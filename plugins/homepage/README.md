@@ -1,29 +1,47 @@
-# Homepage
+<div align="center">
 
-A custom widget page and service links for your servers and services.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>Homepage</h1>
+
+<p>A widget page you build yourself</p>
+
+</div>
+
+<br />
+
+## Overview
+
+Homepage is a drag and drop page of widgets for your servers, services and anything else you want to keep an eye on.
+
+<br />
 
 ## Features
 
-- A page of widgets you can move, resize, pan and zoom. Open it from the command palette.
-- Widgets for clocks, notes, folders, host status, bookmarks, weather, RSS feeds, ping checks, calendars, countdowns, search, images, custom APIs, an embedded terminal and more.
-- Other features can add their own widgets, like Docker, Tunnels, File Manager and Host Metrics.
-- Service link buttons and a homepage preview for the dashboard.
-- Widgets and service links sync between the desktop app and a server.
+- Drag, resize and arrange widgets on a canvas
+- Widgets for host status, pings, service links, bookmarks, search, clocks, calendars, weather, RSS, notes, images, iframes, custom APIs and a live terminal
+- Other features add their own widgets, like Docker, Tunnels and Host Metrics
+- Service links and a homepage preview on the dashboard
+- Syncs between the desktop app and a Termix server
 
-## Permissions
-
-- `homepage.use`: Use the homepage. Admins and users have it by default.
+<br />
 
 ## Services
 
 Provides to other plugins:
 
-- `homepage.items`: list a user's homepage widgets.
+- `homepage.items`: list a user's homepage widgets
 
-## Development
+<br />
 
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+## Support
+
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
+
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
+
+<br />
+
+## License
+
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

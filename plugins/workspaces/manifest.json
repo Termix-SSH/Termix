@@ -2,16 +2,16 @@
   "id": "workspaces",
   "name": "Workspaces",
   "version": "1.0.0",
-  "description": "Save and restore named tab and split layouts.",
+  "description": "Save your open tabs and split layouts and reopen them in one click.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Productivity",
   "icon": "LayoutTemplate",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": ["db:own", "network:serve", "ui:surface"],

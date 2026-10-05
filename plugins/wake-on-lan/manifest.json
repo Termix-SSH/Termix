@@ -2,16 +2,16 @@
   "id": "wake-on-lan",
   "name": "Wake-on-LAN",
   "version": "1.0.0",
-  "description": "Wake a sleeping host by sending a Wake-on-LAN packet to its MAC address.",
+  "description": "Wake sleeping machines by sending a Wake-on-LAN packet to their MAC address.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Networking",
   "icon": "Zap",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": [

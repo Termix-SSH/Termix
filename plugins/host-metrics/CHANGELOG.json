@@ -1,0 +1,34 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Termix-SSH/Termix/main/packages/plugin-sdk/schema/changelog.schema.json",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "changes": [
+        {
+          "type": "added",
+          "text": "CPU, memory, disk, network, temperature, NVIDIA GPU, processes, ports and logins"
+        },
+        {
+          "type": "added",
+          "text": "History charts for each host"
+        },
+        {
+          "type": "added",
+          "text": "Manage services, packages, cron jobs, firewall rules, users, SSL certificates, logs and WireGuard"
+        },
+        {
+          "type": "added",
+          "text": "Health checks for your hosts and services"
+        },
+        {
+          "type": "added",
+          "text": "A layout you can rearrange per host"
+        },
+        {
+          "type": "added",
+          "text": "Live stats in the terminal toolbar"
+        }
+      ]
+    }
+  ]
+}

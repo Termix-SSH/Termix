@@ -1,33 +1,45 @@
-# Wake-on-LAN
+<div align="center">
 
-Wake a sleeping host by sending a Wake-on-LAN packet to its MAC address.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>Wake-on-LAN</h1>
+
+<p>Wake up sleeping machines from Termix</p>
+
+</div>
+
+<br />
+
+## Overview
+
+Wake-on-LAN sends a magic packet to wake a host up.
+
+<br />
 
 ## Features
 
-- Wake a sleeping host by sending a Wake-on-LAN packet to its MAC address.
-- Automations can wake a host as one of their steps.
+- Wake a host in one click
+- Wake a host before a remote desktop connection
+- Wake a host from an automation
 
-## Settings
-
-### Host
-
-- MAC address: the network card to wake.
-- Broadcast address: where to send the packet.
-
-## Permissions
-
-- `wake-on-lan.send`: Send Wake-on-LAN packets. Admins and users have it by default.
+<br />
 
 ## Services
 
 Provides to other plugins:
 
-- `wake-on-lan.send`: wake a host.
+- `wake-on-lan.send`: wake a host
 
-## Development
+<br />
 
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+## Support
+
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
+
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
+
+<br />
+
+## License
+
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

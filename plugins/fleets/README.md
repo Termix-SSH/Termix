@@ -1,32 +1,48 @@
-# Fleets
+<div align="center">
 
-Group hosts into fleets and run commands, package actions and file transfers on all of them at once.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>Fleets</h1>
+
+<p>Run commands and actions across many hosts at once</p>
+
+</div>
+
+<br />
+
+## Overview
+
+Fleets groups your hosts so you can act on all of them together.
+
+<br />
 
 ## Features
 
-- Group hosts into fleets by hand or by tag. Hosts with a matching tag join on their own.
-- Run a command on every host in a fleet at once and see each result.
-- Run package actions, like updates, across a fleet.
-- Transfer files to and from every host in a fleet.
-- See an inventory of the hosts in a fleet.
-- Share fleets with other users or roles.
+- Group hosts by hand or with tag rules, so new hosts join on their own
+- Run one command on every host and see each result
+- Install, remove or upgrade packages across the fleet
+- Push and pull files on every host
+- Collect an inventory of OS, kernel, architecture and uptime
+- Share a fleet with users or roles
 
-## Permissions
-
-- `fleets.view`: See fleets, their hosts and inventory. Admins and users have it by default.
-- `fleets.manage`: Create, edit, delete and share fleets. Admins and users have it by default.
-- `fleets.execute`: Run commands, package actions and file transfers on a fleet. Admins and users have it by default.
+<br />
 
 ## Services
 
 Provides to other plugins:
 
-- `fleets.access`: list fleets and run actions on them.
+- `fleets.access`: list fleets and run actions on them
 
-## Development
+<br />
 
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+## Support
+
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
+
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
+
+<br />
+
+## License
+
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

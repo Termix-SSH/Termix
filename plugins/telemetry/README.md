@@ -1,29 +1,37 @@
-# Usage Statistics
+<div align="center">
 
-Sends a small anonymous report once a day so the Termix developers can see how many instances run and which features get used.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
 
-## What is sent
+<h1>Usage Statistics</h1>
 
-Always, while it is on:
+<p>A small anonymous report that helps improve Termix</p>
 
-- A random instance ID, the Termix version, and how many users and hosts exist.
+</div>
 
-Each of these has its own switch in Admin Settings > Usage Statistics:
+<br />
 
-- Platform info: operating system, CPU architecture, Node.js version, database type, and whether Termix runs in Docker, the desktop app or as a plain server.
-- Feature usage: how many times each kind of tab was opened, plus SSH logins and host connections, since the last report.
-- Installed features: the ids of the running built-in features.
+## Overview
 
-It never sends usernames, hostnames, IP addresses, credentials or anything else that identifies you or your servers. Admins can preview the exact report before it is sent.
+Usage Statistics sends a small anonymous report once a day so the Termix developers can see how many instances are running and which features get used.
 
-## Turning it off
+<br />
 
-- Admin Settings > Usage Statistics > Share anonymous usage statistics.
-- Each user can leave their own feature usage out in User Profile > Usage Statistics.
-- `ENABLE_TELEMETRY=false` turns it off and locks the switch. `ENABLE_TELEMETRY=true` locks it on.
+## Features
 
-## Environment
+- Never sends usernames, hostnames, IP addresses or credentials
+- Choose what the report includes, or turn it off
+- Preview the exact report before it is sent
 
-- `ENABLE_TELEMETRY`: `true` or `false` overrides the admin switch.
-- `POSTHOG_API_KEY`: the PostHog project key. Defaults to the Termix project.
-- `POSTHOG_HOST`: the PostHog host. Defaults to `https://us.i.posthog.com`.
+<br />
+
+## Support
+
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
+
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
+
+<br />
+
+## License
+
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

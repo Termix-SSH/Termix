@@ -1,39 +1,48 @@
-# Snippets
+<div align="center">
 
-Save commands and notes, then run or paste them into a terminal. Supports variables and sharing.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>Snippets</h1>
+
+<p>Save the commands you run often and run them in one click</p>
+
+</div>
+
+<br />
+
+## Overview
+
+Snippets keeps the commands and text you use often in one place, ready to run in a terminal.
+
+<br />
 
 ## Features
 
-- Save commands and notes and sort them into folders.
-- Run a snippet or paste it into a terminal.
-- Use variables like `$HOST` and `$INPUT_1` that are filled in when the snippet runs.
-- Share snippets and folders with other users or roles.
-- Snippets sync between the desktop app and a server.
+- Save commands and notes in folders
+- Run them in one or more terminals, or straight on a set of hosts
+- Variables for the host and your own inputs
+- Run a snippet each time you connect to a host
+- Share snippets with users or roles
+- Import and export as JSON
 
-## Settings
-
-### User
-
-- Collapse folders by default: start each folder closed when you open the Snippets panel.
-
-## Permissions
-
-- `snippets.view`: See your own and shared snippets. Admins and users have it by default.
-- `snippets.create`: Create snippets, notes and folders. Admins and users have it by default.
-- `snippets.edit`: Change snippets and folders. Admins and users have it by default.
-- `snippets.delete`: Delete snippets and folders. Admins and users have it by default.
-- `snippets.share`: Share snippets and folders. Admins and users have it by default.
+<br />
 
 ## Services
 
 Provides to other plugins:
 
-- `snippets.access`: read and run snippets.
+- `snippets.access`: read and run snippets
 
-## Development
+<br />
 
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+## Support
+
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
+
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
+
+<br />
+
+## License
+
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

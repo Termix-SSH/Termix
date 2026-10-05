@@ -2,16 +2,16 @@
   "id": "sso",
   "name": "Single sign-on",
   "version": "1.0.0",
-  "description": "Sign in with an OpenID Connect provider, GitHub or Google. Each provider gets its own button on the login screen.",
+  "description": "Sign in with any OpenID Connect provider, GitHub or Google.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Access & Security",
   "icon": "KeyRound",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": [

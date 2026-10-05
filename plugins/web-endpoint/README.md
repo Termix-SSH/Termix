@@ -1,38 +1,45 @@
-# Web Endpoint
+<div align="center">
 
-Open a host's web UI in a tab or a separate desktop window, directly or over an SSH tunnel.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>Web Endpoint</h1>
+
+<p>Open a host's web UI inside Termix</p>
+
+</div>
+
+<br />
+
+## Overview
+
+Web Endpoint opens a host's own web interface, like a router admin page, inside Termix instead of a separate browser tab.
+
+<br />
 
 ## Features
 
-- Open a host's web UI in a tab or a separate desktop window.
-- Connect directly, or over an SSH tunnel when the web UI is only reachable from the host.
-- Up to 16 endpoints per host.
+- Open a web UI in a Termix tab or its own desktop window
+- Connect directly, or over an SSH tunnel through the host
+- Embedded pages never see your Termix login
 
-## Setup
-
-Each endpoint is one of two kinds:
-
-- Direct: your browser loads `scheme://host:port/path` itself.
-- Tunnel: Termix opens an SSH tunnel to the port and loads it from there. Unused tunnels close after ten minutes.
-
-Tunnel endpoints need the Tunnels plugin.
-
-## Settings
-
-### Host
-
-- Enable web endpoints and the list of endpoints for this host.
+<br />
 
 ## Services
 
 Uses from other plugins:
 
-- `tunnels.access` to open tunnels. Required.
+- `tunnels.access` to open tunnels. Required
 
-## Development
+<br />
 
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+## Support
+
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
+
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
+
+<br />
+
+## License
+
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

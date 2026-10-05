@@ -1,28 +1,39 @@
-# Single sign-on
+<div align="center">
 
-Sign in with an OpenID Connect provider, GitHub or Google. Each provider gets its own button on the login screen.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>Single sign-on</h1>
+
+<p>Sign in with OpenID Connect, GitHub or Google</p>
+
+</div>
+
+<br />
+
+## Overview
+
+Single sign-on lets people sign in to Termix with an identity provider instead of a password.
+
+<br />
 
 ## Features
 
-- Sign in with any OpenID Connect provider, GitHub or Google.
-- Each provider gets its own button on the login screen.
-- Make members of an admin group Termix admins, read from a group claim.
-- Supports back-channel logout.
+- Any OpenID Connect provider, plus GitHub and Google
+- More than one provider, each with its own login button
+- Make members of an admin group Termix admins
+- Limit sign in to certain users
+- Back-channel logout
 
-## Settings
+<br />
 
-### Admin
+## Support
 
-- Providers: add a provider, then register the redirect URI it shows with your identity provider. Providers set up before 2.9 keep the old redirect URI until you turn it off.
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
 
-## Permissions
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
 
-- `sso.manage`: Add, edit and remove SSO providers. Only admins have it by default.
+<br />
 
-## Development
+## License
 
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

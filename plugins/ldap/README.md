@@ -1,27 +1,38 @@
-# LDAP
+<div align="center">
 
-Sign in with a username and password checked against an LDAP or Active Directory server.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>LDAP</h1>
+
+<p>Sign in with your LDAP or Active Directory account</p>
+
+</div>
+
+<br />
+
+## Overview
+
+LDAP lets people sign in to Termix with their LDAP or Active Directory username and password.
+
+<br />
 
 ## Features
 
-- Sign in with a username and password checked against an LDAP or Active Directory server.
-- Add more than one directory. Each gets its own option on the login screen.
-- Make members of an admin group Termix admins.
+- Sign in against LDAP or Active Directory
+- More than one directory, each with its own login button
+- LDAPS for encrypted connections
+- Make members of an admin group Termix admins
 
-## Settings
+<br />
 
-### Admin
+## Support
 
-- Directories: the LDAP servers, search bases and admin group for each directory.
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
 
-## Permissions
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
 
-- `ldap.manage`: Add, edit and remove LDAP directories. Only admins have it by default.
+<br />
 
-## Development
+## License
 
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

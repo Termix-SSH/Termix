@@ -1,38 +1,48 @@
-# File Manager
+<div align="center">
 
-Browse, edit and transfer files over SFTP, including between two hosts.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>File Manager</h1>
+
+<p>Browse, edit and move files on your servers over SFTP</p>
+
+</div>
+
+<br />
+
+## Overview
+
+File Manager lets you work with the files on your hosts over SFTP, and copy files straight from one server to another.
+
+<br />
 
 ## Features
 
-- Browse, upload, download, rename, move and delete files over SFTP.
-- Edit files in a built-in code editor.
-- Transfer files between two hosts in the SFTP tab.
-- Restore deleted files from the trash until they are cleaned up.
-- Save bookmarks to folders you use often.
-- Browse local files in the desktop app.
+- Browse, upload, download, rename, move and delete files, with sudo support
+- Edit files in a built-in code editor
+- Preview images, PDFs, audio and video
+- A trash you can restore deleted files from
+- Copy files between two hosts, with the fastest route picked for you and an integrity check
+- A side by side local and remote view in the desktop app
 
-## Settings
-
-### Host
-
-- Enable File Manager: show the file manager for this host.
-- Default Path: the folder to open first.
-- SCP Legacy Mode: use SCP for hosts without a working SFTP server.
-
-## Permissions
-
-- `file-manager.use`: Browse, edit and transfer files. Admins and users have it by default.
+<br />
 
 ## Services
 
 Provides to other plugins:
 
-- `files.sftp`: read and write files on a host.
+- `files.sftp`: read and write files on a host
 
-## Development
+<br />
 
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+## Support
+
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
+
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
+
+<br />
+
+## License
+
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

@@ -2,16 +2,16 @@
   "id": "host-metrics",
   "name": "Host Metrics",
   "version": "1.0.0",
-  "description": "Live CPU, memory, disk, network and process stats, plus tools to manage services, packages, firewall rules, cron jobs, users and more.",
+  "description": "Live CPU, memory, disk, network and GPU stats, plus cards to manage services, packages, firewall rules and more.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Monitoring",
   "icon": "Activity",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": [

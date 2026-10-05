@@ -435,7 +435,9 @@ Interested in a paid placement to support development? Email [mail@termix.site](
 
 ## Support
 
-Need help or want to request a feature? Open a [new issue](https://github.com/Termix-SSH/Support/issues) and add as much detail as you can, in English if possible. You can also ask in the support channel on [Discord](https://discord.gg/jVQGdvHDrf), though replies there can take longer.
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
+
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
 
 <br />
 
@@ -501,4 +503,4 @@ See [Projects](https://github.com/orgs/Termix-SSH/projects/5) for all planned fe
 
 ## License
 
-Distributed under the Apache License Version 2.0. See `LICENSE` for more information.
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

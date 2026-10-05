@@ -1,29 +1,47 @@
-# Network Topology
+<div align="center">
 
-Show your hosts and how they connect as an interactive graph.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>Network Topology</h1>
+
+<p>See your homelab drawn out as a live graph</p>
+
+</div>
+
+<br />
+
+## Overview
+
+Network Topology draws your hosts and the links between them as an interactive graph with live status.
+
+<br />
 
 ## Features
 
-- Show your hosts and the links between them as an interactive graph.
-- Put hosts into groups, and groups inside other groups.
-- Import and export the graph as JSON.
-- Add the graph to the dashboard as a card.
-- Each user's graph is saved and syncs between the desktop app and a server.
+- Add hosts and draw links between them
+- Live status for each host
+- Nested, colored groups
+- Import and export as JSON
+- A dashboard card for the graph
 
-## Permissions
-
-- `network-topology.use`: Use the network graph. Admins and users have it by default.
+<br />
 
 ## Services
 
 Provides to other plugins:
 
-- `network-topology.graph`: read a user's graph.
+- `network-topology.graph`: read a user's graph
 
-## Development
+<br />
 
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+## Support
+
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
+
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
+
+<br />
+
+## License
+
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

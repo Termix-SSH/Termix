@@ -1,0 +1,34 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Termix-SSH/Termix/main/packages/plugin-sdk/schema/changelog.schema.json",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "changes": [
+        {
+          "type": "added",
+          "text": "Group hosts by hand or with tag rules, so new hosts join on their own"
+        },
+        {
+          "type": "added",
+          "text": "Run one command on every host and see each result"
+        },
+        {
+          "type": "added",
+          "text": "Install, remove or upgrade packages across the fleet"
+        },
+        {
+          "type": "added",
+          "text": "Push and pull files on every host"
+        },
+        {
+          "type": "added",
+          "text": "Collect an inventory of OS, kernel, architecture and uptime"
+        },
+        {
+          "type": "added",
+          "text": "Share a fleet with users or roles"
+        }
+      ]
+    }
+  ]
+}

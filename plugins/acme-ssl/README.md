@@ -1,41 +1,38 @@
-# ACME Certificates
+<div align="center">
 
-Gets and renews the Termix HTTPS certificate from Let's Encrypt or another ACME provider.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>ACME Certificates</h1>
+
+<p>Free HTTPS certificates for your Termix server, renewed for you</p>
+
+</div>
+
+<br />
+
+## Overview
+
+ACME Certificates gets the HTTPS certificate Termix serves from Let's Encrypt or any other ACME provider and keeps it renewed.
+
+<br />
 
 ## Features
 
-- Gets a certificate from Let's Encrypt, Let's Encrypt staging or any ACME directory URL.
-- Checks twice a day and renews when there is no certificate, the current one is self-signed, it does not cover the domain or it expires within 30 days.
-- Swaps in the new certificate without a restart.
-- Shows the current certificate and the last attempt, with a button to request one now.
+- Certificates from Let's Encrypt or any ACME directory
+- HTTP challenge on port 80, or a Cloudflare DNS challenge when port 80 is closed
+- Renews before the certificate expires
+- Swaps in the new certificate without a restart
 
-## Setup
+<br />
 
-Pick a challenge type:
+## Support
 
-- HTTP: the provider fetches `http://<domain>/.well-known/acme-challenge/...`, so port 80 must reach Termix.
-- DNS (Cloudflare): needs a Cloudflare API token with Zone:DNS:Edit. Works when port 80 is closed.
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
 
-If you turn this plugin off, Termix keeps serving the current certificate but nothing renews it. Admin Settings > HTTPS certificate warns you before it expires. Uploading your own certificate is still done there.
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
 
-## Settings
+<br />
 
-### Admin
+## License
 
-- Renew automatically: turn automatic renewal on or off.
-- Domain and Email: the domain to cover and the contact email for the provider.
-- Certificate authority: Let's Encrypt, Let's Encrypt staging or a custom ACME directory URL.
-- Challenge type: HTTP or DNS (Cloudflare).
-- Cloudflare API token: used by the DNS challenge. Stored encrypted.
-
-## Permissions
-
-- `acme-ssl.manage`: Manage ACME certificates. Only admins have it by default.
-
-## Development
-
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

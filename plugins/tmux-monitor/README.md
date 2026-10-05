@@ -1,58 +1,48 @@
-# Tmux Monitor
+<div align="center">
 
-Browse and control tmux sessions, windows and panes across your hosts.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>Tmux Monitor</h1>
+
+<p>Browse and control tmux sessions across your hosts</p>
+
+</div>
+
+<br />
+
+## Overview
+
+Tmux Monitor shows the tmux sessions, windows and panes on your hosts and lets you manage them without attaching first.
+
+<br />
 
 ## Features
 
-- See the tmux sessions, windows and panes on every host with the monitor on.
-- CPU, memory and GPU use for each pane, and search across pane history.
-- Create, rename and close sessions and windows, and split and close panes.
-- Attach a terminal to any pane.
-- Tag sessions with your own labels.
+- Every host's tmux sessions in one place
+- Live pane previews
+- Resource use for each session
+- Search across every pane
+- Create, rename, split and kill sessions, windows and panes
+- Attach a terminal in one click
 
-## Unified monitor
-
-Open Tmux Monitor from a host action or the command palette. **All hosts**
-shows an expandable tree for each SSH host with the monitor enabled. Filter
-by host name or address, or choose **Single host** to use one host at a time.
-Click a session name or pane to switch the live preview. The tree actions
-continue to target the host containing that session, even when two hosts
-have identical session names or pane IDs. The toolbar and output search
-operate on the selected host.
-
-The monitor remembers its mode, filter, collapsed hosts, expanded sessions,
-last host and selected pane locally. An explicit host action takes precedence
-over the saved host and clears the filter. A saved pane is restored only if
-it still exists in the host's latest overview.
-
-Expanded background hosts poll overview and resource metrics independently,
-with at most four background hosts loading at once. Collapsing or filtering
-out a background host stops its polling; switching away from the monitor
-stops all overview/metrics polling. The selected host keeps polling while
-its preview is active, including when its tree is collapsed. These controls
-use the existing SSH APIs and require only tmux on the remote hosts, not
-Auto Tmux.
-
-## Settings
-
-### Host
-
-- Enable Tmux Monitor: show this host in the monitor.
-
-## Permissions
-
-- `tmux-monitor.use`: Use Tmux Monitor. Admins and users have it by default.
+<br />
 
 ## Services
 
 Provides to other plugins:
 
-- `tmux.sessions`: find, attach to and create tmux sessions. The terminal uses this to attach to tmux on connect.
+- `tmux.sessions`: find, attach to and create tmux sessions
 
-## Development
+<br />
 
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+## Support
+
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
+
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
+
+<br />
+
+## License
+
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

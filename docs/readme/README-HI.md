@@ -440,7 +440,9 @@ Termix मुफ़्त और ओपन सोर्स है, न कोई
 
 ## सहायता
 
-मदद चाहिए या कोई सुविधा माँगनी है? एक [नया issue](https://github.com/Termix-SSH/Support/issues) खोलें और जितना हो सके विस्तार से लिखें, हो सके तो अंग्रेज़ी में। आप [Discord](https://discord.gg/jVQGdvHDrf) के सपोर्ट चैनल में भी पूछ सकते हैं, हालाँकि वहाँ जवाब आने में ज़्यादा समय लग सकता है।
+बग रिपोर्ट करने या कोई सुविधा माँगने के लिए एक [सपोर्ट टिकट](https://github.com/Termix-SSH/Support/issues/new/choose) खोलें। इसके लिए GitHub में लॉग इन होना ज़रूरी है। जितना हो सके विस्तार से लिखें, हो सके तो अंग्रेज़ी में।
+
+चर्चा और सवालों के लिए [Discord](https://discord.gg/jVQGdvHDrf) सर्वर से जुड़ें।
 
 <br />
 
@@ -506,4 +508,4 @@ Termix मुफ़्त और ओपन सोर्स है, न कोई
 
 ## लाइसेंस
 
-Apache License संस्करण 2.0 के तहत वितरित। अधिक जानकारी के लिए `LICENSE` देखें।
+Apache License संस्करण 2.0 के तहत वितरित। अधिक जानकारी के लिए [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) देखें।

@@ -2,16 +2,16 @@
   "id": "telemetry",
   "name": "Usage Statistics",
   "version": "1.0.0",
-  "description": "Sends an anonymous daily summary of how Termix is used, to help decide what to work on next.",
+  "description": "Sends a small anonymous report once a day so the Termix developers can see how many instances run and which features get used.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Monitoring",
   "icon": "ChartNoAxesColumn",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": [

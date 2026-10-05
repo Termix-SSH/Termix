@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Termix-SSH/Termix/main/packages/plugin-sdk/schema/changelog.schema.json",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "changes": [
+        {
+          "type": "added",
+          "text": "Open a web UI in a Termix tab or its own desktop window"
+        },
+        {
+          "type": "added",
+          "text": "Connect directly, or over an SSH tunnel through the host"
+        },
+        {
+          "type": "added",
+          "text": "Embedded pages never see your Termix login"
+        }
+      ]
+    }
+  ]
+}

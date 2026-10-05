@@ -435,7 +435,9 @@ Termix は無料でオープンソースで、サブスクリプションも有�
 
 ## サポート
 
-困ったときや機能の要望があるときは、[新しい issue](https://github.com/Termix-SSH/Support/issues) を作って、できるだけ詳しく、できれば英語で書いてください。[Discord](https://discord.gg/jVQGdvHDrf) のサポートチャンネルでも質問できますが、返信には時間がかかることがあります。
+バグの報告や機能の要望は、[サポートチケット](https://github.com/Termix-SSH/Support/issues/new/choose)を作成してください。GitHub へのログインが必要です。できるだけ詳しく、できれば英語で書いてください。
+
+議論や質問は [Discord](https://discord.gg/jVQGdvHDrf) サーバーに参加してください。
 
 <br />
 
@@ -501,5 +503,5 @@ Termix は無料でオープンソースで、サブスクリプションも有�
 
 ## ライセンス
 
-Apache License 2.0 のもとで配布しています。詳しくは `LICENSE` をご覧ください。
+Apache License 2.0 のもとで配布しています。詳しくは [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) をご覧ください。
 </content>

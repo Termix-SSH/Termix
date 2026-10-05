@@ -1,27 +1,38 @@
-# Proxmox
+<div align="center">
 
-Find Proxmox VE guests through an SSH host, import them as hosts and keep them in sync.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>Proxmox</h1>
+
+<p>Import Proxmox guests as hosts and watch your nodes</p>
+
+</div>
+
+<br />
+
+## Overview
+
+Proxmox imports the VMs and containers on a Proxmox VE node as Termix hosts and shows stats for the node. It works over SSH, so no API token is needed.
+
+<br />
 
 ## Features
 
-- Find the VMs and containers on a Proxmox VE node through an SSH host you already have.
-- Import them as Termix hosts with the login type you choose.
-- Keep imported hosts in sync on a schedule.
-- Show node and guest stats in the Proxmox tab.
+- Find and import VMs and LXC containers from a node
+- Keep imported hosts in sync on a schedule
+- Set up Windows guests for RDP and turn on Docker for guests by name
+- Node, guest, storage and cluster stats in their own tab
 
-## Settings
+<br />
 
-### Host
+## Support
 
-- Proxmox: mark this host as a Proxmox node and set how guests are imported.
-- Default Auth Type: the login type given to imported guests.
-- Auto sync guests and Sync interval (minutes): check the node for changes on a schedule. The minimum is 5 minutes.
-- Proxmox stats: show the stats tab for this host.
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
 
-## Development
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
 
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+<br />
+
+## License
+
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

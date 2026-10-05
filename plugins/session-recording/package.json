@@ -7,7 +7,10 @@
     "build": "termix-plugin build",
     "test": "termix-plugin test",
     "typecheck": "tsc -p .",
-    "validate": "termix-plugin validate"
+    "validate": "termix-plugin validate",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky || true"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",
@@ -16,12 +19,17 @@
     "lucide-react": "^1.33.0"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.0",
     "@termix/plugin-sdk": "^1.0.0",
     "@types/node": "^26.2.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "better-sqlite3": "^13.0.3",
+    "husky": "^9.1.7",
     "jsdom": "^30.0.1",
+    "lint-staged": "^17.2.0",
+    "prettier": "3.9.9",
     "vitest": "^4.1.11"
   },
   "peerDependencies": {
@@ -34,6 +42,11 @@
     "patches": [
       "xterm-android-ime",
       "guacamole-common-js-flush"
+    ]
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs,json,css,md}": [
+      "prettier --write"
     ]
   }
 }

@@ -1,31 +1,38 @@
-# Step CA
+<div align="center">
 
-Connect to hosts with short-lived SSH certificates from a smallstep step-ca server, after signing in through its OIDC provisioner.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>Step CA</h1>
+
+<p>Short-lived SSH certificates from your own step-ca server</p>
+
+</div>
+
+<br />
+
+## Overview
+
+Step CA lets you connect to hosts with short-lived SSH certificates from a [smallstep step-ca](https://smallstep.com/docs/step-ca/) server, after signing in through its OIDC provisioner.
+
+<br />
 
 ## Features
 
-- Adds the Step CA login type to the host editor.
-- Signs you in through the identity provider behind a [smallstep step-ca](https://smallstep.com/docs/step-ca/) OIDC provisioner.
-- Has the CA sign a fresh key and keeps the certificate until it expires.
-- Talks to the CA's HTTPS API directly, so the `step` binary is never needed.
+- Adds the Step CA auth type to hosts
+- Sign in with your identity provider in the browser
+- Certificates are kept until they expire
+- No `step` binary needed
 
-## Setup
+<br />
 
-When `REDIS_URL` is set and you run more than one Termix instance, a callback that reaches the wrong instance is handed to the one that started the sign-in. `TERMIX_STEP_CA_REDIS_PREFIX` changes the key prefix, which defaults to `termix:step-ca`.
+## Support
 
-## Settings
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
 
-### Admin
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
 
-- CA URL, Root fingerprint and OIDC provisioner name: leave all three empty to turn Step CA off.
-- Allowed private Step CA hosts: the CA and, if it is internal, the identity provider. Private hosts not on this list are refused.
-- Redirect URI: register `<base URL>/plugin-api/step-ca/callback` with your identity provider.
-- Use the old redirect URI: keep sending the 2.8 URI `<base URL>/host/step-ca-callback`. Upgraded installs keep this on until you turn it off.
+<br />
 
-## Development
+## License
 
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

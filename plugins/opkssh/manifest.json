@@ -2,16 +2,16 @@
   "id": "opkssh",
   "name": "OPKSSH",
   "version": "1.0.0",
-  "description": "Connect to hosts with short-lived SSH certificates from OpenPubkey SSH, after signing in with your identity provider.",
+  "description": "Connect to hosts with short-lived OpenPubkey SSH certificates after signing in with your identity provider.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Access & Security",
   "icon": "ShieldCheck",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": [

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Termix-SSH/Termix/main/packages/plugin-sdk/schema/changelog.schema.json",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "changes": [
+        {
+          "type": "added",
+          "text": "RDP, VNC and Telnet from any browser"
+        },
+        {
+          "type": "added",
+          "text": "Tabs and split screen like any other session"
+        },
+        {
+          "type": "added",
+          "text": "Clipboard sync and file transfer through RDP drives"
+        },
+        {
+          "type": "added",
+          "text": "Jump host support"
+        },
+        {
+          "type": "added",
+          "text": "Session sharing and recording"
+        },
+        {
+          "type": "added",
+          "text": "Open a host in the native Windows Remote Desktop client from the desktop app"
+        }
+      ]
+    }
+  ]
+}

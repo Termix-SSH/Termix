@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Termix-SSH/Termix/main/packages/plugin-sdk/schema/changelog.schema.json",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "changes": [
+        {
+          "type": "added",
+          "text": "Set the baud rate, data bits, stop bits and parity"
+        },
+        {
+          "type": "added",
+          "text": "The desktop app talks to the device directly"
+        },
+        {
+          "type": "added",
+          "text": "Browsers use the Web Serial API (Chrome, Edge or Firefox 151 and newer)"
+        }
+      ]
+    }
+  ]
+}

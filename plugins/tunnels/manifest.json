@@ -2,16 +2,16 @@
   "id": "tunnels",
   "name": "Tunnels",
   "version": "1.0.0",
-  "description": "SSH port forwarding between servers, plus local tunnels from the desktop app.",
+  "description": "SSH port forwarding that reconnects on its own, plus client tunnels from the desktop app.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Networking",
   "icon": "ArrowLeftRight",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": [

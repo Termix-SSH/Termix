@@ -2,16 +2,16 @@
   "id": "network-topology",
   "name": "Network Topology",
   "version": "1.0.0",
-  "description": "Show your hosts and how they connect as an interactive graph.",
+  "description": "Draws your hosts and the links between them as a live, interactive graph.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Infrastructure",
   "icon": "Network",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": ["db:own", "network:serve", "ui:surface"],

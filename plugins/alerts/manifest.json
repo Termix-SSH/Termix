@@ -2,16 +2,16 @@
   "id": "alerts",
   "name": "Alerts",
   "version": "1.0.0",
-  "description": "One inbox for every alert, with delivery to webhooks, ntfy, Discord and email.",
+  "description": "One inbox for every alert in Termix, with delivery to webhooks, ntfy, Discord and email.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Monitoring",
   "icon": "Bell",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": [

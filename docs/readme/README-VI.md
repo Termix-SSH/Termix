@@ -431,7 +431,9 @@ Bạn muốn đặt quảng cáo trả phí để ủng hộ việc phát triể
 
 ## Hỗ trợ
 
-Cần giúp đỡ hoặc muốn đề xuất tính năng? Hãy mở một [issue mới](https://github.com/Termix-SSH/Support/issues) và mô tả càng chi tiết càng tốt, bằng tiếng Anh nếu được. Bạn cũng có thể hỏi trong kênh hỗ trợ trên [Discord](https://discord.gg/jVQGdvHDrf), tuy nhiên ở đó có thể lâu được trả lời hơn.
+Để báo lỗi hoặc đề xuất tính năng, hãy mở một [phiếu hỗ trợ](https://github.com/Termix-SSH/Support/issues/new/choose). Bạn cần đăng nhập GitHub. Hãy mô tả càng chi tiết càng tốt, ưu tiên bằng tiếng Anh.
+
+Để thảo luận và đặt câu hỏi, hãy tham gia máy chủ [Discord](https://discord.gg/jVQGdvHDrf).
 
 <br />
 
@@ -497,4 +499,4 @@ Toàn bộ tính năng dự kiến nằm ở [Projects](https://github.com/orgs/
 
 ## Giấy phép
 
-Phát hành theo Giấy phép Apache phiên bản 2.0. Xem `LICENSE` để biết thêm chi tiết.
+Phát hành theo Giấy phép Apache phiên bản 2.0. Xem [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) để biết thêm chi tiết.

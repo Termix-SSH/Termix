@@ -435,7 +435,9 @@ Termix es gratuito y de código abierto, sin suscripciones ni planes de pago. Si
 
 ## Soporte
 
-¿Necesitas ayuda o quieres pedir una función? Abre una [nueva incidencia](https://github.com/Termix-SSH/Support/issues) y añade todo el detalle que puedas, en inglés si te es posible. También puedes preguntar en el canal de soporte de [Discord](https://discord.gg/jVQGdvHDrf), aunque allí las respuestas pueden tardar más.
+Para informar de un error o pedir una función, abre un [ticket de soporte](https://github.com/Termix-SSH/Support/issues/new/choose). Necesitas haber iniciado sesión en GitHub. Añade todo el detalle que puedas, preferiblemente en inglés.
+
+Para debates y preguntas, únete al servidor de [Discord](https://discord.gg/jVQGdvHDrf).
 
 <br />
 
@@ -501,4 +503,4 @@ Todas las funciones planeadas están en [Projects](https://github.com/orgs/Termi
 
 ## Licencia
 
-Distribuido bajo la Licencia Apache versión 2.0. Consulta `LICENSE` para más información.
+Distribuido bajo la Licencia Apache versión 2.0. Consulta [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) para más información.

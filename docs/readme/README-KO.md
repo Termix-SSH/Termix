@@ -433,7 +433,9 @@ Termix는 무료 오픈 소스이고 구독이나 유료 요금제가 없습니�
 
 ## 지원
 
-도움이 필요하거나 기능을 제안하고 싶으신가요? [새 이슈](https://github.com/Termix-SSH/Support/issues)를 올리면서 되도록 자세히, 가능하면 영어로 적어 주세요. [Discord](https://discord.gg/jVQGdvHDrf) 지원 채널에서 물어봐도 되지만 답변이 늦을 수 있습니다.
+버그를 신고하거나 기능을 요청하려면 [지원 티켓](https://github.com/Termix-SSH/Support/issues/new/choose)을 여세요. GitHub에 로그인되어 있어야 합니다. 되도록 자세히, 가능하면 영어로 적어 주세요.
+
+토론과 질문은 [Discord](https://discord.gg/jVQGdvHDrf) 서버에 참여해 주세요.
 
 <br />
 
@@ -499,4 +501,4 @@ Termix는 무료 오픈 소스이고 구독이나 유료 요금제가 없습니�
 
 ## 라이선스
 
-Apache License 2.0에 따라 배포합니다. 자세한 내용은 `LICENSE`를 참고하세요.
+Apache License 2.0에 따라 배포합니다. 자세한 내용은 [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE)를 참고하세요.

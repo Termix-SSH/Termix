@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Termix-SSH/Termix/main/packages/plugin-sdk/schema/changelog.schema.json",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "changes": [
+        {
+          "type": "added",
+          "text": "Works with a self-hosted 1Password Connect server"
+        },
+        {
+          "type": "added",
+          "text": "Use `op://vault/item/field` references in a host's password or key fields"
+        },
+        {
+          "type": "added",
+          "text": "Secrets are fetched each time you connect and never stored in Termix"
+        }
+      ]
+    }
+  ]
+}

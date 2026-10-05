@@ -1,0 +1,34 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Termix-SSH/Termix/main/packages/plugin-sdk/schema/changelog.schema.json",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "changes": [
+        {
+          "type": "added",
+          "text": "Every host's tmux sessions in one place"
+        },
+        {
+          "type": "added",
+          "text": "Live pane previews"
+        },
+        {
+          "type": "added",
+          "text": "Resource use for each session"
+        },
+        {
+          "type": "added",
+          "text": "Search across every pane"
+        },
+        {
+          "type": "added",
+          "text": "Create, rename, split and kill sessions, windows and panes"
+        },
+        {
+          "type": "added",
+          "text": "Attach a terminal in one click"
+        }
+      ]
+    }
+  ]
+}

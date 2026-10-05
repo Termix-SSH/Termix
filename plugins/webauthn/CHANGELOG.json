@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Termix-SSH/Termix/main/packages/plugin-sdk/schema/changelog.schema.json",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "changes": [
+        {
+          "type": "added",
+          "text": "Passkeys and security keys"
+        },
+        {
+          "type": "added",
+          "text": "Counts as a second factor when it checks your PIN or fingerprint"
+        },
+        {
+          "type": "added",
+          "text": "More than one passkey, including synced ones"
+        }
+      ]
+    }
+  ]
+}

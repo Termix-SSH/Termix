@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Termix-SSH/Termix/main/packages/plugin-sdk/schema/changelog.schema.json",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "changes": [
+        {
+          "type": "added",
+          "text": "Add tailnet devices as hosts in a couple of clicks"
+        },
+        {
+          "type": "added",
+          "text": "Connect with Tailscale SSH, with no credentials stored"
+        },
+        {
+          "type": "added",
+          "text": "Works with Headscale"
+        },
+        {
+          "type": "added",
+          "text": "A Tailscale card in Host Metrics"
+        }
+      ]
+    }
+  ]
+}

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readManifest } from "../lib/plugin-dir.mjs";
+import { validateChangelog } from "../lib/changelog.mjs";
 
 /**
  * The manifest rules live in src/manifest.ts, which the server uses too, so
@@ -40,6 +41,7 @@ export async function validate({ cwd }) {
   );
   problems.push(...validateNativeDependencies(cwd, raw));
   problems.push(...validatePackage(cwd, raw));
+  problems.push(...validateChangelogFile(cwd, raw));
 
   if (problems.length > 0) {
     for (const problem of problems) console.error(`  ${problem}`);
@@ -77,6 +79,30 @@ function validatePackage(cwd, raw) {
     );
   }
   return problems;
+}
+
+/**
+ * CHANGELOG.json is optional, but when it is there it has to parse and its
+ * newest release has to match the manifest version.
+ */
+function validateChangelogFile(cwd, raw) {
+  const jsonPath = path.join(cwd, "CHANGELOG.json");
+  if (!fs.existsSync(jsonPath)) {
+    return fs.existsSync(path.join(cwd, "CHANGELOG.md"))
+      ? [
+          "CHANGELOG.md is no longer shipped; move the release notes to CHANGELOG.json",
+        ]
+      : [];
+  }
+  let changelog;
+  try {
+    changelog = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+  } catch (error) {
+    return [`CHANGELOG.json is not valid JSON: ${error.message}`];
+  }
+  return validateChangelog(changelog, raw.version).map(
+    (problem) => `CHANGELOG.json: ${problem}`,
+  );
 }
 
 /**

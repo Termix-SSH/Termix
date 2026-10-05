@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Termix-SSH/Termix/main/packages/plugin-sdk/schema/changelog.schema.json",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "changes": [
+        {
+          "type": "added",
+          "text": "Drag, resize and arrange widgets on a canvas"
+        },
+        {
+          "type": "added",
+          "text": "Widgets for host status, pings, service links, bookmarks, search, clocks, calendars, weather, RSS, notes, images, iframes, custom APIs and a live terminal"
+        },
+        {
+          "type": "added",
+          "text": "Other features add their own widgets, like Docker, Tunnels and Host Metrics"
+        },
+        {
+          "type": "added",
+          "text": "Service links and a homepage preview on the dashboard"
+        },
+        {
+          "type": "added",
+          "text": "Syncs between the desktop app and a Termix server"
+        }
+      ]
+    }
+  ]
+}

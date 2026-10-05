@@ -2,16 +2,16 @@
   "id": "docker",
   "name": "Docker",
   "version": "1.0.0",
-  "description": "Manage Docker and Podman containers over SSH, with logs and a container console.",
+  "description": "Manage Docker and Podman containers on your hosts over SSH, with logs, stats and a console.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Infrastructure",
   "icon": "Box",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": [

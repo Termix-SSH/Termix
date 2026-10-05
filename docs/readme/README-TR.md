@@ -431,7 +431,9 @@ Geliştirmeyi desteklemek için ücretli bir yerleşim ilginizi çeker mi? [mail
 
 ## Destek
 
-Yardıma mı ihtiyacınız var ya da bir özellik mi istiyorsunuz? [Yeni bir konu](https://github.com/Termix-SSH/Support/issues) açın ve olabildiğince ayrıntı ekleyin, mümkünse İngilizce yazın. [Discord](https://discord.gg/jVQGdvHDrf) üzerindeki destek kanalında da sorabilirsiniz, ancak oradaki yanıtlar daha uzun sürebilir.
+Bir hata bildirmek veya özellik istemek için bir [destek talebi](https://github.com/Termix-SSH/Support/issues/new/choose) açın. GitHub'a giriş yapmış olmanız gerekir. Olabildiğince ayrıntılı yazın, mümkünse İngilizce.
+
+Tartışmalar ve sorular için [Discord](https://discord.gg/jVQGdvHDrf) sunucusuna katılın.
 
 <br />
 
@@ -497,4 +499,4 @@ Planlanan tüm özellikler [Projects](https://github.com/orgs/Termix-SSH/project
 
 ## Lisans
 
-Apache Lisansı Sürüm 2.0 ile dağıtılır. Ayrıntılar için `LICENSE` dosyasına bakın.
+Apache Lisansı Sürüm 2.0 ile dağıtılır. Ayrıntılar için [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) dosyasına bakın.

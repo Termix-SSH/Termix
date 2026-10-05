@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Termix-SSH/Termix/main/packages/plugin-sdk/schema/changelog.schema.json",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "changes": [
+        {
+          "type": "added",
+          "text": "Add hosts and draw links between them"
+        },
+        {
+          "type": "added",
+          "text": "Live status for each host"
+        },
+        {
+          "type": "added",
+          "text": "Nested, colored groups"
+        },
+        {
+          "type": "added",
+          "text": "Import and export as JSON"
+        },
+        {
+          "type": "added",
+          "text": "A dashboard card for the graph"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Termix-SSH/Termix/main/packages/plugin-sdk/schema/changelog.schema.json",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "changes": [
+        {
+          "type": "added",
+          "text": "Tabs and split screen"
+        },
+        {
+          "type": "added",
+          "text": "Jump hosts and host key verification"
+        },
+        {
+          "type": "added",
+          "text": "Sessions stay alive after a disconnect and reconnect on their own"
+        },
+        {
+          "type": "added",
+          "text": "Tmux and Mosh support"
+        },
+        {
+          "type": "added",
+          "text": "Themes, fonts and syntax highlighting"
+        },
+        {
+          "type": "added",
+          "text": "A toolbar with live stats and quick links to the host's other tools"
+        },
+        {
+          "type": "added",
+          "text": "Command history with autocomplete"
+        },
+        {
+          "type": "added",
+          "text": "Macros that automate logins and prompts"
+        },
+        {
+          "type": "added",
+          "text": "Send keystrokes to several terminals at once"
+        },
+        {
+          "type": "added",
+          "text": "A local terminal in the desktop app"
+        }
+      ]
+    }
+  ]
+}

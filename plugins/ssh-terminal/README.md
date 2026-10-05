@@ -1,60 +1,59 @@
-# SSH Terminal
+<div align="center">
 
-SSH terminal sessions with jump hosts, host key checks, command history and a local terminal in the desktop app.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>SSH Terminal</h1>
+
+<p>A full SSH terminal in your browser, desktop and phone</p>
+
+</div>
+
+<br />
+
+## Overview
+
+SSH Terminal is the terminal in Termix. It opens SSH sessions in tabs and split screen, and the desktop app also gets a local terminal.
+
+<br />
 
 ## Features
 
-- SSH terminal sessions with jump hosts and host key checks.
-- Keeps a session alive on the server after a disconnect, so reopening the tab picks up where you left off.
-- Command history with autocomplete.
-- A toolbar docked to the terminal with host tools and live stats.
-- Paste or upload images to the host from the terminal.
-- A local terminal in the desktop app.
-- Attaches to tmux sessions when Tmux Monitor is on.
+- Tabs and split screen
+- Jump hosts and host key verification
+- Sessions stay alive after a disconnect and reconnect on their own
+- Tmux and Mosh support
+- Themes, fonts and syntax highlighting
+- A toolbar with live stats and quick links to the host's other tools
+- Command history with autocomplete
+- Macros that automate logins and prompts
+- Send keystrokes to several terminals at once
+- A local terminal in the desktop app
 
-## Settings
-
-### Admin
-
-- Keep sessions after disconnect and Terminal Session Persistence: keep a disconnected terminal alive, and for how long.
-- Command History and Command history for new hosts: allow history, and whether new hosts start with it on.
-- Touch Input: options for using the terminal on a touch screen.
-- Image Storage: where pasted and uploaded images are kept, and how many and how large.
-
-### Host
-
-- Enable Terminal: offer an SSH terminal for this host.
-- Enable Terminal Toolbar: show the toolbar for this host.
-- Command History: record commands run on this host.
-
-## Permissions
-
-- `ssh-terminal.sessions`: Let other features, like session sharing and recording, reach your live terminal sessions. Admins and users have it by default.
-- `ssh-terminal.history`: Read command history. Admins and users have it by default.
+<br />
 
 ## Services
 
 Provides to other plugins:
 
-- `sessions.live` as `ssh`: find a live terminal session so it can be shared.
-- `terminal.history`: read a user's command history.
+- `sessions.live` as `ssh`: find a live terminal session so it can be shared
+- `terminal.history`: read a user's command history
 
 Uses from other plugins:
 
-- `tmux.sessions` to attach to tmux. Optional.
-- `sessions.sharing` for shared sessions. Optional.
-- `recordings.writer` to record sessions. Optional.
+- `tmux.sessions` to attach to tmux. Optional
+- `sessions.sharing` for shared sessions. Optional
+- `recordings.writer` to record sessions. Optional
 
-## Development
+<br />
 
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+## Support
 
-## Reconnecting a workspace
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
 
-Use **Reconnect all disconnected terminals** from a tab's context menu or the command palette after a network interruption. It retries mounted SSH terminal tabs, including hidden tabs and split panes, through their existing manual reconnect flow. Connected terminals and terminals already connecting or waiting for an automatic retry are skipped. Invoking the action again does not interrupt an in-flight connection; failures in one tab do not stop the others. The notification counts reconnect attempts started, not successful connections.
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
 
-This is a manual workspace action. It does not add automatic SSH-error retries, resume/network listeners, tmux-session restoration or scrollback preservation. Existing authentication prompts, host-key validation and manual-reconnect behavior still apply. Other session plugins participate only if they expose the SDK's optional `reconnectIfDisconnected` handle method.
+<br />
+
+## License
+
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

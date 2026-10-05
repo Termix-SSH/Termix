@@ -2,16 +2,16 @@
   "id": "ai",
   "name": "AI Assistant",
   "version": "1.0.0",
-  "description": "An AI assistant that can read your hosts, snippets, fleets, alerts and automations, and suggest changes for you to approve.",
+  "description": "An optional AI assistant that reads your setup and proposes changes for you to approve.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Productivity",
   "icon": "Sparkles",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": [

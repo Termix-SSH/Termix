@@ -2,7 +2,7 @@
   "name": "@termix/plugin-sdk",
   "version": "1.0.0",
   "description": "The contract between Termix core and a plugin: types, the capability catalog and the manifest schema.",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Termix-SSH/Termix.git",
@@ -75,6 +75,7 @@
     },
     "./tsconfig.plugin.json": "./tsconfig.plugin.json",
     "./schema/manifest.schema.json": "./schema/manifest.schema.json",
+    "./schema/changelog.schema.json": "./schema/changelog.schema.json",
     "./ui": {
       "types": "./dist/host/ui.d.ts",
       "default": "./dist/host/ui.js"

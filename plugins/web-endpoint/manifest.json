@@ -2,16 +2,16 @@
   "id": "web-endpoint",
   "name": "Web Endpoint",
   "version": "1.0.0",
-  "description": "Open a host's web UI in a tab or a separate desktop window, directly or over an SSH tunnel.",
+  "description": "Open a host's web UI inside Termix, directly or over an SSH tunnel.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Networking",
   "icon": "Globe",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": [

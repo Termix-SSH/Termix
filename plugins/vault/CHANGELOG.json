@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Termix-SSH/Termix/main/packages/plugin-sdk/schema/changelog.schema.json",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "changes": [
+        {
+          "type": "added",
+          "text": "Adds the Vault auth type to hosts"
+        },
+        {
+          "type": "added",
+          "text": "Sign in to Vault with OIDC when you connect"
+        },
+        {
+          "type": "added",
+          "text": "Never stores a Vault token or long-lived key"
+        },
+        {
+          "type": "added",
+          "text": "Reusable signer profiles you can share with everyone"
+        }
+      ]
+    }
+  ]
+}

@@ -1,28 +1,46 @@
-# Workspaces
+<div align="center">
 
-Save and restore named tab and split layouts.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>Workspaces</h1>
+
+<p>Save your tabs and reopen them in one click</p>
+
+</div>
+
+<br />
+
+## Overview
+
+Workspaces saves a set of open tabs with their split layout so you can bring them all back later.
+
+<br />
 
 ## Features
 
-- Save your open tabs and split layouts as a named workspace.
-- Open a workspace later to bring every tab back.
-- Tabs from a feature that is turned off are kept as placeholders.
-- Saved workspaces sync between the desktop app and a server.
+- Save your tabs and split layout as a named workspace
+- Reopen it in one click
+- Recover your last session
+- Syncs between the desktop app and a Termix server
 
-## Permissions
-
-- `workspaces.use`: Use workspaces. Admins and users have it by default.
+<br />
 
 ## Services
 
 Provides to other plugins:
 
-- `workspaces.saved`: list a user's saved workspaces.
+- `workspaces.saved`: list a user's saved workspaces
 
-## Development
+<br />
 
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+## Support
+
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
+
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
+
+<br />
+
+## License
+
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

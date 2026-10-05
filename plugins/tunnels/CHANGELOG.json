@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Termix-SSH/Termix/main/packages/plugin-sdk/schema/changelog.schema.json",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "changes": [
+        {
+          "type": "added",
+          "text": "Local, remote and dynamic SOCKS5 forwarding"
+        },
+        {
+          "type": "added",
+          "text": "Reconnects on its own when a tunnel drops"
+        },
+        {
+          "type": "added",
+          "text": "Start tunnels on boot"
+        },
+        {
+          "type": "added",
+          "text": "Route a tunnel through a second host"
+        },
+        {
+          "type": "added",
+          "text": "Client tunnels on your own computer from the desktop app, with presets you can save to the server"
+        }
+      ]
+    }
+  ]
+}

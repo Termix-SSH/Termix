@@ -2,16 +2,16 @@
   "id": "session-sharing",
   "name": "Session Sharing",
   "version": "1.0.0",
-  "description": "Share a live terminal or remote desktop session by link or with another user, and present sessions in collaboration rooms.",
+  "description": "Share live sessions by link or with another user, and present sessions to a group in meeting rooms.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Productivity",
   "icon": "Presentation",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": [

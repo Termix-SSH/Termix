@@ -9,7 +9,7 @@ export const TMXPLUG_CONTENTS = [
   "locales",
   "migrations",
   "README.md",
-  "CHANGELOG.md",
+  "CHANGELOG.json",
   "icon.svg",
 ];
 

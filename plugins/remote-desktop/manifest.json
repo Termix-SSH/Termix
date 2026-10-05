@@ -2,16 +2,16 @@
   "id": "remote-desktop",
   "name": "Remote Desktop",
   "version": "1.0.0",
-  "description": "RDP, VNC and Telnet sessions in the browser, with clipboard, file transfer, recording and sharing.",
+  "description": "RDP, VNC and Telnet sessions in your browser, with clipboard, file transfer, sharing and recording.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Terminal",
   "icon": "Monitor",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": [

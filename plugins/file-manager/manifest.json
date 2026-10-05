@@ -2,16 +2,16 @@
   "id": "file-manager",
   "name": "File Manager",
   "version": "1.0.0",
-  "description": "Browse, edit and transfer files over SFTP, including between two hosts.",
+  "description": "Browse, edit and move files over SFTP, including straight from one server to another.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Files & Transfer",
   "icon": "FolderSearch",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": [

@@ -1,0 +1,34 @@
+# Overview
+
+_Short summary of what this PR does_
+
+- [ ] Added: ...
+- [ ] Updated: ...
+- [ ] Removed: ...
+- [ ] Fixed: ...
+
+# Changes Made
+
+_Detailed explanation of changes (if needed)_
+
+- ...
+
+# Related Issues
+
+_Link any issues this PR addresses_
+
+- Closes #ISSUE_NUMBER
+- Related to #ISSUE_NUMBER
+
+# Screenshots / Demos
+
+_(Optional: add before/after screenshots, GIFs, or console output)_
+
+# Checklist
+
+- [ ] Code follows project style guidelines
+- [ ] Supports mobile and desktop UI/app (if applicable)
+- [ ] Added the change to `CHANGELOG.json`
+- [ ] `npm run test`, `npm run typecheck` and `npm run validate` pass
+- [ ] I have read `CONTRIBUTING.md`
+- [ ] This is not a translation request. See [docs](https://docs.termix.site/translations)

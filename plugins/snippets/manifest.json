@@ -2,16 +2,16 @@
   "id": "snippets",
   "name": "Snippets",
   "version": "1.0.0",
-  "description": "Save commands and notes, then run or paste them into a terminal. Supports variables and sharing.",
+  "description": "Save the commands you run often and run them in a terminal or on many hosts in one click.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Productivity",
   "icon": "Play",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": [

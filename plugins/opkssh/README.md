@@ -1,40 +1,38 @@
-# OPKSSH
+<div align="center">
 
-Connect to hosts with short-lived SSH certificates from OpenPubkey SSH, after signing in with your identity provider.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>OPKSSH</h1>
+
+<p>Sign in to your hosts with your identity provider</p>
+
+</div>
+
+<br />
+
+## Overview
+
+OPKSSH lets you connect to hosts with short-lived SSH certificates from [OpenPubkey SSH](https://github.com/openpubkey/opkssh), after signing in with your identity provider.
+
+<br />
 
 ## Features
 
-- Adds the OPKSSH login type to the host editor.
-- Signs you in with your identity provider in the browser and gets a short-lived SSH certificate from [OpenPubkey SSH](https://github.com/openpubkey/opkssh).
-- Keeps the certificate for 24 hours.
+- Adds the OPKSSH auth type to hosts
+- Sign in with your identity provider in the browser
+- Certificates last 24 hours, so you sign in once a day
+- Uses a pinned, checksum verified `opkssh` release
 
-## Setup
+<br />
 
-The config file lives at `<DATA_DIR>/plugins/opkssh/config.yml` and uses the OPKSSH config format. A template is written there the first time someone signs in without one. Installs upgraded from 2.8 have their old `<DATA_DIR>/.opk/config.yml` copied here.
+## Support
 
-`redirect_uris` in that file is the local listener OPKSSH opens on the Termix server. It must be localhost or left out. Register the public callback shown in the admin settings with your identity provider instead.
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
 
-### Binary
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
 
-The plugin runs one pinned release of `opkssh` and checks its SHA-256. It looks for the binary in this order:
+<br />
 
-1. `OPKSSH_BUNDLED_DIR/<asset>`, which defaults to `<cwd>/opkssh-bundled`. The Docker image ships it at `/app/opkssh-bundled`, so offline installs never download it.
-2. `<DATA_DIR>/plugins/opkssh/bin/<asset>`, a copy downloaded earlier.
-3. A download from the GitHub release.
+## License
 
-A copy with the wrong checksum is ignored. Set `OPKSSH_VERSION` to use another release, and `OPKSSH_SHA256` to its checksum.
-
-## Settings
-
-### Admin
-
-- Redirect URI: register `<base URL>/plugin-api/opkssh/callback` with your identity provider.
-- Use the old redirect URI: keep sending the 2.8 URI `<base URL>/host/opkssh-callback`. Upgraded installs keep this on until you turn it off.
-
-## Development
-
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

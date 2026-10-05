@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Termix-SSH/Termix/main/packages/plugin-sdk/schema/changelog.schema.json",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "changes": [
+        {
+          "type": "added",
+          "text": "Warpgate's browser approval shows as a sign in dialog"
+        },
+        {
+          "type": "added",
+          "text": "Your saved password is sent to Warpgate for you"
+        }
+      ]
+    }
+  ]
+}

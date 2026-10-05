@@ -2,16 +2,16 @@
   "id": "ssh-terminal",
   "name": "SSH Terminal",
   "version": "1.0.0",
-  "description": "SSH terminal sessions with jump hosts, host key checks, command history and a local terminal in the desktop app.",
+  "description": "SSH terminal sessions with tabs, split screen, history, macros and a local terminal in the desktop app.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Terminal",
   "icon": "SquareTerminal",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": [

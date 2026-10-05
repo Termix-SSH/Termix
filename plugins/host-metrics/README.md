@@ -1,52 +1,48 @@
-# Host Metrics
+<div align="center">
 
-Live CPU, memory, disk, network and process stats, plus tools to manage services, packages, firewall rules, cron jobs, users and more.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>Host Metrics</h1>
+
+<p>Live stats for your servers, plus tools to manage them</p>
+
+</div>
+
+<br />
+
+## Overview
+
+Host Metrics shows what is happening on your servers, live and over time, and lets you manage common things on them without opening a terminal. It works over SSH on most Linux servers with nothing to install.
+
+<br />
 
 ## Features
 
-- Live CPU, memory, disk, network, temperature and process stats.
-- History charts for each host.
-- Tools to manage services, packages, firewall rules, cron jobs, users, SSL certificates, logs and WireGuard.
-- A drag and drop layout you can change per host.
-- Other features can add their own tools. Tailscale does.
+- CPU, memory, disk, network, temperature, NVIDIA GPU, processes, ports and logins
+- History charts for each host
+- Manage services, packages, cron jobs, firewall rules, users, SSL certificates, logs and WireGuard
+- Health checks for your hosts and services
+- A layout you can rearrange per host
+- Live stats in the terminal toolbar
 
-## Setup
-
-The online dot in the host list comes from Termix itself, not this plugin. A working metrics login is what marks a reachable host as online.
-
-## Settings
-
-### Admin
-
-- Metrics interval (seconds): how often a host is checked while someone views it.
-- History retention (days): how long history is kept.
-- Metrics on for new hosts: whether new hosts start with metrics turned on.
-
-### User
-
-- Temperature unit: Celsius or Fahrenheit.
-
-### Host
-
-- Collect metrics: turn metrics on for this host.
-- Metrics interval (seconds): override the admin interval.
-- Enabled widgets: which widgets to show.
-- Excluded mounts and Monitored paths: which disks to hide or watch.
-
-## Permissions
-
-- `host-metrics.use`: View metrics and use the host tools. Admins and users have it by default.
+<br />
 
 ## Services
 
 Provides to other plugins:
 
-- `host-metrics.viewers`: read a host's current metrics.
+- `host-metrics.viewers`: read a host's current metrics
 
-## Development
+<br />
 
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+## Support
+
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
+
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
+
+<br />
+
+## License
+
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

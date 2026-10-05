@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Termix-SSH/Termix/main/packages/plugin-sdk/schema/changelog.schema.json",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "changes": [
+        {
+          "type": "added",
+          "text": "Any OpenID Connect provider, plus GitHub and Google"
+        },
+        {
+          "type": "added",
+          "text": "More than one provider, each with its own login button"
+        },
+        {
+          "type": "added",
+          "text": "Make members of an admin group Termix admins"
+        },
+        {
+          "type": "added",
+          "text": "Limit sign in to certain users"
+        },
+        {
+          "type": "added",
+          "text": "Back-channel logout"
+        }
+      ]
+    }
+  ]
+}

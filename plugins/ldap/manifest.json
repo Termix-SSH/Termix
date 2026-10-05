@@ -2,16 +2,16 @@
   "id": "ldap",
   "name": "LDAP",
   "version": "1.0.0",
-  "description": "Sign in with a username and password checked against an LDAP or Active Directory server.",
+  "description": "Sign in with your LDAP or Active Directory username and password.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Access & Security",
   "icon": "Server",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": [

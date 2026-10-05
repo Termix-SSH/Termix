@@ -2,16 +2,16 @@
   "id": "serial",
   "name": "Serial",
   "version": "1.0.0",
-  "description": "Open a serial console to a device plugged into your computer.",
+  "description": "Open a serial console to a router, switch or other device plugged into your computer.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Terminal",
   "icon": "Usb",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": ["network:serve", "device:serial", "ui:surface"],

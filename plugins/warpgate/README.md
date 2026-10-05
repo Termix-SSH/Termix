@@ -1,23 +1,36 @@
-# Warpgate
+<div align="center">
 
-Connect through a Warpgate SSH bastion. Its browser approval shows as a sign-in dialog and your saved password is sent for you.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>Warpgate</h1>
+
+<p>Connect through a Warpgate SSH bastion</p>
+
+</div>
+
+<br />
+
+## Overview
+
+Warpgate lets you connect to hosts through a [Warpgate](https://github.com/warp-tech/warpgate) SSH bastion.
+
+<br />
 
 ## Features
 
-- Connect through a [Warpgate](https://github.com/warp-tech/warpgate) SSH bastion.
-- Warpgate's browser approval shows as a sign-in dialog.
-- Your saved password is sent to Warpgate for you.
+- Warpgate's browser approval shows as a sign in dialog
+- Your saved password is sent to Warpgate for you
 
-## Settings
+<br />
 
-### Host
+## Support
 
-- Warpgate Gateway: this host connects through Warpgate.
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
 
-## Development
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
 
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+<br />
+
+## License
+
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

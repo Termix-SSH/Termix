@@ -1,35 +1,38 @@
-# Termix Identity
+<div align="center">
 
-Publish your SSH public keys under a public handle and run your own SSH certificate authority.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>Termix Identity</h1>
+
+<p>Publish your SSH keys and run your own SSH certificate authority</p>
+
+</div>
+
+<br />
+
+## Overview
+
+Termix Identity is a built-in take on sshid.io. Claim a handle, publish your SSH public keys at a public URL, and issue SSH certificates from your own certificate authority.
+
+<br />
 
 ## Features
 
-- Claim a public handle and publish your SSH public keys under it.
-- Run your own SSH certificate authority for each handle.
-- Issue short-lived certificates for your Ed25519 keys.
+- Publish your public keys under a handle
+- Add your keys to any server with one command
+- Generate new keys or import saved ones
+- Your own SSH certificate authority
 
-## Setup
+<br />
 
-Any server can pull your keys into `authorized_keys`:
+## Support
 
-```bash
-curl -fsSL https://<termix>/plugin-api/termix-identity/u/<handle> >> ~/.ssh/authorized_keys
-```
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
 
-Add `/<ALGO>`, for example `/ED25519`, to get only one key type. This URL needs no login and is never cached.
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
 
-To use the certificate authority, point `TrustedUserCAKeys` on your servers at the public key from `/u/<handle>/ca`. Rotating the CA revokes every certificate it issued. Certificates are downloaded once and not stored, so Termix hosts do not use them to connect.
+<br />
 
-The 2.8 URLs under `/termix-id/u/` redirect here, so existing scripts keep working. Use `curl -L` to follow the redirect.
+## License
 
-## Permissions
-
-- `termix-identity.use`: Claim a handle, publish keys and run a CA. Admins and users have it by default.
-
-## Development
-
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

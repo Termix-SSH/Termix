@@ -2,16 +2,16 @@
   "id": "totp",
   "name": "TOTP",
   "version": "1.0.0",
-  "description": "Ask for a code from an authenticator app after signing in, with backup codes in case you lose your phone.",
+  "description": "Two-factor sign in with a code from an authenticator app, with backup codes.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Access & Security",
   "icon": "ShieldCheck",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": [

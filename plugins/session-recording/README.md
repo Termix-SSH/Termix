@@ -1,39 +1,46 @@
-# Session Recording
+<div align="center">
 
-Record terminal sessions and play them back or download them later.
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>Session Recording</h1>
+
+<p>Record sessions and play them back later</p>
+
+</div>
+
+<br />
+
+## Overview
+
+Session Recording records your terminal and remote desktop sessions so you can watch them again later.
+
+<br />
 
 ## Features
 
-- Records SSH terminal sessions as they happen.
-- Play a recording back, skip through it and copy its text.
-- Download a recording as a file or as plain text.
-- Removes recordings older than a set number of days.
-- Keeps recordings when a user is deleted, with the user's name removed.
+- Record SSH, RDP and VNC sessions
+- Play recordings back at any speed
+- Download a recording as a file or plain text
+- Old recordings are removed after a number of days you choose
 
-## Settings
-
-### Admin
-
-- Retention (days): remove recordings older than this. Checked at startup and once a day.
-
-### Host
-
-- Enable session recording: record sessions on this host.
-
-## Permissions
-
-- `session-recording.view`: View and download session recordings. Admins and users have it by default.
+<br />
 
 ## Services
 
 Provides to other plugins:
 
-- `recordings.writer`: start a recording and add to it as a session runs, or save a recording that is already finished.
+- `recordings.writer`: start a recording and add to it as a session runs, or save a recording that is already finished
 
-## Development
+<br />
 
-```bash
-npm run build      # build into dist/
-npm run test       # run this plugin's tests
-npm run typecheck  # type-check this plugin
-```
+## Support
+
+To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
+
+For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
+
+<br />
+
+## License
+
+Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.

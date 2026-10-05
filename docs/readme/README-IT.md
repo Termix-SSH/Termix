@@ -435,7 +435,9 @@ Ti interessa uno spazio a pagamento per sostenere lo sviluppo? Scrivi a [mail@te
 
 ## Supporto
 
-Ti serve aiuto o vuoi proporre una funzionalità? Apri una [nuova issue](https://github.com/Termix-SSH/Support/issues) con più dettagli possibile, in inglese se ci riesci. Puoi anche chiedere nel canale di supporto su [Discord](https://discord.gg/jVQGdvHDrf), anche se lì le risposte possono richiedere più tempo.
+Per segnalare un bug o proporre una funzionalità, apri un [ticket di supporto](https://github.com/Termix-SSH/Support/issues/new/choose). Devi aver effettuato l'accesso a GitHub. Aggiungi più dettagli possibile, preferibilmente in inglese.
+
+Per discussioni e domande, unisciti al server [Discord](https://discord.gg/jVQGdvHDrf).
 
 <br />
 
@@ -501,6 +503,6 @@ Tutte le funzionalità pianificate sono su [Projects](https://github.com/orgs/Te
 
 ## Licenza
 
-Distribuito con licenza Apache versione 2.0. Vedi `LICENSE` per maggiori informazioni.
+Distribuito con licenza Apache versione 2.0. Vedi [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) per maggiori informazioni.
 </content>
 </invoke>

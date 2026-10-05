@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Termix-SSH/Termix/main/packages/plugin-sdk/schema/changelog.schema.json",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "changes": [
+        {
+          "type": "added",
+          "text": "Adds the Step CA auth type to hosts"
+        },
+        {
+          "type": "added",
+          "text": "Sign in with your identity provider in the browser"
+        },
+        {
+          "type": "added",
+          "text": "Certificates are kept until they expire"
+        },
+        {
+          "type": "added",
+          "text": "No `step` binary needed"
+        }
+      ]
+    }
+  ]
+}

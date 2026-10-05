@@ -2,16 +2,16 @@
   "id": "session-recording",
   "name": "Session Recording",
   "version": "1.0.0",
-  "description": "Record terminal sessions and play them back or download them later.",
+  "description": "Record terminal and remote desktop sessions and play them back or download them later.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Terminal",
   "icon": "ScrollText",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": [

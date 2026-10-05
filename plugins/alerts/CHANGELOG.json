@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Termix-SSH/Termix/main/packages/plugin-sdk/schema/changelog.schema.json",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "changes": [
+        {
+          "type": "added",
+          "text": "One inbox for alerts from every part of Termix"
+        },
+        {
+          "type": "added",
+          "text": "Popups for new alerts"
+        },
+        {
+          "type": "added",
+          "text": "Send alerts to Discord, ntfy, email or a webhook"
+        },
+        {
+          "type": "added",
+          "text": "Rules that pick which alerts go where"
+        },
+        {
+          "type": "added",
+          "text": "Optional news from the Termix team, like security notices and releases"
+        }
+      ]
+    }
+  ]
+}

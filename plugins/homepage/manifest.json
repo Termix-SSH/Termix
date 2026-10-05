@@ -2,16 +2,16 @@
   "id": "homepage",
   "name": "Homepage",
   "version": "1.0.0",
-  "description": "A custom widget page and service links for your servers and services.",
+  "description": "A drag and drop widget page for your servers and services, plus service links for the dashboard.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Productivity",
   "icon": "LayoutGrid",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": ["db:own", "network:serve", "network:outbound", "ui:surface"],

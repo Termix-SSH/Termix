@@ -434,7 +434,9 @@ Termix 免费且开源，没有订阅也没有付费方案。如果你觉得它�
 
 ## 支持
 
-需要帮助或想提功能建议？可以[新建一个 issue](https://github.com/Termix-SSH/Support/issues)，尽量写清楚细节，如果方便请用英文。你也可以在 [Discord](https://discord.gg/jVQGdvHDrf) 的支持频道提问，不过那边回复可能会慢一些。
+要报告 bug 或提功能建议，请提交一个[支持工单](https://github.com/Termix-SSH/Support/issues/new/choose)。你需要先登录 GitHub。请尽量写清楚细节，最好用英文。
+
+讨论和提问请加入 [Discord](https://discord.gg/jVQGdvHDrf) 服务器。
 
 <br />
 
@@ -500,5 +502,5 @@ Termix 免费且开源，没有订阅也没有付费方案。如果你觉得它�
 
 ## 许可证
 
-基于 Apache License 2.0 发布。详见 `LICENSE`。
+基于 Apache License 2.0 发布。详见 [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE)。
 </content>

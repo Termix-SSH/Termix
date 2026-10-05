@@ -2,16 +2,16 @@
   "id": "proxmox",
   "name": "Proxmox",
   "version": "1.0.0",
-  "description": "Find Proxmox VE guests through an SSH host, import them as hosts and keep them in sync.",
+  "description": "Import Proxmox VE guests as hosts, keep them in sync and watch node stats.",
   "author": {
     "name": "Termix"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Infrastructure",
   "icon": "Server",
   "engine": {
-    "termix": ">=2.9.0",
+    "termix": ">=26.10.0",
     "api": "1"
   },
   "capabilities": [
