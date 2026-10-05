@@ -1,9 +1,5 @@
 name: Publish SDK
 
-# Publishes packages/plugin-sdk to npm as @termix-ssh/plugin-sdk with trusted
-# publishing, so there is no npm token. The version is whatever
-# packages/plugin-sdk/package.json says; bump it before running this.
-
 on:
   workflow_dispatch:
     inputs:
@@ -56,7 +52,6 @@ jobs:
 
       - run: npm run build:sdk
 
-      # The SDK's ui and test host are built from core, so check core too.
       - run: npm run lint
 
       - run: npm run type-check
