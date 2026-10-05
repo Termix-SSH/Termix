@@ -323,7 +323,7 @@
     "sideBySide": "Nebeneinander",
     "inline": "Inline",
     "fileComparison": "Dateivergleich: {{file1}} vs. {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "Die Datei ist zu groß (> 10 MB) und kann aus Sicherheitsgründen nicht als Textdatei geöffnet werden.",
     "sshConnectionFailed": "SSH-Verbindung fehlgeschlagen. Bitte überprüfen Sie Ihre Verbindung zu {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Fehler beim Laden der Datei: {{error}}",
     "connecting": "Verbindung wird hergestellt...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Nutzen Sie ein komfortables Layout",
     "cannotLoadPdf": "PDF kann nicht geladen werden",
     "pdfLoadError": "Beim Laden dieser PDF-Datei ist ein Fehler aufgetreten.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "PDF-Viewer wird geladen...",
     "loadingPage": "Seite wird geladen...",
     "cancel": "Abbrechen",
     "copiedItems_one": "Kopierter Eintrag {{count}}",
@@ -384,15 +384,15 @@
     "downloadToPlay": "Laden Sie es herunter, um es woanders abzuspielen.",
     "cannotPreviewType": "Vorschau dieses Dateityps nicht möglich",
     "cannotPreviewTypeHint": "Dieser Dateityp hat keine Vorschau. Laden Sie ihn herunter, um ihn in einer anderen App zu öffnen.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "Datei wird geladen...",
+    "loadingImage": "Bild wird geladen...",
+    "loadingEditor": "Editor wird geladen...",
+    "loadingPreview": "Vorschau wird geladen...",
+    "loadingAudio": "Audioplayer wird geladen...",
+    "emptyPreview": "Noch nichts zur Vorschau...",
+    "revert": "Zurücksetzen",
+    "openAsText": "Als Text öffnen",
+    "confirmOpenAsText": "Möchten Sie diese Datei weiterhin als Text öffnen? Dies kann Ihren Browser verlangsamen."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "Server → Ziel (lokal): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "Dateimanager"
   }
 }

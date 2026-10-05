@@ -214,25 +214,25 @@
       "resizeMethod": "Mètode de redimensionament",
       "driveNamePlaceholder": "Termix Drive",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "any": "Qualsevol",
+        "auto": "Automàtic",
+        "nlaExtended": "NLA ampliat",
+        "color8": "8 bits",
+        "color16": "16 bits",
+        "color24": "24 bits",
+        "color32": "32 bits",
+        "displayUpdate": "Actualització de la pantalla",
+        "reconnect": "Reconnecta",
+        "preserve": "Preservar",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
         "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "remote": "Remot",
+        "failsafe": "a prova de fallades",
+        "blackOnWhite": "Negre sobre blanc",
+        "whiteOnBlack": "Blanc sobre negre",
+        "grayOnBlack": "Gris sobre negre",
+        "greenOnBlack": "Verd sobre negre"
       }
     },
     "remoteDesktop": "Escriptori remot",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Cal un servidor remot. Connecteu un servidor remot a Configuració per utilitzar aquest tipus de connexió."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Escriptori remot"
   }
 }

@@ -323,7 +323,7 @@
     "sideBySide": "Naast elkaar",
     "inline": "Inline",
     "fileComparison": "Bestandsvergelijking: {{file1}} versus {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "Het bestand is te groot (> 10 MB) en kan om veiligheidsredenen niet als tekstbestand worden geopend.",
     "sshConnectionFailed": "SSH-verbinding mislukt. Controleer uw verbinding met {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Bestand laden mislukt: {{error}}",
     "connecting": "Verbinden...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Gebruik een comfortabele lay-out.",
     "cannotLoadPdf": "Kan PDF niet laden",
     "pdfLoadError": "Er is een fout opgetreden bij het laden van dit PDF-bestand.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "PDF-viewer wordt geladen...",
     "loadingPage": "Pagina laden...",
     "cancel": "Annuleren",
     "copiedItems_one": "Gekopieerd {{count}} item",
@@ -384,15 +384,15 @@
     "downloadToPlay": "Download het om het elders te spelen.",
     "cannotPreviewType": "Kan dit bestandstype niet bekijken.",
     "cannotPreviewTypeHint": "Dit bestandstype heeft geen voorbeeldweergave. Download het om het in een andere app te openen.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "Bestand laden...",
+    "loadingImage": "Afbeelding laden...",
+    "loadingEditor": "Editor wordt geladen...",
+    "loadingPreview": "Voorbeeldweergave laden...",
+    "loadingAudio": "Audioplayer wordt geladen...",
+    "emptyPreview": "Nog niets om te bekijken...",
+    "revert": "Terugdraaien",
+    "openAsText": "Openen als tekst",
+    "confirmOpenAsText": "Wilt u dit bestand als tekstbestand blijven openen? Dit kan uw browser vertragen."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "Server → bestemming (lokaal): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "Bestandsbeheerder"
   }
 }

@@ -323,7 +323,7 @@
     "sideBySide": "并排",
     "inline": "内联",
     "fileComparison": "文件比较: {{file1}} 对比 {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "文件过大（> 10MB），出于安全原因无法以文本格式打开。",
     "sshConnectionFailed": "SSH 连接失败。请检查您到 {{name}} ({{ip}}:{{port}}) 的连接",
     "loadFileFailed": "加载文件失败: {{error}}",
     "connecting": "连接中...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "采用舒适的布局",
     "cannotLoadPdf": "无法加载 PDF",
     "pdfLoadError": "加载此 PDF 文件时出错。",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "正在加载PDF查看器...",
     "loadingPage": "正在加载页面...",
     "cancel": "取消",
     "copiedItems_one": "已复制 {{count}} 项目",
@@ -384,15 +384,15 @@
     "downloadToPlay": "下载后即可在其他地方播放",
     "cannotPreviewType": "无法预览此文件类型",
     "cannotPreviewTypeHint": "此文件类型没有预览。请下载后在其他应用程序中打开。",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "正在加载文件...",
+    "loadingImage": "正在加载图片……",
+    "loadingEditor": "正在加载编辑器...",
+    "loadingPreview": "正在加载预览……",
+    "loadingAudio": "正在加载音频播放器...",
+    "emptyPreview": "目前还没有预览内容……",
+    "revert": "恢复",
+    "openAsText": "以文本格式打开",
+    "confirmOpenAsText": "是否继续以文本格式打开此文件？这可能会降低浏览器的运行速度。"
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "服务器 → 目标 (本地)：{{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "文件管理器"
   }
 }

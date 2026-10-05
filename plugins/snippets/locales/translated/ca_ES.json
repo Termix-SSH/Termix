@@ -233,6 +233,6 @@
   "selectAll": "Tot",
   "selectNone": "Cap",
   "plugin": {
-    "name": "Snippets"
+    "name": "Fragments"
   }
 }

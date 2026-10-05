@@ -323,7 +323,7 @@
     "sideBySide": "Бок о бок",
     "inline": "Встроенный",
     "fileComparison": "Сравнение файлов: {{file1}} и {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "Файл слишком большой (> 10 МБ) и не может быть открыт как текстовый файл по соображениям безопасности.",
     "sshConnectionFailed": "Ошибка SSH-подключения. Проверьте подключение к {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Не удалось загрузить файл: {{error}}",
     "connecting": "Подключение...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Используйте удобную планировку",
     "cannotLoadPdf": "Не удаётся загрузить PDF",
     "pdfLoadError": "Ошибка при загрузке этого PDF-файла.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "Загрузка программы просмотра PDF-файлов...",
     "loadingPage": "Загрузка страницы...",
     "cancel": "Отмена",
     "copiedItems_one": "Скопировано {{count}} элемент",
@@ -384,15 +384,15 @@
     "downloadToPlay": "Скачайте, чтобы играть в другом месте.",
     "cannotPreviewType": "Предварительный просмотр файла этого типа невозможен.",
     "cannotPreviewTypeHint": "Для этого типа файла предварительный просмотр недоступен. Скачайте его, чтобы открыть в другом приложении.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "Загрузка файла...",
+    "loadingImage": "Загрузка изображения...",
+    "loadingEditor": "Загрузка редактора...",
+    "loadingPreview": "Загрузка предварительного просмотра...",
+    "loadingAudio": "Загрузка аудиоплеера...",
+    "emptyPreview": "Пока ничего для предварительного просмотра нет...",
+    "revert": "Возвращаться",
+    "openAsText": "Открыть как текст",
+    "confirmOpenAsText": "Вы хотите продолжить открывать этот файл как текстовый? Это может замедлить работу вашего браузера."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "Сервер → назначение (локально): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "Файловый менеджер"
   }
 }

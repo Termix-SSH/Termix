@@ -212,12 +212,12 @@
     "sidebar": {
       "automations": {
         "options": {
-          "connect": "connect",
-          "disconnect": "disconnect",
-          "offline": "offline",
-          "online": "online",
-          "failing": "failing",
-          "recovered": "recovered"
+          "connect": "連線",
+          "disconnect": "中斷連線",
+          "offline": "離線",
+          "online": "在線",
+          "failing": "失敗",
+          "recovered": "恢復"
         }
       }
     }

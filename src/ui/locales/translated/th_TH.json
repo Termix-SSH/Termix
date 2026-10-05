@@ -116,8 +116,8 @@
     "updateLinkLabel": "มีการอัปเดตแล้ว โปรดดูรายละเอียดการเปลี่ยนแปลงได้ที่ GitHub"
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "เลื่อนแท็บไปทางซ้าย",
+    "scrollTabsRight": "เลื่อนแท็บไปทางขวา",
     "close": "ปิด",
     "minimize": "ลดขนาด",
     "online": "ออนไลน์",
@@ -189,10 +189,10 @@
     "add": "เพิ่ม",
     "update": "อัปเดต",
     "noResults": "ไม่พบผลลัพธ์",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "แถบด้านข้าง",
+    "mobileSidebarDescription": "แสดงแถบด้านข้างสำหรับมือถือ",
+    "toggleSidebar": "สลับแถบด้านข้าง",
+    "search": "ค้นหา..."
   },
   "onboarding": {
     "stepCounter": "ขั้นตอน {{current}} ของ {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "อุโมงค์",
     "serverStats": "เมตริกโฮสต์",
     "status": {
-      "online": "Online",
+      "online": "ออนไลน์",
       "offline": "ออฟไลน์",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "กำลังตรวจสอบ",
+      "monitoringDisabled": "ตรวจสอบสถานะเรียบร้อยแล้ว",
       "label": "สถานะ"
     },
     "folderRenamed": "เปลี่ยนชื่อโฟลเดอร์ \"{{oldName}}\" เป็น \"{{newName}}\" สำเร็จแล้ว",
@@ -482,7 +482,7 @@
     "sameHost": "โฮสต์นี้ (อุโมงค์ตรง)",
     "statusChecksLabel": "การตรวจสอบสถานะ",
     "enableStatusChecks": "เปิดใช้งานการตรวจสอบสถานะ",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "ตรวจสอบความสามารถในการเข้าถึงโฮสต์ เซสชันที่ใช้งานอยู่จะข้ามการตรวจสอบเพิ่มเติม การตรวจสอบ SSH ที่ไม่มีเซสชันที่ใช้งานอยู่ อาจทำให้กฎ Fail2Ban ทำงานอย่างเข้มงวด ดังนั้น ให้ปิดใช้งานการตรวจสอบสถานะบนโฮสต์เหล่านั้น",
     "useGlobalInterval": "ใช้ช่วงเวลาทั่วโลก",
     "useGlobalIntervalDesc": "แทนที่ด้วยช่วงเวลาตรวจสอบสถานะทั่วทั้งเซิร์ฟเวอร์",
     "checkIntervalS": "ช่วงเวลาตรวจสอบ",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "ปัจจัยที่สองนี้ไม่สามารถแสดงบนหน้าจอนี้ได้ โปรดติดต่อผู้ดูแลระบบ",
     "serverAuthentication": "การเข้าสู่ระบบเซิร์ฟเวอร์",
     "minChars": "อย่างน้อย {{min}} ตัวอักษร",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "วิธีการตรวจสอบการโหลดซ้ำ"
   },
   "hostKey": {
     "verifyNewHost": "ตรวจสอบคีย์โฮสต์ SSH",
@@ -1126,12 +1126,12 @@
     "keyPassword": "รหัสผ่านสำคัญ",
     "pastePrivateKey": "วางรหัสส่วนตัวของคุณที่นี่...",
     "enterPassword": "ป้อนรหัสผ่านของคุณ",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "เช่น CI Pipeline",
+    "credentialName": "เช่น คีย์ SSH สำหรับการผลิต",
+    "optionalDetails": "รายละเอียดเพิ่มเติม (ไม่บังคับ)...",
+    "sshUsername": "เช่น root หรือ deploy",
+    "hostAddress": "10.0.0.1 หรือ example.com",
+    "hostName": "เช่น การผลิตเว็บเซิร์ฟเวอร์"
   },
   "dashboard": {
     "title": "แดชบอร์ด",
@@ -1514,9 +1514,9 @@
     "sslNames": "ปก {{names}}",
     "sslManualTitle": "อัปโหลดใบรับรอง",
     "updateExternalAutoProvisionFailed": "ไม่สามารถอัปเดตการตั้งค่าการสร้างอัตโนมัติได้",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "แท็กโฮสต์ที่กำหนดไว้ล่วงหน้า",
+    "hostTagsDesc": "แท็กที่ผู้ใช้ทุกคนเห็นเป็นคำแนะนำในโปรแกรมแก้ไขโฮสต์ กด Space หรือ Enter เพื่อเพิ่มแท็ก การลบแท็กในที่นี้ไม่ได้ลบแท็กออกจากโฮสต์",
+    "hostTagsError": "ไม่สามารถโหลดหรือบันทึกคำแนะนำแท็กโฮสต์ได้"
   },
   "newUi": {
     "sidebar": {

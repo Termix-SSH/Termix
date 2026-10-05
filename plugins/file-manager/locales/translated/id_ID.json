@@ -323,7 +323,7 @@
     "sideBySide": "Berdampingan",
     "inline": "Sejajar",
     "fileComparison": "Perbandingan File: {{file1}} vs {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "Ukuran file terlalu besar (> 10MB) dan tidak dapat dibuka sebagai teks karena alasan keamanan.",
     "sshConnectionFailed": "Koneksi SSH gagal. Harap periksa koneksi Anda ke {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Gagal memuat file: {{error}}",
     "connecting": "Menghubungkan...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Gunakan tata letak yang nyaman.",
     "cannotLoadPdf": "Tidak dapat memuat PDF",
     "pdfLoadError": "Terjadi kesalahan saat memuat file PDF ini.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "Sedang memuat penampil PDF...",
     "loadingPage": "Sedang memuat halaman...",
     "cancel": "Membatalkan",
     "copiedItems_one": "Item {{count}} disalin",
@@ -384,15 +384,15 @@
     "downloadToPlay": "Unduh untuk memainkannya di tempat lain",
     "cannotPreviewType": "Tidak dapat melihat pratinjau tipe file ini.",
     "cannotPreviewTypeHint": "Jenis file ini tidak memiliki pratinjau. Unduh untuk membukanya di aplikasi lain.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "Memuat file...",
+    "loadingImage": "Sedang memuat gambar...",
+    "loadingEditor": "Sedang memuat editor...",
+    "loadingPreview": "Memuat pratinjau...",
+    "loadingAudio": "Memuat pemutar audio...",
+    "emptyPreview": "Belum ada yang bisa dipratinjau...",
+    "revert": "Kembali",
+    "openAsText": "Buka sebagai Teks",
+    "confirmOpenAsText": "Apakah Anda ingin terus membuka file ini sebagai teks? Ini dapat memperlambat browser Anda."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "Server → tujuan (lokal): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "Pengelola File"
   }
 }

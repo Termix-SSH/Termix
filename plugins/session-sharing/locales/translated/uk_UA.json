@@ -184,6 +184,6 @@
     "sharedSessionLabel": "{{hostName}} (спільний доступ)"
   },
   "plugin": {
-    "name": "Session Sharing"
+    "name": "Спільне використання сеансу"
   }
 }

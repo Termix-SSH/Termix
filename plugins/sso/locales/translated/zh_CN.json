@@ -20,12 +20,12 @@
     "nameRequired": "必须填写显示名称。",
     "type": "提供商类型",
     "enabled": "已启用",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "在登录界面显示该提供商的登录按钮。",
+    "dialogDesc": "连接身份提供商，以便用户可以使用该身份提供商登录。",
+    "sectionGeneral": "常规",
+    "sectionCredentials": "客户",
+    "sectionClaims": "索赔",
+    "sectionAccess": "使用权",
     "save": "保存提供商",
     "saving": "保存中...",
     "saved": "已保存",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "单点登录"
   }
 }

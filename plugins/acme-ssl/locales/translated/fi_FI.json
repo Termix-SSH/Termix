@@ -56,6 +56,6 @@
     "issued": "Sertifikaatti myönnetty ja asennettu"
   },
   "plugin": {
-    "name": "ACME Certificates"
+    "name": "ACME-sertifikaatit"
   }
 }

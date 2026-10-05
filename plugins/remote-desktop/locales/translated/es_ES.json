@@ -214,25 +214,25 @@
       "resizeMethod": "Método de redimensionamiento",
       "driveNamePlaceholder": "Unidad Termix",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "any": "Cualquier",
+        "auto": "Automático",
+        "nlaExtended": "NLA Extendido",
+        "color8": "8 bits",
+        "color16": "16 bits",
+        "color24": "24 bits",
+        "color32": "32 bits",
+        "displayUpdate": "Actualización de pantalla",
+        "reconnect": "Reconectar",
+        "preserve": "Preservar",
         "unix": "Unix (LF)",
-        "windows": "Windows (CRLF)",
+        "windows": "Ventanas (CRLF)",
         "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "remote": "Remoto",
+        "failsafe": "a prueba de fallos",
+        "blackOnWhite": "Negro sobre blanco",
+        "whiteOnBlack": "Blanco sobre negro",
+        "grayOnBlack": "Gris sobre negro",
+        "greenOnBlack": "Verde sobre negro"
       }
     },
     "remoteDesktop": "Escritorio remoto",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Se requiere un servidor remoto. Conecte un servidor remoto en Configuración para usar este tipo de conexión."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Escritorio remoto"
   }
 }

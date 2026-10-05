@@ -212,12 +212,12 @@
     "sidebar": {
       "automations": {
         "options": {
-          "connect": "connect",
-          "disconnect": "disconnect",
-          "offline": "offline",
-          "online": "online",
-          "failing": "failing",
-          "recovered": "recovered"
+          "connect": "συνδέω",
+          "disconnect": "αποσυνδέω",
+          "offline": "εκτός σύνδεσης",
+          "online": "διαδικτυακά",
+          "failing": "έλλειψη",
+          "recovered": "ανακτήθηκε"
         }
       }
     }

@@ -214,25 +214,25 @@
       "resizeMethod": "Metodo di ridimensionamento",
       "driveNamePlaceholder": "Termix Drive",
       "options": {
-        "any": "Any",
+        "any": "Qualunque",
         "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "nlaExtended": "NLA esteso",
+        "color8": "8 bit",
+        "color16": "16 bit",
+        "color24": "24 bit",
+        "color32": "32 bit",
+        "displayUpdate": "Aggiornamento della visualizzazione",
+        "reconnect": "Riconnetti",
+        "preserve": "Conserva",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "local": "Locale",
+        "remote": "Remoto",
+        "failsafe": "Sistema di sicurezza",
+        "blackOnWhite": "Nero su bianco",
+        "whiteOnBlack": "Bianco su nero",
+        "grayOnBlack": "Grigio su nero",
+        "greenOnBlack": "Verde su nero"
       }
     },
     "remoteDesktop": "Desktop remoto",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "È necessario un server remoto. Per utilizzare questo tipo di connessione, collega un server remoto nelle Impostazioni."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Desktop remoto"
   }
 }

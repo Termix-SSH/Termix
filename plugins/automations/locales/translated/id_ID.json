@@ -212,12 +212,12 @@
     "sidebar": {
       "automations": {
         "options": {
-          "connect": "connect",
-          "disconnect": "disconnect",
+          "connect": "menghubungkan",
+          "disconnect": "memutuskan",
           "offline": "offline",
-          "online": "online",
-          "failing": "failing",
-          "recovered": "recovered"
+          "online": "on line",
+          "failing": "kegagalan",
+          "recovered": "pulih"
         }
       }
     }

@@ -214,25 +214,25 @@
       "resizeMethod": "Átméretezési módszer",
       "driveNamePlaceholder": "Termix Drive",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "any": "Bármilyen",
+        "auto": "Autó",
+        "nlaExtended": "NLA kiterjesztve",
+        "color8": "8 bites",
+        "color16": "16 bites",
+        "color24": "24 bites",
+        "color32": "32 bites",
+        "displayUpdate": "Kijelzőfrissítés",
+        "reconnect": "Újracsatlakozás",
+        "preserve": "Megőrzés",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "local": "Helyi",
+        "remote": "Távoli",
+        "failsafe": "meghibásodásbiztos",
+        "blackOnWhite": "Fekete-fehér",
+        "whiteOnBlack": "Fehér a feketén",
+        "grayOnBlack": "Szürke feketén",
+        "greenOnBlack": "Zöld a feketén"
       }
     },
     "remoteDesktop": "Távoli asztal",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Távoli szerver szükséges. Csatlakoztasson egy távoli szervert a Beállításokban a kapcsolattípus használatához."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Távoli asztal"
   }
 }

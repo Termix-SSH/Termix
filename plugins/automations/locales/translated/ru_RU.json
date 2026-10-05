@@ -212,12 +212,12 @@
     "sidebar": {
       "automations": {
         "options": {
-          "connect": "connect",
-          "disconnect": "disconnect",
-          "offline": "offline",
-          "online": "online",
-          "failing": "failing",
-          "recovered": "recovered"
+          "connect": "соединить",
+          "disconnect": "отключить",
+          "offline": "офлайн",
+          "online": "онлайн",
+          "failing": "провал",
+          "recovered": "выздоровел"
         }
       }
     }

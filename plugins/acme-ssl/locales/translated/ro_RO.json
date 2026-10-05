@@ -56,6 +56,6 @@
     "issued": "Certificat emis și instalat"
   },
   "plugin": {
-    "name": "ACME Certificates"
+    "name": "Certificate ACME"
   }
 }

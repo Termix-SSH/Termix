@@ -20,12 +20,12 @@
     "nameRequired": "Je vyžadováno zobrazované jméno",
     "type": "Typ poskytovatele",
     "enabled": "Povoleno",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "Zobrazit na přihlašovací obrazovce tlačítko pro přihlášení k tomuto poskytovateli.",
+    "dialogDesc": "Připojte poskytovatele identity, aby se s ním uživatelé mohli přihlašovat.",
+    "sectionGeneral": "Obecné",
+    "sectionCredentials": "Klient",
+    "sectionClaims": "Nároky",
+    "sectionAccess": "Přístup",
     "save": "Uložit poskytovatele",
     "saving": "Ukládání…",
     "saved": "Uloženo",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "Jednotné přihlašování"
   }
 }

@@ -170,136 +170,136 @@
     "configureLocation": "ตั้งค่าตำแหน่งที่ตั้งในการตั้งค่าวิดเจ็ต",
     "bannerTextPlaceholder": "ข้อความแบนเนอร์",
     "serviceNamePlaceholder": "บริการของฉัน",
-    "emptyNote": "Empty note...",
-    "weatherLoadFailed": "Could not load weather for \"{{location}}\"",
-    "feelsLike": "Feels like {{temperature}}",
-    "timezonePlaceholder": "America/New_York (leave blank for local)",
-    "notesPlaceholder": "Write your notes here...",
-    "locationPlaceholder": "New York, London, Tokyo...",
+    "emptyNote": "จดหมายเปล่า...",
+    "weatherLoadFailed": "ไม่สามารถโหลดข้อมูลสภาพอากาศสำหรับ \"{{location}}\"",
+    "feelsLike": "รู้สึกเหมือน {{temperature}}",
+    "timezonePlaceholder": "อเมริกา/นิวยอร์ก (เว้นว่างไว้สำหรับรหัสพื้นที่)",
+    "notesPlaceholder": "เขียนบันทึกของคุณที่นี่...",
+    "locationPlaceholder": "นิวยอร์ก ลอนดอน โตเกียว...",
     "widgets": {
       "bookmark_list": {
-        "name": "Bookmarks",
-        "description": "A list of quick links"
+        "name": "ที่คั่นหนังสือ",
+        "description": "รายการลิงก์ด่วน"
       },
       "calendar": {
-        "name": "Calendar",
-        "description": "A month calendar with today highlighted"
+        "name": "ปฏิทิน",
+        "description": "ปฏิทินรายเดือนที่ไฮไลต์วันนี้ไว้"
       },
       "clock": {
-        "name": "Clock",
-        "description": "A live clock with configurable timezone"
+        "name": "นาฬิกา",
+        "description": "นาฬิกาแบบเรียลไทม์พร้อมโซนเวลาที่สามารถตั้งค่าได้"
       },
       "countdown": {
-        "name": "Countdown",
-        "description": "Counts down to a target date and time"
+        "name": "นับถอยหลัง",
+        "description": "นับถอยหลังสู่วันและเวลาเป้าหมาย"
       },
       "custom_api": {
-        "name": "Custom API",
-        "description": "Fetch and display data from any JSON API"
+        "name": "API แบบกำหนดเอง",
+        "description": "ดึงและแสดงข้อมูลจาก JSON API ใดๆ ก็ได้"
       },
       "dashboard_links": {
-        "name": "Dashboard Links",
-        "description": "Shows your saved dashboard service links"
+        "name": "ลิงก์แดชบอร์ด",
+        "description": "แสดงลิงก์บริการแดชบอร์ดที่คุณบันทึกไว้"
       },
       "folder": {
-        "name": "Folder",
-        "description": "A background card for grouping widgets visually"
+        "name": "โฟลเดอร์",
+        "description": "การ์ดพื้นหลังสำหรับจัดกลุ่มวิดเจ็ตให้ดูสวยงาม"
       },
       "host_grid": {
-        "name": "Host Grid",
-        "description": "Live status overview grid for all your SSH hosts"
+        "name": "โฮสต์กริด",
+        "description": "ตารางแสดงสถานะแบบเรียลไทม์สำหรับโฮสต์ SSH ทั้งหมดของคุณ"
       },
       "host_status": {
-        "name": "Host Status",
-        "description": "Shows live status and metrics for an SSH host"
+        "name": "สถานะโฮสต์",
+        "description": "แสดงสถานะและข้อมูลเมตริกแบบเรียลไทม์สำหรับโฮสต์ SSH"
       },
       "iframe_embed": {
-        "name": "iFrame Embed",
-        "description": "Embed any URL in an iframe"
+        "name": "การฝัง iFrame",
+        "description": "ฝัง URL ใดๆ ลงใน iframe"
       },
       "image_widget": {
-        "name": "Image",
-        "description": "Display any image from a URL"
+        "name": "ภาพ",
+        "description": "แสดงภาพใดก็ได้จาก URL"
       },
       "link_tree": {
-        "name": "Link Tree",
-        "description": "Grouped links organized into labeled sections"
+        "name": "ลิงก์ทรี",
+        "description": "ลิงก์ที่จัดกลุ่มไว้จะถูกจัดเรียงเป็นส่วนๆ โดยมีป้ายกำกับกำกับไว้"
       },
       "markdown_notes": {
-        "name": "Markdown Notes",
-        "description": "Notes with optional Markdown rendering and inline editing"
+        "name": "บันทึกมาร์คดาวน์",
+        "description": "บันทึกพร้อมตัวเลือกการแสดงผล Markdown และการแก้ไขแบบอินไลน์"
       },
       "notes": {
-        "name": "Notes",
-        "description": "A text notes widget"
+        "name": "หมายเหตุ",
+        "description": "วิดเจ็ตบันทึกข้อความ"
       },
       "ping_status": {
-        "name": "Ping Status",
-        "description": "Check if URLs or services are reachable"
+        "name": "สถานะการปิง",
+        "description": "ตรวจสอบว่าสามารถเข้าถึง URL หรือบริการต่างๆ ได้หรือไม่"
       },
       "quick_connect": {
-        "name": "Quick Connect",
-        "description": "Launch terminal, files, docker, tunnels, and more for your hosts"
+        "name": "การเชื่อมต่อด่วน",
+        "description": "เปิดใช้งานเทอร์มินัล ไฟล์ Docker อุโมงค์ และอื่นๆ สำหรับโฮสต์ของคุณ"
       },
       "recent_activity": {
-        "name": "Recent Activity",
-        "description": "Shows recent terminal, Docker, file, and tunnel activity"
+        "name": "กิจกรรมล่าสุด",
+        "description": "แสดงกิจกรรมล่าสุดของเทอร์มินัล, Docker, ไฟล์ และอุโมงค์"
       },
       "rss_feed": {
-        "name": "RSS Feed",
-        "description": "Display items from an RSS or Atom feed"
+        "name": "ฟีด RSS",
+        "description": "แสดงรายการจากฟีด RSS หรือ Atom"
       },
       "search_bar": {
-        "name": "Search Bar",
-        "description": "Quick search with Google, DuckDuckGo, Bing, or a custom engine"
+        "name": "แถบค้นหา",
+        "description": "ค้นหาอย่างรวดเร็วด้วย Google, DuckDuckGo, Bing หรือเครื่องมือค้นหาที่กำหนดเอง"
       },
       "search_links": {
-        "name": "Search Shortcuts",
-        "description": "Quick buttons to search different engines"
+        "name": "ทางลัดการค้นหา",
+        "description": "ปุ่มลัดสำหรับค้นหาในเครื่องมือค้นหาต่างๆ"
       },
       "service_grid": {
-        "name": "Service Grid",
-        "description": "A grid of service tiles with icons and links"
+        "name": "ตารางบริการ",
+        "description": "ตารางแสดงข้อมูลบริการพร้อมไอคอนและลิงก์"
       },
       "service_link": {
-        "name": "Service Link",
-        "description": "A clickable tile linking to a service URL"
+        "name": "ลิงก์บริการ",
+        "description": "ช่องที่สามารถคลิกได้ ซึ่งเชื่อมโยงไปยัง URL ของบริการ"
       },
       "ssh_terminal": {
-        "name": "SSH Terminal",
-        "description": "An inline SSH terminal connected to a configured host"
+        "name": "เทอร์มินัล SSH",
+        "description": "เทอร์มินัล SSH แบบอินไลน์ที่เชื่อมต่อกับโฮสต์ที่กำหนดค่าไว้"
       },
       "system_overview": {
-        "name": "System Overview",
-        "description": "Termix version, database health, and uptime at a glance"
+        "name": "ภาพรวมระบบ",
+        "description": "ตรวจสอบเวอร์ชัน Termix, สถานะฐานข้อมูล และระยะเวลาการทำงานได้อย่างรวดเร็ว"
       },
       "termix_uptime": {
-        "name": "Termix Uptime",
-        "description": "Shows how long the Termix server has been running"
+        "name": "เวลาทำงานของเทอร์มิกซ์",
+        "description": "แสดงระยะเวลาที่เซิร์ฟเวอร์ Termix ทำงานอยู่"
       },
       "text_banner": {
-        "name": "Text Banner",
-        "description": "A styled text label for sections and headings"
+        "name": "แบนเนอร์ข้อความ",
+        "description": "ป้ายข้อความที่มีรูปแบบเฉพาะสำหรับส่วนต่างๆ และหัวข้อ"
       },
       "weather": {
-        "name": "Weather",
-        "description": "Live weather for any location"
+        "name": "สภาพอากาศ",
+        "description": "พยากรณ์อากาศแบบเรียลไทม์สำหรับทุกสถานที่"
       },
       "docker_widget": {
-        "name": "Docker Manager",
-        "description": "Embedded Docker container manager for a configured host"
+        "name": "ตัวจัดการ Docker",
+        "description": "ตัวจัดการคอนเทนเนอร์ Docker แบบฝังตัวสำหรับโฮสต์ที่กำหนดค่าไว้"
       },
       "file_manager_widget": {
-        "name": "File Manager",
-        "description": "Embedded SFTP file manager for a configured host"
+        "name": "ตัวจัดการไฟล์",
+        "description": "ตัวจัดการไฟล์ SFTP แบบฝังตัวสำหรับโฮสต์ที่กำหนดค่าไว้"
       },
       "tunnel_widget": {
-        "name": "Tunnel Manager",
-        "description": "Embedded SSH tunnel manager for a configured host"
+        "name": "ผู้จัดการอุโมงค์",
+        "description": "ตัวจัดการอุโมงค์ SSH แบบฝังตัวสำหรับโฮสต์ที่กำหนดค่าไว้"
       },
       "metrics_chart": {
-        "name": "Metrics Chart",
-        "description": "Historical CPU, memory, disk, or network chart for a host"
+        "name": "แผนภูมิตัวชี้วัด",
+        "description": "แผนภูมิแสดงประวัติการใช้งาน CPU, หน่วยความจำ, ดิสก์ หรือเครือข่ายสำหรับโฮสต์"
       }
     }
   },
@@ -320,6 +320,6 @@
     }
   },
   "plugin": {
-    "name": "Homepage"
+    "name": "หน้าแรก"
   }
 }

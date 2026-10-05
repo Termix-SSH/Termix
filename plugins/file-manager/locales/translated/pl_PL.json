@@ -323,7 +323,7 @@
     "sideBySide": "Obok siebie",
     "inline": "W linii",
     "fileComparison": "Porównanie plików: {{file1}} vs {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "Plik jest za duży (> 10 MB) i ze względów bezpieczeństwa nie można go otworzyć w formacie tekstowym.",
     "sshConnectionFailed": "Połączenie SSH nie powiodło się. Sprawdź połączenie z {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Nie udało się załadować pliku: {{error}}",
     "connecting": "Łączenie...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Użyj wygodnego układu",
     "cannotLoadPdf": "Nie można załadować pliku PDF",
     "pdfLoadError": "Wystąpił błąd podczas ładowania pliku PDF.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "Ładowanie przeglądarki PDF...",
     "loadingPage": "Ładowanie strony...",
     "cancel": "Anuluj",
     "copiedItems_one": "Skopiowano element {{count}}",
@@ -384,15 +384,15 @@
     "downloadToPlay": "Pobierz, aby odtworzyć w innym miejscu",
     "cannotPreviewType": "Nie można wyświetlić podglądu tego typu pliku",
     "cannotPreviewTypeHint": "Ten typ pliku nie ma podglądu. Pobierz go, aby otworzyć w innej aplikacji.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "Ładowanie pliku...",
+    "loadingImage": "Ładowanie obrazu...",
+    "loadingEditor": "Ładowanie edytora...",
+    "loadingPreview": "Ładowanie podglądu...",
+    "loadingAudio": "Ładowanie odtwarzacza audio...",
+    "emptyPreview": "Na razie nic nie ma do wyświetlenia...",
+    "revert": "Przywróć",
+    "openAsText": "Otwórz jako tekst",
+    "confirmOpenAsText": "Czy chcesz kontynuować otwieranie tego pliku jako tekstu? Może to spowolnić działanie przeglądarki."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "Serwer → cel (lokalny): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "Menedżer plików"
   }
 }

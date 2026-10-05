@@ -214,25 +214,25 @@
       "resizeMethod": "Метод зміни розміру",
       "driveNamePlaceholder": "Термікс Драйв",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "any": "Будь-який",
+        "auto": "Авто",
+        "nlaExtended": "Розширена НЛА",
+        "color8": "8-бітний",
+        "color16": "16-бітний",
+        "color24": "24-бітний",
+        "color32": "32-бітний",
+        "displayUpdate": "Оновлення дисплея",
+        "reconnect": "Знову підключитися",
+        "preserve": "Зберегти",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "local": "Місцевий",
+        "remote": "Віддалений",
+        "failsafe": "безвідмовний",
+        "blackOnWhite": "Чорне на білому",
+        "whiteOnBlack": "Біле на чорному",
+        "grayOnBlack": "Сірий на чорному",
+        "greenOnBlack": "Зелений на чорному"
       }
     },
     "remoteDesktop": "Віддалений робочий стіл",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Потрібен віддалений сервер. Підключіться до віддаленого сервера в налаштуваннях, щоб використовувати цей тип підключення."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Віддалений робочий стіл"
   }
 }

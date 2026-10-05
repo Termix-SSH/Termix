@@ -20,12 +20,12 @@
     "nameRequired": "必須填寫顯示名稱。",
     "type": "提供者類型",
     "enabled": "已啟用",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "在登入介面顯示該提供者的登入按鈕。",
+    "dialogDesc": "連接身分提供者，以便使用者可以使用該身分提供者登入。",
+    "sectionGeneral": "一般",
+    "sectionCredentials": "客戶",
+    "sectionClaims": "索賠",
+    "sectionAccess": "使用權",
     "save": "儲存提供者",
     "saving": "儲存中…",
     "saved": "已儲存",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "單一登入"
   }
 }

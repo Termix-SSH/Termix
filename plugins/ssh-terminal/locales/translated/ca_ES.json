@@ -703,6 +703,6 @@
     "remoteServerRequired": "Cal un servidor remot. Connecteu un servidor remot a Configuració per utilitzar aquest tipus de connexió."
   },
   "plugin": {
-    "name": "SSH Terminal"
+    "name": "Terminal SSH"
   }
 }

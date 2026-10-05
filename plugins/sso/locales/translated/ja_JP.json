@@ -20,12 +20,12 @@
     "nameRequired": "表示名は必須です",
     "type": "プロバイダータイプ",
     "enabled": "有効",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "ログイン画面に、このプロバイダーのサインインボタンを表示する。",
+    "dialogDesc": "ユーザーがIDプロバイダーを使ってログインできるように、IDプロバイダーを接続します。",
+    "sectionGeneral": "全般",
+    "sectionCredentials": "クライアント",
+    "sectionClaims": "クレーム",
+    "sectionAccess": "アクセス",
     "save": "保存",
     "saving": "保存中...",
     "saved": "保存しました",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "シングルサインオン"
   }
 }

@@ -323,7 +323,7 @@
     "sideBySide": "Πλάι πλάι",
     "inline": "Ενσωματωμένο",
     "fileComparison": "Σύγκριση αρχείων: {{file1}} έναντι {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "Το αρχείο είναι πολύ μεγάλο (> 10MB) και δεν μπορεί να ανοιχτεί ως κείμενο για λόγους ασφαλείας.",
     "sshConnectionFailed": "Η σύνδεση SSH απέτυχε. Ελέγξτε τη σύνδεσή σας με {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Αποτυχία φόρτωσης αρχείου: {{error}}",
     "connecting": "Συνδετικός...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Χρησιμοποιήστε άνετη διάταξη",
     "cannotLoadPdf": "Δεν είναι δυνατή η φόρτωση του PDF",
     "pdfLoadError": "Παρουσιάστηκε σφάλμα κατά τη φόρτωση αυτού του αρχείου PDF.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "Φόρτωση προγράμματος προβολής PDF...",
     "loadingPage": "Φόρτωση σελίδας...",
     "cancel": "Ματαίωση",
     "copiedItems_one": "Αντιγράφηκε {{count}} στοιχείο",
@@ -384,15 +384,15 @@
     "downloadToPlay": "Κατεβάστε το για να το παίξετε αλλού",
     "cannotPreviewType": "Δεν είναι δυνατή η προεπισκόπηση αυτού του τύπου αρχείου",
     "cannotPreviewTypeHint": "Αυτός ο τύπος αρχείου δεν έχει προεπισκόπηση. Κατεβάστε το για να το ανοίξετε σε άλλη εφαρμογή.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "Φόρτωση αρχείου...",
+    "loadingImage": "Φόρτωση εικόνας...",
+    "loadingEditor": "Φόρτωση προγράμματος επεξεργασίας...",
+    "loadingPreview": "Φόρτωση προεπισκόπησης...",
+    "loadingAudio": "Φόρτωση προγράμματος αναπαραγωγής ήχου...",
+    "emptyPreview": "Δεν υπάρχει τίποτα για προεπισκόπηση ακόμα...",
+    "revert": "Επαναστρέφω",
+    "openAsText": "Άνοιγμα ως κείμενο",
+    "confirmOpenAsText": "Θέλετε να συνεχίσετε να ανοίγετε αυτό το αρχείο ως κείμενο; Αυτό μπορεί να επιβραδύνει το πρόγραμμα περιήγησής σας."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "Διακομιστής → προορισμός (τοπικός): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "Διαχειριστής αρχείων"
   }
 }

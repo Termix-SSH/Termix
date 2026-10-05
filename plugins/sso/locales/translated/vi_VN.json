@@ -20,12 +20,12 @@
     "nameRequired": "Tên hiển thị là bắt buộc",
     "type": "Loại nhà cung cấp",
     "enabled": "Đã bật",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "Hiển thị nút đăng nhập cho nhà cung cấp này trên màn hình đăng nhập.",
+    "dialogDesc": "Kết nối với nhà cung cấp danh tính để người dùng có thể đăng nhập bằng tài khoản đó.",
+    "sectionGeneral": "Chung",
+    "sectionCredentials": "Khách hàng",
+    "sectionClaims": "Yêu cầu bồi thường",
+    "sectionAccess": "Truy cập",
     "save": "Lưu nhà cung cấp",
     "saving": "Đang lưu...",
     "saved": "Đã lưu",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "Đăng nhập một lần"
   }
 }

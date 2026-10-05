@@ -323,7 +323,7 @@
     "sideBySide": "Egymás mellett",
     "inline": "Beágyazott",
     "fileComparison": "Fájl-összehasonlítás: {{file1}} vs {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "A fájl túl nagy (> 10 MB), és biztonsági okokból nem nyitható meg szövegként.",
     "sshConnectionFailed": "SSH kapcsolat sikertelen. Kérjük, ellenőrizze a kapcsolatot a következővel: {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Nem sikerült betölteni a fájlt: {{error}}",
     "connecting": "Kapcsolódás...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Használjon kényelmes elrendezést",
     "cannotLoadPdf": "Nem tudom betölteni a PDF-et",
     "pdfLoadError": "Hiba történt a PDF fájl betöltésekor.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "PDF-megjelenítő betöltése...",
     "loadingPage": "Oldal betöltése...",
     "cancel": "Mégsem",
     "copiedItems_one": "Másolt {{count}} elem",
@@ -384,15 +384,15 @@
     "downloadToPlay": "Töltsd le, hogy máshol is lejátszhasd",
     "cannotPreviewType": "Ez a fájltípus nem tekinthető meg előnézetben",
     "cannotPreviewTypeHint": "Ennek a fájltípusnak nincs előnézete. Töltse le, hogy egy másik alkalmazásban megnyissa.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "Fájl betöltése...",
+    "loadingImage": "Kép betöltése...",
+    "loadingEditor": "Szerkesztő betöltése...",
+    "loadingPreview": "Előnézet betöltése...",
+    "loadingAudio": "Hanglejátszó betöltése...",
+    "emptyPreview": "Még nincs mit előnézetben látni...",
+    "revert": "Visszaállítás",
+    "openAsText": "Megnyitás szövegként",
+    "confirmOpenAsText": "Szeretné továbbra is szövegként megnyitni ezt a fájlt? Ez lelassíthatja a böngészőjét."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "Szerver → cél (helyi): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "Fájlkezelő"
   }
 }

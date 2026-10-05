@@ -116,8 +116,8 @@
     "updateLinkLabel": "Доступне оновлення. Відкрийте нотатки до випуску на GitHub."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Прокручування вкладок ліворуч",
+    "scrollTabsRight": "Прокручування вкладок праворуч",
     "close": "Закрити",
     "minimize": "Згорнути",
     "online": "Онлайн",
@@ -189,10 +189,10 @@
     "add": "Додати",
     "update": "Оновлення",
     "noResults": "Результатів не знайдено",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Бічна панель",
+    "mobileSidebarDescription": "Відображає мобільну бічну панель.",
+    "toggleSidebar": "Перемикання бічної панелі",
+    "search": "Пошук..."
   },
   "onboarding": {
     "stepCounter": "Крок {{current}} з {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "Тунель",
     "serverStats": "Метрики хоста",
     "status": {
-      "online": "Online",
+      "online": "Онлайн",
       "offline": "Офлайн",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Перевірка",
+      "monitoringDisabled": "Перевірка статусу завершена",
       "label": "Статус"
     },
     "folderRenamed": "Папку «{{oldName}}» успішно перейменовано на «{{newName}}»",
@@ -482,7 +482,7 @@
     "sameHost": "Цей хост (прямий тунель)",
     "statusChecksLabel": "Перевірки статусу",
     "enableStatusChecks": "Увімкнути перевірки стану",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Перевірте доступність хоста. Активні сесії пропускають додаткові зонди. SSH-зонди без активного сеансу можуть запускати агресивні правила Fail2Ban; вимкніть перевірки стану на цих хостах.",
     "useGlobalInterval": "Використовувати глобальний інтервал",
     "useGlobalIntervalDesc": "Перевизначити інтервал перевірки стану на рівні сервера",
     "checkIntervalS": "Інтервал перевірки (і)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Цей другий фактор неможливо відобразити на цьому екрані. Зверніться до адміністратора.",
     "serverAuthentication": "Вхід на сервер",
     "minChars": "мін. {{min}} символів",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Методи перевірки поновлення"
   },
   "hostKey": {
     "verifyNewHost": "Перевірте ключ хоста SSH",
@@ -1126,12 +1126,12 @@
     "keyPassword": "пароль ключа",
     "pastePrivateKey": "Вставте сюди свій закритий ключ...",
     "enterPassword": "Введіть свій пароль",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "наприклад, CI Pipeline",
+    "credentialName": "наприклад, SSH-ключ виробничого класу",
+    "optionalDetails": "Додаткові деталі...",
+    "sshUsername": "наприклад, root або розгортання",
+    "hostAddress": "10.0.0.1 або example.com",
+    "hostName": "наприклад, виробництво веб-сервера"
   },
   "dashboard": {
     "title": "Інформаційна панель",
@@ -1514,9 +1514,9 @@
     "sslNames": "Обкладинки {{names}}",
     "sslManualTitle": "Завантажити сертифікат",
     "updateExternalAutoProvisionFailed": "Не вдалося оновити налаштування автоматичного створення",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Попередньо визначені теги хоста",
+    "hostTagsDesc": "Теги, які кожен користувач бачить як пропозиції в редакторі хостів. Натисніть пробіл або Enter, щоб додати тег. Видалення тегу тут не видаляє його з хостів.",
+    "hostTagsError": "Не вдалося завантажити або зберегти пропозиції щодо тегів хоста."
   },
   "newUi": {
     "sidebar": {

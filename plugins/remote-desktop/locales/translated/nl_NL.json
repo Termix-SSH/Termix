@@ -214,25 +214,25 @@
       "resizeMethod": "Formaatwijzigingsmethode",
       "driveNamePlaceholder": "Termix Drive",
       "options": {
-        "any": "Any",
+        "any": "Elk",
         "auto": "Auto",
         "nlaExtended": "NLA Extended",
         "color8": "8-bit",
         "color16": "16-bit",
         "color24": "24-bit",
         "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "displayUpdate": "Weergave bijwerken",
+        "reconnect": "Opnieuw verbinding maken",
+        "preserve": "Beschermen",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "local": "Lokaal",
+        "remote": "Op afstand",
+        "failsafe": "faalveilige",
+        "blackOnWhite": "Zwart op wit",
+        "whiteOnBlack": "Wit op zwart",
+        "grayOnBlack": "Grijs op zwart",
+        "greenOnBlack": "Groen op zwart"
       }
     },
     "remoteDesktop": "Extern bureaublad",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Externe server vereist. Verbind een externe server in de instellingen om dit verbindingstype te gebruiken."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Extern bureaublad"
   }
 }

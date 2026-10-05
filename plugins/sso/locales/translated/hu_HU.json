@@ -20,12 +20,12 @@
     "nameRequired": "Megjelenített név megadása kötelező",
     "type": "Szolgáltató típusa",
     "enabled": "Engedélyezve",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "Jelenítsen meg egy bejelentkezési gombot ehhez a szolgáltatóhoz a bejelentkezési képernyőn.",
+    "dialogDesc": "Csatlakoztasson egy identitásszolgáltatót, hogy a felhasználók bejelentkezhessenek vele.",
+    "sectionGeneral": "Általános",
+    "sectionCredentials": "Ügyfél",
+    "sectionClaims": "Követelések",
+    "sectionAccess": "Hozzáférés",
     "save": "Szolgáltató mentése",
     "saving": "Megtakarítás...",
     "saved": "Mentett",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "Egyszeri bejelentkezés"
   }
 }

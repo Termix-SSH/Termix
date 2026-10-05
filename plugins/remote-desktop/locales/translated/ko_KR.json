@@ -214,25 +214,25 @@
       "resizeMethod": "크기 조정 방법",
       "driveNamePlaceholder": "터믹스 드라이브",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
-        "unix": "Unix (LF)",
-        "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "any": "어느",
+        "auto": "자동",
+        "nlaExtended": "NLA 확장",
+        "color8": "8비트",
+        "color16": "16비트",
+        "color24": "24비트",
+        "color32": "32비트",
+        "displayUpdate": "디스플레이 업데이트",
+        "reconnect": "재연결",
+        "preserve": "보존하다",
+        "unix": "유닉스(LF)",
+        "windows": "윈도우(CRLF)",
+        "local": "로컬",
+        "remote": "원격",
+        "failsafe": "안전장치",
+        "blackOnWhite": "흰색 바탕에 검은색",
+        "whiteOnBlack": "검정색 바탕에 흰색",
+        "grayOnBlack": "검정색 바탕에 회색",
+        "greenOnBlack": "검정색 바탕에 녹색"
       }
     },
     "remoteDesktop": "원격 데스크톱",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "원격 서버가 필요합니다. 이 연결 유형을 사용하려면 설정에서 원격 서버를 연결하세요."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "원격 데스크톱"
   }
 }

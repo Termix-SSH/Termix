@@ -323,7 +323,7 @@
     "sideBySide": "Рамо до рамо",
     "inline": "Вграден",
     "fileComparison": "Сравнение на файлове: {{file1}} срещу {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "Файлът е твърде голям (> 10MB) и не може да бъде отворен като текст от съображения за сигурност.",
     "sshConnectionFailed": "SSH връзката не бе успешна. Моля, проверете връзката си с {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Неуспешно зареждане на файл: {{error}}",
     "connecting": "Свързване...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Използвайте удобно оформление",
     "cannotLoadPdf": "Не може да се зареди PDF файл",
     "pdfLoadError": "Възникна грешка при зареждането на този PDF файл.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "Зареждане на PDF визуализатора...",
     "loadingPage": "Зареждане на страницата...",
     "cancel": "Отказ",
     "copiedItems_one": "Копиран елемент {{count}}",
@@ -384,15 +384,15 @@
     "downloadToPlay": "Изтеглете, за да го играете другаде",
     "cannotPreviewType": "Не може да се прегледа този тип файл",
     "cannotPreviewTypeHint": "Този тип файл няма предварителен преглед. Изтеглете го, за да го отворите в друго приложение.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "Зареждане на файл...",
+    "loadingImage": "Зареждане на изображението...",
+    "loadingEditor": "Зареждане на редактора...",
+    "loadingPreview": "Зареждане на визуализация...",
+    "loadingAudio": "Зареждане на аудио плейъра...",
+    "emptyPreview": "Все още няма нищо за предварителен преглед...",
+    "revert": "Връщане",
+    "openAsText": "Отвори като текст",
+    "confirmOpenAsText": "Искате ли да продължите да отваряте този файл като текст? Това може да забави браузъра ви."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "Сървър → дестинация (локална): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "Файлов мениджър"
   }
 }

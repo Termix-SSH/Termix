@@ -56,6 +56,6 @@
     "loadFailed": "Tidak dapat memuat status statistik penggunaan."
   },
   "plugin": {
-    "name": "Usage Statistics"
+    "name": "Statistik Penggunaan"
   }
 }

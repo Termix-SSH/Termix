@@ -703,6 +703,6 @@
     "remoteServerRequired": "Fjernserver kræves. Opret forbindelse til en fjernserver i Indstillinger for at bruge denne forbindelsestype."
   },
   "plugin": {
-    "name": "SSH Terminal"
+    "name": "SSH-terminal"
   }
 }

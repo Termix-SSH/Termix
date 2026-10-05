@@ -56,6 +56,6 @@
     "issued": "証明書が発行され、インストールされました。"
   },
   "plugin": {
-    "name": "ACME Certificates"
+    "name": "ACME認定証"
   }
 }

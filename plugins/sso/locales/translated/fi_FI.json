@@ -20,12 +20,12 @@
     "nameRequired": "Näyttönimi on pakollinen",
     "type": "Palveluntarjoajan tyyppi",
     "enabled": "Käytössä",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "Näytä tämän palveluntarjoajan kirjautumispainike kirjautumisnäytössä.",
+    "dialogDesc": "Yhdistä identiteetintarjoaja, jotta käyttäjät voivat kirjautua sisään sillä.",
+    "sectionGeneral": "Yleistä",
+    "sectionCredentials": "Asiakas",
+    "sectionClaims": "Vaatimukset",
+    "sectionAccess": "Pääsy",
     "save": "Tallenna palveluntarjoaja",
     "saving": "Tallennetaan...",
     "saved": "Tallennettu",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "Kertakirjautuminen"
   }
 }

@@ -170,136 +170,136 @@
     "configureLocation": "הגדרת מיקום בהגדרות הווידג'ט",
     "bannerTextPlaceholder": "טקסט באנר",
     "serviceNamePlaceholder": "השירות שלי",
-    "emptyNote": "Empty note...",
-    "weatherLoadFailed": "Could not load weather for \"{{location}}\"",
-    "feelsLike": "Feels like {{temperature}}",
-    "timezonePlaceholder": "America/New_York (leave blank for local)",
-    "notesPlaceholder": "Write your notes here...",
-    "locationPlaceholder": "New York, London, Tokyo...",
+    "emptyNote": "פתק ריק...",
+    "weatherLoadFailed": "לא ניתן היה לטעון את מזג האוויר עבור \"{{location}}\"",
+    "feelsLike": "מרגיש כמו {{temperature}}",
+    "timezonePlaceholder": "אמריקה/ניו יורק (השאירו ריק עבור מקומי)",
+    "notesPlaceholder": "כתבו כאן את ההערות שלכם...",
+    "locationPlaceholder": "ניו יורק, לונדון, טוקיו...",
     "widgets": {
       "bookmark_list": {
-        "name": "Bookmarks",
-        "description": "A list of quick links"
+        "name": "סימניות",
+        "description": "רשימה של קישורים מהירים"
       },
       "calendar": {
-        "name": "Calendar",
-        "description": "A month calendar with today highlighted"
+        "name": "לוּחַ שָׁנָה",
+        "description": "לוח שנה חודשי עם היום המודגש"
       },
       "clock": {
-        "name": "Clock",
-        "description": "A live clock with configurable timezone"
+        "name": "שָׁעוֹן",
+        "description": "שעון חי עם אזור זמן הניתן להגדרה"
       },
       "countdown": {
-        "name": "Countdown",
-        "description": "Counts down to a target date and time"
+        "name": "סְפִירָה לְאָחוֹר",
+        "description": "סופר לאחור עד לתאריך ושעה יעד"
       },
       "custom_api": {
-        "name": "Custom API",
-        "description": "Fetch and display data from any JSON API"
+        "name": "ממשק API מותאם אישית",
+        "description": "אחזור והצגת נתונים מכל API של JSON"
       },
       "dashboard_links": {
-        "name": "Dashboard Links",
-        "description": "Shows your saved dashboard service links"
+        "name": "קישורי לוח המחוונים",
+        "description": "מציג את קישורי שירותי לוח המחוונים השמורים שלך"
       },
       "folder": {
-        "name": "Folder",
-        "description": "A background card for grouping widgets visually"
+        "name": "תיקייה",
+        "description": "כרטיס רקע לקיבוץ ויזואלי של ווידג'טים"
       },
       "host_grid": {
-        "name": "Host Grid",
-        "description": "Live status overview grid for all your SSH hosts"
+        "name": "רשת מארחים",
+        "description": "רשת סקירת סטטוס בזמן אמת עבור כל מארחי ה-SSH שלך"
       },
       "host_status": {
-        "name": "Host Status",
-        "description": "Shows live status and metrics for an SSH host"
+        "name": "סטטוס מארח",
+        "description": "מציג סטטוס ומדדים בזמן אמת עבור מארח SSH"
       },
       "iframe_embed": {
-        "name": "iFrame Embed",
-        "description": "Embed any URL in an iframe"
+        "name": "הטמעת iFrame",
+        "description": "הטמע כל כתובת URL ב-iframe"
       },
       "image_widget": {
-        "name": "Image",
-        "description": "Display any image from a URL"
+        "name": "תְמוּנָה",
+        "description": "הצג כל תמונה מכתובת URL"
       },
       "link_tree": {
-        "name": "Link Tree",
-        "description": "Grouped links organized into labeled sections"
+        "name": "עץ קישורים",
+        "description": "קישורים מקובצים מאורגנים לפי מקטעים מתויגים"
       },
       "markdown_notes": {
-        "name": "Markdown Notes",
-        "description": "Notes with optional Markdown rendering and inline editing"
+        "name": "הערות הנחה",
+        "description": "הערות עם עיבוד Markdown אופציונלי ועריכה מוטבעת"
       },
       "notes": {
-        "name": "Notes",
-        "description": "A text notes widget"
+        "name": "הערות",
+        "description": "ווידג'ט של הערות טקסט"
       },
       "ping_status": {
-        "name": "Ping Status",
-        "description": "Check if URLs or services are reachable"
+        "name": "סטטוס פינג",
+        "description": "בדוק אם כתובות URL או שירותים נגישים"
       },
       "quick_connect": {
-        "name": "Quick Connect",
-        "description": "Launch terminal, files, docker, tunnels, and more for your hosts"
+        "name": "חיבור מהיר",
+        "description": "הפעלת טרמינל, קבצים, docker, tunnels ועוד עבור המארחים שלך"
       },
       "recent_activity": {
-        "name": "Recent Activity",
-        "description": "Shows recent terminal, Docker, file, and tunnel activity"
+        "name": "פעילות אחרונה",
+        "description": "מציג פעילות אחרונה בטרמינל, ב-Docker, בקבצים ובמנהרות"
       },
       "rss_feed": {
-        "name": "RSS Feed",
-        "description": "Display items from an RSS or Atom feed"
+        "name": "עדכון RSS",
+        "description": "הצגת פריטים מפיד RSS או Atom"
       },
       "search_bar": {
-        "name": "Search Bar",
-        "description": "Quick search with Google, DuckDuckGo, Bing, or a custom engine"
+        "name": "סרגל חיפוש",
+        "description": "חיפוש מהיר עם גוגל, DuckDuckGo, Bing או מנוע חיפוש מותאם אישית"
       },
       "search_links": {
-        "name": "Search Shortcuts",
-        "description": "Quick buttons to search different engines"
+        "name": "קיצורי דרך לחיפוש",
+        "description": "כפתורים מהירים לחיפוש מנועי חיפוש שונים"
       },
       "service_grid": {
-        "name": "Service Grid",
-        "description": "A grid of service tiles with icons and links"
+        "name": "רשת שירותים",
+        "description": "רשת של אריחי שירות עם סמלים וקישורים"
       },
       "service_link": {
-        "name": "Service Link",
-        "description": "A clickable tile linking to a service URL"
+        "name": "קישור שירות",
+        "description": "אריח הניתן ללחיצה המקשר לכתובת URL של שירות"
       },
       "ssh_terminal": {
-        "name": "SSH Terminal",
-        "description": "An inline SSH terminal connected to a configured host"
+        "name": "מסוף SSH",
+        "description": "מסוף SSH מובנה המחובר למארח מוגדר"
       },
       "system_overview": {
-        "name": "System Overview",
-        "description": "Termix version, database health, and uptime at a glance"
+        "name": "סקירת מערכת",
+        "description": "גרסת Termix, תקינות מסד הנתונים וזמן הפעילות במבט חטוף"
       },
       "termix_uptime": {
-        "name": "Termix Uptime",
-        "description": "Shows how long the Termix server has been running"
+        "name": "זמן פעילות של טרמיקס",
+        "description": "מראה כמה זמן שרת ה-Termix פועל"
       },
       "text_banner": {
-        "name": "Text Banner",
-        "description": "A styled text label for sections and headings"
+        "name": "באנר טקסט",
+        "description": "תווית טקסט מעוצבת עבור מקטעים וכותרות"
       },
       "weather": {
-        "name": "Weather",
-        "description": "Live weather for any location"
+        "name": "מֶזֶג אֲוִיר",
+        "description": "מזג אוויר חי לכל מקום"
       },
       "docker_widget": {
-        "name": "Docker Manager",
-        "description": "Embedded Docker container manager for a configured host"
+        "name": "מנהל דוקר",
+        "description": "מנהל מכולות Docker מוטמע עבור מארח מוגדר"
       },
       "file_manager_widget": {
-        "name": "File Manager",
-        "description": "Embedded SFTP file manager for a configured host"
+        "name": "מנהל הקבצים",
+        "description": "מנהל קבצי SFTP מוטמע עבור מארח מוגדר"
       },
       "tunnel_widget": {
-        "name": "Tunnel Manager",
-        "description": "Embedded SSH tunnel manager for a configured host"
+        "name": "מנהל המנהרה",
+        "description": "מנהל מנהרות SSH מוטמע עבור מארח מוגדר"
       },
       "metrics_chart": {
-        "name": "Metrics Chart",
-        "description": "Historical CPU, memory, disk, or network chart for a host"
+        "name": "תרשים מדדים",
+        "description": "תרשים היסטורי של מעבד, זיכרון, דיסק או רשת עבור מחשב מארח"
       }
     }
   },
@@ -320,6 +320,6 @@
     }
   },
   "plugin": {
-    "name": "Homepage"
+    "name": "דף הבית"
   }
 }

@@ -214,25 +214,25 @@
       "resizeMethod": "リサイズ方法",
       "driveNamePlaceholder": "ターミックスドライブ",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "any": "どれでも",
+        "auto": "自動",
+        "nlaExtended": "NLA延長",
+        "color8": "8ビット",
+        "color16": "16ビット",
+        "color24": "24ビット",
+        "color32": "32ビット",
+        "displayUpdate": "ディスプレイの更新",
+        "reconnect": "再接続",
+        "preserve": "保存する",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "local": "ローカル",
+        "remote": "リモート",
+        "failsafe": "フェイルセーフ",
+        "blackOnWhite": "白地に黒",
+        "whiteOnBlack": "白地に黒",
+        "grayOnBlack": "黒地にグレー",
+        "greenOnBlack": "黒地に緑"
       }
     },
     "remoteDesktop": "リモートデスクトップ",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "リモートサーバーが必要です。この接続タイプを使用するには、設定でリモートサーバーを接続してください。"
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "リモートデスクトップ"
   }
 }

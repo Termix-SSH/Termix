@@ -703,6 +703,6 @@
     "remoteServerRequired": "リモートサーバーが必要です。この接続タイプを使用するには、設定でリモートサーバーを接続してください。"
   },
   "plugin": {
-    "name": "SSH Terminal"
+    "name": "SSHターミナル"
   }
 }

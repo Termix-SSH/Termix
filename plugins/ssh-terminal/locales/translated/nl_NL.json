@@ -703,6 +703,6 @@
     "remoteServerRequired": "Externe server vereist. Verbind een externe server in de instellingen om dit verbindingstype te gebruiken."
   },
   "plugin": {
-    "name": "SSH Terminal"
+    "name": "SSH-terminal"
   }
 }

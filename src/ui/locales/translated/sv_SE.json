@@ -116,8 +116,8 @@
     "updateLinkLabel": "Uppdatering tillgänglig. Öppna versionsinformationen på GitHub"
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Bläddra till vänster",
+    "scrollTabsRight": "Bläddra till höger på flikar",
     "close": "Nära",
     "minimize": "Minimera",
     "online": "Online",
@@ -189,10 +189,10 @@
     "add": "Tillägga",
     "update": "Uppdatera",
     "noResults": "Inga resultat hittades",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Sidofält",
+    "mobileSidebarDescription": "Visar mobilens sidofält.",
+    "toggleSidebar": "Växla sidofält",
+    "search": "Söka..."
   },
   "onboarding": {
     "stepCounter": "Steg {{current}} av {{total}}",
@@ -359,8 +359,8 @@
     "status": {
       "online": "Online",
       "offline": "Off-line",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Kontroll",
+      "monitoringDisabled": "Statuskontroller av",
       "label": "Status"
     },
     "folderRenamed": "Mappen \"{{oldName}}\" har bytt namn till \"{{newName}}\"",
@@ -482,7 +482,7 @@
     "sameHost": "Denna värd (direkt tunnel)",
     "statusChecksLabel": "Statuskontroller",
     "enableStatusChecks": "Aktivera statuskontroller",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Kontrollera värdens tillgänglighet. Aktiva sessioner hoppar över extra sonder. SSH-sonder utan en aktiv session kan utlösa aggressiva Fail2Ban-regler; inaktivera statuskontroller på dessa värdar.",
     "useGlobalInterval": "Använd globalt intervall",
     "useGlobalIntervalDesc": "Åsidosätt med det serveromfattande statuskontrollintervallet",
     "checkIntervalS": "Kontrollintervall (s)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Den här andra faktorn kan inte visas på den här skärmen. Kontakta en administratör.",
     "serverAuthentication": "Serverinloggning",
     "minChars": "min. {{min}} tecken",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Ladda om verifieringsmetoder"
   },
   "hostKey": {
     "verifyNewHost": "Verifiera SSH-värdnyckel",
@@ -1126,12 +1126,12 @@
     "keyPassword": "nyckellösenord",
     "pastePrivateKey": "Klistra in din privata nyckel här...",
     "enterPassword": "Ange ditt lösenord",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "t.ex. CI-rörledning",
+    "credentialName": "t.ex. produktions-SSH-nyckel",
+    "optionalDetails": "Valfria detaljer...",
+    "sshUsername": "t.ex. root eller deploy",
+    "hostAddress": "10.0.0.1 eller exempel.com",
+    "hostName": "t.ex. webbserverproduktion"
   },
   "dashboard": {
     "title": "Instrumentpanel",
@@ -1514,9 +1514,9 @@
     "sslNames": "Omslag {{names}}",
     "sslManualTitle": "Ladda upp ett certifikat",
     "updateExternalAutoProvisionFailed": "Misslyckades med att uppdatera inställningen för automatiskt skapande",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Fördefinierade värdtaggar",
+    "hostTagsDesc": "Taggar som alla användare ser som förslag i värdredigeraren. Tryck på mellanslag eller Enter för att lägga till en. Att ta bort en tagg här tar inte bort den från värdar.",
+    "hostTagsError": "Kunde inte läsa in eller spara förslag på värdtaggar."
   },
   "newUi": {
     "sidebar": {

@@ -20,12 +20,12 @@
     "nameRequired": "Un nom d'affichage est requis.",
     "type": "Type de fournisseur",
     "enabled": "Activé",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
+    "enabledDesc": "Afficher un bouton de connexion pour ce fournisseur sur l'écran de connexion.",
+    "dialogDesc": "Connectez un fournisseur d'identité pour que les utilisateurs puissent se connecter avec celui-ci.",
+    "sectionGeneral": "Général",
     "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "sectionClaims": "Réclamations",
+    "sectionAccess": "Accéder",
     "save": "Enregistrer le fournisseur",
     "saving": "Enregistrement…",
     "saved": "Enregistré",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "Authentification unique"
   }
 }

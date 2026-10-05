@@ -214,25 +214,25 @@
       "resizeMethod": "Ändra storleksmetod",
       "driveNamePlaceholder": "Termix Drive",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "any": "Några",
+        "auto": "Bil",
+        "nlaExtended": "NLA-utökning",
+        "color8": "8-bitars",
+        "color16": "16-bitars",
+        "color24": "24-bitars",
+        "color32": "32-bitars",
+        "displayUpdate": "Uppdatering av displayen",
+        "reconnect": "Återanslut",
+        "preserve": "Bevara",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "local": "Lokal",
+        "remote": "Avlägsen",
+        "failsafe": "felsäker",
+        "blackOnWhite": "Svart på vitt",
+        "whiteOnBlack": "Vitt på svart",
+        "grayOnBlack": "Grått på svart",
+        "greenOnBlack": "Grönt på svart"
       }
     },
     "remoteDesktop": "Fjärrskrivbord",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Fjärrserver krävs. Anslut en fjärrserver i Inställningar för att använda den här anslutningstypen."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Fjärrskrivbord"
   }
 }

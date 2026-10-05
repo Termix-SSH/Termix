@@ -20,12 +20,12 @@
     "nameRequired": "اسم العرض مطلوب",
     "type": "نوع المزود",
     "enabled": "مُمكّن",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "اعرض زر تسجيل الدخول لهذا المزود على شاشة تسجيل الدخول.",
+    "dialogDesc": "قم بتوصيل موفر الهوية حتى يتمكن المستخدمون من تسجيل الدخول باستخدامه.",
+    "sectionGeneral": "عام",
+    "sectionCredentials": "عميل",
+    "sectionClaims": "المطالبات",
+    "sectionAccess": "وصول",
     "save": "حفظ المزود",
     "saving": "جارٍ الحفظ...",
     "saved": "محفوظ",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "تسجيل دخول موحد"
   }
 }

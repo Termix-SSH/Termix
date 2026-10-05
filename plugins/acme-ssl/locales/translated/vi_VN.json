@@ -56,6 +56,6 @@
     "issued": "Giấy chứng nhận đã được cấp và cài đặt"
   },
   "plugin": {
-    "name": "ACME Certificates"
+    "name": "Chứng chỉ ACME"
   }
 }

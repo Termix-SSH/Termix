@@ -56,6 +56,6 @@
     "issued": "Έκδοση και εγκατάσταση πιστοποιητικού"
   },
   "plugin": {
-    "name": "ACME Certificates"
+    "name": "Πιστοποιητικά ACME"
   }
 }

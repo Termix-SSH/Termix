@@ -170,136 +170,136 @@
     "configureLocation": "ウィジェットの設定で場所を設定してください",
     "bannerTextPlaceholder": "バナーテキスト",
     "serviceNamePlaceholder": "私のサービス",
-    "emptyNote": "Empty note...",
-    "weatherLoadFailed": "Could not load weather for \"{{location}}\"",
-    "feelsLike": "Feels like {{temperature}}",
-    "timezonePlaceholder": "America/New_York (leave blank for local)",
-    "notesPlaceholder": "Write your notes here...",
-    "locationPlaceholder": "New York, London, Tokyo...",
+    "emptyNote": "空欄のメモ…",
+    "weatherLoadFailed": "「{{location}}」の天気情報を読み込めませんでした。",
+    "feelsLike": "{{temperature}} のような感じ",
+    "timezonePlaceholder": "アメリカ/ニューヨーク（ローカルの場合は空欄のままにしてください）",
+    "notesPlaceholder": "ここにメモを書いてください…",
+    "locationPlaceholder": "ニューヨーク、ロンドン、東京…",
     "widgets": {
       "bookmark_list": {
-        "name": "Bookmarks",
-        "description": "A list of quick links"
+        "name": "ブックマーク",
+        "description": "クイックリンクのリスト"
       },
       "calendar": {
-        "name": "Calendar",
-        "description": "A month calendar with today highlighted"
+        "name": "カレンダー",
+        "description": "今日がハイライト表示された月間カレンダー"
       },
       "clock": {
-        "name": "Clock",
-        "description": "A live clock with configurable timezone"
+        "name": "時計",
+        "description": "設定可能なタイムゾーンを備えた現在時刻の時計"
       },
       "countdown": {
-        "name": "Countdown",
-        "description": "Counts down to a target date and time"
+        "name": "カウントダウン",
+        "description": "目標の日時までのカウントダウン"
       },
       "custom_api": {
-        "name": "Custom API",
-        "description": "Fetch and display data from any JSON API"
+        "name": "カスタムAPI",
+        "description": "任意のJSON APIからデータを取得して表示"
       },
       "dashboard_links": {
-        "name": "Dashboard Links",
-        "description": "Shows your saved dashboard service links"
+        "name": "ダッシュボードリンク",
+        "description": "保存済みのダッシュボードサービスリンクを表示します"
       },
       "folder": {
-        "name": "Folder",
-        "description": "A background card for grouping widgets visually"
+        "name": "フォルダ",
+        "description": "ウィジェットを視覚的にグループ化するための背景カード"
       },
       "host_grid": {
-        "name": "Host Grid",
-        "description": "Live status overview grid for all your SSH hosts"
+        "name": "ホストグリッド",
+        "description": "すべてのSSHホストのリアルタイムステータス概要グリッド"
       },
       "host_status": {
-        "name": "Host Status",
-        "description": "Shows live status and metrics for an SSH host"
+        "name": "ホストステータス",
+        "description": "SSHホストのリアルタイムステータスとメトリクスを表示します"
       },
       "iframe_embed": {
-        "name": "iFrame Embed",
-        "description": "Embed any URL in an iframe"
+        "name": "iFrame埋め込み",
+        "description": "任意のURLをiFrameで埋め込み"
       },
       "image_widget": {
-        "name": "Image",
-        "description": "Display any image from a URL"
+        "name": "イメージ",
+        "description": "URLから任意の画像を表示する"
       },
       "link_tree": {
-        "name": "Link Tree",
-        "description": "Grouped links organized into labeled sections"
+        "name": "リンクツリー",
+        "description": "ラベル付きセクションに整理されたリンクのグループ分け"
       },
       "markdown_notes": {
-        "name": "Markdown Notes",
-        "description": "Notes with optional Markdown rendering and inline editing"
+        "name": "Markdownノート",
+        "description": "オプションでMarkdownレンダリングとインライン編集が可能なノート"
       },
       "notes": {
-        "name": "Notes",
-        "description": "A text notes widget"
+        "name": "メモ",
+        "description": "テキストメモウィジェット"
       },
       "ping_status": {
-        "name": "Ping Status",
-        "description": "Check if URLs or services are reachable"
+        "name": "Pingステータス",
+        "description": "URLやサービスにアクセスできるかどうかを確認してください。"
       },
       "quick_connect": {
-        "name": "Quick Connect",
-        "description": "Launch terminal, files, docker, tunnels, and more for your hosts"
+        "name": "クイック接続",
+        "description": "ホスト上でターミナル、ファイル、Docker、トンネルなどを起動します。"
       },
       "recent_activity": {
-        "name": "Recent Activity",
-        "description": "Shows recent terminal, Docker, file, and tunnel activity"
+        "name": "最近のアクティビティ",
+        "description": "最近のターミナル、Docker、ファイル、およびトンネルのアクティビティを表示します。"
       },
       "rss_feed": {
-        "name": "RSS Feed",
-        "description": "Display items from an RSS or Atom feed"
+        "name": "RSSフィード",
+        "description": "RSSまたはAtomフィードのアイテムを表示"
       },
       "search_bar": {
-        "name": "Search Bar",
-        "description": "Quick search with Google, DuckDuckGo, Bing, or a custom engine"
+        "name": "検索バー",
+        "description": "Google、DuckDuckGo、Bing、またはカスタムエンジンによるクイック検索"
       },
       "search_links": {
-        "name": "Search Shortcuts",
-        "description": "Quick buttons to search different engines"
+        "name": "検索ショートカット",
+        "description": "さまざまな検索エンジンを検索するためのクイックボタン"
       },
       "service_grid": {
-        "name": "Service Grid",
-        "description": "A grid of service tiles with icons and links"
+        "name": "サービスグリッド",
+        "description": "アイコンとリンクを含むサービスタイルのグリッド"
       },
       "service_link": {
-        "name": "Service Link",
-        "description": "A clickable tile linking to a service URL"
+        "name": "サービスリンク",
+        "description": "サービスURLへリンクするクリック可能なタイル"
       },
       "ssh_terminal": {
-        "name": "SSH Terminal",
-        "description": "An inline SSH terminal connected to a configured host"
+        "name": "SSHターミナル",
+        "description": "設定済みホストに接続するインラインSSHターミナル"
       },
       "system_overview": {
-        "name": "System Overview",
-        "description": "Termix version, database health, and uptime at a glance"
+        "name": "システム概要",
+        "description": "Termixのバージョン、データベースの状態、稼働状況が一目でわかります"
       },
       "termix_uptime": {
-        "name": "Termix Uptime",
-        "description": "Shows how long the Termix server has been running"
+        "name": "Termixアップタイム",
+        "description": "Termixサーバーの稼働時間を表示します。"
       },
       "text_banner": {
-        "name": "Text Banner",
-        "description": "A styled text label for sections and headings"
+        "name": "テキストバナー",
+        "description": "セクションと見出し用のスタイル付きテキストラベル"
       },
       "weather": {
-        "name": "Weather",
-        "description": "Live weather for any location"
+        "name": "天気",
+        "description": "任意の場所の現在の天気"
       },
       "docker_widget": {
-        "name": "Docker Manager",
-        "description": "Embedded Docker container manager for a configured host"
+        "name": "Docker マネージャー",
+        "description": "設定済みホスト用の組み込みDockerコンテナマネージャー"
       },
       "file_manager_widget": {
-        "name": "File Manager",
-        "description": "Embedded SFTP file manager for a configured host"
+        "name": "ファイルマネージャー",
+        "description": "設定済みホスト用の組み込みSFTPファイルマネージャー"
       },
       "tunnel_widget": {
-        "name": "Tunnel Manager",
-        "description": "Embedded SSH tunnel manager for a configured host"
+        "name": "トンネルマネージャー",
+        "description": "設定済みホスト用の組み込みSSHトンネルマネージャー"
       },
       "metrics_chart": {
-        "name": "Metrics Chart",
-        "description": "Historical CPU, memory, disk, or network chart for a host"
+        "name": "メトリックチャート",
+        "description": "ホストのCPU、メモリ、ディスク、またはネットワークの履歴チャート"
       }
     }
   },
@@ -320,6 +320,6 @@
     }
   },
   "plugin": {
-    "name": "Homepage"
+    "name": "ホームページ"
   }
 }

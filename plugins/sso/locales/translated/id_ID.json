@@ -20,12 +20,12 @@
     "nameRequired": "Nama tampilan wajib diisi.",
     "type": "Jenis Penyedia",
     "enabled": "Diaktifkan",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "Tampilkan tombol masuk untuk penyedia ini di layar login.",
+    "dialogDesc": "Hubungkan penyedia identitas agar pengguna dapat masuk menggunakan penyedia tersebut.",
+    "sectionGeneral": "Umum",
+    "sectionCredentials": "Klien",
+    "sectionClaims": "Klaim",
+    "sectionAccess": "Mengakses",
     "save": "Simpan Penyedia",
     "saving": "Penghematan...",
     "saved": "Tersimpan",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "Masuk tunggal"
   }
 }

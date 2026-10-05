@@ -703,6 +703,6 @@
     "remoteServerRequired": "Afstandbediener word benodig. Koppel 'n afstandbediener in Instellings om hierdie verbindingstipe te gebruik."
   },
   "plugin": {
-    "name": "SSH Terminal"
+    "name": "SSH-terminaal"
   }
 }

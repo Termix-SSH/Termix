@@ -310,6 +310,6 @@
     }
   },
   "plugin": {
-    "name": "Host Metrics"
+    "name": "호스트 메트릭"
   }
 }

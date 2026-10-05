@@ -170,136 +170,136 @@
     "configureLocation": "Définissez un emplacement dans les paramètres du widget",
     "bannerTextPlaceholder": "Texte de la bannière",
     "serviceNamePlaceholder": "Mon service",
-    "emptyNote": "Empty note...",
-    "weatherLoadFailed": "Could not load weather for \"{{location}}\"",
-    "feelsLike": "Feels like {{temperature}}",
-    "timezonePlaceholder": "America/New_York (leave blank for local)",
-    "notesPlaceholder": "Write your notes here...",
-    "locationPlaceholder": "New York, London, Tokyo...",
+    "emptyNote": "Note vide...",
+    "weatherLoadFailed": "Impossible de charger les données météorologiques pour «{{location}}»",
+    "feelsLike": "On dirait {{temperature}}",
+    "timezonePlaceholder": "Amérique/New_York (laisser vide pour la région)",
+    "notesPlaceholder": "Écrivez vos notes ici...",
+    "locationPlaceholder": "New York, Londres, Tokyo...",
     "widgets": {
       "bookmark_list": {
-        "name": "Bookmarks",
-        "description": "A list of quick links"
+        "name": "Favoris",
+        "description": "Une liste de liens rapides"
       },
       "calendar": {
-        "name": "Calendar",
-        "description": "A month calendar with today highlighted"
+        "name": "Calendrier",
+        "description": "Un calendrier mensuel avec la date du jour mise en évidence. Un calendrier mensuel avec la date du jour mise en évidence. Un calendrier mensuel avec la date du jour en surbrillance. Le jour de la semaine est mis en évidence. Un calendrier mensuel avec la date du jour mise ..."
       },
       "clock": {
-        "name": "Clock",
-        "description": "A live clock with configurable timezone"
+        "name": "Horloge",
+        "description": "Une horloge en temps réel avec fuseau horaire configurable"
       },
       "countdown": {
-        "name": "Countdown",
-        "description": "Counts down to a target date and time"
+        "name": "Compte à rebours",
+        "description": "Compte à rebours jusqu'à une date et une heure cibles"
       },
       "custom_api": {
-        "name": "Custom API",
-        "description": "Fetch and display data from any JSON API"
+        "name": "API personnalisée",
+        "description": "Récupérer et afficher des données depuis n'importe quelle API JSON"
       },
       "dashboard_links": {
-        "name": "Dashboard Links",
-        "description": "Shows your saved dashboard service links"
+        "name": "Liens du tableau de bord",
+        "description": "Affiche les liens vers les services enregistrés de votre tableau de bord"
       },
       "folder": {
-        "name": "Folder",
-        "description": "A background card for grouping widgets visually"
+        "name": "Dossier",
+        "description": "Une carte de fond pour regrouper visuellement les widgets"
       },
       "host_grid": {
-        "name": "Host Grid",
-        "description": "Live status overview grid for all your SSH hosts"
+        "name": "Grille d'hôtes",
+        "description": "Tableau récapitulatif en temps réel de l'état de tous vos hôtes SSH"
       },
       "host_status": {
-        "name": "Host Status",
-        "description": "Shows live status and metrics for an SSH host"
+        "name": "État de l'hôte",
+        "description": "Affiche l'état et les indicateurs en direct d'un hôte SSH"
       },
       "iframe_embed": {
-        "name": "iFrame Embed",
-        "description": "Embed any URL in an iframe"
+        "name": "Intégration iFrame",
+        "description": "Intègre n'importe quelle URL dans une iframe"
       },
       "image_widget": {
         "name": "Image",
-        "description": "Display any image from a URL"
+        "description": "Afficher n'importe quelle image à partir d'une URL"
       },
       "link_tree": {
-        "name": "Link Tree",
-        "description": "Grouped links organized into labeled sections"
+        "name": "Arborescence de liens",
+        "description": "Liens regroupés et organisés en sections étiquetées"
       },
       "markdown_notes": {
-        "name": "Markdown Notes",
-        "description": "Notes with optional Markdown rendering and inline editing"
+        "name": "Notes Markdown",
+        "description": "Notes avec rendu Markdown optionnel et édition en ligne"
       },
       "notes": {
         "name": "Notes",
-        "description": "A text notes widget"
+        "description": "Un widget de notes textuelles"
       },
       "ping_status": {
-        "name": "Ping Status",
-        "description": "Check if URLs or services are reachable"
+        "name": "Statut du ping",
+        "description": "Vérifier si les URL ou les services sont accessibles"
       },
       "quick_connect": {
-        "name": "Quick Connect",
-        "description": "Launch terminal, files, docker, tunnels, and more for your hosts"
+        "name": "Connexion rapide",
+        "description": "Lancez des terminaux, des fichiers, des conteneurs Docker, des tunnels et bien plus encore pour vos hôtes."
       },
       "recent_activity": {
-        "name": "Recent Activity",
-        "description": "Shows recent terminal, Docker, file, and tunnel activity"
+        "name": "Activité récente",
+        "description": "Affiche l'activité récente du terminal, de Docker, des fichiers et des tunnels"
       },
       "rss_feed": {
-        "name": "RSS Feed",
-        "description": "Display items from an RSS or Atom feed"
+        "name": "Flux RSS",
+        "description": "Affiche les éléments d'un flux RSS ou Atom"
       },
       "search_bar": {
-        "name": "Search Bar",
-        "description": "Quick search with Google, DuckDuckGo, Bing, or a custom engine"
+        "name": "Barre de recherche",
+        "description": "Recherche rapide avec Google, DuckDuckGo, Bing ou un moteur de recherche personnalisé"
       },
       "search_links": {
-        "name": "Search Shortcuts",
-        "description": "Quick buttons to search different engines"
+        "name": "Raccourcis de recherche",
+        "description": "Boutons d'accès rapide pour rechercher différents moteurs"
       },
       "service_grid": {
-        "name": "Service Grid",
-        "description": "A grid of service tiles with icons and links"
+        "name": "Grille de services",
+        "description": "Une grille de vignettes de service avec icônes et liens"
       },
       "service_link": {
-        "name": "Service Link",
-        "description": "A clickable tile linking to a service URL"
+        "name": "Lien de service",
+        "description": "Une tuile cliquable renvoyant vers une URL de service"
       },
       "ssh_terminal": {
-        "name": "SSH Terminal",
-        "description": "An inline SSH terminal connected to a configured host"
+        "name": "Terminal SSH",
+        "description": "Un terminal SSH intégré connecté à un hôte configuré"
       },
       "system_overview": {
-        "name": "System Overview",
-        "description": "Termix version, database health, and uptime at a glance"
+        "name": "Vue d'ensemble du système",
+        "description": "Aperçu de la version de Termix, de l'état de la base de données et de la disponibilité"
       },
       "termix_uptime": {
-        "name": "Termix Uptime",
-        "description": "Shows how long the Termix server has been running"
+        "name": "Temps de disponibilité de Termix",
+        "description": "Indique la durée de fonctionnement du serveur Termix."
       },
       "text_banner": {
-        "name": "Text Banner",
-        "description": "A styled text label for sections and headings"
+        "name": "Bannière de texte",
+        "description": "Étiquette de texte stylisée pour les sections et les titres"
       },
       "weather": {
-        "name": "Weather",
-        "description": "Live weather for any location"
+        "name": "Météo",
+        "description": "Météo en direct pour n'importe quel lieu"
       },
       "docker_widget": {
-        "name": "Docker Manager",
-        "description": "Embedded Docker container manager for a configured host"
+        "name": "Gestionnaire Docker",
+        "description": "Gestionnaire de conteneurs Docker intégré pour un hôte configuré"
       },
       "file_manager_widget": {
-        "name": "File Manager",
-        "description": "Embedded SFTP file manager for a configured host"
+        "name": "Gestionnaire de fichiers",
+        "description": "Gestionnaire de fichiers SFTP intégré pour un hôte configuré"
       },
       "tunnel_widget": {
-        "name": "Tunnel Manager",
-        "description": "Embedded SSH tunnel manager for a configured host"
+        "name": "Gestionnaire de tunnels",
+        "description": "Gestionnaire de tunnels SSH intégré pour un hôte configuré"
       },
       "metrics_chart": {
-        "name": "Metrics Chart",
-        "description": "Historical CPU, memory, disk, or network chart for a host"
+        "name": "Graphique de métriques",
+        "description": "Graphique historique du processeur, de la mémoire, du disque ou du réseau pour un hôte"
       }
     }
   },
@@ -320,6 +320,6 @@
     }
   },
   "plugin": {
-    "name": "Homepage"
+    "name": "Accueil"
   }
 }

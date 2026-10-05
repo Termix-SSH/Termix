@@ -116,8 +116,8 @@
     "updateLinkLabel": "Güncelleme mevcut. GitHub'daki sürüm notlarını açın."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Sekmeleri sola kaydırın",
+    "scrollTabsRight": "Sekmeleri sağa kaydırın",
     "close": "Kapat",
     "minimize": "Simge Durumuna Küçült",
     "online": "Çevrimiçi",
@@ -189,10 +189,10 @@
     "add": "Ekle",
     "update": "Güncelle",
     "noResults": "Hiçbir sonuç bulunamadı.",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Kenar Çubuğu",
+    "mobileSidebarDescription": "Mobil kenar çubuğunu görüntüler.",
+    "toggleSidebar": "Kenar Çubuğunu Göster/Gizle",
+    "search": "Ara..."
   },
   "onboarding": {
     "stepCounter": "Adım {{current}} , {{total}}'in",
@@ -357,10 +357,10 @@
     "tunnel": "Tünel",
     "serverStats": "Sunucu Metrikleri",
     "status": {
-      "online": "Online",
+      "online": "çevrimiçi",
       "offline": "Çevrimdışı",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Kontrol ediliyor",
+      "monitoringDisabled": "Durum kontrolleri kapalı",
       "label": "Durum"
     },
     "folderRenamed": "\"{{oldName}}\" klasörü başarıyla \"{{newName}}\" olarak yeniden adlandırıldı.",
@@ -482,7 +482,7 @@
     "sameHost": "Bu ana bilgisayar (doğrudan tünel)",
     "statusChecksLabel": "Durum Denetimleri",
     "enableStatusChecks": "Durum Denetimlerini Etkinleştir",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Sunucunun erişilebilirliğini kontrol edin. Aktif oturumlar ek yoklamaları atlar. Aktif oturum olmadan yapılan SSH yoklamaları, agresif Fail2Ban kurallarını tetikleyebilir; bu sunucularda durum kontrollerini devre dışı bırakın.",
     "useGlobalInterval": "Genel Aralığı Kullan",
     "useGlobalIntervalDesc": "Sunucu geneli durum denetim aralığını geçersiz kıl",
     "checkIntervalS": "Denetim Aralığı (sn)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Bu ikinci faktör bu ekranda gösterilemiyor. Lütfen bir yöneticiyle iletişime geçin.",
     "serverAuthentication": "Sunucuya giriş yap",
     "minChars": "min. {{min}} karakter",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Yeniden yükleme doğrulama yöntemleri"
   },
   "hostKey": {
     "verifyNewHost": "SSH Sunucu Anahtarını Doğrula",
@@ -1126,12 +1126,12 @@
     "keyPassword": "anahtar parolası",
     "pastePrivateKey": "Özel anahtarınızı buraya yapıştırın...",
     "enterPassword": "Parolanızı girin",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "Örneğin, CI İşlem Hattı",
+    "credentialName": "Örneğin Üretim SSH Anahtarı",
+    "optionalDetails": "İsteğe bağlı detaylar...",
+    "sshUsername": "örneğin root veya deploy",
+    "hostAddress": "10.0.0.1 veya example.com",
+    "hostName": "Örneğin, Web Sunucusu Üretimi"
   },
   "dashboard": {
     "title": "Gösterge Paneli",
@@ -1514,9 +1514,9 @@
     "sslNames": "Kapaklar {{names}}",
     "sslManualTitle": "Sertifika yükleyin",
     "updateExternalAutoProvisionFailed": "Otomatik oluşturma ayarı güncellenemedi.",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Önceden tanımlanmış ana bilgisayar etiketleri",
+    "hostTagsDesc": "Her kullanıcının sunucu düzenleyicisinde öneri olarak gördüğü etiketler. Bir etiket eklemek için Boşluk veya Enter tuşuna basın. Buradan bir etiketi kaldırmak, onu sunuculardan kaldırmaz.",
+    "hostTagsError": "Ana bilgisayar etiketi önerileri yüklenemedi veya kaydedilemedi."
   },
   "newUi": {
     "sidebar": {

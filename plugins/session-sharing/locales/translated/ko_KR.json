@@ -184,6 +184,6 @@
     "sharedSessionLabel": "{{hostName}} (공유됨)"
   },
   "plugin": {
-    "name": "Session Sharing"
+    "name": "세션 공유"
   }
 }

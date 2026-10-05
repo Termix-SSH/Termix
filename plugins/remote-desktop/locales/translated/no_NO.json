@@ -214,25 +214,25 @@
       "resizeMethod": "Endre størrelse-metoden",
       "driveNamePlaceholder": "Termix Drive",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
+        "any": "Noen",
+        "auto": "Bil",
+        "nlaExtended": "NLA utvidet",
         "color8": "8-bit",
         "color16": "16-bit",
         "color24": "24-bit",
         "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "displayUpdate": "Oppdatering av skjerm",
+        "reconnect": "Koble til på nytt",
+        "preserve": "Bevare",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "local": "Lokal",
+        "remote": "Fjern",
+        "failsafe": "feilsikker",
+        "blackOnWhite": "Svart på hvitt",
+        "whiteOnBlack": "Hvitt på svart",
+        "grayOnBlack": "Grått på svart",
+        "greenOnBlack": "Grønt på svart"
       }
     },
     "remoteDesktop": "Eksternt skrivebord",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Ekstern server kreves. Koble til en ekstern server i Innstillinger for å bruke denne tilkoblingstypen."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Eksternt skrivebord"
   }
 }

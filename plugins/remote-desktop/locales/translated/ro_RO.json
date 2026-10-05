@@ -214,25 +214,25 @@
       "resizeMethod": "Metodă de redimensionare",
       "driveNamePlaceholder": "Termix Drive",
       "options": {
-        "any": "Any",
+        "any": "Orice",
         "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "nlaExtended": "NLA extins",
+        "color8": "8 biți",
+        "color16": "16 biți",
+        "color24": "24 de biți",
+        "color32": "32 de biți",
+        "displayUpdate": "Actualizare afișare",
+        "reconnect": "Reconectați-vă",
+        "preserve": "Păstrați",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
         "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "remote": "De la distanță",
+        "failsafe": "siguranță",
+        "blackOnWhite": "Negru pe alb",
+        "whiteOnBlack": "Alb pe negru",
+        "grayOnBlack": "Gri pe negru",
+        "greenOnBlack": "Verde pe negru"
       }
     },
     "remoteDesktop": "Desktop la distanță",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Este necesar un server la distanță. Conectați un server la distanță în Setări pentru a utiliza acest tip de conexiune."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Desktop la distanță"
   }
 }

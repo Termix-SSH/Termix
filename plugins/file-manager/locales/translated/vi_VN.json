@@ -323,7 +323,7 @@
     "sideBySide": "Song song",
     "inline": "Trong dòng",
     "fileComparison": "So sánh tệp: {{file1}} vs {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "Tệp quá lớn (> 10MB) và không thể mở dưới dạng văn bản vì lý do bảo mật.",
     "sshConnectionFailed": "Kết nối SSH thất bại. Vui lòng kiểm tra kết nối tới {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Không thể tải tệp: {{error}}",
     "connecting": "Đang kết nối...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Sử dụng bố cục thoải mái",
     "cannotLoadPdf": "Không thể tải PDF",
     "pdfLoadError": "Đã xảy ra lỗi khi tải tệp PDF này.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "Đang tải trình xem PDF...",
     "loadingPage": "Đang tải trang...",
     "cancel": "Hủy",
     "copiedItems_one": "Đã sao chép mục {{count}}",
@@ -384,15 +384,15 @@
     "downloadToPlay": "Tải xuống để chơi ở nơi khác",
     "cannotPreviewType": "Không thể xem trước loại tệp này",
     "cannotPreviewTypeHint": "Loại tệp này không có bản xem trước. Hãy tải xuống để mở bằng ứng dụng khác.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "Đang tải tập tin...",
+    "loadingImage": "Đang tải hình ảnh...",
+    "loadingEditor": "Đang tải trình chỉnh sửa...",
+    "loadingPreview": "Đang tải bản xem trước...",
+    "loadingAudio": "Đang tải trình phát âm thanh...",
+    "emptyPreview": "Hiện chưa có gì để xem trước...",
+    "revert": "Hoàn tác",
+    "openAsText": "Mở dưới dạng văn bản",
+    "confirmOpenAsText": "Bạn có muốn tiếp tục mở tệp này dưới dạng văn bản không? Việc này có thể làm chậm trình duyệt của bạn."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "Máy chủ → đích (cục bộ): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "Trình quản lý file"
   }
 }

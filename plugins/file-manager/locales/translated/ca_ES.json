@@ -323,7 +323,7 @@
     "sideBySide": "Costat al costat",
     "inline": "En línia",
     "fileComparison": "Comparació de fitxers: {{file1}} vs {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "El fitxer és massa gran (> 10 MB) i no es pot obrir com a text per motius de seguretat.",
     "sshConnectionFailed": "La connexió SSH ha fallat. Si us plau, comproveu la connexió a {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "No s'ha pogut carregar el fitxer: {{error}}",
     "connecting": "Connectant...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Utilitza un disseny còmode",
     "cannotLoadPdf": "No es pot carregar el PDF",
     "pdfLoadError": "S'ha produït un error en carregar aquest fitxer PDF.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "S'està carregant el visor de PDF...",
     "loadingPage": "S'està carregant la pàgina...",
     "cancel": "Cancel·la",
     "copiedItems_one": "S'ha copiat l'element {{count}}",
@@ -384,15 +384,15 @@
     "downloadToPlay": "Descarrega-ho per reproduir-ho en un altre lloc",
     "cannotPreviewType": "No es pot previsualitzar aquest tipus de fitxer",
     "cannotPreviewTypeHint": "Aquest tipus de fitxer no té vista prèvia. Baixeu-lo per obrir-lo en una altra aplicació.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "S'està carregant el fitxer...",
+    "loadingImage": "S'està carregant la imatge...",
+    "loadingEditor": "S'està carregant l'editor...",
+    "loadingPreview": "S'està carregant la vista prèvia...",
+    "loadingAudio": "S'està carregant el reproductor d'àudio...",
+    "emptyPreview": "Encara no hi ha res per previsualitzar...",
+    "revert": "Revertir",
+    "openAsText": "Obre com a text",
+    "confirmOpenAsText": "Voleu continuar obrint aquest fitxer com a text? Això pot alentir el vostre navegador."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "Servidor → destí (local): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "Gestor de fitxers"
   }
 }

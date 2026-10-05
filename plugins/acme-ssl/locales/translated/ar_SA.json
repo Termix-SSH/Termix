@@ -56,6 +56,6 @@
     "issued": "تم إصدار الشهادة وتركيبها"
   },
   "plugin": {
-    "name": "ACME Certificates"
+    "name": "شهادات ACME"
   }
 }

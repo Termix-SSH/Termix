@@ -233,6 +233,6 @@
   "selectAll": "Tutte",
   "selectNone": "Nessuno",
   "plugin": {
-    "name": "Snippets"
+    "name": "Snippet"
   }
 }

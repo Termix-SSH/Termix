@@ -184,6 +184,6 @@
     "sharedSessionLabel": "{{hostName}} (แชร์)"
   },
   "plugin": {
-    "name": "Session Sharing"
+    "name": "การแบ่งปันเซสชัน"
   }
 }

@@ -214,25 +214,25 @@
       "resizeMethod": "Méthode de redimensionnement",
       "driveNamePlaceholder": "Lecteur Termix",
       "options": {
-        "any": "Any",
+        "any": "N'importe lequel",
         "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "nlaExtended": "NLA étendu",
+        "color8": "8 bits",
+        "color16": "16 bits",
+        "color24": "24 bits",
+        "color32": "32 bits",
+        "displayUpdate": "Mise à jour de l'affichage",
+        "reconnect": "Reconnecter",
+        "preserve": "Préserver",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "local": "Locale",
+        "remote": "Distant",
+        "failsafe": "sécurité intégrée",
+        "blackOnWhite": "Noir sur blanc",
+        "whiteOnBlack": "Blanc sur noir",
+        "grayOnBlack": "Gris sur noir",
+        "greenOnBlack": "Vert sur noir"
       }
     },
     "remoteDesktop": "Bureau à distance",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Serveur distant requis. Connectez un serveur distant dans les paramètres pour utiliser ce type de connexion."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Bureau à distance"
   }
 }

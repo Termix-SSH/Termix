@@ -170,136 +170,136 @@
     "configureLocation": "Imposta una posizione nelle impostazioni del widget",
     "bannerTextPlaceholder": "Testo del banner",
     "serviceNamePlaceholder": "Il mio servizio",
-    "emptyNote": "Empty note...",
-    "weatherLoadFailed": "Could not load weather for \"{{location}}\"",
-    "feelsLike": "Feels like {{temperature}}",
-    "timezonePlaceholder": "America/New_York (leave blank for local)",
-    "notesPlaceholder": "Write your notes here...",
-    "locationPlaceholder": "New York, London, Tokyo...",
+    "emptyNote": "Nota vuota...",
+    "weatherLoadFailed": "Impossibile caricare le previsioni meteo per \"{{location}}\"",
+    "feelsLike": "Sembra {{temperature}}",
+    "timezonePlaceholder": "America/New_York (lasciare vuoto per la località)",
+    "notesPlaceholder": "Scrivi qui i tuoi appunti...",
+    "locationPlaceholder": "New York, Londra, Tokyo...",
     "widgets": {
       "bookmark_list": {
-        "name": "Bookmarks",
-        "description": "A list of quick links"
+        "name": "Segnalibri",
+        "description": "Un elenco di collegamenti rapidi"
       },
       "calendar": {
-        "name": "Calendar",
-        "description": "A month calendar with today highlighted"
+        "name": "Calendario",
+        "description": "Un calendario mensile con la data odierna evidenziata."
       },
       "clock": {
-        "name": "Clock",
-        "description": "A live clock with configurable timezone"
+        "name": "Orologio",
+        "description": "Un orologio in tempo reale con fuso orario configurabile"
       },
       "countdown": {
-        "name": "Countdown",
-        "description": "Counts down to a target date and time"
+        "name": "Conto alla rovescia",
+        "description": "Conto alla rovescia fino a una data e ora obiettivo"
       },
       "custom_api": {
-        "name": "Custom API",
-        "description": "Fetch and display data from any JSON API"
+        "name": "API personalizzata",
+        "description": "Recupera e visualizza dati da qualsiasi API JSON"
       },
       "dashboard_links": {
-        "name": "Dashboard Links",
-        "description": "Shows your saved dashboard service links"
+        "name": "Collegamenti dashboard",
+        "description": "Mostra i collegamenti di servizio del dashboard salvati"
       },
       "folder": {
-        "name": "Folder",
-        "description": "A background card for grouping widgets visually"
+        "name": "Cartella",
+        "description": "Una scheda di sfondo per raggruppare visivamente i widget"
       },
       "host_grid": {
-        "name": "Host Grid",
-        "description": "Live status overview grid for all your SSH hosts"
+        "name": "Griglia host",
+        "description": "Griglia di riepilogo dello stato in tempo reale per tutti i tuoi host SSH"
       },
       "host_status": {
-        "name": "Host Status",
-        "description": "Shows live status and metrics for an SSH host"
+        "name": "Stato host",
+        "description": "Mostra lo stato in tempo reale e le metriche per un host SSH"
       },
       "iframe_embed": {
-        "name": "iFrame Embed",
-        "description": "Embed any URL in an iframe"
+        "name": "Incorporamento iFrame",
+        "description": "Incorpora qualsiasi URL in un iframe"
       },
       "image_widget": {
-        "name": "Image",
-        "description": "Display any image from a URL"
+        "name": "Immagine",
+        "description": "Visualizzare qualsiasi immagine da un URL"
       },
       "link_tree": {
-        "name": "Link Tree",
-        "description": "Grouped links organized into labeled sections"
+        "name": "Albero dei collegamenti",
+        "description": "Collegamenti raggruppati e organizzati in sezioni etichettate"
       },
       "markdown_notes": {
-        "name": "Markdown Notes",
-        "description": "Notes with optional Markdown rendering and inline editing"
+        "name": "Note in Markdown",
+        "description": "Note con rendering Markdown opzionale e modifica in linea"
       },
       "notes": {
-        "name": "Notes",
-        "description": "A text notes widget"
+        "name": "Note",
+        "description": "Un widget per le note di testo"
       },
       "ping_status": {
-        "name": "Ping Status",
-        "description": "Check if URLs or services are reachable"
+        "name": "Stato ping",
+        "description": "Verifica se gli URL o i servizi sono raggiungibili"
       },
       "quick_connect": {
-        "name": "Quick Connect",
-        "description": "Launch terminal, files, docker, tunnels, and more for your hosts"
+        "name": "Connessione rapida",
+        "description": "Avvia terminale, file, Docker, tunnel e altro ancora per i tuoi host"
       },
       "recent_activity": {
-        "name": "Recent Activity",
-        "description": "Shows recent terminal, Docker, file, and tunnel activity"
+        "name": "Attività recente",
+        "description": "Mostra le attività recenti del terminale, di Docker, dei file e dei tunnel."
       },
       "rss_feed": {
-        "name": "RSS Feed",
-        "description": "Display items from an RSS or Atom feed"
+        "name": "Feed RSS",
+        "description": "Visualizza elementi da un feed RSS o Atom"
       },
       "search_bar": {
-        "name": "Search Bar",
-        "description": "Quick search with Google, DuckDuckGo, Bing, or a custom engine"
+        "name": "Barra di ricerca",
+        "description": "Ricerca rapida con Google, DuckDuckGo, Bing o un motore di ricerca personalizzato"
       },
       "search_links": {
-        "name": "Search Shortcuts",
-        "description": "Quick buttons to search different engines"
+        "name": "Scorciatoie di ricerca",
+        "description": "Tasti rapidi per cercare in diversi motori di ricerca"
       },
       "service_grid": {
-        "name": "Service Grid",
-        "description": "A grid of service tiles with icons and links"
+        "name": "Griglia dei servizi",
+        "description": "Una griglia di riquadri di servizio con icone e collegamenti"
       },
       "service_link": {
-        "name": "Service Link",
-        "description": "A clickable tile linking to a service URL"
+        "name": "Collegamento servizio",
+        "description": "Un riquadro cliccabile che collega a un URL di servizio"
       },
       "ssh_terminal": {
-        "name": "SSH Terminal",
-        "description": "An inline SSH terminal connected to a configured host"
+        "name": "Terminale SSH",
+        "description": "Un terminale SSH inline connesso a un host configurato"
       },
       "system_overview": {
-        "name": "System Overview",
-        "description": "Termix version, database health, and uptime at a glance"
+        "name": "Panoramica del sistema",
+        "description": "Versione di Termix, stato del database e tempo di attività a colpo d'occhio"
       },
       "termix_uptime": {
-        "name": "Termix Uptime",
-        "description": "Shows how long the Termix server has been running"
+        "name": "Uptime di Termix",
+        "description": "Mostra da quanto tempo è in esecuzione il server Termix"
       },
       "text_banner": {
-        "name": "Text Banner",
-        "description": "A styled text label for sections and headings"
+        "name": "Banner di testo",
+        "description": "Un'etichetta di testo stilizzata per sezioni e intestazioni"
       },
       "weather": {
-        "name": "Weather",
-        "description": "Live weather for any location"
+        "name": "Meteo",
+        "description": "Meteo in tempo reale per qualsiasi località"
       },
       "docker_widget": {
-        "name": "Docker Manager",
-        "description": "Embedded Docker container manager for a configured host"
+        "name": "Gestore Docker",
+        "description": "Gestore di container Docker integrato per un host configurato"
       },
       "file_manager_widget": {
-        "name": "File Manager",
-        "description": "Embedded SFTP file manager for a configured host"
+        "name": "Gestore file",
+        "description": "Gestore file SFTP integrato per un host configurato"
       },
       "tunnel_widget": {
-        "name": "Tunnel Manager",
-        "description": "Embedded SSH tunnel manager for a configured host"
+        "name": "Gestore Tunnel",
+        "description": "Gestore di tunnel SSH integrato per un host configurato"
       },
       "metrics_chart": {
-        "name": "Metrics Chart",
-        "description": "Historical CPU, memory, disk, or network chart for a host"
+        "name": "Grafico metriche",
+        "description": "Grafico storico di CPU, memoria, disco o rete per un host"
       }
     }
   },

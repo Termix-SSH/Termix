@@ -116,8 +116,8 @@
     "updateLinkLabel": "Päivitys saatavilla. Avaa julkaisutiedot GitHubissa."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Vieritä välilehtiä vasemmalle",
+    "scrollTabsRight": "Vieritä välilehtiä oikealle",
     "close": "Lähellä",
     "minimize": "Minimoida",
     "online": "Verkossa",
@@ -189,10 +189,10 @@
     "add": "Lisätä",
     "update": "Päivittää",
     "noResults": "Ei tuloksia",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Sivupalkki",
+    "mobileSidebarDescription": "Näyttää mobiilisivupalkin.",
+    "toggleSidebar": "Näytä/piilota sivupalkki",
+    "search": "Haku..."
   },
   "onboarding": {
     "stepCounter": "Vaihe {{current}} / {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "Tunneli",
     "serverStats": "Isännän mittarit",
     "status": {
-      "online": "Online",
+      "online": "Verkossa",
       "offline": "Offline-tilassa",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Tarkistetaan",
+      "monitoringDisabled": "Tilatarkistukset pois päältä",
       "label": "Status"
     },
     "folderRenamed": "Kansio \"{{oldName}}\" nimettiin uudelleen onnistuneesti muotoon \"{{newName}}\"",
@@ -482,7 +482,7 @@
     "sameHost": "Tämä isäntä (suora tunneli)",
     "statusChecksLabel": "Tilatarkastukset",
     "enableStatusChecks": "Ota käyttöön tilan tarkistukset",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Tarkista isännän tavoitettavuus. Aktiiviset istunnot ohittavat ylimääräiset tarkistukset. SSH-tarkistukset ilman aktiivista istuntoa voivat laukaista aggressiivisia Fail2Ban-sääntöjä; poista tilatarkistukset käytöstä näillä isännillä.",
     "useGlobalInterval": "Käytä globaalia väliä",
     "useGlobalIntervalDesc": "Ohita palvelimen laajuisella tilan tarkistusvälillä",
     "checkIntervalS": "Tarkistusväli (s)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Tätä toista tekijää ei voida näyttää tällä näytöllä. Ota yhteyttä ylläpitäjään.",
     "serverAuthentication": "Palvelimelle kirjautuminen",
     "minChars": "vähintään {{min}} merkkiä",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Lataa vahvistusmenetelmät uudelleen"
   },
   "hostKey": {
     "verifyNewHost": "Vahvista SSH-isäntäavain",
@@ -1126,12 +1126,12 @@
     "keyPassword": "avainsalasana",
     "pastePrivateKey": "Liitä yksityinen avaimesi tähän...",
     "enterPassword": "Anna salasanasi",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "esim. CI-putkisto",
+    "credentialName": "esim. tuotantokäyttöön tarkoitettu SSH-avain",
+    "optionalDetails": "Valinnaiset tiedot...",
+    "sshUsername": "esim. pääkäyttäjä tai deploy",
+    "hostAddress": "10.0.0.1 tai esimerkki.com",
+    "hostName": "esim. web-palvelimen tuotanto"
   },
   "dashboard": {
     "title": "Kojelauta",
@@ -1514,9 +1514,9 @@
     "sslNames": "Kannet {{names}}",
     "sslManualTitle": "Lähetä sertifikaatti",
     "updateExternalAutoProvisionFailed": "Automaattisen luomisen asetuksen päivittäminen epäonnistui",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Ennalta määritetyt isäntätunnisteet",
+    "hostTagsDesc": "Jokainen käyttäjä näkee ehdotuksina tunnisteet isäntäeditorissa. Lisää ehdotus painamalla välilyöntiä tai Enter-näppäintä. Tunnisteen poistaminen tästä ei poista sitä isännistä.",
+    "hostTagsError": "Isäntätunnisteehdotusten lataaminen tai tallentaminen epäonnistui."
   },
   "newUi": {
     "sidebar": {

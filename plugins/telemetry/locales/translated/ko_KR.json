@@ -56,6 +56,6 @@
     "loadFailed": "사용량 통계 상태를 불러올 수 없습니다."
   },
   "plugin": {
-    "name": "Usage Statistics"
+    "name": "사용 통계"
   }
 }

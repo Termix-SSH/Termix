@@ -116,8 +116,8 @@
     "updateLinkLabel": "Oppdatering tilgjengelig. Åpne utgivelsesnotatene på GitHub"
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Bla fanene til venstre",
+    "scrollTabsRight": "Bla fanene til høyre",
     "close": "Lukke",
     "minimize": "Minimer",
     "online": "På nett",
@@ -189,10 +189,10 @@
     "add": "Legge til",
     "update": "Oppdatering",
     "noResults": "Ingen resultater funnet",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Sidepanel",
+    "mobileSidebarDescription": "Viser sidefeltet for mobilen.",
+    "toggleSidebar": "Veksle sidepanel",
+    "search": "Søk..."
   },
   "onboarding": {
     "stepCounter": "Trinn {{current}} av {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "Tunnel",
     "serverStats": "Vertsmålinger",
     "status": {
-      "online": "Online",
+      "online": "Tilkoblet",
       "offline": "Frakoblet",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Sjekker",
+      "monitoringDisabled": "Statussjekker av",
       "label": "Status"
     },
     "folderRenamed": "Mappen «{{oldName}}» har fått nytt navn til «{{newName}}»",
@@ -482,7 +482,7 @@
     "sameHost": "Denne verten (direkte tunnel)",
     "statusChecksLabel": "Statuskontroller",
     "enableStatusChecks": "Aktiver statuskontroller",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Sjekk vertens tilgjengelighet. Aktive økter hopper over ekstra sonder. SSH-sonder uten en aktiv økt kan utløse aggressive Fail2Ban-regler; deaktiver statuskontroller på disse vertene.",
     "useGlobalInterval": "Bruk globalt intervall",
     "useGlobalIntervalDesc": "Overstyr med det serveromfattende statuskontrollintervallet",
     "checkIntervalS": "Kontrollintervall (s)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Denne andre faktoren kan ikke vises på denne skjermen. Kontakt en administrator.",
     "serverAuthentication": "Serverpålogging",
     "minChars": "min. {{min}} tegn",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Last inn bekreftelsesmetoder på nytt"
   },
   "hostKey": {
     "verifyNewHost": "Bekreft SSH-vertsnøkkel",
@@ -1126,12 +1126,12 @@
     "keyPassword": "nøkkelpassord",
     "pastePrivateKey": "Lim inn din private nøkkel her...",
     "enterPassword": "Skriv inn passordet ditt",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "f.eks. CI-rørledning",
+    "credentialName": "f.eks. produksjons-SSH-nøkkel",
+    "optionalDetails": "Valgfrie detaljer...",
+    "sshUsername": "f.eks. rot eller distribuer",
+    "hostAddress": "10.0.0.1 eller example.com",
+    "hostName": "f.eks. webserverproduksjon"
   },
   "dashboard": {
     "title": "Dashbord",
@@ -1514,9 +1514,9 @@
     "sslNames": "Omslag {{names}}",
     "sslManualTitle": "Last opp et sertifikat",
     "updateExternalAutoProvisionFailed": "Kunne ikke oppdatere innstillingen for automatisk oppretting",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Forhåndsdefinerte vertskoder",
+    "hostTagsDesc": "Tagger som alle brukere ser som forslag i vertredigeringsprogrammet. Trykk mellomrom eller Enter for å legge til en. Å fjerne en tagg her fjerner den ikke fra vertene.",
+    "hostTagsError": "Kunne ikke laste inn eller lagre forslag til vertstagger."
   },
   "newUi": {
     "sidebar": {

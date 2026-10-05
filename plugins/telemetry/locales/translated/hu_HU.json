@@ -56,6 +56,6 @@
     "loadFailed": "Nem sikerült betölteni a használati statisztikák állapotát"
   },
   "plugin": {
-    "name": "Usage Statistics"
+    "name": "Használati statisztikák"
   }
 }

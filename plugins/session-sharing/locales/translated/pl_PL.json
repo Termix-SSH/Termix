@@ -184,6 +184,6 @@
     "sharedSessionLabel": "{{hostName}} (udostępnione)"
   },
   "plugin": {
-    "name": "Session Sharing"
+    "name": "Udostępnianie sesji"
   }
 }

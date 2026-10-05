@@ -214,25 +214,25 @@
       "resizeMethod": "Método de redimensionamento",
       "driveNamePlaceholder": "Termix Drive",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "any": "Qualquer",
+        "auto": "Automático",
+        "nlaExtended": "NLA Estendido",
+        "color8": "8 bits",
+        "color16": "16 bits",
+        "color24": "24 bits",
+        "color32": "32 bits",
+        "displayUpdate": "Atualização de visualização",
+        "reconnect": "Reconectar",
+        "preserve": "Preservar",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
         "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "remote": "Remoto",
+        "failsafe": "segurança contra falhas",
+        "blackOnWhite": "Preto sobre branco",
+        "whiteOnBlack": "Branco sobre preto",
+        "grayOnBlack": "Cinza sobre preto",
+        "greenOnBlack": "Verde sobre preto"
       }
     },
     "remoteDesktop": "Ambiente de trabalho remoto",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "É necessário um servidor remoto. Ligue um servidor remoto nas Definições para utilizar este tipo de ligação."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Ambiente de trabalho remoto"
   }
 }

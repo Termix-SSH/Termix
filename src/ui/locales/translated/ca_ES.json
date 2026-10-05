@@ -116,8 +116,8 @@
     "updateLinkLabel": "Actualització disponible. Obriu les notes de la versió a GitHub."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Desplaça les pestanyes cap a l'esquerra",
+    "scrollTabsRight": "Desplaça les pestanyes cap a la dreta",
     "close": "Tanca",
     "minimize": "Minimitzar",
     "online": "En línia",
@@ -189,10 +189,10 @@
     "add": "Afegeix",
     "update": "Actualització",
     "noResults": "No s'han trobat resultats",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Barra lateral",
+    "mobileSidebarDescription": "Mostra la barra lateral per a mòbils.",
+    "toggleSidebar": "Obre/tanca la barra lateral",
+    "search": "Cerca..."
   },
   "onboarding": {
     "stepCounter": "Pas {{current}} de {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "Túnel",
     "serverStats": "Mètriques de l'amfitrió",
     "status": {
-      "online": "Online",
+      "online": "En línia",
       "offline": "Fora de línia",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Comprovació",
+      "monitoringDisabled": "Comprovació d'estat desactivada",
       "label": "Estat"
     },
     "folderRenamed": "La carpeta \"{{oldName}}\" s'ha canviat de nom a \"{{newName}}\" correctament",
@@ -482,7 +482,7 @@
     "sameHost": "Aquest host (túnel directe)",
     "statusChecksLabel": "Comprovacions d'estat",
     "enableStatusChecks": "Activa les comprovacions d'estat",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Comproveu l'accessibilitat de l'amfitrió. Les sessions actives ometen sondes addicionals. Les sondes SSH sense una sessió activa poden activar regles agressives de Fail2Ban; desactiveu les comprovacions d'estat en aquests amfitrions.",
     "useGlobalInterval": "Utilitza l'interval global",
     "useGlobalIntervalDesc": "Substitueix amb l'interval de comprovació d'estat de tot el servidor",
     "checkIntervalS": "Interval (s) de comprovació",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Aquest segon factor no es pot mostrar en aquesta pantalla. Contacta amb un administrador.",
     "serverAuthentication": "Inici de sessió al servidor",
     "minChars": "mínim {{min}} caràcters",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Mètodes de verificació de recàrrega"
   },
   "hostKey": {
     "verifyNewHost": "Verifica la clau d'amfitrió SSH",
@@ -1126,12 +1126,12 @@
     "keyPassword": "contrasenya clau",
     "pastePrivateKey": "Enganxa la teva clau privada aquí...",
     "enterPassword": "Introdueix la teva contrasenya",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "p. ex., CI Pipeline",
+    "credentialName": "p. ex. Clau SSH de producció",
+    "optionalDetails": "Detalls opcionals...",
+    "sshUsername": "p. ex. root o deploy",
+    "hostAddress": "10.0.0.1 o example.com",
+    "hostName": "p. ex. Producció de servidors web"
   },
   "dashboard": {
     "title": "Tauler de control",
@@ -1514,9 +1514,9 @@
     "sslNames": "Cobertes {{names}}",
     "sslManualTitle": "Puja un certificat",
     "updateExternalAutoProvisionFailed": "No s'ha pogut actualitzar la configuració de creació automàtica",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Etiquetes d'amfitrió predefinides",
+    "hostTagsDesc": "Etiquetes que tots els usuaris veuen com a suggeriments a l'editor d'amfitrions. Premeu Espai o Retorn per afegir-ne una. Si es treu una etiqueta aquí, no s'elimina dels amfitrions.",
+    "hostTagsError": "No s'han pogut carregar ni desar els suggeriments d'etiquetes d'amfitrió."
   },
   "newUi": {
     "sidebar": {

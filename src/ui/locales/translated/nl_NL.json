@@ -116,8 +116,8 @@
     "updateLinkLabel": "Update beschikbaar. Bekijk de release-opmerkingen op GitHub."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Scrolltabbladen naar links",
+    "scrollTabsRight": "Schuif de tabbladen naar rechts",
     "close": "Dichtbij",
     "minimize": "Minimaliseren",
     "online": "Online",
@@ -189,10 +189,10 @@
     "add": "Toevoegen",
     "update": "Update",
     "noResults": "Geen resultaten gevonden",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Zijbalk",
+    "mobileSidebarDescription": "Toont de zijbalk voor mobiele apparaten.",
+    "toggleSidebar": "Zijbalk in-/uitschakelen",
+    "search": "Zoekopdracht..."
   },
   "onboarding": {
     "stepCounter": "Stap {{current}} van {{total}}",
@@ -359,8 +359,8 @@
     "status": {
       "online": "Online",
       "offline": "Offline",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Controleren",
+      "monitoringDisabled": "Statuscontroles voltooid",
       "label": "Status"
     },
     "folderRenamed": "Map \"{{oldName}}\" is succesvol hernoemd naar \"{{newName}}\"",
@@ -482,7 +482,7 @@
     "sameHost": "Deze host (directe tunnel)",
     "statusChecksLabel": "Statuscontroles",
     "enableStatusChecks": "Statuscontroles inschakelen",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Controleer de bereikbaarheid van de host. Actieve sessies slaan extra controles over. SSH-controles zonder actieve sessie kunnen agressieve Fail2Ban-regels activeren; schakel statuscontroles op die hosts uit.",
     "useGlobalInterval": "Gebruik globaal interval",
     "useGlobalIntervalDesc": "Overschrijf dit met het serverbrede statuscontrole-interval.",
     "checkIntervalS": "Controle-interval (s)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Deze tweede factor kan niet op dit scherm worden weergegeven. Neem contact op met een beheerder.",
     "serverAuthentication": "Server aanmelden",
     "minChars": "min. {{min}} tekens",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Herlaadverificatiemethoden"
   },
   "hostKey": {
     "verifyNewHost": "Verifieer de SSH-hostsleutel",
@@ -1126,12 +1126,12 @@
     "keyPassword": "sleutel wachtwoord",
     "pastePrivateKey": "Plak hier uw privésleutel...",
     "enterPassword": "Voer uw wachtwoord in",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "bijvoorbeeld CI-pipeline",
+    "credentialName": "bijv. SSH-sleutel voor productie",
+    "optionalDetails": "Optionele details...",
+    "sshUsername": "bijvoorbeeld root of implementeren",
+    "hostAddress": "10.0.0.1 of example.com",
+    "hostName": "bijv. Webserverproductie"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1514,9 +1514,9 @@
     "sslNames": "Omslagen {{names}}",
     "sslManualTitle": "Een certificaat uploaden",
     "updateExternalAutoProvisionFailed": "Het bijwerken van de instelling voor automatisch aanmaken is mislukt.",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Vooraf gedefinieerde hosttags",
+    "hostTagsDesc": "Tags die elke gebruiker als suggesties ziet in de hosteditor. Druk op de spatiebalk of Enter om er een toe te voegen. Het verwijderen van een tag hier verwijdert deze niet uit de hosts.",
+    "hostTagsError": "Het lukte niet om suggesties voor hosttags te laden of op te slaan."
   },
   "newUi": {
     "sidebar": {

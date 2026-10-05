@@ -170,136 +170,136 @@
     "configureLocation": "在小部件設定中設定位置",
     "bannerTextPlaceholder": "橫幅文字",
     "serviceNamePlaceholder": "我的服務",
-    "emptyNote": "Empty note...",
-    "weatherLoadFailed": "Could not load weather for \"{{location}}\"",
-    "feelsLike": "Feels like {{temperature}}",
-    "timezonePlaceholder": "America/New_York (leave blank for local)",
-    "notesPlaceholder": "Write your notes here...",
-    "locationPlaceholder": "New York, London, Tokyo...",
+    "emptyNote": "空紙條…",
+    "weatherLoadFailed": "無法載入「{{location}}」的天氣",
+    "feelsLike": "感覺像 {{temperature}}",
+    "timezonePlaceholder": "美國/紐約（留空為本地）",
+    "notesPlaceholder": "請在此寫下您的筆記…",
+    "locationPlaceholder": "紐約、倫敦、東京…",
     "widgets": {
       "bookmark_list": {
-        "name": "Bookmarks",
-        "description": "A list of quick links"
+        "name": "書籤",
+        "description": "快速連結清單"
       },
       "calendar": {
-        "name": "Calendar",
-        "description": "A month calendar with today highlighted"
+        "name": "行事曆",
+        "description": "一張月曆，今天已高亮顯示。"
       },
       "clock": {
-        "name": "Clock",
-        "description": "A live clock with configurable timezone"
+        "name": "時鐘",
+        "description": "具有可設定時區的即時時鐘"
       },
       "countdown": {
-        "name": "Countdown",
-        "description": "Counts down to a target date and time"
+        "name": "倒數計時",
+        "description": "倒數計時至目標日期和時間"
       },
       "custom_api": {
-        "name": "Custom API",
-        "description": "Fetch and display data from any JSON API"
+        "name": "自訂 API",
+        "description": "從任何 JSON API 擷取並顯示資料"
       },
       "dashboard_links": {
-        "name": "Dashboard Links",
-        "description": "Shows your saved dashboard service links"
+        "name": "儀表板連結",
+        "description": "顯示您儲存的儀表板服務鏈接"
       },
       "folder": {
-        "name": "Folder",
-        "description": "A background card for grouping widgets visually"
+        "name": "資料夾",
+        "description": "用於以視覺方式對控制項進行分組的背景卡片"
       },
       "host_grid": {
-        "name": "Host Grid",
-        "description": "Live status overview grid for all your SSH hosts"
+        "name": "主機方格",
+        "description": "即時狀態概覽網格，顯示所有 SSH 主機"
       },
       "host_status": {
-        "name": "Host Status",
-        "description": "Shows live status and metrics for an SSH host"
+        "name": "主機狀態",
+        "description": "顯示 SSH 主機的即時狀態和指標"
       },
       "iframe_embed": {
-        "name": "iFrame Embed",
-        "description": "Embed any URL in an iframe"
+        "name": "iFrame 嵌入",
+        "description": "在 iframe 中嵌入任何 URL 的內容"
       },
       "image_widget": {
-        "name": "Image",
-        "description": "Display any image from a URL"
+        "name": "映像",
+        "description": "顯示來自 URL 的任何圖像"
       },
       "link_tree": {
-        "name": "Link Tree",
-        "description": "Grouped links organized into labeled sections"
+        "name": "連結樹",
+        "description": "分組連結按標籤分類"
       },
       "markdown_notes": {
-        "name": "Markdown Notes",
-        "description": "Notes with optional Markdown rendering and inline editing"
+        "name": "Markdown 筆記",
+        "description": "帶有可選 Markdown 渲染和內聯編輯功能的筆記"
       },
       "notes": {
-        "name": "Notes",
-        "description": "A text notes widget"
+        "name": "筆記",
+        "description": "文字備註小工具"
       },
       "ping_status": {
-        "name": "Ping Status",
-        "description": "Check if URLs or services are reachable"
+        "name": "Ping 狀態",
+        "description": "檢查 URL 或服務是否可存取"
       },
       "quick_connect": {
-        "name": "Quick Connect",
-        "description": "Launch terminal, files, docker, tunnels, and more for your hosts"
+        "name": "快速連線",
+        "description": "為您的主機啟動終端、檔案、Docker、隧道等。"
       },
       "recent_activity": {
-        "name": "Recent Activity",
-        "description": "Shows recent terminal, Docker, file, and tunnel activity"
+        "name": "近期活動",
+        "description": "顯示最近的終端、Docker、文件和隧道活動"
       },
       "rss_feed": {
-        "name": "RSS Feed",
-        "description": "Display items from an RSS or Atom feed"
+        "name": "RSS 摘要",
+        "description": "顯示來自 RSS 或 Atom 摘要的項目"
       },
       "search_bar": {
-        "name": "Search Bar",
-        "description": "Quick search with Google, DuckDuckGo, Bing, or a custom engine"
+        "name": "搜尋列",
+        "description": "使用 Google、DuckDuckGo、Bing 或自訂引擎快速搜尋"
       },
       "search_links": {
-        "name": "Search Shortcuts",
-        "description": "Quick buttons to search different engines"
+        "name": "搜尋捷徑",
+        "description": "快速按鈕，可搜尋不同的搜尋引擎"
       },
       "service_grid": {
-        "name": "Service Grid",
-        "description": "A grid of service tiles with icons and links"
+        "name": "服務網格",
+        "description": "包含圖示和連結的服務圖塊網格"
       },
       "service_link": {
-        "name": "Service Link",
-        "description": "A clickable tile linking to a service URL"
+        "name": "服務連結",
+        "description": "可點擊的方塊，連結至服務 URL"
       },
       "ssh_terminal": {
-        "name": "SSH Terminal",
-        "description": "An inline SSH terminal connected to a configured host"
+        "name": "SSH 終端機",
+        "description": "連線至已設定主機的內嵌 SSH 終端機"
       },
       "system_overview": {
-        "name": "System Overview",
-        "description": "Termix version, database health, and uptime at a glance"
+        "name": "系統概覽",
+        "description": "Termix 版本、資料庫健康狀況和正常運作時間一覽"
       },
       "termix_uptime": {
-        "name": "Termix Uptime",
-        "description": "Shows how long the Termix server has been running"
+        "name": "Termix 運作時間",
+        "description": "顯示 Termix 伺服器已運行多長時間"
       },
       "text_banner": {
-        "name": "Text Banner",
-        "description": "A styled text label for sections and headings"
+        "name": "文字橫幅",
+        "description": "用於章節和標題的樣式化文字標籤"
       },
       "weather": {
-        "name": "Weather",
-        "description": "Live weather for any location"
+        "name": "天氣",
+        "description": "任何地點的即時天氣"
       },
       "docker_widget": {
-        "name": "Docker Manager",
-        "description": "Embedded Docker container manager for a configured host"
+        "name": "Docker 管理",
+        "description": "用於已設定主機的內嵌 Docker 容器管理員"
       },
       "file_manager_widget": {
-        "name": "File Manager",
-        "description": "Embedded SFTP file manager for a configured host"
+        "name": "檔案管理員",
+        "description": "用於已設定主機的內嵌 SFTP 檔案管理員"
       },
       "tunnel_widget": {
-        "name": "Tunnel Manager",
-        "description": "Embedded SSH tunnel manager for a configured host"
+        "name": "通道管理員",
+        "description": "用於已設定主機的內嵌 SSH 通道管理員"
       },
       "metrics_chart": {
-        "name": "Metrics Chart",
-        "description": "Historical CPU, memory, disk, or network chart for a host"
+        "name": "指標圖表",
+        "description": "主機的歷史 CPU、記憶體、磁碟或網路圖表"
       }
     }
   },
@@ -320,6 +320,6 @@
     }
   },
   "plugin": {
-    "name": "Homepage"
+    "name": "首頁"
   }
 }

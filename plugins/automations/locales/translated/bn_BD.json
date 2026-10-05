@@ -212,12 +212,12 @@
     "sidebar": {
       "automations": {
         "options": {
-          "connect": "connect",
-          "disconnect": "disconnect",
-          "offline": "offline",
-          "online": "online",
-          "failing": "failing",
-          "recovered": "recovered"
+          "connect": "সংযোগ করুন",
+          "disconnect": "সংযোগ বিচ্ছিন্ন করুন",
+          "offline": "অফলাইন",
+          "online": "অনলাইন",
+          "failing": "ব্যর্থ হওয়া",
+          "recovered": "পুনরুদ্ধার করা হয়েছে"
         }
       }
     }

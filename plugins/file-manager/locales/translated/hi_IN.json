@@ -323,7 +323,7 @@
     "sideBySide": "साथ-साथ",
     "inline": "इनलाइन",
     "fileComparison": "फ़ाइल तुलना: {{file1}} बनाम {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "फाइल का आकार बहुत बड़ा है (> 10MB) और सुरक्षा कारणों से इसे टेक्स्ट के रूप में नहीं खोला जा सकता है।",
     "sshConnectionFailed": "SSH कनेक्शन विफल। कृपया {{name}} ({{ip}}:{{port}}) से अपना कनेक्शन जाँचें।",
     "loadFileFailed": "फ़ाइल लोड करने में विफल: {{error}}",
     "connecting": "कनेक्ट हो रहा है...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "सुविधाजनक लेआउट का उपयोग करें",
     "cannotLoadPdf": "PDF लोड नहीं कर सकता",
     "pdfLoadError": "इस PDF फ़ाइल को लोड करने में त्रुटि हुई।",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "पीडीएफ व्यूअर लोड हो रहा है...",
     "loadingPage": "पृष्ठ लोड हो रहा है...",
     "cancel": "रद्द करें",
     "copiedItems_one": "आइटम कॉपी किया गया {{count}}",
@@ -384,15 +384,15 @@
     "downloadToPlay": "इसे कहीं और खेलने के लिए डाउनलोड करें",
     "cannotPreviewType": "इस फ़ाइल प्रकार का पूर्वावलोकन नहीं किया जा सकता है",
     "cannotPreviewTypeHint": "इस फ़ाइल प्रकार का कोई पूर्वावलोकन नहीं है। इसे डाउनलोड करके किसी अन्य ऐप में खोलें।",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "फ़ाइल लोड हो रही है...",
+    "loadingImage": "छवि लोड हो रही है...",
+    "loadingEditor": "एडिटर लोड हो रहा है...",
+    "loadingPreview": "पूर्वावलोकन लोड हो रहा है...",
+    "loadingAudio": "ऑडियो प्लेयर लोड हो रहा है...",
+    "emptyPreview": "अभी पूर्वावलोकन के लिए कुछ भी उपलब्ध नहीं है...",
+    "revert": "फिर लौट आना",
+    "openAsText": "टेक्स्ट के रूप में खोलें",
+    "confirmOpenAsText": "क्या आप इस फ़ाइल को टेक्स्ट के रूप में खोलना जारी रखना चाहते हैं? इससे आपके ब्राउज़र की गति धीमी हो सकती है।"
   },
   "sftpTransfer": {
     "title": "एसएफटीपी",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "सर्वर → गंतव्य (स्थानीय): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "फ़ाइल प्रबंधक"
   }
 }

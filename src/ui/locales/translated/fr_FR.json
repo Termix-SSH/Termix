@@ -116,8 +116,8 @@
     "updateLinkLabel": "Mise à jour disponible. Consultez les notes de version sur GitHub."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Défilez les onglets vers la gauche",
+    "scrollTabsRight": "Défilez les onglets vers la droite",
     "close": "Fermer",
     "minimize": "Réduire",
     "online": "En ligne",
@@ -189,10 +189,10 @@
     "add": "Ajouter",
     "update": "Mettre à jour",
     "noResults": "Aucun résultat trouvé",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Barre latérale",
+    "mobileSidebarDescription": "Affiche la barre latérale mobile.",
+    "toggleSidebar": "Afficher/Masquer la barre latérale",
+    "search": "Rechercher..."
   },
   "onboarding": {
     "stepCounter": "Étape {{current}} de {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "Tunnel",
     "serverStats": "Métriques de l'hôte",
     "status": {
-      "online": "Online",
+      "online": "En ligne",
       "offline": "Hors ligne",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Vérification",
+      "monitoringDisabled": "Vérification du statut",
       "label": "Statut"
     },
     "folderRenamed": "Dossier « {{oldName}} » renommé en « {{newName}} » avec succès",
@@ -482,7 +482,7 @@
     "sameHost": "Cet hôte (tunnel direct)",
     "statusChecksLabel": "Vérifications d'état",
     "enableStatusChecks": "Activer les vérifications d'état",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Vérifiez la disponibilité de l'hôte. Les sessions actives ignorent les requêtes supplémentaires. Les requêtes SSH sans session active peuvent déclencher des règles Fail2Ban strictes ; désactivez les vérifications d'état sur ces hôtes.",
     "useGlobalInterval": "Utiliser l'intervalle global",
     "useGlobalIntervalDesc": "Remplacer par l'intervalle de vérification d'état défini à l'échelle du serveur",
     "checkIntervalS": "Intervalle de vérification (s)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Ce deuxième facteur ne peut pas être affiché sur cet écran. Veuillez contacter un administrateur.",
     "serverAuthentication": "Connexion au serveur",
     "minChars": "min. {{min}} caractères",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Méthodes de vérification du rechargement"
   },
   "hostKey": {
     "verifyNewHost": "Vérifier la clé d'hôte SSH",
@@ -1126,12 +1126,12 @@
     "keyPassword": "mot de passe de la clé",
     "pastePrivateKey": "Collez votre clé privée ici...",
     "enterPassword": "Saisissez votre mot de passe",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "par exemple, pipeline CI",
+    "credentialName": "Exemple : clé SSH de production",
+    "optionalDetails": "Détails optionnels...",
+    "sshUsername": "par exemple, racine ou déploiement",
+    "hostAddress": "10.0.0.1 ou exemple.com",
+    "hostName": "par exemple, production de serveur Web"
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -1514,9 +1514,9 @@
     "sslNames": "Couvertures {{names}}",
     "sslManualTitle": "Téléverser un certificat",
     "updateExternalAutoProvisionFailed": "Échec de la mise à jour du paramètre de création automatique",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Étiquettes d'hôte prédéfinies",
+    "hostTagsDesc": "Les balises apparaissent comme suggestions dans l'éditeur d'hôtes. Appuyez sur Espace ou Entrée pour en ajouter une. Supprimer une balise ici ne la supprime pas des hôtes.",
+    "hostTagsError": "Impossible de charger ou d'enregistrer les suggestions de balises d'hôte."
   },
   "newUi": {
     "sidebar": {

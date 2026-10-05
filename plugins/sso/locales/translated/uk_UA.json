@@ -20,12 +20,12 @@
     "nameRequired": "Потрібне відображуване ім'я",
     "type": "Тип постачальника",
     "enabled": "Увімкнено",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "Показувати кнопку входу для цього постачальника на екрані входу.",
+    "dialogDesc": "Підключіть постачальника ідентифікаційних даних, щоб користувачі могли входити за його допомогою.",
+    "sectionGeneral": "Загальне",
+    "sectionCredentials": "Клієнт",
+    "sectionClaims": "Претензії",
+    "sectionAccess": "Доступ",
     "save": "Зберегти постачальника",
     "saving": "Збереження...",
     "saved": "Збережено",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "Єдиний вхід"
   }
 }

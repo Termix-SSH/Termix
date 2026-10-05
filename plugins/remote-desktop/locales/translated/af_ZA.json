@@ -214,25 +214,25 @@
       "resizeMethod": "Vergrootingsmetode",
       "driveNamePlaceholder": "Termix-rylaan",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "any": "Enige",
+        "auto": "Outomaties",
+        "nlaExtended": "NLA Uitgebreide",
+        "color8": "8-bis",
+        "color16": "16-bis",
+        "color24": "24-bis",
+        "color32": "32-bis",
+        "displayUpdate": "Skermopdatering",
+        "reconnect": "Herkoppel",
+        "preserve": "Bewaar",
         "unix": "Unix (LF)",
-        "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "windows": "Vensters (CRLF)",
+        "local": "Plaaslik",
+        "remote": "Afstandsbediening",
+        "failsafe": "faalveilig",
+        "blackOnWhite": "Swart op wit",
+        "whiteOnBlack": "Wit op Swart",
+        "grayOnBlack": "Grys op Swart",
+        "greenOnBlack": "Groen op Swart"
       }
     },
     "remoteDesktop": "Afstandslessenaar",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Afstandbediener word benodig. Koppel 'n afstandbediener in Instellings om hierdie verbindingstipe te gebruik."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Afstandslessenaar"
   }
 }

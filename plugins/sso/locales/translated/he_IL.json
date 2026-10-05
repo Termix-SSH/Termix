@@ -20,12 +20,12 @@
     "nameRequired": "נדרש שם תצוגה",
     "type": "סוג ספק",
     "enabled": "מופעל",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "הצג כפתור כניסה עבור ספק זה במסך הכניסה.",
+    "dialogDesc": "חבר ספק זהויות כדי שמשתמשים יוכלו להתחבר באמצעותו.",
+    "sectionGeneral": "כְּלָלִי",
+    "sectionCredentials": "לָקוּחַ",
+    "sectionClaims": "תביעות",
+    "sectionAccess": "גִישָׁה",
     "save": "שמור ספק",
     "saving": "חִסָכוֹן...",
     "saved": "נשמר",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "כניסה יחידה"
   }
 }

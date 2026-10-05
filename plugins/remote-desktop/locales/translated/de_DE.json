@@ -214,25 +214,25 @@
       "resizeMethod": "Skalierungsmethode",
       "driveNamePlaceholder": "Termix Drive",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
+        "any": "Beliebig",
+        "auto": "Automatisch",
         "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "color8": "8-Bit",
+        "color16": "16-Bit",
+        "color24": "24-Bit",
+        "color32": "32-Bit",
+        "displayUpdate": "Anzeigeaktualisierung",
+        "reconnect": "Erneut verbinden",
+        "preserve": "Bewahren",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
-        "local": "Local",
+        "local": "Lokal",
         "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "failsafe": "Ausfallsicherung",
+        "blackOnWhite": "Schwarz auf Weiß",
+        "whiteOnBlack": "Weiß auf Schwarz",
+        "grayOnBlack": "Grau auf Schwarz",
+        "greenOnBlack": "Grün auf Schwarz"
       }
     },
     "remoteDesktop": "Remotedesktop",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Remote-Server erforderlich. Um diesen Verbindungstyp zu verwenden, verbinden Sie einen Remote-Server in den Einstellungen."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Remotedesktop"
   }
 }

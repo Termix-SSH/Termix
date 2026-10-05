@@ -56,6 +56,6 @@
     "issued": "Sertifikat telah diterbitkan dan dipasang."
   },
   "plugin": {
-    "name": "ACME Certificates"
+    "name": "Sertifikat ACME"
   }
 }

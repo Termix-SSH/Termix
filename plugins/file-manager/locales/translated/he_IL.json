@@ -323,7 +323,7 @@
     "sideBySide": "זֶה בְּצַד זֶה",
     "inline": "מוטבע",
     "fileComparison": "השוואת קבצים: {{file1}} לעומת {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "הקובץ גדול מדי (מעל 10MB) ולא ניתן לפתוח אותו כטקסט מסיבות אבטחה.",
     "sshConnectionFailed": "חיבור SSH נכשל. אנא בדוק את החיבור שלך אל {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "טעינת הקובץ נכשלה: {{error}}",
     "connecting": "מְקַשֵׁר...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "השתמש בפריסה נוחה",
     "cannotLoadPdf": "לא ניתן לטעון את ה-PDF",
     "pdfLoadError": "אירעה שגיאה בטעינת קובץ PDF זה.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "טוען מציג PDF...",
     "loadingPage": "טוען דף...",
     "cancel": "לְבַטֵל",
     "copiedItems_one": "פריט {{count}} הועתק",
@@ -384,15 +384,15 @@
     "downloadToPlay": "הורד כדי להפעיל אותו במקום אחר",
     "cannotPreviewType": "לא ניתן להציג תצוגה מקדימה של סוג קובץ זה",
     "cannotPreviewTypeHint": "לסוג קובץ זה אין תצוגה מקדימה. הורד אותו כדי לפתוח אותו באפליקציה אחרת.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "טוען קובץ...",
+    "loadingImage": "טוען תמונה...",
+    "loadingEditor": "טוען את העורך...",
+    "loadingPreview": "טוען תצוגה מקדימה...",
+    "loadingAudio": "טוען נגן אודיו...",
+    "emptyPreview": "אין עוד אפשרות להציג בתצוגה מקדימה...",
+    "revert": "לַחֲזוֹר",
+    "openAsText": "פתח כטקסט",
+    "confirmOpenAsText": "האם ברצונך להמשיך לפתוח קובץ זה כטקסט? פעולה זו עלולה להאט את הדפדפן שלך."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "שרת → יעד (מקומי): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "מנהל הקבצים"
   }
 }

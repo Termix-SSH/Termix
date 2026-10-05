@@ -56,6 +56,6 @@
     "issued": "תעודה הונפקה והותקנה"
   },
   "plugin": {
-    "name": "ACME Certificates"
+    "name": "תעודות ACME"
   }
 }

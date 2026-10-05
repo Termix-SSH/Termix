@@ -184,6 +184,6 @@
     "sharedSessionLabel": "{{hostName}} (partajat)"
   },
   "plugin": {
-    "name": "Session Sharing"
+    "name": "Partajarea sesiunii"
   }
 }

@@ -20,12 +20,12 @@
     "nameRequired": "Wymagana jest nazwa wyświetlana",
     "type": "Typ dostawcy",
     "enabled": "Włączona",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "Pokaż przycisk logowania dla tego dostawcy na ekranie logowania.",
+    "dialogDesc": "Połącz się z dostawcą tożsamości, aby użytkownicy mogli się za jego pomocą logować.",
+    "sectionGeneral": "Ogólne",
+    "sectionCredentials": "Klient",
+    "sectionClaims": "Roszczenia",
+    "sectionAccess": "Dostęp",
     "save": "Zapisz dostawcę",
     "saving": "Zapisywanie...",
     "saved": "Zapisano",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "Pojedyncze logowanie"
   }
 }

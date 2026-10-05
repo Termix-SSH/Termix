@@ -67,6 +67,6 @@
     }
   },
   "plugin": {
-    "name": "HashiCorp Vault"
+    "name": "HashiCorp-trezor"
   }
 }

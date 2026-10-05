@@ -20,12 +20,12 @@
     "nameRequired": "Ein Anzeigename ist erforderlich.",
     "type": "Anbietertyp",
     "enabled": "Aktiviert",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "Zeigen Sie auf dem Anmeldebildschirm eine Anmeldeschaltfläche für diesen Anbieter an.",
+    "dialogDesc": "Verbinden Sie einen Identitätsanbieter, damit sich Benutzer damit anmelden können.",
+    "sectionGeneral": "Allgemein",
+    "sectionCredentials": "Kunde",
+    "sectionClaims": "Ansprüche",
+    "sectionAccess": "Zugang",
     "save": "Anbieter speichern",
     "saving": "Wird gespeichert …",
     "saved": "Gespeichert",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "Single Sign-On"
   }
 }

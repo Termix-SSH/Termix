@@ -20,12 +20,12 @@
     "nameRequired": "Απαιτείται εμφανιζόμενο όνομα",
     "type": "Τύπος παρόχου",
     "enabled": "Ενεργοποιημένο",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "Εμφάνιση ενός κουμπιού σύνδεσης για αυτόν τον πάροχο στην οθόνη σύνδεσης.",
+    "dialogDesc": "Συνδέστε έναν πάροχο ταυτότητας, ώστε οι χρήστες να μπορούν να συνδεθούν με αυτόν.",
+    "sectionGeneral": "Γενικός",
+    "sectionCredentials": "Πελάτης",
+    "sectionClaims": "Αξιώσεις",
+    "sectionAccess": "Πρόσβαση",
     "save": "Αποθήκευση παρόχου",
     "saving": "Οικονομία...",
     "saved": "Αποθηκεύτηκε",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "Μοναδική σύνδεση"
   }
 }

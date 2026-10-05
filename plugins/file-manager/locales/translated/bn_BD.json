@@ -323,7 +323,7 @@
     "sideBySide": "পাশাপাশি",
     "inline": "ইনলাইন",
     "fileComparison": "ফাইল তুলনা: {{file1}} বনাম {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "ফাইলটি অনেক বড় (> ১০ মেগাবাইট) হওয়ায় নিরাপত্তাজনিত কারণে এটি টেক্সট হিসেবে খোলা যাবে না।",
     "sshConnectionFailed": "SSH সংযোগ ব্যর্থ হয়েছে। অনুগ্রহ করে {{name}} ({{ip}}:{{port}} ) -এ আপনার সংযোগ পরীক্ষা করুন।",
     "loadFileFailed": "ফাইল লোড করতে ব্যর্থ: {{error}}",
     "connecting": "সংযোগ স্থাপন...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "আরামদায়ক বিন্যাস ব্যবহার করুন",
     "cannotLoadPdf": "পিডিএফ লোড করা যাচ্ছে না",
     "pdfLoadError": "এই পিডিএফ ফাইলটি লোড করতে ত্রুটি হয়েছে।",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "পিডিএফ ভিউয়ার লোড হচ্ছে...",
     "loadingPage": "পৃষ্ঠা লোড হচ্ছে...",
     "cancel": "বাতিল করুন",
     "copiedItems_one": "{{count}} আইটেমটি অনুলিপি করা হয়েছে",
@@ -384,15 +384,15 @@
     "downloadToPlay": "অন্যত্র চালানোর জন্য ডাউনলোড করুন",
     "cannotPreviewType": "এই ফাইল প্রকারের প্রিভিউ দেখা সম্ভব নয়",
     "cannotPreviewTypeHint": "এই ফাইল টাইপের কোনো প্রিভিউ নেই। অন্য কোনো অ্যাপে খোলার জন্য এটি ডাউনলোড করুন।",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "ফাইল লোড হচ্ছে...",
+    "loadingImage": "ছবি লোড হচ্ছে...",
+    "loadingEditor": "এডিটর লোড হচ্ছে...",
+    "loadingPreview": "প্রিভিউ লোড হচ্ছে...",
+    "loadingAudio": "অডিও প্লেয়ার লোড হচ্ছে...",
+    "emptyPreview": "এখনো প্রিভিউ করার মতো কিছু নেই...",
+    "revert": "প্রত্যাবর্তন করুন",
+    "openAsText": "টেক্সট হিসেবে খুলুন",
+    "confirmOpenAsText": "আপনি কি এই ফাইলটি টেক্সট হিসেবে খোলা চালিয়ে যেতে চান? এতে আপনার ব্রাউজারের গতি কমে যেতে পারে।"
   },
   "sftpTransfer": {
     "title": "এসএফটিপি",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "সার্ভার → গন্তব্য (স্থানীয়): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "ফাইল ম্যানেজার"
   }
 }

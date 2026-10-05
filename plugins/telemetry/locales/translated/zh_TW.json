@@ -56,6 +56,6 @@
     "loadFailed": "無法載入使用情況統計狀態"
   },
   "plugin": {
-    "name": "Usage Statistics"
+    "name": "使用情況統計"
   }
 }

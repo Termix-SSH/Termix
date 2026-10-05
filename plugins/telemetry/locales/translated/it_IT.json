@@ -56,6 +56,6 @@
     "loadFailed": "Impossibile caricare lo stato delle statistiche di utilizzo"
   },
   "plugin": {
-    "name": "Usage Statistics"
+    "name": "Statistiche di utilizzo"
   }
 }

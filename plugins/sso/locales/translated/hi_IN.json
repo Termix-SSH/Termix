@@ -20,12 +20,12 @@
     "nameRequired": "एक डिस्प्ले नाम आवश्यक है",
     "type": "प्रदाता प्रकार",
     "enabled": "सक्षम",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "लॉगिन स्क्रीन पर इस प्रदाता के लिए साइन इन बटन दिखाएं।",
+    "dialogDesc": "एक पहचान प्रदाता को कनेक्ट करें ताकि उपयोगकर्ता इसके साथ साइन इन कर सकें।",
+    "sectionGeneral": "सामान्य",
+    "sectionCredentials": "ग्राहक",
+    "sectionClaims": "दावा",
+    "sectionAccess": "पहुँच",
     "save": "प्रदाता सहेजें",
     "saving": "सहेजा जा रहा है...",
     "saved": "सहेजा गया",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "केवल हस्ताक्षर के ऊपर"
   }
 }

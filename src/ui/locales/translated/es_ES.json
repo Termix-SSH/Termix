@@ -116,8 +116,8 @@
     "updateLinkLabel": "Actualización disponible. Consulta las notas de la versión en GitHub."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Desplazar pestañas hacia la izquierda",
+    "scrollTabsRight": "Desplaza las pestañas hacia la derecha.",
     "close": "Cerrar",
     "minimize": "Minimizar",
     "online": "En línea",
@@ -189,10 +189,10 @@
     "add": "Añadir",
     "update": "Actualizar",
     "noResults": "No se encontraron resultados",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Barra lateral",
+    "mobileSidebarDescription": "Muestra la barra lateral para móviles.",
+    "toggleSidebar": "Alternar barra lateral",
+    "search": "Buscar..."
   },
   "onboarding": {
     "stepCounter": "Paso {{current}} de {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "Túnel",
     "serverStats": "Métricas del host",
     "status": {
-      "online": "Online",
+      "online": "En línea",
       "offline": "Desconectado",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Comprobando",
+      "monitoringDisabled": "Marcas de estado",
       "label": "Estado"
     },
     "folderRenamed": "Carpeta \"{{oldName}}\" renombrada a \"{{newName}}\" correctamente",
@@ -482,7 +482,7 @@
     "sameHost": "Este host (túnel directo)",
     "statusChecksLabel": "Comprobaciones de estado",
     "enableStatusChecks": "Habilitar comprobaciones de estado",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Compruebe la accesibilidad del host. Las sesiones activas omiten las comprobaciones adicionales. Las comprobaciones SSH sin una sesión activa pueden activar reglas agresivas de Fail2Ban; desactive las comprobaciones de estado en esos hosts.",
     "useGlobalInterval": "Usar intervalo global",
     "useGlobalIntervalDesc": "Sobrescribir con el intervalo de comprobación de estado global del servidor.",
     "checkIntervalS": "Intervalo de comprobación (s)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Este segundo factor no se puede mostrar en esta pantalla. Contacta con un administrador.",
     "serverAuthentication": "Inicio de sesión en el servidor",
     "minChars": "min. {{min}} caracteres",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Métodos de verificación de recarga"
   },
   "hostKey": {
     "verifyNewHost": "Verificar clave de host SSH",
@@ -1126,12 +1126,12 @@
     "keyPassword": "contraseña de la clave",
     "pastePrivateKey": "Pegue su clave privada aquí...",
     "enterPassword": "Introduce tu contraseña",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "p. ej., canalización de CI",
+    "credentialName": "Por ejemplo, clave SSH de producción",
+    "optionalDetails": "Detalles opcionales...",
+    "sshUsername": "por ejemplo, raíz o despliegue",
+    "hostAddress": "10.0.0.1 o example.com",
+    "hostName": "Por ejemplo, producción de servidores web"
   },
   "dashboard": {
     "title": "Panel de control",
@@ -1514,9 +1514,9 @@
     "sslNames": "Portadas {{names}}",
     "sslManualTitle": "Subir un certificado",
     "updateExternalAutoProvisionFailed": "No se pudo actualizar la configuración de creación automática.",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Etiquetas de host predefinidas",
+    "hostTagsDesc": "Etiquetas que todos los usuarios ven como sugerencias en el editor de hosts. Pulsa Espacio o Intro para añadir una. Eliminar una etiqueta aquí no la elimina de los hosts.",
+    "hostTagsError": "No se pudieron cargar ni guardar las sugerencias de etiquetas de host."
   },
   "newUi": {
     "sidebar": {

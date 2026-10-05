@@ -323,7 +323,7 @@
     "sideBySide": "Пліч-о-пліч",
     "inline": "Вбудований",
     "fileComparison": "Порівняння файлів: {{file1}} проти {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "Файл занадто великий (> 10 МБ) і не може бути відкритий як текст з міркувань безпеки.",
     "sshConnectionFailed": "Помилка SSH-з’єднання. Будь ласка, перевірте ваше з’єднання з {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Не вдалося завантажити файл: {{error}}",
     "connecting": "Підключення...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Використовуйте зручний макет",
     "cannotLoadPdf": "Не вдається завантажити PDF",
     "pdfLoadError": "Під час завантаження цього PDF-файлу сталася помилка.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "Завантаження засобу перегляду PDF-файлів...",
     "loadingPage": "Завантаження сторінки...",
     "cancel": "Скасувати",
     "copiedItems_one": "Скопійовано елемент {{count}}",
@@ -384,15 +384,15 @@
     "downloadToPlay": "Завантажте, щоб відтворити деінде",
     "cannotPreviewType": "Неможливо переглянути цей тип файлу",
     "cannotPreviewTypeHint": "Цей тип файлу не має попереднього перегляду. Завантажте його, щоб відкрити в іншій програмі.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "Завантаження файлу...",
+    "loadingImage": "Завантаження зображення...",
+    "loadingEditor": "Завантаження редактора...",
+    "loadingPreview": "Завантаження попереднього перегляду...",
+    "loadingAudio": "Завантаження аудіоплеєра...",
+    "emptyPreview": "Поки що нічого для попереднього перегляду...",
+    "revert": "Повернути",
+    "openAsText": "Відкрити як текст",
+    "confirmOpenAsText": "Ви хочете продовжити відкривати цей файл як текст? Це може уповільнити роботу вашого браузера."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "Сервер → призначення (локальний): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "Файловий менеджер"
   }
 }

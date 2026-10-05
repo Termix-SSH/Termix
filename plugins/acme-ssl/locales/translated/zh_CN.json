@@ -56,6 +56,6 @@
     "issued": "证书已颁发并安装"
   },
   "plugin": {
-    "name": "ACME Certificates"
+    "name": "ACME证书"
   }
 }

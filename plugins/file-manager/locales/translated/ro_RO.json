@@ -323,7 +323,7 @@
     "sideBySide": "Alăturat",
     "inline": "În linie",
     "fileComparison": "Comparație fișiere: {{file1}} vs {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "Fișierul este prea mare (> 10 MB) și nu poate fi deschis ca text din motive de securitate.",
     "sshConnectionFailed": "Conexiunea SSH a eșuat. Vă rugăm să verificați conexiunea la {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Nu s-a putut încărca fișierul: {{error}}",
     "connecting": "Se conectează...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Folosește un aspect confortabil",
     "cannotLoadPdf": "Nu se poate încărca PDF-ul",
     "pdfLoadError": "A apărut o eroare la încărcarea acestui fișier PDF.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "Se încarcă vizualizatorul PDF...",
     "loadingPage": "Se încarcă pagina...",
     "cancel": "Anula",
     "copiedItems_one": "Elementul {{count}} a fost copiat",
@@ -384,15 +384,15 @@
     "downloadToPlay": "Descarcă pentru a-l reda în altă parte",
     "cannotPreviewType": "Nu se poate previzualiza acest tip de fișier",
     "cannotPreviewTypeHint": "Acest tip de fișier nu are previzualizare. Descărcați-l pentru a-l deschide în altă aplicație.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "Se încarcă fișierul...",
+    "loadingImage": "Se încarcă imaginea...",
+    "loadingEditor": "Se încarcă editorul...",
+    "loadingPreview": "Se încarcă previzualizarea...",
+    "loadingAudio": "Se încarcă playerul audio...",
+    "emptyPreview": "Nimic de previzualizat încă...",
+    "revert": "Reveni",
+    "openAsText": "Deschide ca text",
+    "confirmOpenAsText": "Doriți să continuați să deschideți acest fișier ca text? Acest lucru ar putea încetini browserul."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "Server → destinație (locală): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "Manager de fișiere"
   }
 }

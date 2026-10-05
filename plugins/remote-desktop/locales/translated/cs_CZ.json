@@ -214,25 +214,25 @@
       "resizeMethod": "Metoda změny velikosti",
       "driveNamePlaceholder": "Termix Drive",
       "options": {
-        "any": "Any",
+        "any": "Žádný",
         "auto": "Auto",
         "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "color8": "8bitový",
+        "color16": "16bitový",
+        "color24": "24bitový",
+        "color32": "32bitový",
+        "displayUpdate": "Aktualizace displeje",
+        "reconnect": "Znovu se připojte",
+        "preserve": "Zachovat",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "local": "Místní",
+        "remote": "Vzdálený",
+        "failsafe": "zabezpečený proti selhání",
+        "blackOnWhite": "Černá na bílém",
+        "whiteOnBlack": "Bílá na černé",
+        "grayOnBlack": "Šedá na černé",
+        "greenOnBlack": "Zelená na černém"
       }
     },
     "remoteDesktop": "Vzdálená plocha",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Je vyžadován vzdálený server. Pro použití tohoto typu připojení se připojte ke vzdálenému serveru v Nastavení."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Vzdálená plocha"
   }
 }

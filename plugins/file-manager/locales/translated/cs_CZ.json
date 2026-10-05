@@ -323,7 +323,7 @@
     "sideBySide": "Bok po boku",
     "inline": "Vložený",
     "fileComparison": "Porovnání souborů: {{file1}} vs. {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "Soubor je příliš velký (> 10 MB) a z bezpečnostních důvodů jej nelze otevřít jako text.",
     "sshConnectionFailed": "SSH připojení selhalo. Zkontrolujte prosím připojení k {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Nepodařilo se načíst soubor: {{error}}",
     "connecting": "Spojovací...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Použijte pohodlné rozvržení",
     "cannotLoadPdf": "Nelze načíst PDF",
     "pdfLoadError": "Při načítání tohoto PDF souboru došlo k chybě.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "Načítání prohlížeče PDF...",
     "loadingPage": "Načítání stránky...",
     "cancel": "Zrušit",
     "copiedItems_one": "Zkopírována položka {{count}}",
@@ -384,15 +384,15 @@
     "downloadToPlay": "Stáhněte si pro přehrávání jinde",
     "cannotPreviewType": "Nelze zobrazit náhled tohoto typu souboru",
     "cannotPreviewTypeHint": "Tento typ souboru nemá náhled. Stáhněte si jej a otevřete jej v jiné aplikaci.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "Načítání souboru...",
+    "loadingImage": "Načítání obrázku...",
+    "loadingEditor": "Načítání editoru...",
+    "loadingPreview": "Načítání náhledu...",
+    "loadingAudio": "Načítání audio přehrávače...",
+    "emptyPreview": "Zatím nic k náhledu...",
+    "revert": "Vrátit zpět",
+    "openAsText": "Otevřít jako text",
+    "confirmOpenAsText": "Chcete tento soubor i nadále otevírat jako text? Může to zpomalit váš prohlížeč."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "Server → cíl (lokální): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "Správce souborů"
   }
 }

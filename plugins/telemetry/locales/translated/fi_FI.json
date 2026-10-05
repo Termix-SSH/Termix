@@ -56,6 +56,6 @@
     "loadFailed": "Käyttötilastojen tilan lataaminen epäonnistui"
   },
   "plugin": {
-    "name": "Usage Statistics"
+    "name": "Käyttötilastot"
   }
 }

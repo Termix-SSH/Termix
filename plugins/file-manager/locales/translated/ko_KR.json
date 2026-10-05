@@ -323,7 +323,7 @@
     "sideBySide": "나란히 보기",
     "inline": "인라인",
     "fileComparison": "파일 비교: {{file1}} vs {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "파일 크기가 너무 커서(> 10MB) 보안상의 이유로 텍스트 형식으로 열 수 없습니다.",
     "sshConnectionFailed": "SSH 연결 실패. {{name}}({{ip}}:{{port}})에 대한 연결을 확인하세요.",
     "loadFileFailed": "파일 불러오기 실패: {{error}}",
     "connecting": "연결 중...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "편안한 레이아웃을 사용하세요",
     "cannotLoadPdf": "PDF를 로드할 수 없습니다",
     "pdfLoadError": "이 PDF 파일을 로드하는 중 오류가 발생했습니다.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "PDF 뷰어를 불러오는 중...",
     "loadingPage": "페이지 로드 중...",
     "cancel": "취소",
     "copiedItems_one": "복사됨 {{count}} 항목",
@@ -384,15 +384,15 @@
     "downloadToPlay": "다운로드하여 다른 곳에서 재생하세요.",
     "cannotPreviewType": "이 파일 형식을 미리 볼 수 없습니다.",
     "cannotPreviewTypeHint": "이 파일 형식은 미리보기를 지원하지 않습니다. 다운로드하여 다른 앱에서 열어보세요.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "파일을 불러오는 중...",
+    "loadingImage": "이미지 로딩 중...",
+    "loadingEditor": "에디터 로딩 중...",
+    "loadingPreview": "미리보기 로딩 중...",
+    "loadingAudio": "오디오 플레이어를 불러오는 중...",
+    "emptyPreview": "아직 미리 볼 내용이 없습니다...",
+    "revert": "돌아가는 것",
+    "openAsText": "텍스트로 열기",
+    "confirmOpenAsText": "이 파일을 텍스트 파일로 계속 열겠습니까? 이렇게 하면 브라우저 속도가 느려질 수 있습니다."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "서버 → 목적지 (로컬): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "파일 관리자"
   }
 }

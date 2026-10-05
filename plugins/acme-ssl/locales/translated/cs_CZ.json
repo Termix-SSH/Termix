@@ -56,6 +56,6 @@
     "issued": "Certifikát vydán a nainstalován"
   },
   "plugin": {
-    "name": "ACME Certificates"
+    "name": "Certifikáty ACME"
   }
 }

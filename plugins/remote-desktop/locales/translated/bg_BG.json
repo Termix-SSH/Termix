@@ -214,25 +214,25 @@
       "resizeMethod": "Метод за преоразмеряване",
       "driveNamePlaceholder": "Термикс Драйв",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "any": "Всякакви",
+        "auto": "Автоматично",
+        "nlaExtended": "Разширена НЛА",
+        "color8": "8-битов",
+        "color16": "16-битов",
+        "color24": "24-битов",
+        "color32": "32-битов",
+        "displayUpdate": "Актуализация на дисплея",
+        "reconnect": "Свържете се отново",
+        "preserve": "Запази",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "local": "Местно",
+        "remote": "Дистанционно",
+        "failsafe": "отказоустойчив",
+        "blackOnWhite": "Черно на бяло",
+        "whiteOnBlack": "Бяло върху черно",
+        "grayOnBlack": "Сиво на черно",
+        "greenOnBlack": "Зелено на черно"
       }
     },
     "remoteDesktop": "Отдалечен работен плот",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Изисква се отдалечен сървър. Свържете се с отдалечен сървър в „Настройки“, за да използвате този тип връзка."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Отдалечен работен плот"
   }
 }

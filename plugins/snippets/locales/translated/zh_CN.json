@@ -233,6 +233,6 @@
   "selectAll": "全部",
   "selectNone": "全不选",
   "plugin": {
-    "name": "Snippets"
+    "name": "代码片段"
   }
 }

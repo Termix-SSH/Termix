@@ -116,8 +116,8 @@
     "updateLinkLabel": "Update verfügbar. Die Versionshinweise finden Sie auf GitHub."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Scroll-Tabs nach links",
+    "scrollTabsRight": "Scrollen Sie die Tabs nach rechts",
     "close": "Schließen",
     "minimize": "Minimieren",
     "online": "Online",
@@ -189,10 +189,10 @@
     "add": "Hinzufügen",
     "update": "Aktualisieren",
     "noResults": "Keine Ergebnisse gefunden",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Seitenleiste",
+    "mobileSidebarDescription": "Zeigt die mobile Seitenleiste an.",
+    "toggleSidebar": "Seitenleiste umschalten",
+    "search": "Suchen..."
   },
   "onboarding": {
     "stepCounter": "Schritt {{current}} von {{total}}",
@@ -359,8 +359,8 @@
     "status": {
       "online": "Online",
       "offline": "Offline",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Wird überprüft",
+      "monitoringDisabled": "Statusabfragen deaktiviert",
       "label": "Status"
     },
     "folderRenamed": "Ordner \"{{oldName}}\" erfolgreich in \"{{newName}}\" umbenannt",
@@ -482,7 +482,7 @@
     "sameHost": "Dieser Host (direkter Tunnel)",
     "statusChecksLabel": "Statusprüfungen",
     "enableStatusChecks": "Statusprüfungen aktivieren",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Überprüfen Sie die Erreichbarkeit des Hosts. Aktive Sitzungen überspringen zusätzliche Prüfungen. SSH-Prüfungen ohne aktive Sitzung können aggressive Fail2Ban-Regeln auslösen; deaktivieren Sie Statusprüfungen auf diesen Hosts.",
     "useGlobalInterval": "Globales Intervall verwenden",
     "useGlobalIntervalDesc": "Mit dem serverweiten Statusprüfungsintervall überschreiben",
     "checkIntervalS": "Prüfintervall (s)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Dieser zweite Faktor kann auf diesem Bildschirm nicht angezeigt werden. Wenden Sie sich an einen Administrator.",
     "serverAuthentication": "Serveranmeldung",
     "minChars": "min. {{min}} Zeichen",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Methoden zur Überprüfung des Neuladens"
   },
   "hostKey": {
     "verifyNewHost": "SSH-Host-Key überprüfen",
@@ -1126,12 +1126,12 @@
     "keyPassword": "Schlüsselpasswort",
     "pastePrivateKey": "Privaten Schlüssel hier einfügen...",
     "enterPassword": "Passwort eingeben",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "z. B. CI-Pipeline",
+    "credentialName": "z. B. Produktions-SSH-Schlüssel",
+    "optionalDetails": "Optionale Details...",
+    "sshUsername": "z.B. root oder deploy",
+    "hostAddress": "10.0.0.1 oder example.com",
+    "hostName": "z.B. Webserver-Produktion"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1514,9 +1514,9 @@
     "sslNames": "Cover {{names}}",
     "sslManualTitle": "Laden Sie ein Zertifikat hoch",
     "updateExternalAutoProvisionFailed": "Die Aktualisierung der Einstellung für die automatische Erstellung ist fehlgeschlagen.",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Vordefinierte Host-Tags",
+    "hostTagsDesc": "Tags, die jedem Benutzer als Vorschläge im Host-Editor angezeigt werden. Drücken Sie die Leertaste oder die Eingabetaste, um einen Tag hinzuzufügen. Das Entfernen eines Tags hier entfernt ihn nicht aus den Hosts.",
+    "hostTagsError": "Die Host-Tag-Vorschläge konnten nicht geladen oder gespeichert werden."
   },
   "newUi": {
     "sidebar": {

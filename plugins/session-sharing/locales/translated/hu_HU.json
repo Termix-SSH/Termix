@@ -184,6 +184,6 @@
     "sharedSessionLabel": "{{hostName}} (megosztva)"
   },
   "plugin": {
-    "name": "Session Sharing"
+    "name": "Munkamenet-megosztás"
   }
 }

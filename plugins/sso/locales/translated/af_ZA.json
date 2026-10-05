@@ -20,12 +20,12 @@
     "nameRequired": "'n Vertoonnaam word vereis",
     "type": "Verskaffertipe",
     "enabled": "Geaktiveer",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "Wys 'n aanmeldknoppie vir hierdie verskaffer op die aanmeldskerm.",
+    "dialogDesc": "Koppel 'n identiteitsverskaffer sodat gebruikers daarmee kan aanmeld.",
+    "sectionGeneral": "Algemeen",
+    "sectionCredentials": "Kliënt",
+    "sectionClaims": "Eise",
+    "sectionAccess": "Toegang",
     "save": "Stoor Verskaffer",
     "saving": "Stoor...",
     "saved": "Gestoor",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "Enkele aanmelding"
   }
 }

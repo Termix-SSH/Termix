@@ -323,7 +323,7 @@
     "sideBySide": "Sy aan Sy",
     "inline": "Inlyn",
     "fileComparison": "Lêervergelyking: {{file1}} vs {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "Die lêer is te groot (> 10MB) en kan om sekuriteitsredes nie as teks oopgemaak word nie.",
     "sshConnectionFailed": "SSH-verbinding het misluk. Kontroleer asseblief jou verbinding met {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Kon nie lêer laai nie: {{error}}",
     "connecting": "Verbind...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Gebruik gemaklike uitleg",
     "cannotLoadPdf": "Kan nie PDF laai nie",
     "pdfLoadError": "Daar was 'n fout tydens die laai van hierdie PDF-lêer.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "Laai PDF-kyker...",
     "loadingPage": "Laai bladsy...",
     "cancel": "Kanselleer",
     "copiedItems_one": "Gekopieerde {{count}} item",
@@ -384,15 +384,15 @@
     "downloadToPlay": "Laai dit af om dit elders te speel",
     "cannotPreviewType": "Kan nie hierdie lêertipe voorbeskou nie",
     "cannotPreviewTypeHint": "Hierdie lêertipe het geen voorskou nie. Laai dit af om dit in 'n ander toepassing oop te maak.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "Laai lêer...",
+    "loadingImage": "Laai beeld...",
+    "loadingEditor": "Laai redigeerder...",
+    "loadingPreview": "Laai voorskou...",
+    "loadingAudio": "Laai oudiospeler...",
+    "emptyPreview": "Niks om nog te voorskou nie...",
+    "revert": "Terugkeer",
+    "openAsText": "Maak oop as teks",
+    "confirmOpenAsText": "Wil jy hierdie lêer as teks aanhou oopmaak? Dit kan jou blaaier vertraag."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "Bediener → bestemming (plaaslik): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "Lêerbestuurder"
   }
 }

@@ -214,25 +214,25 @@
       "resizeMethod": "調整尺寸方法",
       "driveNamePlaceholder": "特米克斯大道",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
-        "unix": "Unix (LF)",
-        "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "any": "任何",
+        "auto": "自動",
+        "nlaExtended": "NLA 擴展",
+        "color8": "8 位元",
+        "color16": "16 位元",
+        "color24": "24 位元",
+        "color32": "32 位元",
+        "displayUpdate": "顯示更新",
+        "reconnect": "重新連線",
+        "preserve": "儲存",
+        "unix": "Unix（LF）",
+        "windows": "Windows（CRLF）",
+        "local": "本機",
+        "remote": "遠端",
+        "failsafe": "故障安全",
+        "blackOnWhite": "黑底白字",
+        "whiteOnBlack": "黑底白字",
+        "grayOnBlack": "灰色底黑色",
+        "greenOnBlack": "綠色底黑色"
       }
     },
     "remoteDesktop": "遠端桌面",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "需要遠端伺服器。請在「設定」中連接遠端伺服器以使用此連線類型。"
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "遠端桌面"
   }
 }

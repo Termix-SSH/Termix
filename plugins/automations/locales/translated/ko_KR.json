@@ -212,12 +212,12 @@
     "sidebar": {
       "automations": {
         "options": {
-          "connect": "connect",
-          "disconnect": "disconnect",
-          "offline": "offline",
-          "online": "online",
-          "failing": "failing",
-          "recovered": "recovered"
+          "connect": "연결",
+          "disconnect": "연결 해제",
+          "offline": "오프라인",
+          "online": "온라인",
+          "failing": "실패",
+          "recovered": "회복됨"
         }
       }
     }

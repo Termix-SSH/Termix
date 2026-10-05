@@ -214,25 +214,25 @@
       "resizeMethod": "Ændre størrelse-metode",
       "driveNamePlaceholder": "Termix Drive",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
+        "any": "Enhver",
+        "auto": "Bil",
+        "nlaExtended": "NLA udvidet",
         "color8": "8-bit",
         "color16": "16-bit",
         "color24": "24-bit",
         "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "displayUpdate": "Opdatering af display",
+        "reconnect": "Genopret forbindelse",
+        "preserve": "Bevare",
         "unix": "Unix (LF)",
-        "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "windows": "Vinduer (CRLF)",
+        "local": "Lokal",
+        "remote": "Fjern",
+        "failsafe": "fejlsikker",
+        "blackOnWhite": "Sort på hvid",
+        "whiteOnBlack": "Hvid på sort",
+        "grayOnBlack": "Grå på sort",
+        "greenOnBlack": "Grøn på sort"
       }
     },
     "remoteDesktop": "Fjernskrivebord",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Fjernserver kræves. Opret forbindelse til en fjernserver i Indstillinger for at bruge denne forbindelsestype."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Fjernskrivebord"
   }
 }

@@ -58,6 +58,6 @@
     "pause": "Приостановить запись"
   },
   "plugin": {
-    "name": "Session Recording"
+    "name": "Запись сессии"
   }
 }

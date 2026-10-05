@@ -116,8 +116,8 @@
     "updateLinkLabel": "Pembaruan tersedia. Buka catatan rilis di GitHub."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Gulir tab ke kiri",
+    "scrollTabsRight": "Gulir tab ke kanan",
     "close": "Menutup",
     "minimize": "Memperkecil",
     "online": "On line",
@@ -190,9 +190,9 @@
     "update": "Memperbarui",
     "noResults": "Tidak ada hasil yang ditemukan",
     "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "mobileSidebarDescription": "Menampilkan sidebar seluler.",
+    "toggleSidebar": "Alihkan Sidebar",
+    "search": "Mencari..."
   },
   "onboarding": {
     "stepCounter": "Langkah {{current}} dari {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "Terowongan",
     "serverStats": "Metrik Host",
     "status": {
-      "online": "Online",
+      "online": "On line",
       "offline": "Offline",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Memeriksa",
+      "monitoringDisabled": "Status diperiksa",
       "label": "Status"
     },
     "folderRenamed": "Folder \"{{oldName}}\" berhasil diganti namanya menjadi \"{{newName}}\"",
@@ -482,7 +482,7 @@
     "sameHost": "Host ini (terowongan langsung)",
     "statusChecksLabel": "Pemeriksaan Status",
     "enableStatusChecks": "Aktifkan Pemeriksaan Status",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Periksa ketersediaan host. Sesi aktif akan melewati pemeriksaan tambahan. Pemeriksaan SSH tanpa sesi aktif dapat memicu aturan Fail2Ban yang agresif; nonaktifkan pemeriksaan status pada host tersebut.",
     "useGlobalInterval": "Gunakan Interval Global",
     "useGlobalIntervalDesc": "Ganti dengan interval pemeriksaan status di seluruh server.",
     "checkIntervalS": "Interval Pemeriksaan (detik)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Faktor kedua ini tidak dapat ditampilkan di layar ini. Hubungi administrator.",
     "serverAuthentication": "Masuk ke server",
     "minChars": "min. {{min}} karakter",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Metode verifikasi pemuatan ulang"
   },
   "hostKey": {
     "verifyNewHost": "Verifikasi Kunci Host SSH",
@@ -1126,12 +1126,12 @@
     "keyPassword": "kata sandi kunci",
     "pastePrivateKey": "Tempelkan kunci pribadi Anda di sini...",
     "enterPassword": "Masukkan kata sandi Anda",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "misalnya, CI Pipeline",
+    "credentialName": "misalnya Kunci SSH Produksi",
+    "optionalDetails": "Detail opsional...",
+    "sshUsername": "misalnya root atau deploy",
+    "hostAddress": "10.0.0.1 atau example.com",
+    "hostName": "misalnya Produksi Server Web"
   },
   "dashboard": {
     "title": "Dasbor",
@@ -1514,9 +1514,9 @@
     "sslNames": "Sampul {{names}}",
     "sslManualTitle": "Unggah sertifikat",
     "updateExternalAutoProvisionFailed": "Gagal memperbarui pengaturan pembuatan otomatis.",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Tag host yang telah ditentukan sebelumnya",
+    "hostTagsDesc": "Tag yang dilihat setiap pengguna sebagai saran di editor host. Tekan Spasi atau Enter untuk menambahkannya. Menghapus tag di sini tidak akan menghapusnya dari host.",
+    "hostTagsError": "Tidak dapat memuat atau menyimpan saran tag host."
   },
   "newUi": {
     "sidebar": {

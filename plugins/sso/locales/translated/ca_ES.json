@@ -20,12 +20,12 @@
     "nameRequired": "Cal un nom de visualització",
     "type": "Tipus de proveïdor",
     "enabled": "Activat",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "enabledDesc": "Mostra un botó d'inici de sessió per a aquest proveïdor a la pantalla d'inici de sessió.",
+    "dialogDesc": "Connecteu un proveïdor d'identitat perquè els usuaris puguin iniciar la sessió amb ell.",
     "sectionGeneral": "General",
     "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "sectionClaims": "Reclamacions",
+    "sectionAccess": "Accés",
     "save": "Desa el proveïdor",
     "saving": "Desant...",
     "saved": "Desat",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "Inici de sessió únic"
   }
 }

@@ -214,25 +214,25 @@
       "resizeMethod": "रीसाइज़ विधि",
       "driveNamePlaceholder": "टर्मिक्स ड्राइव",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
-        "unix": "Unix (LF)",
-        "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "any": "कोई",
+        "auto": "स्वचालित",
+        "nlaExtended": "एनएलए विस्तारित",
+        "color8": "8 बिट",
+        "color16": "16-बिट",
+        "color24": "24-बिट",
+        "color32": "32-बिट",
+        "displayUpdate": "डिस्प्ले अपडेट",
+        "reconnect": "पुनः कनेक्ट करें",
+        "preserve": "संरक्षित करना",
+        "unix": "यूनिक्स (एलएफ)",
+        "windows": "विंडोज़ (सीआरएलएफ)",
+        "local": "स्थानीय",
+        "remote": "रिमोट",
+        "failsafe": "सुरक्षा कम होना",
+        "blackOnWhite": "सफेद पर काला",
+        "whiteOnBlack": "काले पर सफेद",
+        "grayOnBlack": "काले पर धूसर",
+        "greenOnBlack": "काले पर हरा"
       }
     },
     "remoteDesktop": "दूरस्थ डेस्कटॉप",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "रिमोट सर्वर आवश्यक है। इस कनेक्शन प्रकार का उपयोग करने के लिए सेटिंग्स में जाकर रिमोट सर्वर कनेक्ट करें।"
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "दूरस्थ डेस्कटॉप"
   }
 }

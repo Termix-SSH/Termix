@@ -323,7 +323,7 @@
     "sideBySide": "横並び表示",
     "inline": "インライン表示",
     "fileComparison": "ファイル比較: {{file1}} 対 {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "ファイルサイズが大きすぎる（10MB以上）ため、セキュリティ上の理由からテキストファイルとして開くことができません。",
     "sshConnectionFailed": "SSH接続に失敗しました。 {{name}} ({{ip}}:{{port}}) への接続を確認してください",
     "loadFileFailed": "ファイルの読み込みに失敗しました: {{error}}",
     "connecting": "接続中...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "快適なレイアウトを使用する",
     "cannotLoadPdf": "PDFを読み込めません",
     "pdfLoadError": "このPDFファイルの読み込み中にエラーが発生しました。",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "PDFビューアを読み込んでいます...",
     "loadingPage": "ページを読み込み中...",
     "cancel": "キャンセル",
     "copiedItems_one": "{{count}} アイテムをコピーしました",
@@ -384,15 +384,15 @@
     "downloadToPlay": "他の場所でプレイするにはダウンロードしてください",
     "cannotPreviewType": "このファイルタイプはプレビューできません",
     "cannotPreviewTypeHint": "このファイル形式にはプレビュー機能がありません。ダウンロードして別のアプリで開いてください。",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "ファイルを読み込んでいます...",
+    "loadingImage": "画像を読み込んでいます...",
+    "loadingEditor": "エディターを読み込んでいます...",
+    "loadingPreview": "プレビューを読み込んでいます...",
+    "loadingAudio": "オーディオプレーヤーを読み込んでいます...",
+    "emptyPreview": "現時点ではプレビューできるものはありません...",
+    "revert": "元に戻す",
+    "openAsText": "テキストとして開く",
+    "confirmOpenAsText": "このファイルをテキストファイルとして開き続けますか？ブラウザの動作が遅くなる可能性があります。"
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "サーバー → 送信先 (ローカル): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "ファイルマネージャー"
   }
 }

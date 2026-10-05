@@ -214,25 +214,25 @@
       "resizeMethod": "שיטת שינוי גודל",
       "driveNamePlaceholder": "כונן טרמיקס",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
-        "unix": "Unix (LF)",
-        "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "any": "כֹּל",
+        "auto": "אוטומטי",
+        "nlaExtended": "NLA מורחב",
+        "color8": "8 סיביות",
+        "color16": "16 סיביות",
+        "color24": "24 סיביות",
+        "color32": "32 סיביות",
+        "displayUpdate": "עדכון תצוגה",
+        "reconnect": "התחבר מחדש",
+        "preserve": "לְשַׁמֵר",
+        "unix": "יוניקס (LF)",
+        "windows": "חלונות (CRLF)",
+        "local": "מְקוֹמִי",
+        "remote": "מְרוּחָק",
+        "failsafe": "אַל כֶּשֶׁל",
+        "blackOnWhite": "שחור על לבן",
+        "whiteOnBlack": "לבן על שחור",
+        "grayOnBlack": "אפור על שחור",
+        "greenOnBlack": "ירוק על שחור"
       }
     },
     "remoteDesktop": "שולחן עבודה מרוחק",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "נדרש שרת מרוחק. יש להתחבר לשרת מרוחק בהגדרות כדי להשתמש בסוג חיבור זה."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "שולחן עבודה מרוחק"
   }
 }

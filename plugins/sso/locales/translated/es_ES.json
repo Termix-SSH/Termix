@@ -20,12 +20,12 @@
     "nameRequired": "Se requiere un nombre para mostrar.",
     "type": "Tipo de proveedor",
     "enabled": "Activado",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "enabledDesc": "Mostrar un botón de inicio de sesión para este proveedor en la pantalla de inicio de sesión.",
+    "dialogDesc": "Conecta un proveedor de identidad para que los usuarios puedan iniciar sesión con él.",
     "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "sectionCredentials": "Cliente",
+    "sectionClaims": "Reclamos",
+    "sectionAccess": "Acceso",
     "save": "Guardar proveedor",
     "saving": "Guardando...",
     "saved": "Guardado",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "Inicio de sesión único"
   }
 }

@@ -214,25 +214,25 @@
       "resizeMethod": "Metode Pengubahan Ukuran",
       "driveNamePlaceholder": "Termix Drive",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
+        "any": "Setiap",
+        "auto": "Mobil",
+        "nlaExtended": "NLA Diperpanjang",
         "color8": "8-bit",
         "color16": "16-bit",
         "color24": "24-bit",
         "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "displayUpdate": "Pembaruan Tampilan",
+        "reconnect": "Terhubung kembali",
+        "preserve": "Melestarikan",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "local": "Lokal",
+        "remote": "Terpencil",
+        "failsafe": "pengaman",
+        "blackOnWhite": "Hitam di atas Putih",
+        "whiteOnBlack": "Putih di atas Hitam",
+        "grayOnBlack": "Abu-abu di atas Hitam",
+        "greenOnBlack": "Hijau di atas Hitam"
       }
     },
     "remoteDesktop": "Desktop Jarak Jauh",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Diperlukan server jarak jauh. Hubungkan server jarak jauh di Pengaturan untuk menggunakan jenis koneksi ini."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Desktop Jarak Jauh"
   }
 }

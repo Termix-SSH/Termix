@@ -214,25 +214,25 @@
       "resizeMethod": "Μέθοδος αλλαγής μεγέθους",
       "driveNamePlaceholder": "Οδός Τέρμιξ",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
+        "any": "Κάθε",
+        "auto": "Αυτο",
+        "nlaExtended": "Επέκταση NLA",
         "color8": "8-bit",
         "color16": "16-bit",
         "color24": "24-bit",
         "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "displayUpdate": "Ενημέρωση οθόνης",
+        "reconnect": "Επανασύνδεση",
+        "preserve": "Διατηρώ",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "local": "Τοπικός",
+        "remote": "Μακρινός",
+        "failsafe": "ασφαλής",
+        "blackOnWhite": "Μαύρο σε άσπρο",
+        "whiteOnBlack": "Λευκό σε μαύρο",
+        "grayOnBlack": "Γκρι σε μαύρο",
+        "greenOnBlack": "Πράσινο σε μαύρο"
       }
     },
     "remoteDesktop": "Απομακρυσμένη επιφάνεια εργασίας",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Απαιτείται απομακρυσμένος διακομιστής. Συνδέστε έναν απομακρυσμένο διακομιστή στις Ρυθμίσεις για να χρησιμοποιήσετε αυτόν τον τύπο σύνδεσης."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Απομακρυσμένη επιφάνεια εργασίας"
   }
 }

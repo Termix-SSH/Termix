@@ -214,25 +214,25 @@
       "resizeMethod": "Yeniden Boyutlandırma Yöntemi",
       "driveNamePlaceholder": "Termix Drive",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "any": "Herhangi",
+        "auto": "Otomatik",
+        "nlaExtended": "NLA Uzatıldı",
+        "color8": "8 bit",
+        "color16": "16 bit",
+        "color24": "24 bit",
+        "color32": "32 bit",
+        "displayUpdate": "Ekran Güncellemesi",
+        "reconnect": "Yeniden Bağlan",
+        "preserve": "Korumak",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "local": "Yerel",
+        "remote": "Uzak",
+        "failsafe": "arıza emniyeti",
+        "blackOnWhite": "Siyah Beyaz",
+        "whiteOnBlack": "Siyah üzerine beyaz",
+        "grayOnBlack": "Siyah üzerine gri",
+        "greenOnBlack": "Siyah üzerine yeşil"
       }
     },
     "remoteDesktop": "Uzak Masaüstü",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Uzak sunucu gereklidir. Bu bağlantı türünü kullanmak için Ayarlar'dan bir uzak sunucu bağlayın."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Uzak Masaüstü"
   }
 }

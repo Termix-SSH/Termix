@@ -310,6 +310,6 @@
     }
   },
   "plugin": {
-    "name": "Host Metrics"
+    "name": "Hoststatistieken"
   }
 }

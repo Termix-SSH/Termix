@@ -703,6 +703,6 @@
     "remoteServerRequired": "需要远程服务器。请在“设置”中连接远程服务器以使用此连接类型。"
   },
   "plugin": {
-    "name": "SSH Terminal"
+    "name": "SSH 终端"
   }
 }

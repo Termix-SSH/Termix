@@ -67,6 +67,6 @@
     }
   },
   "plugin": {
-    "name": "HashiCorp Vault"
+    "name": "하시코프 볼트"
   }
 }

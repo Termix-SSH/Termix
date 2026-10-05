@@ -323,7 +323,7 @@
     "sideBySide": "Један поред другог",
     "inline": "Уграђено",
     "fileComparison": "Поређење датотека: {{file1}} наспрам {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "Датотека је превелика (> 10MB) и не може се отворити као текст из безбедносних разлога.",
     "sshConnectionFailed": "SSH веза није успела. Молимо вас да проверите везу са {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Није успело учитавање датотеке: {{error}}",
     "connecting": "Повезивање...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Користите удобан распоред",
     "cannotLoadPdf": "Није могуће учитати PDF",
     "pdfLoadError": "Дошло је до грешке при учитавању ове PDF датотеке.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "Учитавање PDF прегледача...",
     "loadingPage": "Учитавање странице...",
     "cancel": "Откажи",
     "copiedItems_one": "Копирана ставка {{count}}",
@@ -384,15 +384,15 @@
     "downloadToPlay": "Преузмите да бисте је репродуковали негде другде",
     "cannotPreviewType": "Не могу да прегледам овај тип датотеке",
     "cannotPreviewTypeHint": "Овај тип датотеке нема преглед. Преузмите је да бисте је отворили у другој апликацији.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "Учитавање датотеке...",
+    "loadingImage": "Учитавање слике...",
+    "loadingEditor": "Учитавање уређивача...",
+    "loadingPreview": "Учитавање прегледа...",
+    "loadingAudio": "Учитавање аудио плејера...",
+    "emptyPreview": "Још нема ништа за преглед...",
+    "revert": "Врати",
+    "openAsText": "Отвори као текст",
+    "confirmOpenAsText": "Да ли желите да наставите да отварате ову датотеку као текст? Ово може успорити ваш прегледач."
   },
   "sftpTransfer": {
     "title": "СФТП",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "Сервер → одредиште (локално): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "Менаџер датотека"
   }
 }

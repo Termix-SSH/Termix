@@ -184,6 +184,6 @@
     "sharedSessionLabel": "{{hostName}} (condiviso)"
   },
   "plugin": {
-    "name": "Session Sharing"
+    "name": "Condivisione della sessione"
   }
 }

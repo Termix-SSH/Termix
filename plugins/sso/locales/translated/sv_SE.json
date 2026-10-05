@@ -20,12 +20,12 @@
     "nameRequired": "Ett visningsnamn krävs",
     "type": "Leverantörstyp",
     "enabled": "Aktiverad",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "Visa en inloggningsknapp för den här leverantören på inloggningsskärmen.",
+    "dialogDesc": "Anslut en identitetsleverantör så att användare kan logga in med den.",
+    "sectionGeneral": "Allmän",
+    "sectionCredentials": "Klient",
+    "sectionClaims": "Anspråk",
+    "sectionAccess": "Tillträde",
     "save": "Spara leverantör",
     "saving": "Sparande...",
     "saved": "Sparad",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "Enkel inloggning"
   }
 }

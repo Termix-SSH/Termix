@@ -170,136 +170,136 @@
     "configureLocation": "विजेट सेटिंग में स्थान निर्धारित करें",
     "bannerTextPlaceholder": "बैनर पाठ",
     "serviceNamePlaceholder": "मेरी सेवा",
-    "emptyNote": "Empty note...",
-    "weatherLoadFailed": "Could not load weather for \"{{location}}\"",
-    "feelsLike": "Feels like {{temperature}}",
-    "timezonePlaceholder": "America/New_York (leave blank for local)",
-    "notesPlaceholder": "Write your notes here...",
-    "locationPlaceholder": "New York, London, Tokyo...",
+    "emptyNote": "खाली नोट...",
+    "weatherLoadFailed": "\"{{location}} \" के लिए मौसम लोड नहीं हो सका",
+    "feelsLike": "ऐसा लगता है {{temperature}}",
+    "timezonePlaceholder": "America/New_York (स्थानीय उपयोग के लिए खाली छोड़ दें)",
+    "notesPlaceholder": "अपने नोट्स यहाँ लिखें...",
+    "locationPlaceholder": "न्यूयॉर्क, लंदन, टोक्यो...",
     "widgets": {
       "bookmark_list": {
-        "name": "Bookmarks",
-        "description": "A list of quick links"
+        "name": "बुकमार्क",
+        "description": "त्वरित लिंक की सूची"
       },
       "calendar": {
-        "name": "Calendar",
-        "description": "A month calendar with today highlighted"
+        "name": "कैलेंडर",
+        "description": "आज को हाइलाइट करते हुए एक महीने का कैलेंडर"
       },
       "clock": {
-        "name": "Clock",
-        "description": "A live clock with configurable timezone"
+        "name": "घड़ी",
+        "description": "कॉन्फ़िगर करने योग्य समय क्षेत्र वाली लाइव घड़ी"
       },
       "countdown": {
-        "name": "Countdown",
-        "description": "Counts down to a target date and time"
+        "name": "काउंटडाउन",
+        "description": "यह लक्षित तिथि और समय तक उलटी गिनती करता है।"
       },
       "custom_api": {
-        "name": "Custom API",
-        "description": "Fetch and display data from any JSON API"
+        "name": "कस्टम API",
+        "description": "किसी भी JSON API से डेटा प्राप्त करें और प्रदर्शित करें"
       },
       "dashboard_links": {
-        "name": "Dashboard Links",
-        "description": "Shows your saved dashboard service links"
+        "name": "डैशबोर्ड लिंक",
+        "description": "आपके सहेजे गए डैशबोर्ड सेवा लिंक दिखाता है"
       },
       "folder": {
-        "name": "Folder",
-        "description": "A background card for grouping widgets visually"
+        "name": "फ़ोल्डर",
+        "description": "विजेट्स को दृश्य रूप से समूहित करने के लिए एक पृष्ठभूमि कार्ड"
       },
       "host_grid": {
-        "name": "Host Grid",
-        "description": "Live status overview grid for all your SSH hosts"
+        "name": "होस्ट ग्रिड",
+        "description": "आपके सभी SSH होस्ट के लिए लाइव स्टेटस ओवरव्यू ग्रिड"
       },
       "host_status": {
-        "name": "Host Status",
-        "description": "Shows live status and metrics for an SSH host"
+        "name": "होस्ट स्थिति",
+        "description": "यह SSH होस्ट के लिए लाइव स्थिति और मेट्रिक्स दिखाता है।"
       },
       "iframe_embed": {
-        "name": "iFrame Embed",
-        "description": "Embed any URL in an iframe"
+        "name": "iFrame एम्बेड",
+        "description": "किसी भी URL को आइफ्रेम में एम्बेड करें"
       },
       "image_widget": {
-        "name": "Image",
-        "description": "Display any image from a URL"
+        "name": "इमेज",
+        "description": "किसी URL से कोई भी छवि प्रदर्शित करें"
       },
       "link_tree": {
-        "name": "Link Tree",
-        "description": "Grouped links organized into labeled sections"
+        "name": "लिंक ट्री",
+        "description": "समूहीकृत लिंकों को लेबल वाले अनुभागों में व्यवस्थित किया गया है।"
       },
       "markdown_notes": {
-        "name": "Markdown Notes",
-        "description": "Notes with optional Markdown rendering and inline editing"
+        "name": "मार्कडाउन नोट्स",
+        "description": "वैकल्पिक मार्कडाउन रेंडरिंग और इनलाइन संपादन के साथ नोट्स"
       },
       "notes": {
-        "name": "Notes",
-        "description": "A text notes widget"
+        "name": "नोट्स",
+        "description": "एक टेक्स्ट नोट्स विजेट"
       },
       "ping_status": {
-        "name": "Ping Status",
-        "description": "Check if URLs or services are reachable"
+        "name": "पिंग स्थिति",
+        "description": "जांचें कि यूआरएल या सेवाएं पहुंच योग्य हैं या नहीं।"
       },
       "quick_connect": {
-        "name": "Quick Connect",
-        "description": "Launch terminal, files, docker, tunnels, and more for your hosts"
+        "name": "त्वरित कनेक्ट",
+        "description": "अपने होस्ट के लिए टर्मिनल, फाइलें, डॉकर, टनल और बहुत कुछ लॉन्च करें"
       },
       "recent_activity": {
-        "name": "Recent Activity",
-        "description": "Shows recent terminal, Docker, file, and tunnel activity"
+        "name": "हाल की गतिविधि",
+        "description": "हाल ही में हुई टर्मिनल, डॉकर, फ़ाइल और टनल गतिविधि को दर्शाता है"
       },
       "rss_feed": {
-        "name": "RSS Feed",
-        "description": "Display items from an RSS or Atom feed"
+        "name": "RSS फ़ीड",
+        "description": "RSS या एटम फ़ीड से आइटम प्रदर्शित करें"
       },
       "search_bar": {
-        "name": "Search Bar",
-        "description": "Quick search with Google, DuckDuckGo, Bing, or a custom engine"
+        "name": "खोज पट्टी",
+        "description": "Google, DuckDuckGo, Bing या किसी कस्टम सर्च इंजन के साथ त्वरित खोज"
       },
       "search_links": {
-        "name": "Search Shortcuts",
-        "description": "Quick buttons to search different engines"
+        "name": "खोज शॉर्टकट",
+        "description": "विभिन्न खोज इंजनों के लिए त्वरित बटन"
       },
       "service_grid": {
-        "name": "Service Grid",
-        "description": "A grid of service tiles with icons and links"
+        "name": "सेवा ग्रिड",
+        "description": "आइकन और लिंक के साथ सेवा टाइलों का एक ग्रिड"
       },
       "service_link": {
-        "name": "Service Link",
-        "description": "A clickable tile linking to a service URL"
+        "name": "सेवा लिंक",
+        "description": "एक क्लिक करने योग्य टाइल जो सेवा URL से जुड़ता है"
       },
       "ssh_terminal": {
-        "name": "SSH Terminal",
-        "description": "An inline SSH terminal connected to a configured host"
+        "name": "SSH टर्मिनल",
+        "description": "कॉन्फ़िगर किए गए होस्ट से जुड़ा एक इनलाइन SSH टर्मिनल"
       },
       "system_overview": {
-        "name": "System Overview",
-        "description": "Termix version, database health, and uptime at a glance"
+        "name": "सिस्टम अवलोकन",
+        "description": "टर्मिक्स संस्करण, डेटाबेस की स्थिति और अपटाइम की संक्षिप्त जानकारी"
       },
       "termix_uptime": {
-        "name": "Termix Uptime",
-        "description": "Shows how long the Termix server has been running"
+        "name": "Termix अपटाइम",
+        "description": "यह दर्शाता है कि टर्मिक्स सर्वर कितने समय से चल रहा है।"
       },
       "text_banner": {
-        "name": "Text Banner",
-        "description": "A styled text label for sections and headings"
+        "name": "टेक्स्ट बैनर",
+        "description": "अनुभागों और शीर्षकों के लिए एक शैलीबद्ध पाठ लेबल"
       },
       "weather": {
-        "name": "Weather",
-        "description": "Live weather for any location"
+        "name": "मौसम",
+        "description": "किसी भी स्थान का लाइव मौसम"
       },
       "docker_widget": {
-        "name": "Docker Manager",
-        "description": "Embedded Docker container manager for a configured host"
+        "name": "Docker प्रबंधक",
+        "description": "कॉन्फ़िगर किए गए होस्ट के लिए एम्बेडेड Docker कंटेनर प्रबंधक"
       },
       "file_manager_widget": {
-        "name": "File Manager",
-        "description": "Embedded SFTP file manager for a configured host"
+        "name": "फ़ाइल प्रबंधक",
+        "description": "कॉन्फ़िगर किए गए होस्ट के लिए एम्बेडेड SFTP फ़ाइल प्रबंधक"
       },
       "tunnel_widget": {
-        "name": "Tunnel Manager",
-        "description": "Embedded SSH tunnel manager for a configured host"
+        "name": "टनल प्रबंधक",
+        "description": "कॉन्फ़िगर किए गए होस्ट के लिए एम्बेडेड SSH टनल प्रबंधक"
       },
       "metrics_chart": {
-        "name": "Metrics Chart",
-        "description": "Historical CPU, memory, disk, or network chart for a host"
+        "name": "मीट्रिक चार्ट",
+        "description": "किसी होस्ट के लिए ऐतिहासिक CPU, मेमोरी, डिस्क या नेटवर्क चार्ट"
       }
     }
   },
@@ -320,6 +320,6 @@
     }
   },
   "plugin": {
-    "name": "Homepage"
+    "name": "होमपेज"
   }
 }

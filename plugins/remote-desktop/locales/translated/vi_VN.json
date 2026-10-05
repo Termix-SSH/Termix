@@ -214,25 +214,25 @@
       "resizeMethod": "Phương thức thay đổi kích thước",
       "driveNamePlaceholder": "Đường Termix",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
+        "any": "Bất kì",
+        "auto": "Tự động",
+        "nlaExtended": "NLA mở rộng",
         "color8": "8-bit",
         "color16": "16-bit",
-        "color24": "24-bit",
+        "color24": "24 bit",
         "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "displayUpdate": "Cập nhật hiển thị",
+        "reconnect": "Kết nối lại",
+        "preserve": "Bảo tồn",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "local": "Cục bộ",
+        "remote": "Từ xa",
+        "failsafe": "an toàn",
+        "blackOnWhite": "Đen trên nền trắng",
+        "whiteOnBlack": "Trắng trên nền đen",
+        "grayOnBlack": "Xám trên nền đen",
+        "greenOnBlack": "Xanh lá cây trên nền đen"
       }
     },
     "remoteDesktop": "Máy tính từ xa",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Cần có máy chủ từ xa. Kết nối máy chủ từ xa trong Cài đặt để sử dụng loại kết nối này."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Máy tính từ xa"
   }
 }

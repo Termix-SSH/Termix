@@ -116,8 +116,8 @@
     "updateLinkLabel": "アップデートが利用可能です。GitHubのリリースノートをご覧ください。"
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "タブを左にスクロール",
+    "scrollTabsRight": "タブを右にスクロール",
     "close": "閉じる",
     "minimize": "最小化",
     "online": "オンライン",
@@ -189,10 +189,10 @@
     "add": "追加",
     "update": "更新",
     "noResults": "検索結果が見つかりませんでした",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "サイドバー",
+    "mobileSidebarDescription": "モバイル版サイドバーを表示します。",
+    "toggleSidebar": "サイドバー切り替え",
+    "search": "検索..."
   },
   "onboarding": {
     "stepCounter": "ステップ {{current}} / {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "トンネル",
     "serverStats": "ホストメトリクス",
     "status": {
-      "online": "Online",
+      "online": "オンライン",
       "offline": "オフライン",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "確認中",
+      "monitoringDisabled": "ステータスチェックオフ",
       "label": "状態"
     },
     "folderRenamed": "フォルダ「{{oldName}}」を「{{newName}}」に正常にリネームしました",
@@ -482,7 +482,7 @@
     "sameHost": "このホスト（直接トンネル）",
     "statusChecksLabel": "ステータスチェック",
     "enableStatusChecks": "ステータスチェックを有効にする",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "ホストへの到達可能性を確認してください。アクティブなセッションは追加のプローブをスキップします。アクティブなセッションがないSSHプローブは、Fail2Banの厳しいルールをトリガーする可能性があります。そのようなホストではステータスチェックを無効にしてください。",
     "useGlobalInterval": "グローバル間隔を使用する",
     "useGlobalIntervalDesc": "サーバー全体のステータスチェック間隔で上書きします",
     "checkIntervalS": "チェック間隔 (秒)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "この2つ目の要素は、この画面には表示できません。管理者にお問い合わせください。",
     "serverAuthentication": "サーバーへのサインイン",
     "minChars": "最小 {{min}} 文字",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "再読み込み検証方法"
   },
   "hostKey": {
     "verifyNewHost": "SSHホストキーを確認",
@@ -1126,12 +1126,12 @@
     "keyPassword": "キーパスワード",
     "pastePrivateKey": "秘密鍵をここに貼り付け...",
     "enterPassword": "パスワードを入力",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "例：CIパイプライン",
+    "credentialName": "例：本番環境用SSHキー",
+    "optionalDetails": "オプションの詳細...",
+    "sshUsername": "例えば、root や deploy など",
+    "hostAddress": "10.0.0.1 または example.com",
+    "hostName": "例：Webサーバーの製造"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -1514,9 +1514,9 @@
     "sslNames": "カバー {{names}}",
     "sslManualTitle": "証明書をアップロードしてください",
     "updateExternalAutoProvisionFailed": "自動作成設定の更新に失敗しました",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "定義済みのホストタグ",
+    "hostTagsDesc": "ホストエディタで、すべてのユーザーに提案として表示されるタグです。スペースキーまたはエンターキーを押して追加してください。ここでタグを削除しても、ホストから削除されるわけではありません。",
+    "hostTagsError": "ホストタグの候補を読み込んだり保存したりできませんでした。"
   },
   "newUi": {
     "sidebar": {

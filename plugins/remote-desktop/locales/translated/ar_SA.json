@@ -214,25 +214,25 @@
       "resizeMethod": "طريقة تغيير الحجم",
       "driveNamePlaceholder": "محرك Termix",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
+        "any": "أي",
+        "auto": "تلقائي",
         "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
-        "unix": "Unix (LF)",
-        "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "color8": "8 بت",
+        "color16": "16 بت",
+        "color24": "24 بت",
+        "color32": "32 بت",
+        "displayUpdate": "تحديث الشاشة",
+        "reconnect": "إعادة الاتصال",
+        "preserve": "يحفظ",
+        "unix": "يونكس (LF)",
+        "windows": "ويندوز (CRLF)",
+        "local": "محلي",
+        "remote": "البعيد",
+        "failsafe": "نظام أمان",
+        "blackOnWhite": "أسود على أبيض",
+        "whiteOnBlack": "أبيض على أسود",
+        "grayOnBlack": "رمادي على أسود",
+        "greenOnBlack": "أخضر على أسود"
       }
     },
     "remoteDesktop": "سطح المكتب البعيد",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "يلزم وجود خادم بعيد. قم بتوصيل خادم بعيد في الإعدادات لاستخدام نوع الاتصال هذا."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "سطح المكتب البعيد"
   }
 }

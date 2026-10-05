@@ -20,12 +20,12 @@
     "nameRequired": "Görünen ad gereklidir.",
     "type": "Sağlayıcı Türü",
     "enabled": "Etkin",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "Giriş ekranında bu sağlayıcı için bir oturum açma düğmesi gösterin.",
+    "dialogDesc": "Kullanıcıların oturum açabilmesi için bir kimlik sağlayıcısı bağlayın.",
+    "sectionGeneral": "Genel",
+    "sectionCredentials": "Müşteri",
+    "sectionClaims": "İddialar",
+    "sectionAccess": "Erişim",
     "save": "Sağlayıcıyı Kaydet",
     "saving": "Kaydediliyor...",
     "saved": "Kaydedildi",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "Tek oturum açma"
   }
 }

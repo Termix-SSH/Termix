@@ -56,6 +56,6 @@
     "issued": "Certificat emès i instal·lat"
   },
   "plugin": {
-    "name": "ACME Certificates"
+    "name": "Certificats ACME"
   }
 }

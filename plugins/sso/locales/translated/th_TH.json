@@ -20,12 +20,12 @@
     "nameRequired": "จำเป็นต้องระบุชื่อที่แสดง",
     "type": "ประเภทผู้ให้บริการ",
     "enabled": "เปิดใช้งาน",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "แสดงปุ่มเข้าสู่ระบบสำหรับผู้ให้บริการรายนี้บนหน้าจอเข้าสู่ระบบ",
+    "dialogDesc": "เชื่อมต่อผู้ให้บริการยืนยันตัวตนเพื่อให้ผู้ใช้สามารถลงชื่อเข้าใช้ได้",
+    "sectionGeneral": "ทั่วไป",
+    "sectionCredentials": "ลูกค้า",
+    "sectionClaims": "การเรียกร้อง",
+    "sectionAccess": "เข้าถึง",
     "save": "บันทึกผู้ให้บริการ",
     "saving": "ประหยัด...",
     "saved": "บันทึกแล้ว",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "การเข้าสู่ระบบครั้งเดียว"
   }
 }

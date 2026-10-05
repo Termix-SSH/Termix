@@ -170,6 +170,6 @@
     "loading": "加载中..."
   },
   "plugin": {
-    "name": "Alerts"
+    "name": "告警"
   }
 }

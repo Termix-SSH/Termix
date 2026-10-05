@@ -214,25 +214,25 @@
       "resizeMethod": "Metoda zmiany rozmiaru",
       "driveNamePlaceholder": "Napęd Termix",
       "options": {
-        "any": "Any",
+        "any": "Każdy",
         "auto": "Auto",
-        "nlaExtended": "NLA Extended",
+        "nlaExtended": "NLA rozszerzony",
         "color8": "8-bit",
         "color16": "16-bit",
         "color24": "24-bit",
         "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "displayUpdate": "Aktualizacja ekranu",
+        "reconnect": "Połącz ponownie",
+        "preserve": "Utrzymywać",
         "unix": "Unix (LF)",
-        "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "windows": "Okna (CRLF)",
+        "local": "Lokalne",
+        "remote": "Zdalny",
+        "failsafe": "bezpieczny w razie awarii",
+        "blackOnWhite": "Czarno na białym",
+        "whiteOnBlack": "Białe na czarnym",
+        "grayOnBlack": "Szary na czarnym",
+        "greenOnBlack": "Zielony na czarnym"
       }
     },
     "remoteDesktop": "Pulpit zdalny",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Wymagany jest serwer zdalny. Połącz się z serwerem zdalnym w Ustawieniach, aby korzystać z tego typu połączenia."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Pulpit zdalny"
   }
 }

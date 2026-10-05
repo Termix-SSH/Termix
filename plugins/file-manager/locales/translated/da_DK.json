@@ -323,7 +323,7 @@
     "sideBySide": "Side om side",
     "inline": "Indlejret",
     "fileComparison": "Filsammenligning: {{file1}} vs. {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "Filen er for stor (> 10 MB) og kan af sikkerhedsmæssige årsager ikke åbnes som tekst.",
     "sshConnectionFailed": "SSH-forbindelse mislykkedes. Kontroller venligst din forbindelse til {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Kunne ikke indlæse filen: {{error}}",
     "connecting": "Forbinder...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Brug et komfortabelt layout",
     "cannotLoadPdf": "Kan ikke indlæse PDF'en",
     "pdfLoadError": "Der opstod en fejl under indlæsning af denne PDF-fil.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "Indlæser PDF-fremviser...",
     "loadingPage": "Indlæser side...",
     "cancel": "Ophæve",
     "copiedItems_one": "Kopieret {{count}} element",
@@ -384,15 +384,15 @@
     "downloadToPlay": "Download for at afspille det et andet sted",
     "cannotPreviewType": "Kan ikke forhåndsvise denne filtype",
     "cannotPreviewTypeHint": "Denne filtype har ingen forhåndsvisning. Download den for at åbne den i en anden app.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "Indlæser fil...",
+    "loadingImage": "Indlæser billede...",
+    "loadingEditor": "Indlæser editor...",
+    "loadingPreview": "Indlæser forhåndsvisning...",
+    "loadingAudio": "Indlæser lydafspiller...",
+    "emptyPreview": "Intet at forhåndsvise endnu...",
+    "revert": "Vende tilbage",
+    "openAsText": "Åbn som tekst",
+    "confirmOpenAsText": "Vil du fortsætte med at åbne denne fil som tekst? Dette kan gøre din browser langsommere."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "Server → destination (lokal): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "Filhåndtering"
   }
 }

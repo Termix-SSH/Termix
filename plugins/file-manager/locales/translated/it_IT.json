@@ -323,7 +323,7 @@
     "sideBySide": "Fianco a fianco",
     "inline": "In linea",
     "fileComparison": "Confronto file: {{file1}} vs {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "Il file è troppo grande (> 10 MB) e non può essere aperto come testo per motivi di sicurezza.",
     "sshConnectionFailed": "Connessione SSH non riuscita. Controlla la connessione a {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Caricamento del file non riuscito: {{error}}",
     "connecting": "Connessione in corso...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Utilizzare una disposizione comoda",
     "cannotLoadPdf": "Impossibile caricare il PDF",
     "pdfLoadError": "Si è verificato un errore durante il caricamento del file PDF.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "Caricamento del visualizzatore PDF in corso...",
     "loadingPage": "Caricamento pagina in corso...",
     "cancel": "Annulla",
     "copiedItems_one": "Elemento copiato {{count}}",
@@ -384,15 +384,15 @@
     "downloadToPlay": "Scaricalo per riprodurlo altrove",
     "cannotPreviewType": "Impossibile visualizzare l'anteprima di questo tipo di file",
     "cannotPreviewTypeHint": "Questo tipo di file non ha un'anteprima. Scaricalo per aprirlo in un'altra applicazione.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "Caricamento del file in corso...",
+    "loadingImage": "Caricamento immagine...",
+    "loadingEditor": "Caricamento dell'editor in corso...",
+    "loadingPreview": "Caricamento anteprima...",
+    "loadingAudio": "Caricamento del lettore audio in corso...",
+    "emptyPreview": "Ancora niente da mostrare in anteprima...",
+    "revert": "Ripristina",
+    "openAsText": "Apri come testo",
+    "confirmOpenAsText": "Desideri continuare ad aprire questo file come testo? Ciò potrebbe rallentare il browser."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "Server → dest (locale): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "Gestore file"
   }
 }

@@ -100,7 +100,7 @@
     "noHostsHint": "Включите параметр Tmux Monitor на SSH-хосте (Диспетчер хостов, вкладка Tmux Monitor), чтобы отслеживать его tmux-сессии.",
     "tmuxInstallHint": "Установите его на хост с помощью:",
     "attachTooltip": "Открыть терминал на {{host}}",
-    "attachTooltipPane": "Open a terminal to {{host}}, tmux session {{session}}",
+    "attachTooltipPane": "Откройте терминал и запустите команду `tmux session {{host}}`, затем выполните команду `tmux session {{session}}`.",
     "timeJustNow": "только что",
     "timeMinutes": "{{count}}м назад",
     "timeHours": "{{count}}ч назад",

@@ -56,6 +56,6 @@
     "issued": "Certifikat utfärdat och installerat"
   },
   "plugin": {
-    "name": "ACME Certificates"
+    "name": "ACME-certifikat"
   }
 }

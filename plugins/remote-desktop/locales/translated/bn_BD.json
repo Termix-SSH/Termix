@@ -214,25 +214,25 @@
       "resizeMethod": "আকার পরিবর্তন পদ্ধতি",
       "driveNamePlaceholder": "টারমিক্স ড্রাইভ",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
-        "unix": "Unix (LF)",
-        "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "any": "যেকোনো",
+        "auto": "অটো",
+        "nlaExtended": "এনএলএ বর্ধিত",
+        "color8": "৮-বিট",
+        "color16": "১৬-বিট",
+        "color24": "২৪-বিট",
+        "color32": "৩২-বিট",
+        "displayUpdate": "ডিসপ্লে আপডেট",
+        "reconnect": "পুনরায় সংযোগ করুন",
+        "preserve": "সংরক্ষণ করুন",
+        "unix": "ইউনিক্স (এলএফ)",
+        "windows": "উইন্ডোজ (CRLF)",
+        "local": "স্থানীয়",
+        "remote": "দূরবর্তী",
+        "failsafe": "ব্যর্থতারোধী",
+        "blackOnWhite": "সাদার উপর কালো",
+        "whiteOnBlack": "কালোর উপর সাদা",
+        "grayOnBlack": "কালোর উপর ধূসর",
+        "greenOnBlack": "কালোর উপর সবুজ"
       }
     },
     "remoteDesktop": "রিমোট ডেস্কটপ",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "রিমোট সার্ভার প্রয়োজন। এই সংযোগের ধরণটি ব্যবহার করতে সেটিংস-এ একটি রিমোট সার্ভার সংযুক্ত করুন।"
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "রিমোট ডেস্কটপ"
   }
 }

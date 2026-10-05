@@ -56,6 +56,6 @@
     "loadFailed": "无法加载使用情况统计状态"
   },
   "plugin": {
-    "name": "Usage Statistics"
+    "name": "使用情况统计"
   }
 }

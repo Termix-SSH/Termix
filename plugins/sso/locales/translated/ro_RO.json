@@ -20,12 +20,12 @@
     "nameRequired": "Este obligatoriu un nume afișat",
     "type": "Tipul furnizorului",
     "enabled": "Activat",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "enabledDesc": "Afișați un buton de conectare pentru acest furnizor pe ecranul de conectare.",
+    "dialogDesc": "Conectați un furnizor de identitate, astfel încât utilizatorii să se poată conecta cu acesta.",
     "sectionGeneral": "General",
     "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "sectionClaims": "Revendicări",
+    "sectionAccess": "Acces",
     "save": "Salvați furnizorul",
     "saving": "Economisire...",
     "saved": "Salvat",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "Autentificare unică"
   }
 }

@@ -116,8 +116,8 @@
     "updateLinkLabel": "Aggiornamento disponibile. Consulta le note di rilascio su GitHub."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Scorri le schede a sinistra",
+    "scrollTabsRight": "Scorri le schede verso destra",
     "close": "Chiudi",
     "minimize": "Riduci a icona",
     "online": "Online",
@@ -189,10 +189,10 @@
     "add": "Aggiungi",
     "update": "Aggiorna",
     "noResults": "Nessun risultato trovato",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Barra laterale",
+    "mobileSidebarDescription": "Visualizza la barra laterale mobile.",
+    "toggleSidebar": "Mostra/Nascondi barra laterale",
+    "search": "Cerca..."
   },
   "onboarding": {
     "stepCounter": "Passo {{current}} di {{total}}",
@@ -359,8 +359,8 @@
     "status": {
       "online": "Online",
       "offline": "Offline",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Controllo",
+      "monitoringDisabled": "Controllo dello stato disattivato",
       "label": "Stato"
     },
     "folderRenamed": "Cartella \"{{oldName}}\" rinominata in \"{{newName}}\" con successo",
@@ -482,7 +482,7 @@
     "sameHost": "Questo host (tunnel diretto)",
     "statusChecksLabel": "Controlli di stato",
     "enableStatusChecks": "Abilita controlli di stato",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Verifica la raggiungibilità dell'host. Le sessioni attive ignorano i controlli aggiuntivi. I controlli SSH senza una sessione attiva potrebbero attivare regole Fail2Ban aggressive; disabilita i controlli di stato su tali host.",
     "useGlobalInterval": "Usa intervallo globale",
     "useGlobalIntervalDesc": "Sovrascrivi con l'intervallo di controllo dello stato del server",
     "checkIntervalS": "Intervallo di controllo (s)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Questo secondo fattore non può essere visualizzato in questa schermata. Contatta un amministratore.",
     "serverAuthentication": "Accesso al server",
     "minChars": "min. {{min}} caratteri",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Metodi di verifica del ricaricamento"
   },
   "hostKey": {
     "verifyNewHost": "Verifica chiave host SSH",
@@ -1126,12 +1126,12 @@
     "keyPassword": "password chiave",
     "pastePrivateKey": "Incolla qui la tua chiave privata...",
     "enterPassword": "Inserisci la password",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "ad esempio, pipeline CI",
+    "credentialName": "ad esempio Chiave SSH di produzione",
+    "optionalDetails": "Dettagli facoltativi...",
+    "sshUsername": "ad esempio root o deploy",
+    "hostAddress": "10.0.0.1 o example.com",
+    "hostName": "ad esempio Produzione di server web"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1514,9 +1514,9 @@
     "sslNames": "Copertine {{names}}",
     "sslManualTitle": "Carica un certificato",
     "updateExternalAutoProvisionFailed": "Impossibile aggiornare l'impostazione di creazione automatica",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Tag host predefiniti",
+    "hostTagsDesc": "I tag visualizzati da ogni utente come suggerimenti nell'editor dell'host sono quelli che si trovano in questa pagina. Premi Spazio o Invio per aggiungerne uno. La rimozione di un tag da qui non lo elimina dagli host.",
+    "hostTagsError": "Impossibile caricare o salvare i suggerimenti per i tag host."
   },
   "newUi": {
     "sidebar": {

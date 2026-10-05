@@ -214,25 +214,25 @@
       "resizeMethod": "Метод промене величине",
       "driveNamePlaceholder": "Термикс Драјв",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
-        "unix": "Unix (LF)",
-        "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "any": "Било који",
+        "auto": "Аутоматски",
+        "nlaExtended": "НЛА продужена",
+        "color8": "8-битни",
+        "color16": "16-битни",
+        "color24": "24-битни",
+        "color32": "32-битни",
+        "displayUpdate": "Ажурирање екрана",
+        "reconnect": "Поново се повежите",
+        "preserve": "Сачувај",
+        "unix": "Јуникс (ЛФ)",
+        "windows": "Виндоус (CRLF)",
+        "local": "Локално",
+        "remote": "Даљински",
+        "failsafe": "безбедан",
+        "blackOnWhite": "Црно на белом",
+        "whiteOnBlack": "Бело на црном",
+        "grayOnBlack": "Сиво на црном",
+        "greenOnBlack": "Зелено на црном"
       }
     },
     "remoteDesktop": "Удаљена радна површина",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Потребан је удаљени сервер. Повежите се са удаљеним сервером у Подешавањима да бисте користили овај тип везе."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Удаљена радна површина"
   }
 }

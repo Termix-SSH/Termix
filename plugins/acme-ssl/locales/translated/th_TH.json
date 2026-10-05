@@ -56,6 +56,6 @@
     "issued": "ออกและติดตั้งใบรับรองแล้ว"
   },
   "plugin": {
-    "name": "ACME Certificates"
+    "name": "ใบรับรอง ACME"
   }
 }

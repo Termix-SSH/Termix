@@ -56,6 +56,6 @@
     "loadFailed": "Kunde inte ladda användningsstatistikens status"
   },
   "plugin": {
-    "name": "Usage Statistics"
+    "name": "Användningsstatistik"
   }
 }

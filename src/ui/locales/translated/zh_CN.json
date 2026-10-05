@@ -116,8 +116,8 @@
     "updateLinkLabel": "有更新可用。请在 GitHub 上查看发布说明。"
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "向左滚动标签",
+    "scrollTabsRight": "向右滚动标签",
     "close": "关闭",
     "minimize": "最小化",
     "online": "在线",
@@ -189,10 +189,10 @@
     "add": "添加",
     "update": "更新",
     "noResults": "未找到结果",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "侧边栏",
+    "mobileSidebarDescription": "显示移动侧边栏。",
+    "toggleSidebar": "切换侧边栏",
+    "search": "搜索..."
   },
   "onboarding": {
     "stepCounter": "步骤 {{current}}/{{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "隧道",
     "serverStats": "主机指标",
     "status": {
-      "online": "Online",
+      "online": "在线",
       "offline": "离线",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "检查中",
+      "monitoringDisabled": "状态检查已关闭",
       "label": "地位"
     },
     "folderRenamed": "文件夹 \"{{oldName}}\" 已成功重命名为 \"{{newName}}\"",
@@ -482,7 +482,7 @@
     "sameHost": "此主机（直接隧道）",
     "statusChecksLabel": "状态检查",
     "enableStatusChecks": "启用状态检查",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "检查主机可达性。活动会话将跳过额外的探测。没有活动会话的 SSH 探测可能会触发严格的 Fail2Ban 规则；请禁用这些主机的状态检查。",
     "useGlobalInterval": "使用全局间隔",
     "useGlobalIntervalDesc": "使用服务器范围的状态检查间隔覆盖",
     "checkIntervalS": "检查间隔（秒）",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "第二个因素无法在此屏幕上显示。请联系管理员。",
     "serverAuthentication": "服务器登录",
     "minChars": "最小 {{min}} 个字符",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "重新加载验证方法"
   },
   "hostKey": {
     "verifyNewHost": "验证 SSH 主机密钥",
@@ -1126,12 +1126,12 @@
     "keyPassword": "密钥密码",
     "pastePrivateKey": "在此粘贴您的私钥...",
     "enterPassword": "输入您的密码",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
+    "apiKeyName": "例如，CI 流水线",
+    "credentialName": "例如：生产环境 SSH 密钥",
+    "optionalDetails": "可选细节……",
+    "sshUsername": "例如 root 或部署",
     "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "hostName": "例如：Web服务器生产环境"
   },
   "dashboard": {
     "title": "仪表盘",
@@ -1514,9 +1514,9 @@
     "sslNames": "封面 {{names}}",
     "sslManualTitle": "上传证书",
     "updateExternalAutoProvisionFailed": "自动创建设置更新失败",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "预定义的主机标签",
+    "hostTagsDesc": "所有用户在主机编辑器中都会看到标签建议。按空格键或回车键添加标签。在此处删除标签不会将其从主机列表中移除。",
+    "hostTagsError": "无法加载或保存主机标签建议。"
   },
   "newUi": {
     "sidebar": {

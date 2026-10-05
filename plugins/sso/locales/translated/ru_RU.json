@@ -20,12 +20,12 @@
     "nameRequired": "Необходимо указать отображаемое имя.",
     "type": "Тип провайдера",
     "enabled": "Включено",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "Отобразить кнопку входа для этого провайдера на экране авторизации.",
+    "dialogDesc": "Подключите поставщика идентификационных данных, чтобы пользователи могли входить в систему с его помощью.",
+    "sectionGeneral": "Общие",
+    "sectionCredentials": "Клиент",
+    "sectionClaims": "Претензии",
+    "sectionAccess": "Доступ",
     "save": "Сохранить провайдера",
     "saving": "Сохранение…",
     "saved": "Сохранено",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "Единый вход"
   }
 }

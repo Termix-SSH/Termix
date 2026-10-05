@@ -212,12 +212,12 @@
     "sidebar": {
       "automations": {
         "options": {
-          "connect": "connect",
-          "disconnect": "disconnect",
-          "offline": "offline",
-          "online": "online",
-          "failing": "failing",
-          "recovered": "recovered"
+          "connect": "เชื่อมต่อ",
+          "disconnect": "ตัดการเชื่อมต่อ",
+          "offline": "ออฟไลน์",
+          "online": "ออนไลน์",
+          "failing": "ล้มเหลว",
+          "recovered": "ฟื้นตัวแล้ว"
         }
       }
     }

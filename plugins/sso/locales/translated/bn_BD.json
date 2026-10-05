@@ -20,12 +20,12 @@
     "nameRequired": "একটি প্রদর্শনের নাম প্রয়োজন",
     "type": "প্রদানকারীর ধরণ",
     "enabled": "সক্ষম করা হয়েছে",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "লগইন স্ক্রিনে এই প্রোভাইডারের জন্য একটি সাইন ইন বাটন দেখান।",
+    "dialogDesc": "একটি আইডেন্টিটি প্রোভাইডার সংযুক্ত করুন যাতে ব্যবহারকারীরা এর মাধ্যমে সাইন ইন করতে পারেন।",
+    "sectionGeneral": "সাধারণ",
+    "sectionCredentials": "ক্লায়েন্ট",
+    "sectionClaims": "দাবি",
+    "sectionAccess": "অ্যাক্সেস",
     "save": "সরবরাহকারীকে সংরক্ষণ করুন",
     "saving": "সঞ্চয়...",
     "saved": "সংরক্ষিত",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "একক সাইন-অন"
   }
 }

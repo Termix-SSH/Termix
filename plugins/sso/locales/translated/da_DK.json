@@ -20,12 +20,12 @@
     "nameRequired": "Et visningsnavn er påkrævet",
     "type": "Udbydertype",
     "enabled": "Aktiveret",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "Vis en loginknap for denne udbyder på loginskærmen.",
+    "dialogDesc": "Tilslut en identitetsudbyder, så brugerne kan logge ind med den.",
+    "sectionGeneral": "Generel",
+    "sectionCredentials": "Klient",
+    "sectionClaims": "Krav",
+    "sectionAccess": "Adgang",
     "save": "Gem udbyder",
     "saving": "Gemmer...",
     "saved": "Gemt",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "Enkelt login"
   }
 }

@@ -214,25 +214,25 @@
       "resizeMethod": "Koon muuttamismenetelmä",
       "driveNamePlaceholder": "Termix Drive",
       "options": {
-        "any": "Any",
+        "any": "Mikä tahansa",
         "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "nlaExtended": "NLA Laajennettu",
+        "color8": "8-bittinen",
+        "color16": "16-bittinen",
+        "color24": "24-bittinen",
+        "color32": "32-bittinen",
+        "displayUpdate": "Näyttöpäivitys",
+        "reconnect": "Yhdistä uudelleen",
+        "preserve": "Säilyttää",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "local": "Paikallinen",
+        "remote": "Kauko",
+        "failsafe": "vikaturvallinen",
+        "blackOnWhite": "Mustaa valkoisella",
+        "whiteOnBlack": "Valkoinen mustalla",
+        "grayOnBlack": "Harmaa mustalla pohjalla",
+        "greenOnBlack": "Vihreä mustalla"
       }
     },
     "remoteDesktop": "Etätyöpöytä",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Etäpalvelin vaaditaan. Yhdistä etäpalvelin asetuksissa käyttääksesi tätä yhteystyyppiä."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Etätyöpöytä"
   }
 }

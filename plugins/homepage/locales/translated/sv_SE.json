@@ -170,136 +170,136 @@
     "configureLocation": "Ange en plats i widgetinställningarna",
     "bannerTextPlaceholder": "Bannertext",
     "serviceNamePlaceholder": "Min tjänst",
-    "emptyNote": "Empty note...",
-    "weatherLoadFailed": "Could not load weather for \"{{location}}\"",
-    "feelsLike": "Feels like {{temperature}}",
-    "timezonePlaceholder": "America/New_York (leave blank for local)",
-    "notesPlaceholder": "Write your notes here...",
+    "emptyNote": "Tom anteckning...",
+    "weatherLoadFailed": "Kunde inte ladda väder för \"{{location}}\"",
+    "feelsLike": "Känns som {{temperature}}",
+    "timezonePlaceholder": "Amerika/New_York (lämna tomt för lokalt)",
+    "notesPlaceholder": "Skriv dina anteckningar här...",
     "locationPlaceholder": "New York, London, Tokyo...",
     "widgets": {
       "bookmark_list": {
-        "name": "Bookmarks",
-        "description": "A list of quick links"
+        "name": "Bokmärken",
+        "description": "En lista med snabblänkar"
       },
       "calendar": {
-        "name": "Calendar",
-        "description": "A month calendar with today highlighted"
+        "name": "Kalender",
+        "description": "En månadskalender med idag markerad"
       },
       "clock": {
-        "name": "Clock",
-        "description": "A live clock with configurable timezone"
+        "name": "Klocka",
+        "description": "En liveklocka med konfigurerbar tidszon"
       },
       "countdown": {
-        "name": "Countdown",
-        "description": "Counts down to a target date and time"
+        "name": "Nedräkning",
+        "description": "Räknar ner till ett måldatum och en måltid"
       },
       "custom_api": {
-        "name": "Custom API",
-        "description": "Fetch and display data from any JSON API"
+        "name": "Anpassat API",
+        "description": "Hämta och visa data från valfritt JSON API"
       },
       "dashboard_links": {
-        "name": "Dashboard Links",
-        "description": "Shows your saved dashboard service links"
+        "name": "Länkar till instrumentpanelen",
+        "description": "Visar dina sparade länkar till instrumentpanelens tjänster"
       },
       "folder": {
-        "name": "Folder",
-        "description": "A background card for grouping widgets visually"
+        "name": "Mapp",
+        "description": "Ett bakgrundskort för att gruppera widgetar visuellt"
       },
       "host_grid": {
-        "name": "Host Grid",
-        "description": "Live status overview grid for all your SSH hosts"
+        "name": "Värdnät",
+        "description": "Översiktsruta för livestatus för alla dina SSH-värdar"
       },
       "host_status": {
-        "name": "Host Status",
-        "description": "Shows live status and metrics for an SSH host"
+        "name": "Värdstatus",
+        "description": "Visar livestatus och mätvärden för en SSH-värd"
       },
       "iframe_embed": {
-        "name": "iFrame Embed",
-        "description": "Embed any URL in an iframe"
+        "name": "iFrame-bäddning",
+        "description": "Bädda in valfri URL i en iframe"
       },
       "image_widget": {
-        "name": "Image",
-        "description": "Display any image from a URL"
+        "name": "Bild",
+        "description": "Visa valfri bild från en URL"
       },
       "link_tree": {
-        "name": "Link Tree",
-        "description": "Grouped links organized into labeled sections"
+        "name": "Länkträd",
+        "description": "Grupperade länkar organiserade i märkta avsnitt"
       },
       "markdown_notes": {
-        "name": "Markdown Notes",
-        "description": "Notes with optional Markdown rendering and inline editing"
+        "name": "Nedskrivningsanteckningar",
+        "description": "Anteckningar med valfri Markdown-rendering och inline-redigering"
       },
       "notes": {
-        "name": "Notes",
-        "description": "A text notes widget"
+        "name": "Anteckningar",
+        "description": "En widget för textanteckningar"
       },
       "ping_status": {
-        "name": "Ping Status",
-        "description": "Check if URLs or services are reachable"
+        "name": "Pingstatus",
+        "description": "Kontrollera om webbadresser eller tjänster är nåbara"
       },
       "quick_connect": {
-        "name": "Quick Connect",
-        "description": "Launch terminal, files, docker, tunnels, and more for your hosts"
+        "name": "Snabbanslutning",
+        "description": "Starta terminal, filer, docker, tunnlar och mer för dina värdar"
       },
       "recent_activity": {
-        "name": "Recent Activity",
-        "description": "Shows recent terminal, Docker, file, and tunnel activity"
+        "name": "Senaste aktivitet",
+        "description": "Visar den senaste terminal-, Docker-, fil- och tunnelaktiviteten"
       },
       "rss_feed": {
-        "name": "RSS Feed",
-        "description": "Display items from an RSS or Atom feed"
+        "name": "RSS-flöde",
+        "description": "Visa objekt från ett RSS- eller Atom-flöde"
       },
       "search_bar": {
-        "name": "Search Bar",
-        "description": "Quick search with Google, DuckDuckGo, Bing, or a custom engine"
+        "name": "Sökfält",
+        "description": "Snabbsökning med Google, DuckDuckGo, Bing eller en anpassad sökmotor"
       },
       "search_links": {
-        "name": "Search Shortcuts",
-        "description": "Quick buttons to search different engines"
+        "name": "Sökgenvägar",
+        "description": "Snabbknappar för att söka i olika motorer"
       },
       "service_grid": {
-        "name": "Service Grid",
-        "description": "A grid of service tiles with icons and links"
+        "name": "Servicenät",
+        "description": "Ett rutnät med servicerutor med ikoner och länkar"
       },
       "service_link": {
-        "name": "Service Link",
-        "description": "A clickable tile linking to a service URL"
+        "name": "Servicelänk",
+        "description": "En klickbar panel som länkar till en tjänst-URL"
       },
       "ssh_terminal": {
-        "name": "SSH Terminal",
-        "description": "An inline SSH terminal connected to a configured host"
+        "name": "SSH-terminal",
+        "description": "En inline SSH-terminal ansluten till en konfigurerad värd"
       },
       "system_overview": {
-        "name": "System Overview",
-        "description": "Termix version, database health, and uptime at a glance"
+        "name": "Systemöversikt",
+        "description": "Termix-version, databasstatus och drifttid i korthet"
       },
       "termix_uptime": {
-        "name": "Termix Uptime",
-        "description": "Shows how long the Termix server has been running"
+        "name": "Termix drifttid",
+        "description": "Visar hur länge Termix-servern har varit igång"
       },
       "text_banner": {
-        "name": "Text Banner",
-        "description": "A styled text label for sections and headings"
+        "name": "Textbanner",
+        "description": "En stiliserad textetikett för avsnitt och rubriker"
       },
       "weather": {
-        "name": "Weather",
-        "description": "Live weather for any location"
+        "name": "Väder",
+        "description": "Liveväder för alla platser"
       },
       "docker_widget": {
         "name": "Docker Manager",
-        "description": "Embedded Docker container manager for a configured host"
+        "description": "Inbäddad Docker-containerhanterare för en konfigurerad värd"
       },
       "file_manager_widget": {
-        "name": "File Manager",
-        "description": "Embedded SFTP file manager for a configured host"
+        "name": "Filhanteraren",
+        "description": "Inbäddad SFTP-filhanterare för en konfigurerad värd"
       },
       "tunnel_widget": {
-        "name": "Tunnel Manager",
-        "description": "Embedded SSH tunnel manager for a configured host"
+        "name": "Tunnelchef",
+        "description": "Inbäddad SSH-tunnelhanterare för en konfigurerad värd"
       },
       "metrics_chart": {
-        "name": "Metrics Chart",
-        "description": "Historical CPU, memory, disk, or network chart for a host"
+        "name": "Mätvärdena Diagram",
+        "description": "Historiskt diagram över CPU, minne, disk eller nätverk för en värd"
       }
     }
   },
@@ -320,6 +320,6 @@
     }
   },
   "plugin": {
-    "name": "Homepage"
+    "name": "Hemsida"
   }
 }

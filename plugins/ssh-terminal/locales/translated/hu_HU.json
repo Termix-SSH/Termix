@@ -703,6 +703,6 @@
     "remoteServerRequired": "Távoli szerver szükséges. Csatlakoztasson egy távoli szervert a Beállításokban a kapcsolattípus használatához."
   },
   "plugin": {
-    "name": "SSH Terminal"
+    "name": "SSH terminál"
   }
 }

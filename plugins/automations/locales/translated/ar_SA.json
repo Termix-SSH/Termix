@@ -212,12 +212,12 @@
     "sidebar": {
       "automations": {
         "options": {
-          "connect": "connect",
-          "disconnect": "disconnect",
-          "offline": "offline",
-          "online": "online",
-          "failing": "failing",
-          "recovered": "recovered"
+          "connect": "اتصال",
+          "disconnect": "افصل",
+          "offline": "غير متصل",
+          "online": "متصل",
+          "failing": "الفشل",
+          "recovered": "تم التعافي"
         }
       }
     }

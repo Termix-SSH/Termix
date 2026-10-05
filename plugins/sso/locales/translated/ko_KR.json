@@ -20,12 +20,12 @@
     "nameRequired": "표시 이름은 필수입니다.",
     "type": "제공자 유형",
     "enabled": "사용",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "로그인 화면에 해당 제공업체의 로그인 버튼을 표시합니다.",
+    "dialogDesc": "사용자가 로그인할 수 있도록 ID 공급자를 연결하세요.",
+    "sectionGeneral": "일반",
+    "sectionCredentials": "고객",
+    "sectionClaims": "청구",
+    "sectionAccess": "입장",
     "save": "제공자 저장",
     "saving": "저장 중...",
     "saved": "저장됨",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "싱글 사인온"
   }
 }

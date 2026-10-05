@@ -184,6 +184,6 @@
     "sharedSessionLabel": "{{hostName}} (مشترك)"
   },
   "plugin": {
-    "name": "Session Sharing"
+    "name": "مشاركة الجلسة"
   }
 }

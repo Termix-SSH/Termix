@@ -56,6 +56,6 @@
     "issued": "Sertifikaat uitgereik en geïnstalleer"
   },
   "plugin": {
-    "name": "ACME Certificates"
+    "name": "ACME-sertifikate"
   }
 }

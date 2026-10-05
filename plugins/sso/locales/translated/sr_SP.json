@@ -20,12 +20,12 @@
     "nameRequired": "Потребно је приказано име",
     "type": "Тип добављача",
     "enabled": "Омогућено",
-    "enabledDesc": "Show a sign in button for this provider on the login screen.",
-    "dialogDesc": "Connect an identity provider so users can sign in with it.",
-    "sectionGeneral": "General",
-    "sectionCredentials": "Client",
-    "sectionClaims": "Claims",
-    "sectionAccess": "Access",
+    "enabledDesc": "Прикажи дугме за пријаву за овог добављача на екрану за пријаву.",
+    "dialogDesc": "Повежите добављача идентитета како би се корисници могли пријавити помоћу њега.",
+    "sectionGeneral": "Опште",
+    "sectionCredentials": "Клијент",
+    "sectionClaims": "Потраживања",
+    "sectionAccess": "Приступ",
     "save": "Сачувај добављача",
     "saving": "Чување...",
     "saved": "Сачувано",
@@ -69,6 +69,6 @@
     }
   },
   "plugin": {
-    "name": "Single sign-on"
+    "name": "Једнократно пријављивање"
   }
 }

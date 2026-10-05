@@ -58,6 +58,6 @@
     "pause": "Opname pauzeren"
   },
   "plugin": {
-    "name": "Session Recording"
+    "name": "Sessieopname"
   }
 }

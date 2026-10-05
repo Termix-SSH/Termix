@@ -56,6 +56,6 @@
     "issued": "인증서가 발급 및 설치되었습니다."
   },
   "plugin": {
-    "name": "ACME Certificates"
+    "name": "ACME 인증서"
   }
 }

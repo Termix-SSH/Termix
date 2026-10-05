@@ -184,6 +184,6 @@
     "sharedSessionLabel": "{{hostName}} (delad)"
   },
   "plugin": {
-    "name": "Session Sharing"
+    "name": "Sessionsdelning"
   }
 }

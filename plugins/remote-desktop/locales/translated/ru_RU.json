@@ -214,25 +214,25 @@
       "resizeMethod": "Метод изменения размера",
       "driveNamePlaceholder": "Термикс Драйв",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
+        "any": "Любой",
+        "auto": "Авто",
         "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
+        "color8": "8-битный",
+        "color16": "16-бит",
+        "color24": "24-бит",
+        "color32": "32-битный",
+        "displayUpdate": "Обновление дисплея",
+        "reconnect": "Переподключиться",
+        "preserve": "Сохранять",
         "unix": "Unix (LF)",
         "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "local": "Локальная",
+        "remote": "Удалённый",
+        "failsafe": "отказоустойчивость",
+        "blackOnWhite": "Черное на белом",
+        "whiteOnBlack": "Белый на чёрном",
+        "grayOnBlack": "Серый на чёрном",
+        "greenOnBlack": "Зеленый на черном"
       }
     },
     "remoteDesktop": "Удаленный рабочий стол",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "Требуется удаленный сервер. Для использования этого типа подключения подключите удаленный сервер в настройках."
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "Удаленный рабочий стол"
   }
 }

@@ -214,25 +214,25 @@
       "resizeMethod": "วิธีการปรับขนาด",
       "driveNamePlaceholder": "เทอร์มิกซ์ไดรฟ์",
       "options": {
-        "any": "Any",
-        "auto": "Auto",
-        "nlaExtended": "NLA Extended",
-        "color8": "8-bit",
-        "color16": "16-bit",
-        "color24": "24-bit",
-        "color32": "32-bit",
-        "displayUpdate": "Display Update",
-        "reconnect": "Reconnect",
-        "preserve": "Preserve",
-        "unix": "Unix (LF)",
-        "windows": "Windows (CRLF)",
-        "local": "Local",
-        "remote": "Remote",
-        "failsafe": "failsafe",
-        "blackOnWhite": "Black on White",
-        "whiteOnBlack": "White on Black",
-        "grayOnBlack": "Gray on Black",
-        "greenOnBlack": "Green on Black"
+        "any": "ใดๆ",
+        "auto": "อัตโนมัติ",
+        "nlaExtended": "NLA ขยาย",
+        "color8": "8 บิต",
+        "color16": "16 บิต",
+        "color24": "24 บิต",
+        "color32": "32 บิต",
+        "displayUpdate": "อัปเดตการแสดงผล",
+        "reconnect": "เชื่อมต่อใหม่",
+        "preserve": "อนุรักษ์",
+        "unix": "ยูนิกซ์ (LF)",
+        "windows": "วินโดวส์ (CRLF)",
+        "local": "ท้องถิ่น",
+        "remote": "ระยะไกล",
+        "failsafe": "ระบบป้องกันความล้มเหลว",
+        "blackOnWhite": "สีดำบนพื้นขาว",
+        "whiteOnBlack": "สีขาวบนพื้นดำ",
+        "grayOnBlack": "สีเทาบนพื้นดำ",
+        "greenOnBlack": "สีเขียวบนพื้นดำ"
       }
     },
     "remoteDesktop": "รีโมทเดสก์ท็อป",
@@ -369,6 +369,6 @@
     "remoteServerRequired": "จำเป็นต้องใช้เซิร์ฟเวอร์ระยะไกล เชื่อมต่อเซิร์ฟเวอร์ระยะไกลในการตั้งค่าเพื่อใช้ประเภทการเชื่อมต่อนี้"
   },
   "plugin": {
-    "name": "Remote Desktop"
+    "name": "รีโมทเดสก์ท็อป"
   }
 }

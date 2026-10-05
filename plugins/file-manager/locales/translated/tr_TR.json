@@ -323,7 +323,7 @@
     "sideBySide": "Yan Yana",
     "inline": "Satır İçi",
     "fileComparison": "Dosya Karşılaştırması: {{file1}} vs {{file2}}",
-    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
+    "fileTooLarge": "Dosya çok büyük (> 10 MB) ve güvenlik nedenleriyle metin dosyası olarak açılamıyor.",
     "sshConnectionFailed": "SSH bağlantısı başarısız oldu. Lütfen {{name}} ({{ip}}:{{port}}) ile bağlantınızı kontrol edin",
     "loadFileFailed": "Dosya yüklenemedi: {{error}}",
     "connecting": "Bağlanıyor...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Rahat bir düzen kullanın.",
     "cannotLoadPdf": "PDF yüklenemiyor",
     "pdfLoadError": "Bu PDF dosyası yüklenirken bir hata oluştu.",
-    "loadingPdf": "Loading PDF viewer...",
+    "loadingPdf": "PDF görüntüleyici yükleniyor...",
     "loadingPage": "Sayfa yükleniyor...",
     "cancel": "İptal",
     "copiedItems_one": "Kopyalanan {{count}} öğe",
@@ -384,15 +384,15 @@
     "downloadToPlay": "Başka yerde oynamak için indirin",
     "cannotPreviewType": "Bu dosya türünün önizlemesi yapılamıyor.",
     "cannotPreviewTypeHint": "Bu dosya türünün önizlemesi yok. Başka bir uygulamada açmak için indirin.",
-    "loadingFile": "Loading file...",
-    "loadingImage": "Loading image...",
-    "loadingEditor": "Loading editor...",
-    "loadingPreview": "Loading preview...",
-    "loadingAudio": "Loading audio player...",
-    "emptyPreview": "Nothing to preview yet...",
-    "revert": "Revert",
-    "openAsText": "Open as Text",
-    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
+    "loadingFile": "Dosya yükleniyor...",
+    "loadingImage": "Resim yükleniyor...",
+    "loadingEditor": "Editör yükleniyor...",
+    "loadingPreview": "Önizleme yükleniyor...",
+    "loadingAudio": "Ses oynatıcısı yükleniyor...",
+    "emptyPreview": "Henüz önizlenecek bir şey yok...",
+    "revert": "Geri al",
+    "openAsText": "Metin olarak aç",
+    "confirmOpenAsText": "Bu dosyayı metin olarak açmaya devam etmek istiyor musunuz? Bu, tarayıcınızın yavaşlamasına neden olabilir."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -550,6 +550,6 @@
     "metricsHopDestLocalWrite": "Sunucu → hedef (yerel): {{throughput}}"
   },
   "plugin": {
-    "name": "File Manager"
+    "name": "Dosya Yöneticisi"
   }
 }
