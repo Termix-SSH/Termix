@@ -28,7 +28,10 @@ import type {
 } from "@termix-ssh/plugin-sdk/backend";
 import { pluginLogger } from "../utils/logger.js";
 import { recordConflict } from "./conflicts.js";
-import { extractWebSocketToken } from "../utils/ws-auth.js";
+import {
+  extractWebSocketToken,
+  isCookieOriginAllowed,
+} from "../utils/ws-auth.js";
 import { runAsActor } from "./actor.js";
 import { isPluginInstalled } from "./http.js";
 
@@ -161,6 +164,12 @@ async function handlePluginUpgrade(
   if (!(await hasCapability(route.pluginId, "network:serve", route.declared))) {
     reject(socket, 403, "Forbidden");
     return true;
+  }
+
+  // A page on another site gets the browser's cookies attached for free.
+  // Core already ignores them for auth; plugin code must not see them either.
+  if (request.headers.cookie && !isCookieOriginAllowed(request)) {
+    delete request.headers.cookie;
   }
 
   let userId = "";

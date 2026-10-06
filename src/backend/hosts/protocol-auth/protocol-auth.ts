@@ -511,7 +511,10 @@ export async function resolveOwnerProtocolLogin(
 
   const fallback = declared.hostLoginFallback ?? [];
   if (fallback.includes("username")) username ||= str(host.username);
-  if (fallback.includes("password")) password ||= str(host.password);
+  // A key or credential host can still carry an old password; never send it.
+  if (fallback.includes("password") && host.authType === "password") {
+    password ||= str(host.password);
+  }
 
   const secretFields: Record<string, string> = {};
   for (const [key, value] of Object.entries(login?.secretFields ?? {})) {

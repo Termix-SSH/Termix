@@ -87,7 +87,8 @@ router.get("/public", async (_req: Request, res: Response) => {
         {
           id: record.id,
           name: record.name,
-          version: record.version,
+          // Not before login: it tells a scanner which known bugs apply.
+          version: "",
           enabled: true,
           state: loaded?.state ?? record.state,
           contributes: {
@@ -121,7 +122,8 @@ router.get("/public", async (_req: Request, res: Response) => {
  *       that plugins provide, before anyone has signed in. Returns only
  *       enabled plugins that contribute login methods or second factors, with
  *       the fields the browser loader needs and the ids they contribute.
- *       Nothing operational: no capabilities, grants, settings or errors.
+ *       Nothing operational: no versions, capabilities, grants, settings or
+ *       errors.
  *     tags:
  *       - Plugins
  *     responses:
@@ -165,7 +167,7 @@ export async function listPreLoginPlugins(): Promise<
       {
         id: record.id,
         name: record.name,
-        version: record.version,
+        version: "",
         enabled: true,
         state: loaded.state,
         contributes: { auth: { loginMethods, secondFactors } },

@@ -434,7 +434,8 @@ export interface PluginProtocolContribution {
   defaultPort?: number;
   /**
    * What the owner's login falls back to from the host's own SSH login
-   * when the protocol login leaves it empty.
+   * when the protocol login leaves it empty. The password only falls back
+   * while the host signs in to SSH with a password.
    */
   hostLoginFallback?: Array<"username" | "password">;
 }

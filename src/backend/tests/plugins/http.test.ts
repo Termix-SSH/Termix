@@ -234,6 +234,48 @@ describe("ctx.http authentication", () => {
     expect(response.status).toBe(401);
   });
 
+  it("only opens the methods the public route was registered for", async () => {
+    const router = http.createPluginRouter({
+      manifest: manifest(),
+      options: { public: ["/webhook/:token"] },
+      reportError: () => {},
+    });
+    router.post("/webhook/:token", (_req, res) => res.json({ ok: true }));
+    router.delete("/webhook/:token", (_req, res) => res.json({ ok: true }));
+
+    const base = await startServer();
+    const url = `${base}/plugin-api/sample-plugin/webhook/abc`;
+
+    expect((await fetch(url, { method: "POST" })).status).toBe(200);
+    expect((await fetch(url)).status).toBe(401);
+    expect((await fetch(url, { method: "PUT" })).status).toBe(401);
+  });
+
+  it("does not open a literal route beside a public parameter", async () => {
+    const router = http.createPluginRouter({
+      manifest: manifest(),
+      options: { public: ["/webhook/:token"] },
+      reportError: () => {},
+    });
+    router.get("/webhook/config", (_req, res) => res.json({ secret: true }));
+    router.post("/webhook/config", (_req, res) => res.json({ secret: true }));
+    router.get("/webhook/:token", (_req, res) => res.json({ ok: true }));
+    router.post("/webhook/:token", (_req, res) => res.json({ ok: true }));
+
+    const base = await startServer();
+    const root = `${base}/plugin-api/sample-plugin/webhook`;
+
+    expect((await fetch(`${root}/config`)).status).toBe(401);
+    expect((await fetch(`${root}/config`, { method: "POST" })).status).toBe(
+      401,
+    );
+    expect((await fetch(`${root}/abc`)).status).toBe(200);
+    expect((await fetch(`${root}/abc`, { method: "HEAD" })).status).toBe(200);
+    expect((await fetch(`${root}/config`, { headers: authed })).status).toBe(
+      200,
+    );
+  });
+
   it("opens everything below a trailing /* and nothing beside it", async () => {
     const router = http.createPluginRouter({
       manifest: manifest(),

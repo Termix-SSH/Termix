@@ -156,6 +156,7 @@ const baseHost = {
   ip: "10.0.0.7",
   port: 22,
   username: "sshuser",
+  authType: "password",
   password: "ssh-secret",
   jumpHosts: JSON.stringify([{ hostId: 3 }]),
 };
@@ -283,6 +284,26 @@ describe("ctx.credentials.resolveHostProtocol", () => {
       password: "ssh-secret",
       fields: { display: "", ticket: "" },
     });
+  });
+
+  it("does not fall back to an old password on a key host", async () => {
+    grants.set("demo", ["credentials:read"]);
+    state.hosts.set(7, { ...baseHost, authType: "key" });
+    state.logins.set("7:spice", {
+      protocol: "spice",
+      authType: "direct",
+      credentialId: null,
+      username: null,
+      password: null,
+      fields: {},
+      secretFields: {},
+    });
+    const ctx = spiceContext(["credentials:read"]);
+
+    const target = await runAsActor("owner", "request", () =>
+      ctx.credentials.resolveHostProtocol(7, "spice"),
+    );
+    expect(target?.auth.password).toBe("");
   });
 
   it("uses the stored credential in credential mode", async () => {

@@ -239,6 +239,7 @@ describe("plugins route", () => {
       });
       expect(body[0]).not.toHaveProperty("capabilities");
       expect(body[0]).not.toHaveProperty("lastError");
+      expect(body[0].version).toBe("");
     });
 
     it("skips a plugin whose manifest does not parse", async () => {
@@ -314,6 +315,9 @@ describe("plugins route", () => {
       expect(body[0].contributes).toEqual({
         auth: { loginMethods: ["corp-sso"], secondFactors: [] },
       });
+      expect(body.map((plugin: { version: string }) => plugin.version)).toEqual(
+        ["", ""],
+      );
       for (const plugin of body) {
         expect(Object.keys(plugin).sort()).toEqual(
           [
