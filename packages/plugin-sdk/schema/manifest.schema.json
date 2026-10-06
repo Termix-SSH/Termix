@@ -72,7 +72,7 @@
     "icon": {
       "type": "string",
       "minLength": 1,
-      "description": "A Lucide icon name, or a relative path to an icon.svg in the plugin root."
+      "description": "A Lucide icon name, like \"Play\"."
     },
     "engine": {
       "type": "object",

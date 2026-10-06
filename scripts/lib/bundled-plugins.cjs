@@ -152,8 +152,29 @@ async function extractArtifact(buffer, outDir, id) {
   }
 }
 
+/**
+ * Pins the newest registry version of each wanted plugin. `ids` is the list
+ * to pin, or null for every plugin in the index.
+ */
+function pinsFromIndex(index, ids) {
+  const plugins = Array.isArray(index?.plugins) ? index.plugins : [];
+  const byId = new Map(plugins.map((plugin) => [plugin.id, plugin]));
+  const wanted = ids ?? plugins.map((plugin) => plugin.id);
+  return [...wanted].sort().map((id) => {
+    const latest = byId.get(id)?.versions?.[0];
+    if (!latest) throw new Error(`${id} is not in the registry index`);
+    return {
+      id,
+      source: "tmxplug",
+      url: latest.url,
+      sha256: latest.sha256,
+    };
+  });
+}
+
 module.exports = {
   parseBundledPlugins,
+  pinsFromIndex,
   loadBundledPlugins,
   checkSha256,
   fetchArtifact,

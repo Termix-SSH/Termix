@@ -48,7 +48,8 @@
     "schema:check": "node scripts/generate-dialect-schema.cjs --check",
     "schema:migrations": "drizzle-kit generate --config=drizzle.config.sqlite.ts && drizzle-kit generate --config=drizzle.config.pg.ts && drizzle-kit generate --config=drizzle.config.mysql.ts",
     "build:sdk": "npm run build --workspace @termix-ssh/plugin-sdk && node scripts/build-sdk-host.mjs",
-    "build:plugins": "node scripts/build-plugins.cjs"
+    "build:plugins": "node scripts/build-plugins.cjs",
+    "plugins:pin": "node scripts/pin-bundled-plugins.cjs"
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.14.13",

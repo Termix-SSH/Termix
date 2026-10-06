@@ -9,6 +9,7 @@ import {
   loadBundledPlugins,
   fetchArtifact,
   extractArtifact,
+  pinsFromIndex,
 } from "./lib/bundled-plugins.cjs";
 
 const cleanups: Array<() => void> = [];
@@ -133,5 +134,61 @@ describe("tmxplug entries", () => {
     await expect(
       extractArtifact(await artifactFor("other"), out, "demo"),
     ).rejects.toThrow(/is for "other"/);
+  });
+});
+
+describe("pinsFromIndex", () => {
+  const index = {
+    plugins: [
+      {
+        id: "beta",
+        versions: [
+          {
+            version: "1.1.0",
+            url: "https://example.test/beta-1.1.0.tmxplug",
+            sha256: "b".repeat(64),
+          },
+          {
+            version: "1.0.0",
+            url: "https://example.test/beta-1.0.0.tmxplug",
+            sha256: SHA,
+          },
+        ],
+      },
+      {
+        id: "alpha",
+        versions: [
+          {
+            version: "1.0.0",
+            url: "https://example.test/alpha-1.0.0.tmxplug",
+            sha256: "c".repeat(64),
+          },
+        ],
+      },
+    ],
+  };
+
+  it("pins the newest version of every plugin, sorted by id", () => {
+    const pins = pinsFromIndex(index, null);
+    expect(pins.map((pin) => pin.id)).toEqual(["alpha", "beta"]);
+    expect(pins[1]).toEqual({
+      id: "beta",
+      source: "tmxplug",
+      url: "https://example.test/beta-1.1.0.tmxplug",
+      sha256: "b".repeat(64),
+    });
+    expect(parseBundledPlugins({ plugins: pins }).problems).toEqual([]);
+  });
+
+  it("pins only the ids asked for", () => {
+    expect(pinsFromIndex(index, ["beta"]).map((pin) => pin.id)).toEqual([
+      "beta",
+    ]);
+  });
+
+  it("refuses an id the index does not list", () => {
+    expect(() => pinsFromIndex(index, ["gamma"])).toThrow(
+      /not in the registry/,
+    );
   });
 });
