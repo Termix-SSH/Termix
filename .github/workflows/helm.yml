@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -48,7 +48,7 @@ jobs:
   publish:
     needs: lint
     if: github.event_name == 'workflow_dispatch' && inputs.publish
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     permissions:
       contents: read
       packages: write
