@@ -34,15 +34,25 @@ import { preloadPermissions } from "@/hooks/use-permissions";
 import { getUserPreferences } from "@/api/open-tabs-api";
 import { standaloneViewFor } from "@/shell/tab-registry";
 import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
+import {
+  resolveStartupOnboarding,
+  type StartupOnboarding,
+} from "@/onboarding/startup";
 
 const AppShell = lazy(() =>
   import("@/AppShell").then((m) => ({ default: m.AppShell })),
+);
+const OnboardingStage = lazy(() =>
+  import("@/onboarding/OnboardingStage").then((m) => ({
+    default: m.OnboardingStage,
+  })),
 );
 
 type Phase =
   | "verifying"
   | "idle-auth"
   | "loading-app"
+  | "onboarding"
   | "fading-in"
   | "idle-app"
   | "fading-out";
@@ -132,6 +142,7 @@ function App() {
   );
   const [authUsername, setAuthUsername] = useState(stored?.username ?? "");
   const [verifyRetryCount, setVerifyRetryCount] = useState(0);
+  const [startup, setStartup] = useState<StartupOnboarding | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Dedupes concurrent handleLogout() calls within the same tick -- see
   // handleLogout for why phase state alone isn't sufficient for this.
@@ -178,8 +189,7 @@ function App() {
           preloadPermissions(),
           getUserPreferences().catch(() => undefined),
         ]);
-        setPhase("fading-in");
-        timerRef.current = setTimeout(() => setPhase("idle-app"), 450);
+        await enterApp();
       })
       .catch((err: unknown) => {
         // Only treat a genuine auth rejection (401/403) as "not logged in".
@@ -229,7 +239,25 @@ function App() {
           }, delay);
         });
       });
+    // enterApp only touches state setters and refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, verifyRetryCount]);
+
+  function fadeIntoApp() {
+    setPhase("fading-in");
+    timerRef.current = setTimeout(() => setPhase("idle-app"), 450);
+  }
+
+  /** Opens on onboarding first when there is something to show. */
+  async function enterApp() {
+    const plan = await resolveStartupOnboarding().catch(() => null);
+    setStartup(plan);
+    if (plan?.mode) {
+      setPhase("onboarding");
+      return;
+    }
+    fadeIntoApp();
+  }
 
   function handleLogin(u: string) {
     loggingOutRef.current = false;
@@ -244,8 +272,7 @@ function App() {
         preloadPermissions(),
         getUserPreferences().catch(() => undefined),
       ]);
-      setPhase("fading-in");
-      timerRef.current = setTimeout(() => setPhase("idle-app"), 450);
+      await enterApp();
     })();
     if (isElectron()) {
       window.electronAPI?.startC2SAutoStartTunnels?.().catch(() => {});
@@ -282,8 +309,17 @@ function App() {
         ? "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Lax"
         : "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax";
     }
+    // The app never mounted, so there is nothing to fade out of.
+    if (phase === "onboarding") {
+      setStartup(null);
+      setAuthUsername("");
+      setPhase("idle-auth");
+      loggingOutRef.current = false;
+      return;
+    }
     setPhase("fading-out");
     timerRef.current = setTimeout(() => {
+      setStartup(null);
       setAuthUsername("");
       setPhase("idle-auth");
       loggingOutRef.current = false;
@@ -323,20 +359,35 @@ function App() {
         </div>
       )}
 
-      {showApp && (
-        <div
-          className="fixed inset-0 z-10 transition-opacity duration-[450ms] ease-in-out"
-          style={{
-            opacity: appOpacity,
-            pointerEvents: phase === "idle-app" ? "auto" : "none",
-          }}
-        >
-          <Suspense fallback={null}>
-            <UiPreferencesProvider>
-              <AppShell username={authUsername} onLogout={handleLogout} />
-            </UiPreferencesProvider>
-          </Suspense>
-        </div>
+      {(showApp || phase === "onboarding") && (
+        // One provider from onboarding into the app, so nothing chosen in
+        // onboarding is lost or fetched twice on the way.
+        <UiPreferencesProvider initial={startup?.preferences}>
+          {phase === "onboarding" && startup?.mode && (
+            <Suspense fallback={null}>
+              <OnboardingStage
+                mode={startup.mode}
+                initialPlugins={startup.plugins}
+                shellReady={false}
+                onDone={fadeIntoApp}
+                onLogout={() => handleLogout({ manual: true })}
+              />
+            </Suspense>
+          )}
+          {showApp && (
+            <div
+              className="fixed inset-0 z-10 transition-opacity duration-[450ms] ease-in-out"
+              style={{
+                opacity: appOpacity,
+                pointerEvents: phase === "idle-app" ? "auto" : "none",
+              }}
+            >
+              <Suspense fallback={null}>
+                <AppShell username={authUsername} onLogout={handleLogout} />
+              </Suspense>
+            </div>
+          )}
+        </UiPreferencesProvider>
       )}
 
       {showAuth && (

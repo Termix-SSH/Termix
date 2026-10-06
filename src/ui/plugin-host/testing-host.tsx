@@ -73,6 +73,7 @@ import {
 import { PluginViewPlaceholder } from "./PluginViewPlaceholder";
 import { resolveLayoutTabTarget } from "@/shell/shell-layout";
 import { getExtension, listExtensions } from "./extension-registry";
+import { onboardingSteps } from "@/onboarding/onboarding-registry";
 import type { WorkspaceTabSnapshot } from "@/types/ui-types";
 
 function recordingShell(calls: ShellCall[]): TabShellCallbacks {
@@ -201,6 +202,8 @@ export async function renderPlugin(
 
   const mine = <T extends { pluginId?: string }>(items: T[]) =>
     items.filter((item) => item.pluginId === pluginId);
+  const unprefixed = (items: { id: string; pluginId?: string }[]) =>
+    mine(items).map((item) => item.id.slice(pluginId.length + 1));
 
   const tabRecord = (type: string, host?: Host): Tab => ({
     id: `${type}-test`,
@@ -257,6 +260,7 @@ export async function renderPlugin(
         mine(listKeybindingActions()).map((action) => action.id),
       keybindingDefaults: () =>
         mine(listKeybindingDefaults()).map((binding) => binding.id),
+      onboardingSteps: () => unprefixed(onboardingSteps.list()),
     },
 
     async loadPaletteGroup(id) {
@@ -330,6 +334,35 @@ export async function renderPlugin(
           : undefined;
       if (!Component) missing(`an extension "${component}" component`, id);
       return wrap(<Component {...props} />);
+    },
+
+    renderOnboardingStep(id, props = {}) {
+      const step =
+        onboardingSteps.get(`${pluginId}:${id}`) ??
+        missing("an onboarding step", id);
+      const Component = step.Component;
+      let canContinue = true;
+      let beforeNext: (() => boolean | Promise<boolean>) | null = null;
+      const element = wrap(
+        <Component
+          mode="full"
+          isAdmin
+          isDesktop={false}
+          shellReady={false}
+          setCanContinue={(ok) => {
+            canContinue = ok;
+          }}
+          setBeforeNext={(fn) => {
+            beforeNext = fn;
+          }}
+          {...props}
+        />,
+      );
+      return {
+        element,
+        canContinue: () => canContinue,
+        next: async () => (beforeNext ? await beforeNext() : true),
+      };
     },
 
     renderDashboardCard(id) {

@@ -1,4 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
+import {
+  isInElectronWebView,
+  isInMobileWebView,
+  type EmbeddedFrameWindow,
+} from "@/lib/embedded-frame";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
@@ -182,26 +187,6 @@ type ResetStep = "email" | "code" | "newpass";
 interface AuthProps {
   onLogin: (username: string, userId?: string, isAdmin?: boolean) => void;
 }
-
-interface ExtendedWindow extends Window {
-  IS_ELECTRON_WEBVIEW?: boolean;
-  ReactNativeWebView?: { postMessage: (msg: string) => void };
-}
-
-const isInMobileWebView = () =>
-  /Termix-Mobile\/(Android|iOS)/.test(navigator.userAgent) ||
-  !!(window as ExtendedWindow).ReactNativeWebView;
-
-const isInElectronWebView = () => {
-  if (isInMobileWebView()) return false;
-  if ((window as ExtendedWindow).IS_ELECTRON_WEBVIEW) return true;
-  try {
-    if (window.self !== window.top) return true;
-  } catch {
-    return true;
-  }
-  return false;
-};
 
 function PasswordInput({
   value,
@@ -616,7 +601,7 @@ export function Auth({ onLogin }: AuthProps) {
         // (termix-mobile:-origin callbacks include one), otherwise read it back
         // from the cookie via /users/me/token before handing it to the app.
         const postToken = (token: string) => {
-          (window as ExtendedWindow).ReactNativeWebView?.postMessage(
+          (window as EmbeddedFrameWindow).ReactNativeWebView?.postMessage(
             JSON.stringify({ type: "AUTH_SUCCESS", token }),
           );
           setWebviewAuthSuccess(true);
@@ -762,7 +747,7 @@ export function Auth({ onLogin }: AuthProps) {
     if (isInMobileWebView()) {
       // Native-app requests get the JWT in the login response body.
       const token = res?.token ?? "";
-      (window as ExtendedWindow).ReactNativeWebView?.postMessage(
+      (window as EmbeddedFrameWindow).ReactNativeWebView?.postMessage(
         JSON.stringify({ type: "AUTH_SUCCESS", token }),
       );
       setWebviewAuthSuccess(true);

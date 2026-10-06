@@ -192,6 +192,13 @@ vi.mock("../../../utils/audit-logger.js", () => ({
   getRequestMeta: () => ({ ipAddress: "127.0.0.1", userAgent: "test" }),
 }));
 
+const onboardingMock = vi.hoisted(() => ({
+  describeOnboardingPlugins: vi.fn(),
+  applyOnboardingChoices: vi.fn(),
+}));
+
+vi.mock("../../../plugins/onboarding.js", () => onboardingMock);
+
 const pluginRoutes = (await import("../../../database/routes/plugins.js"))
   .default;
 
@@ -614,6 +621,87 @@ describe("plugins route", () => {
       expect(state.grants).toHaveLength(1);
     });
   });
+  describe("onboarding plugin picker", () => {
+    const post = (body: unknown, user = "admin-1") =>
+      fetch(`${baseUrl}/plugins/onboarding/apply`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-test-user-id": user },
+        body: JSON.stringify(body),
+      });
+
+    beforeEach(() => {
+      onboardingMock.describeOnboardingPlugins.mockReset();
+      onboardingMock.applyOnboardingChoices.mockReset();
+      manageMock.isLinkedDesktop.mockResolvedValue(false);
+      auditMock.logAudit.mockClear();
+    });
+
+    it("lists plugins for a manager only", async () => {
+      onboardingMock.describeOnboardingPlugins.mockResolvedValue({
+        pending: true,
+        managedByLinkedServer: false,
+        plugins: [],
+      });
+      const ok = await fetch(`${baseUrl}/plugins/onboarding`, {
+        headers: { "x-test-user-id": "admin-1" },
+      });
+      expect(ok.status).toBe(200);
+      expect(await ok.json()).toMatchObject({ pending: true });
+
+      const denied = await fetch(`${baseUrl}/plugins/onboarding`, {
+        headers: { "x-test-user-id": "user-2" },
+      });
+      expect(denied.status).toBe(403);
+    });
+
+    it("applies choices and audits each change", async () => {
+      onboardingMock.applyOnboardingChoices.mockResolvedValue({
+        resolved: {},
+        adjustments: [],
+        enabled: ["a"],
+        disabled: ["b"],
+        removed: ["c"],
+        failed: [],
+      });
+      const res = await post({
+        choices: { a: "enabled", b: "disabled", c: "remove" },
+      });
+      expect(res.status).toBe(200);
+      expect(onboardingMock.applyOnboardingChoices).toHaveBeenCalledWith(
+        { a: "enabled", b: "disabled", c: "remove" },
+        { dryRun: false },
+      );
+      const actions = auditMock.logAudit.mock.calls.map(
+        (call) => (call as unknown as [{ action: string }])[0].action,
+      );
+      expect(actions).toEqual([
+        "enable_plugin",
+        "disable_plugin",
+        "uninstall_plugin",
+      ]);
+    });
+
+    it("rejects bad choices", async () => {
+      expect((await post({})).status).toBe(400);
+      expect((await post({ choices: ["a"] })).status).toBe(400);
+      expect((await post({ choices: { a: "delete" } })).status).toBe(400);
+      expect(
+        (await post({ choices: { a: "enabled" }, dryRun: "yes" })).status,
+      ).toBe(400);
+      expect(onboardingMock.applyOnboardingChoices).not.toHaveBeenCalled();
+    });
+
+    it("refuses on a linked desktop and for non-managers", async () => {
+      manageMock.isLinkedDesktop.mockResolvedValue(true);
+      expect((await post({ choices: { a: "enabled" } })).status).toBe(409);
+      manageMock.isLinkedDesktop.mockResolvedValue(false);
+      expect((await post({ choices: { a: "enabled" } }, "user-2")).status).toBe(
+        403,
+      );
+      expect(onboardingMock.applyOnboardingChoices).not.toHaveBeenCalled();
+    });
+  });
+
   describe("install, update, uninstall", () => {
     const post = (path: string, body: unknown = {}, user = "admin-1") =>
       fetch(`${baseUrl}${path}`, {

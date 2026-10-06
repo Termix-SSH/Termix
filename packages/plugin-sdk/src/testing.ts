@@ -2139,6 +2139,8 @@ export interface RenderedPluginApp {
     paletteGroups: () => string[];
     keybindingActions: () => string[];
     keybindingDefaults: () => string[];
+    /** Onboarding step ids, without the plugin prefix. */
+    onboardingSteps: () => string[];
   };
   /** A registered palette group's items, as the palette loads them on open. */
   loadPaletteGroup: (
@@ -2160,6 +2162,19 @@ export interface RenderedPluginApp {
   renderTab: (type: string, props?: Record<string, unknown>) => HTMLElement;
   renderPanel: (id: string, props?: Record<string, unknown>) => HTMLElement;
   renderDashboardCard: (id: string) => HTMLElement;
+  /**
+   * Renders an onboarding step with OnboardingStepProps for a first run,
+   * overridable. Read what the step set with the returned `canContinue()`
+   * and `next()` (runs its beforeNext, true when it has none).
+   */
+  renderOnboardingStep: (
+    id: string,
+    props?: Record<string, unknown>,
+  ) => {
+    element: HTMLElement;
+    canContinue: () => boolean;
+    next: () => Promise<boolean>;
+  };
   /** Renders one component of a contributed extension, "view" by default. */
   renderExtension: (
     pointId: string,

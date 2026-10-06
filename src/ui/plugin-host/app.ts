@@ -45,6 +45,11 @@ import {
 } from "@/shell/action-registry";
 import { pluginApiFor, pluginFetch, pluginWsUrl } from "@/lib/plugin-transport";
 import { registerPluginComponent } from "./component-registry";
+import {
+  onboardingSteps,
+  sectionPosition,
+} from "@/onboarding/onboarding-registry";
+import { pluginStepKey } from "@/types/onboarding";
 import type { LucideIcon } from "lucide-react";
 import {
   registerLoginMethod,
@@ -69,6 +74,8 @@ import { manifestDeclares, type ViewKind } from "./view-ownership";
 import { pluginKey } from "@/lib/plugin-i18n";
 import { hasPermission } from "@/hooks/use-permissions";
 import i18n from "@/i18n/i18n";
+
+const ONBOARDING_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
 export interface PluginAppHandle {
   app: TermixApp;
@@ -121,6 +128,12 @@ export function createPluginApp(
   const hostCallback = <F extends (...args: never[]) => unknown>(
     fn: F | undefined,
   ): F | undefined => scopeHostCallback(fn, pluginId);
+
+  const requireStepId = (id: string, what: string) => {
+    if (typeof id !== "string" || !ONBOARDING_ID.test(id)) {
+      throw new Error(`${pluginId}: ${what} id "${id}" is not valid`);
+    }
+  };
 
   const requireDeclared = (kind: ViewKind, id: string, what: string) => {
     if (!manifestDeclares(contributes, kind, id)) {
@@ -459,6 +472,45 @@ export function createPluginApp(
                 contribution.when!(scopeHostFields(context, pluginId))
             : undefined,
           pluginId,
+        }),
+      );
+    },
+
+    registerOnboardingStep(step) {
+      requireStepId(step.id, "onboarding step");
+      const version = step.version ?? 1;
+      if (!Number.isInteger(version) || version < 1) {
+        throw new Error(
+          `${pluginId}: onboarding step "${step.id}" needs a whole version of 1 or more`,
+        );
+      }
+      const when = guardCallback(pluginId, step.when, false);
+      return track(
+        onboardingSteps.register({
+          id: pluginStepKey(pluginId, step.id),
+          pluginId,
+          version,
+          titleKey: key(step.titleKey),
+          descriptionKey: step.descriptionKey
+            ? key(step.descriptionKey)
+            : undefined,
+          icon: step.icon
+            ? (withIconBoundary(pluginId, step.icon as never) as never)
+            : undefined,
+          Component: scoped(step.component),
+          audience: step.audience ?? "all",
+          permission: step.permission
+            ? resolvePluginPermission(pluginId, step.permission)
+            : undefined,
+          position: sectionPosition(step.section, step.order),
+          isRelevant: when
+            ? (ctx) =>
+                when({
+                  isAdmin: ctx.isAdmin,
+                  isDesktop: ctx.isDesktop,
+                  mode: ctx.mode,
+                }) === true
+            : undefined,
         }),
       );
     },

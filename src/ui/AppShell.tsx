@@ -40,9 +40,7 @@ import {
   type ConfirmOptions,
   type EditingWidth,
 } from "@/components/surface/surface-scope";
-import { OnboardingDialog } from "@/onboarding/OnboardingDialog";
-import { UI_ONBOARDING_VERSION } from "@/types/ui-preferences";
-import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
+import { OnboardingHost } from "@/onboarding/OnboardingHost";
 import { SplitView, type SplitViewActions } from "@/shell/split/SplitView";
 import { SplitDropOverlay } from "@/shell/split/SplitDropOverlay";
 import {
@@ -311,42 +309,6 @@ export function AppShell({
   const [backgroundTabRecords, setBackgroundTabRecords] = useState<
     OpenTabRecord[]
   >([]);
-
-  // First-run onboarding. The backend hands accounts that predate this feature
-  // an already-completed state, so only genuinely new users are interrupted.
-  const uiPrefs = useUiPreferencesContext();
-  const onboardingPending =
-    !!uiPrefs?.loaded &&
-    uiPrefs.preferences.onboarding.completedVersion < UI_ONBOARDING_VERSION;
-
-  /**
-   * Both onboarding entry points wait for plugins first, since plugins add
-   * steps of their own (the AI step, feature cards).
-   */
-  const loadOnboardingContext = useCallback(async () => {
-    const { settledPromise } = await import("@/plugin-host/plugin-store");
-    await settledPromise();
-  }, []);
-
-  useEffect(() => {
-    if (!username || !onboardingPending) return;
-    let cancelled = false;
-    loadOnboardingContext().finally(() => {
-      if (!cancelled) setShowOnboarding(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [username, onboardingPending, loadOnboardingContext]);
-
-  // "Run setup again" from settings.
-  useEffect(() => {
-    const handler = () => {
-      loadOnboardingContext().finally(() => setShowOnboarding(true));
-    };
-    window.addEventListener("termix:open-onboarding", handler);
-    return () => window.removeEventListener("termix:open-onboarding", handler);
-  }, [loadOnboardingContext]);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railView, setRailView] = useState<RailView>("hosts");
@@ -3226,11 +3188,7 @@ export function AppShell({
           />
         </Suspense>
       )}
-      <OnboardingDialog
-        open={showOnboarding}
-        context={{}}
-        onClose={() => setShowOnboarding(false)}
-      />
+      <OnboardingHost onOpenChange={setShowOnboarding} />
       <DonationReminderModal
         open={showDonationModal && !showOnboarding}
         onDismiss={handleDismissDonationModal}

@@ -694,7 +694,11 @@ export interface ActionSlotDefinition {
 export interface SlotContribution {
   actionId: string;
   titleKey: string;
-  /** Secondary text, for slots that show one (onboarding cards). */
+  /**
+   * Secondary text, for slots that show one. The onboarding.* slots that
+   * used it are deprecated: use registerOnboardingStep. The feature and
+   * workflow card slots are no longer shown.
+   */
   descriptionKey?: string;
   icon?: IconComponent;
   kind?: "button" | "component" | string;
@@ -703,6 +707,65 @@ export interface SlotContribution {
   /** Extra condition on top of the action's permission. */
   when?: (context: Record<string, unknown>) => boolean;
   order?: number;
+}
+
+export type OnboardingMode = "full" | "partial" | "rerun";
+
+/**
+ * Where a plugin step sits in onboarding. "setup" comes right after the
+ * appearance steps, for things that need doing before the feature works
+ * (like pointing at a guacd server). "explore" (the default) comes after
+ * that, "security" after the account security step. Onboarding is for
+ * choices, not for explaining features.
+ */
+export type OnboardingSection = "setup" | "explore" | "security";
+
+export interface OnboardingStepProps {
+  /**
+   * "full" is a new user's first run, "partial" shows only steps they have
+   * not seen yet (a plugin installed later, a step whose version went up),
+   * "rerun" is the user running setup again from settings.
+   */
+  mode: OnboardingMode;
+  isAdmin: boolean;
+  isDesktop: boolean;
+  /** Blocks or allows Next. Steps can continue by default. */
+  setCanContinue: (ok: boolean) => void;
+  /**
+   * Runs when Next is pressed, before moving on. Return false to stay on the
+   * step (to show an error, say). Pass null to clear it.
+   */
+  setBeforeNext: (fn: (() => boolean | Promise<boolean>) | null) => void;
+  /**
+   * False on a first run, which shows before the app shell exists: app.tabs
+   * and the shell callbacks do nothing until it is true.
+   */
+  shellReady: boolean;
+}
+
+export interface OnboardingStepContribution {
+  /** Unique within the plugin. Lowercase letters, digits and dashes. */
+  id: string;
+  /**
+   * Starts at 1. Raise it when the step changes enough that people who saw
+   * it should see it again; they get just this step, not all of onboarding.
+   */
+  version?: number;
+  titleKey: string;
+  descriptionKey?: string;
+  icon?: IconComponent;
+  component: ComponentType<OnboardingStepProps>;
+  /** "admin" shows it only to users who can manage plugins. */
+  audience?: "all" | "admin";
+  /** A permission the user must hold, like registerAction's. */
+  permission?: string;
+  section?: OnboardingSection;
+  order?: number;
+  when?: (context: {
+    isAdmin: boolean;
+    isDesktop: boolean;
+    mode: OnboardingMode;
+  }) => boolean;
 }
 
 export interface SshAuthEditorProps {
@@ -894,6 +957,13 @@ export interface TermixApp extends TermixAppInfo {
     slotId: string,
     contribution: SlotContribution,
   ) => Disposer;
+  /**
+   * Adds a step to onboarding. New users see it in their first run; people
+   * who already finished onboarding see just this step the next time they
+   * open Termix (or right away, if they install the plugin mid-session).
+   * Needs plugin API 1.1.
+   */
+  registerOnboardingStep: (step: OnboardingStepContribution) => Disposer;
   invokeAction: (id: string, ...args: unknown[]) => Promise<unknown>;
   /**
    * Offers a component to other plugins and to core by id, rendered where

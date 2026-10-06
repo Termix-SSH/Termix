@@ -1,10 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
-import { ONBOARDING_STEPS, relevantSteps } from "@/onboarding/onboarding-steps";
+import { describe, expect, it } from "vitest";
+import { CORE_STEPS } from "@/onboarding/onboarding-steps";
+import { computeFlow } from "@/onboarding/onboarding-flow";
+import type { OnboardingCtx } from "@/onboarding/onboarding-registry";
+import { CORE_ONBOARDING_STEPS } from "@/types/onboarding";
 import { UI_AREA_KEYS, PRESETS } from "@/types/ui-preferences";
 import en from "@/locales/en.json";
-
-const isElectron = vi.hoisted(() => vi.fn(() => false));
-vi.mock("@/lib/electron", () => ({ isElectron }));
 
 function lookup(key: string): unknown {
   return key
@@ -18,82 +18,124 @@ function lookup(key: string): unknown {
     );
 }
 
-describe("ONBOARDING_STEPS", () => {
-  it("has unique ids and real title translations", () => {
-    const ids = ONBOARDING_STEPS.map((s) => s.id);
-    expect(new Set(ids).size).toBe(ids.length);
-    for (const step of ONBOARDING_STEPS) {
+function ctx(overrides: Partial<OnboardingCtx> = {}): OnboardingCtx {
+  return {
+    mode: "full",
+    isAdmin: false,
+    isDesktop: false,
+    has: () => false,
+    pluginSetupPending: false,
+    pluginsManagedElsewhere: false,
+    canEnrollSecondFactor: false,
+    ...overrides,
+  };
+}
+
+const ids = (c: OnboardingCtx) =>
+  computeFlow(CORE_STEPS, {}, c).map((s) => s.id);
+
+describe("CORE_STEPS", () => {
+  it("has unique ids, real titles and the versions in CORE_ONBOARDING_STEPS", () => {
+    const stepIds = CORE_STEPS.map((s) => s.id);
+    expect(new Set(stepIds).size).toBe(stepIds.length);
+    expect(stepIds.sort()).toEqual(Object.keys(CORE_ONBOARDING_STEPS).sort());
+    for (const step of CORE_STEPS) {
       expect(typeof lookup(step.titleKey), step.titleKey).toBe("string");
+      expect(step.version).toBe(
+        CORE_ONBOARDING_STEPS[step.id as keyof typeof CORE_ONBOARDING_STEPS],
+      );
     }
   });
 
-  it("opens with the preset picker right after the welcome", () => {
-    expect(ONBOARDING_STEPS[0].id).toBe("welcome");
-    expect(ONBOARDING_STEPS[1].id).toBe("preset");
+  it("is only choices: preset and appearance for everyone", () => {
+    expect(ids(ctx())).toEqual(["preset", "appearance"]);
   });
 
-  it("has no add-a-host step, which used to close onboarding mid-flow", () => {
-    const ids = relevantSteps({}).map((s) => s.id);
-    expect(ids).not.toContain("first-host");
+  it("opens on the plugin picker for an admin on a fresh install", () => {
+    expect(ids(ctx({ isAdmin: true, pluginSetupPending: true }))).toEqual([
+      "plugins",
+      "preset",
+      "appearance",
+    ]);
+  });
+
+  it("never shows the plugin picker to someone who is not an admin", () => {
+    expect(ids(ctx({ pluginSetupPending: true }))).not.toContain("plugins");
+    expect(ids(ctx({ mode: "rerun" }))).not.toContain("plugins");
+  });
+
+  it("leaves the picker out once it was applied, even on a rerun", () => {
+    expect(ids(ctx({ isAdmin: true, mode: "rerun" }))).not.toContain("plugins");
+    expect(ids(ctx({ isAdmin: true }))).not.toContain("plugins");
+  });
+
+  it("never shows the picker on a linked desktop", () => {
+    expect(
+      ids(
+        ctx({
+          isAdmin: true,
+          pluginSetupPending: true,
+          pluginsManagedElsewhere: true,
+        }),
+      ),
+    ).not.toContain("plugins");
+  });
+
+  it("makes the plugin picker required", () => {
+    expect(CORE_STEPS.find((s) => s.id === "plugins")?.required).toBe(true);
   });
 
   it("asks how the desktop app is used only on the desktop", () => {
-    isElectron.mockReturnValue(false);
-    expect(relevantSteps({}).map((s) => s.id)).not.toContain("desktop-sync");
-    isElectron.mockReturnValue(true);
-    expect(relevantSteps({}).map((s) => s.id)).toContain("desktop-sync");
-    isElectron.mockReturnValue(false);
+    expect(ids(ctx({ isDesktop: true }))).toEqual([
+      "desktop-sync",
+      "preset",
+      "appearance",
+    ]);
   });
 
-  it("ends on the done step", () => {
-    const ids = relevantSteps({}).map((s) => s.id);
-    expect(ids[ids.length - 1]).toBe("done");
-  });
-
-  it("tours the feature set after the setup choices", () => {
-    const ids = ONBOARDING_STEPS.map((s) => s.id);
-    for (const id of ["features", "workflow", "security"]) {
-      expect(ids).toContain(id);
-      expect(ids.indexOf(id)).toBeGreaterThan(ids.indexOf("appearance"));
-    }
+  it("offers account security only when there is something to set up", () => {
+    expect(ids(ctx({ canEnrollSecondFactor: true }))).toEqual([
+      "preset",
+      "appearance",
+      "security",
+    ]);
   });
 });
 
-describe("onboarding step body translations", () => {
-  const KEYS: Record<string, string[]> = {
-    welcome: ["hosts", "terminal", "files"],
-    workflow: ["palette", "split", "dock"],
-    security: ["credentials", "twofa", "identity", "sharing"],
-    done: ["settings", "rerun", "docs"],
-  };
-
-  it("has a title and description for every card the steps render", () => {
-    for (const [prefix, keys] of Object.entries(KEYS)) {
-      for (const key of keys) {
-        expect(
-          lookup(`onboarding.${prefix}_${key}`),
-          `${prefix}_${key}`,
-        ).toBeTypeOf("string");
-        expect(
-          lookup(`onboarding.${prefix}_${key}_desc`),
-          `${prefix}_${key}_desc`,
-        ).toBeTypeOf("string");
-      }
-    }
-  });
-
-  it("has the intro copy each step shows above its cards", () => {
+describe("onboarding translations", () => {
+  it("has the copy the stage and the steps show", () => {
     for (const key of [
-      "welcomeIntro",
       "presetIntro",
       "appearanceIntro",
-      "featuresIntro",
-      "workflowIntro",
       "securityIntro",
-      "doneDesc",
+      "pluginsIntro",
+      "pluginsRemoveNote",
+      "pluginsChoice_enabled",
+      "pluginsChoice_disabled",
+      "pluginsChoice_remove",
+      "pluginsConsentTitle",
+      "partialHeading",
+      "setupHeading",
+      "skipPartial",
+      "next",
+      "finish",
     ]) {
       expect(lookup(`onboarding.${key}`), key).toBeTypeOf("string");
     }
+  });
+
+  it("no longer carries the feature tour", () => {
+    const keys = Object.keys(
+      (en as Record<string, Record<string, unknown>>).onboarding,
+    );
+    expect(
+      keys.filter((k) => /^(welcome|features|workflow|done)/.test(k)),
+    ).toEqual([]);
+  });
+
+  it("uses no em dashes", () => {
+    const text = JSON.stringify((en as Record<string, unknown>).onboarding);
+    expect(text).not.toContain("—");
   });
 });
 

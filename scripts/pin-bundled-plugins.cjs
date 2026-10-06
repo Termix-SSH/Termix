@@ -28,8 +28,9 @@ async function main() {
   }
   const index = await response.json();
 
-  const ids = all ? null : loadBundledPlugins(root).map((plugin) => plugin.id);
-  const plugins = pinsFromIndex(index, ids);
+  const current = loadBundledPlugins(root);
+  const ids = all ? null : current.map((plugin) => plugin.id);
+  const plugins = pinsFromIndex(index, ids, current);
   fs.writeFileSync(configPath, `${JSON.stringify({ plugins }, null, 2)}\n`);
   console.log(
     `Pinned ${plugins.length} plugin(s) in docker/bundled-plugins.json`,

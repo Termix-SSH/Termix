@@ -65,7 +65,7 @@ export class PluginManageError extends Error {
 let queue: Promise<unknown> = Promise.resolve();
 
 /** One change at a time: dependencies make concurrent changes unsafe. */
-function serialized<T>(fn: () => Promise<T>): Promise<T> {
+export function serialized<T>(fn: () => Promise<T>): Promise<T> {
   const run = queue.then(fn, fn);
   queue = run.catch(() => {});
   return run;
@@ -543,41 +543,47 @@ export function setPluginState(
   pluginId: string,
   enabled: boolean,
 ): Promise<StateChangePlan & { state: string }> {
-  return serialized(async () => {
-    const { loader } = getPluginRuntime();
-    if (!loader.get(pluginId)) {
-      throw new PluginManageError("Plugin not found", 404, "NOT_FOUND");
-    }
-    const plan = await planStateChange(pluginId, enabled);
+  return serialized(() => setPluginStateUnlocked(pluginId, enabled));
+}
 
-    if (enabled) {
-      if (plan.missing.length > 0) {
-        throw new PluginManageError(
-          "Some dependencies are not installed",
-          409,
-          "MISSING_DEPENDENCIES",
-          { missing: plan.missing },
+/** setPluginState for a caller already inside serialized(). */
+export async function setPluginStateUnlocked(
+  pluginId: string,
+  enabled: boolean,
+): Promise<StateChangePlan & { state: string }> {
+  const { loader } = getPluginRuntime();
+  if (!loader.get(pluginId)) {
+    throw new PluginManageError("Plugin not found", 404, "NOT_FOUND");
+  }
+  const plan = await planStateChange(pluginId, enabled);
+
+  if (enabled) {
+    if (plan.missing.length > 0) {
+      throw new PluginManageError(
+        "Some dependencies are not installed",
+        409,
+        "MISSING_DEPENDENCIES",
+        { missing: plan.missing },
+      );
+    }
+    for (const id of plan.enable) {
+      if ((await startAndRecord(id)) === "failed") {
+        await recordState(
+          pluginId,
+          "blocked",
+          `requires plugin "${id}", which could not start`,
         );
+        return { ...plan, state: "blocked" };
       }
-      for (const id of plan.enable) {
-        if ((await startAndRecord(id)) === "failed") {
-          await recordState(
-            pluginId,
-            "blocked",
-            `requires plugin "${id}", which could not start`,
-          );
-          return { ...plan, state: "blocked" };
-        }
-      }
-      return { ...plan, state: await startAndRecord(pluginId) };
     }
+    return { ...plan, state: await startAndRecord(pluginId) };
+  }
 
-    for (const id of [...plan.disable, pluginId]) {
-      await recordState(id, "disabled", null);
-      await deactivatePlugin(id);
-    }
-    return { ...plan, state: "stopped" };
-  });
+  for (const id of [...plan.disable, pluginId]) {
+    await recordState(id, "disabled", null);
+    await deactivatePlugin(id);
+  }
+  return { ...plan, state: "stopped" };
 }
 
 export interface InstallOptions {
@@ -858,68 +864,73 @@ export function updateAllPlugins(options: {
 export function uninstallPlugin(
   pluginId: string,
 ): Promise<{ id: string; removed: { tables: string[]; kvKeys: number } }> {
-  return serialized(async () => {
-    if (!ID_PATTERN.test(pluginId)) {
-      throw new PluginManageError("Invalid plugin id", 400, "INVALID_ID");
-    }
-    const { createCurrentPluginRepository } = await repos();
-    const repository = createCurrentPluginRepository();
-    const record = await repository.findById(pluginId);
-    const { loader } = getPluginRuntime();
-    const live = loader.get(pluginId);
-    if (!record && !live) {
-      throw new PluginManageError("Plugin not found", 404, "NOT_FOUND");
-    }
-    const shipped = loader.bundledIds().has(pluginId);
+  return serialized(() => uninstallPluginUnlocked(pluginId));
+}
 
-    const dependents = dependentChain(pluginId, await enabledIds());
-    if (dependents.length > 0) {
-      throw new PluginManageError(
-        "Other plugins depend on this one",
-        409,
-        "HAS_DEPENDENTS",
-        { dependents },
-      );
-    }
+/** uninstallPlugin for a caller already inside serialized(). */
+export async function uninstallPluginUnlocked(
+  pluginId: string,
+): Promise<{ id: string; removed: { tables: string[]; kvKeys: number } }> {
+  if (!ID_PATTERN.test(pluginId)) {
+    throw new PluginManageError("Invalid plugin id", 400, "INVALID_ID");
+  }
+  const { createCurrentPluginRepository } = await repos();
+  const repository = createCurrentPluginRepository();
+  const record = await repository.findById(pluginId);
+  const { loader } = getPluginRuntime();
+  const live = loader.get(pluginId);
+  if (!record && !live) {
+    throw new PluginManageError("Plugin not found", 404, "NOT_FOUND");
+  }
+  const shipped = loader.bundledIds().has(pluginId);
 
-    if (live) await deactivatePlugin(pluginId);
+  const dependents = dependentChain(pluginId, await enabledIds());
+  if (dependents.length > 0) {
+    throw new PluginManageError(
+      "Other plugins depend on this one",
+      409,
+      "HAS_DEPENDENTS",
+      { dependents },
+    );
+  }
 
-    const { removePluginData } = await import("./data.js");
-    const removed = await removePluginData(pluginId, {
-      knownPluginIds: loader.list().map((plugin) => plugin.id),
-    });
+  if (live) await deactivatePlugin(pluginId);
 
-    if (live) loader.forget(pluginId);
-    await removeArtifactFiles(pluginId, live?.artifact);
-    await removeUserFolder(pluginId, live);
-    await fs.promises.rm(path.join(getUnpackedPluginsDir(), pluginId), {
-      recursive: true,
-      force: true,
-    });
-    await fs.promises.rm(getPluginDataDir(pluginId), {
-      recursive: true,
-      force: true,
-    });
-    await repository.delete(pluginId);
-    await applyPin(pluginId, null);
-
-    // Ignored even when the files are gone: a recreated container brings
-    // the image's copy back, and it must not load in place of a reinstall.
-    if (shipped) {
-      const uninstalled = await readUninstalled();
-      uninstalled.add(pluginId);
-      await writeUninstalled(uninstalled);
-      await removeShippedCopy(pluginId);
-    }
-
-    pluginLogger.info(`Uninstalled plugin ${pluginId}`, {
-      operation: "plugin_uninstall",
-    });
-    return {
-      id: pluginId,
-      removed: { tables: removed.tables, kvKeys: removed.kvKeys },
-    };
+  const { removePluginData } = await import("./data.js");
+  const removed = await removePluginData(pluginId, {
+    knownPluginIds: loader.list().map((plugin) => plugin.id),
   });
+
+  if (live) loader.forget(pluginId);
+  await removeArtifactFiles(pluginId, live?.artifact);
+  await removeUserFolder(pluginId, live);
+  await fs.promises.rm(path.join(getUnpackedPluginsDir(), pluginId), {
+    recursive: true,
+    force: true,
+  });
+  await fs.promises.rm(getPluginDataDir(pluginId), {
+    recursive: true,
+    force: true,
+  });
+  await repository.delete(pluginId);
+  await applyPin(pluginId, null);
+
+  // Ignored even when the files are gone: a recreated container brings
+  // the image's copy back, and it must not load in place of a reinstall.
+  if (shipped) {
+    const uninstalled = await readUninstalled();
+    uninstalled.add(pluginId);
+    await writeUninstalled(uninstalled);
+    await removeShippedCopy(pluginId);
+  }
+
+  pluginLogger.info(`Uninstalled plugin ${pluginId}`, {
+    operation: "plugin_uninstall",
+  });
+  return {
+    id: pluginId,
+    removed: { tables: removed.tables, kvKeys: removed.kvKeys },
+  };
 }
 
 export function setPluginOptions(

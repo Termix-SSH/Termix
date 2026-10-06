@@ -66,6 +66,7 @@ import type { FontSizeId, ThemeId, UiFontId } from "@/types/ui-types";
 import { toast } from "sonner";
 import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
 import { Select2 } from "@/components/select2";
+import { LANGUAGES, THEMES } from "@/settings/appearance/appearance-controls";
 import { clearLocalAdaptivePreferences } from "@/lib/local-adaptive-preferences";
 import {
   FeatureSettingsSection,
@@ -82,57 +83,6 @@ type UserProfileSection =
   | "api-keys"
   | "data"
   | FeatureSectionId;
-
-const THEMES: { id: ThemeId; preview: string }[] = [
-  { id: "system", preview: "auto" },
-  { id: "light", preview: "#ffffff" },
-  { id: "dark", preview: "#1a1c22" },
-  { id: "dracula", preview: "#282a36" },
-  { id: "catppuccin", preview: "#1e1e2e" },
-  { id: "nord", preview: "#2e3440" },
-  { id: "solarized", preview: "#002b36" },
-  { id: "tokyo-night", preview: "#1a1b26" },
-  { id: "one-dark", preview: "#282c34" },
-  { id: "gruvbox", preview: "#282828" },
-];
-
-const LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "af", label: "Afrikaans" },
-  { code: "ar", label: "العربية" },
-  { code: "bn", label: "বাংলা" },
-  { code: "bg", label: "Български" },
-  { code: "ca", label: "Català" },
-  { code: "zh-CN", label: "中文 (简体)" },
-  { code: "zh-TW", label: "中文 (繁體)" },
-  { code: "cs", label: "Čeština" },
-  { code: "da", label: "Dansk" },
-  { code: "nl", label: "Nederlands" },
-  { code: "fi", label: "Suomi" },
-  { code: "fr", label: "Français" },
-  { code: "de", label: "Deutsch" },
-  { code: "el", label: "Ελληνικά" },
-  { code: "he", label: "עברית" },
-  { code: "hi", label: "हिन्दी" },
-  { code: "hu", label: "Magyar" },
-  { code: "id", label: "Indonesia" },
-  { code: "it", label: "Italiano" },
-  { code: "ja", label: "日本語" },
-  { code: "ko", label: "한국어" },
-  { code: "no", label: "Norsk" },
-  { code: "pl", label: "Polski" },
-  { code: "pt-PT", label: "Português (PT)" },
-  { code: "pt-BR", label: "Português (BR)" },
-  { code: "ro", label: "Română" },
-  { code: "ru", label: "Русский" },
-  { code: "sr", label: "Српски" },
-  { code: "es-ES", label: "Español" },
-  { code: "sv-SE", label: "Svenska" },
-  { code: "th", label: "ไทย" },
-  { code: "tr", label: "Türkçe" },
-  { code: "uk", label: "Українська" },
-  { code: "vi", label: "Tiếng Việt" },
-];
 
 export function AccordionSection({
   id,

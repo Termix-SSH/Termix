@@ -10,6 +10,7 @@ import {
   fetchArtifact,
   extractArtifact,
   pinsFromIndex,
+  buildBundledIndex,
   findLocalPluginBuilds,
   isLocalBuildStale,
   rebuildLocalPlugins,
@@ -83,6 +84,73 @@ describe("parseBundledPlugins", () => {
     ]);
   });
 
+  it("reads onboarding defaults", () => {
+    const { plugins, problems } = parseBundledPlugins({
+      plugins: [
+        {
+          id: "kept",
+          source: "tmxplug",
+          path: "a",
+          sha256: SHA,
+          onboarding: { recommended: true },
+        },
+        {
+          id: "desk",
+          source: "tmxplug",
+          path: "a",
+          sha256: SHA,
+          onboarding: { recommended: "desktop" },
+        },
+        {
+          id: "ask",
+          source: "tmxplug",
+          path: "a",
+          sha256: SHA,
+          onboarding: { recommended: true, consent: true },
+        },
+        {
+          id: "env",
+          source: "tmxplug",
+          path: "a",
+          sha256: SHA,
+          onboarding: { enabledByEnv: ["OIDC_CLIENT_ID"] },
+        },
+        { id: "plain", source: "tmxplug", path: "a", sha256: SHA },
+      ],
+    });
+    expect(problems).toEqual([]);
+    expect(plugins.map((p: { onboarding: unknown }) => p.onboarding)).toEqual([
+      { recommended: true, consent: false },
+      { recommended: "desktop", consent: false },
+      { recommended: true, consent: true },
+      { recommended: false, consent: false, enabledByEnv: ["OIDC_CLIENT_ID"] },
+      null,
+    ]);
+  });
+
+  it("rejects bad onboarding defaults", () => {
+    const entry = { source: "tmxplug", path: "a", sha256: SHA };
+    const { plugins, problems } = parseBundledPlugins({
+      plugins: [
+        { ...entry, id: "a", onboarding: "yes" },
+        { ...entry, id: "b", onboarding: { recommended: "web" } },
+        { ...entry, id: "c", onboarding: { consent: 1 } },
+        { ...entry, id: "d", onboarding: { pinned: true } },
+        { ...entry, id: "e", onboarding: { enabledByEnv: ["lower"] } },
+        { ...entry, id: "f", onboarding: { enabledByEnv: [] } },
+      ],
+    });
+    expect(plugins).toEqual([]);
+    expect(problems).toEqual([
+      "a has an onboarding field that is not an object",
+      'b onboarding.recommended must be true, false or "desktop"',
+      "c onboarding.consent must be a boolean",
+      'd has an unknown onboarding field "pinned"',
+      "e onboarding.enabledByEnv must be a list of environment variable names",
+      "f onboarding.enabledByEnv must be a list of environment variable names",
+    ]);
+  });
+
   it("reads the list in this repo", () => {
     const root = path.resolve(__dirname, "..");
     expect(() => loadBundledPlugins(root)).not.toThrow();
@@ -141,6 +209,20 @@ describe("tmxplug entries", () => {
   });
 });
 
+describe("buildBundledIndex", () => {
+  it("lists the onboarding defaults of staged plugins only", () => {
+    const plugins = [
+      { id: "a", onboarding: { recommended: true, consent: false } },
+      { id: "b", onboarding: { recommended: "desktop", consent: false } },
+      { id: "c", onboarding: null },
+    ];
+    expect(buildBundledIndex(plugins, ["a", "c", "local"])).toEqual({
+      version: 1,
+      plugins: { a: { onboarding: { recommended: true, consent: false } } },
+    });
+  });
+});
+
 describe("pinsFromIndex", () => {
   const index = {
     plugins: [
@@ -182,6 +264,15 @@ describe("pinsFromIndex", () => {
       sha256: "b".repeat(64),
     });
     expect(parseBundledPlugins({ plugins: pins }).problems).toEqual([]);
+  });
+
+  it("keeps the onboarding defaults of an existing pin", () => {
+    const current = [
+      { id: "beta", onboarding: { recommended: true, consent: false } },
+    ];
+    const pins = pinsFromIndex(index, null, current);
+    expect(pins[1].onboarding).toEqual({ recommended: true, consent: false });
+    expect(pins[0]).not.toHaveProperty("onboarding");
   });
 
   it("pins only the ids asked for", () => {

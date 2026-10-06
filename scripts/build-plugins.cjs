@@ -22,6 +22,7 @@ const {
   findLocalPluginBuilds,
   rebuildLocalPlugins,
   copyLocalBuild,
+  buildBundledIndex,
 } = require("./lib/bundled-plugins.cjs");
 
 const root = path.resolve(__dirname, "..");
@@ -61,6 +62,13 @@ async function main() {
     copyLocalBuild(local.get(id), path.join(destination, id));
     console.log(`copied local build of ${id} (not pinned)`);
   }
+
+  const staged = [...pinned, ...extra];
+  fs.writeFileSync(
+    path.join(destination, "bundled-index.json"),
+    `${JSON.stringify(buildBundledIndex(plugins, staged), null, 2)}
+`,
+  );
 
   console.log(
     `Bundled ${plugins.length + extra.length} plugin(s): ${[...pinned, ...extra].join(", ")}`,

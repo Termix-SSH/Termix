@@ -204,6 +204,12 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       await import("./hosts/status/host-status-service.js");
     hostStatusService.start();
 
+    // Counted before the desktop user is provisioned, so a first desktop
+    // run counts as a fresh install too.
+    const { createCurrentUserRepository } =
+      await import("./database/repositories/factory.js");
+    const freshInstall = (await createCurrentUserRepository().countAll()) === 0;
+
     if (process.env.ELECTRON_EMBEDDED === "true") {
       await provisionLocalDesktopUserIfNeeded();
     }
@@ -238,7 +244,7 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     // fails to load must not stop the backend, so this never rejects.
     try {
       const { initializePlugins } = await import("./plugins/index.js");
-      const loaded = await initializePlugins();
+      const loaded = await initializePlugins({ freshInstall });
       if (loaded.length > 0) {
         systemLogger.info(`Loaded ${loaded.length} plugin(s)`, {
           operation: "plugin_init",

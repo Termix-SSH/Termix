@@ -21,13 +21,13 @@ import {
   resolvePluginArea,
   type UiPluginPresets,
   sanitizeUiPreferences,
-  UI_ONBOARDING_VERSION,
   type UiAreaKey,
   type UiAreaPreferences,
   type UiOverrides,
   type UiPreferences,
   type UiPreset,
 } from "@/types/ui-preferences";
+import { mergeSeen } from "@/types/onboarding";
 
 const SAVE_DEBOUNCE_MS = 500;
 const LS_KEY = "uiPreferences";
@@ -62,7 +62,21 @@ interface UiPreferencesContextValue {
   ) => void;
   clearArea: (area: UiAreaKey) => void;
   clearAllOverrides: () => void;
-  completeOnboarding: (skipped: boolean) => void;
+  /**
+   * Records onboarding steps as seen (per-step max, never lowered).
+   * `completed` stamps completedAt the first time a run finishes, and
+   * `baselineDone` clears the carried-over-user flag.
+   */
+  markOnboardingSeen: (
+    seen: Record<string, number>,
+    options?: {
+      completed?: boolean;
+      skipped?: boolean;
+      baselineDone?: boolean;
+    },
+  ) => void;
+  /** Sends any queued change now instead of after the debounce. */
+  flushNow: () => Promise<void>;
   /** A plugin's own area, from the presets it declared. */
   resolvePlugin: (
     pluginId: string,
@@ -85,15 +99,26 @@ const UiPreferencesContext = createContext<UiPreferencesContextValue | null>(
  * deep and treats null as "clear this", so handing a knob back to the preset is
  * a single PUT rather than a read-modify-write of the whole document.
  */
-export function UiPreferencesProvider({ children }: { children: ReactNode }) {
+export function UiPreferencesProvider({
+  children,
+  initial,
+}: {
+  children: ReactNode;
+  /** Already fetched (by the onboarding gate), so no second request. */
+  initial?: UiPreferences | null;
+}) {
   const [preferences, setPreferences] = useState<UiPreferences>(
-    () => readCache() ?? defaultUiPreferences(),
+    () => initial ?? readCache() ?? defaultUiPreferences(),
   );
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(!!initial);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingPatch = useRef<Record<string, unknown>>({});
 
   useEffect(() => {
+    if (initial) {
+      writeCache(initial);
+      return;
+    }
     let cancelled = false;
 
     getUiPreferences()
@@ -112,49 +137,74 @@ export function UiPreferencesProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
+    // initial only matters on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const flush = useCallback((): Promise<void> => {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    const body = pendingPatch.current;
+    pendingPatch.current = {};
+    if (Object.keys(body).length === 0) return Promise.resolve();
+    return getUserPreferences()
+      .then((prefs) => {
+        if (prefs.storageMode === "cloud") return saveUiPreferences(body);
+        // The server copy replaces the cache on load, so onboarding has to
+        // reach it even in local mode or it reruns every time.
+        if (body.onboarding)
+          return saveUiPreferences({
+            onboarding: body.onboarding as UiPreferences["onboarding"],
+          });
+      })
+      .catch(() => {
+        /* best-effort; cache already holds it */
+      });
+  }, []);
+
+  // A pending edit must not be lost when the provider goes away.
   useEffect(() => {
     return () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
+      void flush();
     };
-  }, []);
+  }, [flush]);
 
-  const queueSave = useCallback((patch: Record<string, unknown>) => {
-    // Overrides accumulate key by key so a burst of edits still sends every
-    // change; anything else is last-write-wins.
-    const merged = { ...pendingPatch.current };
-    for (const [key, value] of Object.entries(patch)) {
-      if (key === "overrides" && value && typeof value === "object") {
-        merged.overrides = {
-          ...((merged.overrides as Record<string, unknown>) ?? {}),
-          ...(value as Record<string, unknown>),
-        };
-      } else {
-        merged[key] = value;
+  const queueSave = useCallback(
+    (patch: Record<string, unknown>) => {
+      // Overrides accumulate key by key so a burst of edits still sends every
+      // change, and onboarding seen maps merge; anything else is
+      // last-write-wins.
+      const merged = { ...pendingPatch.current };
+      for (const [key, value] of Object.entries(patch)) {
+        if (key === "overrides" && value && typeof value === "object") {
+          merged.overrides = {
+            ...((merged.overrides as Record<string, unknown>) ?? {}),
+            ...(value as Record<string, unknown>),
+          };
+        } else if (key === "onboarding" && value && typeof value === "object") {
+          const prev = (merged.onboarding ?? {}) as Record<string, unknown>;
+          const next = value as Record<string, unknown>;
+          merged.onboarding = {
+            ...prev,
+            ...next,
+            seen: mergeSeen(
+              prev.seen as Record<string, number>,
+              next.seen as Record<string, number>,
+            ),
+          };
+        } else {
+          merged[key] = value;
+        }
       }
-    }
-    pendingPatch.current = merged;
+      pendingPatch.current = merged;
 
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      const body = pendingPatch.current;
-      pendingPatch.current = {};
-      getUserPreferences()
-        .then((prefs) => {
-          if (prefs.storageMode === "cloud") return saveUiPreferences(body);
-          // The server copy replaces the cache on load, so onboarding has to
-          // reach it even in local mode or it reruns every time.
-          if (body.onboarding)
-            return saveUiPreferences({
-              onboarding: body.onboarding as UiPreferences["onboarding"],
-            });
-        })
-        .catch(() => {
-          /* best-effort; cache already holds it */
-        });
-    }, SAVE_DEBOUNCE_MS);
-  }, []);
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => void flush(), SAVE_DEBOUNCE_MS);
+    },
+    [flush],
+  );
 
   /** Applies the local mirror of a patch, then queues the same patch remotely. */
   const applyLocal = useCallback(
@@ -227,14 +277,34 @@ export function UiPreferencesProvider({ children }: { children: ReactNode }) {
     applyLocal((prev) => ({ ...prev, overrides: {} }), { overrides: null });
   }, [applyLocal]);
 
-  const completeOnboarding = useCallback(
-    (skipped: boolean) => {
-      const onboarding = {
-        completedVersion: UI_ONBOARDING_VERSION,
-        completedAt: new Date().toISOString(),
-        skipped,
-      };
-      applyLocal((prev) => ({ ...prev, onboarding }), { onboarding });
+  const markOnboardingSeen = useCallback(
+    (
+      seen: Record<string, number>,
+      options: {
+        completed?: boolean;
+        skipped?: boolean;
+        baselineDone?: boolean;
+      } = {},
+    ) => {
+      const patch: Record<string, unknown> = { seen };
+      if (options.completed) patch.completedAt = new Date().toISOString();
+      if (options.skipped !== undefined) patch.skipped = options.skipped;
+      if (options.baselineDone) patch.baselinePending = false;
+      applyLocal(
+        (prev) => ({
+          ...prev,
+          onboarding: {
+            ...prev.onboarding,
+            ...patch,
+            completedAt:
+              prev.onboarding.completedAt ??
+              (patch.completedAt as string | undefined) ??
+              null,
+            seen: mergeSeen(prev.onboarding.seen, seen),
+          },
+        }),
+        { onboarding: patch },
+      );
     },
     [applyLocal],
   );
@@ -248,7 +318,8 @@ export function UiPreferencesProvider({ children }: { children: ReactNode }) {
       setOverride,
       clearArea,
       clearAllOverrides,
-      completeOnboarding,
+      markOnboardingSeen,
+      flushNow: flush,
       resolvePlugin: (pluginId, presets) =>
         resolvePluginArea(preferences, pluginId, presets),
       setPluginOverride: (pluginId, key, value) =>
@@ -265,7 +336,8 @@ export function UiPreferencesProvider({ children }: { children: ReactNode }) {
       setOverride,
       clearArea,
       clearAllOverrides,
-      completeOnboarding,
+      markOnboardingSeen,
+      flush,
     ],
   );
 

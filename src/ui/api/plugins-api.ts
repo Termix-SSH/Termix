@@ -1,4 +1,7 @@
 import { rbacApi } from "@/main-axios";
+import type { ChoiceAdjustment, PluginChoice } from "@/types/plugin-onboarding";
+
+export type { PluginChoice };
 
 export interface PluginTabContribution {
   id: string;
@@ -501,6 +504,55 @@ export async function installUploadedPlugin(
       `/plugins/upload/${encodeURIComponent(token)}/install`,
       { capabilities },
     );
+    return response.data;
+  } finally {
+    announcePluginsChanged();
+  }
+}
+
+export interface OnboardingPluginInfo {
+  id: string;
+  name: string;
+  description: string;
+  icon: string | null;
+  category: string;
+  version: string;
+  source: "bundled" | "user";
+  state: string;
+  dependencies: string[];
+  recommended: boolean;
+  consent: boolean;
+}
+
+export interface OnboardingPluginList {
+  pending: boolean;
+  /** On an upgrade the picker starts from what is on, not the defaults. */
+  reason: "fresh" | "upgrade" | null;
+  managedByLinkedServer: boolean;
+  plugins: OnboardingPluginInfo[];
+}
+
+export interface OnboardingApplyResult {
+  resolved: Record<string, PluginChoice>;
+  adjustments: ChoiceAdjustment[];
+  enabled: string[];
+  disabled: string[];
+  removed: string[];
+  failed: { id: string; error: string; code?: string }[];
+}
+
+export async function getOnboardingPlugins(): Promise<OnboardingPluginList> {
+  const response = await rbacApi.get("/plugins/onboarding");
+  return response.data;
+}
+
+export async function applyOnboardingPlugins(
+  choices: Record<string, PluginChoice>,
+): Promise<OnboardingApplyResult> {
+  try {
+    const response = await rbacApi.post("/plugins/onboarding/apply", {
+      choices,
+    });
     return response.data;
   } finally {
     announcePluginsChanged();

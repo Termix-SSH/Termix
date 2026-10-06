@@ -7,6 +7,14 @@
  *
  * A tmxplug entry is pinned by sha256 in this file, which is reviewed like
  * any other change, so the build does not need the registry signature.
+ *
+ * An entry can also carry "onboarding": { "recommended": true | "desktop",
+ * "consent": true, "enabledByEnv": ["NAME"] }. The first-run plugin picker
+ * keeps recommended plugins by default ("desktop" only in the desktop app),
+ * and shows consent ones (like telemetry) in their own opt-in section.
+ * enabledByEnv counts the plugin as recommended when any of those
+ * environment variables is set, for a server configured before first boot.
+ * Plugins without it start unchecked.
  */
 
 const crypto = require("node:crypto");
@@ -14,7 +22,53 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const ID = /^[a-z0-9][a-z0-9-]*$/;
+const ENV_NAME = /^[A-Z][A-Z0-9_]*$/;
+const ONBOARDING_KEYS = new Set(["recommended", "consent", "enabledByEnv"]);
 const SHA256 = /^[0-9a-f]{64}$/;
+
+function parseOnboarding(value, id, problems) {
+  if (value === undefined) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    problems.push(`${id} has an onboarding field that is not an object`);
+    return null;
+  }
+  for (const key of Object.keys(value)) {
+    if (!ONBOARDING_KEYS.has(key)) {
+      problems.push(`${id} has an unknown onboarding field "${key}"`);
+      return null;
+    }
+  }
+  const { recommended = false, consent = false } = value;
+  if (
+    recommended !== true &&
+    recommended !== false &&
+    recommended !== "desktop"
+  ) {
+    problems.push(
+      `${id} onboarding.recommended must be true, false or "desktop"`,
+    );
+    return null;
+  }
+  if (typeof consent !== "boolean") {
+    problems.push(`${id} onboarding.consent must be a boolean`);
+    return null;
+  }
+  const { enabledByEnv } = value;
+  if (enabledByEnv === undefined) return { recommended, consent };
+  if (
+    !Array.isArray(enabledByEnv) ||
+    enabledByEnv.length === 0 ||
+    !enabledByEnv.every(
+      (name) => typeof name === "string" && ENV_NAME.test(name),
+    )
+  ) {
+    problems.push(
+      `${id} onboarding.enabledByEnv must be a list of environment variable names`,
+    );
+    return null;
+  }
+  return { recommended, consent, enabledByEnv };
+}
 
 function parseBundledPlugins(raw) {
   const problems = [];
@@ -54,12 +108,16 @@ function parseBundledPlugins(raw) {
         problems.push(`${entry.id} needs a lowercase hex sha256`);
         continue;
       }
+      const before = problems.length;
+      const onboarding = parseOnboarding(entry.onboarding, entry.id, problems);
+      if (problems.length > before) continue;
       plugins.push({
         id: entry.id,
         source: "tmxplug",
         url: hasUrl ? entry.url : null,
         path: hasPath ? entry.path : null,
         sha256: entry.sha256,
+        onboarding,
       });
     } else {
       problems.push(`${entry.id} has an unknown source "${entry.source}"`);
@@ -153,21 +211,39 @@ async function extractArtifact(buffer, outDir, id) {
 }
 
 /**
- * Pins the newest registry version of each wanted plugin. `ids` is the list
- * to pin, or null for every plugin in the index.
+ * What dist/plugins/bundled-index.json holds: the onboarding defaults of each
+ * staged plugin, read by the backend when it seeds a fresh install.
  */
-function pinsFromIndex(index, ids) {
+function buildBundledIndex(plugins, stagedIds) {
+  const staged = new Set(stagedIds);
+  const out = {};
+  for (const plugin of plugins) {
+    if (!staged.has(plugin.id) || !plugin.onboarding) continue;
+    out[plugin.id] = { onboarding: plugin.onboarding };
+  }
+  return { version: 1, plugins: out };
+}
+
+/**
+ * Pins the newest registry version of each wanted plugin. `ids` is the list
+ * to pin, or null for every plugin in the index. `current` is the existing
+ * pin list, so fields the registry does not know (onboarding) carry over.
+ */
+function pinsFromIndex(index, ids, current = []) {
   const plugins = Array.isArray(index?.plugins) ? index.plugins : [];
   const byId = new Map(plugins.map((plugin) => [plugin.id, plugin]));
+  const currentById = new Map(current.map((entry) => [entry.id, entry]));
   const wanted = ids ?? plugins.map((plugin) => plugin.id);
   return [...wanted].sort().map((id) => {
     const latest = byId.get(id)?.versions?.[0];
     if (!latest) throw new Error(`${id} is not in the registry index`);
+    const onboarding = currentById.get(id)?.onboarding;
     return {
       id,
       source: "tmxplug",
       url: latest.url,
       sha256: latest.sha256,
+      ...(onboarding ? { onboarding } : {}),
     };
   });
 }
@@ -273,6 +349,7 @@ module.exports = {
   rebuildLocalPlugins,
   copyLocalBuild,
   parseBundledPlugins,
+  buildBundledIndex,
   pinsFromIndex,
   loadBundledPlugins,
   checkSha256,

@@ -19,6 +19,10 @@ import { getPluginPublicHttpRoutes } from "../../plugins/http.js";
 import { getPluginPublicWsRoutes } from "../../plugins/ws.js";
 import { PluginManageError } from "../../plugins/manage.js";
 import {
+  isPluginChoice,
+  type PluginChoice,
+} from "../../../types/plugin-onboarding.js";
+import {
   findField,
   getAllSettings,
   setSetting,
@@ -397,6 +401,131 @@ async function refuseOnLinkedDesktop(res: Response): Promise<boolean> {
   });
   return true;
 }
+
+/**
+ * @openapi
+ * /plugins/onboarding:
+ *   get:
+ *     summary: List plugins for the onboarding plugin picker
+ *     description: Every installed plugin with its category, hard dependencies, current state and the onboarding defaults from the bundled index (recommended, consent). pending is true on a fresh install until an admin confirms the picker. managedByLinkedServer is true on a desktop linked to a server, where the picker is not shown.
+ *     tags:
+ *       - Plugins
+ *     responses:
+ *       200:
+ *         description: The picker's plugin list.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       500:
+ *         description: The list could not be read.
+ */
+router.get(
+  "/onboarding",
+  authenticateJWT,
+  requireManagePlugins,
+  async (_req: Request, res: Response) => {
+    try {
+      const { describeOnboardingPlugins } =
+        await import("../../plugins/onboarding.js");
+      res.json(await describeOnboardingPlugins());
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to list plugins for onboarding",
+        "plugin_onboarding_list",
+      );
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/onboarding/apply:
+ *   post:
+ *     summary: Apply the onboarding plugin picker
+ *     description: Sets every listed plugin to enabled, disabled or removed in one pass. Choices are first raised so that every kept plugin still has its hard dependencies (the adjustments list says which and why). Enabling runs dependencies first, disabling and removing run dependents first, and one plugin failing does not stop the rest. Removing a bundled plugin deletes it and its data; it can be reinstalled from the registry later. Clears the fresh-install pending flag. With dryRun nothing changes and the response lists what would.
+ *     tags:
+ *       - Plugins
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [choices]
+ *             properties:
+ *               choices:
+ *                 type: object
+ *                 additionalProperties:
+ *                   type: string
+ *                   enum: [enabled, disabled, remove]
+ *               dryRun:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: What was enabled, disabled, removed or failed.
+ *       400:
+ *         description: The choices are not valid.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       409:
+ *         description: Plugins on a linked desktop are managed by the server.
+ *       500:
+ *         description: The choices could not be applied.
+ */
+router.post(
+  "/onboarding/apply",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    const { choices, dryRun } = req.body ?? {};
+    if (
+      !choices ||
+      typeof choices !== "object" ||
+      Array.isArray(choices) ||
+      !Object.values(choices).every(isPluginChoice) ||
+      (dryRun !== undefined && typeof dryRun !== "boolean")
+    ) {
+      res.status(400).json({ error: "Invalid plugin choices" });
+      return;
+    }
+    if (!dryRun && (await refuseOnLinkedDesktop(res))) return;
+
+    try {
+      const { applyOnboardingChoices } =
+        await import("../../plugins/onboarding.js");
+      const result = await applyOnboardingChoices(
+        choices as Record<string, PluginChoice>,
+        { dryRun: dryRun === true },
+      );
+      if (!dryRun) {
+        for (const id of result.enabled) {
+          await auditPluginAction(req, "enable_plugin", id, {
+            via: "onboarding",
+          });
+        }
+        for (const id of result.disabled) {
+          await auditPluginAction(req, "disable_plugin", id, {
+            via: "onboarding",
+          });
+        }
+        for (const id of result.removed) {
+          await auditPluginAction(req, "uninstall_plugin", id, {
+            via: "onboarding",
+          });
+        }
+      }
+      res.json(result);
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to apply plugin choices",
+        "plugin_onboarding_apply",
+      );
+    }
+  },
+);
 
 /**
  * @openapi
