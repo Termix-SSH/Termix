@@ -2,7 +2,7 @@ export const NETWORK = "termix-dev";
 export const APP_CONTAINER = "termix-dev";
 export const APP_IMAGE = "termix:dev";
 
-/** Side containers dev:all can run. hostPort is what the local backend uses. */
+/** Side containers npm run dev can run. hostPort is what the local backend uses. */
 export const SERVICES = {
   postgres: {
     container: "termix-dev-postgres",

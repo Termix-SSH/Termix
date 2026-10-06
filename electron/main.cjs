@@ -655,7 +655,7 @@ async function handleBackendRequest(msg) {
   if (!msg || msg.type !== "backend-request") return;
   const { id, channel, payload } = msg;
   const handler = BACKEND_REQUEST_HANDLERS[channel];
-  // Under dev:all the runner owns the backend and relays these messages.
+  // Under npm run dev:electron the runner owns the backend and relays these messages.
   const target =
     backendProcess && !backendProcess.killed
       ? backendProcess
@@ -3775,7 +3775,7 @@ app.whenReady().then(async () => {
     logToFile("startBackendServer result:", result);
   } else {
     logToFile(
-      "Skipping embedded backend (isDev=true) - expecting separate dev:backend process",
+      "Skipping embedded backend (isDev=true) - expecting the dev runner's backend",
     );
     if (isDevRunner()) {
       process.on("message", (msg) => void handleBackendRequest(msg));

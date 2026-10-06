@@ -23,10 +23,9 @@ Run the following commands:
 
 ```sh
 npm run dev
-npm run dev:backend
 ```
 
-This will start the backend and the frontend Vite server. You can access Termix by going to `http://localhost:5174/`.
+This builds everything, starts the backend and then the Vite server at `http://localhost:5173/`. Backend changes restart the backend, and plugin changes in `../Termix-Plugins` rebuild and reload that plugin. `npm run dev:electron` does the same with the desktop app, and `npm run dev -- --help` lists the other options.
 
 ## Contributing
 

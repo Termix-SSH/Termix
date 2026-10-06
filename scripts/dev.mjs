@@ -1,5 +1,5 @@
 /**
- * dev:all, one command for manual testing. Run with --help for the targets
+ * npm run dev, one command for manual testing. Run with --help for the targets
  * and options.
  *
  * Every target builds the SDK and stages plugins (local builds from

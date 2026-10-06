@@ -87,7 +87,8 @@ export function createDebouncer(ms, fn) {
 export const TARGETS = ["web", "electron", "docker"];
 export const DATABASES = ["sqlite", "postgres", "mysql"];
 
-export const HELP = `Usage: npm run dev:all -- [target] [options]
+export const HELP = `Usage: npm run dev -- [target] [options]
+       (npm run dev:electron and npm run dev:docker pick the target)
 
 Targets
   web        Backend and Vite on http://localhost:5173 (default)
@@ -112,7 +113,7 @@ Keys while running
   o  open the app in a browser
   q  quit`;
 
-/** Reads dev:all arguments. Throws on anything it does not know. */
+/** Reads npm run dev arguments. Throws on anything it does not know. */
 export function parseDevArgs(argv) {
   const options = {
     target: "web",
