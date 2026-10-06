@@ -78,7 +78,7 @@ export function createCurrentRepositoryWriteHook(
  *
  * Marks the in-memory database dirty and lets DatabaseSaveTrigger's existing
  * debounce coalesce the actual serialize+encrypt, instead of forcing one on
- * every single sample. A lost 2-second window of telemetry on crash is
+ * every single sample. Losing up to 30 seconds of these on a crash is
  * acceptable; blocking the event loop that serves SSH traffic on every metric
  * sample is not.
  */
@@ -128,7 +128,8 @@ export function createCurrentApiKeyRepository(): ApiKeyRepository {
 export function createCurrentAuditLogRepository(): AuditLogRepository {
   return new AuditLogRepository(
     createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("audit_log_repository_write"),
+    // Rows land on every audited call; the audited action saves on its own.
+    createCurrentRepositoryLazyWriteHook("audit_log_repository_write"),
   );
 }
 

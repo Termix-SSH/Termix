@@ -71,7 +71,21 @@ describe("DatabaseSaveTrigger", () => {
     expect(DatabaseSaveTrigger.getStatus().pendingSave).toBe(false);
   });
 
-  it("saves within the max wait even while writes keep coming", async () => {
+  it("saves at most once per 30 seconds while writes keep coming", async () => {
+    vi.useFakeTimers();
+    const save = vi.fn().mockResolvedValue(undefined);
+    DatabaseSaveTrigger.initialize(save);
+    // One sample every 3 seconds used to rewrite the database after each one.
+    for (let tick = 0; tick < 40; tick++) {
+      void DatabaseSaveTrigger.triggerSave("sample");
+      await vi.advanceTimersByTimeAsync(3000);
+    }
+    // 120 seconds: the first save after 2s, then one per 30s window.
+    expect(save.mock.calls.length).toBeGreaterThanOrEqual(4);
+    expect(save.mock.calls.length).toBeLessThanOrEqual(5);
+  });
+
+  it("still saves a steady stream of writes", async () => {
     vi.useFakeTimers();
     const save = vi.fn().mockResolvedValue(undefined);
     DatabaseSaveTrigger.initialize(save);
@@ -79,7 +93,38 @@ describe("DatabaseSaveTrigger", () => {
       void DatabaseSaveTrigger.triggerSave("sample");
       await vi.advanceTimersByTimeAsync(1000);
     }
+    expect(save.mock.calls.length).toBeGreaterThanOrEqual(1);
+    expect(save.mock.calls.length).toBeLessThanOrEqual(2);
+  });
+
+  it("saves a lone write after a quiet period within the debounce", async () => {
+    vi.useFakeTimers();
+    const save = vi.fn().mockResolvedValue(undefined);
+    DatabaseSaveTrigger.initialize(save);
+    void DatabaseSaveTrigger.triggerSave("first");
+    await vi.advanceTimersByTimeAsync(2000);
     expect(save).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    void DatabaseSaveTrigger.triggerSave("later");
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(save).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not let a force save be throttled", async () => {
+    vi.useFakeTimers();
+    const save = vi.fn().mockResolvedValue(undefined);
+    DatabaseSaveTrigger.initialize(save);
+    void DatabaseSaveTrigger.triggerSave("sample");
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(save).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(10);
+
+    // Inside the 30s window, but a critical write saves right away.
+    vi.useRealTimers();
+    await DatabaseSaveTrigger.forceSave("user_create");
+    expect(save).toHaveBeenCalledTimes(2);
   });
 
   it("queues a force save behind an in-flight save", async () => {

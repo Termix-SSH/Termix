@@ -3,7 +3,9 @@ import { getErrorMessage } from "./error-message.js";
 import { databaseLogger } from "./logger.js";
 
 const DEBOUNCE_MS = 2000;
-const MAX_DEBOUNCE_WAIT_MS = 30_000;
+// Every save rewrites the whole database file, so background writes (metrics
+// samples, audit rows) may only cause one save per this window.
+const MIN_LAZY_SAVE_GAP_MS = 30_000;
 
 export class DatabaseSaveTrigger {
   private static saveFunction: (() => Promise<void>) | null = null;
@@ -11,7 +13,7 @@ export class DatabaseSaveTrigger {
   private static pendingSave = false;
   private static activeSave: Promise<void> | null = null;
   private static saveTimeout: NodeJS.Timeout | null = null;
-  private static firstTriggerAt: number | null = null;
+  private static lastSaveAt = 0;
   private static _dirty = false;
   private static batch = new AsyncLocalStorage<{
     open: boolean;
@@ -49,22 +51,16 @@ export class DatabaseSaveTrigger {
 
     this._dirty = true;
 
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-    }
+    // A save already pending picks this write up too.
+    if (this.saveTimeout) return;
 
-    // Each call pushes the save back, so steady writes (samples every few
-    // seconds) would keep it from ever running. Cap how long it can wait.
-    const now = Date.now();
-    this.firstTriggerAt ??= now;
     const delay = Math.max(
-      0,
-      Math.min(DEBOUNCE_MS, this.firstTriggerAt + MAX_DEBOUNCE_WAIT_MS - now),
+      DEBOUNCE_MS,
+      this.lastSaveAt + MIN_LAZY_SAVE_GAP_MS - Date.now(),
     );
 
     this.saveTimeout = setTimeout(async () => {
       this.saveTimeout = null;
-      this.firstTriggerAt = null;
 
       try {
         await this.runSave();
@@ -123,7 +119,6 @@ export class DatabaseSaveTrigger {
       clearTimeout(this.saveTimeout);
       this.saveTimeout = null;
     }
-    this.firstTriggerAt = null;
 
     try {
       await this.runSave();
@@ -156,6 +151,7 @@ export class DatabaseSaveTrigger {
       .finally(() => new Promise<void>((resolve) => setImmediate(resolve)));
     this.activeSave = save;
     this.pendingSave = true;
+    this.lastSaveAt = Date.now();
 
     try {
       await save;
@@ -184,7 +180,7 @@ export class DatabaseSaveTrigger {
       clearTimeout(this.saveTimeout);
       this.saveTimeout = null;
     }
-    this.firstTriggerAt = null;
+    this.lastSaveAt = 0;
 
     this.pendingSave = false;
     this.activeSave = null;

@@ -76,4 +76,8 @@ export async function runCoreBootMigrations(): Promise<void> {
   const { runSshOptionsMigration } =
     await import("./utils/crypto-migration/ssh-options-migration.js");
   await runSshOptionsMigration();
+
+  const { runAuditNoiseCleanup } =
+    await import("./upgrade/audit-noise-cleanup.js");
+  await runAuditNoiseCleanup();
 }

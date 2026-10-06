@@ -142,6 +142,42 @@ describe("AuditLogRepository", () => {
     ).toEqual(["user-2"]);
   });
 
+  it("clears only background routine plugin entries", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+    const entry = (userId: string | null, action: string) =>
+      repo.create({
+        userId,
+        username: "plugin:host-metrics",
+        action,
+        resourceType: "plugin",
+        success: true,
+      });
+
+    await entry(null, "plugin_db_client");
+    await entry(null, "plugin_kv_get");
+    await entry(null, "plugin_kv_set");
+    await entry("user-1", "plugin_db_client");
+    await entry(null, "plugin_as_user");
+    writeCount = 0;
+
+    expect(await repo.deleteRoutinePluginNoise()).toBe(2);
+    expect(writeCount).toBe(1);
+    const left = (
+      await repo.listPage({ filters: {}, limit: 10, offset: 0 })
+    ).logs.map((log) => `${log.userId}:${log.action}`);
+    expect(left.sort()).toEqual([
+      "null:plugin_as_user",
+      "null:plugin_kv_set",
+      "user-1:plugin_db_client",
+    ]);
+
+    expect(await repo.deleteRoutinePluginNoise()).toBe(0);
+    expect(writeCount).toBe(1);
+  });
+
   it("keeps entries when their user is deleted, detaching instead of removing", async () => {
     const repo = await createRepository();
 

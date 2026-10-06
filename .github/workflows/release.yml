@@ -89,7 +89,7 @@ jobs:
         with:
           ref: ${{ needs.prep.outputs.dev_branch }}
           fetch-depth: 0
-          token: ${{ secrets.GHCR_TOKEN }}
+          token: ${{ secrets.TERMIX_PAT }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -153,7 +153,7 @@ jobs:
         with:
           ref: ${{ needs.prep.outputs.dev_branch }}
           fetch-depth: 0
-          token: ${{ secrets.GHCR_TOKEN }}
+          token: ${{ secrets.TERMIX_PAT }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -171,7 +171,7 @@ jobs:
       - name: Clean up stale Crowdin git integration branch
         continue-on-error: true
         env:
-          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
         run: |
           PR_NUMBER=$(gh pr list --repo ${{ github.repository }} --head i18n_translate --state open --json number -q '.[0].number' || true)
           if [ -n "$PR_NUMBER" ]; then
@@ -254,7 +254,7 @@ jobs:
       - name: Open and squash-merge PR to main
         id: merge
         env:
-          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
         run: |
           DEV_BRANCH="${{ needs.prep.outputs.dev_branch }}"
           TITLE="release-${{ needs.prep.outputs.version }}"
@@ -325,7 +325,7 @@ jobs:
       - name: Clear existing release artifacts (overwrite mode)
         if: ${{ inputs.mode == 'Overwrite release' }}
         env:
-          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
         run: |
           TAG="${{ needs.prep.outputs.release_tag }}"
           if ! gh release view "$TAG" --repo ${{ github.repository }} >/dev/null 2>&1; then
@@ -348,7 +348,7 @@ jobs:
       - name: Create or update GitHub release
         if: ${{ inputs.mode != 'Overwrite release' }}
         env:
-          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
         run: |
           TAG="${{ needs.prep.outputs.release_tag }}"
           TITLE="release-${{ needs.prep.outputs.version }}"
@@ -391,7 +391,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 1
-          token: ${{ secrets.GHCR_TOKEN }}
+          token: ${{ secrets.TERMIX_PAT }}
 
       - name: Bump and commit Homebrew cask
         env:
@@ -452,7 +452,7 @@ jobs:
           repository: Termix-SSH/Docs
           ref: main
           fetch-depth: 0
-          token: ${{ secrets.GHCR_TOKEN }}
+          token: ${{ secrets.TERMIX_PAT }}
           path: docs-repo
 
       - name: Create docs release branch
@@ -499,7 +499,7 @@ jobs:
         if: ${{ inputs.mode != 'Dry run' }}
         working-directory: docs-repo
         env:
-          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
         run: |
           BRANCH="dev-${{ needs.prep.outputs.version }}"
           if ! git ls-remote --exit-code origin "refs/heads/$BRANCH" >/dev/null 2>&1; then
@@ -567,14 +567,14 @@ jobs:
 
       - name: Delete dev branch in Termix
         env:
-          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
         run: |
-          git push https://x-access-token:${{ secrets.GHCR_TOKEN }}@github.com/${{ github.repository }}.git \
+          git push https://x-access-token:${{ secrets.TERMIX_PAT }}@github.com/${{ github.repository }}.git \
             --delete "${{ needs.prep.outputs.dev_branch }}" || true
 
       - name: Delete dev branch in Docs
         env:
-          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
         run: |
-          git push https://x-access-token:${{ secrets.GHCR_TOKEN }}@github.com/Termix-SSH/Docs.git \
+          git push https://x-access-token:${{ secrets.TERMIX_PAT }}@github.com/Termix-SSH/Docs.git \
             --delete "dev-${{ needs.prep.outputs.version }}" || true

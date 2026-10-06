@@ -10,6 +10,7 @@ vi.mock("../../../database/db/index.js", () => ({
 }));
 
 const {
+  createCurrentAuditLogRepository,
   createCurrentSessionRepository,
   createCurrentRepositoryContext,
   createCurrentRepositoryWriteHook,
@@ -113,6 +114,45 @@ it("wires SQLite activity to the periodic flush and token changes to immediate p
     expect(force).not.toHaveBeenCalled();
     await repo.updateToken("session-1", "new-token");
     expect(force).toHaveBeenCalledOnce();
+  } finally {
+    vi.restoreAllMocks();
+    if (saved === undefined) delete process.env[DATABASE_DIALECT_ENV];
+    else process.env[DATABASE_DIALECT_ENV] = saved;
+  }
+});
+
+// Audit rows land on every audited call; a forced save per row rewrote the
+// whole SQLite file each time.
+it("saves SQLite audit rows lazily instead of forcing a save per row", async () => {
+  const saved = process.env[DATABASE_DIALECT_ENV];
+  process.env[DATABASE_DIALECT_ENV] = "sqlite";
+  const { getDb } = await import("../../../database/db/index.js");
+  const { DatabaseSaveTrigger } =
+    await import("../../../utils/database-save-trigger.js");
+  const lazy = vi.spyOn(DatabaseSaveTrigger, "triggerSave").mockResolvedValue();
+  const force = vi.spyOn(DatabaseSaveTrigger, "forceSave").mockResolvedValue();
+  const query = {
+    insert: () => query,
+    values: async () => ({ changes: 1 }),
+    select: () => query,
+    from: async () => [{ count: 1 }],
+  };
+  vi.mocked(getDb).mockReturnValue(
+    query as unknown as ReturnType<typeof getDb>,
+  );
+  try {
+    const repo = createCurrentAuditLogRepository();
+    for (let i = 0; i < 100; i++) {
+      await repo.create({
+        userId: null,
+        username: "plugin:host-metrics",
+        action: "plugin_db_client",
+        resourceType: "plugin",
+        success: true,
+      });
+    }
+    expect(force).not.toHaveBeenCalled();
+    expect(lazy).toHaveBeenCalledTimes(100);
   } finally {
     vi.restoreAllMocks();
     if (saved === undefined) delete process.env[DATABASE_DIALECT_ENV];

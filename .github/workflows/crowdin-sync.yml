@@ -31,7 +31,7 @@ jobs:
         with:
           ref: ${{ steps.branch.outputs.name }}
           fetch-depth: 0
-          token: ${{ secrets.GHCR_TOKEN }}
+          token: ${{ secrets.TERMIX_PAT }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v7

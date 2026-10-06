@@ -21,7 +21,7 @@ jobs:
       - name: Resolve newest dev branch
         id: dev
         env:
-          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
         run: |
           REFS=$(gh api "repos/${{ github.repository }}/branches" --paginate -q '.[].name')
           # The helper exits non-zero when no dev-X.Y.Z branch exists; treat that
@@ -37,7 +37,7 @@ jobs:
       - name: Retarget and merge Dependabot PRs
         if: ${{ steps.dev.outputs.branch != '' }}
         env:
-          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
           DEV_BRANCH: ${{ steps.dev.outputs.branch }}
           REPO: ${{ github.repository }}
         run: |
