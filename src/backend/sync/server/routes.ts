@@ -360,7 +360,7 @@ router.get("/v2/events", authenticateJWT, (req: Request, res: Response) => {
  * /sync/v2/hosts/{syncId}:
  *   get:
  *     summary: This server's id for a host, by its sync id
- *     description: For a linked desktop that asks the server to act on a host (a tunnel through it), which needs the server's own id. Only for hosts the caller can see.
+ *     description: For a linked desktop that asks the server to act on a host (a tunnel through it), which needs the server's own id. Only for hosts the caller can connect to.
  *     tags:
  *       - Sync
  *     parameters:
@@ -373,7 +373,7 @@ router.get("/v2/events", authenticateJWT, (req: Request, res: Response) => {
  *       200:
  *         description: The host's id and name.
  *       404:
- *         description: No such host the caller can see.
+ *         description: No such host the caller can connect to.
  */
 router.get(
   "/v2/hosts/:syncId",
@@ -393,7 +393,7 @@ router.get(
       const access = await PermissionManager.getInstance().canAccessHost(
         userId,
         hostId,
-        "view",
+        "connect",
       );
       if (!access.hasAccess)
         return res.status(404).json({ error: "Not found" });
