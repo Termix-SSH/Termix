@@ -24,6 +24,7 @@ import {
 import { getDefaultConnectionTab } from "@/lib/host-connection-tabs";
 import type { RecentActivityItem } from "@/main-axios";
 import type { Host, TabType } from "@/types/ui-types";
+import { quarterBorders } from "./quarter-borders";
 
 export type VersionStatus =
   "up_to_date" | "requires_update" | "beta" | "unknown";
@@ -161,17 +162,19 @@ function ActionButton({
   label,
   hint,
   onClick,
+  className,
 }: {
   icon: React.ElementType;
   label: string;
   hint: string;
   onClick: () => void;
+  className?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group/btn flex h-full min-w-0 items-center gap-2 border border-border/60 px-2 py-1.5 text-left transition-colors hover:border-accent-brand/40 hover:bg-muted/50"
+      className={`group/btn flex h-full min-w-0 items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-muted/50 ${className ?? ""}`}
     >
       <span className="flex size-6 shrink-0 items-center justify-center border border-border bg-muted transition-colors group-hover/btn:border-accent-brand/40 group-hover/btn:bg-accent-brand/20">
         <Icon className="size-3 text-accent-brand" />
@@ -208,39 +211,48 @@ export function QuickActions({
         : host.port;
     return `${host.ip}:${port ?? host.port}`;
   };
+  const actions = [
+    {
+      icon: Plus,
+      label: t("dashboard.addHost"),
+      hint: t("dashboardTab.registerNewServer"),
+      onClick: () =>
+        onOpenSingletonTab("host-manager", "host-manager:add-host"),
+    },
+    {
+      icon: KeyRound,
+      label: t("dashboard.addCredential"),
+      hint: t("dashboardTab.storeSshKeysOrPasswords"),
+      onClick: () =>
+        onOpenSingletonTab("host-manager", "host-manager:add-credential"),
+    },
+    ...(isAdmin
+      ? [
+          {
+            icon: Settings,
+            label: t("dashboard.adminSettings"),
+            hint: t("dashboardTab.manageUsersAndRoles"),
+            onClick: () => onOpenSingletonTab("admin-settings"),
+          },
+        ]
+      : []),
+    {
+      icon: User,
+      label: t("dashboard.userProfile"),
+      hint: t("dashboardTab.manageYourAccount"),
+      onClick: () => onOpenSingletonTab("user-profile"),
+    },
+  ];
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <div className="grid flex-1 auto-rows-fr grid-cols-1 gap-1 p-2 sm:grid-cols-2">
-        <ActionButton
-          icon={Plus}
-          label={t("dashboard.addHost")}
-          hint={t("dashboardTab.registerNewServer")}
-          onClick={() =>
-            onOpenSingletonTab("host-manager", "host-manager:add-host")
-          }
-        />
-        <ActionButton
-          icon={KeyRound}
-          label={t("dashboard.addCredential")}
-          hint={t("dashboardTab.storeSshKeysOrPasswords")}
-          onClick={() =>
-            onOpenSingletonTab("host-manager", "host-manager:add-credential")
-          }
-        />
-        {isAdmin && (
+      <div className="grid flex-1 auto-rows-fr grid-cols-1 sm:grid-cols-2">
+        {actions.map((action, i) => (
           <ActionButton
-            icon={Settings}
-            label={t("dashboard.adminSettings")}
-            hint={t("dashboardTab.manageUsersAndRoles")}
-            onClick={() => onOpenSingletonTab("admin-settings")}
+            key={action.label}
+            {...action}
+            className={quarterBorders(i, actions.length)}
           />
-        )}
-        <ActionButton
-          icon={User}
-          label={t("dashboard.userProfile")}
-          hint={t("dashboardTab.manageYourAccount")}
-          onClick={() => onOpenSingletonTab("user-profile")}
-        />
+        ))}
       </div>
       {pinnedHosts.length > 0 && (
         <div className="flex flex-col border-t border-border">
@@ -308,7 +320,7 @@ export function HostStatusList({
                 defaultConnectAction(actions, host)?.tabType;
               if (target) onOpenTab(host, target);
             }}
-            className="group/row flex min-w-0 cursor-pointer items-center gap-2 border-b border-border/60 px-3 py-1.5 last:border-0 hover:bg-muted/50"
+            className="group/row flex min-w-0 cursor-pointer items-center gap-2 px-3 py-1.5 hover:bg-muted/50"
           >
             <span
               className={`size-1.5 shrink-0 rounded-full ${getStatusClasses(availability, scheme, "dot", statusLoading)}`}
