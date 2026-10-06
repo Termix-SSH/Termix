@@ -12,7 +12,10 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import semver from "semver";
-import { SUPPORTED_PLUGIN_API_VERSION } from "@termix-ssh/plugin-sdk/manifest";
+import {
+  SUPPORTED_PLUGIN_API_VERSION,
+  youtubeVideoId,
+} from "@termix-ssh/plugin-sdk/manifest";
 import { safeOutboundFetch } from "../utils/safe-outbound-fetch.js";
 import { pluginLogger } from "../utils/logger.js";
 import { verifyPluginArtifact } from "./trust.js";
@@ -27,6 +30,7 @@ const CACHE_MS = 15 * 60_000;
 const MAX_INDEX_BYTES = 5 * 1024 * 1024;
 const MAX_ARTIFACT_BYTES = 200 * 1024 * 1024;
 const MAX_REDIRECTS = 5;
+const MAX_NOTES_LENGTH = 20_000;
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
 export interface RegistryVersion {
@@ -38,6 +42,8 @@ export interface RegistryVersion {
   size: number;
   capabilities: string[];
   releaseNotesUrl?: string;
+  /** This version's CHANGELOG.md section, as Markdown. */
+  notes?: string;
   publishedAt?: string;
 }
 
@@ -49,6 +55,8 @@ export interface RegistryPlugin {
   category: string;
   repository?: string;
   icon?: string;
+  /** Only ever a YouTube video id, never a link. */
+  videoId?: string;
   /** Newest first. */
   versions: RegistryVersion[];
 }
@@ -95,6 +103,7 @@ function parseVersion(raw: unknown): RegistryVersion | null {
       ? entry.capabilities.filter((c): c is string => typeof c === "string")
       : [],
     releaseNotesUrl: asString(entry.releaseNotesUrl),
+    notes: asString(entry.notes)?.slice(0, MAX_NOTES_LENGTH),
     publishedAt: asString(entry.publishedAt),
   };
 }
@@ -128,6 +137,7 @@ export function parseRegistryIndex(raw: unknown): RegistryIndex {
       category: asString(entry.category) ?? "",
       repository: asString(entry.repository),
       icon: asString(entry.icon),
+      videoId: youtubeVideoId(entry.video) ?? undefined,
       versions,
     });
   }

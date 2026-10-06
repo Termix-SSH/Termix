@@ -2,7 +2,7 @@ cask "termix" do
   version "2.9.1"
   sha256 "6d8847e18508314db8ed4380c63bf0dd31437102a288b8e861879c92ba25a254"
 
-  url "https://github.com/Termix-SSH/Termix/releases/download/release-#{version}-tag/termix_macos_universal_dmg.dmg"
+  url "https://github.com/Termix-SSH/Termix/releases/download/v#{version}/termix_macos_universal_dmg.dmg"
   name "Termix"
   desc "Web-based server management platform with SSH terminal, tunneling, and file editing"
   homepage "https://github.com/Termix-SSH/Termix"

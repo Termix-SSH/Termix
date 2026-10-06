@@ -5,7 +5,9 @@ import {
   describeContributions,
   formatBytes,
   formatCount,
+  groupChanges,
   matchesQuery,
+  mergeReleaseNotes,
   mergePlugins,
   orderByRisk,
   pluginSource,
@@ -13,6 +15,7 @@ import {
   reportIssueUrl,
   sortPlugins,
   uploadEntry,
+  youtubeEmbedUrl,
 } from "@/plugins/plugin-model";
 
 function summary(overrides: Partial<PluginSummary> = {}): PluginSummary {
@@ -281,5 +284,90 @@ describe("reportIssueUrl", () => {
         source: "official",
       }),
     ).toBeNull();
+  });
+});
+
+describe("mergeReleaseNotes", () => {
+  const registryVersion = (version: string, extra = {}) => ({
+    version,
+    compatible: true,
+    capabilities: [],
+    size: 1,
+    publishedAt: "2026-10-01T00:00:00Z",
+    ...extra,
+  });
+
+  it("joins registry and local notes newest first, local winning", () => {
+    const rows = mergeReleaseNotes(
+      [
+        registryVersion("1.2.0", {
+          compatible: false,
+          notes: { changes: [{ type: "added", text: "Registry" }] },
+        }),
+        registryVersion("1.0.0", {
+          releaseNotesUrl: "https://github.com/x/y/releases/tag/v1.0.0",
+          notes: { changes: [{ type: "added", text: "Old" }] },
+        }),
+      ],
+      [
+        {
+          version: "1.0.0",
+          date: "2026-09-01",
+          summary: "First.",
+          changes: [{ type: "added", text: "Local" }],
+        },
+        { version: "0.9.0", changes: [{ type: "fixed", text: "Beta" }] },
+      ],
+    );
+    expect(rows.map((r) => r.version)).toEqual(["1.2.0", "1.0.0", "0.9.0"]);
+    expect(rows[0]).toMatchObject({ compatible: false });
+    expect(rows[1]).toEqual({
+      version: "1.0.0",
+      date: "2026-09-01",
+      summary: "First.",
+      changes: [{ type: "added", text: "Local" }],
+      compatible: true,
+      releaseNotesUrl: "https://github.com/x/y/releases/tag/v1.0.0",
+    });
+    expect(rows[2]).toMatchObject({ date: null, compatible: true });
+  });
+
+  it("is empty with nothing to show", () => {
+    expect(mergeReleaseNotes([], [])).toEqual([]);
+  });
+});
+
+describe("groupChanges", () => {
+  it("groups by type in a fixed order", () => {
+    expect(
+      groupChanges([
+        { type: "fixed", text: "b" },
+        { type: "added", text: "a" },
+        { type: "fixed", text: "c" },
+      ]),
+    ).toEqual([
+      { type: "added", items: ["a"] },
+      { type: "fixed", items: ["b", "c"] },
+    ]);
+  });
+});
+
+describe("youtubeEmbedUrl", () => {
+  it("builds a privacy embed from a video id only", () => {
+    expect(youtubeEmbedUrl("dQw4w9WgXcQ")).toBe(
+      "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0",
+    );
+  });
+
+  it("refuses anything that is not an id", () => {
+    for (const value of [
+      undefined,
+      "",
+      "https://evil.example/x",
+      "dQw4w9WgXcQ/../../x",
+      "javascript:alert(1)",
+    ]) {
+      expect(youtubeEmbedUrl(value)).toBeNull();
+    }
   });
 });

@@ -1,5 +1,9 @@
 import { rbacApi } from "@/main-axios";
 import type { ChoiceAdjustment, PluginChoice } from "@/types/plugin-onboarding";
+import type {
+  ChangelogRelease,
+  ReleaseNotes,
+} from "@termix-ssh/plugin-sdk/changelog";
 
 export type { PluginChoice };
 
@@ -246,6 +250,8 @@ export interface PluginSummary {
   description?: string;
   author?: string;
   repository?: string;
+  /** A YouTube video id from the manifest. Admins only. */
+  videoId?: string;
   signedBy?: string | null;
 }
 
@@ -267,6 +273,7 @@ export interface RegistryPluginVersion {
   capabilities: string[];
   publishedAt?: string;
   releaseNotesUrl?: string;
+  notes?: ReleaseNotes;
   size: number;
 }
 
@@ -278,6 +285,7 @@ export interface RegistryPluginEntry {
   category: string;
   repository?: string;
   icon?: string;
+  videoId?: string;
   versions: RegistryPluginVersion[];
   latestVersion: string | null;
   installed: boolean;
@@ -446,6 +454,13 @@ export async function getPluginData(
 ): Promise<PluginDataSummary> {
   const response = await rbacApi.get(`${pluginPath(pluginId)}/data`);
   return response.data;
+}
+
+export async function getPluginChangelog(
+  pluginId: string,
+): Promise<ChangelogRelease[]> {
+  const response = await rbacApi.get(`${pluginPath(pluginId)}/changelog`);
+  return response.data?.releases ?? [];
 }
 
 export async function deletePluginData(pluginId: string): Promise<void> {

@@ -49,6 +49,43 @@ export function isTermixCompatible(
   return semver.satisfies(semver.coerce(coreVersion)!.version, range);
 }
 
+const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
+const YOUTUBE_HOSTS = new Set([
+  "youtube.com",
+  "www.youtube.com",
+  "m.youtube.com",
+  "youtu.be",
+  "youtube-nocookie.com",
+  "www.youtube-nocookie.com",
+]);
+
+/**
+ * The video id of a YouTube link, or null for anything else. Only the id is
+ * ever used, so a manifest can never point the embed at another site.
+ */
+export function youtubeVideoId(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  let url: URL;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" || url.username || url.password) return null;
+  const host = url.hostname.toLowerCase();
+  if (!YOUTUBE_HOSTS.has(host)) return null;
+
+  let id: string | null | undefined;
+  if (host === "youtu.be") {
+    id = url.pathname.slice(1);
+  } else if (url.pathname === "/watch") {
+    id = url.searchParams.get("v");
+  } else {
+    id = /^\/(?:embed|shorts|live)\/([^/]+)\/?$/.exec(url.pathname)?.[1];
+  }
+  return id && YOUTUBE_ID.test(id) ? id : null;
+}
+
 export const PLUGIN_CATEGORIES = [
   "Terminal",
   "Files & Transfer",
@@ -540,6 +577,8 @@ export interface PluginManifest {
   repository?: string;
   category: string;
   icon?: string;
+  /** A YouTube link shown at the top of the plugin's page. */
+  video?: string;
   engine: PluginEngine;
   /** Catalog capability ids. */
   capabilities: string[];
@@ -591,6 +630,7 @@ const ALLOWED_TOP_LEVEL = new Set([
   ...REQUIRED_TOP_LEVEL,
   "repository",
   "icon",
+  "video",
   "dependencies",
   "optionalDependencies",
   "provides",
@@ -747,6 +787,11 @@ export function validateManifest(manifest: unknown): string[] {
 
   if ("repository" in m) requireString(m.repository, "repository", errors);
   if ("icon" in m) requireString(m.icon, "icon", errors);
+  if ("video" in m && youtubeVideoId(m.video) === null) {
+    errors.push(
+      `Field "video" must be a YouTube link such as https://www.youtube.com/watch?v=..., got: ${JSON.stringify(m.video)}`,
+    );
+  }
   for (const field of ["backend", "frontend", "locales"] as const) {
     if (field in m && requireString(m[field], field, errors)) {
       requireRelativePath(m[field] as string, field, errors);

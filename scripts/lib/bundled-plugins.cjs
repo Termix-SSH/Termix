@@ -254,7 +254,7 @@ const LOCAL_FILES = [
   "locales",
   "migrations",
   "README.md",
-  "CHANGELOG.json",
+  "CHANGELOG.md",
 ];
 
 /**

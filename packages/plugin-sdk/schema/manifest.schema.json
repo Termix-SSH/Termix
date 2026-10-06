@@ -74,6 +74,11 @@
       "minLength": 1,
       "description": "A Lucide icon name, like \"Play\"."
     },
+    "video": {
+      "type": "string",
+      "pattern": "^https://(www\\.|m\\.)?(youtube\\.com|youtu\\.be|youtube-nocookie\\.com)/",
+      "description": "A YouTube link shown at the top of the plugin's page."
+    },
     "engine": {
       "type": "object",
       "additionalProperties": false,

@@ -1,113 +1,177 @@
 import { describe, expect, it } from "vitest";
-import { validateChangelog } from "../packages/plugin-sdk/cli/lib/changelog.mjs";
+import {
+  changelogSection,
+  parseChangelog,
+  parseReleaseNotes,
+  validateChangelog,
+} from "../packages/plugin-sdk/src/changelog.ts";
 
-function release(version: string, extra: Record<string, unknown> = {}) {
-  return {
-    version,
-    date: "2026-10-01",
-    changes: [{ type: "added", text: "Something new" }],
-    ...extra,
-  };
-}
+const FILE = [
+  "# Changelog",
+  "",
+  "## Unreleased",
+  "",
+  "### Fixed",
+  "- A bug not shipped yet",
+  "",
+  "## 1.1.0 - 2026-10-06",
+  "",
+  "Second release.",
+  "",
+  "### Added",
+  "- Something new",
+  "  that wraps",
+  "* Another thing",
+  "",
+  "### Fixed",
+  "- Something broken",
+  "",
+  "## 1.0.0",
+  "",
+  "### Added",
+  "- The first version",
+  "",
+].join("\n");
 
-describe("validateChangelog", () => {
-  it("accepts a changelog whose newest release matches the manifest", () => {
-    const changelog = {
-      $schema: "https://example.com/changelog.schema.json",
-      unreleased: [{ type: "fixed", text: "A bug" }],
-      releases: [
-        release("1.1.0", { notes: "Second release." }),
-        release("1.0.0"),
-      ],
-    };
-    expect(validateChangelog(changelog, "1.1.0")).toEqual([]);
+describe("parseChangelog", () => {
+  it("reads releases, summaries, sections and unreleased changes", () => {
+    const { changelog, problems } = parseChangelog(FILE);
+    expect(problems).toEqual([]);
+    expect(changelog.unreleased).toEqual([
+      { type: "fixed", text: "A bug not shipped yet" },
+    ]);
+    expect(changelog.releases).toEqual([
+      {
+        version: "1.1.0",
+        date: "2026-10-06",
+        summary: "Second release.",
+        changes: [
+          { type: "added", text: "Something new\nthat wraps" },
+          { type: "added", text: "Another thing" },
+          { type: "fixed", text: "Something broken" },
+        ],
+      },
+      {
+        version: "1.0.0",
+        changes: [{ type: "added", text: "The first version" }],
+      },
+    ]);
   });
 
-  it("accepts a release that has no date yet", () => {
-    const { date: _date, ...undated } = release("1.0.0");
-    expect(validateChangelog({ releases: [undated] }, "1.0.0")).toEqual([]);
-  });
-
-  it("flags a manifest version with no release notes", () => {
-    const problems = validateChangelog(
-      { releases: [release("1.0.0")] },
-      "1.1.0",
+  it("accepts Keep a Changelog brackets, CRLF and calendar versions", () => {
+    const { changelog, problems } = parseChangelog(
+      "## [26.10.0] - 2026-10-06\r\n\r\n### Changed\r\n- A thing\r\n",
     );
-    expect(problems).toContain(
-      "the newest release is 1.0.0, but manifest version is 1.1.0",
-    );
-  });
-
-  it("requires releases newest first and without duplicates", () => {
-    expect(
-      validateChangelog(
-        { releases: [release("1.0.0"), release("1.2.0")] },
-        "1.0.0",
-      ),
-    ).toContain("releases must be listed newest first");
-    expect(
-      validateChangelog(
-        { releases: [release("1.0.0"), release("1.0.0")] },
-        "1.0.0",
-      ),
-    ).toContain("releases[1].version 1.0.0 is listed twice");
+    expect(problems).toEqual([]);
+    expect(changelog.releases[0]).toMatchObject({
+      version: "26.10.0",
+      date: "2026-10-06",
+    });
   });
 
   it("orders a prerelease below its release", () => {
-    expect(
-      validateChangelog(
-        { releases: [release("2.0.0"), release("2.0.0-beta.1")] },
-        "2.0.0",
-      ),
-    ).toEqual([]);
-    expect(
-      validateChangelog(
-        { releases: [release("2.0.0-beta.1"), release("2.0.0")] },
-        "2.0.0-beta.1",
-      ),
-    ).toContain("releases must be listed newest first");
+    const md = (a: string, b: string) =>
+      `## ${a}\n### Added\n- x\n## ${b}\n### Added\n- y\n`;
+    expect(parseChangelog(md("2.0.0", "2.0.0-beta.1")).problems).toEqual([]);
+    expect(parseChangelog(md("2.0.0-beta.1", "2.0.0")).problems).toContain(
+      "releases must be listed newest first",
+    );
   });
 
-  it("rejects bad versions, dates, change types and empty text", () => {
-    const problems = validateChangelog(
-      {
-        releases: [
-          {
-            version: "v1",
-            date: "October 1",
-            changes: [{ type: "improved", text: " " }],
-          },
-        ],
-      },
-      undefined,
+  it("flags bad headings, dates, sections, stray text and duplicates", () => {
+    const { problems } = parseChangelog(
+      [
+        "## v1",
+        "## 1.0.0 - October 1",
+        "### Improved",
+        "- x",
+        "### Added",
+        "loose text",
+        "- y",
+        "## 1.0.0",
+        "### Added",
+        "- z",
+      ].join("\n"),
     );
     expect(problems).toEqual(
       expect.arrayContaining([
-        "releases[0].version must be a version like 1.2.3",
-        "releases[0].date must be a date like 2026-10-01",
-        expect.stringContaining("releases[0].changes[0].type must be one of"),
-        "releases[0].changes[0].text must be a non-empty string",
+        'line 1: "## v1" should look like "## 1.2.0 - 2026-10-06"',
+        '1.0.0 has a date "October 1", use YYYY-MM-DD',
+        expect.stringContaining('unknown section "Improved"'),
+        expect.stringContaining("that is not a list item: loose text"),
+        "1.0.0 is listed twice",
       ]),
     );
   });
 
-  it("rejects unknown keys, empty change lists and missing releases", () => {
-    expect(validateChangelog({ releases: [] }, "1.0.0")).toEqual([
-      "releases must be a non-empty array",
-    ]);
-    expect(
-      validateChangelog(
-        { extra: true, releases: [release("1.0.0", { changes: [] })] },
-        "1.0.0",
-      ),
-    ).toEqual(
-      expect.arrayContaining([
-        'CHANGELOG.json has unknown key "extra"',
-        "releases[0].changes must list at least one change",
-      ]),
+  it("flags a release with no changes and Unreleased out of place", () => {
+    const { problems } = parseChangelog(
+      "## 1.0.0\n\nJust a summary.\n\n## Unreleased\n### Added\n- x\n",
     );
-    expect(validateChangelog([], "1.0.0")).toEqual([
-      "CHANGELOG.json must be an object",
+    expect(problems).toContain("1.0.0 has no changes listed");
+    expect(problems).toContain('"## Unreleased" has to come first');
+  });
+
+  it("ignores headings inside code fences", () => {
+    const { changelog, problems } = parseChangelog(
+      "## 1.0.0\n\n```\n## not a heading\n```\n\n### Added\n- x\n",
+    );
+    expect(problems).toEqual([]);
+    expect(changelog.releases).toHaveLength(1);
+  });
+});
+
+describe("validateChangelog", () => {
+  it("passes when the newest release is the manifest version", () => {
+    expect(validateChangelog(FILE, "1.1.0")).toEqual([]);
+  });
+
+  it("flags a manifest version with no notes", () => {
+    expect(validateChangelog(FILE, "1.2.0")).toContain(
+      "the newest release is 1.1.0, but the manifest version is 1.2.0",
+    );
+  });
+
+  it("flags a file with no releases", () => {
+    expect(validateChangelog("# Changelog\n", "1.0.0")).toEqual([
+      'no releases found, add a "## 1.0.0" heading',
     ]);
+  });
+});
+
+describe("changelogSection", () => {
+  it("returns the Markdown under a version's heading", () => {
+    expect(changelogSection(FILE, "1.1.0")).toBe(
+      [
+        "Second release.",
+        "",
+        "### Added",
+        "- Something new",
+        "  that wraps",
+        "* Another thing",
+        "",
+        "### Fixed",
+        "- Something broken",
+      ].join("\n"),
+    );
+    expect(changelogSection(FILE, "1.0.0")).toBe(
+      "### Added\n- The first version",
+    );
+  });
+
+  it("is null for a version that is not there", () => {
+    expect(changelogSection(FILE, "9.9.9")).toBeNull();
+  });
+});
+
+describe("parseReleaseNotes", () => {
+  it("parses a section body on its own", () => {
+    expect(
+      parseReleaseNotes("Summary.\n\n### Security\n- Patched a hole"),
+    ).toEqual({
+      summary: "Summary.",
+      changes: [{ type: "security", text: "Patched a hole" }],
+      problems: [],
+    });
   });
 });

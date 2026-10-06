@@ -37,16 +37,11 @@ import {
   type PluginEntry,
 } from "./plugin-model";
 import { openPluginSettings } from "./open-plugins";
+import { PluginReleaseNotes, PluginVideo } from "./PluginReleaseNotes";
 import type { PluginsManager } from "./use-plugins-manager";
 
 const LINK_ROW =
   "flex items-center gap-2 border border-border bg-card px-3 py-2.5 text-left text-[11px] text-muted-foreground transition-colors hover:border-accent-brand/40 hover:text-foreground";
-
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
-}
 
 export function PluginDetail({
   plugin,
@@ -206,6 +201,8 @@ export function PluginDetail({
 
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-3">
         <div className="flex flex-col gap-2 lg:col-span-2">
+          <PluginVideo videoId={plugin.videoId} name={plugin.name} />
+
           <SectionCard title={t("plugins.manager.whatItCanDo")} icon={null}>
             <div className="divide-y divide-border">
               {orderByRisk(plugin.capabilities).map((capability) => (
@@ -224,48 +221,7 @@ export function PluginDetail({
             </div>
           </SectionCard>
 
-          {plugin.versions.length > 0 && (
-            <SectionCard
-              title={t("plugins.manager.versionHistory")}
-              icon={null}
-            >
-              <div className="divide-y divide-border">
-                {plugin.versions.map((v) => (
-                  <div
-                    key={v.version}
-                    className="flex flex-col gap-0.5 px-4 py-2.5"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold">{v.version}</span>
-                      {v.version === plugin.version && (
-                        <span className="border border-accent-brand/40 bg-accent-brand/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent-brand">
-                          {t("plugins.manager.installedBadge")}
-                        </span>
-                      )}
-                      {!v.compatible && (
-                        <span className="border border-warning/40 bg-warning/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-warning">
-                          {t("plugins.manager.incompatible")}
-                        </span>
-                      )}
-                      <span className="ml-auto text-[10px] text-muted-foreground">
-                        {formatDate(v.publishedAt)}
-                      </span>
-                    </div>
-                    {v.releaseNotesUrl && (
-                      <a
-                        href={v.releaseNotesUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="w-fit text-[11px] text-muted-foreground hover:text-accent-brand"
-                      >
-                        {t("plugins.manager.releaseNotes")}
-                      </a>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </SectionCard>
-          )}
+          <PluginReleaseNotes plugin={plugin} />
 
           {plugin.installed && (
             <DataCard

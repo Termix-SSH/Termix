@@ -45,6 +45,12 @@ import { readInstallCounts } from "./install-counts.js";
 import { readArtifactManifest, sameCapabilities } from "./artifact-manifest.js";
 import { parseManifest, type PluginManifest } from "./manifest.js";
 import { requireSignedPlugins } from "./trust.js";
+import {
+  parseChangelog,
+  parseReleaseNotes,
+  type ChangelogRelease,
+  type ReleaseNotes,
+} from "@termix-ssh/plugin-sdk/changelog";
 
 const UNINSTALLED_KEY = "plugins_uninstalled";
 const DEVELOPER_MODE_KEY = "plugins_developer_mode";
@@ -206,12 +212,14 @@ export interface RegistryListing {
     category: string;
     repository?: string;
     icon?: string;
+    videoId?: string;
     versions: Array<{
       version: string;
       compatible: boolean;
       capabilities: string[];
       publishedAt?: string;
       releaseNotesUrl?: string;
+      notes?: ReleaseNotes;
       size: number;
     }>;
     latestVersion: string | null;
@@ -263,12 +271,14 @@ export async function listRegistry(
         category: plugin.category,
         repository: plugin.repository,
         icon: plugin.icon,
+        videoId: plugin.videoId,
         versions: plugin.versions.map((entry) => ({
           version: entry.version,
           compatible: isApiCompatible(entry.api),
           capabilities: entry.capabilities,
           publishedAt: entry.publishedAt,
           releaseNotesUrl: entry.releaseNotesUrl,
+          notes: readReleaseNotes(entry.notes),
           size: entry.size,
         })),
         latestVersion: latest?.version ?? null,
@@ -961,6 +971,40 @@ export function setPluginOptions(
       pinnedVersion: updated?.pinnedVersion ?? null,
     };
   });
+}
+
+const MAX_CHANGELOG_BYTES = 512 * 1024;
+
+/** A registry version's Markdown notes, parsed. Undefined when empty. */
+export function readReleaseNotes(
+  markdown: string | undefined,
+): ReleaseNotes | undefined {
+  if (!markdown) return undefined;
+  const { summary, changes } = parseReleaseNotes(markdown);
+  if (!summary && changes.length === 0) return undefined;
+  return { ...(summary ? { summary } : {}), changes };
+}
+
+/**
+ * The releases in an installed plugin's CHANGELOG.md, newest first. Empty when
+ * the plugin ships none or it cannot be read.
+ */
+export async function getPluginChangelog(
+  pluginId: string,
+): Promise<ChangelogRelease[]> {
+  const plugin = getPluginRuntime().loader.get(pluginId);
+  if (!plugin) {
+    throw new PluginManageError("Plugin not found", 404, "NOT_FOUND");
+  }
+  const file = path.join(plugin.dir, "CHANGELOG.md");
+  try {
+    const stat = await fs.promises.stat(file);
+    if (!stat.isFile() || stat.size > MAX_CHANGELOG_BYTES) return [];
+    return parseChangelog(await fs.promises.readFile(file, "utf8")).changelog
+      .releases;
+  } catch {
+    return [];
+  }
 }
 
 async function directorySize(dir: string): Promise<number> {

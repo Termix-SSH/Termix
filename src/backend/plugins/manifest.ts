@@ -17,6 +17,7 @@ export {
   SYSTEM_ROLE_NAMES,
   RESERVED_PERMISSION_PREFIXES,
   qualifyPermission,
+  youtubeVideoId,
 } from "@termix-ssh/plugin-sdk/manifest";
 
 export type {

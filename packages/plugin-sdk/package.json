@@ -1,6 +1,6 @@
 {
   "name": "@termix-ssh/plugin-sdk",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "The contract between Termix core and a plugin: types, the capability catalog and the manifest schema.",
   "license": "Apache-2.0",
   "repository": {
@@ -49,6 +49,10 @@
       "types": "./dist/capabilities.d.ts",
       "default": "./dist/capabilities.js"
     },
+    "./changelog": {
+      "types": "./dist/changelog.d.ts",
+      "default": "./dist/changelog.js"
+    },
     "./settings": {
       "types": "./dist/settings.d.ts",
       "default": "./dist/settings.js"
@@ -75,7 +79,6 @@
     },
     "./tsconfig.plugin.json": "./tsconfig.plugin.json",
     "./schema/manifest.schema.json": "./schema/manifest.schema.json",
-    "./schema/changelog.schema.json": "./schema/changelog.schema.json",
     "./ui": {
       "types": "./dist/host/ui.d.ts",
       "default": "./dist/host/ui.js"

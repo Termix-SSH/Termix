@@ -2,24 +2,22 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readManifest } from "../lib/plugin-dir.mjs";
-import { validateChangelog } from "../lib/changelog.mjs";
 
 /**
  * The manifest rules live in src/manifest.ts, which the server uses too, so
  * there is one implementation rather than a copy here that drifts.
  */
-async function loadParseManifest() {
-  const entry = new URL("../../dist/manifest.js", import.meta.url);
+export async function loadSdkModule(name) {
+  const entry = new URL(`../../dist/${name}.js`, import.meta.url);
   if (!fs.existsSync(fileURLToPath(entry))) {
     throw new Error("The plugin SDK is not built yet. Run: npm run build:sdk");
   }
-  const mod = await import(entry.href);
-  return mod.parseManifest;
+  return import(entry.href);
 }
 
 export async function validate({ cwd }) {
   const raw = readManifest(cwd);
-  const parseManifest = await loadParseManifest();
+  const { parseManifest } = await loadSdkModule("manifest");
   const { errors } = parseManifest(raw);
 
   const problems = [...errors];
@@ -41,7 +39,7 @@ export async function validate({ cwd }) {
   );
   problems.push(...validateNativeDependencies(cwd, raw));
   problems.push(...validatePackage(cwd, raw));
-  problems.push(...validateChangelogFile(cwd, raw));
+  problems.push(...(await validateChangelogFile(cwd, raw)));
 
   if (problems.length > 0) {
     for (const problem of problems) console.error(`  ${problem}`);
@@ -82,26 +80,20 @@ function validatePackage(cwd, raw) {
 }
 
 /**
- * CHANGELOG.json is optional, but when it is there it has to parse and its
+ * CHANGELOG.md is optional, but when it is there it has to parse and its
  * newest release has to match the manifest version.
  */
-function validateChangelogFile(cwd, raw) {
-  const jsonPath = path.join(cwd, "CHANGELOG.json");
-  if (!fs.existsSync(jsonPath)) {
-    return fs.existsSync(path.join(cwd, "CHANGELOG.md"))
-      ? [
-          "CHANGELOG.md is no longer shipped; move the release notes to CHANGELOG.json",
-        ]
-      : [];
+async function validateChangelogFile(cwd, raw) {
+  if (fs.existsSync(path.join(cwd, "CHANGELOG.json"))) {
+    return [
+      "CHANGELOG.json is no longer read; move the release notes to CHANGELOG.md",
+    ];
   }
-  let changelog;
-  try {
-    changelog = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
-  } catch (error) {
-    return [`CHANGELOG.json is not valid JSON: ${error.message}`];
-  }
-  return validateChangelog(changelog, raw.version).map(
-    (problem) => `CHANGELOG.json: ${problem}`,
+  const mdPath = path.join(cwd, "CHANGELOG.md");
+  if (!fs.existsSync(mdPath)) return [];
+  const { validateChangelog } = await loadSdkModule("changelog");
+  return validateChangelog(fs.readFileSync(mdPath, "utf8"), raw.version).map(
+    (problem) => `CHANGELOG.md: ${problem}`,
   );
 }
 

@@ -32,6 +32,7 @@ npx termix-plugin test                   # run the plugin's Vitest suite
 npx termix-plugin validate               # check manifest.json and the files it names
 npx termix-plugin migrations             # write migrations from the table definitions
 npx termix-plugin pack                   # write <id>-<version>.tmxplug
+npx termix-plugin changelog              # print this version's notes from CHANGELOG.md
 npx termix-plugin sign <file.tmxplug>    # sign it, needs TERMIX_PLUGIN_SIGNING_KEY
 npx termix-plugin verify <file.tmxplug> --key <base64>   # check a signature
 npx termix-plugin keygen --out <dir>     # make a new signing key pair

@@ -1462,6 +1462,14 @@ function createWindow() {
 
       details.requestHeaders["User-Agent"] = customUserAgent;
 
+      // YouTube refuses embeds without a Referer, which file:// never sends.
+      if (
+        details.url.startsWith("https://www.youtube-nocookie.com/embed/") &&
+        !details.requestHeaders.Referer
+      ) {
+        details.requestHeaders.Referer = "https://termix.site/";
+      }
+
       const rememberedJwt = getRememberedElectronAuthCookie("jwt", details.url);
       if (rememberedJwt) {
         setCookieHeaderValue(

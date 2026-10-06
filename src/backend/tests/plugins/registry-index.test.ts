@@ -121,6 +121,28 @@ describe("parseRegistryIndex", () => {
     expect(index.plugins.map((p) => p.id)).toEqual(["ok"]);
   });
 
+  it("keeps release notes and only a YouTube video id", () => {
+    const NOTES = "### Added\n- Thing";
+    const index = parseRegistryIndex({
+      plugins: [
+        {
+          id: "docker",
+          video: "https://youtu.be/dQw4w9WgXcQ",
+          versions: [version({ notes: NOTES })],
+        },
+        {
+          id: "other",
+          video: "https://evil.example/watch?v=dQw4w9WgXcQ",
+          versions: [version({ notes: "x".repeat(30_000) })],
+        },
+      ],
+    });
+    expect(index.plugins[0].videoId).toBe("dQw4w9WgXcQ");
+    expect(index.plugins[0].versions[0].notes).toBe(NOTES);
+    expect(index.plugins[1].videoId).toBeUndefined();
+    expect(index.plugins[1].versions[0].notes).toHaveLength(20_000);
+  });
+
   it("refuses something that is not an index", () => {
     expect(() => parseRegistryIndex({ nope: true })).toThrow(/no plugins/);
   });

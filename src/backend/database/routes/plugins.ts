@@ -18,6 +18,7 @@ import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
 import { getPluginPublicHttpRoutes } from "../../plugins/http.js";
 import { getPluginPublicWsRoutes } from "../../plugins/ws.js";
 import { PluginManageError } from "../../plugins/manage.js";
+import { youtubeVideoId } from "../../plugins/manifest.js";
 import {
   isPluginChoice,
   type PluginChoice,
@@ -255,6 +256,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
         let description: string | undefined;
         let author: string | undefined;
         let repository: string | undefined;
+        let videoId: string | undefined;
         try {
           const manifest = JSON.parse(record.manifestJson) as {
             contributes?: unknown;
@@ -263,6 +265,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
             description?: unknown;
             author?: unknown;
             repository?: unknown;
+            video?: unknown;
             dependencies?: Record<string, string>;
             optionalDependencies?: Record<string, string>;
           };
@@ -284,6 +287,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
             typeof manifest?.repository === "string"
               ? manifest.repository
               : undefined;
+          videoId = youtubeVideoId(manifest?.video) ?? undefined;
         } catch {
           contributes = null;
         }
@@ -313,6 +317,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
           description,
           author,
           repository,
+          videoId,
           signedBy: loaded?.signedBy ?? null,
           capabilities,
           grantedCapabilities: grantsByPlugin.get(record.id) ?? [],
@@ -1979,6 +1984,48 @@ router.get(
         error,
         "Failed to read the plugin's data",
         "plugin_data",
+      );
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/{id}/changelog:
+ *   get:
+ *     summary: Read an installed plugin's release notes
+ *     description: The releases in the plugin's CHANGELOG.md, newest first, each with its date, summary and changes. Empty when the plugin ships no changelog.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: The releases.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       404:
+ *         description: No such plugin.
+ */
+router.get(
+  "/:id/changelog",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    const pluginId = String(req.params.id);
+    try {
+      const { getPluginChangelog } = await import("../../plugins/manage.js");
+      res.json({ id: pluginId, releases: await getPluginChangelog(pluginId) });
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to read the plugin's release notes",
+        "plugin_changelog",
       );
     }
   },

@@ -12,6 +12,7 @@ import {
   validateManifest,
   SUPPORTED_PLUGIN_API_VERSION,
   isTermixCompatible,
+  youtubeVideoId,
 } from "../../plugins/manifest.js";
 
 function base(overrides: Record<string, unknown> = {}) {
@@ -850,5 +851,49 @@ describe("contributes.protocols", () => {
     expect(errors.join("\n")).toMatch(/defaultPort must be a port number/);
     expect(errors.join("\n")).toMatch(/hostLoginFallback/);
     expect(errors.join("\n")).toMatch(/extra/);
+  });
+});
+
+describe("manifest video", () => {
+  it("accepts YouTube links", () => {
+    for (const video of [
+      "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "https://youtu.be/dQw4w9WgXcQ",
+      "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      "https://youtube.com/shorts/dQw4w9WgXcQ",
+    ]) {
+      expect(validateManifest(base({ video }))).toEqual([]);
+    }
+  });
+
+  it("rejects anything that is not a YouTube video", () => {
+    for (const video of [
+      "https://evil.example/watch?v=dQw4w9WgXcQ",
+      "http://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "https://www.youtube.com.evil.example/watch?v=dQw4w9WgXcQ",
+      "https://user@www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "https://www.youtube.com/watch?v=short",
+      "https://www.youtube.com/channel/UC123",
+      "javascript:alert(1)",
+      "",
+      42,
+    ]) {
+      expect(validateManifest(base({ video }))).toEqual([
+        expect.stringContaining('Field "video" must be a YouTube link'),
+      ]);
+    }
+  });
+});
+
+describe("youtubeVideoId", () => {
+  it("returns only the id", () => {
+    expect(
+      youtubeVideoId("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42"),
+    ).toBe("dQw4w9WgXcQ");
+    expect(youtubeVideoId("https://youtu.be/dQw4w9WgXcQ?si=abc")).toBe(
+      "dQw4w9WgXcQ",
+    );
+    expect(youtubeVideoId("https://youtu.be/../../x")).toBeNull();
+    expect(youtubeVideoId(undefined)).toBeNull();
   });
 });

@@ -170,6 +170,7 @@ const manageMock = vi.hoisted(() => ({
   uninstallPlugin: vi.fn(),
   setPluginOptions: vi.fn(),
   getPluginDataSummary: vi.fn(),
+  getPluginChangelog: vi.fn(),
   deletePluginData: vi.fn(),
   planStateChange: vi.fn(),
   setPluginState: vi.fn(),
@@ -832,6 +833,21 @@ describe("plugins route", () => {
       expect(manageMock.setPluginState).not.toHaveBeenCalled();
     });
 
+    it("returns an installed plugin's release notes", async () => {
+      manageMock.getPluginChangelog.mockResolvedValue([
+        { version: "1.0.0", changes: [{ type: "added", text: "First" }] },
+      ]);
+      const res = await fetch(`${baseUrl}/plugins/docker/changelog`);
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({
+        id: "docker",
+        releases: [
+          { version: "1.0.0", changes: [{ type: "added", text: "First" }] },
+        ],
+      });
+      expect(manageMock.getPluginChangelog).toHaveBeenCalledWith("docker");
+    });
+
     it("answers 502 when the registry is unreachable", async () => {
       manageMock.listRegistry.mockRejectedValue(new Error("offline"));
       const res = await fetch(`${baseUrl}/plugins/registry`);
@@ -856,6 +872,7 @@ describe("plugins route", () => {
           body: JSON.stringify({ autoUpdate: true }),
         }),
         fetch(`${baseUrl}/plugins/docker/data`, { headers }),
+        fetch(`${baseUrl}/plugins/docker/changelog`, { headers }),
         fetch(`${baseUrl}/plugins/developer-mode`, { headers }),
         fetch(`${baseUrl}/plugins/developer-mode`, {
           method: "PUT",

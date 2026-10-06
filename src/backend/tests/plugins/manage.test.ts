@@ -680,3 +680,40 @@ describe("installing from a file", () => {
     ).rejects.toMatchObject({ code: "UPLOAD_EXPIRED" });
   });
 });
+
+describe("release notes", () => {
+  it("reads an installed plugin's CHANGELOG.md", async () => {
+    createFixturePlugin({ id: "docker", root: bundled });
+    fs.writeFileSync(
+      path.join(bundled, "docker", "CHANGELOG.md"),
+      "# Changelog\n\n## 1.1.0 - 2026-10-06\n\n### Fixed\n- A bug\n\n## 1.0.0\n\n### Added\n- First\n",
+    );
+    await boot();
+    expect(await manage.getPluginChangelog("docker")).toEqual([
+      {
+        version: "1.1.0",
+        date: "2026-10-06",
+        changes: [{ type: "fixed", text: "A bug" }],
+      },
+      { version: "1.0.0", changes: [{ type: "added", text: "First" }] },
+    ]);
+  });
+
+  it("is empty without a changelog and 404s for an unknown plugin", async () => {
+    createFixturePlugin({ id: "docker", root: bundled });
+    await boot();
+    expect(await manage.getPluginChangelog("docker")).toEqual([]);
+    await expect(manage.getPluginChangelog("nope")).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+
+  it("parses registry notes and drops empty ones", () => {
+    expect(manage.readReleaseNotes("Summary.\n\n### Added\n- Thing")).toEqual({
+      summary: "Summary.",
+      changes: [{ type: "added", text: "Thing" }],
+    });
+    expect(manage.readReleaseNotes("")).toBeUndefined();
+    expect(manage.readReleaseNotes(undefined)).toBeUndefined();
+  });
+});

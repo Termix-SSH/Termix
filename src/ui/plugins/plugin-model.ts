@@ -3,6 +3,13 @@ import {
   getCapabilityInfo,
   type CapabilityRisk,
 } from "@termix-ssh/plugin-sdk/capabilities";
+import semver from "semver";
+import {
+  CHANGE_TYPES,
+  type ChangeType,
+  type ChangelogChange,
+  type ChangelogRelease,
+} from "@termix-ssh/plugin-sdk/changelog";
 import type {
   PluginSummary,
   PluginUploadPreview,
@@ -21,6 +28,7 @@ export interface PluginEntry {
   category: string;
   icon?: string;
   repository?: string;
+  videoId?: string;
   installed: boolean;
   version: string | null;
   latestVersion: string | null;
@@ -80,6 +88,7 @@ export function mergePlugins(
       category: entry?.category ?? "",
       icon: summary.icon ?? entry?.icon,
       repository: summary.repository ?? entry?.repository,
+      videoId: summary.videoId ?? entry?.videoId,
       installed: true,
       version: summary.version,
       latestVersion: entry?.latestVersion ?? null,
@@ -115,6 +124,7 @@ export function mergePlugins(
       category: entry.category,
       icon: entry.icon,
       repository: entry.repository,
+      videoId: entry.videoId,
       installed: false,
       version: null,
       latestVersion: entry.latestVersion,
@@ -337,4 +347,74 @@ export function reportIssueUrl(
     body: lines.join("\n"),
   });
   return `${repo}/issues/new?${params.toString()}`;
+}
+
+/** One version in a plugin's release notes. */
+export interface ReleaseRow {
+  version: string;
+  date: string | null;
+  summary?: string;
+  changes: ChangelogChange[];
+  /** False only for a registry version this build cannot run. */
+  compatible: boolean;
+  releaseNotesUrl?: string;
+}
+
+/**
+ * The registry's versions and the installed copy's CHANGELOG.md as one list,
+ * newest first. The installed copy's notes win for a version in both.
+ */
+export function mergeReleaseNotes(
+  versions: RegistryPluginVersion[],
+  local: ChangelogRelease[],
+): ReleaseRow[] {
+  const rows = new Map<string, ReleaseRow>();
+  for (const v of versions) {
+    rows.set(v.version, {
+      version: v.version,
+      date: v.publishedAt ?? null,
+      summary: v.notes?.summary,
+      changes: v.notes?.changes ?? [],
+      compatible: v.compatible,
+      releaseNotesUrl: v.releaseNotesUrl,
+    });
+  }
+  for (const release of local) {
+    const row = rows.get(release.version);
+    rows.set(release.version, {
+      version: release.version,
+      date: release.date ?? row?.date ?? null,
+      summary: release.summary ?? row?.summary,
+      changes:
+        release.changes.length > 0 ? release.changes : (row?.changes ?? []),
+      compatible: row?.compatible ?? true,
+      releaseNotesUrl: row?.releaseNotesUrl,
+    });
+  }
+  return [...rows.values()].sort((a, b) =>
+    semver.valid(a.version) && semver.valid(b.version)
+      ? semver.rcompare(a.version, b.version)
+      : 0,
+  );
+}
+
+/** The changes of one release grouped by type, in the changelog's order. */
+export function groupChanges(
+  changes: ChangelogChange[],
+): Array<{ type: ChangeType; items: string[] }> {
+  const groups: Array<{ type: ChangeType; items: string[] }> = [];
+  for (const type of CHANGE_TYPES) {
+    const items = changes.filter((c) => c.type === type).map((c) => c.text);
+    if (items.length > 0) groups.push({ type, items });
+  }
+  return groups;
+}
+
+const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
+
+/** The embed address for a video id, or null for anything that is not one. */
+export function youtubeEmbedUrl(videoId: string | undefined): string | null {
+  return videoId && YOUTUBE_ID.test(videoId)
+    ? `https://www.youtube-nocookie.com/embed/${videoId}?rel=0`
+    : null;
 }

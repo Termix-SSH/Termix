@@ -14,6 +14,7 @@ import { pack } from "./commands/pack.mjs";
 import { sign, verify, keygen } from "./commands/sign.mjs";
 import { migrations } from "./commands/migrations.mjs";
 import { dev } from "./commands/dev.mjs";
+import { changelog } from "./commands/changelog.mjs";
 
 const COMMANDS = {
   build,
@@ -30,6 +31,7 @@ const COMMANDS = {
   keygen,
   migrations,
   dev,
+  changelog,
 };
 
 const [command, ...args] = process.argv.slice(2);
@@ -48,6 +50,7 @@ if (!command || command === "--help" || command === "-h") {
       "  verify     Check a .tmxplug's .sig <file> --key <base64>[,...]",
       "  keygen     Write a new signing key pair [--out dir]",
       "  migrations Generate migrations from the plugin's table definitions",
+      "  changelog  Print a version's notes from CHANGELOG.md [--version x.y.z]",
       "  dev        Build, pack and install on a running server, again on every change",
       "             [--server url] [--key tmx_...] [--once]",
       "             (or TERMIX_SERVER_URL and TERMIX_API_KEY; needs developer mode)",
