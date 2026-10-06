@@ -1,5 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
+
+const { isLocalBuildStale } = createRequire(import.meta.url)(
+  "./bundled-plugins.cjs",
+);
 
 const ID = /^[a-z0-9][a-z0-9-]*$/;
 const SOURCE_DIRS = new Set(["src", "locales", "migrations"]);
@@ -17,6 +22,27 @@ export function isPluginSourceChange(filename) {
   const parts = String(filename).replaceAll("\\", "/").split("/");
   if (parts.length === 1) return SOURCE_FILES.has(parts[0]);
   return SOURCE_DIRS.has(parts[0]);
+}
+
+/**
+ * Whether a watcher event in a plugin repo is an edit worth a rebuild.
+ *
+ * On Windows, fs.watch also reports a folder or file being read (its last
+ * access time changing, which NTFS writes lazily), so reading a repo looks
+ * like editing it. Folder events are ignored, and a file event only counts
+ * while its sources are newer than the last build. A path that no longer
+ * exists was deleted, which always counts.
+ */
+export function isPluginEdit(repo, filename, isStale = isLocalBuildStale) {
+  if (!isPluginSourceChange(filename)) return false;
+  let stat;
+  try {
+    stat = fs.statSync(path.join(repo, String(filename)));
+  } catch {
+    return true;
+  }
+  if (stat.isDirectory()) return false;
+  return isStale(repo);
 }
 
 /** Plugin repos under dir that can be built (manifest.json and node_modules). */

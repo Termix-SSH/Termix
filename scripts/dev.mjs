@@ -29,7 +29,7 @@ import {
   createSerialQueue,
   dataDirFor,
   findBuildablePlugins,
-  isPluginSourceChange,
+  isPluginEdit,
   needsDocker,
   parseDevArgs,
   parseTscStatus,
@@ -575,7 +575,7 @@ function watchPlugins(dir) {
   );
   for (const plugin of plugins) {
     watch(plugin.repo, true, (_event, filename) => {
-      if (isPluginSourceChange(filename)) changed(plugin.id);
+      if (isPluginEdit(plugin.repo, filename)) changed(plugin.id);
     });
   }
   log(`watching ${plugins.length} plugin(s) in ${dir}`);

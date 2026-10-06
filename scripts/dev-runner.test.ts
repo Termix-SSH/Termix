@@ -7,6 +7,7 @@ import {
   createSerialQueue,
   dataDirFor,
   findBuildablePlugins,
+  isPluginEdit,
   isPluginSourceChange,
   needsDocker,
   parseDevArgs,
@@ -43,6 +44,34 @@ describe("isPluginSourceChange", () => {
     expect(isPluginSourceChange("node_modules/x/index.js")).toBe(false);
     expect(isPluginSourceChange("notes.txt")).toBe(false);
     expect(isPluginSourceChange(null)).toBe(false);
+  });
+});
+
+describe("isPluginEdit", () => {
+  function repo() {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "termix-edit-"));
+    cleanups.push(() => fs.rmSync(dir, { recursive: true, force: true }));
+    fs.mkdirSync(path.join(dir, "src", "frontend"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "src", "frontend", "index.ts"), "");
+    return dir;
+  }
+
+  it("ignores a folder being read", () => {
+    expect(isPluginEdit(repo(), "src/frontend", () => true)).toBe(false);
+  });
+
+  it("rebuilds an edited file only while the build is out of date", () => {
+    const dir = repo();
+    expect(isPluginEdit(dir, "src/frontend/index.ts", () => true)).toBe(true);
+    expect(isPluginEdit(dir, "src/frontend/index.ts", () => false)).toBe(false);
+  });
+
+  it("rebuilds after a source file is deleted", () => {
+    expect(isPluginEdit(repo(), "src/gone.ts", () => false)).toBe(true);
+  });
+
+  it("skips paths that do not feed the build", () => {
+    expect(isPluginEdit(repo(), "dist/index.js", () => true)).toBe(false);
   });
 });
 
