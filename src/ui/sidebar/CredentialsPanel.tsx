@@ -315,6 +315,7 @@ export function CredentialsPanel({
           density={sidebarPrefs.display.density}
           trayTrigger={sidebarPrefs.display.trayTrigger}
           showTags={sidebarPrefs.display.showTags}
+          rowFields={sidebarPrefs.display}
           onTagsChange={setAllTags}
         />
       </div>

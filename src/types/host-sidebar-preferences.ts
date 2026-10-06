@@ -47,7 +47,38 @@ export interface HostSidebarFilterState {
   tags: string[];
 }
 
-export interface HostSidebarDisplayPreferences {
+/** Which parts of a host row are shown. */
+export interface HostRowFields {
+  showAddress: boolean;
+  showUsername: boolean;
+  showPort: boolean;
+  showPinIcon: boolean;
+  showSharedBadge: boolean;
+  /** Badges plugins add next to the name. */
+  showBadges: boolean;
+}
+
+export const HOST_ROW_FIELD_KEYS: (keyof HostRowFields)[] = [
+  "showAddress",
+  "showUsername",
+  "showPort",
+  "showPinIcon",
+  "showSharedBadge",
+  "showBadges",
+];
+
+export function defaultHostRowFields(): HostRowFields {
+  return {
+    showAddress: true,
+    showUsername: true,
+    showPort: false,
+    showPinIcon: true,
+    showSharedBadge: true,
+    showBadges: true,
+  };
+}
+
+export interface HostSidebarDisplayPreferences extends HostRowFields {
   density: HostDensity;
   showTags: boolean;
   trayTrigger: HostTrayTrigger;
@@ -133,6 +164,7 @@ export function defaultHostSidebarPreferences(): HostSidebarPreferences {
       showFolderPaths: true,
       hostClickBehavior: "newTab",
       barActions: {},
+      ...defaultHostRowFields(),
     },
   };
 }
@@ -203,7 +235,15 @@ export function sanitizeHostSidebarPreferences(
   const openFolders = sanitizeStringArray(obj.openFolders);
 
   const displayObj = (obj.display ?? {}) as Record<string, unknown>;
+  const rowFields = {} as HostRowFields;
+  for (const key of HOST_ROW_FIELD_KEYS) {
+    rowFields[key] =
+      typeof displayObj[key] === "boolean"
+        ? (displayObj[key] as boolean)
+        : defaults.display[key];
+  }
   const display: HostSidebarDisplayPreferences = {
+    ...rowFields,
     density: DENSITIES.includes(displayObj.density as HostDensity)
       ? (displayObj.density as HostDensity)
       : defaults.display.density,

@@ -17,6 +17,7 @@ import {
 import { requestManage } from "@/manage/manage-requests";
 import type { Credential, Host } from "@/types/ui-types";
 import type {
+  CredentialRowFields,
   CredentialSidebarFilterState,
   CredentialSortKey,
 } from "@/types/credential-sidebar-preferences";
@@ -40,6 +41,7 @@ export function CredentialList({
   density = "comfortable",
   trayTrigger = "hover",
   showTags = true,
+  rowFields,
   onTagsChange,
 }: {
   search?: string;
@@ -49,6 +51,7 @@ export function CredentialList({
   density?: "comfortable" | "compact";
   trayTrigger?: "always" | "hover" | "click" | "actionsOnly";
   showTags?: boolean;
+  rowFields?: CredentialRowFields;
   onTagsChange?: (tags: string[]) => void;
 }) {
   const { t } = useTranslation();
@@ -232,6 +235,7 @@ export function CredentialList({
           density={density}
           trayTrigger={trayTrigger}
           showTags={showTags}
+          rowFields={rowFields}
           editingFolderName={editingFolderName}
           editingFolderValue={editingFolderValue}
           onEditingFolderNameChange={setEditingFolderName}

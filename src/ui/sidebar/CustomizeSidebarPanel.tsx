@@ -1,16 +1,26 @@
 import { Select2 } from "@/components/select2";
 import { InlineView } from "@/components/surface/surface-scope";
 import { useTranslation } from "react-i18next";
-import { PanelTop, Rows3, SquareStack } from "lucide-react";
+import { ListChecks, PanelTop, Rows3, SquareStack } from "lucide-react";
 import { actionOrder, useHostActions } from "./host-contributions";
 import { showsInBar } from "./tree/host-bar-actions";
 import { SectionCard, SettingRow, FakeSwitch } from "@/components/section-card";
 import type {
   HostClickBehavior,
   HostDensity,
+  HostRowFields,
   HostSidebarPreferences,
   HostTrayTrigger,
 } from "@/types/host-sidebar-preferences";
+
+const ROW_FIELDS: { key: keyof HostRowFields; dependsOnAddress?: boolean }[] = [
+  { key: "showAddress" },
+  { key: "showUsername", dependsOnAddress: true },
+  { key: "showPort", dependsOnAddress: true },
+  { key: "showPinIcon" },
+  { key: "showSharedBadge" },
+  { key: "showBadges" },
+];
 
 export function CustomizeSidebarPanel({
   open,
@@ -75,6 +85,33 @@ export function CustomizeSidebarPanel({
               </option>
             </Select2>
           </SettingRow>
+        </SectionCard>
+
+        <SectionCard
+          title={t("hosts.rowDetailsTitle")}
+          icon={<ListChecks className="size-3.5" />}
+        >
+          <p className="pt-2 text-xs text-muted-foreground">
+            {t("hosts.rowDetailsDesc")}
+          </p>
+          {ROW_FIELDS.map(({ key, dependsOnAddress }) => (
+            <SettingRow
+              key={key}
+              label={t(`hosts.${key}`)}
+              description={t(`hosts.${key}Desc`)}
+            >
+              <FakeSwitch
+                checked={preferences.display[key]}
+                disabled={dependsOnAddress && !preferences.display.showAddress}
+                onChange={(v) =>
+                  update((prev) => ({
+                    ...prev,
+                    display: { ...prev.display, [key]: v },
+                  }))
+                }
+              />
+            </SettingRow>
+          ))}
         </SectionCard>
 
         <SectionCard

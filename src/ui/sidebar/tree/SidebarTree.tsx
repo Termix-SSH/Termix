@@ -50,6 +50,7 @@ import type { SSHHostData } from "@/types/index";
 import type {
   HostDensity,
   HostClickBehavior,
+  HostRowFields,
   HostTrayTrigger,
 } from "@/types/host-sidebar-preferences";
 import { resolveHostTabType } from "@/lib/host-connection-tabs";
@@ -93,6 +94,7 @@ export function SidebarTree({
   openOnDoubleClick = false,
   showFolderPaths = true,
   hostClickBehavior = "newTab",
+  rowFields,
 }: {
   children: (Host | HostFolder)[];
   onOpenTab: (
@@ -120,6 +122,7 @@ export function SidebarTree({
   /** When false, nested folders hide the parent-path breadcrumb before their name. */
   showFolderPaths?: boolean;
   hostClickBehavior?: HostClickBehavior;
+  rowFields?: HostRowFields;
 }) {
   const { t } = useTranslation();
   const hostSettingPlugins = usePluginHostSections();
@@ -753,6 +756,8 @@ export function SidebarTree({
   // Tag pills are a separate flex row. Comfortable density adds the row plus
   // its gap; compact density pulls it upward by 2px but still needs a slot.
   const TAG_ROW_EXTRA = isCompactDensity ? 12.5 : 18.5;
+  // The username@ip line plus its gap.
+  const ADDRESS_ROW_SAVED = rowFields && !rowFields.showAddress ? 14.5 : 0;
   // showResourceBars:false simply drops RESOURCE_ROW_EXTRA from every row.
 
   const rowHeight = useCallback(
@@ -761,7 +766,7 @@ export function SidebarTree({
       if (!row) return FOLDER_ROW_HEIGHT;
       if (isFolder(row.item)) return FOLDER_ROW_HEIGHT;
       if (isCompactDensity) return 29;
-      const tagExtra = showTags && row.item.tags?.length ? TAG_ROW_EXTRA : 0;
+      const tagRowExtra = showTags && row.item.tags?.length ? TAG_ROW_EXTRA : 0;
       // The resource bars only render for an online host that reported CPU/RAM.
       // Reserving their height unconditionally left a gap under every offline
       // row. measureElement corrects any drift from live status this estimate
@@ -773,6 +778,7 @@ export function SidebarTree({
       )
         ? RESOURCE_ROW_EXTRA
         : 0;
+      const tagExtra = tagRowExtra - ADDRESS_ROW_SAVED;
       if (alwaysShowActions)
         return ALWAYS_ROW_HEIGHT + tagExtra + resourceExtra;
       const toggledOpen =
@@ -818,6 +824,7 @@ export function SidebarTree({
       ACTIONS_ONLY_ROW_HEIGHT,
       ACTIONS_ONLY_OPEN_ROW_HEIGHT,
       TAG_ROW_EXTRA,
+      ADDRESS_ROW_SAVED,
       showResourceBars,
       isCompactDensity,
     ],
@@ -887,7 +894,14 @@ export function SidebarTree({
     parentRef.current
       ?.querySelectorAll<HTMLElement>("[data-index]")
       .forEach((element) => virtualizer.measureElement(element));
-  }, [virtualizer, density, trayTrigger, showTags, showResourceBars]);
+  }, [
+    virtualizer,
+    density,
+    trayTrigger,
+    showTags,
+    showResourceBars,
+    ADDRESS_ROW_SAVED,
+  ]);
 
   useEffect(() => {
     if (speedSearch.open) speedSearch.inputRef.current?.focus();
@@ -1168,6 +1182,7 @@ export function SidebarTree({
                       hostClickBehavior={hostClickBehavior}
                       showResourceBars={showResourceBars}
                       showStatusStripes={showStatusStripes}
+                      rowFields={rowFields}
                       rowActions={rowActions}
                       arrangeMode={arrangeMode}
                       isDragging={draggedReorderKey === `host:${item.id}`}

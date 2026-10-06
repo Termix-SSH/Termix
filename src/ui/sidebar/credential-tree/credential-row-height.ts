@@ -10,6 +10,7 @@ const HEIGHTS = {
     alwaysKey: 100.25,
     alwaysPassword: 74,
     tags: 18.5,
+    detail: 15,
   },
   compact: {
     base: 23,
@@ -20,6 +21,7 @@ const HEIGHTS = {
     alwaysKey: 74.75,
     alwaysPassword: 52,
     tags: 12.5,
+    detail: 0,
   },
 } as const;
 
@@ -31,6 +33,7 @@ export function getCredentialRowHeight({
   isOpen,
   showTags,
   tagCount,
+  hasDetailRow = true,
 }: {
   density: CredentialDensity;
   isKey: boolean;
@@ -39,6 +42,8 @@ export function getCredentialRowHeight({
   isOpen: boolean;
   showTags: boolean;
   tagCount: number;
+  /** False when the username and usage line has nothing to show. */
+  hasDetailRow?: boolean;
 }): number {
   const heights = HEIGHTS[density];
   let height: number = heights.base;
@@ -51,5 +56,9 @@ export function getCredentialRowHeight({
     height = isKey ? heights.actionsOnlyKey : heights.actionsOnlyPassword;
   }
 
-  return height + (showTags && tagCount > 0 ? heights.tags : 0);
+  return (
+    height +
+    (showTags && tagCount > 0 ? heights.tags : 0) -
+    (hasDetailRow ? 0 : heights.detail)
+  );
 }

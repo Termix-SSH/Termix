@@ -1061,6 +1061,7 @@ export function HostsPanel({
             showTags={sidebarPrefs.display.showTags}
             openOnDoubleClick={sidebarPrefs.display.openOnDoubleClick}
             showFolderPaths={sidebarPrefs.display.showFolderPaths}
+            rowFields={sidebarPrefs.display}
             hostClickBehavior={sidebarPrefs.display.hostClickBehavior}
           />
         </div>

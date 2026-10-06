@@ -43,7 +43,11 @@ vi.mock("@/main-axios", () => ({
   getHostPassword: vi.fn(),
 }));
 
-import { HostItem } from "../../../../sidebar/tree/HostItem/HostItem";
+import {
+  HostItem,
+  formatHostAddress,
+} from "../../../../sidebar/tree/HostItem/HostItem";
+import { defaultHostRowFields } from "@/types/host-sidebar-preferences";
 
 const baseHost: Host = {
   id: "1",
@@ -354,5 +358,47 @@ describe("HostItem click behavior", () => {
     } finally {
       dispose();
     }
+  });
+});
+
+describe("HostItem row fields", () => {
+  function renderWith(
+    fields: Partial<ReturnType<typeof defaultHostRowFields>>,
+  ) {
+    return render(
+      <HostItem
+        host={baseHost}
+        onOpenTab={noop}
+        onEditHost={noop}
+        onDelete={noop}
+        onDuplicate={noop}
+        density="comfortable"
+        rowFields={{ ...defaultHostRowFields(), ...fields }}
+      />,
+    );
+  }
+
+  it("shows user@address by default", () => {
+    renderWith({});
+    expect(screen.getByText("root@10.0.0.5")).toBeTruthy();
+  });
+
+  it("hides the address when turned off", () => {
+    renderWith({ showAddress: false });
+    expect(screen.queryByText(/10\.0\.0\.5/)).toBeNull();
+  });
+
+  it("hides the pin icon when turned off", () => {
+    renderWith({ showPinIcon: false });
+    expect(document.querySelector(".lucide-pin")).toBeNull();
+  });
+
+  it("formats the address from the chosen parts", () => {
+    expect(
+      formatHostAddress(baseHost, { showUsername: false, showPort: true }),
+    ).toBe("10.0.0.5:22");
+    expect(
+      formatHostAddress(baseHost, { showUsername: true, showPort: false }),
+    ).toBe("root@10.0.0.5");
   });
 });

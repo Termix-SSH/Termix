@@ -55,6 +55,7 @@ import { reconnectDisconnectedTabs } from "@/shell/reconnect-tabs";
 import { canCloseTab } from "@/shell/tab-close-guards";
 import {
   MANAGE_REQUEST_EVENT,
+  type ManageMode,
   requestFromLegacyEvent,
   requestManage,
 } from "@/manage/manage-requests";
@@ -2963,10 +2964,13 @@ export function AppShell({
 
   const dockProps = (view: RailView) => ({
     title: sidebarTitle(view),
-    onOpenAsTab:
-      !isMobile && promotableIds().includes(view)
-        ? () => openSingletonTab(view as TabType)
-        : undefined,
+    onOpenAsTab: isMobile
+      ? undefined
+      : view === "hosts" || view === "credentials"
+        ? () => requestManage({ kind: "browse", mode: view as ManageMode })
+        : promotableIds().includes(view)
+          ? () => openSingletonTab(view as TabType)
+          : undefined,
   });
 
   return (

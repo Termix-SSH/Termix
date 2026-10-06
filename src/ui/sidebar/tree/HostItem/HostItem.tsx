@@ -41,10 +41,12 @@ import {
 import { toast } from "sonner";
 import { getHostPassword } from "@/main-axios";
 import type { Host, TabType } from "@/types/ui-types";
-import type {
-  HostDensity,
-  HostClickBehavior,
-  HostTrayTrigger,
+import {
+  defaultHostRowFields,
+  type HostDensity,
+  type HostClickBehavior,
+  type HostRowFields,
+  type HostTrayTrigger,
 } from "@/types/host-sidebar-preferences";
 import { copyToClipboard } from "@/lib/clipboard";
 import {
@@ -143,6 +145,17 @@ function canCopyHostSudoPassword(host: Host): boolean {
  */
 const DOUBLE_CLICK_WINDOW_MS = 250;
 
+const DEFAULT_ROW_FIELDS = defaultHostRowFields();
+
+export function formatHostAddress(
+  host: Pick<Host, "username" | "ip" | "port">,
+  fields: Pick<HostRowFields, "showUsername" | "showPort">,
+): string {
+  const user = fields.showUsername && host.username ? `${host.username}@` : "";
+  const port = fields.showPort && host.port ? `:${host.port}` : "";
+  return `${user}${host.ip}${port}`;
+}
+
 const HOST_ITEM_DENSITY_TOKENS = {
   comfortable: {
     rowPadding: "pl-[8.75px] pr-[7px] py-[7px]",
@@ -188,6 +201,7 @@ export function HostItem({
   hostClickBehavior = "newTab",
   showResourceBars = true,
   showStatusStripes = true,
+  rowFields = DEFAULT_ROW_FIELDS,
   rowActions = "full",
   arrangeMode = false,
   isDragging = false,
@@ -239,6 +253,7 @@ export function HostItem({
   showResourceBars?: boolean;
   /** Preset-driven: hides the per-row status color stripe. */
   showStatusStripes?: boolean;
+  rowFields?: HostRowFields;
   /** "essential" trims the row's management actions to the common few. */
   rowActions?: "essential" | "full";
   /** When true (rearranging unlocked), the row can be dragged: its edges
@@ -320,6 +335,7 @@ export function HostItem({
   const densityTokens = HOST_ITEM_DENSITY_TOKENS[density];
   const tokens = {
     ...densityTokens,
+    showAddressRow: densityTokens.showAddressRow && rowFields.showAddress,
     showTagsRow: densityTokens.showTagsRow && showTags,
     showResourceRow: densityTokens.showResourceRow && showResourceBars,
   };
@@ -1123,14 +1139,15 @@ export function HostItem({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          {host.pin && (
+          {rowFields.showPinIcon && host.pin && (
             <Pin className="size-2.5 text-accent-brand/50 shrink-0" />
           )}
-          {badges.map((badge) => {
-            const Badge = badge.component;
-            return <Badge key={badge.id} host={host} />;
-          })}
-          {host.isShared && (
+          {rowFields.showBadges &&
+            badges.map((badge) => {
+              const Badge = badge.component;
+              return <Badge key={badge.id} host={host} />;
+            })}
+          {rowFields.showSharedBadge && host.isShared && (
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1166,12 +1183,12 @@ export function HostItem({
               +{host.tags!.length - 2}
             </span>
           )}
-          {isCompact && (
+          {isCompact && rowFields.showAddress && (
             <span
               className="text-[11px] text-muted-foreground/70 truncate leading-none ml-auto max-w-[50%] shrink-0"
               title={host.ip}
             >
-              {host.ip}
+              {formatHostAddress(host, { ...rowFields, showUsername: false })}
             </span>
           )}
           {isCompact && !selectionMode && (
@@ -1211,10 +1228,9 @@ export function HostItem({
           )}
         </div>
 
-        {/* Address — always visible in comfortable density */}
         {tokens.showAddressRow && (
           <span className="text-[11px] text-muted-foreground/60 truncate leading-none font-mono">
-            {host.username}@{host.ip}
+            {formatHostAddress(host, rowFields)}
           </span>
         )}
 

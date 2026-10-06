@@ -29,6 +29,12 @@ describe("defaultHostSidebarPreferences", () => {
         showFolderPaths: true,
         hostClickBehavior: "newTab",
         barActions: {},
+        showAddress: true,
+        showUsername: true,
+        showPort: false,
+        showPinIcon: true,
+        showSharedBadge: true,
+        showBadges: true,
       },
     });
   });
@@ -69,6 +75,12 @@ describe("sanitizeHostSidebarPreferences", () => {
         showFolderPaths: false,
         hostClickBehavior: "focusExistingDoubleClickNew",
         barActions: { maintenance: true },
+        showAddress: false,
+        showUsername: false,
+        showPort: true,
+        showPinIcon: false,
+        showSharedBadge: false,
+        showBadges: true,
       },
     };
     expect(sanitizeHostSidebarPreferences(valid)).toEqual(valid);
@@ -172,5 +184,25 @@ describe("barActions", () => {
       sanitizeHostSidebarPreferences({ display: { barActions: [] } }).display
         .barActions,
     ).toEqual({});
+  });
+});
+
+describe("row fields", () => {
+  it("keeps boolean row field choices", () => {
+    const prefs = sanitizeHostSidebarPreferences({
+      display: { showAddress: false, showPort: true, showBadges: false },
+    });
+    expect(prefs.display.showAddress).toBe(false);
+    expect(prefs.display.showPort).toBe(true);
+    expect(prefs.display.showBadges).toBe(false);
+    expect(prefs.display.showUsername).toBe(true);
+  });
+
+  it("falls back to defaults for non-boolean values", () => {
+    const prefs = sanitizeHostSidebarPreferences({
+      display: { showAddress: "no", showPort: 1 },
+    });
+    expect(prefs.display.showAddress).toBe(true);
+    expect(prefs.display.showPort).toBe(false);
   });
 });

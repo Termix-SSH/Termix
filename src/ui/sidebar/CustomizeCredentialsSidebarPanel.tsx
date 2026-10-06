@@ -1,12 +1,13 @@
 import { Select2 } from "@/components/select2";
 import { InlineView } from "@/components/surface/surface-scope";
 import { useTranslation } from "react-i18next";
-import { Rows3, SquareStack } from "lucide-react";
+import { ListChecks, Rows3, SquareStack } from "lucide-react";
 import { SectionCard, SettingRow, FakeSwitch } from "@/components/section-card";
-import type {
-  CredentialDensity,
-  CredentialSidebarPreferences,
-  CredentialTrayTrigger,
+import {
+  CREDENTIAL_ROW_FIELD_KEYS,
+  type CredentialDensity,
+  type CredentialSidebarPreferences,
+  type CredentialTrayTrigger,
 } from "@/types/credential-sidebar-preferences";
 
 export function CustomizeCredentialsSidebarPanel({
@@ -69,6 +70,32 @@ export function CustomizeCredentialsSidebarPanel({
               </option>
             </Select2>
           </SettingRow>
+        </SectionCard>
+
+        <SectionCard
+          title={t("credentials.rowDetailsTitle")}
+          icon={<ListChecks className="size-3.5" />}
+        >
+          <p className="pt-2 text-xs text-muted-foreground">
+            {t("credentials.rowDetailsDesc")}
+          </p>
+          {CREDENTIAL_ROW_FIELD_KEYS.map((key) => (
+            <SettingRow
+              key={key}
+              label={t(`credentials.${key}`)}
+              description={t(`credentials.${key}Desc`)}
+            >
+              <FakeSwitch
+                checked={preferences.display[key]}
+                onChange={(v) =>
+                  update((prev) => ({
+                    ...prev,
+                    display: { ...prev.display, [key]: v },
+                  }))
+                }
+              />
+            </SettingRow>
+          ))}
         </SectionCard>
 
         <SectionCard
