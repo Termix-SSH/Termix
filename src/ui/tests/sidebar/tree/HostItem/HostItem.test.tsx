@@ -1,3 +1,4 @@
+import { registerHostProtocol } from "@/sidebar/host-protocols";
 import {
   act,
   cleanup,
@@ -401,4 +402,43 @@ describe("HostItem row fields", () => {
       formatHostAddress(baseHost, { showUsername: true, showPort: false }),
     ).toBe("root@10.0.0.5");
   });
+});
+
+it("uses the enabled protocol username for non-SSH hosts", () => {
+  const dispose = registerHostProtocol({
+    id: "rdp",
+    pluginId: "remote-desktop",
+    settingKey: "enableRdp",
+    defaultPort: 3389,
+    titleKey: "rdp",
+    icon: () => null,
+  });
+  try {
+    const host: Host = {
+      ...baseHost,
+      enableSsh: false,
+      pluginSettings: { "remote-desktop": { enableRdp: true } },
+      protocolAuth: {
+        rdp: {
+          authType: "credential",
+          credentialId: 6,
+          username: "Administrator",
+          fields: {},
+        },
+      },
+    };
+    const fields = { showUsername: true, showPort: false };
+    expect(formatHostAddress(host, fields)).toBe("Administrator@10.0.0.5");
+    expect(formatHostAddress({ ...host, enableSsh: true }, fields)).toBe(
+      "root@10.0.0.5",
+    );
+    expect(formatHostAddress({ ...host, protocolAuth: {} }, fields)).toBe(
+      "10.0.0.5",
+    );
+    expect(formatHostAddress(host, { ...fields, showUsername: false })).toBe(
+      "10.0.0.5",
+    );
+  } finally {
+    dispose();
+  }
 });

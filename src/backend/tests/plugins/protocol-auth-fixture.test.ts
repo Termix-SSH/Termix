@@ -329,6 +329,23 @@ describe("a plugin protocol core does not know", () => {
     });
   });
 
+  it("summarizes the usable credential username without exposing its secret", async () => {
+    const patch = readProtocolAuthPayload({
+      protocolAuth: { spice: { authType: "credential", credentialId: 6 } },
+    });
+    await writeProtocolAuth("owner", HOST_ID, patch!, { isOwner: true });
+    const summaries = await loadProtocolAuthSummaries([{ id: HOST_ID }]);
+    expect(summaries.get(HOST_ID)?.spice.username).toBe("cred-user");
+    expect(JSON.stringify(summaries.get(HOST_ID))).not.toContain("cred-pass");
+    const recipient = sanitizeHostForRecipient(
+      { protocolAuth: summaries.get(HOST_ID) },
+      "connect",
+    );
+    expect(recipient.protocolAuth).toEqual({
+      spice: { authType: "credential" },
+    });
+  });
+
   it("lets a shared editor change the login but not its credential", async () => {
     await storeLogin();
     const rename = readProtocolAuthPayload({

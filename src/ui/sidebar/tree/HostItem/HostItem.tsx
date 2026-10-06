@@ -148,10 +148,19 @@ const DOUBLE_CLICK_WINDOW_MS = 250;
 const DEFAULT_ROW_FIELDS = defaultHostRowFields();
 
 export function formatHostAddress(
-  host: Pick<Host, "username" | "ip" | "port">,
+  host: Pick<Host, "username" | "ip" | "port"> &
+    Partial<Pick<Host, "enableSsh" | "pluginSettings" | "protocolAuth">>,
   fields: Pick<HostRowFields, "showUsername" | "showPort">,
 ): string {
-  const user = fields.showUsername && host.username ? `${host.username}@` : "";
+  const protocol =
+    host.enableSsh === false ? enabledHostProtocols(host)[0] : undefined;
+  const username =
+    host.enableSsh === false
+      ? protocol
+        ? host.protocolAuth?.[protocol.id]?.username
+        : undefined
+      : host.username;
+  const user = fields.showUsername && username ? `${username}@` : "";
   const port = fields.showPort && host.port ? `:${host.port}` : "";
   return `${user}${host.ip}${port}`;
 }
@@ -787,7 +796,12 @@ export function HostItem({
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();
-              writeClipboardText(`${host.username}@${host.ip}`);
+              writeClipboardText(
+                formatHostAddress(host, {
+                  showUsername: true,
+                  showPort: false,
+                }),
+              );
               toast.success(t("hosts.copiedToClipboard"));
             }}
           >

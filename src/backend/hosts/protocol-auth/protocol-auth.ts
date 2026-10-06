@@ -434,12 +434,25 @@ export async function loadProtocolAuthSummaries(
   const rows =
     await createCurrentHostProtocolAuthRepository().listRowsForHosts(ids);
   const keys = new Map<string, Buffer | null>();
+  const usernames = new Map<string, string | null>();
   for (const row of rows) {
     if (!keys.has(row.userId)) {
       keys.set(row.userId, DataCrypto.getUserDataKey(row.userId));
     }
     const own = result.get(row.hostId) ?? {};
-    own[row.protocol] = summarize(row, keys.get(row.userId) ?? null);
+    const summary = summarize(row, keys.get(row.userId) ?? null);
+    if (row.authType === "credential" && row.credentialId) {
+      const key = `${row.userId}:${row.credentialId}`;
+      if (!usernames.has(key)) {
+        const credential = await findUsableCredential(
+          row.credentialId,
+          row.userId,
+        );
+        usernames.set(key, credential?.username || null);
+      }
+      summary.username = usernames.get(key) ?? null;
+    }
+    own[row.protocol] = summary;
     result.set(row.hostId, own);
   }
   return result;
