@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Bell, Boxes } from "lucide-react";
 import { AppRail } from "../../sidebar/AppRail";
@@ -36,6 +36,7 @@ function renderRail(onRailClick = vi.fn()) {
       isAdmin={false}
       onRailClick={onRailClick}
       onOpenSettings={vi.fn()}
+      onOpenNavigationSettings={vi.fn()}
       onLogout={vi.fn()}
     />,
   );
@@ -117,8 +118,9 @@ describe("AppRail", () => {
     expect(await screen.findByTitle("nav.connections")).toBeTruthy();
   });
 
-  it("opens settings from the account button", async () => {
+  it("opens plain settings from the account button", async () => {
     const onOpenSettings = vi.fn();
+    const onOpenNavigationSettings = vi.fn();
     render(
       <AppRail
         railView="hosts"
@@ -127,11 +129,34 @@ describe("AppRail", () => {
         isAdmin
         onRailClick={vi.fn()}
         onOpenSettings={onOpenSettings}
+        onOpenNavigationSettings={onOpenNavigationSettings}
         onLogout={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByLabelText("nav.openSettings"));
     expect(onOpenSettings).toHaveBeenCalled();
+    expect(onOpenNavigationSettings).not.toHaveBeenCalled();
+  });
+
+  it("opens the navigation settings from the rail menu", async () => {
+    const onOpenSettings = vi.fn();
+    const onOpenNavigationSettings = vi.fn();
+    render(
+      <AppRail
+        railView="hosts"
+        sidebarOpen={false}
+        username="alice"
+        isAdmin
+        onRailClick={vi.fn()}
+        onOpenSettings={onOpenSettings}
+        onOpenNavigationSettings={onOpenNavigationSettings}
+        onLogout={vi.fn()}
+      />,
+    );
+    fireEvent.contextMenu(screen.getByTitle("nav.connections"));
+    await userEvent.click(screen.getByText("nav.openSettings"));
+    expect(onOpenNavigationSettings).toHaveBeenCalled();
+    expect(onOpenSettings).not.toHaveBeenCalled();
   });
 });
 

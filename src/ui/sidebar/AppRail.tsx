@@ -130,6 +130,7 @@ export function AppRail({
   onOpenTab,
   onOpenInRightDock,
   onOpenSettings,
+  onOpenNavigationSettings,
   onOpenPalette,
   onLogout,
 }: {
@@ -143,6 +144,8 @@ export function AppRail({
   onOpenTab?: (type: TabType) => void;
   onOpenInRightDock?: (view: RailView) => void;
   onOpenSettings: () => void;
+  /** The rail menu's own entry, which jumps to the navigation settings. */
+  onOpenNavigationSettings: () => void;
   onOpenPalette?: () => void;
   onLogout: (options?: { manual?: boolean }) => void;
 }) {
@@ -543,7 +546,7 @@ export function AppRail({
           <MenuItem
             icon={<SlidersHorizontal className="size-3" />}
             onClick={() => {
-              onOpenSettings();
+              onOpenNavigationSettings();
               setMenuPos(null);
             }}
           >

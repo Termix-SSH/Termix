@@ -238,7 +238,10 @@ import {
   setShellLayoutProvider,
 } from "@/plugin-host/shell-bridge";
 import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
-import { OPEN_PLUGINS_EVENT } from "@/plugins/open-plugins";
+import {
+  OPEN_PLUGINS_EVENT,
+  OPEN_PLUGIN_SETTINGS_EVENT,
+} from "@/plugins/open-plugins";
 
 export { buildHostTree } from "@/sidebar/build-host-tree";
 export { tabIcon, renderTabContent } from "@/shell/tabUtils";
@@ -1784,6 +1787,20 @@ export function AppShell({
     return () => window.removeEventListener(OPEN_PLUGINS_EVENT, handler);
   }, []);
 
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const pluginId = (event as CustomEvent<string>).detail;
+      if (typeof pluginId !== "string") return;
+      openSingletonTabRef.current("settings", undefined, undefined, {
+        section: `plugin:${pluginId}`,
+        revealAt: Date.now(),
+      });
+    };
+    window.addEventListener(OPEN_PLUGIN_SETTINGS_EVENT, handler);
+    return () =>
+      window.removeEventListener(OPEN_PLUGIN_SETTINGS_EVENT, handler);
+  }, []);
+
   const getTabCloseLabel = useCallback((tab: Tab) => {
     return tab.customLabel || tab.label || tab.host?.name || String(tab.id);
   }, []);
@@ -2969,7 +2986,8 @@ export function AppShell({
             onRailClick={handleRailClick}
             onOpenTab={openSingletonTab}
             onOpenInRightDock={openInRightDock}
-            onOpenSettings={() =>
+            onOpenSettings={() => openSingletonTab("settings")}
+            onOpenNavigationSettings={() =>
               openSingletonTab("settings", undefined, undefined, {
                 section: "appearance",
                 reveal: "settings-navigation",
