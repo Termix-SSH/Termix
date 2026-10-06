@@ -3118,7 +3118,15 @@ export function AppShell({
                         ? paneId === focusedPaneId
                         : activeInline;
                       return createPortal(
-                        <SurfaceScope kind="tab" className="h-full w-full">
+                        <SurfaceScope
+                          kind="tab"
+                          className="h-full w-full"
+                          onClose={
+                            tab.id === "dashboard"
+                              ? undefined
+                              : () => closeTab(tab.id)
+                          }
+                        >
                           {renderTabContent(tab, {
                             shell: shellCallbacks,
                             settings: settingsTabProps,

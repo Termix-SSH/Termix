@@ -11,6 +11,8 @@ import {
   extractArtifact,
   pinsFromIndex,
   findLocalPluginBuilds,
+  isLocalBuildStale,
+  rebuildLocalPlugins,
   copyLocalBuild,
 } from "./lib/bundled-plugins.cjs";
 
@@ -228,5 +230,54 @@ describe("local plugin builds", () => {
     expect(fs.existsSync(path.join(out, "dist", "frontend.js"))).toBe(true);
     expect(fs.existsSync(path.join(out, "manifest.json"))).toBe(true);
     expect(fs.existsSync(path.join(out, "src"))).toBe(false);
+  });
+});
+
+describe("rebuilding local plugins", () => {
+  function repo(dir: string, name: string, id: string): string {
+    const root = path.join(dir, name);
+    fs.mkdirSync(path.join(root, "src"), { recursive: true });
+    fs.mkdirSync(path.join(root, "node_modules"));
+    fs.writeFileSync(path.join(root, "manifest.json"), JSON.stringify({ id }));
+    fs.writeFileSync(path.join(root, "src", "index.ts"), "x");
+    return root;
+  }
+
+  function touch(file: string, secondsAgo: number) {
+    const time = new Date(Date.now() - secondsAgo * 1000);
+    fs.utimesSync(file, time, time);
+  }
+
+  it("is stale with no dist or with a source newer than the build", () => {
+    const root = repo(tempDir(), "Plugin-A", "a");
+    expect(isLocalBuildStale(root)).toBe(true);
+
+    fs.mkdirSync(path.join(root, "dist"));
+    fs.writeFileSync(path.join(root, "dist", "frontend.js"), "x");
+    touch(path.join(root, "manifest.json"), 60);
+    touch(path.join(root, "src", "index.ts"), 60);
+    expect(isLocalBuildStale(root)).toBe(false);
+
+    touch(path.join(root, "src", "index.ts"), 0);
+    touch(path.join(root, "dist", "frontend.js"), 30);
+    expect(isLocalBuildStale(root)).toBe(true);
+  });
+
+  it("builds only stale repos for bundled ids that have node_modules", () => {
+    const dir = tempDir();
+    repo(dir, "Plugin-A", "a");
+    repo(dir, "Plugin-B", "b");
+    const noDeps = repo(dir, "Plugin-C", "c");
+    fs.rmSync(path.join(noDeps, "node_modules"), { recursive: true });
+
+    const run: string[] = [];
+    const rebuilt = rebuildLocalPlugins(
+      dir,
+      new Set(["a", "c"]),
+      (_repo: string, id: string) => run.push(id),
+    );
+    expect(rebuilt).toEqual(["a"]);
+    expect(run).toEqual(["a"]);
+    expect(rebuildLocalPlugins(null, new Set(["a"]), () => {})).toEqual([]);
   });
 });

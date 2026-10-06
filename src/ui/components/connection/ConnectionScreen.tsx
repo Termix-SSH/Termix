@@ -2,8 +2,10 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils.ts";
 import { Button } from "@/components/button.tsx";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, X } from "lucide-react";
 import { ConnectionLogPanel } from "@/components/connection/ConnectionLogPanel.tsx";
+import { useOptionalConnectionLog } from "@/ssh/connection-log/ConnectionLogContext.tsx";
+import { useSurfaceClose } from "@/components/surface/surface-scope.tsx";
 import type { ConnectionStatus } from "@/components/connection/connection-status.ts";
 
 export interface ConnectionUnavailable {
@@ -19,9 +21,7 @@ export interface ConnectionScreenProps {
   message?: string;
   /** Second line under the headline, usually user@host:port. */
   detail?: string;
-  /** Headline once it has failed and is not retrying on its own. */
-  errorMessage?: string;
-  /** The reason it failed, shown under the headline. */
+  /** The reason it failed. Falls back to the last error in the log. */
   errorDetail?: string | null;
   /** Shown instead of a failure when the feature cannot run here. */
   unavailable?: ConnectionUnavailable | null;
@@ -30,8 +30,10 @@ export interface ConnectionScreenProps {
   maxAttempts?: number;
   nextRetryInMs?: number | null;
   onManualRetry?: () => void;
-  retryLabel?: string;
+  /** Headline when it was up and dropped. */
   disconnectedMessage?: string;
+  /** Overrides closing the tab this sits in. False hides the button. */
+  onClose?: (() => void) | false;
   extraActions?: React.ReactNode;
   logPosition?: "top" | "bottom";
   emptyState?: React.ReactNode;
@@ -43,7 +45,6 @@ export function ConnectionScreen({
   status,
   message,
   detail,
-  errorMessage,
   errorDetail,
   unavailable,
   backgroundColor,
@@ -51,14 +52,17 @@ export function ConnectionScreen({
   maxAttempts = 0,
   nextRetryInMs = null,
   onManualRetry,
-  retryLabel,
   disconnectedMessage,
+  onClose,
   extraActions,
   logPosition = "bottom",
   emptyState,
   className,
 }: ConnectionScreenProps) {
   const { t } = useTranslation();
+  const surfaceClose = useSurfaceClose();
+  const logs = useOptionalConnectionLog()?.logs;
+  const close = onClose === false ? null : (onClose ?? surfaceClose);
 
   if (status === "connected" && !emptyState && !unavailable) {
     return null;
@@ -68,16 +72,22 @@ export function ConnectionScreen({
   const failed = status === "error" || status === "disconnected";
   const retrying =
     status === "error" && attempt > 0 && !!nextRetryInMs && nextRetryInMs > 0;
-  const showRetryButton = (failed || !!unavailable) && !!onManualRetry;
+  const stopped = failed || !!unavailable;
+  const showRetryButton = stopped && !!onManualRetry;
+  const showClose = stopped && !!close;
+  const reason =
+    errorDetail ||
+    [...(logs ?? [])].reverse().find((entry) => entry.type === "error")
+      ?.message ||
+    null;
   const showLog = !emptyState && (status !== "connected" || !!unavailable);
 
   let headline = message;
   if (unavailable) headline = unavailable.title;
-  else if (status === "disconnected")
-    headline = disconnectedMessage || t("connection.disconnected");
   else if (retrying) headline = t("connection.failedRetrying");
-  else if (status === "error")
-    headline = errorMessage || t("connection.failed");
+  else if (status === "disconnected" && disconnectedMessage)
+    headline = disconnectedMessage;
+  else if (failed) headline = t("connection.failed");
 
   const showCountdown = attempt > 0 && (connecting || retrying);
 
@@ -123,9 +133,9 @@ export function ConnectionScreen({
                   {unavailable.hint}
                 </p>
               )}
-              {failed && !unavailable && errorDetail && (
+              {failed && !unavailable && reason && (
                 <p className="line-clamp-3 text-xs leading-snug text-destructive/80">
-                  {errorDetail}
+                  {reason}
                 </p>
               )}
               {showCountdown && (
@@ -145,7 +155,8 @@ export function ConnectionScreen({
             </div>
 
             {(showRetryButton ||
-              ((failed || unavailable) && extraActions) ||
+              showClose ||
+              (stopped && extraActions) ||
               unavailable?.action) && (
               <div className="flex flex-wrap justify-center gap-2 pt-0.5">
                 {showRetryButton && (
@@ -158,11 +169,22 @@ export function ConnectionScreen({
                     <RefreshCw className="size-3.5" />
                     {retrying
                       ? t("connection.retryNow")
-                      : retryLabel || t("connection.reconnect")}
+                      : t("connection.reconnect")}
                   </Button>
                 )}
                 {unavailable?.action}
-                {(failed || unavailable) && extraActions}
+                {stopped && extraActions}
+                {showClose && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={close}
+                    className="gap-2 font-semibold"
+                  >
+                    <X className="size-3.5" />
+                    {t("connection.close")}
+                  </Button>
+                )}
               </div>
             )}
           </div>
@@ -173,7 +195,7 @@ export function ConnectionScreen({
         <ConnectionLogPanel
           isConnecting={connecting}
           isConnected={false}
-          hasConnectionError={failed || !!unavailable}
+          hasConnectionError={stopped}
           position={logPosition}
         />
       )}

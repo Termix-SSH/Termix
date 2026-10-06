@@ -11,6 +11,7 @@ interface ConnectionLogPanelProps {
   isConnecting: boolean;
   isConnected: boolean;
   hasConnectionError: boolean;
+  /** Kept for older callers. The log always sits at the bottom. */
   position?: "top" | "bottom";
   className?: string;
 }
@@ -37,7 +38,6 @@ export function ConnectionLogPanel({
   isConnecting,
   isConnected,
   hasConnectionError,
-  position = "bottom",
   className,
 }: ConnectionLogPanelProps) {
   const { t } = useTranslation();
@@ -109,15 +109,13 @@ export function ConnectionLogPanel({
     <div
       className={cn(
         "relative z-10 flex shrink-0 flex-col bg-surface-dim/60",
-        position === "bottom"
-          ? "border-t border-border"
-          : "border-b border-border",
+        "border-t border-border",
         expanded ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT,
         "transition-[height] duration-200",
         className,
       )}
     >
-      <div className="flex h-9 shrink-0 items-center gap-2 border-b border-border/60 px-2 pr-1.5">
+      <div className="flex h-9 shrink-0 items-center gap-2 border-b border-border px-2 pr-1.5">
         <button
           type="button"
           onClick={handleToggle}

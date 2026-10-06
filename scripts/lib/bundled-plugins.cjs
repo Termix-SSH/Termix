@@ -203,6 +203,56 @@ function findLocalPluginBuilds(dir) {
   return builds;
 }
 
+const BUILD_INPUTS = [
+  "src",
+  "locales",
+  "migrations",
+  "manifest.json",
+  "package.json",
+];
+
+function newestMtime(target) {
+  if (!fs.existsSync(target)) return 0;
+  const stat = fs.statSync(target);
+  if (!stat.isDirectory()) return stat.mtimeMs;
+  let newest = 0;
+  for (const name of fs.readdirSync(target)) {
+    newest = Math.max(newest, newestMtime(path.join(target, name)));
+  }
+  return newest;
+}
+
+/** True when a plugin repo has never been built or its sources changed since. */
+function isLocalBuildStale(repo) {
+  const built = newestMtime(path.join(repo, "dist"));
+  if (!built) return true;
+  return BUILD_INPUTS.some(
+    (entry) => newestMtime(path.join(repo, entry)) > built,
+  );
+}
+
+/** Builds each listed plugin repo whose build is missing or out of date. */
+function rebuildLocalPlugins(dir, ids, run) {
+  const rebuilt = [];
+  if (!dir || !fs.existsSync(dir)) return rebuilt;
+  for (const name of fs.readdirSync(dir)) {
+    const repo = path.join(dir, name);
+    const manifestPath = path.join(repo, "manifest.json");
+    if (!fs.existsSync(manifestPath)) continue;
+    if (!fs.existsSync(path.join(repo, "node_modules"))) continue;
+    let id;
+    try {
+      ({ id } = JSON.parse(fs.readFileSync(manifestPath, "utf8")));
+    } catch {
+      continue;
+    }
+    if (!ids.has(id) || !isLocalBuildStale(repo)) continue;
+    run(repo, id);
+    rebuilt.push(id);
+  }
+  return rebuilt;
+}
+
 /** Copies a local plugin build into the staging folder. */
 function copyLocalBuild(repo, destination) {
   fs.mkdirSync(destination, { recursive: true });
@@ -216,6 +266,8 @@ function copyLocalBuild(repo, destination) {
 
 module.exports = {
   findLocalPluginBuilds,
+  isLocalBuildStale,
+  rebuildLocalPlugins,
   copyLocalBuild,
   parseBundledPlugins,
   pinsFromIndex,

@@ -50,6 +50,7 @@ interface ScopeValue {
   closeView: (id: string) => void;
   topView: string | null;
   confirm: (options: ConfirmOptions) => Promise<boolean>;
+  close: (() => void) | null;
 }
 
 const ScopeContext = createContext<ScopeValue | null>(null);
@@ -65,10 +66,13 @@ const keyOwners: number[] = [];
 export function SurfaceScope({
   kind = "panel",
   onEditingChange,
+  onClose,
   className,
   children,
 }: {
   kind?: SurfaceKind;
+  /** Closes whatever this surface is, like the tab it fills. */
+  onClose?: () => void;
   /** Gets the widest open inline view, so a sidebar can widen for it. */
   onEditingChange?: (editing: EditingWidth) => void;
   className?: string;
@@ -80,6 +84,13 @@ export function SurfaceScope({
   const nextConfirm = useRef(0);
   const editingRef = useRef(onEditingChange);
   editingRef.current = onEditingChange;
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  const hasClose = !!onClose;
+  const close = useMemo(
+    () => (hasClose ? () => closeRef.current?.() : null),
+    [hasClose],
+  );
 
   const openView = useCallback((id: string, width: EditingWidth) => {
     setViews((prev) => [...prev.filter((v) => v.id !== id), { id, width }]);
@@ -126,8 +137,9 @@ export function SurfaceScope({
       closeView,
       topView: views.length ? views[views.length - 1].id : null,
       confirm,
+      close,
     }),
-    [kind, overlay, openView, closeView, views, confirm],
+    [kind, overlay, openView, closeView, views, confirm, close],
   );
 
   const current = confirms[0];
@@ -163,6 +175,11 @@ export function SurfaceScope({
 /** Which kind of surface this code renders in, or null outside any. */
 export function useSurfaceKind(): SurfaceKind | null {
   return useContext(ScopeContext)?.kind ?? null;
+}
+
+/** Closes the surface this code renders in, or null when it can't be closed. */
+export function useSurfaceClose(): (() => void) | null {
+  return useContext(ScopeContext)?.close ?? null;
 }
 
 /**

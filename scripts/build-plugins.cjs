@@ -7,10 +7,12 @@
  * pinned sha256 and unpacked.
  *
  * For development, `--local <dir>` (or TERMIX_LOCAL_PLUGINS) points at a
- * folder of plugin repos like ../Termix-Plugins. Any plugin built there (has
- * dist/) is copied in place of its pin, so local plugin changes show up.
+ * folder of plugin repos like ../Termix-Plugins. A bundled plugin there whose
+ * sources changed since its last build is rebuilt first, then any built one
+ * (has dist/) is copied in place of its pin, so local plugin changes show up.
  */
 
+const { execSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const {
@@ -18,6 +20,7 @@ const {
   fetchArtifact,
   extractArtifact,
   findLocalPluginBuilds,
+  rebuildLocalPlugins,
   copyLocalBuild,
 } = require("./lib/bundled-plugins.cjs");
 
@@ -30,6 +33,14 @@ async function main() {
   const localArg =
     flag !== -1 ? process.argv[flag + 1] : process.env.TERMIX_LOCAL_PLUGINS;
   const localDir = localArg ? path.resolve(root, localArg) : null;
+  rebuildLocalPlugins(
+    localDir,
+    new Set(plugins.map((p) => p.id)),
+    (repo, id) => {
+      console.log(`building ${id}`);
+      execSync("npm run build", { cwd: repo, stdio: "inherit" });
+    },
+  );
   const local = findLocalPluginBuilds(localDir);
 
   fs.rmSync(destination, { recursive: true, force: true });

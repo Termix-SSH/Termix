@@ -2,8 +2,8 @@
   "connection": {
     "retryingIn": "Retrying in {{seconds}}s ({{attempt}}/{{max}})",
     "retryingNow": "Retrying... ({{attempt}}/{{max}})",
-    "disconnected": "Unable to connect",
     "reconnect": "Reconnect",
+    "close": "Close",
     "failed": "Could not connect",
     "failedRetrying": "Connection failed, trying again",
     "retryNow": "Retry now"
