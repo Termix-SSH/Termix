@@ -238,6 +238,7 @@ import {
   setShellLayoutProvider,
 } from "@/plugin-host/shell-bridge";
 import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
+import { OPEN_PLUGINS_EVENT } from "@/plugins/open-plugins";
 
 export { buildHostTree } from "@/sidebar/build-host-tree";
 export { tabIcon, renderTabContent } from "@/shell/tabUtils";
@@ -1723,6 +1724,7 @@ export function AppShell({
       const singletonLabels: Partial<Record<TabType, string>> = {
         "host-manager": t("nav.manage"),
         settings: t("nav.settings"),
+        plugins: t("nav.plugins"),
       };
       // A plugin tab names itself; promoted rail panels reuse the rail's own
       // label so the two stay in sync.
@@ -1775,6 +1777,12 @@ export function AppShell({
 
   const openSingletonTabRef = useRef(openSingletonTab);
   openSingletonTabRef.current = openSingletonTab;
+
+  useEffect(() => {
+    const handler = () => openSingletonTabRef.current("plugins");
+    window.addEventListener(OPEN_PLUGINS_EVENT, handler);
+    return () => window.removeEventListener(OPEN_PLUGINS_EVENT, handler);
+  }, []);
 
   const getTabCloseLabel = useCallback((tab: Tab) => {
     return tab.customLabel || tab.label || tab.host?.name || String(tab.id);
@@ -3161,6 +3169,7 @@ export function AppShell({
                   "host-manager",
                   "user-profile",
                   "admin-settings",
+                  "plugins",
                 ].includes(type)
               ) {
                 openSingletonTab(type, pendingEvent);

@@ -1005,6 +1005,8 @@ export const plugins = pgTable(
     autoUpdate: boolean("auto_update")
       .notNull()
       .default(false),
+    /** Version an admin pinned. Never auto-updated while set. */
+    pinnedVersion: text("pinned_version"),
     manifestJson: text("manifest_json").notNull(),
   },
   (table) => [index("idx_plugins_registry_id").on(table.registryId)],

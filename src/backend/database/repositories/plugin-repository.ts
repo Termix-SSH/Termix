@@ -20,6 +20,7 @@ export interface PluginCreateInput {
   state?: string;
   lastError?: string | null;
   autoUpdate?: boolean;
+  pinnedVersion?: string | null;
   manifestJson: string;
 }
 
@@ -32,6 +33,7 @@ export interface PluginUpdateInput {
   state?: string;
   lastError?: string | null;
   autoUpdate?: boolean;
+  pinnedVersion?: string | null;
   manifestJson?: string;
 }
 
@@ -68,6 +70,7 @@ export class PluginRepository {
       state: input.state ?? "disabled",
       lastError: input.lastError ?? null,
       autoUpdate: input.autoUpdate ?? false,
+      pinnedVersion: input.pinnedVersion ?? null,
       manifestJson: input.manifestJson,
       installedAt: now,
       updatedAt: now,
@@ -101,6 +104,10 @@ export class PluginRepository {
         lastError:
           input.lastError === undefined ? existing.lastError : input.lastError,
         autoUpdate: input.autoUpdate ?? existing.autoUpdate,
+        pinnedVersion:
+          input.pinnedVersion === undefined
+            ? existing.pinnedVersion
+            : input.pinnedVersion,
         manifestJson: input.manifestJson ?? existing.manifestJson,
         updatedAt: now,
       },

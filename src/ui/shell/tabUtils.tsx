@@ -2,6 +2,7 @@
 import {
   LayoutDashboard,
   LayoutPanelLeft,
+  Puzzle,
   LibraryBig,
   Server,
   Settings,
@@ -29,6 +30,9 @@ const ManageTab = lazy(() =>
 );
 const SettingsTab = lazy(() =>
   import("@/settings/SettingsTab").then((m) => ({ default: m.SettingsTab })),
+);
+const PluginsTab = lazy(() =>
+  import("@/plugins/PluginsTab").then((m) => ({ default: m.PluginsTab })),
 );
 const DashboardTab = lazy(() =>
   import("@/dashboard/DashboardTab").then((m) => ({
@@ -105,6 +109,8 @@ export function tabIcon(type: TabType) {
       return <Settings className="size-3.5" />;
     case "split-screen":
       return <LayoutPanelLeft className="size-3.5" />;
+    case "plugins":
+      return <Puzzle className="size-3.5" />;
     default: {
       const Icon = getTabType(type)?.icon;
       return Icon ? <Icon className="size-3.5" /> : null;
@@ -235,6 +241,9 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
 
     case "host-manager":
       return withTabSuspense(<ManageTab />);
+
+    case "plugins":
+      return withTabSuspense(<PluginsTab />);
 
     case "settings":
       return context.settings

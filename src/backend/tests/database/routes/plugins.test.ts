@@ -6,6 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { PluginManageError } from "../../../plugins/manage.js";
 import express from "express";
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
@@ -159,6 +160,32 @@ vi.mock("../../../database/repositories/factory.js", () => ({
       return state.grants.length < before;
     },
   }),
+}));
+
+const manageMock = vi.hoisted(() => ({
+  listRegistry: vi.fn(),
+  installPlugin: vi.fn(),
+  updatePlugin: vi.fn(),
+  updateAllPlugins: vi.fn(),
+  uninstallPlugin: vi.fn(),
+  setPluginOptions: vi.fn(),
+  getPluginDataSummary: vi.fn(),
+  deletePluginData: vi.fn(),
+  planStateChange: vi.fn(),
+  setPluginState: vi.fn(),
+  isLinkedDesktop: vi.fn(async () => false),
+}));
+const auditMock = vi.hoisted(() => ({ logAudit: vi.fn(async () => {}) }));
+
+vi.mock("../../../plugins/manage.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../plugins/manage.js")>()),
+  ...manageMock,
+}));
+
+vi.mock("../../../utils/audit-logger.js", () => ({
+  logAudit: auditMock.logAudit,
+  getAuditUsername: async () => "admin",
+  getRequestMeta: () => ({ ipAddress: "127.0.0.1", userAgent: "test" }),
 }));
 
 const pluginRoutes = (await import("../../../database/routes/plugins.js"))
@@ -581,6 +608,141 @@ describe("plugins route", () => {
 
       expect(res.status).toBe(403);
       expect(state.grants).toHaveLength(1);
+    });
+  });
+  describe("install, update, uninstall", () => {
+    const post = (path: string, body: unknown = {}, user = "admin-1") =>
+      fetch(`${baseUrl}${path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-test-user-id": user },
+        body: JSON.stringify(body),
+      });
+
+    beforeEach(() => {
+      for (const fn of Object.values(manageMock)) fn.mockReset();
+      manageMock.isLinkedDesktop.mockResolvedValue(false);
+      auditMock.logAudit.mockClear();
+    });
+
+    it("installs a plugin as the caller and audits it", async () => {
+      manageMock.installPlugin.mockResolvedValue({
+        id: "docker",
+        version: "1.0.0",
+        state: "active",
+      });
+      const res = await post("/plugins/docker/install", { version: "1.0.0" });
+      expect(res.status).toBe(200);
+      expect(manageMock.installPlugin).toHaveBeenCalledWith("docker", {
+        version: "1.0.0",
+        userId: "admin-1",
+      });
+      expect(auditMock.logAudit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: "install_plugin",
+          resourceId: "docker",
+        }),
+      );
+    });
+
+    it("rejects a bad id or version before touching anything", async () => {
+      expect((await post("/plugins/..%2Fx/install")).status).toBe(400);
+      expect(
+        (await post("/plugins/docker/install", { version: 7 })).status,
+      ).toBe(400);
+      expect(manageMock.installPlugin).not.toHaveBeenCalled();
+    });
+
+    it("passes a refusal through with its code and details", async () => {
+      manageMock.updatePlugin.mockRejectedValue(
+        new PluginManageError("new caps", 409, "CAPABILITIES_ADDED", {
+          capabilities: ["notify:send"],
+        }),
+      );
+      const res = await post("/plugins/docker/update", {});
+      expect(res.status).toBe(409);
+      expect(await res.json()).toMatchObject({
+        code: "CAPABILITIES_ADDED",
+        capabilities: ["notify:send"],
+      });
+      expect(manageMock.updatePlugin).toHaveBeenCalledWith("docker", {
+        version: undefined,
+        userId: "admin-1",
+        acceptCapabilities: false,
+      });
+    });
+
+    it("uninstalls", async () => {
+      manageMock.uninstallPlugin.mockResolvedValue({
+        id: "docker",
+        removed: { tables: ["p_docker_x"], kvKeys: 0 },
+      });
+      const res = await fetch(`${baseUrl}/plugins/docker`, {
+        method: "DELETE",
+      });
+      expect(res.status).toBe(200);
+      expect(manageMock.uninstallPlugin).toHaveBeenCalledWith("docker");
+    });
+
+    it("refuses changes on a linked desktop", async () => {
+      manageMock.isLinkedDesktop.mockResolvedValue(true);
+      const res = await post("/plugins/docker/install");
+      expect(res.status).toBe(409);
+      expect((await res.json()).code).toBe("MANAGED_BY_SERVER");
+      expect(manageMock.installPlugin).not.toHaveBeenCalled();
+    });
+
+    it("previews a state change without making it", async () => {
+      state.plugins.set("sample-plugin", makePlugin());
+      manageMock.planStateChange.mockResolvedValue({
+        enable: [],
+        disable: ["addon"],
+        missing: [],
+      });
+      const res = await fetch(
+        `${baseUrl}/plugins/sample-plugin/state?dryRun=1`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ enabled: false }),
+        },
+      );
+      expect(await res.json()).toMatchObject({ disable: ["addon"] });
+      expect(manageMock.setPluginState).not.toHaveBeenCalled();
+    });
+
+    it("answers 502 when the registry is unreachable", async () => {
+      manageMock.listRegistry.mockRejectedValue(new Error("offline"));
+      const res = await fetch(`${baseUrl}/plugins/registry`);
+      expect(res.status).toBe(502);
+    });
+
+    it("403s a non-admin on every management route", async () => {
+      const user = "regular-user";
+      const headers = {
+        "content-type": "application/json",
+        "x-test-user-id": user,
+      };
+      const calls = [
+        fetch(`${baseUrl}/plugins/registry`, { headers }),
+        post("/plugins/docker/install", {}, user),
+        post("/plugins/docker/update", {}, user),
+        post("/plugins/update-all", {}, user),
+        fetch(`${baseUrl}/plugins/docker`, { method: "DELETE", headers }),
+        fetch(`${baseUrl}/plugins/docker/options`, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ autoUpdate: true }),
+        }),
+        fetch(`${baseUrl}/plugins/docker/data`, { headers }),
+      ];
+      for (const res of await Promise.all(calls)) {
+        expect(res.status).toBe(403);
+      }
+      for (const fn of Object.values(manageMock)) {
+        if (fn !== manageMock.isLinkedDesktop) {
+          expect(fn).not.toHaveBeenCalled();
+        }
+      }
     });
   });
 });

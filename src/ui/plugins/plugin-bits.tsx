@@ -1,0 +1,76 @@
+import { useTranslation } from "react-i18next";
+import { PluginIcon } from "@/lib/plugin-icon";
+import { cn } from "@/lib/utils";
+import { capabilityRisk, isSevere } from "./plugin-model";
+
+export function PluginIconBox({
+  name,
+  size = "md",
+  muted,
+}: {
+  name?: string;
+  size?: "sm" | "md" | "lg";
+  muted?: boolean;
+}) {
+  const box = size === "lg" ? "size-10" : size === "sm" ? "size-7" : "size-9";
+  const glyph =
+    size === "lg" ? "size-5" : size === "sm" ? "size-3.5" : "size-4";
+  return (
+    <div
+      className={cn(
+        box,
+        "flex shrink-0 items-center justify-center border border-border bg-muted",
+        muted && "opacity-40",
+      )}
+    >
+      <PluginIcon name={name} className={cn(glyph, "text-accent-brand")} />
+    </div>
+  );
+}
+
+/** One capability as its consequence, with a mark only on the severe ones. */
+export function CapabilityRow({
+  capability,
+  showId,
+  className,
+}: {
+  capability: string;
+  showId?: boolean;
+  className?: string;
+}) {
+  const { t } = useTranslation();
+  const severe = isSevere(capability);
+  return (
+    <div className={cn("flex items-start gap-2.5", className)}>
+      <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
+        {severe && (
+          <span
+            className="flex size-4 items-center justify-center border border-destructive/50 bg-destructive/10 text-[10px] font-bold text-destructive"
+            title={t(`plugins.manager.risk.${capabilityRisk(capability)}`)}
+          >
+            !
+          </span>
+        )}
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="text-xs font-medium leading-snug">
+          {t(`plugins.capabilities.${capability}.title`, {
+            defaultValue: capability,
+            nsSeparator: false,
+          })}
+        </span>
+        <span className="text-[11px] leading-snug text-muted-foreground">
+          {t(`plugins.capabilities.${capability}.consequence`, {
+            defaultValue: "",
+            nsSeparator: false,
+          })}
+        </span>
+      </div>
+      {showId && (
+        <span className="shrink-0 text-[10px] text-muted-foreground/50">
+          {capability}
+        </span>
+      )}
+    </div>
+  );
+}

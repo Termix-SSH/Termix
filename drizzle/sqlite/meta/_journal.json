@@ -442,6 +442,13 @@
       "when": 1791209309626,
       "tag": "0062_external_session_ref",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "6",
+      "when": 1791256339684,
+      "tag": "0063_plugin_pinned_version",
+      "breakpoints": true
     }
   ]
 }

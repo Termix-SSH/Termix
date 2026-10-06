@@ -92,11 +92,16 @@ export function pluginVitestConfig(
     ...options.alias,
   };
 
+  // Forks workers on Windows abort now and then with "Worker exited
+  // unexpectedly". Threads don't.
+  const pool = "threads" as const;
+
   return {
     resolve: { alias },
     test: {
       globals: true,
       setupFiles: [setupFile],
+      pool,
       projects: [
         {
           resolve: { alias },
@@ -104,6 +109,7 @@ export function pluginVitestConfig(
             name: `${pluginId}:backend`,
             root: pluginDir,
             environment: "node",
+            pool,
             globals: true,
             setupFiles: [setupFile],
             include: ["tests/backend/**/*.test.ts"],
@@ -115,6 +121,7 @@ export function pluginVitestConfig(
             name: `${pluginId}:frontend`,
             root: pluginDir,
             environment: "jsdom",
+            pool,
             globals: true,
             setupFiles: [setupFile],
             // Run the SDK through Vite rather than plain Node, so its import

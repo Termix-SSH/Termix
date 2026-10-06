@@ -1003,6 +1003,8 @@ export const plugins = sqliteTable(
     autoUpdate: integer("auto_update", { mode: "boolean" })
       .notNull()
       .default(false),
+    /** Version an admin pinned. Never auto-updated while set. */
+    pinnedVersion: text("pinned_version"),
     manifestJson: text("manifest_json").notNull(),
   },
   (table) => [index("idx_plugins_registry_id").on(table.registryId)],

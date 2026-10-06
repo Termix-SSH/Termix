@@ -112,8 +112,9 @@ export function readMigrations(
  *
  * A plugin owns the p_<id>_ namespace and nothing else. Enforced here as well
  * as in the CLI, because a plugin installed from a tarball never ran the CLI.
- * A legacy core table is allowed only for the bundled plugin that adopts it:
- * a user plugin with the same id gets no exemption.
+ * A legacy core table is allowed only for the official plugin that adopts
+ * it, bundled or signed by a trusted key: an unsigned plugin with the same id
+ * gets no exemption.
  */
 export function assertOwnedTables(
   pluginId: string,

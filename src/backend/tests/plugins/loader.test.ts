@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { PluginLoader } from "../../plugins/loader.js";
+import { PluginLoader, assertBundledUpdate } from "../../plugins/loader.js";
 import { createFixturePlugin } from "./fixture-plugin.js";
 
 vi.mock("../../database/repositories/factory.js", () => ({
@@ -482,5 +482,70 @@ describe("PluginLoader error budget", () => {
 
     expect(loader.get("sample-plugin")?.state).toBe("active");
     expect(loader.get("sample-plugin")?.lastError).toBeNull();
+  });
+});
+
+describe("PluginLoader uninstall and pins", () => {
+  it("ignores the shipped copy of a bundled plugin an admin uninstalled", async () => {
+    const bundled = tempRoot("termix-bundled-");
+    const user = tempRoot("termix-data-");
+    createFixturePlugin({ id: "ssh-terminal", root: bundled });
+    createFixturePlugin({ id: "docker", root: bundled });
+    setRoots(bundled, user);
+
+    const loader = new PluginLoader();
+    loader.setUninstalled(["docker"]);
+    const loaded = await loader.loadAll();
+
+    expect(loaded.map((plugin) => plugin.id)).toEqual(["ssh-terminal"]);
+    expect(loader.bundledVersion("docker")).toBeUndefined();
+    expect(loader.bundledIds().has("docker")).toBe(false);
+  });
+
+  it("loads a downloaded copy of an uninstalled bundled id as a normal plugin", async () => {
+    const bundled = tempRoot("termix-bundled-");
+    const user = tempRoot("termix-data-");
+    const userPlugins = path.join(user, "plugins");
+    fs.mkdirSync(userPlugins, { recursive: true });
+    createFixturePlugin({ id: "docker", root: bundled });
+    createFixturePlugin({ id: "docker", root: userPlugins });
+    setRoots(bundled, user);
+
+    const loader = new PluginLoader();
+    loader.setUninstalled(["docker"]);
+    const loaded = await loader.loadAll();
+
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0].source).toBe("user");
+  });
+
+  it("loads the shipped copy again on reinstall", async () => {
+    const bundled = tempRoot("termix-bundled-");
+    const user = tempRoot("termix-data-");
+    createFixturePlugin({ id: "docker", root: bundled });
+    setRoots(bundled, user);
+
+    const loader = new PluginLoader();
+    loader.setUninstalled(["docker"]);
+    await loader.loadAll();
+    const plugin = await loader.loadBundled("docker");
+
+    expect(plugin.source).toBe("bundled");
+    expect(loader.get("docker")).toBe(plugin);
+  });
+
+  it("refuses an older signed update unless that exact version is pinned", () => {
+    expect(() =>
+      assertBundledUpdate("docker", "1.0.0", "key", "1.1.0"),
+    ).toThrow(/not newer/);
+    expect(() =>
+      assertBundledUpdate("docker", "1.0.0", "key", "1.1.0", "0.9.0"),
+    ).toThrow(/not newer/);
+    expect(() =>
+      assertBundledUpdate("docker", "1.0.0", "key", "1.1.0", "1.0.0"),
+    ).not.toThrow();
+    expect(() =>
+      assertBundledUpdate("docker", "1.0.0", undefined, "1.1.0", "1.0.0"),
+    ).toThrow(/signed/);
   });
 });

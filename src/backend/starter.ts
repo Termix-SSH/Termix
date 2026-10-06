@@ -248,6 +248,10 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       const { runPluginDataMigrations } =
         await import("./upgrade/boot-migrations.js");
       await runPluginDataMigrations();
+
+      const { startPluginAutoUpdate } =
+        await import("./plugins/auto-update.js");
+      startPluginAutoUpdate();
     } catch (error) {
       systemLogger.warn("Plugin runtime failed to initialize", {
         operation: "plugin_init",

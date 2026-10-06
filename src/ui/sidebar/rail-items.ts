@@ -4,6 +4,7 @@ import {
   Plug,
   Server,
   LibraryBig,
+  Puzzle,
   Settings,
   Zap,
   type LucideIcon,
@@ -117,6 +118,15 @@ export const RAIL_ITEMS: RailItemDef[] = [
     placement: "footer",
     group: "system",
     useBadge: useSyncAttentionCount,
+  },
+  {
+    id: "plugins",
+    icon: Puzzle,
+    labelKey: "nav.plugins",
+    kind: "tab",
+    placement: "footer",
+    group: "system",
+    permission: "admin.plugins.manage",
   },
 ];
 

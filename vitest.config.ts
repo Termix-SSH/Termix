@@ -29,6 +29,9 @@ export default defineConfig({
   test: {
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
+    // Forks workers on Windows abort now and then (0xC0000409) in a random
+    // file and Vitest reports "Worker exited unexpectedly". Threads don't.
+    pool: "threads",
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],

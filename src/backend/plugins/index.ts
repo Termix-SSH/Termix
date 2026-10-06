@@ -215,6 +215,9 @@ async function syncCapabilityGrants(loaded: LoadedPlugin[]): Promise<void> {
 export async function initializePlugins(): Promise<LoadedPlugin[]> {
   const { loader: pluginLoader } = getPluginRuntime();
 
+  const { applyStoredPluginChoices } = await import("./manage.js");
+  await applyStoredPluginChoices(pluginLoader);
+
   const loaded = await pluginLoader.loadAll();
   if (loaded.length === 0) return [];
 
@@ -565,6 +568,14 @@ export async function installPluginArtifact(
   await seedPlugins([plugin]);
   await syncCapabilityGrants([plugin]);
   return plugin;
+}
+
+/** Gives freshly loaded plugins a row and their bundled grants. */
+export async function registerLoadedPlugins(
+  loaded: LoadedPlugin[],
+): Promise<void> {
+  await seedPlugins(loaded);
+  await syncCapabilityGrants(loaded);
 }
 
 /** Stops a plugin and forgets it, before a new version is installed. */

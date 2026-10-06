@@ -237,9 +237,209 @@ export interface PluginSummary {
   lastError?: string | null;
   /** Paths a running plugin serves without login. Admins only. */
   publicRoutes?: { http: string[]; ws: string[] };
+  registryId?: string | null;
+  autoUpdate?: boolean;
+  pinnedVersion?: string | null;
+  description?: string;
+  author?: string;
+  repository?: string;
+  signedBy?: string | null;
 }
 
 export async function getPlugins(): Promise<PluginSummary[]> {
   const response = await rbacApi.get("/plugins");
   return Array.isArray(response.data) ? response.data : [];
+}
+
+/** Fired after any change to installed plugins; the loader resyncs on it. */
+export const PLUGINS_CHANGED_EVENT = "termix:plugins-changed";
+
+function announcePluginsChanged(): void {
+  window.dispatchEvent(new CustomEvent(PLUGINS_CHANGED_EVENT));
+}
+
+export interface RegistryPluginVersion {
+  version: string;
+  compatible: boolean;
+  capabilities: string[];
+  publishedAt?: string;
+  releaseNotesUrl?: string;
+  size: number;
+}
+
+export interface RegistryPluginEntry {
+  id: string;
+  name: string;
+  description: string;
+  author: string;
+  category: string;
+  repository?: string;
+  icon?: string;
+  versions: RegistryPluginVersion[];
+  latestVersion: string | null;
+  installed: boolean;
+  installedVersion: string | null;
+  updateAvailable: boolean;
+  addedCapabilities: string[];
+  pinnedVersion: string | null;
+  autoUpdate: boolean;
+  bundled: boolean;
+}
+
+export interface RegistryListing {
+  registry: {
+    id: string;
+    url: string;
+    lastCheckedAt: string | null;
+    error: string | null;
+  };
+  managedByServer: boolean;
+  plugins: RegistryPluginEntry[];
+}
+
+export interface PluginStateChange {
+  id: string;
+  enabled: boolean;
+  enable: string[];
+  disable: string[];
+  missing: string[];
+  state?: string;
+}
+
+export interface PluginDataSummary {
+  id: string;
+  tables: Array<{ name: string; rows: number | null }>;
+  kvKeys: number;
+  settings: { admin: number; user: number; host: number; secret: number };
+  migrations: Array<{ id: string; appliedAt: string | null }>;
+  grants: Array<{
+    capability: string;
+    source: string;
+    grantedAt: string | null;
+  }>;
+  filesBytes: number;
+}
+
+export interface UpdateAllResult {
+  updated: Array<{ id: string; version: string }>;
+  needsReview: Array<{ id: string; capabilities: string[] }>;
+  failed: Array<{ id: string; error: string }>;
+}
+
+const pluginPath = (pluginId: string) =>
+  `/plugins/${encodeURIComponent(pluginId)}`;
+
+export async function getPluginRegistry(
+  refresh = false,
+): Promise<RegistryListing> {
+  const response = await rbacApi.get("/plugins/registry", {
+    params: refresh ? { refresh: 1 } : undefined,
+  });
+  return response.data;
+}
+
+export async function installPlugin(
+  pluginId: string,
+  version?: string,
+): Promise<{ id: string; version: string; state: string }> {
+  try {
+    const response = await rbacApi.post(`${pluginPath(pluginId)}/install`, {
+      version,
+    });
+    return response.data;
+  } finally {
+    announcePluginsChanged();
+  }
+}
+
+export async function updatePlugin(
+  pluginId: string,
+  options: { version?: string; acceptCapabilities?: boolean } = {},
+): Promise<{ id: string; version: string; state: string }> {
+  try {
+    const response = await rbacApi.post(
+      `${pluginPath(pluginId)}/update`,
+      options,
+    );
+    return response.data;
+  } finally {
+    announcePluginsChanged();
+  }
+}
+
+export async function updateAllPlugins(): Promise<UpdateAllResult> {
+  try {
+    const response = await rbacApi.post("/plugins/update-all");
+    return response.data;
+  } finally {
+    announcePluginsChanged();
+  }
+}
+
+export async function uninstallPlugin(pluginId: string): Promise<void> {
+  try {
+    await rbacApi.delete(pluginPath(pluginId));
+  } finally {
+    announcePluginsChanged();
+  }
+}
+
+export async function previewPluginState(
+  pluginId: string,
+  enabled: boolean,
+): Promise<PluginStateChange> {
+  const response = await rbacApi.patch(
+    `${pluginPath(pluginId)}/state`,
+    { enabled },
+    { params: { dryRun: 1 } },
+  );
+  return response.data;
+}
+
+export async function setPluginState(
+  pluginId: string,
+  enabled: boolean,
+): Promise<PluginStateChange> {
+  try {
+    const response = await rbacApi.patch(`${pluginPath(pluginId)}/state`, {
+      enabled,
+    });
+    return response.data;
+  } finally {
+    announcePluginsChanged();
+  }
+}
+
+export async function retryPlugin(pluginId: string): Promise<void> {
+  try {
+    await rbacApi.post(`${pluginPath(pluginId)}/retry`);
+  } finally {
+    announcePluginsChanged();
+  }
+}
+
+export async function setPluginOptions(
+  pluginId: string,
+  options: { autoUpdate?: boolean; pinned?: boolean },
+): Promise<{ autoUpdate: boolean; pinnedVersion: string | null }> {
+  const response = await rbacApi.patch(
+    `${pluginPath(pluginId)}/options`,
+    options,
+  );
+  return response.data;
+}
+
+export async function getPluginData(
+  pluginId: string,
+): Promise<PluginDataSummary> {
+  const response = await rbacApi.get(`${pluginPath(pluginId)}/data`);
+  return response.data;
+}
+
+export async function deletePluginData(pluginId: string): Promise<void> {
+  try {
+    await rbacApi.delete(`${pluginPath(pluginId)}/data`);
+  } finally {
+    announcePluginsChanged();
+  }
 }

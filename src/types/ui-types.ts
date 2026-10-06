@@ -149,7 +149,8 @@ type KnownTabType =
   | "settings"
   | "user-profile"
   | "admin-settings"
-  | "split-screen";
+  | "split-screen"
+  | "plugins";
 
 /**
  * TabType covers every built-in tab plus any plugin-contributed tab id.

@@ -26,6 +26,7 @@ const CORE_UNSAVED = new Set([
   "user-profile",
   "admin-settings",
   "split-screen",
+  "plugins",
 ]);
 
 /**

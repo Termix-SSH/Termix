@@ -63,7 +63,17 @@ describe("RAIL_ITEMS", () => {
       "connections",
       "quick-connect",
       "sync",
+      "plugins",
     ]);
+  });
+
+  it("opens the Plugins tab only for plugin managers", () => {
+    const plugins = RAIL_ITEMS.find((item) => item.id === "plugins");
+    expect(plugins).toMatchObject({
+      kind: "tab",
+      placement: "footer",
+      permission: "admin.plugins.manage",
+    });
   });
 
   it("exposes every visible rail item as hideable", () => {

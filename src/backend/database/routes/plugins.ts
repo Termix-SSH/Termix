@@ -17,6 +17,7 @@ import { describePluginFrontend } from "../../plugins/assets.js";
 import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
 import { getPluginPublicHttpRoutes } from "../../plugins/http.js";
 import { getPluginPublicWsRoutes } from "../../plugins/ws.js";
+import { PluginManageError } from "../../plugins/manage.js";
 import {
   findField,
   getAllSettings,
@@ -247,11 +248,17 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
         let icon: string | undefined;
         let dependencies: Record<string, string> = {};
         let optionalDependencies: Record<string, string> = {};
+        let description: string | undefined;
+        let author: string | undefined;
+        let repository: string | undefined;
         try {
           const manifest = JSON.parse(record.manifestJson) as {
             contributes?: unknown;
             capabilities?: unknown;
             icon?: unknown;
+            description?: unknown;
+            author?: unknown;
+            repository?: unknown;
             dependencies?: Record<string, string>;
             optionalDependencies?: Record<string, string>;
           };
@@ -262,6 +269,17 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
           icon = typeof manifest?.icon === "string" ? manifest.icon : undefined;
           dependencies = manifest?.dependencies ?? {};
           optionalDependencies = manifest?.optionalDependencies ?? {};
+          description =
+            typeof manifest?.description === "string"
+              ? manifest.description
+              : undefined;
+          const rawAuthor = manifest?.author as { name?: unknown } | undefined;
+          author =
+            typeof rawAuthor?.name === "string" ? rawAuthor.name : undefined;
+          repository =
+            typeof manifest?.repository === "string"
+              ? manifest.repository
+              : undefined;
         } catch {
           contributes = null;
         }
@@ -285,6 +303,13 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
           ...summary,
           tier: record.tier,
           source: record.source,
+          registryId: record.registryId ?? null,
+          autoUpdate: Boolean(record.autoUpdate),
+          pinnedVersion: record.pinnedVersion ?? null,
+          description,
+          author,
+          repository,
+          signedBy: loaded?.signedBy ?? null,
           capabilities,
           grantedCapabilities: grantsByPlugin.get(record.id) ?? [],
           lastError: loaded?.lastError ?? record.lastError ?? null,
@@ -315,12 +340,70 @@ async function isManagedByLinkedServer(pluginId: string): Promise<boolean> {
   return isServerManaged(pluginId);
 }
 
+async function auditPluginAction(
+  req: Request,
+  action: string,
+  pluginId: string,
+  details: Record<string, unknown> = {},
+): Promise<void> {
+  const userId = (req as AuthenticatedRequest).userId as string;
+  const { ipAddress, userAgent } = getRequestMeta(req);
+  try {
+    await logAudit({
+      userId,
+      username: await getAuditUsername(userId),
+      action,
+      resourceType: "plugin",
+      resourceId: pluginId,
+      resourceName: pluginId,
+      details: JSON.stringify(details),
+      ipAddress,
+      userAgent,
+      success: true,
+    });
+  } catch {
+    // An audit failure must not undo a change that already happened.
+  }
+}
+
+function sendManageError(
+  res: Response,
+  error: unknown,
+  fallback: string,
+  operation: string,
+): void {
+  if (error instanceof PluginManageError) {
+    res.status(error.status).json({
+      error: error.message,
+      code: error.code,
+      ...(error.details ?? {}),
+    });
+    return;
+  }
+  databaseLogger.error(
+    fallback,
+    error instanceof Error ? error : new Error(String(error)),
+    { operation },
+  );
+  res.status(500).json({ error: fallback });
+}
+
+async function refuseOnLinkedDesktop(res: Response): Promise<boolean> {
+  const { isLinkedDesktop } = await import("../../plugins/manage.js");
+  if (!(await isLinkedDesktop())) return false;
+  res.status(409).json({
+    error: "Plugins on a linked desktop are managed by the server",
+    code: "MANAGED_BY_SERVER",
+  });
+  return true;
+}
+
 /**
  * @openapi
  * /plugins/{id}/state:
  *   patch:
  *     summary: Enable or disable a plugin
- *     description: Persists the new state and starts or stops the plugin immediately. Disabling releases everything the plugin owns, including any port it was listening on.
+ *     description: Persists the new state and starts or stops the plugin immediately. Disabling releases everything the plugin owns, including any port it was listening on. Enabling also starts any installed hard dependency that is off, and disabling also stops the running plugins that depend on it. With dryRun nothing changes and the response lists what would.
  *     tags:
  *       - Plugins
  *     parameters:
@@ -329,6 +412,10 @@ async function isManagedByLinkedServer(pluginId: string): Promise<boolean> {
  *         required: true
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: dryRun
+ *         schema:
+ *           type: boolean
  *     requestBody:
  *       required: true
  *       content:
@@ -364,8 +451,7 @@ router.patch(
     }
 
     try {
-      const repository = createCurrentPluginRepository();
-      const record = await repository.findById(pluginId);
+      const record = await createCurrentPluginRepository().findById(pluginId);
       if (!record) {
         res.status(404).json({ error: "Plugin not found" });
         return;
@@ -380,33 +466,42 @@ router.patch(
         return;
       }
 
-      // Persist first: if the start or stop below throws, the recorded
-      // intent still matches what the user asked for, and the next boot
-      // acts on it rather than silently reverting.
-      await repository.update(pluginId, {
-        state: enabled ? "enabled" : "disabled",
-        lastError: null,
-      });
+      const { planStateChange, setPluginState } =
+        await import("../../plugins/manage.js");
 
-      const { activatePlugin, deactivatePlugin } =
-        await import("../../plugins/index.js");
+      if (req.query.dryRun === "1" || req.query.dryRun === "true") {
+        res.json({
+          id: pluginId,
+          enabled,
+          ...(await planStateChange(pluginId, enabled)),
+        });
+        return;
+      }
 
-      if (enabled) await activatePlugin(pluginId);
-      else await deactivatePlugin(pluginId);
+      const result = await setPluginState(pluginId, enabled);
+      await auditPluginAction(
+        req,
+        enabled ? "enable_plugin" : "disable_plugin",
+        pluginId,
+        {
+          enable: result.enable,
+          disable: result.disable,
+        },
+      );
 
       databaseLogger.info(
         `Plugin ${pluginId} ${enabled ? "enabled" : "disabled"}`,
         { operation: "plugin_state_change", pluginId },
       );
 
-      res.json({ id: pluginId, enabled });
+      res.json({ id: pluginId, enabled, ...result });
     } catch (error) {
-      databaseLogger.error(
-        `Failed to change state for plugin ${pluginId}`,
-        error instanceof Error ? error : new Error(String(error)),
-        { operation: "plugin_state_change" },
+      sendManageError(
+        res,
+        error,
+        "Failed to change plugin state",
+        "plugin_state_change",
       );
-      res.status(500).json({ error: "Failed to change plugin state" });
     }
   },
 );
@@ -668,7 +763,7 @@ router.delete(
  * /plugins/{id}/data:
  *   delete:
  *     summary: Delete everything a plugin stores
- *     description: Drops every table under the plugin's prefix and clears its key/value state, settings and secrets, capability grants and migration ledger. Role permissions stay. Disabling a plugin never touches its data; this is the explicit uninstall path, and it cannot be undone. The plugin is deactivated first so nothing is writing while its tables go.
+ *     description: Drops every table under the plugin's prefix and clears its key/value state, settings and secrets, migration ledger and files. Role permissions stay, and the capabilities the admin agreed to are granted again. The plugin stays installed but is switched off, so nothing is writing while its tables go. It cannot be undone.
  *     tags:
  *       - Plugins
  *     parameters:
@@ -700,24 +795,27 @@ router.delete(
         return;
       }
 
-      // Stopped first: dropping a table out from under a running plugin turns
-      // its next query into an error rather than a clean shutdown.
-      const { loader } = getPluginRuntime();
-      if (loader.get(pluginId)?.state === "active") {
-        await loader.deactivate(pluginId);
+      if (await isManagedByLinkedServer(pluginId)) {
+        res.status(409).json({
+          error: "Managed by the linked server",
+          code: "MANAGED_BY_SERVER",
+        });
+        return;
       }
 
-      const { removePluginData } = await import("../../plugins/data.js");
-      const removed = await removePluginData(pluginId, {
-        knownPluginIds: getPluginRuntime()
-          .loader.list()
-          .map((plugin) => plugin.id),
-      });
+      // The plugin is stopped first: dropping a table out from under a
+      // running plugin turns its next query into an error.
+      const { deletePluginData } = await import("../../plugins/manage.js");
+      const removed = await deletePluginData(pluginId, userId ?? null);
 
       databaseLogger.warn(`Removed all data for plugin ${pluginId}`, {
         operation: "plugin_remove_data",
         pluginId,
         userId,
+        tables: removed.tables.length,
+        kvKeys: removed.kvKeys,
+      });
+      await auditPluginAction(req, "delete_plugin_data", pluginId, {
         tables: removed.tables.length,
         kvKeys: removed.kvKeys,
       });
@@ -1295,6 +1393,416 @@ router.put(
         { operation: "plugin_settings_write" },
       );
       res.status(500).json({ error: "Failed to update the plugin's settings" });
+    }
+  },
+);
+
+const ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
+
+function readVersion(body: unknown): string | undefined | null {
+  const version = (body as { version?: unknown } | undefined)?.version;
+  if (version === undefined || version === null || version === "") {
+    return undefined;
+  }
+  return typeof version === "string" && version.length <= 64 ? version : null;
+}
+
+/**
+ * @openapi
+ * /plugins/registry:
+ *   get:
+ *     summary: List the plugins in the official registry
+ *     description: >
+ *       Fetches the official registry index (cached for 15 minutes unless
+ *       refresh is set) and merges it with what is installed here: the
+ *       installed version, the newest release this build can run, whether an
+ *       update asks for new capabilities, and the pin and auto-update choices.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: query
+ *         name: refresh
+ *         schema:
+ *           type: boolean
+ *     responses:
+ *       200:
+ *         description: The registry listing.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       502:
+ *         description: The registry could not be reached.
+ */
+router.get(
+  "/registry",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    try {
+      const { listRegistry } = await import("../../plugins/manage.js");
+      const force = req.query.refresh === "1" || req.query.refresh === "true";
+      res.json(await listRegistry({ force }));
+    } catch (error) {
+      databaseLogger.warn("Plugin registry fetch failed", {
+        operation: "plugin_registry",
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(502).json({
+        error: "Could not reach the plugin registry",
+        code: "REGISTRY_UNREACHABLE",
+      });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/update-all:
+ *   post:
+ *     summary: Update every plugin that has a newer release
+ *     description: Skips pinned plugins and any update that asks for new capabilities, which are returned under needsReview for the admin to look at one by one.
+ *     tags:
+ *       - Plugins
+ *     responses:
+ *       200:
+ *         description: What was updated, what needs review and what failed.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       409:
+ *         description: This desktop is linked to a server, which manages its plugins.
+ */
+router.post(
+  "/update-all",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    if (await refuseOnLinkedDesktop(res)) return;
+    try {
+      const { updateAllPlugins } = await import("../../plugins/manage.js");
+      const userId = (req as AuthenticatedRequest).userId as string;
+      const result = await updateAllPlugins({ userId });
+      for (const done of result.updated) {
+        await auditPluginAction(req, "update_plugin", done.id, {
+          version: done.version,
+        });
+      }
+      res.json(result);
+    } catch (error) {
+      sendManageError(res, error, "Failed to update plugins", "plugin_update");
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/{id}/install:
+ *   post:
+ *     summary: Install a plugin from the official registry
+ *     description: >
+ *       Downloads the release, checks its sha256 and signature against a key
+ *       this build trusts, loads it, grants the capabilities it declares and
+ *       starts it along with any installed dependency that is off. Without a
+ *       version the newest compatible release is used; naming an older one
+ *       pins the plugin there. A bundled plugin at its shipped version needs
+ *       no download.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               version:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: The installed version and the plugin's state.
+ *       400:
+ *         description: Invalid id or version.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       404:
+ *         description: Not in the official registry.
+ *       409:
+ *         description: Already installed, incompatible, or managed by a linked server.
+ *       502:
+ *         description: The registry could not be reached.
+ */
+router.post(
+  "/:id/install",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    const pluginId = String(req.params.id);
+    const version = readVersion(req.body);
+    if (!ID_PATTERN.test(pluginId) || version === null) {
+      res.status(400).json({ error: "Invalid plugin id or version" });
+      return;
+    }
+    if (await refuseOnLinkedDesktop(res)) return;
+    try {
+      const { installPlugin } = await import("../../plugins/manage.js");
+      const userId = (req as AuthenticatedRequest).userId as string;
+      const result = await installPlugin(pluginId, { version, userId });
+      await auditPluginAction(req, "install_plugin", pluginId, {
+        version: result.version,
+      });
+      res.json(result);
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to install the plugin",
+        "plugin_install",
+      );
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/{id}/update:
+ *   post:
+ *     summary: Update or change the installed version of a plugin
+ *     description: >
+ *       Swaps in another release from the official registry, newer or older.
+ *       If the release declares capabilities the installed one does not, the
+ *       request must set acceptCapabilities, otherwise it answers 409 with
+ *       code CAPABILITIES_ADDED and the list. A running plugin is started
+ *       again on the new version. Naming a version that is not the newest
+ *       pins the plugin to it.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               version:
+ *                 type: string
+ *               acceptCapabilities:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: The new version and the plugin's state.
+ *       400:
+ *         description: Invalid id or version.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       404:
+ *         description: Not installed, or the version is not in the registry.
+ *       409:
+ *         description: Same version, new capabilities need consent, or managed by a linked server.
+ */
+router.post(
+  "/:id/update",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    const pluginId = String(req.params.id);
+    const version = readVersion(req.body);
+    if (!ID_PATTERN.test(pluginId) || version === null) {
+      res.status(400).json({ error: "Invalid plugin id or version" });
+      return;
+    }
+    if (await refuseOnLinkedDesktop(res)) return;
+    try {
+      const { updatePlugin } = await import("../../plugins/manage.js");
+      const userId = (req as AuthenticatedRequest).userId as string;
+      const result = await updatePlugin(pluginId, {
+        version,
+        userId,
+        acceptCapabilities: req.body?.acceptCapabilities === true,
+      });
+      await auditPluginAction(req, "update_plugin", pluginId, {
+        version: result.version,
+      });
+      res.json(result);
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to update the plugin",
+        "plugin_update",
+      );
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/{id}:
+ *   delete:
+ *     summary: Uninstall a plugin
+ *     description: >
+ *       Stops the plugin, drops its tables, settings, secrets, grants and
+ *       files, and removes it. A plugin that ships with Termix keeps its
+ *       files in the image but is marked uninstalled and never loads again
+ *       until it is installed from the Plugins tab. Refused while a running
+ *       plugin depends on it.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: What was removed.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       404:
+ *         description: No such plugin.
+ *       409:
+ *         description: Other running plugins depend on it, or managed by a linked server.
+ */
+router.delete(
+  "/:id",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    const pluginId = String(req.params.id);
+    if (!ID_PATTERN.test(pluginId)) {
+      res.status(400).json({ error: "Invalid plugin id" });
+      return;
+    }
+    if (await refuseOnLinkedDesktop(res)) return;
+    try {
+      const { uninstallPlugin } = await import("../../plugins/manage.js");
+      const result = await uninstallPlugin(pluginId);
+      await auditPluginAction(req, "uninstall_plugin", pluginId, {
+        tables: result.removed.tables.length,
+      });
+      res.json(result);
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to uninstall the plugin",
+        "plugin_uninstall",
+      );
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/{id}/options:
+ *   patch:
+ *     summary: Change a plugin's update choices
+ *     description: autoUpdate lets the background check apply new releases that ask for nothing new. pinned holds the plugin at its installed version, which also stops auto-update.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               autoUpdate:
+ *                 type: boolean
+ *               pinned:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: The saved choices.
+ *       400:
+ *         description: Invalid request body.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       404:
+ *         description: No such plugin.
+ */
+router.patch(
+  "/:id/options",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    const pluginId = String(req.params.id);
+    const { autoUpdate, pinned } = req.body ?? {};
+    if (
+      (autoUpdate !== undefined && typeof autoUpdate !== "boolean") ||
+      (pinned !== undefined && typeof pinned !== "boolean")
+    ) {
+      res.status(400).json({ error: "autoUpdate and pinned must be booleans" });
+      return;
+    }
+    try {
+      const { setPluginOptions } = await import("../../plugins/manage.js");
+      const result = await setPluginOptions(pluginId, { autoUpdate, pinned });
+      await auditPluginAction(req, "update_plugin_options", pluginId, result);
+      res.json({ id: pluginId, ...result });
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to save plugin options",
+        "plugin_options",
+      );
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/{id}/data:
+ *   get:
+ *     summary: Summarize what a plugin stores
+ *     description: The plugin's tables with row counts, key/value count, stored settings per scope, applied migrations, capability grants and the size of its files folder. No values are returned.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: The summary.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       404:
+ *         description: No such plugin.
+ */
+router.get(
+  "/:id/data",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    const pluginId = String(req.params.id);
+    try {
+      const { getPluginDataSummary } = await import("../../plugins/manage.js");
+      res.json({ id: pluginId, ...(await getPluginDataSummary(pluginId)) });
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to read the plugin's data",
+        "plugin_data",
+      );
     }
   },
 );

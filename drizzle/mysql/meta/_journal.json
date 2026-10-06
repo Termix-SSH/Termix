@@ -477,6 +477,13 @@
       "when": 1791209311841,
       "tag": "0067_external_session_ref",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "5",
+      "when": 1791256341049,
+      "tag": "0068_plugin_pinned_version",
+      "breakpoints": true
     }
   ]
 }

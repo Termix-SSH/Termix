@@ -263,6 +263,34 @@ export async function removePluginData(
   return { tables: dropped, kvKeys, migrations };
 }
 
+/** The plugin's tables in the live database, with how many rows each holds. */
+export async function describePluginTables(
+  pluginId: string,
+  options: { knownPluginIds?: string[]; dialect?: DatabaseDialect } = {},
+): Promise<Array<{ name: string; rows: number | null }>> {
+  const dialect = options.dialect ?? resolveDatabaseDialect();
+  const tables = ownedTableNames(
+    pluginId,
+    await listDatabaseTables(dialect),
+    options.knownPluginIds ?? [],
+  ).sort();
+
+  const { selectRows } = await import("../utils/crypto-migration/raw-rows.js");
+  const result: Array<{ name: string; rows: number | null }> = [];
+  for (const table of tables) {
+    const quoted = dialect === "mysql" ? "`" + table + "`" : `"${table}"`;
+    try {
+      const [row] = await selectRows<Record<string, unknown>>(
+        sql.raw(`SELECT COUNT(*) AS count FROM ${quoted}`),
+      );
+      result.push({ name: table, rows: Number(row?.count ?? row?.COUNT ?? 0) });
+    } catch {
+      result.push({ name: table, rows: null });
+    }
+  }
+  return result;
+}
+
 /**
  * The tables in `all` that belong to this plugin: its prefix, minus any that
  * sit under a longer prefix another plugin owns.

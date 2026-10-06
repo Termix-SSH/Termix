@@ -508,6 +508,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         installed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         auto_update INTEGER NOT NULL DEFAULT 0,
+        pinned_version TEXT,
         manifest_json TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_plugins_registry_id ON plugins (registry_id);
@@ -1605,6 +1606,7 @@ const migrateSchema = () => {
   // Plugin runtime: lastError reports why a plugin is blocked or failed, and
   // grants record whether a capability came from an admin or from bundling.
   addColumnIfNotExists("plugins", "last_error", "TEXT");
+  addColumnIfNotExists("plugins", "pinned_version", "TEXT");
   addColumnIfNotExists(
     "plugin_permission_grants",
     "source",

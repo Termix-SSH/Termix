@@ -178,6 +178,28 @@ export class PluginSettingsRepository {
     return affected;
   }
 
+  /** How many stored values the plugin has in each scope. */
+  async countByScope(
+    pluginId: string,
+  ): Promise<Record<PluginSettingsScope, number>> {
+    const rows = await this.context.drizzle
+      .select({ scope: pluginSettings.scope })
+      .from(pluginSettings)
+      .where(eq(pluginSettings.pluginId, pluginId));
+
+    const counts: Record<PluginSettingsScope, number> = {
+      admin: 0,
+      user: 0,
+      host: 0,
+      secret: 0,
+    };
+    for (const row of rows) {
+      const scope = row.scope as PluginSettingsScope;
+      if (scope in counts) counts[scope] += 1;
+    }
+    return counts;
+  }
+
   async deleteByPlugin(pluginId: string): Promise<number> {
     const result = await this.context.drizzle
       .delete(pluginSettings)
