@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import {
+  act,
   render,
   screen,
   cleanup,
@@ -10,6 +11,9 @@ import { FolderSearch, Monitor, Server, Terminal } from "lucide-react";
 
 vi.mock("@/api/credentials-api", () => ({
   getCredentials: vi.fn(async () => []),
+}));
+vi.mock("@/api/host-defaults-api", () => ({
+  resolveHostDefaults: vi.fn(async () => ({})),
 }));
 vi.mock("@/api/auth-methods-api", () => ({
   getSshAuthProviders: vi.fn(async () => []),
@@ -83,13 +87,22 @@ function registerDefaults() {
   });
 }
 
+// The panel loads credentials and host defaults on mount; settle them inside
+// act so their state updates never land after the test ends.
+async function renderPanel(onConnect = vi.fn()) {
+  await act(async () => {
+    render(<QuickConnectPanel onConnect={onConnect} />);
+  });
+  return onConnect;
+}
+
 const buttonName = (key: string) =>
   `newUi.sidebar.quickConnect.connectToAction:${JSON.stringify({ name: key })}`;
 
 describe("QuickConnectPanel", () => {
-  it("offers every usable connect target and opt-in tool", () => {
+  it("offers every usable connect target and opt-in tool", async () => {
     registerDefaults();
-    render(<QuickConnectPanel onConnect={vi.fn()} />);
+    await renderPanel();
     expect(screen.getByText(buttonName("nav.terminal"))).toBeTruthy();
     expect(screen.getByText(buttonName("nav.files"))).toBeTruthy();
     expect(screen.queryByText(buttonName("nav.docker"))).toBeNull();
@@ -99,7 +112,7 @@ describe("QuickConnectPanel", () => {
   it("opens the chosen tab for the typed address", async () => {
     registerDefaults();
     const onConnect = vi.fn();
-    render(<QuickConnectPanel onConnect={onConnect} />);
+    await renderPanel(onConnect);
     fireEvent.change(
       screen.getByPlaceholderText("newUi.sidebar.quickConnect.hostPlaceholder"),
       { target: { value: "10.0.0.1" } },
@@ -111,10 +124,10 @@ describe("QuickConnectPanel", () => {
     expect(host).toMatchObject({ ip: "10.0.0.1", username: "root", port: 22 });
   });
 
-  it("connects with the top target on Enter", () => {
+  it("connects with the top target on Enter", async () => {
     registerDefaults();
     const onConnect = vi.fn();
-    render(<QuickConnectPanel onConnect={onConnect} />);
+    await renderPanel(onConnect);
     const input = screen.getByPlaceholderText(
       "newUi.sidebar.quickConnect.hostPlaceholder",
     );
@@ -126,16 +139,16 @@ describe("QuickConnectPanel", () => {
     );
   });
 
-  it("does nothing without an address", () => {
+  it("does nothing without an address", async () => {
     registerDefaults();
     const onConnect = vi.fn();
-    render(<QuickConnectPanel onConnect={onConnect} />);
+    await renderPanel(onConnect);
     fireEvent.click(screen.getByText(buttonName("nav.terminal")));
     expect(onConnect).not.toHaveBeenCalled();
   });
 
-  it("says so when nothing can connect", () => {
-    render(<QuickConnectPanel onConnect={vi.fn()} />);
+  it("says so when nothing can connect", async () => {
+    await renderPanel();
     expect(
       screen.getByText("newUi.sidebar.quickConnect.noTarget"),
     ).toBeTruthy();
@@ -172,7 +185,7 @@ describe("QuickConnectPanel", () => {
       },
     ];
     const onConnect = vi.fn();
-    render(<QuickConnectPanel onConnect={onConnect} />);
+    await renderPanel(onConnect);
     fireEvent.change(screen.getByDisplayValue("password"), {
       target: { value: "tailnet" },
     });
