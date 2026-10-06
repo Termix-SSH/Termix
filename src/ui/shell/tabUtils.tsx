@@ -1,5 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 import {
+  requestFromLegacyEvent,
+  requestManage,
+} from "@/manage/manage-requests";
+import {
   LayoutDashboard,
   LayoutPanelLeft,
   Puzzle,
@@ -178,7 +182,14 @@ const DashboardTabHost = memo(function DashboardTabHost({
 }) {
   return withTabSuspense(
     <DashboardTab
-      onOpenSingletonTab={(type) => shell.openSingletonTab(type)}
+      onOpenSingletonTab={(type, pendingEvent) => {
+        // "Add host" and friends say what to open in the Manage tab.
+        const request = pendingEvent
+          ? requestFromLegacyEvent(pendingEvent)
+          : null;
+        if (request) requestManage(request);
+        else shell.openSingletonTab(type);
+      }}
       onOpenTab={(host, type) => shell.openTab(host, type)}
       isVisible={isVisible}
     />,
@@ -253,6 +264,11 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
               section={
                 typeof tab.data?.section === "string"
                   ? tab.data.section
+                  : undefined
+              }
+              reveal={
+                typeof tab.data?.reveal === "string"
+                  ? `${tab.data.reveal}@${String(tab.data.revealAt ?? "")}`
                   : undefined
               }
             />,

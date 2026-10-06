@@ -472,8 +472,9 @@ function InstalledCard({
       <div className="flex items-center gap-1.5 border-t border-border px-3 py-2">
         {plugin.updateAvailable && !plugin.pinnedVersion && !failed && (
           <Button
+            variant="outline"
             size="xs"
-            className="gap-1"
+            className="gap-1 border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
             disabled={busy || locked}
             onClick={() => void manager.requestUpdate(plugin)}
           >
@@ -651,9 +652,11 @@ function BrowseCard({
           </span>
         ) : (
           <Button
+            variant="outline"
             size="xs"
             disabled={busy || manager.managedByServer || !plugin.latestVersion}
             onClick={() => manager.requestInstall(plugin)}
+            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
           >
             {t("plugins.manager.install")}
           </Button>
@@ -706,8 +709,9 @@ function UpdatesSection({
               ` ${t("plugins.manager.updatesNeedReview", { count: gated.length })}`}
           </span>
           <Button
+            variant="outline"
             size="sm"
-            className="gap-1.5"
+            className="gap-1.5 border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
             disabled={manager.busy.size > 0 || manager.managedByServer}
             onClick={() => void manager.updateAll()}
           >
@@ -802,9 +806,11 @@ function UpdateRow({
           </label>
           {!plugin.pinnedVersion && (
             <Button
+              variant="outline"
               size="xs"
               disabled={busy || manager.managedByServer}
               onClick={() => void manager.requestUpdate(plugin)}
+              className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
             >
               {gated
                 ? t("plugins.manager.review")

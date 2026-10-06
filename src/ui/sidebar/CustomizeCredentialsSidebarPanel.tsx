@@ -1,3 +1,4 @@
+import { Select2 } from "@/components/select2";
 import { InlineView } from "@/components/surface/surface-scope";
 import { useTranslation } from "react-i18next";
 import { Rows3, SquareStack } from "lucide-react";
@@ -47,7 +48,7 @@ export function CustomizeCredentialsSidebarPanel({
                 : t("credentials.densityCompactDesc")
             }
           >
-            <select
+            <Select2
               value={preferences.display.density}
               onChange={(e) =>
                 update((prev) => ({
@@ -66,7 +67,7 @@ export function CustomizeCredentialsSidebarPanel({
               <option value="compact">
                 {t("credentials.displayDensityCompact")}
               </option>
-            </select>
+            </Select2>
           </SettingRow>
         </SectionCard>
 
@@ -97,7 +98,7 @@ export function CustomizeCredentialsSidebarPanel({
                 {t("credentials.actionsVisibilityDesc")}
               </span>
             </div>
-            <select
+            <Select2
               value={preferences.display.trayTrigger}
               onChange={(e) =>
                 update((prev) => ({
@@ -116,7 +117,7 @@ export function CustomizeCredentialsSidebarPanel({
               </option>
               <option value="hover">{t("credentials.actionsHover")}</option>
               <option value="click">{t("credentials.actionsClick")}</option>
-            </select>
+            </Select2>
           </div>
         </SectionCard>
 

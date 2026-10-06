@@ -244,7 +244,7 @@ export function CommandPalette({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center bg-background/40 pt-[15vh] backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-start justify-center bg-background/70 pt-[15vh]"
       onClick={() => setIsOpen(false)}
     >
       <div
@@ -270,7 +270,7 @@ export function CommandPalette({
             <Kbd className="ml-2">ESC</Kbd>
           </div>
 
-          <CommandList className="thin-scrollbar max-h-[60vh]">
+          <CommandList className="thin-scrollbar max-h-[60vh] [contain:content]">
             <CommandEmpty className="py-8 text-center text-xs text-muted-foreground">
               {t("commandPalette.noHostsFound", { search })}
             </CommandEmpty>

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useMemo, useSyncExternalStore } from "react";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useAreaPreferences } from "@/contexts/UiPreferencesContext";
 import { useSyncAttentionCount } from "@/hooks/use-sync-status";
 import { isElectron } from "@/lib/electron";
 import { createRegistry } from "@/lib/registry";
@@ -233,10 +234,53 @@ export function useRailItems(): RailItemDef[] {
     railItemsSnapshot,
   );
   const { has, loaded } = usePermissions();
+  const { order } = useAreaPreferences("rail");
   return useMemo(
-    () => permittedRailItems(items, { has, loaded }),
-    [items, has, loaded],
+    () => applyRailOrder(permittedRailItems(items, { has, loaded }), order),
+    [items, has, loaded, order],
   );
+}
+
+/**
+ * Items in the user's order. Listed ids come first in that order within the
+ * default sequence; unlisted ones keep their default place relative to it.
+ */
+export function applyRailOrder(
+  items: RailItemDef[],
+  order: string[] | undefined,
+): RailItemDef[] {
+  if (!order || order.length === 0) return items;
+  const rank = new Map(order.map((id, index) => [id, index]));
+  const listed = items
+    .filter((item) => rank.has(item.id))
+    .sort((a, b) => rank.get(a.id)! - rank.get(b.id)!);
+  let next = 0;
+  return items.map((item) => (rank.has(item.id) ? listed[next++] : item));
+}
+
+/**
+ * The order after moving `id` to sit before `beforeId` (or to the end of its
+ * band when null), as a full list of the given items' ids.
+ */
+export function moveRailItem(
+  items: RailItemDef[],
+  id: string,
+  beforeId: string | null,
+): string[] {
+  const ids = items.map((item) => item.id).filter((other) => other !== id);
+  const at = beforeId ? ids.indexOf(beforeId) : -1;
+  if (at < 0) {
+    const group = items.find((item) => item.id === id)?.group ?? "tools";
+    const lastInBand = items
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => item.id !== id && (item.group ?? "tools") === group)
+      .map(({ item }) => ids.indexOf(item.id))
+      .pop();
+    ids.splice(lastInBand === undefined ? ids.length : lastInBand + 1, 0, id);
+  } else {
+    ids.splice(at, 0, id);
+  }
+  return ids;
 }
 
 /** Places outside the rail that still need a title, like the Settings tab. */

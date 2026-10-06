@@ -198,7 +198,8 @@ export function SyncPanel() {
             <li>{t("sync.unlinkedPointAccount")}</li>
           </ul>
           <Button
-            className="self-start rounded-none"
+            variant="outline"
+            className="self-start rounded-none border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
             onClick={() => setLinkOpen(true)}
           >
             <Cloud className="size-4" />
@@ -302,8 +303,9 @@ export function SyncPanel() {
         <div className="flex flex-wrap gap-2">
           {state === "signed_out" ? (
             <Button
+              variant="outline"
               size="sm"
-              className="h-7 text-[10px] rounded-none"
+              className="h-7 text-[10px] rounded-none border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
               onClick={() => setReloginOpen(true)}
             >
               {t("sync.signInAgain")}
@@ -535,8 +537,9 @@ export function SyncPanel() {
         </div>
         {proxyDraft && (
           <Button
+            variant="outline"
             size="sm"
-            className="self-start h-7 text-[10px] rounded-none"
+            className="self-start h-7 text-[10px] rounded-none border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
             disabled={busy === "proxy"}
             onClick={() =>
               run("proxy", async () => {

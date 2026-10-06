@@ -10,6 +10,8 @@ import {
   fetchArtifact,
   extractArtifact,
   pinsFromIndex,
+  findLocalPluginBuilds,
+  copyLocalBuild,
 } from "./lib/bundled-plugins.cjs";
 
 const cleanups: Array<() => void> = [];
@@ -190,5 +192,41 @@ describe("pinsFromIndex", () => {
     expect(() => pinsFromIndex(index, ["gamma"])).toThrow(
       /not in the registry/,
     );
+  });
+});
+
+describe("local plugin builds", () => {
+  it("finds built repos by manifest id and skips unbuilt ones", () => {
+    const dir = tempDir();
+    const built = path.join(dir, "Plugin-Files");
+    fs.mkdirSync(path.join(built, "dist"), { recursive: true });
+    fs.writeFileSync(
+      path.join(built, "manifest.json"),
+      JSON.stringify({ id: "file-manager" }),
+    );
+    const unbuilt = path.join(dir, "Plugin-Other");
+    fs.mkdirSync(unbuilt);
+    fs.writeFileSync(
+      path.join(unbuilt, "manifest.json"),
+      JSON.stringify({ id: "other" }),
+    );
+
+    const builds = findLocalPluginBuilds(dir);
+    expect([...builds.keys()]).toEqual(["file-manager"]);
+    expect(findLocalPluginBuilds(null).size).toBe(0);
+  });
+
+  it("copies only the files a bundled plugin needs", () => {
+    const repo = tempDir();
+    fs.mkdirSync(path.join(repo, "dist"));
+    fs.writeFileSync(path.join(repo, "dist", "frontend.js"), "x");
+    fs.writeFileSync(path.join(repo, "manifest.json"), "{}");
+    fs.mkdirSync(path.join(repo, "src"));
+
+    const out = path.join(tempDir(), "file-manager");
+    copyLocalBuild(repo, out);
+    expect(fs.existsSync(path.join(out, "dist", "frontend.js"))).toBe(true);
+    expect(fs.existsSync(path.join(out, "manifest.json"))).toBe(true);
+    expect(fs.existsSync(path.join(out, "src"))).toBe(false);
   });
 });

@@ -276,7 +276,13 @@ export function createPluginAssetsRouter(
           : "no-cache",
       );
       res.type(CONTENT_TYPES[path.extname(file)] ?? "application/octet-stream");
-      res.sendFile(file);
+      // Installed plugins unpack under .unpacked/, which send would refuse as a
+      // dotfile path. resolvePluginAsset already kept the file in the plugin.
+      res.sendFile(file, { dotfiles: "allow" }, (error) => {
+        if (error && !res.headersSent) {
+          res.status(404).json({ error: "Not found" });
+        }
+      });
     },
   );
 

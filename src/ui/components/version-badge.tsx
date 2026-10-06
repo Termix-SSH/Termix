@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 
 interface VersionBadgeProps {
   status: "up_to_date" | "requires_update" | "beta" | "unknown";
@@ -14,13 +15,15 @@ export function VersionBadge({
   const { t } = useTranslation();
   if (status === "unknown") return null;
 
-  const badgeClassName = `text-[10px] px-1.5 py-0.5 font-semibold leading-none ${
+  const badgeClassName = cn(
+    "text-[10px] px-1.5 py-0.5 font-semibold leading-none",
     status === "beta"
       ? "bg-blue-500/20 text-blue-400"
       : status === "requires_update"
         ? "bg-warning/20 text-warning"
-        : "bg-accent-brand/20 text-accent-brand"
-  }${className ? ` ${className}` : ""}`;
+        : "bg-accent-brand/20 text-accent-brand",
+    className,
+  );
 
   const label =
     status === "beta"
@@ -42,7 +45,7 @@ export function VersionBadge({
         rel="noopener noreferrer"
         title={linkLabel}
         aria-label={linkLabel}
-        className={`${badgeClassName} cursor-pointer hover:underline`}
+        className={cn(badgeClassName, "cursor-pointer hover:underline")}
       >
         {label}
       </a>

@@ -94,9 +94,8 @@ describe("HostAuthOverrideModal", () => {
       />,
     );
 
-    const select = await screen.findByLabelText(
-      "hosts.sharing.authOverrideCredentialLabel",
-    );
+    await screen.findByLabelText("hosts.sharing.authOverrideCredentialLabel");
+    const select = document.querySelector("select") as HTMLSelectElement;
     expect((select as HTMLSelectElement).value).toBe("7");
 
     fireEvent.change(select, { target: { value: "8" } });
@@ -119,9 +118,8 @@ describe("HostAuthOverrideModal", () => {
       />,
     );
 
-    const select = await screen.findByLabelText(
-      "hosts.sharing.authOverrideCredentialLabel",
-    );
+    await screen.findByLabelText("hosts.sharing.authOverrideCredentialLabel");
+    const select = document.querySelector("select") as HTMLSelectElement;
     expect(screen.getByText("hosts.sharing.noPersonalCredential")).toBeTruthy();
     fireEvent.change(select, { target: { value: "" } });
     expect(screen.getByText("hosts.sharing.authOverrideRequired")).toBeTruthy();
@@ -187,9 +185,8 @@ describe("HostAuthOverrideModal", () => {
       />,
     );
 
-    const select = await screen.findByLabelText(
-      "hosts.sharing.authOverrideCredentialLabel",
-    );
+    await screen.findByLabelText("hosts.sharing.authOverrideCredentialLabel");
+    const select = document.querySelector("select") as HTMLSelectElement;
     expect((select as HTMLSelectElement).value).toBe("19");
     expect(remote.get).toHaveBeenCalledWith("/credentials");
     expect(api.getCredentials).not.toHaveBeenCalled();

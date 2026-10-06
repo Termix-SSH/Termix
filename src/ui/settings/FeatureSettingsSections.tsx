@@ -233,8 +233,9 @@ export function FeatureSettingsForm({
 
       <div className="flex justify-end">
         <Button
+          variant="outline"
           size="sm"
-          className="h-7 text-xs"
+          className="h-7 text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
           disabled={!dirty || saving}
           onClick={() => void save()}
         >

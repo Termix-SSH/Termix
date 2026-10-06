@@ -57,6 +57,11 @@ export interface HostSidebarDisplayPreferences {
   /** When false, nested folders hide the parent-path breadcrumb before their name. */
   showFolderPaths: boolean;
   hostClickBehavior: HostClickBehavior;
+  /**
+   * Host action id to whether it shows in the row's connect bar. An action
+   * missing here follows its own default. Every action stays in the menu.
+   */
+  barActions: Record<string, boolean>;
 }
 
 export interface HostSidebarPreferences {
@@ -127,8 +132,22 @@ export function defaultHostSidebarPreferences(): HostSidebarPreferences {
       openOnDoubleClick: false,
       showFolderPaths: true,
       hostClickBehavior: "newTab",
+      barActions: {},
     },
   };
+}
+
+const ACTION_ID_PATTERN = /^[a-z0-9][a-z0-9._:-]{0,79}$/;
+
+function sanitizeBarActions(input: unknown): Record<string, boolean> {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return {};
+  const out: Record<string, boolean> = {};
+  for (const [id, value] of Object.entries(input as Record<string, unknown>)) {
+    if (ACTION_ID_PATTERN.test(id) && typeof value === "boolean") {
+      out[id] = value;
+    }
+  }
+  return out;
 }
 
 function sanitizeStringArray(input: unknown): string[] {
@@ -215,6 +234,7 @@ export function sanitizeHostSidebarPreferences(
     )
       ? (displayObj.hostClickBehavior as HostClickBehavior)
       : defaults.display.hostClickBehavior,
+    barActions: sanitizeBarActions(displayObj.barActions),
   };
 
   return {

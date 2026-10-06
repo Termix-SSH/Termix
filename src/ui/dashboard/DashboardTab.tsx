@@ -828,6 +828,43 @@ export function DashboardTab({
       scroll={false}
       actions={
         <>
+          {isDashboardView && !viewPending && (
+            <>
+              {editMode ? (
+                <>
+                  <span className="hidden text-[11px] text-muted-foreground lg:inline">
+                    {t("dashboardTab.dragToReorder")}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    className="gap-1"
+                    onClick={() => void handleReset()}
+                  >
+                    <RotateCcw className="size-3" />
+                    {t("dashboard.reset")}
+                  </Button>
+                </>
+              ) : (
+                <Facts className="hidden px-1.5 text-[11px] text-muted-foreground md:flex">
+                  <span>
+                    {t("dashboardTab.onlineCount", { count: online })}
+                  </span>
+                  <span>
+                    {t("dashboardTab.hostCount", { count: hosts.length })}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    {t("dashboardTab.commandPalette")}
+                    <Kbd className="h-4">⇧⇧</Kbd>
+                  </span>
+                </Facts>
+              )}
+              <span
+                aria-hidden
+                className="hidden h-4 w-px bg-border xl:block"
+              />
+            </>
+          )}
           <span className="hidden items-center gap-0.5 xl:flex">
             {links.map((link) => (
               <a
@@ -866,39 +903,6 @@ export function DashboardTab({
             </Button>
           )}
         </>
-      }
-      toolbar={
-        isDashboardView && !viewPending ? (
-          <>
-            {editMode ? (
-              <>
-                <span className="hidden text-[11px] text-muted-foreground sm:inline">
-                  {t("dashboardTab.dragToReorder")}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  className="gap-1"
-                  onClick={() => void handleReset()}
-                >
-                  <RotateCcw className="size-3" />
-                  {t("dashboard.reset")}
-                </Button>
-              </>
-            ) : (
-              <span className="hidden items-center gap-1 text-[11px] text-muted-foreground sm:flex">
-                {t("dashboardTab.commandPalette")}
-                <Kbd className="h-4">⇧⇧</Kbd>
-              </span>
-            )}
-            <Facts className="ml-auto text-[11px] text-muted-foreground">
-              <span>{t("dashboardTab.onlineCount", { count: online })}</span>
-              <span>
-                {t("dashboardTab.hostCount", { count: hosts.length })}
-              </span>
-            </Facts>
-          </>
-        ) : undefined
       }
     >
       {viewPending ? (

@@ -16,10 +16,12 @@ import { Skeleton } from "@/components/skeleton";
 import { readRailPreference, setRailPreference } from "./rail-preferences";
 import {
   groupRailItems,
+  moveRailItem,
   useRailItems,
   type RailGroup,
   type RailItemDef,
 } from "./rail-items";
+import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import { toggleHiddenRailTab, useHiddenRailTabs } from "./hidden-rail-tabs";
 import { RailBadge } from "./RailBadge";
 import { rem } from "@/lib/rem";
@@ -200,6 +202,9 @@ export function AppRail({
 
   // Plugins add and remove rail items at runtime, and permissions hide some.
   const railItems = useRailItems();
+  const uiPrefs = useUiPreferencesContext();
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropBefore, setDropBefore] = useState<string | null>(null);
 
   const railExpanded = pinned || (expandOnHover && hovered) || managing;
   const mainItems = railItems.filter((item) => item.placement !== "footer");
@@ -226,15 +231,48 @@ export function AppRail({
     setMenuPos(null);
   };
 
+  const sameBand = (a: string, b: string) =>
+    (mainItems.find((item) => item.id === a)?.group ?? "tools") ===
+    (mainItems.find((item) => item.id === b)?.group ?? "tools");
+
   const renderItem = (item: RailItemDef) => {
     const Icon = item.icon;
     const title = t(item.labelKey);
     const isTab = item.kind === "tab";
     const active = !isTab && sidebarOpen && railView === item.id;
+    const reorderable = item.placement !== "footer" && !!uiPrefs;
+    const dropHere =
+      dragId !== null && dropBefore === item.id && dragId !== item.id;
     return (
       <button
         key={item.id}
         type="button"
+        draggable={reorderable}
+        onDragStart={(e) => {
+          e.dataTransfer.effectAllowed = "move";
+          setDragId(item.id);
+        }}
+        onDragEnd={() => {
+          setDragId(null);
+          setDropBefore(null);
+        }}
+        onDragOver={(e) => {
+          if (!dragId || dragId === item.id || !sameBand(dragId, item.id))
+            return;
+          e.preventDefault();
+          setDropBefore(item.id);
+        }}
+        onDrop={(e) => {
+          if (!dragId || !sameBand(dragId, item.id)) return;
+          e.preventDefault();
+          uiPrefs?.setOverride(
+            "rail",
+            "order",
+            moveRailItem(mainItems, dragId, item.id),
+          );
+          setDragId(null);
+          setDropBefore(null);
+        }}
         onClick={(e) => {
           if (isTab || (item.promotable && (e.ctrlKey || e.metaKey))) {
             onOpenTab?.(item.id as TabType);
@@ -260,7 +298,7 @@ export function AppRail({
         aria-current={active ? "page" : undefined}
         title={item.promotable ? `${title}\n${t("nav.openAsTabHint")}` : title}
         style={btnStyle}
-        className={`${btnBase} ${active ? activeClass : idle}`}
+        className={`${btnBase} ${active ? activeClass : idle} ${dragId === item.id ? "opacity-40" : ""} ${dropHere ? "relative before:absolute before:inset-x-1 before:-top-0.5 before:h-0.5 before:bg-accent-brand" : ""}`}
       >
         <RailIcon useBadge={item.useBadge}>
           <Icon size={16} />

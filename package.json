@@ -30,6 +30,7 @@
     "build": "npm run build:sdk && vite build && tsc -p tsconfig.node.json && node -e \"require('fs').copyFileSync('src/backend/package.json','dist/backend/package.json')\" && npm run build:plugins",
     "build:backend": "npm run build:sdk && tsc -p tsconfig.node.json && node -e \"require('fs').copyFileSync('src/backend/package.json','dist/backend/package.json')\" && npm run build:plugins",
     "dev:backend": "npm run build:sdk && tsc -p tsconfig.node.json && node -e \"require('fs').copyFileSync('src/backend/package.json','dist/backend/package.json')\" && npm run build:plugins && node ./dist/backend/backend/starter.js",
+    "dev:backend:local": "npm run build:sdk && tsc -p tsconfig.node.json && node -e \"require('fs').copyFileSync('src/backend/package.json','dist/backend/package.json')\" && npm run build:plugins:local && node ./dist/backend/backend/starter.js",
     "dev:docker": "docker stop termix-dev 2>nul & docker rm termix-dev 2>nul & docker build -f docker/Dockerfile -t termix:dev --no-cache . && docker run -d --name termix-dev -p 3000:3000 -p 8080:8080 -p 30001:30001 -v \"%cd%\\db\\data:/app/data\" termix:dev",
     "dev:docker:restart": "docker stop termix-dev 2>nul & docker rm termix-dev 2>nul & docker run -d --name termix-dev -p 8080:8080 -p 30001:30001 -v \"%cd%\\db\\data:/app/data\" termix:dev",
     "generate:openapi": "tsc -p tsconfig.node.json && node -e \"require('fs').copyFileSync('src/backend/package.json','dist/backend/package.json')\" && node ./dist/backend/backend/utils/swagger.js",
@@ -49,6 +50,7 @@
     "schema:migrations": "drizzle-kit generate --config=drizzle.config.sqlite.ts && drizzle-kit generate --config=drizzle.config.pg.ts && drizzle-kit generate --config=drizzle.config.mysql.ts",
     "build:sdk": "npm run build --workspace @termix-ssh/plugin-sdk && node scripts/build-sdk-host.mjs",
     "build:plugins": "node scripts/build-plugins.cjs",
+    "build:plugins:local": "node scripts/build-plugins.cjs --local ../Termix-Plugins",
     "plugins:pin": "node scripts/pin-bundled-plugins.cjs"
   },
   "dependencies": {

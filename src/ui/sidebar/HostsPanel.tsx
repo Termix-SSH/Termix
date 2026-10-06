@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../lib/error-message.js";
+import { setBarActions } from "@/sidebar/tree/host-bar-actions";
 import { enabledHostProtocols, useHostProtocols } from "./host-protocols";
 import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -248,6 +249,9 @@ export function HostsPanel({
   );
   const { preferences: sidebarPrefs, update: updateSidebarPrefs } =
     useHostSidebarPreferences();
+  useEffect(() => {
+    setBarActions(sidebarPrefs.display.barActions);
+  }, [sidebarPrefs.display.barActions]);
   const sortKey = sidebarPrefs.sort.key;
   const pinnedFirst = sidebarPrefs.sort.pinnedFirst;
   const { arrangeLocked, toggleArrangeLock } = useArrangeLock(

@@ -348,8 +348,9 @@ export function LinkServerDialog({
               {t("common.cancel")}
             </Button>
             <Button
+              variant="outline"
               type="submit"
-              className="rounded-none"
+              className="rounded-none border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
               disabled={checking || !target.serverUrl.trim()}
             >
               {checking && <Loader2 className="size-4 animate-spin" />}
@@ -420,8 +421,9 @@ export function LinkServerDialog({
               {t("common.cancel")}
             </Button>
             <Button
+              variant="outline"
               type="button"
-              className="rounded-none"
+              className="rounded-none border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
               disabled={!token}
               onClick={() => token && void finish(token, mode)}
             >

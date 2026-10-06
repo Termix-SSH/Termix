@@ -1,3 +1,4 @@
+import { Select2 } from "@/components/select2";
 import { InlineView } from "@/components/surface/surface-scope";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -174,7 +175,7 @@ export function FolderMetadataDialog({
           <label className="text-xs font-semibold">
             {t("hosts.folderCredential")}
           </label>
-          <select
+          <Select2
             value={credentialId}
             onChange={(e) => setCredentialId(e.target.value)}
             className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -185,7 +186,7 @@ export function FolderMetadataDialog({
                 {c.username ? `${c.name} (${c.username})` : c.name}
               </option>
             ))}
-          </select>
+          </Select2>
           <p className="text-[10px] text-muted-foreground">
             {t("hosts.folderCredentialHint")}
           </p>

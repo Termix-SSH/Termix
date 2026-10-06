@@ -1,3 +1,4 @@
+import { Select2 } from "@/components/select2";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -453,7 +454,7 @@ export function KeybindingsSettings() {
             <label className="text-xs font-semibold">
               {t("newUi.sidebar.keybindings.actionLabel")}
             </label>
-            <select
+            <Select2
               value={draft.type}
               onChange={(e) => setDraft({ type: e.target.value })}
               className="h-8 border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -466,7 +467,7 @@ export function KeybindingsSettings() {
                   {t(action.labelKey)}
                 </option>
               ))}
-            </select>
+            </Select2>
           </div>
 
           {Editor && <Editor action={draft} onChange={setDraft} />}

@@ -71,7 +71,7 @@ export function SplitLayoutMenu({
         <Button
           variant="ghost"
           size="icon"
-          className={`h-full w-12.5 rounded-none border-y-0 border-border ${activeIsSplit ? "text-accent-brand" : "text-muted-foreground hover:text-foreground"}`}
+          className={`h-full w-12.5 rounded-none ${activeIsSplit ? "text-accent-brand" : "text-muted-foreground hover:text-foreground"}`}
           title={t("splitScreen.title")}
           aria-label={t("splitScreen.title")}
         >

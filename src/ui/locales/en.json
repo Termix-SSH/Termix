@@ -195,7 +195,8 @@
     "sidebar": "Sidebar",
     "mobileSidebarDescription": "Displays the mobile sidebar.",
     "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "search": "Search...",
+    "new": "New"
   },
   "onboarding": {
     "stepCounter": "Step {{current}} of {{total}}",
@@ -327,6 +328,9 @@
     "search": "Search",
     "hiddenCount": "{{count}} hidden",
     "showInRail": "Show in sidebar",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "resetRailOrder": "Reset order",
     "hideFromRail": "Hide from sidebar",
     "openSettings": "Open settings",
     "settings": "Settings",
@@ -632,6 +636,8 @@
     "customizeSidebarDescription": "Choose how the host list looks and behaves.",
     "customizeDensityTitle": "Density",
     "customizeBehaviorTitle": "Behavior",
+    "connectBarTitle": "Connect bar",
+    "connectBarDesc": "Choose which actions show as buttons on a host. Every action stays in the host's menu.",
     "customizeSortHint": "Sort order and grouping live in the sort and group menus in the toolbar.",
     "densityComfortableDesc": "More detail per host: address, tags, and resource usage.",
     "densityCompactDesc": "One line per host, for longer lists.",
@@ -1564,6 +1570,8 @@
   "newUi": {
     "sidebar": {
       "quickConnect": {
+        "where": "Where",
+        "who": "Who",
         "hostLabel": "Host",
         "hostPlaceholder": "192.168.1.1 or example.com",
         "portLabel": "Port",
@@ -1631,10 +1639,6 @@
         "resetAllConfirm": "Reset every keybinding to its default?"
       },
       "userProfile": {
-        "donateTitle": "Keep Termix alive",
-        "donateDescription": "Termix is free, self-hosted, and built by only a few people in their spare time. If it's saved you time or money, a crypto donation helps keep it going.",
-        "donateMilestones": "Donations help fund the time to research and learn what's needed to build SAML, Kubernetes, and Agent support. See the progress and donate.",
-        "donateButton": "Donate crypto",
         "storageModeLocal": "Browser",
         "storageModeCloud": "Database",
         "storageModeDescription": "Browser stores settings in this browser only. Database syncs to the server and loads on any device.",
@@ -2155,7 +2159,9 @@
     "noResults": "No settings match.",
     "pages": "Pages",
     "instanceSettings": "Server settings",
-    "nothingHere": "Nothing to set here."
+    "nothingHere": "Nothing to set here.",
+    "searchPage": "Search this page",
+    "noPageMatches": "Nothing on this page matches."
   },
   "managerCard": {
     "refresh": "Refresh",
@@ -2345,6 +2351,8 @@
     "revoke": "Remove access"
   },
   "manage": {
+    "searchSettings": "Search settings",
+    "noMatchingSettings": "No settings match.",
     "sections": "Sections",
     "sectionNeedsAttention": "Something here needs attention",
     "needsAttention_one": "One thing needs attention.",

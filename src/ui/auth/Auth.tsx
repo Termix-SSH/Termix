@@ -1205,7 +1205,11 @@ export function Auth({ onLogin }: AuthProps) {
               {t("messages.databaseConnectionFailed")}
             </p>
           </div>
-          <Button onClick={() => window.location.reload()}>
+          <Button
+            variant="outline"
+            onClick={() => window.location.reload()}
+            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
+          >
             {t("common.refresh")}
           </Button>
           <LanguageRow
@@ -1351,11 +1355,13 @@ export function Auth({ onLogin }: AuthProps) {
                           )}
                         </p>
                         <Button
+                          variant="outline"
                           type="button"
                           disabled={authPluginsLoading}
                           onClick={() =>
                             void retryAuthPlugins().catch(() => {})
                           }
+                          className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
                         >
                           {t("auth.retrySecondFactorUI")}
                         </Button>

@@ -1,4 +1,5 @@
 import { InlineView, useConfirm } from "@/components/surface/surface-scope";
+import { FormFooter } from "@/components/list-kit";
 import { useState, useRef, useEffect } from "react";
 import { AuthEnrollmentSections } from "./AuthEnrollmentSections";
 import { useTranslation } from "react-i18next";
@@ -265,36 +266,20 @@ export function NewApiKeyDialog({
       }}
       title={t("newUi.sidebar.userProfile.createApiKeyTitle")}
       footer={
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          {createdToken ? (
-            <Button
-              variant="outline"
-              className="rounded-none border-accent-brand/40 text-[10px] font-bold uppercase tracking-widest text-accent-brand"
-              onClick={close}
-            >
-              {t("newUi.sidebar.userProfile.done")}
-            </Button>
-          ) : (
-            <>
-              <Button
-                variant="ghost"
-                onClick={close}
-                className="rounded-none text-[10px] font-bold uppercase tracking-widest"
-              >
-                {t("newUi.sidebar.userProfile.cancel")}
-              </Button>
-              <Button
-                variant="outline"
-                className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 rounded-none text-[10px] font-bold uppercase tracking-widest gap-1.5"
-                onClick={handleCreate}
-                disabled={creating}
-              >
-                <KeyRound className="size-3" />{" "}
-                {t("newUi.sidebar.userProfile.createKey")}
-              </Button>
-            </>
-          )}
-        </div>
+        createdToken ? (
+          <FormFooter
+            onSave={close}
+            saveLabel={t("newUi.sidebar.userProfile.done")}
+          />
+        ) : (
+          <FormFooter
+            onCancel={close}
+            cancelLabel={t("newUi.sidebar.userProfile.cancel")}
+            onSave={() => void handleCreate()}
+            saveLabel={t("newUi.sidebar.userProfile.createKey")}
+            saving={creating}
+          />
+        )
       }
     >
       <p className="text-xs text-muted-foreground">
@@ -1197,29 +1182,6 @@ export function UserProfilePanel({
         userId={userId}
       />
 
-      {/* Donate banner */}
-      {shows("account") && (
-        <div className="border border-accent-brand/40 bg-accent-brand/10 px-3 py-2.5 flex flex-col gap-1.5">
-          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-accent-brand">
-            {t("newUi.sidebar.userProfile.donateTitle")}
-          </div>
-          <p className="text-[10px] text-muted-foreground leading-relaxed">
-            {t("newUi.sidebar.userProfile.donateDescription")}
-          </p>
-          <p className="text-[10px] text-muted-foreground leading-relaxed">
-            {t("newUi.sidebar.userProfile.donateMilestones")}
-          </p>
-          <a
-            href="https://donate.termix.site/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="self-start flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest bg-accent-brand text-white px-2 py-1 hover:opacity-90 transition-opacity"
-          >
-            {t("newUi.sidebar.userProfile.donateButton")}
-          </a>
-        </div>
-      )}
-
       {/* Storage mode toggle — only meaningful once a remote server is
           connected; with no sync there's nowhere for "cloud" to sync to,
           so this stays forced to local storage and hidden. */}
@@ -1233,7 +1195,7 @@ export function UserProfilePanel({
               onClick={() => handleStorageModeChange("local")}
               className={`flex-1 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
                 storageMode === "local"
-                  ? "bg-accent-brand text-white"
+                  ? "bg-accent-brand/10 text-accent-brand"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
               }`}
             >
@@ -1243,7 +1205,7 @@ export function UserProfilePanel({
               onClick={() => handleStorageModeChange("cloud")}
               className={`flex-1 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
                 storageMode === "cloud"
-                  ? "bg-accent-brand text-white"
+                  ? "bg-accent-brand/10 text-accent-brand"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
               }`}
             >
@@ -1363,15 +1325,22 @@ export function UserProfilePanel({
           )}
 
           <div className="border-t border-border pt-3 mt-1">
-            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-              {t("newUi.sidebar.userProfile.versionLabel")}
-            </span>
-            <div className="flex items-center justify-between mt-1.5">
-              <span className="text-sm font-bold text-accent-brand">
-                {version ? `v${version}` : "—"}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+                {t("newUi.sidebar.userProfile.versionLabel")}
               </span>
-              <VersionBadge status={versionStatus} releaseUrl={releaseUrl} />
+              <VersionBadge
+                status={versionStatus}
+                releaseUrl={releaseUrl}
+                className="shrink-0 px-1 py-px text-[9px]"
+              />
             </div>
+            <span
+              className="mt-1.5 block truncate text-sm font-bold text-accent-brand"
+              title={version ? `v${version}` : undefined}
+            >
+              {version ? `v${version}` : "-"}
+            </span>
           </div>
 
           <div className="border-t border-border pt-3 mt-3">
@@ -1528,7 +1497,7 @@ export function UserProfilePanel({
               <Type className="size-3" />
               {t("newUi.sidebar.userProfile.interfaceFontLabel")}
             </span>
-            <select
+            <Select2
               value={uiFont}
               onChange={(event) =>
                 handleUiFontChange(event.target.value as UiFontId)
@@ -1540,7 +1509,7 @@ export function UserProfilePanel({
                   {font.label}
                 </option>
               ))}
-            </select>
+            </Select2>
             <span className="text-[10px] text-muted-foreground">
               {t("newUi.sidebar.userProfile.interfaceFontDescription")}
             </span>
@@ -1767,7 +1736,10 @@ export function UserProfilePanel({
             </SettingRow>
           </div>
 
-          <div className="flex flex-col gap-1 border-t border-border pt-3">
+          <div
+            id="settings-navigation"
+            className="flex flex-col gap-1 border-t border-border pt-3"
+          >
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
               {t("newUi.sidebar.userProfile.settingsNavigation")}
             </span>

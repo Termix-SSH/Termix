@@ -61,6 +61,11 @@ const menuItems = createRegistry<HostContextMenuItemDef>(byOrderThenId);
 
 export const registerHostAction = actions.register;
 export const useHostActions = actions.useList;
+
+/** Plugin actions sort by order; connect actions default to the end. */
+export function actionOrder(action: HostActionDef): number {
+  return action.order ?? (action.kind === "connect" ? 100 : 50);
+}
 export const listHostActions = actions.list;
 export const registerHostBadge = badges.register;
 export const useHostBadges = badges.useList;

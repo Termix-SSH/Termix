@@ -28,6 +28,7 @@ describe("defaultHostSidebarPreferences", () => {
         openOnDoubleClick: false,
         showFolderPaths: true,
         hostClickBehavior: "newTab",
+        barActions: {},
       },
     });
   });
@@ -67,6 +68,7 @@ describe("sanitizeHostSidebarPreferences", () => {
         openOnDoubleClick: true,
         showFolderPaths: false,
         hostClickBehavior: "focusExistingDoubleClickNew",
+        barActions: { maintenance: true },
       },
     };
     expect(sanitizeHostSidebarPreferences(valid)).toEqual(valid);
@@ -143,5 +145,32 @@ describe("sanitizeHostSidebarPreferences", () => {
   it("always stamps the current version regardless of input", () => {
     const result = sanitizeHostSidebarPreferences({ version: 999 });
     expect(result.version).toBe(HOST_SIDEBAR_PREFS_VERSION);
+  });
+});
+
+describe("barActions", () => {
+  it("keeps boolean choices for valid action ids only", () => {
+    const prefs = sanitizeHostSidebarPreferences({
+      display: {
+        barActions: {
+          maintenance: true,
+          "ai-agent": false,
+          "Bad Id": true,
+          docker: "yes",
+        },
+      },
+    });
+    expect(prefs.display.barActions).toEqual({
+      maintenance: true,
+      "ai-agent": false,
+    });
+  });
+
+  it("defaults to no overrides", () => {
+    expect(sanitizeHostSidebarPreferences({}).display.barActions).toEqual({});
+    expect(
+      sanitizeHostSidebarPreferences({ display: { barActions: [] } }).display
+        .barActions,
+    ).toEqual({});
   });
 });

@@ -41,13 +41,14 @@ export function TabStrip({
         left: el.scrollLeft > 1,
         right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
       });
-    const observer = new ResizeObserver(update);
-    observer.observe(el);
-    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    const observer =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    observer?.observe(el);
+    if (el.firstElementChild) observer?.observe(el.firstElementChild);
     el.addEventListener("scroll", update);
     update();
     return () => {
-      observer.disconnect();
+      observer?.disconnect();
       el.removeEventListener("scroll", update);
     };
   }, [tabs]);

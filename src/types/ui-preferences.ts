@@ -65,6 +65,8 @@ export interface UiRailPreferences {
    * items are only known at runtime, so the preset cannot list them.
    */
   hidePluginItems?: boolean;
+  /** Rail item ids in the user's order. Items not listed keep their place. */
+  order?: string[];
 }
 
 export interface UiDashboardPreferences {
@@ -243,6 +245,7 @@ const AREA_SPECS: {
   },
   rail: {
     hiddenTabs: { kind: "stringArray" },
+    order: { kind: "stringArray" },
     hidePluginItems: { kind: "bool" },
   },
   dashboard: {

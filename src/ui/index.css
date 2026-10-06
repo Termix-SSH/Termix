@@ -815,3 +815,13 @@ html.fs-xl {
   outline-offset: 2px;
   transition: outline-color 1.2s ease;
 }
+
+/* Cards and rows the settings page search filtered out. */
+[data-search-hidden] {
+  display: none !important;
+}
+
+::highlight(settings-search) {
+  background-color: color-mix(in oklab, var(--accent-brand) 35%, transparent);
+  color: inherit;
+}

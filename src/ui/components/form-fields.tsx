@@ -34,7 +34,7 @@ export function Field({
   children: ReactNode;
 }) {
   return (
-    <div className={cn("flex flex-col gap-1.5", className)}>
+    <div data-setting-row="" className={cn("flex flex-col gap-1.5", className)}>
       {(label || aside) && (
         <div className="flex items-center gap-2">
           <label

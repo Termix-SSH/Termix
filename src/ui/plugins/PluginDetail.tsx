@@ -98,8 +98,9 @@ export function PluginDetail({
             plugin.updateAvailable &&
             !plugin.pinnedVersion && (
               <Button
+                variant="outline"
                 size="sm"
-                className="gap-1.5"
+                className="gap-1.5 border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
                 disabled={busy || locked}
                 onClick={() => void manager.requestUpdate(plugin)}
               >
@@ -148,8 +149,9 @@ export function PluginDetail({
             </>
           ) : (
             <Button
+              variant="outline"
               size="sm"
-              className="gap-1.5"
+              className="gap-1.5 border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
               disabled={busy || locked || !plugin.latestVersion}
               onClick={() => manager.requestInstall(plugin)}
             >
@@ -446,8 +448,8 @@ function DataCard({
           {t("plugins.manager.loading")}
         </div>
       ) : (
-        <div className="flex flex-col">
-          <div className="grid grid-cols-2 gap-px border-b border-border bg-border sm:grid-cols-4">
+        <div className="-mx-3 -my-1 flex flex-col md:-mx-4">
+          <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4">
             <Stat
               label={t("plugins.manager.data.tables")}
               value={`${data.tables.length}`}
@@ -470,7 +472,7 @@ function DataCard({
             />
           </div>
           {data.tables.length > 0 && (
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-border border-t border-border">
               {data.tables.map((table) => (
                 <div
                   key={table.name}

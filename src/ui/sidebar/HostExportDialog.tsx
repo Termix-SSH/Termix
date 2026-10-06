@@ -1,9 +1,10 @@
 import { InlineView } from "@/components/surface/surface-scope";
+import { FormFooter } from "@/components/list-kit";
 import { getErrorMessage } from "../lib/error-message.js";
 import { usePluginStore } from "@/plugin-host/plugin-store";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Download, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/button";
 import { Checkbox } from "@/components/checkbox";
@@ -220,20 +221,13 @@ export function HostExportDialog({
       title={t("hosts.export.title")}
       width="wide"
       footer={
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
-            {t("hosts.export.cancel")}
-          </Button>
-          <Button
-            variant="outline"
-            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-            onClick={handleExport}
-            disabled={!canExport}
-          >
-            <Download className="size-3.5 mr-2" />
-            {t("hosts.export.confirm")}
-          </Button>
-        </div>
+        <FormFooter
+          onCancel={onClose}
+          cancelLabel={t("hosts.export.cancel")}
+          onSave={() => void handleExport()}
+          saveLabel={t("hosts.export.confirm")}
+          disabled={!canExport}
+        />
       }
     >
       <div className="flex flex-col md:flex-row gap-4 flex-1 min-h-0 min-w-0 overflow-y-auto md:overflow-visible">

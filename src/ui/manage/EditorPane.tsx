@@ -1,6 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 import type React from "react";
 import {
+  createContext,
+  useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -9,9 +12,15 @@ import {
   type RefObject,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { GroupHeading, PANEL } from "@/components/panel-layout";
+import { Search } from "lucide-react";
+import { GroupHeading, PANEL, PanelSearch } from "@/components/panel-layout";
 import { TabStrip } from "@/components/tab-strip";
+import { EmptyState } from "@/components/empty-state";
+import { HIDDEN_ATTR, useSettingsPageFilter } from "@/settings/page-filter";
 import { cn } from "@/lib/utils";
+
+/** True while the editor is searched, so every lazy section mounts. */
+const SearchingContext = createContext(false);
 
 export interface EditorNavItem {
   id: string;
@@ -25,6 +34,25 @@ export interface EditorNavBand {
   id: string;
   label: string;
   items: EditorNavItem[];
+}
+
+/**
+ * The element that really scrolls: the editor's own area, or the page around
+ * it when the editor is embedded somewhere that scrolls itself.
+ */
+function scroller(el: HTMLElement): HTMLElement {
+  let node: HTMLElement | null = el;
+  while (node) {
+    const overflow = getComputedStyle(node).overflowY;
+    if (
+      (overflow === "auto" || overflow === "scroll") &&
+      node.scrollHeight > node.clientHeight + 1
+    ) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return el;
 }
 
 /** Which section is in view, and a way to jump to one. */
@@ -42,7 +70,8 @@ export function useScrollSpy(
     if (!container) return;
     const onScroll = () => {
       if (Date.now() < lockUntil.current) return;
-      const top = container.getBoundingClientRect().top;
+      const area = scroller(container);
+      const top = area.getBoundingClientRect().top;
       let current = ids[0] ?? "";
       for (const id of ids) {
         const el = container.querySelector<HTMLElement>(
@@ -52,17 +81,21 @@ export function useScrollSpy(
         if (el.getBoundingClientRect().top - top <= 24) current = id;
       }
       if (
-        container.scrollHeight > container.clientHeight &&
-        container.scrollTop + container.clientHeight >=
-          container.scrollHeight - 8
+        area.scrollHeight > area.clientHeight &&
+        area.scrollTop + area.clientHeight >= area.scrollHeight - 8
       ) {
         current = ids[ids.length - 1] ?? current;
       }
       setActive(current);
     };
     onScroll();
-    container.addEventListener("scroll", onScroll, { passive: true });
-    return () => container.removeEventListener("scroll", onScroll);
+    // Captured on the document so an outer scroller is heard too.
+    document.addEventListener("scroll", onScroll, {
+      passive: true,
+      capture: true,
+    });
+    return () =>
+      document.removeEventListener("scroll", onScroll, { capture: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [containerRef, idsKey]);
 
@@ -76,11 +109,12 @@ export function useScrollSpy(
       if (!container || !el) return;
       lockUntil.current = Date.now() + 600;
       setActive(id);
-      container.scrollTo?.({
+      const area = scroller(container);
+      area.scrollTo?.({
         top:
           el.getBoundingClientRect().top -
-          container.getBoundingClientRect().top +
-          container.scrollTop -
+          area.getBoundingClientRect().top +
+          area.scrollTop -
           8,
         behavior: "smooth",
       });
@@ -114,9 +148,13 @@ export function EditorSection({
  */
 export function LazySection({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
+  const searching = useContext(SearchingContext);
   const [shown, setShown] = useState(
     () => typeof IntersectionObserver === "undefined",
   );
+  useEffect(() => {
+    if (searching) setShown(true);
+  }, [searching]);
   useLayoutEffect(() => {
     if (shown) return;
     const el = ref.current;
@@ -167,9 +205,39 @@ export function EditorPane({
 }) {
   const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const ids = bands.flatMap((band) => band.items.map((item) => item.id));
+  const formRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState("");
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  const searching = query.trim().length > 0;
+  const onFiltered = useCallback((root: HTMLElement) => {
+    const next = new Set<string>();
+    for (const el of root.querySelectorAll<HTMLElement>(
+      `[data-section][${HIDDEN_ATTR}]`,
+    )) {
+      if (el.dataset.section) next.add(el.dataset.section);
+    }
+    setHiddenIds((prev) =>
+      prev.size === next.size && [...next].every((id) => prev.has(id))
+        ? prev
+        : next,
+    );
+  }, []);
+  const anyShown = useSettingsPageFilter(
+    formRef,
+    query,
+    "editor",
+    "[data-section]",
+    onFiltered,
+  );
+  const visibleBands = bands
+    .map((band) => ({
+      ...band,
+      items: band.items.filter((item) => !hiddenIds.has(item.id)),
+    }))
+    .filter((band) => band.items.length > 0);
+  const ids = visibleBands.flatMap((band) => band.items.map((item) => item.id));
   const { active, scrollTo } = useScrollSpy(scrollRef, ids);
-  const showNav = ids.length > 1;
+  const showNav = bands.flatMap((band) => band.items).length > 1;
   if (revealRef) revealRef.current = scrollTo;
 
   return (
@@ -179,7 +247,7 @@ export function EditorPane({
           aria-label={t("manage.sections")}
           className="hidden w-52 shrink-0 flex-col gap-3 overflow-y-auto border-r border-border py-2.5 thin-scrollbar lg:flex"
         >
-          {bands.map((band) => (
+          {visibleBands.map((band) => (
             <div key={band.id} className="flex flex-col">
               <GroupHeading title={band.label} className="px-2.5 pb-1.5" />
               {band.items.map((item) => {
@@ -220,10 +288,20 @@ export function EditorPane({
       )}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className={`shrink-0 border-b border-border ${PANEL.band}`}>
+          <div className="mx-auto w-full max-w-3xl">
+            <PanelSearch
+              value={query}
+              onChange={setQuery}
+              placeholder={t("manage.searchSettings")}
+              fill
+            />
+          </div>
+        </div>
         {showNav && (
           <div className="shrink-0 border-b border-border px-1 lg:hidden">
             <TabStrip
-              tabs={bands.flatMap((band) =>
+              tabs={visibleBands.flatMap((band) =>
                 band.items.map((item) => ({ id: item.id, label: item.label })),
               )}
               activeTab={active}
@@ -235,9 +313,17 @@ export function EditorPane({
           ref={scrollRef}
           className={`min-h-0 flex-1 overflow-y-auto thin-scrollbar ${PANEL.body}`}
         >
-          <div className={`mx-auto flex max-w-3xl flex-col ${PANEL.gap} pb-6`}>
+          {!anyShown && (
+            <EmptyState icon={Search} title={t("manage.noMatchingSettings")} />
+          )}
+          <div
+            ref={formRef}
+            className={`mx-auto flex max-w-3xl flex-col ${PANEL.gap} pb-6`}
+          >
             {banner}
-            {children}
+            <SearchingContext.Provider value={searching}>
+              {children}
+            </SearchingContext.Provider>
           </div>
         </div>
         {(footer || errorCount > 0) && (

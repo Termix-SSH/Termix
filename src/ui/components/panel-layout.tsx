@@ -166,6 +166,10 @@ export function PanelSearch({
   placeholder,
   fill,
   autoFocus,
+  disabled,
+  title,
+  onEnter,
+  inputRef,
   className,
 }: {
   value: string;
@@ -174,10 +178,15 @@ export function PanelSearch({
   /** Takes the whole toolbar, for panels where search is the only control. */
   fill?: boolean;
   autoFocus?: boolean;
+  disabled?: boolean;
+  title?: string;
+  /** Runs on Enter, for searches that query a server. */
+  onEnter?: () => void;
+  inputRef?: React.Ref<HTMLInputElement>;
   className?: string;
 }) {
   const { t } = useTranslation();
-  const ref = useRef<HTMLInputElement>(null);
+  const localRef = useRef<HTMLInputElement>(null);
   const text = placeholder ?? t("common.search");
   return (
     <div
@@ -189,10 +198,19 @@ export function PanelSearch({
     >
       <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
       <input
-        ref={ref}
+        ref={(el) => {
+          localRef.current = el;
+          if (typeof inputRef === "function") inputRef(el);
+          else if (inputRef)
+            (
+              inputRef as React.MutableRefObject<HTMLInputElement | null>
+            ).current = el;
+        }}
         type="text"
         value={value}
         autoFocus={autoFocus}
+        disabled={disabled}
+        title={title}
         aria-label={text}
         placeholder={text}
         onChange={(e) => onChange(e.target.value)}
@@ -201,8 +219,12 @@ export function PanelSearch({
             e.stopPropagation();
             onChange("");
           }
+          if (e.key === "Enter" && onEnter) {
+            e.preventDefault();
+            onEnter();
+          }
         }}
-        className="h-8 w-full min-w-0 border border-input bg-transparent pl-8 pr-7 text-xs outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 dark:bg-input/30"
+        className="h-8 w-full min-w-0 border border-input bg-transparent pl-8 pr-7 text-xs outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
       />
       {value && (
         <button
@@ -211,7 +233,7 @@ export function PanelSearch({
           title={t("panel.clearSearch")}
           onClick={() => {
             onChange("");
-            ref.current?.focus();
+            localRef.current?.focus();
           }}
           className="absolute right-1.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center text-muted-foreground hover:text-foreground"
         >

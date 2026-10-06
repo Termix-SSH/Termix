@@ -1,6 +1,9 @@
+import { Select2 } from "@/components/select2";
 import { InlineView } from "@/components/surface/surface-scope";
 import { useTranslation } from "react-i18next";
-import { Rows3, SquareStack } from "lucide-react";
+import { PanelTop, Rows3, SquareStack } from "lucide-react";
+import { actionOrder, useHostActions } from "./host-contributions";
+import { showsInBar } from "./tree/host-bar-actions";
 import { SectionCard, SettingRow, FakeSwitch } from "@/components/section-card";
 import type {
   HostClickBehavior,
@@ -25,6 +28,9 @@ export function CustomizeSidebarPanel({
   ) => void;
 }) {
   const { t } = useTranslation();
+  const actions = [...useHostActions()].sort(
+    (a, b) => actionOrder(a) - actionOrder(b) || a.id.localeCompare(b.id),
+  );
 
   return (
     <InlineView
@@ -48,7 +54,7 @@ export function CustomizeSidebarPanel({
                 : t("hosts.densityCompactDesc")
             }
           >
-            <select
+            <Select2
               value={preferences.display.density}
               onChange={(e) =>
                 update((prev) => ({
@@ -67,7 +73,7 @@ export function CustomizeSidebarPanel({
               <option value="compact">
                 {t("hosts.displayDensityCompact")}
               </option>
-            </select>
+            </Select2>
           </SettingRow>
         </SectionCard>
 
@@ -112,7 +118,7 @@ export function CustomizeSidebarPanel({
                 {t("hosts.actionsVisibilityDesc")}
               </span>
             </div>
-            <select
+            <Select2
               value={preferences.display.trayTrigger}
               onChange={(e) =>
                 update((prev) => ({
@@ -129,7 +135,7 @@ export function CustomizeSidebarPanel({
               <option value="actionsOnly">{t("hosts.actionsOnly")}</option>
               <option value="hover">{t("hosts.actionsHover")}</option>
               <option value="click">{t("hosts.actionsClick")}</option>
-            </select>
+            </Select2>
           </div>
           <div className="flex flex-col gap-1.5 py-3 border-b border-border last:border-0">
             <div className="flex flex-col gap-0.5">
@@ -140,7 +146,7 @@ export function CustomizeSidebarPanel({
                 {t("hosts.hostClickBehaviorDesc")}
               </span>
             </div>
-            <select
+            <Select2
               value={preferences.display.hostClickBehavior}
               onChange={(e) =>
                 update((prev) => ({
@@ -160,7 +166,7 @@ export function CustomizeSidebarPanel({
               <option value="focusExistingDoubleClickNew">
                 {t("hosts.hostClickFocusExistingDoubleNew")}
               </option>
-            </select>
+            </Select2>
           </div>
           <SettingRow
             label={t("hosts.openOnDoubleClick")}
@@ -198,6 +204,49 @@ export function CustomizeSidebarPanel({
             />
           </SettingRow>
         </SectionCard>
+
+        {actions.length > 0 && (
+          <SectionCard
+            title={t("hosts.connectBarTitle")}
+            icon={<PanelTop className="size-3.5" />}
+          >
+            <p className="pt-2 text-xs text-muted-foreground">
+              {t("hosts.connectBarDesc")}
+            </p>
+            {actions.map((action) => {
+              const Icon = action.icon;
+              return (
+                <SettingRow
+                  key={action.id}
+                  label={t(action.titleKey)}
+                  rowId={`bar-action-${action.id}`}
+                >
+                  <span className="flex items-center gap-2">
+                    <Icon className="size-3.5 text-muted-foreground" />
+                    <FakeSwitch
+                      checked={showsInBar(
+                        preferences.display.barActions,
+                        action,
+                      )}
+                      onChange={(v) =>
+                        update((prev) => ({
+                          ...prev,
+                          display: {
+                            ...prev.display,
+                            barActions: {
+                              ...prev.display.barActions,
+                              [action.id]: v,
+                            },
+                          },
+                        }))
+                      }
+                    />
+                  </span>
+                </SettingRow>
+              );
+            })}
+          </SectionCard>
+        )}
 
         <p className="text-[11px] text-muted-foreground/70 leading-snug">
           {t("hosts.customizeSortHint")}

@@ -809,7 +809,7 @@ export function HostEditorGeneralTab({
                   ),
                 ].join(" ")}
               >
-                <select
+                <Select2
                   className="flex h-7 border border-border bg-background px-2 py-0 text-xs outline-none focus:ring-1 focus:ring-ring"
                   value={form.connectionOrigin ?? ""}
                   onChange={(e) =>
@@ -826,7 +826,7 @@ export function HostEditorGeneralTab({
                   <option value="remote">
                     {t("hosts.connectionOriginRemote")}
                   </option>
-                </select>
+                </Select2>
               </SettingRow>
             </HostOnly>
           )}

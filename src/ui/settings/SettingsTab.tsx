@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, Settings as SettingsIcon } from "lucide-react";
+import { ChevronDown, Search, Settings as SettingsIcon } from "lucide-react";
 import {
   GroupHeading,
   PANEL,
@@ -23,6 +23,7 @@ import {
 } from "./FeatureSettingsSections";
 import { KeybindingsSettings } from "./KeybindingsSettings";
 import { SettingsEmbedContext } from "./settings-embed";
+import { useSettingsPageFilter } from "./page-filter";
 import {
   CORE_SETTINGS_PAGES,
   SETTINGS_BAND_ORDER,
@@ -35,6 +36,8 @@ import {
 export interface SettingsTabProps {
   /** The page to open, from the tab's data. */
   section?: string;
+  /** An element id on that page to scroll to, as "id@nonce". */
+  reveal?: string;
   username: string;
   isAdmin: boolean;
   onLogout?: () => void;
@@ -76,6 +79,7 @@ function revealText(container: HTMLElement, needle: string): boolean {
 /** Everything that configures the app, one page at a time. */
 export function SettingsTab({
   section,
+  reveal,
   username,
   isAdmin,
   onLogout,
@@ -88,7 +92,9 @@ export function SettingsTab({
   const adminFeatures = useFeatureSettings("admin");
   const [query, setQuery] = useState("");
   const [navOpen, setNavOpen] = useState(false);
+  const [pageQuery, setPageQuery] = useState("");
   const contentRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
 
   const pages = useMemo(() => {
     const plugins = new Map<string, SettingsPage>();
@@ -130,15 +136,42 @@ export function SettingsTab({
     if (section) setCurrent(section);
   }, [section]);
 
+  // The page renders lazily, so the target may take a moment to appear.
+  useEffect(() => {
+    const target = reveal?.split("@")[0];
+    if (!target) return;
+    let tries = 0;
+    let timer = 0;
+    const attempt = () => {
+      const el = contentRef.current?.querySelector<HTMLElement>(
+        `#${CSS.escape(target)}`,
+      );
+      if (el) {
+        el.scrollIntoView?.({ block: "start", behavior: "smooth" });
+        el.classList.add("settings-search-hit");
+        timer = window.setTimeout(
+          () => el.classList.remove("settings-search-hit"),
+          1600,
+        );
+        return;
+      }
+      if (++tries < 15) timer = window.setTimeout(attempt, 120);
+    };
+    timer = window.setTimeout(attempt, 60);
+    return () => window.clearTimeout(timer);
+  }, [reveal]);
+
   const page =
     pages.find((p) => p.id === current) ??
     pages.find((p) => p.id === "account")!;
+  const pageHasMatches = useSettingsPageFilter(pageRef, pageQuery, page.id);
   const hits = searchSettingsPages(pages, query, (key) => t(key));
   const pageLabel = (p: SettingsPage) => p.label ?? t(p.labelKey);
 
   const go = (id: string) => {
     setCurrent(id);
     setNavOpen(false);
+    setPageQuery("");
     contentRef.current?.scrollTo?.({ top: 0 });
     const needle = query.trim();
     if (!needle) return;
@@ -261,7 +294,7 @@ export function SettingsTab({
         <nav
           aria-label={t("settings.pages")}
           className={cn(
-            "w-full shrink-0 overflow-y-auto border-r border-border bg-sidebar thin-scrollbar md:static md:block md:w-60",
+            "w-full shrink-0 overflow-y-auto border-r border-border bg-background thin-scrollbar md:static md:block md:w-60",
             navOpen ? "absolute inset-0 z-20 block" : "hidden",
           )}
         >
@@ -269,11 +302,25 @@ export function SettingsTab({
         </nav>
 
         <SurfaceScope kind="tab" className="min-w-0">
+          <div className={`shrink-0 border-b border-border ${PANEL.band}`}>
+            <div className="mx-auto w-full max-w-3xl">
+              <PanelSearch
+                value={pageQuery}
+                onChange={setPageQuery}
+                placeholder={t("settings.searchPage")}
+                fill
+              />
+            </div>
+          </div>
           <div
             ref={contentRef}
             className={`min-h-0 flex-1 overflow-y-auto thin-scrollbar ${PANEL.body}`}
           >
+            {!pageHasMatches && (
+              <EmptyState icon={Search} title={t("settings.noPageMatches")} />
+            )}
             <div
+              ref={pageRef}
               className={`mx-auto flex w-full max-w-3xl flex-col ${PANEL.gap} pb-6`}
             >
               <SettingsEmbedContext.Provider value>

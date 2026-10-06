@@ -2969,7 +2969,13 @@ export function AppShell({
             onRailClick={handleRailClick}
             onOpenTab={openSingletonTab}
             onOpenInRightDock={openInRightDock}
-            onOpenSettings={() => openSingletonTab("settings")}
+            onOpenSettings={() =>
+              openSingletonTab("settings", undefined, undefined, {
+                section: "appearance",
+                reveal: "settings-navigation",
+                revealAt: Date.now(),
+              })
+            }
             onOpenPalette={() => setCommandPaletteOpen(true)}
             onLogout={onLogout}
           />

@@ -1,8 +1,9 @@
+import { Select2 } from "@/components/select2";
+import { FormFooter } from "@/components/list-kit";
 import { InlineView } from "@/components/surface/surface-scope";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Button } from "@/components/button";
 import {
   getCredentials,
   getHostAuthOverride,
@@ -127,25 +128,12 @@ export function HostAuthOverrideModal({
           </>
         }
         footer={
-          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={saving}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button
-              variant="outline"
-              className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-              onClick={handleSave}
-              disabled={
-                loading || loadError || saving || selectedId === initialId
-              }
-            >
-              {saving ? t("common.saving") : t("common.save")}
-            </Button>
-          </div>
+          <FormFooter
+            onCancel={() => onOpenChange(false)}
+            onSave={() => void handleSave()}
+            saving={saving}
+            disabled={loading || loadError || selectedId === initialId}
+          />
         }
       >
         <p className="text-xs text-muted-foreground">
@@ -172,7 +160,7 @@ export function HostAuthOverrideModal({
             >
               {t("hosts.sharing.authOverrideCredentialLabel")}
             </label>
-            <select
+            <Select2
               id={`auth-override-${host.id}`}
               value={selectedId}
               onChange={(event) => setSelectedId(event.target.value)}
@@ -192,7 +180,7 @@ export function HostAuthOverrideModal({
                     : credential.name}
                 </option>
               ))}
-            </select>
+            </Select2>
             {credentials.length === 0 && (
               <p className="text-[10px] text-muted-foreground">
                 {t("hosts.sharing.authOverrideNoCredentials")}

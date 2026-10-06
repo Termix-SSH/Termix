@@ -64,7 +64,12 @@ export function PluginConsentPrompt({
           <Button variant="ghost" onClick={onCancel} disabled={busy}>
             {t("common.cancel")}
           </Button>
-          <Button onClick={onConfirm} disabled={busy}>
+          <Button
+            variant="outline"
+            onClick={onConfirm}
+            disabled={busy}
+            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
+          >
             {mode === "update"
               ? t("plugins.manager.consent.agreeUpdate")
               : t("plugins.manager.install")}

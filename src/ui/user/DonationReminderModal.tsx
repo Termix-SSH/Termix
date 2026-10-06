@@ -45,7 +45,13 @@ export function DonationReminderModal({
           <Button variant="outline" onClick={onDismiss}>
             {t("donation.dismiss")}
           </Button>
-          <Button onClick={handleDonate}>{t("donation.cta")}</Button>
+          <Button
+            variant="outline"
+            onClick={handleDonate}
+            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
+          >
+            {t("donation.cta")}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

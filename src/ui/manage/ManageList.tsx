@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/button";
 import { EmptyState } from "@/components/empty-state";
-import { PanelSearch, Segmented } from "@/components/panel-layout";
+import { PanelSearch } from "@/components/panel-layout";
 import { cn } from "@/lib/utils";
 import { rem } from "@/lib/rem";
 import type { Credential, Host } from "@/types/ui-types";
@@ -143,24 +143,69 @@ export function ManageList({
     <div
       className={cn(
         editing ? "hidden md:flex" : "flex",
-        "w-full shrink-0 flex-col border-r border-border bg-sidebar md:w-72",
+        "w-full shrink-0 flex-col border-r border-border bg-background md:w-72",
       )}
     >
-      <div className="flex flex-col gap-2 border-b border-border px-2.5 py-2">
-        <Segmented
-          value={mode}
-          onChange={onMode}
-          options={[
-            { value: "hosts", label: t("nav.hosts"), count: hosts.length },
+      <nav
+        aria-label={t("manage.sections")}
+        className="flex shrink-0 flex-col border-b border-border py-1"
+      >
+        {(
+          [
+            {
+              value: "hosts",
+              label: t("nav.hosts"),
+              icon: Server,
+              count: hosts.length,
+            },
             {
               value: "credentials",
               label: t("nav.credentials"),
+              icon: KeyRound,
               count: credentials.length,
             },
-            { value: "defaults", label: t("manage.defaults") },
-          ]}
-          className="w-full [&>button]:flex-1"
-        />
+            {
+              value: "defaults",
+              label: t("manage.defaults"),
+              icon: SlidersHorizontal,
+            },
+          ] as {
+            value: ManageMode;
+            label: string;
+            icon: typeof Server;
+            count?: number;
+          }[]
+        ).map((item) => {
+          const active = item.value === mode;
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.value}
+              type="button"
+              aria-current={active ? "page" : undefined}
+              onClick={() => onMode(item.value)}
+              className={cn(
+                "flex w-full items-center gap-2 border-l-2 py-1.5 pl-2 pr-2.5 text-left transition-colors",
+                rowFocus,
+                active
+                  ? "border-accent-brand bg-accent-brand/10 text-accent-brand"
+                  : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              <Icon className="size-3.5 shrink-0" />
+              <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                {item.label}
+              </span>
+              {item.count !== undefined && (
+                <span className="shrink-0 text-[10px] tabular-nums opacity-60">
+                  {item.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+      <div className="flex flex-col gap-2 border-b border-border px-2.5 py-2">
         <div className="flex items-center gap-2">
           <PanelSearch
             value={query}

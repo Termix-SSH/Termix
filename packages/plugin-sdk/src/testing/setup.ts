@@ -10,6 +10,15 @@ import { installSafePorts } from "./safe-ports.js";
 
 installSafePorts();
 
+// Radix measures some controls (Checkbox, Switch) and jsdom has no observer.
+if (typeof globalThis.ResizeObserver === "undefined") {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+}
+
 if (typeof window !== "undefined" && !window.matchMedia) {
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,

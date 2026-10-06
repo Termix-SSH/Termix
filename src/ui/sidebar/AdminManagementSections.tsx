@@ -14,6 +14,7 @@ import { pluginKey } from "@/lib/plugin-i18n";
 import { PluginIcon } from "@/lib/plugin-icon";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
+import { PanelSearch } from "@/components/panel-layout";
 import {
   Activity,
   Check,
@@ -151,11 +152,11 @@ export function AdminUsersSection({
           </div>
         </div>
         <div className="py-2 border-b border-border">
-          <Input
+          <PanelSearch
             value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
+            onChange={onSearchChange}
             placeholder={t("admin.searchUsers")}
-            className="h-7 text-xs rounded-none"
+            fill
           />
         </div>
         {users.map((user) => {

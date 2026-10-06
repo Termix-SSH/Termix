@@ -1,3 +1,4 @@
+import { Select2 } from "@/components/select2";
 import { useConfirm } from "@/components/surface/surface-scope";
 import { useEffect, useState } from "react";
 import { hostProtocolFlags, type HostProtocols } from "./host-protocols";
@@ -943,7 +944,7 @@ export function AdminUserManagePanel({
                 </span>
                 <label className="flex flex-col gap-1 text-[10px] text-muted-foreground">
                   {t("admin.deleteSuccessorLabel")}
-                  <select
+                  <Select2
                     value={successor}
                     onChange={(e) => setSuccessor(e.target.value)}
                     className="h-7 border border-border bg-background px-2 text-xs text-foreground outline-none"
@@ -957,7 +958,7 @@ export function AdminUserManagePanel({
                     <option value="none">
                       {t("admin.deleteSuccessorNone")}
                     </option>
-                  </select>
+                  </Select2>
                   <span>{t("admin.deleteSuccessorDesc")}</span>
                 </label>
                 <Button

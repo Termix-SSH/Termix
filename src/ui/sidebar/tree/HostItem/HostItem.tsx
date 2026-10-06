@@ -1,4 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
+import { actionOrder } from "@/sidebar/host-contributions";
+import { showsInBar, useBarActions } from "@/sidebar/tree/host-bar-actions";
 import { rem } from "@/lib/rem";
 import { enabledHostProtocols } from "@/sidebar/host-protocols";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
@@ -114,11 +116,6 @@ export function buildStatusTooltip(
   }
   if (protocols.length === 0) return statusLabel;
   return `${protocols.join(", ")}: ${statusLabel}`;
-}
-
-/** Plugin actions sort by order; connect actions default to the end. */
-function actionOrder(action: HostActionDef): number {
-  return action.order ?? (action.kind === "connect" ? 100 : 50);
 }
 
 async function writeClipboardText(value: string): Promise<void> {
@@ -275,6 +272,7 @@ export function HostItem({
   const allowDelete = canDeleteHost(host);
   const allHostActions = useHostActions();
   const pluginActions = hostActionsFor(allHostActions, host);
+  const barActions = useBarActions();
   const badges = hostBadgesFor(useHostBadges(), host);
   const pluginMenuItems = hostMenuItemsFor(useHostContextMenuItems(), host);
   const splitTargets = useSplitTargets();
@@ -421,7 +419,7 @@ export function HostItem({
         icon: action.icon as typeof Terminal,
         label: action.label?.(host) ?? t(action.titleKey),
         tabType: action.tabType,
-        tray: action.tray !== false,
+        tray: showsInBar(barActions, action),
         items:
           items && items.length > 1
             ? items.map((item) => ({

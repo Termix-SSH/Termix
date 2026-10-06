@@ -1,4 +1,5 @@
 ActionSlot (value): ({ slotId, context, className, enabled, renderItem, hideLabels, when, }: ActionSlotProps) => Element
+AddButton (value): ({ label, compact, className, ...rest }: { label?: string; compact?: boolean; className?: string; } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & { ref?: Ref<HTMLButtonElement>; }) => Element
 Alert (value): ({ className, variant, ...props }: ClassAttributes<HTMLDivElement> & HTMLAttributes<HTMLDivElement> & VariantProps<(props?: ConfigVariants<{ variant: { default: string; destructive: string; }; }> & ClassProp) => string>) => Element
 AlertDescription (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
 AlertDialog (value): ({ ...props }: AlertDialogProps) => Element
@@ -79,6 +80,7 @@ Facts (value): ({ className, children, }: { className?: string; children: ReactN
 FakeSwitch (value): ({ defaultChecked, disabled, checked, onChange, }: { defaultChecked?: boolean; disabled?: boolean; checked?: boolean; onChange?: (v: boolean) => void; }) => Element
 Field (value): ({ label, hint, error, aside, htmlFor, className, children, }: { label: string; hint?: ReactNode; error?: string; aside?: ReactNode; htmlFor?: string; className?: string; children: ReactNode; }) => Element
 FieldPair (value): ({ children }: { children: ReactNode; }) => Element
+FormFooter (value): ({ onCancel, onSave, saveLabel, cancelLabel, saving, dirty, status, disabled, onDelete, deleteLabel, extra, saveType, form, }: { onCancel?: () => void; onSave?: () => void; saveLabel?: string; cancelLabel?: string; saving?: boolean; dirty?: boolean; status?: ReactNode; disabled?: boolean; onDelete?: () => void; deleteLabel?: string; extra?: ReactNode; saveType?: "button" | "submit"; form?: string; }) => Element
 FullScreenAppPhase (type): FullScreenAppPhase
 FullScreenAppWrapper (value): FC<FullScreenAppWrapperProps>
 GridCardCatalogEntry (type): GridCardCatalogEntry
@@ -103,6 +105,11 @@ KeybindingActionType (type): string
 Label (value): ({ className, ...props }: LabelProps & RefAttributes<HTMLLabelElement>) => Element
 LineChart (value): ({ series, timestamps, domain, yFormatter, height, className, }: LineChartProps) => Element
 LineChartSeries (type): LineChartSeries
+ListBadge (value): ({ tone, className, children, }: { tone?: "destructive" | "muted" | "brand" | "warning" | "success"; className?: string; children: ReactNode; }) => Element
+ListRow (value): ({ title, icon, badges, meta, stripe, tone, color, selected, active, dimmed, leading, trailing, actions, onClick, className, children, ...rest }: { title: ReactNode; icon?: ReactNode; badges?: ReactNode; meta?: ReactNode; stripe?: number; tone?: ListRowTone; color?: string; selected?: boolean; active?: boolean; dimmed?: boolean; leading?: ReactNode; trailing?: ReactNode; actions?: ReactNode; onClick?: () => void; className?: string; children?: ReactNode; } & Omit<HTMLAttributes<HTMLDivElement>, "title" | "children" | "onClick">) => Element
+ListRowAction (value): ({ label, tone, className, children, ...rest }: { label: string; tone?: "default" | "destructive" | "brand"; className?: string; children: ReactNode; } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & { ref?: Ref<HTMLButtonElement>; }) => Element
+ListRowFolder (value): ({ name, icon, count, open, onToggle, stripe, actions, dropActive, onDropItem, emptyText, className, children, }: { name: ReactNode; icon?: ReactNode; count?: number; open: boolean; onToggle: () => void; stripe?: number; actions?: ReactNode; dropActive?: boolean; onDropItem?: () => void; emptyText?: ReactNode; className?: string; children?: ReactNode; }) => Element
+ListRowTone (type): ListRowTone
 LogContext (type): LogContext
 LogEntry (type): LogEntry
 MFAPromptMode (type): MFAPromptMode
@@ -119,7 +126,8 @@ PROMPT_DESTRUCTIVE_BUTTON (value): "inline-flex h-7 items-center justify-center 
 PROMPT_PRIMARY_BUTTON (value): "inline-flex h-7 items-center justify-center gap-1.5 border border-accent-brand/40 px-3 text-xs font-medium text-accent-brand transition-colors hover:bg-accent-brand/10 focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
 PanePrompt (value): ({ open, title, titleId, description, icon, tone, actions, onCancel, role, labelledBy, layer, backgroundColor, className, children, }: { open: boolean; title: ReactNode; titleId?: string; description?: ReactNode; icon?: ReactNode; tone?: "default" | "destructive"; actions?: ReactNode; onCancel?: () => void; role?: "dialog" | "alertdialog"; labelledBy?: string; layer?: "connection" | "pane"; backgroundColor?: string; className?: string; children?: ReactNode; }) => Element
 PanelDensity (type): PanelDensity
-PanelSearch (value): ({ value, onChange, placeholder, fill, autoFocus, className, }: { value: string; onChange: (next: string) => void; placeholder?: string; fill?: boolean; autoFocus?: boolean; className?: string; }) => Element
+PanelList (value): ({ empty, className, children, }: { empty?: ReactNode; className?: string; children?: ReactNode; }) => Element
+PanelSearch (value): ({ value, onChange, placeholder, fill, autoFocus, disabled, title, onEnter, inputRef, className, }: { value: string; onChange: (next: string) => void; placeholder?: string; fill?: boolean; autoFocus?: boolean; disabled?: boolean; title?: string; onEnter?: () => void; inputRef?: Ref<HTMLInputElement>; className?: string; }) => Element
 PanelShell (value): ({ chrome, icon, title, status, leading, actions, toolbar, tabs, footer, scroll, className, children, }: { chrome?: boolean; icon?: ReactNode; title?: ReactNode; status?: ReactNode; leading?: ReactNode; actions?: ReactNode; toolbar?: ReactNode; tabs?: ReactNode; footer?: ReactNode; scroll?: boolean; className?: string; children: ReactNode; }) => Element
 PanelViewMode (type): PanelViewMode
 PassphraseDialog (value): ({ isOpen, onSubmit, onCancel, hostInfo, backgroundColor, }: PassphraseDialogProps) => Element

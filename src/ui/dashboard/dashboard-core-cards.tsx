@@ -30,17 +30,23 @@ export type VersionStatus =
 
 function Stat({
   label,
+  aside,
   children,
 }: {
   label: string;
+  /** Sits beside the label, like the release channel. */
+  aside?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex min-w-0 flex-col justify-center gap-1 px-3 py-2">
       {children}
-      <span className="truncate text-[10px] text-muted-foreground">
-        {label}
-      </span>
+      <div className="flex min-w-0 items-center gap-1.5">
+        <span className="truncate text-[10px] text-muted-foreground">
+          {label}
+        </span>
+        {aside}
+      </div>
     </div>
   );
 }
@@ -65,15 +71,19 @@ export function StatsStrip({
   const big = "text-2xl font-bold leading-none tracking-tight";
   return (
     <div className="grid h-full grid-cols-2 divide-x divide-border md:grid-cols-4">
-      <Stat label={t("dashboard.version")}>
-        <div className="flex flex-wrap items-baseline gap-1.5">
-          <span className={big}>{versionText || "-"}</span>
+      <Stat
+        label={t("dashboard.version")}
+        aside={
           <VersionBadge
             status={versionStatus}
             releaseUrl={releaseUrl}
-            className="w-fit"
+            className="shrink-0 px-1 py-px text-[9px]"
           />
-        </div>
+        }
+      >
+        <span className={`${big} truncate`} title={versionText || undefined}>
+          {versionText || "-"}
+        </span>
       </Stat>
       <Stat label={t("dashboard.uptime")}>
         <span className={big}>{uptimeFormatted || "-"}</span>
@@ -161,7 +171,7 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className="group/btn flex min-w-0 items-center gap-2 px-2 py-1.5 text-left transition-colors hover:bg-muted/50"
+      className="group/btn flex h-full min-w-0 items-center gap-2 border border-border/60 px-2 py-1.5 text-left transition-colors hover:border-accent-brand/40 hover:bg-muted/50"
     >
       <span className="flex size-6 shrink-0 items-center justify-center border border-border bg-muted transition-colors group-hover/btn:border-accent-brand/40 group-hover/btn:bg-accent-brand/20">
         <Icon className="size-3 text-accent-brand" />
@@ -199,8 +209,8 @@ export function QuickActions({
     return `${host.ip}:${port ?? host.port}`;
   };
   return (
-    <div className="flex flex-col">
-      <div className="grid grid-cols-1 gap-1 p-2 sm:grid-cols-2">
+    <div className="flex min-h-full flex-1 flex-col">
+      <div className="grid flex-1 auto-rows-fr grid-cols-1 gap-1 p-2 sm:grid-cols-2">
         <ActionButton
           icon={Plus}
           label={t("dashboard.addHost")}

@@ -172,7 +172,51 @@ function pinsFromIndex(index, ids) {
   });
 }
 
+const LOCAL_FILES = [
+  "manifest.json",
+  "dist",
+  "locales",
+  "migrations",
+  "README.md",
+  "CHANGELOG.json",
+];
+
+/**
+ * Built plugin repos under dir (each with manifest.json and dist/), by id.
+ * Used in development to stage local plugin builds instead of the pins.
+ */
+function findLocalPluginBuilds(dir) {
+  const builds = new Map();
+  if (!dir || !fs.existsSync(dir)) return builds;
+  for (const name of fs.readdirSync(dir)) {
+    const repo = path.join(dir, name);
+    const manifestPath = path.join(repo, "manifest.json");
+    if (!fs.existsSync(manifestPath)) continue;
+    if (!fs.existsSync(path.join(repo, "dist"))) continue;
+    try {
+      const { id } = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+      if (typeof id === "string" && ID.test(id)) builds.set(id, repo);
+    } catch {
+      // not a plugin repo
+    }
+  }
+  return builds;
+}
+
+/** Copies a local plugin build into the staging folder. */
+function copyLocalBuild(repo, destination) {
+  fs.mkdirSync(destination, { recursive: true });
+  for (const entry of LOCAL_FILES) {
+    const from = path.join(repo, entry);
+    if (fs.existsSync(from)) {
+      fs.cpSync(from, path.join(destination, entry), { recursive: true });
+    }
+  }
+}
+
 module.exports = {
+  findLocalPluginBuilds,
+  copyLocalBuild,
   parseBundledPlugins,
   pinsFromIndex,
   loadBundledPlugins,
