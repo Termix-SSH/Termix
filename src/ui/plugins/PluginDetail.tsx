@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Bug,
   Database,
   Download,
   ExternalLink,
   Pin,
   RotateCcw,
+  Settings,
   Trash2,
   TriangleAlert,
 } from "lucide-react";
@@ -21,14 +23,24 @@ import {
   SelectValue,
 } from "@/components/select";
 import { getPluginData, type PluginDataSummary } from "@/api/plugins-api";
-import { CapabilityRow, PluginIconBox } from "./plugin-bits";
+import {
+  CapabilityRow,
+  InstallCountFact,
+  PluginIconBox,
+  UnverifiedBadge,
+} from "./plugin-bits";
 import {
   describeContributions,
   formatBytes,
   orderByRisk,
+  reportIssueUrl,
   type PluginEntry,
 } from "./plugin-model";
+import { openPluginSettings } from "./open-plugins";
 import type { PluginsManager } from "./use-plugins-manager";
+
+const LINK_ROW =
+  "flex items-center gap-2 border border-border bg-card px-3 py-2.5 text-left text-[11px] text-muted-foreground transition-colors hover:border-accent-brand/40 hover:text-foreground";
 
 function formatDate(value: string | null | undefined): string {
   if (!value) return "";
@@ -60,6 +72,15 @@ export function PluginDetail({
   }, [plugin.version, plugin.latestVersion]);
 
   const contributions = describeContributions(plugin.contributes);
+  const settings = plugin.contributes?.settings as
+    { admin?: unknown[]; user?: unknown[] } | undefined;
+  const hasSettings =
+    plugin.installed &&
+    ((settings?.admin?.length ?? 0) > 0 || (settings?.user?.length ?? 0) > 0);
+  const issueUrl = reportIssueUrl(
+    plugin,
+    import.meta.env.VITE_APP_VERSION || undefined,
+  );
 
   return (
     <div
@@ -77,6 +98,7 @@ export function PluginDetail({
             {plugin.description}
           </span>
           <Facts className="text-[11px] text-muted-foreground/70">
+            {plugin.unverified && <UnverifiedBadge />}
             {plugin.author && <span>{plugin.author}</span>}
             {plugin.version ? (
               <span>v{plugin.version}</span>
@@ -91,6 +113,10 @@ export function PluginDetail({
                 })}
               </span>
             )}
+            <InstallCountFact
+              count={plugin.installCount}
+              source={plugin.installCountSource}
+            />
           </Facts>
         </div>
         <div className="flex shrink-0 flex-col gap-1.5">
@@ -305,6 +331,7 @@ export function PluginDetail({
                   <Button
                     size="sm"
                     variant="outline"
+                    className="h-8"
                     disabled={
                       busy || locked || !picked || picked === plugin.version
                     }
@@ -367,12 +394,43 @@ export function PluginDetail({
             </SectionCard>
           )}
 
+          {hasSettings && (
+            <button
+              type="button"
+              onClick={() => openPluginSettings(plugin.id)}
+              className={LINK_ROW}
+            >
+              <Settings className="size-3.5 shrink-0" />
+              <span className="truncate">
+                {t("plugins.manager.openSettings")}
+              </span>
+            </button>
+          )}
+
+          {issueUrl && (
+            <a
+              href={issueUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={LINK_ROW}
+            >
+              <Bug className="size-3.5 shrink-0" />
+              <span className="truncate">
+                {plugin.source === "official" ||
+                plugin.source === "bundled" ||
+                !plugin.author
+                  ? t("plugins.manager.reportIssue")
+                  : t("plugins.manager.reportTo", { author: plugin.author })}
+              </span>
+            </a>
+          )}
+
           {plugin.repository && (
             <a
               href={plugin.repository}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-2 border border-border bg-card px-3 py-2.5 text-[11px] text-muted-foreground transition-colors hover:border-accent-brand/40 hover:text-foreground"
+              className={LINK_ROW}
             >
               <ExternalLink className="size-3.5 shrink-0" />
               <span className="truncate">

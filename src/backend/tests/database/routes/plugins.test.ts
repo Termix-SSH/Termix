@@ -173,6 +173,10 @@ const manageMock = vi.hoisted(() => ({
   deletePluginData: vi.fn(),
   planStateChange: vi.fn(),
   setPluginState: vi.fn(),
+  getDeveloperMode: vi.fn(),
+  setDeveloperMode: vi.fn(),
+  stageUpload: vi.fn(),
+  installUpload: vi.fn(),
   isLinkedDesktop: vi.fn(async () => false),
 }));
 const auditMock = vi.hoisted(() => ({ logAudit: vi.fn(async () => {}) }));
@@ -630,11 +634,15 @@ describe("plugins route", () => {
         version: "1.0.0",
         state: "active",
       });
-      const res = await post("/plugins/docker/install", { version: "1.0.0" });
+      const res = await post("/plugins/docker/install", {
+        version: "1.0.0",
+        capabilities: ["kv:own"],
+      });
       expect(res.status).toBe(200);
       expect(manageMock.installPlugin).toHaveBeenCalledWith("docker", {
         version: "1.0.0",
         userId: "admin-1",
+        capabilities: ["kv:own"],
       });
       expect(auditMock.logAudit).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -648,6 +656,13 @@ describe("plugins route", () => {
       expect((await post("/plugins/..%2Fx/install")).status).toBe(400);
       expect(
         (await post("/plugins/docker/install", { version: 7 })).status,
+      ).toBe(400);
+      expect(
+        (await post("/plugins/docker/install", { capabilities: "kv:own" }))
+          .status,
+      ).toBe(400);
+      expect(
+        (await post("/plugins/docker/install", { capabilities: [1] })).status,
       ).toBe(400);
       expect(manageMock.installPlugin).not.toHaveBeenCalled();
     });
@@ -668,6 +683,25 @@ describe("plugins route", () => {
         version: undefined,
         userId: "admin-1",
         acceptCapabilities: false,
+        capabilities: undefined,
+      });
+    });
+
+    it("passes the consented list on an accepted update", async () => {
+      manageMock.updatePlugin.mockResolvedValue({
+        id: "docker",
+        version: "1.1.0",
+        state: "active",
+      });
+      await post("/plugins/docker/update", {
+        acceptCapabilities: true,
+        capabilities: ["notify:send"],
+      });
+      expect(manageMock.updatePlugin).toHaveBeenCalledWith("docker", {
+        version: undefined,
+        userId: "admin-1",
+        acceptCapabilities: true,
+        capabilities: ["notify:send"],
       });
     });
 
@@ -734,6 +768,21 @@ describe("plugins route", () => {
           body: JSON.stringify({ autoUpdate: true }),
         }),
         fetch(`${baseUrl}/plugins/docker/data`, { headers }),
+        fetch(`${baseUrl}/plugins/developer-mode`, { headers }),
+        fetch(`${baseUrl}/plugins/developer-mode`, {
+          method: "PUT",
+          headers,
+          body: JSON.stringify({ enabled: true }),
+        }),
+        fetch(`${baseUrl}/plugins/upload`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/octet-stream",
+            "x-test-user-id": user,
+          },
+          body: Buffer.from("x"),
+        }),
+        post(`/plugins/upload/${"a".repeat(32)}/install`, {}, user),
       ];
       for (const res of await Promise.all(calls)) {
         expect(res.status).toBe(403);
@@ -743,6 +792,108 @@ describe("plugins route", () => {
           expect(fn).not.toHaveBeenCalled();
         }
       }
+    });
+  });
+
+  describe("developer mode and file installs", () => {
+    beforeEach(() => {
+      for (const fn of Object.values(manageMock)) fn.mockReset();
+      manageMock.isLinkedDesktop.mockResolvedValue(false);
+      auditMock.logAudit.mockClear();
+    });
+
+    it("reads and saves developer mode, auditing the change", async () => {
+      manageMock.getDeveloperMode.mockResolvedValue(true);
+      const read = await fetch(`${baseUrl}/plugins/developer-mode`);
+      expect(await read.json()).toEqual({ enabled: true, signedOnly: false });
+
+      const bad = await fetch(`${baseUrl}/plugins/developer-mode`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ enabled: "yes" }),
+      });
+      expect(bad.status).toBe(400);
+
+      const saved = await fetch(`${baseUrl}/plugins/developer-mode`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ enabled: false }),
+      });
+      expect(saved.status).toBe(200);
+      expect(manageMock.setDeveloperMode).toHaveBeenCalledWith(false);
+      expect(auditMock.logAudit).toHaveBeenCalledWith(
+        expect.objectContaining({ action: "plugin_developer_mode" }),
+      );
+    });
+
+    it("hands the raw upload to the stager", async () => {
+      manageMock.stageUpload.mockResolvedValue({ token: "t", id: "notes" });
+      const res = await fetch(`${baseUrl}/plugins/upload`, {
+        method: "POST",
+        headers: { "content-type": "application/octet-stream" },
+        body: Buffer.from("archive"),
+      });
+      expect(res.status).toBe(200);
+      const [buffer] = manageMock.stageUpload.mock.calls[0];
+      expect(Buffer.from(buffer).toString()).toBe("archive");
+    });
+
+    it("refuses an upload that is not octet-stream", async () => {
+      const res = await fetch(`${baseUrl}/plugins/upload`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(400);
+      expect(manageMock.stageUpload).not.toHaveBeenCalled();
+    });
+
+    it("passes the developer mode refusal through", async () => {
+      manageMock.stageUpload.mockRejectedValue(
+        new PluginManageError("off", 403, "DEVELOPER_MODE_OFF"),
+      );
+      const res = await fetch(`${baseUrl}/plugins/upload`, {
+        method: "POST",
+        headers: { "content-type": "application/octet-stream" },
+        body: Buffer.from("archive"),
+      });
+      expect(res.status).toBe(403);
+      expect((await res.json()).code).toBe("DEVELOPER_MODE_OFF");
+    });
+
+    it("installs a staged upload and audits it as unverified", async () => {
+      manageMock.installUpload.mockResolvedValue({
+        id: "notes",
+        version: "0.1.0",
+        state: "active",
+      });
+      const token = "b".repeat(32);
+      const res = await fetch(`${baseUrl}/plugins/upload/${token}/install`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ capabilities: ["kv:own"] }),
+      });
+      expect(res.status).toBe(200);
+      expect(manageMock.installUpload).toHaveBeenCalledWith(token, {
+        userId: "admin-1",
+        capabilities: ["kv:own"],
+      });
+      expect(auditMock.logAudit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: "install_plugin_from_file",
+          resourceId: "notes",
+        }),
+      );
+    });
+
+    it("rejects a malformed upload token", async () => {
+      const res = await fetch(`${baseUrl}/plugins/upload/nope/install`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ capabilities: [] }),
+      });
+      expect(res.status).toBe(400);
+      expect(manageMock.installUpload).not.toHaveBeenCalled();
     });
   });
 });

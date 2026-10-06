@@ -284,6 +284,9 @@ export interface RegistryPluginEntry {
   pinnedVersion: string | null;
   autoUpdate: boolean;
   bundled: boolean;
+  /** Active installs when known, release downloads otherwise. */
+  installCount: number | null;
+  installCountSource: string | null;
 }
 
 export interface RegistryListing {
@@ -338,14 +341,16 @@ export async function getPluginRegistry(
   return response.data;
 }
 
+/** `capabilities` is exactly what the consent prompt showed. */
 export async function installPlugin(
   pluginId: string,
-  version?: string,
+  options: { version?: string; capabilities: string[] },
 ): Promise<{ id: string; version: string; state: string }> {
   try {
-    const response = await rbacApi.post(`${pluginPath(pluginId)}/install`, {
-      version,
-    });
+    const response = await rbacApi.post(
+      `${pluginPath(pluginId)}/install`,
+      options,
+    );
     return response.data;
   } finally {
     announcePluginsChanged();
@@ -354,7 +359,11 @@ export async function installPlugin(
 
 export async function updatePlugin(
   pluginId: string,
-  options: { version?: string; acceptCapabilities?: boolean } = {},
+  options: {
+    version?: string;
+    acceptCapabilities?: boolean;
+    capabilities?: string[];
+  } = {},
 ): Promise<{ id: string; version: string; state: string }> {
   try {
     const response = await rbacApi.post(
@@ -439,6 +448,60 @@ export async function getPluginData(
 export async function deletePluginData(pluginId: string): Promise<void> {
   try {
     await rbacApi.delete(`${pluginPath(pluginId)}/data`);
+  } finally {
+    announcePluginsChanged();
+  }
+}
+
+export interface DeveloperModeState {
+  enabled: boolean;
+  /** TERMIX_REQUIRE_SIGNED_PLUGINS blocks file installs even in developer mode. */
+  signedOnly: boolean;
+}
+
+export async function getDeveloperMode(): Promise<DeveloperModeState> {
+  const response = await rbacApi.get("/plugins/developer-mode");
+  return response.data;
+}
+
+/** Fired after developer mode changes; detail is the new value. */
+export const DEVELOPER_MODE_CHANGED_EVENT = "termix:plugin-developer-mode";
+
+export async function setDeveloperMode(enabled: boolean): Promise<void> {
+  await rbacApi.put("/plugins/developer-mode", { enabled });
+  window.dispatchEvent(
+    new CustomEvent(DEVELOPER_MODE_CHANGED_EVENT, { detail: enabled }),
+  );
+}
+
+export interface PluginUploadPreview {
+  token: string;
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  author: string;
+  capabilities: string[];
+  replaces: string | null;
+}
+
+export async function uploadPlugin(file: Blob): Promise<PluginUploadPreview> {
+  const response = await rbacApi.post("/plugins/upload", file, {
+    headers: { "Content-Type": "application/octet-stream" },
+  });
+  return response.data;
+}
+
+export async function installUploadedPlugin(
+  token: string,
+  capabilities: string[],
+): Promise<{ id: string; version: string; state: string }> {
+  try {
+    const response = await rbacApi.post(
+      `/plugins/upload/${encodeURIComponent(token)}/install`,
+      { capabilities },
+    );
+    return response.data;
   } finally {
     announcePluginsChanged();
   }

@@ -155,6 +155,8 @@ function tempRoot(prefix: string): string {
   return root;
 }
 
+const DEFAULT_CAPS = ["hosts:read", "kv:own"];
+
 function registryEntry(
   id: string,
   versions: Array<{ version: string; capabilities?: string[] }>,
@@ -248,7 +250,10 @@ describe("uninstall and reinstall of a bundled plugin", () => {
     expect(loader.get("docker")).toBeUndefined();
 
     registry.download.mockImplementation(() => stageArtifact("docker"));
-    const result = await manage.installPlugin("docker", { userId: "admin" });
+    const result = await manage.installPlugin("docker", {
+      userId: "admin",
+      capabilities: DEFAULT_CAPS,
+    });
     expect(result.state).toBe("active");
     expect(registry.download).toHaveBeenCalledOnce();
     expect(loader.get("docker")?.source).toBe("user");
@@ -299,7 +304,10 @@ describe("installing from the registry", () => {
     );
     const loader = await boot();
 
-    const result = await manage.installPlugin("notes", { userId: "admin" });
+    const result = await manage.installPlugin("notes", {
+      userId: "admin",
+      capabilities: DEFAULT_CAPS,
+    });
 
     expect(result).toMatchObject({ id: "notes", state: "active" });
     expect(fs.existsSync(path.join(data, "plugins", "notes.tmxplug"))).toBe(
@@ -326,7 +334,11 @@ describe("installing from the registry", () => {
     registry.download.mockImplementation(() => stageArtifact("notes"));
     await boot();
 
-    await manage.installPlugin("notes", { userId: "admin", version: "1.0.0" });
+    await manage.installPlugin("notes", {
+      userId: "admin",
+      version: "1.0.0",
+      capabilities: DEFAULT_CAPS,
+    });
     expect(db.rows.get("notes")?.pinnedVersion).toBe("1.0.0");
   });
 
@@ -334,7 +346,10 @@ describe("installing from the registry", () => {
     registry.index.plugins = [registryEntry("notes", [{ version: "1.0.0" }])];
     registry.download.mockImplementation(() => stageArtifact("notes"));
     await boot();
-    await manage.installPlugin("notes", { userId: "admin" });
+    await manage.installPlugin("notes", {
+      userId: "admin",
+      capabilities: DEFAULT_CAPS,
+    });
 
     await manage.uninstallPlugin("notes");
     expect(fs.existsSync(path.join(data, "plugins", "notes.tmxplug"))).toBe(
@@ -427,5 +442,201 @@ describe("dependencies", () => {
       code: "HAS_DEPENDENTS",
       details: { dependents: ["addon"] },
     });
+  });
+});
+
+describe("consent", () => {
+  it("refuses an install without the consented list, before any download", async () => {
+    registry.index.plugins = [registryEntry("notes", [{ version: "1.0.0" }])];
+    await boot();
+    await expect(
+      manage.installPlugin("notes", { userId: "admin" }),
+    ).rejects.toMatchObject({ code: "CONSENT_REQUIRED" });
+    expect(registry.download).not.toHaveBeenCalled();
+  });
+
+  it("refuses when the consent does not match what the release asks for", async () => {
+    registry.index.plugins = [
+      registryEntry("notes", [
+        { version: "1.0.0", capabilities: ["kv:own", "credentials:read"] },
+      ]),
+    ];
+    await boot();
+    await expect(
+      manage.installPlugin("notes", {
+        userId: "admin",
+        capabilities: ["kv:own"],
+      }),
+    ).rejects.toMatchObject({
+      code: "CONSENT_MISMATCH",
+      details: { capabilities: ["kv:own", "credentials:read"] },
+    });
+    expect(registry.download).not.toHaveBeenCalled();
+    expect(db.rows.has("notes")).toBe(false);
+  });
+
+  it("accepts the same list in another order", async () => {
+    registry.index.plugins = [registryEntry("notes", [{ version: "1.0.0" }])];
+    registry.download.mockImplementation(() => stageArtifact("notes"));
+    await boot();
+    const result = await manage.installPlugin("notes", {
+      userId: "admin",
+      capabilities: ["kv:own", "hosts:read"],
+    });
+    expect(result.state).toBe("active");
+  });
+
+  it("needs the added capabilities listed to accept an update", async () => {
+    createFixturePlugin({ id: "docker", root: bundled });
+    registry.index.plugins = [
+      registryEntry("docker", [
+        {
+          version: "1.1.0",
+          capabilities: ["hosts:read", "kv:own", "notify:send"],
+        },
+        { version: "1.0.0" },
+      ]),
+    ];
+    await boot();
+
+    await expect(
+      manage.updatePlugin("docker", {
+        userId: "admin",
+        acceptCapabilities: true,
+        capabilities: ["ssh:connect"],
+      }),
+    ).rejects.toMatchObject({ code: "CONSENT_MISMATCH" });
+    await expect(
+      manage.updatePlugin("docker", {
+        userId: "admin",
+        acceptCapabilities: true,
+      }),
+    ).rejects.toMatchObject({ code: "CONSENT_REQUIRED" });
+    expect(registry.download).not.toHaveBeenCalled();
+  });
+});
+
+describe("installing from a file", () => {
+  async function artifactBuffer(
+    id: string,
+    manifestOverrides: Record<string, unknown> = {},
+  ) {
+    const staged = await stageArtifact(id, manifestOverrides);
+    const buffer = fs.readFileSync(staged.file);
+    fs.rmSync(staged.file);
+    return buffer;
+  }
+
+  afterEach(() => {
+    manage.resetUploads();
+    delete process.env.TERMIX_REQUIRE_SIGNED_PLUGINS;
+  });
+
+  it("is refused while developer mode is off", async () => {
+    await boot();
+    await expect(
+      manage.stageUpload(await artifactBuffer("notes")),
+    ).rejects.toMatchObject({ code: "DEVELOPER_MODE_OFF" });
+  });
+
+  it("is refused when signed plugins are required", async () => {
+    await boot();
+    await manage.setDeveloperMode(true);
+    process.env.TERMIX_REQUIRE_SIGNED_PLUGINS = "true";
+    await expect(
+      manage.stageUpload(await artifactBuffer("notes")),
+    ).rejects.toMatchObject({ code: "SIGNED_ONLY" });
+  });
+
+  it("stages, asks for consent, then installs it marked unverified", async () => {
+    const loader = await boot();
+    await manage.setDeveloperMode(true);
+
+    const preview = await manage.stageUpload(
+      await artifactBuffer("notes", { capabilities: ["kv:own"] }),
+    );
+    expect(preview).toMatchObject({
+      id: "notes",
+      capabilities: ["kv:own"],
+      replaces: null,
+    });
+    expect(loader.get("notes")).toBeUndefined();
+
+    await expect(
+      manage.installUpload(preview.token, {
+        userId: "admin",
+        capabilities: ["kv:own", "hosts:read"],
+      }),
+    ).rejects.toMatchObject({ code: "CONSENT_MISMATCH" });
+
+    const result = await manage.installUpload(preview.token, {
+      userId: "admin",
+      capabilities: ["kv:own"],
+    });
+    expect(result.state).toBe("active");
+    expect(db.rows.get("notes")).toMatchObject({
+      tier: manage.UNVERIFIED_TIER,
+      registryId: null,
+    });
+    expect(loader.get("notes")?.signedBy).toBeUndefined();
+    expect(fs.existsSync(path.join(data, "plugins", "notes.tmxplug"))).toBe(
+      true,
+    );
+
+    // A token is used once.
+    await expect(
+      manage.installUpload(preview.token, {
+        userId: "admin",
+        capabilities: ["kv:own"],
+      }),
+    ).rejects.toMatchObject({ code: "UPLOAD_EXPIRED" });
+  });
+
+  it("replaces an earlier upload but never a bundled plugin", async () => {
+    createFixturePlugin({ id: "docker", root: bundled });
+    const loader = await boot();
+    await manage.setDeveloperMode(true);
+
+    await expect(
+      manage.stageUpload(await artifactBuffer("docker")),
+    ).rejects.toMatchObject({ code: "BUNDLED_ID" });
+
+    const first = await manage.stageUpload(await artifactBuffer("notes"));
+    await manage.installUpload(first.token, {
+      userId: "admin",
+      capabilities: first.capabilities,
+    });
+    const second = await manage.stageUpload(
+      await artifactBuffer("notes", { version: "1.1.0" }),
+    );
+    expect(second.replaces).toBe("1.0.0");
+    await manage.installUpload(second.token, {
+      userId: "admin",
+      capabilities: second.capabilities,
+    });
+    expect(loader.get("notes")?.manifest.version).toBe("1.1.0");
+    expect(db.rows.get("notes")?.tier).toBe(manage.UNVERIFIED_TIER);
+  });
+
+  it("refuses a file that is not a plugin archive", async () => {
+    await boot();
+    await manage.setDeveloperMode(true);
+    await expect(
+      manage.stageUpload(Buffer.from("not a tarball")),
+    ).rejects.toMatchObject({ code: "INVALID_ARTIFACT" });
+  });
+
+  it("drops staged files when developer mode is turned off", async () => {
+    await boot();
+    await manage.setDeveloperMode(true);
+    const preview = await manage.stageUpload(await artifactBuffer("notes"));
+    await manage.setDeveloperMode(false);
+    await manage.setDeveloperMode(true);
+    await expect(
+      manage.installUpload(preview.token, {
+        userId: "admin",
+        capabilities: preview.capabilities,
+      }),
+    ).rejects.toMatchObject({ code: "UPLOAD_EXPIRED" });
   });
 });

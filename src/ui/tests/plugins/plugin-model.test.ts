@@ -4,11 +4,15 @@ import {
   categoriesOf,
   describeContributions,
   formatBytes,
+  formatCount,
   matchesQuery,
   mergePlugins,
   orderByRisk,
+  pluginSource,
   pluginStatus,
+  reportIssueUrl,
   sortPlugins,
+  uploadEntry,
 } from "@/plugins/plugin-model";
 
 function summary(overrides: Partial<PluginSummary> = {}): PluginSummary {
@@ -50,6 +54,8 @@ function entry(
     pinnedVersion: null,
     autoUpdate: false,
     bundled: true,
+    installCount: null,
+    installCountSource: null,
     ...overrides,
   };
 }
@@ -170,5 +176,110 @@ describe("helpers", () => {
     expect(formatBytes(512)).toBe("512 B");
     expect(formatBytes(2048)).toBe("2.0 KB");
     expect(formatBytes(50 * 1024 * 1024)).toBe("50 MB");
+  });
+});
+
+describe("popularity", () => {
+  it("sorts by install count, unknown counts last", () => {
+    const rows = mergePlugins(
+      [],
+      [
+        entry({ id: "a", name: "A", installed: false, installCount: 5 }),
+        entry({ id: "b", name: "B", installed: false, installCount: null }),
+        entry({ id: "c", name: "C", installed: false, installCount: 90 }),
+      ],
+    );
+    expect(sortPlugins(rows, "popular").map((r) => r.id)).toEqual([
+      "c",
+      "a",
+      "b",
+    ]);
+  });
+
+  it("formats counts roughly", () => {
+    expect(formatCount(950)).toBe("950");
+    expect(formatCount(1234)).toBe("1.2k");
+    expect(formatCount(45_000)).toBe("45k");
+    expect(formatCount(2_500_000)).toBe("2.5M");
+  });
+});
+
+describe("source and trust", () => {
+  it("tells bundled, signed and unverified copies apart", () => {
+    expect(pluginSource(summary({ source: "bundled", tier: "bundled" }))).toBe(
+      "bundled",
+    );
+    expect(
+      pluginSource(
+        summary({ source: "user", tier: "official", signedBy: "k" }),
+      ),
+    ).toBe("official");
+    expect(pluginSource(summary({ source: "user", tier: "community" }))).toBe(
+      "unverified",
+    );
+    expect(
+      pluginSource(
+        summary({ source: "user", tier: "unverified", signedBy: "k" }),
+      ),
+    ).toBe("unverified");
+  });
+
+  it("marks an upload as unverified", () => {
+    const row = uploadEntry({
+      token: "t",
+      id: "notes",
+      name: "Notes",
+      version: "0.2.0",
+      description: "",
+      author: "me",
+      capabilities: ["kv:own"],
+      replaces: "0.1.0",
+    });
+    expect(row).toMatchObject({
+      unverified: true,
+      installed: true,
+      version: "0.1.0",
+      latestVersion: "0.2.0",
+    });
+  });
+});
+
+describe("reportIssueUrl", () => {
+  it("prefills id, version, source and state on the plugin repo", () => {
+    const url = reportIssueUrl(
+      {
+        id: "docker",
+        repository: "https://github.com/Termix-SSH/Plugin-Docker.git",
+        version: "1.0.0",
+        latestVersion: "1.1.0",
+        status: "failed",
+        source: "official",
+      },
+      "26.10.0",
+    )!;
+    const parsed = new URL(url);
+    expect(parsed.origin + parsed.pathname).toBe(
+      "https://github.com/Termix-SSH/Plugin-Docker/issues/new",
+    );
+    expect(parsed.searchParams.get("title")).toBe("[docker] ");
+    const body = parsed.searchParams.get("body")!;
+    expect(body).toContain("**Plugin:** docker");
+    expect(body).toContain("**Version:** 1.0.0");
+    expect(body).toContain("**Source:** official");
+    expect(body).toContain("**State:** failed");
+    expect(body).toContain("**Termix:** 26.10.0");
+  });
+
+  it("gives nothing for a repo that is not on GitHub", () => {
+    expect(
+      reportIssueUrl({
+        id: "x",
+        repository: "https://gitlab.com/a/b",
+        version: null,
+        latestVersion: null,
+        status: null,
+        source: "official",
+      }),
+    ).toBeNull();
   });
 });

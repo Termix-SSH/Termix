@@ -16,6 +16,7 @@ import { SUPPORTED_PLUGIN_API_VERSION } from "@termix-ssh/plugin-sdk/manifest";
 import { safeOutboundFetch } from "../utils/safe-outbound-fetch.js";
 import { pluginLogger } from "../utils/logger.js";
 import { verifyPluginArtifact } from "./trust.js";
+import { readArtifactManifest, sameCapabilities } from "./artifact-manifest.js";
 import { getPluginsDir } from "./paths.js";
 
 export const OFFICIAL_REGISTRY_ID = "official";
@@ -245,6 +246,55 @@ export async function fetchRegistryIndex(
   return inflight;
 }
 
+export interface RegistryStats {
+  plugins: Map<string, { downloads: number; activeInstalls: number | null }>;
+}
+
+/** stats.json sits next to index.json and is rebuilt daily by the registry. */
+export function getStatsUrl(): string | null {
+  if (process.env.TERMIX_PLUGIN_STATS_URL) {
+    return process.env.TERMIX_PLUGIN_STATS_URL;
+  }
+  const url = getRegistryUrl();
+  return /\/index\.json$/.test(url)
+    ? url.replace(/\/index\.json$/, "/stats.json")
+    : null;
+}
+
+function asCount(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? Math.floor(value)
+    : null;
+}
+
+export function parseRegistryStats(raw: unknown): RegistryStats {
+  const plugins = new Map<
+    string,
+    { downloads: number; activeInstalls: number | null }
+  >();
+  const entries = (raw as { plugins?: unknown } | null)?.plugins;
+  if (!entries || typeof entries !== "object" || Array.isArray(entries)) {
+    return { plugins };
+  }
+  for (const [id, value] of Object.entries(entries)) {
+    if (!ID_PATTERN.test(id) || !value || typeof value !== "object") continue;
+    const entry = value as Record<string, unknown>;
+    plugins.set(id, {
+      downloads: asCount(entry.downloads) ?? 0,
+      activeInstalls: asCount(entry.activeInstalls),
+    });
+  }
+  return { plugins };
+}
+
+export async function fetchRegistryStats(): Promise<RegistryStats | null> {
+  const url = getStatsUrl();
+  if (!url) return null;
+  const response = await fetchFollowing(url);
+  const body = await readLimited(response, MAX_INDEX_BYTES);
+  return parseRegistryStats(JSON.parse(body.toString("utf8")));
+}
+
 /** Test seam. */
 export function resetRegistryCache(): void {
   cache = null;
@@ -264,6 +314,35 @@ export function findRelease(
     : plugin.versions.find((entry) => isApiCompatible(entry.api));
   if (!release) return null;
   return { plugin, release };
+}
+
+/**
+ * The signed file is the truth and the index only describes it, so the
+ * consent the admin gave (built from the index) must match what the packed
+ * manifest asks for.
+ */
+export function assertArtifactMatches(
+  pluginId: string,
+  release: RegistryVersion,
+  manifest: Record<string, unknown>,
+): void {
+  const where = `${pluginId} ${release.version}`;
+  if (manifest.id !== pluginId) {
+    throw new Error(`${where}: the archive is for "${String(manifest.id)}"`);
+  }
+  if (manifest.version !== release.version) {
+    throw new Error(
+      `${where}: the archive is version ${String(manifest.version)}`,
+    );
+  }
+  const declared = Array.isArray(manifest.capabilities)
+    ? manifest.capabilities.filter((c): c is string => typeof c === "string")
+    : [];
+  if (!sameCapabilities(declared, release.capabilities)) {
+    throw new Error(
+      `${where}: the archive asks for different capabilities than the registry lists`,
+    );
+  }
 }
 
 /**
@@ -296,6 +375,7 @@ export async function downloadRelease(
   if (verified.ok === false) {
     throw new Error(`${pluginId} ${release.version}: ${verified.reason}`);
   }
+  assertArtifactMatches(pluginId, release, readArtifactManifest(buffer));
 
   const staging = getDownloadsDir();
   await fs.promises.mkdir(staging, { recursive: true });

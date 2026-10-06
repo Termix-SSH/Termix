@@ -5,6 +5,7 @@ import {
 } from "@termix-ssh/plugin-sdk/capabilities";
 import type {
   PluginSummary,
+  PluginUploadPreview,
   RegistryPluginEntry,
   RegistryPluginVersion,
 } from "@/api/plugins-api";
@@ -36,6 +37,22 @@ export interface PluginEntry {
   inRegistry: boolean;
   contributes: Record<string, unknown> | null;
   publishedAt: string | null;
+  installCount: number | null;
+  installCountSource: string | null;
+  source: PluginSource;
+  /** Installed from a file or folder with no registry signature behind it. */
+  unverified: boolean;
+}
+
+export type PluginSource = "bundled" | "official" | "unverified";
+
+/** Where an installed copy came from, as the issue report names it. */
+export function pluginSource(summary: PluginSummary): PluginSource {
+  if (summary.tier === "unverified") return "unverified";
+  if (summary.source === "bundled" || summary.tier === "bundled") {
+    return "bundled";
+  }
+  return summary.signedBy ? "official" : "unverified";
 }
 
 export function pluginStatus(summary: PluginSummary): PluginStatus {
@@ -79,6 +96,10 @@ export function mergePlugins(
       inRegistry: Boolean(entry),
       contributes: (summary.contributes as Record<string, unknown>) ?? null,
       publishedAt: latestPublished(entry?.versions ?? []),
+      installCount: entry?.installCount ?? null,
+      installCountSource: entry?.installCountSource ?? null,
+      source: pluginSource(summary),
+      unverified: pluginSource(summary) === "unverified",
     });
   }
 
@@ -110,10 +131,45 @@ export function mergePlugins(
       inRegistry: true,
       contributes: null,
       publishedAt: latestPublished(entry.versions),
+      installCount: entry.installCount ?? null,
+      installCountSource: entry.installCountSource ?? null,
+      source: "official",
+      unverified: false,
     });
   }
 
   return rows;
+}
+
+/** A row for a file that was uploaded but not installed yet. */
+export function uploadEntry(preview: PluginUploadPreview): PluginEntry {
+  return {
+    id: preview.id,
+    name: preview.name,
+    description: preview.description,
+    author: preview.author,
+    category: "",
+    installed: preview.replaces !== null,
+    version: preview.replaces,
+    latestVersion: preview.version,
+    updateAvailable: false,
+    addedCapabilities: [],
+    versions: [],
+    capabilities: preview.capabilities,
+    status: null,
+    enabled: false,
+    lastError: null,
+    autoUpdate: false,
+    pinnedVersion: null,
+    bundled: false,
+    inRegistry: false,
+    contributes: null,
+    publishedAt: null,
+    installCount: null,
+    installCountSource: null,
+    source: "unverified",
+    unverified: true,
+  };
 }
 
 function latestPublished(versions: RegistryPluginVersion[]): string | null {
@@ -124,11 +180,17 @@ function latestPublished(versions: RegistryPluginVersion[]): string | null {
   return dates.at(-1) ?? null;
 }
 
-export type SortKey = "name" | "updated" | "category";
+export type SortKey = "popular" | "name" | "updated" | "category";
 
 export function sortPlugins(rows: PluginEntry[], key: SortKey): PluginEntry[] {
   const sorted = [...rows];
-  if (key === "updated") {
+  if (key === "popular") {
+    sorted.sort(
+      (a, b) =>
+        (b.installCount ?? -1) - (a.installCount ?? -1) ||
+        a.name.localeCompare(b.name),
+    );
+  } else if (key === "updated") {
     sorted.sort((a, b) =>
       (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""),
     );
@@ -229,4 +291,50 @@ export function formatBytes(bytes: number): string {
     unit += 1;
   }
   return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unit]}`;
+}
+
+/** 1234 reads as 1.2k, so the number stays a rough ranking. */
+export function formatCount(count: number): string {
+  if (count < 1000) return String(count);
+  if (count < 1_000_000) {
+    return `${(count / 1000).toFixed(count < 10_000 ? 1 : 0)}k`;
+  }
+  return `${(count / 1_000_000).toFixed(1)}M`;
+}
+
+/**
+ * A new GitHub issue on the plugin's own repo with what a maintainer asks
+ * first already filled in. Null when the repository is not on GitHub.
+ */
+export function reportIssueUrl(
+  plugin: Pick<
+    PluginEntry,
+    "id" | "repository" | "version" | "latestVersion" | "status" | "source"
+  >,
+  termixVersion?: string,
+): string | null {
+  const repo = plugin.repository
+    ?.trim()
+    .replace(/\.git$/, "")
+    .replace(/\/+$/, "");
+  if (!repo || !/^https:\/\/github\.com\/[^/]+\/[^/]+$/.test(repo)) {
+    return null;
+  }
+  const lines = [
+    `**Plugin:** ${plugin.id}`,
+    `**Version:** ${plugin.version ?? plugin.latestVersion ?? "not installed"}`,
+    `**Source:** ${plugin.source}`,
+    `**State:** ${plugin.status ?? "not installed"}`,
+    ...(termixVersion ? [`**Termix:** ${termixVersion}`] : []),
+    "",
+    "**What happened:**",
+    "",
+    "**What you expected:**",
+    "",
+  ];
+  const params = new URLSearchParams({
+    title: `[${plugin.id}] `,
+    body: lines.join("\n"),
+  });
+  return `${repo}/issues/new?${params.toString()}`;
 }

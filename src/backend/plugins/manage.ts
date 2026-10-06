@@ -1,12 +1,15 @@
 /**
  * Installing, updating, uninstalling and switching plugins at runtime.
  *
- * Only the official registry is a source for now. Bundled plugins ship in the
+ * The official registry is the one real source. With developer mode on, an
+ * admin can also install a .tmxplug from a file; that skips the download,
+ * sha256 and signature checks and stays marked unverified. Bundled plugins ship in the
  * image and can still be uninstalled: their files are deleted and the id is
  * recorded in the settings table, so the shipped copy is ignored from then
  * on and a reinstall downloads the plugin like any other.
  */
 
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import semver from "semver";
@@ -38,8 +41,15 @@ import {
 } from "./registry-index.js";
 import { invalidatePluginPermissionCache } from "./permissions.js";
 import { moveWithRetry } from "./fs-retry.js";
+import { readInstallCounts } from "./install-counts.js";
+import { readArtifactManifest, sameCapabilities } from "./artifact-manifest.js";
+import { parseManifest, type PluginManifest } from "./manifest.js";
+import { requireSignedPlugins } from "./trust.js";
 
 const UNINSTALLED_KEY = "plugins_uninstalled";
+const DEVELOPER_MODE_KEY = "plugins_developer_mode";
+/** Installed from a file with no registry signature behind it. Never cleared. */
+export const UNVERIFIED_TIER = "unverified";
 
 export class PluginManageError extends Error {
   constructor(
@@ -212,6 +222,9 @@ export interface RegistryListing {
     pinnedVersion: string | null;
     autoUpdate: boolean;
     bundled: boolean;
+    /** See install-counts.ts for what this number does and does not mean. */
+    installCount: number | null;
+    installCountSource: string | null;
   }>;
 }
 
@@ -223,6 +236,7 @@ export async function listRegistry(
   const records = new Map(
     (await createCurrentPluginRepository().listAll()).map((r) => [r.id, r]),
   );
+  const counts = await readInstallCounts();
   const { loader } = getPluginRuntime();
   const shipped = loader.bundledIds();
 
@@ -271,6 +285,8 @@ export async function listRegistry(
         pinnedVersion: record?.pinnedVersion ?? null,
         autoUpdate: Boolean(record?.autoUpdate),
         bundled: shipped.has(plugin.id),
+        installCount: counts.get(plugin.id)?.count ?? null,
+        installCountSource: counts.get(plugin.id)?.source ?? null,
       };
     }),
   };
@@ -313,24 +329,31 @@ async function grantDeclared(
   invalidatePluginPermissionCache(plugin.id);
 }
 
+type SwapSource = { release: RegistryVersion } | { upload: string };
+
 /**
- * Puts `release` in place of whatever copy of the plugin is loaded. On a
- * failed load the previous copy comes back.
+ * Puts a registry release, or an uploaded file, in place of whatever copy of
+ * the plugin is loaded. On a failed load the previous copy comes back.
  */
 async function swapIn(
   pluginId: string,
-  release: RegistryVersion,
+  source: SwapSource,
 ): Promise<LoadedPlugin> {
   const { loader } = getPluginRuntime();
   const previous = loader.get(pluginId);
   const bundledVersion = loader.bundledVersion(pluginId);
   const useBundled =
+    "release" in source &&
     bundledVersion !== undefined &&
-    bundledVersion === release.version &&
+    bundledVersion === source.release.version &&
     isBundledOnDisk(pluginId);
 
   // Fetched before anything stops, so a bad download changes nothing.
-  const staged = useBundled ? null : await downloadRelease(pluginId, release);
+  const staged = useBundled
+    ? null
+    : "release" in source
+      ? await downloadRelease(pluginId, source.release)
+      : { file: source.upload, signatureFile: `${source.upload}.sig` };
 
   const finalFile = path.join(getPluginsDir(), `${pluginId}.tmxplug`);
   const backupDir = path.join(getDownloadsDir(), `${pluginId}.previous`);
@@ -561,6 +584,32 @@ export interface InstallOptions {
   version?: string;
   userId: string | null;
   acceptCapabilities?: boolean;
+  /**
+   * The capabilities the consent prompt showed: every one for an install,
+   * the added ones for an update. Must match what the release asks for.
+   */
+  capabilities?: string[];
+}
+
+function assertConsent(
+  consented: string[] | undefined,
+  asked: readonly string[],
+): void {
+  if (consented === undefined) {
+    throw new PluginManageError(
+      "The capabilities agreed to were not sent",
+      400,
+      "CONSENT_REQUIRED",
+    );
+  }
+  if (!sameCapabilities(consented, asked)) {
+    throw new PluginManageError(
+      "The capabilities agreed to do not match what this release asks for",
+      409,
+      "CONSENT_MISMATCH",
+      { capabilities: [...asked] },
+    );
+  }
 }
 
 async function requireRelease(
@@ -641,12 +690,13 @@ export function installPlugin(
     }
 
     const { release, latest } = await requireRelease(pluginId, options.version);
+    assertConsent(options.capabilities, release.capabilities);
     const pin = pinFor(release, latest, options.version);
     await applyPin(pluginId, pin);
 
     let plugin: LoadedPlugin;
     try {
-      plugin = await swapIn(pluginId, release);
+      plugin = await swapIn(pluginId, { release });
     } catch (error) {
       await applyPin(pluginId, null);
       throw new PluginManageError(
@@ -716,13 +766,16 @@ async function updateUnlocked(
     live.manifest.capabilities,
     release.capabilities,
   );
-  if (added.length > 0 && !options.acceptCapabilities) {
-    throw new PluginManageError(
-      "This version asks for new capabilities",
-      409,
-      "CAPABILITIES_ADDED",
-      { capabilities: added },
-    );
+  if (added.length > 0) {
+    if (!options.acceptCapabilities) {
+      throw new PluginManageError(
+        "This version asks for new capabilities",
+        409,
+        "CAPABILITIES_ADDED",
+        { capabilities: added },
+      );
+    }
+    assertConsent(options.capabilities, added);
   }
 
   const wasEnabled = record.state !== "disabled";
@@ -731,7 +784,7 @@ async function updateUnlocked(
 
   let plugin: LoadedPlugin;
   try {
-    plugin = await swapIn(pluginId, release);
+    plugin = await swapIn(pluginId, { release });
   } catch (error) {
     await applyPin(pluginId, record.pinnedVersion ?? null);
     if (wasEnabled && loader.get(pluginId)) await startAndRecord(pluginId);
@@ -1002,4 +1055,242 @@ export function deletePluginData(
     }
     return removed;
   });
+}
+
+export async function getDeveloperMode(): Promise<boolean> {
+  const { createCurrentSettingsRepository } = await repos();
+  return (
+    (await createCurrentSettingsRepository().get(DEVELOPER_MODE_KEY)) === "true"
+  );
+}
+
+export async function setDeveloperMode(enabled: boolean): Promise<boolean> {
+  const { createCurrentSettingsRepository } = await repos();
+  await createCurrentSettingsRepository().set(
+    DEVELOPER_MODE_KEY,
+    enabled ? "true" : "false",
+  );
+  if (!enabled) await clearUploads();
+  return enabled;
+}
+
+/** 50 MB, the most nginx lets through to /plugins. */
+export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+const UPLOAD_TTL_MS = 30 * 60_000;
+
+interface StagedUpload {
+  file: string;
+  manifest: PluginManifest;
+  expiresAt: number;
+}
+
+const uploads = new Map<string, StagedUpload>();
+
+async function clearUploads(now = Infinity): Promise<void> {
+  for (const [token, upload] of uploads) {
+    if (upload.expiresAt > now) continue;
+    uploads.delete(token);
+    await fs.promises.rm(upload.file, { force: true });
+  }
+}
+
+export interface UploadPreview {
+  token: string;
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  author: string;
+  capabilities: string[];
+  /** The version of an earlier upload this one replaces. */
+  replaces: string | null;
+}
+
+async function assertUploadsAllowed(): Promise<void> {
+  if (!(await getDeveloperMode())) {
+    throw new PluginManageError(
+      "Installing from a file needs developer mode",
+      403,
+      "DEVELOPER_MODE_OFF",
+    );
+  }
+  if (requireSignedPlugins()) {
+    throw new PluginManageError(
+      "TERMIX_REQUIRE_SIGNED_PLUGINS is on, so unsigned files cannot be installed",
+      403,
+      "SIGNED_ONLY",
+    );
+  }
+}
+
+function validateUpload(buffer: Buffer): PluginManifest {
+  let raw: Record<string, unknown>;
+  try {
+    raw = readArtifactManifest(buffer);
+  } catch (error) {
+    throw new PluginManageError(
+      error instanceof Error ? error.message : String(error),
+      400,
+      "INVALID_ARTIFACT",
+    );
+  }
+  const { manifest, errors } = parseManifest(raw);
+  if (!manifest) {
+    throw new PluginManageError(
+      `The manifest is not valid: ${errors.join("; ")}`,
+      400,
+      "INVALID_MANIFEST",
+    );
+  }
+  if (!isApiCompatible(String(manifest.engine.api))) {
+    throw new PluginManageError(
+      `${manifest.id} ${manifest.version} does not run on this version of Termix`,
+      409,
+      "INCOMPATIBLE",
+    );
+  }
+  return manifest;
+}
+
+/** Only another upload of the same id can be replaced from a file. */
+async function assertReplaceable(pluginId: string): Promise<string | null> {
+  const { loader } = getPluginRuntime();
+  if (loader.bundledIds().has(pluginId)) {
+    throw new PluginManageError(
+      `${pluginId} ships with Termix and can only be replaced by a signed release`,
+      409,
+      "BUNDLED_ID",
+    );
+  }
+  const { createCurrentPluginRepository } = await repos();
+  const record = await createCurrentPluginRepository().findById(pluginId);
+  if (!record) return null;
+  if (record.tier !== UNVERIFIED_TIER) {
+    throw new PluginManageError(
+      "A plugin with this id is already installed from another source",
+      409,
+      "ALREADY_INSTALLED",
+    );
+  }
+  return record.version;
+}
+
+/**
+ * Checks an uploaded .tmxplug and holds it until the admin agrees to what
+ * it asks for. Nothing is loaded yet.
+ */
+export async function stageUpload(buffer: Buffer): Promise<UploadPreview> {
+  await assertUploadsAllowed();
+  await clearUploads(Date.now());
+  const manifest = validateUpload(buffer);
+  const replaces = await assertReplaceable(manifest.id);
+
+  const token = crypto.randomBytes(16).toString("hex");
+  const dir = getDownloadsDir();
+  await fs.promises.mkdir(dir, { recursive: true });
+  const file = path.join(dir, `upload-${token}.tmxplug`);
+  await fs.promises.writeFile(file, buffer);
+  uploads.set(token, {
+    file,
+    manifest,
+    expiresAt: Date.now() + UPLOAD_TTL_MS,
+  });
+
+  return {
+    token,
+    id: manifest.id,
+    name: manifest.name,
+    version: manifest.version,
+    description: manifest.description ?? "",
+    author: manifest.author?.name ?? "",
+    capabilities: [...manifest.capabilities],
+    replaces,
+  };
+}
+
+/** Installs a staged upload. It stays marked unverified for good. */
+export function installUpload(
+  token: string,
+  options: { userId: string | null; capabilities?: string[] },
+): Promise<{ id: string; version: string; state: string }> {
+  return serialized(async () => {
+    await assertUploadsAllowed();
+    const upload = uploads.get(token);
+    if (!upload || upload.expiresAt < Date.now()) {
+      throw new PluginManageError(
+        "The uploaded file has expired, upload it again",
+        404,
+        "UPLOAD_EXPIRED",
+      );
+    }
+    const pluginId = upload.manifest.id;
+    // Read again: the staged file is what gets loaded, not the first look.
+    const manifest = validateUpload(await fs.promises.readFile(upload.file));
+    if (manifest.id !== pluginId) {
+      throw new PluginManageError(
+        "The staged file changed",
+        409,
+        "UPLOAD_CHANGED",
+      );
+    }
+    assertConsent(options.capabilities, manifest.capabilities);
+    await assertReplaceable(pluginId);
+
+    const { createCurrentPluginRepository } = await repos();
+    const repository = createCurrentPluginRepository();
+    const before = await repository.findById(pluginId);
+    const wasEnabled = !before || before.state !== "disabled";
+
+    uploads.delete(token);
+    let plugin: LoadedPlugin;
+    try {
+      plugin = await swapIn(pluginId, { upload: upload.file });
+    } catch (error) {
+      await fs.promises.rm(upload.file, { force: true });
+      const { loader } = getPluginRuntime();
+      if (before && wasEnabled && loader.get(pluginId)) {
+        await startAndRecord(pluginId);
+      }
+      throw new PluginManageError(
+        error instanceof Error ? error.message : String(error),
+        500,
+        "INSTALL_FAILED",
+      );
+    }
+
+    await repository.update(pluginId, {
+      tier: UNVERIFIED_TIER,
+      registryId: null,
+      pinnedVersion: null,
+      autoUpdate: false,
+    });
+    await grantDeclared(plugin, options.userId);
+
+    if (!wasEnabled) {
+      return { id: pluginId, version: manifest.version, state: "stopped" };
+    }
+    const { missing } = dependencyChain(pluginId);
+    if (missing.length > 0) {
+      await recordState(
+        pluginId,
+        "blocked",
+        `requires ${missing.map((id) => `"${id}"`).join(", ")}, which is not installed`,
+      );
+      return { id: pluginId, version: manifest.version, state: "blocked" };
+    }
+    for (const id of (await planStateChange(pluginId, true)).enable) {
+      await startAndRecord(id);
+    }
+    const state = await startAndRecord(pluginId);
+    pluginLogger.warn(
+      `Installed unverified plugin ${pluginId}@${manifest.version} from a file`,
+      { operation: "plugin_install" },
+    );
+    return { id: pluginId, version: manifest.version, state };
+  });
+}
+
+/** Test seam. */
+export function resetUploads(): void {
+  uploads.clear();
 }

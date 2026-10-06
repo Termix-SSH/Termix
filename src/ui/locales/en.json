@@ -1976,6 +1976,7 @@
         "notRunning": "Not running"
       },
       "sort": {
+        "popular": "Most popular",
         "name": "Name",
         "updated": "Recently updated",
         "category": "Category"
@@ -2017,7 +2018,9 @@
         "updateExplain": "This version asks for something the one you have does not, so it will not install on its own.",
         "newInVersion": "New in this version",
         "minor": "It also adds its own screens and stores its own data, kept separate from other plugins.",
-        "none": "It asks for no special access."
+        "none": "It asks for no special access.",
+        "uploadTitle": "Install {{name}} from a file",
+        "uploadWarning": "This file was not checked or signed by the Termix registry. Only install it if you built it yourself or trust whoever did."
       },
       "confirm": {
         "uninstallTitle": "Uninstall {{name}}?",
@@ -2054,7 +2057,10 @@
         "deleteData": "Could not delete data for {{name}}: {{error}}",
         "managedByServer": "This desktop is linked to a server, which decides its plugins.",
         "hasDependents": "{{name}} is needed by {{list}}. Turn those off or uninstall them first.",
-        "missingDependencies": "{{name}} needs {{list}}, which is not installed."
+        "missingDependencies": "{{name}} needs {{list}}, which is not installed.",
+        "consentChanged": "What this plugin asks for changed since you looked. Check the list again.",
+        "upload": "Could not read {{name}}: {{error}}",
+        "developerMode": "Could not change developer mode: {{error}}"
       },
       "data": {
         "title": "Stored data",
@@ -2122,7 +2128,29 @@
       "registryUnreachable": "Could not reach the plugin registry ({{error}}). Installed plugins still work.",
       "managedByServer": "This desktop is linked to a server, which decides its plugins. Changes are made on the server.",
       "browsePlugins": "Browse plugins",
-      "loading": "Loading"
+      "loading": "Loading",
+      "developer": {
+        "title": "Plugin developer mode",
+        "hint": "Lets admins install plugins from a .tmxplug file in the Plugins tab, without the registry checks. Use it to build and test your own plugins.",
+        "enableTitle": "Turn on developer mode?",
+        "enableBody": "Admins will be able to install plugins from files that Termix has not checked. A plugin can do anything its capabilities allow, so only turn this on while you are building or testing plugins.",
+        "enable": "Turn on",
+        "installFromFile": "Install from file",
+        "signedOnly": "TERMIX_REQUIRE_SIGNED_PLUGINS is set, so installing from a file stays blocked."
+      },
+      "count": {
+        "active_one": "{{formatted}} active install",
+        "active_other": "{{formatted}} active installs",
+        "downloads_one": "{{formatted}} download",
+        "downloads_other": "{{formatted}} downloads",
+        "activeHint": "Instances that reported this plugin turned on in the last week. Instances with usage statistics turned off are not counted.",
+        "downloadsHint": "How many times a release was downloaded. This is not the number of installs."
+      },
+      "unverified": "Unverified",
+      "unverifiedHint": "Installed from a file. Termix did not check or sign it.",
+      "reportIssue": "Report an issue",
+      "reportTo": "Report to {{author}}",
+      "openSettings": "Open its settings"
     }
   },
   "settings": {

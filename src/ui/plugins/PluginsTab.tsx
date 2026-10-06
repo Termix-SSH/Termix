@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowDownWideNarrow,
@@ -11,6 +11,7 @@ import {
   Search,
   Trash2,
   TriangleAlert,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/button";
 import { Card } from "@/components/card";
@@ -33,7 +34,11 @@ import {
 } from "@/components/panel-layout";
 import { InlineView, SurfaceScope } from "@/components/surface/surface-scope";
 import { cn } from "@/lib/utils";
-import { PluginIconBox } from "./plugin-bits";
+import {
+  InstallCountFact,
+  PluginIconBox,
+  UnverifiedBadge,
+} from "./plugin-bits";
 import { PluginConsentPrompt } from "./PluginConsentPrompt";
 import { PluginDetail } from "./PluginDetail";
 import {
@@ -210,7 +215,7 @@ function SortSelect({
   onChange: (next: SortKey) => void;
 }) {
   const { t } = useTranslation();
-  const keys: SortKey[] = ["name", "updated", "category"];
+  const keys: SortKey[] = ["popular", "name", "updated", "category"];
   return (
     <Select value={value} onValueChange={(v) => onChange(v as SortKey)}>
       <SelectTrigger size="sm" className="w-auto gap-1.5 text-xs">
@@ -306,6 +311,9 @@ function InstalledSection({
       >
         <div className="ml-auto flex items-center gap-2">
           <SortSelect value={sort} onChange={setSort} />
+          {manager.developerMode && !manager.signedOnly && (
+            <UploadButton manager={manager} />
+          )}
           <Button
             variant="outline"
             className="gap-1.5"
@@ -366,6 +374,35 @@ function InstalledSection({
         </>
       )}
     </div>
+  );
+}
+
+function UploadButton({ manager }: { manager: PluginsManager }) {
+  const { t } = useTranslation();
+  const input = useRef<HTMLInputElement>(null);
+  return (
+    <>
+      <input
+        ref={input}
+        type="file"
+        accept=".tmxplug"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (file) void manager.requestUpload(file);
+        }}
+      />
+      <Button
+        variant="outline"
+        className="gap-1.5"
+        disabled={manager.busy.size > 0 || manager.managedByServer}
+        onClick={() => input.current?.click()}
+      >
+        <Upload className="size-3.5" />
+        {t("plugins.manager.developer.installFromFile")}
+      </Button>
+    </>
   );
 }
 
@@ -431,6 +468,7 @@ function InstalledCard({
         onOpen={onOpen}
         facts={
           <>
+            {plugin.unverified && <UnverifiedBadge />}
             {plugin.author && <span>{plugin.author}</span>}
             <span>v{plugin.version}</span>
             {adds.length > 0 && <span>{adds.join(", ")}</span>}
@@ -540,7 +578,7 @@ function BrowseSection({
 }) {
   const { t } = useTranslation();
   const [category, setCategory] = useState<string | null>(null);
-  const [sort, setSort] = useState<SortKey>("name");
+  const [sort, setSort] = useState<SortKey>("popular");
   const categories = useMemo(() => categoriesOf(plugins), [plugins]);
 
   const rows = sortPlugins(
@@ -633,6 +671,10 @@ function BrowseCard({
             {plugin.author && <span>{plugin.author}</span>}
             {plugin.latestVersion && <span>v{plugin.latestVersion}</span>}
             {plugin.category && <span>{plugin.category}</span>}
+            <InstallCountFact
+              count={plugin.installCount}
+              source={plugin.installCountSource}
+            />
           </>
         }
       />

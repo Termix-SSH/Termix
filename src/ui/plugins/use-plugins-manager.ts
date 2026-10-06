@@ -3,10 +3,13 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import semver from "semver";
 import {
+  DEVELOPER_MODE_CHANGED_EVENT,
   deletePluginData,
+  getDeveloperMode,
   getPluginRegistry,
   getPlugins,
   installPlugin,
+  installUploadedPlugin,
   previewPluginState,
   retryPlugin,
   setPluginOptions,
@@ -14,11 +17,13 @@ import {
   uninstallPlugin,
   updateAllPlugins,
   updatePlugin,
+  uploadPlugin,
+  type DeveloperModeState,
   type PluginSummary,
   type RegistryListing,
 } from "@/api/plugins-api";
 import { useConfirm } from "@/components/surface/surface-scope";
-import { mergePlugins, type PluginEntry } from "./plugin-model";
+import { mergePlugins, uploadEntry, type PluginEntry } from "./plugin-model";
 import type { ConsentRequest } from "./PluginConsentPrompt";
 
 interface ApiError {
@@ -53,6 +58,10 @@ export function usePluginsManager() {
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [consent, setConsent] = useState<ConsentRequest | null>(null);
+  const [developer, setDeveloper] = useState<DeveloperModeState>({
+    enabled: false,
+    signedOnly: false,
+  });
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -64,12 +73,14 @@ export function usePluginsManager() {
 
   const load = useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true);
-    const [plugins, listing] = await Promise.allSettled([
+    const [plugins, listing, devMode] = await Promise.allSettled([
       getPlugins(),
       getPluginRegistry(refresh),
+      getDeveloperMode(),
     ]);
     if (!mounted.current) return;
     if (plugins.status === "fulfilled") setInstalled(plugins.value);
+    if (devMode.status === "fulfilled") setDeveloper(devMode.value);
     if (listing.status === "fulfilled") {
       setRegistry(listing.value);
       setRegistryError(listing.value.registry.error);
@@ -83,6 +94,18 @@ export function usePluginsManager() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // The switch lives in admin settings, which may change while this is open.
+  useEffect(() => {
+    const onChange = (event: Event) => {
+      const enabled = (event as CustomEvent<boolean>).detail;
+      if (typeof enabled !== "boolean") return;
+      setDeveloper((current) => ({ ...current, enabled }));
+    };
+    window.addEventListener(DEVELOPER_MODE_CHANGED_EVENT, onChange);
+    return () =>
+      window.removeEventListener(DEVELOPER_MODE_CHANGED_EVENT, onChange);
+  }, []);
 
   const plugins = useMemo(
     () => mergePlugins(installed, registry?.plugins ?? null),
@@ -152,13 +175,13 @@ export function usePluginsManager() {
   );
 
   const doInstall = useCallback(
-    (plugin: PluginEntry, version: string) =>
+    (plugin: PluginEntry, version: string, capabilities: string[]) =>
       run(plugin.id, async () => {
         try {
-          const result = await installPlugin(
-            plugin.id,
-            version === plugin.latestVersion ? undefined : version,
-          );
+          const result = await installPlugin(plugin.id, {
+            version: version === plugin.latestVersion ? undefined : version,
+            capabilities,
+          });
           if (result.state === "failed" || result.state === "blocked") {
             toast.error(
               t("plugins.manager.toast.installedNotRunning", {
@@ -171,6 +194,17 @@ export function usePluginsManager() {
             );
           }
         } catch (error) {
+          const info = readError(error, "");
+          if (info.code === "CONSENT_MISMATCH") {
+            toast.error(t("plugins.manager.errors.consentChanged"));
+            setConsent({
+              plugin,
+              mode: "install",
+              version,
+              capabilities: (info.data.capabilities as string[]) ?? [],
+            });
+            return;
+          }
           failToast(error, "plugins.manager.errors.install", plugin.name);
         }
       }),
@@ -178,12 +212,13 @@ export function usePluginsManager() {
   );
 
   const doUpdate = useCallback(
-    (plugin: PluginEntry, version: string, acceptCapabilities: boolean) =>
+    (plugin: PluginEntry, version: string, accepted: string[] | null) =>
       run(plugin.id, async () => {
         try {
           await updatePlugin(plugin.id, {
             version: version === plugin.latestVersion ? undefined : version,
-            acceptCapabilities,
+            acceptCapabilities: accepted !== null,
+            capabilities: accepted ?? undefined,
           });
           toast.success(
             t("plugins.manager.toast.updated", {
@@ -193,7 +228,13 @@ export function usePluginsManager() {
           );
         } catch (error) {
           const info = readError(error, "");
-          if (info.code === "CAPABILITIES_ADDED") {
+          if (
+            info.code === "CAPABILITIES_ADDED" ||
+            info.code === "CONSENT_MISMATCH"
+          ) {
+            if (info.code === "CONSENT_MISMATCH") {
+              toast.error(t("plugins.manager.errors.consentChanged"));
+            }
             setConsent({
               plugin,
               mode: "update",
@@ -242,21 +283,74 @@ export function usePluginsManager() {
         });
         return;
       }
-      await doUpdate(plugin, target, false);
+      await doUpdate(plugin, target, null);
     },
     [confirm, t, doUpdate],
+  );
+
+  const doInstallUpload = useCallback(
+    (request: ConsentRequest) =>
+      run(request.plugin.id, async () => {
+        try {
+          const result = await installUploadedPlugin(
+            request.uploadToken!,
+            request.capabilities,
+          );
+          if (result.state === "failed" || result.state === "blocked") {
+            toast.error(
+              t("plugins.manager.toast.installedNotRunning", {
+                name: request.plugin.name,
+              }),
+            );
+          } else {
+            toast.success(
+              t("plugins.manager.toast.installed", {
+                name: request.plugin.name,
+              }),
+            );
+          }
+        } catch (error) {
+          failToast(
+            error,
+            "plugins.manager.errors.install",
+            request.plugin.name,
+          );
+        }
+      }),
+    [run, t, failToast],
+  );
+
+  /** Reads a picked .tmxplug and asks for consent before anything loads. */
+  const requestUpload = useCallback(
+    async (file: File) => {
+      try {
+        const preview = await uploadPlugin(file);
+        setConsent({
+          plugin: uploadEntry(preview),
+          mode: "upload",
+          version: preview.version,
+          capabilities: preview.capabilities,
+          uploadToken: preview.token,
+        });
+      } catch (error) {
+        failToast(error, "plugins.manager.errors.upload", file.name);
+      }
+    },
+    [failToast],
   );
 
   const confirmConsent = useCallback(async () => {
     if (!consent) return;
     const request = consent;
     setConsent(null);
-    if (request.mode === "install") {
-      await doInstall(request.plugin, request.version);
+    if (request.mode === "upload" && request.uploadToken) {
+      await doInstallUpload(request);
+    } else if (request.mode === "install") {
+      await doInstall(request.plugin, request.version, request.capabilities);
     } else {
-      await doUpdate(request.plugin, request.version, true);
+      await doUpdate(request.plugin, request.version, request.capabilities);
     }
-  }, [consent, doInstall, doUpdate]);
+  }, [consent, doInstall, doUpdate, doInstallUpload]);
 
   const nameOf = useCallback(
     (id: string) => plugins.find((p) => p.id === id)?.name ?? id,
@@ -439,6 +533,9 @@ export function usePluginsManager() {
     busy,
     consent,
     setConsent,
+    developerMode: developer.enabled,
+    signedOnly: developer.signedOnly,
+    requestUpload,
     refresh: () => load(true),
     requestInstall,
     requestUpdate,

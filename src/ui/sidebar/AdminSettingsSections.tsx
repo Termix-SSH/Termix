@@ -6,6 +6,7 @@ import { SettingRow } from "@/components/section-card";
 import { Database, Lock, RefreshCw, Server, Settings } from "lucide-react";
 import { AccordionSection, AdminToggle } from "./AdminSettingsShared";
 import { AdminHostTags } from "./AdminHostTags";
+import { AdminPluginDeveloperMode } from "./AdminPluginDeveloperMode";
 import type { TlsStatus } from "@/api/tls-api";
 
 type GeneralSettingsSectionProps = {
@@ -142,6 +143,7 @@ export function AdminGeneralSettingsSection({
             onToggle={handleTogglePasswordReset}
           />
         </SettingRow>
+        <AdminPluginDeveloperMode />
         <div className="flex flex-col gap-2 pt-3 mt-2">
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             {t("admin.sessionTimeout")}

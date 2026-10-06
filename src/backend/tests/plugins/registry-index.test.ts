@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import * as tar from "tar";
 
 const fetchMock = vi.hoisted(() => vi.fn());
 const testKey = vi.hoisted(() => ({ value: null as null | object }));
@@ -26,9 +27,12 @@ vi.mock("../../plugins/trust.js", async (importOriginal) => {
 import {
   downloadRelease,
   fetchRegistryIndex,
+  fetchRegistryStats,
   findRelease,
+  getStatsUrl,
   isApiCompatible,
   parseRegistryIndex,
+  parseRegistryStats,
   resetRegistryCache,
   type RegistryVersion,
 } from "../../plugins/registry-index.js";
@@ -186,8 +190,25 @@ describe("fetchRegistryIndex", () => {
   });
 });
 
+/** A real .tmxplug holding only a manifest, enough for the checks. */
+function pack(manifest: Record<string, unknown>): Buffer {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "termix-pack-"));
+  try {
+    fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify(manifest));
+    const file = path.join(dir, "out.tmxplug");
+    tar.c({ gzip: true, sync: true, file, cwd: dir }, ["manifest.json"]);
+    return fs.readFileSync(file);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 describe("downloadRelease", () => {
-  const artifact = Buffer.from("plugin archive bytes");
+  const artifact = pack({
+    id: "docker",
+    version: "1.0.0",
+    capabilities: ["kv:own"],
+  });
 
   it("writes a verified artifact and its signature to staging", async () => {
     const signed = sign(artifact);
@@ -204,6 +225,47 @@ describe("downloadRelease", () => {
     expect(
       result.file.startsWith(path.join(dataDir, "plugins", ".downloads")),
     ).toBe(true);
+  });
+
+  it("refuses a file signed by a key this build does not trust", async () => {
+    const other = crypto.generateKeyPairSync("ed25519").privateKey;
+    const digest = crypto.createHash("sha256").update(artifact).digest();
+    fetchMock.mockResolvedValueOnce(response(artifact));
+    await expect(
+      downloadRelease(
+        "docker",
+        version({
+          sha256: digest.toString("hex"),
+          signature: crypto.sign(null, digest, other).toString("base64"),
+          size: artifact.length,
+        }),
+      ),
+    ).rejects.toThrow(/trusted key/);
+  });
+
+  it.each([
+    ["another plugin id", { id: "evil" }, /archive is for/],
+    ["another version", { version: "9.9.9" }, /archive is version/],
+    [
+      "more capabilities than the index lists",
+      { capabilities: ["kv:own", "credentials:read"] },
+      /different capabilities/,
+    ],
+  ])("refuses a signed file with %s", async (_label, override, error) => {
+    const tampered = pack({
+      id: "docker",
+      version: "1.0.0",
+      capabilities: ["kv:own"],
+      ...override,
+    });
+    const signed = sign(tampered);
+    fetchMock.mockResolvedValueOnce(response(tampered));
+    await expect(
+      downloadRelease("docker", version({ ...signed, size: tampered.length })),
+    ).rejects.toThrow(error);
+    expect(fs.existsSync(path.join(dataDir, "plugins", ".downloads"))).toBe(
+      false,
+    );
   });
 
   it("refuses a file that does not match its signature", async () => {
@@ -227,5 +289,40 @@ describe("downloadRelease", () => {
     await expect(
       downloadRelease("docker", version({ ...signed, size: 10 })),
     ).rejects.toThrow(/larger than allowed/);
+  });
+});
+
+describe("registry stats", () => {
+  it("sits next to the index", () => {
+    expect(getStatsUrl()).toBe(
+      "https://raw.githubusercontent.com/Termix-SSH/Termix-Registry/main/official/stats.json",
+    );
+  });
+
+  it("keeps valid counts and drops the rest", () => {
+    const stats = parseRegistryStats({
+      plugins: {
+        docker: { downloads: 120, activeInstalls: 40 },
+        tunnels: { downloads: 7 },
+        "../bad": { downloads: 1 },
+        broken: { downloads: -3, activeInstalls: "many" },
+      },
+    });
+    expect(Object.fromEntries(stats.plugins)).toEqual({
+      docker: { downloads: 120, activeInstalls: 40 },
+      tunnels: { downloads: 7, activeInstalls: null },
+      broken: { downloads: 0, activeInstalls: null },
+    });
+  });
+
+  it("fetches and parses stats.json", async () => {
+    fetchMock.mockResolvedValueOnce(
+      response(JSON.stringify({ plugins: { docker: { downloads: 3 } } })),
+    );
+    const stats = await fetchRegistryStats();
+    expect(stats?.plugins.get("docker")).toEqual({
+      downloads: 3,
+      activeInstalls: null,
+    });
   });
 });

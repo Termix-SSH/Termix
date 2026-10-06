@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { PluginIcon } from "@/lib/plugin-icon";
 import { cn } from "@/lib/utils";
-import { capabilityRisk, isSevere } from "./plugin-model";
+import { capabilityRisk, formatCount, isSevere } from "./plugin-model";
 
 export function PluginIconBox({
   name,
@@ -72,5 +72,47 @@ export function CapabilityRow({
         </span>
       )}
     </div>
+  );
+}
+
+/** Permanent mark on anything installed without a registry signature. */
+export function UnverifiedBadge() {
+  const { t } = useTranslation();
+  return (
+    <span
+      className="shrink-0 border border-warning/40 bg-warning/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-warning"
+      title={t("plugins.manager.unverifiedHint")}
+    >
+      {t("plugins.manager.unverified")}
+    </span>
+  );
+}
+
+/** Active installs when the registry has them, release downloads otherwise. */
+export function InstallCountFact({
+  count,
+  source,
+}: {
+  count: number | null;
+  source: string | null;
+}) {
+  const { t } = useTranslation();
+  if (count === null || count <= 0) return null;
+  const active = source === "aggregate-telemetry";
+  return (
+    <span
+      title={
+        active
+          ? t("plugins.manager.count.activeHint")
+          : t("plugins.manager.count.downloadsHint")
+      }
+    >
+      {t(
+        active
+          ? "plugins.manager.count.active"
+          : "plugins.manager.count.downloads",
+        { count, formatted: formatCount(count) },
+      )}
+    </span>
   );
 }

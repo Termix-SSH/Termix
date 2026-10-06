@@ -1399,6 +1399,20 @@ router.put(
 
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
+/** The consented capability list, or null when the body is malformed. */
+function readCapabilities(body: unknown): string[] | undefined | null {
+  const value = (body as { capabilities?: unknown } | undefined)?.capabilities;
+  if (value === undefined) return undefined;
+  if (
+    !Array.isArray(value) ||
+    value.length > 200 ||
+    !value.every((c) => typeof c === "string" && c.length <= 128)
+  ) {
+    return null;
+  }
+  return value as string[];
+}
+
 function readVersion(body: unknown): string | undefined | null {
   const version = (body as { version?: unknown } | undefined)?.version;
   if (version === undefined || version === null || version === "") {
@@ -1503,7 +1517,9 @@ router.post(
  *       starts it along with any installed dependency that is off. Without a
  *       version the newest compatible release is used; naming an older one
  *       pins the plugin there. A bundled plugin at its shipped version needs
- *       no download.
+ *       no download. capabilities must list exactly what the consent prompt
+ *       showed; when it differs from what the release asks for, nothing is
+ *       downloaded and the answer is 409 CONSENT_MISMATCH with the real list.
  *     tags:
  *       - Plugins
  *     parameters:
@@ -1513,24 +1529,31 @@ router.post(
  *         schema:
  *           type: string
  *     requestBody:
+ *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - capabilities
  *             properties:
  *               version:
  *                 type: string
+ *               capabilities:
+ *                 type: array
+ *                 items:
+ *                   type: string
  *     responses:
  *       200:
  *         description: The installed version and the plugin's state.
  *       400:
- *         description: Invalid id or version.
+ *         description: Invalid id, version or capability list, or no capability list.
  *       403:
  *         description: The caller lacks admin.plugins.manage.
  *       404:
  *         description: Not in the official registry.
  *       409:
- *         description: Already installed, incompatible, or managed by a linked server.
+ *         description: Already installed, incompatible, the consent does not match, or managed by a linked server.
  *       502:
  *         description: The registry could not be reached.
  */
@@ -1541,17 +1564,29 @@ router.post(
   async (req: Request, res: Response) => {
     const pluginId = String(req.params.id);
     const version = readVersion(req.body);
-    if (!ID_PATTERN.test(pluginId) || version === null) {
-      res.status(400).json({ error: "Invalid plugin id or version" });
+    const capabilities = readCapabilities(req.body);
+    if (
+      !ID_PATTERN.test(pluginId) ||
+      version === null ||
+      capabilities === null
+    ) {
+      res
+        .status(400)
+        .json({ error: "Invalid plugin id, version or capabilities" });
       return;
     }
     if (await refuseOnLinkedDesktop(res)) return;
     try {
       const { installPlugin } = await import("../../plugins/manage.js");
       const userId = (req as AuthenticatedRequest).userId as string;
-      const result = await installPlugin(pluginId, { version, userId });
+      const result = await installPlugin(pluginId, {
+        version,
+        userId,
+        capabilities,
+      });
       await auditPluginAction(req, "install_plugin", pluginId, {
         version: result.version,
+        capabilities,
       });
       res.json(result);
     } catch (error) {
@@ -1573,8 +1608,9 @@ router.post(
  *     description: >
  *       Swaps in another release from the official registry, newer or older.
  *       If the release declares capabilities the installed one does not, the
- *       request must set acceptCapabilities, otherwise it answers 409 with
- *       code CAPABILITIES_ADDED and the list. A running plugin is started
+ *       request must set acceptCapabilities and list exactly those added
+ *       capabilities in capabilities, otherwise it answers 409 with code
+ *       CAPABILITIES_ADDED (or CONSENT_MISMATCH) and the list. A running plugin is started
  *       again on the new version. Naming a version that is not the newest
  *       pins the plugin to it.
  *     tags:
@@ -1595,6 +1631,10 @@ router.post(
  *                 type: string
  *               acceptCapabilities:
  *                 type: boolean
+ *               capabilities:
+ *                 type: array
+ *                 items:
+ *                   type: string
  *     responses:
  *       200:
  *         description: The new version and the plugin's state.
@@ -1614,8 +1654,15 @@ router.post(
   async (req: Request, res: Response) => {
     const pluginId = String(req.params.id);
     const version = readVersion(req.body);
-    if (!ID_PATTERN.test(pluginId) || version === null) {
-      res.status(400).json({ error: "Invalid plugin id or version" });
+    const capabilities = readCapabilities(req.body);
+    if (
+      !ID_PATTERN.test(pluginId) ||
+      version === null ||
+      capabilities === null
+    ) {
+      res
+        .status(400)
+        .json({ error: "Invalid plugin id, version or capabilities" });
       return;
     }
     if (await refuseOnLinkedDesktop(res)) return;
@@ -1626,6 +1673,7 @@ router.post(
         version,
         userId,
         acceptCapabilities: req.body?.acceptCapabilities === true,
+        capabilities,
       });
       await auditPluginAction(req, "update_plugin", pluginId, {
         version: result.version,
@@ -1802,6 +1850,233 @@ router.get(
         error,
         "Failed to read the plugin's data",
         "plugin_data",
+      );
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/developer-mode:
+ *   get:
+ *     summary: Read whether plugin developer mode is on
+ *     description: Developer mode lets admins install a .tmxplug from a file, without the registry's signature check. The UI shows a banner while it is on.
+ *     tags:
+ *       - Plugins
+ *     responses:
+ *       200:
+ *         description: Whether developer mode is on, and whether TERMIX_REQUIRE_SIGNED_PLUGINS blocks file installs anyway.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ */
+router.get(
+  "/developer-mode",
+  authenticateJWT,
+  requireManagePlugins,
+  async (_req: Request, res: Response) => {
+    try {
+      const { getDeveloperMode } = await import("../../plugins/manage.js");
+      const { requireSignedPlugins } = await import("../../plugins/trust.js");
+      res.json({
+        enabled: await getDeveloperMode(),
+        signedOnly: requireSignedPlugins(),
+      });
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to read developer mode",
+        "plugin_developer_mode",
+      );
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/developer-mode:
+ *   put:
+ *     summary: Turn plugin developer mode on or off
+ *     description: Turning it off drops any file that was uploaded but not installed yet. Plugins already installed from a file keep running and stay marked unverified.
+ *     tags:
+ *       - Plugins
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - enabled
+ *             properties:
+ *               enabled:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: The saved value.
+ *       400:
+ *         description: enabled is not a boolean.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ */
+router.put(
+  "/developer-mode",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    const enabled = req.body?.enabled;
+    if (typeof enabled !== "boolean") {
+      res.status(400).json({ error: "enabled must be a boolean" });
+      return;
+    }
+    try {
+      const { setDeveloperMode } = await import("../../plugins/manage.js");
+      await setDeveloperMode(enabled);
+      await auditPluginAction(req, "plugin_developer_mode", "*", { enabled });
+      res.json({ enabled });
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to save developer mode",
+        "plugin_developer_mode",
+      );
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/upload:
+ *   post:
+ *     summary: Upload a .tmxplug to install from a file
+ *     description: >
+ *       Developer mode only. The body is the raw .tmxplug (at most 50 MB).
+ *       The file is checked (archive, manifest, plugin API) and held for 30
+ *       minutes, but nothing is loaded. The answer lists what it asks for so
+ *       the admin can agree, then POST /plugins/upload/{token}/install
+ *       installs it. A file can replace an earlier upload with the same id,
+ *       never a bundled or registry plugin.
+ *     tags:
+ *       - Plugins
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/octet-stream:
+ *           schema:
+ *             type: string
+ *             format: binary
+ *     responses:
+ *       200:
+ *         description: A token plus the plugin's id, name, version and capabilities.
+ *       400:
+ *         description: Not a valid .tmxplug or manifest.
+ *       403:
+ *         description: Developer mode is off, signed plugins are required, or the caller lacks admin.plugins.manage.
+ *       409:
+ *         description: The id belongs to a bundled or registry plugin, the plugin API does not match, or managed by a linked server.
+ *       413:
+ *         description: The file is larger than 50 MB.
+ */
+router.post(
+  "/upload",
+  authenticateJWT,
+  requireManagePlugins,
+  express.raw({ type: "application/octet-stream", limit: "50mb" }),
+  async (req: Request, res: Response) => {
+    if (await refuseOnLinkedDesktop(res)) return;
+    if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+      res.status(400).json({
+        error: "Send the .tmxplug as application/octet-stream",
+        code: "INVALID_ARTIFACT",
+      });
+      return;
+    }
+    try {
+      const { stageUpload } = await import("../../plugins/manage.js");
+      res.json(await stageUpload(req.body));
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to read the uploaded plugin",
+        "plugin_upload",
+      );
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/upload/{token}/install:
+ *   post:
+ *     summary: Install a plugin uploaded from a file
+ *     description: >
+ *       Developer mode only. capabilities must list exactly what the upload
+ *       asks for, as the consent prompt showed it. The plugin is installed,
+ *       granted those capabilities and started, and is marked unverified for
+ *       as long as it stays installed.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - capabilities
+ *             properties:
+ *               capabilities:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: The installed version and the plugin's state.
+ *       400:
+ *         description: Invalid token or capability list.
+ *       403:
+ *         description: Developer mode is off, signed plugins are required, or the caller lacks admin.plugins.manage.
+ *       404:
+ *         description: The upload expired or never existed.
+ *       409:
+ *         description: The consent does not match, the id is taken, or managed by a linked server.
+ */
+router.post(
+  "/upload/:token/install",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    const token = String(req.params.token);
+    const capabilities = readCapabilities(req.body);
+    if (!/^[a-f0-9]{32}$/.test(token) || capabilities === null) {
+      res.status(400).json({ error: "Invalid upload token or capabilities" });
+      return;
+    }
+    if (await refuseOnLinkedDesktop(res)) return;
+    try {
+      const { installUpload } = await import("../../plugins/manage.js");
+      const userId = (req as AuthenticatedRequest).userId as string;
+      const result = await installUpload(token, { userId, capabilities });
+      await auditPluginAction(req, "install_plugin_from_file", result.id, {
+        version: result.version,
+        capabilities,
+        verified: false,
+      });
+      res.json(result);
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to install the plugin",
+        "plugin_install",
       );
     }
   },

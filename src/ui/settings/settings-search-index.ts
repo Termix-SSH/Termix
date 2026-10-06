@@ -132,6 +132,13 @@ export const SETTINGS_SEARCH_INDEX: Record<string, string[]> = {
     "admin.sessionTimeoutRange",
     "admin.statusCheck",
     "common.save",
+    "plugins.manager.developer.enable",
+    "plugins.manager.developer.enableBody",
+    "plugins.manager.developer.enableTitle",
+    "plugins.manager.developer.hint",
+    "plugins.manager.developer.signedOnly",
+    "plugins.manager.developer.title",
+    "plugins.manager.errors.developerMode",
   ],
   "admin-host-defaults": [
     "admin.hostTags",

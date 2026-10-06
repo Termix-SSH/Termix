@@ -85,9 +85,12 @@ function adminSections() {
   const settings = read("AdminSettingsSections.tsx");
   const management = read("AdminManagementSections.tsx");
   return {
-    "admin-general": keysIn(
-      functionBody(settings, "AdminGeneralSettingsSection"),
-    ),
+    "admin-general": [
+      ...new Set([
+        ...keysIn(functionBody(settings, "AdminGeneralSettingsSection")),
+        ...keysIn(read("AdminPluginDeveloperMode.tsx")),
+      ]),
+    ],
     "admin-users": [
       ...new Set([
         ...keysIn(functionBody(management, "AdminUsersSection")),
