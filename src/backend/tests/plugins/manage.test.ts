@@ -445,6 +445,46 @@ describe("dependencies", () => {
   });
 });
 
+describe("reloading a bundled plugin for the dev runner", () => {
+  it("loads the rebuilt copy and restarts what depends on it", async () => {
+    createFixturePlugin({ id: "base", root: bundled });
+    createFixturePlugin({
+      id: "addon",
+      root: bundled,
+      manifestOverrides: { dependencies: { base: "^1.0.0" } },
+    });
+    const loader = await boot();
+    createFixturePlugin({
+      id: "base",
+      root: bundled,
+      manifestOverrides: { version: "1.1.0" },
+    });
+
+    const result = await manage.reloadBundledPlugin("base");
+    expect(result).toEqual({ id: "base", version: "1.1.0", state: "active" });
+    expect(loader.get("base")?.manifest.version).toBe("1.1.0");
+    expect(loader.get("addon")?.state).toBe("active");
+    expect(db.rows.get("base")?.version).toBe("1.1.0");
+  });
+
+  it("loads and starts a plugin added since boot", async () => {
+    const loader = await boot();
+    createFixturePlugin({ id: "fresh", root: bundled });
+    const result = await manage.reloadBundledPlugin("fresh");
+    expect(result.state).toBe("active");
+    expect(loader.get("fresh")?.state).toBe("active");
+  });
+
+  it("keeps a disabled plugin stopped", async () => {
+    createFixturePlugin({ id: "base", root: bundled });
+    const loader = await boot();
+    await manage.setPluginState("base", false);
+    const result = await manage.reloadBundledPlugin("base");
+    expect(result.state).toBe("stopped");
+    expect(loader.get("base")?.state).toBe("loaded");
+  });
+});
+
 describe("consent", () => {
   it("refuses an install without the consented list, before any download", async () => {
     registry.index.plugins = [registryEntry("notes", [{ version: "1.0.0" }])];

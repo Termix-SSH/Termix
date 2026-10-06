@@ -25,6 +25,7 @@ import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import { toggleHiddenRailTab, useHiddenRailTabs } from "./hidden-rail-tabs";
 import { RailBadge } from "./RailBadge";
 import { rem } from "@/lib/rem";
+import { isElectron } from "@/lib/electron";
 
 /** Core rail views; plugins add their own ids at runtime. */
 export type CoreRailView =
@@ -437,20 +438,25 @@ export function AppRail({
           </>
         )}
         {footerItems.map(renderItem)}
-        {footerItems.length > 0 && <Rule expanded={railExpanded} />}
-        <button
-          type="button"
-          onClick={() => onLogout({ manual: true })}
-          style={btnStyle}
-          title={t("common.logout")}
-          aria-label={t("common.logout")}
-          className={`${btnBase} text-muted-foreground hover:text-destructive hover:bg-destructive/10`}
-        >
-          <RailIcon>
-            <LogOut size={16} />
-          </RailIcon>
-          <RailLabel expanded={railExpanded}>{t("common.logout")}</RailLabel>
-        </button>
+        {footerItems.length > 0 && !isElectron() && (
+          <Rule expanded={railExpanded} />
+        )}
+        {/* The desktop signs in to its own local profile by itself. */}
+        {!isElectron() && (
+          <button
+            type="button"
+            onClick={() => onLogout({ manual: true })}
+            style={btnStyle}
+            title={t("common.logout")}
+            aria-label={t("common.logout")}
+            className={`${btnBase} text-muted-foreground hover:text-destructive hover:bg-destructive/10`}
+          >
+            <RailIcon>
+              <LogOut size={16} />
+            </RailIcon>
+            <RailLabel expanded={railExpanded}>{t("common.logout")}</RailLabel>
+          </button>
+        )}
       </div>
 
       <div className="shrink-0 border-t border-border">

@@ -19,6 +19,7 @@ import {
 import { useHiddenRailTabs } from "@/sidebar/hidden-rail-tabs";
 import { RailBadge } from "@/sidebar/RailBadge";
 import { cn } from "@/lib/utils";
+import { isElectron } from "@/lib/electron";
 
 const PRIMARY_COUNT = 4;
 
@@ -183,14 +184,16 @@ export function MobileBar({
                     onOpenSettings();
                   }}
                 />
-                <SheetRow
-                  icon={LogOut}
-                  label={t("common.logout")}
-                  onClick={() => {
-                    close();
-                    onLogout();
-                  }}
-                />
+                {!isElectron() && (
+                  <SheetRow
+                    icon={LogOut}
+                    label={t("common.logout")}
+                    onClick={() => {
+                      close();
+                      onLogout();
+                    }}
+                  />
+                )}
               </div>
             </div>
           </div>

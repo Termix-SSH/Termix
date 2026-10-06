@@ -280,4 +280,13 @@ describe("rebuilding local plugins", () => {
     expect(run).toEqual(["a"]);
     expect(rebuildLocalPlugins(null, new Set(["a"]), () => {})).toEqual([]);
   });
+
+  it("builds every stale repo when no ids are given", () => {
+    const dir = tempDir();
+    repo(dir, "Plugin-A", "a");
+    repo(dir, "Plugin-B", "b");
+    const run: string[] = [];
+    rebuildLocalPlugins(dir, null, (_repo: string, id: string) => run.push(id));
+    expect(run.sort()).toEqual(["a", "b"]);
+  });
 });

@@ -7,9 +7,9 @@
  * pinned sha256 and unpacked.
  *
  * For development, `--local <dir>` (or TERMIX_LOCAL_PLUGINS) points at a
- * folder of plugin repos like ../Termix-Plugins. A bundled plugin there whose
- * sources changed since its last build is rebuilt first, then any built one
- * (has dist/) is copied in place of its pin, so local plugin changes show up.
+ * folder of plugin repos like ../Termix-Plugins. A plugin there whose sources
+ * changed since its last build is rebuilt first, then any built one (has
+ * dist/) is copied in place of its pin, or added when it has no pin.
  */
 
 const { execSync } = require("node:child_process");
@@ -33,14 +33,10 @@ async function main() {
   const localArg =
     flag !== -1 ? process.argv[flag + 1] : process.env.TERMIX_LOCAL_PLUGINS;
   const localDir = localArg ? path.resolve(root, localArg) : null;
-  rebuildLocalPlugins(
-    localDir,
-    new Set(plugins.map((p) => p.id)),
-    (repo, id) => {
-      console.log(`building ${id}`);
-      execSync("npm run build", { cwd: repo, stdio: "inherit" });
-    },
-  );
+  rebuildLocalPlugins(localDir, null, (repo, id) => {
+    console.log(`building ${id}`);
+    execSync("npm run build", { cwd: repo, stdio: "inherit" });
+  });
   const local = findLocalPluginBuilds(localDir);
 
   fs.rmSync(destination, { recursive: true, force: true });
@@ -58,8 +54,16 @@ async function main() {
     console.log(`unpacked ${plugin.id}`);
   }
 
+  // A local plugin with no pin yet still gets staged, so new plugins work too.
+  const pinned = new Set(plugins.map((p) => p.id));
+  const extra = [...local.keys()].filter((id) => !pinned.has(id));
+  for (const id of extra) {
+    copyLocalBuild(local.get(id), path.join(destination, id));
+    console.log(`copied local build of ${id} (not pinned)`);
+  }
+
   console.log(
-    `Bundled ${plugins.length} plugin(s): ${plugins.map((p) => p.id).join(", ")}`,
+    `Bundled ${plugins.length + extra.length} plugin(s): ${[...pinned, ...extra].join(", ")}`,
   );
 }
 

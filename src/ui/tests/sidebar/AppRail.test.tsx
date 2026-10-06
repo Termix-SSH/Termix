@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Bell, Boxes } from "lucide-react";
 import { AppRail } from "../../sidebar/AppRail";
@@ -25,6 +25,7 @@ vi.mock("@/hooks/use-permissions", () => ({
 afterEach(() => {
   resetRegisteredRailItems();
   localStorage.clear();
+  delete (window as { IS_ELECTRON?: boolean }).IS_ELECTRON;
 });
 
 function renderRail(onRailClick = vi.fn()) {
@@ -44,6 +45,15 @@ function renderRail(onRailClick = vi.fn()) {
 }
 
 describe("AppRail", () => {
+  it("shows logout in the browser but not on the desktop", () => {
+    renderRail();
+    expect(screen.getByLabelText("common.logout")).toBeTruthy();
+    cleanup();
+    (window as { IS_ELECTRON?: boolean }).IS_ELECTRON = true;
+    renderRail();
+    expect(screen.queryByLabelText("common.logout")).toBeNull();
+  });
+
   it("puts a footer item above the profile with its badge", async () => {
     registerRailItem({
       id: "inbox",

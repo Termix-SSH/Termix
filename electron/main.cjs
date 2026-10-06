@@ -644,17 +644,30 @@ const BACKEND_REQUEST_HANDLERS = {
   },
 };
 
+function isDevRunner() {
+  return (
+    process.env.TERMIX_DEV_RUNNER === "true" &&
+    typeof process.send === "function"
+  );
+}
+
 async function handleBackendRequest(msg) {
   if (!msg || msg.type !== "backend-request") return;
   const { id, channel, payload } = msg;
   const handler = BACKEND_REQUEST_HANDLERS[channel];
+  // Under dev:all the runner owns the backend and relays these messages.
+  const target =
+    backendProcess && !backendProcess.killed
+      ? backendProcess
+      : isDevRunner()
+        ? process
+        : null;
   const reply = (response) => {
-    if (backendProcess && !backendProcess.killed) {
-      try {
-        backendProcess.send({ type: "backend-response", id, ...response });
-      } catch (error) {
-        logToFile("Failed to reply to backend request:", error.message);
-      }
+    if (!target) return;
+    try {
+      target.send({ type: "backend-response", id, ...response });
+    } catch (error) {
+      logToFile("Failed to reply to backend request:", error.message);
     }
   };
   if (!handler) {
@@ -3764,6 +3777,9 @@ app.whenReady().then(async () => {
     logToFile(
       "Skipping embedded backend (isDev=true) - expecting separate dev:backend process",
     );
+    if (isDevRunner()) {
+      process.on("message", (msg) => void handleBackendRequest(msg));
+    }
   }
 
   createTray();

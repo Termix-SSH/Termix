@@ -24,6 +24,7 @@ afterEach(() => {
   cleanup();
   resetRegisteredRailItems();
   localStorage.clear();
+  delete (window as { IS_ELECTRON?: boolean }).IS_ELECTRON;
 });
 
 function renderBar(onRailClick = vi.fn()) {
@@ -75,6 +76,17 @@ describe("MobileBar", () => {
     expect(screen.getByText("test.inbox")).toBeTruthy();
     expect(screen.getByText("nav.settings")).toBeTruthy();
     expect(screen.getByText("nav.group.objects")).toBeTruthy();
+  });
+
+  it("leaves logout out of More on the desktop", () => {
+    renderBar();
+    fireEvent.click(screen.getByLabelText("common.more"));
+    expect(screen.getByText("common.logout")).toBeTruthy();
+    cleanup();
+    (window as { IS_ELECTRON?: boolean }).IS_ELECTRON = true;
+    renderBar();
+    fireEvent.click(screen.getByLabelText("common.more"));
+    expect(screen.queryByText("common.logout")).toBeNull();
   });
 
   it("leaves out hidden items", () => {

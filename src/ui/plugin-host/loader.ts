@@ -398,6 +398,11 @@ function onPluginsChanged() {
   void syncPlugins();
 }
 
+// Sent by scripts/dev.mjs after it rebuilt a plugin or restarted the backend.
+import.meta.hot?.on("termix:plugins-reloaded", () => {
+  if (started) void syncPlugins();
+});
+
 function onFocus() {
   const now = Date.now();
   if (now - lastFocusSync < FOCUS_SYNC_INTERVAL_MS) return;

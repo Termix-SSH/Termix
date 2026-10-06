@@ -1290,6 +1290,44 @@ export function installUpload(
   });
 }
 
+/**
+ * Loads the copy in the bundled folder again after it was rebuilt, for the
+ * dev runner. Running dependents stop first and start again after.
+ */
+export function reloadBundledPlugin(
+  pluginId: string,
+): Promise<{ id: string; version: string; state: string }> {
+  return serialized(async () => {
+    const { loader } = getPluginRuntime();
+    const previous = loader.get(pluginId);
+    if (previous && previous.source !== "bundled") {
+      throw new PluginManageError(
+        `${pluginId} is not loaded from the bundled folder`,
+        409,
+        "NOT_BUNDLED",
+      );
+    }
+    const dependents = previous
+      ? dependentChain(pluginId, await enabledIds()).filter(
+          (id) => loader.get(id)?.state === "active",
+        )
+      : [];
+    for (const id of dependents) await deactivatePlugin(id);
+    await unloadPlugin(pluginId);
+
+    const plugin = await loader.loadBundled(pluginId);
+    await registerLoadedPlugins([plugin]);
+
+    let state = "stopped";
+    if ((await enabledIds()).has(pluginId)) {
+      const { missing } = dependencyChain(pluginId);
+      state = missing.length > 0 ? "blocked" : await startAndRecord(pluginId);
+    }
+    for (const id of [...dependents].reverse()) await startAndRecord(id);
+    return { id: pluginId, version: plugin.manifest.version, state };
+  });
+}
+
 /** Test seam. */
 export function resetUploads(): void {
   uploads.clear();

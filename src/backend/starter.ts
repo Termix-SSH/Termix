@@ -283,7 +283,10 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     });
 
     // Log output can be filtered by the configured level or split across chunks.
-    if (process.env.ELECTRON_EMBEDDED === "true") {
+    if (
+      process.env.ELECTRON_EMBEDDED === "true" ||
+      process.env.TERMIX_DEV_RELOAD === "true"
+    ) {
       process.send?.({ type: "backend-ready" });
     }
 
@@ -327,6 +330,11 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
         gracefulShutdown("IPC shutdown");
       }
     });
+
+    if (process.env.TERMIX_DEV_RELOAD === "true") {
+      const { listenForDevReloads } = await import("./plugins/dev-reload.js");
+      listenForDevReloads();
+    }
 
     // A single bad request must not take the server down. Exit only on errors
     // that leave the process genuinely unusable; log and keep serving

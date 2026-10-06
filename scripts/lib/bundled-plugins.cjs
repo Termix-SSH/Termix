@@ -231,7 +231,10 @@ function isLocalBuildStale(repo) {
   );
 }
 
-/** Builds each listed plugin repo whose build is missing or out of date. */
+/**
+ * Builds each plugin repo whose build is missing or out of date. ids limits
+ * it to those plugins; null builds every one.
+ */
 function rebuildLocalPlugins(dir, ids, run) {
   const rebuilt = [];
   if (!dir || !fs.existsSync(dir)) return rebuilt;
@@ -246,7 +249,7 @@ function rebuildLocalPlugins(dir, ids, run) {
     } catch {
       continue;
     }
-    if (!ids.has(id) || !isLocalBuildStale(repo)) continue;
+    if ((ids && !ids.has(id)) || !isLocalBuildStale(repo)) continue;
     run(repo, id);
     rebuilt.push(id);
   }

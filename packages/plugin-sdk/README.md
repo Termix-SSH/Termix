@@ -35,7 +35,13 @@ npx termix-plugin pack                   # write <id>-<version>.tmxplug
 npx termix-plugin sign <file.tmxplug>    # sign it, needs TERMIX_PLUGIN_SIGNING_KEY
 npx termix-plugin verify <file.tmxplug> --key <base64>   # check a signature
 npx termix-plugin keygen --out <dir>     # make a new signing key pair
+npx termix-plugin dev --server <url> --key <tmx_...>   # install on a server and reinstall on every change
 ```
+
+`dev` needs developer mode on (Admin settings, Plugins) and an API key from an
+admin account. It installs the plugin from a file, marked unverified, and
+reinstalls it each time you save. `TERMIX_SERVER_URL` and `TERMIX_API_KEY` work
+in place of the flags. Reload the page to pick up frontend changes.
 
 <br />
 
