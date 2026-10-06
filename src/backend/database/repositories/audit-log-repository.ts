@@ -1,4 +1,15 @@
-import { and, asc, desc, eq, gte, inArray, lt, lte, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  lt,
+  lte,
+  sql,
+} from "drizzle-orm";
 import { auditLogs } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { sqlTimestampDaysAgo } from "./sql-timestamp.js";
@@ -26,6 +37,17 @@ export const AUDIT_RETENTION_DAYS_ENV = "AUDIT_LOG_RETENTION_DAYS";
 export const AUDIT_MAX_ENTRIES_ENV = "AUDIT_LOG_MAX_ENTRIES";
 
 const DEFAULT_MAX_ENTRIES = 10000;
+
+// 2.9.1 logged these on every background plugin query and pushed real
+// entries out of the capped log. They are now audited once per activation.
+export const ROUTINE_PLUGIN_AUDIT_ACTIONS = [
+  "plugin_db_client",
+  "plugin_db_refs",
+  "plugin_kv_get",
+  "plugin_kv_list",
+  "plugin_files_data_dir",
+  "plugin_settings_read_core",
+];
 const PRUNE_TARGET_RATIO = 0.9;
 
 function positiveIntEnv(key: string, env: NodeJS.ProcessEnv): number | null {
@@ -158,6 +180,24 @@ export class AuditLogRepository {
     const result = await this.context.drizzle
       .delete(auditLogs)
       .where(eq(auditLogs.userId, userId));
+
+    if (rowsAffected(result) > 0) {
+      await this.afterWrite();
+    }
+
+    return rowsAffected(result);
+  }
+
+  async deleteRoutinePluginNoise(): Promise<number> {
+    AuditLogRepository.cachedCount = null;
+    const result = await this.context.drizzle
+      .delete(auditLogs)
+      .where(
+        and(
+          isNull(auditLogs.userId),
+          inArray(auditLogs.action, ROUTINE_PLUGIN_AUDIT_ACTIONS),
+        ),
+      );
 
     if (rowsAffected(result) > 0) {
       await this.afterWrite();

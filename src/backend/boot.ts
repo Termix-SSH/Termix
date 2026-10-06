@@ -68,4 +68,8 @@ export async function runCoreBootMigrations(): Promise<void> {
   const { runExternalAutoProvisionMigration } =
     await import("./upgrade/external-auto-provision-migration.js");
   await runExternalAutoProvisionMigration();
+
+  const { runAuditNoiseCleanup } =
+    await import("./upgrade/audit-noise-cleanup.js");
+  await runAuditNoiseCleanup();
 }

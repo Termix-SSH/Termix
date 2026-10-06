@@ -212,6 +212,48 @@ describe("ctx.db capability", () => {
   });
 });
 
+// Every audit row rewrote the whole SQLite file, and pollers fetch the
+// client before every query (2.9.1 wrote 100 GB in hours).
+describe("ctx audit volume", () => {
+  it("audits the client handle once however often it is fetched", async () => {
+    grants.set("demo", ["db:own"]);
+    const { ctx } = contextFor("demo", ["db:own"]);
+
+    for (let i = 0; i < 100; i++) await ctx.db.client();
+
+    expect(
+      auditEntries.filter((row) => row.action === "plugin_db_client"),
+    ).toHaveLength(1);
+  });
+
+  it("audits kv reads once but every kv write", async () => {
+    grants.set("demo", ["kv:own"]);
+    const { ctx } = contextFor("demo", ["kv:own"]);
+
+    for (let i = 0; i < 5; i++) await ctx.kv.get("k");
+    for (let i = 0; i < 3; i++) await ctx.kv.set("k", i);
+
+    const actions = auditEntries.map((row) => row.action);
+    expect(actions.filter((a) => a === "plugin_kv_get")).toHaveLength(1);
+    expect(actions.filter((a) => a === "plugin_kv_set")).toHaveLength(3);
+  });
+
+  it("still audits a refusal after the first success", async () => {
+    grants.set("demo", ["db:own"]);
+    const { ctx } = contextFor("demo", ["db:own"]);
+    await ctx.db.client();
+
+    grants.set("demo", []);
+    invalidatePluginPermissionCache("demo");
+    await expect(ctx.db.client()).rejects.toThrow();
+
+    const entries = auditEntries.filter(
+      (row) => row.action === "plugin_db_client",
+    );
+    expect(entries.map((row) => row.success)).toEqual([true, false]);
+  });
+});
+
 describe("ctx.kv limits", () => {
   it("refuses a key over the length cap", async () => {
     grants.set("demo", ["kv:own"]);

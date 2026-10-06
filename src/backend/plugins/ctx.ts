@@ -109,6 +109,11 @@ interface AuditOptions {
   action: string;
   /** Short description of the call shape. Never a value. */
   details?: () => string;
+  /**
+   * Audit only the first success. For handles plugins fetch before every
+   * query: an audit row per call rewrote the whole database each time.
+   */
+  once?: boolean;
 }
 
 /**
@@ -124,6 +129,7 @@ function guarded<Args extends unknown[], Result>(
   fn: (...args: Args) => Promise<Result>,
   options: AuditOptions,
 ): (...args: Args) => Promise<Result> {
+  let audited = false;
   return async (...args: Args): Promise<Result> => {
     // A refusal is audited inside assertCapability, under this action.
     await assertCapability(
@@ -135,7 +141,10 @@ function guarded<Args extends unknown[], Result>(
 
     try {
       const result = await fn(...args);
-      await writeAudit(manifest, options, { success: true });
+      if (!options.once || !audited) {
+        audited = true;
+        await writeAudit(manifest, options, { success: true });
+      }
       return result;
     } catch (error) {
       await writeAudit(manifest, options, {
@@ -242,7 +251,7 @@ export function createPluginContext(
         return null;
       }
     },
-    { action: "kv_get" },
+    { action: "kv_get", once: true },
   );
 
   const kvSet = guarded(
@@ -296,7 +305,7 @@ export function createPluginContext(
         await import("../database/repositories/factory.js");
       return createCurrentPluginStorageRepository().listKeys(pluginId);
     },
-    { action: "kv_list" },
+    { action: "kv_list", once: true },
   );
 
   const filesDataDir = guarded(
@@ -309,7 +318,7 @@ export function createPluginContext(
       await fs.mkdir(dir, { recursive: true });
       return dir;
     },
-    { action: "files_data_dir" },
+    { action: "files_data_dir", once: true },
   );
 
   const dbDefine = guarded(
@@ -329,7 +338,7 @@ export function createPluginContext(
       const { getDb } = await import("../database/db/index.js");
       return getDb();
     },
-    { action: "db_client" },
+    { action: "db_client", once: true },
   );
 
   // The one settings call that leaves the plugin's own namespace, so the one
@@ -341,6 +350,7 @@ export function createPluginContext(
     {
       action: "settings_read_core",
       details: () => "read a core server setting",
+      once: true,
     },
   );
 
@@ -359,7 +369,7 @@ export function createPluginContext(
         userRoles: schema.userRoles,
       };
     },
-    { action: "db_refs" },
+    { action: "db_refs", once: true },
   );
 
   const desktopOpenIsolatedWindow = guarded(
@@ -488,8 +498,8 @@ export function createPluginContext(
       define: (definition) => dbDefine(definition) as never,
       client: () => dbClient() as never,
       refs: () => dbRefs() as never,
-      // Gated but not audited: it follows every write, and the write itself
-      // went through a client() call that already left an audit line.
+      // Gated but not audited: it follows every write, and client() was
+      // already audited when the plugin first asked for it.
       persist: async (options) => {
         await assertCapability(pluginId, "db:own", manifest.capabilities);
         if (!needsExplicitPersist(resolveDatabaseDialect())) return;
