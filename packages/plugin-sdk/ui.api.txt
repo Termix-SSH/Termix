@@ -38,10 +38,10 @@ ConfirmOptions (type): ConfirmOptions
 ConnectionGate (value): (props: ConnectionGateProps) => Element
 ConnectionGateController (type): ConnectionGateController
 ConnectionGateProps (type): ConnectionGateProps
-ConnectionLogPanel (value): ({ isConnecting, isConnected, hasConnectionError, position, className, }: ConnectionLogPanelProps) => Element
+ConnectionLogPanel (value): ({ isConnecting, isConnected, hasConnectionError, className, }: ConnectionLogPanelProps) => Element
 ConnectionLogProvider (value): ({ children, }: { children: ReactNode; }) => Element
 ConnectionOrigin (type): ConnectionOrigin
-ConnectionScreen (value): ({ status, message, detail, errorMessage, errorDetail, unavailable, backgroundColor, attempt, maxAttempts, nextRetryInMs, onManualRetry, retryLabel, disconnectedMessage, extraActions, logPosition, emptyState, className, }: ConnectionScreenProps) => Element
+ConnectionScreen (value): ({ status, message, detail, errorDetail, unavailable, backgroundColor, attempt, maxAttempts, nextRetryInMs, onManualRetry, disconnectedMessage, onClose, extraActions, logPosition, emptyState, className, }: ConnectionScreenProps) => Element
 ConnectionStage (type): ConnectionStage
 ConnectionStatus (type): ConnectionStatus
 ConnectionUnavailable (type): ConnectionUnavailable
@@ -177,7 +177,7 @@ Sparkline (value): ({ data, domain, className, colorClassName, showLastDot, heig
 SparklineProps (type): SparklineProps
 StatRow (value): ({ label, value, mono, className, }: { label: ReactNode; value: ReactNode; mono?: boolean; className?: string; }) => Element
 SurfaceKind (type): SurfaceKind
-SurfaceScope (value): ({ kind, onEditingChange, className, children, }: { kind?: SurfaceKind; onEditingChange?: (editing: EditingWidth) => void; className?: string; children: ReactNode; }) => Element
+SurfaceScope (value): ({ kind, onEditingChange, onClose, className, children, }: { kind?: SurfaceKind; onClose?: () => void; onEditingChange?: (editing: EditingWidth) => void; className?: string; children: ReactNode; }) => Element
 Switch (value): ({ className, ...props }: SwitchProps & RefAttributes<HTMLButtonElement>) => Element
 SwitchRow (value): ({ label, description, badge, checked, onChange, disabled, defaultKey, rowId, }: { label: string; description?: ReactNode; badge?: string; checked: boolean; onChange: (value: boolean) => void; disabled?: boolean; defaultKey?: string; rowId?: string; }) => Element
 TOTPDialog (value): ({ isOpen, prompt, mode, waiting, onSubmit, onCancel, backgroundColor, }: TOTPDialogProps) => Element
