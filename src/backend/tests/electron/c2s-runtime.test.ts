@@ -72,9 +72,12 @@ function setup() {
       runtimes.get(name).status = { connected: false, reason: error };
     },
     createC2SFailure: (error: string) => ({ success: false, error }),
+    normalizeC2SErrorMessage: (message: string) => message,
+    C2S_REMOTE_SESSION_EXPIRED_ERROR: "expired",
   });
   vm.runInContext(
-    section("async function testC2SRelay(", "async function testC2STunnel(") +
+    section("async function openC2SRelay(", "async function testC2SRelay(") +
+      section("async function testC2SRelay(", "async function testC2STunnel(") +
       section("async function startC2STunnel(", "function stopAllC2STunnels("),
     context,
   );
@@ -139,5 +142,38 @@ describe("client tunnel runtime authentication", () => {
       await context.testC2SRelay({ name: "stopped" }, null, null, null, {}),
     ).toEqual({ success: false, error: "Tunnel stopped" });
     expect(sockets).toHaveLength(1);
+  });
+
+  it("keeps the tunnel connected when one of its connections fails", async () => {
+    const { context, runtimes, sockets } = setup();
+    runtimes.set("web", { status: { connected: true, status: "CONNECTED" } });
+    const local = () =>
+      Object.assign(new EventEmitter(), {
+        destroy: vi.fn(),
+        write: vi.fn(),
+      });
+
+    const first = local();
+    await context.openC2SRelay({ name: "web" }, "127.0.0.1", 8006, first);
+    await vi.waitFor(() => expect(sockets).toHaveLength(1));
+    first.emit("error", new Error("ECONNRESET"));
+    sockets[0].emit(
+      "message",
+      Buffer.from(JSON.stringify({ type: "error", error: "refused" })),
+      false,
+    );
+    expect(runtimes.get("web").status.connected).toBe(true);
+
+    await context.openC2SRelay({ name: "web" }, "127.0.0.1", 8006, local());
+    await vi.waitFor(() => expect(sockets).toHaveLength(2));
+    sockets[1].emit(
+      "message",
+      Buffer.from(JSON.stringify({ type: "error", error: "expired" })),
+      false,
+    );
+    expect(runtimes.get("web").status).toMatchObject({
+      connected: false,
+      reason: "expired",
+    });
   });
 });

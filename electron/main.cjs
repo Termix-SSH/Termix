@@ -2187,11 +2187,6 @@ async function openC2SRelay(
     targetHost,
     targetPort,
   });
-  setC2STunnelStatus(tunnelName, {
-    connected: false,
-    status: "CONNECTING",
-    reason: `Opening relay to ${targetHost}:${targetPort}`,
-  });
   const ws = new WebSocket(
     relayUrl,
     getWebSocketOptions(relayUrl, { headers }),
@@ -2226,13 +2221,16 @@ async function openC2SRelay(
 
   socket.on("data", sendChunk);
   socket.on("close", cleanup);
+  // One connection failing must not stop the tunnel: the listener refuses
+  // new connections while the tunnel is not connected, and a browser opens
+  // many at once.
   socket.on("error", (error) => {
-    setC2STunnelError(tunnelName, error.message || "Local socket error");
+    logToFile(`[c2s] ${tunnelName} local socket error:`, error.message);
     cleanup();
   });
   ws.on("close", cleanup);
   ws.on("error", (error) => {
-    setC2STunnelError(tunnelName, error.message || "Relay connection failed");
+    logToFile(`[c2s] ${tunnelName} relay error:`, error.message);
     cleanup();
   });
 
@@ -2259,10 +2257,6 @@ async function openC2SRelay(
       if (message.type === "ready") {
         ready = true;
         logToFile(`[c2s] relay ready for ${tunnelName}`);
-        setC2STunnelStatus(tunnelName, {
-          connected: true,
-          status: "CONNECTED",
-        });
         if (initialData?.length) {
           ws.send(initialData);
         }
@@ -2275,12 +2269,13 @@ async function openC2SRelay(
           "Relay rejected the client tunnel",
         );
         logToFile("[c2s] relay error:", relayError);
-        setC2STunnelError(tunnelName, relayError);
+        if (relayError === C2S_REMOTE_SESSION_EXPIRED_ERROR) {
+          setC2STunnelError(tunnelName, relayError);
+        }
         cleanup();
       }
     } catch (error) {
       logToFile("[c2s] invalid relay message:", error.message);
-      setC2STunnelError(tunnelName, error.message || "Invalid relay response");
       cleanup();
     }
   });
@@ -2506,7 +2501,9 @@ function handleC2SLocalConnection(tunnel, socket, authToken) {
       "Local relay failed",
     );
     logToFile("[c2s] local relay failed:", message);
-    setC2STunnelError(tunnelName, message);
+    if (message === C2S_REMOTE_SESSION_EXPIRED_ERROR) {
+      setC2STunnelError(tunnelName, message);
+    }
     socket.destroy();
   });
 }
