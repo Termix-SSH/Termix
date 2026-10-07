@@ -12,7 +12,8 @@ import {
   type ReleaseRow,
 } from "./plugin-model";
 
-const SHOWN = 3;
+/** A long release shows this many changes until it is opened up. */
+const MAX_CHANGES = 8;
 
 function formatDate(value: string | null): string {
   if (!value) return "";
@@ -48,7 +49,17 @@ function Release({
   installedVersion: string | null;
 }) {
   const { t } = useTranslation();
-  const groups = groupChanges(row.changes);
+  const [full, setFull] = useState(false);
+  const all = groupChanges(row.changes);
+  const hidden = full ? 0 : Math.max(0, row.changes.length - MAX_CHANGES);
+  let budget = full ? Infinity : MAX_CHANGES;
+  const groups = all
+    .map((group) => {
+      const items = group.items.slice(0, Math.max(0, budget));
+      budget -= items.length;
+      return { ...group, items };
+    })
+    .filter((group) => group.items.length > 0);
 
   return (
     <div className="flex flex-col gap-2 px-4 py-3">
@@ -69,7 +80,9 @@ function Release({
         </span>
       </div>
       {row.summary && (
-        <p className="whitespace-pre-line text-[11px] leading-relaxed text-muted-foreground">
+        <p
+          className={`whitespace-pre-line text-[11px] leading-relaxed text-muted-foreground ${full ? "" : "line-clamp-4"}`}
+        >
           <InlineText text={row.summary} />
         </p>
       )}
@@ -87,6 +100,15 @@ function Release({
           </ul>
         </div>
       ))}
+      {hidden > 0 && (
+        <button
+          type="button"
+          onClick={() => setFull(true)}
+          className="w-fit text-[11px] text-muted-foreground hover:text-accent-brand"
+        >
+          {t("plugins.manager.showMoreChanges", { count: hidden })}
+        </button>
+      )}
       {groups.length === 0 && !row.summary && (
         <span className="text-[11px] text-muted-foreground">
           {t("plugins.manager.noReleaseNotes")}
@@ -107,13 +129,14 @@ function Release({
 }
 
 /**
- * Every version's notes, from the registry and the installed CHANGELOG.md.
+ * The newest version's notes, from the registry and the installed
+ * CHANGELOG.md, with older versions behind a toggle in a capped scroll area.
  * Renders nothing when there are no versions to list.
  */
 export function PluginReleaseNotes({ plugin }: { plugin: PluginEntry }) {
   const { t } = useTranslation();
   const [local, setLocal] = useState<ChangelogRelease[]>([]);
-  const [expanded, setExpanded] = useState(false);
+  const [showOlder, setShowOlder] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -134,35 +157,42 @@ export function PluginReleaseNotes({ plugin }: { plugin: PluginEntry }) {
     [plugin.versions, local],
   );
   if (rows.length === 0) return null;
-  const shown = expanded ? rows : rows.slice(0, SHOWN);
+  const [latest, ...older] = rows;
 
   return (
     <SectionCard
       title={t("plugins.manager.releaseNotes")}
       icon={null}
       action={
-        rows.length > SHOWN ? (
+        older.length > 0 ? (
           <Button
             variant="ghost"
             size="xs"
             className="text-muted-foreground"
-            onClick={() => setExpanded((v) => !v)}
+            onClick={() => setShowOlder((v) => !v)}
           >
-            {expanded
-              ? t("plugins.manager.showFewerReleases")
-              : t("plugins.manager.showAllReleases", { count: rows.length })}
+            {showOlder
+              ? t("plugins.manager.hideOlderReleases")
+              : t("plugins.manager.showOlderReleases", {
+                  count: older.length,
+                })}
           </Button>
         ) : undefined
       }
     >
-      <div className="-mx-3 -my-1 divide-y divide-border md:-mx-4">
-        {shown.map((row) => (
-          <Release
-            key={row.version}
-            row={row}
-            installedVersion={plugin.version}
-          />
-        ))}
+      <div className="-mx-3 -my-1 md:-mx-4">
+        <Release row={latest} installedVersion={plugin.version} />
+        {showOlder && older.length > 0 && (
+          <div className="max-h-96 divide-y divide-border overflow-y-auto border-t border-border">
+            {older.map((row) => (
+              <Release
+                key={row.version}
+                row={row}
+                installedVersion={plugin.version}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </SectionCard>
   );

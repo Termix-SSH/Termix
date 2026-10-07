@@ -2108,8 +2108,9 @@
       "releaseNotes": "Release notes",
       "noReleaseNotes": "No notes for this version.",
       "viewRelease": "View on GitHub",
-      "showAllReleases": "Show all {{count}}",
-      "showFewerReleases": "Show fewer",
+      "showOlderReleases": "Older releases ({{count}})",
+      "hideOlderReleases": "Hide older releases",
+      "showMoreChanges": "Show {{count}} more",
       "videoTitle": "{{name}} video",
       "changeTypes": {
         "added": "Added",
