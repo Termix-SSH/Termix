@@ -75,24 +75,22 @@ jobs:
 
           if [ "$BUILD_TYPE" = "Production" ]; then
             TAGS+=("release-$VERSION" "$VERSION" "latest")
-            for tag in "${TAGS[@]}"; do
-              ALL_TAGS+=("ghcr.io/lukegus/termix:$tag")
-              ALL_TAGS+=("docker.io/bugattiguy527/termix:$tag")
-            done
           elif [ "$BUILD_TYPE" = "Beta" ]; then
             TAGS+=("beta" "beta-$VERSION")
-            for tag in "${TAGS[@]}"; do
-              ALL_TAGS+=("ghcr.io/lukegus/termix:$tag")
-              ALL_TAGS+=("docker.io/bugattiguy527/termix:$tag")
-            done
           else
             TAGS+=("dev-$VERSION")
-            for tag in "${TAGS[@]}"; do
-              ALL_TAGS+=("ghcr.io/lukegus/termix:$tag")
-            done
           fi
 
+          for tag in "${TAGS[@]}"; do
+            ALL_TAGS+=("ghcr.io/lukegus/termix:$tag")
+            ALL_TAGS+=("ghcr.io/termix-ssh/termix:$tag")
+            if [ "$BUILD_TYPE" != "Development" ]; then
+              ALL_TAGS+=("docker.io/bugattiguy527/termix:$tag")
+            fi
+          done
+
           echo "ALL_TAGS=$(IFS=,; echo "${ALL_TAGS[*]}")" >> $GITHUB_ENV
+          echo "TAGS=${TAGS[*]}" >> $GITHUB_ENV
 
       - name: Login to GHCR
         if: ${{ !inputs.dry_run }}
@@ -124,6 +122,26 @@ jobs:
             org.opencontainers.image.revision=${{ env.SOURCE_SHA }}
             org.opencontainers.image.created=${{ github.run_id }}
           outputs: ${{ inputs.dry_run && 'type=cacheonly' || 'type=registry,compression=zstd' }}
+
+      - name: Login to Docker Hub as termixssh
+        id: termix_hub
+        if: ${{ (inputs.build_type == 'Production' || inputs.build_type == 'Beta') && !inputs.dry_run }}
+        env:
+          TOKEN: ${{ secrets.DOCKERHUB_TERMIXSSH_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "DOCKERHUB_TERMIXSSH_TOKEN is not set, skipping docker.io/termixssh"
+            exit 0
+          fi
+          echo "$TOKEN" | docker login docker.io --username termixssh --password-stdin
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Copy image to docker.io/termixssh
+        if: ${{ steps.termix_hub.outputs.ready == 'true' }}
+        run: |
+          for tag in $TAGS; do
+            docker buildx imagetools create --tag "docker.io/termixssh/termix:$tag" "ghcr.io/termix-ssh/termix:$tag"
+          done
 
       - name: Cleanup Docker
         if: always()
