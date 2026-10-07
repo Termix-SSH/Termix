@@ -304,8 +304,6 @@ Proxmox 인스턴스에서 호스트를 바로 가져오고, 노드와 게스트
 
 모든 플랫폼의 자세한 설치 방법은 [Termix 문서](https://docs.termix.site/install)를 참고하세요.
 
-쿠버네티스에 배포하시나요? Helm 차트는 `charts/termix`에 있고, Ingress와 Traefik, Argo CD, GitHub Actions, GitLab CI를 다루는 설정 안내는 [docs.termix.site/install/server/kubernetes](https://docs.termix.site/install/server/kubernetes)에 있습니다.
-
 Docker Compose 예시입니다(원격 데스크톱 기능을 쓰지 않는다면 `guacd`와 네트워크 부분은 빼도 됩니다):
 
 ```yaml

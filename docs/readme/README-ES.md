@@ -304,10 +304,6 @@ Unos 30 idiomas incluidos, gestionados a través de [Crowdin](https://docs.termi
 
 Visita la [documentación de Termix](https://docs.termix.site/install) para ver las instrucciones completas de instalación en todas las plataformas.
 
-¿Vas a desplegar en Kubernetes? El chart de Helm está en `charts/termix`, y las instrucciones
-de configuración para Ingress, Traefik, Argo CD, GitHub Actions y GitLab CI están en
-[docs.termix.site/install/server/kubernetes](https://docs.termix.site/install/server/kubernetes).
-
 Ejemplo de archivo Docker Compose (puedes quitar `guacd` y la red si no piensas usar el escritorio remoto):
 
 ```yaml

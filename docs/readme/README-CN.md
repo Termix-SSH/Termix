@@ -304,9 +304,6 @@ Termix 是一个免费、开源、自托管的服务器管理平台。它把 SSH
 
 访问 [Termix 文档](https://docs.termix.site/install) 查看所有平台的完整安装说明。
 
-要部署到 Kubernetes？Helm chart 在 `charts/termix` 目录下，涵盖 Ingress、Traefik、Argo CD、GitHub Actions 和 GitLab CI 的完整搭建说明见
-[docs.termix.site/install/server/kubernetes](https://docs.termix.site/install/server/kubernetes)。
-
 Docker Compose 示例（如果你不打算使用远程桌面功能，可以省略 `guacd` 和相关网络配置）：
 
 ```yaml

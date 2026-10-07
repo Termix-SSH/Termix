@@ -304,10 +304,6 @@ Proxmox のインスタンスからそのままホストを取り込めます。
 
 すべてのプラットフォーム向けの詳しいインストール手順は [Termix ドキュメント](https://docs.termix.site/install)をご覧ください。
 
-Kubernetes にデプロイしますか？Helm chart は `charts/termix` にあり、
-Ingress、Traefik、Argo CD、GitHub Actions、GitLab CI を扱うセットアップ手順は
-[docs.termix.site/install/server/kubernetes](https://docs.termix.site/install/server/kubernetes) にあります。
-
 Docker Compose の例です（リモートデスクトップ機能を使わないなら `guacd` とネットワークの部分は省略できます）:
 
 ```yaml
