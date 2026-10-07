@@ -105,7 +105,7 @@ jobs:
         uses: docker/login-action@v4
         with:
           username: bugattiguy527
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          password: ${{ secrets.DOCKERHUB_BUGATTIGUY527_TOKEN }}
 
       - name: Build and push multi-arch image
         uses: useblacksmith/build-push-action@v2
