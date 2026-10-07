@@ -13,6 +13,7 @@ import {
   SUPPORTED_PLUGIN_API_VERSION,
   isTermixCompatible,
   youtubeVideoId,
+  pluginFeatures,
 } from "../../plugins/manifest.js";
 
 function base(overrides: Record<string, unknown> = {}) {
@@ -882,6 +883,37 @@ describe("manifest video", () => {
         expect.stringContaining('Field "video" must be a YouTube link'),
       ]);
     }
+  });
+});
+
+describe("manifest features", () => {
+  it("accepts a short list of lines", () => {
+    expect(
+      validateManifest(base({ features: ["Start containers", "Read logs"] })),
+    ).toEqual([]);
+  });
+
+  it("rejects bad lists", () => {
+    expect(validateManifest(base({ features: "Logs" }))).toEqual([
+      'Field "features" must be an array of strings',
+    ]);
+    expect(validateManifest(base({ features: ["ok", "", 4] }))).toHaveLength(2);
+    expect(
+      validateManifest(base({ features: ["x".repeat(161)] })).join(),
+    ).toMatch(/features\[0\]/);
+    expect(
+      validateManifest(base({ features: Array(21).fill("x") })).join(),
+    ).toMatch(/at most 20/);
+  });
+});
+
+describe("pluginFeatures", () => {
+  it("keeps only usable lines", () => {
+    expect(pluginFeatures([" Logs ", "", 3, "x".repeat(161), "Stats"])).toEqual(
+      ["Logs", "Stats"],
+    );
+    expect(pluginFeatures(Array(30).fill("x"))).toHaveLength(20);
+    expect(pluginFeatures("Logs")).toEqual([]);
   });
 });
 

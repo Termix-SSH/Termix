@@ -143,6 +143,17 @@ describe("parseRegistryIndex", () => {
     expect(index.plugins[1].versions[0].notes).toHaveLength(20_000);
   });
 
+  it("keeps only usable feature lines", () => {
+    const index = parseRegistryIndex({
+      plugins: [
+        { id: "docker", features: ["Logs", 5, ""], versions: [version()] },
+        { id: "other", features: "Logs", versions: [version()] },
+      ],
+    });
+    expect(index.plugins[0].features).toEqual(["Logs"]);
+    expect(index.plugins[1].features).toEqual([]);
+  });
+
   it("refuses something that is not an index", () => {
     expect(() => parseRegistryIndex({ nope: true })).toThrow(/no plugins/);
   });

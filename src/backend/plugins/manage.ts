@@ -43,7 +43,11 @@ import { invalidatePluginPermissionCache } from "./permissions.js";
 import { moveWithRetry } from "./fs-retry.js";
 import { readInstallCounts } from "./install-counts.js";
 import { readArtifactManifest, sameCapabilities } from "./artifact-manifest.js";
-import { parseManifest, type PluginManifest } from "./manifest.js";
+import {
+  parseManifest,
+  pluginFeatures,
+  type PluginManifest,
+} from "./manifest.js";
 import { requireSignedPlugins } from "./trust.js";
 import {
   parseChangelog,
@@ -213,6 +217,7 @@ export interface RegistryListing {
     repository?: string;
     icon?: string;
     videoId?: string;
+    features: string[];
     versions: Array<{
       version: string;
       compatible: boolean;
@@ -272,6 +277,7 @@ export async function listRegistry(
         repository: plugin.repository,
         icon: plugin.icon,
         videoId: plugin.videoId,
+        features: plugin.features,
         versions: plugin.versions.map((entry) => ({
           version: entry.version,
           compatible: isApiCompatible(entry.api),
@@ -1156,6 +1162,7 @@ export interface UploadPreview {
   version: string;
   description: string;
   author: string;
+  features: string[];
   capabilities: string[];
   /** The version of an earlier upload this one replaces. */
   replaces: string | null;
@@ -1258,6 +1265,7 @@ export async function stageUpload(buffer: Buffer): Promise<UploadPreview> {
     version: manifest.version,
     description: manifest.description ?? "",
     author: manifest.author?.name ?? "",
+    features: pluginFeatures(manifest.features),
     capabilities: [...manifest.capabilities],
     replaces,
   };

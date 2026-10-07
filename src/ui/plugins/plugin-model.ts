@@ -34,6 +34,7 @@ export interface PluginEntry {
   icon?: string;
   repository?: string;
   videoId?: string;
+  features: string[];
   installed: boolean;
   version: string | null;
   latestVersion: string | null;
@@ -94,6 +95,9 @@ export function mergePlugins(
       icon: summary.icon ?? entry?.icon,
       repository: summary.repository ?? entry?.repository,
       videoId: summary.videoId ?? entry?.videoId,
+      features: summary.features?.length
+        ? summary.features
+        : (entry?.features ?? []),
       installed: true,
       version: summary.version,
       latestVersion: entry?.latestVersion ?? null,
@@ -130,6 +134,7 @@ export function mergePlugins(
       icon: entry.icon,
       repository: entry.repository,
       videoId: entry.videoId,
+      features: entry.features ?? [],
       installed: false,
       version: null,
       latestVersion: entry.latestVersion,
@@ -163,6 +168,7 @@ export function uploadEntry(preview: PluginUploadPreview): PluginEntry {
     name: preview.name,
     description: preview.description,
     author: preview.author,
+    features: preview.features ?? [],
     category: "",
     installed: preview.replaces !== null,
     version: preview.replaces,
@@ -226,6 +232,7 @@ export function matchesQuery(row: PluginEntry, query: string): boolean {
   return (
     row.name.toLowerCase().includes(q) ||
     row.description.toLowerCase().includes(q) ||
+    row.features.some((f) => f.toLowerCase().includes(q)) ||
     row.id.includes(q)
   );
 }

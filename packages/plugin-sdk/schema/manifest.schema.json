@@ -79,6 +79,12 @@
       "pattern": "^https://(www\\.|m\\.)?(youtube\\.com|youtu\\.be|youtube-nocookie\\.com)/",
       "description": "A YouTube link shown at the top of the plugin's page."
     },
+    "features": {
+      "type": "array",
+      "maxItems": 20,
+      "items": { "type": "string", "minLength": 1, "maxLength": 160 },
+      "description": "Short lines listing what the plugin does, shown on its page."
+    },
     "engine": {
       "type": "object",
       "additionalProperties": false,

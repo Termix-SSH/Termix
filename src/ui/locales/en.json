@@ -2122,6 +2122,7 @@
       },
       "installedBadge": "Installed",
       "incompatible": "Needs a newer Termix",
+      "features": "Features",
       "whatItCanDo": "What it can do",
       "addsToTermix": "Adds to Termix",
       "addsToTermixHint": "Uninstall and every one of these goes away.",

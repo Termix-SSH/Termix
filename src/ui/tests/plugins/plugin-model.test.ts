@@ -92,6 +92,18 @@ describe("mergePlugins", () => {
     });
   });
 
+  it("uses the installed features and falls back to the registry", () => {
+    const registry = entry({ features: ["From registry"] });
+    expect(
+      mergePlugins([summary({ features: ["Installed"] })], [registry])[0]
+        .features,
+    ).toEqual(["Installed"]);
+    expect(mergePlugins([summary()], [registry])[0].features).toEqual([
+      "From registry",
+    ]);
+    expect(mergePlugins([summary()], null)[0].features).toEqual([]);
+  });
+
   it("keeps installed plugins when the registry is unreachable", () => {
     const rows = mergePlugins([summary()], null);
     expect(rows).toHaveLength(1);
@@ -120,6 +132,7 @@ describe("sorting and filtering", () => {
         name: "Alpha",
         category: "Access",
         description: "Sign in",
+        features: ["Works with Podman"],
         versions: [
           {
             version: "1.0.0",
@@ -142,6 +155,9 @@ describe("sorting and filtering", () => {
   it("searches name, description and id", () => {
     expect(
       rows.filter((r) => matchesQuery(r, "sign")).map((r) => r.id),
+    ).toEqual(["a"]);
+    expect(
+      rows.filter((r) => matchesQuery(r, "podman")).map((r) => r.id),
     ).toEqual(["a"]);
     expect(rows.filter((r) => matchesQuery(r, "  ")).length).toBe(2);
   });

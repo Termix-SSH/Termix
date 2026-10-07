@@ -18,7 +18,7 @@ import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
 import { getPluginPublicHttpRoutes } from "../../plugins/http.js";
 import { getPluginPublicWsRoutes } from "../../plugins/ws.js";
 import { PluginManageError } from "../../plugins/manage.js";
-import { youtubeVideoId } from "../../plugins/manifest.js";
+import { pluginFeatures, youtubeVideoId } from "../../plugins/manifest.js";
 import {
   isPluginChoice,
   type PluginChoice,
@@ -257,6 +257,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
         let author: string | undefined;
         let repository: string | undefined;
         let videoId: string | undefined;
+        let features: string[] = [];
         try {
           const manifest = JSON.parse(record.manifestJson) as {
             contributes?: unknown;
@@ -266,6 +267,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
             author?: unknown;
             repository?: unknown;
             video?: unknown;
+            features?: unknown;
             dependencies?: Record<string, string>;
             optionalDependencies?: Record<string, string>;
           };
@@ -288,6 +290,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
               ? manifest.repository
               : undefined;
           videoId = youtubeVideoId(manifest?.video) ?? undefined;
+          features = pluginFeatures(manifest?.features);
         } catch {
           contributes = null;
         }
@@ -318,6 +321,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
           author,
           repository,
           videoId,
+          features,
           signedBy: loaded?.signedBy ?? null,
           capabilities,
           grantedCapabilities: grantsByPlugin.get(record.id) ?? [],

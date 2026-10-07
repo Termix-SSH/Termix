@@ -252,6 +252,8 @@ export interface PluginSummary {
   repository?: string;
   /** A YouTube video id from the manifest. Admins only. */
   videoId?: string;
+  /** What the plugin does, from the manifest. Admins only. */
+  features?: string[];
   signedBy?: string | null;
 }
 
@@ -286,6 +288,7 @@ export interface RegistryPluginEntry {
   repository?: string;
   icon?: string;
   videoId?: string;
+  features?: string[];
   versions: RegistryPluginVersion[];
   latestVersion: string | null;
   installed: boolean;
@@ -499,6 +502,7 @@ export interface PluginUploadPreview {
   version: string;
   description: string;
   author: string;
+  features?: string[];
   capabilities: string[];
   replaces: string | null;
 }

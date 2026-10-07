@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Bug,
+  Check,
   Database,
   Download,
   ExternalLink,
@@ -202,6 +203,22 @@ export function PluginDetail({
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-3">
         <div className="flex flex-col gap-2 lg:col-span-2">
           <PluginVideo videoId={plugin.videoId} name={plugin.name} />
+
+          {plugin.features.length > 0 && (
+            <SectionCard title={t("plugins.manager.features")} icon={null}>
+              <ul className="grid grid-cols-1 gap-x-4 gap-y-1.5 px-4 py-3 sm:grid-cols-2">
+                {plugin.features.map((feature) => (
+                  <li
+                    key={feature}
+                    className="flex items-start gap-2 text-xs leading-snug"
+                  >
+                    <Check className="mt-px size-3.5 shrink-0 text-accent-brand" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </SectionCard>
+          )}
 
           <SectionCard title={t("plugins.manager.whatItCanDo")} icon={null}>
             <div className="divide-y divide-border">

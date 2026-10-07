@@ -59,6 +59,26 @@ const YOUTUBE_HOSTS = new Set([
   "www.youtube-nocookie.com",
 ]);
 
+export const MAX_FEATURES = 20;
+export const MAX_FEATURE_LENGTH = 160;
+
+/**
+ * The usable feature lines of a manifest or registry entry. Anything that is
+ * not a short non-empty string is dropped, so an index cannot flood the page.
+ */
+export function pluginFeatures(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (f): f is string =>
+        typeof f === "string" &&
+        f.trim().length > 0 &&
+        f.length <= MAX_FEATURE_LENGTH,
+    )
+    .map((f) => f.trim())
+    .slice(0, MAX_FEATURES);
+}
+
 /**
  * The video id of a YouTube link, or null for anything else. Only the id is
  * ever used, so a manifest can never point the embed at another site.
@@ -579,6 +599,8 @@ export interface PluginManifest {
   icon?: string;
   /** A YouTube link shown at the top of the plugin's page. */
   video?: string;
+  /** Short lines listing what the plugin does, shown on its page. */
+  features?: string[];
   engine: PluginEngine;
   /** Catalog capability ids. */
   capabilities: string[];
@@ -631,6 +653,7 @@ const ALLOWED_TOP_LEVEL = new Set([
   "repository",
   "icon",
   "video",
+  "features",
   "dependencies",
   "optionalDependencies",
   "provides",
@@ -792,6 +815,7 @@ export function validateManifest(manifest: unknown): string[] {
       `Field "video" must be a YouTube link such as https://www.youtube.com/watch?v=..., got: ${JSON.stringify(m.video)}`,
     );
   }
+  validateFeatures(m.features, errors);
   for (const field of ["backend", "frontend", "locales"] as const) {
     if (field in m && requireString(m[field], field, errors)) {
       requireRelativePath(m[field] as string, field, errors);
@@ -825,6 +849,28 @@ export function validateManifest(manifest: unknown): string[] {
   );
 
   return errors;
+}
+
+function validateFeatures(features: unknown, errors: string[]): void {
+  if (features === undefined) return;
+  if (!Array.isArray(features)) {
+    errors.push('Field "features" must be an array of strings');
+    return;
+  }
+  if (features.length > MAX_FEATURES) {
+    errors.push(`Field "features" may list at most ${MAX_FEATURES} items`);
+  }
+  features.forEach((feature, i) => {
+    if (
+      typeof feature !== "string" ||
+      feature.trim().length === 0 ||
+      feature.length > MAX_FEATURE_LENGTH
+    ) {
+      errors.push(
+        `Field "features[${i}]" must be a non-empty string of at most ${MAX_FEATURE_LENGTH} characters`,
+      );
+    }
+  });
 }
 
 function validateAuthor(author: unknown, errors: string[]): void {

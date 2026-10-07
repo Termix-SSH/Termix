@@ -13,6 +13,7 @@ import fs from "node:fs";
 import path from "node:path";
 import semver from "semver";
 import {
+  pluginFeatures,
   SUPPORTED_PLUGIN_API_VERSION,
   youtubeVideoId,
 } from "@termix-ssh/plugin-sdk/manifest";
@@ -57,6 +58,7 @@ export interface RegistryPlugin {
   icon?: string;
   /** Only ever a YouTube video id, never a link. */
   videoId?: string;
+  features: string[];
   /** Newest first. */
   versions: RegistryVersion[];
 }
@@ -138,6 +140,7 @@ export function parseRegistryIndex(raw: unknown): RegistryIndex {
       repository: asString(entry.repository),
       icon: asString(entry.icon),
       videoId: youtubeVideoId(entry.video) ?? undefined,
+      features: pluginFeatures(entry.features),
       versions,
     });
   }

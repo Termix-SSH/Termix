@@ -18,6 +18,7 @@ export {
   RESERVED_PERMISSION_PREFIXES,
   qualifyPermission,
   youtubeVideoId,
+  pluginFeatures,
 } from "@termix-ssh/plugin-sdk/manifest";
 
 export type {
