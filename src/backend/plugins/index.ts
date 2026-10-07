@@ -22,6 +22,7 @@ import { setSshAuthTypeOwnerSource } from "../hosts/connect/auth-provider-regist
 import { setHostProtocolSource } from "../hosts/protocol-auth/registry.js";
 import { setSecretResolverOwnerSource } from "../hosts/connect/secret-resolver-registry.js";
 import { recordConflict } from "./conflicts.js";
+import { startablePluginIds } from "./boot-state.js";
 import { setPluginImpersonationCheck } from "../utils/auth-manager.js";
 import { setKeybindingActionSource } from "../database/routes/keybinding-validation.js";
 
@@ -94,9 +95,9 @@ export function getPluginRuntime(): { loader: PluginLoader } {
 }
 
 /**
- * A plugin that tripped the error budget is off until an admin retries it, so
- * it has to look off everywhere: no routes, greyed permissions, and a failed
- * row that survives a restart.
+ * A plugin that tripped the error budget is off until an admin retries it or
+ * the server restarts, so it has to look off everywhere: no routes and greyed
+ * permissions.
  */
 async function handlePluginFailed(plugin: LoadedPlugin): Promise<void> {
   unregisterPluginHttp(plugin.id);
@@ -245,11 +246,7 @@ export async function initializePlugins(
   const { createCurrentPluginRepository } =
     await import("../database/repositories/factory.js");
   const records = await createCurrentPluginRepository().listAll();
-  const enabled = new Set(
-    records
-      .filter((record) => record.state === "enabled")
-      .map((record) => record.id),
-  );
+  const enabled = startablePluginIds(records);
 
   const candidates = loaded
     .filter((plugin) => enabled.has(plugin.id))
@@ -278,14 +275,28 @@ async function persistRuntimeState(loaded: LoadedPlugin[]): Promise<void> {
   const { createCurrentPluginRepository } =
     await import("../database/repositories/factory.js");
   const repository = createCurrentPluginRepository();
+  const records = new Map(
+    (await repository.listAll()).map((record) => [record.id, record]),
+  );
 
   for (const plugin of loaded) {
-    if (plugin.state !== "blocked" && plugin.state !== "failed") continue;
+    const record = records.get(plugin.id);
     try {
-      await repository.update(plugin.id, {
-        state: plugin.state,
-        lastError: plugin.lastError,
-      });
+      if (plugin.state === "blocked" || plugin.state === "failed") {
+        await repository.update(plugin.id, {
+          state: plugin.state,
+          lastError: plugin.lastError,
+        });
+      } else if (
+        plugin.state === "active" &&
+        record &&
+        record.state !== "enabled"
+      ) {
+        await repository.update(plugin.id, {
+          state: "enabled",
+          lastError: null,
+        });
+      }
     } catch {
       // Reporting state must never stop the boot.
     }
