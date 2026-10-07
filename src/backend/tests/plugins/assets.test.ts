@@ -85,6 +85,23 @@ describe("describePluginFrontend", () => {
     }
   });
 
+  it("changes the version when only a translation changes", () => {
+    const before = describePluginFrontend(plugin).assetVersion;
+    const locale = path.join(
+      root,
+      "gizmo",
+      "locales",
+      "translated",
+      "de_DE.json",
+    );
+    fs.writeFileSync(locale, '{"hello":"Hallo"}');
+    try {
+      expect(describePluginFrontend(plugin).assetVersion).not.toBe(before);
+    } finally {
+      fs.writeFileSync(locale, "{}");
+    }
+  });
+
   it("reports nothing for an unknown plugin", () => {
     expect(describePluginFrontend(undefined)).toEqual({
       frontend: false,

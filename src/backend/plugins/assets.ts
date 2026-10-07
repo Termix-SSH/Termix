@@ -76,13 +76,18 @@ export function describePluginFrontend(
   if (!plugin) return none;
 
   const locales: string[] = [];
+  const localeFiles: string[] = [];
   const dir = localesDir(plugin);
-  if (dir && fileExists(path.join(dir, "en.json"))) locales.push("en");
+  if (dir && fileExists(path.join(dir, "en.json"))) {
+    locales.push("en");
+    localeFiles.push(path.join(dir, "en.json"));
+  }
   if (dir) {
     try {
       for (const name of fs.readdirSync(path.join(dir, "translated"))) {
         if (/^[a-z]{2}_[A-Z]{2}\.json$/.test(name)) {
           locales.push(name.slice(0, -".json".length));
+          localeFiles.push(path.join(dir, "translated", name));
         }
       }
     } catch {
@@ -95,8 +100,9 @@ export function describePluginFrontend(
 
   const cssFile = path.join(entry.dir, "frontend.css");
   const css = fileExists(cssFile);
+  // Locales share the version, so a translations-only update must change it.
   const assetVersion = contentVersion(
-    css ? [entry.file, cssFile] : [entry.file],
+    [...(css ? [entry.file, cssFile] : [entry.file]), ...localeFiles.sort()],
     plugin.manifest.version,
   );
 
@@ -113,8 +119,8 @@ const versionCache = new Map<string, { stamp: string; version: string }>();
 /**
  * A hash of the bundle's bytes, not its mtime: assets are cached as immutable
  * for a year, and a rebuilt .tmxplug has a fixed mtime, so a same-size rebuild
- * would otherwise keep serving the stale copy. The CSS is hashed with the JS
- * because both are served under the same version.
+ * would otherwise keep serving the stale copy. The CSS and locales are hashed
+ * with the JS because all of them are served under the same version.
  */
 function contentVersion(files: string[], version: string): string {
   // ctime, unlike mtime, cannot be set by tar, so an unpack always changes it.
