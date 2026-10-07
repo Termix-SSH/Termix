@@ -2167,6 +2167,7 @@
       "unverifiedHint": "Installed from a file. Termix did not check or sign it.",
       "reportIssue": "Report an issue",
       "reportTo": "Report to {{author}}",
+      "requestFeature": "Request a feature",
       "openSettings": "Open its settings"
     }
   },

@@ -6,6 +6,7 @@ import {
   Database,
   Download,
   ExternalLink,
+  Lightbulb,
   Pin,
   RotateCcw,
   Settings,
@@ -35,6 +36,7 @@ import {
   formatBytes,
   orderByRisk,
   reportIssueUrl,
+  requestFeatureUrl,
   type PluginEntry,
 } from "./plugin-model";
 import { openPluginSettings } from "./open-plugins";
@@ -77,6 +79,7 @@ export function PluginDetail({
     plugin,
     import.meta.env.VITE_APP_VERSION || undefined,
   );
+  const featureUrl = requestFeatureUrl(plugin);
 
   return (
     <div
@@ -394,6 +397,20 @@ export function PluginDetail({
                 !plugin.author
                   ? t("plugins.manager.reportIssue")
                   : t("plugins.manager.reportTo", { author: plugin.author })}
+              </span>
+            </a>
+          )}
+
+          {featureUrl && (
+            <a
+              href={featureUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={LINK_ROW}
+            >
+              <Lightbulb className="size-3.5 shrink-0" />
+              <span className="truncate">
+                {t("plugins.manager.requestFeature")}
               </span>
             </a>
           )}

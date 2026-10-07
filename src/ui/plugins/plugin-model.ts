@@ -325,10 +325,9 @@ export function formatCount(count: number): string {
 }
 
 /**
- * A new GitHub issue on the plugin's own repo with what a maintainer asks
- * first already filled in. Official plugins use the org bug form; a third
- * party repo may not have it, so it gets a plain prefilled body. Null when
- * the repository is not on GitHub.
+ * A new bug report on the plugin's own repo with what a maintainer asks first
+ * already filled in. Official plugins use the org bug form and the plugin
+ * template ships the same one. Null when the repository is not on GitHub.
  */
 export function reportIssueUrl(
   plugin: Pick<
@@ -347,38 +346,25 @@ export function reportIssueUrl(
   if (!repo) return null;
   const version = plugin.version ?? plugin.latestVersion ?? "not installed";
   const state = `Plugin ${plugin.id}, ${plugin.source}, ${plugin.status ?? "not installed"}`;
-  if (plugin.source !== "unverified") {
-    return buildIssueUrl(repo, {
-      template: "bug_report.yml",
-      fields: {
-        "termix-version": termixVersion,
-        "plugin-version": version,
-        environment: `${describeEnvironment()}\n${state}`,
-        logs: plugin.lastError,
-      },
-    });
-  }
-  const lines = [
-    `**Plugin:** ${plugin.id}`,
-    `**Version:** ${version}`,
-    `**Source:** ${plugin.source}`,
-    `**State:** ${plugin.status ?? "not installed"}`,
-    ...(termixVersion ? [`**Termix:** ${termixVersion}`] : []),
-    `**Environment:** ${describeEnvironment()}`,
-    ...(plugin.lastError
-      ? ["", "**Error:**", "```", plugin.lastError, "```"]
-      : []),
-    "",
-    "**What happened:**",
-    "",
-    "**What you expected:**",
-    "",
-  ];
-  const params = new URLSearchParams({
-    title: `[${plugin.id}] `,
-    body: lines.join("\n"),
+  return buildIssueUrl(repo, {
+    template: "bug_report.yml",
+    fields: {
+      "termix-version": termixVersion,
+      "plugin-version": version,
+      environment: `${describeEnvironment()}
+${state}`,
+      logs: plugin.lastError,
+    },
   });
-  return `${repo}/issues/new?${params.toString()}`;
+}
+
+/** A new feature request on the plugin's own repo, or null when not on GitHub. */
+export function requestFeatureUrl(
+  plugin: Pick<PluginEntry, "repository">,
+): string | null {
+  const repo = normalizeGitHubRepo(plugin.repository);
+  if (!repo) return null;
+  return buildIssueUrl(repo, { template: "feature_request.yml" });
 }
 
 /** One version in a plugin's release notes. */

@@ -13,6 +13,7 @@ import {
   pluginSource,
   pluginStatus,
   reportIssueUrl,
+  requestFeatureUrl,
   sortPlugins,
   uploadEntry,
   youtubeEmbedUrl,
@@ -289,19 +290,16 @@ describe("reportIssueUrl", () => {
     expect(parsed.searchParams.has("body")).toBe(false);
   });
 
-  it("uses a plain body for an unverified plugin", () => {
+  it("fills the same bug form on an unverified plugin repo", () => {
     const parsed = new URL(
       reportIssueUrl({ ...base, source: "unverified" }, "26.10.0")!,
     );
-    expect(parsed.searchParams.has("template")).toBe(false);
-    expect(parsed.searchParams.get("title")).toBe("[docker] ");
-    const body = parsed.searchParams.get("body")!;
-    expect(body).toContain("**Plugin:** docker");
-    expect(body).toContain("**Version:** 1.0.0");
-    expect(body).toContain("**Source:** unverified");
-    expect(body).toContain("**State:** failed");
-    expect(body).toContain("**Termix:** 26.10.0");
-    expect(body).toContain("boom");
+    expect(parsed.searchParams.get("template")).toBe("bug_report.yml");
+    expect(parsed.searchParams.get("plugin-version")).toBe("1.0.0");
+    expect(parsed.searchParams.get("environment")).toContain(
+      "Plugin docker, unverified, failed",
+    );
+    expect(parsed.searchParams.has("body")).toBe(false);
   });
 
   it("gives nothing for a repo that is not on GitHub", () => {
@@ -310,6 +308,26 @@ describe("reportIssueUrl", () => {
         ...base,
         repository: "https://gitlab.com/a/b",
       }),
+    ).toBeNull();
+  });
+});
+
+describe("requestFeatureUrl", () => {
+  it("opens the feature form on the plugin repo", () => {
+    const parsed = new URL(
+      requestFeatureUrl({
+        repository: "https://github.com/Termix-SSH/Plugin-Docker/",
+      })!,
+    );
+    expect(parsed.origin + parsed.pathname).toBe(
+      "https://github.com/Termix-SSH/Plugin-Docker/issues/new",
+    );
+    expect(parsed.searchParams.get("template")).toBe("feature_request.yml");
+  });
+
+  it("gives nothing for a repo that is not on GitHub", () => {
+    expect(
+      requestFeatureUrl({ repository: "https://gitlab.com/a/b" }),
     ).toBeNull();
   });
 });

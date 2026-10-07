@@ -99,6 +99,9 @@ describe("PluginsStep", () => {
       />,
     );
     await screen.findByText("TERM");
+    // findByText resolves on the DOM change, before the effect that hands
+    // over the loaded apply has run. Flush it so beforeNext is never stale.
+    await act(async () => {});
   }
 
   it("groups plugins by category and puts consent plugins in their own section", async () => {
