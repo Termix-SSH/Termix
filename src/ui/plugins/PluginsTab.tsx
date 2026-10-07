@@ -489,7 +489,8 @@ function InstalledCard({
           </span>
         </div>
       ) : !running ? (
-        <div className="border-t border-border bg-muted/20 px-3 py-2">
+        <div className="flex items-center gap-2 border-t border-border px-3 py-2">
+          <span className="size-1.5 shrink-0 bg-muted-foreground/40" />
           <span className="text-[11px] text-muted-foreground">
             {t("plugins.manager.status.disabled")}
           </span>

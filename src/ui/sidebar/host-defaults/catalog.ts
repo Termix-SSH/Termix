@@ -3,7 +3,7 @@
  * running plugin's host fields that can have one.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   CORE_HOST_DEFAULTS,
   CORE_NAMESPACE,
@@ -11,10 +11,10 @@ import {
   type HostDefaultsLevel,
 } from "@/types/host-defaults";
 import {
-  getPlugins,
   type PluginSettingsField,
   type PluginSummary,
 } from "@/api/plugins-api";
+import { useInstalledPlugins } from "@/hooks/use-installed-plugins";
 
 export interface EditorDefaultKey {
   fullKey: string;
@@ -71,18 +71,7 @@ export const CORE_EDITOR_KEYS: EditorDefaultKey[] = CORE_HOST_DEFAULTS.map(
 
 /** Every key, by full key. Refreshed when the plugin list is. */
 export function useEditorDefaultKeys(): Map<string, EditorDefaultKey> {
-  const [plugins, setPlugins] = useState<PluginSummary[]>([]);
-  useEffect(() => {
-    let cancelled = false;
-    void getPlugins()
-      .then((loaded) => {
-        if (!cancelled) setPlugins(loaded);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const plugins = useInstalledPlugins();
   return useMemo(
     () =>
       new Map(

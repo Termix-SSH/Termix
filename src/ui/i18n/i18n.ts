@@ -168,6 +168,8 @@ i18n
 
     react: {
       useSuspense: false,
+      // Repaint when a plugin enabled later loads its strings.
+      bindI18n: "languageChanged loaded",
     },
   });
 

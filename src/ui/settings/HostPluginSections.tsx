@@ -10,11 +10,12 @@
  * group does not appear as an empty tab.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { SectionCard } from "@/components/section-card";
 import { PluginIcon } from "@/lib/plugin-icon";
-import { getPlugins, type PluginSummary } from "@/api/plugins-api";
+import { type PluginSummary } from "@/api/plugins-api";
+import { useInstalledPlugins } from "@/hooks/use-installed-plugins";
 import { usePluginScope } from "@/plugin-host/scope";
 import { SettingsFieldRow } from "./SettingsFields";
 import { hasVisibleFields, isFieldShown } from "./settings-fields-util";
@@ -24,21 +25,7 @@ export type HostPluginSettings = Record<string, Record<string, unknown>>;
 
 /** Enabled plugins declaring host-scope settings. */
 export function usePluginHostSections(): PluginSummary[] {
-  const [plugins, setPlugins] = useState<PluginSummary[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void getPlugins()
-      .then((loaded) => {
-        if (!cancelled) setPlugins(loaded);
-      })
-      .catch(() => {
-        // Additive: the built-in host tabs do not depend on this.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const plugins = useInstalledPlugins();
 
   return useMemo(
     () =>

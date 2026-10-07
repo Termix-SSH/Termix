@@ -28,6 +28,7 @@ import { withPluginScope } from "@/plugin-host/scope";
 
 const getPlugins = vi.fn();
 vi.mock("@/api/plugins-api", () => ({
+  PLUGINS_CHANGED_EVENT: "termix:plugins-changed",
   getPlugins: () => getPlugins(),
 }));
 

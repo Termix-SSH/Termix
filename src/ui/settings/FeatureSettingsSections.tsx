@@ -14,7 +14,6 @@ import { AccordionSection } from "@/sidebar/AdminSettingsShared";
 import { pluginKey } from "@/lib/plugin-i18n";
 import { PluginIcon } from "@/lib/plugin-icon";
 import {
-  getPlugins,
   getPluginAdminSettings,
   getPluginUserSettings,
   updatePluginAdminSettings,
@@ -24,6 +23,7 @@ import {
   type PluginSettingsField,
   type PluginSummary,
 } from "@/api/plugins-api";
+import { useInstalledPlugins } from "@/hooks/use-installed-plugins";
 import { SettingsFieldRow } from "./SettingsFields";
 import { hasVisibleFields, isFieldShown } from "./settings-fields-util";
 
@@ -39,19 +39,7 @@ export function featureSectionId(pluginId: string): FeatureSectionId {
 export function useFeatureSettings(
   scope: FeatureSettingsScope,
 ): PluginSummary[] {
-  const [plugins, setPlugins] = useState<PluginSummary[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void getPlugins()
-      .then((loaded) => {
-        if (!cancelled) setPlugins(loaded);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const plugins = useInstalledPlugins();
 
   return useMemo(
     () =>

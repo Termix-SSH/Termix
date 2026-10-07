@@ -23,6 +23,7 @@ import {
   getPluginAdminSettings,
   getPluginHostSettings,
   getPluginUserSettings,
+  PLUGIN_SETTINGS_CHANGED_EVENT,
   updatePluginAdminSettings,
   updatePluginHostSettings,
   updatePluginUserSettings,
@@ -120,6 +121,12 @@ function loadCurrentUser() {
       });
   }
   return currentUser;
+}
+
+interface SettingsChangeDetail {
+  pluginId: string;
+  scope: SettingsScope;
+  hostId?: number;
 }
 
 const SETTINGS_READERS: Record<
@@ -245,15 +252,26 @@ export const pluginHostBridge: PluginHostBridge = {
     useEffect(() => {
       let cancelled = false;
       if (scope === "host" && !Number.isFinite(numericHostId)) return;
-      SETTINGS_READERS[scope](pluginId, numericHostId)
-        .then((values) => {
-          if (!cancelled) setState({ values, loaded: true });
-        })
-        .catch(() => {
-          if (!cancelled) setState((prev) => ({ ...prev, loaded: true }));
-        });
+      const read = () =>
+        SETTINGS_READERS[scope](pluginId, numericHostId)
+          .then((values) => {
+            if (!cancelled) setState({ values, loaded: true });
+          })
+          .catch(() => {
+            if (!cancelled) setState((prev) => ({ ...prev, loaded: true }));
+          });
+      void read();
+      // Saved from the settings page, which keeps its own copy of the form.
+      const onChanged = (event: Event) => {
+        const detail = (event as CustomEvent<SettingsChangeDetail>).detail;
+        if (detail?.pluginId !== pluginId || detail.scope !== scope) return;
+        if (scope === "host" && detail.hostId !== numericHostId) return;
+        void read();
+      };
+      window.addEventListener(PLUGIN_SETTINGS_CHANGED_EVENT, onChanged);
       return () => {
         cancelled = true;
+        window.removeEventListener(PLUGIN_SETTINGS_CHANGED_EVENT, onChanged);
       };
     }, [pluginId, scope, numericHostId]);
 
