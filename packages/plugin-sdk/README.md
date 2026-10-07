@@ -48,7 +48,7 @@ in place of the flags. Reload the page to pick up frontend changes.
 
 ## Support
 
-To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
+Bugs and ideas for the SDK or the `termix-plugin` CLI go in the [Termix repo](https://github.com/Termix-SSH/Termix/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
 
 For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
 

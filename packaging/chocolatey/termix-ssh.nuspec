@@ -13,7 +13,7 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <projectSourceUrl>https://github.com/Termix-SSH/Termix</projectSourceUrl>
     <docsUrl>https://docs.termix.site/install</docsUrl>
-    <bugTrackerUrl>https://github.com/Termix-SSH/Support/issues</bugTrackerUrl>
+    <bugTrackerUrl>https://github.com/Termix-SSH/Termix/issues</bugTrackerUrl>
     <tags>docker ssh terminal telnet self-hosted rdp file-management vnc ssh-tunnel server-stats termix</tags>
     <summary>Self-hosted, plugin-based server management.</summary>
     <description>

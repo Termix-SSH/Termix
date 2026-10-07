@@ -72,4 +72,4 @@ Start from the [plugin template](https://github.com/Termix-SSH/Termix-Plugin-Tem
 
 ## Support
 
-To report a bug or request a feature, open a [support ticket](https://github.com/Termix-SSH/Support/issues/new/choose). Please be as detailed as possible, preferably in English. You can also ask in the [Discord](https://discord.gg/jVQGdvHDrf) server.
+Bugs and ideas for Termix itself go in [this repo](https://github.com/Termix-SSH/Termix/issues/new/choose). Plugin problems go in that plugin's own `Plugin-<Name>` repo. Please be as detailed as possible, preferably in English. You can also ask in the [Discord](https://discord.gg/jVQGdvHDrf) server.

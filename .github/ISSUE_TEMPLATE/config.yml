@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Problem with a plugin?
+    url: https://github.com/Termix-SSH/Termix#plugins
+    about: Each plugin has its own repo. Find it in this list, or use Report an issue on the plugin's page in Termix.
+  - name: Questions and chat
+    url: https://discord.gg/jVQGdvHDrf
+    about: Ask the community on Discord. Bugs and ideas belong in issues.
+  - name: Business or priority support
+    url: https://termix.site/contact
+    about: For teams that need a faster response. Contact us to discuss terms.

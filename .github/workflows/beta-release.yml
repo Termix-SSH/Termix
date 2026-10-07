@@ -148,7 +148,7 @@ jobs:
           > [!WARNING]
           > This is an automated weekly beta build, snapshotted from the \`${{ needs.prep.outputs.dev_branch }}\` branch. It is not a stable release: it may contain unfinished features, regressions, or breaking changes, and this tag is overwritten every week. Do not run it in production.
           >
-          > Found a bug? [Open a Beta Feedback report](https://github.com/Termix-SSH/Support/issues/new?template=beta_feedback.yml) and mention this build: \`${{ needs.prep.outputs.beta_version }}\`.
+          > Found a bug? [Open a Beta Feedback report](https://github.com/Termix-SSH/Termix/issues/new?template=beta_feedback.yml) and mention this build: \`${{ needs.prep.outputs.beta_version }}\`.
 
           **Snapshot of:** \`${{ needs.prep.outputs.dev_branch }}\` @ \`${{ needs.prep.outputs.sha }}\`
           **Docker image:** \`ghcr.io/termix-ssh/termix:beta\` / \`docker.io/termixssh/termix:beta\` (rolling), or pin to \`:beta-${{ needs.prep.outputs.beta_version }}\` for this exact build.

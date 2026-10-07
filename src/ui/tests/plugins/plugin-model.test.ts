@@ -248,40 +248,51 @@ describe("source and trust", () => {
 });
 
 describe("reportIssueUrl", () => {
-  it("prefills id, version, source and state on the plugin repo", () => {
-    const url = reportIssueUrl(
-      {
-        id: "docker",
-        repository: "https://github.com/Termix-SSH/Plugin-Docker.git",
-        version: "1.0.0",
-        latestVersion: "1.1.0",
-        status: "failed",
-        source: "official",
-      },
-      "26.10.0",
-    )!;
-    const parsed = new URL(url);
+  const base = {
+    id: "docker",
+    repository: "https://github.com/Termix-SSH/Plugin-Docker.git",
+    version: "1.0.0",
+    latestVersion: "1.1.0",
+    status: "failed" as const,
+    source: "official" as const,
+    lastError: "boom",
+  };
+
+  it("fills the bug form on an official plugin repo", () => {
+    const parsed = new URL(reportIssueUrl(base, "26.10.0")!);
     expect(parsed.origin + parsed.pathname).toBe(
       "https://github.com/Termix-SSH/Plugin-Docker/issues/new",
     );
+    expect(parsed.searchParams.get("template")).toBe("bug_report.yml");
+    expect(parsed.searchParams.get("termix-version")).toBe("26.10.0");
+    expect(parsed.searchParams.get("plugin-version")).toBe("1.0.0");
+    expect(parsed.searchParams.get("environment")).toContain(
+      "Plugin docker, official, failed",
+    );
+    expect(parsed.searchParams.get("logs")).toBe("boom");
+    expect(parsed.searchParams.has("body")).toBe(false);
+  });
+
+  it("uses a plain body for an unverified plugin", () => {
+    const parsed = new URL(
+      reportIssueUrl({ ...base, source: "unverified" }, "26.10.0")!,
+    );
+    expect(parsed.searchParams.has("template")).toBe(false);
     expect(parsed.searchParams.get("title")).toBe("[docker] ");
     const body = parsed.searchParams.get("body")!;
     expect(body).toContain("**Plugin:** docker");
     expect(body).toContain("**Version:** 1.0.0");
-    expect(body).toContain("**Source:** official");
+    expect(body).toContain("**Source:** unverified");
     expect(body).toContain("**State:** failed");
     expect(body).toContain("**Termix:** 26.10.0");
+    expect(body).toContain("boom");
   });
 
   it("gives nothing for a repo that is not on GitHub", () => {
     expect(
       reportIssueUrl({
-        id: "x",
+        ...base,
         repository: "https://gitlab.com/a/b",
-        version: null,
-        latestVersion: null,
-        status: null,
-        source: "official",
       }),
     ).toBeNull();
   });

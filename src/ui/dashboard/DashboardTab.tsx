@@ -61,6 +61,7 @@ import {
   StatsStrip,
   type VersionStatus,
 } from "./dashboard-core-cards";
+import { reportCoreIssueUrl } from "@/lib/issue-url";
 
 export { HostStatusList as HostStatusCard } from "./dashboard-core-cards";
 
@@ -795,8 +796,8 @@ export function DashboardTab({
       label: t("dashboard.github"),
     },
     {
-      href: "https://github.com/Termix-SSH/Support",
-      label: t("dashboard.support"),
+      href: reportCoreIssueUrl(import.meta.env.VITE_APP_VERSION || undefined),
+      label: t("dashboard.reportBug"),
     },
     {
       href: "https://discord.com/invite/jVQGdvHDrf",

@@ -68,6 +68,7 @@ import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
 import { Select2 } from "@/components/select2";
 import { LANGUAGES, THEMES } from "@/settings/appearance/appearance-controls";
 import { clearLocalAdaptivePreferences } from "@/lib/local-adaptive-preferences";
+import { reportCoreIssueUrl } from "@/lib/issue-url";
 import {
   FeatureSettingsSection,
   featureSectionId,
@@ -1302,7 +1303,10 @@ export function UserProfilePanel({
                 <span className="text-[10px] text-muted-foreground">
                   {t("newUi.sidebar.userProfile.betaProgramDescription")}{" "}
                   <a
-                    href="https://github.com/Termix-SSH/Support/issues/new?template=beta_feedback.yml"
+                    href={reportCoreIssueUrl(
+                      version || undefined,
+                      "beta_feedback.yml",
+                    )}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-accent-brand hover:underline"

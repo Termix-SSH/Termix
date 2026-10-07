@@ -16,6 +16,11 @@ import type {
   RegistryPluginEntry,
   RegistryPluginVersion,
 } from "@/api/plugins-api";
+import {
+  buildIssueUrl,
+  describeEnvironment,
+  normalizeGitHubRepo,
+} from "@/lib/issue-url";
 
 export type PluginStatus = "running" | "disabled" | "failed" | "blocked";
 
@@ -314,28 +319,48 @@ export function formatCount(count: number): string {
 
 /**
  * A new GitHub issue on the plugin's own repo with what a maintainer asks
- * first already filled in. Null when the repository is not on GitHub.
+ * first already filled in. Official plugins use the org bug form; a third
+ * party repo may not have it, so it gets a plain prefilled body. Null when
+ * the repository is not on GitHub.
  */
 export function reportIssueUrl(
   plugin: Pick<
     PluginEntry,
-    "id" | "repository" | "version" | "latestVersion" | "status" | "source"
+    | "id"
+    | "repository"
+    | "version"
+    | "latestVersion"
+    | "status"
+    | "source"
+    | "lastError"
   >,
   termixVersion?: string,
 ): string | null {
-  const repo = plugin.repository
-    ?.trim()
-    .replace(/\.git$/, "")
-    .replace(/\/+$/, "");
-  if (!repo || !/^https:\/\/github\.com\/[^/]+\/[^/]+$/.test(repo)) {
-    return null;
+  const repo = normalizeGitHubRepo(plugin.repository);
+  if (!repo) return null;
+  const version = plugin.version ?? plugin.latestVersion ?? "not installed";
+  const state = `Plugin ${plugin.id}, ${plugin.source}, ${plugin.status ?? "not installed"}`;
+  if (plugin.source !== "unverified") {
+    return buildIssueUrl(repo, {
+      template: "bug_report.yml",
+      fields: {
+        "termix-version": termixVersion,
+        "plugin-version": version,
+        environment: `${describeEnvironment()}\n${state}`,
+        logs: plugin.lastError,
+      },
+    });
   }
   const lines = [
     `**Plugin:** ${plugin.id}`,
-    `**Version:** ${plugin.version ?? plugin.latestVersion ?? "not installed"}`,
+    `**Version:** ${version}`,
     `**Source:** ${plugin.source}`,
     `**State:** ${plugin.status ?? "not installed"}`,
     ...(termixVersion ? [`**Termix:** ${termixVersion}`] : []),
+    `**Environment:** ${describeEnvironment()}`,
+    ...(plugin.lastError
+      ? ["", "**Error:**", "```", plugin.lastError, "```"]
+      : []),
     "",
     "**What happened:**",
     "",

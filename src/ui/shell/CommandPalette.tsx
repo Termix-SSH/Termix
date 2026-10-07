@@ -11,11 +11,11 @@ import {
   CommandEmpty,
 } from "@/components/command";
 import {
+  Bug,
   Clock,
   Folder,
   Globe,
   KeyRound,
-  LifeBuoy,
   MessagesSquare,
   Pencil,
   Plus,
@@ -43,6 +43,7 @@ import {
   type PaletteItemDef,
 } from "./palette-registry";
 import { activityTarget } from "@/lib/activity-types";
+import { reportCoreIssueUrl } from "@/lib/issue-url";
 import { shell } from "@/plugin-host/shell-bridge";
 import { getLiveHostStatus } from "@/lib/ServerStatusContext";
 
@@ -228,10 +229,10 @@ export function CommandPalette({
       url: "https://discord.com/invite/jVQGdvHDrf",
     },
     {
-      id: "link-support",
-      label: t("dashboard.support"),
-      icon: LifeBuoy,
-      url: "https://github.com/Termix-SSH/Support/issues/new",
+      id: "link-report-bug",
+      label: t("dashboard.reportBug"),
+      icon: Bug,
+      url: reportCoreIssueUrl(import.meta.env.VITE_APP_VERSION || undefined),
     },
   ].filter((link) => matches(link.label));
 

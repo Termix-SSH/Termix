@@ -1,0 +1,41 @@
+name: Feature request
+description: Suggest an idea for Termix itself
+labels: [feature]
+type: Feature
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Is it about a plugin (terminal, file manager, Docker, remote desktop and so on)? Report it on that plugin's repo instead. **Report an issue** on the plugin's page in Termix takes you there with your versions filled in.
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. Explain the problem first, then how you would solve it.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: What are you trying to do, and what gets in the way today?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: What would you like?
+      description: Describe how it should work.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Anything you tried or considered instead.
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+      description: Screenshots, mockups or links.
+    validations:
+      required: false
