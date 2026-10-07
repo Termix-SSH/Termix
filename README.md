@@ -58,7 +58,7 @@ Plugins add everything else. The official ones ship with Termix, and admins can 
 | Plugin                                                                      | What it does                                                                                                |
 | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | [ACME Certificates](https://github.com/Termix-SSH/Plugin-ACME-SSL)          | Gets the Termix HTTPS certificate from Let's Encrypt or any ACME provider and renews it for you.            |
-| [AI Assistant](https://github.com/Termix-SSH/Plugin-AI)                     | An optional AI assistant that reads your setup and proposes changes for you to approve.                     |
+| [AI Assistant](https://github.com/Termix-SSH/Plugin-AI)                     | An AI assistant that reads your setup and proposes changes for you to approve.                              |
 | [Alerts](https://github.com/Termix-SSH/Plugin-Alerts)                       | One inbox for every alert in Termix, with delivery to webhooks, ntfy, Discord and email.                    |
 | [Automations](https://github.com/Termix-SSH/Plugin-Automations)             | Run steps on your hosts on a schedule or when something happens.                                            |
 | [Docker](https://github.com/Termix-SSH/Plugin-Docker)                       | Manage Docker and Podman containers on your hosts over SSH, with logs, stats and a console.                 |
