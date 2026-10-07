@@ -169,6 +169,7 @@ const manageMock = vi.hoisted(() => ({
   updateAllPlugins: vi.fn(),
   uninstallPlugin: vi.fn(),
   setPluginOptions: vi.fn(),
+  setAllPluginChannels: vi.fn(),
   getPluginDataSummary: vi.fn(),
   getPluginChangelog: vi.fn(),
   deletePluginData: vi.fn(),
@@ -730,6 +731,7 @@ describe("plugins route", () => {
       expect(res.status).toBe(200);
       expect(manageMock.installPlugin).toHaveBeenCalledWith("docker", {
         version: "1.0.0",
+        channel: "stable",
         userId: "admin-1",
         capabilities: ["kv:own"],
       });
@@ -739,6 +741,68 @@ describe("plugins route", () => {
           resourceId: "docker",
         }),
       );
+    });
+
+    it("installs on the beta channel when asked", async () => {
+      manageMock.installPlugin.mockResolvedValue({
+        id: "docker",
+        version: "1.1.0-beta.1",
+        state: "active",
+      });
+      const res = await post("/plugins/docker/install", {
+        channel: "beta",
+        capabilities: ["kv:own"],
+      });
+      expect(res.status).toBe(200);
+      expect(manageMock.installPlugin).toHaveBeenCalledWith(
+        "docker",
+        expect.objectContaining({ channel: "beta" }),
+      );
+      expect(
+        (
+          await post("/plugins/docker/install", {
+            channel: "nightly",
+            capabilities: [],
+          })
+        ).status,
+      ).toBe(400);
+    });
+
+    it("moves every plugin to one channel", async () => {
+      manageMock.setAllPluginChannels.mockResolvedValue({
+        changed: ["docker"],
+      });
+      const res = await post("/plugins/channel", { channel: "beta" });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ changed: ["docker"] });
+      expect(manageMock.setAllPluginChannels).toHaveBeenCalledWith("beta");
+      expect((await post("/plugins/channel", { channel: "x" })).status).toBe(
+        400,
+      );
+    });
+
+    it("saves a plugin's channel and refuses an unknown one", async () => {
+      manageMock.setPluginOptions.mockResolvedValue({
+        autoUpdate: false,
+        pinnedVersion: null,
+        channel: "beta",
+      });
+      const patch = (body: unknown) =>
+        fetch(`${baseUrl}/plugins/docker/options`, {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json",
+            "x-test-user-id": "admin-1",
+          },
+          body: JSON.stringify(body),
+        });
+      expect((await patch({ channel: "beta" })).status).toBe(200);
+      expect(manageMock.setPluginOptions).toHaveBeenCalledWith("docker", {
+        autoUpdate: undefined,
+        pinned: undefined,
+        channel: "beta",
+      });
+      expect((await patch({ channel: "nightly" })).status).toBe(400);
     });
 
     it("rejects a bad id or version before touching anything", async () => {
@@ -865,6 +929,7 @@ describe("plugins route", () => {
         post("/plugins/docker/install", {}, user),
         post("/plugins/docker/update", {}, user),
         post("/plugins/update-all", {}, user),
+        post("/plugins/channel", { channel: "beta" }, user),
         fetch(`${baseUrl}/plugins/docker`, { method: "DELETE", headers }),
         fetch(`${baseUrl}/plugins/docker/options`, {
           method: "PATCH",

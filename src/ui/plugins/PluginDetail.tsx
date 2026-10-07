@@ -6,6 +6,7 @@ import {
   Database,
   Download,
   ExternalLink,
+  FlaskConical,
   Lightbulb,
   Pin,
   RotateCcw,
@@ -26,12 +27,15 @@ import {
 } from "@/components/select";
 import { getPluginData, type PluginDataSummary } from "@/api/plugins-api";
 import {
+  BetaBadge,
   CapabilityRow,
   InstallCountFact,
   PluginIconBox,
   UnverifiedBadge,
 } from "./plugin-bits";
 import {
+  betaFeedbackUrl,
+  betaToTry,
   describeContributions,
   formatBytes,
   orderByRisk,
@@ -80,6 +84,10 @@ export function PluginDetail({
     import.meta.env.VITE_APP_VERSION || undefined,
   );
   const featureUrl = requestFeatureUrl(plugin);
+  const feedbackUrl = plugin.isBeta
+    ? betaFeedbackUrl(plugin, import.meta.env.VITE_APP_VERSION || undefined)
+    : null;
+  const tryableBeta = betaToTry(plugin);
 
   return (
     <div
@@ -98,6 +106,7 @@ export function PluginDetail({
           </span>
           <Facts className="text-[11px] text-muted-foreground/70">
             {plugin.unverified && <UnverifiedBadge />}
+            {plugin.isBeta && <BetaBadge />}
             {plugin.author && <span>{plugin.author}</span>}
             {plugin.version ? (
               <span>v{plugin.version}</span>
@@ -135,6 +144,18 @@ export function PluginDetail({
                 })}
               </Button>
             )}
+          {tryableBeta && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={busy || locked}
+              onClick={() => void manager.tryBeta(plugin)}
+            >
+              <FlaskConical className="size-3.5" />
+              {t("plugins.manager.beta.try", { version: tryableBeta })}
+            </Button>
+          )}
           {plugin.installed ? (
             <>
               {failed ? (
@@ -299,7 +320,11 @@ export function PluginDetail({
                             ? t("plugins.manager.latestVersion", {
                                 version: v.version,
                               })
-                            : v.version}
+                            : v.prerelease
+                              ? t("plugins.manager.beta.versionLabel", {
+                                  version: v.version,
+                                })
+                              : v.version}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -343,6 +368,30 @@ export function PluginDetail({
                     disabled={busy || locked || !!plugin.pinnedVersion}
                     onChange={(v) =>
                       void manager.setOptions(plugin, { autoUpdate: v })
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3 px-4 py-3">
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <span className="flex items-center gap-1.5 text-xs font-medium">
+                      <FlaskConical className="size-3 text-muted-foreground" />
+                      {t("plugins.manager.beta.channel")}
+                    </span>
+                    <span className="text-[11px] leading-snug text-muted-foreground">
+                      {plugin.channel === "stable" && plugin.isBeta
+                        ? t("plugins.manager.beta.waitingForStable", {
+                            version: plugin.version,
+                          })
+                        : t("plugins.manager.beta.channelHint")}
+                    </span>
+                  </div>
+                  <FakeSwitch
+                    checked={plugin.channel === "beta"}
+                    disabled={busy || locked}
+                    onChange={(v) =>
+                      void (v
+                        ? manager.tryBeta(plugin)
+                        : manager.leaveBeta(plugin))
                     }
                   />
                 </div>
@@ -397,6 +446,20 @@ export function PluginDetail({
                 !plugin.author
                   ? t("plugins.manager.reportIssue")
                   : t("plugins.manager.reportTo", { author: plugin.author })}
+              </span>
+            </a>
+          )}
+
+          {feedbackUrl && (
+            <a
+              href={feedbackUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={LINK_ROW}
+            >
+              <FlaskConical className="size-3.5 shrink-0" />
+              <span className="truncate">
+                {t("plugins.manager.beta.sendFeedback")}
               </span>
             </a>
           )}

@@ -110,6 +110,12 @@ function adminSections() {
     "admin-ssl": keysIn(functionBody(settings, "AdminSSLSection")),
     "admin-api-keys": keysIn(read("AdminApiKeysSection.tsx")),
     "admin-audit-log": keysIn(read("AdminAuditLogSection.tsx")),
+    updates: keysIn(
+      fs.readFileSync(
+        path.join(ROOT, "src", "ui", "settings", "UpdatesSettings.tsx"),
+        "utf8",
+      ),
+    ),
   };
 }
 

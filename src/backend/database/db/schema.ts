@@ -1005,6 +1005,8 @@ export const plugins = sqliteTable(
       .default(false),
     /** Version an admin pinned. Never auto-updated while set. */
     pinnedVersion: text("pinned_version"),
+    /** stable | beta: which registry releases updates offer. */
+    channel: text("channel").notNull().default("stable"),
     manifestJson: text("manifest_json").notNull(),
   },
   (table) => [index("idx_plugins_registry_id").on(table.registryId)],

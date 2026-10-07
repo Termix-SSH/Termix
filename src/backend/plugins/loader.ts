@@ -482,7 +482,11 @@ export class PluginLoader {
           state.set(id, "done");
           return false;
         }
-        if (!semver.satisfies(dependency.manifest.version, range)) {
+        if (
+          !semver.satisfies(dependency.manifest.version, range, {
+            includePrerelease: true,
+          })
+        ) {
           blocked.set(
             id,
             `requires "${dependencyId}" ${range}, but ${dependency.manifest.version} is installed`,

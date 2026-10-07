@@ -35,6 +35,7 @@ import {
 import { InlineView, SurfaceScope } from "@/components/surface/surface-scope";
 import { cn } from "@/lib/utils";
 import {
+  BetaBadge,
   InstallCountFact,
   PluginIconBox,
   UnverifiedBadge,
@@ -469,6 +470,7 @@ function InstalledCard({
         facts={
           <>
             {plugin.unverified && <UnverifiedBadge />}
+            {plugin.isBeta && <BetaBadge />}
             {plugin.author && <span>{plugin.author}</span>}
             <span>v{plugin.version}</span>
             {adds.length > 0 && <span>{adds.join(", ")}</span>}

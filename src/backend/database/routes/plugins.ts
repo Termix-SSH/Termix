@@ -18,6 +18,7 @@ import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
 import { getPluginPublicHttpRoutes } from "../../plugins/http.js";
 import { getPluginPublicWsRoutes } from "../../plugins/ws.js";
 import { PluginManageError } from "../../plugins/manage.js";
+import { parsePluginChannel } from "../../plugins/registry-index.js";
 import { pluginFeatures, youtubeVideoId } from "../../plugins/manifest.js";
 import {
   isPluginChoice,
@@ -317,6 +318,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
           registryId: record.registryId ?? null,
           autoUpdate: Boolean(record.autoUpdate),
           pinnedVersion: record.pinnedVersion ?? null,
+          channel: record.channel ?? "stable",
           description,
           author,
           repository,
@@ -1646,6 +1648,65 @@ router.post(
 
 /**
  * @openapi
+ * /plugins/channel:
+ *   post:
+ *     summary: Move every installed plugin to one update channel
+ *     description: Sets the channel on every installed plugin. Nothing is installed here; the next update check offers what the channel allows. Going back to stable never downgrades a plugin that is on a beta.
+ *     tags:
+ *       - Plugins
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [channel]
+ *             properties:
+ *               channel:
+ *                 type: string
+ *                 enum: [stable, beta]
+ *     responses:
+ *       200:
+ *         description: The plugins whose channel changed.
+ *       400:
+ *         description: Not a known channel.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       409:
+ *         description: This desktop is linked to a server, which manages its plugins.
+ */
+router.post(
+  "/channel",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    const channel = parsePluginChannel(req.body?.channel);
+    if (!channel) {
+      res.status(400).json({ error: "channel must be stable or beta" });
+      return;
+    }
+    if (await refuseOnLinkedDesktop(res)) return;
+    try {
+      const { setAllPluginChannels } = await import("../../plugins/manage.js");
+      const result = await setAllPluginChannels(channel);
+      await auditPluginAction(req, "update_plugin_options", "*", {
+        channel,
+        changed: result.changed,
+      });
+      res.json(result);
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to change the plugin channel",
+        "plugin_options",
+      );
+    }
+  },
+);
+
+/**
+ * @openapi
  * /plugins/{id}/install:
  *   post:
  *     summary: Install a plugin from the official registry
@@ -1677,6 +1738,10 @@ router.post(
  *             properties:
  *               version:
  *                 type: string
+ *               channel:
+ *                 type: string
+ *                 enum: [stable, beta]
+ *                 description: The channel to follow. beta installs the newest beta when it is newer than stable.
  *               capabilities:
  *                 type: array
  *                 items:
@@ -1703,14 +1768,19 @@ router.post(
     const pluginId = String(req.params.id);
     const version = readVersion(req.body);
     const capabilities = readCapabilities(req.body);
+    const channel =
+      req.body?.channel === undefined
+        ? "stable"
+        : parsePluginChannel(req.body.channel);
     if (
       !ID_PATTERN.test(pluginId) ||
       version === null ||
-      capabilities === null
+      capabilities === null ||
+      channel === null
     ) {
       res
         .status(400)
-        .json({ error: "Invalid plugin id, version or capabilities" });
+        .json({ error: "Invalid plugin id, version, channel or capabilities" });
       return;
     }
     if (await refuseOnLinkedDesktop(res)) return;
@@ -1719,6 +1789,7 @@ router.post(
       const userId = (req as AuthenticatedRequest).userId as string;
       const result = await installPlugin(pluginId, {
         version,
+        channel,
         userId,
         capabilities,
       });
@@ -1891,7 +1962,7 @@ router.delete(
  * /plugins/{id}/options:
  *   patch:
  *     summary: Change a plugin's update choices
- *     description: autoUpdate lets the background check apply new releases that ask for nothing new. pinned holds the plugin at its installed version, which also stops auto-update.
+ *     description: autoUpdate lets the background check apply new releases that ask for nothing new. pinned holds the plugin at its installed version, which also stops auto-update. channel picks whether betas are offered; going back to stable keeps an installed beta until a stable release passes it.
  *     tags:
  *       - Plugins
  *     parameters:
@@ -1911,6 +1982,9 @@ router.delete(
  *                 type: boolean
  *               pinned:
  *                 type: boolean
+ *               channel:
+ *                 type: string
+ *                 enum: [stable, beta]
  *     responses:
  *       200:
  *         description: The saved choices.
@@ -1928,16 +2002,28 @@ router.patch(
   async (req: Request, res: Response) => {
     const pluginId = String(req.params.id);
     const { autoUpdate, pinned } = req.body ?? {};
+    const channel =
+      req.body?.channel === undefined
+        ? undefined
+        : parsePluginChannel(req.body.channel);
     if (
       (autoUpdate !== undefined && typeof autoUpdate !== "boolean") ||
-      (pinned !== undefined && typeof pinned !== "boolean")
+      (pinned !== undefined && typeof pinned !== "boolean") ||
+      channel === null
     ) {
-      res.status(400).json({ error: "autoUpdate and pinned must be booleans" });
+      res.status(400).json({
+        error:
+          "autoUpdate and pinned must be booleans and channel stable or beta",
+      });
       return;
     }
     try {
       const { setPluginOptions } = await import("../../plugins/manage.js");
-      const result = await setPluginOptions(pluginId, { autoUpdate, pinned });
+      const result = await setPluginOptions(pluginId, {
+        autoUpdate,
+        pinned,
+        channel,
+      });
       await auditPluginAction(req, "update_plugin_options", pluginId, result);
       res.json({ id: pluginId, ...result });
     } catch (error) {

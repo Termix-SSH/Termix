@@ -21,6 +21,7 @@ export interface PluginCreateInput {
   lastError?: string | null;
   autoUpdate?: boolean;
   pinnedVersion?: string | null;
+  channel?: string;
   manifestJson: string;
 }
 
@@ -34,6 +35,7 @@ export interface PluginUpdateInput {
   lastError?: string | null;
   autoUpdate?: boolean;
   pinnedVersion?: string | null;
+  channel?: string;
   manifestJson?: string;
 }
 
@@ -71,6 +73,7 @@ export class PluginRepository {
       lastError: input.lastError ?? null,
       autoUpdate: input.autoUpdate ?? false,
       pinnedVersion: input.pinnedVersion ?? null,
+      channel: input.channel ?? "stable",
       manifestJson: input.manifestJson,
       installedAt: now,
       updatedAt: now,
@@ -108,6 +111,7 @@ export class PluginRepository {
           input.pinnedVersion === undefined
             ? existing.pinnedVersion
             : input.pinnedVersion,
+        channel: input.channel ?? existing.channel,
         manifestJson: input.manifestJson ?? existing.manifestJson,
         updatedAt: now,
       },

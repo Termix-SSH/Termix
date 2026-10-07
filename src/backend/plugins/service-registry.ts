@@ -229,7 +229,12 @@ export function getServiceImplementation<T extends object>(
 ): T | undefined {
   const registration = lookup(service, name);
   if (!registration) return undefined;
-  if (!semver.satisfies(registration.version, versionRange)) return undefined;
+  if (
+    !semver.satisfies(registration.version, versionRange, {
+      includePrerelease: true,
+    })
+  )
+    return undefined;
   return registration.implementation as T;
 }
 
@@ -267,7 +272,9 @@ export function resolveRequirements(
     const providers = [...(services.get(requirement.service)?.values() ?? [])];
     const registration =
       providers.find((candidate) =>
-        semver.satisfies(candidate.version, requirement.versionRange),
+        semver.satisfies(candidate.version, requirement.versionRange, {
+          includePrerelease: true,
+        }),
       ) ?? providers[0];
 
     if (!registration) {
@@ -280,7 +287,11 @@ export function resolveRequirements(
       continue;
     }
 
-    if (!semver.satisfies(registration.version, requirement.versionRange)) {
+    if (
+      !semver.satisfies(registration.version, requirement.versionRange, {
+        includePrerelease: true,
+      })
+    ) {
       recordUnsatisfied(
         requirement,
         `requires service "${requirement.service}" ${requirement.versionRange}, but ${registration.pluginId} provides ${registration.version}`,

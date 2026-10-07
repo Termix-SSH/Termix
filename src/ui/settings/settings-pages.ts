@@ -1,6 +1,7 @@
 import {
   Database,
   FileText,
+  FlaskConical,
   Globe,
   KeyRound,
   Keyboard,
@@ -115,6 +116,13 @@ export const CORE_SETTINGS_PAGES: SettingsPage[] = [
     icon: Settings,
     admin: true,
     adminSection: "general",
+  }),
+  core({
+    id: "updates",
+    band: "instance",
+    labelKey: "settings.updates.title",
+    icon: FlaskConical,
+    admin: true,
   }),
   core({
     id: "admin-users",

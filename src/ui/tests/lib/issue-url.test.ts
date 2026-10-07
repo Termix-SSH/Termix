@@ -3,6 +3,7 @@ import {
   buildIssueUrl,
   describeEnvironment,
   normalizeGitHubRepo,
+  reportBetaFeedbackUrl,
   reportCoreIssueUrl,
 } from "@/lib/issue-url";
 
@@ -87,10 +88,31 @@ describe("describeEnvironment", () => {
 
 describe("reportCoreIssueUrl", () => {
   it("points at the core repo with the version filled in", () => {
-    const url = new URL(reportCoreIssueUrl("26.10.0", "beta_feedback.yml"));
+    const url = new URL(reportCoreIssueUrl("26.10.0"));
     expect(url.pathname).toBe("/Termix-SSH/Termix/issues/new");
-    expect(url.searchParams.get("template")).toBe("beta_feedback.yml");
+    expect(url.searchParams.get("template")).toBe("bug_report.yml");
     expect(url.searchParams.get("termix-version")).toBe("26.10.0");
     expect(url.searchParams.get("environment")).toBeTruthy();
+  });
+});
+
+describe("reportBetaFeedbackUrl", () => {
+  it("uses the beta form and lists plugins on a beta", () => {
+    const url = new URL(
+      reportBetaFeedbackUrl("26.11.0-beta.2", [
+        { id: "docker", version: "1.2.0-beta.1" },
+        { id: "tunnels", version: "1.1.0-beta.3" },
+      ]),
+    );
+    expect(url.searchParams.get("template")).toBe("beta_feedback.yml");
+    expect(url.searchParams.get("termix-version")).toBe("26.11.0-beta.2");
+    expect(url.searchParams.get("beta-plugins")).toBe(
+      "docker 1.2.0-beta.1\ntunnels 1.1.0-beta.3",
+    );
+  });
+
+  it("leaves the plugin list out when none are on a beta", () => {
+    const url = new URL(reportBetaFeedbackUrl("26.11.0-beta.2"));
+    expect(url.searchParams.has("beta-plugins")).toBe(false);
   });
 });

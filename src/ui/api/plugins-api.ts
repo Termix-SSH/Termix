@@ -247,6 +247,7 @@ export interface PluginSummary {
   registryId?: string | null;
   autoUpdate?: boolean;
   pinnedVersion?: string | null;
+  channel?: PluginChannel;
   description?: string;
   author?: string;
   repository?: string;
@@ -269,8 +270,12 @@ function announcePluginsChanged(): void {
   window.dispatchEvent(new CustomEvent(PLUGINS_CHANGED_EVENT));
 }
 
+export type PluginChannel = "stable" | "beta";
+
 export interface RegistryPluginVersion {
   version: string;
+  /** A beta, offered only to plugins on the beta channel. */
+  prerelease?: boolean;
   compatible: boolean;
   capabilities: string[];
   publishedAt?: string;
@@ -290,7 +295,11 @@ export interface RegistryPluginEntry {
   videoId?: string;
   features?: string[];
   versions: RegistryPluginVersion[];
+  /** Newest release on the plugin's channel. */
   latestVersion: string | null;
+  /** Newest beta, when one is newer than stable. */
+  latestBeta?: string | null;
+  channel?: PluginChannel;
   installed: boolean;
   installedVersion: string | null;
   updateAvailable: boolean;
@@ -443,12 +452,23 @@ export async function retryPlugin(pluginId: string): Promise<void> {
 
 export async function setPluginOptions(
   pluginId: string,
-  options: { autoUpdate?: boolean; pinned?: boolean },
-): Promise<{ autoUpdate: boolean; pinnedVersion: string | null }> {
+  options: { autoUpdate?: boolean; pinned?: boolean; channel?: PluginChannel },
+): Promise<{
+  autoUpdate: boolean;
+  pinnedVersion: string | null;
+  channel: PluginChannel;
+}> {
   const response = await rbacApi.patch(
     `${pluginPath(pluginId)}/options`,
     options,
   );
+  return response.data;
+}
+
+export async function setAllPluginChannels(
+  channel: PluginChannel,
+): Promise<{ changed: string[] }> {
+  const response = await rbacApi.post("/plugins/channel", { channel });
   return response.data;
 }
 

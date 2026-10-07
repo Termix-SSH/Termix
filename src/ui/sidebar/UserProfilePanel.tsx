@@ -68,7 +68,8 @@ import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
 import { Select2 } from "@/components/select2";
 import { LANGUAGES, THEMES } from "@/settings/appearance/appearance-controls";
 import { clearLocalAdaptivePreferences } from "@/lib/local-adaptive-preferences";
-import { reportCoreIssueUrl } from "@/lib/issue-url";
+import { reportBetaFeedbackUrl } from "@/lib/issue-url";
+import { isPrerelease } from "@/plugins/plugin-model";
 import {
   FeatureSettingsSection,
   featureSectionId,
@@ -464,6 +465,7 @@ export function UserProfilePanel({
   const [accountUsername, setAccountUsername] = useState(username ?? "");
   const [accountTotpEnabled, setAccountTotpEnabled] = useState(false);
   const [userRole, setUserRole] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
   const [authMethod, setAuthMethod] = useState("");
   const [version, setVersion] = useState("");
   const [versionStatus, setVersionStatus] = useState<
@@ -586,6 +588,7 @@ export function UserProfilePanel({
         // A linked desktop is the account it is signed in to on the server.
         setAccountUsername(linked?.username || info.username);
         setAccountTotpEnabled(info.totp_enabled ?? false);
+        setIsAdmin(Boolean(linked ? linked.isAdmin : info.is_admin));
         setUserRole(
           (linked ? linked.isAdmin : info.is_admin)
             ? t("newUi.sidebar.userProfile.roleAdministrator")
@@ -1294,37 +1297,42 @@ export function UserProfilePanel({
             </span>
           </div>
 
-          <div className="border-t border-border pt-3 mt-3">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-medium">
-                  {t("newUi.sidebar.userProfile.betaProgramTitle")}
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  {t("newUi.sidebar.userProfile.betaProgramDescription")}{" "}
+          {(isPrerelease(version) || isAdmin) && (
+            <div className="border-t border-border pt-3 mt-3">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs font-medium">
+                    {isPrerelease(version)
+                      ? t("newUi.sidebar.userProfile.onBetaTitle")
+                      : t("newUi.sidebar.userProfile.tryBetaTitle")}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {isPrerelease(version)
+                      ? t("newUi.sidebar.userProfile.onBetaDescription")
+                      : t("newUi.sidebar.userProfile.tryBetaDescription")}
+                  </span>
+                </div>
+                {isPrerelease(version) ? (
                   <a
-                    href={reportCoreIssueUrl(
-                      version || undefined,
-                      "beta_feedback.yml",
-                    )}
+                    href={reportBetaFeedbackUrl(version)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-accent-brand hover:underline"
+                    className="shrink-0 ml-3 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest border border-border px-2 py-1.5 hover:bg-muted/40 transition-colors"
                   >
-                    {t("newUi.sidebar.userProfile.betaProgramFeedback")}
+                    {t("newUi.sidebar.userProfile.sendBetaFeedback")}
                   </a>
-                </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onOpenSettingsPage?.("updates")}
+                    className="shrink-0 ml-3 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest border border-border px-2 py-1.5 hover:bg-muted/40 transition-colors"
+                  >
+                    {t("newUi.sidebar.userProfile.openUpdates")}
+                  </button>
+                )}
               </div>
-              <a
-                href="https://docs.termix.site/install/server/docker#beta-builds"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 ml-3 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest border border-border px-2 py-1.5 hover:bg-muted/40 transition-colors"
-              >
-                {t("newUi.sidebar.userProfile.betaProgramLearnMore")}
-              </a>
             </div>
-          </div>
+          )}
 
           <div className="border-t border-border pt-3 mt-3">
             <div className="flex items-center justify-between">

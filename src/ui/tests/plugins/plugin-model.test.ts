@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { PluginSummary, RegistryPluginEntry } from "@/api/plugins-api";
 import {
+  betaFeedbackUrl,
+  betaToTry,
+  isPrerelease,
   categoriesOf,
   describeContributions,
   formatBytes,
@@ -414,5 +417,52 @@ describe("youtubeEmbedUrl", () => {
     ]) {
       expect(youtubeEmbedUrl(value)).toBeNull();
     }
+  });
+});
+
+describe("betas", () => {
+  it("knows a prerelease", () => {
+    expect(isPrerelease("1.2.0-beta.1")).toBe(true);
+    expect(isPrerelease("1.2.0")).toBe(false);
+    expect(isPrerelease(null)).toBe(false);
+  });
+
+  it("offers a beta only when newer than what is installed on stable", () => {
+    const base = {
+      installed: true,
+      version: "1.1.0",
+      latestBeta: "1.2.0-beta.1",
+      channel: "stable" as const,
+    };
+    expect(betaToTry(base)).toBe("1.2.0-beta.1");
+    expect(betaToTry({ ...base, channel: "beta" })).toBeNull();
+    expect(betaToTry({ ...base, version: "1.2.0-beta.1" })).toBeNull();
+    expect(betaToTry({ ...base, installed: false })).toBeNull();
+    expect(betaToTry({ ...base, latestBeta: null })).toBeNull();
+  });
+
+  it("sends beta feedback to the plugin's repo", () => {
+    const url = new URL(
+      betaFeedbackUrl(
+        {
+          id: "docker",
+          repository: "https://github.com/Termix-SSH/Plugin-Docker",
+          version: "1.2.0-beta.1",
+          lastError: null,
+        },
+        "26.11.0",
+      )!,
+    );
+    expect(url.pathname).toBe("/Termix-SSH/Plugin-Docker/issues/new");
+    expect(url.searchParams.get("template")).toBe("beta_feedback.yml");
+    expect(url.searchParams.get("plugin-version")).toBe("1.2.0-beta.1");
+    expect(
+      betaFeedbackUrl({
+        id: "x",
+        repository: "https://gitlab.com/a/b",
+        version: "1.0.0",
+        lastError: null,
+      }),
+    ).toBeNull();
   });
 });

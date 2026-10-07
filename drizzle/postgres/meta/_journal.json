@@ -484,6 +484,13 @@
       "when": 1791256340388,
       "tag": "0068_plugin_pinned_version",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1791388888397,
+      "tag": "0069_plugin_channel",
+      "breakpoints": true
     }
   ]
 }

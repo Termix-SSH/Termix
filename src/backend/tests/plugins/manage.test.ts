@@ -160,19 +160,22 @@ const DEFAULT_CAPS = ["hosts:read", "kv:own"];
 function registryEntry(
   id: string,
   versions: Array<{ version: string; capabilities?: string[] }>,
+  prereleases: Array<{ version: string; capabilities?: string[] }> = [],
 ) {
+  const toEntry = (v: { version: string; capabilities?: string[] }) => ({
+    version: v.version,
+    api: "1",
+    url: `https://example.com/${id}-${v.version}.tmxplug`,
+    sha256: "a".repeat(64),
+    signature: "sig",
+    size: 1,
+    capabilities: v.capabilities ?? ["hosts:read", "kv:own"],
+  });
   return {
     id,
     name: id,
-    versions: versions.map((v) => ({
-      version: v.version,
-      api: "1",
-      url: `https://example.com/${id}-${v.version}.tmxplug`,
-      sha256: "a".repeat(64),
-      signature: "sig",
-      size: 1,
-      capabilities: v.capabilities ?? ["hosts:read", "kv:own"],
-    })),
+    versions: versions.map(toEntry),
+    prereleases: prereleases.map(toEntry),
   };
 }
 
@@ -404,6 +407,114 @@ describe("updates", () => {
     const result = await manage.updateAllPlugins({ userId: "admin" });
     expect(result.updated).toEqual([]);
     expect(registry.download).not.toHaveBeenCalled();
+  });
+});
+
+describe("beta channel", () => {
+  it("offers betas only to a plugin on the beta channel", async () => {
+    createFixturePlugin({ id: "docker", root: bundled });
+    registry.index.plugins = [
+      registryEntry(
+        "docker",
+        [{ version: "1.0.0" }],
+        [{ version: "1.1.0-beta.1" }],
+      ),
+    ];
+    await boot();
+
+    expect((await manage.listRegistry()).plugins[0]).toMatchObject({
+      channel: "stable",
+      latestVersion: "1.0.0",
+      latestBeta: "1.1.0-beta.1",
+      updateAvailable: false,
+    });
+    expect(
+      (await manage.listRegistry()).plugins[0].versions.map((v) => [
+        v.version,
+        v.prerelease,
+      ]),
+    ).toEqual([
+      ["1.1.0-beta.1", true],
+      ["1.0.0", false],
+    ]);
+
+    await manage.setPluginOptions("docker", { channel: "beta" });
+    expect((await manage.listRegistry()).plugins[0]).toMatchObject({
+      channel: "beta",
+      latestVersion: "1.1.0-beta.1",
+      updateAvailable: true,
+    });
+  });
+
+  it("keeps an installed beta after going back to stable", async () => {
+    createFixturePlugin({
+      id: "docker",
+      root: bundled,
+      manifestOverrides: { version: "1.1.0-beta.1" },
+    });
+    registry.index.plugins = [
+      registryEntry(
+        "docker",
+        [{ version: "1.0.0" }],
+        [{ version: "1.1.0-beta.1" }],
+      ),
+    ];
+    await boot();
+
+    expect((await manage.listRegistry()).plugins[0]).toMatchObject({
+      channel: "stable",
+      installedVersion: "1.1.0-beta.1",
+      updateAvailable: false,
+    });
+    const result = await manage.updateAllPlugins({ userId: "admin" });
+    expect(result.updated).toEqual([]);
+    expect(registry.download).not.toHaveBeenCalled();
+
+    registry.index.plugins = [
+      registryEntry("docker", [{ version: "1.1.0" }, { version: "1.0.0" }]),
+    ];
+    expect((await manage.listRegistry()).plugins[0]).toMatchObject({
+      latestVersion: "1.1.0",
+      updateAvailable: true,
+    });
+  });
+
+  it("installs the newest beta when asked to follow betas", async () => {
+    registry.index.plugins = [
+      registryEntry(
+        "notes",
+        [{ version: "1.0.0" }],
+        [{ version: "1.1.0-beta.2" }],
+      ),
+    ];
+    registry.download.mockImplementation(() =>
+      stageArtifact("notes", { version: "1.1.0-beta.2" }),
+    );
+    await boot();
+
+    const result = await manage.installPlugin("notes", {
+      userId: "admin",
+      channel: "beta",
+      capabilities: DEFAULT_CAPS,
+    });
+    expect(result.version).toBe("1.1.0-beta.2");
+    expect(db.rows.get("notes")).toMatchObject({
+      channel: "beta",
+      pinnedVersion: null,
+    });
+  });
+
+  it("moves every installed plugin to one channel", async () => {
+    createFixturePlugin({ id: "docker", root: bundled });
+    createFixturePlugin({ id: "notes", root: bundled });
+    await boot();
+
+    expect((await manage.setAllPluginChannels("beta")).changed.sort()).toEqual([
+      "docker",
+      "notes",
+    ]);
+    expect(db.rows.get("docker")?.channel).toBe("beta");
+    expect((await manage.setAllPluginChannels("beta")).changed).toEqual([]);
   });
 });
 

@@ -13,6 +13,7 @@ import {
 import {
   Bug,
   Clock,
+  FlaskConical,
   Folder,
   Globe,
   KeyRound,
@@ -43,7 +44,8 @@ import {
   type PaletteItemDef,
 } from "./palette-registry";
 import { activityTarget } from "@/lib/activity-types";
-import { reportCoreIssueUrl } from "@/lib/issue-url";
+import { reportBetaFeedbackUrl, reportCoreIssueUrl } from "@/lib/issue-url";
+import { isPrerelease } from "@/plugins/plugin-model";
 import { shell } from "@/plugin-host/shell-bridge";
 import { getLiveHostStatus } from "@/lib/ServerStatusContext";
 
@@ -234,6 +236,16 @@ export function CommandPalette({
       icon: Bug,
       url: reportCoreIssueUrl(import.meta.env.VITE_APP_VERSION || undefined),
     },
+    ...(isPrerelease(import.meta.env.VITE_APP_VERSION)
+      ? [
+          {
+            id: "link-beta-feedback",
+            label: t("newUi.sidebar.userProfile.sendBetaFeedback"),
+            icon: FlaskConical,
+            url: reportBetaFeedbackUrl(import.meta.env.VITE_APP_VERSION),
+          },
+        ]
+      : []),
   ].filter((link) => matches(link.label));
 
   const rowClass = "group gap-2 rounded-none";

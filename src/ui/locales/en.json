@@ -1688,10 +1688,6 @@
         "twoFaOn": "On",
         "twoFaOff": "Off",
         "versionLabel": "Version",
-        "betaProgramTitle": "Beta Program",
-        "betaProgramDescription": "Try upcoming features early with the weekly rolling :beta Docker tag. Unstable, not for production.",
-        "betaProgramFeedback": "Found a bug? Report it here.",
-        "betaProgramLearnMore": "Learn More",
         "cliTitle": "Termix CLI",
         "cliDescription": "Open terminals, run commands and move files from your own shell.",
         "cliLearnMore": "Learn More",
@@ -1826,7 +1822,13 @@
         "linkedProfileDescription": "This device uses your account on the server and keeps a copy of your data, so it still works offline.",
         "manageSync": "Manage sync",
         "setUpSync": "Link to a server",
-        "settingsTabsAndShortcuts": "Tabs and Shortcuts"
+        "settingsTabsAndShortcuts": "Tabs and Shortcuts",
+        "onBetaTitle": "You are on a beta",
+        "onBetaDescription": "Thanks for testing. Tell us what breaks.",
+        "tryBetaTitle": "Try new features early",
+        "tryBetaDescription": "Join the beta program in Updates.",
+        "sendBetaFeedback": "Send beta feedback",
+        "openUpdates": "Updates"
       }
     }
   },
@@ -2168,7 +2170,22 @@
       "reportIssue": "Report an issue",
       "reportTo": "Report to {{author}}",
       "requestFeature": "Request a feature",
-      "openSettings": "Open its settings"
+      "openSettings": "Open its settings",
+      "beta": {
+        "badge": "Beta",
+        "badgeHint": "This is a beta version. It can have bugs.",
+        "try": "Try beta {{version}}",
+        "confirmTitle": "Use betas for {{name}}?",
+        "confirmBody": "Betas get new features and fixes first, but they can have bugs. You can switch back to stable at any time.",
+        "confirmInstall": "Install {{version}}",
+        "confirmSwitch": "Use betas",
+        "leftWhileOnBeta": "{{name}} stays on {{version}} until a stable release is newer.",
+        "channel": "Beta versions",
+        "channelHint": "Get new versions early. They can have bugs.",
+        "waitingForStable": "Back on stable. Stays on {{version}} until a stable release is newer.",
+        "versionLabel": "{{version}} (beta)",
+        "sendFeedback": "Send beta feedback"
+      }
     }
   },
   "settings": {
@@ -2207,7 +2224,39 @@
     "instanceSettings": "Server settings",
     "nothingHere": "Nothing to set here.",
     "searchPage": "Search this page",
-    "noPageMatches": "Nothing on this page matches."
+    "noPageMatches": "Nothing on this page matches.",
+    "updates": {
+      "title": "Updates",
+      "betaProgram": "Beta program",
+      "betaIntro": "Betas are early builds of the next Termix version. They come out on Tuesdays and Fridays when there is something new to try. They can have bugs, and your feedback is what makes the stable release better.",
+      "termixBetas": "Termix betas",
+      "termixBetasHint": "Tell me about new betas, not only stable releases.",
+      "runningBetaBuild": "You are running a beta build. To leave, switch back to a stable image or installer.",
+      "howToInstall": "How to get the beta",
+      "desktopInstall": "Download the beta installer and install it over this one.",
+      "downloadBeta": "Download {{version}}",
+      "dockerInstall": "Change your image to the beta tag and restart the container:",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyFailed": "Could not copy",
+      "learnMore": "Learn more about betas",
+      "feedback": "Feedback",
+      "feedbackHint": "Found a bug or have an idea? It goes straight to the developers with your version filled in.",
+      "sendFeedback": "Send beta feedback",
+      "releases": "Releases",
+      "thisVersion": "This version",
+      "newestStable": "Newest stable",
+      "newestBeta": "Newest beta",
+      "noRelease": "None right now",
+      "pluginBetas": "Plugin betas",
+      "pluginBetasIntro": "Each plugin can use betas on its own. To try one, open it and press Try beta.",
+      "openPlugins": "Open Plugins",
+      "waitingForStable": "Back on stable. Stays on {{version}} until a stable release is newer.",
+      "backToStable": "Back to stable",
+      "allPluginsBeta": "Use betas for all plugins",
+      "allPluginsStable": "All plugins back to stable",
+      "saveFailed": "Could not save the change"
+    }
   },
   "managerCard": {
     "refresh": "Refresh",

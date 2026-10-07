@@ -87,15 +87,29 @@ export function describeEnvironment(
 }
 
 /** A bug report on the Termix core repo. */
-export function reportCoreIssueUrl(
-  termixVersion?: string,
-  template: "bug_report.yml" | "beta_feedback.yml" = "bug_report.yml",
-): string {
+export function reportCoreIssueUrl(termixVersion?: string): string {
   return buildIssueUrl(CORE_REPO_URL, {
-    template,
+    template: "bug_report.yml",
     fields: {
       "termix-version": termixVersion,
       environment: describeEnvironment(),
+    },
+  });
+}
+
+/** Beta feedback on the core repo, listing every plugin running a beta. */
+export function reportBetaFeedbackUrl(
+  termixVersion?: string,
+  betaPlugins: Array<{ id: string; version: string }> = [],
+): string {
+  return buildIssueUrl(CORE_REPO_URL, {
+    template: "beta_feedback.yml",
+    fields: {
+      "termix-version": termixVersion,
+      environment: describeEnvironment(),
+      "beta-plugins": betaPlugins
+        .map((plugin) => `${plugin.id} ${plugin.version}`)
+        .join("\n"),
     },
   });
 }

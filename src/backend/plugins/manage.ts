@@ -32,10 +32,14 @@ import {
   OFFICIAL_REGISTRY_ID,
   downloadRelease,
   fetchRegistryIndex,
+  channelReleases,
   findRelease,
   getDownloadsDir,
   getRegistryStatus,
   isApiCompatible,
+  latestOnChannel,
+  parsePluginChannel,
+  type PluginChannel,
   type RegistryIndex,
   type RegistryVersion,
 } from "./registry-index.js";
@@ -192,8 +196,8 @@ export async function isLinkedDesktop(): Promise<boolean> {
   return Boolean(await getLink());
 }
 
-function latestCompatible(versions: RegistryVersion[]): RegistryVersion | null {
-  return versions.find((entry) => isApiCompatible(entry.api)) ?? null;
+function channelOf(record: { channel?: string | null } | null | undefined) {
+  return parsePluginChannel(record?.channel) ?? "stable";
 }
 
 function addedCapabilities(
@@ -220,6 +224,7 @@ export interface RegistryListing {
     features: string[];
     versions: Array<{
       version: string;
+      prerelease: boolean;
       compatible: boolean;
       capabilities: string[];
       publishedAt?: string;
@@ -227,7 +232,11 @@ export interface RegistryListing {
       notes?: ReleaseNotes;
       size: number;
     }>;
+    /** Newest release on the plugin's channel. */
     latestVersion: string | null;
+    /** Newest compatible beta, when one is newer than stable. */
+    latestBeta: string | null;
+    channel: PluginChannel;
     installed: boolean;
     installedVersion: string | null;
     updateAvailable: boolean;
@@ -259,7 +268,10 @@ export async function listRegistry(
     plugins: index.plugins.map((plugin) => {
       const record = records.get(plugin.id);
       const live = loader.get(plugin.id);
-      const latest = latestCompatible(plugin.versions);
+      const channel = channelOf(record);
+      const latest = latestOnChannel(plugin, channel);
+      const latestBeta =
+        plugin.prereleases.find((entry) => isApiCompatible(entry.api)) ?? null;
       const installedVersion =
         live?.manifest.version ?? record?.version ?? null;
       const updateAvailable = Boolean(
@@ -278,8 +290,9 @@ export async function listRegistry(
         icon: plugin.icon,
         videoId: plugin.videoId,
         features: plugin.features,
-        versions: plugin.versions.map((entry) => ({
+        versions: channelReleases(plugin, "beta").map((entry) => ({
           version: entry.version,
+          prerelease: Boolean(entry.prerelease),
           compatible: isApiCompatible(entry.api),
           capabilities: entry.capabilities,
           publishedAt: entry.publishedAt,
@@ -288,6 +301,8 @@ export async function listRegistry(
           size: entry.size,
         })),
         latestVersion: latest?.version ?? null,
+        latestBeta: latestBeta?.version ?? null,
+        channel,
         installed: Boolean(record),
         installedVersion: record ? installedVersion : null,
         updateAvailable: Boolean(record) && updateAvailable,
@@ -501,7 +516,12 @@ function dependencyChain(pluginId: string): {
       plugin.manifest.dependencies ?? {},
     )) {
       const found = loader.get(dependency);
-      if (found && !semver.satisfies(found.manifest.version, range)) {
+      if (
+        found &&
+        !semver.satisfies(found.manifest.version, range, {
+          includePrerelease: true,
+        })
+      ) {
         missing.push(`${dependency}@${range}`);
         continue;
       }
@@ -604,6 +624,8 @@ export async function setPluginStateUnlocked(
 
 export interface InstallOptions {
   version?: string;
+  /** Install only: the channel to follow from the start. */
+  channel?: PluginChannel;
   userId: string | null;
   acceptCapabilities?: boolean;
   /**
@@ -637,6 +659,7 @@ function assertConsent(
 async function requireRelease(
   pluginId: string,
   version: string | undefined,
+  channel: PluginChannel,
 ): Promise<{
   index: RegistryIndex;
   release: RegistryVersion;
@@ -654,7 +677,7 @@ async function requireRelease(
       "REGISTRY_UNREACHABLE",
     );
   }
-  const found = findRelease(index, pluginId, version);
+  const found = findRelease(index, pluginId, version, channel);
   if (!found) {
     throw new PluginManageError(
       version
@@ -674,7 +697,7 @@ async function requireRelease(
   return {
     index,
     release: found.release,
-    latest: latestCompatible(found.plugin.versions),
+    latest: latestOnChannel(found.plugin, channel),
   };
 }
 
@@ -711,7 +734,12 @@ export function installPlugin(
       );
     }
 
-    const { release, latest } = await requireRelease(pluginId, options.version);
+    const channel = options.channel ?? "stable";
+    const { release, latest } = await requireRelease(
+      pluginId,
+      options.version,
+      channel,
+    );
     assertConsent(options.capabilities, release.capabilities);
     const pin = pinFor(release, latest, options.version);
     await applyPin(pluginId, pin);
@@ -732,6 +760,7 @@ export function installPlugin(
       registryId: OFFICIAL_REGISTRY_ID,
       tier: plugin.source === "bundled" ? "bundled" : "official",
       pinnedVersion: pin,
+      channel,
     });
     await grantDeclared(plugin, options.userId);
 
@@ -775,7 +804,11 @@ async function updateUnlocked(
     throw new PluginManageError("Plugin not found", 404, "NOT_FOUND");
   }
 
-  const { release, latest } = await requireRelease(pluginId, options.version);
+  const { release, latest } = await requireRelease(
+    pluginId,
+    options.version,
+    channelOf(record),
+  );
   if (release.version === live.manifest.version) {
     throw new PluginManageError(
       `${pluginId} ${release.version} is already installed`,
@@ -951,8 +984,12 @@ export async function uninstallPluginUnlocked(
 
 export function setPluginOptions(
   pluginId: string,
-  options: { autoUpdate?: boolean; pinned?: boolean },
-): Promise<{ autoUpdate: boolean; pinnedVersion: string | null }> {
+  options: { autoUpdate?: boolean; pinned?: boolean; channel?: PluginChannel },
+): Promise<{
+  autoUpdate: boolean;
+  pinnedVersion: string | null;
+  channel: PluginChannel;
+}> {
   return serialized(async () => {
     const { createCurrentPluginRepository } = await repos();
     const repository = createCurrentPluginRepository();
@@ -970,12 +1007,34 @@ export function setPluginOptions(
     const updated = await repository.update(pluginId, {
       autoUpdate: options.autoUpdate,
       pinnedVersion,
+      channel: options.channel,
     });
     await applyPin(pluginId, pinnedVersion);
     return {
       autoUpdate: Boolean(updated?.autoUpdate),
       pinnedVersion: updated?.pinnedVersion ?? null,
+      channel: channelOf(updated),
     };
+  });
+}
+
+/**
+ * Moves every installed plugin to one channel. Going back to stable never
+ * downgrades: a plugin on a beta stays there until a stable release passes it.
+ */
+export function setAllPluginChannels(
+  channel: PluginChannel,
+): Promise<{ changed: string[] }> {
+  return serialized(async () => {
+    const { createCurrentPluginRepository } = await repos();
+    const repository = createCurrentPluginRepository();
+    const changed: string[] = [];
+    for (const record of await repository.listAll()) {
+      if (channelOf(record) === channel) continue;
+      await repository.update(record.id, { channel });
+      changed.push(record.id);
+    }
+    return { changed };
   });
 }
 

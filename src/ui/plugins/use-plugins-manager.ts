@@ -12,6 +12,7 @@ import {
   installUploadedPlugin,
   previewPluginState,
   retryPlugin,
+  setAllPluginChannels,
   setPluginOptions,
   setPluginState,
   uninstallPlugin,
@@ -19,6 +20,7 @@ import {
   updatePlugin,
   uploadPlugin,
   type DeveloperModeState,
+  type PluginChannel,
   type PluginSummary,
   type RegistryListing,
 } from "@/api/plugins-api";
@@ -484,13 +486,66 @@ export function usePluginsManager() {
   const setOptions = useCallback(
     (
       plugin: PluginEntry,
-      options: { autoUpdate?: boolean; pinned?: boolean },
+      options: {
+        autoUpdate?: boolean;
+        pinned?: boolean;
+        channel?: PluginChannel;
+      },
     ) =>
       run(plugin.id, async () => {
         try {
           await setPluginOptions(plugin.id, options);
         } catch (error) {
           failToast(error, "plugins.manager.errors.options", plugin.name);
+        }
+      }),
+    [run, failToast],
+  );
+
+  /** Moves a plugin to betas and installs the newest one. */
+  const tryBeta = useCallback(
+    async (plugin: PluginEntry) => {
+      const version = plugin.latestBeta;
+      const ok = await confirm({
+        title: t("plugins.manager.beta.confirmTitle", { name: plugin.name }),
+        description: t("plugins.manager.beta.confirmBody"),
+        confirmLabel: version
+          ? t("plugins.manager.beta.confirmInstall", { version })
+          : t("plugins.manager.beta.confirmSwitch"),
+        destructive: false,
+      });
+      if (!ok) return;
+      await setOptions(plugin, { channel: "beta", pinned: false });
+      if (version && version !== plugin.version) {
+        await requestUpdate({ ...plugin, pinnedVersion: null }, version);
+      }
+    },
+    [confirm, t, setOptions, requestUpdate],
+  );
+
+  /** Back to stable. An installed beta stays until stable passes it. */
+  const leaveBeta = useCallback(
+    async (plugin: PluginEntry) => {
+      await setOptions(plugin, { channel: "stable" });
+      if (plugin.isBeta) {
+        toast.info(
+          t("plugins.manager.beta.leftWhileOnBeta", {
+            name: plugin.name,
+            version: plugin.version,
+          }),
+        );
+      }
+    },
+    [setOptions, t],
+  );
+
+  const setAllChannels = useCallback(
+    (channel: PluginChannel) =>
+      run("*", async () => {
+        try {
+          await setAllPluginChannels(channel);
+        } catch (error) {
+          failToast(error, "plugins.manager.errors.options", "");
         }
       }),
     [run, failToast],
@@ -545,6 +600,9 @@ export function usePluginsManager() {
     uninstall,
     removeData,
     setOptions,
+    tryBeta,
+    leaveBeta,
+    setAllChannels,
     updateAll,
   };
 }

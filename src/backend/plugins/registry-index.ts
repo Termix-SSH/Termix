@@ -46,6 +46,14 @@ export interface RegistryVersion {
   /** This version's CHANGELOG.md section, as Markdown. */
   notes?: string;
   publishedAt?: string;
+  /** Listed under the plugin's prereleases: a beta. */
+  prerelease?: boolean;
+}
+
+export type PluginChannel = "stable" | "beta";
+
+export function parsePluginChannel(value: unknown): PluginChannel | null {
+  return value === "stable" || value === "beta" ? value : null;
 }
 
 export interface RegistryPlugin {
@@ -59,8 +67,13 @@ export interface RegistryPlugin {
   /** Only ever a YouTube video id, never a link. */
   videoId?: string;
   features: string[];
-  /** Newest first. */
+  /** Stable releases, newest first. */
   versions: RegistryVersion[];
+  /**
+   * Betas newer than the newest stable release, newest first. A separate
+   * list so cores from before channels never offer one.
+   */
+  prereleases: RegistryVersion[];
 }
 
 export interface RegistryIndex {
@@ -126,11 +139,18 @@ export function parseRegistryIndex(raw: unknown): RegistryIndex {
     const entry = item as Record<string, unknown>;
     const id = asString(entry.id);
     if (!id || !ID_PATTERN.test(id)) continue;
-    const versions = (Array.isArray(entry.versions) ? entry.versions : [])
-      .map(parseVersion)
-      .filter((v): v is RegistryVersion => v !== null)
-      .sort((a, b) => semver.rcompare(a.version, b.version));
-    if (versions.length === 0) continue;
+    const parseList = (list: unknown) =>
+      (Array.isArray(list) ? list : [])
+        .map(parseVersion)
+        .filter((v): v is RegistryVersion => v !== null)
+        .sort((a, b) => semver.rcompare(a.version, b.version));
+    const versions = parseList(entry.versions).filter(
+      (v) => !semver.prerelease(v.version),
+    );
+    const prereleases = parseList(entry.prereleases)
+      .filter((v) => semver.prerelease(v.version))
+      .map((v) => ({ ...v, prerelease: true }));
+    if (versions.length === 0 && prereleases.length === 0) continue;
     plugins.push({
       id,
       name: asString(entry.name) ?? id,
@@ -142,6 +162,7 @@ export function parseRegistryIndex(raw: unknown): RegistryIndex {
       videoId: youtubeVideoId(entry.video) ?? undefined,
       features: pluginFeatures(entry.features),
       versions,
+      prereleases,
     });
   }
 
@@ -315,16 +336,40 @@ export function resetRegistryCache(): void {
   lastError = null;
 }
 
+/** Every release a channel may install, newest first. */
+export function channelReleases(
+  plugin: RegistryPlugin,
+  channel: PluginChannel,
+): RegistryVersion[] {
+  if (channel === "stable") return plugin.versions;
+  return [...plugin.prereleases, ...plugin.versions].sort((a, b) =>
+    semver.rcompare(a.version, b.version),
+  );
+}
+
+/** The newest release on a channel this build can run. */
+export function latestOnChannel(
+  plugin: RegistryPlugin,
+  channel: PluginChannel,
+): RegistryVersion | null {
+  return (
+    channelReleases(plugin, channel).find((entry) =>
+      isApiCompatible(entry.api),
+    ) ?? null
+  );
+}
+
 export function findRelease(
   index: RegistryIndex,
   pluginId: string,
   version?: string,
+  channel: PluginChannel = "stable",
 ): { plugin: RegistryPlugin; release: RegistryVersion } | null {
   const plugin = index.plugins.find((entry) => entry.id === pluginId);
   if (!plugin) return null;
   const release = version
-    ? plugin.versions.find((entry) => entry.version === version)
-    : plugin.versions.find((entry) => isApiCompatible(entry.api));
+    ? channelReleases(plugin, "beta").find((entry) => entry.version === version)
+    : latestOnChannel(plugin, channel);
   if (!release) return null;
   return { plugin, release };
 }

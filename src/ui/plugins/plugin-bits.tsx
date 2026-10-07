@@ -88,6 +88,18 @@ export function UnverifiedBadge() {
   );
 }
 
+export function BetaBadge() {
+  const { t } = useTranslation();
+  return (
+    <span
+      className="shrink-0 border border-accent-brand/40 bg-accent-brand/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent-brand"
+      title={t("plugins.manager.beta.badgeHint")}
+    >
+      {t("plugins.manager.beta.badge")}
+    </span>
+  );
+}
+
 /** Active installs when the registry has them, release downloads otherwise. */
 export function InstallCountFact({
   count,

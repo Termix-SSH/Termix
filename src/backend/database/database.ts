@@ -47,11 +47,19 @@ import "dotenv/config";
 import { databaseLogger, apiLogger } from "../utils/logger.js";
 import { getLocalVersion } from "../utils/app-version.js";
 import {
-  compareSemver,
   fetchGitHubAPI,
+  fetchLatestRelease,
+  isPrereleaseVersion,
   REPO_NAME,
   REPO_OWNER,
+  updateStatus,
 } from "../utils/latest-release.js";
+import {
+  getCoreChannel,
+  getStoredCoreChannel,
+  parseChannel,
+  setCoreChannel,
+} from "../updates/update-channel.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { DataCrypto } from "../utils/data-crypto.js";
 import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
@@ -242,7 +250,7 @@ app.get("/.well-known/acme-challenge/:token", acmeChallengeHandler);
  * /version:
  *   get:
  *     summary: Get version information
- *     description: Returns the running instance's version in localVersion. When the update check succeeds, remoteVersion is the latest GitHub release and version is its legacy alias, not the instance's version. Remote fields are omitted when the check is disabled, fails, or returns an unparseable release tag.
+ *     description: Returns the running instance's version in localVersion. When the update check succeeds, remoteVersion is the newest GitHub release on the instance's update channel and version is its legacy alias, not the instance's version. Remote fields are omitted when the check is disabled, fails, or returns an unparseable release tag.
  *     tags:
  *       - General
  *     parameters:
@@ -271,9 +279,13 @@ app.get("/.well-known/acme-challenge/:token", acmeChallengeHandler);
  *                   type: string
  *                   description: Update comparison result, update_check_disabled when explicitly disabled, or unknown when the remote lookup fails or the release tag cannot be parsed.
  *                   enum: [up_to_date, beta, requires_update, update_check_disabled, unknown]
+ *                 channel:
+ *                   type: string
+ *                   enum: [stable, beta]
+ *                   description: The update channel the check used. Always beta on a beta build.
  *                 remoteVersion:
  *                   type: string
- *                   description: Latest GitHub release version. Present only when the update check succeeds.
+ *                   description: Newest release version on the channel. Present only when the update check succeeds.
  *                   example: 2.8.0
  *                 version:
  *                   type: string
@@ -296,12 +308,8 @@ app.get("/.well-known/acme-challenge/:token", acmeChallengeHandler);
  *                     html_url:
  *                       type: string
  *                       format: uri
- *                 cached:
- *                   type: boolean
- *                   description: Whether the release lookup used a cached response. Present only when the update check succeeds.
- *                 cache_age:
- *                   type: number
- *                   description: Age of the cached response in milliseconds, when available.
+ *                     prerelease:
+ *                       type: boolean
  *       404:
  *         description: Local version not set.
  */
@@ -320,53 +328,152 @@ app.get("/version", authenticateJWT, async (req, res) => {
   }
 
   try {
-    const cacheKey = "latest_release";
-    const releaseData = await fetchGitHubAPI<GitHubRelease>(
-      `/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`,
-      cacheKey,
-    );
+    const channel = await getCoreChannel(localVersion);
+    const latest = await fetchLatestRelease(channel);
 
-    const rawTag = releaseData.data.tag_name || releaseData.data.name || "";
-    const remoteVersionMatch = rawTag.match(/(\d+\.\d+(\.\d+)?)/);
-    const remoteVersion = remoteVersionMatch ? remoteVersionMatch[1] : null;
-
-    if (!remoteVersion) {
+    if (!latest) {
       databaseLogger.warn("Remote version not found in GitHub response", {
         operation: "version_check",
-        rawTag,
+        channel,
       });
-      return res.json({ localVersion, status: "unknown" });
+      return res.json({ localVersion, status: "unknown", channel });
     }
 
-    const versionComparison = compareSemver(localVersion, remoteVersion);
-    const status =
-      versionComparison === null || versionComparison === 0
-        ? "up_to_date"
-        : versionComparison > 0
-          ? "beta"
-          : "requires_update";
-
-    const response = {
-      status,
-      localVersion: localVersion,
-      version: remoteVersion,
-      remoteVersion: remoteVersion,
+    res.json({
+      status: updateStatus(localVersion, latest.version),
+      channel,
+      localVersion,
+      version: latest.version,
+      remoteVersion: latest.version,
       latest_release: {
-        tag_name: releaseData.data.tag_name,
-        name: releaseData.data.name,
-        published_at: releaseData.data.published_at,
-        html_url: releaseData.data.html_url,
+        tag_name: latest.tagName,
+        name: latest.name,
+        published_at: latest.publishedAt,
+        html_url: latest.url,
+        prerelease: latest.prerelease,
       },
-      cached: releaseData.cached,
-      cache_age: releaseData.cache_age,
-    };
-
-    res.json(response);
+    });
   } catch (err) {
     databaseLogger.error("Version check failed", err, {
       operation: "version_check",
     });
     res.json({ localVersion, status: "unknown" });
+  }
+});
+
+/**
+ * @openapi
+ * /version/channel:
+ *   get:
+ *     summary: Get the update channel
+ *     description: Which Termix releases this instance is told about. A beta build always reports beta; stored is the admin's choice for stable builds.
+ *     tags:
+ *       - General
+ *     responses:
+ *       200:
+ *         description: The channel.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 channel:
+ *                   type: string
+ *                   enum: [stable, beta]
+ *                 stored:
+ *                   type: string
+ *                   enum: [stable, beta]
+ *                 runningBeta:
+ *                   type: boolean
+ *   put:
+ *     summary: Set the update channel
+ *     description: Admin only. Switches which Termix releases update checks and the Updates page offer. It does not change the running build.
+ *     tags:
+ *       - General
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [channel]
+ *             properties:
+ *               channel:
+ *                 type: string
+ *                 enum: [stable, beta]
+ *     responses:
+ *       200:
+ *         description: The channel after the change.
+ *       400:
+ *         description: Not a known channel.
+ */
+app.get("/version/channel", authenticateJWT, async (_req, res) => {
+  try {
+    const localVersion = getLocalVersion();
+    res.json({
+      channel: await getCoreChannel(localVersion),
+      stored: await getStoredCoreChannel(),
+      runningBeta: isPrereleaseVersion(localVersion ?? undefined),
+    });
+  } catch (error) {
+    databaseLogger.error("Failed to read the update channel", error, {
+      operation: "update_channel",
+    });
+    res.status(500).json({ error: "Failed to read the update channel" });
+  }
+});
+
+app.put("/version/channel", requireAdmin, async (req, res) => {
+  const channel = parseChannel(req.body?.channel);
+  if (!channel) {
+    return res.status(400).json({ error: "channel must be stable or beta" });
+  }
+  try {
+    await setCoreChannel(channel);
+    const localVersion = getLocalVersion();
+    res.json({
+      channel: await getCoreChannel(localVersion),
+      stored: channel,
+      runningBeta: isPrereleaseVersion(localVersion ?? undefined),
+    });
+  } catch (error) {
+    databaseLogger.error("Failed to save the update channel", error, {
+      operation: "update_channel",
+    });
+    res.status(500).json({ error: "Failed to save the update channel" });
+  }
+});
+
+/**
+ * @openapi
+ * /version/releases:
+ *   get:
+ *     summary: Get the newest stable and beta releases
+ *     description: The newest stable Termix release and the newest beta, if one is newer than stable, for the Updates page.
+ *     tags:
+ *       - General
+ *     responses:
+ *       200:
+ *         description: The releases. Either may be null.
+ *       500:
+ *         description: GitHub could not be reached.
+ */
+app.get("/version/releases", authenticateJWT, async (_req, res) => {
+  try {
+    const [stable, newest] = await Promise.all([
+      fetchLatestRelease("stable"),
+      fetchLatestRelease("beta"),
+    ]);
+    res.json({
+      localVersion: getLocalVersion(),
+      stable,
+      beta: newest?.prerelease ? newest : null,
+    });
+  } catch (error) {
+    databaseLogger.error("Failed to read releases", error, {
+      operation: "version_releases",
+    });
+    res.status(500).json({ error: "Failed to read releases" });
   }
 });
 

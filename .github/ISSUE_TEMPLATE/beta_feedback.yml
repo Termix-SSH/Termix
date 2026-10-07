@@ -1,67 +1,37 @@
 name: Beta feedback
-description: A bug or feedback on a weekly beta build
-labels: [bug, beta]
-type: Bug
+description: A bug, rough edge or idea from a Termix beta
+labels: [beta]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for testing a beta. Betas are weekly snapshots of active development (the `:beta` Docker tag and a rolling pre-release here), so things will break sometimes.
+        Thanks for testing a beta. Short reports are fine. If you opened this from Termix, the version and setup are already filled in.
   - type: input
     id: termix-version
     attributes:
-      label: Beta build
-      description: Your image tag, or the version in Settings under About.
-      placeholder: "e.g. 26.10.0-beta.20261005"
-    validations:
-      required: true
-  - type: dropdown
-    id: regression
-    attributes:
-      label: Does this happen on the latest stable release?
-      description: Check stable too if you can.
-      options:
-        - "Not tested on stable"
-        - "Yes, it happens on stable too"
-        - "No, only on this beta"
-        - "Not applicable, this is a new beta feature"
-    validations:
-      required: true
-  - type: dropdown
-    id: platform
-    attributes:
-      label: Platform
-      description: Where do you see the problem?
-      options:
-        - "Web browser"
-        - "Desktop app (Windows)"
-        - "Desktop app (macOS)"
-        - "Desktop app (Linux)"
-        - "Mobile app (iOS)"
-        - "Mobile app (Android)"
-        - "Other"
-    validations:
-      required: true
-  - type: dropdown
-    id: install-method
-    attributes:
-      label: Server install
-      description: How is the Termix server installed?
-      options:
-        - "Docker"
-        - "Manual build"
-        - "Proxmox community script"
-        - "Desktop app (built-in server)"
-        - "Not sure"
+      label: Beta version
+      description: Shown in Settings under Updates, or your image tag.
+      placeholder: "e.g. 26.11.0-beta.2"
     validations:
       required: true
   - type: textarea
     id: what-happened
     attributes:
       label: What happened?
-      description: Describe the bug or feedback. Screenshots help a lot.
+      description: The bug, what felt off, or your idea. Screenshots help a lot.
     validations:
       required: true
+  - type: dropdown
+    id: regression
+    attributes:
+      label: Does this happen on the latest stable release?
+      options:
+        - "Not tested on stable"
+        - "Yes, it happens on stable too"
+        - "No, only on this beta"
+        - "Not a bug, just feedback"
+    validations:
+      required: false
   - type: textarea
     id: steps
     attributes:
@@ -74,10 +44,18 @@ body:
     validations:
       required: false
   - type: textarea
+    id: beta-plugins
+    attributes:
+      label: Plugins on a beta
+      description: Filled in by Termix. One plugin and version per line.
+      render: text
+    validations:
+      required: false
+  - type: textarea
     id: environment
     attributes:
       label: Environment
-      description: Browser and OS, plus anything special about your setup.
+      description: Browser or desktop app, OS, and how the server is installed.
     validations:
       required: false
   - type: textarea
@@ -88,21 +66,10 @@ body:
       render: text
     validations:
       required: false
-  - type: textarea
-    id: context
-    attributes:
-      label: Anything else?
-      description: Links, config, or anything that might help.
-    validations:
-      required: false
   - type: checkboxes
     id: checks
     attributes:
       label: Before you submit
       options:
-        - label: I searched open and closed issues and this is not a duplicate
-          required: true
-        - label: I am on the latest version, or I said which version I am on
-          required: true
-        - label: I understand beta builds are not stable
+        - label: I searched open issues and this is not a duplicate
           required: true

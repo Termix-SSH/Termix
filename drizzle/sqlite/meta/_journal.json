@@ -449,6 +449,13 @@
       "when": 1791256339684,
       "tag": "0063_plugin_pinned_version",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "6",
+      "when": 1791388887785,
+      "tag": "0064_plugin_channel",
+      "breakpoints": true
     }
   ]
 }

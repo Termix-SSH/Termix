@@ -29,6 +29,7 @@ import {
   fetchRegistryIndex,
   fetchRegistryStats,
   findRelease,
+  latestOnChannel,
   getStatsUrl,
   isApiCompatible,
   parseRegistryIndex,
@@ -185,6 +186,63 @@ describe("findRelease", () => {
     );
     expect(findRelease(index, "docker", "9.9.9")).toBeNull();
     expect(findRelease(index, "missing")).toBeNull();
+  });
+});
+
+describe("prereleases", () => {
+  const index = parseRegistryIndex({
+    plugins: [
+      {
+        id: "docker",
+        versions: [
+          version({ version: "1.1.0" }),
+          version({ version: "1.2.0-beta.1" }),
+        ],
+        prereleases: [
+          version({ version: "1.2.0-beta.1" }),
+          version({ version: "1.2.0-beta.10" }),
+          version({ version: "1.3.0" }),
+        ],
+      },
+      { id: "only-beta", prereleases: [version({ version: "0.1.0-beta.1" })] },
+    ],
+  });
+  const docker = index.plugins[0];
+
+  it("keeps betas out of the stable list and stable out of betas", () => {
+    expect(docker.versions.map((v) => v.version)).toEqual(["1.1.0"]);
+    expect(docker.prereleases.map((v) => v.version)).toEqual([
+      "1.2.0-beta.10",
+      "1.2.0-beta.1",
+    ]);
+    expect(docker.prereleases.every((v) => v.prerelease)).toBe(true);
+    expect(index.plugins[1].versions).toEqual([]);
+  });
+
+  it("picks by channel and finds a beta by exact version", () => {
+    expect(latestOnChannel(docker, "stable")?.version).toBe("1.1.0");
+    expect(latestOnChannel(docker, "beta")?.version).toBe("1.2.0-beta.10");
+    expect(findRelease(index, "docker")?.release.version).toBe("1.1.0");
+    expect(
+      findRelease(index, "docker", undefined, "beta")?.release.version,
+    ).toBe("1.2.0-beta.10");
+    expect(findRelease(index, "docker", "1.2.0-beta.1")?.release.version).toBe(
+      "1.2.0-beta.1",
+    );
+    expect(findRelease(index, "only-beta")).toBeNull();
+  });
+
+  it("prefers a newer stable over an older beta", () => {
+    const later = parseRegistryIndex({
+      plugins: [
+        {
+          id: "docker",
+          versions: [version({ version: "1.2.0" })],
+          prereleases: [version({ version: "1.2.0-beta.3" })],
+        },
+      ],
+    });
+    expect(latestOnChannel(later.plugins[0], "beta")?.version).toBe("1.2.0");
   });
 });
 

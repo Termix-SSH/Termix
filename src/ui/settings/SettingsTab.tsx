@@ -29,6 +29,7 @@ import {
   useFeatureSettings,
 } from "./FeatureSettingsSections";
 import { KeybindingsSettings } from "./KeybindingsSettings";
+import { UpdatesSettings } from "./UpdatesSettings";
 import { SettingsEmbedContext } from "./settings-embed";
 import { useSettingsPageFilter } from "./page-filter";
 import {
@@ -376,6 +377,7 @@ export function SettingsTab({
                 )}
               </SettingsEmbedContext.Provider>
               {page.id === "keybindings" && <KeybindingsSettings />}
+              {page.id === "updates" && isAdmin && <UpdatesSettings />}
               {pluginFeature && (
                 <>
                   {pluginFeature.user && (

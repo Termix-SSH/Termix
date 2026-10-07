@@ -11,6 +11,7 @@ import {
   type ChangelogRelease,
 } from "@termix-ssh/plugin-sdk/changelog";
 import type {
+  PluginChannel,
   PluginSummary,
   PluginUploadPreview,
   RegistryPluginEntry,
@@ -38,6 +39,11 @@ export interface PluginEntry {
   installed: boolean;
   version: string | null;
   latestVersion: string | null;
+  /** Newest beta, when one is newer than stable. */
+  latestBeta: string | null;
+  channel: PluginChannel;
+  /** The installed copy is a beta. */
+  isBeta: boolean;
   updateAvailable: boolean;
   addedCapabilities: string[];
   versions: RegistryPluginVersion[];
@@ -59,6 +65,26 @@ export interface PluginEntry {
 }
 
 export type PluginSource = "bundled" | "official" | "unverified";
+
+export function isPrerelease(version: string | null | undefined): boolean {
+  return Boolean(
+    version && semver.valid(version) && semver.prerelease(version),
+  );
+}
+
+/** A beta newer than what is installed, worth offering with "Try beta". */
+export function betaToTry(
+  plugin: Pick<PluginEntry, "installed" | "version" | "latestBeta" | "channel">,
+): string | null {
+  const { latestBeta, version } = plugin;
+  if (!plugin.installed || plugin.channel === "beta" || !latestBeta) {
+    return null;
+  }
+  if (!version || !semver.valid(version) || !semver.valid(latestBeta)) {
+    return null;
+  }
+  return semver.gt(latestBeta, version) ? latestBeta : null;
+}
 
 /** Where an installed copy came from, as the issue report names it. */
 export function pluginSource(summary: PluginSummary): PluginSource {
@@ -101,6 +127,9 @@ export function mergePlugins(
       installed: true,
       version: summary.version,
       latestVersion: entry?.latestVersion ?? null,
+      latestBeta: entry?.latestBeta ?? null,
+      channel: summary.channel ?? entry?.channel ?? "stable",
+      isBeta: isPrerelease(summary.version),
       updateAvailable: entry?.updateAvailable ?? false,
       addedCapabilities: entry?.addedCapabilities ?? [],
       versions: entry?.versions ?? [],
@@ -138,6 +167,9 @@ export function mergePlugins(
       installed: false,
       version: null,
       latestVersion: entry.latestVersion,
+      latestBeta: entry.latestBeta ?? null,
+      channel: "stable",
+      isBeta: false,
       updateAvailable: false,
       addedCapabilities: [],
       versions: entry.versions,
@@ -173,6 +205,9 @@ export function uploadEntry(preview: PluginUploadPreview): PluginEntry {
     installed: preview.replaces !== null,
     version: preview.replaces,
     latestVersion: preview.version,
+    latestBeta: null,
+    channel: "stable",
+    isBeta: isPrerelease(preview.replaces),
     updateAvailable: false,
     addedCapabilities: [],
     versions: [],
@@ -353,6 +388,27 @@ export function reportIssueUrl(
       "plugin-version": version,
       environment: `${describeEnvironment()}
 ${state}`,
+      logs: plugin.lastError,
+    },
+  });
+}
+
+/**
+ * Beta feedback on the plugin's own repo, through the org beta form. Null when
+ * the repository is not on GitHub.
+ */
+export function betaFeedbackUrl(
+  plugin: Pick<PluginEntry, "id" | "repository" | "version" | "lastError">,
+  termixVersion?: string,
+): string | null {
+  const repo = normalizeGitHubRepo(plugin.repository);
+  if (!repo) return null;
+  return buildIssueUrl(repo, {
+    template: "beta_feedback.yml",
+    fields: {
+      "termix-version": termixVersion,
+      "plugin-version": plugin.version,
+      environment: describeEnvironment(),
       logs: plugin.lastError,
     },
   });
