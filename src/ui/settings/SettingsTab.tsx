@@ -43,6 +43,8 @@ import {
 export interface SettingsTabProps {
   /** The page to open, from the tab's data. */
   section?: string;
+  /** Changes on every open request, so asking for the same page again still goes there. */
+  sectionAt?: string | number;
   /** An element id on that page to scroll to, as "id@nonce". */
   reveal?: string;
   username: string;
@@ -86,6 +88,7 @@ function revealText(container: HTMLElement, needle: string): boolean {
 /** Everything that configures the app, one page at a time. */
 export function SettingsTab({
   section,
+  sectionAt,
   reveal,
   username,
   isAdmin,
@@ -141,7 +144,7 @@ export function SettingsTab({
   const [current, setCurrent] = useState(section ?? "account");
   useEffect(() => {
     if (section) setCurrent(section);
-  }, [section]);
+  }, [section, sectionAt]);
 
   // The page renders lazily, so the target may take a moment to appear.
   useEffect(() => {

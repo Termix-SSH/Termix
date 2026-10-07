@@ -227,7 +227,7 @@ function noop() {}
 export interface TabRenderContext {
   shell: TabShellCallbacks;
   /** What the Settings tab needs from the shell. */
-  settings?: Omit<SettingsTabProps, "section">;
+  settings?: Omit<SettingsTabProps, "section" | "sectionAt">;
   /** The terminal a panel shown as a tab sends commands to. */
   panelTargetTab?: Tab;
   isVisible?: boolean;
@@ -264,6 +264,12 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
               section={
                 typeof tab.data?.section === "string"
                   ? tab.data.section
+                  : undefined
+              }
+              sectionAt={
+                typeof tab.data?.revealAt === "number" ||
+                typeof tab.data?.revealAt === "string"
+                  ? tab.data.revealAt
                   : undefined
               }
               reveal={

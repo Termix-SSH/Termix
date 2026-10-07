@@ -19,3 +19,24 @@ export function isFieldShown(
 export function hasVisibleFields(fields: PluginSettingsField[]): boolean {
   return fields.some((field) => !field.hidden);
 }
+
+/** Whether Settings lists a page for this plugin, by the same rule it uses. */
+export function hasSettingsPage(
+  plugin: {
+    enabled: boolean;
+    contributes?: {
+      settings?: {
+        user?: PluginSettingsField[];
+        admin?: PluginSettingsField[];
+      };
+    } | null;
+  },
+  isAdmin: boolean,
+): boolean {
+  const settings = plugin.contributes?.settings;
+  return (
+    plugin.enabled &&
+    (hasVisibleFields(settings?.user ?? []) ||
+      (isAdmin && hasVisibleFields(settings?.admin ?? [])))
+  );
+}

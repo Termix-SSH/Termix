@@ -1686,6 +1686,10 @@ export function AppShell({
           tabLabel,
         );
       }
+      // Asking for a page again still goes there after the user moved away
+      if (type === "settings" && data?.section && data.revealAt === undefined) {
+        data = { ...data, revealAt: Date.now() };
+      }
       const id = type;
       const singletonLabels: Partial<Record<TabType, string>> = {
         "host-manager": t("nav.manage"),

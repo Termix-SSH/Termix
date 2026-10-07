@@ -37,6 +37,7 @@ import {
   type PluginEntry,
 } from "./plugin-model";
 import { openPluginSettings } from "./open-plugins";
+import { hasSettingsPage } from "@/settings/settings-fields-util";
 import { PluginReleaseNotes, PluginVideo } from "./PluginReleaseNotes";
 import type { PluginsManager } from "./use-plugins-manager";
 
@@ -67,11 +68,10 @@ export function PluginDetail({
   }, [plugin.version, plugin.latestVersion]);
 
   const contributions = describeContributions(plugin.contributes);
-  const settings = plugin.contributes?.settings as
-    { admin?: unknown[]; user?: unknown[] } | undefined;
+  // Only people who can manage plugins get here, and they see admin settings
   const hasSettings =
     plugin.installed &&
-    ((settings?.admin?.length ?? 0) > 0 || (settings?.user?.length ?? 0) > 0);
+    hasSettingsPage(plugin as Parameters<typeof hasSettingsPage>[0], true);
   const issueUrl = reportIssueUrl(
     plugin,
     import.meta.env.VITE_APP_VERSION || undefined,
