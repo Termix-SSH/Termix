@@ -556,6 +556,30 @@ describe("ctx.auth", () => {
     ).not.toBe("browser");
   });
 
+  it("asks for a push/TOTP menu choice as text and a press-enter confirm as a push", () => {
+    const host = { id: 1, ip: "10.0.0.1", port: 22, username: "root" };
+    expect(
+      classifyKeyboardInteractive(
+        {
+          name: "",
+          instructions: "",
+          prompts: [{ prompt: "Choose [1] Push, or [2] TOTP: ", echo: true }],
+        },
+        host,
+      ),
+    ).toEqual({ kind: "input", promptIndex: 0, isPush: false });
+    expect(
+      classifyKeyboardInteractive(
+        {
+          name: "",
+          instructions: "",
+          prompts: [{ prompt: "Press enter to send push", echo: false }],
+        },
+        host,
+      ),
+    ).toEqual({ kind: "input", promptIndex: 0, isPush: true });
+  });
+
   it("refuses a keyboard-interactive handler that is not declared", () => {
     const auth = createPluginAuth({
       manifest: manifest(["auth:provide"], { keyboardInteractive: ["gate"] }),
