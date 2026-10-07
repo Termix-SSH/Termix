@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, Search, Settings as SettingsIcon } from "lucide-react";
+import {
+  Bug,
+  ChevronDown,
+  ExternalLink,
+  Search,
+  Settings as SettingsIcon,
+} from "lucide-react";
 import {
   GroupHeading,
   PANEL,
@@ -10,6 +16,7 @@ import {
 import { SurfaceScope } from "@/components/surface/surface-scope";
 import { EmptyState } from "@/components/empty-state";
 import { isElectron } from "@/lib/electron";
+import { reportCoreIssueUrl } from "@/lib/issue-url";
 import { cn } from "@/lib/utils";
 import { pluginKey } from "@/lib/plugin-i18n";
 import { PluginIcon } from "@/lib/plugin-icon";
@@ -210,7 +217,13 @@ export function SettingsTab({
       )}
       {SETTINGS_BAND_ORDER.map((band) => {
         const items = hits.filter((hit) => hit.page.band === band);
-        if (items.length === 0) return null;
+        const reportBug =
+          band === "you" &&
+          (!query.trim() ||
+            t("dashboard.reportBug")
+              .toLowerCase()
+              .includes(query.trim().toLowerCase()));
+        if (items.length === 0 && !reportBug) return null;
         return (
           <div key={band} className="flex flex-col">
             <GroupHeading
@@ -258,6 +271,22 @@ export function SettingsTab({
                 </button>
               );
             })}
+            {reportBug && (
+              <a
+                href={reportCoreIssueUrl(
+                  import.meta.env.VITE_APP_VERSION || undefined,
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center gap-2 border-l-2 border-transparent py-1.5 pl-2 pr-2 text-left text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:relative focus-visible:z-10 focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <Bug className="size-3.5 shrink-0" />
+                <span className="truncate text-xs font-medium">
+                  {t("dashboard.reportBug")}
+                </span>
+                <ExternalLink className="ml-auto size-3 shrink-0" />
+              </a>
+            )}
           </div>
         );
       })}
