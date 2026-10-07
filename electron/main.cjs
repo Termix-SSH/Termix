@@ -33,7 +33,7 @@ const { launchNativeRdp } = require("./native-rdp.cjs");
 const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
 const { quitApp } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
-const { resolveLocalShell } = require("./local-shell.cjs");
+const { resolveLocalShell, repairSpawnHelpers } = require("./local-shell.cjs");
 const { registerLocalFileHandlers } = require("./local-files.cjs");
 
 const localTerminalSessions = new Map();
@@ -3240,17 +3240,32 @@ ipcMain.handle("local-terminal-start", (event, dimensions = {}) => {
   const rows = Math.min(300, Math.max(1, Number(dimensions.rows) || 24));
   const sessionId = crypto.randomUUID();
   const shellConfig = resolveLocalShell(process.platform, dimensions.shell);
-  const child = pty.spawn(shellConfig.file, shellConfig.args, {
-    name: "xterm-256color",
-    cols,
-    rows,
-    cwd: os.homedir(),
-    env: {
-      ...process.env,
-      TERM: "xterm-256color",
-      COLORTERM: "truecolor",
-    },
-  });
+  const spawnShell = () =>
+    pty.spawn(shellConfig.file, shellConfig.args, {
+      name: "xterm-256color",
+      cols,
+      rows,
+      cwd: os.homedir(),
+      env: {
+        ...process.env,
+        TERM: "xterm-256color",
+        COLORTERM: "truecolor",
+      },
+    });
+  let child;
+  try {
+    child = spawnShell();
+  } catch (error) {
+    const ptyDir = path.dirname(require.resolve("node-pty/package.json"));
+    if (
+      !String(error?.message).includes("posix_spawnp") ||
+      repairSpawnHelpers(ptyDir) === 0
+    ) {
+      throw error;
+    }
+    logToFile("[local-terminal] restored the spawn-helper execute bit");
+    child = spawnShell();
+  }
   const ownerId = event.sender.id;
   const session = { ownerId, process: child, ready: false, buffered: "" };
   localTerminalSessions.set(sessionId, session);
