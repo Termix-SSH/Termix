@@ -19,8 +19,7 @@ permissions:
 jobs:
   publish:
     name: Publish @termix-ssh/plugin-sdk
-    # Trusted publishing only works on GitHub-hosted runners.
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
 
     env:
       NODE_OPTIONS: "--max-old-space-size=4096"
