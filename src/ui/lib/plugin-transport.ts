@@ -61,7 +61,10 @@ export function createPluginApi(pluginId: string): AxiosInstance {
         property === "options" ||
         property === "post" ||
         property === "put" ||
-        property === "patch"
+        property === "patch" ||
+        property === "postForm" ||
+        property === "putForm" ||
+        property === "patchForm"
       ) {
         return (url: string, ...rest: unknown[]) =>
           (value as (...args: unknown[]) => unknown).call(

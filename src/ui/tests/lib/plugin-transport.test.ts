@@ -1,15 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({ electron: false }));
+const axiosMethods = vi.hoisted(() => ({
+  get: vi.fn(),
+  postForm: vi.fn(),
+}));
 
 vi.mock("@/main-axios", () => ({
-  authApi: { defaults: { baseURL: "http://server:8080/" } },
+  authApi: {
+    defaults: { baseURL: "http://server:8080/" },
+    ...axiosMethods,
+  },
   createRemoteOriginApiInstance: vi.fn(),
 }));
 vi.mock("@/lib/electron", () => ({ isElectron: () => state.electron }));
 vi.mock("@/lib/device-id", () => ({ getDeviceId: () => "device-1" }));
 
-import { pluginFetch } from "@/lib/plugin-transport";
+import { createPluginApi, pluginFetch } from "@/lib/plugin-transport";
 
 const fetchMock = vi.fn(async () => new Response("ok"));
 
@@ -59,5 +66,21 @@ describe("pluginFetch", () => {
     const headers = init.headers as Headers;
     expect(headers.get("x-electron-app")).toBe("true");
     expect(headers.get("authorization")).toBe("Bearer token-1");
+  });
+});
+
+describe("createPluginApi", () => {
+  it("puts the plugin's mount point in front of request and form paths", () => {
+    const api = createPluginApi("file-manager");
+    const form = new FormData();
+    api.get("/listFiles");
+    api.postForm("uploadFileStream", form);
+    expect(axiosMethods.get).toHaveBeenCalledWith(
+      "/plugin-api/file-manager/listFiles",
+    );
+    expect(axiosMethods.postForm).toHaveBeenCalledWith(
+      "/plugin-api/file-manager/uploadFileStream",
+      form,
+    );
   });
 });
