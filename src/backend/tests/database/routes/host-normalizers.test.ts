@@ -497,3 +497,11 @@ describe("transformHostResponse terminal fields", () => {
     expect(shared.terminalConfig).toEqual({ keepaliveInterval: 9 });
   });
 });
+
+it("preserves a shared host sync identity for connect-only recipients", () => {
+  const result = sanitizeHostForRecipient(
+    { id: 9, syncId: "remote-host-41", password: "secret", notes: "private" },
+    "connect",
+  );
+  expect(result).toEqual({ id: 9, syncId: "remote-host-41" });
+});

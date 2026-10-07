@@ -288,6 +288,7 @@ export function stripSensitiveFields(
 // Connection essentials a connect-level recipient is allowed to see.
 const CONNECT_LEVEL_FIELDS = new Set([
   "id",
+  "syncId",
   "userId",
   "ownerId",
   "ownerUsername",
