@@ -93,7 +93,7 @@
     "desktop": {
       "entry": {
         "Name": "Termix",
-        "Comment": "Self-hosted SSH and remote desktop management. ",
+        "Comment": "Self-hosted, plugin-based server management.",
         "Keywords": "docker;ssh;terminal;telnet;self-hosted;rdp;file-management;vnc;ssh-tunnel;server-stats;termix",
         "StartupWMClass": "termix"
       }

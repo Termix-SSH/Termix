@@ -2,7 +2,7 @@
 <component type="desktop-application">
     <id>com.karmaa.termix</id>
     <name>Termix</name>
-    <summary>Self-hosted SSH and remote desktop management.</summary>
+    <summary>Self-hosted, plugin-based server management.</summary>
 
     <metadata_license>CC0-1.0</metadata_license>
     <project_license>Apache-2.0</project_license>
@@ -11,22 +11,14 @@
 
     <description>
         <p>
-            Termix is an open-source, forever-free, self-hosted all-in-one server management platform. It provides a
-            multi-platform solution for managing your servers and infrastructure through a single, intuitive interface.
-            Termix offers SSH terminal access, remote desktop control (RDP, VNC, Telnet), SSH tunneling capabilities,
-            remote file management, and many other tools. Termix is the perfect free and self-hosted alternative to
-            Termius available for all platforms.
+            Termix is a free, open source, self-hosted platform for managing your servers, built on plugins. The core
+            keeps your hosts, credentials, users and sharing, and plugins add the SSH terminal, remote desktop (RDP, VNC,
+            Telnet), file manager, tunnels, Docker, metrics and more. It runs on web, desktop and mobile, and it is a
+            free, self-hosted alternative to Termius.
         </p>
     </description>
 
     <launchable type="desktop-id">com.karmaa.termix.desktop</launchable>
-
-    <screenshots>
-        <screenshot type="default">
-            <image>https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/screenshots/terminal.png</image>
-            <caption>SSH Terminal Interface</caption>
-        </screenshot>
-    </screenshots>
 
     <url type="homepage">https://github.com/Termix-SSH/Termix</url>
     <url type="bugtracker">https://github.com/Termix-SSH/Support/issues</url>

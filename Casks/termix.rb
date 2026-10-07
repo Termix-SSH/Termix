@@ -4,7 +4,7 @@ cask "termix" do
 
   url "https://github.com/Termix-SSH/Termix/releases/download/v#{version}/termix_macos_universal_dmg.dmg"
   name "Termix"
-  desc "Web-based server management platform with SSH terminal, tunneling, and file editing"
+  desc "Self-hosted, plugin-based server management"
   homepage "https://github.com/Termix-SSH/Termix"
 
   livecheck do

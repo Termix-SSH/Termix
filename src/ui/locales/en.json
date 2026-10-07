@@ -1038,7 +1038,7 @@
     "empty": "No cards. Use Add below to place cards."
   },
   "auth": {
-    "tagline": "Self-hosted SSH and remote desktop management",
+    "tagline": "Self-hosted, plugin-based server management",
     "loginTitle": "Welcome back",
     "registerTitle": "Create Account",
     "forgotPassword": "Forgot Password?",
