@@ -79,6 +79,6 @@ jobs:
           " "$VERSION"
           gh release create "sdk-v$VERSION" \
             --target "${{ github.sha }}" \
-            --title "Plugin SDK $VERSION" \
+            --title "Plugin SDK v$VERSION" \
             --notes-file sdk-notes.md \
             --latest=false

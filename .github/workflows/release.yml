@@ -462,7 +462,7 @@ jobs:
           GH_TOKEN: ${{ secrets.TERMIX_PAT }}
         run: |
           TAG="${{ needs.prep.outputs.release_tag }}"
-          TITLE="v${{ needs.prep.outputs.version }}"
+          TITLE="Termix v${{ needs.prep.outputs.version }}"
           if gh release view "$TAG" --repo ${{ github.repository }} >/dev/null 2>&1; then
             gh release edit "$TAG" --repo ${{ github.repository }} --title "$TITLE" --notes-file RELEASE_BODY.md
           else
@@ -500,7 +500,7 @@ jobs:
           GH_TOKEN: ${{ secrets.TERMIX_PAT }}
         run: |
           VERSION="${{ needs.prep.outputs.version }}"
-          TITLE="Termix ${VERSION%-beta.*} Beta ${VERSION##*-beta.}"
+          TITLE="Termix v${VERSION%-beta.*} Beta ${VERSION##*-beta.}"
           TAG="${{ needs.prep.outputs.release_tag }}"
           if gh release view "$TAG" --repo ${{ github.repository }} >/dev/null 2>&1; then
             gh release edit "$TAG" --repo ${{ github.repository }} \
