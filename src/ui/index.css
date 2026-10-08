@@ -636,6 +636,11 @@ html.fs-xl {
     var(--motion-ease-enter) both;
 }
 
+.motion-fade-enter {
+  animation: motion-fade-enter var(--motion-duration-context)
+    var(--motion-ease-enter) both;
+}
+
 .motion-workspace-enter {
   animation: motion-workspace-enter var(--motion-duration-panel)
     var(--motion-ease-enter) both;
@@ -723,6 +728,12 @@ html.fs-xl {
   }
 }
 
+@keyframes motion-fade-enter {
+  from {
+    opacity: 0;
+  }
+}
+
 @keyframes motion-workspace-enter {
   from {
     opacity: 0;
@@ -783,6 +794,7 @@ html.fs-xl {
 
   .motion-panel-enter,
   .motion-context-enter,
+  .motion-fade-enter,
   .motion-workspace-enter,
   .motion-workspace-layout,
   .motion-transfer-phase,

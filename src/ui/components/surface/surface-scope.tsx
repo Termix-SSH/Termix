@@ -321,10 +321,8 @@ export function PanePrompt({
   return (
     <div
       className={cn(
-        "motion-context-enter absolute inset-0 flex items-center justify-center overflow-y-auto p-4",
-        layer === "connection"
-          ? "z-500 bg-canvas"
-          : "z-50 bg-background/80 backdrop-blur-sm",
+        "motion-fade-enter absolute inset-0 flex items-center justify-center overflow-y-auto p-4",
+        layer === "connection" ? "z-500 bg-canvas" : "z-50 bg-background/85",
       )}
       style={
         layer === "connection" && backgroundColor
@@ -340,7 +338,7 @@ export function PanePrompt({
         aria-modal="true"
         aria-labelledby={labelledBy ?? headingId}
         className={cn(
-          "my-auto flex w-full max-w-sm flex-col border bg-popover shadow-xl",
+          "motion-context-enter my-auto flex w-full max-w-sm flex-col border bg-popover shadow-xl",
           tone === "destructive" ? "border-destructive/40" : "border-border",
           className,
         )}
