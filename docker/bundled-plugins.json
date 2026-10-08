@@ -94,7 +94,7 @@
       "id": "remote-desktop",
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-Remote-Desktop/releases/download/v1.0.0/remote-desktop-1.0.0.tmxplug",
-      "sha256": "5201dc1ce4846ef9f509a4c609698e2b2970e31fbc152bb2fe5c39c72c5c6d39",
+      "sha256": "b24e957591f0a019337eb4e50f44303bb1393d32f594149d1582d27cad07e171",
       "onboarding": {
         "recommended": true
       }
