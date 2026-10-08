@@ -19,8 +19,14 @@ vi.mock("../../database/db/index.js", () => ({
 
 vi.mock("../../database/repositories/factory.js", () => ({
   createCurrentSettingsRepository: () => ({ get: async () => null }),
-  // No sessionId in our tokens, so the session branch is skipped.
-  createCurrentSessionRepository: () => ({ findById: async () => null }),
+  createCurrentSessionRepository: () => ({
+    findById: async (id: string) => ({
+      id,
+      expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+    }),
+    touch: async () => {},
+    revoke: async () => {},
+  }),
   createCurrentUserRepository: () => ({
     findById: async (userId: string) => state.users.get(userId) ?? null,
   }),
@@ -128,7 +134,9 @@ function runMiddleware(token: string, headers: Record<string, string> = {}) {
 }
 
 function token(userId: string) {
-  return jwt.sign({ userId }, jwtSecret, { expiresIn: "1h" });
+  return jwt.sign({ userId, sessionId: `s-${userId}` }, jwtSecret, {
+    expiresIn: "1h",
+  });
 }
 
 beforeEach(() => {

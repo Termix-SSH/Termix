@@ -426,8 +426,12 @@ class AuthManager {
           );
           return null;
         }
-      } else {
+      } else if (payload.pendingTOTP) {
         await this.migrateDataKeyFromPayload(payload);
+      } else {
+        // Every real login has a session row to revoke; a signed token
+        // without one did not come from this server's login.
+        return null;
       }
       return payload;
     } catch (error) {

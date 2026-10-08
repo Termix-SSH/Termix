@@ -18,7 +18,9 @@ vi.mock("../../database/db/index.js", () => ({
 
 vi.mock("../../database/repositories/factory.js", () => ({
   createCurrentSettingsRepository: () => ({ get: async () => null }),
-  createCurrentSessionRepository: () => ({}),
+  createCurrentSessionRepository: () => ({
+    findById: async (id: string) => ({ id }),
+  }),
   createCurrentUserRepository: () => ({}),
   createCurrentApiKeyRepository: () => ({}),
   createCurrentTrustedDeviceRepository: () => ({}),
@@ -58,7 +60,7 @@ function makeLegacyDataKeyWrap(
 ): Record<string, string> {
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", encryptionKey, iv);
-  cipher.setAAD(Buffer.from(`${userId}:`, "utf8"));
+  cipher.setAAD(Buffer.from(`${userId}:s1`, "utf8"));
   const data = Buffer.concat([cipher.update(dek), cipher.final()]);
   return {
     version: "v1",
@@ -85,7 +87,11 @@ describe("AuthManager token handling", () => {
   it("adopts the DEK from a legacy dataKeyWrap token on verify", async () => {
     const dek = crypto.randomBytes(32);
     const token = jwt.sign(
-      { userId: "user-1", dataKeyWrap: makeLegacyDataKeyWrap("user-1", dek) },
+      {
+        userId: "user-1",
+        sessionId: "s1",
+        dataKeyWrap: makeLegacyDataKeyWrap("user-1", dek),
+      },
       jwtSecret,
       { expiresIn: "1h" },
     );
@@ -107,6 +113,7 @@ describe("AuthManager token handling", () => {
     const token = jwt.sign(
       {
         userId: "user-1",
+        sessionId: "s1",
         dataKeyWrap: makeLegacyDataKeyWrap("user-1", crypto.randomBytes(32)),
       },
       jwtSecret,
@@ -123,13 +130,32 @@ describe("AuthManager token handling", () => {
     wrap.tag = Buffer.from(
       Buffer.from(wrap.tag, "base64url").map((b) => b ^ 0xff),
     ).toString("base64url");
-    const token = jwt.sign({ userId: "user-1", dataKeyWrap: wrap }, jwtSecret, {
-      expiresIn: "1h",
-    });
+    const token = jwt.sign(
+      { userId: "user-1", sessionId: "s1", dataKeyWrap: wrap },
+      jwtSecret,
+      {
+        expiresIn: "1h",
+      },
+    );
 
     const payload = await authManager.verifyJWTToken(token);
 
     expect(payload?.userId).toBe("user-1");
     expect(mocks.adoptRecoveredDEK).not.toHaveBeenCalled();
+  });
+
+  it("rejects a signed token with no session behind it", async () => {
+    const token = jwt.sign({ userId: "user-1" }, jwtSecret, {
+      expiresIn: "1h",
+    });
+    expect(await authManager.verifyJWTToken(token)).toBeNull();
+  });
+
+  it("still accepts the sessionless pending second-factor token", async () => {
+    const token = jwt.sign({ userId: "user-1", pendingTOTP: true }, jwtSecret, {
+      expiresIn: "10m",
+    });
+    const payload = await authManager.verifyJWTToken(token);
+    expect(payload?.pendingTOTP).toBe(true);
   });
 });
