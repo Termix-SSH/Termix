@@ -12,6 +12,21 @@
 
 import semver from "semver";
 import { isKnownCapability } from "./capabilities.js";
+import {
+  ENV_NAME_PATTERN,
+  MAX_ENV_DESCRIPTION_LENGTH,
+  pluginDocsUrl,
+  type PluginEnvVar,
+} from "./docs.js";
+
+export {
+  ENV_NAME_PATTERN,
+  MAX_ENV_DESCRIPTION_LENGTH,
+  pluginDocsPage,
+  pluginDocsUrl,
+  pluginEnvVars,
+  type PluginEnvVar,
+} from "./docs.js";
 
 /**
  * The plugin API this build implements. A minor bump adds to the API and
@@ -21,7 +36,7 @@ import { isKnownCapability } from "./capabilities.js";
  * "^1.2" needs 1.2 or later). engine.termix is checked against the core
  * version by the server.
  */
-export const PLUGIN_API_VERSION = "1.1.0";
+export const PLUGIN_API_VERSION = "1.2.0";
 
 /** The API major, the default engine.api for a new plugin. */
 export const SUPPORTED_PLUGIN_API_VERSION = String(
@@ -601,6 +616,10 @@ export interface PluginManifest {
   video?: string;
   /** Short lines listing what the plugin does, shown on its page. */
   features?: string[];
+  /** Where the plugin's docs live. https only. */
+  docs?: string;
+  /** Environment variables the plugin reads. */
+  env?: PluginEnvVar[];
   engine: PluginEngine;
   /** Catalog capability ids. */
   capabilities: string[];
@@ -654,6 +673,8 @@ const ALLOWED_TOP_LEVEL = new Set([
   "icon",
   "video",
   "features",
+  "docs",
+  "env",
   "dependencies",
   "optionalDependencies",
   "provides",
@@ -816,6 +837,12 @@ export function validateManifest(manifest: unknown): string[] {
     );
   }
   validateFeatures(m.features, errors);
+  if ("docs" in m && pluginDocsUrl(m.docs) === null) {
+    errors.push(
+      `Field "docs" must be an https URL, got: ${JSON.stringify(m.docs)}`,
+    );
+  }
+  validateEnv(m.env, errors);
   for (const field of ["backend", "frontend", "locales"] as const) {
     if (field in m && requireString(m[field], field, errors)) {
       requireRelativePath(m[field] as string, field, errors);
@@ -869,6 +896,54 @@ function validateFeatures(features: unknown, errors: string[]): void {
       errors.push(
         `Field "features[${i}]" must be a non-empty string of at most ${MAX_FEATURE_LENGTH} characters`,
       );
+    }
+  });
+}
+
+function validateEnv(env: unknown, errors: string[]): void {
+  if (env === undefined) return;
+  if (!Array.isArray(env)) {
+    errors.push('Field "env" must be an array');
+    return;
+  }
+  const seen = new Set<string>();
+  env.forEach((entry, i) => {
+    const where = `env[${i}]`;
+    if (!isPlainObject(entry)) {
+      errors.push(`Field "${where}" must be an object`);
+      return;
+    }
+    rejectUnknown(
+      entry,
+      ["name", "description", "default", "required", "secret"],
+      where,
+      errors,
+    );
+    if (typeof entry.name !== "string" || !ENV_NAME_PATTERN.test(entry.name)) {
+      errors.push(
+        `Field "${where}.name" must be an uppercase name like MY_PLUGIN_URL, got: ${JSON.stringify(entry.name)}`,
+      );
+    } else if (seen.has(entry.name)) {
+      errors.push(`Field "${where}.name" repeats ${entry.name}`);
+    } else {
+      seen.add(entry.name);
+    }
+    if (
+      typeof entry.description !== "string" ||
+      entry.description.trim().length === 0 ||
+      entry.description.length > MAX_ENV_DESCRIPTION_LENGTH
+    ) {
+      errors.push(
+        `Field "${where}.description" must be a non-empty string of at most ${MAX_ENV_DESCRIPTION_LENGTH} characters`,
+      );
+    }
+    if ("default" in entry && typeof entry.default !== "string") {
+      errors.push(`Field "${where}.default" must be a string`);
+    }
+    for (const flag of ["required", "secret"] as const) {
+      if (flag in entry && typeof entry[flag] !== "boolean") {
+        errors.push(`Field "${where}.${flag}" must be true or false`);
+      }
     }
   });
 }

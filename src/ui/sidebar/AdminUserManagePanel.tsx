@@ -55,6 +55,7 @@ import type { AdminSession, AdminUser } from "./AdminManagementSections";
 import { TabStrip } from "./HostManagerTabs";
 import { BackButton, PanelShell } from "@/components/panel-layout";
 import { useActionSlot } from "@/hooks/use-action-slot";
+import { docsUrl } from "@/lib/docs";
 
 type ApiErrorLike = {
   response?: {
@@ -338,6 +339,7 @@ export function AdminUserManagePanel({
         <PanelShell
           leading={<BackButton onClick={close} />}
           title={t("admin.manageEditorBack", { username: user.username })}
+          docs={docsUrl("users")}
           status={
             editor.kind === "host"
               ? (editor.host?.name ?? t("manage.newHost"))

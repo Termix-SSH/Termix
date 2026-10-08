@@ -3,6 +3,7 @@ import {
   getCapabilityInfo,
   type CapabilityRisk,
 } from "@termix-ssh/plugin-sdk/capabilities";
+import type { PluginEnvVar } from "@termix-ssh/plugin-sdk/docs";
 import semver from "semver";
 import {
   CHANGE_TYPES,
@@ -36,6 +37,9 @@ export interface PluginEntry {
   repository?: string;
   videoId?: string;
   features: string[];
+  /** Docs link: the installed manifest's, else the registry's. */
+  docs?: string;
+  env: PluginEnvVar[];
   installed: boolean;
   version: string | null;
   latestVersion: string | null;
@@ -124,6 +128,8 @@ export function mergePlugins(
       features: summary.features?.length
         ? summary.features
         : (entry?.features ?? []),
+      docs: summary.docs ?? entry?.docs,
+      env: summary.env ?? [],
       installed: true,
       version: summary.version,
       latestVersion: entry?.latestVersion ?? null,
@@ -164,6 +170,8 @@ export function mergePlugins(
       repository: entry.repository,
       videoId: entry.videoId,
       features: entry.features ?? [],
+      docs: entry.docs,
+      env: [],
       installed: false,
       version: null,
       latestVersion: entry.latestVersion,
@@ -201,6 +209,7 @@ export function uploadEntry(preview: PluginUploadPreview): PluginEntry {
     description: preview.description,
     author: preview.author,
     features: preview.features ?? [],
+    env: [],
     category: "",
     installed: preview.replaces !== null,
     version: preview.replaces,

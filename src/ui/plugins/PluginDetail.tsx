@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  BookOpen,
   Bug,
   Check,
   Database,
@@ -262,6 +263,40 @@ export function PluginDetail({
             </div>
           </SectionCard>
 
+          {plugin.env.length > 0 && (
+            <SectionCard title={t("plugins.manager.envVars")} icon={null}>
+              <div className="divide-y divide-border">
+                {plugin.env.map((v) => (
+                  <div
+                    key={v.name}
+                    className="flex flex-col gap-0.5 px-4 py-2.5"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <code className="font-mono text-xs font-semibold">
+                        {v.name}
+                      </code>
+                      {v.required && (
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-accent-brand">
+                          {t("plugins.manager.envRequired")}
+                        </span>
+                      )}
+                      {v.default !== undefined && (
+                        <span className="font-mono text-[10px] text-muted-foreground">
+                          {t("plugins.manager.envDefault", {
+                            value: v.default,
+                          })}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] leading-snug text-muted-foreground">
+                      {v.description}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          )}
+
           <PluginReleaseNotes plugin={plugin} />
 
           {plugin.installed && (
@@ -417,6 +452,20 @@ export function PluginDetail({
                 </div>
               </div>
             </SectionCard>
+          )}
+
+          {plugin.docs && (
+            <a
+              href={plugin.docs}
+              target="_blank"
+              rel="noreferrer"
+              className={LINK_ROW}
+            >
+              <BookOpen className="size-3.5 shrink-0" />
+              <span className="truncate">
+                {t("plugins.manager.documentation")}
+              </span>
+            </a>
           )}
 
           {hasSettings && (

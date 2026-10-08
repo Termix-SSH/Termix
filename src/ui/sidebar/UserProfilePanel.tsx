@@ -76,6 +76,7 @@ import {
   useFeatureSettings,
   type FeatureSectionId,
 } from "@/settings/FeatureSettingsSections";
+import { docsUrl } from "@/lib/docs";
 
 type UserProfileSection =
   | "account"
@@ -1345,7 +1346,7 @@ export function UserProfilePanel({
                 </span>
               </div>
               <a
-                href="https://docs.termix.site/cli"
+                href={docsUrl("cli")}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="shrink-0 ml-3 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest border border-border px-2 py-1.5 hover:bg-muted/40 transition-colors"

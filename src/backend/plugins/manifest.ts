@@ -19,10 +19,13 @@ export {
   qualifyPermission,
   youtubeVideoId,
   pluginFeatures,
+  pluginDocsUrl,
+  pluginEnvVars,
 } from "@termix-ssh/plugin-sdk/manifest";
 
 export type {
   PluginManifest,
+  PluginEnvVar,
   PluginAuthor,
   PluginEngine,
   PluginContributions,

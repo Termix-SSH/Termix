@@ -29,6 +29,7 @@ import {
   getSavedServerUrls,
   rememberServerUrl,
 } from "./saved-servers";
+import { DocsLink } from "@/components/docs-link";
 
 type Step = "server" | "signin" | "choose" | "finishing";
 
@@ -454,7 +455,9 @@ export function LinkServerDialog({
         scroll={!wide}
       >
         {!wide && (
-          <p className="text-xs text-muted-foreground">{description}</p>
+          <p className="text-xs text-muted-foreground">
+            {description} {step === "server" && <DocsLink core="desktopSync" />}
+          </p>
         )}
         {content}
       </InlineView>
@@ -474,7 +477,9 @@ export function LinkServerDialog({
       >
         <DialogHeader className={wide ? "sr-only" : undefined}>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogDescription>
+            {description} {step === "server" && <DocsLink core="desktopSync" />}
+          </DialogDescription>
         </DialogHeader>
 
         {content}

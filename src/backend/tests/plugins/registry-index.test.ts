@@ -155,6 +155,23 @@ describe("parseRegistryIndex", () => {
     expect(index.plugins[1].features).toEqual([]);
   });
 
+  it("keeps only https docs links", () => {
+    const index = parseRegistryIndex({
+      plugins: [
+        {
+          id: "docker",
+          docs: "https://docs.termix.site/plugins/docker/",
+          versions: [version()],
+        },
+        { id: "other", docs: "javascript:alert(1)", versions: [version()] },
+      ],
+    });
+    expect(index.plugins[0].docs).toBe(
+      "https://docs.termix.site/plugins/docker",
+    );
+    expect(index.plugins[1].docs).toBeUndefined();
+  });
+
   it("refuses something that is not an index", () => {
     expect(() => parseRegistryIndex({ nope: true })).toThrow(/no plugins/);
   });

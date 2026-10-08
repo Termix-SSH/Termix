@@ -12,7 +12,7 @@
 
 ## Overview
 
-`@termix-ssh/plugin-sdk` is what every [Termix](https://github.com/Termix-SSH/Termix) plugin builds against, including the ones that ship with Termix. It has the types for a plugin's backend and frontend, table definitions, the manifest schema, test helpers, and the `termix-plugin` CLI. The easiest way to start is the [Termix Plugin Template](https://github.com/Termix-SSH/Termix-Plugin-Template).
+`@termix-ssh/plugin-sdk` is what every [Termix](https://github.com/Termix-SSH/Termix) plugin builds against, including the ones that ship with Termix. It has the types for a plugin's backend and frontend, table definitions, the manifest schema, test helpers, and the `termix-plugin` CLI. The easiest way to start is the [Termix Plugin Template](https://github.com/Termix-SSH/Termix-Plugin-Template). The full guide is at [docs.termix.site/develop](https://docs.termix.site/develop).
 
 <br />
 
@@ -30,6 +30,7 @@ npm install --save-dev @termix-ssh/plugin-sdk
 npx termix-plugin build                  # bundle dist/backend.js and dist/frontend.js
 npx termix-plugin test                   # run the plugin's Vitest suite
 npx termix-plugin validate               # check manifest.json and the files it names
+npx termix-plugin openapi                # write dist/openapi.json from @openapi comments
 npx termix-plugin migrations             # write migrations from the table definitions
 npx termix-plugin pack                   # write <id>-<version>.tmxplug
 npx termix-plugin changelog              # print this version's notes from CHANGELOG.md
@@ -39,7 +40,7 @@ npx termix-plugin keygen --out <dir>     # make a new signing key pair
 npx termix-plugin dev --server <url> --key <tmx_...>   # install on a server and reinstall on every change
 ```
 
-`dev` needs developer mode on (Admin settings, Plugins) and an API key from an
+`dev` needs developer mode on (Settings, General) and an API key from an
 admin account. It installs the plugin from a file, marked unverified, and
 reinstalls it each time you save. `TERMIX_SERVER_URL` and `TERMIX_API_KEY` work
 in place of the flags. Reload the page to pick up frontend changes.

@@ -41,12 +41,79 @@ export async function validate({ cwd }) {
   problems.push(...validatePackage(cwd, raw));
   problems.push(...(await validateChangelogFile(cwd, raw)));
 
+  for (const warning of docsWarnings(cwd, raw)) {
+    console.warn(`  warn  ${warning}`);
+  }
+
   if (problems.length > 0) {
     for (const problem of problems) console.error(`  ${problem}`);
     throw new Error(`${raw.id ?? path.basename(cwd)}: manifest is not valid.`);
   }
 
   console.log(`ok  ${raw.id ?? path.basename(cwd)}`);
+}
+
+/** Env vars core sets for everyone, so a plugin need not list them. */
+const CORE_ENV = new Set([
+  "DATA_DIR",
+  "NODE_ENV",
+  "PORT",
+  "BASE_PATH",
+  "VERSION",
+  "HOME",
+  "TMPDIR",
+  "TEMP",
+  "TMP",
+  "PATH",
+  "APPDATA",
+  "LOCALAPPDATA",
+  "USERPROFILE",
+  "ELECTRON_EMBEDDED",
+]);
+
+const ENV_READS = [
+  /process\.env\.([A-Z][A-Z0-9_]*)/g,
+  /process\.env\[\s*["'`]([A-Z][A-Z0-9_]*)["'`]\s*\]/g,
+  /\benv\.([A-Z][A-Z0-9_]*)\b/g,
+  /\benv\[\s*["'`]([A-Z][A-Z0-9_]*)["'`]\s*\]/g,
+];
+
+function walkSources(dir, out = []) {
+  if (!fs.existsSync(dir)) return out;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walkSources(full, out);
+    else if (/\.(ts|tsx|js|mjs|cjs)$/.test(entry.name)) out.push(full);
+  }
+  return out;
+}
+
+/**
+ * Docs gaps that do not block a release: no docs/index.md, or a process.env
+ * read the manifest does not list in env.
+ */
+export function docsWarnings(cwd, raw) {
+  const warnings = [];
+  if (!fs.existsSync(path.join(cwd, "docs", "index.md"))) {
+    warnings.push("docs/index.md is missing, so the plugin has no docs page");
+  }
+  const declared = new Set(
+    Array.isArray(raw.env) ? raw.env.map((e) => e?.name) : [],
+  );
+  const missing = new Set();
+  for (const file of walkSources(path.join(cwd, "src"))) {
+    const text = fs.readFileSync(file, "utf8");
+    for (const pattern of ENV_READS) {
+      for (const match of text.matchAll(pattern)) {
+        const name = match[1];
+        if (!declared.has(name) && !CORE_ENV.has(name)) missing.add(name);
+      }
+    }
+  }
+  for (const name of [...missing].sort()) {
+    warnings.push(`reads ${name} but manifest env does not list it`);
+  }
+  return warnings;
 }
 
 /**

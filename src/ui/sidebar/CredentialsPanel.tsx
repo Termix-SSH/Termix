@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import {
   ArrowUpDown,
   Check,
-  ExternalLink,
   Filter,
   GripVertical,
   Plus,
@@ -29,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
 import type { CredentialSortKey } from "@/types/credential-sidebar-preferences";
+import { DocsLink } from "@/components/docs-link";
 
 export function CredentialsPanel({
   active: _active = true,
@@ -269,15 +269,7 @@ export function CredentialsPanel({
                 </DropdownMenuContent>
               </DropdownMenu>
               <div className="w-px self-stretch bg-border" />
-              <a
-                href="https://docs.termix.site/features/files-and-hosts/credentials"
-                target="_blank"
-                rel="noreferrer"
-                title={t("hosts.docsLink")}
-                className="flex items-center justify-center size-7 text-muted-foreground hover:text-foreground shrink-0 transition-colors"
-              >
-                <ExternalLink className="size-3.5" />
-              </a>
+              <DocsLink core="credentials" variant="icon" />
             </div>
             <div className="flex items-center border border-border shrink-0">
               <button

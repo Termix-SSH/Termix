@@ -43,6 +43,7 @@ import {
   type ManageMode,
   type ManageRequest,
 } from "./manage-requests";
+import { docsUrl } from "@/lib/docs";
 
 type Editing =
   | {
@@ -440,6 +441,13 @@ export function ManageTab() {
       title={t("nav.manage")}
       status={status}
       scroll={false}
+      docs={docsUrl(
+        mode === "credentials"
+          ? "credentials"
+          : mode === "hosts"
+            ? "hosts"
+            : "hostDefaults",
+      )}
       leading={
         editing ? (
           <span className="flex h-full md:hidden">

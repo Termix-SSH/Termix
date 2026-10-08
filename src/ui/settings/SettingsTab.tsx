@@ -40,6 +40,8 @@ import {
   type SettingsBand,
   type SettingsPage,
 } from "./settings-pages";
+import { usePluginDocsUrl } from "@/components/docs-link";
+import { docsUrl } from "@/lib/docs";
 
 export interface SettingsTabProps {
   /** The page to open, from the tab's data. */
@@ -195,6 +197,13 @@ export function SettingsTab({
     window.setTimeout(attempt, 60);
   };
 
+  const pluginDocs = usePluginDocsUrl(page.pluginId);
+  const pageDocs = page.pluginId
+    ? pluginDocs
+    : page.docs
+      ? docsUrl(page.docs)
+      : null;
+
   const pluginFeature = page.pluginId
     ? {
         user: userFeatures.find((p) => p.id === page.pluginId),
@@ -306,6 +315,7 @@ export function SettingsTab({
       title={t("nav.settings")}
       status={pageLabel(page)}
       scroll={false}
+      docs={pageDocs}
       actions={
         <button
           type="button"

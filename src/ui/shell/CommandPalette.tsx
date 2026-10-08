@@ -11,6 +11,7 @@ import {
   CommandEmpty,
 } from "@/components/command";
 import {
+  BookOpen,
   Bug,
   Clock,
   FlaskConical,
@@ -48,6 +49,7 @@ import { reportBetaFeedbackUrl, reportCoreIssueUrl } from "@/lib/issue-url";
 import { isPrerelease } from "@/plugins/plugin-model";
 import { shell } from "@/plugin-host/shell-bridge";
 import { getLiveHostStatus } from "@/lib/ServerStatusContext";
+import { docsUrl } from "@/lib/docs";
 
 interface CommandPaletteProps {
   /** Opens settings, optionally at one section. */
@@ -218,6 +220,12 @@ export function CommandPalette({
   );
 
   const links = [
+    {
+      id: "link-docs",
+      label: t("commandPalette.documentation"),
+      icon: BookOpen,
+      url: docsUrl(),
+    },
     {
       id: "link-github",
       label: "GitHub",

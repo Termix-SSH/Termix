@@ -79,6 +79,8 @@ const ALLOWED = [
   "DialogPortal",
   "DialogTitle",
   "DialogTrigger",
+  "DocsLink",
+  "DocsLinkProps",
   "DropdownMenu",
   "DropdownMenuCheckboxItem",
   "DropdownMenuContent",

@@ -19,6 +19,7 @@ import {
   defaultChoices,
   recommendedChoices,
 } from "../plugin-choices";
+import { DocsLink } from "@/components/docs-link";
 
 const CATEGORY_ORDER = [
   "Terminal",
@@ -173,7 +174,10 @@ export function PluginsStep({
   return (
     <div className="flex flex-col gap-4">
       <p className="text-xs text-muted-foreground">
-        {t("onboarding.pluginsIntro")}
+        {t("onboarding.pluginsIntro")}{" "}
+        <DocsLink core="pluginCatalog" className="text-xs">
+          {t("onboarding.pluginsDocsLink")}
+        </DocsLink>
       </p>
 
       <div className="flex items-start gap-2 border border-border bg-muted/30 p-2.5 text-[11px] leading-snug text-muted-foreground">

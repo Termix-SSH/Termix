@@ -17,6 +17,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { AdminSection } from "@/types/ui-types";
+import type { DocsPage } from "@/lib/docs";
 import { SETTINGS_SEARCH_INDEX } from "./settings-search-index";
 
 export type SettingsBand = "you" | "app" | "plugins" | "instance";
@@ -45,6 +46,8 @@ export interface SettingsPage {
   adminSection?: AdminSection;
   /** A plugin's settings page. */
   pluginId?: string;
+  /** The docs page for this settings page. Plugin pages use the plugin's docs. */
+  docs?: DocsPage;
   /** i18n keys whose text search matches. */
   searchKeys: string[];
 }
@@ -61,6 +64,7 @@ function core(
 export const CORE_SETTINGS_PAGES: SettingsPage[] = [
   core({
     id: "account",
+    docs: "account",
     band: "you",
     labelKey: "settings.account",
     icon: User,
@@ -68,6 +72,7 @@ export const CORE_SETTINGS_PAGES: SettingsPage[] = [
   }),
   core({
     id: "security",
+    docs: "accountSecurity",
     band: "you",
     labelKey: "settings.security",
     icon: Shield,
@@ -76,6 +81,7 @@ export const CORE_SETTINGS_PAGES: SettingsPage[] = [
   }),
   core({
     id: "api-keys",
+    docs: "apiKeys",
     band: "you",
     labelKey: "settings.apiKeys",
     icon: KeyRound,
@@ -83,6 +89,7 @@ export const CORE_SETTINGS_PAGES: SettingsPage[] = [
   }),
   core({
     id: "data",
+    docs: "accountData",
     band: "you",
     labelKey: "settings.data",
     icon: Database,
@@ -90,6 +97,7 @@ export const CORE_SETTINGS_PAGES: SettingsPage[] = [
   }),
   core({
     id: "interface",
+    docs: "interfaceSettings",
     band: "app",
     labelKey: "settings.interface",
     icon: SlidersHorizontal,
@@ -97,6 +105,7 @@ export const CORE_SETTINGS_PAGES: SettingsPage[] = [
   }),
   core({
     id: "appearance",
+    docs: "appearance",
     band: "app",
     labelKey: "settings.appearance",
     icon: Palette,
@@ -104,6 +113,7 @@ export const CORE_SETTINGS_PAGES: SettingsPage[] = [
   }),
   core({
     id: "keybindings",
+    docs: "keybindings",
     band: "app",
     labelKey: "settings.keybindings",
     icon: Keyboard,
@@ -111,6 +121,7 @@ export const CORE_SETTINGS_PAGES: SettingsPage[] = [
   }),
   core({
     id: "admin-general",
+    docs: "adminGeneral",
     band: "instance",
     labelKey: "settings.adminGeneral",
     icon: Settings,
@@ -119,6 +130,7 @@ export const CORE_SETTINGS_PAGES: SettingsPage[] = [
   }),
   core({
     id: "updates",
+    docs: "updating",
     band: "instance",
     labelKey: "settings.updates.title",
     icon: FlaskConical,
@@ -126,6 +138,7 @@ export const CORE_SETTINGS_PAGES: SettingsPage[] = [
   }),
   core({
     id: "admin-users",
+    docs: "users",
     band: "instance",
     labelKey: "settings.adminUsers",
     icon: Users,
@@ -134,6 +147,7 @@ export const CORE_SETTINGS_PAGES: SettingsPage[] = [
   }),
   core({
     id: "admin-sessions",
+    docs: "sessions",
     band: "instance",
     labelKey: "settings.adminSessions",
     icon: Monitor,
@@ -142,6 +156,7 @@ export const CORE_SETTINGS_PAGES: SettingsPage[] = [
   }),
   core({
     id: "admin-roles",
+    docs: "roles",
     band: "instance",
     labelKey: "settings.adminRoles",
     icon: Lock,
@@ -150,6 +165,7 @@ export const CORE_SETTINGS_PAGES: SettingsPage[] = [
   }),
   core({
     id: "admin-host-defaults",
+    docs: "hostDefaults",
     band: "instance",
     labelKey: "settings.adminHostDefaults",
     icon: Server,
@@ -158,6 +174,7 @@ export const CORE_SETTINGS_PAGES: SettingsPage[] = [
   }),
   core({
     id: "admin-branding",
+    docs: "branding",
     band: "instance",
     labelKey: "settings.adminBranding",
     icon: Palette,
@@ -166,6 +183,7 @@ export const CORE_SETTINGS_PAGES: SettingsPage[] = [
   }),
   core({
     id: "admin-database",
+    docs: "adminDatabase",
     band: "instance",
     labelKey: "settings.adminDatabase",
     icon: Database,
@@ -174,6 +192,7 @@ export const CORE_SETTINGS_PAGES: SettingsPage[] = [
   }),
   core({
     id: "admin-ssl",
+    docs: "adminSsl",
     band: "instance",
     labelKey: "settings.adminSsl",
     icon: Globe,
@@ -182,6 +201,7 @@ export const CORE_SETTINGS_PAGES: SettingsPage[] = [
   }),
   core({
     id: "admin-api-keys",
+    docs: "apiKeys",
     band: "instance",
     labelKey: "settings.adminApiKeys",
     icon: KeyRound,
@@ -190,6 +210,7 @@ export const CORE_SETTINGS_PAGES: SettingsPage[] = [
   }),
   core({
     id: "admin-audit-log",
+    docs: "auditLog",
     band: "instance",
     labelKey: "settings.adminAuditLog",
     icon: FileText,

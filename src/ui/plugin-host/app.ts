@@ -72,6 +72,7 @@ import {
 } from "./host-scope";
 import { manifestDeclares, type ViewKind } from "./view-ownership";
 import { pluginKey } from "@/lib/plugin-i18n";
+import { pluginDocsPage, pluginDocsUrl } from "@termix-ssh/plugin-sdk/docs";
 import { hasPermission } from "@/hooks/use-permissions";
 import i18n from "@/i18n/i18n";
 
@@ -81,6 +82,20 @@ export interface PluginAppHandle {
   app: TermixApp;
   /** Runs every disposer, newest first, isolating failures. */
   dispose: () => void;
+}
+
+function createDocsApi(manifest: PluginManifest): TermixApp["docs"] {
+  const url = pluginDocsUrl(manifest?.docs);
+  const page = (name?: string, anchor?: string) =>
+    url ? pluginDocsPage(url, name, anchor) : null;
+  return {
+    url,
+    page,
+    open(name, anchor) {
+      const target = page(name, anchor);
+      if (target) window.open(target, "_blank", "noopener,noreferrer");
+    },
+  };
 }
 
 /**
@@ -601,6 +616,8 @@ export function createPluginApp(
     },
 
     confirm: (options) => shell.confirm!(options),
+
+    docs: createDocsApi(manifest),
 
     desktop: {
       available: isElectron(),

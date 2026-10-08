@@ -6,6 +6,7 @@ import * as esbuild from "esbuild";
 import { BACKEND_EXTERNALS, FRONTEND_EXTERNALS } from "../lib/externals.mjs";
 import { staticUrlImports } from "../lib/static-url-imports.mjs";
 import { readManifest, resolveEntry, copyDir } from "../lib/plugin-dir.mjs";
+import { openapi } from "./openapi.mjs";
 
 const BACKEND_ENTRIES = [
   "src/backend/index.ts",
@@ -241,6 +242,7 @@ export async function build({ cwd }) {
 
   copyDir(path.join(cwd, "locales"), path.join(outDir, "locales"));
   copyDir(path.join(cwd, "migrations"), path.join(outDir, "migrations"));
+  await openapi({ cwd, quiet: true });
 
   console.log(`built ${pluginId}`);
 }

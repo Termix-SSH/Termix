@@ -21,10 +21,9 @@ import { reportBetaFeedbackUrl } from "@/lib/issue-url";
 import { isElectron } from "@/lib/electron";
 import { isPrerelease } from "@/plugins/plugin-model";
 import { OPEN_PLUGINS_EVENT } from "@/plugins/open-plugins";
+import { docsUrl } from "@/lib/docs";
 
 const DOCKER_BETA_IMAGE = "ghcr.io/termix-ssh/termix:beta";
-const BETA_DOCS_URL =
-  "https://docs.termix.site/install/server/docker#beta-builds";
 
 function onBeta(plugin: PluginSummary): boolean {
   return plugin.channel === "beta" || isPrerelease(plugin.version);
@@ -196,7 +195,7 @@ export function UpdatesSettings() {
               </>
             )}
             <a
-              href={BETA_DOCS_URL}
+              href={docsUrl("betas")}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-accent-brand hover:underline"

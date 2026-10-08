@@ -32,6 +32,7 @@ import {
 import { getUserList, type AccessRecord } from "@/main-axios";
 import type { Credential } from "@/types/ui-types";
 import { getErrorMessage } from "@/lib/error-message";
+import { DocsLink } from "@/components/docs-link";
 
 const PERMISSION_LEVELS: CredentialPermissionLevel[] = ["use", "manage"];
 
@@ -268,14 +269,7 @@ export function CredentialShareModal({
             <Users className="size-3.5" />
             {t("hosts.sharing.shareWithSection")}
           </div>
-          <a
-            href="https://docs.termix.site/features/authentication/rbac"
-            target="_blank"
-            rel="noreferrer"
-            className="text-[10px] text-accent-brand hover:underline shrink-0"
-          >
-            {t("hosts.docsLink")}
-          </a>
+          <DocsLink core="sharing">{t("hosts.docsLink")}</DocsLink>
         </div>
 
         <p className="text-[11px] text-muted-foreground leading-snug">

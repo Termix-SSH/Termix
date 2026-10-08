@@ -85,6 +85,27 @@
       "items": { "type": "string", "minLength": 1, "maxLength": 160 },
       "description": "Short lines listing what the plugin does, shown on its page."
     },
+    "docs": {
+      "type": "string",
+      "pattern": "^https://",
+      "description": "Where the plugin's docs live. Shown as a Documentation link in Termix."
+    },
+    "env": {
+      "type": "array",
+      "description": "Environment variables the plugin reads, listed in its docs.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "description"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$" },
+          "description": { "type": "string", "minLength": 1, "maxLength": 300 },
+          "default": { "type": "string" },
+          "required": { "type": "boolean" },
+          "secret": { "type": "boolean" }
+        }
+      }
+    },
     "engine": {
       "type": "object",
       "additionalProperties": false,

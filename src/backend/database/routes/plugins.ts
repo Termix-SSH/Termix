@@ -19,7 +19,13 @@ import { getPluginPublicHttpRoutes } from "../../plugins/http.js";
 import { getPluginPublicWsRoutes } from "../../plugins/ws.js";
 import { PluginManageError } from "../../plugins/manage.js";
 import { parsePluginChannel } from "../../plugins/registry-index.js";
-import { pluginFeatures, youtubeVideoId } from "../../plugins/manifest.js";
+import {
+  pluginDocsUrl,
+  pluginEnvVars,
+  pluginFeatures,
+  youtubeVideoId,
+  type PluginEnvVar,
+} from "../../plugins/manifest.js";
 import {
   isPluginChoice,
   type PluginChoice,
@@ -259,6 +265,8 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
         let repository: string | undefined;
         let videoId: string | undefined;
         let features: string[] = [];
+        let docs: string | undefined;
+        let env: PluginEnvVar[] = [];
         try {
           const manifest = JSON.parse(record.manifestJson) as {
             contributes?: unknown;
@@ -269,6 +277,8 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
             repository?: unknown;
             video?: unknown;
             features?: unknown;
+            docs?: unknown;
+            env?: unknown;
             dependencies?: Record<string, string>;
             optionalDependencies?: Record<string, string>;
           };
@@ -292,6 +302,8 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
               : undefined;
           videoId = youtubeVideoId(manifest?.video) ?? undefined;
           features = pluginFeatures(manifest?.features);
+          docs = pluginDocsUrl(manifest?.docs) ?? undefined;
+          env = pluginEnvVars(manifest?.env);
         } catch {
           contributes = null;
         }
@@ -306,6 +318,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
           icon,
           dependencies,
           optionalDependencies,
+          docs,
           ...describePluginFrontend(loaded),
         };
 
@@ -324,6 +337,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
           repository,
           videoId,
           features,
+          env,
           signedBy: loaded?.signedBy ?? null,
           capabilities,
           grantedCapabilities: grantsByPlugin.get(record.id) ?? [],

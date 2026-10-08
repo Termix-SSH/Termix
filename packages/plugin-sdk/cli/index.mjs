@@ -15,6 +15,7 @@ import { sign, verify, keygen } from "./commands/sign.mjs";
 import { migrations } from "./commands/migrations.mjs";
 import { dev } from "./commands/dev.mjs";
 import { changelog } from "./commands/changelog.mjs";
+import { openapi } from "./commands/openapi.mjs";
 
 const COMMANDS = {
   build,
@@ -32,6 +33,7 @@ const COMMANDS = {
   migrations,
   dev,
   changelog,
+  openapi,
 };
 
 const [command, ...args] = process.argv.slice(2);
@@ -50,6 +52,7 @@ if (!command || command === "--help" || command === "-h") {
       "  verify     Check a .tmxplug's .sig <file> --key <base64>[,...]",
       "  keygen     Write a new signing key pair [--out dir]",
       "  migrations Generate migrations from the plugin's table definitions",
+      "  openapi    Write dist/openapi.json from the @openapi blocks in src/backend",
       "  changelog  Print a version's notes from CHANGELOG.md [--version x.y.z]",
       "  dev        Build, pack and install on a running server, again on every change",
       "             [--server url] [--key tmx_...] [--once]",

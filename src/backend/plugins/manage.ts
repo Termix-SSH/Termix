@@ -222,6 +222,7 @@ export interface RegistryListing {
     icon?: string;
     videoId?: string;
     features: string[];
+    docs?: string;
     versions: Array<{
       version: string;
       prerelease: boolean;
@@ -290,6 +291,7 @@ export async function listRegistry(
         icon: plugin.icon,
         videoId: plugin.videoId,
         features: plugin.features,
+        docs: plugin.docs,
         versions: channelReleases(plugin, "beta").map((entry) => ({
           version: entry.version,
           prerelease: Boolean(entry.prerelease),

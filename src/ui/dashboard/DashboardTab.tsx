@@ -62,6 +62,7 @@ import {
   type VersionStatus,
 } from "./dashboard-core-cards";
 import { reportCoreIssueUrl } from "@/lib/issue-url";
+import { docsUrl } from "@/lib/docs";
 
 export { HostStatusList as HostStatusCard } from "./dashboard-core-cards";
 
@@ -803,7 +804,7 @@ export function DashboardTab({
       href: "https://discord.com/invite/jVQGdvHDrf",
       label: t("dashboard.discord"),
     },
-    { href: "https://docs.termix.site/", label: t("dashboard.docs") },
+    { href: docsUrl(), label: t("dashboard.docs") },
     { href: "https://donate.termix.site/", label: t("dashboard.donate") },
   ];
 
@@ -827,6 +828,7 @@ export function DashboardTab({
       title={title}
       status={isDashboardView ? todayLabel : undefined}
       scroll={false}
+      docs={docsUrl("dashboard")}
       actions={
         <>
           {isDashboardView && !viewPending && (

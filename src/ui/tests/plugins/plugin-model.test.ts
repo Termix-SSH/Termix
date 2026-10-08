@@ -108,6 +108,23 @@ describe("mergePlugins", () => {
     expect(mergePlugins([summary()], null)[0].features).toEqual([]);
   });
 
+  it("uses the installed docs link and falls back to the registry", () => {
+    const registry = entry({ docs: "https://docs.example.com/registry" });
+    expect(
+      mergePlugins(
+        [summary({ docs: "https://docs.example.com/installed" })],
+        [registry],
+      )[0].docs,
+    ).toBe("https://docs.example.com/installed");
+    expect(mergePlugins([summary()], [registry])[0].docs).toBe(
+      "https://docs.example.com/registry",
+    );
+    expect(mergePlugins([summary()], null)[0].docs).toBeUndefined();
+    expect(mergePlugins([], [registry])[0].docs).toBe(
+      "https://docs.example.com/registry",
+    );
+  });
+
   it("keeps installed plugins when the registry is unreachable", () => {
     const rows = mergePlugins([summary()], null);
     expect(rows).toHaveLength(1);

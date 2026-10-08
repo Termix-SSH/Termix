@@ -14,7 +14,10 @@ import {
   isTermixCompatible,
   youtubeVideoId,
   pluginFeatures,
+  pluginDocsUrl,
+  pluginEnvVars,
 } from "../../plugins/manifest.js";
+import { pluginDocsPage } from "@termix-ssh/plugin-sdk/docs";
 
 function base(overrides: Record<string, unknown> = {}) {
   return {
@@ -927,5 +930,75 @@ describe("youtubeVideoId", () => {
     );
     expect(youtubeVideoId("https://youtu.be/../../x")).toBeNull();
     expect(youtubeVideoId(undefined)).toBeNull();
+  });
+});
+
+describe("docs and env fields", () => {
+  it("accepts an https docs link and well formed env entries", () => {
+    expect(
+      validateManifest(
+        base({
+          docs: "https://docs.termix.site/plugins/sample-plugin",
+          env: [
+            { name: "SAMPLE_URL", description: "Where to connect." },
+            {
+              name: "SAMPLE_TOKEN",
+              description: "Token.",
+              secret: true,
+              required: true,
+              default: "",
+            },
+          ],
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("refuses a docs link that is not https", () => {
+    const errors = validateManifest(base({ docs: "http://example.com" }));
+    expect(errors.join(" ")).toMatch(/"docs" must be an https URL/);
+  });
+
+  it("refuses bad env entries", () => {
+    const errors = validateManifest(
+      base({
+        env: [
+          { name: "lower_case", description: "x" },
+          { name: "DUP", description: "x" },
+          { name: "DUP", description: "x" },
+          { name: "NO_DESC", description: "" },
+          { name: "EXTRA", description: "x", other: 1 },
+          { name: "FLAG", description: "x", secret: "yes" },
+        ],
+      }),
+    ).join(" ");
+    expect(errors).toMatch(/env\[0\]\.name/);
+    expect(errors).toMatch(/env\[2\]\.name" repeats DUP/);
+    expect(errors).toMatch(/env\[3\]\.description/);
+    expect(errors).toMatch(/Unknown field "other" in env\[4\]/);
+    expect(errors).toMatch(/env\[5\]\.secret/);
+  });
+
+  it("reads docs links and env entries leniently", () => {
+    expect(pluginDocsUrl("https://docs.termix.site/plugins/x/")).toBe(
+      "https://docs.termix.site/plugins/x",
+    );
+    expect(pluginDocsUrl("file:///etc/passwd")).toBeNull();
+    expect(pluginDocsUrl(42)).toBeNull();
+    expect(
+      pluginEnvVars([
+        { name: "OK_VAR", description: "fine" },
+        { name: "bad", description: "x" },
+        "nope",
+      ]),
+    ).toEqual([{ name: "OK_VAR", description: "fine" }]);
+  });
+
+  it("joins pages and anchors onto a docs link", () => {
+    const base = "https://docs.termix.site/plugins/docker";
+    expect(pluginDocsPage(base)).toBe(base);
+    expect(pluginDocsPage(base, "/setup/")).toBe(`${base}/setup`);
+    expect(pluginDocsPage(base, "setup", "#ports")).toBe(`${base}/setup#ports`);
+    expect(pluginDocsPage(base, "", "top")).toBe(`${base}#top`);
   });
 });

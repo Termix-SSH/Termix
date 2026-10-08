@@ -289,6 +289,8 @@ export {
   type PanelDensity,
   type PanelViewMode,
 } from "@/components/panel-layout";
+// A link to docs. Inside a plugin, page="setup" opens that page of its docs.
+export { DocsLink, type DocsLinkProps } from "@/components/docs-link";
 export {
   AddButton,
   FormFooter,

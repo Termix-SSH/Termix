@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.3
+
+Plugin API 1.2.0.
+
+### Added
+
+- `docs` manifest field: an https link to the plugin's docs. Termix shows it as a Documentation link on the plugin's page and in its settings
+- `env` manifest field: the environment variables the plugin reads, listed in its docs and on its page
+- `app.docs` and `useDocsUrl()` for links into the plugin's own docs, and `DocsLink` in `@termix-ssh/plugin-sdk/ui`
+- `PanelShell` takes a `docs` link and shows it as a book icon in the header
+- `@termix-ssh/plugin-sdk/openapi` with `buildOpenApi()`, and `termix-plugin openapi`, which writes `dist/openapi.json` from the `@openapi` blocks in `src/backend`. `build` runs it too
+- `@termix-ssh/plugin-sdk/docs` with `pluginDocsUrl()`, `pluginDocsPage()` and `pluginEnvVars()`
+- `termix-plugin validate` warns when `docs/index.md` is missing or the source reads an env var the manifest does not list
+
 ## 1.0.2
 
 ### Added

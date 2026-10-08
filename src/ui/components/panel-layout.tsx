@@ -5,6 +5,7 @@ import { ArrowLeft, Grid3X3, List, Rows3, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/separator";
+import { DocsLink } from "@/components/docs-link";
 
 /** One spacing rhythm for every panel and tab. */
 export const PANEL = {
@@ -30,6 +31,7 @@ export function PanelShell({
   tabs,
   footer,
   scroll = true,
+  docs,
   className,
   children,
 }: {
@@ -49,6 +51,8 @@ export function PanelShell({
   footer?: React.ReactNode;
   /** False when the body scrolls itself. */
   scroll?: boolean;
+  /** Docs URL for this screen, shown as a book icon in the header. */
+  docs?: string | null;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -120,8 +124,11 @@ export function PanelShell({
             </>
           )}
         </div>
-        {actions && (
-          <div className="flex shrink-0 items-center gap-1 px-2">{actions}</div>
+        {(actions || docs) && (
+          <div className="flex shrink-0 items-center gap-1 px-2">
+            {actions}
+            {docs && <DocsLink href={docs} variant="icon" />}
+          </div>
         )}
       </header>
       {bands}

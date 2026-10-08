@@ -8,6 +8,7 @@ import { AccordionSection, AdminToggle } from "./AdminSettingsShared";
 import { AdminHostTags } from "./AdminHostTags";
 import { AdminPluginDeveloperMode } from "./AdminPluginDeveloperMode";
 import type { TlsStatus } from "@/api/tls-api";
+import { DocsLink } from "@/components/docs-link";
 
 type GeneralSettingsSectionProps = {
   open: boolean;
@@ -423,14 +424,7 @@ export function AdminSSLSection({
       <div className="flex flex-col gap-3 pt-3">
         <span className="text-[10px] text-muted-foreground">
           {t("admin.sslDescription")}{" "}
-          <a
-            href="https://docs.termix.site/features/networking/ssl"
-            target="_blank"
-            rel="noreferrer"
-            className="text-accent-brand hover:underline"
-          >
-            {t("admin.sslDocsLink")}
-          </a>
+          <DocsLink core="https">{t("admin.sslDocsLink")}</DocsLink>
         </span>
 
         <div className="flex flex-col gap-0.5 p-2 border border-border bg-background/50">

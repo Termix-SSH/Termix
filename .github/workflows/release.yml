@@ -591,6 +591,18 @@ jobs:
               gh release delete "$TAG" --repo ${{ github.repository }} --yes || true
             done
 
+  # The docs site reads the env catalog, API spec and download list from the
+  # newest stable release.
+  docs-refresh:
+    needs: [prep, electron-release]
+    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.electron-release.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - name: Tell the docs site
+        env:
+          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
+        run: gh api repos/Termix-SSH/Docs/dispatches -f event_type=core-released
+
   cleanup:
     needs: [prep, merge-to-main, electron-release, cask-commit-back]
     if: ${{ always() && needs.prep.outputs.channel == 'Stable' && (needs.prep.outputs.mode == 'Everything' || needs.prep.outputs.mode == 'Skip submit') && needs.merge-to-main.result == 'success' }}

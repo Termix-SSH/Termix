@@ -888,6 +888,16 @@ export interface DesktopApi {
   onRemoteServerChange: (listener: () => void) => Disposer;
 }
 
+/** Links into this plugin's docs, from the manifest's docs field. */
+export interface DocsApi {
+  /** The docs link, or null when the manifest has none. */
+  readonly url: string | null;
+  /** A page of the docs ("setup"), with an optional anchor. */
+  page: (page?: string, anchor?: string) => string | null;
+  /** Opens a page in a new tab. Does nothing without a docs link. */
+  open: (page?: string, anchor?: string) => void;
+}
+
 export interface TermixAppInfo {
   readonly pluginId: string;
   readonly manifest: PluginManifest;
@@ -1017,6 +1027,8 @@ export interface TermixApp extends TermixAppInfo {
   confirm: (options: ConfirmRequest) => Promise<boolean>;
   /** The desktop app, when the frontend runs in it. */
   desktop: DesktopApi;
+  /** This plugin's docs. Needs plugin API 1.2. */
+  docs: DocsApi;
   /**
    * Fires after this plugin's settings are saved from the settings screen or
    * the host editor. Disposed automatically.
@@ -1091,6 +1103,11 @@ export interface SshAuthTypeInfo {
  */
 export interface PluginHostBridge {
   usePluginId: () => string;
+  useDocsUrl: (
+    pluginId: string,
+    page?: string,
+    anchor?: string,
+  ) => string | null;
   useTranslation: (pluginId: string) => {
     t: TranslateFn;
     language: string;
@@ -1288,6 +1305,15 @@ function requireHost(): PluginHostBridge {
 /** The id of the plugin that registered the component being rendered. */
 export function usePluginId(): string {
   return requireHost().usePluginId();
+}
+
+/**
+ * A page of this plugin's docs, or null when the manifest has no docs link.
+ * Pass it to PanelShell's docs prop or use DocsLink. Needs plugin API 1.2.
+ */
+export function useDocsUrl(page?: string, anchor?: string): string | null {
+  const bridge = requireHost();
+  return bridge.useDocsUrl(bridge.usePluginId(), page, anchor);
 }
 
 /**

@@ -4,6 +4,7 @@ import type {
   ChangelogRelease,
   ReleaseNotes,
 } from "@termix-ssh/plugin-sdk/changelog";
+import type { PluginEnvVar } from "@termix-ssh/plugin-sdk/docs";
 
 export type { PluginChoice };
 
@@ -255,6 +256,10 @@ export interface PluginSummary {
   videoId?: string;
   /** What the plugin does, from the manifest. Admins only. */
   features?: string[];
+  /** https docs link from the manifest. */
+  docs?: string;
+  /** Environment variables the plugin reads. Admins only. */
+  env?: PluginEnvVar[];
   signedBy?: string | null;
 }
 
@@ -294,6 +299,7 @@ export interface RegistryPluginEntry {
   icon?: string;
   videoId?: string;
   features?: string[];
+  docs?: string;
   versions: RegistryPluginVersion[];
   /** Newest release on the plugin's channel. */
   latestVersion: string | null;

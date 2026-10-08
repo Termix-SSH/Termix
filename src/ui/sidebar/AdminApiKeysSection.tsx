@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { AccordionSection } from "./AdminSettingsShared";
 import type { AdminUser } from "./AdminManagementSections";
 import { Select2 } from "@/components/select2";
+import { DocsLink } from "@/components/docs-link";
 
 type AdminApiKeysSectionProps = {
   open: boolean;
@@ -66,24 +67,10 @@ export function AdminApiKeysSection({
         <div className="flex items-center justify-between py-2 border-b border-border">
           <span className="text-[10px] text-muted-foreground">
             {t("admin.apiKeysCount", { count: apiKeys.length })}{" "}
-            <a
-              href="https://docs.termix.site/features/api/api-keys"
-              target="_blank"
-              rel="noreferrer"
-              className="text-accent-brand hover:underline"
-            >
-              {t("admin.apiKeysDocsLink")}
-            </a>
+            <DocsLink core="apiKeys">{t("admin.apiKeysDocsLink")}</DocsLink>
             <br />
             {t("admin.apiKeysCliHint")}{" "}
-            <a
-              href="https://docs.termix.site/cli"
-              target="_blank"
-              rel="noreferrer"
-              className="text-accent-brand hover:underline"
-            >
-              {t("admin.apiKeysCliLink")}
-            </a>
+            <DocsLink core="cli">{t("admin.apiKeysCliLink")}</DocsLink>
           </span>
           <div className="flex items-center gap-1">
             <Button

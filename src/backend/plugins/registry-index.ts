@@ -13,6 +13,7 @@ import fs from "node:fs";
 import path from "node:path";
 import semver from "semver";
 import {
+  pluginDocsUrl,
   pluginFeatures,
   SUPPORTED_PLUGIN_API_VERSION,
   youtubeVideoId,
@@ -67,6 +68,8 @@ export interface RegistryPlugin {
   /** Only ever a YouTube video id, never a link. */
   videoId?: string;
   features: string[];
+  /** https docs link from the index. */
+  docs?: string;
   /** Stable releases, newest first. */
   versions: RegistryVersion[];
   /**
@@ -161,6 +164,7 @@ export function parseRegistryIndex(raw: unknown): RegistryIndex {
       icon: asString(entry.icon),
       videoId: youtubeVideoId(entry.video) ?? undefined,
       features: pluginFeatures(entry.features),
+      docs: pluginDocsUrl(entry.docs) ?? undefined,
       versions,
       prereleases,
     });

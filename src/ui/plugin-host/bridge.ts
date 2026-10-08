@@ -39,6 +39,7 @@ import {
 } from "@/api/open-tabs-api";
 import { runKeybindingAction } from "@/shell/keybinding-registry";
 import { usePluginScope } from "./scope";
+import { usePluginDocsUrl } from "@/components/docs-link";
 import { knownPluginIds, usePluginStore } from "./plugin-store";
 import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import type { UiPluginPresets } from "@/types/ui-preferences";
@@ -223,6 +224,10 @@ export const pluginHostBridge: PluginHostBridge = {
       );
     }
     return pluginId;
+  },
+
+  useDocsUrl(pluginId, page, anchor) {
+    return usePluginDocsUrl(pluginId, page, anchor);
   },
 
   useTranslation(pluginId) {

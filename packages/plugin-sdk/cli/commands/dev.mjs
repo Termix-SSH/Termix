@@ -42,7 +42,7 @@ export function resolveDevOptions(args, env = process.env) {
 
 const HINTS = {
   DEVELOPER_MODE_OFF:
-    "Turn on developer mode in Admin settings, under Plugins, then save again.",
+    "Turn on Plugin developer mode in Settings, General, then save again.",
   SIGNED_ONLY:
     "The server sets TERMIX_REQUIRE_SIGNED_PLUGINS, so it never installs unsigned files.",
   BUNDLED_ID: "That id ships with Termix. Use a different id while developing.",

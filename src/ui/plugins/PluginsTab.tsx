@@ -53,6 +53,8 @@ import {
   type SortKey,
 } from "./plugin-model";
 import { usePluginsManager, type PluginsManager } from "./use-plugins-manager";
+import { docsUrl } from "@/lib/docs";
+import { DocsLink } from "@/components/docs-link";
 
 type Section = "installed" | "browse" | "updates";
 
@@ -102,6 +104,7 @@ function PluginsTabBody() {
       <PanelShell
         icon={<Puzzle className="size-4" />}
         title={t("nav.plugins")}
+        docs={docsUrl("plugins")}
         status={t("plugins.manager.status.summary", {
           installed: installed.length,
           running,
@@ -550,13 +553,21 @@ function InstalledCard({
               : t("plugins.manager.enable")}
           </Button>
         )}
+        <DocsLink
+          href={plugin.docs}
+          variant="icon"
+          className="ml-auto size-6"
+        />
         <Button
           variant="ghost"
           size="icon-xs"
           disabled={busy || locked}
           title={t("plugins.manager.uninstall")}
           aria-label={t("plugins.manager.uninstall")}
-          className="ml-auto text-muted-foreground hover:text-destructive"
+          className={cn(
+            "text-muted-foreground hover:text-destructive",
+            !plugin.docs && "ml-auto",
+          )}
           onClick={() => void manager.uninstall(plugin)}
         >
           <Trash2 className="size-3" />
@@ -690,6 +701,7 @@ function BrowseCard({
               })
             : t("plugins.manager.noServerAccess")}
         </span>
+        <DocsLink href={plugin.docs} variant="icon" className="size-6" />
         {plugin.installed ? (
           <span className="flex shrink-0 items-center gap-1 text-[11px] font-medium text-accent-brand">
             <Check className="size-3" />

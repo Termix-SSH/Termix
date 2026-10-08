@@ -85,6 +85,7 @@ const offline = () =>
   Promise.reject(new Error("No plugin API in a unit test; mock it"));
 (globalThis as Record<string, unknown>).__termixTestPluginHost = {
   usePluginId: () => "test-plugin",
+  useDocsUrl: () => null,
   useTranslation: () => ({
     t: (key: string) => key,
     language: "en",

@@ -39,6 +39,7 @@ import {
 } from "@/main-axios";
 import type { Host } from "@/types/ui-types";
 import { Select2 } from "@/components/select2";
+import { DocsLink } from "@/components/docs-link";
 
 const PERMISSION_LEVELS: SharePermissionLevel[] = [
   "connect",
@@ -307,14 +308,7 @@ export function HostShareModal({
             <Users className="size-3.5" />
             {t("hosts.sharing.shareWithSection")}
           </div>
-          <a
-            href="https://docs.termix.site/features/authentication/rbac"
-            target="_blank"
-            rel="noreferrer"
-            className="text-[10px] text-accent-brand hover:underline shrink-0"
-          >
-            {t("hosts.docsLink")}
-          </a>
+          <DocsLink core="sharing">{t("hosts.docsLink")}</DocsLink>
         </div>
 
         <div className="flex gap-1.5">

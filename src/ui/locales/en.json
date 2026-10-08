@@ -208,7 +208,8 @@
     "mobileSidebarDescription": "Displays the mobile sidebar.",
     "toggleSidebar": "Toggle Sidebar",
     "search": "Search...",
-    "new": "New"
+    "new": "New",
+    "docs": "Docs"
   },
   "onboarding": {
     "stepCounter": "Step {{current}} of {{total}}",
@@ -252,7 +253,8 @@
     "desktopLocalBody": "Everything is stored here. Nothing to set up.",
     "desktopLinkTitle": "With my Termix server",
     "desktopLinkBody": "Sign in to your server to use the same hosts and settings on every device.",
-    "desktopLinked": "Linked to {{server}}"
+    "desktopLinked": "Linked to {{server}}",
+    "pluginsDocsLink": "Read about each one"
   },
   "nav": {
     "home": "Home",
@@ -930,7 +932,8 @@
     "select": "Select",
     "toggleWith": "Toggle with",
     "pluginActions": "More actions",
-    "noTargetTab": "No terminal tab is open"
+    "noTargetTab": "No terminal tab is open",
+    "documentation": "Documentation"
   },
   "splitScreen": {
     "title": "Split screen",
@@ -2185,7 +2188,11 @@
         "waitingForStable": "Back on stable. Stays on {{version}} until a stable release is newer.",
         "versionLabel": "{{version}} (beta)",
         "sendFeedback": "Send beta feedback"
-      }
+      },
+      "documentation": "Documentation",
+      "envVars": "Environment variables",
+      "envRequired": "Required",
+      "envDefault": "Default: {{value}}"
     }
   },
   "settings": {

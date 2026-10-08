@@ -22,6 +22,7 @@ import {
   HostDefaultBadge,
   HostOnly,
 } from "@/lib/host-defaults-context";
+import { DocsLink } from "@/components/docs-link";
 
 type HostEditorSetField = <K extends keyof HostEditorForm>(
   key: K,
@@ -402,14 +403,7 @@ export function HostEditorGeneralTab({
                 {t("hosts.portKnockingSequence")}
               </span>
               <HostDefaultBadge settingKey="core.portKnockSequence" />
-              <a
-                href="https://docs.termix.site/features/networking/port-knocking"
-                target="_blank"
-                rel="noreferrer"
-                className="text-[10px] text-accent-brand hover:underline"
-              >
-                {t("hosts.docsLink")}
-              </a>
+              <DocsLink core="portKnocking">{t("hosts.docsLink")}</DocsLink>
             </div>
             <Button
               variant="outline"

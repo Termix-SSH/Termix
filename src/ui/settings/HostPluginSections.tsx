@@ -13,6 +13,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { SectionCard } from "@/components/section-card";
+import { DocsLink } from "@/components/docs-link";
 import { PluginIcon } from "@/lib/plugin-icon";
 import { type PluginSummary } from "@/api/plugins-api";
 import { useInstalledPlugins } from "@/hooks/use-installed-plugins";
@@ -142,6 +143,7 @@ function HostPluginSection({
     <SectionCard
       title={plugin.name}
       icon={<PluginIcon name={plugin.icon} className="size-3.5" />}
+      action={<DocsLink href={plugin.docs} />}
     >
       {!running && (
         <div className="my-3 border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
