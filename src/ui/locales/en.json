@@ -2477,6 +2477,7 @@
     "collapse": "Collapse",
     "expand": "Expand",
     "cannotBeUndone": "This cannot be undone.",
+    "hostNotFound": "Couldn't find that host. Try refreshing the list.",
     "hostCount_one": "{{count}} host",
     "hostCount_other": "{{count}} hosts",
     "credentialCount_one": "{{count}} credential",

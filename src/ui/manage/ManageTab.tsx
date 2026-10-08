@@ -20,6 +20,7 @@ import {
   type SSHHostWithStatus,
 } from "@/main-axios";
 import { getFolderDefaultsId } from "@/api/host-defaults-api";
+import { invalidateHostsAndStatusCaches } from "@/lib/hosts-request-cache";
 import { registerTabCloseGuard } from "@/shell/tab-close-guards";
 import { HostEditor } from "@/sidebar/HostEditor";
 import { CredentialEditorView } from "@/sidebar/CredentialEditorView";
@@ -109,12 +110,20 @@ export function ManageTab() {
 
   const reloadHosts = useCallback(() => {
     return getSSHHosts()
-      .then((raw) => setHosts(raw.map(sshHostToHost)))
+      .then((raw) => {
+        const list = raw.map(sshHostToHost);
+        hostsRef.current = list;
+        setHosts(list);
+      })
       .catch(() => {});
   }, []);
   const reloadCredentials = useCallback(() => {
     return getCredentials()
-      .then((res) => setCredentials(mapCredentials(res)))
+      .then((res) => {
+        const list = mapCredentials(res);
+        credentialsRef.current = list;
+        setCredentials(list);
+      })
       .catch(() => {});
   }, []);
 
@@ -207,17 +216,30 @@ export function ManageTab() {
       if (!(await confirmDiscard())) return;
       await loaded.current;
       if (request.kind === "host") {
-        const host = request.hostId
-          ? (hostsRef.current.find((h) => h.id === request.hostId) ?? null)
-          : null;
-        if (request.hostId && !host) return;
+        const find = () =>
+          hostsRef.current.find((h) => h.id === request.hostId) ?? null;
+        let host = request.hostId ? find() : null;
+        // Our list can lag the sidebar's, so refetch once before giving up.
+        if (request.hostId && !host) {
+          invalidateHostsAndStatusCaches();
+          await reloadHosts();
+          host = find();
+          if (!host) {
+            toast.error(t("manage.hostNotFound"));
+            return;
+          }
+        }
         openHost(host, request.draft);
       } else if (request.kind === "credential") {
-        const credential = request.credentialId
-          ? (credentialsRef.current.find(
-              (c) => c.id === request.credentialId,
-            ) ?? null)
-          : null;
+        const find = () =>
+          credentialsRef.current.find(
+            (c) => String(c.id) === String(request.credentialId),
+          ) ?? null;
+        let credential = request.credentialId ? find() : null;
+        if (request.credentialId && !credential) {
+          await reloadCredentials();
+          credential = find();
+        }
         void openCredential(credential);
       } else if (request.kind === "defaults") {
         void openDefaults(request);
@@ -227,7 +249,15 @@ export function ManageTab() {
         setMode(request.mode);
       }
     },
-    [confirmDiscard, openHost, openCredential, openDefaults],
+    [
+      confirmDiscard,
+      openHost,
+      openCredential,
+      openDefaults,
+      reloadHosts,
+      reloadCredentials,
+      t,
+    ],
   );
 
   // The request that opened this tab was parked before it mounted.
