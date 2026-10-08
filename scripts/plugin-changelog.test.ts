@@ -9,11 +9,6 @@ import {
 const FILE = [
   "# Changelog",
   "",
-  "## Unreleased",
-  "",
-  "### Fixed",
-  "- A bug not shipped yet",
-  "",
   "## 1.1.0 - 2026-10-06",
   "",
   "Second release.",
@@ -34,12 +29,9 @@ const FILE = [
 ].join("\n");
 
 describe("parseChangelog", () => {
-  it("reads releases, summaries, sections and unreleased changes", () => {
+  it("reads releases, summaries and sections", () => {
     const { changelog, problems } = parseChangelog(FILE);
     expect(problems).toEqual([]);
-    expect(changelog.unreleased).toEqual([
-      { type: "fixed", text: "A bug not shipped yet" },
-    ]);
     expect(changelog.releases).toEqual([
       {
         version: "1.1.0",
@@ -104,12 +96,19 @@ describe("parseChangelog", () => {
     );
   });
 
-  it("flags a release with no changes and Unreleased out of place", () => {
-    const { problems } = parseChangelog(
-      "## 1.0.0\n\nJust a summary.\n\n## Unreleased\n### Added\n- x\n",
-    );
+  it("flags a release with no changes", () => {
+    const { problems } = parseChangelog("## 1.0.0\n\nJust a summary.\n");
     expect(problems).toContain("1.0.0 has no changes listed");
-    expect(problems).toContain('"## Unreleased" has to come first');
+  });
+
+  it("flags an Unreleased section", () => {
+    const { changelog, problems } = parseChangelog(
+      "## Unreleased\n### Added\n- x\n\n## 1.0.0\n### Added\n- y\n",
+    );
+    expect(problems).toEqual([
+      'line 1: drop "## Unreleased", notes go under the version they ship in',
+    ]);
+    expect(changelog.releases.map((r) => r.version)).toEqual(["1.0.0"]);
   });
 
   it("ignores headings inside code fences", () => {

@@ -9,11 +9,23 @@ if (!fs.existsSync(sdk)) {
   process.exit(1);
 }
 
-const { parseChangelog } = require(sdk);
-const { problems } = parseChangelog(
-  fs.readFileSync(path.join(root, "CHANGELOG.md"), "utf8"),
+const { parseChangelog, validateChangelog } = require(sdk);
+const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
+
+const problems = parseChangelog(read("CHANGELOG.md")).problems.map(
+  (problem) => `CHANGELOG.md: ${problem}`,
 );
+
+// The SDK is published on its own, so its newest release has to be the package version.
+const sdkVersion = JSON.parse(read("packages/plugin-sdk/package.json")).version;
+problems.push(
+  ...validateChangelog(
+    read("packages/plugin-sdk/CHANGELOG.md"),
+    sdkVersion,
+  ).map((problem) => `packages/plugin-sdk/CHANGELOG.md: ${problem}`),
+);
+
 if (problems.length > 0) {
-  for (const problem of problems) console.error(`  CHANGELOG.md: ${problem}`);
+  for (const problem of problems) console.error(`  ${problem}`);
   process.exit(1);
 }

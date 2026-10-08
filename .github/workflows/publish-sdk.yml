@@ -13,7 +13,7 @@ on:
           - Dry run
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 jobs:
@@ -64,3 +64,21 @@ jobs:
           else
             npm publish --workspace @termix-ssh/plugin-sdk --provenance --access public
           fi
+
+      - name: Tag and release
+        if: ${{ inputs.mode == 'Publish' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p "require('./packages/plugin-sdk/package.json').version")
+          node -e "
+            const fs = require('fs');
+            const { changelogSection } = require('./packages/plugin-sdk/dist/changelog.js');
+            const notes = changelogSection(fs.readFileSync('packages/plugin-sdk/CHANGELOG.md', 'utf8'), process.argv[1]);
+            fs.writeFileSync('sdk-notes.md', notes);
+          " "$VERSION"
+          gh release create "sdk-v$VERSION" \
+            --target "${{ github.sha }}" \
+            --title "Plugin SDK $VERSION" \
+            --notes-file sdk-notes.md \
+            --latest=false

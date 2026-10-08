@@ -3,12 +3,7 @@
  *
  *   # Changelog
  *
- *   ## Unreleased
- *
- *   ### Added
- *   - Something merged but not shipped yet
- *
- *   ## 1.1.0 - 2026-10-06
+ *   ## 1.1.0
  *
  *   An optional summary paragraph.
  *
@@ -19,7 +14,8 @@
  *   - Something broken
  *
  * Releases are listed newest first, and the newest one has to be the
- * manifest version. The date is optional until the version ships.
+ * manifest version. Notes go straight under the version they ship in, there
+ * is no Unreleased section.
  */
 
 import semver from "semver";
@@ -48,7 +44,6 @@ export interface ChangelogRelease {
 }
 
 export interface Changelog {
-  unreleased: ChangelogChange[];
   /** Newest first, as written. */
   releases: ChangelogRelease[];
 }
@@ -135,7 +130,7 @@ export function parseChangelog(markdown: string): {
   problems: string[];
 } {
   const problems: string[] = [];
-  const changelog: Changelog = { unreleased: [], releases: [] };
+  const changelog: Changelog = { releases: [] };
   const lines = markdown.replace(/\r/g, "").split("\n");
 
   type Block = { heading: string; line: number; body: string[] };
@@ -151,12 +146,11 @@ export function parseChangelog(markdown: string): {
   });
 
   const seen = new Set<string>();
-  blocks.forEach((block, i) => {
+  blocks.forEach((block) => {
     if (UNRELEASED_HEADING.test(block.heading)) {
-      if (i !== 0) problems.push(`"## Unreleased" has to come first`);
-      const notes = parseReleaseNotes(block.body.join("\n"), "Unreleased");
-      problems.push(...notes.problems);
-      changelog.unreleased = notes.changes;
+      problems.push(
+        `line ${block.line}: drop "## Unreleased", notes go under the version they ship in`,
+      );
       return;
     }
 
