@@ -14,6 +14,7 @@ import {
 import { lazy, memo, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import type { Tab, TabType } from "@/types/ui-types";
+import { trackTabHandle } from "@/shell/tab-handles";
 import { hostToSSHHost } from "@/lib/host-to-ssh-host";
 import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
 import {
@@ -164,7 +165,9 @@ const RegisteredTab = memo(function RegisteredTab({
       isVisible={isVisible}
       isFocusedPane={isFocusedPane}
       inSplit={inSplit}
-      handleRef={tab.terminalRef as React.Ref<unknown>}
+      handleRef={trackTabHandle(
+        tab.terminalRef as React.RefObject<unknown> | undefined,
+      )}
       shell={shell}
     />
   );

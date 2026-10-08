@@ -33,6 +33,7 @@ import { isSessionTabType } from "@/shell/tab-registry";
 import { isElectron } from "@/lib/electron";
 import type { Tab, TabType } from "@/types/ui-types";
 import { ActionSlot } from "@/shell/ActionSlot";
+import { useTabHandlesVersion } from "@/shell/tab-handles";
 import {
   canJoinSplit,
   isSplitTab,
@@ -97,6 +98,8 @@ export function TabBar({
   showTabNumbers?: boolean;
 }) {
   const { t } = useTranslation();
+  // Re-renders when a tab's handle attaches, for buttons whose when reads it.
+  useTabHandlesVersion();
   const reduceMotion = useReducedMotion();
   const [open, setOpen] = useState(true);
   const [dragTabId, setDragTabId] = useState<string | null>(null);

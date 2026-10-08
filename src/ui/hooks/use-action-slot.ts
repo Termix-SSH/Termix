@@ -52,6 +52,10 @@ function contextKey(context: Record<string, unknown> | undefined): string {
   try {
     return JSON.stringify(context);
   } catch {
-    return String(Object.keys(context));
+    // A value that will not serialize still counts as there or not, so a
+    // handle filling in changes the key.
+    return Object.entries(context)
+      .map(([key, value]) => `${key}:${value == null ? "-" : typeof value}`)
+      .join(",");
   }
 }
