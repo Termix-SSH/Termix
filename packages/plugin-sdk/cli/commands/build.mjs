@@ -7,6 +7,7 @@ import { BACKEND_EXTERNALS, FRONTEND_EXTERNALS } from "../lib/externals.mjs";
 import { staticUrlImports } from "../lib/static-url-imports.mjs";
 import { readManifest, resolveEntry, copyDir } from "../lib/plugin-dir.mjs";
 import { openapi } from "./openapi.mjs";
+import { splitByCoreClasses } from "../lib/css-classes.mjs";
 
 const BACKEND_ENTRIES = [
   "src/backend/index.ts",
@@ -97,14 +98,15 @@ export function applyPatches(cwd, pluginId) {
   }
 }
 
-const THEME_CSS = path.join(
+const HOST_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
   "..",
   "dist",
   "host",
-  "theme.css",
 );
+const THEME_CSS = path.join(HOST_DIR, "theme.css");
+const CORE_CLASSES = path.join(HOST_DIR, "core-classes.json");
 
 /**
  * Compiles the Tailwind classes the plugin's frontend uses into
@@ -117,13 +119,21 @@ const THEME_CSS = path.join(
  * Moves a plugin's Tailwind layers under their own names. Core orders
  * termix-plugin-utilities above its base styles and below its own utilities,
  * so a plugin's copy of `.hidden` can never beat core's `md:flex` just
- * because the plugin's file loaded later.
+ * because the plugin's file loaded later. Only classes core also ships go
+ * there; `utilities: false` keeps the rest in core's own utilities layer.
  */
-export function lowerPluginLayers(css) {
+export function lowerPluginLayers(css, { utilities = true } = {}) {
+  const layers = utilities ? "properties|utilities" : "properties";
   return css.replace(
-    /@layer (properties|utilities)(?=[\s{;,])/g,
+    new RegExp(`@layer (${layers})(?=[\\s{;,])`, "g"),
     "@layer termix-plugin-$1",
   );
+}
+
+/** Classes core's CSS has rules for, or null with an SDK built before 1.0.4. */
+function readCoreClasses() {
+  if (!fs.existsSync(CORE_CLASSES)) return null;
+  return new Set(JSON.parse(fs.readFileSync(CORE_CLASSES, "utf8")));
 }
 
 export async function buildTailwind(cwd, outDir) {
@@ -137,10 +147,9 @@ export async function buildTailwind(cwd, outDir) {
     `@import ${JSON.stringify(THEME_CSS.replaceAll("\\", "/"))};`,
     '@import "tailwindcss/utilities.css" layer(utilities);',
   ].join("\n");
-  const compiler = await compile(input, {
-    base: path.dirname(THEME_CSS),
-    onDependency: () => {},
-  });
+  // build() adds to what a compiler already emitted, so each half gets its own.
+  const compiler = () =>
+    compile(input, { base: path.dirname(THEME_CSS), onDependency: () => {} });
   const scanner = new Scanner({
     sources: [
       {
@@ -152,9 +161,23 @@ export async function buildTailwind(cwd, outDir) {
   });
   // Flattened and minified the way core's own CSS is, so it does not rely
   // on native CSS nesting.
-  const css = lowerPluginLayers(
-    optimize(compiler.build(scanner.scan()), { minify: true }).code.trim(),
-  );
+  const emit = async (candidates, options) =>
+    candidates.length === 0
+      ? ""
+      : lowerPluginLayers(
+          optimize((await compiler()).build(candidates), {
+            minify: true,
+          }).code.trim(),
+          options,
+        );
+  const candidates = scanner.scan();
+  const coreClasses = readCoreClasses();
+  const { shared, own } = coreClasses
+    ? splitByCoreClasses(candidates, coreClasses)
+    : { shared: candidates, own: [] };
+  const css = [await emit(shared), await emit(own, { utilities: false })]
+    .filter(Boolean)
+    .join("\n");
   if (!css) return;
   const target = path.join(outDir, "frontend.css");
   const existing = fs.existsSync(target) ? fs.readFileSync(target, "utf8") : "";

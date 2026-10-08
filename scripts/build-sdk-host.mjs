@@ -3,6 +3,7 @@
  *
  *   dist/host/ui.js            @termix-ssh/plugin-sdk/ui, the shell's UI kit
  *   dist/host/testing-host.js  what renderWithApp() renders plugins into
+ *   dist/host/core-classes.json  the classes core's CSS has rules for
  *
  * Inside Termix the page's import map points @termix-ssh/plugin-sdk/ui at the
  * shell's own copy, so ui.js is never loaded there. It exists so a plugin in
@@ -18,6 +19,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import * as esbuild from "esbuild";
+import { compile, optimize } from "@tailwindcss/node";
+import { Scanner } from "@tailwindcss/oxide";
+import { classNamesInCss } from "../packages/plugin-sdk/cli/lib/css-classes.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = path.join(root, "packages", "plugin-sdk", "dist", "host");
@@ -135,6 +139,32 @@ fs.writeFileSync(
 fs.copyFileSync(
   path.join(root, "src/ui/theme.css"),
   path.join(outDir, "theme.css"),
+);
+
+// Every class core's own CSS has a rule for, found the way the Vite build
+// finds them, so termix-plugin build knows which plugin classes it shares.
+const indexCss = path.join(root, "src/ui/index.css");
+const compiler = await compile(fs.readFileSync(indexCss, "utf8"), {
+  base: path.dirname(indexCss),
+  onDependency: () => {},
+});
+const rootSource =
+  compiler.root === "none"
+    ? []
+    : compiler.root === null
+      ? [{ base: root, pattern: "**/*", negated: false }]
+      : [{ ...compiler.root, negated: false }];
+const scanner = new Scanner({
+  sources: [...rootSource, ...compiler.sources],
+});
+const coreClasses = [
+  ...classNamesInCss(
+    optimize(compiler.build(scanner.scan()), { minify: true }).code,
+  ),
+].sort();
+fs.writeFileSync(
+  path.join(outDir, "core-classes.json"),
+  `${JSON.stringify(coreClasses)}\n`,
 );
 
 console.log(`Built the SDK host modules into ${path.relative(root, outDir)}`);
