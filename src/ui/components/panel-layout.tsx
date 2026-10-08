@@ -105,10 +105,9 @@ export function PanelShell({
         className={`flex ${PANEL.header} shrink-0 flex-row items-center border-b border-border`}
       >
         {leading && (
-          <>
+          <div className="flex h-full shrink-0 border-r border-border">
             {leading}
-            <Separator orientation="vertical" />
-          </>
+          </div>
         )}
         <div className="flex min-w-0 flex-1 items-center gap-2 px-3">
           {icon && <span className="shrink-0 text-accent-brand">{icon}</span>}
@@ -117,7 +116,10 @@ export function PanelShell({
           </span>
           {status && (
             <>
-              <Separator orientation="vertical" className="h-4 self-center" />
+              <Separator
+                orientation="vertical"
+                className="h-4 data-[orientation=vertical]:self-center"
+              />
               <span className="truncate text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                 {status}
               </span>

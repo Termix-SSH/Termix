@@ -8,7 +8,6 @@ import {
   RotateCcw,
   SquareArrowOutUpRight,
 } from "lucide-react";
-import { Separator } from "@/components/separator";
 import { PANEL } from "@/components/panel-layout";
 import type { EditingWidth } from "@/components/surface/surface-scope";
 import { cn } from "@/lib/utils";
@@ -37,18 +36,15 @@ function HeaderButton({
   children: React.ReactNode;
 }) {
   return (
-    <>
-      <Separator orientation="vertical" />
-      <button
-        type="button"
-        title={title}
-        aria-label={title}
-        onClick={onClick}
-        className="flex h-full w-12.5 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
-      >
-        {children}
-      </button>
-    </>
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      onClick={onClick}
+      className="flex h-full w-12.5 shrink-0 items-center justify-center border-l border-border text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
+    >
+      {children}
+    </button>
   );
 }
 
