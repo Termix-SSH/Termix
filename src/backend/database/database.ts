@@ -82,6 +82,10 @@ import {
 import { withCurrentSqliteForeignKeysDisabled } from "./repositories/sqlite-foreign-keys.js";
 import { applyPluginHostImportSettings } from "./routes/host-plugin-settings.js";
 import {
+  selectExportableSettings,
+  type SettingData,
+} from "../utils/export-settings.js";
+import {
   keepUsableProtocolCredentials,
   listProtocolLogins,
   readProtocolAuthPayload,
@@ -107,19 +111,9 @@ const requireAdmin = authManager.createAdminMiddleware();
 app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware());
 
-type SettingData = {
-  key: string;
-  value: string;
-};
-
-function shouldExportSetting(key: string): boolean {
-  return !key.startsWith("reset_code_") && !key.startsWith("temp_reset_token_");
-}
-
-async function getExportableSettings(): Promise<SettingData[]> {
+async function getExportableSettings(isAdmin: boolean): Promise<SettingData[]> {
   const settingsRows = await createCurrentSettingsRepository().listAll();
-
-  return settingsRows.filter((setting) => shouldExportSetting(setting.key));
+  return selectExportableSettings(settingsRows, isAdmin);
 }
 
 function writeSettingsToExportDatabase(
@@ -1047,7 +1041,10 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         );
       }
 
-      writeSettingsToExportDatabase(exportDb, await getExportableSettings());
+      writeSettingsToExportDatabase(
+        exportDb,
+        await getExportableSettings(!!user.isAdmin),
+      );
       await writeHostDefaultsToExport(exportDb, userId);
     } finally {
       exportDb.close();
