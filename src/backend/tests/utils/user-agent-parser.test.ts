@@ -3,8 +3,6 @@ import type { Request } from "express";
 import {
   detectPlatform,
   parseUserAgent,
-  generateDeviceFingerprint,
-  getDeviceId,
 } from "../../utils/user-agent-parser.js";
 
 function reqWith(headers: Record<string, string>): Request {
@@ -95,85 +93,5 @@ describe("parseUserAgent", () => {
     );
     expect(info.type).toBe("mobile");
     expect(info.os).toContain("iOS");
-  });
-});
-
-describe("generateDeviceFingerprint", () => {
-  it("is stable for the same client device id", () => {
-    const a = generateDeviceFingerprint(
-      {
-        type: "web",
-        browser: "Chrome",
-        version: "120.5",
-        os: "Windows 10/11",
-        deviceInfo: "Chrome 120.5 on Windows 10/11",
-      },
-      "a".repeat(64),
-    );
-    const b = generateDeviceFingerprint(
-      {
-        type: "web",
-        browser: "Chrome",
-        version: "121.9",
-        os: "Windows 10/11",
-        deviceInfo: "Chrome 121.9 on Windows 10/11",
-      },
-      "a".repeat(64),
-    );
-    expect(a).toBe(b);
-  });
-
-  it("differs for two clients on the same platform", () => {
-    const a = generateDeviceFingerprint(
-      {
-        type: "desktop",
-        browser: "Termix Desktop",
-        version: "2.7.0",
-        os: "Linux",
-        deviceInfo: "",
-      },
-      "a".repeat(64),
-    );
-    const b = generateDeviceFingerprint(
-      {
-        type: "desktop",
-        browser: "Termix Desktop",
-        version: "2.7.0",
-        os: "Linux",
-        deviceInfo: "",
-      },
-      "b".repeat(64),
-    );
-    expect(a).not.toBe(b);
-  });
-
-  it("does not trust clients without a device id", () => {
-    const fp = generateDeviceFingerprint(
-      {
-        type: "desktop",
-        browser: "Termix Desktop",
-        version: "2.3.1",
-        os: "macOS",
-        deviceInfo: "",
-      },
-      null,
-    );
-    expect(fp).toBeNull();
-  });
-});
-
-describe("getDeviceId", () => {
-  it("accepts a 256-bit hex device id", () => {
-    const deviceId = "a".repeat(64);
-    expect(getDeviceId(reqWith({ "x-termix-device-id": deviceId }))).toBe(
-      deviceId,
-    );
-  });
-
-  it("rejects missing or malformed device ids", () => {
-    expect(getDeviceId(reqWith({}))).toBeNull();
-    expect(
-      getDeviceId(reqWith({ "x-termix-device-id": "shared-linux" })),
-    ).toBeNull();
   });
 });

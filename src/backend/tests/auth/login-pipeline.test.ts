@@ -88,6 +88,8 @@ const {
   respondWithRedirectLogin,
   verifySecondFactorAndRespond,
   resetPendingLoginsForTests,
+  TRUST_DEVICE_COOKIE,
+  hashTrustToken,
 } = await import("../../auth/login-pipeline.js");
 const { verifyPasswordLogin } =
   await import("../../auth/builtin-login-methods.js");
@@ -295,14 +297,44 @@ describe("second factors", () => {
     await verifySecondFactorAndRespond(req as never, res as never, "totp");
 
     expect(res.statusCode).toBe(200);
-    expect(res.cookies[0]).toMatchObject({ name: "jwt" });
+    const trust = res.cookies.find((c) => c.name === TRUST_DEVICE_COOKIE);
+    expect(trust?.value).toMatch(/^[a-f0-9]{64}$/);
+    expect(res.cookies.find((c) => c.name === "jwt")).toBeDefined();
     expect(res.body).toMatchObject({
       success: true,
       username: "alice",
       totp_enabled: true,
     });
-    expect(h.state.trustedAdded).toHaveLength(1);
+    expect(res.body).not.toHaveProperty("trustToken");
+    expect(h.state.trustedAdded).toEqual([
+      `u1:${hashTrustToken(trust!.value)}`,
+    ]);
     expect(h.state.audits.at(-1)).toMatchObject({ action: "login" });
+  });
+
+  it("hands the trust token to the desktop app in the body", async () => {
+    enrolTotp();
+    const first = await passwordLogin({
+      username: "alice",
+      password: PASSWORD,
+    });
+    const res = fakeResponse();
+    await verifySecondFactorAndRespond(
+      fakeRequest({
+        headers: { "x-electron-app": "true" },
+        body: {
+          temp_token: (first.body as { temp_token: string }).temp_token,
+          totp_code: TOTP_CODE,
+          rememberMe: true,
+        },
+      }) as never,
+      res as never,
+      "totp",
+    );
+    expect(res.statusCode).toBe(200);
+    expect((res.body as { trustToken: string }).trustToken).toMatch(
+      /^[a-f0-9]{64}$/,
+    );
   });
 
   it("answers the 2.8 route with the user's first factor when none is named", async () => {
@@ -369,11 +401,30 @@ describe("second factors", () => {
     expect(res.cookies).toEqual([]);
   });
 
-  it("skips the factor on a trusted device", async () => {
+  it("skips the factor with a server-issued trust cookie", async () => {
     enrolTotp();
-    h.manager.isTrustedDevice.mockResolvedValueOnce(true);
-    const res = await passwordLogin({ username: "alice", password: PASSWORD });
+    const token = "c".repeat(64);
+    h.state.trusted.add(`u1:${hashTrustToken(token)}`);
+    const req = fakeRequest({
+      body: { username: "alice", password: PASSWORD },
+      cookies: { [TRUST_DEVICE_COOKIE]: token },
+    });
+    const res = fakeResponse();
+    const identity = await verifyPasswordLogin(req as never);
+    await respondWithLogin(req as never, res as never, identity, {
+      methodId: "password",
+      rememberMe: false,
+    });
     expect(res.cookies[0]).toMatchObject({ name: "jwt" });
+  });
+
+  it("never skips the factor on a client-made device id", async () => {
+    enrolTotp();
+    const deviceId = "a".repeat(64);
+    h.state.trusted.add(`u1:${deviceId}`);
+    const res = await passwordLogin({ username: "alice", password: PASSWORD });
+    expect(res.body).toMatchObject({ requires_totp: true });
+    expect(h.manager.isTrustedDevice).not.toHaveBeenCalled();
   });
 
   it("fails closed when an enrolled factor's plugin is gone", async () => {

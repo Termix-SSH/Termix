@@ -2,6 +2,7 @@ import {
   authApi,
   handleApiError,
   markUserAuthenticated,
+  TRUST_TOKEN_KEY,
   type AuthResponse,
 } from "@/main-axios";
 
@@ -26,8 +27,11 @@ export type LoginResponse = AuthResponse & {
   userId?: string;
 };
 
-function remember(data: LoginResponse): LoginResponse {
+function remember(
+  data: LoginResponse & { trustToken?: string },
+): LoginResponse {
   if (data?.token) localStorage.setItem("jwt", data.token);
+  if (data?.trustToken) localStorage.setItem(TRUST_TOKEN_KEY, data.trustToken);
   if (data?.success && !data.requires_totp) markUserAuthenticated();
   return data;
 }

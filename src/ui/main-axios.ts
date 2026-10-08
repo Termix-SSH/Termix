@@ -135,6 +135,8 @@ type ElectronWindow = Window &
 
 export { isElectron };
 
+export const TRUST_TOKEN_KEY = "termixTrustToken";
+
 function getLoggerForService(serviceName: string) {
   if (serviceName.includes("SSH") || serviceName.includes("ssh")) {
     return sshLogger;
@@ -368,6 +370,19 @@ function createApiInstance(
           config.headers.set("Authorization", `Bearer ${jwt}`);
         } else {
           config.headers["Authorization"] = `Bearer ${jwt}`;
+        }
+      }
+      // The desktop app has no cookies with the server, so it carries the
+      // remember-this-device token itself, and only to login.
+      const trustToken = localStorage.getItem(TRUST_TOKEN_KEY);
+      const isLogin =
+        config.url?.includes("/users/login") ||
+        /\/users\/auth\/[^/]+\/verify$/.test(config.url ?? "");
+      if (trustToken && isLogin) {
+        if (config.headers.set) {
+          config.headers.set("X-Termix-Trust-Token", trustToken);
+        } else {
+          config.headers["X-Termix-Trust-Token"] = trustToken;
         }
       }
     }

@@ -235,7 +235,6 @@ export function fakeAuthManager(state: AuthState) {
 export function fakeRequest(overrides: Record<string, unknown> = {}) {
   const headers: Record<string, string> = {
     "user-agent": "Mozilla/5.0 (X11; Linux x86_64) Firefox/120.0",
-    "x-termix-device-id": "a".repeat(64),
     ...(overrides.headers as Record<string, string> | undefined),
   };
   return {
