@@ -14,15 +14,28 @@ function getAllowedOrigins(): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Origins allowed to drive the embedded desktop backend: the desktop app
+ * itself and the dev server. Any website open in a browser on the same
+ * machine can reach loopback too, so nothing else gets in.
+ */
+export function isDesktopAppOrigin(origin: string | undefined): boolean {
+  if (!origin) return true;
+  return (
+    DEV_ORIGINS.includes(origin) || origin.startsWith(ELECTRON_FILE_ORIGIN)
+  );
+}
+
 export function isCorsOriginAllowed(
   req: Request,
   origin: string | undefined,
 ): boolean {
-  if (!origin) return true;
-  if (DEV_ORIGINS.includes(origin)) return true;
-  if (origin.startsWith(ELECTRON_FILE_ORIGIN)) return true;
+  if (isDesktopAppOrigin(origin)) return true;
 
   const configured = getAllowedOrigins();
+  if (process.env.ELECTRON_EMBEDDED === "true") {
+    return configured.includes(origin) || origin === getRequestOrigin(req);
+  }
   if (configured.length === 0) return true;
   if (configured.includes(origin)) return true;
 
