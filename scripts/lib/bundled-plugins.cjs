@@ -299,12 +299,35 @@ function newestMtime(target) {
 }
 
 /** True when a plugin repo has never been built or its sources changed since. */
-function isLocalBuildStale(repo) {
+/** The SDK CLI in this checkout, which dev builds local plugins with. */
+const LOCAL_SDK_CLI = path.join(
+  __dirname,
+  "..",
+  "..",
+  "packages",
+  "plugin-sdk",
+  "cli",
+);
+
+/**
+ * True when the build is missing, a source is newer than it, or the SDK CLI
+ * that builds it changed since (sdkCli, when given).
+ */
+function isLocalBuildStale(repo, sdkCli) {
   const built = newestMtime(path.join(repo, "dist"));
   if (!built) return true;
+  if (sdkCli && newestMtime(sdkCli) > built) return true;
   return BUILD_INPUTS.some(
     (entry) => newestMtime(path.join(repo, entry)) > built,
   );
+}
+
+/**
+ * The command that builds a plugin repo with this checkout's SDK instead of
+ * the published one in its node_modules, so SDK edits apply right away.
+ */
+function localSdkBuildCommand() {
+  return [process.execPath, [path.join(LOCAL_SDK_CLI, "index.mjs"), "build"]];
 }
 
 /**
@@ -325,7 +348,8 @@ function rebuildLocalPlugins(dir, ids, run) {
     } catch {
       continue;
     }
-    if ((ids && !ids.has(id)) || !isLocalBuildStale(repo)) continue;
+    if ((ids && !ids.has(id)) || !isLocalBuildStale(repo, LOCAL_SDK_CLI))
+      continue;
     run(repo, id);
     rebuilt.push(id);
   }
@@ -346,6 +370,7 @@ function copyLocalBuild(repo, destination) {
 module.exports = {
   findLocalPluginBuilds,
   isLocalBuildStale,
+  localSdkBuildCommand,
   rebuildLocalPlugins,
   copyLocalBuild,
   parseBundledPlugins,

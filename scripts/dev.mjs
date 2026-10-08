@@ -45,7 +45,10 @@ import {
 } from "./lib/dev-docker.mjs";
 
 const require = createRequire(import.meta.url);
-const { copyLocalBuild } = require("./lib/bundled-plugins.cjs");
+const {
+  copyLocalBuild,
+  localSdkBuildCommand,
+} = require("./lib/bundled-plugins.cjs");
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const BACKEND_ENTRY = path.join(
@@ -83,7 +86,9 @@ function run(command, args, cwd = root) {
     const child = spawn(command, args, {
       cwd,
       stdio: ["ignore", "inherit", "inherit"],
-      shell: process.platform === "win32",
+      // npm is a .cmd on Windows and needs the shell, but the shell splits
+      // arguments on spaces, so a path like "Personal Projects" gets cut.
+      shell: process.platform === "win32" && !path.isAbsolute(command),
     });
     child.on("error", reject);
     child.on("exit", (code) =>
@@ -541,7 +546,7 @@ function watchCoreForDocker() {
 async function rebuildPlugin({ id, repo }) {
   log(`building ${id}`);
   try {
-    await run("npm", ["run", "build"], repo);
+    await run(...localSdkBuildCommand(), repo);
   } catch (error) {
     warn(`${id} failed to build: ${error.message}`);
     return;

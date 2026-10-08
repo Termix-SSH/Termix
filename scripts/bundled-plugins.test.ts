@@ -13,6 +13,7 @@ import {
   buildBundledIndex,
   findLocalPluginBuilds,
   isLocalBuildStale,
+  localSdkBuildCommand,
   rebuildLocalPlugins,
   copyLocalBuild,
 } from "./lib/bundled-plugins.cjs";
@@ -352,6 +353,40 @@ describe("rebuilding local plugins", () => {
     touch(path.join(root, "src", "index.ts"), 0);
     touch(path.join(root, "dist", "frontend.js"), 30);
     expect(isLocalBuildStale(root)).toBe(true);
+  });
+
+  it("is stale when the SDK CLI changed after the build", () => {
+    const root = repo(tempDir(), "Plugin-A", "a");
+    const cli = path.join(tempDir(), "cli");
+    fs.mkdirSync(cli);
+    fs.writeFileSync(path.join(cli, "index.mjs"), "x");
+    fs.mkdirSync(path.join(root, "dist"));
+    fs.writeFileSync(path.join(root, "dist", "frontend.js"), "x");
+    touch(path.join(root, "manifest.json"), 60);
+    touch(path.join(root, "src", "index.ts"), 60);
+    touch(path.join(cli, "index.mjs"), 60);
+    expect(isLocalBuildStale(root, cli)).toBe(false);
+
+    touch(path.join(root, "dist", "frontend.js"), 30);
+    touch(path.join(cli, "index.mjs"), 0);
+    expect(isLocalBuildStale(root, cli)).toBe(true);
+    expect(isLocalBuildStale(root)).toBe(false);
+  });
+
+  it("builds with this checkout's SDK CLI, not the plugin's own", () => {
+    const [command, args] = localSdkBuildCommand();
+    expect(command).toBe(process.execPath);
+    expect(args).toEqual([
+      path.resolve(
+        __dirname,
+        "..",
+        "packages",
+        "plugin-sdk",
+        "cli",
+        "index.mjs",
+      ),
+      "build",
+    ]);
   });
 
   it("builds only stale repos for bundled ids that have node_modules", () => {
