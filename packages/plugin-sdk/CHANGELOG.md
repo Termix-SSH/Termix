@@ -4,7 +4,7 @@
 
 ### Fixed
 
-- `termix-plugin build` puts a plugin's own Tailwind classes in core's utilities layer, so responsive, hover and group variants and `className` overrides on SDK components work. Classes core already ships stay below core's utilities as before. Rebuild a plugin to pick it up
+- `termix-plugin build` puts a plugin's own Tailwind classes in core's utilities layer, so responsive, hover and group variants and `className` overrides on SDK components work. Plain classes core already ships stay below core's utilities as before, while variants core ships go with the plugin's own so `max-h-56 md:max-h-none` keeps its order. Rebuild a plugin to pick it up
 
 ## 1.0.3
 

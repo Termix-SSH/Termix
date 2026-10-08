@@ -20,16 +20,18 @@ export function classNamesInCss(css) {
 
 /**
  * Splits a plugin's candidates by whether core's own CSS already has them.
- * A class core ships keeps the plugin's copy below core's utilities, so it can
- * never reorder core's rules. Any other class has no rule in core to fight,
- * so it goes in core's utilities layer and overrides the way it would in one
- * Tailwind build.
+ * A plain class core ships keeps the plugin's copy below core's utilities, so
+ * it can never reorder core's rules. Everything else goes in core's utilities
+ * layer: plugin-only classes, and every variant (md:, hover:, ...) even when
+ * core ships it, so `max-h-56 md:max-h-none` is ordered in one build and a
+ * variant still beats core's own base class.
  */
 export function splitByCoreClasses(candidates, coreClasses) {
   const shared = [];
   const own = [];
   for (const candidate of candidates) {
-    (coreClasses.has(candidate) ? shared : own).push(candidate);
+    const plain = !candidate.includes(":");
+    (plain && coreClasses.has(candidate) ? shared : own).push(candidate);
   }
   return { shared, own };
 }

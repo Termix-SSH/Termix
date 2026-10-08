@@ -142,6 +142,18 @@ describe("plugin CSS layers", () => {
     ).toEqual({ shared: ["w-28", "hidden"], own: ["md:w-44"] });
   });
 
+  it("keeps variants core ships with the plugin's own classes", () => {
+    expect(
+      splitByCoreClasses(
+        ["max-h-56", "md:max-h-none", "flex-col", "md:flex-row"],
+        new Set(["md:max-h-none", "flex-col", "md:flex-row"]),
+      ),
+    ).toEqual({
+      shared: ["flex-col"],
+      own: ["max-h-56", "md:max-h-none", "md:flex-row"],
+    });
+  });
+
   it("keeps classes core ships below core and the plugin's own beside core's", async () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     // Core's class list comes from scanning this repo, this file included,
