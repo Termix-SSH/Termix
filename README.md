@@ -254,4 +254,4 @@ For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf)
 
 ## License
 
-Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.
+Distributed under the Apache License Version 2.0. See [LICENSE](LICENSE) for more information.
