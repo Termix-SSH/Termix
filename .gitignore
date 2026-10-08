@@ -20,10 +20,10 @@ coverage
 termix-plugin-signing.key
 /src/**/*.js
 
-.vscode/*
-!.vscode/settings.json
-.idea
+.vscode/
+.idea/
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
