@@ -1,3 +1,5 @@
-# Do Not Edit Translated Files
+# Translations
 
-Only `en.json` is edited by hand. Every other file here is translated through Crowdin and will be overwritten. See the [docs](https://docs.termix.site/translations) to help translate.
+Only `en.json` needs to be updated. Every other language in `translated/` is filled in automatically for any string that doesn't have a translation yet.
+
+If an automatic translation is wrong, fix it in that language's file. Strings that already have a translation are never overwritten.

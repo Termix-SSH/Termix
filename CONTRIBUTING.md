@@ -57,7 +57,7 @@ npm run format       # format the code with Prettier
 ## Guidelines
 
 - Follow the existing code style. The frontend uses React, Tailwind CSS and shadcn components in `src/ui/`.
-- Never hardcode text. Use `t()` and add the English string to `src/ui/locales/en.json`. Other languages are translated on [Crowdin](https://docs.termix.site/translations).
+- Never hardcode text. Use `t()` and add the English string to `src/ui/locales/en.json`. That's the only locale file you need to update. Other languages are translated automatically, and if an automatic translation is wrong you can fix it in that language's file.
 - Keep the UI flat and square. Avoid rounded corners on panels, cards and dialogs.
 - Use the theme variables (like `var(--bg-base)` and `var(--text-primary)`) instead of fixed colors.
 - There is one component tree for desktop and mobile. Use `src/ui/hooks/use-mobile.ts` for layout changes.
