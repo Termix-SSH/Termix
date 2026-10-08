@@ -412,17 +412,22 @@ export function RecentActivityList({
             <span
               className={`size-1.5 shrink-0 rounded-full ${getStatusClasses(host?.status ?? false, scheme, "dot", statusLoading)}`}
             />
-            <span className="truncate text-xs font-medium">
-              {item.hostName}
-            </span>
-            <span className="flex min-w-0 items-center gap-1 text-[10px] text-muted-foreground">
-              <Icon className="size-2.5 shrink-0" />
-              <span className="truncate">
-                {target?.labelKey
-                  ? t(target.labelKey)
-                  : item.type.replace("_", " ")}
+            <Facts className="min-w-0">
+              <span
+                className="truncate text-xs font-medium"
+                title={item.hostName}
+              >
+                {item.hostName}
               </span>
-            </span>
+              <span className="flex min-w-0 items-center gap-1 text-[10px] text-muted-foreground">
+                <Icon className="size-2.5 shrink-0" />
+                <span className="truncate">
+                  {target?.labelKey
+                    ? t(target.labelKey)
+                    : item.type.replace("_", " ")}
+                </span>
+              </span>
+            </Facts>
             <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground">
               {ago(item.timestamp)}
             </span>
