@@ -14,7 +14,7 @@
     "node": ">=22"
   },
   "bin": {
-    "termix-plugin": "./cli/index.mjs"
+    "termix-plugin": "cli/index.mjs"
   },
   "exports": {
     "./backend": {
