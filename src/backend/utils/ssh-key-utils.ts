@@ -1,8 +1,9 @@
 import { createPrivateKey } from "node:crypto";
-import { parsePrivateKey } from "sshpk";
+import sshpk from "sshpk";
 import { getErrorMessage } from "./error-message.js";
 import ssh2Pkg from "ssh2";
 const ssh2Utils = ssh2Pkg.utils;
+const { parsePrivateKey } = sshpk;
 
 function detectKeyTypeFromContent(keyContent: string): string {
   const content = keyContent.trim();

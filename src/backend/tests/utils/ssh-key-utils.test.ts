@@ -1,6 +1,6 @@
 import { generateKeyPairSync } from "node:crypto";
 import ssh2 from "ssh2";
-import { parsePrivateKey } from "sshpk";
+import sshpk from "sshpk";
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import {
@@ -11,6 +11,8 @@ import {
   getFriendlyKeyTypeName,
   validateKeyPair,
 } from "../../utils/ssh-key-utils.js";
+
+const { parsePrivateKey } = sshpk;
 
 // A real OpenSSH ed25519 keypair generated solely for these tests. It grants no
 // access to anything and exists only so the ssh2 parsing path is exercised for
