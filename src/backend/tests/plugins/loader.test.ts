@@ -11,7 +11,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { PluginLoader, assertBundledUpdate } from "../../plugins/loader.js";
+import zlib from "node:zlib";
+import {
+  PluginLoader,
+  assertBundledUpdate,
+  unsafeArchivePath,
+} from "../../plugins/loader.js";
 import { createFixturePlugin } from "./fixture-plugin.js";
 
 vi.mock("../../database/repositories/factory.js", () => ({
@@ -547,5 +552,48 @@ describe("PluginLoader uninstall and pins", () => {
     expect(() =>
       assertBundledUpdate("docker", "1.0.0", undefined, "1.1.0", "1.0.0"),
     ).toThrow(/signed/);
+  });
+});
+
+/** A gzipped tar with the given entry names, written by hand. */
+function rawTar(names: string[]): Buffer {
+  const blocks: Buffer[] = [];
+  for (const name of names) {
+    const header = Buffer.alloc(512);
+    header.write(name, 0, 100);
+    header.write("0000644 ", 100);
+    header.write("00000000001 ", 124);
+    header.write("        ", 148);
+    header.write("0", 156);
+    header.write("ustar ", 257);
+    header.write("00", 263);
+    let sum = 0;
+    for (const byte of header) sum += byte;
+    header.write(sum.toString(8).padStart(6, "0") + "  ", 148);
+    blocks.push(header, Buffer.concat([Buffer.from("x"), Buffer.alloc(511)]));
+  }
+  blocks.push(Buffer.alloc(1024));
+  return zlib.gzipSync(Buffer.concat(blocks));
+}
+
+describe("unsafeArchivePath", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "termix-unsafe-"));
+  const write = (names: string[]) => {
+    const file = path.join(dir, `${names.length}-${Math.random()}.tmxplug`);
+    fs.writeFileSync(file, rawTar(names));
+    return file;
+  };
+
+  it("finds entries that escape the folder", async () => {
+    expect(
+      await unsafeArchivePath(write(["manifest.json", "../../etc/x"])),
+    ).toBe("../../etc/x");
+    expect(await unsafeArchivePath(write(["/tmp/x"]))).not.toBeNull();
+  });
+
+  it("passes a normal archive", async () => {
+    expect(
+      await unsafeArchivePath(write(["manifest.json", "dist/backend.js"])),
+    ).toBeNull();
   });
 });

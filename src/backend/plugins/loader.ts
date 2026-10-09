@@ -361,6 +361,13 @@ export class PluginLoader {
       );
     }
 
+    const unsafe = await unsafeArchivePath(file);
+    if (unsafe) {
+      throw new Error(
+        `${path.basename(file)} has a file outside the plugin folder: ${unsafe}`,
+      );
+    }
+
     const unpackedRoot = getUnpackedPluginsDir();
     const staging = path.join(
       unpackedRoot,
@@ -430,7 +437,15 @@ export class PluginLoader {
         throw error;
       }
     } finally {
-      await fs.promises.rm(staging, { recursive: true, force: true });
+      // Never let a failed cleanup hide the error that got us here.
+      await fs.promises
+        .rm(staging, { recursive: true, force: true, maxRetries: 5 })
+        .catch((error) =>
+          pluginLogger.warn(`Could not remove ${staging}`, {
+            operation: "plugin_load",
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        );
     }
   }
 
@@ -883,4 +898,28 @@ export function isRealPathInside(root: string, target: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * The first entry that would land outside the folder it is unpacked into,
+ * or null. tar skips these on its own, but its stream keeps writing after
+ * it rejects, so they are refused before anything is unpacked.
+ */
+export async function unsafeArchivePath(file: string): Promise<string | null> {
+  let unsafe: string | null = null;
+  await tar.t({
+    file,
+    onReadEntry: (entry) => {
+      const name = entry.path.replace(/\\/g, "/");
+      if (
+        !unsafe &&
+        (name.startsWith("/") ||
+          /^[a-zA-Z]:/.test(name) ||
+          name.split("/").includes(".."))
+      ) {
+        unsafe = entry.path;
+      }
+    },
+  });
+  return unsafe;
 }
