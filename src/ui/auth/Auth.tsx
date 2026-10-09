@@ -725,6 +725,10 @@ export function Auth({ onLogin }: AuthProps) {
       toast.error(t("auth.secondFactorUnavailable"));
       return;
     }
+    if (error?.response?.data?.code === "external_login_required") {
+      toast.error(t("auth.externalLoginRequired"));
+      return;
+    }
     toast.error(
       error?.response?.data?.error || error?.message || t(fallbackKey),
     );

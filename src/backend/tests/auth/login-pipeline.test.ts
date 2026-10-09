@@ -527,6 +527,46 @@ describe("external identities", () => {
   });
   afterEach(() => disposeOidc());
 
+  function addSsoUser(passwordHash = "") {
+    addUser({ passwordHash });
+    h.state.identities.push({
+      userId: "u1",
+      providerId: "3",
+      subject: "sub-1",
+    } as never);
+  }
+
+  it("refuses a passkey sign in for an account that only uses SSO", async () => {
+    addSsoUser();
+    await expect(
+      runLogin(
+        fakeRequest() as never,
+        { kind: "user", userId: "u1", mfaSatisfied: true },
+        { methodId: "passkey", rememberMe: false },
+      ),
+    ).rejects.toMatchObject({ status: 403, code: "external_login_required" });
+  });
+
+  it("still lets an SSO account with a password use a passkey", async () => {
+    addSsoUser(bcrypt.hashSync(PASSWORD, 4));
+    const result = await runLogin(
+      fakeRequest() as never,
+      { kind: "user", userId: "u1", mfaSatisfied: true },
+      { methodId: "passkey", rememberMe: false },
+    );
+    expect(result.kind).toBe("session");
+  });
+
+  it("lets an external method sign an SSO account in by user id", async () => {
+    addSsoUser();
+    const result = await runLogin(
+      fakeRequest() as never,
+      { kind: "user", userId: "u1" },
+      { methodId: "oidc", rememberMe: false },
+    );
+    expect(result.kind).toBe("session");
+  });
+
   it("provisions the first user as admin and links the identity", async () => {
     const result = await runLogin(fakeRequest() as never, external, {
       methodId: "oidc",

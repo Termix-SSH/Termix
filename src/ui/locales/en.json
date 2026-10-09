@@ -1027,6 +1027,7 @@
     "loadingServer": "Loading server...",
     "password": "Password",
     "secondFactorUnavailable": "Your account uses a second factor that is not available right now. Contact an admin to reset it.",
+    "externalLoginRequired": "This account signs in through single sign-on. Use that button to sign in.",
     "secondFactorNoUI": "This second factor cannot be shown on this screen. Contact an admin.",
     "serverAuthentication": "Server sign-in",
     "minChars": "min. {{min}} characters",

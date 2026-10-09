@@ -171,6 +171,27 @@ async function isTrustedDevice(req: Request, userId: string): Promise<boolean> {
 
 type DeviceType = ReturnType<typeof parseUserAgent>["type"];
 
+/**
+ * An account that only signs in through SSO or LDAP must keep doing so. A
+ * passkey or any other local method would skip the identity provider, so a
+ * user disabled there could still get in.
+ */
+export function assertMethodAllowedFor(
+  user: Pick<UserRecord, "isExternal" | "passwordHash">,
+  identity: VerifiedIdentity,
+  methodId: string,
+): void {
+  if (identity.kind === "external" || !user.isExternal) return;
+  if (user.passwordHash && user.passwordHash.trim() !== "") return;
+  ensureCoreLoginProviders();
+  if (getLoginMethod(methodId)?.external) return;
+  throw new LoginMethodError(
+    "This account signs in through its identity provider",
+    403,
+    "external_login_required",
+  );
+}
+
 async function resolveUser(
   identity: VerifiedIdentity,
   deviceType: DeviceType,
@@ -253,6 +274,7 @@ export async function runLogin(
 ): Promise<LoginResult> {
   const deviceType = parseUserAgent(req).type;
   const user = await resolveUser(identity, deviceType);
+  assertMethodAllowedFor(user, identity, context.methodId);
 
   await unlockUser(user, identity, deviceType);
   if ("password" in identity && identity.password) {
