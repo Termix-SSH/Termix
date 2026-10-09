@@ -117,6 +117,7 @@ export function OnboardingStage({
   }, [allSteps, ctx]);
 
   const [currentId, setCurrentId] = useState<string | null>(null);
+  const [viewOpen, setViewOpen] = useState(false);
   const lastPosition = useRef(0);
   const [confirmed, setConfirmed] = useState<Set<string>>(() => new Set());
   const [canContinue, setCanContinueMap] = useState<Record<string, boolean>>(
@@ -280,7 +281,10 @@ export function OnboardingStage({
 
           <SurfaceScope
             kind="tab"
-            className="relative flex flex-col border border-border bg-card"
+            onEditingChange={(editing) => setViewOpen(!!editing)}
+            className={`relative flex flex-col border border-border bg-card ${
+              viewOpen ? "min-h-[70vh]" : ""
+            }`}
           >
             <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
               {Icon && <Icon size={14} className="text-muted-foreground" />}

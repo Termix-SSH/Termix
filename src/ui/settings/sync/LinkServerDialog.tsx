@@ -1,18 +1,11 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { InlineView, useSurfaceKind } from "@/components/surface/surface-scope";
+import { InlineView } from "@/components/surface/surface-scope";
 import { toast } from "sonner";
 import { AlertCircle, Loader2, X } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Switch } from "@/components/switch";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/dialog";
 import { ElectronLoginForm } from "@/auth/ElectronLoginForm";
 import {
   completeLink,
@@ -224,7 +217,6 @@ export function LinkServerDialog({
     0,
   );
   const wide = step === "signin";
-  const inSurface = useSurfaceKind() !== null;
 
   const title = relogin
     ? t("sync.wizard.reloginTitle")
@@ -443,47 +435,21 @@ export function LinkServerDialog({
     </>
   );
 
-  // From a sidebar panel the wizard takes over the panel. Outside one (the
-  // first-run setup) it stays a dialog.
-  if (inSurface) {
-    return (
-      <InlineView
-        open={open}
-        onOpenChange={onOpenChange}
-        title={title}
-        width="wide"
-        scroll={!wide}
-      >
-        {!wide && (
-          <p className="text-xs text-muted-foreground">
-            {description} {step === "server" && <DocsLink core="desktopSync" />}
-          </p>
-        )}
-        {content}
-      </InlineView>
-    );
-  }
-
+  // The wizard takes over the panel, tab or onboarding step it opens from.
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className={`bg-card border border-border rounded-none ${
-          wide ? "sm:max-w-4xl h-[80vh] flex flex-col p-0 gap-0" : "sm:max-w-lg"
-        }`}
-        // The sign-in step is a page from another origin in an iframe; clicks
-        // inside it look like outside clicks to the dialog.
-        onPointerDownOutside={(event) => wide && event.preventDefault()}
-        onInteractOutside={(event) => wide && event.preventDefault()}
-      >
-        <DialogHeader className={wide ? "sr-only" : undefined}>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>
-            {description} {step === "server" && <DocsLink core="desktopSync" />}
-          </DialogDescription>
-        </DialogHeader>
-
-        {content}
-      </DialogContent>
-    </Dialog>
+    <InlineView
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      width="wide"
+      scroll={!wide}
+    >
+      {!wide && (
+        <p className="text-xs text-muted-foreground">
+          {description} {step === "server" && <DocsLink core="desktopSync" />}
+        </p>
+      )}
+      {content}
+    </InlineView>
   );
 }
