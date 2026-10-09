@@ -85,6 +85,20 @@ describe("Facts", () => {
     );
     expect(container.querySelectorAll("[aria-hidden]")).toHaveLength(1);
   });
+
+  it("separates facts passed inside a fragment", () => {
+    const { container } = render(
+      <Facts>
+        <>
+          <span>Termix</span>
+          {false}
+          <span>v1.0.0</span>
+          <span>Monitoring</span>
+        </>
+      </Facts>,
+    );
+    expect(container.querySelectorAll("[aria-hidden]")).toHaveLength(2);
+  });
 });
 
 describe("PanelShell", () => {

@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { Children, Fragment, useRef } from "react";
+import { Children, Fragment, isValidElement, useRef } from "react";
 import type React from "react";
 import { ArrowLeft, Grid3X3, List, Rows3, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -395,6 +395,16 @@ function ToggleButton({
  * A run of peer facts with a rule between each pair, like "12 online | 40
  * hosts". Never wraps; a fact that does not fit is truncated.
  */
+/** Children with fragments opened up, so each fact gets its own divider. */
+function flattenFacts(children: React.ReactNode): React.ReactNode[] {
+  return Children.toArray(children).flatMap((child) =>
+    isValidElement<{ children?: React.ReactNode }>(child) &&
+    child.type === Fragment
+      ? flattenFacts(child.props.children)
+      : [child],
+  );
+}
+
 export function Facts({
   className,
   children,
@@ -402,7 +412,7 @@ export function Facts({
   className?: string;
   children: React.ReactNode;
 }) {
-  const items = Children.toArray(children).filter(Boolean);
+  const items = flattenFacts(children);
   if (items.length === 0) return null;
 
   return (
