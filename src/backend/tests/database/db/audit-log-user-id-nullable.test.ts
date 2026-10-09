@@ -10,8 +10,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  *
  * The Drizzle schema said so, the repository was written against it, but the
  * runtime bootstrap still created `user_id TEXT NOT NULL`. A second, corrected
- * `CREATE TABLE IF NOT EXISTS` further down was a no-op — the table already
- * existed — so every fresh install got the old constraint and every user
+ * `CREATE TABLE IF NOT EXISTS` further down was a no-op, the table already
+ * existed, so every fresh install got the old constraint and every user
  * deletion (including the OIDC account-link cleanup) failed once the account
  * had logged in at least once.
  */

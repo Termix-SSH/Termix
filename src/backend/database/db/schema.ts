@@ -534,7 +534,7 @@ export const sharedHostSecrets = sqliteTable(
   },
   // Declared inline in the production DDL as UNIQUE(...), but never here,
   // so the generated Postgres and MySQL schemas allowed duplicates the
-  // SQLite deployment forbids — and the upsert had nothing to conflict on.
+  // SQLite deployment forbids, and the upsert had nothing to conflict on.
   (table) => [
     uniqueIndex("idx_shared_host_secrets_scope").on(
       table.hostAccessId,
@@ -584,7 +584,7 @@ export const userRoles = sqliteTable(
   },
   // Declared inline in the production DDL as UNIQUE(...), but never here,
   // so the generated Postgres and MySQL schemas allowed duplicates the
-  // SQLite deployment forbids — and the upsert had nothing to conflict on.
+  // SQLite deployment forbids, and the upsert had nothing to conflict on.
   //
   // The unique pair already serves lookups by user, since user_id leads it.
   // Listing a role's members starts from role_id, which it cannot serve.
@@ -1058,7 +1058,7 @@ export const pluginRegistries = sqliteTable("plugin_registries", {
 /**
  * Install counts populated by a background job (GitHub release download
  * counts, aggregated telemetry, or a manual override) rather than by the
- * install/uninstall actions themselves — kept separate from `plugins` so
+ * install/uninstall actions themselves, kept separate from `plugins` so
  * that job can overwrite counts without touching install state.
  */
 export const pluginInstallCounts = sqliteTable(

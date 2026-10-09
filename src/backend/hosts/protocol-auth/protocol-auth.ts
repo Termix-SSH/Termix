@@ -8,10 +8,7 @@
  * needs no core change.
  */
 
-import {
-  createCurrentHostProtocolAuthRepository,
-  createCurrentSharedHostAuthOverrideRepository,
-} from "../../database/repositories/factory.js";
+import { createCurrentHostProtocolAuthRepository } from "../../database/repositories/factory.js";
 import {
   decryptProtocolLogin,
   type HostProtocolAuthRecord,
@@ -603,17 +600,6 @@ export async function resolveRecipientProtocolLogin(
     password: "",
     fields: withDeclaredFields(declared, ownerFields),
   };
-}
-
-/** Credential ids a recipient chose for this host, per protocol. */
-export async function listRecipientOverrideIds(
-  hostId: number,
-  userId: string,
-): Promise<Record<string, number>> {
-  return (await createCurrentSharedHostAuthOverrideRepository().listCredentialIds(
-    hostId,
-    userId,
-  )) as Record<string, number>;
 }
 
 /** A login in an export or on the sync wire: plaintext, keyed by protocol. */

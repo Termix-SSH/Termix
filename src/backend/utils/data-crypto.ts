@@ -201,7 +201,7 @@ class DataCrypto {
     migratedFieldsCount: number;
   }> {
     // Only a database that predates field encryption has plaintext to migrate,
-    // and only SQLite deployments can predate it — Postgres and MySQL support
+    // and only SQLite deployments can predate it, Postgres and MySQL support
     // arrived after. The store also needs synchronous queries no other driver
     // has, so this would throw rather than find nothing to do.
     if (!needsExplicitPersist(resolveDatabaseDialect())) {

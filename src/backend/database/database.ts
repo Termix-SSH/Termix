@@ -280,12 +280,12 @@ app.get("/.well-known/acme-challenge/:token", acmeChallengeHandler);
  *                 remoteVersion:
  *                   type: string
  *                   description: Newest release version on the channel. Present only when the update check succeeds.
- *                   example: 2.8.0
+ *                   example: 26.10.0
  *                 version:
  *                   type: string
  *                   deprecated: true
  *                   description: Legacy alias of remoteVersion, not the running instance's version. Present only when the update check succeeds. Use localVersion for the instance or remoteVersion for the latest release.
- *                   example: 2.8.0
+ *                   example: 26.10.0
  *                 latest_release:
  *                   type: object
  *                   description: GitHub release metadata. Present only when the update check succeeds.

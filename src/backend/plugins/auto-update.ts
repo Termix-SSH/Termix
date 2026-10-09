@@ -61,8 +61,3 @@ export function startPluginAutoUpdate(): void {
   timer = setInterval(run, CHECK_EVERY_MS);
   timer.unref?.();
 }
-
-export function stopPluginAutoUpdate(): void {
-  if (timer) clearInterval(timer);
-  timer = null;
-}

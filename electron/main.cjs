@@ -1041,7 +1041,7 @@ function getBackendPaths() {
       backendCwd: backendDir,
     };
   }
-  // fork() does not go through Electron's asar redirector — use the unpacked path.
+  // fork() does not go through Electron's asar redirector, use the unpacked path.
   // On macOS multi-arch builds (mergeASARs: false), electron-builder names the ASAR
   // app-arm64.asar / app-x64.asar instead of app.asar, so match all variants.
   const unpackedRoot = getUnpackedAppRoot(appRoot);
@@ -1303,7 +1303,7 @@ function createTray() {
   try {
     const { nativeImage } = require("electron");
 
-    // Native APIs (Tray, nativeImage) can't load files from inside app.asar —
+    // Native APIs (Tray, nativeImage) can't load files from inside app.asar,
     // use the unpacked path so the OS sees a real file.
     const publicRoot = isDev
       ? path.join(appRoot, "public")

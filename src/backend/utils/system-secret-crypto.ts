@@ -7,7 +7,7 @@ import { SystemCrypto } from "./system-crypto.js";
  * Per-user field encryption (DataCrypto/FieldCrypto) derives its key from the
  * user's DEK, which works for host passwords and SSH keys. It does not work for
  * SSO provider configuration: `sso_providers` has no `userId`, and the OIDC
- * client secret and LDAP bind password must be readable during login — before
+ * client secret and LDAP bind password must be readable during login, before
  * any user is authenticated, let alone unlocked.
  *
  * Those secrets were previously stored base64-encoded behind an `encoded:`

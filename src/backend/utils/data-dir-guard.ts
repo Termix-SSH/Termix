@@ -14,7 +14,7 @@ export class DataDirMisconfiguredError extends Error {
 
 /**
  * Directories Termix has shipped or documented as a data location. A deployment
- * that loses DATA_DIR — an unloaded .env file, an unmounted volume — falls back
+ * that loses DATA_DIR, an unloaded .env file, an unmounted volume, falls back
  * to the default and finds an empty directory, which is indistinguishable from a
  * first run. Checking these tells the two apart.
  */

@@ -17,7 +17,7 @@ describe("rowsAffected", () => {
   });
 
   it("reads changes from a better-sqlite3 write result", () => {
-    // The shape of a write with no .returning() attached — verified against
+    // The shape of a write with no .returning() attached, verified against
     // the driver, not assumed.
     expect(rowsAffected({ changes: 1, lastInsertRowid: 7 })).toBe(1);
     expect(rowsAffected({ changes: 0, lastInsertRowid: 7 })).toBe(0);
@@ -81,7 +81,7 @@ describe("supportsReturning", () => {
     expect(supportsReturning("sqlite")).toBe(true);
     expect(supportsReturning("postgres")).toBe(true);
     // No RETURNING clause in MySQL, and drizzle's mysql-core does not expose
-    // the method — call sites that need rows back must read first.
+    // the method, call sites that need rows back must read first.
     expect(supportsReturning("mysql")).toBe(false);
   });
 });

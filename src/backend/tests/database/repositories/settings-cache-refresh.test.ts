@@ -8,8 +8,8 @@ import {
 /**
  * The settings cache lives in one process and is updated by whichever process
  * wrote the setting. On SQLite that is the only process there is. On Postgres
- * and MySQL — the reason those exist here is to let several instances share one
- * database — a setting changed on one replica would otherwise never reach the
+ * and MySQL, the reason those exist here is to let several instances share one
+ * database, a setting changed on one replica would otherwise never reach the
  * others, because the synchronous read cannot go back to the database.
  *
  * Re-priming on a timer does not make settings immediately consistent. It
@@ -57,7 +57,7 @@ describe("settings cache refresh", () => {
 
   it("keeps running after a refresh throws", async () => {
     // A transient database blip must not stop the loop, or the replica is stuck
-    // on stale settings until it restarts — the exact failure this prevents.
+    // on stale settings until it restarts, the exact failure this prevents.
     const refresh = vi
       .fn()
       .mockRejectedValueOnce(new Error("connection reset"))

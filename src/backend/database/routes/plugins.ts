@@ -17,7 +17,7 @@ import { describePluginFrontend } from "../../plugins/assets.js";
 import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
 import { getPluginPublicHttpRoutes } from "../../plugins/http.js";
 import { getPluginPublicWsRoutes } from "../../plugins/ws.js";
-import { PluginManageError } from "../../plugins/manage.js";
+import { MAX_UPLOAD_BYTES, PluginManageError } from "../../plugins/manage.js";
 import { parsePluginChannel } from "../../plugins/registry-index.js";
 import {
   pluginDocsUrl,
@@ -2262,7 +2262,10 @@ router.post(
   "/upload",
   authenticateJWT,
   requireManagePlugins,
-  express.raw({ type: "application/octet-stream", limit: "50mb" }),
+  express.raw({
+    type: "application/octet-stream",
+    limit: MAX_UPLOAD_BYTES,
+  }),
   async (req: Request, res: Response) => {
     if (await refuseOnLinkedDesktop(res)) return;
     if (!Buffer.isBuffer(req.body) || req.body.length === 0) {

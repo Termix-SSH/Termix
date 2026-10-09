@@ -141,8 +141,8 @@ export class UserRepository {
    * at once would otherwise both see an empty table and both become admin.
    *
    * The two branches are not a style choice. better-sqlite3 is synchronous and
-   * rejects an async transaction callback outright — "Transaction function
-   * cannot return a promise" — so a single body cannot serve both. It fails
+   * rejects an async transaction callback outright, "Transaction function
+   * cannot return a promise", so a single body cannot serve both. It fails
    * loudly rather than silently skipping the write, which is the one mercy here.
    */
   private async createCheckingIfFirst(

@@ -74,7 +74,7 @@ export class AuditLogRepository {
   /**
    * Cached row count backing the cap check. Static because the factory builds
    * a repository per call, so a per-instance count would never survive to be
-   * reused. Null means "unknown, re-read" — which is also how any path that
+   * reused. Null means "unknown, re-read", which is also how any path that
    * deletes rows invalidates it.
    */
   private static cachedCount: number | null = null;
@@ -233,13 +233,13 @@ export class AuditLogRepository {
    *
    * Both passes used to run inline on every insert: a retention DELETE plus a
    * COUNT over the whole table, thousands of times an hour on a busy install,
-   * almost always to find nothing to do — and audit writes sit in the request
+   * almost always to find nothing to do, and audit writes sit in the request
    * path of the actions they record.
    *
    * They are split by what they cost and what they guarantee. Retention is
    * time-based, so nothing is lost by checking it on an interval. The row cap
    * is a disk-space guard that has to react to inserts, so it is still checked
-   * on the write that crosses it — but against a cached count, so the common
+   * on the write that crosses it, but against a cached count, so the common
    * case is an integer compare rather than a COUNT.
    */
   private async pruneIfDue(): Promise<void> {

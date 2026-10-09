@@ -25,7 +25,7 @@ const sshLogger = logger;
  * `id` is an autoincrement belonging to whichever database produced the row.
  * When the desktop app delegates a connection to a sync server, the two
  * sequences have no reason to agree, and resolving the client's id here lands
- * on whatever host happens to own that number — a different machine, with its
+ * on whatever host happens to own that number, a different machine, with its
  * own address, credentials and host key. `syncId` is the same string on both
  * sides, so it names the host the user actually picked.
  *

@@ -64,12 +64,6 @@ export function locate(
   return and(eq(table.syncId, syncId), eq(ownerColumn(entity), userId))!;
 }
 
-export function rowSyncId(entity: RegisteredSyncEntity, row: SyncRow): string {
-  return entity.singleton
-    ? singletonSyncId(entity.type)
-    : (row.syncId as string);
-}
-
 let hashKey: Buffer | null = null;
 
 export async function getHashKey(): Promise<Buffer> {

@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /**
  * Sharing a host used to hand the owner's SSH authentication to the recipient
  * unconditionally. 2.6.1 put that behind `ssh_data.share_ssh_auth`, added as
- * `NOT NULL DEFAULT 0` — so every host shared before the upgrade silently
+ * `NOT NULL DEFAULT 0`, so every host shared before the upgrade silently
  * stopped supplying credentials, and recipients hit "No valid authentication
  * method provided" on hosts that had worked the day before.
  *

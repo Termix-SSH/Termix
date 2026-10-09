@@ -31,7 +31,7 @@ export class HostFolderRepository {
     now = new Date().toISOString(),
   ): Promise<RenameFolderResult> {
     // CAST target: every engine spells the text type differently enough to
-    // matter here — MySQL has no `text` cast and wants `char`.
+    // matter here, MySQL has no `text` cast and wants `char`.
     const textType = this.context.dialect === "mysql" ? "char" : "text";
     const oldPrefix = `${oldName} / `;
     const newPrefix = `${newName} / `;

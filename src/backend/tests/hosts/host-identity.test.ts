@@ -19,7 +19,7 @@ import {
  *
  * The resolved row supplies the address, the credentials, the jump hosts and
  * the stored host key, so the session opened on whichever machine owned that
- * id on the server — the host list stayed correct the whole time, and nothing
+ * id on the server, the host list stayed correct the whole time, and nothing
  * announced the substitution.
  */
 describe("hostAddressMismatch", () => {

@@ -9,6 +9,14 @@ const router = express.Router();
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 
+const DEFAULT_TAB_TTL_MINUTES = 30;
+
+// Tabs live as long as the terminal keeps a detached session.
+function getTabTtlMs(): number {
+  const minutes = liveTerminalSessions.idleTimeoutMinutes();
+  return (minutes && minutes > 0 ? minutes : DEFAULT_TAB_TTL_MINUTES) * 60_000;
+}
+
 /**
  * @openapi
  * /open-tabs:
@@ -20,14 +28,6 @@ const authenticateJWT = authManager.createAuthMiddleware();
  *       200:
  *         description: List of open tabs ordered by tab_order.
  */
-const DEFAULT_TAB_TTL_MINUTES = 30;
-
-// Tabs live as long as the terminal keeps a detached session.
-function getTabTtlMs(): number {
-  const minutes = liveTerminalSessions.idleTimeoutMinutes();
-  return (minutes && minutes > 0 ? minutes : DEFAULT_TAB_TTL_MINUTES) * 60_000;
-}
-
 router.get("/", authenticateJWT, async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {

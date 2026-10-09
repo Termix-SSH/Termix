@@ -371,10 +371,6 @@ function disposeRoute(routeKey: string, pluginId: string, path: string): void {
   });
 }
 
-export function getRegisteredWsRoutes(): string[] {
-  return [...routes.keys()];
-}
-
 /** The socket paths a plugin serves without core's login check. */
 export function getPluginPublicWsRoutes(pluginId: string): string[] {
   return [...routes.values()]

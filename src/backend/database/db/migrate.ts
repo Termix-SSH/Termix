@@ -25,7 +25,7 @@ export function migrationsFolder(
  * Brings a remote database up to the current schema.
  *
  * drizzle's migrator records what it has applied in its own table, so this is
- * safe to run on every start — including against a database another instance
+ * safe to run on every start, including against a database another instance
  * already migrated.
  */
 export async function runRemoteMigrations(

@@ -11,7 +11,7 @@ import type { DatabaseDialect } from "../../../database/db/dialect.js";
  * The MySQL path cannot be exercised against a real engine here, and its whole
  * correctness is an ordering property: an update must be read AFTER the write,
  * a delete BEFORE it. Get either backwards and the rows describe the wrong
- * state — silently, with no error anywhere.
+ * state, silently, with no error anywhere.
  *
  * So the drizzle handle is stubbed and the order of calls is recorded.
  */
@@ -169,7 +169,7 @@ describe("deleteReturning", () => {
     await deleteReturning(context, {} as never, where);
 
     // Without this, a concurrent write between them makes the returned rows
-    // describe a state that never existed — and with a pool the second
+    // describe a state that never existed, and with a pool the second
     // statement need not even reach the same connection.
     expect(calls[0]).toBe("begin");
     expect(calls[calls.length - 1]).toBe("commit");

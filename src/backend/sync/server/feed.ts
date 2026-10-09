@@ -126,11 +126,6 @@ export async function reconcileUser(
   return { changed, wire };
 }
 
-/** Forgets a user's snapshot so the next reconcile reads everything. */
-export function invalidateSnapshot(userId: string): void {
-  snapshots.delete(userId);
-}
-
 const listeners = new Map<string, Set<Response>>();
 let debounce: NodeJS.Timeout | null = null;
 let heartbeat: NodeJS.Timeout | null = null;

@@ -169,7 +169,7 @@ export class SSHConnectionPool {
     if (available) {
       if (!this.isConnectionHealthy(available.client)) {
         connections = this.removeUnhealthy(key, connections, available);
-        // Fall through — may create or wait again.
+        // Fall through, may create or wait again.
       } else {
         const waiter = queue.shift()!;
         if (queue.length === 0) this.waiters.delete(key);

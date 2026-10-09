@@ -1103,7 +1103,7 @@ const migrateSchema = () => {
       // Derive the replacement table from the live definition instead of
       // restating it here. The table keeps gaining columns (cert_public_key,
       // pin, sort_order, sync_id, ...), and a second copy of the column list
-      // falls behind every time one is added — leaving the copy narrower than
+      // falls behind every time one is added, leaving the copy narrower than
       // the table, so the INSERT below fails and the constraint stays put.
       const createSql = sqlite
         .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'ssh_credentials'")
@@ -2108,7 +2108,7 @@ export function getSqlite(): Database.Database {
     if (dialect !== "sqlite") {
       throw new Error(
         `No SQLite handle: DATABASE_DIALECT is "${dialect}". This caller needs a ` +
-          `synchronous query, which only SQLite offers — give it an async path instead.`,
+          `synchronous query, which only SQLite offers. Give it an async path instead.`,
       );
     }
     throw new Error(

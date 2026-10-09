@@ -34,7 +34,7 @@ try {
   // The pure-JS fallback in ssh2 for chacha20-poly1305@openssh.com is broken and
   // corrupts the transport: the target sshd aborts the KEX with
   // "ssh_dispatch_run_fatal: ... incomplete message [preauth]" and the client times out.
-  // A working OpenSSL "chacha20" cipher is NOT sufficient here — only the native
+  // A working OpenSSL "chacha20" cipher is NOT sufficient here, only the native
   // binding (sshcrypto.node) makes chacha20-poly1305 usable. Keep it disabled otherwise
   // so filterCiphers() drops it and the connection negotiates AES-GCM instead.
   ssh2BindingAvailable = false;
