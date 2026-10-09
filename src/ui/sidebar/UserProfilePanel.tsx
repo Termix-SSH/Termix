@@ -1441,7 +1441,6 @@ export function UserProfilePanel({
                   </option>
                 ))}
               </Select2>
-              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-3 text-muted-foreground pointer-events-none" />
             </div>
             <div className="flex gap-1 mt-0.5">
               {THEMES.filter((th) => th.id !== "system").map((th) => (
