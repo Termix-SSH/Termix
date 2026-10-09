@@ -30,3 +30,4 @@
 ### Removed
 
 - Downgrading to 2.8 is no longer supported. A 2.8 install has to start 2.9 once before upgrading
+- The donation reminder popup
