@@ -658,6 +658,13 @@ function BrowseSection({
           ))}
         </div>
       )}
+
+      <p className="text-[11px] text-muted-foreground">
+        {t("plugins.manager.communitySoon")}{" "}
+        <DocsLink core="communityRegistry" className="text-[11px]">
+          {t("plugins.manager.communitySubmit")}
+        </DocsLink>
+      </p>
     </div>
   );
 }

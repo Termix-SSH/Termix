@@ -7,6 +7,7 @@
 - Plugins. Every feature beyond hosts, credentials and sharing is now its own plugin with its own repo, and you pick which ones you want
 - A Plugins tab to install, update, pin, turn off and remove plugins from the official registry, with release notes and a beta channel per plugin
 - Developer mode to install a plugin from a file, and a plugin SDK on npm to build your own
+- The community plugin registry is open for submissions. Termix can install community plugins in a later update
 - Redesigned UI with a Manage tab for hosts and credentials and a Settings tab with search
 - New full screen onboarding where you choose which plugins to start with
 - Beta channel for Termix itself in Settings > Updates

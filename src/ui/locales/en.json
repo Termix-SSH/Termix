@@ -2017,6 +2017,8 @@
       "noneInstalled": "No plugins installed yet. Browse to add some.",
       "nothingHere": "Nothing here.",
       "nothingHereHint": "Try another category or search.",
+      "communitySoon": "Community plugins are coming in a later update. Plugin authors can already submit theirs to the community registry.",
+      "communitySubmit": "How to submit",
       "upToDate": "Everything is up to date.",
       "lastChecked": "Last checked {{time}}",
       "updatesReady_one": "{{count}} update ready.",
