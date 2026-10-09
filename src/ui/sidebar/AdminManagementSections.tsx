@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AccordionSection } from "./AdminSettingsShared";
+import { roleLabel } from "@/lib/role-label";
 
 export type AdminUser = {
   id: string;
@@ -637,7 +638,7 @@ export function AdminRolesSection({
                 <div className="flex flex-col gap-0.5 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="text-xs font-semibold truncate">
-                      {role.displayName}
+                      {roleLabel(t, role.displayName)}
                     </span>
                     {role.isSystem ? (
                       <span className="text-[9px] font-semibold px-1 py-px border border-border text-muted-foreground">

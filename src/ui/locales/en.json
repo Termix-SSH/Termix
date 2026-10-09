@@ -2369,5 +2369,11 @@
     "pickCredential": "Pick a credential to edit",
     "pickDefaults": "Pick a level of defaults to edit",
     "pickHint": "Everything about a connection lives here, grouped so you can find it."
+  },
+  "rbac": {
+    "roles": {
+      "admin": "Admin",
+      "user": "User"
+    }
   }
 }

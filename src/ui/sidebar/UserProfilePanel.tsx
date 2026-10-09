@@ -77,6 +77,7 @@ import {
   type FeatureSectionId,
 } from "@/settings/FeatureSettingsSections";
 import { docsUrl } from "@/lib/docs";
+import { roleLabel } from "@/lib/role-label";
 
 type UserProfileSection =
   | "account"
@@ -1240,7 +1241,7 @@ export function UserProfilePanel({
                       key={r.roleId}
                       className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold border border-border bg-muted text-muted-foreground w-fit"
                     >
-                      {r.roleDisplayName}
+                      {roleLabel(t, r.roleDisplayName)}
                     </span>
                   ))}
                 </div>

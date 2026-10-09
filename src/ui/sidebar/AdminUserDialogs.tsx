@@ -14,6 +14,7 @@ import { AlertCircle, Eye, EyeOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AdminToggle } from "./AdminSettingsShared";
 import type { AdminUser } from "./AdminManagementSections";
+import { roleLabel } from "@/lib/role-label";
 
 type ApiErrorLike = {
   response?: {
@@ -244,7 +245,7 @@ export function AdminEditUserDialog({
                           key={ur.roleId}
                           className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 border border-accent-brand/40 bg-accent-brand/10 text-accent-brand"
                         >
-                          {ur.roleDisplayName}
+                          {roleLabel(t, ur.roleDisplayName)}
                           {!isSystem && (
                             <button
                               onClick={async () => {

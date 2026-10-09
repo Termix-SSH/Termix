@@ -40,6 +40,7 @@ import {
 import type { Host } from "@/types/ui-types";
 import { Select2 } from "@/components/select2";
 import { DocsLink } from "@/components/docs-link";
+import { roleLabel } from "@/lib/role-label";
 
 const PERMISSION_LEVELS: SharePermissionLevel[] = [
   "connect",
@@ -411,7 +412,7 @@ export function HostShareModal({
                     </div>
                     <Shield className="size-3 text-muted-foreground shrink-0" />
                     <span className="truncate">
-                      {role.displayName || role.name}
+                      {roleLabel(t, role.displayName || role.name)}
                     </span>
                   </button>
                 );
@@ -526,7 +527,7 @@ export function HostShareModal({
             >
               <span className="flex-1 truncate">
                 {rule.targetType === "role"
-                  ? rule.roleDisplayName || rule.roleName
+                  ? roleLabel(t, rule.roleDisplayName) || rule.roleName
                   : rule.username}
               </span>
               <span className="text-[10px] uppercase text-muted-foreground">
@@ -541,7 +542,7 @@ export function HostShareModal({
                     title: t("sharing.revokeConfirm", {
                       name:
                         rule.username ??
-                        rule.roleDisplayName ??
+                        roleLabel(t, rule.roleDisplayName) ??
                         rule.roleName ??
                         "",
                     }),
@@ -593,7 +594,7 @@ export function HostShareModal({
                       )}
                       <span className="font-semibold truncate">
                         {record.username ??
-                          record.roleDisplayName ??
+                          roleLabel(t, record.roleDisplayName) ??
                           record.roleName ??
                           record.userId ??
                           record.roleId}
@@ -633,7 +634,7 @@ export function HostShareModal({
                             title: t("sharing.revokeConfirm", {
                               name:
                                 record.username ??
-                                record.roleDisplayName ??
+                                roleLabel(t, record.roleDisplayName) ??
                                 record.roleName ??
                                 "",
                             }),
