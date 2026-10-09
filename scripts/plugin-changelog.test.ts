@@ -131,6 +131,17 @@ describe("validateChangelog", () => {
     );
   });
 
+  it("lets a beta through when its notes are not written yet", () => {
+    expect(validateChangelog(FILE, "1.1.0-beta.1")).toEqual([]);
+    expect(validateChangelog(FILE, "1.2.0-beta.3")).toEqual([]);
+  });
+
+  it("flags a beta older than the newest release", () => {
+    expect(validateChangelog(FILE, "1.0.1-beta.1")).toContain(
+      "the newest release is 1.1.0, but the manifest version is 1.0.1-beta.1",
+    );
+  });
+
   it("flags a file with no releases", () => {
     expect(validateChangelog("# Changelog\n", "1.0.0")).toEqual([
       'no releases found, add a "## 1.0.0" heading',

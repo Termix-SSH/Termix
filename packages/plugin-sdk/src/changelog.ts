@@ -194,7 +194,9 @@ export function parseChangelog(markdown: string): {
 
 /**
  * Checks a CHANGELOG.md. With a manifest version, the newest release has to
- * be that version, so a release never ships without its notes.
+ * be that version, so a release never ships without its notes. A beta like
+ * 1.1.0-beta.2 gets its notes from git, so it only needs the newest release
+ * to be 1.1.0 or older.
  */
 export function validateChangelog(
   markdown: string,
@@ -206,7 +208,16 @@ export function validateChangelog(
     return problems;
   }
   const newest = changelog.releases[0].version;
-  if (manifestVersion && newest !== manifestVersion) {
+  const base = manifestVersion
+    ? semver.valid(semver.coerce(manifestVersion))
+    : null;
+  const betaOk =
+    !!manifestVersion &&
+    !!semver.prerelease(manifestVersion) &&
+    !!base &&
+    !!semver.valid(newest) &&
+    semver.lte(newest, base);
+  if (manifestVersion && newest !== manifestVersion && !betaOk) {
     problems.push(
       `the newest release is ${newest}, but the manifest version is ${manifestVersion}`,
     );

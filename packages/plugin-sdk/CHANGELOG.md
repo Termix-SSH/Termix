@@ -9,6 +9,7 @@
 - `termix-plugin migrations` loads the table definitions from a path with a `#` or other URL characters in it
 - Text, json and encrypted columns are `longtext` on MySQL in new migrations, so they are no longer capped at 64KB. Existing migrations keep `text`
 - `i18next`, `react-dom`, `react-i18next` and `sonner` are optional peer dependencies, so npm stops installing them into backend-only plugins
+- `termix-plugin validate` accepts a beta version like `1.1.0-beta.1` when the changelog's newest release is `1.1.0` or older, so beta releases pass
 
 ## 1.0.4
 
