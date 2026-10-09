@@ -28,7 +28,7 @@ function fail(message) {
 function buildTable(version, mobileVersion, mobileTag) {
   const tag = `v${version}`;
   const base = `https://github.com/Termix-SSH/Termix/releases/download/${tag}`;
-  const mobileBase = `https://github.com/Termix-SSH/Mobile/releases/download/${mobileTag || `release-${mobileVersion}-tag`}`;
+  const mobileBase = `https://github.com/Termix-SSH/Mobile/releases/download/${mobileTag || `v${mobileVersion}`}`;
 
   const win = (file) => `${base}/${file}`;
   const linux = (file) => `${base}/${file}`;

@@ -30,7 +30,7 @@ describe("buildBody", () => {
     expect(body).not.toContain("A bug");
     expect(body).toContain("/releases/download/v26.10.0/termix_");
     expect(body).toContain(
-      "Mobile/releases/download/release-1.2.0-tag/termix_android.apk",
+      "Mobile/releases/download/v1.2.0/termix_android.apk",
     );
   });
 
