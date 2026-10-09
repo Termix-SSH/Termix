@@ -50,6 +50,7 @@ import { isPrerelease } from "@/plugins/plugin-model";
 import { shell } from "@/plugin-host/shell-bridge";
 import { getLiveHostStatus } from "@/lib/ServerStatusContext";
 import { docsUrl } from "@/lib/docs";
+import { parseServerTime } from "@/lib/server-time";
 
 interface CommandPaletteProps {
   /** Opens settings, optionally at one section. */
@@ -316,7 +317,7 @@ export function CommandPalette({
                       <span className="truncate">{item.hostName}</span>
                       <span className="ml-auto flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground">
                         <Clock className="size-3" />
-                        {new Date(item.timestamp).toLocaleDateString()}
+                        {parseServerTime(item.timestamp).toLocaleDateString()}
                       </span>
                     </CommandItem>
                   );

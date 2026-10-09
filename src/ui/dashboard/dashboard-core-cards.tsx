@@ -25,6 +25,7 @@ import { getDefaultConnectionTab } from "@/lib/host-connection-tabs";
 import type { RecentActivityItem } from "@/main-axios";
 import type { Host, TabType } from "@/types/ui-types";
 import { quarterBorders } from "./quarter-borders";
+import { parseServerTime } from "@/lib/server-time";
 
 export type VersionStatus =
   "up_to_date" | "requires_update" | "beta" | "unknown";
@@ -381,7 +382,9 @@ export function RecentActivityList({
   const { t } = useTranslation();
   const scheme = useStatusColorScheme();
   const ago = (ts: string) => {
-    const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+    const diff = Math.floor(
+      (Date.now() - parseServerTime(ts).getTime()) / 1000,
+    );
     if (diff < 60) return t("dashboard.justNow");
     if (diff < 3600) return `${Math.floor(diff / 60)}m`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
