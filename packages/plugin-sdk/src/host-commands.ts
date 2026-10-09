@@ -32,7 +32,7 @@ export function execCommand(
       if (!settled) {
         settled = true;
         cleanup();
-        reject(new Error(`Command timeout after ${timeoutMs}ms: ${command}`));
+        reject(new Error(`Command timeout after ${timeoutMs}ms`));
       }
     }, timeoutMs);
 

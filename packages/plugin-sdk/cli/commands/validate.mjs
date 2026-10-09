@@ -218,6 +218,11 @@ async function validateMigrations(cwd, pluginId) {
   const present = DIALECTS.filter((dialect) =>
     fs.existsSync(path.join(root, dialect)),
   );
+  for (const dialect of DIALECTS) {
+    if (present.length > 0 && !present.includes(dialect)) {
+      problems.push(`migrations/${dialect} is missing`);
+    }
+  }
 
   const byDialect = new Map();
   for (const dialect of present) {

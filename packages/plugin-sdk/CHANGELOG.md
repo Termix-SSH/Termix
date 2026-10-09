@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.5
+
+### Fixed
+
+- `execCommand` timeout errors no longer include the command, which could hold a sudo password
+- `termix-plugin validate` fails when a plugin ships migrations for some database engines but not all three
+- `termix-plugin migrations` loads the table definitions from a path with a `#` or other URL characters in it
+- `i18next`, `react-dom`, `react-i18next` and `sonner` are optional peer dependencies, so npm stops installing them into backend-only plugins
+
 ## 1.0.4
 
 ### Fixed

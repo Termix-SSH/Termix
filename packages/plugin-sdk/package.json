@@ -1,6 +1,6 @@
 {
   "name": "@termix-ssh/plugin-sdk",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "The contract between Termix core and a plugin: types, the capability catalog and the manifest schema.",
   "license": "Apache-2.0",
   "repository": {
@@ -147,6 +147,18 @@
       "optional": true
     },
     "@testing-library/react": {
+      "optional": true
+    },
+    "i18next": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
+    "react-i18next": {
+      "optional": true
+    },
+    "sonner": {
       "optional": true
     }
   },

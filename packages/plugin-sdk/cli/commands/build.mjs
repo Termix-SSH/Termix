@@ -109,13 +109,6 @@ const THEME_CSS = path.join(HOST_DIR, "theme.css");
 const CORE_CLASSES = path.join(HOST_DIR, "core-classes.json");
 
 /**
- * Compiles the Tailwind classes the plugin's frontend uses into
- * dist/frontend.css, against the theme core ships in the SDK. Core only
- * compiles its own classes, so a class no core file happens to use would
- * otherwise have no CSS at all. Appended to whatever CSS the bundle already
- * produced (a library's stylesheet the plugin imports).
- */
-/**
  * Moves a plugin's Tailwind layers under their own names. Core orders
  * termix-plugin-utilities above its base styles and below its own utilities,
  * so a plugin's copy of `.hidden` can never beat core's `md:flex` just
@@ -136,6 +129,13 @@ function readCoreClasses() {
   return new Set(JSON.parse(fs.readFileSync(CORE_CLASSES, "utf8")));
 }
 
+/**
+ * Compiles the Tailwind classes the plugin's frontend uses into
+ * dist/frontend.css, against the theme core ships in the SDK. Core only
+ * compiles its own classes, so a class no core file happens to use would
+ * otherwise have no CSS at all. Appended to whatever CSS the bundle already
+ * produced (a library's stylesheet the plugin imports).
+ */
 export async function buildTailwind(cwd, outDir) {
   const { compile, optimize } = await import("@tailwindcss/node");
   const { Scanner } = await import("@tailwindcss/oxide");

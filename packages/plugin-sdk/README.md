@@ -28,6 +28,7 @@ npm install --save-dev @termix-ssh/plugin-sdk
 
 ```bash
 npx termix-plugin build                  # bundle dist/backend.js and dist/frontend.js
+npx termix-plugin patch                  # apply the plugin's dependency patches (build does this too)
 npx termix-plugin test                   # run the plugin's Vitest suite
 npx termix-plugin validate               # check manifest.json and the files it names
 npx termix-plugin openapi                # write dist/openapi.json from @openapi comments
