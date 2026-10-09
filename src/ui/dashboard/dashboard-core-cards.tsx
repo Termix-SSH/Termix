@@ -346,6 +346,7 @@ export function HostStatusList({
               slotId="dashboard.hostRow"
               props={{
                 hostId: Number(host.id),
+                host,
                 online: availability === "online",
               }}
             />
