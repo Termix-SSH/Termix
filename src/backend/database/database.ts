@@ -268,7 +268,7 @@ app.get("/.well-known/acme-challenge/:token", acmeChallengeHandler);
  *                 localVersion:
  *                   type: string
  *                   description: Version of the running instance. Use this field for client compatibility checks.
- *                   example: 2.7.1
+ *                   example: 26.10.0
  *                 status:
  *                   type: string
  *                   description: Update comparison result, update_check_disabled when explicitly disabled, or unknown when the remote lookup fails or the release tag cannot be parsed.
