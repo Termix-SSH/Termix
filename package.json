@@ -47,6 +47,7 @@
     "plugins:pin": "node scripts/pin-bundled-plugins.cjs"
   },
   "dependencies": {
+    "@noble/hashes": "^2.4.0",
     "@tanstack/react-virtual": "^3.14.13",
     "@types/compression": "^1.8.1",
     "@types/semver": "^7.8.0",

@@ -8,6 +8,7 @@ import {
 import { Shield, AlertTriangle, Copy, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "@/lib/clipboard";
+import { hostKeyFingerprint } from "@/lib/host-key-fingerprint";
 
 interface HostKeyVerificationDialogProps {
   isOpen: boolean;
@@ -24,8 +25,6 @@ interface HostKeyVerificationDialogProps {
   onReject: () => void;
   backgroundColor?: string;
 }
-
-const formatFingerprint = (fp: string) => fp.match(/.{1,2}/g)?.join(":") || fp;
 
 function FingerprintRow({
   label,
@@ -46,7 +45,7 @@ function FingerprintRow({
       </p>
       <div className="flex items-center gap-2">
         <div className="flex-1 bg-muted/50 border border-border p-3 font-mono text-xs break-all">
-          {formatFingerprint(value)}
+          {value}
         </div>
         <button
           type="button"
@@ -74,7 +73,6 @@ export function HostKeyVerificationDialog({
   hostname,
   fingerprint,
   oldFingerprint,
-  algorithm,
   onAccept,
   onReject,
   backgroundColor,
@@ -97,6 +95,8 @@ export function HostKeyVerificationDialog({
   };
 
   const changed = scenario === "changed";
+  const newPrint = hostKeyFingerprint(fingerprint);
+  const oldPrint = hostKeyFingerprint(oldFingerprint || "");
 
   return (
     <PanePrompt
@@ -155,15 +155,15 @@ export function HostKeyVerificationDialog({
             </div>
             <FingerprintRow
               label={t("hostKey.previousKey")}
-              value={oldFingerprint || ""}
+              value={oldPrint}
               copied={copiedOldFingerprint}
-              onCopy={() => copyFingerprint(oldFingerprint || "", true)}
+              onCopy={() => copyFingerprint(oldPrint, true)}
             />
             <FingerprintRow
               label={t("hostKey.newFingerprint")}
-              value={fingerprint}
+              value={newPrint}
               copied={copiedFingerprint}
-              onCopy={() => copyFingerprint(fingerprint)}
+              onCopy={() => copyFingerprint(newPrint)}
             />
           </>
         ) : (
@@ -180,10 +180,10 @@ export function HostKeyVerificationDialog({
               </div>
             </div>
             <FingerprintRow
-              label={`${t("hostKey.fingerprint")} (${algorithm.toUpperCase()})`}
-              value={fingerprint}
+              label={t("hostKey.fingerprint")}
+              value={newPrint}
               copied={copiedFingerprint}
-              onCopy={() => copyFingerprint(fingerprint)}
+              onCopy={() => copyFingerprint(newPrint)}
             />
             <p className="text-[10px] text-muted-foreground">
               {t("hostKey.verifyInstructions")}
