@@ -69,7 +69,7 @@ function builder(column: PluginColumn): Builder {
 export const id = () =>
   builder({ type: "id", primaryKey: true, notNull: true });
 
-/** Unbounded string. Never indexable: MySQL cannot index TEXT. */
+/** Unbounded string, LONGTEXT on MySQL. Never indexable: MySQL cannot index TEXT. */
 export const text = () => builder({ type: "text" });
 
 /** Bounded string. Indexable on every engine. */

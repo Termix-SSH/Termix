@@ -184,9 +184,9 @@ describe("createTableSql", () => {
         \`user_id\` varchar(255) NOT NULL,
         \`host_id\` int NOT NULL,
         \`title\` varchar(200) NOT NULL,
-        \`body\` text,
-        \`meta\` text,
-        \`secret\` text,
+        \`body\` longtext,
+        \`meta\` longtext,
+        \`secret\` longtext,
         \`pinned\` boolean DEFAULT false,
         \`position\` int DEFAULT 0,
         \`size\` bigint,
@@ -286,9 +286,9 @@ describe("adoptTableSql", () => {
     expect(mysql[1]).toBe("RENAME TABLE `fleets` TO `p_fleets_fleets`;");
   });
 
-  it("writes a TEXT default as an expression on MySQL", () => {
+  it("writes a long text default as an expression on MySQL", () => {
     expect(adoptTableSql("mysql", "fleets", adopted)[0]).toContain(
-      "`name` text NOT NULL DEFAULT ('x')",
+      "`name` longtext NOT NULL DEFAULT ('x')",
     );
     expect(createTableSql("sqlite", "fleets", adopted)[0]).toContain(
       "\"name\" text NOT NULL DEFAULT 'x'",
