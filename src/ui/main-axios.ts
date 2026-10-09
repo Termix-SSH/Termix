@@ -370,9 +370,7 @@ function createApiInstance(
       // The desktop app has no cookies with the server, so it carries the
       // remember-this-device token itself, and only to login.
       const trustToken = localStorage.getItem(TRUST_TOKEN_KEY);
-      const isLogin =
-        config.url?.includes("/users/login") ||
-        /\/users\/auth\/[^/]+\/verify$/.test(config.url ?? "");
+      const isLogin = isLoginRequestUrl(config.url);
       if (trustToken && isLogin) {
         if (config.headers.set) {
           config.headers.set("X-Termix-Trust-Token", trustToken);
@@ -728,6 +726,19 @@ class ApiError extends Error {
   }
 }
 
+/**
+ * Requests that sign someone in. A 401 from one of these means wrong
+ * credentials or a wrong code, not an expired session.
+ */
+export function isLoginRequestUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  return (
+    url.includes("/users/login") ||
+    url.includes("/users/totp/verify-login") ||
+    /\/users\/auth\/(second-factor\/)?[^/?]+\/verify(\?|$)/.test(url)
+  );
+}
+
 export function handleApiError(error: unknown, operation: string): never {
   const context: LogContext = {
     operation: "error_handling",
@@ -759,8 +770,7 @@ export function handleApiError(error: unknown, operation: string): never {
         errorContext,
       );
 
-      const isLoginEndpoint = url?.includes("/users/login");
-      const errorMessage = isLoginEndpoint
+      const errorMessage = isLoginRequestUrl(url)
         ? message
         : "Authentication required. Please log in again.";
 
