@@ -251,6 +251,7 @@ export class PluginLoader {
   async loadAll(): Promise<LoadedPlugin[]> {
     this.plugins.clear();
     this.bundledVersions.clear();
+    await removeStaleStaging();
     const loaded: LoadedPlugin[] = [];
     // Every bundled folder name, loaded or not: a bundled plugin that fails
     // to load must not leave its id free for a user plugin to take.
@@ -922,4 +923,21 @@ export async function unsafeArchivePath(file: string): Promise<string | null> {
     },
   });
   return unsafe;
+}
+
+/** Clears unpack folders an install left behind when the process died. */
+export async function removeStaleStaging(): Promise<void> {
+  const root = getUnpackedPluginsDir();
+  let entries: fs.Dirent[];
+  try {
+    entries = await fs.promises.readdir(root, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !entry.name.startsWith(".staging-")) continue;
+    await fs.promises
+      .rm(path.join(root, entry.name), { recursive: true, force: true })
+      .catch(() => {});
+  }
 }

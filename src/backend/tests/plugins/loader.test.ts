@@ -15,6 +15,7 @@ import zlib from "node:zlib";
 import {
   PluginLoader,
   assertBundledUpdate,
+  removeStaleStaging,
   unsafeArchivePath,
 } from "../../plugins/loader.js";
 import { createFixturePlugin } from "./fixture-plugin.js";
@@ -561,15 +562,15 @@ function rawTar(names: string[]): Buffer {
   for (const name of names) {
     const header = Buffer.alloc(512);
     header.write(name, 0, 100);
-    header.write("0000644 ", 100);
-    header.write("00000000001 ", 124);
+    header.write("0000644\0", 100);
+    header.write("00000000001\0", 124);
     header.write("        ", 148);
     header.write("0", 156);
-    header.write("ustar ", 257);
+    header.write("ustar\0", 257);
     header.write("00", 263);
     let sum = 0;
     for (const byte of header) sum += byte;
-    header.write(sum.toString(8).padStart(6, "0") + "  ", 148);
+    header.write(sum.toString(8).padStart(6, "0") + "\0 ", 148);
     blocks.push(header, Buffer.concat([Buffer.from("x"), Buffer.alloc(511)]));
   }
   blocks.push(Buffer.alloc(1024));
@@ -595,5 +596,24 @@ describe("unsafeArchivePath", () => {
     expect(
       await unsafeArchivePath(write(["manifest.json", "dist/backend.js"])),
     ).toBeNull();
+  });
+});
+
+describe("removeStaleStaging", () => {
+  it("removes unpack folders left by a crashed install", async () => {
+    const data = fs.mkdtempSync(path.join(os.tmpdir(), "termix-staging-"));
+    const previous = process.env.DATA_DIR;
+    process.env.DATA_DIR = data;
+    try {
+      const unpacked = path.join(data, "plugins", ".unpacked");
+      fs.mkdirSync(path.join(unpacked, ".staging-abc", "dist"), {
+        recursive: true,
+      });
+      fs.mkdirSync(path.join(unpacked, "serial"), { recursive: true });
+      await removeStaleStaging();
+      expect(fs.readdirSync(unpacked)).toEqual(["serial"]);
+    } finally {
+      process.env.DATA_DIR = previous;
+    }
   });
 });
