@@ -279,6 +279,28 @@ describe("plugin loader", () => {
     expect(i18n.t("hello", { ns: "guest" })).toBe("Hello guest");
   });
 
+  it("does not fetch strings for a disabled plugin", async () => {
+    const loadLocale = vi.fn(async () => null);
+    modules.on = railPlugin("on");
+    plugins = [
+      summary("on", { locales: ["en"] }),
+      summary("off", { enabled: false, locales: ["en"] }),
+    ];
+    configurePluginLoader({
+      fetchPlugins: async () => plugins,
+      importFrontend: async (entry) => modules[entry.id],
+      loadLocale,
+      injectCss: () => null,
+    });
+
+    await syncPlugins();
+    const loaded = loadLocale.mock.calls.map(
+      (call) => (call as unknown as [PluginSummary])[0].id,
+    );
+    expect(loaded).toContain("on");
+    expect(loaded).not.toContain("off");
+  });
+
   it("settles even when the plugin list cannot be fetched", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     configurePluginLoader({

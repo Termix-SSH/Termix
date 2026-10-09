@@ -277,13 +277,18 @@ async function loadNamespaces(summaries: PluginSummary[]): Promise<void> {
   }
 }
 
+/** The server only serves assets of a running plugin. */
+function serverServesAssets(summary: PluginSummary): boolean {
+  return summary.enabled && (!summary.state || summary.state === "active");
+}
+
 function namespaceVersion(summary: PluginSummary): string {
   return `${summary.version}|${summary.assetVersion ?? ""}`;
 }
 
 async function reconcile(summaries: PluginSummary[]): Promise<void> {
   setPluginSummaries(summaries);
-  await loadNamespaces(summaries);
+  await loadNamespaces(summaries.filter(serverServesAssets));
 
   const { order, blocked } = orderForActivation(summaries);
   const wanted = new Map(order.map((summary) => [summary.id, summary]));
