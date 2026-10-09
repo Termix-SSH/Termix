@@ -170,7 +170,6 @@ if (isElectron()) {
             if (!localStorage.getItem(key)) {
               electronSettingsCache.set(key, value);
               localStorage.setItem(key, value);
-              console.log(`[Electron] Loaded setting ${key} from main process`);
             } else {
               // Even if we don't overwrite localStorage, update the cache
               electronSettingsCache.set(key, localStorage.getItem(key)!);
@@ -204,8 +203,6 @@ export function setCookie(
           console.error(`[Electron] Failed to persist setting ${name}:`, err);
         });
       }
-
-      console.log(`[Electron] Set setting: ${name}`);
     } catch (error) {
       console.error(`[Electron] Failed to set setting: ${name}`, error);
     }
@@ -230,7 +227,6 @@ export function getCookie(name: string): string | undefined {
       if (token) {
         electronSettingsCache.set(name, token);
       }
-      console.log(`[Electron] Get setting: ${name} = ${token}`);
       return token;
     } catch (error) {
       console.error(`[Electron] Failed to get setting: ${name}`, error);

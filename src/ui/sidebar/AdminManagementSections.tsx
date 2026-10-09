@@ -568,7 +568,7 @@ export function AdminRolesSection({
                 <span className="text-accent-brand">*</span>
               </label>
               <Input
-                placeholder="e.g., developer"
+                placeholder="developer"
                 value={newRoleName}
                 onChange={(e) => setNewRoleName(e.target.value)}
                 className="text-xs"
@@ -580,7 +580,7 @@ export function AdminRolesSection({
                 <span className="text-accent-brand">*</span>
               </label>
               <Input
-                placeholder="e.g., Developer"
+                placeholder="Developer"
                 value={newRoleDisplayName}
                 onChange={(e) => setNewRoleDisplayName(e.target.value)}
                 className="text-xs"

@@ -2,7 +2,7 @@
  * Credential sidebar preferences model. Shared by the frontend sidebar and
  * the backend preferences endpoint (no framework imports, mirrors
  * ./host-sidebar-preferences.ts's dependency-free convention). Independent
- * from HostSidebarPreferences by design — a separate parallel system, not a
+ * from HostSidebarPreferences by design, a separate parallel system, not a
  * shared blob, matching how credentialSortKey/credentialFilterState were
  * already independently namespaced from hostSortKey/etc. before this port.
  *

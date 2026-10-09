@@ -146,7 +146,7 @@ export function HostEditorGeneralTab({
   return (
     <>
       <HostOnly>
-        {/* Protocols — enable/disable each connection type */}
+        {/* Protocols, enable/disable each connection type */}
         <SectionCard
           title={t("hosts.protocols")}
           icon={<Globe className="size-3.5" />}

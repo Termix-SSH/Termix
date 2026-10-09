@@ -135,7 +135,7 @@ describe("onboarding translations", () => {
 
   it("uses no em dashes", () => {
     const text = JSON.stringify((en as Record<string, unknown>).onboarding);
-    expect(text).not.toContain("—");
+    expect(text).not.toContain("\u2014");
   });
 });
 

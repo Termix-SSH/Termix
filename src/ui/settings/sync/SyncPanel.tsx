@@ -269,7 +269,7 @@ export function SyncPanel() {
               {t("sync.account")}
             </span>
             <span className="font-semibold truncate">
-              {status.account?.username || "—"}
+              {status.account?.username || "-"}
             </span>
           </div>
           <div className="flex flex-col">

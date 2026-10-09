@@ -493,7 +493,7 @@ export function UserProfilePanel({
   const { theme, setTheme } = useTheme();
   const localSnapshot = useRef<Record<string, string | null>>({});
 
-  // Appearance state — initialized from localStorage
+  // Appearance state, initialized from localStorage
   const [accentColor, setAccentColor] = useState(
     () => localStorage.getItem("termix-accent") ?? "#f59145",
   );
@@ -534,7 +534,7 @@ export function UserProfilePanel({
     }
   }, [linkedAccount, storageMode, onPrefsChange]);
 
-  // Settings toggles — all backed by localStorage
+  // Settings toggles, all backed by localStorage
   const [commandPaletteEnabled, setCommandPaletteEnabled] = useState(() => {
     const v = localStorage.getItem("commandPaletteShortcutEnabled");
     return v !== null ? v === "true" : true;
@@ -1137,7 +1137,7 @@ export function UserProfilePanel({
         userId={userId}
       />
 
-      {/* Storage mode toggle — only meaningful once a remote server is
+      {/* Storage mode toggle, only meaningful once a remote server is
           connected; with no sync there's nowhere for "cloud" to sync to,
           so this stays forced to local storage and hidden. */}
       {(!isElectron() || isLinked) && shows("data") && (
@@ -1224,7 +1224,7 @@ export function UserProfilePanel({
                   {t("newUi.sidebar.userProfile.usernameLabel")}
                 </span>
                 <span className="text-sm font-semibold mt-0.5">
-                  {accountUsername || "—"}
+                  {accountUsername || "-"}
                 </span>
               </div>
               <div className="flex flex-col py-2">
@@ -1233,7 +1233,7 @@ export function UserProfilePanel({
                 </span>
                 <div className="flex flex-wrap gap-1 mt-0.5">
                   <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold border border-accent-brand/40 bg-accent-brand/10 text-accent-brand w-fit">
-                    {userRole || "—"}
+                    {userRole || "-"}
                   </span>
                   {userRoles.map((r) => (
                     <span
@@ -1252,7 +1252,7 @@ export function UserProfilePanel({
                       {t("newUi.sidebar.userProfile.authMethodLabel")}
                     </span>
                     <span className="text-sm font-semibold mt-0.5">
-                      {authMethod || "—"}
+                      {authMethod || "-"}
                     </span>
                   </div>
                   <div className="flex flex-col py-2">

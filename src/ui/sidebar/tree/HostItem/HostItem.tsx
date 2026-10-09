@@ -1282,7 +1282,7 @@ export function HostItem({
             </div>
           )}
 
-        {/* Action tray — slides open on hover (default) or via chevron in click-tray mode */}
+        {/* Action tray, slides open on hover (default) or via chevron in click-tray mode */}
         {!isCompact && (
           <div className={trayVisibilityClass}>
             {tokens.showResourceRow &&

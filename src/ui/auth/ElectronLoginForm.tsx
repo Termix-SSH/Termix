@@ -98,7 +98,7 @@ export function ElectronLoginForm({
           return;
         }
 
-        // OIDC login requested from inside the iframe — open the system browser
+        // OIDC login requested from inside the iframe, open the system browser
         // so captcha stages (e.g. Cloudflare Turnstile) render correctly.
         if (type === "OIDC_SYSTEM_BROWSER_AUTH" && authUrl && callbackPort) {
           const sendResultToIframe = (result: {

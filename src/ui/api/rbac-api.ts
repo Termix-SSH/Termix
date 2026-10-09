@@ -1,3 +1,4 @@
+import i18n from "i18next";
 import {
   handleApiError,
   rbacApi,
@@ -16,7 +17,7 @@ async function getSharingTarget(hostId: number, syncId?: string | null) {
   if (!api || !syncId) return { api: rbacApi, hostId };
   const remoteHostId = await resolveRemoteHostId(syncId);
   if (remoteHostId === null) {
-    throw new Error("The synced host does not exist on the remote server");
+    throw new Error(i18n.t("errors.syncedHostMissing"));
   }
   return { api, hostId: remoteHostId };
 }
@@ -27,7 +28,7 @@ async function getSharedCopyTarget(hostId: number, syncId?: string | null) {
   const api = await getConnectedRemoteApi();
   const remoteHostId = api ? await resolveRemoteHostId(syncId) : null;
   if (!api || remoteHostId === null) {
-    throw new Error("The linked server is not reachable");
+    throw new Error(i18n.t("errors.linkedServerUnreachable"));
   }
   return { api, hostId: remoteHostId };
 }

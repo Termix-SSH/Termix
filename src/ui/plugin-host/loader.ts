@@ -410,6 +410,14 @@ function onFocus() {
   void syncPlugins();
 }
 
+function installLocaleResolver(): void {
+  setPluginLocaleResolver((namespace, _language, file) => {
+    const summary = getPluginRecord(namespace)?.summary;
+    if (!summary) return Promise.resolve(null);
+    return currentDeps().loadLocale(summary, file);
+  });
+}
+
 async function fetchGuestPlugins(): Promise<PluginSummary[]> {
   const response = await fetch(getBackendUrl("/plugins/public"));
   if (!response.ok) return [];
@@ -460,11 +468,7 @@ export async function startPreLoginPlugins(
     return;
   }
   if (list.length === 0 || started) return;
-  setPluginLocaleResolver((namespace, _language, file) => {
-    const summary = getPluginRecord(namespace)?.summary;
-    if (!summary) return Promise.resolve(null);
-    return currentDeps().loadLocale(summary, file);
-  });
+  installLocaleResolver();
   await enqueue(async () => {
     // Once signed in the full sync owns the list, and reconciling this
     // subset would unload everything else. Auth remounts during the
@@ -487,16 +491,12 @@ export function startPluginRuntime(
   options: { guest?: boolean } = {},
 ): Promise<void> {
   installPluginHostBridge();
+  installLocaleResolver();
   if (options.guest) {
     guestMode = true;
     if (!deps) configurePluginLoader({ fetchPlugins: fetchGuestPlugins });
     return syncPlugins();
   }
-  setPluginLocaleResolver((namespace, _language, file) => {
-    const summary = getPluginRecord(namespace)?.summary;
-    if (!summary) return Promise.resolve(null);
-    return currentDeps().loadLocale(summary, file);
-  });
 
   if (!started && typeof window !== "undefined") {
     started = true;
@@ -527,6 +527,7 @@ export function isPluginFrontendActive(pluginId: string): boolean {
 export async function resetPluginLoader(): Promise<void> {
   await stopPluginRuntime();
   deps = null;
+  guestMode = false;
   queue = Promise.resolve();
   failedVersions.clear();
 }

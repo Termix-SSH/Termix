@@ -289,7 +289,7 @@ export function AppShell({
   });
   const [userPrefsLoaded, setUserPrefsLoaded] = useState(false);
   const [hostsLoaded, setHostsLoaded] = useState(false);
-  // Flips to true once the initial DB read (restore or skip) is done — sync must not fire before this
+  // Flips to true once the initial DB read (restore or skip) is done. Sync must not fire before this
   const [tabsReady, setTabsReady] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   // Split tabs are restored once their child tabs have stable live ids.
@@ -383,7 +383,7 @@ export function AppShell({
     ((options: ConfirmOptions) => Promise<boolean>) | null
   >(null);
 
-  // Right dock — a second panel column so reference panels like history can
+  // Right dock: a second panel column so reference panels like history can
   // stay visible while the left sidebar is used for something else.
   const [rightRailView, setRightRailView] = useState<RailView | null>(() => {
     const saved = localStorage.getItem("termix_rightRailView");
@@ -698,7 +698,7 @@ export function AppShell({
   const paneElsRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const [, setPaneElsVersion] = useState(0);
 
-  // Stable per-tab DOM nodes — created once per tab, never destroyed while the tab lives.
+  // Stable per-tab DOM nodes, created once per tab, never destroyed while the tab lives.
   // We always portal each tab's content into its own node, then move that node between
   // the normal-view container and the pane container via vanilla DOM so React's portal
   // target never changes (changing the target causes a remount).
@@ -708,7 +708,7 @@ export function AppShell({
   const mainAreaRef = useRef<HTMLDivElement>(null);
   // Tab id the enter animation has already played for, so a re-render while
   // the tab stays active (there can be several right after a switch) doesn't
-  // replay it — only a genuine switch to a different tab should.
+  // replay it, only a genuine switch to a different tab should.
   const lastAnimatedTabIdRef = useRef<string | null>(null);
 
   const getTabNode = useCallback((tabId: string, isTerminal: boolean) => {
@@ -726,7 +726,7 @@ export function AppShell({
   // Portal render order for tab content, kept independent of the tab bar's
   // visual order. Reordering tabs in the bar reorders `tabs`, and mapping
   // that array directly to portals reshuffles the Suspense-wrapped portal
-  // children's sibling order in the fiber tree — React then runs its
+  // children's sibling order in the fiber tree, React then runs its
   // Offscreen disconnect/reconnect pass on the ones that moved, which tears
   // down and rebuilds every passive effect underneath (including
   // react-xtermjs's terminal-creation effect), dropping the live terminal
@@ -855,7 +855,7 @@ export function AppShell({
         }
       }
 
-      // Cmd+1..9 on macOS, Alt+1..9 elsewhere — jump directly to the tab at that position
+      // Cmd+1..9 on macOS, Alt+1..9 elsewhere: jump directly to the tab at that position
       const tabDigit = getTabJumpDigit(e);
       if (tabDigit !== null) {
         const currentTabs = tabsRef.current.filter(
@@ -869,7 +869,7 @@ export function AppShell({
         return;
       }
 
-      // Ctrl+Shift+] / Ctrl+Shift+[ — cycle through open tabs (] = next, [ = previous)
+      // Ctrl+Shift+] / Ctrl+Shift+[: cycle through open tabs (] = next, [ = previous)
       if (e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey) {
         if (e.code === "BracketRight" || e.code === "BracketLeft") {
           e.preventDefault();
@@ -1368,7 +1368,7 @@ export function AppShell({
             // Restored tabs are in the tab bar, not in background records
           }
         } else {
-          // Not restoring to tab bar — keep as background records for ConnectionsPanel
+          // Not restoring to tab bar, keep as background records for ConnectionsPanel
           setBackgroundTabRecords(savedTabs as OpenTabRecord[]);
         }
       } catch {
@@ -2471,10 +2471,10 @@ export function AppShell({
   }, [tabs, activeTab]);
 
   // Move each tab's stable DOM node to the right container (pane or normal-view).
-  // This is vanilla DOM so React's portal target never changes — changing the portal
+  // This is vanilla DOM so React's portal target never changes. Changing the portal
   // target causes a remount which is exactly what we're trying to avoid.
   // useLayoutEffect (not useEffect) so visibility/display are corrected before
-  // the browser paints — otherwise the previous tab's node can flash on screen
+  // the browser paints, otherwise the previous tab's node can flash on screen
   // for a frame while still visible.
   useLayoutEffect(() => {
     const normalView = normalViewRef.current;
@@ -3113,7 +3113,7 @@ export function AppShell({
               </div>
             </SurfaceScope>
 
-            {/* Bottom nav bar — mobile only */}
+            {/* Bottom nav bar, mobile only */}
             <MobileBar
               railView={railView}
               sidebarOpen={sidebarOpen}
@@ -3126,7 +3126,7 @@ export function AppShell({
             />
           </div>
 
-          {/* Right dock — desktop only, holds a second reference panel */}
+          {/* Right dock, desktop only, holds a second reference panel */}
           {!isMobile && rightRailView && (
             <DockPanel
               side="right"
