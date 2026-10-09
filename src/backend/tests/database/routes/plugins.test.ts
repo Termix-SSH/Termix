@@ -282,6 +282,37 @@ describe("plugins route", () => {
       expect(body[0].version).toBe("");
     });
 
+    it("leaves out dependencies that do not load on guest pages", async () => {
+      state.plugins.set(
+        "sharing",
+        makePlugin({
+          id: "sharing",
+          manifestJson: JSON.stringify({
+            contributes: { guest: true, guestViews: ["shared"] },
+            dependencies: { terminal: "^1.0.0", desktop: "^1.0.0" },
+            optionalDependencies: { recorder: "^1.0.0" },
+          }),
+        }),
+      );
+      state.plugins.set(
+        "desktop",
+        makePlugin({
+          id: "desktop",
+          manifestJson: JSON.stringify({ contributes: { guest: true } }),
+        }),
+      );
+      state.plugins.set("terminal", makePlugin({ id: "terminal" }));
+
+      const res = await fetch(`${baseUrl}/plugins/public`);
+      const body = await res.json();
+      const sharing = body.find(
+        (plugin: { id: string }) => plugin.id === "sharing",
+      );
+
+      expect(sharing.dependencies).toEqual({ desktop: "^1.0.0" });
+      expect(sharing.optionalDependencies).toEqual({});
+    });
+
     it("skips a plugin whose manifest does not parse", async () => {
       state.plugins.set(
         "broken",

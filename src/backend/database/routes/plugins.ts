@@ -82,37 +82,46 @@ router.get("/public", async (_req: Request, res: Response) => {
   try {
     const records = await createCurrentPluginRepository().listAll();
     const { loader } = getPluginRuntime();
-    const plugins = records.flatMap((record) => {
+    type GuestManifest = {
+      contributes?: { guest?: boolean; guestViews?: string[] };
+      dependencies?: Record<string, string>;
+      optionalDependencies?: Record<string, string>;
+    };
+    const guests = records.flatMap((record) => {
       if (record.state !== "enabled") return [];
-      const loaded = loader.get(record.id);
-      let manifest: {
-        contributes?: { guest?: boolean; guestViews?: string[] };
-        dependencies?: Record<string, string>;
-        optionalDependencies?: Record<string, string>;
-      };
       try {
-        manifest = JSON.parse(record.manifestJson);
+        const manifest = JSON.parse(record.manifestJson) as GuestManifest;
+        return manifest?.contributes?.guest === true
+          ? [{ record, manifest }]
+          : [];
       } catch {
         return [];
       }
-      if (manifest?.contributes?.guest !== true) return [];
-      return [
-        {
-          id: record.id,
-          name: record.name,
-          // Not before login: it tells a scanner which known bugs apply.
-          version: "",
-          enabled: true,
-          state: loaded?.state ?? record.state,
-          contributes: {
-            guest: true,
-            guestViews: manifest.contributes.guestViews ?? [],
-          },
-          dependencies: manifest.dependencies ?? {},
-          optionalDependencies: manifest.optionalDependencies ?? {},
-          ...describePluginFrontend(loaded),
+    });
+    // Only guest plugins load on a guest page, so a dependency that is not
+    // one would block the plugin there for nothing.
+    const guestIds = new Set(guests.map(({ record }) => record.id));
+    const onlyGuests = (deps: Record<string, string> = {}) =>
+      Object.fromEntries(
+        Object.entries(deps).filter(([id]) => guestIds.has(id)),
+      );
+    const plugins = guests.map(({ record, manifest }) => {
+      const loaded = loader.get(record.id);
+      return {
+        id: record.id,
+        name: record.name,
+        // Not before login: it tells a scanner which known bugs apply.
+        version: "",
+        enabled: true,
+        state: loaded?.state ?? record.state,
+        contributes: {
+          guest: true,
+          guestViews: manifest.contributes?.guestViews ?? [],
         },
-      ];
+        dependencies: onlyGuests(manifest.dependencies),
+        optionalDependencies: onlyGuests(manifest.optionalDependencies),
+        ...describePluginFrontend(loaded),
+      };
     });
     res.json(plugins);
   } catch (error) {
