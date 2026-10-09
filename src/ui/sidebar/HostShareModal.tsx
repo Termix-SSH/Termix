@@ -32,6 +32,7 @@ import {
   updateHostAccess,
   revokeHostAccess,
   getUserList,
+  getUserInfo,
   getRoles,
   type AccessRecord,
   type SharePermissionLevel,
@@ -113,14 +114,18 @@ export function HostShareModal({
         : Promise.resolve({ accessList: [] }),
       getUserList().catch(() => ({ users: [] })),
       getRoles().catch(() => ({ roles: [] })),
+      getUserInfo().catch(() => null),
     ])
-      .then(([accessRes, usersRes, rolesRes]) => {
+      .then(([accessRes, usersRes, rolesRes, me]) => {
         setAccessList(accessRes.accessList ?? []);
+        // Nobody shares with themselves.
         setShareUsers(
-          (usersRes.users ?? []).map((u) => ({
-            id: String(u.id ?? u.userId),
-            username: u.username,
-          })),
+          (usersRes.users ?? [])
+            .map((u) => ({
+              id: String(u.id ?? u.userId),
+              username: u.username,
+            }))
+            .filter((u) => u.id !== me?.userId),
         );
         setShareRoles(
           (rolesRes.roles ?? [])

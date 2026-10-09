@@ -29,7 +29,7 @@ import {
   type CredentialPermissionLevel,
   type ShareTarget,
 } from "@/api/rbac-api";
-import { getUserList, type AccessRecord } from "@/main-axios";
+import { getUserInfo, getUserList, type AccessRecord } from "@/main-axios";
 import type { Credential } from "@/types/ui-types";
 import { getErrorMessage } from "@/lib/error-message";
 import { DocsLink } from "@/components/docs-link";
@@ -120,14 +120,15 @@ export function CredentialShareModal({
       getCredentialAccess(credentialId).catch(() => ({ access: [] })),
       getUserList().catch(() => ({ users: [] })),
       getRoles().catch(() => ({ roles: [] })),
+      getUserInfo().catch(() => null),
     ])
-      .then(([accessRes, usersRes, rolesRes]) => {
+      .then(([accessRes, usersRes, rolesRes, me]) => {
         setAccessList(accessRes.access ?? []);
+        // Nobody shares a credential with themselves.
         setShareUsers(
-          (usersRes.users ?? []).map((u) => ({
-            id: String(u.userId),
-            username: u.username,
-          })),
+          (usersRes.users ?? [])
+            .map((u) => ({ id: String(u.userId), username: u.username }))
+            .filter((u) => u.id !== me?.userId),
         );
         setShareRoles(
           (rolesRes.roles ?? [])
