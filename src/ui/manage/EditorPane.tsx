@@ -110,14 +110,29 @@ export function useScrollSpy(
       lockUntil.current = Date.now() + 600;
       setActive(id);
       const area = scroller(container);
-      area.scrollTo?.({
-        top:
-          el.getBoundingClientRect().top -
-          area.getBoundingClientRect().top +
-          area.scrollTop -
-          8,
-        behavior: "smooth",
-      });
+      const target = () =>
+        el.getBoundingClientRect().top -
+        area.getBoundingClientRect().top +
+        area.scrollTop -
+        8;
+      let lastTop = target();
+      let lastHeight = area.scrollHeight;
+      area.scrollTo?.({ top: lastTop, behavior: "smooth" });
+      // Sections above can still be mounting, which moves the target or
+      // cuts the scroll short. Follow it until the layout settles.
+      const started = Date.now();
+      const follow = () => {
+        if (!el.isConnected || Date.now() - started > 1500) return;
+        const top = target();
+        if (Math.abs(top - lastTop) > 4 || area.scrollHeight !== lastHeight) {
+          lastTop = top;
+          lastHeight = area.scrollHeight;
+          lockUntil.current = Date.now() + 600;
+          area.scrollTo?.({ top, behavior: "smooth" });
+        }
+        requestAnimationFrame(follow);
+      };
+      requestAnimationFrame(follow);
     },
   };
 }
