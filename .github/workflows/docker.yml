@@ -81,7 +81,7 @@ jobs:
           ALL_TAGS=()
 
           if [ "$BUILD_TYPE" = "Production" ]; then
-            TAGS+=("release-$VERSION" "$VERSION" "latest")
+            TAGS+=("$VERSION" "latest")
           elif [ "$BUILD_TYPE" = "Beta" ]; then
             TAGS+=("beta" "$VERSION")
           else
