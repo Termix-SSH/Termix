@@ -19,7 +19,10 @@ vi.mock("../../database/db/index.js", () => ({
 vi.mock("../../database/repositories/factory.js", () => ({
   createCurrentSettingsRepository: () => ({ get: async () => null }),
   createCurrentSessionRepository: () => ({
-    findById: async (id: string) => ({ id }),
+    findById: async (id: string) =>
+      id === "expired"
+        ? { id, expiresAt: new Date(Date.now() - 1000).toISOString() }
+        : { id },
   }),
   createCurrentUserRepository: () => ({}),
   createCurrentApiKeyRepository: () => ({}),
@@ -148,6 +151,15 @@ describe("AuthManager token handling", () => {
     const token = jwt.sign({ userId: "user-1" }, jwtSecret, {
       expiresIn: "1h",
     });
+    expect(await authManager.verifyJWTToken(token)).toBeNull();
+  });
+
+  it("rejects a token whose session has expired", async () => {
+    const token = jwt.sign(
+      { userId: "user-1", sessionId: "expired" },
+      jwtSecret,
+      { expiresIn: "1h" },
+    );
     expect(await authManager.verifyJWTToken(token)).toBeNull();
   });
 

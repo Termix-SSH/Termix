@@ -87,12 +87,17 @@ router.get("/v2/info", async (_req: Request, res: Response) => {
  *         description: The desktop session token and the account it belongs to.
  *       401:
  *         description: Not signed in.
+ *       403:
+ *         description: API keys cannot link a desktop.
  */
 router.post(
   "/v2/link",
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = userOf(req);
+    if ((req as AuthenticatedRequest).apiKeyId) {
+      return res.status(403).json({ error: "API keys cannot link a desktop" });
+    }
     try {
       const user = await createCurrentUserRepository().findById(userId);
       if (!user) return res.status(401).json({ error: "User not found" });

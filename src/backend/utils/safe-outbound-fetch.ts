@@ -40,6 +40,7 @@ const blockedIpv4Ranges = [
   ["127.0.0.0", 8],
   ["169.254.0.0", 16], // link-local
   ["172.16.0.0", 12],
+  ["192.0.0.0", 24], // IETF protocol assignments
   ["192.168.0.0", 16],
   ["198.18.0.0", 15], // benchmarking
   ["224.0.0.0", 4], // multicast
@@ -70,7 +71,7 @@ export function isBlockedAddress(address: string): boolean {
 }
 
 // Extracted so the blocklist decision can be tested directly against a
-// fake DNS resolver, instead of only through a real fetch()/Agent call —
+// fake DNS resolver, instead of only through a real fetch()/Agent call,
 // the actual bug here lived entirely in this callback, several layers
 // below where undici's own "fetch failed" wrapping would otherwise hide it.
 export function createDnsLookupHook(

@@ -22,6 +22,7 @@ describe("isBlockedAddress", () => {
     expect(isBlockedAddress("192.168.1.1")).toBe(true);
     expect(isBlockedAddress("127.0.0.1")).toBe(true);
     expect(isBlockedAddress("169.254.1.1")).toBe(true);
+    expect(isBlockedAddress("192.0.0.170")).toBe(true);
     expect(isBlockedAddress("100.64.0.1")).toBe(true);
   });
 

@@ -414,6 +414,10 @@ class AuthManager {
             return null;
           }
 
+          if (new Date(sessionRecord.expiresAt).getTime() < Date.now()) {
+            return null;
+          }
+
           await this.migrateDataKeyFromPayload(payload);
         } catch (dbError) {
           databaseLogger.error(
