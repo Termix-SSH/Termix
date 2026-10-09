@@ -275,7 +275,7 @@ export async function findOrProvisionExternalUser(
           provider: identity.provider,
         });
         throw new LoginMethodError(
-          "Registration is disabled",
+          "You have no Termix account yet. Ask an admin to turn on Auto-create external accounts.",
           403,
           "registration_disabled",
         );

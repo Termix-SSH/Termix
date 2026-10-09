@@ -1079,7 +1079,7 @@
     "sessionExpiredLogin": "Session expired. Please log in again."
   },
   "messages": {
-    "registrationDisabled": "New account registration is currently disabled by an admin. Please log in or contact an administrator.",
+    "registrationDisabled": "You have no Termix account yet. Ask an admin to turn on Auto-create external accounts.",
     "userNotAllowed": "Your account is not authorized to register. Please contact an administrator.",
     "databaseConnectionFailed": "Failed to connect to the database server",
     "embeddedServerPortInUse": "Port {{port}} is already in use by another program. This is usually a Termix Docker container or a leftover Termix process from a previous session. Close it, then restart Termix.",
@@ -1218,7 +1218,7 @@
     "allowPasswordLogin": "Allow Password Login",
     "allowPasswordLoginDesc": "Username/password login",
     "externalAutoProvision": "Auto-create external accounts",
-    "externalAutoProvisionDesc": "Create an account the first time someone signs in through an external login such as SSO or LDAP, even when registration is off",
+    "externalAutoProvisionDesc": "Create an account the first time someone signs in through an external login such as SSO or LDAP. When off, only people who already have an account can sign in that way",
     "secondFactorAfterExternalLogin": "Ask for a second factor after external logins (SSO, GitHub, Google, LDAP)",
     "secondFactorAfterExternalLoginDesc": "Off, an enrolled second factor is only asked for after password and other local logins, same as before. On, it is asked for after every login method, including SSO and LDAP.",
     "allowPasswordReset": "Allow Password Reset",
