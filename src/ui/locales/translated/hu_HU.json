@@ -116,8 +116,8 @@
     "updateLinkLabel": "Frissítés elérhető. Nyissa meg a kiadási megjegyzéseket a GitHubon."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Görgessen balra a füleket",
+    "scrollTabsRight": "Görgessen jobbra a füleket",
     "close": "Közeli",
     "minimize": "Minimalizálás",
     "online": "Online",
@@ -189,10 +189,10 @@
     "add": "Hozzáadás",
     "update": "Frissítés",
     "noResults": "Nincs találat",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Oldalsáv",
+    "mobileSidebarDescription": "Megjeleníti a mobil oldalsávot.",
+    "toggleSidebar": "Oldalsáv be- és kikapcsolása",
+    "search": "Keresés..."
   },
   "onboarding": {
     "stepCounter": "{{total}} {{current}} lépése",
@@ -359,8 +359,8 @@
     "status": {
       "online": "Online",
       "offline": "Offline",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Ellenőrzés",
+      "monitoringDisabled": "Állapot pipák kikapcsolva",
       "label": "Állapot"
     },
     "folderRenamed": "A(z) „{{oldName}}” mappa sikeresen átnevezve erre: „{{newName}}”",
@@ -482,7 +482,7 @@
     "sameHost": "Ez a gazdagép (közvetlen alagút)",
     "statusChecksLabel": "Állapotellenőrzések",
     "enableStatusChecks": "Állapotellenőrzések engedélyezése",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Ellenőrizd a hoszt elérhetőségét. Az aktív munkamenetek kihagyják a további próbákat. Az aktív munkamenet nélküli SSH próbák agresszív Fail2Ban szabályokat válthatnak ki; tiltsd le az állapotellenőrzéseket ezeken a hosztokon.",
     "useGlobalInterval": "Globális intervallum használata",
     "useGlobalIntervalDesc": "Felülbírálás a szerver szintű állapotellenőrzési intervallummal",
     "checkIntervalS": "Ellenőrzési intervallum (s)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Ez a második tényező nem jeleníthető meg ezen a képernyőn. Lépjen kapcsolatba egy adminisztrátorral.",
     "serverAuthentication": "Szerver bejelentkezés",
     "minChars": "min. {{min}} karakter",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Újratöltési ellenőrzési módszerek"
   },
   "hostKey": {
     "verifyNewHost": "SSH host kulcs ellenőrzése",
@@ -1126,12 +1126,12 @@
     "keyPassword": "kulcs jelszó",
     "pastePrivateKey": "Illeszd be ide a privát kulcsodat...",
     "enterPassword": "Írja be a jelszavát",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "pl. CI Pipeline",
+    "credentialName": "pl. éles SSH-kulcs",
+    "optionalDetails": "Opcionális részletek...",
+    "sshUsername": "pl. root vagy deploy",
+    "hostAddress": "10.0.0.1 vagy example.com",
+    "hostName": "pl. webszerver gyártás"
   },
   "dashboard": {
     "title": "Műszerfal",
@@ -1513,9 +1513,9 @@
     "sslNames": "Borítók {{names}}",
     "sslManualTitle": "Tanúsítvány feltöltése",
     "updateExternalAutoProvisionFailed": "Nem sikerült frissíteni az automatikus létrehozási beállítást",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Előre definiált hosztcímkék",
+    "hostTagsDesc": "A címkék, amelyeket minden felhasználó javaslatként lát a host szerkesztőben. Nyomd meg a Space vagy az Enter billentyűt egy hozzáadásához. Ha itt eltávolítasz egy címkét, az nem távolítja el azt a hostokból.",
+    "hostTagsError": "Nem sikerült betölteni vagy menteni a hosztcímke-javaslatokat."
   },
   "newUi": {
     "sidebar": {

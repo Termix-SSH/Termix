@@ -116,8 +116,8 @@
     "updateLinkLabel": "Ажурирање је доступно. Отворите белешке о издању на GitHub-у."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Померање картица лево",
+    "scrollTabsRight": "Померање картица удесно",
     "close": "Затвори",
     "minimize": "Минимизирај",
     "online": "Онлајн",
@@ -189,10 +189,10 @@
     "add": "Додај",
     "update": "Ажурирање",
     "noResults": "Нису пронађени резултати",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Бочна трака",
+    "mobileSidebarDescription": "Приказује бочну траку за мобилне уређаје.",
+    "toggleSidebar": "Укључи/искључи бочну траку",
+    "search": "Претрага..."
   },
   "onboarding": {
     "stepCounter": "Корак {{current}} од {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "Тунел",
     "serverStats": "Метрике хоста",
     "status": {
-      "online": "Online",
+      "online": "Онлајн",
       "offline": "Офлајн",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Провера",
+      "monitoringDisabled": "Статус проверава искључен",
       "label": "Статус"
     },
     "folderRenamed": "Фасцикла „{{oldName}}“ је успешно преименована у „{{newName}}“",
@@ -482,7 +482,7 @@
     "sameHost": "Овај хост (директни тунел)",
     "statusChecksLabel": "Провере статуса",
     "enableStatusChecks": "Омогући провере статуса",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Проверите доступност хоста. Активне сесије прескачу додатне пробе. SSH пробе без активне сесије могу покренути агресивна правила Fail2Ban; онемогућите провере статуса на тим хостовима.",
     "useGlobalInterval": "Користи глобални интервал",
     "useGlobalIntervalDesc": "Замени интервал провере статуса на нивоу сервера",
     "checkIntervalS": "Интервал провере(е)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Овај други фактор не може бити приказан на овом екрану. Контактирајте администратора.",
     "serverAuthentication": "Пријава на сервер",
     "minChars": "мин. {{min}} знакова",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Методе верификације поновног учитавања"
   },
   "hostKey": {
     "verifyNewHost": "Проверите SSH кључ хоста",
@@ -1126,12 +1126,12 @@
     "keyPassword": "кључна лозинка",
     "pastePrivateKey": "Налепите свој приватни кључ овде...",
     "enterPassword": "Унесите лозинку",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "нпр. CI цевовод",
+    "credentialName": "нпр. SSH кључ за производњу",
+    "optionalDetails": "Опциони детаљи...",
+    "sshUsername": "нпр. root или deploy",
+    "hostAddress": "10.0.0.1 или example.com",
+    "hostName": "нпр. продукција веб сервера"
   },
   "dashboard": {
     "title": "Контролна табла",
@@ -1513,9 +1513,9 @@
     "sslNames": "Навлаке {{names}}",
     "sslManualTitle": "Отпреми сертификат",
     "updateExternalAutoProvisionFailed": "Ажурирање подешавања аутоматског креирања није успело",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Унапред дефинисане ознаке хоста",
+    "hostTagsDesc": "Ознаке које сваки корисник види као предлоге у уређивачу хостова. Притисните размакницу или Ентер да бисте додали једну. Уклањање ознаке овде је не уклања са хостова.",
+    "hostTagsError": "Није могуће учитати или сачувати предлоге ознака хоста."
   },
   "newUi": {
     "sidebar": {

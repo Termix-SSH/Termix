@@ -116,8 +116,8 @@
     "updateLinkLabel": "يتوفر تحديث. اطلع على ملاحظات الإصدار على GitHub"
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "قم بتمرير علامات التبويب إلى اليسار",
+    "scrollTabsRight": "قم بتمرير علامات التبويب إلى اليمين",
     "close": "إغلاق",
     "minimize": "تصغير",
     "online": "متصل",
@@ -189,10 +189,10 @@
     "add": "إضافة",
     "update": "تحديث",
     "noResults": "لم يتم العثور على نتائج",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "الشريط الجانبي",
+    "mobileSidebarDescription": "يعرض الشريط الجانبي للجوال.",
+    "toggleSidebar": "إظهار/إخفاء الشريط الجانبي",
+    "search": "بحث..."
   },
   "onboarding": {
     "stepCounter": "الخطوة {{current}} من {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "النفق",
     "serverStats": "مقاييس المضيف",
     "status": {
-      "online": "Online",
+      "online": "متصل",
       "offline": "غير متصل بالإنترنت",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "جارٍ التحقق",
+      "monitoringDisabled": "تم إيقاف عمليات التحقق من الحالة",
       "label": "حالة"
     },
     "folderRenamed": "تمت إعادة تسمية المجلد \"{{oldName}}\" إلى \"{{newName}}\" بنجاح",
@@ -482,7 +482,7 @@
     "sameHost": "هذا المضيف (نفق مباشر)",
     "statusChecksLabel": "فحوصات الحالة",
     "enableStatusChecks": "تمكين فحوصات الحالة",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "تحقق من إمكانية الوصول إلى المضيف. تتخطى الجلسات النشطة عمليات التحقق الإضافية. قد تؤدي عمليات التحقق عبر SSH بدون جلسة نشطة إلى تفعيل قواعد Fail2Ban الصارمة؛ لذا قم بتعطيل عمليات التحقق من الحالة على تلك المضيفات.",
     "useGlobalInterval": "استخدام الفاصل الزمني العام",
     "useGlobalIntervalDesc": "تجاوز باستخدام فترة فحص الحالة على مستوى الخادم",
     "checkIntervalS": "فترة الفحص (ثانية)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "لا يمكن عرض هذا العامل الثاني على هذه الشاشة. تواصل مع أحد المسؤولين.",
     "serverAuthentication": "تسجيل الدخول إلى الخادم",
     "minChars": "الحد الأدنى {{min}} حرفًا",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "طرق التحقق من إعادة التحميل"
   },
   "hostKey": {
     "verifyNewHost": "تحقق من مفتاح مضيف SSH",
@@ -1126,12 +1126,12 @@
     "keyPassword": "كلمة مرور المفتاح",
     "pastePrivateKey": "الصق مفتاحك الخاص هنا...",
     "enterPassword": "أدخل كلمة المرور",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "مثال: خط أنابيب التكامل المستمر",
+    "credentialName": "مثال: مفتاح SSH للإنتاج",
+    "optionalDetails": "تفاصيل اختيارية...",
+    "sshUsername": "على سبيل المثال، الجذر أو النشر",
+    "hostAddress": "10.0.0.1 أو example.com",
+    "hostName": "مثال: إنتاج خادم الويب"
   },
   "dashboard": {
     "title": "لوحة التحكم",
@@ -1513,9 +1513,9 @@
     "sslNames": "يغطي {{names}}",
     "sslManualTitle": "قم بتحميل شهادة",
     "updateExternalAutoProvisionFailed": "فشل تحديث إعداد الإنشاء التلقائي",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "علامات المضيف المحددة مسبقًا",
+    "hostTagsDesc": "تظهر الوسوم لجميع المستخدمين كاقتراحات في محرر المضيفين. اضغط على مفتاح المسافة أو مفتاح الإدخال لإضافة وسم. إزالة وسم من هنا لا تحذفه من قائمة المضيفين.",
+    "hostTagsError": "تعذر تحميل أو حفظ اقتراحات علامات المضيف."
   },
   "newUi": {
     "sidebar": {

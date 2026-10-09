@@ -116,8 +116,8 @@
     "updateLinkLabel": "עדכון זמין. פתח את הערות הגרסה ב-GitHub"
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "גלילה של טאבים שמאלה",
+    "scrollTabsRight": "גלילה ימינה בכרטיסיות",
     "close": "לִסְגוֹר",
     "minimize": "לְצַמְצֵם",
     "online": "באינטרנט",
@@ -189,10 +189,10 @@
     "add": "לְהוֹסִיף",
     "update": "לְעַדְכֵּן",
     "noResults": "לא נמצאו תוצאות",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "סרגל צד",
+    "mobileSidebarDescription": "מציג את סרגל הצד לנייד.",
+    "toggleSidebar": "הפעלה/כיבוי סרגל צד",
+    "search": "לְחַפֵּשׂ..."
   },
   "onboarding": {
     "stepCounter": "שלב {{current}} של {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "מִנהָרָה",
     "serverStats": "מדדי מארח",
     "status": {
-      "online": "Online",
+      "online": "באינטרנט",
       "offline": "לא מקוון",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "בודק",
+      "monitoringDisabled": "בדיקות סטטוס כבויות",
       "label": "סטָטוּס"
     },
     "folderRenamed": "תיקיית \"{{oldName}}\" שמה שונה בהצלחה ל- \"{{newName}}\"",
@@ -482,7 +482,7 @@
     "sameHost": "מארח זה (מנהרה ישירה)",
     "statusChecksLabel": "בדיקות סטטוס",
     "enableStatusChecks": "הפעל בדיקות סטטוס",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "בדוק את נגישות המארח. סשנים פעילים מדלגים על בדיקות נוספות. בדיקות SSH ללא סשן פעיל עלולות להפעיל כללי Fail2Ban אגרסיביים; השבת בדיקות סטטוס במארחים אלה.",
     "useGlobalInterval": "השתמש במרווח גלובלי",
     "useGlobalIntervalDesc": "עקיפה עם מרווח בדיקת המצב הכולל של השרת",
     "checkIntervalS": "מרווח זמן בדיקה (ים)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "לא ניתן להציג את הגורם השני במסך זה. צור קשר עם מנהל.",
     "serverAuthentication": "כניסה לשרת",
     "minChars": "מינימום {{min}} תווים",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "טעינה מחדש של שיטות אימות"
   },
   "hostKey": {
     "verifyNewHost": "אימות מפתח מארח SSH",
@@ -1126,12 +1126,12 @@
     "keyPassword": "סיסמת מפתח",
     "pastePrivateKey": "הדבק את המפתח הפרטי שלך כאן...",
     "enterPassword": "הזן את הסיסמה שלך",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "לדוגמה, צינור CI",
+    "credentialName": "לדוגמה, מפתח SSH של ייצור",
+    "optionalDetails": "פרטים אופציונליים...",
+    "sshUsername": "לדוגמה, root או deploy",
+    "hostAddress": "10.0.0.1 או example.com",
+    "hostName": "לדוגמה, ייצור שרת אינטרנט"
   },
   "dashboard": {
     "title": "לוּחַ מַחווָנִים",
@@ -1513,9 +1513,9 @@
     "sslNames": "כריכות {{names}}",
     "sslManualTitle": "העלה תעודה",
     "updateExternalAutoProvisionFailed": "נכשל עדכון הגדרת היצירה האוטומטית",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "תגי מארח מוגדרים מראש",
+    "hostTagsDesc": "תגיות שכל משתמש רואה כהצעות בעורך המארחים. לחץ על מקש הרווח או Enter כדי להוסיף תג. הסרת תג כאן אינה מסירה אותו מהמארחים.",
+    "hostTagsError": "לא ניתן היה לטעון או לשמור הצעות לתגיות מארח."
   },
   "newUi": {
     "sidebar": {

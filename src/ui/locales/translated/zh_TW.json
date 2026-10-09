@@ -116,8 +116,8 @@
     "updateLinkLabel": "有更新可用。請在 GitHub 上查看發布說明。"
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "向左滾動標籤",
+    "scrollTabsRight": "向右滾動標籤",
     "close": "關閉",
     "minimize": "最小化",
     "online": "線上",
@@ -189,10 +189,10 @@
     "add": "新增",
     "update": "更新",
     "noResults": "未找到結果",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "側邊欄",
+    "mobileSidebarDescription": "顯示移動側邊欄。",
+    "toggleSidebar": "切換側邊欄",
+    "search": "搜尋..."
   },
   "onboarding": {
     "stepCounter": "步驟 {{current}} 的 {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "通道",
     "serverStats": "主機指標",
     "status": {
-      "online": "Online",
+      "online": "在線",
       "offline": "離線",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "檢查中",
+      "monitoringDisabled": "狀態檢查已關閉",
       "label": "地位"
     },
     "folderRenamed": "資料夾「{{oldName}}」已成功重新命名為「{{newName}}」",
@@ -482,7 +482,7 @@
     "sameHost": "此主機（直接通道）",
     "statusChecksLabel": "狀態檢查",
     "enableStatusChecks": "啟用狀態檢查",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "檢查主機可達性。活動會話將跳過額外的探測。沒有活動會話的 SSH 偵測可能會觸發嚴格的 Fail2Ban 規則；請停用這些主機的狀態檢查。",
     "useGlobalInterval": "使用全域間隔",
     "useGlobalIntervalDesc": "以伺服器範圍的狀態檢查間隔覆寫",
     "checkIntervalS": "檢查間隔（秒）",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "第二個因素無法在此畫面上顯示。請聯絡管理員。",
     "serverAuthentication": "伺服器登入",
     "minChars": "最小字元數 {{min}}",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "重新載入驗證方法"
   },
   "hostKey": {
     "verifyNewHost": "驗證 SSH 主機金鑰",
@@ -1126,12 +1126,12 @@
     "keyPassword": "金鑰密碼",
     "pastePrivateKey": "在此貼上您的私密金鑰...",
     "enterPassword": "輸入您的密碼",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "例如，CI 管線",
+    "credentialName": "例如：生產環境 SSH 金鑰",
+    "optionalDetails": "可選細節…",
+    "sshUsername": "例如 root 或部署",
+    "hostAddress": "10.0.0.1 或 example.com",
+    "hostName": "例如：Web伺服器生產"
   },
   "dashboard": {
     "title": "儀表板",
@@ -1513,9 +1513,9 @@
     "sslNames": "封面 {{names}}",
     "sslManualTitle": "上傳證書",
     "updateExternalAutoProvisionFailed": "自動建立設定更新失敗",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "預先定義的主機標籤",
+    "hostTagsDesc": "所有使用者在主機編輯器中都會看到標籤建議。按空白鍵或回車鍵新增標籤。在此刪除標籤不會將其從主機清單中移除。",
+    "hostTagsError": "無法載入或儲存主機標籤建議。"
   },
   "newUi": {
     "sidebar": {

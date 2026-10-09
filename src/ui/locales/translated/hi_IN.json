@@ -116,8 +116,8 @@
     "updateLinkLabel": "अपडेट उपलब्ध है। GitHub पर रिलीज़ नोट्स देखें।"
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "टैब को बाईं ओर स्क्रॉल करें",
+    "scrollTabsRight": "टैब को दाईं ओर स्क्रॉल करें",
     "close": "बंद करें",
     "minimize": "न्यूनतम करें",
     "online": "ऑनलाइन",
@@ -189,10 +189,10 @@
     "add": "जोड़ें",
     "update": "अपडेट करें",
     "noResults": "कोई परिणाम नहीं मिला",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "साइडबार",
+    "mobileSidebarDescription": "मोबाइल साइडबार प्रदर्शित करता है।",
+    "toggleSidebar": "साइडबार टॉगल करें",
+    "search": "खोजें..."
   },
   "onboarding": {
     "stepCounter": "चरण {{current}} का {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "टनल",
     "serverStats": "होस्ट मेट्रिक्स",
     "status": {
-      "online": "Online",
+      "online": "ऑनलाइन",
       "offline": "ऑफलाइन",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "जाँच हो रही है",
+      "monitoringDisabled": "स्थिति की जाँच पूरी हो गई है",
       "label": "स्थिति"
     },
     "folderRenamed": "फ़ोल्डर \"{{oldName}}\" का नाम बदलकर \"{{newName}}\" सफलतापूर्वक किया गया",
@@ -482,7 +482,7 @@
     "sameHost": "यह होस्ट (डायरेक्ट टनल)",
     "statusChecksLabel": "स्थिति जाँच",
     "enableStatusChecks": "स्थिति जाँच सक्षम करें",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "होस्ट की पहुंच की जांच करें। सक्रिय सत्र अतिरिक्त जांचों को छोड़ देते हैं। सक्रिय सत्र के बिना SSH जांच आक्रामक Fail2Ban नियमों को सक्रिय कर सकती हैं; ऐसे होस्ट पर स्थिति जांच को अक्षम करें।",
     "useGlobalInterval": "वैश्विक अंतराल का उपयोग करें",
     "useGlobalIntervalDesc": "सर्वर-व्यापी स्थिति जाँच अंतराल से ओवरराइड करें",
     "checkIntervalS": "जाँच अंतराल (सेकंड)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "यह दूसरा कारक इस स्क्रीन पर नहीं दिखाया जा सकता। कृपया व्यवस्थापक से संपर्क करें।",
     "serverAuthentication": "सर्वर साइन-इन",
     "minChars": "न्यूनतम {{min}} अक्षर",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "पुनः लोड सत्यापन विधियाँ"
   },
   "hostKey": {
     "verifyNewHost": "SSH होस्ट कुंजी सत्यापित करें",
@@ -1126,12 +1126,12 @@
     "keyPassword": "कुंजी पासवर्ड",
     "pastePrivateKey": "अपनी निजी कुंजी यहाँ चिपकाएँ...",
     "enterPassword": "अपना पासवर्ड दर्ज करें",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
+    "apiKeyName": "उदाहरण के लिए, सीआई पाइपलाइन",
+    "credentialName": "उदाहरण के लिए, प्रोडक्शन एसएसएच कुंजी",
+    "optionalDetails": "वैकल्पिक विवरण...",
+    "sshUsername": "उदाहरण के लिए रूट या डिप्लॉय",
     "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "hostName": "उदाहरण के लिए वेब सर्वर उत्पादन"
   },
   "dashboard": {
     "title": "डैशबोर्ड",
@@ -1513,9 +1513,9 @@
     "sslNames": "कवर {{names}}",
     "sslManualTitle": "प्रमाणपत्र अपलोड करें",
     "updateExternalAutoProvisionFailed": "ऑटो-क्रिएट सेटिंग को अपडेट करने में विफलता",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "पूर्वनिर्धारित होस्ट टैग",
+    "hostTagsDesc": "होस्ट एडिटर में सभी उपयोगकर्ताओं को टैग सुझाव के रूप में दिखाई देते हैं। टैग जोड़ने के लिए स्पेस या एंटर दबाएँ। यहाँ से टैग हटाने से वह होस्ट से नहीं हटता।",
+    "hostTagsError": "होस्ट टैग सुझाव लोड या सेव नहीं हो सके।"
   },
   "newUi": {
     "sidebar": {

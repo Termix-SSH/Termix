@@ -116,8 +116,8 @@
     "updateLinkLabel": "Доступно обновление. Откройте примечания к выпуску на GitHub."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Прокрутите вкладки влево",
+    "scrollTabsRight": "Прокрутите вкладки вправо",
     "close": "Закрыть",
     "minimize": "Свернуть",
     "online": "В сети",
@@ -189,10 +189,10 @@
     "add": "Добавить",
     "update": "Обновить",
     "noResults": "Результаты не найдены",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Сайдбар",
+    "mobileSidebarDescription": "Отображает боковую панель для мобильных устройств.",
+    "toggleSidebar": "Переключить боковую панель",
+    "search": "Поиск..."
   },
   "onboarding": {
     "stepCounter": "Шаг {{current}} из {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "Туннель",
     "serverStats": "Метрики хоста",
     "status": {
-      "online": "Online",
+      "online": "Онлайн",
       "offline": "Офлайн",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Проверка",
+      "monitoringDisabled": "Статус отмечен галочками",
       "label": "Статус"
     },
     "folderRenamed": "Папка \"{{oldName}}\" успешно переименована в \"{{newName}}\"",
@@ -482,7 +482,7 @@
     "sameHost": "Этот хост (прямой туннель)",
     "statusChecksLabel": "Проверки состояния",
     "enableStatusChecks": "Включить проверки состояния",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Проверьте доступность хоста. Активные сессии пропускают дополнительные проверки. SSH-проверки без активной сессии могут активировать агрессивные правила Fail2Ban; отключите проверки состояния на таких хостах.",
     "useGlobalInterval": "Использовать глобальный интервал",
     "useGlobalIntervalDesc": "Переопределить глобальным интервалом проверки состояния сервера",
     "checkIntervalS": "Интервал проверки (с)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Этот второй фактор не отображается на данном экране. Свяжитесь с администратором.",
     "serverAuthentication": "Вход на сервер",
     "minChars": "мин. {{min}} символов",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Методы проверки перезагрузки"
   },
   "hostKey": {
     "verifyNewHost": "Проверить SSH-ключ хоста",
@@ -1126,12 +1126,12 @@
     "keyPassword": "пароль ключа",
     "pastePrivateKey": "Вставьте свой закрытый ключ сюда...",
     "enterPassword": "Введите пароль",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "например, конвейер непрерывной интеграции (CI Pipeline)",
+    "credentialName": "например, производственный SSH-ключ",
+    "optionalDetails": "Дополнительные сведения...",
+    "sshUsername": "например, root или deploy",
+    "hostAddress": "10.0.0.1 или example.com",
+    "hostName": "например, производство веб-серверов"
   },
   "dashboard": {
     "title": "Панель управления",
@@ -1513,9 +1513,9 @@
     "sslNames": "Обложки {{names}}",
     "sslManualTitle": "Загрузите сертификат",
     "updateExternalAutoProvisionFailed": "Не удалось обновить настройку автоматического создания.",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Предопределенные теги хоста",
+    "hostTagsDesc": "В редакторе хостов каждый пользователь видит теги в качестве подсказок. Нажмите пробел или Enter, чтобы добавить тег. Удаление тега здесь не удаляет его из списка хостов.",
+    "hostTagsError": "Не удалось загрузить или сохранить предложения по тегам хоста."
   },
   "newUi": {
     "sidebar": {

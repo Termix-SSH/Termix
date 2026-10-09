@@ -116,8 +116,8 @@
     "updateLinkLabel": "Налична е актуализация. Отворете бележките за изданието в GitHub."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Превъртане на раздели наляво",
+    "scrollTabsRight": "Превъртане на раздели надясно",
     "close": "Затвори",
     "minimize": "Минимизиране",
     "online": "Онлайн",
@@ -189,10 +189,10 @@
     "add": "Добавяне",
     "update": "Актуализация",
     "noResults": "Няма намерени резултати",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Странична лента",
+    "mobileSidebarDescription": "Показва страничната лента за мобилни устройства.",
+    "toggleSidebar": "Превключване на страничната лента",
+    "search": "Търсене..."
   },
   "onboarding": {
     "stepCounter": "Стъпка {{current}} от {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "Тунел",
     "serverStats": "Метрики на хоста",
     "status": {
-      "online": "Online",
+      "online": "Онлайн",
       "offline": "Офлайн",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Проверка",
+      "monitoringDisabled": "Проверките за състояние са изключени",
       "label": "Статус"
     },
     "folderRenamed": "Папка „{{oldName}}“ е преименувана успешно на „{{newName}}“",
@@ -482,7 +482,7 @@
     "sameHost": "Този хост (директен тунел)",
     "statusChecksLabel": "Проверки на състоянието",
     "enableStatusChecks": "Активиране на проверки на състоянието",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Проверете достъпността на хоста. Активните сесии пропускат допълнителни сонди. SSH сонди без активна сесия могат да задействат агресивни правила Fail2Ban; деактивирайте проверките на състоянието на тези хостове.",
     "useGlobalInterval": "Използване на глобален интервал",
     "useGlobalIntervalDesc": "Замяна с интервала за проверка на състоянието на целия сървър",
     "checkIntervalS": "Интервал(и) на проверка",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Този втори фактор не може да бъде показан на този екран. Свържете се с администратор.",
     "serverAuthentication": "Влизане в сървъра",
     "minChars": "мин. {{min}} символа",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Методи за проверка при презареждане"
   },
   "hostKey": {
     "verifyNewHost": "Проверете SSH хост ключа",
@@ -1126,12 +1126,12 @@
     "keyPassword": "ключова парола",
     "pastePrivateKey": "Поставете личния си ключ тук...",
     "enterPassword": "Въведете паролата си",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "напр. CI тръбопровод",
+    "credentialName": "напр. SSH ключ за производство",
+    "optionalDetails": "Незадължителни подробности...",
+    "sshUsername": "например root или deploy",
+    "hostAddress": "10.0.0.1 или example.com",
+    "hostName": "напр. Производство на уеб сървър"
   },
   "dashboard": {
     "title": "Табло за управление",
@@ -1513,9 +1513,9 @@
     "sslNames": "Обхваща {{names}}",
     "sslManualTitle": "Качване на сертификат",
     "updateExternalAutoProvisionFailed": "Актуализирането на настройката за автоматично създаване не бе успешно",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Предварително дефинирани тагове за хост",
+    "hostTagsDesc": "Етикети, които всеки потребител вижда като предложения в редактора на хостове. Натиснете интервал или Enter, за да добавите такъв. Премахването на етикет тук не го премахва от хостове.",
+    "hostTagsError": "Не можаха да се заредят или запазят предложенията за етикети на хостове."
   },
   "newUi": {
     "sidebar": {

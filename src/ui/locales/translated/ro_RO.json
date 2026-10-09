@@ -116,8 +116,8 @@
     "updateLinkLabel": "Actualizare disponibilă. Deschideți notele de lansare pe GitHub."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Derulați filele la stânga",
+    "scrollTabsRight": "Derulați filele la dreapta",
     "close": "Aproape",
     "minimize": "Minimizare",
     "online": "Online",
@@ -189,10 +189,10 @@
     "add": "Adăuga",
     "update": "Actualizare",
     "noResults": "Nu s-au găsit rezultate",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Bara laterală",
+    "mobileSidebarDescription": "Afișează bara laterală mobilă.",
+    "toggleSidebar": "Comutare bară laterală",
+    "search": "Căutare..."
   },
   "onboarding": {
     "stepCounter": "Pasul {{current}} din {{total}}",
@@ -359,8 +359,8 @@
     "status": {
       "online": "Online",
       "offline": "Offline",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Control",
+      "monitoringDisabled": "Verificările de stare sunt dezactivate",
       "label": "Stare"
     },
     "folderRenamed": "Dosarul „{{oldName}}” a fost redenumit în „{{newName}}” a fost reușit.",
@@ -482,7 +482,7 @@
     "sameHost": "Această gazdă (tunel direct)",
     "statusChecksLabel": "Verificări de stare",
     "enableStatusChecks": "Activați verificările de stare",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Verificați accesibilitatea gazdei. Sesiunile active omit sondele suplimentare. Sondele SSH fără o sesiune activă pot declanșa reguli agresive Fail2Ban; dezactivați verificările de stare pe acele gazde.",
     "useGlobalInterval": "Utilizați intervalul global",
     "useGlobalIntervalDesc": "Suprascriere cu intervalul de verificare a stării la nivel de server",
     "checkIntervalS": "Interval (e) de verificare",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Acest al doilea factor nu poate fi afișat pe acest ecran. Contactați un administrator.",
     "serverAuthentication": "Conectare la server",
     "minChars": "min. {{min}} caractere",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Metode de verificare a reîncărcării"
   },
   "hostKey": {
     "verifyNewHost": "Verificați cheia gazdă SSH",
@@ -1126,12 +1126,12 @@
     "keyPassword": "parolă cheie",
     "pastePrivateKey": "Lipește cheia privată aici...",
     "enterPassword": "Introduceți parola",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "de exemplu, CI Pipeline",
+    "credentialName": "de exemplu, cheie SSH de producție",
+    "optionalDetails": "Detalii opționale...",
+    "sshUsername": "de exemplu, root sau deploy",
+    "hostAddress": "10.0.0.1 sau example.com",
+    "hostName": "de exemplu, producție de servere web"
   },
   "dashboard": {
     "title": "Bord",
@@ -1513,9 +1513,9 @@
     "sslNames": "Acoperă {{names}}",
     "sslManualTitle": "Încărcați un certificat",
     "updateExternalAutoProvisionFailed": "Nu s-a putut actualiza setarea de creare automată",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Etichete gazdă predefinite",
+    "hostTagsDesc": "Etichete pe care fiecare utilizator le vede ca sugestii în editorul de gazdă. Apăsați Space sau Enter pentru a adăuga una. Eliminarea unei etichete aici nu o elimină din gazde.",
+    "hostTagsError": "Nu s-au putut încărca sau salva sugestiile de etichete gazdă."
   },
   "newUi": {
     "sidebar": {

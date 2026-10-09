@@ -116,8 +116,8 @@
     "updateLinkLabel": "업데이트가 있습니다. GitHub에서 릴리스 노트를 확인하세요."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "왼쪽으로 스크롤 탭을",
+    "scrollTabsRight": "탭을 오른쪽으로 스크롤하세요",
     "close": "닫기",
     "minimize": "최소화",
     "online": "온라인",
@@ -189,10 +189,10 @@
     "add": "추가",
     "update": "업데이트",
     "noResults": "검색 결과가 없습니다.",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "사이드바",
+    "mobileSidebarDescription": "모바일 사이드바를 표시합니다.",
+    "toggleSidebar": "사이드바 표시/숨기기",
+    "search": "검색..."
   },
   "onboarding": {
     "stepCounter": "{{current}} 단계 {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "터널",
     "serverStats": "호스트 메트릭",
     "status": {
-      "online": "Online",
+      "online": "온라인",
       "offline": "오프라인",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "확인 중",
+      "monitoringDisabled": "상태 확인 완료",
       "label": "상태"
     },
     "folderRenamed": "폴더 \"{{oldName}}\"이(가) \"{{newName}}\"(으)로 성공적으로 이름이 변경되었습니다.",
@@ -482,7 +482,7 @@
     "sameHost": "이 호스트 (직접 터널)",
     "statusChecksLabel": "상태 확인",
     "enableStatusChecks": "상태 확인 활성화",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "호스트 연결 가능성을 확인합니다. 활성 세션은 추가 프로브를 건너뜁니다. 활성 세션이 없는 SSH 프로브는 Fail2Ban의 강력한 규칙을 트리거할 수 있으므로, 해당 호스트에 대한 상태 확인을 비활성화하십시오.",
     "useGlobalInterval": "전역 간격 사용",
     "useGlobalIntervalDesc": "서버 전체 상태 확인 간격으로 재정의합니다.",
     "checkIntervalS": "확인 간격(초)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "두 번째 요소는 이 화면에 표시할 수 없습니다. 관리자에게 문의하십시오.",
     "serverAuthentication": "서버 로그인",
     "minChars": "최소 {{min}} 문자",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "재로드 검증 방법"
   },
   "hostKey": {
     "verifyNewHost": "SSH 호스트 키 확인",
@@ -1126,12 +1126,12 @@
     "keyPassword": "키 비밀번호",
     "pastePrivateKey": "여기에 개인 키를 붙여넣으세요...",
     "enterPassword": "비밀번호를 입력하세요",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "예: CI 파이프라인",
+    "credentialName": "예: 프로덕션 SSH 키",
+    "optionalDetails": "선택 사항 세부 정보...",
+    "sshUsername": "예: 루트 또는 배포",
+    "hostAddress": "10.0.0.1 또는 example.com",
+    "hostName": "예: 웹 서버 제작"
   },
   "dashboard": {
     "title": "대시보드",
@@ -1513,9 +1513,9 @@
     "sslNames": "{{names}}을 덮습니다.",
     "sslManualTitle": "인증서를 업로드하세요",
     "updateExternalAutoProvisionFailed": "자동 생성 설정을 업데이트하는 데 실패했습니다.",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "사전 정의된 호스트 태그",
+    "hostTagsDesc": "태그는 모든 사용자가 호스트 편집기에서 추천 항목으로 볼 수 있습니다. 스페이스 키 또는 엔터 키를 눌러 태그를 추가하세요. 여기서 태그를 삭제해도 호스트 목록에서는 삭제되지 않습니다.",
+    "hostTagsError": "호스트 태그 제안을 불러오거나 저장할 수 없습니다."
   },
   "newUi": {
     "sidebar": {

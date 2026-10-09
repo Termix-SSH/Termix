@@ -116,8 +116,8 @@
     "updateLinkLabel": "Διαθέσιμη ενημέρωση. Ανοίξτε τις σημειώσεις έκδοσης στο GitHub"
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Κύλιση καρτελών προς τα αριστερά",
+    "scrollTabsRight": "Κύλιση καρτελών προς τα δεξιά",
     "close": "Κοντά",
     "minimize": "Ελαττώνω",
     "online": "Διαδικτυακά",
@@ -189,10 +189,10 @@
     "add": "Προσθέτω",
     "update": "Εκσυγχρονίζω",
     "noResults": "Δεν βρέθηκαν αποτελέσματα",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Πλαϊνή μπάρα",
+    "mobileSidebarDescription": "Εμφανίζει την πλαϊνή μπάρα για κινητά.",
+    "toggleSidebar": "Εναλλαγή πλευρικής γραμμής",
+    "search": "Ερευνα..."
   },
   "onboarding": {
     "stepCounter": "Βήμα {{current}} από {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "Σήραγγα",
     "serverStats": "Μετρήσεις κεντρικού υπολογιστή",
     "status": {
-      "online": "Online",
+      "online": "Διαδικτυακά",
       "offline": "Εκτός σύνδεσης",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Ελεγχος",
+      "monitoringDisabled": "Οι έλεγχοι κατάστασης είναι απενεργοποιημένοι",
       "label": "Κατάσταση"
     },
     "folderRenamed": "Ο φάκελος \"{{oldName}}\" μετονομάστηκε με επιτυχία σε \"{{newName}}\"",
@@ -482,7 +482,7 @@
     "sameHost": "Αυτός ο κεντρικός υπολογιστής (άμεση σήραγγα)",
     "statusChecksLabel": "Έλεγχοι κατάστασης",
     "enableStatusChecks": "Ενεργοποίηση ελέγχων κατάστασης",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Ελέγξτε την προσβασιμότητα του κεντρικού υπολογιστή. Οι ενεργές συνεδρίες παραλείπουν τους επιπλέον ανιχνευτές. Οι ανιχνευτές SSH χωρίς ενεργή συνεδρία ενδέχεται να ενεργοποιήσουν επιθετικούς κανόνες Fail2Ban. Απενεργοποιήστε τους ελέγχους κατάστασης σε αυτούς τους κεντρικούς υπολογιστές.",
     "useGlobalInterval": "Χρήση καθολικού διαστήματος",
     "useGlobalIntervalDesc": "Παράκαμψη με το διάστημα ελέγχου κατάστασης σε ολόκληρο τον διακομιστή",
     "checkIntervalS": "Διάστημα ελέγχου (s)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Αυτός ο δεύτερος παράγοντας δεν μπορεί να εμφανιστεί σε αυτήν την οθόνη. Επικοινωνήστε με έναν διαχειριστή.",
     "serverAuthentication": "Σύνδεση διακομιστή",
     "minChars": "ελάχ. {{min}} χαρακτήρες",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Επαναφόρτωση μεθόδων επαλήθευσης"
   },
   "hostKey": {
     "verifyNewHost": "Επαλήθευση κλειδιού κεντρικού υπολογιστή SSH",
@@ -1126,12 +1126,12 @@
     "keyPassword": "κωδικός πρόσβασης κλειδιού",
     "pastePrivateKey": "Επικολλήστε το ιδιωτικό σας κλειδί εδώ...",
     "enterPassword": "Εισαγάγετε τον κωδικό πρόσβασής σας",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "π.χ., αγωγός CI",
+    "credentialName": "π.χ. Κλειδί SSH Παραγωγής",
+    "optionalDetails": "Προαιρετικές λεπτομέρειες...",
+    "sshUsername": "π.χ. root ή deploy",
+    "hostAddress": "10.0.0.1 ή example.com",
+    "hostName": "π.χ. Παραγωγή Διακομιστών Ιστού"
   },
   "dashboard": {
     "title": "Ταμπλό",
@@ -1513,9 +1513,9 @@
     "sslNames": "Καλύμματα {{names}}",
     "sslManualTitle": "Μεταφόρτωση πιστοποιητικού",
     "updateExternalAutoProvisionFailed": "Η ενημέρωση της ρύθμισης αυτόματης δημιουργίας απέτυχε",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Προκαθορισμένες ετικέτες κεντρικού υπολογιστή",
+    "hostTagsDesc": "Ετικέτες που βλέπει κάθε χρήστης ως προτάσεις στον επεξεργαστή κεντρικού υπολογιστή. Πατήστε Space ή Enter για να προσθέσετε μία. Η αφαίρεση μιας ετικέτας εδώ δεν την καταργεί από τους κεντρικούς υπολογιστές.",
+    "hostTagsError": "Δεν ήταν δυνατή η φόρτωση ή η αποθήκευση προτάσεων ετικέτας κεντρικού υπολογιστή."
   },
   "newUi": {
     "sidebar": {

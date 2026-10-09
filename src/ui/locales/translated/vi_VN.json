@@ -116,8 +116,8 @@
     "updateLinkLabel": "Đã có bản cập nhật. Xem ghi chú phát hành trên GitHub."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Cuộn các tab sang trái",
+    "scrollTabsRight": "Cuộn các tab sang phải",
     "close": "Đóng",
     "minimize": "Thu nhỏ",
     "online": "Trực tuyến",
@@ -189,10 +189,10 @@
     "add": "Thêm",
     "update": "Cập nhật",
     "noResults": "Không tìm thấy kết quả nào.",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Thanh bên",
+    "mobileSidebarDescription": "Hiển thị thanh bên dành cho thiết bị di động.",
+    "toggleSidebar": "Ẩn/Hiện thanh bên",
+    "search": "Tìm kiếm..."
   },
   "onboarding": {
     "stepCounter": "Bước {{current}} của {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "Đường hầm",
     "serverStats": "Số liệu máy chủ",
     "status": {
-      "online": "Online",
+      "online": "Trực tuyến",
       "offline": "Ngoại tuyến",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Đang kiểm tra",
+      "monitoringDisabled": "Trạng thái đã được kiểm tra",
       "label": "Trạng thái"
     },
     "folderRenamed": "Đã đổi tên thư mục \"{{oldName}}\" thành \"{{newName}}\" thành công",
@@ -482,7 +482,7 @@
     "sameHost": "Máy chủ này (đường hầm trực tiếp)",
     "statusChecksLabel": "Kiểm tra trạng thái",
     "enableStatusChecks": "Bật Kiểm tra trạng thái",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Kiểm tra khả năng kết nối đến máy chủ. Các phiên hoạt động sẽ bỏ qua các lần kiểm tra bổ sung. Các lần kiểm tra SSH mà không có phiên hoạt động có thể kích hoạt các quy tắc Fail2Ban nghiêm ngặt; hãy tắt kiểm tra trạng thái trên các máy chủ đó.",
     "useGlobalInterval": "Dùng khoảng thời gian toàn cục",
     "useGlobalIntervalDesc": "Ghi đè bằng khoảng thời gian kiểm tra trạng thái toàn máy chủ",
     "checkIntervalS": "Khoảng kiểm tra (giây)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Yếu tố thứ hai không thể hiển thị trên màn hình này. Vui lòng liên hệ với quản trị viên.",
     "serverAuthentication": "Đăng nhập máy chủ",
     "minChars": "tối thiểu {{min}} ký tự",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Tải lại các phương pháp xác minh"
   },
   "hostKey": {
     "verifyNewHost": "Xác minh khóa máy chủ SSH",
@@ -1126,12 +1126,12 @@
     "keyPassword": "mật khẩu khóa",
     "pastePrivateKey": "Dán khóa riêng tư của bạn vào đây...",
     "enterPassword": "Nhập mật khẩu của bạn",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
+    "apiKeyName": "ví dụ: CI Pipeline",
+    "credentialName": "Ví dụ: Khóa SSH sản xuất",
+    "optionalDetails": "Thông tin chi tiết tùy chọn...",
+    "sshUsername": "ví dụ: root hoặc deploy",
     "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "hostName": "Ví dụ: Sản xuất máy chủ web"
   },
   "dashboard": {
     "title": "Bảng điều khiển",
@@ -1513,9 +1513,9 @@
     "sslNames": "Ảnh bìa {{names}}",
     "sslManualTitle": "Tải lên chứng chỉ",
     "updateExternalAutoProvisionFailed": "Không thể cập nhật cài đặt tự động tạo.",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Thẻ máy chủ được xác định trước",
+    "hostTagsDesc": "Các thẻ mà mọi người dùng đều thấy dưới dạng gợi ý trong trình chỉnh sửa máy chủ. Nhấn phím Space hoặc Enter để thêm thẻ. Việc xóa thẻ ở đây không xóa thẻ đó khỏi máy chủ.",
+    "hostTagsError": "Không thể tải hoặc lưu các đề xuất thẻ máy chủ."
   },
   "newUi": {
     "sidebar": {

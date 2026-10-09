@@ -116,8 +116,8 @@
     "updateLinkLabel": "Aktualizace je k dispozici. Otevřít poznámky k verzi na GitHubu."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Posunout záložky doleva",
+    "scrollTabsRight": "Posunout karty doprava",
     "close": "Blízko",
     "minimize": "Minimalizovat",
     "online": "Online",
@@ -189,10 +189,10 @@
     "add": "Přidat",
     "update": "Aktualizovat",
     "noResults": "Nenalezeny žádné výsledky",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Boční panel",
+    "mobileSidebarDescription": "Zobrazuje mobilní postranní panel.",
+    "toggleSidebar": "Přepnout postranní panel",
+    "search": "Vyhledávání..."
   },
   "onboarding": {
     "stepCounter": "Krok {{current}} z {{total}}",
@@ -359,8 +359,8 @@
     "status": {
       "online": "Online",
       "offline": "Offline",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Kontrola",
+      "monitoringDisabled": "Kontroly stavu vypnuty",
       "label": "Postavení"
     },
     "folderRenamed": "Složka „{{oldName}}“ byla úspěšně přejmenována na „{{newName}}“",
@@ -482,7 +482,7 @@
     "sameHost": "Tento hostitel (přímý tunel)",
     "statusChecksLabel": "Kontroly stavu",
     "enableStatusChecks": "Povolit kontroly stavu",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Zkontrolujte dostupnost hostitele. Aktivní relace přeskakují další sondy. SSH sondy bez aktivní relace mohou spustit agresivní pravidla Fail2Ban; zakažte kontroly stavu na těchto hostitelích.",
     "useGlobalInterval": "Použít globální interval",
     "useGlobalIntervalDesc": "Přepsat intervalem kontroly stavu na úrovni celého serveru",
     "checkIntervalS": "Kontrolní interval(y)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Tento druhý faktor nelze na této obrazovce zobrazit. Kontaktujte administrátora.",
     "serverAuthentication": "Přihlášení k serveru",
     "minChars": "min. {{min}} znaků",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Metody ověření opětovného načtení"
   },
   "hostKey": {
     "verifyNewHost": "Ověření klíče hostitele SSH",
@@ -1126,12 +1126,12 @@
     "keyPassword": "klíčové heslo",
     "pastePrivateKey": "Vložte sem svůj soukromý klíč...",
     "enterPassword": "Zadejte své heslo",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "např. CI Pipeline",
+    "credentialName": "např. produkční SSH klíč",
+    "optionalDetails": "Volitelné podrobnosti...",
+    "sshUsername": "např. root nebo nasazení",
+    "hostAddress": "10.0.0.1 nebo example.com",
+    "hostName": "např. produkce webového serveru"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1513,9 +1513,9 @@
     "sslNames": "Kryty {{names}}",
     "sslManualTitle": "Nahrát certifikát",
     "updateExternalAutoProvisionFailed": "Nepodařilo se aktualizovat nastavení automatického vytváření",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Předdefinované tagy hostitelů",
+    "hostTagsDesc": "Štítky vidí každý uživatel jako návrhy v editoru hostitelů. Stisknutím mezerníku nebo klávesy Enter můžete návrh přidat. Odebráním štítku zde jej neodstraníte z hostitelů.",
+    "hostTagsError": "Nelze načíst ani uložit návrhy tagů hostitele."
   },
   "newUi": {
     "sidebar": {

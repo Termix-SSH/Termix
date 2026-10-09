@@ -116,8 +116,8 @@
     "updateLinkLabel": "Aktualizacja dostępna. Otwórz notatki do wydania na GitHubie."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Przewiń karty w lewo",
+    "scrollTabsRight": "Przewiń karty w prawo",
     "close": "Zamknij",
     "minimize": "Minimalizuj",
     "online": "Online",
@@ -189,10 +189,10 @@
     "add": "Dodaj",
     "update": "Aktualizuj",
     "noResults": "Nie znaleziono wyników",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Pasek boczny",
+    "mobileSidebarDescription": "Wyświetla pasek boczny dla urządzeń mobilnych.",
+    "toggleSidebar": "Przełącz pasek boczny",
+    "search": "Szukaj..."
   },
   "onboarding": {
     "stepCounter": "Krok {{current}} z {{total}}",
@@ -359,8 +359,8 @@
     "status": {
       "online": "Online",
       "offline": "Niedostępny",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Sprawdzanie",
+      "monitoringDisabled": "Status jest sprawdzany",
       "label": "Status"
     },
     "folderRenamed": "Zmieniono nazwę folderu „{{oldName}}” na „{{newName}}”",
@@ -482,7 +482,7 @@
     "sameHost": "Ten host (tunel bezpośredni)",
     "statusChecksLabel": "Sprawdzanie statusu",
     "enableStatusChecks": "Włącz sprawdzanie statusu",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Sprawdź dostępność hosta. Aktywne sesje pomijają dodatkowe sondowania. Sondy SSH bez aktywnej sesji mogą wywołać agresywne reguły Fail2Ban; wyłącz sprawdzanie statusu na tych hostach.",
     "useGlobalInterval": "Użyj interwału globalnego",
     "useGlobalIntervalDesc": "Użyj globalnego interwału sprawdzania statusu",
     "checkIntervalS": "Interwał sprawdzania (s)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Drugiego czynnika nie można wyświetlić na tym ekranie. Skontaktuj się z administratorem.",
     "serverAuthentication": "Logowanie do serwera",
     "minChars": "min. {{min}} znaków",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Metody weryfikacji ponownego ładowania"
   },
   "hostKey": {
     "verifyNewHost": "Zweryfikuj klucz hosta SSH",
@@ -1126,12 +1126,12 @@
     "keyPassword": "hasło klucza",
     "pastePrivateKey": "Wklej tutaj klucz prywatny...",
     "enterPassword": "Wprowadź hasło",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "np. CI Pipeline",
+    "credentialName": "np. Klucz produkcyjny SSH",
+    "optionalDetails": "Szczegóły opcjonalne...",
+    "sshUsername": "np. root lub wdrożenie",
+    "hostAddress": "10.0.0.1 lub example.com",
+    "hostName": "np. Produkcja serwera WWW"
   },
   "dashboard": {
     "title": "Pulpit",
@@ -1513,9 +1513,9 @@
     "sslNames": "Obejmuje {{names}}",
     "sslManualTitle": "Prześlij certyfikat",
     "updateExternalAutoProvisionFailed": "Nie udało się zaktualizować ustawienia automatycznego tworzenia",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Predefiniowane znaczniki hosta",
+    "hostTagsDesc": "Tagi, które każdy użytkownik widzi jako sugestie w edytorze hosta. Naciśnij spację lub Enter, aby dodać tag. Usunięcie tagu w tym miejscu nie powoduje usunięcia go z hostów.",
+    "hostTagsError": "Nie można załadować ani zapisać sugestii dotyczących tagów hosta."
   },
   "newUi": {
     "sidebar": {

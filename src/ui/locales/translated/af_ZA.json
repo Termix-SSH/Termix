@@ -116,8 +116,8 @@
     "updateLinkLabel": "Opdatering beskikbaar. Maak die vrystellingsnotas op GitHub oop."
   },
   "common": {
-    "scrollTabsLeft": "Scroll tabs left",
-    "scrollTabsRight": "Scroll tabs right",
+    "scrollTabsLeft": "Blaai oortjies links",
+    "scrollTabsRight": "Blaai oortjies regs",
     "close": "Maak toe",
     "minimize": "Minimaliseer",
     "online": "Aanlyn",
@@ -189,10 +189,10 @@
     "add": "Voeg by",
     "update": "Opdatering",
     "noResults": "Geen resultate gevind nie",
-    "sidebar": "Sidebar",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar",
-    "search": "Search..."
+    "sidebar": "Sybalk",
+    "mobileSidebarDescription": "Wys die mobiele sybalk.",
+    "toggleSidebar": "Wissel sybalk",
+    "search": "Soek..."
   },
   "onboarding": {
     "stepCounter": "Stap {{current}} van {{total}}",
@@ -357,10 +357,10 @@
     "tunnel": "Tonnel",
     "serverStats": "Gasheermetrieke",
     "status": {
-      "online": "Online",
+      "online": "Aanlyn",
       "offline": "Vanlyn",
-      "checking": "Checking",
-      "monitoringDisabled": "Status checks off",
+      "checking": "Kontroleer",
+      "monitoringDisabled": "Statuskontroles af",
       "label": "Status"
     },
     "folderRenamed": "Lêer \"{{oldName}}\" is suksesvol hernoem na \"{{newName}}\"",
@@ -482,7 +482,7 @@
     "sameHost": "Hierdie gasheer (direkte tonnel)",
     "statusChecksLabel": "Statuskontroles",
     "enableStatusChecks": "Aktiveer statuskontroles",
-    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
+    "enableStatusChecksDesc": "Kontroleer gasheerbereikbaarheid. Aktiewe sessies slaan ekstra probes oor. SSH-probes sonder 'n aktiewe sessie kan aggressiewe Fail2Ban-reëls aktiveer; deaktiveer statuskontroles op daardie gashere.",
     "useGlobalInterval": "Gebruik globale interval",
     "useGlobalIntervalDesc": "Oorskryf met die bedienerwye statuskontrole-interval",
     "checkIntervalS": "Kontrole-interval (s)",
@@ -1064,7 +1064,7 @@
     "secondFactorNoUI": "Hierdie tweede faktor kan nie op hierdie skerm gewys word nie. Kontak 'n administrateur.",
     "serverAuthentication": "Bediener-aanmelding",
     "minChars": "min. {{min}} karakters",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Herlaai verifikasiemetodes"
   },
   "hostKey": {
     "verifyNewHost": "Verifieer SSH-gasheersleutel",
@@ -1126,12 +1126,12 @@
     "keyPassword": "sleutelwagwoord",
     "pastePrivateKey": "Plak jou privaat sleutel hier...",
     "enterPassword": "Voer jou wagwoord in",
-    "apiKeyName": "e.g., CI Pipeline",
-    "credentialName": "e.g. Production SSH Key",
-    "optionalDetails": "Optional details...",
-    "sshUsername": "e.g. root or deploy",
-    "hostAddress": "10.0.0.1 or example.com",
-    "hostName": "e.g. Web Server Production"
+    "apiKeyName": "bv. CI-pyplyn",
+    "credentialName": "bv. Produksie SSH Sleutel",
+    "optionalDetails": "Opsionele besonderhede...",
+    "sshUsername": "bv. wortel of ontplooi",
+    "hostAddress": "10.0.0.1 of voorbeeld.com",
+    "hostName": "bv. Webbedienerproduksie"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1513,9 +1513,9 @@
     "sslNames": "Omslae {{names}}",
     "sslManualTitle": "Laai 'n sertifikaat op",
     "updateExternalAutoProvisionFailed": "Kon nie die outomatiese skep-instelling opdateer nie",
-    "hostTags": "Predefined host tags",
-    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTags": "Voorafgedefinieerde gasheer-etikette",
+    "hostTagsDesc": "Etikette wat elke gebruiker as voorstelle in die gasheerredigeerder sien. Druk Spasie of Enter om een by te voeg. As 'n etiket hier verwyder word, word dit nie van die gasheer verwyder nie.",
+    "hostTagsError": "Kon nie gasheer-etiketvoorstelle laai of stoor nie."
   },
   "newUi": {
     "sidebar": {
