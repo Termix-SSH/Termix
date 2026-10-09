@@ -15,11 +15,6 @@ export const users = sqliteTable("users", {
   passwordHash: text("password_hash").notNull(),
   isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
   registeredAt: text("registered_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  donationModalDismissed: integer("donation_modal_dismissed", {
-    mode: "boolean",
-  })
-    .notNull()
-    .default(false),
 });
 
 export const settings = sqliteTable("settings", {

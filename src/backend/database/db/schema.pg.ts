@@ -27,9 +27,6 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   isAdmin: boolean("is_admin").notNull().default(false),
   registeredAt: text("registered_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  donationModalDismissed: boolean("donation_modal_dismissed")
-    .notNull()
-    .default(false),
 });
 
 export const settings = pgTable("settings", {

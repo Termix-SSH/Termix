@@ -77,6 +77,7 @@ export const RETIRED_COLUMNS: Record<string, string[]> = {
     "identifier_path",
     "name_path",
     "scopes",
+    "donation_modal_dismissed",
   ],
   sessions: ["oidc_sub", "oidc_sid", "sso_provider_id"],
   user_preferences: [

@@ -242,8 +242,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         username TEXT NOT NULL,
         password_hash TEXT NOT NULL,
         is_admin INTEGER NOT NULL DEFAULT 0,
-        registered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        donation_modal_dismissed INTEGER NOT NULL DEFAULT 0
+        registered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -970,9 +969,7 @@ const migrateSchema = () => {
   // CURRENT_TIMESTAMP, so the column is added empty and backfilled below.
   addColumnIfNotExists("users", "registered_at", "TEXT");
   if (!hadRegisteredAtColumn) {
-    // Pre-existing users are backdated past the 30 day mark so they see the
-    // donation modal immediately on upgrade instead of waiting a fresh
-    // 30 days as if they had just registered.
+    // Pre-existing users get a date in the past, since their real one is unknown.
     try {
       sqlite.exec(
         `UPDATE users SET registered_at = datetime('now', '-31 days') WHERE registered_at IS NULL`,
@@ -1000,12 +997,6 @@ const migrateSchema = () => {
       );
     }
   }
-  addColumnIfNotExists(
-    "users",
-    "donation_modal_dismissed",
-    "INTEGER NOT NULL DEFAULT 0",
-  );
-
   addColumnIfNotExists("sessions", "external_session_ref", "TEXT");
 
   addColumnIfNotExists("ssh_data", "name", "TEXT");

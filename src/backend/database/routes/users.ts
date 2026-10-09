@@ -20,7 +20,6 @@ import {
   isNativeTokenExportRequest,
   resolveDesktopAutoSessionUser,
 } from "./desktop-auto-session.js";
-import { shouldShowDonationModal } from "./donation-modal-utils.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { registerUserApiKeyRoutes } from "./user-api-key-routes.js";
 import { registerBrandingRoutes } from "./branding-routes.js";
@@ -595,11 +594,6 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
     const hasPassword = user.passwordHash && user.passwordHash.trim() !== "";
     const isDualAuth = hasPassword && isExternalAccount(user);
 
-    const showDonationModal = shouldShowDonationModal(
-      user.registeredAt,
-      !!user.donationModalDismissed,
-    );
-
     res.json({
       userId: user.id,
       username: user.username,
@@ -610,7 +604,6 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
       totp_enabled: await createCurrentUserAuthRepository().hasSecondFactor(
         user.id,
       ),
-      show_donation_modal: showDonationModal,
       linked: await describeDesktopLink(user.id),
     });
   } catch (err) {
@@ -618,48 +611,6 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to get username" });
   }
 });
-
-/**
- * @openapi
- * /users/me/dismiss-donation-modal:
- *   post:
- *     summary: Permanently dismiss the donation reminder modal
- *     description: Marks the donation reminder modal as dismissed for the currently authenticated user so it is never shown to them again.
- *     tags:
- *       - Users
- *     responses:
- *       200:
- *         description: Donation modal dismissed.
- *       401:
- *         description: Invalid userId or user not found.
- *       500:
- *         description: Failed to dismiss donation modal.
- */
-router.post(
-  "/me/dismiss-donation-modal",
-  authenticateJWT,
-  async (req: Request, res: Response) => {
-    const userId = (req as AuthenticatedRequest).userId;
-
-    if (!isNonEmptyString(userId)) {
-      return res.status(401).json({ error: "Invalid userId" });
-    }
-    try {
-      const updated = await createCurrentUserRepository().update(userId, {
-        donationModalDismissed: true,
-      });
-      if (!updated) {
-        return res.status(401).json({ error: "User not found" });
-      }
-      return res.json({ success: true });
-    } catch (err) {
-      authLogger.error("Failed to dismiss donation modal", err);
-      return res
-        .status(500)
-        .json({ error: "Failed to dismiss donation modal" });
-    }
-  },
-);
 
 /**
  * @openapi

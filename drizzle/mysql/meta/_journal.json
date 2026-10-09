@@ -491,6 +491,13 @@
       "when": 1791388888997,
       "tag": "0069_plugin_channel",
       "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "5",
+      "when": 1791550497926,
+      "tag": "0070_drop_donation_modal",
+      "breakpoints": true
     }
   ]
 }

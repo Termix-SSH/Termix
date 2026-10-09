@@ -97,7 +97,6 @@ export interface UserInfo {
   is_dual_auth?: boolean;
   password_hash?: string;
   data_unlocked?: boolean;
-  show_donation_modal?: boolean;
   /** On a desktop linked to a server, the account it is signed in to there. */
   linked?: LinkedAccountInfo | null;
 }
@@ -1015,14 +1014,6 @@ export async function getUserInfo(): Promise<UserInfo> {
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch user info");
-  }
-}
-
-export async function dismissDonationModal(): Promise<void> {
-  try {
-    await authApi.post("/users/me/dismiss-donation-modal");
-  } catch (error) {
-    handleApiError(error, "dismiss donation modal");
   }
 }
 
