@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to build (e.g., 1.8.0)"
+        description: "Version to build (e.g., 26.10.0)"
         required: true
       build_type:
         description: "Build type"
@@ -22,11 +22,11 @@ on:
   workflow_call:
     inputs:
       version:
-        description: "Version to build (e.g., 1.8.0)"
+        description: "Version to build (e.g., 26.10.0)"
         required: true
         type: string
       build_type:
-        description: "Build type (Development or Production)"
+        description: "Build type (Development, Beta or Production)"
         required: true
         type: string
       dry_run:
@@ -52,7 +52,14 @@ jobs:
           fetch-depth: 1
 
       - name: Resolve source revision
-        run: echo "SOURCE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+        run: |
+          echo "SOURCE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "BUILD_CREATED=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      # The image reads its version from package.json, so a beta has to say so.
+      - name: Stamp beta version
+        if: ${{ inputs.build_type == 'Beta' }}
+        run: node scripts/sync-version.cjs --version "${{ inputs.version }}"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -120,7 +127,7 @@ jobs:
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ env.SOURCE_SHA }}
-            org.opencontainers.image.created=${{ github.run_id }}
+            org.opencontainers.image.created=${{ env.BUILD_CREATED }}
           outputs: ${{ inputs.dry_run && 'type=cacheonly' || 'type=registry,compression=zstd' }}
 
       - name: Login to Docker Hub as termixssh

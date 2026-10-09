@@ -109,14 +109,14 @@ Want to build your own? Start from the [plugin template](https://github.com/Term
 </tr>
 <tr>
 <td align="center"><b>Windows</b> <sub>x64/ia32</sub></td>
-<td>Portable · MSI Installer · Chocolatey</td>
+<td>Portable · EXE and MSI Installer · Chocolatey</td>
 </tr>
 <tr>
-<td align="center"><b>Linux</b> <sub>x64/ia32</sub></td>
+<td align="center"><b>Linux</b> <sub>x64/arm64/armv7l</sub></td>
 <td>Portable · AUR · AppImage · Deb · Flatpak</td>
 </tr>
 <tr>
-<td align="center"><b>macOS</b> <sub>x64/ia32, v12.0+</sub></td>
+<td align="center"><b>macOS</b> <sub>Universal/x64/arm64, v12.0+</sub></td>
 <td>Apple App Store · DMG · Homebrew</td>
 </tr>
 <tr>
@@ -149,6 +149,10 @@ services:
       - termix-data:/app/data
     environment:
       PORT: "8080"
+      GUACD_HOST: "guacd"
+      GUACD_TUNNEL_HOST: "termix"
+      GUACD_RECORDING_PATH: "/termix-data/session_recordings/guacamole"
+      GUACD_DRIVE_PATH: "/termix-data/rdp-drive"
     depends_on:
       - guacd
     networks:
@@ -158,8 +162,8 @@ services:
     image: guacamole/guacd:1.6.0
     container_name: guacd
     restart: unless-stopped
-    ports:
-      - "4822:4822"
+    volumes:
+      - termix-data:/termix-data
     networks:
       - termix-net
 

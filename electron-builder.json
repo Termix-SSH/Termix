@@ -123,7 +123,7 @@
     "entitlements": "packaging/build/entitlements.mac.plist",
     "entitlementsInherit": "packaging/build/entitlements.mac.inherit.plist",
     "type": "distribution",
-    "minimumSystemVersion": "10.15",
+    "minimumSystemVersion": "12.0",
     "mergeASARs": false,
     "singleArchFiles": "**/*.{node,bare,dylib}",
     "x64ArchFiles": "**/{*.{node,bare,dylib},node-pty/prebuilds/*/spawn-helper}"

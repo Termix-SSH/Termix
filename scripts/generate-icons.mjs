@@ -46,7 +46,7 @@ await sharp(svgBuffer)
   .toFile(join(publicDir, "full-icon.png"));
 console.log("  ✓ full-icon.png");
 
-// favicon.ico — embed 16, 32, 48 px layers
+// favicon.ico: embed 16, 32, 48 px layers
 console.log("Generating favicon.ico...");
 const icoSizes = [16, 32, 48];
 const icoBuffers = await Promise.all(
@@ -55,7 +55,7 @@ const icoBuffers = await Promise.all(
 writeFileSync(join(publicDir, "favicon.ico"), buildIco(icoBuffers, icoSizes));
 console.log("  ✓ favicon.ico");
 
-// icon.ico — embed 16, 32, 48, 64, 128, 256 px layers
+// icon.ico: embed 16, 32, 48, 64, 128, 256 px layers
 console.log("Generating icon.ico...");
 const winSizes = [16, 32, 48, 64, 128, 256];
 const winBuffers = await Promise.all(

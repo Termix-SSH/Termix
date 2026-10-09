@@ -117,6 +117,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # A beta build has to know it is a beta, or it reports the stable version.
+      - name: Stamp beta version
+        if: inputs.version_override != ''
+        run: node scripts/sync-version.cjs --version "${{ inputs.version_override }}"
+
       - name: Get version
         id: package-version
         run: |
@@ -219,6 +224,11 @@ jobs:
           npm install --force @rollup/rollup-linux-x64-gnu
           npm install --force @rollup/rollup-linux-arm64-gnu
           npm install --force @rollup/rollup-linux-arm-gnueabihf
+
+      # A beta build has to know it is a beta, or it reports the stable version.
+      - name: Stamp beta version
+        if: inputs.version_override != ''
+        run: node scripts/sync-version.cjs --version "${{ inputs.version_override }}"
 
       - name: Build Linux x64
         env:
@@ -429,6 +439,11 @@ jobs:
           npm install dmg-license
           node scripts/install-macos-sharp.cjs
 
+      # A beta build has to know it is a beta, or it reports the stable version.
+      - name: Stamp beta version
+        if: inputs.version_override != ''
+        run: node scripts/sync-version.cjs --version "${{ inputs.version_override }}"
+
       - name: Check for Code Signing Certificates
         id: check_certs
         run: |
@@ -468,14 +483,15 @@ jobs:
 
           security find-identity -v -p codesigning $KEYCHAIN_PATH
 
+      # Betas never go to the App Store, so they skip the MAS package.
       - name: Build macOS App Store Package
-        if: steps.check_certs.outputs.has_certs == 'true'
+        id: mas_build
+        if: steps.check_certs.outputs.has_certs == 'true' && inputs.version_override == ''
         env:
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_OPTIONS: --max-old-space-size=4096
         run: |
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
           BUILD_VERSION="${{ github.run_number }}"
 
           npm run build && npx electron-builder --mac mas --universal --config.buildVersion="$BUILD_VERSION"
@@ -534,7 +550,7 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=4096
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ "${{ steps.check_certs.outputs.has_certs }}" != "true" ]; then
+          if [ "${{ steps.mas_build.outcome }}" != "success" ]; then
             npm run build
           fi
           npx electron-builder --mac dmg --universal --x64 --arm64 --publish never
@@ -555,7 +571,7 @@ jobs:
           echo "path=$MAS_PKG" >> "$GITHUB_OUTPUT"
 
       - name: Upload macOS MAS PKG
-        if: steps.check_certs.outputs.has_certs == 'true' && steps.locate_mas_pkg.outputs.path != '' && (inputs.artifact_destination == 'file' || inputs.artifact_destination == 'release' || inputs.artifact_destination == 'submit')
+        if: steps.mas_build.outcome == 'success' && steps.locate_mas_pkg.outputs.path != '' && (inputs.artifact_destination == 'file' || inputs.artifact_destination == 'release' || inputs.artifact_destination == 'submit')
         uses: actions/upload-artifact@v7
         with:
           name: termix_macos_universal_mas
@@ -722,7 +738,7 @@ jobs:
           choco pack termix-ssh.nuspec
 
           if ($LASTEXITCODE -ne 0) {
-            throw "Chocolatey push failed with exit code $LASTEXITCODE"
+            throw "Chocolatey pack failed with exit code $LASTEXITCODE"
           }
 
       - name: Check for Chocolatey API Key
@@ -952,8 +968,8 @@ jobs:
 
           cp Casks/termix.rb homebrew-submission/Casks/t/termix.rb
 
-          sed -i '' "s/VERSION_PLACEHOLDER/$VERSION/g" homebrew-submission/Casks/t/termix.rb
-          sed -i '' "s/CHECKSUM_PLACEHOLDER/$CHECKSUM/g" homebrew-submission/Casks/t/termix.rb
+          sed -i '' "s|version \".*\"|version \"$VERSION\"|g" homebrew-submission/Casks/t/termix.rb
+          sed -i '' "s|sha256 \".*\"|sha256 \"$CHECKSUM\"|g" homebrew-submission/Casks/t/termix.rb
 
       - name: Verify Cask syntax
         run: |

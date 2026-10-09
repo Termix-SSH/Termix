@@ -53,7 +53,7 @@ export default tseslint.config([
   },
   {
     // MySQL has no RETURNING clause, and drizzle's mysql-core does not expose
-    // the method at all — a bare .returning() is a TypeError there, not a bad
+    // the method at all. A bare .returning() is a TypeError there, not a bad
     // query, and it only fails on the engine no test in this repo runs against.
     //
     // 175 call sites were migrated off it. This is what stops number 176.
@@ -85,14 +85,14 @@ export default tseslint.config([
         {
           // Postgres and SQLite spell it ON CONFLICT; MySQL spells it ON
           // DUPLICATE KEY and names no columns, so drizzle's mysql-core has no
-          // onConflictDoUpdate at all — another TypeError, not a bad query.
+          // onConflictDoUpdate at all, another TypeError, not a bad query.
           selector: "CallExpression[callee.property.name='onConflictDoUpdate']",
           message:
             "MySQL has no ON CONFLICT. Use upsert() from ./returning.js.",
         },
         {
           // better-sqlite3 puts these on a write result; node-postgres and
-          // mysql2 do not, so reading them directly yields undefined — and
+          // mysql2 do not, so reading them directly yields undefined, and
           // Number(undefined) is NaN, which reaches the database as the string
           // "NaN" and fails an integer column. Three call sites did exactly
           // this and only broke on Postgres.

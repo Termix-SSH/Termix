@@ -7,8 +7,8 @@
  * drizzle/mysql. Nothing imports them to run a query.
  *
  * That is not an oversight. The query builder needs two things from a table
- * object — the identifiers to interpolate, and the encoders that turn JS values
- * into driver values — and the sqlite definitions supply both correctly for
+ * object: the identifiers to interpolate, and the encoders that turn JS values
+ * into driver values. The sqlite definitions supply both correctly for
  * every engine, which is why all 44 repositories import schema.ts directly:
  *
  *   - text and integer encode as themselves everywhere
@@ -17,15 +17,15 @@
  *     which is true for JS `true` as well as for 1
  *   - real is a plain number on all three
  *
- * What genuinely differs between the dialects is DDL — column types, key
- * lengths, autoincrement syntax — and DDL is exactly what these files exist to
+ * What genuinely differs between the dialects is DDL (column types, key
+ * lengths, autoincrement syntax), and DDL is exactly what these files exist to
  * generate. See scripts/verify-dialects.mjs, which asserts the round-trips
  * above against real servers rather than trusting this comment.
  *
  * The schema is declared once, in sqlite-core, and the other two dialects are
  * derived. Hand-maintaining three copies of 52 tables would mean a renamed
  * table has to land in three places consistently or a foreign key silently
- * points at the wrong one — and the schema is regular enough that the mapping
+ * points at the wrong one, and the schema is regular enough that the mapping
  * is mechanical.
  *
  * What varies between dialects is small and closed:
@@ -198,7 +198,7 @@ function transform(source, dialect) {
     );
 
     // Timestamps are stored as text (see sql-timestamp.ts). MySQL only accepts
-    // DEFAULT CURRENT_TIMESTAMP on a DATETIME or TIMESTAMP column — on a TEXT
+    // DEFAULT CURRENT_TIMESTAMP on a DATETIME or TIMESTAMP column. On a TEXT
     // one it is ER_INVALID_DEFAULT, "Invalid default value". Since 8.0.13 an
     // expression default works on any type, and an expression is written
     // parenthesised. MariaDB accepts the bare form, which is why this only
@@ -272,13 +272,13 @@ function transform(source, dialect) {
 }
 
 function header(dialect) {
-  return `// GENERATED FILE — do not edit.
+  return `// GENERATED FILE, do not edit.
 //
 // Produced from schema.ts by scripts/generate-dialect-schema.cjs.
 // Edit the sqlite schema and re-run \`node scripts/generate-dialect-schema.cjs\`.
 // Target dialect: ${dialect}.
 //
-// DDL source for drizzle-kit. NOT imported to run queries — repositories use
+// DDL source for drizzle-kit. NOT imported to run queries. Repositories use
 // schema.ts on every dialect. See the generator header for why that is correct.
 `;
 }

@@ -5,13 +5,22 @@ yarn-error.log*
 
 dist
 build
-.next
-.nuxt
+coverage
+release
 
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Local data, secrets and editor state
+db
+old_db
+ssl
+uploads
+plugins
+.env
+.env.*
+.mcp.json
+.claude
+CLAUDE.md
+termix-plugin-signing.key
+*.tmxplug.sig
 
 .vscode
 .idea
@@ -29,63 +38,31 @@ Thumbs.db
 
 .git
 .gitignore
+.husky
 
 README.md
 CONTRIBUTING.md
+CHANGELOG.md
 LICENSE
-
-
-uploads/
 
 electron/
 electron-builder.json
+Casks
+packaging
 
 *.log
 *.tmp
 *.temp
-
 logs
-*.log
-
 pids
 *.pid
 *.seed
 *.pid.lock
 
-coverage
-
 .nyc_output
-
-jspm_packages/
-
 .npm
-
 .eslintcache
-
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
-
-.node_repl_history
-
-*.tgz
-
-.yarn-integrity
-
 .cache
 .parcel-cache
-
-.next
-
-.nuxt
-
-.vuepress/dist
-
-.serverless
-
-.fusebox/
-
-.dynamodb/
-
-.tern-port
+*.tgz
+.node_repl_history
