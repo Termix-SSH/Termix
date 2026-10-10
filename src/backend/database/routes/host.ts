@@ -31,6 +31,7 @@ import {
 import {
   applyHostKeyTypeUpdate,
   containsOwnerPrivateAuthUpdate,
+  keepsStoredSshAuth,
   isNonEmptyString,
   isOptionalBoolean,
   isValidPort,
@@ -921,6 +922,8 @@ router.put(
       sshDataObj.key = null;
       sshDataObj.keyPassword = null;
       sshDataObj.keyType = null;
+    } else if (keepsStoredSshAuth(effectiveAuthType)) {
+      // The update says nothing about authentication.
     } else if (effectiveAuthType === "password") {
       if (password) {
         sshDataObj.password = password;

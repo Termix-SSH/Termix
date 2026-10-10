@@ -80,6 +80,14 @@ export function containsOwnerPrivateAuthUpdate(
   );
 }
 
+/**
+ * An update that names no auth type leaves the stored password and key
+ * alone. Clearing them would leave a password host with no password.
+ */
+export function keepsStoredSshAuth(authType: unknown): boolean {
+  return authType === undefined || authType === null;
+}
+
 const FOLDER_PATH_SEPARATOR = " / ";
 
 /**

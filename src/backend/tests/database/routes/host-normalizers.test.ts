@@ -4,6 +4,7 @@ import {
   applyHostKeyTypeUpdate,
   containsOwnerPrivateAuthUpdate,
   isNonEmptyString,
+  keepsStoredSshAuth,
   isOptionalBoolean,
   isValidPort,
   normalizeImportedHost,
@@ -504,4 +505,13 @@ it("preserves a shared host sync identity for connect-only recipients", () => {
     "connect",
   );
   expect(result).toEqual({ id: 9, syncId: "remote-host-41" });
+});
+
+describe("keepsStoredSshAuth", () => {
+  it("keeps stored secrets only when no auth type is sent", () => {
+    expect(keepsStoredSshAuth(undefined)).toBe(true);
+    expect(keepsStoredSshAuth(null)).toBe(true);
+    expect(keepsStoredSshAuth("password")).toBe(false);
+    expect(keepsStoredSshAuth("none")).toBe(false);
+  });
 });
