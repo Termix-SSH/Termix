@@ -43,7 +43,7 @@ function FingerprintRow({
       <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
         {label}
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex items-stretch gap-2">
         <div className="flex-1 bg-muted/50 border border-border p-3 font-mono text-xs break-all">
           {value}
         </div>
@@ -52,7 +52,7 @@ function FingerprintRow({
           onClick={onCopy}
           title={t("common.copy")}
           aria-label={t("common.copy")}
-          className={`${PROMPT_BUTTON} size-8 shrink-0 px-0`}
+          className="flex w-11 shrink-0 items-center justify-center border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
         >
           {copied ? (
             <Check className="size-4 text-accent-brand" />
