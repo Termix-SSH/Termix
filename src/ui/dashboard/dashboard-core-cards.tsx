@@ -1,3 +1,4 @@
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useTranslation } from "react-i18next";
 import {
   ExternalLink,
@@ -297,6 +298,8 @@ export function HostStatusList({
 }) {
   const { t } = useTranslation();
   const scheme = useStatusColorScheme();
+  // A phone has no room for the metric bars next to the host name.
+  const isMobile = useIsMobile();
   if (hosts.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center py-8 text-xs text-muted-foreground/60">
@@ -343,14 +346,16 @@ export function HostStatusList({
               </Facts>
             </span>
             {/* Plugins add live details to a host row here. */}
-            <ComponentSlot
-              slotId="dashboard.hostRow"
-              props={{
-                hostId: Number(host.id),
-                host,
-                online: availability === "online",
-              }}
-            />
+            {!isMobile && (
+              <ComponentSlot
+                slotId="dashboard.hostRow"
+                props={{
+                  hostId: Number(host.id),
+                  host,
+                  online: availability === "online",
+                }}
+              />
+            )}
             <span
               className={`shrink-0 border px-1.5 py-0.5 text-[10px] font-semibold ${getStatusClasses(availability, scheme, "badge", statusLoading)}`}
             >

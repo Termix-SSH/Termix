@@ -181,6 +181,7 @@ function Section({
   onDrop,
   onRemove,
   onHeightChange,
+  autoHeight,
   children,
 }: {
   slot: CardSlot;
@@ -192,6 +193,8 @@ function Section({
   onDrop: () => void;
   onRemove: () => void;
   onHeightChange: (key: string, h: number) => void;
+  /** Phones stack cards, so each takes the height of its content. */
+  autoHeight?: boolean;
   children: React.ReactNode;
 }) {
   const { t } = useTranslation();
@@ -227,7 +230,9 @@ function Section({
         e.stopPropagation();
         onDrop();
       }}
-      style={{ height: flex ? undefined : (slot.height ?? undefined) }}
+      style={{
+        height: flex || autoHeight ? undefined : (slot.height ?? undefined),
+      }}
       className={`relative flex shrink-0 flex-col border-b border-border last:border-b-0 ${
         flex ? "min-h-48 flex-1" : ""
       } ${dragging ? "opacity-40" : ""} ${editMode ? "cursor-grab select-none" : ""}`}
@@ -783,6 +788,7 @@ export function DashboardTab({
             setSlots((prev) => prev.filter((s) => s.key !== slot.key))
           }
           onHeightChange={handleHeightChange}
+          autoHeight={isMobile}
         >
           {renderCard(slot.id)}
         </Section>
