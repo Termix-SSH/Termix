@@ -105,27 +105,27 @@ Want to build your own? Start from the [plugin template](https://github.com/Term
 </tr>
 <tr>
 <td align="center"><b>Web</b></td>
-<td>Any modern browser (Chrome, Safari, Firefox) · PWA support</td>
+<td>Any modern browser (Chrome, Safari, Firefox) | PWA support</td>
 </tr>
 <tr>
 <td align="center"><b>Windows</b> <sub>x64/ia32</sub></td>
-<td>Portable · EXE and MSI Installer · Chocolatey</td>
+<td>Portable | EXE and MSI Installer | Chocolatey</td>
 </tr>
 <tr>
 <td align="center"><b>Linux</b> <sub>x64/arm64/armv7l</sub></td>
-<td>Portable · AUR · AppImage · Deb · Flatpak</td>
+<td>Portable | AUR | AppImage | Deb | Flatpak</td>
 </tr>
 <tr>
 <td align="center"><b>macOS</b> <sub>Universal/x64/arm64, v12.0+</sub></td>
-<td>Apple App Store · DMG · Homebrew</td>
+<td>Apple App Store | DMG | Homebrew</td>
 </tr>
 <tr>
 <td align="center"><b>iOS/iPadOS</b> <sub>v15.1+</sub></td>
-<td>Apple App Store · IPA</td>
+<td>Apple App Store | IPA</td>
 </tr>
 <tr>
 <td align="center"><b>Android</b> <sub>v7.0+</sub></td>
-<td>Google Play Store · APK</td>
+<td>Google Play Store | APK</td>
 </tr>
 </table>
 
