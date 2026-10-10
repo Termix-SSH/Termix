@@ -42,7 +42,7 @@
       "id": "file-manager",
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-File-Manager/releases/download/v1.0.0/file-manager-1.0.0.tmxplug",
-      "sha256": "e0263ea7abcdcaed88a9b198dde06962610453708222e798ebe51a3e76b9215f",
+      "sha256": "1cafccfe86a29e2f318026ca7bc20629df94331c81209607976dafd7feac0ca4",
       "onboarding": {
         "recommended": true,
         "consent": false
