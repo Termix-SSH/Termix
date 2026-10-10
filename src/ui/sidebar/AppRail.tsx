@@ -314,7 +314,8 @@ export function AppRail({
 
   return (
     <div
-      className="hidden md:flex flex-col items-stretch bg-sidebar border-r border-border shrink-0 overflow-hidden pt-2 gap-1 transition-[width] duration-200 min-h-0"
+      // The desktop app keeps the rail however narrow its window gets.
+      className={`${isElectron() ? "flex" : "hidden md:flex"} flex-col items-stretch bg-sidebar border-r border-border shrink-0 overflow-hidden pt-2 gap-1 transition-[width] duration-200 min-h-0`}
       style={{ width: rem(railExpanded ? 172 : 40) }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

@@ -20,6 +20,7 @@ import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { resetPermissionsCache } from "@/hooks/use-permissions";
 import { MobileBar } from "@/shell/MobileBar";
+import { isElectron } from "@/lib/electron";
 import { AppRail, type RailView } from "@/sidebar/AppRail";
 import { ComponentSlot } from "@/shell/ActionSlot";
 import {
@@ -3101,17 +3102,19 @@ export function AppShell({
               </div>
             </SurfaceScope>
 
-            {/* Bottom nav bar, mobile only */}
-            <MobileBar
-              railView={railView}
-              sidebarOpen={sidebarOpen}
-              username={username}
-              onRailClick={handleRailClick}
-              onOpenTab={(type) => openSingletonTab(type)}
-              onOpenSettings={() => openSingletonTab("settings")}
-              onOpenPalette={() => setCommandPaletteOpen(true)}
-              onLogout={() => onLogout({ manual: true })}
-            />
+            {/* Bottom nav bar, mobile only. The desktop app keeps the rail. */}
+            {!isElectron() && (
+              <MobileBar
+                railView={railView}
+                sidebarOpen={sidebarOpen}
+                username={username}
+                onRailClick={handleRailClick}
+                onOpenTab={(type) => openSingletonTab(type)}
+                onOpenSettings={() => openSingletonTab("settings")}
+                onOpenPalette={() => setCommandPaletteOpen(true)}
+                onLogout={() => onLogout({ manual: true })}
+              />
+            )}
           </div>
 
           {/* Right dock, desktop only, holds a second reference panel */}
