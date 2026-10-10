@@ -61,6 +61,34 @@ export class SSHHostKeyVerifier {
           const keyType = this.getKeyType(hostkey);
           const algorithm = "sha256";
 
+          // An unsaved host (Quick Connect) has nowhere to keep the key, so the
+          // user checks it for this session when there is a socket to ask on.
+          if (!hostId && ws) {
+            const accepted = await this.promptUserForNewKey(
+              ws,
+              ip,
+              port,
+              undefined,
+              fingerprint,
+              keyType,
+              algorithm,
+            );
+            sshLogger.info(
+              accepted
+                ? "Quick connect host key accepted for this session"
+                : "Quick connect host key rejected",
+              {
+                operation: "host_key_quick_connect",
+                ip,
+                port,
+                fingerprint,
+                userId,
+              },
+            );
+            verify(accepted);
+            return;
+          }
+
           if (!hostId) {
             sshLogger.info(
               "Host key verification skipped (no hostId - quick connect)",
