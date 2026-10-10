@@ -2220,7 +2220,12 @@
       "dashboardServiceLinks": "Service links",
       "homepageItems": "Homepage items",
       "networkTopology": "Network map",
-      "workspaces": "Workspaces"
+      "workspaces": "Workspaces",
+      "hostDefaults": "Host defaults",
+      "hostDefaultsAdmin": "Server host defaults",
+      "aiProviders": "AI providers",
+      "homepageLayouts": "Homepage layouts",
+      "accountProfile": "Account profile"
     },
     "proxy": {
       "title": "Reverse proxy",
@@ -2267,9 +2272,11 @@
       "continue": "Continue",
       "back": "Back",
       "mergeTitle": "Add it to my account",
-      "mergeBody": "The {{count}} items on this device are added to your account. Items your account already has stay as they are on the server.",
+      "mergeBody_one": "The item on this device is added to your account. Items your account already has stay as they are on the server.",
+      "mergeBody_other": "The {{count}} items on this device are added to your account. Items your account already has stay as they are on the server.",
       "replaceTitle": "Replace it with my account",
-      "replaceBody": "The {{count}} items on this device are removed, and this device takes everything from your account. Hosts kept on this device only stay.",
+      "replaceBody_one": "The item on this device is removed, and this device takes everything from your account. Hosts kept on this device only stay.",
+      "replaceBody_other": "The {{count}} items on this device are removed, and this device takes everything from your account. Hosts kept on this device only stay.",
       "link": "Link",
       "linking": "Linking and running the first sync...",
       "linked": "Linked. Your data is syncing now.",
