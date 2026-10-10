@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg" width="120" height="120" alt="Termix Logo" />
+<img src="https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.svg?v=2" width="120" height="120" alt="Termix Logo" />
 
 <h1>Termix Plugin SDK</h1>
 
