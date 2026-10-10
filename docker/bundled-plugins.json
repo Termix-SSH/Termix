@@ -16,7 +16,7 @@
       "id": "alerts",
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-Alerts/releases/download/v1.0.0/alerts-1.0.0.tmxplug",
-      "sha256": "ff3cc9f0b1f6bc2e05412bcb76aee78fca25a4ab19c4a2ee4aa8136506ad6828",
+      "sha256": "3fe008f9d2a32e2b7111399054a2264ea5cf5d71264cc31e85cdab3e909cc62f",
       "onboarding": {
         "recommended": true,
         "consent": false
@@ -26,7 +26,7 @@
       "id": "automations",
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-Automations/releases/download/v1.0.0/automations-1.0.0.tmxplug",
-      "sha256": "00747fd5d80df0e33c81cf64a21c5d4e1def802705bbfd775c84414b861a42c6"
+      "sha256": "76d4cff6e78d40ec67e899f0c7b2aca43d35a47b9a15071d0a8f5a8d939af9a9"
     },
     {
       "id": "docker",
@@ -52,7 +52,7 @@
       "id": "fleets",
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-Fleets/releases/download/v1.0.0/fleets-1.0.0.tmxplug",
-      "sha256": "b05e5a1eb7e268f6fa900e337692ed2d03daa655b200d6b300ecb51b8c54a9fa"
+      "sha256": "1ebeccd6b2a8e9510ab56658374d0b87f652149101d14956752a696ca920f611"
     },
     {
       "id": "homepage",
@@ -124,7 +124,7 @@
       "id": "session-recording",
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-Session-Recording/releases/download/v1.0.0/session-recording-1.0.0.tmxplug",
-      "sha256": "4ef0f9500abe93d83036bcad3cc237947c82da245b2370d5222d59df69b07272"
+      "sha256": "6b630ca0e08d79be7cb49366c898586ee3416a518f8e200157a6191c2c7c9ab7"
     },
     {
       "id": "session-sharing",
@@ -146,7 +146,7 @@
       "id": "ssh-terminal",
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-SSH-Terminal/releases/download/v1.0.0/ssh-terminal-1.0.0.tmxplug",
-      "sha256": "76bc333daaa80c3aec9cf2e82bf808bd18b7b578b98da19157ecc8a4972c5e52",
+      "sha256": "5b5a357bbf9a503c6b68725245712a99fa8ea0eec0baff64319be28950acac79",
       "onboarding": {
         "recommended": true,
         "consent": false
@@ -255,7 +255,7 @@
       "id": "workspaces",
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-Workspaces/releases/download/v1.0.0/workspaces-1.0.0.tmxplug",
-      "sha256": "4002a23c007ffc1989b2940c45e46b917a73a25e047124a17fe83e0aa74979b2",
+      "sha256": "1ee3a07bd8d61b46b6fbe118d2a424f8027575282287622b467e83a4356e6412",
       "onboarding": {
         "recommended": true,
         "consent": false
