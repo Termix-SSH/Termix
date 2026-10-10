@@ -473,7 +473,7 @@ jobs:
 
   electron-submit:
     needs: [prep, merge-to-main, electron-release]
-    if: ${{ needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' && needs.prep.outputs.mode != 'Skip submit' }}
+    if: ${{ always() && needs.electron-release.result == 'success' && needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' && needs.prep.outputs.mode != 'Skip submit' }}
     uses: ./.github/workflows/electron.yml
     with:
       build_type: all
@@ -483,7 +483,7 @@ jobs:
 
   cask-commit-back:
     needs: [prep, electron-release]
-    if: ${{ needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' }}
+    if: ${{ always() && needs.electron-release.result == 'success' && needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     permissions:
       contents: write
