@@ -270,7 +270,17 @@ jobs:
           git config user.name "LukeGus"
           git config user.email "bugattiguy527@gmail.com"
           git fetch origin main
-          git merge origin/main -X ours --no-edit || true
+          # -X ours leaves modify/delete conflicts, so settle those to the dev side too
+          if ! git merge origin/main -X ours --no-edit; then
+            git diff --name-only --diff-filter=U | while read -r f; do
+              if git cat-file -e "HEAD:$f" 2>/dev/null; then
+                git checkout --ours -- "$f" && git add -- "$f"
+              else
+                git rm -q -- "$f"
+              fi
+            done
+            git commit --no-edit
+          fi
           git push origin HEAD:"${{ needs.prep.outputs.dev_branch }}"
 
   merge-to-main:
