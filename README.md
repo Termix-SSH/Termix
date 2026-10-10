@@ -202,14 +202,6 @@ Interested in a paid placement to support development? Email [mail@termix.site](
 
 <br />
 
-<a href="https://www.digitalocean.com/">
-  <img src="https://termix.site/img/sponsors/digitalocean.svg" height="40" alt="DigitalOcean" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://crowdin.com/">
-  <img src="https://termix.site/img/sponsors/crowdin.svg" height="40" alt="Crowdin" />
-</a>
-&nbsp;&nbsp;&nbsp;
 <a href="https://www.blacksmith.sh/">
   <img src="https://termix.site/img/sponsors/blacksmith.svg" height="40" alt="Blacksmith" />
 </a>
