@@ -34,7 +34,7 @@ describe("share_ssh_auth backfill", () => {
   });
 
   /**
-   * Hosts and shares exist, the column does not. The plugins table is there
+   * Hosts and shares exist, the column does not. The plugin tables are there
    * because 26.10.0 only opens a database 2.9 has already upgraded.
    */
   function writePreUpgradeDatabase(): void {
@@ -53,6 +53,15 @@ describe("share_ssh_auth backfill", () => {
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         auto_update INTEGER NOT NULL DEFAULT 0,
         manifest_json TEXT NOT NULL
+      );
+      CREATE TABLE plugin_migrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plugin_id TEXT NOT NULL,
+        migration_id TEXT NOT NULL,
+        checksum TEXT NOT NULL,
+        applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (plugin_id, migration_id),
+        FOREIGN KEY (plugin_id) REFERENCES plugins (id) ON DELETE CASCADE
       );
 
       CREATE TABLE users (

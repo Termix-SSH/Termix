@@ -45,6 +45,15 @@ describe("dropping the columns 2.9.0 kept", () => {
         auto_update INTEGER NOT NULL DEFAULT 0,
         manifest_json TEXT NOT NULL
       );
+      CREATE TABLE plugin_migrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plugin_id TEXT NOT NULL,
+        migration_id TEXT NOT NULL,
+        checksum TEXT NOT NULL,
+        applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (plugin_id, migration_id),
+        FOREIGN KEY (plugin_id) REFERENCES plugins (id) ON DELETE CASCADE
+      );
 
       CREATE TABLE users (
         id TEXT PRIMARY KEY,

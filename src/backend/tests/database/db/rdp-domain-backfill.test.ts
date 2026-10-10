@@ -37,6 +37,18 @@ describe("RDP domain across database boots", () => {
         "utf8",
       ),
     );
+    // 2.9 has opened it, so it has the table 2.9 added.
+    seed.exec(`
+      CREATE TABLE plugin_migrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plugin_id TEXT NOT NULL,
+        migration_id TEXT NOT NULL,
+        checksum TEXT NOT NULL,
+        applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (plugin_id, migration_id),
+        FOREIGN KEY (plugin_id) REFERENCES plugins (id) ON DELETE CASCADE
+      );
+    `);
     seed.exec(`
       INSERT INTO users (id, username, password_hash)
         VALUES ('owner', 'alice', 'hash');
