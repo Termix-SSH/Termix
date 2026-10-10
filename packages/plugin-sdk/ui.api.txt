@@ -95,7 +95,7 @@ HostDefaultBadge (value): ({ settingKey }: { settingKey: string; }) => Element
 HostDefaultField (value): ({ settingKey, children, }: { settingKey: string; children: ReactNode; }) => Element
 HostFeatureFields (value): ({ form, updateForm, }: HostFeatureFieldsProps) => Element
 HostFeatureFieldsProps (type): HostFeatureFieldsProps
-HostKeyVerificationDialog (value): ({ isOpen, scenario, ip, port, hostname, fingerprint, oldFingerprint, algorithm, onAccept, onReject, backgroundColor, }: HostKeyVerificationDialogProps) => Element
+HostKeyVerificationDialog (value): ({ isOpen, scenario, ip, port, hostname, fingerprint, oldFingerprint, onAccept, onReject, backgroundColor, }: HostKeyVerificationDialogProps) => Element
 InlineView (value): ({ open, onOpenChange, title, icon, status, actions, toolbar, footer, width, onBeforeClose, scroll, bare, className, children, }: { open: boolean; onOpenChange: (open: boolean) => void; title: ReactNode; icon?: ReactNode; status?: ReactNode; actions?: ReactNode; toolbar?: ReactNode; footer?: ReactNode; width?: EditingWidth; onBeforeClose?: () => boolean | Promise<boolean>; scroll?: boolean; bare?: boolean; className?: string; children: ReactNode; }) => ReactPortal
 Input (value): ({ className, type, ...props }: DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>) => Element
 Kbd (value): ForwardRefExoticComponent<KbdProps & RefAttributes<HTMLElement>>
