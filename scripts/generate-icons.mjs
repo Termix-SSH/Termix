@@ -10,7 +10,7 @@ const iconsDir = join(publicDir, "icons");
 
 mkdirSync(iconsDir, { recursive: true });
 
-const svgBuffer = readFileSync(join(publicDir, "icon.svg"));
+const svgBuffer = readFileSync(join(publicDir, "icon-square.svg"));
 const render = (size) =>
   sharp(svgBuffer, { density: 72 * Math.max(1, size / 1024) })
     .resize(size, size)
@@ -63,7 +63,7 @@ writeFileSync(
 copyFileSync(join(publicDir, "icon.ico"), join(iconsDir, "icon.ico"));
 copyFileSync(join(publicDir, "icon.icns"), join(iconsDir, "icon.icns"));
 
-console.log("Icons generated from public/icon.svg");
+console.log("Icons generated from public/icon-square.svg");
 
 function buildIco(pngBuffers, sizes) {
   const headerSize = 6;
