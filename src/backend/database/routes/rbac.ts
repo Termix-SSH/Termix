@@ -75,6 +75,74 @@ async function canManageHostSharing(
   return { allowed: access.hasAccess, isOwner: access.isOwner };
 }
 
+/**
+ * Drops shares handed out by someone who can no longer manage sharing on the
+ * host, then repeats so shares they passed on further go too.
+ */
+export async function pruneHostGrants(hostId: number): Promise<number> {
+  const repository = createCurrentRbacAccessRepository();
+  const ownerId =
+    await createCurrentHostResolutionRepository().findHostOwnerId(hostId);
+  let removed = 0;
+  for (let changed = true; changed;) {
+    changed = false;
+    for (const grant of await repository.listHostAccess(hostId)) {
+      if (!grant.grantedBy || grant.grantedBy === ownerId) continue;
+      if ((await canManageHostSharing(grant.grantedBy, hostId)).allowed) {
+        continue;
+      }
+      await repository.revokeHostAccess(grant.id, hostId);
+      removed++;
+      changed = true;
+    }
+  }
+  return removed;
+}
+
+/** pruneHostGrants for credential shares. */
+export async function pruneCredentialGrants(
+  credentialId: number,
+): Promise<number> {
+  const repository = createCurrentCredentialAccessRepository();
+  const owner =
+    await createCurrentCredentialRepository().findById(credentialId);
+  if (!owner) return 0;
+  let removed = 0;
+  for (let changed = true; changed;) {
+    changed = false;
+    for (const grant of await repository.listForCredential(credentialId)) {
+      if (!grant.grantedBy || grant.grantedBy === owner.userId) continue;
+      if (
+        (await canManageCredentialSharing(grant.grantedBy, credentialId))
+          .allowed
+      ) {
+        continue;
+      }
+      await repository.revoke(grant.id, credentialId);
+      removed++;
+      changed = true;
+    }
+  }
+  return removed;
+}
+
+/** Prunes everything these users shared, after they lost a role. */
+export async function pruneGrantsBy(userIds: string[]): Promise<void> {
+  for (const userId of userIds) {
+    permissionManager.invalidateUserPermissionCache(userId);
+    for (const hostId of await createCurrentRbacAccessRepository().listHostIdsGrantedBy(
+      userId,
+    )) {
+      await pruneHostGrants(hostId);
+    }
+    for (const credentialId of await createCurrentCredentialAccessRepository().listCredentialIdsGrantedBy(
+      userId,
+    )) {
+      await pruneCredentialGrants(credentialId);
+    }
+  }
+}
+
 export interface ShareTarget {
   type: "user" | "role";
   id: string | number;
@@ -300,6 +368,7 @@ router.post(
         });
       }
 
+      await pruneHostGrants(hostId);
       databaseLogger.success("Host shared successfully", {
         operation: "rbac_host_share_success",
         userId,
@@ -780,6 +849,7 @@ router.patch(
         hostId,
         update,
       );
+      await pruneHostGrants(hostId);
 
       databaseLogger.info("Host access grant updated", {
         operation: "rbac_host_access_update",
@@ -863,6 +933,7 @@ router.delete(
         accessId,
         hostId,
       );
+      await pruneHostGrants(hostId);
       databaseLogger.info("Permission revoked", {
         operation: "rbac_permission_revoke",
         adminId: userId,
@@ -1383,6 +1454,7 @@ router.delete(
       for (const userId of deletedUserIds) {
         permissionManager.invalidateUserPermissionCache(userId);
       }
+      await pruneGrantsBy(deletedUserIds);
 
       res.json({
         success: true,
@@ -1675,6 +1747,7 @@ router.delete(
       }
 
       permissionManager.invalidateUserPermissionCache(targetUserId);
+      await pruneGrantsBy([targetUserId]);
       databaseLogger.info("Role removed from user", {
         operation: "rbac_role_remove",
         adminId: req.userId!,
@@ -1888,6 +1961,7 @@ router.post(
         success: true,
       });
 
+      await pruneCredentialGrants(credentialId);
       res.json({ success: true, permissionLevel, expiresAt });
     } catch (error) {
       databaseLogger.error("Failed to share credential", error, {
@@ -1971,6 +2045,7 @@ router.delete(
         return res.status(404).json({ error: "Access grant not found" });
       }
       await repository.revoke(accessId, credentialId);
+      await pruneCredentialGrants(credentialId);
       res.json({ success: true });
     } catch (error) {
       databaseLogger.error("Failed to revoke credential access", error, {
