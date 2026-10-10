@@ -117,6 +117,44 @@ describe("plugin user data", () => {
     expect(again).toMatchObject({ imported: 0, skipped: 1 });
   });
 
+  it("exports and imports a table keyed by its user column", async () => {
+    const keyed = defineTable("keyed", {
+      userId: refUser().primaryKey(),
+      secret: encryptedText(),
+      label: text(),
+    });
+    for (const statement of createTableSql("sqlite", "fixture", keyed)) {
+      sqlite.exec(statement);
+    }
+    registerTable("fixture", keyed);
+    sqlite.exec(
+      "INSERT INTO p_fixture_keyed (user_id, secret, label) VALUES ('u1', 'sealed', 'mine')",
+    );
+
+    const file = new Database(":memory:");
+    file.exec("CREATE TABLE users (id TEXT PRIMARY KEY)");
+    file.exec("CREATE TABLE ssh_data (id INTEGER PRIMARY KEY)");
+    file.exec("INSERT INTO users (id) VALUES ('u1')");
+    await writeUserPluginTables(file, "u1");
+    expect(file.prepare("SELECT * FROM p_fixture_keyed").all()).toEqual([
+      { user_id: "u1", secret: null, label: "mine" },
+    ]);
+
+    const result = await importUserPluginRows(file, "u2");
+    expect(result.errors).toEqual([]);
+    expect(
+      sqlite
+        .prepare(
+          "SELECT user_id, label FROM p_fixture_keyed WHERE user_id = 'u2'",
+        )
+        .all(),
+    ).toEqual([{ user_id: "u2", label: "mine" }]);
+    // The user already has their one row, so a second import skips it.
+    expect(await importUserPluginRows(file, "u2")).toMatchObject({
+      errors: [],
+    });
+  });
+
   it("writes large tables in chunks and lets the event loop run between them", async () => {
     const insert = sqlite.prepare(
       "INSERT INTO p_fixture_bookmark (user_id, path) VALUES ('u1', ?)",
