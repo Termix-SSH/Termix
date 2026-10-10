@@ -1867,6 +1867,19 @@
         "updated": "Recently updated",
         "category": "Category"
       },
+      "columns": {
+        "title": "Columns",
+        "auto": "Auto",
+        "count": "{{count}} wide"
+      },
+      "table": {
+        "name": "Name",
+        "description": "Description",
+        "version": "Version",
+        "status": "Status",
+        "category": "Category",
+        "installs": "Installs"
+      },
       "risk": {
         "critical": "Critical",
         "high": "High risk",

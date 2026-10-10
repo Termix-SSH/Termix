@@ -1,8 +1,9 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowDownWideNarrow,
   Check,
+  Columns3,
   Download,
   Globe,
   Puzzle,
@@ -31,7 +32,10 @@ import {
   GroupHeading,
   PANEL,
   PanelShell,
+  ViewToggle,
+  type PanelViewMode,
 } from "@/components/panel-layout";
+import { DataView, type DataColumn } from "@/components/data-view";
 import { InlineView, SurfaceScope } from "@/components/surface/surface-scope";
 import { cn } from "@/lib/utils";
 import {
@@ -58,6 +62,37 @@ import { DocsLink } from "@/components/docs-link";
 
 type Section = "installed" | "browse" | "updates";
 
+const GRID_SIZES = ["auto", "2", "3", "4", "5", "6"] as const;
+type GridSize = (typeof GRID_SIZES)[number];
+
+interface Layout {
+  view: PanelViewMode;
+  columns: GridSize;
+}
+
+function useStoredChoice<T extends string>(
+  key: string,
+  allowed: readonly T[],
+  fallback: T,
+) {
+  const [value, setValue] = useState<T>(() => {
+    try {
+      const saved = localStorage.getItem(key);
+      return allowed.includes(saved as T) ? (saved as T) : fallback;
+    } catch {
+      return fallback;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // blocked storage just means the choice won't stick
+    }
+  }, [key, value]);
+  return [value, setValue] as const;
+}
+
 export function PluginsTab() {
   return (
     <SurfaceScope kind="tab" className="h-full min-h-0">
@@ -72,6 +107,20 @@ function PluginsTabBody() {
   const [section, setSection] = useState<Section>("installed");
   const [query, setQuery] = useState("");
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [view, setView] = useStoredChoice<PanelViewMode>(
+    "pluginsTab.view",
+    ["grid", "list"],
+    "grid",
+  );
+  const [columns, setColumns] = useStoredChoice<GridSize>(
+    "pluginsTab.columns",
+    GRID_SIZES,
+    "auto",
+  );
+  const layout: Layout = { view, columns };
+  const layoutControls = (
+    <LayoutControls layout={layout} onView={setView} onColumns={setColumns} />
+  );
 
   const installed = manager.plugins.filter((p) => p.installed);
   const available = manager.plugins.filter((p) => p.inRegistry);
@@ -155,6 +204,8 @@ function PluginsTabBody() {
               query={query}
               onQuery={setQuery}
               onOpen={setDetailId}
+              layout={layout}
+              layoutControls={layoutControls}
             />
           ) : section === "browse" ? (
             <BrowseSection
@@ -163,6 +214,8 @@ function PluginsTabBody() {
               query={query}
               onQuery={setQuery}
               onOpen={setDetailId}
+              layout={layout}
+              layoutControls={layoutControls}
             />
           ) : (
             <UpdatesSection
@@ -276,11 +329,134 @@ function Group({
   return (
     <section className="flex flex-col gap-2.5">
       <GroupHeading title={title} count={count} />
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {children}
-      </div>
+      {children}
     </section>
   );
+}
+
+function LayoutControls({
+  layout,
+  onView,
+  onColumns,
+}: {
+  layout: Layout;
+  onView: (next: PanelViewMode) => void;
+  onColumns: (next: GridSize) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <>
+      {layout.view === "grid" && (
+        <Select
+          value={layout.columns}
+          onValueChange={(v) => onColumns(v as GridSize)}
+        >
+          <SelectTrigger
+            size="sm"
+            className="w-auto gap-1.5 text-xs"
+            title={t("plugins.manager.columns.title")}
+            aria-label={t("plugins.manager.columns.title")}
+          >
+            <Columns3 className="size-3.5 text-muted-foreground" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {GRID_SIZES.map((size) => (
+              <SelectItem key={size} value={size} className="text-xs">
+                {size === "auto"
+                  ? t("plugins.manager.columns.auto")
+                  : t("plugins.manager.columns.count", { count: Number(size) })}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+      <ViewToggle view={layout.view} onView={onView} />
+    </>
+  );
+}
+
+// Sized off the tab's own width, not the window. Cards keep a min width,
+// so narrow panes drop columns on their own.
+function gridStyle(columns: GridSize): React.CSSProperties {
+  if (columns === "auto") {
+    return {
+      gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 400px), 1fr))",
+    };
+  }
+  const n = Number(columns);
+  const gaps = (n - 1) * 12;
+  return {
+    gridTemplateColumns: `repeat(auto-fill, minmax(max(220px, calc((100% - ${gaps}px) / ${n} - 0.5px)), 1fr))`,
+  };
+}
+
+function PluginCollection({
+  plugins,
+  layout,
+  renderCard,
+  listColumns,
+  onOpen,
+}: {
+  plugins: PluginEntry[];
+  layout: Layout;
+  renderCard: (plugin: PluginEntry) => React.ReactNode;
+  listColumns: DataColumn<PluginEntry>[];
+  onOpen: (id: string) => void;
+}) {
+  if (layout.view === "list") {
+    return (
+      <DataView
+        items={plugins}
+        view="list"
+        getKey={(p) => p.id}
+        renderCard={renderCard}
+        columns={{}}
+        listColumns={listColumns}
+        onRowClick={(p) => onOpen(p.id)}
+        empty={null}
+      />
+    );
+  }
+  return (
+    <div className="grid gap-3" style={gridStyle(layout.columns)}>
+      {plugins.map((p) => (
+        <div key={p.id} className="flex flex-col *:flex-1">
+          {renderCard(p)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function NameCell({ plugin, muted }: { plugin: PluginEntry; muted?: boolean }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <PluginIconBox name={plugin.icon} size="sm" muted={muted} />
+      <span
+        className={cn(
+          "truncate font-semibold",
+          muted && "text-muted-foreground",
+        )}
+      >
+        {plugin.name}
+      </span>
+      {plugin.unverified && <UnverifiedBadge />}
+      {plugin.isBeta && <BetaBadge />}
+    </div>
+  );
+}
+
+function DescriptionCell({ plugin }: { plugin: PluginEntry }) {
+  return (
+    <span className="text-muted-foreground" title={plugin.description}>
+      {plugin.description}
+    </span>
+  );
+}
+
+function stop(e: React.MouseEvent) {
+  e.stopPropagation();
 }
 
 function InstalledSection({
@@ -289,12 +465,16 @@ function InstalledSection({
   query,
   onQuery,
   onOpen,
+  layout,
+  layoutControls,
 }: {
   plugins: PluginEntry[];
   manager: PluginsManager;
   query: string;
   onQuery: (v: string) => void;
   onOpen: (id: string) => void;
+  layout: Layout;
+  layoutControls: React.ReactNode;
 }) {
   const { t } = useTranslation();
   const [sort, setSort] = useState<SortKey>("name");
@@ -306,6 +486,59 @@ function InstalledSection({
   const stopped = rows.filter((p) => p.status !== "running");
   const pending = plugins.filter((p) => p.updateAvailable && !p.pinnedVersion);
 
+  const listColumns: DataColumn<PluginEntry>[] = [
+    {
+      key: "name",
+      header: t("plugins.manager.table.name"),
+      width: "minmax(0,1.3fr)",
+      cell: (p) => <NameCell plugin={p} muted={p.status !== "running"} />,
+    },
+    {
+      key: "description",
+      header: t("plugins.manager.table.description"),
+      width: "minmax(0,2fr)",
+      hideBelow: "md",
+      cell: (p) => <DescriptionCell plugin={p} />,
+    },
+    {
+      key: "version",
+      header: t("plugins.manager.table.version"),
+      width: "80px",
+      cell: (p) => (
+        <span className="tabular-nums text-muted-foreground">v{p.version}</span>
+      ),
+    },
+    {
+      key: "status",
+      header: t("plugins.manager.table.status"),
+      width: "140px",
+      hideBelow: "lg",
+      cell: (p) => <StatusCell plugin={p} />,
+    },
+    {
+      key: "actions",
+      header: "",
+      width: "150px",
+      align: "end",
+      cell: (p) => <InstalledRowActions plugin={p} manager={manager} />,
+    },
+  ];
+  const collection = (items: PluginEntry[]) => (
+    <PluginCollection
+      plugins={items}
+      layout={layout}
+      renderCard={(p) => (
+        <InstalledCard
+          plugin={p}
+          manager={manager}
+          onOpen={() => onOpen(p.id)}
+        />
+      )}
+      listColumns={listColumns}
+      onOpen={onOpen}
+    />
+  );
+
   return (
     <div className={`flex flex-col ${PANEL.gap} ${PANEL.body}`}>
       <Toolbar
@@ -315,6 +548,7 @@ function InstalledSection({
       >
         <div className="ml-auto flex items-center gap-2">
           <SortSelect value={sort} onChange={setSort} />
+          {layoutControls}
           {manager.developerMode && !manager.signedOnly && (
             <UploadButton manager={manager} />
           )}
@@ -350,14 +584,7 @@ function InstalledSection({
               title={t("plugins.manager.groups.running")}
               count={running.length}
             >
-              {running.map((p) => (
-                <InstalledCard
-                  key={p.id}
-                  plugin={p}
-                  manager={manager}
-                  onOpen={() => onOpen(p.id)}
-                />
-              ))}
+              {collection(running)}
             </Group>
           )}
           {stopped.length > 0 && (
@@ -365,14 +592,7 @@ function InstalledSection({
               title={t("plugins.manager.groups.notRunning")}
               count={stopped.length}
             >
-              {stopped.map((p) => (
-                <InstalledCard
-                  key={p.id}
-                  plugin={p}
-                  manager={manager}
-                  onOpen={() => onOpen(p.id)}
-                />
-              ))}
+              {collection(stopped)}
             </Group>
           )}
         </>
@@ -577,18 +797,126 @@ function InstalledCard({
   );
 }
 
+function StatusCell({ plugin }: { plugin: PluginEntry }) {
+  const { t } = useTranslation();
+  const running = plugin.status === "running";
+  const failed = plugin.status === "failed" || plugin.status === "blocked";
+  const label =
+    plugin.status === "blocked"
+      ? t("plugins.manager.status.blocked")
+      : failed
+        ? t("plugins.manager.status.failed")
+        : !running
+          ? t("plugins.manager.status.disabled")
+          : plugin.pinnedVersion
+            ? t("plugins.manager.pinnedTo", { version: plugin.pinnedVersion })
+            : t("plugins.manager.status.running");
+  return (
+    <span
+      className="flex min-w-0 items-center gap-1.5 text-muted-foreground"
+      title={failed ? (plugin.lastError ?? undefined) : undefined}
+    >
+      {failed ? (
+        <TriangleAlert className="size-3 shrink-0 text-destructive" />
+      ) : (
+        <span
+          className={cn(
+            "size-1.5 shrink-0",
+            running ? "bg-green-500" : "bg-muted-foreground/40",
+          )}
+        />
+      )}
+      <span className="truncate">{label}</span>
+    </span>
+  );
+}
+
+function InstalledRowActions({
+  plugin,
+  manager,
+}: {
+  plugin: PluginEntry;
+  manager: PluginsManager;
+}) {
+  const { t } = useTranslation();
+  const failed = plugin.status === "failed" || plugin.status === "blocked";
+  const busy = manager.busy.has(plugin.id) || manager.busy.has("*");
+  const locked = manager.managedByServer;
+  const updateLabel =
+    plugin.addedCapabilities.length > 0
+      ? t("plugins.manager.reviewUpdate")
+      : t("plugins.manager.updateTo", { version: plugin.latestVersion });
+
+  return (
+    <div className="flex items-center justify-end gap-1" onClick={stop}>
+      {plugin.updateAvailable && !plugin.pinnedVersion && !failed && (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          title={updateLabel}
+          aria-label={updateLabel}
+          className="text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+          disabled={busy || locked}
+          onClick={() => void manager.requestUpdate(plugin)}
+        >
+          <Download className="size-3" />
+        </Button>
+      )}
+      {failed ? (
+        <Button
+          variant="outline"
+          size="xs"
+          className="gap-1"
+          disabled={busy || locked}
+          onClick={() => void manager.retry(plugin)}
+        >
+          <RotateCcw className="size-3" />
+          {t("plugins.manager.restart")}
+        </Button>
+      ) : (
+        <Button
+          variant="outline"
+          size="xs"
+          disabled={busy || locked}
+          onClick={() => void manager.toggle(plugin)}
+        >
+          {plugin.enabled
+            ? t("plugins.manager.disable")
+            : t("plugins.manager.enable")}
+        </Button>
+      )}
+      <DocsLink href={plugin.docs} variant="icon" className="size-6" />
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        disabled={busy || locked}
+        title={t("plugins.manager.uninstall")}
+        aria-label={t("plugins.manager.uninstall")}
+        className="text-muted-foreground hover:text-destructive"
+        onClick={() => void manager.uninstall(plugin)}
+      >
+        <Trash2 className="size-3" />
+      </Button>
+    </div>
+  );
+}
+
 function BrowseSection({
   plugins,
   manager,
   query,
   onQuery,
   onOpen,
+  layout,
+  layoutControls,
 }: {
   plugins: PluginEntry[];
   manager: PluginsManager;
   query: string;
   onQuery: (v: string) => void;
   onOpen: (id: string) => void;
+  layout: Layout;
+  layoutControls: React.ReactNode;
 }) {
   const { t } = useTranslation();
   const [category, setCategory] = useState<string | null>(null);
@@ -604,6 +932,62 @@ function BrowseSection({
     sort,
   );
 
+  const listColumns: DataColumn<PluginEntry>[] = [
+    {
+      key: "name",
+      header: t("plugins.manager.table.name"),
+      width: "minmax(0,1.3fr)",
+      cell: (p) => <NameCell plugin={p} />,
+    },
+    {
+      key: "description",
+      header: t("plugins.manager.table.description"),
+      width: "minmax(0,2fr)",
+      hideBelow: "md",
+      cell: (p) => <DescriptionCell plugin={p} />,
+    },
+    {
+      key: "category",
+      header: t("plugins.manager.table.category"),
+      width: "120px",
+      hideBelow: "lg",
+      cell: (p) => (
+        <span className="text-muted-foreground">{p.category ?? ""}</span>
+      ),
+    },
+    {
+      key: "installs",
+      header: t("plugins.manager.table.installs"),
+      width: "110px",
+      hideBelow: "lg",
+      cell: (p) => (
+        <span className="text-muted-foreground">
+          <InstallCountFact
+            count={p.installCount}
+            source={p.installCountSource}
+          />
+        </span>
+      ),
+    },
+    {
+      key: "version",
+      header: t("plugins.manager.table.version"),
+      width: "80px",
+      cell: (p) => (
+        <span className="tabular-nums text-muted-foreground">
+          {p.latestVersion ? `v${p.latestVersion}` : ""}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      width: "120px",
+      align: "end",
+      cell: (p) => <BrowseAction plugin={p} manager={manager} />,
+    },
+  ];
+
   return (
     <div className={`flex flex-col ${PANEL.gap} ${PANEL.body}`}>
       <Toolbar
@@ -613,6 +997,7 @@ function BrowseSection({
       >
         <div className="ml-auto flex items-center gap-2">
           <SortSelect value={sort} onChange={setSort} />
+          {layoutControls}
         </div>
       </Toolbar>
 
@@ -647,16 +1032,19 @@ function BrowseSection({
           }
         />
       ) : (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {rows.map((p) => (
+        <PluginCollection
+          plugins={rows}
+          layout={layout}
+          renderCard={(p) => (
             <BrowseCard
-              key={p.id}
               plugin={p}
               manager={manager}
               onOpen={() => onOpen(p.id)}
             />
-          ))}
-        </div>
+          )}
+          listColumns={listColumns}
+          onOpen={onOpen}
+        />
       )}
 
       <p className="text-[11px] text-muted-foreground">
@@ -680,7 +1068,6 @@ function BrowseCard({
 }) {
   const { t } = useTranslation();
   const severe = orderByRisk(plugin.capabilities).filter(isSevere);
-  const busy = manager.busy.has(plugin.id) || manager.busy.has("*");
 
   return (
     <Card className="gap-0 overflow-hidden py-0">
@@ -708,25 +1095,44 @@ function BrowseCard({
               })
             : t("plugins.manager.noServerAccess")}
         </span>
-        <DocsLink href={plugin.docs} variant="icon" className="size-6" />
-        {plugin.installed ? (
-          <span className="flex shrink-0 items-center gap-1 text-[11px] font-medium text-accent-brand">
-            <Check className="size-3" />
-            {t("plugins.manager.installedBadge")}
-          </span>
-        ) : (
-          <Button
-            variant="outline"
-            size="xs"
-            disabled={busy || manager.managedByServer || !plugin.latestVersion}
-            onClick={() => manager.requestInstall(plugin)}
-            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
-          >
-            {t("plugins.manager.install")}
-          </Button>
-        )}
+        <BrowseAction plugin={plugin} manager={manager} />
       </div>
     </Card>
+  );
+}
+
+function BrowseAction({
+  plugin,
+  manager,
+}: {
+  plugin: PluginEntry;
+  manager: PluginsManager;
+}) {
+  const { t } = useTranslation();
+  const busy = manager.busy.has(plugin.id) || manager.busy.has("*");
+  return (
+    <div
+      className="flex shrink-0 items-center justify-end gap-2"
+      onClick={stop}
+    >
+      <DocsLink href={plugin.docs} variant="icon" className="size-6" />
+      {plugin.installed ? (
+        <span className="flex shrink-0 items-center gap-1 text-[11px] font-medium text-accent-brand">
+          <Check className="size-3" />
+          {t("plugins.manager.installedBadge")}
+        </span>
+      ) : (
+        <Button
+          variant="outline"
+          size="xs"
+          disabled={busy || manager.managedByServer || !plugin.latestVersion}
+          onClick={() => manager.requestInstall(plugin)}
+          className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
+        >
+          {t("plugins.manager.install")}
+        </Button>
+      )}
+    </div>
   );
 }
 
