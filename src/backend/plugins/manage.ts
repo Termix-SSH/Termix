@@ -551,6 +551,19 @@ function dependentChain(pluginId: string, enabled: Set<string>): string[] {
   return result;
 }
 
+/** Marks a plugin that was turned off only because a dependency was. */
+const STOPPED_WITH = "stopped with ";
+
+async function stoppedWith(pluginId: string): Promise<string[]> {
+  const { createCurrentPluginRepository } = await repos();
+  const marker = STOPPED_WITH + pluginId;
+  return (await createCurrentPluginRepository().listAll())
+    .filter(
+      (record) => record.state === "disabled" && record.lastError === marker,
+    )
+    .map((record) => record.id);
+}
+
 export interface StateChangePlan {
   enable: string[];
   disable: string[];
@@ -614,13 +627,26 @@ export async function setPluginStateUnlocked(
         return { ...plan, state: "blocked" };
       }
     }
-    return { ...plan, state: await startAndRecord(pluginId) };
+    const state = await startAndRecord(pluginId);
+    if (state === "active") {
+      // Bring back what turning this plugin off also turned off.
+      for (const id of await stoppedWith(pluginId)) {
+        const restore = await planStateChange(id, true);
+        if (restore.missing.length > 0) continue;
+        for (const dependency of restore.enable)
+          await startAndRecord(dependency);
+        await startAndRecord(id);
+      }
+    }
+    return { ...plan, state };
   }
 
-  for (const id of [...plan.disable, pluginId]) {
-    await recordState(id, "disabled", null);
+  for (const id of plan.disable) {
+    await recordState(id, "disabled", STOPPED_WITH + pluginId);
     await deactivatePlugin(id);
   }
+  await recordState(pluginId, "disabled", null);
+  await deactivatePlugin(pluginId);
   return { ...plan, state: "stopped" };
 }
 

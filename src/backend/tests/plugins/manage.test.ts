@@ -540,6 +540,34 @@ describe("dependencies", () => {
     expect(loader.get("base")?.state).toBe("active");
   });
 
+  it("restarts dependents it stopped when turned back on", async () => {
+    createFixturePlugin({ id: "base", root: bundled });
+    createFixturePlugin({
+      id: "addon",
+      root: bundled,
+      manifestOverrides: { dependencies: { base: "^1.0.0" } },
+    });
+    createFixturePlugin({
+      id: "manual",
+      root: bundled,
+      manifestOverrides: { dependencies: { base: "^1.0.0" } },
+    });
+    const loader = await boot();
+
+    await manage.setPluginState("manual", false);
+    await manage.setPluginState("base", false);
+    expect(loader.get("addon")?.state).toBe("stopped");
+
+    await manage.setPluginState("base", true);
+    expect(loader.get("addon")?.state).toBe("active");
+    expect(db.rows.get("addon")).toMatchObject({
+      state: "enabled",
+      lastError: null,
+    });
+    expect(loader.get("manual")?.state).not.toBe("active");
+    expect(db.rows.get("manual")?.state).toBe("disabled");
+  });
+
   it("refuses to uninstall a plugin a running one depends on", async () => {
     createFixturePlugin({ id: "base", root: bundled });
     createFixturePlugin({
