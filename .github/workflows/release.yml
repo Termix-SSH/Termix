@@ -253,7 +253,7 @@ jobs:
           git commit -m "chore: lint, format, and bump version to ${{ needs.prep.outputs.version }}"
           git push origin HEAD:"${{ needs.prep.outputs.dev_branch }}"
 
-  crowdin:
+  sync-main:
     needs: [prep, normalize]
     if: ${{ needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' && needs.prep.outputs.mode != 'Overwrite release' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
@@ -265,11 +265,6 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.TERMIX_PAT }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: ".nvmrc"
-
       - name: Merge main into dev branch
         run: |
           git config user.name "LukeGus"
@@ -278,66 +273,9 @@ jobs:
           git merge origin/main -X ours --no-edit || true
           git push origin HEAD:"${{ needs.prep.outputs.dev_branch }}"
 
-      - name: Clean up stale Crowdin git integration branch
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
-        run: |
-          PR_NUMBER=$(gh pr list --repo ${{ github.repository }} --head i18n_translate --state open --json number -q '.[0].number' || true)
-          if [ -n "$PR_NUMBER" ]; then
-            gh pr close "$PR_NUMBER" --repo ${{ github.repository }} --delete-branch || true
-          fi
-          git push origin --delete i18n_translate || true
-
-      - name: Upload sources to Crowdin
-        uses: crowdin/github-action@v3
-        with:
-          upload_sources: true
-          upload_translations: false
-          download_translations: false
-          create_pull_request: false
-          push_translations: false
-          token: ${{ secrets.CROWDIN_API_KEY }}
-          project_id: "858252"
-        env:
-          CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_KEY }}
-
-      # Off until the machine translation credits are topped up.
-      - name: Pre-translate untranslated strings
-        if: false
-        env:
-          CROWDIN_API_KEY: ${{ secrets.CROWDIN_API_KEY }}
-        run: node scripts/crowdin-pretranslate.cjs
-
-      - name: Download translations from Crowdin
-        uses: crowdin/github-action@v3
-        with:
-          upload_sources: false
-          upload_translations: false
-          download_translations: true
-          create_pull_request: false
-          push_translations: false
-          token: ${{ secrets.CROWDIN_API_KEY }}
-          project_id: "858252"
-        env:
-          CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_KEY }}
-
-      - name: Commit translations to dev branch
-        run: |
-          git config user.name "LukeGus"
-          git config user.email "bugattiguy527@gmail.com"
-
-          git add src/ui/locales/translated
-          if git diff --cached --quiet; then
-            echo "No translation changes to commit."
-            exit 0
-          fi
-          git commit -m "chore: sync Crowdin translations for ${{ needs.prep.outputs.version }}"
-          git push origin HEAD:"${{ needs.prep.outputs.dev_branch }}"
-
   merge-to-main:
-    needs: [prep, normalize, crowdin]
-    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.channel == 'Stable' && (needs.normalize.result == 'success' || needs.normalize.result == 'skipped') && (needs.crowdin.result == 'success' || needs.crowdin.result == 'skipped') }}
+    needs: [prep, normalize, sync-main]
+    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.channel == 'Stable' && (needs.normalize.result == 'success' || needs.normalize.result == 'skipped') && (needs.sync-main.result == 'success' || needs.sync-main.result == 'skipped') }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     outputs:
       main_sha: ${{ steps.merge.outputs.main_sha }}
