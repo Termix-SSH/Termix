@@ -136,7 +136,7 @@
       "id": "snippets",
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-Snippets/releases/download/v1.0.0/snippets-1.0.0.tmxplug",
-      "sha256": "89bbf4cd732682b9f60d72fdb9f3a28b01f9dcb0fb119868b53a7eec2bb637b1",
+      "sha256": "47872d08cdf4a15b50c8f90ca125276a92579147a27cb6b5639a84a01160abe5",
       "onboarding": {
         "recommended": true,
         "consent": false
@@ -189,7 +189,7 @@
       "id": "termix-identity",
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-Termix-Identity/releases/download/v1.0.0/termix-identity-1.0.0.tmxplug",
-      "sha256": "74f3acee4486cacb837f235ee3609f3b88666b17f3fe61b687552c4ec59a2a0b"
+      "sha256": "facd9f1c6036202e7c6b1020408ce49c7ba4bc687a8f8b93ccf60e97f473f897"
     },
     {
       "id": "tmux-monitor",
