@@ -100,6 +100,12 @@ describe("CORE_STEPS", () => {
       "security",
     ]);
   });
+
+  it("skips account security on the desktop, which signs in by itself", () => {
+    expect(
+      ids(ctx({ isDesktop: true, canEnrollSecondFactor: true })),
+    ).not.toContain("security");
+  });
 });
 
 describe("onboarding translations", () => {

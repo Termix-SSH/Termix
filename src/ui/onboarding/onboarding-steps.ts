@@ -64,6 +64,8 @@ export const CORE_STEPS: OnboardingStepDef[] = [
     Component: SecurityStep,
     audience: "all",
     position: 90,
-    isRelevant: (ctx) => ctx.canEnrollSecondFactor === true,
+    // The desktop signs its local account in by itself, so a second factor
+    // set up there would never be asked for.
+    isRelevant: (ctx) => !ctx.isDesktop && ctx.canEnrollSecondFactor === true,
   },
 ];
