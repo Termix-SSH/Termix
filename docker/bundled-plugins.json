@@ -155,8 +155,8 @@
     {
       "id": "sso",
       "source": "tmxplug",
-      "url": "https://github.com/Termix-SSH/Plugin-SSO/releases/download/v1.0.0/sso-1.0.0.tmxplug",
-      "sha256": "d9f69f7f52b778d1b144c58e5a65006780498d6fa171b5aeb18e15b7b033ca6b",
+      "url": "https://github.com/Termix-SSH/Plugin-SSO/releases/download/v1.0.1/sso-1.0.1.tmxplug",
+      "sha256": "ba7485ba058c784975609f6960bbaf7ec2018bcdce40b47308efc92ca96fdab5",
       "onboarding": {
         "recommended": false,
         "consent": false,
