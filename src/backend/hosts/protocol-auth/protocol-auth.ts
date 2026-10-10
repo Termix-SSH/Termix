@@ -495,6 +495,30 @@ function withDeclaredFields(
   return out;
 }
 
+/**
+ * The credential a host inherits from its folder or the user's defaults, for
+ * a protocol login set to "credential" with none picked.
+ */
+async function inheritedCredentialId(
+  ownerId: string,
+  hostId: number,
+): Promise<number | null> {
+  try {
+    const { resolveForEditor } = await import("../defaults/service.js");
+    const resolved = await resolveForEditor({ ownerId, hostId });
+    const auth = resolved["core.auth"]?.value as {
+      authType?: string;
+      credentialId?: unknown;
+    } | null;
+    return auth?.authType === "credential" &&
+      typeof auth.credentialId === "number"
+      ? auth.credentialId
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The owner's own login: the stored one, or the credential it points at. */
 export async function resolveOwnerProtocolLogin(
   host: Record<string, unknown>,
@@ -512,8 +536,12 @@ export async function resolveOwnerProtocolLogin(
   const authType = login?.authType || "direct";
   let username = login?.username ?? "";
   let password = login?.password ?? "";
-  if (authType === "credential" && login?.credentialId) {
-    const credential = await findUsableCredential(login.credentialId, ownerId);
+  const credentialId =
+    authType === "credential"
+      ? (login?.credentialId ?? (await inheritedCredentialId(ownerId, hostId)))
+      : null;
+  if (credentialId) {
+    const credential = await findUsableCredential(credentialId, ownerId);
     // Only the login itself comes from a stored credential, never the fields.
     if (credential?.username) username = credential.username;
     if (credential?.password) password = credential.password;
