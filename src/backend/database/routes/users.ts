@@ -26,6 +26,7 @@ import { registerBrandingRoutes } from "./branding-routes.js";
 import { registerUserSettingsRoutes } from "./user-settings-routes.js";
 import { registerTlsRoutes } from "./tls-routes.js";
 import { registerUserSessionRoutes } from "./user-session-routes.js";
+import { registerUserSocketTicketRoutes } from "./user-socket-ticket-routes.js";
 import { registerUserExternalAccountRoutes } from "./user-external-account-routes.js";
 import { registerUserPasswordResetRoutes } from "./user-password-reset-routes.js";
 import { registerUserAdminRoutes } from "./user-admin-routes.js";
@@ -1530,6 +1531,7 @@ registerUserExternalAccountRoutes(router, {
 });
 
 registerUserSettingsRoutes(router, authenticateJWT);
+registerUserSocketTicketRoutes(router, { authenticateJWT, authManager });
 registerTlsRoutes(router, authenticateJWT);
 
 registerUserApiKeyRoutes(router, requireAdmin);

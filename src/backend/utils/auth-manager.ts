@@ -42,6 +42,8 @@ interface JWTPayload {
   userId: string;
   sessionId?: string;
   pendingTOTP?: boolean;
+  /** Set on a short-lived socket ticket, which only a socket upgrade takes. */
+  purpose?: "ws";
   dataKeyWrap?: WrappedDataKey;
   iat?: number;
   exp?: number;
@@ -393,11 +395,32 @@ class AuthManager {
     }
   }
 
-  async verifyJWTToken(token: string): Promise<JWTPayload | null> {
+  /**
+   * A one minute token for opening a WebSocket. A browser cannot read its
+   * HttpOnly cookie, and a proxy that rewrites Host makes the cookie look
+   * like it came from another site, so the page asks for one of these.
+   */
+  async issueSocketTicket(userId: string, sessionId: string): Promise<string> {
+    const payload: JWTPayload = { userId, sessionId, purpose: "ws" };
+    return jwt.sign(payload, await this.systemCrypto.getJWTSecret(), {
+      expiresIn: 60,
+    } as jwt.SignOptions);
+  }
+
+  async verifyJWTToken(
+    token: string,
+    options: { allowSocketTicket?: boolean } = {},
+  ): Promise<JWTPayload | null> {
     try {
       const jwtSecret = await this.systemCrypto.getJWTSecret();
 
       const payload = jwt.verify(token, jwtSecret) as JWTPayload;
+      if (
+        payload.purpose !== undefined &&
+        !(payload.purpose === "ws" && options.allowSocketTicket)
+      ) {
+        return null;
+      }
 
       if (payload.sessionId) {
         try {

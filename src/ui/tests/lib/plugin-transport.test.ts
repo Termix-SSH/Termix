@@ -15,8 +15,13 @@ vi.mock("@/main-axios", () => ({
 }));
 vi.mock("@/lib/electron", () => ({ isElectron: () => state.electron }));
 vi.mock("@/lib/device-id", () => ({ getDeviceId: () => "device-1" }));
+vi.mock("@/lib/base-path", () => ({ getBasePath: () => "" }));
 
-import { createPluginApi, pluginFetch } from "@/lib/plugin-transport";
+import {
+  createPluginApi,
+  pluginFetch,
+  pluginWsUrl,
+} from "@/lib/plugin-transport";
 
 const fetchMock = vi.fn(async () => new Response("ok"));
 
@@ -82,5 +87,43 @@ describe("createPluginApi", () => {
       "/plugin-api/file-manager/uploadFileStream",
       form,
     );
+  });
+});
+
+describe("pluginWsUrl in the browser", () => {
+  it("sends a socket ticket, since the cookie can fail behind a proxy", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ ticket: "ticket-1" })),
+    );
+
+    const target = await pluginWsUrl("ssh-terminal", "/terminal");
+
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toBe("http://server:8080/users/ws-ticket");
+    expect(init.method).toBe("POST");
+    expect(init.credentials).toBe("include");
+    expect(target?.url).toBe(
+      `ws://${window.location.host}/plugin-ws/ssh-terminal/terminal`,
+    );
+    expect(target?.protocols).toEqual(["termix.jwt.ticket-1"]);
+  });
+
+  it("falls back to the cookie alone for a guest", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("{}", { status: 401 }));
+
+    const target = await pluginWsUrl("ssh-terminal", "/terminal");
+
+    expect(target?.protocols).toEqual([]);
+  });
+
+  it("falls back when the server is older and has no ticket route", async () => {
+    fetchMock.mockRejectedValueOnce(new Error("offline"));
+
+    const target = await pluginWsUrl("ssh-terminal", "/terminal");
+
+    expect(target?.protocols).toEqual([]);
   });
 });

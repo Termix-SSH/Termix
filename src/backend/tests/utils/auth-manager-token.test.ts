@@ -170,4 +170,42 @@ describe("AuthManager token handling", () => {
     const payload = await authManager.verifyJWTToken(token);
     expect(payload?.pendingTOTP).toBe(true);
   });
+
+  it("issues a one minute socket ticket bound to the session", async () => {
+    const ticket = await authManager.issueSocketTicket("user-1", "s1");
+    const payload = jwt.decode(ticket) as Record<string, number | string>;
+
+    expect(payload.userId).toBe("user-1");
+    expect(payload.sessionId).toBe("s1");
+    expect(payload.purpose).toBe("ws");
+    expect(Number(payload.exp) - Number(payload.iat)).toBe(60);
+  });
+
+  it("only accepts a socket ticket where a socket asks for it", async () => {
+    const ticket = await authManager.issueSocketTicket("user-1", "s1");
+
+    expect(await authManager.verifyJWTToken(ticket)).toBeNull();
+    const payload = await authManager.verifyJWTToken(ticket, {
+      allowSocketTicket: true,
+    });
+    expect(payload?.userId).toBe("user-1");
+  });
+
+  it("rejects a socket ticket whose session has expired", async () => {
+    const ticket = await authManager.issueSocketTicket("user-1", "expired");
+    expect(
+      await authManager.verifyJWTToken(ticket, { allowSocketTicket: true }),
+    ).toBeNull();
+  });
+
+  it("rejects a token with an unknown purpose", async () => {
+    const token = jwt.sign(
+      { userId: "user-1", sessionId: "s1", purpose: "other" },
+      jwtSecret,
+      { expiresIn: "1h" },
+    );
+    expect(
+      await authManager.verifyJWTToken(token, { allowSocketTicket: true }),
+    ).toBeNull();
+  });
 });

@@ -113,7 +113,9 @@ async function verifyToken(request: IncomingMessage): Promise<string | null> {
   if (!token) return null;
   try {
     const { AuthManager } = await import("../utils/auth-manager.js");
-    const payload = await AuthManager.getInstance().verifyJWTToken(token);
+    const payload = await AuthManager.getInstance().verifyJWTToken(token, {
+      allowSocketTicket: true,
+    });
     if (!payload || payload.pendingTOTP) return null;
     return payload.userId ?? null;
   } catch {

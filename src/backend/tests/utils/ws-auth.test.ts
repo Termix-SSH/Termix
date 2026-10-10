@@ -83,4 +83,29 @@ describe("the jwt cookie on a socket", () => {
       ),
     ).toBe(true);
   });
+
+  it("trusts the browser's same-origin mark behind a proxy that rewrites Host", () => {
+    expect(
+      extractWebSocketToken(
+        request({
+          cookie: "jwt=cookie-token",
+          host: "10.0.0.5:8080",
+          origin: "https://termix.example.com",
+          "sec-fetch-site": "same-origin",
+        }),
+      ),
+    ).toBe("cookie-token");
+  });
+
+  it("still ignores the cookie from a sibling subdomain", () => {
+    expect(
+      isCookieOriginAllowed(
+        request({
+          host: "termix.example.com",
+          origin: "https://evil.example.com",
+          "sec-fetch-site": "same-site",
+        }),
+      ),
+    ).toBe(false);
+  });
 });

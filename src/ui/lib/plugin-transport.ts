@@ -127,6 +127,26 @@ export function pluginApiFor(
 }
 
 /**
+ * A one minute socket token for the web app. The HttpOnly cookie alone fails
+ * behind a proxy that rewrites Host. Null for a guest or an older server, and
+ * the socket then falls back to the cookie.
+ */
+async function fetchSocketTicket(): Promise<string | null> {
+  const base = (authApi.defaults.baseURL ?? "").replace(/\/+$/, "");
+  try {
+    const response = await fetch(`${base}/users/ws-ticket`, {
+      method: "POST",
+      credentials: "include",
+    });
+    if (!response.ok) return null;
+    const data = (await response.json()) as { ticket?: unknown };
+    return typeof data.ticket === "string" ? data.ticket : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * The WebSocket URL for /plugin-ws/<id>/<path>, plus the subprotocols that
  * carry the JWT.
  *
@@ -151,7 +171,7 @@ export async function pluginWsUrl(
     });
   }
 
-  const token = localStorage.getItem("jwt");
+  const token = (await fetchSocketTicket()) ?? localStorage.getItem("jwt");
   const protocols = websocketAuthProtocols(token);
 
   // Dev without a configured API host goes through Vite's proxy, which is
