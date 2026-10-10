@@ -6,8 +6,8 @@ import { type Request, type RequestHandler, type Response } from "express";
  *
  * The default is 1KB; this is slightly higher because almost every response
  * under a few KB here is a small status or preference object where the CPU and
- * the extra headers are not worth it. The payloads that matter — host lists,
- * audit pages, fleet inventories — are orders of magnitude above this.
+ * the extra headers are not worth it. The payloads that matter, host lists,
+ * audit pages, fleet inventories, are orders of magnitude above this.
  */
 const MIN_RESPONSE_BYTES = 2048;
 

@@ -7,18 +7,17 @@ import { readManifest } from "../lib/plugin-dir.mjs";
  * The manifest rules live in src/manifest.ts, which the server uses too, so
  * there is one implementation rather than a copy here that drifts.
  */
-async function loadParseManifest() {
-  const entry = new URL("../../dist/manifest.js", import.meta.url);
+export async function loadSdkModule(name) {
+  const entry = new URL(`../../dist/${name}.js`, import.meta.url);
   if (!fs.existsSync(fileURLToPath(entry))) {
     throw new Error("The plugin SDK is not built yet. Run: npm run build:sdk");
   }
-  const mod = await import(entry.href);
-  return mod.parseManifest;
+  return import(entry.href);
 }
 
 export async function validate({ cwd }) {
   const raw = readManifest(cwd);
-  const parseManifest = await loadParseManifest();
+  const { parseManifest } = await loadSdkModule("manifest");
   const { errors } = parseManifest(raw);
 
   const problems = [...errors];
@@ -40,6 +39,11 @@ export async function validate({ cwd }) {
   );
   problems.push(...validateNativeDependencies(cwd, raw));
   problems.push(...validatePackage(cwd, raw));
+  problems.push(...(await validateChangelogFile(cwd, raw)));
+
+  for (const warning of docsWarnings(cwd, raw)) {
+    console.warn(`  warn  ${warning}`);
+  }
 
   if (problems.length > 0) {
     for (const problem of problems) console.error(`  ${problem}`);
@@ -47,6 +51,69 @@ export async function validate({ cwd }) {
   }
 
   console.log(`ok  ${raw.id ?? path.basename(cwd)}`);
+}
+
+/** Env vars core sets for everyone, so a plugin need not list them. */
+const CORE_ENV = new Set([
+  "DATA_DIR",
+  "NODE_ENV",
+  "PORT",
+  "BASE_PATH",
+  "VERSION",
+  "HOME",
+  "TMPDIR",
+  "TEMP",
+  "TMP",
+  "PATH",
+  "APPDATA",
+  "LOCALAPPDATA",
+  "USERPROFILE",
+  "ELECTRON_EMBEDDED",
+]);
+
+const ENV_READS = [
+  /process\.env\.([A-Z][A-Z0-9_]*)/g,
+  /process\.env\[\s*["'`]([A-Z][A-Z0-9_]*)["'`]\s*\]/g,
+  /\benv\.([A-Z][A-Z0-9_]*)\b/g,
+  /\benv\[\s*["'`]([A-Z][A-Z0-9_]*)["'`]\s*\]/g,
+];
+
+function walkSources(dir, out = []) {
+  if (!fs.existsSync(dir)) return out;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walkSources(full, out);
+    else if (/\.(ts|tsx|js|mjs|cjs)$/.test(entry.name)) out.push(full);
+  }
+  return out;
+}
+
+/**
+ * Docs gaps that do not block a release: no docs/index.md, or a process.env
+ * read the manifest does not list in env.
+ */
+export function docsWarnings(cwd, raw) {
+  const warnings = [];
+  if (!fs.existsSync(path.join(cwd, "docs", "index.md"))) {
+    warnings.push("docs/index.md is missing, so the plugin has no docs page");
+  }
+  const declared = new Set(
+    Array.isArray(raw.env) ? raw.env.map((e) => e?.name) : [],
+  );
+  const missing = new Set();
+  for (const file of walkSources(path.join(cwd, "src"))) {
+    const text = fs.readFileSync(file, "utf8");
+    for (const pattern of ENV_READS) {
+      for (const match of text.matchAll(pattern)) {
+        const name = match[1];
+        if (!declared.has(name) && !CORE_ENV.has(name)) missing.add(name);
+      }
+    }
+  }
+  for (const name of [...missing].sort()) {
+    warnings.push(`reads ${name} but manifest env does not list it`);
+  }
+  return warnings;
 }
 
 /**
@@ -66,17 +133,35 @@ function validatePackage(cwd, raw) {
   }
 
   const sdkRange =
-    pkg.peerDependencies?.["@termix/plugin-sdk"] ??
-    pkg.dependencies?.["@termix/plugin-sdk"] ??
-    pkg.devDependencies?.["@termix/plugin-sdk"];
+    pkg.peerDependencies?.["@termix-ssh/plugin-sdk"] ??
+    pkg.dependencies?.["@termix-ssh/plugin-sdk"] ??
+    pkg.devDependencies?.["@termix-ssh/plugin-sdk"];
   if (!sdkRange) {
-    problems.push("package.json does not depend on @termix/plugin-sdk");
+    problems.push("package.json does not depend on @termix-ssh/plugin-sdk");
   } else if (sdkRange === "*" || sdkRange === "latest") {
     problems.push(
-      `@termix/plugin-sdk is "${sdkRange}"; pin a range such as "^1.0.0"`,
+      `@termix-ssh/plugin-sdk is "${sdkRange}"; pin a range such as "^1.0.0"`,
     );
   }
   return problems;
+}
+
+/**
+ * CHANGELOG.md is optional, but when it is there it has to parse and its
+ * newest release has to match the manifest version.
+ */
+async function validateChangelogFile(cwd, raw) {
+  if (fs.existsSync(path.join(cwd, "CHANGELOG.json"))) {
+    return [
+      "CHANGELOG.json is no longer read; move the release notes to CHANGELOG.md",
+    ];
+  }
+  const mdPath = path.join(cwd, "CHANGELOG.md");
+  if (!fs.existsSync(mdPath)) return [];
+  const { validateChangelog } = await loadSdkModule("changelog");
+  return validateChangelog(fs.readFileSync(mdPath, "utf8"), raw.version).map(
+    (problem) => `CHANGELOG.md: ${problem}`,
+  );
 }
 
 /**
@@ -133,6 +218,11 @@ async function validateMigrations(cwd, pluginId) {
   const present = DIALECTS.filter((dialect) =>
     fs.existsSync(path.join(root, dialect)),
   );
+  for (const dialect of DIALECTS) {
+    if (present.length > 0 && !present.includes(dialect)) {
+      problems.push(`migrations/${dialect} is missing`);
+    }
+  }
 
   const byDialect = new Map();
   for (const dialect of present) {

@@ -34,14 +34,13 @@ export function pickResolvedPassword(
   return undefined;
 }
 
-const USERNAME_PLACEHOLDER =
-  /\$(?:external\.username|oidc\.preferred_username)/g;
+const USERNAME_PLACEHOLDER = /\$external\.username/g;
 
 /**
- * Expands `$external.username` (or its 2.8 spelling `$oidc.preferred_username`)
- * in an SSH username to the name the connecting user signed in with through
- * SSO or LDAP. Returns the username unchanged if it has no placeholder or the
- * user has no external sign-in.
+ * Expands `$external.username` in an SSH username to the name the connecting
+ * user signed in with through SSO or LDAP: the subject of their first
+ * external identity. Returns the username unchanged if it has no placeholder
+ * or the user has no external sign-in.
  */
 export async function expandExternalUsername(
   username: string | undefined,
@@ -52,30 +51,13 @@ export async function expandExternalUsername(
   }
 
   try {
-    const { createCurrentUserRepository } =
+    const { createCurrentUserAuthRepository } =
       await import("../database/repositories/factory.js");
-    const user = await createCurrentUserRepository().findById(userId);
-    let externalName = user?.oidcIdentifier;
+    const identities =
+      await createCurrentUserAuthRepository().listIdentitiesForUser(userId);
+    const externalName = [...identities].sort((a, b) => a.id - b.id)[0]
+      ?.subject;
     if (!externalName) return username;
-
-    const match = /^ldap:(\d+):(.+)$/.exec(externalName);
-    if (match) {
-      // Only strip the prefix for a real LDAP identity, to prevent spoofing
-      // through an SSO subject that happens to look like one.
-      const { createCurrentUserAuthRepository } =
-        await import("../database/repositories/factory.js");
-      const identities =
-        await createCurrentUserAuthRepository().listIdentitiesForUser(userId);
-      if (
-        identities.some(
-          (identity) =>
-            identity.providerId === `ldap:${match[1]}` &&
-            identity.subject === match[2],
-        )
-      ) {
-        externalName = match[2];
-      }
-    }
 
     return username.replace(USERNAME_PLACEHOLDER, () => externalName);
   } catch {

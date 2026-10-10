@@ -19,14 +19,7 @@ afterEach(() => {
 
 function fixture(files: Record<string, string>): string {
   root = fs.mkdtempSync(path.join(os.tmpdir(), "core-plugin-ids-"));
-  const all = {
-    "plugins/docker/manifest.json": JSON.stringify({
-      id: "docker",
-      contributes: { tabs: [{ id: "docker-tab" }] },
-    }),
-    ...files,
-  };
-  for (const [file, content] of Object.entries(all)) {
+  for (const [file, content] of Object.entries(files)) {
     const full = path.join(root, file);
     fs.mkdirSync(path.dirname(full), { recursive: true });
     fs.writeFileSync(full, content);
@@ -69,40 +62,35 @@ describe("scan", () => {
     });
   });
 
-  it("fails a bare id, and a view id in the shell", () => {
+  it("fails a bare id and an id-prefixed action, but not in tests", () => {
     const dir = fixture({
       "src/backend/id.ts": 'if (pluginId === "docker") {}\n',
-      "src/ui/view.ts": 'open("docker-tab");\n',
+      "src/ui/action.ts": 'run("docker.open");\n',
       "src/ui/tests/skip.ts": 'open("docker");\n',
     });
     expect(scan(dir)).toEqual({
       "src/backend/id.ts": ["docker"],
-      "src/ui/view.ts": ["docker-tab"],
+      "src/ui/action.ts": ["docker.open"],
     });
   });
 });
 
-describe("scan beyond src with plugins elsewhere", () => {
-  it("knows the bundled ids even when plugins/ is empty", () => {
+describe("scan beyond src", () => {
+  it("knows ids from bundled-plugins.json", () => {
     const dir = fixture({
       "docker/bundled-plugins.json": JSON.stringify({
-        plugins: [{ id: "tunnels", source: "workspace" }],
+        plugins: [{ id: "extra-thing", source: "tmxplug" }],
       }),
-      "src/ui/x.ts": 'const route = "/plugin-ws/tunnels/c2s";\n',
+      "src/ui/x.ts": 'const route = "/plugin-ws/extra-thing/c2s";\n',
     });
-    fs.rmSync(path.join(dir, "plugins"), { recursive: true, force: true });
-    expect(scan(dir)["src/ui/x.ts"]).toContain("/plugin-ws/tunnels");
+    expect(scan(dir)["src/ui/x.ts"]).toContain("/plugin-ws/extra-thing");
   });
 
-  it("reads electron and catches an action a plugin owns", () => {
+  it("reads electron", () => {
     const dir = fixture({
-      "plugins/docker/src/frontend/index.tsx":
-        'app.registerAction("terminal.open", fn);\n',
-      "electron/main.cjs": 'invoke("terminal.open");\n',
+      "electron/main.cjs": 'invoke("/plugin-api/tunnels/list");\n',
     });
-    expect(scan(dir)["electron/main.cjs"]).toEqual([
-      "terminal.open (owned by docker)",
-    ]);
+    expect(scan(dir)["electron/main.cjs"]).toEqual(["/plugin-api/tunnels"]);
   });
 
   it("skips a line marked plugin-id-ok with a reason", () => {

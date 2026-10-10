@@ -8,26 +8,28 @@ import {
   CommandItem,
   CommandList,
   CommandGroup,
-  CommandSeparator,
+  CommandEmpty,
 } from "@/components/command";
 import {
+  BookOpen,
+  Bug,
+  Clock,
+  FlaskConical,
+  Folder,
+  Globe,
+  KeyRound,
+  MessagesSquare,
+  Pencil,
+  Plus,
+  Search,
   Server,
   Settings,
-  Globe,
-  Plus,
-  MessagesSquare,
-  LifeBuoy,
-  Search,
-  User,
-  KeyRound,
-  Clock,
-  Folder,
-  Pencil,
+  ShieldCheck,
 } from "lucide-react";
 import { getRecentActivity, type RecentActivityItem } from "@/main-axios";
 import type { Host, TabType, Tab } from "@/types/ui-types";
 import { canEditHost } from "@/sidebar/host-permissions";
-import { RAIL_UTILITY_ITEMS, useRailItems } from "@/sidebar/rail-items";
+import { useRailItems } from "@/sidebar/rail-items";
 import {
   defaultConnectAction,
   hostActionsFor,
@@ -43,10 +45,18 @@ import {
   type PaletteItemDef,
 } from "./palette-registry";
 import { activityTarget } from "@/lib/activity-types";
+import { reportBetaFeedbackUrl, reportCoreIssueUrl } from "@/lib/issue-url";
+import { isPrerelease } from "@/plugins/plugin-model";
 import { shell } from "@/plugin-host/shell-bridge";
 import { getLiveHostStatus } from "@/lib/ServerStatusContext";
+import { docsUrl } from "@/lib/docs";
+import { parseServerTime } from "@/lib/server-time";
 
 interface CommandPaletteProps {
+  /** Opens settings, optionally at one section. */
+  onOpenSettings?: (section?: string) => void;
+  /** Opens a host in the editor. */
+  onEditHost?: (host: Host) => void;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   hosts: Host[];
@@ -65,6 +75,8 @@ export function CommandPalette({
   activeTabId = "",
   onOpenTab,
   onOpenPanel,
+  onOpenSettings,
+  onEditHost,
 }: CommandPaletteProps) {
   const { t } = useTranslation();
   const railItems = useRailItems();
@@ -120,22 +132,26 @@ export function CommandPalette({
     return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [isOpen, setIsOpen]);
 
-  const filteredHosts = hosts.filter((h) => {
-    const query = search.toLowerCase();
-    return (
-      h.name.toLowerCase().includes(query) ||
-      h.ip.toLowerCase().includes(query) ||
-      h.username.toLowerCase().includes(query) ||
-      h.tags?.some((tag) => tag.toLowerCase().includes(query))
-    );
-  });
+  const query = search.trim().toLowerCase();
+  const searching = query.length > 0;
+  // Without a query the list is a short starting point, not every host.
+  const filteredHosts = searching
+    ? hosts.filter(
+        (h) =>
+          h.name.toLowerCase().includes(query) ||
+          h.ip.toLowerCase().includes(query) ||
+          h.username.toLowerCase().includes(query) ||
+          h.folder?.toLowerCase().includes(query) ||
+          h.tags?.some((tag) => tag.toLowerCase().includes(query)),
+      )
+    : hosts.slice(0, 6);
 
-  // Group hosts by folder; ungrouped hosts appear first under an implicit root group
+  // Group hosts by folder; ungrouped hosts appear first.
   const groupedHosts: { folder: string | null; hosts: Host[] }[] = [];
   const folderMap = new Map<string, Host[]>();
   const ungrouped: Host[] = [];
   for (const h of filteredHosts) {
-    if (h.folder) {
+    if (h.folder && searching) {
       if (!folderMap.has(h.folder)) folderMap.set(h.folder, []);
       folderMap.get(h.folder)!.push(h);
     } else {
@@ -151,12 +167,9 @@ export function CommandPalette({
   useEffect(() => {
     if (!isOpen) return;
     const firstHost = filteredHosts[0];
-    if (search.trim() && firstHost) {
-      setSelectedValue(`host-${firstHost.id}`);
-      return;
-    }
-    setSelectedValue("quick-action-add-host");
-  }, [filteredHosts, isOpen, search]);
+    setSelectedValue(searching && firstHost ? `host-${firstHost.id}` : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, search]);
 
   const activeTargetTab =
     terminalTabs.find((tab) => tab.id === activeTabId) ?? terminalTabs[0];
@@ -165,21 +178,99 @@ export function CommandPalette({
     action();
     setIsOpen(false);
   };
-  const showHostResultsFirst = search.trim().length > 0;
+
+  const matches = (...texts: (string | undefined)[]) =>
+    !searching || texts.some((text) => text?.toLowerCase().includes(query));
+
+  const destinations = railItems.filter((item) => matches(t(item.labelKey)));
+
+  const quickActions = [
+    {
+      id: "quick-action-add-host",
+      label: t("commandPalette.addNewHost"),
+      icon: Plus,
+      run: () => onOpenTab("host-manager", undefined, "host-manager:add-host"),
+    },
+    {
+      id: "quick-action-add-credential",
+      label: t("commandPalette.addCredential"),
+      icon: KeyRound,
+      run: () =>
+        onOpenTab("host-manager", undefined, "host-manager:add-credential"),
+    },
+    {
+      id: "quick-action-settings",
+      label: t("nav.settings"),
+      icon: Settings,
+      run: () =>
+        onOpenSettings ? onOpenSettings() : onOpenTab("user-profile"),
+    },
+    {
+      id: "quick-action-admin-settings",
+      label: t("commandPalette.adminSettings"),
+      icon: ShieldCheck,
+      run: () =>
+        onOpenSettings
+          ? onOpenSettings("admin-general")
+          : onOpenTab("admin-settings"),
+    },
+  ].filter((action) => matches(action.label));
+
+  const globalEntries = paletteEntriesFor(paletteEntries, "global").filter(
+    (entry) => matches(t(entry.titleKey), ...(entry.keywords ?? [])),
+  );
+
+  const links = [
+    {
+      id: "link-docs",
+      label: t("commandPalette.documentation"),
+      icon: BookOpen,
+      url: docsUrl(),
+    },
+    {
+      id: "link-github",
+      label: "GitHub",
+      icon: Globe,
+      url: "https://github.com/Termix-SSH/Termix",
+    },
+    {
+      id: "link-discord",
+      label: "Discord",
+      icon: MessagesSquare,
+      url: "https://discord.com/invite/jVQGdvHDrf",
+    },
+    {
+      id: "link-report-bug",
+      label: t("dashboard.reportBug"),
+      icon: Bug,
+      url: reportCoreIssueUrl(import.meta.env.VITE_APP_VERSION || undefined),
+    },
+    ...(isPrerelease(import.meta.env.VITE_APP_VERSION)
+      ? [
+          {
+            id: "link-beta-feedback",
+            label: t("newUi.sidebar.userProfile.sendBetaFeedback"),
+            icon: FlaskConical,
+            url: reportBetaFeedbackUrl(import.meta.env.VITE_APP_VERSION),
+          },
+        ]
+      : []),
+  ].filter((link) => matches(link.label));
+
+  const rowClass = "group gap-2 rounded-none";
+  const iconClass = "size-3.5 shrink-0 text-muted-foreground";
+  const hostButton =
+    "flex size-6 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-accent-brand hover:text-accent-brand";
 
   if (!isOpen) return null;
 
   return (
     <div
-      className={cn(
-        "fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] bg-background/40 backdrop-blur-sm transition-all duration-200 animate-in fade-in",
-      )}
+      className="fixed inset-0 z-[100] flex items-start justify-center bg-background/70 pt-[15vh]"
       onClick={() => setIsOpen(false)}
     >
       <div
-        className={cn(
-          "w-full max-w-2xl mx-4 overflow-hidden rounded-none border border-border bg-card shadow-2xl animate-in zoom-in-95 duration-200",
-        )}
+        className="motion-context-enter mx-4 w-full max-w-2xl overflow-hidden border border-border bg-card shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <Command
@@ -189,247 +280,28 @@ export function CommandPalette({
           value={selectedValue}
           onValueChange={setSelectedValue}
         >
-          <div className="flex items-center border-b border-border px-4 py-1">
-            <Search className="size-4 text-muted-foreground mr-3" />
+          <div className="flex items-center border-b border-border px-3">
+            <Search className="mr-2 size-4 shrink-0 text-muted-foreground" />
             <CommandPrimitive.Input
               ref={inputRef}
               value={search}
               onValueChange={setSearch}
               placeholder={t("commandPalette.searchPlaceholder")}
-              className="flex-1 h-12 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              className="h-12 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
-            <div className="flex items-center gap-1.5 ml-2">
-              <Kbd className="bg-muted/50 border-none h-6 px-2 text-[11px] rounded-none">
-                ESC
-              </Kbd>
-            </div>
+            <Kbd className="ml-2">ESC</Kbd>
           </div>
 
-          <CommandList className="max-h-[60vh] thin-scrollbar flex flex-col">
-            <CommandGroup
-              heading={t("commandPalette.quickActions")}
-              className="px-2"
-            >
-              <CommandItem
-                value="quick-action-add-host"
-                onSelect={() =>
-                  handleAction(() =>
-                    onOpenTab(
-                      "host-manager",
-                      undefined,
-                      "host-manager:add-host",
-                    ),
-                  )
-                }
-                className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
-              >
-                <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors">
-                  <Plus className="size-4 text-accent-brand" />
-                </div>
-                <div className="flex flex-col flex-1">
-                  <span className="text-sm font-semibold">
-                    {t("commandPalette.addNewHost")}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {t("commandPalette.addNewHostDesc")}
-                  </span>
-                </div>
-              </CommandItem>
+          <CommandList className="thin-scrollbar max-h-[60vh] [contain:content]">
+            <CommandEmpty className="py-8 text-center text-xs text-muted-foreground">
+              {t("commandPalette.noHostsFound", { search })}
+            </CommandEmpty>
 
-              <CommandItem
-                value="quick-action-admin-settings"
-                onSelect={() => handleAction(() => onOpenTab("admin-settings"))}
-                className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
-              >
-                <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors">
-                  <Settings className="size-4 text-accent-brand" />
-                </div>
-                <div className="flex flex-col flex-1">
-                  <span className="text-sm font-semibold">
-                    {t("commandPalette.adminSettings")}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {t("commandPalette.adminSettingsDesc")}
-                  </span>
-                </div>
-              </CommandItem>
-
-              <CommandItem
-                value="quick-action-user-profile"
-                onSelect={() => handleAction(() => onOpenTab("user-profile"))}
-                className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
-              >
-                <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors">
-                  <User className="size-4 text-accent-brand" />
-                </div>
-                <div className="flex flex-col flex-1">
-                  <span className="text-sm font-semibold">
-                    {t("commandPalette.userProfile")}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {t("commandPalette.userProfileDesc")}
-                  </span>
-                </div>
-              </CommandItem>
-
-              <CommandItem
-                value="quick-action-add-credential"
-                onSelect={() =>
-                  handleAction(() =>
-                    onOpenTab(
-                      "host-manager",
-                      undefined,
-                      "host-manager:add-credential",
-                    ),
-                  )
-                }
-                className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
-              >
-                <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors">
-                  <KeyRound className="size-4 text-accent-brand" />
-                </div>
-                <div className="flex flex-col flex-1">
-                  <span className="text-sm font-semibold">
-                    {t("commandPalette.addCredential")}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {t("commandPalette.addCredentialDesc")}
-                  </span>
-                </div>
-              </CommandItem>
-            </CommandGroup>
-
-            {onOpenPanel && (
-              <>
-                <CommandSeparator className="my-2" />
-                <CommandGroup
-                  heading={t("commandPalette.navigation")}
-                  className="px-2"
-                >
-                  {[...railItems, ...RAIL_UTILITY_ITEMS]
-                    .filter((item) => item.kind !== "tab")
-                    .map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <CommandItem
-                          key={`nav-${item.id}`}
-                          value={`nav-${item.id} ${t(item.labelKey)}`}
-                          onSelect={() =>
-                            handleAction(() => onOpenPanel(item.id))
-                          }
-                          className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
-                        >
-                          <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors">
-                            <Icon className="size-4 text-accent-brand" />
-                          </div>
-                          <span className="text-sm font-semibold flex-1">
-                            {t(item.labelKey)}
-                          </span>
-                        </CommandItem>
-                      );
-                    })}
-                </CommandGroup>
-              </>
-            )}
-
-            {paletteGroups.map((group) => {
-              const items = filterPaletteItems(
-                groupItems[group.id] ?? [],
-                search,
-                group.showWhenEmpty,
-              );
-              if (items.length === 0) return null;
-              return (
-                <React.Fragment key={`group-${group.id}`}>
-                  <CommandSeparator className="my-2" />
-                  <CommandGroup heading={t(group.titleKey)} className="px-2">
-                    {items.map((item) => {
-                      const Icon = item.icon;
-                      const blocked = !!item.needsTarget && !activeTargetTab;
-                      return (
-                        <CommandItem
-                          key={`${group.id}-${item.id}`}
-                          value={`group-${group.id}-${item.id}`}
-                          onSelect={() => {
-                            if (blocked) return;
-                            handleAction(() =>
-                              item.run({ targetTab: activeTargetTab, shell }),
-                            );
-                          }}
-                          className={cn(
-                            "group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer",
-                            blocked && "pointer-events-none opacity-50",
-                          )}
-                        >
-                          <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors shrink-0">
-                            {Icon && (
-                              <Icon className="size-4 text-accent-brand" />
-                            )}
-                          </div>
-                          <div className="flex flex-col flex-1 min-w-0">
-                            <span className="text-sm font-semibold truncate">
-                              {item.title}
-                            </span>
-                            {item.description && (
-                              <span className="text-xs text-muted-foreground truncate font-mono">
-                                {item.description}
-                              </span>
-                            )}
-                          </div>
-                          {(blocked || item.hint) && (
-                            <span className="text-[10px] text-muted-foreground/60 shrink-0">
-                              {blocked
-                                ? t("commandPalette.noTargetTab")
-                                : item.hint}
-                            </span>
-                          )}
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                </React.Fragment>
-              );
-            })}
-
-            {paletteEntriesFor(paletteEntries, "global").length > 0 && (
-              <>
-                <CommandSeparator className="my-2" />
-                <CommandGroup
-                  heading={t("commandPalette.pluginActions")}
-                  className="px-2"
-                >
-                  {paletteEntriesFor(paletteEntries, "global").map((entry) => {
-                    const Icon = entry.icon;
-                    return (
-                      <CommandItem
-                        key={`plugin-${entry.id}`}
-                        value={`plugin-${entry.id} ${t(entry.titleKey)} ${(entry.keywords ?? []).join(" ")}`}
-                        onSelect={() => handleAction(() => entry.run(shell))}
-                        className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
-                      >
-                        <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors">
-                          {Icon && (
-                            <Icon className="size-4 text-accent-brand" />
-                          )}
-                        </div>
-                        <span className="text-sm font-semibold flex-1">
-                          {t(entry.titleKey)}
-                        </span>
-                      </CommandItem>
-                    );
-                  })}
-                </CommandGroup>
-              </>
-            )}
-
-            {recentActivity.length > 0 && (
-              <>
-                <CommandSeparator className="my-2" />
-                <CommandGroup
-                  heading={t("commandPalette.recentActivity")}
-                  className="px-2"
-                >
-                  {recentActivity.map((item) => (
+            {!searching && recentActivity.length > 0 && (
+              <CommandGroup heading={t("commandPalette.recentActivity")}>
+                {recentActivity.slice(0, 4).map((item) => {
+                  const Icon = activityTarget(item.type)?.icon ?? Server;
+                  return (
                     <CommandItem
                       key={item.id}
                       value={`recent-activity-${item.id}`}
@@ -439,53 +311,36 @@ export function CommandPalette({
                           if (target) onOpenTab(target.tab, item.hostName);
                         })
                       }
-                      className="group flex items-center gap-3 px-3 py-2 rounded-none hover:bg-accent-brand/10 cursor-pointer"
+                      className={rowClass}
                     >
-                      <div className="size-7 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors text-muted-foreground group-hover:text-accent-brand">
-                        {(() => {
-                          const Icon = activityTarget(item.type)?.icon;
-                          return Icon ? <Icon className="size-3.5" /> : null;
-                        })()}
-                      </div>
-                      <div className="flex flex-col flex-1 min-w-0">
-                        <span className="text-sm font-semibold truncate">
-                          {item.hostName}
-                        </span>
-                        <span className="text-xs text-muted-foreground capitalize">
-                          {item.type.replace("_", " ")}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 text-muted-foreground/50">
+                      <Icon className={iconClass} />
+                      <span className="truncate">{item.hostName}</span>
+                      <span className="ml-auto flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground">
                         <Clock className="size-3" />
-                        <span className="text-[10px]">
-                          {new Date(item.timestamp).toLocaleDateString()}
-                        </span>
-                      </div>
+                        {parseServerTime(item.timestamp).toLocaleDateString()}
+                      </span>
                     </CommandItem>
-                  ))}
-                </CommandGroup>
-              </>
+                  );
+                })}
+              </CommandGroup>
             )}
 
-            <div className={cn(showHostResultsFirst && "order-first")}>
-              {!showHostResultsFirst && <CommandSeparator className="my-2" />}
-
-              <CommandGroup
-                heading={t("commandPalette.serversAndHosts")}
-                className="px-2"
-              >
-                {filteredHosts.length > 0 ? (
-                  groupedHosts.map(({ folder, hosts: groupHosts }) => (
-                    <div key={folder ?? "__root__"}>
-                      {folder && (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wide">
-                          <Folder className="size-3" />
-                          {folder}
-                        </div>
-                      )}
-                      {groupHosts.map((host, i) => (
+            {filteredHosts.length > 0 && (
+              <CommandGroup heading={t("commandPalette.serversAndHosts")}>
+                {groupedHosts.map(({ folder, hosts: groupHosts }) => (
+                  <div key={folder ?? "__root__"}>
+                    {folder && (
+                      <div className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                        <Folder className="size-3" />
+                        {folder}
+                      </div>
+                    )}
+                    {groupHosts.map((host) => {
+                      const online =
+                        getLiveHostStatus(Number(host.id)) === "online";
+                      return (
                         <CommandItem
-                          key={i}
+                          key={host.id}
                           value={`host-${host.id}`}
                           onSelect={() =>
                             handleAction(() => {
@@ -496,38 +351,32 @@ export function CommandPalette({
                               if (action) runHostAction(action, host, shell);
                             })
                           }
-                          className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
+                          className={rowClass}
                         >
-                          <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors shrink-0">
-                            <Server
-                              className={cn(
-                                "size-4",
-                                getLiveHostStatus(Number(host.id)) === "online"
-                                  ? "text-accent-brand"
-                                  : "text-muted-foreground",
-                              )}
-                            />
-                          </div>
-                          <div className="flex flex-col flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-semibold truncate">
-                                {host.name}
-                              </span>
-                              {host.isShared && (
-                                <span className="text-[9px] px-1 py-px border border-accent-brand/30 bg-accent-brand/10 text-accent-brand shrink-0 leading-none uppercase tracking-wider">
-                                  {t("hosts.sharing.sharedBadge")}
-                                </span>
-                              )}
-                              {getLiveHostStatus(Number(host.id)) ===
-                                "online" && (
-                                <span className="size-1.5 rounded-full bg-accent-brand animate-pulse shrink-0" />
-                              )}
-                            </div>
-                            <span className="text-xs text-muted-foreground font-mono">
-                              {host.username}@{host.ip}
+                          <Server
+                            className={cn(
+                              "size-3.5 shrink-0",
+                              online
+                                ? "text-accent-brand"
+                                : "text-muted-foreground",
+                            )}
+                          />
+                          <span className="truncate">{host.name}</span>
+                          <span className="truncate font-mono text-[11px] text-muted-foreground">
+                            {host.username}@{host.ip}
+                          </span>
+                          {host.isShared && (
+                            <span className="shrink-0 border border-accent-brand/30 bg-accent-brand/10 px-1 text-[9px] uppercase leading-none tracking-wider text-accent-brand">
+                              {t("hosts.sharing.sharedBadge")}
                             </span>
-                          </div>
-                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          )}
+                          <span
+                            className={cn(
+                              "ml-auto flex shrink-0 items-center gap-1",
+                              !searching &&
+                                "opacity-0 transition-opacity group-hover:opacity-100 group-data-[selected=true]:opacity-100",
+                            )}
+                          >
                             {hostActionsFor(hostActions, host).map((action) => {
                               const Icon = action.icon;
                               const label =
@@ -535,16 +384,18 @@ export function CommandPalette({
                               return (
                                 <button
                                   key={action.id}
+                                  type="button"
                                   title={label}
+                                  aria-label={label}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleAction(() =>
                                       runHostAction(action, host, shell),
                                     );
                                   }}
-                                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                                  className={hostButton}
                                 >
-                                  <Icon className="size-3.5" />
+                                  <Icon className="size-3" />
                                 </button>
                               );
                             })}
@@ -557,126 +408,194 @@ export function CommandPalette({
                               return (
                                 <button
                                   key={entry.id}
+                                  type="button"
                                   title={t(entry.titleKey)}
+                                  aria-label={t(entry.titleKey)}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleAction(() => entry.run(shell, host));
                                   }}
-                                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                                  className={hostButton}
                                 >
-                                  {Icon && <Icon className="size-3.5" />}
+                                  {Icon && <Icon className="size-3" />}
                                 </button>
                               );
                             })}
                             {canEditHost(host) && (
-                              <>
-                                <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
-                                <button
-                                  title={t("hosts.editHost")}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsOpen(false);
-                                    onOpenTab("host-manager");
-                                    setTimeout(() => {
-                                      window.dispatchEvent(
-                                        new CustomEvent(
-                                          "host-manager:edit-host",
-                                          {
-                                            detail: host.id,
-                                          },
-                                        ),
-                                      );
-                                    }, 100);
-                                  }}
-                                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                                >
-                                  <Pencil className="size-3.5" />
-                                </button>
-                              </>
+                              <button
+                                type="button"
+                                title={t("hosts.editHost")}
+                                aria-label={t("hosts.editHost")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAction(() => onEditHost?.(host));
+                                }}
+                                className={hostButton}
+                              >
+                                <Pencil className="size-3" />
+                              </button>
                             )}
-                          </div>
+                          </span>
                         </CommandItem>
-                      ))}
-                    </div>
-                  ))
-                ) : (
-                  <div className="py-6 text-center text-sm text-muted-foreground">
-                    {t("commandPalette.noHostsFound", { search })}
+                      );
+                    })}
                   </div>
-                )}
+                ))}
               </CommandGroup>
-            </div>
+            )}
 
-            <CommandSeparator className="my-2" />
+            {paletteGroups.map((group) => {
+              const items = filterPaletteItems(
+                groupItems[group.id] ?? [],
+                search,
+                group.showWhenEmpty,
+              );
+              if (items.length === 0) return null;
+              return (
+                <CommandGroup
+                  key={`group-${group.id}`}
+                  heading={t(group.titleKey)}
+                >
+                  {items.map((item) => {
+                    const Icon = item.icon;
+                    const blocked = !!item.needsTarget && !activeTargetTab;
+                    return (
+                      <CommandItem
+                        key={`${group.id}-${item.id}`}
+                        value={`group-${group.id}-${item.id}`}
+                        onSelect={() => {
+                          if (blocked) return;
+                          handleAction(() =>
+                            item.run({ targetTab: activeTargetTab, shell }),
+                          );
+                        }}
+                        className={cn(
+                          rowClass,
+                          blocked && "pointer-events-none opacity-50",
+                        )}
+                      >
+                        {Icon && <Icon className={iconClass} />}
+                        <span className="truncate">{item.title}</span>
+                        {item.description && (
+                          <span className="truncate font-mono text-[11px] text-muted-foreground">
+                            {item.description}
+                          </span>
+                        )}
+                        {(blocked || item.hint) && (
+                          <span className="ml-auto shrink-0 text-[10px] text-muted-foreground/60">
+                            {blocked
+                              ? t("commandPalette.noTargetTab")
+                              : item.hint}
+                          </span>
+                        )}
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              );
+            })}
 
-            <CommandGroup heading={t("commandPalette.links")} className="px-2">
-              <div className="grid grid-cols-3 gap-1">
-                <CommandItem
-                  value="link-github"
-                  onSelect={() =>
-                    window.open(
-                      "https://github.com/Termix-SSH/Termix",
-                      "_blank",
-                    )
-                  }
-                  className="flex items-center gap-3 px-3 py-2 rounded-none hover:bg-accent-brand/10 cursor-pointer"
-                >
-                  <Globe className="size-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">GitHub</span>
-                </CommandItem>
-                <CommandItem
-                  value="link-discord"
-                  onSelect={() =>
-                    window.open(
-                      "https://discord.com/invite/jVQGdvHDrf",
-                      "_blank",
-                    )
-                  }
-                  className="flex items-center gap-3 px-3 py-2 rounded-none hover:bg-accent-brand/10 cursor-pointer"
-                >
-                  <MessagesSquare className="size-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Discord</span>
-                </CommandItem>
-                <CommandItem
-                  value="link-support"
-                  onSelect={() =>
-                    window.open(
-                      "https://github.com/Termix-SSH/Support/issues/new",
-                      "_blank",
-                    )
-                  }
-                  className="flex items-center gap-3 px-3 py-2 rounded-none hover:bg-accent-brand/10 cursor-pointer"
-                >
-                  <LifeBuoy className="size-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">
-                    {t("dashboard.support")}
-                  </span>
-                </CommandItem>
-              </div>
-            </CommandGroup>
+            {onOpenPanel && destinations.length > 0 && (
+              <CommandGroup heading={t("commandPalette.navigation")}>
+                {destinations.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <CommandItem
+                      key={`nav-${item.id}`}
+                      value={`nav-${item.id}`}
+                      onSelect={() =>
+                        handleAction(() =>
+                          item.kind === "tab"
+                            ? onOpenTab(item.id as TabType)
+                            : onOpenPanel(item.id),
+                        )
+                      }
+                      className={rowClass}
+                    >
+                      <Icon className={iconClass} />
+                      <span className="truncate">{t(item.labelKey)}</span>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
+
+            {quickActions.length > 0 && (
+              <CommandGroup heading={t("commandPalette.quickActions")}>
+                {quickActions.map((action) => {
+                  const Icon = action.icon;
+                  return (
+                    <CommandItem
+                      key={action.id}
+                      value={action.id}
+                      onSelect={() => handleAction(action.run)}
+                      className={rowClass}
+                    >
+                      <Icon className={iconClass} />
+                      {action.label}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
+
+            {globalEntries.length > 0 && (
+              <CommandGroup heading={t("commandPalette.pluginActions")}>
+                {globalEntries.map((entry) => {
+                  const Icon = entry.icon;
+                  return (
+                    <CommandItem
+                      key={`plugin-${entry.id}`}
+                      value={`plugin-${entry.id}`}
+                      onSelect={() => handleAction(() => entry.run(shell))}
+                      className={rowClass}
+                    >
+                      {Icon && <Icon className={iconClass} />}
+                      {t(entry.titleKey)}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
+
+            {links.length > 0 && (
+              <CommandGroup heading={t("commandPalette.links")}>
+                {links.map((link) => {
+                  const Icon = link.icon;
+                  return (
+                    <CommandItem
+                      key={link.id}
+                      value={link.id}
+                      onSelect={() => window.open(link.url, "_blank")}
+                      className={rowClass}
+                    >
+                      <Icon className={iconClass} />
+                      {link.label}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
           </CommandList>
 
-          <div className="border-t border-border px-4 py-3 bg-muted/30 flex items-center justify-between text-[11px] text-muted-foreground">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                <Kbd className="h-5 px-1 bg-background rounded-none">↑↓</Kbd>
-                <span>{t("commandPalette.navigate")}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Kbd className="h-5 px-1 bg-background rounded-none">ENTER</Kbd>
-                <span>{t("commandPalette.select")}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <span>{t("commandPalette.toggleWith")}</span>
-              <Kbd className="h-5 px-1.5 bg-background rounded-none">Ctrl</Kbd>
-              <span>+</span>
-              <Kbd className="h-5 px-1.5 bg-background rounded-none">K</Kbd>
-              <span>{t("commandPalette.orShortcut")}</span>
-              <Kbd className="h-5 px-1.5 bg-background rounded-none">Shift</Kbd>
-              <span>+</span>
-              <Kbd className="h-5 px-1.5 bg-background rounded-none">Shift</Kbd>
-            </div>
+          <div className="flex items-center gap-3 border-t border-border px-3 py-2 text-[10px] text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Kbd className="h-4">↑↓</Kbd>
+              {t("commandPalette.navigate")}
+            </span>
+            <span className="flex items-center gap-1">
+              <Kbd className="h-4">↵</Kbd>
+              {t("commandPalette.select")}
+            </span>
+            <span className="ml-auto flex items-center gap-1">
+              <Kbd className="h-4">Ctrl</Kbd>
+              <span className="opacity-50">+</span>
+              <Kbd className="h-4">K</Kbd>
+              <span className="px-1 opacity-50">
+                {t("commandPalette.orShortcut")}
+              </span>
+              <Kbd className="h-4">⇧⇧</Kbd>
+            </span>
           </div>
         </Command>
       </div>

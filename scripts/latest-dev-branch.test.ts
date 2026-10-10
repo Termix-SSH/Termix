@@ -15,6 +15,13 @@ describe("latestDevBranch", () => {
     expect(latestDevBranch(["dev-2.10.0", "dev-2.9.0"])).toBe("dev-2.10.0");
   });
 
+  it("ranks calendar versions above the old semver ones", () => {
+    expect(
+      latestDevBranch(["dev-2.9.1", "dev-26.10.0", "dev-26.9.0", "dev-3.0.0"]),
+    ).toBe("dev-26.10.0");
+    expect(latestDevBranch(["dev-26.12.0", "dev-27.1.0"])).toBe("dev-27.1.0");
+  });
+
   it("ignores main and non-dev branches", () => {
     expect(latestDevBranch(["main", "feature/x", "dev-1.0.0"])).toBe(
       "dev-1.0.0",

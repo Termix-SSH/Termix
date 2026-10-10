@@ -13,6 +13,7 @@ import {
 
 let root = "";
 let plugin: { id: string; dir: string; manifest: never };
+let installed: { id: string; dir: string; manifest: never };
 let server: Server;
 let baseUrl = "";
 
@@ -32,6 +33,14 @@ beforeAll(async () => {
   write("locales/translated/de_DE.json", "{}");
   write("manifest.json", "{}");
   fs.writeFileSync(path.join(root, "outside.js"), "nope");
+  const unpacked = path.join(root, ".unpacked", "gadget");
+  fs.mkdirSync(path.join(unpacked, "dist"), { recursive: true });
+  fs.writeFileSync(path.join(unpacked, "dist", "frontend.js"), "export {}");
+  installed = {
+    id: "gadget",
+    dir: unpacked,
+    manifest: { id: "gadget", version: "1.0.0" } as never,
+  };
   plugin = {
     id: "gizmo",
     dir: path.join(root, "gizmo"),
@@ -41,7 +50,9 @@ beforeAll(async () => {
   const app = express();
   app.use(
     "/plugin-assets",
-    createPluginAssetsRouter((id) => (id === "gizmo" ? plugin : undefined)),
+    createPluginAssetsRouter((id) =>
+      id === "gizmo" ? plugin : id === "gadget" ? installed : undefined,
+    ),
   );
   server = await new Promise<Server>((resolve) => {
     const created = app.listen(0, "127.0.0.1", () => resolve(created));
@@ -71,6 +82,23 @@ describe("describePluginFrontend", () => {
       expect(describePluginFrontend(plugin).assetVersion).not.toBe(before);
     } finally {
       fs.writeFileSync(css, ".gizmo{}");
+    }
+  });
+
+  it("changes the version when only a translation changes", () => {
+    const before = describePluginFrontend(plugin).assetVersion;
+    const locale = path.join(
+      root,
+      "gizmo",
+      "locales",
+      "translated",
+      "de_DE.json",
+    );
+    fs.writeFileSync(locale, '{"hello":"Hallo"}');
+    try {
+      expect(describePluginFrontend(plugin).assetVersion).not.toBe(before);
+    } finally {
+      fs.writeFileSync(locale, "{}");
     }
   });
 
@@ -111,6 +139,12 @@ describe("resolvePluginAsset", () => {
 });
 
 describe("GET /plugin-assets", () => {
+  it("serves an installed plugin unpacked under a dot folder", async () => {
+    const res = await fetch(`${baseUrl}/plugin-assets/gadget/frontend.js`);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("export {}");
+  });
+
   it("serves a bundle as a module any origin can load", async () => {
     const res = await fetch(`${baseUrl}/plugin-assets/gizmo/frontend.js`);
     expect(res.status).toBe(200);

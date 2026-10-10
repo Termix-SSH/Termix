@@ -210,6 +210,21 @@ export interface ShellApi {
   openRailView: (id: string) => void;
   /** Closes a rail view wherever it is shown. */
   closeRailView: (id: string) => void;
+  /**
+   * Asks a yes or no question over the main area, for code that runs outside
+   * a panel or tab (a keybinding, a toolbar action). Inside one, prefer
+   * useConfirm from @termix-ssh/plugin-sdk/ui, which asks over that surface.
+   */
+  confirm?: (options: ConfirmRequest) => Promise<boolean>;
+}
+
+export interface ConfirmRequest {
+  title: string;
+  description?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  /** Red confirm button. Defaults to true. */
+  destructive?: boolean;
 }
 
 export interface TabsApi extends Pick<
@@ -260,6 +275,11 @@ export interface RailItemContribution {
   /** Desktop app only. */
   electronOnly?: boolean;
   separatorAfter?: boolean;
+  /**
+   * Which band of the rail it sits in: things you keep (objects), things you
+   * do (tools) or the instance itself (system). Default "tools".
+   */
+  group?: "objects" | "tools" | "system";
   /** Hidden without being unregistered, e.g. while a feature is switched off. */
   hidden?: boolean;
   /**
@@ -293,8 +313,11 @@ export interface PanelProps {
   /** Whether the panel is the one currently shown. */
   active: boolean;
   shell: ShellApi;
-  /** Tells the shell the panel is editing, which widens the sidebar. */
-  setEditing: (editing: boolean) => void;
+  /**
+   * Tells the shell the panel is editing, which widens the sidebar. "wide"
+   * widens it further for tables. InlineView does this on its own.
+   */
+  setEditing: (editing: boolean | "wide") => void;
   /** Type of the focused tab, if any. */
   activeTabType?: string;
   /** Where the panel is rendered. */
@@ -323,6 +346,8 @@ export interface TabHandle {
   /** Repaint only. The shell calls it every time the tab becomes active. */
   refresh?: () => void;
   notifyResize?: () => void;
+  /** Asked before the tab closes; resolve false to keep it open. */
+  confirmClose?: () => boolean | Promise<boolean>;
   [key: string]: unknown;
 }
 
@@ -629,6 +654,11 @@ export interface DashboardCardContribution {
   defaultHeight?: number;
   /** Which column a preset places this card in by default. Defaults to "main". */
   defaultPanel?: "main" | "side";
+  /**
+   * "framed" draws a titled header over the card, "bare" lets it run edge to
+   * edge, for a strip of numbers. Defaults to "framed".
+   */
+  frame?: "framed" | "bare";
   component: ComponentType<DashboardCardProps>;
 }
 
@@ -664,7 +694,11 @@ export interface ActionSlotDefinition {
 export interface SlotContribution {
   actionId: string;
   titleKey: string;
-  /** Secondary text, for slots that show one (onboarding cards). */
+  /**
+   * Secondary text, for slots that show one. The onboarding.* slots that
+   * used it are deprecated: use registerOnboardingStep. The feature and
+   * workflow card slots are no longer shown.
+   */
   descriptionKey?: string;
   icon?: IconComponent;
   kind?: "button" | "component" | string;
@@ -673,6 +707,65 @@ export interface SlotContribution {
   /** Extra condition on top of the action's permission. */
   when?: (context: Record<string, unknown>) => boolean;
   order?: number;
+}
+
+export type OnboardingMode = "full" | "partial" | "rerun";
+
+/**
+ * Where a plugin step sits in onboarding. "setup" comes right after the
+ * appearance steps, for things that need doing before the feature works
+ * (like pointing at a guacd server). "explore" (the default) comes after
+ * that, "security" after the account security step. Onboarding is for
+ * choices, not for explaining features.
+ */
+export type OnboardingSection = "setup" | "explore" | "security";
+
+export interface OnboardingStepProps {
+  /**
+   * "full" is a new user's first run, "partial" shows only steps they have
+   * not seen yet (a plugin installed later, a step whose version went up),
+   * "rerun" is the user running setup again from settings.
+   */
+  mode: OnboardingMode;
+  isAdmin: boolean;
+  isDesktop: boolean;
+  /** Blocks or allows Next. Steps can continue by default. */
+  setCanContinue: (ok: boolean) => void;
+  /**
+   * Runs when Next is pressed, before moving on. Return false to stay on the
+   * step (to show an error, say). Pass null to clear it.
+   */
+  setBeforeNext: (fn: (() => boolean | Promise<boolean>) | null) => void;
+  /**
+   * False on a first run, which shows before the app shell exists: app.tabs
+   * and the shell callbacks do nothing until it is true.
+   */
+  shellReady: boolean;
+}
+
+export interface OnboardingStepContribution {
+  /** Unique within the plugin. Lowercase letters, digits and dashes. */
+  id: string;
+  /**
+   * Starts at 1. Raise it when the step changes enough that people who saw
+   * it should see it again; they get just this step, not all of onboarding.
+   */
+  version?: number;
+  titleKey: string;
+  descriptionKey?: string;
+  icon?: IconComponent;
+  component: ComponentType<OnboardingStepProps>;
+  /** "admin" shows it only to users who can manage plugins. */
+  audience?: "all" | "admin";
+  /** A permission the user must hold, like registerAction's. */
+  permission?: string;
+  section?: OnboardingSection;
+  order?: number;
+  when?: (context: {
+    isAdmin: boolean;
+    isDesktop: boolean;
+    mode: OnboardingMode;
+  }) => boolean;
 }
 
 export interface SshAuthEditorProps {
@@ -795,6 +888,16 @@ export interface DesktopApi {
   onRemoteServerChange: (listener: () => void) => Disposer;
 }
 
+/** Links into this plugin's docs, from the manifest's docs field. */
+export interface DocsApi {
+  /** The docs link, or null when the manifest has none. */
+  readonly url: string | null;
+  /** A page of the docs ("setup"), with an optional anchor. */
+  page: (page?: string, anchor?: string) => string | null;
+  /** Opens a page in a new tab. Does nothing without a docs link. */
+  open: (page?: string, anchor?: string) => void;
+}
+
 export interface TermixAppInfo {
   readonly pluginId: string;
   readonly manifest: PluginManifest;
@@ -864,10 +967,17 @@ export interface TermixApp extends TermixAppInfo {
     slotId: string,
     contribution: SlotContribution,
   ) => Disposer;
+  /**
+   * Adds a step to onboarding. New users see it in their first run; people
+   * who already finished onboarding see just this step the next time they
+   * open Termix (or right away, if they install the plugin mid-session).
+   * Needs plugin API 1.1.
+   */
+  registerOnboardingStep: (step: OnboardingStepContribution) => Disposer;
   invokeAction: (id: string, ...args: unknown[]) => Promise<unknown>;
   /**
    * Offers a component to other plugins and to core by id, rendered where
-   * they choose with `PluginComponent` from @termix/plugin-sdk/ui or
+   * they choose with `PluginComponent` from @termix-ssh/plugin-sdk/ui or
    * `usePluginComponent`. The id should start with a name the plugin owns
    * ("terminal.view"). The props are the owner's contract; document them.
    */
@@ -909,8 +1019,16 @@ export interface TermixApp extends TermixAppInfo {
     options?: { origin?: unknown },
   ) => Promise<PluginWsTarget | null>;
   tabs: TabsApi;
+  /**
+   * Asks a yes or no question over the main area. For code that runs outside
+   * a panel or tab; inside one, useConfirm from @termix-ssh/plugin-sdk/ui asks
+   * over that surface instead.
+   */
+  confirm: (options: ConfirmRequest) => Promise<boolean>;
   /** The desktop app, when the frontend runs in it. */
   desktop: DesktopApi;
+  /** This plugin's docs. Needs plugin API 1.2. */
+  docs: DocsApi;
   /**
    * Fires after this plugin's settings are saved from the settings screen or
    * the host editor. Disposed automatically.
@@ -985,6 +1103,11 @@ export interface SshAuthTypeInfo {
  */
 export interface PluginHostBridge {
   usePluginId: () => string;
+  useDocsUrl: (
+    pluginId: string,
+    page?: string,
+    anchor?: string,
+  ) => string | null;
   useTranslation: (pluginId: string) => {
     t: TranslateFn;
     language: string;
@@ -1154,7 +1277,7 @@ let host: PluginHostBridge | null = null;
 export function __setPluginHost(bridge: PluginHostBridge | null): void {
   if (host && bridge !== host) {
     throw new Error(
-      "@termix/plugin-sdk/frontend: the plugin host is already set",
+      "@termix-ssh/plugin-sdk/frontend: the plugin host is already set",
     );
   }
   host = bridge;
@@ -1173,7 +1296,7 @@ function requireHost(): PluginHostBridge {
   if (!host && fallback) return fallback;
   if (!host) {
     throw new Error(
-      "@termix/plugin-sdk/frontend: no plugin host. Hooks only work inside Termix or renderWithApp().",
+      "@termix-ssh/plugin-sdk/frontend: no plugin host. Hooks only work inside Termix or renderWithApp().",
     );
   }
   return host;
@@ -1182,6 +1305,15 @@ function requireHost(): PluginHostBridge {
 /** The id of the plugin that registered the component being rendered. */
 export function usePluginId(): string {
   return requireHost().usePluginId();
+}
+
+/**
+ * A page of this plugin's docs, or null when the manifest has no docs link.
+ * Pass it to PanelShell's docs prop or use DocsLink. Needs plugin API 1.2.
+ */
+export function useDocsUrl(page?: string, anchor?: string): string | null {
+  const bridge = requireHost();
+  return bridge.useDocsUrl(bridge.usePluginId(), page, anchor);
 }
 
 /**
@@ -1331,6 +1463,31 @@ export function usePluginUiPreferences<
 } {
   const bridge = requireHost();
   return bridge.usePluginUiPreferences(bridge.usePluginId()) as never;
+}
+
+/**
+ * Grid or list and row density for one of this plugin's views, kept in its
+ * Appearance area as `<prefix>viewMode` and `<prefix>density`. Declare those
+ * keys in contributes.uiPresets so each preset level can pick a default.
+ */
+export function usePluginPanelView(prefix = ""): {
+  view: "grid" | "list";
+  density: "comfortable" | "compact";
+  compact: boolean;
+  setView: (view: "grid" | "list") => void;
+  setDensity: (density: "comfortable" | "compact") => void;
+} {
+  const { values, set } = usePluginUiPreferences();
+  const view = values[`${prefix}viewMode`] === "list" ? "list" : "grid";
+  const density =
+    values[`${prefix}density`] === "compact" ? "compact" : "comfortable";
+  return {
+    view,
+    density,
+    compact: density === "compact",
+    setView: (next) => set(`${prefix}viewMode`, next),
+    setDensity: (next) => set(`${prefix}density`, next),
+  };
 }
 
 export function useTabs(): TabsApi {

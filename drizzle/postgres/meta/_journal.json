@@ -463,6 +463,41 @@
       "when": 1790742086298,
       "tag": "0065_regular_joystick",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1791209295939,
+      "tag": "0066_retire_2_8_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1791209310758,
+      "tag": "0067_external_session_ref",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1791256340388,
+      "tag": "0068_plugin_pinned_version",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1791388888397,
+      "tag": "0069_plugin_channel",
+      "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1791550496661,
+      "tag": "0070_drop_donation_modal",
+      "breakpoints": true
     }
   ]
 }

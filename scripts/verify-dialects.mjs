@@ -2,8 +2,8 @@
  * Runs the repository layer against a real Postgres or MySQL server.
  *
  * The unit tests only ever see SQLite, so the parts of this codebase that
- * differ per engine — the RETURNING replacements, the read-then-write
- * transactions, the value encoders — have no coverage there at all. This is
+ * differ per engine (the RETURNING replacements, the read-then-write
+ * transactions, the value encoders) have no coverage there at all. This is
  * what covers them, and it needs a live server, which is why it is a script
  * rather than a test.
  *
@@ -12,7 +12,7 @@
  *   npm run verify:dialect -- mysql://user:pass@host:3306/db
  *
  * Applies the migrations first, through the same runRemoteMigrations() the
- * application uses at startup — so a broken migration fails here rather than in
+ * application uses at startup, so a broken migration fails here rather than in
  * production. Writes real rows: point it at a scratch database.
  */
 
@@ -40,7 +40,7 @@ const { drizzle } = await import(
   dialect === "postgres" ? "drizzle-orm/node-postgres" : "drizzle-orm/mysql2"
 );
 
-// No schema option on purpose — see connect.ts.
+// No schema option on purpose, see connect.ts.
 const db = drizzle(url);
 const context = { dialect, drizzle: db };
 
@@ -87,7 +87,7 @@ check("insert returns the stored row", created?.username, "before");
 check("boolean true survives the round trip", created?.isAdmin, true);
 
 // updateReturning must report the state AFTER the write. Reading first would
-// return the value the update replaced — silently, with no error.
+// return the value the update replaced, silently, with no error.
 const updated = await users.update(userId, { username: "after" });
 check("update returns the new value", updated?.username, "after");
 

@@ -11,6 +11,8 @@ import {
   rightDockableIds,
   railItemLabel,
   visibleRailItems,
+  applyRailOrder,
+  moveRailItem,
 } from "@/sidebar/rail-items";
 import { isCapturableTabType } from "@/shell/shell-layout";
 import { registerPanel, resetPanels } from "@/shell/panel-registry";
@@ -63,7 +65,17 @@ describe("RAIL_ITEMS", () => {
       "connections",
       "quick-connect",
       "sync",
+      "plugins",
     ]);
+  });
+
+  it("opens the Plugins tab only for plugin managers", () => {
+    const plugins = RAIL_ITEMS.find((item) => item.id === "plugins");
+    expect(plugins).toMatchObject({
+      kind: "tab",
+      placement: "footer",
+      permission: "admin.plugins.manage",
+    });
   });
 
   it("exposes every visible rail item as hideable", () => {
@@ -263,5 +275,52 @@ describe("permittedRailItems", () => {
       has: () => true,
     }).map((item) => item.id);
     expect(ids).toEqual(["open"]);
+  });
+});
+
+describe("rail order", () => {
+  const item = (id: string, group: "objects" | "tools" = "tools") =>
+    ({ id, icon: Boxes, labelKey: id, group }) as const;
+  const items = [
+    item("hosts", "objects"),
+    item("credentials", "objects"),
+    item("snippets"),
+    item("macros"),
+    item("history"),
+  ];
+
+  it("leaves the default order without a saved one", () => {
+    expect(applyRailOrder(items, undefined)).toBe(items);
+    expect(applyRailOrder(items, [])).toBe(items);
+  });
+
+  it("puts listed items in the saved order and keeps the rest in place", () => {
+    const ids = applyRailOrder(items, ["history", "snippets"]).map(
+      (entry) => entry.id,
+    );
+    expect(ids).toEqual([
+      "hosts",
+      "credentials",
+      "history",
+      "macros",
+      "snippets",
+    ]);
+  });
+
+  it("moves an item before another, or to the end of its band", () => {
+    expect(moveRailItem(items, "history", "snippets")).toEqual([
+      "hosts",
+      "credentials",
+      "history",
+      "snippets",
+      "macros",
+    ]);
+    expect(moveRailItem(items, "hosts", null)).toEqual([
+      "credentials",
+      "hosts",
+      "snippets",
+      "macros",
+      "history",
+    ]);
   });
 });

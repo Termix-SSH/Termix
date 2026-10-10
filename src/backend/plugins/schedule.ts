@@ -3,7 +3,7 @@
  * bag, so deactivate clears every one of them.
  */
 
-import type { PluginSchedule } from "@termix/plugin-sdk/backend";
+import type { PluginSchedule } from "@termix-ssh/plugin-sdk/backend";
 import type { DisposableBag } from "./disposables.js";
 
 type Log = (message: string, error: unknown) => void;

@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   PluginNotification,
   PluginNotifyHub,
-} from "@termix/plugin-sdk/backend";
+} from "@termix-ssh/plugin-sdk/backend";
 
 const grants = new Map<string, string[]>();
 const auditEntries: Array<Record<string, unknown>> = [];
@@ -81,7 +81,7 @@ import { createPluginContext, createPluginHandle } from "../../plugins/ctx.js";
 import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
 import { runAsActor } from "../../plugins/actor.js";
 import { clearNotifyHub } from "../../plugins/notify-hub.js";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 
 function contextFor(
   capabilities: string[],

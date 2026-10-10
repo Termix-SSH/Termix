@@ -11,7 +11,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { PluginLoader } from "../../plugins/loader.js";
+import zlib from "node:zlib";
+import {
+  PluginLoader,
+  assertBundledUpdate,
+  removeStaleStaging,
+  unsafeArchivePath,
+} from "../../plugins/loader.js";
 import { createFixturePlugin } from "./fixture-plugin.js";
 
 vi.mock("../../database/repositories/factory.js", () => ({
@@ -482,5 +488,132 @@ describe("PluginLoader error budget", () => {
 
     expect(loader.get("sample-plugin")?.state).toBe("active");
     expect(loader.get("sample-plugin")?.lastError).toBeNull();
+  });
+});
+
+describe("PluginLoader uninstall and pins", () => {
+  it("ignores the shipped copy of a bundled plugin an admin uninstalled", async () => {
+    const bundled = tempRoot("termix-bundled-");
+    const user = tempRoot("termix-data-");
+    createFixturePlugin({ id: "ssh-terminal", root: bundled });
+    createFixturePlugin({ id: "docker", root: bundled });
+    setRoots(bundled, user);
+
+    const loader = new PluginLoader();
+    loader.setUninstalled(["docker"]);
+    const loaded = await loader.loadAll();
+
+    expect(loaded.map((plugin) => plugin.id)).toEqual(["ssh-terminal"]);
+    expect(loader.bundledVersion("docker")).toBeUndefined();
+    expect(loader.bundledIds().has("docker")).toBe(false);
+  });
+
+  it("loads a downloaded copy of an uninstalled bundled id as a normal plugin", async () => {
+    const bundled = tempRoot("termix-bundled-");
+    const user = tempRoot("termix-data-");
+    const userPlugins = path.join(user, "plugins");
+    fs.mkdirSync(userPlugins, { recursive: true });
+    createFixturePlugin({ id: "docker", root: bundled });
+    createFixturePlugin({ id: "docker", root: userPlugins });
+    setRoots(bundled, user);
+
+    const loader = new PluginLoader();
+    loader.setUninstalled(["docker"]);
+    const loaded = await loader.loadAll();
+
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0].source).toBe("user");
+  });
+
+  it("loads the shipped copy again on reinstall", async () => {
+    const bundled = tempRoot("termix-bundled-");
+    const user = tempRoot("termix-data-");
+    createFixturePlugin({ id: "docker", root: bundled });
+    setRoots(bundled, user);
+
+    const loader = new PluginLoader();
+    loader.setUninstalled(["docker"]);
+    await loader.loadAll();
+    const plugin = await loader.loadBundled("docker");
+
+    expect(plugin.source).toBe("bundled");
+    expect(loader.get("docker")).toBe(plugin);
+  });
+
+  it("refuses an older signed update unless that exact version is pinned", () => {
+    expect(() =>
+      assertBundledUpdate("docker", "1.0.0", "key", "1.1.0"),
+    ).toThrow(/not newer/);
+    expect(() =>
+      assertBundledUpdate("docker", "1.0.0", "key", "1.1.0", "0.9.0"),
+    ).toThrow(/not newer/);
+    expect(() =>
+      assertBundledUpdate("docker", "1.0.0", "key", "1.1.0", "1.0.0"),
+    ).not.toThrow();
+    expect(() =>
+      assertBundledUpdate("docker", "1.0.0", undefined, "1.1.0", "1.0.0"),
+    ).toThrow(/signed/);
+  });
+});
+
+/** A gzipped tar with the given entry names, written by hand. */
+function rawTar(names: string[]): Buffer {
+  const blocks: Buffer[] = [];
+  for (const name of names) {
+    const header = Buffer.alloc(512);
+    header.write(name, 0, 100);
+    header.write("0000644\0", 100);
+    header.write("00000000001\0", 124);
+    header.write("        ", 148);
+    header.write("0", 156);
+    header.write("ustar\0", 257);
+    header.write("00", 263);
+    let sum = 0;
+    for (const byte of header) sum += byte;
+    header.write(sum.toString(8).padStart(6, "0") + "\0 ", 148);
+    blocks.push(header, Buffer.concat([Buffer.from("x"), Buffer.alloc(511)]));
+  }
+  blocks.push(Buffer.alloc(1024));
+  return zlib.gzipSync(Buffer.concat(blocks));
+}
+
+describe("unsafeArchivePath", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "termix-unsafe-"));
+  const write = (names: string[]) => {
+    const file = path.join(dir, `${names.length}-${Math.random()}.tmxplug`);
+    fs.writeFileSync(file, rawTar(names));
+    return file;
+  };
+
+  it("finds entries that escape the folder", async () => {
+    expect(
+      await unsafeArchivePath(write(["manifest.json", "../../etc/x"])),
+    ).toBe("../../etc/x");
+    expect(await unsafeArchivePath(write(["/tmp/x"]))).not.toBeNull();
+  });
+
+  it("passes a normal archive", async () => {
+    expect(
+      await unsafeArchivePath(write(["manifest.json", "dist/backend.js"])),
+    ).toBeNull();
+  });
+});
+
+describe("removeStaleStaging", () => {
+  it("removes unpack folders left by a crashed install", async () => {
+    const data = fs.mkdtempSync(path.join(os.tmpdir(), "termix-staging-"));
+    const previous = process.env.DATA_DIR;
+    process.env.DATA_DIR = data;
+    try {
+      const unpacked = path.join(data, "plugins", ".unpacked");
+      fs.mkdirSync(path.join(unpacked, ".staging-abc", "dist"), {
+        recursive: true,
+      });
+      fs.mkdirSync(path.join(unpacked, "serial"), { recursive: true });
+      await removeStaleStaging();
+      expect(fs.readdirSync(unpacked)).toEqual(["serial"]);
+    } finally {
+      process.env.DATA_DIR = previous;
+    }
   });
 });

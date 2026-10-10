@@ -50,7 +50,7 @@ export function sslOption(
 /**
  * Opens a connection to a client-server engine.
  *
- * SQLite is not handled here — it has its own lifecycle in db/index.ts, where
+ * SQLite is not handled here, it has its own lifecycle in db/index.ts, where
  * the database is decrypted into memory and serialised back to a file. This
  * covers the engines that connect to something already running.
  *
@@ -109,7 +109,7 @@ export async function connectRemoteDatabase(
 
   // No `schema` option: it only feeds drizzle's relational query API
   // (`db.query.*`), which nothing here uses. The query builder takes its table
-  // names and value encoders from the table objects the repositories import —
+  // names and value encoders from the table objects the repositories import,
   // see the note in schema.pg.ts on why the generated schemas are DDL-only.
   if (dialect === "postgres") {
     const { drizzle } = await import("drizzle-orm/node-postgres");
@@ -119,7 +119,7 @@ export async function connectRemoteDatabase(
   }
 
   // mysql2 names the pool limit differently and wants no `ssl` key at all when
-  // TLS is off — passing false is not the same as omitting it.
+  // TLS is off, passing false is not the same as omitting it.
   const { drizzle } = await import("drizzle-orm/mysql2");
   return drizzle({
     connection: {

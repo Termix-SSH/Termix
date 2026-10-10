@@ -1,7 +1,7 @@
 {
   "name": "Termix",
   "short_name": "Termix",
-  "description": "Self-hosted SSH and remote desktop management.",
+  "description": "Self-hosted, plugin-based server management.",
   "theme_color": "#09090b",
   "background_color": "#09090b",
   "display": "standalone",

@@ -16,7 +16,7 @@ export function normalizeHostAddress(value: unknown): string {
  * A client addresses a host by the numeric row id of the database it is
  * displaying. When the desktop app delegates a connection to a remote sync
  * server, the id is resolved against *that* server's table instead, and
- * autoincrement ids need not line up between the two — they diverge as soon as
+ * autoincrement ids need not line up between the two, they diverge as soon as
  * the sides accumulate inserts and deletes in a different order.
  *
  * The resolved row then supplies the address, the credentials, the jump hosts

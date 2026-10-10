@@ -7,7 +7,6 @@ const state = vi.hoisted(() => ({
   overrideCredentialId: null as number | null,
   credentials: new Map<string, Record<string, unknown>>(),
   auditCalls: [] as Record<string, unknown>[],
-  folderCredentialId: null as number | null,
   sharedSecret: null as Record<string, unknown> | null,
   activeHostAccessId: null as number | null,
   snapshotForUserCalls: [] as Record<string, unknown>[],
@@ -20,7 +19,6 @@ vi.mock("../../database/repositories/factory.js", () => ({
     findHostById: async () => (state.host ? { ...state.host } : null),
     findCredentialByIdForUser: async (credentialId: number, userId: string) =>
       state.credentials.get(`${credentialId}:${userId}`) ?? null,
-    findFolderCredentialId: async () => state.folderCredentialId,
   }),
   createCurrentSharedHostAuthOverrideRepository: () => ({
     findCredentialId: async () => state.overrideCredentialId,
@@ -114,7 +112,6 @@ function baseHost(overrides: Record<string, unknown> = {}) {
     sudoPassword: "owner-sudo",
     jumpHosts: null,
     tunnelConnections: null,
-    terminalConfig: null,
     socks5ProxyChain: null,
     quickActions: null,
     overrideCredentialUsername: false,
@@ -129,7 +126,6 @@ beforeEach(() => {
   state.overrideCredentialId = null;
   state.credentials.clear();
   state.auditCalls = [];
-  state.folderCredentialId = null;
   state.sharedSecret = null;
   state.activeHostAccessId = null;
   state.snapshotForUserCalls = [];
@@ -171,35 +167,6 @@ describe("resolveHostById", () => {
     expect(host.sudoPassword).toBe("owner-sudo");
   });
 
-  it("falls back to the host's folder-assigned credential when none is set on the host", async () => {
-    state.host = baseHost({
-      authType: "credential",
-      credentialId: null,
-      folder: "switches",
-      username: "",
-      password: null,
-    });
-    state.folderCredentialId = 11;
-    state.credentials.set("11:owner", {
-      id: 11,
-      username: "folder-user",
-      authType: "password",
-      password: "folder-pass",
-      privateKey: null,
-      key: null,
-      keyPassword: null,
-      keyType: null,
-    });
-
-    const host = (await resolveHostById(42, "owner")) as Record<
-      string,
-      unknown
-    >;
-    expect(host.password).toBe("folder-pass");
-    expect(host.username).toBe("folder-user");
-    expect(host.authType).toBe("password");
-  });
-
   it("prefers the host's own credential over its folder's credential", async () => {
     state.host = baseHost({
       authType: "credential",
@@ -208,7 +175,6 @@ describe("resolveHostById", () => {
       username: "",
       password: null,
     });
-    state.folderCredentialId = 11;
     state.credentials.set("9:owner", {
       id: 9,
       username: "host-user",
@@ -281,7 +247,7 @@ describe("resolveHostById", () => {
     state.host = baseHost({
       authType: "agent",
       password: null,
-      terminalConfig: JSON.stringify({
+      sshOptions: JSON.stringify({
         agentSocketPath: "/run/user/1000/ssh-agent.sock",
       }),
     });
@@ -294,7 +260,7 @@ describe("resolveHostById", () => {
       authType: "agent",
       password: null,
       shareSshAuth: true,
-      terminalConfig: JSON.stringify({
+      sshOptions: JSON.stringify({
         agentSocketPath: "/run/user/1000/ssh-agent.sock",
       }),
     });
@@ -305,9 +271,6 @@ describe("resolveHostById", () => {
     >;
     expect(host.authType).toBe("agent");
     expect(host.sshOptions).toEqual({
-      agentSocketPath: "/run/user/1000/ssh-agent.sock",
-    });
-    expect(host.terminalConfig).toEqual({
       agentSocketPath: "/run/user/1000/ssh-agent.sock",
     });
   });
@@ -436,10 +399,7 @@ describe("resolveHostById", () => {
       password: "stale-owner-password",
       key: "stale-owner-key",
       credentialId: null,
-      terminalConfig: JSON.stringify({
-        theme: "termix",
-        sudoPassword: "owner-sudo",
-      }),
+      sudoPassword: "owner-sudo",
     });
     const host = (await resolveHostById(42, "recipient")) as Record<
       string,
@@ -448,37 +408,13 @@ describe("resolveHostById", () => {
     expect(host.password).toBeNull();
     expect(host.key).toBeNull();
     expect(host.credentialId).toBeNull();
-    // The owner's legacy sudo password never reaches a recipient.
-    expect(host.terminalConfig).toEqual({ theme: "termix" });
+    // The owner's sudo password never reaches a recipient.
     expect(host.sudoPassword).toBeNull();
   });
 
-  it("hands the owner a 2.8 sudo password and SSH options kept in terminal_config", async () => {
-    state.host = baseHost({
-      sudoPassword: null,
-      sshOptions: null,
-      terminalConfig: JSON.stringify({
-        sudoPassword: "legacy-sudo",
-        keepaliveInterval: 12,
-        theme: "nord",
-      }),
-    });
-    const host = (await resolveHostById(42, "owner")) as Record<
-      string,
-      unknown
-    >;
-    expect(host.sudoPassword).toBe("legacy-sudo");
-    expect(host.sshOptions).toEqual({ keepaliveInterval: 12 });
-    expect(host.terminalConfig).toEqual({
-      keepaliveInterval: 12,
-      theme: "nord",
-    });
-  });
-
-  it("prefers the ssh_options column once it is filled", async () => {
+  it("reads the ssh_options column", async () => {
     state.host = baseHost({
       sshOptions: JSON.stringify({ keepaliveCountMax: 3 }),
-      terminalConfig: JSON.stringify({ keepaliveInterval: 12 }),
     });
     const host = (await resolveHostById(42, "owner")) as Record<
       string,

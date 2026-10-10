@@ -152,6 +152,15 @@ export class CredentialAccessRepository {
     return rows[0] ?? null;
   }
 
+  /** Credentials holding a share this user handed out. */
+  async listCredentialIdsGrantedBy(userId: string): Promise<number[]> {
+    const rows = await this.context.drizzle
+      .selectDistinct({ credentialId: credentialAccess.credentialId })
+      .from(credentialAccess)
+      .where(eq(credentialAccess.grantedBy, userId));
+    return rows.map((row) => row.credentialId);
+  }
+
   async revoke(accessId: number, credentialId: number): Promise<void> {
     await this.context.drizzle
       .delete(credentialAccess)

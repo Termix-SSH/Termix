@@ -6,8 +6,8 @@
  */
 
 import { and, eq } from "drizzle-orm";
-import type { SyncRow } from "@termix/plugin-sdk/backend";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { SyncRow } from "@termix-ssh/plugin-sdk/backend";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import {
   hosts,
   sshCredentials,
@@ -67,11 +67,10 @@ const HOST_LOCAL_FIELDS = [
 ];
 
 /**
- * Columns kept until 3.0.0 that nothing reads any more: their values moved
- * into plugin host settings, which sync with the host's pluginSettings. They
- * stay off the wire so a stale local id never reaches the other side.
+ * Columns 26.10.0 dropped. A 2.9 desktop still sends them; they never reach
+ * the table.
  */
-const HOST_RETIRED_FIELDS = ["quickActions"];
+const HOST_RETIRED_FIELDS = ["quickActions", "terminalConfig"];
 
 let registered = false;
 

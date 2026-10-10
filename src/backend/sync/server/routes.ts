@@ -87,12 +87,17 @@ router.get("/v2/info", async (_req: Request, res: Response) => {
  *         description: The desktop session token and the account it belongs to.
  *       401:
  *         description: Not signed in.
+ *       403:
+ *         description: API keys cannot link a desktop.
  */
 router.post(
   "/v2/link",
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = userOf(req);
+    if ((req as AuthenticatedRequest).apiKeyId) {
+      return res.status(403).json({ error: "API keys cannot link a desktop" });
+    }
     try {
       const user = await createCurrentUserRepository().findById(userId);
       if (!user) return res.status(401).json({ error: "User not found" });
@@ -360,7 +365,7 @@ router.get("/v2/events", authenticateJWT, (req: Request, res: Response) => {
  * /sync/v2/hosts/{syncId}:
  *   get:
  *     summary: This server's id for a host, by its sync id
- *     description: For a linked desktop that asks the server to act on a host (a tunnel through it), which needs the server's own id. Only for hosts the caller can see.
+ *     description: For a linked desktop that asks the server to act on a host (a tunnel through it), which needs the server's own id. Only for hosts the caller can connect to.
  *     tags:
  *       - Sync
  *     parameters:
@@ -373,7 +378,7 @@ router.get("/v2/events", authenticateJWT, (req: Request, res: Response) => {
  *       200:
  *         description: The host's id and name.
  *       404:
- *         description: No such host the caller can see.
+ *         description: No such host the caller can connect to.
  */
 router.get(
   "/v2/hosts/:syncId",
@@ -393,7 +398,7 @@ router.get(
       const access = await PermissionManager.getInstance().canAccessHost(
         userId,
         hostId,
-        "view",
+        "connect",
       );
       if (!access.hasAccess)
         return res.status(404).json({ error: "Not found" });

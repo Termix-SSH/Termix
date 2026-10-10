@@ -33,7 +33,19 @@ vi.mock("../../plugins/permissions.js", () => ({
   invalidatePluginPermissionCache: vi.fn(),
 }));
 
-const TEST_PORT = 39102;
+// A fixed port can land in a range Windows reserves for Hyper-V or Docker.
+function freePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const { port } = server.address() as net.AddressInfo;
+      server.close(() => resolve(port));
+    });
+  });
+}
+
+const TEST_PORT = await freePort();
 
 function isListening(port: number): Promise<boolean> {
   return new Promise((resolve) => {

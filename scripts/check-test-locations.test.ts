@@ -32,9 +32,8 @@ describe("misplaced", () => {
       "src/backend/tests/utils/a.test.ts",
       "src/ui/tests/lib/b.test.tsx",
       "scripts/c.test.ts",
-      "plugins/docker/tests/backend/d.test.ts",
-      "plugins/docker/node_modules/pkg/e.test.ts",
-      "plugins/docker/dist/f.test.ts",
+      "node_modules/pkg/e.test.ts",
+      "dist/f.test.ts",
     ]);
     expect(misplaced(dir)).toEqual([]);
   });
@@ -43,13 +42,11 @@ describe("misplaced", () => {
     const dir = fixture([
       "src/backend/utils/a.test.ts",
       "src/ui/lib/b.test.tsx",
-      "plugins/docker/src/frontend/c.test.tsx",
       "packages/plugin-sdk/src/d.test.ts",
       "src/backend/utils/not-a-test.ts",
     ]);
     expect(misplaced(dir)).toEqual([
       "packages/plugin-sdk/src/d.test.ts",
-      "plugins/docker/src/frontend/c.test.tsx",
       "src/backend/utils/a.test.ts",
       "src/ui/lib/b.test.tsx",
     ]);

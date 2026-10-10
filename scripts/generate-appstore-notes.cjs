@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { changelogSection } = require("./lib/changelog-section.cjs");
 
 // Apple caps the "What's New in This Version" field at 4000 characters.
 const MAX_LENGTH = 4000;
@@ -26,18 +27,6 @@ function fail(message) {
   process.exit(1);
 }
 
-function extractSection(notes, name, { required = true } = {}) {
-  const pattern = new RegExp(
-    `<!--\\s*${name}\\s*-->([\\s\\S]*?)<!--\\s*/${name}\\s*-->`,
-  );
-  const match = notes.match(pattern);
-  if (!match) {
-    if (required) fail(`missing <!-- ${name} --> section in release notes`);
-    return "";
-  }
-  return match[1].trim();
-}
-
 // Strip markdown that reads badly as plain text in App Store Connect.
 function toPlainText(markdown) {
   return markdown
@@ -50,7 +39,7 @@ function toPlainText(markdown) {
       text = text.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
       text = text.replace(/`([^`]+)`/g, "$1");
       text = text.replace(/\*\*([^*]+)\*\*/g, "$1");
-      text = text.replace(/^#+\s*/, "");
+      if (/^#+\s/.test(text)) text = `${text.replace(/^#+\s*/, "")}:`;
       return text;
     })
     .join("\n")
@@ -78,28 +67,21 @@ function truncate(text, limit) {
   return lines.join("\n").trim();
 }
 
-function buildNotes(notesFile) {
-  const summary = extractSection(notesFile, "SUMMARY");
-  const updateLog = extractSection(notesFile, "UPDATE_LOG", {
-    required: false,
-  });
-  const bugFixes = extractSection(notesFile, "BUG_FIXES", { required: false });
-
-  const parts = [toPlainText(summary)];
-  if (updateLog) parts.push("", "Update Log:", toPlainText(updateLog));
-  if (bugFixes) parts.push("", "Bug Fixes:", toPlainText(bugFixes));
-
-  const body = parts
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+function buildNotes(changelog, version) {
+  const notes = changelogSection(changelog, version);
+  if (!notes) fail(`CHANGELOG.md has no notes for ${version}`);
+  const body = toPlainText(notes);
   if (!body) fail("release notes produced no text");
   return truncate(body, MAX_LENGTH);
 }
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
-  const notesPath = args.notes || "RELEASE_NOTES.md";
+  const changelogPath = args.changelog || "CHANGELOG.md";
+  const version =
+    typeof args.version === "string"
+      ? args.version
+      : require(path.resolve("package.json")).version;
   const outDir = args["out-dir"];
   const locales = String(args.locales || "en-US")
     .split(",")
@@ -109,12 +91,10 @@ function main() {
   if (!outDir || outDir === true) fail("--out-dir is required");
   if (locales.length === 0) fail("--locales resolved to no locales");
 
-  const resolvedNotes = path.resolve(notesPath);
-  if (!fs.existsSync(resolvedNotes)) {
-    fail(`release notes file not found: ${resolvedNotes}`);
-  }
+  const resolved = path.resolve(changelogPath);
+  if (!fs.existsSync(resolved)) fail(`changelog not found: ${resolved}`);
 
-  const notes = buildNotes(fs.readFileSync(resolvedNotes, "utf8"));
+  const notes = buildNotes(fs.readFileSync(resolved, "utf8"), version);
 
   for (const locale of locales) {
     const localeDir = path.join(path.resolve(outDir), locale);

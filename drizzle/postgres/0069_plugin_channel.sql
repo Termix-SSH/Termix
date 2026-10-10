@@ -1,0 +1,1 @@
+ALTER TABLE "plugins" ADD COLUMN "channel" text DEFAULT 'stable' NOT NULL;

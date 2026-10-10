@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /**
  * `ssh_credentials.username` became nullable when key-only credentials landed,
  * and databases created before that are rebuilt on startup to drop the
- * constraint — SQLite cannot ALTER a column.
+ * constraint, SQLite cannot ALTER a column.
  *
  * The rebuild restated the table's columns as a literal, then copied rows with
  * `INSERT INTO temp SELECT <every live column>`. The table has gained columns

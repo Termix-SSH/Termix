@@ -105,7 +105,7 @@ async function prepareKey(
   if (certPublicKey && certPublicKey.trim()) {
     try {
       const { applyCertificateAuth } =
-        await import("@termix/plugin-sdk/ssh-certs");
+        await import("@termix-ssh/plugin-sdk/ssh-certs");
       await applyCertificateAuth(
         config,
         env.client,

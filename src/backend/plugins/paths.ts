@@ -1,10 +1,9 @@
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   DEFAULT_BACKEND_ENTRY,
   type PluginManifest,
-} from "@termix/plugin-sdk/manifest";
+} from "@termix-ssh/plugin-sdk/manifest";
 
 /**
  * Where user-installed plugins live. Resolved per call rather than captured at
@@ -43,29 +42,21 @@ export function getUnpackedPluginsDir(): string {
  * plugin is part of the install and must not be deletable or shadowable by
  * whatever happens to be in the data directory.
  *
- * Resolved from this module's location rather than cwd, because the build
- * emits to dist/backend/backend/plugins/ and the bundled plugins sit beside
- * dist/backend.
+ * Resolved from this module's location rather than cwd. The build emits to
+ * dist/backend/backend/plugins/ with the bundled plugins beside dist/backend,
+ * and a run from source reads the same dist/plugins.
  */
 export function getBundledPluginsDir(): string {
   const override = process.env.TERMIX_BUNDLED_PLUGINS_DIR;
   if (override) return override;
 
   const here = path.dirname(fileURLToPath(import.meta.url));
-
-  const candidates = [
-    // Built server: dist/backend/backend/plugins -> dist/plugins
-    // Source tree:  src/backend/plugins          -> plugins
-    // Both are three levels up, which is why there is one entry, not two.
-    path.resolve(here, "../../../plugins"),
-    // Built server invoked from a nested layout: .../dist/backend/backend/plugins
-    path.resolve(here, "../../../../plugins"),
-  ];
-
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) return candidate;
-  }
-  return candidates[0];
+  // Built: dist/backend/backend/plugins -> dist/plugins
+  // Source (vitest, tsx): src/backend/plugins -> dist/plugins
+  const fromSource = path.basename(path.resolve(here, "../..")) === "src";
+  return fromSource
+    ? path.resolve(here, "../../../dist/plugins")
+    : path.resolve(here, "../../../plugins");
 }
 
 /** The backend entry, from the manifest's own `backend` field. */

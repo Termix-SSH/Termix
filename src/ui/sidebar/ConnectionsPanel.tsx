@@ -1,8 +1,9 @@
+import { useConfirm } from "@/components/surface/surface-scope";
 import { getTabType, isPersistentTabType } from "@/shell/tab-registry";
 import { ComponentSlot } from "@/shell/ActionSlot";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { ExternalLink, Plug, Search, X, Pencil, Check } from "lucide-react";
+import { ExternalLink, Plug, X, Pencil, Check } from "lucide-react";
 import {
   getActiveSessions,
   deleteOpenTab,
@@ -12,14 +13,9 @@ import {
 import { tabIcon } from "@/shell/tabUtils";
 import { getSessionTimeoutMinutes } from "@/api/open-tabs-api";
 import type { Tab, TabType } from "@/types/ui-types";
-import { Badge } from "@/components/badge";
-import { Input } from "@/components/input";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/tooltip";
+import { EmptyState } from "@/components/empty-state";
+import { Facts, GroupHeading, PanelSearch } from "@/components/panel-layout";
+import { ListBadge, ListRow, ListRowAction } from "@/components/list-kit";
 import { usePageVisibleInterval } from "@/hooks/use-page-visible-interval";
 import { useAdaptivePolling } from "@/hooks/use-adaptive-polling";
 
@@ -80,6 +76,7 @@ function ConnectionRow({
   hostName,
   subLabel,
   icon,
+  stripe,
   onSwitch,
   onClose,
   switchTitle,
@@ -94,6 +91,7 @@ function ConnectionRow({
   hostName?: string;
   subLabel: string;
   icon: React.ReactNode;
+  stripe: number;
   onSwitch?: () => void;
   onClose: () => void;
   switchTitle?: string;
@@ -105,12 +103,6 @@ function ConnectionRow({
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(name);
 
-  function startEdit(e: React.MouseEvent) {
-    e.stopPropagation();
-    setEditValue(name);
-    setEditing(true);
-  }
-
   function commitEdit() {
     const trimmed = editValue.trim();
     if (trimmed && trimmed !== name && onRename) {
@@ -119,155 +111,103 @@ function ConnectionRow({
     setEditing(false);
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") commitEdit();
-    if (e.key === "Escape") setEditing(false);
-  }
+  const registered = getTabType(tabType)?.titleKey;
+  const typeLabel =
+    CORE_TYPE_LABELS[tabType] ?? (registered ? t(registered) : tabType);
+  const stop = (e: React.PointerEvent) => e.stopPropagation();
 
   return (
-    <div
-      role={onSwitch && !editing ? "button" : undefined}
-      tabIndex={onSwitch && !editing ? 0 : undefined}
+    <ListRow
+      stripe={stripe}
+      tone={isLive ? "success" : "muted"}
+      selected={isActive}
+      active={editing}
+      dimmed={faded || isDragging}
       onClick={!editing ? onSwitch : undefined}
-      onKeyDown={(e) => !editing && e.key === "Enter" && onSwitch?.()}
-      className={`group flex items-center gap-2.5 px-3 py-2.5 border-b border-border/40 transition-colors last:border-b-0 ${
-        faded ? "opacity-60" : ""
-      } ${isDragging ? "opacity-30" : ""} ${
-        isActive
-          ? "bg-accent-brand/8 cursor-pointer border-l-2 border-l-accent-brand"
-          : onSwitch && !editing
-            ? "hover:bg-muted/40 cursor-pointer"
-            : ""
-      }`}
-    >
-      <div
-        className={`shrink-0 flex items-center justify-center size-7 rounded ${
-          isActive
-            ? "bg-accent-brand/15 text-accent-brand"
-            : "bg-muted/60 text-muted-foreground"
-        }`}
-      >
-        {icon}
-      </div>
-
-      <div className="flex flex-col flex-1 min-w-0 gap-0.5">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span
-            className={`shrink-0 size-1.5 rounded-full ${
-              isLive ? "bg-green-500" : "bg-muted-foreground/30"
-            }`}
+      icon={icon}
+      title={
+        editing ? (
+          <input
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={commitEdit}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === "Enter") commitEdit();
+              if (e.key === "Escape") setEditing(false);
+            }}
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={stop}
+            className="w-full min-w-0 border-b border-accent-brand bg-transparent text-[13px] font-semibold text-foreground outline-none"
+            autoFocus
           />
-          {editing ? (
-            <input
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onBlur={commitEdit}
-              onKeyDown={handleKeyDown}
-              onClick={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
-              className="text-xs font-semibold flex-1 min-w-0 bg-transparent border-b border-accent-brand outline-none text-foreground"
-              autoFocus
-            />
-          ) : (
-            <span
-              className={`text-xs font-semibold truncate flex-1 ${
-                isActive ? "text-accent-brand" : "text-foreground"
-              }`}
-            >
-              {name}
-            </span>
-          )}
-          <Badge
-            variant="outline"
-            className="text-[9px] px-1 py-0 h-4 font-mono shrink-0 text-muted-foreground/60 border-border/60"
+        ) : (
+          name
+        )
+      }
+      badges={<ListBadge className="ml-auto font-mono">{typeLabel}</ListBadge>}
+      meta={
+        <Facts>
+          {hostName && hostName !== name ? <span>{hostName}</span> : null}
+          <span>{subLabel}</span>
+        </Facts>
+      }
+      actions={
+        editing ? (
+          <ListRowAction
+            label={t("common.save")}
+            tone="brand"
+            onPointerDown={stop}
+            onClick={commitEdit}
           >
-            {CORE_TYPE_LABELS[tabType] ??
-              (getTabType(tabType)?.titleKey
-                ? t(getTabType(tabType)!.titleKey!)
-                : tabType)}
-          </Badge>
-        </div>
-        <span className="text-[10px] text-muted-foreground/60 truncate pl-3">
-          {hostName && hostName !== name ? (
-            <span className="text-muted-foreground/50 mr-2.5">{hostName}</span>
-          ) : null}
-          {subLabel}
-        </span>
-      </div>
-
-      <TooltipProvider>
-        <div className="shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          {editing ? (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                commitEdit();
-              }}
-              className="size-6 flex items-center justify-center text-accent-brand hover:bg-muted/60 rounded transition-colors"
+            <Check />
+          </ListRowAction>
+        ) : (
+          <>
+            {onRename && (
+              <ListRowAction
+                label={t("connections.rename")}
+                onPointerDown={stop}
+                onClick={() => {
+                  setEditValue(name);
+                  setEditing(true);
+                }}
+              >
+                <Pencil />
+              </ListRowAction>
+            )}
+            {switchTitle && onSwitch && (
+              <ListRowAction
+                label={switchTitle}
+                tone="brand"
+                onPointerDown={stop}
+                onClick={onSwitch}
+              >
+                <ExternalLink />
+              </ListRowAction>
+            )}
+            <ListRowAction
+              label={t("common.close")}
+              tone="destructive"
+              onPointerDown={stop}
+              onClick={onClose}
             >
-              <Check className="size-3" />
-            </button>
-          ) : (
-            onRename && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={startEdit}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 rounded transition-colors"
-                  >
-                    <Pencil className="size-3" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                  {t("connections.rename")}
-                </TooltipContent>
-              </Tooltip>
-            )
-          )}
-          {switchTitle && onSwitch && !editing && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSwitch();
-                  }}
-                  className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 rounded transition-colors"
-                >
-                  <ExternalLink className="size-3" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="left">{switchTitle}</TooltipContent>
-            </Tooltip>
-          )}
-          {!editing && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-              }}
-              className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 rounded transition-colors"
-            >
-              <X className="size-3" />
-            </button>
-          )}
-        </div>
-      </TooltipProvider>
-    </div>
+              <X />
+            </ListRowAction>
+          </>
+        )
+      }
+    />
   );
 }
 
 function SectionHeader({ label, count }: { label: string; count: number }) {
   return (
-    <div className="flex items-center gap-2 px-3 py-2 border-b border-border/60 bg-muted/20">
-      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 flex-1">
-        {label}
-      </span>
-      <span className="text-[10px] font-semibold text-muted-foreground/40 bg-muted/60 rounded px-1.5 py-0.5">
-        {count}
-      </span>
-    </div>
+    <GroupHeading
+      title={label}
+      count={count}
+      className="border-b border-border/40 px-3 pb-1.5 pt-2.5"
+    />
   );
 }
 
@@ -298,6 +238,7 @@ export function ConnectionsPanel({
   onReorderTabs?: (tabs: Tab[]) => void;
 }) {
   const { t } = useTranslation();
+  const confirm = useConfirm();
   const [now, setNow] = useState(Date.now());
 
   const [persistMinutes, setPersistMinutes] = useState(30);
@@ -448,42 +389,28 @@ export function ConnectionsPanel({
     return (
       <div className="flex flex-col flex-1">
         {pluginSections}
-        <div className="flex flex-col items-center justify-center flex-1 gap-3 p-6 text-center py-16">
-          <div className="size-10 rounded-full bg-muted/40 flex items-center justify-center">
-            <Plug className="size-5 text-muted-foreground/30" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-semibold text-muted-foreground/60">
-              {t("connections.noConnections")}
-            </span>
-            <span className="text-xs text-muted-foreground/40">
-              {t("connections.noConnectionsDesc")}
-            </span>
-          </div>
-        </div>
+        <EmptyState
+          icon={Plug}
+          title={t("connections.noConnections")}
+          hint={t("connections.noConnectionsDesc")}
+          className="flex-1"
+        />
       </div>
     );
   }
 
   return (
     <div className="flex flex-col">
-      <div className="relative px-3 py-2 border-b border-border/60">
-        <Search className="absolute left-5.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/50 pointer-events-none" />
-        <Input
-          placeholder={t("connections.search")}
+      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+        <PanelSearch
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-8 h-7 text-xs"
+          onChange={setSearch}
+          placeholder={t("connections.search")}
+          fill
         />
       </div>
 
-      {!hasResults && (
-        <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-          <span className="text-xs text-muted-foreground/50">
-            {t("connections.noSearchResults")}
-          </span>
-        </div>
-      )}
+      {!hasResults && <EmptyState title={t("connections.noSearchResults")} />}
 
       {filteredOpenTabs.length > 0 && (
         <div className="flex flex-col">
@@ -491,7 +418,7 @@ export function ConnectionsPanel({
             label={t("connections.sectionOpen")}
             count={filteredOpenTabs.length}
           />
-          {filteredOpenTabs.map((tab) => {
+          {filteredOpenTabs.map((tab, index) => {
             const isActive = tab.id === activeTabId;
             const liveSession = tab.instanceId
               ? sessionByInstanceId.get(tab.instanceId)
@@ -522,7 +449,7 @@ export function ConnectionsPanel({
                   didDragRef.current = false;
                   setDragTabId(tab.id);
                 }}
-                className={`relative ${isDropTarget ? "border-t-2 border-accent-brand" : ""}`}
+                className={`relative ${isDropTarget ? "before:absolute before:inset-x-0 before:-top-px before:z-20 before:h-0.5 before:bg-accent-brand" : ""}`}
                 style={{
                   cursor: dragTabId
                     ? isDraggingThis
@@ -532,6 +459,7 @@ export function ConnectionsPanel({
                 }}
               >
                 <ConnectionRow
+                  stripe={index}
                   isActive={isActive}
                   isLive={isLive}
                   tabType={tab.type}
@@ -563,9 +491,7 @@ export function ConnectionsPanel({
       )}
 
       {filteredBackgroundTabs.length > 0 && (
-        <div
-          className={`flex flex-col ${filteredOpenTabs.length > 0 ? "mt-2" : ""}`}
-        >
+        <div className="flex flex-col">
           <SectionHeader
             label={t("connections.sectionBackground")}
             count={filteredBackgroundTabs.length}
@@ -577,7 +503,7 @@ export function ConnectionsPanel({
               })}
             </span>
           </div>
-          {filteredBackgroundTabs.map((record) => {
+          {filteredBackgroundTabs.map((record, index) => {
             const host = record.hostId
               ? allHosts.find((h) => h.id === String(record.hostId))
               : undefined;
@@ -586,6 +512,7 @@ export function ConnectionsPanel({
             return (
               <ConnectionRow
                 key={record.id}
+                stripe={index}
                 isLive={false}
                 faded
                 tabType={record.tabType}
@@ -597,6 +524,13 @@ export function ConnectionsPanel({
                   onReopenTab(record, liveSession?.sessionId ?? null);
                 }}
                 onClose={async () => {
+                  const ok = await confirm({
+                    title: t("connections.forgetConfirm", {
+                      name: host?.name ?? record.label,
+                    }),
+                    confirmLabel: t("connections.forget"),
+                  });
+                  if (!ok) return;
                   await deleteOpenTab(record.id).catch(() => {});
                   onForgetBackground(record.id);
                 }}

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
-  ArrowLeft,
   Check,
   ListChecks,
   Search,
@@ -13,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/button";
+import { InlineView, useConfirm } from "@/components/surface/surface-scope";
 import { Input } from "@/components/input";
 import {
   DropdownMenu,
@@ -29,9 +29,11 @@ import {
   type CredentialPermissionLevel,
   type ShareTarget,
 } from "@/api/rbac-api";
-import { getUserList, type AccessRecord } from "@/main-axios";
+import { getUserInfo, getUserList, type AccessRecord } from "@/main-axios";
 import type { Credential } from "@/types/ui-types";
 import { getErrorMessage } from "@/lib/error-message";
+import { DocsLink } from "@/components/docs-link";
+import { roleLabel } from "@/lib/role-label";
 
 const PERMISSION_LEVELS: CredentialPermissionLevel[] = ["use", "manage"];
 
@@ -72,6 +74,7 @@ export function CredentialShareModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const confirm = useConfirm();
   const [targetTab, setTargetTab] = useState<"user" | "role">("user");
   const [search, setSearch] = useState("");
   const [shareUsers, setShareUsers] = useState<
@@ -117,14 +120,15 @@ export function CredentialShareModal({
       getCredentialAccess(credentialId).catch(() => ({ access: [] })),
       getUserList().catch(() => ({ users: [] })),
       getRoles().catch(() => ({ roles: [] })),
+      getUserInfo().catch(() => null),
     ])
-      .then(([accessRes, usersRes, rolesRes]) => {
+      .then(([accessRes, usersRes, rolesRes, me]) => {
         setAccessList(accessRes.access ?? []);
+        // Nobody shares a credential with themselves.
         setShareUsers(
-          (usersRes.users ?? []).map((u) => ({
-            id: String(u.userId),
-            username: u.username,
-          })),
+          (usersRes.users ?? [])
+            .map((u) => ({ id: String(u.userId), username: u.username }))
+            .filter((u) => u.id !== me?.userId),
         );
         setShareRoles(
           (rolesRes.roles ?? [])
@@ -228,6 +232,16 @@ export function CredentialShareModal({
 
   async function handleRevoke(record: AccessRecord) {
     if (!credentialId) return;
+    const who =
+      record.username ??
+      roleLabel(t, record.roleDisplayName) ??
+      record.roleName ??
+      "";
+    const ok = await confirm({
+      title: t("sharing.revokeConfirm", { name: who }),
+      confirmLabel: t("sharing.revoke"),
+    });
+    if (!ok) return;
     try {
       await revokeCredentialAccess(credentialId, record.id);
       setAccessList((prev) => prev.filter((entry) => entry.id !== record.id));
@@ -237,20 +251,16 @@ export function CredentialShareModal({
     }
   }
 
-  if (!credential) return null;
-
   return (
-    <div className="absolute inset-0 z-20 flex flex-col bg-sidebar">
-      <button
-        onClick={onClose}
-        className="flex items-center gap-2 px-3 py-2 shrink-0 border-b border-border text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-left"
-      >
-        <ArrowLeft className="size-3.5 shrink-0" />
-        <span className="truncate">
-          {t("credentials.share.title", { name: credential.name ?? "" })}
-        </span>
-      </button>
-
+    <InlineView
+      open={!!credential}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      icon={<Share2 className="size-4" />}
+      title={t("credentials.share.title", { name: credential?.name ?? "" })}
+      bare
+    >
       {loadError && (
         <div className="flex items-start gap-2 px-3 py-2 shrink-0 border-b border-destructive/30 bg-destructive/5 text-xs text-destructive">
           <Shield className="size-3.5 shrink-0 mt-0.5" />
@@ -264,14 +274,7 @@ export function CredentialShareModal({
             <Users className="size-3.5" />
             {t("hosts.sharing.shareWithSection")}
           </div>
-          <a
-            href="https://docs.termix.site/features/authentication/rbac"
-            target="_blank"
-            rel="noreferrer"
-            className="text-[10px] text-accent-brand hover:underline shrink-0"
-          >
-            {t("hosts.docsLink")}
-          </a>
+          <DocsLink core="sharing">{t("hosts.docsLink")}</DocsLink>
         </div>
 
         <p className="text-[11px] text-muted-foreground leading-snug">
@@ -378,7 +381,7 @@ export function CredentialShareModal({
                     </div>
                     <Shield className="size-3 text-muted-foreground shrink-0" />
                     <span className="truncate">
-                      {role.displayName || role.name}
+                      {roleLabel(t, role.displayName || role.name)}
                     </span>
                   </button>
                 );
@@ -501,7 +504,7 @@ export function CredentialShareModal({
                     )}
                     <span className="font-semibold truncate">
                       {record.username ??
-                        record.roleDisplayName ??
+                        roleLabel(t, record.roleDisplayName) ??
                         record.roleName ??
                         record.userId ??
                         record.roleId}
@@ -570,6 +573,6 @@ export function CredentialShareModal({
           })}
         </div>
       </div>
-    </div>
+    </InlineView>
   );
 }

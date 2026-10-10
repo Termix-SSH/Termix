@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /**
  * Sharing a host used to hand the owner's SSH authentication to the recipient
  * unconditionally. 2.6.1 put that behind `ssh_data.share_ssh_auth`, added as
- * `NOT NULL DEFAULT 0` — so every host shared before the upgrade silently
+ * `NOT NULL DEFAULT 0`, so every host shared before the upgrade silently
  * stopped supplying credentials, and recipients hit "No valid authentication
  * method provided" on hosts that had worked the day before.
  *
@@ -33,10 +33,37 @@ describe("share_ssh_auth backfill", () => {
     fs.rmSync(dataDir, { recursive: true, force: true });
   });
 
-  /** A 2.6.0 database: hosts and shares exist, the column does not. */
+  /**
+   * Hosts and shares exist, the column does not. The plugin tables are there
+   * because 26.10.0 only opens a database 2.9 has already upgraded.
+   */
   function writePreUpgradeDatabase(): void {
     const seed = new Database(":memory:");
     seed.exec(`
+      CREATE TABLE plugins (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        version TEXT NOT NULL,
+        tier TEXT NOT NULL DEFAULT 'available',
+        source TEXT NOT NULL DEFAULT 'community',
+        registry_id TEXT,
+        state TEXT NOT NULL DEFAULT 'disabled',
+        last_error TEXT,
+        installed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        auto_update INTEGER NOT NULL DEFAULT 0,
+        manifest_json TEXT NOT NULL
+      );
+      CREATE TABLE plugin_migrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plugin_id TEXT NOT NULL,
+        migration_id TEXT NOT NULL,
+        checksum TEXT NOT NULL,
+        applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (plugin_id, migration_id),
+        FOREIGN KEY (plugin_id) REFERENCES plugins (id) ON DELETE CASCADE
+      );
+
       CREATE TABLE users (
         id TEXT PRIMARY KEY,
         username TEXT NOT NULL,

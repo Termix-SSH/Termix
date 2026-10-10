@@ -47,7 +47,7 @@ export async function runLegacySharedCredentialCleanup(): Promise<{
 
   // Nothing to clean up on an engine this application has never run on. A
   // Postgres or MySQL database is created by the drizzle migrations, which have
-  // never emitted these legacy columns, so there is nothing to drop — and the
+  // never emitted these legacy columns, so there is nothing to drop, and the
   // check itself needs a synchronous PRAGMA that only SQLite offers.
   if (!needsExplicitPersist(resolveDatabaseDialect())) return result;
 

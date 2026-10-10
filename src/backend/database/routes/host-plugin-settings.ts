@@ -10,7 +10,7 @@
  * on this path has to decrypt and the async work stays in one place.
  */
 
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import { createCurrentPluginSettingsRepository } from "../repositories/factory.js";
 import type { PluginSettingsRecord } from "../repositories/plugin-settings-repository.js";
 import {
@@ -22,7 +22,7 @@ import {
 import {
   coerceSettingValue,
   validateSettingValue,
-} from "@termix/plugin-sdk/settings";
+} from "@termix-ssh/plugin-sdk/settings";
 import { getPluginRuntime } from "../../plugins/index.js";
 import { consume } from "../../plugins/registry.js";
 import { sshLogger } from "../../utils/logger.js";

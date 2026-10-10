@@ -1,4 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
+import {
+  isInElectronWebView,
+  isInMobileWebView,
+  type EmbeddedFrameWindow,
+} from "@/lib/embedded-frame";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
@@ -48,6 +53,7 @@ import { useLoginMethods, useSecondFactors } from "@/plugin-host/auth-registry";
 import { startPreLoginPlugins } from "@/plugin-host/loader";
 import { Checkbox } from "@/components/checkbox";
 import { useBranding } from "@/contexts/BrandingContext";
+import { BrandPanel, CompactBrand } from "./auth-bits";
 import {
   changeAppLanguage,
   normalizeLanguageCode,
@@ -181,26 +187,6 @@ type ResetStep = "email" | "code" | "newpass";
 interface AuthProps {
   onLogin: (username: string, userId?: string, isAdmin?: boolean) => void;
 }
-
-interface ExtendedWindow extends Window {
-  IS_ELECTRON_WEBVIEW?: boolean;
-  ReactNativeWebView?: { postMessage: (msg: string) => void };
-}
-
-const isInMobileWebView = () =>
-  /Termix-Mobile\/(Android|iOS)/.test(navigator.userAgent) ||
-  !!(window as ExtendedWindow).ReactNativeWebView;
-
-const isInElectronWebView = () => {
-  if (isInMobileWebView()) return false;
-  if ((window as ExtendedWindow).IS_ELECTRON_WEBVIEW) return true;
-  try {
-    if (window.self !== window.top) return true;
-  } catch {
-    return true;
-  }
-  return false;
-};
 
 function PasswordInput({
   value,
@@ -420,7 +406,7 @@ export function Auth({ onLogin }: AuthProps) {
         );
         return;
       }
-      toast.error(event.data.error || t("errors.failedOidcLogin"));
+      toast.error(event.data.error || t("errors.failedExternalLogin"));
     };
 
     window.addEventListener("message", handleExternalBrowserResult);
@@ -604,7 +590,7 @@ export function Auth({ onLogin }: AuthProps) {
         toast.error(t("messages.userNotAllowed"));
       else if (error === "second_factor_unavailable")
         toast.error(t("auth.secondFactorUnavailable"));
-      else toast.error(`${t("errors.oidcAuthFailed")}: ${error}`);
+      else toast.error(`${t("errors.externalAuthFailed")}: ${error}`);
       window.history.replaceState({}, document.title, window.location.pathname);
       return;
     }
@@ -615,7 +601,7 @@ export function Auth({ onLogin }: AuthProps) {
         // (termix-mobile:-origin callbacks include one), otherwise read it back
         // from the cookie via /users/me/token before handing it to the app.
         const postToken = (token: string) => {
-          (window as ExtendedWindow).ReactNativeWebView?.postMessage(
+          (window as EmbeddedFrameWindow).ReactNativeWebView?.postMessage(
             JSON.stringify({ type: "AUTH_SUCCESS", token }),
           );
           setWebviewAuthSuccess(true);
@@ -739,6 +725,10 @@ export function Auth({ onLogin }: AuthProps) {
       toast.error(t("auth.secondFactorUnavailable"));
       return;
     }
+    if (error?.response?.data?.code === "external_login_required") {
+      toast.error(t("auth.externalLoginRequired"));
+      return;
+    }
     toast.error(
       error?.response?.data?.error || error?.message || t(fallbackKey),
     );
@@ -761,7 +751,7 @@ export function Auth({ onLogin }: AuthProps) {
     if (isInMobileWebView()) {
       // Native-app requests get the JWT in the login response body.
       const token = res?.token ?? "";
-      (window as ExtendedWindow).ReactNativeWebView?.postMessage(
+      (window as EmbeddedFrameWindow).ReactNativeWebView?.postMessage(
         JSON.stringify({ type: "AUTH_SUCCESS", token }),
       );
       setWebviewAuthSuccess(true);
@@ -1047,7 +1037,7 @@ export function Auth({ onLogin }: AuthProps) {
           throw new Error(t("errors.invalidAuthUrl"));
         window.location.replace(authUrl);
       } catch (err: unknown) {
-        showLoginError(err, "errors.failedOidcLogin");
+        showLoginError(err, "errors.failedExternalLogin");
         setLoading(false);
       }
     },
@@ -1133,7 +1123,7 @@ export function Auth({ onLogin }: AuthProps) {
     }
 
     if (urlTriggered) {
-      toast.info(t("errors.silentSigninOidcUnavailable"));
+      toast.info(t("errors.silentSigninExternalUnavailable"));
     }
   }, [startRedirect, authMethodsLoaded, externalMethods, t]);
 
@@ -1204,7 +1194,11 @@ export function Auth({ onLogin }: AuthProps) {
               {t("messages.databaseConnectionFailed")}
             </p>
           </div>
-          <Button onClick={() => window.location.reload()}>
+          <Button
+            variant="outline"
+            onClick={() => window.location.reload()}
+            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
+          >
             {t("common.refresh")}
           </Button>
           <LanguageRow
@@ -1228,39 +1222,26 @@ export function Auth({ onLogin }: AuthProps) {
     return (
       <div className="fixed inset-0 flex flex-col bg-background overflow-hidden">
         <div className="flex flex-1 overflow-hidden">
-          <div className="hidden lg:flex flex-col w-[420px] shrink-0 bg-sidebar border-r border-border relative overflow-hidden select-none">
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundImage:
-                  "radial-gradient(circle, color-mix(in oklch, var(--border) 80%, transparent) 1px, transparent 1px)",
-                backgroundSize: "24px 24px",
-              }}
-            />
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 px-12">
-              <span className="text-4xl font-bold tracking-[0.3em] font-mono">
-                TERMIX
-              </span>
-              <div className="w-8 h-px bg-accent-brand" />
-              <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.25em]">
-                {t("auth.tagline")}
-              </span>
-            </div>
-          </div>
+          <BrandPanel
+            logo={branding.logo}
+            appName={branding.appName}
+            tagline={branding.tagline || t("auth.tagline")}
+          />
 
           <div className="flex flex-1 items-center justify-center p-6 overflow-y-auto relative">
-            <div className="w-full max-w-sm flex flex-col gap-6">
+            <div className="w-full max-w-[380px] flex flex-col gap-6 border border-border bg-card p-5">
+              <CompactBrand logo={branding.logo} appName={branding.appName} />
               <div className="flex flex-col gap-5">
                 <div className="flex flex-col gap-1">
                   <h1 className="text-xl font-bold">
                     {desktopManualLogoutActive
-                      ? "Local desktop signed out"
-                      : "Local desktop session unavailable"}
+                      ? t("auth.localDesktopSignedOut")
+                      : t("auth.localDesktopUnavailable")}
                   </h1>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     {desktopManualLogoutActive
-                      ? "You signed out of the local desktop session. Continue locally to use this device's embedded Termix server again."
-                      : "Termix could not create a local desktop session. Retry the embedded local session instead of registering a new account."}
+                      ? t("auth.localDesktopSignedOutDesc")
+                      : t("auth.localDesktopUnavailableDesc")}
                   </p>
                 </div>
                 <Button
@@ -1270,8 +1251,8 @@ export function Auth({ onLogin }: AuthProps) {
                   onClick={continueLocalDesktopSession}
                 >
                   {desktopManualLogoutActive
-                    ? "Continue with local desktop"
-                    : "Retry local desktop session"}
+                    ? t("auth.continueLocalDesktop")
+                    : t("auth.retryLocalDesktop")}
                 </Button>
                 <Separator />
                 <LanguageRow
@@ -1308,37 +1289,16 @@ export function Auth({ onLogin }: AuthProps) {
   return (
     <div className="fixed inset-0 flex flex-col bg-background overflow-hidden">
       <div className="flex flex-1 overflow-hidden">
-        {/* Left decorative panel */}
-        <div className="hidden lg:flex flex-col w-[420px] shrink-0 bg-sidebar border-r border-border relative overflow-hidden select-none">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle, color-mix(in oklch, var(--border) 80%, transparent) 1px, transparent 1px)",
-              backgroundSize: "24px 24px",
-            }}
-          />
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 px-12">
-            {branding.logo && (
-              <img
-                src={branding.logo}
-                alt=""
-                className="w-16 h-16 object-contain mb-1"
-              />
-            )}
-            <span className="text-4xl font-bold tracking-[0.3em] font-mono uppercase">
-              {branding.appName}
-            </span>
-            <div className="w-8 h-px bg-accent-brand" />
-            <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.25em]">
-              {branding.tagline || t("auth.tagline")}
-            </span>
-          </div>
-        </div>
+        <BrandPanel
+          logo={branding.logo}
+          appName={branding.appName}
+          tagline={branding.tagline || t("auth.tagline")}
+        />
 
         {/* Right panel */}
         <div className="flex flex-1 items-center justify-center p-6 overflow-y-auto relative">
-          <div className="w-full max-w-sm flex flex-col gap-6">
+          <div className="w-full max-w-[380px] flex flex-col gap-6 border border-border bg-card p-5">
+            <CompactBrand logo={branding.logo} appName={branding.appName} />
             {/* TOTP view */}
             {view === "second-factor" && (
               <div className="flex flex-col gap-5">
@@ -1384,11 +1344,13 @@ export function Auth({ onLogin }: AuthProps) {
                           )}
                         </p>
                         <Button
+                          variant="outline"
                           type="button"
                           disabled={authPluginsLoading}
                           onClick={() =>
                             void retryAuthPlugins().catch(() => {})
                           }
+                          className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
                         >
                           {t("auth.retrySecondFactorUI")}
                         </Button>

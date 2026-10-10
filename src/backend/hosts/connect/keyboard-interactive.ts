@@ -21,10 +21,13 @@ const PASSWORD_PATTERN = /password/i;
 // because its text also says "push notification".
 const FORTI_TOKEN_PATTERN = /type\s+['"]?push['"]?/i;
 
-// JumpCloud Protect / DUO: a menu choice, then an empty-answerable confirm.
-// Checked before TOTP because "...or [2] TOTP:" would match that pattern.
+// JumpCloud Protect / DUO: a menu choice answered with a number, then an
+// empty-answerable confirm. Checked before TOTP because "...or [2] TOTP:"
+// would match that pattern. The menu needs a text field, so it is not a push.
+const PUSH_MENU_PATTERN = /choose.*push.*totp/i;
+
 const PUSH_PROMPT_PATTERN =
-  /choose.*push.*totp|press enter.*(push|send)|push notification|authentication by phone/i;
+  /press enter.*(push|send)|push notification|authentication by phone/i;
 
 const TOTP_PATTERN =
   /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i;
@@ -77,10 +80,11 @@ export function classifyKeyboardInteractive(
   const { prompts } = round;
   const texts = prompts.map((p) => p.prompt);
   const isFortiToken = texts.some((p) => FORTI_TOKEN_PATTERN.test(p));
-  const isPush =
-    !isFortiToken && texts.some((p) => PUSH_PROMPT_PATTERN.test(p));
+  const isPushFlow =
+    !isFortiToken &&
+    texts.some((p) => PUSH_MENU_PATTERN.test(p) || PUSH_PROMPT_PATTERN.test(p));
 
-  if (!isPush) {
+  if (!isPushFlow) {
     const totpIndex = prompts.findIndex((p) => TOTP_PATTERN.test(p.prompt));
     if (totpIndex !== -1) return { kind: "totp", promptIndex: totpIndex };
   }

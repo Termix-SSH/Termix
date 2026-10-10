@@ -195,7 +195,7 @@ describe("runProtocolAuthMigration", () => {
       username: "waits",
     });
     const [marker] = await database!.query<{ value: string }>(
-      sql`SELECT value FROM settings WHERE key = ${copiedMarker("locked")}`,
+      sql`SELECT value FROM settings WHERE ${sql.identifier("key")} = ${copiedMarker("locked")}`,
     );
     expect(marker.value).toBe("done");
   });

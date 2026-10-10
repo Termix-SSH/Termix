@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../../../database/repositories/factory.js", () => ({}));
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import {
   buildCatalog,
   catalogNamespaces,

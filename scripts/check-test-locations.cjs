@@ -2,7 +2,7 @@
 /**
  * Tests mirror the source tree in their own directories and never sit next
  * to the code they test. A *.test.ts(x) file may only live under
- * src/backend/tests/, src/ui/tests/, scripts/ or plugins/<id>/tests/.
+ * src/backend/tests/, src/ui/tests/ or scripts/.
  */
 
 const fs = require("node:fs");
@@ -20,12 +20,7 @@ const SKIP = new Set([
   ".turbo",
 ]);
 const TEST_FILE = /\.test\.tsx?$/;
-const ALLOWED = [
-  /^src\/backend\/tests\//,
-  /^src\/ui\/tests\//,
-  /^scripts\//,
-  /^plugins\/[^/]+\/tests\//,
-];
+const ALLOWED = [/^src\/backend\/tests\//, /^src\/ui\/tests\//, /^scripts\//];
 
 function walk(dir, root, out) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -50,7 +45,7 @@ function main() {
   const found = misplaced();
   if (found.length === 0) return;
   console.error(
-    "Tests belong in src/backend/tests/, src/ui/tests/, scripts/ or plugins/<id>/tests/, mirroring the source:",
+    "Tests belong in src/backend/tests/, src/ui/tests/ or scripts/, mirroring the source:",
   );
   for (const file of found) console.error(`  ${file}`);
   process.exit(1);

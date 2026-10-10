@@ -1,3 +1,4 @@
+import { useConfirm } from "@/components/surface/surface-scope";
 import { useHostSpeedSearch } from "./hooks/useHostSpeedSearch";
 import {
   useCallback,
@@ -49,6 +50,7 @@ import type { SSHHostData } from "@/types/index";
 import type {
   HostDensity,
   HostClickBehavior,
+  HostRowFields,
   HostTrayTrigger,
 } from "@/types/host-sidebar-preferences";
 import { resolveHostTabType } from "@/lib/host-connection-tabs";
@@ -92,6 +94,7 @@ export function SidebarTree({
   openOnDoubleClick = false,
   showFolderPaths = true,
   hostClickBehavior = "newTab",
+  rowFields,
 }: {
   children: (Host | HostFolder)[];
   onOpenTab: (
@@ -119,6 +122,7 @@ export function SidebarTree({
   /** When false, nested folders hide the parent-path breadcrumb before their name. */
   showFolderPaths?: boolean;
   hostClickBehavior?: HostClickBehavior;
+  rowFields?: HostRowFields;
 }) {
   const { t } = useTranslation();
   const hostSettingPlugins = usePluginHostSections();
@@ -179,10 +183,15 @@ export function SidebarTree({
   useEffect(() => {
     if (!selectionMode) setSelectedHostIds(new Set());
   }, [selectionMode, setSelectedHostIds]);
-  const [confirmDialog, setConfirmDialog] = useState<{
-    message: string;
-    onConfirm: () => Promise<void> | void;
-  } | null>(null);
+  const confirm = useConfirm();
+  const setConfirmDialog = (
+    request: { message: string; onConfirm: () => Promise<void> | void } | null,
+  ) => {
+    if (!request) return;
+    void confirm({ title: request.message }).then((ok) => {
+      if (ok) void request.onConfirm();
+    });
+  };
   const { draggedHostIds, setDraggedHostIds, rootDragOver, setRootDragOver } =
     useSidebarDragState();
   const [folderDialog, setFolderDialog] = useState<{
@@ -608,7 +617,7 @@ export function SidebarTree({
         pin: host.pin ?? false,
         notes: host.notes,
         // Key material is never sent to the frontend, so a cloned key-auth
-        // host would have authType "key" with no key — unusable. Reset to
+        // host would have authType "key" with no key, which is unusable. Reset to
         // password so the clone is in a connectable (editable) state.
         authType: host.authType === "key" ? "password" : host.authType,
         password: host.authType === "key" ? null : (host.password ?? null),
@@ -747,6 +756,8 @@ export function SidebarTree({
   // Tag pills are a separate flex row. Comfortable density adds the row plus
   // its gap; compact density pulls it upward by 2px but still needs a slot.
   const TAG_ROW_EXTRA = isCompactDensity ? 12.5 : 18.5;
+  // The username@ip line plus its gap.
+  const ADDRESS_ROW_SAVED = rowFields && !rowFields.showAddress ? 14.5 : 0;
   // showResourceBars:false simply drops RESOURCE_ROW_EXTRA from every row.
 
   const rowHeight = useCallback(
@@ -755,7 +766,7 @@ export function SidebarTree({
       if (!row) return FOLDER_ROW_HEIGHT;
       if (isFolder(row.item)) return FOLDER_ROW_HEIGHT;
       if (isCompactDensity) return 29;
-      const tagExtra = showTags && row.item.tags?.length ? TAG_ROW_EXTRA : 0;
+      const tagRowExtra = showTags && row.item.tags?.length ? TAG_ROW_EXTRA : 0;
       // The resource bars only render for an online host that reported CPU/RAM.
       // Reserving their height unconditionally left a gap under every offline
       // row. measureElement corrects any drift from live status this estimate
@@ -767,6 +778,7 @@ export function SidebarTree({
       )
         ? RESOURCE_ROW_EXTRA
         : 0;
+      const tagExtra = tagRowExtra - ADDRESS_ROW_SAVED;
       if (alwaysShowActions)
         return ALWAYS_ROW_HEIGHT + tagExtra + resourceExtra;
       const toggledOpen =
@@ -812,6 +824,7 @@ export function SidebarTree({
       ACTIONS_ONLY_ROW_HEIGHT,
       ACTIONS_ONLY_OPEN_ROW_HEIGHT,
       TAG_ROW_EXTRA,
+      ADDRESS_ROW_SAVED,
       showResourceBars,
       isCompactDensity,
     ],
@@ -881,7 +894,14 @@ export function SidebarTree({
     parentRef.current
       ?.querySelectorAll<HTMLElement>("[data-index]")
       .forEach((element) => virtualizer.measureElement(element));
-  }, [virtualizer, density, trayTrigger, showTags, showResourceBars]);
+  }, [
+    virtualizer,
+    density,
+    trayTrigger,
+    showTags,
+    showResourceBars,
+    ADDRESS_ROW_SAVED,
+  ]);
 
   useEffect(() => {
     if (speedSearch.open) speedSearch.inputRef.current?.focus();
@@ -1162,6 +1182,7 @@ export function SidebarTree({
                       hostClickBehavior={hostClickBehavior}
                       showResourceBars={showResourceBars}
                       showStatusStripes={showStatusStripes}
+                      rowFields={rowFields}
                       rowActions={rowActions}
                       arrangeMode={arrangeMode}
                       isDragging={draggedReorderKey === `host:${item.id}`}
@@ -1433,32 +1454,6 @@ export function SidebarTree({
             >
               {t("hosts.cancelSelection")}
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Confirm dialog */}
-      {confirmDialog && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-          <div className="bg-popover border border-border shadow-xl w-full max-w-xs flex flex-col gap-4 p-4">
-            <p className="text-sm text-foreground">{confirmDialog.message}</p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setConfirmDialog(null)}
-                className="px-3 py-1.5 text-xs border border-border text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-              >
-                {t("hosts.cancelBtn")}
-              </button>
-              <button
-                onClick={() => {
-                  confirmDialog.onConfirm();
-                  setConfirmDialog(null);
-                }}
-                className="px-3 py-1.5 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded transition-colors"
-              >
-                {t("hosts.deleteConfirmBtn")}
-              </button>
-            </div>
           </div>
         </div>
       )}

@@ -12,6 +12,21 @@
 
 import semver from "semver";
 import { isKnownCapability } from "./capabilities.js";
+import {
+  ENV_NAME_PATTERN,
+  MAX_ENV_DESCRIPTION_LENGTH,
+  pluginDocsUrl,
+  type PluginEnvVar,
+} from "./docs.js";
+
+export {
+  ENV_NAME_PATTERN,
+  MAX_ENV_DESCRIPTION_LENGTH,
+  pluginDocsPage,
+  pluginDocsUrl,
+  pluginEnvVars,
+  type PluginEnvVar,
+} from "./docs.js";
 
 /**
  * The plugin API this build implements. A minor bump adds to the API and
@@ -21,7 +36,7 @@ import { isKnownCapability } from "./capabilities.js";
  * "^1.2" needs 1.2 or later). engine.termix is checked against the core
  * version by the server.
  */
-export const PLUGIN_API_VERSION = "1.0.0";
+export const PLUGIN_API_VERSION = "1.2.0";
 
 /** The API major, the default engine.api for a new plugin. */
 export const SUPPORTED_PLUGIN_API_VERSION = String(
@@ -47,6 +62,63 @@ export function isTermixCompatible(
   if (!coreVersion || !semver.valid(semver.coerce(coreVersion))) return true;
   if (semver.validRange(range) === null) return false;
   return semver.satisfies(semver.coerce(coreVersion)!.version, range);
+}
+
+const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
+const YOUTUBE_HOSTS = new Set([
+  "youtube.com",
+  "www.youtube.com",
+  "m.youtube.com",
+  "youtu.be",
+  "youtube-nocookie.com",
+  "www.youtube-nocookie.com",
+]);
+
+export const MAX_FEATURES = 20;
+export const MAX_FEATURE_LENGTH = 160;
+
+/**
+ * The usable feature lines of a manifest or registry entry. Anything that is
+ * not a short non-empty string is dropped, so an index cannot flood the page.
+ */
+export function pluginFeatures(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (f): f is string =>
+        typeof f === "string" &&
+        f.trim().length > 0 &&
+        f.length <= MAX_FEATURE_LENGTH,
+    )
+    .map((f) => f.trim())
+    .slice(0, MAX_FEATURES);
+}
+
+/**
+ * The video id of a YouTube link, or null for anything else. Only the id is
+ * ever used, so a manifest can never point the embed at another site.
+ */
+export function youtubeVideoId(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  let url: URL;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" || url.username || url.password) return null;
+  const host = url.hostname.toLowerCase();
+  if (!YOUTUBE_HOSTS.has(host)) return null;
+
+  let id: string | null | undefined;
+  if (host === "youtu.be") {
+    id = url.pathname.slice(1);
+  } else if (url.pathname === "/watch") {
+    id = url.searchParams.get("v");
+  } else {
+    id = /^\/(?:embed|shorts|live)\/([^/]+)\/?$/.exec(url.pathname)?.[1];
+  }
+  return id && YOUTUBE_ID.test(id) ? id : null;
 }
 
 export const PLUGIN_CATEGORIES = [
@@ -81,6 +153,7 @@ export const RESERVED_PLUGIN_IDS: readonly string[] = [
   "termix",
   "plugin",
   "plugins",
+  "onboarding",
   "users",
   "system",
   "sdk",
@@ -276,11 +349,6 @@ export interface PluginSettingsField {
   /** Registered component id. Required when type is "custom". */
   component?: string;
   /**
-   * Deprecated and ignored: host defaults cover every host field now. Still
-   * accepted so an older manifest loads. Removed in 3.0.0.
-   */
-  defaultFrom?: string;
-  /**
    * Host scope only: whether the field can have a host default (server,
    * user or folder) that hosts follow until they set their own. On by
    * default for every field except secrets and json fields with
@@ -439,7 +507,8 @@ export interface PluginProtocolContribution {
   defaultPort?: number;
   /**
    * What the owner's login falls back to from the host's own SSH login
-   * when the protocol login leaves it empty.
+   * when the protocol login leaves it empty. The password only falls back
+   * while the host signs in to SSH with a password.
    */
   hostLoginFallback?: Array<"username" | "password">;
 }
@@ -543,6 +612,14 @@ export interface PluginManifest {
   repository?: string;
   category: string;
   icon?: string;
+  /** A YouTube link shown at the top of the plugin's page. */
+  video?: string;
+  /** Short lines listing what the plugin does, shown on its page. */
+  features?: string[];
+  /** Where the plugin's docs live. https only. */
+  docs?: string;
+  /** Environment variables the plugin reads. */
+  env?: PluginEnvVar[];
   engine: PluginEngine;
   /** Catalog capability ids. */
   capabilities: string[];
@@ -594,6 +671,10 @@ const ALLOWED_TOP_LEVEL = new Set([
   ...REQUIRED_TOP_LEVEL,
   "repository",
   "icon",
+  "video",
+  "features",
+  "docs",
+  "env",
   "dependencies",
   "optionalDependencies",
   "provides",
@@ -644,7 +725,6 @@ const ALLOWED_SETTINGS_FIELD = [
   "group",
   "component",
   "hidden",
-  "defaultFrom",
   "defaultable",
   "defaultLevels",
   "personal",
@@ -751,6 +831,18 @@ export function validateManifest(manifest: unknown): string[] {
 
   if ("repository" in m) requireString(m.repository, "repository", errors);
   if ("icon" in m) requireString(m.icon, "icon", errors);
+  if ("video" in m && youtubeVideoId(m.video) === null) {
+    errors.push(
+      `Field "video" must be a YouTube link such as https://www.youtube.com/watch?v=..., got: ${JSON.stringify(m.video)}`,
+    );
+  }
+  validateFeatures(m.features, errors);
+  if ("docs" in m && pluginDocsUrl(m.docs) === null) {
+    errors.push(
+      `Field "docs" must be an https URL, got: ${JSON.stringify(m.docs)}`,
+    );
+  }
+  validateEnv(m.env, errors);
   for (const field of ["backend", "frontend", "locales"] as const) {
     if (field in m && requireString(m[field], field, errors)) {
       requireRelativePath(m[field] as string, field, errors);
@@ -784,6 +876,76 @@ export function validateManifest(manifest: unknown): string[] {
   );
 
   return errors;
+}
+
+function validateFeatures(features: unknown, errors: string[]): void {
+  if (features === undefined) return;
+  if (!Array.isArray(features)) {
+    errors.push('Field "features" must be an array of strings');
+    return;
+  }
+  if (features.length > MAX_FEATURES) {
+    errors.push(`Field "features" may list at most ${MAX_FEATURES} items`);
+  }
+  features.forEach((feature, i) => {
+    if (
+      typeof feature !== "string" ||
+      feature.trim().length === 0 ||
+      feature.length > MAX_FEATURE_LENGTH
+    ) {
+      errors.push(
+        `Field "features[${i}]" must be a non-empty string of at most ${MAX_FEATURE_LENGTH} characters`,
+      );
+    }
+  });
+}
+
+function validateEnv(env: unknown, errors: string[]): void {
+  if (env === undefined) return;
+  if (!Array.isArray(env)) {
+    errors.push('Field "env" must be an array');
+    return;
+  }
+  const seen = new Set<string>();
+  env.forEach((entry, i) => {
+    const where = `env[${i}]`;
+    if (!isPlainObject(entry)) {
+      errors.push(`Field "${where}" must be an object`);
+      return;
+    }
+    rejectUnknown(
+      entry,
+      ["name", "description", "default", "required", "secret"],
+      where,
+      errors,
+    );
+    if (typeof entry.name !== "string" || !ENV_NAME_PATTERN.test(entry.name)) {
+      errors.push(
+        `Field "${where}.name" must be an uppercase name like MY_PLUGIN_URL, got: ${JSON.stringify(entry.name)}`,
+      );
+    } else if (seen.has(entry.name)) {
+      errors.push(`Field "${where}.name" repeats ${entry.name}`);
+    } else {
+      seen.add(entry.name);
+    }
+    if (
+      typeof entry.description !== "string" ||
+      entry.description.trim().length === 0 ||
+      entry.description.length > MAX_ENV_DESCRIPTION_LENGTH
+    ) {
+      errors.push(
+        `Field "${where}.description" must be a non-empty string of at most ${MAX_ENV_DESCRIPTION_LENGTH} characters`,
+      );
+    }
+    if ("default" in entry && typeof entry.default !== "string") {
+      errors.push(`Field "${where}.default" must be a string`);
+    }
+    for (const flag of ["required", "secret"] as const) {
+      if (flag in entry && typeof entry[flag] !== "boolean") {
+        errors.push(`Field "${where}.${flag}" must be true or false`);
+      }
+    }
+  });
 }
 
 function validateAuthor(author: unknown, errors: string[]): void {
@@ -1614,9 +1776,6 @@ function validateSettings(settings: unknown, errors: string[]): void {
     host.fields.forEach((raw, index) => {
       if (!isPlainObject(raw)) return;
       const fieldAt = `${at}.fields[${index}]`;
-      if ("defaultFrom" in raw && typeof raw.defaultFrom !== "string") {
-        errors.push(`${fieldAt}.defaultFrom must be a string`);
-      }
       for (const flag of ["defaultable", "personal"]) {
         if (flag in raw && typeof raw[flag] !== "boolean") {
           errors.push(`${fieldAt}.${flag} must be a boolean`);
@@ -1670,7 +1829,6 @@ function validateSettings(settings: unknown, errors: string[]): void {
     fields.forEach((raw, index) => {
       if (!isPlainObject(raw)) return;
       for (const key of [
-        "defaultFrom",
         "defaultable",
         "defaultLevels",
         "personal",

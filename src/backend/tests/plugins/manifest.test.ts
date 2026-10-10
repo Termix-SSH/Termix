@@ -12,7 +12,12 @@ import {
   validateManifest,
   SUPPORTED_PLUGIN_API_VERSION,
   isTermixCompatible,
+  youtubeVideoId,
+  pluginFeatures,
+  pluginDocsUrl,
+  pluginEnvVars,
 } from "../../plugins/manifest.js";
+import { pluginDocsPage } from "@termix-ssh/plugin-sdk/docs";
 
 function base(overrides: Record<string, unknown> = {}) {
   return {
@@ -119,8 +124,8 @@ describe("manifest v2 validation", () => {
   it("checks engine.termix against the core version", () => {
     expect(isTermixCompatible(">=2.9.0", "2.9.0")).toBe(true);
     expect(isTermixCompatible(">=2.9.0", "2.9.0-beta.3")).toBe(true);
-    expect(isTermixCompatible(">=3.0.0", "2.9.1")).toBe(false);
-    expect(isTermixCompatible(">=3.0.0", null)).toBe(true);
+    expect(isTermixCompatible(">=26.10.0", "2.9.1")).toBe(false);
+    expect(isTermixCompatible(">=26.10.0", null)).toBe(true);
   });
 
   it("fills in the entry point defaults", () => {
@@ -850,5 +855,150 @@ describe("contributes.protocols", () => {
     expect(errors.join("\n")).toMatch(/defaultPort must be a port number/);
     expect(errors.join("\n")).toMatch(/hostLoginFallback/);
     expect(errors.join("\n")).toMatch(/extra/);
+  });
+});
+
+describe("manifest video", () => {
+  it("accepts YouTube links", () => {
+    for (const video of [
+      "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "https://youtu.be/dQw4w9WgXcQ",
+      "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      "https://youtube.com/shorts/dQw4w9WgXcQ",
+    ]) {
+      expect(validateManifest(base({ video }))).toEqual([]);
+    }
+  });
+
+  it("rejects anything that is not a YouTube video", () => {
+    for (const video of [
+      "https://evil.example/watch?v=dQw4w9WgXcQ",
+      "http://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "https://www.youtube.com.evil.example/watch?v=dQw4w9WgXcQ",
+      "https://user@www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "https://www.youtube.com/watch?v=short",
+      "https://www.youtube.com/channel/UC123",
+      "javascript:alert(1)",
+      "",
+      42,
+    ]) {
+      expect(validateManifest(base({ video }))).toEqual([
+        expect.stringContaining('Field "video" must be a YouTube link'),
+      ]);
+    }
+  });
+});
+
+describe("manifest features", () => {
+  it("accepts a short list of lines", () => {
+    expect(
+      validateManifest(base({ features: ["Start containers", "Read logs"] })),
+    ).toEqual([]);
+  });
+
+  it("rejects bad lists", () => {
+    expect(validateManifest(base({ features: "Logs" }))).toEqual([
+      'Field "features" must be an array of strings',
+    ]);
+    expect(validateManifest(base({ features: ["ok", "", 4] }))).toHaveLength(2);
+    expect(
+      validateManifest(base({ features: ["x".repeat(161)] })).join(),
+    ).toMatch(/features\[0\]/);
+    expect(
+      validateManifest(base({ features: Array(21).fill("x") })).join(),
+    ).toMatch(/at most 20/);
+  });
+});
+
+describe("pluginFeatures", () => {
+  it("keeps only usable lines", () => {
+    expect(pluginFeatures([" Logs ", "", 3, "x".repeat(161), "Stats"])).toEqual(
+      ["Logs", "Stats"],
+    );
+    expect(pluginFeatures(Array(30).fill("x"))).toHaveLength(20);
+    expect(pluginFeatures("Logs")).toEqual([]);
+  });
+});
+
+describe("youtubeVideoId", () => {
+  it("returns only the id", () => {
+    expect(
+      youtubeVideoId("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42"),
+    ).toBe("dQw4w9WgXcQ");
+    expect(youtubeVideoId("https://youtu.be/dQw4w9WgXcQ?si=abc")).toBe(
+      "dQw4w9WgXcQ",
+    );
+    expect(youtubeVideoId("https://youtu.be/../../x")).toBeNull();
+    expect(youtubeVideoId(undefined)).toBeNull();
+  });
+});
+
+describe("docs and env fields", () => {
+  it("accepts an https docs link and well formed env entries", () => {
+    expect(
+      validateManifest(
+        base({
+          docs: "https://docs.termix.site/plugins/sample-plugin",
+          env: [
+            { name: "SAMPLE_URL", description: "Where to connect." },
+            {
+              name: "SAMPLE_TOKEN",
+              description: "Token.",
+              secret: true,
+              required: true,
+              default: "",
+            },
+          ],
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("refuses a docs link that is not https", () => {
+    const errors = validateManifest(base({ docs: "http://example.com" }));
+    expect(errors.join(" ")).toMatch(/"docs" must be an https URL/);
+  });
+
+  it("refuses bad env entries", () => {
+    const errors = validateManifest(
+      base({
+        env: [
+          { name: "lower_case", description: "x" },
+          { name: "DUP", description: "x" },
+          { name: "DUP", description: "x" },
+          { name: "NO_DESC", description: "" },
+          { name: "EXTRA", description: "x", other: 1 },
+          { name: "FLAG", description: "x", secret: "yes" },
+        ],
+      }),
+    ).join(" ");
+    expect(errors).toMatch(/env\[0\]\.name/);
+    expect(errors).toMatch(/env\[2\]\.name" repeats DUP/);
+    expect(errors).toMatch(/env\[3\]\.description/);
+    expect(errors).toMatch(/Unknown field "other" in env\[4\]/);
+    expect(errors).toMatch(/env\[5\]\.secret/);
+  });
+
+  it("reads docs links and env entries leniently", () => {
+    expect(pluginDocsUrl("https://docs.termix.site/plugins/x/")).toBe(
+      "https://docs.termix.site/plugins/x",
+    );
+    expect(pluginDocsUrl("file:///etc/passwd")).toBeNull();
+    expect(pluginDocsUrl(42)).toBeNull();
+    expect(
+      pluginEnvVars([
+        { name: "OK_VAR", description: "fine" },
+        { name: "bad", description: "x" },
+        "nope",
+      ]),
+    ).toEqual([{ name: "OK_VAR", description: "fine" }]);
+  });
+
+  it("joins pages and anchors onto a docs link", () => {
+    const base = "https://docs.termix.site/plugins/docker";
+    expect(pluginDocsPage(base)).toBe(base);
+    expect(pluginDocsPage(base, "/setup/")).toBe(`${base}/setup`);
+    expect(pluginDocsPage(base, "setup", "#ports")).toBe(`${base}/setup#ports`);
+    expect(pluginDocsPage(base, "", "top")).toBe(`${base}#top`);
   });
 });

@@ -2,7 +2,7 @@
  * Credential sidebar preferences model. Shared by the frontend sidebar and
  * the backend preferences endpoint (no framework imports, mirrors
  * ./host-sidebar-preferences.ts's dependency-free convention). Independent
- * from HostSidebarPreferences by design — a separate parallel system, not a
+ * from HostSidebarPreferences by design, a separate parallel system, not a
  * shared blob, matching how credentialSortKey/credentialFilterState were
  * already independently namespaced from hostSortKey/etc. before this port.
  *
@@ -32,7 +32,35 @@ export interface CredentialSidebarFilterState {
   tags: string[];
 }
 
-export interface CredentialSidebarDisplayPreferences {
+/** Which parts of a credential row are shown. */
+export interface CredentialRowFields {
+  showUsername: boolean;
+  /** The "3h" count of hosts using it. */
+  showUsageCount: boolean;
+  showTypeBadge: boolean;
+  showPinIcon: boolean;
+  showSharedBadge: boolean;
+}
+
+export const CREDENTIAL_ROW_FIELD_KEYS: (keyof CredentialRowFields)[] = [
+  "showUsername",
+  "showUsageCount",
+  "showTypeBadge",
+  "showPinIcon",
+  "showSharedBadge",
+];
+
+export function defaultCredentialRowFields(): CredentialRowFields {
+  return {
+    showUsername: true,
+    showUsageCount: true,
+    showTypeBadge: true,
+    showPinIcon: true,
+    showSharedBadge: true,
+  };
+}
+
+export interface CredentialSidebarDisplayPreferences extends CredentialRowFields {
   density: CredentialDensity;
   showTags: boolean;
   trayTrigger: CredentialTrayTrigger;
@@ -76,6 +104,7 @@ export function defaultCredentialSidebarPreferences(): CredentialSidebarPreferen
       density: "comfortable",
       showTags: true,
       trayTrigger: "always",
+      ...defaultCredentialRowFields(),
     },
   };
 }
@@ -114,7 +143,15 @@ export function sanitizeCredentialSidebarPreferences(
   const openFolders = sanitizeStringArray(obj.openFolders);
 
   const displayObj = (obj.display ?? {}) as Record<string, unknown>;
+  const rowFields = {} as CredentialRowFields;
+  for (const key of CREDENTIAL_ROW_FIELD_KEYS) {
+    rowFields[key] =
+      typeof displayObj[key] === "boolean"
+        ? (displayObj[key] as boolean)
+        : defaults.display[key];
+  }
   const display: CredentialSidebarDisplayPreferences = {
+    ...rowFields,
     density: DENSITIES.includes(displayObj.density as CredentialDensity)
       ? (displayObj.density as CredentialDensity)
       : defaults.display.density,

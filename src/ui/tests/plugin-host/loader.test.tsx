@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Puzzle } from "lucide-react";
-import type { FrontendModule, TermixApp } from "@termix/plugin-sdk/frontend";
+import type {
+  FrontendModule,
+  TermixApp,
+} from "@termix-ssh/plugin-sdk/frontend";
 import type { PluginSummary } from "@/api/plugins-api";
 import {
   configurePluginLoader,
@@ -21,6 +24,7 @@ import {
   visibleRailItems,
 } from "@/sidebar/rail-items";
 import { getTabType, resetTabTypes } from "@/shell/tab-registry";
+import i18n from "@/i18n/i18n";
 
 function summary(
   id: string,
@@ -258,6 +262,43 @@ describe("plugin loader", () => {
     await startPreLoginPlugins();
 
     expect(isPluginFrontendActive("alpha")).toBe(true);
+  });
+
+  it("loads plugin strings on guest pages", async () => {
+    modules.guest = railPlugin("guest");
+    plugins = [summary("guest", { locales: ["en"] })];
+    configurePluginLoader({
+      fetchPlugins: async () => plugins,
+      importFrontend: async (entry) => modules[entry.id],
+      loadLocale: async () => ({ hello: "Hello guest" }),
+      injectCss: () => null,
+    });
+
+    await startPluginRuntime({ guest: true });
+    await i18n.loadNamespaces("guest");
+    expect(i18n.t("hello", { ns: "guest" })).toBe("Hello guest");
+  });
+
+  it("does not fetch strings for a disabled plugin", async () => {
+    const loadLocale = vi.fn(async () => null);
+    modules.on = railPlugin("on");
+    plugins = [
+      summary("on", { locales: ["en"] }),
+      summary("off", { enabled: false, locales: ["en"] }),
+    ];
+    configurePluginLoader({
+      fetchPlugins: async () => plugins,
+      importFrontend: async (entry) => modules[entry.id],
+      loadLocale,
+      injectCss: () => null,
+    });
+
+    await syncPlugins();
+    const loaded = loadLocale.mock.calls.map(
+      (call) => (call as unknown as [PluginSummary])[0].id,
+    );
+    expect(loaded).toContain("on");
+    expect(loaded).not.toContain("off");
   });
 
   it("settles even when the plugin list cannot be fetched", async () => {

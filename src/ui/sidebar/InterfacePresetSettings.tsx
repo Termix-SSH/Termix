@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useConfirm } from "@/components/surface/surface-scope";
 import {
   Check,
   Gauge,
@@ -9,14 +10,6 @@ import {
   Wrench,
 } from "lucide-react";
 import { Button } from "@/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/dialog";
 import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import { applyPresetSideEffects } from "@/lib/apply-ui-preset";
 import { usePluginStore } from "@/plugin-host/plugin-store";
@@ -45,10 +38,7 @@ export function InterfacePresetSettings({
 }) {
   const { t } = useTranslation();
   const ctx = useUiPreferencesContext();
-  const [pendingPreset, setPendingPreset] = useState<Exclude<
-    UiPreset,
-    "custom"
-  > | null>(null);
+  const confirm = useConfirm();
   const [applying, setApplying] = useState(false);
 
   // The chosen preset stays highlighted even once knobs diverge from it --
@@ -87,18 +77,25 @@ export function InterfacePresetSettings({
 
   if (!ctx) return null;
 
-  async function confirmPreset() {
-    if (!pendingPreset) return;
+  async function choosePreset(preset: Exclude<UiPreset, "custom">) {
+    const ok = await confirm({
+      title: t("newUi.sidebar.userProfile.presetConfirmTitle", {
+        preset: t(`newUi.sidebar.userProfile.preset_${preset}`),
+      }),
+      description: t("newUi.sidebar.userProfile.presetConfirmDesc"),
+      confirmLabel: t("newUi.sidebar.userProfile.presetConfirmApply"),
+      destructive: false,
+    });
+    if (!ok) return;
     setApplying(true);
     try {
-      ctx.setPreset(pendingPreset);
+      ctx.setPreset(preset);
       // Picking a preset is a deliberate reset, so any knob the user had
       // pinned goes back to following the preset.
       ctx.clearAllOverrides();
-      await applyPresetSideEffects(pendingPreset);
+      await applyPresetSideEffects(preset);
     } finally {
       setApplying(false);
-      setPendingPreset(null);
     }
   }
 
@@ -118,7 +115,8 @@ export function InterfacePresetSettings({
             <button
               key={preset}
               type="button"
-              onClick={() => setPendingPreset(preset)}
+              disabled={applying}
+              onClick={() => void choosePreset(preset)}
               aria-pressed={active}
               className={`flex w-full items-start gap-2 border p-2 text-left transition-colors ${
                 active
@@ -203,44 +201,6 @@ export function InterfacePresetSettings({
           </Button>
         </div>
       )}
-
-      <Dialog
-        open={!!pendingPreset}
-        onOpenChange={(open) => !open && setPendingPreset(null)}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold">
-              {t("newUi.sidebar.userProfile.presetConfirmTitle", {
-                preset: pendingPreset
-                  ? t(`newUi.sidebar.userProfile.preset_${pendingPreset}`)
-                  : "",
-              })}
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              {t("newUi.sidebar.userProfile.presetConfirmDesc")}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPendingPreset(null)}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-              disabled={applying}
-              onClick={confirmPreset}
-            >
-              {t("newUi.sidebar.userProfile.presetConfirmApply")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

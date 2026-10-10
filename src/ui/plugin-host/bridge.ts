@@ -15,7 +15,7 @@ import {
   type PluginHostRecord,
   type SettingsScope,
   type SettingsState,
-} from "@termix/plugin-sdk/frontend";
+} from "@termix-ssh/plugin-sdk/frontend";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useTheme } from "@/components/theme-provider";
 import { createPluginApi, pluginApiFor } from "@/lib/plugin-transport";
@@ -23,6 +23,7 @@ import {
   getPluginAdminSettings,
   getPluginHostSettings,
   getPluginUserSettings,
+  PLUGIN_SETTINGS_CHANGED_EVENT,
   updatePluginAdminSettings,
   updatePluginHostSettings,
   updatePluginUserSettings,
@@ -38,6 +39,7 @@ import {
 } from "@/api/open-tabs-api";
 import { runKeybindingAction } from "@/shell/keybinding-registry";
 import { usePluginScope } from "./scope";
+import { usePluginDocsUrl } from "@/components/docs-link";
 import { knownPluginIds, usePluginStore } from "./plugin-store";
 import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import type { UiPluginPresets } from "@/types/ui-preferences";
@@ -120,6 +122,12 @@ function loadCurrentUser() {
       });
   }
   return currentUser;
+}
+
+interface SettingsChangeDetail {
+  pluginId: string;
+  scope: SettingsScope;
+  hostId?: number;
 }
 
 const SETTINGS_READERS: Record<
@@ -218,6 +226,10 @@ export const pluginHostBridge: PluginHostBridge = {
     return pluginId;
   },
 
+  useDocsUrl(pluginId, page, anchor) {
+    return usePluginDocsUrl(pluginId, page, anchor);
+  },
+
   useTranslation(pluginId) {
     const { t, i18n } = useI18nTranslation(pluginId);
     return {
@@ -245,15 +257,26 @@ export const pluginHostBridge: PluginHostBridge = {
     useEffect(() => {
       let cancelled = false;
       if (scope === "host" && !Number.isFinite(numericHostId)) return;
-      SETTINGS_READERS[scope](pluginId, numericHostId)
-        .then((values) => {
-          if (!cancelled) setState({ values, loaded: true });
-        })
-        .catch(() => {
-          if (!cancelled) setState((prev) => ({ ...prev, loaded: true }));
-        });
+      const read = () =>
+        SETTINGS_READERS[scope](pluginId, numericHostId)
+          .then((values) => {
+            if (!cancelled) setState({ values, loaded: true });
+          })
+          .catch(() => {
+            if (!cancelled) setState((prev) => ({ ...prev, loaded: true }));
+          });
+      void read();
+      // Saved from the settings page, which keeps its own copy of the form.
+      const onChanged = (event: Event) => {
+        const detail = (event as CustomEvent<SettingsChangeDetail>).detail;
+        if (detail?.pluginId !== pluginId || detail.scope !== scope) return;
+        if (scope === "host" && detail.hostId !== numericHostId) return;
+        void read();
+      };
+      window.addEventListener(PLUGIN_SETTINGS_CHANGED_EVENT, onChanged);
       return () => {
         cancelled = true;
+        window.removeEventListener(PLUGIN_SETTINGS_CHANGED_EVENT, onChanged);
       };
     }, [pluginId, scope, numericHostId]);
 

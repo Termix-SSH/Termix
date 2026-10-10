@@ -22,7 +22,7 @@ vi.mock("../../utils/audit-logger.js", () => ({
 
 import { createPluginContext, createPluginHandle } from "../../plugins/ctx.js";
 import { runAsActor } from "../../plugins/actor.js";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 
 function contextFor(pluginId: string) {
   const manifest = {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Bell, Boxes } from "lucide-react";
 import { AppRail } from "../../sidebar/AppRail";
@@ -13,6 +13,11 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
+vi.mock("@/main-axios", () => ({
+  getUserPreferences: vi.fn(async () => ({ storageMode: "local" })),
+  saveUserPreferences: vi.fn(async () => undefined),
+}));
+
 vi.mock("@/hooks/use-permissions", () => ({
   usePermissions: () => ({ has: () => true, loaded: true }),
 }));
@@ -20,6 +25,7 @@ vi.mock("@/hooks/use-permissions", () => ({
 afterEach(() => {
   resetRegisteredRailItems();
   localStorage.clear();
+  delete (window as { IS_ELECTRON?: boolean }).IS_ELECTRON;
 });
 
 function renderRail(onRailClick = vi.fn()) {
@@ -30,6 +36,8 @@ function renderRail(onRailClick = vi.fn()) {
       username="alice"
       isAdmin={false}
       onRailClick={onRailClick}
+      onOpenSettings={vi.fn()}
+      onOpenNavigationSettings={vi.fn()}
       onLogout={vi.fn()}
     />,
   );
@@ -37,6 +45,15 @@ function renderRail(onRailClick = vi.fn()) {
 }
 
 describe("AppRail", () => {
+  it("shows logout in the browser but not on the desktop", () => {
+    renderRail();
+    expect(screen.getByLabelText("common.logout")).toBeTruthy();
+    cleanup();
+    (window as { IS_ELECTRON?: boolean }).IS_ELECTRON = true;
+    renderRail();
+    expect(screen.queryByLabelText("common.logout")).toBeNull();
+  });
+
   it("puts a footer item above the profile with its badge", async () => {
     registerRailItem({
       id: "inbox",
@@ -55,7 +72,7 @@ describe("AppRail", () => {
     const onRailClick = renderRail();
 
     const inbox = screen.getByTitle("test.inbox");
-    const profile = screen.getAllByTitle("nav.userProfile")[0];
+    const profile = screen.getAllByTitle("nav.openSettings")[0];
     const boxes = screen.getByTitle("test.boxes");
     // Footer items render after the main list and before the profile.
     expect(
@@ -81,6 +98,75 @@ describe("AppRail", () => {
     });
     renderRail();
     expect(screen.queryByTitle("test.inbox")).toBeNull();
+  });
+
+  it("groups items into bands with a labelled divider", () => {
+    registerRailItem({
+      id: "fleets",
+      icon: Boxes,
+      labelKey: "test.fleets",
+      group: "objects",
+      pluginId: "demo",
+    });
+    renderRail();
+    expect(screen.getByText("nav.group.tools")).toBeTruthy();
+    const fleets = screen.getByTitle("test.fleets");
+    const connections = screen.getByTitle("nav.connections");
+    expect(
+      fleets.compareDocumentPosition(connections) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("lists hidden items and brings one back", async () => {
+    localStorage.setItem("hiddenRailTabs", JSON.stringify(["connections"]));
+    renderRail();
+    expect(screen.queryByTitle("nav.connections")).toBeNull();
+    await userEvent.click(screen.getByTitle("nav.hiddenCount"));
+    await userEvent.click(screen.getByTitle("nav.showInRail"));
+    expect(JSON.parse(localStorage.getItem("hiddenRailTabs")!)).toEqual([]);
+    expect(await screen.findByTitle("nav.connections")).toBeTruthy();
+  });
+
+  it("opens plain settings from the account button", async () => {
+    const onOpenSettings = vi.fn();
+    const onOpenNavigationSettings = vi.fn();
+    render(
+      <AppRail
+        railView="hosts"
+        sidebarOpen={false}
+        username="alice"
+        isAdmin
+        onRailClick={vi.fn()}
+        onOpenSettings={onOpenSettings}
+        onOpenNavigationSettings={onOpenNavigationSettings}
+        onLogout={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByLabelText("nav.openSettings"));
+    expect(onOpenSettings).toHaveBeenCalled();
+    expect(onOpenNavigationSettings).not.toHaveBeenCalled();
+  });
+
+  it("opens the navigation settings from the rail menu", async () => {
+    const onOpenSettings = vi.fn();
+    const onOpenNavigationSettings = vi.fn();
+    render(
+      <AppRail
+        railView="hosts"
+        sidebarOpen={false}
+        username="alice"
+        isAdmin
+        onRailClick={vi.fn()}
+        onOpenSettings={onOpenSettings}
+        onOpenNavigationSettings={onOpenNavigationSettings}
+        onLogout={vi.fn()}
+      />,
+    );
+    fireEvent.contextMenu(screen.getByTitle("nav.connections"));
+    await userEvent.click(screen.getByText("nav.openSettings"));
+    expect(onOpenNavigationSettings).toHaveBeenCalled();
+    expect(onOpenSettings).not.toHaveBeenCalled();
   });
 });
 

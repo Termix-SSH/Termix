@@ -6,7 +6,8 @@ import {
   isValidPackageName,
   buildSudoCommand,
   parseUpgradable,
-} from "@termix/plugin-sdk/host-commands";
+  execCommand,
+} from "@termix-ssh/plugin-sdk/host-commands";
 
 describe("parsePlatformProbe", () => {
   it("prefers dnf over yum when both are present", () => {
@@ -112,5 +113,15 @@ describe("parseUpgradable", () => {
 
   it("returns an empty list for no package manager", () => {
     expect(parseUpgradable(null, "anything")).toEqual([]);
+  });
+});
+
+describe("execCommand", () => {
+  it("leaves the command out of the timeout error", async () => {
+    const client = { exec: () => {} } as never;
+    const command = buildSudoCommand("apt update", "hunter2");
+    await expect(execCommand(client, command, 5)).rejects.toThrow(
+      /^Command timeout after 5ms$/,
+    );
   });
 });

@@ -28,6 +28,7 @@ import { withPluginScope } from "@/plugin-host/scope";
 
 const getPlugins = vi.fn();
 vi.mock("@/api/plugins-api", () => ({
+  PLUGINS_CHANGED_EVENT: "termix:plugins-changed",
   getPlugins: () => getPlugins(),
 }));
 
@@ -297,7 +298,7 @@ describe("HostPluginSections", () => {
       />,
     );
 
-    fireEvent.click(screen.getAllByRole("button")[0]);
+    fireEvent.click(screen.getAllByRole("switch")[0]);
 
     expect(setValue).toHaveBeenCalledWith("docker", "enableDocker", true);
   });
@@ -373,7 +374,7 @@ describe("HostFeatureFields", () => {
     expect(screen.getAllByText("Docker")).toHaveLength(1);
     expect(screen.queryByText("Warpgate")).toBeNull();
 
-    fireEvent.click(screen.getAllByRole("button")[0]);
+    fireEvent.click(screen.getAllByRole("switch")[0]);
     const patch = updateForm.mock.calls[0][0];
     expect(patch(form).pluginSettings).toEqual({
       docker: { enableDocker: true },

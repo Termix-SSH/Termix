@@ -1,3 +1,4 @@
+import { registerHostProtocol } from "@/sidebar/host-protocols";
 import {
   act,
   cleanup,
@@ -43,7 +44,11 @@ vi.mock("@/main-axios", () => ({
   getHostPassword: vi.fn(),
 }));
 
-import { HostItem } from "../../../../sidebar/tree/HostItem/HostItem";
+import {
+  HostItem,
+  formatHostAddress,
+} from "../../../../sidebar/tree/HostItem/HostItem";
+import { defaultHostRowFields } from "@/types/host-sidebar-preferences";
 
 const baseHost: Host = {
   id: "1",
@@ -355,4 +360,85 @@ describe("HostItem click behavior", () => {
       dispose();
     }
   });
+});
+
+describe("HostItem row fields", () => {
+  function renderWith(
+    fields: Partial<ReturnType<typeof defaultHostRowFields>>,
+  ) {
+    return render(
+      <HostItem
+        host={baseHost}
+        onOpenTab={noop}
+        onEditHost={noop}
+        onDelete={noop}
+        onDuplicate={noop}
+        density="comfortable"
+        rowFields={{ ...defaultHostRowFields(), ...fields }}
+      />,
+    );
+  }
+
+  it("shows user@address by default", () => {
+    renderWith({});
+    expect(screen.getByText("root@10.0.0.5")).toBeTruthy();
+  });
+
+  it("hides the address when turned off", () => {
+    renderWith({ showAddress: false });
+    expect(screen.queryByText(/10\.0\.0\.5/)).toBeNull();
+  });
+
+  it("hides the pin icon when turned off", () => {
+    renderWith({ showPinIcon: false });
+    expect(document.querySelector(".lucide-pin")).toBeNull();
+  });
+
+  it("formats the address from the chosen parts", () => {
+    expect(
+      formatHostAddress(baseHost, { showUsername: false, showPort: true }),
+    ).toBe("10.0.0.5:22");
+    expect(
+      formatHostAddress(baseHost, { showUsername: true, showPort: false }),
+    ).toBe("root@10.0.0.5");
+  });
+});
+
+it("uses the enabled protocol username for non-SSH hosts", () => {
+  const dispose = registerHostProtocol({
+    id: "rdp",
+    pluginId: "remote-desktop",
+    settingKey: "enableRdp",
+    defaultPort: 3389,
+    titleKey: "rdp",
+    icon: () => null,
+  });
+  try {
+    const host: Host = {
+      ...baseHost,
+      enableSsh: false,
+      pluginSettings: { "remote-desktop": { enableRdp: true } },
+      protocolAuth: {
+        rdp: {
+          authType: "credential",
+          credentialId: 6,
+          username: "Administrator",
+          fields: {},
+        },
+      },
+    };
+    const fields = { showUsername: true, showPort: false };
+    expect(formatHostAddress(host, fields)).toBe("Administrator@10.0.0.5");
+    expect(formatHostAddress({ ...host, enableSsh: true }, fields)).toBe(
+      "root@10.0.0.5",
+    );
+    expect(formatHostAddress({ ...host, protocolAuth: {} }, fields)).toBe(
+      "10.0.0.5",
+    );
+    expect(formatHostAddress(host, { ...fields, showUsername: false })).toBe(
+      "10.0.0.5",
+    );
+  } finally {
+    dispose();
+  }
 });

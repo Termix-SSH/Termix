@@ -8,7 +8,7 @@
 
 import crypto from "crypto";
 import { and, eq, getTableColumns, type SQL } from "drizzle-orm";
-import type { SyncRow } from "@termix/plugin-sdk/backend";
+import type { SyncRow } from "@termix-ssh/plugin-sdk/backend";
 import { createCurrentRepositoryContext } from "../database/repositories/factory.js";
 import { DataCrypto } from "../utils/data-crypto.js";
 import { SystemCrypto } from "../utils/system-crypto.js";
@@ -62,12 +62,6 @@ export function locate(
   const table = tableOf(entity);
   if (entity.singleton) return eq(ownerColumn(entity), userId);
   return and(eq(table.syncId, syncId), eq(ownerColumn(entity), userId))!;
-}
-
-export function rowSyncId(entity: RegisteredSyncEntity, row: SyncRow): string {
-  return entity.singleton
-    ? singletonSyncId(entity.type)
-    : (row.syncId as string);
 }
 
 let hashKey: Buffer | null = null;

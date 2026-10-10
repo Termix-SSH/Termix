@@ -30,12 +30,15 @@ type ExternalIdentity = Extract<VerifiedIdentity, { kind: "external" }>;
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
-/** SSO auto-provisioning: the admin setting, or OIDC_ALLOW_REGISTRATION. */
+/** The admin setting that turns external auto-provisioning on. */
+export const EXTERNAL_AUTO_PROVISION_KEY = "external_auto_provision";
+
+/** SSO auto-provisioning: the admin setting, or EXTERNAL_ALLOW_REGISTRATION. */
 async function isExternalProvisioningAllowed(): Promise<boolean> {
   try {
     if (
       await createCurrentSettingsRepository().getBoolean(
-        "oidc_auto_provision",
+        EXTERNAL_AUTO_PROVISION_KEY,
         false,
       )
     ) {
@@ -44,9 +47,12 @@ async function isExternalProvisioningAllowed(): Promise<boolean> {
   } catch {
     // fall through to the environment
   }
-  return (
-    (process.env.OIDC_ALLOW_REGISTRATION || "").trim().toLowerCase() === "true"
-  );
+  // OIDC_ALLOW_REGISTRATION is the 2.9 name, still read for one release.
+  const allow =
+    process.env.EXTERNAL_ALLOW_REGISTRATION ??
+    process.env.OIDC_ALLOW_REGISTRATION ??
+    "";
+  return allow.trim().toLowerCase() === "true";
 }
 
 /**
@@ -150,74 +156,12 @@ async function applyRoleSync(
 async function findLinkedUser(
   identity: ExternalIdentity,
 ): Promise<UserRecord | null> {
-  const identities = createCurrentUserAuthRepository();
-  const users = createCurrentUserRepository();
-
-  const linked = await identities.findIdentity(
+  const linked = await createCurrentUserAuthRepository().findIdentity(
     identity.provider,
     identity.subject,
   );
-  if (linked) {
-    const user = await users.findById(linked.userId);
-    if (user) return user;
-  }
-
-  // Accounts from before user_external_identities matched on the raw
-  // identifier column; link them the first time they sign in. The column is
-  // not scoped to a provider, so only an SSO account that has no link yet,
-  // from the same provider when both say which, can be claimed this way.
-  if (identity.legacyIdentifier) {
-    const legacy = await users.findByExternalIdentifier(
-      identity.legacyIdentifier,
-    );
-    if (legacy && (await mayClaimLegacyAccount(legacy, identity))) {
-      await identities.linkIdentity({
-        userId: legacy.id,
-        providerId: identity.provider,
-        subject: identity.subject,
-        email: identity.email,
-      });
-      return legacy;
-    }
-  }
-  return null;
-}
-
-async function mayClaimLegacyAccount(
-  legacy: UserRecord,
-  identity: ExternalIdentity,
-): Promise<boolean> {
-  if (!legacy.isOidc) return false;
-  if (
-    legacy.ssoProviderId != null &&
-    identity.ssoProviderId != null &&
-    legacy.ssoProviderId !== identity.ssoProviderId
-  ) {
-    return false;
-  }
-  const links = await createCurrentUserAuthRepository().listIdentitiesForUser(
-    legacy.id,
-  );
-  // An unscoped legacy subject may already have been migrated under a
-  // different provider. Creating another account loses access to the old
-  // data; claiming it automatically could cross an identity-provider boundary.
-  if (
-    legacy.ssoProviderId == null &&
-    identity.ssoProviderId != null &&
-    identity.legacyIdentifier === identity.subject &&
-    links.some(
-      (link) =>
-        link.subject === identity.subject &&
-        link.providerId !== identity.provider,
-    )
-  ) {
-    throw new LoginMethodError(
-      "A legacy SSO account has an unresolved provider mapping. Ask an administrator to verify and repair its identity mapping before signing in.",
-      409,
-      "legacy_identity_conflict",
-    );
-  }
-  return links.length === 0;
+  if (!linked) return null;
+  return createCurrentUserRepository().findById(linked.userId);
 }
 
 /**
@@ -249,10 +193,6 @@ async function createUser(
     username: await freeUsername(identity.name || identity.subject, null),
     passwordHash: "",
     isAdmin: !!identity.isAdmin,
-    isOidc: true,
-    oidcIdentifier:
-      identity.legacyIdentifier ?? `${identity.provider}:${identity.subject}`,
-    ssoProviderId: identity.ssoProviderId ?? null,
   });
 
   try {
@@ -335,7 +275,7 @@ export async function findOrProvisionExternalUser(
           provider: identity.provider,
         });
         throw new LoginMethodError(
-          "Registration is disabled",
+          "You have no Termix account yet. Ask an admin to turn on Auto-create external accounts.",
           403,
           "registration_disabled",
         );

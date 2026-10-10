@@ -1,0 +1,1 @@
+ALTER TABLE `sessions` ADD `external_session_ref` text;

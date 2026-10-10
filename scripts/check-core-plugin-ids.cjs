@@ -2,18 +2,15 @@
 /**
  * Core knows no plugin by name.
  *
- * Fails when anything under src/ imports from plugins/, or spells a plugin id:
- * a bare literal ("docker"), a plugin route ("/plugin-api/docker/..."), or an
- * action, slot or permission id that starts with one ("docker.open"). The
- * shell (src/ui) also may not spell a view a plugin owns (a tab, panel or
- * dashboard card id from a manifest). What core needs from a plugin comes
- * through the registries instead. Regex literals are read too, so
- * /^\/plugin-api\/docker/ counts the same as "/plugin-api/docker".
+ * Fails when anything under src/ spells a plugin id: a bare literal
+ * ("docker"), a plugin route ("/plugin-api/docker/..."), or an action, slot
+ * or permission id that starts with one ("docker.open"). What core needs from
+ * a plugin comes through the registries instead. Regex literals are read too,
+ * so /^\/plugin-api\/docker/ counts the same as "/plugin-api/docker".
  *
- * Ids come from every plugin manifest and from docker/bundled-plugins.json, so
- * the check still means something once plugins live in their own repos. An
- * action, slot or extension point id a plugin owns ("terminal.open") counts
- * too, whatever its prefix. electron/ and vite.config.ts are read as well.
+ * Plugins live in their own repos, so the ids are the official ones below
+ * plus anything in docker/bundled-plugins.json. electron/ and vite.config.ts
+ * are read as well.
  *
  * src/backend/tests, src/ui/tests and src/ui/locales are exempt, and so is
  * src/backend/upgrade/: the one-time
@@ -29,16 +26,50 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const { owners } = require("./check-plugin-uses.cjs");
 const SSH_TERMS = new Set(["totp"]);
+
+const OFFICIAL_IDS = [
+  "acme-ssl",
+  "ai",
+  "alerts",
+  "automations",
+  "docker",
+  "file-manager",
+  "fleets",
+  "homepage",
+  "host-metrics",
+  "ldap",
+  "network-topology",
+  "opkssh",
+  "proxmox",
+  "remote-desktop",
+  "secret-sources",
+  "serial",
+  "session-recording",
+  "session-sharing",
+  "snippets",
+  "ssh-terminal",
+  "sso",
+  "step-ca",
+  "tailscale",
+  "telemetry",
+  "termix-identity",
+  "tmux-monitor",
+  "totp",
+  "tunnels",
+  "vault",
+  "wake-on-lan",
+  "warpgate",
+  "web-endpoint",
+  "webauthn",
+  "workspaces",
+];
 
 function paths(root) {
   const src = path.join(root, "src");
   return {
     root,
     src,
-    ui: path.join(src, "ui"),
-    plugins: path.join(root, "plugins"),
     bundled: path.join(root, "docker", "bundled-plugins.json"),
     extra: [path.join(root, "electron"), path.join(root, "vite.config.ts")],
     exempt: [
@@ -51,37 +82,15 @@ function paths(root) {
   };
 }
 
-function manifests(dir) {
-  if (!fs.existsSync(dir)) return [];
-  return fs
-    .readdirSync(dir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => path.join(dir, entry.name, "manifest.json"))
-    .filter((file) => fs.existsSync(file))
-    .map((file) => JSON.parse(fs.readFileSync(file, "utf8")));
-}
-
-function names(pluginsDir, bundledFile) {
-  const ids = new Set();
-  const views = new Set();
+function pluginIds(bundledFile) {
+  const ids = new Set(OFFICIAL_IDS);
   if (bundledFile && fs.existsSync(bundledFile)) {
     for (const entry of JSON.parse(fs.readFileSync(bundledFile, "utf8"))
       .plugins ?? []) {
       if (typeof entry?.id === "string") ids.add(entry.id);
     }
   }
-  for (const manifest of manifests(pluginsDir)) {
-    ids.add(manifest.id);
-    const contributes = manifest.contributes ?? {};
-    for (const list of [
-      contributes.tabs,
-      contributes.panels,
-      contributes.dashboardCards,
-    ]) {
-      for (const view of list ?? []) views.add(view.id);
-    }
-  }
-  return { ids, views };
+  return ids;
 }
 
 function walk(dir, exempt, out) {
@@ -131,9 +140,8 @@ function regexLiterals(source) {
 }
 
 function scan(root = path.resolve(__dirname, "..")) {
-  const { src, ui, plugins, bundled, extra, exempt, sshConnect } = paths(root);
-  const { ids, views } = names(plugins, bundled);
-  const owned = fs.existsSync(plugins) ? owners(plugins) : new Map();
+  const { src, bundled, extra, exempt, sshConnect } = paths(root);
+  const ids = pluginIds(bundled);
   const found = {};
   const add = (file, what) => {
     const key = path.relative(root, file).replaceAll("\\", "/");
@@ -150,23 +158,10 @@ function scan(root = path.resolve(__dirname, "..")) {
       .split("\n")
       .filter((line) => !/plugin-id-ok: \S/.test(line))
       .join("\n");
-    const inShell = file.startsWith(ui + path.sep);
     const inConnect = file.startsWith(sshConnect + path.sep);
-    for (const match of source.matchAll(
-      /(?:from|import)\s*\(?\s*["']([^"']+)["']/g,
-    )) {
-      const target = match[1].startsWith(".")
-        ? path.resolve(path.dirname(file), match[1])
-        : "";
-      if (target.startsWith(plugins + path.sep)) {
-        add(file, `import ${match[1]}`);
-      }
-    }
     for (const text of literals(source)) {
       const sshTerm = inConnect && SSH_TERMS.has(text);
-      if ((ids.has(text) && !sshTerm) || (inShell && views.has(text))) {
-        add(file, text);
-      }
+      if (ids.has(text) && !sshTerm) add(file, text);
       for (const route of text.matchAll(
         /\/plugin-(?:api|ws|assets)\/([a-z0-9-]+)/g,
       )) {
@@ -174,7 +169,6 @@ function scan(root = path.resolve(__dirname, "..")) {
       }
       const prefix = /^([a-z][a-z0-9-]*)\.[a-zA-Z]/.exec(text);
       if (prefix && ids.has(prefix[1])) add(file, text);
-      if (owned.has(text)) add(file, `${text} (owned by ${owned.get(text)})`);
     }
     for (const pattern of regexLiterals(source)) {
       for (const route of pattern.matchAll(

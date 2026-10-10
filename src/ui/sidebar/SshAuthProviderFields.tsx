@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { PluginSettingsField } from "@termix/plugin-sdk/manifest";
+import type { PluginSettingsField } from "@termix-ssh/plugin-sdk/manifest";
 import { SettingsFieldRow } from "@/settings/SettingsFields";
 import {
   getPluginHostSettings,

@@ -4,18 +4,18 @@ import type { DatabaseDialect } from "../db/dialect.js";
  * Reading the outcome of a write without depending on RETURNING.
  *
  * SQLite and Postgres can attach `.returning()` to a delete or update and get
- * the affected rows back. **MySQL cannot** — it has no RETURNING clause, and
+ * the affected rows back. **MySQL cannot**: it has no RETURNING clause, and
  * drizzle's mysql-core does not expose the method at all, so the call is a
  * TypeError rather than a bad query. 175 call sites here read a write's result,
  * so the difference has to be absorbed somewhere.
  *
  * The split that matters is what the caller actually needs:
  *
- * - **How many rows changed** — the majority, and none of them need the rows.
+ * - **How many rows changed**: the majority, and none of them need the rows.
  *   They used to ask for them anyway, via `.returning().length`. Dropping the
  *   `.returning()` and reading the driver's own count is both portable and one
  *   less thing for the database to send back.
- * - **The rows themselves** — cannot be emulated on MySQL without reading
+ * - **The rows themselves**: cannot be emulated on MySQL without reading
  *   first, which needs a transaction to stay correct under concurrency. Those
  *   call sites are handled individually rather than behind a helper that hides
  *   an extra round trip.
@@ -33,7 +33,7 @@ import type { DatabaseDialect } from "../db/dialect.js";
  * | node-postgres  | `{ rowCount, rows, command }`          |
  * | mysql2         | `[{ affectedRows, insertId }, fields]` |
  *
- * These are the shapes returned when NO `.returning()` is attached — which is
+ * These are the shapes returned when NO `.returning()` is attached, which is
  * the portable way to write, since MySQL has no RETURNING clause at all.
  */
 interface WriteHeader {
@@ -47,7 +47,7 @@ interface WriteHeader {
 const COUNT_FIELDS = ["changes", "rowCount", "affectedRows"] as const;
 
 /**
- * mysql2 hands back `[ResultSetHeader, fields]`, which is itself an array — so
+ * mysql2 hands back `[ResultSetHeader, fields]`, which is itself an array, so
  * "is it an array" cannot distinguish a write header from a returning() result.
  * The header is identified by carrying one of the fields above instead.
  */
@@ -70,7 +70,7 @@ function asWriteHeader(result: unknown): WriteHeader | null {
 /**
  * Number of rows a write touched.
  *
- * Pass the result of the write itself — every driver's header is understood, so
+ * Pass the result of the write itself, every driver's header is understood, so
  * the caller neither branches on the dialect nor attaches `.returning()` just to
  * count what came back.
  *
@@ -97,7 +97,7 @@ export function rowsAffected(result: unknown): number {
  *
  * **Only meaningful on the result of an insert.** SQLite's `lastInsertRowid` and
  * MySQL's `insertId` are connection-level values that survive the statement that
- * set them — after a delete, SQLite still reports whatever the last insert
+ * set them, after a delete, SQLite still reports whatever the last insert
  * produced. Passing an update or delete result here gets a stale id, not null.
  *
  * Returns null when the table has no autoincrement key.
@@ -143,7 +143,7 @@ export function supportsReturning(dialect: DatabaseDialect): boolean {
  *
  * `sql<number>` is a type assertion, not a conversion. Postgres returns COUNT()
  * as bigint, which node-postgres hands back as a **string** so that values past
- * 2^53 survive — so the annotation is a lie there and comparisons like
+ * 2^53 survive, so the annotation is a lie there and comparisons like
  * `count < max` compare a string to a number.
  */
 export function countValue(value: unknown): number {

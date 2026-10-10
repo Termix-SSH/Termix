@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Termix
-Comment=Self-hosted SSH and remote desktop management.
+Comment=Self-hosted, plugin-based server management.
 Exec=run.sh %U
 Icon=com.karmaa.termix
 Terminal=false

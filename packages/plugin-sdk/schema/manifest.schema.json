@@ -72,7 +72,39 @@
     "icon": {
       "type": "string",
       "minLength": 1,
-      "description": "A Lucide icon name, or a relative path to an icon.svg in the plugin root."
+      "description": "A Lucide icon name, like \"Play\"."
+    },
+    "video": {
+      "type": "string",
+      "pattern": "^https://(www\\.|m\\.)?(youtube\\.com|youtu\\.be|youtube-nocookie\\.com)/",
+      "description": "A YouTube link shown at the top of the plugin's page."
+    },
+    "features": {
+      "type": "array",
+      "maxItems": 20,
+      "items": { "type": "string", "minLength": 1, "maxLength": 160 },
+      "description": "Short lines listing what the plugin does, shown on its page."
+    },
+    "docs": {
+      "type": "string",
+      "pattern": "^https://",
+      "description": "Where the plugin's docs live. Shown as a Documentation link in Termix."
+    },
+    "env": {
+      "type": "array",
+      "description": "Environment variables the plugin reads, listed in its docs.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "description"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$" },
+          "description": { "type": "string", "minLength": 1, "maxLength": 300 },
+          "default": { "type": "string" },
+          "required": { "type": "boolean" },
+          "secret": { "type": "boolean" }
+        }
+      }
     },
     "engine": {
       "type": "object",

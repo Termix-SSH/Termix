@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { useTranslation, type TermixApp } from "@termix/plugin-sdk/frontend";
+import {
+  useTranslation,
+  type TermixApp,
+} from "@termix-ssh/plugin-sdk/frontend";
 
 function Counter() {
   const { t } = useTranslation();

@@ -33,6 +33,7 @@ import { isSessionTabType } from "@/shell/tab-registry";
 import { isElectron } from "@/lib/electron";
 import type { Tab, TabType } from "@/types/ui-types";
 import { ActionSlot } from "@/shell/ActionSlot";
+import { useTabHandlesVersion } from "@/shell/tab-handles";
 import {
   canJoinSplit,
   isSplitTab,
@@ -97,6 +98,8 @@ export function TabBar({
   showTabNumbers?: boolean;
 }) {
   const { t } = useTranslation();
+  // Re-renders when a tab's handle attaches, for buttons whose when reads it.
+  useTabHandlesVersion();
   const reduceMotion = useReducedMotion();
   const [open, setOpen] = useState(true);
   const [dragTabId, setDragTabId] = useState<string | null>(null);
@@ -573,7 +576,7 @@ export function TabBar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-full w-12.5 border-y-0 border-r-0 border-border rounded-none text-muted-foreground hover:text-foreground"
+                className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
               >
                 <ChevronDown className="size-4" />
               </Button>
@@ -632,7 +635,7 @@ export function TabBar({
               <Button
                 variant="ghost"
                 size="icon"
-                className={`h-full w-12.5 rounded-none border-y-0 border-border ${rightDockOpen ? "text-accent-brand bg-accent-brand/10" : "text-muted-foreground hover:text-foreground"}`}
+                className={`h-full w-12.5 rounded-none ${rightDockOpen ? "text-accent-brand bg-accent-brand/10" : "text-muted-foreground hover:text-foreground"}`}
                 title={t("nav.toggleRightDock")}
                 aria-label={t("nav.toggleRightDock")}
                 aria-pressed={!!rightDockOpen}
@@ -648,7 +651,7 @@ export function TabBar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-full w-12.5 rounded-none border-y-0 border-border text-muted-foreground hover:text-foreground"
+                className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
                 title={
                   isAppFullscreen
                     ? t("nav.exitFullscreen")
@@ -673,7 +676,7 @@ export function TabBar({
           <Button
             variant="ghost"
             size="icon"
-            className="h-full w-12.5 rounded-none border-y-0 border-border text-muted-foreground hover:text-foreground"
+            className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
             onClick={() => setOpen((o) => !o)}
           >
             <ChevronUp

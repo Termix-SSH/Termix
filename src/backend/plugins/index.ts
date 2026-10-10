@@ -22,6 +22,7 @@ import { setSshAuthTypeOwnerSource } from "../hosts/connect/auth-provider-regist
 import { setHostProtocolSource } from "../hosts/protocol-auth/registry.js";
 import { setSecretResolverOwnerSource } from "../hosts/connect/secret-resolver-registry.js";
 import { recordConflict } from "./conflicts.js";
+import { startablePluginIds } from "./boot-state.js";
 import { setPluginImpersonationCheck } from "../utils/auth-manager.js";
 import { setKeybindingActionSource } from "../database/routes/keybinding-validation.js";
 
@@ -94,9 +95,9 @@ export function getPluginRuntime(): { loader: PluginLoader } {
 }
 
 /**
- * A plugin that tripped the error budget is off until an admin retries it, so
- * it has to look off everywhere: no routes, greyed permissions, and a failed
- * row that survives a restart.
+ * A plugin that tripped the error budget is off until an admin retries it or
+ * the server restarts, so it has to look off everywhere: no routes and greyed
+ * permissions.
  */
 async function handlePluginFailed(plugin: LoadedPlugin): Promise<void> {
   unregisterPluginHttp(plugin.id);
@@ -126,11 +127,21 @@ async function handlePluginFailed(plugin: LoadedPlugin): Promise<void> {
  * `state` is only ever set on insert. Once the row exists whatever the user
  * chose wins, because re-enabling a plugin they disabled on every restart
  * would be a bug rather than a default.
+ *
+ * A fresh install (no users, no plugin rows) is different: only the bundled
+ * plugins marked recommended start enabled, and the first admin picks the
+ * rest in onboarding. Consent plugins wait for that choice too, even when
+ * the picker checks them by default.
  */
-async function seedPlugins(loaded: LoadedPlugin[]): Promise<void> {
+async function seedPlugins(
+  loaded: LoadedPlugin[],
+  freshInstall: boolean,
+): Promise<boolean> {
   const { createCurrentPluginRepository } =
     await import("../database/repositories/factory.js");
   const repository = createCurrentPluginRepository();
+  const fresh = freshInstall && (await repository.listAll()).length === 0;
+  const { initialPluginState } = await import("./bundled-index.js");
 
   for (const plugin of loaded) {
     const manifestJson = JSON.stringify(plugin.manifest);
@@ -155,7 +166,7 @@ async function seedPlugins(loaded: LoadedPlugin[]): Promise<void> {
       version: plugin.manifest.version,
       tier: plugin.source === "bundled" ? "bundled" : "community",
       source: plugin.source,
-      state: plugin.source === "bundled" ? "enabled" : "disabled",
+      state: initialPluginState(plugin.id, plugin.source, fresh),
       manifestJson,
     });
 
@@ -163,6 +174,8 @@ async function seedPlugins(loaded: LoadedPlugin[]): Promise<void> {
       operation: "plugin_seed",
     });
   }
+
+  return fresh;
 }
 
 /**
@@ -212,23 +225,28 @@ async function syncCapabilityGrants(loaded: LoadedPlugin[]): Promise<void> {
  * Loads every plugin on disk and activates the ones marked enabled, in
  * dependency order. Called once from the backend start-up sequence.
  */
-export async function initializePlugins(): Promise<LoadedPlugin[]> {
+export async function initializePlugins(
+  options: { freshInstall?: boolean } = {},
+): Promise<LoadedPlugin[]> {
   const { loader: pluginLoader } = getPluginRuntime();
+
+  const { applyStoredPluginChoices } = await import("./manage.js");
+  await applyStoredPluginChoices(pluginLoader);
 
   const loaded = await pluginLoader.loadAll();
   if (loaded.length === 0) return [];
 
-  await seedPlugins(loaded);
+  const fresh = await seedPlugins(loaded, options.freshInstall === true);
   await syncCapabilityGrants(loaded);
+  if (loaded.some((plugin) => plugin.source === "bundled")) {
+    const { offerPluginSetup } = await import("./onboarding.js");
+    await offerPluginSetup(fresh);
+  }
 
   const { createCurrentPluginRepository } =
     await import("../database/repositories/factory.js");
   const records = await createCurrentPluginRepository().listAll();
-  const enabled = new Set(
-    records
-      .filter((record) => record.state === "enabled")
-      .map((record) => record.id),
-  );
+  const enabled = startablePluginIds(records);
 
   const candidates = loaded
     .filter((plugin) => enabled.has(plugin.id))
@@ -257,14 +275,28 @@ async function persistRuntimeState(loaded: LoadedPlugin[]): Promise<void> {
   const { createCurrentPluginRepository } =
     await import("../database/repositories/factory.js");
   const repository = createCurrentPluginRepository();
+  const records = new Map(
+    (await repository.listAll()).map((record) => [record.id, record]),
+  );
 
   for (const plugin of loaded) {
-    if (plugin.state !== "blocked" && plugin.state !== "failed") continue;
+    const record = records.get(plugin.id);
     try {
-      await repository.update(plugin.id, {
-        state: plugin.state,
-        lastError: plugin.lastError,
-      });
+      if (plugin.state === "blocked" || plugin.state === "failed") {
+        await repository.update(plugin.id, {
+          state: plugin.state,
+          lastError: plugin.lastError,
+        });
+      } else if (
+        plugin.state === "active" &&
+        record &&
+        record.state !== "enabled"
+      ) {
+        await repository.update(plugin.id, {
+          state: "enabled",
+          lastError: null,
+        });
+      }
     } catch {
       // Reporting state must never stop the boot.
     }
@@ -562,9 +594,17 @@ export async function installPluginArtifact(
     file,
     pluginLoader.bundledIds(),
   );
-  await seedPlugins([plugin]);
+  await seedPlugins([plugin], false);
   await syncCapabilityGrants([plugin]);
   return plugin;
+}
+
+/** Gives freshly loaded plugins a row and their bundled grants. */
+export async function registerLoadedPlugins(
+  loaded: LoadedPlugin[],
+): Promise<void> {
+  await seedPlugins(loaded, false);
+  await syncCapabilityGrants(loaded);
 }
 
 /** Stops a plugin and forgets it, before a new version is installed. */

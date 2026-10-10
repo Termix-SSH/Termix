@@ -1,23 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
 /* eslint-disable react-hooks/exhaustive-deps */
-import type { TabHandle } from "@termix/plugin-sdk/frontend";
+import type { TabHandle } from "@termix-ssh/plugin-sdk/frontend";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { Separator } from "@/components/separator";
-import { Button } from "@/components/button";
 import { Sheet, SheetContent } from "@/components/sheet";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Columns2,
-  Maximize2,
-  Minimize2,
-  PanelRight,
-  RotateCcw,
-  Rows2,
-  SquareArrowOutUpRight,
-  X,
-} from "lucide-react";
+import { Columns2, Maximize2, RotateCcw, Rows2, X } from "lucide-react";
 import {
   useState,
   useRef,
@@ -32,7 +19,8 @@ import {
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { resetPermissionsCache } from "@/hooks/use-permissions";
-import { MobileBottomBar } from "@/shell/MobileBottomBar";
+import { MobileBar } from "@/shell/MobileBar";
+import { isElectron } from "@/lib/electron";
 import { AppRail, type RailView } from "@/sidebar/AppRail";
 import { ComponentSlot } from "@/shell/ActionSlot";
 import {
@@ -42,10 +30,18 @@ import {
   rightDockableIds,
   useRailItems,
 } from "@/sidebar/rail-items";
-import { MultiPanelHint } from "@/sidebar/MultiPanelHint";
-import { OnboardingDialog } from "@/onboarding/OnboardingDialog";
-import { UI_ONBOARDING_VERSION } from "@/types/ui-preferences";
-import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
+import {
+  DOCK_DEFAULT_WIDTH,
+  DockPanel,
+  DockReopenStrip,
+} from "@/shell/DockPanel";
+import {
+  SurfaceScope,
+  useConfirm,
+  type ConfirmOptions,
+  type EditingWidth,
+} from "@/components/surface/surface-scope";
+import { OnboardingHost } from "@/onboarding/OnboardingHost";
 import { SplitView, type SplitViewActions } from "@/shell/split/SplitView";
 import { SplitDropOverlay } from "@/shell/split/SplitDropOverlay";
 import {
@@ -55,6 +51,13 @@ import {
 import { renderTabContent } from "@/shell/tabUtils";
 import { TabBar } from "@/shell/TabBar";
 import { reconnectDisconnectedTabs } from "@/shell/reconnect-tabs";
+import { canCloseTab } from "@/shell/tab-close-guards";
+import {
+  MANAGE_REQUEST_EVENT,
+  type ManageMode,
+  requestFromLegacyEvent,
+  requestManage,
+} from "@/manage/manage-requests";
 import {
   dispatchCtrlW,
   createCommandPaletteShortcutMatcher,
@@ -87,19 +90,9 @@ const QuickConnectPanel = lazy(() =>
   })),
 );
 
-const UserProfilePanel = lazy(() =>
-  import("@/sidebar/UserProfilePanel").then((m) => ({
-    default: m.UserProfilePanel,
-  })),
-);
 const SyncPanel = lazy(() =>
   import("@/settings/sync/SyncPanel").then((m) => ({
     default: m.SyncPanel,
-  })),
-);
-const AdminSettingsPanel = lazy(() =>
-  import("@/sidebar/AdminSettingsPanel").then((m) => ({
-    default: m.AdminSettingsPanel,
   })),
 );
 const CredentialsPanel = lazy(() =>
@@ -145,7 +138,6 @@ import {
   getActiveSessions,
   getUserPreferences,
   saveUserPreferences,
-  dismissDonationModal,
   type UserPreferences,
   type OpenTabRecord,
 } from "@/main-axios";
@@ -155,9 +147,8 @@ import {
   resolveLayoutTabTarget,
   snapshotData,
 } from "@/shell/shell-layout";
-import { DonationReminderModal } from "@/user/DonationReminderModal.tsx";
 import { useSyncStatus } from "@/hooks/use-sync-status";
-import { rem, remScale } from "@/lib/rem";
+import { remScale } from "@/lib/rem";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import { ServerStatusProvider } from "@/lib/ServerStatusContext";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
@@ -245,9 +236,26 @@ import {
   setShellLayoutProvider,
 } from "@/plugin-host/shell-bridge";
 import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
+import {
+  OPEN_PLUGINS_EVENT,
+  OPEN_PLUGIN_SETTINGS_EVENT,
+} from "@/plugins/open-plugins";
 
 export { buildHostTree } from "@/sidebar/build-host-tree";
 export { tabIcon, renderTabContent } from "@/shell/tabUtils";
+
+/** Hands the main area's confirm to code outside it, like closeTab. */
+function ShellConfirmCapture({
+  confirmRef,
+}: {
+  confirmRef: React.MutableRefObject<
+    ((options: ConfirmOptions) => Promise<boolean>) | null
+  >;
+}) {
+  const confirm = useConfirm();
+  confirmRef.current = confirm;
+  return null;
+}
 
 // ─── AppShell ────────────────────────────────────────────────────────────────
 
@@ -280,7 +288,7 @@ export function AppShell({
   });
   const [userPrefsLoaded, setUserPrefsLoaded] = useState(false);
   const [hostsLoaded, setHostsLoaded] = useState(false);
-  // Flips to true once the initial DB read (restore or skip) is done — sync must not fire before this
+  // Flips to true once the initial DB read (restore or skip) is done. Sync must not fire before this
   const [tabsReady, setTabsReady] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   // Split tabs are restored once their child tabs have stable live ids.
@@ -295,77 +303,84 @@ export function AppShell({
   // The standalone desktop backend still owns system settings such as the
   // Tailscale API key, even though it has only one implicit user.
   const showAdminUI = isAdmin;
-  const [showDonationModal, setShowDonationModal] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [backgroundTabRecords, setBackgroundTabRecords] = useState<
     OpenTabRecord[]
   >([]);
 
-  // First-run onboarding. The backend hands accounts that predate this feature
-  // an already-completed state, so only genuinely new users are interrupted.
-  const uiPrefs = useUiPreferencesContext();
-  const onboardingPending =
-    !!uiPrefs?.loaded &&
-    uiPrefs.preferences.onboarding.completedVersion < UI_ONBOARDING_VERSION;
-
-  /**
-   * Both onboarding entry points wait for plugins first, since plugins add
-   * steps of their own (the AI step, feature cards).
-   */
-  const loadOnboardingContext = useCallback(async () => {
-    const { settledPromise } = await import("@/plugin-host/plugin-store");
-    await settledPromise();
-  }, []);
-
-  useEffect(() => {
-    if (!username || !onboardingPending) return;
-    let cancelled = false;
-    loadOnboardingContext().finally(() => {
-      if (!cancelled) setShowOnboarding(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [username, onboardingPending, loadOnboardingContext]);
-
-  // "Run setup again" from settings.
-  useEffect(() => {
-    const handler = () => {
-      loadOnboardingContext().finally(() => setShowOnboarding(true));
-    };
-    window.addEventListener("termix:open-onboarding", handler);
-    return () => window.removeEventListener("termix:open-onboarding", handler);
-  }, [loadOnboardingContext]);
-
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railView, setRailView] = useState<RailView>("hosts");
 
-  // Host defaults open in the host manager, from anywhere (the admin panel,
-  // a folder's menu).
+  // Anything that asks to add or edit a host, a credential or host defaults
+  // ends up in the Manage tab, whichever event it still speaks.
   useEffect(() => {
+    const names = [
+      "host-manager:add-host",
+      "host-manager:edit-host",
+      "host-manager:add-credential",
+      "host-manager:show-credentials",
+      "host-manager:edit-defaults",
+      "termix:open-host-defaults",
+    ];
     const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      setSidebarOpen(true);
-      setRailView("hosts");
-      setTimeout(() => {
-        window.dispatchEvent(
-          new CustomEvent("host-manager:edit-defaults", { detail }),
-        );
-      }, 0);
+      const request = requestFromLegacyEvent(e.type, (e as CustomEvent).detail);
+      if (request) requestManage(request);
     };
-    window.addEventListener("termix:open-host-defaults", handler);
-    return () =>
-      window.removeEventListener("termix:open-host-defaults", handler);
+    const open = () => openSingletonTabRef.current("host-manager");
+    for (const name of names) window.addEventListener(name, handler);
+    window.addEventListener(MANAGE_REQUEST_EVENT, open);
+    return () => {
+      for (const name of names) window.removeEventListener(name, handler);
+      window.removeEventListener(MANAGE_REQUEST_EVENT, open);
+    };
   }, []);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem("termix_sidebarWidth");
     return saved ? parseInt(saved, 10) : 291;
   });
   const [sidebarDragging, setSidebarDragging] = useState(false);
-  const [sidebarEditing, setSidebarEditing] = useState(false);
-  const [settingsFullscreen, setSettingsFullscreen] = useState(false);
+  // How far each panel wants the sidebar widened: what the panel says itself,
+  // and what its open inline views say.
+  const [panelEditing, setPanelEditing] = useState<
+    Record<string, EditingWidth>
+  >({});
+  const [scopeEditing, setScopeEditing] = useState<
+    Record<string, EditingWidth>
+  >({});
+  const setPanelEditingFor = useCallback(
+    (view: string, editing: EditingWidth) =>
+      setPanelEditing((prev) =>
+        prev[view] === editing ? prev : { ...prev, [view]: editing },
+      ),
+    [],
+  );
+  const setScopeEditingFor = useCallback(
+    (view: string, editing: EditingWidth) =>
+      setScopeEditing((prev) =>
+        prev[view] === editing ? prev : { ...prev, [view]: editing },
+      ),
+    [],
+  );
+  const editingSetters = useRef(
+    new Map<string, (editing: EditingWidth) => void>(),
+  );
+  const panelEditingSetter = (view: string) => {
+    const key = `panel:${view}`;
+    if (!editingSetters.current.has(key))
+      editingSetters.current.set(key, (e) => setPanelEditingFor(view, e));
+    return editingSetters.current.get(key)!;
+  };
+  const scopeEditingSetter = (view: string) => {
+    const key = `scope:${view}`;
+    if (!editingSetters.current.has(key))
+      editingSetters.current.set(key, (e) => setScopeEditingFor(view, e));
+    return editingSetters.current.get(key)!;
+  };
+  // The root confirm, for questions the shell itself asks (closing a tab).
+  const shellConfirmRef = useRef<
+    ((options: ConfirmOptions) => Promise<boolean>) | null
+  >(null);
 
-  // Right dock — a second panel column so reference panels like history can
+  // Right dock: a second panel column so reference panels like history can
   // stay visible while the left sidebar is used for something else.
   const [rightRailView, setRightRailView] = useState<RailView | null>(() => {
     const saved = localStorage.getItem("termix_rightRailView");
@@ -414,22 +429,6 @@ export function AppShell({
   }, [tabs]);
 
   const isMobile = useIsMobile();
-  const isSettingsView =
-    railView === "user-profile" || railView === "admin-settings";
-
-  useEffect(() => {
-    if (!settingsFullscreen) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSettingsFullscreen(false);
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [settingsFullscreen]);
-
-  useEffect(() => {
-    if (!isSettingsView) setSettingsFullscreen(false);
-  }, [isSettingsView]);
-
   const sidebarOpenBeforeMobile = useRef(sidebarOpen);
   useEffect(() => {
     if (isMobile) {
@@ -442,16 +441,8 @@ export function AppShell({
 
   useEffect(() => {
     getUserInfo()
-      .then((info) => {
-        setIsAdmin(info.is_admin);
-        setShowDonationModal(!!info.show_donation_modal);
-      })
+      .then((info) => setIsAdmin(info.is_admin))
       .catch(() => setIsAdmin(false));
-  }, []);
-
-  const handleDismissDonationModal = useCallback(() => {
-    setShowDonationModal(false);
-    dismissDonationModal().catch(() => {});
   }, []);
 
   const toggleAppFullscreen = useCallback(async () => {
@@ -696,7 +687,7 @@ export function AppShell({
   const paneElsRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const [, setPaneElsVersion] = useState(0);
 
-  // Stable per-tab DOM nodes — created once per tab, never destroyed while the tab lives.
+  // Stable per-tab DOM nodes, created once per tab, never destroyed while the tab lives.
   // We always portal each tab's content into its own node, then move that node between
   // the normal-view container and the pane container via vanilla DOM so React's portal
   // target never changes (changing the target causes a remount).
@@ -706,7 +697,7 @@ export function AppShell({
   const mainAreaRef = useRef<HTMLDivElement>(null);
   // Tab id the enter animation has already played for, so a re-render while
   // the tab stays active (there can be several right after a switch) doesn't
-  // replay it — only a genuine switch to a different tab should.
+  // replay it, only a genuine switch to a different tab should.
   const lastAnimatedTabIdRef = useRef<string | null>(null);
 
   const getTabNode = useCallback((tabId: string, isTerminal: boolean) => {
@@ -724,7 +715,7 @@ export function AppShell({
   // Portal render order for tab content, kept independent of the tab bar's
   // visual order. Reordering tabs in the bar reorders `tabs`, and mapping
   // that array directly to portals reshuffles the Suspense-wrapped portal
-  // children's sibling order in the fiber tree — React then runs its
+  // children's sibling order in the fiber tree, React then runs its
   // Offscreen disconnect/reconnect pass on the ones that moved, which tears
   // down and rebuilds every passive effect underneath (including
   // react-xtermjs's terminal-creation effect), dropping the live terminal
@@ -853,7 +844,7 @@ export function AppShell({
         }
       }
 
-      // Cmd+1..9 on macOS, Alt+1..9 elsewhere — jump directly to the tab at that position
+      // Cmd+1..9 on macOS, Alt+1..9 elsewhere: jump directly to the tab at that position
       const tabDigit = getTabJumpDigit(e);
       if (tabDigit !== null) {
         const currentTabs = tabsRef.current.filter(
@@ -867,7 +858,7 @@ export function AppShell({
         return;
       }
 
-      // Ctrl+Shift+] / Ctrl+Shift+[ — cycle through open tabs (] = next, [ = previous)
+      // Ctrl+Shift+] / Ctrl+Shift+[: cycle through open tabs (] = next, [ = previous)
       if (e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey) {
         if (e.code === "BracketRight" || e.code === "BracketLeft") {
           e.preventDefault();
@@ -1366,7 +1357,7 @@ export function AppShell({
             // Restored tabs are in the tab bar, not in background records
           }
         } else {
-          // Not restoring to tab bar — keep as background records for ConnectionsPanel
+          // Not restoring to tab bar, keep as background records for ConnectionsPanel
           setBackgroundTabRecords(savedTabs as OpenTabRecord[]);
         }
       } catch {
@@ -1663,41 +1654,36 @@ export function AppShell({
       if (getTabType(type)?.multiInstance) {
         return openMultiInstanceTab(type, { host, data, label: tabLabel });
       }
-      if (type === "host-manager") {
-        if (pendingEvent === "host-manager:add-credential") {
-          setSidebarOpen(true);
-          setRailView("credentials");
-          setTimeout(
-            () =>
-              window.dispatchEvent(
-                new CustomEvent("host-manager:add-credential"),
-              ),
-            0,
-          );
-        } else if (pendingEvent === "host-manager:show-credentials") {
-          setSidebarOpen(true);
-          setRailView("credentials");
-        } else {
-          setSidebarOpen(true);
-          setRailView("hosts");
-          if (pendingEvent) {
-            setTimeout(
-              () => window.dispatchEvent(new CustomEvent(pendingEvent)),
-              0,
-            );
-          }
-        }
-        return;
+      if (type === "host-manager" && pendingEvent) {
+        const request = requestFromLegacyEvent(pendingEvent);
+        if (request) requestManage(request);
       }
+      // Profile and admin are pages of the one Settings tab now.
       if (type === "user-profile" || type === "admin-settings") {
-        setSidebarEditing(false);
-        setRailView(type as RailView);
-        setSidebarOpen(true);
-        return;
+        return openSingletonTab(
+          "settings",
+          undefined,
+          undefined,
+          {
+            section:
+              typeof data?.section === "string"
+                ? data.section
+                : type === "admin-settings"
+                  ? "admin-general"
+                  : "account",
+          },
+          tabLabel,
+        );
+      }
+      // Asking for a page again still goes there after the user moved away
+      if (type === "settings" && data?.section && data.revealAt === undefined) {
+        data = { ...data, revealAt: Date.now() };
       }
       const id = type;
       const singletonLabels: Partial<Record<TabType, string>> = {
-        "host-manager": t("nav.hostManager"),
+        "host-manager": t("nav.manage"),
+        settings: t("nav.settings"),
+        plugins: t("nav.plugins"),
       };
       // A plugin tab names itself; promoted rail panels reuse the rail's own
       // label so the two stay in sync.
@@ -1748,6 +1734,29 @@ export function AppShell({
     [t],
   );
 
+  const openSingletonTabRef = useRef(openSingletonTab);
+  openSingletonTabRef.current = openSingletonTab;
+
+  useEffect(() => {
+    const handler = () => openSingletonTabRef.current("plugins");
+    window.addEventListener(OPEN_PLUGINS_EVENT, handler);
+    return () => window.removeEventListener(OPEN_PLUGINS_EVENT, handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const pluginId = (event as CustomEvent<string>).detail;
+      if (typeof pluginId !== "string") return;
+      openSingletonTabRef.current("settings", undefined, undefined, {
+        section: `plugin:${pluginId}`,
+        revealAt: Date.now(),
+      });
+    };
+    window.addEventListener(OPEN_PLUGIN_SETTINGS_EVENT, handler);
+    return () =>
+      window.removeEventListener(OPEN_PLUGIN_SETTINGS_EVENT, handler);
+  }, []);
+
   const getTabCloseLabel = useCallback((tab: Tab) => {
     return tab.customLabel || tab.label || tab.host?.name || String(tab.id);
   }, []);
@@ -1776,6 +1785,8 @@ export function AppShell({
     };
   }, [hasActiveConnection]);
 
+  const doCloseTabRef = useRef<(id: string) => void>(() => {});
+  doCloseTabRef.current = doCloseTab;
   function doCloseTab(id: string) {
     const tabToClose = tabs.find((t) => t.id === id);
     if (tabToClose?.terminalRef?.current?.disconnect) {
@@ -1842,35 +1853,23 @@ export function AppShell({
     else handle.refresh?.();
   }
 
-  function closeTab(id: string) {
-    const tab = tabs.find((t) => t.id === id);
+  async function closeTab(id: string) {
+    const tab = tabsRef.current.find((t) => t.id === id);
+    const guard = tab?.terminalRef?.current?.confirmClose;
+    if (guard && !(await guard())) return;
+    if (!(await canCloseTab(id))) return;
     const confirmEnabled = localStorage.getItem("confirmTabClose") === "true";
     if (tab && confirmEnabled && isActiveConnectionTab(tab)) {
-      const closeLabel = getTabCloseLabel(tab);
-      const toastId = `close-tab-${id}`;
-      toast(t("nav.confirmCloseHost", { host: closeLabel }), {
-        id: toastId,
-        duration: 8000,
-        action: {
-          label: t("nav.close"),
-          onClick: () => {
-            toast.dismiss(toastId);
-            doCloseTab(id);
-          },
-        },
-        cancel: {
-          label: t("nav.cancel"),
-          onClick: () => toast.dismiss(toastId),
-        },
-      });
-      return;
+      const ask = shellConfirmRef.current;
+      const ok = ask
+        ? await ask({
+            title: t("nav.confirmCloseHost", { host: getTabCloseLabel(tab) }),
+            confirmLabel: t("nav.close"),
+          })
+        : true;
+      if (!ok) return;
     }
-
-    if (tab && isSessionTabType(tab.type) && confirmEnabled) {
-      toast.dismiss(`close-tab-${id}`);
-    }
-
-    doCloseTab(id);
+    doCloseTabRef.current(id);
   }
 
   // In a split, closing acts on the focused pane: its session, or the pane
@@ -2266,21 +2265,14 @@ export function AppShell({
     } else {
       // A panel lives in one dock at a time, so the left dock reclaims it.
       if (rightRailView === view) setRightRailView(null);
-      if (view !== railView) setSidebarEditing(false);
-      if (view !== railView) setSettingsFullscreen(false);
       setRailView(view);
       setSidebarOpen(true);
     }
   }
 
   function editHostInManager(host: Host) {
-    setSidebarOpen(true);
-    setRailView("hosts");
-    setTimeout(() => {
-      window.dispatchEvent(
-        new CustomEvent("host-manager:edit-host", { detail: host.id }),
-      );
-    }, 0);
+    requestManage({ kind: "host", hostId: host.id });
+    if (isMobile) setSidebarOpen(false);
   }
 
   const onSidebarMouseDown = useCallback(
@@ -2468,10 +2460,10 @@ export function AppShell({
   }, [tabs, activeTab]);
 
   // Move each tab's stable DOM node to the right container (pane or normal-view).
-  // This is vanilla DOM so React's portal target never changes — changing the portal
+  // This is vanilla DOM so React's portal target never changes. Changing the portal
   // target causes a remount which is exactly what we're trying to avoid.
   // useLayoutEffect (not useEffect) so visibility/display are corrected before
-  // the browser paints — otherwise the previous tab's node can flash on screen
+  // the browser paints, otherwise the previous tab's node can flash on screen
   // for a frame while still visible.
   useLayoutEffect(() => {
     const normalView = normalViewRef.current;
@@ -2611,18 +2603,13 @@ export function AppShell({
       setRailView((prev) => (prev === id ? "hosts" : prev));
       setRightRailView((prev) => (prev === id ? null : prev));
     },
-    openHostEditor: (draft) => {
-      setSidebarOpen(true);
-      setRailView("hosts");
-      setTimeout(
-        () =>
-          window.dispatchEvent(
-            new CustomEvent("host-manager:add-host", { detail: draft }),
-          ),
-        0,
-      );
-    },
+    openHostEditor: (draft) =>
+      requestManage({ kind: "host", hostId: null, draft }),
     saveQuickConnect: saveQuickConnectHost,
+    confirm: (options) =>
+      shellConfirmRef.current
+        ? shellConfirmRef.current(options)
+        : Promise.resolve(false),
   };
 
   // Tabs get one stable bag that forwards to the latest callbacks, so a shell
@@ -2645,6 +2632,7 @@ export function AppShell({
         shellImplRef.current.openHostEditor?.(...args),
       saveQuickConnect: (...args) =>
         shellImplRef.current.saveQuickConnect!(...args),
+      confirm: (...args) => shellImplRef.current.confirm!(...args),
     }),
     [],
   );
@@ -2675,14 +2663,34 @@ export function AppShell({
     setShellHosts(allHosts, hostsLoaded);
   }, [allHosts, hostsLoaded]);
 
+  // Every panel gets its own surface, so its inline views and confirms stay
+  // inside it. Only the left dock widens for them.
+  const panelScope = (
+    view: string,
+    owned: boolean,
+    shown: boolean,
+    children: React.ReactNode,
+    className = "",
+  ) => (
+    <SurfaceScope
+      key={view}
+      kind="panel"
+      onEditingChange={owned ? scopeEditingSetter(view) : undefined}
+      className={`${shown ? "" : "hidden"} ${className}`}
+    >
+      {children}
+    </SurfaceScope>
+  );
+
   const renderSidebarPanels = (railView: RailView, owned = true) => (
     <Suspense fallback={<SidebarPanelFallback />}>
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
         {owned && (
           <>
-            <div
-              className={`flex flex-col flex-1 min-h-0 ${railView === "hosts" ? "" : "hidden"}`}
-            >
+            {panelScope(
+              "hosts",
+              owned,
+              railView === "hosts",
               <HostsPanel
                 onOpenTab={(host, type, options) => {
                   connectHost(host, type, options);
@@ -2691,30 +2699,34 @@ export function AppShell({
                 onEditHost={editHostInManager}
                 hostTree={realHostTree ?? undefined}
                 loading={hostsLoading}
-                onEditingChange={setSidebarEditing}
+                onEditingChange={panelEditingSetter("hosts")}
                 active={railView === "hosts"}
-              />
-            </div>
-
-            <div
-              className={`flex flex-col flex-1 min-h-0 ${railView === "credentials" ? "" : "hidden"}`}
-            >
+              />,
+            )}
+            {panelScope(
+              "credentials",
+              owned,
+              railView === "credentials",
               <CredentialsPanel
-                onEditingChange={setSidebarEditing}
+                onEditingChange={panelEditingSetter("credentials")}
                 active={railView === "credentials"}
-              />
-            </div>
+              />,
+            )}
           </>
         )}
 
-        {railView === "quick-connect" && (
-          <QuickConnectPanel
-            onConnect={(host, type) => {
-              openTab(host, type);
-              if (isMobile) setSidebarOpen(false);
-            }}
-          />
-        )}
+        {railView === "quick-connect" &&
+          panelScope(
+            "quick-connect",
+            owned,
+            true,
+            <QuickConnectPanel
+              onConnect={(host, type) => {
+                openTab(host, type);
+                if (isMobile) setSidebarOpen(false);
+              }}
+            />,
+          )}
 
         {registeredPanels.map((panel) => {
           const shown = railView === panel.id;
@@ -2722,24 +2734,26 @@ export function AppShell({
           // copies never fight over the same state.
           if (panel.keepMounted ? !owned : !shown) return null;
           const Panel = panel.component;
-          return (
-            <div
-              key={panel.id}
-              className={`flex flex-col flex-1 min-h-0 overflow-y-auto ${shown ? "" : "hidden"}`}
-            >
+          return panelScope(
+            panel.id,
+            owned,
+            shown,
+            <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
               <Panel
                 targetTab={terminalTabs.find(
                   (tab) => tab.id === targetTerminalTabId,
                 )}
                 active={shown}
                 shell={panelShell}
-                setEditing={setSidebarEditing}
+                setEditing={
+                  owned ? panelEditingSetter(panel.id) : () => undefined
+                }
                 activeTabType={
                   tabs.find((tab) => tab.id === activeTabId)?.type ?? undefined
                 }
                 placement={owned ? "left" : "right"}
               />
-            </div>
+            </div>,
           );
         })}
 
@@ -2747,80 +2761,63 @@ export function AppShell({
           <PluginViewPlaceholder kind="panel" viewId={railView} compact />
         )}
 
-        {railView === "connections" && (
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <ConnectionsPanel
-              tabs={tabs}
-              activeTabId={activeTabId}
-              allHosts={allHosts}
-              backgroundTabRecords={backgroundTabRecords}
-              onSwitchToTab={(tabId) => {
-                setActiveTabId(tabId);
-                if (isMobile) setSidebarOpen(false);
-              }}
-              onCloseTab={closeTab}
-              onReopenTab={(record, restoredSessionId) => {
-                const host = record.hostId
-                  ? allHosts.find((h) => h.id === String(record.hostId))
-                  : undefined;
-                if (!host && !getTabType(record.tabType)?.hostless) return;
-                setBackgroundTabRecords((prev) =>
-                  prev.filter((r) => r.id !== record.id),
-                );
-                if (host) {
-                  const effectiveSessionId =
-                    restoredSessionId ?? record.backendSessionId ?? null;
-                  openTab(host, record.tabType as TabType, {
-                    instanceId: record.id,
-                    restoredSessionId: effectiveSessionId,
-                    savedLabel: record.label,
-                  });
-                } else {
-                  openSingletonTab(record.tabType as TabType);
-                }
-                if (isMobile) setSidebarOpen(false);
-              }}
-              onForgetBackground={(recordId) => {
-                setBackgroundTabRecords((prev) =>
-                  prev.filter((r) => r.id !== recordId),
-                );
-              }}
-              onRenameTab={renameTab}
-              onReorderTabs={setTabs}
-            />
-          </div>
-        )}
+        {railView === "connections" &&
+          panelScope(
+            "connections",
+            owned,
+            true,
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <ConnectionsPanel
+                tabs={tabs}
+                activeTabId={activeTabId}
+                allHosts={allHosts}
+                backgroundTabRecords={backgroundTabRecords}
+                onSwitchToTab={(tabId) => {
+                  setActiveTabId(tabId);
+                  if (isMobile) setSidebarOpen(false);
+                }}
+                onCloseTab={closeTab}
+                onReopenTab={(record, restoredSessionId) => {
+                  const host = record.hostId
+                    ? allHosts.find((h) => h.id === String(record.hostId))
+                    : undefined;
+                  if (!host && !getTabType(record.tabType)?.hostless) return;
+                  setBackgroundTabRecords((prev) =>
+                    prev.filter((r) => r.id !== record.id),
+                  );
+                  if (host) {
+                    const effectiveSessionId =
+                      restoredSessionId ?? record.backendSessionId ?? null;
+                    openTab(host, record.tabType as TabType, {
+                      instanceId: record.id,
+                      restoredSessionId: effectiveSessionId,
+                      savedLabel: record.label,
+                    });
+                  } else {
+                    openSingletonTab(record.tabType as TabType);
+                  }
+                  if (isMobile) setSidebarOpen(false);
+                }}
+                onForgetBackground={(recordId) => {
+                  setBackgroundTabRecords((prev) =>
+                    prev.filter((r) => r.id !== recordId),
+                  );
+                }}
+                onRenameTab={renameTab}
+                onReorderTabs={setTabs}
+              />
+            </div>,
+          )}
 
-        {railView === "user-profile" && (
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <UserProfilePanel
-              username={username}
-              onLogout={onLogout}
-              userPrefs={userPrefs}
-              onPrefsChange={(updates) =>
-                setUserPrefs((current) => ({ ...current, ...updates }))
-              }
-            />
-          </div>
-        )}
-
-        {railView === "sync" && (
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <SyncPanel />
-          </div>
-        )}
-
-        {railView === "admin-settings" && showAdminUI && (
-          <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
-            <AdminSettingsPanel
-              onEditingChange={setSidebarEditing}
-              onOpenHostTab={(host) => {
-                connectHost(host);
-                if (isMobile) setSidebarOpen(false);
-              }}
-            />
-          </div>
-        )}
+        {railView === "sync" &&
+          panelScope(
+            "sync",
+            owned,
+            true,
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <SyncPanel />
+            </div>,
+          )}
       </div>
     </Suspense>
   );
@@ -2904,107 +2901,32 @@ export function AppShell({
 
   const sidebarPanelContent = renderSidebarPanels(railView);
 
-  // Sidebar header — shared
-  const sidebarHeader = (
-    <div className="flex flex-row items-center border-b border-border h-12.5 shrink-0">
-      <span className="flex-1 min-w-0 whitespace-nowrap text-base font-bold tracking-tight text-foreground px-3">
-        {sidebarTitle(railView)}
-      </span>
-      {!isMobile && promotableIds().includes(railView) && (
-        <>
-          <Separator orientation="vertical" />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-full w-12.5 border-y-0 border-r-0 border-border rounded-none text-muted-foreground hover:text-foreground"
-            title={t("nav.openAsTab")}
-            aria-label={t("nav.openAsTab")}
-            onClick={() => openSingletonTab(railView as TabType)}
-          >
-            <SquareArrowOutUpRight className="size-3.5" />
-          </Button>
-        </>
-      )}
-      {!isMobile && rightDockableIds().includes(railView) && (
-        <>
-          <Separator orientation="vertical" />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-full w-12.5 border-y-0 border-r-0 border-border rounded-none text-muted-foreground hover:text-foreground"
-            title={t("nav.openInRightDock")}
-            aria-label={t("nav.openInRightDock")}
-            onClick={() => openInRightDock(railView)}
-          >
-            <PanelRight className="size-3.5" />
-          </Button>
-        </>
-      )}
-      {!isMobile && (
-        <>
-          <Separator orientation="vertical" />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-full w-12.5 border-y-0 border-border rounded-none text-muted-foreground hover:text-foreground"
-            title={t("nav.resetSidebarWidth")}
-            onClick={() => setSidebarWidth(291)}
-          >
-            <RotateCcw className="size-3.5" />
-          </Button>
-        </>
-      )}
-      {isSettingsView && (
-        <>
-          <Separator orientation="vertical" />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
-            title={
-              settingsFullscreen
-                ? t("newUi.sidebar.userProfile.exitFullscreenSettings")
-                : t("newUi.sidebar.userProfile.openFullscreenSettings")
-            }
-            aria-label={
-              settingsFullscreen
-                ? t("newUi.sidebar.userProfile.exitFullscreenSettings")
-                : t("newUi.sidebar.userProfile.openFullscreenSettings")
-            }
-            onClick={() => setSettingsFullscreen((value) => !value)}
-          >
-            {settingsFullscreen ? (
-              <Minimize2 className="size-4" />
-            ) : (
-              <Maximize2 className="size-4" />
-            )}
-          </Button>
-        </>
-      )}
-      <Separator orientation="vertical" />
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
-        title={t("nav.collapseSidebar")}
-        onClick={() => {
-          setSettingsFullscreen(false);
-          setSidebarOpen(false);
-        }}
-      >
-        <ChevronLeft className="size-4" />
-      </Button>
-    </div>
-  );
+  const settingsTabProps = {
+    username,
+    isAdmin: showAdminUI,
+    onLogout,
+    userPrefs,
+    onPrefsChange: (updates: Partial<UserPreferences>) =>
+      setUserPrefs((current) => ({ ...current, ...updates })),
+    onOpenHostTab: (host: Host) => connectHost(host),
+  };
 
-  const sidebarHint = !isMobile && (
-    <MultiPanelHint
-      canPromote={promotableIds().includes(railView)}
-      canRightDock={rightDockableIds().includes(railView)}
-      onOpenAsTab={() => openSingletonTab(railView as TabType)}
-      onOpenInRightDock={() => openInRightDock(railView)}
-    />
-  );
+  const leftEditing: EditingWidth = (() => {
+    const values = [panelEditing[railView], scopeEditing[railView]];
+    if (values.includes("wide")) return "wide";
+    return values.some(Boolean);
+  })();
+
+  const dockProps = (view: RailView) => ({
+    title: sidebarTitle(view),
+    onOpenAsTab: isMobile
+      ? undefined
+      : view === "hosts" || view === "credentials"
+        ? () => requestManage({ kind: "browse", mode: view as ManageMode })
+        : promotableIds().includes(view)
+          ? () => openSingletonTab(view as TabType)
+          : undefined,
+  });
 
   return (
     <ServerStatusProvider isAuthenticated={!!username}>
@@ -3013,45 +2935,48 @@ export function AppShell({
         style={{ height: "100dvh" }}
       >
         <div className="flex flex-1 min-h-0">
-          {/* Skinny icon rail — desktop only, hidden on mobile */}
-          {!settingsFullscreen && (
-            <AppRail
-              railView={railView}
-              sidebarOpen={sidebarOpen}
-              username={username}
-              isAdmin={showAdminUI}
-              pluginsSettled={pluginsSettled}
-              onRailClick={handleRailClick}
-              onOpenTab={openSingletonTab}
-              onOpenInRightDock={openInRightDock}
-              onLogout={onLogout}
-            />
-          )}
+          {/* Skinny icon rail, desktop only */}
+          <AppRail
+            railView={railView}
+            sidebarOpen={sidebarOpen}
+            username={username}
+            isAdmin={showAdminUI}
+            pluginsSettled={pluginsSettled}
+            onRailClick={handleRailClick}
+            onOpenTab={openSingletonTab}
+            onOpenInRightDock={openInRightDock}
+            onOpenSettings={() => openSingletonTab("settings")}
+            onOpenNavigationSettings={() =>
+              openSingletonTab("settings", undefined, undefined, {
+                section: "appearance",
+                reveal: "settings-navigation",
+                revealAt: Date.now(),
+              })
+            }
+            onOpenPalette={() => setCommandPaletteOpen(true)}
+            onLogout={onLogout}
+          />
 
           {/* Desktop: inline resizable sidebar */}
           {!isMobile && (
-            <div
-              className={`${settingsFullscreen ? "fixed inset-0 z-50" : "relative"} flex flex-col min-h-0 bg-sidebar shrink-0 overflow-hidden ${sidebarOpen ? `border-r transition-colors ${sidebarDragging ? "border-accent-brand/60" : "border-border"}` : ""}`}
-              style={{
-                width: settingsFullscreen
-                  ? "100vw"
-                  : sidebarOpen
-                    ? rem(sidebarEditing ? 560 : sidebarWidth)
-                    : 0,
-                transition: sidebarDragging ? "none" : "width 0.2s",
-              }}
+            <DockPanel
+              side="left"
+              {...dockProps(railView)}
+              open={sidebarOpen}
+              width={sidebarWidth}
+              editing={leftEditing}
+              dragging={sidebarDragging}
+              onResizeStart={onSidebarMouseDown}
+              onClose={() => setSidebarOpen(false)}
+              onMoveToRightDock={
+                rightDockableIds().includes(railView)
+                  ? () => openInRightDock(railView)
+                  : undefined
+              }
+              onResetWidth={() => setSidebarWidth(DOCK_DEFAULT_WIDTH)}
             >
-              {sidebarHeader}
-              {sidebarHint}
               {sidebarPanelContent}
-
-              {sidebarOpen && !sidebarEditing && !settingsFullscreen && (
-                <div
-                  onMouseDown={onSidebarMouseDown}
-                  className={`absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-30 transition-colors ${sidebarDragging ? "bg-accent-brand/60" : "hover:bg-accent-brand/40"}`}
-                />
-              )}
-            </div>
+            </DockPanel>
           )}
 
           {/* Mobile: sidebar as overlay sheet */}
@@ -3060,150 +2985,152 @@ export function AppShell({
               <SheetContent
                 side="left"
                 showCloseButton={false}
-                className={`p-0 flex flex-col min-h-0 max-w-full bg-sidebar border-r border-border gap-0 ${settingsFullscreen ? "w-screen" : "w-[min(85vw,360px)]"}`}
+                className={`p-0 flex flex-col min-h-0 max-w-full bg-sidebar border-r border-border gap-0 ${leftEditing ? "w-screen" : "w-[min(85vw,360px)]"}`}
                 style={{ height: "100dvh" }}
               >
-                {sidebarHeader}
-                {sidebarPanelContent}
+                <DockPanel
+                  side="left"
+                  {...dockProps(railView)}
+                  open
+                  fill
+                  width={sidebarWidth}
+                  onClose={() => setSidebarOpen(false)}
+                >
+                  {sidebarPanelContent}
+                </DockPanel>
               </SheetContent>
             </Sheet>
           )}
 
           {/* Main content area */}
           <div
-            inert={settingsFullscreen ? true : undefined}
-            aria-hidden={settingsFullscreen || undefined}
             className={`relative flex flex-col flex-1 min-w-0 overflow-hidden transition-[padding] duration-200 ${!isMobile && !sidebarOpen ? "pl-6" : ""}`}
           >
             {!isMobile && !sidebarOpen && (
-              <button
-                onClick={() => setSidebarOpen(true)}
-                title={t("nav.openSidebar")}
-                className="absolute left-0 top-0 bottom-0 z-20 flex items-center justify-center w-6 bg-sidebar border-r border-border text-muted-foreground hover:text-accent-brand hover:bg-accent-brand/5 transition-colors"
-              >
-                <ChevronRight className="size-3.5" />
-              </button>
+              <DockReopenStrip onClick={() => setSidebarOpen(true)} />
             )}
-            <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
-              <TabBar
-                tabs={topLevelTabs}
-                activeTabId={activeTabId}
-                splits={summarizeSplits(tabs, MAX_PANES)}
-                activeSplitFull={
-                  activeSplit ? !canAddPane(activeSplit.split) : false
-                }
-                onSetActiveTab={setActiveTabId}
-                onCloseTab={closeTab}
-                onRefreshTab={refreshTab}
-                onReconnectDisconnected={reconnectAllDisconnected}
-                onReorderTabs={reorderTopLevelTabs}
-                onSplitAction={handleTabSplitAction}
-                onRenameTab={renameTab}
-                isAppFullscreen={isAppFullscreen}
-                onToggleAppFullscreen={toggleAppFullscreen}
-                rightDockOpen={rightRailView !== null}
-                onToggleRightDock={isMobile ? undefined : toggleRightDock}
-                showTabNumbers={showTabNumbers}
-              />
-              <div
-                ref={mainAreaRef}
-                className="relative flex flex-col flex-1 min-h-0 overflow-hidden"
-              >
-                {activeSplit && (
-                  <div className="motion-workspace-layout absolute inset-0 flex flex-col">
-                    <SplitView
-                      splitTab={activeSplit}
-                      tabs={tabs}
-                      isMobile={isMobile}
-                      actions={splitViewActions(activeSplit.id)}
-                      onPaneContentRef={onPaneContentRef}
-                      renderEmptyPane={(paneId, paneIndex) =>
-                        renderEmptyPane(activeSplit.id, paneId, paneIndex)
-                      }
-                    />
-                  </div>
-                )}
-                <SplitDropOverlay containerRef={mainAreaRef} />
+            <SurfaceScope kind="tab" className="overflow-hidden">
+              <ShellConfirmCapture confirmRef={shellConfirmRef} />
+              <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
+                <TabBar
+                  tabs={topLevelTabs}
+                  activeTabId={activeTabId}
+                  splits={summarizeSplits(tabs, MAX_PANES)}
+                  activeSplitFull={
+                    activeSplit ? !canAddPane(activeSplit.split) : false
+                  }
+                  onSetActiveTab={setActiveTabId}
+                  onCloseTab={closeTab}
+                  onRefreshTab={refreshTab}
+                  onReconnectDisconnected={reconnectAllDisconnected}
+                  onReorderTabs={reorderTopLevelTabs}
+                  onSplitAction={handleTabSplitAction}
+                  onRenameTab={renameTab}
+                  isAppFullscreen={isAppFullscreen}
+                  onToggleAppFullscreen={toggleAppFullscreen}
+                  rightDockOpen={rightRailView !== null}
+                  onToggleRightDock={isMobile ? undefined : toggleRightDock}
+                  showTabNumbers={showTabNumbers}
+                />
+                <div
+                  ref={mainAreaRef}
+                  className="relative flex flex-col flex-1 min-h-0 overflow-hidden"
+                >
+                  {activeSplit && (
+                    <div className="motion-workspace-layout absolute inset-0 flex flex-col">
+                      <SplitView
+                        splitTab={activeSplit}
+                        tabs={tabs}
+                        isMobile={isMobile}
+                        actions={splitViewActions(activeSplit.id)}
+                        onPaneContentRef={onPaneContentRef}
+                        renderEmptyPane={(paneId, paneIndex) =>
+                          renderEmptyPane(activeSplit.id, paneId, paneIndex)
+                        }
+                      />
+                    </div>
+                  )}
+                  <SplitDropOverlay containerRef={mainAreaRef} />
 
-                {/* Normal-view container. Tab nodes are appended here (or to pane elements)
+                  {/* Normal-view container. Tab nodes are appended here (or to pane elements)
                   by the DOM-placement effect above. React portals each tab's content
                   into its stable per-tab node so the component is never remounted.
                   Hidden while a split is active. */}
-                <div
-                  ref={normalViewRef}
-                  className="absolute inset-0"
-                  style={{ display: activeSplit ? "none" : undefined }}
-                >
-                  {tabsByPortalOrder.map((tab) => {
-                    const tabNode = getTabNode(
-                      tab.id,
-                      !!getTabType(tab.type)?.ownBackground,
-                    );
-                    const paneId = paneIdByTabId.get(tab.id);
-                    const inPane = !!paneId;
-                    const activeInline = !inPane && tab.id === activeTabId;
-                    const isFocusedPane = inPane
-                      ? paneId === focusedPaneId
-                      : activeInline;
-                    return createPortal(
-                      renderTabContent(tab, {
-                        shell: shellCallbacks,
-                        panelTargetTab: terminalTabs.find(
-                          (t) => t.id === targetTerminalTabId,
-                        ),
-                        isVisible: inPane || activeInline,
-                        isFocusedPane,
-                        inSplit: inPane,
-                      }),
-                      tabNode,
-                      tab.id,
-                    );
-                  })}
+                  <div
+                    ref={normalViewRef}
+                    className="absolute inset-0"
+                    style={{ display: activeSplit ? "none" : undefined }}
+                  >
+                    {tabsByPortalOrder.map((tab) => {
+                      const tabNode = getTabNode(
+                        tab.id,
+                        !!getTabType(tab.type)?.ownBackground,
+                      );
+                      const paneId = paneIdByTabId.get(tab.id);
+                      const inPane = !!paneId;
+                      const activeInline = !inPane && tab.id === activeTabId;
+                      const isFocusedPane = inPane
+                        ? paneId === focusedPaneId
+                        : activeInline;
+                      return createPortal(
+                        <SurfaceScope
+                          kind="tab"
+                          className="h-full w-full"
+                          onClose={
+                            tab.id === "dashboard"
+                              ? undefined
+                              : () => closeTab(tab.id)
+                          }
+                        >
+                          {renderTabContent(tab, {
+                            shell: shellCallbacks,
+                            settings: settingsTabProps,
+                            panelTargetTab: terminalTabs.find(
+                              (t) => t.id === targetTerminalTabId,
+                            ),
+                            isVisible: inPane || activeInline,
+                            isFocusedPane,
+                            inSplit: inPane,
+                          })}
+                        </SurfaceScope>,
+                        tabNode,
+                        tab.id,
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
+            </SurfaceScope>
 
-            {/* Bottom nav bar — mobile only */}
-            <MobileBottomBar
-              railView={railView}
-              sidebarOpen={sidebarOpen}
-              onRailClick={handleRailClick}
-            />
+            {/* Bottom nav bar, mobile only. The desktop app keeps the rail. */}
+            {!isElectron() && (
+              <MobileBar
+                railView={railView}
+                sidebarOpen={sidebarOpen}
+                username={username}
+                onRailClick={handleRailClick}
+                onOpenTab={(type) => openSingletonTab(type)}
+                onOpenSettings={() => openSingletonTab("settings")}
+                onOpenPalette={() => setCommandPaletteOpen(true)}
+                onLogout={() => onLogout({ manual: true })}
+              />
+            )}
           </div>
 
-          {/* Right dock — desktop only, holds a second reference panel */}
-          {!isMobile && rightRailView && !settingsFullscreen && (
-            <div
-              className={`relative flex flex-col min-h-0 bg-sidebar shrink-0 overflow-hidden border-l transition-colors ${rightSidebarDragging ? "border-accent-brand/60" : "border-border"}`}
-              style={{
-                width: rem(rightSidebarWidth),
-                transition: rightSidebarDragging ? "none" : "width 0.2s",
-              }}
+          {/* Right dock, desktop only, holds a second reference panel */}
+          {!isMobile && rightRailView && (
+            <DockPanel
+              side="right"
+              {...dockProps(rightRailView)}
+              open
+              width={rightSidebarWidth}
+              dragging={rightSidebarDragging}
+              onResizeStart={onRightSidebarMouseDown}
+              onClose={() => setRightRailView(null)}
+              onResetWidth={() => setRightSidebarWidth(DOCK_DEFAULT_WIDTH)}
             >
-              <div className="flex flex-row items-center border-b border-border h-12.5 shrink-0">
-                <span className="flex-1 min-w-0 whitespace-nowrap text-base font-bold tracking-tight text-foreground px-3">
-                  {sidebarTitle(rightRailView)}
-                </span>
-                <Separator orientation="vertical" />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
-                  title={t("nav.closeRightDock")}
-                  aria-label={t("nav.closeRightDock")}
-                  onClick={() => setRightRailView(null)}
-                >
-                  <ChevronRight className="size-4" />
-                </Button>
-              </div>
-
               {renderSidebarPanels(rightRailView, false)}
-
-              <div
-                onMouseDown={onRightSidebarMouseDown}
-                className={`absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-30 transition-colors ${rightSidebarDragging ? "bg-accent-brand/60" : "hover:bg-accent-brand/40"}`}
-              />
-            </div>
+            </DockPanel>
           )}
         </div>
       </div>
@@ -3219,6 +3146,15 @@ export function AppShell({
             terminalTabs={terminalTabs}
             activeTabId={activeTabId}
             onOpenPanel={(view) => handleRailClick(view as RailView)}
+            onEditHost={editHostInManager}
+            onOpenSettings={(section) =>
+              openSingletonTab(
+                "settings",
+                undefined,
+                undefined,
+                section ? { section } : undefined,
+              )
+            }
             onOpenTab={(type, label, pendingEvent) => {
               if (
                 [
@@ -3226,6 +3162,7 @@ export function AppShell({
                   "host-manager",
                   "user-profile",
                   "admin-settings",
+                  "plugins",
                 ].includes(type)
               ) {
                 openSingletonTab(type, pendingEvent);
@@ -3246,15 +3183,7 @@ export function AppShell({
           />
         </Suspense>
       )}
-      <OnboardingDialog
-        open={showOnboarding}
-        context={{}}
-        onClose={() => setShowOnboarding(false)}
-      />
-      <DonationReminderModal
-        open={showDonationModal && !showOnboarding}
-        onDismiss={handleDismissDonationModal}
-      />
+      <OnboardingHost />
     </ServerStatusProvider>
   );
 }

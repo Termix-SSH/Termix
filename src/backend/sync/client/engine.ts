@@ -9,7 +9,7 @@
  */
 
 import os from "os";
-import type { SyncRow } from "@termix/plugin-sdk/backend";
+import type { SyncRow } from "@termix-ssh/plugin-sdk/backend";
 import {
   getEntity,
   listEntities,

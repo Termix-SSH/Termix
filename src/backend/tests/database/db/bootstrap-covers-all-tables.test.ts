@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /**
  * `migrateSchema()` carried a `SELECT id FROM <table> LIMIT 1` probe for a
  * number of tables that the primary bootstrap already creates. The probe never
- * threw, so the `CREATE TABLE IF NOT EXISTS` in its catch never ran — and one
+ * threw, so the `CREATE TABLE IF NOT EXISTS` in its catch never ran, and one
  * of those unreachable copies had drifted away from the real definition
  * (`sessions` had lost `ON DELETE CASCADE`).
  *
@@ -61,7 +61,7 @@ describe("bootstrap creates the tables the removed probes covered", () => {
   });
 
   it("creates them on a database old enough to predate them", async () => {
-    // A database with users and hosts but none of the tables above — the
+    // A database with users and hosts but none of the tables above, the
     // upgrade path the deleted probes appeared to be protecting.
     const seed = new Database(":memory:");
     seed.exec(`

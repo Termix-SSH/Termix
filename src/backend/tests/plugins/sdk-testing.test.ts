@@ -16,9 +16,9 @@ import {
   id,
   refUser,
   text,
-} from "@termix/plugin-sdk/db";
-import { adoptTableSql } from "@termix/plugin-sdk/ddl";
-import { createMockCtx, createTestDb } from "@termix/plugin-sdk/testing";
+} from "@termix-ssh/plugin-sdk/db";
+import { adoptTableSql } from "@termix-ssh/plugin-sdk/ddl";
+import { createMockCtx, createTestDb } from "@termix-ssh/plugin-sdk/testing";
 
 let root: string;
 let pluginDir: string;
@@ -30,7 +30,7 @@ const notes = adoptLegacyTable(
 
 beforeEach(() => {
   root = fs.mkdtempSync(path.join(os.tmpdir(), "termix-sdk-testing-"));
-  // The directory name is the plugin id, as it is in plugins/.
+  // The directory name is the plugin id.
   pluginDir = path.join(root, "fleets");
   fs.mkdirSync(path.join(pluginDir, "migrations", "sqlite"), {
     recursive: true,

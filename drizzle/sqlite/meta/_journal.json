@@ -428,6 +428,41 @@
       "when": 1790742085632,
       "tag": "0060_fine_cerise",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "6",
+      "when": 1791209294736,
+      "tag": "0061_retire_2_8_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "6",
+      "when": 1791209309626,
+      "tag": "0062_external_session_ref",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "6",
+      "when": 1791256339684,
+      "tag": "0063_plugin_pinned_version",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "6",
+      "when": 1791388887785,
+      "tag": "0064_plugin_channel",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "6",
+      "when": 1791550495357,
+      "tag": "0065_drop_donation_modal",
+      "breakpoints": true
     }
   ]
 }

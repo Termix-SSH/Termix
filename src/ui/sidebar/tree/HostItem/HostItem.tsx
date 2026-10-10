@@ -1,4 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
+import { actionOrder } from "@/sidebar/host-contributions";
+import { showsInBar, useBarActions } from "@/sidebar/tree/host-bar-actions";
 import { rem } from "@/lib/rem";
 import { enabledHostProtocols } from "@/sidebar/host-protocols";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
@@ -39,10 +41,12 @@ import {
 import { toast } from "sonner";
 import { getHostPassword } from "@/main-axios";
 import type { Host, TabType } from "@/types/ui-types";
-import type {
-  HostDensity,
-  HostClickBehavior,
-  HostTrayTrigger,
+import {
+  defaultHostRowFields,
+  type HostDensity,
+  type HostClickBehavior,
+  type HostRowFields,
+  type HostTrayTrigger,
 } from "@/types/host-sidebar-preferences";
 import { copyToClipboard } from "@/lib/clipboard";
 import {
@@ -116,11 +120,6 @@ export function buildStatusTooltip(
   return `${protocols.join(", ")}: ${statusLabel}`;
 }
 
-/** Plugin actions sort by order; connect actions default to the end. */
-function actionOrder(action: HostActionDef): number {
-  return action.order ?? (action.kind === "connect" ? 100 : 50);
-}
-
 async function writeClipboardText(value: string): Promise<void> {
   await copyToClipboard(value);
 }
@@ -145,6 +144,26 @@ function canCopyHostSudoPassword(host: Host): boolean {
  * means a future style tweak only has to be made once.
  */
 const DOUBLE_CLICK_WINDOW_MS = 250;
+
+const DEFAULT_ROW_FIELDS = defaultHostRowFields();
+
+export function formatHostAddress(
+  host: Pick<Host, "username" | "ip" | "port"> &
+    Partial<Pick<Host, "enableSsh" | "pluginSettings" | "protocolAuth">>,
+  fields: Pick<HostRowFields, "showUsername" | "showPort">,
+): string {
+  const protocol =
+    host.enableSsh === false ? enabledHostProtocols(host)[0] : undefined;
+  const username =
+    host.enableSsh === false
+      ? protocol
+        ? host.protocolAuth?.[protocol.id]?.username
+        : undefined
+      : host.username;
+  const user = fields.showUsername && username ? `${username}@` : "";
+  const port = fields.showPort && host.port ? `:${host.port}` : "";
+  return `${user}${host.ip}${port}`;
+}
 
 const HOST_ITEM_DENSITY_TOKENS = {
   comfortable: {
@@ -191,6 +210,7 @@ export function HostItem({
   hostClickBehavior = "newTab",
   showResourceBars = true,
   showStatusStripes = true,
+  rowFields = DEFAULT_ROW_FIELDS,
   rowActions = "full",
   arrangeMode = false,
   isDragging = false,
@@ -242,6 +262,7 @@ export function HostItem({
   showResourceBars?: boolean;
   /** Preset-driven: hides the per-row status color stripe. */
   showStatusStripes?: boolean;
+  rowFields?: HostRowFields;
   /** "essential" trims the row's management actions to the common few. */
   rowActions?: "essential" | "full";
   /** When true (rearranging unlocked), the row can be dragged: its edges
@@ -275,6 +296,7 @@ export function HostItem({
   const allowDelete = canDeleteHost(host);
   const allHostActions = useHostActions();
   const pluginActions = hostActionsFor(allHostActions, host);
+  const barActions = useBarActions();
   const badges = hostBadgesFor(useHostBadges(), host);
   const pluginMenuItems = hostMenuItemsFor(useHostContextMenuItems(), host);
   const splitTargets = useSplitTargets();
@@ -322,6 +344,7 @@ export function HostItem({
   const densityTokens = HOST_ITEM_DENSITY_TOKENS[density];
   const tokens = {
     ...densityTokens,
+    showAddressRow: densityTokens.showAddressRow && rowFields.showAddress,
     showTagsRow: densityTokens.showTagsRow && showTags,
     showResourceRow: densityTokens.showResourceRow && showResourceBars,
   };
@@ -421,7 +444,7 @@ export function HostItem({
         icon: action.icon as typeof Terminal,
         label: action.label?.(host) ?? t(action.titleKey),
         tabType: action.tabType,
-        tray: action.tray !== false,
+        tray: showsInBar(barActions, action),
         items:
           items && items.length > 1
             ? items.map((item) => ({
@@ -773,7 +796,12 @@ export function HostItem({
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();
-              writeClipboardText(`${host.username}@${host.ip}`);
+              writeClipboardText(
+                formatHostAddress(host, {
+                  showUsername: true,
+                  showPort: false,
+                }),
+              );
               toast.success(t("hosts.copiedToClipboard"));
             }}
           >
@@ -1125,14 +1153,15 @@ export function HostItem({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          {host.pin && (
+          {rowFields.showPinIcon && host.pin && (
             <Pin className="size-2.5 text-accent-brand/50 shrink-0" />
           )}
-          {badges.map((badge) => {
-            const Badge = badge.component;
-            return <Badge key={badge.id} host={host} />;
-          })}
-          {host.isShared && (
+          {rowFields.showBadges &&
+            badges.map((badge) => {
+              const Badge = badge.component;
+              return <Badge key={badge.id} host={host} />;
+            })}
+          {rowFields.showSharedBadge && host.isShared && (
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1168,12 +1197,12 @@ export function HostItem({
               +{host.tags!.length - 2}
             </span>
           )}
-          {isCompact && (
+          {isCompact && rowFields.showAddress && (
             <span
               className="text-[11px] text-muted-foreground/70 truncate leading-none ml-auto max-w-[50%] shrink-0"
               title={host.ip}
             >
-              {host.ip}
+              {formatHostAddress(host, { ...rowFields, showUsername: false })}
             </span>
           )}
           {isCompact && !selectionMode && (
@@ -1213,10 +1242,9 @@ export function HostItem({
           )}
         </div>
 
-        {/* Address — always visible in comfortable density */}
         {tokens.showAddressRow && (
           <span className="text-[11px] text-muted-foreground/60 truncate leading-none font-mono">
-            {host.username}@{host.ip}
+            {formatHostAddress(host, rowFields)}
           </span>
         )}
 
@@ -1254,7 +1282,7 @@ export function HostItem({
             </div>
           )}
 
-        {/* Action tray — slides open on hover (default) or via chevron in click-tray mode */}
+        {/* Action tray, slides open on hover (default) or via chevron in click-tray mode */}
         {!isCompact && (
           <div className={trayVisibilityClass}>
             {tokens.showResourceRow &&
@@ -1267,7 +1295,7 @@ export function HostItem({
                       <Cpu className="size-2.5 shrink-0 text-muted-foreground/40" />
                       <div className="w-9 h-1 bg-muted-foreground/15 rounded-full overflow-hidden">
                         <div
-                          className={`motion-meter h-full rounded-full ${host.cpu > 80 ? "bg-red-400" : host.cpu > 50 ? "bg-yellow-400" : "bg-accent-brand"}`}
+                          className={`motion-meter h-full rounded-full ${host.cpu > 80 ? "bg-red-400" : host.cpu > 50 ? "bg-warning" : "bg-accent-brand"}`}
                           style={{ width: `${host.cpu}%` }}
                         />
                       </div>
@@ -1281,7 +1309,7 @@ export function HostItem({
                       <MemoryStick className="size-2.5 shrink-0 text-muted-foreground/40" />
                       <div className="w-9 h-1 bg-muted-foreground/15 rounded-full overflow-hidden">
                         <div
-                          className={`motion-meter h-full rounded-full ${host.ram > 80 ? "bg-red-400" : host.ram > 60 ? "bg-yellow-400" : "bg-accent-brand/60"}`}
+                          className={`motion-meter h-full rounded-full ${host.ram > 80 ? "bg-red-400" : host.ram > 60 ? "bg-warning" : "bg-accent-brand/60"}`}
                           style={{ width: `${host.ram}%` }}
                         />
                       </div>

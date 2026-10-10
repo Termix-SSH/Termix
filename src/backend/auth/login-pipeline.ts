@@ -14,11 +14,7 @@ import type { Request, Response } from "express";
 import { AuthManager } from "../utils/auth-manager.js";
 import { loginRateLimiter } from "../utils/login-rate-limiter.js";
 import { authLogger } from "../utils/logger.js";
-import {
-  generateDeviceFingerprint,
-  getDeviceId,
-  parseUserAgent,
-} from "../utils/user-agent-parser.js";
+import { parseUserAgent } from "../utils/user-agent-parser.js";
 import { logAudit, getRequestMeta } from "../utils/audit-logger.js";
 import {
   createCurrentUserAuthRepository,
@@ -37,6 +33,7 @@ import {
   type SecondFactor,
 } from "./registry.js";
 import {
+  isNativeAppRequest,
   issueSession,
   sendSession,
   syncSharedCredentialsForUserRoles,
@@ -131,10 +128,33 @@ function shouldRunSecondFactors(methodId: string): boolean {
   return isSecondFactorAfterExternalLoginEnabled();
 }
 
+export const TRUST_DEVICE_COOKIE = "termix_trust_device";
+const TRUST_TOKEN_PATTERN = /^[a-f0-9]{64}$/;
+const TRUST_TOKEN_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * The remember-this-device token the server handed out after a full login.
+ * Browsers carry it in an HttpOnly cookie; the desktop app, which talks to
+ * the server cross-origin without cookies, sends it back as a header.
+ */
+function readTrustToken(req: Request): string | null {
+  const cookies = (req as Request & { cookies?: Record<string, string> })
+    .cookies;
+  const value =
+    cookies?.[TRUST_DEVICE_COOKIE] || req.get("x-termix-trust-token");
+  return typeof value === "string" && TRUST_TOKEN_PATTERN.test(value)
+    ? value
+    : null;
+}
+
+export function hashTrustToken(token: string): string {
+  return crypto.createHash("sha256").update(`trust-v2|${token}`).digest("hex");
+}
+
 async function isTrustedDevice(req: Request, userId: string): Promise<boolean> {
-  const deviceInfo = parseUserAgent(req);
-  const fingerprint = generateDeviceFingerprint(deviceInfo, getDeviceId(req));
-  if (!fingerprint) return false;
+  const token = readTrustToken(req);
+  if (!token) return false;
+  const fingerprint = hashTrustToken(token);
   const trusted = await AuthManager.getInstance().isTrustedDevice(
     userId,
     fingerprint,
@@ -150,6 +170,27 @@ async function isTrustedDevice(req: Request, userId: string): Promise<boolean> {
 }
 
 type DeviceType = ReturnType<typeof parseUserAgent>["type"];
+
+/**
+ * An account that only signs in through SSO or LDAP must keep doing so. A
+ * passkey or any other local method would skip the identity provider, so a
+ * user disabled there could still get in.
+ */
+export function assertMethodAllowedFor(
+  user: Pick<UserRecord, "isExternal" | "passwordHash">,
+  identity: VerifiedIdentity,
+  methodId: string,
+): void {
+  if (identity.kind === "external" || !user.isExternal) return;
+  if (user.passwordHash && user.passwordHash.trim() !== "") return;
+  ensureCoreLoginProviders();
+  if (getLoginMethod(methodId)?.external) return;
+  throw new LoginMethodError(
+    "This account signs in through its identity provider",
+    403,
+    "external_login_required",
+  );
+}
 
 async function resolveUser(
   identity: VerifiedIdentity,
@@ -175,7 +216,7 @@ async function unlockUser(
 ): Promise<void> {
   const authManager = AuthManager.getInstance();
 
-  if (identity.kind === "external" || user.isOidc) {
+  if (identity.kind === "external" || user.isExternal) {
     try {
       await authManager.authenticateExternalUser(user.id, deviceType);
     } catch (error) {
@@ -233,6 +274,7 @@ export async function runLogin(
 ): Promise<LoginResult> {
   const deviceType = parseUserAgent(req).type;
   const user = await resolveUser(identity, deviceType);
+  assertMethodAllowedFor(user, identity, context.methodId);
 
   await unlockUser(user, identity, deviceType);
   if ("password" in identity && identity.password) {
@@ -280,11 +322,7 @@ export async function runLogin(
     );
   }
 
-  const ssoClaims = {
-    ssoProviderId: identity.ssoProviderId ?? null,
-    oidcSub: identity.oidcSub ?? null,
-    oidcSid: identity.oidcSid ?? null,
-  };
+  const ssoClaims = { externalSession: identity.externalSession ?? null };
 
   if (
     factors.required.length > 0 &&
@@ -477,32 +515,41 @@ export async function verifySecondFactorAndRespond(
       ? req.body.rememberMe
       : (lookup.pending?.rememberMe ?? false);
 
+  let trustToken: string | null = null;
   if (rememberMe) {
     const deviceInfo = parseUserAgent(req);
-    const fingerprint = generateDeviceFingerprint(deviceInfo, getDeviceId(req));
-    if (fingerprint) {
-      await AuthManager.getInstance().addTrustedDevice(
-        user.id,
-        fingerprint,
-        deviceInfo.type,
-        deviceInfo.deviceInfo,
-      );
-      authLogger.info("Device automatically trusted via Remember Me", {
-        operation: "totp_auto_trust",
-        userId: user.id,
-        deviceType: deviceInfo.type,
-      });
-    }
+    trustToken = crypto.randomBytes(32).toString("hex");
+    await AuthManager.getInstance().addTrustedDevice(
+      user.id,
+      hashTrustToken(trustToken),
+      deviceInfo.type,
+      deviceInfo.deviceInfo,
+    );
+    res.cookie(
+      TRUST_DEVICE_COOKIE,
+      trustToken,
+      AuthManager.getInstance().getSecureCookieOptions(
+        req,
+        TRUST_TOKEN_MAX_AGE_MS,
+      ),
+    );
+    authLogger.info("Device automatically trusted via Remember Me", {
+      operation: "totp_auto_trust",
+      userId: user.id,
+      deviceType: deviceInfo.type,
+    });
   }
 
   const pending = lookup.pending;
   const session = await issueSession(req, user, {
     methodId: pending?.methodId ?? "password",
     rememberMe,
-    ssoProviderId: pending?.ssoProviderId ?? null,
-    oidcSub: pending?.oidcSub ?? null,
-    oidcSid: pending?.oidcSid ?? null,
+    externalSession: pending?.externalSession ?? null,
   });
+
+  if (trustToken && isNativeAppRequest(req)) {
+    session.body.trustToken = trustToken;
+  }
 
   consumePendingLogin(lookup.token);
   res.clearCookie(

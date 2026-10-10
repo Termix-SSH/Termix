@@ -3,7 +3,7 @@
  * columns into host_protocol_auth, re-encrypted with the owner's data key
  * under the new table's context.
  *
- * The columns stay in the database, unused, until 3.0.0. A user's hosts are
+ * The columns stay in the database, unused, until 26.10.0. A user's hosts are
  * copied once their data key opens (at boot for a system-wrapped key, at the
  * next password login for a 2.8 key that only the password opens), and a
  * per-user marker then stops a later boot from bringing back a login the

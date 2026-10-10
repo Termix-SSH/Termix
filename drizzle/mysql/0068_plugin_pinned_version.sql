@@ -1,0 +1,1 @@
+ALTER TABLE `plugins` ADD `pinned_version` text;

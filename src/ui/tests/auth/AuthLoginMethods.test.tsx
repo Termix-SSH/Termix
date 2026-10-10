@@ -18,7 +18,7 @@ import {
 import type {
   LoginMethodUIProps,
   SecondFactorUIProps,
-} from "@termix/plugin-sdk/frontend";
+} from "@termix-ssh/plugin-sdk/frontend";
 
 const mainAxios = vi.hoisted(() => ({
   loginUser: vi.fn(),

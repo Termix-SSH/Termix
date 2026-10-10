@@ -58,15 +58,6 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     id,
     username: "local",
     passwordHash: "",
-    isOidc: false,
-    clientId: "",
-    clientSecret: "",
-    issuerUrl: "",
-    authorizationUrl: "",
-    tokenUrl: "",
-    identifierPath: "",
-    namePath: "",
-    scopes: "openid email profile",
   });
 
   try {
@@ -191,7 +182,7 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
         createCurrentUserAuthRepository().listUserIdsWithSecondFactors(),
       ]);
       const conflictingUser = users.some(
-        (user) => user.isOidc || secondFactorUsers.has(user.id),
+        (user) => user.isExternal || secondFactorUsers.has(user.id),
       );
       if (process.env.OIDC_CLIENT_ID || conflictingUser) {
         throw new Error(
@@ -213,6 +204,12 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       await import("./hosts/status/host-status-service.js");
     hostStatusService.start();
 
+    // Counted before the desktop user is provisioned, so a first desktop
+    // run counts as a fresh install too.
+    const { createCurrentUserRepository } =
+      await import("./database/repositories/factory.js");
+    const freshInstall = (await createCurrentUserRepository().countAll()) === 0;
+
     if (process.env.ELECTRON_EMBEDDED === "true") {
       await provisionLocalDesktopUserIfNeeded();
     }
@@ -226,21 +223,11 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     const { primeKnownPermissions } =
       await import("./utils/known-permissions.js");
     await primeKnownPermissions();
-    // Terminal, docker, host-metrics, file-manager and tmux monitoring are
-    // deliberately absent: the ssh-terminal, docker, host-metrics,
-    // file-manager and tmux-monitor plugins start their own servers, so
-    // disabling any of them stops its WS/HTTP server. See
-    // plugins/ssh-terminal, plugins/docker, plugins/host-metrics,
-    // plugins/file-manager and plugins/tmux-monitor.
-    // Every other plugin (AI, Proxmox, Remote Desktop, Fleets, Automations,
-    // Network Topology, Workspaces, Web Endpoint, Tunnels, Serial, Homepage)
-    // is absent for the same reason: each one serves its routes under
-    // /plugin-api/<id>/ (or a WS route under /plugin-ws/<id>/) through ctx on
-    // activate, so disabling it answers 503 instead of leaving a dead import
-    // here. The dashboard's own uptime and recent-activity routes are core
-    // and are mounted on the main server in database.ts.
-    // Automations' scheduler and tunnel autostart also start from their own
-    // activate() rather than here.
+    // Plugins serve their routes under /plugin-api/<id>/ and /plugin-ws/<id>/
+    // through ctx on activate, and start their own schedulers there, so
+    // disabling one answers 503 instead of leaving a dead import here. The
+    // dashboard's own uptime and recent-activity routes are core and are
+    // mounted on the main server in database.ts.
 
     // Initialize log level from database settings
     const { getCurrentSettingValue } =
@@ -257,7 +244,7 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     // fails to load must not stop the backend, so this never rejects.
     try {
       const { initializePlugins } = await import("./plugins/index.js");
-      const loaded = await initializePlugins();
+      const loaded = await initializePlugins({ freshInstall });
       if (loaded.length > 0) {
         systemLogger.info(`Loaded ${loaded.length} plugin(s)`, {
           operation: "plugin_init",
@@ -267,6 +254,10 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       const { runPluginDataMigrations } =
         await import("./upgrade/boot-migrations.js");
       await runPluginDataMigrations();
+
+      const { startPluginAutoUpdate } =
+        await import("./plugins/auto-update.js");
+      startPluginAutoUpdate();
     } catch (error) {
       systemLogger.warn("Plugin runtime failed to initialize", {
         operation: "plugin_init",
@@ -298,7 +289,10 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     });
 
     // Log output can be filtered by the configured level or split across chunks.
-    if (process.env.ELECTRON_EMBEDDED === "true") {
+    if (
+      process.env.ELECTRON_EMBEDDED === "true" ||
+      process.env.TERMIX_DEV_RELOAD === "true"
+    ) {
       process.send?.({ type: "backend-ready" });
     }
 
@@ -342,6 +336,11 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
         gracefulShutdown("IPC shutdown");
       }
     });
+
+    if (process.env.TERMIX_DEV_RELOAD === "true") {
+      const { listenForDevReloads } = await import("./plugins/dev-reload.js");
+      listenForDevReloads();
+    }
 
     // A single bad request must not take the server down. Exit only on errors
     // that leave the process genuinely unusable; log and keep serving

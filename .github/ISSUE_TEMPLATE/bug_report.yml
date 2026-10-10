@@ -1,0 +1,107 @@
+name: Bug report
+description: Something in Termix itself is broken
+labels: [bug]
+type: Bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. A maintainer reads every issue, even when there is no reply right away. We usually reply once there is a fix or a workaround.
+
+        If you came from **Report an issue** in Termix, your versions and environment are already filled in below.
+
+        Is it about a plugin (terminal, file manager, Docker, remote desktop and so on)? Report it on that plugin's repo instead. **Report an issue** on the plugin's page in Termix takes you there with your versions filled in.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug. Screenshots help a lot.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: As few steps as you can.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+      description: What should have happened instead?
+    validations:
+      required: false
+  - type: input
+    id: termix-version
+    attributes:
+      label: Termix version
+      description: Shown in Settings under About, or in your User Profile.
+      placeholder: "e.g. 26.10.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Where do you see the problem?
+      options:
+        - "Web browser"
+        - "Desktop app (Windows)"
+        - "Desktop app (macOS)"
+        - "Desktop app (Linux)"
+        - "Mobile app (iOS)"
+        - "Mobile app (Android)"
+        - "Other"
+    validations:
+      required: true
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: Server install
+      description: How is the Termix server installed?
+      options:
+        - "Docker"
+        - "Manual build"
+        - "Proxmox community script"
+        - "Desktop app (built-in server)"
+        - "Not sure"
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser and OS, plus anything special about your setup (reverse proxy, database, SSO).
+      placeholder: |
+        Web, Chrome on Windows. Behind nginx, Postgres.
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Errors from the browser console, `docker logs termix`, or the error Termix shows. This is shown as code, so no backticks needed.
+      render: text
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+      description: Links, config, or anything that might help.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched open and closed issues and this is not a duplicate
+          required: true
+        - label: I am on the latest version, or I said which version I am on
+          required: true

@@ -22,7 +22,8 @@ vi.mock("../../utils/logger.js", () => {
   return { pluginLogger: log, sshLogger: log, logger: log, authLogger: log };
 });
 vi.mock("../../plugins/permissions.js", async () => {
-  const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+  const { PluginCapabilityError } =
+    await import("@termix-ssh/plugin-sdk/backend");
   return {
     assertCapability: async (
       pluginId: string,
@@ -142,7 +143,8 @@ const { classifyKeyboardInteractive } =
   await import("../../hosts/connect/keyboard-interactive.js");
 const { getLoginMethod, getSecondFactor } =
   await import("../../auth/registry.js");
-const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+const { PluginCapabilityError } =
+  await import("@termix-ssh/plugin-sdk/backend");
 
 function manifest(capabilities: string[], auth: Record<string, string[]> = {}) {
   return {
@@ -554,6 +556,30 @@ describe("ctx.auth", () => {
     ).not.toBe("browser");
   });
 
+  it("asks for a push/TOTP menu choice as text and a press-enter confirm as a push", () => {
+    const host = { id: 1, ip: "10.0.0.1", port: 22, username: "root" };
+    expect(
+      classifyKeyboardInteractive(
+        {
+          name: "",
+          instructions: "",
+          prompts: [{ prompt: "Choose [1] Push, or [2] TOTP: ", echo: true }],
+        },
+        host,
+      ),
+    ).toEqual({ kind: "input", promptIndex: 0, isPush: false });
+    expect(
+      classifyKeyboardInteractive(
+        {
+          name: "",
+          instructions: "",
+          prompts: [{ prompt: "Press enter to send push", echo: false }],
+        },
+        host,
+      ),
+    ).toEqual({ kind: "input", promptIndex: 0, isPush: true });
+  });
+
   it("refuses a keyboard-interactive handler that is not declared", () => {
     const auth = createPluginAuth({
       manifest: manifest(["auth:provide"], { keyboardInteractive: ["gate"] }),
@@ -647,7 +673,7 @@ describe("ctx.auth", () => {
   it("refuses enrolment when core policy forbids second factors", async () => {
     h.granted = new Set(["auth:provide"]);
     h.factors = [];
-    const { LoginMethodError } = await import("@termix/plugin-sdk/backend");
+    const { LoginMethodError } = await import("@termix-ssh/plugin-sdk/backend");
     h.policyError = new LoginMethodError("password login is off", 409);
     const auth = createPluginAuth({
       manifest: manifest(["auth:provide"], { secondFactors: ["pin"] }),

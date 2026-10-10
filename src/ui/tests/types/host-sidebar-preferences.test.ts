@@ -28,6 +28,13 @@ describe("defaultHostSidebarPreferences", () => {
         openOnDoubleClick: false,
         showFolderPaths: true,
         hostClickBehavior: "newTab",
+        barActions: {},
+        showAddress: true,
+        showUsername: true,
+        showPort: false,
+        showPinIcon: true,
+        showSharedBadge: true,
+        showBadges: true,
       },
     });
   });
@@ -67,6 +74,13 @@ describe("sanitizeHostSidebarPreferences", () => {
         openOnDoubleClick: true,
         showFolderPaths: false,
         hostClickBehavior: "focusExistingDoubleClickNew",
+        barActions: { maintenance: true },
+        showAddress: false,
+        showUsername: false,
+        showPort: true,
+        showPinIcon: false,
+        showSharedBadge: false,
+        showBadges: true,
       },
     };
     expect(sanitizeHostSidebarPreferences(valid)).toEqual(valid);
@@ -143,5 +157,52 @@ describe("sanitizeHostSidebarPreferences", () => {
   it("always stamps the current version regardless of input", () => {
     const result = sanitizeHostSidebarPreferences({ version: 999 });
     expect(result.version).toBe(HOST_SIDEBAR_PREFS_VERSION);
+  });
+});
+
+describe("barActions", () => {
+  it("keeps boolean choices for valid action ids only", () => {
+    const prefs = sanitizeHostSidebarPreferences({
+      display: {
+        barActions: {
+          maintenance: true,
+          "ai-agent": false,
+          "Bad Id": true,
+          docker: "yes",
+        },
+      },
+    });
+    expect(prefs.display.barActions).toEqual({
+      maintenance: true,
+      "ai-agent": false,
+    });
+  });
+
+  it("defaults to no overrides", () => {
+    expect(sanitizeHostSidebarPreferences({}).display.barActions).toEqual({});
+    expect(
+      sanitizeHostSidebarPreferences({ display: { barActions: [] } }).display
+        .barActions,
+    ).toEqual({});
+  });
+});
+
+describe("row fields", () => {
+  it("keeps boolean row field choices", () => {
+    const prefs = sanitizeHostSidebarPreferences({
+      display: { showAddress: false, showPort: true, showBadges: false },
+    });
+    expect(prefs.display.showAddress).toBe(false);
+    expect(prefs.display.showPort).toBe(true);
+    expect(prefs.display.showBadges).toBe(false);
+    expect(prefs.display.showUsername).toBe(true);
+  });
+
+  it("falls back to defaults for non-boolean values", () => {
+    const prefs = sanitizeHostSidebarPreferences({
+      display: { showAddress: "no", showPort: 1 },
+    });
+    expect(prefs.display.showAddress).toBe(true);
+    expect(prefs.display.showPort).toBe(false);
   });
 });

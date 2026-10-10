@@ -80,11 +80,13 @@ function columnType(
       // though it was declared unbounded. defineTable refuses to index a
       // text/json column, so in practice this only catches a primary key.
       if (keyed && dialect !== "sqlite") return `varchar(${KEY_LENGTH})`;
+      // MySQL TEXT stops at 64KB, so free text, json and secrets go long.
+      if (dialect === "mysql" && column.type !== "timestamp") return "longtext";
       return "text";
   }
 }
 
-/** Column types that are TEXT on MySQL when nothing keys them. */
+/** Column types that are TEXT or LONGTEXT on MySQL when nothing keys them. */
 const TEXT_ON_MYSQL: ReadonlySet<PluginColumn["type"]> = new Set([
   "text",
   "json",

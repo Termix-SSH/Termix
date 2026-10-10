@@ -21,6 +21,8 @@ export interface RegisteredDashboardCard {
   defaultHeight?: number;
   /** Which column a preset places this card in by default. Defaults to "main". */
   defaultPanel?: "main" | "side";
+  /** "framed" gets a titled header from the dashboard; "bare" draws its own. */
+  frame?: "framed" | "bare";
   component: ComponentType<DashboardCardRenderProps>;
 }
 

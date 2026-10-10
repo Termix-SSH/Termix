@@ -77,8 +77,6 @@ export interface AuthResponse {
   username?: string;
   userId?: string;
   is_external?: boolean;
-  /** 2.8 name for is_external. */
-  is_oidc?: boolean;
   totp_enabled?: boolean;
   requires_totp?: boolean;
   temp_token?: string;
@@ -96,12 +94,9 @@ export interface UserInfo {
   is_admin: boolean;
   /** Signs in through an external login such as SSO or LDAP. */
   is_external?: boolean;
-  /** 2.8 name for is_external. */
-  is_oidc: boolean;
   is_dual_auth?: boolean;
   password_hash?: string;
   data_unlocked?: boolean;
-  show_donation_modal?: boolean;
   /** On a desktop linked to a server, the account it is signed in to there. */
   linked?: LinkedAccountInfo | null;
 }
@@ -139,6 +134,8 @@ type ElectronWindow = Window &
 
 export { isElectron };
 
+export const TRUST_TOKEN_KEY = "termixTrustToken";
+
 function getLoggerForService(serviceName: string) {
   if (serviceName.includes("SSH") || serviceName.includes("ssh")) {
     return sshLogger;
@@ -172,7 +169,6 @@ if (isElectron()) {
             if (!localStorage.getItem(key)) {
               electronSettingsCache.set(key, value);
               localStorage.setItem(key, value);
-              console.log(`[Electron] Loaded setting ${key} from main process`);
             } else {
               // Even if we don't overwrite localStorage, update the cache
               electronSettingsCache.set(key, localStorage.getItem(key)!);
@@ -206,8 +202,6 @@ export function setCookie(
           console.error(`[Electron] Failed to persist setting ${name}:`, err);
         });
       }
-
-      console.log(`[Electron] Set setting: ${name}`);
     } catch (error) {
       console.error(`[Electron] Failed to set setting: ${name}`, error);
     }
@@ -232,7 +226,6 @@ export function getCookie(name: string): string | undefined {
       if (token) {
         electronSettingsCache.set(name, token);
       }
-      console.log(`[Electron] Get setting: ${name} = ${token}`);
       return token;
     } catch (error) {
       console.error(`[Electron] Failed to get setting: ${name}`, error);
@@ -372,6 +365,17 @@ function createApiInstance(
           config.headers.set("Authorization", `Bearer ${jwt}`);
         } else {
           config.headers["Authorization"] = `Bearer ${jwt}`;
+        }
+      }
+      // The desktop app has no cookies with the server, so it carries the
+      // remember-this-device token itself, and only to login.
+      const trustToken = localStorage.getItem(TRUST_TOKEN_KEY);
+      const isLogin = isLoginRequestUrl(config.url);
+      if (trustToken && isLogin) {
+        if (config.headers.set) {
+          config.headers.set("X-Termix-Trust-Token", trustToken);
+        } else {
+          config.headers["X-Termix-Trust-Token"] = trustToken;
         }
       }
     }
@@ -722,6 +726,19 @@ class ApiError extends Error {
   }
 }
 
+/**
+ * Requests that sign someone in. A 401 from one of these means wrong
+ * credentials or a wrong code, not an expired session.
+ */
+export function isLoginRequestUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  return (
+    url.includes("/users/login") ||
+    url.includes("/users/totp/verify-login") ||
+    /\/users\/auth\/(second-factor\/)?[^/?]+\/verify(\?|$)/.test(url)
+  );
+}
+
 export function handleApiError(error: unknown, operation: string): never {
   const context: LogContext = {
     operation: "error_handling",
@@ -753,8 +770,7 @@ export function handleApiError(error: unknown, operation: string): never {
         errorContext,
       );
 
-      const isLoginEndpoint = url?.includes("/users/login");
-      const errorMessage = isLoginEndpoint
+      const errorMessage = isLoginRequestUrl(url)
         ? message
         : "Authentication required. Please log in again.";
 
@@ -960,8 +976,7 @@ export async function loginUser(
       requires_totp: response.data.requires_totp,
       temp_token: response.data.temp_token,
       rememberMe: response.data.rememberMe,
-      is_external: response.data.is_external ?? response.data.is_oidc,
-      is_oidc: response.data.is_oidc,
+      is_external: response.data.is_external,
       totp_enabled: response.data.totp_enabled,
       token: response.data.token,
     };
@@ -1009,14 +1024,6 @@ export async function getUserInfo(): Promise<UserInfo> {
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch user info");
-  }
-}
-
-export async function dismissDonationModal(): Promise<void> {
-  try {
-    await authApi.post("/users/me/dismiss-donation-modal");
-  } catch (error) {
-    handleApiError(error, "dismiss donation modal");
   }
 }
 

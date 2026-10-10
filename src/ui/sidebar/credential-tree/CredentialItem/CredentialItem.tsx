@@ -15,9 +15,11 @@ import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/clipboard";
 import { ComponentSlot } from "@/shell/ActionSlot";
 import type { Credential } from "@/types/ui-types";
-import type {
-  CredentialDensity,
-  CredentialTrayTrigger,
+import {
+  defaultCredentialRowFields,
+  type CredentialDensity,
+  type CredentialRowFields,
+  type CredentialTrayTrigger,
 } from "@/types/credential-sidebar-preferences";
 
 /**
@@ -40,6 +42,8 @@ const CREDENTIAL_ITEM_DENSITY_TOKENS = {
   },
 } as const;
 
+const DEFAULT_ROW_FIELDS = defaultCredentialRowFields();
+
 export function CredentialItem({
   cred,
   usedByCount = 0,
@@ -53,6 +57,7 @@ export function CredentialItem({
   density = "comfortable",
   trayTrigger = "hover",
   showTags = true,
+  rowFields = DEFAULT_ROW_FIELDS,
   arrangeMode = false,
   isDragging = false,
   onReorderDrop,
@@ -80,6 +85,7 @@ export function CredentialItem({
   density?: CredentialDensity;
   trayTrigger?: CredentialTrayTrigger;
   showTags?: boolean;
+  rowFields?: CredentialRowFields;
   /** When true (rearranging unlocked), the row can be dragged to reorder or
    * onto a folder header to move. */
   arrangeMode?: boolean;
@@ -103,6 +109,8 @@ export function CredentialItem({
   const isKey = cred.type === "key";
   const tokens = CREDENTIAL_ITEM_DENSITY_TOKENS[density];
   const isCompact = density === "compact";
+  const showUsername = rowFields.showUsername && !!cred.username;
+  const showUsage = rowFields.showUsageCount && usedByCount > 0;
   const isTouchOnly =
     typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
 
@@ -281,7 +289,7 @@ export function CredentialItem({
             className={`${tokens.nameTextSize} font-semibold truncate text-foreground leading-none tracking-tight`}
           >
             {cred.name}
-            {cred.isShared && (
+            {rowFields.showSharedBadge && cred.isShared && (
               <span
                 className="ml-1 inline-flex items-center gap-0.5 text-[9px] uppercase text-accent-brand/80"
                 title={t("credentials.sharedBy", {
@@ -293,21 +301,27 @@ export function CredentialItem({
               </span>
             )}
           </span>
-          <span
-            className={`text-[9px] px-1 py-px font-bold border leading-none shrink-0 ${isKey ? "border-accent-brand/30 text-accent-brand" : "border-border/60 text-muted-foreground/60"}`}
-          >
-            {isKey ? t("credentials.keyBadge") : t("credentials.passwordBadge")}
-          </span>
+          {rowFields.showTypeBadge && (
+            <span
+              className={`text-[9px] px-1 py-px font-bold border leading-none shrink-0 ${isKey ? "border-accent-brand/30 text-accent-brand" : "border-border/60 text-muted-foreground/60"}`}
+            >
+              {isKey
+                ? t("credentials.keyBadge")
+                : t("credentials.passwordBadge")}
+            </span>
+          )}
           <ComponentSlot
             slotId="credentials.badges"
             props={{ credentialId: Number(cred.id) }}
           />
-          {cred.pin && (
+          {rowFields.showPinIcon && cred.pin && (
             <Pin className="size-2.5 text-accent-brand/50 shrink-0" />
           )}
           {!shouldUseClickTray && !actionsOnly && (
             <span className="text-[11px] text-muted-foreground/45 truncate leading-none ml-auto shrink-0 group-hover:hidden">
-              {usedByCount > 0 ? `${usedByCount}h` : ""}
+              {rowFields.showUsageCount && usedByCount > 0
+                ? `${usedByCount}h`
+                : ""}
             </span>
           )}
           {(shouldUseClickTray || actionsOnly) && (
@@ -331,12 +345,12 @@ export function CredentialItem({
         </div>
 
         {/* Username row */}
-        {tokens.showUsernameRow && (cred.username || usedByCount > 0) && (
+        {tokens.showUsernameRow && (showUsername || showUsage) && (
           <span className="text-[11px] text-muted-foreground/60 truncate leading-none font-mono">
-            {cred.username}
-            {usedByCount > 0 && (
+            {showUsername && cred.username}
+            {showUsage && (
               <span
-                className={`text-muted-foreground/40${cred.username ? " ml-2" : ""}`}
+                className={`text-muted-foreground/40${showUsername ? " ml-2" : ""}`}
               >
                 {usedByCount}h
               </span>

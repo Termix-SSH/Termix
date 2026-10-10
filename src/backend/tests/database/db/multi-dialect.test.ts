@@ -59,7 +59,7 @@ describe("needsExplicitPersist", () => {
 
 /**
  * schema.pg.ts and schema.mysql.ts are generated from schema.ts. These check the
- * generated output is usable rather than merely syntactically valid — the
+ * generated output is usable rather than merely syntactically valid, the
  * repository layer's correctness rests on all three behaving the same way.
  */
 describe("generated schemas", () => {
@@ -113,8 +113,8 @@ describe("generated schemas", () => {
       expect(auditFks).toHaveLength(1);
       expect(auditFks[0].onDelete).toBe("set null");
 
-      const folderFks = read(schema.sshFolders).foreignKeys;
-      expect(folderFks.map((fk) => fk.onDelete).sort()).toEqual([
+      const hostFks = read(schema.hosts).foreignKeys;
+      expect([...new Set(hostFks.map((fk) => fk.onDelete))].sort()).toEqual([
         "cascade",
         "set null",
       ]);
@@ -133,7 +133,7 @@ describe("generated schemas", () => {
    * SQLite builds its indexes at runtime from PERFORMANCE_INDEXES; Postgres and
    * MySQL only ever get what the migrations declare, which comes from schema.ts.
    * Anything listed in one and missing from the other is an index the engines
-   * chosen for scale silently do without — which is how 31 of them went missing.
+   * chosen for scale silently do without, which is how 31 of them went missing.
    */
   it("declares every performance index in schema.ts", () => {
     // Both are the leading column of an existing composite unique index, which

@@ -8,10 +8,7 @@
  * needs no core change.
  */
 
-import {
-  createCurrentHostProtocolAuthRepository,
-  createCurrentSharedHostAuthOverrideRepository,
-} from "../../database/repositories/factory.js";
+import { createCurrentHostProtocolAuthRepository } from "../../database/repositories/factory.js";
 import {
   decryptProtocolLogin,
   type HostProtocolAuthRecord,
@@ -434,12 +431,25 @@ export async function loadProtocolAuthSummaries(
   const rows =
     await createCurrentHostProtocolAuthRepository().listRowsForHosts(ids);
   const keys = new Map<string, Buffer | null>();
+  const usernames = new Map<string, string | null>();
   for (const row of rows) {
     if (!keys.has(row.userId)) {
       keys.set(row.userId, DataCrypto.getUserDataKey(row.userId));
     }
     const own = result.get(row.hostId) ?? {};
-    own[row.protocol] = summarize(row, keys.get(row.userId) ?? null);
+    const summary = summarize(row, keys.get(row.userId) ?? null);
+    if (row.authType === "credential" && row.credentialId) {
+      const key = `${row.userId}:${row.credentialId}`;
+      if (!usernames.has(key)) {
+        const credential = await findUsableCredential(
+          row.credentialId,
+          row.userId,
+        );
+        usernames.set(key, credential?.username || null);
+      }
+      summary.username = usernames.get(key) ?? null;
+    }
+    own[row.protocol] = summary;
     result.set(row.hostId, own);
   }
   return result;
@@ -485,6 +495,30 @@ function withDeclaredFields(
   return out;
 }
 
+/**
+ * The credential a host inherits from its folder or the user's defaults, for
+ * a protocol login set to "credential" with none picked.
+ */
+async function inheritedCredentialId(
+  ownerId: string,
+  hostId: number,
+): Promise<number | null> {
+  try {
+    const { resolveForEditor } = await import("../defaults/service.js");
+    const resolved = await resolveForEditor({ ownerId, hostId });
+    const auth = resolved["core.auth"]?.value as {
+      authType?: string;
+      credentialId?: unknown;
+    } | null;
+    return auth?.authType === "credential" &&
+      typeof auth.credentialId === "number"
+      ? auth.credentialId
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The owner's own login: the stored one, or the credential it points at. */
 export async function resolveOwnerProtocolLogin(
   host: Record<string, unknown>,
@@ -502,8 +536,12 @@ export async function resolveOwnerProtocolLogin(
   const authType = login?.authType || "direct";
   let username = login?.username ?? "";
   let password = login?.password ?? "";
-  if (authType === "credential" && login?.credentialId) {
-    const credential = await findUsableCredential(login.credentialId, ownerId);
+  const credentialId =
+    authType === "credential"
+      ? (login?.credentialId ?? (await inheritedCredentialId(ownerId, hostId)))
+      : null;
+  if (credentialId) {
+    const credential = await findUsableCredential(credentialId, ownerId);
     // Only the login itself comes from a stored credential, never the fields.
     if (credential?.username) username = credential.username;
     if (credential?.password) password = credential.password;
@@ -511,7 +549,10 @@ export async function resolveOwnerProtocolLogin(
 
   const fallback = declared.hostLoginFallback ?? [];
   if (fallback.includes("username")) username ||= str(host.username);
-  if (fallback.includes("password")) password ||= str(host.password);
+  // A key or credential host can still carry an old password; never send it.
+  if (fallback.includes("password") && host.authType === "password") {
+    password ||= str(host.password);
+  }
 
   const secretFields: Record<string, string> = {};
   for (const [key, value] of Object.entries(login?.secretFields ?? {})) {
@@ -587,17 +628,6 @@ export async function resolveRecipientProtocolLogin(
     password: "",
     fields: withDeclaredFields(declared, ownerFields),
   };
-}
-
-/** Credential ids a recipient chose for this host, per protocol. */
-export async function listRecipientOverrideIds(
-  hostId: number,
-  userId: string,
-): Promise<Record<string, number>> {
-  return (await createCurrentSharedHostAuthOverrideRepository().listCredentialIds(
-    hostId,
-    userId,
-  )) as Record<string, number>;
 }
 
 /** A login in an export or on the sync wire: plaintext, keyed by protocol. */

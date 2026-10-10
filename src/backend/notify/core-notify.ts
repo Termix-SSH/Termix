@@ -4,7 +4,7 @@
  * reach nobody, same as a plugin's.
  */
 
-import type { PluginNotification } from "@termix/plugin-sdk/backend";
+import type { PluginNotification } from "@termix-ssh/plugin-sdk/backend";
 import { activeNotifyHub } from "../plugins/notify-hub.js";
 import { resolveAudience } from "../plugins/ctx-notify.js";
 import { systemLogger } from "../utils/logger.js";

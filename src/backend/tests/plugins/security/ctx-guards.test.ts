@@ -27,7 +27,8 @@ const { createPluginContext, createPluginHandle } =
 const { invalidatePluginPermissionCache } =
   await import("../../../plugins/permissions.js");
 const { runAsActor } = await import("../../../plugins/actor.js");
-const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+const { PluginCapabilityError } =
+  await import("@termix-ssh/plugin-sdk/backend");
 
 const PLUGIN_ID = "walker";
 const ACTOR = "user-walker";

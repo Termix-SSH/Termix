@@ -1,3 +1,6 @@
+import { generateKeyPairSync } from "node:crypto";
+import ssh2 from "ssh2";
+import sshpk from "sshpk";
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import {
@@ -8,6 +11,8 @@ import {
   getFriendlyKeyTypeName,
   validateKeyPair,
 } from "../../utils/ssh-key-utils.js";
+
+const { parsePrivateKey } = sshpk;
 
 // A real OpenSSH ed25519 keypair generated solely for these tests. It grants no
 // access to anything and exists only so the ssh2 parsing path is exercised for
@@ -156,5 +161,66 @@ describe("validateKeyPair", () => {
     );
     expect(result.isValid).toBe(false);
     expect(result.error).toMatch(/private key/i);
+  });
+});
+
+describe("PKCS#8 runtime key normalization", () => {
+  it.each(["ed25519", "rsa", "ec"] as const)(
+    "converts %s without changing its public key",
+    (type) => {
+      const { privateKey, publicKey } =
+        type === "rsa"
+          ? generateKeyPairSync("rsa", { modulusLength: 2048 })
+          : type === "ec"
+            ? generateKeyPairSync("ec", { namedCurve: "prime256v1" })
+            : generateKeyPairSync("ed25519");
+      const pem = privateKey
+        .export({ type: "pkcs8", format: "pem" })
+        .toString();
+      const prepared = preparePrivateKeyForSSH2(pem);
+      const parsed = ssh2.utils.parseKey(prepared);
+      expect(parsed).not.toBeInstanceOf(Error);
+      if (parsed instanceof Error) throw parsed;
+      expect(
+        parsePrivateKey(prepared).toPublic().toBuffer("pkcs8").toString(),
+      ).toBe(publicKey.export({ type: "spki", format: "pem" }).toString());
+    },
+  );
+
+  it("decrypts encrypted PKCS#8 only with the correct passphrase", () => {
+    const { privateKey } = generateKeyPairSync("ed25519");
+    const pem = privateKey
+      .export({
+        type: "pkcs8",
+        format: "pem",
+        cipher: "aes-256-cbc",
+        passphrase: " key passphrase ",
+      })
+      .toString();
+    expect(
+      ssh2.utils.parseKey(preparePrivateKeyForSSH2(pem, " key passphrase ")),
+    ).not.toBeInstanceOf(Error);
+    expect(() => preparePrivateKeyForSSH2(pem)).toThrow();
+    expect(() => preparePrivateKeyForSSH2(pem, "wrong")).toThrow();
+  });
+
+  it("keeps an already usable OpenSSH key unchanged", () => {
+    expect(preparePrivateKeyForSSH2(ED25519_PRIVATE).toString()).toBe(
+      ED25519_PRIVATE,
+    );
+  });
+
+  it("rejects unsupported X25519 keys", () => {
+    const { privateKey } = generateKeyPairSync("x25519");
+    const pem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();
+    expect(() => preparePrivateKeyForSSH2(pem)).toThrow();
+  });
+
+  it("rejects malformed PKCS#8 instead of guessing from its header", () => {
+    expect(() =>
+      preparePrivateKeyForSSH2(
+        "-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----",
+      ),
+    ).toThrow();
   });
 });

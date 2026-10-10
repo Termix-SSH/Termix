@@ -28,7 +28,7 @@ vi.mock("../../utils/audit-logger.js", () => ({
 
 import { createPluginContext, createPluginHandle } from "../../plugins/ctx.js";
 import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 
 function manifestFor(pluginId: string, capabilities: string[]): PluginManifest {
   return {

@@ -6,11 +6,11 @@
  * core keeps one import site.
  */
 
-export { buildTable } from "@termix/plugin-sdk/table-builder";
+export { buildTable } from "@termix-ssh/plugin-sdk/table-builder";
 export {
   createTableSql,
   adoptTableSql,
   dropTableSql,
   addColumnSql,
   keyedColumns,
-} from "@termix/plugin-sdk/ddl";
+} from "@termix-ssh/plugin-sdk/ddl";

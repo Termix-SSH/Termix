@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 const api = vi.hoisted(() => ({
   getUiPreferences: vi.fn(),
-  saveUiPreferences: vi.fn(async () => {}),
+  saveUiPreferences: vi.fn(async (_body: unknown) => {}),
   getUserPreferences: vi.fn(async () => ({ storageMode: "local" })),
 }));
 
@@ -197,5 +197,66 @@ describe("UiPreferencesProvider", () => {
     act(() => result.current?.setOverride("hostList", "showTags", null));
 
     expect(result.current?.preferences.overrides).toEqual({});
+  });
+});
+
+describe("onboarding state", () => {
+  it("uses preferences handed in by the boot gate without fetching", () => {
+    const initial = { ...defaultUiPreferences(), preset: "advanced" as const };
+    const { result } = renderHook(() => useUiPreferencesContext(), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <UiPreferencesProvider initial={initial}>
+          {children}
+        </UiPreferencesProvider>
+      ),
+    });
+    expect(result.current?.loaded).toBe(true);
+    expect(result.current?.preferences.preset).toBe("advanced");
+    expect(api.getUiPreferences).not.toHaveBeenCalled();
+  });
+
+  it("merges seen steps and sends them right away on flushNow, even in local mode", async () => {
+    const { result } = renderHook(() => useUiPreferencesContext(), { wrapper });
+    await waitFor(() => expect(result.current?.loaded).toBe(true));
+
+    act(() => {
+      result.current?.markOnboardingSeen({ welcome: 1, "rd:guacd": 2 });
+      result.current?.markOnboardingSeen(
+        { "rd:guacd": 1, done: 1 },
+        { completed: true, skipped: false },
+      );
+    });
+    expect(result.current?.preferences.onboarding.seen).toEqual({
+      welcome: 1,
+      "rd:guacd": 2,
+      done: 1,
+    });
+    expect(result.current?.preferences.onboarding.completedAt).toBeTruthy();
+
+    await act(async () => {
+      await result.current?.flushNow();
+    });
+    expect(api.saveUiPreferences).toHaveBeenCalledTimes(1);
+    const body = api.saveUiPreferences.mock.calls[0][0] as {
+      onboarding: { seen: Record<string, number>; skipped: boolean };
+    };
+    expect(body.onboarding.seen).toEqual({
+      welcome: 1,
+      "rd:guacd": 2,
+      done: 1,
+    });
+    expect(body.onboarding.skipped).toBe(false);
+  });
+
+  it("sends a queued change when the provider unmounts", async () => {
+    const { result, unmount } = renderHook(() => useUiPreferencesContext(), {
+      wrapper,
+    });
+    await waitFor(() => expect(result.current?.loaded).toBe(true));
+    act(() => {
+      result.current?.markOnboardingSeen({ appearance: 1 });
+    });
+    unmount();
+    await waitFor(() => expect(api.saveUiPreferences).toHaveBeenCalled());
   });
 });

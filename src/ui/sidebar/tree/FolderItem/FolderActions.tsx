@@ -19,7 +19,7 @@ export function FolderActions({
   const actionButtonClass =
     "flex items-center justify-center size-6 text-muted-foreground/60 hover:text-foreground hover:bg-background/80 transition-colors";
   return (
-    <span className="flex items-center gap-0.5 ml-0.5 opacity-0 group-hover/folder:opacity-100 transition-opacity">
+    <span className="hidden items-center gap-0.5 ml-0.5 group-hover/folder:flex group-focus-within/folder:flex [@media(hover:none)]:flex">
       <button
         type="button"
         title={t("hosts.openAllSessions")}

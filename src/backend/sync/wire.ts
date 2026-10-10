@@ -7,7 +7,10 @@
  */
 
 import crypto from "crypto";
-import type { SyncEntityReference, SyncRow } from "@termix/plugin-sdk/backend";
+import type {
+  SyncEntityReference,
+  SyncRow,
+} from "@termix-ssh/plugin-sdk/backend";
 import { FieldCrypto } from "../utils/field-crypto.js";
 import type { RegisteredSyncEntity } from "../plugins/sync-registry.js";
 

@@ -9,6 +9,7 @@ import {
   sanitizeUiPreferences,
   UI_PREFERENCES_VERSION,
 } from "@/types/ui-preferences";
+import { LEGACY_SEEN } from "@/types/onboarding";
 
 describe("defaultUiPreferences", () => {
   it("starts every user on balanced with no overrides", () => {
@@ -16,9 +17,10 @@ describe("defaultUiPreferences", () => {
     expect(defaults.preset).toBe("balanced");
     expect(defaults.overrides).toEqual({});
     expect(defaults.onboarding).toEqual({
-      completedVersion: 0,
+      seen: {},
       completedAt: null,
       skipped: false,
+      baselinePending: false,
     });
   });
 });
@@ -36,9 +38,10 @@ describe("sanitizeUiPreferences", () => {
       preset: "simple" as const,
       overrides: { hostList: { density: "compact" as const, showTags: true } },
       onboarding: {
-        completedVersion: 1,
+        seen: { welcome: 1, "remote-desktop:guacd": 2 },
         completedAt: "2026-01-01T00:00:00.000Z",
         skipped: false,
+        baselinePending: false,
       },
     };
     expect(sanitizeUiPreferences(valid)).toEqual(valid);
@@ -56,10 +59,27 @@ describe("sanitizeUiPreferences", () => {
 
   it("ignores a malformed onboarding block", () => {
     expect(sanitizeUiPreferences({ onboarding: "done" }).onboarding).toEqual({
-      completedVersion: 0,
+      seen: {},
       completedAt: null,
       skipped: false,
+      baselinePending: false,
     });
+  });
+
+  it("migrates the old completedVersion shape to the legacy seen map", () => {
+    const onboarding = sanitizeUiPreferences({
+      onboarding: { completedVersion: 2, completedAt: null, skipped: true },
+    }).onboarding;
+    expect(onboarding.seen).toEqual(LEGACY_SEEN);
+    expect(onboarding.baselinePending).toBe(true);
+    expect(onboarding.skipped).toBe(true);
+  });
+
+  it("treats an old never-completed shape as new", () => {
+    expect(
+      sanitizeUiPreferences({ onboarding: { completedVersion: 0 } }).onboarding
+        .seen,
+    ).toEqual({});
   });
 });
 
@@ -175,7 +195,7 @@ describe("PRESETS.balanced", () => {
 });
 
 describe("plugin areas", () => {
-  it("moves version 1 docker and host metrics overrides to their plugins", () => {
+  it("drops 2.8 area names, even from an old version", () => {
     const upgraded = sanitizeUiPreferences({
       version: 1,
       preset: "balanced",
@@ -184,10 +204,7 @@ describe("plugin areas", () => {
         hostMetrics: { columns: 2 },
       },
     });
-    expect(upgraded.overrides).toEqual({
-      "plugin:docker": { containerLayout: "table" },
-      "plugin:host-metrics": { columns: 2 },
-    });
+    expect(upgraded.overrides).toEqual({});
   });
 
   it("resolves a plugin area from its presets and the user's overrides", () => {
@@ -220,24 +237,12 @@ describe("plugin areas", () => {
 });
 
 describe("areas that moved into plugins", () => {
-  it("maps version 2 terminal and file manager overrides to their plugins", () => {
+  it("drops the old names", () => {
     expect(
-      sanitizeUiOverrides(
-        {
-          terminal: { toolbarDensity: "expanded" },
-          fileManager: { viewMode: "list" },
-        },
-        2,
-      ),
-    ).toEqual({
-      "plugin:ssh-terminal": { toolbarDensity: "expanded" },
-      "plugin:file-manager": { viewMode: "list" },
-    });
-  });
-
-  it("drops the old names from a current payload", () => {
-    expect(
-      sanitizeUiOverrides({ terminal: { toolbarDensity: "icon" } }),
+      sanitizeUiOverrides({
+        terminal: { toolbarDensity: "icon" },
+        fileManager: { viewMode: "list" },
+      }),
     ).toEqual({});
   });
 });

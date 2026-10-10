@@ -1,5 +1,48 @@
-import { describe, expect, it } from "vitest";
-import { toHostRecord } from "@/plugin-host/bridge";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+
+const getPluginUserSettings = vi.hoisted(() => vi.fn());
+
+vi.mock("@/api/plugins-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/api/plugins-api")>()),
+  getPluginUserSettings,
+}));
+
+import { pluginHostBridge, toHostRecord } from "@/plugin-host/bridge";
+import { PLUGIN_SETTINGS_CHANGED_EVENT } from "@/api/plugins-api";
+
+afterEach(cleanup);
+
+function announce(pluginId: string, scope: string) {
+  act(() => {
+    window.dispatchEvent(
+      new CustomEvent(PLUGIN_SETTINGS_CHANGED_EVENT, {
+        detail: { pluginId, scope },
+      }),
+    );
+  });
+}
+
+describe("useSettings", () => {
+  it("reads again when the settings page saves the same plugin and scope", async () => {
+    getPluginUserSettings.mockResolvedValueOnce({ enabled: false });
+    const { result } = renderHook(() =>
+      pluginHostBridge.useSettings("ai", "user"),
+    );
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    expect(result.current.values).toEqual({ enabled: false });
+
+    getPluginUserSettings.mockResolvedValue({ enabled: true });
+    announce("other", "user");
+    announce("ai", "admin");
+    expect(getPluginUserSettings).toHaveBeenCalledTimes(1);
+
+    announce("ai", "user");
+    await waitFor(() =>
+      expect(result.current.values).toEqual({ enabled: true }),
+    );
+  });
+});
 
 describe("toHostRecord", () => {
   it("copies only the fields the SDK types", () => {

@@ -2,7 +2,7 @@ import type {
   HostProtocolAuthSummary,
   HostProtocolAuthType,
   HostSshOptions,
-} from "@termix/plugin-sdk/frontend";
+} from "@termix-ssh/plugin-sdk/frontend";
 import type { Request } from "express";
 import type { RefObject } from "react";
 import type { HostAuthOverrides } from "./auth-protocols.js";
@@ -280,7 +280,7 @@ export interface CredentialBackend {
  */
 export type HostTerminalConfig = Record<string, unknown>;
 
-export type { HostSshOptions } from "@termix/plugin-sdk/frontend";
+export type { HostSshOptions } from "@termix-ssh/plugin-sdk/frontend";
 
 // ============================================================================
 // TAB TYPES

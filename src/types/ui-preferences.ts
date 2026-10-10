@@ -1,3 +1,5 @@
+import { LEGACY_SEEN, sanitizeSeen } from "./onboarding.js";
+
 /**
  * App-wide UI complexity preferences. Shared by the frontend UI preferences
  * context and the backend preferences endpoint (no framework imports, mirrors
@@ -18,9 +20,6 @@
 
 /** 2: the docker and host metrics areas moved to their plugins. */
 export const UI_PREFERENCES_VERSION = 3;
-
-/** Bump when onboarding gains steps existing users should be shown again. */
-export const UI_ONBOARDING_VERSION = 2;
 
 export type UiPreset = "simple" | "balanced" | "advanced" | "custom";
 
@@ -65,6 +64,8 @@ export interface UiRailPreferences {
    * items are only known at runtime, so the preset cannot list them.
    */
   hidePluginItems?: boolean;
+  /** Rail item ids in the user's order. Items not listed keep their place. */
+  order?: string[];
 }
 
 export interface UiDashboardPreferences {
@@ -92,10 +93,17 @@ export type UiOverrides = {
 } & { [key: UiPluginAreaKey]: Record<string, unknown> };
 
 export interface UiOnboardingState {
-  /** 0 means "never completed". Compared against UI_ONBOARDING_VERSION. */
-  completedVersion: number;
+  /** Step key to the highest version of that step the user was shown. */
+  seen: Record<string, number>;
+  /** When the first full run finished. Null means it never has. */
   completedAt: string | null;
   skipped: boolean;
+  /**
+   * Set for users carried over from the old single-version onboarding. The
+   * client marks every plugin step that exists right now as seen without
+   * showing it, then clears this.
+   */
+  baselinePending: boolean;
 }
 
 export interface UiPreferences {
@@ -243,6 +251,7 @@ const AREA_SPECS: {
   },
   rail: {
     hiddenTabs: { kind: "stringArray" },
+    order: { kind: "stringArray" },
     hidePluginItems: { kind: "bool" },
   },
   dashboard: {
@@ -314,40 +323,9 @@ function sanitizePluginArea(input: unknown): Record<string, unknown> {
   return out;
 }
 
-/**
- * Areas that moved into a plugin: before `version` they were stored under
- * core's name. Version 1 had docker and host metrics, version 2 the terminal
- * and the file manager.
- */
-const MOVED_PLUGIN_AREAS: Array<{
-  before: number;
-  legacy: string;
-  area: UiPluginAreaKey;
-}> = [
-  { before: 2, legacy: "docker", area: "plugin:docker" }, // plugin-id-ok: 2.8 key
-  { before: 2, legacy: "hostMetrics", area: "plugin:host-metrics" },
-  { before: 3, legacy: "terminal", area: "plugin:ssh-terminal" },
-  { before: 3, legacy: "fileManager", area: "plugin:file-manager" },
-];
-
-export function sanitizeUiOverrides(
-  input: unknown,
-  version = UI_PREFERENCES_VERSION,
-): UiOverrides {
+export function sanitizeUiOverrides(input: unknown): UiOverrides {
   const out: Record<string, Record<string, unknown>> = {};
   if (!input || typeof input !== "object") return out as UiOverrides;
-
-  const moves = MOVED_PLUGIN_AREAS.filter((move) => version < move.before);
-  if (moves.length > 0) {
-    const upgraded = { ...(input as Record<string, unknown>) };
-    for (const { legacy, area } of moves) {
-      if (legacy in upgraded) {
-        upgraded[area] = upgraded[legacy];
-        delete upgraded[legacy];
-      }
-    }
-    input = upgraded;
-  }
 
   const specsByArea = AREA_SPECS as unknown as Record<
     string,
@@ -381,27 +359,42 @@ export function sanitizeUiOverrides(
   return out as UiOverrides;
 }
 
-function sanitizeOnboarding(input: unknown): UiOnboardingState {
-  const defaults: UiOnboardingState = {
-    completedVersion: 0,
+export function defaultOnboardingState(): UiOnboardingState {
+  return {
+    seen: {},
     completedAt: null,
     skipped: false,
+    baselinePending: false,
   };
+}
+
+export function sanitizeOnboarding(input: unknown): UiOnboardingState {
+  const defaults = defaultOnboardingState();
   if (!input || typeof input !== "object") return defaults;
   const obj = input as Record<string, unknown>;
+  const completedAt =
+    typeof obj.completedAt === "string" ? obj.completedAt : null;
+  const skipped = typeof obj.skipped === "boolean" ? obj.skipped : false;
+
+  // The old shape had a single completedVersion and no seen map.
+  if (
+    !("seen" in obj) &&
+    typeof obj.completedVersion === "number" &&
+    obj.completedVersion >= 1
+  ) {
+    return {
+      seen: { ...LEGACY_SEEN },
+      completedAt,
+      skipped,
+      baselinePending: true,
+    };
+  }
 
   return {
-    completedVersion:
-      typeof obj.completedVersion === "number" &&
-      Number.isFinite(obj.completedVersion) &&
-      obj.completedVersion >= 0
-        ? Math.round(obj.completedVersion)
-        : defaults.completedVersion,
-    completedAt:
-      typeof obj.completedAt === "string"
-        ? obj.completedAt
-        : defaults.completedAt,
-    skipped: typeof obj.skipped === "boolean" ? obj.skipped : defaults.skipped,
+    seen: sanitizeSeen(obj.seen),
+    completedAt,
+    skipped,
+    baselinePending: obj.baselinePending === true,
   };
 }
 
@@ -410,7 +403,7 @@ export function defaultUiPreferences(): UiPreferences {
     version: UI_PREFERENCES_VERSION,
     preset: "balanced",
     overrides: {},
-    onboarding: { completedVersion: 0, completedAt: null, skipped: false },
+    onboarding: defaultOnboardingState(),
   };
 }
 
@@ -424,10 +417,7 @@ export function sanitizeUiPreferences(input: unknown): UiPreferences {
     preset: PRESET_VALUES.includes(obj.preset as UiPreset)
       ? (obj.preset as UiPreset)
       : defaults.preset,
-    overrides: sanitizeUiOverrides(
-      obj.overrides,
-      typeof obj.version === "number" ? obj.version : 1,
-    ),
+    overrides: sanitizeUiOverrides(obj.overrides),
     onboarding: sanitizeOnboarding(obj.onboarding),
   };
 }

@@ -2,7 +2,7 @@ import type { ResourceKey } from "i18next";
 import type {
   FrontendModule,
   PluginManifest,
-} from "@termix/plugin-sdk/frontend";
+} from "@termix-ssh/plugin-sdk/frontend";
 import i18n, { setPluginLocaleResolver } from "@/i18n/i18n";
 import { getPlugins, type PluginSummary } from "@/api/plugins-api";
 import { getBackendUrl } from "@/main-axios";
@@ -15,7 +15,6 @@ import {
   setFrontendState,
   setPluginSummaries,
 } from "./plugin-store";
-import { workspaceFrontends, workspaceLocales } from "./workspace-plugins";
 import { syncHostFeatureTabs } from "@/settings/host-feature-tabs";
 
 /**
@@ -75,16 +74,12 @@ const defaultDeps: PluginLoaderDeps = {
   fetchPlugins: getPlugins,
 
   async importFrontend(summary) {
-    const workspace = workspaceFrontends[summary.id];
-    if (workspace) return (await workspace()) as FrontendModule;
     return (await import(
       /* @vite-ignore */ absolute(assetUrl(summary, "frontend.js"))
     )) as FrontendModule;
   },
 
   async loadLocale(summary, file) {
-    const workspace = workspaceLocales[summary.id]?.[file];
-    if (workspace) return (await workspace()) as ResourceKey;
     const hasFile = summary.locales?.includes(file);
     if (!hasFile) return null;
     const path = file === "en" ? "en.json" : `translated/${file}.json`;
@@ -282,13 +277,18 @@ async function loadNamespaces(summaries: PluginSummary[]): Promise<void> {
   }
 }
 
+/** The server only serves assets of a running plugin. */
+function serverServesAssets(summary: PluginSummary): boolean {
+  return summary.enabled && (!summary.state || summary.state === "active");
+}
+
 function namespaceVersion(summary: PluginSummary): string {
   return `${summary.version}|${summary.assetVersion ?? ""}`;
 }
 
 async function reconcile(summaries: PluginSummary[]): Promise<void> {
   setPluginSummaries(summaries);
-  await loadNamespaces(summaries);
+  await loadNamespaces(summaries.filter(serverServesAssets));
 
   const { order, blocked } = orderForActivation(summaries);
   const wanted = new Map(order.map((summary) => [summary.id, summary]));
@@ -403,11 +403,24 @@ function onPluginsChanged() {
   void syncPlugins();
 }
 
+// Sent by scripts/dev.mjs after it rebuilt a plugin or restarted the backend.
+import.meta.hot?.on("termix:plugins-reloaded", () => {
+  if (started) void syncPlugins();
+});
+
 function onFocus() {
   const now = Date.now();
   if (now - lastFocusSync < FOCUS_SYNC_INTERVAL_MS) return;
   lastFocusSync = now;
   void syncPlugins();
+}
+
+function installLocaleResolver(): void {
+  setPluginLocaleResolver((namespace, _language, file) => {
+    const summary = getPluginRecord(namespace)?.summary;
+    if (!summary) return Promise.resolve(null);
+    return currentDeps().loadLocale(summary, file);
+  });
 }
 
 async function fetchGuestPlugins(): Promise<PluginSummary[]> {
@@ -460,11 +473,7 @@ export async function startPreLoginPlugins(
     return;
   }
   if (list.length === 0 || started) return;
-  setPluginLocaleResolver((namespace, _language, file) => {
-    const summary = getPluginRecord(namespace)?.summary;
-    if (!summary) return Promise.resolve(null);
-    return currentDeps().loadLocale(summary, file);
-  });
+  installLocaleResolver();
   await enqueue(async () => {
     // Once signed in the full sync owns the list, and reconciling this
     // subset would unload everything else. Auth remounts during the
@@ -487,16 +496,12 @@ export function startPluginRuntime(
   options: { guest?: boolean } = {},
 ): Promise<void> {
   installPluginHostBridge();
+  installLocaleResolver();
   if (options.guest) {
     guestMode = true;
     if (!deps) configurePluginLoader({ fetchPlugins: fetchGuestPlugins });
     return syncPlugins();
   }
-  setPluginLocaleResolver((namespace, _language, file) => {
-    const summary = getPluginRecord(namespace)?.summary;
-    if (!summary) return Promise.resolve(null);
-    return currentDeps().loadLocale(summary, file);
-  });
 
   if (!started && typeof window !== "undefined") {
     started = true;
@@ -527,6 +532,7 @@ export function isPluginFrontendActive(pluginId: string): boolean {
 export async function resetPluginLoader(): Promise<void> {
   await stopPluginRuntime();
   deps = null;
+  guestMode = false;
   queue = Promise.resolve();
   failedVersions.clear();
 }

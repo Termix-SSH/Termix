@@ -6,8 +6,8 @@
 import type {
   PluginManifest,
   PluginSettingsField,
-} from "@termix/plugin-sdk/manifest";
-import { coerceSettingValue } from "@termix/plugin-sdk/settings";
+} from "@termix-ssh/plugin-sdk/manifest";
+import { coerceSettingValue } from "@termix-ssh/plugin-sdk/settings";
 import {
   CORE_HOST_DEFAULTS,
   CORE_NAMESPACE,

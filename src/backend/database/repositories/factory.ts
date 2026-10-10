@@ -18,6 +18,7 @@ import { PluginStorageRepository } from "./plugin-storage-repository.js";
 import { PluginSettingsRepository } from "./plugin-settings-repository.js";
 import { HostDefaultsRepository } from "./host-defaults-repository.js";
 import { PluginMigrationRepository } from "./plugin-migration-repository.js";
+import { PluginInstallCountRepository } from "./plugin-install-count-repository.js";
 import { PluginPermissionGrantRepository } from "./plugin-permission-grant-repository.js";
 import { UserAuthRepository } from "./user-auth-repository.js";
 import { RbacAccessRepository } from "./rbac-access-repository.js";
@@ -48,7 +49,7 @@ import { UserRepository } from "./user-repository.js";
  * write.
  *
  * Both cross-dialect harnesses build a DatabaseContext themselves, so neither
- * exercises this function — see tests/database/repositories/factory-context.
+ * exercises this function, see tests/database/repositories/factory-context.
  */
 export function createCurrentRepositoryContext(): DatabaseContext {
   return {
@@ -63,7 +64,7 @@ export function createCurrentRepositoryContext(): DatabaseContext {
  * Only meaningful for SQLite, where the database lives in memory and has to be
  * serialised back to its encrypted file. On Postgres and MySQL the write is
  * already durable, so no hook is installed at all rather than one that does
- * nothing — repositories call it as `this.onWrite?.()`.
+ * nothing, repositories call it as `this.onWrite?.()`.
  */
 export function createCurrentRepositoryWriteHook(
   reason: string,
@@ -90,7 +91,7 @@ export function createCurrentRepositoryLazyWriteHook(
 }
 
 /**
- * Raw driver handle for the few synchronous call sites that cannot await —
+ * Raw driver handle for the few synchronous call sites that cannot await,
  * getCurrentSettingValue below, and settings reads during startup. Repositories
  * must not use this: they take a DatabaseContext, which is drizzle-only.
  * Porting to another engine means giving these callers an async path first.
@@ -237,6 +238,13 @@ export function createCurrentPluginSettingsRepository(): PluginSettingsRepositor
   return new PluginSettingsRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("plugin_settings_repository_write"),
+  );
+}
+
+export function createCurrentPluginInstallCountRepository(): PluginInstallCountRepository {
+  return new PluginInstallCountRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("plugin_install_count_repository_write"),
   );
 }
 
@@ -395,8 +403,8 @@ let refreshTimer: NodeJS.Timeout | null = null;
  *
  * The cache is per-process and updated in the process that writes. That is
  * enough for SQLite, where there is only ever one process. On Postgres and
- * MySQL — which exist here precisely so more than one instance can share the
- * data — a setting changed on one replica would otherwise never reach the
+ * MySQL, which exist here precisely so more than one instance can share the
+ * data, a setting changed on one replica would otherwise never reach the
  * others, because the synchronous read has no way to go back to the database.
  *
  * Periodic re-priming does not make the value immediately consistent. It bounds

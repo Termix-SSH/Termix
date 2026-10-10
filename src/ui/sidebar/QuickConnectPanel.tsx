@@ -1,8 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/input";
+import { PasswordInput } from "@/components/password-input";
+import { Textarea } from "@/components/textarea";
+import { GroupHeading, PANEL } from "@/components/panel-layout";
 import type { Host } from "@/types/ui-types";
 import { getCredentials } from "@/api/credentials-api";
 import { mapCredentials } from "./HostManagerData";
@@ -27,7 +29,7 @@ const INLINE_AUTH_TYPES = new Set(["password", "key", "credential"]);
 const LABEL_CLASS =
   "text-[10px] font-semibold uppercase tracking-widest text-muted-foreground";
 const SELECT_CLASS =
-  "flex h-7 w-full border border-border bg-background px-2.5 py-1 text-xs outline-none focus:ring-1 focus:ring-ring";
+  "flex h-8 w-full border border-border bg-background px-2.5 py-1 text-xs outline-none focus:ring-1 focus:ring-ring";
 
 interface QuickConnectPanelProps {
   onConnect: (host: Host, type: string) => void;
@@ -54,7 +56,6 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
   const [authFields, setAuthFields] = useState<Record<string, unknown>>({});
   const [password, setPassword] = useState("");
   const [privateKey, setPrivateKey] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [credentialId, setCredentialId] = useState("");
   const [credentials, setCredentials] = useState<
     { id: string; name: string; username: string }[]
@@ -140,7 +141,8 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
-      <div className="flex flex-col gap-3 p-3">
+      <div className={`flex flex-col ${PANEL.gap} ${PANEL.body}`}>
+        <GroupHeading title={t("newUi.sidebar.quickConnect.where")} />
         <div className="grid grid-cols-[1fr_5rem] gap-2">
           <Field label={t("newUi.sidebar.quickConnect.protocolLabel")}>
             <Select2
@@ -164,7 +166,7 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
               value={port}
               onChange={(e) => setPort(e.target.value)}
               onKeyDown={onEnter}
-              className="h-7 text-xs"
+              className="h-8 text-xs"
             />
           </Field>
         </div>
@@ -174,9 +176,13 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
             value={host}
             onChange={(e) => setHost(e.target.value)}
             onKeyDown={onEnter}
-            className="h-7 text-xs"
+            className="h-8 text-xs"
           />
         </Field>
+        <GroupHeading
+          title={t("newUi.sidebar.quickConnect.who")}
+          className="pt-1"
+        />
         <Field label={t("newUi.sidebar.quickConnect.usernameLabel")}>
           <Input
             placeholder={t("newUi.sidebar.quickConnect.usernamePlaceholder")}
@@ -189,7 +195,7 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
             }}
             onChange={(e) => setUsername(e.target.value)}
             onKeyDown={onEnter}
-            className="h-7 text-xs"
+            className="h-8 text-xs"
           />
         </Field>
         {!isDesktop && authOptions.length > 0 && (
@@ -212,29 +218,13 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
         )}
         {(isDesktop || authType === "password") && (
           <Field label={t("newUi.sidebar.quickConnect.passwordLabel")}>
-            <div className="relative">
-              <Input
-                type={showPassword ? "text" : "password"}
-                placeholder={t(
-                  "newUi.sidebar.quickConnect.passwordPlaceholder",
-                )}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={onEnter}
-                className="h-7 text-xs pr-8"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((o) => !o)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                {showPassword ? (
-                  <EyeOff className="size-3.5" />
-                ) : (
-                  <Eye className="size-3.5" />
-                )}
-              </button>
-            </div>
+            <PasswordInput
+              placeholder={t("newUi.sidebar.quickConnect.passwordPlaceholder")}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={onEnter}
+              className="h-8 pr-8 text-xs"
+            />
           </Field>
         )}
         {selected?.quickConnect?.showDomain && (
@@ -244,19 +234,19 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
               onKeyDown={onEnter}
-              className="h-7 text-xs"
+              className="h-8 text-xs"
             />
           </Field>
         )}
         {!isDesktop && authType === "key" && (
           <Field label={t("newUi.sidebar.quickConnect.privateKeyLabel")}>
-            <textarea
+            <Textarea
               placeholder={t(
                 "newUi.sidebar.quickConnect.privateKeyPlaceholder",
               )}
               value={privateKey}
               onChange={(e) => setPrivateKey(e.target.value)}
-              className="w-full h-24 px-2.5 py-2 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
+              className="h-24 resize-none font-mono text-xs"
             />
           </Field>
         )}
@@ -294,7 +284,7 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
             }}
           />
         )}
-        <div className="flex flex-col gap-1.5 pt-1">
+        <div className="flex flex-col gap-1.5 pt-2">
           {targets.length === 0 ? (
             <p className="text-xs text-muted-foreground">
               {t("newUi.sidebar.quickConnect.noTarget")}
@@ -306,9 +296,9 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
                 type="button"
                 disabled={!host.trim()}
                 onClick={() => connect(action)}
-                className={`flex items-center justify-center gap-1.5 h-7 w-full border text-xs font-semibold transition-colors disabled:opacity-50 disabled:pointer-events-none ${
+                className={`flex h-8 w-full items-center justify-center gap-1.5 border text-xs font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 ${
                   index === 0
-                    ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand hover:bg-accent-brand/20"
+                    ? "border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10"
                     : "border-border text-foreground hover:bg-muted"
                 }`}
               >

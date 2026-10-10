@@ -20,7 +20,13 @@ export interface TrustedPluginKey {
  *
  * Add a key with `termix-plugin keygen` (see the Termix-Registry README).
  */
-export const TRUSTED_PLUGIN_KEYS: readonly TrustedPluginKey[] = [];
+export const TRUSTED_PLUGIN_KEYS: readonly TrustedPluginKey[] = [
+  {
+    id: "ec40e29bcc4986b2",
+    publicKey: "rF6ouWTnuLgnZi7yemr+yhZmMxvNMvgro1Mf05IkSGo=",
+    addedIn: "26.10.0",
+  },
+];
 
 export type ArtifactVerification =
   { ok: true; keyId: string } | { ok: false; reason: string };

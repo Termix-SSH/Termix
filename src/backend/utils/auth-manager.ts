@@ -13,7 +13,8 @@ import { logAudit, getRequestMeta } from "./audit-logger.js";
 import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
-import { and, eq, inArray } from "drizzle-orm";
+import { inArray, isNotNull } from "drizzle-orm";
+import type { ExternalSessionRef } from "../auth/types.js";
 import type { DeviceType } from "./user-agent-parser.js";
 import { getDb } from "../database/db/index.js";
 import { sessions } from "../database/db/schema.js";
@@ -41,6 +42,8 @@ interface JWTPayload {
   userId: string;
   sessionId?: string;
   pendingTOTP?: boolean;
+  /** Set on a short-lived socket ticket, which only a socket upgrade takes. */
+  purpose?: "ws";
   dataKeyWrap?: WrappedDataKey;
   iat?: number;
   exp?: number;
@@ -66,6 +69,29 @@ interface RequestWithHeaders extends Request {
   headers: Request["headers"] & {
     "x-forwarded-proto"?: string;
   };
+}
+
+function serializeExternalSession(
+  ref: ExternalSessionRef | null | undefined,
+): string | null {
+  if (!ref || (!ref.sub && !ref.sid)) return null;
+  return JSON.stringify({
+    providerId: ref.providerId ?? null,
+    sub: ref.sub ?? null,
+    sid: ref.sid ?? null,
+  });
+}
+
+function parseExternalSession(
+  value: string | null | undefined,
+): ExternalSessionRef | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as ExternalSessionRef;
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 const ADMIN_TARGET_USER_HEADER = "x-admin-target-user";
@@ -283,9 +309,7 @@ class AuthManager {
       rememberMe?: boolean;
       deviceType?: DeviceType;
       deviceInfo?: string;
-      oidcSub?: string | null;
-      oidcSid?: string | null;
-      ssoProviderId?: number | null;
+      externalSession?: ExternalSessionRef | null;
     } = {},
   ): Promise<string> {
     const jwtSecret = await this.systemCrypto.getJWTSecret();
@@ -331,9 +355,7 @@ class AuthManager {
           jwtToken: token,
           deviceType: options.deviceType,
           deviceInfo: options.deviceInfo,
-          oidcSub: options.oidcSub ?? null,
-          oidcSid: options.oidcSid ?? null,
-          ssoProviderId: options.ssoProviderId ?? null,
+          externalSessionRef: serializeExternalSession(options.externalSession),
           createdAt,
           expiresAt,
           lastActiveAt: createdAt,
@@ -373,11 +395,32 @@ class AuthManager {
     }
   }
 
-  async verifyJWTToken(token: string): Promise<JWTPayload | null> {
+  /**
+   * A one minute token for opening a WebSocket. A browser cannot read its
+   * HttpOnly cookie, and a proxy that rewrites Host makes the cookie look
+   * like it came from another site, so the page asks for one of these.
+   */
+  async issueSocketTicket(userId: string, sessionId: string): Promise<string> {
+    const payload: JWTPayload = { userId, sessionId, purpose: "ws" };
+    return jwt.sign(payload, await this.systemCrypto.getJWTSecret(), {
+      expiresIn: 60,
+    } as jwt.SignOptions);
+  }
+
+  async verifyJWTToken(
+    token: string,
+    options: { allowSocketTicket?: boolean } = {},
+  ): Promise<JWTPayload | null> {
     try {
       const jwtSecret = await this.systemCrypto.getJWTSecret();
 
       const payload = jwt.verify(token, jwtSecret) as JWTPayload;
+      if (
+        payload.purpose !== undefined &&
+        !(payload.purpose === "ws" && options.allowSocketTicket)
+      ) {
+        return null;
+      }
 
       if (payload.sessionId) {
         try {
@@ -394,6 +437,10 @@ class AuthManager {
             return null;
           }
 
+          if (new Date(sessionRecord.expiresAt).getTime() < Date.now()) {
+            return null;
+          }
+
           await this.migrateDataKeyFromPayload(payload);
         } catch (dbError) {
           databaseLogger.error(
@@ -406,8 +453,12 @@ class AuthManager {
           );
           return null;
         }
-      } else {
+      } else if (payload.pendingTOTP) {
         await this.migrateDataKeyFromPayload(payload);
+      } else {
+        // Every real login has a session row to revoke; a signed token
+        // without one did not come from this server's login.
+        return null;
       }
       return payload;
     } catch (error) {
@@ -506,35 +557,36 @@ class AuthManager {
   }
 
   async revokeSessionsByExternalSession(params: {
-    ssoProviderId?: number | null;
+    providerId?: number | null;
     sub?: string | null;
     sid?: string | null;
   }): Promise<number> {
-    const { ssoProviderId, sub, sid } = params;
+    const { providerId, sub, sid } = params;
     if (!sub && !sid) return 0;
 
     try {
-      const conditions = [
-        sid ? eq(sessions.oidcSid, sid) : eq(sessions.oidcSub, sub!),
-      ];
-      if (ssoProviderId != null)
-        conditions.push(eq(sessions.ssoProviderId, ssoProviderId));
-
       const db = getDb();
-      const matched = await db
-        .select()
+      const candidates = await db
+        .select({ id: sessions.id, ref: sessions.externalSessionRef })
         .from(sessions)
-        .where(conditions.length === 1 ? conditions[0] : and(...conditions));
+        .where(isNotNull(sessions.externalSessionRef));
 
-      if (matched.length === 0) return 0;
+      const matchedIds = candidates
+        .filter((row) => {
+          const ref = parseExternalSession(row.ref);
+          if (!ref) return false;
+          if (sid ? ref.sid !== sid : ref.sub !== sub) return false;
+          return providerId == null || ref.providerId === providerId;
+        })
+        .map((row) => row.id);
 
-      const matchedIds = matched.map((s) => s.id);
+      if (matchedIds.length === 0) return 0;
 
       await db.delete(sessions).where(inArray(sessions.id, matchedIds));
 
-      authLogger.info("Sessions revoked via OIDC back-channel logout", {
-        operation: "oidc_backchannel_logout",
-        ssoProviderId,
+      authLogger.info("Sessions revoked via back-channel logout", {
+        operation: "external_backchannel_logout",
+        providerId,
         sessionCount: matchedIds.length,
       });
 
@@ -544,9 +596,13 @@ class AuthManager {
 
       return matchedIds.length;
     } catch (error) {
-      databaseLogger.error("Failed to revoke sessions via OIDC", error, {
-        operation: "oidc_backchannel_logout_failed",
-      });
+      databaseLogger.error(
+        "Failed to revoke sessions via back-channel logout",
+        error,
+        {
+          operation: "external_backchannel_logout_failed",
+        },
+      );
       throw error;
     }
   }

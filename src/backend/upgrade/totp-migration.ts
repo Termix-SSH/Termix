@@ -11,7 +11,7 @@
  *    there sealed with the installation key (what ctx.secrets.seal writes),
  *    then the users columns are cleared.
  *
- * The columns stay in the database until 3.0.0, since core's drizzle
+ * The columns stay in the database until 26.10.0, since core's drizzle
  * migrations run before this does. A user whose data key cannot be opened
  * at boot is skipped and tried again on the next one. Idempotent.
  */

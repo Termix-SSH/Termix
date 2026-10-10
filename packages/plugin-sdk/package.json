@@ -1,8 +1,8 @@
 {
-  "name": "@termix/plugin-sdk",
-  "version": "1.0.0",
+  "name": "@termix-ssh/plugin-sdk",
+  "version": "1.0.5",
   "description": "The contract between Termix core and a plugin: types, the capability catalog and the manifest schema.",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Termix-SSH/Termix.git",
@@ -14,7 +14,7 @@
     "node": ">=22"
   },
   "bin": {
-    "termix-plugin": "./cli/index.mjs"
+    "termix-plugin": "cli/index.mjs"
   },
   "exports": {
     "./backend": {
@@ -48,6 +48,18 @@
     "./capabilities": {
       "types": "./dist/capabilities.d.ts",
       "default": "./dist/capabilities.js"
+    },
+    "./changelog": {
+      "types": "./dist/changelog.d.ts",
+      "default": "./dist/changelog.js"
+    },
+    "./docs": {
+      "types": "./dist/docs.d.ts",
+      "default": "./dist/docs.js"
+    },
+    "./openapi": {
+      "types": "./dist/openapi.d.ts",
+      "default": "./dist/openapi.js"
     },
     "./settings": {
       "types": "./dist/settings.d.ts",
@@ -90,6 +102,7 @@
     "schema",
     "tsconfig.plugin.json",
     "README.md",
+    "CHANGELOG.md",
     "client.d.ts"
   ],
   "scripts": {
@@ -97,6 +110,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
+    "@deadendjs/swagger-jsdoc": "^8.1.2",
     "@tailwindcss/node": "^4.2.4",
     "@tailwindcss/oxide": "^4.2.4",
     "esbuild": "^0.28.1",
@@ -133,6 +147,18 @@
       "optional": true
     },
     "@testing-library/react": {
+      "optional": true
+    },
+    "i18next": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
+    "react-i18next": {
+      "optional": true
+    },
+    "sonner": {
       "optional": true
     }
   },

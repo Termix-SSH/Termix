@@ -16,8 +16,8 @@ import type {
   PluginBinarySpec,
   PluginProcess,
   PluginProcessHandle,
-} from "@termix/plugin-sdk/backend";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+} from "@termix-ssh/plugin-sdk/backend";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import { assertCapability } from "./permissions.js";
 import { getPluginDataDir } from "./paths.js";
 import type { DisposableBag } from "./disposables.js";
@@ -40,6 +40,30 @@ interface Deps {
 
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const SAFE_NAME = /^[A-Za-z0-9._-]+$/;
+
+/** Larger than any CLI a plugin ships, small enough not to stall a boot. */
+const MAX_PREBUILT_BYTES = 512 * 1024 * 1024;
+
+/**
+ * Only a regular file carrying the binary's own name is hashed, so a plugin
+ * cannot use prebuilt to fingerprint arbitrary files on the server.
+ */
+async function isPrebuiltCandidate(
+  candidate: string,
+  name: string,
+): Promise<boolean> {
+  if (!path.isAbsolute(candidate) || path.basename(candidate) !== name) {
+    return false;
+  }
+  try {
+    const real = await fs.realpath(candidate);
+    if (path.basename(real) !== name) return false;
+    const stat = await fs.stat(real);
+    return stat.isFile() && stat.size <= MAX_PREBUILT_BYTES;
+  } catch {
+    return false;
+  }
+}
 
 async function sha256Of(file: string): Promise<string | null> {
   try {
@@ -217,6 +241,7 @@ export function createPluginProcess(deps: Deps): PluginProcess {
         }
 
         for (const candidate of spec.prebuilt ?? []) {
+          if (!(await isPrebuiltCandidate(candidate, spec.name))) continue;
           if ((await sha256Of(candidate)) === expected) return candidate;
         }
 

@@ -62,6 +62,7 @@ export const OWNER_PRIVATE_AUTH_FIELDS = {
   ],
 } as const;
 
+/** Keys a 2.8 client's terminalConfig may carry that only the owner may set. */
 export const OWNER_PRIVATE_TERMINAL_CONFIG_FIELDS = [
   "sudoPassword",
   "agentSocketPath",
@@ -77,6 +78,14 @@ export function containsOwnerPrivateAuthUpdate(
   return OWNER_PRIVATE_AUTH_FIELDS[protocol].some((field) =>
     Object.prototype.hasOwnProperty.call(hostData, field),
   );
+}
+
+/**
+ * An update that names no auth type leaves the stored password and key
+ * alone. Clearing them would leave a password host with no password.
+ */
+export function keepsStoredSshAuth(authType: unknown): boolean {
+  return authType === undefined || authType === null;
 }
 
 const FOLDER_PATH_SEPARATOR = " / ";
@@ -263,18 +272,10 @@ export function stripSensitiveFields(
   host: Record<string, unknown>,
 ): Record<string, unknown> {
   const result = { ...host };
-  const terminalConfigForSudo =
-    host.terminalConfig &&
-    typeof host.terminalConfig === "object" &&
-    !Array.isArray(host.terminalConfig)
-      ? (host.terminalConfig as Record<string, unknown>)
-      : undefined;
   result.hasKey = !!host.key;
   result.hasKeyPassword = !!host.keyPassword;
   result.hasPassword = !!host.password;
-  // 2.8 editors kept the sudo password inside terminal_config.
-  result.hasSudoPassword =
-    !!host.sudoPassword || !!terminalConfigForSudo?.sudoPassword;
+  result.hasSudoPassword = !!host.sudoPassword;
   for (const field of SENSITIVE_FIELDS) {
     delete result[field];
   }
@@ -283,11 +284,11 @@ export function stripSensitiveFields(
     typeof result.terminalConfig === "object" &&
     !Array.isArray(result.terminalConfig)
   ) {
-    const terminalConfig = {
-      ...(result.terminalConfig as Record<string, unknown>),
-    };
-    delete terminalConfig.sudoPassword;
-    result.terminalConfig = terminalConfig;
+    const { sudoPassword: _sudo, ...rest } = result.terminalConfig as Record<
+      string,
+      unknown
+    >;
+    result.terminalConfig = rest;
   }
   return result;
 }
@@ -295,6 +296,7 @@ export function stripSensitiveFields(
 // Connection essentials a connect-level recipient is allowed to see.
 const CONNECT_LEVEL_FIELDS = new Set([
   "id",
+  "syncId",
   "userId",
   "ownerId",
   "ownerUsername",
@@ -397,44 +399,22 @@ export function parseSharedSource(
   }
 }
 
-function parseJsonObject(value: unknown): Record<string, unknown> | null {
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as Record<string, unknown>;
-  }
-  if (typeof value !== "string" || !value) return null;
-  try {
-    const parsed = JSON.parse(value);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed
-      : null;
-  } catch {
-    return null;
-  }
-}
-
 /**
  * sshOptions, and terminalConfig in the shape 2.8 clients and exports read:
  * core's own keys only, the SSH options. Everything else 2.8 kept there now
  * belongs to plugins' host settings, which they put back through their
- * hostPayloadLegacy. A sudo password 2.8 kept in terminal_config comes out as
- * sudoPassword, for the sanitizers to handle.
+ * hostPayloadLegacy.
  */
 export function hostTerminalExport(host: Record<string, unknown>): {
   sshOptions: HostSshOptions;
   terminalConfig?: Record<string, unknown>;
-  sudoPassword?: unknown;
 } {
-  const raw = parseJsonObject(host.terminalConfig);
-  const sshOptions = parseSshOptions(
-    host.sshOptions != null ? host.sshOptions : raw,
-  );
+  const sshOptions = parseSshOptions(host.sshOptions);
   const terminalConfig: Record<string, unknown> = { ...sshOptions };
-  const legacySudo = !host.sudoPassword ? raw?.sudoPassword : undefined;
   return {
     sshOptions,
     terminalConfig:
       Object.keys(terminalConfig).length > 0 ? terminalConfig : undefined,
-    ...(legacySudo ? { sudoPassword: legacySudo } : {}),
   };
 }
 

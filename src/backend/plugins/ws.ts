@@ -25,10 +25,13 @@ import { WebSocketServer, type WebSocket } from "ws";
 import type {
   PluginWebSocketHandler,
   PluginWebSocketOptions,
-} from "@termix/plugin-sdk/backend";
+} from "@termix-ssh/plugin-sdk/backend";
 import { pluginLogger } from "../utils/logger.js";
 import { recordConflict } from "./conflicts.js";
-import { extractWebSocketToken } from "../utils/ws-auth.js";
+import {
+  extractWebSocketToken,
+  isCookieOriginAllowed,
+} from "../utils/ws-auth.js";
 import { runAsActor } from "./actor.js";
 import { isPluginInstalled } from "./http.js";
 
@@ -110,7 +113,9 @@ async function verifyToken(request: IncomingMessage): Promise<string | null> {
   if (!token) return null;
   try {
     const { AuthManager } = await import("../utils/auth-manager.js");
-    const payload = await AuthManager.getInstance().verifyJWTToken(token);
+    const payload = await AuthManager.getInstance().verifyJWTToken(token, {
+      allowSocketTicket: true,
+    });
     if (!payload || payload.pendingTOTP) return null;
     return payload.userId ?? null;
   } catch {
@@ -161,6 +166,12 @@ async function handlePluginUpgrade(
   if (!(await hasCapability(route.pluginId, "network:serve", route.declared))) {
     reject(socket, 403, "Forbidden");
     return true;
+  }
+
+  // A page on another site gets the browser's cookies attached for free.
+  // Core already ignores them for auth; plugin code must not see them either.
+  if (request.headers.cookie && !isCookieOriginAllowed(request)) {
+    delete request.headers.cookie;
   }
 
   let userId = "";
@@ -360,10 +371,6 @@ function disposeRoute(routeKey: string, pluginId: string, path: string): void {
   pluginLogger.info(`Unmounted /plugin-ws/${pluginId}${path}`, {
     operation: "plugin_ws_unmount",
   });
-}
-
-export function getRegisteredWsRoutes(): string[] {
-  return [...routes.keys()];
 }
 
 /** The socket paths a plugin serves without core's login check. */

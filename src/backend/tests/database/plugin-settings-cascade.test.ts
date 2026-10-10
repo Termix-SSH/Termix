@@ -9,7 +9,10 @@
 
 import { asc } from "drizzle-orm";
 import { afterEach, describe, expect, it } from "vitest";
-import { TestSqliteDatabase } from "./repositories/test-support.js";
+import {
+  TestSqliteDatabase,
+  testDialect,
+} from "./repositories/test-support.js";
 import { HostRepository } from "../../database/repositories/host-repository.js";
 import { UserRepository } from "../../database/repositories/user-repository.js";
 import type { DatabaseContext } from "../../database/repositories/database-context.js";
@@ -48,13 +51,16 @@ async function seed(): Promise<DatabaseContext> {
   return context;
 }
 
+// key is reserved in MySQL
+const KEY_COLUMN = testDialect() === "mysql" ? "`key`" : "key";
+
 async function addSetting(
   scope: string,
   scopeId: string | null,
   key = "k",
 ): Promise<void> {
   await adapter!.exec(
-    `INSERT INTO plugin_settings (plugin_id, scope, scope_id, key, value)
+    `INSERT INTO plugin_settings (plugin_id, scope, scope_id, ${KEY_COLUMN}, value)
      VALUES ('sample', '${scope}', ${scopeId === null ? "NULL" : `'${scopeId}'`}, '${key}', '"v"')`,
   );
 }

@@ -9,13 +9,11 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   collectOwnedIndexes,
   findUnownedTableWrites,
-} from "@termix/plugin-sdk/ddl";
-import { LEGACY_TABLE_OWNERS } from "@termix/plugin-sdk/db";
+} from "@termix-ssh/plugin-sdk/ddl";
 
 const state = vi.hoisted(() => ({
   db: null as unknown,
@@ -153,39 +151,6 @@ describe("the migration checker", () => {
     expect(
       findUnownedTableWrites("foo", "DROP INDEX idx_core", new Set(), owned),
     ).not.toEqual([]);
-  });
-
-  it("passes every migration a bundled plugin ships", () => {
-    const plugins = path.resolve(
-      path.dirname(fileURLToPath(import.meta.url)),
-      "../../../../../plugins",
-    );
-    for (const id of fs.readdirSync(plugins)) {
-      const legacy = new Set(
-        Object.entries(LEGACY_TABLE_OWNERS)
-          .filter(([, owner]) => owner === id)
-          .map(([table]) => table),
-      );
-      for (const dialect of ["sqlite", "postgres", "mysql"]) {
-        const dir = path.join(plugins, id, "migrations", dialect);
-        if (!fs.existsSync(dir)) continue;
-        const files = fs
-          .readdirSync(dir)
-          .filter((file) => file.endsWith(".sql"))
-          .sort();
-        const sqls = files.map((file) =>
-          fs.readFileSync(path.join(dir, file), "utf8"),
-        );
-        // The runner lets a later migration drop an index an earlier one made.
-        const ownedIndexes = collectOwnedIndexes(id, sqls, legacy);
-        files.forEach((file, index) => {
-          expect(
-            findUnownedTableWrites(id, sqls[index], legacy, ownedIndexes),
-            `${id}/${dialect}/${file}`,
-          ).toEqual([]);
-        });
-      }
-    }
   });
 
   it("gives a user plugin no legacy exemption at runtime", () => {

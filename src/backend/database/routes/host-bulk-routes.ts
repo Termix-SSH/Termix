@@ -23,6 +23,7 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
 import { sshLogger } from "../../utils/logger.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
+import { pluginEvents, TOPICS } from "../../plugins/events.js";
 import {
   createCurrentCredentialRepository,
   createCurrentHostRepository,
@@ -133,6 +134,16 @@ export function parseSSHConfig(content: string): SSHConfigHost[] {
   if (current && current.hostname) results.push(current);
 
   return results;
+}
+
+/**
+ * Tells status checks and other pollers about hosts an import wrote, the way
+ * a single host create or update does.
+ */
+export function notifyImportedHosts(userId: string, hostIds: number[]): void {
+  for (const hostId of hostIds) {
+    pluginEvents.emit(TOPICS.hostUpdated, { hostId, userId });
+  }
 }
 
 export function importedHostUsername(
@@ -710,9 +721,6 @@ export function registerHostBulkRoutes(
             sudoPassword: hostData.sudoPassword || null,
             jumpHosts: jumpHosts ? JSON.stringify(jumpHosts) : null,
             ...importedStatusCheck(hostData as Record<string, unknown>),
-            terminalConfig: hostData.terminalConfig
-              ? JSON.stringify(hostData.terminalConfig)
-              : null,
             // A 2.8 export carries these inside terminalConfig.
             sshOptions:
               sshOptionsForWrite({
@@ -820,6 +828,7 @@ export function registerHostBulkRoutes(
       }
 
       await applyDefaultsAfterHostWrites(writtenHostIds);
+      notifyImportedHosts(userId, writtenHostIds);
 
       res.json({
         message: `Import completed: ${results.success} created, ${results.updated} updated, ${results.failed} failed`,
@@ -975,7 +984,6 @@ export function registerHostBulkRoutes(
               : null,
             statusCheckEnabled: true,
             statusCheckInterval: null,
-            terminalConfig: null,
             sshOptions: null,
             forceKeyboardInteractive: "false",
             notes: null,
@@ -1026,6 +1034,7 @@ export function registerHostBulkRoutes(
       }
 
       await applyDefaultsAfterHostWrites(writtenHostIds);
+      notifyImportedHosts(userId, writtenHostIds);
 
       res.json({
         message: `Import completed: ${results.success} created, ${results.updated} updated, ${results.failed} failed`,

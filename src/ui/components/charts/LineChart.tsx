@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { parseServerTime } from "@/lib/server-time";
 
 export interface LineChartSeries {
   key: string;
@@ -23,12 +24,8 @@ const X_LABEL_H = 20;
 const TOP_PAD = 6;
 const TICK_COUNT = 5;
 
-function parseTs(ts: string): Date {
-  return new Date(ts.includes("T") ? ts : ts.replace(" ", "T") + "Z");
-}
-
 function formatTimestamp(ts: string, rangeMs: number): string {
-  const d = parseTs(ts);
+  const d = parseServerTime(ts);
   if (rangeMs <= 25 * 60 * 60 * 1000) {
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
@@ -104,8 +101,8 @@ export function LineChart({
 
   const rangeMs =
     timestamps.length >= 2
-      ? parseTs(timestamps[timestamps.length - 1]).getTime() -
-        parseTs(timestamps[0]).getTime()
+      ? parseServerTime(timestamps[timestamps.length - 1]).getTime() -
+        parseServerTime(timestamps[0]).getTime()
       : 0;
 
   const yTicks = (() => {

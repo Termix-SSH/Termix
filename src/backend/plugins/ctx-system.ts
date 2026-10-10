@@ -4,8 +4,8 @@
  * say that it renews it. Every call is audited.
  */
 
-import type { PluginSystem } from "@termix/plugin-sdk/backend";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { PluginSystem } from "@termix-ssh/plugin-sdk/backend";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import { assertCapability } from "./permissions.js";
 import type { DisposableBag } from "./disposables.js";
 

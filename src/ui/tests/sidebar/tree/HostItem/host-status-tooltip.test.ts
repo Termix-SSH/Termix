@@ -6,7 +6,7 @@ import {
   statusCheckEnabled,
 } from "@/sidebar/tree/HostItem/HostItem";
 
-// Minimal host factory – only the fields buildStatusTooltip reads.
+// Minimal host factory, only the fields buildStatusTooltip reads.
 function makeHost(overrides: Partial<Host> = {}): Host {
   return {
     id: 1,
@@ -90,7 +90,7 @@ describe("buildStatusTooltip", () => {
   it("does not render key paths when a translator is supplied", () => {
     const host = makeHost();
     const tooltip = buildStatusTooltip(host, "online", t);
-    // The tooltip must never show the raw key path – that means the
+    // The tooltip must never show the raw key path, that means the
     // translation resource is missing, which is the bug #1265 fixed.
     expect(tooltip).not.toMatch(/hosts\.status\./);
   });

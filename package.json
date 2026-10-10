@@ -2,11 +2,10 @@
   "name": "termix",
   "private": true,
   "workspaces": [
-    "packages/*",
-    "plugins/*"
+    "packages/*"
   ],
-  "version": "2.9.2",
-  "description": "Self-hosted SSH and remote desktop management.",
+  "version": "26.10.0",
+  "description": "Self-hosted, plugin-based server management.",
   "author": "Karmaa",
   "main": "electron/main.cjs",
   "engines": {
@@ -16,10 +15,10 @@
   "scripts": {
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs && node scripts/patch-node-pty.cjs && node scripts/patch-ssh2-agent.cjs && node scripts/apply-plugin-patches.cjs",
+    "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs && node scripts/patch-node-pty.cjs && node scripts/patch-ssh2-agent.cjs",
     "prepare": "husky || true",
     "prebuild": "node scripts/write-electron-build-info.cjs",
-    "lint": "node scripts/generate-dialect-schema.cjs --check && npm run plugin:validate-manifest && eslint . && node scripts/check-importmap-csp.cjs && node scripts/check-core-plugin-ids.cjs && node scripts/check-sdk-ui-exports.cjs && node scripts/check-plugin-locales.cjs && node scripts/check-plugin-uses.cjs && node scripts/check-test-locations.cjs",
+    "lint": "node scripts/generate-dialect-schema.cjs --check && eslint . && node scripts/check-importmap-csp.cjs && node scripts/check-core-plugin-ids.cjs && node scripts/check-sdk-ui-exports.cjs && node scripts/generate-settings-search-index.cjs --check && node scripts/check-test-locations.cjs && node scripts/check-changelog.cjs && node scripts/check-env-catalog.cjs",
     "lint:fix": "eslint --fix .",
     "type-check": "npm run build:sdk && tsc -b --force",
     "test": "vitest run",
@@ -27,34 +26,28 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "dev": "vite",
+    "dev": "node scripts/dev.mjs",
+    "dev:electron": "node scripts/dev.mjs electron",
+    "dev:docker": "node scripts/dev.mjs docker",
+    "dev:frontend": "vite",
     "build": "npm run build:sdk && vite build && tsc -p tsconfig.node.json && node -e \"require('fs').copyFileSync('src/backend/package.json','dist/backend/package.json')\" && npm run build:plugins",
     "build:backend": "npm run build:sdk && tsc -p tsconfig.node.json && node -e \"require('fs').copyFileSync('src/backend/package.json','dist/backend/package.json')\" && npm run build:plugins",
-    "dev:backend": "npm run build:sdk && tsc -p tsconfig.node.json && node -e \"require('fs').copyFileSync('src/backend/package.json','dist/backend/package.json')\" && npm run build:plugins && node ./dist/backend/backend/starter.js",
-    "dev:docker": "docker stop termix-dev 2>nul & docker rm termix-dev 2>nul & docker build -f docker/Dockerfile -t termix:dev --no-cache . && docker run -d --name termix-dev -p 3000:3000 -p 8080:8080 -p 30001:30001 -v \"%cd%\\db\\data:/app/data\" termix:dev",
-    "dev:docker:restart": "docker stop termix-dev 2>nul & docker rm termix-dev 2>nul & docker run -d --name termix-dev -p 8080:8080 -p 30001:30001 -v \"%cd%\\db\\data:/app/data\" termix:dev",
-    "generate:openapi": "npm run build:sdk && tsc -p tsconfig.node.json && node -e \"require('fs').copyFileSync('src/backend/package.json','dist/backend/package.json')\" && node ./dist/backend/backend/utils/swagger.js",
-    "preview": "vite preview",
-    "electron:dev": "concurrently \"npm run dev\" \"powershell -c \\\"Start-Sleep -Seconds 5\\\" && electron .\"",
-    "electron:patch-builder": "node scripts/patch-app-builder-lib.cjs",
+    "generate:openapi": "npm run build:sdk && node scripts/generate-openapi.mjs",
     "electron:rebuild": "electron-rebuild -f -o better-sqlite3,@serialport/bindings-cpp,node-pty",
-    "build:win-portable": "npm run build && npm run electron:rebuild && npm run electron:patch-builder && electron-builder --win --dir",
-    "build:win-installer": "npm run build && npm run electron:rebuild && npm run electron:patch-builder && electron-builder --win --publish=never",
-    "build:linux-portable": "npm run build && npm run electron:rebuild && npm run electron:patch-builder && electron-builder --linux --dir",
-    "build:linux-appimage": "npm run build && npm run electron:rebuild && npm run electron:patch-builder && electron-builder --linux AppImage",
-    "build:linux-targz": "npm run build && npm run electron:rebuild && npm run electron:patch-builder && electron-builder --linux tar.gz",
-    "build:mac": "npm run build && npm run electron:rebuild && npm run electron:patch-builder && electron-builder --mac --universal",
-    "build:mac-dev": "npm run build && npm run electron:rebuild && npm run electron:patch-builder && electron-builder --mac dir --publish=never",
+    "build:win-portable": "npm run build && npm run electron:rebuild && electron-builder --win --dir",
+    "build:win-installer": "npm run build && npm run electron:rebuild && electron-builder --win --publish=never",
+    "build:linux-appimage": "npm run build && npm run electron:rebuild && electron-builder --linux AppImage",
+    "build:linux-targz": "npm run build && npm run electron:rebuild && electron-builder --linux tar.gz",
+    "build:mac": "npm run build && npm run electron:rebuild && electron-builder --mac --universal",
     "schema:generate": "node scripts/generate-dialect-schema.cjs",
     "schema:check": "node scripts/generate-dialect-schema.cjs --check",
     "schema:migrations": "drizzle-kit generate --config=drizzle.config.sqlite.ts && drizzle-kit generate --config=drizzle.config.pg.ts && drizzle-kit generate --config=drizzle.config.mysql.ts",
-    "plugin:validate-manifest": "node scripts/validate-plugin-manifest.cjs",
-    "build:sdk": "npm run build --workspace @termix/plugin-sdk && node scripts/build-sdk-host.mjs",
+    "build:sdk": "npm run build --workspace @termix-ssh/plugin-sdk && node scripts/build-sdk-host.mjs",
     "build:plugins": "node scripts/build-plugins.cjs",
-    "test:plugins": "node scripts/run-plugin-tests.cjs",
-    "test:all": "npm run test && npm run test:plugins"
+    "plugins:pin": "node scripts/pin-bundled-plugins.cjs"
   },
   "dependencies": {
+    "@noble/hashes": "^2.4.0",
     "@tanstack/react-virtual": "^3.14.13",
     "@types/compression": "^1.8.1",
     "@types/semver": "^7.8.0",
@@ -81,6 +74,7 @@
     "sharp": "^0.35.4",
     "socks": "^2.8.10",
     "ssh2": "^1.17.0",
+    "sshpk": "^1.18.0",
     "tar": "^7.5.22",
     "undici": "^8.10.2",
     "ws": "^8.21.3"
@@ -125,6 +119,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@types/ssh2": "^1.15.6",
+    "@types/sshpk": "^1.17.5",
     "@types/supertest": "^7.2.1",
     "@types/ws": "^8.18.1",
     "@uiw/react-codemirror": "^4.25.11",
@@ -135,7 +130,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
-    "concurrently": "^10.0.5",
     "drizzle-kit": "^0.31.10",
     "electron": "^43.4.1",
     "electron-builder": "^26.15.3",
@@ -143,7 +137,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
     "eslint-plugin-unused-imports": "^4.4.1",
-    "globals": "^17.11.0",
+    "globals": "^17.13.0",
     "husky": "^9.1.7",
     "i18next": "^26.4.2",
     "i18next-browser-languagedetector": "^8.2.1",
@@ -173,10 +167,7 @@
       "eslint --fix",
       "prettier --write"
     ],
-    "*.{js,jsx}": [
-      "prettier --write"
-    ],
-    "*.{json,css,md}": [
+    "*.{js,jsx,mjs,cjs,json,css,md}": [
       "prettier --write"
     ]
   },

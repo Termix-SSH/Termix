@@ -11,6 +11,7 @@ import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { parseUserAgent } from "../../utils/user-agent-parser.js";
+import { isDesktopAppOrigin } from "../../utils/cors-config.js";
 import { deleteUserAndRelatedData } from "./delete-user-data.js";
 import {
   allowsDesktopAutoSession,
@@ -19,13 +20,13 @@ import {
   isNativeTokenExportRequest,
   resolveDesktopAutoSessionUser,
 } from "./desktop-auto-session.js";
-import { shouldShowDonationModal } from "./donation-modal-utils.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { registerUserApiKeyRoutes } from "./user-api-key-routes.js";
 import { registerBrandingRoutes } from "./branding-routes.js";
 import { registerUserSettingsRoutes } from "./user-settings-routes.js";
 import { registerTlsRoutes } from "./tls-routes.js";
 import { registerUserSessionRoutes } from "./user-session-routes.js";
+import { registerUserSocketTicketRoutes } from "./user-socket-ticket-routes.js";
 import { registerUserExternalAccountRoutes } from "./user-external-account-routes.js";
 import { registerUserPasswordResetRoutes } from "./user-password-reset-routes.js";
 import { registerUserAdminRoutes } from "./user-admin-routes.js";
@@ -55,6 +56,7 @@ import {
   isNativeAppRequest,
   syncSharedCredentialsForUserRoles,
 } from "../../auth/session-issuer.js";
+import { EXTERNAL_AUTO_PROVISION_KEY } from "../../auth/provisioning.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -184,15 +186,6 @@ router.post("/create", async (req, res) => {
       id,
       username,
       passwordHash: password_hash,
-      isOidc: false,
-      clientId: "",
-      clientSecret: "",
-      issuerUrl: "",
-      authorizationUrl: "",
-      tokenUrl: "",
-      identifierPath: "",
-      namePath: "",
-      scopes: "openid email profile",
     });
 
     try {
@@ -361,7 +354,7 @@ router.post("/proxy-login", async (req, res) => {
       return res.status(403).json({ error: "Proxy user must already exist" });
     }
     if (
-      userRecord.isOidc ||
+      userRecord.isExternal ||
       (await createCurrentUserAuthRepository().hasSecondFactor(userRecord.id))
     ) {
       return res.status(409).json({
@@ -600,27 +593,18 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
     }
 
     const hasPassword = user.passwordHash && user.passwordHash.trim() !== "";
-    const isDualAuth =
-      hasPassword && isExternalAccount(user) && !!user.oidcIdentifier;
-
-    const showDonationModal = shouldShowDonationModal(
-      user.registeredAt,
-      !!user.donationModalDismissed,
-    );
+    const isDualAuth = hasPassword && isExternalAccount(user);
 
     res.json({
       userId: user.id,
       username: user.username,
       is_admin: !!user.isAdmin,
       is_external: isExternalAccount(user),
-      // 2.8 name, kept until 3.0.0.
-      is_oidc: !!user.isOidc,
       is_dual_auth: isDualAuth,
       // Any second factor; the name is what 2.8 clients read.
       totp_enabled: await createCurrentUserAuthRepository().hasSecondFactor(
         user.id,
       ),
-      show_donation_modal: showDonationModal,
       linked: await describeDesktopLink(user.id),
     });
   } catch (err) {
@@ -628,48 +612,6 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to get username" });
   }
 });
-
-/**
- * @openapi
- * /users/me/dismiss-donation-modal:
- *   post:
- *     summary: Permanently dismiss the donation reminder modal
- *     description: Marks the donation reminder modal as dismissed for the currently authenticated user so it is never shown to them again.
- *     tags:
- *       - Users
- *     responses:
- *       200:
- *         description: Donation modal dismissed.
- *       401:
- *         description: Invalid userId or user not found.
- *       500:
- *         description: Failed to dismiss donation modal.
- */
-router.post(
-  "/me/dismiss-donation-modal",
-  authenticateJWT,
-  async (req: Request, res: Response) => {
-    const userId = (req as AuthenticatedRequest).userId;
-
-    if (!isNonEmptyString(userId)) {
-      return res.status(401).json({ error: "Invalid userId" });
-    }
-    try {
-      const updated = await createCurrentUserRepository().update(userId, {
-        donationModalDismissed: true,
-      });
-      if (!updated) {
-        return res.status(401).json({ error: "User not found" });
-      }
-      return res.json({ success: true });
-    } catch (err) {
-      authLogger.error("Failed to dismiss donation modal", err);
-      return res
-        .status(500)
-        .json({ error: "Failed to dismiss donation modal" });
-    }
-  },
-);
 
 /**
  * @openapi
@@ -755,7 +697,11 @@ router.get("/setup-required", async (req, res) => {
  */
 router.post("/internal/auto-session", async (req, res) => {
   try {
-    if (!allowsDesktopAutoSession() || !isLoopbackRequest(req)) {
+    if (
+      !allowsDesktopAutoSession() ||
+      !isLoopbackRequest(req) ||
+      !isDesktopAppOrigin(req.headers.origin)
+    ) {
       authLogger.warn(
         "Rejected non-loopback attempt to access auto-session endpoint",
         { source: req.ip },
@@ -944,7 +890,7 @@ router.patch("/registration-allowed", authenticateJWT, async (req, res) => {
  * /users/external-auto-provision:
  *   get:
  *     summary: Get the external account auto-create setting
- *     description: Whether a new account is created the first time someone signs in through an external login (SSO, LDAP or any login plugin). The 2.8 path /users/oidc-auto-provision is accepted too.
+ *     description: Whether a new account is created the first time someone signs in through an external login (SSO, LDAP or any login plugin).
  *     tags:
  *       - Users
  *     responses:
@@ -955,7 +901,7 @@ const getExternalAutoProvision: RequestHandler = async (_req, res) => {
   try {
     res.json({
       enabled: await createCurrentSettingsRepository().getBoolean(
-        "oidc_auto_provision",
+        EXTERNAL_AUTO_PROVISION_KEY,
         false,
       ),
     });
@@ -972,7 +918,7 @@ const getExternalAutoProvision: RequestHandler = async (_req, res) => {
  * /users/external-auto-provision:
  *   patch:
  *     summary: Set the external account auto-create setting
- *     description: Enables or disables creating an account on first external sign-in. The 2.8 path /users/oidc-auto-provision is accepted too.
+ *     description: Enables or disables creating an account on first external sign-in.
  *     tags:
  *       - Users
  *     requestBody:
@@ -1006,7 +952,7 @@ const setExternalAutoProvision: RequestHandler = async (req, res) => {
       return res.status(400).json({ error: "Invalid value for enabled" });
     }
     await createCurrentSettingsRepository().set(
-      "oidc_auto_provision",
+      EXTERNAL_AUTO_PROVISION_KEY,
       enabled ? "true" : "false",
     );
     res.json({ enabled });
@@ -1022,9 +968,6 @@ router.patch(
   authenticateJWT,
   setExternalAutoProvision,
 );
-// 2.8 paths, kept until 3.0.0.
-router.get("/oidc-auto-provision", getExternalAutoProvision);
-router.patch("/oidc-auto-provision", authenticateJWT, setExternalAutoProvision);
 
 /**
  * @openapi
@@ -1317,7 +1260,7 @@ router.delete("/delete-account", authenticateJWT, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (userRecord.isOidc) {
+    if (userRecord.isExternal) {
       return res.status(403).json({
         error:
           "Cannot delete external authentication accounts through this endpoint",
@@ -1588,6 +1531,7 @@ registerUserExternalAccountRoutes(router, {
 });
 
 registerUserSettingsRoutes(router, authenticateJWT);
+registerUserSocketTicketRoutes(router, { authenticateJWT, authManager });
 registerTlsRoutes(router, authenticateJWT);
 
 registerUserApiKeyRoutes(router, requireAdmin);

@@ -107,7 +107,6 @@ function addUser(overrides: Record<string, unknown> = {}) {
     username: "alice",
     passwordHash: bcrypt.hashSync(PASSWORD, 4),
     isAdmin: false,
-    isOidc: false,
     ...overrides,
   };
   h.state.users.set(user.id as string, user as never);
@@ -196,7 +195,6 @@ describe("external sign-in cannot claim another account", () => {
     email: null,
     name: "Alice",
     legacyIdentifier: "shared-id",
-    ssoProviderId: 3,
   };
 
   beforeEach(() => {
@@ -209,7 +207,7 @@ describe("external sign-in cannot claim another account", () => {
         external: true,
       }),
     );
-    h.state.settings.set("oidc_auto_provision", "true");
+    h.state.settings.set("external_auto_provision", "true");
   });
 
   async function signIn(identity: Record<string, unknown> = external) {
@@ -223,55 +221,21 @@ describe("external sign-in cannot claim another account", () => {
     return h.state.identities.find((row) => row.subject === "sub-1")?.userId;
   }
 
-  it("never links a local password account by its old identifier", async () => {
-    addUser({ id: "local", oidcIdentifier: "shared-id", isOidc: false });
-    await signIn();
-    expect(linkedTo()).not.toBe("local");
-  });
-
-  it("never links an account that already has an identity", async () => {
-    addUser({
-      id: "taken",
-      username: "bob",
-      passwordHash: "",
-      isOidc: true,
-      oidcIdentifier: "shared-id",
-    });
+  it("never links an account that has no identity for this provider", async () => {
+    addUser({ id: "local", username: "Alice" });
+    addUser({ id: "sso", username: "bob", passwordHash: "" });
     h.state.identities.push({
       id: 1,
-      userId: "taken",
+      userId: "sso",
       providerId: "9",
-      subject: "bob",
+      subject: "sub-1",
       email: null,
     });
     await signIn();
-    expect(linkedTo()).not.toBe("taken");
-  });
-
-  it("never links an account from a different provider", async () => {
-    addUser({
-      id: "other",
-      username: "bob",
-      passwordHash: "",
-      isOidc: true,
-      oidcIdentifier: "shared-id",
-      ssoProviderId: 7,
-    });
-    await signIn();
-    expect(linkedTo()).not.toBe("other");
-  });
-
-  it("still links a genuine 2.8 account on its first sign-in", async () => {
-    addUser({
-      id: "legacy",
-      username: "Alice",
-      passwordHash: "",
-      isOidc: true,
-      oidcIdentifier: "shared-id",
-      ssoProviderId: 3,
-    });
-    await signIn();
-    expect(linkedTo()).toBe("legacy");
+    expect(linkedTo()).not.toBe("local");
+    expect(
+      h.state.identities.find((row) => row.providerId === "3")?.userId,
+    ).not.toBe("sso");
   });
 
   it("never gives a new account a local user's username", async () => {
@@ -290,7 +254,6 @@ describe("external sign-in cannot claim another account", () => {
       id: "sso-user",
       username: "carol",
       passwordHash: "",
-      isOidc: true,
     });
     h.state.identities.push({
       id: 1,

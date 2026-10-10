@@ -52,6 +52,13 @@
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-dim: var(--surface-dim);
+  --color-warning: var(--warning);
+  --color-terminal-bg: var(--terminal-bg);
+  --color-bg-base: var(--bg-base);
+  --color-border-base: var(--border-base);
+  --color-foreground-secondary: var(--foreground-secondary);
+  --color-canvas: var(--canvas);
+  --color-overlay: var(--overlay);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);

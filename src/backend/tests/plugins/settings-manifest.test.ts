@@ -398,7 +398,7 @@ describe("host field options", () => {
       host: { enableKey: "on", enableLabelKey: "k", fields, ...extra },
     });
 
-  it("accepts enableDefault, defaultFrom, shareRead and ownerOnly", () => {
+  it("accepts enableDefault, shareRead and ownerOnly", () => {
     expect(
       validateManifest(
         host(
@@ -407,7 +407,6 @@ describe("host field options", () => {
               key: "mode",
               type: "boolean",
               labelKey: "k",
-              defaultFrom: "defaultOn",
               shareRead: "edit",
               ownerOnly: true,
             },
@@ -418,7 +417,7 @@ describe("host field options", () => {
     ).toEqual([]);
   });
 
-  it("still accepts an old defaultFrom, but only as a string", () => {
+  it("rejects the removed defaultFrom", () => {
     expect(
       validateManifest(
         host([
@@ -429,11 +428,6 @@ describe("host field options", () => {
             defaultFrom: "missing",
           },
         ]),
-      ),
-    ).toEqual([]);
-    expect(
-      validateManifest(
-        host([{ key: "mode", type: "boolean", labelKey: "k", defaultFrom: 1 }]),
       ).join(),
     ).toMatch(/defaultFrom/);
   });

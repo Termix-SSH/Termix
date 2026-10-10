@@ -1,14 +1,20 @@
 /* eslint-disable react-refresh/only-export-components */
 import {
+  requestFromLegacyEvent,
+  requestManage,
+} from "@/manage/manage-requests";
+import {
   LayoutDashboard,
   LayoutPanelLeft,
+  Puzzle,
+  LibraryBig,
   Server,
   Settings,
-  User,
 } from "lucide-react";
 import { lazy, memo, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import type { Tab, TabType } from "@/types/ui-types";
+import { trackTabHandle } from "@/shell/tab-handles";
 import { hostToSSHHost } from "@/lib/host-to-ssh-host";
 import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
 import {
@@ -17,12 +23,22 @@ import {
   type TabTypeDef,
 } from "./tab-registry";
 import { getPanel, type PanelDef } from "./panel-registry";
+import type { SettingsTabProps } from "@/settings/SettingsTab";
 import {
   markAdaptiveResourceUsed,
   runAdaptiveBackgroundTask,
 } from "@/lib/adaptive-resource-budget";
 
-// Heavy tab surfaces — keep out of the AppShell critical path.
+// Heavy tab surfaces, kept out of the AppShell critical path.
+const ManageTab = lazy(() =>
+  import("@/manage/ManageTab").then((m) => ({ default: m.ManageTab })),
+);
+const SettingsTab = lazy(() =>
+  import("@/settings/SettingsTab").then((m) => ({ default: m.SettingsTab })),
+);
+const PluginsTab = lazy(() =>
+  import("@/plugins/PluginsTab").then((m) => ({ default: m.PluginsTab })),
+);
 const DashboardTab = lazy(() =>
   import("@/dashboard/DashboardTab").then((m) => ({
     default: m.DashboardTab,
@@ -91,13 +107,15 @@ export function tabIcon(type: TabType) {
     case "dashboard":
       return <LayoutDashboard className="size-3.5" />;
     case "host-manager":
-      return <Server className="size-3.5" />;
+      return <LibraryBig className="size-3.5" />;
+    case "settings":
     case "user-profile":
-      return <User className="size-3.5" />;
     case "admin-settings":
       return <Settings className="size-3.5" />;
     case "split-screen":
       return <LayoutPanelLeft className="size-3.5" />;
+    case "plugins":
+      return <Puzzle className="size-3.5" />;
     default: {
       const Icon = getTabType(type)?.icon;
       return Icon ? <Icon className="size-3.5" /> : null;
@@ -147,7 +165,9 @@ const RegisteredTab = memo(function RegisteredTab({
       isVisible={isVisible}
       isFocusedPane={isFocusedPane}
       inSplit={inSplit}
-      handleRef={tab.terminalRef as React.Ref<unknown>}
+      handleRef={trackTabHandle(
+        tab.terminalRef as React.RefObject<unknown> | undefined,
+      )}
       shell={shell}
     />
   );
@@ -165,7 +185,14 @@ const DashboardTabHost = memo(function DashboardTabHost({
 }) {
   return withTabSuspense(
     <DashboardTab
-      onOpenSingletonTab={(type) => shell.openSingletonTab(type)}
+      onOpenSingletonTab={(type, pendingEvent) => {
+        // "Add host" and friends say what to open in the Manage tab.
+        const request = pendingEvent
+          ? requestFromLegacyEvent(pendingEvent)
+          : null;
+        if (request) requestManage(request);
+        else shell.openSingletonTab(type);
+      }}
       onOpenTab={(host, type) => shell.openTab(host, type)}
       isVisible={isVisible}
     />,
@@ -202,6 +229,8 @@ function noop() {}
 
 export interface TabRenderContext {
   shell: TabShellCallbacks;
+  /** What the Settings tab needs from the shell. */
+  settings?: Omit<SettingsTabProps, "section" | "sectionAt">;
   /** The terminal a panel shown as a tab sends commands to. */
   panelTargetTab?: Tab;
   isVisible?: boolean;
@@ -225,6 +254,36 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
       return null;
 
     case "host-manager":
+      return withTabSuspense(<ManageTab />);
+
+    case "plugins":
+      return withTabSuspense(<PluginsTab />);
+
+    case "settings":
+      return context.settings
+        ? withTabSuspense(
+            <SettingsTab
+              {...context.settings}
+              section={
+                typeof tab.data?.section === "string"
+                  ? tab.data.section
+                  : undefined
+              }
+              sectionAt={
+                typeof tab.data?.revealAt === "number" ||
+                typeof tab.data?.revealAt === "string"
+                  ? tab.data.revealAt
+                  : undefined
+              }
+              reveal={
+                typeof tab.data?.reveal === "string"
+                  ? `${tab.data.reveal}@${String(tab.data.revealAt ?? "")}`
+                  : undefined
+              }
+            />,
+          )
+        : null;
+
     case "user-profile":
     case "admin-settings":
       return null;

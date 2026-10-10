@@ -56,3 +56,31 @@ describe("getCredentialRowHeight", () => {
     ).toBe(base);
   });
 });
+
+describe("detail row", () => {
+  it("drops the username line height in comfortable density only", () => {
+    const shape = {
+      isKey: false,
+      alwaysShowActions: false,
+      actionsOnly: false,
+      isOpen: false,
+      showTags: false,
+      tagCount: 0,
+    };
+    const full = getCredentialRowHeight({ density: "comfortable", ...shape });
+    expect(
+      getCredentialRowHeight({
+        density: "comfortable",
+        ...shape,
+        hasDetailRow: false,
+      }),
+    ).toBe(full - 15);
+    expect(
+      getCredentialRowHeight({
+        density: "compact",
+        ...shape,
+        hasDetailRow: false,
+      }),
+    ).toBe(getCredentialRowHeight({ density: "compact", ...shape }));
+  });
+});

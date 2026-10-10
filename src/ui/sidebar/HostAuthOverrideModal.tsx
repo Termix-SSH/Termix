@@ -1,15 +1,9 @@
+import { Select2 } from "@/components/select2";
+import { FormFooter } from "@/components/list-kit";
+import { InlineView } from "@/components/surface/surface-scope";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Button } from "@/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/dialog";
 import {
   getCredentials,
   getHostAuthOverride,
@@ -123,98 +117,86 @@ export function HostAuthOverrideModal({
       onClick={(event) => event.stopPropagation()}
       onPointerDown={(event) => event.stopPropagation()}
     >
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {t("hosts.sharing.authOverrideTitleProtocol", {
-                protocol: authProtocolLabel(protocol, t),
-              })}
-            </DialogTitle>
-            <DialogDescription>
-              {t(
-                ownerAuthShared
-                  ? "hosts.sharing.authOverrideDescriptionShared"
-                  : "hosts.sharing.authOverrideDescriptionPrivate",
-                { host: host.name },
-              )}
-            </DialogDescription>
-          </DialogHeader>
-
-          {loading ? (
-            <p className="py-4 text-center text-muted-foreground">
-              {t("common.loading")}
-            </p>
-          ) : loadError ? (
-            <p className="border border-destructive/30 bg-destructive/5 p-3 text-destructive">
-              {t("hosts.sharing.authOverrideLoadError")}
-            </p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <label
-                htmlFor={`auth-override-${host.id}`}
-                className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
-              >
-                {t("hosts.sharing.authOverrideCredentialLabel")}
-              </label>
-              <select
-                id={`auth-override-${host.id}`}
-                value={selectedId}
-                onChange={(event) => setSelectedId(event.target.value)}
-                className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="">
-                  {t(
-                    ownerAuthShared
-                      ? "hosts.sharing.useSharedAuthentication"
-                      : "hosts.sharing.noPersonalCredential",
-                  )}
-                </option>
-                {credentials.map((credential) => (
-                  <option key={credential.id} value={credential.id}>
-                    {credential.username
-                      ? `${credential.name} (${credential.username})`
-                      : credential.name}
-                  </option>
-                ))}
-              </select>
-              {credentials.length === 0 && (
-                <p className="text-[10px] text-muted-foreground">
-                  {t("hosts.sharing.authOverrideNoCredentials")}
-                </p>
-              )}
-              {overrideState?.required && selectedId === "" && (
-                <p className="border border-amber-500/30 bg-amber-500/5 p-2 text-[10px] text-amber-600 dark:text-amber-400">
-                  {t("hosts.sharing.authOverrideRequired")}
-                </p>
-              )}
-              <p className="text-[10px] text-muted-foreground">
-                {t("hosts.sharing.authOverridePrivateHint")}
-              </p>
-            </div>
+      <InlineView
+        open={open}
+        onOpenChange={onOpenChange}
+        title={
+          <>
+            {t("hosts.sharing.authOverrideTitleProtocol", {
+              protocol: authProtocolLabel(protocol, t),
+            })}
+          </>
+        }
+        footer={
+          <FormFooter
+            onCancel={() => onOpenChange(false)}
+            onSave={() => void handleSave()}
+            saving={saving}
+            disabled={loading || loadError || selectedId === initialId}
+          />
+        }
+      >
+        <p className="text-xs text-muted-foreground">
+          {t(
+            ownerAuthShared
+              ? "hosts.sharing.authOverrideDescriptionShared"
+              : "hosts.sharing.authOverrideDescriptionPrivate",
+            { host: host.name },
           )}
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={saving}
+        </p>
+        {loading ? (
+          <p className="py-4 text-center text-muted-foreground">
+            {t("common.loading")}
+          </p>
+        ) : loadError ? (
+          <p className="border border-destructive/30 bg-destructive/5 p-3 text-destructive">
+            {t("hosts.sharing.authOverrideLoadError")}
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <label
+              htmlFor={`auth-override-${host.id}`}
+              className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
             >
-              {t("common.cancel")}
-            </Button>
-            <Button
-              variant="outline"
-              className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-              onClick={handleSave}
-              disabled={
-                loading || loadError || saving || selectedId === initialId
-              }
+              {t("hosts.sharing.authOverrideCredentialLabel")}
+            </label>
+            <Select2
+              id={`auth-override-${host.id}`}
+              value={selectedId}
+              onChange={(event) => setSelectedId(event.target.value)}
+              className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
             >
-              {saving ? t("common.saving") : t("common.save")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <option value="">
+                {t(
+                  ownerAuthShared
+                    ? "hosts.sharing.useSharedAuthentication"
+                    : "hosts.sharing.noPersonalCredential",
+                )}
+              </option>
+              {credentials.map((credential) => (
+                <option key={credential.id} value={credential.id}>
+                  {credential.username
+                    ? `${credential.name} (${credential.username})`
+                    : credential.name}
+                </option>
+              ))}
+            </Select2>
+            {credentials.length === 0 && (
+              <p className="text-[10px] text-muted-foreground">
+                {t("hosts.sharing.authOverrideNoCredentials")}
+              </p>
+            )}
+            {overrideState?.required && selectedId === "" && (
+              <p className="border border-warning/30 bg-warning/5 p-2 text-[10px] text-warning">
+                {t("hosts.sharing.authOverrideRequired")}
+              </p>
+            )}
+            <p className="text-[10px] text-muted-foreground">
+              {t("hosts.sharing.authOverridePrivateHint")}
+            </p>
+          </div>
+        )}
+      </InlineView>
     </span>
   );
 }

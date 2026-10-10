@@ -9,10 +9,20 @@ const {
   MAX_LENGTH,
 } = require("./generate-appstore-notes.cjs");
 
-function notesFile(sections: Record<string, string>) {
-  return Object.entries(sections)
-    .map(([name, body]) => `<!-- ${name} -->\n${body}\n<!-- /${name} -->`)
-    .join("\n\n");
+function changelog(body: string, version = "26.10.0") {
+  return [
+    "# Changelog",
+    "",
+    `## ${version}`,
+    "",
+    body,
+    "",
+    "## 26.9.0",
+    "",
+    "### Added",
+    "- Older",
+    "",
+  ].join("\n");
 }
 
 describe("toPlainText", () => {
@@ -36,6 +46,10 @@ describe("toPlainText", () => {
     expect(toPlainText("* One\n* Two")).toBe("- One\n- Two");
   });
 
+  it("turns headings into labels", () => {
+    expect(toPlainText("### Added\n- One")).toBe("Added:\n- One");
+  });
+
   it("collapses runs of blank lines", () => {
     expect(toPlainText("- One\n\n\n\n- Two")).toBe("- One\n\n- Two");
   });
@@ -52,74 +66,40 @@ describe("truncate", () => {
   });
 
   it("drops a section header left with no bullets under it", () => {
-    const result = truncate("- One\n\nBug Fixes:\n- Two", 18);
+    const result = truncate("- One\n\nFixed:\n- Two", 14);
     expect(result).toBe("- One");
   });
 });
 
 describe("buildNotes", () => {
-  it("includes the summary, update log, and bug fixes", () => {
+  it("uses only the version's section", () => {
     const notes = buildNotes(
-      notesFile({
-        SUMMARY: "A big release.",
-        UPDATE_LOG: "- Added a thing",
-        BUG_FIXES: "- Fixed a thing",
-      }),
+      changelog("A summary.\n\n### Added\n- A thing\n\n### Fixed\n- A bug"),
+      "26.10.0",
     );
-
-    expect(notes).toContain("A big release.");
-    expect(notes).toContain("Update Log:");
-    expect(notes).toContain("- Added a thing");
-    expect(notes).toContain("Bug Fixes:");
-    expect(notes).toContain("- Fixed a thing");
+    expect(notes).toBe("A summary.\n\nAdded:\n- A thing\n\nFixed:\n- A bug");
+    expect(notes).not.toContain("Older");
   });
 
-  it("omits optional sections that are absent", () => {
-    const notes = buildNotes(notesFile({ SUMMARY: "Small release." }));
-
-    expect(notes).toBe("Small release.");
-    expect(notes).not.toContain("Update Log:");
-    expect(notes).not.toContain("Bug Fixes:");
-  });
-
-  it("stays within the App Store character limit", () => {
-    const notes = buildNotes(
-      notesFile({
-        SUMMARY: "Big release.",
-        UPDATE_LOG: Array.from(
-          { length: 400 },
-          (_, i) => `- Added feature number ${i}`,
-        ).join("\n"),
-        BUG_FIXES: Array.from(
-          { length: 400 },
-          (_, i) => `- Fixed bug number ${i}`,
-        ).join("\n"),
-      }),
+  it("stays within the App Store limit and never ends mid-bullet", () => {
+    const bullets = Array.from(
+      { length: 400 },
+      (_, i) => `- Added feature number ${i}`,
     );
-
+    const notes = buildNotes(
+      changelog(`### Added\n${bullets.join("\n")}`),
+      "26.10.0",
+    );
     expect(notes.length).toBeLessThanOrEqual(MAX_LENGTH);
-    expect(notes.length).toBeGreaterThan(0);
+    expect(notes.split("\n").at(-1)).toMatch(/^- Added feature number \d+$/);
   });
 
-  it("never ends mid-bullet when truncating", () => {
-    const notes = buildNotes(
-      notesFile({
-        SUMMARY: "Big release.",
-        UPDATE_LOG: Array.from(
-          { length: 400 },
-          (_, i) => `- Added feature number ${i}`,
-        ).join("\n"),
-      }),
-    );
-
-    const lines = notes.split("\n");
-    expect(lines[lines.length - 1]).toMatch(/^- Added feature number \d+$/);
-  });
-
-  it("produces non-empty notes for the real release notes file", () => {
+  it("produces notes for the real changelog", () => {
     const fs = require("fs");
-    const notes = buildNotes(fs.readFileSync("RELEASE_NOTES.md", "utf8"));
-
+    const notes = buildNotes(
+      fs.readFileSync("CHANGELOG.md", "utf8"),
+      require("../package.json").version,
+    );
     expect(notes.length).toBeGreaterThan(0);
     expect(notes.length).toBeLessThanOrEqual(MAX_LENGTH);
   });

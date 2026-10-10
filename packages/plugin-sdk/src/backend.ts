@@ -339,6 +339,9 @@ export interface PluginRouterOptions {
    * and matched exactly ("/callback", not "/plugin-api/<id>/callback"). A
    * ":name" segment matches one segment, and a trailing "/*" matches any
    * number of further segments, for a proxied page ("/chooser/:id/*").
+   * An entry only opens the route registered with that same path, for the
+   * methods it was registered with, so a literal route beside a ":param"
+   * ("/webhook/config" next to "/webhook/:token") still needs a login.
    *
    * For the handful of routes an unauthenticated third party has to reach: an
    * OIDC callback, an inbound webhook. Every entry is audited when the router
@@ -373,7 +376,7 @@ export interface PluginHttp {
   /**
    * The public base URL a request came in on: origin plus the install's base
    * path, no trailing slash. Honours forwarded headers from a trusted proxy,
-   * BASE_PATH and OIDC_FORCE_HTTPS. For building absolute callback URLs.
+   * BASE_PATH and EXTERNAL_FORCE_HTTPS. For building absolute callback URLs.
    */
   baseUrl: (req: unknown) => string;
 }
@@ -1368,10 +1371,9 @@ export type PluginVerifiedIdentity =
         sid?: string | null;
       };
       /**
-       * The values a 2.8 install kept on the user row (`oidc_identifier`,
-       * `sso_provider_id`). Only for a plugin that took over a 2.8 login
-       * method: core finds pre-2.9 accounts by `identifier` and keeps writing
-       * both for new users so a downgrade still works.
+       * The identifier a 2.8 install kept for the user. Only for a plugin
+       * that took over a 2.8 login method: core also checks `identifier`
+       * against `allowedUsers`. `providerRowId` is no longer read.
        */
       legacy?: { identifier: string; providerRowId?: number | null };
       /**
@@ -1860,8 +1862,9 @@ export interface PluginBinarySpec {
   /** Hex SHA-256 the file must have. */
   sha256: string;
   /**
-   * Paths checked before downloading, such as a copy baked into the Docker
-   * image. One whose checksum matches is used in place.
+   * Absolute paths checked before downloading, such as a copy baked into the
+   * Docker image. Only a regular file named `name` is considered, and one
+   * whose checksum matches is used in place.
    */
   prebuilt?: readonly string[];
 }

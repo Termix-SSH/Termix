@@ -1,72 +1,71 @@
-import type { ComponentType } from "react";
-import { WelcomeStep } from "./steps/WelcomeStep";
+import { LayoutTemplate, Monitor, Palette, Puzzle, Shield } from "lucide-react";
+import { CORE_ONBOARDING_STEPS } from "@/types/onboarding";
+import { PluginsStep } from "./steps/PluginsStep";
 import { PresetStep } from "./steps/PresetStep";
 import { AppearanceStep } from "./steps/AppearanceStep";
-import { FeaturesStep } from "./steps/FeaturesStep";
-import { WorkflowStep } from "./steps/WorkflowStep";
 import { SecurityStep } from "./steps/SecurityStep";
-import { DoneStep } from "./steps/DoneStep";
 import { DesktopSyncStep } from "./steps/DesktopSyncStep";
-import { isElectron } from "@/lib/electron";
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface OnboardingContext {}
-
-export interface OnboardingStepProps {
-  context: OnboardingContext;
-}
-
-export interface OnboardingStep {
-  id: string;
-  titleKey: string;
-  Component: ComponentType<OnboardingStepProps>;
-  /** Steps that do not apply to this account are skipped entirely. */
-  isRelevant?: (context: OnboardingContext) => boolean;
-}
+import type { OnboardingStepDef } from "./onboarding-registry";
 
 /**
- * Onboarding as data rather than hardcoded JSX, so steps can be added,
- * reordered or made conditional without touching the dialog shell. Plugins
- * add steps through the "onboarding.steps" slot; they land before security.
+ * Core onboarding as data: only choices, no tour. Plugin steps slot in
+ * between these by section (see SECTION_POSITION). To show a changed step
+ * again to people who saw it, bump its version in CORE_ONBOARDING_STEPS;
+ * only that step reruns.
  */
-export const ONBOARDING_STEPS: OnboardingStep[] = [
+export const CORE_STEPS: OnboardingStepDef[] = [
   {
-    id: "welcome",
-    titleKey: "onboarding.welcomeTitle",
-    Component: WelcomeStep,
+    id: "plugins",
+    version: CORE_ONBOARDING_STEPS.plugins,
+    titleKey: "onboarding.pluginsTitle",
+    icon: Puzzle,
+    Component: PluginsStep,
+    audience: "admin",
+    position: 10,
+    required: true,
+    // Once applied there is nothing to redo here; the Plugins tab is where
+    // plugins change after that, so a rerun leaves it out.
+    isRelevant: (ctx) => !ctx.pluginsManagedElsewhere && ctx.pluginSetupPending,
+    forcePending: (ctx) => ctx.pluginSetupPending,
   },
-  { id: "preset", titleKey: "onboarding.presetTitle", Component: PresetStep },
   {
     id: "desktop-sync",
+    version: CORE_ONBOARDING_STEPS["desktop-sync"],
     titleKey: "onboarding.desktopTitle",
+    icon: Monitor,
     Component: DesktopSyncStep,
-    isRelevant: () => isElectron(),
+    audience: "all",
+    position: 20,
+    isRelevant: (ctx) => ctx.isDesktop,
+  },
+  {
+    id: "preset",
+    version: CORE_ONBOARDING_STEPS.preset,
+    titleKey: "onboarding.presetTitle",
+    icon: LayoutTemplate,
+    Component: PresetStep,
+    audience: "all",
+    position: 30,
   },
   {
     id: "appearance",
+    version: CORE_ONBOARDING_STEPS.appearance,
     titleKey: "onboarding.appearanceTitle",
+    icon: Palette,
     Component: AppearanceStep,
-  },
-  {
-    id: "features",
-    titleKey: "onboarding.featuresTitle",
-    Component: FeaturesStep,
-  },
-  {
-    id: "workflow",
-    titleKey: "onboarding.workflowTitle",
-    Component: WorkflowStep,
+    audience: "all",
+    position: 40,
   },
   {
     id: "security",
+    version: CORE_ONBOARDING_STEPS.security,
     titleKey: "onboarding.securityTitle",
+    icon: Shield,
     Component: SecurityStep,
+    audience: "all",
+    position: 90,
+    // The desktop signs its local account in by itself, so a second factor
+    // set up there would never be asked for.
+    isRelevant: (ctx) => !ctx.isDesktop && ctx.canEnrollSecondFactor === true,
   },
-  { id: "done", titleKey: "onboarding.doneTitle", Component: DoneStep },
 ];
-
-export function relevantSteps(context: OnboardingContext): OnboardingStep[] {
-  return ONBOARDING_STEPS.filter(
-    (step) => !step.isRelevant || step.isRelevant(context),
-  );
-}

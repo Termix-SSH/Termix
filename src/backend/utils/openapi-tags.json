@@ -1,0 +1,32 @@
+[
+  { "name": "Auth", "description": "Sign in, sign out and login methods" },
+  { "name": "Users", "description": "Accounts, profiles and sessions" },
+  { "name": "API Keys", "description": "API keys for scripts and the CLI" },
+  { "name": "Encryption", "description": "Data key setup and unlock" },
+  { "name": "SSH", "description": "Hosts, folders and connections" },
+  {
+    "name": "SSH Auth",
+    "description": "SSH auth types the server can connect with"
+  },
+  {
+    "name": "Host Defaults",
+    "description": "Admin, user and folder host defaults"
+  },
+  { "name": "Host Enrollment", "description": "Adding hosts from a script" },
+  { "name": "Credentials", "description": "Saved credentials" },
+  { "name": "RBAC", "description": "Roles and sharing" },
+  { "name": "Dashboard", "description": "Dashboard stats and recent activity" },
+  { "name": "Audit", "description": "Audit log search and export" },
+  { "name": "Plugins", "description": "Installing and managing plugins" },
+  { "name": "Sync", "description": "Desktop sync with a linked server" },
+  { "name": "Database", "description": "Database export, import and health" },
+  { "name": "General", "description": "Server info and settings" },
+  { "name": "Open Tabs", "description": "Saved open tabs" },
+  { "name": "User Preferences", "description": "Per-user preferences" },
+  { "name": "UI Preferences", "description": "Interface layout preferences" },
+  { "name": "Host Sidebar", "description": "Host sidebar display options" },
+  {
+    "name": "Credential Sidebar",
+    "description": "Credential sidebar display options"
+  }
+]

@@ -14,6 +14,7 @@ import { getSSHFolders, isElectron } from "@/main-axios";
 import { connectionOriginAppliesTo } from "./HostEditorData";
 import { useSyncStatus } from "@/hooks/use-sync-status";
 import type { HostEditorForm, HostProtocols } from "./HostEditorData";
+import type { HostFormErrors } from "@/manage/host-validation";
 import { Select2 } from "@/components/select2";
 import { useHostProtocols } from "./host-protocols";
 import {
@@ -21,6 +22,7 @@ import {
   HostDefaultBadge,
   HostOnly,
 } from "@/lib/host-defaults-context";
+import { DocsLink } from "@/components/docs-link";
 
 type HostEditorSetField = <K extends keyof HostEditorForm>(
   key: K,
@@ -35,6 +37,7 @@ export function HostEditorGeneralTab({
   hosts,
   host,
   simpleMode = false,
+  errors = {},
 }: {
   form: HostEditorForm;
   setField: HostEditorSetField;
@@ -44,6 +47,7 @@ export function HostEditorGeneralTab({
   host: Host | null;
   /** Hides organizational/advanced fields; their values still save unchanged. */
   simpleMode?: boolean;
+  errors?: HostFormErrors;
 }) {
   const { t } = useTranslation();
   const syncLinked = !!useSyncStatus()?.linked;
@@ -142,7 +146,7 @@ export function HostEditorGeneralTab({
   return (
     <>
       <HostOnly>
-        {/* Protocols — enable/disable each connection type */}
+        {/* Protocols, enable/disable each connection type */}
         <SectionCard
           title={t("hosts.protocols")}
           icon={<Globe className="size-3.5" />}
@@ -210,8 +214,14 @@ export function HostEditorGeneralTab({
               <Input
                 placeholder={t("placeholders.hostAddress")}
                 value={form.ip}
+                aria-invalid={!!errors.ip}
                 onChange={(e) => setField("ip", e.target.value)}
               />
+              {errors.ip && (
+                <span className="text-[10px] text-destructive">
+                  {t(errors.ip)}
+                </span>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -393,14 +403,7 @@ export function HostEditorGeneralTab({
                 {t("hosts.portKnockingSequence")}
               </span>
               <HostDefaultBadge settingKey="core.portKnockSequence" />
-              <a
-                href="https://docs.termix.site/features/networking/port-knocking"
-                target="_blank"
-                rel="noreferrer"
-                className="text-[10px] text-accent-brand hover:underline"
-              >
-                {t("hosts.docsLink")}
-              </a>
+              <DocsLink core="portKnocking">{t("hosts.docsLink")}</DocsLink>
             </div>
             <Button
               variant="outline"
@@ -800,7 +803,7 @@ export function HostEditorGeneralTab({
                   ),
                 ].join(" ")}
               >
-                <select
+                <Select2
                   className="flex h-7 border border-border bg-background px-2 py-0 text-xs outline-none focus:ring-1 focus:ring-ring"
                   value={form.connectionOrigin ?? ""}
                   onChange={(e) =>
@@ -817,7 +820,7 @@ export function HostEditorGeneralTab({
                   <option value="remote">
                     {t("hosts.connectionOriginRemote")}
                   </option>
-                </select>
+                </Select2>
               </SettingRow>
             </HostOnly>
           )}

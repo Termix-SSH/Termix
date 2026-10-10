@@ -11,10 +11,8 @@ export class LazyFieldEncryption {
     private_key: "privateKey",
     public_key: "publicKey",
     password_hash: "passwordHash",
-    client_secret: "clientSecret",
     totp_secret: "totpSecret",
     totp_backup_codes: "totpBackupCodes",
-    oidc_identifier: "oidcIdentifier",
 
     keyPassword: "key_password",
     sudoPassword: "sudo_password",
@@ -22,10 +20,8 @@ export class LazyFieldEncryption {
     privateKey: "private_key",
     publicKey: "public_key",
     passwordHash: "password_hash",
-    clientSecret: "client_secret",
     totpSecret: "totp_secret",
     totpBackupCodes: "totp_backup_codes",
-    oidcIdentifier: "oidc_identifier",
   };
 
   static isPlaintextField(value: string): boolean {
@@ -95,8 +91,6 @@ export class LazyFieldEncryption {
           "socks5Password",
           "privateKey",
           "publicKey",
-          "clientSecret",
-          "oidcIdentifier",
         ];
 
         if (sensitiveFields.includes(fieldName)) {
@@ -241,8 +235,6 @@ export class LazyFieldEncryption {
     publicKey: "public_key",
     sudoPassword: "sudo_password",
     socks5Password: "socks5_password",
-    clientSecret: "client_secret",
-    oidcIdentifier: "oidc_identifier",
   };
 
   static getSensitiveFieldsForTable(tableName: string): string[] {

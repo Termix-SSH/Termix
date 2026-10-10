@@ -47,7 +47,38 @@ export interface HostSidebarFilterState {
   tags: string[];
 }
 
-export interface HostSidebarDisplayPreferences {
+/** Which parts of a host row are shown. */
+export interface HostRowFields {
+  showAddress: boolean;
+  showUsername: boolean;
+  showPort: boolean;
+  showPinIcon: boolean;
+  showSharedBadge: boolean;
+  /** Badges plugins add next to the name. */
+  showBadges: boolean;
+}
+
+export const HOST_ROW_FIELD_KEYS: (keyof HostRowFields)[] = [
+  "showAddress",
+  "showUsername",
+  "showPort",
+  "showPinIcon",
+  "showSharedBadge",
+  "showBadges",
+];
+
+export function defaultHostRowFields(): HostRowFields {
+  return {
+    showAddress: true,
+    showUsername: true,
+    showPort: false,
+    showPinIcon: true,
+    showSharedBadge: true,
+    showBadges: true,
+  };
+}
+
+export interface HostSidebarDisplayPreferences extends HostRowFields {
   density: HostDensity;
   showTags: boolean;
   trayTrigger: HostTrayTrigger;
@@ -57,6 +88,11 @@ export interface HostSidebarDisplayPreferences {
   /** When false, nested folders hide the parent-path breadcrumb before their name. */
   showFolderPaths: boolean;
   hostClickBehavior: HostClickBehavior;
+  /**
+   * Host action id to whether it shows in the row's connect bar. An action
+   * missing here follows its own default. Every action stays in the menu.
+   */
+  barActions: Record<string, boolean>;
 }
 
 export interface HostSidebarPreferences {
@@ -127,8 +163,23 @@ export function defaultHostSidebarPreferences(): HostSidebarPreferences {
       openOnDoubleClick: false,
       showFolderPaths: true,
       hostClickBehavior: "newTab",
+      barActions: {},
+      ...defaultHostRowFields(),
     },
   };
+}
+
+const ACTION_ID_PATTERN = /^[a-z0-9][a-z0-9._:-]{0,79}$/;
+
+function sanitizeBarActions(input: unknown): Record<string, boolean> {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return {};
+  const out: Record<string, boolean> = {};
+  for (const [id, value] of Object.entries(input as Record<string, unknown>)) {
+    if (ACTION_ID_PATTERN.test(id) && typeof value === "boolean") {
+      out[id] = value;
+    }
+  }
+  return out;
 }
 
 function sanitizeStringArray(input: unknown): string[] {
@@ -184,7 +235,15 @@ export function sanitizeHostSidebarPreferences(
   const openFolders = sanitizeStringArray(obj.openFolders);
 
   const displayObj = (obj.display ?? {}) as Record<string, unknown>;
+  const rowFields = {} as HostRowFields;
+  for (const key of HOST_ROW_FIELD_KEYS) {
+    rowFields[key] =
+      typeof displayObj[key] === "boolean"
+        ? (displayObj[key] as boolean)
+        : defaults.display[key];
+  }
   const display: HostSidebarDisplayPreferences = {
+    ...rowFields,
     density: DENSITIES.includes(displayObj.density as HostDensity)
       ? (displayObj.density as HostDensity)
       : defaults.display.density,
@@ -215,6 +274,7 @@ export function sanitizeHostSidebarPreferences(
     )
       ? (displayObj.hostClickBehavior as HostClickBehavior)
       : defaults.display.hostClickBehavior,
+    barActions: sanitizeBarActions(displayObj.barActions),
   };
 
   return {

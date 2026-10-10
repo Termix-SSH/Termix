@@ -9,7 +9,7 @@
 import crypto from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import { TestSqliteDatabase } from "../database/repositories/test-support.js";
 import type { DatabaseContext } from "../../database/repositories/database-context.js";
 
@@ -326,6 +326,23 @@ describe("a plugin protocol core does not know", () => {
       authType: "credential",
       username: "cred-user",
       password: "cred-pass",
+    });
+  });
+
+  it("summarizes the usable credential username without exposing its secret", async () => {
+    const patch = readProtocolAuthPayload({
+      protocolAuth: { spice: { authType: "credential", credentialId: 6 } },
+    });
+    await writeProtocolAuth("owner", HOST_ID, patch!, { isOwner: true });
+    const summaries = await loadProtocolAuthSummaries([{ id: HOST_ID }]);
+    expect(summaries.get(HOST_ID)?.spice.username).toBe("cred-user");
+    expect(JSON.stringify(summaries.get(HOST_ID))).not.toContain("cred-pass");
+    const recipient = sanitizeHostForRecipient(
+      { protocolAuth: summaries.get(HOST_ID) },
+      "connect",
+    );
+    expect(recipient.protocolAuth).toEqual({
+      spice: { authType: "credential" },
     });
   });
 

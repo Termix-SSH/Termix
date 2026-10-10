@@ -168,7 +168,18 @@ export function FolderItem({
       style={depth > 0 ? { paddingLeft: rem(depth * 12) } : undefined}
     >
       <div className="relative">
-        <button
+        {/* A div, not a button: the folder actions inside are buttons. */}
+        <div
+          role="button"
+          tabIndex={0}
+          aria-expanded={isOpen}
+          onKeyDown={(e) => {
+            if (e.target !== e.currentTarget) return;
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              if (!query) onToggleFolder(folderPath);
+            }
+          }}
           draggable={canDragFolder}
           onDragStart={(e) => {
             if (!canDragFolder) return;
@@ -294,7 +305,7 @@ export function FolderItem({
               )}
             </>
           }
-        </button>
+        </div>
       </div>
       {!flat && isOpen && (
         <div className="border-l border-border/50 ml-[27px]">

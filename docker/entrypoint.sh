@@ -68,6 +68,25 @@ fi
 mkdir -p /tmp/nginx
 envsubst '${PORT} ${SSL_PORT} ${SSL_CERT_PATH} ${SSL_KEY_PATH}' < $NGINX_CONF_SOURCE > /tmp/nginx/nginx.conf
 
+# Which proxies may set the client IP through X-Forwarded-For. Unset keeps
+# the private ranges in the template.
+if [ -n "$TRUSTED_PROXIES" ]; then
+    REAL_IP_LINES=""
+    for proxy in $(echo "$TRUSTED_PROXIES" | tr ',' ' '); do
+        case "$proxy" in
+            *[!0-9a-fA-F:./]*) echo "Ignoring invalid TRUSTED_PROXIES entry: $proxy" ;;
+            *) REAL_IP_LINES="${REAL_IP_LINES}    set_real_ip_from ${proxy};\n" ;;
+        esac
+    done
+    echo "Trusting X-Forwarded-For from: $TRUSTED_PROXIES"
+    awk -v lines="$REAL_IP_LINES" '
+        /# BEGIN TRUSTED_PROXIES/ { printf "%s", lines; skip = 1; next }
+        /# END TRUSTED_PROXIES/ { skip = 0; next }
+        !skip
+    ' /tmp/nginx/nginx.conf > /tmp/nginx/nginx.conf.tmp
+    mv /tmp/nginx/nginx.conf.tmp /tmp/nginx/nginx.conf
+fi
+
 if [ "$ENABLE_SSL" = "true" ] && [ "$PORT" = "$SSL_PORT" ]; then
     echo "HTTP and HTTPS use port $SSL_PORT; disabling the HTTP redirect listener"
     sed -i '/# BEGIN HTTP_REDIRECT_SERVER/,/# END HTTP_REDIRECT_SERVER/d' /tmp/nginx/nginx.conf

@@ -1,10 +1,8 @@
 /**
  * The AI settings migration.
  *
- * An upgrade must be lossless: the admin switch, the private endpoint list,
- * every user's opt-in, every host's switch and every provider key have to
- * reach the ai plugin, keys encrypted and gone from the table. Running it
- * twice must not duplicate or clobber anything.
+ * Every provider key has to reach the ai plugin, encrypted and gone from the
+ * table. Running it twice must not duplicate or clobber anything.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -127,10 +125,7 @@ vi.mock("../../utils/logger.js", () => ({
   databaseLogger: { info: vi.fn(), warn: vi.fn() },
 }));
 
-import {
-  allowlistToText,
-  runAiSettingsMigration,
-} from "../../upgrade/ai-settings-migration.js";
+import { runAiSettingsMigration } from "../../upgrade/ai-settings-migration.js";
 
 const value = (scope: string, scopeId: string | null, key: string) => {
   const row = state.pluginRows.find(
@@ -167,30 +162,7 @@ beforeEach(() => {
   state.deks = new Set(["u1", "u2"]);
 });
 
-describe("allowlistToText", () => {
-  it("turns the stored JSON array into one host per line", () => {
-    expect(allowlistToText('[" a ", "", "b"]')).toBe("a\nb");
-    expect(allowlistToText("[]")).toBe("");
-    expect(allowlistToText("nope")).toBeNull();
-  });
-});
-
 describe("runAiSettingsMigration", () => {
-  it("moves admin, user and host settings", async () => {
-    await runAiSettingsMigration();
-
-    expect(value("admin", null, "globallyEnabled")).toBe(true);
-    expect(value("admin", null, "privateEndpoints")).toBe(
-      "localhost\nollama.lan",
-    );
-    expect(value("user", "u1", "enabled")).toBe(true);
-    expect(value("user", "u1", "allowReadOnlyCommands")).toBe(false);
-    // Never asked stays unset, which the plugin reads as not enabled.
-    expect(value("user", "u2", "enabled")).toBeUndefined();
-    expect(value("host", "5", "enableAiAssistant")).toBe(true);
-    expect(value("host", "6", "enableAiAssistant")).toBeUndefined();
-  });
-
   it("moves each provider key into its owner's secrets, encrypted, and clears the column", async () => {
     await runAiSettingsMigration();
 
@@ -235,18 +207,18 @@ describe("runAiSettingsMigration", () => {
     expect(JSON.stringify(state.pluginRows)).toBe(first);
   });
 
-  it("does not overwrite a value the plugin already has", async () => {
+  it("does not overwrite a key the plugin already has", async () => {
     state.pluginRows.push({
       pluginId: "ai",
-      scope: "admin",
-      scopeId: null,
-      key: "globallyEnabled",
-      value: "false",
-      encrypted: false,
+      scope: "secret",
+      scopeId: "u1",
+      key: "provider:3",
+      value: JSON.stringify("sysenc:kept"),
+      encrypted: true,
     });
     await runAiSettingsMigration();
 
-    expect(value("admin", null, "globallyEnabled")).toBe(false);
+    expect(value("secret", "u1", "provider:3")).toBe("sysenc:kept");
   });
 
   it("does nothing until the plugin row exists", async () => {

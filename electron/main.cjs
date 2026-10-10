@@ -33,7 +33,7 @@ const { launchNativeRdp } = require("./native-rdp.cjs");
 const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
 const { quitApp } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
-const { resolveLocalShell } = require("./local-shell.cjs");
+const { resolveLocalShell, repairSpawnHelpers } = require("./local-shell.cjs");
 const { registerLocalFileHandlers } = require("./local-files.cjs");
 
 const localTerminalSessions = new Map();
@@ -644,17 +644,30 @@ const BACKEND_REQUEST_HANDLERS = {
   },
 };
 
+function isDevRunner() {
+  return (
+    process.env.TERMIX_DEV_RUNNER === "true" &&
+    typeof process.send === "function"
+  );
+}
+
 async function handleBackendRequest(msg) {
   if (!msg || msg.type !== "backend-request") return;
   const { id, channel, payload } = msg;
   const handler = BACKEND_REQUEST_HANDLERS[channel];
+  // Under npm run dev:electron the runner owns the backend and relays these messages.
+  const target =
+    backendProcess && !backendProcess.killed
+      ? backendProcess
+      : isDevRunner()
+        ? process
+        : null;
   const reply = (response) => {
-    if (backendProcess && !backendProcess.killed) {
-      try {
-        backendProcess.send({ type: "backend-response", id, ...response });
-      } catch (error) {
-        logToFile("Failed to reply to backend request:", error.message);
-      }
+    if (!target) return;
+    try {
+      target.send({ type: "backend-response", id, ...response });
+    } catch (error) {
+      logToFile("Failed to reply to backend request:", error.message);
     }
   };
   if (!handler) {
@@ -1028,7 +1041,7 @@ function getBackendPaths() {
       backendCwd: backendDir,
     };
   }
-  // fork() does not go through Electron's asar redirector — use the unpacked path.
+  // fork() does not go through Electron's asar redirector, use the unpacked path.
   // On macOS multi-arch builds (mergeASARs: false), electron-builder names the ASAR
   // app-arm64.asar / app-x64.asar instead of app.asar, so match all variants.
   const unpackedRoot = getUnpackedAppRoot(appRoot);
@@ -1290,7 +1303,7 @@ function createTray() {
   try {
     const { nativeImage } = require("electron");
 
-    // Native APIs (Tray, nativeImage) can't load files from inside app.asar —
+    // Native APIs (Tray, nativeImage) can't load files from inside app.asar,
     // use the unpacked path so the OS sees a real file.
     const publicRoot = isDev
       ? path.join(appRoot, "public")
@@ -1448,6 +1461,14 @@ function createWindow() {
       details.requestHeaders["X-Electron-App"] = "true";
 
       details.requestHeaders["User-Agent"] = customUserAgent;
+
+      // YouTube refuses embeds without a Referer, which file:// never sends.
+      if (
+        details.url.startsWith("https://www.youtube-nocookie.com/embed/") &&
+        !details.requestHeaders.Referer
+      ) {
+        details.requestHeaders.Referer = "https://termix.site/";
+      }
 
       const rememberedJwt = getRememberedElectronAuthCookie("jwt", details.url);
       if (rememberedJwt) {
@@ -2166,11 +2187,6 @@ async function openC2SRelay(
     targetHost,
     targetPort,
   });
-  setC2STunnelStatus(tunnelName, {
-    connected: false,
-    status: "CONNECTING",
-    reason: `Opening relay to ${targetHost}:${targetPort}`,
-  });
   const ws = new WebSocket(
     relayUrl,
     getWebSocketOptions(relayUrl, { headers }),
@@ -2205,13 +2221,16 @@ async function openC2SRelay(
 
   socket.on("data", sendChunk);
   socket.on("close", cleanup);
+  // One connection failing must not stop the tunnel: the listener refuses
+  // new connections while the tunnel is not connected, and a browser opens
+  // many at once.
   socket.on("error", (error) => {
-    setC2STunnelError(tunnelName, error.message || "Local socket error");
+    logToFile(`[c2s] ${tunnelName} local socket error:`, error.message);
     cleanup();
   });
   ws.on("close", cleanup);
   ws.on("error", (error) => {
-    setC2STunnelError(tunnelName, error.message || "Relay connection failed");
+    logToFile(`[c2s] ${tunnelName} relay error:`, error.message);
     cleanup();
   });
 
@@ -2238,10 +2257,6 @@ async function openC2SRelay(
       if (message.type === "ready") {
         ready = true;
         logToFile(`[c2s] relay ready for ${tunnelName}`);
-        setC2STunnelStatus(tunnelName, {
-          connected: true,
-          status: "CONNECTED",
-        });
         if (initialData?.length) {
           ws.send(initialData);
         }
@@ -2254,12 +2269,13 @@ async function openC2SRelay(
           "Relay rejected the client tunnel",
         );
         logToFile("[c2s] relay error:", relayError);
-        setC2STunnelError(tunnelName, relayError);
+        if (relayError === C2S_REMOTE_SESSION_EXPIRED_ERROR) {
+          setC2STunnelError(tunnelName, relayError);
+        }
         cleanup();
       }
     } catch (error) {
       logToFile("[c2s] invalid relay message:", error.message);
-      setC2STunnelError(tunnelName, error.message || "Invalid relay response");
       cleanup();
     }
   });
@@ -2485,7 +2501,9 @@ function handleC2SLocalConnection(tunnel, socket, authToken) {
       "Local relay failed",
     );
     logToFile("[c2s] local relay failed:", message);
-    setC2STunnelError(tunnelName, message);
+    if (message === C2S_REMOTE_SESSION_EXPIRED_ERROR) {
+      setC2STunnelError(tunnelName, message);
+    }
     socket.destroy();
   });
 }
@@ -3222,17 +3240,32 @@ ipcMain.handle("local-terminal-start", (event, dimensions = {}) => {
   const rows = Math.min(300, Math.max(1, Number(dimensions.rows) || 24));
   const sessionId = crypto.randomUUID();
   const shellConfig = resolveLocalShell(process.platform, dimensions.shell);
-  const child = pty.spawn(shellConfig.file, shellConfig.args, {
-    name: "xterm-256color",
-    cols,
-    rows,
-    cwd: os.homedir(),
-    env: {
-      ...process.env,
-      TERM: "xterm-256color",
-      COLORTERM: "truecolor",
-    },
-  });
+  const spawnShell = () =>
+    pty.spawn(shellConfig.file, shellConfig.args, {
+      name: "xterm-256color",
+      cols,
+      rows,
+      cwd: os.homedir(),
+      env: {
+        ...process.env,
+        TERM: "xterm-256color",
+        COLORTERM: "truecolor",
+      },
+    });
+  let child;
+  try {
+    child = spawnShell();
+  } catch (error) {
+    const ptyDir = path.dirname(require.resolve("node-pty/package.json"));
+    if (
+      !String(error?.message).includes("posix_spawnp") ||
+      repairSpawnHelpers(ptyDir) === 0
+    ) {
+      throw error;
+    }
+    logToFile("[local-terminal] restored the spawn-helper execute bit");
+    child = spawnShell();
+  }
   const ownerId = event.sender.id;
   const session = { ownerId, process: child, ready: false, buffered: "" };
   localTerminalSessions.set(sessionId, session);
@@ -3762,8 +3795,11 @@ app.whenReady().then(async () => {
     logToFile("startBackendServer result:", result);
   } else {
     logToFile(
-      "Skipping embedded backend (isDev=true) - expecting separate dev:backend process",
+      "Skipping embedded backend (isDev=true) - expecting the dev runner's backend",
     );
+    if (isDevRunner()) {
+      process.on("message", (msg) => void handleBackendRequest(msg));
+    }
   }
 
   createTray();

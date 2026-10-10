@@ -28,8 +28,6 @@ jobs:
         run: npm run build:sdk
 
       - name: Lint
-        # npm run lint, not npx eslint — the script also checks that the
-        # generated dialect schemas match schema.ts, which eslint cannot see.
         run: npm run lint
 
       - name: Run Prettier check
@@ -44,16 +42,10 @@ jobs:
       - name: Run unit tests
         run: npm run test
 
-      - name: Run plugin tests
-        run: npm run test:plugins
-
   database-dialects:
     name: Postgres and MySQL
     runs-on: blacksmith-2vcpu-ubuntu-2404
 
-    # The test suite only ever sees SQLite. Everything that differs per engine —
-    # the RETURNING replacements, the read-then-write transactions, the
-    # migrations themselves — is only covered here, against real servers.
     services:
       postgres:
         image: postgres:16
@@ -100,17 +92,12 @@ jobs:
       - name: Build plugin SDK
         run: npm run build:sdk
 
-      # Each run applies the migrations to an empty database first, so a
-      # migration that does not apply cleanly fails the build.
       - name: Verify Postgres
         run: npm run verify:dialect -- postgres://termix:termix@127.0.0.1:5432/termix_test
 
       - name: Verify MySQL
         run: npm run verify:dialect -- mysql://termix:termix@127.0.0.1:3306/termix_test
 
-      # The same repository suite the SQLite run executes, pointed at each
-      # engine. This is where a dialect difference in a query shows up as a
-      # failing assertion rather than as a bug report.
       - name: Repository tests on Postgres
         env:
           TEST_DIALECT: postgres

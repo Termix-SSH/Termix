@@ -10,8 +10,8 @@ import type {
   PluginNotificationAudience,
   PluginNotify,
   PluginNotifyResult,
-} from "@termix/plugin-sdk/backend";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+} from "@termix-ssh/plugin-sdk/backend";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import { assertCapability, capabilityRefused } from "./permissions.js";
 import { getActor } from "./actor.js";
 import { activeNotifyHub, registerNotifyHub } from "./notify-hub.js";

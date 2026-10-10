@@ -6,7 +6,7 @@
 import {
   coerceSettingValue,
   validateSettingValue,
-} from "@termix/plugin-sdk/settings";
+} from "@termix-ssh/plugin-sdk/settings";
 import { createCurrentHostDefaultsRepository } from "../../database/repositories/factory.js";
 import type { HostDefaultsScope } from "../../database/repositories/host-defaults-repository.js";
 import { validateSettingsSave } from "../../plugins/settings.js";
@@ -256,6 +256,35 @@ export async function resolveForEditor(input: {
     effectiveFolderPath(self, placement),
   );
   return resolveAll(catalog, levels, input.hostId ?? null);
+}
+
+/** Each folder's credential, from its auth default, keyed by folder id. */
+export async function folderCredentialIds(
+  userId: string,
+): Promise<Map<number, number>> {
+  const result = new Map<number, number>();
+  const rows = await createCurrentHostDefaultsRepository().listOwnedBy(userId);
+  for (const row of rows) {
+    if (
+      row.level !== "folder" ||
+      row.folderId == null ||
+      row.namespace !== CORE_NAMESPACE ||
+      row.key !== "auth"
+    ) {
+      continue;
+    }
+    const auth = decodeDefaultValue(row.value) as {
+      authType?: string;
+      credentialId?: unknown;
+    } | null;
+    if (
+      auth?.authType === "credential" &&
+      typeof auth.credentialId === "number"
+    ) {
+      result.set(row.folderId, auth.credentialId);
+    }
+  }
+  return result;
 }
 
 /**

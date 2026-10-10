@@ -47,11 +47,19 @@ import "dotenv/config";
 import { databaseLogger, apiLogger } from "../utils/logger.js";
 import { getLocalVersion } from "../utils/app-version.js";
 import {
-  compareSemver,
   fetchGitHubAPI,
+  fetchLatestRelease,
+  isPrereleaseVersion,
   REPO_NAME,
   REPO_OWNER,
+  updateStatus,
 } from "../utils/latest-release.js";
+import {
+  getCoreChannel,
+  getStoredCoreChannel,
+  parseChannel,
+  setCoreChannel,
+} from "../updates/update-channel.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { DataCrypto } from "../utils/data-crypto.js";
 import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
@@ -73,6 +81,10 @@ import {
 } from "./repositories/factory.js";
 import { withCurrentSqliteForeignKeysDisabled } from "./repositories/sqlite-foreign-keys.js";
 import { applyPluginHostImportSettings } from "./routes/host-plugin-settings.js";
+import {
+  selectExportableSettings,
+  type SettingData,
+} from "../utils/export-settings.js";
 import {
   keepUsableProtocolCredentials,
   listProtocolLogins,
@@ -99,19 +111,9 @@ const requireAdmin = authManager.createAdminMiddleware();
 app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware());
 
-type SettingData = {
-  key: string;
-  value: string;
-};
-
-function shouldExportSetting(key: string): boolean {
-  return !key.startsWith("reset_code_") && !key.startsWith("temp_reset_token_");
-}
-
-async function getExportableSettings(): Promise<SettingData[]> {
+async function getExportableSettings(isAdmin: boolean): Promise<SettingData[]> {
   const settingsRows = await createCurrentSettingsRepository().listAll();
-
-  return settingsRows.filter((setting) => shouldExportSetting(setting.key));
+  return selectExportableSettings(settingsRows, isAdmin);
 }
 
 function writeSettingsToExportDatabase(
@@ -242,7 +244,7 @@ app.get("/.well-known/acme-challenge/:token", acmeChallengeHandler);
  * /version:
  *   get:
  *     summary: Get version information
- *     description: Returns the running instance's version in localVersion. When the update check succeeds, remoteVersion is the latest GitHub release and version is its legacy alias, not the instance's version. Remote fields are omitted when the check is disabled, fails, or returns an unparseable release tag.
+ *     description: Returns the running instance's version in localVersion. When the update check succeeds, remoteVersion is the newest GitHub release on the instance's update channel and version is its legacy alias, not the instance's version. Remote fields are omitted when the check is disabled, fails, or returns an unparseable release tag.
  *     tags:
  *       - General
  *     parameters:
@@ -266,20 +268,24 @@ app.get("/.well-known/acme-challenge/:token", acmeChallengeHandler);
  *                 localVersion:
  *                   type: string
  *                   description: Version of the running instance. Use this field for client compatibility checks.
- *                   example: 2.7.1
+ *                   example: 26.10.0
  *                 status:
  *                   type: string
  *                   description: Update comparison result, update_check_disabled when explicitly disabled, or unknown when the remote lookup fails or the release tag cannot be parsed.
  *                   enum: [up_to_date, beta, requires_update, update_check_disabled, unknown]
+ *                 channel:
+ *                   type: string
+ *                   enum: [stable, beta]
+ *                   description: The update channel the check used. Always beta on a beta build.
  *                 remoteVersion:
  *                   type: string
- *                   description: Latest GitHub release version. Present only when the update check succeeds.
- *                   example: 2.8.0
+ *                   description: Newest release version on the channel. Present only when the update check succeeds.
+ *                   example: 26.10.0
  *                 version:
  *                   type: string
  *                   deprecated: true
  *                   description: Legacy alias of remoteVersion, not the running instance's version. Present only when the update check succeeds. Use localVersion for the instance or remoteVersion for the latest release.
- *                   example: 2.8.0
+ *                   example: 26.10.0
  *                 latest_release:
  *                   type: object
  *                   description: GitHub release metadata. Present only when the update check succeeds.
@@ -296,12 +302,8 @@ app.get("/.well-known/acme-challenge/:token", acmeChallengeHandler);
  *                     html_url:
  *                       type: string
  *                       format: uri
- *                 cached:
- *                   type: boolean
- *                   description: Whether the release lookup used a cached response. Present only when the update check succeeds.
- *                 cache_age:
- *                   type: number
- *                   description: Age of the cached response in milliseconds, when available.
+ *                     prerelease:
+ *                       type: boolean
  *       404:
  *         description: Local version not set.
  */
@@ -320,53 +322,152 @@ app.get("/version", authenticateJWT, async (req, res) => {
   }
 
   try {
-    const cacheKey = "latest_release";
-    const releaseData = await fetchGitHubAPI<GitHubRelease>(
-      `/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`,
-      cacheKey,
-    );
+    const channel = await getCoreChannel(localVersion);
+    const latest = await fetchLatestRelease(channel);
 
-    const rawTag = releaseData.data.tag_name || releaseData.data.name || "";
-    const remoteVersionMatch = rawTag.match(/(\d+\.\d+(\.\d+)?)/);
-    const remoteVersion = remoteVersionMatch ? remoteVersionMatch[1] : null;
-
-    if (!remoteVersion) {
+    if (!latest) {
       databaseLogger.warn("Remote version not found in GitHub response", {
         operation: "version_check",
-        rawTag,
+        channel,
       });
-      return res.json({ localVersion, status: "unknown" });
+      return res.json({ localVersion, status: "unknown", channel });
     }
 
-    const versionComparison = compareSemver(localVersion, remoteVersion);
-    const status =
-      versionComparison === null || versionComparison === 0
-        ? "up_to_date"
-        : versionComparison > 0
-          ? "beta"
-          : "requires_update";
-
-    const response = {
-      status,
-      localVersion: localVersion,
-      version: remoteVersion,
-      remoteVersion: remoteVersion,
+    res.json({
+      status: updateStatus(localVersion, latest.version),
+      channel,
+      localVersion,
+      version: latest.version,
+      remoteVersion: latest.version,
       latest_release: {
-        tag_name: releaseData.data.tag_name,
-        name: releaseData.data.name,
-        published_at: releaseData.data.published_at,
-        html_url: releaseData.data.html_url,
+        tag_name: latest.tagName,
+        name: latest.name,
+        published_at: latest.publishedAt,
+        html_url: latest.url,
+        prerelease: latest.prerelease,
       },
-      cached: releaseData.cached,
-      cache_age: releaseData.cache_age,
-    };
-
-    res.json(response);
+    });
   } catch (err) {
     databaseLogger.error("Version check failed", err, {
       operation: "version_check",
     });
     res.json({ localVersion, status: "unknown" });
+  }
+});
+
+/**
+ * @openapi
+ * /version/channel:
+ *   get:
+ *     summary: Get the update channel
+ *     description: Which Termix releases this instance is told about. A beta build always reports beta; stored is the admin's choice for stable builds.
+ *     tags:
+ *       - General
+ *     responses:
+ *       200:
+ *         description: The channel.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 channel:
+ *                   type: string
+ *                   enum: [stable, beta]
+ *                 stored:
+ *                   type: string
+ *                   enum: [stable, beta]
+ *                 runningBeta:
+ *                   type: boolean
+ *   put:
+ *     summary: Set the update channel
+ *     description: Admin only. Switches which Termix releases update checks and the Updates page offer. It does not change the running build.
+ *     tags:
+ *       - General
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [channel]
+ *             properties:
+ *               channel:
+ *                 type: string
+ *                 enum: [stable, beta]
+ *     responses:
+ *       200:
+ *         description: The channel after the change.
+ *       400:
+ *         description: Not a known channel.
+ */
+app.get("/version/channel", authenticateJWT, async (_req, res) => {
+  try {
+    const localVersion = getLocalVersion();
+    res.json({
+      channel: await getCoreChannel(localVersion),
+      stored: await getStoredCoreChannel(),
+      runningBeta: isPrereleaseVersion(localVersion ?? undefined),
+    });
+  } catch (error) {
+    databaseLogger.error("Failed to read the update channel", error, {
+      operation: "update_channel",
+    });
+    res.status(500).json({ error: "Failed to read the update channel" });
+  }
+});
+
+app.put("/version/channel", requireAdmin, async (req, res) => {
+  const channel = parseChannel(req.body?.channel);
+  if (!channel) {
+    return res.status(400).json({ error: "channel must be stable or beta" });
+  }
+  try {
+    await setCoreChannel(channel);
+    const localVersion = getLocalVersion();
+    res.json({
+      channel: await getCoreChannel(localVersion),
+      stored: channel,
+      runningBeta: isPrereleaseVersion(localVersion ?? undefined),
+    });
+  } catch (error) {
+    databaseLogger.error("Failed to save the update channel", error, {
+      operation: "update_channel",
+    });
+    res.status(500).json({ error: "Failed to save the update channel" });
+  }
+});
+
+/**
+ * @openapi
+ * /version/releases:
+ *   get:
+ *     summary: Get the newest stable and beta releases
+ *     description: The newest stable Termix release and the newest beta, if one is newer than stable, for the Updates page.
+ *     tags:
+ *       - General
+ *     responses:
+ *       200:
+ *         description: The releases. Either may be null.
+ *       500:
+ *         description: GitHub could not be reached.
+ */
+app.get("/version/releases", authenticateJWT, async (_req, res) => {
+  try {
+    const [stable, newest] = await Promise.all([
+      fetchLatestRelease("stable"),
+      fetchLatestRelease("beta"),
+    ]);
+    res.json({
+      localVersion: getLocalVersion(),
+      stable,
+      beta: newest?.prerelease ? newest : null,
+    });
+  } catch (error) {
+    databaseLogger.error("Failed to read releases", error, {
+      operation: "version_releases",
+    });
+    res.status(500).json({ error: "Failed to read releases" });
   }
 });
 
@@ -630,15 +731,15 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const isOidcUser = !!user.isOidc;
+    const isExternalUser = !!user.isExternal;
 
     if (!DataCrypto.getUserDataKey(userId)) {
-      if (isOidcUser) {
-        const oidcUnlocked = await authManager.authenticateExternalUser(
+      if (isExternalUser) {
+        const externalUnlocked = await authManager.authenticateExternalUser(
           userId,
           deviceInfo.type,
         );
-        if (!oidcUnlocked) {
+        if (!externalUnlocked) {
           return res.status(403).json({
             error: "Failed to unlock user data with SSO credentials",
           });
@@ -699,17 +800,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           id TEXT PRIMARY KEY,
           username TEXT NOT NULL,
           password_hash TEXT NOT NULL,
-          is_admin INTEGER NOT NULL DEFAULT 0,
-          is_oidc INTEGER NOT NULL DEFAULT 0,
-          oidc_identifier TEXT,
-          client_id TEXT,
-          client_secret TEXT,
-          issuer_url TEXT,
-          authorization_url TEXT,
-          token_url TEXT,
-          identifier_path TEXT,
-          name_path TEXT,
-          scopes TEXT DEFAULT 'openid email profile'
+          is_admin INTEGER NOT NULL DEFAULT 0
         );
 
         CREATE TABLE settings (
@@ -740,9 +831,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           jump_hosts TEXT,
           status_check_enabled INTEGER NOT NULL DEFAULT 1,
           status_check_interval INTEGER,
-          terminal_config TEXT,
           ssh_options TEXT,
-          quick_actions TEXT,
           notes TEXT,
           use_socks5 INTEGER,
           socks5_host TEXT,
@@ -805,31 +894,21 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
 
       const userRecord = user;
       const insertUser = exportDb.prepare(`
-        INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, client_id, client_secret, issuer_url, authorization_url, token_url, identifier_path, name_path, scopes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (id, username, password_hash, is_admin)
+        VALUES (?, ?, ?, ?)
       `);
       insertUser.run(
         userRecord.id,
         userRecord.username,
         "[EXPORTED_USER_NO_PASSWORD]",
         userRecord.isAdmin ? 1 : 0,
-        userRecord.isOidc ? 1 : 0,
-        userRecord.oidcIdentifier || null,
-        userRecord.clientId || null,
-        userRecord.clientSecret || null,
-        userRecord.issuerUrl || null,
-        userRecord.authorizationUrl || null,
-        userRecord.tokenUrl || null,
-        userRecord.identifierPath || null,
-        userRecord.namePath || null,
-        userRecord.scopes || null,
       );
 
       const sshHosts =
         await createCurrentHostRepository().listDecryptedByUserId(userId);
       const insertHost = exportDb.prepare(`
-        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, credential_id, override_credential_username, jump_hosts, status_check_enabled, status_check_interval, terminal_config, ssh_options, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, port_knock_sequence, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, credential_id, override_credential_username, jump_hosts, status_check_enabled, status_check_interval, ssh_options, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, port_knock_sequence, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const decrypted of sshHosts) {
@@ -856,9 +935,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.jumpHosts || null,
           decrypted.statusCheckEnabled === false ? 0 : 1,
           decrypted.statusCheckInterval ?? null,
-          decrypted.terminalConfig || null,
           decrypted.sshOptions || null,
-          decrypted.quickActions || null,
           decrypted.notes || null,
           decrypted.useSocks5 ? 1 : 0,
           decrypted.socks5Host || null,
@@ -964,7 +1041,10 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         );
       }
 
-      writeSettingsToExportDatabase(exportDb, await getExportableSettings());
+      writeSettingsToExportDatabase(
+        exportDb,
+        await getExportableSettings(!!user.isAdmin),
+      );
       await writeHostDefaultsToExport(exportDb, userId);
     } finally {
       exportDb.close();
@@ -1074,15 +1154,15 @@ app.post(
         return res.status(404).json({ error: "User not found" });
       }
 
-      const isOidcUser = !!userRecord.isOidc;
+      const isExternalUser = !!userRecord.isExternal;
 
       if (!DataCrypto.getUserDataKey(userId)) {
-        if (isOidcUser) {
-          const oidcUnlocked = await authManager.authenticateExternalUser(
+        if (isExternalUser) {
+          const externalUnlocked = await authManager.authenticateExternalUser(
             userId,
             deviceInfo.type,
           );
-          if (!oidcUnlocked) {
+          if (!externalUnlocked) {
             return res.status(403).json({
               error: "Failed to unlock user data with SSO credentials",
             });
@@ -1198,7 +1278,6 @@ app.post(
                   ),
                   jumpHosts: host.jump_hosts,
                   ...legacyStatusCheck(host),
-                  terminalConfig: host.terminal_config,
                   // Exports from before 2.9.0 carry these in terminal_config.
                   sshOptions:
                     host.ssh_options ??
@@ -1206,7 +1285,6 @@ app.post(
                       terminalConfig: host.terminal_config,
                     }) ??
                     null,
-                  quickActions: host.quick_actions,
                   notes: host.notes,
                   useSocks5: Boolean(host.use_socks5),
                   socks5Host: host.socks5_host,

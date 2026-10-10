@@ -22,6 +22,7 @@ function setViewport(width: number) {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  delete (window as { electronAPI?: unknown }).electronAPI;
 });
 
 describe("useIsMobile", () => {
@@ -39,6 +40,13 @@ describe("useIsMobile", () => {
 
   it("treats exactly 768 as not mobile", () => {
     setViewport(768);
+    const { result } = renderHook(() => useIsMobile());
+    expect(result.current).toBe(false);
+  });
+
+  it("keeps the desktop layout in the desktop app, however narrow", () => {
+    setViewport(500);
+    (window as { electronAPI?: unknown }).electronAPI = { isElectron: true };
     const { result } = renderHook(() => useIsMobile());
     expect(result.current).toBe(false);
   });

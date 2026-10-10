@@ -2,7 +2,7 @@ import {
   CORE_KEYBINDING_ACTIONS,
   validateKeybindingActionParams,
   type PluginKeybindingActionContribution,
-} from "@termix/plugin-sdk/manifest";
+} from "@termix-ssh/plugin-sdk/manifest";
 
 export interface DeclaredKeybindingAction extends PluginKeybindingActionContribution {
   pluginId: string;

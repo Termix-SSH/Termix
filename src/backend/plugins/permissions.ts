@@ -16,7 +16,7 @@
  */
 
 import { createCurrentPluginPermissionGrantRepository } from "../database/repositories/factory.js";
-import { PluginCapabilityError } from "@termix/plugin-sdk/backend";
+import { PluginCapabilityError } from "@termix-ssh/plugin-sdk/backend";
 import { getActor } from "./actor.js";
 
 const cache = new Map<string, Set<string>>();

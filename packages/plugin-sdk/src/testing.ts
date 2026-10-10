@@ -5,7 +5,7 @@
  * real runtime does. createFakeContext stays for tests that only need a
  * context-shaped object and do not care about the gates.
  *
- * The vitest config these run under comes from @termix/plugin-sdk/vitest-preset.
+ * The vitest config these run under comes from @termix-ssh/plugin-sdk/vitest-preset.
  */
 
 import {
@@ -2080,7 +2080,7 @@ export async function createTestDb(
  * so a test sees exactly what the shell would: which rail items, tabs, host
  * actions and cards it registered, and each of those rendered with the SDK
  * hooks working. It is implemented by the Termix host, which is where the
- * registries live; the vitest preset points "@termix/plugin-host/testing" at
+ * registries live; the vitest preset points "@termix-ssh/plugin-host/testing" at
  * core's implementation.
  */
 export interface RenderWithAppOptions {
@@ -2139,6 +2139,8 @@ export interface RenderedPluginApp {
     paletteGroups: () => string[];
     keybindingActions: () => string[];
     keybindingDefaults: () => string[];
+    /** Onboarding step ids, without the plugin prefix. */
+    onboardingSteps: () => string[];
   };
   /** A registered palette group's items, as the palette loads them on open. */
   loadPaletteGroup: (
@@ -2160,6 +2162,19 @@ export interface RenderedPluginApp {
   renderTab: (type: string, props?: Record<string, unknown>) => HTMLElement;
   renderPanel: (id: string, props?: Record<string, unknown>) => HTMLElement;
   renderDashboardCard: (id: string) => HTMLElement;
+  /**
+   * Renders an onboarding step with OnboardingStepProps for a first run,
+   * overridable. Read what the step set with the returned `canContinue()`
+   * and `next()` (runs its beforeNext, true when it has none).
+   */
+  renderOnboardingStep: (
+    id: string,
+    props?: Record<string, unknown>,
+  ) => {
+    element: HTMLElement;
+    canContinue: () => boolean;
+    next: () => Promise<boolean>;
+  };
   /** Renders one component of a contributed extension, "view" by default. */
   renderExtension: (
     pointId: string,
@@ -2205,7 +2220,7 @@ interface PluginTestHost {
   ) => Promise<RenderedPluginApp>;
 }
 
-const TEST_HOST = "@termix/plugin-host/testing";
+const TEST_HOST = "@termix-ssh/plugin-host/testing";
 
 export async function renderWithApp(
   plugin: FrontendPluginModule,

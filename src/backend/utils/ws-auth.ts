@@ -7,10 +7,14 @@ const JWT_PROTOCOL_PREFIX = "termix.jwt.";
  * same site, including a sibling subdomain. The cookie only counts when the
  * page that opened the socket is this server. A non-web origin (the desktop
  * app) or no Origin at all is not a browser page on another host.
+ *
+ * Sec-Fetch-Site is set by the browser itself, so it holds even behind a
+ * proxy that rewrites Host.
  */
 export function isCookieOriginAllowed(req: IncomingMessage): boolean {
   const origin = req.headers.origin;
   if (!origin) return true;
+  if (req.headers["sec-fetch-site"] === "same-origin") return true;
   let parsed: URL;
   try {
     parsed = new URL(origin);

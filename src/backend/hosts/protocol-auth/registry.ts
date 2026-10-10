@@ -4,7 +4,7 @@
  * share and sync a protocol's login without the plugin's code running.
  */
 
-import type { PluginProtocolContribution } from "@termix/plugin-sdk/manifest";
+import type { PluginProtocolContribution } from "@termix-ssh/plugin-sdk/manifest";
 import { SSH_AUTH_PROTOCOL } from "../../../types/auth-protocols.js";
 
 export interface DeclaredHostProtocol extends PluginProtocolContribution {

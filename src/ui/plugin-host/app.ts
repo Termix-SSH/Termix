@@ -3,7 +3,7 @@ import type {
   Disposer,
   PluginManifest,
   TermixApp,
-} from "@termix/plugin-sdk/frontend";
+} from "@termix-ssh/plugin-sdk/frontend";
 import {
   PLUGIN_SETTINGS_CHANGED_EVENT,
   type PluginContributions,
@@ -45,6 +45,11 @@ import {
 } from "@/shell/action-registry";
 import { pluginApiFor, pluginFetch, pluginWsUrl } from "@/lib/plugin-transport";
 import { registerPluginComponent } from "./component-registry";
+import {
+  onboardingSteps,
+  sectionPosition,
+} from "@/onboarding/onboarding-registry";
+import { pluginStepKey } from "@/types/onboarding";
 import type { LucideIcon } from "lucide-react";
 import {
   registerLoginMethod,
@@ -67,13 +72,30 @@ import {
 } from "./host-scope";
 import { manifestDeclares, type ViewKind } from "./view-ownership";
 import { pluginKey } from "@/lib/plugin-i18n";
+import { pluginDocsPage, pluginDocsUrl } from "@termix-ssh/plugin-sdk/docs";
 import { hasPermission } from "@/hooks/use-permissions";
 import i18n from "@/i18n/i18n";
+
+const ONBOARDING_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
 export interface PluginAppHandle {
   app: TermixApp;
   /** Runs every disposer, newest first, isolating failures. */
   dispose: () => void;
+}
+
+function createDocsApi(manifest: PluginManifest): TermixApp["docs"] {
+  const url = pluginDocsUrl(manifest?.docs);
+  const page = (name?: string, anchor?: string) =>
+    url ? pluginDocsPage(url, name, anchor) : null;
+  return {
+    url,
+    page,
+    open(name, anchor) {
+      const target = page(name, anchor);
+      if (target) window.open(target, "_blank", "noopener,noreferrer");
+    },
+  };
 }
 
 /**
@@ -122,6 +144,12 @@ export function createPluginApp(
     fn: F | undefined,
   ): F | undefined => scopeHostCallback(fn, pluginId);
 
+  const requireStepId = (id: string, what: string) => {
+    if (typeof id !== "string" || !ONBOARDING_ID.test(id)) {
+      throw new Error(`${pluginId}: ${what} id "${id}" is not valid`);
+    }
+  };
+
   const requireDeclared = (kind: ViewKind, id: string, what: string) => {
     if (!manifestDeclares(contributes, kind, id)) {
       const field =
@@ -159,6 +187,7 @@ export function createPluginApp(
           mobilePrimary: item.mobilePrimary,
           electronOnly: item.electronOnly,
           separatorAfter: item.separatorAfter ?? true,
+          group: item.group,
           hidden: item.hidden,
           after: item.after,
           order: item.order,
@@ -392,6 +421,7 @@ export function createPluginApp(
           titleKey: key(card.titleKey),
           defaultHeight: card.defaultHeight,
           defaultPanel: card.defaultPanel,
+          frame: card.frame,
           component: scoped(
             card.component as unknown as ComponentType<DashboardCardRenderProps>,
           ),
@@ -457,6 +487,45 @@ export function createPluginApp(
                 contribution.when!(scopeHostFields(context, pluginId))
             : undefined,
           pluginId,
+        }),
+      );
+    },
+
+    registerOnboardingStep(step) {
+      requireStepId(step.id, "onboarding step");
+      const version = step.version ?? 1;
+      if (!Number.isInteger(version) || version < 1) {
+        throw new Error(
+          `${pluginId}: onboarding step "${step.id}" needs a whole version of 1 or more`,
+        );
+      }
+      const when = guardCallback(pluginId, step.when, false);
+      return track(
+        onboardingSteps.register({
+          id: pluginStepKey(pluginId, step.id),
+          pluginId,
+          version,
+          titleKey: key(step.titleKey),
+          descriptionKey: step.descriptionKey
+            ? key(step.descriptionKey)
+            : undefined,
+          icon: step.icon
+            ? (withIconBoundary(pluginId, step.icon as never) as never)
+            : undefined,
+          Component: scoped(step.component),
+          audience: step.audience ?? "all",
+          permission: step.permission
+            ? resolvePluginPermission(pluginId, step.permission)
+            : undefined,
+          position: sectionPosition(step.section, step.order),
+          isRelevant: when
+            ? (ctx) =>
+                when({
+                  isAdmin: ctx.isAdmin,
+                  isDesktop: ctx.isDesktop,
+                  mode: ctx.mode,
+                }) === true
+            : undefined,
         }),
       );
     },
@@ -545,6 +614,10 @@ export function createPluginApp(
       onChange: (listener) => track(tabsApi.onChange(listener)),
       onReady: (listener) => track(tabsApi.onReady(listener)),
     },
+
+    confirm: (options) => shell.confirm!(options),
+
+    docs: createDocsApi(manifest),
 
     desktop: {
       available: isElectron(),

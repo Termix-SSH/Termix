@@ -6,7 +6,7 @@ import type {
 } from "./index.js";
 import type { HostAuthOverrides } from "./auth-protocols.js";
 import type { DefaultOverrides } from "./host-defaults.js";
-import type { QuickConnectLogin } from "@termix/plugin-sdk/frontend";
+import type { QuickConnectLogin } from "@termix-ssh/plugin-sdk/frontend";
 
 export type Host = {
   id: string;
@@ -146,9 +146,11 @@ export type HostFolder = {
 type KnownTabType =
   | "dashboard"
   | "host-manager"
+  | "settings"
   | "user-profile"
   | "admin-settings"
-  | "split-screen";
+  | "split-screen"
+  | "plugins";
 
 /**
  * TabType covers every built-in tab plus any plugin-contributed tab id.
@@ -189,6 +191,8 @@ export type Tab = {
     refresh?: () => void;
     getApplicationCursorKeysMode?: () => boolean;
     focus?: () => void;
+    /** Asked before the tab closes; resolve false to keep it open. */
+    confirmClose?: () => boolean | Promise<boolean>;
   } | null>;
 };
 

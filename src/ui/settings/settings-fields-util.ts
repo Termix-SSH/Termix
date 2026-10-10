@@ -1,4 +1,4 @@
-import { isFieldActive } from "@termix/plugin-sdk/settings";
+import { isFieldActive } from "@termix-ssh/plugin-sdk/settings";
 import type { PluginSettingsField } from "@/api/plugins-api";
 
 /**
@@ -18,4 +18,25 @@ export function isFieldShown(
 /** Whether a plugin has any field the generic form would ever draw. */
 export function hasVisibleFields(fields: PluginSettingsField[]): boolean {
   return fields.some((field) => !field.hidden);
+}
+
+/** Whether Settings lists a page for this plugin, by the same rule it uses. */
+export function hasSettingsPage(
+  plugin: {
+    enabled: boolean;
+    contributes?: {
+      settings?: {
+        user?: PluginSettingsField[];
+        admin?: PluginSettingsField[];
+      };
+    } | null;
+  },
+  isAdmin: boolean,
+): boolean {
+  const settings = plugin.contributes?.settings;
+  return (
+    plugin.enabled &&
+    (hasVisibleFields(settings?.user ?? []) ||
+      (isAdmin && hasVisibleFields(settings?.admin ?? [])))
+  );
 }

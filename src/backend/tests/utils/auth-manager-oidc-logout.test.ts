@@ -75,17 +75,15 @@ function insertSession({ id, userId, sub, sid, providerId }: SessionInput) {
     .sqlite!.prepare(
       `INSERT INTO sessions (
         id, user_id, jwt_token, device_type, device_info,
-        oidc_sub, oidc_sid, sso_provider_id,
+        external_session_ref,
         created_at, expires_at, last_active_at
-      ) VALUES (?, ?, ?, 'browser', 'test', ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, 'browser', 'test', ?, ?, ?, ?)`,
     )
     .run(
       id,
       userId,
       `token-${id}`,
-      sub,
-      sid,
-      providerId,
+      JSON.stringify({ providerId, sub, sid }),
       "2026-07-10T00:00:00.000Z",
       "2026-07-11T00:00:00.000Z",
       "2026-07-10T00:00:00.000Z",
@@ -108,9 +106,7 @@ describe("AuthManager.revokeSessionsByExternalSession", () => {
         jwt_token TEXT NOT NULL,
         device_type TEXT NOT NULL,
         device_info TEXT NOT NULL,
-        oidc_sub TEXT,
-        oidc_sid TEXT,
-        sso_provider_id INTEGER,
+        external_session_ref TEXT,
         created_at TEXT NOT NULL,
         expires_at TEXT NOT NULL,
         last_active_at TEXT NOT NULL
@@ -148,7 +144,7 @@ describe("AuthManager.revokeSessionsByExternalSession", () => {
 
     await expect(
       authManager.revokeSessionsByExternalSession({
-        ssoProviderId: 7,
+        providerId: 7,
         sub: "subject-1",
         sid: "session-1",
       }),
@@ -182,7 +178,7 @@ describe("AuthManager.revokeSessionsByExternalSession", () => {
 
     await expect(
       authManager.revokeSessionsByExternalSession({
-        ssoProviderId: 7,
+        providerId: 7,
         sub: "subject-1",
       }),
     ).resolves.toBe(2);
@@ -190,10 +186,34 @@ describe("AuthManager.revokeSessionsByExternalSession", () => {
     expect(sessionIds()).toEqual(["other-subject"]);
   });
 
+  it("leaves sessions with no or a broken reference alone", async () => {
+    mocks
+      .sqlite!.prepare(
+        `INSERT INTO sessions (
+          id, user_id, jwt_token, device_type, device_info,
+          external_session_ref, created_at, expires_at, last_active_at
+        ) VALUES (?, 'user-1', 't', 'browser', 'test', ?, 'a', 'b', 'c')`,
+      )
+      .run("broken", "{not json");
+    mocks
+      .sqlite!.prepare(
+        `INSERT INTO sessions (
+          id, user_id, jwt_token, device_type, device_info,
+          external_session_ref, created_at, expires_at, last_active_at
+        ) VALUES (?, 'user-1', 't', 'browser', 'test', NULL, 'a', 'b', 'c')`,
+      )
+      .run("password");
+
+    await expect(
+      authManager.revokeSessionsByExternalSession({ sub: "subject-1" }),
+    ).resolves.toBe(0);
+    expect(sessionIds()).toEqual(["broken", "password"]);
+  });
+
   it("does not persist when no session matches", async () => {
     await expect(
       authManager.revokeSessionsByExternalSession({
-        ssoProviderId: 7,
+        providerId: 7,
         sid: "missing",
       }),
     ).resolves.toBe(0);
@@ -213,7 +233,7 @@ describe("AuthManager.revokeSessionsByExternalSession", () => {
 
     await expect(
       authManager.revokeSessionsByExternalSession({
-        ssoProviderId: 7,
+        providerId: 7,
         sid: "session-1",
       }),
     ).rejects.toThrow("disk full");

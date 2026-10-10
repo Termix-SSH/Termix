@@ -20,6 +20,11 @@ describe("defaultCredentialSidebarPreferences", () => {
         density: "comfortable",
         showTags: true,
         trayTrigger: "always",
+        showUsername: true,
+        showUsageCount: true,
+        showTypeBadge: true,
+        showPinIcon: true,
+        showSharedBadge: true,
       },
     });
   });
@@ -51,6 +56,11 @@ describe("sanitizeCredentialSidebarPreferences", () => {
         density: "compact",
         showTags: false,
         trayTrigger: "click",
+        showUsername: false,
+        showUsageCount: false,
+        showTypeBadge: false,
+        showPinIcon: true,
+        showSharedBadge: false,
       },
     };
     expect(sanitizeCredentialSidebarPreferences(valid)).toEqual(valid);
@@ -88,5 +98,16 @@ describe("sanitizeCredentialSidebarPreferences", () => {
   it("always stamps the current version regardless of input", () => {
     const result = sanitizeCredentialSidebarPreferences({ version: 999 });
     expect(result.version).toBe(CREDENTIAL_SIDEBAR_PREFS_VERSION);
+  });
+});
+
+describe("credential row fields", () => {
+  it("keeps boolean choices and defaults the rest", () => {
+    const prefs = sanitizeCredentialSidebarPreferences({
+      display: { showUsername: false, showTypeBadge: "off" },
+    });
+    expect(prefs.display.showUsername).toBe(false);
+    expect(prefs.display.showTypeBadge).toBe(true);
+    expect(prefs.display.showUsageCount).toBe(true);
   });
 });

@@ -24,8 +24,8 @@ import express, {
 import type {
   PluginMiddleware,
   PluginRouterOptions,
-} from "@termix/plugin-sdk/backend";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+} from "@termix-ssh/plugin-sdk/backend";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import { pluginLogger } from "../utils/logger.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { runAsActor } from "./actor.js";
@@ -162,17 +162,81 @@ function compilePublicPath(path: string): RegExp {
   return new RegExp(prefix ? `^${escaped}(?:/.*)?$` : `^${escaped}$`);
 }
 
+interface PublicPath {
+  declared: string;
+  pattern: RegExp;
+}
+
+interface RouterLayer {
+  route?: {
+    path?: unknown;
+    _handlesMethod?: (method: string) => boolean;
+  };
+  match?: (path: string) => boolean;
+}
+
+function segments(path: string): string[] {
+  return normalizePublicPath(path).split("/").slice(1);
+}
+
 /**
- * Matches the request path against the declared public paths.
- *
- * Full-path match only. A prefix match would turn one declared route into a
- * hole covering everything below it, which is not what declaring a single
- * public path should mean.
+ * Whether a declared public path names this registered route: literal
+ * segments must be equal and a ":param" must sit where the route has one, so
+ * "/webhook/:token" never covers a sibling "/webhook/config".
  */
-function isPublicRequest(req: Request, publicPaths: RegExp[]): boolean {
+function declaredCoversRoute(declared: string, routePath: string): boolean {
+  const prefix = declared.endsWith("/*");
+  const want = segments(prefix ? declared.slice(0, -2) : declared);
+  const have = segments(routePath);
+  if (prefix ? have.length < want.length : have.length !== want.length) {
+    return false;
+  }
+  return want.every((segment, index) =>
+    segment.startsWith(":")
+      ? have[index].startsWith(":")
+      : segment.toLowerCase() === have[index].toLowerCase(),
+  );
+}
+
+/**
+ * Whether the request is for a declared public path.
+ *
+ * Full-path match only, and only for the route that will actually answer:
+ * the first route in the plugin's router that matches the path and method
+ * has to be the one the declaration names. So a public "/webhook/:token"
+ * registered for POST does not open GET, and does not open a literal sibling
+ * route registered next to it. A trailing "/*" may also be served by
+ * router.use(), which has no route to compare against.
+ */
+function isPublicRequest(
+  req: Request,
+  publicPaths: PublicPath[],
+  inner: Router,
+): boolean {
   if (publicPaths.length === 0) return false;
   const path = normalizePublicPath(req.path || "/");
-  return publicPaths.some((pattern) => pattern.test(path));
+  const candidates = publicPaths.filter(({ pattern }) => pattern.test(path));
+  if (candidates.length === 0) return false;
+
+  const stack = (inner as unknown as { stack?: RouterLayer[] }).stack ?? [];
+  for (const layer of stack) {
+    if (!layer.match?.(req.path || "/")) continue;
+    if (!layer.route) {
+      if (candidates.some(({ declared }) => declared.endsWith("/*"))) {
+        return true;
+      }
+      continue;
+    }
+    if (!layer.route._handlesMethod?.(req.method)) continue;
+    const routePath = layer.route.path;
+    return (
+      typeof routePath === "string" &&
+      candidates.some(({ declared }) =>
+        declaredCoversRoute(declared, routePath),
+      )
+    );
+  }
+  return false;
 }
 
 export interface CreatePluginRouterArgs {
@@ -196,7 +260,10 @@ export function createPluginRouter({
   const declaredPublic = (options?.public ?? []).map((path) =>
     normalizePublicPath(path),
   );
-  const publicPaths = declaredPublic.map((path) => compilePublicPath(path));
+  const publicPaths = declaredPublic.map((declared) => ({
+    declared,
+    pattern: compilePublicPath(declared),
+  }));
   publicRoutes.set(pluginId, declaredPublic);
 
   if (declaredPublic.length > 0) {
@@ -250,7 +317,7 @@ export function createPluginRouter({
   const authenticate = AuthManager.getInstance().createAuthMiddleware();
 
   outer.use((req: Request, res: Response, next: NextFunction) => {
-    if (isPublicRequest(req, publicPaths)) {
+    if (isPublicRequest(req, publicPaths, inner)) {
       const ip = req.ip || req.socket?.remoteAddress || "unknown";
       if (overPublicRateLimit(pluginId, ip)) {
         res.status(429).json({ error: "Too many requests" });

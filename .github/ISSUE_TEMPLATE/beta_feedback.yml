@@ -1,0 +1,75 @@
+name: Beta feedback
+description: A bug, rough edge or idea from a Termix beta
+labels: [beta]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing a beta. Short reports are fine. If you opened this from Termix, the version and setup are already filled in.
+  - type: input
+    id: termix-version
+    attributes:
+      label: Beta version
+      description: Shown in Settings under Updates, or your image tag.
+      placeholder: "e.g. 26.11.0-beta.2"
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: The bug, what felt off, or your idea. Screenshots help a lot.
+    validations:
+      required: true
+  - type: dropdown
+    id: regression
+    attributes:
+      label: Does this happen on the latest stable release?
+      options:
+        - "Not tested on stable"
+        - "Yes, it happens on stable too"
+        - "No, only on this beta"
+        - "Not a bug, just feedback"
+    validations:
+      required: false
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: As few steps as you can.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: false
+  - type: textarea
+    id: beta-plugins
+    attributes:
+      label: Plugins on a beta
+      description: Filled in by Termix. One plugin and version per line.
+      render: text
+    validations:
+      required: false
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser or desktop app, OS, and how the server is installed.
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Errors from the browser console, `docker logs termix`, or the error Termix shows. This is shown as code, so no backticks needed.
+      render: text
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched open issues and this is not a duplicate
+          required: true

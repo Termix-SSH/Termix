@@ -13,11 +13,11 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <projectSourceUrl>https://github.com/Termix-SSH/Termix</projectSourceUrl>
     <docsUrl>https://docs.termix.site/install</docsUrl>
-    <bugTrackerUrl>https://github.com/Termix-SSH/Support/issues</bugTrackerUrl>
+    <bugTrackerUrl>https://github.com/Termix-SSH/Termix/issues</bugTrackerUrl>
     <tags>docker ssh terminal telnet self-hosted rdp file-management vnc ssh-tunnel server-stats termix</tags>
-    <summary>Self-hosted SSH and remote desktop management.</summary>
+    <summary>Self-hosted, plugin-based server management.</summary>
     <description>
-Termix is an open-source, forever-free, self-hosted all-in-one server management platform. It provides a multi-platform solution for managing your servers and infrastructure through a single, intuitive interface. Termix offers SSH terminal access, remote desktop control (RDP, VNC, Telnet), SSH tunneling capabilities, remote file management, and many other tools. Termix is the perfect free and self-hosted alternative to Termius available for all platforms.
+Termix is a free, open source, self-hosted platform for managing your servers, built on plugins. The core keeps your hosts, credentials, users and sharing, and plugins add the SSH terminal, remote desktop (RDP, VNC, Telnet), file manager, tunnels, Docker, metrics and more. It runs on web, desktop and mobile, and it is a free, self-hosted alternative to Termius.
 
 This package installs the desktop application version of Termix.
     </description>

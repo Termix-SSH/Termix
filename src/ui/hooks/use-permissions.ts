@@ -56,6 +56,14 @@ export async function hasPermission(permission: string): Promise<boolean> {
   return matchesPermission(permissions, isAdmin, permission);
 }
 
+/** A sync has() over the current grants, for code outside a component. */
+export async function loadPermissionChecker(): Promise<
+  (permission: string) => boolean
+> {
+  const { permissions, isAdmin } = await load();
+  return (permission) => matchesPermission(permissions, isAdmin, permission);
+}
+
 /**
  * Warms the permissions cache before the shell mounts, so permission-gated
  * rail items are already known on first paint instead of popping in once

@@ -88,6 +88,8 @@ const {
   respondWithRedirectLogin,
   verifySecondFactorAndRespond,
   resetPendingLoginsForTests,
+  TRUST_DEVICE_COOKIE,
+  hashTrustToken,
 } = await import("../../auth/login-pipeline.js");
 const { verifyPasswordLogin } =
   await import("../../auth/builtin-login-methods.js");
@@ -119,7 +121,6 @@ function addUser(
     username: "alice",
     passwordHash: bcrypt.hashSync(PASSWORD, 4),
     isAdmin: false,
-    isOidc: false,
     ...overrides,
   };
   h.state.users.set(user.id, user);
@@ -296,14 +297,44 @@ describe("second factors", () => {
     await verifySecondFactorAndRespond(req as never, res as never, "totp");
 
     expect(res.statusCode).toBe(200);
-    expect(res.cookies[0]).toMatchObject({ name: "jwt" });
+    const trust = res.cookies.find((c) => c.name === TRUST_DEVICE_COOKIE);
+    expect(trust?.value).toMatch(/^[a-f0-9]{64}$/);
+    expect(res.cookies.find((c) => c.name === "jwt")).toBeDefined();
     expect(res.body).toMatchObject({
       success: true,
       username: "alice",
       totp_enabled: true,
     });
-    expect(h.state.trustedAdded).toHaveLength(1);
+    expect(res.body).not.toHaveProperty("trustToken");
+    expect(h.state.trustedAdded).toEqual([
+      `u1:${hashTrustToken(trust!.value)}`,
+    ]);
     expect(h.state.audits.at(-1)).toMatchObject({ action: "login" });
+  });
+
+  it("hands the trust token to the desktop app in the body", async () => {
+    enrolTotp();
+    const first = await passwordLogin({
+      username: "alice",
+      password: PASSWORD,
+    });
+    const res = fakeResponse();
+    await verifySecondFactorAndRespond(
+      fakeRequest({
+        headers: { "x-electron-app": "true" },
+        body: {
+          temp_token: (first.body as { temp_token: string }).temp_token,
+          totp_code: TOTP_CODE,
+          rememberMe: true,
+        },
+      }) as never,
+      res as never,
+      "totp",
+    );
+    expect(res.statusCode).toBe(200);
+    expect((res.body as { trustToken: string }).trustToken).toMatch(
+      /^[a-f0-9]{64}$/,
+    );
   });
 
   it("answers the 2.8 route with the user's first factor when none is named", async () => {
@@ -370,11 +401,30 @@ describe("second factors", () => {
     expect(res.cookies).toEqual([]);
   });
 
-  it("skips the factor on a trusted device", async () => {
+  it("skips the factor with a server-issued trust cookie", async () => {
     enrolTotp();
-    h.manager.isTrustedDevice.mockResolvedValueOnce(true);
-    const res = await passwordLogin({ username: "alice", password: PASSWORD });
+    const token = "c".repeat(64);
+    h.state.trusted.add(`u1:${hashTrustToken(token)}`);
+    const req = fakeRequest({
+      body: { username: "alice", password: PASSWORD },
+      cookies: { [TRUST_DEVICE_COOKIE]: token },
+    });
+    const res = fakeResponse();
+    const identity = await verifyPasswordLogin(req as never);
+    await respondWithLogin(req as never, res as never, identity, {
+      methodId: "password",
+      rememberMe: false,
+    });
     expect(res.cookies[0]).toMatchObject({ name: "jwt" });
+  });
+
+  it("never skips the factor on a client-made device id", async () => {
+    enrolTotp();
+    const deviceId = "a".repeat(64);
+    h.state.trusted.add(`u1:${deviceId}`);
+    const res = await passwordLogin({ username: "alice", password: PASSWORD });
+    expect(res.body).toMatchObject({ requires_totp: true });
+    expect(h.manager.isTrustedDevice).not.toHaveBeenCalled();
   });
 
   it("fails closed when an enrolled factor's plugin is gone", async () => {
@@ -461,7 +511,7 @@ describe("external identities", () => {
     email: "a@example.com",
     name: "Alice",
     legacyIdentifier: "sub-1",
-    ssoProviderId: 3,
+    externalSession: { providerId: 3, sub: "sub-1", sid: "sid-1" },
   };
 
   // The sso plugin's method, which marks itself external.
@@ -477,6 +527,46 @@ describe("external identities", () => {
   });
   afterEach(() => disposeOidc());
 
+  function addSsoUser(passwordHash = "") {
+    addUser({ passwordHash });
+    h.state.identities.push({
+      userId: "u1",
+      providerId: "3",
+      subject: "sub-1",
+    } as never);
+  }
+
+  it("refuses a passkey sign in for an account that only uses SSO", async () => {
+    addSsoUser();
+    await expect(
+      runLogin(
+        fakeRequest() as never,
+        { kind: "user", userId: "u1", mfaSatisfied: true },
+        { methodId: "passkey", rememberMe: false },
+      ),
+    ).rejects.toMatchObject({ status: 403, code: "external_login_required" });
+  });
+
+  it("still lets an SSO account with a password use a passkey", async () => {
+    addSsoUser(bcrypt.hashSync(PASSWORD, 4));
+    const result = await runLogin(
+      fakeRequest() as never,
+      { kind: "user", userId: "u1", mfaSatisfied: true },
+      { methodId: "passkey", rememberMe: false },
+    );
+    expect(result.kind).toBe("session");
+  });
+
+  it("lets an external method sign an SSO account in by user id", async () => {
+    addSsoUser();
+    const result = await runLogin(
+      fakeRequest() as never,
+      { kind: "user", userId: "u1" },
+      { methodId: "oidc", rememberMe: false },
+    );
+    expect(result.kind).toBe("session");
+  });
+
   it("provisions the first user as admin and links the identity", async () => {
     const result = await runLogin(fakeRequest() as never, external, {
       methodId: "oidc",
@@ -487,7 +577,6 @@ describe("external identities", () => {
     expect(user).toMatchObject({
       username: "Alice",
       isAdmin: true,
-      isOidc: true,
     });
     expect(h.state.identities).toEqual([
       expect.objectContaining({
@@ -511,7 +600,7 @@ describe("external identities", () => {
       }),
     ).rejects.toMatchObject({ code: "registration_disabled" });
 
-    h.state.settings.set("oidc_auto_provision", "true");
+    h.state.settings.set("external_auto_provision", "true");
     await expect(
       runLogin(
         fakeRequest() as never,
@@ -521,45 +610,11 @@ describe("external identities", () => {
     ).rejects.toMatchObject({ code: "user_not_allowed" });
   });
 
-  it.each(["true", "false"])(
-    "does not duplicate an unscoped migrated account with provisioning %s",
-    async (enabled) => {
-      addUser({
-        id: "old",
-        username: "Alice",
-        isOidc: true,
-        passwordHash: "",
-        oidcIdentifier: "sub-1",
-        ssoProviderId: null,
-      });
-      const { runExternalIdentityMigration } =
-        await import("../../upgrade/external-identity-migration.js");
-      await runExternalIdentityMigration();
-      h.state.settings.set("oidc_auto_provision", enabled);
-      await expect(
-        runLogin(fakeRequest() as never, external, {
-          methodId: "oidc",
-          rememberMe: false,
-        }),
-      ).rejects.toMatchObject({ code: "legacy_identity_conflict" });
-      expect([...h.state.users.keys()]).toEqual(["old"]);
-      expect(h.state.identities).toHaveLength(1);
-      expect(h.state.identities[0]).toMatchObject({
-        userId: "old",
-        providerId: "legacy-oidc",
-        subject: "sub-1",
-      });
-    },
-  );
-
   it("keeps equal subjects on explicitly different providers separate", async () => {
     addUser({
       id: "other",
       username: "Other Alice",
-      isOidc: true,
       passwordHash: "",
-      oidcIdentifier: "sub-1",
-      ssoProviderId: 9,
     });
     h.state.identities.push({
       id: 1,
@@ -568,7 +623,7 @@ describe("external identities", () => {
       subject: "sub-1",
       email: null,
     });
-    h.state.settings.set("oidc_auto_provision", "true");
+    h.state.settings.set("external_auto_provision", "true");
     const result = await runLogin(fakeRequest() as never, external, {
       methodId: "oidc",
       rememberMe: false,
@@ -584,10 +639,7 @@ describe("external identities", () => {
     addUser({
       id: "old",
       username: "Alice",
-      isOidc: true,
       passwordHash: "",
-      oidcIdentifier: "sub-1",
-      ssoProviderId: null,
     });
     h.state.identities.push({
       id: 1,
@@ -605,7 +657,7 @@ describe("external identities", () => {
   });
 
   it("re-checks the allowed list for existing users", async () => {
-    addUser({ id: "u9", username: "Alice", isOidc: true, passwordHash: "" });
+    addUser({ id: "u9", username: "Alice", passwordHash: "" });
     h.state.identities.push({
       id: 1,
       userId: "u9",
@@ -622,42 +674,10 @@ describe("external identities", () => {
     ).rejects.toMatchObject({ code: "user_not_allowed" });
   });
 
-  it("finds an account from before the identity table by its old identifier", async () => {
-    addUser({
-      id: "old",
-      username: "ldap-bob",
-      isOidc: true,
-      passwordHash: "",
-      oidcIdentifier: "ldap:4:bob",
-    });
-    const result = await runLogin(
-      fakeRequest() as never,
-      {
-        kind: "external",
-        provider: "4",
-        subject: "bob",
-        name: "Bob",
-        legacyIdentifier: "ldap:4:bob",
-        ssoProviderId: 4,
-      },
-      { methodId: "ldap", rememberMe: false },
-    );
-    expect(result.kind).toBe("session");
-    expect(h.state.users.size).toBe(1);
-    expect(h.state.identities).toEqual([
-      expect.objectContaining({
-        userId: "old",
-        providerId: "4",
-        subject: "bob",
-      }),
-    ]);
-  });
-
   it("keeps admin in step with the provider's admin group", async () => {
     addUser({
       id: "u9",
       username: "Alice",
-      isOidc: true,
       passwordHash: "",
       isAdmin: true,
     });
@@ -680,7 +700,6 @@ describe("external identities", () => {
     addUser({
       id: "u9",
       username: "Alice",
-      isOidc: true,
       passwordHash: "",
     });
     h.state.factors.push({ userId: "u9", pluginId: "totp", factorId: "totp" });
@@ -703,7 +722,6 @@ describe("external identities", () => {
     addUser({
       id: "u9",
       username: "Alice",
-      isOidc: true,
       passwordHash: "",
     });
     h.state.factors.push({ userId: "u9", pluginId: "totp", factorId: "totp" });
@@ -729,9 +747,7 @@ describe("redirect logins", () => {
     subject: "sub-1",
     name: "Alice",
     returnTo: "https://termix.example",
-    ssoProviderId: 3,
-    oidcSub: "sub-1",
-    oidcSid: "sid-1",
+    externalSession: { providerId: 3, sub: "sub-1", sid: "sid-1" },
   };
 
   it("sets the cookie and redirects with success, carrying the SSO claims", async () => {
@@ -748,9 +764,7 @@ describe("redirect logins", () => {
     expect(h.manager.generateJWTToken).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({
-        oidcSub: "sub-1",
-        oidcSid: "sid-1",
-        ssoProviderId: 3,
+        externalSession: { providerId: 3, sub: "sub-1", sid: "sid-1" },
       }),
     );
   });
@@ -774,7 +788,6 @@ describe("redirect logins", () => {
     addUser({
       id: "u9",
       username: "Alice",
-      isOidc: true,
       passwordHash: "",
     });
     h.state.factors.push({ userId: "u9", pluginId: "totp", factorId: "totp" });
@@ -812,7 +825,9 @@ describe("redirect logins", () => {
     expect(verify.statusCode).toBe(200);
     expect(h.manager.generateJWTToken).toHaveBeenLastCalledWith(
       "u9",
-      expect.objectContaining({ oidcSid: "sid-1", ssoProviderId: 3 }),
+      expect.objectContaining({
+        externalSession: { providerId: 3, sub: "sub-1", sid: "sid-1" },
+      }),
     );
   });
 

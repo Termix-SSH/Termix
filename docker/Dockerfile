@@ -1,23 +1,13 @@
-# Stage 0: every plugin's package.json and manifest.json and nothing else.
-# npm ci needs each workspace package.json in place or it silently skips it,
-# and a glob COPY flattens paths, so the tree is trimmed here instead. The
-# deps layer below stays cached until one of these files changes.
-FROM node:26-slim AS workspace-manifests
-WORKDIR /src
-COPY plugins ./plugins
-RUN find plugins -mindepth 2 -maxdepth 2 ! -name package.json ! -name manifest.json -exec rm -rf {} +
-
 # Stage 1: Install dependencies
 # The builders only produce JS, so they run on the build machine's own arch
 # once instead of under QEMU per target. Rolldown hangs under arm64 emulation.
-FROM --platform=$BUILDPLATFORM node:26-slim AS deps
+FROM --platform=$BUILDPLATFORM node:24-slim AS deps
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
 COPY packages/plugin-sdk/package.json ./packages/plugin-sdk/package.json
-COPY --from=workspace-manifests /src/plugins ./plugins
 COPY .npmrc ./
 COPY vendor ./vendor
 
@@ -47,7 +37,7 @@ COPY . .
 RUN npm run build:backend
 
 # Stage 4: Download OPKSSH binary for the target platform so the image works offline
-FROM node:26-slim AS opkssh-downloader
+FROM node:24-slim AS opkssh-downloader
 ARG TARGETARCH
 ARG OPKSSH_VERSION=v0.16.0
 ARG OPKSSH_SHA256_AMD64=c018c3e7baf98612b923e742dd87be38650bf61e3b755fb2bc90de177568b1bf
@@ -68,7 +58,7 @@ RUN case "$TARGETARCH" in \
     echo -n "$OPKSSH_VERSION" > version.txt
 
 # Stage 5: Production dependencies only
-FROM node:26-slim AS production-deps
+FROM node:24-slim AS production-deps
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
@@ -80,15 +70,9 @@ COPY packages/plugin-sdk/package.json ./packages/plugin-sdk/package.json
 COPY .npmrc ./
 COPY vendor ./vendor
 
-COPY scripts/patch-ssh2-agent.cjs scripts/install-native-plugin-deps.cjs ./scripts/
-# Plugin manifests only, for their nativeDependencies. Outside plugins/ so npm
-# ci does not treat them as workspaces: everything else a plugin uses is
-# already inside its bundle.
-COPY --from=workspace-manifests /src/plugins ./plugin-manifests
+COPY scripts/patch-ssh2-agent.cjs ./scripts/
 
 RUN npm ci --omit=dev --ignore-scripts && \
-    node scripts/install-native-plugin-deps.cjs plugin-manifests && \
-    rm -rf plugin-manifests && \
     node scripts/patch-ssh2-agent.cjs && \
     rm -rf node_modules/better-sqlite3/prebuilds && \
     npm run build-release --prefix node_modules/better-sqlite3 && \
@@ -97,7 +81,7 @@ RUN npm ci --omit=dev --ignore-scripts && \
     npm cache clean --force
 
 # Stage 6: Final optimized image
-FROM node:26-slim
+FROM node:24-slim
 WORKDIR /app
 
 # The release the opkssh-downloader stage baked in, so the plugin trusts that
@@ -128,10 +112,10 @@ COPY --chown=node:node --from=frontend-builder /app/dist /app/html
 
 COPY --chown=node:node --from=production-deps /app/node_modules /app/node_modules
 COPY --chown=node:node --from=backend-builder /app/dist/backend ./dist/backend
-# Bundled first-party plugins, resolved as dist/plugins by
+# Plugins pinned in docker/bundled-plugins.json, resolved as dist/plugins by
 # getBundledPluginsDir().
 COPY --chown=node:node --from=backend-builder /app/dist/plugins ./dist/plugins
-# Target of node_modules/@termix/plugin-sdk, which core and the plugins import.
+# Target of node_modules/@termix-ssh/plugin-sdk, which core and the plugins import.
 COPY --chown=node:node --from=backend-builder /app/packages/plugin-sdk/package.json ./packages/plugin-sdk/package.json
 COPY --chown=node:node --from=backend-builder /app/packages/plugin-sdk/dist ./packages/plugin-sdk/dist
 # Pre-baked OPKSSH binary. The opkssh plugin uses it when its checksum

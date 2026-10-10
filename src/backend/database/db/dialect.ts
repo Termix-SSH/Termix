@@ -42,7 +42,7 @@ export function resolveDatabaseDialect(
  *
  * SQLite here is an in-memory database serialised back to an encrypted file, so
  * every write needs a trigger to flush it. Client-server engines have already
- * durably committed by the time the query returns — there is no file to write
+ * durably committed by the time the query returns, there is no file to write
  * and nothing to schedule.
  */
 export function needsExplicitPersist(dialect: DatabaseDialect): boolean {

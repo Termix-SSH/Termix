@@ -12,6 +12,9 @@
  * and exactly one OIDC row is from before 2.9. An identity whose target is
  * already taken (a duplicate account made by 2.9.0) is left for an admin.
  * Idempotent.
+ *
+ * 2.9.1 ran it at boot. 26.10.0 runs it from the database setup, before
+ * users.oidc_identifier is dropped, for an install upgrading from 2.9.0.
  */
 
 import { sql } from "drizzle-orm";

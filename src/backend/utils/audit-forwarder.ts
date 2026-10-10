@@ -22,7 +22,7 @@ function readForwardSetting(key: string): string | null {
 
 /**
  * How many consecutive failures before the forwarder stops complaining on every
- * entry. It keeps trying — this only throttles the log noise, and it reports
+ * entry. It keeps trying, this only throttles the log noise, and it reports
  * again once delivery recovers.
  */
 const QUIET_AFTER_FAILURES = 5;

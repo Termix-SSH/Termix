@@ -55,7 +55,7 @@ describe("field types", () => {
       { enabled: false },
     );
 
-    const toggle = screen.getByRole("button");
+    const toggle = screen.getByRole("switch");
     fireEvent.click(toggle);
 
     expect(setValue).toHaveBeenCalledWith("enabled", true);

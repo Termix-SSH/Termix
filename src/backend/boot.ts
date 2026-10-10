@@ -65,17 +65,9 @@ export async function runCoreBootMigrations(): Promise<void> {
     await import("./utils/crypto-migration/private-shared-ssh-auth-migration.js");
   await runPrivateSharedSshAuthMigration();
 
-  const { runExternalIdentityMigration } =
-    await import("./upgrade/external-identity-migration.js");
-  await runExternalIdentityMigration();
-
-  const { runHostStatusConfigMigration } =
-    await import("./utils/crypto-migration/host-status-config-migration.js");
-  await runHostStatusConfigMigration();
-
-  const { runSshOptionsMigration } =
-    await import("./utils/crypto-migration/ssh-options-migration.js");
-  await runSshOptionsMigration();
+  const { runExternalAutoProvisionMigration } =
+    await import("./upgrade/external-auto-provision-migration.js");
+  await runExternalAutoProvisionMigration();
 
   const { runAuditNoiseCleanup } =
     await import("./upgrade/audit-noise-cleanup.js");

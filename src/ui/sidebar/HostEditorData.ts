@@ -5,7 +5,7 @@ import {
   type HostDraft,
   type HostProtocolAuthForm,
   type HostProtocolAuthSummary,
-} from "@termix/plugin-sdk/frontend";
+} from "@termix-ssh/plugin-sdk/frontend";
 import type { DefaultOverrides } from "@/types/host-defaults";
 import {
   listHostProtocols,

@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({ granted: new Set<string>() }));
 
 vi.mock("../../plugins/permissions.js", async () => {
-  const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+  const { PluginCapabilityError } =
+    await import("@termix-ssh/plugin-sdk/backend");
   return {
     assertCapability: async (
       pluginId: string,
@@ -23,7 +24,8 @@ vi.mock("../../plugins/permissions.js", async () => {
 
 const { createPluginProcess } = await import("../../plugins/ctx-process.js");
 const { DisposableBag } = await import("../../plugins/disposables.js");
-const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+const { PluginCapabilityError } =
+  await import("@termix-ssh/plugin-sdk/backend");
 
 const DECLARED = ["process:spawn", "network:outbound"];
 
@@ -111,7 +113,8 @@ describe("ctx.process.ensureBinary", () => {
   const contents = "#!/bin/sh\necho hi\n";
 
   it("uses a prebuilt copy whose checksum matches, without downloading", async () => {
-    const prebuilt = path.join(dir, "prebuilt-tool");
+    await fs.mkdir(path.join(dir, "prebuilt"), { recursive: true });
+    const prebuilt = path.join(dir, "prebuilt", "tool");
     await fs.writeFile(prebuilt, contents);
     const fetch = vi.fn();
     const { process: proc } = create({ fetch: fetch as never });
@@ -125,6 +128,23 @@ describe("ctx.process.ensureBinary", () => {
       }),
     ).resolves.toBe(prebuilt);
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("never hashes a prebuilt path that is not the binary itself", async () => {
+    const other = path.join(dir, "secrets.db");
+    await fs.writeFile(other, contents);
+    await fs.mkdir(path.join(dir, "tool-dir", "tool"), { recursive: true });
+    const fetch = vi.fn(async () => new Response(contents));
+    const { process: proc } = create({ fetch: fetch as never });
+    const result = await proc.ensureBinary({
+      name: "tool",
+      version: "1",
+      url: "https://example.test/tool",
+      sha256: sha256(contents),
+      prebuilt: [other, "relative/tool", path.join(dir, "tool-dir", "tool")],
+    });
+    expect(result).toBe(path.join(dir, "bin", "tool"));
+    expect(fetch).toHaveBeenCalledOnce();
   });
 
   it("downloads once, verifies it and reuses the copy", async () => {

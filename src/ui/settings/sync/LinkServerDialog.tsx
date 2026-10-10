@@ -1,17 +1,11 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { InlineView } from "@/components/surface/surface-scope";
 import { toast } from "sonner";
 import { AlertCircle, Loader2, X } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Switch } from "@/components/switch";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/dialog";
 import { ElectronLoginForm } from "@/auth/ElectronLoginForm";
 import {
   completeLink,
@@ -28,6 +22,7 @@ import {
   getSavedServerUrls,
   rememberServerUrl,
 } from "./saved-servers";
+import { DocsLink } from "@/components/docs-link";
 
 type Step = "server" | "signin" | "choose" | "finishing";
 
@@ -223,233 +218,238 @@ export function LinkServerDialog({
   );
   const wide = step === "signin";
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className={`bg-card border border-border rounded-none ${
-          wide ? "sm:max-w-4xl h-[80vh] flex flex-col p-0 gap-0" : "sm:max-w-lg"
-        }`}
-        // The sign-in step is a page from another origin in an iframe; clicks
-        // inside it look like outside clicks to the dialog.
-        onPointerDownOutside={(event) => wide && event.preventDefault()}
-        onInteractOutside={(event) => wide && event.preventDefault()}
-      >
-        <DialogHeader className={wide ? "sr-only" : undefined}>
-          <DialogTitle>
-            {relogin ? t("sync.wizard.reloginTitle") : t("sync.wizard.title")}
-          </DialogTitle>
-          <DialogDescription>
-            {step === "server" && t("sync.wizard.serverDescription")}
-            {step === "signin" &&
-              t("sync.wizard.signinDescription", { url: target.serverUrl })}
-            {step === "choose" && t("sync.wizard.chooseDescription")}
-            {step === "finishing" && t("sync.wizard.finishingDescription")}
-          </DialogDescription>
-        </DialogHeader>
-
-        {step === "server" && (
-          <form
-            className="flex flex-col gap-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void handleCheck();
-            }}
-          >
-            <div className="flex flex-col gap-1.5">
-              <label
-                className="text-xs font-semibold"
-                htmlFor="sync-server-url"
-              >
-                {t("sync.wizard.serverUrl")}
-              </label>
-              <Input
-                id="sync-server-url"
-                autoFocus
-                className="rounded-none"
-                placeholder="https://termix.example.com"
-                value={target.serverUrl}
-                onChange={(event) =>
-                  setTarget({ ...target, serverUrl: event.target.value })
-                }
-              />
-              <p className="text-[10px] text-muted-foreground">
-                {t("sync.wizard.serverUrlHint")}
-              </p>
-              {!relogin && savedUrls.length > 0 && (
-                <div className="flex flex-col gap-1 pt-1">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    {t("sync.wizard.savedServers")}
-                  </span>
-                  {savedUrls.map((url) => (
-                    <div
-                      key={url}
-                      className="flex items-center border border-border hover:bg-muted"
-                    >
-                      <button
-                        type="button"
-                        className="flex-1 min-w-0 truncate px-2 py-1.5 text-left font-mono text-xs"
-                        onClick={() => setTarget({ ...target, serverUrl: url })}
-                      >
-                        {url}
-                      </button>
-                      <button
-                        type="button"
-                        title={t("sync.wizard.removeServer")}
-                        className="px-2 py-1.5 text-muted-foreground hover:text-destructive"
-                        onClick={() => setSavedUrls(forgetServerUrl(url))}
-                      >
-                        <X className="size-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {problem && (
-              <div className="flex gap-2 border border-destructive/40 bg-destructive/10 p-2.5 text-xs">
-                <AlertCircle className="size-4 shrink-0 text-destructive" />
-                <span>{problem}</span>
-              </div>
-            )}
-
-            {(problemKind === "tls_untrusted" ||
-              target.allowInvalidCertificate) && (
-              <div className="flex items-center justify-between gap-3 border border-border p-2.5">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-xs font-medium">
-                    {t("sync.proxy.allowInvalidCertificate")}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {t("sync.proxy.allowInvalidCertificateHint")}
-                  </span>
-                </div>
-                <Switch
-                  checked={!!target.allowInvalidCertificate}
-                  onCheckedChange={(checked) =>
-                    setTarget({ ...target, allowInvalidCertificate: checked })
-                  }
-                />
-              </div>
-            )}
-
-            <button
-              type="button"
-              className="self-start text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground"
-              onClick={() => setShowAdvanced((value) => !value)}
-            >
-              {showAdvanced
-                ? t("sync.wizard.hideProxySettings")
-                : t("sync.wizard.showProxySettings")}
-            </button>
-            {showAdvanced && (
-              <ProxySettingsFields
-                customHeaders={target.customHeaders ?? []}
-                basicAuth={target.basicAuth ?? null}
-                onChange={(next) => setTarget({ ...target, ...next })}
-              />
-            )}
-
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-none"
-                onClick={() => onOpenChange(false)}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="submit"
-                className="rounded-none"
-                disabled={checking || !target.serverUrl.trim()}
-              >
-                {checking && <Loader2 className="size-4 animate-spin" />}
-                {t("sync.wizard.continue")}
-              </Button>
-            </div>
-          </form>
-        )}
-
-        {step === "signin" && (
-          <div className="flex-1 min-h-0">
-            <ElectronLoginForm
-              serverUrl={target.serverUrl}
-              targetPurpose="link"
-              onAuthSuccess={handleSignedIn}
-              onChangeServer={() =>
-                relogin ? onOpenChange(false) : setStep("server")
+  const title = relogin
+    ? t("sync.wizard.reloginTitle")
+    : t("sync.wizard.title");
+  const description =
+    step === "server"
+      ? t("sync.wizard.serverDescription")
+      : step === "signin"
+        ? t("sync.wizard.signinDescription", { url: target.serverUrl })
+        : step === "choose"
+          ? t("sync.wizard.chooseDescription")
+          : t("sync.wizard.finishingDescription");
+  const content = (
+    <>
+      {step === "server" && (
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleCheck();
+          }}
+        >
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold" htmlFor="sync-server-url">
+              {t("sync.wizard.serverUrl")}
+            </label>
+            <Input
+              id="sync-server-url"
+              autoFocus
+              className="rounded-none"
+              placeholder="https://termix.example.com"
+              value={target.serverUrl}
+              onChange={(event) =>
+                setTarget({ ...target, serverUrl: event.target.value })
               }
             />
-          </div>
-        )}
-
-        {step === "choose" && (
-          <div className="flex flex-col gap-3">
-            {finishError && (
-              <div className="flex gap-2 border border-destructive/40 bg-destructive/10 p-2.5 text-xs">
-                <AlertCircle className="size-4 shrink-0 text-destructive" />
-                <span>{finishError}</span>
+            <p className="text-[10px] text-muted-foreground">
+              {t("sync.wizard.serverUrlHint")}
+            </p>
+            {!relogin && savedUrls.length > 0 && (
+              <div className="flex flex-col gap-1 pt-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {t("sync.wizard.savedServers")}
+                </span>
+                {savedUrls.map((url) => (
+                  <div
+                    key={url}
+                    className="flex items-center border border-border hover:bg-muted"
+                  >
+                    <button
+                      type="button"
+                      className="flex-1 min-w-0 truncate px-2 py-1.5 text-left font-mono text-xs"
+                      onClick={() => setTarget({ ...target, serverUrl: url })}
+                    >
+                      {url}
+                    </button>
+                    <button
+                      type="button"
+                      title={t("sync.wizard.removeServer")}
+                      className="px-2 py-1.5 text-muted-foreground hover:text-destructive"
+                      onClick={() => setSavedUrls(forgetServerUrl(url))}
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
-            {(
-              [
-                {
-                  value: "merge",
-                  title: t("sync.wizard.mergeTitle"),
-                  body: t("sync.wizard.mergeBody", { count: localTotal }),
-                },
-                {
-                  value: "replace",
-                  title: t("sync.wizard.replaceTitle"),
-                  body: t("sync.wizard.replaceBody", { count: localTotal }),
-                },
-              ] as const
-            ).map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setMode(option.value)}
-                className={`text-left border p-3 flex flex-col gap-1 transition-colors ${
-                  mode === option.value
-                    ? "border-accent-brand bg-accent-brand/10"
-                    : "border-border hover:bg-muted/40"
-                }`}
-              >
-                <span className="text-sm font-semibold">{option.title}</span>
-                <span className="text-xs text-muted-foreground">
-                  {option.body}
-                </span>
-              </button>
-            ))}
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-none"
-                onClick={() => onOpenChange(false)}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                className="rounded-none"
-                disabled={!token}
-                onClick={() => token && void finish(token, mode)}
-              >
-                {t("sync.wizard.link")}
-              </Button>
-            </div>
           </div>
-        )}
 
-        {step === "finishing" && (
-          <div className="flex items-center gap-3 py-6 text-sm text-muted-foreground">
-            <Loader2 className="size-5 animate-spin text-accent-brand" />
-            {t("sync.wizard.linking")}
+          {problem && (
+            <div className="flex gap-2 border border-destructive/40 bg-destructive/10 p-2.5 text-xs">
+              <AlertCircle className="size-4 shrink-0 text-destructive" />
+              <span>{problem}</span>
+            </div>
+          )}
+
+          {(problemKind === "tls_untrusted" ||
+            target.allowInvalidCertificate) && (
+            <div className="flex items-center justify-between gap-3 border border-border p-2.5">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-medium">
+                  {t("sync.proxy.allowInvalidCertificate")}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {t("sync.proxy.allowInvalidCertificateHint")}
+                </span>
+              </div>
+              <Switch
+                checked={!!target.allowInvalidCertificate}
+                onCheckedChange={(checked) =>
+                  setTarget({ ...target, allowInvalidCertificate: checked })
+                }
+              />
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="self-start text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground"
+            onClick={() => setShowAdvanced((value) => !value)}
+          >
+            {showAdvanced
+              ? t("sync.wizard.hideProxySettings")
+              : t("sync.wizard.showProxySettings")}
+          </button>
+          {showAdvanced && (
+            <ProxySettingsFields
+              customHeaders={target.customHeaders ?? []}
+              basicAuth={target.basicAuth ?? null}
+              onChange={(next) => setTarget({ ...target, ...next })}
+            />
+          )}
+
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-none"
+              onClick={() => onOpenChange(false)}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="outline"
+              type="submit"
+              className="rounded-none border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
+              disabled={checking || !target.serverUrl.trim()}
+            >
+              {checking && <Loader2 className="size-4 animate-spin" />}
+              {t("sync.wizard.continue")}
+            </Button>
           </div>
-        )}
-      </DialogContent>
-    </Dialog>
+        </form>
+      )}
+
+      {step === "signin" && (
+        <div className="flex-1 min-h-0">
+          <ElectronLoginForm
+            serverUrl={target.serverUrl}
+            targetPurpose="link"
+            onAuthSuccess={handleSignedIn}
+            onChangeServer={() =>
+              relogin ? onOpenChange(false) : setStep("server")
+            }
+          />
+        </div>
+      )}
+
+      {step === "choose" && (
+        <div className="flex flex-col gap-3">
+          {finishError && (
+            <div className="flex gap-2 border border-destructive/40 bg-destructive/10 p-2.5 text-xs">
+              <AlertCircle className="size-4 shrink-0 text-destructive" />
+              <span>{finishError}</span>
+            </div>
+          )}
+          {(
+            [
+              {
+                value: "merge",
+                title: t("sync.wizard.mergeTitle"),
+                body: t("sync.wizard.mergeBody", { count: localTotal }),
+              },
+              {
+                value: "replace",
+                title: t("sync.wizard.replaceTitle"),
+                body: t("sync.wizard.replaceBody", { count: localTotal }),
+              },
+            ] as const
+          ).map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setMode(option.value)}
+              className={`text-left border p-3 flex flex-col gap-1 transition-colors ${
+                mode === option.value
+                  ? "border-accent-brand bg-accent-brand/10"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              <span className="text-sm font-semibold">{option.title}</span>
+              <span className="text-xs text-muted-foreground">
+                {option.body}
+              </span>
+            </button>
+          ))}
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-none"
+              onClick={() => onOpenChange(false)}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="outline"
+              type="button"
+              className="rounded-none border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
+              disabled={!token}
+              onClick={() => token && void finish(token, mode)}
+            >
+              {t("sync.wizard.link")}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {step === "finishing" && (
+        <div className="flex items-center gap-3 py-6 text-sm text-muted-foreground">
+          <Loader2 className="size-5 animate-spin text-accent-brand" />
+          {t("sync.wizard.linking")}
+        </div>
+      )}
+    </>
+  );
+
+  // The wizard takes over the panel, tab or onboarding step it opens from.
+  return (
+    <InlineView
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      width="wide"
+      scroll={!wide}
+    >
+      {!wide && (
+        <p className="text-xs text-muted-foreground">
+          {description} {step === "server" && <DocsLink core="desktopSync" />}
+        </p>
+      )}
+      {content}
+    </InlineView>
   );
 }

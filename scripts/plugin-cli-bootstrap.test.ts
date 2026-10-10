@@ -24,13 +24,8 @@ function fixture() {
     path.join(root, "node_modules"),
     "dir",
   );
-  fs.mkdirSync(path.join(root, "scripts"));
-  fs.copyFileSync(
-    path.join(repo, "scripts/apply-plugin-patches.cjs"),
-    path.join(root, "scripts/apply-plugin-patches.cjs"),
-  );
-  const plugin = path.join(root, "plugins/fixture");
-  fs.mkdirSync(path.join(plugin, "patches"), { recursive: true });
+  const plugin = path.join(root, "fixture");
+  fs.mkdirSync(plugin);
   fs.writeFileSync(
     path.join(plugin, "manifest.json"),
     JSON.stringify({ id: "fixture" }),
@@ -38,10 +33,6 @@ function fixture() {
   fs.writeFileSync(
     path.join(plugin, "package.json"),
     JSON.stringify({ name: "fixture" }),
-  );
-  fs.writeFileSync(
-    path.join(plugin, "patches/check.cjs"),
-    'require("node:fs").writeFileSync("patched", "ok");',
   );
   const run = (...args: string[]) =>
     spawnSync(process.execPath, args, { cwd: plugin, encoding: "utf8" });
@@ -54,15 +45,6 @@ function fixture() {
 }
 
 describe("plugin CLI before the SDK is built", () => {
-  it("runs the postinstall plugin patches without SDK dist files", () => {
-    const { root, plugin, run } = fixture();
-    expect(fs.existsSync(path.join(root, "packages/plugin-sdk/dist"))).toBe(
-      false,
-    );
-    const result = run(path.join(root, "scripts/apply-plugin-patches.cjs"));
-    expect(result.status, result.stderr).toBe(0);
-    expect(fs.readFileSync(path.join(plugin, "patched"), "utf8")).toBe("ok");
-  });
   it("prints help without SDK dist files", () => {
     const { cli, run } = fixture();
     const result = run(cli, "--help");
@@ -75,5 +57,20 @@ describe("plugin CLI before the SDK is built", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Run: npm run build:sdk");
     expect(result.stderr).not.toContain("ERR_MODULE_NOT_FOUND");
+  });
+});
+
+describe("termix-plugin test", () => {
+  it("applies the plugin's patches before running vitest", () => {
+    const { cli, plugin, run } = fixture();
+    fs.mkdirSync(path.join(plugin, "patches"));
+    fs.writeFileSync(
+      path.join(plugin, "patches", "mark.cjs"),
+      'require("node:fs").writeFileSync("patched.txt", "yes");',
+    );
+    run(cli, "test");
+    expect(fs.readFileSync(path.join(plugin, "patched.txt"), "utf8")).toBe(
+      "yes",
+    );
   });
 });

@@ -137,7 +137,7 @@ describe("mysql output", () => {
     expect(out).toContain('double("score")');
   });
 
-  it("makes key columns varchar — MySQL cannot index unbounded TEXT", () => {
+  it("makes key columns varchar since MySQL cannot index unbounded TEXT", () => {
     expect(out).toContain('varchar("user_id", { length: 255 })');
     expect(out).toContain('text("name")');
   });

@@ -1,6 +1,9 @@
+import { createPrivateKey } from "node:crypto";
+import sshpk from "sshpk";
 import { getErrorMessage } from "./error-message.js";
 import ssh2Pkg from "ssh2";
 const ssh2Utils = ssh2Pkg.utils;
+const { parsePrivateKey } = sshpk;
 
 function detectKeyTypeFromContent(keyContent: string): string {
   const content = keyContent.trim();
@@ -246,7 +249,26 @@ export function preparePrivateKeyForSSH2(
   privateKeyData: string,
   passphrase?: string,
 ): Buffer {
-  const cleanKey = normalizePrivateKeyText(privateKeyData);
+  let cleanKey = normalizePrivateKeyText(privateKeyData);
+  if (
+    /^-----BEGIN (?:ENCRYPTED )?PRIVATE KEY-----/.test(cleanKey) &&
+    ssh2Utils.parseKey(cleanKey, passphrase) instanceof Error
+  ) {
+    try {
+      const pem = createPrivateKey({ key: cleanKey, format: "pem", passphrase })
+        .export({ type: "pkcs8", format: "pem" })
+        .toString();
+      cleanKey = parsePrivateKey(pem, "pkcs8").toString("openssh");
+    } catch {
+      throw new Error(
+        cleanKey.startsWith("-----BEGIN ENCRYPTED PRIVATE KEY-----")
+          ? "Could not decrypt PKCS#8 private key; check the passphrase"
+          : "Invalid or unsupported PKCS#8 private key",
+      );
+    }
+    const parsed = ssh2Utils.parseKey(cleanKey);
+    if (parsed instanceof Error) throw parsed;
+  }
   const keyInfo = parseSSHKey(cleanKey, passphrase);
 
   if (!keyInfo.success) {

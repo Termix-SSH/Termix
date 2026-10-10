@@ -42,6 +42,7 @@ export async function getReleasesRSS(
 
 export interface VersionInfo {
   status?: "up_to_date" | "requires_update" | "beta" | "unknown";
+  channel?: "stable" | "beta";
   /** Same value as remoteVersion; the endpoint sends both. */
   version?: string;
   localVersion?: string;
@@ -79,6 +80,46 @@ export async function getVersionInfo(checkRemote = true): Promise<VersionInfo> {
   } catch (error) {
     handleApiError(error, "fetch version info");
   }
+}
+
+export type UpdateChannel = "stable" | "beta";
+
+export interface UpdateChannelState {
+  channel: UpdateChannel;
+  /** The admin's choice; a beta build reports beta whatever it is. */
+  stored: UpdateChannel;
+  runningBeta: boolean;
+}
+
+export async function getUpdateChannel(): Promise<UpdateChannelState> {
+  const response = await authApi.get("/version/channel");
+  return response.data;
+}
+
+export async function setUpdateChannel(
+  channel: UpdateChannel,
+): Promise<UpdateChannelState> {
+  const response = await authApi.put("/version/channel", { channel });
+  return response.data;
+}
+
+export interface ReleaseInfo {
+  version: string;
+  tagName: string;
+  name: string;
+  url: string;
+  publishedAt: string;
+  prerelease: boolean;
+  notes: string;
+}
+
+export async function getChannelReleases(): Promise<{
+  localVersion: string | null;
+  stable: ReleaseInfo | null;
+  beta: ReleaseInfo | null;
+}> {
+  const response = await authApi.get("/version/releases");
+  return response.data;
 }
 
 // ============================================================================

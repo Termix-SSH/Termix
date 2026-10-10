@@ -34,7 +34,19 @@ vi.mock("../../plugins/permissions.js", () => ({
   invalidatePluginPermissionCache: vi.fn(),
 }));
 
-const CONSOLE_PORT = 39109;
+// A fixed port can land in a range Windows reserves for Hyper-V or Docker.
+function freePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const { port } = server.address() as net.AddressInfo;
+      server.close(() => resolve(port));
+    });
+  });
+}
+
+const CONSOLE_PORT = await freePort();
 const cleanups: Array<() => void> = [];
 
 function tempRoot(prefix: string): string {

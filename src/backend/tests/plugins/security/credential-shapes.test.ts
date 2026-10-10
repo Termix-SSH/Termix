@@ -37,7 +37,8 @@ function secretHost(id: number): Record<string, unknown> {
 }
 
 vi.mock("../../../plugins/permissions.js", async () => {
-  const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+  const { PluginCapabilityError } =
+    await import("@termix-ssh/plugin-sdk/backend");
   const granted = (capability: string, declared: readonly string[]) =>
     declared.includes(capability) && h.granted.has(capability);
   return {

@@ -17,7 +17,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import * as esbuild from "esbuild";
 import { BACKEND_EXTERNALS } from "../lib/externals.mjs";
 import { readManifest, resolveEntry } from "../lib/plugin-dir.mjs";
@@ -37,7 +37,7 @@ async function loadDefinitions(cwd) {
 
   // Emitted inside the plugin rather than in the system temp dir: the SDK
   // stays external to the bundle, so the output has to sit somewhere node can
-  // resolve @termix/plugin-sdk from.
+  // resolve @termix-ssh/plugin-sdk from.
   const outdir = fs.mkdtempSync(path.join(cwd, ".termix-tables-"));
   const outfile = path.join(outdir, "tables.mjs");
 
@@ -53,7 +53,7 @@ async function loadDefinitions(cwd) {
       external: BACKEND_EXTERNALS,
     });
 
-    const module = await import(`file://${outfile.split(path.sep).join("/")}`);
+    const module = await import(pathToFileURL(outfile).href);
     const tables = module.tables ?? module.default;
     if (!Array.isArray(tables)) {
       throw new Error(

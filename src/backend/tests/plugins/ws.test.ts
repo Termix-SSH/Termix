@@ -14,6 +14,7 @@ import { WebSocket } from "ws";
 
 const state = vi.hoisted(() => ({
   validToken: "valid-token",
+  ticket: "socket-ticket",
   userId: "user-1",
   granted: new Set<string>(["network:serve"]),
 }));
@@ -31,8 +32,14 @@ vi.mock("../../utils/logger.js", () => ({
 vi.mock("../../utils/auth-manager.js", () => ({
   AuthManager: {
     getInstance: () => ({
-      verifyJWTToken: async (token: string) =>
-        token === state.validToken ? { userId: state.userId } : null,
+      verifyJWTToken: async (
+        token: string,
+        options: { allowSocketTicket?: boolean } = {},
+      ) =>
+        token === state.validToken ||
+        (token === state.ticket && options.allowSocketTicket)
+          ? { userId: state.userId }
+          : null,
     }),
   },
 }));
@@ -83,6 +90,21 @@ function connect(
 ): Promise<{ outcome: "open"; socket: WebSocket } | { outcome: number }> {
   return new Promise((resolve) => {
     const socket = new WebSocket(url, protocols);
+    socket.once("open", () => resolve({ outcome: "open", socket }));
+    socket.once("unexpected-response", (_req, res) =>
+      resolve({ outcome: res.statusCode ?? 0 }),
+    );
+    socket.once("error", () => resolve({ outcome: 0 }));
+  });
+}
+
+function connectWithHeaders(
+  url: string,
+  headers: Record<string, string>,
+  protocols: string[] = [],
+): Promise<{ outcome: "open"; socket: WebSocket } | { outcome: number }> {
+  return new Promise((resolve) => {
+    const socket = new WebSocket(url, protocols, { headers });
     socket.once("open", () => resolve({ outcome: "open", socket }));
     socket.once("unexpected-response", (_req, res) =>
       resolve({ outcome: res.statusCode ?? 0 }),
@@ -159,6 +181,78 @@ describe("ctx.ws routing", () => {
 });
 
 describe("ctx.ws authentication", () => {
+  it("ignores the jwt cookie on an upgrade from another site", async () => {
+    ws.registerPluginWsRoute("sample-plugin", "/socket", () => {}, DECLARED);
+
+    const base = await startServer();
+    const result = await connectWithHeaders(
+      `${base}/plugin-ws/sample-plugin/socket`,
+      { Cookie: `jwt=${state.validToken}`, Origin: "https://evil.example" },
+    );
+
+    expect(result.outcome).toBe(401);
+  });
+
+  it("accepts the jwt cookie from this server's own page", async () => {
+    ws.registerPluginWsRoute("sample-plugin", "/socket", () => {}, DECLARED);
+
+    const base = await startServer();
+    const result = await connectWithHeaders(
+      `${base}/plugin-ws/sample-plugin/socket`,
+      {
+        Cookie: `jwt=${state.validToken}`,
+        Origin: base.replace(/^ws:/, "http:"),
+      },
+    );
+
+    expect(result.outcome).toBe("open");
+    if (result.outcome === "open") result.socket.close();
+  });
+
+  it("hides cross-site cookies from a public socket's handler", async () => {
+    const cookies: Array<string | undefined> = [];
+    const users: string[] = [];
+    ws.registerPluginWsRoute(
+      "sample-plugin",
+      "/public",
+      ({ request, userId, socket }) => {
+        cookies.push(request.headers.cookie);
+        users.push(userId);
+        (socket as WebSocket).close();
+      },
+      DECLARED,
+      { public: true, optionalAuth: true },
+    );
+
+    const base = await startServer();
+    const result = await connectWithHeaders(
+      `${base}/plugin-ws/sample-plugin/public`,
+      { Cookie: `jwt=${state.validToken}`, Origin: "https://evil.example" },
+    );
+
+    expect(result.outcome).toBe("open");
+    await vi.waitFor(() => expect(users).toHaveLength(1));
+    expect(users).toEqual([""]);
+    expect(cookies).toEqual([undefined]);
+  });
+
+  it("accepts a socket ticket when the proxy hid the page's origin", async () => {
+    ws.registerPluginWsRoute("sample-plugin", "/socket", () => {}, DECLARED);
+
+    const base = await startServer();
+    const result = await connectWithHeaders(
+      `${base}/plugin-ws/sample-plugin/socket`,
+      {
+        Cookie: `jwt=${state.validToken}`,
+        Origin: "https://termix.example.com",
+      },
+      authProtocols(state.ticket),
+    );
+
+    expect(result.outcome).toBe("open");
+    if (result.outcome === "open") result.socket.close();
+  });
+
   it("rejects an upgrade with no token", async () => {
     ws.registerPluginWsRoute("sample-plugin", "/socket", () => {}, DECLARED);
 

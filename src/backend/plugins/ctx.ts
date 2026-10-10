@@ -42,14 +42,14 @@ import {
 import { registerPluginWsRoute, registerPluginWsUpgrade } from "./ws.js";
 import { resolvePermission } from "./rbac.js";
 import * as pluginSettings from "./settings.js";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import {
   type PluginContext,
   type PluginModule,
   type PluginOpenIsolatedWindowRequest,
   type PluginExternalClientRequest,
-} from "@termix/plugin-sdk/backend";
-import type { PluginTableDefinition } from "@termix/plugin-sdk/db";
+} from "@termix-ssh/plugin-sdk/backend";
+import type { PluginTableDefinition } from "@termix-ssh/plugin-sdk/db";
 import * as syncRegistry from "./sync-registry.js";
 import {
   needsExplicitPersist,

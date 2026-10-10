@@ -173,6 +173,15 @@ export class RbacAccessRepository {
     return rowsAffected(result);
   }
 
+  /** Hosts holding a share this user handed out. */
+  async listHostIdsGrantedBy(userId: string): Promise<number[]> {
+    const rows = await this.context.drizzle
+      .selectDistinct({ hostId: hostAccess.hostId })
+      .from(hostAccess)
+      .where(eq(hostAccess.grantedBy, userId));
+    return rows.map((row) => row.hostId);
+  }
+
   /** Grants the departing user handed out now count as the successor's. */
   async reassignHostAccessGrantedBy(
     fromUserId: string,

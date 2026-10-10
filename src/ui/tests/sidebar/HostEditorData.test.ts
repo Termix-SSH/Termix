@@ -9,7 +9,7 @@ import {
   type HostProtocols,
 } from "../../sidebar/HostEditorData";
 import type { Host } from "@/types/ui-types";
-import { HOST_PROTOCOL_SECRET_KEPT } from "@termix/plugin-sdk/frontend";
+import { HOST_PROTOCOL_SECRET_KEPT } from "@termix-ssh/plugin-sdk/frontend";
 
 const sshOnly: HostProtocols = {
   enableSsh: true,

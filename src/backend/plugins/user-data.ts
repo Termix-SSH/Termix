@@ -7,9 +7,9 @@
  */
 
 import { sql } from "drizzle-orm";
-import { columnName, createTableSql } from "@termix/plugin-sdk/ddl";
-import { prefixedTableName } from "@termix/plugin-sdk/db";
-import type { PluginTableDefinition } from "@termix/plugin-sdk/db";
+import { columnName, createTableSql } from "@termix-ssh/plugin-sdk/ddl";
+import { prefixedTableName } from "@termix-ssh/plugin-sdk/db";
+import type { PluginTableDefinition } from "@termix-ssh/plugin-sdk/db";
 import {
   runStatement,
   selectRows,
@@ -29,6 +29,8 @@ export interface UserOwnedTable {
   hostColumns: string[];
   /** Columns that travel, as SQL names. The primary key and secrets do not. */
   columns: string[];
+  /** The owner column is the primary key: one row per user. */
+  userIsKey: boolean;
   definition: PluginTableDefinition;
 }
 
@@ -50,14 +52,17 @@ export function listUserOwnedTables(): UserOwnedTable[] {
       hostColumns: entries
         .filter(([, column]) => column.type === "refHost")
         .map(([property, column]) => columnName(property, column)),
+      // The owner column always travels, even as the key; import rewrites it.
       columns: entries
         .filter(
           ([, column]) =>
-            column.type !== "id" &&
-            !column.primaryKey &&
-            column.type !== "encryptedText",
+            column === user[1] ||
+            (column.type !== "id" &&
+              !column.primaryKey &&
+              column.type !== "encryptedText"),
         )
         .map(([property, column]) => columnName(property, column)),
+      userIsKey: !!user[1].primaryKey,
       definition,
     });
   }
@@ -239,13 +244,15 @@ export async function importUserPluginRows(
           summary.skipped++;
           continue;
         }
+        const matchOn = owned.userIsKey ? [owned.userColumn] : columns;
         const existing = await selectRows(
           sql`SELECT 1 FROM ${sql.identifier(owned.table)} WHERE ${sql.join(
-            columns.map((column, index) =>
-              values[index] === null
+            matchOn.map((column) => {
+              const value = values[columns.indexOf(column)];
+              return value === null
                 ? sql`${sql.identifier(column)} IS NULL`
-                : sql`${sql.identifier(column)} = ${values[index]}`,
-            ),
+                : sql`${sql.identifier(column)} = ${value}`;
+            }),
             sql` AND `,
           )} LIMIT 1`,
         );

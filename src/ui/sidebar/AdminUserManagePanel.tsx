@@ -1,3 +1,5 @@
+import { Select2 } from "@/components/select2";
+import { useConfirm } from "@/components/surface/surface-scope";
 import { useEffect, useState } from "react";
 import { hostProtocolFlags, type HostProtocols } from "./host-protocols";
 import { getUserList } from "@/main-axios";
@@ -50,8 +52,11 @@ import { AdminSecondFactorsSection } from "./AdminSecondFactorsSection";
 import { HostEditor } from "./HostEditor";
 import { mapCredentials, sshHostToHost } from "./HostManagerData";
 import type { AdminSession, AdminUser } from "./AdminManagementSections";
-import { makeCredentialTabs, makeHostTabs, TabStrip } from "./HostManagerTabs";
+import { TabStrip } from "./HostManagerTabs";
+import { BackButton, PanelShell } from "@/components/panel-layout";
 import { useActionSlot } from "@/hooks/use-action-slot";
+import { docsUrl } from "@/lib/docs";
+import { roleLabel } from "@/lib/role-label";
 
 type ApiErrorLike = {
   response?: {
@@ -114,14 +119,18 @@ export function AdminUserManagePanel({
       .catch(() => {});
   }, [user.id]);
   const [editor, setEditor] = useState<EditorState>(null);
-  const [editorTab, setEditorTab] = useState("general");
   const [editorProtocols, setEditorProtocols] = useState<HostProtocols>(() =>
     hostProtocolFlags(null),
   );
-  const [confirmDialog, setConfirmDialog] = useState<{
-    message: string;
-    onConfirm: () => void;
-  } | null>(null);
+  const confirm = useConfirm();
+  const setConfirmDialog = (
+    request: { message: string; onConfirm: () => void } | null,
+  ) => {
+    if (!request) return;
+    void confirm({ title: request.message }).then((ok) => {
+      if (ok) void request.onConfirm();
+    });
+  };
 
   const [hosts, setHosts] = useState<Host[]>([]);
   const [credentials, setCredentials] = useState<Credential[]>([]);
@@ -323,57 +332,35 @@ export function AdminUserManagePanel({
     </span>
   );
 
-  // Full-panel host/credential editor view (mirrors HostManager's editor view)
+  // Editing one of the user's hosts or credentials takes over the panel.
   if (editor) {
-    const isHost = editor.kind === "host";
-    const tabs = isHost
-      ? makeHostTabs(
-          t,
-          editorProtocols as unknown as Record<string, boolean>,
-        ).filter((tab) => tab.id !== "ssh" || editorProtocols.enableSsh)
-      : makeCredentialTabs(t);
-
+    const close = () => setEditor(null);
     return (
       <div className="flex flex-col flex-1 min-h-0">
-        <div className="flex flex-col shrink-0 border-b border-border">
-          <button
-            onClick={() => {
-              setEditor(null);
-              setEditorTab("general");
-            }}
-            className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors border-b border-border/50"
-          >
-            <ArrowLeft className="size-3.5 shrink-0" />
-            <span>
-              {t("admin.manageEditorBack", { username: user.username })}
-            </span>
-          </button>
-          <TabStrip
-            tabs={tabs}
-            activeTab={editorTab}
-            onTabChange={setEditorTab}
-          />
-        </div>
-        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 flex flex-col gap-3">
-          {isHost ? (
+        <PanelShell
+          leading={<BackButton onClick={close} />}
+          title={t("admin.manageEditorBack", { username: user.username })}
+          docs={docsUrl("users")}
+          status={
+            editor.kind === "host"
+              ? (editor.host?.name ?? t("manage.newHost"))
+              : (editor.credential?.name ?? t("manage.newCredential"))
+          }
+          scroll={false}
+        >
+          {editor.kind === "host" ? (
             <HostEditor
               key={editor.host ? editor.host.id : "new-host"}
               host={editor.host}
-              activeTab={editorTab}
-              onBack={() => {
-                setEditor(null);
-                setEditorTab("general");
-              }}
+              onBack={close}
               onSave={() => {
-                setEditor(null);
-                setEditorTab("general");
+                close();
                 reloadHosts();
               }}
               protocols={editorProtocols}
               onProtocolChange={(p) =>
                 setEditorProtocols((prev) => ({ ...prev, ...p }))
               }
-              onTabChange={setEditorTab}
               hosts={hosts}
               credentials={credentials}
               adminTargetUserId={user.id}
@@ -382,7 +369,6 @@ export function AdminUserManagePanel({
             <CredentialEditorView
               key={editor.credential ? editor.credential.id : "new-cred"}
               credential={editor.credential}
-              activeTab={editorTab}
               existingFolders={Array.from(
                 new Set(
                   credentials
@@ -390,19 +376,15 @@ export function AdminUserManagePanel({
                     .filter((f): f is string => !!f),
                 ),
               ).sort()}
-              onBack={() => {
-                setEditor(null);
-                setEditorTab("general");
-              }}
+              onBack={close}
               onSave={() => {
-                setEditor(null);
-                setEditorTab("general");
+                close();
                 reloadCredentials();
               }}
               adminTargetUserId={user.id}
             />
           )}
-        </div>
+        </PanelShell>
       </div>
     );
   }
@@ -450,9 +432,9 @@ export function AdminUserManagePanel({
             {/* Password reset */}
             <div className="flex flex-col gap-2">
               {sectionHeading(t("admin.resetPasswordTitle"))}
-              {user.isOidc && !user.passwordHash ? (
+              {user.isExternal && !user.passwordHash ? (
                 <span className="text-xs text-muted-foreground">
-                  {t("admin.resetPasswordOidcOnly")}
+                  {t("admin.resetPasswordExternalOnly")}
                 </span>
               ) : (
                 <div className="flex items-center gap-2">
@@ -500,7 +482,7 @@ export function AdminUserManagePanel({
                         key={ur.roleId}
                         className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 border border-accent-brand/40 bg-accent-brand/10 text-accent-brand"
                       >
-                        {ur.roleDisplayName}
+                        {roleLabel(t, ur.roleDisplayName)}
                         {!isSystem && (
                           <button
                             onClick={async () => {
@@ -678,7 +660,6 @@ export function AdminUserManagePanel({
                     className="h-6 text-[10px] border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
                     onClick={() => {
                       setEditorProtocols(hostProtocolFlags(null));
-                      setEditorTab("general");
                       setEditor({ kind: "host", host: null });
                     }}
                   >
@@ -724,7 +705,6 @@ export function AdminUserManagePanel({
                       className="size-6 text-muted-foreground hover:text-foreground"
                       onClick={() => {
                         setEditorProtocols(hostProtocolFlags(host));
-                        setEditorTab("general");
                         setEditor({ kind: "host", host });
                       }}
                     >
@@ -790,7 +770,6 @@ export function AdminUserManagePanel({
                     size="sm"
                     className="h-6 text-[10px] border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
                     onClick={() => {
-                      setEditorTab("general");
                       setEditor({ kind: "credential", credential: null });
                     }}
                   >
@@ -827,7 +806,6 @@ export function AdminUserManagePanel({
                       size="icon"
                       className="size-6 text-muted-foreground hover:text-foreground"
                       onClick={() => {
-                        setEditorTab("general");
                         setEditor({ kind: "credential", credential: cred });
                       }}
                     >
@@ -969,7 +947,7 @@ export function AdminUserManagePanel({
                 </span>
                 <label className="flex flex-col gap-1 text-[10px] text-muted-foreground">
                   {t("admin.deleteSuccessorLabel")}
-                  <select
+                  <Select2
                     value={successor}
                     onChange={(e) => setSuccessor(e.target.value)}
                     className="h-7 border border-border bg-background px-2 text-xs text-foreground outline-none"
@@ -983,7 +961,7 @@ export function AdminUserManagePanel({
                     <option value="none">
                       {t("admin.deleteSuccessorNone")}
                     </option>
-                  </select>
+                  </Select2>
                   <span>{t("admin.deleteSuccessorDesc")}</span>
                 </label>
                 <Button
@@ -1013,32 +991,6 @@ export function AdminUserManagePanel({
           </div>
         )}
       </div>
-
-      {/* Confirm dialog overlay */}
-      {confirmDialog && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-          <div className="bg-popover border border-border shadow-xl w-full max-w-xs flex flex-col gap-4 p-4">
-            <p className="text-sm text-foreground">{confirmDialog.message}</p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setConfirmDialog(null)}
-                className="px-3 py-1.5 text-xs border border-border text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-              >
-                {t("common.cancel")}
-              </button>
-              <button
-                onClick={() => {
-                  confirmDialog.onConfirm();
-                  setConfirmDialog(null);
-                }}
-                className="px-3 py-1.5 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded transition-colors"
-              >
-                {t("common.confirm")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { InlineView } from "@/components/surface/surface-scope";
 import {
   useCallback,
   useEffect,
@@ -17,14 +18,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/button";
 import { Switch } from "@/components/switch";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/dialog";
 import { useSyncStatus } from "@/hooks/use-sync-status";
 import { refreshSyncStatus, setSyncStatus } from "@/lib/sync-status";
 import { notifySyncChanged } from "@/lib/linked-server";
@@ -205,7 +198,8 @@ export function SyncPanel() {
             <li>{t("sync.unlinkedPointAccount")}</li>
           </ul>
           <Button
-            className="self-start rounded-none"
+            variant="outline"
+            className="self-start rounded-none border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
             onClick={() => setLinkOpen(true)}
           >
             <Cloud className="size-4" />
@@ -275,7 +269,7 @@ export function SyncPanel() {
               {t("sync.account")}
             </span>
             <span className="font-semibold truncate">
-              {status.account?.username || "—"}
+              {status.account?.username || "-"}
             </span>
           </div>
           <div className="flex flex-col">
@@ -309,8 +303,9 @@ export function SyncPanel() {
         <div className="flex flex-wrap gap-2">
           {state === "signed_out" ? (
             <Button
+              variant="outline"
               size="sm"
-              className="h-7 text-[10px] rounded-none"
+              className="h-7 text-[10px] rounded-none border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
               onClick={() => setReloginOpen(true)}
             >
               {t("sync.signInAgain")}
@@ -542,8 +537,9 @@ export function SyncPanel() {
         </div>
         {proxyDraft && (
           <Button
+            variant="outline"
             size="sm"
-            className="self-start h-7 text-[10px] rounded-none"
+            className="self-start h-7 text-[10px] rounded-none border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
             disabled={busy === "proxy"}
             onClick={() =>
               run("proxy", async () => {
@@ -565,45 +561,12 @@ export function SyncPanel() {
         relogin={status.serverUrl ? { serverUrl: status.serverUrl } : undefined}
       />
 
-      <Dialog open={unlinkOpen} onOpenChange={setUnlinkOpen}>
-        <DialogContent className="bg-card border border-border rounded-none sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("sync.unlinkTitle")}</DialogTitle>
-            <DialogDescription>{t("sync.unlinkDescription")}</DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-2">
-            {(
-              [
-                {
-                  value: true,
-                  title: t("sync.unlinkKeepTitle"),
-                  body: t("sync.unlinkKeepBody"),
-                },
-                {
-                  value: false,
-                  title: t("sync.unlinkRemoveTitle"),
-                  body: t("sync.unlinkRemoveBody"),
-                },
-              ] as const
-            ).map((option) => (
-              <button
-                key={String(option.value)}
-                type="button"
-                onClick={() => setKeepData(option.value)}
-                className={`text-left border p-3 flex flex-col gap-1 transition-colors ${
-                  keepData === option.value
-                    ? "border-accent-brand bg-accent-brand/10"
-                    : "border-border hover:bg-muted/40"
-                }`}
-              >
-                <span className="text-sm font-semibold">{option.title}</span>
-                <span className="text-xs text-muted-foreground">
-                  {option.body}
-                </span>
-              </button>
-            ))}
-          </div>
-          <DialogFooter>
+      <InlineView
+        open={unlinkOpen}
+        onOpenChange={setUnlinkOpen}
+        title={t("sync.unlinkTitle")}
+        footer={
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
             <Button
               variant="outline"
               className="rounded-none"
@@ -626,9 +589,46 @@ export function SyncPanel() {
               {busy === "unlink" && <Loader2 className="size-4 animate-spin" />}
               {t("sync.unlink")}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        }
+      >
+        <p className="text-xs text-muted-foreground">
+          {t("sync.unlinkDescription")}
+        </p>
+        <div className="flex flex-col gap-2">
+          {(
+            [
+              {
+                value: true,
+                title: t("sync.unlinkKeepTitle"),
+                body: t("sync.unlinkKeepBody"),
+              },
+              {
+                value: false,
+                title: t("sync.unlinkRemoveTitle"),
+                body: t("sync.unlinkRemoveBody"),
+              },
+            ] as const
+          ).map((option) => (
+            <button
+              key={String(option.value)}
+              type="button"
+              onClick={() => setKeepData(option.value)}
+              className={`text-left border p-3 flex flex-col gap-1 transition-colors ${
+                keepData === option.value
+                  ? "border-accent-brand bg-accent-brand/10"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              <span className="text-sm font-semibold">{option.title}</span>
+              <span className="text-xs text-muted-foreground">
+                {option.body}
+              </span>
+            </button>
+          ))}
+        </div>
+      </InlineView>
+
       {linkDialog}
     </div>
   );

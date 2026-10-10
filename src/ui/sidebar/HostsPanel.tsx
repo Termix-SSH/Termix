@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../lib/error-message.js";
+import { setBarActions } from "@/sidebar/tree/host-bar-actions";
 import { enabledHostProtocols, useHostProtocols } from "./host-protocols";
 import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -26,7 +27,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { SidebarTree, isFolder } from "@/sidebar/SidebarTree";
-import { HostManager } from "@/sidebar/HostManager";
 import { HostShareModal } from "@/sidebar/HostShareModal";
 import { HostExportDialog } from "@/sidebar/HostExportDialog";
 import { CustomizeSidebarPanel } from "@/sidebar/CustomizeSidebarPanel";
@@ -200,7 +200,6 @@ export function HostsPanel({
   onEditHost,
   hostTree,
   loading,
-  onEditingChange,
   active = true,
 }: {
   onOpenTab: (
@@ -215,6 +214,7 @@ export function HostsPanel({
   onEditHost: (host: Host) => void;
   hostTree?: HostFolder;
   loading?: boolean;
+  /** Unused since editing moved to the Manage tab. */
   onEditingChange?: (editing: boolean) => void;
   active?: boolean;
 }) {
@@ -238,7 +238,6 @@ export function HostsPanel({
   const hostProtocols = useHostProtocols();
   const sshAuthProviders = useSshAuthProviders();
   const [hostSearch, setHostSearch] = useState("");
-  const [managerEditing, setManagerEditing] = useState(false);
   const [customizePanelOpen, setCustomizePanelOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -250,6 +249,9 @@ export function HostsPanel({
   );
   const { preferences: sidebarPrefs, update: updateSidebarPrefs } =
     useHostSidebarPreferences();
+  useEffect(() => {
+    setBarActions(sidebarPrefs.display.barActions);
+  }, [sidebarPrefs.display.barActions]);
   const sortKey = sidebarPrefs.sort.key;
   const pinnedFirst = sidebarPrefs.sort.pinnedFirst;
   const { arrangeLocked, toggleArrangeLock } = useArrangeLock(
@@ -345,11 +347,6 @@ export function HostsPanel({
     };
   }, []);
 
-  function handleEditingChange(editing: boolean) {
-    setManagerEditing(editing);
-    onEditingChange?.(editing);
-  }
-
   function toggleSelectionMode() {
     setSelectionMode((v) => !v);
   }
@@ -422,7 +419,7 @@ export function HostsPanel({
 
   return (
     <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
-      {!managerEditing && (
+      {
         <div className="flex flex-col px-2 py-1.5 shrink-0 border-b border-border/60 gap-1.5">
           <div className="flex items-center gap-2 px-2.5 h-7 bg-muted/60 border border-border/60 rounded-none">
             <Search className="size-3 text-muted-foreground/60 shrink-0" />
@@ -1023,7 +1020,7 @@ export function HostsPanel({
             </div>
           </div>
         </div>
-      )}
+      }
       <CustomizeSidebarPanel
         open={customizePanelOpen}
         onOpenChange={setCustomizePanelOpen}
@@ -1031,7 +1028,7 @@ export function HostsPanel({
         update={updateSidebarPrefs}
       />
 
-      {active && !managerEditing && (
+      {active && (
         <div className="flex flex-col flex-1 min-h-0">
           <SidebarTree
             children={
@@ -1064,16 +1061,11 @@ export function HostsPanel({
             showTags={sidebarPrefs.display.showTags}
             openOnDoubleClick={sidebarPrefs.display.openOnDoubleClick}
             showFolderPaths={sidebarPrefs.display.showFolderPaths}
+            rowFields={sidebarPrefs.display}
             hostClickBehavior={sidebarPrefs.display.hostClickBehavior}
           />
         </div>
       )}
-
-      <div
-        className={managerEditing ? "flex flex-col flex-1 min-h-0" : "hidden"}
-      >
-        <HostManager onEditingChange={handleEditingChange} active={active} />
-      </div>
 
       <HostShareModal
         open={shareModalHost !== null}

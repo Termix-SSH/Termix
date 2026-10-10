@@ -5,18 +5,18 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: "@termix/plugin-sdk/frontend",
+        find: "@termix-ssh/plugin-sdk/frontend",
         replacement: path.resolve(
           __dirname,
           "./packages/plugin-sdk/src/frontend.ts",
         ),
       },
       {
-        find: "@termix/plugin-sdk/ui",
+        find: "@termix-ssh/plugin-sdk/ui",
         replacement: path.resolve(__dirname, "./src/ui/plugin-host/sdk-ui.ts"),
       },
       {
-        find: "@termix/plugin-host/testing",
+        find: "@termix-ssh/plugin-host/testing",
         replacement: path.resolve(
           __dirname,
           "./src/ui/plugin-host/testing-host.tsx",
@@ -29,6 +29,9 @@ export default defineConfig({
   test: {
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
+    // Forks workers on Windows abort now and then (0xC0000409) in a random
+    // file and Vitest reports "Worker exited unexpectedly". Threads don't.
+    pool: "threads",
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],

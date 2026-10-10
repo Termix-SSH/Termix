@@ -1,5 +1,4 @@
 import type { Request } from "express";
-import crypto from "crypto";
 
 export type DeviceType = "web" | "desktop" | "mobile";
 
@@ -248,23 +247,4 @@ function parseMacVersion(userAgent: string): string {
     return `macOS ${version}`;
   }
   return "macOS";
-}
-
-/** Return the installation-scoped identifier used for trusted-device checks. */
-export function getDeviceId(req: Request): string | null {
-  const value = req.headers["x-termix-device-id"];
-  if (typeof value !== "string" || !/^[a-f0-9]{64}$/.test(value)) return null;
-  return value;
-}
-
-/** Bind a trusted-device record to one client installation and platform. */
-export function generateDeviceFingerprint(
-  deviceInfo: DeviceInfo,
-  deviceId: string | null,
-): string | null {
-  if (!deviceId) return null;
-  return crypto
-    .createHash("sha256")
-    .update(`${deviceInfo.type}|${deviceId}`)
-    .digest("hex");
 }

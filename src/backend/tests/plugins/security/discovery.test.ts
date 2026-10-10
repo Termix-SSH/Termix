@@ -9,10 +9,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { PluginLoader, prefixesOverlap } from "../../../plugins/loader.js";
 import { parseManifest } from "../../../plugins/manifest.js";
-import { RESERVED_PLUGIN_IDS } from "@termix/plugin-sdk/manifest";
+import { RESERVED_PLUGIN_IDS } from "@termix-ssh/plugin-sdk/manifest";
 import { createFixturePlugin } from "../fixture-plugin.js";
 
 vi.mock("../../../database/repositories/factory.js", () => ({
@@ -94,22 +93,6 @@ describe("table prefixes", () => {
     await expect(
       loader.load(path.join(root, "foo-bar"), "user"),
     ).rejects.toThrow(/overlaps "foo"/);
-  });
-
-  it("no two bundled plugins overlap", () => {
-    const plugins = path.resolve(
-      path.dirname(fileURLToPath(import.meta.url)),
-      "../../../../../plugins",
-    );
-    const ids = fs
-      .readdirSync(plugins, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name);
-    for (const a of ids) {
-      for (const b of ids) {
-        expect(prefixesOverlap(a, b), `${a} and ${b}`).toBe(false);
-      }
-    }
   });
 });
 

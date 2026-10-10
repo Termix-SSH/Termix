@@ -11,15 +11,15 @@ import {
  * Writes that need the affected rows back.
  *
  * `mutation-result.ts` covers the call sites that only wanted a count. These are
- * the ones that genuinely read the rows — an updated record to return to the
+ * the ones that genuinely read the rows, an updated record to return to the
  * caller, a deleted row's fields to clean up alongside it.
  *
  * SQLite and Postgres do this in one statement with RETURNING. MySQL has no
  * such clause, so the read is a second statement, and the pair has to be atomic:
  *
- * - **insert** — write, then read the row back by its key.
- * - **update** — write, then read. Reading first would return the old values.
- * - **delete** — read, then write. Reading after would return nothing.
+ * - **insert**: write, then read the row back by its key.
+ * - **update**: write, then read. Reading first would return the old values.
+ * - **delete**: read, then write. Reading after would return nothing.
  *
  * Both run in a transaction. Without one, a concurrent write between the two
  * statements makes the returned rows describe a state that never existed, and
@@ -29,7 +29,7 @@ import {
  * ## The trap, and why it cannot bite silently
  *
  * On MySQL the update path re-reads using the same `where`. If the update
- * changes a column that `where` tests, the read finds nothing — SQLite would
+ * changes a column that `where` tests, the read finds nothing, SQLite would
  * have returned the row. Every current caller filters on an id it does not
  * modify, but that is a convention, not a guarantee, so the mismatch is
  * detected and thrown rather than returned as an empty array. Same for an
@@ -40,7 +40,7 @@ import {
  */
 
 /**
- * What `.set()` accepts: a column's own type, or a SQL expression in its place —
+ * What `.set()` accepts: a column's own type, or a SQL expression in its place,
  * `updatedAt: sql`CURRENT_TIMESTAMP`` is the common one here.
  */
 type UpdateValues<T extends SQLiteTable> = {
@@ -68,7 +68,7 @@ export async function updateReturning<T extends SQLiteTable>(
     const rows = await tx.select().from(table).where(where);
 
     // The trap this catches: if the update changed a column that `where` tests,
-    // the read finds nothing and the caller gets [] — on MySQL only, with no
+    // the read finds nothing and the caller gets [], on MySQL only, with no
     // error, where SQLite would have returned the row. Rows changed but none
     // readable back is exactly that case, so make it loud instead.
     if (rows.length === 0 && rowsAffected(written) > 0) {
@@ -108,10 +108,10 @@ type Keyed = SQLiteTable & { id: SQLiteColumn };
 
 /**
  * Inserts one row and returns it as stored, including whatever the database
- * filled in — defaults, an autoincrement id, a CURRENT_TIMESTAMP.
+ * filled in, defaults, an autoincrement id, a CURRENT_TIMESTAMP.
  *
  * This is the one case Postgres cannot shortcut either: without RETURNING there
- * is no id to read back by. Hence the split is genuinely three-way — except
+ * is no id to read back by. Hence the split is genuinely three-way, except
  * that sqlite and pg both have RETURNING, so it collapses to two again.
  *
  * On MySQL the key comes from one of two places:
@@ -161,7 +161,7 @@ export async function insertReturning<T extends Keyed>(
  * back by an explicit condition.
  *
  * `user_preferences` is keyed by `userId` and has no `id` column at all, so
- * there is no insertId to read back by — the caller has to say what identifies
+ * there is no insertId to read back by, the caller has to say what identifies
  * the row it just wrote.
  */
 export async function insertReturningWhere<T extends SQLiteTable>(
@@ -195,13 +195,13 @@ export async function insertReturningWhere<T extends SQLiteTable>(
  *
  * The clause has three spellings. SQLite and Postgres take
  * `ON CONFLICT (cols) DO UPDATE`; **MySQL takes `ON DUPLICATE KEY UPDATE` and
- * names no columns** — it uses whichever unique key was violated. drizzle
+ * names no columns**: it uses whichever unique key was violated. drizzle
  * follows suit, so `onConflictDoUpdate` does not exist on mysql-core at all and
  * calling it is a TypeError rather than a rejected query.
  *
  * The conflict target still has to be passed: it is what SQLite and Postgres
  * need, and stating it keeps the caller honest about which unique constraint it
- * is relying on — four of those were missing from the schema entirely until the
+ * is relying on, four of those were missing from the schema entirely until the
  * cross-dialect tests went looking.
  */
 export async function upsert<T extends SQLiteTable>(

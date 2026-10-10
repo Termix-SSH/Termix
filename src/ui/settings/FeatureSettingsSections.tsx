@@ -14,7 +14,6 @@ import { AccordionSection } from "@/sidebar/AdminSettingsShared";
 import { pluginKey } from "@/lib/plugin-i18n";
 import { PluginIcon } from "@/lib/plugin-icon";
 import {
-  getPlugins,
   getPluginAdminSettings,
   getPluginUserSettings,
   updatePluginAdminSettings,
@@ -24,6 +23,7 @@ import {
   type PluginSettingsField,
   type PluginSummary,
 } from "@/api/plugins-api";
+import { useInstalledPlugins } from "@/hooks/use-installed-plugins";
 import { SettingsFieldRow } from "./SettingsFields";
 import { hasVisibleFields, isFieldShown } from "./settings-fields-util";
 
@@ -39,19 +39,7 @@ export function featureSectionId(pluginId: string): FeatureSectionId {
 export function useFeatureSettings(
   scope: FeatureSettingsScope,
 ): PluginSummary[] {
-  const [plugins, setPlugins] = useState<PluginSummary[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void getPlugins()
-      .then((loaded) => {
-        if (!cancelled) setPlugins(loaded);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const plugins = useInstalledPlugins();
 
   return useMemo(
     () =>
@@ -96,7 +84,7 @@ export function FeatureSettingsSection({
   );
 }
 
-function FeatureSettingsForm({
+export function FeatureSettingsForm({
   plugin,
   scope,
   fields,
@@ -208,7 +196,7 @@ function FeatureSettingsForm({
   return (
     <div className="flex flex-col gap-2 pt-2">
       {!running && (
-        <div className="border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-500">
+        <div className="border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
           {t("settings.featureUnavailable", {
             name: t(pluginKey(plugin.id, "plugin.name"), {
               defaultValue: plugin.name,
@@ -233,8 +221,9 @@ function FeatureSettingsForm({
 
       <div className="flex justify-end">
         <Button
+          variant="outline"
           size="sm"
-          className="h-7 text-xs"
+          className="h-7 text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
           disabled={!dirty || saving}
           onClick={() => void save()}
         >

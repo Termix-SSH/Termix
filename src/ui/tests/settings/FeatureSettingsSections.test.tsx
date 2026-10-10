@@ -106,6 +106,22 @@ describe("useFeatureSettings", () => {
     await waitFor(() => expect(api.getPlugins).toHaveBeenCalled());
     expect(result.current).toEqual([]);
   });
+
+  it("picks up a feature enabled while it is open", async () => {
+    api.getPlugins.mockResolvedValue([
+      plugin({ id: "late", name: "Late", enabled: false }),
+    ]);
+    const { result } = renderHook(() => useFeatureSettings("user"));
+    await waitFor(() => expect(api.getPlugins).toHaveBeenCalledTimes(1));
+    expect(result.current).toEqual([]);
+
+    api.getPlugins.mockResolvedValue([plugin({ id: "late", name: "Late" })]);
+    window.dispatchEvent(new CustomEvent("termix:plugins-changed"));
+
+    await waitFor(() =>
+      expect(result.current.map((p) => p.id)).toEqual(["late"]),
+    );
+  });
 });
 
 describe("FeatureSettingsSection", () => {
@@ -155,11 +171,7 @@ describe("FeatureSettingsSection", () => {
     const save = screen.getByText("common.save").closest("button")!;
     expect(save.disabled).toBe(true);
 
-    fireEvent.click(
-      screen
-        .getAllByRole("button")
-        .find((b) => b !== save && b.textContent === "")!,
-    );
+    fireEvent.click(screen.getByRole("switch"));
     fireEvent.click(save);
 
     await waitFor(() =>

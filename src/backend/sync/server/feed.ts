@@ -9,7 +9,7 @@
  */
 
 import type { Response } from "express";
-import type { SyncRow } from "@termix/plugin-sdk/backend";
+import type { SyncRow } from "@termix-ssh/plugin-sdk/backend";
 import { listEntities } from "../../plugins/sync-registry.js";
 import { syncLogger } from "../../utils/logger.js";
 import { registerCoreSyncEntities } from "../entities.js";
@@ -124,11 +124,6 @@ export async function reconcileUser(
   snapshots.set(userId, { at: Date.now(), generation: startedAt, wire });
   if (changed) notifyListeners(userId);
   return { changed, wire };
-}
-
-/** Forgets a user's snapshot so the next reconcile reads everything. */
-export function invalidateSnapshot(userId: string): void {
-  snapshots.delete(userId);
 }
 
 const listeners = new Map<string, Set<Response>>();

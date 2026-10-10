@@ -123,7 +123,7 @@ describe("forwardAuditEntry", () => {
     );
   });
 
-  it("swallows transport errors — a dead SIEM must not break auditing", async () => {
+  it("swallows transport errors, a dead SIEM must not break auditing", async () => {
     safeFetch.mockRejectedValueOnce(new Error("ECONNREFUSED"));
 
     await expect(forwardAuditEntry(ENTRY, NOW, env)).resolves.toBe(false);
@@ -140,7 +140,7 @@ describe("forwardAuditEntry", () => {
       await forwardAuditEntry(ENTRY, NOW, env);
     }
 
-    // 5 per-entry warnings, then one suppression notice — not 8.
+    // 5 per-entry warnings, then one suppression notice, not 8.
     const perEntry = logs.warn.mock.calls.filter(
       (call) => call[0] === "Failed to forward audit entry",
     );

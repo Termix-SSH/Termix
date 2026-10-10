@@ -37,7 +37,7 @@ vi.mock("../../../hosts/host-key-verifier.js", () => ({
     createHostVerifier: mocks.createHostVerifier,
   },
 }));
-vi.mock("@termix/plugin-sdk/ssh-certs", () => ({
+vi.mock("@termix-ssh/plugin-sdk/ssh-certs", () => ({
   applyCertificateAuth: mocks.applyCertificateAuth,
 }));
 vi.mock("../../../hosts/terminal-auth-helpers.js", () => ({
@@ -297,12 +297,6 @@ describe("buildConnectConfig per auth type", () => {
     expect(config.tryKeyboard).toBe(true);
   });
 
-  // OPKSSH is a plugin-registered SSH auth provider now: see
-  // plugins/opkssh/tests/backend/provider.test.ts.
-
-  // Step CA is the step-ca plugin's provider: see
-  // plugins/step-ca/tests/backend/step-ca.test.ts.
-
   it("a stepca host without the step-ca plugin names it", async () => {
     setSshAuthTypeOwnerSource(() => [
       { type: "stepca", pluginId: "step-ca", pluginName: "Step CA" },
@@ -316,9 +310,6 @@ describe("buildConnectConfig per auth type", () => {
     setSshAuthTypeOwnerSource(() => []);
   });
 
-  // Vault is the vault plugin's provider: see
-  // plugins/vault/tests/backend/vault.test.ts.
-
   it("a vault host without the vault plugin names it", async () => {
     setSshAuthTypeOwnerSource(() => [
       { type: "vault", pluginId: "vault", pluginName: "HashiCorp Vault" },
@@ -331,9 +322,6 @@ describe("buildConnectConfig per auth type", () => {
     });
     setSshAuthTypeOwnerSource(() => []);
   });
-
-  // Tailscale is a plugin-registered SSH auth provider now: see
-  // plugins/tailscale/tests/backend/ssh-auth-provider.test.ts.
 
   it("a type nobody provides names the plugin that would", async () => {
     setSshAuthTypeOwnerSource(() => [

@@ -3,6 +3,16 @@ import { promises as fs } from "fs";
 import path from "path";
 import { databaseLogger } from "./logger.js";
 
+/** Owner-only access for the secrets file. Not meaningful on Windows. */
+export async function restrictToOwner(filePath: string): Promise<void> {
+  if (process.platform === "win32") return;
+  try {
+    await fs.chmod(filePath, 0o600);
+  } catch {
+    // best effort, new files are already written with 0600
+  }
+}
+
 class SystemCrypto {
   private static instance: SystemCrypto;
   private jwtSecret: string | null = null;
@@ -58,9 +68,9 @@ class SystemCrypto {
 
       const dataDir = process.env.DATA_DIR || "./db/data";
       const envPath = path.join(dataDir, ".env");
-
       try {
         const envContent = await fs.readFile(envPath, "utf8");
+        await restrictToOwner(envPath);
         const jwtMatch = envContent.match(/^JWT_SECRET=(.+)$/m);
         if (jwtMatch && jwtMatch[1] && jwtMatch[1].length >= 64) {
           this.jwtSecret = jwtMatch[1];
@@ -349,7 +359,7 @@ class SystemCrypto {
     const envPath = path.join(dataDir, ".env");
 
     try {
-      await fs.mkdir(dataDir, { recursive: true });
+      await fs.mkdir(dataDir, { recursive: true, mode: 0o700 });
 
       let envContent = "";
 
@@ -370,7 +380,8 @@ class SystemCrypto {
         envContent += `${key}=${value}\n`;
       }
 
-      await fs.writeFile(envPath, envContent);
+      await fs.writeFile(envPath, envContent, { mode: 0o600 });
+      await restrictToOwner(envPath);
 
       process.env[key] = value;
     } catch (error) {

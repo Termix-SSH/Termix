@@ -10,16 +10,18 @@
 import fs from "fs";
 import path from "path";
 import semver from "semver";
-import type { PluginDesktopMode } from "@termix/plugin-sdk/manifest";
+import type { PluginDesktopMode } from "@termix-ssh/plugin-sdk/manifest";
 import { syncLogger } from "../../utils/logger.js";
 import { sendCoreAlert } from "../../notify/core-notify.js";
 import {
   getPluginRuntime,
   installPluginArtifact,
+  registerLoadedPlugins,
   setPluginEnabled,
   unloadPlugin,
 } from "../../plugins/index.js";
 import { getPluginsDir } from "../../plugins/paths.js";
+import type { LoadedPlugin } from "../../plugins/loader.js";
 import {
   createCurrentPluginPermissionGrantRepository,
   createCurrentPluginRepository,
@@ -56,6 +58,7 @@ async function isEnabledLocally(pluginId: string): Promise<boolean> {
 
 const PLUGIN_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
+/** Downloads next to the installed copy, which stays until the swap. */
 async function download(link: SyncLink, plugin: RemotePlugin): Promise<string> {
   const response = await remoteFetch(
     link,
@@ -68,7 +71,7 @@ async function download(link: SyncLink, plugin: RemotePlugin): Promise<string> {
   const buffer = Buffer.from(await response.arrayBuffer());
   const dir = getPluginsDir();
   await fs.promises.mkdir(dir, { recursive: true });
-  const file = path.join(dir, `${plugin.id}.tmxplug`);
+  const file = path.join(dir, `${plugin.id}.tmxplug.download`);
   await fs.promises.writeFile(file, buffer);
   const signature = response.headers.get("x-termix-signature");
   const sigFile = `${file}.sig`;
@@ -81,6 +84,68 @@ async function download(link: SyncLink, plugin: RemotePlugin): Promise<string> {
     await fs.promises.rm(sigFile, { force: true });
   }
   return file;
+}
+
+async function moveIfThere(from: string, to: string): Promise<void> {
+  await fs.promises.rm(to, { force: true });
+  if (fs.existsSync(from)) await fs.promises.rename(from, to);
+}
+
+/**
+ * Swaps a downloaded copy in for the installed one. If it fails to install,
+ * the old copy goes back on disk and is loaded again, so a bad download never
+ * leaves the desktop without the plugin.
+ */
+async function replaceWithDownload(
+  pluginId: string,
+  downloaded: string,
+  previous: LoadedPlugin | undefined,
+  wasEnabled: boolean,
+): Promise<LoadedPlugin> {
+  const file = path.join(getPluginsDir(), `${pluginId}.tmxplug`);
+  const backup = `${file}.previous`;
+  await moveIfThere(file, backup);
+  await moveIfThere(`${file}.sig`, `${backup}.sig`);
+  await moveIfThere(downloaded, file);
+  await moveIfThere(`${downloaded}.sig`, `${file}.sig`);
+  if (previous) await unloadPlugin(pluginId);
+  try {
+    const installed = await installPluginArtifact(file);
+    await fs.promises.rm(backup, { force: true });
+    await fs.promises.rm(`${backup}.sig`, { force: true });
+    return installed;
+  } catch (error) {
+    await moveIfThere(backup, file);
+    await moveIfThere(`${backup}.sig`, `${file}.sig`);
+    if (previous) await restorePrevious(pluginId, previous, file, wasEnabled);
+    throw error;
+  }
+}
+
+async function restorePrevious(
+  pluginId: string,
+  previous: LoadedPlugin,
+  file: string,
+  wasEnabled: boolean,
+): Promise<void> {
+  const { loader } = getPluginRuntime();
+  if (loader.get(pluginId)) return;
+  try {
+    if (fs.existsSync(file)) {
+      await installPluginArtifact(file);
+    } else if (previous.source === "bundled") {
+      await registerLoadedPlugins([await loader.loadBundled(pluginId)]);
+    }
+    if (wasEnabled && loader.get(pluginId)) {
+      await setPluginEnabled(pluginId, true);
+    }
+  } catch (error) {
+    syncLogger.warn("Could not restore a feature after a failed update", {
+      operation: "sync_plugin_restore",
+      pluginId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 async function matchGrants(plugin: RemotePlugin): Promise<void> {
@@ -161,9 +226,14 @@ async function mirrorOne(link: SyncLink, plugin: RemotePlugin): Promise<void> {
       // A signed update of a bundled plugin. The loader checks the signature
       // and that the version really is newer.
       const wasEnabled = await isEnabledLocally(plugin.id);
-      if (local) await unloadPlugin(plugin.id);
       try {
-        local = await installPluginArtifact(await download(link, plugin));
+        const downloaded = await download(link, plugin);
+        local = await replaceWithDownload(
+          plugin.id,
+          downloaded,
+          local,
+          wasEnabled,
+        );
       } catch (error) {
         await alertOlderDesktop(plugin);
         throw error;
@@ -180,9 +250,13 @@ async function mirrorOne(link: SyncLink, plugin: RemotePlugin): Promise<void> {
       local.manifest.version !== plugin.version;
     if (outdated && (!local || local.source === "user")) {
       const wasEnabled = local ? await isEnabledLocally(plugin.id) : false;
-      if (local) await unloadPlugin(plugin.id);
-      const file = await download(link, plugin);
-      local = await installPluginArtifact(file);
+      const downloaded = await download(link, plugin);
+      local = await replaceWithDownload(
+        plugin.id,
+        downloaded,
+        local,
+        wasEnabled,
+      );
       if (wasEnabled && !plugin.enabled) {
         await setPluginEnabled(plugin.id, false);
       }

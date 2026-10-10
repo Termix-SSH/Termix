@@ -12,7 +12,7 @@
  * login for a 2.8 key only the password unwraps. Until then the channel shows
  * as needing to be saved again.
  *
- * The old table stays until 3.0.0, like the old columns. Idempotent.
+ * The old table stays until 26.10.0, like the old columns. Idempotent.
  */
 
 import { sql } from "drizzle-orm";

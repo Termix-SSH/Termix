@@ -1,5 +1,8 @@
 import { CircleSlash } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/button";
+import { usePermissions } from "@/hooks/use-permissions";
+import { OPEN_PLUGINS_EVENT } from "@/plugins/open-plugins";
 import { usePluginStore } from "./plugin-store";
 import { unregisteredViewStatus, type ViewKind } from "./view-ownership";
 
@@ -22,6 +25,7 @@ export function PluginViewPlaceholder({
   const { t } = useTranslation();
   // Subscribing re-renders this when plugin state changes.
   usePluginStore();
+  const { has } = usePermissions();
   const { status, owner } = unregisteredViewStatus(kind, viewId);
   const name = owner?.summary.name ?? viewId;
 
@@ -60,6 +64,18 @@ export function PluginViewPlaceholder({
         {title}
       </span>
       <span className="text-xs text-muted-foreground/70">{hint}</span>
+      {!compact && status !== "failed" && has("admin.plugins.manage") && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-1"
+          onClick={() =>
+            window.dispatchEvent(new CustomEvent(OPEN_PLUGINS_EVENT))
+          }
+        >
+          {t("plugins.manager.browsePlugins")}
+        </Button>
+      )}
     </div>
   );
 }

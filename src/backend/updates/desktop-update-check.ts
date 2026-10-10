@@ -6,6 +6,7 @@
 import { sendCoreAlert } from "../notify/core-notify.js";
 import { getLocalVersion } from "../utils/app-version.js";
 import { compareSemver, fetchLatestRelease } from "../utils/latest-release.js";
+import { getCoreChannel } from "./update-channel.js";
 import { systemLogger } from "../utils/logger.js";
 import {
   createCurrentUserPreferenceRepository,
@@ -33,7 +34,7 @@ export async function checkForDesktopUpdate(): Promise<void> {
   const current = getLocalVersion();
   if (!current || (await checkDisabled())) return;
 
-  const latest = await fetchLatestRelease();
+  const latest = await fetchLatestRelease(await getCoreChannel(current));
   if (!latest) return;
   const comparison = compareSemver(current, latest.version);
   if (comparison === null || comparison >= 0) return;

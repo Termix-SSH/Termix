@@ -6,7 +6,9 @@ import { SettingRow } from "@/components/section-card";
 import { Database, Lock, RefreshCw, Server, Settings } from "lucide-react";
 import { AccordionSection, AdminToggle } from "./AdminSettingsShared";
 import { AdminHostTags } from "./AdminHostTags";
+import { AdminPluginDeveloperMode } from "./AdminPluginDeveloperMode";
 import type { TlsStatus } from "@/api/tls-api";
+import { DocsLink } from "@/components/docs-link";
 
 type GeneralSettingsSectionProps = {
   open: boolean;
@@ -116,8 +118,8 @@ export function AdminGeneralSettingsSection({
           </p>
         )}
         <SettingRow
-          label={t("admin.oidcAutoProvision")}
-          description={t("admin.oidcAutoProvisionDesc")}
+          label={t("admin.externalAutoProvision")}
+          description={t("admin.externalAutoProvisionDesc")}
         >
           <AdminToggle
             on={externalAutoProvision}
@@ -142,6 +144,7 @@ export function AdminGeneralSettingsSection({
             onToggle={handleTogglePasswordReset}
           />
         </SettingRow>
+        <AdminPluginDeveloperMode />
         <div className="flex flex-col gap-2 pt-3 mt-2">
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             {t("admin.sessionTimeout")}
@@ -372,7 +375,7 @@ function certState(
 const CERT_STATUS_STYLES: Record<ReturnType<typeof certState>, string> = {
   none: "text-muted-foreground",
   valid: "text-green-500",
-  expiring: "text-yellow-500",
+  expiring: "text-warning",
   expired: "text-destructive",
 };
 
@@ -421,14 +424,7 @@ export function AdminSSLSection({
       <div className="flex flex-col gap-3 pt-3">
         <span className="text-[10px] text-muted-foreground">
           {t("admin.sslDescription")}{" "}
-          <a
-            href="https://docs.termix.site/features/networking/ssl"
-            target="_blank"
-            rel="noreferrer"
-            className="text-accent-brand hover:underline"
-          >
-            {t("admin.sslDocsLink")}
-          </a>
+          <DocsLink core="https">{t("admin.sslDocsLink")}</DocsLink>
         </span>
 
         <div className="flex flex-col gap-0.5 p-2 border border-border bg-background/50">
@@ -470,7 +466,7 @@ export function AdminSSLSection({
         </div>
 
         {cert && !cert.selfSigned && !status?.renewal && (
-          <div className="p-2 border border-yellow-500/40 bg-yellow-500/10 text-[10px] text-yellow-600 dark:text-yellow-400">
+          <div className="p-2 border border-warning/40 bg-warning/10 text-[10px] text-warning">
             {t("admin.sslNotRenewed", { date: expiry })}
           </div>
         )}

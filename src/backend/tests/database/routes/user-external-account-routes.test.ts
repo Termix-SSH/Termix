@@ -13,10 +13,7 @@ interface User {
   id: string;
   username: string;
   isAdmin: boolean;
-  isOidc: boolean;
   passwordHash: string;
-  oidcIdentifier?: string | null;
-  clientId?: string;
 }
 
 const h = vi.hoisted(() => ({
@@ -30,14 +27,21 @@ const h = vi.hoisted(() => ({
   revoked: [] as string[],
 }));
 
+function withIdentities(user: User | undefined) {
+  if (!user) return null;
+  return {
+    ...user,
+    isExternal: h.identities.some((row) => row.userId === user.id),
+  };
+}
+
 vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentUserRepository: () => ({
-    findById: async (id: string) => h.users.get(id) ?? null,
+    findById: async (id: string) => withIdentities(h.users.get(id)),
     findByUsername: async (username: string) =>
-      [...h.users.values()].find((user) => user.username === username) ?? null,
-    update: async (id: string, changes: Partial<User>) => {
-      Object.assign(h.users.get(id)!, changes);
-    },
+      withIdentities(
+        [...h.users.values()].find((user) => user.username === username),
+      ),
   }),
   createCurrentUserAuthRepository: () => ({
     listIdentitiesForUser: async (userId: string) =>
@@ -84,7 +88,6 @@ beforeEach(async () => {
         id: "admin",
         username: "admin",
         isAdmin: true,
-        isOidc: false,
         passwordHash: "x",
       },
     ],
@@ -94,9 +97,7 @@ beforeEach(async () => {
         id: "sso",
         username: "alice-sso",
         isAdmin: false,
-        isOidc: true,
         passwordHash: "",
-        oidcIdentifier: "ldap:4:alice",
       },
     ],
     [
@@ -105,7 +106,6 @@ beforeEach(async () => {
         id: "local",
         username: "alice",
         isAdmin: false,
-        isOidc: false,
         passwordHash: "hash",
       },
     ],
@@ -149,16 +149,12 @@ function post(path: string, body: unknown, user = "admin") {
 }
 
 describe("linking an external account to a password account", () => {
-  it("moves the identities and the old identifier, then removes the external account", async () => {
-    const response = await post("/link-oidc-to-password", {
-      oidcUserId: "sso",
+  it("moves the identities, then removes the external account", async () => {
+    const response = await post("/link-external-to-password", {
+      externalUserId: "sso",
       targetUsername: "alice",
     });
     expect(response.status).toBe(200);
-    expect(h.users.get("local")).toMatchObject({
-      isOidc: true,
-      oidcIdentifier: "ldap:4:alice",
-    });
     expect(h.identities).toEqual([
       { userId: "local", providerId: "ldap:4", subject: "alice" },
     ]);
@@ -166,13 +162,13 @@ describe("linking an external account to a password account", () => {
     expect(h.deleted).toEqual(["sso"]);
   });
 
-  it("takes the new path and field name", async () => {
-    const response = await post("/link-external-to-password", {
-      externalUserId: "sso",
+  it("no longer takes the 2.8 path and field name", async () => {
+    const response = await post("/link-oidc-to-password", {
+      oidcUserId: "sso",
       targetUsername: "alice",
     });
-    expect(response.status).toBe(200);
-    expect(h.identities[0].userId).toBe("local");
+    expect(response.status).toBe(404);
+    expect(h.identities[0].userId).toBe("sso");
   });
 
   it("refuses a target that already signs in externally", async () => {
@@ -186,8 +182,8 @@ describe("linking an external account to a password account", () => {
 
   it("is for admins only", async () => {
     const response = await post(
-      "/link-oidc-to-password",
-      { oidcUserId: "sso", targetUsername: "alice" },
+      "/link-external-to-password",
+      { externalUserId: "sso", targetUsername: "alice" },
       "local",
     );
     expect(response.status).toBe(403);
@@ -195,8 +191,8 @@ describe("linking an external account to a password account", () => {
   });
 
   it("refuses a target that is not a password account", async () => {
-    const response = await post("/link-oidc-to-password", {
-      oidcUserId: "sso",
+    const response = await post("/link-external-to-password", {
+      externalUserId: "sso",
       targetUsername: "alice-sso",
     });
     expect(response.status).toBe(400);
@@ -207,17 +203,13 @@ describe("linking an external account to a password account", () => {
       id: "orig",
       username: "bob",
       isAdmin: false,
-      isOidc: true,
       passwordHash: "",
-      oidcIdentifier: "sub-9",
     });
     h.users.set("dup", {
       id: "dup",
       username: "bob-1",
       isAdmin: false,
-      isOidc: true,
       passwordHash: "",
-      oidcIdentifier: null,
     });
     h.identities.push(
       { userId: "orig", providerId: "legacy-oidc", subject: "sub-9" },
@@ -231,7 +223,6 @@ describe("linking an external account to a password account", () => {
 
     expect(response.status).toBe(200);
     expect(h.deleted).toEqual(["dup"]);
-    expect(h.users.get("orig")!.oidcIdentifier).toBe("sub-9");
     expect(
       h.identities
         .filter((row) => row.userId === "orig")
@@ -244,9 +235,7 @@ describe("linking an external account to a password account", () => {
       id: "other",
       username: "carol",
       isAdmin: false,
-      isOidc: true,
       passwordHash: "",
-      oidcIdentifier: "sub-x",
     });
     h.identities.push({
       userId: "other",
@@ -264,22 +253,6 @@ describe("linking an external account to a password account", () => {
 
 describe("unlinking", () => {
   it("drops the identities so the provider no longer signs in as the user", async () => {
-    await post("/link-oidc-to-password", {
-      oidcUserId: "sso",
-      targetUsername: "alice",
-    });
-    const response = await post("/unlink-oidc-from-password", {
-      userId: "local",
-    });
-    expect(response.status).toBe(200);
-    expect(h.users.get("local")).toMatchObject({
-      isOidc: false,
-      oidcIdentifier: null,
-    });
-    expect(h.identities).toEqual([]);
-  });
-
-  it("takes the new path", async () => {
     await post("/link-external-to-password", {
       externalUserId: "sso",
       targetUsername: "alice",
@@ -291,8 +264,15 @@ describe("unlinking", () => {
     expect(h.identities).toEqual([]);
   });
 
-  it("refuses to leave an account with no way in", async () => {
+  it("no longer takes the 2.8 path", async () => {
     const response = await post("/unlink-oidc-from-password", {
+      userId: "local",
+    });
+    expect(response.status).toBe(404);
+  });
+
+  it("refuses to leave an account with no way in", async () => {
+    const response = await post("/unlink-external-from-password", {
       userId: "sso",
     });
     expect(response.status).toBe(400);

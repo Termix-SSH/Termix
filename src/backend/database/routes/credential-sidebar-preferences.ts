@@ -17,7 +17,7 @@ const authenticateJWT = authManager.createAuthMiddleware();
  * /credential-sidebar/preferences:
  *   get:
  *     summary: Get the credential sidebar preferences for the current user
- *     description: Returns the current user's saved credential sidebar preferences (sort, filters, open folders, display settings). Unlike /host-sidebar/preferences, there is no legacy-column migration to perform here — credentials never had exploded preference columns on userPreferences — so a first-time GET simply returns the defaults without writing a row; a row is only created once the user actually changes something via PUT.
+ *     description: Returns the current user's saved credential sidebar preferences (sort, filters, open folders, display settings). Unlike /host-sidebar/preferences, there is no legacy-column migration to perform here, credentials never had exploded preference columns on userPreferences, so a first-time GET simply returns the defaults without writing a row; a row is only created once the user actually changes something via PUT.
  *     tags:
  *       - Credential Sidebar
  *     responses:
