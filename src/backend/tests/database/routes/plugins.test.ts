@@ -276,6 +276,8 @@ describe("plugins route", () => {
       expect(body[0].contributes).toEqual({
         guest: true,
         guestViews: ["shared"],
+        tabs: [],
+        panels: [],
       });
       expect(body[0]).not.toHaveProperty("capabilities");
       expect(body[0]).not.toHaveProperty("lastError");
@@ -288,7 +290,11 @@ describe("plugins route", () => {
         makePlugin({
           id: "sharing",
           manifestJson: JSON.stringify({
-            contributes: { guest: true, guestViews: ["shared"] },
+            contributes: {
+              guest: true,
+              guestViews: ["shared"],
+              tabs: [{ id: "collab", titleKey: "nav.collab" }],
+            },
             dependencies: { terminal: "^1.0.0", desktop: "^1.0.0" },
             optionalDependencies: { recorder: "^1.0.0" },
           }),
@@ -311,6 +317,9 @@ describe("plugins route", () => {
 
       expect(sharing.dependencies).toEqual({ desktop: "^1.0.0" });
       expect(sharing.optionalDependencies).toEqual({});
+      expect(sharing.contributes.tabs).toEqual([
+        { id: "collab", titleKey: "nav.collab" },
+      ]);
     });
 
     it("skips a plugin whose manifest does not parse", async () => {

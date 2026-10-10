@@ -83,7 +83,12 @@ router.get("/public", async (_req: Request, res: Response) => {
     const records = await createCurrentPluginRepository().listAll();
     const { loader } = getPluginRuntime();
     type GuestManifest = {
-      contributes?: { guest?: boolean; guestViews?: string[] };
+      contributes?: {
+        guest?: boolean;
+        guestViews?: string[];
+        tabs?: unknown[];
+        panels?: unknown[];
+      };
       dependencies?: Record<string, string>;
       optionalDependencies?: Record<string, string>;
     };
@@ -114,9 +119,13 @@ router.get("/public", async (_req: Request, res: Response) => {
         version: "",
         enabled: true,
         state: loaded?.state ?? record.state,
+        // The tab and panel ids a guest page may register, which the
+        // browser checks against the manifest.
         contributes: {
           guest: true,
           guestViews: manifest.contributes?.guestViews ?? [],
+          tabs: manifest.contributes?.tabs ?? [],
+          panels: manifest.contributes?.panels ?? [],
         },
         dependencies: onlyGuests(manifest.dependencies),
         optionalDependencies: onlyGuests(manifest.optionalDependencies),
