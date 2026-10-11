@@ -6,6 +6,8 @@
 
 - Slovak, Croatian, Slovenian, Lithuanian, Latvian, Estonian and Malay
 - The desktop app can update itself. Pick Automatic, Ask first or Never in Settings, Updates. Store and package manager installs keep updating the way they do now
+- Community plugins. Turn on the community registry in Plugins, Registries to browse and install plugins made by other people, each version reviewed before it is listed
+- Custom plugin registries. Add your own registry by its index URL; its signing key is pinned when you add it
 
 ### Changed
 

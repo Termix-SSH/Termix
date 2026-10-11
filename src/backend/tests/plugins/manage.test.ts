@@ -4,6 +4,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -33,6 +34,8 @@ const db = vi.hoisted(() => ({
 
 const registry = vi.hoisted(() => ({
   index: { registry: "official", name: "", plugins: [] as unknown[] },
+  /** Indexes of the other registries, by id. Missing means unreachable. */
+  others: {} as Record<string, Record<string, unknown>>,
   download: vi.fn(),
 }));
 
@@ -97,7 +100,14 @@ vi.mock("../../plugins/registry-index.js", async (importOriginal) => {
     await importOriginal<typeof import("../../plugins/registry-index.js")>();
   return {
     ...actual,
-    fetchRegistryIndex: async () => actual.parseRegistryIndex(registry.index),
+    fetchRegistryIndex: async (source?: { id: string }) => {
+      if (!source || source.id === "official") {
+        return actual.parseRegistryIndex(registry.index);
+      }
+      const other = registry.others[source.id];
+      if (!other) throw new Error(`${source.id} is offline`);
+      return actual.parseRegistryIndex(other);
+    },
     downloadRelease: registry.download,
   };
 });
@@ -216,6 +226,7 @@ beforeEach(() => {
   db.settings.clear();
   db.grants.length = 0;
   registry.index.plugins = [];
+  registry.others = {};
   registry.download.mockReset();
 });
 
@@ -854,5 +865,222 @@ describe("release notes", () => {
     });
     expect(manage.readReleaseNotes("")).toBeUndefined();
     expect(manage.readReleaseNotes(undefined)).toBeUndefined();
+  });
+});
+
+describe("more registries", () => {
+  const customKey = (() => {
+    const { publicKey } = crypto.generateKeyPairSync("ed25519");
+    return publicKey
+      .export({ format: "der", type: "spki" })
+      .subarray(12)
+      .toString("base64");
+  })();
+
+  function turnOnCommunity(): void {
+    db.settings.set(
+      "plugin_registries",
+      JSON.stringify({ community: { enabled: true }, custom: [] }),
+    );
+  }
+
+  it("lists community plugins only when it is on, never official ids", async () => {
+    registry.index.plugins = [registryEntry("docker", [{ version: "1.0.0" }])];
+    registry.others.community = {
+      registry: "community",
+      name: "Community",
+      plugins: [
+        registryEntry("docker", [{ version: "9.0.0" }]),
+        registryEntry("neat", [{ version: "1.0.0" }]),
+      ],
+    };
+    await boot();
+
+    let listing = await manage.listRegistry();
+    expect(listing.plugins.map((p) => p.id)).toEqual(["docker"]);
+    expect(listing.registries.map((r) => r.id)).toEqual(["official"]);
+
+    turnOnCommunity();
+    listing = await manage.listRegistry();
+    expect(
+      listing.plugins.map((p) => [p.id, p.registryId, p.tier, p.latestVersion]),
+    ).toEqual([
+      ["docker", "official", "official", "1.0.0"],
+      ["neat", "community", "community", "1.0.0"],
+    ]);
+    expect(listing.registries.find((r) => r.id === "community")).toMatchObject({
+      tier: "community",
+      plugins: 1,
+      error: null,
+    });
+  });
+
+  it("keeps listing official plugins when another registry is down", async () => {
+    registry.index.plugins = [registryEntry("docker", [{ version: "1.0.0" }])];
+    turnOnCommunity();
+    await boot();
+    const listing = await manage.listRegistry();
+    expect(listing.plugins.map((p) => p.id)).toEqual(["docker"]);
+    expect(listing.registries.find((r) => r.id === "community")?.error).toMatch(
+      /offline/,
+    );
+  });
+
+  it("installs from the community registry with its keys and records it", async () => {
+    registry.others.community = {
+      registry: "community",
+      plugins: [registryEntry("neat", [{ version: "1.0.0" }])],
+    };
+    turnOnCommunity();
+    await boot();
+    registry.download.mockImplementation(() => stageArtifact("neat"));
+
+    const result = await manage.installPlugin("neat", {
+      userId: "admin",
+      registryId: "community",
+      capabilities: DEFAULT_CAPS,
+    });
+    expect(result.state).toBe("active");
+    const keys = registry.download.mock.calls[0][2] as Array<{ id: string }>;
+    expect(keys.map((key) => key.id)).toEqual(["be5b24ea07b36624"]);
+    expect(db.rows.get("neat")).toMatchObject({
+      registryId: "community",
+      tier: "community",
+    });
+  });
+
+  it("updates a plugin from the registry it came from", async () => {
+    registry.others.community = {
+      registry: "community",
+      plugins: [
+        registryEntry("neat", [{ version: "1.1.0" }, { version: "1.0.0" }]),
+      ],
+    };
+    turnOnCommunity();
+    await boot();
+    registry.download.mockImplementation(() =>
+      stageArtifact("neat", { version: "1.0.0" }),
+    );
+    await manage.installPlugin("neat", {
+      userId: "admin",
+      registryId: "community",
+      version: "1.0.0",
+      capabilities: DEFAULT_CAPS,
+    });
+    await manage.setPluginOptions("neat", { pinned: false });
+
+    registry.download.mockReset();
+    registry.download.mockImplementation(() =>
+      stageArtifact("neat", { version: "1.1.0" }),
+    );
+    const result = await manage.updatePlugin("neat", { userId: "admin" });
+    expect(result.version).toBe("1.1.0");
+    const [, release, keys] = registry.download.mock.calls[0];
+    expect(release.url).toContain("neat-1.1.0");
+    expect(keys.map((key: { id: string }) => key.id)).toEqual([
+      "be5b24ea07b36624",
+    ]);
+    expect(db.rows.get("neat")).toMatchObject({ registryId: "community" });
+  });
+
+  it("stops updating a community plugin once the official registry lists its id", async () => {
+    registry.others.community = {
+      registry: "community",
+      plugins: [
+        registryEntry("neat", [{ version: "1.1.0" }, { version: "1.0.0" }]),
+      ],
+    };
+    turnOnCommunity();
+    await boot();
+    registry.download.mockImplementation(() => stageArtifact("neat"));
+    await manage.installPlugin("neat", {
+      userId: "admin",
+      registryId: "community",
+      version: "1.0.0",
+      capabilities: DEFAULT_CAPS,
+    });
+    registry.index.plugins = [registryEntry("neat", [{ version: "5.0.0" }])];
+    await expect(
+      manage.updatePlugin("neat", { userId: "admin", version: "1.1.0" }),
+    ).rejects.toMatchObject({ code: "RESERVED_ID" });
+  });
+
+  it("refuses an official id from another registry", async () => {
+    registry.index.plugins = [registryEntry("docker", [{ version: "1.0.0" }])];
+    registry.others.community = {
+      registry: "community",
+      plugins: [registryEntry("docker", [{ version: "9.0.0" }])],
+    };
+    turnOnCommunity();
+    await boot();
+    await expect(
+      manage.installPlugin("docker", {
+        userId: "admin",
+        registryId: "community",
+        capabilities: DEFAULT_CAPS,
+      }),
+    ).rejects.toMatchObject({ code: "RESERVED_ID" });
+    expect(registry.download).not.toHaveBeenCalled();
+  });
+
+  it("refuses a registry that is off", async () => {
+    registry.others.community = {
+      registry: "community",
+      plugins: [registryEntry("neat", [{ version: "1.0.0" }])],
+    };
+    await boot();
+    await expect(
+      manage.installPlugin("neat", {
+        userId: "admin",
+        registryId: "community",
+        capabilities: DEFAULT_CAPS,
+      }),
+    ).rejects.toMatchObject({ code: "REGISTRY_OFF" });
+  });
+
+  it("stops trusting a custom registry whose index names a new key", async () => {
+    const other = crypto
+      .generateKeyPairSync("ed25519")
+      .publicKey.export({ format: "der", type: "spki" })
+      .subarray(12)
+      .toString("base64");
+    db.settings.set(
+      "plugin_registries",
+      JSON.stringify({
+        community: { enabled: false },
+        custom: [
+          {
+            id: "mine",
+            name: "Mine",
+            url: "https://example.com/index.json",
+            publicKey: customKey,
+            enabled: true,
+            addedAt: "2026-10-11T00:00:00Z",
+          },
+        ],
+      }),
+    );
+    registry.others.mine = {
+      registry: "mine",
+      publicKey: customKey,
+      plugins: [registryEntry("tool", [{ version: "1.0.0" }])],
+    };
+    await boot();
+    let listing = await manage.listRegistry();
+    expect(listing.plugins.find((p) => p.id === "tool")?.tier).toBe("custom");
+
+    registry.others.mine.publicKey = other;
+    listing = await manage.listRegistry();
+    expect(listing.plugins.find((p) => p.id === "tool")).toBeUndefined();
+    expect(listing.registries.find((r) => r.id === "mine")?.error).toMatch(
+      /different signing key/,
+    );
+    await expect(
+      manage.installPlugin("tool", {
+        userId: "admin",
+        registryId: "mine",
+        capabilities: DEFAULT_CAPS,
+      }),
+    ).rejects.toMatchObject({ code: "KEY_CHANGED" });
   });
 });

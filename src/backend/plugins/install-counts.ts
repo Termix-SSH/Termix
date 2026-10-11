@@ -15,7 +15,12 @@
  */
 
 import { pluginLogger } from "../utils/logger.js";
-import { OFFICIAL_REGISTRY_ID, fetchRegistryStats } from "./registry-index.js";
+import {
+  OFFICIAL_REGISTRY_ID,
+  fetchRegistryStats,
+  officialSource,
+  type RegistrySource,
+} from "./registry-index.js";
 
 export const TELEMETRY_SOURCE = "aggregate-telemetry";
 export const DOWNLOADS_SOURCE = "github-releases";
@@ -43,23 +48,33 @@ export function preferredCount(entry: {
 
 /** Returns how many rows changed. Never throws; a failed sync keeps the old numbers. */
 export async function syncInstallCounts(): Promise<number> {
+  let changed = 0;
+  let sources: RegistrySource[] = [officialSource()];
   try {
-    const stats = await fetchRegistryStats();
-    if (!stats) return 0;
-    const entries = [...stats.plugins].map(([pluginId, entry]) => ({
-      pluginId,
-      ...preferredCount(entry),
-    }));
-    return await (await repository()).upsertMany(OFFICIAL_REGISTRY_ID, entries);
-  } catch (error) {
-    pluginLogger.warn(
-      `Could not sync plugin install counts: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-      { operation: "plugin_registry" },
-    );
-    return 0;
+    const { listSources } = await import("./registries.js");
+    sources = await listSources();
+  } catch {
+    // Official only when the registry choices cannot be read.
   }
+  for (const source of sources) {
+    try {
+      const stats = await fetchRegistryStats(source);
+      if (!stats) continue;
+      const entries = [...stats.plugins].map(([pluginId, entry]) => ({
+        pluginId,
+        ...preferredCount(entry),
+      }));
+      changed += await (await repository()).upsertMany(source.id, entries);
+    } catch (error) {
+      pluginLogger.warn(
+        `Could not sync plugin install counts from ${source.id}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        { operation: "plugin_registry" },
+      );
+    }
+  }
+  return changed;
 }
 
 export async function readInstallCounts(

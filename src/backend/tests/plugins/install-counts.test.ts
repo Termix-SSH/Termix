@@ -5,16 +5,34 @@ const state = vi.hoisted(() => ({
     plugins: Map<string, { downloads: number; activeInstalls: number | null }>;
   },
   fail: false,
+  sources: [{ id: "official", tier: "official" }] as Array<{
+    id: string;
+    tier: string;
+  }>,
+  statsBySource: {} as Record<
+    string,
+    {
+      plugins: Map<
+        string,
+        { downloads: number; activeInstalls: number | null }
+      >;
+    } | null
+  >,
   upserted: [] as Array<{ registryId: string; entries: unknown[] }>,
   rows: [] as Array<{ pluginId: string; count: number; source: string }>,
 }));
 
 vi.mock("../../plugins/registry-index.js", () => ({
   OFFICIAL_REGISTRY_ID: "official",
-  fetchRegistryStats: async () => {
+  officialSource: () => ({ id: "official", tier: "official" }),
+  fetchRegistryStats: async (source: { id: string }) => {
     if (state.fail) throw new Error("offline");
-    return state.stats;
+    return state.statsBySource[source.id] ?? state.stats;
   },
+}));
+
+vi.mock("../../plugins/registries.js", () => ({
+  listSources: async () => state.sources,
 }));
 
 vi.mock("../../database/repositories/factory.js", () => ({
@@ -38,8 +56,34 @@ const {
 beforeEach(() => {
   state.stats = null;
   state.fail = false;
+  state.sources = [{ id: "official", tier: "official" }];
+  state.statsBySource = {};
   state.upserted = [];
   state.rows = [];
+});
+
+describe("syncInstallCounts with more registries", () => {
+  it("stores counts per registry and skips custom ones", async () => {
+    state.sources = [
+      { id: "official", tier: "official" },
+      { id: "community", tier: "community" },
+      { id: "mine", tier: "custom" },
+    ];
+    state.statsBySource = {
+      official: {
+        plugins: new Map([["docker", { downloads: 5, activeInstalls: null }]]),
+      },
+      community: {
+        plugins: new Map([["neat", { downloads: 3, activeInstalls: 2 }]]),
+      },
+      mine: null,
+    };
+    expect(await syncInstallCounts()).toBe(2);
+    expect(state.upserted.map((entry) => entry.registryId)).toEqual([
+      "official",
+      "community",
+    ]);
+  });
 });
 
 describe("preferredCount", () => {

@@ -67,9 +67,13 @@ export interface PluginEntry {
   source: PluginSource;
   /** Installed from a file or folder with no registry signature behind it. */
   unverified: boolean;
+  /** The registry it is listed in or was installed from. */
+  registryId: string | null;
+  registryName: string | null;
 }
 
-export type PluginSource = "bundled" | "official" | "unverified";
+export type PluginSource =
+  "bundled" | "official" | "community" | "custom" | "unverified";
 
 export function isPrerelease(version: string | null | undefined): boolean {
   return Boolean(
@@ -97,7 +101,10 @@ export function pluginSource(summary: PluginSummary): PluginSource {
   if (summary.source === "bundled" || summary.tier === "bundled") {
     return "bundled";
   }
-  return summary.signedBy ? "official" : "unverified";
+  if (!summary.signedBy) return "unverified";
+  return summary.tier === "community" || summary.tier === "custom"
+    ? summary.tier
+    : "official";
 }
 
 export function pluginStatus(summary: PluginSummary): PluginStatus {
@@ -158,6 +165,8 @@ export function mergePlugins(
       installCountSource: entry?.installCountSource ?? null,
       source: pluginSource(summary),
       unverified: pluginSource(summary) === "unverified",
+      registryId: entry?.registryId ?? summary.registryId ?? null,
+      registryName: entry?.registryName ?? null,
     });
   }
 
@@ -198,8 +207,10 @@ export function mergePlugins(
       publishedAt: latestPublished(entry.versions),
       installCount: entry.installCount ?? null,
       installCountSource: entry.installCountSource ?? null,
-      source: "official",
+      source: entry.tier ?? "official",
       unverified: false,
+      registryId: entry.registryId ?? "official",
+      registryName: entry.registryName ?? null,
     });
   }
 
@@ -239,6 +250,8 @@ export function uploadEntry(preview: PluginUploadPreview): PluginEntry {
     installCountSource: null,
     source: "unverified",
     unverified: true,
+    registryId: null,
+    registryName: null,
   };
 }
 

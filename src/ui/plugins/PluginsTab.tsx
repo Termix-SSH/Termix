@@ -6,6 +6,7 @@ import {
   Columns3,
   Download,
   Globe,
+  Library,
   Puzzle,
   RefreshCw,
   RotateCcw,
@@ -42,8 +43,10 @@ import {
   BetaBadge,
   InstallCountFact,
   PluginIconBox,
+  SourceBadge,
   UnverifiedBadge,
 } from "./plugin-bits";
+import { RegistriesSection } from "./RegistriesSection";
 import { PluginConsentPrompt } from "./PluginConsentPrompt";
 import { PluginDetail } from "./PluginDetail";
 import {
@@ -60,7 +63,7 @@ import { usePluginsManager, type PluginsManager } from "./use-plugins-manager";
 import { docsUrl } from "@/lib/docs";
 import { DocsLink } from "@/components/docs-link";
 
-type Section = "installed" | "browse" | "updates";
+type Section = "installed" | "browse" | "updates" | "registries";
 
 const GRID_SIZES = ["auto", "2", "3", "4", "5", "6"] as const;
 type GridSize = (typeof GRID_SIZES)[number];
@@ -146,6 +149,11 @@ function PluginsTabBody() {
       icon: <Download className="size-3" />,
       count: updates.filter((p) => !p.pinnedVersion).length || undefined,
     },
+    {
+      id: "registries",
+      label: t("plugins.manager.tabs.registries"),
+      icon: <Library className="size-3" />,
+    },
   ];
 
   return (
@@ -217,12 +225,14 @@ function PluginsTabBody() {
               layout={layout}
               layoutControls={layoutControls}
             />
-          ) : (
+          ) : section === "updates" ? (
             <UpdatesSection
               plugins={updates}
               manager={manager}
               onOpen={setDetailId}
             />
+          ) : (
+            <RegistriesSection manager={manager} />
           )}
         </div>
       </PanelShell>
@@ -442,6 +452,7 @@ function NameCell({ plugin, muted }: { plugin: PluginEntry; muted?: boolean }) {
         {plugin.name}
       </span>
       {plugin.unverified && <UnverifiedBadge />}
+      <SourceBadge source={plugin.source} registryName={plugin.registryName} />
       {plugin.isBeta && <BetaBadge />}
     </div>
   );
@@ -704,6 +715,10 @@ function InstalledCard({
         facts={
           <>
             {plugin.unverified && <UnverifiedBadge />}
+            <SourceBadge
+              source={plugin.source}
+              registryName={plugin.registryName}
+            />
             {plugin.isBeta && <BetaBadge />}
             {plugin.author && <span>{plugin.author}</span>}
             <span>v{plugin.version}</span>
@@ -935,14 +950,20 @@ function BrowseSection({
 }) {
   const { t } = useTranslation();
   const [category, setCategory] = useState<string | null>(null);
+  const [registry, setRegistry] = useState<string | null>(null);
   const [sort, setSort] = useState<SortKey>("popular");
   const categories = useMemo(() => categoriesOf(plugins), [plugins]);
+  const registries = manager.registries;
+  const registryFilter = registries.some((entry) => entry.id === registry)
+    ? registry
+    : null;
 
   const rows = sortPlugins(
     plugins.filter(
       (p) =>
         matchesQuery(p, query) &&
-        (category === null || p.category === category),
+        (category === null || p.category === category) &&
+        (registryFilter === null || p.registryId === registryFilter),
     ),
     sort,
   );
@@ -1011,6 +1032,35 @@ function BrowseSection({
         placeholder={t("plugins.manager.searchPlugins")}
       >
         <div className="ml-auto flex items-center gap-2">
+          {registries.length > 1 && (
+            <Select
+              value={registryFilter ?? "__all"}
+              onValueChange={(v) => setRegistry(v === "__all" ? null : v)}
+            >
+              <SelectTrigger
+                size="sm"
+                className="w-auto gap-1.5 text-xs"
+                aria-label={t("plugins.manager.registries.filter")}
+              >
+                <Library className="size-3.5 text-muted-foreground" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all" className="text-xs">
+                  {t("plugins.manager.registries.allRegistries")}
+                </SelectItem>
+                {registries.map((entry) => (
+                  <SelectItem
+                    key={entry.id}
+                    value={entry.id}
+                    className="text-xs"
+                  >
+                    {entry.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <SortSelect value={sort} onChange={setSort} />
           {layoutControls}
         </div>
@@ -1063,7 +1113,7 @@ function BrowseSection({
       )}
 
       <p className="text-[11px] text-muted-foreground">
-        {t("plugins.manager.communitySoon")}{" "}
+        {t("plugins.manager.registries.browseHint")}{" "}
         <DocsLink core="communityRegistry" className="text-[11px]">
           {t("plugins.manager.communitySubmit")}
         </DocsLink>
@@ -1091,6 +1141,10 @@ function BrowseCard({
         onOpen={onOpen}
         facts={
           <>
+            <SourceBadge
+              source={plugin.source}
+              registryName={plugin.registryName}
+            />
             {plugin.author && <span>{plugin.author}</span>}
             {plugin.latestVersion && <span>v{plugin.latestVersion}</span>}
             {plugin.category && <span>{plugin.category}</span>}

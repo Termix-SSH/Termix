@@ -28,6 +28,49 @@ export const TRUSTED_PLUGIN_KEYS: readonly TrustedPluginKey[] = [
   },
 ];
 
+/**
+ * Signs community plugins after a person reviewed them. Its own tier on
+ * purpose: it can never replace a bundled plugin or count as official.
+ */
+export const COMMUNITY_PLUGIN_KEYS: readonly TrustedPluginKey[] = [
+  {
+    id: "be5b24ea07b36624",
+    publicKey: "LYdHHGJeinCZ7UA8R/o5i1P5W3+dzktTDn5bxp4nPpI=",
+    addedIn: "26.10.1",
+  },
+];
+
+export type KeyTier = "official" | "community" | "custom";
+
+/** Keys of registries an admin added, pinned when they were added. */
+let customKeys: readonly TrustedPluginKey[] = [];
+
+export function setCustomPluginKeys(keys: readonly TrustedPluginKey[]): void {
+  customKeys = keys.filter((key) => toPublicKey(key.publicKey) !== null);
+}
+
+export function getCustomPluginKeys(): readonly TrustedPluginKey[] {
+  return customKeys;
+}
+
+/** First 16 hex chars of the sha256 of a raw base64 public key. */
+export function pluginKeyId(publicKey: string): string {
+  return crypto
+    .createHash("sha256")
+    .update(Buffer.from(publicKey, "base64"))
+    .digest("hex")
+    .slice(0, 16);
+}
+
+/** Whether a string is a raw base64 Ed25519 public key. */
+export function isPluginPublicKey(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^[A-Za-z0-9+/]{43}=$/.test(value) &&
+    toPublicKey(value) !== null
+  );
+}
+
 export type ArtifactVerification =
   { ok: true; keyId: string } | { ok: false; reason: string };
 
@@ -84,6 +127,31 @@ export function verifyPluginArtifact(
     }
   }
   return { ok: false, reason: "signature does not match a trusted key" };
+}
+
+/**
+ * Checks a file against every key this build trusts, official first, and
+ * says which tier signed it.
+ */
+export function verifyAnyTrusted(
+  buffer: Buffer,
+  sha256: string,
+  signature: string,
+): { ok: true; keyId: string; tier: KeyTier } | { ok: false; reason: string } {
+  const tiers: Array<[KeyTier, readonly TrustedPluginKey[]]> = [
+    ["official", TRUSTED_PLUGIN_KEYS],
+    ["community", COMMUNITY_PLUGIN_KEYS],
+    ["custom", customKeys],
+  ];
+  let reason = "signature does not match a trusted key";
+  for (const [tier, keys] of tiers) {
+    if (keys.length === 0) continue;
+    const result = verifyPluginArtifact(buffer, sha256, signature, keys);
+    if (result.ok === true) return { ok: true, keyId: result.keyId, tier };
+    reason = result.reason;
+    if (reason !== "signature does not match a trusted key") break;
+  }
+  return { ok: false, reason };
 }
 
 /** TERMIX_REQUIRE_SIGNED_PLUGINS=true blocks unsigned user plugins. */

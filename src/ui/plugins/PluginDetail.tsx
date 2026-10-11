@@ -33,6 +33,7 @@ import {
   CapabilityRow,
   InstallCountFact,
   PluginIconBox,
+  SourceBadge,
   UnverifiedBadge,
 } from "./plugin-bits";
 import {
@@ -108,6 +109,10 @@ export function PluginDetail({
           </span>
           <Facts className="text-[11px] text-muted-foreground/70">
             {plugin.unverified && <UnverifiedBadge />}
+            <SourceBadge
+              source={plugin.source}
+              registryName={plugin.registryName}
+            />
             {plugin.isBeta && <BetaBadge />}
             {plugin.author && <span>{plugin.author}</span>}
             {plugin.version ? (

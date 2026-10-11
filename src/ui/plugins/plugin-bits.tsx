@@ -88,6 +88,32 @@ export function UnverifiedBadge() {
   );
 }
 
+/** Marks a plugin from the community registry or a custom one. */
+export function SourceBadge({
+  source,
+  registryName,
+}: {
+  source: string;
+  registryName?: string | null;
+}) {
+  const { t } = useTranslation();
+  if (source !== "community" && source !== "custom") return null;
+  const label =
+    source === "community"
+      ? t("plugins.manager.registries.communityBadge")
+      : (registryName ?? t("plugins.manager.registries.customBadge"));
+  return (
+    <span
+      className="max-w-32 shrink-0 truncate border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
+      title={t(`plugins.manager.registries.${source}BadgeHint`, {
+        name: label,
+      })}
+    >
+      {label}
+    </span>
+  );
+}
+
 export function BetaBadge() {
   const { t } = useTranslation();
   return (

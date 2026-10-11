@@ -21,6 +21,7 @@ import {
   unloadPlugin,
 } from "../../plugins/index.js";
 import { getPluginsDir } from "../../plugins/paths.js";
+import { setSyncedRegistryKeys } from "../../plugins/registries.js";
 import type { LoadedPlugin } from "../../plugins/loader.js";
 import {
   createCurrentPluginPermissionGrantRepository,
@@ -283,10 +284,12 @@ async function mirrorOne(link: SyncLink, plugin: RemotePlugin): Promise<void> {
 }
 
 export async function mirrorPlugins(link: SyncLink): Promise<void> {
-  const { plugins } = await remoteJson<{ plugins: RemotePlugin[] }>(
-    link,
-    "/sync/v2/plugins",
-  );
+  const { plugins, registryKeys } = await remoteJson<{
+    plugins: RemotePlugin[];
+    registryKeys?: unknown[];
+  }>(link, "/sync/v2/plugins");
+  // Before any download: a plugin from a custom registry needs its key.
+  await setSyncedRegistryKeys(Array.isArray(registryKeys) ? registryKeys : []);
   lastRemote = plugins;
   const remoteIds = new Set(plugins.map((plugin) => plugin.id));
 
