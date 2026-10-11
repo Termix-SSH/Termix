@@ -512,16 +512,16 @@ describe("registry stats", () => {
   it("keeps valid counts and drops the rest", () => {
     const stats = parseRegistryStats({
       plugins: {
-        docker: { downloads: 120, activeInstalls: 40 },
+        docker: { downloads: 120 },
         tunnels: { downloads: 7 },
         "../bad": { downloads: 1 },
-        broken: { downloads: -3, activeInstalls: "many" },
+        broken: { downloads: -3 },
       },
     });
     expect(Object.fromEntries(stats.plugins)).toEqual({
-      docker: { downloads: 120, activeInstalls: 40 },
-      tunnels: { downloads: 7, activeInstalls: null },
-      broken: { downloads: 0, activeInstalls: null },
+      docker: 120,
+      tunnels: 7,
+      broken: 0,
     });
   });
 
@@ -530,9 +530,6 @@ describe("registry stats", () => {
       response(JSON.stringify({ plugins: { docker: { downloads: 3 } } })),
     );
     const stats = await fetchRegistryStats();
-    expect(stats?.plugins.get("docker")).toEqual({
-      downloads: 3,
-      activeInstalls: null,
-    });
+    expect(stats?.plugins.get("docker")).toBe(3);
   });
 });

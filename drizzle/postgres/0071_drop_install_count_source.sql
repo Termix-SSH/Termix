@@ -1,0 +1,1 @@
+ALTER TABLE "plugin_install_counts" DROP COLUMN "source";

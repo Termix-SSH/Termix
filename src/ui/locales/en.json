@@ -1933,7 +1933,7 @@
         "version": "Version",
         "status": "Status",
         "category": "Category",
-        "installs": "Installs"
+        "downloads": "Downloads"
       },
       "risk": {
         "critical": "Critical",
@@ -2145,11 +2145,8 @@
         "signedOnly": "TERMIX_REQUIRE_SIGNED_PLUGINS is set, so installing from a file stays blocked."
       },
       "count": {
-        "active_one": "{{formatted}} active install",
-        "active_other": "{{formatted}} active installs",
         "downloads_one": "{{formatted}} download",
         "downloads_other": "{{formatted}} downloads",
-        "activeHint": "Instances that reported this plugin turned on in the last week. Instances with usage statistics turned off are not counted.",
         "downloadsHint": "How many times a release was downloaded. This is not the number of installs."
       },
       "unverified": "Unverified",

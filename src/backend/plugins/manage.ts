@@ -56,7 +56,10 @@ import {
 } from "./registries.js";
 import { invalidatePluginPermissionCache } from "./permissions.js";
 import { moveWithRetry } from "./fs-retry.js";
-import { readInstallCounts } from "./install-counts.js";
+import {
+  readDownloadCounts,
+  refreshDownloadCounts,
+} from "./download-counts.js";
 import { readArtifactManifest, sameCapabilities } from "./artifact-manifest.js";
 import {
   parseManifest,
@@ -273,9 +276,8 @@ export interface RegistryListing {
     pinnedVersion: string | null;
     autoUpdate: boolean;
     bundled: boolean;
-    /** See install-counts.ts for what this number does and does not mean. */
-    installCount: number | null;
-    installCountSource: string | null;
+    /** See download-counts.ts for what this number does and does not mean. */
+    downloads: number | null;
   }>;
 }
 
@@ -315,13 +317,14 @@ export async function listRegistry(
   const records = new Map(
     (await createCurrentPluginRepository().listAll()).map((r) => [r.id, r]),
   );
+  await refreshDownloadCounts(options.force);
   const counts = new Map(
     await Promise.all(
       sources
         .filter((source) => source.tier !== "custom")
         .map(
           async (source) =>
-            [source.id, await readInstallCounts(source.id)] as const,
+            [source.id, await readDownloadCounts(source.id)] as const,
         ),
     ),
   );
@@ -439,9 +442,7 @@ export async function listRegistry(
         pinnedVersion: record?.pinnedVersion ?? null,
         autoUpdate: Boolean(record?.autoUpdate),
         bundled: shipped.has(plugin.id),
-        installCount: counts.get(source.id)?.get(plugin.id)?.count ?? null,
-        installCountSource:
-          counts.get(source.id)?.get(plugin.id)?.source ?? null,
+        downloads: counts.get(source.id)?.get(plugin.id) ?? null,
       };
     }),
   };

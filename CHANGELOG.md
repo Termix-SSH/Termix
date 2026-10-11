@@ -13,6 +13,7 @@
 
 - Every language is now fully translated, in Termix and in every plugin, and stays up to date with each release
 - Languages with more than two plural forms, like Russian, Polish and Arabic, now use the right one
+- The Plugins tab shows how many times each plugin was downloaded, in a Downloads column
 
 ### Fixed
 
@@ -21,6 +22,7 @@
 - Plugin updates synced to the desktop app failed to start with "Cannot find package"
 - The desktop app showed plugins that only run on the server as not running and out of date
 - Keep the terminal WebSocket open past nginx's 60s default
+- Plugin download counts now show in the Plugins tab without waiting for the background check
 
 ## 26.10.0
 

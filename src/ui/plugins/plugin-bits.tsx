@@ -126,31 +126,16 @@ export function BetaBadge() {
   );
 }
 
-/** Active installs when the registry has them, release downloads otherwise. */
-export function InstallCountFact({
-  count,
-  source,
-}: {
-  count: number | null;
-  source: string | null;
-}) {
+/** How often the plugin's release files were downloaded. */
+export function DownloadCount({ count }: { count: number | null }) {
   const { t } = useTranslation();
   if (count === null || count <= 0) return null;
-  const active = source === "aggregate-telemetry";
   return (
-    <span
-      title={
-        active
-          ? t("plugins.manager.count.activeHint")
-          : t("plugins.manager.count.downloadsHint")
-      }
-    >
-      {t(
-        active
-          ? "plugins.manager.count.active"
-          : "plugins.manager.count.downloads",
-        { count, formatted: formatCount(count) },
-      )}
+    <span title={t("plugins.manager.count.downloadsHint")}>
+      {t("plugins.manager.count.downloads", {
+        count,
+        formatted: formatCount(count),
+      })}
     </span>
   );
 }

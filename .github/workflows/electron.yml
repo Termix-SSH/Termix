@@ -117,6 +117,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Bundled plugins are counted as downloads in the plugin store, so a
+      # build only fetches them when the pins change.
+      - name: Cache bundled plugins
+        uses: actions/cache@v6
+        with:
+          path: node_modules/.cache/termix-bundled-plugins
+          key: bundled-plugins-${{ hashFiles('docker/bundled-plugins.json') }}
+          enableCrossOsArchive: true
+
       # A beta build has to know it is a beta, or it reports the stable version.
       - name: Stamp beta version
         if: inputs.version_override != ''
@@ -239,6 +248,15 @@ jobs:
           npm install --force @rollup/rollup-linux-x64-gnu
           npm install --force @rollup/rollup-linux-arm64-gnu
           npm install --force @rollup/rollup-linux-arm-gnueabihf
+
+      # Bundled plugins are counted as downloads in the plugin store, so a
+      # build only fetches them when the pins change.
+      - name: Cache bundled plugins
+        uses: actions/cache@v6
+        with:
+          path: node_modules/.cache/termix-bundled-plugins
+          key: bundled-plugins-${{ hashFiles('docker/bundled-plugins.json') }}
+          enableCrossOsArchive: true
 
       # A beta build has to know it is a beta, or it reports the stable version.
       - name: Stamp beta version
@@ -466,6 +484,15 @@ jobs:
           npm install --force @rollup/rollup-darwin-arm64
           npm install dmg-license
           node scripts/install-macos-sharp.cjs
+
+      # Bundled plugins are counted as downloads in the plugin store, so a
+      # build only fetches them when the pins change.
+      - name: Cache bundled plugins
+        uses: actions/cache@v6
+        with:
+          path: node_modules/.cache/termix-bundled-plugins
+          key: bundled-plugins-${{ hashFiles('docker/bundled-plugins.json') }}
+          enableCrossOsArchive: true
 
       # A beta build has to know it is a beta, or it reports the stable version.
       - name: Stamp beta version
@@ -953,6 +980,15 @@ jobs:
           npm install --force @rollup/rollup-darwin-arm64
           npm install dmg-license
           node scripts/install-macos-sharp.cjs
+
+      # Bundled plugins are counted as downloads in the plugin store, so a
+      # build only fetches them when the pins change.
+      - name: Cache bundled plugins
+        uses: actions/cache@v6
+        with:
+          path: node_modules/.cache/termix-bundled-plugins
+          key: bundled-plugins-${{ hashFiles('docker/bundled-plugins.json') }}
+          enableCrossOsArchive: true
 
       - name: Check for Code Signing Certificates
         id: check_certs

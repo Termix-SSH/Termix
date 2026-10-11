@@ -22,8 +22,7 @@ const plugin = {
   capabilities: [],
   contributes: {},
   versions: [],
-  installCount: null,
-  installCountSource: null,
+  downloads: null,
 };
 
 vi.mock("@/plugins/use-plugins-manager", () => ({

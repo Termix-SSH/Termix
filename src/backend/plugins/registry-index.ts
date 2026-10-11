@@ -356,7 +356,8 @@ export async function fetchRegistryIndex(
 }
 
 export interface RegistryStats {
-  plugins: Map<string, { downloads: number; activeInstalls: number | null }>;
+  /** Downloads per plugin id. */
+  plugins: Map<string, number>;
 }
 
 /** stats.json sits next to index.json and is rebuilt daily by the registry. */
@@ -380,21 +381,14 @@ function asCount(value: unknown): number | null {
 }
 
 export function parseRegistryStats(raw: unknown): RegistryStats {
-  const plugins = new Map<
-    string,
-    { downloads: number; activeInstalls: number | null }
-  >();
+  const plugins = new Map<string, number>();
   const entries = (raw as { plugins?: unknown } | null)?.plugins;
   if (!entries || typeof entries !== "object" || Array.isArray(entries)) {
     return { plugins };
   }
   for (const [id, value] of Object.entries(entries)) {
     if (!ID_PATTERN.test(id) || !value || typeof value !== "object") continue;
-    const entry = value as Record<string, unknown>;
-    plugins.set(id, {
-      downloads: asCount(entry.downloads) ?? 0,
-      activeInstalls: asCount(entry.activeInstalls),
-    });
+    plugins.set(id, asCount((value as Record<string, unknown>).downloads) ?? 0);
   }
   return { plugins };
 }

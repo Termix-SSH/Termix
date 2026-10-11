@@ -61,8 +61,7 @@ function entry(
     pinnedVersion: null,
     autoUpdate: false,
     bundled: true,
-    installCount: null,
-    installCountSource: null,
+    downloads: null,
     ...overrides,
   };
 }
@@ -235,9 +234,9 @@ describe("popularity", () => {
     const rows = mergePlugins(
       [],
       [
-        entry({ id: "a", name: "A", installed: false, installCount: 5 }),
-        entry({ id: "b", name: "B", installed: false, installCount: null }),
-        entry({ id: "c", name: "C", installed: false, installCount: 90 }),
+        entry({ id: "a", name: "A", installed: false, downloads: 5 }),
+        entry({ id: "b", name: "B", installed: false, downloads: null }),
+        entry({ id: "c", name: "C", installed: false, downloads: 90 }),
       ],
     );
     expect(sortPlugins(rows, "popular").map((r) => r.id)).toEqual([

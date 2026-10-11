@@ -80,6 +80,8 @@ export const RETIRED_COLUMNS: Record<string, string[]> = {
     "donation_modal_dismissed",
   ],
   sessions: ["oidc_sub", "oidc_sid", "sso_provider_id"],
+  // 26.10.1 shows downloads only.
+  plugin_install_counts: ["source"],
   user_preferences: [
     "command_autocomplete",
     "terminal_defaults",

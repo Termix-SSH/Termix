@@ -1055,10 +1055,9 @@ export const pluginRegistries = mysqlTable("plugin_registries", {
 });
 
 /**
- * Install counts populated by a background job (GitHub release download
- * counts, aggregated telemetry, or a manual override) rather than by the
- * install/uninstall actions themselves, kept separate from `plugins` so
- * that job can overwrite counts without touching install state.
+ * Download counts from each registry's stats.json, written by a background
+ * job rather than by installs, kept separate from `plugins` so that job can
+ * overwrite counts without touching install state.
  */
 export const pluginInstallCounts = mysqlTable(
   "plugin_install_counts",
@@ -1067,7 +1066,6 @@ export const pluginInstallCounts = mysqlTable(
     pluginId: varchar("plugin_id", { length: 255 }).notNull(),
     registryId: varchar("registry_id", { length: 255 }).notNull(),
     count: int("count").notNull().default(0),
-    source: text("source").notNull().default("aggregate-telemetry"),
     updatedAt: text("updated_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
