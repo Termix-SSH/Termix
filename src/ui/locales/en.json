@@ -2085,6 +2085,9 @@
       "noneInstalled": "No plugins installed yet. Browse to add some.",
       "nothingHere": "Nothing here.",
       "nothingHereHint": "Try another category or search.",
+      "showInstalled": "Show installed",
+      "allInstalled": "Everything here is already installed.",
+      "allInstalledHint": "Turn on Show installed to see them.",
       "communitySubmit": "How to submit",
       "registries": {
         "intro": "Registries are lists of plugins you can install. The official one is always on. You can turn on the community registry or add your own.",

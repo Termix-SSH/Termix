@@ -952,6 +952,12 @@ function BrowseSection({
   const [category, setCategory] = useState<string | null>(null);
   const [registry, setRegistry] = useState<string | null>(null);
   const [sort, setSort] = useState<SortKey>("popular");
+  const [installedChoice, setInstalledChoice] = useStoredChoice(
+    "pluginsTab.browseInstalled",
+    ["hide", "show"],
+    "hide",
+  );
+  const showInstalled = installedChoice === "show";
   const categories = useMemo(() => categoriesOf(plugins), [plugins]);
   const registries = manager.registries;
   const registryFilter = registries.some((entry) => entry.id === registry)
@@ -961,12 +967,16 @@ function BrowseSection({
   const rows = sortPlugins(
     plugins.filter(
       (p) =>
+        (showInstalled || !p.installed) &&
         matchesQuery(p, query) &&
         (category === null || p.category === category) &&
         (registryFilter === null || p.registryId === registryFilter),
     ),
     sort,
   );
+
+  const allInstalledHidden =
+    !showInstalled && plugins.length > 0 && plugins.every((p) => p.installed);
 
   const listColumns: DataColumn<PluginEntry>[] = [
     {
@@ -1029,6 +1039,15 @@ function BrowseSection({
         placeholder={t("plugins.manager.searchPlugins")}
       >
         <div className="ml-auto flex items-center gap-2">
+          <label className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">
+              {t("plugins.manager.showInstalled")}
+            </span>
+            <FakeSwitch
+              checked={showInstalled}
+              onChange={(v) => setInstalledChoice(v ? "show" : "hide")}
+            />
+          </label>
           {registries.length > 1 && (
             <Select
               value={registryFilter ?? "__all"}
@@ -1084,15 +1103,23 @@ function BrowseSection({
       )}
 
       {rows.length === 0 ? (
-        <EmptyState
-          icon={Puzzle}
-          title={t("plugins.manager.nothingHere")}
-          hint={
-            plugins.length === 0
-              ? undefined
-              : t("plugins.manager.nothingHereHint")
-          }
-        />
+        allInstalledHidden ? (
+          <EmptyState
+            icon={Puzzle}
+            title={t("plugins.manager.allInstalled")}
+            hint={t("plugins.manager.allInstalledHint")}
+          />
+        ) : (
+          <EmptyState
+            icon={Puzzle}
+            title={t("plugins.manager.nothingHere")}
+            hint={
+              plugins.length === 0
+                ? undefined
+                : t("plugins.manager.nothingHereHint")
+            }
+          />
+        )
       ) : (
         <PluginCollection
           plugins={rows}

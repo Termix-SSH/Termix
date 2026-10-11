@@ -73,6 +73,19 @@ describe("PluginsTab", () => {
     expect(link.getAttribute("href")).toBe(docsUrl("communityRegistry"));
   });
 
+  it("hides installed plugins in Browse until shown", async () => {
+    await renderTab();
+    fireEvent.click(screen.getByText(en.plugins.manager.tabs.browse));
+
+    expect(screen.queryByText("Demo Plugin")).toBeNull();
+    expect(screen.getByText(en.plugins.manager.allInstalled)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("switch"));
+
+    expect(screen.getByText("Demo Plugin")).toBeTruthy();
+    expect(localStorage.getItem("pluginsTab.browseInstalled")).toBe("show");
+  });
+
   it("switches to a table and remembers it", async () => {
     await renderTab();
     expect(screen.queryByRole("table")).toBeNull();

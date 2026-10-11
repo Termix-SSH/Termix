@@ -14,6 +14,7 @@
 - Every language is now fully translated, in Termix and in every plugin, and stays up to date with each release
 - Languages with more than two plural forms, like Russian, Polish and Arabic, now use the right one
 - The Plugins tab shows how many times each plugin was downloaded, in a Downloads column
+- Plugins, Browse hides plugins you already have. Turn on Show installed to see them
 
 ### Fixed
 
