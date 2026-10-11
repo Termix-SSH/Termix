@@ -187,7 +187,7 @@ export const SETTINGS_SEARCH_INDEX: Record<string, string[]> = {
     "admin.sectionSessions",
     "admin.sessionActive",
     "admin.sessionExpires",
-    "admin.sessionsActive",
+    "admin.sessionsActive_other",
     "admin.youBadge",
   ],
   "admin-ssl": [
