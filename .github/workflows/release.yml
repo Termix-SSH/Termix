@@ -161,15 +161,62 @@ jobs:
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
           echo "prev_ref=$PREV" >> "$GITHUB_OUTPUT"
 
-  verify-beta:
+  # Translates new or changed strings with the Termix LLM server and commits
+  # them to the dev branch, so the beta or stable build includes them. If the
+  # server is down it warns and the release goes on with what is there.
+  translate:
     needs: [prep]
+    if: ${{ needs.prep.outputs.skip != 'true' && needs.prep.outputs.mode != 'Overwrite release' }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
+    steps:
+      - name: Checkout dev branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prep.outputs.sha || needs.prep.outputs.dev_branch }}
+          fetch-depth: 1
+          token: ${{ secrets.TERMIX_PAT }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Translate
+        uses: Termix-SSH/Termix-Registry/translate@main
+        with:
+          source: src/ui/locales/en.json
+          out: src/ui/locales/translated
+          languages: src/ui/locales/languages.json
+          api-key: ${{ secrets.TERMIX_LLM_API_KEY }}
+
+      - name: Commit translations
+        id: commit
+        run: |
+          git add src/ui/locales
+          if git diff --cached --quiet; then
+            echo "No translation changes."
+          elif [ "${{ needs.prep.outputs.mode }}" = "Dry run" ]; then
+            echo "DRY RUN: would commit these translation changes:"
+            git --no-pager diff --cached --stat
+          else
+            git config user.name "LukeGus"
+            git config user.email "bugattiguy527@gmail.com"
+            git commit -m "chore: update translations"
+            git push origin HEAD:"${{ needs.prep.outputs.dev_branch }}"
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  verify-beta:
+    needs: [prep, translate]
     if: ${{ needs.prep.outputs.channel == 'Beta' && needs.prep.outputs.skip != 'true' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Checkout beta commit
         uses: actions/checkout@v7
         with:
-          ref: ${{ needs.prep.outputs.sha }}
+          ref: ${{ needs.translate.outputs.sha || needs.prep.outputs.sha }}
           fetch-depth: 1
 
       - name: Setup Node.js
@@ -197,7 +244,7 @@ jobs:
         run: npm run test
 
   normalize:
-    needs: [prep]
+    needs: [prep, translate]
     if: ${{ needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Overwrite release' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
@@ -284,8 +331,8 @@ jobs:
           git push origin HEAD:"${{ needs.prep.outputs.dev_branch }}"
 
   merge-to-main:
-    needs: [prep, normalize, sync-main]
-    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.channel == 'Stable' && (needs.normalize.result == 'success' || needs.normalize.result == 'skipped') && (needs.sync-main.result == 'success' || needs.sync-main.result == 'skipped') }}
+    needs: [prep, translate, normalize, sync-main]
+    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.channel == 'Stable' && (needs.translate.result == 'success' || needs.translate.result == 'skipped') && (needs.normalize.result == 'success' || needs.normalize.result == 'skipped') && (needs.sync-main.result == 'success' || needs.sync-main.result == 'skipped') }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     outputs:
       main_sha: ${{ steps.merge.outputs.main_sha }}
@@ -353,14 +400,14 @@ jobs:
           echo "build_ref=$MAIN_SHA" >> "$GITHUB_OUTPUT"
 
   docker:
-    needs: [prep, verify-beta, merge-to-main]
+    needs: [prep, translate, verify-beta, merge-to-main]
     if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && (needs.merge-to-main.result == 'success' || needs.verify-beta.result == 'success') }}
     uses: ./.github/workflows/docker.yml
     with:
       version: ${{ needs.prep.outputs.version }}
       build_type: ${{ needs.prep.outputs.channel == 'Beta' && 'Beta' || 'Production' }}
       dry_run: ${{ needs.prep.outputs.mode == 'Dry run' }}
-      source_ref: ${{ needs.merge-to-main.outputs.build_ref || needs.prep.outputs.sha }}
+      source_ref: ${{ needs.merge-to-main.outputs.build_ref || needs.translate.outputs.sha || needs.prep.outputs.sha }}
     secrets: inherit
 
   create-release:
@@ -418,7 +465,7 @@ jobs:
           fi
 
   create-beta-release:
-    needs: [prep, docker]
+    needs: [prep, translate, docker]
     if: ${{ always() && needs.prep.outputs.channel == 'Beta' && needs.docker.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     permissions:
@@ -427,7 +474,7 @@ jobs:
       - name: Checkout beta commit
         uses: actions/checkout@v7
         with:
-          ref: ${{ needs.prep.outputs.sha }}
+          ref: ${{ needs.translate.outputs.sha || needs.prep.outputs.sha }}
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -440,7 +487,7 @@ jobs:
           node scripts/generate-beta-body.cjs \
             --version "${{ needs.prep.outputs.version }}" \
             --branch "${{ needs.prep.outputs.dev_branch }}" \
-            --sha "${{ needs.prep.outputs.sha }}" \
+            --sha "${{ needs.translate.outputs.sha || needs.prep.outputs.sha }}" \
             --prev "${{ needs.prep.outputs.prev_ref }}" > BETA_BODY.md
 
       - name: Create beta release
@@ -456,11 +503,19 @@ jobs:
           else
             gh release create "$TAG" --repo ${{ github.repository }} \
               --title "$TITLE" --notes-file BETA_BODY.md \
-              --prerelease --target "${{ needs.prep.outputs.sha }}"
+              --prerelease --target "${{ needs.translate.outputs.sha || needs.prep.outputs.sha }}"
           fi
 
   electron-release:
-    needs: [prep, merge-to-main, docker, create-release, create-beta-release]
+    needs:
+      [
+        prep,
+        translate,
+        merge-to-main,
+        docker,
+        create-release,
+        create-beta-release,
+      ]
     if: ${{ always() && needs.prep.outputs.skip != 'true' && needs.docker.result == 'success' && needs.create-release.result != 'failure' && needs.create-beta-release.result != 'failure' }}
     uses: ./.github/workflows/electron.yml
     with:
@@ -468,7 +523,7 @@ jobs:
       artifact_destination: ${{ needs.prep.outputs.mode == 'Dry run' && 'file' || 'release' }}
       release_tag: ${{ needs.prep.outputs.release_tag }}
       version_override: ${{ needs.prep.outputs.channel == 'Beta' && needs.prep.outputs.version || '' }}
-      source_ref: ${{ needs.merge-to-main.outputs.build_ref || needs.prep.outputs.sha }}
+      source_ref: ${{ needs.merge-to-main.outputs.build_ref || needs.translate.outputs.sha || needs.prep.outputs.sha }}
     secrets: inherit
 
   electron-submit:
@@ -541,8 +596,48 @@ jobs:
 
   # The docs site reads the env catalog, API spec and download list from the
   # newest stable release.
-  docs-refresh:
+  # Docs written for this release live on dev-X.Y.Z in the Docs repo. Squash
+  # merge it into main once the release is out. No branch means nothing to do.
+  docs-merge:
     needs: [prep, electron-release]
+    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.electron-release.result == 'success' && needs.prep.outputs.mode != 'Dry run' && needs.prep.outputs.mode != 'Overwrite release' }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - name: Merge the docs dev branch into main
+        env:
+          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
+          REPO: Termix-SSH/Docs
+          VERSION: ${{ needs.prep.outputs.version }}
+        run: |
+          BRANCH="dev-$VERSION"
+          if ! gh api "repos/$REPO/branches/$BRANCH" > /dev/null 2>&1; then
+            echo "$REPO has no $BRANCH branch, nothing to merge."
+            exit 0
+          fi
+
+          AHEAD=$(gh api "repos/$REPO/compare/main...$BRANCH" -q .ahead_by)
+          if [ "$AHEAD" = "0" ]; then
+            echo "$BRANCH has nothing main doesn't, deleting it."
+            gh api -X DELETE "repos/$REPO/git/refs/heads/$BRANCH"
+            exit 0
+          fi
+
+          PR_NUMBER=$(gh pr list --repo "$REPO" --head "$BRANCH" --base main --state open --json number -q '.[0].number')
+          if [ -z "$PR_NUMBER" ]; then
+            PR_NUMBER=$(gh pr create --repo "$REPO" --base main --head "$BRANCH" \
+              --title "v$VERSION" --body "Docs for Termix v$VERSION." | grep -oE '[0-9]+$')
+          fi
+
+          gh pr merge "$PR_NUMBER" --repo "$REPO" --squash --admin --delete-branch
+
+          STATE=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json state -q .state)
+          if [ "$STATE" != "MERGED" ]; then
+            echo "Docs PR #$PR_NUMBER did not merge (state: $STATE)."
+            exit 1
+          fi
+
+  docs-refresh:
+    needs: [prep, electron-release, docs-merge]
     if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.electron-release.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:

@@ -1,0 +1,53 @@
+name: Translate
+
+on:
+  workflow_dispatch:
+    inputs:
+      retranslate:
+        description: "Translate every string again, not only new or changed ones"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: translate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  translate:
+    if: ${{ startsWith(github.ref, 'refs/heads/dev-') }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          token: ${{ secrets.TERMIX_PAT }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Translate
+        uses: Termix-SSH/Termix-Registry/translate@main
+        with:
+          source: src/ui/locales/en.json
+          out: src/ui/locales/translated
+          languages: src/ui/locales/languages.json
+          retranslate: ${{ inputs.retranslate }}
+          api-key: ${{ secrets.TERMIX_LLM_API_KEY }}
+
+      - name: Commit translations
+        run: |
+          git add src/ui/locales
+          if git diff --cached --quiet; then
+            echo "No translation changes."
+            exit 0
+          fi
+          git config user.name "LukeGus"
+          git config user.email "bugattiguy527@gmail.com"
+          git commit -m "chore: update translations"
+          git push origin HEAD:"${GITHUB_REF_NAME}"

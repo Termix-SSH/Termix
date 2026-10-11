@@ -1,5 +1,20 @@
 # Changelog
 
+## 26.10.1
+
+### Added
+
+- Slovak, Croatian, Slovenian, Lithuanian, Latvian, Estonian and Malay
+
+### Changed
+
+- Every language is now fully translated, in Termix and in every plugin, and stays up to date with each release
+- Languages with more than two plural forms, like Russian, Polish and Arabic, now use the right one
+
+### Fixed
+
+- Regional browser languages like `es-MX`, `pt` or `zh-HK` showed English instead of the closest translation
+
 ## 26.10.0
 
 ### Added

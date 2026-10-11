@@ -59,50 +59,13 @@ import {
   normalizeLanguageCode,
   rememberLoginLanguage,
 } from "@/i18n/i18n";
+import { LANGUAGES } from "@/i18n/languages";
 import {
   removeSilentSigninFromSearch,
   shouldTriggerSilentSignin,
 } from "./silent-signin";
 import { Select2 } from "@/components/select2";
 import { cn } from "@/lib/utils";
-
-const LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "af", label: "Afrikaans" },
-  { code: "ar", label: "العربية" },
-  { code: "bn", label: "বাংলা" },
-  { code: "bg", label: "Български" },
-  { code: "ca", label: "Català" },
-  { code: "zh-CN", label: "中文 (简体)" },
-  { code: "zh-TW", label: "中文 (繁體)" },
-  { code: "cs", label: "Čeština" },
-  { code: "da", label: "Dansk" },
-  { code: "nl", label: "Nederlands" },
-  { code: "fi", label: "Suomi" },
-  { code: "fr", label: "Français" },
-  { code: "de", label: "Deutsch" },
-  { code: "el", label: "Ελληνικά" },
-  { code: "he", label: "עברית" },
-  { code: "hi", label: "हिन्दी" },
-  { code: "hu", label: "Magyar" },
-  { code: "id", label: "Indonesia" },
-  { code: "it", label: "Italiano" },
-  { code: "ja", label: "日本語" },
-  { code: "ko", label: "한국어" },
-  { code: "no", label: "Norsk" },
-  { code: "pl", label: "Polski" },
-  { code: "pt-PT", label: "Português (PT)" },
-  { code: "pt-BR", label: "Português (BR)" },
-  { code: "ro", label: "Română" },
-  { code: "ru", label: "Русский" },
-  { code: "sr", label: "Српски" },
-  { code: "es-ES", label: "Español" },
-  { code: "sv-SE", label: "Svenska" },
-  { code: "th", label: "ไทย" },
-  { code: "tr", label: "Türkçe" },
-  { code: "uk", label: "Українська" },
-  { code: "vi", label: "Tiếng Việt" },
-];
 
 function LanguageRow({
   label,

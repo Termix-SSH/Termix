@@ -14,6 +14,7 @@ import {
   UI_FONTS,
 } from "@/lib/theme";
 import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
+import { LANGUAGES } from "@/i18n/languages";
 import { getUserPreferences, saveUserPreferences } from "@/api/open-tabs-api";
 import type { FontSizeId, ThemeId, UiFontId } from "@/types/ui-types";
 
@@ -47,44 +48,6 @@ const THEME_PALETTES: Record<
   "one-dark": { bg: "#282c34", panel: "#21252b", text: "#abb2bf" },
   gruvbox: { bg: "#282828", panel: "#3c3836", text: "#ebdbb2" },
 };
-
-export const LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "af", label: "Afrikaans" },
-  { code: "ar", label: "العربية" },
-  { code: "bn", label: "বাংলা" },
-  { code: "bg", label: "Български" },
-  { code: "ca", label: "Català" },
-  { code: "zh-CN", label: "中文 (简体)" },
-  { code: "zh-TW", label: "中文 (繁體)" },
-  { code: "cs", label: "Čeština" },
-  { code: "da", label: "Dansk" },
-  { code: "nl", label: "Nederlands" },
-  { code: "fi", label: "Suomi" },
-  { code: "fr", label: "Français" },
-  { code: "de", label: "Deutsch" },
-  { code: "el", label: "Ελληνικά" },
-  { code: "he", label: "עברית" },
-  { code: "hi", label: "हिन्दी" },
-  { code: "hu", label: "Magyar" },
-  { code: "id", label: "Indonesia" },
-  { code: "it", label: "Italiano" },
-  { code: "ja", label: "日本語" },
-  { code: "ko", label: "한국어" },
-  { code: "no", label: "Norsk" },
-  { code: "pl", label: "Polski" },
-  { code: "pt-PT", label: "Português (PT)" },
-  { code: "pt-BR", label: "Português (BR)" },
-  { code: "ro", label: "Română" },
-  { code: "ru", label: "Русский" },
-  { code: "sr", label: "Српски" },
-  { code: "es-ES", label: "Español" },
-  { code: "sv-SE", label: "Svenska" },
-  { code: "th", label: "ไทย" },
-  { code: "tr", label: "Türkçe" },
-  { code: "uk", label: "Українська" },
-  { code: "vi", label: "Tiếng Việt" },
-];
 
 export const THEME_LABEL_KEYS: Record<ThemeId, string> = {
   system: "newUi.sidebar.userProfile.themeSystem",
