@@ -17,7 +17,11 @@ import { describePluginFrontend } from "../../plugins/assets.js";
 import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
 import { getPluginPublicHttpRoutes } from "../../plugins/http.js";
 import { getPluginPublicWsRoutes } from "../../plugins/ws.js";
-import { MAX_UPLOAD_BYTES, PluginManageError } from "../../plugins/manage.js";
+import {
+  isLinkedDesktop,
+  MAX_UPLOAD_BYTES,
+  PluginManageError,
+} from "../../plugins/manage.js";
 import { parsePluginChannel } from "../../plugins/registry-index.js";
 import {
   pluginDocsUrl,
@@ -236,6 +240,9 @@ export async function listPreLoginPlugins(): Promise<
  *       it, and `locales` lists the languages it ships ("en" and xx_YY).
  *       `dependencies` and `optionalDependencies` let the loader activate
  *       frontends in the same order the server does.
+ *
+ *       On a desktop linked to a server, `runsOnServer` marks plugins that
+ *       only run on that server and stay off here on purpose.
  *     tags:
  *       - Plugins
  *     responses:
@@ -253,6 +260,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
       userId,
       "admin.plugins.manage",
     );
+    const linked = await isLinkedDesktop();
 
     // One query for every plugin rather than one per plugin.
     const grantsByPlugin = new Map<string, string[]>();
@@ -285,6 +293,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
         let features: string[] = [];
         let docs: string | undefined;
         let env: PluginEnvVar[] = [];
+        let desktopMode: unknown = loaded?.manifest.desktop;
         try {
           const manifest = JSON.parse(record.manifestJson) as {
             contributes?: unknown;
@@ -299,7 +308,9 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
             env?: unknown;
             dependencies?: Record<string, string>;
             optionalDependencies?: Record<string, string>;
+            desktop?: unknown;
           };
+          desktopMode = loaded?.manifest.desktop ?? manifest?.desktop;
           contributes = manifest?.contributes ?? null;
           capabilities = Array.isArray(manifest?.capabilities)
             ? (manifest.capabilities as string[])
@@ -332,6 +343,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
           version: record.version,
           enabled: record.state === "enabled",
           state: loaded?.state ?? record.state,
+          runsOnServer: linked && desktopMode === "server",
           contributes,
           icon,
           dependencies,

@@ -125,6 +125,14 @@ describe("mergePlugins", () => {
     );
   });
 
+  it("offers no update for a plugin a linked desktop leaves to its server", () => {
+    const [row] = mergePlugins(
+      [summary({ enabled: false, state: "disabled", runsOnServer: true })],
+      [entry()],
+    );
+    expect(row).toMatchObject({ status: "server", updateAvailable: false });
+  });
+
   it("keeps installed plugins when the registry is unreachable", () => {
     const rows = mergePlugins([summary()], null);
     expect(rows).toHaveLength(1);
@@ -140,6 +148,9 @@ describe("pluginStatus", () => {
       "disabled",
     );
     expect(pluginStatus(summary())).toBe("running");
+    expect(pluginStatus(summary({ state: "failed", runsOnServer: true }))).toBe(
+      "server",
+    );
   });
 });
 

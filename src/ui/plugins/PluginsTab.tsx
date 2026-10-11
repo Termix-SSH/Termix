@@ -483,7 +483,10 @@ function InstalledSection({
     sort,
   );
   const running = rows.filter((p) => p.status === "running");
-  const stopped = rows.filter((p) => p.status !== "running");
+  const onServer = rows.filter((p) => p.status === "server");
+  const stopped = rows.filter(
+    (p) => p.status !== "running" && p.status !== "server",
+  );
   const pending = plugins.filter((p) => p.updateAvailable && !p.pinnedVersion);
 
   const listColumns: DataColumn<PluginEntry>[] = [
@@ -585,6 +588,14 @@ function InstalledSection({
               count={running.length}
             >
               {collection(running)}
+            </Group>
+          )}
+          {onServer.length > 0 && (
+            <Group
+              title={t("plugins.manager.groups.onServer")}
+              count={onServer.length}
+            >
+              {collection(onServer)}
             </Group>
           )}
           {stopped.length > 0 && (
@@ -717,7 +728,9 @@ function InstalledCard({
         <div className="flex items-center gap-2 border-t border-border px-3 py-2">
           <span className="size-1.5 shrink-0 bg-muted-foreground/40" />
           <span className="text-[11px] text-muted-foreground">
-            {t("plugins.manager.status.disabled")}
+            {plugin.status === "server"
+              ? t("plugins.manager.status.server")
+              : t("plugins.manager.status.disabled")}
           </span>
         </div>
       ) : (
@@ -806,11 +819,13 @@ function StatusCell({ plugin }: { plugin: PluginEntry }) {
       ? t("plugins.manager.status.blocked")
       : failed
         ? t("plugins.manager.status.failed")
-        : !running
-          ? t("plugins.manager.status.disabled")
-          : plugin.pinnedVersion
-            ? t("plugins.manager.pinnedTo", { version: plugin.pinnedVersion })
-            : t("plugins.manager.status.running");
+        : plugin.status === "server"
+          ? t("plugins.manager.status.server")
+          : !running
+            ? t("plugins.manager.status.disabled")
+            : plugin.pinnedVersion
+              ? t("plugins.manager.pinnedTo", { version: plugin.pinnedVersion })
+              : t("plugins.manager.status.running");
   return (
     <span
       className="flex min-w-0 items-center gap-1.5 text-muted-foreground"

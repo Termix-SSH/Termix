@@ -221,6 +221,8 @@ export interface PluginSummary {
   enabled: boolean;
   /** enabled | disabled | blocked | failed, or the loader's live state. */
   state: string;
+  /** A linked desktop leaves this plugin to its server. */
+  runsOnServer?: boolean;
   contributes: PluginContributions | null;
   /** Lucide icon name from the manifest. */
   icon?: string;

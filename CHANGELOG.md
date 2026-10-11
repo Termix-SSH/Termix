@@ -15,6 +15,8 @@
 
 - Regional browser languages like `es-MX`, `pt` or `zh-HK` showed English instead of the closest translation
 - Counts like "1 keys" or "Moved 1 host(s)" now use the singular
+- Plugin updates synced to the desktop app failed to start with "Cannot find package"
+- The desktop app showed plugins that only run on the server as not running and out of date
 
 ## 26.10.0
 

@@ -1875,12 +1875,15 @@
         "running": "Running",
         "disabled": "Disabled",
         "failed": "Stopped unexpectedly",
-        "blocked": "Waiting on another plugin"
+        "blocked": "Waiting on another plugin",
+        "server": "Runs on your server"
       },
       "groups": {
         "running": "Running",
-        "notRunning": "Not running"
+        "notRunning": "Not running",
+        "onServer": "On your server"
       },
+      "runsOnServerHint": "This plugin only runs on your server, so it stays off in the desktop app. It still works there.",
       "sort": {
         "popular": "Most popular",
         "name": "Name",

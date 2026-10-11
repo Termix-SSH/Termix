@@ -11,6 +11,7 @@ import {
   Lightbulb,
   Pin,
   RotateCcw,
+  Server,
   Settings,
   Trash2,
   TriangleAlert,
@@ -222,6 +223,15 @@ export function PluginDetail({
               {plugin.lastError}
             </span>
           </div>
+        </div>
+      )}
+
+      {plugin.status === "server" && (
+        <div className="flex items-start gap-2 border border-border bg-muted/30 px-3 py-2.5">
+          <Server className="mt-px size-3.5 shrink-0 text-muted-foreground" />
+          <span className="text-[11px] leading-snug text-muted-foreground">
+            {t("plugins.manager.runsOnServerHint")}
+          </span>
         </div>
       )}
 

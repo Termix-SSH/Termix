@@ -40,6 +40,7 @@ import {
 import { resolveRequirements } from "./service-registry.js";
 import { resolveSecretRequirements } from "./secret-registry.js";
 import { recordConflict } from "./conflicts.js";
+import { installHostModuleFallback } from "./host-modules.js";
 import { tablePrefix } from "@termix-ssh/plugin-sdk/db";
 
 export type PluginState =
@@ -567,6 +568,7 @@ export class PluginLoader {
     )}`;
 
     try {
+      installHostModuleFallback();
       const imported = (await import(entry)) as {
         activate?: PluginModule["activate"];
         deactivate?: PluginModule["deactivate"];

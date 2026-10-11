@@ -443,6 +443,28 @@ describe("plugins route", () => {
     ]);
   });
 
+  it("marks server-only plugins on a linked desktop", async () => {
+    state.plugins.set(
+      "sample-plugin",
+      makePlugin({ manifestJson: JSON.stringify({ desktop: "server" }) }),
+    );
+
+    const read = async () =>
+      (
+        (await (await fetch(`${baseUrl}/plugins`)).json()) as Array<{
+          runsOnServer: boolean;
+        }>
+      )[0].runsOnServer;
+
+    expect(await read()).toBe(false);
+    manageMock.isLinkedDesktop.mockResolvedValue(true);
+    try {
+      expect(await read()).toBe(true);
+    } finally {
+      manageMock.isLinkedDesktop.mockResolvedValue(false);
+    }
+  });
+
   it("grants a declared capability", async () => {
     state.plugins.set("sample-plugin", makePlugin());
 
@@ -577,6 +599,7 @@ describe("plugins route", () => {
         version: "1.0.0",
         enabled: true,
         state: "enabled",
+        runsOnServer: false,
         contributes: null,
         dependencies: {},
         optionalDependencies: {},

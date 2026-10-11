@@ -24,7 +24,8 @@ import {
   normalizeGitHubRepo,
 } from "@/lib/issue-url";
 
-export type PluginStatus = "running" | "disabled" | "failed" | "blocked";
+export type PluginStatus =
+  "running" | "disabled" | "failed" | "blocked" | "server";
 
 /** One row of the Plugins tab: what is installed merged with the registry. */
 export interface PluginEntry {
@@ -100,6 +101,7 @@ export function pluginSource(summary: PluginSummary): PluginSource {
 }
 
 export function pluginStatus(summary: PluginSummary): PluginStatus {
+  if (summary.runsOnServer) return "server";
   if (summary.state === "failed") return "failed";
   if (summary.state === "blocked") return "blocked";
   if (!summary.enabled) return "disabled";
@@ -136,7 +138,10 @@ export function mergePlugins(
       latestBeta: entry?.latestBeta ?? null,
       channel: summary.channel ?? entry?.channel ?? "stable",
       isBeta: isPrerelease(summary.version),
-      updateAvailable: entry?.updateAvailable ?? false,
+      // The server keeps its own copy up to date.
+      updateAvailable: summary.runsOnServer
+        ? false
+        : (entry?.updateAvailable ?? false),
       addedCapabilities: entry?.addedCapabilities ?? [],
       versions: entry?.versions ?? [],
       capabilities: summary.capabilities ?? [],
