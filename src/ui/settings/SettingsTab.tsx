@@ -387,7 +387,7 @@ export function SettingsTab({
                 )}
               </SettingsEmbedContext.Provider>
               {page.id === "keybindings" && <KeybindingsSettings />}
-              {page.id === "updates" && isAdmin && <UpdatesSettings />}
+              {page.id === "updates" && <UpdatesSettings isAdmin={isAdmin} />}
               {pluginFeature && (
                 <>
                   {pluginFeature.user && (

@@ -11,6 +11,7 @@
 export const CORE_ONBOARDING_STEPS = {
   plugins: 1,
   "desktop-sync": 1,
+  "desktop-updates": 1,
   preset: 1,
   appearance: 1,
   security: 1,

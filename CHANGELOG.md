@@ -5,6 +5,7 @@
 ### Added
 
 - Slovak, Croatian, Slovenian, Lithuanian, Latvian, Estonian and Malay
+- The desktop app can update itself. Pick Automatic, Ask first or Never in Settings, Updates. Store and package manager installs keep updating the way they do now
 
 ### Changed
 

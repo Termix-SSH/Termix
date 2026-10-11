@@ -26,6 +26,23 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getEmbeddedServerStatus: () =>
     ipcRenderer.invoke("get-embedded-server-status"),
 
+  // App Store builds are updated by the store.
+  updates: process.mas
+    ? undefined
+    : {
+        getState: () => ipcRenderer.invoke("desktop-update-get-state"),
+        check: () => ipcRenderer.invoke("desktop-update-check"),
+        download: () => ipcRenderer.invoke("desktop-update-download"),
+        install: () => ipcRenderer.invoke("desktop-update-install"),
+        setMode: (mode) => ipcRenderer.invoke("desktop-update-set-mode", mode),
+        onState: (callback) => {
+          const listener = (_event, state) => callback(state);
+          ipcRenderer.on("desktop-update-state", listener);
+          return () =>
+            ipcRenderer.removeListener("desktop-update-state", listener);
+        },
+      },
+
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
   isElectron: true,
   isDev: process.env.NODE_ENV === "development",
