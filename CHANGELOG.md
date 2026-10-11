@@ -20,6 +20,7 @@
 - Counts like "1 keys" or "Moved 1 host(s)" now use the singular
 - Plugin updates synced to the desktop app failed to start with "Cannot find package"
 - The desktop app showed plugins that only run on the server as not running and out of date
+- Keep the terminal WebSocket open past nginx's 60s default
 
 ## 26.10.0
 
