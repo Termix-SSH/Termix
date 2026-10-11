@@ -1413,7 +1413,6 @@ export function SidebarTree({
                 setConfirmDialog({
                   message: t("hosts.deleteHostsConfirm", {
                     count: selectedHostIds.size,
-                    plural: selectedHostIds.size !== 1 ? "s" : "",
                   }),
                   onConfirm: async () => {
                     const ids = Array.from(selectedHostIds);

@@ -14,6 +14,7 @@
 ### Fixed
 
 - Regional browser languages like `es-MX`, `pt` or `zh-HK` showed English instead of the closest translation
+- Counts like "1 keys" or "Moved 1 host(s)" now use the singular
 
 ## 26.10.0
 
