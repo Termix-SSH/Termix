@@ -1984,6 +1984,16 @@ const C2S_WS_HIGH_WATERMARK = 1024 * 1024;
 const C2S_WS_LOW_WATERMARK = 256 * 1024;
 const C2S_STREAM_WRITE_LIMIT = 8 * 1024 * 1024;
 
+// A proxy in front of the server may drop an idle WebSocket, which stopped
+// the tunnel. Pings count as traffic.
+function keepC2SSocketAlive(ws) {
+  const timer = setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) ws.ping();
+  }, 25_000);
+  timer.unref?.();
+  ws.once("close", () => clearInterval(timer));
+}
+
 // C2S (client-to-server) tunnels relay through the server this desktop is
 // linked to, not the embedded backend.
 function getC2SRemoteBaseUrl() {
@@ -2252,6 +2262,7 @@ async function openC2SRelay(
     getWebSocketOptions(relayUrl, { headers }),
   );
   attachC2SAuth(ws, tunnel.name || getC2STunnelName(tunnel));
+  keepC2SSocketAlive(ws);
   const pendingChunks = [];
   let ready = false;
   let closed = false;
@@ -2359,6 +2370,7 @@ async function testC2SRelay(
     getWebSocketOptions(relayUrl, { headers }),
   );
   attachC2SAuth(ws, tunnel.name || getC2STunnelName(tunnel));
+  keepC2SSocketAlive(ws);
 
   if (runtime) runtime.authSocket = ws;
   return new Promise((resolve) => {
@@ -2669,6 +2681,7 @@ async function startC2SRemoteTunnel(tunnel, index = 0, authToken) {
     getWebSocketOptions(relayUrl, { headers }),
   );
   attachC2SAuth(ws, tunnel.name || getC2STunnelName(tunnel));
+  keepC2SSocketAlive(ws);
   const sockets = new Map();
   let closed = false;
 

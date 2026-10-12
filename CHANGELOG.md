@@ -26,6 +26,7 @@
 - Plugin download counts now show in the Plugins tab without waiting for the background check
 - Clicking into a saved password, key passphrase or sudo password field and saving without typing erased it, which stopped sudo autofill
 - The desktop app now says when its data is from 2.8 or older and needs 2.9 first, instead of only saying the local server could not start
+- Client tunnels on the desktop app stopped with "Endpoint SSH connection closed" when a reverse proxy dropped their idle connection
 
 ## 26.10.0
 
