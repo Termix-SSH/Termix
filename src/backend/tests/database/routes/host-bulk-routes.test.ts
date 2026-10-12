@@ -92,6 +92,13 @@ Host alias-only
     expect(result).toHaveLength(0);
   });
 
+  it("accepts tabs and = between keywords and values", () => {
+    const config = "Host\tweb\n\tHostName=10.0.0.5\n\tUser = deploy\n";
+    expect(parseSSHConfig(config)).toEqual([
+      { name: "web", hostname: "10.0.0.5", user: "deploy" },
+    ]);
+  });
+
   it("defaults port to undefined when not specified", () => {
     const config = `
 Host server
