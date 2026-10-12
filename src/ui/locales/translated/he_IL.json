@@ -1141,6 +1141,7 @@
     "databaseConnectionFailed": "החיבור לשרת המסד נתונים נכשל",
     "embeddedServerPortInUse": "הפורט {{port}} כבר בשימוש על ידי תוכנית אחרת. לרוב מדובר במיכל Docker של Termix או בתהליך Termix שנותר מהפעלה קודמת. סגור אותו, ואז הפעל מחדש את Termix.",
     "embeddedServerPortInUseUnknownPort": "אחד מהפורטים ש-Termix זקוק להם כבר בשימוש על ידי תוכנית אחרת. סגור את מה שמשתמש בו, ואז הפעל מחדש את Termix.",
+    "embeddedServerOldDatabase": "הנתונים המקומיים שלך הם מ-Termix 2.8 או קודם יותר, ועליהם לעבור דרך גרסה 2.9 תחילה. התקן את Termix 2.9.1, פתח אותו פעם אחת כדי שיוכל להעביר את הנתונים שלך, ואז עדכן שוב לגרסה זו.",
     "embeddedServerCrashed": "השרת המקומי הופסק באופן בלתי צפוי. הפעל מחדש את Termix, ובדוק את יומן השולחן העבודה אם זה ממשיך לקרות.",
     "resetCodeSent": "קוד איפוס נשלח ליומני Docker",
     "codeVerified": "הקוד אומת בהצלחה",

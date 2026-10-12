@@ -1113,6 +1113,7 @@
     "databaseConnectionFailed": "데이터베이스 서버 연결 실패",
     "embeddedServerPortInUse": "포트 {{port}}는 이미 다른 프로그램에서 사용 중입니다. 일반적으로 Termix Docker 컨테이너나 이전 세션의 Termix 프로세스가 원인입니다. 해당 프로그램을 닫은 후 Termix를 다시 시작하세요.",
     "embeddedServerPortInUseUnknownPort": "Termix가 필요로 하는 포트 중 하나가 이미 다른 프로그램에서 사용 중입니다. 해당 포트를 사용하는 프로그램을 닫은 후 Termix를 다시 시작하세요.",
+    "embeddedServerOldDatabase": "로컬 데이터가 Termix 2.8 이하 버전에서 생성된 것으로, 먼저 2.9 버전을 거쳐야 합니다. Termix 2.9.1을 설치하고 한 번 실행하여 데이터를 마이그레이션한 후, 다시 이 버전으로 업데이트하세요.",
     "embeddedServerCrashed": "로컬 서버가 예기치 않게 중지되었습니다. Termix를 다시 시작하고, 이 문제가 계속 발생하면 데스크톱 로그를 확인하세요.",
     "resetCodeSent": "리셋 코드가 Docker 로그로 전송되었습니다",
     "codeVerified": "코드가 성공적으로 확인되었습니다",

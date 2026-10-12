@@ -1141,6 +1141,7 @@
     "databaseConnectionFailed": "Neizdevās izveidot savienojumu ar datubāzes serveri",
     "embeddedServerPortInUse": "Ports {{port}} jau tiek izmantots citā programmā. Parasti tas ir Termix Docker konteineris vai iepriekšējās sesijas Termix process. Aizveriet to un restartējiet Termix.",
     "embeddedServerPortInUseUnknownPort": "Viens no portiem, kurus Termix nepieciešams, jau tiek izmantots citā programmā. Aizveriet to, kas to izmanto, un restartējiet Termix.",
+    "embeddedServerOldDatabase": "Jūsu vietējie dati ir no Termix 2.8 vai vecākas versijas, un tiem vispirms ir jāiziet cauri 2.9 versijai. Instalējiet Termix 2.9.1, atveriet to vienu reizi, lai tas pārvietotu jūsu datus, pēc tam atkal atjauniniet uz šo versiju.",
     "embeddedServerCrashed": "Vietējais serveris negaidīti apstājās. Restartējiet Termix un, ja tas turpinās notikt, pārbaudiet darbvirsmas žurnālu.",
     "resetCodeSent": "Atiestatīšanas kods nosūtīts uz Docker žurnāliem",
     "codeVerified": "Kods veiksmīgi verificēts",

@@ -1127,6 +1127,7 @@
     "databaseConnectionFailed": "Kunne ikke koble til databasenserveren",
     "embeddedServerPortInUse": "Port {{port}} er allerede i bruk av et annet program. Dette er vanligvis en Termix Docker-container eller en etterlatt Termix-prosess fra en tidligere økt. Lukk den, og start deretter Termix på nytt.",
     "embeddedServerPortInUseUnknownPort": "En av portene Termix trenger er allerede i bruk av et annet program. Lukk det som bruker den, og start deretter Termix på nytt.",
+    "embeddedServerOldDatabase": "De lokale dataene dine er fra Termix 2.8 eller eldre og må først oppgraderes gjennom versjon 2.9. Installer Termix 2.9.1, åpne den én gang slik at den kan flytte dataene dine, og oppgrader deretter til denne versjonen igjen.",
     "embeddedServerCrashed": "Den lokale serveren stoppet uventet. Start Termix på nytt, og sjekk skrivebordsloggen hvis dette fortsetter å skje.",
     "resetCodeSent": "Tilbakestillingskode sendt til Docker-logger",
     "codeVerified": "Koden ble verifisert",

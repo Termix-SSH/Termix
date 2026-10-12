@@ -1113,6 +1113,7 @@
     "databaseConnectionFailed": "Không thể kết nối đến máy chủ cơ sở dữ liệu",
     "embeddedServerPortInUse": "Cổng {{port}} đang được sử dụng bởi một chương trình khác. Điều này thường là do một container Docker Termix hoặc một tiến trình Termix còn sót lại từ phiên trước. Hãy đóng nó đi, sau đó khởi động lại Termix.",
     "embeddedServerPortInUseUnknownPort": "Một trong các cổng mà Termix cần đang bị một chương trình khác sử dụng. Hãy đóng chương trình đang sử dụng cổng đó, sau đó khởi động lại Termix.",
+    "embeddedServerOldDatabase": "Dữ liệu cục bộ của bạn từ Termix 2.8 hoặc cũ hơn và cần phải được nâng cấp qua phiên bản 2.9 trước. Hãy cài đặt Termix 2.9.1, mở ứng dụng một lần để nó có thể di chuyển dữ liệu của bạn, sau đó cập nhật lên phiên bản này.",
     "embeddedServerCrashed": "Máy chủ cục bộ đã dừng hoạt động bất ngờ. Hãy khởi động lại Termix và kiểm tra nhật ký máy tính để bàn nếu tình trạng này tiếp tục xảy ra.",
     "resetCodeSent": "Mã đặt lại đã được gửi đến nhật ký Docker",
     "codeVerified": "Xác minh mã thành công",

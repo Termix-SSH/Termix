@@ -1113,6 +1113,7 @@
     "databaseConnectionFailed": "無法連線至資料庫伺服器",
     "embeddedServerPortInUse": "連接埠 {{port}} 已被其他程式使用。這通常是 Termix Docker 容器或上次工作階段殘留的 Termix 行程。請關閉該程式，然後重新啟動 Termix。",
     "embeddedServerPortInUseUnknownPort": "Termix 所需的其中一個連接埠已被其他程式使用。請關閉佔用該連接埠的程式，然後重新啟動 Termix。",
+    "embeddedServerOldDatabase": "您的本機資料來自 Termix 2.8 或更早版本，必須先透過 2.9 版本進行遷移。請安裝 Termix 2.9.1，開啟一次以完成資料遷移，然後再更新至此版本。",
     "embeddedServerCrashed": "本機伺服器意外停止。請重新啟動 Termix，若問題持續發生，請檢查桌面記錄檔。",
     "resetCodeSent": "重設碼已傳送至 Docker 記錄檔",
     "codeVerified": "驗證碼驗證成功",

@@ -1127,6 +1127,7 @@
     "databaseConnectionFailed": "Veritabanı sunucusuna bağlanılamadı",
     "embeddedServerPortInUse": "{{port}} numaralı bağlantı noktası başka bir program tarafından kullanılıyor. Bu genellikle bir Termix Docker kapsayıcısı veya önceki bir oturumdan kalan bir Termix işlemidir. Kapatın ve ardından Termix'i yeniden başlatın.",
     "embeddedServerPortInUseUnknownPort": "Termix'in ihtiyaç duyduğu bağlantı noktalarından biri başka bir program tarafından kullanılıyor. Kullanan programı kapatın ve ardından Termix'i yeniden başlatın.",
+    "embeddedServerOldDatabase": "Yerel verileriniz Termix 2.8 veya daha eski bir sürümden kalmadır ve önce 2.9 sürümünden geçmelidir. Termix 2.9.1'i yükleyin, verilerinizi taşıyabilmesi için bir kez açın, ardından tekrar bu sürüme güncelleyin.",
     "embeddedServerCrashed": "Yerel sunucu beklenmedik şekilde durdu. Termix'i yeniden başlatın ve bu durum devam ederse masaüstü günlüklerini kontrol edin.",
     "resetCodeSent": "Sıfırlama kodu Docker günlüklerine gönderildi",
     "codeVerified": "Kod başarıyla doğrulandı",

@@ -1127,6 +1127,7 @@
     "databaseConnectionFailed": "Yhteys tietokantapalvelimeen epäonnistui",
     "embeddedServerPortInUse": "Porttia {{port}} käyttää jo toinen ohjelma. Kyseessä on yleensä Termixin Docker-kontti tai edellisestä istunnosta jäänyt Termix-prosessi. Sulje se ja käynnistä Termix uudelleen.",
     "embeddedServerPortInUseUnknownPort": "Termixin tarvitsema portti on jo toisen ohjelman käytössä. Sulje porttia käyttävä ohjelma ja käynnistä Termix uudelleen.",
+    "embeddedServerOldDatabase": "Paikalliset tietosi ovat peräisin Termix 2.8 tai vanhemmasta versiosta, ja niiden on käyty ensin versiota 2.9. Asenna Termix 2.9.1, avaa se kerran, jotta se voi siirtää tietosi, ja päivitä sitten uudelleen tähän versioon.",
     "embeddedServerCrashed": "Paikallinen palvelin pysähtyi odottamatta. Käynnistä Termix uudelleen ja tarkista työpöytäloki, jos ongelma toistuu.",
     "resetCodeSent": "Palautuskoodi lähetetty Docker-lokeihin",
     "codeVerified": "Koodi vahvistettu onnistuneesti",

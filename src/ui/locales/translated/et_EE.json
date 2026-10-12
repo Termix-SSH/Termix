@@ -1127,6 +1127,7 @@
     "databaseConnectionFailed": "Andmebaasi serveriga ühendumine ebaõnnestus",
     "embeddedServerPortInUse": "Porti {{port}} kasutab juba teine programm. Tavaliselt on tegemist Termixi Docker-i konteineriga või eelmisest seansist allesjäänud Termixi protsessiga. Sulge see ja käivita Termix uuesti.",
     "embeddedServerPortInUseUnknownPort": "Üht Termixi jaoks vajalikust portidest kasutab juba teine programm. Sulge see programm ja käivita Termix uuesti.",
+    "embeddedServerOldDatabase": "Teie kohalikud andmed pärinevad Termixi versioonist 2.8 või vanemast ja tuleb esmalt läbida versioon 2.9. Paigaldage Termix 2.9.1, avage see üks kord, et andmed saaksid ümber paigutada, ja uuendage seejärel uuesti sellele versioonile.",
     "embeddedServerCrashed": "Lokaalne server peatus ootamatult. Käivita Termix uuesti ja kui probleem püsib, vaata töölaua logifaili.",
     "resetCodeSent": "Lähtestuskood saadetud Docker-i logidesse",
     "codeVerified": "Kood edukalt kinnitatud",

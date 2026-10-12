@@ -1113,6 +1113,7 @@
     "databaseConnectionFailed": "Gagal terhubung ke server database",
     "embeddedServerPortInUse": "Port {{port}} sudah digunakan oleh program lain. Biasanya ini adalah kontainer Docker Termix atau proses Termix yang tersisa dari sesi sebelumnya. Tutup program tersebut, lalu mulai ulang Termix.",
     "embeddedServerPortInUseUnknownPort": "Salah satu port yang dibutuhkan Termix sudah digunakan oleh program lain. Tutup program yang menggunakannya, lalu mulai ulang Termix.",
+    "embeddedServerOldDatabase": "Data lokal Anda berasal dari Termix 2.8 atau lebih lama dan harus diproses melalui versi 2.9 terlebih dahulu. Instal Termix 2.9.1, buka sekali agar data Anda dapat dipindahkan, lalu perbarui ke versi ini lagi.",
     "embeddedServerCrashed": "Server lokal berhenti secara tidak terduga. Mulai ulang Termix, dan periksa log desktop jika masalah ini terus terjadi.",
     "resetCodeSent": "Kode reset dikirim ke log Docker",
     "codeVerified": "Kode berhasil diverifikasi",

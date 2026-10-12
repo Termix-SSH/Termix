@@ -1056,6 +1056,7 @@
   "messages.databaseConnectionFailed": "1b3aebbdb5fd",
   "messages.embeddedServerPortInUse": "5bf7c4c579d0",
   "messages.embeddedServerPortInUseUnknownPort": "1b00931d564b",
+  "messages.embeddedServerOldDatabase": "531a8964b8fe",
   "messages.embeddedServerCrashed": "c927ebd90f05",
   "messages.resetCodeSent": "6419f91e7844",
   "messages.codeVerified": "65a610f29c92",

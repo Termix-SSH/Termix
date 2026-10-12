@@ -1155,6 +1155,7 @@
     "databaseConnectionFailed": "Povezava s strežnikom podatkovne zbirke ni uspela",
     "embeddedServerPortInUse": "Vrata {{port}} že uporablja drug program. To je običajno Docker posode Termix ali preostali proces Termix iz prejšnje seje. Zaprite ga in ponovno zaženite Termix.",
     "embeddedServerPortInUseUnknownPort": "Eno od vrat, ki jih Termix potrebuje, že uporablja drug program. Zaprite program, ki jih uporablja, in ponovno zaženite Termix.",
+    "embeddedServerOldDatabase": "Vaši lokalni podatki so iz Termix 2.8 ali starejše različice in morajo najprej preiti skozi različico 2.9. Namestite Termix 2.9.1, ga enkrat odprite, da lahko preseli vaše podatke, nato pa posodobite na to različico.",
     "embeddedServerCrashed": "Lokalni strežnik se je nepričakovano ustavil. Ponovno zaženite Termix in, če se težava ponavlja, preverite dnevnik namizne aplikacije.",
     "resetCodeSent": "Koda za ponastavitev je poslana v Docker dnevnike",
     "codeVerified": "Koda je bila uspešno preverjena",

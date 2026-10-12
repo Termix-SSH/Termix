@@ -1141,6 +1141,7 @@
     "databaseConnectionFailed": "Nu s-a putut conecta la serverul de bază de date",
     "embeddedServerPortInUse": "Portul {{port}} este deja utilizat de un alt program. De obicei, acesta este un container Docker Termix sau un proces Termix rămas dintr-o sesiune anterioară. Închideți-l, apoi reporniți Termix.",
     "embeddedServerPortInUseUnknownPort": "Unul dintre porturile de care are nevoie Termix este deja utilizat de un alt program. Închideți aplicația care îl utilizează, apoi reporniți Termix.",
+    "embeddedServerOldDatabase": "Datele locale sunt din Termix 2.8 sau o versiune anterioară și trebuie să treacă mai întâi prin versiunea 2.9. Instalați Termix 2.9.1, deschideți-l o dată pentru a vă muta datele, apoi actualizați din nou la această versiune.",
     "embeddedServerCrashed": "Serverul local s-a oprit neașteptat. Reporniți Termix și verificați jurnalul desktop dacă problema persistă.",
     "resetCodeSent": "Codul de resetare a fost trimis în jurnalul Docker",
     "codeVerified": "Codul a fost verificat cu succes",

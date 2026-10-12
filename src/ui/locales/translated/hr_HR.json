@@ -1141,6 +1141,7 @@
     "databaseConnectionFailed": "Povezivanje s poslužiteljem baze podataka nije uspjelo",
     "embeddedServerPortInUse": "Port {{port}} već koristi drugi program. To je obično Termix Docker kontejner ili preostali Termix proces iz prethodne sesije. Zatvorite ga, a zatim ponovno pokrenite Termix.",
     "embeddedServerPortInUseUnknownPort": "Jedan od portova koji Termixu trebaju već koristi drugi program. Zatvorite program koji ga koristi, a zatim ponovno pokrenite Termix.",
+    "embeddedServerOldDatabase": "Vaši lokalni podaci potječu iz Termixa 2.8 ili starije verzije i moraju prvo proći kroz verziju 2.9. Instalirajte Termix 2.9.1, otvorite ga jednom kako bi mogao premjestiti vaše podatke, a zatim ponovno ažurirajte na ovu verziju.",
     "embeddedServerCrashed": "Lokalni poslužitelj je neočekivano prestao raditi. Ponovno pokrenite Termix i provjerite dnevnik radne površine ako se to ponavlja.",
     "resetCodeSent": "Kod za resetiranje poslan u Docker dnevnike",
     "codeVerified": "Kod uspješno potvrđen",

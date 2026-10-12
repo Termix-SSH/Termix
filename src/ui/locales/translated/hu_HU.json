@@ -1127,6 +1127,7 @@
     "databaseConnectionFailed": "Nem sikerült csatlakozni az adatbázis-szervert",
     "embeddedServerPortInUse": "A {{port}} portot már egy másik program használja. Ez általában egy Termix Docker-konténer vagy egy előző munkamenetből maradt Termix-folyamat. Zárja be, majd indítsa újra a Termixet.",
     "embeddedServerPortInUseUnknownPort": "A Termix által szükséges portok egyikét már egy másik program használja. Zárja be azt, ami használja, majd indítsa újra a Termixet.",
+    "embeddedServerOldDatabase": "A helyi adatai a Termix 2.8 vagy régebbi verzióból származnak, és először át kell futniuk a 2.9-es verzió migrációján. Telepítse a Termix 2.9.1 verzióját, nyissa meg egyszer, hogy az adatok átkerüljenek, majd frissítsen újra erre a verzióra.",
     "embeddedServerCrashed": "A helyi szerver váratlanul leállt. Indítsa újra a Termixet, és ellenőrizze az asztali naplót, ha ez továbbra is előfordul.",
     "resetCodeSent": "A visszaállítási kód elküldve a Docker naplókba",
     "codeVerified": "A kód sikeresen ellenőrizve",

@@ -1141,6 +1141,7 @@
     "databaseConnectionFailed": "Falha ao conectar ao servidor de banco de dados",
     "embeddedServerPortInUse": "A porta {{port}} já está em uso por outro programa. Geralmente, isso é um contêiner Docker do Termix ou um processo residual do Termix de uma sessão anterior. Feche-o e reinicie o Termix.",
     "embeddedServerPortInUseUnknownPort": "Uma das portas necessárias para o Termix já está em uso por outro programa. Feche o que estiver usando-a e reinicie o Termix.",
+    "embeddedServerOldDatabase": "Seus dados locais são da versão 2.8 ou anterior do Termix e precisam passar pela versão 2.9 primeiro. Instale o Termix 2.9.1, abra-o uma vez para que ele possa migrar seus dados e, em seguida, atualize para esta versão novamente.",
     "embeddedServerCrashed": "O servidor local parou inesperadamente. Reinicie o Termix e verifique o log da área de trabalho se isso continuar acontecendo.",
     "resetCodeSent": "Código de redefinição enviado para os logs do Docker",
     "codeVerified": "Código verificado com sucesso",

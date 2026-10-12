@@ -1113,6 +1113,7 @@
     "databaseConnectionFailed": "无法连接到数据库服务器",
     "embeddedServerPortInUse": "端口 {{port}} 已被其他程序占用。这通常是 Termix Docker 容器或上一次会话残留的 Termix 进程。请关闭该程序，然后重启 Termix。",
     "embeddedServerPortInUseUnknownPort": "Termix 所需的一个端口已被其他程序占用。请关闭占用该端口的程序，然后重启 Termix。",
+    "embeddedServerOldDatabase": "您的本地数据来自 Termix 2.8 或更早版本，必须先通过 2.9 版本进行迁移。请安装 Termix 2.9.1，打开一次以完成数据迁移，然后再更新到当前版本。",
     "embeddedServerCrashed": "本地服务器意外停止。请重启 Termix，如果问题持续出现，请检查桌面日志。",
     "resetCodeSent": "重置代码已发送至 Docker 日志",
     "codeVerified": "代码验证成功",

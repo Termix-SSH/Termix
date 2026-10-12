@@ -1155,6 +1155,7 @@
     "databaseConnectionFailed": "Nepavyko prisijungti prie duomenų bazės serverio",
     "embeddedServerPortInUse": "Prievadas {{port}} jau naudojamas kitos programos. Dažniausiai tai yra Termix Docker konteineris arba ankstesnės sesijos Termix procesas. Uždarykite jį ir paleiskite Termix iš naujo.",
     "embeddedServerPortInUseUnknownPort": "Viena iš prievadų, kurių Termix reikia, jau naudojama kitos programos. Uždarykite programą, kurią naudoja, ir paleiskite Termix iš naujo.",
+    "embeddedServerOldDatabase": "Jūsų vietiniai duomenys yra iš Termix 2.8 arba senesnės versijos, todėl pirmiausia juos reikia atnaujinti per 2.9 versiją. Įdiekite Termix 2.9.1, atidarykite ją vieną kartą, kad duomenys būtų perkelti, tada vėl atnaujinkite į šią versiją.",
     "embeddedServerCrashed": "Vietinis serveris netikėtai sustojo. Paleiskite Termix iš naujo ir, jei tai kartosis, patikrinkite darbalaužio žurnalą.",
     "resetCodeSent": "Atstatymo kodas išsiųstas į Docker žurnalus",
     "codeVerified": "Kodas sėkmingai patvirtintas",

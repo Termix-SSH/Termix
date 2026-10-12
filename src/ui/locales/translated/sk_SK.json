@@ -1155,6 +1155,7 @@
     "databaseConnectionFailed": "Nepodarilo sa pripojiť k databázovému serveru",
     "embeddedServerPortInUse": "Port {{port}} je už používaný iným programom. Zvyčajne ide o kontajner Termix Docker alebo o zvyškový proces Termix z predchádzajúcej relácie. Zatvorte ho a potom reštartujte Termix.",
     "embeddedServerPortInUseUnknownPort": "Jeden z portov, ktoré Termix potrebuje, je už používaný iným programom. Zatvorte aplikáciu, ktorá ho používa, a potom reštartujte Termix.",
+    "embeddedServerOldDatabase": "Vaše lokálne údaje pochádzajú z Termix 2.8 alebo staršej verzie a musia prejsť cez verziu 2.9. Nainštalujte Termix 2.9.1, otvorte ho raz, aby mohol presunúť vaše údaje, a potom aktualizujte na túto verziu znova.",
     "embeddedServerCrashed": "Lokálny server neočakávane zastavil. Reštartujte Termix a ak sa problém opakuje, skontrolujte denník udalostí na ploche.",
     "resetCodeSent": "Resetovací kód bol odoslaný do logov Dockeru",
     "codeVerified": "Kód bol úspešne overený",
