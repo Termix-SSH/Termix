@@ -156,6 +156,6 @@
       "NSAppleEventsUsageDescription": "Termix needs access to control other applications for terminal operations."
     }
   },
-  "generateUpdatesFilesForAllChannels": true,
+  "generateUpdatesFilesForAllChannels": false,
   "msiProjectCreated": "packaging/build/msi-shortcuts.cjs"
 }
