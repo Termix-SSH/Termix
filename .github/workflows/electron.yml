@@ -1153,6 +1153,49 @@ jobs:
             --locales "en-US"
           echo "metadata_path=$META_DIR" >> "$GITHUB_OUTPUT"
 
+      # Apple won't create a new version while the last one is still in
+      # review. Pull it out so deliver can rename it to this version.
+      - name: Cancel pending App Store review
+        if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
+        run: |
+          LANE_DIR="$RUNNER_TEMP/asc_cancel/fastlane"
+          mkdir -p "$LANE_DIR"
+
+          cat > "$LANE_DIR/Fastfile" <<'EOF'
+          default_platform(:mac)
+
+          lane :cancel_pending_review do
+            Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.from_json_file("/tmp/asc_keys/api_key.json")
+            app = Spaceship::ConnectAPI::App.find("com.karmaa.termix")
+            UI.user_error!("App not found") unless app
+
+            app.get_app_store_versions(filter: { platform: "MAC_OS" }, limit: 5).each do |v|
+              UI.message("Version #{v.version_string}: #{v.app_version_state || v.app_store_state}")
+            end
+
+            active = %w[WAITING_FOR_REVIEW IN_REVIEW UNRESOLVED_ISSUES]
+            canceled = false
+            app.get_review_submissions(filter: { platform: "MAC_OS" }).each do |sub|
+              UI.message("Review submission #{sub.id}: #{sub.state}")
+              next unless active.include?(sub.state)
+              sub.cancel_submission
+              canceled = true
+              UI.important("Canceled review submission #{sub.id}")
+            end
+            next unless canceled
+
+            30.times do
+              busy = app.get_review_submissions(filter: { platform: "MAC_OS" }).any? do |sub|
+                (active + %w[CANCELING]).include?(sub.state)
+              end
+              break unless busy
+              sleep(10)
+            end
+          end
+          EOF
+
+          cd "$RUNNER_TEMP/asc_cancel" && fastlane cancel_pending_review
+
       - name: Upload and submit to Mac App Store
         if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
         run: |
