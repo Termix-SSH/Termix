@@ -1,6 +1,7 @@
 import { isElectron } from "@/lib/electron";
 
-export type EmbeddedServerFailureReason = "port-in-use" | "crashed";
+export type EmbeddedServerFailureReason =
+  "port-in-use" | "old-database" | "crashed";
 
 export interface EmbeddedServerFailure {
   reason: EmbeddedServerFailureReason;
@@ -41,9 +42,13 @@ export async function getEmbeddedServerFailure(): Promise<EmbeddedServerFailure 
     // An unrecognized reason from a newer/older main process still means the
     // backend is down, which is the part the caller acts on -- so it is
     // reported as the generic crash rather than dropped.
-    return failure.reason === "port-in-use"
-      ? { reason: "port-in-use", port: failure.port ?? null }
-      : { reason: "crashed", port: null };
+    if (failure.reason === "port-in-use") {
+      return { reason: "port-in-use", port: failure.port ?? null };
+    }
+    if (failure.reason === "old-database") {
+      return { reason: "old-database", port: null };
+    }
+    return { reason: "crashed", port: null };
   } catch {
     // No status channel, or the main process is tearing down. Neither is
     // evidence that the backend failed, so keep waiting.

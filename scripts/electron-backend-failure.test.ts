@@ -1,5 +1,6 @@
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
+import { PRE_29_DATABASE_ERROR } from "../src/backend/database/db/upgrade-guard.js";
 
 const require = createRequire(import.meta.url);
 const { classifyBackendFailure } =
@@ -42,6 +43,16 @@ describe("classifyBackendFailure", () => {
   it("falls back to a null port when EADDRINUSE carries no parsable port", () => {
     expect(classifyBackendFailure("code: 'EADDRINUSE'")).toEqual({
       reason: "port-in-use",
+      port: null,
+    });
+  });
+
+  it("identifies a 2.8 database the backend refused to open", () => {
+    const stderr = `[ERROR] [SYSTEM] Failed to initialize backend services [op:startup_failed]
+Error: ${PRE_29_DATABASE_ERROR}
+    at assertNotPre29Database (upgrade-guard.js:14:11)`;
+    expect(classifyBackendFailure(stderr)).toEqual({
+      reason: "old-database",
       port: null,
     });
   });

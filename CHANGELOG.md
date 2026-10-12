@@ -20,10 +20,12 @@
 
 - Regional browser languages like `es-MX`, `pt` or `zh-HK` showed English instead of the closest translation
 - Counts like "1 keys" or "Moved 1 host(s)" now use the singular
-- Plugin updates synced to the desktop app failed to start with "Cannot find package"
+- Plugin updates on the desktop app, synced or installed from the Plugins tab, failed to start with "Cannot find package"
 - The desktop app showed plugins that only run on the server as not running and out of date
 - Keep the terminal WebSocket open past nginx's 60s default
 - Plugin download counts now show in the Plugins tab without waiting for the background check
+- Clicking into a saved password, key passphrase or sudo password field and saving without typing erased it, which stopped sudo autofill
+- The desktop app now says when its data is from 2.8 or older and needs 2.9 first, instead of only saying the local server could not start
 
 ## 26.10.0
 

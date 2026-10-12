@@ -1101,7 +1101,9 @@ export function Auth({ onLogin }: AuthProps) {
               port: embeddedServerFailure.port,
             })
           : t("messages.embeddedServerPortInUseUnknownPort")
-        : t("messages.embeddedServerCrashed");
+        : embeddedServerFailure.reason === "old-database"
+          ? t("messages.embeddedServerOldDatabase")
+          : t("messages.embeddedServerCrashed");
 
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background p-6">
