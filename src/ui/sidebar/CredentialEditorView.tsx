@@ -489,10 +489,6 @@ export function CredentialEditorView({
                       ? ""
                       : credForm.passphrase
                   }
-                  onFocus={() => {
-                    if (credForm.passphrase === "existing_key_password")
-                      setCredField("passphrase", "");
-                  }}
                   onChange={(e) => setCredField("passphrase", e.target.value)}
                 />
               </div>
