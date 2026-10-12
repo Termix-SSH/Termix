@@ -41,8 +41,8 @@
     {
       "id": "file-manager",
       "source": "tmxplug",
-      "url": "https://github.com/Termix-SSH/Plugin-File-Manager/releases/download/v1.0.1/file-manager-1.0.1.tmxplug",
-      "sha256": "12416f48f8dbbd1670e86ade779c7b473f27c5b0ae809d60ade507fd465d068b",
+      "url": "https://github.com/Termix-SSH/Plugin-File-Manager/releases/download/v1.0.2/file-manager-1.0.2.tmxplug",
+      "sha256": "4c735f5b795a8c676590a0dc25db1bcc6036ac250b9817a61867cebdc17931c6",
       "onboarding": {
         "recommended": true,
         "consent": false
@@ -97,8 +97,8 @@
     {
       "id": "remote-desktop",
       "source": "tmxplug",
-      "url": "https://github.com/Termix-SSH/Plugin-Remote-Desktop/releases/download/v1.0.1/remote-desktop-1.0.1.tmxplug",
-      "sha256": "237b00c88f5cc2e83b48c17d5242ec2ac8b468dd975e4baa09c0b73c54182b20",
+      "url": "https://github.com/Termix-SSH/Plugin-Remote-Desktop/releases/download/v1.0.2/remote-desktop-1.0.2.tmxplug",
+      "sha256": "70823a3f5161f6722fee22a9d5fe274dd47623960bc2188429c39a1c7e3e2b39",
       "onboarding": {
         "recommended": true,
         "consent": false
@@ -145,8 +145,8 @@
     {
       "id": "ssh-terminal",
       "source": "tmxplug",
-      "url": "https://github.com/Termix-SSH/Plugin-SSH-Terminal/releases/download/v1.0.1/ssh-terminal-1.0.1.tmxplug",
-      "sha256": "03e8c740a64d424e5197c54f889e8aef46949ff9290fcf4e033f33bf33f1696f",
+      "url": "https://github.com/Termix-SSH/Plugin-SSH-Terminal/releases/download/v1.0.2/ssh-terminal-1.0.2.tmxplug",
+      "sha256": "e65102a8cd6afdaa890095fa698f3f455a1035729b9fdca800a31cc6e5ed760f",
       "onboarding": {
         "recommended": true,
         "consent": false
@@ -194,8 +194,8 @@
     {
       "id": "tmux-monitor",
       "source": "tmxplug",
-      "url": "https://github.com/Termix-SSH/Plugin-Tmux-Monitor/releases/download/v1.0.1/tmux-monitor-1.0.1.tmxplug",
-      "sha256": "a34eab840ba768a542db3a92036c1830db34373ab38aff6f7a0de5f83a7af7f9"
+      "url": "https://github.com/Termix-SSH/Plugin-Tmux-Monitor/releases/download/v1.0.2/tmux-monitor-1.0.2.tmxplug",
+      "sha256": "ea41f1f90bdeab6164cfa2a594f359492afa123ed06990afa338be69a9d974c6"
     },
     {
       "id": "totp",
@@ -210,8 +210,8 @@
     {
       "id": "tunnels",
       "source": "tmxplug",
-      "url": "https://github.com/Termix-SSH/Plugin-Tunnels/releases/download/v1.0.1/tunnels-1.0.1.tmxplug",
-      "sha256": "a5157fdbd255910df00f2cb53d554379667bf7a5115069537528c6d3fd22767c",
+      "url": "https://github.com/Termix-SSH/Plugin-Tunnels/releases/download/v1.0.2/tunnels-1.0.2.tmxplug",
+      "sha256": "44799c0bdbcc576fb0e1c1ecce96f283d2cc32b44ac5aeeb7253f8ca0b650860",
       "onboarding": {
         "recommended": true,
         "consent": false
