@@ -4,7 +4,7 @@
   "workspaces": [
     "packages/*"
   ],
-  "version": "26.10.0",
+  "version": "26.10.1",
   "description": "Self-hosted, plugin-based server management.",
   "author": "Karmaa",
   "main": "electron/main.cjs",
