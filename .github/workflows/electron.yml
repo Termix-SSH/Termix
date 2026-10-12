@@ -146,8 +146,9 @@ jobs:
         run: npm run build && npx electron-builder --win --x64 --ia32 --publish never
 
       # The updater only installs the x64 NSIS build; 32-bit installs get a link.
+      # The combined x64+ia32 installer is never uploaded.
       - name: Fix Windows update files
-        run: node scripts/fix-update-info.cjs --drop ia32 release/latest.yml release/beta.yml release/alpha.yml
+        run: node scripts/fix-update-info.cjs --drop ia32 --drop termix_windows_nsis.exe release/latest.yml release/beta.yml release/alpha.yml
 
       - name: Upload Windows x64 NSIS Installer
         uses: actions/upload-artifact@v7

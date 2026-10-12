@@ -4,7 +4,8 @@
  * build, so the desktop updater gets the right download:
  *
  *   --drop <text>       remove entries whose file name contains text
- *                       (the ia32 installer, the universal mac zip)
+ *                       (the ia32 installer, the combined Windows
+ *                       installer, the universal mac zip)
  *   --rename <old=new>  follow an artifact the workflow renamed
  *
  * Usage: node scripts/fix-update-info.cjs [--drop x] [--rename a=b] files...
@@ -15,9 +16,12 @@ const yaml = require("js-yaml");
 
 function fixUpdateInfo(info, { drop = [], rename = {} } = {}) {
   const rewrite = (name) => rename[name] ?? name;
+  const seen = new Set();
+  // electron-builder can list the same file more than once.
   const files = (info.files ?? [])
     .filter((file) => !drop.some((text) => file.url.includes(text)))
-    .map((file) => ({ ...file, url: rewrite(file.url) }));
+    .map((file) => ({ ...file, url: rewrite(file.url) }))
+    .filter((file) => !seen.has(file.url) && seen.add(file.url));
   if (files.length === 0) {
     throw new Error("no files left in update info");
   }

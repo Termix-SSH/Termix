@@ -26,6 +26,26 @@ describe("fixUpdateInfo", () => {
     expect(fixed.version).toBe("26.10.2");
   });
 
+  it("drops the combined Windows installer and duplicate entries", () => {
+    const fixed = fixUpdateInfo(
+      {
+        ...info,
+        files: [
+          { url: "termix_windows_nsis.exe", sha512: "c", size: 3 },
+          { url: "termix_windows_ia32_nsis.exe", sha512: "a", size: 1 },
+          { url: "termix_windows_x64_nsis.exe", sha512: "b", size: 2 },
+          { url: "termix_windows_x64_nsis.exe", sha512: "b", size: 2 },
+        ],
+        path: "termix_windows_nsis.exe",
+      },
+      { drop: ["ia32", "termix_windows_nsis.exe"] },
+    );
+    expect(fixed.files).toEqual([
+      { url: "termix_windows_x64_nsis.exe", sha512: "b", size: 2 },
+    ]);
+    expect(fixed.path).toBe("termix_windows_x64_nsis.exe");
+  });
+
   it("follows renamed artifacts", () => {
     const fixed = fixUpdateInfo(
       {
