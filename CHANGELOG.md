@@ -15,7 +15,6 @@
 - Languages with more than two plural forms, like Russian, Polish and Arabic, now use the right one
 - The Plugins tab shows how many times each plugin was downloaded, in a Downloads column
 - Plugins, Browse hides plugins you already have. Turn on Show installed to see them
-- Bundled SSH Terminal, File Manager, Tmux Monitor, Remote Desktop and Tunnels plugins updated to 1.0.2
 
 ### Fixed
 
