@@ -233,6 +233,37 @@
     "desktopLinked": "Gekoppeld aan {{server}}",
     "pluginsDocsLink": "Lees meer over elk plugin"
   },
+  "desktopUpdates": {
+    "title": "Bureaublad-app",
+    "mode": "Updates",
+    "modeHint": "Hoe deze app nieuwe versies krijgt.",
+    "manualModeHint": "Deze kopie kan zichzelf niet updaten, dus Termix geeft je alleen een seintje als er een nieuwe versie is.",
+    "modeAutomatic": "Automatisch",
+    "modePrompt": "Eerst vragen",
+    "modeNever": "Nooit",
+    "automaticBody": "Download nieuwe versies op de achtergrond en installeer ze bij de volgende herstart.",
+    "promptBody": "Laat me weten als er een nieuwe versie is en laat me zelf kiezen wanneer ik hem download.",
+    "neverBody": "Niet controleren op updates. Je kunt dit handmatig doen in Instellingen.",
+    "onboardingTitle": "App-updates",
+    "onboardingBody": "De bureaublad-app kan zichzelf nu updaten. Kies hoe je nieuwe versies wilt ontvangen. Je kunt dit later wijzigen in Instellingen, Updates.",
+    "onboardingManual": "Deze kopie van de app is op een manier geïnstalleerd die geen automatische updates ondersteunt. Termix geeft je daarom een seintje als er een nieuwe versie is, met een link om hem te downloaden.",
+    "status": "Versie {{version}}",
+    "statusIdle": "Nog niet gecontroleerd",
+    "statusChecking": "Controleren op updates",
+    "statusAvailable": "Versie {{version}} is beschikbaar",
+    "statusDownloading": "Downloaden van {{version}} ({{progress}}%)",
+    "statusReady": "Versie {{version}} is klaar. Herstart om te installeren.",
+    "statusUpToDate": "Je hebt de nieuwste versie",
+    "statusError": "Kan niet controleren op updates. Probeer het later opnieuw.",
+    "checkNow": "Nu controleren",
+    "download": "Downloaden",
+    "restart": "Nu herstarten",
+    "later": "Later",
+    "available": "Termix {{version}} is beschikbaar",
+    "manualHint": "Download hem van de releasepagina en installeer hem bovenop deze versie.",
+    "ready": "Termix {{version}} is klaar om te installeren",
+    "readyHint": "Het wordt geïnstalleerd de volgende keer dat Termix herstart."
+  },
   "nav": {
     "home": "Home",
     "terminal": "Terminal",
@@ -1868,19 +1899,23 @@
       "tabs": {
         "installed": "Geïnstalleerd",
         "browse": "Bladeren",
-        "updates": "Updates"
+        "updates": "Updates",
+        "registries": "Registrars"
       },
       "status": {
         "summary": "{{installed}} geïnstalleerd, {{running}} actief",
         "running": "Actief",
         "disabled": "Uitgeschakeld",
         "failed": "Onverwacht gestopt",
-        "blocked": "Wachten op een andere plugin"
+        "blocked": "Wachten op een andere plugin",
+        "server": "Wordt uitgevoerd op je server"
       },
       "groups": {
         "running": "Actief",
-        "notRunning": "Niet actief"
+        "notRunning": "Niet actief",
+        "onServer": "Op je server"
       },
+      "runsOnServerHint": "Deze plugin wordt alleen uitgevoerd op je server, dus hij staat uit in de bureaublad-app. Hij werkt daar wel.",
       "sort": {
         "popular": "Meest populair",
         "name": "Naam",
@@ -1898,7 +1933,7 @@
         "version": "Versie",
         "status": "Status",
         "category": "Categorie",
-        "installs": "Installaties"
+        "downloads": "Downloads"
       },
       "risk": {
         "critical": "Kritiek",
@@ -2050,8 +2085,47 @@
       "noneInstalled": "Nog geen plugins geïnstalleerd. Blader om er een paar toe te voegen.",
       "nothingHere": "Hier is niets.",
       "nothingHereHint": "Probeer een andere categorie of zoekopdracht.",
-      "communitySoon": "Community-plugins komen in een latere update. Plugin-auteurs kunnen hun plugins al indienen bij het community-register.",
+      "showInstalled": "Geïnstalleerde tonen",
+      "allInstalled": "Alles hier is al geïnstalleerd.",
+      "allInstalledHint": "Zet Geïnstalleerde tonen aan om ze te zien.",
       "communitySubmit": "Hoe in te dienen",
+      "registries": {
+        "intro": "Registrars zijn lijsten met plugins die je kunt installeren. De officiële staat altijd aan. Je kunt de community-registrar aanzetten of je eigen toevoegen.",
+        "hostYourOwn": "Je eigen registrar hosten",
+        "add": "Registrar toevoegen",
+        "addTitle": "Een registrar toevoegen",
+        "addHint": "Plak de link naar de index.json van de registrar. Termix leest deze in en toont de sleutel waarmee de plugins worden ondertekend. Voeg alleen registrars toe van bronnen die je vertrouwt.",
+        "urlLabel": "Index-URL",
+        "check": "Controleren",
+        "addConfirm": "Vertrouwen en toevoegen",
+        "added": "{{name}} toegevoegd",
+        "customWarning": "Plugins uit deze registrar worden niet beoordeeld door het Termix-team. Alleen de eigenaar van de registrar bepaalt wat erin staat. Elke download moet worden ondertekend met de bovenstaande sleutel.",
+        "keyFingerprint": "Sleutel {{keyId}}",
+        "pluginCount_one": "{{count}} plugin",
+        "pluginCount_other": "{{count}} plugins",
+        "officialName": "Officieel",
+        "communityName": "Community",
+        "alwaysOn": "Altijd aan",
+        "communityHint": "Plugins gemaakt door anderen. Elke versie wordt door een persoon en door geautomatiseerde controles gecontroleerd voordat hij wordt opgenomen.",
+        "communityConfirmTitle": "Community-plugins aanzetten?",
+        "communityConfirmBody": "Community-plugins worden gemaakt door anderen, niet door het Termix-team. Elke versie wordt door een persoon en door geautomatiseerde controles gecontroleerd voordat hij wordt opgenomen, maar er kunnen nog steeds fouten insluipen. Installeer alleen plugins die je vertrouwt en controleer wat elke plugin vraagt.",
+        "communityConfirm": "Aanzetten",
+        "communityBadge": "Community",
+        "communityBadgeHint": "Uit de community-registrar. Gemaakt door anderen en beoordeeld voordat hij werd opgenomen.",
+        "customBadge": "Aangepast",
+        "customBadgeHint": "Uit {{name}}, een registrar die een beheerder heeft toegevoegd. Niet beoordeeld door het Termix-team.",
+        "remove": "Verwijderen",
+        "removeTitle": "{{name}} verwijderen?",
+        "removeBody": "De plugins ervan worden niet langer weergegeven in Bladeren. Je kunt het later opnieuw toevoegen.",
+        "removed": "{{name}} verwijderd",
+        "inUse": "Verwijder eerst de plugins van {{name}}: {{list}}",
+        "changeFailed": "Het register kon niet worden gewijzigd: {{error}}",
+        "loadFailed": "Registers konden niet worden geladen: {{error}}",
+        "unreachable": "Kon het niet lezen: {{error}}",
+        "filter": "Register",
+        "allRegistries": "Alle registers",
+        "browseHint": "Schakel community-plugins in of voeg je eigen register toe op het tabblad Registers."
+      },
       "upToDate": "Alles is bijgewerkt.",
       "lastChecked": "Laatst gecontroleerd {{time}}",
       "updatesReady_one": "{{count}} update klaar.",
@@ -2074,11 +2148,8 @@
         "signedOnly": "TERMIX_REQUIRE_SIGNED_PLUGINS is ingesteld, dus installeren vanuit een bestand blijft geblokkeerd."
       },
       "count": {
-        "active_one": "{{formatted}} actieve installatie",
-        "active_other": "{{formatted}} actieve installaties",
         "downloads_one": "{{formatted}} download",
         "downloads_other": "{{formatted}} downloads",
-        "activeHint": "Instanties die in de afgelopen week hebben gemeld dat deze plugin was ingeschakeld. Instanties met gebruikstatistieken uitgeschakeld worden niet meegeteld.",
         "downloadsHint": "Hoe vaak een release is gedownload. Dit is niet het aantal installaties."
       },
       "unverified": "Niet geverifieerd",

@@ -233,6 +233,37 @@
     "desktopLinked": "Ligado a {{server}}",
     "pluginsDocsLink": "Leia sobre cada um"
   },
+  "desktopUpdates": {
+    "title": "Aplicação desktop",
+    "mode": "Atualizações",
+    "modeHint": "Como esta aplicação recebe novas versões.",
+    "manualModeHint": "Esta cópia não pode atualizar-se automaticamente, pelo que o Termix apenas informa quando há uma nova versão disponível.",
+    "modeAutomatic": "Automático",
+    "modePrompt": "Perguntar primeiro",
+    "modeNever": "Nunca",
+    "automaticBody": "Transferir novas versões em segundo plano e instalá-las quando reiniciar.",
+    "promptBody": "Avisar-me quando houver uma nova versão e deixar-me escolher quando a transferir.",
+    "neverBody": "Não verificar atualizações. Pode sempre verificar manualmente nas Definições.",
+    "onboardingTitle": "Atualizações da aplicação",
+    "onboardingBody": "A aplicação desktop pode agora atualizar-se automaticamente. Escolha como deseja receber as novas versões. Pode alterar isto mais tarde em Definições, Atualizações.",
+    "onboardingManual": "Esta cópia da aplicação foi instalada de uma forma que não permite atualizações automáticas, pelo que o Termix irá informar quando houver uma nova versão disponível com um link para a transferir.",
+    "status": "Versão {{version}}",
+    "statusIdle": "Ainda não verificado",
+    "statusChecking": "A verificar atualizações",
+    "statusAvailable": "A versão {{version}} está disponível",
+    "statusDownloading": "A transferir {{version}} ({{progress}}%)",
+    "statusReady": "A versão {{version}} está pronta. Reinicie para instalar.",
+    "statusUpToDate": "Tem a versão mais recente",
+    "statusError": "Não foi possível verificar atualizações. Tente novamente mais tarde.",
+    "checkNow": "Verificar agora",
+    "download": "Transferir",
+    "restart": "Reiniciar agora",
+    "later": "Mais tarde",
+    "available": "O Termix {{version}} está disponível",
+    "manualHint": "Transfira-o na página de lançamentos e instale-o por cima desta versão.",
+    "ready": "O Termix {{version}} está pronto para instalar",
+    "readyHint": "Será instalado na próxima reinicialização do Termix."
+  },
   "nav": {
     "home": "Início",
     "terminal": "Terminal",
@@ -1892,19 +1923,23 @@
       "tabs": {
         "installed": "Instalados",
         "browse": "Explorar",
-        "updates": "Atualizações"
+        "updates": "Atualizações",
+        "registries": "Registos"
       },
       "status": {
         "summary": "{{installed}} instalados, {{running}} em execução",
         "running": "Em execução",
         "disabled": "Desativado",
         "failed": "Parado inesperadamente",
-        "blocked": "À espera de outro plugin"
+        "blocked": "À espera de outro plugin",
+        "server": "Executa no seu servidor"
       },
       "groups": {
         "running": "Em execução",
-        "notRunning": "Não em execução"
+        "notRunning": "Não em execução",
+        "onServer": "No seu servidor"
       },
+      "runsOnServerHint": "Este plugin apenas executa no seu servidor, pelo que permanece desativado na aplicação desktop. Continua a funcionar lá.",
       "sort": {
         "popular": "Mais populares",
         "name": "Nome",
@@ -1922,7 +1957,7 @@
         "version": "Versão",
         "status": "Estado",
         "category": "Categoria",
-        "installs": "Instalações"
+        "downloads": "Transferências"
       },
       "risk": {
         "critical": "Crítico",
@@ -2090,8 +2125,48 @@
       "noneInstalled": "Ainda não há plugins instalados. Navegue para adicionar alguns.",
       "nothingHere": "Nada aqui.",
       "nothingHereHint": "Tente outra categoria ou pesquisa.",
-      "communitySoon": "Plugins da comunidade chegarão numa atualização futura. Os autores de plugins já podem submeter os seus ao registo da comunidade.",
+      "showInstalled": "Mostrar instalados",
+      "allInstalled": "Tudo aqui já está instalado.",
+      "allInstalledHint": "Ative Mostrar instalados para os ver.",
       "communitySubmit": "Como submeter",
+      "registries": {
+        "intro": "Os registos são listas de plugins que pode instalar. O oficial está sempre ativo. Pode ativar o registo da comunidade ou adicionar o seu próprio.",
+        "hostYourOwn": "Alojar o seu próprio registo",
+        "add": "Adicionar registo",
+        "addTitle": "Adicionar um registo",
+        "addHint": "Cole o link para o index.json do registo. O Termix lê-o e mostra a chave com que assina os plugins. Adicione apenas registos de pessoas em quem confia.",
+        "urlLabel": "URL do índice",
+        "check": "Verificar",
+        "addConfirm": "Confiar e adicionar",
+        "added": "Adicionado {{name}}",
+        "customWarning": "Os plugins deste registo não são revistos pela equipa do Termix. Apenas o proprietário do registo decide o que nele se inclui. Cada transferência deve ser assinada pela chave acima.",
+        "keyFingerprint": "Chave {{keyId}}",
+        "pluginCount_one": "{{count}} plugin",
+        "pluginCount_many": "{{count}} plugins",
+        "pluginCount_other": "{{count}} plugins",
+        "officialName": "Oficial",
+        "communityName": "Comunidade",
+        "alwaysOn": "Sempre ativo",
+        "communityHint": "Plugins feitos por outras pessoas. Cada versão é verificada por uma pessoa e por verificações automáticas antes de ser listada.",
+        "communityConfirmTitle": "Ativar plugins da comunidade?",
+        "communityConfirmBody": "Os plugins da comunidade são feitos por outras pessoas, não pela equipa do Termix. Cada versão é verificada por uma pessoa e por verificações automáticas antes de ser listada, mas erros podem ainda ocorrer. Instale apenas plugins em quem confia e verifique o que cada um solicita.",
+        "communityConfirm": "Ativar",
+        "communityBadge": "Comunidade",
+        "communityBadgeHint": "Do registo da comunidade. Feito por outras pessoas e revisto antes de ser listado.",
+        "customBadge": "Personalizado",
+        "customBadgeHint": "De {{name}}, um registo adicionado por um administrador. Não revisto pela equipa do Termix.",
+        "remove": "Remover",
+        "removeTitle": "Remover {{name}}?",
+        "removeBody": "Os seus plugins deixarão de aparecer em Explorar. Pode adicioná-lo novamente mais tarde.",
+        "removed": "{{name}} removido",
+        "inUse": "Desinstale primeiro os plugins de {{name}}: {{list}}",
+        "changeFailed": "Não foi possível alterar o registo: {{error}}",
+        "loadFailed": "Não foi possível carregar os registos: {{error}}",
+        "unreachable": "Não foi possível ler: {{error}}",
+        "filter": "Registo",
+        "allRegistries": "Todos os registos",
+        "browseHint": "Ative os plugins da comunidade ou adicione o seu próprio registo na separação Registos."
+      },
       "upToDate": "Tudo está atualizado.",
       "lastChecked": "Última verificação {{time}}",
       "updatesReady_one": "{{count}} atualização pronta.",
@@ -2116,13 +2191,9 @@
         "signedOnly": "TERMIX_REQUIRE_SIGNED_PLUGINS está definido, por isso a instalação a partir de ficheiro permanece bloqueada."
       },
       "count": {
-        "active_one": "{{formatted}} instalação ativa",
-        "active_many": "{{formatted}} instalações ativas",
-        "active_other": "{{formatted}} instalações ativas",
         "downloads_one": "{{formatted}} descarga",
         "downloads_many": "{{formatted}} descargas",
         "downloads_other": "{{formatted}} descargas",
-        "activeHint": "Instâncias que reportaram este plugin ativado na última semana. Instâncias com estatísticas de utilização desativadas não são contadas.",
         "downloadsHint": "Quantas vezes uma versão foi descarregada. Isto não é o número de instalações."
       },
       "unverified": "Não verificado",

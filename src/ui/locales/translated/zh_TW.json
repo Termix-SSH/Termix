@@ -233,6 +233,37 @@
     "desktopLinked": "已連線至 {{server}}",
     "pluginsDocsLink": "閱讀各外掛說明"
   },
+  "desktopUpdates": {
+    "title": "桌面應用程式",
+    "mode": "更新",
+    "modeHint": "此應用程式如何取得新版本。",
+    "manualModeHint": "此副本無法自行更新，因此 Termix 僅會在新版本發布時通知您。",
+    "modeAutomatic": "自動",
+    "modePrompt": "先詢問",
+    "modeNever": "永不",
+    "automaticBody": "在背景下載新版本，並在您重新啟動時安裝。",
+    "promptBody": "在新版本發布時通知我，並讓我選擇何時下載。",
+    "neverBody": "不要檢查更新。您仍可在設定中手動檢查。",
+    "onboardingTitle": "應用程式更新",
+    "onboardingBody": "桌面應用程式現在可以自行更新。選擇您希望接收新版本的方式。您之後可以在「設定」>「更新」中更改此設定。",
+    "onboardingManual": "此應用程式副本的安裝方式無法自行更新，因此 Termix 會在新版本發布時通知您，並提供下載連結。",
+    "status": "版本 {{version}}",
+    "statusIdle": "尚未檢查",
+    "statusChecking": "正在檢查更新",
+    "statusAvailable": "版本 {{version}} 可供使用",
+    "statusDownloading": "正在下載 {{version}} ({{progress}}%)",
+    "statusReady": "版本 {{version}} 已準備就緒。重新啟動以安裝。",
+    "statusUpToDate": "您已擁有最新版本",
+    "statusError": "無法檢查更新。請稍後再試。",
+    "checkNow": "立即檢查",
+    "download": "下載",
+    "restart": "立即重新啟動",
+    "later": "稍後",
+    "available": "Termix {{version}} 可供使用",
+    "manualHint": "從發布頁面下載並覆蓋安裝此版本。",
+    "ready": "Termix {{version}} 已準備好安裝",
+    "readyHint": "下次重新啟動 Termix 時將進行安裝。"
+  },
   "nav": {
     "home": "首頁",
     "terminal": "終端機",
@@ -1844,19 +1875,23 @@
       "tabs": {
         "installed": "已安裝",
         "browse": "瀏覽",
-        "updates": "更新"
+        "updates": "更新",
+        "registries": "登錄"
       },
       "status": {
         "summary": "已安裝 {{installed}} 個，執行中 {{running}} 個",
         "running": "執行中",
         "disabled": "已停用",
         "failed": "意外停止",
-        "blocked": "等待其他外掛"
+        "blocked": "等待其他外掛",
+        "server": "在您的伺服器上執行"
       },
       "groups": {
         "running": "執行中",
-        "notRunning": "未執行"
+        "notRunning": "未執行",
+        "onServer": "在您的伺服器上"
       },
+      "runsOnServerHint": "此外掛程式僅在您的伺服器上執行，因此在桌面應用程式中會保持關閉狀態。它在伺服器上仍會正常運作。",
       "sort": {
         "popular": "最受歡迎",
         "name": "名稱",
@@ -1874,7 +1909,7 @@
         "version": "版本",
         "status": "狀態",
         "category": "類別",
-        "installs": "安裝次數"
+        "downloads": "下載次數"
       },
       "risk": {
         "critical": "嚴重",
@@ -2010,8 +2045,46 @@
       "noneInstalled": "尚未安裝任何外掛。瀏覽並安裝一些外掛吧。",
       "nothingHere": "此處無內容。",
       "nothingHereHint": "請嘗試其他分類或搜尋。",
-      "communitySoon": "社群外掛將於後續更新中推出。外掛作者目前已可將其作品提交至社群登錄。",
+      "showInstalled": "顯示已安裝",
+      "allInstalled": "此處的所有項目都已安裝。",
+      "allInstalledHint": "開啟「顯示已安裝」以查看它們。",
       "communitySubmit": "如何提交",
+      "registries": {
+        "intro": "登錄是您可以安裝的外掛程式清單。官方登錄始終開啟。您可以開啟社群登錄或新增自己的登錄。",
+        "hostYourOwn": "託管您自己的登錄",
+        "add": "新增登錄",
+        "addTitle": "新增登錄",
+        "addHint": "貼上登錄 index.json 的連結。Termix 會讀取它並顯示用於簽署外掛程式的金鑰。僅新增您信任的人提供的登錄。",
+        "urlLabel": "索引 URL",
+        "check": "檢查",
+        "addConfirm": "信任並新增",
+        "added": "已新增 {{name}}",
+        "customWarning": "此登錄中的外掛程式未經 Termix 團隊審查。僅由登錄擁有者決定其內容。每次下載都必須由上述金鑰簽署。",
+        "keyFingerprint": "金鑰 {{keyId}}",
+        "pluginCount_other": "{{count}} 個外掛程式",
+        "officialName": "官方",
+        "communityName": "社群",
+        "alwaysOn": "始終開啟",
+        "communityHint": "由其他人製作的外掛程式。每個版本在列出前都會經過人工和自動化檢查。",
+        "communityConfirmTitle": "要開啟社群外掛程式嗎？",
+        "communityConfirmBody": "社群外掛程式由其他人而非 Termix 團隊製作。每個版本在列出前都會經過人工和自動化檢查，但仍可能有疏漏。僅安裝您信任的外掛程式，並檢查每個外掛程式要求的權限。",
+        "communityConfirm": "開啟",
+        "communityBadge": "社群",
+        "communityBadgeHint": "來自社群登錄。由其他人製作並在列出前經過審查。",
+        "customBadge": "自訂",
+        "customBadgeHint": "來自 {{name}}，這是管理員新增的登錄。未經 Termix 團隊審查。",
+        "remove": "移除",
+        "removeTitle": "移除 {{name}}？",
+        "removeBody": "其插件將不再顯示於「瀏覽」中。您可以稍後再次新增。",
+        "removed": "已移除 {{name}}",
+        "inUse": "請先解除安裝來自 {{name}} 的插件：{{list}}",
+        "changeFailed": "無法變更註冊表：{{error}}",
+        "loadFailed": "無法載入註冊表：{{error}}",
+        "unreachable": "無法讀取：{{error}}",
+        "filter": "註冊表",
+        "allRegistries": "所有註冊表",
+        "browseHint": "在「註冊表」分頁中啟用社群插件或新增您自己的註冊表。"
+      },
       "upToDate": "所有項目皆為最新。",
       "lastChecked": "上次檢查時間：{{time}}",
       "updatesReady_other": "有 {{count}} 項更新待安裝。",
@@ -2032,9 +2105,7 @@
         "signedOnly": "已設定 TERMIX_REQUIRE_SIGNED_PLUGINS，因此無法從檔案安裝。"
       },
       "count": {
-        "active_other": "{{formatted}} 個活躍安裝",
         "downloads_other": "{{formatted}} 次下載",
-        "activeHint": "過去一周內回報此插件已啟用的實例數量。已關閉使用統計的實例不會被計入。",
         "downloadsHint": "版本被下載的次數。這並非安裝次數。"
       },
       "unverified": "未驗證",

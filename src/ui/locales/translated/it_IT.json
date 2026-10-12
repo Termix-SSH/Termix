@@ -233,6 +233,37 @@
     "desktopLinked": "Collegato a {{server}}",
     "pluginsDocsLink": "Leggi la descrizione di ciascuno"
   },
+  "desktopUpdates": {
+    "title": "App desktop",
+    "mode": "Aggiornamenti",
+    "modeHint": "Come questa app riceve le nuove versioni.",
+    "manualModeHint": "Questa copia non può aggiornarsi automaticamente, quindi Termix ti avvisa solo quando è disponibile una nuova versione.",
+    "modeAutomatic": "Automatico",
+    "modePrompt": "Chiedi prima",
+    "modeNever": "Mai",
+    "automaticBody": "Scarica le nuove versioni in background e installale al riavvio.",
+    "promptBody": "Avvisami quando è disponibile una nuova versione e permettimi di scegliere quando scaricarla.",
+    "neverBody": "Non cercare aggiornamenti. Puoi comunque controllare manualmente nelle Impostazioni.",
+    "onboardingTitle": "Aggiornamenti dell'app",
+    "onboardingBody": "L'app desktop può ora aggiornarsi automaticamente. Scegli come desideri ricevere le nuove versioni. Puoi modificare questa impostazione in seguito in Impostazioni, Aggiornamenti.",
+    "onboardingManual": "Questa copia dell'app è stata installata in un modo che non supporta l'aggiornamento automatico, quindi Termix ti avviserà quando è disponibile una nuova versione con un link per scaricarla.",
+    "status": "Versione {{version}}",
+    "statusIdle": "Non ancora controllato",
+    "statusChecking": "Verifica aggiornamenti in corso",
+    "statusAvailable": "È disponibile la versione {{version}}",
+    "statusDownloading": "Download di {{version}} in corso ({{progress}}%)",
+    "statusReady": "La versione {{version}} è pronta. Riavvia per installarla.",
+    "statusUpToDate": "Hai l'ultima versione",
+    "statusError": "Impossibile verificare la presenza di aggiornamenti. Riprova più tardi.",
+    "checkNow": "Verifica ora",
+    "download": "Scarica",
+    "restart": "Riavvia ora",
+    "later": "Più tardi",
+    "available": "Termix {{version}} è disponibile",
+    "manualHint": "Scaricalo dalla pagina dei rilasci e installalo sopra questa versione.",
+    "ready": "Termix {{version}} è pronto per l'installazione",
+    "readyHint": "Verrà installato al prossimo riavvio di Termix."
+  },
   "nav": {
     "home": "Home",
     "terminal": "Terminale",
@@ -1892,19 +1923,23 @@
       "tabs": {
         "installed": "Installati",
         "browse": "Sfoglia",
-        "updates": "Aggiornamenti"
+        "updates": "Aggiornamenti",
+        "registries": "Registri"
       },
       "status": {
         "summary": "{{installed}} installati, {{running}} in esecuzione",
         "running": "In esecuzione",
         "disabled": "Disabilitato",
         "failed": "Arrestato inaspettatamente",
-        "blocked": "In attesa di un altro plugin"
+        "blocked": "In attesa di un altro plugin",
+        "server": "Eseguito sul tuo server"
       },
       "groups": {
         "running": "In esecuzione",
-        "notRunning": "Non in esecuzione"
+        "notRunning": "Non in esecuzione",
+        "onServer": "Sul tuo server"
       },
+      "runsOnServerHint": "Questo plugin viene eseguito solo sul tuo server, quindi rimane disattivato nell'app desktop. Funziona comunque sul server.",
       "sort": {
         "popular": "Più popolari",
         "name": "Nome",
@@ -1922,7 +1957,7 @@
         "version": "Versione",
         "status": "Stato",
         "category": "Categoria",
-        "installs": "Installazioni"
+        "downloads": "Download"
       },
       "risk": {
         "critical": "Critico",
@@ -2090,8 +2125,48 @@
       "noneInstalled": "Nessun plugin installato. Esplora per aggiungerne alcuni.",
       "nothingHere": "Nessun elemento qui.",
       "nothingHereHint": "Prova un'altra categoria o una ricerca.",
-      "communitySoon": "I plugin della community arriveranno in un aggiornamento futuro. Gli autori di plugin possono già inviarli al registro della community.",
+      "showInstalled": "Mostra installati",
+      "allInstalled": "Tutto qui è già installato.",
+      "allInstalledHint": "Attiva Mostra installati per vederli.",
       "communitySubmit": "Come inviare",
+      "registries": {
+        "intro": "I registri sono elenchi di plugin che puoi installare. Quello ufficiale è sempre attivo. Puoi attivare il registro della community o aggiungerne uno tuo.",
+        "hostYourOwn": "Ospita il tuo registro",
+        "add": "Aggiungi registro",
+        "addTitle": "Aggiungi un registro",
+        "addHint": "Incolla il link al file index.json del registro. Termix lo legge e mostra la chiave con cui firma i plugin. Aggiungi solo registri di persone di cui ti fidi.",
+        "urlLabel": "URL dell'indice",
+        "check": "Verifica",
+        "addConfirm": "Fidati e aggiungi",
+        "added": "Aggiunto {{name}}",
+        "customWarning": "I plugin da questo registro non sono revisionati dal team di Termix. Solo il proprietario del registro decide cosa contiene. Ogni download deve essere firmato dalla chiave sopra.",
+        "keyFingerprint": "Chiave {{keyId}}",
+        "pluginCount_one": "{{count}} plugin",
+        "pluginCount_many": "{{count}} plugin",
+        "pluginCount_other": "{{count}} plugin",
+        "officialName": "Ufficiale",
+        "communityName": "Community",
+        "alwaysOn": "Sempre attivo",
+        "communityHint": "Plugin creati da altre persone. Ogni versione viene controllata da una persona e da controlli automatizzati prima di essere elencata.",
+        "communityConfirmTitle": "Attivare i plugin della community?",
+        "communityConfirmBody": "I plugin della community sono creati da altre persone, non dal team di Termix. Ogni versione viene controllata da una persona e da controlli automatizzati prima di essere elencata, ma errori possono comunque sfuggire. Installa solo plugin di cui ti fidi e controlla cosa richiede ciascuno.",
+        "communityConfirm": "Attiva",
+        "communityBadge": "Community",
+        "communityBadgeHint": "Dal registro della community. Creato da altre persone e revisionato prima dell'inserimento.",
+        "customBadge": "Personalizzato",
+        "customBadgeHint": "Da {{name}}, un registro aggiunto da un amministratore. Non revisionato dal team di Termix.",
+        "remove": "Rimuovi",
+        "removeTitle": "Rimuovere {{name}}?",
+        "removeBody": "I suoi plugin non appariranno più nella sezione Esplora. Puoi aggiungerlo di nuovo in seguito.",
+        "removed": "{{name}} rimosso",
+        "inUse": "Disinstalla prima i plugin di {{name}}: {{list}}",
+        "changeFailed": "Impossibile modificare il registro: {{error}}",
+        "loadFailed": "Impossibile caricare i registri: {{error}}",
+        "unreachable": "Impossibile leggerlo: {{error}}",
+        "filter": "Registro",
+        "allRegistries": "Tutti i registri",
+        "browseHint": "Abilita i plugin della community o aggiungi il tuo registro nella scheda Registri."
+      },
       "upToDate": "Tutto è aggiornato.",
       "lastChecked": "Ultimo controllo {{time}}",
       "updatesReady_one": "{{count}} aggiornamento pronto.",
@@ -2116,13 +2191,9 @@
         "signedOnly": "TERMIX_REQUIRE_SIGNED_PLUGINS è impostato, quindi l'installazione da file rimane bloccata."
       },
       "count": {
-        "active_one": "{{formatted}} installazione attiva",
-        "active_many": "{{formatted}} installazioni attive",
-        "active_other": "{{formatted}} installazioni attive",
         "downloads_one": "{{formatted}} download",
         "downloads_many": "{{formatted}} download",
         "downloads_other": "{{formatted}} download",
-        "activeHint": "Istanze che hanno segnalato questo plugin attivato nell'ultima settimana. Le istanze con le statistiche di utilizzo disattivate non vengono conteggiate.",
         "downloadsHint": "Quante volte una versione è stata scaricata. Questo non è il numero di installazioni."
       },
       "unverified": "Non verificato",

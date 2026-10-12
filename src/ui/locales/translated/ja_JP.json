@@ -233,6 +233,37 @@
     "desktopLinked": "{{server}} と連携済み",
     "pluginsDocsLink": "各プラグインについて読む"
   },
+  "desktopUpdates": {
+    "title": "デスクトップアプリ",
+    "mode": "アップデート",
+    "modeHint": "このアプリが新しいバージョンを取得する方法です。",
+    "manualModeHint": "このコピーは自動更新できないため、Termix は新しいバージョンがリリースされたときのみお知らせします。",
+    "modeAutomatic": "自動",
+    "modePrompt": "確認してから",
+    "modeNever": "しない",
+    "automaticBody": "バックグラウンドで新しいバージョンをダウンロードし、再起動時にインストールします。",
+    "promptBody": "新しいバージョンがリリースされたらお知らせし、ダウンロードするタイミングは自分で選べます。",
+    "neverBody": "アップデートを確認しません。設定から手動で確認することはできます。",
+    "onboardingTitle": "アプリのアップデート",
+    "onboardingBody": "デスクトップアプリが自動で更新できるようになりました。新しいバージョンの入手方法を選んでください。後で「設定」>「アップデート」から変更できます。",
+    "onboardingManual": "このアプリのコピーは自動更新できない方法でインストールされたため、Termix は新しいバージョンがリリースされたときにダウンロードリンク付きでお知らせします。",
+    "status": "バージョン {{version}}",
+    "statusIdle": "まだ確認していません",
+    "statusChecking": "アップデートを確認中",
+    "statusAvailable": "バージョン {{version}} が利用可能です",
+    "statusDownloading": "{{version}} をダウンロード中 ({{progress}}%)",
+    "statusReady": "バージョン {{version}} の準備ができました。インストールするには再起動してください。",
+    "statusUpToDate": "最新バージョンです",
+    "statusError": "アップデートの確認に失敗しました。後でもう一度お試しください。",
+    "checkNow": "今すぐ確認",
+    "download": "ダウンロード",
+    "restart": "今すぐ再起動",
+    "later": "後で",
+    "available": "Termix {{version}} が利用可能です",
+    "manualHint": "リリースページからダウンロードして、現在のバージョンに上書きインストールしてください。",
+    "ready": "Termix {{version}} のインストール準備ができました",
+    "readyHint": "Termix を再起動したときにインストールされます。"
+  },
   "nav": {
     "home": "ホーム",
     "terminal": "ターミナル",
@@ -1844,19 +1875,23 @@
       "tabs": {
         "installed": "インストール済み",
         "browse": "閲覧",
-        "updates": "アップデート"
+        "updates": "アップデート",
+        "registries": "レジストリ"
       },
       "status": {
         "summary": "{{installed}} 個インストール済み、{{running}} 個実行中",
         "running": "実行中",
         "disabled": "無効",
         "failed": "予期せず停止",
-        "blocked": "他のプラグインを待機中"
+        "blocked": "他のプラグインを待機中",
+        "server": "サーバー上で実行"
       },
       "groups": {
         "running": "実行中",
-        "notRunning": "実行中ではない"
+        "notRunning": "実行中ではない",
+        "onServer": "サーバー上"
       },
+      "runsOnServerHint": "このプラグインはサーバー上でのみ実行されるため、デスクトップアプリでは無効のままです。サーバー上では引き続き動作します。",
       "sort": {
         "popular": "人気順",
         "name": "名前",
@@ -1874,7 +1909,7 @@
         "version": "バージョン",
         "status": "ステータス",
         "category": "カテゴリ",
-        "installs": "インストール数"
+        "downloads": "ダウンロード数"
       },
       "risk": {
         "critical": "重大",
@@ -2010,8 +2045,46 @@
       "noneInstalled": "まだプラグインがインストールされていません。閲覧して追加してください。",
       "nothingHere": "ここには何もありません。",
       "nothingHereHint": "別のカテゴリや検索を試してください。",
-      "communitySoon": "コミュニティプラグインは今後の更新で提供される予定です。プラグイン開発者はすでにコミュニティレジストリに提出できます。",
+      "showInstalled": "インストール済みを表示",
+      "allInstalled": "ここにあるものはすべて既にインストール済みです。",
+      "allInstalledHint": "「インストール済みを表示」をオンにすると表示されます。",
       "communitySubmit": "提出方法",
+      "registries": {
+        "intro": "レジストリはインストールできるプラグインのリストです。公式レジストリは常に有効です。コミュニティレジストリを有効にしたり、独自のレジストリを追加したりできます。",
+        "hostYourOwn": "独自のレジストリをホスト",
+        "add": "レジストリを追加",
+        "addTitle": "レジストリを追加",
+        "addHint": "レジストリの index.json へのリンクを貼り付けてください。Termix はこれを読み取り、プラグインに署名する鍵を表示します。信頼できる人からのレジストリのみを追加してください。",
+        "urlLabel": "インデックス URL",
+        "check": "確認",
+        "addConfirm": "信頼して追加",
+        "added": "{{name}} を追加しました",
+        "customWarning": "このレジストリのプラグインは Termix チームによってレビューされていません。レジストリの所有者のみがその内容を決めます。すべてのダウンロードは上記の鍵で署名されている必要があります。",
+        "keyFingerprint": "鍵 {{keyId}}",
+        "pluginCount_other": "{{count}} 個のプラグイン",
+        "officialName": "公式",
+        "communityName": "コミュニティ",
+        "alwaysOn": "常に有効",
+        "communityHint": "他の人によって作成されたプラグインです。各バージョンは、リストに掲載される前に人間と自動チェックの両方で確認されます。",
+        "communityConfirmTitle": "コミュニティプラグインを有効にしますか？",
+        "communityConfirmBody": "コミュニティプラグインは Termix チームではなく、他の人によって作成されています。各バージョンはリストに掲載される前に人間と自動チェックの両方で確認されますが、ミスが漏れることもあります。信頼できるプラグインのみをインストールし、各プラグインが要求する権限を確認してください。",
+        "communityConfirm": "有効にする",
+        "communityBadge": "コミュニティ",
+        "communityBadgeHint": "コミュニティレジストリから。他の人によって作成され、リストに掲載される前にレビューされています。",
+        "customBadge": "カスタム",
+        "customBadgeHint": "{{name}}（管理者が追加したレジストリ）から。Termix チームによってレビューされていません。",
+        "remove": "削除",
+        "removeTitle": "{{name}} を削除しますか？",
+        "removeBody": "そのプラグインは「閲覧」に表示されなくなります。後で再度追加できます。",
+        "removed": "{{name}} を削除しました",
+        "inUse": "まず {{name}} のプラグインをアンインストールしてください: {{list}}",
+        "changeFailed": "レジストリを変更できませんでした: {{error}}",
+        "loadFailed": "レジストリを読み込めませんでした: {{error}}",
+        "unreachable": "読み取れませんでした: {{error}}",
+        "filter": "レジストリ",
+        "allRegistries": "すべてのレジストリ",
+        "browseHint": "コミュニティプラグインを有効にするか、レジストリタブで独自のレジストリを追加してください。"
+      },
       "upToDate": "すべて最新です。",
       "lastChecked": "最終確認: {{time}}",
       "updatesReady_other": "{{count}} 件の更新が準備完了です。",
@@ -2032,9 +2105,7 @@
         "signedOnly": "TERMIX_REQUIRE_SIGNED_PLUGINS が設定されているため、ファイルからのインストールはブロックされたままです。"
       },
       "count": {
-        "active_other": "{{formatted}} 件のアクティブインストール",
         "downloads_other": "{{formatted}} 回のダウンロード",
-        "activeHint": "過去1週間でこのプラグインが有効になっていると報告したインスタンス数。使用統計が無効化されているインスタンスはカウントされません。",
         "downloadsHint": "リリースがダウンロードされた回数です。これはインストール数ではありません。"
       },
       "unverified": "未検証",

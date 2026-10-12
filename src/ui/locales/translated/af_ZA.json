@@ -233,6 +233,37 @@
     "desktopLinked": "Gekoppel aan {{server}}",
     "pluginsDocsLink": "Lees oor elkeen"
   },
+  "desktopUpdates": {
+    "title": "Buro-toepassing",
+    "mode": "Opdaterings",
+    "modeHint": "Hoe hierdie toepassing nuwe weergawes kry.",
+    "manualModeHint": "Hierdie kopie kan nie self opdateer nie, so Termix vertel jou net wanneer 'n nuwe weergas beskikbaar is.",
+    "modeAutomatic": "Outomaties",
+    "modePrompt": "Vra eers",
+    "modeNever": "Nooit",
+    "automaticBody": "Laai nuwe weergawes in die agtergrond af en installeer hulle wanneer jy herbegin.",
+    "promptBody": "Vertel my wanneer 'n nuwe weergawe beskikbaar is en laat my kies wanneer om dit af te laai.",
+    "neverBody": "Soek nie na opdaterings nie. Jy kan steeds handmatig in Instellings soek.",
+    "onboardingTitle": "Toepassing-opdaterings",
+    "onboardingBody": "Die buro-toepassing kan nou self opdateer. Kies hoe jy wil hê nuwe weergawes moet aankom. Jy kan dit later in Instellings, Opdaterings verander.",
+    "onboardingManual": "Hierdie kopie van die toepassing is op 'n manier geïnstalleer wat nie self kan opdateer nie, so Termix sal jou vertel wanneer 'n nuwe weergawe beskikbaar is met 'n skakel om dit af te laai.",
+    "status": "Weergawe {{version}}",
+    "statusIdle": "Nog nie gecontroleer nie",
+    "statusChecking": "Soek na opdaterings",
+    "statusAvailable": "Weergawe {{version}} is beskikbaar",
+    "statusDownloading": "Laai {{version}} af ({{progress}}%)",
+    "statusReady": "Weergawe {{version}} is gereed. Herbegin om dit te installeer.",
+    "statusUpToDate": "Jy het die nuutste weergawe",
+    "statusError": "Kon nie na opdaterings soek nie. Probeer later weer.",
+    "checkNow": "Soek nou",
+    "download": "Laai af",
+    "restart": "Herbegin nou",
+    "later": "Later",
+    "available": "Termix {{version}} is beskikbaar",
+    "manualHint": "Laai dit af van die vrystellingsblad en installeer dit oor hierdie een.",
+    "ready": "Termix {{version}} is gereed om te installeer",
+    "readyHint": "Dit word die volgende keer wat Termix herbegin geïnstalleer."
+  },
   "nav": {
     "home": "Tuis",
     "terminal": "Terminaal",
@@ -1868,19 +1899,23 @@
       "tabs": {
         "installed": "Geïnstalleer",
         "browse": "Blaaie",
-        "updates": "Opdaterings"
+        "updates": "Opdaterings",
+        "registries": "Register"
       },
       "status": {
         "summary": "{{installed}} geïnstalleer, {{running}} aktief",
         "running": "Aktief",
         "disabled": "Afgeskakel",
         "failed": "Onverwags gestop",
-        "blocked": "Wag op 'n ander plugin"
+        "blocked": "Wag op 'n ander plugin",
+        "server": "Loop op jou bediener"
       },
       "groups": {
         "running": "Aktief",
-        "notRunning": "Nie aktief nie"
+        "notRunning": "Nie aktief nie",
+        "onServer": "Op jou bediener"
       },
+      "runsOnServerHint": "Hierdie invoegtoepassing loop slegs op jou bediener, so dit bly af in die buro-toepassing. Dit werk steeds daar.",
       "sort": {
         "popular": "Mees gewild",
         "name": "Naam",
@@ -1898,7 +1933,7 @@
         "version": "Weergawe",
         "status": "Status",
         "category": "Kategorie",
-        "installs": "Installasies"
+        "downloads": "Aflaai"
       },
       "risk": {
         "critical": "Krities",
@@ -2050,8 +2085,47 @@
       "noneInstalled": "Nog geen plugins geïnstalleer nie. Blaai om sommige by te voeg.",
       "nothingHere": "Niets hier nie.",
       "nothingHereHint": "Probeer 'n ander kategorie of soek.",
-      "communitySoon": "Gemeenskapsplugins kom in 'n latere opdatering. Plugin-skrywers kan reeds hulle plugins by die gemeenskapsregister indien.",
+      "showInstalled": "Wys geïnstalleerdes",
+      "allInstalled": "Alles hier is reeds geïnstalleer.",
+      "allInstalledHint": "Skakel Wys geïnstalleerdes aan om hulle te sien.",
       "communitySubmit": "Hoe om in te dien",
+      "registries": {
+        "intro": "Register is lys van invoegtoepassings wat jy kan installeer. Die amptelike een is altyd aan. Jy kan die gemeenskapsregister aanskakel of jou eie byvoeg.",
+        "hostYourOwn": "Herberg jou eie register",
+        "add": "Voeg register by",
+        "addTitle": "Voeg 'n register by",
+        "addHint": "Plak die skakel na die register se index.json. Termix lees dit en wys die sleutel waarmee dit invoegtoepassings onderteken. Voeg slegs register by van mense wat jy vertrou.",
+        "urlLabel": "Index-URL",
+        "check": "Kontroleer",
+        "addConfirm": "Vertrou en voeg by",
+        "added": "Het {{name}} bygevoeg",
+        "customWarning": "Invoegtoepassings uit hierdie register word nie deur die Termix-span hersien nie. Slegs die eienaar van die register besluit wat daarin is. Elke aflaai moet onderteken word deur die sleutel hierbo.",
+        "keyFingerprint": "Sleutel {{keyId}}",
+        "pluginCount_one": "{{count}} invoegtoepassing",
+        "pluginCount_other": "{{count}} invoegtoepassings",
+        "officialName": "Amptelik",
+        "communityName": "Gemeenskap",
+        "alwaysOn": "Altyd aan",
+        "communityHint": "Invoegtoepassings gemaak deur ander mense. Elke weergawe word deur 'n persoon en outomatiese kontroles nagegaan voordat dit gelys word.",
+        "communityConfirmTitle": "Skakel gemeenskapsinvoegtoepassings aan?",
+        "communityConfirmBody": "Gemeenskapsinvoegtoepassings word deur ander mense gemaak, nie die Termix-span nie. Elke weergawe word deur 'n persoon en outomatiese kontroles nagegaan voordat dit gelys word, maar foute kan steeds deurskiet. Installeer slegs invoegtoepassings wat jy vertrou en kyk wat elkeen vra.",
+        "communityConfirm": "Skakel aan",
+        "communityBadge": "Gemeenskap",
+        "communityBadgeHint": "Van die gemeenskapsregister. Gemaak deur ander mense en hersien voordat dit gelys is.",
+        "customBadge": "Aangepas",
+        "customBadgeHint": "Van {{name}}, 'n register wat 'n admin bygevoeg het. Nie deur die Termix-span hersien nie.",
+        "remove": "Verwyder",
+        "removeTitle": "Verwyder {{name}}?",
+        "removeBody": "Sy plugins sal nie meer in Blaaie verskyn nie. Jy kan dit later weer byvoeg.",
+        "removed": "{{name}} verwyder",
+        "inUse": "Installeer eers die plugins van {{name}} uit: {{list}}",
+        "changeFailed": "Kon nie die register verander nie: {{error}}",
+        "loadFailed": "Kon nie registers laai nie: {{error}}",
+        "unreachable": "Kon nie dit lees nie: {{error}}",
+        "filter": "Register",
+        "allRegistries": "Alle registers",
+        "browseHint": "Skakel gemeenskapsplugins aan of voeg jou eie register by in die Registers-oortjie."
+      },
       "upToDate": "Alles is op datum.",
       "lastChecked": "Laas gecheck {{time}}",
       "updatesReady_one": "{{count}} opdatering gereed.",
@@ -2074,11 +2148,8 @@
         "signedOnly": "TERMIX_REQUIRE_SIGNED_PLUGINS is gestel, dus bly installering vanaf 'n lêer geblokkeer."
       },
       "count": {
-        "active_one": "{{formatted}} aktiewe installering",
-        "active_other": "{{formatted}} aktiewe installasies",
         "downloads_one": "{{formatted}} aflaai",
         "downloads_other": "{{formatted}} afdlae",
-        "activeHint": "Instansies wat die afgelope week gerapporteer het dat hierdie plugin aangeskakel is. Instansies met gebruiksstatistieke afgeskakel word nie getel nie.",
         "downloadsHint": "Hoeveel keer 'n uitgawe afgelaai is. Dit is nie die aantal installasies nie."
       },
       "unverified": "Ongeverifieer",

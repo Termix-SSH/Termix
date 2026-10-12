@@ -233,6 +233,37 @@
     "desktopLinked": "Legat de {{server}}",
     "pluginsDocsLink": "Citește despre fiecare"
   },
+  "desktopUpdates": {
+    "title": "Aplicație desktop",
+    "mode": "Actualizări",
+    "modeHint": "Cum primește această aplicație versiuni noi.",
+    "manualModeHint": "Această copie nu se poate actualiza singură, așa că Termix îți va anunța doar când apare o versiune nouă.",
+    "modeAutomatic": "Automat",
+    "modePrompt": "Întreabă mai întâi",
+    "modeNever": "Niciodată",
+    "automaticBody": "Descarcă versiunile noi în fundal și instalează-le când repornești aplicația.",
+    "promptBody": "Anunță-mă când apare o versiune nouă și lasă-mă să aleg când să o descarc.",
+    "neverBody": "Nu verifica actualizările. Îți poți verifica manual în Setări.",
+    "onboardingTitle": "Actualizări aplicație",
+    "onboardingBody": "Aplicația desktop se poate actualiza acum singură. Alege cum vrei să primești versiunile noi. Poți modifica această setare ulterior în Setări, Actualizări.",
+    "onboardingManual": "Această copie a aplicației a fost instalată într-un mod care nu permite actualizarea automată, așa că Termix îți va anunța când apare o versiune nouă, cu un link pentru descărcare.",
+    "status": "Versiunea {{version}}",
+    "statusIdle": "Nu s-a verificat încă",
+    "statusChecking": "Se verifică actualizările",
+    "statusAvailable": "Versiunea {{version}} este disponibilă",
+    "statusDownloading": "Se descarcă {{version}} ({{progress}}%)",
+    "statusReady": "Versiunea {{version}} este gata. Repornește pentru a o instala.",
+    "statusUpToDate": "Ai cea mai nouă versiune",
+    "statusError": "Nu s-au putut verifica actualizările. Încearcă din nou mai târziu.",
+    "checkNow": "Verifică acum",
+    "download": "Descarcă",
+    "restart": "Repornire acum",
+    "later": "Mai târziu",
+    "available": "Termix {{version}} este disponibil",
+    "manualHint": "Descarcă-l de pe pagina de lansare și instalează-l peste cel actual.",
+    "ready": "Termix {{version}} este gata de instalare",
+    "readyHint": "Se instalează data viitoare când Termix se repornește."
+  },
   "nav": {
     "home": "Acasă",
     "terminal": "Terminal",
@@ -1892,19 +1923,23 @@
       "tabs": {
         "installed": "Instalate",
         "browse": "Răsfoire",
-        "updates": "Actualizări"
+        "updates": "Actualizări",
+        "registries": "Registre"
       },
       "status": {
         "summary": "{{installed}} instalate, {{running}} în execuție",
         "running": "În execuție",
         "disabled": "Dezactivat",
         "failed": "Oprit neașteptat",
-        "blocked": "Așteaptă un alt plugin"
+        "blocked": "Așteaptă un alt plugin",
+        "server": "Rulează pe serverul tău"
       },
       "groups": {
         "running": "În execuție",
-        "notRunning": "Nu este în execuție"
+        "notRunning": "Nu este în execuție",
+        "onServer": "Pe serverul tău"
       },
+      "runsOnServerHint": "Acest plugin rulează doar pe serverul tău, așa că rămâne dezactivat în aplicația desktop. Funcționează totuși acolo.",
       "sort": {
         "popular": "Cele mai populare",
         "name": "Nume",
@@ -1922,7 +1957,7 @@
         "version": "Versiune",
         "status": "Stare",
         "category": "Categorie",
-        "installs": "Instalări"
+        "downloads": "Descărcări"
       },
       "risk": {
         "critical": "Critic",
@@ -2090,8 +2125,48 @@
       "noneInstalled": "Nu sunt plugin-uri instalate încă. Răsfoiește pentru a adăuga unele.",
       "nothingHere": "Nimic aici.",
       "nothingHereHint": "Încearcă o altă categorie sau o căutare.",
-      "communitySoon": "Plugin-urile comunității vor fi disponibile într-o actualizare ulterioară. Autorii de plugin-uri își pot deja trimite plugin-urile în registrul comunității.",
+      "showInstalled": "Arată instalate",
+      "allInstalled": "Totul de aici este deja instalat.",
+      "allInstalledHint": "Activează „Arată instalate” pentru a le vedea.",
       "communitySubmit": "Cum să trimiți",
+      "registries": {
+        "intro": "Registrele sunt liste de pluginuri pe care le poți instala. Cel oficial este mereu activat. Poți activa registrul comunității sau să adaugi unul propriu.",
+        "hostYourOwn": "Găzduiește-ți propriul registru",
+        "add": "Adaugă registru",
+        "addTitle": "Adaugă un registru",
+        "addHint": "Lipește link-ul către index.json al registrului. Termix îl citește și afișează cheia cu care semnează pluginurile. Adaugă doar registre de la surse de încredere.",
+        "urlLabel": "URL index",
+        "check": "Verifică",
+        "addConfirm": "Aprobă și adaugă",
+        "added": "Adăugat {{name}}",
+        "customWarning": "Pluginurile din acest registru nu sunt verificate de echipa Termix. Doar proprietarul registrului decide ce conține. Fiecare descărcare trebuie semnată cu cheia de mai sus.",
+        "keyFingerprint": "Cheia {{keyId}}",
+        "pluginCount_one": "{{count}} plugin",
+        "pluginCount_few": "{{count}} pluginuri",
+        "pluginCount_other": "{{count}} pluginuri",
+        "officialName": "Oficial",
+        "communityName": "Comunitate",
+        "alwaysOn": "Mereu activat",
+        "communityHint": "Pluginuri create de alte persoane. Fiecare versiune este verificată de o persoană și prin verificări automate înainte de a fi listată.",
+        "communityConfirmTitle": "Activezi pluginurile comunității?",
+        "communityConfirmBody": "Pluginurile comunității sunt create de alte persoane, nu de echipa Termix. Fiecare versiune este verificată de o persoană și prin verificări automate înainte de a fi listată, dar pot trece totuși erori. Instalează doar pluginuri de care ai încredere și verifică ce solicită fiecare.",
+        "communityConfirm": "Activează",
+        "communityBadge": "Comunitate",
+        "communityBadgeHint": "Din registrul comunității. Creat de alte persoane și verificat înainte de listare.",
+        "customBadge": "Personalizat",
+        "customBadgeHint": "Din {{name}}, un registru adăugat de un administrator. Nu este verificat de echipa Termix.",
+        "remove": "Elimină",
+        "removeTitle": "Elimină {{name}}?",
+        "removeBody": "Plugin-urile sale nu vor mai apărea în secțiunea Browse. Le poți adăuga din nou mai târziu.",
+        "removed": "{{name}} eliminat",
+        "inUse": "Dezinstalează mai întâi plugin-urile din {{name}}: {{list}}",
+        "changeFailed": "Nu s-a putut modifica registrul: {{error}}",
+        "loadFailed": "Nu s-au putut încărca registrele: {{error}}",
+        "unreachable": "Nu s-a putut citi: {{error}}",
+        "filter": "Registrul",
+        "allRegistries": "Toate registrele",
+        "browseHint": "Activează plugin-urile comunitare sau adaugă propriul registru în fila Registries."
+      },
       "upToDate": "Totul este la zi.",
       "lastChecked": "Ultima verificare {{time}}",
       "updatesReady_one": "{{count}} actualizare gata.",
@@ -2116,13 +2191,9 @@
         "signedOnly": "TERMIX_REQUIRE_SIGNED_PLUGINS este setat, așa că instalarea din fișier rămâne blocată."
       },
       "count": {
-        "active_one": "{{formatted}} instalare activă",
-        "active_few": "{{formatted}} instalări active",
-        "active_other": "{{formatted}} instalări active",
         "downloads_one": "{{formatted}} descărcare",
         "downloads_few": "{{formatted}} descărcări",
         "downloads_other": "{{formatted}} descărcări",
-        "activeHint": "Instanțe care au raportat acest plugin activat în ultima săptămână. Instanțele cu statisticile de utilizare dezactivate nu sunt luate în calcul.",
         "downloadsHint": "De câte ori a fost descărcată o versiune. Acesta nu este numărul de instalări."
       },
       "unverified": "Nevalidat",

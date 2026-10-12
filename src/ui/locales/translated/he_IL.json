@@ -233,6 +233,37 @@
     "desktopLinked": "מקושר ל-{{server}}",
     "pluginsDocsLink": "קרא על כל אחד מהם"
   },
+  "desktopUpdates": {
+    "title": "אפליקציית שולחן עבודה",
+    "mode": "עדכונים",
+    "modeHint": "כך האפליקציה מקבלת גרסאות חדשות.",
+    "manualModeHint": "עותק זה אינו יכול לעדכן את עצמו, לכן Termix רק מודיע לך כאשר גרסה חדשה זמינה.",
+    "modeAutomatic": "אוטומטי",
+    "modePrompt": "שאל קודם",
+    "modeNever": "לעולם לא",
+    "automaticBody": "הורד גרסאות חדשות ברקע והתקן אותן בעת ההפעלה מחדש.",
+    "promptBody": "הודע לי כאשר גרסה חדשה זמינה ואפשר לי לבחור מתי להוריד אותה.",
+    "neverBody": "אל תבדוק אם יש עדכונים. עדיין ניתן לבדוק ידנית בהגדרות.",
+    "onboardingTitle": "עדכוני אפליקציה",
+    "onboardingBody": "אפליקציית שולחן העבודה יכולה כעת לעדכן את עצמה. בחר כיצד תרצה שגרסאות חדשות יגיעו. ניתן לשנות זאת מאוחר יותר בהגדרות, עדכונים.",
+    "onboardingManual": "עותק זה של האפליקציה הותקן בדרך שאינה מאפשרת עדכון עצמי, לכן Termix יודיע לך כאשר גרסה חדשה זמינה עם קישור להורדה.",
+    "status": "גרסה {{version}}",
+    "statusIdle": "טרם נבדק",
+    "statusChecking": "בודק אם יש עדכונים",
+    "statusAvailable": "גרסה {{version}} זמינה",
+    "statusDownloading": "מוריד את {{version}} ({{progress}}%)",
+    "statusReady": "גרסה {{version}} מוכנה. הפעל מחדש כדי להתקין.",
+    "statusUpToDate": "יש לך את הגרסה העדכנית ביותר",
+    "statusError": "לא ניתן לבדוק אם יש עדכונים. נסה שוב מאוחר יותר.",
+    "checkNow": "בדוק עכשיו",
+    "download": "הורד",
+    "restart": "הפעל מחדש עכשיו",
+    "later": "מאוחר יותר",
+    "available": "Termix {{version}} זמין",
+    "manualHint": "הורד אותו מדף השחרור והתקן אותו מעל זה.",
+    "ready": "Termix {{version}} מוכן להתקנה",
+    "readyHint": "הוא מותקן בפעם הבאה ש-Termix מופעל מחדש."
+  },
   "nav": {
     "home": "דף הבית",
     "terminal": "טרמינל",
@@ -1892,19 +1923,23 @@
       "tabs": {
         "installed": "מותקן",
         "browse": "דפדוף",
-        "updates": "עדכונים"
+        "updates": "עדכונים",
+        "registries": "רשומות"
       },
       "status": {
         "summary": "{{installed}} מותקנים, {{running}} פעילים",
         "running": "פעיל",
         "disabled": "מושבת",
         "failed": "הופסק ללא ציפייה",
-        "blocked": "ממתין לתוסף אחר"
+        "blocked": "ממתין לתוסף אחר",
+        "server": "רץ על השרת שלך"
       },
       "groups": {
         "running": "פעילים",
-        "notRunning": "לא פעילים"
+        "notRunning": "לא פעילים",
+        "onServer": "על השרת שלך"
       },
+      "runsOnServerHint": "תוסף זה פועל רק על השרת שלך, לכן הוא נשאר כבוי באפליקציית שולחן העבודה. הוא עדיין עובד שם.",
       "sort": {
         "popular": "הפופולריים ביותר",
         "name": "שם",
@@ -1922,7 +1957,7 @@
         "version": "גרסה",
         "status": "סטטוס",
         "category": "קטגוריה",
-        "installs": "התקנות"
+        "downloads": "הורדות"
       },
       "risk": {
         "critical": "קריטי",
@@ -2090,8 +2125,48 @@
       "noneInstalled": "אין תוספים מותקנים עדיין. דפדף כדי להוסיף כמה.",
       "nothingHere": "אין כאן כלום.",
       "nothingHereHint": "נסה קטגוריה אחרת או חיפוש.",
-      "communitySoon": "תוספי קהילה יגיעו בעדכון מאוחר יותר. יוצרי תוספים כבר יכולים להגיש את התוספים שלהם לרשם הקהילה.",
+      "showInstalled": "הצג מותקנים",
+      "allInstalled": "הכל כאן כבר מותקן.",
+      "allInstalledHint": "הפעל את הצג מותקנים כדי לראות אותם.",
       "communitySubmit": "איך להגיש",
+      "registries": {
+        "intro": "רשומות הן רשימות של תוספים שניתן להתקין. הרשומה הרשמית תמיד פעילה. ניתן להפעיל את רשומת הקהילה או להוסיף רשומה משלך.",
+        "hostYourOwn": "ארח רשומה משלך",
+        "add": "הוסף רשומה",
+        "addTitle": "הוסף רשומה",
+        "addHint": "הדבק את הקישור ל-index.json של הרשומה. Termix קורא אותו ומציג את המפתח שבו הוא חותם על תוספים. הוסף רק רשומות מאנשים שאתה סומך עליהם.",
+        "urlLabel": "כתובת אינדקס",
+        "check": "בדוק",
+        "addConfirm": "סמוך והוסף",
+        "added": "נוסף {{name}}",
+        "customWarning": "תוספים מרשומה זו אינם נבדקים על ידי צוות Termix. רק בעל הרשומה מחליט מה נכלל בה. כל הורדה חייבת להיות חתומה על ידי המפתח למעלה.",
+        "keyFingerprint": "מפתח {{keyId}}",
+        "pluginCount_one": "{{count}} תוסף",
+        "pluginCount_two": "{{count}} תוספים",
+        "pluginCount_other": "{{count}} תוספים",
+        "officialName": "רשמי",
+        "communityName": "קהילה",
+        "alwaysOn": "תמיד פעיל",
+        "communityHint": "תוספים שנוצרו על ידי אנשים אחרים. כל גרסה נבדקת על ידי אדם ועל ידי בדיקות אוטומטיות לפני שהיא מוצגת.",
+        "communityConfirmTitle": "להפעיל תוספי קהילה?",
+        "communityConfirmBody": "תוספי קהילה נוצרים על ידי אנשים אחרים, לא על ידי צוות Termix. כל גרסה נבדקת על ידי אדם ועל ידי בדיקות אוטומטיות לפני שהיא מוצגת, אך טעויות עדיין יכולות לחדור. התקן רק תוספים שאתה סומך עליהם ובדוק מה כל אחד מהם מבקש.",
+        "communityConfirm": "הפעל",
+        "communityBadge": "קהילה",
+        "communityBadgeHint": "מרשומת הקהילה. נוצר על ידי אנשים אחרים ונבדק לפני שהוצג.",
+        "customBadge": "מותאם אישית",
+        "customBadgeHint": "מ-{{name}}, רשומה שהוסיף מנהל. לא נבדק על ידי צוות Termix.",
+        "remove": "הסר",
+        "removeTitle": "להסיר את {{name}}?",
+        "removeBody": "התוספים שלו לא יופיעו עוד בדפדוף. תוכל להוסיף אותו שוב מאוחר יותר.",
+        "removed": "{{name}} הוסר",
+        "inUse": "הסר קודם את התוספים מ-{{name}}: {{list}}",
+        "changeFailed": "לא ניתן לשנות את הרשומה: {{error}}",
+        "loadFailed": "לא ניתן לטעון את הרשומות: {{error}}",
+        "unreachable": "לא ניתן לקרוא אותה: {{error}}",
+        "filter": "רשומה",
+        "allRegistries": "כל הרשומות",
+        "browseHint": "הפעל תוספים קהילתיים או הוסף רשומה משלך בלשונית רשומות."
+      },
       "upToDate": "הכל מעודכן.",
       "lastChecked": "בדיקה אחרונה {{time}}",
       "updatesReady_one": "עדכון אחד מוכן.",
@@ -2116,13 +2191,9 @@
         "signedOnly": "TERMIX_REQUIRE_SIGNED_PLUGINS מוגדר, אז התקנה מקובץ נשארת חסומה."
       },
       "count": {
-        "active_one": "{{formatted}} התקנה פעילה",
-        "active_two": "{{formatted}} התקנות פעילות",
-        "active_other": "{{formatted}} התקנות פעילות",
         "downloads_one": "{{formatted}} הורדה",
         "downloads_two": "{{formatted}} הורדות",
         "downloads_other": "{{formatted}} הורדות",
-        "activeHint": "מארחים שדיווחו שהתוסף הזה מופעל בשבוע האחרון. מארחים עם סטטיסטיקות שימוש כבויות אינם נספרים.",
         "downloadsHint": "כמה פעמים גרסה הורדה. זה לא מספר ההתקנות."
       },
       "unverified": "לא מאומת",

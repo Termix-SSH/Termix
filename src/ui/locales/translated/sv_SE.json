@@ -233,6 +233,37 @@
     "desktopLinked": "Länkad till {{server}}",
     "pluginsDocsLink": "Läs om varje plugin"
   },
+  "desktopUpdates": {
+    "title": "Skrivbordsapp",
+    "mode": "Uppdateringar",
+    "modeHint": "Hur den här appen får nya versioner.",
+    "manualModeHint": "Den här kopian kan inte uppdatera sig själv, så Termix meddelar dig bara när en ny version finns tillgänglig.",
+    "modeAutomatic": "Automatisk",
+    "modePrompt": "Fråga först",
+    "modeNever": "Aldrig",
+    "automaticBody": "Ladda ner nya versioner i bakgrunden och installera dem när du startar om.",
+    "promptBody": "Meddela mig när en ny version finns tillgänglig och låt mig välja när jag vill ladda ner den.",
+    "neverBody": "Sök inte efter uppdateringar. Du kan fortfarande söka manuellt i Inställningar.",
+    "onboardingTitle": "Appuppdateringar",
+    "onboardingBody": "Skrivbordsappen kan nu uppdatera sig själv. Välj hur du vill att nya versioner ska levereras. Du kan ändra detta senare i Inställningar, Uppdateringar.",
+    "onboardingManual": "Den här kopian av appen installerades på ett sätt som inte kan uppdatera sig själv, så Termix kommer att meddela dig när en ny version finns tillgänglig med en länk för att ladda ner den.",
+    "status": "Version {{version}}",
+    "statusIdle": "Har inte kontrollerats ännu",
+    "statusChecking": "Söker efter uppdateringar",
+    "statusAvailable": "Version {{version}} finns tillgänglig",
+    "statusDownloading": "Laddar ner {{version}} ({{progress}} %)",
+    "statusReady": "Version {{version}} är klar. Starta om för att installera den.",
+    "statusUpToDate": "Du har den senaste versionen",
+    "statusError": "Kunde inte söka efter uppdateringar. Försök igen senare.",
+    "checkNow": "Kontrollera nu",
+    "download": "Ladda ner",
+    "restart": "Starta om nu",
+    "later": "Senare",
+    "available": "Termix {{version}} finns tillgänglig",
+    "manualHint": "Ladda ner den från versionsidan och installera den över den nuvarande.",
+    "ready": "Termix {{version}} är redo att installeras",
+    "readyHint": "Den installeras nästa gång Termix startas om."
+  },
   "nav": {
     "home": "Hem",
     "terminal": "Terminal",
@@ -1868,19 +1899,23 @@
       "tabs": {
         "installed": "Installerade",
         "browse": "Bläddra",
-        "updates": "Uppdateringar"
+        "updates": "Uppdateringar",
+        "registries": "Register"
       },
       "status": {
         "summary": "{{installed}} installerade, {{running}} körs",
         "running": "Körs",
         "disabled": "Inaktiverad",
         "failed": "Stoppades oväntat",
-        "blocked": "Väntar på ett annat plugin"
+        "blocked": "Väntar på ett annat plugin",
+        "server": "Kör på din server"
       },
       "groups": {
         "running": "Körs",
-        "notRunning": "Körs inte"
+        "notRunning": "Körs inte",
+        "onServer": "På din server"
       },
+      "runsOnServerHint": "Detta tillägg körs endast på din server, så det är avstängt i skrivbordsappen. Det fungerar fortfarande där.",
       "sort": {
         "popular": "Mest populära",
         "name": "Namn",
@@ -1898,7 +1933,7 @@
         "version": "Version",
         "status": "Status",
         "category": "Kategori",
-        "installs": "Installationer"
+        "downloads": "Nedladdningar"
       },
       "risk": {
         "critical": "Kritisk",
@@ -2050,8 +2085,47 @@
       "noneInstalled": "Inga plugins installerade ännu. Bläddra för att lägga till några.",
       "nothingHere": "Inget här.",
       "nothingHereHint": "Prova en annan kategori eller sök.",
-      "communitySoon": "Community-plugins kommer i en senare uppdatering. Plugin-utvecklare kan redan skicka in sina plugins till community-registret.",
+      "showInstalled": "Visa installerade",
+      "allInstalled": "Allt här är redan installerat.",
+      "allInstalledHint": "Aktivera Visa installerade för att se dem.",
       "communitySubmit": "Hur man skickar in",
+      "registries": {
+        "intro": "Register är listor över tillägg du kan installera. Det officiella är alltid påslaget. Du kan aktivera community-registret eller lägga till ditt eget.",
+        "hostYourOwn": "Värd ditt eget register",
+        "add": "Lägg till register",
+        "addTitle": "Lägg till ett register",
+        "addHint": "Klistra in länken till registrets index.json. Termix läser den och visar nyckeln den signerar tilläggen med. Lägg bara till register från personer du litar på.",
+        "urlLabel": "Index-URL",
+        "check": "Kontrollera",
+        "addConfirm": "Lita på och lägg till",
+        "added": "Lade till {{name}}",
+        "customWarning": "Tillägg från detta register granskas inte av Termix-teamet. Endast ägaren av registret bestämmer vad som finns i det. Varje nedladdning måste signeras med nyckeln ovan.",
+        "keyFingerprint": "Nyckel {{keyId}}",
+        "pluginCount_one": "{{count}} tillägg",
+        "pluginCount_other": "{{count}} tillägg",
+        "officialName": "Officiell",
+        "communityName": "Community",
+        "alwaysOn": "Alltid på",
+        "communityHint": "Tillägg skapade av andra personer. Varje version kontrolleras av en person och av automatiserade kontroller innan den listas.",
+        "communityConfirmTitle": "Vill du aktivera community-tillägg?",
+        "communityConfirmBody": "Community-tillägg skapas av andra personer, inte av Termix-teamet. Varje version kontrolleras av en person och av automatiserade kontroller innan den listas, men misstag kan fortfarande smyga igenom. Installera bara tillägg du litar på och kontrollera vad varje tillägg begär.",
+        "communityConfirm": "Aktivera",
+        "communityBadge": "Community",
+        "communityBadgeHint": "Från community-registret. Skapad av andra personer och granskad innan den lades till.",
+        "customBadge": "Anpassad",
+        "customBadgeHint": "Från {{name}}, ett register som en administratör har lagt till. Inte granskad av Termix-teamet.",
+        "remove": "Ta bort",
+        "removeTitle": "Ta bort {{name}}?",
+        "removeBody": "Dess plugins visas inte längre i Bläddra. Du kan lägga till den igen senare.",
+        "removed": "Tog bort {{name}}",
+        "inUse": "Avinstallera plugins från {{name}} först: {{list}}",
+        "changeFailed": "Kunde inte ändra registret: {{error}}",
+        "loadFailed": "Kunde inte ladda register: {{error}}",
+        "unreachable": "Kunde inte läsa det: {{error}}",
+        "filter": "Register",
+        "allRegistries": "Alla register",
+        "browseHint": "Aktivera community-plugins eller lägg till ditt eget register på fliken Register."
+      },
       "upToDate": "Allt är uppdaterat.",
       "lastChecked": "Senast kontrollerad {{time}}",
       "updatesReady_one": "{{count}} uppdatering redo.",
@@ -2074,11 +2148,8 @@
         "signedOnly": "TERMIX_REQUIRE_SIGNED_PLUGINS är inställt, så installation från fil förblir blockerad."
       },
       "count": {
-        "active_one": "{{formatted}} aktiv installation",
-        "active_other": "{{formatted}} aktiva installationer",
         "downloads_one": "{{formatted}} nedladdning",
         "downloads_other": "{{formatted}} nedladdningar",
-        "activeHint": "Instanser som rapporterade att detta plugin var aktiverat under den senaste veckan. Instanser med avstängd användningsstatistik räknas inte.",
         "downloadsHint": "Hur många gånger en version har laddats ner. Detta är inte antalet installationer."
       },
       "unverified": "Ej verifierad",

@@ -233,6 +233,37 @@
     "desktopLinked": "Đã liên kết với {{server}}",
     "pluginsDocsLink": "Đọc về từng plugin"
   },
+  "desktopUpdates": {
+    "title": "Ứng dụng máy tính để bàn",
+    "mode": "Cập nhật",
+    "modeHint": "Cách ứng dụng này nhận các phiên bản mới.",
+    "manualModeHint": "Bản cài đặt này không thể tự động cập nhật, nên Termix chỉ thông báo cho bạn khi có phiên bản mới.",
+    "modeAutomatic": "Tự động",
+    "modePrompt": "Hỏi trước",
+    "modeNever": "Không bao giờ",
+    "automaticBody": "Tải xuống các phiên bản mới trong nền và cài đặt khi bạn khởi động lại.",
+    "promptBody": "Thông báo cho tôi khi có phiên bản mới và để tôi chọn thời điểm tải xuống.",
+    "neverBody": "Không kiểm tra cập nhật. Bạn vẫn có thể kiểm tra thủ công trong Cài đặt.",
+    "onboardingTitle": "Cập nhật ứng dụng",
+    "onboardingBody": "Ứng dụng máy tính để bàn giờ có thể tự động cập nhật. Chọn cách bạn muốn nhận các phiên bản mới. Bạn có thể thay đổi điều này sau trong Cài đặt, mục Cập nhật.",
+    "onboardingManual": "Bản cài đặt ứng dụng này được cài đặt theo cách không thể tự động cập nhật, nên Termix sẽ thông báo cho bạn khi có phiên bản mới kèm theo liên kết tải xuống.",
+    "status": "Phiên bản {{version}}",
+    "statusIdle": "Chưa kiểm tra",
+    "statusChecking": "Đang kiểm tra cập nhật",
+    "statusAvailable": "Phiên bản {{version}} đã sẵn sàng",
+    "statusDownloading": "Đang tải xuống {{version}} ({{progress}}%)",
+    "statusReady": "Phiên bản {{version}} đã sẵn sàng. Khởi động lại để cài đặt.",
+    "statusUpToDate": "Bạn đang dùng phiên bản mới nhất",
+    "statusError": "Không thể kiểm tra cập nhật. Vui lòng thử lại sau.",
+    "checkNow": "Kiểm tra ngay",
+    "download": "Tải xuống",
+    "restart": "Khởi động lại ngay",
+    "later": "Để sau",
+    "available": "Termix {{version}} đã sẵn sàng",
+    "manualHint": "Tải xuống từ trang phát hành và cài đặt đè lên bản hiện tại.",
+    "ready": "Termix {{version}} đã sẵn sàng để cài đặt",
+    "readyHint": "Nó sẽ được cài đặt khi Termix khởi động lại lần tới."
+  },
   "nav": {
     "home": "Trang chủ",
     "terminal": "Terminal",
@@ -1844,19 +1875,23 @@
       "tabs": {
         "installed": "Đã cài đặt",
         "browse": "Duyệt",
-        "updates": "Cập nhật"
+        "updates": "Cập nhật",
+        "registries": "Registries"
       },
       "status": {
         "summary": "{{installed}} đã cài đặt, {{running}} đang chạy",
         "running": "Đang chạy",
         "disabled": "Đã tắt",
         "failed": "Dừng bất ngờ",
-        "blocked": "Đang chờ plugin khác"
+        "blocked": "Đang chờ plugin khác",
+        "server": "Chạy trên máy chủ của bạn"
       },
       "groups": {
         "running": "Đang chạy",
-        "notRunning": "Không chạy"
+        "notRunning": "Không chạy",
+        "onServer": "Trên máy chủ của bạn"
       },
+      "runsOnServerHint": "Plugin này chỉ chạy trên máy chủ của bạn, nên nó sẽ tắt trong ứng dụng máy tính để bàn. Nó vẫn hoạt động trên máy chủ.",
       "sort": {
         "popular": "Phổ biến nhất",
         "name": "Tên",
@@ -1874,7 +1909,7 @@
         "version": "Phiên bản",
         "status": "Trạng thái",
         "category": "Danh mục",
-        "installs": "Lượt cài đặt"
+        "downloads": "Lượt tải"
       },
       "risk": {
         "critical": "Quan trọng",
@@ -2010,8 +2045,46 @@
       "noneInstalled": "Chưa cài đặt plugin nào. Hãy duyệt để thêm một số plugin.",
       "nothingHere": "Không có gì ở đây.",
       "nothingHereHint": "Hãy thử một danh mục khác hoặc tìm kiếm.",
-      "communitySoon": "Plugin cộng đồng sẽ có trong một bản cập nhật sau. Tác giả plugin đã có thể gửi plugin của họ vào sổ đăng ký cộng đồng.",
+      "showInstalled": "Hiển thị đã cài",
+      "allInstalled": "Tất cả ở đây đều đã được cài đặt.",
+      "allInstalledHint": "Bật Hiển thị đã cài để xem chúng.",
       "communitySubmit": "Cách gửi plugin",
+      "registries": {
+        "intro": "Registries là danh sách các plugin bạn có thể cài đặt. Registry chính thức luôn được bật. Bạn có thể bật registry cộng đồng hoặc thêm registry của riêng mình.",
+        "hostYourOwn": "Tự lưu trữ registry",
+        "add": "Thêm registry",
+        "addTitle": "Thêm một registry",
+        "addHint": "Dán liên kết đến file index.json của registry. Termix sẽ đọc file này và hiển thị khóa dùng để ký cho các plugin. Chỉ thêm registry từ những người bạn tin tưởng.",
+        "urlLabel": "URL chỉ mục",
+        "check": "Kiểm tra",
+        "addConfirm": "Tin tưởng và thêm",
+        "added": "Đã thêm {{name}}",
+        "customWarning": "Các plugin từ registry này không được đội ngũ Termix xem xét. Chỉ chủ sở hữu registry quyết định nội dung của nó. Mọi lượt tải xuống đều phải được ký bằng khóa ở trên.",
+        "keyFingerprint": "Khóa {{keyId}}",
+        "pluginCount_other": "{{count}} plugin",
+        "officialName": "Chính thức",
+        "communityName": "Cộng đồng",
+        "alwaysOn": "Luôn bật",
+        "communityHint": "Các plugin do người khác tạo. Mỗi phiên bản đều được kiểm tra bởi con người và các quy trình tự động trước khi được liệt kê.",
+        "communityConfirmTitle": "Bật plugin cộng đồng?",
+        "communityConfirmBody": "Plugin cộng đồng do người khác tạo, không phải đội ngũ Termix. Mỗi phiên bản đều được kiểm tra bởi con người và các quy trình tự động trước khi được liệt kê, nhưng vẫn có thể có sai sót lọt qua. Chỉ cài đặt các plugin bạn tin tưởng và kiểm tra những gì mỗi plugin yêu cầu.",
+        "communityConfirm": "Bật",
+        "communityBadge": "Cộng đồng",
+        "communityBadgeHint": "Từ registry cộng đồng. Do người khác tạo và đã được xem xét trước khi liệt kê.",
+        "customBadge": "Tùy chỉnh",
+        "customBadgeHint": "Từ {{name}}, một registry do quản trị viên thêm. Không được đội ngũ Termix xem xét.",
+        "remove": "Xóa",
+        "removeTitle": "Xóa {{name}}?",
+        "removeBody": "Các plugin của nó sẽ không còn hiển thị trong mục Khám phá. Bạn có thể thêm lại sau.",
+        "removed": "Đã xóa {{name}}",
+        "inUse": "Hãy gỡ cài đặt các plugin từ {{name}} trước: {{list}}",
+        "changeFailed": "Không thể thay đổi registry: {{error}}",
+        "loadFailed": "Không thể tải danh sách registry: {{error}}",
+        "unreachable": "Không thể đọc: {{error}}",
+        "filter": "Registry",
+        "allRegistries": "Tất cả registry",
+        "browseHint": "Bật plugin cộng đồng hoặc thêm registry của riêng bạn trong tab Registries."
+      },
       "upToDate": "Mọi thứ đều đã cập nhật.",
       "lastChecked": "Lần kiểm tra cuối cùng {{time}}",
       "updatesReady_other": "{{count}} bản cập nhật sẵn sàng.",
@@ -2032,9 +2105,7 @@
         "signedOnly": "TERMIX_REQUIRE_SIGNED_PLUGINS được đặt, vì vậy việc cài đặt từ tệp vẫn bị chặn."
       },
       "count": {
-        "active_other": "{{formatted}} cài đặt đang hoạt động",
         "downloads_other": "{{formatted}} lượt tải xuống",
-        "activeHint": "Số lượng phiên bản báo cáo rằng plugin này đã được bật trong tuần qua. Các phiên bản tắt thống kê sử dụng không được tính.",
         "downloadsHint": "Số lần một phiên bản phát hành được tải xuống. Đây không phải là số lần cài đặt."
       },
       "unverified": "Chưa xác minh",
@@ -2258,6 +2329,7 @@
       "continue": "Tiếp tục",
       "back": "Quay lại",
       "mergeTitle": "Thêm vào tài khoản của tôi",
+      "mergeBody_other": "{{count}} mục trên thiết bị này sẽ được thêm vào tài khoản của bạn. Các mục mà tài khoản của bạn đã có sẽ giữ nguyên trên máy chủ.",
       "replaceTitle": "Thay thế bằng tài khoản của tôi",
       "replaceBody_other": "Các mục {{count}} trên thiết bị này sẽ bị xóa, và thiết bị này sẽ đồng bộ mọi thứ từ tài khoản của bạn. Các host chỉ được giữ trên thiết bị này sẽ vẫn còn.",
       "link": "Liên kết",

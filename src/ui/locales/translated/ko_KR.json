@@ -233,6 +233,37 @@
     "desktopLinked": "{{server}}(으)로 연결됨",
     "pluginsDocsLink": "각 항목에 대해 읽기"
   },
+  "desktopUpdates": {
+    "title": "데스크톱 앱",
+    "mode": "업데이트",
+    "modeHint": "이 앱이 새 버전을 받는 방법입니다.",
+    "manualModeHint": "이 복사본은 자체 업데이트가 불가능하므로, Termix는 새 버전이 출시되었을 때만 알려드립니다.",
+    "modeAutomatic": "자동",
+    "modePrompt": "먼저 묻기",
+    "modeNever": "사용 안 함",
+    "automaticBody": "백그라운드에서 새 버전을 다운로드하고 재시작 시 설치합니다.",
+    "promptBody": "새 버전이 출시되면 알려드리고, 다운로드 시점은 사용자가 선택합니다.",
+    "neverBody": "업데이트 확인을 하지 않습니다. 설정에서 수동으로 확인할 수 있습니다.",
+    "onboardingTitle": "앱 업데이트",
+    "onboardingBody": "이제 데스크톱 앱이 자체 업데이트를 지원합니다. 새 버전이 도착하는 방식을 선택하세요. 나중에 설정 > 업데이트에서 변경할 수 있습니다.",
+    "onboardingManual": "이 앱 복사본은 자체 업데이트가 불가능한 방식으로 설치되었으므로, Termix는 새 버전이 출시되면 다운로드 링크와 함께 알려드립니다.",
+    "status": "버전 {{version}}",
+    "statusIdle": "아직 확인하지 않음",
+    "statusChecking": "업데이트 확인 중",
+    "statusAvailable": "버전 {{version}} 사용 가능",
+    "statusDownloading": "{{version}} 다운로드 중 ({{progress}}%)",
+    "statusReady": "버전 {{version}} 준비 완료. 설치하려면 재시작하세요.",
+    "statusUpToDate": "최신 버전을 사용 중입니다",
+    "statusError": "업데이트를 확인할 수 없습니다. 나중에 다시 시도하세요.",
+    "checkNow": "지금 확인",
+    "download": "다운로드",
+    "restart": "지금 재시작",
+    "later": "나중에",
+    "available": "Termix {{version}} 사용 가능",
+    "manualHint": "릴리스 페이지에서 다운로드하여 현재 버전 위에 설치하세요.",
+    "ready": "Termix {{version}} 설치 준비 완료",
+    "readyHint": "Termix가 다음에 재시작될 때 설치됩니다."
+  },
   "nav": {
     "home": "홈",
     "terminal": "터미널",
@@ -1844,19 +1875,23 @@
       "tabs": {
         "installed": "설치됨",
         "browse": "찾아보기",
-        "updates": "업데이트"
+        "updates": "업데이트",
+        "registries": "레지스트리"
       },
       "status": {
         "summary": "{{installed}}개 설치, {{running}}개 실행 중",
         "running": "실행 중",
         "disabled": "비활성화됨",
         "failed": "예기치 않게 중지됨",
-        "blocked": "다른 플러그인 대기 중"
+        "blocked": "다른 플러그인 대기 중",
+        "server": "서버에서 실행 중"
       },
       "groups": {
         "running": "실행 중",
-        "notRunning": "실행 안 됨"
+        "notRunning": "실행 안 됨",
+        "onServer": "서버에 설치됨"
       },
+      "runsOnServerHint": "이 플러그인은 서버에서만 실행되므로 데스크톱 앱에서는 비활성화됩니다. 서버에서는 정상적으로 작동합니다.",
       "sort": {
         "popular": "인기순",
         "name": "이름순",
@@ -1874,7 +1909,7 @@
         "version": "버전",
         "status": "상태",
         "category": "카테고리",
-        "installs": "설치 횟수"
+        "downloads": "다운로드"
       },
       "risk": {
         "critical": "치명적",
@@ -2010,8 +2045,46 @@
       "noneInstalled": "아직 플러그인이 설치되지 않았습니다. 둘러보고 추가해 보세요.",
       "nothingHere": "내용이 없습니다.",
       "nothingHereHint": "다른 카테고리나 검색어를 시도해 보세요.",
-      "communitySoon": "커뮤니티 플러그인은 향후 업데이트에서 제공됩니다. 플러그인 개발자는 이미 커뮤니티 레지스트리에 플러그인을 제출할 수 있습니다.",
+      "showInstalled": "설치된 항목 표시",
+      "allInstalled": "여기에 있는 모든 항목이 이미 설치되어 있습니다.",
+      "allInstalledHint": "설치된 항목 표시를 켜면 볼 수 있습니다.",
       "communitySubmit": "제출 방법",
+      "registries": {
+        "intro": "레지스트리는 설치할 수 있는 플러그인 목록입니다. 공식 레지스트리는 항상 켜져 있습니다. 커뮤니티 레지스트리를 켜거나 사용자 정의 레지스트리를 추가할 수 있습니다.",
+        "hostYourOwn": "자신의 레지스트리 호스팅하기",
+        "add": "레지스트리 추가",
+        "addTitle": "레지스트리 추가",
+        "addHint": "레지스트리의 index.json 링크를 붙여넣으세요. Termix는 이를 읽고 플러그인에 서명하는 키를 표시합니다. 신뢰할 수 있는 사람만 추가하세요.",
+        "urlLabel": "인덱스 URL",
+        "check": "확인",
+        "addConfirm": "신뢰하고 추가",
+        "added": "{{name}} 추가됨",
+        "customWarning": "이 레지스트리의 플러그인은 Termix 팀에서 검토하지 않습니다. 레지스트리 소유자만 내용을 결정합니다. 모든 다운로드는 위의 키로 서명되어야 합니다.",
+        "keyFingerprint": "키 {{keyId}}",
+        "pluginCount_other": "{{count}}개 플러그인",
+        "officialName": "공식",
+        "communityName": "커뮤니티",
+        "alwaysOn": "항상 켜짐",
+        "communityHint": "다른 사용자가 만든 플러그인입니다. 각 버전은 목록에 올라가기 전에 사람과 자동 검사를 통해 확인됩니다.",
+        "communityConfirmTitle": "커뮤니티 플러그인을 켜시겠습니까?",
+        "communityConfirmBody": "커뮤니티 플러그인은 Termix 팀이 아닌 다른 사용자가 만듭니다. 각 버전은 목록에 올라가기 전에 사람과 자동 검사를 통해 확인되지만, 실수가 발생할 수 있습니다. 신뢰할 수 있는 플러그인만 설치하고 각 플러그인이 요청하는 권한을 확인하세요.",
+        "communityConfirm": "켜기",
+        "communityBadge": "커뮤니티",
+        "communityBadgeHint": "커뮤니티 레지스트리에서 제공됩니다. 다른 사용자가 만들었고 목록에 올라가기 전에 검토되었습니다.",
+        "customBadge": "사용자 정의",
+        "customBadgeHint": "{{name}}에서 제공됩니다. 관리자가 추가한 레지스트리입니다. Termix 팀에서 검토하지 않았습니다.",
+        "remove": "제거",
+        "removeTitle": "{{name}}을(를) 제거하시겠습니까?",
+        "removeBody": "해당 플러그인은 더 이상 탐색 화면에 표시되지 않습니다. 나중에 다시 추가할 수 있습니다.",
+        "removed": "{{name}} 제거됨",
+        "inUse": "먼저 {{name}}의 플러그인을 제거하세요: {{list}}",
+        "changeFailed": "레지스트리를 변경할 수 없습니다: {{error}}",
+        "loadFailed": "레지스트리를 로드할 수 없습니다: {{error}}",
+        "unreachable": "읽을 수 없습니다: {{error}}",
+        "filter": "레지스트리",
+        "allRegistries": "모든 레지스트리",
+        "browseHint": "커뮤니티 플러그인을 활성화하거나 레지스트리 탭에서 사용자 정의 레지스트리를 추가하세요."
+      },
       "upToDate": "모든 항목이 최신 상태입니다.",
       "lastChecked": "마지막 확인: {{time}}",
       "updatesReady_other": "{{count}}개의 업데이트가 준비되었습니다.",
@@ -2032,9 +2105,7 @@
         "signedOnly": "TERMIX_REQUIRE_SIGNED_PLUGINS가 설정되어 있어 파일에서 설치가 차단됩니다."
       },
       "count": {
-        "active_other": "{{formatted}}개의 활성 설치",
         "downloads_other": "{{formatted}}회 다운로드",
-        "activeHint": "지난 주에 이 플러그인이 켜져 있다고 보고한 인스턴스 수입니다. 사용량 통계가 꺼진 인스턴스는 계산되지 않습니다.",
         "downloadsHint": "릴리스가 다운로드된 횟수입니다. 이는 설치 횟수가 아닙니다."
       },
       "unverified": "미검증",

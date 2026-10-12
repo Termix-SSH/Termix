@@ -233,6 +233,37 @@
     "desktopLinked": "Seotud {{server}}-iga",
     "pluginsDocsLink": "Loe igaühe kohta"
   },
+  "desktopUpdates": {
+    "title": "Töölaukra rakendus",
+    "mode": "Uuendused",
+    "modeHint": "Kuidas see rakendus uusi versioone saab.",
+    "manualModeHint": "See koopia ei saa ennast uuendada, seega teatab Termix sulle ainult siis, kui uus versioon on välja antud.",
+    "modeAutomatic": "Automaatne",
+    "modePrompt": "Küsi esmalt",
+    "modeNever": "Mitte kunagi",
+    "automaticBody": "Laadi uued versioonid taustal alla ja paigalda need taaskäivitamisel.",
+    "promptBody": "Teata mulle, kui uus versioon on saadaval, ja lase mul valida, millal selle alla laadida.",
+    "neverBody": "Ärge otsige uuendusi. Saate ikkagi käsitsi Sätetes kontrollida.",
+    "onboardingTitle": "Rakenduse uuendused",
+    "onboardingBody": "Töölauarakendus saab nüüd ennast uuendada. Vali, kuidas soovid uusi versioone saada. Seda saad hiljem muuta Sätetes, Uuendused.",
+    "onboardingManual": "See rakenduse koopia on paigaldatud viisil, mis ei võimalda eneseuuendamist, seega teatab Termix sulle uue versiooni saadavusest koos allalaadimise lingiga.",
+    "status": "Versioon {{version}}",
+    "statusIdle": "Pole veel kontrollitud",
+    "statusChecking": "Uuenduste otsimine",
+    "statusAvailable": "Versioon {{version}} on saadaval",
+    "statusDownloading": "Laadin alla versiooni {{version}} ({{progress}}%)",
+    "statusReady": "Versioon {{version}} on valmis. Taaskäivita, et see paigaldada.",
+    "statusUpToDate": "Sul on uusim versioon",
+    "statusError": "Uuenduste kontrollimine ei õnnestunud. Proovi hiljem uuesti.",
+    "checkNow": "Kontrolli nüüd",
+    "download": "Laadi alla",
+    "restart": "Taaskäivita nüüd",
+    "later": "Hiljem",
+    "available": "Termix {{version}} on saadaval",
+    "manualHint": "Laadi see vabastusleheküljelt alla ja paigalda see selle peale.",
+    "ready": "Termix {{version}} on paigaldamiseks valmis",
+    "readyHint": "See paigaldatakse järgmisel Termixi taaskäivitamisel."
+  },
   "nav": {
     "home": "Avaleht",
     "terminal": "Terminal",
@@ -1868,19 +1899,23 @@
       "tabs": {
         "installed": "Paigaldatud",
         "browse": "Sirvi",
-        "updates": "Uuendused"
+        "updates": "Uuendused",
+        "registries": "Registrid"
       },
       "status": {
         "summary": "{{installed}} paigaldatud, {{running}} käimas",
         "running": "Käimas",
         "disabled": "Keelatud",
         "failed": "Peatati ootamatult",
-        "blocked": "Ootab teist pistikprogrammi"
+        "blocked": "Ootab teist pistikprogrammi",
+        "server": "Töötab sinu serveris"
       },
       "groups": {
         "running": "Käimas",
-        "notRunning": "Ei tööta"
+        "notRunning": "Ei tööta",
+        "onServer": "Sinu serveris"
       },
+      "runsOnServerHint": "See plugin töötab ainult sinu serveris, seega on see töölauarakenduses väljas. See töötab seal ikkagi.",
       "sort": {
         "popular": "Kõige populaarsemad",
         "name": "Nimi",
@@ -1898,7 +1933,7 @@
         "version": "Versioon",
         "status": "Olek",
         "category": "Kategooria",
-        "installs": "Paigaldused"
+        "downloads": "Allalaadimised"
       },
       "risk": {
         "critical": "Kriitiline",
@@ -2050,8 +2085,47 @@
       "noneInstalled": "Pistikmooduleid pole veel paigaldatud. Sirvige, et lisada mõned.",
       "nothingHere": "Siin pole midagi.",
       "nothingHereHint": "Proovige teist kategooriat või otsingut.",
-      "communitySoon": "Kogukonna pistikmoodulid ilmuvad hilisemas uuenduses. Pistikmooduli autorid saavad juba oma moodulid kogukonna registrisse esitada.",
+      "showInstalled": "Kuva paigaldatud",
+      "allInstalled": "Kõik siin on juba paigaldatud.",
+      "allInstalledHint": "Lülita sisse Kuva paigaldatud, et neid näha.",
       "communitySubmit": "Kuidas esitada",
+      "registries": {
+        "intro": "Registrid on loendid plugindest, mida sa paigaldada. Ametlik on alati sees. Saad sisse lülitada kogukonna registri või lisada oma.",
+        "hostYourOwn": "Hosti oma registrit",
+        "add": "Lisa register",
+        "addTitle": "Lisa register",
+        "addHint": "Kleepi registri index.json-i link. Termix loeb selle ja kuvab võtme, millega ta plugineid allkirjastab. Lisa ainult registreid inimestelt, kellele usaldad.",
+        "urlLabel": "Indeksi URL",
+        "check": "Kontrolli",
+        "addConfirm": "Usalda ja lisa",
+        "added": "Lisatud {{name}}",
+        "customWarning": "Selle registri plugineid ei kontrolli Termixi meeskond. Ainult registri omanik otsustab, mis selles on. Iga allalaadimine peab olema ülaloleva võtmega allkirjastatud.",
+        "keyFingerprint": "Võti {{keyId}}",
+        "pluginCount_one": "{{count}} plugin",
+        "pluginCount_other": "{{count}} pluginit",
+        "officialName": "Ametlik",
+        "communityName": "Kogukond",
+        "alwaysOn": "Alati sees",
+        "communityHint": "Teiste inimeste poolt loodud plugined. Iga versioon kontrollitakse enne loetellu panemist inimese ja automatiseeritud kontrollide poolt.",
+        "communityConfirmTitle": "Lülita kogukonna plugined sisse?",
+        "communityConfirmBody": "Kogukonna plugined on loodud teiste inimeste poolt, mitte Termixi meeskonna poolt. Iga versioon kontrollitakse enne loetellu panemist inimese ja automatiseeritud kontrollide poolt, kuid vigu võib ikkagi läbi libiseda. Paigalda ainult plugineid, millele usaldad, ja kontrolli, mida igaüks küsib.",
+        "communityConfirm": "Lülita sisse",
+        "communityBadge": "Kogukond",
+        "communityBadgeHint": "Kogukonna registrilt. Loodud teiste inimeste poolt ja enne loetellu panemist kontrollitud.",
+        "customBadge": "Kohandatud",
+        "customBadgeHint": "Registrilt {{name}}, mille administraator on lisanud. Ei ole Termixi meeskonna poolt kontrollitud.",
+        "remove": "Eemalda",
+        "removeTitle": "Kas eemaldada {{name}}?",
+        "removeBody": "Selle registri pluginad ei ilmu enam brauseris. Saate selle hiljem uuesti lisada.",
+        "removed": "{{name}} eemaldatud",
+        "inUse": "Eemaldage kõigepealt {{name}} pluginad: {{list}}",
+        "changeFailed": "Registrit ei õnnestunud muuta: {{error}}",
+        "loadFailed": "Registreid ei õnnestunud laadida: {{error}}",
+        "unreachable": "Selle lugemine ei õnnestunud: {{error}}",
+        "filter": "Registri",
+        "allRegistries": "Kõik registrid",
+        "browseHint": "Lülitage sisse kogukonna pluginad või lisage oma registri Registrid-kaardil."
+      },
       "upToDate": "Kõik on ajakohane.",
       "lastChecked": "Viimati kontrollitud {{time}}",
       "updatesReady_one": "{{count}} uuendus valmis.",
@@ -2074,11 +2148,8 @@
         "signedOnly": "TERMIX_REQUIRE_SIGNED_PLUGINS on määratud, seega on failist paigaldamine blokeeritud."
       },
       "count": {
-        "active_one": "{{formatted}} aktiivne paigaldus",
-        "active_other": "{{formatted}} aktiivset paigaldust",
         "downloads_one": "{{formatted}} allalaadimine",
         "downloads_other": "{{formatted}} allalaadimist",
-        "activeHint": "Instantsid, mis on viimase nädala jooksul teatanud selle plugini sisselülitamisest. Kasutusstatistika väljalülitatud instantsid ei arvestata.",
         "downloadsHint": "Kui mitu korda on väljaanne alla laaditud. See ei ole installide arv."
       },
       "unverified": "Kontrollimata",

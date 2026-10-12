@@ -233,6 +233,37 @@
     "desktopLinked": "已关联到 {{server}}",
     "pluginsDocsLink": "阅读每个插件的说明"
   },
+  "desktopUpdates": {
+    "title": "桌面应用",
+    "mode": "更新",
+    "modeHint": "此应用如何获取新版本。",
+    "manualModeHint": "此副本无法自动更新，因此 Termix 仅在新版本发布时通知您。",
+    "modeAutomatic": "自动",
+    "modePrompt": "先询问",
+    "modeNever": "从不",
+    "automaticBody": "在后台下载新版本，并在您重启时安装。",
+    "promptBody": "有新版本时通知我，由我决定何时下载。",
+    "neverBody": "不检查更新。您仍可在设置中手动检查。",
+    "onboardingTitle": "应用更新",
+    "onboardingBody": "桌面应用现在可以自动更新。请选择您希望接收新版本的方式。您稍后可以在“设置”>“更新”中更改此选项。",
+    "onboardingManual": "此应用副本的安装方式不支持自动更新，因此 Termix 会在新版本发布时通知您，并提供下载链接。",
+    "status": "版本 {{version}}",
+    "statusIdle": "尚未检查",
+    "statusChecking": "正在检查更新",
+    "statusAvailable": "版本 {{version}} 可用",
+    "statusDownloading": "正在下载 {{version}} ({{progress}}%)",
+    "statusReady": "版本 {{version}} 已就绪。重启即可安装。",
+    "statusUpToDate": "您已拥有最新版本",
+    "statusError": "无法检查更新。请稍后重试。",
+    "checkNow": "立即检查",
+    "download": "下载",
+    "restart": "立即重启",
+    "later": "稍后",
+    "available": "Termix {{version}} 可用",
+    "manualHint": "从发布页面下载并覆盖安装当前版本。",
+    "ready": "Termix {{version}} 已准备好安装",
+    "readyHint": "下次重启 Termix 时将进行安装。"
+  },
   "nav": {
     "home": "主页",
     "terminal": "终端",
@@ -1844,19 +1875,23 @@
       "tabs": {
         "installed": "已安装",
         "browse": "浏览",
-        "updates": "更新"
+        "updates": "更新",
+        "registries": "注册表"
       },
       "status": {
         "summary": "已安装 {{installed}} 个，正在运行 {{running}} 个",
         "running": "正在运行",
         "disabled": "已禁用",
         "failed": "意外停止",
-        "blocked": "等待其他插件"
+        "blocked": "等待其他插件",
+        "server": "在您的服务器上运行"
       },
       "groups": {
         "running": "正在运行",
-        "notRunning": "未运行"
+        "notRunning": "未运行",
+        "onServer": "在您的服务器上"
       },
+      "runsOnServerHint": "此插件仅在您的服务器上运行，因此在桌面应用中处于关闭状态。它在服务器上仍然正常工作。",
       "sort": {
         "popular": "最受欢迎",
         "name": "名称",
@@ -1874,7 +1909,7 @@
         "version": "版本",
         "status": "状态",
         "category": "类别",
-        "installs": "安装量"
+        "downloads": "下载量"
       },
       "risk": {
         "critical": "严重",
@@ -2010,8 +2045,46 @@
       "noneInstalled": "尚未安装任何插件。浏览并添加一些。",
       "nothingHere": "这里什么都没有。",
       "nothingHereHint": "尝试其他类别或搜索。",
-      "communitySoon": "社区插件将在后续更新中推出。插件作者现在就可以向社区注册表提交他们的插件。",
+      "showInstalled": "显示已安装",
+      "allInstalled": "此处所有内容均已安装。",
+      "allInstalledHint": "开启“显示已安装”以查看它们。",
       "communitySubmit": "如何提交",
+      "registries": {
+        "intro": "注册表是您安装的插件列表。官方注册表始终开启。您可以开启社区注册表或添加自己的注册表。",
+        "hostYourOwn": "托管您自己的注册表",
+        "add": "添加注册表",
+        "addTitle": "添加注册表",
+        "addHint": "粘贴注册表 index.json 的链接。Termix 将读取该文件并显示用于签署插件的密钥。仅添加您信任的人提供的注册表。",
+        "urlLabel": "索引 URL",
+        "check": "检查",
+        "addConfirm": "信任并添加",
+        "added": "已添加 {{name}}",
+        "customWarning": "此注册表中的插件未经 Termix 团队审核。注册表的所有者决定其中包含的内容。每次下载都必须由上述密钥签名。",
+        "keyFingerprint": "密钥 {{keyId}}",
+        "pluginCount_other": "{{count}} 个插件",
+        "officialName": "官方",
+        "communityName": "社区",
+        "alwaysOn": "始终开启",
+        "communityHint": "由其他人制作的插件。每个版本在列出前都经过人工和自动化检查。",
+        "communityConfirmTitle": "要开启社区插件吗？",
+        "communityConfirmBody": "社区插件由其他人制作，而非 Termix 团队。每个版本在列出前都经过人工和自动化检查，但仍可能有疏漏。仅安装您信任的插件，并检查每个插件的权限请求。",
+        "communityConfirm": "开启",
+        "communityBadge": "社区",
+        "communityBadgeHint": "来自社区注册表。由其他人制作，并在列出前经过审核。",
+        "customBadge": "自定义",
+        "customBadgeHint": "来自 {{name}}，这是管理员添加的注册表。未经 Termix 团队审核。",
+        "remove": "移除",
+        "removeTitle": "移除 {{name}}？",
+        "removeBody": "其插件将不再显示在“浏览”中。您可以稍后再次添加。",
+        "removed": "已移除 {{name}}",
+        "inUse": "请先卸载来自 {{name}} 的插件：{{list}}",
+        "changeFailed": "无法更改注册表：{{error}}",
+        "loadFailed": "无法加载注册表：{{error}}",
+        "unreachable": "无法读取：{{error}}",
+        "filter": "注册表",
+        "allRegistries": "所有注册表",
+        "browseHint": "在“注册表”选项卡中启用社区插件或添加您自己的注册表。"
+      },
       "upToDate": "所有内容均为最新。",
       "lastChecked": "上次检查于 {{time}}",
       "updatesReady_other": "{{count}} 个更新就绪。",
@@ -2032,9 +2105,7 @@
         "signedOnly": "已设置 TERMIX_REQUIRE_SIGNED_PLUGINS，因此从文件安装仍处于阻止状态。"
       },
       "count": {
-        "active_other": "{{formatted}} 个活跃安装",
         "downloads_other": "{{formatted}} 次下载",
-        "activeHint": "过去一周内报告已启用此插件的实例数量。未开启使用统计的实例不计入其中。",
         "downloadsHint": "某个版本被下载的次数。这并非安装数量。"
       },
       "unverified": "未验证",

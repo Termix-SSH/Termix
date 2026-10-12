@@ -233,6 +233,37 @@
     "desktopLinked": "Povezano s {{server}}",
     "pluginsDocsLink": "Pročitajte o svakom od njih"
   },
+  "desktopUpdates": {
+    "title": "Desktop aplikacija",
+    "mode": "Ažuriranja",
+    "modeHint": "Kako ova aplikacija dobiva nove verzije.",
+    "manualModeHint": "Ova kopija se ne može sama ažurirati, pa vas Termix samo obavještava kada je nova verzija dostupna.",
+    "modeAutomatic": "Automatski",
+    "modePrompt": "Pitaj prvo",
+    "modeNever": "Nikada",
+    "automaticBody": "Preuzmi nove verzije u pozadini i instaliraj ih pri ponovnom pokretanju.",
+    "promptBody": "Obavijesti me kada je nova verzija dostupna i dopusti mi da odaberem kada je preuzeti.",
+    "neverBody": "Ne provjeravaj za ažuriranja. I dalje možete ručno provjeriti u Postavkama.",
+    "onboardingTitle": "Ažuriranja aplikacije",
+    "onboardingBody": "Desktop aplikacija se sada može sama ažurirati. Odaberite kako želite da nove verzije stignu. Ovo možete kasnije promijeniti u Postavkama, Ažuriranja.",
+    "onboardingManual": "Ova kopija aplikacije instalirana je na način koji ne dopušta samostalno ažuriranje, pa će vas Termix obavijestiti kada je nova verzija dostupna s poveznicom za preuzimanje.",
+    "status": "Verzija {{version}}",
+    "statusIdle": "Još nije provjereno",
+    "statusChecking": "Provjera ažuriranja",
+    "statusAvailable": "Verzija {{version}} je dostupna",
+    "statusDownloading": "Preuzimanje {{version}} ({{progress}}%)",
+    "statusReady": "Verzija {{version}} je spremna. Ponovno pokrenite za instalaciju.",
+    "statusUpToDate": "Imate najnoviju verziju",
+    "statusError": "Nije moguće provjeriti ažuriranja. Pokušajte ponovno kasnije.",
+    "checkNow": "Provjeri sada",
+    "download": "Preuzmi",
+    "restart": "Ponovno pokreni sada",
+    "later": "Kasnije",
+    "available": "Termix {{version}} je dostupan",
+    "manualHint": "Preuzmite ga s stranice izdanja i instalirajte preko ove verzije.",
+    "ready": "Termix {{version}} je spreman za instalaciju",
+    "readyHint": "Instalirat će se sljedeći put kada se Termix ponovno pokrene."
+  },
   "nav": {
     "home": "Početna",
     "terminal": "Terminal",
@@ -1892,19 +1923,23 @@
       "tabs": {
         "installed": "Instalirano",
         "browse": "Pregled",
-        "updates": "Ažuriranja"
+        "updates": "Ažuriranja",
+        "registries": "Registri"
       },
       "status": {
         "summary": "{{installed}} instalirano, {{running}} pokrenuto",
         "running": "Pokrenuto",
         "disabled": "Onemogućeno",
         "failed": "Neočekivano zaustavljeno",
-        "blocked": "Čeka drugi dodatak"
+        "blocked": "Čeka drugi dodatak",
+        "server": "Radi na vašem poslužitelju"
       },
       "groups": {
         "running": "Pokrenuto",
-        "notRunning": "Nije pokrenuto"
+        "notRunning": "Nije pokrenuto",
+        "onServer": "Na vašem poslužitelju"
       },
+      "runsOnServerHint": "Ovaj dodatak radi samo na vašem poslužitelju, pa je isključen u desktop aplikaciji. I dalje radi tamo.",
       "sort": {
         "popular": "Najpopularniji",
         "name": "Naziv",
@@ -1922,7 +1957,7 @@
         "version": "Verzija",
         "status": "Status",
         "category": "Kategorija",
-        "installs": "Instalacije"
+        "downloads": "Preuzimanja"
       },
       "risk": {
         "critical": "Kritično",
@@ -2090,8 +2125,48 @@
       "noneInstalled": "Još nema instaliranih dodataka. Pregledajte ih kako biste dodali neke.",
       "nothingHere": "Ovdje nema ništa.",
       "nothingHereHint": "Pokušajte s drugom kategorijom ili pretragom.",
-      "communitySoon": "Društveni dodaci dolaze u kasnijem ažuriranju. Autori dodataka već mogu predložiti svoje dodatke u zajednički registar.",
+      "showInstalled": "Prikaži instalirane",
+      "allInstalled": "Sve ovdje je već instalirano.",
+      "allInstalledHint": "Uključite Prikaži instalirane da ih vidite.",
       "communitySubmit": "Kako predložiti",
+      "registries": {
+        "intro": "Registri su popisi dodataka koje možete instalirati. Službeni je uvijek uključen. Možete uključiti zajednički registar ili dodati vlastiti.",
+        "hostYourOwn": "Hostajte vlastiti registar",
+        "add": "Dodaj registar",
+        "addTitle": "Dodaj registar",
+        "addHint": "Zalijepite poveznicu na index.json registra. Termix ga čita i prikazuje ključ kojim potpisuje dodatke. Dodajte samo registre od ljudi kojima vjerujete.",
+        "urlLabel": "URL indeksa",
+        "check": "Provjeri",
+        "addConfirm": "Vjeruj i dodaj",
+        "added": "Dodano {{name}}",
+        "customWarning": "Dodaci iz ovog registra nisu pregledani od strane Termix tima. Samo vlasnik registra odlučuje što se nalazi u njemu. Svako preuzimanje mora biti potpisano ključem iznad.",
+        "keyFingerprint": "Ključ {{keyId}}",
+        "pluginCount_one": "{{count}} dodatak",
+        "pluginCount_few": "{{count}} dodatka",
+        "pluginCount_other": "{{count}} dodataka",
+        "officialName": "Službeni",
+        "communityName": "Zajednica",
+        "alwaysOn": "Uvijek uključen",
+        "communityHint": "Dodaci koje su napravili drugi ljudi. Svaka verzija je provjerena od strane osobe i automatiziranim provjerama prije nego što bude navedena.",
+        "communityConfirmTitle": "Uključiti dodatke zajednice?",
+        "communityConfirmBody": "Dodatke zajednice prave drugi ljudi, a ne Termix tim. Svaka verzija je provjerena od strane osobe i automatiziranim provjerama prije nego što bude navedena, ali greške se mogu probiti. Instalirajte samo dodatke kojima vjerujete i provjerite što svaki od njih traži.",
+        "communityConfirm": "Uključi",
+        "communityBadge": "Zajednica",
+        "communityBadgeHint": "Iz registra zajednice. Napravili su ga drugi ljudi i pregledan je prije nego što je naveden.",
+        "customBadge": "Prilagođeno",
+        "customBadgeHint": "Iz {{name}}, registra koji je dodao administrator. Nije pregledan od strane Termix tima.",
+        "remove": "Ukloni",
+        "removeTitle": "Ukloniti {{name}}?",
+        "removeBody": "Njegovi dodaci više se neće prikazivati u Pregledu. Možete ga ponovno dodati kasnije.",
+        "removed": "Uklonjen {{name}}",
+        "inUse": "Prvo deinstalirajte dodatke iz {{name}}: {{list}}",
+        "changeFailed": "Nije moguće promijeniti registar: {{error}}",
+        "loadFailed": "Nije moguće učitati registre: {{error}}",
+        "unreachable": "Nije moguće pročitati: {{error}}",
+        "filter": "Registar",
+        "allRegistries": "Svi registri",
+        "browseHint": "Uključite zajedničke dodatke ili dodajte vlastiti registar na kartici Registri."
+      },
       "upToDate": "Sve je ažurirano.",
       "lastChecked": "Zadnja provjera {{time}}",
       "updatesReady_one": "{{count}} ažuriranje spremno.",
@@ -2116,13 +2191,9 @@
         "signedOnly": "Postavljena je varijabla TERMIX_REQUIRE_SIGNED_PLUGINS, stoga je instaliranje iz datoteke i dalje blokirano."
       },
       "count": {
-        "active_one": "{{formatted}} aktivna instalacija",
-        "active_few": "{{formatted}} aktivne instalacije",
-        "active_other": "{{formatted}} aktivnih instalacija",
         "downloads_one": "{{formatted}} preuzimanje",
         "downloads_few": "{{formatted}} preuzimanja",
         "downloads_other": "{{formatted}} preuzimanja",
-        "activeHint": "Instancije koje su prijavile da je ovaj dodatak uključen tijekom posljednjeg tjedna. Instancije s isključenom statistikom korištenja ne računaju se.",
         "downloadsHint": "Koliko je puta verzija preuzeta. Ovo nije broj instalacija."
       },
       "unverified": "Neprovjereno",

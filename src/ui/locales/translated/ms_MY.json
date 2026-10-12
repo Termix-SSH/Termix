@@ -233,6 +233,37 @@
     "desktopLinked": "Disambungkan ke {{server}}",
     "pluginsDocsLink": "Baca tentang setiap satu"
   },
+  "desktopUpdates": {
+    "title": "Aplikasi desktop",
+    "mode": "Kemas kini",
+    "modeHint": "Bagaimana aplikasi ini mendapatkan versi baharu.",
+    "manualModeHint": "Salinan ini tidak boleh dikemas kini secara automatik, jadi Termix hanya akan memberitahu anda apabila versi baharu dikeluarkan.",
+    "modeAutomatic": "Automatik",
+    "modePrompt": "Tanya dahulu",
+    "modeNever": "Tidak pernah",
+    "automaticBody": "Muat turun versi baharu di latar belakang dan pasang apabila anda memulakan semula.",
+    "promptBody": "Beritahu saya apabila versi baharu dikeluarkan dan biarkan saya memilih bila untuk memuat turunnya.",
+    "neverBody": "Jangan semak kemas kini. Anda masih boleh menyemak secara manual dalam Tetapan.",
+    "onboardingTitle": "Kemas kini aplikasi",
+    "onboardingBody": "Aplikasi desktop kini boleh dikemas kini secara automatik. Pilih bagaimana anda mahu versi baharu tiba. Anda boleh mengubah ini kemudian dalam Tetapan, Kemas kini.",
+    "onboardingManual": "Salinan aplikasi ini dipasang dengan cara yang tidak boleh dikemas kini secara automatik, jadi Termix akan memberitahu anda apabila versi baharu dikeluarkan dengan pautan untuk memuat turunnya.",
+    "status": "Versi {{version}}",
+    "statusIdle": "Belum disemak",
+    "statusChecking": "Menyemak kemas kini",
+    "statusAvailable": "Versi {{version}} tersedia",
+    "statusDownloading": "Memuat turun {{version}} ({{progress}}%)",
+    "statusReady": "Versi {{version}} sedia. Mula semula untuk memasangnya.",
+    "statusUpToDate": "Anda mempunyai versi terkini",
+    "statusError": "Tidak dapat menyemak kemas kini. Cuba lagi nanti.",
+    "checkNow": "Semak sekarang",
+    "download": "Muat turun",
+    "restart": "Mula semula sekarang",
+    "later": "Nanti",
+    "available": "Termix {{version}} tersedia",
+    "manualHint": "Muat turun dari halaman pelepasan dan pasang di atas yang ini.",
+    "ready": "Termix {{version}} sedia untuk dipasang",
+    "readyHint": "Ia akan dipasang pada kali seterusnya Termix dimulakan semula."
+  },
   "nav": {
     "home": "Laman Utama",
     "terminal": "Terminal",
@@ -1844,19 +1875,23 @@
       "tabs": {
         "installed": "Dipasang",
         "browse": "Semak imbas",
-        "updates": "Kemas kini"
+        "updates": "Kemas kini",
+        "registries": "Daftar"
       },
       "status": {
         "summary": "{{installed}} dipasang, {{running}} berjalan",
         "running": "Berjalan",
         "disabled": "Dilumpuhkan",
         "failed": "Berhenti secara tidak dijangka",
-        "blocked": "Menunggu plugin lain"
+        "blocked": "Menunggu plugin lain",
+        "server": "Berjalan pada pelayan anda"
       },
       "groups": {
         "running": "Berjalan",
-        "notRunning": "Tidak berjalan"
+        "notRunning": "Tidak berjalan",
+        "onServer": "Pada pelayan anda"
       },
+      "runsOnServerHint": "Plugin ini hanya berjalan pada pelayan anda, jadi ia kekal dimatikan dalam aplikasi desktop. Ia masih berfungsi di sana.",
       "sort": {
         "popular": "Paling popular",
         "name": "Nama",
@@ -1874,7 +1909,7 @@
         "version": "Versi",
         "status": "Status",
         "category": "Kategori",
-        "installs": "Pemasangan"
+        "downloads": "Muat turun"
       },
       "risk": {
         "critical": "Kritikal",
@@ -2010,8 +2045,46 @@
       "noneInstalled": "Tiada plugin dipasang lagi. Layari untuk menambah beberapa.",
       "nothingHere": "Tiada apa-apa di sini.",
       "nothingHereHint": "Cuba kategori lain atau carian.",
-      "communitySoon": "Plugin komuniti akan datang dalam kemas kini kemudian. Pengarang plugin sudah boleh menghantar plugin mereka ke daftar komuniti.",
+      "showInstalled": "Paparkan yang dipasang",
+      "allInstalled": "Semua di sini sudah dipasang.",
+      "allInstalledHint": "Hidupkan Paparkan yang dipasang untuk melihatnya.",
       "communitySubmit": "Cara menghantar",
+      "registries": {
+        "intro": "Daftar adalah senarai plugin yang boleh anda pasang. Daftar rasmi sentiasa dihidupkan. Anda boleh menghidupkan daftar komuniti atau menambah milik anda sendiri.",
+        "hostYourOwn": "Hoskan daftar anda sendiri",
+        "add": "Tambah daftar",
+        "addTitle": "Tambah daftar",
+        "addHint": "Tampal pautan ke index.json daftar. Termix akan membacanya dan memaparkan kunci yang digunakan untuk menandatangani plugin. Hanya tambah daftar daripada orang yang anda percayai.",
+        "urlLabel": "URL Indeks",
+        "check": "Semak",
+        "addConfirm": "Percaya dan tambah",
+        "added": "Menambah {{name}}",
+        "customWarning": "Plugin dari daftar ini tidak disemak oleh pasukan Termix. Hanya pemilik daftar yang memutuskan apa yang ada di dalamnya. Setiap muat turun mesti ditandatangani oleh kunci di atas.",
+        "keyFingerprint": "Kunci {{keyId}}",
+        "pluginCount_other": "{{count}} plugin",
+        "officialName": "Rasmi",
+        "communityName": "Komuniti",
+        "alwaysOn": "Sentiasa dihidupkan",
+        "communityHint": "Plugin yang dibuat oleh orang lain. Setiap versi disemak oleh seseorang dan oleh pemeriksaan automatik sebelum ia disenaraikan.",
+        "communityConfirmTitle": "Hidupkan plugin komuniti?",
+        "communityConfirmBody": "Plugin komuniti dibuat oleh orang lain, bukan pasukan Termix. Setiap versi disemak oleh seseorang dan oleh pemeriksaan automatik sebelum ia disenaraikan, tetapi kesilapan masih boleh berlaku. Hanya pasang plugin yang anda percayai dan semak apa yang diminta oleh setiap satu.",
+        "communityConfirm": "Hidupkan",
+        "communityBadge": "Komuniti",
+        "communityBadgeHint": "Dari daftar komuniti. Dibuat oleh orang lain dan disemak sebelum ia disenaraikan.",
+        "customBadge": "Tersuai",
+        "customBadgeHint": "Dari {{name}}, sebuah daftar yang ditambah oleh pentadbir. Tidak disemak oleh pasukan Termix.",
+        "remove": "Buang",
+        "removeTitle": "Buang {{name}}?",
+        "removeBody": "Pluginnya tidak akan lagi dipaparkan dalam Teroka. Anda boleh menambahnya semula kemudian.",
+        "removed": "{{name}} telah dibuang",
+        "inUse": "Nyahpasang plugin dari {{name}} dahulu: {{list}}",
+        "changeFailed": "Tidak dapat mengubah daftar: {{error}}",
+        "loadFailed": "Tidak dapat memuatkan daftar: {{error}}",
+        "unreachable": "Tidak dapat membacanya: {{error}}",
+        "filter": "Daftar",
+        "allRegistries": "Semua daftar",
+        "browseHint": "Hidupkan plugin komuniti atau tambah daftar anda sendiri dalam tab Daftar."
+      },
       "upToDate": "Semuanya terkini.",
       "lastChecked": "Pemeriksaan terakhir {{time}}",
       "updatesReady_other": "{{count}} kemas kini sedia.",
@@ -2032,9 +2105,7 @@
         "signedOnly": "TERMIX_REQUIRE_SIGNED_PLUGINS ditetapkan, jadi pemasangan daripada fail kekal disekat."
       },
       "count": {
-        "active_other": "{{formatted}} pemasangan aktif",
         "downloads_other": "{{formatted}} muat turun",
-        "activeHint": "Contoh yang melaporkan plugin ini dihidupkan dalam tempoh seminggu yang lalu. Contoh dengan statistik penggunaan yang dimatikan tidak dikira.",
         "downloadsHint": "Berapa kali satu versi telah dimuat turun. Ini bukan bilangan pemasangan."
       },
       "unverified": "Tidak disahkan",

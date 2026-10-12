@@ -233,6 +233,37 @@
     "desktopLinked": "Linket til {{server}}",
     "pluginsDocsLink": "Læs om hver enkelt"
   },
+  "desktopUpdates": {
+    "title": "Skrivebordsapp",
+    "mode": "Opdateringer",
+    "modeHint": "Sådan får appen nye versioner.",
+    "manualModeHint": "Denne kopi kan ikke opdatere sig selv, så Termix giver kun besked, når en ny version er udkommet.",
+    "modeAutomatic": "Automatisk",
+    "modePrompt": "Spørg først",
+    "modeNever": "Aldrig",
+    "automaticBody": "Download nye versioner i baggrunden og installer dem, når du genstarter.",
+    "promptBody": "Giv mig besked, når en ny version er udkommet, og lad mig vælge, hvornår den skal downloades.",
+    "neverBody": "Tjek ikke efter opdateringer. Du kan stadig tjekke manuelt i Indstillinger.",
+    "onboardingTitle": "App-opdateringer",
+    "onboardingBody": "Skrivebordsappen kan nu opdatere sig selv. Vælg, hvordan du vil modtage nye versioner. Du kan ændre dette senere i Indstillinger, Opdateringer.",
+    "onboardingManual": "Denne kopi af appen blev installeret på en måde, der ikke understøtter selvopdatering, så Termix vil give dig besked, når en ny version er udkommet, med et link til at downloade den.",
+    "status": "Version {{version}}",
+    "statusIdle": "Ikke tjekket endnu",
+    "statusChecking": "Tjekker efter opdateringer",
+    "statusAvailable": "Version {{version}} er tilgængelig",
+    "statusDownloading": "Downloader {{version}} ({{progress}}%)",
+    "statusReady": "Version {{version}} er klar. Genstart for at installere den.",
+    "statusUpToDate": "Du har den nyeste version",
+    "statusError": "Kunne ikke tjekke efter opdateringer. Prøv igen senere.",
+    "checkNow": "Tjek nu",
+    "download": "Download",
+    "restart": "Genstart nu",
+    "later": "Senere",
+    "available": "Termix {{version}} er tilgængelig",
+    "manualHint": "Download den fra udgivelsessiden og installer den over den nuværende.",
+    "ready": "Termix {{version}} er klar til installation",
+    "readyHint": "Den installeres næste gang Termix genstartes."
+  },
   "nav": {
     "home": "Hjem",
     "terminal": "Terminal",
@@ -1868,19 +1899,23 @@
       "tabs": {
         "installed": "Installeret",
         "browse": "Gennemse",
-        "updates": "Opdateringer"
+        "updates": "Opdateringer",
+        "registries": "Registre"
       },
       "status": {
         "summary": "{{installed}} installeret, {{running}} kører",
         "running": "Kører",
         "disabled": "Deaktiveret",
         "failed": "Stoppet uventet",
-        "blocked": "Venter på et andet plugin"
+        "blocked": "Venter på et andet plugin",
+        "server": "Kører på din server"
       },
       "groups": {
         "running": "Kører",
-        "notRunning": "Kører ikke"
+        "notRunning": "Kører ikke",
+        "onServer": "På din server"
       },
+      "runsOnServerHint": "Denne plugin kører kun på din server, så den er slukket i skrivebordsappen. Den fungerer stadig der.",
       "sort": {
         "popular": "Mest populære",
         "name": "Navn",
@@ -1898,7 +1933,7 @@
         "version": "Version",
         "status": "Status",
         "category": "Kategori",
-        "installs": "Installationer"
+        "downloads": "Downloads"
       },
       "risk": {
         "critical": "Kritisk",
@@ -2050,8 +2085,47 @@
       "noneInstalled": "Ingen plugins er installeret endnu. Gennemse for at tilføje nogle.",
       "nothingHere": "Intet her.",
       "nothingHereHint": "Prøv en anden kategori eller søg.",
-      "communitySoon": "Community-plugins kommer i en senere opdatering. Plugin-forfattere kan allerede indsende deres til community-registret.",
+      "showInstalled": "Vis installeret",
+      "allInstalled": "Alt her er allerede installeret.",
+      "allInstalledHint": "Slå Vis installeret til for at se dem.",
       "communitySubmit": "Sådan indsender du",
+      "registries": {
+        "intro": "Registre er lister over plugins, du kan installere. Den officielle er altid tændt. Du kan slå fællesskabsregistret til eller tilføje dit eget.",
+        "hostYourOwn": "Vært for dit eget register",
+        "add": "Tilføj register",
+        "addTitle": "Tilføj et register",
+        "addHint": "Indsæt linket til registrets index.json. Termix læser det og viser nøglen, det signerer plugins med. Tilføj kun registre fra personer, du stoler på.",
+        "urlLabel": "Index-URL",
+        "check": "Tjek",
+        "addConfirm": "Stol på og tilføj",
+        "added": "Tilføjede {{name}}",
+        "customWarning": "Plugins fra dette register er ikke gennemgået af Termix-teamet. Kun ejeren af registret afgør, hvad der er i det. Hver download skal være signeret med nøglen ovenfor.",
+        "keyFingerprint": "Nøgle {{keyId}}",
+        "pluginCount_one": "{{count}} plugin",
+        "pluginCount_other": "{{count}} plugins",
+        "officialName": "Officiel",
+        "communityName": "Fællesskab",
+        "alwaysOn": "Altid tændt",
+        "communityHint": "Plugins lavet af andre. Hver version er tjekket af en person og af automatiske kontroller, før den bliver listet.",
+        "communityConfirmTitle": "Slå fællesskabsplugins til?",
+        "communityConfirmBody": "Fællesskabsplugins er lavet af andre, ikke af Termix-teamet. Hver version er tjekket af en person og af automatiske kontroller, før den bliver listet, men fejl kan stadig slippe igennem. Installer kun plugins, du stoler på, og tjek, hvad hver enkelt beder om.",
+        "communityConfirm": "Slå til",
+        "communityBadge": "Fællesskab",
+        "communityBadgeHint": "Fra fællesskabsregistret. Lavet af andre og gennemgået, før det blev listet.",
+        "customBadge": "Brugerdefineret",
+        "customBadgeHint": "Fra {{name}}, et register, en administrator har tilføjet. Ikke gennemgået af Termix-teamet.",
+        "remove": "Fjern",
+        "removeTitle": "Fjern {{name}}?",
+        "removeBody": "Dens plugins vil ikke længere vises i Gennemse. Du kan tilføje det igen senere.",
+        "removed": "{{name}} er fjernet",
+        "inUse": "Afinstaller plugins fra {{name}} først: {{list}}",
+        "changeFailed": "Kunne ikke ændre registreret: {{error}}",
+        "loadFailed": "Kunne ikke indlæse registre: {{error}}",
+        "unreachable": "Kunne ikke læse det: {{error}}",
+        "filter": "Registret",
+        "allRegistries": "Alle registre",
+        "browseHint": "Aktiver fællesskabsplugins eller tilføj dit eget register i fanen Register."
+      },
       "upToDate": "Alt er opdateret.",
       "lastChecked": "Sidst tjekket {{time}}",
       "updatesReady_one": "{{count}} opdatering klar.",
@@ -2074,11 +2148,8 @@
         "signedOnly": "TERMIX_REQUIRE_SIGNED_PLUGINS er indstillet, så installation fra fil forbliver blokeret."
       },
       "count": {
-        "active_one": "{{formatted}} aktiv installation",
-        "active_other": "{{formatted}} aktive installationer",
         "downloads_one": "{{formatted}} download",
         "downloads_other": "{{formatted}} downloads",
-        "activeHint": "Instanser, der har rapporteret, at denne plugin var slået til i den sidste uge. Instanser med brugstatistik slået fra tæles ikke med.",
         "downloadsHint": "Hvor mange gange en udgivelse er blevet downloadet. Dette er ikke antallet af installationer."
       },
       "unverified": "Ikke verificeret",

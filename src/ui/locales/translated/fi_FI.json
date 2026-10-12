@@ -233,6 +233,37 @@
     "desktopLinked": "Linkitetty palvelimeen {{server}}",
     "pluginsDocsLink": "Lue lisää jokaisesta"
   },
+  "desktopUpdates": {
+    "title": "Työpöytäsovellus",
+    "mode": "Päivitykset",
+    "modeHint": "Kuinka tämä sovellus hankkii uusia versioita.",
+    "manualModeHint": "Tätä kopiota ei voi päivittää automaattisesti, joten Termix ilmoittaa vain, kun uusi versio on saatavilla.",
+    "modeAutomatic": "Automaattinen",
+    "modePrompt": "Kysy ensin",
+    "modeNever": "Ei koskaan",
+    "automaticBody": "Lataa uudet versiot taustalla ja asenna ne, kun käynnistät sovelluksen uudelleen.",
+    "promptBody": "Ilmoita, kun uusi versio on saatavilla, ja anna minun valita, milloin se ladataan.",
+    "neverBody": "Älä tarkista päivityksiä. Voit silti tarkistaa päivitykset manuaalisesti Asetuksista.",
+    "onboardingTitle": "Sovelluspäivitykset",
+    "onboardingBody": "Työpöytäsovellus voi nyt päivittää itsensä. Valitse, miten haluat uusien versioiden tulevan. Voit muuttaa tätä myöhemmin Asetukset > Päivitykset -kohdasta.",
+    "onboardingManual": "Tämä sovelluksen kopio on asennettu tavalla, joka ei tue automaattista päivitystä, joten Termix ilmoittaa, kun uusi versio on saatavilla, ja antaa linkin sen lataamiseen.",
+    "status": "Versio {{version}}",
+    "statusIdle": "Ei vielä tarkistettu",
+    "statusChecking": "Tarkistetaan päivityksiä",
+    "statusAvailable": "Versio {{version}} on saatavilla",
+    "statusDownloading": "Ladataan versiota {{version}} ({{progress}} %)",
+    "statusReady": "Versio {{version}} on valmis. Käynnistä uudelleen asentaaksesi sen.",
+    "statusUpToDate": "Sinulla on uusin versio",
+    "statusError": "Päivitysten tarkistus epäonnistui. Yritä myöhemmin uudelleen.",
+    "checkNow": "Tarkista nyt",
+    "download": "Lataa",
+    "restart": "Käynnistä uudelleen nyt",
+    "later": "Myöhemmin",
+    "available": "Termix {{version}} on saatavilla",
+    "manualHint": "Lataa se julkaisusivulta ja asenna se tämän päälle.",
+    "ready": "Termix {{version}} on valmis asennettavaksi",
+    "readyHint": "Se asennetaan seuraavan kerran, kun Termix käynnistetään uudelleen."
+  },
   "nav": {
     "home": "Koti",
     "terminal": "Pääte",
@@ -1868,19 +1899,23 @@
       "tabs": {
         "installed": "Asennetut",
         "browse": "Selaa",
-        "updates": "Päivitykset"
+        "updates": "Päivitykset",
+        "registries": "Rekisterit"
       },
       "status": {
         "summary": "{{installed}} asennettu, {{running}} käynnissä",
         "running": "Käynnissä",
         "disabled": "Poistettu käytöstä",
         "failed": "Pysähtyi odottamatta",
-        "blocked": "Odottaa toista lisäosaa"
+        "blocked": "Odottaa toista lisäosaa",
+        "server": "Käynnistyy palvelimellasi"
       },
       "groups": {
         "running": "Käynnissä",
-        "notRunning": "Ei käynnissä"
+        "notRunning": "Ei käynnissä",
+        "onServer": "Palvelimellasi"
       },
+      "runsOnServerHint": "Tämä lisäosa toimii vain palvelimellasi, joten se pysyy pois päältä työpöytäsovelluksessa. Se toimii silti palvelimella.",
       "sort": {
         "popular": "Suosituimmat",
         "name": "Nimi",
@@ -1898,7 +1933,7 @@
         "version": "Versio",
         "status": "Tila",
         "category": "Kategoria",
-        "installs": "Asennukset"
+        "downloads": "Lataukset"
       },
       "risk": {
         "critical": "Kriittinen",
@@ -2050,8 +2085,47 @@
       "noneInstalled": "Lisäosia ei ole vielä asennettu. Selaa ja lisää joitakin.",
       "nothingHere": "Täällä ei ole mitään.",
       "nothingHereHint": "Kokeile toista kategoriaa tai haku.",
-      "communitySoon": "Yhteisön lisäosat tulevat myöhemmässä päivityksessä. Lisäosan tekijät voivat jo lähettää lisäosansa yhteisön rekisteriin.",
+      "showInstalled": "Näytä asennetut",
+      "allInstalled": "Kaikki tässä on jo asennettu.",
+      "allInstalledHint": "Ota Näytä asennetut -vaihtoehto käyttöön nähdäksesi ne.",
       "communitySubmit": "Miten lähetän",
+      "registries": {
+        "intro": "Rekisterit ovat listoja lisäosista, jotka voit asentaa. Virallinen rekisteri on aina käytössä. Voit ottaa käyttöön yhteisön rekisterin tai lisätä oman.",
+        "hostYourOwn": "Isännöi oma rekisterisi",
+        "add": "Lisää rekisteri",
+        "addTitle": "Lisää rekisteri",
+        "addHint": "Liitä linkki rekisterin index.json-tiedostoon. Termix lukee sen ja näyttää avaimen, jolla se allekirjoittaa lisäosat. Lisää vain rekistereitä luotettavista lähteistä.",
+        "urlLabel": "Hakemiston URL-osoite",
+        "check": "Tarkista",
+        "addConfirm": "Luota ja lisää",
+        "added": "Lisätty {{name}}",
+        "customWarning": "Tämän rekisterin lisäosia ei tarkasta Termixin tiimi. Vain rekisterin omistaja päättää, mitä se sisältää. Jokaisen latauksen on oltava yllä olevalla avaimella allekirjoitettu.",
+        "keyFingerprint": "Avain {{keyId}}",
+        "pluginCount_one": "{{count}} lisäosa",
+        "pluginCount_other": "{{count}} lisäosaa",
+        "officialName": "Virallinen",
+        "communityName": "Yhteisö",
+        "alwaysOn": "Aina käytössä",
+        "communityHint": "Muiden tekemiä lisäosia. Jokainen versio tarkistetaan henkilökohtaisesti ja automaattisin tarkistuksin ennen listauksia.",
+        "communityConfirmTitle": "Ota yhteisön lisäosat käyttöön?",
+        "communityConfirmBody": "Yhteisön lisäosat ovat muiden kuin Termixin tiimin tekemiä. Jokainen versio tarkistetaan henkilökohtaisesti ja automaattisin tarkistuksin ennen listauksia, mutta virheet voivat silti päästä läpi. Asenna vain luottamasi lisäosat ja tarkista, mitä kukin niistä pyytää.",
+        "communityConfirm": "Ota käyttöön",
+        "communityBadge": "Yhteisö",
+        "communityBadgeHint": "Yhteisön rekisteristä. Muun tekemä ja tarkistettu ennen listauksia.",
+        "customBadge": "Mukautettu",
+        "customBadgeHint": "Lähde: {{name}}, ylläpitäjän lisäämä rekisteri. Ei tarkastettu Termixin tiimin toimesta.",
+        "remove": "Poista",
+        "removeTitle": "Poistetaanko {{name}}?",
+        "removeBody": "Sen lisäosat eivät enää näy Selaa-osiossa. Voit lisätä sen myöhemmin uudelleen.",
+        "removed": "{{name}} poistettu",
+        "inUse": "Asenna lisäosat palvelimelta {{name}} ensin: {{list}}",
+        "changeFailed": "Rekisterin muuttaminen epäonnistui: {{error}}",
+        "loadFailed": "Rekistereitä ei voitu ladata: {{error}}",
+        "unreachable": "Sen lukeminen epäonnistui: {{error}}",
+        "filter": "Rekisteri",
+        "allRegistries": "Kaikki rekisterit",
+        "browseHint": "Ota yhteisön lisäosat käyttöön tai lisää oma rekisterisi Rekisterit-välilehdellä."
+      },
       "upToDate": "Kaikki on ajan tasalla.",
       "lastChecked": "Viimeksi tarkistettu {{time}}",
       "updatesReady_one": "{{count}} päivitys valmis.",
@@ -2074,11 +2148,8 @@
         "signedOnly": "TERMIX_REQUIRE_SIGNED_PLUGINS on määritetty, joten asennus tiedostosta pysyy estettynä."
       },
       "count": {
-        "active_one": "{{formatted}} aktiivinen asennus",
-        "active_other": "{{formatted}} aktiivista asennusta",
         "downloads_one": "{{formatted}} lataus",
         "downloads_other": "{{formatted}} latausta",
-        "activeHint": "Esimerkit, jotka ovat ilmoittaneet tämän lisäosan olevan käytössä viimeisen viikon aikana. Esimerkit, joissa käyttötilastot on poistettu käytöstä, eivät ole mukana laskussa.",
         "downloadsHint": "Kuinka monta kertaa julkaisu on ladattu. Tämä ei ole asennusten määrää."
       },
       "unverified": "Varmentamaton",

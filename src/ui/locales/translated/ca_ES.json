@@ -233,6 +233,37 @@
     "desktopLinked": "Vinculat a {{server}}",
     "pluginsDocsLink": "Llegeix sobre cadascun"
   },
+  "desktopUpdates": {
+    "title": "Aplicació d'escriptori",
+    "mode": "Actualitzacions",
+    "modeHint": "Com obté aquesta aplicació les noves versions.",
+    "manualModeHint": "Aquesta còpia no es pot actualitzar sola, per la qual cosa Termix només t'informa quan hi ha una nova versió disponible.",
+    "modeAutomatic": "Automàtic",
+    "modePrompt": "Pregunta primer",
+    "modeNever": "Mai",
+    "automaticBody": "Descarrega les noves versions en segon pla i instal·la-les quan reiniciïs.",
+    "promptBody": "Informa'm quan hi hagi una nova versió i deixa'm triar quan la vull descarregar.",
+    "neverBody": "No comprovis si hi ha actualitzacions. Encara pots comprovar-ho manualment a Configuració.",
+    "onboardingTitle": "Actualitzacions de l'aplicació",
+    "onboardingBody": "L'aplicació d'escriptori ara es pot actualitzar sola. Tria com vols que arribin les noves versions. Pots canviar-ho més endavant a Configuració, Actualitzacions.",
+    "onboardingManual": "Aquesta còpia de l'aplicació s'ha instal·lat d'una manera que no es pot actualitzar sola, per la qual cosa Termix t'informarà quan hi hagi una nova versió disponible amb un enllaç per descarregar-la.",
+    "status": "Versió {{version}}",
+    "statusIdle": "Encara no s'ha comprovat",
+    "statusChecking": "Comprovant si hi ha actualitzacions",
+    "statusAvailable": "Hi ha disponible la versió {{version}}",
+    "statusDownloading": "Descarregant {{version}} ({{progress}}%)",
+    "statusReady": "La versió {{version}} està llesta. Reinicia per instal·lar-la.",
+    "statusUpToDate": "Tens l'última versió",
+    "statusError": "No s'ha pogut comprovar si hi ha actualitzacions. Torna-ho a provar més tard.",
+    "checkNow": "Comprova ara",
+    "download": "Descarrega",
+    "restart": "Reinicia ara",
+    "later": "Més tard",
+    "available": "Hi ha disponible Termix {{version}}",
+    "manualHint": "Descarrega-la des de la pàgina de llançaments i instal·la-la sobre aquesta.",
+    "ready": "Termix {{version}} està llest per instal·lar-se",
+    "readyHint": "S'instal·larà la propera vegada que reiniciïs Termix."
+  },
   "nav": {
     "home": "Inici",
     "terminal": "Terminal",
@@ -1892,19 +1923,23 @@
       "tabs": {
         "installed": "Instal·lats",
         "browse": "Explorar",
-        "updates": "Actualitzacions"
+        "updates": "Actualitzacions",
+        "registries": "Registres"
       },
       "status": {
         "summary": "{{installed}} instal·lats, {{running}} en execució",
         "running": "En execució",
         "disabled": "Desactivat",
         "failed": "Aturat inesperadament",
-        "blocked": "Esperant un altre plugin"
+        "blocked": "Esperant un altre plugin",
+        "server": "S'executa al teu servidor"
       },
       "groups": {
         "running": "En execució",
-        "notRunning": "No en execució"
+        "notRunning": "No en execució",
+        "onServer": "Al teu servidor"
       },
+      "runsOnServerHint": "Aquest complement només s'executa al teu servidor, per la qual cosa es manté desactivat a l'aplicació d'escriptori. Funciona igual allà.",
       "sort": {
         "popular": "Més populars",
         "name": "Nom",
@@ -1922,7 +1957,7 @@
         "version": "Versió",
         "status": "Estat",
         "category": "Categoria",
-        "installs": "Instal·lacions"
+        "downloads": "Descarregues"
       },
       "risk": {
         "critical": "Crític",
@@ -2090,8 +2125,48 @@
       "noneInstalled": "Encara no tens cap complement instal·lat. Navega per afegir-ne alguns.",
       "nothingHere": "No hi ha res aquí.",
       "nothingHereHint": "Prova una altra categoria o cerca.",
-      "communitySoon": "Els complements de la comunitat arribaran en una actualització futura. Els autors de complements ja poden enviar els seus al registre de la comunitat.",
+      "showInstalled": "Mostra els instal·lats",
+      "allInstalled": "Tot el que hi ha aquí ja està instal·lat.",
+      "allInstalledHint": "Activa Mostra els instal·lats per veure'ls.",
       "communitySubmit": "Com enviar-los",
+      "registries": {
+        "intro": "Els registres són llistes de complements que pots instal·lar. L'oficial està sempre activat. Pots activar el registre de la comunitat o afegir-ne el teu propi.",
+        "hostYourOwn": "Allotja el teu propi registre",
+        "add": "Afegeix un registre",
+        "addTitle": "Afegeix un registre",
+        "addHint": "Enganxa l'enllaç a l'index.json del registre. Termix el llegeix i mostra la clau amb la qual signa els complements. Només afegeixis registres de persones de confiança.",
+        "urlLabel": "URL de l'índex",
+        "check": "Comprova",
+        "addConfirm": "Confia i afegeix",
+        "added": "S'ha afegit {{name}}",
+        "customWarning": "Els complements d'aquest registre no són revisats per l'equip de Termix. Només el propietari del registre decideix què hi ha. Cada descàrrega ha d'estar signada amb la clau anterior.",
+        "keyFingerprint": "Clau {{keyId}}",
+        "pluginCount_one": "{{count}} complement",
+        "pluginCount_many": "{{count}} complements",
+        "pluginCount_other": "{{count}} complements",
+        "officialName": "Oficial",
+        "communityName": "Comunitat",
+        "alwaysOn": "Sempre activat",
+        "communityHint": "Complements fets per altres persones. Cada versió és revisada per una persona i per comprovacions automatitzades abans de ser publicada.",
+        "communityConfirmTitle": "Vols activar els complements de la comunitat?",
+        "communityConfirmBody": "Els complements de la comunitat són fets per altres persones, no per l'equip de Termix. Cada versió és revisada per una persona i per comprovacions automatitzades abans de ser publicada, però encara poden passar errors. Només instal·lis complements de confiança i comprova què demana cadascun.",
+        "communityConfirm": "Activa",
+        "communityBadge": "Comunitat",
+        "communityBadgeHint": "Del registre de la comunitat. Fet per altres persones i revisat abans de ser publicat.",
+        "customBadge": "Personalitzat",
+        "customBadgeHint": "De {{name}}, un registre afegit per un administrador. No revisat per l'equip de Termix.",
+        "remove": "Eliminar",
+        "removeTitle": "Vols eliminar {{name}}?",
+        "removeBody": "Els seus connectors ja no es mostraran a Explorar. Ho pots tornar a afegir més endavant.",
+        "removed": "S'ha eliminat {{name}}",
+        "inUse": "Desinstal·la primer els connectors de {{name}}: {{list}}",
+        "changeFailed": "No s'ha pogut modificar el registre: {{error}}",
+        "loadFailed": "No s'han pogut carregar els registres: {{error}}",
+        "unreachable": "No s'ha pogut llegir: {{error}}",
+        "filter": "Registre",
+        "allRegistries": "Tots els registres",
+        "browseHint": "Activa els connectors de la comunitat o afegeix el teu propi registre a la pestanya Registres."
+      },
       "upToDate": "Tot està actualitzat.",
       "lastChecked": "Última comprovació: {{time}}",
       "updatesReady_one": "{{count}} actualització disponible.",
@@ -2116,13 +2191,9 @@
         "signedOnly": "TERMIX_REQUIRE_SIGNED_PLUGINS està configurat, per la qual cosa la instal·lació des d'un fitxer continua bloquejada."
       },
       "count": {
-        "active_one": "{{formatted}} instal·lació activa",
-        "active_many": "{{formatted}} instal·lacions actives",
-        "active_other": "{{formatted}} instal·lacions actives",
         "downloads_one": "{{formatted}} descàrrega",
         "downloads_many": "{{formatted}} descàrregues",
         "downloads_other": "{{formatted}} descàrregues",
-        "activeHint": "Instàncies que han informat que aquest complement estava activat durant l'última setmana. Les instàncies amb les estadístiques d'ús desactivades no es compten.",
         "downloadsHint": "Quant de temps s'ha descarregat una versió. Això no és el nombre d'instal·lacions."
       },
       "unverified": "No verificat",

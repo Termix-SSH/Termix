@@ -233,6 +233,37 @@
     "desktopLinked": "{{server}} ile bağlantılı",
     "pluginsDocsLink": "Her biri hakkında bilgi edinin"
   },
+  "desktopUpdates": {
+    "title": "Masaüstü uygulaması",
+    "mode": "Güncellemeler",
+    "modeHint": "Bu uygulamanın yeni sürümleri nasıl alır.",
+    "manualModeHint": "Bu kopya kendini güncelleyemez, bu yüzden Termix yalnızca yeni bir sürüm çıktığında size bildirir.",
+    "modeAutomatic": "Otomatik",
+    "modePrompt": "Önce sor",
+    "modeNever": "Asla",
+    "automaticBody": "Yeni sürümleri arka planda indirin ve yeniden başlattığınızda yükleyin.",
+    "promptBody": "Yeni bir sürüm çıktığında bana bildir ve ne zaman indireceğime karar vermemi sağla.",
+    "neverBody": "Güncelleme kontrolü yapma. Ayarlar'dan manuel olarak kontrol edebilirsiniz.",
+    "onboardingTitle": "Uygulama güncellemeleri",
+    "onboardingBody": "Masaüstü uygulaması artık kendini güncelleyebilir. Yeni sürümlerin nasıl geleceğini seçin. Bunu daha sonra Ayarlar > Güncellemeler bölümünden değiştirebilirsiniz.",
+    "onboardingManual": "Bu uygulama kopyası kendini güncelleyemeyecek şekilde kurulmuş, bu yüzden Termix yeni bir sürüm çıktığında size indirme bağlantısıyla birlikte bildirimde bulunacaktır.",
+    "status": "Sürüm {{version}}",
+    "statusIdle": "Henüz kontrol edilmedi",
+    "statusChecking": "Güncellemeler kontrol ediliyor",
+    "statusAvailable": "{{version}} sürümü mevcut",
+    "statusDownloading": "{{version}} indiriliyor ({{progress}}%)",
+    "statusReady": "{{version}} sürümü hazır. Yüklemek için yeniden başlatın.",
+    "statusUpToDate": "En yeni sürüme sahipsiniz",
+    "statusError": "Güncellemeler kontrol edilemedi. Daha sonra tekrar deneyin.",
+    "checkNow": "Şimdi kontrol et",
+    "download": "İndir",
+    "restart": "Şimdi yeniden başlat",
+    "later": "Daha sonra",
+    "available": "Termix {{version}} mevcut",
+    "manualHint": "Sürüm sayfasından indirin ve bunun üzerine yükleyin.",
+    "ready": "Termix {{version}} yüklenmeye hazır",
+    "readyHint": "Termix yeniden başladığında yüklenir."
+  },
   "nav": {
     "home": "Ana Sayfa",
     "terminal": "Terminal",
@@ -1868,19 +1899,23 @@
       "tabs": {
         "installed": "Yüklü",
         "browse": "Göz at",
-        "updates": "Güncellemeler"
+        "updates": "Güncellemeler",
+        "registries": "Kayıtlar"
       },
       "status": {
         "summary": "{{installed}} yüklü, {{running}} çalışıyor",
         "running": "Çalışıyor",
         "disabled": "Devre dışı",
         "failed": "Beklenmedik şekilde durdu",
-        "blocked": "Başka bir eklentiyi bekliyor"
+        "blocked": "Başka bir eklentiyi bekliyor",
+        "server": "Sunucunuzda çalışır"
       },
       "groups": {
         "running": "Çalışıyor",
-        "notRunning": "Çalışmıyor"
+        "notRunning": "Çalışmıyor",
+        "onServer": "Sunucunuzda"
       },
+      "runsOnServerHint": "Bu eklenti yalnızca sunucunuzda çalışır, bu yüzden masaüstü uygulamasında kapalı kalır. Orada yine de çalışır.",
       "sort": {
         "popular": "En popüler",
         "name": "Ad",
@@ -1898,7 +1933,7 @@
         "version": "Sürüm",
         "status": "Durum",
         "category": "Kategori",
-        "installs": "Yüklemeler"
+        "downloads": "İndirmeler"
       },
       "risk": {
         "critical": "Kritik",
@@ -2050,8 +2085,47 @@
       "noneInstalled": "Henüz eklenti yüklenmedi. Eklemek için göz atın.",
       "nothingHere": "Burada hiçbir şey yok.",
       "nothingHereHint": "Başka bir kategori veya arama deneyin.",
-      "communitySoon": "Topluluk eklentileri daha sonraki bir güncellemede gelecek. Eklenti yazarları eklentilerini topluluk kayıt defterine zaten gönderebilir.",
+      "showInstalled": "Yüklenmiş olanları göster",
+      "allInstalled": "Buradaki her şey zaten yüklü.",
+      "allInstalledHint": "Görmek için Yüklenmiş olanları göster'i açın.",
       "communitySubmit": "Nasıl gönderilir",
+      "registries": {
+        "intro": "Kayıtlar, yükleyebileceğiniz eklenti listeleridir. Resmi kayıt her zaman açıktır. Topluluk kaydını açabilir veya kendi kaydınızı ekleyebilirsiniz.",
+        "hostYourOwn": "Kendi kaydınızı barındırın",
+        "add": "Kayıt ekle",
+        "addTitle": "Kayıt ekle",
+        "addHint": "Kaydın index.json dosyasına bağlantıyı yapıştırın. Termix bunu okur ve eklentileri imzaladığı anahtarı gösterir. Yalnızca güvendiğiniz kişilerden kayıtlar ekleyin.",
+        "urlLabel": "Dizin URL'si",
+        "check": "Kontrol et",
+        "addConfirm": "Güven ve ekle",
+        "added": "{{name}} eklendi",
+        "customWarning": "Bu kayıttaki eklentiler Termix ekibi tarafından gözden geçirilmez. Kaydın sahibi yalnızca içeriği belirler. Her indirme yukarıdaki anahtarla imzalanmalıdır.",
+        "keyFingerprint": "Anahtar {{keyId}}",
+        "pluginCount_one": "{{count}} eklenti",
+        "pluginCount_other": "{{count}} eklenti",
+        "officialName": "Resmi",
+        "communityName": "Topluluk",
+        "alwaysOn": "Her zaman açık",
+        "communityHint": "Diğer kişiler tarafından yapılan eklentiler. Her sürüm listelenmeden önce bir kişi ve otomatik kontroller tarafından kontrol edilir.",
+        "communityConfirmTitle": "Topluluk eklentileri açılsın mı?",
+        "communityConfirmBody": "Topluluk eklentileri Termix ekibi tarafından değil, diğer kişiler tarafından yapılır. Her sürüm listelenmeden önce bir kişi ve otomatik kontroller tarafından kontrol edilir, ancak hatalar yine de geçebilir. Yalnızca güvendiğiniz eklentileri yükleyin ve her birinin ne istediğini kontrol edin.",
+        "communityConfirm": "Aç",
+        "communityBadge": "Topluluk",
+        "communityBadgeHint": "Topluluk kaydından. Diğer kişiler tarafından yapılmış ve listelenmeden önce gözden geçirilmiştir.",
+        "customBadge": "Özel",
+        "customBadgeHint": "{{name}} kayıtlarından, bir yönetici tarafından eklenen bir kayıttan. Termix ekibi tarafından gözden geçirilmemiştir.",
+        "remove": "Kaldır",
+        "removeTitle": "{{name}} kaldırılsın mı?",
+        "removeBody": "Eklentileri artık Gözat bölümünde görünmeyecek. Daha sonra tekrar ekleyebilirsiniz.",
+        "removed": "{{name}} kaldırıldı",
+        "inUse": "Önce {{name}} eklentilerini kaldırın: {{list}}",
+        "changeFailed": "Kayıt defteri değiştirilemedi: {{error}}",
+        "loadFailed": "Kayıt defterleri yüklenemedi: {{error}}",
+        "unreachable": "Okunamadı: {{error}}",
+        "filter": "Kayıt defteri",
+        "allRegistries": "Tüm kayıt defterleri",
+        "browseHint": "Topluluk eklentilerini açın veya Kayıt Defterleri sekmesinden kendi kayıt defterinizi ekleyin."
+      },
       "upToDate": "Her şey güncel.",
       "lastChecked": "Son kontrol {{time}}",
       "updatesReady_one": "{{count}} güncelleme hazır.",
@@ -2074,11 +2148,8 @@
         "signedOnly": "TERMIX_REQUIRE_SIGNED_PLUGINS ayarlı olduğu için dosyadan yükleme engelleniyor."
       },
       "count": {
-        "active_one": "{{formatted}} aktif yükleme",
-        "active_other": "{{formatted}} aktif yükleme",
         "downloads_one": "{{formatted}} indirme",
         "downloads_other": "{{formatted}} indirme",
-        "activeHint": "Son bir hafta içinde bu eklentinin etkin olduğunu bildiren örnekler. Kullanım istatistikleri kapalı olan örnekler sayılmaz.",
         "downloadsHint": "Bir sürümün kaç kez indirildiği. Bu, kurulum sayısı değildir."
       },
       "unverified": "Doğrulanmamış",

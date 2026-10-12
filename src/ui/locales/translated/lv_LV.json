@@ -233,6 +233,37 @@
     "desktopLinked": "Saitēts ar {{server}}",
     "pluginsDocsLink": "Lasiet par katru no tiem"
   },
+  "desktopUpdates": {
+    "title": "Darbvirsmas lietotne",
+    "mode": "Atjauninājumi",
+    "modeHint": "Kā šī lietotne saņem jaunās versijas.",
+    "manualModeHint": "Šo kopiju nevar atjaunināt pati, tāpēc Termix tikai paziņo, kad ir iznākusi jauna versija.",
+    "modeAutomatic": "Automātiski",
+    "modePrompt": "Vispirms vaicāt",
+    "modeNever": "Nekad",
+    "automaticBody": "Lejupielādē jaunās versijas fonā un instalē tās, kad restartējat.",
+    "promptBody": "Paziņo, kad ir iznākusi jauna versija, un ļauj izvēlēties, kad to lejupielādēt.",
+    "neverBody": "Neizpildīt atjauninājumu pārbaudi. Jūs joprojām varat pārbaudīt manuāli Iestatījumos.",
+    "onboardingTitle": "Lietotnes atjauninājumi",
+    "onboardingBody": "Tagad darbvirsmas lietotne var atjaunināt pati. Izvēlieties, kā vēlaties saņemt jaunās versijas. To varat mainīt vēlāk Iestatījumos, sadaļā Atjauninājumi.",
+    "onboardingManual": "Šī lietotnes kopija tika instalēta tā, ka to nevar atjaunināt pati, tāpēc Termix paziņos, kad ir iznākusi jauna versija, ar saiti tās lejupielādei.",
+    "status": "Versija {{version}}",
+    "statusIdle": "Vēl nav pārbaudīts",
+    "statusChecking": "Pārbauda atjauninājumus",
+    "statusAvailable": "Ir pieejama versija {{version}}",
+    "statusDownloading": "Lejupielādē {{version}} ({{progress}}%)",
+    "statusReady": "Versija {{version}} ir gatava. Restartējiet, lai to instalētu.",
+    "statusUpToDate": "Jums ir jaunākā versija",
+    "statusError": "Neizdevās pārbaudīt atjauninājumus. Mēģiniet vēlreiz vēlāk.",
+    "checkNow": "Pārbaudīt tagad",
+    "download": "Lejupielādēt",
+    "restart": "Restartēt tagad",
+    "later": "Vēlāk",
+    "available": "Ir pieejams Termix {{version}}",
+    "manualHint": "Lejupielādējiet to no izlaišanas lapas un instalējiet virs šīs versijas.",
+    "ready": "Termix {{version}} ir gatavs instalēšanai",
+    "readyHint": "Tas tiks instalēts nākamajā reizi, kad Termix tiks restartēts."
+  },
   "nav": {
     "home": "Sākums",
     "terminal": "Terminālis",
@@ -1892,19 +1923,23 @@
       "tabs": {
         "installed": "Instalēti",
         "browse": "Pārlūkot",
-        "updates": "Atjauninājumi"
+        "updates": "Atjauninājumi",
+        "registries": "Reģistri"
       },
       "status": {
         "summary": "{{installed}} instalēti, {{running}} darbojas",
         "running": "Darbojas",
         "disabled": "Atspējots",
         "failed": "Gaidāms apstājās",
-        "blocked": "Gaida citu spraudni"
+        "blocked": "Gaida citu spraudni",
+        "server": "Darbojas jūsu serverī"
       },
       "groups": {
         "running": "Darbojas",
-        "notRunning": "Nedarbojas"
+        "notRunning": "Nedarbojas",
+        "onServer": "Jūsu serverī"
       },
+      "runsOnServerHint": "Šis spraudnis darbojas tikai jūsu serverī, tāpēc darbvirsmas lietotnē tas ir izslēgts. Tur tas joprojām darbojas.",
       "sort": {
         "popular": "Populārākie",
         "name": "Nosaukums",
@@ -1922,7 +1957,7 @@
         "version": "Versija",
         "status": "Statuss",
         "category": "Kategorija",
-        "installs": "Instalācijas"
+        "downloads": "Lejupielādes"
       },
       "risk": {
         "critical": "Kritisks",
@@ -2090,8 +2125,48 @@
       "noneInstalled": "Vēl nav uzstādīti spraudņi. Pārlūkojiet, lai pievienotu.",
       "nothingHere": "Šeit nekas nav.",
       "nothingHereHint": "Mēģiniet citu kategoriju vai meklējiet.",
-      "communitySoon": "Sabiedrības spraudņi būs pieejami nākamajā atjauninājumā. Spraudņu autori jau tagad var iesniegt savus spraudņus sabiedrības reģistrā.",
+      "showInstalled": "Rādīt instalētos",
+      "allInstalled": "Šeit viss jau ir instalēts.",
+      "allInstalledHint": "Ieslēdziet Rādīt instalētos, lai tos redzētu.",
       "communitySubmit": "Kā iesniegt",
+      "registries": {
+        "intro": "Reģistri ir spraudņu saraksti, kurus varat instalēt. Oficiālais reģistrs vienmēr ir ieslēgts. Varat ieslēgt kopienas reģistru vai pievienot savu.",
+        "hostYourOwn": "Izvietojiet savu reģistru",
+        "add": "Pievienot reģistru",
+        "addTitle": "Pievienot reģistru",
+        "addHint": "Ielīmējiet saiti uz reģistra index.json. Termix to nolasīs un parādīs atslēgu, ar kuru tas paraksta spraudņus. Pievienojiet tikai reģistrus no cilvēkiem, kam uzticat.",
+        "urlLabel": "Indeksa URL",
+        "check": "Pārbaudīt",
+        "addConfirm": "Uzticēties un pievienot",
+        "added": "Pievienots {{name}}",
+        "customWarning": "Spraudņi no šī reģistra netiek pārskatīti Termix komandas. Tikai reģistra īpašnieks nosaka, kas tajā atrodas. Katrai lejupielādei ir jābūt parakstītai ar augstāk minēto atslēgu.",
+        "keyFingerprint": "Atslēga {{keyId}}",
+        "pluginCount_zero": "0 spraudņi",
+        "pluginCount_one": "{{count}} spraudnis",
+        "pluginCount_other": "{{count}} spraudņi",
+        "officialName": "Oficiālais",
+        "communityName": "Kopiena",
+        "alwaysOn": "Vienmēr ieslēgts",
+        "communityHint": "Spraudņus izstrādājuši citi cilvēki. Katru versiju pirms iekļaušanas sarakstā pārbauda cilvēks un automatizētie pārbaudes.",
+        "communityConfirmTitle": "Ieslēgt kopienas spraudņus?",
+        "communityConfirmBody": "Kopienas spraudņus izstrādājuši citi cilvēki, nevis Termix komanda. Katru versiju pirms iekļaušanas sarakstā pārbauda cilvēks un automatizētie pārbaudes, taču kļūdas var tikt cauri. Instalējiet tikai spraudņus, kam uzticat, un pārbaudiet, ko katrs no tiem pieprasa.",
+        "communityConfirm": "Ieslēgt",
+        "communityBadge": "Kopiena",
+        "communityBadgeHint": "No kopienas reģistra. Izstrādājis cits cilvēks un pārskatīts pirms iekļaušanas sarakstā.",
+        "customBadge": "Pielāgots",
+        "customBadgeHint": "No {{name}}, reģistra, ko pievienoja administrators. Nepārskatīts Termix komandas.",
+        "remove": "Noņemt",
+        "removeTitle": "Noņemt {{name}}?",
+        "removeBody": "Tā spraudņi vairs neparādīsies sadaļā „Pārlūkot”. To varat pievienot vēlāk.",
+        "removed": "{{name}} noņemts",
+        "inUse": "Vispirms atinstalējiet spraudņus no {{name}}: {{list}}",
+        "changeFailed": "Neizdevās mainīt reģistru: {{error}}",
+        "loadFailed": "Neizdevās ielādēt reģistrus: {{error}}",
+        "unreachable": "Neizdevās to izlasīt: {{error}}",
+        "filter": "Reģistrs",
+        "allRegistries": "Visi reģistri",
+        "browseHint": "Ieslēdziet kopienas spraudņus vai pievienojiet savu reģistru cilnē „Reģistri”."
+      },
       "upToDate": "Viss ir jaunākajā versijā.",
       "lastChecked": "Pēdējo reizi pārbaudīts {{time}}",
       "updatesReady_zero": "Nav gatavu atjauninājumu.",
@@ -2116,13 +2191,9 @@
         "signedOnly": "Ir iestatīts TERMIX_REQUIRE_SIGNED_PLUGINS, tāpēc uzstādīšana no faila paliek bloķēta."
       },
       "count": {
-        "active_zero": "Nav aktīvu uzstādījumu.",
-        "active_one": "{{formatted}} aktīvs uzstādījums",
-        "active_other": "{{formatted}} aktīvi uzstādījumi",
         "downloads_zero": "Nav lejupielāžu.",
         "downloads_one": "{{formatted}} lejupielāde",
         "downloads_other": "{{formatted}} lejupielādes",
-        "activeHint": "Instances, kas pēdējās nedēļas laikā ziņoja, ka šis spraudnis ir ieslēgts. Instances, kurām ir izslēgta lietošanas statistika, netiek skaitītas.",
         "downloadsHint": "Cik reižu izlaidums tika lejupielādēts. Tas nav instalāciju skaits."
       },
       "unverified": "Nav verificēts",

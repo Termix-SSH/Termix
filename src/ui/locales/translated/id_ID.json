@@ -233,6 +233,37 @@
     "desktopLinked": "Terhubung ke {{server}}",
     "pluginsDocsLink": "Baca tentang masing-masing"
   },
+  "desktopUpdates": {
+    "title": "Aplikasi desktop",
+    "mode": "Pembaruan",
+    "modeHint": "Bagaimana aplikasi ini mendapatkan versi baru.",
+    "manualModeHint": "Salinan ini tidak dapat memperbarui dirinya sendiri, jadi Termix hanya memberi tahu Anda ketika versi baru tersedia.",
+    "modeAutomatic": "Otomatis",
+    "modePrompt": "Tanya dulu",
+    "modeNever": "Tidak pernah",
+    "automaticBody": "Unduh versi baru di latar belakang dan instal saat Anda memulai ulang.",
+    "promptBody": "Beritahu saya ketika versi baru tersedia dan biarkan saya memilih kapan mengunduhnya.",
+    "neverBody": "Jangan periksa pembaruan. Anda masih bisa memeriksa secara manual di Pengaturan.",
+    "onboardingTitle": "Pembaruan aplikasi",
+    "onboardingBody": "Aplikasi desktop sekarang dapat memperbarui dirinya sendiri. Pilih bagaimana Anda ingin versi baru tiba. Anda dapat mengubah ini nanti di Pengaturan, Pembaruan.",
+    "onboardingManual": "Salinan aplikasi ini diinstal dengan cara yang tidak dapat memperbarui dirinya sendiri, jadi Termix akan memberi tahu Anda ketika versi baru tersedia dengan tautan untuk mengunduhnya.",
+    "status": "Versi {{version}}",
+    "statusIdle": "Belum diperiksa",
+    "statusChecking": "Memeriksa pembaruan",
+    "statusAvailable": "Versi {{version}} tersedia",
+    "statusDownloading": "Mengunduh {{version}} ({{progress}}%)",
+    "statusReady": "Versi {{version}} siap. Mulai ulang untuk menginstalnya.",
+    "statusUpToDate": "Anda memiliki versi terbaru",
+    "statusError": "Tidak dapat memeriksa pembaruan. Coba lagi nanti.",
+    "checkNow": "Periksa sekarang",
+    "download": "Unduh",
+    "restart": "Mulai ulang sekarang",
+    "later": "Nanti",
+    "available": "Termix {{version}} tersedia",
+    "manualHint": "Unduh dari halaman rilis dan instal di atas yang ini.",
+    "ready": "Termix {{version}} siap untuk diinstal",
+    "readyHint": "Ini akan diinstal saat Termix dimulai ulang berikutnya."
+  },
   "nav": {
     "home": "Beranda",
     "terminal": "Terminal",
@@ -1844,19 +1875,23 @@
       "tabs": {
         "installed": "Terpasang",
         "browse": "Jelajahi",
-        "updates": "Pembaruan"
+        "updates": "Pembaruan",
+        "registries": "Registrasi"
       },
       "status": {
         "summary": "{{installed}} terpasang, {{running}} berjalan",
         "running": "Berjalan",
         "disabled": "Dinonaktifkan",
         "failed": "Berhenti secara tak terduga",
-        "blocked": "Menunggu plugin lain"
+        "blocked": "Menunggu plugin lain",
+        "server": "Berjalan di server Anda"
       },
       "groups": {
         "running": "Berjalan",
-        "notRunning": "Tidak berjalan"
+        "notRunning": "Tidak berjalan",
+        "onServer": "Di server Anda"
       },
+      "runsOnServerHint": "Plugin ini hanya berjalan di server Anda, jadi tetap nonaktif di aplikasi desktop. Plugin ini tetap berfungsi di sana.",
       "sort": {
         "popular": "Paling populer",
         "name": "Nama",
@@ -1874,7 +1909,7 @@
         "version": "Versi",
         "status": "Status",
         "category": "Kategori",
-        "installs": "Instalasi"
+        "downloads": "Unduhan"
       },
       "risk": {
         "critical": "Kritis",
@@ -2010,8 +2045,46 @@
       "noneInstalled": "Belum ada plugin terpasang. Jelajahi untuk menambahkan beberapa.",
       "nothingHere": "Tidak ada di sini.",
       "nothingHereHint": "Coba kategori lain atau cari.",
-      "communitySoon": "Plugin komunitas akan hadir dalam pembaruan mendatang. Pengembang plugin sudah dapat mengirimkan plugin mereka ke registri komunitas.",
+      "showInstalled": "Tampilkan yang terinstal",
+      "allInstalled": "Semua di sini sudah terinstal.",
+      "allInstalledHint": "Aktifkan Tampilkan yang terinstal untuk melihatnya.",
       "communitySubmit": "Cara mengirimkan",
+      "registries": {
+        "intro": "Registrasi adalah daftar plugin yang dapat Anda instal. Registrasi resmi selalu aktif. Anda dapat mengaktifkan registrasi komunitas atau menambahkan registrasi Anda sendiri.",
+        "hostYourOwn": "Host registrasi Anda sendiri",
+        "add": "Tambahkan registrasi",
+        "addTitle": "Tambahkan registrasi",
+        "addHint": "Tempel tautan ke index.json registrasi. Termix membacanya dan menampilkan kunci yang digunakan untuk menandatangani plugin. Hanya tambahkan registrasi dari orang yang Anda percayai.",
+        "urlLabel": "URL Indeks",
+        "check": "Periksa",
+        "addConfirm": "Percaya dan tambahkan",
+        "added": "Menambahkan {{name}}",
+        "customWarning": "Plugin dari registrasi ini tidak ditinjau oleh tim Termix. Hanya pemilik registrasi yang memutuskan apa yang ada di dalamnya. Setiap unduhan harus ditandatangani oleh kunci di atas.",
+        "keyFingerprint": "Kunci {{keyId}}",
+        "pluginCount_other": "{{count}} plugin",
+        "officialName": "Resmi",
+        "communityName": "Komunitas",
+        "alwaysOn": "Selalu aktif",
+        "communityHint": "Plugin yang dibuat oleh orang lain. Setiap versi diperiksa oleh seseorang dan oleh pemeriksaan otomatis sebelum dicantumkan.",
+        "communityConfirmTitle": "Aktifkan plugin komunitas?",
+        "communityConfirmBody": "Plugin komunitas dibuat oleh orang lain, bukan tim Termix. Setiap versi diperiksa oleh seseorang dan oleh pemeriksaan otomatis sebelum dicantumkan, tetapi kesalahan masih bisa lolos. Hanya instal plugin yang Anda percayai dan periksa apa yang diminta oleh masing-masing.",
+        "communityConfirm": "Aktifkan",
+        "communityBadge": "Komunitas",
+        "communityBadgeHint": "Dari registrasi komunitas. Dibuat oleh orang lain dan ditinjau sebelum dicantumkan.",
+        "customBadge": "Kustom",
+        "customBadgeHint": "Dari {{name}}, registrasi yang ditambahkan oleh admin. Tidak ditinjau oleh tim Termix.",
+        "remove": "Hapus",
+        "removeTitle": "Hapus {{name}}?",
+        "removeBody": "Plugin-nya tidak akan lagi muncul di Jelajahi. Anda bisa menambahkannya kembali nanti.",
+        "removed": "{{name}} telah dihapus",
+        "inUse": "Copot pemasangan plugin dari {{name}} terlebih dahulu: {{list}}",
+        "changeFailed": "Tidak dapat mengubah registri: {{error}}",
+        "loadFailed": "Tidak dapat memuat registri: {{error}}",
+        "unreachable": "Tidak dapat membacanya: {{error}}",
+        "filter": "Registri",
+        "allRegistries": "Semua registri",
+        "browseHint": "Aktifkan plugin komunitas atau tambahkan registri Anda sendiri di tab Registri."
+      },
       "upToDate": "Semuanya sudah diperbarui.",
       "lastChecked": "Terakhir diperiksa {{time}}",
       "updatesReady_other": "{{count}} pembaruan siap.",
@@ -2032,9 +2105,7 @@
         "signedOnly": "TERMIX_REQUIRE_SIGNED_PLUGINS diatur, sehingga pemasangan dari file tetap diblokir."
       },
       "count": {
-        "active_other": "{{formatted}} instalasi aktif",
         "downloads_other": "{{formatted}} unduhan",
-        "activeHint": "Instansi yang melaporkan plugin ini diaktifkan dalam seminggu terakhir. Instansi dengan statistik penggunaan yang dimatikan tidak dihitung.",
         "downloadsHint": "Berapa kali rilis diunduh. Ini bukan jumlah instalasi."
       },
       "unverified": "Tidak terverifikasi",
@@ -2258,6 +2329,7 @@
       "continue": "Lanjutkan",
       "back": "Kembali",
       "mergeTitle": "Tambahkan ke akun saya",
+      "mergeBody_other": "{{count}} item di perangkat ini ditambahkan ke akun Anda. Item yang sudah ada di akun Anda tetap seperti semula di server.",
       "replaceTitle": "Ganti dengan akun saya",
       "replaceBody_other": "{{count}} item di perangkat ini dihapus, dan perangkat ini mengambil semua dari akun Anda. Host yang hanya disimpan di perangkat ini tetap ada.",
       "link": "Hubungkan",

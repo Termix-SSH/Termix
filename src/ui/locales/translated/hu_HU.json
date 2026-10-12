@@ -233,6 +233,37 @@
     "desktopLinked": "Csatolva a(z) {{server}} szerverhez",
     "pluginsDocsLink": "Olvasson el többet mindegyikről"
   },
+  "desktopUpdates": {
+    "title": "Asztali alkalmazás",
+    "mode": "Frissítések",
+    "modeHint": "Hogyan kap új verziókat ez az alkalmazás.",
+    "manualModeHint": "Ez a példány nem tud önmagát frissíteni, így a Termix csak akkor értesít, ha megjelenik egy új verzió.",
+    "modeAutomatic": "Automatikus",
+    "modePrompt": "Először kérdezzen",
+    "modeNever": "Soha",
+    "automaticBody": "Az új verziók letöltése a háttérben történik, és újraindításkor telepíti őket.",
+    "promptBody": "Értesítsen, ha új verzió érhető el, és hagyjon választani, mikor töltsem le.",
+    "neverBody": "Ne ellenőrizze a frissítéseket. Kézzel is ellenőrizheti a Beállításokban.",
+    "onboardingTitle": "Alkalmazásfrissítések",
+    "onboardingBody": "Az asztali alkalmazás mostantól képes önmagát frissíteni. Válassza ki, hogyan szeretné, hogy az új verziók érkezzenek. Ezt később módosíthatja a Beállítások > Frissítések menüpontban.",
+    "onboardingManual": "Az alkalmazás ezt a példányát úgy telepítették, hogy nem tud önmagát frissíteni, így a Termix értesítést küld, ha új verzió jelenik meg, és letöltési linket is mellékel.",
+    "status": "Verzió: {{version}}",
+    "statusIdle": "Még nem ellenőrizve",
+    "statusChecking": "Frissítések keresése",
+    "statusAvailable": "A(z) {{version}} verzió elérhető",
+    "statusDownloading": "A(z) {{version}} letöltése ({{progress}}%)",
+    "statusReady": "A(z) {{version}} verzió készen áll. Indítsa újra a telepítéshez.",
+    "statusUpToDate": "A legújabb verziót használja",
+    "statusError": "Nem sikerült ellenőrizni a frissítéseket. Próbálja újra később.",
+    "checkNow": "Ellenőrzés most",
+    "download": "Letöltés",
+    "restart": "Újraindítás most",
+    "later": "Később",
+    "available": "A Termix {{version}} verziója elérhető",
+    "manualHint": "Töltse le a kiadási oldalról, és telepítse a jelenlegi helyére.",
+    "ready": "A Termix {{version}} verziója készen áll a telepítésre",
+    "readyHint": "A következő újraindításkor települ."
+  },
   "nav": {
     "home": "Főoldal",
     "terminal": "Terminál",
@@ -1868,19 +1899,23 @@
       "tabs": {
         "installed": "Telepítve",
         "browse": "Böngészés",
-        "updates": "Frissítések"
+        "updates": "Frissítések",
+        "registries": "Regisztrációk"
       },
       "status": {
         "summary": "{{installed}} telepítve, {{running}} fut",
         "running": "Fut",
         "disabled": "Letiltva",
         "failed": "Váratlanul leállt",
-        "blocked": "Várakozás egy másik bővítményre"
+        "blocked": "Várakozás egy másik bővítményre",
+        "server": "A szerverén fut"
       },
       "groups": {
         "running": "Fut",
-        "notRunning": "Nem fut"
+        "notRunning": "Nem fut",
+        "onServer": "A szerverén"
       },
+      "runsOnServerHint": "Ez a bővítmény csak a szerverén fut, ezért az asztali alkalmazásban kikapcsolva marad. A szerveren továbbra is működik.",
       "sort": {
         "popular": "Legnépszerűbb",
         "name": "Név",
@@ -1898,7 +1933,7 @@
         "version": "Verzió",
         "status": "Állapot",
         "category": "Kategória",
-        "installs": "Telepítések"
+        "downloads": "Letöltések"
       },
       "risk": {
         "critical": "Kritikus",
@@ -2050,8 +2085,47 @@
       "noneInstalled": "Még nincsenek telepített bővítmények. Böngésszen, és adjon hozzá néhányat.",
       "nothingHere": "Itt nincs semmi.",
       "nothingHereHint": "Próbáljon meg másik kategóriát vagy keresést.",
-      "communitySoon": "A közösségi bővítmények egy későbbi frissítésben érkeznek. A bővítmény-fejlesztők már most beküldhetik alkotásaikat a közösségi nyilvántartásba.",
+      "showInstalled": "Telepítettek megjelenítése",
+      "allInstalled": "Minden itt már telepítve van.",
+      "allInstalledHint": "Kapcsolja be a Telepítettek megjelenítése opciót, hogy lássa őket.",
       "communitySubmit": "Hogyan küldjem be",
+      "registries": {
+        "intro": "A regisztrációk telepíthető bővítmények listái. A hivatalos mindig be van kapcsolva. Bekapcsolhatja a közösségi regisztrációt, vagy hozzáadhatja a sajátját.",
+        "hostYourOwn": "Saját regisztráció üzemeltetése",
+        "add": "Regisztráció hozzáadása",
+        "addTitle": "Regisztráció hozzáadása",
+        "addHint": "Illessze be a regisztráció index.json fájljának linkjét. A Termix beolvassa, és megjeleníti azt a kulcsot, amellyel a bővítményeket aláírja. Csak olyan regisztrációkat adjon hozzá, amelyeknek megbízik a tulajdonosában.",
+        "urlLabel": "Index URL",
+        "check": "Ellenőrzés",
+        "addConfirm": "Megbízás és hozzáadás",
+        "added": "A(z) {{name}} hozzáadva",
+        "customWarning": "Ebből a regisztrációból származó bővítményeket nem ellenőrzi a Termix csapata. Csak a regisztráció tulajdonosa dönt arról, mi kerül bele. Minden letöltést a fenti kulccsal kell aláírni.",
+        "keyFingerprint": "Kulcs: {{keyId}}",
+        "pluginCount_one": "{{count}} bővítmény",
+        "pluginCount_other": "{{count}} bővítmény",
+        "officialName": "Hivatalos",
+        "communityName": "Közösségi",
+        "alwaysOn": "Mindig bekapcsolva",
+        "communityHint": "Mások által készített bővítmények. Minden verziót egy személy és automatizált ellenőrzések is átnéznek, mielőtt felkerülne a listára.",
+        "communityConfirmTitle": "Bekapcsolja a közösségi bővítményeket?",
+        "communityConfirmBody": "A közösségi bővítményeket nem a Termix csapata, hanem mások készítik. Minden verziót egy személy és automatizált ellenőrzések is átnéznek, mielőtt felkerülne a listára, de előfordulhatnak hibák. Csak olyan bővítményeket telepítsen, amelyeknek megbízik, és ellenőrizze, mire kér engedélyt mindegyik.",
+        "communityConfirm": "Bekapcsolás",
+        "communityBadge": "Közösségi",
+        "communityBadgeHint": "A közösségi regisztrációból. Mások által készített, és felvétel előtt ellenőrzött.",
+        "customBadge": "Egyedi",
+        "customBadgeHint": "A(z) {{name}}-ből, egy admin által hozzáadott regisztrációból. Nem ellenőrizte a Termix csapata.",
+        "remove": "Eltávolítás",
+        "removeTitle": "Eltávolítja a(z) {{name}} elemet?",
+        "removeBody": "A benne lévő bővítmények már nem jelennek meg a Böngészés fülön. Később újra hozzáadhatja.",
+        "removed": "A(z) {{name}} eltávolítva",
+        "inUse": "Először távolítsa el a(z) {{name}} bővítményeit: {{list}}",
+        "changeFailed": "Nem sikerült módosítani a regisztrációs tárat: {{error}}",
+        "loadFailed": "Nem sikerült betölteni a regisztrációs tárokat: {{error}}",
+        "unreachable": "Nem sikerült olvasni: {{error}}",
+        "filter": "Regisztrációs tároló",
+        "allRegistries": "Összes regisztrációs tároló",
+        "browseHint": "Kapcsolja be a közösségi bővítményeket, vagy adja hozzá saját regisztrációs tárolóját a Regisztrációs tárolók fülön."
+      },
       "upToDate": "Minden naprakész.",
       "lastChecked": "Utolsó ellenőrzés: {{time}}",
       "updatesReady_one": "{{count}} frissítés kész.",
@@ -2074,11 +2148,8 @@
         "signedOnly": "A TERMIX_REQUIRE_SIGNED_PLUGINS be van állítva, ezért a fájlból való telepítés továbbra is letiltva."
       },
       "count": {
-        "active_one": "{{formatted}} aktív telepítés",
-        "active_other": "{{formatted}} aktív telepítés",
         "downloads_one": "{{formatted}} letöltés",
         "downloads_other": "{{formatted}} letöltés",
-        "activeHint": "Azok a példányok, amelyek az elmúlt hétben bekapcsolt állapotban jelentették ezt a bővítményt. Azok a példányok, amelyeknél a használati statisztikák kikapcsolva vannak, nem számítanak bele.",
         "downloadsHint": "Hányszor letöltötték egy kiadást. Ez nem a telepítések számát jelenti."
       },
       "unverified": "Nem ellenőrzött",
