@@ -15,6 +15,7 @@
 - Languages with more than two plural forms, like Russian, Polish and Arabic, now use the right one
 - The Plugins tab shows how many times each plugin was downloaded, in a Downloads column
 - Plugins, Browse hides plugins you already have. Turn on Show installed to see them
+- Bundled SSH Terminal, File Manager, Tmux Monitor, Remote Desktop and Tunnels plugins updated to 1.0.2
 
 ### Fixed
 
@@ -28,6 +29,8 @@
 - The desktop app now says when its data is from 2.8 or older and needs 2.9 first, instead of only saying the local server could not start
 - Client tunnels on the desktop app stopped with "Endpoint SSH connection closed" when a reverse proxy dropped their idle connection
 - Typing right after opening a host from the sidebar went to the host search instead of the new session
+- SSH config import failed on files that put a tab or `=` between a keyword and its value
+- App icons and the favicon have rounded corners again
 
 ## 26.10.0
 
