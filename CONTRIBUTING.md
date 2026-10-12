@@ -38,21 +38,21 @@ npm run format       # format the code with Prettier
 
 ## Making a change
 
-1. **Fork the repository**: Click "Fork" at the top right of the [repository page](https://github.com/Termix-SSH/Termix).
-2. **Create a branch**:
+1. Fork the [repo](https://github.com/Termix-SSH/Termix).
+2. Create a branch:
    ```sh
    git checkout -b feature/my-new-feature
    ```
-3. **Make your changes** and add or update tests for them.
-4. **Commit your changes**:
+3. Make your changes and add or update tests for them.
+4. Commit your changes:
    ```sh
    git commit -m "feat: add my new feature"
    ```
-5. **Push to your fork**:
+5. Push to your fork:
    ```sh
    git push origin feature/my-new-feature
    ```
-6. **Open a pull request** against the current `dev-*` branch with a clear description.
+6. Open a pull request against the current `dev-*` branch with a clear description.
 
 ## Guidelines
 
@@ -72,4 +72,4 @@ Start from the [plugin template](https://github.com/Termix-SSH/Termix-Plugin-Tem
 
 ## Support
 
-Bugs and ideas for Termix itself go in [this repo](https://github.com/Termix-SSH/Termix/issues/new/choose). Plugin problems go in that plugin's own `Plugin-<Name>` repo. Please be as detailed as possible, preferably in English. You can also ask in the [Discord](https://discord.gg/jVQGdvHDrf) server.
+Bugs and ideas for Termix itself go in [this repo](https://github.com/Termix-SSH/Termix/issues/new/choose). Plugin problems go in that plugin's own `Plugin-<Name>` repo. Add as much detail as you can, in English if possible. You can also ask in the [Discord](https://discord.gg/jVQGdvHDrf) server.

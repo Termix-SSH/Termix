@@ -50,7 +50,7 @@ in place of the flags. Reload the page to pick up frontend changes.
 
 ## Support
 
-Bugs and ideas for the SDK or the `termix-plugin` CLI go in the [Termix repo](https://github.com/Termix-SSH/Termix/issues/new/choose). You need to be logged in to GitHub. Please be as detailed as possible, preferably in English.
+Bugs and ideas for the SDK or the `termix-plugin` CLI go in the [Termix repo](https://github.com/Termix-SSH/Termix/issues/new/choose). Add as much detail as you can, in English if possible.
 
 For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
 
@@ -58,4 +58,4 @@ For discussions and questions, join the [Discord](https://discord.gg/jVQGdvHDrf)
 
 ## License
 
-Distributed under the Apache License Version 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE) for more information.
+Apache License 2.0. See [LICENSE](https://github.com/Termix-SSH/Termix/blob/main/LICENSE).
