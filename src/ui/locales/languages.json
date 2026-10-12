@@ -1,0 +1,103 @@
+[
+  { "code": "af", "file": "af_ZA", "name": "Afrikaans", "label": "Afrikaans" },
+  { "code": "ar", "file": "ar_SA", "name": "Arabic", "label": "العربية" },
+  { "code": "bn", "file": "bn_BD", "name": "Bengali", "label": "বাংলা" },
+  { "code": "bg", "file": "bg_BG", "name": "Bulgarian", "label": "Български" },
+  { "code": "ca", "file": "ca_ES", "name": "Catalan", "label": "Català" },
+  {
+    "code": "zh-CN",
+    "file": "zh_CN",
+    "name": "Simplified Chinese",
+    "label": "中文 (简体)"
+  },
+  {
+    "code": "zh-TW",
+    "file": "zh_TW",
+    "name": "Traditional Chinese (Taiwan)",
+    "label": "中文 (繁體)"
+  },
+  { "code": "hr", "file": "hr_HR", "name": "Croatian", "label": "Hrvatski" },
+  { "code": "cs", "file": "cs_CZ", "name": "Czech", "label": "Čeština" },
+  { "code": "da", "file": "da_DK", "name": "Danish", "label": "Dansk" },
+  { "code": "nl", "file": "nl_NL", "name": "Dutch", "label": "Nederlands" },
+  { "code": "et", "file": "et_EE", "name": "Estonian", "label": "Eesti" },
+  { "code": "fi", "file": "fi_FI", "name": "Finnish", "label": "Suomi" },
+  { "code": "fr", "file": "fr_FR", "name": "French", "label": "Français" },
+  { "code": "de", "file": "de_DE", "name": "German", "label": "Deutsch" },
+  { "code": "el", "file": "el_GR", "name": "Greek", "label": "Ελληνικά" },
+  { "code": "he", "file": "he_IL", "name": "Hebrew", "label": "עברית" },
+  { "code": "hi", "file": "hi_IN", "name": "Hindi", "label": "हिन्दी" },
+  { "code": "hu", "file": "hu_HU", "name": "Hungarian", "label": "Magyar" },
+  {
+    "code": "id",
+    "file": "id_ID",
+    "name": "Indonesian",
+    "label": "Indonesia"
+  },
+  { "code": "it", "file": "it_IT", "name": "Italian", "label": "Italiano" },
+  { "code": "ja", "file": "ja_JP", "name": "Japanese", "label": "日本語" },
+  { "code": "ko", "file": "ko_KR", "name": "Korean", "label": "한국어" },
+  { "code": "lv", "file": "lv_LV", "name": "Latvian", "label": "Latviešu" },
+  {
+    "code": "lt",
+    "file": "lt_LT",
+    "name": "Lithuanian",
+    "label": "Lietuvių"
+  },
+  { "code": "ms", "file": "ms_MY", "name": "Malay", "label": "Bahasa Melayu" },
+  {
+    "code": "no",
+    "file": "no_NO",
+    "name": "Norwegian Bokmål",
+    "label": "Norsk"
+  },
+  { "code": "pl", "file": "pl_PL", "name": "Polish", "label": "Polski" },
+  {
+    "code": "pt-PT",
+    "file": "pt_PT",
+    "name": "European Portuguese",
+    "label": "Português (PT)"
+  },
+  {
+    "code": "pt-BR",
+    "file": "pt_BR",
+    "name": "Brazilian Portuguese",
+    "label": "Português (BR)"
+  },
+  { "code": "ro", "file": "ro_RO", "name": "Romanian", "label": "Română" },
+  { "code": "ru", "file": "ru_RU", "name": "Russian", "label": "Русский" },
+  {
+    "code": "sr",
+    "file": "sr_SP",
+    "name": "Serbian (Cyrillic script)",
+    "label": "Српски"
+  },
+  { "code": "sk", "file": "sk_SK", "name": "Slovak", "label": "Slovenčina" },
+  {
+    "code": "sl",
+    "file": "sl_SI",
+    "name": "Slovenian",
+    "label": "Slovenščina"
+  },
+  {
+    "code": "es-ES",
+    "file": "es_ES",
+    "name": "Spanish (Spain)",
+    "label": "Español"
+  },
+  { "code": "sv-SE", "file": "sv_SE", "name": "Swedish", "label": "Svenska" },
+  { "code": "th", "file": "th_TH", "name": "Thai", "label": "ไทย" },
+  { "code": "tr", "file": "tr_TR", "name": "Turkish", "label": "Türkçe" },
+  {
+    "code": "uk",
+    "file": "uk_UA",
+    "name": "Ukrainian",
+    "label": "Українська"
+  },
+  {
+    "code": "vi",
+    "file": "vi_VN",
+    "name": "Vietnamese",
+    "label": "Tiếng Việt"
+  }
+]

@@ -28,7 +28,11 @@ import {
   getPluginsDir,
   getUnpackedPluginsDir,
 } from "./paths.js";
-import { requireSignedPlugins, verifyPluginArtifact } from "./trust.js";
+import {
+  requireSignedPlugins,
+  verifyAnyTrusted,
+  type KeyTier,
+} from "./trust.js";
 import { moveWithRetry } from "./fs-retry.js";
 import {
   createPluginContext,
@@ -40,6 +44,7 @@ import {
 import { resolveRequirements } from "./service-registry.js";
 import { resolveSecretRequirements } from "./secret-registry.js";
 import { recordConflict } from "./conflicts.js";
+import { installHostModuleFallback } from "./host-modules.js";
 import { tablePrefix } from "@termix-ssh/plugin-sdk/db";
 
 export type PluginState =
@@ -76,6 +81,8 @@ export interface LoadedPlugin {
   artifact?: string;
   /** Key id that signed the artifact, when a trusted key signed it. */
   signedBy?: string;
+  /** Which set of keys that key belongs to. */
+  signedTier?: KeyTier;
 }
 
 export interface PluginLoaderOptions {
@@ -344,10 +351,11 @@ export class PluginLoader {
     const buffer = await fs.promises.readFile(file);
     const sigFile = `${file}.sig`;
     let signedBy: string | undefined;
+    let signedTier: KeyTier | undefined;
 
     if (fs.existsSync(sigFile)) {
       const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
-      const result = verifyPluginArtifact(
+      const result = verifyAnyTrusted(
         buffer,
         sha256,
         await fs.promises.readFile(sigFile, "utf8"),
@@ -356,6 +364,7 @@ export class PluginLoader {
         throw new Error(`signature check failed: ${result.reason}`);
       }
       signedBy = result.keyId;
+      signedTier = result.tier;
     } else if (requireSignedPlugins()) {
       throw new Error(
         `TERMIX_REQUIRE_SIGNED_PLUGINS is on and ${path.basename(file)} has no .sig next to it`,
@@ -401,7 +410,7 @@ export class PluginLoader {
         assertBundledUpdate(
           id,
           raw?.version,
-          signedBy,
+          signedTier === "official" ? signedBy : undefined,
           this.bundledVersions.get(id) ?? replaced?.manifest.version,
           this.pinned.get(id),
         );
@@ -426,6 +435,7 @@ export class PluginLoader {
         const plugin = await this.load(target, isUpdate ? "bundled" : "user");
         plugin.artifact = file;
         plugin.signedBy = signedBy;
+        plugin.signedTier = signedTier;
         if (replaced) {
           pluginLogger.info(
             `Plugin ${id} updated from ${replaced.manifest.version} to ${plugin.manifest.version}`,
@@ -567,6 +577,7 @@ export class PluginLoader {
     )}`;
 
     try {
+      installHostModuleFallback();
       const imported = (await import(entry)) as {
         activate?: PluginModule["activate"];
         deactivate?: PluginModule["deactivate"];
@@ -615,7 +626,8 @@ export class PluginLoader {
       // A release signed by a trusted key is official whether it shipped in
       // the image or was downloaded, so it may adopt its 2.8 tables too.
       const applied = await migratePlugin(plugin.id, plugin.dir, {
-        bundled: plugin.source === "bundled" || Boolean(plugin.signedBy),
+        bundled:
+          plugin.source === "bundled" || plugin.signedTier === "official",
       });
       // A new table may be where core data is waiting to move.
       if (applied.length > 0) {
@@ -847,7 +859,7 @@ export function assertBundledUpdate(
 ): void {
   if (!signedBy) {
     throw new Error(
-      `a bundled plugin already uses the id "${id}"; only a signed update can replace it`,
+      `a bundled plugin already uses the id "${id}"; only an official signed update can replace it`,
     );
   }
   if (typeof version !== "string" || !semver.valid(version)) {

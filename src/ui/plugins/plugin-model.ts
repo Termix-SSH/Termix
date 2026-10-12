@@ -24,7 +24,8 @@ import {
   normalizeGitHubRepo,
 } from "@/lib/issue-url";
 
-export type PluginStatus = "running" | "disabled" | "failed" | "blocked";
+export type PluginStatus =
+  "running" | "disabled" | "failed" | "blocked" | "server";
 
 /** One row of the Plugins tab: what is installed merged with the registry. */
 export interface PluginEntry {
@@ -61,14 +62,17 @@ export interface PluginEntry {
   inRegistry: boolean;
   contributes: Record<string, unknown> | null;
   publishedAt: string | null;
-  installCount: number | null;
-  installCountSource: string | null;
+  downloads: number | null;
   source: PluginSource;
   /** Installed from a file or folder with no registry signature behind it. */
   unverified: boolean;
+  /** The registry it is listed in or was installed from. */
+  registryId: string | null;
+  registryName: string | null;
 }
 
-export type PluginSource = "bundled" | "official" | "unverified";
+export type PluginSource =
+  "bundled" | "official" | "community" | "custom" | "unverified";
 
 export function isPrerelease(version: string | null | undefined): boolean {
   return Boolean(
@@ -96,10 +100,14 @@ export function pluginSource(summary: PluginSummary): PluginSource {
   if (summary.source === "bundled" || summary.tier === "bundled") {
     return "bundled";
   }
-  return summary.signedBy ? "official" : "unverified";
+  if (!summary.signedBy) return "unverified";
+  return summary.tier === "community" || summary.tier === "custom"
+    ? summary.tier
+    : "official";
 }
 
 export function pluginStatus(summary: PluginSummary): PluginStatus {
+  if (summary.runsOnServer) return "server";
   if (summary.state === "failed") return "failed";
   if (summary.state === "blocked") return "blocked";
   if (!summary.enabled) return "disabled";
@@ -136,7 +144,10 @@ export function mergePlugins(
       latestBeta: entry?.latestBeta ?? null,
       channel: summary.channel ?? entry?.channel ?? "stable",
       isBeta: isPrerelease(summary.version),
-      updateAvailable: entry?.updateAvailable ?? false,
+      // The server keeps its own copy up to date.
+      updateAvailable: summary.runsOnServer
+        ? false
+        : (entry?.updateAvailable ?? false),
       addedCapabilities: entry?.addedCapabilities ?? [],
       versions: entry?.versions ?? [],
       capabilities: summary.capabilities ?? [],
@@ -149,10 +160,11 @@ export function mergePlugins(
       inRegistry: Boolean(entry),
       contributes: (summary.contributes as Record<string, unknown>) ?? null,
       publishedAt: latestPublished(entry?.versions ?? []),
-      installCount: entry?.installCount ?? null,
-      installCountSource: entry?.installCountSource ?? null,
+      downloads: entry?.downloads ?? null,
       source: pluginSource(summary),
       unverified: pluginSource(summary) === "unverified",
+      registryId: entry?.registryId ?? summary.registryId ?? null,
+      registryName: entry?.registryName ?? null,
     });
   }
 
@@ -191,10 +203,11 @@ export function mergePlugins(
       inRegistry: true,
       contributes: null,
       publishedAt: latestPublished(entry.versions),
-      installCount: entry.installCount ?? null,
-      installCountSource: entry.installCountSource ?? null,
-      source: "official",
+      downloads: entry.downloads ?? null,
+      source: entry.tier ?? "official",
       unverified: false,
+      registryId: entry.registryId ?? "official",
+      registryName: entry.registryName ?? null,
     });
   }
 
@@ -230,10 +243,11 @@ export function uploadEntry(preview: PluginUploadPreview): PluginEntry {
     inRegistry: false,
     contributes: null,
     publishedAt: null,
-    installCount: null,
-    installCountSource: null,
+    downloads: null,
     source: "unverified",
     unverified: true,
+    registryId: null,
+    registryName: null,
   };
 }
 
@@ -252,7 +266,7 @@ export function sortPlugins(rows: PluginEntry[], key: SortKey): PluginEntry[] {
   if (key === "popular") {
     sorted.sort(
       (a, b) =>
-        (b.installCount ?? -1) - (a.installCount ?? -1) ||
+        (b.downloads ?? -1) - (a.downloads ?? -1) ||
         a.name.localeCompare(b.name),
     );
   } else if (key === "updated") {

@@ -35,7 +35,13 @@ function parseConflictingPort(stderr) {
  * stderr. Always returns a failure -- see the note above on why every exit
  * that reaches this point counts as one.
  */
+// Part of PRE_29_DATABASE_ERROR in src/backend/database/db/upgrade-guard.ts.
+const OLD_DATABASE_MARKER = "This database is from Termix 2.8 or older";
+
 function classifyBackendFailure(stderr = "") {
+  if (stderr.includes(OLD_DATABASE_MARKER)) {
+    return { reason: "old-database", port: null };
+  }
   if (stderr.includes("EADDRINUSE")) {
     return { reason: "port-in-use", port: parseConflictingPort(stderr) };
   }

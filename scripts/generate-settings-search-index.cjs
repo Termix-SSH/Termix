@@ -20,9 +20,30 @@ const OUT = path.join(
   "settings-search-index.ts",
 );
 
+function flatKeys(obj, prefix = "") {
+  return Object.entries(obj).flatMap(([key, value]) =>
+    typeof value === "object"
+      ? flatKeys(value, `${prefix}${key}.`)
+      : [`${prefix}${key}`],
+  );
+}
+
+const EN_KEYS = new Set(
+  flatKeys(require(path.join(ROOT, "src", "ui", "locales", "en.json"))),
+);
+
+// t("x", { count }) reads x_one or x_other, so index the plural key.
+function realKey(key) {
+  return EN_KEYS.has(key) || !EN_KEYS.has(`${key}_other`)
+    ? key
+    : `${key}_other`;
+}
+
 function keysIn(text) {
   return [
-    ...new Set([...text.matchAll(/\bt\(\s*"([\w.-]+)"/g)].map((m) => m[1])),
+    ...new Set(
+      [...text.matchAll(/\bt\(\s*"([\w.-]+)"/g)].map((m) => realKey(m[1])),
+    ),
   ];
 }
 
@@ -110,12 +131,18 @@ function adminSections() {
     "admin-ssl": keysIn(functionBody(settings, "AdminSSLSection")),
     "admin-api-keys": keysIn(read("AdminApiKeysSection.tsx")),
     "admin-audit-log": keysIn(read("AdminAuditLogSection.tsx")),
-    updates: keysIn(
-      fs.readFileSync(
-        path.join(ROOT, "src", "ui", "settings", "UpdatesSettings.tsx"),
-        "utf8",
+    updates: [
+      ...new Set(
+        ["UpdatesSettings.tsx", "DesktopUpdatesCard.tsx"].flatMap((file) =>
+          keysIn(
+            fs.readFileSync(
+              path.join(ROOT, "src", "ui", "settings", file),
+              "utf8",
+            ),
+          ),
+        ),
       ),
-    ),
+    ],
   };
 }
 

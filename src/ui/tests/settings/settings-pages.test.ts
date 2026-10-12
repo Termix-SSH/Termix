@@ -33,6 +33,16 @@ describe("settings pages", () => {
     expect(admin).toContain("security");
   });
 
+  it("shows Updates to everyone on desktop but only admins in the browser", () => {
+    const ids = (isAdmin: boolean, isElectron: boolean) =>
+      visibleSettingsPages(CORE_SETTINGS_PAGES, { isAdmin, isElectron }).map(
+        (page) => page.id,
+      );
+    expect(ids(false, true)).toContain("updates");
+    expect(ids(false, false)).not.toContain("updates");
+    expect(ids(true, false)).toContain("updates");
+  });
+
   it("finds a page by a label shown on it, not only its name", () => {
     const hits = searchSettingsPages(CORE_SETTINGS_PAGES, "theme", translate);
     expect(hits.some((hit) => hit.page.id === "appearance")).toBe(true);

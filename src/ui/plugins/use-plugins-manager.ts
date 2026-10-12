@@ -183,6 +183,7 @@ export function usePluginsManager() {
           const result = await installPlugin(plugin.id, {
             version: version === plugin.latestVersion ? undefined : version,
             capabilities,
+            registryId: plugin.registryId ?? undefined,
           });
           if (result.state === "failed" || result.state === "blocked") {
             toast.error(
@@ -585,6 +586,8 @@ export function usePluginsManager() {
     registryError,
     managedByServer: registry?.managedByServer ?? false,
     lastCheckedAt: registry?.registry.lastCheckedAt ?? null,
+    registries: registry?.registries ?? [],
+    reload: () => load(),
     busy,
     consent,
     setConsent,

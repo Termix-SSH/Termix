@@ -1,10 +1,19 @@
-import { LayoutTemplate, Monitor, Palette, Puzzle, Shield } from "lucide-react";
+import {
+  LayoutTemplate,
+  Monitor,
+  MonitorDown,
+  Palette,
+  Puzzle,
+  Shield,
+} from "lucide-react";
 import { CORE_ONBOARDING_STEPS } from "@/types/onboarding";
 import { PluginsStep } from "./steps/PluginsStep";
 import { PresetStep } from "./steps/PresetStep";
 import { AppearanceStep } from "./steps/AppearanceStep";
 import { SecurityStep } from "./steps/SecurityStep";
 import { DesktopSyncStep } from "./steps/DesktopSyncStep";
+import { DesktopUpdatesStep } from "./steps/DesktopUpdatesStep";
+import { desktopUpdates } from "@/lib/desktop-updates";
 import type { OnboardingStepDef } from "./onboarding-registry";
 
 /**
@@ -37,6 +46,17 @@ export const CORE_STEPS: OnboardingStepDef[] = [
     audience: "all",
     position: 20,
     isRelevant: (ctx) => ctx.isDesktop,
+  },
+  {
+    id: "desktop-updates",
+    version: CORE_ONBOARDING_STEPS["desktop-updates"],
+    titleKey: "desktopUpdates.onboardingTitle",
+    icon: MonitorDown,
+    Component: DesktopUpdatesStep,
+    audience: "all",
+    position: 25,
+    // App Store builds have no updater.
+    isRelevant: (ctx) => ctx.isDesktop && desktopUpdates() !== null,
   },
   {
     id: "preset",

@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import crypto from "node:crypto";
 import {
+  COMMUNITY_PLUGIN_KEYS,
+  TRUSTED_PLUGIN_KEYS,
+  isPluginPublicKey,
+  pluginKeyId,
   requireSignedPlugins,
+  setCustomPluginKeys,
+  verifyAnyTrusted,
   verifyPluginArtifact,
   type TrustedPluginKey,
 } from "../../plugins/trust.js";
@@ -94,6 +100,61 @@ describe("verifyPluginArtifact", () => {
     const { privateKey } = keyPair();
     const { sha256, signature } = signed(artifact, privateKey);
     expect(verifyPluginArtifact(artifact, sha256, signature).ok).toBe(false);
+  });
+});
+
+describe("key tiers", () => {
+  const artifact = Buffer.from("a plugin archive");
+
+  it("derives key ids the same way the built in keys were made", () => {
+    for (const key of [...TRUSTED_PLUGIN_KEYS, ...COMMUNITY_PLUGIN_KEYS]) {
+      expect(pluginKeyId(key.publicKey)).toBe(key.id);
+      expect(isPluginPublicKey(key.publicKey)).toBe(true);
+    }
+    expect(isPluginPublicKey("bm9wZQ==")).toBe(false);
+    expect(isPluginPublicKey(42)).toBe(false);
+  });
+
+  it("keeps the community key apart from the official ones", () => {
+    const official = new Set(TRUSTED_PLUGIN_KEYS.map((key) => key.id));
+    for (const key of COMMUNITY_PLUGIN_KEYS) {
+      expect(official.has(key.id)).toBe(false);
+    }
+  });
+
+  it("verifies a custom key only while it is set, as the custom tier", () => {
+    const { key, privateKey } = keyPair();
+    const { sha256, signature } = signed(artifact, privateKey);
+    expect(verifyAnyTrusted(artifact, sha256, signature).ok).toBe(false);
+
+    setCustomPluginKeys([key]);
+    expect(verifyAnyTrusted(artifact, sha256, signature)).toEqual({
+      ok: true,
+      keyId: "test",
+      tier: "custom",
+    });
+
+    setCustomPluginKeys([]);
+    expect(verifyAnyTrusted(artifact, sha256, signature).ok).toBe(false);
+  });
+
+  it("drops a custom key that is not a valid public key", () => {
+    setCustomPluginKeys([{ id: "bad", publicKey: "bm9wZQ==", addedIn: "x" }]);
+    const { privateKey } = keyPair();
+    const { sha256, signature } = signed(artifact, privateKey);
+    expect(verifyAnyTrusted(artifact, sha256, signature).ok).toBe(false);
+    setCustomPluginKeys([]);
+  });
+
+  it("stops at a sha256 mismatch", () => {
+    const { key, privateKey } = keyPair();
+    setCustomPluginKeys([key]);
+    const { signature } = signed(artifact, privateKey);
+    expect(verifyAnyTrusted(artifact, "0".repeat(64), signature)).toEqual({
+      ok: false,
+      reason: "sha256 does not match the file",
+    });
+    setCustomPluginKeys([]);
   });
 });
 

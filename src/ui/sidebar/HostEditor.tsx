@@ -1094,10 +1094,6 @@ export function HostEditor({
                               ? ""
                               : form.password
                           }
-                          onFocus={() => {
-                            if (form.password === "existing_password")
-                              setField("password", "");
-                          }}
                           onChange={(e) => setField("password", e.target.value)}
                         />
                         <PluginComponent
@@ -1211,10 +1207,6 @@ export function HostEditor({
                                 ? ""
                                 : form.keyPassword
                             }
-                            onFocus={() => {
-                              if (form.keyPassword === "existing_key_password")
-                                setField("keyPassword", "");
-                            }}
                             onChange={(e) =>
                               setField("keyPassword", e.target.value)
                             }
@@ -1236,10 +1228,6 @@ export function HostEditor({
                                 ? ""
                                 : form.password
                             }
-                            onFocus={() => {
-                              if (form.password === "existing_password")
-                                setField("password", "");
-                            }}
                             onChange={(e) =>
                               setField("password", e.target.value)
                             }
@@ -1377,10 +1365,6 @@ export function HostEditor({
                                   ? ""
                                   : form.password
                               }
-                              onFocus={() => {
-                                if (form.password === "existing_password")
-                                  setField("password", "");
-                              }}
                               onChange={(e) =>
                                 setField("password", e.target.value)
                               }
@@ -1506,10 +1490,6 @@ export function HostEditor({
                             ? ""
                             : form.sudoPassword
                         }
-                        onFocus={() => {
-                          if (form.sudoPassword === "existing_sudo_password")
-                            setField("sudoPassword", "");
-                        }}
                         onChange={(e) =>
                           setField("sudoPassword", e.target.value)
                         }

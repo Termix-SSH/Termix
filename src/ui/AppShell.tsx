@@ -42,6 +42,7 @@ import {
   type EditingWidth,
 } from "@/components/surface/surface-scope";
 import { OnboardingHost } from "@/onboarding/OnboardingHost";
+import { DesktopUpdateToasts } from "@/shell/DesktopUpdateToasts";
 import { SplitView, type SplitViewActions } from "@/shell/split/SplitView";
 import { SplitDropOverlay } from "@/shell/split/SplitDropOverlay";
 import {
@@ -3184,6 +3185,7 @@ export function AppShell({
         </Suspense>
       )}
       <OnboardingHost />
+      {isElectron() && <DesktopUpdateToasts />}
     </ServerStatusProvider>
   );
 }

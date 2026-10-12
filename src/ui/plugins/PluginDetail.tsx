@@ -11,6 +11,7 @@ import {
   Lightbulb,
   Pin,
   RotateCcw,
+  Server,
   Settings,
   Trash2,
   TriangleAlert,
@@ -30,8 +31,9 @@ import { getPluginData, type PluginDataSummary } from "@/api/plugins-api";
 import {
   BetaBadge,
   CapabilityRow,
-  InstallCountFact,
+  DownloadCount,
   PluginIconBox,
+  SourceBadge,
   UnverifiedBadge,
 } from "./plugin-bits";
 import {
@@ -107,6 +109,10 @@ export function PluginDetail({
           </span>
           <Facts className="text-[11px] text-muted-foreground/70">
             {plugin.unverified && <UnverifiedBadge />}
+            <SourceBadge
+              source={plugin.source}
+              registryName={plugin.registryName}
+            />
             {plugin.isBeta && <BetaBadge />}
             {plugin.author && <span>{plugin.author}</span>}
             {plugin.version ? (
@@ -122,10 +128,7 @@ export function PluginDetail({
                 })}
               </span>
             )}
-            <InstallCountFact
-              count={plugin.installCount}
-              source={plugin.installCountSource}
-            />
+            <DownloadCount count={plugin.downloads} />
           </Facts>
         </div>
         <div className="flex shrink-0 flex-col gap-1.5">
@@ -222,6 +225,15 @@ export function PluginDetail({
               {plugin.lastError}
             </span>
           </div>
+        </div>
+      )}
+
+      {plugin.status === "server" && (
+        <div className="flex items-start gap-2 border border-border bg-muted/30 px-3 py-2.5">
+          <Server className="mt-px size-3.5 shrink-0 text-muted-foreground" />
+          <span className="text-[11px] leading-snug text-muted-foreground">
+            {t("plugins.manager.runsOnServerHint")}
+          </span>
         </div>
       )}
 

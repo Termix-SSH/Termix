@@ -34,7 +34,9 @@ WORKDIR /app
 
 COPY . .
 
-RUN npm run build:backend
+# Bundled plugin downloads show in the plugin store, so keep them between builds.
+RUN --mount=type=cache,target=/app/node_modules/.cache/termix-bundled-plugins \
+    npm run build:backend
 
 # Stage 4: Download OPKSSH binary for the target platform so the image works offline
 FROM node:24-slim AS opkssh-downloader

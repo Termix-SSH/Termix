@@ -28,8 +28,7 @@ const [plugin] = mergePlugins(
       pinnedVersion: null,
       autoUpdate: false,
       bundled: false,
-      installCount: null,
-      installCountSource: null,
+      downloads: null,
     },
   ],
 );

@@ -17,14 +17,27 @@ vi.mock("../../plugins/trust.js", async (importOriginal) => {
     await importOriginal<typeof import("../../plugins/trust.js")>();
   return {
     ...actual,
-    verifyPluginArtifact: (buffer: Buffer, sha256: string, signature: string) =>
-      actual.verifyPluginArtifact(buffer, sha256, signature, [
-        testKey.value as never,
-      ]),
+    // The built in official keys are swapped for the test key. Keys a
+    // caller passes for another registry are used as they are.
+    verifyPluginArtifact: (
+      buffer: Buffer,
+      sha256: string,
+      signature: string,
+      keys?: readonly unknown[],
+    ) =>
+      actual.verifyPluginArtifact(
+        buffer,
+        sha256,
+        signature,
+        keys && keys !== actual.TRUSTED_PLUGIN_KEYS
+          ? (keys as never)
+          : [testKey.value as never],
+      ),
   };
 });
 
 import {
+  communitySource,
   downloadRelease,
   fetchRegistryIndex,
   fetchRegistryStats,
@@ -35,6 +48,7 @@ import {
   parseRegistryIndex,
   parseRegistryStats,
   resetRegistryCache,
+  type RegistrySource,
   type RegistryVersion,
 } from "../../plugins/registry-index.js";
 
@@ -89,6 +103,25 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.DATA_DIR;
   fs.rmSync(dataDir, { recursive: true, force: true });
+});
+
+describe("parseRegistryIndex publicKey", () => {
+  const key = publicKey
+    .export({ format: "der", type: "spki" })
+    .subarray(12)
+    .toString("base64");
+
+  it("keeps a valid key and drops anything else", () => {
+    expect(parseRegistryIndex({ publicKey: key, plugins: [] }).publicKey).toBe(
+      key,
+    );
+    expect(
+      parseRegistryIndex({ publicKey: "not a key", plugins: [] }).publicKey,
+    ).toBeUndefined();
+    expect(
+      parseRegistryIndex({ publicKey: 42, plugins: [] }).publicKey,
+    ).toBeUndefined();
+  });
 });
 
 describe("parseRegistryIndex", () => {
@@ -289,7 +322,29 @@ describe("fetchRegistryIndex", () => {
     fetchMock.mockResolvedValueOnce(response(body));
     const first = await fetchRegistryIndex();
     fetchMock.mockResolvedValueOnce(response("down", 503));
-    expect(await fetchRegistryIndex({ force: true })).toBe(first);
+    expect(await fetchRegistryIndex(undefined, { force: true })).toBe(first);
+  });
+
+  it("caches each registry on its own", async () => {
+    const other: RegistrySource = {
+      id: "mine",
+      name: "Mine",
+      url: "https://example.com/mine/index.json",
+      tier: "custom",
+      keys: [],
+    };
+    fetchMock
+      .mockResolvedValueOnce(response(body))
+      .mockResolvedValueOnce(
+        response(JSON.stringify({ registry: "mine", plugins: [] })),
+      );
+    const official = await fetchRegistryIndex();
+    const mine = await fetchRegistryIndex(other);
+    expect(official.plugins).toHaveLength(1);
+    expect(mine.plugins).toHaveLength(0);
+    expect(fetchMock.mock.calls[1][0]).toBe(other.url);
+    expect(await fetchRegistryIndex(other)).toBe(mine);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("throws when there is nothing cached", async () => {
@@ -384,6 +439,38 @@ describe("downloadRelease", () => {
     ).rejects.toThrow(/sha256/);
   });
 
+  it("checks against the keys of the registry it came from", async () => {
+    const signed = sign(artifact);
+    const own = crypto.generateKeyPairSync("ed25519");
+    const ownKey = {
+      id: "own",
+      publicKey: own.publicKey
+        .export({ format: "der", type: "spki" })
+        .subarray(12)
+        .toString("base64"),
+      addedIn: "admin",
+    };
+    fetchMock.mockResolvedValueOnce(response(artifact));
+    await expect(
+      downloadRelease("docker", version({ ...signed, size: artifact.length }), [
+        ownKey,
+      ]),
+    ).rejects.toThrow(/trusted key/);
+
+    const digest = crypto.createHash("sha256").update(artifact).digest();
+    fetchMock.mockResolvedValueOnce(response(artifact));
+    const result = await downloadRelease(
+      "docker",
+      version({
+        sha256: digest.toString("hex"),
+        signature: crypto.sign(null, digest, own.privateKey).toString("base64"),
+        size: artifact.length,
+      }),
+      [ownKey],
+    );
+    expect(fs.readFileSync(result.file)).toEqual(artifact);
+  });
+
   it("refuses a release built for another plugin API", async () => {
     await expect(
       downloadRelease("docker", version({ api: "2" })),
@@ -407,19 +494,34 @@ describe("registry stats", () => {
     );
   });
 
+  it("has a community stats file and none for custom registries", () => {
+    expect(getStatsUrl(communitySource())).toBe(
+      "https://raw.githubusercontent.com/Termix-SSH/Termix-Registry/main/community/stats.json",
+    );
+    expect(
+      getStatsUrl({
+        id: "mine",
+        name: "Mine",
+        url: "https://example.com/index.json",
+        tier: "custom",
+        keys: [],
+      }),
+    ).toBeNull();
+  });
+
   it("keeps valid counts and drops the rest", () => {
     const stats = parseRegistryStats({
       plugins: {
-        docker: { downloads: 120, activeInstalls: 40 },
+        docker: { downloads: 120 },
         tunnels: { downloads: 7 },
         "../bad": { downloads: 1 },
-        broken: { downloads: -3, activeInstalls: "many" },
+        broken: { downloads: -3 },
       },
     });
     expect(Object.fromEntries(stats.plugins)).toEqual({
-      docker: { downloads: 120, activeInstalls: 40 },
-      tunnels: { downloads: 7, activeInstalls: null },
-      broken: { downloads: 0, activeInstalls: null },
+      docker: 120,
+      tunnels: 7,
+      broken: 0,
     });
   });
 
@@ -428,9 +530,6 @@ describe("registry stats", () => {
       response(JSON.stringify({ plugins: { docker: { downloads: 3 } } })),
     );
     const stats = await fetchRegistryStats();
-    expect(stats?.plugins.get("docker")).toEqual({
-      downloads: 3,
-      activeInstalls: null,
-    });
+    expect(stats?.plugins.get("docker")).toBe(3);
   });
 });

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.6
+
+### Added
+
+- `PLUGIN-GUIDE.md`, a guide to building, testing and releasing a plugin, written so AI coding tools can read it too
+
 ## 1.0.5
 
 ### Fixed

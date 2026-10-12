@@ -91,11 +91,11 @@ export function parseSSHConfig(content: string): SSHConfigHost[] {
     const line = rawLine.trim();
     if (!line || line.startsWith("#")) continue;
 
-    const spaceIdx = line.indexOf(" ");
-    if (spaceIdx === -1) continue;
+    const match = /^(\S+?)(?:\s*=\s*|\s+)(.+)$/.exec(line);
+    if (!match) continue;
 
-    const key = line.slice(0, spaceIdx).toLowerCase();
-    const value = line.slice(spaceIdx + 1).trim();
+    const key = match[1].toLowerCase();
+    const value = match[2];
 
     if (key === "host") {
       if (current && current.hostname) results.push(current);

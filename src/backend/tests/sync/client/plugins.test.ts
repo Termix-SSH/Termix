@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   install: vi.fn(),
   fetch: vi.fn(),
   loadBundled: vi.fn(),
+  syncedKeys: vi.fn(async (_keys: unknown[]) => {}),
 }));
 
 vi.mock("../../../utils/logger.js", () => ({
@@ -28,6 +29,9 @@ vi.mock("../../../database/repositories/factory.js", () => ({
     }),
   }),
   createCurrentPluginPermissionGrantRepository: () => ({}),
+}));
+vi.mock("../../../plugins/registries.js", () => ({
+  setSyncedRegistryKeys: state.syncedKeys,
 }));
 vi.mock("../../../sync/client/http.js", () => ({
   remoteFetch: state.fetch,
@@ -100,6 +104,19 @@ afterEach(() => {
 });
 
 describe("mirrorPlugins", () => {
+  it("trusts the server's custom registry keys before downloading", async () => {
+    vi.mocked(remoteJson).mockResolvedValue({
+      plugins: [],
+      registryKeys: ["a-key"],
+    });
+    await mirrorPlugins({} as never);
+    expect(state.syncedKeys).toHaveBeenCalledWith(["a-key"]);
+
+    vi.mocked(remoteJson).mockResolvedValue({ plugins: [] });
+    await mirrorPlugins({} as never);
+    expect(state.syncedKeys).toHaveBeenLastCalledWith([]);
+  });
+
   it("keeps the installed copy when the download fails", async () => {
     serverHas("1.1.0");
     state.fetch.mockResolvedValue({ ok: false, status: 502 });

@@ -79,7 +79,7 @@ import { useSidebarDragState } from "./hooks/useSidebarDragState";
 
 export function SidebarTree({
   children,
-  onOpenTab,
+  onOpenTab: openTab,
   onEditHost,
   onShareHost,
   query: externalQuery = "",
@@ -125,6 +125,16 @@ export function SidebarTree({
   rowFields?: HostRowFields;
 }) {
   const { t } = useTranslation();
+  const rootRef = useRef<HTMLDivElement>(null);
+  // Focus left on the clicked row sends the next keys to the host speed
+  // search instead of the session that just opened.
+  const onOpenTab: typeof openTab = (...args) => {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && rootRef.current?.contains(active)) {
+      active.blur();
+    }
+    openTab(...args);
+  };
   const hostSettingPlugins = usePluginHostSections();
   const hostSwitchPlugins = hostSettingPlugins.filter(
     (plugin) => !!plugin.contributes?.settings?.host?.enableKey,
@@ -939,6 +949,7 @@ export function SidebarTree({
 
   return (
     <div
+      ref={rootRef}
       className="relative flex flex-col flex-1 min-h-0"
       onKeyDown={(event) => {
         if (selectionMode || arrangeMode) return;
@@ -1413,7 +1424,6 @@ export function SidebarTree({
                 setConfirmDialog({
                   message: t("hosts.deleteHostsConfirm", {
                     count: selectedHostIds.size,
-                    plural: selectedHostIds.size !== 1 ? "s" : "",
                   }),
                   onConfirm: async () => {
                     const ids = Array.from(selectedHostIds);

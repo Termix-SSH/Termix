@@ -1,11 +1,13 @@
 /**
- * The official plugin registry: fetching its index and downloading a release.
+ * Plugin registries: fetching an index and downloading a release.
  *
- * The index is a plain JSON file in Termix-SSH/Termix-Registry. Nothing in it
- * is trusted on its own: every download is checked against the sha256 and
- * Ed25519 signature listed for it, and the signature must come from a key
- * pinned in trust.ts. A tampered index can at most point at a file that then
- * fails the check.
+ * An index is a plain JSON file. Official and community live in
+ * Termix-SSH/Termix-Registry, custom ones anywhere an admin points to.
+ * Nothing in an index is trusted on its own: every download is checked
+ * against the sha256 and Ed25519 signature listed for it, and the signature
+ * must come from that registry's keys (built in for official and community,
+ * pinned when an admin added a custom one). A tampered index can at most
+ * point at a file that then fails the check.
  */
 
 import crypto from "node:crypto";
@@ -20,13 +22,33 @@ import {
 } from "@termix-ssh/plugin-sdk/manifest";
 import { safeOutboundFetch } from "../utils/safe-outbound-fetch.js";
 import { pluginLogger } from "../utils/logger.js";
-import { verifyPluginArtifact } from "./trust.js";
+import {
+  COMMUNITY_PLUGIN_KEYS,
+  TRUSTED_PLUGIN_KEYS,
+  isPluginPublicKey,
+  verifyPluginArtifact,
+  type TrustedPluginKey,
+} from "./trust.js";
 import { readArtifactManifest, sameCapabilities } from "./artifact-manifest.js";
 import { getPluginsDir } from "./paths.js";
 
 export const OFFICIAL_REGISTRY_ID = "official";
 export const OFFICIAL_REGISTRY_URL =
   "https://raw.githubusercontent.com/Termix-SSH/Termix-Registry/main/official/index.json";
+export const COMMUNITY_REGISTRY_ID = "community";
+export const COMMUNITY_REGISTRY_URL =
+  "https://raw.githubusercontent.com/Termix-SSH/Termix-Registry/main/community/index.json";
+
+export type RegistryTier = "official" | "community" | "custom";
+
+/** Where an index lives and which keys may sign what it lists. */
+export interface RegistrySource {
+  id: string;
+  name: string;
+  url: string;
+  tier: RegistryTier;
+  keys: readonly TrustedPluginKey[];
+}
 
 const CACHE_MS = 15 * 60_000;
 const MAX_INDEX_BYTES = 5 * 1024 * 1024;
@@ -83,11 +105,33 @@ export interface RegistryIndex {
   registry: string;
   name: string;
   updatedAt?: string;
+  /** The key the registry signs with, base64. Only read when adding one. */
+  publicKey?: string;
   plugins: RegistryPlugin[];
 }
 
 export function getRegistryUrl(): string {
   return process.env.TERMIX_PLUGIN_REGISTRY_URL || OFFICIAL_REGISTRY_URL;
+}
+
+export function officialSource(): RegistrySource {
+  return {
+    id: OFFICIAL_REGISTRY_ID,
+    name: "Termix Official Plugins",
+    url: getRegistryUrl(),
+    tier: "official",
+    keys: TRUSTED_PLUGIN_KEYS,
+  };
+}
+
+export function communitySource(): RegistrySource {
+  return {
+    id: COMMUNITY_REGISTRY_ID,
+    name: "Termix Community Plugins",
+    url: process.env.TERMIX_COMMUNITY_REGISTRY_URL || COMMUNITY_REGISTRY_URL,
+    tier: "community",
+    keys: COMMUNITY_PLUGIN_KEYS,
+  };
 }
 
 function asString(value: unknown): string | undefined {
@@ -174,6 +218,7 @@ export function parseRegistryIndex(raw: unknown): RegistryIndex {
     registry: asString(index.registry) ?? OFFICIAL_REGISTRY_ID,
     name: asString(index.name) ?? "",
     updatedAt: asString(index.updatedAt),
+    publicKey: isPluginPublicKey(index.publicKey) ? index.publicKey : undefined,
     plugins,
   };
 }
@@ -228,8 +273,18 @@ async function readLimited(response: Response, limit: number): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-let cache: { index: RegistryIndex; at: number; hash: string } | null = null;
-let inflight: Promise<RegistryIndex> | null = null;
+interface CacheEntry {
+  index: RegistryIndex;
+  at: number;
+}
+
+const caches = new Map<string, CacheEntry>();
+const inflight = new Map<string, Promise<RegistryIndex>>();
+const lastErrors = new Map<string, string>();
+
+function cacheKey(source: RegistrySource): string {
+  return `${source.id} ${source.url}`;
+}
 
 export interface RegistryStatus {
   url: string;
@@ -237,63 +292,83 @@ export interface RegistryStatus {
   error: string | null;
 }
 
-let lastError: string | null = null;
-
-export function getRegistryStatus(): RegistryStatus {
+export function getRegistryStatus(
+  source: RegistrySource = officialSource(),
+): RegistryStatus {
+  const cache = caches.get(cacheKey(source));
   return {
-    url: getRegistryUrl(),
+    url: source.url,
     lastCheckedAt: cache ? new Date(cache.at).toISOString() : null,
-    error: lastError,
+    error: lastErrors.get(cacheKey(source)) ?? null,
   };
 }
 
+/** Fetches and parses an index with no caching, for previewing a new one. */
+export async function fetchIndexAt(url: string): Promise<RegistryIndex> {
+  const response = await fetchFollowing(url);
+  const body = await readLimited(response, MAX_INDEX_BYTES);
+  let raw: unknown;
+  try {
+    raw = JSON.parse(body.toString("utf8"));
+  } catch {
+    throw new Error("the registry index is not valid JSON");
+  }
+  return parseRegistryIndex(raw);
+}
+
 export async function fetchRegistryIndex(
+  source: RegistrySource = officialSource(),
   options: { force?: boolean } = {},
 ): Promise<RegistryIndex> {
+  const key = cacheKey(source);
+  const cache = caches.get(key);
   if (!options.force && cache && Date.now() - cache.at < CACHE_MS) {
     return cache.index;
   }
-  if (inflight) return inflight;
+  const running = inflight.get(key);
+  if (running) return running;
 
-  inflight = (async () => {
+  const request = (async () => {
     try {
-      const response = await fetchFollowing(getRegistryUrl());
-      const body = await readLimited(response, MAX_INDEX_BYTES);
-      const index = parseRegistryIndex(JSON.parse(body.toString("utf8")));
-      cache = {
-        index,
-        at: Date.now(),
-        hash: crypto.createHash("sha256").update(body).digest("hex"),
-      };
-      lastError = null;
+      const index = await fetchIndexAt(source.url);
+      caches.set(key, { index, at: Date.now() });
+      lastErrors.delete(key);
       return index;
     } catch (error) {
-      lastError = error instanceof Error ? error.message : String(error);
+      const message = error instanceof Error ? error.message : String(error);
+      lastErrors.set(key, message);
       // A stale index beats none when the registry is briefly unreachable.
-      if (cache) {
-        pluginLogger.warn(`Plugin registry check failed: ${lastError}`, {
-          operation: "plugin_registry",
-        });
-        return cache.index;
+      const stale = caches.get(key);
+      if (stale) {
+        pluginLogger.warn(
+          `Plugin registry ${source.id} check failed: ${message}`,
+          { operation: "plugin_registry" },
+        );
+        return stale.index;
       }
       throw error;
     } finally {
-      inflight = null;
+      inflight.delete(key);
     }
   })();
-  return inflight;
+  inflight.set(key, request);
+  return request;
 }
 
 export interface RegistryStats {
-  plugins: Map<string, { downloads: number; activeInstalls: number | null }>;
+  /** Downloads per plugin id. */
+  plugins: Map<string, number>;
 }
 
 /** stats.json sits next to index.json and is rebuilt daily by the registry. */
-export function getStatsUrl(): string | null {
-  if (process.env.TERMIX_PLUGIN_STATS_URL) {
+export function getStatsUrl(
+  source: RegistrySource = officialSource(),
+): string | null {
+  if (source.tier === "custom") return null;
+  if (source.tier === "official" && process.env.TERMIX_PLUGIN_STATS_URL) {
     return process.env.TERMIX_PLUGIN_STATS_URL;
   }
-  const url = getRegistryUrl();
+  const url = source.url;
   return /\/index\.json$/.test(url)
     ? url.replace(/\/index\.json$/, "/stats.json")
     : null;
@@ -306,27 +381,22 @@ function asCount(value: unknown): number | null {
 }
 
 export function parseRegistryStats(raw: unknown): RegistryStats {
-  const plugins = new Map<
-    string,
-    { downloads: number; activeInstalls: number | null }
-  >();
+  const plugins = new Map<string, number>();
   const entries = (raw as { plugins?: unknown } | null)?.plugins;
   if (!entries || typeof entries !== "object" || Array.isArray(entries)) {
     return { plugins };
   }
   for (const [id, value] of Object.entries(entries)) {
     if (!ID_PATTERN.test(id) || !value || typeof value !== "object") continue;
-    const entry = value as Record<string, unknown>;
-    plugins.set(id, {
-      downloads: asCount(entry.downloads) ?? 0,
-      activeInstalls: asCount(entry.activeInstalls),
-    });
+    plugins.set(id, asCount((value as Record<string, unknown>).downloads) ?? 0);
   }
   return { plugins };
 }
 
-export async function fetchRegistryStats(): Promise<RegistryStats | null> {
-  const url = getStatsUrl();
+export async function fetchRegistryStats(
+  source: RegistrySource = officialSource(),
+): Promise<RegistryStats | null> {
+  const url = getStatsUrl(source);
   if (!url) return null;
   const response = await fetchFollowing(url);
   const body = await readLimited(response, MAX_INDEX_BYTES);
@@ -335,9 +405,9 @@ export async function fetchRegistryStats(): Promise<RegistryStats | null> {
 
 /** Test seam. */
 export function resetRegistryCache(): void {
-  cache = null;
-  inflight = null;
-  lastError = null;
+  caches.clear();
+  inflight.clear();
+  lastErrors.clear();
 }
 
 /** Every release a channel may install, newest first. */
@@ -414,6 +484,7 @@ export function assertArtifactMatches(
 export async function downloadRelease(
   pluginId: string,
   release: RegistryVersion,
+  keys: readonly TrustedPluginKey[] = TRUSTED_PLUGIN_KEYS,
 ): Promise<{ file: string; signatureFile: string }> {
   if (!isApiCompatible(release.api)) {
     throw new Error(
@@ -433,6 +504,7 @@ export async function downloadRelease(
     buffer,
     release.sha256,
     release.signature,
+    keys,
   );
   if (verified.ok === false) {
     throw new Error(`${pluginId} ${release.version}: ${verified.reason}`);

@@ -38,6 +38,8 @@ export interface SettingsPage {
   icon: LucideIcon;
   /** Only for admins. */
   admin?: boolean;
+  /** Also shown to non-admins in the desktop app. */
+  desktopToo?: boolean;
   /** Left out of the desktop app. */
   browserOnly?: boolean;
   /** The profile section this page shows. */
@@ -135,6 +137,7 @@ export const CORE_SETTINGS_PAGES: SettingsPage[] = [
     labelKey: "settings.updates.title",
     icon: FlaskConical,
     admin: true,
+    desktopToo: true,
   }),
   core({
     id: "admin-users",
@@ -225,7 +228,9 @@ export function visibleSettingsPages(
   { isAdmin, isElectron }: { isAdmin: boolean; isElectron: boolean },
 ): SettingsPage[] {
   return pages.filter(
-    (page) => (!page.admin || isAdmin) && (!page.browserOnly || !isElectron),
+    (page) =>
+      (!page.admin || isAdmin || (page.desktopToo && isElectron)) &&
+      (!page.browserOnly || !isElectron),
   );
 }
 

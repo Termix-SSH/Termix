@@ -88,6 +88,32 @@ export function UnverifiedBadge() {
   );
 }
 
+/** Marks a plugin from the community registry or a custom one. */
+export function SourceBadge({
+  source,
+  registryName,
+}: {
+  source: string;
+  registryName?: string | null;
+}) {
+  const { t } = useTranslation();
+  if (source !== "community" && source !== "custom") return null;
+  const label =
+    source === "community"
+      ? t("plugins.manager.registries.communityBadge")
+      : (registryName ?? t("plugins.manager.registries.customBadge"));
+  return (
+    <span
+      className="max-w-32 shrink-0 truncate border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
+      title={t(`plugins.manager.registries.${source}BadgeHint`, {
+        name: label,
+      })}
+    >
+      {label}
+    </span>
+  );
+}
+
 export function BetaBadge() {
   const { t } = useTranslation();
   return (
@@ -100,31 +126,16 @@ export function BetaBadge() {
   );
 }
 
-/** Active installs when the registry has them, release downloads otherwise. */
-export function InstallCountFact({
-  count,
-  source,
-}: {
-  count: number | null;
-  source: string | null;
-}) {
+/** How often the plugin's release files were downloaded. */
+export function DownloadCount({ count }: { count: number | null }) {
   const { t } = useTranslation();
   if (count === null || count <= 0) return null;
-  const active = source === "aggregate-telemetry";
   return (
-    <span
-      title={
-        active
-          ? t("plugins.manager.count.activeHint")
-          : t("plugins.manager.count.downloadsHint")
-      }
-    >
-      {t(
-        active
-          ? "plugins.manager.count.active"
-          : "plugins.manager.count.downloads",
-        { count, formatted: formatCount(count) },
-      )}
+    <span title={t("plugins.manager.count.downloadsHint")}>
+      {t("plugins.manager.count.downloads", {
+        count,
+        formatted: formatCount(count),
+      })}
     </span>
   );
 }

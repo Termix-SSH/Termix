@@ -38,8 +38,12 @@ describe("onboarding seen map", () => {
   });
 
   it("legacy seen covers every core step at launch", () => {
+    // Steps added later stay out so upgraded users still see them.
+    const addedLater = ["desktop-updates"];
     expect(Object.keys(LEGACY_SEEN).sort()).toEqual(
-      Object.keys(CORE_ONBOARDING_STEPS).sort(),
+      Object.keys(CORE_ONBOARDING_STEPS)
+        .filter((key) => !addedLater.includes(key))
+        .sort(),
     );
   });
 });

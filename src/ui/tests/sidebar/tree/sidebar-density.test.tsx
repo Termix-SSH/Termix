@@ -23,7 +23,9 @@ vi.mock("@/sidebar/tree/FolderItem/FolderItem", () => ({
   folderHostCount: () => 1,
 }));
 vi.mock("@/sidebar/tree/HostItem/HostItem", () => ({
-  HostItem: () => <div>Host</div>,
+  HostItem: ({ onOpenTab }: { onOpenTab: (type: string) => void }) => (
+    <button onClick={() => onOpenTab("terminal")}>Host</button>
+  ),
 }));
 
 const observers: Array<{
@@ -161,13 +163,45 @@ it("finds a host inside a closed folder and opens the keyboard-selected match", 
   const search = view.getByLabelText("hosts.speedSearch");
   expect(document.activeElement).toBe(search);
   expect(view.container.querySelectorAll("[data-index]")).toHaveLength(3);
-  fireEvent.keyDown(search, { key: "ArrowDown" });
-  fireEvent.keyDown(search, { key: "Enter" });
-  expect(onOpenTab).toHaveBeenCalledWith(beta, "terminal", {
-    forceNewTab: false,
-  });
   fireEvent.keyDown(search, { key: "Escape" });
   expect(view.queryByLabelText("hosts.speedSearch")).toBeNull();
   expect(view.container.querySelectorAll("[data-index]")).toHaveLength(1);
   expect(document.activeElement).toBe(list);
+
+  fireEvent.keyDown(list, { key: "a" });
+  const again = view.getByLabelText("hosts.speedSearch");
+  fireEvent.keyDown(again, { key: "ArrowDown" });
+  fireEvent.keyDown(again, { key: "Enter" });
+  expect(onOpenTab).toHaveBeenCalledWith(beta, "terminal", {
+    forceNewTab: false,
+  });
+  // The opened session takes over the keyboard.
+  expect(view.queryByLabelText("hosts.speedSearch")).toBeNull();
+  expect(view.container.contains(document.activeElement)).toBe(false);
+});
+
+it("lets go of focus when a host opens, so typing reaches the session", () => {
+  const host = {
+    id: "1",
+    name: "alpha",
+    ip: "192.0.2.1",
+    username: "u",
+  } as Host;
+  const onOpenTab = vi.fn();
+  const view = render(
+    <SidebarTree
+      children={[{ name: "group", path: "group", children: [host] }]}
+      onOpenTab={onOpenTab}
+      onEditHost={vi.fn()}
+      selectionMode={false}
+      onToggleSelectionMode={vi.fn()}
+    />,
+  );
+  const row = view.getByText("Host");
+  row.focus();
+  fireEvent.click(row);
+  expect(onOpenTab).toHaveBeenCalledWith(host, "terminal", undefined);
+  expect(document.activeElement).not.toBe(row);
+  fireEvent.keyDown(document.body, { key: "a" });
+  expect(view.queryByLabelText("hosts.speedSearch")).toBeNull();
 });

@@ -542,7 +542,6 @@ async function initializeCompleteDatabase(): Promise<void> {
         plugin_id TEXT NOT NULL,
         registry_id TEXT NOT NULL,
         count INTEGER NOT NULL DEFAULT 0,
-        source TEXT NOT NULL DEFAULT 'aggregate-telemetry',
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (plugin_id, registry_id)
     );

@@ -38,6 +38,20 @@ describe("getEmbeddedServerFailure", () => {
     });
   });
 
+  it("surfaces a database too old to open", async () => {
+    setElectronAPI({
+      isElectron: true,
+      getEmbeddedServerStatus: vi.fn().mockResolvedValue({
+        running: false,
+        failure: { reason: "old-database", port: null },
+      }),
+    });
+    await expect(getEmbeddedServerFailure()).resolves.toEqual({
+      reason: "old-database",
+      port: null,
+    });
+  });
+
   it("surfaces a generic crash", async () => {
     setElectronAPI({
       isElectron: true,

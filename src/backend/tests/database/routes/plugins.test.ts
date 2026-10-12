@@ -7,6 +7,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PluginManageError } from "../../../plugins/manage.js";
+import { RegistryError } from "../../../plugins/registries.js";
 import express from "express";
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
@@ -192,6 +193,19 @@ vi.mock("../../../utils/audit-logger.js", () => ({
   logAudit: auditMock.logAudit,
   getAuditUsername: async () => "admin",
   getRequestMeta: () => ({ ipAddress: "127.0.0.1", userAgent: "test" }),
+}));
+
+const registriesMock = vi.hoisted(() => ({
+  readRegistriesConfig: vi.fn(),
+  previewRegistry: vi.fn(),
+  addRegistry: vi.fn(),
+  setRegistryEnabled: vi.fn(),
+  removeRegistry: vi.fn(),
+}));
+
+vi.mock("../../../plugins/registries.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../plugins/registries.js")>()),
+  ...registriesMock,
 }));
 
 const onboardingMock = vi.hoisted(() => ({
@@ -443,6 +457,28 @@ describe("plugins route", () => {
     ]);
   });
 
+  it("marks server-only plugins on a linked desktop", async () => {
+    state.plugins.set(
+      "sample-plugin",
+      makePlugin({ manifestJson: JSON.stringify({ desktop: "server" }) }),
+    );
+
+    const read = async () =>
+      (
+        (await (await fetch(`${baseUrl}/plugins`)).json()) as Array<{
+          runsOnServer: boolean;
+        }>
+      )[0].runsOnServer;
+
+    expect(await read()).toBe(false);
+    manageMock.isLinkedDesktop.mockResolvedValue(true);
+    try {
+      expect(await read()).toBe(true);
+    } finally {
+      manageMock.isLinkedDesktop.mockResolvedValue(false);
+    }
+  });
+
   it("grants a declared capability", async () => {
     state.plugins.set("sample-plugin", makePlugin());
 
@@ -577,6 +613,7 @@ describe("plugins route", () => {
         version: "1.0.0",
         enabled: true,
         state: "enabled",
+        runsOnServer: false,
         contributes: null,
         dependencies: {},
         optionalDependencies: {},
@@ -741,6 +778,190 @@ describe("plugins route", () => {
         403,
       );
       expect(onboardingMock.applyOnboardingChoices).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("plugin registries", () => {
+    const call = (
+      method: string,
+      path: string,
+      body?: unknown,
+      user = "admin-1",
+    ) =>
+      fetch(`${baseUrl}${path}`, {
+        method,
+        headers: { "content-type": "application/json", "x-test-user-id": user },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+
+    beforeEach(async () => {
+      for (const fn of Object.values(registriesMock)) fn.mockReset();
+      manageMock.isLinkedDesktop.mockReset();
+      manageMock.isLinkedDesktop.mockResolvedValue(false);
+      auditMock.logAudit.mockClear();
+    });
+
+    it("is admin only", async () => {
+      for (const [method, path, body] of [
+        ["GET", "/plugins/registries", undefined],
+        [
+          "POST",
+          "/plugins/registries/preview",
+          { url: "https://x.com/i.json" },
+        ],
+        ["POST", "/plugins/registries", { url: "https://x.com/i.json" }],
+        ["PATCH", "/plugins/registries/community", { enabled: true }],
+        ["DELETE", "/plugins/registries/acme", undefined],
+      ] as const) {
+        const res = await call(method, path, body, "user-2");
+        expect(res.status).toBe(403);
+      }
+      expect(registriesMock.setRegistryEnabled).not.toHaveBeenCalled();
+      expect(registriesMock.removeRegistry).not.toHaveBeenCalled();
+    });
+
+    it("lists the registries without the full public keys", async () => {
+      registriesMock.readRegistriesConfig.mockResolvedValue({
+        community: { enabled: true },
+        custom: [
+          {
+            id: "acme",
+            name: "Acme",
+            url: "https://acme.example/index.json",
+            publicKey: "secret-looking",
+            keyId: "abcd",
+            enabled: true,
+            addedAt: "2026-10-11T00:00:00Z",
+          },
+        ],
+      });
+      const res = await call("GET", "/plugins/registries");
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.community.enabled).toBe(true);
+      expect(body.custom[0]).toEqual({
+        id: "acme",
+        name: "Acme",
+        url: "https://acme.example/index.json",
+        keyId: "abcd",
+        enabled: true,
+        addedAt: "2026-10-11T00:00:00Z",
+      });
+    });
+
+    it("previews and adds a registry and audits the add", async () => {
+      registriesMock.previewRegistry.mockResolvedValue({
+        id: "acme",
+        name: "Acme",
+        url: "https://acme.example/index.json",
+        keyId: "abcd",
+        plugins: 2,
+      });
+      const preview = await call("POST", "/plugins/registries/preview", {
+        url: "https://acme.example/index.json",
+      });
+      expect(preview.status).toBe(200);
+      expect((await preview.json()).keyId).toBe("abcd");
+
+      registriesMock.addRegistry.mockResolvedValue({
+        id: "acme",
+        name: "Acme",
+        url: "https://acme.example/index.json",
+        publicKey: "k",
+        keyId: "abcd",
+        enabled: true,
+        addedAt: "2026-10-11T00:00:00Z",
+      });
+      const added = await call("POST", "/plugins/registries", {
+        url: "https://acme.example/index.json",
+        keyId: "abcd",
+      });
+      expect(added.status).toBe(200);
+      expect(registriesMock.addRegistry).toHaveBeenCalledWith(
+        "https://acme.example/index.json",
+        "abcd",
+      );
+      expect(auditMock.logAudit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: "add_plugin_registry",
+          resourceType: "plugin_registry",
+          resourceId: "acme",
+        }),
+      );
+    });
+
+    it("passes registry errors through with their code", async () => {
+      registriesMock.addRegistry.mockRejectedValue(
+        new RegistryError("changed", 409, "KEY_MISMATCH", { keyId: "new" }),
+      );
+      const res = await call("POST", "/plugins/registries", {
+        url: "https://acme.example/index.json",
+        keyId: "old",
+      });
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({
+        error: "changed",
+        code: "KEY_MISMATCH",
+        keyId: "new",
+      });
+    });
+
+    it("turns a registry on and off and checks the body", async () => {
+      expect(
+        (await call("PATCH", "/plugins/registries/community", { enabled: "x" }))
+          .status,
+      ).toBe(400);
+      const res = await call("PATCH", "/plugins/registries/community", {
+        enabled: true,
+      });
+      expect(res.status).toBe(200);
+      expect(registriesMock.setRegistryEnabled).toHaveBeenCalledWith(
+        "community",
+        true,
+      );
+    });
+
+    it("refuses to remove a registry still in use", async () => {
+      registriesMock.removeRegistry.mockRejectedValue(
+        new RegistryError("in use", 409, "REGISTRY_IN_USE", {
+          plugins: ["tool"],
+        }),
+      );
+      const res = await call("DELETE", "/plugins/registries/acme");
+      expect(res.status).toBe(409);
+      expect((await res.json()).plugins).toEqual(["tool"]);
+    });
+
+    it("leaves registries to the server on a linked desktop", async () => {
+      manageMock.isLinkedDesktop.mockResolvedValue(true);
+      const res = await call("PATCH", "/plugins/registries/community", {
+        enabled: true,
+      });
+      expect(res.status).toBe(409);
+      expect(registriesMock.setRegistryEnabled).not.toHaveBeenCalled();
+    });
+
+    it("installs from the registry the caller names", async () => {
+      manageMock.installPlugin.mockReset();
+      manageMock.installPlugin.mockResolvedValue({
+        id: "neat",
+        version: "1.0.0",
+        state: "active",
+      });
+      const res = await call("POST", "/plugins/neat/install", {
+        registryId: "community",
+        capabilities: [],
+      });
+      expect(res.status).toBe(200);
+      expect(manageMock.installPlugin).toHaveBeenCalledWith(
+        "neat",
+        expect.objectContaining({ registryId: "community" }),
+      );
+      const bad = await call("POST", "/plugins/neat/install", {
+        registryId: "../x",
+        capabilities: [],
+      });
+      expect(bad.status).toBe(400);
     });
   });
 

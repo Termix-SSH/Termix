@@ -472,7 +472,7 @@ async function listPluginsForDesktop() {
  * /sync/v2/plugins:
  *   get:
  *     summary: The features this server runs, for a linked desktop to mirror
- *     description: Every installed plugin with its version, where it came from, whether it is on, how a desktop should treat it and which sync entities it owns.
+ *     description: Every installed plugin with its version, where it came from, whether it is on, how a desktop should treat it and which sync entities it owns. registryKeys lists the signing keys of the custom registries an admin added, so plugins from them load on the desktop.
  *     tags:
  *       - Sync
  *     responses:
@@ -509,7 +509,9 @@ router.get(
           ),
         });
       }
-      res.json({ plugins });
+      const { customRegistryKeys } =
+        await import("../../plugins/registries.js");
+      res.json({ plugins, registryKeys: await customRegistryKeys() });
     } catch (error) {
       syncLogger.error("Failed to list plugins for sync", error, {
         operation: "sync_plugins",

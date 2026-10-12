@@ -32,7 +32,7 @@ function writeJson(filePath, value) {
   }
 }
 
-const DEFAULTS = { defaultConnectionOrigin: "local" };
+const DEFAULTS = { defaultConnectionOrigin: "local", updateMode: "prompt" };
 
 function getDesktopSettings() {
   return { ...DEFAULTS, ...readJson(dataPath("desktop-settings.json"), {}) };

@@ -1,5 +1,5 @@
 /**
- * The registry timer: refreshes the store's install counts and applies
+ * The registry timer: refreshes the store's download counts and applies
  * plugin updates for plugins with auto-update on. An update that asks for a
  * new capability is never applied here; admins get an alert and review it in
  * the Plugins tab. Nothing is ever installed from here.
@@ -13,8 +13,8 @@ const CHECK_EVERY_MS = 6 * 60 * 60_000;
 let timer: NodeJS.Timeout | null = null;
 
 export async function runPluginAutoUpdate(): Promise<void> {
-  const { syncInstallCounts } = await import("./install-counts.js");
-  await syncInstallCounts();
+  const { syncDownloadCounts } = await import("./download-counts.js");
+  await syncDownloadCounts();
 
   const { isLinkedDesktop, updateAllPlugins } = await import("./manage.js");
   if (await isLinkedDesktop()) return;

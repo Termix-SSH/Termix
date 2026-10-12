@@ -15,6 +15,8 @@ import { PluginLoader } from "../../plugins/loader.js";
 const testKey = vi.hoisted(() => ({
   privateKey: null as crypto.KeyObject | null,
   key: { id: "test", publicKey: "", addedIn: "2.9.0" },
+  communityPrivateKey: null as crypto.KeyObject | null,
+  community: { id: "community", publicKey: "", addedIn: "26.10.1" },
 }));
 
 vi.mock("../../plugins/trust.js", async (importActual) => {
@@ -23,6 +25,17 @@ vi.mock("../../plugins/trust.js", async (importActual) => {
     ...actual,
     verifyPluginArtifact: (buffer: Buffer, sha256: string, signature: string) =>
       actual.verifyPluginArtifact(buffer, sha256, signature, [testKey.key]),
+    verifyAnyTrusted: (buffer: Buffer, sha256: string, signature: string) => {
+      const official = actual.verifyPluginArtifact(buffer, sha256, signature, [
+        testKey.key,
+      ]);
+      if (official.ok === true) return { ...official, tier: "official" };
+      const community = actual.verifyPluginArtifact(buffer, sha256, signature, [
+        testKey.community,
+      ]);
+      if (community.ok === true) return { ...community, tier: "community" };
+      return community;
+    },
   };
 });
 
@@ -39,6 +52,12 @@ vi.mock("../../database/repositories/factory.js", () => ({
   const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519");
   testKey.privateKey = privateKey;
   testKey.key.publicKey = publicKey
+    .export({ format: "der", type: "spki" })
+    .subarray(12)
+    .toString("base64");
+  const community = crypto.generateKeyPairSync("ed25519");
+  testKey.communityPrivateKey = community.privateKey;
+  testKey.community.publicKey = community.publicKey
     .export({ format: "der", type: "spki" })
     .subarray(12)
     .toString("base64");
@@ -68,7 +87,7 @@ function setup() {
 async function writeArtifact(
   dir: string,
   id: string,
-  sig: "valid" | "wrong-key" | "none",
+  sig: "valid" | "community" | "wrong-key" | "none",
   version = "1.0.0",
 ): Promise<string> {
   const build = tempRoot("termix-build-");
@@ -82,7 +101,9 @@ async function writeArtifact(
     const signer =
       sig === "valid"
         ? testKey.privateKey
-        : crypto.generateKeyPairSync("ed25519").privateKey;
+        : sig === "community"
+          ? testKey.communityPrivateKey
+          : crypto.generateKeyPairSync("ed25519").privateKey;
     const digest = crypto
       .createHash("sha256")
       .update(fs.readFileSync(file))
@@ -171,6 +192,27 @@ describe("updating a bundled plugin", () => {
     expect(plugin?.source).toBe("bundled");
     expect(plugin?.artifact).toBe(file);
     expect(plugin?.signedBy).toBe("test");
+    expect(plugin?.signedTier).toBe("official");
+  });
+
+  it("keeps the bundled copy for a community signed newer archive", async () => {
+    const { userDir } = setup();
+    await writeArtifact(userDir, "bundled-one", "community", "2.0.0");
+    const loader = new PluginLoader();
+    await loader.loadAll();
+    expect(loader.get("bundled-one")?.manifest.version).toBe("1.0.0");
+  });
+
+  it("loads a community signed plugin and records its tier", async () => {
+    const { userDir } = setup();
+    process.env.TERMIX_REQUIRE_SIGNED_PLUGINS = "true";
+    await writeArtifact(userDir, "community-one", "community");
+    const loader = new PluginLoader();
+    await loader.loadAll();
+    const plugin = loader.get("community-one");
+    expect(plugin?.source).toBe("user");
+    expect(plugin?.signedBy).toBe("community");
+    expect(plugin?.signedTier).toBe("community");
   });
 
   it("keeps the bundled copy for an unsigned newer archive", async () => {

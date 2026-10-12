@@ -1,8 +1,9 @@
 /**
  * Installing, updating, uninstalling and switching plugins at runtime.
  *
- * The official registry is the one real source. With developer mode on, an
- * admin can also install a .tmxplug from a file; that skips the download,
+ * Plugins come from the official registry, plus the community and custom
+ * registries an admin turned on (see registries.ts). With developer mode on,
+ * an admin can also install a .tmxplug from a file; that skips the download,
  * sha256 and signature checks and stays marked unverified. Bundled plugins ship in the
  * image and can still be uninstalled: their files are deleted and the id is
  * recorded in the settings table, so the shipped copy is ignored from then
@@ -38,14 +39,27 @@ import {
   getRegistryStatus,
   isApiCompatible,
   latestOnChannel,
+  officialSource,
   parsePluginChannel,
   type PluginChannel,
   type RegistryIndex,
+  type RegistryPlugin,
+  type RegistrySource,
+  type RegistryTier,
   type RegistryVersion,
 } from "./registry-index.js";
+import {
+  findSource,
+  listSources,
+  loadCustomRegistryKeys,
+  pinnedKeyOf,
+} from "./registries.js";
 import { invalidatePluginPermissionCache } from "./permissions.js";
 import { moveWithRetry } from "./fs-retry.js";
-import { readInstallCounts } from "./install-counts.js";
+import {
+  readDownloadCounts,
+  refreshDownloadCounts,
+} from "./download-counts.js";
 import { readArtifactManifest, sameCapabilities } from "./artifact-manifest.js";
 import {
   parseManifest,
@@ -127,6 +141,7 @@ async function readPins(): Promise<Map<string, string>> {
 export async function applyStoredPluginChoices(
   loader: PluginLoader,
 ): Promise<void> {
+  await loadCustomRegistryKeys();
   try {
     loader.setUninstalled(await readUninstalled());
     loader.setPinned(await readPins());
@@ -208,12 +223,28 @@ function addedCapabilities(
   return next.filter((capability) => !have.has(capability));
 }
 
+export interface RegistryListingSource {
+  id: string;
+  name: string;
+  tier: RegistryTier;
+  url: string;
+  lastCheckedAt: string | null;
+  error: string | null;
+  plugins: number;
+}
+
 export interface RegistryListing {
+  /** The official registry, kept for older clients. */
   registry: ReturnType<typeof getRegistryStatus> & { id: string };
+  /** Every registry read for this listing, official first. */
+  registries: RegistryListingSource[];
   /** A linked desktop runs what its server runs, so nothing here can change. */
   managedByServer: boolean;
   plugins: Array<{
     id: string;
+    registryId: string;
+    registryName: string;
+    tier: RegistryTier;
     name: string;
     description: string;
     author: string;
@@ -245,28 +276,118 @@ export interface RegistryListing {
     pinnedVersion: string | null;
     autoUpdate: boolean;
     bundled: boolean;
-    /** See install-counts.ts for what this number does and does not mean. */
-    installCount: number | null;
-    installCountSource: string | null;
+    /** See download-counts.ts for what this number does and does not mean. */
+    downloads: number | null;
   }>;
+}
+
+/** A custom registry whose index now names another key than the pinned one. */
+async function keyChanged(
+  source: RegistrySource,
+  index: RegistryIndex,
+): Promise<boolean> {
+  if (source.tier !== "custom" || !index.publicKey) return false;
+  return index.publicKey !== (await pinnedKeyOf(source.id));
+}
+
+const KEY_CHANGED_MESSAGE =
+  "the registry now names a different signing key; add it again to trust the new key";
+
+/**
+ * Ids only the official registry may offer: what ships in the image and what
+ * the official index lists. Other registries can never take them over.
+ */
+function reservedIds(official: RegistryIndex | null): Set<string> {
+  const ids = new Set(getPluginRuntime().loader.bundledIds());
+  for (const plugin of official?.plugins ?? []) ids.add(plugin.id);
+  return ids;
 }
 
 export async function listRegistry(
   options: { force?: boolean } = {},
 ): Promise<RegistryListing> {
-  const index = await fetchRegistryIndex(options);
+  const sources = await listSources();
+  const results = await Promise.allSettled(
+    sources.map((source) => fetchRegistryIndex(source, options)),
+  );
+  const official = results[0];
+  if (official.status === "rejected") throw official.reason;
+
   const { createCurrentPluginRepository } = await repos();
   const records = new Map(
     (await createCurrentPluginRepository().listAll()).map((r) => [r.id, r]),
   );
-  const counts = await readInstallCounts();
+  await refreshDownloadCounts(options.force);
+  const counts = new Map(
+    await Promise.all(
+      sources
+        .filter((source) => source.tier !== "custom")
+        .map(
+          async (source) =>
+            [source.id, await readDownloadCounts(source.id)] as const,
+        ),
+    ),
+  );
   const { loader } = getPluginRuntime();
   const shipped = loader.bundledIds();
+  const reserved = reservedIds(official.value);
+
+  const registries: RegistryListingSource[] = [];
+  // Per id, every registry that lists it, in source order.
+  const offers = new Map<
+    string,
+    Array<{ source: RegistrySource; plugin: RegistryPlugin }>
+  >();
+  for (let i = 0; i < sources.length; i++) {
+    const source = sources[i];
+    const result = results[i];
+    const status = getRegistryStatus(source);
+    let error = status.error;
+    let listed = 0;
+    if (result.status === "fulfilled") {
+      if (await keyChanged(source, result.value)) {
+        error = KEY_CHANGED_MESSAGE;
+      } else {
+        for (const plugin of result.value.plugins) {
+          if (source.tier !== "official" && reserved.has(plugin.id)) continue;
+          const list = offers.get(plugin.id) ?? [];
+          list.push({ source, plugin });
+          offers.set(plugin.id, list);
+          listed++;
+        }
+      }
+    } else {
+      error =
+        result.reason instanceof Error
+          ? result.reason.message
+          : String(result.reason);
+    }
+    registries.push({
+      id: source.id,
+      name:
+        result.status === "fulfilled" && result.value.name
+          ? result.value.name
+          : source.name,
+      tier: source.tier,
+      url: source.url,
+      lastCheckedAt: status.lastCheckedAt,
+      error,
+      plugins: listed,
+    });
+  }
+
+  const chosen: Array<{ source: RegistrySource; plugin: RegistryPlugin }> = [];
+  for (const [id, list] of offers) {
+    // An installed plugin is always shown from the registry it came from.
+    const from = records.get(id)?.registryId;
+    chosen.push(list.find((offer) => offer.source.id === from) ?? list[0]);
+  }
 
   return {
     registry: { id: OFFICIAL_REGISTRY_ID, ...getRegistryStatus() },
+    registries,
     managedByServer: await isLinkedDesktop(),
-    plugins: index.plugins.map((plugin) => {
+    plugins: chosen.map(({ source, plugin }) => {
       const record = records.get(plugin.id);
       const live = loader.get(plugin.id);
       const channel = channelOf(record);
@@ -283,6 +404,9 @@ export async function listRegistry(
       );
       return {
         id: plugin.id,
+        registryId: source.id,
+        registryName: registries.find((entry) => entry.id === source.id)!.name,
+        tier: source.tier,
         name: plugin.name,
         description: plugin.description,
         author: plugin.author,
@@ -318,8 +442,7 @@ export async function listRegistry(
         pinnedVersion: record?.pinnedVersion ?? null,
         autoUpdate: Boolean(record?.autoUpdate),
         bundled: shipped.has(plugin.id),
-        installCount: counts.get(plugin.id)?.count ?? null,
-        installCountSource: counts.get(plugin.id)?.source ?? null,
+        downloads: counts.get(source.id)?.get(plugin.id) ?? null,
       };
     }),
   };
@@ -362,7 +485,8 @@ async function grantDeclared(
   invalidatePluginPermissionCache(plugin.id);
 }
 
-type SwapSource = { release: RegistryVersion } | { upload: string };
+type SwapSource =
+  { release: RegistryVersion; source: RegistrySource } | { upload: string };
 
 /**
  * Puts a registry release, or an uploaded file, in place of whatever copy of
@@ -377,6 +501,7 @@ async function swapIn(
   const bundledVersion = loader.bundledVersion(pluginId);
   const useBundled =
     "release" in source &&
+    source.source.tier === "official" &&
     bundledVersion !== undefined &&
     bundledVersion === source.release.version &&
     isBundledOnDisk(pluginId);
@@ -385,7 +510,7 @@ async function swapIn(
   const staged = useBundled
     ? null
     : "release" in source
-      ? await downloadRelease(pluginId, source.release)
+      ? await downloadRelease(pluginId, source.release, source.source.keys)
       : { file: source.upload, signatureFile: `${source.upload}.sig` };
 
   const finalFile = path.join(getPluginsDir(), `${pluginId}.tmxplug`);
@@ -654,6 +779,8 @@ export interface InstallOptions {
   version?: string;
   /** Install only: the channel to follow from the start. */
   channel?: PluginChannel;
+  /** Install only: the registry to install from. Official when unset. */
+  registryId?: string;
   userId: string | null;
   acceptCapabilities?: boolean;
   /**
@@ -684,33 +811,68 @@ function assertConsent(
   }
 }
 
+function unreachable(error: unknown): PluginManageError {
+  return new PluginManageError(
+    `Could not reach the plugin registry: ${
+      error instanceof Error ? error.message : String(error)
+    }`,
+    502,
+    "REGISTRY_UNREACHABLE",
+  );
+}
+
 async function requireRelease(
   pluginId: string,
   version: string | undefined,
   channel: PluginChannel,
+  registryId: string = OFFICIAL_REGISTRY_ID,
 ): Promise<{
-  index: RegistryIndex;
+  source: RegistrySource;
   release: RegistryVersion;
   latest: RegistryVersion | null;
 }> {
+  const source = await findSource(registryId);
+  if (!source) {
+    throw new PluginManageError(
+      `The registry "${registryId}" is turned off or was removed`,
+      409,
+      "REGISTRY_OFF",
+    );
+  }
   let index: RegistryIndex;
   try {
-    index = await fetchRegistryIndex();
+    index = await fetchRegistryIndex(source);
   } catch (error) {
+    throw unreachable(error);
+  }
+  if (await keyChanged(source, index)) {
     throw new PluginManageError(
-      `Could not reach the plugin registry: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-      502,
-      "REGISTRY_UNREACHABLE",
+      `${source.name}: ${KEY_CHANGED_MESSAGE}`,
+      409,
+      "KEY_CHANGED",
     );
+  }
+  if (source.tier !== "official") {
+    let official: RegistryIndex;
+    try {
+      official = await fetchRegistryIndex(officialSource());
+    } catch (error) {
+      throw unreachable(error);
+    }
+    if (reservedIds(official).has(pluginId)) {
+      throw new PluginManageError(
+        `${pluginId} is an official plugin and can only come from the official registry`,
+        409,
+        "RESERVED_ID",
+      );
+    }
   }
   const found = findRelease(index, pluginId, version, channel);
   if (!found) {
     throw new PluginManageError(
       version
-        ? `${pluginId} ${version} is not in the official registry`
-        : `${pluginId} is not in the official registry`,
+        ? `${pluginId} ${version} is not in ${source.name}`
+        : `${pluginId} is not in ${source.name}`,
       404,
       "NOT_IN_REGISTRY",
     );
@@ -723,10 +885,18 @@ async function requireRelease(
     );
   }
   return {
-    index,
+    source,
     release: found.release,
     latest: latestOnChannel(found.plugin, channel),
   };
+}
+
+/** What a registry install is recorded as. */
+function tierFor(plugin: LoadedPlugin, source: RegistrySource): string {
+  if (source.tier === "official" && plugin.source === "bundled") {
+    return "bundled";
+  }
+  return source.tier;
 }
 
 /** The version to hold at: an explicit pick that is not the newest. */
@@ -763,10 +933,11 @@ export function installPlugin(
     }
 
     const channel = options.channel ?? "stable";
-    const { release, latest } = await requireRelease(
+    const { source, release, latest } = await requireRelease(
       pluginId,
       options.version,
       channel,
+      options.registryId,
     );
     assertConsent(options.capabilities, release.capabilities);
     const pin = pinFor(release, latest, options.version);
@@ -774,7 +945,7 @@ export function installPlugin(
 
     let plugin: LoadedPlugin;
     try {
-      plugin = await swapIn(pluginId, { release });
+      plugin = await swapIn(pluginId, { release, source });
     } catch (error) {
       await applyPin(pluginId, null);
       throw new PluginManageError(
@@ -785,8 +956,8 @@ export function installPlugin(
     }
 
     await repository.update(pluginId, {
-      registryId: OFFICIAL_REGISTRY_ID,
-      tier: plugin.source === "bundled" ? "bundled" : "official",
+      registryId: source.id,
+      tier: tierFor(plugin, source),
       pinnedVersion: pin,
       channel,
     });
@@ -832,10 +1003,11 @@ async function updateUnlocked(
     throw new PluginManageError("Plugin not found", 404, "NOT_FOUND");
   }
 
-  const { release, latest } = await requireRelease(
+  const { source, release, latest } = await requireRelease(
     pluginId,
     options.version,
     channelOf(record),
+    record.registryId ?? OFFICIAL_REGISTRY_ID,
   );
   if (release.version === live.manifest.version) {
     throw new PluginManageError(
@@ -867,7 +1039,7 @@ async function updateUnlocked(
 
   let plugin: LoadedPlugin;
   try {
-    plugin = await swapIn(pluginId, { release });
+    plugin = await swapIn(pluginId, { release, source });
   } catch (error) {
     await applyPin(pluginId, record.pinnedVersion ?? null);
     if (wasEnabled && loader.get(pluginId)) await startAndRecord(pluginId);
@@ -879,8 +1051,8 @@ async function updateUnlocked(
   }
 
   await repository.update(pluginId, {
-    registryId: OFFICIAL_REGISTRY_ID,
-    tier: plugin.source === "bundled" ? "bundled" : "official",
+    registryId: source.id,
+    tier: tierFor(plugin, source),
     pinnedVersion: pin,
   });
   await grantDeclared(plugin, options.userId);

@@ -7,10 +7,9 @@ export type PluginInstallCountRecord = typeof pluginInstallCounts.$inferSelect;
 export interface PluginInstallCountInput {
   pluginId: string;
   count: number;
-  source: string;
 }
 
-/** Popularity numbers for the store, one row per plugin and registry. */
+/** Download counts for the store, one row per plugin and registry. */
 export class PluginInstallCountRepository {
   constructor(
     private readonly context: DatabaseContext,
@@ -38,13 +37,11 @@ export class PluginInstallCountRepository {
     let written = 0;
     for (const entry of entries) {
       const row = existing.get(entry.pluginId);
-      if (row && row.count === entry.count && row.source === entry.source) {
-        continue;
-      }
+      if (row && row.count === entry.count) continue;
       if (row) {
         await this.context.drizzle
           .update(pluginInstallCounts)
-          .set({ count: entry.count, source: entry.source, updatedAt: now })
+          .set({ count: entry.count, updatedAt: now })
           .where(
             and(
               eq(pluginInstallCounts.pluginId, entry.pluginId),
@@ -56,7 +53,6 @@ export class PluginInstallCountRepository {
           pluginId: entry.pluginId,
           registryId,
           count: entry.count,
-          source: entry.source,
           updatedAt: now,
         });
       }

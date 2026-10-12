@@ -1,7 +1,10 @@
 {
   "appId": "com.karmaa.termix",
   "productName": "Termix",
-  "publish": null,
+  "publish": {
+    "provider": "generic",
+    "url": "https://github.com/Termix-SSH/Termix/releases/latest/download"
+  },
   "directories": {
     "output": "release"
   },
@@ -114,8 +117,13 @@
       {
         "target": "dmg",
         "arch": ["universal", "x64", "arm64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["x64", "arm64"]
       }
     ],
+    "artifactName": "termix_macos_${arch}_update.${ext}",
     "icon": "public/icon.icns",
     "category": "public.app-category.developer-tools",
     "hardenedRuntime": true,

@@ -117,6 +117,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Bundled plugins are counted as downloads in the plugin store, so a
+      # build only fetches them when the pins change.
+      - name: Cache bundled plugins
+        uses: actions/cache@v6
+        with:
+          path: node_modules/.cache/termix-bundled-plugins
+          key: bundled-plugins-${{ hashFiles('docker/bundled-plugins.json') }}
+          enableCrossOsArchive: true
+
       # A beta build has to know it is a beta, or it reports the stable version.
       - name: Stamp beta version
         if: inputs.version_override != ''
@@ -134,7 +143,12 @@ jobs:
       - name: Build Windows (All Architectures)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run build && npx electron-builder --win --x64 --ia32
+        run: npm run build && npx electron-builder --win --x64 --ia32 --publish never
+
+      # The updater only installs the x64 NSIS build; 32-bit installs get a link.
+      # The combined x64+ia32 installer is never uploaded.
+      - name: Fix Windows update files
+        run: node scripts/fix-update-info.cjs --drop ia32 --drop termix_windows_nsis.exe release/latest.yml release/beta.yml release/alpha.yml
 
       - name: Upload Windows x64 NSIS Installer
         uses: actions/upload-artifact@v7
@@ -177,6 +191,17 @@ jobs:
         if: hashFiles('release/win-ia32-unpacked/*') != ''
         run: |
           Compress-Archive -Path "release\win-ia32-unpacked\*" -DestinationPath "termix_windows_ia32_portable.zip"
+
+      - name: Upload Windows update files
+        uses: actions/upload-artifact@v7
+        if: hashFiles('release/*.yml') != '' && inputs.artifact_destination != 'none'
+        with:
+          name: termix_windows_update_meta
+          path: |
+            release/*.yml
+            release/termix_windows_x64_nsis.exe.blockmap
+            !release/builder-debug.yml
+          retention-days: 30
 
       - name: Upload Windows x64 Portable
         uses: actions/upload-artifact@v7
@@ -225,6 +250,15 @@ jobs:
           npm install --force @rollup/rollup-linux-arm64-gnu
           npm install --force @rollup/rollup-linux-arm-gnueabihf
 
+      # Bundled plugins are counted as downloads in the plugin store, so a
+      # build only fetches them when the pins change.
+      - name: Cache bundled plugins
+        uses: actions/cache@v6
+        with:
+          path: node_modules/.cache/termix-bundled-plugins
+          key: bundled-plugins-${{ hashFiles('docker/bundled-plugins.json') }}
+          enableCrossOsArchive: true
+
       # A beta build has to know it is a beta, or it reports the stable version.
       - name: Stamp beta version
         if: inputs.version_override != ''
@@ -234,12 +268,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEBUG: electron-builder
-        run: npm run build && npx electron-builder --linux --x64
+        run: npm run build && npx electron-builder --linux --x64 --publish never
 
       - name: Build Linux arm64 and armv7l
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --linux --arm64 --armv7l
+        run: npx electron-builder --linux --arm64 --armv7l --publish never
 
       - name: Rename Linux artifacts for consistency
         run: |
@@ -254,6 +288,19 @@ jobs:
           fi
 
           cd ..
+
+          node scripts/fix-update-info.cjs \
+            --rename termix_linux_amd64_deb.deb=termix_linux_x64_deb.deb \
+            --rename termix_linux_x86_64_appimage.AppImage=termix_linux_x64_appimage.AppImage \
+            release/*-linux*.yml
+
+      - name: Upload Linux update files
+        uses: actions/upload-artifact@v7
+        if: hashFiles('release/*-linux*.yml') != '' && inputs.artifact_destination != 'none'
+        with:
+          name: termix_linux_update_meta
+          path: release/*-linux*.yml
+          retention-days: 30
 
       - name: Upload Linux x64 AppImage
         uses: actions/upload-artifact@v7
@@ -439,6 +486,15 @@ jobs:
           npm install dmg-license
           node scripts/install-macos-sharp.cjs
 
+      # Bundled plugins are counted as downloads in the plugin store, so a
+      # build only fetches them when the pins change.
+      - name: Cache bundled plugins
+        uses: actions/cache@v6
+        with:
+          path: node_modules/.cache/termix-bundled-plugins
+          key: bundled-plugins-${{ hashFiles('docker/bundled-plugins.json') }}
+          enableCrossOsArchive: true
+
       # A beta build has to know it is a beta, or it reports the stable version.
       - name: Stamp beta version
         if: inputs.version_override != ''
@@ -494,7 +550,7 @@ jobs:
         run: |
           BUILD_VERSION="${{ github.run_number }}"
 
-          npm run build && npx electron-builder --mac mas --universal --config.buildVersion="$BUILD_VERSION"
+          npm run build && npx electron-builder --mac mas --universal --config.buildVersion="$BUILD_VERSION" --publish never
 
       - name: Clean up MAS keychain before DMG build
         if: steps.check_certs.outputs.has_certs == 'true'
@@ -553,7 +609,24 @@ jobs:
           if [ "${{ steps.mas_build.outcome }}" != "success" ]; then
             npm run build
           fi
-          npx electron-builder --mac dmg --universal --x64 --arm64 --publish never
+          npx electron-builder --mac dmg zip --universal --x64 --arm64 --publish never
+
+      # The updater picks the x64 or arm64 zip, so the universal one is left out.
+      - name: Fix macOS update files
+        run: node scripts/fix-update-info.cjs --drop universal release/*-mac.yml
+
+      - name: Upload macOS update files
+        uses: actions/upload-artifact@v7
+        if: hashFiles('release/*-mac.yml') != '' && inputs.artifact_destination != 'none'
+        with:
+          name: termix_macos_update_meta
+          path: |
+            release/*-mac.yml
+            release/termix_macos_x64_update.zip
+            release/termix_macos_x64_update.zip.blockmap
+            release/termix_macos_arm64_update.zip
+            release/termix_macos_arm64_update.zip.blockmap
+          retention-days: 30
 
       - name: Verify macOS sharp packaging
         run: |
@@ -771,144 +844,6 @@ jobs:
           path: choco-build/*.nupkg
           retention-days: 30
 
-  submit-to-flatpak:
-    runs-on: blacksmith-8vcpu-ubuntu-2404
-    if: inputs.artifact_destination == 'submit' && (inputs.build_type == 'all' || inputs.build_type == 'linux' || inputs.build_type == '')
-    needs: []
-    permissions:
-      contents: read
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ inputs.source_ref || github.ref }}
-          fetch-depth: 1
-
-      - name: Get version from package.json
-        id: package-version
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          RELEASE_DATE=$(date +%Y-%m-%d)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "release_date=$RELEASE_DATE" >> $GITHUB_OUTPUT
-
-      - name: Download and prepare AppImage info from public release
-        id: appimage-info
-        run: |
-          VERSION="${{ steps.package-version.outputs.version }}"
-          mkdir -p release_assets
-
-          APPIMAGE_X64_NAME="termix_linux_x64_appimage.AppImage"
-          URL_X64="https://github.com/Termix-SSH/Termix/releases/download/v$VERSION/$APPIMAGE_X64_NAME"
-          PATH_X64="release_assets/$APPIMAGE_X64_NAME"
-          echo "Downloading x64 AppImage from $URL_X64"
-          curl -L -o "$PATH_X64" "$URL_X64"
-          chmod +x "$PATH_X64"
-          CHECKSUM_X64=$(sha256sum "$PATH_X64" | awk '{print $1}')
-
-          APPIMAGE_ARM64_NAME="termix_linux_arm64_appimage.AppImage"
-          URL_ARM64="https://github.com/Termix-SSH/Termix/releases/download/v$VERSION/$APPIMAGE_ARM64_NAME"
-          PATH_ARM64="release_assets/$APPIMAGE_ARM64_NAME"
-          echo "Downloading arm64 AppImage from $URL_ARM64"
-          curl -L -o "$PATH_ARM64" "$URL_ARM64"
-          chmod +x "$PATH_ARM64"
-          CHECKSUM_ARM64=$(sha256sum "$PATH_ARM64" | awk '{print $1}')
-
-          echo "appimage_x64_name=$APPIMAGE_X64_NAME" >> $GITHUB_OUTPUT
-          echo "checksum_x64=$CHECKSUM_X64" >> $GITHUB_OUTPUT
-          echo "appimage_arm64_name=$APPIMAGE_ARM64_NAME" >> $GITHUB_OUTPUT
-          echo "checksum_arm64=$CHECKSUM_ARM64" >> $GITHUB_OUTPUT
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y imagemagick
-
-      - name: Prepare Flatpak submission files
-        run: |
-          VERSION="${{ steps.package-version.outputs.version }}"
-          CHECKSUM_X64="${{ steps.appimage-info.outputs.checksum_x64 }}"
-          CHECKSUM_ARM64="${{ steps.appimage-info.outputs.checksum_arm64 }}"
-          RELEASE_DATE="${{ steps.package-version.outputs.release_date }}"
-
-          mkdir -p flatpak-submission
-
-          cp packaging/flatpak/com.karmaa.termix.yml flatpak-submission/
-          cp packaging/flatpak/com.karmaa.termix.desktop flatpak-submission/
-          cp packaging/flatpak/com.karmaa.termix.metainfo.xml flatpak-submission/
-          cp packaging/flatpak/flathub.json flatpak-submission/
-
-          cp public/icon.svg flatpak-submission/com.karmaa.termix.svg
-          convert public/icon.png -resize 256x256 flatpak-submission/icon-256.png
-          convert public/icon.png -resize 128x128 flatpak-submission/icon-128.png
-
-          sed -i "s/VERSION_PLACEHOLDER/$VERSION/g" flatpak-submission/com.karmaa.termix.yml
-          sed -i "s/CHECKSUM_X64_PLACEHOLDER/$CHECKSUM_X64/g" flatpak-submission/com.karmaa.termix.yml
-          sed -i "s/CHECKSUM_ARM64_PLACEHOLDER/$CHECKSUM_ARM64/g" flatpak-submission/com.karmaa.termix.yml
-
-          sed -i "s/VERSION_PLACEHOLDER/$VERSION/g" flatpak-submission/com.karmaa.termix.metainfo.xml
-          sed -i "s/DATE_PLACEHOLDER/$RELEASE_DATE/g" flatpak-submission/com.karmaa.termix.metainfo.xml
-
-      - name: Upload Flatpak submission as artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: flatpak-submission
-          path: flatpak-submission/*
-          retention-days: 30
-
-      - name: Check for Flathub token
-        id: check_flathub_token
-        run: |
-          if [ -n "${{ secrets.FLATHUB_TOKEN }}" ]; then
-            echo "has_token=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Open PR on Flathub repo
-        if: steps.check_flathub_token.outputs.has_token == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.FLATHUB_TOKEN }}
-          VERSION: ${{ steps.package-version.outputs.version }}
-        run: |
-          FLATHUB_REPO="flathub/com.karmaa.termix"
-          BRANCH="release-$VERSION"
-
-          git config --global user.name "LukeGus"
-          git config --global user.email "bugattiguy527@gmail.com"
-
-          git clone "https://x-access-token:${GH_TOKEN}@github.com/${FLATHUB_REPO}.git" flathub-repo
-          cd flathub-repo
-
-          git checkout -b "$BRANCH"
-
-          cp ../flatpak-submission/com.karmaa.termix.yml ./
-          cp ../flatpak-submission/com.karmaa.termix.desktop ./
-          cp ../flatpak-submission/com.karmaa.termix.metainfo.xml ./
-          cp ../flatpak-submission/flathub.json ./
-          cp ../flatpak-submission/com.karmaa.termix.svg ./
-          cp ../flatpak-submission/icon-256.png ./
-          cp ../flatpak-submission/icon-128.png ./
-
-          if git diff --quiet && git diff --cached --quiet; then
-            echo "No changes to submit for $VERSION; Flathub repo already up to date."
-            exit 0
-          fi
-
-          git add -A
-          git commit -m "Update to $VERSION"
-          git push origin "$BRANCH"
-
-          EXISTING_PR=$(gh pr list --repo "$FLATHUB_REPO" --head "$BRANCH" --state open --json number -q '.[0].number' || true)
-          if [ -z "$EXISTING_PR" ]; then
-            gh pr create --repo "$FLATHUB_REPO" \
-              --base master \
-              --head "$BRANCH" \
-              --title "Update to $VERSION" \
-              --body "Automated release update to version $VERSION."
-          else
-            echo "PR #$EXISTING_PR already open for $BRANCH."
-          fi
-
   submit-to-homebrew:
     runs-on: blacksmith-6vcpu-macos-latest
     if: inputs.artifact_destination == 'submit' && (inputs.build_type == 'all' || inputs.build_type == 'macos')
@@ -1007,18 +942,15 @@ jobs:
             echo "RELEASE_TAG=$(gh release list --repo ${{ github.repository }} --limit 1 --json tagName -q '.[0].tagName')" >> $GITHUB_ENV
           fi
 
+      # Update files go up last: the desktop updater treats a release as ready
+      # once its update file is there, so every installer must already be up.
       - name: Upload artifacts to latest release
         run: |
-          cd artifacts
-          for dir in */; do
-            cd "$dir"
-            for file in *;
-            do
-              if [ -f "$file" ]; then
-                gh release upload "$RELEASE_TAG" "$file" --repo ${{ github.repository }} --clobber
-              fi
-            done
-            cd ..
+          find artifacts -type f ! -name '*.yml' -print0 | while IFS= read -r -d '' file; do
+            gh release upload "$RELEASE_TAG" "$file" --repo ${{ github.repository }} --clobber
+          done
+          find artifacts -type f -name '*.yml' -print0 | while IFS= read -r -d '' file; do
+            gh release upload "$RELEASE_TAG" "$file" --repo ${{ github.repository }} --clobber
           done
         env:
           GH_TOKEN: ${{ github.token }}
@@ -1049,6 +981,15 @@ jobs:
           npm install --force @rollup/rollup-darwin-arm64
           npm install dmg-license
           node scripts/install-macos-sharp.cjs
+
+      # Bundled plugins are counted as downloads in the plugin store, so a
+      # build only fetches them when the pins change.
+      - name: Cache bundled plugins
+        uses: actions/cache@v6
+        with:
+          path: node_modules/.cache/termix-bundled-plugins
+          key: bundled-plugins-${{ hashFiles('docker/bundled-plugins.json') }}
+          enableCrossOsArchive: true
 
       - name: Check for Code Signing Certificates
         id: check_certs
@@ -1188,7 +1129,7 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=4096
         run: |
           BUILD_VERSION="${{ steps.build_number.outputs.build_version || github.run_number }}"
-          npm run build && npx electron-builder --mac mas --universal --config.buildVersion="$BUILD_VERSION"
+          npm run build && npx electron-builder --mac mas --universal --config.buildVersion="$BUILD_VERSION" --publish never
 
       - name: Verify macOS sharp packaging
         if: steps.check_certs.outputs.has_certs == 'true'

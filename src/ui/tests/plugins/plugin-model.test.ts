@@ -61,8 +61,7 @@ function entry(
     pinnedVersion: null,
     autoUpdate: false,
     bundled: true,
-    installCount: null,
-    installCountSource: null,
+    downloads: null,
     ...overrides,
   };
 }
@@ -125,6 +124,14 @@ describe("mergePlugins", () => {
     );
   });
 
+  it("offers no update for a plugin a linked desktop leaves to its server", () => {
+    const [row] = mergePlugins(
+      [summary({ enabled: false, state: "disabled", runsOnServer: true })],
+      [entry()],
+    );
+    expect(row).toMatchObject({ status: "server", updateAvailable: false });
+  });
+
   it("keeps installed plugins when the registry is unreachable", () => {
     const rows = mergePlugins([summary()], null);
     expect(rows).toHaveLength(1);
@@ -140,6 +147,9 @@ describe("pluginStatus", () => {
       "disabled",
     );
     expect(pluginStatus(summary())).toBe("running");
+    expect(pluginStatus(summary({ state: "failed", runsOnServer: true }))).toBe(
+      "server",
+    );
   });
 });
 
@@ -224,9 +234,9 @@ describe("popularity", () => {
     const rows = mergePlugins(
       [],
       [
-        entry({ id: "a", name: "A", installed: false, installCount: 5 }),
-        entry({ id: "b", name: "B", installed: false, installCount: null }),
-        entry({ id: "c", name: "C", installed: false, installCount: 90 }),
+        entry({ id: "a", name: "A", installed: false, downloads: 5 }),
+        entry({ id: "b", name: "B", installed: false, downloads: null }),
+        entry({ id: "c", name: "C", installed: false, downloads: 90 }),
       ],
     );
     expect(sortPlugins(rows, "popular").map((r) => r.id)).toEqual([

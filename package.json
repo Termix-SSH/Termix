@@ -4,7 +4,7 @@
   "workspaces": [
     "packages/*"
   ],
-  "version": "26.10.0",
+  "version": "26.10.1",
   "description": "Self-hosted, plugin-based server management.",
   "author": "Karmaa",
   "main": "electron/main.cjs",
@@ -18,7 +18,7 @@
     "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs && node scripts/patch-node-pty.cjs && node scripts/patch-ssh2-agent.cjs",
     "prepare": "husky || true",
     "prebuild": "node scripts/write-electron-build-info.cjs",
-    "lint": "node scripts/generate-dialect-schema.cjs --check && eslint . && node scripts/check-importmap-csp.cjs && node scripts/check-core-plugin-ids.cjs && node scripts/check-sdk-ui-exports.cjs && node scripts/generate-settings-search-index.cjs --check && node scripts/check-test-locations.cjs && node scripts/check-changelog.cjs && node scripts/check-env-catalog.cjs",
+    "lint": "node scripts/generate-dialect-schema.cjs --check && eslint . && node scripts/check-importmap-csp.cjs && node scripts/check-core-plugin-ids.cjs && node scripts/check-sdk-ui-exports.cjs && node scripts/check-sdk-guide.cjs && node scripts/generate-settings-search-index.cjs --check && node scripts/check-test-locations.cjs && node scripts/check-changelog.cjs && node scripts/check-env-catalog.cjs",
     "lint:fix": "eslint --fix .",
     "type-check": "npm run build:sdk && tsc -b --force",
     "test": "vitest run",
@@ -61,6 +61,7 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
+    "electron-updater": "^6.8.9",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "motion": "^13.1.1",
@@ -141,6 +142,7 @@
     "husky": "^9.1.7",
     "i18next": "^26.4.2",
     "i18next-browser-languagedetector": "^8.2.1",
+    "js-yaml": "^4.3.2",
     "jsdom": "^30.0.1",
     "lint-staged": "^17.2.0",
     "lucide-react": "^1.33.0",

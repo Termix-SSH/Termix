@@ -29,6 +29,7 @@ const pty = require("node-pty");
 const WebSocket = require("ws");
 const linkedServer = require("./linked-server.cjs");
 const desktopSettings = require("./desktop-settings.cjs");
+const autoUpdates = require("./auto-updater.cjs");
 const { launchNativeRdp } = require("./native-rdp.cjs");
 const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
 const { quitApp } = require("./app-quit.cjs");
@@ -1752,6 +1753,65 @@ ipcMain.handle("save-desktop-settings", (_event, settings) => {
   return desktopSettings.saveDesktopSettings(settings);
 });
 
+let appUpdater = null;
+
+function startAppUpdater() {
+  const kind = autoUpdates.getInstallKind({
+    platform: process.platform,
+    arch: process.arch,
+    isPackaged: app.isPackaged,
+    mas: !!process.mas,
+    env: process.env,
+    execPath: process.execPath,
+    resourcesPath: process.resourcesPath,
+    exists: (target) => fs.existsSync(target),
+    readFile: (target) => fs.readFileSync(target, "utf8"),
+  });
+  logToFile("Updater install kind:", kind);
+  appUpdater = autoUpdates.createUpdater({
+    currentVersion: app.getVersion(),
+    platform: process.platform,
+    arch: process.arch,
+    kind,
+    getMode: () => desktopSettings.getDesktopSettings().updateMode,
+    saveMode: (mode) =>
+      desktopSettings.saveDesktopSettings({ updateMode: mode }),
+    fetchReleases: async () => {
+      const { net } = require("electron");
+      const response = await net.fetch(autoUpdates.RELEASES_API, {
+        headers: { Accept: "application/vnd.github+json" },
+      });
+      if (!response.ok) {
+        throw new Error(`GitHub releases returned ${response.status}`);
+      }
+      return response.json();
+    },
+    loadAutoUpdater: () => require("electron-updater").autoUpdater,
+    send: (state) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("desktop-update-state", state);
+      }
+    },
+    log: logToFile,
+    beforeInstall: () => {
+      isQuitting = true;
+    },
+  });
+  appUpdater.start();
+}
+
+ipcMain.handle(
+  "desktop-update-get-state",
+  () => appUpdater?.getState() ?? null,
+);
+ipcMain.handle("desktop-update-check", () => appUpdater?.check() ?? null);
+ipcMain.handle("desktop-update-download", () => appUpdater?.download() ?? null);
+ipcMain.handle("desktop-update-install", () => appUpdater?.install() ?? false);
+ipcMain.handle(
+  "desktop-update-set-mode",
+  (_event, mode) => appUpdater?.setMode(mode) ?? null,
+);
+
 // The server an older version of the app was pointed at, offered again when
 // linking so upgraded installs do not have to look it up.
 ipcMain.handle("get-previous-server-url", () => {
@@ -1923,6 +1983,16 @@ const c2sTunnelRuntimes = new Map();
 const C2S_WS_HIGH_WATERMARK = 1024 * 1024;
 const C2S_WS_LOW_WATERMARK = 256 * 1024;
 const C2S_STREAM_WRITE_LIMIT = 8 * 1024 * 1024;
+
+// A proxy in front of the server may drop an idle WebSocket, which stopped
+// the tunnel. Pings count as traffic.
+function keepC2SSocketAlive(ws) {
+  const timer = setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) ws.ping();
+  }, 25_000);
+  timer.unref?.();
+  ws.once("close", () => clearInterval(timer));
+}
 
 // C2S (client-to-server) tunnels relay through the server this desktop is
 // linked to, not the embedded backend.
@@ -2192,6 +2262,7 @@ async function openC2SRelay(
     getWebSocketOptions(relayUrl, { headers }),
   );
   attachC2SAuth(ws, tunnel.name || getC2STunnelName(tunnel));
+  keepC2SSocketAlive(ws);
   const pendingChunks = [];
   let ready = false;
   let closed = false;
@@ -2299,6 +2370,7 @@ async function testC2SRelay(
     getWebSocketOptions(relayUrl, { headers }),
   );
   attachC2SAuth(ws, tunnel.name || getC2STunnelName(tunnel));
+  keepC2SSocketAlive(ws);
 
   if (runtime) runtime.authSocket = ws;
   return new Promise((resolve) => {
@@ -2609,6 +2681,7 @@ async function startC2SRemoteTunnel(tunnel, index = 0, authToken) {
     getWebSocketOptions(relayUrl, { headers }),
   );
   attachC2SAuth(ws, tunnel.name || getC2STunnelName(tunnel));
+  keepC2SSocketAlive(ws);
   const sockets = new Map();
   let closed = false;
 
@@ -3804,6 +3877,7 @@ app.whenReady().then(async () => {
 
   createTray();
   createWindow();
+  startAppUpdater();
   desktopSettings.removeOldSyncFiles();
   logToFile("=== Startup complete ===");
 });

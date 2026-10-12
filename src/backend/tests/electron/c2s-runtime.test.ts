@@ -61,6 +61,7 @@ function setup() {
     getC2SRelayHeaders: headers,
     getWebSocketOptions: (_url: string, options: unknown) => options,
     attachC2SAuth: vi.fn(),
+    keepC2SSocketAlive: vi.fn(),
     logToFile: vi.fn(),
     emitC2STunnelStatuses: vi.fn(),
     checkLocalPortAvailable: async () => ({ available: true }),
@@ -175,5 +176,34 @@ describe("client tunnel runtime authentication", () => {
       connected: false,
       reason: "expired",
     });
+  });
+});
+
+describe("client tunnel socket keepalive", () => {
+  it("pings an open socket until it closes", () => {
+    vi.useFakeTimers();
+    try {
+      const context = vm.createContext({
+        setInterval,
+        clearInterval,
+        WebSocket: { OPEN: 1 },
+      });
+      vm.runInContext(
+        section("function keepC2SSocketAlive(", "// C2S (client-to-server)"),
+        context,
+      );
+      const ws = Object.assign(new EventEmitter(), {
+        readyState: 1,
+        ping: vi.fn(),
+      });
+      context.keepC2SSocketAlive(ws);
+      vi.advanceTimersByTime(50_000);
+      expect(ws.ping).toHaveBeenCalledTimes(2);
+      ws.emit("close");
+      vi.advanceTimersByTime(50_000);
+      expect(ws.ping).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

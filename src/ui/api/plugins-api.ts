@@ -221,6 +221,8 @@ export interface PluginSummary {
   enabled: boolean;
   /** enabled | disabled | blocked | failed, or the loader's live state. */
   state: string;
+  /** A linked desktop leaves this plugin to its server. */
+  runsOnServer?: boolean;
   contributes: PluginContributions | null;
   /** Lucide icon name from the manifest. */
   icon?: string;
@@ -289,8 +291,14 @@ export interface RegistryPluginVersion {
   size: number;
 }
 
+export type RegistryTier = "official" | "community" | "custom";
+
 export interface RegistryPluginEntry {
   id: string;
+  /** Which registry this entry comes from. */
+  registryId?: string;
+  registryName?: string;
+  tier?: RegistryTier;
   name: string;
   description: string;
   author: string;
@@ -313,9 +321,18 @@ export interface RegistryPluginEntry {
   pinnedVersion: string | null;
   autoUpdate: boolean;
   bundled: boolean;
-  /** Active installs when known, release downloads otherwise. */
-  installCount: number | null;
-  installCountSource: string | null;
+  /** How often the release files were downloaded, from the registry. */
+  downloads: number | null;
+}
+
+export interface RegistryListingSource {
+  id: string;
+  name: string;
+  tier: RegistryTier;
+  url: string;
+  lastCheckedAt: string | null;
+  error: string | null;
+  plugins: number;
 }
 
 export interface RegistryListing {
@@ -325,6 +342,7 @@ export interface RegistryListing {
     lastCheckedAt: string | null;
     error: string | null;
   };
+  registries?: RegistryListingSource[];
   managedByServer: boolean;
   plugins: RegistryPluginEntry[];
 }
@@ -373,7 +391,7 @@ export async function getPluginRegistry(
 /** `capabilities` is exactly what the consent prompt showed. */
 export async function installPlugin(
   pluginId: string,
-  options: { version?: string; capabilities: string[] },
+  options: { version?: string; capabilities: string[]; registryId?: string },
 ): Promise<{ id: string; version: string; state: string }> {
   try {
     const response = await rbacApi.post(
@@ -403,6 +421,61 @@ export async function updatePlugin(
   } finally {
     announcePluginsChanged();
   }
+}
+
+export interface CustomRegistryInfo {
+  id: string;
+  name: string;
+  url: string;
+  keyId: string;
+  enabled: boolean;
+  addedAt: string;
+}
+
+export interface RegistriesState {
+  managedByServer: boolean;
+  official: { id: string; url: string };
+  community: { id: string; url: string; enabled: boolean };
+  custom: CustomRegistryInfo[];
+}
+
+export interface RegistryPreview {
+  id: string;
+  name: string;
+  url: string;
+  keyId: string;
+  plugins: number;
+}
+
+export async function getRegistries(): Promise<RegistriesState> {
+  const response = await rbacApi.get("/plugins/registries");
+  return response.data;
+}
+
+export async function previewRegistry(url: string): Promise<RegistryPreview> {
+  const response = await rbacApi.post("/plugins/registries/preview", { url });
+  return response.data;
+}
+
+export async function addRegistry(
+  url: string,
+  keyId: string,
+): Promise<CustomRegistryInfo> {
+  const response = await rbacApi.post("/plugins/registries", { url, keyId });
+  return response.data;
+}
+
+export async function setRegistryEnabled(
+  id: string,
+  enabled: boolean,
+): Promise<void> {
+  await rbacApi.patch(`/plugins/registries/${encodeURIComponent(id)}`, {
+    enabled,
+  });
+}
+
+export async function removeRegistry(id: string): Promise<void> {
+  await rbacApi.delete(`/plugins/registries/${encodeURIComponent(id)}`);
 }
 
 export async function updateAllPlugins(): Promise<UpdateAllResult> {

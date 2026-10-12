@@ -38,5 +38,7 @@
   "pluginCatalog": "plugins",
   "cli": "cli",
   "develop": "develop",
-  "communityRegistry": "develop/community-registry"
+  "communityRegistry": "develop/community-registry",
+  "pluginRegistries": "guide/plugins#registries",
+  "hostRegistry": "develop/registries"
 }

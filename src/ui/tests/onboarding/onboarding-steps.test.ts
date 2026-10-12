@@ -93,6 +93,22 @@ describe("CORE_STEPS", () => {
     ]);
   });
 
+  it("asks how the desktop app updates when it has an updater", () => {
+    const win = window as unknown as { electronAPI?: unknown };
+    win.electronAPI = { isElectron: true, updates: {} };
+    try {
+      expect(ids(ctx({ isDesktop: true }))).toEqual([
+        "desktop-sync",
+        "desktop-updates",
+        "preset",
+        "appearance",
+      ]);
+      expect(ids(ctx())).not.toContain("desktop-updates");
+    } finally {
+      delete win.electronAPI;
+    }
+  });
+
   it("offers account security only when there is something to set up", () => {
     expect(ids(ctx({ canEnrollSecondFactor: true }))).toEqual([
       "preset",
