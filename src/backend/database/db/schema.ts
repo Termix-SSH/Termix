@@ -9,13 +9,19 @@ import {
 } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
-export const users = sqliteTable("users", {
-  id: text("id").primaryKey(),
-  username: text("username").notNull(),
-  passwordHash: text("password_hash").notNull(),
-  isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
-  registeredAt: text("registered_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+export const users = sqliteTable(
+  "users",
+  {
+    id: text("id").primaryKey(),
+    username: text("username").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
+    registeredAt: text("registered_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [uniqueIndex("idx_users_username").on(table.username)],
+);
 
 export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),

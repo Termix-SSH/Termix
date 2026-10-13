@@ -17,9 +17,10 @@ import {
   listUserSecondFactors,
   resetUserSecondFactors,
 } from "../../auth/second-factor-admin.js";
-import type {
-  UserRecord,
-  UserRepository,
+import {
+  isUsernameTaken,
+  type UserRecord,
+  type UserRepository,
 } from "../repositories/user-repository.js";
 
 function isNonEmptyString(val: unknown): val is string {
@@ -541,6 +542,9 @@ export function registerUserAdminRoutes(
         toast: { type: "success", message: `User created: ${username}` },
       });
     } catch (err) {
+      if (isUsernameTaken(err)) {
+        return res.status(409).json({ error: "Username already exists" });
+      }
       authLogger.error("Failed to admin-create user", err);
       res.status(500).json({ error: "Failed to create user" });
     }

@@ -1,0 +1,3 @@
+ALTER TABLE `users` MODIFY COLUMN `username` varchar(255) NOT NULL;--> statement-breakpoint
+UPDATE `users` JOIN (SELECT DISTINCT `later`.`id` FROM `users` AS `later` JOIN `users` AS `older` ON `older`.`username` = `later`.`username` AND (`older`.`registered_at` < `later`.`registered_at` OR (`older`.`registered_at` = `later`.`registered_at` AND `older`.`id` < `later`.`id`))) AS `duplicates` ON `duplicates`.`id` = `users`.`id` SET `users`.`username` = CONCAT(`users`.`username`, '-', `users`.`id`);--> statement-breakpoint
+ALTER TABLE `users` ADD CONSTRAINT `idx_users_username` UNIQUE(`username`);
