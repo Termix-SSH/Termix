@@ -25,7 +25,7 @@ Termix is a small core plus plugins. This repo is the core: hosts, credentials, 
 npm run dev
 ```
 
-This builds everything, starts the backend and then the Vite server at `http://localhost:5173/`. Backend changes restart the backend, and plugin changes in `../Termix-Plugins` rebuild and reload that plugin. `npm run dev:electron` does the same with the desktop app, and `npm run dev -- --help` lists the other options.
+This builds everything, starts the backend and then the Vite server at `http://localhost:5173/`. Backend changes restart the backend, and plugin changes in `../Plugins` rebuild and reload that plugin. `npm run dev:electron` does the same with the desktop app, and `npm run dev -- --help` lists the other options.
 
 ## Useful commands
 

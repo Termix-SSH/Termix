@@ -122,7 +122,7 @@ Targets
   docker     Build the production image and run it with your local plugins
 
 Options
-  --plugins <dir>  Plugin repos to build and watch (default ../Termix-Plugins)
+  --plugins <dir>  Plugin repos to build and watch (default ../Plugins)
   --no-local       Use only the plugins pinned in docker/bundled-plugins.json
   --db <engine>    sqlite (default), postgres or mysql. Postgres and MySQL run in Docker
   --guacd          Run guacd in Docker for remote desktop

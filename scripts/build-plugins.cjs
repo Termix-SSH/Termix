@@ -7,7 +7,7 @@
  * pinned sha256 and unpacked.
  *
  * For development, `--local <dir>` (or TERMIX_LOCAL_PLUGINS) points at a
- * folder of plugin repos like ../Termix-Plugins. A plugin there whose sources
+ * folder of plugin repos like ../Plugins. A plugin there whose sources
  * changed since its last build is rebuilt first with this checkout's SDK, so
  * SDK edits apply without publishing, then any built one (has
  * dist/) is copied in place of its pin, or added when it has no pin.

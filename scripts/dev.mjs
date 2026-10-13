@@ -3,7 +3,7 @@
  * and options.
  *
  * Every target builds the SDK and stages plugins (local builds from
- * ../Termix-Plugins when it exists), then:
+ * ../Plugins when it exists), then:
  *
  * - web: compiles the backend in watch mode, starts it, then starts Vite. A
  *   backend or SDK change restarts the backend. A plugin change rebuilds that
@@ -652,9 +652,7 @@ async function main() {
   const pluginsDir = options.local
     ? path.resolve(
         root,
-        options.pluginsDir ??
-          process.env.TERMIX_LOCAL_PLUGINS ??
-          "../Termix-Plugins",
+        options.pluginsDir ?? process.env.TERMIX_LOCAL_PLUGINS ?? "../Plugins",
       )
     : null;
   const localPlugins =
