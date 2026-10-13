@@ -36,7 +36,7 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   }),
 }));
 import { registerHostBulkRoutes } from "../../../database/routes/host-bulk-routes.js";
-import { buildExportPayload } from "../../../../ui/sidebar/host-export-payload";
+import { buildExportPayload } from "../../../../ui/sidebar/host-export-payload.js";
 
 let handler: RequestHandler;
 let sshConfigHandler: RequestHandler;
