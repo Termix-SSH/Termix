@@ -256,4 +256,16 @@ describe("keys from a linked server", () => {
     await registries.setSyncedRegistryKeys([]);
     expect(getCustomPluginKeys()).toEqual([]);
   });
+
+  it("marks them as synced unless an admin added the same key here", async () => {
+    const synced = newKey();
+    const shared = newKey();
+    serve(URL_A, { registry: "acme", publicKey: shared });
+    await registries.addRegistry(URL_A, pluginKeyId(shared));
+    await registries.setSyncedRegistryKeys([synced, shared]);
+
+    expect(registries.isSyncedOnlyKey(pluginKeyId(synced))).toBe(true);
+    expect(registries.isSyncedOnlyKey(pluginKeyId(shared))).toBe(false);
+    expect(registries.isSyncedOnlyKey("ec40e29bcc4986b2")).toBe(false);
+  });
 });
