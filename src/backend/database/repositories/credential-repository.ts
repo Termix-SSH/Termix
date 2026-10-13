@@ -103,11 +103,11 @@ export class CredentialRepository {
       .orderBy(desc(sshCredentials.updatedAt));
   }
 
-  async existsForImportIdentity(
+  async findIdForImportIdentity(
     userId: string,
     name: string,
     username: string | null,
-  ): Promise<boolean> {
+  ): Promise<number | null> {
     const rows = await this.context.drizzle
       .select({ id: sshCredentials.id })
       .from(sshCredentials)
@@ -120,7 +120,7 @@ export class CredentialRepository {
       )
       .limit(1);
 
-    return rows.length > 0;
+    return rows[0]?.id ?? null;
   }
 
   async findDecryptedByIdForUser(
