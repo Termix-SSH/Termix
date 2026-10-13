@@ -32,6 +32,19 @@ describe("Electron security boundary", () => {
     }
   });
 
+  it("never hands the session cookie to the renderer over IPC", () => {
+    for (const channel of ["get-session-cookie", "wait-session-cookie"]) {
+      expect(main).not.toContain(`"${channel}"`);
+      expect(preload).not.toContain(`"${channel}"`);
+    }
+  });
+
+  it("launches only the editor saved from a file dialog", () => {
+    expect(main).not.toContain("fileData?.editorPath");
+    expect(main).toContain("readSetting(EXTERNAL_EDITOR_SETTING)");
+    expect(main).toContain("dialogChosenPaths.has(value)");
+  });
+
   it("scopes proxy headers and basic auth to the linked origin", () => {
     expect(main).toContain('"sync-proxy-config"');
     expect(main).toContain("linkedServer.applyLinkHeaders(");
