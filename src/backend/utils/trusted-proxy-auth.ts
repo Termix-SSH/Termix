@@ -1,3 +1,4 @@
+import type { IncomingHttpHeaders } from "node:http";
 import { BlockList, isIP } from "node:net";
 
 export interface TrustedProxyAuthConfig {
@@ -106,6 +107,31 @@ export function isTrustedProxyAddress(
   return (
     family !== 0 && blockList.check(normalized, family === 4 ? "ipv4" : "ipv6")
   );
+}
+
+function isLoopbackAddress(address: string): boolean {
+  const normalized = normalizeAddress(address);
+  return normalized === "::1" || normalized.startsWith("127.");
+}
+
+/**
+ * The address checked against the allowlist. The bundled nginx always
+ * connects from loopback and sets X-Termix-Proxy-Peer to its own TCP peer,
+ * overwriting whatever the client sent, so behind it the proxy that counts
+ * is that peer rather than nginx. Any other connection is judged by its
+ * socket address.
+ */
+export function getTrustedProxySourceAddress(req: {
+  headers: IncomingHttpHeaders;
+  socket: { remoteAddress?: string };
+}): string | undefined {
+  const socketAddress = req.socket.remoteAddress;
+  const peer = req.headers["x-termix-proxy-peer"];
+  return socketAddress &&
+    isLoopbackAddress(socketAddress) &&
+    typeof peer === "string"
+    ? peer
+    : socketAddress;
 }
 
 export function resolveTrustedProxyRoles(
