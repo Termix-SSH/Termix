@@ -1,4 +1,9 @@
-const CACHE_NAME = "termix-static-v2";
+// CACHE_NAME carries the package version so a new release always gets a fresh
+// cache: the activate handler below deletes every cache whose name differs
+// from this one, which is what evicts a previous build's entries. Both
+// placeholders on these lines are stamped by scripts/stamp-sw-build-info.cjs
+// during `npm run build` - vite copies public/ verbatim and never transforms it.
+const CACHE_NAME = "termix-static-" + "__TERMIX_CACHE_VERSION__";
 const BASE_PATH = "__TERMIX_SW_BASE_PATH__";
 const STATIC_ASSETS = [
   `${BASE_PATH}/favicon.ico`,
