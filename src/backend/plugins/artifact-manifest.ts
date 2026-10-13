@@ -1,50 +1,59 @@
+import path from "node:path";
 import zlib from "node:zlib";
+import * as tar from "tar";
 
 const MAX_UNPACKED_BYTES = 512 * 1024 * 1024;
 
 /**
- * Reads one file out of a .tmxplug (a gzipped tar) without unpacking it to
- * disk. Returns null when the archive has no such file.
+ * Reads every copy of one file out of a .tmxplug (a gzipped tar) without
+ * unpacking it to disk. Uses the same tar parser as the loader's unpack, so
+ * pax and long-name headers resolve the same way, and only plain files count
+ * because they are the only kind the unpack writes. Names compare
+ * case-insensitively since a case-insensitive disk folds them together.
  */
-export function readArtifactFile(
-  buffer: Buffer,
-  wanted: string,
-): Buffer | null {
-  const tar = zlib.gunzipSync(buffer, { maxOutputLength: MAX_UNPACKED_BYTES });
-  let offset = 0;
-  while (offset + 512 <= tar.length) {
-    const header = tar.subarray(offset, offset + 512);
-    if (header.every((byte) => byte === 0)) break;
-    const field = (start: number, length: number) =>
-      header
-        .subarray(start, start + length)
-        .toString("utf8")
-        .replace(/\0.*$/s, "");
-    const prefix = field(345, 155);
-    const name = (
-      prefix ? `${prefix}/${field(0, 100)}` : field(0, 100)
-    ).replace(/^\.\//, "");
-    const size = Number.parseInt(field(124, 12).trim() || "0", 8);
-    if (!Number.isFinite(size) || size < 0) break;
-    const start = offset + 512;
-    if (name === wanted) return tar.subarray(start, start + size);
-    offset = start + Math.ceil(size / 512) * 512;
-  }
-  return null;
+export function readArtifactFiles(buffer: Buffer, wanted: string): Buffer[] {
+  const archive = zlib.gunzipSync(buffer, {
+    maxOutputLength: MAX_UNPACKED_BYTES,
+  });
+  const key = wanted.toLowerCase();
+  const found: Buffer[] = [];
+  const parser = new tar.Parser({
+    strict: true,
+    onReadEntry: (entry) => {
+      const name = path.posix.normalize(entry.path.replace(/\\/g, "/"));
+      if (entry.type !== "File" || name.toLowerCase() !== key) {
+        entry.resume();
+        return;
+      }
+      const chunks: Buffer[] = [];
+      entry.on("data", (chunk: Buffer) => chunks.push(chunk));
+      entry.on("end", () => found.push(Buffer.concat(chunks)));
+    },
+  });
+  // The parser runs synchronously on an in-memory buffer.
+  parser.end(archive);
+  return found;
 }
 
-/** The manifest.json packed in a .tmxplug, parsed but not validated. */
+/**
+ * The manifest.json packed in a .tmxplug, parsed but not validated. An
+ * archive with more than one is refused: the unpack keeps the last copy, so
+ * whichever one this read the other could carry different capabilities.
+ */
 export function readArtifactManifest(buffer: Buffer): Record<string, unknown> {
-  let raw: Buffer | null;
+  let copies: Buffer[];
   try {
-    raw = readArtifactFile(buffer, "manifest.json");
+    copies = readArtifactFiles(buffer, "manifest.json");
   } catch {
     throw new Error("the file is not a valid .tmxplug archive");
   }
-  if (!raw) throw new Error("the archive has no manifest.json");
+  if (copies.length === 0) throw new Error("the archive has no manifest.json");
+  if (copies.length > 1) {
+    throw new Error("the archive has more than one manifest.json");
+  }
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw.toString("utf8"));
+    parsed = JSON.parse(copies[0].toString("utf8"));
   } catch {
     throw new Error("manifest.json is not valid JSON");
   }
