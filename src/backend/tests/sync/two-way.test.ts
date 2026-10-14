@@ -14,6 +14,7 @@ const state = vi.hoisted(() => ({
   current: null as null | { drizzle: unknown },
   server: null as null | { drizzle: unknown },
   allow: true,
+  sharedHostIds: new Set<number>(),
 }));
 
 const SERVER_USER = "srv-user";
@@ -38,13 +39,18 @@ vi.mock("../../utils/system-crypto.js", () => ({
   },
 }));
 vi.mock("../../utils/data-crypto.js", () => ({
-  DataCrypto: { getUserDataKey: () => Buffer.alloc(32, 3) },
+  DataCrypto: {
+    getUserDataKey: () => Buffer.alloc(32, 3),
+    decryptRecord: (_table: string, record: unknown) => record,
+  },
 }));
 vi.mock("../../utils/permission-manager.js", () => ({
   PermissionManager: {
     getInstance: () => ({
       hasPermission: async () => state.allow,
-      canAccessHost: async () => ({ hasAccess: false }),
+      canAccessHost: async (_userId: string, hostId: number) => ({
+        hasAccess: state.sharedHostIds.has(hostId),
+      }),
       getUserPermissions: async () => [],
     }),
   },
@@ -239,6 +245,7 @@ beforeEach(async () => {
   resetFeed();
   resetSeqAllocator();
   state.allow = true;
+  state.sharedHostIds.clear();
   server = await side(SERVER_USER);
   state.server = server.ctx;
   desktops = [await side("desk-a"), await side("desk-b")];
@@ -477,6 +484,47 @@ describe("after linking", () => {
     expect(
       (await on(server, () => hostsOf(server))).map((h) => h.name).sort(),
     ).toEqual(["later", "private"]);
+  });
+});
+
+describe("hosts shared with the account", () => {
+  it("arrive on the desktop with their text columns as stored", async () => {
+    const [desk] = desktops;
+    await on(server, async () => {
+      await server.db.run(
+        sql`INSERT INTO users (id, username, password_hash, is_admin) VALUES ('owner', 'owner', '', 0)`,
+      );
+      await db(server).insert(schema.hosts).values({
+        userId: "owner",
+        name: "theirs",
+        ip: "10.0.0.5",
+        port: 22,
+        username: "root",
+        authType: "none",
+        forceKeyboardInteractive: "true",
+        syncId: "host-theirs",
+      });
+      const [host] = await db(server).select().from(schema.hosts);
+      await db(server).insert(schema.hostAccess).values({
+        hostId: host.id,
+        userId: SERVER_USER,
+        grantedBy: "owner",
+        permissionLevel: "view",
+      });
+      state.sharedHostIds.add(host.id);
+      markChanged();
+    });
+
+    const engine = await linkDesktop(desk);
+    await pass(desk, engine);
+
+    const [copy] = await on(desk, () => hostsOf(desk));
+    expect(copy?.name).toBe("theirs");
+    expect(copy.forceKeyboardInteractive).toBe("true");
+    expect(JSON.parse(copy.sharedSource!)).toMatchObject({
+      owner: "owner",
+      permissionLevel: "view",
+    });
   });
 });
 
