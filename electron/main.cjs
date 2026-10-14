@@ -40,6 +40,7 @@ const {
   EXTERNAL_EDITOR_SETTING,
   isLaunchableFileName,
 } = require("./external-editor.cjs");
+const { isExternalLoginUrl, isCallbackPort } = require("./external-login.cjs");
 
 const localTerminalSessions = new Map();
 
@@ -1670,6 +1671,12 @@ ipcMain.handle("get-embedded-server-status", () => {
 ipcMain.handle(
   "external-browser-login",
   async (_event, authUrl, callbackPort) => {
+    if (!isExternalLoginUrl(authUrl)) {
+      return { success: false, error: "Invalid authentication URL" };
+    }
+    if (!isCallbackPort(callbackPort)) {
+      return { success: false, error: "Invalid callback port" };
+    }
     const http = require("http");
 
     return new Promise((resolve) => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getTrustedProxyAuthConfig,
+  getTrustedProxySourceAddress,
   isTrustedProxyAddress,
   parseTrustedProxyRoleMap,
   resolveTrustedProxyRoles,
@@ -26,6 +27,35 @@ describe("trusted proxy authentication config", () => {
     expect(isTrustedProxyAddress("::ffff:10.20.1.4", trusted)).toBe(true);
     expect(isTrustedProxyAddress("10.21.1.4", trusted)).toBe(false);
     expect(isTrustedProxyAddress("2001:db8::5", trusted)).toBe(true);
+  });
+
+  it("judges requests relayed by the bundled nginx by nginx's own peer", () => {
+    const viaNginx = (peer?: string) => ({
+      headers: peer ? { "x-termix-proxy-peer": peer } : {},
+      socket: { remoteAddress: "::ffff:127.0.0.1" },
+    });
+    expect(getTrustedProxySourceAddress(viaNginx("172.20.0.10"))).toBe(
+      "172.20.0.10",
+    );
+    // A client reaching nginx directly is reported as itself, so trusting
+    // the auth proxy no longer means trusting nginx on loopback.
+    expect(
+      isTrustedProxyAddress(
+        getTrustedProxySourceAddress(viaNginx("203.0.113.7")),
+        ["127.0.0.1"],
+      ),
+    ).toBe(false);
+    // A local reverse proxy that does not set the header keeps working.
+    expect(getTrustedProxySourceAddress(viaNginx())).toBe("::ffff:127.0.0.1");
+  });
+
+  it("ignores the peer header on connections that are not from loopback", () => {
+    expect(
+      getTrustedProxySourceAddress({
+        headers: { "x-termix-proxy-peer": "172.20.0.10" },
+        socket: { remoteAddress: "198.51.100.9" },
+      }),
+    ).toBe("198.51.100.9");
   });
 
   it("fails closed when a supplied external role is not mapped", () => {

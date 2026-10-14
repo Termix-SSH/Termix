@@ -73,11 +73,21 @@ export function ElectronLoginForm({
   );
 
   // postMessage from server Auth.tsx after the backend has set the HttpOnly cookie.
-  // Uses '*' as target origin because the iframe may be cross-origin (e.g. remote Docker server).
+  // Only the server's own origin is trusted: the iframe can navigate away
+  // (identity provider, redirects), and those pages must not hand us a token,
+  // start a system browser login, or receive the replies.
   useEffect(() => {
+    let serverOrigin: string;
+    try {
+      serverOrigin = new URL(serverUrl).origin;
+    } catch {
+      return;
+    }
+
     const handleMessage = async (event: MessageEvent) => {
       try {
         if (event.source !== iframeRef.current?.contentWindow) return;
+        if (event.origin !== serverOrigin) return;
         if (!event.data || typeof event.data !== "object") return;
         const {
           type,
@@ -115,7 +125,7 @@ export function ElectronLoginForm({
                 providerId,
                 ...result,
               },
-              "*",
+              serverOrigin,
             );
           };
           const electronAPI = (
@@ -181,14 +191,14 @@ export function ElectronLoginForm({
             success: false,
             error,
           },
-          "*",
+          serverOrigin,
         );
       }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [handleAuthSuccess, t]);
+  }, [handleAuthSuccess, serverUrl, t]);
 
   useEffect(() => {
     const iframe = iframeRef.current;

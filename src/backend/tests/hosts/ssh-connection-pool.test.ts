@@ -42,6 +42,52 @@ describe("SSHConnectionPool", () => {
     pool.destroy();
   });
 
+  it("tracks every client from concurrent connects to a new host", async () => {
+    const pool = new SSHConnectionPool();
+    const clients = Array.from({ length: 3 }, deferredClient);
+    let factoryCalls = 0;
+    const factory = vi.fn(() => clients[factoryCalls++].promise);
+
+    const requests = Array.from({ length: 3 }, () =>
+      pool.getConnection("new-host", factory),
+    );
+    for (const pending of clients) pending.resolve(pending.client);
+    const connected = await Promise.all(requests);
+
+    for (const client of connected) pool.releaseConnection("new-host", client);
+    const reused = await Promise.all(
+      Array.from({ length: 3 }, () => pool.getConnection("new-host", factory)),
+    );
+    expect(new Set(reused)).toEqual(new Set(connected));
+    expect(factory).toHaveBeenCalledTimes(3);
+
+    pool.clearKeyConnections("new-host");
+    for (const pending of clients) {
+      expect(pending.client.end).toHaveBeenCalledOnce();
+    }
+    pool.destroy();
+  });
+
+  it("does not resurrect a connection removed while another connects", async () => {
+    const pool = new SSHConnectionPool();
+    const first = deferredClient();
+    const second = deferredClient();
+    first.resolve(first.client);
+    await pool.getConnection("host", () => first.promise);
+
+    const request = pool.getConnection("host", () => second.promise);
+    first.client.emit("close");
+    second.resolve(second.client);
+    await expect(request).resolves.toBe(second.client);
+
+    pool.releaseConnection("host", first.client);
+    pool.releaseConnection("host", second.client);
+    await expect(
+      pool.getConnection("host", () => deferredClient().promise),
+    ).resolves.toBe(second.client);
+    pool.destroy();
+  });
+
   it("discards a pending connection when its host pool is cleared", async () => {
     const pool = new SSHConnectionPool();
     const pending = deferredClient();
