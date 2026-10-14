@@ -177,7 +177,7 @@ export function PluginDetail({
               <Button
                 variant="outline"
                 size="sm"
-                disabled={busy || locked}
+                disabled={busy || plugin.managedByServer}
                 onClick={() => void manager.toggle(plugin)}
               >
                 {plugin.enabled

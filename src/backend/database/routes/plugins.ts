@@ -243,7 +243,9 @@ export async function listPreLoginPlugins(): Promise<
  *       frontends in the same order the server does.
  *
  *       On a desktop linked to a server, `runsOnServer` marks plugins that
- *       only run on that server and stay off here on purpose.
+ *       only run on that server and stay off here on purpose, and, for
+ *       admins, `managedByServer` marks plugins whose on/off state the server
+ *       decides.
  *     tags:
  *       - Plugins
  *     responses:
@@ -370,6 +372,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
           features,
           env,
           signedBy: loaded?.signedBy ?? null,
+          managedByServer: linked && (await isManagedByLinkedServer(record.id)),
           capabilities,
           grantedCapabilities: grantsByPlugin.get(record.id) ?? [],
           lastError: loaded?.lastError ?? record.lastError ?? null,
@@ -393,9 +396,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
 });
 
 async function isManagedByLinkedServer(pluginId: string): Promise<boolean> {
-  if (process.env.ELECTRON_EMBEDDED !== "true") return false;
-  const { getLink } = await import("../../sync/client/link-store.js");
-  if (!(await getLink())) return false;
+  if (!(await isLinkedDesktop())) return false;
   const { isServerManaged } = await import("../../sync/client/plugins.js");
   return isServerManaged(pluginId);
 }

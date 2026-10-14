@@ -64,7 +64,8 @@ vi.mock("../../../plugins/index.js", () => ({
   }),
 }));
 
-const { mirrorPlugins } = await import("../../../sync/client/plugins.js");
+const { mirrorPlugins, isServerManaged } =
+  await import("../../../sync/client/plugins.js");
 const { remoteJson } = await import("../../../sync/client/http.js");
 const { sendCoreAlert } = await import("../../../notify/core-notify.js");
 
@@ -185,7 +186,7 @@ describe("mirrorPlugins", () => {
   });
 
   describe("a user plugin the server has on", () => {
-    function serverRunsSignedBy(keyId: string) {
+    function serverRunsSignedBy(keyId: string, enabled = true) {
       const version = keyId === "removed-key" ? "1.0.1" : "1.0.0";
       state.loaded.set("extra", {
         id: "extra",
@@ -202,8 +203,8 @@ describe("mirrorPlugins", () => {
             version,
             source: "user",
             artifact: true,
-            enabled: true,
-            active: true,
+            enabled,
+            active: enabled,
             desktop: "mirror",
             syncEntities: [],
             granted: ["net"],
@@ -236,6 +237,34 @@ describe("mirrorPlugins", () => {
         );
       },
     );
+
+    it("leaves the server in charge of one a trusted key signed", () => {
+      serverRunsSignedBy("local-key");
+      expect(isServerManaged("extra")).toBe(true);
+    });
+
+    it.each(["server-key", "removed-key"])(
+      "lets this desktop's admin decide on one signed by %s",
+      async (keyId) => {
+        serverRunsSignedBy(keyId);
+        state.syncedOnlyKeys.add("server-key");
+        expect(isServerManaged("extra")).toBe(false);
+
+        state.enabled.add("extra");
+        await mirrorPlugins({} as never);
+        expect(state.enabled.has("extra")).toBe(true);
+      },
+    );
+
+    it("still switches an untrusted one off when the server does", async () => {
+      serverRunsSignedBy("server-key", false);
+      state.syncedOnlyKeys.add("server-key");
+      state.enabled.add("extra");
+
+      await mirrorPlugins({} as never);
+
+      expect(state.enabled.has("extra")).toBe(false);
+    });
   });
 });
 

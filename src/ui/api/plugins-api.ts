@@ -263,6 +263,8 @@ export interface PluginSummary {
   /** Environment variables the plugin reads. Admins only. */
   env?: PluginEnvVar[];
   signedBy?: string | null;
+  /** A linked server decides whether it runs here. Admins only. */
+  managedByServer?: boolean;
 }
 
 export async function getPlugins(): Promise<PluginSummary[]> {

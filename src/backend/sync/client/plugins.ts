@@ -4,7 +4,8 @@
  * For every plugin in "mirror" mode, the server decides: a plugin installed
  * there is installed here, on or off to match, with the capabilities an
  * admin granted it there. Plugins marked "local" are left to the desktop and
- * "server" ones never run on a linked desktop.
+ * "server" ones never run on a linked desktop. A user plugin no key trusted
+ * here signed is only ever switched off; the desktop's admin turns it on.
  */
 
 import fs from "fs";
@@ -328,8 +329,13 @@ export async function mirrorPlugins(link: SyncLink): Promise<void> {
   }
 }
 
-/** Whether a plugin's on/off state belongs to the linked server. */
+/**
+ * Whether a plugin's on/off state belongs to the linked server. Code no key
+ * trusted here vouches for is the desktop's own admin's call to turn on.
+ */
 export function isServerManaged(pluginId: string): boolean {
   const local = getPluginRuntime().loader.get(pluginId);
-  return (local?.manifest.desktop ?? "mirror") !== "local";
+  const mode = local?.manifest.desktop ?? "mirror";
+  if (mode !== "mirror") return mode === "server";
+  return local?.source !== "user" || vouchedHere(local);
 }

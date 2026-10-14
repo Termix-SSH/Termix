@@ -69,6 +69,8 @@ export interface PluginEntry {
   /** The registry it is listed in or was installed from. */
   registryId: string | null;
   registryName: string | null;
+  /** A linked server decides whether it runs here. */
+  managedByServer: boolean;
 }
 
 export type PluginSource =
@@ -165,6 +167,7 @@ export function mergePlugins(
       unverified: pluginSource(summary) === "unverified",
       registryId: entry?.registryId ?? summary.registryId ?? null,
       registryName: entry?.registryName ?? null,
+      managedByServer: summary.managedByServer ?? false,
     });
   }
 
@@ -208,6 +211,7 @@ export function mergePlugins(
       unverified: false,
       registryId: entry.registryId ?? "official",
       registryName: entry.registryName ?? null,
+      managedByServer: false,
     });
   }
 
@@ -248,6 +252,7 @@ export function uploadEntry(preview: PluginUploadPreview): PluginEntry {
     unverified: true,
     registryId: null,
     registryName: null,
+    managedByServer: false,
   };
 }
 
