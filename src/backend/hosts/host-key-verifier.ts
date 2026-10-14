@@ -263,28 +263,6 @@ export class SSHHostKeyVerifier {
             changeCount: host.hostKeyChangedCount || 0,
           });
 
-          if (isJumpHost) {
-            await this.updateHostKey(
-              hostId,
-              fingerprint,
-              keyType,
-              algorithm,
-              host.hostKeyChangedCount || 0,
-            );
-            sshLogger.warn("Jump host key changed - auto-accepted", {
-              operation: "host_key_updated",
-              hostId,
-              ip,
-              port,
-              fingerprint,
-              keyType,
-              userId,
-              isJumpHost: true,
-            });
-            verify(true);
-            return;
-          }
-
           if (!ws) {
             sshLogger.error(
               "Host key changed - please connect via Terminal to verify the new key",

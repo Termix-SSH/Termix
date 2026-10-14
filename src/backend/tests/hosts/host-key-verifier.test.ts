@@ -1,10 +1,16 @@
 import { EventEmitter } from "node:events";
 import type { WebSocket } from "ws";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SSHHostKeyVerifier } from "../../hosts/host-key-verifier.js";
 
+const repo = vi.hoisted(() => ({
+  updateHostKey: vi.fn(async () => {}),
+  storeHostKey: vi.fn(async () => {}),
+  touchHostKeyLastVerified: vi.fn(async () => {}),
+}));
+
 vi.mock("../../database/repositories/factory.js", () => ({
-  createCurrentHostResolutionRepository: () => ({}),
+  createCurrentHostResolutionRepository: () => repo,
 }));
 vi.mock("../../utils/logger.js", () => ({
   sshLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -55,5 +61,52 @@ describe("quick connect host keys", () => {
 
   it("still connects when there is no socket to ask on", async () => {
     expect(await verifyUnsaved(null)).toBe(true);
+  });
+});
+
+const pinned = {
+  hostKeyFingerprint: Buffer.from("old-key").toString("hex"),
+  hostKeyType: "ssh-ed25519",
+  hostKeyAlgorithm: "sha256",
+  hostKeyChangedCount: 0,
+  name: "bastion",
+};
+
+async function verifyJumpHop(socket: WebSocket | null, key: string) {
+  const verifier = await SSHHostKeyVerifier.createHostVerifier(
+    7,
+    "10.0.0.1",
+    22,
+    socket,
+    "user",
+    true,
+    pinned,
+  );
+  return new Promise<boolean>((resolve) => verifier(Buffer.from(key), resolve));
+}
+
+describe("jump host key changes", () => {
+  beforeEach(() => {
+    repo.updateHostKey.mockClear();
+  });
+
+  it("refuses a changed key and keeps the pin when nobody can be asked", async () => {
+    expect(await verifyJumpHop(null, "new-key")).toBe(false);
+    expect(repo.updateHostKey).not.toHaveBeenCalled();
+  });
+
+  it("asks the user and only replaces the pin when they accept", async () => {
+    const no = socketAnswering("reject");
+    expect(await verifyJumpHop(no.socket, "new-key")).toBe(false);
+    expect(no.sent[0]).toContain("host_key_changed");
+    expect(repo.updateHostKey).not.toHaveBeenCalled();
+
+    const yes = socketAnswering("accept");
+    expect(await verifyJumpHop(yes.socket, "new-key")).toBe(true);
+    expect(repo.updateHostKey).toHaveBeenCalledTimes(1);
+  });
+
+  it("still accepts the pinned key without asking", async () => {
+    expect(await verifyJumpHop(null, "old-key")).toBe(true);
   });
 });
