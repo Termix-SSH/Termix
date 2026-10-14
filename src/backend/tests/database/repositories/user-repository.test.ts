@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { TestSqliteDatabase } from "./test-support.js";
-import { UserRepository } from "../../../database/repositories/user-repository.js";
+import {
+  UserRepository,
+  isUsernameTaken,
+} from "../../../database/repositories/user-repository.js";
 
 describe("UserRepository.listPage", () => {
   let adapter: TestSqliteDatabase | null = null;
@@ -91,5 +94,29 @@ describe("UserRepository.listPage", () => {
 
     expect(page.users).toEqual([]);
     expect(page.total).toBe(5);
+  });
+});
+
+describe("UserRepository.create", () => {
+  let adapter: TestSqliteDatabase | null = null;
+
+  afterEach(async () => {
+    if (adapter) {
+      await adapter.close();
+      adapter = null;
+    }
+  });
+
+  it("rejects a taken username in a way callers can recognise", async () => {
+    adapter = new TestSqliteDatabase();
+    const repo = new UserRepository(await adapter.connect());
+    await repo.create({ id: "u1", username: "alice", passwordHash: "hash" });
+
+    const error = await repo
+      .create({ id: "u2", username: "alice", passwordHash: "hash" })
+      .catch((e: unknown) => e);
+
+    expect(isUsernameTaken(error)).toBe(true);
+    expect(isUsernameTaken(new Error("unrelated"))).toBe(false);
   });
 });

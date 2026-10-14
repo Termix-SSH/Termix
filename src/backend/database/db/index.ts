@@ -925,6 +925,38 @@ const dropRetiredColumns = () => {
   }
 };
 
+// Registration checked for a taken username and then inserted with nothing
+// enforcing it, so concurrent sign-ups could create two accounts with one
+// name, and every lookup by username picked between them arbitrarily. Later
+// duplicates are renamed rather than deleted, so no account is lost.
+const enforceUniqueUsernames = () => {
+  try {
+    sqlite.exec(`
+      WITH ranked AS MATERIALIZED (
+        SELECT id, username,
+          ROW_NUMBER() OVER (ORDER BY registered_at, id) AS sequence,
+          ROW_NUMBER() OVER (PARTITION BY username ORDER BY registered_at, id) AS occurrence
+        FROM users
+      ), candidates AS (
+        SELECT 0 AS candidate UNION ALL SELECT sequence FROM ranked
+      ), available AS (
+        SELECT MIN(candidate) AS candidate FROM candidates
+        WHERE NOT EXISTS (
+          SELECT 1 FROM ranked WHERE username LIKE 'termix-recovered-' || candidate || '-' || '%'
+        )
+      )
+      UPDATE users SET username = 'termix-recovered-' || (SELECT candidate FROM available) || '-' || ranked.sequence
+      FROM ranked WHERE ranked.id = users.id AND ranked.occurrence > 1;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users (username);
+    `);
+  } catch (error) {
+    databaseLogger.warn("Failed to enforce unique usernames", {
+      operation: "schema_migration",
+      error: getErrorMessage(error),
+    });
+  }
+};
+
 const migrateSchema = () => {
   repairSnippetsColumns(sqlite);
   addColumnIfNotExists("user_preferences", "theme", "TEXT");
@@ -996,6 +1028,7 @@ const migrateSchema = () => {
       );
     }
   }
+  enforceUniqueUsernames();
   addColumnIfNotExists("sessions", "external_session_ref", "TEXT");
 
   addColumnIfNotExists("ssh_data", "name", "TEXT");

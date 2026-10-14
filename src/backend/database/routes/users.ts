@@ -41,7 +41,10 @@ import {
   createCurrentUserAuthRepository,
   createCurrentUserRepository,
 } from "../repositories/factory.js";
-import type { UserRecord } from "../repositories/user-repository.js";
+import {
+  isUsernameTaken,
+  type UserRecord,
+} from "../repositories/user-repository.js";
 import {
   getTrustedProxyAuthConfig,
   getTrustedProxySourceAddress,
@@ -265,6 +268,10 @@ router.post("/create", async (req, res) => {
       toast: { type: "success", message: `User created: ${username}` },
     });
   } catch (err) {
+    // Lost a race with a concurrent sign-up for the same name.
+    if (isUsernameTaken(err)) {
+      return res.status(409).json({ error: "Username already exists" });
+    }
     authLogger.error("Failed to create user", err);
     res.status(500).json({ error: "Failed to create user" });
   }

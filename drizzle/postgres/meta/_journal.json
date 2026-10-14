@@ -505,6 +505,13 @@
       "when": 1791755800419,
       "tag": "0071_drop_install_count_source",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1791935282340,
+      "tag": "0072_unique_username",
+      "breakpoints": true
     }
   ]
 }
