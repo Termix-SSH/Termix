@@ -19,6 +19,8 @@ import {
   type RegistrySource,
 } from "./registry-index.js";
 import {
+  COMMUNITY_PLUGIN_KEYS,
+  TRUSTED_PLUGIN_KEYS,
   getCustomPluginKeys,
   isPluginPublicKey,
   pluginKeyId,
@@ -151,14 +153,15 @@ async function applyCustomKeys(config: RegistriesConfig): Promise<void> {
   setCustomPluginKeys([...keys.values()]);
 }
 
-/**
- * Whether a key is trusted only because the linked server sent it. The
- * server's admin chose it, so it lets mirrored plugins load but is not
- * enough to switch them on here.
- */
-export function isSyncedOnlyKey(keyId: string): boolean {
-  return getCustomPluginKeys().some(
-    (key) => key.id === keyId && key.addedIn === SYNCED,
+/** Whether this app trusts the key independently of its linked server. */
+export function isLocallyTrustedPluginKey(keyId: string): boolean {
+  return (
+    [...TRUSTED_PLUGIN_KEYS, ...COMMUNITY_PLUGIN_KEYS].some(
+      (key) => key.id === keyId,
+    ) ||
+    getCustomPluginKeys().some(
+      (key) => key.id === keyId && key.addedIn !== SYNCED,
+    )
   );
 }
 

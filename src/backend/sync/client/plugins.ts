@@ -22,7 +22,7 @@ import {
 } from "../../plugins/index.js";
 import { getPluginsDir } from "../../plugins/paths.js";
 import {
-  isSyncedOnlyKey,
+  isLocallyTrustedPluginKey,
   setSyncedRegistryKeys,
 } from "../../plugins/registries.js";
 import type { LoadedPlugin } from "../../plugins/loader.js";
@@ -65,7 +65,7 @@ async function isEnabledLocally(pluginId: string): Promise<boolean> {
  * would let the server's admin sign anything, so it does not count.
  */
 function vouchedHere(local: LoadedPlugin): boolean {
-  return !!local.signedBy && !isSyncedOnlyKey(local.signedBy);
+  return !!local.signedBy && isLocallyTrustedPluginKey(local.signedBy);
 }
 
 const PLUGIN_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;

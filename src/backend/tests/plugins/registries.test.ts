@@ -264,8 +264,17 @@ describe("keys from a linked server", () => {
     await registries.addRegistry(URL_A, pluginKeyId(shared));
     await registries.setSyncedRegistryKeys([synced, shared]);
 
-    expect(registries.isSyncedOnlyKey(pluginKeyId(synced))).toBe(true);
-    expect(registries.isSyncedOnlyKey(pluginKeyId(shared))).toBe(false);
-    expect(registries.isSyncedOnlyKey("ec40e29bcc4986b2")).toBe(false);
+    expect(registries.isLocallyTrustedPluginKey(pluginKeyId(synced))).toBe(
+      false,
+    );
+    expect(registries.isLocallyTrustedPluginKey(pluginKeyId(shared))).toBe(
+      true,
+    );
+    expect(registries.isLocallyTrustedPluginKey("ec40e29bcc4986b2")).toBe(true);
+    await registries.setSyncedRegistryKeys([]);
+    expect(registries.isLocallyTrustedPluginKey(pluginKeyId(synced))).toBe(
+      false,
+    );
+    expect(registries.isLocallyTrustedPluginKey("unknown-key")).toBe(false);
   });
 });

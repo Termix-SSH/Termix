@@ -38,7 +38,8 @@ vi.mock("../../../database/repositories/factory.js", () => ({
 }));
 vi.mock("../../../plugins/registries.js", () => ({
   setSyncedRegistryKeys: state.syncedKeys,
-  isSyncedOnlyKey: (keyId: string) => state.syncedOnlyKeys.has(keyId),
+  isLocallyTrustedPluginKey: (keyId: string) =>
+    keyId === "local-key" && !state.syncedOnlyKeys.has(keyId),
 }));
 vi.mock("../../../sync/client/http.js", () => ({
   remoteFetch: state.fetch,
@@ -185,19 +186,20 @@ describe("mirrorPlugins", () => {
 
   describe("a user plugin the server has on", () => {
     function serverRunsSignedBy(keyId: string) {
+      const version = keyId === "removed-key" ? "1.0.1" : "1.0.0";
       state.loaded.set("extra", {
         id: "extra",
         source: "user",
         state: "loaded",
         signedBy: keyId,
-        manifest: { id: "extra", version: "1.0.0", capabilities: ["net"] },
+        manifest: { id: "extra", version, capabilities: ["net"] },
       });
       vi.mocked(remoteJson).mockResolvedValue({
         plugins: [
           {
             id: "extra",
             name: "Extra",
-            version: "1.0.0",
+            version,
             source: "user",
             artifact: true,
             enabled: true,
@@ -219,18 +221,21 @@ describe("mirrorPlugins", () => {
       expect(state.grants).toEqual(["net"]);
     });
 
-    it("leaves it off when only a key from the server signed it", async () => {
-      serverRunsSignedBy("server-key");
-      state.syncedOnlyKeys.add("server-key");
+    it.each(["server-key", "removed-key"])(
+      "leaves it off for untrusted key %s",
+      async (keyId) => {
+        serverRunsSignedBy(keyId);
+        state.syncedOnlyKeys.add("server-key");
 
-      await mirrorPlugins({} as never);
+        await mirrorPlugins({} as never);
 
-      expect(state.enabled.has("extra")).toBe(false);
-      expect(state.grants).toEqual([]);
-      expect(sendCoreAlert).toHaveBeenCalledWith(
-        expect.objectContaining({ category: "termix.sync.unsigned_plugin" }),
-      );
-    });
+        expect(state.enabled.has("extra")).toBe(false);
+        expect(state.grants).toEqual([]);
+        expect(sendCoreAlert).toHaveBeenCalledWith(
+          expect.objectContaining({ category: "termix.sync.unsigned_plugin" }),
+        );
+      },
+    );
   });
 });
 
