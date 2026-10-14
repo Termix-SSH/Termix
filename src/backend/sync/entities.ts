@@ -5,7 +5,7 @@
  * an entity in without renumbering; anything referenced syncs first.
  */
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, getTableColumns } from "drizzle-orm";
 import type { SyncRow } from "@termix-ssh/plugin-sdk/backend";
 import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import {
@@ -493,6 +493,25 @@ const SHARED_HOST_DROP = [
   ...HOST_LOCAL_FIELDS,
 ];
 
+const HOST_TEXT_COLUMNS = new Set(
+  Object.entries(getTableColumns(hosts))
+    .filter(([, column]) => column.dataType === "string")
+    .map(([field]) => field),
+);
+
+/**
+ * A resolved host field back in the form its column stores, as an owned host
+ * sends it: the resolver parses JSON columns and turns the "true"/"false" of
+ * forceKeyboardInteractive into a boolean, which a text column cannot bind.
+ */
+function storedForm(field: string, value: unknown): unknown {
+  if (value !== null && typeof value === "object") return JSON.stringify(value);
+  if (typeof value === "boolean" && HOST_TEXT_COLUMNS.has(field)) {
+    return String(value);
+  }
+  return value;
+}
+
 async function loadSharedHosts(userId: string): Promise<SyncRow[]> {
   const {
     createCurrentRbacAccessRepository,
@@ -540,10 +559,7 @@ async function loadSharedHosts(userId: string): Promise<SyncRow[]> {
       const wire: SyncRow = {};
       for (const [field, value] of Object.entries(host)) {
         if (SHARED_HOST_DROP.includes(field)) continue;
-        wire[field] =
-          value !== null && typeof value === "object"
-            ? JSON.stringify(value)
-            : value;
+        wire[field] = storedForm(field, value);
       }
       wire.jumpHosts = await jumpHostsToSyncIds(host.jumpHosts);
       wire.pluginSettings = await exportHostPluginSettings(hostId, {
