@@ -186,8 +186,11 @@ describe("mirrorPlugins", () => {
   });
 
   describe("a user plugin the server has on", () => {
-    function serverRunsSignedBy(keyId: string, enabled = true) {
-      const version = keyId === "removed-key" ? "1.0.1" : "1.0.0";
+    function serverRunsSignedBy(
+      keyId: string,
+      enabled = true,
+      version = keyId === "removed-key" ? "1.0.1" : "1.0.0",
+    ) {
       state.loaded.set("extra", {
         id: "extra",
         source: "user",
@@ -265,6 +268,39 @@ describe("mirrorPlugins", () => {
 
       expect(state.enabled.has("extra")).toBe(false);
     });
+
+    it.each([
+      ["server-key", false],
+      ["local-key", true],
+    ])(
+      "after an update signed by %s, keeps it on: %s",
+      async (keyId, stays) => {
+        serverRunsSignedBy(keyId, true, "2.0.0");
+        state.syncedOnlyKeys.add("server-key");
+        const reviewed = state.loaded.get("extra")!;
+        state.loaded.set("extra", {
+          ...reviewed,
+          manifest: { id: "extra", version: "1.0.0", capabilities: ["net"] },
+        });
+        state.enabled.add("extra");
+        state.fetch.mockResolvedValue({
+          ok: true,
+          arrayBuffer: async () => new ArrayBuffer(4),
+          headers: new Headers(),
+        });
+        state.install.mockImplementation(async () => {
+          const plugin = { ...reviewed };
+          state.loaded.set("extra", plugin);
+          return plugin;
+        });
+
+        await mirrorPlugins({} as never);
+
+        expect(state.install).toHaveBeenCalled();
+        expect(state.enabled.has("extra")).toBe(stays);
+        expect(vi.mocked(sendCoreAlert).mock.calls.length > 0).toBe(!stays);
+      },
+    );
   });
 });
 

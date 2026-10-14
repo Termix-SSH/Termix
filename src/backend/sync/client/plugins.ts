@@ -272,7 +272,8 @@ async function mirrorOne(link: SyncLink, plugin: RemotePlugin): Promise<void> {
         local,
         wasEnabled,
       );
-      if (wasEnabled && !plugin.enabled) {
+      // Code no trusted key signed is reviewed again with each new version.
+      if (wasEnabled && (!plugin.enabled || !vouchedHere(local))) {
         await setPluginEnabled(plugin.id, false);
       }
     }
