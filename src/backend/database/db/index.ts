@@ -1926,6 +1926,23 @@ async function moveRemoteLegacySudoPasswords(remote: {
   }
 }
 
+async function dropMysqlForeignKeys(
+  remote: { execute: (query: SQL) => Promise<unknown> },
+  table: string,
+  column: string,
+): Promise<void> {
+  const keys = resultRows<{ name: string }>(
+    await remote.execute(
+      sql`SELECT CONSTRAINT_NAME AS name FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ${table} AND COLUMN_NAME = ${column} AND REFERENCED_TABLE_NAME IS NOT NULL`,
+    ),
+  );
+  for (const key of keys) {
+    await remote.execute(
+      sql`ALTER TABLE ${sql.identifier(table)} DROP FOREIGN KEY ${sql.identifier(key.name)}`,
+    );
+  }
+}
+
 /**
  * The columns 2.9.0 left in place without a drizzle migration, so drizzle no
  * longer knows them. Dropped by hand, only where they still exist.
@@ -1961,6 +1978,10 @@ async function dropRemoteRetired(
     for (const column of columns) {
       if (!existing.has(`${table}.${column}`)) continue;
       try {
+        // Postgres drops a column's foreign keys with it; MySQL refuses.
+        if (dialect === "mysql") {
+          await dropMysqlForeignKeys(remote, table, column);
+        }
         await remote.execute(
           sql`ALTER TABLE ${sql.identifier(table)} DROP COLUMN ${sql.identifier(column)}`,
         );
