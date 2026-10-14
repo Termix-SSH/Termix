@@ -36,6 +36,7 @@ const { quitApp } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
 const { resolveLocalShell, repairSpawnHelpers } = require("./local-shell.cjs");
 const { registerLocalFileHandlers } = require("./local-files.cjs");
+const { isExternalLoginUrl, isCallbackPort } = require("./external-login.cjs");
 
 const localTerminalSessions = new Map();
 
@@ -1663,6 +1664,12 @@ ipcMain.handle("get-embedded-server-status", () => {
 ipcMain.handle(
   "external-browser-login",
   async (_event, authUrl, callbackPort) => {
+    if (!isExternalLoginUrl(authUrl)) {
+      return { success: false, error: "Invalid authentication URL" };
+    }
+    if (!isCallbackPort(callbackPort)) {
+      return { success: false, error: "Invalid callback port" };
+    }
     const http = require("http");
 
     return new Promise((resolve) => {
