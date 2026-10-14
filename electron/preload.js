@@ -87,16 +87,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
 
   clearSessionCookies: () => ipcRenderer.invoke("clear-session-cookies"),
-  getSessionCookie: (name, targetUrl) =>
-    ipcRenderer.invoke("get-session-cookie", name, targetUrl),
-  waitForSessionCookie: (name, targetUrl, previousValue, timeoutMs) =>
-    ipcRenderer.invoke(
-      "wait-session-cookie",
-      name,
-      targetUrl,
-      previousValue,
-      timeoutMs,
-    ),
 
   externalBrowserLogin: (authUrl, callbackPort) =>
     ipcRenderer.invoke("external-browser-login", authUrl, callbackPort),
