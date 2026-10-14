@@ -1,26 +1,6 @@
 #!/usr/bin/env node
-/**
- * Rewrites the build-time placeholders in dist/sw.js:
- *
- *   __TERMIX_CACHE_VERSION__ -> the package.json version (dots become dashes)
- *   __TERMIX_SW_BASE_PATH__  -> the effective base path the build used
- *
- * vite copies public/ verbatim and never transforms it, so both placeholders
- * reach dist/sw.js untouched unless something rewrites them here.
- *
- * Why both matter:
- *
- * - BASE_PATH unreplaced makes the worker request "__TERMIX_SW_BASE_PATH__/favicon.ico",
- *   its install promise rejects, and it never activates.
- * - CACHE_NAME unchanged across releases means a worker that *did* activate on
- *   an older build keeps serving its old cache forever, because the activate
- *   handler only deletes caches whose name differs from its own CACHE_NAME.
- *
- * Run as part of `build` right after `vite build`, before patch-sw-base-path
- * (this script only stamps the version; that one owns the base path).
- *
- * The base path mirrors vite.config.ts: VITE_BASE_PATH when set, otherwise
- * "./" (the same root-relative default the app bundle uses).
+/** Stamp the cache version and static-build base path.
+ * Docker keeps the base-path placeholder for entrypoint.sh to fill at startup.
  */
 
 const fs = require("node:fs");
@@ -53,7 +33,9 @@ let sw = fs.readFileSync(SW_PATH, "utf8");
 const rel = path.relative(ROOT, SW_PATH);
 const replacements = [
   [VERSION_PLACEHOLDER, cacheVersion],
-  [BASE_PATH_PLACEHOLDER, basePath],
+  ...(process.env.TERMIX_RUNTIME_BASE_PATH === "true"
+    ? []
+    : [[BASE_PATH_PLACEHOLDER, basePath]]),
 ];
 
 let changed = false;
