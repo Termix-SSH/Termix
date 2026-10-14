@@ -69,9 +69,9 @@ describe("users.username uniqueness", () => {
     );
     expect(names).toEqual({
       first: "alice",
-      late: "alice-late",
+      late: "termix-recovered-0-5",
       "tie-a": "bob",
-      "tie-b": "bob-tie-b",
+      "tie-b": "termix-recovered-0-3",
       only: "Alice",
     });
   });
@@ -86,4 +86,24 @@ describe("users.username uniqueness", () => {
 
     expect(() => insert.run("u2", "alice", "hash")).toThrow(/UNIQUE/i);
   });
+});
+
+// Run the checked-in migration itself, including occupied recovery prefixes.
+it("migrates duplicate names without colliding with existing names", () => {
+  const db = new Database(":memory:");
+  try {
+    db.exec(`CREATE TABLE users (id TEXT PRIMARY KEY, username TEXT NOT NULL, registered_at TEXT NOT NULL);
+      INSERT INTO users VALUES
+        ('first', 'alice', '2025-01-01'),
+        ('late', 'alice', '2025-02-01'),
+        ('other', 'alice-late', '2025-01-01'),
+        ('occupied', 'termix-recovered-0-1', '2025-01-01');`);
+    db.exec(fs.readFileSync("drizzle/sqlite/0067_unique_username.sql", "utf8"));
+    const rows = db.prepare("SELECT username FROM users").pluck().all();
+    expect(new Set(rows).size).toBe(4);
+    expect(rows).toContain("alice");
+    expect(rows).toContain("alice-late");
+    expect(rows).toContain("termix-recovered-0-1");
+    expect(() => db.exec("INSERT INTO users VALUES ('new', 'alice', '2026-01-01')")).toThrow(/UNIQUE/i);
+  } finally { db.close(); }
 });
