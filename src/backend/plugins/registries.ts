@@ -19,6 +19,9 @@ import {
   type RegistrySource,
 } from "./registry-index.js";
 import {
+  COMMUNITY_PLUGIN_KEYS,
+  TRUSTED_PLUGIN_KEYS,
+  getCustomPluginKeys,
   isPluginPublicKey,
   pluginKeyId,
   setCustomPluginKeys,
@@ -28,6 +31,8 @@ import {
 const CONFIG_KEY = "plugin_registries";
 /** Keys a linked desktop copied from its server, so mirrored plugins load. */
 const SYNCED_KEYS_KEY = "plugin_registry_synced_keys";
+/** `addedIn` of a key only the linked server vouches for. */
+const SYNCED = "synced";
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 const MAX_ID_LENGTH = 40;
 const MAX_NAME_LENGTH = 80;
@@ -117,8 +122,8 @@ async function writeRegistriesConfig(config: RegistriesConfig): Promise<void> {
   await applyCustomKeys(config);
 }
 
-function toKey(publicKey: string): TrustedPluginKey {
-  return { id: pluginKeyId(publicKey), publicKey, addedIn: "admin" };
+function toKey(publicKey: string, addedIn = "admin"): TrustedPluginKey {
+  return { id: pluginKeyId(publicKey), publicKey, addedIn };
 }
 
 async function readSyncedKeys(): Promise<string[]> {
@@ -134,17 +139,30 @@ async function readSyncedKeys(): Promise<string[]> {
 
 /**
  * Trusts the key of every custom registry, on or off: a plugin installed
- * from a registry that was later turned off still has to load.
+ * from a registry that was later turned off still has to load. A key added
+ * here wins over the same key synced from a server.
  */
 async function applyCustomKeys(config: RegistriesConfig): Promise<void> {
   const keys = new Map<string, TrustedPluginKey>();
+  for (const publicKey of await readSyncedKeys()) {
+    keys.set(pluginKeyId(publicKey), toKey(publicKey, SYNCED));
+  }
   for (const entry of config.custom) {
     keys.set(entry.keyId, toKey(entry.publicKey));
   }
-  for (const publicKey of await readSyncedKeys()) {
-    keys.set(pluginKeyId(publicKey), toKey(publicKey));
-  }
   setCustomPluginKeys([...keys.values()]);
+}
+
+/** Whether this app trusts the key independently of its linked server. */
+export function isLocallyTrustedPluginKey(keyId: string): boolean {
+  return (
+    [...TRUSTED_PLUGIN_KEYS, ...COMMUNITY_PLUGIN_KEYS].some(
+      (key) => key.id === keyId,
+    ) ||
+    getCustomPluginKeys().some(
+      (key) => key.id === keyId && key.addedIn !== SYNCED,
+    )
+  );
 }
 
 /** Called before the boot scan so plugins from custom registries load. */

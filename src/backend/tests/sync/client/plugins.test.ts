@@ -11,6 +11,8 @@ const state = vi.hoisted(() => ({
   fetch: vi.fn(),
   loadBundled: vi.fn(),
   syncedKeys: vi.fn(async (_keys: unknown[]) => {}),
+  syncedOnlyKeys: new Set<string>(),
+  grants: [] as string[],
 }));
 
 vi.mock("../../../utils/logger.js", () => ({
@@ -28,10 +30,16 @@ vi.mock("../../../database/repositories/factory.js", () => ({
       state: state.enabled.has(id) ? "enabled" : "disabled",
     }),
   }),
-  createCurrentPluginPermissionGrantRepository: () => ({}),
+  createCurrentPluginPermissionGrantRepository: () => ({
+    listByPlugin: async () => [],
+    grant: async ({ capability }: { capability: string }) =>
+      void state.grants.push(capability),
+  }),
 }));
 vi.mock("../../../plugins/registries.js", () => ({
   setSyncedRegistryKeys: state.syncedKeys,
+  isLocallyTrustedPluginKey: (keyId: string) =>
+    keyId === "local-key" && !state.syncedOnlyKeys.has(keyId),
 }));
 vi.mock("../../../sync/client/http.js", () => ({
   remoteFetch: state.fetch,
@@ -58,6 +66,7 @@ vi.mock("../../../plugins/index.js", () => ({
 
 const { mirrorPlugins } = await import("../../../sync/client/plugins.js");
 const { remoteJson } = await import("../../../sync/client/http.js");
+const { sendCoreAlert } = await import("../../../notify/core-notify.js");
 
 const bundled = {
   id: "ssh-terminal",
@@ -92,6 +101,9 @@ beforeEach(() => {
   state.install.mockReset();
   state.fetch.mockReset();
   state.loadBundled.mockReset();
+  state.syncedOnlyKeys = new Set();
+  state.grants = [];
+  vi.mocked(sendCoreAlert).mockClear();
   state.loadBundled.mockImplementation(async (id: string) => {
     const plugin = { ...bundled, id };
     state.loaded.set(id, plugin);
@@ -171,4 +183,87 @@ describe("mirrorPlugins", () => {
     expect(state.loaded.has("ssh-terminal")).toBe(true);
     expect(state.enabled.has("ssh-terminal")).toBe(true);
   });
+
+  describe("a user plugin the server has on", () => {
+    function serverRunsSignedBy(keyId: string) {
+      const version = keyId === "removed-key" ? "1.0.1" : "1.0.0";
+      state.loaded.set("extra", {
+        id: "extra",
+        source: "user",
+        state: "loaded",
+        signedBy: keyId,
+        manifest: { id: "extra", version, capabilities: ["net"] },
+      });
+      vi.mocked(remoteJson).mockResolvedValue({
+        plugins: [
+          {
+            id: "extra",
+            name: "Extra",
+            version,
+            source: "user",
+            artifact: true,
+            enabled: true,
+            active: true,
+            desktop: "mirror",
+            syncEntities: [],
+            granted: ["net"],
+          },
+        ],
+      });
+    }
+
+    it("turns it on when a key this desktop trusts signed it", async () => {
+      serverRunsSignedBy("local-key");
+
+      await mirrorPlugins({} as never);
+
+      expect(state.enabled.has("extra")).toBe(true);
+      expect(state.grants).toEqual(["net"]);
+    });
+
+    it.each(["server-key", "removed-key"])(
+      "leaves it off for untrusted key %s",
+      async (keyId) => {
+        serverRunsSignedBy(keyId);
+        state.syncedOnlyKeys.add("server-key");
+
+        await mirrorPlugins({} as never);
+
+        expect(state.enabled.has("extra")).toBe(false);
+        expect(state.grants).toEqual([]);
+        expect(sendCoreAlert).toHaveBeenCalledWith(
+          expect.objectContaining({ category: "termix.sync.unsigned_plugin" }),
+        );
+      },
+    );
+  });
+});
+
+it("server bundled label must not enable a synced-only user plugin", async () => {
+  state.syncedOnlyKeys.add("server-key");
+  state.loaded.set("extra", {
+    id: "extra",
+    source: "user",
+    state: "loaded",
+    signedBy: "server-key",
+    manifest: { id: "extra", version: "1.0.0", capabilities: [] },
+  });
+  vi.mocked(remoteJson).mockResolvedValue({
+    plugins: [
+      {
+        id: "extra",
+        name: "Extra",
+        version: "1.0.0",
+        source: "bundled",
+        artifact: true,
+        enabled: true,
+        active: true,
+        desktop: "mirror",
+        syncEntities: [],
+        granted: [],
+      },
+    ],
+  });
+  await mirrorPlugins({} as never);
+  expect(state.enabled.has("extra")).toBe(false);
 });

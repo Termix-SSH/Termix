@@ -21,7 +21,10 @@ import {
   unloadPlugin,
 } from "../../plugins/index.js";
 import { getPluginsDir } from "../../plugins/paths.js";
-import { setSyncedRegistryKeys } from "../../plugins/registries.js";
+import {
+  isLocallyTrustedPluginKey,
+  setSyncedRegistryKeys,
+} from "../../plugins/registries.js";
 import type { LoadedPlugin } from "../../plugins/loader.js";
 import {
   createCurrentPluginPermissionGrantRepository,
@@ -55,6 +58,14 @@ export function lastRemotePlugins(): RemotePlugin[] {
 async function isEnabledLocally(pluginId: string): Promise<boolean> {
   const record = await createCurrentPluginRepository().findById(pluginId);
   return record?.state === "enabled";
+}
+
+/**
+ * Signed by a key this desktop trusts on its own. A key the server sent
+ * would let the server's admin sign anything, so it does not count.
+ */
+function vouchedHere(local: LoadedPlugin): boolean {
+  return !!local.signedBy && isLocallyTrustedPluginKey(local.signedBy);
 }
 
 const PLUGIN_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
@@ -155,7 +166,7 @@ async function matchGrants(plugin: RemotePlugin): Promise<void> {
   if (!local || local.source !== "user") return;
   // Grants are only copied for code a trusted key signed. Anything else the
   // desktop's own admin has to review, as with any plugin dropped on disk.
-  if (!local.signedBy) return;
+  if (!vouchedHere(local)) return;
   const declared = new Set(local.manifest.capabilities);
   const wanted = new Set(plugin.granted.filter((cap) => declared.has(cap)));
   const existing = await repository.listByPlugin(plugin.id);
@@ -196,7 +207,7 @@ async function alertUnsigned(plugin: RemotePlugin): Promise<void> {
   alertedVersions.add(key);
   await sendCoreAlert({
     title: "Review a feature from your server",
-    body: `${plugin.name} (${plugin.version}) was copied from your server but is not signed, so it stays off here until you turn it on.`,
+    body: `${plugin.name} (${plugin.version}) was copied from your server but is not signed by a key this app trusts, so it stays off here until you turn it on.`,
     severity: "warning",
     category: "termix.sync.unsigned_plugin",
     dedupeKey: `sync:${key}`,
@@ -239,7 +250,9 @@ async function mirrorOne(link: SyncLink, plugin: RemotePlugin): Promise<void> {
         await alertOlderDesktop(plugin);
         throw error;
       }
-      if (wasEnabled) await setPluginEnabled(plugin.id, true);
+      if (wasEnabled && local.source === "bundled") {
+        await setPluginEnabled(plugin.id, true);
+      }
     } else if (newer) {
       await alertOlderDesktop(plugin);
     }
@@ -263,19 +276,19 @@ async function mirrorOne(link: SyncLink, plugin: RemotePlugin): Promise<void> {
       }
     }
     await matchGrants(plugin);
-    // Unsigned code is only ever switched off from here, never on.
-    if (!local.signedBy) {
-      const enabledHere = await isEnabledLocally(plugin.id);
-      if (!plugin.enabled && enabledHere) {
-        await setPluginEnabled(plugin.id, false);
-      } else if (plugin.enabled && !enabledHere) {
-        await alertUnsigned(plugin);
-      }
-      return;
-    }
   }
 
   if (!local) return;
+  // Remote metadata cannot confer bundled trust on a locally loaded user plugin.
+  if (local.source === "user" && !vouchedHere(local)) {
+    const enabledHere = await isEnabledLocally(plugin.id);
+    if (!plugin.enabled && enabledHere) {
+      await setPluginEnabled(plugin.id, false);
+    } else if (plugin.enabled && !enabledHere) {
+      await alertUnsigned(plugin);
+    }
+    return;
+  }
   if (plugin.enabled !== (await isEnabledLocally(plugin.id))) {
     await setPluginEnabled(plugin.id, plugin.enabled);
   } else if (plugin.enabled && local.state !== "active") {
