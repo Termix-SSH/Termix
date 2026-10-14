@@ -263,6 +263,8 @@ export interface PluginSummary {
   /** Environment variables the plugin reads. Admins only. */
   env?: PluginEnvVar[];
   signedBy?: string | null;
+  /** A linked server decides whether it runs here. Admins only. */
+  managedByServer?: boolean;
 }
 
 export async function getPlugins(): Promise<PluginSummary[]> {
@@ -510,10 +512,12 @@ export async function previewPluginState(
 export async function setPluginState(
   pluginId: string,
   enabled: boolean,
+  consent?: { version: string; capabilities: string[] },
 ): Promise<PluginStateChange> {
   try {
     const response = await rbacApi.patch(`${pluginPath(pluginId)}/state`, {
       enabled,
+      ...consent,
     });
     return response.data;
   } finally {

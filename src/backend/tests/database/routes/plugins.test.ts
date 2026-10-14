@@ -176,6 +176,7 @@ const manageMock = vi.hoisted(() => ({
   deletePluginData: vi.fn(),
   planStateChange: vi.fn(),
   setPluginState: vi.fn(),
+  enablePluginWithConsent: vi.fn(),
   getDeveloperMode: vi.fn(),
   setDeveloperMode: vi.fn(),
   stageUpload: vi.fn(),
@@ -214,6 +215,12 @@ const onboardingMock = vi.hoisted(() => ({
 }));
 
 vi.mock("../../../plugins/onboarding.js", () => onboardingMock);
+
+const syncPluginsMock = vi.hoisted(() => ({
+  isServerManaged: vi.fn((_id: string) => true),
+}));
+
+vi.mock("../../../sync/client/plugins.js", () => syncPluginsMock);
 
 const pluginRoutes = (await import("../../../database/routes/plugins.js"))
   .default;
@@ -1137,6 +1144,65 @@ describe("plugins route", () => {
       expect(res.status).toBe(409);
       expect((await res.json()).code).toBe("MANAGED_BY_SERVER");
       expect(manageMock.installPlugin).not.toHaveBeenCalled();
+    });
+
+    describe("on a linked desktop", () => {
+      const switchOn = (id: string) =>
+        fetch(`${baseUrl}/plugins/${id}/state`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            enabled: true,
+            version: "1.0.0",
+            capabilities: ["kv:own"],
+          }),
+        });
+
+      beforeEach(() => {
+        manageMock.isLinkedDesktop.mockResolvedValue(true);
+        state.plugins.set("sample-plugin", makePlugin({ state: "disabled" }));
+      });
+
+      afterEach(() => {
+        syncPluginsMock.isServerManaged.mockImplementation(() => true);
+      });
+
+      it("refuses to switch a plugin the server decides", async () => {
+        const res = await switchOn("sample-plugin");
+        expect(res.status).toBe(409);
+        expect((await res.json()).code).toBe("MANAGED_BY_SERVER");
+        expect(manageMock.setPluginState).not.toHaveBeenCalled();
+      });
+
+      it("lets the desktop's admin switch one the server does not", async () => {
+        syncPluginsMock.isServerManaged.mockImplementation(() => false);
+        manageMock.enablePluginWithConsent.mockResolvedValue({
+          enable: [],
+          disable: [],
+        });
+        const res = await switchOn("sample-plugin");
+        expect(res.status).toBe(200);
+        expect(manageMock.enablePluginWithConsent).toHaveBeenCalledWith(
+          "sample-plugin",
+          expect.objectContaining({
+            version: "1.0.0",
+            capabilities: ["kv:own"],
+          }),
+        );
+      });
+
+      it("says per plugin whether the server decides it", async () => {
+        state.plugins.set("other", makePlugin({ id: "other" }));
+        syncPluginsMock.isServerManaged.mockImplementation(
+          (id) => id === "other",
+        );
+        const listed = (await (
+          await fetch(`${baseUrl}/plugins`)
+        ).json()) as Array<{ id: string; managedByServer: boolean }>;
+        expect(
+          Object.fromEntries(listed.map((p) => [p.id, p.managedByServer])),
+        ).toEqual({ "sample-plugin": false, other: true });
+      });
     });
 
     it("previews a state change without making it", async () => {

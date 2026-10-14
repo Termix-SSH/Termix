@@ -82,6 +82,14 @@ describe("mergePlugins", () => {
     });
   });
 
+  it("says whether the linked server decides an installed plugin", () => {
+    const rows = mergePlugins(
+      [summary({ managedByServer: true })],
+      [entry({ id: "other" })],
+    );
+    expect(rows.map((row) => row.managedByServer)).toEqual([true, false]);
+  });
+
   it("lists registry plugins that are not installed with the latest capabilities", () => {
     const rows = mergePlugins(
       [],

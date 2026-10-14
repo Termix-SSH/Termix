@@ -4,7 +4,8 @@
  * For every plugin in "mirror" mode, the server decides: a plugin installed
  * there is installed here, on or off to match, with the capabilities an
  * admin granted it there. Plugins marked "local" are left to the desktop and
- * "server" ones never run on a linked desktop.
+ * "server" ones never run on a linked desktop. A user plugin no key trusted
+ * here signed is only ever switched off; the desktop's admin turns it on.
  */
 
 import fs from "fs";
@@ -123,6 +124,10 @@ async function replaceWithDownload(
   if (previous) await unloadPlugin(pluginId);
   try {
     const installed = await installPluginArtifact(file);
+    // Approval belongs to the reviewed version, regardless of remote metadata.
+    if (wasEnabled && installed.source === "user" && !vouchedHere(installed)) {
+      await setPluginEnabled(pluginId, false);
+    }
     await fs.promises.rm(backup, { force: true });
     await fs.promises.rm(`${backup}.sig`, { force: true });
     return installed;
@@ -297,6 +302,7 @@ async function mirrorOne(link: SyncLink, plugin: RemotePlugin): Promise<void> {
 }
 
 export async function mirrorPlugins(link: SyncLink): Promise<void> {
+  const { serialized } = await import("../../plugins/manage.js");
   const { plugins, registryKeys } = await remoteJson<{
     plugins: RemotePlugin[];
     registryKeys?: unknown[];
@@ -308,7 +314,8 @@ export async function mirrorPlugins(link: SyncLink): Promise<void> {
 
   for (const plugin of plugins) {
     try {
-      await mirrorOne(link, plugin);
+      // Share the consent/enable lock so an update cannot swap code mid-approval.
+      await serialized(() => mirrorOne(link, plugin));
     } catch (error) {
       syncLogger.warn("Could not match a feature to the server", {
         operation: "sync_plugin_mirror",
@@ -328,8 +335,13 @@ export async function mirrorPlugins(link: SyncLink): Promise<void> {
   }
 }
 
-/** Whether a plugin's on/off state belongs to the linked server. */
+/**
+ * Whether a plugin's on/off state belongs to the linked server. Code no key
+ * trusted here vouches for is the desktop's own admin's call to turn on.
+ */
 export function isServerManaged(pluginId: string): boolean {
   const local = getPluginRuntime().loader.get(pluginId);
-  return (local?.manifest.desktop ?? "mirror") !== "local";
+  const mode = local?.manifest.desktop ?? "mirror";
+  if (mode !== "mirror") return mode === "server";
+  return local?.source !== "user" || vouchedHere(local);
 }

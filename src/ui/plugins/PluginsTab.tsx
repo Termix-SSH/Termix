@@ -793,7 +793,7 @@ function InstalledCard({
           <Button
             variant="outline"
             size="xs"
-            disabled={busy || locked}
+            disabled={busy || plugin.managedByServer}
             onClick={() => void manager.toggle(plugin)}
           >
             {plugin.enabled
@@ -907,7 +907,7 @@ function InstalledRowActions({
         <Button
           variant="outline"
           size="xs"
-          disabled={busy || locked}
+          disabled={busy || plugin.managedByServer}
           onClick={() => void manager.toggle(plugin)}
         >
           {plugin.enabled

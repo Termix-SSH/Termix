@@ -1967,6 +1967,7 @@
         "syncEntities_other": "Desktop sync"
       },
       "consent": {
+        "enableTitle": "Enable {{name}}?",
         "installTitle": "Install {{name}}",
         "updateTitle": "Update {{name}}",
         "agreeUpdate": "Agree and update",

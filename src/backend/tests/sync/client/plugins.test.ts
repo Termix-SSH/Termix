@@ -64,7 +64,8 @@ vi.mock("../../../plugins/index.js", () => ({
   }),
 }));
 
-const { mirrorPlugins } = await import("../../../sync/client/plugins.js");
+const { mirrorPlugins, isServerManaged } =
+  await import("../../../sync/client/plugins.js");
 const { remoteJson } = await import("../../../sync/client/http.js");
 const { sendCoreAlert } = await import("../../../notify/core-notify.js");
 
@@ -185,8 +186,11 @@ describe("mirrorPlugins", () => {
   });
 
   describe("a user plugin the server has on", () => {
-    function serverRunsSignedBy(keyId: string) {
-      const version = keyId === "removed-key" ? "1.0.1" : "1.0.0";
+    function serverRunsSignedBy(
+      keyId: string,
+      enabled = true,
+      version = keyId === "removed-key" ? "1.0.1" : "1.0.0",
+    ) {
       state.loaded.set("extra", {
         id: "extra",
         source: "user",
@@ -202,8 +206,8 @@ describe("mirrorPlugins", () => {
             version,
             source: "user",
             artifact: true,
-            enabled: true,
-            active: true,
+            enabled,
+            active: enabled,
             desktop: "mirror",
             syncEntities: [],
             granted: ["net"],
@@ -236,6 +240,67 @@ describe("mirrorPlugins", () => {
         );
       },
     );
+
+    it("leaves the server in charge of one a trusted key signed", () => {
+      serverRunsSignedBy("local-key");
+      expect(isServerManaged("extra")).toBe(true);
+    });
+
+    it.each(["server-key", "removed-key"])(
+      "lets this desktop's admin decide on one signed by %s",
+      async (keyId) => {
+        serverRunsSignedBy(keyId);
+        state.syncedOnlyKeys.add("server-key");
+        expect(isServerManaged("extra")).toBe(false);
+
+        state.enabled.add("extra");
+        await mirrorPlugins({} as never);
+        expect(state.enabled.has("extra")).toBe(true);
+      },
+    );
+
+    it("still switches an untrusted one off when the server does", async () => {
+      serverRunsSignedBy("server-key", false);
+      state.syncedOnlyKeys.add("server-key");
+      state.enabled.add("extra");
+
+      await mirrorPlugins({} as never);
+
+      expect(state.enabled.has("extra")).toBe(false);
+    });
+
+    it.each([
+      ["server-key", false],
+      ["local-key", true],
+    ])(
+      "after an update signed by %s, keeps it on: %s",
+      async (keyId, stays) => {
+        serverRunsSignedBy(keyId, true, "2.0.0");
+        state.syncedOnlyKeys.add("server-key");
+        const reviewed = state.loaded.get("extra")!;
+        state.loaded.set("extra", {
+          ...reviewed,
+          manifest: { id: "extra", version: "1.0.0", capabilities: ["net"] },
+        });
+        state.enabled.add("extra");
+        state.fetch.mockResolvedValue({
+          ok: true,
+          arrayBuffer: async () => new ArrayBuffer(4),
+          headers: new Headers(),
+        });
+        state.install.mockImplementation(async () => {
+          const plugin = { ...reviewed };
+          state.loaded.set("extra", plugin);
+          return plugin;
+        });
+
+        await mirrorPlugins({} as never);
+
+        expect(state.install).toHaveBeenCalled();
+        expect(state.enabled.has("extra")).toBe(stays);
+        expect(vi.mocked(sendCoreAlert).mock.calls.length > 0).toBe(!stays);
+      },
+    );
   });
 });
 
@@ -266,4 +331,79 @@ it("server bundled label must not enable a synced-only user plugin", async () =>
   });
   await mirrorPlugins({} as never);
   expect(state.enabled.has("extra")).toBe(false);
+});
+
+it("remote bundled label cannot preserve approval across an untrusted update", async () => {
+  const reviewed = {
+    id: "extra",
+    source: "user",
+    state: "loaded",
+    signedBy: "server-key",
+    manifest: { id: "extra", version: "1.0.0", capabilities: [] },
+  };
+  state.loaded.set("extra", reviewed);
+  state.syncedOnlyKeys.add("server-key");
+  state.enabled.add("extra");
+  vi.mocked(remoteJson).mockResolvedValue({
+    plugins: [
+      {
+        id: "extra",
+        name: "Extra",
+        version: "2.0.0",
+        source: "bundled",
+        artifact: true,
+        enabled: true,
+        active: true,
+        desktop: "mirror",
+        syncEntities: [],
+        granted: [],
+      },
+    ],
+  });
+  state.fetch.mockResolvedValue({
+    ok: true,
+    arrayBuffer: async () => new ArrayBuffer(4),
+    headers: new Headers(),
+  });
+  state.install.mockImplementation(async () => {
+    const plugin = {
+      ...reviewed,
+      manifest: { ...reviewed.manifest, version: "2.0.0" },
+    };
+    state.loaded.set("extra", plugin);
+    return plugin;
+  });
+  await mirrorPlugins({} as never);
+  expect(state.install).toHaveBeenCalledOnce();
+  expect(state.enabled.has("extra")).toBe(false);
+});
+
+it("waits for an in-flight local plugin change before applying a remote update", async () => {
+  const { serialized } = await import("../../../plugins/manage.js");
+  let release!: () => void;
+  let entered!: () => void;
+  const ready = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  const barrier = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const localChange = serialized(async () => {
+    entered();
+    await barrier;
+  });
+  await ready;
+  serverHas("1.1.0");
+  state.fetch.mockResolvedValue({ ok: false, status: 502 });
+  vi.mocked(remoteJson).mockClear();
+  const syncing = mirrorPlugins({} as never);
+  try {
+    await vi.waitFor(() => expect(remoteJson).toHaveBeenCalled());
+    expect(state.fetch).not.toHaveBeenCalled();
+  } finally {
+    release();
+  }
+  await localChange;
+  await syncing;
+  expect(state.fetch).toHaveBeenCalledOnce();
 });

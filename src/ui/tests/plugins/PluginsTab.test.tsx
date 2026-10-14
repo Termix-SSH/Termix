@@ -23,7 +23,9 @@ const plugin = {
   contributes: {},
   versions: [],
   downloads: null,
+  managedByServer: false,
 };
+let linked = false;
 
 vi.mock("@/plugins/use-plugins-manager", () => ({
   usePluginsManager: () => ({
@@ -32,7 +34,7 @@ vi.mock("@/plugins/use-plugins-manager", () => ({
     refreshing: false,
     refresh: vi.fn(),
     registryError: null,
-    managedByServer: false,
+    managedByServer: linked,
     busy: new Set(),
     consent: null,
     setConsent: vi.fn(),
@@ -56,7 +58,11 @@ async function renderTab() {
   );
 }
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+  linked = false;
+  plugin.managedByServer = false;
+});
 afterEach(cleanup);
 
 describe("PluginsTab", () => {
@@ -122,5 +128,18 @@ describe("PluginsTab", () => {
       "[style*='grid-template-columns']",
     );
     expect(grid?.style.gridTemplateColumns).toContain("auto-fill");
+  });
+
+  it("lets a linked desktop switch a plugin its server does not decide", async () => {
+    linked = true;
+    await renderTab();
+    const toggle = () =>
+      screen.getByRole("button", { name: en.plugins.manager.disable });
+    expect(toggle().hasAttribute("disabled")).toBe(false);
+
+    cleanup();
+    plugin.managedByServer = true;
+    await renderTab();
+    expect(toggle().hasAttribute("disabled")).toBe(true);
   });
 });
