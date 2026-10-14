@@ -40,4 +40,13 @@ describe("embedded frame detection", () => {
     expect(isInElectronWebView()).toBe(true);
     expect(isEmbeddedAuthFrame()).toBe(true);
   });
+
+  it("only treats a frame as the desktop link window inside the app", () => {
+    vi.spyOn(window, "top", "get").mockReturnValue({} as Window);
+    expect(isInElectronWebView()).toBe(false);
+    vi.spyOn(navigator, "userAgent", "get").mockReturnValue(
+      "Termix-Desktop/26.10.2 (win32; Electron/38.0.0)",
+    );
+    expect(isInElectronWebView()).toBe(true);
+  });
 });
