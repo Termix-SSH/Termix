@@ -3,43 +3,45 @@ const path = require("node:path");
 
 const nodePtyDir = path.join(__dirname, "..", "node_modules", "node-pty");
 
-if (!fs.existsSync(nodePtyDir)) {
-  console.log("[patch-node-pty] node-pty not found, skipping");
-  process.exit(0);
-}
-
 const unixTerminalPath = path.join(nodePtyDir, "lib", "unixTerminal.js");
 
-const originalHelperRewrite = [
-  "helperPath = helperPath.replace('app.asar', 'app.asar.unpacked');",
-  "helperPath = helperPath.replace('node_modules.asar', 'node_modules.asar.unpacked');",
-].join("\n");
+// Older installs may still carry the first version of this patch.
+const knownHelperRewrites = [
+  [
+    "helperPath = helperPath.replace('app.asar', 'app.asar.unpacked');",
+    "helperPath = helperPath.replace('node_modules.asar', 'node_modules.asar.unpacked');",
+  ].join("\n"),
+  [
+    "if (!helperPath.includes('app.asar.unpacked')) {",
+    "    helperPath = helperPath.replace('app.asar', 'app.asar.unpacked');",
+    "}",
+    "if (!helperPath.includes('node_modules.asar.unpacked')) {",
+    "    helperPath = helperPath.replace('node_modules.asar', 'node_modules.asar.unpacked');",
+    "}",
+  ].join("\n"),
+];
 
-const patchedHelperRewrite = [
-  "if (!helperPath.includes('app.asar.unpacked')) {",
-  "    helperPath = helperPath.replace('app.asar', 'app.asar.unpacked');",
-  "}",
-  "if (!helperPath.includes('node_modules.asar.unpacked')) {",
-  "    helperPath = helperPath.replace('node_modules.asar', 'node_modules.asar.unpacked');",
-  "}",
-].join("\n");
+// A universal macOS build ships app-arm64.asar and app-x64.asar, not app.asar.
+const patchedHelperRewrite =
+  "helperPath = helperPath.replace(/\\b(app(?:-[a-z0-9]+)?|node_modules)\\.asar(?!\\.unpacked)/g, '$1.asar.unpacked');";
 
-function patchUnixTerminalHelperRewrite() {
-  if (!fs.existsSync(unixTerminalPath)) {
+function patchUnixTerminalHelperRewrite(file = unixTerminalPath) {
+  if (!fs.existsSync(file)) {
     return false;
   }
 
-  const source = fs.readFileSync(unixTerminalPath, "utf8");
+  const source = fs.readFileSync(file, "utf8");
   if (source.includes(patchedHelperRewrite)) {
     return false;
   }
-  if (!source.includes(originalHelperRewrite)) {
+  const known = knownHelperRewrites.find((rewrite) => source.includes(rewrite));
+  if (!known) {
     return false;
   }
 
   fs.writeFileSync(
-    unixTerminalPath,
-    source.replace(originalHelperRewrite, patchedHelperRewrite),
+    file,
+    source.replace(known, () => patchedHelperRewrite),
   );
   return true;
 }
@@ -67,19 +69,31 @@ function chmodSpawnHelpers(rootDir) {
   return fixed;
 }
 
-const helperRewritePatched = patchUnixTerminalHelperRewrite();
-const helpersChmodded = chmodSpawnHelpers(nodePtyDir);
+// Tests and afterPack require this file; only a direct run patches node_modules.
+function main() {
+  if (!fs.existsSync(nodePtyDir)) {
+    console.log("[patch-node-pty] node-pty not found, skipping");
+    return;
+  }
 
-if (helperRewritePatched) {
-  console.log("[patch-node-pty] Patched unixTerminal helper path rewrite");
+  const helperRewritePatched = patchUnixTerminalHelperRewrite();
+  const helpersChmodded = chmodSpawnHelpers(nodePtyDir);
+
+  if (helperRewritePatched) {
+    console.log("[patch-node-pty] Patched unixTerminal helper path rewrite");
+  }
+  if (helpersChmodded > 0) {
+    console.log(
+      `[patch-node-pty] Restored execute bit on ${helpersChmodded} spawn-helper binary(ies)`,
+    );
+  }
+  if (!helperRewritePatched && helpersChmodded === 0) {
+    console.log("[patch-node-pty] Already patched or target files not found");
+  }
 }
-if (helpersChmodded > 0) {
-  console.log(
-    `[patch-node-pty] Restored execute bit on ${helpersChmodded} spawn-helper binary(ies)`,
-  );
-}
-if (!helperRewritePatched && helpersChmodded === 0) {
-  console.log("[patch-node-pty] Already patched or target files not found");
+
+if (require.main === module) {
+  main();
 }
 
 module.exports = { chmodSpawnHelpers, patchUnixTerminalHelperRewrite };
