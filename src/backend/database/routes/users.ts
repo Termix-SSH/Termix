@@ -44,6 +44,7 @@ import {
 import type { UserRecord } from "../repositories/user-repository.js";
 import {
   getTrustedProxyAuthConfig,
+  getTrustedProxySourceAddress,
   isTrustedProxyAddress,
   isTrustedProxyAuthEnabled,
   resolveTrustedProxyRoles,
@@ -304,7 +305,7 @@ router.post("/proxy-login", async (req, res) => {
   }
   if (!config.enabled) return res.json({ enabled: false });
 
-  const sourceAddress = req.socket.remoteAddress;
+  const sourceAddress = getTrustedProxySourceAddress(req);
   try {
     if (!isTrustedProxyAddress(sourceAddress, config.trustedProxies)) {
       authLogger.warn(
