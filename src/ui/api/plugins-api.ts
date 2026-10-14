@@ -512,10 +512,12 @@ export async function previewPluginState(
 export async function setPluginState(
   pluginId: string,
   enabled: boolean,
+  consent?: { version: string; capabilities: string[] },
 ): Promise<PluginStateChange> {
   try {
     const response = await rbacApi.patch(`${pluginPath(pluginId)}/state`, {
       enabled,
+      ...consent,
     });
     return response.data;
   } finally {

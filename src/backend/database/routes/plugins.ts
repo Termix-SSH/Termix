@@ -501,7 +501,7 @@ router.get(
  * /plugins/onboarding/apply:
  *   post:
  *     summary: Apply the onboarding plugin picker
- *     description: Sets every listed plugin to enabled, disabled or removed in one pass. Choices are first raised so that every kept plugin still has its hard dependencies (the adjustments list says which and why). Enabling runs dependencies first, disabling and removing run dependents first, and one plugin failing does not stop the rest. Removing a bundled plugin deletes it and its data; it can be reinstalled from the registry later. Clears the fresh-install pending flag. With dryRun nothing changes and the response lists what would.
+ *     description: Sets every listed plugin to enabled, disabled or removed in one pass. Choices are first raised so that every kept plugin still has its hard dependencies (the adjustments list says which and why). Enabling runs dependencies first, disabling and removing run dependents first, and one plugin failing does not stop the rest. Removing a bundled plugin deletes it and its data; it can be reinstalled from the registry later. Clears the fresh-install pending flag. With dryRun nothing changes and the response lists what would. On a linked desktop, locally managed plugins require version and capabilities matching the reviewed manifest when enabling.
  *     tags:
  *       - Plugins
  *     requestBody:
@@ -783,6 +783,12 @@ router.post(
  *             properties:
  *               enabled:
  *                 type: boolean
+ *               version:
+ *                 type: string
+ *               capabilities:
+ *                 type: array
+ *                 items:
+ *                   type: string
  *     responses:
  *       200:
  *         description: The registry was changed.
@@ -888,7 +894,7 @@ router.delete(
  * /plugins/{id}/state:
  *   patch:
  *     summary: Enable or disable a plugin
- *     description: Persists the new state and starts or stops the plugin immediately. Disabling releases everything the plugin owns, including any port it was listening on. Enabling also starts any installed hard dependency that is off, and disabling also stops the running plugins that depend on it. With dryRun nothing changes and the response lists what would.
+ *     description: Persists the new state and starts or stops the plugin immediately. Disabling releases everything the plugin owns, including any port it was listening on. Enabling also starts any installed hard dependency that is off, and disabling also stops the running plugins that depend on it. With dryRun nothing changes and the response lists what would. On a linked desktop, locally managed plugins require version and capabilities matching the reviewed manifest when enabling.
  *     tags:
  *       - Plugins
  *     parameters:
@@ -963,7 +969,26 @@ router.patch(
         return;
       }
 
-      const result = await setPluginState(pluginId, enabled);
+      let result;
+      if (enabled && (await isLinkedDesktop())) {
+        const version = readVersion(req.body);
+        const capabilities = readCapabilities(req.body);
+        if (version === null || capabilities === null) {
+          res
+            .status(400)
+            .json({ error: "Invalid plugin version or capabilities" });
+          return;
+        }
+        const { enablePluginWithConsent } =
+          await import("../../plugins/manage.js");
+        result = await enablePluginWithConsent(pluginId, {
+          version,
+          capabilities,
+          userId: (req as AuthenticatedRequest).userId as string,
+        });
+      } else {
+        result = await setPluginState(pluginId, enabled);
+      }
       await auditPluginAction(
         req,
         enabled ? "enable_plugin" : "disable_plugin",

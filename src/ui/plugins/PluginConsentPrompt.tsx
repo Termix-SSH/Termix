@@ -8,7 +8,7 @@ import { capabilityRisk, orderByRisk, type PluginEntry } from "./plugin-model";
 
 export interface ConsentRequest {
   plugin: PluginEntry;
-  mode: "install" | "update" | "upload";
+  mode: "install" | "update" | "upload" | "enable";
   version: string;
   /** What the prompt lists: all of them to install, only the new ones to update. */
   capabilities: string[];
@@ -45,17 +45,19 @@ export function PluginConsentPrompt({
       onCancel={busy ? undefined : onCancel}
       icon={<PluginIconBox name={plugin.icon} size="sm" />}
       title={
-        mode === "update"
-          ? t("plugins.manager.consent.updateTitle", { name: plugin.name })
-          : mode === "upload"
-            ? t("plugins.manager.consent.uploadTitle", { name: plugin.name })
-            : t("plugins.manager.consent.installTitle", { name: plugin.name })
+        mode === "enable"
+          ? t("plugins.manager.consent.enableTitle", { name: plugin.name })
+          : mode === "update"
+            ? t("plugins.manager.consent.updateTitle", { name: plugin.name })
+            : mode === "upload"
+              ? t("plugins.manager.consent.uploadTitle", { name: plugin.name })
+              : t("plugins.manager.consent.installTitle", { name: plugin.name })
       }
       description={
         <Facts>
           {plugin.author && <span className="truncate">{plugin.author}</span>}
           <span className="shrink-0">
-            {mode !== "install" && plugin.version
+            {(mode === "update" || mode === "upload") && plugin.version
               ? t("plugins.manager.versionChange", {
                   from: plugin.version,
                   to: version,
@@ -75,9 +77,11 @@ export function PluginConsentPrompt({
             disabled={busy}
             className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"
           >
-            {mode === "update"
-              ? t("plugins.manager.consent.agreeUpdate")
-              : t("plugins.manager.install")}
+            {mode === "enable"
+              ? t("plugins.manager.enable")
+              : mode === "update"
+                ? t("plugins.manager.consent.agreeUpdate")
+                : t("plugins.manager.install")}
           </Button>
         </>
       }

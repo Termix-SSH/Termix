@@ -332,3 +332,78 @@ it("server bundled label must not enable a synced-only user plugin", async () =>
   await mirrorPlugins({} as never);
   expect(state.enabled.has("extra")).toBe(false);
 });
+
+it("remote bundled label cannot preserve approval across an untrusted update", async () => {
+  const reviewed = {
+    id: "extra",
+    source: "user",
+    state: "loaded",
+    signedBy: "server-key",
+    manifest: { id: "extra", version: "1.0.0", capabilities: [] },
+  };
+  state.loaded.set("extra", reviewed);
+  state.syncedOnlyKeys.add("server-key");
+  state.enabled.add("extra");
+  vi.mocked(remoteJson).mockResolvedValue({
+    plugins: [
+      {
+        id: "extra",
+        name: "Extra",
+        version: "2.0.0",
+        source: "bundled",
+        artifact: true,
+        enabled: true,
+        active: true,
+        desktop: "mirror",
+        syncEntities: [],
+        granted: [],
+      },
+    ],
+  });
+  state.fetch.mockResolvedValue({
+    ok: true,
+    arrayBuffer: async () => new ArrayBuffer(4),
+    headers: new Headers(),
+  });
+  state.install.mockImplementation(async () => {
+    const plugin = {
+      ...reviewed,
+      manifest: { ...reviewed.manifest, version: "2.0.0" },
+    };
+    state.loaded.set("extra", plugin);
+    return plugin;
+  });
+  await mirrorPlugins({} as never);
+  expect(state.install).toHaveBeenCalledOnce();
+  expect(state.enabled.has("extra")).toBe(false);
+});
+
+it("waits for an in-flight local plugin change before applying a remote update", async () => {
+  const { serialized } = await import("../../../plugins/manage.js");
+  let release!: () => void;
+  let entered!: () => void;
+  const ready = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  const barrier = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const localChange = serialized(async () => {
+    entered();
+    await barrier;
+  });
+  await ready;
+  serverHas("1.1.0");
+  state.fetch.mockResolvedValue({ ok: false, status: 502 });
+  vi.mocked(remoteJson).mockClear();
+  const syncing = mirrorPlugins({} as never);
+  try {
+    await vi.waitFor(() => expect(remoteJson).toHaveBeenCalled());
+    expect(state.fetch).not.toHaveBeenCalled();
+  } finally {
+    release();
+  }
+  await localChange;
+  await syncing;
+  expect(state.fetch).toHaveBeenCalledOnce();
+});

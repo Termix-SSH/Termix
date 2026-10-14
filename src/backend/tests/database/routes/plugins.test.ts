@@ -176,6 +176,7 @@ const manageMock = vi.hoisted(() => ({
   deletePluginData: vi.fn(),
   planStateChange: vi.fn(),
   setPluginState: vi.fn(),
+  enablePluginWithConsent: vi.fn(),
   getDeveloperMode: vi.fn(),
   setDeveloperMode: vi.fn(),
   stageUpload: vi.fn(),
@@ -1150,7 +1151,11 @@ describe("plugins route", () => {
         fetch(`${baseUrl}/plugins/${id}/state`, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ enabled: true }),
+          body: JSON.stringify({
+            enabled: true,
+            version: "1.0.0",
+            capabilities: ["kv:own"],
+          }),
         });
 
       beforeEach(() => {
@@ -1171,15 +1176,18 @@ describe("plugins route", () => {
 
       it("lets the desktop's admin switch one the server does not", async () => {
         syncPluginsMock.isServerManaged.mockImplementation(() => false);
-        manageMock.setPluginState.mockResolvedValue({
+        manageMock.enablePluginWithConsent.mockResolvedValue({
           enable: [],
           disable: [],
         });
         const res = await switchOn("sample-plugin");
         expect(res.status).toBe(200);
-        expect(manageMock.setPluginState).toHaveBeenCalledWith(
+        expect(manageMock.enablePluginWithConsent).toHaveBeenCalledWith(
           "sample-plugin",
-          true,
+          expect.objectContaining({
+            version: "1.0.0",
+            capabilities: ["kv:own"],
+          }),
         );
       });
 

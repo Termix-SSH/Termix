@@ -89,3 +89,26 @@ describe("PluginConsentPrompt", () => {
     expect(container.innerHTML).toBe("");
   });
 });
+
+it("shows explicit enable consent and only confirms when clicked", () => {
+  const onConfirm = vi.fn();
+  render(
+    <PluginConsentPrompt
+      request={{
+        plugin,
+        mode: "enable",
+        version: "1.0.0",
+        capabilities: ["ssh:connect"],
+      }}
+      onCancel={() => {}}
+      onConfirm={onConfirm}
+    />,
+  );
+  expect(screen.getByText("plugins.manager.consent.enableTitle")).toBeTruthy();
+  expect(
+    screen.getByText("plugins.capabilities.ssh:connect.title"),
+  ).toBeTruthy();
+  expect(onConfirm).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByText("plugins.manager.enable"));
+  expect(onConfirm).toHaveBeenCalledOnce();
+});

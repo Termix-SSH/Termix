@@ -124,6 +124,10 @@ async function replaceWithDownload(
   if (previous) await unloadPlugin(pluginId);
   try {
     const installed = await installPluginArtifact(file);
+    // Approval belongs to the reviewed version, regardless of remote metadata.
+    if (wasEnabled && installed.source === "user" && !vouchedHere(installed)) {
+      await setPluginEnabled(pluginId, false);
+    }
     await fs.promises.rm(backup, { force: true });
     await fs.promises.rm(`${backup}.sig`, { force: true });
     return installed;
@@ -272,8 +276,7 @@ async function mirrorOne(link: SyncLink, plugin: RemotePlugin): Promise<void> {
         local,
         wasEnabled,
       );
-      // Code no trusted key signed is reviewed again with each new version.
-      if (wasEnabled && (!plugin.enabled || !vouchedHere(local))) {
+      if (wasEnabled && !plugin.enabled) {
         await setPluginEnabled(plugin.id, false);
       }
     }
@@ -299,6 +302,7 @@ async function mirrorOne(link: SyncLink, plugin: RemotePlugin): Promise<void> {
 }
 
 export async function mirrorPlugins(link: SyncLink): Promise<void> {
+  const { serialized } = await import("../../plugins/manage.js");
   const { plugins, registryKeys } = await remoteJson<{
     plugins: RemotePlugin[];
     registryKeys?: unknown[];
@@ -310,7 +314,8 @@ export async function mirrorPlugins(link: SyncLink): Promise<void> {
 
   for (const plugin of plugins) {
     try {
-      await mirrorOne(link, plugin);
+      // Share the consent/enable lock so an update cannot swap code mid-approval.
+      await serialized(() => mirrorOne(link, plugin));
     } catch (error) {
       syncLogger.warn("Could not match a feature to the server", {
         operation: "sync_plugin_mirror",

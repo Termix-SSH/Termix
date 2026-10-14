@@ -715,6 +715,28 @@ export async function planStateChange(
   };
 }
 
+/** A local admin consents to the exact mirrored version before granting it access. */
+export function enablePluginWithConsent(
+  pluginId: string,
+  options: { version?: string; capabilities?: string[]; userId: string },
+): Promise<StateChangePlan & { state: string }> {
+  return serialized(async () => {
+    const plugin = getPluginRuntime().loader.get(pluginId);
+    if (!plugin)
+      throw new PluginManageError("Plugin not found", 404, "NOT_FOUND");
+    if (options.version !== plugin.manifest.version) {
+      throw new PluginManageError(
+        "The plugin version changed; review it again",
+        409,
+        "CONSENT_MISMATCH",
+      );
+    }
+    assertConsent(options.capabilities, plugin.manifest.capabilities);
+    await grantDeclared(plugin, options.userId);
+    return setPluginStateUnlocked(pluginId, true);
+  });
+}
+
 export function setPluginState(
   pluginId: string,
   enabled: boolean,

@@ -342,18 +342,42 @@ export function usePluginsManager() {
     [failToast],
   );
 
+  const doEnable = useCallback(
+    async (request: ConsentRequest) =>
+      run(request.plugin.id, async () => {
+        try {
+          const result = await setPluginState(request.plugin.id, true, {
+            version: request.version,
+            capabilities: request.capabilities,
+          });
+          if (result.state === "failed" || result.state === "blocked") {
+            toast.error(
+              t("plugins.manager.toast.failedToStart", {
+                name: request.plugin.name,
+              }),
+            );
+          }
+        } catch (error) {
+          failToast(error, "plugins.manager.errors.state", request.plugin.name);
+        }
+      }),
+    [run, t, failToast],
+  );
+
   const confirmConsent = useCallback(async () => {
     if (!consent) return;
     const request = consent;
     setConsent(null);
-    if (request.mode === "upload" && request.uploadToken) {
+    if (request.mode === "enable") {
+      await doEnable(request);
+    } else if (request.mode === "upload" && request.uploadToken) {
       await doInstallUpload(request);
     } else if (request.mode === "install") {
       await doInstall(request.plugin, request.version, request.capabilities);
     } else {
       await doUpdate(request.plugin, request.version, request.capabilities);
     }
-  }, [consent, doInstall, doUpdate, doInstallUpload]);
+  }, [consent, doInstall, doUpdate, doInstallUpload, doEnable]);
 
   const nameOf = useCallback(
     (id: string) => plugins.find((p) => p.id === id)?.name ?? id,
@@ -402,6 +426,15 @@ export function usePluginsManager() {
         failToast(error, "plugins.manager.errors.state", plugin.name);
         return;
       }
+      if (enable && registry?.managedByServer) {
+        setConsent({
+          plugin,
+          mode: "enable",
+          version: plugin.version!,
+          capabilities: plugin.capabilities,
+        });
+        return;
+      }
       await run(plugin.id, async () => {
         try {
           const result = await setPluginState(plugin.id, enable);
@@ -415,7 +448,7 @@ export function usePluginsManager() {
         }
       });
     },
-    [confirm, t, run, failToast, nameOf],
+    [confirm, t, run, failToast, nameOf, registry?.managedByServer],
   );
 
   const retry = useCallback(
