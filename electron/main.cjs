@@ -3180,6 +3180,9 @@ ipcMain.handle("get-setting", (event, key) => {
 });
 
 ipcMain.handle("set-setting", (event, key, value) => {
+  if (typeof key !== "string") {
+    return { success: false, error: "Invalid setting key" };
+  }
   if (
     key === EXTERNAL_EDITOR_SETTING &&
     value &&
