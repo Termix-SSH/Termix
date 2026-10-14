@@ -233,3 +233,32 @@ describe("mirrorPlugins", () => {
     });
   });
 });
+
+it("server bundled label must not enable a synced-only user plugin", async () => {
+  state.syncedOnlyKeys.add("server-key");
+  state.loaded.set("extra", {
+    id: "extra",
+    source: "user",
+    state: "loaded",
+    signedBy: "server-key",
+    manifest: { id: "extra", version: "1.0.0", capabilities: [] },
+  });
+  vi.mocked(remoteJson).mockResolvedValue({
+    plugins: [
+      {
+        id: "extra",
+        name: "Extra",
+        version: "1.0.0",
+        source: "bundled",
+        artifact: true,
+        enabled: true,
+        active: true,
+        desktop: "mirror",
+        syncEntities: [],
+        granted: [],
+      },
+    ],
+  });
+  await mirrorPlugins({} as never);
+  expect(state.enabled.has("extra")).toBe(false);
+});

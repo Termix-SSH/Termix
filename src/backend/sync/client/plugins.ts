@@ -250,7 +250,9 @@ async function mirrorOne(link: SyncLink, plugin: RemotePlugin): Promise<void> {
         await alertOlderDesktop(plugin);
         throw error;
       }
-      if (wasEnabled) await setPluginEnabled(plugin.id, true);
+      if (wasEnabled && local.source === "bundled") {
+        await setPluginEnabled(plugin.id, true);
+      }
     } else if (newer) {
       await alertOlderDesktop(plugin);
     }
@@ -274,19 +276,19 @@ async function mirrorOne(link: SyncLink, plugin: RemotePlugin): Promise<void> {
       }
     }
     await matchGrants(plugin);
-    // Unsigned code is only ever switched off from here, never on.
-    if (!vouchedHere(local)) {
-      const enabledHere = await isEnabledLocally(plugin.id);
-      if (!plugin.enabled && enabledHere) {
-        await setPluginEnabled(plugin.id, false);
-      } else if (plugin.enabled && !enabledHere) {
-        await alertUnsigned(plugin);
-      }
-      return;
-    }
   }
 
   if (!local) return;
+  // Remote metadata cannot confer bundled trust on a locally loaded user plugin.
+  if (local.source === "user" && !vouchedHere(local)) {
+    const enabledHere = await isEnabledLocally(plugin.id);
+    if (!plugin.enabled && enabledHere) {
+      await setPluginEnabled(plugin.id, false);
+    } else if (plugin.enabled && !enabledHere) {
+      await alertUnsigned(plugin);
+    }
+    return;
+  }
   if (plugin.enabled !== (await isEnabledLocally(plugin.id))) {
     await setPluginEnabled(plugin.id, plugin.enabled);
   } else if (plugin.enabled && local.state !== "active") {
