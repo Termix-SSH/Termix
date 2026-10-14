@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import zlib from "node:zlib";
 import * as tar from "tar";
 import {
-  readArtifactFile,
+  readArtifactFiles,
   readArtifactManifest,
   sameCapabilities,
 } from "../../plugins/artifact-manifest.js";
@@ -27,20 +28,42 @@ function pack(files: Record<string, string>, prefix = ""): Buffer {
   }
 }
 
-describe("readArtifactFile", () => {
+/** Two archives' entries back to back, so a name can appear twice. */
+function concat(first: Buffer, second: Buffer): Buffer {
+  const entries = (buffer: Buffer) => {
+    const raw = zlib.gunzipSync(buffer);
+    // Drop the two zero blocks that end every tar.
+    return raw.subarray(0, raw.length - 1024);
+  };
+  return zlib.gzipSync(
+    Buffer.concat([entries(first), entries(second), Buffer.alloc(1024)]),
+  );
+}
+
+describe("readArtifactFiles", () => {
   it("finds a file by name, with or without a ./ prefix", () => {
     const plain = pack({ "manifest.json": "{}", "dist/a.js": "x" });
-    expect(readArtifactFile(plain, "dist/a.js")?.toString()).toBe("x");
+    expect(
+      readArtifactFiles(plain, "dist/a.js").map((b) => b.toString()),
+    ).toEqual(["x"]);
     const dotted = pack({ "manifest.json": '{"id":"a"}' }, "./");
-    expect(readArtifactFile(dotted, "manifest.json")?.toString()).toBe(
-      '{"id":"a"}',
+    expect(
+      readArtifactFiles(dotted, "manifest.json").map((b) => b.toString()),
+    ).toEqual(['{"id":"a"}']);
+  });
+
+  it("returns nothing for a missing file", () => {
+    expect(readArtifactFiles(pack({ "a.txt": "a" }), "manifest.json")).toEqual(
+      [],
     );
   });
 
-  it("returns null for a missing file", () => {
-    expect(readArtifactFile(pack({ "a.txt": "a" }), "manifest.json")).toBe(
-      null,
-    );
+  it("resolves names that need a pax header", () => {
+    const long = `dist/${"x".repeat(150)}.js`;
+    const archive = pack({ "manifest.json": "{}", [long]: "x" });
+    expect(readArtifactFiles(archive, long).map((b) => b.toString())).toEqual([
+      "x",
+    ]);
   });
 });
 
@@ -67,6 +90,18 @@ describe("readArtifactManifest", () => {
     expect(() =>
       readArtifactManifest(pack({ "manifest.json": "[1]" })),
     ).toThrow(/not an object/);
+  });
+
+  it("refuses an archive with two manifests", () => {
+    const first = pack({ "manifest.json": '{"capabilities":[]}' });
+    const second = pack({ "manifest.json": '{"capabilities":["ssh"]}' });
+    expect(() => readArtifactManifest(concat(first, second))).toThrow(
+      /more than one manifest.json/,
+    );
+    const upper = pack({ "MANIFEST.JSON": '{"capabilities":["ssh"]}' });
+    expect(() => readArtifactManifest(concat(first, upper))).toThrow(
+      /more than one manifest.json/,
+    );
   });
 });
 
