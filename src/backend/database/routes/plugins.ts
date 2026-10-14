@@ -783,12 +783,6 @@ router.post(
  *             properties:
  *               enabled:
  *                 type: boolean
- *               version:
- *                 type: string
- *               capabilities:
- *                 type: array
- *                 items:
- *                   type: string
  *     responses:
  *       200:
  *         description: The registry was changed.
@@ -916,6 +910,12 @@ router.delete(
  *             properties:
  *               enabled:
  *                 type: boolean
+ *               version:
+ *                 type: string
+ *               capabilities:
+ *                 type: array
+ *                 items:
+ *                   type: string
  *     responses:
  *       200:
  *         description: The plugin's new state.
