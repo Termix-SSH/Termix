@@ -70,9 +70,9 @@ export function sortHostTree(
       case "name-desc":
         return hostB.name.localeCompare(hostA.name);
       case "ip-asc":
-        return hostA.ip.localeCompare(hostB.ip);
+        return hostA.ip.localeCompare(hostB.ip, undefined, { numeric: true });
       case "ip-desc":
-        return hostB.ip.localeCompare(hostA.ip);
+        return hostB.ip.localeCompare(hostA.ip, undefined, { numeric: true });
       case "status-online":
         return Number(hostB.online) - Number(hostA.online);
       case "status-offline":

@@ -75,6 +75,44 @@ describe("sortHostTree", () => {
   });
 });
 
+describe("sortHostTree ip mode", () => {
+  const ips = (folder: HostFolder) =>
+    folder.children.map((child) => (child as Host).ip);
+  const tree: HostFolder = {
+    name: "root",
+    children: [
+      "10.0.0.210",
+      "db.internal",
+      "10.0.0.3",
+      "10.0.0.255",
+      "10.0.0.1",
+      "10.0.0.69",
+      "10.0.0.9",
+    ].map((ip) => ({ ...host(ip), ip })),
+  };
+
+  it("orders IPv4 addresses numerically by octet", () => {
+    expect(ips(sortHostTree(tree, "ip-asc"))).toEqual([
+      "10.0.0.1",
+      "10.0.0.3",
+      "10.0.0.9",
+      "10.0.0.69",
+      "10.0.0.210",
+      "10.0.0.255",
+      "db.internal",
+    ]);
+    expect(ips(sortHostTree(tree, "ip-desc"))).toEqual([
+      "db.internal",
+      "10.0.0.255",
+      "10.0.0.210",
+      "10.0.0.69",
+      "10.0.0.9",
+      "10.0.0.3",
+      "10.0.0.1",
+    ]);
+  });
+});
+
 describe("sortHostTree manual mode", () => {
   it("sorts hosts by sortOrder, nulls last, name tie-break", () => {
     const tree: HostFolder = {
