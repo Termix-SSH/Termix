@@ -433,6 +433,9 @@ export class SyncEngine {
       return;
     }
 
+    // A live row the server could not send says nothing; keep ours to retry.
+    if (!result.deleted && !result.row) return;
+
     // Conflict: the server moved on since this device last saw the row. Its
     // version wins here, and a local edit it replaced is kept for the user.
     if (op.op === "upsert" && op.row) {
@@ -445,7 +448,7 @@ export class SyncEngine {
       );
     }
     const resolvers = createResolvers(userId);
-    if (result.deleted || !result.row) {
+    if (result.deleted) {
       await deleteStoredRow(entity, userId, op.syncId);
       await putRecord(userId, op.entityType, op.syncId, {
         revision: result.revision,

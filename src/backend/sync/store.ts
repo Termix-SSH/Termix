@@ -13,6 +13,7 @@ import { createCurrentRepositoryContext } from "../database/repositories/factory
 import { DataCrypto } from "../utils/data-crypto.js";
 import { SystemCrypto } from "../utils/system-crypto.js";
 import { DatabaseSaveTrigger } from "../utils/database-save-trigger.js";
+import { syncLogger } from "../utils/logger.js";
 import {
   getEntity,
   type RegisteredSyncEntity,
@@ -229,7 +230,13 @@ export async function loadWireRows(
       );
       const wire = toWire(entity, serialized, syncId);
       rows.set(syncId, { syncId, wire, hash: hashWire(entity, wire, key) });
-    } catch {
+    } catch (error) {
+      syncLogger.warn("Could not serialize a sync row", {
+        operation: "sync_serialize",
+        entityType: entity.type,
+        syncId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       failed.add(syncId);
     }
   }

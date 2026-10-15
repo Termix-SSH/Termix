@@ -153,11 +153,14 @@ const { default: syncRouter } = await import("../../sync/server/routes.js");
 const { SyncEngine } = await import("../../sync/client/engine.js");
 const { createLink, getLink, updateLink } =
   await import("../../sync/client/link-store.js");
-const { markChanged, resetFeed } = await import("../../sync/server/feed.js");
+const { markChanged, reconcileUser, resetFeed } =
+  await import("../../sync/server/feed.js");
 const { resetSeqAllocator, listConflicts, getConflict, deleteConflict } =
   await import("../../sync/records.js");
 const { createResolvers, writeWireRow } = await import("../../sync/store.js");
 const { getEntity } = await import("../../plugins/sync-registry.js");
+const { FieldCrypto } = await import("../../utils/field-crypto.js");
+const { syncLogger } = await import("../../utils/logger.js");
 
 const app = express();
 app.use(express.json({ limit: "5mb" }));
@@ -484,6 +487,142 @@ describe("after linking", () => {
     expect(
       (await on(server, () => hostsOf(server))).map((h) => h.name).sort(),
     ).toEqual(["later", "private"]);
+  });
+});
+
+describe("a server row that cannot be read", () => {
+  async function recordOf(where: Side, syncId: string) {
+    const [record] = await on(where, () =>
+      db(where)
+        .select()
+        .from(schema.syncRecords)
+        .where(
+          and(
+            eq(schema.syncRecords.entityType, "hosts"),
+            eq(schema.syncRecords.syncId, syncId),
+          ),
+        ),
+    );
+    return record;
+  }
+
+  it("is not taken for a delete when a local edit loses to it", async () => {
+    const [desk] = desktops;
+    await on(server, () => addHost(server, { name: "a" }));
+    const engine = await linkDesktop(desk);
+    await pass(desk, engine);
+
+    await on(desk, () =>
+      db(desk)
+        .update(schema.hosts)
+        .set({ ip: "desk-edit" })
+        .where(eq(schema.hosts.syncId, "host-a")),
+    );
+    await on(server, async () => {
+      await db(server)
+        .update(schema.hosts)
+        .set({ ip: "server-edit" })
+        .where(eq(schema.hosts.syncId, "host-a"));
+      await reconcileUser(SERVER_USER, { force: true });
+      // Then its secret stops decrypting, as under a different key.
+      const [host] = await hostsOf(server);
+      await db(server)
+        .update(schema.hosts)
+        .set({
+          password: FieldCrypto.encryptField(
+            "s3cret",
+            Buffer.alloc(32, 9),
+            String(host.id),
+            "password",
+          ),
+        })
+        .where(eq(schema.hosts.id, host.id));
+    });
+
+    const warn = vi.spyOn(syncLogger, "warn");
+    try {
+      await pass(desk, engine);
+      expect(warn).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          entityType: "hosts",
+          syncId: "host-a",
+          error: expect.any(String),
+        }),
+      );
+    } finally {
+      warn.mockRestore();
+    }
+
+    const [local] = await on(desk, () => hostsOf(desk));
+    expect(local?.ip).toBe("desk-edit");
+    expect(await on(desk, () => listConflicts(desk.userId))).toEqual([]);
+    expect((await recordOf(desk, "host-a")).error).toBe("unavailable");
+
+    // Once the server row reads again, the next local edit gets a normal
+    // conflict with the server's version.
+    await on(server, () =>
+      db(server)
+        .update(schema.hosts)
+        .set({ password: null })
+        .where(eq(schema.hosts.syncId, "host-a")),
+    );
+    await on(desk, () =>
+      db(desk)
+        .update(schema.hosts)
+        .set({ ip: "desk-edit-2" })
+        .where(eq(schema.hosts.syncId, "host-a")),
+    );
+    await pass(desk, engine);
+    const [after] = await on(desk, () => hostsOf(desk));
+    expect(after.ip).toBe("server-edit");
+    expect((await recordOf(desk, "host-a")).error).toBeNull();
+    const conflicts = await on(desk, () => listConflicts(desk.userId));
+    expect(conflicts.map((c) => JSON.parse(c.localRow).ip)).toEqual([
+      "desk-edit-2",
+    ]);
+  });
+
+  it("keeps the local row when a conflict carries no row", async () => {
+    const [desk] = desktops;
+    await on(server, () => addHost(server, { name: "a" }));
+    const engine = await linkDesktop(desk);
+    await pass(desk, engine);
+
+    await on(desk, async () => {
+      const link = (await getLink())!;
+      const settle = (
+        engine as unknown as {
+          settle: (...args: unknown[]) => Promise<void>;
+        }
+      ).settle.bind(engine);
+      await settle(
+        link,
+        {
+          entityType: "hosts",
+          syncId: "host-a",
+          baseRevision: 1,
+          op: "upsert",
+          row: { syncId: "host-a", name: "a" },
+        },
+        {
+          entityType: "hosts",
+          syncId: "host-a",
+          status: "conflict",
+          revision: 2,
+          deleted: false,
+          row: null,
+        },
+        "hash",
+      );
+    });
+
+    expect((await on(desk, () => hostsOf(desk))).map((h) => h.name)).toEqual([
+      "a",
+    ]);
+    const record = await recordOf(desk, "host-a");
+    expect(record.deleted).toBe(false);
+    expect(record.revision).toBe(1);
   });
 });
 
