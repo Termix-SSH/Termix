@@ -351,7 +351,10 @@ export class SyncEngine {
         const key = recordKey(entity.type, row.syncId);
         const record = records.get(key);
         if (record && !record.deleted && record.hash === row.hash) continue;
-        if (record?.errorHash === row.hash) continue;
+        // Unavailable server rows can recover without another local edit.
+        if (record?.errorHash === row.hash && record.error !== "unavailable") {
+          continue;
+        }
         ops.push({
           entityType: entity.type,
           syncId: row.syncId,
@@ -367,7 +370,12 @@ export class SyncEngine {
         if (record.revision === 0) continue;
         if (rows.has(record.syncId) || failed.has(record.syncId)) continue;
         if (entity.covers && !entity.covers(record.syncId)) continue;
-        if (record.errorHash === DELETED_HASH) continue;
+        if (
+          record.errorHash === DELETED_HASH &&
+          record.error !== "unavailable"
+        ) {
+          continue;
+        }
         ops.push({
           entityType: entity.type,
           syncId: record.syncId,

@@ -506,82 +506,80 @@ describe("a server row that cannot be read", () => {
     return record;
   }
 
-  it("is not taken for a delete when a local edit loses to it", async () => {
-    const [desk] = desktops;
-    await on(server, () => addHost(server, { name: "a" }));
-    const engine = await linkDesktop(desk);
-    await pass(desk, engine);
-
-    await on(desk, () =>
-      db(desk)
-        .update(schema.hosts)
-        .set({ ip: "desk-edit" })
-        .where(eq(schema.hosts.syncId, "host-a")),
-    );
-    await on(server, async () => {
-      await db(server)
-        .update(schema.hosts)
-        .set({ ip: "server-edit" })
-        .where(eq(schema.hosts.syncId, "host-a"));
-      await reconcileUser(SERVER_USER, { force: true });
-      // Then its secret stops decrypting, as under a different key.
-      const [host] = await hostsOf(server);
-      await db(server)
-        .update(schema.hosts)
-        .set({
-          password: FieldCrypto.encryptField(
-            "s3cret",
-            Buffer.alloc(32, 9),
-            String(host.id),
-            "password",
-          ),
-        })
-        .where(eq(schema.hosts.id, host.id));
-    });
-
-    const warn = vi.spyOn(syncLogger, "warn");
-    try {
+  it.each(["upsert", "delete"] as const)(
+    "retries a local %s after the server row becomes readable",
+    async (op) => {
+      const [desk] = desktops;
+      await on(server, () => addHost(server, { name: "a" }));
+      const engine = await linkDesktop(desk);
       await pass(desk, engine);
-      expect(warn).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          entityType: "hosts",
-          syncId: "host-a",
-          error: expect.any(String),
-        }),
+
+      await on(desk, () =>
+        (op === "delete"
+          ? db(desk).delete(schema.hosts)
+          : db(desk).update(schema.hosts).set({ ip: "desk-edit" })
+        ).where(eq(schema.hosts.syncId, "host-a")),
       );
-    } finally {
-      warn.mockRestore();
-    }
+      await on(server, async () => {
+        await db(server)
+          .update(schema.hosts)
+          .set({ ip: "server-edit" })
+          .where(eq(schema.hosts.syncId, "host-a"));
+        await reconcileUser(SERVER_USER, { force: true });
+        // Then its secret stops decrypting, as under a different key.
+        const [host] = await hostsOf(server);
+        await db(server)
+          .update(schema.hosts)
+          .set({
+            password: FieldCrypto.encryptField(
+              "s3cret",
+              Buffer.alloc(32, 9),
+              String(host.id),
+              "password",
+            ),
+          })
+          .where(eq(schema.hosts.id, host.id));
+      });
 
-    const [local] = await on(desk, () => hostsOf(desk));
-    expect(local?.ip).toBe("desk-edit");
-    expect(await on(desk, () => listConflicts(desk.userId))).toEqual([]);
-    expect((await recordOf(desk, "host-a")).error).toBe("unavailable");
+      const warn = vi.spyOn(syncLogger, "warn");
+      try {
+        await pass(desk, engine);
+        expect(warn).toHaveBeenCalledWith(
+          expect.any(String),
+          expect.objectContaining({
+            entityType: "hosts",
+            syncId: "host-a",
+            error: expect.any(String),
+          }),
+        );
+      } finally {
+        warn.mockRestore();
+      }
 
-    // Once the server row reads again, the next local edit gets a normal
-    // conflict with the server's version.
-    await on(server, () =>
-      db(server)
-        .update(schema.hosts)
-        .set({ password: null })
-        .where(eq(schema.hosts.syncId, "host-a")),
-    );
-    await on(desk, () =>
-      db(desk)
-        .update(schema.hosts)
-        .set({ ip: "desk-edit-2" })
-        .where(eq(schema.hosts.syncId, "host-a")),
-    );
-    await pass(desk, engine);
-    const [after] = await on(desk, () => hostsOf(desk));
-    expect(after.ip).toBe("server-edit");
-    expect((await recordOf(desk, "host-a")).error).toBeNull();
-    const conflicts = await on(desk, () => listConflicts(desk.userId));
-    expect(conflicts.map((c) => JSON.parse(c.localRow).ip)).toEqual([
-      "desk-edit-2",
-    ]);
-  });
+      const [local] = await on(desk, () => hostsOf(desk));
+      expect(local?.ip).toBe(op === "upsert" ? "desk-edit" : undefined);
+      expect(await on(desk, () => listConflicts(desk.userId))).toEqual([]);
+      expect((await recordOf(desk, "host-a")).error).toBe("unavailable");
+
+      // Restore the same server content without another local edit or a new
+      // server revision. The failed operation must still be retried.
+      await on(server, () =>
+        db(server)
+          .update(schema.hosts)
+          .set({ password: null })
+          .where(eq(schema.hosts.syncId, "host-a")),
+      );
+      await on(server, () => reconcileUser(SERVER_USER, { force: true }));
+      await pass(desk, engine);
+      const [after] = await on(desk, () => hostsOf(desk));
+      expect(after?.ip).toBe("server-edit");
+      expect((await recordOf(desk, "host-a")).error).toBeNull();
+      const conflicts = await on(desk, () => listConflicts(desk.userId));
+      expect(conflicts.map((c) => JSON.parse(c.localRow).ip)).toEqual(
+        op === "upsert" ? ["desk-edit"] : [],
+      );
+    },
+  );
 
   it("keeps the local row when a conflict carries no row", async () => {
     const [desk] = desktops;
