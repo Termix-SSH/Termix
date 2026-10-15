@@ -92,6 +92,25 @@ describe("EditorPane search", () => {
   });
 });
 
+describe("EditorPane jump", () => {
+  it("mounts lazy sections before scrolling to one", async () => {
+    // Never intersecting, so lazy sections only mount when asked to.
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        observe() {}
+        disconnect() {}
+      },
+    );
+    renderEditor();
+    expect(screen.queryByText("Font size")).toBeNull();
+    // The side nav, not the narrow-screen tab strip.
+    fireEvent.click(screen.getAllByRole("button", { name: "Terminal" })[0]);
+    await waitFor(() => expect(screen.getByText("Font size")).toBeTruthy());
+    vi.unstubAllGlobals();
+  });
+});
+
 describe("useScrollSpy scrollTo", () => {
   it("follows a section that moves while the form is still mounting", async () => {
     const container = document.createElement("div");
@@ -114,6 +133,67 @@ describe("useScrollSpy scrollTo", () => {
 
     sectionTop = 900;
     await waitFor(() => expect(calls).toContain(892));
+    container.remove();
+  });
+
+  it("keeps following past 1.5s while lazy sections still mount", async () => {
+    vi.useFakeTimers({ toFake: ["Date", "requestAnimationFrame"] });
+    const container = document.createElement("div");
+    const section = document.createElement("div");
+    section.dataset.section = "warpgate";
+    container.appendChild(section);
+    document.body.appendChild(container);
+    let sectionTop = 300;
+    section.getBoundingClientRect = () => ({ top: sectionTop }) as DOMRect;
+    container.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
+    // Still scrolling toward the target, so the follow stays on.
+    Object.defineProperty(container, "scrollHeight", { value: 5000 });
+    const calls: number[] = [];
+    container.scrollTo = ((options: ScrollToOptions) => {
+      calls.push(options.top ?? 0);
+    }) as typeof container.scrollTo;
+
+    const ref = { current: container };
+    const { result } = renderHook(() =>
+      useScrollSpy(ref, ["general", "warpgate"]),
+    );
+    act(() => result.current.scrollTo("warpgate"));
+    act(() => vi.advanceTimersByTime(2000));
+    sectionTop = 1400;
+    act(() => vi.advanceTimersByTime(100));
+    expect(calls).toContain(1392);
+
+    vi.useRealTimers();
+    container.remove();
+  });
+
+  it("stops following once the user scrolls", () => {
+    vi.useFakeTimers({ toFake: ["Date", "requestAnimationFrame"] });
+    const container = document.createElement("div");
+    const section = document.createElement("div");
+    section.dataset.section = "warpgate";
+    container.appendChild(section);
+    document.body.appendChild(container);
+    let sectionTop = 300;
+    section.getBoundingClientRect = () => ({ top: sectionTop }) as DOMRect;
+    container.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
+    Object.defineProperty(container, "scrollHeight", { value: 5000 });
+    const calls: number[] = [];
+    container.scrollTo = ((options: ScrollToOptions) => {
+      calls.push(options.top ?? 0);
+    }) as typeof container.scrollTo;
+
+    const ref = { current: container };
+    const { result } = renderHook(() =>
+      useScrollSpy(ref, ["general", "warpgate"]),
+    );
+    act(() => result.current.scrollTo("warpgate"));
+    fireEvent.wheel(container);
+    sectionTop = 900;
+    act(() => vi.advanceTimersByTime(200));
+    expect(calls).toEqual([292]);
+
+    vi.useRealTimers();
     container.remove();
   });
 });

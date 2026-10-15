@@ -119,22 +119,68 @@ export function useScrollSpy(
       let lastHeight = area.scrollHeight;
       area.scrollTo?.({ top: lastTop, behavior: "smooth" });
       // Sections above can still be mounting, which moves the target or
-      // cuts the scroll short. Follow it until the layout settles.
+      // cuts the scroll short. Follow it until the scroll lands and the
+      // layout stops changing, unless the user scrolls first.
       const started = Date.now();
+      let changedAt = started;
+      let userScrolled = false;
+      const onUser = () => {
+        userScrolled = true;
+      };
+      area.addEventListener("wheel", onUser, { passive: true });
+      area.addEventListener("touchstart", onUser, { passive: true });
+      const done = () => {
+        area.removeEventListener("wheel", onUser);
+        area.removeEventListener("touchstart", onUser);
+      };
       const follow = () => {
-        if (!el.isConnected || Date.now() - started > 1500) return;
+        const now = Date.now();
+        if (userScrolled || !el.isConnected || now - started > 5000) {
+          return done();
+        }
         const top = target();
+        // Keep the spy quiet for the whole trip, not just the first scroll.
+        lockUntil.current = now + 600;
         if (Math.abs(top - lastTop) > 4 || area.scrollHeight !== lastHeight) {
           lastTop = top;
           lastHeight = area.scrollHeight;
-          lockUntil.current = Date.now() + 600;
+          changedAt = now;
           area.scrollTo?.({ top, behavior: "smooth" });
+        }
+        const reachable = Math.min(
+          lastTop,
+          area.scrollHeight - area.clientHeight,
+        );
+        if (
+          Math.abs(area.scrollTop - reachable) <= 2 &&
+          now - changedAt > 400
+        ) {
+          setActive(id);
+          return done();
         }
         requestAnimationFrame(follow);
       };
       requestAnimationFrame(follow);
     },
   };
+}
+
+/** Resolves once the element's height holds still for a few frames. */
+function untilLayoutSettles(el: HTMLElement | null, max = 800): Promise<void> {
+  return new Promise((resolve) => {
+    if (!el || typeof requestAnimationFrame === "undefined") return resolve();
+    const started = Date.now();
+    let last = -1;
+    let still = 0;
+    const check = () => {
+      const height = el.scrollHeight;
+      still = height === last ? still + 1 : 0;
+      last = height;
+      if (still >= 3 || Date.now() - started > max) return resolve();
+      requestAnimationFrame(check);
+    };
+    requestAnimationFrame(check);
+  });
 }
 
 /** Wraps a section so the nav can find it. */
@@ -253,7 +299,15 @@ export function EditorPane({
   const ids = visibleBands.flatMap((band) => band.items.map((item) => item.id));
   const { active, scrollTo } = useScrollSpy(scrollRef, ids);
   const showNav = bands.flatMap((band) => band.items).length > 1;
-  if (revealRef) revealRef.current = scrollTo;
+  // A jump mounts every lazy section first and scrolls once the form stops
+  // growing. Mounting them on the way down made the scroll stall and restart.
+  const [mountAll, setMountAll] = useState(false);
+  const jump = (id: string) => {
+    if (mountAll) return scrollTo(id);
+    setMountAll(true);
+    void untilLayoutSettles(scrollRef.current).then(() => scrollTo(id));
+  };
+  if (revealRef) revealRef.current = jump;
 
   return (
     <div className={cn("flex min-h-0 flex-1", className)}>
@@ -272,7 +326,7 @@ export function EditorPane({
                     key={item.id}
                     type="button"
                     aria-current={on ? "true" : undefined}
-                    onClick={() => scrollTo(item.id)}
+                    onClick={() => jump(item.id)}
                     className={cn(
                       "flex w-full items-center gap-2 border-l-2 py-1.5 pl-2 pr-2 text-left transition-colors focus-visible:relative focus-visible:z-10 focus-visible:ring-1 focus-visible:ring-ring",
                       on
@@ -320,7 +374,7 @@ export function EditorPane({
                 band.items.map((item) => ({ id: item.id, label: item.label })),
               )}
               activeTab={active}
-              onTabChange={scrollTo}
+              onTabChange={jump}
             />
           </div>
         )}
@@ -336,7 +390,7 @@ export function EditorPane({
             className={`mx-auto flex max-w-3xl flex-col ${PANEL.gap} pb-6`}
           >
             {banner}
-            <SearchingContext.Provider value={searching}>
+            <SearchingContext.Provider value={searching || mountAll}>
               {children}
             </SearchingContext.Provider>
           </div>

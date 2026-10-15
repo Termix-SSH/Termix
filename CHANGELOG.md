@@ -1,5 +1,11 @@
 # Changelog
 
+## 26.10.2
+
+### Fixed
+
+- Picking a section lower down in the host editor, like Warpgate, stuttered on the way and sometimes stopped before it got there
+
 ## 26.10.1
 
 ### Added
