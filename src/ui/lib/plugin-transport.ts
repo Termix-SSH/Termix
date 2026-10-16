@@ -175,11 +175,10 @@ export async function pluginWsUrl(
   const protocols = websocketAuthProtocols(token);
 
   // Dev without a configured API host goes through Vite's proxy, which is
-  // reached on the page's own origin rather than the backend port.
+  // reached on the page's own origin rather than the backend port. Vite moves
+  // to another port when 5173 is taken, so the port says nothing here.
   const devProxy =
-    process.env.NODE_ENV === "development" &&
-    !import.meta.env.VITE_API_HOST &&
-    (window.location.port === "3000" || window.location.port === "5173");
+    process.env.NODE_ENV === "development" && !import.meta.env.VITE_API_HOST;
 
   const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
 

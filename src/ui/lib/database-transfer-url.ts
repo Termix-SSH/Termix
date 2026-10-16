@@ -20,7 +20,9 @@ export function getDatabaseTransferUrl(
     return `${serverUrl.replace(/\/$/, "")}/database/${operation}`;
   }
 
-  const development = location.port === "5173";
+  // Vite moves off 5173 when another dev server holds it.
+  const development =
+    process.env.NODE_ENV === "development" || location.port === "5173";
 
   if (development) {
     return `http://localhost:30001/database/${operation}`;

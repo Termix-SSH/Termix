@@ -111,6 +111,21 @@ describe("pluginWsUrl in the browser", () => {
     expect(target?.protocols).toEqual(["termix.jwt.ticket-1"]);
   });
 
+  it("goes through the Vite proxy in dev on any port", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    try {
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ ticket: "ticket-1" })),
+      );
+      const target = await pluginWsUrl("ssh-terminal", "/terminal");
+      expect(target?.url).toBe(
+        `ws://${window.location.host}/__termix_api/30001/plugin-ws/ssh-terminal/terminal`,
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("falls back to the cookie alone for a guest", async () => {
     fetchMock.mockResolvedValueOnce(new Response("{}", { status: 401 }));
 
