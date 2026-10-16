@@ -638,6 +638,8 @@
     "actionsClick": "點擊展開/收合",
     "openOnDoubleClick": "雙擊開啟",
     "openOnDoubleClickDesc": "需要雙擊才能開啟主機工作階段，而非單擊",
+    "closeOnOpen": "開啟主機後隱藏側邊欄",
+    "closeOnOpenDesc": "從側邊欄開啟主機後自動收合側邊欄",
     "showFolderPaths": "顯示資料夾路徑",
     "showFolderPathsDesc": "在巢狀子資料夾名稱上方顯示父資料夾路徑。無論如何，子資料夾都會保持縮排。",
     "rowDetailsTitle": "列詳細資訊",
@@ -1932,6 +1934,7 @@
         "syncEntities_other": "桌面同步"
       },
       "consent": {
+        "enableTitle": "啟用 {{name}}？",
         "installTitle": "安裝 {{name}}",
         "updateTitle": "更新 {{name}}",
         "agreeUpdate": "同意並更新",

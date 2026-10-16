@@ -638,6 +638,8 @@
     "actionsClick": "点击展开/折叠",
     "openOnDoubleClick": "双击打开",
     "openOnDoubleClickDesc": "要求双击打开主机会话，而不是单击",
+    "closeOnOpen": "打开主机后隐藏侧边栏",
+    "closeOnOpenDesc": "从侧边栏打开主机后自动收起侧边栏",
     "showFolderPaths": "显示文件夹路径",
     "showFolderPathsDesc": "在嵌套子文件夹名称上方显示父文件夹路径。无论哪种方式，子文件夹都会缩进。",
     "rowDetailsTitle": "行详细信息",
@@ -1932,6 +1934,7 @@
         "syncEntities_other": "桌面同步"
       },
       "consent": {
+        "enableTitle": "启用 {{name}}？",
         "installTitle": "安装 {{name}}",
         "updateTitle": "更新 {{name}}",
         "agreeUpdate": "同意并更新",
