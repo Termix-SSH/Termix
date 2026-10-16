@@ -1674,6 +1674,8 @@
         "pinAppRailDesc": "Keep the left sidebar app rail always expanded instead of expanding on hover",
         "expandAppRailOnHover": "Expand App Rail on Hover",
         "expandAppRailOnHoverDesc": "Allow the left sidebar app rail to expand when the pointer moves over it",
+        "appRailHoverPushesContent": "Push content when it expands",
+        "appRailHoverPushesContentDesc": "Make room for the expanded rail instead of opening it over the page. Open sessions, like remote desktop, resize each time",
         "showPinAppRailButton": "Show Pin App Rail Button",
         "showPinAppRailButtonDesc": "Show a button in the app rail to pin it open. Off by default.",
         "settingsNavigation": "Navigation",

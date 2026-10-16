@@ -159,6 +159,9 @@ export function AppRail({
   const [showPinButton, setShowPinButton] = useState(() =>
     readRailPreference("showPinAppRailButton"),
   );
+  const [hoverPushes, setHoverPushes] = useState(() =>
+    readRailPreference("appRailHoverPushesContent"),
+  );
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [menuTarget, setMenuTarget] = useState<MenuTarget | null>(null);
   const [managing, setManaging] = useState(false);
@@ -170,8 +173,11 @@ export function AppRail({
       setExpandOnHover(readRailPreference("expandAppRailOnHover"));
     const showPinButtonHandler = () =>
       setShowPinButton(readRailPreference("showPinAppRailButton"));
+    const pushHandler = () =>
+      setHoverPushes(readRailPreference("appRailHoverPushesContent"));
     window.addEventListener("pinAppRailChanged", pinHandler);
     window.addEventListener("expandAppRailOnHoverChanged", hoverHandler);
+    window.addEventListener("appRailHoverPushesContentChanged", pushHandler);
     window.addEventListener(
       "showPinAppRailButtonChanged",
       showPinButtonHandler,
@@ -179,6 +185,10 @@ export function AppRail({
     return () => {
       window.removeEventListener("pinAppRailChanged", pinHandler);
       window.removeEventListener("expandAppRailOnHoverChanged", hoverHandler);
+      window.removeEventListener(
+        "appRailHoverPushesContentChanged",
+        pushHandler,
+      );
       window.removeEventListener(
         "showPinAppRailButtonChanged",
         showPinButtonHandler,
@@ -313,8 +323,9 @@ export function AppRail({
   };
 
   // Expanding on hover draws over the content instead of pushing it, so open
-  // sessions like remote desktop are not resized each time.
-  const takesSpace = pinned || managing;
+  // sessions like remote desktop are not resized each time, unless the user
+  // asked for the old behavior.
+  const takesSpace = hoverPushes ? railExpanded : pinned || managing;
 
   return (
     <div

@@ -66,6 +66,17 @@ describe("AppRail", () => {
     expect(slot.style.width).toBe(collapsed);
   });
 
+  it("pushes the content on hover when the user asks for it", () => {
+    localStorage.setItem("appRailHoverPushesContent", "true");
+    renderRail();
+    const rail = screen
+      .getByLabelText("common.logout")
+      .closest(".absolute") as HTMLElement;
+    const slot = rail.parentElement as HTMLElement;
+    fireEvent.mouseEnter(rail);
+    expect(slot.style.width).toBe(rail.style.width);
+  });
+
   it("puts a footer item above the profile with its badge", async () => {
     registerRailItem({
       id: "inbox",

@@ -553,6 +553,9 @@ export function UserProfilePanel({
   const [expandAppRailOnHover, setExpandAppRailOnHover] = useState(() =>
     readRailPreference("expandAppRailOnHover"),
   );
+  const [appRailHoverPushes, setAppRailHoverPushes] = useState(() =>
+    readRailPreference("appRailHoverPushesContent"),
+  );
   const [showPinAppRailButton, setShowPinAppRailButton] = useState(() =>
     readRailPreference("showPinAppRailButton"),
   );
@@ -1681,6 +1684,21 @@ export function UserProfilePanel({
                 onChange={(v) => {
                   setExpandAppRailOnHover(v);
                   setRailPreference("expandAppRailOnHover", v);
+                }}
+              />
+            </SettingRow>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.appRailHoverPushesContent")}
+              description={t(
+                "newUi.sidebar.userProfile.appRailHoverPushesContentDesc",
+              )}
+            >
+              <FakeSwitch
+                checked={appRailHoverPushes}
+                disabled={!expandAppRailOnHover}
+                onChange={(v) => {
+                  setAppRailHoverPushes(v);
+                  setRailPreference("appRailHoverPushesContent", v);
                 }}
               />
             </SettingRow>

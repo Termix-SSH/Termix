@@ -9,7 +9,7 @@
 
 ### Changed
 
-- The side menu now opens over the page when it expands on hover, so open sessions like remote desktop are not resized each time
+- The side menu now opens over the page when it expands on hover, so open sessions like remote desktop are not resized each time. Turn on Push content when it expands in Settings to get the old behavior back
 
 ### Fixed
 
