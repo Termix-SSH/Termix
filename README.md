@@ -18,7 +18,7 @@
   <a href="https://donate.termix.site/"><img alt="Donations this month" src="https://img.shields.io/badge/dynamic/json?style=for-the-badge&label=Donations%20this%20month&query=%24.fiatTotal&prefix=%24&url=https%3A%2F%2Ftermix.site%2Fdonation-snapshot.json&color=F39044&labelColor=1a1a1a" /></a>
 </p>
 
-<a href="https://www.youtube.com/watch?v=UEhYqKdgwCo"><img src="./.github/readme/overview.jpg" width="720" alt="Watch the Termix overview on YouTube" /></a>
+<a href="https://www.youtube.com/watch?v=vhtkP-UqV5U"><img src="./.github/readme/overview.jpg" width="720" alt="Watch the Termix overview on YouTube" /></a>
 
 </div>
 
