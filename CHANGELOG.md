@@ -30,6 +30,8 @@
 - Synced plugins signed only by a key the server sent are no longer turned on by themselves
 - Two connects to the same host at once could overwrite each other's connection
 - Indonesian uses the same technical terms everywhere
+- When the server was down or still starting, the login page said it could not connect to the database and stopped trying. It now says the server is not responding and continues on its own once the server is back
+- nginx answered 404 instead of 502 while the backend was down
 - The Docker server crashed and restarted every few hours in ssh2's native crypto on Node 24
 
 ## 26.10.1

@@ -143,6 +143,24 @@ describe("Auth local desktop flow", () => {
     expect(mainAxios.getSetupRequired).not.toHaveBeenCalled();
   });
 
+  it("keeps checking after the server is unreachable and recovers on its own", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      mainAxios.getSetupRequired.mockRejectedValue(new Error("502"));
+      renderAuth();
+      await vi.advanceTimersByTimeAsync(20000);
+      expect(screen.getByText("errors.databaseConnection")).toBeTruthy();
+
+      mainAxios.getSetupRequired.mockResolvedValue({ setup_required: false });
+      await vi.advanceTimersByTimeAsync(6000);
+      await waitFor(() =>
+        expect(screen.queryByText("errors.databaseConnection")).toBeNull(),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps register visible for normal web auth when registration is allowed", async () => {
     mainAxios.isElectron.mockReturnValue(false);
 

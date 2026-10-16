@@ -1099,7 +1099,7 @@
     "acceptNewKey": "Accept New Key & Continue"
   },
   "errors": {
-    "databaseConnection": "Could not connect to the database",
+    "databaseConnection": "The Termix server is not responding",
     "embeddedServerFailed": "Termix's local server could not start",
     "unknownError": "Unknown error",
     "syncedHostMissing": "The synced host does not exist on the linked server",
@@ -1126,7 +1126,7 @@
   "messages": {
     "registrationDisabled": "You have no Termix account yet. Ask an admin to turn on Auto-create external accounts.",
     "userNotAllowed": "Your account is not authorized to register. Please contact an administrator.",
-    "databaseConnectionFailed": "Failed to connect to the database server",
+    "databaseConnectionFailed": "It may still be starting, or it stopped. This page keeps trying and continues on its own once the server is back.",
     "embeddedServerPortInUse": "Port {{port}} is already in use by another program. This is usually a Termix Docker container or a leftover Termix process from a previous session. Close it, then restart Termix.",
     "embeddedServerPortInUseUnknownPort": "One of the ports Termix needs is already in use by another program. Close whatever is using it, then restart Termix.",
     "embeddedServerOldDatabase": "Your local data is from Termix 2.8 or older and has to pass through 2.9 first. Install Termix 2.9.1, open it once so it can move your data, then update to this version again.",
