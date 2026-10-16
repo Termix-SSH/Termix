@@ -5,6 +5,22 @@
 ### Fixed
 
 - Picking a section lower down in the host editor, like Warpgate, stuttered on the way and sometimes stopped before it got there
+- Sorting hosts by IP address put 10.0.0.210 before 10.0.0.3
+- The local terminal failed to start in the universal macOS build
+- Hosts shared with you never showed up on a linked desktop
+- A linked desktop could never turn on an unsigned plugin the server had enabled
+- Creating, cloning or deleting hosts failed with "no such table: main.p_vault_profiles" after the Vault plugin was removed
+- Opening a user in Settings, Users blocked the other admin sections until you went back to the user list
+- A linked desktop could keep showing the same sync conflicts, or delete a local host, when the server could not send its copy
+- Usernames are now unique
+- Importing user data keeps foreign keys on
+- Trusted proxy login checks the address nginx saw, not nginx itself
+- The desktop login frame only trusts the server's own origin
+- External login URLs and callback ports are checked on the desktop app
+- A changed jump host key is no longer accepted without asking
+- Synced plugins signed only by a key the server sent are no longer turned on by themselves
+- Two connects to the same host at once could overwrite each other's connection
+- Indonesian uses the same technical terms everywhere
 
 ## 26.10.1
 
