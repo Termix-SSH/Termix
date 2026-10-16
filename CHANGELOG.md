@@ -21,6 +21,7 @@
 - Synced plugins signed only by a key the server sent are no longer turned on by themselves
 - Two connects to the same host at once could overwrite each other's connection
 - Indonesian uses the same technical terms everywhere
+- The Docker server crashed and restarted every few hours in ssh2's native crypto on Node 24
 
 ## 26.10.1
 
