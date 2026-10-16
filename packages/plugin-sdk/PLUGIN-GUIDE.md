@@ -105,7 +105,7 @@ Before you call a change finished:
 - [ ] `npm run build` passes
 - [ ] `npm run format:check` passes
 - [ ] `npx termix-plugin migrations --check` passes (you ran `npm run migrations` after changing tables)
-- [ ] New strings are in `locales/en.json`
+- [ ] New strings are in `locales/en.json`, and `plugin.name` / `plugin.description` match the manifest
 - [ ] New routes have an `@openapi` block and a test, including without the permission
 - [ ] New env vars are listed in `env` in the manifest
 - [ ] `docs/` and the "About this plugin" section of `AGENTS.md` still match what the plugin does
@@ -517,6 +517,20 @@ read it from your own namespace. Unknown keys fall back to Termix's shared strin
 Plurals use `_one` and `_other` with `t("hosts", { count })`. Other languages go in
 `locales/translated/<code>.json` (like `de_DE.json`) with the same keys. Keep `{{placeholders}}` as they are.
 Untranslated strings show in English.
+
+Termix shows your plugin's name and description in the plugin manager, the setup picker and settings.
+Put them in `locales/en.json` as `plugin.name` and `plugin.description`, with the same text as `name` and
+`description` in the manifest, so they get translated too. Without them, the English manifest text shows in
+every language.
+
+```json
+{
+  "plugin": {
+    "name": "Host Metrics",
+    "description": "Live CPU, memory, disk, network and GPU stats."
+  }
+}
+```
 
 ## Docs
 
