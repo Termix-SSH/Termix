@@ -22,6 +22,7 @@ import { isElectron } from "@/lib/electron";
 import { isPrerelease } from "@/plugins/plugin-model";
 import { OPEN_PLUGINS_EVENT } from "@/plugins/open-plugins";
 import { docsUrl } from "@/lib/docs";
+import { pluginName } from "@/lib/plugin-i18n";
 import { DesktopUpdatesCard } from "./DesktopUpdatesCard";
 
 const DOCKER_BETA_IMAGE = "ghcr.io/termix-ssh/termix:beta";
@@ -262,7 +263,7 @@ function InstanceUpdates() {
         {betaPlugins.map((plugin) => (
           <SettingRow
             key={plugin.id}
-            label={plugin.name}
+            label={pluginName(t, plugin)}
             description={
               plugin.channel === "beta"
                 ? `v${plugin.version}`

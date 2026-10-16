@@ -45,7 +45,7 @@ export interface HostEditorSectionDef {
   pluginId?: string;
   group: "top" | "ssh";
   labelKey: string;
-  /** Already-translated label, used instead of labelKey when set. */
+  /** Shown when labelKey has no translation. */
   label?: string;
   icon?: ComponentType<{ className?: string }>;
   /** Position among the group's tabs, core ones included. */
@@ -88,7 +88,7 @@ function sectionVisible(
 function mergeByOrder(
   core: (HostTab & { order: number })[],
   group: "top" | "ssh",
-  t: (key: string) => string,
+  t: (key: string, options?: { defaultValue?: string }) => string,
   protocols: Record<string, boolean> | undefined,
   defaultsMode = false,
 ): HostTab[] {
@@ -104,7 +104,7 @@ function mergeByOrder(
       const Icon = section.icon;
       return {
         id: section.id,
-        label: section.label ?? t(section.labelKey),
+        label: t(section.labelKey, { defaultValue: section.label }),
         icon: Icon ? <Icon className="size-3" /> : null,
         order: section.order ?? 1000,
       };
@@ -119,7 +119,7 @@ function mergeByOrder(
  * `visible`; without, every registered top tab is listed.
  */
 export function makeHostTabs(
-  t: (key: string) => string,
+  t: (key: string, options?: { defaultValue?: string }) => string,
   protocols?: Record<string, boolean>,
   defaultsMode = false,
 ): HostTab[] {
@@ -146,7 +146,7 @@ export function makeHostTabs(
 }
 
 export function makeHostSshSubTabs(
-  t: (key: string) => string,
+  t: (key: string, options?: { defaultValue?: string }) => string,
   protocols?: Record<string, boolean>,
   defaultsMode = false,
 ): HostTab[] {
@@ -167,7 +167,7 @@ export function makeHostSshSubTabs(
 }
 
 export function makeCredentialTabs(
-  t: (key: string) => string,
+  t: (key: string, options?: { defaultValue?: string }) => string,
 ): CredentialTab[] {
   return [
     {

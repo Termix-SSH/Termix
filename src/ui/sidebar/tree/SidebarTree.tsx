@@ -11,6 +11,7 @@ import {
 import { updatePluginHostSettings } from "@/api/plugins-api";
 import { resetHostToDefaults } from "@/api/host-defaults-api";
 import { PluginIcon } from "@/lib/plugin-icon";
+import { pluginName } from "@/lib/plugin-i18n";
 import { usePluginHostSections } from "@/settings/HostPluginSections";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -1284,7 +1285,7 @@ export function SidebarTree({
                         value
                           ? "hosts.enablePluginFeature"
                           : "hosts.disablePluginFeature",
-                        { name: plugin.name },
+                        { name: pluginName(t, plugin) },
                       )}
                     </DropdownMenuItem>
                   )),
@@ -1307,7 +1308,7 @@ export function SidebarTree({
                   { id: "core", label: t("hostDefaults.resetCore") },
                   ...hostSettingPlugins.map((plugin) => ({
                     id: plugin.id,
-                    label: plugin.name,
+                    label: pluginName(t, plugin),
                   })),
                 ].map((option) => (
                   <DropdownMenuItem

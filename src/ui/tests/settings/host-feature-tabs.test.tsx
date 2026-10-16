@@ -33,7 +33,10 @@ vi.mock("@/api/plugins-api", () => ({
 }));
 
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, options?: { defaultValue?: string }) =>
+      options?.defaultValue ?? key,
+  }),
 }));
 
 function plugin(overrides: Partial<PluginSummary> = {}): PluginSummary {
@@ -75,9 +78,10 @@ describe("syncHostFeatureTabs", () => {
       "feature:docker",
       "feature:warpgate",
     ]);
-    expect(getHostEditorSection(hostFeatureTabId("docker"))?.label).toBe(
-      "Docker",
-    );
+    expect(getHostEditorSection(hostFeatureTabId("docker"))).toMatchObject({
+      labelKey: "docker:plugin.name",
+      label: "Docker",
+    });
     expect(getHostEditorSection(hostFeatureTabId("warpgate"))).toBeDefined();
   });
 

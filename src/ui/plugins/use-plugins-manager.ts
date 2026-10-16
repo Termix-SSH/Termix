@@ -25,6 +25,7 @@ import {
   type RegistryListing,
 } from "@/api/plugins-api";
 import { useConfirm } from "@/components/surface/surface-scope";
+import { pluginDescription, pluginName } from "@/lib/plugin-i18n";
 import { mergePlugins, uploadEntry, type PluginEntry } from "./plugin-model";
 import type { ConsentRequest } from "./PluginConsentPrompt";
 
@@ -109,9 +110,16 @@ export function usePluginsManager() {
       window.removeEventListener(DEVELOPER_MODE_CHANGED_EVENT, onChange);
   }, []);
 
+  // Named in the UI language once here, so lists, sorting, search, dialogs
+  // and toasts all show the same name.
   const plugins = useMemo(
-    () => mergePlugins(installed, registry?.plugins ?? null),
-    [installed, registry],
+    () =>
+      mergePlugins(installed, registry?.plugins ?? null).map((plugin) => ({
+        ...plugin,
+        name: pluginName(t, plugin),
+        description: pluginDescription(t, plugin),
+      })),
+    [installed, registry, t],
   );
 
   const run = useCallback(

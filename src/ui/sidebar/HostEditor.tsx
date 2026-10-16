@@ -730,7 +730,7 @@ export function HostEditor({
       <EditorSection
         key={id}
         id={id}
-        label={section.label ?? t(section.labelKey)}
+        label={t(section.labelKey, { defaultValue: section.label })}
       >
         <LazySection>
           <Section
