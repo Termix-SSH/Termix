@@ -53,6 +53,8 @@ import {
 } from "@/lib/ServerStatusContext";
 import { withLiveHostStatus } from "@/sidebar/live-host-status";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
+import { sortHostTree, type SortKey } from "@/sidebar/host-sort";
+import { Select2 } from "@/components/select2";
 import {
   CountersStrip,
   HostStatusList,
@@ -65,6 +67,17 @@ import { reportCoreIssueUrl } from "@/lib/issue-url";
 import { docsUrl } from "@/lib/docs";
 
 export { HostStatusList as HostStatusCard } from "./dashboard-core-cards";
+
+const HOST_STATUS_SORT_LABELS: Partial<Record<SortKey, string>> = {
+  default: "hosts.sortDefault",
+  "name-asc": "hosts.sortNameAsc",
+  "name-desc": "hosts.sortNameDesc",
+  "ip-asc": "hosts.sortIpAsc",
+  "ip-desc": "hosts.sortIpDesc",
+  "status-online": "hosts.sortOnlineFirst",
+  "status-offline": "hosts.sortOfflineFirst",
+};
+const HOST_STATUS_SORTS = Object.keys(HOST_STATUS_SORT_LABELS) as SortKey[];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -460,7 +473,20 @@ export function DashboardTab({
   const [dbHealth, setDbHealth] = useState<"healthy" | "error">("healthy");
   const [credentialCount, setCredentialCount] = useState(0);
   const [activity, setActivity] = useState<RecentActivityItem[]>([]);
-  const statusCheckHosts = hosts.filter(isStatusCheckEnabled);
+  const [hostStatusSort, setHostStatusSort] = useState<SortKey>(() => {
+    try {
+      const saved = localStorage.getItem("dashboardTab.hostStatusSort");
+      return HOST_STATUS_SORTS.includes(saved as SortKey)
+        ? (saved as SortKey)
+        : "default";
+    } catch {
+      return "default";
+    }
+  });
+  const statusCheckHosts = sortHostTree(
+    { name: "", children: hosts.filter(isStatusCheckEnabled) },
+    hostStatusSort,
+  ).children as Host[];
 
   useEffect(() => {
     let mounted = true;
@@ -580,7 +606,28 @@ export function DashboardTab({
         icon: core.icon,
         frame: core.frame,
         action:
-          id === "recent_activity" && activity.length > 0 ? (
+          id === "host_status" && statusCheckHosts.length > 1 ? (
+            <Select2
+              value={hostStatusSort}
+              aria-label={t("hosts.sortHosts")}
+              onChange={(e) => {
+                const key = e.target.value as SortKey;
+                setHostStatusSort(key);
+                try {
+                  localStorage.setItem("dashboardTab.hostStatusSort", key);
+                } catch {
+                  /* ignore */
+                }
+              }}
+              className="h-6 border border-border bg-background px-1.5 text-[10px] outline-none focus:ring-1 focus:ring-ring"
+            >
+              {HOST_STATUS_SORTS.map((key) => (
+                <option key={key} value={key}>
+                  {t(HOST_STATUS_SORT_LABELS[key]!)}
+                </option>
+              ))}
+            </Select2>
+          ) : id === "recent_activity" && activity.length > 0 ? (
             <button
               type="button"
               onClick={() => void handleClearActivity()}

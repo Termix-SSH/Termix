@@ -5,6 +5,7 @@
 ### Added
 
 - Hide sidebar after opening, in Customize Sidebar, closes the host list once you open a host
+- Sort the dashboard's Host Status card by name, IP address or status
 
 ### Fixed
 
