@@ -7,6 +7,10 @@
 - Hide sidebar after opening, in Customize Sidebar, closes the host list once you open a host
 - Sort the dashboard's Host Status card by name, IP address or status
 
+### Changed
+
+- The side menu now opens over the page when it expands on hover, so open sessions like remote desktop are not resized each time
+
 ### Fixed
 
 - Picking a section lower down in the host editor, like Warpgate, stuttered on the way and sometimes stopped before it got there
