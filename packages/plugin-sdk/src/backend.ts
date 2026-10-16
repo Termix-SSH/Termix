@@ -357,6 +357,13 @@ export interface PluginRouterOptions {
    * (multer, a raw body for signature checking, a proxied stream).
    */
   rawBody?: boolean;
+  /**
+   * Requests per minute one address may make to this plugin's public routes.
+   * Defaults to 120, which a proxied page loading its own scripts and images
+   * can pass on its own. Capped at 10000, and an admin's
+   * TERMIX_PLUGIN_PUBLIC_RATE_LIMIT wins over it.
+   */
+  publicRateLimit?: number;
 }
 
 /**

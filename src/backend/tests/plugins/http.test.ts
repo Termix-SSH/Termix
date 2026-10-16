@@ -461,6 +461,19 @@ describe("public route rate limit", () => {
     expect(http.overPublicRateLimit("other", "1.2.3.4", now)).toBe(false);
   });
 
+  it("lets a plugin raise its own limit, capped, unless the admin set one", () => {
+    const hits = (limit: number, count: number) =>
+      Array.from({ length: count }, () =>
+        http.overPublicRateLimit("proxy", "ip", 0, limit),
+      ).filter(Boolean).length;
+    expect(hits(500, 500)).toBe(0);
+    http.resetPublicRateLimits();
+    expect(hits(50_000, 10_001)).toBe(1);
+    http.resetPublicRateLimits();
+    process.env.TERMIX_PLUGIN_PUBLIC_RATE_LIMIT = "2";
+    expect(hits(500, 3)).toBe(1);
+  });
+
   it("starts a new window after a minute", () => {
     process.env.TERMIX_PLUGIN_PUBLIC_RATE_LIMIT = "1";
     expect(http.overPublicRateLimit("demo", "ip", 0)).toBe(false);

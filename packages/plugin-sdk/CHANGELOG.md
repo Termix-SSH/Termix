@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.8
+
+### Added
+
+- `publicRateLimit` on `ctx.http.router()`, for a plugin whose public routes serve a proxied page
+
 ## 1.0.7
 
 ### Fixed

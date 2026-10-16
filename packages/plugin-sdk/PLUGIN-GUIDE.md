@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.7 | Plugin API 1.2.0
+SDK 1.0.8 | Plugin API 1.2.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -283,7 +283,8 @@ router.post("/notes", async (req, res) => {
 - The `@openapi` path is the full path, starting with `/plugin-api/<id>/`. `build` turns these into
   `dist/openapi.json` and the docs site renders them.
 - `ctx.http.router({ public: ["/webhook/:token"], bodyLimit: "20mb", rawBody: false })`. Public routes
-  have no actor: check their token yourself and rate limit them.
+  have no actor: check their token yourself. Core allows 120 public requests a minute per address;
+  `publicRateLimit` raises that for a proxied page that loads its own assets.
 - `ctx.http.baseUrl(req)` is the public address, for callback URLs.
 - `ctx.ws.route("/live", (socket, conn) => ...)`. Long lived sockets should check
   `conn.isDataUnlocked()` per message.
