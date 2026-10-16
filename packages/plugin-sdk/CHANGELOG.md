@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.7
+
+### Fixed
+
+- A migration file, or a part of one, holding only comments made core fail to start the plugin
+
 ## 1.0.6
 
 ### Added
