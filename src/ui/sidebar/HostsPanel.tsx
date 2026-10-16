@@ -201,6 +201,7 @@ export function HostsPanel({
   hostTree,
   loading,
   active = true,
+  onCloseSidebar,
 }: {
   onOpenTab: (
     host: Host,
@@ -217,6 +218,7 @@ export function HostsPanel({
   /** Unused since editing moved to the Manage tab. */
   onEditingChange?: (editing: boolean) => void;
   active?: boolean;
+  onCloseSidebar?: () => void;
 }) {
   const { t } = useTranslation();
   const { statuses, getStatus } = useServerStatus();
@@ -1044,7 +1046,10 @@ export function HostsPanel({
                   ).children
                 : []
             }
-            onOpenTab={onOpenTab}
+            onOpenTab={(host, type, options) => {
+              onOpenTab(host, type, options);
+              if (sidebarPrefs.display.closeOnOpen) onCloseSidebar?.();
+            }}
             onEditHost={onEditHost}
             onShareHost={(host) => setShareModalHost(host)}
             query={hostSearch.trim().toLowerCase()}

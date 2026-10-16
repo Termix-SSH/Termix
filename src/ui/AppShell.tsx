@@ -2698,6 +2698,7 @@ export function AppShell({
                   if (isMobile) setSidebarOpen(false);
                 }}
                 onEditHost={editHostInManager}
+                onCloseSidebar={() => setSidebarOpen(false)}
                 hostTree={realHostTree ?? undefined}
                 loading={hostsLoading}
                 onEditingChange={panelEditingSetter("hosts")}

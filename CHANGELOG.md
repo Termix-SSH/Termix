@@ -2,6 +2,10 @@
 
 ## 26.10.2
 
+### Added
+
+- Hide sidebar after opening, in Customize Sidebar, closes the host list once you open a host
+
 ### Fixed
 
 - Picking a section lower down in the host editor, like Warpgate, stuttered on the way and sometimes stopped before it got there

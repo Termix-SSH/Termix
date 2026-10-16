@@ -644,6 +644,8 @@
     "actionsClick": "Click to expand/collapse",
     "openOnDoubleClick": "Open on double click",
     "openOnDoubleClickDesc": "Require a double click to open a host session instead of a single click",
+    "closeOnOpen": "Hide sidebar after opening",
+    "closeOnOpenDesc": "Close the sidebar after you open a host from it",
     "showFolderPaths": "Show folder paths",
     "showFolderPathsDesc": "Show the parent folder path above nested subfolder names. Subfolders stay indented either way.",
     "rowDetailsTitle": "Row details",
