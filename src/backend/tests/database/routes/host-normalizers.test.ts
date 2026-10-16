@@ -3,6 +3,7 @@ import { setHostProtocolSource } from "../../../hosts/protocol-auth/registry.js"
 import {
   applyHostKeyTypeUpdate,
   containsOwnerPrivateAuthUpdate,
+  impliedSshAuthType,
   isNonEmptyString,
   keepsStoredSshAuth,
   isOptionalBoolean,
@@ -513,5 +514,18 @@ describe("keepsStoredSshAuth", () => {
     expect(keepsStoredSshAuth(null)).toBe(true);
     expect(keepsStoredSshAuth("password")).toBe(false);
     expect(keepsStoredSshAuth("none")).toBe(false);
+  });
+});
+
+describe("impliedSshAuthType", () => {
+  it("reads the auth type from the secret a create body carries", () => {
+    expect(impliedSshAuthType({ credentialId: 2, password: "pw" })).toBe(
+      "credential",
+    );
+    expect(impliedSshAuthType({ key: "-----BEGIN", password: "pw" })).toBe(
+      "key",
+    );
+    expect(impliedSshAuthType({ password: "pw" })).toBe("password");
+    expect(impliedSshAuthType({})).toBeUndefined();
   });
 });
