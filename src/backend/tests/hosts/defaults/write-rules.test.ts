@@ -106,6 +106,31 @@ describe("applyHostDefaultsToWrite", () => {
     expect(overrides.core).toEqual(["statusCheckEnabled", "username"]);
   });
 
+  it("keeps a changed auth type on an update without a list", async () => {
+    userDefault("auth", { authType: "credential", credentialId: 3 });
+    const stored = {
+      id: 5,
+      userId: "u1",
+      authType: "credential",
+      credentialId: 3,
+      defaultOverrides: JSON.stringify({ core: ["username"] }),
+    };
+    const columns: Record<string, unknown> = {
+      authType: "vault",
+      credentialId: null,
+      overrideCredentialUsername: 0,
+    };
+    const overrides = await applyHostDefaultsToWrite({
+      ownerId: "u1",
+      hostId: 5,
+      columns,
+      body: { authType: "vault", credentialId: 0 },
+      stored: stored as never,
+    });
+    expect(columns.authType).toBe("vault");
+    expect(overrides.core).toContain("auth");
+  });
+
   it("keeps a locked key's state for a shared editor", async () => {
     const overrides = await applyHostDefaultsToWrite({
       ownerId: "u1",
