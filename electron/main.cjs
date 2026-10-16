@@ -2389,6 +2389,8 @@ async function testC2SRelay(
   if (runtime) runtime.authSocket = ws;
   return new Promise((resolve) => {
     let settled = false;
+    // The relay sends its reason and then closes; keep the reason.
+    let relayError = null;
     const settle = (result) => {
       if (settled) return;
       settled = true;
@@ -2425,6 +2427,10 @@ async function testC2SRelay(
           settle({ success: true });
         } else if (message.type === "error") {
           clearTimeout(timer);
+          relayError = normalizeC2SErrorMessage(
+            message.error,
+            "Tunnel test failed",
+          );
           settle(createC2SFailure(message.error, "Tunnel test failed"));
         }
       } catch (error) {
@@ -2438,7 +2444,10 @@ async function testC2SRelay(
     });
     ws.on("close", () => {
       if (runtime && c2sTunnelRuntimes.get(tunnel.name) === runtime) {
-        setC2STunnelError(tunnel.name, "Endpoint SSH connection closed");
+        setC2STunnelError(
+          tunnel.name,
+          relayError || "Endpoint SSH connection closed",
+        );
       }
       clearTimeout(timer);
       settle({ success: false, error: "Tunnel test connection closed" });

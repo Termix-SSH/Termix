@@ -32,6 +32,7 @@
 - Indonesian uses the same technical terms everywhere
 - When the server was down or still starting, the login page said it could not connect to the database and stopped trying. It now says the server is not responding and continues on its own once the server is back
 - nginx answered 404 instead of 502 while the backend was down
+- A client tunnel that could not start always said "Endpoint SSH connection closed" on the desktop app instead of the real reason, like the target refusing the connection
 - The Docker server crashed and restarted every few hours in ssh2's native crypto on Node 24
 
 ## 26.10.1
