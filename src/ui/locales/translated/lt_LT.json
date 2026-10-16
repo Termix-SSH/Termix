@@ -656,6 +656,8 @@
     "actionsClick": "Paspausti, kad išskleistumėte/suskleistumėte",
     "openOnDoubleClick": "Atidaryti dukart paspaudus",
     "openOnDoubleClickDesc": "Reikalauti dukart paspausti, kad atidarytumėte serverio sesiją, vietoj vieno paspaudimo",
+    "closeOnOpen": "Slėpti šoninę juostą atidarius",
+    "closeOnOpenDesc": "Uždaryti šoninę juostą, kai atidarote priimtuvą iš jos",
     "showFolderPaths": "Rodyti aplanko kelius",
     "showFolderPathsDesc": "Rodyti tėvinio aplanko kelią virš įdėto poaplanko pavadinimo. Poaplanai vis tiek lieka įtraukti.",
     "rowDetailsTitle": "Eilutės detalės",
@@ -1125,7 +1127,7 @@
     "acceptNewKey": "Priimti naują raktą ir tęsti"
   },
   "errors": {
-    "databaseConnection": "Nepavyko prisijungti prie duomenų bazės",
+    "databaseConnection": "Termix serveris neatsako",
     "embeddedServerFailed": "Nepavyko paleisti Termix vietinio serverio",
     "unknownError": "Nežinoma klaida",
     "syncedHostMissing": "Sinchronizuotas serveris nesusietame serveryje neegzistuoja",
@@ -1152,7 +1154,7 @@
   "messages": {
     "registrationDisabled": "Dar neturite Termix paskyros. Paprašykite administratoriaus įjungti funkciją „Automatiškai kurti išorines paskyras“.",
     "userNotAllowed": "Jūsų paskyra neturi teisės registruotis. Susisiekite su administratoriumi.",
-    "databaseConnectionFailed": "Nepavyko prisijungti prie duomenų bazės serverio",
+    "databaseConnectionFailed": "Jis gali vis dar paleidžiamas arba sustojo. Šis puslapis nuolat bando prisijungti ir automatiškai atsinaujins, kai serveris vėl bus pasiekiamas.",
     "embeddedServerPortInUse": "Prievadas {{port}} jau naudojamas kitos programos. Dažniausiai tai yra Termix Docker konteineris arba ankstesnės sesijos Termix procesas. Uždarykite jį ir paleiskite Termix iš naujo.",
     "embeddedServerPortInUseUnknownPort": "Viena iš prievadų, kurių Termix reikia, jau naudojama kitos programos. Uždarykite programą, kurią naudoja, ir paleiskite Termix iš naujo.",
     "embeddedServerOldDatabase": "Jūsų vietiniai duomenys yra iš Termix 2.8 arba senesnės versijos, todėl pirmiausia juos reikia atnaujinti per 2.9 versiją. Įdiekite Termix 2.9.1, atidarykite ją vieną kartą, kad duomenys būtų perkelti, tada vėl atnaujinkite į šią versiją.",
@@ -1718,6 +1720,8 @@
         "pinAppRailDesc": "Visada išlaikyti kairę programų juostą išplėstą, vietoj to, kad ji išsiplėstų užvedus pelę",
         "expandAppRailOnHover": "Išplėsti programų juostą užvedus pelę",
         "expandAppRailOnHoverDesc": "Leisti kairiajai programų juostai išsiplėsti, kai pelės žymeklis užvedamas ant jos",
+        "appRailHoverPushesContent": "Stumti turinį išsiplėtimo metu",
+        "appRailHoverPushesContentDesc": "Sukurti vietos išsiplėtusiai juostai vietoj to, kad ji būtų rodoma virš puslapio. Atidarytos sesijos, pvz., nuotolinis darbalaukis, kiekvieną kartą keičia dydį",
         "showPinAppRailButton": "Rodyti programų juostos pritvirtinimo mygtuką",
         "showPinAppRailButtonDesc": "Rodyti mygtuką programų juostoje, kad būtų galima ją pritvirtinti. Numatyta išjungta.",
         "settingsNavigation": "Navigacija",
@@ -2037,6 +2041,7 @@
         "syncEntities_other": "Darbalaukio sinchronizavimas"
       },
       "consent": {
+        "enableTitle": "Įgalinti „{{name}}“?",
         "installTitle": "Įdiegti {{name}}",
         "updateTitle": "Atnaujinti {{name}}",
         "agreeUpdate": "Sutikti ir atnaujinti",

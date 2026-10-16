@@ -638,6 +638,8 @@
     "actionsClick": "클릭하여 펼치기/접기",
     "openOnDoubleClick": "더블 클릭 시 열기",
     "openOnDoubleClickDesc": "단일 클릭 대신 더블 클릭으로 호스트 세션을 열도록 설정합니다",
+    "closeOnOpen": "열기 후 사이드바 숨기기",
+    "closeOnOpenDesc": "사이드바에서 호스트를 열면 사이드바를 닫습니다",
     "showFolderPaths": "폴더 경로 표시",
     "showFolderPathsDesc": "중첩된 하위 폴더 이름 위에 상위 폴더 경로를 표시합니다. 하위 폴더는 어느 경우든 들여쓰기가 유지됩니다.",
     "rowDetailsTitle": "행 세부 정보",
@@ -1083,7 +1085,7 @@
     "acceptNewKey": "새 키 수락 및 계속"
   },
   "errors": {
-    "databaseConnection": "데이터베이스에 연결할 수 없습니다",
+    "databaseConnection": "Termix 서버가 응답하지 않습니다",
     "embeddedServerFailed": "Termix의 로컬 서버를 시작할 수 없습니다",
     "unknownError": "알 수 없는 오류",
     "syncedHostMissing": "동기화된 호스트가 연결된 서버에 존재하지 않습니다",
@@ -1110,7 +1112,7 @@
   "messages": {
     "registrationDisabled": "아직 Termix 계정이 없습니다. 관리자에게 외부 계정 자동 생성을 활성화해 달라고 요청하세요.",
     "userNotAllowed": "귀하의 계정은 등록이 허용되지 않았습니다. 관리자에게 문의해 주세요.",
-    "databaseConnectionFailed": "데이터베이스 서버 연결 실패",
+    "databaseConnectionFailed": "서버가 아직 시작 중이거나 중지되었을 수 있습니다. 이 페이지는 계속 시도하다가 서버가 다시 연결되면 자동으로 계속됩니다.",
     "embeddedServerPortInUse": "포트 {{port}}는 이미 다른 프로그램에서 사용 중입니다. 일반적으로 Termix Docker 컨테이너나 이전 세션의 Termix 프로세스가 원인입니다. 해당 프로그램을 닫은 후 Termix를 다시 시작하세요.",
     "embeddedServerPortInUseUnknownPort": "Termix가 필요로 하는 포트 중 하나가 이미 다른 프로그램에서 사용 중입니다. 해당 포트를 사용하는 프로그램을 닫은 후 Termix를 다시 시작하세요.",
     "embeddedServerOldDatabase": "로컬 데이터가 Termix 2.8 이하 버전에서 생성된 것으로, 먼저 2.9 버전을 거쳐야 합니다. Termix 2.9.1을 설치하고 한 번 실행하여 데이터를 마이그레이션한 후, 다시 이 버전으로 업데이트하세요.",
@@ -1649,6 +1651,8 @@
         "pinAppRailDesc": "마우스를 올리면 확장되는 대신 왼쪽 사이드바 앱 레일을 항상 확장된 상태로 유지합니다",
         "expandAppRailOnHover": "마우스 오버 시 앱 레일 확장",
         "expandAppRailOnHoverDesc": "포인터가 왼쪽 사이드바 앱 레일 위에 있을 때 확장되도록 허용합니다",
+        "appRailHoverPushesContent": "확장 시 콘텐츠 밀기",
+        "appRailHoverPushesContentDesc": "페이지 위에 레일을 열지 않고 확장된 레일 공간을 확보합니다. 원격 데스크톱과 같은 열린 세션은 매번 크기가 조정됩니다",
         "showPinAppRailButton": "앱 레일 고정 버튼 표시",
         "showPinAppRailButtonDesc": "앱 레일을 열려 있도록 고정하는 버튼을 앱 레일에 표시합니다. 기본적으로 꺼져 있습니다.",
         "settingsNavigation": "네비게이션",
@@ -1932,6 +1936,7 @@
         "syncEntities_other": "데스크톱 동기화"
       },
       "consent": {
+        "enableTitle": "{{name}}을(를) 활성화하시겠습니까?",
         "installTitle": "{{name}} 설치",
         "updateTitle": "{{name}} 업데이트",
         "agreeUpdate": "동의하고 업데이트",

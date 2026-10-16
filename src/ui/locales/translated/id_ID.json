@@ -638,6 +638,8 @@
     "actionsClick": "Klik untuk memperluas/menciutkan",
     "openOnDoubleClick": "Buka saat diklik dua kali",
     "openOnDoubleClickDesc": "Memerlukan klik dua kali untuk membuka sesi host, bukan klik tunggal",
+    "closeOnOpen": "Sembunyikan bilah sisi setelah membuka",
+    "closeOnOpenDesc": "Tutup bilah sisi setelah Anda membuka host darinya",
     "showFolderPaths": "Tampilkan jalur folder",
     "showFolderPathsDesc": "Tampilkan jalur folder induk di atas nama subfolder bersarang. Subfolder tetap menjorok ke dalam dalam kedua kasus.",
     "rowDetailsTitle": "Detail baris",
@@ -1083,7 +1085,7 @@
     "acceptNewKey": "Terima Kunci Baru & Lanjutkan"
   },
   "errors": {
-    "databaseConnection": "Tidak dapat terhubung ke database",
+    "databaseConnection": "Server Termix tidak merespons",
     "embeddedServerFailed": "Server lokal Termix tidak dapat dimulai",
     "unknownError": "Kesalahan tidak diketahui",
     "syncedHostMissing": "Host yang disinkronkan tidak ada di server yang terhubung",
@@ -1110,7 +1112,7 @@
   "messages": {
     "registrationDisabled": "Anda belum memiliki akun Termix. Mintalah admin untuk mengaktifkan pembuatan otomatis akun eksternal.",
     "userNotAllowed": "Akun Anda tidak diizinkan untuk mendaftar. Hubungi administrator.",
-    "databaseConnectionFailed": "Gagal terhubung ke server database",
+    "databaseConnectionFailed": "Server mungkin masih sedang dimulai atau telah berhenti. Halaman ini akan terus mencoba dan kembali normal secara otomatis setelah server aktif kembali.",
     "embeddedServerPortInUse": "Port {{port}} sudah digunakan oleh program lain. Biasanya ini adalah kontainer Docker Termix atau proses Termix yang tersisa dari sesi sebelumnya. Tutup program tersebut, lalu mulai ulang Termix.",
     "embeddedServerPortInUseUnknownPort": "Salah satu port yang dibutuhkan Termix sudah digunakan oleh program lain. Tutup program yang menggunakannya, lalu mulai ulang Termix.",
     "embeddedServerOldDatabase": "Data lokal Anda berasal dari Termix 2.8 atau lebih lama dan harus diproses melalui versi 2.9 terlebih dahulu. Instal Termix 2.9.1, buka sekali agar data Anda dapat dipindahkan, lalu perbarui ke versi ini lagi.",
@@ -1649,6 +1651,8 @@
         "pinAppRailDesc": "Jaga agar rel aplikasi di sidebar kiri tetap terbuka, bukan hanya saat kursor diarahkan",
         "expandAppRailOnHover": "Perluas Rel Aplikasi saat Kursor Diarahkan",
         "expandAppRailOnHoverDesc": "Izinkan rel aplikasi di sidebar kiri untuk diperluas saat kursor diarahkan",
+        "appRailHoverPushesContent": "Geser konten saat diperluas",
+        "appRailHoverPushesContentDesc": "Buat ruang untuk rel yang diperluas alih-alih menampilkannya di atas halaman. Sesi terbuka, seperti desktop jarak jauh, akan menyesuaikan ukuran setiap kali",
         "showPinAppRailButton": "Tampilkan Tombol Sematkan Rel Aplikasi",
         "showPinAppRailButtonDesc": "Tampilkan tombol di rel aplikasi untuk menyematkannya agar tetap terbuka. Nonaktif secara default.",
         "settingsNavigation": "Navigasi",
@@ -1932,6 +1936,7 @@
         "syncEntities_other": "Sinkronisasi desktop"
       },
       "consent": {
+        "enableTitle": "Aktifkan {{name}}?",
         "installTitle": "Pasang {{name}}",
         "updateTitle": "Perbarui {{name}}",
         "agreeUpdate": "Setuju dan perbarui",

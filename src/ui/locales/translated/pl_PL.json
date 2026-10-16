@@ -656,6 +656,8 @@
     "actionsClick": "Kliknij, aby rozwinąć/zwinąć",
     "openOnDoubleClick": "Otwieraj po podwójnym kliknięciu",
     "openOnDoubleClickDesc": "Wymagaj podwójnego kliknięcia do otwarcia sesji hosta zamiast pojedynczego kliknięcia",
+    "closeOnOpen": "Ukryj pasek boczny po otwarciu",
+    "closeOnOpenDesc": "Zamknij pasek boczny po otwarciu hosta z jego listy",
     "showFolderPaths": "Pokaż ścieżki folderów",
     "showFolderPathsDesc": "Pokaż ścieżkę nadrzędnego folderu nad nazwami zagnieżdżonych podfolderów. Podfoldery pozostają wcięte w obu przypadkach.",
     "rowDetailsTitle": "Szczegóły wiersza",
@@ -1125,7 +1127,7 @@
     "acceptNewKey": "Akceptuj nowy klucz i kontynuuj"
   },
   "errors": {
-    "databaseConnection": "Nie udało się połączyć z bazą danych",
+    "databaseConnection": "Serwer Termix nie odpowiada",
     "embeddedServerFailed": "Lokalny serwer Termix nie mógł się uruchomić",
     "unknownError": "Nieznany błąd",
     "syncedHostMissing": "Synchronizowany host nie istnieje na połączonym serwerze",
@@ -1152,7 +1154,7 @@
   "messages": {
     "registrationDisabled": "Nie masz jeszcze konta Termix. Poproś administratora o włączenie opcji Automatyczne tworzenie kont zewnętrznych.",
     "userNotAllowed": "Twoje konto nie ma uprawnień do rejestracji. Skontaktuj się z administratorem.",
-    "databaseConnectionFailed": "Nie udało się połączyć z serwerem bazy danych",
+    "databaseConnectionFailed": "Może się jeszcze uruchamiać lub został zatrzymany. Ta strona będzie próbować ponownie i wróci do działania, gdy serwer będzie dostępny.",
     "embeddedServerPortInUse": "Port {{port}} jest już używany przez inny program. Zazwyczaj jest to kontener Docker Termix lub pozostały proces Termix z poprzedniej sesji. Zamknij go, a następnie uruchom Termix ponownie.",
     "embeddedServerPortInUseUnknownPort": "Jeden z portów wymaganych przez Termix jest już używany przez inny program. Zamknij program, który go używa, a następnie uruchom Termix ponownie.",
     "embeddedServerOldDatabase": "Twoje lokalne dane pochodzą z Termix 2.8 lub starszej wersji i muszą zostać najpierw zaktualizowane do wersji 2.9. Zainstaluj Termix 2.9.1, otwórz go raz, aby mógł przenieść Twoje dane, a następnie zaktualizuj ponownie do tej wersji.",
@@ -1718,6 +1720,8 @@
         "pinAppRailDesc": "Zawsze rozwiń lewy pasek aplikacji zamiast rozwijać go po najechaniu kursorem",
         "expandAppRailOnHover": "Rozwijaj pasek aplikacji po najechaniu",
         "expandAppRailOnHoverDesc": "Zezwalaj na rozwinięcie lewego paska aplikacji po najechaniu na niego kursorem",
+        "appRailHoverPushesContent": "Przesuń zawartość przy rozwinięciu",
+        "appRailHoverPushesContentDesc": "Zostaw miejsce dla rozwiniętego paska bocznego zamiast nakładać go na stronę. Otwarte sesje, takie jak zdalny pulpit, będą zmieniać rozmiar za każdym razem",
         "showPinAppRailButton": "Pokaż przycisk przypinania paska aplikacji",
         "showPinAppRailButtonDesc": "Wyświetlaj przycisk przypinania paska aplikacji. Domyślnie wyłączone.",
         "settingsNavigation": "Nawigacja",
@@ -2037,6 +2041,7 @@
         "syncEntities_other": "Synchronizacja pulpitu"
       },
       "consent": {
+        "enableTitle": "Włączyć {{name}}?",
         "installTitle": "Zainstaluj {{name}}",
         "updateTitle": "Aktualizuj {{name}}",
         "agreeUpdate": "Zaakceptuj i zaktualizuj",

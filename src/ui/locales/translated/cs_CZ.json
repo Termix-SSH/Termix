@@ -656,6 +656,8 @@
     "actionsClick": "Kliknutím rozbalit/sbalit",
     "openOnDoubleClick": "Otevřít dvojklikem",
     "openOnDoubleClickDesc": "Požadovat dvojklik pro otevření relace hosta místo jednokliku",
+    "closeOnOpen": "Skrýt postranní panel po otevření",
+    "closeOnOpenDesc": "Zavřít postranní panel po otevření hostitele z něj",
     "showFolderPaths": "Zobrazit cesty složek",
     "showFolderPathsDesc": "Zobrazit cestu nadřazené složky nad jmény vnořených podsložek. Podsložky zůstanou v obou případech odsazené.",
     "rowDetailsTitle": "Detaily řádku",
@@ -1125,7 +1127,7 @@
     "acceptNewKey": "Přijmout nový klíč a pokračovat"
   },
   "errors": {
-    "databaseConnection": "Nelze se připojit k databázi",
+    "databaseConnection": "Server Termix neodpovídá",
     "embeddedServerFailed": "Lokální server Termix se nepodařilo spustit",
     "unknownError": "Neznámá chyba",
     "syncedHostMissing": "Synchronizovaný hostitel neexistuje na propojeném serveru",
@@ -1152,7 +1154,7 @@
   "messages": {
     "registrationDisabled": "Zatím nemáte účet Termix. Požádejte administrátora, aby zapnul možnost Automatické vytváření externích účtů.",
     "userNotAllowed": "Váš účet není oprávněn k registraci. Kontaktujte prosím administrátora.",
-    "databaseConnectionFailed": "Nepodařilo se připojit k databázovému serveru",
+    "databaseConnectionFailed": "Server se možná stále spouští, nebo byl zastaven. Tato stránka se bude neustále pokoušet o připojení a automaticky se obnoví, jakmile bude server znovu dostupný.",
     "embeddedServerPortInUse": "Port {{port}} je již používán jiným programem. Obvykle se jedná o Docker kontejner Termix nebo zbytkový proces Termix z předchozí relace. Zavřete jej a poté restartujte Termix.",
     "embeddedServerPortInUseUnknownPort": "Jeden z portů, které Termix potřebuje, je již používán jiným programem. Zavřete aplikaci, která jej používá, a poté restartujte Termix.",
     "embeddedServerOldDatabase": "Vaše místní data pocházejí z Termix 2.8 nebo starší verze a musí být nejprve převedena verzí 2.9. Nainstalujte Termix 2.9.1, otevřete jej jednou, aby mohl přesunout vaše data, a poté aktualizujte znovu na tuto verzi.",
@@ -1718,6 +1720,8 @@
         "pinAppRailDesc": "Nechat levý postranní panel aplikací vždy rozbalený místo rozbalení při najetí myší",
         "expandAppRailOnHover": "Rozbalit panel aplikací při najetí myší",
         "expandAppRailOnHoverDesc": "Povolit rozbalení levého postranního panelu aplikací při najetí ukazatelem",
+        "appRailHoverPushesContent": "Posunout obsah při rozbalení",
+        "appRailHoverPushesContentDesc": "Uvolnit místo pro rozbalený panel místo překrytí stránky. Otevřené relace, jako je vzdálená plocha, se při každém rozbalení přizpůsobí velikosti.",
         "showPinAppRailButton": "Zobrazit tlačítko pro připnutí panelu aplikací",
         "showPinAppRailButtonDesc": "Zobrazí tlačítko v panelu aplikací pro jeho připnutí. Ve výchozím nastavení vypnuto.",
         "settingsNavigation": "Navigace",
@@ -2037,6 +2041,7 @@
         "syncEntities_other": "Synchronizace plochy"
       },
       "consent": {
+        "enableTitle": "Povolit {{name}}?",
         "installTitle": "Nainstalovat {{name}}",
         "updateTitle": "Aktualizovat {{name}}",
         "agreeUpdate": "Souhlasit a aktualizovat",

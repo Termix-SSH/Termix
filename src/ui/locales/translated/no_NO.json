@@ -644,6 +644,8 @@
     "actionsClick": "Klikk for å utvide/skjule",
     "openOnDoubleClick": "Åpne ved dobbeltklikk",
     "openOnDoubleClickDesc": "Krev dobbeltklikk for å åpne en vertøkt i stedet for enkeltklikk",
+    "closeOnOpen": "Skjul sidefeltet etter åpning",
+    "closeOnOpenDesc": "Lukk sidefeltet etter at du har åpnet en vert fra det",
     "showFolderPaths": "Vis mappestier",
     "showFolderPathsDesc": "Vis overordnede mappet over navnene på innrykkede undermapper. Undermapper forblir innrykket uansett.",
     "rowDetailsTitle": "Radens detaljer",
@@ -1097,7 +1099,7 @@
     "acceptNewKey": "Aksepter ny nøkkel og fortsett"
   },
   "errors": {
-    "databaseConnection": "Kunne ikke koble til databasen",
+    "databaseConnection": "Termix-serveren svarer ikke",
     "embeddedServerFailed": "Termix' lokale server kunne ikke startes",
     "unknownError": "Ukjent feil",
     "syncedHostMissing": "Den synkroniserte verten finnes ikke på den lenkede serveren",
@@ -1124,7 +1126,7 @@
   "messages": {
     "registrationDisabled": "Du har ikke en Termix-konto ennå. Be en administrator om å skru på «Auto-create external accounts».",
     "userNotAllowed": "Kontoen din er ikke autorisert til å registrere seg. Vennligst kontakt en administrator.",
-    "databaseConnectionFailed": "Kunne ikke koble til databasenserveren",
+    "databaseConnectionFailed": "Den kan fortsatt starte, eller den har stoppet. Denne siden prøver igjen og fortsetter automatisk når serveren er tilbake.",
     "embeddedServerPortInUse": "Port {{port}} er allerede i bruk av et annet program. Dette er vanligvis en Termix Docker-container eller en etterlatt Termix-prosess fra en tidligere økt. Lukk den, og start deretter Termix på nytt.",
     "embeddedServerPortInUseUnknownPort": "En av portene Termix trenger er allerede i bruk av et annet program. Lukk det som bruker den, og start deretter Termix på nytt.",
     "embeddedServerOldDatabase": "De lokale dataene dine er fra Termix 2.8 eller eldre og må først oppgraderes gjennom versjon 2.9. Installer Termix 2.9.1, åpne den én gang slik at den kan flytte dataene dine, og oppgrader deretter til denne versjonen igjen.",
@@ -1672,6 +1674,8 @@
         "pinAppRailDesc": "Hold venstre sidefelt alltid utvidet i stedet for å utvide det ved sveiping",
         "expandAppRailOnHover": "Utvid programlinje ved sveiping",
         "expandAppRailOnHoverDesc": "Tillat at venstre sidefelt utvides når pekeren beveger seg over det",
+        "appRailHoverPushesContent": "Skyv innholdet når det utvides",
+        "appRailHoverPushesContentDesc": "Gi plass til det utvidede feltet i stedet for å åpne det over siden. Åpne økter, som fjernskrivebord, endrer størrelse hver gang",
         "showPinAppRailButton": "Vis knapp for å feste programlinje",
         "showPinAppRailButtonDesc": "Vis en knapp i programlinjen for å feste den åpen. Av som standard.",
         "settingsNavigation": "Navigasjon",
@@ -1967,6 +1971,7 @@
         "syncEntities_other": "Skrivebordsynkronisering"
       },
       "consent": {
+        "enableTitle": "Aktivere {{name}}?",
         "installTitle": "Installer {{name}}",
         "updateTitle": "Oppdater {{name}}",
         "agreeUpdate": "Godta og oppdater",

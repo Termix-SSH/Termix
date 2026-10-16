@@ -638,6 +638,8 @@
     "actionsClick": "Klik untuk kembangkan/runtuhkan",
     "openOnDoubleClick": "Buka dengan dwiklik",
     "openOnDoubleClickDesc": "Perlukan dwiklik untuk membuka sesi hos, bukan klik tunggal",
+    "closeOnOpen": "Sembunyikan bar sisi selepas dibuka",
+    "closeOnOpenDesc": "Tutup bar sisi selepas anda membuka hos daripadanya",
     "showFolderPaths": "Paparkan laluan folder",
     "showFolderPathsDesc": "Paparkan laluan folder induk di atas nama subfolder bersarang. Subfolder kekal bersebelah sama ada pilihan ini diaktifkan atau tidak.",
     "rowDetailsTitle": "Butiran baris",
@@ -1083,7 +1085,7 @@
     "acceptNewKey": "Terima Kunci Baharu & Teruskan"
   },
   "errors": {
-    "databaseConnection": "Tidak dapat menyambung ke pangkalan data",
+    "databaseConnection": "Pelayan Termix tidak memberi respons",
     "embeddedServerFailed": "Pelayan tempatan Termix tidak dapat dimulakan",
     "unknownError": "Ralat tidak diketahui",
     "syncedHostMissing": "Hos yang diselaraskan tidak wujud pada pelayan yang dipautkan",
@@ -1110,7 +1112,7 @@
   "messages": {
     "registrationDisabled": "Anda belum mempunyai akaun Termix. Minta pentadbir menghidupkan Cipta akaun luar secara automatik.",
     "userNotAllowed": "Akaun anda tidak dibenarkan untuk mendaftar. Sila hubungi pentadbir.",
-    "databaseConnectionFailed": "Gagal menyambung ke pelayan pangkalan data",
+    "databaseConnectionFailed": "Ia mungkin masih dalam proses permulaan, atau telah berhenti. Halaman ini akan terus cuba dan akan kembali berfungsi secara automatik apabila pelayan sedia.",
     "embeddedServerPortInUse": "Port {{port}} sudah digunakan oleh program lain. Ini biasanya bekas kontena Docker Termix atau proses Termix yang tinggal dari sesi sebelumnya. Tutupnya, kemudian mulakan semula Termix.",
     "embeddedServerPortInUseUnknownPort": "Salah satu port yang diperlukan oleh Termix sudah digunakan oleh program lain. Tutup apa sahaja yang menggunakannya, kemudian mulakan semula Termix.",
     "embeddedServerOldDatabase": "Data tempatan anda adalah dari Termix 2.8 atau lebih lama dan perlu melalui versi 2.9 terlebih dahulu. Pasang Termix 2.9.1, buka sekali supaya ia boleh memindahkan data anda, kemudian kemaskini ke versi ini semula.",
@@ -1649,6 +1651,8 @@
         "pinAppRailDesc": "Kekalkan landasan aplikasi bar sisi kiri sentiasa dikembangkan sebagai ganti mengembangkan semasa melayan",
         "expandAppRailOnHover": "Kembangkan Landasan Aplikasi Semasa Melayan",
         "expandAppRailOnHoverDesc": "Benarkan landasan aplikasi bar sisi kiri untuk dikembangkan apabila penunjuk bergerak di atasnya",
+        "appRailHoverPushesContent": "Tolak kandungan apabila ia kembang",
+        "appRailHoverPushesContentDesc": "Buat ruang untuk rel yang kembang bukannya membukanya di atas halaman. Sesi yang dibuka, seperti desktop jauh, akan saiz semula setiap kali",
         "showPinAppRailButton": "Paparkan Butang Pin Landasan Aplikasi",
         "showPinAppRailButtonDesc": "Paparkan butang dalam landasan aplikasi untuk meminyainya terbuka. Dimatikan secara lalai.",
         "settingsNavigation": "Navigasi",
@@ -1932,6 +1936,7 @@
         "syncEntities_other": "Selaras desktop"
       },
       "consent": {
+        "enableTitle": "Dayakan {{name}}?",
         "installTitle": "Pasang {{name}}",
         "updateTitle": "Kemas kini {{name}}",
         "agreeUpdate": "Setuju dan kemas kini",

@@ -644,6 +644,8 @@
     "actionsClick": "Zum Erweitern/Zuklappen klicken",
     "openOnDoubleClick": "Beim Doppelklick öffnen",
     "openOnDoubleClickDesc": "Erfordert einen Doppelklick zum Öffnen einer Host-Sitzung statt eines einzelnen Klicks",
+    "closeOnOpen": "Seitenleiste nach dem Öffnen ausblenden",
+    "closeOnOpenDesc": "Schließe die Seitenleiste, nachdem du einen Host daraus geöffnet hast",
     "showFolderPaths": "Verzeichnispfade anzeigen",
     "showFolderPathsDesc": "Zeigt den Pfad des übergeordneten Verzeichnisses über verschachtelten Unterverzeichnisnamen an. Unterverzeichnisse bleiben in jedem Fall eingerückt.",
     "rowDetailsTitle": "Zeilen-Details",
@@ -1097,7 +1099,7 @@
     "acceptNewKey": "Neuen Schlüssel akzeptieren & Fortfahren"
   },
   "errors": {
-    "databaseConnection": "Verbindung zur Datenbank fehlgeschlagen",
+    "databaseConnection": "Der Termix-Server antwortet nicht",
     "embeddedServerFailed": "Der lokale Server von Termix konnte nicht gestartet werden",
     "unknownError": "Unbekannter Fehler",
     "syncedHostMissing": "Der synchronisierte Host existiert nicht auf dem verknüpften Server",
@@ -1124,7 +1126,7 @@
   "messages": {
     "registrationDisabled": "Sie haben noch kein Termix-Konto. Bitten Sie einen Administrator, die automatische Erstellung externer Konten zu aktivieren.",
     "userNotAllowed": "Ihr Konto ist nicht zur Registrierung berechtigt. Bitte wenden Sie sich an einen Administrator.",
-    "databaseConnectionFailed": "Verbindung zum Datenbankserver fehlgeschlagen",
+    "databaseConnectionFailed": "Er startet möglicherweise noch oder wurde gestoppt. Diese Seite versucht es weiterhin und geht automatisch weiter, sobald der Server wieder verfügbar ist.",
     "embeddedServerPortInUse": "Der Port {{port}} wird bereits von einem anderen Programm verwendet. Dies ist in der Regel ein Termix-Docker-Container oder ein verbliebener Termix-Prozess aus einer früheren Sitzung. Schließen Sie dieses Programm und starten Sie Termix neu.",
     "embeddedServerPortInUseUnknownPort": "Einer der von Termix benötigten Ports wird bereits von einem anderen Programm verwendet. Schließen Sie das entsprechende Programm und starten Sie Termix neu.",
     "embeddedServerOldDatabase": "Ihre lokalen Daten stammen von Termix 2.8 oder älter und müssen zuerst durch Version 2.9 migriert werden. Installieren Sie Termix 2.9.1, öffnen Sie es einmal, damit Ihre Daten verschoben werden können, und aktualisieren Sie anschließend erneut auf diese Version.",
@@ -1672,6 +1674,8 @@
         "pinAppRailDesc": "Halten Sie die linke App-Leiste der Seitenleiste immer erweitert, anstatt sie beim Hovern zu erweitern",
         "expandAppRailOnHover": "App-Leiste beim Hovern erweitern",
         "expandAppRailOnHoverDesc": "Erlauben Sie der linken App-Leiste der Seitenleiste, sich zu erweitern, wenn der Mauszeiger darüber bewegt wird",
+        "appRailHoverPushesContent": "Inhalt verschieben, wenn sie sich ausdehnt",
+        "appRailHoverPushesContentDesc": "Platz für die ausgeklappte Leiste schaffen, anstatt sie über die Seite zu legen. Offene Sitzungen, wie Remote Desktop, werden jedes Mal neu angepasst",
         "showPinAppRailButton": "Schaltfläche zum Anheften der App-Leiste anzeigen",
         "showPinAppRailButtonDesc": "Zeigt eine Schaltfläche in der App-Leiste zum Anheften an. Standardmäßig deaktiviert.",
         "settingsNavigation": "Navigation",
@@ -1967,6 +1971,7 @@
         "syncEntities_other": "Desktop-Synchronisierung"
       },
       "consent": {
+        "enableTitle": "{{name}} aktivieren?",
         "installTitle": "{{name}} installieren",
         "updateTitle": "{{name}} aktualisieren",
         "agreeUpdate": "Zustimmen und aktualisieren",

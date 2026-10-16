@@ -650,6 +650,8 @@
     "actionsClick": "Cliquer pour développer/réduire",
     "openOnDoubleClick": "Ouvrir au double-clic",
     "openOnDoubleClickDesc": "Exiger un double-clic pour ouvrir une session d'hôte au lieu d'un clic simple",
+    "closeOnOpen": "Masquer la barre latérale après l'ouverture",
+    "closeOnOpenDesc": "Fermer la barre latérale après avoir ouvert un hôte depuis celle-ci",
     "showFolderPaths": "Afficher les chemins des dossiers",
     "showFolderPathsDesc": "Afficher le chemin du dossier parent au-dessus des noms des sous-dossiers imbriqués. Les sous-dossiers restent indentés dans les deux cas.",
     "rowDetailsTitle": "Détails de la ligne",
@@ -1111,7 +1113,7 @@
     "acceptNewKey": "Accepter la nouvelle clé et continuer"
   },
   "errors": {
-    "databaseConnection": "Impossible de se connecter à la base de données",
+    "databaseConnection": "Le serveur Termix ne répond pas",
     "embeddedServerFailed": "Le serveur local de Termix n'a pas pu démarrer",
     "unknownError": "Erreur inconnue",
     "syncedHostMissing": "L'hôte synchronisé n'existe pas sur le serveur lié",
@@ -1138,7 +1140,7 @@
   "messages": {
     "registrationDisabled": "Vous n'avez pas encore de compte Termix. Demandez à un administrateur d'activer la création automatique de comptes externes.",
     "userNotAllowed": "Votre compte n'est pas autorisé à s'inscrire. Veuillez contacter un administrateur.",
-    "databaseConnectionFailed": "Échec de la connexion au serveur de base de données",
+    "databaseConnectionFailed": "Il est peut-être encore en cours de démarrage, ou il s'est arrêté. Cette page continue d'essayer et reprend automatiquement une fois le serveur de retour.",
     "embeddedServerPortInUse": "Le port {{port}} est déjà utilisé par un autre programme. Il s'agit généralement d'un conteneur Docker Termix ou d'un processus Termix résidant d'une session précédente. Fermez-le, puis redémarrez Termix.",
     "embeddedServerPortInUseUnknownPort": "L'un des ports requis par Termix est déjà utilisé par un autre programme. Fermez l'application qui l'utilise, puis redémarrez Termix.",
     "embeddedServerOldDatabase": "Vos données locales proviennent de Termix 2.8 ou d'une version antérieure et doivent d'abord être migrées vers la version 2.9. Installez Termix 2.9.1, ouvrez-le une fois pour permettre la migration de vos données, puis mettez à jour vers cette version.",
@@ -1695,6 +1697,8 @@
         "pinAppRailDesc": "Garder la barre d'applications de la barre latérale gauche toujours déployée au lieu de la déployer au survol",
         "expandAppRailOnHover": "Déployer la barre d'applications au survol",
         "expandAppRailOnHoverDesc": "Permettre à la barre d'applications de la barre latérale gauche de se déployer lorsque le pointeur passe dessus",
+        "appRailHoverPushesContent": "Déplacer le contenu lors de l'expansion",
+        "appRailHoverPushesContentDesc": "Faire de la place pour la barre latérale élargie au lieu de l'afficher par-dessus la page. Les sessions ouvertes, comme le bureau à distance, sont redimensionnées à chaque fois.",
         "showPinAppRailButton": "Afficher le bouton d'épinglage de la barre d'applications",
         "showPinAppRailButtonDesc": "Affiche un bouton dans la barre d'applications pour l'épingler ouverte. Désactivé par défaut.",
         "settingsNavigation": "Navigation",
@@ -2002,6 +2006,7 @@
         "syncEntities_other": "Synchronisation du bureau"
       },
       "consent": {
+        "enableTitle": "Activer {{name}} ?",
         "installTitle": "Installer {{name}}",
         "updateTitle": "Mettre à jour {{name}}",
         "agreeUpdate": "Accepter et mettre à jour",

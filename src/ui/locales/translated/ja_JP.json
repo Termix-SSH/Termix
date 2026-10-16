@@ -638,6 +638,8 @@
     "actionsClick": "クリックで展開/折りたたみ",
     "openOnDoubleClick": "ダブルクリックで開く",
     "openOnDoubleClickDesc": "シングルクリックの代わりに、ホストセッションを開くためにダブルクリックを必要とします",
+    "closeOnOpen": "開いた後にサイドバーを隠す",
+    "closeOnOpenDesc": "サイドバーからホストを開いた後、サイドバーを閉じます",
     "showFolderPaths": "フォルダパスを表示",
     "showFolderPathsDesc": "ネストされたサブフォルダ名の上部に親フォルダのパスを表示します。サブフォルダはどちらの場合もインデントされます。",
     "rowDetailsTitle": "行の詳細",
@@ -1083,7 +1085,7 @@
     "acceptNewKey": "新しいキーを承諾して続行"
   },
   "errors": {
-    "databaseConnection": "データベースに接続できませんでした",
+    "databaseConnection": "Termix サーバーが応答していません",
     "embeddedServerFailed": "Termix のローカルサーバーが起動できませんでした",
     "unknownError": "不明なエラー",
     "syncedHostMissing": "同期されたホストはリンクされたサーバー上に存在しません",
@@ -1110,7 +1112,7 @@
   "messages": {
     "registrationDisabled": "まだTermixアカウントをお持ちではありません。管理者に「外部アカウントの自動作成」を有効化するように依頼してください。",
     "userNotAllowed": "あなたのアカウントは登録が許可されていません。管理者にご連絡ください。",
-    "databaseConnectionFailed": "データベースサーバーへの接続に失敗しました",
+    "databaseConnectionFailed": "起動中か、停止している可能性があります。サーバーが回復すると、このページは自動的に再接続を試み続けます。",
     "embeddedServerPortInUse": "ポート {{port}} はすでに別のプログラムで使用されています。これは通常、TermixのDockerコンテナや、以前のセッションから残ったTermixプロセスです。それを閉じてから、Termixを再起動してください。",
     "embeddedServerPortInUseUnknownPort": "Termixが必要とするポートの1つが、すでに別のプログラムで使用されています。それを使用中のものを閉じてから、Termixを再起動してください。",
     "embeddedServerOldDatabase": "ローカルデータは Termix 2.8 以前のものであり、まず 2.9 を経由する必要があります。Termix 2.9.1 をインストールし、一度起動してデータを移行してから、再度このバージョンにアップデートしてください。",
@@ -1649,6 +1651,8 @@
         "pinAppRailDesc": "ホバー時に展開する代わりに、左サイドバーのアプリレールを常に展開した状態に保ちます",
         "expandAppRailOnHover": "ホバー時にアプリレールを展開",
         "expandAppRailOnHoverDesc": "ポインタが左サイドバーのアプリレール上に移動したときに展開できるようにします",
+        "appRailHoverPushesContent": "展開時にコンテンツを押し出す",
+        "appRailHoverPushesContentDesc": "ページの上に重ねるのではなく、展開されたレール分のスペースを確保します。リモートデスクトップなどの開いているセッションは、毎回サイズが調整されます",
         "showPinAppRailButton": "アプリレール固定ボタンを表示",
         "showPinAppRailButtonDesc": "アプリレールを開いたまま固定するためのボタンをアプリレールに表示します。デフォルトではオフです。",
         "settingsNavigation": "ナビゲーション",
@@ -1932,6 +1936,7 @@
         "syncEntities_other": "デスクトップ同期"
       },
       "consent": {
+        "enableTitle": "{{name}} を有効にしますか？",
         "installTitle": "{{name}} をインストール",
         "updateTitle": "{{name}} をアップデート",
         "agreeUpdate": "同意してアップデート",

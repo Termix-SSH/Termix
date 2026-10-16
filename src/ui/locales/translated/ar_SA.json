@@ -668,6 +668,8 @@
     "actionsClick": "انقر للتوسيع/الطي",
     "openOnDoubleClick": "الفتح عند النقر المزدوج",
     "openOnDoubleClickDesc": "تطلب نقرًا مزدوجًا لفتح جلسة الجهاز بدلاً من نقر واحد",
+    "closeOnOpen": "إخفاء الشريط الجانبي بعد الفتح",
+    "closeOnOpenDesc": "إغلاق الشريط الجانبي بعد فتح مضيف منه",
     "showFolderPaths": "إظهار مسارات المجلدات",
     "showFolderPathsDesc": "إظهار مسار المجلد الأب فوق أسماء المجلدات الفرعية المتداخلة. تظل المجلدات الفرعية مضمنة في كلتا الحالتين.",
     "rowDetailsTitle": "تفاصيل الصف",
@@ -1153,7 +1155,7 @@
     "acceptNewKey": "قبول المفتاح الجديد ومتابعة"
   },
   "errors": {
-    "databaseConnection": "تعذر الاتصال بقاعدة البيانات",
+    "databaseConnection": "خادم Termix لا يستجيب",
     "embeddedServerFailed": "تعذر بدء الخادم المحلي لـ Termix",
     "unknownError": "خطأ غير معروف",
     "syncedHostMissing": "المضيف المتزامن غير موجود على الخادم المرتبط",
@@ -1180,7 +1182,7 @@
   "messages": {
     "registrationDisabled": "ليس لديك حساب Termix بعد. اطلب من المسؤول تفعيل إنشاء الحسابات الخارجية تلقائيًا.",
     "userNotAllowed": "حسابك غير مصرح له بالتسجيل. يرجى الاتصال بمسؤول النظام.",
-    "databaseConnectionFailed": "فشل في الاتصال بخادم قاعدة البيانات",
+    "databaseConnectionFailed": "قد لا يزال قيد التشغيل أو توقف. تستمر هذه الصفحة في المحاولة وستعمل تلقائياً بمجرد عودة الخادم.",
     "embeddedServerPortInUse": "المنفذ {{port}} مستخدم بالفعل بواسطة برنامج آخر. عادةً ما يكون هذا حاوية Docker لـ Termix أو عملية متبقية من Termix من جلسة سابقة. أغلقها، ثم أعد تشغيل Termix.",
     "embeddedServerPortInUseUnknownPort": "أحد المنافذ التي يحتاجها Termix مستخدم بالفعل بواسطة برنامج آخر. أغلق ما يستخدمه، ثم أعد تشغيل Termix.",
     "embeddedServerOldDatabase": "بياناتك المحلية من إصدار Termix 2.8 أو أقدم، ويجب أولاً تحديثها عبر الإصدار 2.9. قم بتثبيت Termix 2.9.1، وافتحه مرة واحدة للسماح بنقل بياناتك، ثم قم بالتحديث إلى هذا الإصدار مرة أخرى.",
@@ -1764,6 +1766,8 @@
         "pinAppRailDesc": "أبقِ شريط التطبيقات الجانبي الأيسر موسعًا دائمًا بدلاً من توسيعه عند التمرير فوقه",
         "expandAppRailOnHover": "توسيع شريط التطبيقات عند التمرير",
         "expandAppRailOnHoverDesc": "اسمح لشريط التطبيقات الجانبي الأيسر بالتوسع عند تحريك المؤشر فوقه",
+        "appRailHoverPushesContent": "دفع المحتوى عند التوسيع",
+        "appRailHoverPushesContentDesc": "توفير مساحة للشريط الموسع بدلاً من فتحه فوق الصفحة. سيتم تغيير حجم الجلسات المفتوحة، مثل سطح المكتب عن بُعد، في كل مرة",
         "showPinAppRailButton": "إظهار زر تثبيت شريط التطبيقات",
         "showPinAppRailButtonDesc": "اعرض زرًا في شريط التطبيقات لتثبيته مفتوحًا. معطّل افتراضيًا.",
         "settingsNavigation": "التنقل",
@@ -2107,6 +2111,7 @@
         "syncEntities_other": "مزامنة سطح المكتب"
       },
       "consent": {
+        "enableTitle": "تفعيل {{name}}؟",
         "installTitle": "تثبيت {{name}}",
         "updateTitle": "تحديث {{name}}",
         "agreeUpdate": "موافقة وتحديث",

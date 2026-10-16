@@ -650,6 +650,8 @@
     "actionsClick": "לחץ להרחבה/כיווץ",
     "openOnDoubleClick": "פתח בלחיצה כפולה",
     "openOnDoubleClickDesc": "דרוש לחיצה כפולה כדי לפתוח פעילות מארח במקום לחיצה בודדת",
+    "closeOnOpen": "הסתר סרגל צד לאחר פתיחה",
+    "closeOnOpenDesc": "סגור את סרגל הצד לאחר פתיחת מארח ממנו",
     "showFolderPaths": "הצג נתיבי תיקייה",
     "showFolderPathsDesc": "הצג את נתיב התיקייה האם מעל שמות תתי-תיקיות מקוננות. תתי-תיקיות נשארות מושרשות בכל מקרה.",
     "rowDetailsTitle": "פרטי שורה",
@@ -1111,7 +1113,7 @@
     "acceptNewKey": "קבל מפתח חדש והמשך"
   },
   "errors": {
-    "databaseConnection": "לא ניתן להתחבר למסד הנתונים",
+    "databaseConnection": "שרת Termix אינו מגיב",
     "embeddedServerFailed": "שרת Termix המקומי לא הצליח להתחיל",
     "unknownError": "שגיאה לא ידועה",
     "syncedHostMissing": "המארח המסונכרן אינו קיים בשרת המקושר",
@@ -1138,7 +1140,7 @@
   "messages": {
     "registrationDisabled": "אין לך עדיין חשבון ב-Termix. בקש ממנהל מערכת להפעיל את האפשרות 'צור חשבונות חיצוניים אוטומטית'.",
     "userNotAllowed": "החשבון שלך אינו מורשה להרשמה. אנא פנה למנהל המערכת.",
-    "databaseConnectionFailed": "החיבור לשרת המסד נתונים נכשל",
+    "databaseConnectionFailed": "ייתכן שהוא עדיין מתחיל להפעיל, או שהופסק. דף זה ממשיך לנסות וממשיך באופן אוטומטי ברגע שהשרת חוזר.",
     "embeddedServerPortInUse": "הפורט {{port}} כבר בשימוש על ידי תוכנית אחרת. לרוב מדובר במיכל Docker של Termix או בתהליך Termix שנותר מהפעלה קודמת. סגור אותו, ואז הפעל מחדש את Termix.",
     "embeddedServerPortInUseUnknownPort": "אחד מהפורטים ש-Termix זקוק להם כבר בשימוש על ידי תוכנית אחרת. סגור את מה שמשתמש בו, ואז הפעל מחדש את Termix.",
     "embeddedServerOldDatabase": "הנתונים המקומיים שלך הם מ-Termix 2.8 או קודם יותר, ועליהם לעבור דרך גרסה 2.9 תחילה. התקן את Termix 2.9.1, פתח אותו פעם אחת כדי שיוכל להעביר את הנתונים שלך, ואז עדכן שוב לגרסה זו.",
@@ -1695,6 +1697,8 @@
         "pinAppRailDesc": "שמור על רצועת היישומים בצד שמאל תמיד מורחבת במקום להרחיב רק בעת מעבר עכבר",
         "expandAppRailOnHover": "הרחב רצועת יישומים בעת מעבר עכבר",
         "expandAppRailOnHoverDesc": "אפשר להרחיב את רצועת היישומים בצד שמאל כאשר הסמן עובר מעליה",
+        "appRailHoverPushesContent": "דחוף תוכן בעת הרחבה",
+        "appRailHoverPushesContentDesc": "השאר מקום לסרגל המורחב במקום לפתוח אותו מעל הדף. סשנים פתוחים, כמו שולחן עבודה מרוחק, משנים גודל בכל פעם",
         "showPinAppRailButton": "הצג כפתור עיגון רצועת יישומים",
         "showPinAppRailButtonDesc": "הצג כפתור ברצועת היישומים כדי לעגן אותה פתוחה. כבוי כברירת מחדל.",
         "settingsNavigation": "ניווט",
@@ -2002,6 +2006,7 @@
         "syncEntities_other": "סנכרון שולחן עבודה"
       },
       "consent": {
+        "enableTitle": "להפעיל את {{name}}?",
         "installTitle": "התקן את {{name}}",
         "updateTitle": "עדכן את {{name}}",
         "agreeUpdate": "סכים ומעדכן",

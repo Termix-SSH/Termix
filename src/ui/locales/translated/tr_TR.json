@@ -644,6 +644,8 @@
     "actionsClick": "Genişletmek/daraltmak için tıkla",
     "openOnDoubleClick": "Çift tıklamayla aç",
     "openOnDoubleClickDesc": "Tek tıklama yerine bir sunucu oturumunu açmak için çift tıklama gerektir",
+    "closeOnOpen": "Açtıktan sonra kenar çubuğunu gizle",
+    "closeOnOpenDesc": "Kenar çubuğundan bir sunucuyu açtıktan sonra kenar çubuğunu kapat",
     "showFolderPaths": "Klasör yollarını göster",
     "showFolderPathsDesc": "İç içe alt klasör adlarının üzerinde üst klasör yolunu göster. Alt klasörler her durumda girintili kalır.",
     "rowDetailsTitle": "Satır ayrıntıları",
@@ -1097,7 +1099,7 @@
     "acceptNewKey": "Yeni Anahtarı Kabul Et & Devam Et"
   },
   "errors": {
-    "databaseConnection": "Veritabanına bağlanılamadı",
+    "databaseConnection": "Termix sunucusu yanıt vermiyor",
     "embeddedServerFailed": "Termix'in yerel sunucusu başlatılamadı",
     "unknownError": "Bilinmeyen hata",
     "syncedHostMissing": "Senkronize edilen sunucu, bağlantılı sunucuda mevcut değil",
@@ -1124,7 +1126,7 @@
   "messages": {
     "registrationDisabled": "Henüz bir Termix hesabınız yok. Bir yöneticiden Dış hesapları otomatik oluştur özelliğini açmasını isteyin.",
     "userNotAllowed": "Hesabınızın kayıt olma yetkisi yok. Lütfen bir yöneticiyle iletişime geçin.",
-    "databaseConnectionFailed": "Veritabanı sunucusuna bağlanılamadı",
+    "databaseConnectionFailed": "Sunucu hala başlatılıyor veya durmuş olabilir. Bu sayfa sunucu tekrar bağlanana kadar bağlantıyı yeniden denemeye devam eder.",
     "embeddedServerPortInUse": "{{port}} numaralı bağlantı noktası başka bir program tarafından kullanılıyor. Bu genellikle bir Termix Docker kapsayıcısı veya önceki bir oturumdan kalan bir Termix işlemidir. Kapatın ve ardından Termix'i yeniden başlatın.",
     "embeddedServerPortInUseUnknownPort": "Termix'in ihtiyaç duyduğu bağlantı noktalarından biri başka bir program tarafından kullanılıyor. Kullanan programı kapatın ve ardından Termix'i yeniden başlatın.",
     "embeddedServerOldDatabase": "Yerel verileriniz Termix 2.8 veya daha eski bir sürümden kalmadır ve önce 2.9 sürümünden geçmelidir. Termix 2.9.1'i yükleyin, verilerinizi taşıyabilmesi için bir kez açın, ardından tekrar bu sürüme güncelleyin.",
@@ -1672,6 +1674,8 @@
         "pinAppRailDesc": "Sol kenar çubuğu uygulama rayını üzerine gelindiğinde genişletmek yerine her zaman açık tut",
         "expandAppRailOnHover": "Üzerine Gelindiğinde Uygulama Rayını Genişlet",
         "expandAppRailOnHoverDesc": "İmleç üzerine geldiğinde sol kenar çubuğu uygulama rayının genişlemesine izin ver",
+        "appRailHoverPushesContent": "Genişlediğinde içeriği kaydır",
+        "appRailHoverPushesContentDesc": "Genişletilmiş kenar çubuğu için sayfa üzerinde açmak yerine yer aç. Uzak masaüstü gibi açık oturumlar her seferinde yeniden boyutlandırılır",
         "showPinAppRailButton": "Uygulama Rayını Sabitleme Düğmesini Göster",
         "showPinAppRailButtonDesc": "Açık tutmak için uygulama rayında bir düğme göster. Varsayılan olarak kapalıdır.",
         "settingsNavigation": "Gezinme",
@@ -1967,6 +1971,7 @@
         "syncEntities_other": "Masaüstü senkronizasyonu"
       },
       "consent": {
+        "enableTitle": "{{name}} etkinleştirilsin mi?",
         "installTitle": "{{name}} yükle",
         "updateTitle": "{{name}} güncelle",
         "agreeUpdate": "Kabul et ve güncelle",

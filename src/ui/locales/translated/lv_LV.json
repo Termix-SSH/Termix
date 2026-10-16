@@ -650,6 +650,8 @@
     "actionsClick": "Klikšķināt, lai izvērstu/sakļautu",
     "openOnDoubleClick": "Atvērt ar dubultklikšķi",
     "openOnDoubleClickDesc": "Lai atvērtu mezгла sesiju, ir nepieciešams dubultklikšķis, nevis viens klikšķis",
+    "closeOnOpen": "Apslēpt sānjoslu pēc atvēršanas",
+    "closeOnOpenDesc": "Aizvērt sānjoslu pēc tam, kad no tās esat atvēris mezglu",
     "showFolderPaths": "Rādīt mapju ceļus",
     "showFolderPathsDesc": "Rādīt vecākmātes mapes ceļu virs iekšējām apakšmapēm. Apakšmapes joprojām ir atkārtas.",
     "rowDetailsTitle": "Rindas detaļas",
@@ -1111,7 +1113,7 @@
     "acceptNewKey": "Pieņemt jauno atslēgu un turpināt"
   },
   "errors": {
-    "databaseConnection": "Nevarēja izveidot savienojumu ar datubāzi",
+    "databaseConnection": "Termix serveris neatbild",
     "embeddedServerFailed": "Termix vietējais serveris nevarēja palaisties",
     "unknownError": "Nezināma kļūda",
     "syncedHostMissing": "Sinhronizētais mezgls neeksistē saistītajā serverī",
@@ -1138,7 +1140,7 @@
   "messages": {
     "registrationDisabled": "Jums vēl nav Termix konta. Lūdziet administratoru ieslēgt automātisko ārējo kontu izveidi.",
     "userNotAllowed": "Jūsu kontam nav atļauts reģistrēties. Lūdzu, sazinieties ar administratoru.",
-    "databaseConnectionFailed": "Neizdevās izveidot savienojumu ar datubāzes serveri",
+    "databaseConnectionFailed": "Tas varētu vēl sākties vai ir apstājies. Šī lapa turpina mēģināt un automātiski atsāks darbu, kad serveris būs pieejams.",
     "embeddedServerPortInUse": "Ports {{port}} jau tiek izmantots citā programmā. Parasti tas ir Termix Docker konteineris vai iepriekšējās sesijas Termix process. Aizveriet to un restartējiet Termix.",
     "embeddedServerPortInUseUnknownPort": "Viens no portiem, kurus Termix nepieciešams, jau tiek izmantots citā programmā. Aizveriet to, kas to izmanto, un restartējiet Termix.",
     "embeddedServerOldDatabase": "Jūsu vietējie dati ir no Termix 2.8 vai vecākas versijas, un tiem vispirms ir jāiziet cauri 2.9 versijai. Instalējiet Termix 2.9.1, atveriet to vienu reizi, lai tas pārvietotu jūsu datus, pēc tam atkal atjauniniet uz šo versiju.",
@@ -1695,6 +1697,8 @@
         "pinAppRailDesc": "Turiet kreiso sānjoslas lietotņu slīdi vienmēr izvērstu, nevis izvērstu, kad uz to norāda kursors",
         "expandAppRailOnHover": "Izvērst lietotņu slīdi, kad uz to norāda kursors",
         "expandAppRailOnHoverDesc": "Ļaujiet kreisajai sānjoslas lietotņu slīdij izvērsties, kad kursors pārvietojas pār to",
+        "appRailHoverPushesContent": "Pārvietot saturu, kad tas izplešas",
+        "appRailHoverPushesContentDesc": "Izveidot vietu izplestajai joslai, nevis atvērt to pār lapu. Atvērtās sesijas, piemēram, attālinātais darbvirsma, katru reizi maina izmēru",
         "showPinAppRailButton": "Rādīt pogu, lai piesprāustu lietotņu slīdi",
         "showPinAppRailButtonDesc": "Rādīt pogu lietotņu slīdē, lai to piesprāustu atvērtu. Noklusējuma stāvoklī ir izslēgts.",
         "settingsNavigation": "Navigācija",
@@ -2002,6 +2006,7 @@
         "syncEntities_other": "Darbvirsas sinhronizācija"
       },
       "consent": {
+        "enableTitle": "Iespējot {{name}}?",
         "installTitle": "Instalēt {{name}}",
         "updateTitle": "Atjaunināt {{name}}",
         "agreeUpdate": "Piekrīt un atjaunina",

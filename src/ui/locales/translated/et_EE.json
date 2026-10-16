@@ -644,6 +644,8 @@
     "actionsClick": "Klõpsa avamiseks/kokku kerimiseks",
     "openOnDoubleClick": "Ava topeltklõpsuga",
     "openOnDoubleClickDesc": "Nõua hosti sessiooni avamiseks topeltklõpsu ühe klõpsu asemel",
+    "closeOnOpen": "Peida külgriba pärast avamist",
+    "closeOnOpenDesc": "Sulge külgriba pärast hosti sellest avamist",
     "showFolderPaths": "Kuva kausta teed",
     "showFolderPathsDesc": "Kuva vanemkausta tee sisestatud alamkaustade nimede kohal. Alamkaustad on igal juhul sisse tõstetud.",
     "rowDetailsTitle": "Rea detailid",
@@ -1097,7 +1099,7 @@
     "acceptNewKey": "Nõustu uue võtmega ja jätkamine"
   },
   "errors": {
-    "databaseConnection": "Andmebaasiga ei õnnestunud ühendust võtta",
+    "databaseConnection": "Termixi server ei vasta",
     "embeddedServerFailed": "Termixi kohalik server ei suutnud käivituda",
     "unknownError": "Tundmatu viga",
     "syncedHostMissing": "Sünkroonitud hosti ei eksisteeri linkitud serveris",
@@ -1124,7 +1126,7 @@
   "messages": {
     "registrationDisabled": "Sul puudub Termixi konto. Palu administraatoril lubada väliskontode automaatne loomine.",
     "userNotAllowed": "Sinu kontol pole registreerumiseks õigusi. Palun võta ühendust administraatoriga.",
-    "databaseConnectionFailed": "Andmebaasi serveriga ühendumine ebaõnnestus",
+    "databaseConnectionFailed": "Server võib veel käivituda või olla peatunud. See leht proovib pidevalt uuesti ja jätkab tööd automaatselt, kui server on tagasi.",
     "embeddedServerPortInUse": "Porti {{port}} kasutab juba teine programm. Tavaliselt on tegemist Termixi Docker-i konteineriga või eelmisest seansist allesjäänud Termixi protsessiga. Sulge see ja käivita Termix uuesti.",
     "embeddedServerPortInUseUnknownPort": "Üht Termixi jaoks vajalikust portidest kasutab juba teine programm. Sulge see programm ja käivita Termix uuesti.",
     "embeddedServerOldDatabase": "Teie kohalikud andmed pärinevad Termixi versioonist 2.8 või vanemast ja tuleb esmalt läbida versioon 2.9. Paigaldage Termix 2.9.1, avage see üks kord, et andmed saaksid ümber paigutada, ja uuendage seejärel uuesti sellele versioonile.",
@@ -1672,6 +1674,8 @@
         "pinAppRailDesc": "Hoia vasakut külgriba rakenduse rööpi alati lahtina, mitte ainult hiire kohal hõljutades",
         "expandAppRailOnHover": "Laienda rakenduse rööpi hiire kohal hõljutades",
         "expandAppRailOnHoverDesc": "Luba vasaku külgriba rakenduse rööbi laienemine, kui hiirekursor selle kohale liigub",
+        "appRailHoverPushesContent": "Lükka sisu, kui see laieneb",
+        "appRailHoverPushesContentDesc": "Tee ruumi laienenud ribale selle asemel, et see avaneks lehe peale. Avatud sessioonid, nagu kauglaud, muudavad oma suurust iga kord",
         "showPinAppRailButton": "Kuva rakenduse rööbi kinnitamise nupp",
         "showPinAppRailButtonDesc": "Kuva rakenduse rööbis nupp selle avatuks kinnitamiseks. Vaikimisi väljas.",
         "settingsNavigation": "Navigatsioon",
@@ -1967,6 +1971,7 @@
         "syncEntities_other": "Töölaua sünkroonimine"
       },
       "consent": {
+        "enableTitle": "Kas lubada {{name}}?",
         "installTitle": "Paigalda {{name}}",
         "updateTitle": "Uuenda {{name}}",
         "agreeUpdate": "Nõustu ja uuenda",

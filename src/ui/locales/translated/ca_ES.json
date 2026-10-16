@@ -650,6 +650,8 @@
     "actionsClick": "Fes clic per expandir/reduir",
     "openOnDoubleClick": "Obre en fer doble clic",
     "openOnDoubleClickDesc": "Requereix un doble clic per obrir una sessió d'amfitrió en lloc d'un sol clic",
+    "closeOnOpen": "Amaga la barra lateral en obrir",
+    "closeOnOpenDesc": "Tanca la barra lateral després d'obrir un amfitrió des d'ella",
     "showFolderPaths": "Mostra les rutes de les carpetes",
     "showFolderPathsDesc": "Mostra la ruta de la carpeta principal sobre els noms de les subcarpetes anidades. Les subcarpetes es mantenen amb sagnat en qualsevol cas.",
     "rowDetailsTitle": "Detalls de la fila",
@@ -1111,7 +1113,7 @@
     "acceptNewKey": "Accepta la clau nova i continua"
   },
   "errors": {
-    "databaseConnection": "No s'ha pogut connectar a la base de dades",
+    "databaseConnection": "El servidor de Termix no respon",
     "embeddedServerFailed": "El servidor local de Termix no ha pogut iniciar-se",
     "unknownError": "Error desconegut",
     "syncedHostMissing": "L'amfitrió sincronitzat no existeix al servidor enllaçat",
@@ -1138,7 +1140,7 @@
   "messages": {
     "registrationDisabled": "Encara no tens un compte de Termix. Demana a un administrador que activi la creació automàtica de comptes externs.",
     "userNotAllowed": "El teu compte no està autoritzat per registrar-se. Si us plau, contacta amb un administrador.",
-    "databaseConnectionFailed": "No s'ha pogut connectar al servidor de bases de dades",
+    "databaseConnectionFailed": "Potser encara s'està iniciant o s'ha aturat. Aquesta pàgina continuarà intentant-ho i es recuperarà automàticament quan el servidor torni a estar disponible.",
     "embeddedServerPortInUse": "El port {{port}} ja està en ús per un altre programa. Normalment és un contenidor Docker de Termix o un procés de Termix d'una sessió anterior. Tanca'l i reinicia Termix.",
     "embeddedServerPortInUseUnknownPort": "Un dels ports que necessita Termix ja està en ús per un altre programa. Tanca el que l'està utilitzant i reinicia Termix.",
     "embeddedServerOldDatabase": "Les dades locals són de Termix 2.8 o anterior i han de passar primer per la versió 2.9. Instal·la Termix 2.9.1, obre-la un cop perquè pugui moure les dades i, a continuació, actualitza a aquesta versió.",
@@ -1695,6 +1697,8 @@
         "pinAppRailDesc": "Mantén la barra d'aplicacions de la barra lateral esquerra sempre ampliada en lloc d'ampliar-la en passar el cursor per sobre",
         "expandAppRailOnHover": "Amplia la barra d'aplicacions en passar el cursor",
         "expandAppRailOnHoverDesc": "Permet que la barra d'aplicacions de la barra lateral esquerra s'ampliï quan el cursor passi per sobre",
+        "appRailHoverPushesContent": "Desplaça el contingut en expandir-se",
+        "appRailHoverPushesContentDesc": "Deixa espai per a la barra lateral expandida en lloc d'obrir-la sobre la pàgina. Les sessions obertes, com l'escriptori remot, es redimensionen cada vegada.",
         "showPinAppRailButton": "Mostra el botó per fixar la barra d'aplicacions",
         "showPinAppRailButtonDesc": "Mostra un botó a la barra d'aplicacions per fixar-la oberta. Desactivat per defecte.",
         "settingsNavigation": "Navegació",
@@ -2002,6 +2006,7 @@
         "syncEntities_other": "Sincronització d'escriptori"
       },
       "consent": {
+        "enableTitle": "Vols habilitar {{name}}?",
         "installTitle": "Instal·lar {{name}}",
         "updateTitle": "Actualitzar {{name}}",
         "agreeUpdate": "Acceptar i actualitzar",

@@ -650,6 +650,8 @@
     "actionsClick": "Clic pentru extindere/restrângere",
     "openOnDoubleClick": "Deschide la dublu clic",
     "openOnDoubleClickDesc": "Necesită un dublu clic pentru a deschide o sesiune de gazdă, în loc de un singur clic",
+    "closeOnOpen": "Ascunde bara laterală după deschidere",
+    "closeOnOpenDesc": "Închide bara laterală după ce deschizi un gazdă din ea",
     "showFolderPaths": "Afișează căile dosarelor",
     "showFolderPathsDesc": "Afișează calea dosarului părinte deasupra numelor subdosarelor imbricate. Subdosarele rămân indentate în orice caz.",
     "rowDetailsTitle": "Detalii rând",
@@ -1111,7 +1113,7 @@
     "acceptNewKey": "Acceptă cheia nouă și continuă"
   },
   "errors": {
-    "databaseConnection": "Nu s-a putut conecta la baza de date",
+    "databaseConnection": "Serverul Termix nu răspunde",
     "embeddedServerFailed": "Serverul local Termix nu a putut fi pornit",
     "unknownError": "Eroare necunoscută",
     "syncedHostMissing": "Gazda sincronizată nu există pe serverul legat",
@@ -1138,7 +1140,7 @@
   "messages": {
     "registrationDisabled": "Nu aveți încă un cont Termix. Cereți unui administrator să activeze opțiunea „Auto-create external accounts” (Creare automată conturi externe).",
     "userNotAllowed": "Contul dvs. nu este autorizat pentru înregistrare. Vă rugăm să contactați un administrator.",
-    "databaseConnectionFailed": "Nu s-a putut conecta la serverul de bază de date",
+    "databaseConnectionFailed": "Este posibil să se mai inițializeze sau să fi oprit. Această pagină continuă să încerce și va reveni automat când serverul va fi din nou disponibil.",
     "embeddedServerPortInUse": "Portul {{port}} este deja utilizat de un alt program. De obicei, acesta este un container Docker Termix sau un proces Termix rămas dintr-o sesiune anterioară. Închideți-l, apoi reporniți Termix.",
     "embeddedServerPortInUseUnknownPort": "Unul dintre porturile de care are nevoie Termix este deja utilizat de un alt program. Închideți aplicația care îl utilizează, apoi reporniți Termix.",
     "embeddedServerOldDatabase": "Datele locale sunt din Termix 2.8 sau o versiune anterioară și trebuie să treacă mai întâi prin versiunea 2.9. Instalați Termix 2.9.1, deschideți-l o dată pentru a vă muta datele, apoi actualizați din nou la această versiune.",
@@ -1695,6 +1697,8 @@
         "pinAppRailDesc": "Păstrează bara laterală din stânga mereu extinsă, în loc să se extindă doar la trecerea cu mouse-ul",
         "expandAppRailOnHover": "Extinde bara laterală la trecerea cu mouse-ul",
         "expandAppRailOnHoverDesc": "Permite extinderea barei laterale din stânga când cursorul trece peste ea",
+        "appRailHoverPushesContent": "Mută conținutul când se extinde",
+        "appRailHoverPushesContentDesc": "Fă loc pentru bara extinsă în loc să o deschizi peste pagină. Sesiunile deschise, precum desktopul remote, se redimensionează de fiecare dată",
         "showPinAppRailButton": "Afișează butonul de fixare a barei laterale",
         "showPinAppRailButtonDesc": "Afișează un buton în bara laterală pentru a o fixa deschisă. Dezactivat implicit.",
         "settingsNavigation": "Navigare",
@@ -2002,6 +2006,7 @@
         "syncEntities_other": "Sincronizare desktop"
       },
       "consent": {
+        "enableTitle": "Activezi {{name}}?",
         "installTitle": "Instalează {{name}}",
         "updateTitle": "Actualizează {{name}}",
         "agreeUpdate": "Sunt de acord și actualizez",
