@@ -143,12 +143,12 @@ jobs:
       - name: Build Windows (All Architectures)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run build && npx electron-builder --win --x64 --ia32 --publish never
+        run: npm run build && npx electron-builder --win --x64 --ia32 --arm64 --publish never
 
-      # The updater only installs the x64 NSIS build; 32-bit installs get a link.
-      # The combined x64+ia32 installer is never uploaded.
+      # The updater only installs the x64 NSIS build; 32-bit and ARM installs get a link.
+      # The combined multi-arch installer is never uploaded.
       - name: Fix Windows update files
-        run: node scripts/fix-update-info.cjs --drop ia32 --drop termix_windows_nsis.exe release/latest.yml release/beta.yml
+        run: node scripts/fix-update-info.cjs --drop ia32 --drop arm64 --drop termix_windows_nsis.exe release/latest.yml release/beta.yml
 
       - name: Upload Windows x64 NSIS Installer
         uses: actions/upload-artifact@v7
@@ -164,6 +164,14 @@ jobs:
         with:
           name: termix_windows_ia32_nsis
           path: release/termix_windows_ia32_nsis.exe
+          retention-days: 30
+
+      - name: Upload Windows arm64 NSIS Installer
+        uses: actions/upload-artifact@v7
+        if: hashFiles('release/termix_windows_arm64_nsis.exe') != '' && inputs.artifact_destination != 'none'
+        with:
+          name: termix_windows_arm64_nsis
+          path: release/termix_windows_arm64_nsis.exe
           retention-days: 30
 
       - name: Upload Windows x64 MSI Installer
@@ -182,6 +190,14 @@ jobs:
           path: release/termix_windows_ia32_msi.msi
           retention-days: 30
 
+      - name: Upload Windows arm64 MSI Installer
+        uses: actions/upload-artifact@v7
+        if: hashFiles('release/termix_windows_arm64_msi.msi') != '' && inputs.artifact_destination != 'none'
+        with:
+          name: termix_windows_arm64_msi
+          path: release/termix_windows_arm64_msi.msi
+          retention-days: 30
+
       - name: Create Windows x64 Portable zip
         if: hashFiles('release/win-unpacked/*') != ''
         run: |
@@ -191,6 +207,11 @@ jobs:
         if: hashFiles('release/win-ia32-unpacked/*') != ''
         run: |
           Compress-Archive -Path "release\win-ia32-unpacked\*" -DestinationPath "termix_windows_ia32_portable.zip"
+
+      - name: Create Windows arm64 Portable zip
+        if: hashFiles('release/win-arm64-unpacked/*') != ''
+        run: |
+          Compress-Archive -Path "release\win-arm64-unpacked\*" -DestinationPath "termix_windows_arm64_portable.zip"
 
       - name: Upload Windows update files
         uses: actions/upload-artifact@v7
@@ -217,6 +238,14 @@ jobs:
         with:
           name: termix_windows_ia32_portable
           path: termix_windows_ia32_portable.zip
+          retention-days: 30
+
+      - name: Upload Windows arm64 Portable
+        uses: actions/upload-artifact@v7
+        if: hashFiles('termix_windows_arm64_portable.zip') != '' && inputs.artifact_destination != 'none'
+        with:
+          name: termix_windows_arm64_portable
+          path: termix_windows_arm64_portable.zip
           retention-days: 30
 
   build-linux:
