@@ -9,6 +9,7 @@
 
 ### Changed
 
+- The Docker Compose files no longer start a guacd container. npm run dev -- --guacd also points remote desktop at the guacd it starts
 - The side menu now opens over the page when it expands on hover, so open sessions like remote desktop are not resized each time. Turn on Push content when it expands in Settings to get the old behavior back
 
 ### Fixed

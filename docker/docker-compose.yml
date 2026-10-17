@@ -9,12 +9,6 @@ services:
       - termix-data:/app/data
     environment:
       PORT: "8080"
-      GUACD_HOST: "guacd"
-      GUACD_TUNNEL_HOST: "termix"
-      GUACD_RECORDING_PATH: "/termix-data/session_recordings/guacamole"
-      # Where guacd stores files for RDP drive redirection (one folder per
-      # user is created underneath). Must be writable by guacd's user.
-      GUACD_DRIVE_PATH: "/termix-data/rdp-drive"
       # Multi-instance deployments should point every backend at the same
       # Redis. Without it, collaboration rooms keep their single-instance
       # in-memory fallback.
@@ -36,17 +30,6 @@ services:
       # TRUSTED_PROXY_AUTH_ROLE_MAP: '{"operators":["user"]}'
       # TRUSTED_PROXY_AUTH_USERNAME_HEADER: "x-forwarded-username"
       # TRUSTED_PROXY_AUTH_ROLE_HEADER: "x-forwarded-role"
-    depends_on:
-      - guacd
-    networks:
-      - termix-net
-
-  guacd:
-    image: guacamole/guacd:1.6.0
-    container_name: guacd
-    restart: unless-stopped
-    volumes:
-      - termix-data:/termix-data
     networks:
       - termix-net
 

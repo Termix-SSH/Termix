@@ -85,6 +85,8 @@ export function serviceEnv(options, inDocker) {
     const guacd = SERVICES.guacd;
     env.GUACD_HOST = inDocker ? guacd.container : "127.0.0.1";
     env.GUACD_PORT = String(inDocker ? guacd.port : guacd.hostPort);
+    // Remote desktop runs built in unless told to use guacd.
+    env.REMOTE_DESKTOP_ENGINE = "guacd";
   }
   return env;
 }

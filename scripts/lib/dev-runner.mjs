@@ -125,7 +125,7 @@ Options
   --plugins <dir>  Plugin repos to build and watch (default ../Plugins)
   --no-local       Use only the plugins pinned in docker/bundled-plugins.json
   --db <engine>    sqlite (default), postgres or mysql. Postgres and MySQL run in Docker
-  --guacd          Run guacd in Docker for remote desktop
+  --guacd          Run guacd in Docker and use it instead of the built-in remote desktop
   --fresh          Start from empty data (first run, onboarding)
   --data <dir>     Data folder for the backend (default db/data, db/data-desktop for
                    electron, plus -<engine> for postgres or mysql)
