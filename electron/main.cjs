@@ -442,14 +442,6 @@ function isInsecureModeEnabled() {
   );
 }
 
-function getOrigin(url) {
-  try {
-    return new URL(url).origin;
-  } catch {
-    return null;
-  }
-}
-
 function isPrivateNetworkHost(hostname) {
   if (
     hostname === "localhost" ||
@@ -493,7 +485,7 @@ function isInvalidCertificateAllowedForUrl(url) {
   // allows a self-signed certificate.
   const linked = linkedServer.getLinkedServer();
   if (!linked?.allowInvalidCertificate) return false;
-  return getOrigin(url) === linked.origin;
+  return linkedServer.isLinkedOrigin(url);
 }
 
 function getTlsVerificationOptions(url) {
