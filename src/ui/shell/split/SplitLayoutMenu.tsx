@@ -18,6 +18,7 @@ import {
   type SplitPresetId,
 } from "./split-presets";
 import { MAX_PANES, type PaneEdge } from "./split-tree";
+import { paneNavHotkeyLabel } from "@/lib/pane-nav-hotkey";
 
 function NodeThumb({ node }: { node: LayoutNode }) {
   if (node.kind === "pane") {
@@ -129,7 +130,7 @@ export function SplitLayoutMenu({
         <div className="flex flex-col gap-1 px-2 pb-1.5 text-xs text-muted-foreground">
           <div className="flex items-center justify-between gap-2">
             <span>{t("splitScreen.shortcutNavigate")}</span>
-            <kbd className="font-mono text-[10px]">Alt+Arrows</kbd>
+            <kbd className="font-mono text-[10px]">{paneNavHotkeyLabel()}</kbd>
           </div>
           <div className="flex items-center justify-between gap-2">
             <span>{t("splitScreen.zoom")}</span>
