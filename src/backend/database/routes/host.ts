@@ -486,6 +486,7 @@ router.post(
       });
 
       res.json(await withProtocolAuth(stripSensitiveFields(resolvedHost)));
+      pluginEvents.emit(TOPICS.hostCreated, { hostId: createdHost.id, userId });
       notifyStatsHostUpdated(createdHost.id as number, userId, "host_create");
     } catch (err) {
       sshLogger.error("Failed to save SSH host to database", err, {

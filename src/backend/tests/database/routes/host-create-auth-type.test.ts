@@ -84,6 +84,7 @@ const { hosts, sshCredentials } =
 const { saveLevel } = await import("../../../hosts/defaults/service.js");
 const { default: hostRouter } =
   await import("../../../database/routes/host.js");
+const { pluginEvents, TOPICS } = await import("../../../plugins/events.js");
 
 const app = express();
 app.use(express.json());
@@ -190,5 +191,26 @@ describe("host update authType", () => {
       .put(`/host/db/host/${created.body.id}`)
       .send({ ...base, authType: { bad: true } });
     expect(res.status).toBe(400);
+  });
+});
+
+describe("host.created", () => {
+  it("is published once when a host is created, and not on update", async () => {
+    const seen: unknown[] = [];
+    const off = pluginEvents.on(TOPICS.hostCreated, (payload) => {
+      seen.push(payload);
+    });
+    try {
+      const created = await request(app)
+        .post("/host/db/host")
+        .send({ ...base, authType: "password", password: "pw" });
+      expect(created.status).toBe(200);
+      await request(app)
+        .put(`/host/db/host/${created.body.id}`)
+        .send({ ...base, name: "renamed" });
+      expect(seen).toEqual([{ hostId: created.body.id, userId: USER }]);
+    } finally {
+      off();
+    }
   });
 });

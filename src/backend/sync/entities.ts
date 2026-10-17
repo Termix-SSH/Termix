@@ -22,6 +22,7 @@ import {
 import { FieldCrypto } from "../utils/field-crypto.js";
 import { syncLogger } from "../utils/logger.js";
 import { getPluginRuntime } from "../plugins/index.js";
+import { pluginEvents, TOPICS } from "../plugins/events.js";
 import { singletonSyncId } from "./wire.js";
 import { parseDefaultOverrides } from "../../types/host-defaults.js";
 import {
@@ -174,7 +175,7 @@ export function registerCoreSyncEntities(): void {
               )
             : {},
       }),
-      afterWrite: async ({ id, userId, wire, resolveId }) => {
+      afterWrite: async ({ id, userId, wire, created, resolveId }) => {
         if (id === null) return;
         // The server owns host defaults: it keeps what the host set itself
         // and resolves the rest. A desktop takes the server's values as sent.
@@ -195,6 +196,9 @@ export function registerCoreSyncEntities(): void {
         const { SharedHostSecretsManager } =
           await import("../utils/shared-host-secrets-manager.js");
         await SharedHostSecretsManager.getInstance().resyncHost(id);
+        if (created) {
+          pluginEvents.emit(TOPICS.hostCreated, { hostId: id, userId });
+        }
       },
       remove: async (row, userId) => {
         const { deleteOwnedHost } = await import("../hosts/delete-host.js");

@@ -26,6 +26,8 @@ export const TOPICS = {
   hostStatus: "host.status",
   /** A host's key was accepted again after it changed. */
   hostKeyUpdated: "host.key.updated",
+  /** A host was added and anything inventorying hosts should pick it up. */
+  hostCreated: "host.created",
   /** A host's connection details changed and pollers should re-read them. */
   hostUpdated: "host.updated",
   /** A host was deleted and any poller holding it should drop it. */

@@ -48,6 +48,7 @@ function exportFile(): string {
 
 async function invoke(path: string, user: unknown = { isExternal: false }) {
   const writes: string[] = [];
+  const events: Array<[string, unknown]> = [];
   const hosts: Array<Record<string, unknown>> = [];
   const importHostProtocolLogins = vi.fn();
   const handler = runInNewContext(
@@ -98,6 +99,11 @@ async function invoke(path: string, user: unknown = { isExternal: false }) {
       importHostDefaults: async () => ({ imported: 0, skipped: 0 }),
       DatabaseSaveTrigger: { forceSave: async () => {} },
       getErrorMessage: (error: Error) => error.message,
+      pluginEvents: {
+        emit: (topic: string, payload: unknown) =>
+          events.push([topic, payload]),
+      },
+      TOPICS: { hostCreated: "host.created" },
     },
   );
   const res = { json: vi.fn(), status: vi.fn() };
@@ -106,7 +112,7 @@ async function invoke(path: string, user: unknown = { isExternal: false }) {
     { userId: "user-1", file: { path, originalname: "export.db" } },
     res,
   );
-  return { res, writes, hosts, importHostProtocolLogins };
+  return { res, writes, hosts, events, importHostProtocolLogins };
 }
 
 it("points imported hosts at the credentials imported with them", async () => {
@@ -120,6 +126,17 @@ it("points imported hosts at the credentials imported with them", async () => {
     [7, 100],
     [8, 42],
   ]);
+});
+
+it("publishes host.created once for each imported host", async () => {
+  const { events } = await invoke(exportFile());
+
+  expect(events).toEqual(
+    [501, 502, 503, 504].map((hostId) => [
+      "host.created",
+      { hostId, userId: "user-1" },
+    ]),
+  );
 });
 
 it("removes the uploaded file when the user is gone", async () => {

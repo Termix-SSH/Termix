@@ -38,6 +38,7 @@ import { attachPluginWebSockets } from "../plugins/ws.js";
 import pluginRoutes from "./routes/plugins.js";
 import { createPluginAssetsRouter } from "../plugins/assets.js";
 import { getPluginRuntime } from "../plugins/index.js";
+import { pluginEvents, TOPICS } from "../plugins/events.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
 import { createCompressionMiddleware } from "../utils/compression-config.js";
 import fs from "fs";
@@ -1388,6 +1389,9 @@ app.post(
             }
           }
           await applyDefaultsAfterHostWrites(importedHostIds);
+          for (const hostId of importedHostIds) {
+            pluginEvents.emit(TOPICS.hostCreated, { hostId, userId });
+          }
         } catch {
           apiLogger.info("ssh_data table not found in import file, skipping");
         }

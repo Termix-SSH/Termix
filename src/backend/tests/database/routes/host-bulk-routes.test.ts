@@ -143,7 +143,7 @@ describe("notifyImportedHosts", () => {
       seen.push(payload);
     });
     try {
-      notifyImportedHosts("user-1", [4, 7]);
+      notifyImportedHosts("user-1", [4, 7], []);
     } finally {
       off();
     }
