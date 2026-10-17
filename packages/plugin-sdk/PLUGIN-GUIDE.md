@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.8 | Plugin API 1.2.0
+SDK 1.0.9 | Plugin API 1.2.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -334,8 +334,27 @@ ctx.schedule.every(60_000, () => refresh(), { jitterMs: 5_000 });
 ### Shared packages
 
 These come from Termix and are never bundled: `@termix-ssh/plugin-sdk`, `express`, `ssh2`, `ws`, `multer`,
-`cookie-parser`, `axios`, `jszip`, `guacamole-lite`, `@anthropic-ai/sdk`, `drizzle-orm`, `sharp` and every
-Node builtin. List the ones you use in `peerDependencies`. Any other npm package is bundled.
+`cookie-parser`, `axios`, `drizzle-orm`, `sharp` and every Node builtin. List the ones you use in
+`peerDependencies`. Any other npm package is bundled.
+
+### Workers and WebAssembly
+
+Heavy work (decoding, encoding, parsing) belongs in a worker thread so it never blocks the server. Name
+each worker entry in `package.json`:
+
+```json
+"termix": { "workers": { "engine": "src/backend/engine/worker.ts" } }
+```
+
+`build` bundles it alone into `dist/workers/engine.js`; start it with
+`new Worker(new URL("./workers/engine.js", import.meta.url))`. A worker bundles everything it imports and
+can't use the shared packages above, so it must not import `@termix-ssh/plugin-sdk`. Talk to it with
+`postMessage`.
+
+Importing a `.wasm`, `.ttf` or `.otf` file gives its bytes as a `Uint8Array`, in `build` and in tests, so a module ships
+inside the bundle with no file to find. Compile it once on the main thread with `new WebAssembly.Module`
+and post that to each worker. Add `declare module "*.wasm" { const bytes: Uint8Array; export default bytes; }`
+to a `.d.ts` in the plugin.
 
 ## Database
 
@@ -683,20 +702,20 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 
 ## termix-plugin CLI
 
-| Command                        | What it does                                                                                   |
-| ------------------------------ | ---------------------------------------------------------------------------------------------- |
-| `build`                        | Bundle `dist/backend.js` and `dist/frontend.js`, CSS, locales, migrations, `dist/openapi.json` |
-| `validate`                     | Check the manifest, its files, migrations for every database, the changelog and `package.json` |
-| `test`                         | Apply patches, run Vitest                                                                      |
-| `migrations`                   | Write a migration per database from `tables.ts`. `--check` fails when one is missing           |
-| `openapi`                      | Write `dist/openapi.json` from `@openapi` blocks                                               |
-| `pack`                         | Validate, then write `<id>-<version>.tmxplug`. `--out <dir>`                                   |
-| `sign <file>`                  | Sign a `.tmxplug` with `TERMIX_PLUGIN_SIGNING_KEY`                                             |
-| `verify <file> --key <base64>` | Check a `.tmxplug` against its `.sig`                                                          |
-| `keygen`                       | Write a new signing key pair. `--out <dir>`                                                    |
-| `changelog`                    | Print one version's notes. `--version x.y.z`                                                   |
-| `patch`                        | Apply the plugin's dependency patches (`build` and `test` do this too)                         |
-| `dev`                          | Build, pack and install on a server, again on every change. `--server`, `--key`, `--once`      |
+| Command                        | What it does                                                                                    |
+| ------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `build`                        | Bundle `dist/backend.js`, `dist/frontend.js`, workers, CSS, locales, migrations, `openapi.json` |
+| `validate`                     | Check the manifest, its files, migrations for every database, the changelog and `package.json`  |
+| `test`                         | Apply patches, run Vitest                                                                       |
+| `migrations`                   | Write a migration per database from `tables.ts`. `--check` fails when one is missing            |
+| `openapi`                      | Write `dist/openapi.json` from `@openapi` blocks                                                |
+| `pack`                         | Validate, then write `<id>-<version>.tmxplug`. `--out <dir>`                                    |
+| `sign <file>`                  | Sign a `.tmxplug` with `TERMIX_PLUGIN_SIGNING_KEY`                                              |
+| `verify <file> --key <base64>` | Check a `.tmxplug` against its `.sig`                                                           |
+| `keygen`                       | Write a new signing key pair. `--out <dir>`                                                     |
+| `changelog`                    | Print one version's notes. `--version x.y.z`                                                    |
+| `patch`                        | Apply the plugin's dependency patches (`build` and `test` do this too)                          |
+| `dev`                          | Build, pack and install on a server, again on every change. `--server`, `--key`, `--once`       |
 
 ## SDK entry points
 

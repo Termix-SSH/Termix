@@ -92,6 +92,74 @@ describe("termix-plugin build", () => {
   });
 });
 
+describe("termix-plugin build workers and wasm", () => {
+  // The smallest valid module: magic and version, no sections.
+  const EMPTY_WASM = Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0, 0, 0]);
+
+  it("inlines a .wasm import as its bytes", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const dir = fixturePlugin();
+    fs.writeFileSync(path.join(dir, "src", "backend", "mod.wasm"), EMPTY_WASM);
+    fs.writeFileSync(
+      path.join(dir, "src", "backend", "index.ts"),
+      'import bytes from "./mod.wasm";\nexport const valid = WebAssembly.validate(bytes);\nexport function activate() {}\n',
+    );
+
+    await build({ cwd: dir });
+
+    const mod = await import(
+      pathToFileURL(path.join(dir, "dist", "backend.js")).href
+    );
+    expect(mod.valid).toBe(true);
+  });
+
+  it("bundles each worker entry on its own into dist/workers", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const dir = fixturePlugin();
+    fs.writeFileSync(
+      path.join(dir, "package.json"),
+      JSON.stringify({ termix: { workers: { engine: "src/worker.ts" } } }),
+    );
+    const dep = path.join(dir, "node_modules", "worker-dep");
+    fs.mkdirSync(dep, { recursive: true });
+    fs.writeFileSync(
+      path.join(dep, "package.json"),
+      JSON.stringify({ name: "worker-dep", main: "index.js" }),
+    );
+    fs.writeFileSync(path.join(dep, "index.js"), "exports.answer = 42;\n");
+    fs.writeFileSync(
+      path.join(dir, "src", "worker.ts"),
+      'import { parentPort } from "node:worker_threads";\nimport { answer } from "worker-dep";\nparentPort?.postMessage(answer);\n',
+    );
+
+    await build({ cwd: dir });
+
+    const file = path.join(dir, "dist", "workers", "engine.js");
+    expect(fs.readFileSync(file, "utf8")).not.toContain('from "worker-dep"');
+    const { Worker } = await import("node:worker_threads");
+    const answer = await new Promise((resolve, reject) => {
+      const worker = new Worker(file);
+      worker.once("message", (value) => {
+        void worker.terminate();
+        resolve(value);
+      });
+      worker.once("error", reject);
+    });
+    expect(answer).toBe(42);
+  });
+
+  it("refuses a worker whose entry is missing", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const dir = fixturePlugin();
+    fs.writeFileSync(
+      path.join(dir, "package.json"),
+      JSON.stringify({ termix: { workers: { engine: "src/nope.ts" } } }),
+    );
+
+    await expect(build({ cwd: dir })).rejects.toThrow(/entry src\/nope.ts/);
+  });
+});
+
 describe("plugin CSS layers", () => {
   it("renames the Tailwind layers so core's utilities always win", () => {
     expect(

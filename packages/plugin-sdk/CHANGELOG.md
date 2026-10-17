@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.9
+
+### Added
+
+- Worker entries in `package.json` `termix.workers`, each bundled on its own into `dist/workers/<name>.js`
+- A `.wasm`, `.ttf` or `.otf` import gives the file's bytes, in `termix-plugin build` and in plugin tests
+
+### Fixed
+
+- The plugin guide listed jszip, guacamole-lite and @anthropic-ai/sdk as shared packages, but they are bundled
+
 ## 1.0.8
 
 ### Added

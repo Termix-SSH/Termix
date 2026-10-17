@@ -30,6 +30,25 @@ function findRepoRoot(startDir: string): string | null {
   }
 }
 
+/**
+ * termix-plugin build turns a .wasm or font import into its bytes. Tests get the same,
+ * so code that imports a module compiles it the same way under vitest.
+ */
+export function wasmBinaryPlugin() {
+  return {
+    name: "termix-wasm-binary",
+    enforce: "pre" as const,
+    load(id: string) {
+      const file = id.split("?")[0];
+      if (![".wasm", ".ttf", ".otf"].some((ext) => file.endsWith(ext))) {
+        return null;
+      }
+      const base64 = fs.readFileSync(file).toString("base64");
+      return `export default new Uint8Array(Buffer.from(${JSON.stringify(base64)}, "base64"));`;
+    },
+  };
+}
+
 export interface PluginVitestOptions {
   /** Extra aliases merged over the defaults. */
   alias?: Record<string, string>;
@@ -96,7 +115,10 @@ export function pluginVitestConfig(
   // unexpectedly". Threads don't.
   const pool = "threads" as const;
 
+  const plugins = [wasmBinaryPlugin()];
+
   return {
+    plugins,
     resolve: { alias },
     test: {
       globals: true,
@@ -104,6 +126,7 @@ export function pluginVitestConfig(
       pool,
       projects: [
         {
+          plugins,
           resolve: { alias },
           test: {
             name: `${pluginId}:backend`,
@@ -116,6 +139,7 @@ export function pluginVitestConfig(
           },
         },
         {
+          plugins,
           resolve: { alias },
           test: {
             name: `${pluginId}:frontend`,
