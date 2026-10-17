@@ -35,7 +35,49 @@ export interface AuditLogParams {
   errorMessage?: string;
 }
 
+// Plugin routine calls (a headless viewer's heartbeat through ctx.asUser and a
+// service) repeat identically every few seconds; written each time they push
+// real security entries out of the capped log. Only successful plugin_as_user
+// and plugin_service_* lines are coalesced; failures and everything else are
+// always written.
+const ROUTINE_COALESCE_MS = 10 * 60 * 1000;
+const ROUTINE_COALESCE_MAX_KEYS = 5000;
+const routineLastWritten = new Map<string, number>();
+
+function isCoalescedRoutine(params: AuditLogParams): boolean {
+  if (
+    !params.success ||
+    !params.username.startsWith("plugin:") ||
+    !(
+      params.action === "plugin_as_user" ||
+      params.action.startsWith("plugin_service_")
+    )
+  ) {
+    return false;
+  }
+  const key = JSON.stringify([
+    params.userId,
+    params.username,
+    params.action,
+    params.resourceType,
+    params.resourceId,
+    params.details,
+  ]);
+  const now = Date.now();
+  const last = routineLastWritten.get(key);
+  if (last !== undefined && now - last < ROUTINE_COALESCE_MS) return true;
+  if (routineLastWritten.size >= ROUTINE_COALESCE_MAX_KEYS) {
+    for (const [k, at] of routineLastWritten) {
+      if (now - at >= ROUTINE_COALESCE_MS) routineLastWritten.delete(k);
+    }
+  }
+  routineLastWritten.set(key, now);
+  return false;
+}
+
 export async function logAudit(params: AuditLogParams): Promise<void> {
+  if (isCoalescedRoutine(params)) return;
+
   // Local storage is the source of truth and runs first; forwarding is a copy
   // and must never delay or fail the audited operation.
   void forwardAuditEntry(params).catch(() => {});

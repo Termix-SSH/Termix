@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const createMock = vi.fn().mockResolvedValue(undefined);
 
@@ -57,6 +57,101 @@ describe("logAudit", () => {
         success: false,
       }),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe("logAudit plugin routine coalescing", () => {
+  const WINDOW_MS = 10 * 60 * 1000;
+  let run = 0;
+  let details = "";
+
+  const routine = (overrides: Record<string, unknown> = {}) =>
+    logAudit({
+      userId: null,
+      username: "plugin:automations",
+      action: "plugin_as_user",
+      resourceType: "plugin",
+      resourceId: "automations",
+      details,
+      success: true,
+      ...overrides,
+    });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    createMock.mockResolvedValue(undefined);
+    vi.useFakeTimers();
+    // The coalescing memory is module state: a fresh key per test keeps them
+    // independent.
+    details = `automations ran background work as user-${++run}`;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("writes one row for identical successful plugin_as_user repeats in the window", async () => {
+    await routine();
+    vi.advanceTimersByTime(WINDOW_MS - 1);
+    await routine();
+    await routine();
+
+    expect(createMock).toHaveBeenCalledOnce();
+  });
+
+  it("writes one row for identical successful plugin service calls in the window", async () => {
+    const service = {
+      action: "plugin_service_host_metrics_open",
+      resourceId: "host-metrics",
+    };
+    await routine(service);
+    await routine(service);
+
+    expect(createMock).toHaveBeenCalledOnce();
+  });
+
+  it("writes again once the window has passed", async () => {
+    await routine();
+    vi.advanceTimersByTime(WINDOW_MS);
+    await routine();
+
+    expect(createMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("always writes failures", async () => {
+    await routine();
+    await routine({ success: false, errorMessage: "boom" });
+    await routine({ success: false, errorMessage: "boom" });
+
+    expect(createMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("never coalesces non-plugin or non-routine actions", async () => {
+    const login = {
+      userId: "user-1",
+      username: "alice",
+      action: "login",
+      resourceType: "user",
+    };
+    await routine(login);
+    await routine(login);
+    const secretRead = { action: "plugin_secret_shared_read" };
+    await routine(secretRead);
+    await routine(secretRead);
+    const notPlugin = { username: "alice" };
+    await routine(notPlugin);
+    await routine(notPlugin);
+
+    expect(createMock).toHaveBeenCalledTimes(6);
+  });
+
+  it("does not coalesce entries with different details or resourceId", async () => {
+    await routine();
+    await routine({ details: `${details} (other)` });
+    await routine({ resourceId: "other-plugin" });
+    await routine({ userId: "user-2" });
+
+    expect(createMock).toHaveBeenCalledTimes(4);
   });
 });
 

@@ -75,7 +75,8 @@ const UNGATED: Record<string, string> = {
   "schedule.every": "the plugin's own timers",
   "schedule.after": "the plugin's own timers",
   "audit.record": "writes under the runtime's actor, never a plugin value",
-  asUser: "always audited as plugin_as_user",
+  asUser:
+    "audited as plugin_as_user (identical successful repeats coalesced for 10 minutes)",
   currentActor: "reads the actor, cannot set it",
   "desktop.available": "a yes/no about the environment",
   "http.baseUrl": "reads the request's public origin",
