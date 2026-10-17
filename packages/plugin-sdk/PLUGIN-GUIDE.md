@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.9 | Plugin API 1.2.0
+SDK 1.0.10 | Plugin API 1.2.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -90,7 +90,7 @@ npm test             # termix-plugin test: Vitest
 npm run typecheck    # tsc
 npm run validate     # termix-plugin validate: manifest, files, migrations, changelog, docs
 npm run migrations   # termix-plugin migrations: write migrations after changing tables.ts
-npm run pack         # termix-plugin pack: write <id>-<version>.tmxplug
+npm run pack         # termix-plugin pack: write <id>-<version>.tmxplug (with LICENSE and NOTICE)
 npm run format       # Prettier
 npm run format:check
 ```

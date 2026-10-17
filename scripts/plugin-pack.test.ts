@@ -46,6 +46,8 @@ function fixturePlugin(manifest: Record<string, unknown> = {}): string {
   writeFile(dir, "migrations/mysql/0001_init.sql", "SELECT 1;\n");
   writeFile(dir, "README.md", "# Fixture\n");
   writeFile(dir, "icon.svg", "<svg/>\n");
+  writeFile(dir, "LICENSE", "Apache-2.0\n");
+  writeFile(dir, "NOTICE", "Third-party notices\n");
   writeFile(dir, "src/backend/index.ts", "left out of the archive\n");
   return dir;
 }
@@ -91,6 +93,8 @@ describe("termix-plugin pack", () => {
 
     const names = await entries(file);
     expect(names).toEqual([
+      "LICENSE",
+      "NOTICE",
       "README.md",
       "dist/backend.js",
       "dist/frontend.js",
