@@ -55,6 +55,7 @@ import type { Host, HostFolder, TabType } from "@/types/ui-types";
 import { sortHostTree, type SortKey } from "@/sidebar/host-sort";
 import { withLiveStatus } from "@/sidebar/live-host-status";
 import { useServerStatus } from "@/lib/ServerStatusContext";
+import { pluginName } from "@/lib/plugin-i18n";
 import { useHostSidebarPreferences } from "@/sidebar/tree/hooks/useHostSidebarPreferences";
 import { useArrangeLock } from "@/sidebar/use-arrange-lock";
 import type {
@@ -816,7 +817,7 @@ export function HostsPanel({
                       }
                       onSelect={(e) => e.preventDefault()}
                     >
-                      {plugin.name}
+                      {pluginName(t, plugin)}
                     </DropdownMenuCheckboxItem>
                   ))}
                   {allTags.length > 0 && (

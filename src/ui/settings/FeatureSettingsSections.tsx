@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/button";
 import { SectionCard } from "@/components/section-card";
 import { AccordionSection } from "@/sidebar/AdminSettingsShared";
-import { pluginKey } from "@/lib/plugin-i18n";
+import { pluginKey, pluginName } from "@/lib/plugin-i18n";
 import { PluginIcon } from "@/lib/plugin-icon";
 import {
   getPluginAdminSettings,
@@ -68,9 +68,7 @@ export function FeatureSettingsSection({
   const { t } = useTranslation();
   return (
     <AccordionSection
-      label={t(pluginKey(plugin.id, "plugin.name"), {
-        defaultValue: plugin.name,
-      })}
+      label={pluginName(t, plugin)}
       icon={<PluginIcon name={plugin.icon} className="size-3.5" />}
       open={open}
       onToggle={onToggle}
@@ -198,9 +196,7 @@ export function FeatureSettingsForm({
       {!running && (
         <div className="border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
           {t("settings.featureUnavailable", {
-            name: t(pluginKey(plugin.id, "plugin.name"), {
-              defaultValue: plugin.name,
-            }),
+            name: pluginName(t, plugin),
           })}
         </div>
       )}

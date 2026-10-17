@@ -10,6 +10,7 @@ import {
 } from "react";
 import { scopeHostFields } from "./host-scope";
 import { useTranslation } from "react-i18next";
+import { pluginName } from "@/lib/plugin-i18n";
 import { getPluginRecord } from "./plugin-store";
 
 const PluginScopeContext = createContext<string | null>(null);
@@ -27,7 +28,8 @@ function CrashNotice({
   onRetry: () => void;
 }) {
   const { t } = useTranslation();
-  const name = getPluginRecord(pluginId)?.summary.name ?? pluginId;
+  const summary = getPluginRecord(pluginId)?.summary;
+  const name = summary ? pluginName(t, summary) : pluginId;
   return (
     <div className="flex flex-col items-center justify-center gap-2 p-4 text-center text-sm text-muted-foreground">
       <span>{t("plugins.runtime.crashed", { name })}</span>

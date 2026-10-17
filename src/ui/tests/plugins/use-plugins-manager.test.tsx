@@ -35,9 +35,17 @@ vi.mock("@/api/plugins-api", async (importOriginal) => ({
 vi.mock("@/components/surface/surface-scope", () => ({
   useConfirm: () => vi.fn(async () => true),
 }));
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
-}));
+const i18n = vi.hoisted(() => {
+  const strings: Record<string, string> = {
+    "sample-plugin:plugin.name": "示例",
+    "sample-plugin:plugin.description": "一个示例插件",
+  };
+  return {
+    t: (key: string, options?: { defaultValue?: string }) =>
+      strings[key] ?? options?.defaultValue ?? key,
+  };
+});
+vi.mock("react-i18next", () => ({ useTranslation: () => i18n }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
 import { usePluginsManager } from "@/plugins/use-plugins-manager";
@@ -68,4 +76,34 @@ it("waits for local consent and sends the reviewed version and capabilities", as
     true,
     { version: "1.0.0", capabilities: ["kv:own"] },
   );
+});
+
+it("names plugins in the UI language, falling back to the manifest", async () => {
+  api.getPluginRegistry.mockResolvedValueOnce({
+    plugins: [
+      {
+        id: "browse-only",
+        name: "Browse Only",
+        description: "Not installed",
+        author: "someone",
+        category: "Tools",
+        latestVersion: "1.0.0",
+        versions: [],
+        bundled: false,
+      },
+    ],
+    managedByServer: true,
+    registry: {},
+  } as never);
+  const { result } = renderHook(() => usePluginsManager());
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  expect(
+    result.current.plugins.map(({ name, description }) => ({
+      name,
+      description,
+    })),
+  ).toEqual([
+    { name: "示例", description: "一个示例插件" },
+    { name: "Browse Only", description: "Not installed" },
+  ]);
 });

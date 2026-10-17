@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/button";
 import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import { applyPresetSideEffects } from "@/lib/apply-ui-preset";
+import { pluginName } from "@/lib/plugin-i18n";
 import { usePluginStore } from "@/plugin-host/plugin-store";
 import {
   UI_AREA_KEYS,
@@ -67,9 +68,10 @@ export function InterfacePresetSettings({
       )
       .map((area) => {
         const pluginId = area.slice("plugin:".length);
+        const summary = pluginStore.records.get(pluginId)?.summary;
         return {
           key: area,
-          label: pluginStore.records.get(pluginId)?.summary.name ?? pluginId,
+          label: summary ? pluginName(t, summary) : pluginId,
         };
       });
     return [...core, ...plugins];

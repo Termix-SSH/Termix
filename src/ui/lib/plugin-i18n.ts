@@ -1,3 +1,5 @@
+import type { TFunction } from "i18next";
+
 /**
  * Where a plugin's i18n keys resolve from.
  *
@@ -18,4 +20,26 @@ export function pluginKey(
 ): string | undefined {
   if (!key) return key;
   return key.includes(":") ? key : `${pluginId}:${key}`;
+}
+
+/**
+ * A plugin's name in the UI language: "plugin.name" from its own locales,
+ * else the manifest's. A plugin whose strings are not loaded, like one only
+ * listed in a registry, shows the manifest name.
+ */
+export function pluginName(
+  t: TFunction,
+  plugin: { id: string; name: string },
+): string {
+  return t(pluginKey(plugin.id, "plugin.name"), { defaultValue: plugin.name });
+}
+
+/** Same as pluginName, for "plugin.description". */
+export function pluginDescription(
+  t: TFunction,
+  plugin: { id: string; description?: string | null },
+): string {
+  return t(pluginKey(plugin.id, "plugin.description"), {
+    defaultValue: plugin.description ?? "",
+  });
 }

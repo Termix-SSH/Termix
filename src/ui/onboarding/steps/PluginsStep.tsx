@@ -20,6 +20,7 @@ import {
   recommendedChoices,
 } from "../plugin-choices";
 import { DocsLink } from "@/components/docs-link";
+import { pluginDescription, pluginName } from "@/lib/plugin-i18n";
 
 const CATEGORY_ORDER = [
   "Terminal",
@@ -79,8 +80,8 @@ export function PluginsStep({
   }, [list, choices]);
 
   const names = useMemo(
-    () => new Map(list?.plugins.map((p) => [p.id, p.name]) ?? []),
-    [list],
+    () => new Map(list?.plugins.map((p) => [p.id, pluginName(t, p)]) ?? []),
+    [list, t],
   );
 
   const changed = useMemo(() => {
@@ -260,7 +261,7 @@ export function PluginsStep({
                   />
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <span className="flex items-center gap-1.5 text-xs font-medium">
-                      {plugin.name}
+                      {pluginName(t, plugin)}
                       {plugin.recommended && (
                         <span className="border border-accent-brand/40 px-1 text-[9px] font-semibold uppercase tracking-wider text-accent-brand">
                           {t("onboarding.pluginsRecommended")}
@@ -268,7 +269,7 @@ export function PluginsStep({
                       )}
                     </span>
                     <span className="text-[10px] leading-snug text-muted-foreground">
-                      {plugin.description}
+                      {pluginDescription(t, plugin)}
                     </span>
                     {forcedBy.has(plugin.id) && (
                       <span className="text-[10px] text-accent-brand">
@@ -281,7 +282,7 @@ export function PluginsStep({
                 </div>
                 <div
                   role="radiogroup"
-                  aria-label={plugin.name}
+                  aria-label={pluginName(t, plugin)}
                   className="flex shrink-0 border border-border"
                 >
                   {CHOICES.map((option) => (
@@ -335,9 +336,11 @@ export function PluginsStep({
                   }
                 />
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-xs font-medium">{plugin.name}</span>
+                  <span className="text-xs font-medium">
+                    {pluginName(t, plugin)}
+                  </span>
                   <span className="text-[10px] leading-snug text-muted-foreground">
-                    {plugin.description}
+                    {pluginDescription(t, plugin)}
                   </span>
                   <span className="text-[10px] text-muted-foreground/80">
                     {t("onboarding.pluginsConsentNote")}
