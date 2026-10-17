@@ -174,6 +174,8 @@ export interface FakeContextOptions {
   linkedUsers?: Record<string, number>;
   /** Failures before ctx.auth.loginRateLimit locks a key. Defaults to 5. */
   loginAttemptLimit?: number;
+  /** What ctx.users.getLocale answers, by user id. A missing user answers null. */
+  locales?: Record<string, string>;
 }
 
 export interface FakeProcessOptions {
@@ -247,6 +249,8 @@ export interface FakeAuthRegistrations {
   }>;
   /** Failures recorded through ctx.auth.loginRateLimit, by "<ip>|<key>". */
   loginFailures: Map<string, number>;
+  /** Every ctx.auth.issueUserToken call, in order. */
+  userTokens: Array<{ userId: string; purpose: string; ttlSeconds?: number }>;
 }
 
 export interface FakePluginContext {
@@ -574,6 +578,7 @@ export function createFakeContext(
     completedLogins: [],
     revokedSessions: [],
     loginFailures: new Map(),
+    userTokens: [],
   };
   const sshClient = options.sshClient ?? {};
   let actor = options.actor;
@@ -1140,6 +1145,18 @@ export function createFakeContext(
       },
       countLinkedUsers: async (provider) =>
         options.linkedUsers?.[provider] ?? 0,
+      issueUserToken: async (userId, tokenOptions) => {
+        auth.userTokens.push({ userId, ...tokenOptions });
+        const ttl = Math.min(tokenOptions.ttlSeconds ?? 300, 900);
+        return {
+          token: `fake-token-${auth.userTokens.length}`,
+          expiresAt: new Date(Date.now() + ttl * 1000).toISOString(),
+        };
+      },
+    },
+
+    users: {
+      getLocale: async (userId) => options.locales?.[userId] ?? null,
     },
 
     desktop: {
@@ -1442,6 +1459,8 @@ export interface MockContextOptions {
   linkedUsers?: Record<string, number>;
   /** See FakeContextOptions. */
   loginAttemptLimit?: number;
+  /** See FakeContextOptions. */
+  locales?: Record<string, string>;
 }
 
 export interface MockPluginContext extends FakePluginContext {
@@ -1458,7 +1477,8 @@ export interface MockPluginContext extends FakePluginContext {
  * topic outside the plugin's own namespace, settings:read-core on
  * ctx.settings.readCore, ssh:connect plus credentials:use on ctx.ssh,
  * notify:send on ctx.notify (notify:hub on serve), network:outbound on ctx.fetch, process:spawn on
- * ctx.process, system:tls on ctx.system, plugins:read on ctx.plugins, and auth:provide on ctx.auth. Reading a plugin's own settings is deliberately
+ * ctx.process, system:tls on ctx.system, plugins:read on ctx.plugins, auth:provide on ctx.auth
+ * (users:impersonate on issueUserToken), and users:read on ctx.users. Reading a plugin's own settings is deliberately
  * ungated. As the SDK grows a member, add its gate here in the same shape.
  */
 export function createMockCtx(
@@ -1495,6 +1515,7 @@ export function createMockCtx(
     baseUrl: options.baseUrl,
     linkedUsers: options.linkedUsers,
     loginAttemptLimit: options.loginAttemptLimit,
+    locales: options.locales,
     manifest: {
       capabilities: options.capabilities ?? [],
       ...options.manifest,
@@ -1785,6 +1806,17 @@ export function createMockCtx(
       countLinkedUsers: async (provider) => {
         require("auth:provide");
         return ctx.auth.countLinkedUsers(provider);
+      },
+      issueUserToken: async (userId, tokenOptions) => {
+        require("users:impersonate");
+        return ctx.auth.issueUserToken(userId, tokenOptions);
+      },
+    },
+
+    users: {
+      getLocale: async (userId) => {
+        require("users:read");
+        return ctx.users.getLocale(userId);
       },
     },
 

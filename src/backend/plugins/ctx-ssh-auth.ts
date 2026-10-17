@@ -25,6 +25,7 @@ import {
 import { getActor, getActorSessionId } from "./actor.js";
 import type { DisposableBag } from "./disposables.js";
 import { redactHostSecrets } from "./ctx-hosts.js";
+import { issueUserToken } from "./ctx-users.js";
 import {
   getSshAuthProvider,
   listSshAuthProviders,
@@ -901,5 +902,7 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
         await import("../database/repositories/factory.js");
       return createCurrentUserAuthRepository().countUsersForProvider(provider);
     },
+    issueUserToken: (userId, options) =>
+      issueUserToken(manifest, userId, options),
   };
 }

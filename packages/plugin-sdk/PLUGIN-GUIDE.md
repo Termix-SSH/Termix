@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.10 | Plugin API 1.2.0
+SDK 1.0.11 | Plugin API 1.3.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -225,6 +225,8 @@ Bundled as ESM for Node 22+ into `dist/backend.js`. Backend imports of your own 
 | `audit.record`         | none                             | Write your own audit line                                      |
 | `sync`                 | none                             | Sync your tables to a linked desktop                           |
 | `auth`                 | `auth:provide`                   | Login methods, second factors, SSH auth types                  |
+| `auth.issueUserToken`  | `users:impersonate`              | A short-lived session for calling Termix's API as a user       |
+| `users.getLocale`      | `users:read`                     | A user's UI language                                           |
 | `system`               | `system:tls`                     | The server's HTTPS certificate                                 |
 | `plugins.list()`       | `plugins:read`                   | Which plugins are installed                                    |
 | `asUser(userId, fn)`   | always audited                   | Run background work as a user                                  |
@@ -236,6 +238,13 @@ Bundled as ESM for Node 22+ into `dist/backend.js`. Backend imports of your own 
 In a route the actor is the signed-in user, set by Termix. `ctx.currentActor()` returns it. Background
 work with no request (a timer, an event) uses `ctx.asUser(userId, fn)`, which is audited and still applies
 that user's permissions.
+
+Background work that must call Termix's own HTTP API (the Termix CLI, say) asks for a session with
+`ctx.auth.issueUserToken(userId, { purpose, ttlSeconds })` and sends it as `Authorization: Bearer <token>`.
+It needs `users:impersonate` and `engine.api` `^1.3`, lasts 300 seconds by default and 900 at most, and is
+audited as `plugin_user_token_issued`. The user's permissions apply, and it is refused on routes that change
+their password, second factors, API keys or linked logins. `ctx.users.getLocale(userId)` gives the user's
+UI language, like `zh_CN`, or null, for writing to them in it.
 
 ### Routes
 
@@ -754,37 +763,37 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 
 ## Capabilities
 
-| Capability           | Risk     | What it allows                                         |
-| -------------------- | -------- | ------------------------------------------------------ |
-| `credentials:read`   | critical | Read stored secrets for hosts the user can reach       |
-| `system:tls`         | critical | Replace the HTTPS certificate, answer CA domain checks |
-| `ssh:connect`        | high     | Run any command on hosts, with the user's access       |
-| `process:spawn`      | high     | Run programs on the Termix server                      |
-| `users:write`        | high     | Add users and change their roles                       |
-| `users:impersonate`  | high     | Run background work as another user, audited           |
-| `db:core-refs`       | high     | Query core users, roles and hosts tables (read only)   |
-| `auth:provide`       | high     | Add login methods, second factors, SSH auth types      |
-| `device:serial`      | high     | Open serial and USB ports on the server                |
-| `notify:hub`         | high     | Receive every alert (the alerts hub only)              |
-| `hosts:write`        | medium   | Add and edit hosts                                     |
-| `credentials:use`    | medium   | Connect with saved credentials without seeing them     |
-| `credentials:write`  | medium   | Save new credentials                                   |
-| `network:outbound`   | medium   | Outbound HTTP through `ctx.fetch`                      |
-| `network:serve`      | medium   | HTTP routes and sockets                                |
-| `network:broadcast`  | medium   | Local network broadcasts, like Wake-on-LAN             |
-| `users:read`         | medium   | Usernames and roles                                    |
-| `events:core`        | medium   | Listen to core events                                  |
-| `notify:send`        | medium   | Send alerts                                            |
-| `audit:read`         | medium   | Read the audit log                                     |
-| `desktop:window`     | medium   | Open windows in the desktop app                        |
-| `hosts:read`         | low      | Read hosts the user can see                            |
-| `db:own`             | low      | Your own tables                                        |
-| `kv:own`             | low      | Small key value state                                  |
-| `files:own`          | low      | Your own folder on disk                                |
-| `secrets:own`        | low      | Your own encrypted secrets                             |
-| `settings:read-core` | low      | Read Termix server settings                            |
-| `plugins:read`       | low      | See installed plugins                                  |
-| `ui:surface`         | low      | Add tabs, panels and settings                          |
+| Capability           | Risk     | What it allows                                          |
+| -------------------- | -------- | ------------------------------------------------------- |
+| `credentials:read`   | critical | Read stored secrets for hosts the user can reach        |
+| `system:tls`         | critical | Replace the HTTPS certificate, answer CA domain checks  |
+| `ssh:connect`        | high     | Run any command on hosts, with the user's access        |
+| `process:spawn`      | high     | Run programs on the Termix server                       |
+| `users:write`        | high     | Add users and change their roles                        |
+| `users:impersonate`  | high     | Act as another user, or get a session for them, audited |
+| `db:core-refs`       | high     | Query core users, roles and hosts tables (read only)    |
+| `auth:provide`       | high     | Add login methods, second factors, SSH auth types       |
+| `device:serial`      | high     | Open serial and USB ports on the server                 |
+| `notify:hub`         | high     | Receive every alert (the alerts hub only)               |
+| `hosts:write`        | medium   | Add and edit hosts                                      |
+| `credentials:use`    | medium   | Connect with saved credentials without seeing them      |
+| `credentials:write`  | medium   | Save new credentials                                    |
+| `network:outbound`   | medium   | Outbound HTTP through `ctx.fetch`                       |
+| `network:serve`      | medium   | HTTP routes and sockets                                 |
+| `network:broadcast`  | medium   | Local network broadcasts, like Wake-on-LAN              |
+| `users:read`         | medium   | Usernames, roles and UI language                        |
+| `events:core`        | medium   | Listen to core events                                   |
+| `notify:send`        | medium   | Send alerts                                             |
+| `audit:read`         | medium   | Read the audit log                                      |
+| `desktop:window`     | medium   | Open windows in the desktop app                         |
+| `hosts:read`         | low      | Read hosts the user can see                             |
+| `db:own`             | low      | Your own tables                                         |
+| `kv:own`             | low      | Small key value state                                   |
+| `files:own`          | low      | Your own folder on disk                                 |
+| `secrets:own`        | low      | Your own encrypted secrets                              |
+| `settings:read-core` | low      | Read Termix server settings                             |
+| `plugins:read`       | low      | See installed plugins                                   |
+| `ui:surface`         | low      | Add tabs, panels and settings                           |
 
 An update that adds a capability waits for an admin to approve it.
 

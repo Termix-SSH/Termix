@@ -15,6 +15,7 @@ import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { inArray, isNotNull } from "drizzle-orm";
 import type { ExternalSessionRef } from "../auth/types.js";
+import { listSecondFactors } from "../auth/registry.js";
 import type { DeviceType } from "./user-agent-parser.js";
 import { getDb } from "../database/db/index.js";
 import { sessions } from "../database/db/schema.js";
@@ -44,6 +45,11 @@ interface JWTPayload {
   pendingTOTP?: boolean;
   /** Set on a short-lived socket ticket, which only a socket upgrade takes. */
   purpose?: "ws";
+  /**
+   * A plugin minted the session. Read from the session row on verify, never
+   * from the token, so a refreshed token stays marked.
+   */
+  pluginSession?: boolean;
   dataKeyWrap?: WrappedDataKey;
   iat?: number;
   exp?: number;
@@ -102,6 +108,26 @@ const ADMIN_TARGET_USER_HEADER = "x-admin-target-user";
 const IMPERSONATION_PATH_ALLOWLIST = [/^\/host\/db\//, /^\/credentials(\/|$)/];
 
 const PLUGIN_API_PATH = /^\/plugin-api\/([a-z][a-z0-9-]*)(\/|$)/;
+
+/** sessions.device_type of a session a plugin minted with ctx.auth.issueUserToken. */
+export const PLUGIN_SESSION_DEVICE_TYPE = "plugin";
+
+// Routes that change how a user signs in or mint a credential that outlives
+// the session. A plugin-minted session is refused on them, and on every
+// route of a plugin that provides a second factor.
+const PLUGIN_SESSION_BLOCKLIST = [
+  /^\/users\/(change-password|api-keys|link-external-to-password|unlink-external-from-password|admin\/reset-password)(\/|$)/,
+  /^\/users\/admin\/[^/]+\/second-factors(\/|$)/,
+];
+
+/** Whether a session a plugin minted may call this path. */
+export function allowsPluginSession(path: string): boolean {
+  if (PLUGIN_SESSION_BLOCKLIST.some((pattern) => pattern.test(path))) {
+    return false;
+  }
+  const plugin = PLUGIN_API_PATH.exec(path)?.[1];
+  return !listSecondFactors().some((factor) => factor.pluginId === plugin);
+}
 
 let pluginAllowsImpersonation: (pluginId: string) => boolean = () => false;
 
@@ -407,6 +433,38 @@ class AuthManager {
     } as jwt.SignOptions);
   }
 
+  /**
+   * A session a plugin mints for a user, to call core's API as them. It is
+   * an ordinary session row, so it verifies, expires and shows up like a
+   * login, marked with the plugin and why.
+   */
+  async issuePluginSession(
+    userId: string,
+    options: { pluginId: string; purpose: string; ttlSeconds: number },
+  ): Promise<{ token: string; expiresAt: string }> {
+    const sessionId = nanoid();
+    const token = jwt.sign(
+      { userId, sessionId } satisfies JWTPayload,
+      await this.systemCrypto.getJWTSecret(),
+      { expiresIn: options.ttlSeconds },
+    );
+    const now = new Date();
+    const expiresAt = new Date(
+      now.getTime() + options.ttlSeconds * 1000,
+    ).toISOString();
+    await createCurrentSessionRepository().create({
+      id: sessionId,
+      userId,
+      jwtToken: token,
+      deviceType: PLUGIN_SESSION_DEVICE_TYPE,
+      deviceInfo: `${options.pluginId}: ${options.purpose}`,
+      createdAt: now.toISOString(),
+      expiresAt,
+      lastActiveAt: now.toISOString(),
+    });
+    return { token, expiresAt };
+  }
+
   async verifyJWTToken(
     token: string,
     options: { allowSocketTicket?: boolean } = {},
@@ -440,6 +498,8 @@ class AuthManager {
           if (new Date(sessionRecord.expiresAt).getTime() < Date.now()) {
             return null;
           }
+          payload.pluginSession =
+            sessionRecord.deviceType === PLUGIN_SESSION_DEVICE_TYPE;
 
           await this.migrateDataKeyFromPayload(payload);
         } catch (dbError) {
@@ -787,6 +847,8 @@ class AuthManager {
         });
       }
 
+      if (this.refusePluginSession(req, res, payload)) return;
+
       if (payload.sessionId) {
         try {
           const sessionRepository = createCurrentSessionRepository();
@@ -953,6 +1015,21 @@ class AuthManager {
     return false;
   }
 
+  /** Sends the 403 and returns true when a plugin session may not use this route. */
+  private refusePluginSession(
+    req: Request,
+    res: Response,
+    payload: JWTPayload,
+  ): boolean {
+    const path = (req.originalUrl || req.url || "").split("?")[0];
+    if (!payload.pluginSession || allowsPluginSession(path)) return false;
+    res.status(403).json({
+      error: "A session a plugin issued cannot use this route",
+      code: "PLUGIN_SESSION_NOT_ALLOWED",
+    });
+    return true;
+  }
+
   createDataAccessMiddleware() {
     return async (req: Request, res: Response, next: NextFunction) => {
       const authReq = req as AuthenticatedRequest;
@@ -1006,6 +1083,8 @@ class AuthManager {
           code: "TOTP_REQUIRED",
         });
       }
+
+      if (this.refusePluginSession(req, res, payload)) return;
 
       try {
         const user = await createCurrentUserRepository().findById(
