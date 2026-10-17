@@ -35,7 +35,10 @@ const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
 const { quitApp } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
 const { resolveLocalShell, repairSpawnHelpers } = require("./local-shell.cjs");
-const { registerLocalFileHandlers } = require("./local-files.cjs");
+const {
+  registerLocalFileHandlers,
+  setLocalBackendPort,
+} = require("./local-files.cjs");
 const {
   EXTERNAL_EDITOR_SETTING,
   isLaunchableFileName,
@@ -1124,6 +1127,35 @@ function reapOrphanedBackendProcess() {
   }
 }
 
+const DEFAULT_BACKEND_PORT = 30001;
+let backendPort = DEFAULT_BACKEND_PORT;
+
+function canListenOn(port) {
+  return new Promise((resolve) => {
+    const probe = net.createServer();
+    probe.once("error", () => resolve(null));
+    probe.listen(port, "127.0.0.1", () => {
+      const { port: bound } = probe.address();
+      probe.close(() => resolve(bound));
+    });
+  });
+}
+
+// 30001 when it is free, otherwise any free port. Only the desktop app talks
+// to this backend, so the number itself does not matter.
+async function findBackendPort() {
+  const preferred = await canListenOn(DEFAULT_BACKEND_PORT);
+  if (preferred) return preferred;
+  const fallback = await canListenOn(0);
+  if (fallback) {
+    logToFile(
+      `Port ${DEFAULT_BACKEND_PORT} is in use, starting the backend on ${fallback}`,
+    );
+    return fallback;
+  }
+  return DEFAULT_BACKEND_PORT;
+}
+
 function startBackendServer() {
   reapOrphanedBackendProcess();
   backendFailure = null;
@@ -1164,7 +1196,8 @@ function startBackendServer() {
         DATA_DIR: dataDir,
         NODE_ENV: "production",
         ELECTRON_EMBEDDED: "true",
-        PORT: "30001",
+        PORT: String(backendPort),
+        EMBEDDED_BACKEND_PORT: String(backendPort),
         VERSION: app.getVersion(),
       },
       stdio: ["pipe", "pipe", "pipe", "ipc"],
@@ -1429,6 +1462,7 @@ function createWindow() {
       sandbox: true,
       webSecurity: true,
       preload: path.join(__dirname, "preload.js"),
+      additionalArguments: [`--termix-backend-port=${backendPort}`],
       partition: termixSessionPartition,
       allowRunningInsecureContent: false,
       webviewTag: false,
@@ -3814,6 +3848,8 @@ app.whenReady().then(async () => {
   await clearElectronJwtCookiesAtStartup();
 
   if (!isDev) {
+    backendPort = await findBackendPort();
+    setLocalBackendPort(backendPort);
     const result = await startBackendServer();
     logToFile("startBackendServer result:", result);
   } else {

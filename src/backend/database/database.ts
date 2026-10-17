@@ -1716,7 +1716,8 @@ app.use(
   },
 );
 
-const HTTP_PORT = 30001;
+// The desktop app moves its embedded backend off 30001 when that is taken.
+const HTTP_PORT = Number(process.env.EMBEDDED_BACKEND_PORT) || 30001;
 
 async function initializeSecurity() {
   try {

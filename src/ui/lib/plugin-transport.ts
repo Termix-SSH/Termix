@@ -19,7 +19,7 @@
 import type { AxiosInstance } from "axios";
 import { authApi, createRemoteOriginApiInstance } from "@/main-axios";
 import { getBasePath } from "@/lib/base-path";
-import { isElectron } from "@/lib/electron";
+import { isElectron, localBackendPort } from "@/lib/electron";
 import { getDeviceId } from "@/lib/device-id";
 import { websocketAuthProtocols } from "@/lib/ws-auth";
 import {
@@ -165,7 +165,7 @@ export async function pluginWsUrl(
   if (isElectron()) {
     return buildOriginWsUrl({
       origin: options.origin ?? "local",
-      localPort: BACKEND_PORT,
+      localPort: localBackendPort(),
       localPath: route,
       remotePath: route,
     });

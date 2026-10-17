@@ -1,4 +1,5 @@
 import { getBasePath } from "./base-path";
+import { localBackendPort } from "./electron";
 
 type BrowserLocation = Pick<
   Location,
@@ -16,7 +17,8 @@ export function getDatabaseTransferUrl(
   { electron, configuredServerUrl, location }: DatabaseTransferUrlOptions,
 ): string {
   if (electron) {
-    const serverUrl = configuredServerUrl || "http://localhost:30001";
+    const serverUrl =
+      configuredServerUrl || `http://localhost:${localBackendPort()}`;
     return `${serverUrl.replace(/\/$/, "")}/database/${operation}`;
   }
 

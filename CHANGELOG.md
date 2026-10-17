@@ -38,6 +38,7 @@
 - The Docker server crashed and restarted every few hours in ssh2's native crypto on Node 24
 - Plugin names and descriptions showed in English in the plugin manager, setup picker and host editor no matter the UI language
 - Creating a host through the API without an auth type failed with a server error. It now picks the type from the credential, key or password, or says auth type is required
+- The desktop app would not start its local server when another program used port 30001. It now picks a free port on its own
 
 ## 26.10.1
 
