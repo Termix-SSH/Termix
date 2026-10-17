@@ -499,15 +499,19 @@ export class SyncEngine {
       );
       all.push(...result.changes);
       next = result.nextCursor;
-      this.serverTypes = new Set(result.entityTypes.map((entry) => entry.type));
-      this.state.serverTypes = result.entityTypes.map((entry) => ({
-        type: entry.type,
-        owner: entry.owner,
-        readOnly: entry.readOnly,
-      }));
+      this.learnTypes(result);
       if (!result.hasMore) break;
     }
     return { changes: all, cursor: next };
+  }
+
+  private learnTypes(page: ChangesPage): void {
+    this.serverTypes = new Set(page.entityTypes.map((entry) => entry.type));
+    this.state.serverTypes = page.entityTypes.map((entry) => ({
+      type: entry.type,
+      owner: entry.owner,
+      readOnly: entry.readOnly,
+    }));
   }
 
   private async pull(link: SyncLink): Promise<void> {
@@ -528,7 +532,14 @@ export class SyncEngine {
   /** Pulls every row of types this device has not pulled before. */
   private async backfill(link: SyncLink): Promise<void> {
     if (!this.serverTypes) {
-      await this.fetchChanges(link, Number.MAX_SAFE_INTEGER);
+      // Only the entity types are wanted, so a one-row page is enough.
+      this.learnTypes(
+        await remoteJson<ChangesPage>(
+          link,
+          `/sync/v2/changes?cursor=${link.cursor}&limit=1`,
+          { timeoutMs: 120_000 },
+        ),
+      );
     }
     const fresh = listEntities()
       .map((entity) => entity.type)

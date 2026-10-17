@@ -140,6 +140,9 @@ export async function listRecordErrors(userId: string): Promise<SyncRecord[]> {
   return rows.filter((row) => !!row.error);
 }
 
+/** The largest seq the column holds: a 32-bit integer on Postgres and MySQL. */
+const MAX_SEQ = 2_147_483_647;
+
 export async function listChanges(
   userId: string,
   cursor: number,
@@ -148,7 +151,8 @@ export async function listChanges(
 ): Promise<SyncRecord[]> {
   const conditions = [
     eq(syncRecords.userId, userId),
-    gt(syncRecords.seq, cursor),
+    // Postgres rejects a bound value the column cannot hold.
+    gt(syncRecords.seq, Math.min(cursor, MAX_SEQ)),
   ];
   if (types && types.length > 0) {
     conditions.push(inArray(syncRecords.entityType, types));

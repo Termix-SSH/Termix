@@ -37,6 +37,17 @@ function userOf(req: Request): string {
   return (req as AuthenticatedRequest).userId;
 }
 
+/** A non-negative integer query value, the fallback when absent, null when malformed. */
+function queryInt(value: unknown, fallback: number): number | null {
+  if (value === undefined) return fallback;
+  const parsed = Number(value);
+  return typeof value === "string" &&
+    /^\d+$/.test(value) &&
+    Number.isSafeInteger(parsed)
+    ? parsed
+    : null;
+}
+
 /**
  * @openapi
  * /sync/v2/info:
@@ -224,6 +235,8 @@ router.post(
  *     responses:
  *       200:
  *         description: A page of changes, the next cursor and whether more remain.
+ *       400:
+ *         description: The cursor or limit is not a non-negative integer.
  *       500:
  *         description: Failed to read changes.
  */
@@ -232,11 +245,12 @@ router.get(
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = userOf(req);
-    const cursor = Math.max(0, Number(req.query.cursor) || 0);
-    const limit = Math.min(
-      MAX_PAGE,
-      Math.max(1, Number(req.query.limit) || MAX_PAGE),
-    );
+    const cursor = queryInt(req.query.cursor, 0);
+    const pageSize = queryInt(req.query.limit, MAX_PAGE);
+    if (cursor === null || pageSize === null) {
+      return res.status(400).json({ error: "Invalid cursor or limit" });
+    }
+    const limit = Math.min(MAX_PAGE, Math.max(1, pageSize));
     const types =
       typeof req.query.types === "string" && req.query.types
         ? req.query.types.split(",").filter(Boolean)

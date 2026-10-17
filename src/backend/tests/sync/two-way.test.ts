@@ -15,6 +15,7 @@ const state = vi.hoisted(() => ({
   server: null as null | { drizzle: unknown },
   allow: true,
   sharedHostIds: new Set<number>(),
+  paths: [] as string[],
 }));
 
 const SERVER_USER = "srv-user";
@@ -123,6 +124,7 @@ vi.mock("../../sync/client/http.js", async (importOriginal) => {
       path: string,
       init: { method?: string; body?: unknown } = {},
     ) => {
+      state.paths.push(path);
       const previous = state.current;
       state.current = state.server;
       try {
@@ -249,6 +251,7 @@ beforeEach(async () => {
   resetSeqAllocator();
   state.allow = true;
   state.sharedHostIds.clear();
+  state.paths = [];
   server = await side(SERVER_USER);
   state.server = server.ctx;
   desktops = [await side("desk-a"), await side("desk-b")];
@@ -316,6 +319,22 @@ describe("linking a desktop", () => {
     const [host] = await on(desk, () => hostsOf(desk));
     expect(host.ip).toBe("new");
     expect(await on(desk, () => listConflicts(desk.userId))).toEqual([]);
+  });
+
+  it("never asks for a cursor past what the server's seq column holds", async () => {
+    const [desk] = desktops;
+    await on(server, () => addHost(server, { name: "srv" }));
+
+    const engine = await linkDesktop(desk);
+    await pass(desk, engine);
+
+    const cursors = state.paths
+      .filter((path) => path.startsWith("/sync/v2/changes?"))
+      .map((path) =>
+        Number(new URLSearchParams(path.split("?")[1]).get("cursor")),
+      );
+    expect(cursors.length).toBeGreaterThan(0);
+    expect(Math.max(...cursors)).toBeLessThanOrEqual(2_147_483_647);
   });
 });
 
