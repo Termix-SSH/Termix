@@ -35,6 +35,8 @@
 - nginx answered 404 instead of 502 while the backend was down
 - A client tunnel that could not start always said "Endpoint SSH connection closed" on the desktop app instead of the real reason, like the target refusing the connection
 - The Docker server crashed and restarted every few hours in ssh2's native crypto on Node 24
+- Plugin names and descriptions showed in English in the plugin manager, setup picker and host editor no matter the UI language
+- Creating a host through the API without an auth type failed with a server error. It now picks the type from the credential, key or password, or says auth type is required
 
 ## 26.10.1
 
