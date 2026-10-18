@@ -1,7 +1,12 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ThemeId } from "@/types/ui-types";
-import { SYSTEM_THEME, getTheme, useThemes } from "@/look/theme-registry";
+import {
+  SYSTEM_THEME,
+  effectiveThemeId,
+  getTheme,
+  useThemes,
+} from "@/look/theme-registry";
 import { applyThemeCss } from "@/look/theme-css";
 
 type ThemeProviderProps = {
@@ -41,7 +46,9 @@ export function ThemeProvider({
   // Plugin themes arrive after login; the class and CSS follow them.
   const themes = useThemes();
 
-  const activeTheme = previewTheme ?? theme;
+  // A saved theme whose plugin is gone shows as System.
+  const shownTheme = effectiveThemeId(theme);
+  const activeTheme = previewTheme ?? shownTheme;
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -60,7 +67,7 @@ export function ThemeProvider({
   }, [activeTheme, themes]);
 
   const value = {
-    theme,
+    theme: shownTheme,
     setTheme: (theme: ThemeId, persist = true) => {
       if (persist) localStorage.setItem(storageKey, theme);
       setTheme(theme);

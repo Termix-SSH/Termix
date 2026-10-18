@@ -34,6 +34,7 @@ const OFFICIAL_IDS = [
   "alerts",
   "automations",
   "classic-layout",
+  "classic-themes",
   "docker",
   "file-manager",
   "fleets",

@@ -60,7 +60,7 @@ describe("LookSettings", () => {
     const [, layoutDefault, themeDefault] = screen.getAllByRole("combobox");
     fireEvent.change(layoutDefault, { target: { value: "fancy" } });
     expect(look.chooseDefaultLook).toHaveBeenCalledWith({ layout: "fancy" });
-    fireEvent.change(themeDefault, { target: { value: "nord" } });
-    expect(look.chooseDefaultLook).toHaveBeenCalledWith({ theme: "nord" });
+    fireEvent.change(themeDefault, { target: { value: "light" } });
+    expect(look.chooseDefaultLook).toHaveBeenCalledWith({ theme: "light" });
   });
 });

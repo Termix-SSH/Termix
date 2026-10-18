@@ -36,6 +36,13 @@
       "defaultLook": true
     },
     {
+      "id": "classic-themes",
+      "source": "tmxplug",
+      "url": "https://github.com/Termix-SSH/Plugin-Classic-Themes/releases/download/v1.0.0/classic-themes-1.0.0.tmxplug",
+      "sha256": "17561e569811476ea4e1f7cdf8d9afbe33edf061bd09f6b05699b44968da41ad",
+      "defaultLook": true
+    },
+    {
       "id": "docker",
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-Docker/releases/download/v1.0.2/docker-1.0.2.tmxplug",

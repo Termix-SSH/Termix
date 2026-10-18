@@ -1115,14 +1115,7 @@
         "colorPickerTooltip": "Open color picker",
         "themeSystem": "System",
         "themeLight": "Light",
-        "themeDark": "Dark",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "Dark"
       }
     }
   },

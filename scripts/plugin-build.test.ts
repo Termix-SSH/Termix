@@ -35,6 +35,42 @@ function fixturePlugin(): string {
 }
 
 describe("termix-plugin build", () => {
+  it("builds a theme only plugin with an empty backend and no source", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "termix-build-"));
+    cleanups.push(() => fs.rmSync(dir, { recursive: true, force: true }));
+    fs.writeFileSync(
+      path.join(dir, "manifest.json"),
+      JSON.stringify({
+        id: "theme-fixture",
+        capabilities: ["ui:theme"],
+        contributes: { themes: [{ id: "paper" }] },
+      }),
+    );
+
+    await build({ cwd: dir });
+
+    expect(
+      fs.readFileSync(path.join(dir, "dist", "backend.js"), "utf8"),
+    ).toContain("export function activate()");
+    expect(fs.existsSync(path.join(dir, "dist", "frontend.js"))).toBe(false);
+  });
+
+  it("still needs a backend entry once a plugin holds more than themes", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "termix-build-"));
+    cleanups.push(() => fs.rmSync(dir, { recursive: true, force: true }));
+    fs.writeFileSync(
+      path.join(dir, "manifest.json"),
+      JSON.stringify({
+        id: "mixed-fixture",
+        capabilities: ["ui:theme", "ui:layout"],
+        contributes: { themes: [{ id: "paper" }] },
+      }),
+    );
+
+    await expect(build({ cwd: dir })).rejects.toThrow("no backend entry");
+  });
+
   it("marks dist as ESM so Node loads backend.js without reparsing", async () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const dir = fixturePlugin();

@@ -155,9 +155,9 @@ describe("RepairView", () => {
     fireEvent.click(screen.getByText("Classic"));
     expect(look.chooseLayout).toHaveBeenCalledWith("classic");
     fireEvent.click(
-      screen.getAllByTitle("newUi.sidebar.userProfile.themeNord")[0],
+      screen.getAllByTitle("newUi.sidebar.userProfile.themeLight")[0],
     );
-    expect(look.chooseTheme).toHaveBeenCalledWith("nord");
+    expect(look.chooseTheme).toHaveBeenCalledWith("light");
   });
 
   it("resets to the default look", async () => {

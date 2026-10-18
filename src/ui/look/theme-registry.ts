@@ -24,8 +24,9 @@ export interface ThemeDef {
 }
 
 /**
- * Themes core ships, with their tokens in index.css. A plugin theme with the
- * same id takes the built-in's place while it is installed.
+ * The two themes core keeps as a fallback, with their tokens in index.css.
+ * The rest come from theme plugins. A plugin theme with the same id takes
+ * the built-in's place while it is installed.
  */
 export const BUILTIN_THEMES: readonly ThemeDef[] = [
   {
@@ -39,48 +40,6 @@ export const BUILTIN_THEMES: readonly ThemeDef[] = [
     label: "newUi.sidebar.userProfile.themeDark",
     mode: "dark",
     swatch: { background: "#1a1c22", panel: "#25272e", text: "#e5e7eb" },
-  },
-  {
-    id: "dracula",
-    label: "newUi.sidebar.userProfile.themeDracula",
-    mode: "dark",
-    swatch: { background: "#282a36", panel: "#44475a", text: "#f8f8f2" },
-  },
-  {
-    id: "catppuccin",
-    label: "newUi.sidebar.userProfile.themeCatppuccin",
-    mode: "dark",
-    swatch: { background: "#1e1e2e", panel: "#313244", text: "#cdd6f4" },
-  },
-  {
-    id: "nord",
-    label: "newUi.sidebar.userProfile.themeNord",
-    mode: "dark",
-    swatch: { background: "#2e3440", panel: "#3b4252", text: "#eceff4" },
-  },
-  {
-    id: "solarized",
-    label: "newUi.sidebar.userProfile.themeSolarized",
-    mode: "dark",
-    swatch: { background: "#002b36", panel: "#073642", text: "#93a1a1" },
-  },
-  {
-    id: "tokyo-night",
-    label: "newUi.sidebar.userProfile.themeTokyoNight",
-    mode: "dark",
-    swatch: { background: "#1a1b26", panel: "#24283b", text: "#c0caf5" },
-  },
-  {
-    id: "one-dark",
-    label: "newUi.sidebar.userProfile.themeOneDark",
-    mode: "dark",
-    swatch: { background: "#282c34", panel: "#21252b", text: "#abb2bf" },
-  },
-  {
-    id: "gruvbox",
-    label: "newUi.sidebar.userProfile.themeGruvbox",
-    mode: "dark",
-    swatch: { background: "#282828", panel: "#3c3836", text: "#ebdbb2" },
   },
 ];
 
@@ -96,15 +55,15 @@ function emit() {
   for (const listener of listeners) listener();
 }
 
-/** Built-ins in their order, a plugin theme in a built-in's place, then the rest. */
+/** Built-ins in their order, a plugin theme in a built-in's place, then the rest as declared. */
 export function listThemes(): ThemeDef[] {
   if (!snapshot) {
     const replaced = BUILTIN_THEMES.map(
       (theme) => pluginThemes.get(theme.id) ?? theme,
     );
-    const extra = [...pluginThemes.values()]
-      .filter((theme) => !builtins.has(theme.id))
-      .sort((a, b) => a.id.localeCompare(b.id));
+    const extra = [...pluginThemes.values()].filter(
+      (theme) => !builtins.has(theme.id),
+    );
     snapshot = [...replaced, ...extra];
   }
   return snapshot;
@@ -154,7 +113,16 @@ export function themeMode(id: string): "light" | "dark" {
       ? "dark"
       : "light";
   }
-  return getTheme(id)?.mode ?? "dark";
+  const theme = getTheme(id);
+  if (theme) return theme.mode;
+  // A theme that went away follows the OS, once the plugins have said so.
+  return pluginThemesKnown ? themeMode(SYSTEM_THEME) : "dark";
+}
+
+/** The theme to show for a saved id: itself, or System when it is gone. */
+export function effectiveThemeId(id: string): string {
+  if (id === SYSTEM_THEME || getTheme(id) || !pluginThemesKnown) return id;
+  return SYSTEM_THEME;
 }
 
 export function themeLabel(theme: ThemeDef, t: TFunction): string {

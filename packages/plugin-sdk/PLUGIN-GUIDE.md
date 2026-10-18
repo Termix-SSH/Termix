@@ -563,6 +563,17 @@ inside `@media` or `@supports`. `@import`, `url()` to another host and other at-
 `termix-plugin validate` and by the server. Set the same tokens core's themes set (`--background`,
 `--foreground`, `--card`, `--border`, `--muted` and the rest).
 
+A plugin that only holds themes needs no code. Leave out `src/`: `termix-plugin build` writes an empty backend and
+`validate` does not ask for a frontend. Keep the CSS in `themes/` and a test that checks it with
+`validateThemeCss()`. Notes:
+
+- A theme with the id of a built-in (`light` or `dark`) replaces core's basic copy while the plugin runs.
+- The first theme a bundled default-look plugin lists is the default for new installs.
+- Themes show in the picker in the order core lists its own, then the plugin's order.
+- A theme someone saved that no longer exists shows as System. It comes back when the plugin does.
+- Accent color, UI font, font size and density are not part of a theme. Core applies them on top.
+- Bundled Classic Themes (https://github.com/Termix-SSH/Plugin-Classic-Themes) is a full example.
+
 ## Looking native
 
 Build UI from `@termix-ssh/plugin-sdk/ui` so it matches Termix and follows the theme. The full list of

@@ -75,4 +75,36 @@ describe("ThemeProvider", () => {
     expect(classes()).toEqual(["dark"]);
     expect(document.getElementById("termix-theme-css")).toBeNull();
   });
+
+  it("shows system when the saved theme's plugin is gone", () => {
+    localStorage.setItem("test-theme", "nord");
+    mount();
+    // Plugins not read yet, so the saved theme is kept.
+    expect(classes()).toEqual(["nord"]);
+    act(() => setPluginThemes([]));
+    expect(api!.theme).toBe("system");
+    expect(classes()).toHaveLength(1);
+    expect(["light", "dark"]).toContain(classes()[0]);
+    expect(localStorage.getItem("test-theme")).toBe("nord");
+  });
+
+  it("brings the saved theme back when its plugin returns", () => {
+    localStorage.setItem("test-theme", "nord");
+    mount();
+    act(() => setPluginThemes([]));
+    act(() =>
+      setPluginThemes([
+        {
+          id: "nord",
+          label: "theme.nord",
+          mode: "dark",
+          swatch: { background: "#2e3440", panel: "#3b4252", text: "#eceff4" },
+          pluginId: "classic-themes",
+          cssHref: "/plugin-assets/classic-themes/_themes/nord.css?v=1",
+        },
+      ]),
+    );
+    expect(api!.theme).toBe("nord");
+    expect(classes()).toEqual(["nord"]);
+  });
 });

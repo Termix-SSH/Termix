@@ -13,6 +13,8 @@ Plugin API 1.4.0.
 - `validateThemeCss()` in `@termix-ssh/plugin-sdk/manifest`
 - `@termix-ssh/plugin-sdk/ui` also exports what a whole layout is built from: the API client, shared types, hooks, `useShellController()` and `APP_VERSION`. These reach into core, so they can change with a core release
 - `@termix-ssh/plugin-sdk/testing-host` exports the registries and permission seam a layout's own tests fill directly
+- A plugin that only holds themes needs no source: `termix-plugin build` writes an empty backend and `validate` does not ask for a frontend
+- `termix-plugin validate` flags `ui:layout` or `ui:theme` with nothing contributed, and a layout plugin with no frontend
 
 ### Fixed
 

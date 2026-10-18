@@ -95,17 +95,17 @@ describe("ThemeGrid", () => {
     render(<ThemeGrid value="dark" onChange={onChange} />);
     const buttons = screen.getAllByRole("button");
     expect(buttons).toHaveLength(THEMES.length);
-    fireEvent.click(buttons[THEMES.findIndex((t) => t.id === "gruvbox")]);
-    expect(onChange).toHaveBeenCalledWith("gruvbox");
+    fireEvent.click(buttons[THEMES.findIndex((t) => t.id === "light")]);
+    expect(onChange).toHaveBeenCalledWith("light");
   });
 
   it("previews a theme while it is hovered", () => {
     render(<ThemeGrid value="dark" onChange={vi.fn()} />);
-    const nord =
-      screen.getAllByRole("button")[THEMES.findIndex((t) => t.id === "nord")];
-    fireEvent.mouseEnter(nord);
-    expect(theme.setThemePreview).toHaveBeenLastCalledWith("nord");
-    fireEvent.mouseLeave(nord);
+    const light =
+      screen.getAllByRole("button")[THEMES.findIndex((t) => t.id === "light")];
+    fireEvent.mouseEnter(light);
+    expect(theme.setThemePreview).toHaveBeenLastCalledWith("light");
+    fireEvent.mouseLeave(light);
     expect(theme.setThemePreview).toHaveBeenLastCalledWith(null);
   });
 });

@@ -14,6 +14,8 @@
 
 - The icon rail, sidebar, tab bar, dock, Dashboard, Manage, Settings and command palette now come from a bundled layout. It can be swapped for another layout but not removed, and a fix to it no longer needs a Termix release
 - Your theme is saved to your account so your other devices use it too, unless you keep settings on this device only
+- The themes besides light and dark now come from a bundled themes plugin. It can be swapped but not removed, and Termix keeps a basic light and dark theme of its own
+- A theme that no longer exists shows as System instead of an unstyled page
 
 ## 26.10.2
 
