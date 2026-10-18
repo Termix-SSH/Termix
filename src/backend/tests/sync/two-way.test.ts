@@ -163,6 +163,7 @@ const { createResolvers, writeWireRow } = await import("../../sync/store.js");
 const { getEntity } = await import("../../plugins/sync-registry.js");
 const { FieldCrypto } = await import("../../utils/field-crypto.js");
 const { syncLogger } = await import("../../utils/logger.js");
+const { pluginEvents, TOPICS } = await import("../../plugins/events.js");
 
 const app = express();
 app.use(express.json({ limit: "5mb" }));
@@ -335,6 +336,44 @@ describe("linking a desktop", () => {
       );
     expect(cursors.length).toBeGreaterThan(0);
     expect(Math.max(...cursors)).toBeLessThanOrEqual(2_147_483_647);
+  });
+});
+
+describe("a synced host", () => {
+  it("publishes host.created when it is written for the first time only", async () => {
+    const [desk] = desktops;
+    const seen: unknown[] = [];
+    const off = pluginEvents.on(TOPICS.hostCreated, (payload) => {
+      seen.push(payload);
+    });
+    const wire = {
+      syncId: "host-new",
+      name: "new",
+      ip: "10.0.0.2",
+      port: 22,
+      username: "root",
+      authType: "password",
+    };
+    try {
+      await on(desk, async () => {
+        const resolvers = createResolvers(desk.userId);
+        const first = await writeWireRow(
+          getEntity("hosts")!,
+          desk.userId,
+          wire,
+          resolvers,
+        );
+        await writeWireRow(
+          getEntity("hosts")!,
+          desk.userId,
+          { ...wire, name: "renamed" },
+          resolvers,
+        );
+        expect(seen).toEqual([{ hostId: first.id, userId: desk.userId }]);
+      });
+    } finally {
+      off();
+    }
   });
 });
 

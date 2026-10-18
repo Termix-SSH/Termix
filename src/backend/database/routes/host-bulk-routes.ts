@@ -140,7 +140,14 @@ export function parseSSHConfig(content: string): SSHConfigHost[] {
  * Tells status checks and other pollers about hosts an import wrote, the way
  * a single host create or update does.
  */
-export function notifyImportedHosts(userId: string, hostIds: number[]): void {
+export function notifyImportedHosts(
+  userId: string,
+  hostIds: number[],
+  createdHostIds: number[],
+): void {
+  for (const hostId of createdHostIds) {
+    pluginEvents.emit(TOPICS.hostCreated, { hostId, userId });
+  }
   for (const hostId of hostIds) {
     pluginEvents.emit(TOPICS.hostUpdated, { hostId, userId });
   }
@@ -588,6 +595,7 @@ export function registerHostBulkRoutes(
 
       const knownAuthTypes = listKnownAuthTypes();
       const writtenHostIds: number[] = [];
+      const createdHostIds: number[] = [];
       for (const { host: hostData, index: i, exportId } of orderedHosts) {
         try {
           const effectiveConnectionType = hostData.connectionType || "ssh";
@@ -797,6 +805,7 @@ export function registerHostBulkRoutes(
             );
             if (exportId !== undefined) importedIds.set(exportId, saved.id);
             savedHostId = saved.id;
+            createdHostIds.push(saved.id);
             results.success++;
           }
 
@@ -828,7 +837,7 @@ export function registerHostBulkRoutes(
       }
 
       await applyDefaultsAfterHostWrites(writtenHostIds);
-      notifyImportedHosts(userId, writtenHostIds);
+      notifyImportedHosts(userId, writtenHostIds, createdHostIds);
 
       res.json({
         message: `Import completed: ${results.success} created, ${results.updated} updated, ${results.failed} failed`,
@@ -948,6 +957,7 @@ export function registerHostBulkRoutes(
       }
 
       const writtenHostIds: number[] = [];
+      const createdHostIds: number[] = [];
       for (let i = 0; i < hostsToImport.length; i++) {
         const hostData = normalizeImportedHost(
           hostsToImport[i] as Record<string, unknown>,
@@ -1023,6 +1033,7 @@ export function registerHostBulkRoutes(
               sshDataObj,
             );
             writtenHostIds.push(saved.id);
+            createdHostIds.push(saved.id);
             results.success++;
           }
         } catch (error) {
@@ -1034,7 +1045,7 @@ export function registerHostBulkRoutes(
       }
 
       await applyDefaultsAfterHostWrites(writtenHostIds);
-      notifyImportedHosts(userId, writtenHostIds);
+      notifyImportedHosts(userId, writtenHostIds, createdHostIds);
 
       res.json({
         message: `Import completed: ${results.success} created, ${results.updated} updated, ${results.failed} failed`,
