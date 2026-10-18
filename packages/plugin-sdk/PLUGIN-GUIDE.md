@@ -493,7 +493,7 @@ your own host settings, under `host.pluginSettings[<id>]`.
 
 Slots you can fill include `terminal.toolbar`, `terminal.toolbarStatus`, `terminal.sidePanel`,
 `terminal.overlay`, `dashboard.counters`, `dashboard.hostMetrics`, `admin.userTabs`, `hosts.importMenu`,
-`hosts.panel`, `credentials.badges`, `shell.overlay` and `tab.menu`. See
+`hosts.panel`, `credentials.badges`, `shell.overlay`, `shell.rightEdge` and `tab.menu`. See
 https://docs.termix.site/develop/more-extension-points.
 
 ## Looking native

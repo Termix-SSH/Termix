@@ -9,6 +9,7 @@
 - Windows on ARM builds of the desktop app (installer, MSI and portable)
 - Plugins get an event when a host is added
 - Plugins can start a short-lived session as a user and read the user's language, for tasks that run without a browser
+- Plugins can pin a panel to the right edge of the window that pushes the page over
 
 ### Changed
 

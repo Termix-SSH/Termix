@@ -3126,6 +3126,9 @@ export function AppShell({
               {renderSidebarPanels(rightRailView, false)}
             </DockPanel>
           )}
+
+          {/* Plugin panels pinned to the right edge, sized by the plugin */}
+          <ComponentSlot slotId="shell.rightEdge" />
         </div>
       </div>
 
