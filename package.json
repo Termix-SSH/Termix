@@ -30,7 +30,7 @@
     "dev:electron": "node scripts/dev.mjs electron",
     "dev:docker": "node scripts/dev.mjs docker",
     "dev:frontend": "vite",
-    "build": "npm run build:sdk && vite build && tsc -p tsconfig.node.json && node -e \"require('fs').copyFileSync('src/backend/package.json','dist/backend/package.json')\" && npm run build:plugins",
+    "build": "npm run build:sdk && vite build && node scripts/stamp-sw-build-info.cjs && tsc -p tsconfig.node.json && node -e \"require('fs').copyFileSync('src/backend/package.json','dist/backend/package.json')\" && npm run build:plugins",
     "build:backend": "npm run build:sdk && tsc -p tsconfig.node.json && node -e \"require('fs').copyFileSync('src/backend/package.json','dist/backend/package.json')\" && npm run build:plugins",
     "generate:openapi": "npm run build:sdk && node scripts/generate-openapi.mjs",
     "electron:rebuild": "electron-rebuild -f -o better-sqlite3,@serialport/bindings-cpp,node-pty",
