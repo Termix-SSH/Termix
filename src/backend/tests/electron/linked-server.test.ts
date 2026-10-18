@@ -39,6 +39,48 @@ describe("linked server in Electron main", () => {
     ).toEqual({ Accept: "x" });
   });
 
+  it("treats WebSocket upgrades to the linked server as the linked origin", () => {
+    linked.setLinkedServer({ origin: ORIGIN });
+    expect(linked.isLinkedOrigin(`${ORIGIN}/host/status`)).toBe(true);
+    expect(
+      linked.isLinkedOrigin("wss://termix.example/plugin-ws/ssh-terminal"),
+    ).toBe(true);
+    expect(linked.isLinkedOrigin("wss://termix.example:443/")).toBe(true);
+    expect(linked.isLinkedOrigin("ws://termix.example/")).toBe(false);
+    expect(linked.isLinkedOrigin("wss://termix.example:8443/")).toBe(false);
+    expect(linked.isLinkedOrigin("wss://other.example/")).toBe(false);
+    expect(linked.isLinkedOrigin("not a url")).toBe(false);
+
+    linked.setLinkedServer({ origin: "http://termix.example:8080" });
+    expect(linked.isLinkedOrigin("ws://termix.example:8080/ws")).toBe(true);
+    expect(linked.isLinkedOrigin("wss://termix.example:8080/ws")).toBe(false);
+    expect(linked.isLinkedOrigin("ws://termix.example/ws")).toBe(false);
+  });
+
+  it("adds proxy headers and basic auth to the terminal WebSocket", () => {
+    linked.setLinkedServer({
+      origin: ORIGIN,
+      headers: [{ name: "CF-Access-Client-Id", value: "id" }],
+      basicAuth: { username: "gate", password: "pw" },
+    });
+    expect(
+      linked.applyLinkHeaders(
+        "wss://termix.example/plugin-ws/ssh-terminal/terminal",
+        { Upgrade: "websocket" },
+      ),
+    ).toEqual({
+      Upgrade: "websocket",
+      "CF-Access-Client-Id": "id",
+      Authorization: `Basic ${Buffer.from("gate:pw").toString("base64")}`,
+    });
+    expect(
+      linked.answerLogin({}, "wss://termix.example/plugin-ws/ssh-terminal"),
+    ).toEqual({ username: "gate", password: "pw" });
+    expect(
+      linked.applyLinkHeaders("wss://other.example/", { Upgrade: "websocket" }),
+    ).toEqual({ Upgrade: "websocket" });
+  });
+
   it("moves a Termix bearer into the jwt cookie when basic auth is in front", () => {
     linked.setLinkedServer({
       origin: ORIGIN,
