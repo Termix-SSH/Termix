@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { buildHostTree } from "../../sidebar/build-host-tree.js";
-import { isFolder } from "../../sidebar/tree/visible-rows.js";
 import type { SSHHostWithStatus } from "@/main-axios";
+import type { Host, HostFolder } from "@/types/ui-types";
+
+function isFolder(item: Host | HostFolder): item is HostFolder {
+  return "children" in item;
+}
 
 type RawHostOverrides = {
   id: number;

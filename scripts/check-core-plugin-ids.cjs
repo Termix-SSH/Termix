@@ -33,6 +33,7 @@ const OFFICIAL_IDS = [
   "ai",
   "alerts",
   "automations",
+  "classic-layout",
   "docker",
   "file-manager",
   "fleets",

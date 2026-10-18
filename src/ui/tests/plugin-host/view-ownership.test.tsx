@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import type { PluginSummary } from "@/api/plugins-api";
 import {
   resetPluginStore,
@@ -17,11 +17,7 @@ import {
   registerTabType,
   resetTabTypes,
 } from "@/shell/tab-registry";
-import {
-  registerDashboardCard,
-  resetDashboardCards,
-} from "@/dashboard/dashboard-cards-registry";
-import { PluginCardSlot } from "@/dashboard/DashboardTab";
+import { resetDashboardCards } from "@/dashboard/dashboard-cards-registry";
 import type { Host, Tab } from "@/types/ui-types";
 
 const shell = {
@@ -122,37 +118,5 @@ describe("view ownership", () => {
     });
     render(<>{renderTabContent(savedTab, { shell })}</>);
     expect(screen.getByText("gizmo on web-01")).toBeTruthy();
-  });
-
-  it("keeps a dashboard card's slot while its plugin is off", () => {
-    setPluginSummaries([owner({ enabled: false })]);
-    const view = render(
-      <PluginCardSlot
-        id="gizmo-card"
-        isVisible
-        onOpenSingletonTab={() => {}}
-      />,
-    );
-    expect(screen.getByTestId("plugin-view-placeholder").dataset.status).toBe(
-      "disabled",
-    );
-
-    act(() => {
-      setPluginSummaries([owner()]);
-      registerDashboardCard({
-        id: "gizmo-card",
-        pluginId: "gizmo",
-        titleKey: "t",
-        component: () => <span>gizmo card</span>,
-      });
-    });
-    view.rerender(
-      <PluginCardSlot
-        id="gizmo-card"
-        isVisible
-        onOpenSingletonTab={() => {}}
-      />,
-    );
-    expect(screen.getByText("gizmo card")).toBeTruthy();
   });
 });

@@ -2283,6 +2283,63 @@ router.post(
 
 /**
  * @openapi
+ * /plugins/{id}/restore-bundled:
+ *   post:
+ *     summary: Restore the bundled copy of a plugin
+ *     description: >
+ *       Drops any update downloaded over a plugin that ships with Termix and
+ *       loads the copy from the image again, so a broken release can be rolled
+ *       back from the layout repair view. The shipped version is pinned so
+ *       auto update does not bring the release back. Dependents restart.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: The restored version and the plugin's state.
+ *       400:
+ *         description: Invalid plugin id.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       409:
+ *         description: The plugin has no bundled copy, or a linked server manages it.
+ */
+router.post(
+  "/:id/restore-bundled",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    const pluginId = String(req.params.id);
+    if (!ID_PATTERN.test(pluginId)) {
+      res.status(400).json({ error: "Invalid plugin id" });
+      return;
+    }
+    if (await refuseOnLinkedDesktop(res)) return;
+    try {
+      const { restoreBundledPlugin } = await import("../../plugins/manage.js");
+      const result = await restoreBundledPlugin(pluginId);
+      await auditPluginAction(req, "restore_bundled_plugin", pluginId, {
+        version: result.version,
+      });
+      res.json(result);
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to restore the bundled copy",
+        "plugin_restore_bundled",
+      );
+    }
+  },
+);
+
+/**
+ * @openapi
  * /plugins/{id}:
  *   delete:
  *     summary: Uninstall a plugin

@@ -661,6 +661,54 @@ describe("reloading a bundled plugin for the dev runner", () => {
   });
 });
 
+describe("restoring the bundled copy", () => {
+  it("drops a downloaded update, loads the shipped copy and pins it", async () => {
+    createFixturePlugin({ id: "docker", root: bundled });
+    const loader = await boot();
+    // What a signed update leaves behind next to the shipped copy.
+    const artifact = path.join(data, "plugins", "docker.tmxplug");
+    fs.mkdirSync(path.dirname(artifact), { recursive: true });
+    fs.writeFileSync(artifact, "update");
+    fs.writeFileSync(`${artifact}.sig`, "sig");
+
+    const result = await manage.restoreBundledPlugin("docker");
+
+    expect(result).toEqual({ id: "docker", version: "1.0.0", state: "active" });
+    expect(loader.get("docker")?.manifest.version).toBe("1.0.0");
+    expect(fs.existsSync(artifact)).toBe(false);
+    expect(fs.existsSync(`${artifact}.sig`)).toBe(false);
+    expect(db.rows.get("docker")).toMatchObject({
+      pinnedVersion: "1.0.0",
+      autoUpdate: false,
+    });
+  });
+
+  it("keeps a plugin that is turned off stopped", async () => {
+    createFixturePlugin({ id: "docker", root: bundled });
+    const loader = await boot();
+    await manage.setPluginState("docker", false);
+    const result = await manage.restoreBundledPlugin("docker");
+    expect(result.state).toBe("stopped");
+    expect(loader.get("docker")?.state).toBe("loaded");
+  });
+
+  it("refuses a plugin that has no bundled copy", async () => {
+    createFixturePlugin({ id: "notes", root: path.join(data, "plugins") });
+    await boot();
+    await expect(manage.restoreBundledPlugin("notes")).rejects.toMatchObject({
+      code: "NO_BUNDLED_COPY",
+      status: 409,
+    });
+  });
+
+  it("refuses a bad id", async () => {
+    await expect(manage.restoreBundledPlugin("../x")).rejects.toMatchObject({
+      code: "INVALID_ID",
+      status: 400,
+    });
+  });
+});
+
 describe("consent", () => {
   it("refuses an install without the consented list, before any download", async () => {
     registry.index.plugins = [registryEntry("notes", [{ version: "1.0.0" }])];

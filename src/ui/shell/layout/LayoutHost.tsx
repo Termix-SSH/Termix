@@ -12,9 +12,6 @@ import { layoutStatus } from "@/look/layout-status";
 import { safeLayoutInUrl } from "@/look/resolve-look";
 import { useLookTheme } from "@/look/use-look-theme";
 import { RepairView } from "@/look/RepairView";
-import { registerBuiltinLayout } from "./builtin";
-
-registerBuiltinLayout();
 
 /** Catches a crash while a layout draws, so the repair view can take over. */
 class LayoutErrorBoundary extends Component<

@@ -1,16 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import {
-  requestFromLegacyEvent,
-  requestManage,
-} from "@/manage/manage-requests";
-import {
-  LayoutDashboard,
-  LayoutPanelLeft,
-  Puzzle,
-  LibraryBig,
-  Server,
-  Settings,
-} from "lucide-react";
+import { LayoutPanelLeft, Puzzle, Server, Settings } from "lucide-react";
 import { lazy, memo, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import type { Tab, TabType } from "@/types/ui-types";
@@ -23,26 +12,14 @@ import {
   type TabTypeDef,
 } from "./tab-registry";
 import { getPanel, type PanelDef } from "./panel-registry";
-import type { SettingsTabProps } from "@/settings/SettingsTab";
 import {
   markAdaptiveResourceUsed,
   runAdaptiveBackgroundTask,
 } from "@/lib/adaptive-resource-budget";
 
 // Heavy tab surfaces, kept out of the AppShell critical path.
-const ManageTab = lazy(() =>
-  import("@/manage/ManageTab").then((m) => ({ default: m.ManageTab })),
-);
-const SettingsTab = lazy(() =>
-  import("@/settings/SettingsTab").then((m) => ({ default: m.SettingsTab })),
-);
 const PluginsTab = lazy(() =>
   import("@/plugins/PluginsTab").then((m) => ({ default: m.PluginsTab })),
-);
-const DashboardTab = lazy(() =>
-  import("@/dashboard/DashboardTab").then((m) => ({
-    default: m.DashboardTab,
-  })),
 );
 
 /** Download a likely next tab without starting a connection or mounting UI. */
@@ -104,11 +81,6 @@ function PanelTabFrame({ children }: { children: React.ReactNode }) {
 
 export function tabIcon(type: TabType) {
   switch (type) {
-    case "dashboard":
-      return <LayoutDashboard className="size-3.5" />;
-    case "host-manager":
-      return <LibraryBig className="size-3.5" />;
-    case "settings":
     case "user-profile":
     case "admin-settings":
       return <Settings className="size-3.5" />;
@@ -176,29 +148,6 @@ const RegisteredTab = memo(function RegisteredTab({
   );
 });
 
-const DashboardTabHost = memo(function DashboardTabHost({
-  shell,
-  isVisible,
-}: {
-  shell: TabShellCallbacks;
-  isVisible: boolean;
-}) {
-  return withTabSuspense(
-    <DashboardTab
-      onOpenSingletonTab={(type, pendingEvent) => {
-        // "Add host" and friends say what to open in the Manage tab.
-        const request = pendingEvent
-          ? requestFromLegacyEvent(pendingEvent)
-          : null;
-        if (request) requestManage(request);
-        else shell.openSingletonTab(type);
-      }}
-      onOpenTab={(host, type) => shell.openTab(host, type)}
-      isVisible={isVisible}
-    />,
-  );
-});
-
 /** A rail panel opened as a tab when its plugin registers no tab of its own. */
 const PanelAsTab = memo(function PanelAsTab({
   panel,
@@ -229,8 +178,6 @@ function noop() {}
 
 export interface TabRenderContext {
   shell: TabShellCallbacks;
-  /** What the Settings tab needs from the shell. */
-  settings?: Omit<SettingsTabProps, "section" | "sectionAt">;
   /** The terminal a panel shown as a tab sends commands to. */
   panelTargetTab?: Tab;
   isVisible?: boolean;
@@ -247,42 +194,11 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
   } = context;
 
   switch (tab.type) {
-    case "dashboard":
-      return <DashboardTabHost shell={shell} isVisible={isVisible} />;
-
     case "split-screen":
       return null;
 
-    case "host-manager":
-      return withTabSuspense(<ManageTab />);
-
     case "plugins":
       return withTabSuspense(<PluginsTab />);
-
-    case "settings":
-      return context.settings
-        ? withTabSuspense(
-            <SettingsTab
-              {...context.settings}
-              section={
-                typeof tab.data?.section === "string"
-                  ? tab.data.section
-                  : undefined
-              }
-              sectionAt={
-                typeof tab.data?.revealAt === "number" ||
-                typeof tab.data?.revealAt === "string"
-                  ? tab.data.revealAt
-                  : undefined
-              }
-              reveal={
-                typeof tab.data?.reveal === "string"
-                  ? `${tab.data.reveal}@${String(tab.data.revealAt ?? "")}`
-                  : undefined
-              }
-            />,
-          )
-        : null;
 
     case "user-profile":
     case "admin-settings":

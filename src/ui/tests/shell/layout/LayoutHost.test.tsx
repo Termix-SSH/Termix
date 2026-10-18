@@ -17,9 +17,6 @@ vi.mock("@/plugin-host/loader", () => loader);
 const mobile = vi.hoisted(() => ({ value: false }));
 vi.mock("@/hooks/use-mobile", () => ({ useIsMobile: () => mobile.value }));
 
-// The built-in layout pulls in the whole classic shell; these tests register their own.
-vi.mock("@/shell/layout/builtin", () => ({ registerBuiltinLayout: () => {} }));
-
 vi.mock("@/look/RepairView", () => ({
   RepairView: ({
     status,

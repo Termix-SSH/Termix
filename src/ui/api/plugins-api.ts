@@ -519,6 +519,15 @@ export async function uninstallPlugin(pluginId: string): Promise<void> {
   }
 }
 
+/** Puts a bundled plugin back to the copy that shipped with this install. */
+export async function restoreBundledPlugin(pluginId: string): Promise<void> {
+  try {
+    await rbacApi.post(`${pluginPath(pluginId)}/restore-bundled`);
+  } finally {
+    announcePluginsChanged();
+  }
+}
+
 export async function previewPluginState(
   pluginId: string,
   enabled: boolean,

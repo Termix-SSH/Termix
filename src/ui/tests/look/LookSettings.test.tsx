@@ -29,7 +29,7 @@ vi.mock("@/look/look-store", () => ({
   useLookState: () => look.state,
 }));
 
-import { LookSettings } from "@/settings/appearance/LookSettings";
+import { LookSettings } from "@/look/LookSettings";
 import { resetPluginLayouts, setPluginLayouts } from "@/look/layout-registry";
 
 beforeEach(() => {

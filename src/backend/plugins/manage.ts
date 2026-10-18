@@ -1645,40 +1645,93 @@ export function installUpload(
 }
 
 /**
+ * Loads the copy in the bundled folder again. Running dependents stop first
+ * and start again after. `prepare` runs once the plugin is stopped, for work
+ * that needs its files out of use.
+ */
+async function reloadBundledUnlocked(
+  pluginId: string,
+  prepare?: (previous: LoadedPlugin | undefined) => Promise<void>,
+): Promise<{ id: string; version: string; state: string }> {
+  const { loader } = getPluginRuntime();
+  const previous = loader.get(pluginId);
+  if (previous && previous.source !== "bundled" && !prepare) {
+    throw new PluginManageError(
+      `${pluginId} is not loaded from the bundled folder`,
+      409,
+      "NOT_BUNDLED",
+    );
+  }
+  const dependents = previous
+    ? dependentChain(pluginId, await enabledIds()).filter(
+        (id) => loader.get(id)?.state === "active",
+      )
+    : [];
+  for (const id of dependents) await deactivatePlugin(id);
+  await unloadPlugin(pluginId);
+  if (prepare) await prepare(previous);
+
+  const plugin = await loader.loadBundled(pluginId);
+  await registerLoadedPlugins([plugin]);
+
+  let state = "stopped";
+  if ((await enabledIds()).has(pluginId)) {
+    const { missing } = dependencyChain(pluginId);
+    state = missing.length > 0 ? "blocked" : await startAndRecord(pluginId);
+  }
+  for (const id of [...dependents].reverse()) await startAndRecord(id);
+  return { id: pluginId, version: plugin.manifest.version, state };
+}
+
+/**
  * Loads the copy in the bundled folder again after it was rebuilt, for the
- * dev runner. Running dependents stop first and start again after.
+ * dev runner.
  */
 export function reloadBundledPlugin(
   pluginId: string,
 ): Promise<{ id: string; version: string; state: string }> {
+  return serialized(() => reloadBundledUnlocked(pluginId));
+}
+
+/**
+ * Puts a bundled plugin back to the copy that shipped with this install,
+ * dropping any update downloaded over it. The shipped version is pinned so
+ * auto update does not bring a broken release straight back; unpin it in the
+ * Plugins tab to follow updates again.
+ */
+export function restoreBundledPlugin(
+  pluginId: string,
+): Promise<{ id: string; version: string; state: string }> {
   return serialized(async () => {
+    if (!ID_PATTERN.test(pluginId)) {
+      throw new PluginManageError("Invalid plugin id", 400, "INVALID_ID");
+    }
     const { loader } = getPluginRuntime();
-    const previous = loader.get(pluginId);
-    if (previous && previous.source !== "bundled") {
+    if (!loader.bundledIds().has(pluginId) || !isBundledOnDisk(pluginId)) {
       throw new PluginManageError(
-        `${pluginId} is not loaded from the bundled folder`,
+        "This plugin has no bundled copy",
         409,
-        "NOT_BUNDLED",
+        "NO_BUNDLED_COPY",
       );
     }
-    const dependents = previous
-      ? dependentChain(pluginId, await enabledIds()).filter(
-          (id) => loader.get(id)?.state === "active",
-        )
-      : [];
-    for (const id of dependents) await deactivatePlugin(id);
-    await unloadPlugin(pluginId);
-
-    const plugin = await loader.loadBundled(pluginId);
-    await registerLoadedPlugins([plugin]);
-
-    let state = "stopped";
-    if ((await enabledIds()).has(pluginId)) {
-      const { missing } = dependencyChain(pluginId);
-      state = missing.length > 0 ? "blocked" : await startAndRecord(pluginId);
-    }
-    for (const id of [...dependents].reverse()) await startAndRecord(id);
-    return { id: pluginId, version: plugin.manifest.version, state };
+    const { createCurrentPluginRepository } = await repos();
+    const repository = createCurrentPluginRepository();
+    const result = await reloadBundledUnlocked(pluginId, async (previous) => {
+      await removeArtifactFiles(pluginId, previous?.artifact);
+      await fs.promises.rm(path.join(getUnpackedPluginsDir(), pluginId), {
+        recursive: true,
+        force: true,
+      });
+    });
+    await repository.update(pluginId, {
+      autoUpdate: false,
+      pinnedVersion: result.version,
+    });
+    await applyPin(pluginId, result.version);
+    pluginLogger.info(`Restored the bundled copy of ${pluginId}`, {
+      operation: "plugin_restore_bundled",
+    });
+    return result;
   });
 }
 

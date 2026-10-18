@@ -1,4 +1,8 @@
-import type { TFunction } from "i18next";
+/** The part of a translate function these helpers use. */
+export type Translator = (
+  key: string,
+  options?: Record<string, unknown>,
+) => string;
 
 /**
  * Where a plugin's i18n keys resolve from.
@@ -28,7 +32,7 @@ export function pluginKey(
  * listed in a registry, shows the manifest name.
  */
 export function pluginName(
-  t: TFunction,
+  t: Translator,
   plugin: { id: string; name: string },
 ): string {
   return t(pluginKey(plugin.id, "plugin.name"), { defaultValue: plugin.name });
@@ -36,7 +40,7 @@ export function pluginName(
 
 /** Same as pluginName, for "plugin.description". */
 export function pluginDescription(
-  t: TFunction,
+  t: Translator,
   plugin: { id: string; description?: string | null },
 ): string {
   return t(pluginKey(plugin.id, "plugin.description"), {

@@ -11,4 +11,3 @@ db
 *.min.css
 openapi.json
 drizzle/
-src/ui/settings/settings-search-index.ts

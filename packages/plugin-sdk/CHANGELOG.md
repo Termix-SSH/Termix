@@ -11,6 +11,8 @@ Plugin API 1.4.0.
 - `useShell()` gives a layout the live shell: tabs, splits, hosts, docks, the command palette and the registries
 - `TabStage` and `ShellConfirmCapture` in `@termix-ssh/plugin-sdk/ui`, for a layout to place tabs
 - `validateThemeCss()` in `@termix-ssh/plugin-sdk/manifest`
+- `@termix-ssh/plugin-sdk/ui` also exports what a whole layout is built from: the API client, shared types, hooks, `useShellController()` and `APP_VERSION`. These reach into core, so they can change with a core release
+- `@termix-ssh/plugin-sdk/testing-host` exports the registries and permission seam a layout's own tests fill directly
 
 ### Fixed
 

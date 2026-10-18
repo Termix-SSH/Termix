@@ -6,7 +6,6 @@ import {
   resolveThemeId,
   safeLayoutInUrl,
 } from "@/look/resolve-look";
-import { BUILTIN_LAYOUT_ID } from "@/look/layout-registry";
 
 function look(patch: Partial<LookResponse> = {}): LookResponse {
   return {
@@ -36,12 +35,12 @@ describe("resolveLayoutId", () => {
         defaults: { layout: null, theme: null },
       }),
     ).toBe("shipped");
-    expect(resolveLayoutId(look())).toBe(BUILTIN_LAYOUT_ID);
+    expect(resolveLayoutId(look())).toBe("");
   });
 
   it("falls back to the last layout shown when the server did not answer", () => {
     expect(resolveLayoutId(null, "remembered")).toBe("remembered");
-    expect(resolveLayoutId(null)).toBe(BUILTIN_LAYOUT_ID);
+    expect(resolveLayoutId(null)).toBe("");
   });
 });
 

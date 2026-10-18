@@ -8,9 +8,11 @@
 - Plugins can add layouts and themes
 - A repair screen shows when the chosen layout cannot load, with ways to update, switch, reset or turn it off. Open it any time with ?safe-layout=1, or for everyone with TERMIX_SAFE_LAYOUT=1
 - Hovering a theme in Settings previews it
+- Restore the bundled copy of a plugin from the repair screen, which also pins the shipped version
 
 ### Changed
 
+- The icon rail, sidebar, tab bar, dock, Dashboard, Manage, Settings and command palette now come from a bundled layout. It can be swapped for another layout but not removed, and a fix to it no longer needs a Termix release
 - Your theme is saved to your account so your other devices use it too, unless you keep settings on this device only
 
 ## 26.10.2

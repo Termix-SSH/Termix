@@ -28,14 +28,15 @@ vi.mock("@/hooks/use-permissions", () => ({
   }),
 }));
 
-const shell = vi.hoisted(() => ({ openSingleton: vi.fn() }));
 vi.mock("@/shell/controller/ShellControllerProvider", () => ({
-  useShellController: () => ({ tabs: { openSingleton: shell.openSingleton } }),
   ShellConfirmCapture: () => null,
 }));
-vi.mock("@/shell/stage/TabStage", () => ({
-  TabStage: () => <div data-testid="stage" />,
+
+const plugins = vi.hoisted(() => ({
+  restoreBundledPlugin: vi.fn(async () => {}),
 }));
+vi.mock("@/api/plugins-api", () => plugins);
+vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
 const look = vi.hoisted(() => ({
   chooseLayout: vi.fn(async () => {}),
@@ -75,6 +76,7 @@ vi.mock("@/plugins/use-plugins-manager", () => ({
         updateAvailable: true,
         latestVersion: "1.1.0",
         managedByServer: false,
+        bundled: true,
         versions: [],
       },
       {
@@ -116,12 +118,15 @@ beforeEach(() => {
   for (const fn of [
     ...Object.values(look),
     ...Object.values(manager),
-    shell.openSingleton,
+    plugins.restoreBundledPlugin,
     onRetry,
   ]) {
     fn.mockClear();
   }
-  setPluginLayouts([{ id: "fancy", label: "Fancy", pluginId: "fancy-layout" }]);
+  setPluginLayouts([
+    { id: "fancy", label: "Fancy", pluginId: "fancy-layout" },
+    { id: "classic", label: "Classic", pluginId: "classic-layout" },
+  ]);
 });
 afterEach(cleanup);
 
@@ -147,8 +152,8 @@ describe("RepairView", () => {
 
   it("switches to another layout or theme", () => {
     render(<RepairView status={status} onRetry={onRetry} />);
-    fireEvent.click(screen.getByText("looks.builtinLayout"));
-    expect(look.chooseLayout).toHaveBeenCalledWith("default");
+    fireEvent.click(screen.getByText("Classic"));
+    expect(look.chooseLayout).toHaveBeenCalledWith("classic");
     fireEvent.click(
       screen.getAllByTitle("newUi.sidebar.userProfile.themeNord")[0],
     );
@@ -169,20 +174,6 @@ describe("RepairView", () => {
     });
   });
 
-  it("opens Settings in place and comes back", () => {
-    render(<RepairView status={status} onRetry={onRetry} />);
-    fireEvent.click(screen.getByText("looks.repair.settings"));
-    expect(shell.openSingleton).toHaveBeenCalledWith(
-      "settings",
-      undefined,
-      undefined,
-      { section: "appearance" },
-    );
-    expect(screen.getByTestId("stage")).toBeTruthy();
-    fireEvent.click(screen.getByText("looks.repair.back"));
-    expect(screen.queryByTestId("stage")).toBeNull();
-  });
-
   it("lets an admin update or turn off the plugin", () => {
     render(<RepairView status={status} onRetry={onRetry} />);
     fireEvent.click(
@@ -197,6 +188,27 @@ describe("RepairView", () => {
     expect(manager.toggle).toHaveBeenCalledWith(
       expect.objectContaining({ id: "fancy-layout" }),
     );
+  });
+
+  it("lets an admin restore the bundled copy and then tries again", async () => {
+    render(<RepairView status={status} onRetry={onRetry} />);
+    fireEvent.click(screen.getByText('looks.repair.restore:{"name":"Fancy"}'));
+    expect(plugins.restoreBundledPlugin).toHaveBeenCalledWith("fancy-layout");
+    await waitFor(() => expect(onRetry).toHaveBeenCalled());
+  });
+
+  it("names the missing layout when none is set", () => {
+    render(
+      <RepairView
+        status={{
+          kind: "repair",
+          reason: "missing",
+          layoutId: "",
+        }}
+        onRetry={onRetry}
+      />,
+    );
+    expect(screen.getByText("looks.repair.noLayout")).toBeTruthy();
   });
 
   it("lets an admin install a layout or theme from the registries", () => {

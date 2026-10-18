@@ -1,25 +1,20 @@
 import type { LookResponse } from "@/api/look-api";
-import { BUILTIN_LAYOUT_ID } from "./layout-registry";
 
 /** The theme a fresh install starts in when nothing else says otherwise. */
 export const FALLBACK_THEME = "dark";
 
 /**
  * The layout to show: the user's choice, else the admin default, else the
- * default look, else core's built-in. Without an answer from the server the
- * last layout this browser showed stands in.
+ * default look. Empty when none of them names one, which the repair view
+ * answers. Without an answer from the server the last layout this browser
+ * showed stands in.
  */
 export function resolveLayoutId(
   look: LookResponse | null,
   lastShown: string | null = null,
 ): string {
-  if (!look) return lastShown ?? BUILTIN_LAYOUT_ID;
-  return (
-    look.layoutId ??
-    look.defaults.layout ??
-    look.defaultLook.layout ??
-    BUILTIN_LAYOUT_ID
-  );
+  if (!look) return lastShown ?? "";
+  return look.layoutId ?? look.defaults.layout ?? look.defaultLook.layout ?? "";
 }
 
 /**

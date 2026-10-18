@@ -546,7 +546,15 @@ export function activate(app: TermixApp) {
   keeps its connection. The command palette, overlays and onboarding stay in core.
 - `mobileComponent` is used on phones and narrow windows. The desktop app always gets `component`.
 - Only the chosen layout's plugin is loaded. If it fails to load or crashes twice, Termix shows a repair
-  screen where people can switch, reset, update or turn it off. `?safe-layout=1` opens it any time.
+  screen where people can switch, reset, update, turn it off or (for a bundled plugin) restore the copy that
+  shipped. `?safe-layout=1` opens it any time.
+- Termix has no layout of its own. The default is the bundled Classic Layout plugin
+  (https://github.com/Termix-SSH/Plugin-Classic-Layout), which is also a full example. It owns the rail,
+  sidebar, tab bar, docks, Dashboard, Manage, Settings and command palette, registers the `dashboard`,
+  `host-manager` and `settings` tab types, and offers the host list and dashboard as the components
+  `classic-layout.hostTree` and `classic-layout.dashboard` for other plugins to place with `PluginComponent`.
+  It reads the shell with `useShellController()` from `@termix-ssh/plugin-sdk/ui`, which exposes more than
+  `useShell()` and may change with Termix. A third party layout should start from `useShell()`.
 
 A theme is CSS only. Declare it in `contributes.themes` (`id`, `label`, `mode` light or dark, `css` path,
 optional `swatch` colors for the picker) with the `ui:theme` capability. The id becomes a class on `<html>`,

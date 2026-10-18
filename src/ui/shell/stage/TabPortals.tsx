@@ -50,7 +50,6 @@ export function TabPortals() {
           >
             {renderTabContent(tab, {
               shell: shell.callbacks,
-              settings: shell.settings,
               panelTargetTab: targetTerminal,
               isVisible: inPane || activeInline,
               isFocusedPane,

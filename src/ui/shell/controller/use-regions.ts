@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { EditingWidth } from "@/components/surface/surface-scope";
 import { remScale } from "@/lib/rem";
 import { rightDockableIds } from "@/sidebar/rail-items";
-import { DOCK_DEFAULT_WIDTH } from "@/shell/DockPanel";
 import type { ShellRegions } from "./types";
 
 const MIN_WIDTH = 160;
@@ -48,6 +47,9 @@ function startDockDrag(
 }
 
 /** The left sidebar and the right dock: what they show, open state and size. */
+/** A dock's width after Reset width, in Normal-size pixels. */
+export const DOCK_DEFAULT_WIDTH = 291;
+
 export function useRegions(isMobile: boolean): ShellRegions {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railView, setRailView] = useState<string>("hosts");

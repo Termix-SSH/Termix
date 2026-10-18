@@ -5,8 +5,7 @@ vi.mock("@/sidebar/rail-items", () => ({
   rightDockableIds: () => ["history", "alerts"],
 }));
 
-import { useRegions } from "@/shell/controller/use-regions";
-import { DOCK_DEFAULT_WIDTH } from "@/shell/DockPanel";
+import { DOCK_DEFAULT_WIDTH, useRegions } from "@/shell/controller/use-regions";
 
 beforeEach(() => localStorage.clear());
 

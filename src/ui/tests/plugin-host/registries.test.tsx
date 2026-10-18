@@ -16,7 +16,6 @@ import {
   type RenderedPluginApp,
 } from "@termix-ssh/plugin-sdk/testing";
 import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
-import { NavigationVisibilityToggles } from "@/sidebar/NavigationVisibilityToggles";
 import {
   hostActionsFor,
   listHostActions,
@@ -208,32 +207,6 @@ describe("registries through the app object", () => {
     const app = await mount();
     const container = app.renderTab("fixture-tab", { host: host() });
     expect(container.textContent).toBe("tab for web-01");
-  });
-
-  it("lists a rail item in the Navigation visibility toggles and toggles it", async () => {
-    await mount();
-    const onChange = vi.fn();
-    render(
-      <NavigationVisibilityToggles hidden={new Set()} onChange={onChange} />,
-    );
-    const row = screen.getByTestId("nav-toggle-fixture-panel");
-    expect(row.textContent).toContain("Fixture title");
-    fireEvent.click(row.querySelector("button, [role=switch]")!);
-    expect(onChange).toHaveBeenCalledWith(new Set(["fixture-panel"]));
-  });
-
-  it("drops the toggle when the plugin goes away", async () => {
-    const app = await mount();
-    const { rerender } = render(
-      <NavigationVisibilityToggles hidden={new Set()} onChange={() => {}} />,
-    );
-    expect(screen.queryByTestId("nav-toggle-fixture-panel")).not.toBeNull();
-    await app.deactivate();
-    rendered = null;
-    rerender(
-      <NavigationVisibilityToggles hidden={new Set()} onChange={() => {}} />,
-    );
-    expect(screen.queryByTestId("nav-toggle-fixture-panel")).toBeNull();
   });
 
   it("adds a host editor section to the SSH group in order", async () => {

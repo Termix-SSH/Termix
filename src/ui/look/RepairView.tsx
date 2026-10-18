@@ -2,16 +2,15 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
-  ArrowLeft,
   Check,
   Copy,
   Download,
   LayoutTemplate,
   Palette,
+  History,
   Power,
   RefreshCw,
   RotateCcw,
-  Settings,
   TriangleAlert,
 } from "lucide-react";
 import { Button } from "@/components/button";
@@ -23,11 +22,8 @@ import { PluginConsentPrompt } from "@/plugins/PluginConsentPrompt";
 import { usePluginsManager } from "@/plugins/use-plugins-manager";
 import { PluginIconBox } from "@/plugins/plugin-bits";
 import { getPluginRecord } from "@/plugin-host/plugin-store";
-import {
-  ShellConfirmCapture,
-  useShellController,
-} from "@/shell/controller/ShellControllerProvider";
-import { TabStage } from "@/shell/stage/TabStage";
+import { restoreBundledPlugin } from "@/api/plugins-api";
+import { ShellConfirmCapture } from "@/shell/controller/ShellControllerProvider";
 import {
   chooseDefaultLook,
   chooseLayout,
@@ -50,10 +46,12 @@ function AdminTools({
   status,
   installOpen,
   setInstallOpen,
+  onRetry,
 }: {
   status: RepairStatus;
   installOpen: boolean;
   setInstallOpen: (open: boolean) => void;
+  onRetry: () => void;
 }) {
   const { t } = useTranslation();
   const manager = usePluginsManager();
@@ -92,6 +90,21 @@ function AdminTools({
         >
           <Power />
           {t("looks.repair.disable", { name: entry.name })}
+        </Button>
+      )}
+      {entry?.installed && entry.bundled && !entry.managedByServer && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            void restoreBundledPlugin(entry.id)
+              .then(onRetry)
+              .catch(() => toast.error(t("looks.repair.restoreFailed")));
+          }}
+          disabled={manager.busy.has(entry.id)}
+        >
+          <History />
+          {t("looks.repair.restore", { name: entry.name })}
         </Button>
       )}
       <Button size="sm" variant="outline" onClick={() => setInstallOpen(true)}>
@@ -162,7 +175,6 @@ export function RepairView({
   onRetry: () => void;
 }) {
   const { t } = useTranslation();
-  const shell = useShellController();
   const { isAdmin } = usePermissions();
   const { theme } = useTheme();
   const chooseTheme = useChooseTheme();
@@ -170,12 +182,13 @@ export function RepairView({
   const themes = useThemes();
   const [copied, setCopied] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const record = status.pluginId ? getPluginRecord(status.pluginId) : null;
   const layoutName =
     layouts.find((layout) => layout.id === status.layoutId) ?? null;
-  const name = layoutName ? layoutLabel(layoutName, t) : status.layoutId;
+  const name = layoutName
+    ? layoutLabel(layoutName, t)
+    : status.layoutId || t("looks.repair.noLayout");
   const details = [
     `${t("looks.repair.layout")}: ${name} (${status.layoutId})`,
     status.pluginId
@@ -213,30 +226,6 @@ export function RepairView({
   const resetForEveryone = run(() =>
     chooseDefaultLook({ layout: null, theme: null }),
   );
-
-  if (settingsOpen) {
-    return (
-      <div
-        className="flex flex-col w-screen bg-background"
-        style={{ height: "100dvh" }}
-      >
-        <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setSettingsOpen(false)}
-          >
-            <ArrowLeft />
-            {t("looks.repair.back")}
-          </Button>
-        </div>
-        <SurfaceScope kind="tab" className="overflow-hidden">
-          <ShellConfirmCapture />
-          <TabStage />
-        </SurfaceScope>
-      </div>
-    );
-  }
 
   const safe = status.reason === "safe-url" || status.reason === "safe-env";
 
@@ -298,24 +287,12 @@ export function RepairView({
                 {t("looks.repair.resetEveryone")}
               </Button>
             )}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                shell.tabs.openSingleton("settings", undefined, undefined, {
-                  section: "appearance",
-                });
-                setSettingsOpen(true);
-              }}
-            >
-              <Settings />
-              {t("looks.repair.settings")}
-            </Button>
             {isAdmin && (
               <AdminTools
                 status={status}
                 installOpen={installOpen}
                 setInstallOpen={setInstallOpen}
+                onRetry={onRetry}
               />
             )}
           </div>
