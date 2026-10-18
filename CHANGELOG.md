@@ -7,6 +7,8 @@
 - Hide sidebar after opening, in Customize Sidebar, closes the host list once you open a host
 - Sort the dashboard's Host Status card by name, IP address or status
 - Windows on ARM builds of the desktop app (installer, MSI and portable)
+- Plugins get an event when a host is added
+- Plugins can start a short-lived session as a user and read the user's language, for tasks that run without a browser
 
 ### Changed
 
@@ -40,6 +42,10 @@
 - Plugin names and descriptions showed in English in the plugin manager, setup picker and host editor no matter the UI language
 - Creating a host through the API without an auth type failed with a server error. It now picks the type from the credential, key or password, or says auth type is required
 - The desktop app would not start its local server when another program used port 30001. It now picks a free port on its own
+- A linked desktop could never finish syncing with a server on Postgres
+- Routine plugin activity filled the audit log and pushed out real security entries
+- Opening a full-screen view link while signed out showed a spinner forever. It now shows the login and opens the link after
+- A linked desktop behind a proxy that needs extra headers, or with an allowed self-signed certificate, could not open remote terminals or tunnels
 
 ## 26.10.1
 
