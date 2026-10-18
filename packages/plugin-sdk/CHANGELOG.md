@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.11
+
+Plugin API 1.3.0.
+
+### Added
+
+- `ctx.auth.issueUserToken()` mints a short-lived session for a user, for calling Termix's own API as them from background work. Needs `users:impersonate` and `engine.api` 1.3
+- `ctx.users.getLocale()` reads a user's UI language. Needs `users:read` and `engine.api` 1.3
+
 ## 1.0.10
 
 ### Changed
