@@ -159,6 +159,9 @@ export function AppRail({
   const [showPinButton, setShowPinButton] = useState(() =>
     readRailPreference("showPinAppRailButton"),
   );
+  const [hoverPushes, setHoverPushes] = useState(() =>
+    readRailPreference("appRailHoverPushesContent"),
+  );
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [menuTarget, setMenuTarget] = useState<MenuTarget | null>(null);
   const [managing, setManaging] = useState(false);
@@ -170,8 +173,11 @@ export function AppRail({
       setExpandOnHover(readRailPreference("expandAppRailOnHover"));
     const showPinButtonHandler = () =>
       setShowPinButton(readRailPreference("showPinAppRailButton"));
+    const pushHandler = () =>
+      setHoverPushes(readRailPreference("appRailHoverPushesContent"));
     window.addEventListener("pinAppRailChanged", pinHandler);
     window.addEventListener("expandAppRailOnHoverChanged", hoverHandler);
+    window.addEventListener("appRailHoverPushesContentChanged", pushHandler);
     window.addEventListener(
       "showPinAppRailButtonChanged",
       showPinButtonHandler,
@@ -179,6 +185,10 @@ export function AppRail({
     return () => {
       window.removeEventListener("pinAppRailChanged", pinHandler);
       window.removeEventListener("expandAppRailOnHoverChanged", hoverHandler);
+      window.removeEventListener(
+        "appRailHoverPushesContentChanged",
+        pushHandler,
+      );
       window.removeEventListener(
         "showPinAppRailButtonChanged",
         showPinButtonHandler,
@@ -312,255 +322,269 @@ export function AppRail({
     );
   };
 
+  // Expanding on hover draws over the content instead of pushing it, so open
+  // sessions like remote desktop are not resized each time, unless the user
+  // asked for the old behavior.
+  const takesSpace = hoverPushes ? railExpanded : pinned || managing;
+
   return (
     <div
       // The desktop app keeps the rail however narrow its window gets.
-      className={`${isElectron() ? "flex" : "hidden md:flex"} flex-col items-stretch bg-sidebar border-r border-border shrink-0 overflow-hidden pt-2 gap-1 transition-[width] duration-200 min-h-0`}
-      style={{ width: rem(railExpanded ? 172 : 40) }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        // Keep the menu on screen when right-clicking near the viewport edges
-        const MENU_W = 200;
-        const MENU_H = 180;
-        setMenuPos({
-          x: Math.min(e.clientX, window.innerWidth - MENU_W - 8),
-          y: Math.min(e.clientY, window.innerHeight - MENU_H - 8),
-        });
-        if (!(e.target as HTMLElement).closest("[data-rail-item]")) {
-          setMenuTarget(null);
-        }
-      }}
+      className={`${isElectron() ? "flex" : "hidden md:flex"} relative shrink-0 transition-[width] duration-200 min-h-0`}
+      style={{ width: rem(takesSpace ? 172 : 40) }}
     >
-      {onOpenPalette && (
-        <>
-          <button
-            type="button"
-            onClick={onOpenPalette}
-            title={t("nav.searchEverything")}
-            aria-label={t("nav.searchEverything")}
-            style={btnStyle}
-            className={`${btnBase} ${idle}`}
-          >
-            <RailIcon>
-              <Search size={16} />
-            </RailIcon>
-            <RailLabel expanded={railExpanded}>{t("nav.search")}</RailLabel>
-          </button>
-          <Rule expanded={railExpanded} />
-        </>
-      )}
-
-      <div className="flex flex-col flex-1 gap-1 overflow-y-auto scrollbar-none min-h-0">
-        {!pluginsSettled
-          ? Array.from({ length: mainItems.length || 8 }, (_, i) => (
-              <div
-                key={`rail-skeleton-${i}`}
-                style={btnStyle}
-                className="flex items-center h-7 shrink-0"
-              >
-                <Skeleton className="size-4 shrink-0" />
-              </div>
-            ))
-          : bands.map((band, i) => (
-              <div key={band.group} className="flex flex-col gap-1">
-                {i > 0 && (
-                  <GroupDivider group={band.group} expanded={railExpanded} />
-                )}
-                {band.items.map(renderItem)}
-              </div>
-            ))}
-
-        {pluginsSettled && hiddenItems.length > 0 && (
-          <>
-            <Rule expanded={railExpanded} />
-            <button
-              type="button"
-              onClick={() => setManaging((v) => !v)}
-              aria-expanded={managing}
-              title={t("nav.hiddenCount", { count: hiddenItems.length })}
-              style={btnStyle}
-              className={`${btnBase} ${managing ? activeClass : idle}`}
-            >
-              <RailIcon>
-                <EyeOff size={16} />
-              </RailIcon>
-              <RailLabel expanded={railExpanded}>
-                {t("nav.hiddenCount", { count: hiddenItems.length })}
-              </RailLabel>
-            </button>
-            {managing &&
-              hiddenItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={`hidden-${item.id}`}
-                    type="button"
-                    onClick={() => void toggleHiddenRailTab(item.id)}
-                    title={t("nav.showInRail")}
-                    style={btnStyle}
-                    className={`${btnBase} text-muted-foreground/70 hover:text-foreground hover:bg-muted/60`}
-                  >
-                    <RailIcon>
-                      <Icon size={16} />
-                    </RailIcon>
-                    <span className="min-w-0 truncate text-xs font-medium whitespace-nowrap">
-                      {t(item.labelKey)}
-                    </span>
-                    <Eye className="ml-auto size-3 shrink-0 opacity-60" />
-                  </button>
-                );
-              })}
-          </>
-        )}
-      </div>
-
-      <div className="shrink-0 flex flex-col gap-1 border-t border-border pt-1 pb-1">
-        {showPinButton && (
+      <div
+        className="absolute inset-y-0 left-0 z-40 flex flex-col items-stretch bg-sidebar border-r border-border overflow-hidden pt-2 gap-1 transition-[width] duration-200 min-h-0"
+        style={{ width: rem(railExpanded ? 172 : 40) }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          // Keep the menu on screen when right-clicking near the viewport edges
+          const MENU_W = 200;
+          const MENU_H = 180;
+          setMenuPos({
+            x: Math.min(e.clientX, window.innerWidth - MENU_W - 8),
+            y: Math.min(e.clientY, window.innerHeight - MENU_H - 8),
+          });
+          if (!(e.target as HTMLElement).closest("[data-rail-item]")) {
+            setMenuTarget(null);
+          }
+        }}
+      >
+        {onOpenPalette && (
           <>
             <button
               type="button"
-              onClick={() => setRailPreference("pinAppRail", !pinned)}
+              onClick={onOpenPalette}
+              title={t("nav.searchEverything")}
+              aria-label={t("nav.searchEverything")}
               style={btnStyle}
-              title={
-                pinned ? t("nav.collapseSideMenu") : t("nav.keepSideMenuOpen")
-              }
-              className={`${btnBase} ${pinned ? activeClass : idle}`}
+              className={`${btnBase} ${idle}`}
             >
               <RailIcon>
-                <Pin size={16} />
+                <Search size={16} />
               </RailIcon>
-              <RailLabel expanded={railExpanded}>
-                {pinned ? t("nav.collapseSideMenu") : t("nav.keepSideMenuOpen")}
-              </RailLabel>
+              <RailLabel expanded={railExpanded}>{t("nav.search")}</RailLabel>
             </button>
             <Rule expanded={railExpanded} />
           </>
         )}
-        {footerItems.map(renderItem)}
-        {footerItems.length > 0 && !isElectron() && (
-          <Rule expanded={railExpanded} />
-        )}
-        {/* The desktop signs in to its own local profile by itself. */}
-        {!isElectron() && (
-          <button
-            type="button"
-            onClick={() => onLogout({ manual: true })}
-            style={btnStyle}
-            title={t("common.logout")}
-            aria-label={t("common.logout")}
-            className={`${btnBase} text-muted-foreground hover:text-destructive hover:bg-destructive/10`}
-          >
-            <RailIcon>
-              <LogOut size={16} />
-            </RailIcon>
-            <RailLabel expanded={railExpanded}>{t("common.logout")}</RailLabel>
-          </button>
-        )}
-      </div>
 
-      <div className="shrink-0 border-t border-border">
-        <button
-          type="button"
-          onClick={onOpenSettings}
-          title={t("nav.openSettings")}
-          aria-label={t("nav.openSettings")}
-          className="flex items-center gap-2.5 w-full h-10 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors focus-visible:ring-1 focus-visible:ring-ring"
-          style={{ padding: `0 ${rem(8)}` }}
-        >
-          <div
-            className="rounded-full bg-accent-brand/20 border border-accent-brand/30 flex items-center justify-center font-bold text-accent-brand shrink-0"
-            style={{ width: rem(24), height: rem(24), fontSize: rem(11) }}
-          >
-            {username.charAt(0).toUpperCase() || "U"}
-          </div>
-          <div
-            className={`flex flex-col items-start overflow-hidden transition-opacity duration-150 ${
-              railExpanded ? "opacity-100 delay-75" : "opacity-0"
-            }`}
-          >
-            <span className="text-xs font-semibold leading-tight whitespace-nowrap">
-              {username || t("nav.roleUser")}
-            </span>
-            <span className="text-[10px] text-muted-foreground leading-tight whitespace-nowrap">
-              {isAdmin ? t("nav.roleAdministrator") : t("nav.roleUser")}
-            </span>
-          </div>
-        </button>
-      </div>
+        <div className="flex flex-col flex-1 gap-1 overflow-y-auto scrollbar-none min-h-0">
+          {!pluginsSettled
+            ? Array.from({ length: mainItems.length || 8 }, (_, i) => (
+                <div
+                  key={`rail-skeleton-${i}`}
+                  style={btnStyle}
+                  className="flex items-center h-7 shrink-0"
+                >
+                  <Skeleton className="size-4 shrink-0" />
+                </div>
+              ))
+            : bands.map((band, i) => (
+                <div key={band.group} className="flex flex-col gap-1">
+                  {i > 0 && (
+                    <GroupDivider group={band.group} expanded={railExpanded} />
+                  )}
+                  {band.items.map(renderItem)}
+                </div>
+              ))}
 
-      {menuPos && (
-        <div
-          data-rail-context-menu
-          role="menu"
-          style={{ position: "fixed", left: menuPos.x, top: menuPos.y }}
-          className="z-[10000] bg-popover border border-border shadow-lg py-1 min-w-[200px]"
-        >
-          {menuTarget && (
+          {pluginsSettled && hiddenItems.length > 0 && (
             <>
-              {menuTarget.promotable && (
-                <MenuItem
-                  icon={<SquareArrowOutUpRight className="size-3" />}
-                  onClick={() => {
-                    onOpenTab?.(menuTarget.id as TabType);
-                    setMenuPos(null);
-                  }}
-                >
-                  {t("nav.openAsTab")}
-                </MenuItem>
-              )}
-              {menuTarget.rightDockable && (
-                <MenuItem
-                  icon={<PanelRight className="size-3" />}
-                  onClick={() => {
-                    onOpenInRightDock?.(menuTarget.id);
-                    setMenuPos(null);
-                  }}
-                >
-                  {t("nav.openInRightDock")}
-                </MenuItem>
-              )}
-              {menuTarget.hideable && (
-                <MenuItem
-                  icon={<EyeOff className="size-3" />}
-                  onClick={() => {
-                    void toggleHiddenRailTab(menuTarget.id);
-                    setMenuPos(null);
-                  }}
-                >
-                  {t("nav.hideFromRail")}
-                </MenuItem>
-              )}
-              <div className="h-px bg-border my-1" />
+              <Rule expanded={railExpanded} />
+              <button
+                type="button"
+                onClick={() => setManaging((v) => !v)}
+                aria-expanded={managing}
+                title={t("nav.hiddenCount", { count: hiddenItems.length })}
+                style={btnStyle}
+                className={`${btnBase} ${managing ? activeClass : idle}`}
+              >
+                <RailIcon>
+                  <EyeOff size={16} />
+                </RailIcon>
+                <RailLabel expanded={railExpanded}>
+                  {t("nav.hiddenCount", { count: hiddenItems.length })}
+                </RailLabel>
+              </button>
+              {managing &&
+                hiddenItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={`hidden-${item.id}`}
+                      type="button"
+                      onClick={() => void toggleHiddenRailTab(item.id)}
+                      title={t("nav.showInRail")}
+                      style={btnStyle}
+                      className={`${btnBase} text-muted-foreground/70 hover:text-foreground hover:bg-muted/60`}
+                    >
+                      <RailIcon>
+                        <Icon size={16} />
+                      </RailIcon>
+                      <span className="min-w-0 truncate text-xs font-medium whitespace-nowrap">
+                        {t(item.labelKey)}
+                      </span>
+                      <Eye className="ml-auto size-3 shrink-0 opacity-60" />
+                    </button>
+                  );
+                })}
             </>
           )}
-          <MenuItem
-            icon={pinned ? <Check className="size-3" /> : null}
-            onClick={togglePinned}
-            checked={pinned}
-          >
-            {t("newUi.sidebar.userProfile.pinAppRail")}
-          </MenuItem>
-          <MenuItem
-            icon={expandOnHover ? <Check className="size-3" /> : null}
-            onClick={toggleExpandOnHover}
-            checked={expandOnHover}
-          >
-            {t("newUi.sidebar.userProfile.expandAppRailOnHover")}
-          </MenuItem>
-          <div className="h-px bg-border my-1" />
-          <MenuItem
-            icon={<SlidersHorizontal className="size-3" />}
-            onClick={() => {
-              onOpenNavigationSettings();
-              setMenuPos(null);
-            }}
-          >
-            {t("nav.openSettings")}
-          </MenuItem>
         </div>
-      )}
+
+        <div className="shrink-0 flex flex-col gap-1 border-t border-border pt-1 pb-1">
+          {showPinButton && (
+            <>
+              <button
+                type="button"
+                onClick={() => setRailPreference("pinAppRail", !pinned)}
+                style={btnStyle}
+                title={
+                  pinned ? t("nav.collapseSideMenu") : t("nav.keepSideMenuOpen")
+                }
+                className={`${btnBase} ${pinned ? activeClass : idle}`}
+              >
+                <RailIcon>
+                  <Pin size={16} />
+                </RailIcon>
+                <RailLabel expanded={railExpanded}>
+                  {pinned
+                    ? t("nav.collapseSideMenu")
+                    : t("nav.keepSideMenuOpen")}
+                </RailLabel>
+              </button>
+              <Rule expanded={railExpanded} />
+            </>
+          )}
+          {footerItems.map(renderItem)}
+          {footerItems.length > 0 && !isElectron() && (
+            <Rule expanded={railExpanded} />
+          )}
+          {/* The desktop signs in to its own local profile by itself. */}
+          {!isElectron() && (
+            <button
+              type="button"
+              onClick={() => onLogout({ manual: true })}
+              style={btnStyle}
+              title={t("common.logout")}
+              aria-label={t("common.logout")}
+              className={`${btnBase} text-muted-foreground hover:text-destructive hover:bg-destructive/10`}
+            >
+              <RailIcon>
+                <LogOut size={16} />
+              </RailIcon>
+              <RailLabel expanded={railExpanded}>
+                {t("common.logout")}
+              </RailLabel>
+            </button>
+          )}
+        </div>
+
+        <div className="shrink-0 border-t border-border">
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            title={t("nav.openSettings")}
+            aria-label={t("nav.openSettings")}
+            className="flex items-center gap-2.5 w-full h-10 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+            style={{ padding: `0 ${rem(8)}` }}
+          >
+            <div
+              className="rounded-full bg-accent-brand/20 border border-accent-brand/30 flex items-center justify-center font-bold text-accent-brand shrink-0"
+              style={{ width: rem(24), height: rem(24), fontSize: rem(11) }}
+            >
+              {username.charAt(0).toUpperCase() || "U"}
+            </div>
+            <div
+              className={`flex flex-col items-start overflow-hidden transition-opacity duration-150 ${
+                railExpanded ? "opacity-100 delay-75" : "opacity-0"
+              }`}
+            >
+              <span className="text-xs font-semibold leading-tight whitespace-nowrap">
+                {username || t("nav.roleUser")}
+              </span>
+              <span className="text-[10px] text-muted-foreground leading-tight whitespace-nowrap">
+                {isAdmin ? t("nav.roleAdministrator") : t("nav.roleUser")}
+              </span>
+            </div>
+          </button>
+        </div>
+
+        {menuPos && (
+          <div
+            data-rail-context-menu
+            role="menu"
+            style={{ position: "fixed", left: menuPos.x, top: menuPos.y }}
+            className="z-[10000] bg-popover border border-border shadow-lg py-1 min-w-[200px]"
+          >
+            {menuTarget && (
+              <>
+                {menuTarget.promotable && (
+                  <MenuItem
+                    icon={<SquareArrowOutUpRight className="size-3" />}
+                    onClick={() => {
+                      onOpenTab?.(menuTarget.id as TabType);
+                      setMenuPos(null);
+                    }}
+                  >
+                    {t("nav.openAsTab")}
+                  </MenuItem>
+                )}
+                {menuTarget.rightDockable && (
+                  <MenuItem
+                    icon={<PanelRight className="size-3" />}
+                    onClick={() => {
+                      onOpenInRightDock?.(menuTarget.id);
+                      setMenuPos(null);
+                    }}
+                  >
+                    {t("nav.openInRightDock")}
+                  </MenuItem>
+                )}
+                {menuTarget.hideable && (
+                  <MenuItem
+                    icon={<EyeOff className="size-3" />}
+                    onClick={() => {
+                      void toggleHiddenRailTab(menuTarget.id);
+                      setMenuPos(null);
+                    }}
+                  >
+                    {t("nav.hideFromRail")}
+                  </MenuItem>
+                )}
+                <div className="h-px bg-border my-1" />
+              </>
+            )}
+            <MenuItem
+              icon={pinned ? <Check className="size-3" /> : null}
+              onClick={togglePinned}
+              checked={pinned}
+            >
+              {t("newUi.sidebar.userProfile.pinAppRail")}
+            </MenuItem>
+            <MenuItem
+              icon={expandOnHover ? <Check className="size-3" /> : null}
+              onClick={toggleExpandOnHover}
+              checked={expandOnHover}
+            >
+              {t("newUi.sidebar.userProfile.expandAppRailOnHover")}
+            </MenuItem>
+            <div className="h-px bg-border my-1" />
+            <MenuItem
+              icon={<SlidersHorizontal className="size-3" />}
+              onClick={() => {
+                onOpenNavigationSettings();
+                setMenuPos(null);
+              }}
+            >
+              {t("nav.openSettings")}
+            </MenuItem>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

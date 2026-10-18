@@ -14,7 +14,16 @@ function invokeAllowed(channel, ...args) {
   return ipcRenderer.invoke(channel, ...args);
 }
 
+// The embedded backend's port, picked by the main process at startup.
+const backendPortArg = process.argv.find((arg) =>
+  arg.startsWith("--termix-backend-port="),
+);
+const backendPort = backendPortArg
+  ? Number(backendPortArg.split("=")[1])
+  : undefined;
+
 contextBridge.exposeInMainWorld("electronAPI", {
+  backendPort,
   getAppVersion: () => ipcRenderer.invoke("get-app-version"),
   // Kept so the interface size can reset a zoom an earlier build applied.
   setZoomFactor: (factor) => {
@@ -87,16 +96,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
 
   clearSessionCookies: () => ipcRenderer.invoke("clear-session-cookies"),
-  getSessionCookie: (name, targetUrl) =>
-    ipcRenderer.invoke("get-session-cookie", name, targetUrl),
-  waitForSessionCookie: (name, targetUrl, previousValue, timeoutMs) =>
-    ipcRenderer.invoke(
-      "wait-session-cookie",
-      name,
-      targetUrl,
-      previousValue,
-      timeoutMs,
-    ),
 
   externalBrowserLogin: (authUrl, callbackPort) =>
     ipcRenderer.invoke("external-browser-login", authUrl, callbackPort),

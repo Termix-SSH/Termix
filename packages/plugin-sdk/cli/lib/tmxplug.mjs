@@ -11,6 +11,9 @@ export const TMXPLUG_CONTENTS = [
   "README.md",
   "CHANGELOG.md",
   "icon.svg",
+  // Licence texts, so third-party notices travel with the plugin.
+  "LICENSE",
+  "NOTICE",
 ];
 
 const BLOCK = 512;

@@ -351,7 +351,10 @@ export class SyncEngine {
         const key = recordKey(entity.type, row.syncId);
         const record = records.get(key);
         if (record && !record.deleted && record.hash === row.hash) continue;
-        if (record?.errorHash === row.hash) continue;
+        // Unavailable server rows can recover without another local edit.
+        if (record?.errorHash === row.hash && record.error !== "unavailable") {
+          continue;
+        }
         ops.push({
           entityType: entity.type,
           syncId: row.syncId,
@@ -367,7 +370,12 @@ export class SyncEngine {
         if (record.revision === 0) continue;
         if (rows.has(record.syncId) || failed.has(record.syncId)) continue;
         if (entity.covers && !entity.covers(record.syncId)) continue;
-        if (record.errorHash === DELETED_HASH) continue;
+        if (
+          record.errorHash === DELETED_HASH &&
+          record.error !== "unavailable"
+        ) {
+          continue;
+        }
         ops.push({
           entityType: entity.type,
           syncId: record.syncId,
@@ -433,6 +441,9 @@ export class SyncEngine {
       return;
     }
 
+    // A live row the server could not send says nothing; keep ours to retry.
+    if (!result.deleted && !result.row) return;
+
     // Conflict: the server moved on since this device last saw the row. Its
     // version wins here, and a local edit it replaced is kept for the user.
     if (op.op === "upsert" && op.row) {
@@ -445,7 +456,7 @@ export class SyncEngine {
       );
     }
     const resolvers = createResolvers(userId);
-    if (result.deleted || !result.row) {
+    if (result.deleted) {
       await deleteStoredRow(entity, userId, op.syncId);
       await putRecord(userId, op.entityType, op.syncId, {
         revision: result.revision,
@@ -488,15 +499,19 @@ export class SyncEngine {
       );
       all.push(...result.changes);
       next = result.nextCursor;
-      this.serverTypes = new Set(result.entityTypes.map((entry) => entry.type));
-      this.state.serverTypes = result.entityTypes.map((entry) => ({
-        type: entry.type,
-        owner: entry.owner,
-        readOnly: entry.readOnly,
-      }));
+      this.learnTypes(result);
       if (!result.hasMore) break;
     }
     return { changes: all, cursor: next };
+  }
+
+  private learnTypes(page: ChangesPage): void {
+    this.serverTypes = new Set(page.entityTypes.map((entry) => entry.type));
+    this.state.serverTypes = page.entityTypes.map((entry) => ({
+      type: entry.type,
+      owner: entry.owner,
+      readOnly: entry.readOnly,
+    }));
   }
 
   private async pull(link: SyncLink): Promise<void> {
@@ -517,7 +532,14 @@ export class SyncEngine {
   /** Pulls every row of types this device has not pulled before. */
   private async backfill(link: SyncLink): Promise<void> {
     if (!this.serverTypes) {
-      await this.fetchChanges(link, Number.MAX_SAFE_INTEGER);
+      // Only the entity types are wanted, so a one-row page is enough.
+      this.learnTypes(
+        await remoteJson<ChangesPage>(
+          link,
+          `/sync/v2/changes?cursor=${link.cursor}&limit=1`,
+          { timeoutMs: 120_000 },
+        ),
+      );
     }
     const fresh = listEntities()
       .map((entity) => entity.type)

@@ -434,10 +434,11 @@ export function Auth({ onLogin }: AuthProps) {
         })
         .catch(() => {
           if (cancelled) return;
+          // Past the first few tries, show the error but keep checking, so
+          // the page moves on by itself once the server is back.
           if (attemptNumber >= maxAttempts) {
             setDbConnectionFailed(true);
             setDbHealthChecking(false);
-            return;
           }
           const delay = Math.min(500 * 2 ** attemptNumber, 5000);
           retryTimer = setTimeout(() => {

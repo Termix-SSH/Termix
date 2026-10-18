@@ -24,6 +24,27 @@ const userColumns = {
     ),
 };
 
+// The unique-violation codes of better-sqlite3, node-postgres and mysql2.
+const UNIQUE_VIOLATION_CODES = new Set([
+  "SQLITE_CONSTRAINT_UNIQUE",
+  "23505",
+  "ER_DUP_ENTRY",
+]);
+
+/**
+ * Whether creating a user failed because the username is taken. The id is
+ * generated, so the username index is the only one a new row can collide on.
+ * drizzle wraps driver errors, so the code may sit on a cause.
+ */
+export function isUsernameTaken(error: unknown): boolean {
+  for (let e = error; e instanceof Error; e = e.cause) {
+    if (UNIQUE_VIOLATION_CODES.has((e as { code?: string }).code ?? "")) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export class UserRepository {
   constructor(
     private readonly context: DatabaseContext,

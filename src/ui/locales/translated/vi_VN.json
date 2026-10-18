@@ -638,6 +638,8 @@
     "actionsClick": "Nhấp để mở rộng/thu gọn",
     "openOnDoubleClick": "Mở khi nhấp đúp",
     "openOnDoubleClickDesc": "Yêu cầu nhấp đúp để mở phiên host thay vì nhấp đơn",
+    "closeOnOpen": "Ẩn thanh bên sau khi mở",
+    "closeOnOpenDesc": "Đóng thanh bên sau khi bạn mở một host từ đó",
     "showFolderPaths": "Hiển thị đường dẫn thư mục",
     "showFolderPathsDesc": "Hiển thị đường dẫn thư mục cha phía trên tên thư mục con lồng nhau. Thư mục con vẫn được thụt lề trong mọi trường hợp.",
     "rowDetailsTitle": "Chi tiết hàng",
@@ -1083,7 +1085,7 @@
     "acceptNewKey": "Chấp nhận khóa mới & Tiếp tục"
   },
   "errors": {
-    "databaseConnection": "Không thể kết nối đến cơ sở dữ liệu",
+    "databaseConnection": "Máy chủ Termix không phản hồi",
     "embeddedServerFailed": "Máy chủ cục bộ của Termix không thể khởi động",
     "unknownError": "Lỗi không xác định",
     "syncedHostMissing": "Máy chủ đồng bộ hóa không tồn tại trên máy chủ đã liên kết",
@@ -1110,7 +1112,7 @@
   "messages": {
     "registrationDisabled": "Bạn chưa có tài khoản Termix. Hãy yêu cầu quản trị viên bật tùy chọn Tự động tạo tài khoản bên ngoài.",
     "userNotAllowed": "Tài khoản của bạn không được phép đăng ký. Vui lòng liên hệ với quản trị viên.",
-    "databaseConnectionFailed": "Không thể kết nối đến máy chủ cơ sở dữ liệu",
+    "databaseConnectionFailed": "Máy chủ có thể vẫn đang khởi động hoặc đã dừng. Trang này sẽ tiếp tục thử kết nối và tự động hoạt động trở lại khi máy chủ sẵn sàng.",
     "embeddedServerPortInUse": "Cổng {{port}} đang được sử dụng bởi một chương trình khác. Điều này thường là do một container Docker Termix hoặc một tiến trình Termix còn sót lại từ phiên trước. Hãy đóng nó đi, sau đó khởi động lại Termix.",
     "embeddedServerPortInUseUnknownPort": "Một trong các cổng mà Termix cần đang bị một chương trình khác sử dụng. Hãy đóng chương trình đang sử dụng cổng đó, sau đó khởi động lại Termix.",
     "embeddedServerOldDatabase": "Dữ liệu cục bộ của bạn từ Termix 2.8 hoặc cũ hơn và cần phải được nâng cấp qua phiên bản 2.9 trước. Hãy cài đặt Termix 2.9.1, mở ứng dụng một lần để nó có thể di chuyển dữ liệu của bạn, sau đó cập nhật lên phiên bản này.",
@@ -1649,6 +1651,8 @@
         "pinAppRailDesc": "Giữ thanh ứng dụng bên trái luôn mở rộng thay vì mở rộng khi di chuột",
         "expandAppRailOnHover": "Mở rộng thanh ứng dụng khi di chuột",
         "expandAppRailOnHoverDesc": "Cho phép thanh ứng dụng bên trái mở rộng khi con trỏ di chuột qua",
+        "appRailHoverPushesContent": "Đẩy nội dung khi mở rộng",
+        "appRailHoverPushesContentDesc": "Tạo không gian cho thanh bên mở rộng thay vì hiển thị chồng lên trang. Các phiên đang mở, như máy từ xa, sẽ thay đổi kích thước mỗi lần.",
         "showPinAppRailButton": "Hiển thị nút ghim thanh ứng dụng",
         "showPinAppRailButtonDesc": "Hiển thị một nút trong thanh ứng dụng để ghim nó mở. Tắt theo mặc định.",
         "settingsNavigation": "Điều hướng",
@@ -1932,6 +1936,7 @@
         "syncEntities_other": "Đồng bộ hóa máy tính để bàn"
       },
       "consent": {
+        "enableTitle": "Bật {{name}}?",
         "installTitle": "Cài đặt {{name}}",
         "updateTitle": "Cập nhật {{name}}",
         "agreeUpdate": "Đồng ý và cập nhật",

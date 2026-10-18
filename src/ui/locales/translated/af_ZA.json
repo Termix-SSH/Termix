@@ -644,6 +644,8 @@
     "actionsClick": "Klik om uit/in te vou",
     "openOnDoubleClick": "Maak oop met dubbelklik",
     "openOnDoubleClickDesc": "Vereis 'n dubbelklik om 'n gasheerbediener-sessie oop te maak in plaas van 'n enkele klik",
+    "closeOnOpen": "Versteek sybalk na oopmaak",
+    "closeOnOpenDesc": "Maak die sybalk toe nadat jy 'n gasheer daaruit oopgemaak het",
     "showFolderPaths": "Wys gidsroetes",
     "showFolderPathsDesc": "Wys die ouergidsroete bo ingeslote subgidsname. Subgidse bly ingespring in beide gevalle.",
     "rowDetailsTitle": "Rybesonderhede",
@@ -1097,7 +1099,7 @@
     "acceptNewKey": "Aanvaar Nuwe Sleutel & Gaan Voort"
   },
   "errors": {
-    "databaseConnection": "Kon nie met die databasis verbind nie",
+    "databaseConnection": "Die Termix-bedienaar reageer nie",
     "embeddedServerFailed": "Termix se plaaslike bediener kon nie begin nie",
     "unknownError": "Onbekende fout",
     "syncedHostMissing": "Die gesinkroniseerde gasheer bestaan nie op die gekoppelde bediener nie",
@@ -1124,7 +1126,7 @@
   "messages": {
     "registrationDisabled": "Jy het nog nie 'n Termix-rekening nie. Vra 'n admin om Eksterne rekenings outomaties skep aan te skakel.",
     "userNotAllowed": "Jou rekening is nie gemagtig om te registreer nie. Kontak asseblief 'n administrateur.",
-    "databaseConnectionFailed": "Kon nie met die databasisbediener verbind nie",
+    "databaseConnectionFailed": "Dit is dalk nog besig om te begin, of dit het gestop. Hierdie bladsy gaan voortdurend probeer en sal outomaties hervat sodra die bedienaar weer beskikbaar is.",
     "embeddedServerPortInUse": "Poort {{port}} word reeds deur 'n ander program gebruik. Dit is gewoonlik 'n Termix Docker-houer of 'n oorblywende Termix-proses van 'n vorige sessie. Maak dit toe en herbegin dan Termix.",
     "embeddedServerPortInUseUnknownPort": "Een van die poorte wat Termix benodig, word reeds deur 'n ander program gebruik. Maak wat dit gebruik toe en herbegin dan Termix.",
     "embeddedServerOldDatabase": "U plaaslike data is van Termix 2.8 of ouer en moet eers deur 2.9 gaan. Installeer Termix 2.9.1, open dit een keer sodat dit u data kan verskuif, en dateer dan weer na hierdie weergawe op.",
@@ -1672,6 +1674,8 @@
         "pinAppRailDesc": "Hou die linkersybalke-toepingsbalk altyd uitgebrei in plaas daarvan om dit slegs by hover uit te brei",
         "expandAppRailOnHover": "Brei toepingsbalk uit by hover",
         "expandAppRailOnHoverDesc": "Laat die linkersybalke-toepingsbalk uitbrei wanneer die aanwyser daaroor beweeg",
+        "appRailHoverPushesContent": "Druk inhoud uit wanneer dit uitbrei",
+        "appRailHoverPushesContentDesc": "Maak plek vir die uitgebreide spoor in plaas daarvan om dit oor die bladsy oop te maak. Oop sessies, soos afgeleë bureblad, word elke keer herskaal",
         "showPinAppRailButton": "Wys speld-toepingsbalk-knoppie",
         "showPinAppRailButtonDesc": "Wys 'n knoppie in die toepingsbalk om dit oop te speld. Standaard af.",
         "settingsNavigation": "Navigasie",
@@ -1967,6 +1971,7 @@
         "syncEntities_other": "Buro-sinkronisering"
       },
       "consent": {
+        "enableTitle": "Aktiveer {{name}}?",
         "installTitle": "Installeer {{name}}",
         "updateTitle": "Dateer {{name}} op",
         "agreeUpdate": "Stem saam en dateer op",

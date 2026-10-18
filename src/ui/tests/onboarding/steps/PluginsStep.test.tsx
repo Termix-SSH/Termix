@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import i18next from "i18next";
+import { I18nextProvider, initReactI18next } from "react-i18next";
 import type { OnboardingPluginList } from "@/api/plugins-api";
 
 const api = vi.hoisted(() => ({
@@ -185,5 +187,39 @@ describe("PluginsStep", () => {
     });
     expect(ok).toBe(true);
     expect(api.applyOnboardingPlugins).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows plugin names and descriptions in the UI language", async () => {
+    const i18n = i18next.createInstance();
+    await i18n.use(initReactI18next).init({
+      lng: "zh-CN",
+      fallbackNS: "translation",
+      resources: {
+        "zh-CN": {
+          translation: {},
+          term: { plugin: { name: "终端", description: "终端插件" } },
+          stats: { plugin: { name: "统计" } },
+        },
+      },
+    });
+    render(
+      <I18nextProvider i18n={i18n}>
+        <PluginsStep
+          mode="full"
+          isAdmin
+          isDesktop={false}
+          shellReady={false}
+          setCanContinue={() => {}}
+          setBeforeNext={() => {}}
+        />
+      </I18nextProvider>,
+    );
+    expect(await screen.findByText("终端")).toBeTruthy();
+    expect(screen.getByText("终端插件")).toBeTruthy();
+    expect(screen.getByRole("radiogroup", { name: "终端" })).toBeTruthy();
+    expect(screen.getByText("统计")).toBeTruthy();
+    expect(screen.getByText("stats plugin")).toBeTruthy();
+    expect(screen.getByText("BASE")).toBeTruthy();
+    expect(screen.getByText("base plugin")).toBeTruthy();
   });
 });

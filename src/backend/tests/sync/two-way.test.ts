@@ -14,6 +14,8 @@ const state = vi.hoisted(() => ({
   current: null as null | { drizzle: unknown },
   server: null as null | { drizzle: unknown },
   allow: true,
+  sharedHostIds: new Set<number>(),
+  paths: [] as string[],
 }));
 
 const SERVER_USER = "srv-user";
@@ -38,13 +40,18 @@ vi.mock("../../utils/system-crypto.js", () => ({
   },
 }));
 vi.mock("../../utils/data-crypto.js", () => ({
-  DataCrypto: { getUserDataKey: () => Buffer.alloc(32, 3) },
+  DataCrypto: {
+    getUserDataKey: () => Buffer.alloc(32, 3),
+    decryptRecord: (_table: string, record: unknown) => record,
+  },
 }));
 vi.mock("../../utils/permission-manager.js", () => ({
   PermissionManager: {
     getInstance: () => ({
       hasPermission: async () => state.allow,
-      canAccessHost: async () => ({ hasAccess: false }),
+      canAccessHost: async (_userId: string, hostId: number) => ({
+        hasAccess: state.sharedHostIds.has(hostId),
+      }),
       getUserPermissions: async () => [],
     }),
   },
@@ -117,6 +124,7 @@ vi.mock("../../sync/client/http.js", async (importOriginal) => {
       path: string,
       init: { method?: string; body?: unknown } = {},
     ) => {
+      state.paths.push(path);
       const previous = state.current;
       state.current = state.server;
       try {
@@ -147,11 +155,15 @@ const { default: syncRouter } = await import("../../sync/server/routes.js");
 const { SyncEngine } = await import("../../sync/client/engine.js");
 const { createLink, getLink, updateLink } =
   await import("../../sync/client/link-store.js");
-const { markChanged, resetFeed } = await import("../../sync/server/feed.js");
+const { markChanged, reconcileUser, resetFeed } =
+  await import("../../sync/server/feed.js");
 const { resetSeqAllocator, listConflicts, getConflict, deleteConflict } =
   await import("../../sync/records.js");
 const { createResolvers, writeWireRow } = await import("../../sync/store.js");
 const { getEntity } = await import("../../plugins/sync-registry.js");
+const { FieldCrypto } = await import("../../utils/field-crypto.js");
+const { syncLogger } = await import("../../utils/logger.js");
+const { pluginEvents, TOPICS } = await import("../../plugins/events.js");
 
 const app = express();
 app.use(express.json({ limit: "5mb" }));
@@ -239,6 +251,8 @@ beforeEach(async () => {
   resetFeed();
   resetSeqAllocator();
   state.allow = true;
+  state.sharedHostIds.clear();
+  state.paths = [];
   server = await side(SERVER_USER);
   state.server = server.ctx;
   desktops = [await side("desk-a"), await side("desk-b")];
@@ -306,6 +320,60 @@ describe("linking a desktop", () => {
     const [host] = await on(desk, () => hostsOf(desk));
     expect(host.ip).toBe("new");
     expect(await on(desk, () => listConflicts(desk.userId))).toEqual([]);
+  });
+
+  it("never asks for a cursor past what the server's seq column holds", async () => {
+    const [desk] = desktops;
+    await on(server, () => addHost(server, { name: "srv" }));
+
+    const engine = await linkDesktop(desk);
+    await pass(desk, engine);
+
+    const cursors = state.paths
+      .filter((path) => path.startsWith("/sync/v2/changes?"))
+      .map((path) =>
+        Number(new URLSearchParams(path.split("?")[1]).get("cursor")),
+      );
+    expect(cursors.length).toBeGreaterThan(0);
+    expect(Math.max(...cursors)).toBeLessThanOrEqual(2_147_483_647);
+  });
+});
+
+describe("a synced host", () => {
+  it("publishes host.created when it is written for the first time only", async () => {
+    const [desk] = desktops;
+    const seen: unknown[] = [];
+    const off = pluginEvents.on(TOPICS.hostCreated, (payload) => {
+      seen.push(payload);
+    });
+    const wire = {
+      syncId: "host-new",
+      name: "new",
+      ip: "10.0.0.2",
+      port: 22,
+      username: "root",
+      authType: "password",
+    };
+    try {
+      await on(desk, async () => {
+        const resolvers = createResolvers(desk.userId);
+        const first = await writeWireRow(
+          getEntity("hosts")!,
+          desk.userId,
+          wire,
+          resolvers,
+        );
+        await writeWireRow(
+          getEntity("hosts")!,
+          desk.userId,
+          { ...wire, name: "renamed" },
+          resolvers,
+        );
+        expect(seen).toEqual([{ hostId: first.id, userId: desk.userId }]);
+      });
+    } finally {
+      off();
+    }
   });
 });
 
@@ -477,6 +545,181 @@ describe("after linking", () => {
     expect(
       (await on(server, () => hostsOf(server))).map((h) => h.name).sort(),
     ).toEqual(["later", "private"]);
+  });
+});
+
+describe("a server row that cannot be read", () => {
+  async function recordOf(where: Side, syncId: string) {
+    const [record] = await on(where, () =>
+      db(where)
+        .select()
+        .from(schema.syncRecords)
+        .where(
+          and(
+            eq(schema.syncRecords.entityType, "hosts"),
+            eq(schema.syncRecords.syncId, syncId),
+          ),
+        ),
+    );
+    return record;
+  }
+
+  it.each(["upsert", "delete"] as const)(
+    "retries a local %s after the server row becomes readable",
+    async (op) => {
+      const [desk] = desktops;
+      await on(server, () => addHost(server, { name: "a" }));
+      const engine = await linkDesktop(desk);
+      await pass(desk, engine);
+
+      await on(desk, () =>
+        (op === "delete"
+          ? db(desk).delete(schema.hosts)
+          : db(desk).update(schema.hosts).set({ ip: "desk-edit" })
+        ).where(eq(schema.hosts.syncId, "host-a")),
+      );
+      await on(server, async () => {
+        await db(server)
+          .update(schema.hosts)
+          .set({ ip: "server-edit" })
+          .where(eq(schema.hosts.syncId, "host-a"));
+        await reconcileUser(SERVER_USER, { force: true });
+        // Then its secret stops decrypting, as under a different key.
+        const [host] = await hostsOf(server);
+        await db(server)
+          .update(schema.hosts)
+          .set({
+            password: FieldCrypto.encryptField(
+              "s3cret",
+              Buffer.alloc(32, 9),
+              String(host.id),
+              "password",
+            ),
+          })
+          .where(eq(schema.hosts.id, host.id));
+      });
+
+      const warn = vi.spyOn(syncLogger, "warn");
+      try {
+        await pass(desk, engine);
+        expect(warn).toHaveBeenCalledWith(
+          expect.any(String),
+          expect.objectContaining({
+            entityType: "hosts",
+            syncId: "host-a",
+            error: expect.any(String),
+          }),
+        );
+      } finally {
+        warn.mockRestore();
+      }
+
+      const [local] = await on(desk, () => hostsOf(desk));
+      expect(local?.ip).toBe(op === "upsert" ? "desk-edit" : undefined);
+      expect(await on(desk, () => listConflicts(desk.userId))).toEqual([]);
+      expect((await recordOf(desk, "host-a")).error).toBe("unavailable");
+
+      // Restore the same server content without another local edit or a new
+      // server revision. The failed operation must still be retried.
+      await on(server, () =>
+        db(server)
+          .update(schema.hosts)
+          .set({ password: null })
+          .where(eq(schema.hosts.syncId, "host-a")),
+      );
+      await on(server, () => reconcileUser(SERVER_USER, { force: true }));
+      await pass(desk, engine);
+      const [after] = await on(desk, () => hostsOf(desk));
+      expect(after?.ip).toBe("server-edit");
+      expect((await recordOf(desk, "host-a")).error).toBeNull();
+      const conflicts = await on(desk, () => listConflicts(desk.userId));
+      expect(conflicts.map((c) => JSON.parse(c.localRow).ip)).toEqual(
+        op === "upsert" ? ["desk-edit"] : [],
+      );
+    },
+  );
+
+  it("keeps the local row when a conflict carries no row", async () => {
+    const [desk] = desktops;
+    await on(server, () => addHost(server, { name: "a" }));
+    const engine = await linkDesktop(desk);
+    await pass(desk, engine);
+
+    await on(desk, async () => {
+      const link = (await getLink())!;
+      const settle = (
+        engine as unknown as {
+          settle: (...args: unknown[]) => Promise<void>;
+        }
+      ).settle.bind(engine);
+      await settle(
+        link,
+        {
+          entityType: "hosts",
+          syncId: "host-a",
+          baseRevision: 1,
+          op: "upsert",
+          row: { syncId: "host-a", name: "a" },
+        },
+        {
+          entityType: "hosts",
+          syncId: "host-a",
+          status: "conflict",
+          revision: 2,
+          deleted: false,
+          row: null,
+        },
+        "hash",
+      );
+    });
+
+    expect((await on(desk, () => hostsOf(desk))).map((h) => h.name)).toEqual([
+      "a",
+    ]);
+    const record = await recordOf(desk, "host-a");
+    expect(record.deleted).toBe(false);
+    expect(record.revision).toBe(1);
+  });
+});
+
+describe("hosts shared with the account", () => {
+  it("arrive on the desktop with their text columns as stored", async () => {
+    const [desk] = desktops;
+    await on(server, async () => {
+      await server.db.run(
+        sql`INSERT INTO users (id, username, password_hash, is_admin) VALUES ('owner', 'owner', '', 0)`,
+      );
+      await db(server).insert(schema.hosts).values({
+        userId: "owner",
+        name: "theirs",
+        ip: "10.0.0.5",
+        port: 22,
+        username: "root",
+        authType: "none",
+        forceKeyboardInteractive: "true",
+        syncId: "host-theirs",
+      });
+      const [host] = await db(server).select().from(schema.hosts);
+      await db(server).insert(schema.hostAccess).values({
+        hostId: host.id,
+        userId: SERVER_USER,
+        grantedBy: "owner",
+        permissionLevel: "view",
+      });
+      state.sharedHostIds.add(host.id);
+      markChanged();
+    });
+
+    const engine = await linkDesktop(desk);
+    await pass(desk, engine);
+
+    const [copy] = await on(desk, () => hostsOf(desk));
+    expect(copy?.name).toBe("theirs");
+    expect(copy.forceKeyboardInteractive).toBe("true");
+    expect(JSON.parse(copy.sharedSource!)).toMatchObject({
+      owner: "owner",
+      permissionLevel: "view",
+    });
   });
 });
 

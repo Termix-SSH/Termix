@@ -74,12 +74,15 @@ COPY vendor ./vendor
 
 COPY scripts/patch-ssh2-agent.cjs ./scripts/
 
+# ssh2's native crypto crashes Node 24 when a cipher is freed, so ssh2 uses
+# OpenSSL instead (chacha20-poly1305 is then left out).
 RUN npm ci --omit=dev --ignore-scripts && \
     node scripts/patch-ssh2-agent.cjs && \
     rm -rf node_modules/better-sqlite3/prebuilds && \
     npm run build-release --prefix node_modules/better-sqlite3 && \
     test -f node_modules/better-sqlite3/build/Release/better_sqlite3.node && \
-    npm rebuild bcryptjs ssh2 && \
+    npm rebuild bcryptjs && \
+    rm -rf node_modules/ssh2/lib/protocol/crypto/build && \
     npm cache clean --force
 
 # Stage 6: Final optimized image

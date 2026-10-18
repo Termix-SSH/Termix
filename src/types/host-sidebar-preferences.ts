@@ -88,6 +88,8 @@ export interface HostSidebarDisplayPreferences extends HostRowFields {
   /** When false, nested folders hide the parent-path breadcrumb before their name. */
   showFolderPaths: boolean;
   hostClickBehavior: HostClickBehavior;
+  /** When true, the sidebar closes after a host is opened from it. */
+  closeOnOpen: boolean;
   /**
    * Host action id to whether it shows in the row's connect bar. An action
    * missing here follows its own default. Every action stays in the menu.
@@ -163,6 +165,7 @@ export function defaultHostSidebarPreferences(): HostSidebarPreferences {
       openOnDoubleClick: false,
       showFolderPaths: true,
       hostClickBehavior: "newTab",
+      closeOnOpen: false,
       barActions: {},
       ...defaultHostRowFields(),
     },
@@ -274,6 +277,10 @@ export function sanitizeHostSidebarPreferences(
     )
       ? (displayObj.hostClickBehavior as HostClickBehavior)
       : defaults.display.hostClickBehavior,
+    closeOnOpen:
+      typeof displayObj.closeOnOpen === "boolean"
+        ? displayObj.closeOnOpen
+        : defaults.display.closeOnOpen,
     barActions: sanitizeBarActions(displayObj.barActions),
   };
 

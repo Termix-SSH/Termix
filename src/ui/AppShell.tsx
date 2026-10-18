@@ -125,6 +125,7 @@ import type {
 } from "@/types/ui-types";
 import { applyAccentColor, applyFontSize } from "@/lib/theme";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
+import { getPaneNavDirection } from "@/lib/pane-nav-hotkey";
 import { getTabJumpDigit } from "@/lib/tab-jump-hotkey";
 import { useTheme } from "@/components/theme-provider";
 import {
@@ -829,20 +830,11 @@ export function AppShell({
         }
       }
 
-      // Alt+Arrow moves between panes of the active split
-      if (e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey) {
-        const direction = (
-          {
-            ArrowLeft: "left",
-            ArrowRight: "right",
-            ArrowUp: "up",
-            ArrowDown: "down",
-          } as Record<string, NavDirection>
-        )[e.code];
-        if (direction && splitActionsRef.current?.navigate(direction)) {
-          e.preventDefault();
-          return;
-        }
+      // Alt+Arrow (Cmd+Option+Arrow on macOS) moves between panes of the active split
+      const paneDirection = getPaneNavDirection(e);
+      if (paneDirection && splitActionsRef.current?.navigate(paneDirection)) {
+        e.preventDefault();
+        return;
       }
 
       // Cmd+1..9 on macOS, Alt+1..9 elsewhere: jump directly to the tab at that position
@@ -2698,6 +2690,7 @@ export function AppShell({
                   if (isMobile) setSidebarOpen(false);
                 }}
                 onEditHost={editHostInManager}
+                onCloseSidebar={() => setSidebarOpen(false)}
                 hostTree={realHostTree ?? undefined}
                 loading={hostsLoading}
                 onEditingChange={panelEditingSetter("hosts")}
@@ -3133,6 +3126,9 @@ export function AppShell({
               {renderSidebarPanels(rightRailView, false)}
             </DockPanel>
           )}
+
+          {/* Plugin panels pinned to the right edge, sized by the plugin */}
+          <ComponentSlot slotId="shell.rightEdge" />
         </div>
       </div>
 

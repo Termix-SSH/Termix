@@ -207,6 +207,7 @@ vi.mock("../../hosts/delete-host.js", () => ({
 const { createPluginHosts } = await import("../../plugins/ctx-hosts.js");
 const { PluginCapabilityError } =
   await import("@termix-ssh/plugin-sdk/backend");
+const { pluginEvents, TOPICS } = await import("../../plugins/events.js");
 
 function manifest(capabilities: string[]) {
   return {
@@ -434,6 +435,29 @@ describe("ctx.hosts", () => {
     expect(h.importRows).toEqual([
       { hostId: 99, row: { "remote-desktop": { enableRdp: true } } },
     ]);
+  });
+
+  it("publishes host.created for a host it creates", async () => {
+    h.granted = new Set(["hosts:write"]);
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    const seen: unknown[] = [];
+    const off = pluginEvents.on(TOPICS.hostCreated, (payload) => {
+      seen.push(payload);
+    });
+    try {
+      await hosts.create({
+        ip: "10.0.0.5",
+        port: 22,
+        username: "root",
+        authType: "password",
+      });
+    } finally {
+      off();
+    }
+    expect(seen).toEqual([{ hostId: 99, userId: "user-1" }]);
   });
 
   it("refuses a field the SDK does not take instead of dropping it", async () => {

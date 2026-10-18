@@ -30,6 +30,7 @@ import { hostStatusService } from "../hosts/status/host-status-service.js";
 import { parseSshOptions } from "../hosts/ssh-options.js";
 import { hostTerminalExport } from "../database/routes/host-normalizers.js";
 import type { DisposableBag } from "./disposables.js";
+import { pluginEvents, TOPICS } from "./events.js";
 import { pluginLogger } from "../utils/logger.js";
 
 type AuditFn = (
@@ -502,6 +503,7 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
       await writeSettings(created.id, writes);
       await markSettingsOwn(created.id, writes);
       await audit("hosts_create", `host ${created.id}`, { success: true });
+      pluginEvents.emit(TOPICS.hostCreated, { hostId: created.id, userId });
       return (
         await toRecords([created as unknown as Record<string, unknown>])
       )[0];

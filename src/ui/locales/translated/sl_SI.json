@@ -656,6 +656,8 @@
     "actionsClick": "Klik za razširitev/strnitev",
     "openOnDoubleClick": "Odpri ob dvojnem kliku",
     "openOnDoubleClickDesc": "Zahtevajte dvojni klik za odprtje seje gostitelja namesto enojnega klika",
+    "closeOnOpen": "Skrij stransko vrstico po odpiranju",
+    "closeOnOpenDesc": "Zapri stransko vrstico po odpiranju gostitelja iz nje",
     "showFolderPaths": "Prikaži poti map",
     "showFolderPathsDesc": "Prikažite pot nadrejenih map nad imeni vgnjezdenih podmap. Podmape bodo v obeh primerih zamaknjene.",
     "rowDetailsTitle": "Podrobnosti vrstice",
@@ -1125,7 +1127,7 @@
     "acceptNewKey": "Sprejmi nov ključ in nadaljuj"
   },
   "errors": {
-    "databaseConnection": "Ni mogoče vzpostaviti povezave z bazo podatkov",
+    "databaseConnection": "Strežnik Termix ne odgovarja",
     "embeddedServerFailed": "Lokalni strežnik Termixa se ni mogel zagnati",
     "unknownError": "Neznana napaka",
     "syncedHostMissing": "Usklajeni gostitelj ne obstaja na povezanih strežniku",
@@ -1152,7 +1154,7 @@
   "messages": {
     "registrationDisabled": "Še nimate računa Termix. Prosite administratorja, da vklopi možnost Samodejno ustvari zunanje račune.",
     "userNotAllowed": "Vaš račun ni pooblaščen za registracijo. Prosimo, kontaktirajte administratorja.",
-    "databaseConnectionFailed": "Povezava s strežnikom podatkovne zbirke ni uspela",
+    "databaseConnectionFailed": "Morda se še zažene ali pa je ustavljen. Ta stran bo poskušala ponovno vzpostaviti povezavo in se bo samodejno nadaljevala, ko bo strežnik spet na voljo.",
     "embeddedServerPortInUse": "Vrata {{port}} že uporablja drug program. To je običajno Docker posode Termix ali preostali proces Termix iz prejšnje seje. Zaprite ga in ponovno zaženite Termix.",
     "embeddedServerPortInUseUnknownPort": "Eno od vrat, ki jih Termix potrebuje, že uporablja drug program. Zaprite program, ki jih uporablja, in ponovno zaženite Termix.",
     "embeddedServerOldDatabase": "Vaši lokalni podatki so iz Termix 2.8 ali starejše različice in morajo najprej preiti skozi različico 2.9. Namestite Termix 2.9.1, ga enkrat odprite, da lahko preseli vaše podatke, nato pa posodobite na to različico.",
@@ -1718,6 +1720,8 @@
         "pinAppRailDesc": "Pustite levo vrstico aplikacij vedno razširjeno namesto razširitve ob drsenju miške",
         "expandAppRailOnHover": "Razširi levo vrstico aplikacij ob drsenju miške",
         "expandAppRailOnHoverDesc": "Dovoli razširitev leve vrstice aplikacij, ko se kazalec premakne nanjo",
+        "appRailHoverPushesContent": "Potisni vsebino ob razširitvi",
+        "appRailHoverPushesContentDesc": "Namesto da bi se razširjena vrstica odprla čez stran, ustvari prostor zanje. Odprte seje, kot je oddaljena namizna površina, se bodo vsakič prilagodile velikosti.",
         "showPinAppRailButton": "Prikaži gumb za pripinjanje leve vrstice aplikacij",
         "showPinAppRailButtonDesc": "Prikažite gumb v levi vrstici aplikacij za njeno pripinjanje. Privzeto izklopljeno.",
         "settingsNavigation": "Navigacija",
@@ -2037,6 +2041,7 @@
         "syncEntities_other": "Usklajevanje namizja"
       },
       "consent": {
+        "enableTitle": "Omogoči {{name}}?",
         "installTitle": "Namesti {{name}}",
         "updateTitle": "Posodobi {{name}}",
         "agreeUpdate": "Strinjam se in posodobi",

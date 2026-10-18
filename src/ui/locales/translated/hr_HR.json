@@ -650,6 +650,8 @@
     "actionsClick": "Klik za proširenje/sažimanje",
     "openOnDoubleClick": "Otvori dvostrukim klikom",
     "openOnDoubleClickDesc": "Zahtijevajte dvostruki klik za otvaranje sesije hosta umjesto jednokratnog klika",
+    "closeOnOpen": "Sakrij bočnu traku nakon otvaranja",
+    "closeOnOpenDesc": "Zatvori bočnu traku nakon otvaranja hosta iz nje",
     "showFolderPaths": "Prikaži putanje mapa",
     "showFolderPathsDesc": "Prikažite putanju nadređene mape iznad naziva ugniježđenih podmapa. Podmape ostaju uvučene u svakom slučaju.",
     "rowDetailsTitle": "Detalji retka",
@@ -1111,7 +1113,7 @@
     "acceptNewKey": "Prihvati novi ključ i nastavi"
   },
   "errors": {
-    "databaseConnection": "Nije moguće povezati se s bazom podataka",
+    "databaseConnection": "Termix poslužitelj ne odgovara",
     "embeddedServerFailed": "Lokalni Termix poslužitelj se nije mogao pokrenuti",
     "unknownError": "Nepoznata greška",
     "syncedHostMissing": "Sinkronizirani domaćin ne postoji na povezanom poslužitelju",
@@ -1138,7 +1140,7 @@
   "messages": {
     "registrationDisabled": "Još nemate Termix račun. Zatražite od administratora da uključi opciju Automatsko stvaranje vanjskih računa.",
     "userNotAllowed": "Vaš račun nije ovlašten za registraciju. Kontaktirajte administratora.",
-    "databaseConnectionFailed": "Povezivanje s poslužiteljem baze podataka nije uspjelo",
+    "databaseConnectionFailed": "Moguće je da se još pokreće ili je zaustavljen. Ova stranica nastavlja pokušavati i automatski se nastavlja raditi čim poslužitelj ponovno bude dostupan.",
     "embeddedServerPortInUse": "Port {{port}} već koristi drugi program. To je obično Termix Docker kontejner ili preostali Termix proces iz prethodne sesije. Zatvorite ga, a zatim ponovno pokrenite Termix.",
     "embeddedServerPortInUseUnknownPort": "Jedan od portova koji Termixu trebaju već koristi drugi program. Zatvorite program koji ga koristi, a zatim ponovno pokrenite Termix.",
     "embeddedServerOldDatabase": "Vaši lokalni podaci potječu iz Termixa 2.8 ili starije verzije i moraju prvo proći kroz verziju 2.9. Instalirajte Termix 2.9.1, otvorite ga jednom kako bi mogao premjestiti vaše podatke, a zatim ponovno ažurirajte na ovu verziju.",
@@ -1695,6 +1697,8 @@
         "pinAppRailDesc": "Zadrži lijevu bočnu traku aplikacija uvijek proširenu umjesto proširivanja pri prelasku mišem",
         "expandAppRailOnHover": "Proširi traku aplikacija pri prelasku mišem",
         "expandAppRailOnHoverDesc": "Dopusti proširivanje lijeve bočne trake aplikacija kada se pokazivač miša nalazi iznad nje",
+        "appRailHoverPushesContent": "Pomakni sadržaj pri proširenju",
+        "appRailHoverPushesContentDesc": "Oslobodi prostor za proširenu traku umjesto da se otvara preko stranice. Otvorene sesije, poput udaljenog radnog stola, svaki put se prilagođavaju veličini.",
         "showPinAppRailButton": "Prikaži gumb za prikvačivanje trake aplikacija",
         "showPinAppRailButtonDesc": "Prikaži gumb u traci aplikacija za njezino prikvačivanje. Isključeno prema zadanim postavkama.",
         "settingsNavigation": "Navigacija",
@@ -2002,6 +2006,7 @@
         "syncEntities_other": "Sinkronizacija radne površine"
       },
       "consent": {
+        "enableTitle": "Omogućiti {{name}}?",
         "installTitle": "Instaliraj {{name}}",
         "updateTitle": "Ažuriraj {{name}}",
         "agreeUpdate": "Prihvati i ažuriraj",

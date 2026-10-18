@@ -1,5 +1,43 @@
 # Changelog
 
+## 1.0.11
+
+Plugin API 1.3.0.
+
+### Added
+
+- `ctx.auth.issueUserToken()` mints a short-lived session for a user, for calling Termix's own API as them from background work. Needs `users:impersonate` and `engine.api` 1.3
+- `ctx.users.getLocale()` reads a user's UI language. Needs `users:read` and `engine.api` 1.3
+
+## 1.0.10
+
+### Changed
+
+- `termix-plugin pack` includes the plugin's `LICENSE` and `NOTICE` files, so third-party notices ship with it
+
+## 1.0.9
+
+### Added
+
+- Worker entries in `package.json` `termix.workers`, each bundled on its own into `dist/workers/<name>.js`
+- A `.wasm`, `.ttf` or `.otf` import gives the file's bytes, in `termix-plugin build` and in plugin tests
+
+### Fixed
+
+- The plugin guide listed jszip, guacamole-lite and @anthropic-ai/sdk as shared packages, but they are bundled
+
+## 1.0.8
+
+### Added
+
+- `publicRateLimit` on `ctx.http.router()`, for a plugin whose public routes serve a proxied page
+
+## 1.0.7
+
+### Fixed
+
+- A migration file, or a part of one, holding only comments made core fail to start the plugin
+
 ## 1.0.6
 
 ### Added

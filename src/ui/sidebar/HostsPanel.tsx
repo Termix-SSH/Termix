@@ -55,6 +55,7 @@ import type { Host, HostFolder, TabType } from "@/types/ui-types";
 import { sortHostTree, type SortKey } from "@/sidebar/host-sort";
 import { withLiveStatus } from "@/sidebar/live-host-status";
 import { useServerStatus } from "@/lib/ServerStatusContext";
+import { pluginName } from "@/lib/plugin-i18n";
 import { useHostSidebarPreferences } from "@/sidebar/tree/hooks/useHostSidebarPreferences";
 import { useArrangeLock } from "@/sidebar/use-arrange-lock";
 import type {
@@ -201,6 +202,7 @@ export function HostsPanel({
   hostTree,
   loading,
   active = true,
+  onCloseSidebar,
 }: {
   onOpenTab: (
     host: Host,
@@ -217,6 +219,7 @@ export function HostsPanel({
   /** Unused since editing moved to the Manage tab. */
   onEditingChange?: (editing: boolean) => void;
   active?: boolean;
+  onCloseSidebar?: () => void;
 }) {
   const { t } = useTranslation();
   const { statuses, getStatus } = useServerStatus();
@@ -814,7 +817,7 @@ export function HostsPanel({
                       }
                       onSelect={(e) => e.preventDefault()}
                     >
-                      {plugin.name}
+                      {pluginName(t, plugin)}
                     </DropdownMenuCheckboxItem>
                   ))}
                   {allTags.length > 0 && (
@@ -1044,7 +1047,10 @@ export function HostsPanel({
                   ).children
                 : []
             }
-            onOpenTab={onOpenTab}
+            onOpenTab={(host, type, options) => {
+              onOpenTab(host, type, options);
+              if (sidebarPrefs.display.closeOnOpen) onCloseSidebar?.();
+            }}
             onEditHost={onEditHost}
             onShareHost={(host) => setShareModalHost(host)}
             query={hostSearch.trim().toLowerCase()}

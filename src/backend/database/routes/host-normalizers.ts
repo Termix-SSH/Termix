@@ -88,6 +88,23 @@ export function keepsStoredSshAuth(authType: unknown): boolean {
   return authType === undefined || authType === null;
 }
 
+export function isOptionalAuthType(value: unknown): boolean {
+  return value === undefined || value === null || typeof value === "string";
+}
+
+/**
+ * The auth type a new SSH host's secrets point to when the body names none,
+ * as an API client creating a host from a credential does.
+ */
+export function impliedSshAuthType(
+  body: Record<string, unknown>,
+): string | undefined {
+  if (body.credentialId) return "credential";
+  if (body.key) return "key";
+  if (body.password) return "password";
+  return undefined;
+}
+
 const FOLDER_PATH_SEPARATOR = " / ";
 
 /**

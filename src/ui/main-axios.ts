@@ -8,7 +8,7 @@ import axios, {
 import { toast } from "sonner";
 import i18n from "i18next";
 import { getBasePath } from "@/lib/base-path";
-import { isElectron } from "@/lib/electron";
+import { isElectron, localBackendPort } from "@/lib/electron";
 import { clearTermixSessionStorage } from "@/shell/TabContext";
 import type { SSHHost } from "@/types/index";
 
@@ -603,7 +603,7 @@ function getApiUrl(path: string, defaultPort: number): string {
   if (electronMode) {
     // The desktop app always talks to its embedded backend. The server it
     // may be linked to is reached through createRemoteOriginApiInstance.
-    return `http://localhost:${defaultPort}${path}`;
+    return `http://localhost:${localBackendPort()}${path}`;
   } else if (devMode) {
     if (!import.meta.env.VITE_API_HOST) {
       return `/__termix_api/${defaultPort}${path}`;

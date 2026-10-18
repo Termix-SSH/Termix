@@ -134,12 +134,23 @@ export async function applyPush(
     const record = await getRecord(userId, op.entityType, op.syncId);
     const currentRevision = record?.revision ?? 0;
     if (op.baseRevision !== currentRevision) {
+      const row = record?.deleted ? null : (wire.get(key) ?? null);
+      // A live record with no row failed to serialize; a conflict without a
+      // row would read as a delete on the desktop.
+      if (record && !record.deleted && !row) {
+        results.set(key, {
+          ...base,
+          status: "rejected",
+          reason: "unavailable",
+        });
+        continue;
+      }
       results.set(key, {
         ...base,
         status: "conflict",
         revision: currentRevision,
         deleted: !!record?.deleted,
-        row: record?.deleted ? null : (wire.get(key) ?? null),
+        row,
       });
       continue;
     }

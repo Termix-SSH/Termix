@@ -53,6 +53,7 @@ function start() {
     isDev: false,
     appRoot: "/app",
     BACKEND_STDERR_TAIL_LIMIT: 4096,
+    backendPort: 30001,
     handleBackendRequest,
     setTimeout,
     clearTimeout,

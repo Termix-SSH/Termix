@@ -308,4 +308,11 @@ describe("adoptTableSql", () => {
     const joined = adoptTableSql("sqlite", "fleets", adopted).join("\n");
     expect(splitStatements(joined)).toHaveLength(3);
   });
+
+  it("drops a chunk that is only comments", () => {
+    expect(splitStatements("-- nothing to do here.\n")).toEqual([]);
+    expect(
+      splitStatements("/* note */;\n-- why\nSELECT 1;\n-- trailing"),
+    ).toEqual(["-- why\nSELECT 1"]);
+  });
 });

@@ -16,9 +16,14 @@ export function isInMobileWebView(): boolean {
   );
 }
 
+// Being framed alone is not enough: any site could frame this page and
+// receive the token posted to window.parent. The desktop app tags every
+// request and frame with its own user agent, which a web page cannot fake
+// in someone else's browser.
 export function isInElectronWebView(): boolean {
   if (isInMobileWebView()) return false;
   if ((window as EmbeddedFrameWindow).IS_ELECTRON_WEBVIEW) return true;
+  if (!/Termix-Desktop\//.test(navigator.userAgent)) return false;
   try {
     if (window.self !== window.top) return true;
   } catch {

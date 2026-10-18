@@ -644,6 +644,8 @@
     "actionsClick": "Klikken om uit te vouwen/inklappen",
     "openOnDoubleClick": "Openen bij dubbelklik",
     "openOnDoubleClickDesc": "Vereis een dubbelklik om een hostsessie te openen in plaats van een enkele klik",
+    "closeOnOpen": "Verberg zijbalk na openen",
+    "closeOnOpenDesc": "Sluit de zijbalk nadat je een host vanuit de zijbalk hebt geopend",
     "showFolderPaths": "Mappaden tonen",
     "showFolderPathsDesc": "Toon het pad van de bovenliggende map boven geneste submapnamen. Submappen blijven in beide gevallen ingesprongen.",
     "rowDetailsTitle": "Regelgegevens",
@@ -1097,7 +1099,7 @@
     "acceptNewKey": "Nieuwe sleutel accepteren & Doorgaan"
   },
   "errors": {
-    "databaseConnection": "Kon geen verbinding maken met de database",
+    "databaseConnection": "De Termix-server reageert niet",
     "embeddedServerFailed": "De lokale server van Termix kon niet worden gestart",
     "unknownError": "Onbekende fout",
     "syncedHostMissing": "De gesynchroniseerde host bestaat niet op de gekoppelde server",
@@ -1124,7 +1126,7 @@
   "messages": {
     "registrationDisabled": "U heeft nog geen Termix-account. Vraag een beheerder om 'Automatisch externe accounts aanmaken' in te schakelen.",
     "userNotAllowed": "Uw account is niet gemachtigd om zich te registreren. Neem contact op met een beheerder.",
-    "databaseConnectionFailed": "Kan geen verbinding maken met de databaseserver",
+    "databaseConnectionFailed": "De server start mogelijk nog op of is gestopt. Deze pagina blijft proberen en gaat automatisch verder zodra de server weer beschikbaar is.",
     "embeddedServerPortInUse": "Poort {{port}} wordt al gebruikt door een ander programma. Dit is meestal een Termix Docker-container of een overgebleven Termix-proces van een eerdere sessie. Sluit deze af en start Termix opnieuw op.",
     "embeddedServerPortInUseUnknownPort": "Een van de poorten die Termix nodig heeft, wordt al gebruikt door een ander programma. Sluit het programma dat deze gebruikt en start Termix opnieuw op.",
     "embeddedServerOldDatabase": "Je lokale gegevens zijn afkomstig van Termix 2.8 of ouder en moeten eerst door versie 2.9 worden verwerkt. Installeer Termix 2.9.1, open het een keer zodat je gegevens kunnen worden gemigreerd en update daarna opnieuw naar deze versie.",
@@ -1672,6 +1674,8 @@
         "pinAppRailDesc": "Houd de linker sidebar-app rail altijd uitgeklapt in plaats van alleen bij hover",
         "expandAppRailOnHover": "App Rail uitklappen bij hover",
         "expandAppRailOnHoverDesc": "Sta toe dat de linker sidebar-app rail uitklapt wanneer de aanwijzer erover beweegt",
+        "appRailHoverPushesContent": "Inhoud verplaatsen bij uitklappen",
+        "appRailHoverPushesContentDesc": "Maak ruimte voor de uitgeklapte zijbalk in plaats van deze over de pagina te tonen. Actieve sessies, zoals remote desktop, worden telkens opnieuw geschaald.",
         "showPinAppRailButton": "Knop 'App Rail vastzetten' tonen",
         "showPinAppRailButtonDesc": "Toon een knop in de app rail om deze open te houden. Standaard uitgeschakeld.",
         "settingsNavigation": "Navigatie",
@@ -1967,6 +1971,7 @@
         "syncEntities_other": "Desktop-synchronisatie"
       },
       "consent": {
+        "enableTitle": "{{name}} inschakelen?",
         "installTitle": "{{name}} installeren",
         "updateTitle": "{{name}} bijwerken",
         "agreeUpdate": "Akkoord en bijwerken",

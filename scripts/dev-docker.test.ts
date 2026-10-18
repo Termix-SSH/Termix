@@ -42,6 +42,7 @@ describe("serviceEnv", () => {
       DATABASE_URL: "postgres://termix:termix@127.0.0.1:55432/termix",
       GUACD_HOST: "127.0.0.1",
       GUACD_PORT: "4822",
+      REMOTE_DESKTOP_ENGINE: "guacd",
     });
   });
 
@@ -53,6 +54,7 @@ describe("serviceEnv", () => {
       DATABASE_URL: "mysql://root:termix@termix-dev-mysql:3306/termix",
       GUACD_HOST: "termix-dev-guacd",
       GUACD_PORT: "4822",
+      REMOTE_DESKTOP_ENGINE: "guacd",
     });
   });
 });

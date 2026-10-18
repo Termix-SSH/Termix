@@ -644,6 +644,8 @@
     "actionsClick": "Kattintás a kibontáshoz/összecsukáshoz",
     "openOnDoubleClick": "Megnyitás duplakattintásra",
     "openOnDoubleClickDesc": "Duplakattintás igényelése egy kiszolgáló munkamenetének megnyitásához az egységes kattintás helyett",
+    "closeOnOpen": "Oldalsáv elrejtése megnyitás után",
+    "closeOnOpenDesc": "Az oldalsáv bezárása egy gazdagép megnyitása után",
     "showFolderPaths": "Mappa-utak megjelenítése",
     "showFolderPathsDesc": "A szülőmappa-út megjelenítése az egymásba ágyazott almappanevek felett. Az almappák mindkét esetben behúzásban maradnak.",
     "rowDetailsTitle": "Sor részletei",
@@ -1097,7 +1099,7 @@
     "acceptNewKey": "Új kulcs elfogadása és folytatás"
   },
   "errors": {
-    "databaseConnection": "Nem sikerült csatlakozni az adatbázishoz",
+    "databaseConnection": "A Termix szerver nem válaszol",
     "embeddedServerFailed": "A Termix helyi szervert nem sikerült elindítani",
     "unknownError": "Ismeretlen hiba",
     "syncedHostMissing": "A szinkronizált gazdagép nem létezik a csatolt szerveren",
@@ -1124,7 +1126,7 @@
   "messages": {
     "registrationDisabled": "Még nincs Termix-fiókja. Kérjen meg egy rendszergazdát, hogy engedélyezze a külső fiókok automatikus létrehozását.",
     "userNotAllowed": "A fiókja nem jogosult a regisztrációra. Kérjük, lépjen kapcsolatba egy rendszergazdával.",
-    "databaseConnectionFailed": "Nem sikerült csatlakozni az adatbázis-szervert",
+    "databaseConnectionFailed": "Lehet, hogy még indul, vagy leállt. Ez az oldal folyamatosan próbálkozik, és automatikusan folytatja a munkát, amikor a szerver újra elérhető.",
     "embeddedServerPortInUse": "A {{port}} portot már egy másik program használja. Ez általában egy Termix Docker-konténer vagy egy előző munkamenetből maradt Termix-folyamat. Zárja be, majd indítsa újra a Termixet.",
     "embeddedServerPortInUseUnknownPort": "A Termix által szükséges portok egyikét már egy másik program használja. Zárja be azt, ami használja, majd indítsa újra a Termixet.",
     "embeddedServerOldDatabase": "A helyi adatai a Termix 2.8 vagy régebbi verzióból származnak, és először át kell futniuk a 2.9-es verzió migrációján. Telepítse a Termix 2.9.1 verzióját, nyissa meg egyszer, hogy az adatok átkerüljenek, majd frissítsen újra erre a verzióra.",
@@ -1672,6 +1674,8 @@
         "pinAppRailDesc": "A bal oldali alkalmazásvázlat állandóan kibontott állapotban marad, nem csak rámutatáskor",
         "expandAppRailOnHover": "Alkalmazásvázlat kibontása rámutatáskor",
         "expandAppRailOnHoverDesc": "A bal oldali alkalmazásvázlat kibontásának engedélyezése, amikor a mutató rákerül",
+        "appRailHoverPushesContent": "Tartalom eltolása kibontáskor",
+        "appRailHoverPushesContentDesc": "Helyet biztosít a kibontott sávnak, ahelyett, hogy a lap fölé nyitná. A nyitott munkamenetek (például távoli asztal) minden alkalommal átméreteződnek.",
         "showPinAppRailButton": "Alkalmazásvázlat rögzítés gomb megjelenítése",
         "showPinAppRailButtonDesc": "Gomb megjelenítése az alkalmazásvázlatban a rögzítéshez. Alapértelmezetten ki van kapcsolva.",
         "settingsNavigation": "Navigáció",
@@ -1967,6 +1971,7 @@
         "syncEntities_other": "Asztali szinkronizálás"
       },
       "consent": {
+        "enableTitle": "Engedélyezi a(z) {{name}} bekapcsolását?",
         "installTitle": "A(z) {{name}} telepítése",
         "updateTitle": "A(z) {{name}} frissítése",
         "agreeUpdate": "Elfogadás és frissítés",

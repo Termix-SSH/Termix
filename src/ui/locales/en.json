@@ -644,6 +644,8 @@
     "actionsClick": "Click to expand/collapse",
     "openOnDoubleClick": "Open on double click",
     "openOnDoubleClickDesc": "Require a double click to open a host session instead of a single click",
+    "closeOnOpen": "Hide sidebar after opening",
+    "closeOnOpenDesc": "Close the sidebar after you open a host from it",
     "showFolderPaths": "Show folder paths",
     "showFolderPathsDesc": "Show the parent folder path above nested subfolder names. Subfolders stay indented either way.",
     "rowDetailsTitle": "Row details",
@@ -1097,7 +1099,7 @@
     "acceptNewKey": "Accept New Key & Continue"
   },
   "errors": {
-    "databaseConnection": "Could not connect to the database",
+    "databaseConnection": "The Termix server is not responding",
     "embeddedServerFailed": "Termix's local server could not start",
     "unknownError": "Unknown error",
     "syncedHostMissing": "The synced host does not exist on the linked server",
@@ -1124,7 +1126,7 @@
   "messages": {
     "registrationDisabled": "You have no Termix account yet. Ask an admin to turn on Auto-create external accounts.",
     "userNotAllowed": "Your account is not authorized to register. Please contact an administrator.",
-    "databaseConnectionFailed": "Failed to connect to the database server",
+    "databaseConnectionFailed": "It may still be starting, or it stopped. This page keeps trying and continues on its own once the server is back.",
     "embeddedServerPortInUse": "Port {{port}} is already in use by another program. This is usually a Termix Docker container or a leftover Termix process from a previous session. Close it, then restart Termix.",
     "embeddedServerPortInUseUnknownPort": "One of the ports Termix needs is already in use by another program. Close whatever is using it, then restart Termix.",
     "embeddedServerOldDatabase": "Your local data is from Termix 2.8 or older and has to pass through 2.9 first. Install Termix 2.9.1, open it once so it can move your data, then update to this version again.",
@@ -1672,6 +1674,8 @@
         "pinAppRailDesc": "Keep the left sidebar app rail always expanded instead of expanding on hover",
         "expandAppRailOnHover": "Expand App Rail on Hover",
         "expandAppRailOnHoverDesc": "Allow the left sidebar app rail to expand when the pointer moves over it",
+        "appRailHoverPushesContent": "Push content when it expands",
+        "appRailHoverPushesContentDesc": "Make room for the expanded rail instead of opening it over the page. Open sessions, like remote desktop, resize each time",
         "showPinAppRailButton": "Show Pin App Rail Button",
         "showPinAppRailButtonDesc": "Show a button in the app rail to pin it open. Off by default.",
         "settingsNavigation": "Navigation",
@@ -1967,6 +1971,7 @@
         "syncEntities_other": "Desktop sync"
       },
       "consent": {
+        "enableTitle": "Enable {{name}}?",
         "installTitle": "Install {{name}}",
         "updateTitle": "Update {{name}}",
         "agreeUpdate": "Agree and update",

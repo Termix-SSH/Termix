@@ -38,6 +38,7 @@ import { attachPluginWebSockets } from "../plugins/ws.js";
 import pluginRoutes from "./routes/plugins.js";
 import { createPluginAssetsRouter } from "../plugins/assets.js";
 import { getPluginRuntime } from "../plugins/index.js";
+import { pluginEvents, TOPICS } from "../plugins/events.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
 import { createCompressionMiddleware } from "../utils/compression-config.js";
 import fs from "fs";
@@ -79,7 +80,6 @@ import {
   createCurrentSshCredentialUsageRepository,
   createCurrentUserRepository,
 } from "./repositories/factory.js";
-import { withCurrentSqliteForeignKeysDisabled } from "./repositories/sqlite-foreign-keys.js";
 import { applyPluginHostImportSettings } from "./routes/host-plugin-settings.js";
 import {
   selectExportableSettings,
@@ -1235,225 +1235,219 @@ app.post(
       };
 
       try {
-        await withCurrentSqliteForeignKeysDisabled(async () => {
-          try {
-            const importedHosts = importDb
-              .prepare("SELECT * FROM ssh_data")
-              .all();
-            const importedHostIds: number[] = [];
-            for (const host of importedHosts) {
-              try {
-                const hostRepository = createCurrentHostRepository();
-                const exists = await hostRepository.existsForImportIdentity(
-                  userId,
-                  host.ip,
-                  host.port,
-                  host.username,
-                );
-
-                if (exists) {
-                  result.summary.skippedItems++;
-                  continue;
-                }
-
-                const hostData = {
-                  userId: userId,
-                  name: host.name,
-                  ip: host.ip,
-                  port: host.port,
-                  username: host.username,
-                  folder: host.folder,
-                  tags: host.tags,
-                  pin: Boolean(host.pin),
-                  authType: host.auth_type,
-                  forceKeyboardInteractive: host.force_keyboard_interactive,
-                  password: host.password,
-                  key: host.key,
-                  keyPassword: host.key_password,
-                  keyType: host.key_type,
-                  sudoPassword: host.sudo_password,
-                  credentialId: host.credential_id || null,
-                  overrideCredentialUsername: Boolean(
-                    host.override_credential_username,
-                  ),
-                  jumpHosts: host.jump_hosts,
-                  ...legacyStatusCheck(host),
-                  // Exports from before 2.9.0 carry these in terminal_config.
-                  sshOptions:
-                    host.ssh_options ??
-                    sshOptionsForWrite({
-                      terminalConfig: host.terminal_config,
-                    }) ??
-                    null,
-                  notes: host.notes,
-                  useSocks5: Boolean(host.use_socks5),
-                  socks5Host: host.socks5_host,
-                  socks5Port: host.socks5_port,
-                  socks5Username: host.socks5_username,
-                  socks5Password: host.socks5_password,
-                  socks5ProxyChain: host.socks5_proxy_chain,
-                  createdAt: host.created_at || new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                };
-
-                (hostData as Record<string, unknown>).defaultOverrides =
-                  JSON.stringify(
-                    await applyHostDefaultsToWrite({
-                      ownerId: userId,
-                      hostId: null,
-                      columns: hostData as Record<string, unknown>,
-                      body: hostData as Record<string, unknown>,
-                    }),
-                  );
-                const created = await hostRepository.createEncryptedForUser(
-                  userId,
-                  hostData,
-                );
-                await applyPluginHostImportSettings(
-                  Number(created.id),
-                  importedHostPluginSettings(importDb, host),
-                );
-                importedHostIds.push(Number(created.id));
-                await importHostProtocolLogins(
-                  importDb,
-                  host,
-                  Number(created.id),
-                  userId,
-                );
-                result.summary.sshHostsImported++;
-              } catch (hostError) {
-                result.summary.errors.push(
-                  `SSH host import error: ${hostError.message}`,
-                );
-              }
-            }
-            await applyDefaultsAfterHostWrites(importedHostIds);
-          } catch {
-            apiLogger.info("ssh_data table not found in import file, skipping");
-          }
-
-          try {
-            const importedCreds = importDb
-              .prepare("SELECT * FROM ssh_credentials")
-              .all();
-            for (const cred of importedCreds) {
-              try {
-                const credentialRepository =
-                  createCurrentCredentialRepository();
-                const exists =
-                  await credentialRepository.existsForImportIdentity(
-                    userId,
-                    cred.name,
-                    cred.username,
-                  );
-
-                if (exists) {
-                  result.summary.skippedItems++;
-                  continue;
-                }
-
-                const credData = {
-                  userId: userId,
-                  name: cred.name,
-                  description: cred.description,
-                  folder: cred.folder,
-                  tags: cred.tags,
-                  authType: cred.auth_type,
-                  username: cred.username,
-                  password: cred.password,
-                  key: cred.key,
-                  privateKey: cred.private_key,
-                  publicKey: cred.public_key,
-                  keyPassword: cred.key_password,
-                  keyType: cred.key_type,
-                  detectedKeyType: cred.detected_key_type,
-                  usageCount: cred.usage_count || 0,
-                  lastUsed: cred.last_used,
-                  createdAt: cred.created_at || new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                };
-
-                await credentialRepository.createEncryptedForUser(
-                  userId,
-                  credData,
-                );
-                result.summary.sshCredentialsImported++;
-              } catch (credError) {
-                result.summary.errors.push(
-                  `SSH credential import error: ${credError.message}`,
-                );
-              }
-            }
-          } catch {
-            apiLogger.info(
-              "ssh_credentials table not found in import file, skipping",
-            );
-          }
-
-          const pluginRows = await importUserPluginRows(importDb, userId);
-          result.summary.pluginItemsImported += pluginRows.imported;
-          result.summary.skippedItems += pluginRows.skipped;
-          result.summary.errors.push(...pluginRows.errors);
-
-          const hostDefaults = await importHostDefaults(importDb, userId);
-          result.summary.skippedItems += hostDefaults.skipped;
-          if (hostDefaults.imported > 0) {
-            await recompute({ userIds: [userId] });
-          }
-
-          const targetUser = await userRepository.findById(userId);
-          if (targetUser?.isAdmin) {
+        // The file's credential ids belong to the server that wrote it.
+        const credentialIds = new Map<number, number>();
+        try {
+          const importedCreds = importDb
+            .prepare("SELECT * FROM ssh_credentials")
+            .all();
+          for (const cred of importedCreds) {
             try {
-              const importedSettings = readImportedSettings(importDb);
-              for (const setting of importedSettings) {
-                try {
-                  await upsertImportedSetting(setting);
-                  result.summary.settingsImported++;
-                } catch (settingError) {
-                  result.summary.errors.push(
-                    `Setting import error (${setting.key}): ${settingError.message}`,
-                  );
-                }
+              const credentialRepository = createCurrentCredentialRepository();
+              const existingId =
+                await credentialRepository.findIdForImportIdentity(
+                  userId,
+                  cred.name,
+                  cred.username,
+                );
+
+              if (existingId !== null) {
+                credentialIds.set(cred.id, existingId);
+                result.summary.skippedItems++;
+                continue;
               }
-            } catch {
-              apiLogger.info(
-                "settings table not found in import file, skipping",
+
+              const credData = {
+                userId: userId,
+                name: cred.name,
+                description: cred.description,
+                folder: cred.folder,
+                tags: cred.tags,
+                authType: cred.auth_type,
+                username: cred.username,
+                password: cred.password,
+                key: cred.key,
+                privateKey: cred.private_key,
+                publicKey: cred.public_key,
+                keyPassword: cred.key_password,
+                keyType: cred.key_type,
+                detectedKeyType: cred.detected_key_type,
+                usageCount: cred.usage_count || 0,
+                lastUsed: cred.last_used,
+                createdAt: cred.created_at || new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              };
+
+              const created = await credentialRepository.createEncryptedForUser(
+                userId,
+                credData,
+              );
+              credentialIds.set(cred.id, Number(created.id));
+              result.summary.sshCredentialsImported++;
+            } catch (credError) {
+              result.summary.errors.push(
+                `SSH credential import error: ${credError.message}`,
               );
             }
-          } else {
-            apiLogger.info(
-              "Settings import skipped - only admin users can import settings",
-            );
           }
+        } catch {
+          apiLogger.info(
+            "ssh_credentials table not found in import file, skipping",
+          );
+        }
 
-          result.success = true;
-
-          try {
-            await DatabaseSaveTrigger.forceSave("database_import");
-          } catch (saveError) {
-            apiLogger.error(
-              "Failed to persist imported data to disk",
-              saveError,
-              {
-                operation: "import_force_save_failed",
+        try {
+          const importedHosts = importDb
+            .prepare("SELECT * FROM ssh_data")
+            .all();
+          const importedHostIds: number[] = [];
+          for (const host of importedHosts) {
+            try {
+              const hostRepository = createCurrentHostRepository();
+              const exists = await hostRepository.existsForImportIdentity(
                 userId,
-              },
-            );
+                host.ip,
+                host.port,
+                host.username,
+              );
+
+              if (exists) {
+                result.summary.skippedItems++;
+                continue;
+              }
+
+              const hostData = {
+                userId: userId,
+                name: host.name,
+                ip: host.ip,
+                port: host.port,
+                username: host.username,
+                folder: host.folder,
+                tags: host.tags,
+                pin: Boolean(host.pin),
+                authType: host.auth_type,
+                forceKeyboardInteractive: host.force_keyboard_interactive,
+                password: host.password,
+                key: host.key,
+                keyPassword: host.key_password,
+                keyType: host.key_type,
+                sudoPassword: host.sudo_password,
+                credentialId: credentialIds.get(host.credential_id) ?? null,
+                overrideCredentialUsername: Boolean(
+                  host.override_credential_username,
+                ),
+                jumpHosts: host.jump_hosts,
+                ...legacyStatusCheck(host),
+                // Exports from before 2.9.0 carry these in terminal_config.
+                sshOptions:
+                  host.ssh_options ??
+                  sshOptionsForWrite({
+                    terminalConfig: host.terminal_config,
+                  }) ??
+                  null,
+                notes: host.notes,
+                useSocks5: Boolean(host.use_socks5),
+                socks5Host: host.socks5_host,
+                socks5Port: host.socks5_port,
+                socks5Username: host.socks5_username,
+                socks5Password: host.socks5_password,
+                socks5ProxyChain: host.socks5_proxy_chain,
+                createdAt: host.created_at || new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              };
+
+              (hostData as Record<string, unknown>).defaultOverrides =
+                JSON.stringify(
+                  await applyHostDefaultsToWrite({
+                    ownerId: userId,
+                    hostId: null,
+                    columns: hostData as Record<string, unknown>,
+                    body: hostData as Record<string, unknown>,
+                  }),
+                );
+              const created = await hostRepository.createEncryptedForUser(
+                userId,
+                hostData,
+              );
+              await applyPluginHostImportSettings(
+                Number(created.id),
+                importedHostPluginSettings(importDb, host),
+              );
+              importedHostIds.push(Number(created.id));
+              await importHostProtocolLogins(
+                importDb,
+                host,
+                Number(created.id),
+                userId,
+                credentialIds,
+              );
+              result.summary.sshHostsImported++;
+            } catch (hostError) {
+              result.summary.errors.push(
+                `SSH host import error: ${hostError.message}`,
+              );
+            }
           }
-        });
+          await applyDefaultsAfterHostWrites(importedHostIds);
+          for (const hostId of importedHostIds) {
+            pluginEvents.emit(TOPICS.hostCreated, { hostId, userId });
+          }
+        } catch {
+          apiLogger.info("ssh_data table not found in import file, skipping");
+        }
+
+        const pluginRows = await importUserPluginRows(importDb, userId);
+        result.summary.pluginItemsImported += pluginRows.imported;
+        result.summary.skippedItems += pluginRows.skipped;
+        result.summary.errors.push(...pluginRows.errors);
+
+        const hostDefaults = await importHostDefaults(importDb, userId);
+        result.summary.skippedItems += hostDefaults.skipped;
+        if (hostDefaults.imported > 0) {
+          await recompute({ userIds: [userId] });
+        }
+
+        const targetUser = await userRepository.findById(userId);
+        if (targetUser?.isAdmin) {
+          try {
+            const importedSettings = readImportedSettings(importDb);
+            for (const setting of importedSettings) {
+              try {
+                await upsertImportedSetting(setting);
+                result.summary.settingsImported++;
+              } catch (settingError) {
+                result.summary.errors.push(
+                  `Setting import error (${setting.key}): ${settingError.message}`,
+                );
+              }
+            }
+          } catch {
+            apiLogger.info("settings table not found in import file, skipping");
+          }
+        } else {
+          apiLogger.info(
+            "Settings import skipped - only admin users can import settings",
+          );
+        }
+
+        result.success = true;
+
+        try {
+          await DatabaseSaveTrigger.forceSave("database_import");
+        } catch (saveError) {
+          apiLogger.error(
+            "Failed to persist imported data to disk",
+            saveError,
+            {
+              operation: "import_force_save_failed",
+              userId,
+            },
+          );
+        }
       } finally {
         if (importDb) {
           importDb.close();
         }
-      }
-
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch {
-        apiLogger.warn("Failed to clean up uploaded file", {
-          operation: "file_cleanup_warning",
-          filePath: req.file.path,
-        });
       }
 
       res.json({
@@ -1472,17 +1466,6 @@ app.post(
         });
       }
     } catch (error) {
-      if (req.file?.path && fs.existsSync(req.file.path)) {
-        try {
-          fs.unlinkSync(req.file.path);
-        } catch {
-          apiLogger.warn("Failed to clean up uploaded file after error", {
-            operation: "file_cleanup_error",
-            filePath: req.file.path,
-          });
-        }
-      }
-
       apiLogger.error("SQLite import failed", error, {
         operation: "sqlite_import_api_failed",
         userId: (req as AuthenticatedRequest).userId,
@@ -1491,6 +1474,17 @@ app.post(
         error: "Failed to import SQLite data",
         details: getErrorMessage(error),
       });
+    } finally {
+      if (req.file) {
+        try {
+          fs.rmSync(req.file.path, { force: true });
+        } catch {
+          apiLogger.warn("Failed to clean up uploaded file", {
+            operation: "file_cleanup_warning",
+            filePath: req.file.path,
+          });
+        }
+      }
     }
   }),
 );
@@ -1726,7 +1720,8 @@ app.use(
   },
 );
 
-const HTTP_PORT = 30001;
+// The desktop app moves its embedded backend off 30001 when that is taken.
+const HTTP_PORT = Number(process.env.EMBEDDED_BACKEND_PORT) || 30001;
 
 async function initializeSecurity() {
   try {
@@ -2012,14 +2007,15 @@ function legacyStatusCheck(row: Record<string, unknown>): {
 
 /**
  * A host's plugin protocol logins from an export. The file's credential ids
- * belong to the server that wrote it, so a login keeps one only when it is
- * a credential the importing user can use.
+ * belong to the server that wrote it, so a login keeps one only when it maps
+ * to a credential imported alongside it.
  */
 async function importHostProtocolLogins(
   importDb: Database.Database,
   host: Record<string, unknown>,
   hostId: number,
   userId: string,
+  credentialIds: Map<number, number>,
 ): Promise<void> {
   let rows: Array<Record<string, unknown>>;
   try {
@@ -2040,7 +2036,7 @@ async function importHostProtocolLogins(
     }
     protocolAuth[String(row.protocol)] = {
       authType: row.auth_type,
-      credentialId: row.credential_id,
+      credentialId: credentialIds.get(row.credential_id as number) ?? null,
       username: row.username,
       password: row.password,
       fields,

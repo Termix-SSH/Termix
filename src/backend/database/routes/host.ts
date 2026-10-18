@@ -31,8 +31,10 @@ import {
 import {
   applyHostKeyTypeUpdate,
   containsOwnerPrivateAuthUpdate,
+  impliedSshAuthType,
   keepsStoredSshAuth,
   isNonEmptyString,
+  isOptionalAuthType,
   isOptionalBoolean,
   isValidPort,
   normalizeProtocolEnableFields,
@@ -259,7 +261,9 @@ router.post(
       !isNonEmptyString(ip) ||
       !isValidPort(port) ||
       !isOptionalBoolean(shareSshAuth) ||
-      !isOptionalBoolean(enableSsh)
+      !isOptionalBoolean(enableSsh) ||
+      !isOptionalAuthType(authType) ||
+      !isOptionalAuthType(authMethod)
     ) {
       sshLogger.warn("Invalid SSH data input validation failed", {
         operation: "host_create",
@@ -292,7 +296,9 @@ router.post(
     const effectiveAuthType =
       authType ||
       authMethod ||
-      (effectiveConnectionType !== "ssh" ? "password" : undefined);
+      (effectiveConnectionType !== "ssh"
+        ? "password"
+        : impliedSshAuthType(hostData));
     const effectiveUsername =
       username || firstProtocolUsername(protocolAuthPatch);
     const effectiveName =
@@ -403,6 +409,13 @@ router.post(
           body: hostData,
         }),
       );
+      // Host defaults may have supplied it.
+      if (!sshDataObj.authType) {
+        return res.status(400).json({
+          error:
+            "authType is required (password, key, credential, agent or none)",
+        });
+      }
       const result = await createCurrentHostRepository().createEncryptedForUser(
         userId,
         sshDataObj,
@@ -473,6 +486,7 @@ router.post(
       });
 
       res.json(await withProtocolAuth(stripSensitiveFields(resolvedHost)));
+      pluginEvents.emit(TOPICS.hostCreated, { hostId: createdHost.id, userId });
       notifyStatsHostUpdated(createdHost.id as number, userId, "host_create");
     } catch (err) {
       sshLogger.error("Failed to save SSH host to database", err, {
@@ -827,6 +841,8 @@ router.put(
       !isValidPort(port) ||
       !isOptionalBoolean(shareSshAuth) ||
       !isOptionalBoolean(enableSsh) ||
+      !isOptionalAuthType(authType) ||
+      !isOptionalAuthType(authMethod) ||
       !hostId
     ) {
       sshLogger.warn("Invalid SSH data input validation failed for update", {

@@ -19,7 +19,7 @@
 import type { AxiosInstance } from "axios";
 import { authApi, createRemoteOriginApiInstance } from "@/main-axios";
 import { getBasePath } from "@/lib/base-path";
-import { isElectron } from "@/lib/electron";
+import { isElectron, localBackendPort } from "@/lib/electron";
 import { getDeviceId } from "@/lib/device-id";
 import { websocketAuthProtocols } from "@/lib/ws-auth";
 import {
@@ -165,7 +165,7 @@ export async function pluginWsUrl(
   if (isElectron()) {
     return buildOriginWsUrl({
       origin: options.origin ?? "local",
-      localPort: BACKEND_PORT,
+      localPort: localBackendPort(),
       localPath: route,
       remotePath: route,
     });
@@ -175,11 +175,10 @@ export async function pluginWsUrl(
   const protocols = websocketAuthProtocols(token);
 
   // Dev without a configured API host goes through Vite's proxy, which is
-  // reached on the page's own origin rather than the backend port.
+  // reached on the page's own origin rather than the backend port. Vite moves
+  // to another port when 5173 is taken, so the port says nothing here.
   const devProxy =
-    process.env.NODE_ENV === "development" &&
-    !import.meta.env.VITE_API_HOST &&
-    (window.location.port === "3000" || window.location.port === "5173");
+    process.env.NODE_ENV === "development" && !import.meta.env.VITE_API_HOST;
 
   const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
 

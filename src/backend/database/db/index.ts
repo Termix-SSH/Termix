@@ -925,6 +925,38 @@ const dropRetiredColumns = () => {
   }
 };
 
+// Registration checked for a taken username and then inserted with nothing
+// enforcing it, so concurrent sign-ups could create two accounts with one
+// name, and every lookup by username picked between them arbitrarily. Later
+// duplicates are renamed rather than deleted, so no account is lost.
+const enforceUniqueUsernames = () => {
+  try {
+    sqlite.exec(`
+      WITH ranked AS MATERIALIZED (
+        SELECT id, username,
+          ROW_NUMBER() OVER (ORDER BY registered_at, id) AS sequence,
+          ROW_NUMBER() OVER (PARTITION BY username ORDER BY registered_at, id) AS occurrence
+        FROM users
+      ), candidates AS (
+        SELECT 0 AS candidate UNION ALL SELECT sequence FROM ranked
+      ), available AS (
+        SELECT MIN(candidate) AS candidate FROM candidates
+        WHERE NOT EXISTS (
+          SELECT 1 FROM ranked WHERE username LIKE 'termix-recovered-' || candidate || '-' || '%'
+        )
+      )
+      UPDATE users SET username = 'termix-recovered-' || (SELECT candidate FROM available) || '-' || ranked.sequence
+      FROM ranked WHERE ranked.id = users.id AND ranked.occurrence > 1;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users (username);
+    `);
+  } catch (error) {
+    databaseLogger.warn("Failed to enforce unique usernames", {
+      operation: "schema_migration",
+      error: getErrorMessage(error),
+    });
+  }
+};
+
 const migrateSchema = () => {
   repairSnippetsColumns(sqlite);
   addColumnIfNotExists("user_preferences", "theme", "TEXT");
@@ -996,6 +1028,7 @@ const migrateSchema = () => {
       );
     }
   }
+  enforceUniqueUsernames();
   addColumnIfNotExists("sessions", "external_session_ref", "TEXT");
 
   addColumnIfNotExists("ssh_data", "name", "TEXT");
@@ -1893,6 +1926,23 @@ async function moveRemoteLegacySudoPasswords(remote: {
   }
 }
 
+async function dropMysqlForeignKeys(
+  remote: { execute: (query: SQL) => Promise<unknown> },
+  table: string,
+  column: string,
+): Promise<void> {
+  const keys = resultRows<{ name: string }>(
+    await remote.execute(
+      sql`SELECT CONSTRAINT_NAME AS name FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ${table} AND COLUMN_NAME = ${column} AND REFERENCED_TABLE_NAME IS NOT NULL`,
+    ),
+  );
+  for (const key of keys) {
+    await remote.execute(
+      sql`ALTER TABLE ${sql.identifier(table)} DROP FOREIGN KEY ${sql.identifier(key.name)}`,
+    );
+  }
+}
+
 /**
  * The columns 2.9.0 left in place without a drizzle migration, so drizzle no
  * longer knows them. Dropped by hand, only where they still exist.
@@ -1928,6 +1978,10 @@ async function dropRemoteRetired(
     for (const column of columns) {
       if (!existing.has(`${table}.${column}`)) continue;
       try {
+        // Postgres drops a column's foreign keys with it; MySQL refuses.
+        if (dialect === "mysql") {
+          await dropMysqlForeignKeys(remote, table, column);
+        }
         await remote.execute(
           sql`ALTER TABLE ${sql.identifier(table)} DROP COLUMN ${sql.identifier(column)}`,
         );

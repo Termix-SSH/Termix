@@ -91,8 +91,8 @@ vi.mock("../../plugins/data.js", () => ({
   forgetTables: () => {},
 }));
 
-vi.mock("../../plugins/permissions.js", () => ({
-  invalidatePluginPermissionCache: () => {},
+vi.mock("../../plugins/permissions.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../plugins/permissions.js")>()),
 }));
 
 vi.mock("../../plugins/registry-index.js", async (importOriginal) => {
@@ -1083,4 +1083,49 @@ describe("more registries", () => {
       }),
     ).rejects.toMatchObject({ code: "KEY_CHANGED" });
   });
+});
+
+it("requires exact consent before enabling a mirrored plugin with capabilities", async () => {
+  createFixturePlugin({
+    id: "manual-mirror",
+    root: path.join(data, "plugins"),
+    capabilities: ["kv:own"],
+    backendSource:
+      'export async function activate(ctx) { await ctx.kv.set("probe", "value"); }',
+  });
+  await boot();
+  const options = {
+    version: "1.0.0",
+    capabilities: ["kv:own"],
+    userId: "admin",
+  };
+  await expect(
+    manage.enablePluginWithConsent("manual-mirror", {
+      ...options,
+      version: "0.9.0",
+    }),
+  ).rejects.toMatchObject({ code: "CONSENT_MISMATCH" });
+  await expect(
+    manage.enablePluginWithConsent("manual-mirror", {
+      ...options,
+      capabilities: [],
+    }),
+  ).rejects.toMatchObject({ code: "CONSENT_MISMATCH" });
+  await expect(
+    manage.enablePluginWithConsent("manual-mirror", {
+      version: "1.0.0",
+      userId: "admin",
+    }),
+  ).rejects.toMatchObject({ code: "CONSENT_REQUIRED" });
+  expect(db.grants).toEqual([]);
+  expect(db.rows.get("manual-mirror")?.state).toBe("disabled");
+  const result = await manage.enablePluginWithConsent("manual-mirror", options);
+  expect(result.state).toBe("active");
+  expect(db.grants).toContainEqual(
+    expect.objectContaining({
+      pluginId: "manual-mirror",
+      capability: "kv:own",
+      grantedBy: "admin",
+    }),
+  );
 });

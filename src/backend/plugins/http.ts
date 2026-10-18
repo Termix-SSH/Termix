@@ -42,9 +42,16 @@ const routers = new Map<string, Router>();
  * Requests per minute one address may make to one plugin's public routes.
  * They run without a login, so they are the cheap way to hammer a plugin.
  */
-function publicRateLimit(): number {
+const MAX_PLUGIN_PUBLIC_RATE_LIMIT = 10_000;
+
+/** The admin's limit when set, else the plugin's own, else 120. */
+function publicRateLimit(pluginLimit?: number): number {
   const parsed = Number(process.env.TERMIX_PLUGIN_PUBLIC_RATE_LIMIT);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 120;
+  if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  if (Number.isFinite(pluginLimit) && (pluginLimit as number) > 0) {
+    return Math.min(pluginLimit as number, MAX_PLUGIN_PUBLIC_RATE_LIMIT);
+  }
+  return 120;
 }
 const PUBLIC_RATE_WINDOW_MS = 60_000;
 const publicHits = new Map<string, { count: number; resetAt: number }>();
@@ -54,6 +61,7 @@ export function overPublicRateLimit(
   pluginId: string,
   ip: string,
   now = Date.now(),
+  pluginLimit?: number,
 ): boolean {
   if (publicHits.size > 10_000) {
     for (const [hitKey, entry] of publicHits) {
@@ -67,7 +75,7 @@ export function overPublicRateLimit(
     return false;
   }
   entry.count++;
-  return entry.count > publicRateLimit();
+  return entry.count > publicRateLimit(pluginLimit);
 }
 
 /** Test seam. */
@@ -319,7 +327,9 @@ export function createPluginRouter({
   outer.use((req: Request, res: Response, next: NextFunction) => {
     if (isPublicRequest(req, publicPaths, inner)) {
       const ip = req.ip || req.socket?.remoteAddress || "unknown";
-      if (overPublicRateLimit(pluginId, ip)) {
+      if (
+        overPublicRateLimit(pluginId, ip, Date.now(), options?.publicRateLimit)
+      ) {
         res.status(429).json({ error: "Too many requests" });
         return;
       }

@@ -5,7 +5,7 @@
  * an entity in without renumbering; anything referenced syncs first.
  */
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, getTableColumns } from "drizzle-orm";
 import type { SyncRow } from "@termix-ssh/plugin-sdk/backend";
 import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import {
@@ -22,6 +22,7 @@ import {
 import { FieldCrypto } from "../utils/field-crypto.js";
 import { syncLogger } from "../utils/logger.js";
 import { getPluginRuntime } from "../plugins/index.js";
+import { pluginEvents, TOPICS } from "../plugins/events.js";
 import { singletonSyncId } from "./wire.js";
 import { parseDefaultOverrides } from "../../types/host-defaults.js";
 import {
@@ -174,7 +175,7 @@ export function registerCoreSyncEntities(): void {
               )
             : {},
       }),
-      afterWrite: async ({ id, userId, wire, resolveId }) => {
+      afterWrite: async ({ id, userId, wire, created, resolveId }) => {
         if (id === null) return;
         // The server owns host defaults: it keeps what the host set itself
         // and resolves the rest. A desktop takes the server's values as sent.
@@ -195,6 +196,9 @@ export function registerCoreSyncEntities(): void {
         const { SharedHostSecretsManager } =
           await import("../utils/shared-host-secrets-manager.js");
         await SharedHostSecretsManager.getInstance().resyncHost(id);
+        if (created) {
+          pluginEvents.emit(TOPICS.hostCreated, { hostId: id, userId });
+        }
       },
       remove: async (row, userId) => {
         const { deleteOwnedHost } = await import("../hosts/delete-host.js");
@@ -493,6 +497,25 @@ const SHARED_HOST_DROP = [
   ...HOST_LOCAL_FIELDS,
 ];
 
+const HOST_TEXT_COLUMNS = new Set(
+  Object.entries(getTableColumns(hosts))
+    .filter(([, column]) => column.dataType === "string")
+    .map(([field]) => field),
+);
+
+/**
+ * A resolved host field back in the form its column stores, as an owned host
+ * sends it: the resolver parses JSON columns and turns the "true"/"false" of
+ * forceKeyboardInteractive into a boolean, which a text column cannot bind.
+ */
+function storedForm(field: string, value: unknown): unknown {
+  if (value !== null && typeof value === "object") return JSON.stringify(value);
+  if (typeof value === "boolean" && HOST_TEXT_COLUMNS.has(field)) {
+    return String(value);
+  }
+  return value;
+}
+
 async function loadSharedHosts(userId: string): Promise<SyncRow[]> {
   const {
     createCurrentRbacAccessRepository,
@@ -540,10 +563,7 @@ async function loadSharedHosts(userId: string): Promise<SyncRow[]> {
       const wire: SyncRow = {};
       for (const [field, value] of Object.entries(host)) {
         if (SHARED_HOST_DROP.includes(field)) continue;
-        wire[field] =
-          value !== null && typeof value === "object"
-            ? JSON.stringify(value)
-            : value;
+        wire[field] = storedForm(field, value);
       }
       wire.jumpHosts = await jumpHostsToSyncIds(host.jumpHosts);
       wire.pluginSettings = await exportHostPluginSettings(hostId, {

@@ -6,9 +6,16 @@
 
 let linked = null;
 
+const WEBSOCKET_TO_HTTP = { "ws:": "http:", "wss:": "https:" };
+
+// A WebSocket to the linked server (wss://host/...) counts as the link's
+// https://host origin, so its upgrade carries the proxy headers too.
 function getOrigin(url) {
   try {
-    return new URL(url).origin;
+    const parsed = new URL(url);
+    const httpProtocol = WEBSOCKET_TO_HTTP[parsed.protocol];
+    if (httpProtocol) parsed.protocol = httpProtocol;
+    return parsed.origin;
   } catch {
     return null;
   }

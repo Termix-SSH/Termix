@@ -39,7 +39,11 @@ function resolveLocalShell(
  * how many helpers were fixed.
  */
 function repairSpawnHelpers(ptyDir, fsImpl = fs) {
-  const dir = ptyDir.replace(/app\.asar(?!\.unpacked)/, "app.asar.unpacked");
+  // A universal macOS build ships app-arm64.asar and app-x64.asar.
+  const dir = ptyDir.replace(
+    /\b(app(?:-[a-z0-9]+)?)\.asar(?!\.unpacked)/,
+    "$1.asar.unpacked",
+  );
   const candidates = [
     path.join(dir, "build", "Release", "spawn-helper"),
     path.join(

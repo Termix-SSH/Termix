@@ -644,6 +644,8 @@
     "actionsClick": "Klik for at udvide/skjule",
     "openOnDoubleClick": "Åbn ved dobbeltklik",
     "openOnDoubleClickDesc": "Kræv et dobbeltklik for at åbne en værtssession i stedet for et enkelt klik",
+    "closeOnOpen": "Skjul sidebjælken efter åbning",
+    "closeOnOpenDesc": "Luk sidebjælken, når du åbner en vært fra den",
     "showFolderPaths": "Vis mappesstier",
     "showFolderPathsDesc": "Vis overordnede mappesstier over navne på indlejrede undermapper. Undermapper forbliver indrykket uanset hvad.",
     "rowDetailsTitle": "Radedetaljer",
@@ -1097,7 +1099,7 @@
     "acceptNewKey": "Accepter ny nøgle & fortsæt"
   },
   "errors": {
-    "databaseConnection": "Kunne ikke oprette forbindelse til databasen",
+    "databaseConnection": "Termix-serveren svarer ikke",
     "embeddedServerFailed": "Termix' lokale server kunne ikke starte",
     "unknownError": "Ukendt fejl",
     "syncedHostMissing": "Den synkroniserede vært findes ikke på den linkede server",
@@ -1124,7 +1126,7 @@
   "messages": {
     "registrationDisabled": "Du har ikke en Termix-konto endnu. Bed en administrator om at slå 'Auto-create external accounts' til.",
     "userNotAllowed": "Din konto er ikke autoriseret til at registrere. Kontakt venligst en administrator.",
-    "databaseConnectionFailed": "Kunne ikke oprette forbindelse til databasens server",
+    "databaseConnectionFailed": "Den starter muligvis stadig, eller den er stoppet. Denne side fortsætter med at prøve og genoptager automatisk, når serveren er tilbage.",
     "embeddedServerPortInUse": "Port {{port}} er allerede i brug af et andet program. Dette er typisk en Termix Docker-container eller en efterladt Termix-proces fra en tidligere session. Luk den, og genstart derefter Termix.",
     "embeddedServerPortInUseUnknownPort": "En af de porte, som Termix har brug for, er allerede i brug af et andet program. Luk det, der bruger den, og genstart derefter Termix.",
     "embeddedServerOldDatabase": "Dine lokale data stammer fra Termix 2.8 eller ældre og skal først migreres gennem version 2.9. Installer Termix 2.9.1, åbn den én gang, så den kan flytte dine data, og opdater derefter til denne version igen.",
@@ -1672,6 +1674,8 @@
         "pinAppRailDesc": "Hold venstre app-stolpe altid udvidet i stedet for at udvide den ved hover",
         "expandAppRailOnHover": "Udvid app-stolpe ved hover",
         "expandAppRailOnHoverDesc": "Tillad, at venstre app-stolpe udvides, når markøren bevæger sig over den",
+        "appRailHoverPushesContent": "Skub indholdet, når den udvides",
+        "appRailHoverPushesContentDesc": "Gør plads til den udvidede sidebjælke i stedet for at åbne den over siden. Åbne sessioner, som f.eks. fjernskrivebord, ændrer størrelse hver gang",
         "showPinAppRailButton": "Vis knap til fastgørelse af app-stolpe",
         "showPinAppRailButtonDesc": "Vis en knap i app-stolpen til at fastgøre den åben. Slukket som standard.",
         "settingsNavigation": "Navigation",
@@ -1967,6 +1971,7 @@
         "syncEntities_other": "Skrivebords-synkronisering"
       },
       "consent": {
+        "enableTitle": "Aktiver {{name}}?",
         "installTitle": "Installer {{name}}",
         "updateTitle": "Opdater {{name}}",
         "agreeUpdate": "Accepter og opdater",

@@ -213,7 +213,7 @@ describe("HostRepository and CredentialRepository", () => {
   it("checks credential import identity", async () => {
     const repo = await createRepositories();
 
-    await repo.credentials.create({
+    const created = await repo.credentials.create({
       userId: "user-1",
       name: "primary",
       authType: "password",
@@ -221,11 +221,11 @@ describe("HostRepository and CredentialRepository", () => {
     });
 
     await expect(
-      repo.credentials.existsForImportIdentity("user-1", "primary", "root"),
-    ).resolves.toBe(true);
+      repo.credentials.findIdForImportIdentity("user-1", "primary", "root"),
+    ).resolves.toBe(created.id);
     await expect(
-      repo.credentials.existsForImportIdentity("user-1", "primary", "admin"),
-    ).resolves.toBe(false);
+      repo.credentials.findIdForImportIdentity("user-1", "primary", "admin"),
+    ).resolves.toBeNull();
   });
 
   it("renames credential folders through the write boundary", async () => {

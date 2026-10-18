@@ -35,7 +35,15 @@ const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
 const { quitApp } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
 const { resolveLocalShell, repairSpawnHelpers } = require("./local-shell.cjs");
-const { registerLocalFileHandlers } = require("./local-files.cjs");
+const {
+  registerLocalFileHandlers,
+  setLocalBackendPort,
+} = require("./local-files.cjs");
+const {
+  EXTERNAL_EDITOR_SETTING,
+  isLaunchableFileName,
+} = require("./external-editor.cjs");
+const { isExternalLoginUrl, isCallbackPort } = require("./external-login.cjs");
 
 const localTerminalSessions = new Map();
 
@@ -434,14 +442,6 @@ function isInsecureModeEnabled() {
   );
 }
 
-function getOrigin(url) {
-  try {
-    return new URL(url).origin;
-  } catch {
-    return null;
-  }
-}
-
 function isPrivateNetworkHost(hostname) {
   if (
     hostname === "localhost" ||
@@ -485,7 +485,7 @@ function isInvalidCertificateAllowedForUrl(url) {
   // allows a self-signed certificate.
   const linked = linkedServer.getLinkedServer();
   if (!linked?.allowInvalidCertificate) return false;
-  return getOrigin(url) === linked.origin;
+  return linkedServer.isLinkedOrigin(url);
 }
 
 function getTlsVerificationOptions(url) {
@@ -700,6 +700,9 @@ let tray = null;
 let isQuitting = false;
 const tempFiles = new Map();
 const externalEditorSessions = new Map();
+// Paths the user picked in an open dialog this session. Only these may be
+// saved as the external editor, so the renderer cannot name an executable.
+const dialogChosenPaths = new Set();
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
 const appRoot = isDev ? process.cwd() : path.join(__dirname, "..");
@@ -1116,6 +1119,35 @@ function reapOrphanedBackendProcess() {
   }
 }
 
+const DEFAULT_BACKEND_PORT = 30001;
+let backendPort = DEFAULT_BACKEND_PORT;
+
+function canListenOn(port) {
+  return new Promise((resolve) => {
+    const probe = net.createServer();
+    probe.once("error", () => resolve(null));
+    probe.listen(port, "127.0.0.1", () => {
+      const { port: bound } = probe.address();
+      probe.close(() => resolve(bound));
+    });
+  });
+}
+
+// 30001 when it is free, otherwise any free port. Only the desktop app talks
+// to this backend, so the number itself does not matter.
+async function findBackendPort() {
+  const preferred = await canListenOn(DEFAULT_BACKEND_PORT);
+  if (preferred) return preferred;
+  const fallback = await canListenOn(0);
+  if (fallback) {
+    logToFile(
+      `Port ${DEFAULT_BACKEND_PORT} is in use, starting the backend on ${fallback}`,
+    );
+    return fallback;
+  }
+  return DEFAULT_BACKEND_PORT;
+}
+
 function startBackendServer() {
   reapOrphanedBackendProcess();
   backendFailure = null;
@@ -1156,7 +1188,8 @@ function startBackendServer() {
         DATA_DIR: dataDir,
         NODE_ENV: "production",
         ELECTRON_EMBEDDED: "true",
-        PORT: "30001",
+        PORT: String(backendPort),
+        EMBEDDED_BACKEND_PORT: String(backendPort),
         VERSION: app.getVersion(),
       },
       stdio: ["pipe", "pipe", "pipe", "ipc"],
@@ -1421,6 +1454,7 @@ function createWindow() {
       sandbox: true,
       webSecurity: true,
       preload: path.join(__dirname, "preload.js"),
+      additionalArguments: [`--termix-backend-port=${backendPort}`],
       partition: termixSessionPartition,
       allowRunningInsecureContent: false,
       webviewTag: false,
@@ -1663,6 +1697,12 @@ ipcMain.handle("get-embedded-server-status", () => {
 ipcMain.handle(
   "external-browser-login",
   async (_event, authUrl, callbackPort) => {
+    if (!isExternalLoginUrl(authUrl)) {
+      return { success: false, error: "Invalid authentication URL" };
+    }
+    if (!isCallbackPort(callbackPort)) {
+      return { success: false, error: "Invalid callback port" };
+    }
     const http = require("http");
 
     return new Promise((resolve) => {
@@ -2375,6 +2415,8 @@ async function testC2SRelay(
   if (runtime) runtime.authSocket = ws;
   return new Promise((resolve) => {
     let settled = false;
+    // The relay sends its reason and then closes; keep the reason.
+    let relayError = null;
     const settle = (result) => {
       if (settled) return;
       settled = true;
@@ -2411,6 +2453,10 @@ async function testC2SRelay(
           settle({ success: true });
         } else if (message.type === "error") {
           clearTimeout(timer);
+          relayError = normalizeC2SErrorMessage(
+            message.error,
+            "Tunnel test failed",
+          );
           settle(createC2SFailure(message.error, "Tunnel test failed"));
         }
       } catch (error) {
@@ -2424,7 +2470,10 @@ async function testC2SRelay(
     });
     ws.on("close", () => {
       if (runtime && c2sTunnelRuntimes.get(tunnel.name) === runtime) {
-        setC2STunnelError(tunnel.name, "Endpoint SSH connection closed");
+        setC2STunnelError(
+          tunnel.name,
+          relayError || "Endpoint SSH connection closed",
+        );
       }
       clearTimeout(timer);
       settle({ success: false, error: "Tunnel test connection closed" });
@@ -3156,18 +3205,16 @@ ipcMain.handle("get-c2s-tunnel-preset-default-name", () => {
   return `[${date}] ${computerName} (${platform} ${release})`;
 });
 
+function readSetting(key) {
+  const settingsPath = path.join(app.getPath("userData"), "settings.json");
+  if (!fs.existsSync(settingsPath)) return null;
+  const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+  return settings[key] !== undefined ? settings[key] : null;
+}
+
 ipcMain.handle("get-setting", (event, key) => {
   try {
-    const userDataPath = app.getPath("userData");
-    const settingsPath = path.join(userDataPath, "settings.json");
-
-    if (!fs.existsSync(settingsPath)) {
-      return null;
-    }
-
-    const settingsData = fs.readFileSync(settingsPath, "utf8");
-    const settings = JSON.parse(settingsData);
-    return settings[key] !== undefined ? settings[key] : null;
+    return readSetting(key);
   } catch (error) {
     console.error("Error reading setting:", error);
     return null;
@@ -3175,6 +3222,16 @@ ipcMain.handle("get-setting", (event, key) => {
 });
 
 ipcMain.handle("set-setting", (event, key, value) => {
+  if (typeof key !== "string") {
+    return { success: false, error: "Invalid setting key" };
+  }
+  if (
+    key === EXTERNAL_EDITOR_SETTING &&
+    value &&
+    !dialogChosenPaths.has(value)
+  ) {
+    return { success: false, error: "Choose the editor in the file dialog" };
+  }
   try {
     const userDataPath = app.getPath("userData");
     const settingsPath = path.join(userDataPath, "settings.json");
@@ -3197,94 +3254,6 @@ ipcMain.handle("set-setting", (event, key, value) => {
     return { success: false, error: error.message };
   }
 });
-
-ipcMain.handle("get-session-cookie", async (_event, name, targetUrl) => {
-  try {
-    const ses = mainWindow?.webContents?.session;
-    if (!ses) return null;
-    const cookies = await ses.cookies.get({
-      name,
-      ...(targetUrl ? { url: targetUrl } : {}),
-    });
-    const cookie = cookies.find((candidate) =>
-      cookieMatchesUrl(candidate, targetUrl),
-    );
-    return (
-      cookie?.value ||
-      getRememberedElectronAuthCookie(name, targetUrl)?.value ||
-      null
-    );
-  } catch (error) {
-    console.error("Failed to get session cookie:", error);
-    return getRememberedElectronAuthCookie(name, targetUrl)?.value || null;
-  }
-});
-
-function cookieMatchesUrl(cookie, targetUrl) {
-  if (!targetUrl) return true;
-
-  try {
-    const targetHost = new URL(targetUrl).hostname;
-    const cookieDomain = (cookie.domain || "").replace(/^\./, "");
-
-    return (
-      cookieDomain === targetHost ||
-      targetHost.endsWith(`.${cookieDomain}`) ||
-      (!cookieDomain && targetHost === "localhost")
-    );
-  } catch {
-    return true;
-  }
-}
-
-ipcMain.handle(
-  "wait-session-cookie",
-  async (_event, name, targetUrl, previousValue, timeoutMs = 5000) => {
-    const ses = mainWindow?.webContents?.session;
-    if (!ses) return { success: false, error: "No Electron session" };
-
-    const existingCookies = await ses.cookies.get({
-      name,
-      ...(targetUrl ? { url: targetUrl } : {}),
-    });
-    const existingCookie = existingCookies.find((cookie) =>
-      cookieMatchesUrl(cookie, targetUrl),
-    );
-    if (existingCookie?.value && existingCookie.value !== previousValue) {
-      return { success: true, value: existingCookie.value };
-    }
-
-    const rememberedCookie = getRememberedElectronAuthCookie(name, targetUrl);
-    if (rememberedCookie?.value && rememberedCookie.value !== previousValue) {
-      return { success: true, value: rememberedCookie.value };
-    }
-
-    return new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        ses.cookies.off("changed", onCookieChanged);
-        resolve({ success: false, error: "Timed out waiting for cookie" });
-      }, timeoutMs);
-
-      function onCookieChanged(_event, cookie, _cause, removed) {
-        if (
-          removed ||
-          cookie.name !== name ||
-          !cookie.value ||
-          cookie.value === previousValue ||
-          !cookieMatchesUrl(cookie, targetUrl)
-        ) {
-          return;
-        }
-
-        clearTimeout(timeout);
-        ses.cookies.off("changed", onCookieChanged);
-        resolve({ success: true, value: cookie.value });
-      }
-
-      ses.cookies.on("changed", onCookieChanged);
-    });
-  },
-);
 
 ipcMain.handle("clear-session-cookies", async () => {
   try {
@@ -3413,7 +3382,9 @@ ipcMain.handle("show-save-dialog", async (_event, options) => {
 });
 
 ipcMain.handle("show-open-dialog", async (_event, options) => {
-  return dialog.showOpenDialog(mainWindow, options || {});
+  const result = await dialog.showOpenDialog(mainWindow, options || {});
+  for (const filePath of result.filePaths) dialogChosenPaths.add(filePath);
+  return result;
 });
 
 function toLocalFileType(stat) {
@@ -3736,6 +3707,15 @@ ipcMain.handle("cleanup-temp-file", (_event, tempId) => {
 
 ipcMain.handle("open-external-editor", async (_event, fileData) => {
   try {
+    // The editor comes from the saved setting, never from the caller.
+    const editorPath = readSetting(EXTERNAL_EDITOR_SETTING) || null;
+    if (!editorPath && isLaunchableFileName(fileData?.fileName)) {
+      return {
+        success: false,
+        error: "Choose an external editor to open this file type",
+      };
+    }
+
     const result = createManagedTempFile(
       fileData?.fileName,
       fileData?.content,
@@ -3757,10 +3737,6 @@ ipcMain.handle("open-external-editor", async (_event, fileData) => {
       lastMtimeMs: stat.mtimeMs,
     });
 
-    const editorPath =
-      typeof fileData?.editorPath === "string" && fileData.editorPath.trim()
-        ? fileData.editorPath.trim()
-        : null;
     const openError = await openPathWithEditor(result.path, editorPath);
     if (openError) {
       closeExternalEditorSession(editId);
@@ -3864,6 +3840,8 @@ app.whenReady().then(async () => {
   await clearElectronJwtCookiesAtStartup();
 
   if (!isDev) {
+    backendPort = await findBackendPort();
+    setLocalBackendPort(backendPort);
     const result = await startBackendServer();
     logToFile("startBackendServer result:", result);
   } else {

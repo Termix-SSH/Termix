@@ -638,6 +638,8 @@
     "actionsClick": "點擊展開/收合",
     "openOnDoubleClick": "雙擊開啟",
     "openOnDoubleClickDesc": "需要雙擊才能開啟主機工作階段，而非單擊",
+    "closeOnOpen": "開啟後隱藏側邊欄",
+    "closeOnOpenDesc": "從側邊欄開啟主機後，自動關閉側邊欄",
     "showFolderPaths": "顯示資料夾路徑",
     "showFolderPathsDesc": "在巢狀子資料夾名稱上方顯示父資料夾路徑。無論如何，子資料夾都會保持縮排。",
     "rowDetailsTitle": "列詳細資訊",
@@ -1083,7 +1085,7 @@
     "acceptNewKey": "接受新金鑰並繼續"
   },
   "errors": {
-    "databaseConnection": "無法連線至資料庫",
+    "databaseConnection": "Termix 伺服器沒有回應",
     "embeddedServerFailed": "Termix 的本機伺服器無法啟動",
     "unknownError": "未知錯誤",
     "syncedHostMissing": "同步的主機不存在於已連結的伺服器上",
@@ -1110,7 +1112,7 @@
   "messages": {
     "registrationDisabled": "您尚未擁有 Termix 帳號。請要求管理員開啟「自動建立外部帳號」功能。",
     "userNotAllowed": "您的帳號無權註冊。請聯絡管理員。",
-    "databaseConnectionFailed": "無法連線至資料庫伺服器",
+    "databaseConnectionFailed": "伺服器可能仍在啟動中，或已停止運作。此頁面會持續嘗試連線，待伺服器恢復後將自動繼續。",
     "embeddedServerPortInUse": "連接埠 {{port}} 已被其他程式使用。這通常是 Termix Docker 容器或上次工作階段殘留的 Termix 行程。請關閉該程式，然後重新啟動 Termix。",
     "embeddedServerPortInUseUnknownPort": "Termix 所需的其中一個連接埠已被其他程式使用。請關閉佔用該連接埠的程式，然後重新啟動 Termix。",
     "embeddedServerOldDatabase": "您的本機資料來自 Termix 2.8 或更早版本，必須先透過 2.9 版本進行遷移。請安裝 Termix 2.9.1，開啟一次以完成資料遷移，然後再更新至此版本。",
@@ -1649,6 +1651,8 @@
         "pinAppRailDesc": "保持左側應用程式列始終展開，而非在懸停時展開",
         "expandAppRailOnHover": "懸停時展開應用程式列",
         "expandAppRailOnHoverDesc": "允許游標移至左側應用程式列時將其展開",
+        "appRailHoverPushesContent": "展開時推擠內容",
+        "appRailHoverPushesContentDesc": "為展開的側邊欄騰出空間，而非覆蓋在頁面上方。開啟的會話（如遠端桌面）將隨之調整大小",
         "showPinAppRailButton": "顯示固定應用程式列按鈕",
         "showPinAppRailButtonDesc": "在應用程式列中顯示一個按鈕以將其固定開啟。預設為關閉。",
         "settingsNavigation": "導覽",
@@ -1932,6 +1936,7 @@
         "syncEntities_other": "桌面同步"
       },
       "consent": {
+        "enableTitle": "要啟用 {{name}} 嗎？",
         "installTitle": "安裝 {{name}}",
         "updateTitle": "更新 {{name}}",
         "agreeUpdate": "同意並更新",

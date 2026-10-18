@@ -644,6 +644,8 @@
     "actionsClick": "Laajenna/tiivistä napsauttamalla",
     "openOnDoubleClick": "Avaa kaksoisnapsauttamalla",
     "openOnDoubleClickDesc": "Vaadi kaksoisnapsautus isäntäistunnon avaamiseen yksittäisen napsautuksen sijaan",
+    "closeOnOpen": "Piilota sivupalkki avaamisen jälkeen",
+    "closeOnOpenDesc": "Sulje sivupalkki, kun avaat isäntäsen palvelimen siitä",
     "showFolderPaths": "Näytä kansioiden polut",
     "showFolderPathsDesc": "Näytä vanhemman kansion polku sisäkkäisten alikansioiden nimien yläpuolella. Alikansiot pysyvät sisennettyinä joka tapauksessa.",
     "rowDetailsTitle": "Rivin tiedot",
@@ -1097,7 +1099,7 @@
     "acceptNewKey": "Hyväksy uusi avain ja jatka"
   },
   "errors": {
-    "databaseConnection": "Yhteys tietokantaan epäonnistui",
+    "databaseConnection": "Termix-palvelin ei vastaa",
     "embeddedServerFailed": "Termixin paikallinen palvelin ei voinut käynnistyä",
     "unknownError": "Tuntematon virhe",
     "syncedHostMissing": "Synkronoitu palvelin ei ole olemassa linkitettyä palvelinta",
@@ -1124,7 +1126,7 @@
   "messages": {
     "registrationDisabled": "Sinulla ei vielä ole Termix-tiliä. Pyydä järjestelmänvalvojaa ottamaan käyttöön ulkoisten tilien automaattinen luonti.",
     "userNotAllowed": "Tiliäsi ei ole valtuutettu rekisteröitymään. Ota yhteyttä järjestelmänvalvojaan.",
-    "databaseConnectionFailed": "Yhteys tietokantapalvelimeen epäonnistui",
+    "databaseConnectionFailed": "Se saattaa olla vielä käynnistymässä tai se on pysähtynyt. Tämä sivu yrittää uudelleen ja jatkaa automaattisesti, kun palvelin on takaisin.",
     "embeddedServerPortInUse": "Porttia {{port}} käyttää jo toinen ohjelma. Kyseessä on yleensä Termixin Docker-kontti tai edellisestä istunnosta jäänyt Termix-prosessi. Sulje se ja käynnistä Termix uudelleen.",
     "embeddedServerPortInUseUnknownPort": "Termixin tarvitsema portti on jo toisen ohjelman käytössä. Sulje porttia käyttävä ohjelma ja käynnistä Termix uudelleen.",
     "embeddedServerOldDatabase": "Paikalliset tietosi ovat peräisin Termix 2.8 tai vanhemmasta versiosta, ja niiden on käyty ensin versiota 2.9. Asenna Termix 2.9.1, avaa se kerran, jotta se voi siirtää tietosi, ja päivitä sitten uudelleen tähän versioon.",
@@ -1672,6 +1674,8 @@
         "pinAppRailDesc": "Pidä vasen sovellusraide aina laajennettuna sen sijaan, että se laajenee hiiren vierityksellä",
         "expandAppRailOnHover": "Laajenna sovellusraide hiiren vierityksellä",
         "expandAppRailOnHoverDesc": "Salli vasemman sovellusraiteen laajentuminen, kun osoitin liikkuu sen päällä",
+        "appRailHoverPushesContent": "Työnnä sisältöä, kun se laajenee",
+        "appRailHoverPushesContentDesc": "Varaa tilaa laajennetulle palkille sen sijaan, että se avautuisi sivun päälle. Avoinna olevat istunnot, kuten etätyöpöytä, muuttavat kokoaan joka kerta",
         "showPinAppRailButton": "Näytä sovellusraiteen kiinnitys-painike",
         "showPinAppRailButtonDesc": "Näytä painike sovellusraiteessa sen kiinnittämiseksi auki. Oletuksena pois päältä.",
         "settingsNavigation": "Navigointi",
@@ -1967,6 +1971,7 @@
         "syncEntities_other": "Työpöydän synkronointi"
       },
       "consent": {
+        "enableTitle": "Haluatko ottaa {{name}} käyttöön?",
         "installTitle": "Asenna {{name}}",
         "updateTitle": "Päivitä {{name}}",
         "agreeUpdate": "Hyväksy ja päivitä",

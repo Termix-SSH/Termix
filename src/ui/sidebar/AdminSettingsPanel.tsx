@@ -217,6 +217,12 @@ export function AdminSettingsPanel({
     setUserPage(0);
   }, [userSearch]);
 
+  // The panel stays mounted across Settings pages, so an open user view
+  // would otherwise replace whichever section is picked next.
+  useEffect(() => {
+    setManageUser(null);
+  }, [section]);
+
   useEffect(() => {
     onEditingChange?.(manageUser !== null);
     return () => onEditingChange?.(false);

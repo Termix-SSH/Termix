@@ -52,6 +52,43 @@ export function externalRequireInterop(externals) {
   };
 }
 
+// A .wasm or font import becomes its bytes (a Uint8Array) inside the bundle,
+// so it ships in backend.js or a worker with no separate file to find.
+export const BINARY_EXTENSIONS = [".wasm", ".ttf", ".otf"];
+const BINARY_LOADERS = Object.fromEntries(
+  BINARY_EXTENSIONS.map((ext) => [ext, "binary"]),
+);
+
+const REQUIRE_BANNER =
+  "import { createRequire as __termixCreateRequire } from 'node:module'; const require = __termixCreateRequire(import.meta.url);";
+
+/**
+ * package.json "termix": { "workers": { "engine": "src/backend/engine/worker.ts" } }
+ * bundles each entry on its own into dist/workers/<name>.js, for
+ * new Worker(new URL("./workers/<name>.js", import.meta.url)). Nothing is left
+ * external: core's import fallback only runs on the main thread, so a worker
+ * can't rely on host packages and must not import the SDK.
+ */
+export function readWorkerEntries(cwd, pluginId) {
+  const pkgPath = path.join(cwd, "package.json");
+  const pkg = fs.existsSync(pkgPath)
+    ? JSON.parse(fs.readFileSync(pkgPath, "utf8"))
+    : {};
+  const workers = pkg.termix?.workers ?? {};
+  return Object.entries(workers).map(([name, entry]) => {
+    if (!/^[a-z0-9-]+$/.test(name)) {
+      throw new Error(`${pluginId}: worker name "${name}" must be lowercase`);
+    }
+    const file = path.resolve(cwd, String(entry));
+    if (!fs.existsSync(file)) {
+      throw new Error(
+        `${pluginId}: worker "${name}" entry ${entry} is missing`,
+      );
+    }
+    return { name, file };
+  });
+}
+
 const SDK_PATCHES = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -216,12 +253,26 @@ export async function build({ cwd }) {
     // node_modules import instead, resolved at runtime like a host-provided
     // package.
     external: [...BACKEND_EXTERNALS, ...(manifest.nativeDependencies ?? [])],
+    loader: BINARY_LOADERS,
     // Bundled CJS deps still call require() for Node builtins at runtime.
     // ESM has no ambient require, so give esbuild's require shim a real one.
-    banner: {
-      js: "import { createRequire as __termixCreateRequire } from 'node:module'; const require = __termixCreateRequire(import.meta.url);",
-    },
+    banner: { js: REQUIRE_BANNER },
   });
+
+  for (const worker of readWorkerEntries(cwd, pluginId)) {
+    await esbuild.build({
+      entryPoints: [worker.file],
+      outfile: path.join(outDir, "workers", `${worker.name}.js`),
+      bundle: true,
+      format: "esm",
+      platform: "node",
+      target: "node22",
+      sourcemap: true,
+      logLevel: "warning",
+      loader: BINARY_LOADERS,
+      banner: { js: REQUIRE_BANNER },
+    });
+  }
 
   // Without this Node finds the host's typeless package.json, tries backend.js
   // as CommonJS first and warns before reparsing it as ESM.

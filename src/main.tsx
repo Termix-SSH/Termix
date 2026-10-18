@@ -6,6 +6,8 @@ import "./ui/index.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./ui/i18n/i18n";
 import { isElectron } from "@/lib/electron";
+import { isEmbeddedAuthFrame } from "@/lib/embedded-frame";
+import { rememberViewLink, resumeViewLink } from "@/lib/view-link-resume";
 import { getEmbeddedServerFailure } from "@/lib/embedded-server-status";
 import { Toaster } from "@/components/sonner";
 import {
@@ -84,6 +86,15 @@ function FullscreenApp() {
   }
 }
 
+/**
+ * A signed-out browser gets the normal login for a full-screen link and comes
+ * back to it afterwards. The desktop app and the embedded sign-in frames
+ * hand a login to their own shell, so they keep the bare view.
+ */
+function signsInForViewLink(): boolean {
+  return !isElectron() && !isEmbeddedAuthFrame();
+}
+
 function FullscreenAppGate() {
   const { t } = useTranslation();
   const [ready, setReady] = useState(false);
@@ -109,7 +120,16 @@ function FullscreenAppGate() {
         if (!cancelled) setReady(true);
       })
       .catch(() => {
-        if (!cancelled) setAuthFailed(true);
+        if (cancelled) return;
+        if (signsInForViewLink()) {
+          rememberViewLink();
+          window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname,
+          );
+        }
+        setAuthFailed(true);
       });
 
     return () => {
@@ -118,7 +138,7 @@ function FullscreenAppGate() {
   }, []);
 
   if (authFailed) {
-    return <FullscreenApp />;
+    return signsInForViewLink() ? <App /> : <FullscreenApp />;
   }
 
   if (!ready) {
@@ -181,6 +201,7 @@ function App() {
             // Non-fatal: WebSocket connections will fall back to cookie auth
           }
         }
+        if (resumeViewLink()) return;
         setPhase("loading-app");
         await Promise.all([
           startPluginRuntime()
@@ -262,6 +283,10 @@ function App() {
   function handleLogin(u: string) {
     loggingOutRef.current = false;
     clearDesktopManualLogout();
+    if (resumeViewLink()) {
+      setPhase("loading-app");
+      return;
+    }
     setAuthUsername(u);
     setPhase("loading-app");
     void (async () => {

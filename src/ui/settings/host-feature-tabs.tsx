@@ -7,6 +7,7 @@
  */
 
 import { PluginIcon } from "@/lib/plugin-icon";
+import { pluginKey } from "@/lib/plugin-i18n";
 import {
   hostEditorSectionList,
   registerHostEditorSection,
@@ -95,7 +96,7 @@ export function syncHostFeatureTabs(plugins: PluginSummary[]): string[] {
       pluginId: plugin.id,
       group: placement?.group ?? host.editorGroup ?? "top",
       order: placement?.order ?? host.editorOrder ?? 100,
-      labelKey: plugin.name,
+      labelKey: pluginKey(plugin.id, "plugin.name"),
       label: plugin.name,
       // Nothing but the plugin's host settings, so it works for defaults too.
       defaults: ownSections.has(plugin.id) ? "only" : true,

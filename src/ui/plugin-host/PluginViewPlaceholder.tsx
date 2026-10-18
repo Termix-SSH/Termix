@@ -2,6 +2,7 @@ import { CircleSlash } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/button";
 import { usePermissions } from "@/hooks/use-permissions";
+import { pluginName } from "@/lib/plugin-i18n";
 import { OPEN_PLUGINS_EVENT } from "@/plugins/open-plugins";
 import { usePluginStore } from "./plugin-store";
 import { unregisteredViewStatus, type ViewKind } from "./view-ownership";
@@ -27,7 +28,7 @@ export function PluginViewPlaceholder({
   usePluginStore();
   const { has } = usePermissions();
   const { status, owner } = unregisteredViewStatus(kind, viewId);
-  const name = owner?.summary.name ?? viewId;
+  const name = owner ? pluginName(t, owner.summary) : viewId;
 
   if (status === "loading") {
     return (

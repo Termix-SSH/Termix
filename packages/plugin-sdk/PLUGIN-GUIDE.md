@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.6 | Plugin API 1.2.0
+SDK 1.0.11 | Plugin API 1.3.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -90,7 +90,7 @@ npm test             # termix-plugin test: Vitest
 npm run typecheck    # tsc
 npm run validate     # termix-plugin validate: manifest, files, migrations, changelog, docs
 npm run migrations   # termix-plugin migrations: write migrations after changing tables.ts
-npm run pack         # termix-plugin pack: write <id>-<version>.tmxplug
+npm run pack         # termix-plugin pack: write <id>-<version>.tmxplug (with LICENSE and NOTICE)
 npm run format       # Prettier
 npm run format:check
 ```
@@ -105,7 +105,7 @@ Before you call a change finished:
 - [ ] `npm run build` passes
 - [ ] `npm run format:check` passes
 - [ ] `npx termix-plugin migrations --check` passes (you ran `npm run migrations` after changing tables)
-- [ ] New strings are in `locales/en.json`
+- [ ] New strings are in `locales/en.json`, and `plugin.name` / `plugin.description` match the manifest
 - [ ] New routes have an `@openapi` block and a test, including without the permission
 - [ ] New env vars are listed in `env` in the manifest
 - [ ] `docs/` and the "About this plugin" section of `AGENTS.md` still match what the plugin does
@@ -225,6 +225,8 @@ Bundled as ESM for Node 22+ into `dist/backend.js`. Backend imports of your own 
 | `audit.record`         | none                             | Write your own audit line                                      |
 | `sync`                 | none                             | Sync your tables to a linked desktop                           |
 | `auth`                 | `auth:provide`                   | Login methods, second factors, SSH auth types                  |
+| `auth.issueUserToken`  | `users:impersonate`              | A short-lived session for calling Termix's API as a user       |
+| `users.getLocale`      | `users:read`                     | A user's UI language                                           |
 | `system`               | `system:tls`                     | The server's HTTPS certificate                                 |
 | `plugins.list()`       | `plugins:read`                   | Which plugins are installed                                    |
 | `asUser(userId, fn)`   | always audited                   | Run background work as a user                                  |
@@ -236,6 +238,13 @@ Bundled as ESM for Node 22+ into `dist/backend.js`. Backend imports of your own 
 In a route the actor is the signed-in user, set by Termix. `ctx.currentActor()` returns it. Background
 work with no request (a timer, an event) uses `ctx.asUser(userId, fn)`, which is audited and still applies
 that user's permissions.
+
+Background work that must call Termix's own HTTP API (the Termix CLI, say) asks for a session with
+`ctx.auth.issueUserToken(userId, { purpose, ttlSeconds })` and sends it as `Authorization: Bearer <token>`.
+It needs `users:impersonate` and `engine.api` `^1.3`, lasts 300 seconds by default and 900 at most, and is
+audited as `plugin_user_token_issued`. The user's permissions apply, and it is refused on routes that change
+their password, second factors, API keys or linked logins. `ctx.users.getLocale(userId)` gives the user's
+UI language, like `zh_CN`, or null, for writing to them in it.
 
 ### Routes
 
@@ -283,7 +292,8 @@ router.post("/notes", async (req, res) => {
 - The `@openapi` path is the full path, starting with `/plugin-api/<id>/`. `build` turns these into
   `dist/openapi.json` and the docs site renders them.
 - `ctx.http.router({ public: ["/webhook/:token"], bodyLimit: "20mb", rawBody: false })`. Public routes
-  have no actor: check their token yourself and rate limit them.
+  have no actor: check their token yourself. Core allows 120 public requests a minute per address;
+  `publicRateLimit` raises that for a proxied page that loads its own assets.
 - `ctx.http.baseUrl(req)` is the public address, for callback URLs.
 - `ctx.ws.route("/live", (socket, conn) => ...)`. Long lived sockets should check
   `conn.isDataUnlocked()` per message.
@@ -333,8 +343,27 @@ ctx.schedule.every(60_000, () => refresh(), { jitterMs: 5_000 });
 ### Shared packages
 
 These come from Termix and are never bundled: `@termix-ssh/plugin-sdk`, `express`, `ssh2`, `ws`, `multer`,
-`cookie-parser`, `axios`, `jszip`, `guacamole-lite`, `@anthropic-ai/sdk`, `drizzle-orm`, `sharp` and every
-Node builtin. List the ones you use in `peerDependencies`. Any other npm package is bundled.
+`cookie-parser`, `axios`, `drizzle-orm`, `sharp` and every Node builtin. List the ones you use in
+`peerDependencies`. Any other npm package is bundled.
+
+### Workers and WebAssembly
+
+Heavy work (decoding, encoding, parsing) belongs in a worker thread so it never blocks the server. Name
+each worker entry in `package.json`:
+
+```json
+"termix": { "workers": { "engine": "src/backend/engine/worker.ts" } }
+```
+
+`build` bundles it alone into `dist/workers/engine.js`; start it with
+`new Worker(new URL("./workers/engine.js", import.meta.url))`. A worker bundles everything it imports and
+can't use the shared packages above, so it must not import `@termix-ssh/plugin-sdk`. Talk to it with
+`postMessage`.
+
+Importing a `.wasm`, `.ttf` or `.otf` file gives its bytes as a `Uint8Array`, in `build` and in tests, so a module ships
+inside the bundle with no file to find. Compile it once on the main thread with `new WebAssembly.Module`
+and post that to each worker. Add `declare module "*.wasm" { const bytes: Uint8Array; export default bytes; }`
+to a `.d.ts` in the plugin.
 
 ## Database
 
@@ -464,7 +493,7 @@ your own host settings, under `host.pluginSettings[<id>]`.
 
 Slots you can fill include `terminal.toolbar`, `terminal.toolbarStatus`, `terminal.sidePanel`,
 `terminal.overlay`, `dashboard.counters`, `dashboard.hostMetrics`, `admin.userTabs`, `hosts.importMenu`,
-`hosts.panel`, `credentials.badges`, `shell.overlay` and `tab.menu`. See
+`hosts.panel`, `credentials.badges`, `shell.overlay`, `shell.rightEdge` and `tab.menu`. See
 https://docs.termix.site/develop/more-extension-points.
 
 ## Looking native
@@ -517,6 +546,20 @@ read it from your own namespace. Unknown keys fall back to Termix's shared strin
 Plurals use `_one` and `_other` with `t("hosts", { count })`. Other languages go in
 `locales/translated/<code>.json` (like `de_DE.json`) with the same keys. Keep `{{placeholders}}` as they are.
 Untranslated strings show in English.
+
+Termix shows your plugin's name and description in the plugin manager, the setup picker and settings.
+Put them in `locales/en.json` as `plugin.name` and `plugin.description`, with the same text as `name` and
+`description` in the manifest, so they get translated too. Without them, the English manifest text shows in
+every language.
+
+```json
+{
+  "plugin": {
+    "name": "Host Metrics",
+    "description": "Live CPU, memory, disk, network and GPU stats."
+  }
+}
+```
 
 ## Docs
 
@@ -682,20 +725,20 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 
 ## termix-plugin CLI
 
-| Command                        | What it does                                                                                   |
-| ------------------------------ | ---------------------------------------------------------------------------------------------- |
-| `build`                        | Bundle `dist/backend.js` and `dist/frontend.js`, CSS, locales, migrations, `dist/openapi.json` |
-| `validate`                     | Check the manifest, its files, migrations for every database, the changelog and `package.json` |
-| `test`                         | Apply patches, run Vitest                                                                      |
-| `migrations`                   | Write a migration per database from `tables.ts`. `--check` fails when one is missing           |
-| `openapi`                      | Write `dist/openapi.json` from `@openapi` blocks                                               |
-| `pack`                         | Validate, then write `<id>-<version>.tmxplug`. `--out <dir>`                                   |
-| `sign <file>`                  | Sign a `.tmxplug` with `TERMIX_PLUGIN_SIGNING_KEY`                                             |
-| `verify <file> --key <base64>` | Check a `.tmxplug` against its `.sig`                                                          |
-| `keygen`                       | Write a new signing key pair. `--out <dir>`                                                    |
-| `changelog`                    | Print one version's notes. `--version x.y.z`                                                   |
-| `patch`                        | Apply the plugin's dependency patches (`build` and `test` do this too)                         |
-| `dev`                          | Build, pack and install on a server, again on every change. `--server`, `--key`, `--once`      |
+| Command                        | What it does                                                                                    |
+| ------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `build`                        | Bundle `dist/backend.js`, `dist/frontend.js`, workers, CSS, locales, migrations, `openapi.json` |
+| `validate`                     | Check the manifest, its files, migrations for every database, the changelog and `package.json`  |
+| `test`                         | Apply patches, run Vitest                                                                       |
+| `migrations`                   | Write a migration per database from `tables.ts`. `--check` fails when one is missing            |
+| `openapi`                      | Write `dist/openapi.json` from `@openapi` blocks                                                |
+| `pack`                         | Validate, then write `<id>-<version>.tmxplug`. `--out <dir>`                                    |
+| `sign <file>`                  | Sign a `.tmxplug` with `TERMIX_PLUGIN_SIGNING_KEY`                                              |
+| `verify <file> --key <base64>` | Check a `.tmxplug` against its `.sig`                                                           |
+| `keygen`                       | Write a new signing key pair. `--out <dir>`                                                     |
+| `changelog`                    | Print one version's notes. `--version x.y.z`                                                    |
+| `patch`                        | Apply the plugin's dependency patches (`build` and `test` do this too)                          |
+| `dev`                          | Build, pack and install on a server, again on every change. `--server`, `--key`, `--once`       |
 
 ## SDK entry points
 
@@ -720,37 +763,37 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 
 ## Capabilities
 
-| Capability           | Risk     | What it allows                                         |
-| -------------------- | -------- | ------------------------------------------------------ |
-| `credentials:read`   | critical | Read stored secrets for hosts the user can reach       |
-| `system:tls`         | critical | Replace the HTTPS certificate, answer CA domain checks |
-| `ssh:connect`        | high     | Run any command on hosts, with the user's access       |
-| `process:spawn`      | high     | Run programs on the Termix server                      |
-| `users:write`        | high     | Add users and change their roles                       |
-| `users:impersonate`  | high     | Run background work as another user, audited           |
-| `db:core-refs`       | high     | Query core users, roles and hosts tables (read only)   |
-| `auth:provide`       | high     | Add login methods, second factors, SSH auth types      |
-| `device:serial`      | high     | Open serial and USB ports on the server                |
-| `notify:hub`         | high     | Receive every alert (the alerts hub only)              |
-| `hosts:write`        | medium   | Add and edit hosts                                     |
-| `credentials:use`    | medium   | Connect with saved credentials without seeing them     |
-| `credentials:write`  | medium   | Save new credentials                                   |
-| `network:outbound`   | medium   | Outbound HTTP through `ctx.fetch`                      |
-| `network:serve`      | medium   | HTTP routes and sockets                                |
-| `network:broadcast`  | medium   | Local network broadcasts, like Wake-on-LAN             |
-| `users:read`         | medium   | Usernames and roles                                    |
-| `events:core`        | medium   | Listen to core events                                  |
-| `notify:send`        | medium   | Send alerts                                            |
-| `audit:read`         | medium   | Read the audit log                                     |
-| `desktop:window`     | medium   | Open windows in the desktop app                        |
-| `hosts:read`         | low      | Read hosts the user can see                            |
-| `db:own`             | low      | Your own tables                                        |
-| `kv:own`             | low      | Small key value state                                  |
-| `files:own`          | low      | Your own folder on disk                                |
-| `secrets:own`        | low      | Your own encrypted secrets                             |
-| `settings:read-core` | low      | Read Termix server settings                            |
-| `plugins:read`       | low      | See installed plugins                                  |
-| `ui:surface`         | low      | Add tabs, panels and settings                          |
+| Capability           | Risk     | What it allows                                          |
+| -------------------- | -------- | ------------------------------------------------------- |
+| `credentials:read`   | critical | Read stored secrets for hosts the user can reach        |
+| `system:tls`         | critical | Replace the HTTPS certificate, answer CA domain checks  |
+| `ssh:connect`        | high     | Run any command on hosts, with the user's access        |
+| `process:spawn`      | high     | Run programs on the Termix server                       |
+| `users:write`        | high     | Add users and change their roles                        |
+| `users:impersonate`  | high     | Act as another user, or get a session for them, audited |
+| `db:core-refs`       | high     | Query core users, roles and hosts tables (read only)    |
+| `auth:provide`       | high     | Add login methods, second factors, SSH auth types       |
+| `device:serial`      | high     | Open serial and USB ports on the server                 |
+| `notify:hub`         | high     | Receive every alert (the alerts hub only)               |
+| `hosts:write`        | medium   | Add and edit hosts                                      |
+| `credentials:use`    | medium   | Connect with saved credentials without seeing them      |
+| `credentials:write`  | medium   | Save new credentials                                    |
+| `network:outbound`   | medium   | Outbound HTTP through `ctx.fetch`                       |
+| `network:serve`      | medium   | HTTP routes and sockets                                 |
+| `network:broadcast`  | medium   | Local network broadcasts, like Wake-on-LAN              |
+| `users:read`         | medium   | Usernames, roles and UI language                        |
+| `events:core`        | medium   | Listen to core events                                   |
+| `notify:send`        | medium   | Send alerts                                             |
+| `audit:read`         | medium   | Read the audit log                                      |
+| `desktop:window`     | medium   | Open windows in the desktop app                         |
+| `hosts:read`         | low      | Read hosts the user can see                             |
+| `db:own`             | low      | Your own tables                                         |
+| `kv:own`             | low      | Small key value state                                   |
+| `files:own`          | low      | Your own folder on disk                                 |
+| `secrets:own`        | low      | Your own encrypted secrets                              |
+| `settings:read-core` | low      | Read Termix server settings                             |
+| `plugins:read`       | low      | See installed plugins                                   |
+| `ui:surface`         | low      | Add tabs, panels and settings                           |
 
 An update that adds a capability waits for an admin to approve it.
 

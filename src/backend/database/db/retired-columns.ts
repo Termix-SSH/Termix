@@ -5,8 +5,11 @@
  *
  * Kept on purpose: columns a move only reads once the owner's data key opens
  * at a password login (users.totp_*, the rdp, vnc and telnet logins and
- * domain), so a user who never signed in to 2.9 still gets them, and
- * ssh_data.vault_profile_id, whose foreign key SQLite cannot drop in place.
+ * domain), so a user who never signed in to 2.9 still gets them.
+ *
+ * ssh_data.vault_profile_id goes because its foreign key follows the vault
+ * plugin's rename of vault_profiles: once the plugin is uninstalled, SQLite
+ * refuses every write to ssh_data and the other engines refuse the uninstall.
  */
 
 /** Columns drizzle never knew were removed, dropped by hand on every engine. */
@@ -52,6 +55,7 @@ export const REMOTE_RETIRED_COLUMNS: Record<string, string[]> = {
     "telnet_port",
     "tunnel_connections",
     "use_warpgate",
+    "vault_profile_id",
     "vnc_port",
     "web_ui_config",
     "wol_broadcast_address",

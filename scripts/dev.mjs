@@ -14,7 +14,8 @@
  *   mounted. A plugin change rebuilds it and restarts the container. Core
  *   changes wait for "r", since an image build is slow.
  *
- * --db postgres|mysql and --guacd run those in Docker next to it.
+ * --db postgres|mysql and --guacd run those in Docker next to it; --guacd also
+ * switches remote desktop from its built-in engine to that guacd.
  */
 
 import fs from "node:fs";

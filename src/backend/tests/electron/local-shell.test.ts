@@ -80,4 +80,20 @@ describe("repairSpawnHelpers", () => {
     expect(chmods[0][1] & 0o111).not.toBe(0);
     expect(chmods[0][0]).toContain("app.asar.unpacked");
   });
+
+  it.each(["app-arm64.asar", "app-x64.asar"])(
+    "repairs the helper in the unpacked copy of a universal build's %s",
+    (asar) => {
+      const chmods: string[] = [];
+      const fsImpl = {
+        statSync: () => ({ mode: 0o644 }),
+        chmodSync: (file: string) => {
+          chmods.push(file.split(require("node:path").sep).join("/"));
+        },
+      };
+      const dir = `/Applications/Termix.app/Contents/Resources/${asar}/node_modules/node-pty`;
+      repairSpawnHelpers(dir, fsImpl);
+      expect(chmods[0]).toContain(`/${asar}.unpacked/node_modules/node-pty/`);
+    },
+  );
 });

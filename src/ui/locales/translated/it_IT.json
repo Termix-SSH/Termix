@@ -650,6 +650,8 @@
     "actionsClick": "Clic per espandere/comprimere",
     "openOnDoubleClick": "Apri al doppio clic",
     "openOnDoubleClickDesc": "Richiedi un doppio clic per aprire una sessione host invece di un singolo clic",
+    "closeOnOpen": "Nascondi la barra laterale dopo l'apertura",
+    "closeOnOpenDesc": "Chiudi la barra laterale dopo aver aperto un host da essa",
     "showFolderPaths": "Mostra percorsi delle cartelle",
     "showFolderPathsDesc": "Mostra il percorso della cartella genitore sopra i nomi delle sottocartelle annidate. Le sottocartelle rimangono indentate in ogni caso.",
     "rowDetailsTitle": "Dettagli riga",
@@ -1111,7 +1113,7 @@
     "acceptNewKey": "Accept New Key & Continue"
   },
   "errors": {
-    "databaseConnection": "Could not connect to the database",
+    "databaseConnection": "Il server Termix non risponde",
     "embeddedServerFailed": "Termix's local server could not start",
     "unknownError": "Unknown error",
     "syncedHostMissing": "The synced host does not exist on the linked server",
@@ -1138,7 +1140,7 @@
   "messages": {
     "registrationDisabled": "Non hai ancora un account Termix. Chiedi a un amministratore di attivare la creazione automatica degli account esterni.",
     "userNotAllowed": "Il tuo account non è autorizzato alla registrazione. Contatta un amministratore.",
-    "databaseConnectionFailed": "Impossibile connettersi al server del database",
+    "databaseConnectionFailed": "Potrebbe ancora essere in fase di avvio o essersi arrestato. Questa pagina continua a provare e riprenderà automaticamente una volta che il server sarà di nuovo disponibile.",
     "embeddedServerPortInUse": "La porta {{port}} è già in uso da un altro programma. Di solito si tratta di un container Docker di Termix o di un processo residuo di Termix da una sessione precedente. Chiudilo, quindi riavvia Termix.",
     "embeddedServerPortInUseUnknownPort": "Una delle porte necessarie a Termix è già in uso da un altro programma. Chiudi il programma che la sta utilizzando, quindi riavvia Termix.",
     "embeddedServerOldDatabase": "I tuoi dati locali provengono da Termix 2.8 o versioni precedenti e devono essere migrati tramite la versione 2.9. Installa Termix 2.9.1, aprilo una volta per consentire la migrazione dei dati, quindi aggiorna nuovamente a questa versione.",
@@ -1695,6 +1697,8 @@
         "pinAppRailDesc": "Mantieni la barra app laterale sinistra sempre espansa invece di espanderla al passaggio del mouse",
         "expandAppRailOnHover": "Espandi barra app al passaggio del mouse",
         "expandAppRailOnHoverDesc": "Consenti alla barra app laterale sinistra di espandersi quando il puntatore vi passa sopra",
+        "appRailHoverPushesContent": "Sposta il contenuto quando si espande",
+        "appRailHoverPushesContentDesc": "Fai spazio alla barra laterale espansa invece di sovrapporla alla pagina. Le sessioni aperte, come il desktop remoto, verranno ridimensionate ogni volta.",
         "showPinAppRailButton": "Mostra pulsante per fissare barra app",
         "showPinAppRailButtonDesc": "Mostra un pulsante nella barra app per fissarla aperta. Disattivato di default.",
         "settingsNavigation": "Navigazione",
@@ -2002,6 +2006,7 @@
         "syncEntities_other": "Sincronizzazione desktop"
       },
       "consent": {
+        "enableTitle": "Abilitare {{name}}?",
         "installTitle": "Installa {{name}}",
         "updateTitle": "Aggiorna {{name}}",
         "agreeUpdate": "Accetta e aggiorna",

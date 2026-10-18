@@ -9,12 +9,6 @@ services:
       - termix-data:/app/data
     environment:
       PORT: "8080"
-      GUACD_HOST: "guacd"
-      GUACD_TUNNEL_HOST: "termix"
-      GUACD_RECORDING_PATH: "/termix-data/session_recordings/guacamole"
-      # Where guacd stores files for RDP drive redirection (one folder per
-      # user is created underneath). Must be writable by guacd's user.
-      GUACD_DRIVE_PATH: "/termix-data/rdp-drive"
       # Multi-instance deployments should point every backend at the same
       # Redis. Without it, collaboration rooms keep their single-instance
       # in-memory fallback.
@@ -28,21 +22,14 @@ services:
       # Trusted reverse-proxy authentication is disabled by default. When
       # enabled, do not expose this container directly to untrusted clients.
       # TRUSTED_PROXY_AUTH_ENABLED: "true"
-      # TRUSTED_PROXY_AUTH_TRUSTED_PROXIES: "172.16.0.0/12"
+      # List the address your authenticating proxy connects from, as this
+      # container sees it (for a proxy container on termix-net, its IP there).
+      # Keep it narrow: published ports can reach the container from the
+      # Docker gateway, so do not trust whole private ranges.
+      # TRUSTED_PROXY_AUTH_TRUSTED_PROXIES: "172.20.0.10"
       # TRUSTED_PROXY_AUTH_ROLE_MAP: '{"operators":["user"]}'
       # TRUSTED_PROXY_AUTH_USERNAME_HEADER: "x-forwarded-username"
       # TRUSTED_PROXY_AUTH_ROLE_HEADER: "x-forwarded-role"
-    depends_on:
-      - guacd
-    networks:
-      - termix-net
-
-  guacd:
-    image: guacamole/guacd:1.6.0
-    container_name: guacd
-    restart: unless-stopped
-    volumes:
-      - termix-data:/termix-data
     networks:
       - termix-net
 

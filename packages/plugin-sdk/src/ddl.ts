@@ -309,15 +309,25 @@ export function splitStatements(source: string): string[] {
       continue;
     }
     if (char === ";") {
-      if (current.trim()) statements.push(current.trim());
+      if (hasSql(current)) statements.push(current.trim());
       current = "";
       continue;
     }
     current += char;
   }
 
-  if (current.trim()) statements.push(current.trim());
+  if (hasSql(current)) statements.push(current.trim());
   return statements;
+}
+
+/** False for a chunk that is only comments, which a driver refuses to run. */
+function hasSql(chunk: string): boolean {
+  return (
+    chunk
+      .replace(/--[^\n]*/g, "")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .trim() !== ""
+  );
 }
 
 /** DROP statement for a definition, for removePluginData. */

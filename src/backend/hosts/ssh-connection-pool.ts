@@ -86,7 +86,6 @@ export class SSHConnectionPool {
   private async createPooledClient(
     key: string,
     factory: () => Promise<Client>,
-    existing: PooledConnection[],
   ): Promise<Client> {
     const generation = this.generations.get(key) || 0;
     this.pendingConnections.set(
@@ -109,8 +108,11 @@ export class SSHConnectionPool {
         inUse: true,
         hostKey: key,
       };
-      existing.push(pooled);
-      this.connections.set(key, existing);
+      // Re-read after the await: concurrent connects and removals may have
+      // replaced this key's array in the meantime.
+      const connections = this.connections.get(key) ?? [];
+      connections.push(pooled);
+      this.connections.set(key, connections);
 
       client.on("end", () => {
         this.removeConnection(key, client);
@@ -187,7 +189,7 @@ export class SSHConnectionPool {
       if (queue.length === 0) this.waiters.delete(key);
       else this.waiters.set(key, queue);
       clearTimeout(waiter.timer);
-      this.createPooledClient(key, waiter.factory, connections)
+      this.createPooledClient(key, waiter.factory)
         .then(waiter.resolve)
         .catch(waiter.reject);
       return;
@@ -225,7 +227,7 @@ export class SSHConnectionPool {
     }
 
     if (this.hasCapacity(key, connections)) {
-      return this.createPooledClient(key, factory, connections);
+      return this.createPooledClient(key, factory);
     }
 
     return this.enqueueWaiter(key, factory);

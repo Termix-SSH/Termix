@@ -224,6 +224,20 @@ export function CustomizeSidebarPanel({
             />
           </SettingRow>
           <SettingRow
+            label={t("hosts.closeOnOpen")}
+            description={t("hosts.closeOnOpenDesc")}
+          >
+            <FakeSwitch
+              checked={preferences.display.closeOnOpen}
+              onChange={(v) =>
+                update((prev) => ({
+                  ...prev,
+                  display: { ...prev.display, closeOnOpen: v },
+                }))
+              }
+            />
+          </SettingRow>
+          <SettingRow
             label={t("newUi.sidebar.userProfile.statusColors")}
             description={t("newUi.sidebar.userProfile.statusColorsDesc")}
           >

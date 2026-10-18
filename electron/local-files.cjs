@@ -330,7 +330,11 @@ const AUTH_TOKEN_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 // path, so nothing here names it. Only a /plugin-api/<id> path is accepted,
 // which keeps every transfer on the backend's plugin routes.
 const API_PATH_PATTERN = /^\/plugin-api\/[a-z0-9][a-z0-9-]*$/;
-const LOCAL_BACKEND = "http://localhost:30001";
+let localBackendPort = 30001;
+
+function setLocalBackendPort(port) {
+  localBackendPort = port;
+}
 let registeredApiPath = null;
 
 function setTransferApiPath(apiPath) {
@@ -403,7 +407,8 @@ function createTargetResolver({ localBaseUrl, getLinkedServer, apiPath }) {
       }
       return {
         url: `${normalizeHttpBase(
-          localBaseUrl ?? `${LOCAL_BACKEND}${resolveApiPath()}`,
+          localBaseUrl ??
+            `http://localhost:${localBackendPort}${resolveApiPath()}`,
           "Local backend URL",
         )}${routePath}`,
         headers,
@@ -1050,6 +1055,7 @@ module.exports = {
   createLocalFileHandlers,
   createTargetResolver,
   setTransferApiPath,
+  setLocalBackendPort,
   publishDownload,
   defaultPublishFs,
   assertWithinRoot,

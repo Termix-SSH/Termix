@@ -638,6 +638,8 @@
     "actionsClick": "点击展开/折叠",
     "openOnDoubleClick": "双击打开",
     "openOnDoubleClickDesc": "要求双击打开主机会话，而不是单击",
+    "closeOnOpen": "打开后隐藏侧边栏",
+    "closeOnOpenDesc": "从侧边栏打开主机后关闭侧边栏",
     "showFolderPaths": "显示文件夹路径",
     "showFolderPathsDesc": "在嵌套子文件夹名称上方显示父文件夹路径。无论哪种方式，子文件夹都会缩进。",
     "rowDetailsTitle": "行详细信息",
@@ -1083,7 +1085,7 @@
     "acceptNewKey": "接受新密钥并继续"
   },
   "errors": {
-    "databaseConnection": "无法连接到数据库",
+    "databaseConnection": "Termix 服务器无响应",
     "embeddedServerFailed": "Termix 的本地服务器无法启动",
     "unknownError": "未知错误",
     "syncedHostMissing": "同步的主机在链接的服务器上不存在",
@@ -1110,7 +1112,7 @@
   "messages": {
     "registrationDisabled": "您还没有 Termix 账户。请联系管理员开启“自动创建外部账户”功能。",
     "userNotAllowed": "您的账户无权注册。请联系管理员。",
-    "databaseConnectionFailed": "无法连接到数据库服务器",
+    "databaseConnectionFailed": "服务器可能仍在启动，或已停止。此页面会持续重试，并在服务器恢复后自动继续。",
     "embeddedServerPortInUse": "端口 {{port}} 已被其他程序占用。这通常是 Termix Docker 容器或上一次会话残留的 Termix 进程。请关闭该程序，然后重启 Termix。",
     "embeddedServerPortInUseUnknownPort": "Termix 所需的一个端口已被其他程序占用。请关闭占用该端口的程序，然后重启 Termix。",
     "embeddedServerOldDatabase": "您的本地数据来自 Termix 2.8 或更早版本，必须先通过 2.9 版本进行迁移。请安装 Termix 2.9.1，打开一次以完成数据迁移，然后再更新到当前版本。",
@@ -1649,6 +1651,8 @@
         "pinAppRailDesc": "保持左侧应用侧栏始终展开，而不是悬停时展开",
         "expandAppRailOnHover": "悬停时展开应用侧栏",
         "expandAppRailOnHoverDesc": "允许鼠标悬停在左侧应用侧栏上时展开",
+        "appRailHoverPushesContent": "展开时推动内容",
+        "appRailHoverPushesContentDesc": "为展开的侧边栏腾出空间，而不是覆盖在页面上。远程桌面等打开的会话将随之调整大小",
         "showPinAppRailButton": "显示固定应用侧栏按钮",
         "showPinAppRailButtonDesc": "在应用侧栏中显示一个用于固定展开的按钮。默认关闭。",
         "settingsNavigation": "导航",
@@ -1932,6 +1936,7 @@
         "syncEntities_other": "桌面同步"
       },
       "consent": {
+        "enableTitle": "启用 {{name}}？",
         "installTitle": "安装 {{name}}",
         "updateTitle": "更新 {{name}}",
         "agreeUpdate": "同意并更新",

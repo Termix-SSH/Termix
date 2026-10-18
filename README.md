@@ -137,7 +137,7 @@ Want to build your own? Start from the [plugin template](https://github.com/Term
 
 See the [docs](https://docs.termix.site/install) for install steps on every platform.
 
-Sample Docker Compose file (you can leave out `guacd` and the network if you don't plan to use the Remote Desktop plugin):
+Sample Docker Compose file. Remote desktop (RDP, VNC and Telnet) is built in, so nothing else needs to run next to it:
 
 ```yaml
 services:
@@ -151,31 +151,10 @@ services:
       - termix-data:/app/data
     environment:
       PORT: "8080"
-      GUACD_HOST: "guacd"
-      GUACD_TUNNEL_HOST: "termix"
-      GUACD_RECORDING_PATH: "/termix-data/session_recordings/guacamole"
-      GUACD_DRIVE_PATH: "/termix-data/rdp-drive"
-    depends_on:
-      - guacd
-    networks:
-      - termix-net
-
-  guacd:
-    image: guacamole/guacd:1.6.0
-    container_name: guacd
-    restart: unless-stopped
-    volumes:
-      - termix-data:/termix-data
-    networks:
-      - termix-net
 
 volumes:
   termix-data:
     driver: local
-
-networks:
-  termix-net:
-    driver: bridge
 ```
 
 ### Cloud Hosting

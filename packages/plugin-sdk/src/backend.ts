@@ -357,6 +357,13 @@ export interface PluginRouterOptions {
    * (multer, a raw body for signature checking, a proxied stream).
    */
   rawBody?: boolean;
+  /**
+   * Requests per minute one address may make to this plugin's public routes.
+   * Defaults to 120, which a proxied page loading its own scripts and images
+   * can pass on its own. Capped at 10000, and an admin's
+   * TERMIX_PLUGIN_PUBLIC_RATE_LIMIT wins over it.
+   */
+  publicRateLimit?: number;
 }
 
 /**
@@ -1457,6 +1464,20 @@ export interface PluginSecondFactor {
   reset?: (userId: string) => Promise<void>;
 }
 
+export interface PluginUserTokenOptions {
+  /** Why the token exists, kept in the audit log and on the session. */
+  purpose: string;
+  /** Seconds until it expires. Defaults to 300 and is capped at 900. */
+  ttlSeconds?: number;
+}
+
+export interface PluginUserToken {
+  /** Send as `Authorization: Bearer <token>` to core's own API. */
+  token: string;
+  /** ISO time the session ends. */
+  expiresAt: string;
+}
+
 /**
  * Login methods, second factors and SSH auth types. Every register call needs
  * auth:provide and a matching contributes.auth entry, and is undone on
@@ -1518,6 +1539,26 @@ export interface PluginAuth {
    * delete a provider people still sign in with.
    */
   countLinkedUsers: (provider: string) => Promise<number>;
+  /**
+   * A short-lived session for an existing user, for calling core's own HTTP
+   * API as them from work with no request behind it, like a scheduled task
+   * driving the Termix CLI. The user's RBAC applies unchanged. Needs
+   * users:impersonate, not auth:provide, and every call is audited.
+   *
+   * The session is marked with the plugin and purpose. It cannot change the
+   * user's password, second factors, API keys or linked logins, so it can
+   * never outlive itself.
+   */
+  issueUserToken: (
+    userId: string,
+    options: PluginUserTokenOptions,
+  ) => Promise<PluginUserToken>;
+}
+
+/** What a plugin may learn about a user. Needs users:read. */
+export interface PluginUsers {
+  /** The user's UI language, like "zh_CN", or null when they never chose one. */
+  getLocale: (userId: string) => Promise<string | null>;
 }
 
 export interface PluginOpenIsolatedWindowRequest {
@@ -2006,8 +2047,13 @@ export interface PluginContext {
   readonly hosts: PluginHosts;
   /** SSH through core's connect pipeline. Needs ssh:connect and credentials:use. */
   readonly ssh: PluginSsh;
-  /** Login methods, second factors and SSH auth types. Needs auth:provide. */
+  /**
+   * Login methods, second factors and SSH auth types. Needs auth:provide,
+   * except issueUserToken, which needs users:impersonate.
+   */
   readonly auth: PluginAuth;
+  /** What a plugin may learn about a user. Needs users:read. */
+  readonly users: PluginUsers;
   /** Opens Electron windows outside the main renderer. Needs desktop:window. */
   readonly desktop: PluginDesktop;
   /** Host protocol credentials and the user's saved SSH keys. See PluginCredentials. */
@@ -2032,8 +2078,9 @@ export interface PluginContext {
    * no request behind it. Always audited, and every core API inside still
    * applies that user's RBAC.
    *
-   * Needs users:impersonate. That and a `userId` option on services.get or
-   * secrets.getShared are the only ways a plugin can name a user.
+   * Needs users:impersonate. That, auth.issueUserToken and a `userId` option
+   * on services.get or secrets.getShared are the only ways a plugin can act
+   * as a user it names.
    */
   asUser: <T>(userId: string, fn: () => Promise<T> | T) => Promise<T>;
 

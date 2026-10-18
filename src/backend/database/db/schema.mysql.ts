@@ -21,13 +21,19 @@ import {
 } from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
 
-export const users = mysqlTable("users", {
-  id: varchar("id", { length: 255 }).primaryKey(),
-  username: text("username").notNull(),
-  passwordHash: text("password_hash").notNull(),
-  isAdmin: boolean("is_admin").notNull().default(false),
-  registeredAt: text("registered_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
-});
+export const users = mysqlTable(
+  "users",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    username: varchar("username", { length: 255 }).notNull(),
+    passwordHash: text("password_hash").notNull(),
+    isAdmin: boolean("is_admin").notNull().default(false),
+    registeredAt: text("registered_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [uniqueIndex("idx_users_username").on(table.username)],
+);
 
 export const settings = mysqlTable("settings", {
   key: varchar("key", { length: 255 }).primaryKey(),

@@ -46,11 +46,11 @@
     "target": [
       {
         "target": "nsis",
-        "arch": ["x64", "ia32"]
+        "arch": ["x64", "ia32", "arm64"]
       },
       {
         "target": "msi",
-        "arch": ["x64", "ia32"]
+        "arch": ["x64", "ia32", "arm64"]
       }
     ],
     "icon": "public/icon.ico",
