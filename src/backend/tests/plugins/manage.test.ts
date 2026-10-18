@@ -289,6 +289,32 @@ describe("uninstall and reinstall of a bundled plugin", () => {
     expect(loader.get("docker")?.source).toBe("user");
   });
 
+  it("refuses to uninstall the default look but lets it be turned off", async () => {
+    createFixturePlugin({ id: "some-look", root: bundled });
+    fs.writeFileSync(
+      path.join(bundled, "bundled-index.json"),
+      JSON.stringify({
+        version: 1,
+        plugins: { "some-look": { defaultLook: true } },
+      }),
+    );
+    const { resetBundledIndexCache } =
+      await import("../../plugins/bundled-index.js");
+    resetBundledIndexCache();
+    try {
+      const loader = await boot();
+      await expect(manage.uninstallPlugin("some-look")).rejects.toMatchObject({
+        code: "DEFAULT_LOOK",
+        status: 409,
+      });
+      expect(loader.get("some-look")?.state).toBe("active");
+      expect(fs.existsSync(path.join(bundled, "some-look"))).toBe(true);
+    } finally {
+      fs.rmSync(path.join(bundled, "bundled-index.json"), { force: true });
+      resetBundledIndexCache();
+    }
+  });
+
   it("deletes a plugin dropped in as a plain folder", async () => {
     createFixturePlugin({ id: "notes", root: path.join(data, "plugins") });
     const loader = await boot();

@@ -322,6 +322,7 @@ export const SETTINGS_SEARCH_INDEX: Record<string, string[]> = {
     "newUi.sidebar.userProfile.sectionApiKeys",
   ],
   "appearance": [
+    "looks.layoutLabel",
     "newUi.sidebar.userProfile.accentColorLabel",
     "newUi.sidebar.userProfile.appRailHoverPushesContent",
     "newUi.sidebar.userProfile.appRailHoverPushesContentDesc",

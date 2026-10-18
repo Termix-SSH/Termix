@@ -1,6 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ThemeId } from "@/types/ui-types";
+import { SYSTEM_THEME, getTheme, useThemes } from "@/look/theme-registry";
+import { applyThemeCss } from "@/look/theme-css";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
@@ -10,21 +12,10 @@ type ThemeProviderProps = {
 
 type ThemeProviderState = {
   theme: ThemeId;
-  setTheme: (theme: ThemeId) => void;
+  /** Pass persist false to show a theme without keeping it in this browser. */
+  setTheme: (theme: ThemeId, persist?: boolean) => void;
   setThemePreview: (theme: ThemeId | null) => void;
 };
-
-const ALL_THEME_CLASSES = [
-  "light",
-  "dark",
-  "dracula",
-  "catppuccin",
-  "nord",
-  "solarized",
-  "tokyo-night",
-  "one-dark",
-  "gruvbox",
-];
 
 const initialState: ThemeProviderState = {
   theme: "dark",
@@ -33,6 +24,9 @@ const initialState: ThemeProviderState = {
 };
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
+
+/** The class last put on <html>, in case its theme has since gone away. */
+let appliedClass: string | null = null;
 
 export function ThemeProvider({
   children,
@@ -44,29 +38,31 @@ export function ThemeProvider({
     () => (localStorage.getItem(storageKey) as ThemeId) || defaultTheme,
   );
   const [previewTheme, setPreviewTheme] = useState<ThemeId | null>(null);
+  // Plugin themes arrive after login; the class and CSS follow them.
+  const themes = useThemes();
 
   const activeTheme = previewTheme ?? theme;
 
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove(...ALL_THEME_CLASSES);
+    root.classList.remove(...themes.map((entry) => entry.id));
+    if (appliedClass) root.classList.remove(appliedClass);
 
-    if (activeTheme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light";
-      root.classList.add(systemTheme);
-      return;
-    }
-
-    root.classList.add(activeTheme);
-  }, [activeTheme]);
+    const applied =
+      activeTheme === SYSTEM_THEME
+        ? window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light"
+        : activeTheme;
+    root.classList.add(applied);
+    appliedClass = applied;
+    applyThemeCss(applied, getTheme(applied));
+  }, [activeTheme, themes]);
 
   const value = {
     theme,
-    setTheme: (theme: ThemeId) => {
-      localStorage.setItem(storageKey, theme);
+    setTheme: (theme: ThemeId, persist = true) => {
+      if (persist) localStorage.setItem(storageKey, theme);
       setTheme(theme);
     },
     setThemePreview: (preview: ThemeId | null) => {

@@ -78,6 +78,22 @@ export interface PluginViewContribution {
   icon?: string;
 }
 
+export interface PluginLayoutContribution {
+  id: string;
+  label: string;
+  description?: string;
+  defaultTheme?: string;
+  default?: boolean;
+}
+
+export interface PluginThemeContribution {
+  id: string;
+  label: string;
+  mode: "light" | "dark";
+  css: string;
+  swatch?: { background: string; panel: string; text: string };
+}
+
 export interface PluginContributions {
   tabs?: PluginTabContribution[];
   panels?: PluginViewContribution[];
@@ -87,6 +103,8 @@ export interface PluginContributions {
   settings?: PluginSettingsContribution;
   permissions?: { name: string; titleKey: string; descriptionKey: string }[];
   uiPresets?: PluginUiPresets;
+  layouts?: PluginLayoutContribution[];
+  themes?: PluginThemeContribution[];
 }
 
 export {
@@ -236,6 +254,10 @@ export interface PluginSummary {
   assetVersion?: string | null;
   /** "en" plus the xx_YY names of shipped translations. */
   locales?: string[];
+  /** Cache key for the theme CSS files; null without themes. */
+  themeVersion?: string | null;
+  /** The app is drawn with this plugin by default; it cannot be uninstalled. */
+  defaultLook?: boolean;
 
   tier?: string;
   source?: string;

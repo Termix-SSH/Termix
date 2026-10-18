@@ -142,3 +142,29 @@ describe("termix-plugin pack", () => {
     expect(fs.readdirSync(out)).toEqual([]);
   });
 });
+
+describe("termix-plugin pack themes", () => {
+  it("ships the CSS files the manifest's themes declare", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const dir = fixturePlugin({
+      capabilities: ["ui:theme"],
+      contributes: {
+        themes: [
+          {
+            id: "paper",
+            label: "Paper",
+            mode: "light",
+            css: "styles/paper.css",
+          },
+        ],
+      },
+    });
+    writeFile(dir, "styles/paper.css", ".paper { --background: #fff; }\n");
+    writeFile(dir, "styles/draft.css", ".draft {}\n");
+    const file = await pack({ cwd: dir, args: ["--out", tempDir("t-")] });
+    const names = await entries(file);
+    expect(names).toContain("styles/paper.css");
+    expect(names).not.toContain("styles/draft.css");
+  });
+});

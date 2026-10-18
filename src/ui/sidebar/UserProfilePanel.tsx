@@ -66,7 +66,9 @@ import type { FontSizeId, ThemeId, UiFontId } from "@/types/ui-types";
 import { toast } from "sonner";
 import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
 import { Select2 } from "@/components/select2";
-import { THEMES } from "@/settings/appearance/appearance-controls";
+import { useThemeOptions } from "@/settings/appearance/appearance-controls";
+import { LookSettings } from "@/settings/appearance/LookSettings";
+import { useChooseTheme } from "@/look/use-look-theme";
 import { LANGUAGES } from "@/i18n/languages";
 import { clearLocalAdaptivePreferences } from "@/lib/local-adaptive-preferences";
 import { reportBetaFeedbackUrl } from "@/lib/issue-url";
@@ -446,18 +448,6 @@ export function UserProfilePanel({
 }) {
   const { t } = useTranslation();
   const confirm = useConfirm();
-  const themeLabel: Record<ThemeId, string> = {
-    system: t("newUi.sidebar.userProfile.themeSystem"),
-    light: t("newUi.sidebar.userProfile.themeLight"),
-    dark: t("newUi.sidebar.userProfile.themeDark"),
-    dracula: t("newUi.sidebar.userProfile.themeDracula"),
-    catppuccin: t("newUi.sidebar.userProfile.themeCatppuccin"),
-    nord: t("newUi.sidebar.userProfile.themeNord"),
-    solarized: t("newUi.sidebar.userProfile.themeSolarized"),
-    "tokyo-night": t("newUi.sidebar.userProfile.themeTokyoNight"),
-    "one-dark": t("newUi.sidebar.userProfile.themeOneDark"),
-    gruvbox: t("newUi.sidebar.userProfile.themeGruvbox"),
-  };
   const [openSections, setOpenSections] = useState<Set<UserProfileSection>>(
     () => new Set(["account"]),
   );
@@ -492,7 +482,9 @@ export function UserProfilePanel({
   const [showPassword, setShowPassword] = useState(false);
   const [newKeyOpen, setNewKeyOpen] = useState(false);
   const colorInputRef = useRef<HTMLInputElement>(null);
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, setThemePreview } = useTheme();
+  const themeOptions = useThemeOptions();
+  const chooseTheme = useChooseTheme();
   const localSnapshot = useRef<Record<string, string | null>>({});
 
   // Appearance state, initialized from localStorage
@@ -956,8 +948,8 @@ export function UserProfilePanel({
   }
 
   function handleThemeChange(id: ThemeId) {
-    setTheme(id);
-    if (storageMode === "cloud") saveToCloud({ theme: id });
+    setThemePreview(null);
+    chooseTheme(id);
   }
 
   function handleAccentChange(value: string) {
@@ -1439,24 +1431,37 @@ export function UserProfilePanel({
                 onChange={(e) => handleThemeChange(e.target.value as ThemeId)}
                 className="w-full px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring appearance-none pr-7"
               >
-                {THEMES.map((th) => (
+                {themeOptions.map((th) => (
                   <option key={th.id} value={th.id}>
-                    {themeLabel[th.id]}
+                    {th.label}
                   </option>
                 ))}
               </Select2>
             </div>
             <div className="flex gap-1 mt-0.5">
-              {THEMES.filter((th) => th.id !== "system").map((th) => (
-                <button
-                  key={th.id}
-                  title={themeLabel[th.id]}
-                  onClick={() => handleThemeChange(th.id)}
-                  className={`h-4 flex-1 border transition-all ${theme === th.id ? "border-accent-brand ring-1 ring-accent-brand" : "border-border/50"}`}
-                  style={{ background: th.preview }}
-                />
-              ))}
+              {themeOptions
+                .filter((th) => th.swatch)
+                .map((th) => (
+                  <button
+                    key={th.id}
+                    title={th.label}
+                    onClick={() => handleThemeChange(th.id)}
+                    onMouseEnter={() => setThemePreview(th.id)}
+                    onMouseLeave={() => setThemePreview(null)}
+                    onFocus={() => setThemePreview(th.id)}
+                    onBlur={() => setThemePreview(null)}
+                    className={`h-4 flex-1 border transition-all ${theme === th.id ? "border-accent-brand ring-1 ring-accent-brand" : "border-border/50"}`}
+                    style={{ background: th.swatch!.background }}
+                  />
+                ))}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {t("looks.layoutLabel")}
+            </span>
+            <LookSettings isAdmin={isAdmin} />
           </div>
 
           <div className="flex flex-col gap-1.5">

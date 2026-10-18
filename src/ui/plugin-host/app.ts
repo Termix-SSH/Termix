@@ -64,7 +64,13 @@ import {
 import { shell, shellHost, tabsApi } from "./shell-bridge";
 import { onRemoteServerChange, remoteServerUrl } from "./desktop";
 import { isElectron } from "@/lib/electron";
-import { withPluginScope, withIconBoundary, guardCallback } from "./scope";
+import {
+  withPluginContext,
+  withPluginScope,
+  withIconBoundary,
+  guardCallback,
+} from "./scope";
+import { registerLayout as registerLayoutComponent } from "@/look/layout-registry";
 import {
   scopeHostArgs,
   scopeHostCallback,
@@ -157,7 +163,9 @@ export function createPluginApp(
           ? "contributes.tabs"
           : kind === "panel"
             ? "contributes.panels or contributes.tabs"
-            : "contributes.dashboardCards";
+            : kind === "layout"
+              ? "contributes.layouts"
+              : "contributes.dashboardCards";
       throw new Error(
         `${pluginId}: ${what} "${id}" is not declared in manifest ${field}`,
       );
@@ -574,6 +582,21 @@ export function createPluginApp(
           enrollment: factor.enrollment
             ? (scoped(factor.enrollment) as never)
             : undefined,
+        }),
+      );
+    },
+
+    registerLayout(layout) {
+      requireDeclared("layout", layout.id, "layout");
+      return track(
+        registerLayoutComponent({
+          id: layout.id,
+          pluginId,
+          component: withPluginContext(pluginId, layout.component),
+          mobileComponent: layout.mobileComponent
+            ? withPluginContext(pluginId, layout.mobileComponent)
+            : undefined,
+          defaultTheme: layout.defaultTheme,
         }),
       );
     },

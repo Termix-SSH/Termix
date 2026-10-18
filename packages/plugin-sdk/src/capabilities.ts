@@ -49,6 +49,7 @@ export const CAPABILITY_CATALOG: readonly CapabilityInfo[] = [
   entry("auth:provide", "high"),
   entry("device:serial", "high"),
   entry("notify:hub", "high"),
+  entry("ui:layout", "high"),
 
   entry("hosts:write", "medium"),
   entry("credentials:use", "medium"),
@@ -70,6 +71,7 @@ export const CAPABILITY_CATALOG: readonly CapabilityInfo[] = [
   entry("settings:read-core", "low"),
   entry("plugins:read", "low"),
   entry("ui:surface", "low"),
+  entry("ui:theme", "low"),
 ] as const;
 
 export const CAPABILITY_IDS: readonly string[] = CAPABILITY_CATALOG.map(

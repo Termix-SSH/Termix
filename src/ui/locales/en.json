@@ -1770,6 +1770,54 @@
       }
     }
   },
+  "looks": {
+    "builtinLayout": "Classic",
+    "layoutLabel": "Layout",
+    "layoutHint": "How the whole app is laid out. Themes and layouts come from plugins.",
+    "defaultsLabel": "Default for everyone",
+    "defaultsHint": "What people see until they choose their own layout or theme.",
+    "followDefault": "Use the default",
+    "defaultSaved": "Default look saved",
+    "saveFailed": "Could not save the look",
+    "repair": {
+      "title": "This layout could not be shown",
+      "safeTitle": "Safe mode",
+      "layout": "Layout",
+      "plugin": "Plugin",
+      "reason": "Reason",
+      "error": "Error",
+      "noError": "No error message.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyFailed": "Could not copy the details",
+      "retry": "Try again",
+      "reset": "Reset to the default look",
+      "resetEveryone": "Reset the default for everyone",
+      "settings": "Open Settings",
+      "back": "Back",
+      "update": "Update {{name}} to {{version}}",
+      "disable": "Turn off {{name}}",
+      "install": "Find layouts and themes",
+      "installTitle": "Layouts and themes",
+      "installButton": "Install",
+      "nothingToInstall": "No other layouts or themes are available right now.",
+      "registryUnreachable": "The plugin registry could not be reached.",
+      "askAdmin": "Ask an admin to update or fix this layout. You can switch to another layout or theme for yourself below.",
+      "switchLayout": "Switch layout",
+      "switchTheme": "Switch theme",
+      "saveFailed": "Could not save your choice",
+      "reasons": {
+        "safe-url": "The address asked for safe mode. Pick a layout below, or remove ?safe-layout=1 from the address.",
+        "safe-env": "The server is started with TERMIX_SAFE_LAYOUT, so everyone sees this screen until it is removed.",
+        "missing": "No installed plugin provides this layout.",
+        "disabled": "The plugin that provides this layout is turned off.",
+        "blocked": "The plugin that provides this layout is waiting on something it needs.",
+        "incompatible": "The plugin that provides this layout does not work with this version of Termix.",
+        "failed": "The layout failed to start.",
+        "crashed": "The layout crashed twice while drawing the app."
+      }
+    }
+  },
   "plugins": {
     "capabilities": {
       "credentials:read": {
@@ -1887,6 +1935,14 @@
       "ui:surface": {
         "title": "Add its own screens",
         "consequence": "Tabs, panels and settings you can hide later."
+      },
+      "ui:layout": {
+        "title": "Replace the whole app layout",
+        "consequence": "When chosen, its code draws every screen, including your terminals and settings."
+      },
+      "ui:theme": {
+        "title": "Add color themes",
+        "consequence": "Only colors and styles. No code runs for a theme."
       }
     },
     "runtime": {
@@ -2016,6 +2072,7 @@
         "options": "Could not save options for {{name}}: {{error}}",
         "deleteData": "Could not delete data for {{name}}: {{error}}",
         "managedByServer": "This desktop is linked to a server, which decides its plugins.",
+        "defaultLook": "{{name}} is the default look, so it can be turned off or swapped but not uninstalled.",
         "hasDependents": "{{name}} is needed by {{list}}. Turn those off or uninstall them first.",
         "missingDependencies": "{{name}} needs {{list}}, which is not installed.",
         "consentChanged": "What this plugin asks for changed since you looked. Check the list again.",

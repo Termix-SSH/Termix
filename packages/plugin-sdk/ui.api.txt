@@ -173,6 +173,7 @@ SheetFooter (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<
 SheetHeader (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
 SheetTitle (value): ({ className, ...props }: DialogTitleProps & RefAttributes<HTMLHeadingElement>) => Element
 SheetTrigger (value): ({ ...props }: DialogTriggerProps & RefAttributes<HTMLButtonElement>) => Element
+ShellConfirmCapture (value): () => null
 Skeleton (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
 Slider (value): ({ className, defaultValue, value, min, max, ...props }: SliderProps & RefAttributes<HTMLSpanElement>) => Element
 Sparkline (value): ({ data, domain, className, colorClassName, showLastDot, height, }: SparklineProps) => Element
@@ -183,6 +184,7 @@ SurfaceScope (value): ({ kind, onEditingChange, onClose, className, children, }:
 Switch (value): ({ className, ...props }: SwitchProps & RefAttributes<HTMLButtonElement>) => Element
 SwitchRow (value): ({ label, description, badge, checked, onChange, disabled, defaultKey, rowId, }: { label: string; description?: ReactNode; badge?: string; checked: boolean; onChange: (value: boolean) => void; disabled?: boolean; defaultKey?: string; rowId?: string; }) => Element
 TOTPDialog (value): ({ isOpen, prompt, mode, waiting, onSubmit, onCancel, backgroundColor, }: TOTPDialogProps) => Element
+TabStage (value): ({ className }: { className?: string; }) => Element
 TabStrip (value): ({ tabs, activeTab, onTabChange, isActive, variant, trailing, className, }: { tabs: TabStripItem[]; activeTab: string; onTabChange: (id: string) => void; isActive?: (id: string) => boolean; variant?: "secondary" | "primary"; trailing?: ReactNode; className?: string; }) => Element
 TabStripItem (type): TabStripItem
 TagInput (value): ({ tags, input, placeholder, onTagsChange, onInputChange, }: { tags: string[]; input: string; placeholder: string; onTagsChange: (tags: string[]) => void; onInputChange: (value: string) => void; }) => Element

@@ -7,7 +7,9 @@
  * sha256 and signature checks and stays marked unverified. Bundled plugins ship in the
  * image and can still be uninstalled: their files are deleted and the id is
  * recorded in the settings table, so the shipped copy is ignored from then
- * on and a reinstall downloads the plugin like any other.
+ * on and a reinstall downloads the plugin like any other. The one exception
+ * is a default-look plugin (bundled-index.ts): the app is drawn with it, so
+ * it can be disabled or swapped but never uninstalled.
  */
 
 import crypto from "node:crypto";
@@ -15,6 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 import semver from "semver";
 import { pluginLogger } from "../utils/logger.js";
+import { isDefaultLookPlugin } from "./bundled-index.js";
 import {
   activatePlugin,
   deactivatePlugin,
@@ -1154,6 +1157,13 @@ export async function uninstallPluginUnlocked(
     throw new PluginManageError("Plugin not found", 404, "NOT_FOUND");
   }
   const shipped = loader.bundledIds().has(pluginId);
+  if (shipped && isDefaultLookPlugin(pluginId)) {
+    throw new PluginManageError(
+      "The default look cannot be uninstalled",
+      409,
+      "DEFAULT_LOOK",
+    );
+  }
 
   const dependents = dependentChain(pluginId, await enabledIds());
   if (dependents.length > 0) {

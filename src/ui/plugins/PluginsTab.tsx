@@ -806,20 +806,22 @@ function InstalledCard({
           variant="icon"
           className="ml-auto size-6"
         />
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          disabled={busy || locked}
-          title={t("plugins.manager.uninstall")}
-          aria-label={t("plugins.manager.uninstall")}
-          className={cn(
-            "text-muted-foreground hover:text-destructive",
-            !plugin.docs && "ml-auto",
-          )}
-          onClick={() => void manager.uninstall(plugin)}
-        >
-          <Trash2 className="size-3" />
-        </Button>
+        {!plugin.defaultLook && (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            disabled={busy || locked}
+            title={t("plugins.manager.uninstall")}
+            aria-label={t("plugins.manager.uninstall")}
+            className={cn(
+              "text-muted-foreground hover:text-destructive",
+              !plugin.docs && "ml-auto",
+            )}
+            onClick={() => void manager.uninstall(plugin)}
+          >
+            <Trash2 className="size-3" />
+          </Button>
+        )}
       </div>
     </Card>
   );
@@ -916,17 +918,19 @@ function InstalledRowActions({
         </Button>
       )}
       <DocsLink href={plugin.docs} variant="icon" className="size-6" />
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        disabled={busy || locked}
-        title={t("plugins.manager.uninstall")}
-        aria-label={t("plugins.manager.uninstall")}
-        className="text-muted-foreground hover:text-destructive"
-        onClick={() => void manager.uninstall(plugin)}
-      >
-        <Trash2 className="size-3" />
-      </Button>
+      {!plugin.defaultLook && (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          disabled={busy || locked}
+          title={t("plugins.manager.uninstall")}
+          aria-label={t("plugins.manager.uninstall")}
+          className="text-muted-foreground hover:text-destructive"
+          onClick={() => void manager.uninstall(plugin)}
+        >
+          <Trash2 className="size-3" />
+        </Button>
+      )}
     </div>
   );
 }

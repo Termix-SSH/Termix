@@ -1,5 +1,18 @@
 # Changelog
 
+## 26.10.3
+
+### Added
+
+- Choose the layout of the whole app in Settings, Appearance. Admins can also set the default layout and theme for everyone
+- Plugins can add layouts and themes
+- A repair screen shows when the chosen layout cannot load, with ways to update, switch, reset or turn it off. Open it any time with ?safe-layout=1, or for everyone with TERMIX_SAFE_LAYOUT=1
+- Hovering a theme in Settings previews it
+
+### Changed
+
+- Your theme is saved to your account so your other devices use it too, unless you keep settings on this device only
+
 ## 26.10.2
 
 ### Added

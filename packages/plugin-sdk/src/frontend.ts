@@ -249,6 +249,129 @@ export interface TabsApi extends Pick<
 }
 
 // ---------------------------------------------------------------------------
+// Layouts (plugin API 1.4)
+// ---------------------------------------------------------------------------
+
+/**
+ * A whole-app layout. Core renders the chosen one inside its providers and an
+ * error boundary; everything it shows comes from useShell(). Declare it in
+ * manifest contributes.layouts and add the ui:layout capability.
+ */
+export interface LayoutContribution {
+  id: string;
+  /** Your own i18n key or plain text, the same as the manifest's label. */
+  label: string;
+  component: ComponentType;
+  /** Shown on phones and narrow windows. The desktop app never uses it. */
+  mobileComponent?: ComponentType;
+  /** Theme to start with when nobody chose one. */
+  defaultTheme?: string;
+}
+
+/** A tab as a layout sees it. Splits are tabs too, with a `split` field. */
+export interface ShellTabState extends PluginTabRecord {
+  instanceId: string;
+  customLabel?: string;
+  /** Set while the tab sits in a split pane. */
+  parentSplitTabId?: string;
+  openedAt?: number;
+}
+
+/** What a dock region shows and how it is sized, in Normal-size pixels. */
+export interface ShellDockState {
+  view: string | null;
+  open: boolean;
+  width: number;
+  dragging: boolean;
+  setView: (view: string | null) => void;
+  setWidth: (width: number) => void;
+  /** Starts a drag from the dock's edge, from a mousedown. */
+  startResize: (event: { clientX: number; preventDefault: () => void }) => void;
+  resetWidth: () => void;
+}
+
+/** The live shell: state and actions, nothing drawn. Read with useShell(). */
+export interface ShellController {
+  tabs: {
+    list: ShellTabState[];
+    /** What a tab bar shows: tabs not sitting in a split. */
+    topLevel: ShellTabState[];
+    activeId: string;
+    /** True once saved tabs were restored after login. */
+    ready: boolean;
+    /** The user turned on tab numbers. */
+    showNumbers: boolean;
+    setActive: (id: string) => void;
+    reorder: (topLevel: ShellTabState[]) => void;
+    close: (id: string) => Promise<void>;
+    rename: (id: string, label: string) => void;
+    /** Reconnects or reloads a session tab. */
+    refresh: (id: string) => void;
+    reconnectAll: () => void;
+    openSingleton: (type: string) => string | undefined;
+  };
+  split: {
+    /** The split shown now, or null. */
+    activeId: string | null;
+    focusedPaneId: string | null;
+    /** Every split with its panes, for a split menu. */
+    summaries: Array<{
+      id: string;
+      label: string;
+      full: boolean;
+      panes: Array<{
+        id: string;
+        index: number;
+        tabId: string | null;
+        label: string | null;
+      }>;
+    }>;
+    activeFull: boolean;
+    /** Split a tab, apply a preset, unsplit, add to a pane. */
+    handleAction: (action: Record<string, unknown> & { kind: string }) => void;
+  };
+  hosts: {
+    list: PluginHostRecord[];
+    loading: boolean;
+    loaded: boolean;
+    reload: () => Promise<void>;
+  };
+  regions: {
+    left: ShellDockState & { view: string };
+    right: ShellDockState;
+    /** What a rail click does: toggles or switches the left dock. */
+    railClick: (view: string) => void;
+    openInRightDock: (view: string) => void;
+    toggleRightDock: () => void;
+  };
+  palette: { isOpen: boolean; open: () => void; close: () => void };
+  fullscreen: { active: boolean; toggle: () => void };
+  /** The same callbacks tabs and panels get. */
+  actions: ShellApi;
+  env: {
+    isMobile: boolean;
+    isElectron: boolean;
+    user: { username: string; isAdmin: boolean };
+    permissions: string[];
+    branding: {
+      appName: string | null;
+      tagline: string | null;
+      logo: string | null;
+    };
+  };
+  /** Core registries, as hooks a layout calls while rendering. */
+  registries: {
+    useRailItems: () => ReadonlyArray<{ id: string } & Record<string, unknown>>;
+    usePanels: () => ReadonlyArray<{ id: string } & Record<string, unknown>>;
+    useTabTypes: () => ReadonlyArray<{ id: string } & Record<string, unknown>>;
+    useDashboardCards: () => ReadonlyArray<
+      { id: string } & Record<string, unknown>
+    >;
+  };
+  logout: (options?: { manual?: boolean }) => void;
+}
+
+// ---------------------------------------------------------------------------
 // Registrations
 // ---------------------------------------------------------------------------
 
@@ -988,6 +1111,12 @@ export interface TermixApp extends TermixAppInfo {
   registerSshAuthEditor: (editor: SshAuthEditorContribution) => Disposer;
   registerLoginMethod: (method: LoginMethodContribution) => Disposer;
   registerSecondFactorUI: (factor: SecondFactorContribution) => Disposer;
+  /**
+   * A whole-app layout. Declared in manifest contributes.layouts with the
+   * ui:layout capability. Only the chosen layout's plugin is loaded, so
+   * register it in activate. Needs plugin API 1.4.
+   */
+  registerLayout: (layout: LayoutContribution) => Disposer;
 
   /**
    * Translates a key from the plugin's own locales, for code outside a
@@ -1122,6 +1251,7 @@ export interface PluginHostBridge {
   useHosts: () => { hosts: PluginHostRecord[]; loaded: boolean };
   useCurrentUser: () => CurrentUser | null;
   useTheme: () => { theme: "light" | "dark" };
+  useShell: () => ShellController | null;
   toast: ToastApi;
   getApi: (pluginId: string) => PluginApiClient;
   getApiFor: (pluginId: string, origin: unknown) => PluginApiClient;
@@ -1370,6 +1500,14 @@ export function useCurrentUser(): CurrentUser | null {
 
 export function useTheme(): { theme: "light" | "dark" } {
   return requireHost().useTheme();
+}
+
+/**
+ * The live shell, for a layout. Null outside the signed-in app. Needs plugin
+ * API 1.4.
+ */
+export function useShell(): ShellController | null {
+  return requireHost().useShell();
 }
 
 export function useToast(): ToastApi {

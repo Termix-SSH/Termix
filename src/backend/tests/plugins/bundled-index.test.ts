@@ -3,7 +3,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
+  defaultLookPluginIds,
   initialPluginState,
+  isDefaultLookPlugin,
   onboardingDefaults,
   resetBundledIndexCache,
 } from "../../plugins/bundled-index.js";
@@ -101,5 +103,30 @@ describe("initialPluginState", () => {
   it("never enables a plugin dropped into the data directory", () => {
     expect(initialPluginState("kept", "user", true)).toBe("disabled");
     expect(initialPluginState("kept", "user", false)).toBe("disabled");
+  });
+});
+
+describe("default look", () => {
+  it("lists the plugins flagged as the default look", () => {
+    writeIndex({
+      "some-layout": { defaultLook: true },
+      "some-themes": { defaultLook: true, onboarding: { recommended: false } },
+      other: { onboarding: { recommended: true } },
+    });
+    expect(defaultLookPluginIds()).toEqual(["some-layout", "some-themes"]);
+    expect(isDefaultLookPlugin("some-themes")).toBe(true);
+    expect(isDefaultLookPlugin("other")).toBe(false);
+  });
+
+  it("has none without an index", () => {
+    expect(defaultLookPluginIds()).toEqual([]);
+  });
+
+  it("starts the default look enabled even on a fresh install", () => {
+    writeIndex({
+      "some-themes": { defaultLook: true, onboarding: { recommended: false } },
+    });
+    expect(initialPluginState("some-themes", "bundled", true)).toBe("enabled");
+    expect(initialPluginState("some-themes", "user", true)).toBe("disabled");
   });
 });

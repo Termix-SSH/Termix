@@ -1,7 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { readManifest } from "../lib/plugin-dir.mjs";
-import { collectFiles, createTmxplug } from "../lib/tmxplug.mjs";
+import {
+  collectFiles,
+  createTmxplug,
+  themeFiles,
+  TMXPLUG_CONTENTS,
+} from "../lib/tmxplug.mjs";
 import { sha256 } from "../lib/signing.mjs";
 import { validate } from "./validate.mjs";
 
@@ -32,7 +37,12 @@ export async function pack({ cwd, args = [] }) {
   fs.mkdirSync(outDir, { recursive: true });
   const outfile = path.join(outDir, `${pluginId}-${version}.tmxplug`);
 
-  const archive = createTmxplug(cwd, collectFiles(cwd));
+  const archive = createTmxplug(
+    cwd,
+    collectFiles(cwd, [
+      ...new Set([...TMXPLUG_CONTENTS, ...themeFiles(manifest)]),
+    ]),
+  );
   fs.writeFileSync(outfile, archive);
 
   console.log(`packed ${path.basename(outfile)}`);

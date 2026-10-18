@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.11 | Plugin API 1.3.0
+SDK 1.0.12 | Plugin API 1.4.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -175,7 +175,7 @@ Unknown fields are refused at every level, so a typo fails validation. The schem
 
 `contributes` holds `tabs`, `panels`, `dashboardCards`, `actions`, `actionSlots`, `permissions`,
 `settings`, `protocols`, `auth`, `syncEntities`, `keybindingActions`, `http`, `guest`, `guestViews`,
-`uiPresets` and `uses`. Frontend `register*` calls need their ids declared here first.
+`uiPresets`, `uses`, `layouts` and `themes`. Frontend `register*` calls need their ids declared here first.
 
 Capabilities and permissions are different things. A capability (`hosts:read`, with a colon) is what your
 code may reach. A permission (`hello.use`, with a dot) is what a user may do.
@@ -478,6 +478,7 @@ your plugin's error boundary and Suspense.
 | `registerComponent`, `registerExtension`                                           | Offer a component by id, add to an extension point                |
 | `registerOnboardingStep`                                                           | A first run setup step                                            |
 | `registerLoginMethod`, `registerSecondFactorUI`, `registerSshAuthEditor`           | Sign in UI                                                        |
+| `registerLayout`                                                                   | A whole-app layout (`contributes.layouts`, API 1.4)               |
 | `api`                                                                              | Axios client for your `/plugin-api/<id>/` routes, auth included   |
 | `fetch(path)`, `wsUrl(path)`                                                       | Raw fetch for streams, socket URL and auth                        |
 | `docs`, `tabs`, `confirm`, `listHosts`, `getHost`, `t`, `hasPermission`, `desktop` | Helpers                                                           |
@@ -485,7 +486,7 @@ your plugin's error boundary and Suspense.
 
 Hooks from `@termix-ssh/plugin-sdk/frontend`: `useTranslation`, `usePermission`, `useSettings`, `useHost`,
 `useHosts`, `usePluginApi`, `useCurrentUser`, `useTheme`, `useToast`, `useDocsUrl`, `useTabs`,
-`useSlotContributions`, `useSshAuthTypes`, `useExtensions`.
+`useSlotContributions`, `useSshAuthTypes`, `useExtensions`, `useShell`.
 
 Shared from Termix and never bundled: `react`, `react-dom`, `i18next`, `react-i18next`, `sonner` and the
 SDK's `frontend` and `ui`. Anything else, like `lucide-react`, is bundled. A host your code gets only carries
@@ -495,6 +496,64 @@ Slots you can fill include `terminal.toolbar`, `terminal.toolbarStatus`, `termin
 `terminal.overlay`, `dashboard.counters`, `dashboard.hostMetrics`, `admin.userTabs`, `hosts.importMenu`,
 `hosts.panel`, `credentials.badges`, `shell.overlay`, `shell.rightEdge` and `tab.menu`. See
 https://docs.termix.site/develop/more-extension-points.
+
+## Layouts and themes
+
+A plugin can replace the whole app layout or add themes (API 1.4). Users pick both in Settings, Appearance;
+admins set the default for everyone.
+
+A layout is declared in `contributes.layouts` (`id`, `label`, optional `description` and `defaultTheme`) and
+needs the `ui:layout` capability, which admins see as high risk because a layout draws every screen. Register
+it in `activate`:
+
+```tsx
+import { useShell, type TermixApp } from "@termix-ssh/plugin-sdk/frontend";
+import {
+  ShellConfirmCapture,
+  SurfaceScope,
+  TabStage,
+} from "@termix-ssh/plugin-sdk/ui";
+
+function MyLayout() {
+  const shell = useShell();
+  if (!shell) return null;
+  return (
+    <div className="flex h-dvh w-screen flex-col bg-background">
+      <header>
+        {/* tabs from shell.tabs.topLevel, shell.palette.open() and so on */}
+      </header>
+      <SurfaceScope kind="tab">
+        <ShellConfirmCapture />
+        <TabStage />
+      </SurfaceScope>
+    </div>
+  );
+}
+
+export function activate(app: TermixApp) {
+  app.registerLayout({
+    id: "my-layout",
+    label: "layout.name",
+    component: MyLayout,
+  });
+}
+```
+
+- `useShell()` is the live shell with nothing drawn: tabs, splits, hosts, the left and right docks, the
+  command palette, the registries as hooks and the user. Core keeps all the state, so switching layouts keeps
+  every session.
+- `TabStage` is where tabs show. Place it anywhere; tabs are never remounted when it moves, so a terminal
+  keeps its connection. The command palette, overlays and onboarding stay in core.
+- `mobileComponent` is used on phones and narrow windows. The desktop app always gets `component`.
+- Only the chosen layout's plugin is loaded. If it fails to load or crashes twice, Termix shows a repair
+  screen where people can switch, reset, update or turn it off. `?safe-layout=1` opens it any time.
+
+A theme is CSS only. Declare it in `contributes.themes` (`id`, `label`, `mode` light or dark, `css` path,
+optional `swatch` colors for the picker) with the `ui:theme` capability. The id becomes a class on `<html>`,
+so the file may only hold rules whose selectors start with `.<id>`, `:root.<id>` or `html.<id>`, optionally
+inside `@media` or `@supports`. `@import`, `url()` to another host and other at-rules are refused by
+`termix-plugin validate` and by the server. Set the same tokens core's themes set (`--background`,
+`--foreground`, `--card`, `--border`, `--muted` and the rest).
 
 ## Looking native
 
@@ -775,6 +834,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `auth:provide`       | high     | Add login methods, second factors, SSH auth types       |
 | `device:serial`      | high     | Open serial and USB ports on the server                 |
 | `notify:hub`         | high     | Receive every alert (the alerts hub only)               |
+| `ui:layout`          | high     | Replace the whole app layout                            |
 | `hosts:write`        | medium   | Add and edit hosts                                      |
 | `credentials:use`    | medium   | Connect with saved credentials without seeing them      |
 | `credentials:write`  | medium   | Save new credentials                                    |
@@ -794,6 +854,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `settings:read-core` | low      | Read Termix server settings                             |
 | `plugins:read`       | low      | See installed plugins                                   |
 | `ui:surface`         | low      | Add tabs, panels and settings                           |
+| `ui:theme`           | low      | Add color themes, CSS only                              |
 
 An update that adds a capability waits for an admin to approve it.
 

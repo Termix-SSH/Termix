@@ -17,7 +17,7 @@ export async function loadSdkModule(name) {
 
 export async function validate({ cwd }) {
   const raw = readManifest(cwd);
-  const { parseManifest } = await loadSdkModule("manifest");
+  const { parseManifest, validateThemeCss } = await loadSdkModule("manifest");
   const { errors } = parseManifest(raw);
 
   const problems = [...errors];
@@ -34,6 +34,7 @@ export async function validate({ cwd }) {
     }
   }
 
+  problems.push(...validateThemeFiles(cwd, raw, validateThemeCss));
   problems.push(
     ...(await validateMigrations(cwd, raw.id ?? path.basename(cwd))),
   );
@@ -51,6 +52,30 @@ export async function validate({ cwd }) {
   }
 
   console.log(`ok  ${raw.id ?? path.basename(cwd)}`);
+}
+
+/** Every declared theme file exists and holds only CSS a theme may hold. */
+export function validateThemeFiles(cwd, raw, validateThemeCss) {
+  const problems = [];
+  const themes = raw?.contributes?.themes;
+  if (!Array.isArray(themes)) return problems;
+  for (const theme of themes) {
+    if (typeof theme?.css !== "string" || typeof theme?.id !== "string") {
+      continue;
+    }
+    const file = path.join(cwd, theme.css);
+    if (!fs.existsSync(file)) {
+      problems.push(`theme ${theme.id}: ${theme.css} does not exist`);
+      continue;
+    }
+    for (const error of validateThemeCss(
+      fs.readFileSync(file, "utf8"),
+      theme.id,
+    )) {
+      problems.push(`theme ${theme.id}: ${error}`);
+    }
+  }
+  return problems;
 }
 
 /** Env vars core sets for everyone, so a plugin need not list them. */

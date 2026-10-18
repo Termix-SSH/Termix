@@ -97,6 +97,7 @@ const offline = () =>
   useHostStatus: () => null,
   useCurrentUser: () => null,
   useTheme: () => ({ theme: "dark" }),
+  useShell: () => null,
   toast: { success: noop, error: noop, info: noop, warning: noop },
   getApi: () => ({
     get: offline,

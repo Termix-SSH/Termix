@@ -48,6 +48,8 @@ import { invokeAction } from "@/shell/action-registry";
 import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
 import { useActionSlot } from "@/hooks/use-action-slot";
 import { usePluginComponent } from "./component-registry";
+import { themeMode, useThemes } from "@/look/theme-registry";
+import { usePluginShell } from "@/shell/controller/plugin-shell";
 import {
   getLiveHostStatus,
   useOptionalHostStatusEntry,
@@ -337,15 +339,13 @@ export const pluginHostBridge: PluginHostBridge = {
 
   useTheme() {
     const { theme } = useTheme();
-    if (theme === "light") return { theme: "light" };
-    if ((theme as string) === "system" && typeof window !== "undefined") {
-      return {
-        theme: window.matchMedia?.("(prefers-color-scheme: light)").matches
-          ? "light"
-          : "dark",
-      };
-    }
-    return { theme: "dark" };
+    // Re-render when plugin themes arrive, since they carry their mode.
+    useThemes();
+    return { theme: themeMode(theme) };
+  },
+
+  useShell() {
+    return usePluginShell(usePluginScope());
   },
 
   toast: {

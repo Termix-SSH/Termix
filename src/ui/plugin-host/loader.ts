@@ -16,6 +16,13 @@ import {
   setPluginSummaries,
 } from "./plugin-store";
 import { syncHostFeatureTabs } from "@/settings/host-feature-tabs";
+import {
+  chosenLayoutId,
+  loadLook,
+  safeLayoutRequested,
+} from "@/look/look-store";
+import { BUILTIN_THEMES, setPluginThemes } from "@/look/theme-registry";
+import { setPluginLayouts } from "@/look/layout-registry";
 
 /**
  * Loads plugin frontends into the running shell.
@@ -55,14 +62,22 @@ let queue: Promise<void> = Promise.resolve();
 let deps: PluginLoaderDeps | null = null;
 let started = false;
 let guestMode = false;
+/** Signed in with the full runtime: only the chosen layout's code loads. */
+let gateLayouts = false;
+
+function assetUrlWithVersion(
+  pluginId: string,
+  file: string,
+  version: string | null | undefined,
+): string {
+  const query = version ? `?v=${encodeURIComponent(version)}` : "";
+  return getBackendUrl(
+    `/plugin-assets/${encodeURIComponent(pluginId)}/${file}${query}`,
+  );
+}
 
 function assetUrl(summary: PluginSummary, file: string): string {
-  const version = summary.assetVersion
-    ? `?v=${encodeURIComponent(summary.assetVersion)}`
-    : "";
-  return getBackendUrl(
-    `/plugin-assets/${encodeURIComponent(summary.id)}/${file}${version}`,
-  );
+  return assetUrlWithVersion(summary.id, file, summary.assetVersion);
 }
 
 /** Absolute URL, so import() resolves it against the page, not this module. */
@@ -286,11 +301,75 @@ function namespaceVersion(summary: PluginSummary): string {
   return `${summary.version}|${summary.assetVersion ?? ""}`;
 }
 
+/** Puts every running plugin's themes and every enabled plugin's layouts on offer. */
+function syncLooks(summaries: PluginSummary[]): void {
+  const fallback = (mode: "light" | "dark") =>
+    BUILTIN_THEMES.find((theme) => theme.id === mode)!.swatch;
+  setPluginThemes(
+    summaries.filter(serverServesAssets).flatMap((summary) =>
+      summary.themeVersion
+        ? (summary.contributes?.themes ?? []).map((theme) => ({
+            id: theme.id,
+            label: theme.label,
+            mode: theme.mode,
+            swatch: theme.swatch ?? fallback(theme.mode),
+            pluginId: summary.id,
+            cssHref: assetUrlWithVersion(
+              summary.id,
+              `_themes/${theme.id}.css`,
+              summary.themeVersion,
+            ),
+          }))
+        : [],
+    ),
+  );
+  setPluginLayouts(
+    summaries
+      .filter((summary) => summary.enabled)
+      .flatMap((summary) =>
+        (summary.contributes?.layouts ?? []).map((layout) => ({
+          id: layout.id,
+          label: layout.label,
+          description: layout.description,
+          defaultTheme: layout.defaultTheme,
+          pluginId: summary.id,
+        })),
+      ),
+  );
+}
+
+/**
+ * A layout plugin's code runs only while one of its layouts is the one
+ * shown, and never in the repair view, so a broken layout cannot break the
+ * way out of it.
+ */
+async function withoutUnchosenLayouts(
+  summaries: PluginSummary[],
+): Promise<PluginSummary[]> {
+  if (!gateLayouts) return summaries;
+  await loadLook();
+  const chosen = safeLayoutRequested() ? null : chosenLayoutId();
+  return summaries.map((summary) => {
+    const layouts = summary.contributes?.layouts ?? [];
+    if (layouts.length === 0) return summary;
+    if (layouts.some((layout) => layout.id === chosen)) return summary;
+    if (
+      summary.frontend &&
+      getPluginRecord(summary.id)?.frontend !== "inactive"
+    )
+      setFrontendState(summary.id, "inactive");
+    return { ...summary, frontend: false };
+  });
+}
+
 async function reconcile(summaries: PluginSummary[]): Promise<void> {
   setPluginSummaries(summaries);
+  syncLooks(summaries);
   await loadNamespaces(summaries.filter(serverServesAssets));
 
-  const { order, blocked } = orderForActivation(summaries);
+  const { order, blocked } = orderForActivation(
+    await withoutUnchosenLayouts(summaries),
+  );
   const wanted = new Map(order.map((summary) => [summary.id, summary]));
 
   // Dependents go first, so nothing outlives what it depends on.
@@ -391,6 +470,12 @@ export function syncPlugins(summaries?: PluginSummary[]): Promise<void> {
     await reconcile(list);
     markPluginsSettled();
   });
+}
+
+/** Tries a plugin's frontend again even though this bundle failed before. */
+export function retryPluginFrontend(pluginId: string): Promise<void> {
+  failedVersions.delete(pluginId);
+  return syncPlugins();
 }
 
 /** Fired by anything that changes plugin state, e.g. the admin toggle. */
@@ -503,6 +588,7 @@ export function startPluginRuntime(
     return syncPlugins();
   }
 
+  gateLayouts = true;
   if (!started && typeof window !== "undefined") {
     started = true;
     lastFocusSync = Date.now();
@@ -514,6 +600,7 @@ export function startPluginRuntime(
 
 /** Deactivates every plugin, on logout. */
 export function stopPluginRuntime(): Promise<void> {
+  gateLayouts = false;
   if (started && typeof window !== "undefined") {
     started = false;
     window.removeEventListener(PLUGINS_CHANGED_EVENT, onPluginsChanged);

@@ -71,6 +71,8 @@ export interface PluginEntry {
   registryName: string | null;
   /** A linked server decides whether it runs here. */
   managedByServer: boolean;
+  /** The app is drawn with it by default, so it can be swapped but not uninstalled. */
+  defaultLook: boolean;
 }
 
 export type PluginSource =
@@ -168,6 +170,7 @@ export function mergePlugins(
       registryId: entry?.registryId ?? summary.registryId ?? null,
       registryName: entry?.registryName ?? null,
       managedByServer: summary.managedByServer ?? false,
+      defaultLook: summary.defaultLook ?? false,
     });
   }
 
@@ -212,6 +215,7 @@ export function mergePlugins(
       registryId: entry.registryId ?? "official",
       registryName: entry.registryName ?? null,
       managedByServer: false,
+      defaultLook: false,
     });
   }
 
@@ -253,6 +257,7 @@ export function uploadEntry(preview: PluginUploadPreview): PluginEntry {
     registryId: null,
     registryName: null,
     managedByServer: false,
+    defaultLook: false,
   };
 }
 

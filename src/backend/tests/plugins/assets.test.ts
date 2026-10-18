@@ -108,6 +108,7 @@ describe("describePluginFrontend", () => {
       css: false,
       assetVersion: null,
       locales: [],
+      themeVersion: null,
     });
   });
 });
@@ -173,5 +174,50 @@ describe("GET /plugin-assets", () => {
       const res = await fetch(`${baseUrl}/plugin-assets/${target}`);
       expect(res.status, target).toBe(404);
     }
+  });
+});
+
+describe("theme stylesheets", () => {
+  let themed: { id: string; dir: string; manifest: never };
+
+  beforeAll(() => {
+    const dir = path.join(root, "inks");
+    fs.mkdirSync(path.join(dir, "themes"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "themes", "paper.css"), ".paper{}");
+    fs.writeFileSync(path.join(dir, "themes", "secret.css"), ".secret{}");
+    themed = {
+      id: "inks",
+      dir,
+      manifest: {
+        id: "inks",
+        version: "1.0.0",
+        contributes: {
+          themes: [
+            {
+              id: "paper",
+              label: "Paper",
+              mode: "light",
+              css: "themes/paper.css",
+            },
+          ],
+        },
+      } as never,
+    };
+  });
+
+  it("serves a declared theme's CSS under _themes/<id>.css only", () => {
+    expect(resolvePluginAsset(themed, "_themes/paper.css")).toBe(
+      path.join(themed.dir, "themes", "paper.css"),
+    );
+    expect(resolvePluginAsset(themed, "_themes/secret.css")).toBeNull();
+    expect(resolvePluginAsset(themed, "themes/paper.css")).toBeNull();
+    expect(resolvePluginAsset(themed, "_themes/paper.js")).toBeNull();
+  });
+
+  it("versions theme files even without a frontend bundle", () => {
+    const info = describePluginFrontend(themed);
+    expect(info.frontend).toBe(false);
+    expect(info.themeVersion).toMatch(/^[0-9a-f]{12}$/);
+    expect(describePluginFrontend(plugin).themeVersion).toBeNull();
   });
 });

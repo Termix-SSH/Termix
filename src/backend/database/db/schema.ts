@@ -703,6 +703,8 @@ export const userPreferences = sqliteTable("user_preferences", {
   compactHostView: integer("compact_host_view", { mode: "boolean" }),
   statusColorScheme: text("status_color_scheme"),
   customKeybindings: text("custom_keybindings"),
+  layoutId: text("layout_id"),
+  themeId: text("theme_id"),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

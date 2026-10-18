@@ -152,6 +152,9 @@ export { useTabs, useTabsSafe } from "@/shell/TabContext";
 
 // Slots: a plugin can offer places for other plugins to fill.
 export { ActionSlot, ComponentSlot } from "@/shell/ActionSlot";
+// For layouts: where tabs show, and the confirm a tab close asks with.
+export { TabStage } from "@/shell/stage/TabStage";
+export { ShellConfirmCapture } from "@/shell/controller/ShellControllerProvider";
 
 // A plugin's manifest host settings, drawn inside its own host editor section.
 export {

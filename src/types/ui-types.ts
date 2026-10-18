@@ -223,7 +223,8 @@ export type AdminSection =
   | "api-keys"
   | "audit-log"
   | "ssl";
-export type ThemeId =
+export type ThemeId = string;
+export type LegacyThemeId =
   | "dark"
   | "light"
   | "system"

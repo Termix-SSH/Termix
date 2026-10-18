@@ -433,6 +433,7 @@ describe("plugins route", () => {
             "name",
             "optionalDependencies",
             "state",
+            "themeVersion",
             "version",
           ].sort(),
         );
@@ -624,10 +625,12 @@ describe("plugins route", () => {
         contributes: null,
         dependencies: {},
         optionalDependencies: {},
+        defaultLook: false,
         frontend: false,
         css: false,
         assetVersion: null,
         locales: [],
+        themeVersion: null,
       });
     });
 

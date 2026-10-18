@@ -146,6 +146,8 @@ export function usePluginsManager() {
       const info = readError(error, t("plugins.manager.errors.generic"));
       if (info.code === "MANAGED_BY_SERVER") {
         toast.error(t("plugins.manager.errors.managedByServer"));
+      } else if (info.code === "DEFAULT_LOOK") {
+        toast.error(t("plugins.manager.errors.defaultLook", { name }));
       } else if (info.code === "HAS_DEPENDENTS") {
         toast.error(
           t("plugins.manager.errors.hasDependents", {

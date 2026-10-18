@@ -32,6 +32,9 @@ import {
 } from "@/plugin-host/loader";
 import { settledPromise } from "@/plugin-host/plugin-store";
 import { resetShellBridge } from "@/plugin-host/shell-bridge";
+import { loadLook, resetLook } from "@/look/look-store";
+import { resetPluginThemes } from "@/look/theme-registry";
+import { resetPluginLayouts } from "@/look/layout-registry";
 import { preloadPermissions } from "@/hooks/use-permissions";
 import { getUserPreferences } from "@/api/open-tabs-api";
 import { standaloneViewFor } from "@/shell/tab-registry";
@@ -209,6 +212,7 @@ function App() {
             .then(() => settledPromise()),
           preloadPermissions(),
           getUserPreferences().catch(() => undefined),
+          loadLook(),
         ]);
         await enterApp();
       })
@@ -296,6 +300,7 @@ function App() {
           .then(() => settledPromise()),
         preloadPermissions(),
         getUserPreferences().catch(() => undefined),
+        loadLook(),
       ]);
       await enterApp();
     })();
@@ -321,6 +326,9 @@ function App() {
     // should survive into the next session.
     void stopPluginRuntime();
     resetShellBridge();
+    resetLook();
+    resetPluginThemes();
+    resetPluginLayouts();
     clearStoredAuth();
     localStorage.removeItem("jwt");
     if (isElectron() && options?.manual) {

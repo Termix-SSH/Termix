@@ -14,6 +14,7 @@ import {
 } from "../repositories/factory.js";
 import { getPluginRuntime } from "../../plugins/index.js";
 import { describePluginFrontend } from "../../plugins/assets.js";
+import { isDefaultLookPlugin } from "../../plugins/bundled-index.js";
 import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
 import { getPluginPublicHttpRoutes } from "../../plugins/http.js";
 import { getPluginPublicWsRoutes } from "../../plugins/ws.js";
@@ -352,6 +353,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
           dependencies,
           optionalDependencies,
           docs,
+          defaultLook: isDefaultLookPlugin(record.id),
           ...describePluginFrontend(loaded),
         };
 
@@ -2306,7 +2308,7 @@ router.post(
  *       404:
  *         description: No such plugin.
  *       409:
- *         description: Other running plugins depend on it, or managed by a linked server.
+ *         description: Other running plugins depend on it, it is the default look, or a linked server manages it.
  */
 router.delete(
   "/:id",

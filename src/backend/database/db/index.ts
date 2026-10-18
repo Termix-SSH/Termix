@@ -985,6 +985,8 @@ const migrateSchema = () => {
   addColumnIfNotExists("user_preferences", "compact_host_view", "INTEGER");
   addColumnIfNotExists("user_preferences", "status_color_scheme", "TEXT");
   addColumnIfNotExists("user_preferences", "custom_keybindings", "TEXT");
+  addColumnIfNotExists("user_preferences", "layout_id", "TEXT");
+  addColumnIfNotExists("user_preferences", "theme_id", "TEXT");
 
   addColumnIfNotExists("users", "is_admin", "INTEGER NOT NULL DEFAULT 0");
 

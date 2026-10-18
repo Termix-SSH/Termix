@@ -49,3 +49,53 @@ describe("termix-plugin validate migrations", () => {
     expect(output).not.toMatch(/migrations\/\w+ is missing/);
   });
 });
+
+describe("termix-plugin validate themes", () => {
+  function themed(css: string | null) {
+    const root = plugin([]);
+    fs.writeFileSync(
+      path.join(root, "manifest.json"),
+      JSON.stringify({
+        id: "fixture",
+        version: "1.0.0",
+        capabilities: ["ui:theme"],
+        contributes: {
+          themes: [
+            {
+              id: "paper",
+              label: "Paper",
+              mode: "light",
+              css: "themes/paper.css",
+            },
+          ],
+        },
+      }),
+    );
+    if (css !== null) {
+      fs.mkdirSync(path.join(root, "themes"));
+      fs.writeFileSync(path.join(root, "themes", "paper.css"), css);
+    }
+    return root;
+  }
+
+  it("reports a missing theme file", async () => {
+    expect(await problems(themed(null))).toContain(
+      "theme paper: themes/paper.css does not exist",
+    );
+  });
+
+  it("reports theme CSS that reaches outside or leaves its class", async () => {
+    const output = await problems(
+      themed('@import "x.css"; body { color: red }'),
+    );
+    expect(output).toContain("theme paper: @import is not allowed in a theme");
+    expect(output).toContain(
+      'theme paper: Selector "body" must start with .paper',
+    );
+  });
+
+  it("says nothing about CSS that is fine", async () => {
+    const output = await problems(themed(".paper { --background: #fff; }"));
+    expect(output).not.toContain("theme paper");
+  });
+});

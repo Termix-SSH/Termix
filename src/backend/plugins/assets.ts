@@ -1,4 +1,5 @@
-// Serves a plugin's built frontend: its bundle, stylesheet and locales.
+// Serves a plugin's built frontend: its bundle, stylesheet, locales and the
+// CSS files its themes declare.
 //
 // Unauthenticated on purpose, the same as /assets: import() cannot carry the
 // bearer header, and nothing here is secret. It only ever serves files from
@@ -28,6 +29,22 @@ export interface PluginFrontendInfo {
   assetVersion: string | null;
   /** Language codes with a locale file, "en" plus xx_YY names. */
   locales: string[];
+  /** Changes whenever a theme's CSS does, for its ?v= link. */
+  themeVersion: string | null;
+}
+
+/** Where a theme's CSS is served: /plugin-assets/<id>/_themes/<theme>.css. */
+export const THEME_ASSET_PREFIX = "_themes/";
+
+/** The declared CSS file of each of the plugin's themes, by theme id. */
+function themeFiles(plugin: AssetPlugin): Map<string, string> {
+  const files = new Map<string, string>();
+  const manifest = plugin.manifest as PluginManifest;
+  for (const theme of manifest.contributes?.themes ?? []) {
+    const file = path.resolve(plugin.dir, theme.css);
+    if (isInside(plugin.dir, file)) files.set(theme.id, file);
+  }
+  return files;
 }
 
 function frontendEntry(
@@ -72,8 +89,15 @@ export function describePluginFrontend(
     css: false,
     assetVersion: null,
     locales: [],
+    themeVersion: null,
   };
   if (!plugin) return none;
+
+  const themes = [...themeFiles(plugin).values()].filter(fileExists);
+  const themeVersion =
+    themes.length > 0
+      ? contentVersion(themes.sort(), plugin.manifest.version)
+      : null;
 
   const locales: string[] = [];
   const localeFiles: string[] = [];
@@ -96,7 +120,8 @@ export function describePluginFrontend(
   }
 
   const entry = frontendEntry(plugin);
-  if (!entry || !fileExists(entry.file)) return { ...none, locales };
+  if (!entry || !fileExists(entry.file))
+    return { ...none, locales, themeVersion };
 
   const cssFile = path.join(entry.dir, "frontend.css");
   const css = fileExists(cssFile);
@@ -111,6 +136,7 @@ export function describePluginFrontend(
     css,
     assetVersion,
     locales: locales.sort(),
+    themeVersion,
   };
 }
 
@@ -158,7 +184,14 @@ export function resolvePluginAsset(
 
   let root: string | null;
   let rest: string;
-  if (clean.startsWith("locales/")) {
+  if (clean.startsWith(THEME_ASSET_PREFIX)) {
+    // Only a declared theme file, which the loader checked on load.
+    const themeId = clean.slice(THEME_ASSET_PREFIX.length, -".css".length);
+    const file = themeFiles(plugin).get(themeId);
+    if (!file || !clean.endsWith(".css")) return null;
+    root = path.dirname(file);
+    rest = path.basename(file);
+  } else if (clean.startsWith("locales/")) {
     root = localesDir(plugin);
     rest = clean.slice("locales/".length);
   } else {

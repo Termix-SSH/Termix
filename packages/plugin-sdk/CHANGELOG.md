@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.0.12
+
+Plugin API 1.4.0.
+
+### Added
+
+- `contributes.layouts` and `app.registerLayout()` for a whole-app layout, with the `ui:layout` capability. Needs `engine.api` 1.4
+- `contributes.themes` for CSS-only themes, with the `ui:theme` capability. `termix-plugin validate` checks theme CSS and `pack` ships it
+- `useShell()` gives a layout the live shell: tabs, splits, hosts, docks, the command palette and the registries
+- `TabStage` and `ShellConfirmCapture` in `@termix-ssh/plugin-sdk/ui`, for a layout to place tabs
+- `validateThemeCss()` in `@termix-ssh/plugin-sdk/manifest`
+
+### Fixed
+
+- The manifest JSON schema lists the `notify:hub` and `plugins:read` capabilities
+
 ## 1.0.11
 
 Plugin API 1.3.0.

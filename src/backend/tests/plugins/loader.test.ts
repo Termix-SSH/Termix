@@ -132,6 +132,85 @@ describe("PluginLoader discovery", () => {
   });
 });
 
+describe("PluginLoader themes and skipped looks", () => {
+  const themed = {
+    capabilities: ["ui:theme", "ui:layout"],
+    manifestOverrides: {
+      contributes: {
+        themes: [
+          {
+            id: "paper",
+            label: "Paper",
+            mode: "light",
+            css: "themes/paper.css",
+          },
+        ],
+        layouts: [{ id: "fancy", label: "Fancy" }],
+      },
+    },
+  };
+
+  it("loads a plugin whose theme CSS is allowed", async () => {
+    const fixture = createFixturePlugin(themed);
+    cleanups.push(fixture.cleanup);
+    fs.mkdirSync(path.join(fixture.dir, "themes"));
+    fs.writeFileSync(
+      path.join(fixture.dir, "themes", "paper.css"),
+      ".paper { --background: #fff; }",
+    );
+    const plugin = await new PluginLoader().load(fixture.dir, "bundled");
+    expect(plugin.manifest.contributes?.themes?.[0].id).toBe("paper");
+  });
+
+  it("refuses a plugin whose theme CSS reaches outside", async () => {
+    const fixture = createFixturePlugin(themed);
+    cleanups.push(fixture.cleanup);
+    fs.mkdirSync(path.join(fixture.dir, "themes"));
+    fs.writeFileSync(
+      path.join(fixture.dir, "themes", "paper.css"),
+      '@import url("https://example.com/x.css");',
+    );
+    await expect(
+      new PluginLoader().load(fixture.dir, "bundled"),
+    ).rejects.toThrow(/theme paper is not allowed: @import/);
+  });
+
+  it("refuses a plugin whose theme file is missing", async () => {
+    const fixture = createFixturePlugin(themed);
+    cleanups.push(fixture.cleanup);
+    await expect(
+      new PluginLoader().load(fixture.dir, "bundled"),
+    ).rejects.toThrow(/theme paper file themes\/paper.css is missing/);
+  });
+
+  it("remembers why a layout plugin was skipped", async () => {
+    const bundled = tempRoot("termix-bundled-");
+    const user = tempRoot("termix-data-");
+    createFixturePlugin({
+      ...themed,
+      id: "fancy-layout",
+      root: bundled,
+      manifestOverrides: {
+        ...themed.manifestOverrides,
+        version: "2.0.0",
+        engine: { termix: ">=99.0.0", api: "1" },
+      },
+    });
+    setRoots(bundled, user);
+
+    const loader = new PluginLoader();
+    await loader.loadAll();
+    const [skipped] = loader.skipped();
+    expect(skipped).toMatchObject({
+      id: "fancy-layout",
+      version: "2.0.0",
+      layouts: ["fancy"],
+      themes: ["paper"],
+    });
+    expect(skipped.error).toMatch(/needs Termix >=99.0.0/);
+  });
+});
+
 describe("PluginLoader dependency resolution", () => {
   async function loadAll(
     specs: Array<{ id: string; manifestOverrides?: Record<string, unknown> }>,

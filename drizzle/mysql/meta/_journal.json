@@ -512,6 +512,13 @@
       "when": 1791935283211,
       "tag": "0072_unique_username",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "5",
+      "when": 1792357129912,
+      "tag": "0073_user_look_preferences",
+      "breakpoints": true
     }
   ]
 }

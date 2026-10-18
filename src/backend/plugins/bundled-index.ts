@@ -1,5 +1,5 @@
 /**
- * The onboarding defaults of the bundled plugins, from
+ * The onboarding defaults and the default look of the bundled plugins, from
  * dist/plugins/bundled-index.json (written by scripts/build-plugins.cjs from
  * docker/bundled-plugins.json). Core never names plugins, so which ones a
  * fresh install keeps lives in that file and not here.
@@ -27,6 +27,7 @@ interface BundledIndex {
         consent?: boolean;
         enabledByEnv?: string[];
       };
+      defaultLook?: boolean;
     }
   >;
 }
@@ -50,6 +51,23 @@ export function readBundledIndex(): BundledIndex | null {
     cached = null;
   }
   return cached;
+}
+
+/**
+ * Bundled plugins whose layout and theme a fresh install shows. Core reads
+ * the default look from here so it never has to name a plugin.
+ */
+export function defaultLookPluginIds(): string[] {
+  const index = readBundledIndex();
+  if (!index) return [];
+  return Object.entries(index.plugins)
+    .filter(([, entry]) => entry?.defaultLook === true)
+    .map(([id]) => id)
+    .sort();
+}
+
+export function isDefaultLookPlugin(pluginId: string): boolean {
+  return defaultLookPluginIds().includes(pluginId);
 }
 
 export function resetBundledIndexCache(): void {
@@ -96,6 +114,8 @@ export function initialPluginState(
 ): "enabled" | "disabled" {
   if (source !== "bundled") return "disabled";
   if (!freshInstall) return "enabled";
+  // The default look is what the app is drawn with.
+  if (isDefaultLookPlugin(pluginId)) return "enabled";
   const { recommended, consent } = onboardingDefaults(pluginId);
   return recommended && !consent ? "enabled" : "disabled";
 }
