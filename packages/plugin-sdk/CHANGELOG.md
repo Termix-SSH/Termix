@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.16
+
+Plugin API 1.8.0.
+
+### Added
+
+- `ctx.sync.provide` and the `sync:provide` capability, so a plugin can answer every /sync request
+
 ## 1.0.15
 
 Plugin API 1.7.0.

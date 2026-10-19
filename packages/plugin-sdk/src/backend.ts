@@ -236,6 +236,429 @@ export interface SyncEntityRegistration {
  */
 export interface PluginSync {
   registerEntity: (entity: SyncEntityRegistration) => void;
+  /** Needs sync:provide. Takes over /sync/v2 and /sync/link. Removed on deactivate. */
+  provide: (provider: PluginSyncProvider) => () => void;
+  /** Needs sync:provide. The replica store, change feed and link registry. */
+  readonly host: PluginSyncHost;
+}
+
+/**
+ * The plugin that owns server and desktop sync. Core forwards every request
+ * under /sync to `handle` (an Express style handler) and answers 404 when no
+ * plugin provides it. Call `next()` to let core answer instead.
+ */
+export interface PluginSyncProvider {
+  handle: (
+    req: unknown,
+    res: unknown,
+    next: (error?: unknown) => void,
+  ) => void | Promise<void>;
+}
+
+/** A kind of data that syncs, as the sync provider sees it. */
+export interface SyncEntityInfo {
+  type: string;
+  owner: string;
+  order: number;
+  readOnly: boolean;
+  /** Whether the row would show in a load even if it exists. */
+  covers?: (syncId: string) => boolean;
+}
+
+/** A row ready for the wire, with its content hash. */
+export interface SyncWireRow {
+  syncId: string;
+  wire: SyncRow;
+  hash: string;
+}
+
+export interface SyncRecordInfo {
+  entityType: string;
+  syncId: string;
+  revision: number;
+  hash: string | null;
+  deleted: boolean;
+  error: string | null;
+  errorHash: string | null;
+  seq: number;
+}
+
+export interface SyncConflictInfo {
+  id: number;
+  entityType: string;
+  syncId: string;
+  localRow: string;
+  createdAt: string;
+}
+
+export interface SyncAccountInfo {
+  id: string;
+  username: string;
+  isAdmin: boolean;
+  active: boolean;
+}
+
+export interface SyncProxyHeader {
+  name: string;
+  value: string;
+}
+
+export interface SyncBasicAuth {
+  username: string;
+  password: string;
+}
+
+/** Extra per server connection options. Kept open so new ones need no migration. */
+export type SyncLinkOptions = Record<string, unknown>;
+
+/** One server a desktop is linked to, with a replica of its data. */
+export interface SyncLinkInfo {
+  id: number;
+  /** The local user the replica belongs to. */
+  userId: string;
+  serverUrl: string;
+  serverName: string | null;
+  serverVersion: string | null;
+  sessionToken: string | null;
+  customHeaders: SyncProxyHeader[];
+  basicAuth: SyncBasicAuth | null;
+  allowInvalidCertificate: boolean;
+  remoteUserId: string | null;
+  remoteUsername: string | null;
+  account: {
+    remoteUserId?: string;
+    username?: string;
+    isAdmin?: boolean;
+    roles?: string[];
+    permissions?: string[];
+  } | null;
+  disabledTypes: string[];
+  /** Extra connection options for this server, kept open for new ones. */
+  options: SyncLinkOptions;
+  knownTypes: string[];
+  cursor: number;
+  status: "idle" | "syncing" | "offline" | "error" | "signed_out";
+  lastError: string | null;
+  linkedAt: string;
+  lastSyncAt: string | null;
+}
+
+export interface SyncLinkCreate {
+  userId: string;
+  serverUrl: string;
+  serverName?: string | null;
+  serverVersion?: string | null;
+  sessionToken: string;
+  customHeaders?: SyncProxyHeader[];
+  basicAuth?: SyncBasicAuth | null;
+  allowInvalidCertificate?: boolean;
+  remoteUserId?: string | null;
+  remoteUsername?: string | null;
+}
+
+export type SyncLinkPatch = Partial<
+  Pick<
+    SyncLinkInfo,
+    | "serverName"
+    | "serverVersion"
+    | "sessionToken"
+    | "customHeaders"
+    | "basicAuth"
+    | "allowInvalidCertificate"
+    | "remoteUserId"
+    | "remoteUsername"
+    | "account"
+    | "disabledTypes"
+    | "options"
+    | "knownTypes"
+    | "cursor"
+    | "status"
+    | "lastError"
+    | "lastSyncAt"
+  >
+>;
+
+export type SyncRemoteErrorKind =
+  "offline" | "tls" | "proxy" | "basic_auth" | "signed_out" | "server";
+
+export interface SyncRemoteError extends Error {
+  readonly kind: SyncRemoteErrorKind;
+  readonly status?: number;
+}
+
+export interface SyncRemoteTarget {
+  serverUrl: string;
+  sessionToken?: string | null;
+  customHeaders?: SyncProxyHeader[];
+  basicAuth?: SyncBasicAuth | null;
+  allowInvalidCertificate?: boolean;
+}
+
+export interface SyncRemoteRequest {
+  method?: string;
+  body?: unknown;
+  timeoutMs?: number;
+  signal?: AbortSignal;
+}
+
+export interface SyncPushOp {
+  entityType: string;
+  syncId: string;
+  baseRevision: number;
+  op: "upsert" | "delete";
+  row?: SyncRow;
+}
+
+export type SyncPushResult =
+  | { syncId: string; entityType: string; status: "ok"; revision: number }
+  | {
+      syncId: string;
+      entityType: string;
+      status: "conflict";
+      revision: number;
+      deleted: boolean;
+      row: SyncRow | null;
+    }
+  | { syncId: string; entityType: string; status: "rejected"; reason: string };
+
+export interface SyncRemotePlugin {
+  id: string;
+  name: string;
+  version: string;
+  source: string;
+  artifact: boolean;
+  enabled: boolean;
+  active: boolean;
+  desktop: string;
+  syncEntities: string[];
+  granted: string[];
+}
+
+/**
+ * What the sync provider gets from core: the replica store, the change feed,
+ * the linked server registry, sessions and a few helpers. Core keeps all of
+ * it neutral; the provider decides when and how to use it. Needs sync:provide.
+ */
+export interface PluginSyncHost {
+  /** True on the desktop app's own backend. */
+  readonly embedded: boolean;
+  info: { appName: () => Promise<string>; version: () => string };
+
+  entities: {
+    list: () => SyncEntityInfo[];
+    get: (type: string) => SyncEntityInfo | undefined;
+    /** Registers core's own entities once. */
+    ensureCore: () => Promise<void>;
+    onChanged: (listener: () => void) => () => void;
+    onLocalWrite: (listener: () => void) => () => void;
+  };
+
+  /** Rows and bookkeeping of one local user's replica. */
+  replica: {
+    resolvers: (userId: string, onMissing?: () => void) => unknown;
+    loadRows: (
+      type: string,
+      userId: string,
+      resolvers: unknown,
+    ) => Promise<{ rows: Map<string, SyncWireRow>; failed: Set<string> }>;
+    loadRow: (
+      type: string,
+      userId: string,
+      syncId: string,
+      resolvers: unknown,
+    ) => Promise<SyncWireRow | null>;
+    writeRow: (
+      type: string,
+      userId: string,
+      wire: SyncRow,
+      resolvers: unknown,
+    ) => Promise<void>;
+    deleteRow: (type: string, userId: string, syncId: string) => Promise<void>;
+    orderSelfReferences: (type: string, rows: SyncRow[]) => SyncRow[];
+    counts: (userId: string) => Promise<Record<string, number>>;
+    wipe: (userId: string) => Promise<void>;
+    regenerateSyncIds: (userId: string) => Promise<void>;
+    removeSharedCopies: (userId: string) => Promise<void>;
+    records: {
+      list: (userId: string) => Promise<Map<string, SyncRecordInfo>>;
+      put: (
+        userId: string,
+        type: string,
+        syncId: string,
+        values: { revision: number; hash: string | null; deleted: boolean },
+      ) => Promise<void>;
+      setError: (
+        userId: string,
+        type: string,
+        syncId: string,
+        reason: string,
+        hash: string,
+      ) => Promise<void>;
+      clearErrors: (userId: string) => Promise<void>;
+      listErrors: (userId: string) => Promise<SyncRecordInfo[]>;
+      deleteForUser: (userId: string) => Promise<void>;
+      key: (type: string, syncId: string) => string;
+    };
+    conflicts: {
+      save: (
+        userId: string,
+        type: string,
+        syncId: string,
+        row: SyncRow,
+        revision: number,
+      ) => Promise<void>;
+      list: (userId: string) => Promise<SyncConflictInfo[]>;
+      get: (userId: string, id: number) => Promise<SyncConflictInfo | null>;
+      delete: (userId: string, id: number) => Promise<void>;
+    };
+  };
+
+  /** The server side: what changed for an account and what a desktop pushed. */
+  feed: {
+    withUserLock: <T>(userId: string, run: () => Promise<T>) => Promise<T>;
+    changes: (
+      userId: string,
+      cursor: number,
+      limit: number,
+      types?: string[],
+    ) => Promise<{
+      records: Array<{
+        seq: number;
+        entityType: string;
+        syncId: string;
+        revision: number;
+        deleted: boolean;
+        row: SyncRow | null;
+      }>;
+      hasMore: boolean;
+      nextCursor: number;
+      entityTypes: Array<{
+        type: string;
+        owner: string;
+        order: number;
+        readOnly: boolean;
+      }>;
+    }>;
+    parsePushOps: (body: unknown) => Promise<SyncPushOp[] | null>;
+    applyPush: (userId: string, ops: SyncPushOp[]) => Promise<SyncPushResult[]>;
+    /** Streams a change notice to the account's open event streams. */
+    listen: (userId: string, res: unknown) => Promise<() => void>;
+  };
+
+  /**
+   * The linked server registry, kept in core so it is there before plugins.
+   * One link per local user. Without a user, the active account is meant.
+   */
+  links: {
+    list: () => Promise<SyncLinkInfo[]>;
+    get: (userId?: string) => Promise<SyncLinkInfo | null>;
+    create: (link: SyncLinkCreate) => Promise<SyncLinkInfo>;
+    update: (
+      patch: SyncLinkPatch,
+      userId?: string,
+    ) => Promise<SyncLinkInfo | null>;
+    remove: (userId?: string) => Promise<void>;
+  };
+
+  /** Desktop accounts: the local user and the replica user of each server. */
+  accounts: {
+    list: () => Promise<SyncAccountInfo[]>;
+    /** A new empty account, ready to be linked to a server. */
+    create: () => Promise<string>;
+    /** Which account the app signs in as from now on. */
+    setActive: (userId: string) => Promise<void>;
+    activeId: () => Promise<string | null>;
+    /** Deletes an account and all its data. The last one cannot go. */
+    remove: (userId: string) => Promise<void>;
+  };
+
+  http: {
+    json: <T>(
+      target: SyncRemoteTarget,
+      pathname: string,
+      request?: SyncRemoteRequest,
+    ) => Promise<T>;
+    fetch: (
+      target: SyncRemoteTarget,
+      pathname: string,
+      request?: SyncRemoteRequest,
+    ) => Promise<{
+      ok: boolean;
+      status: number;
+      body: AsyncIterable<Uint8Array> | null;
+    }>;
+    normalizeServerUrl: (input: string) => string | null;
+    isRemoteError: (error: unknown) => error is SyncRemoteError;
+  };
+
+  sessions: {
+    /** A long lived session for a linked desktop. Shows in the account's sessions. */
+    issueDesktop: (
+      userId: string,
+      options: { days: number; deviceInfo: string },
+    ) => Promise<string>;
+    revoke: (sessionId: string) => Promise<void>;
+    find: (
+      sessionId: string,
+    ) => Promise<{ expiresAt: string; deviceInfo: string | null } | null>;
+    findUser: (
+      userId: string,
+    ) => Promise<{ id: string; username: string } | null>;
+    /** The user and session behind a token, or null when it is not valid. */
+    verify: (
+      token: string,
+    ) => Promise<{ userId: string; sessionId?: string } | null>;
+    /** Sets the sign in cookie on a response, like a login does. A name sets another cookie. */
+    setCookie: (
+      req: unknown,
+      res: unknown,
+      value: string,
+      options?: { name?: string; days?: number },
+    ) => void;
+    /** Removes the sign in cookie, without ending the session behind it. */
+    clearCookie: (req: unknown, res: unknown, name?: string) => void;
+    /** Express middleware that signs the request in and sets userId and sessionId. */
+    middleware: () => unknown;
+    /** Express middleware that lets a request through only on a desktop. */
+    desktopOnly: () => unknown;
+  };
+
+  hosts: {
+    findForSync: (
+      userId: string,
+      syncId: string,
+    ) => Promise<{ id: number; name: string | null } | null>;
+    statusBySyncId: (userId: string) => Promise<Record<string, unknown>>;
+  };
+
+  plugins: {
+    listForDesktop: () => Promise<{
+      plugins: SyncRemotePlugin[];
+      registryKeys: unknown;
+    }>;
+    /** Sends a plugin archive; false when there is no such plugin to share. */
+    sendPackage: (pluginId: string, res: unknown) => Promise<boolean>;
+    mirror: (link: SyncLinkInfo) => Promise<void>;
+    lastRemote: () => SyncRemotePlugin[];
+    localNames: () => Map<string, string>;
+  };
+
+  desktop: {
+    /** Tells the app's main process how to reach the linked origin. */
+    applyProxy: (link: SyncLinkInfo | null) => Promise<void>;
+    deviceName: () => string;
+  };
+
+  alerts: {
+    send: (alert: {
+      title: string;
+      body: string;
+      severity: "info" | "warning" | "error";
+      category: string;
+      dedupeKey: string;
+      link?: { tab: string };
+    }) => Promise<void>;
+  };
 }
 
 /**

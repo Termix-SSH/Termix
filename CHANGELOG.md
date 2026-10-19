@@ -19,9 +19,14 @@
 - Plugins can set login rules: sign out after a time without activity, limit how long a session lasts, turn off remember me and require a second factor
 - A user who must have a second factor but has none can sign in only to set one up
 - Admins can redirect HTTP to HTTPS and send HSTS while HTTPS is on. Off by default so reverse proxies keep working
+- A plugin can answer all sync requests and use the replica store, change feed and linked server list, so sync no longer lives in the core app
+- The desktop app can hold several accounts, each with its own copy of a server's data. The app signs in as the active one and its auto session follows a switch
+- The linked server list holds one link per account, with room for more connection options per server
+- Another Termix server can manage this one with an API key, which can now ask for a one minute ticket to open plugin sockets as its user
 
 ### Changed
 
+- Server and desktop sync moved out of the core app into a plugin. Existing links and offline copies keep working
 - The icon rail, sidebar, tab bar, dock, Dashboard, Manage, Settings and command palette now come from a bundled layout. It can be swapped for another layout but not removed, and a fix to it no longer needs a Termix release
 - Your theme is saved to your account so your other devices use it too, unless you keep settings on this device only
 - The themes besides light and dark now come from a bundled themes plugin. It can be swapped but not removed, and Termix keeps a basic light and dark theme of its own

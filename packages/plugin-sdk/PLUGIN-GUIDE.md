@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.15 | Plugin API 1.7.0
+SDK 1.0.16 | Plugin API 1.8.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -227,6 +227,7 @@ Bundled as ESM for Node 22+ into `dist/backend.js`. Backend imports of your own 
 | `auth`                 | `auth:provide`                   | Login methods, second factors, SSH auth types                  |
 | `auth.issueUserToken`  | `users:impersonate`              | A short-lived session for calling Termix's API as a user       |
 | `auth.policy`          | `auth:policy`                    | Login rules: idle timeout, session length, second factors      |
+| `sync.provide`         | `sync:provide`                   | Answers all /sync requests: server sync, linked desktops       |
 | `users.getLocale`      | `users:read`                     | A user's UI language                                           |
 | `system`               | `system:tls`                     | The server's HTTPS certificate                                 |
 | `plugins.list()`       | `plugins:read`                   | Which plugins are installed                                    |
@@ -707,6 +708,14 @@ lists them too). `evaluate` returns `allowRememberDevice`, `maxSessionSeconds`, 
 refuses the login. A user who must have a second factor but has none gets a session that can only set one
 up, and `/users/me` reports `restriction: "second-factor-setup"`.
 
+Sync is answered by one plugin. `sync:provide` is high risk: `ctx.sync.provide({ handle })` takes over every
+request under `/sync` (an Express style handler, 404 when nothing provides it), and `ctx.sync.host` hands
+over the neutral parts core keeps: the replica store (`replica`), the change feed and push applier
+(`feed`), the linked server list (`links`, one per local user), desktop accounts (`accounts`), sessions
+(`sessions`), host lookups, plugin mirroring and the proxy settings the desktop app needs. A test passes its
+own `syncHost` to `createMockCtx`. An API key can ask `POST /users/ws-ticket/api-key` for a one minute
+ticket that opens plugin sockets as its user, which is how one server opens sessions through another.
+
 ## Testing
 
 ```ts
@@ -904,6 +913,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `db:core-refs`           | high     | Query core users, roles and hosts tables (read only)    |
 | `auth:provide`           | high     | Add login methods, second factors, SSH auth types       |
 | `auth:policy`            | high     | Set login rules: idle timeout, session length, 2FA      |
+| `sync:provide`           | high     | Run sync: answer every /sync request                    |
 | `device:serial`          | high     | Open serial and USB ports on the server                 |
 | `desktop:local`          | high     | Use the user's own computer, desktop app only           |
 | `hosts:export`           | high     | Export hosts with their saved logins                    |

@@ -265,17 +265,15 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       });
     }
 
-    // After plugins, so their sync entities are registered before a pass.
+    // Sync itself starts with the plugin that provides it.
     if (process.env.ELECTRON_EMBEDDED === "true") {
       try {
-        const { startDesktopSync } = await import("./sync/client/engine.js");
-        startDesktopSync();
         const { startDesktopUpdateCheck } =
           await import("./updates/desktop-update-check.js");
         startDesktopUpdateCheck();
       } catch (error) {
-        systemLogger.warn("Desktop sync failed to start", {
-          operation: "sync_start",
+        systemLogger.warn("Desktop update check failed to start", {
+          operation: "update_check_start",
           error: getErrorMessage(error),
         });
       }

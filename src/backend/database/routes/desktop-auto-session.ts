@@ -61,14 +61,22 @@ export function isNativeTokenExportRequest(req: Request): boolean {
  * during testing, or a household sharing one install) -- a user in that
  * state deserves to get into the app they installed, not a confusing,
  * unexplained dead end. So this always returns a single, deterministic
- * user: the admin account if one exists, else the earliest-registered
- * account. It never returns null.
+ * user: the account the user switched to if it still exists, else the admin
+ * account if one exists, else the earliest-registered account. It never
+ * returns null when there are users.
  */
 export function resolveDesktopAutoSessionUser(
   allUsers: UserRecord[],
+  preferredId?: string | null,
 ): UserRecord | null {
   if (allUsers.length === 0) return null;
   if (allUsers.length === 1) return allUsers[0];
+
+  // An account the user switched to on purpose, while it still exists.
+  const preferred = preferredId
+    ? allUsers.find((user) => user.id === preferredId)
+    : undefined;
+  if (preferred) return preferred;
 
   const admin = allUsers.find((user) => user.isAdmin);
   if (admin) return admin;

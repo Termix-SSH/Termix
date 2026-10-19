@@ -68,7 +68,7 @@ import type {
   PluginSshKeyCredential,
   PluginSshKeyCredentialInput,
 } from "./backend.js";
-import type { SyncEntityRegistration } from "./backend.js";
+import type { PluginSyncHost, SyncEntityRegistration } from "./backend.js";
 import type { PluginDatabase } from "./backend.js";
 import type {
   PluginExternalClientRequest,
@@ -104,6 +104,8 @@ export interface FakeScheduledJob {
 
 export interface FakeContextOptions {
   pluginId?: string;
+  /** What ctx.sync.host answers, for a sync provider's tests. */
+  syncHost?: Partial<PluginSyncHost>;
   manifest?: Partial<PluginManifest>;
   /** Acting user returned by currentActor and used by asUser. */
   actor?: string;
@@ -755,6 +757,12 @@ export function createFakeContext(
     sync: {
       registerEntity: (entity) => {
         syncEntities.push(entity);
+      },
+      provide: () => () => {},
+      get host() {
+        if (!options.syncHost)
+          throw new Error("Pass syncHost to use ctx.sync.host");
+        return options.syncHost as PluginSyncHost;
       },
     },
 
@@ -1582,6 +1590,8 @@ export function createFakeContext(
 
 export interface MockContextOptions {
   pluginId?: string;
+  /** What ctx.sync.host answers, for a sync provider's tests. */
+  syncHost?: Partial<PluginSyncHost>;
   manifest?: Partial<PluginManifest>;
   /** Capabilities the plugin is granted. Anything else throws. */
   capabilities?: string[];
@@ -1744,6 +1754,7 @@ export function createMockCtx(
 
   const base = createFakeContext({
     pluginId: options.pluginId,
+    syncHost: options.syncHost,
     actor: options.actor,
     settings: options.settings,
     coreSettings: options.coreSettings,

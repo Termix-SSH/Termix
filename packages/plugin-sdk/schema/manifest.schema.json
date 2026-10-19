@@ -152,6 +152,7 @@
           "users:write",
           "auth:provide",
           "auth:policy",
+          "sync:provide",
           "system:tls",
           "device:serial",
           "hosts:write",

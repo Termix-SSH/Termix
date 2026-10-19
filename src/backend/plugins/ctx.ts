@@ -54,6 +54,9 @@ import {
 } from "@termix-ssh/plugin-sdk/backend";
 import type { PluginTableDefinition } from "@termix-ssh/plugin-sdk/db";
 import * as syncRegistry from "./sync-registry.js";
+import { provideSync } from "../sync/provider.js";
+import { createSyncHost } from "../sync/host.js";
+import type { PluginSyncHost } from "@termix-ssh/plugin-sdk/backend";
 import {
   needsExplicitPersist,
   resolveDatabaseDialect,
@@ -189,6 +192,34 @@ export function createPluginContext(
   handle: PluginHandle,
 ): PluginContext {
   const pluginId = manifest.id;
+  let syncHost: PluginSyncHost | undefined;
+  const syncApi: PluginContext["sync"] = {
+    registerEntity: (entity) => {
+      const dispose = syncRegistry.registerEntity(pluginId, entity);
+      handle.bag.add(dispose, `sync entity ${entity.type}`);
+    },
+    provide: (provider) => {
+      if (!manifest.capabilities.includes("sync:provide")) {
+        throw capabilityRefused(pluginId, "sync:provide");
+      }
+      const remove = provideSync(pluginId, provider);
+      const drop = handle.bag.add(remove, "sync provider");
+      return () => {
+        drop();
+        remove();
+      };
+    },
+  } as PluginContext["sync"];
+  // Not enumerable, so tools that walk the context do not trip the check.
+  Object.defineProperty(syncApi, "host", {
+    enumerable: false,
+    get() {
+      if (!manifest.capabilities.includes("sync:provide")) {
+        throw capabilityRefused(pluginId, "sync:provide");
+      }
+      return (syncHost ??= createSyncHost());
+    },
+  });
   const auditCall = (
     action: string,
     details: string,
@@ -520,12 +551,7 @@ export function createPluginContext(
       },
     },
 
-    sync: {
-      registerEntity: (entity) => {
-        const dispose = syncRegistry.registerEntity(pluginId, entity);
-        handle.bag.add(dispose, `sync entity ${entity.type}`);
-      },
-    },
+    sync: syncApi,
 
     kv: {
       get: (key) => kvGet(key),

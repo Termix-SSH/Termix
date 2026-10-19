@@ -1151,6 +1151,10 @@
         "title": "Set sign in rules",
         "consequence": "It can sign people out when idle, limit session length, turn off remember me and require a second factor."
       },
+      "sync:provide": {
+        "title": "Run sync",
+        "consequence": "It can answer all sync requests, so it sees the data that devices and servers sync."
+      },
       "system:tls": {
         "title": "Manage certificates",
         "consequence": "It can replace the certificate Termix serves over HTTPS and answer domain checks from certificate authorities."

@@ -576,8 +576,8 @@ async function describeDesktopLink(userId: string) {
   if (process.env.ELECTRON_EMBEDDED !== "true") return null;
   try {
     const { getLink } = await import("../../sync/client/link-store.js");
-    const link = await getLink();
-    if (!link || link.userId !== userId) return null;
+    const link = await getLink(userId);
+    if (!link) return null;
     return {
       serverUrl: link.serverUrl,
       serverName: link.serverName,
@@ -743,7 +743,11 @@ router.post("/internal/auto-session", async (req, res) => {
 
     const userRepository = createCurrentUserRepository();
     const allUsers = await userRepository.listAll();
-    const userRecord = resolveDesktopAutoSessionUser(allUsers);
+    const { getSavedActiveUserId } = await import("../../sync/accounts.js");
+    const userRecord = resolveDesktopAutoSessionUser(
+      allUsers,
+      await getSavedActiveUserId(),
+    );
     if (!userRecord) {
       return res.status(403).json({
         error: "No local users exist",

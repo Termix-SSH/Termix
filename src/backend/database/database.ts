@@ -27,8 +27,7 @@ import hostSidebarPreferencesRoutes from "./routes/host-sidebar-preferences.js";
 import credentialSidebarPreferencesRoutes from "./routes/credential-sidebar-preferences.js";
 import uiPreferencesRoutes from "./routes/ui-preferences.js";
 import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
-import syncRoutes from "../sync/server/routes.js";
-import syncLinkRoutes from "../sync/client/routes.js";
+import { syncForwarder } from "../sync/provider.js";
 import { syncChangeWatcher } from "../sync/server/change-watcher.js";
 import dashboardRoutes from "./routes/dashboard-routes.js";
 import {
@@ -1625,8 +1624,7 @@ app.use("/host-sidebar/preferences", hostSidebarPreferencesRoutes);
 app.use("/credential-sidebar/preferences", credentialSidebarPreferencesRoutes);
 app.use("/ui-preferences", uiPreferencesRoutes);
 registerAuditLogRoutes(app, authenticateJWT);
-app.use("/sync", syncRoutes);
-app.use("/sync", syncLinkRoutes);
+app.use("/sync", syncForwarder);
 app.use("/dashboard", dashboardRoutes);
 app.use("/plugins", pluginRoutes);
 app.use(

@@ -48,6 +48,7 @@ export const CAPABILITY_CATALOG: readonly CapabilityInfo[] = [
   entry("db:core-refs", "high"),
   entry("auth:provide", "high"),
   entry("auth:policy", "high"),
+  entry("sync:provide", "high"),
   entry("device:serial", "high"),
   entry("notify:hub", "high"),
   entry("ui:layout", "high"),

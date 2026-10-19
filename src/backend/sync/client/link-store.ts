@@ -1,9 +1,12 @@
 /**
- * The desktop's link to a server, one row in sync_link. Secrets (the session
- * token, proxy headers, basic auth) are stored encrypted with the system key.
+ * The desktop's links to servers, one row each in sync_link and at most one
+ * per local user, since each link has its own replica user. Secrets (the
+ * session token, proxy headers, basic auth) are stored encrypted with the
+ * system key. Without a user, a call means the active account's link.
  */
 
 import { eq } from "drizzle-orm";
+import { getActiveUserId } from "../accounts.js";
 import { syncLink } from "../../database/db/schema.js";
 import { createCurrentRepositoryContext } from "../../database/repositories/factory.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
@@ -48,6 +51,8 @@ export interface SyncLink {
   account: LinkAccount | null;
   /** Entity types switched off on this device. */
   disabledTypes: string[];
+  /** Extra connection options for this server, kept open for new ones. */
+  options: Record<string, unknown>;
   /** Entity types this device has fully pulled at least once. */
   knownTypes: string[];
   cursor: number;
@@ -90,7 +95,10 @@ async function fromRow(row: Row): Promise<SyncLink> {
       sessionToken = null;
     }
   }
-  const scope = parseJson<{ disabled?: string[] }>(row.scope, {});
+  const scope = parseJson<{
+    disabled?: string[];
+    options?: Record<string, unknown>;
+  }>(row.scope, {});
   return {
     id: row.id,
     userId: row.userId,
@@ -105,6 +113,8 @@ async function fromRow(row: Row): Promise<SyncLink> {
     remoteUsername: row.remoteUsername,
     account: parseJson<LinkAccount | null>(row.account, null),
     disabledTypes: Array.isArray(scope.disabled) ? scope.disabled : [],
+    options:
+      scope.options && typeof scope.options === "object" ? scope.options : {},
     knownTypes: parseJson<string[]>(row.knownTypes, []),
     cursor: Number(row.cursor) || 0,
     status: (row.status as LinkStatus) || "idle",
@@ -114,8 +124,20 @@ async function fromRow(row: Row): Promise<SyncLink> {
   };
 }
 
-export async function getLink(): Promise<SyncLink | null> {
-  const [row] = await db().select().from(syncLink).limit(1);
+export async function listLinks(): Promise<SyncLink[]> {
+  const rows = await db().select().from(syncLink);
+  return Promise.all(rows.map(fromRow));
+}
+
+/** The link of one local user, or of the active account when none is given. */
+export async function getLink(userId?: string): Promise<SyncLink | null> {
+  const owner = userId ?? (await getActiveUserId());
+  if (!owner) return null;
+  const [row] = await db()
+    .select()
+    .from(syncLink)
+    .where(eq(syncLink.userId, owner))
+    .limit(1);
   return row ? fromRow(row) : null;
 }
 
@@ -133,7 +155,7 @@ export interface NewLink {
 }
 
 export async function createLink(link: NewLink): Promise<SyncLink> {
-  await db().delete(syncLink);
+  await db().delete(syncLink).where(eq(syncLink.userId, link.userId));
   await db()
     .insert(syncLink)
     .values({
@@ -157,7 +179,7 @@ export async function createLink(link: NewLink): Promise<SyncLink> {
       linkedAt: new Date().toISOString(),
     });
   await DatabaseSaveTrigger.forceSave("sync_link");
-  return (await getLink())!;
+  return (await getLink(link.userId))!;
 }
 
 export interface LinkPatch {
@@ -171,6 +193,7 @@ export interface LinkPatch {
   remoteUsername?: string | null;
   account?: LinkAccount | null;
   disabledTypes?: string[];
+  options?: Record<string, unknown>;
   knownTypes?: string[];
   cursor?: number;
   status?: LinkStatus;
@@ -178,8 +201,11 @@ export interface LinkPatch {
   lastSyncAt?: string | null;
 }
 
-export async function updateLink(patch: LinkPatch): Promise<SyncLink | null> {
-  const current = await getLink();
+export async function updateLink(
+  patch: LinkPatch,
+  userId?: string,
+): Promise<SyncLink | null> {
+  const current = await getLink(userId);
   if (!current) return null;
   const set: Partial<Row> = {};
   if (patch.serverName !== undefined) set.serverName = patch.serverName;
@@ -210,8 +236,11 @@ export async function updateLink(patch: LinkPatch): Promise<SyncLink | null> {
   if (patch.account !== undefined) {
     set.account = patch.account ? JSON.stringify(patch.account) : null;
   }
-  if (patch.disabledTypes !== undefined) {
-    set.scope = JSON.stringify({ disabled: patch.disabledTypes });
+  if (patch.disabledTypes !== undefined || patch.options !== undefined) {
+    set.scope = JSON.stringify({
+      disabled: patch.disabledTypes ?? current.disabledTypes,
+      options: patch.options ?? current.options,
+    });
   }
   if (patch.knownTypes !== undefined) {
     set.knownTypes = JSON.stringify(patch.knownTypes);
@@ -224,10 +253,12 @@ export async function updateLink(patch: LinkPatch): Promise<SyncLink | null> {
     await db().update(syncLink).set(set).where(eq(syncLink.id, current.id));
     DatabaseSaveTrigger.triggerSave("sync_link");
   }
-  return getLink();
+  return getLink(current.userId);
 }
 
-export async function deleteLink(): Promise<void> {
-  await db().delete(syncLink);
+export async function deleteLink(userId?: string): Promise<void> {
+  const owner = userId ?? (await getActiveUserId());
+  if (!owner) return;
+  await db().delete(syncLink).where(eq(syncLink.userId, owner));
   await DatabaseSaveTrigger.forceSave("sync_link");
 }
