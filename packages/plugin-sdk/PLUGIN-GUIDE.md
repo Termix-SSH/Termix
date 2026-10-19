@@ -543,7 +543,15 @@ export function activate(app: TermixApp) {
   command palette, the registries as hooks and the user. Core keeps all the state, so switching layouts keeps
   every session.
 - `TabStage` is where tabs show. Place it anywhere; tabs are never remounted when it moves, so a terminal
-  keeps its connection. The command palette, overlays and onboarding stay in core.
+  keeps its connection. Wrap it in `SurfaceScope kind="tab"` with a `ShellConfirmCapture` inside, so
+  close questions and inline views show over the tab area. Overlays and onboarding stay in core.
+- The layout draws the command palette. Core keeps whether it is open (`palette.isOpen`, Ctrl+K calls
+  `palette.open()`) and what is in it (`usePaletteEntries`, `usePaletteGroups`, rail items, hosts).
+- The shell always keeps a home tab with the id and type `dashboard`. `useShell()` leaves it out until some
+  plugin registers a `dashboard` tab type, so a layout without a home screen has no empty tab to draw.
+- Settings, Manage and the host editor belong to Classic Layout. A layout without them should still render
+  `LookSettings` somewhere so people can switch back. `tabs.openSingleton("plugins")` opens core's own
+  Plugins tab in any layout. Switching layouts closes the tabs the old layout's plugin declared.
 - `mobileComponent` is used on phones and narrow windows. The desktop app always gets `component`.
 - Only the chosen layout's plugin is loaded. If it fails to load or crashes twice, Termix shows a repair
   screen where people can switch, reset, update, turn it off or (for a bundled plugin) restore the copy that
@@ -555,6 +563,8 @@ export function activate(app: TermixApp) {
   `classic-layout.hostTree` and `classic-layout.dashboard` for other plugins to place with `PluginComponent`.
   It reads the shell with `useShellController()` from `@termix-ssh/plugin-sdk/ui`, which exposes more than
   `useShell()` and may change with Termix. A third party layout should start from `useShell()`.
+- Example Top Bar Layout (https://github.com/Termix-SSH/Plugin-Example-Topbar-Layout) is a small third party
+  style layout built only on `useShell()`, `TabStage` and `@termix-ssh/plugin-sdk/ui`, with a phone version.
 
 A theme is CSS only. Declare it in `contributes.themes` (`id`, `label`, `mode` light or dark, `css` path,
 optional `swatch` colors for the picker) with the `ui:theme` capability. The id becomes a class on `<html>`,
@@ -572,7 +582,9 @@ A plugin that only holds themes needs no code. Leave out `src/`: `termix-plugin 
 - Themes show in the picker in the order core lists its own, then the plugin's order.
 - A theme someone saved that no longer exists shows as System. It comes back when the plugin does.
 - Accent color, UI font, font size and density are not part of a theme. Core applies them on top.
-- Bundled Classic Themes (https://github.com/Termix-SSH/Plugin-Classic-Themes) is a full example.
+- Bundled Classic Themes (https://github.com/Termix-SSH/Plugin-Classic-Themes) is a full example, and
+  Example Theme (https://github.com/Termix-SSH/Plugin-Example-Theme) a small one with one light and one dark
+  theme.
 
 ## Looking native
 

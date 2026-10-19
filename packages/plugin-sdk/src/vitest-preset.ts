@@ -117,9 +117,19 @@ export function pluginVitestConfig(
 
   const plugins = [wasmBinaryPlugin()];
 
+  // A local SDK linked into node_modules sits outside the plugin folder, so
+  // Vite must be allowed to read it, and React must come from the plugin.
+  const sdkDir = fs.realpathSync(fileURLToPath(new URL("..", import.meta.url)));
+  const server = { fs: { allow: [pluginDir, sdkDir] } };
+  const resolve = {
+    alias,
+    dedupe: ["react", "react-dom", "react-i18next", "i18next"],
+  };
+
   return {
     plugins,
-    resolve: { alias },
+    server,
+    resolve,
     test: {
       globals: true,
       setupFiles: [setupFile],
@@ -127,7 +137,8 @@ export function pluginVitestConfig(
       projects: [
         {
           plugins,
-          resolve: { alias },
+          server,
+          resolve,
           test: {
             name: `${pluginId}:backend`,
             root: pluginDir,
@@ -140,7 +151,8 @@ export function pluginVitestConfig(
         },
         {
           plugins,
-          resolve: { alias },
+          server,
+          resolve,
           test: {
             name: `${pluginId}:frontend`,
             root: pluginDir,

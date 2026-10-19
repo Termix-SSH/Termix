@@ -12,6 +12,7 @@
     "moduleDetection": "force",
     "esModuleInterop": true,
     "resolveJsonModule": true,
+    "preserveSymlinks": true,
     "noEmit": true,
     "strict": false,
     "noUnusedLocals": false,
