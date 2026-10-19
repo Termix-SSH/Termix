@@ -14,7 +14,7 @@ const source = fs.readFileSync(
 );
 const tls = source.slice(
   source.indexOf("const INSECURE_MODE_VALUES"),
-  source.indexOf("function httpFetch("),
+  source.indexOf('if (process.platform === "linux") {'),
 );
 
 const ORIGIN = "https://termix.example";
@@ -30,10 +30,7 @@ function load(link: Record<string, unknown> | null) {
   vm.runInContext(tls, context);
   return context as unknown as {
     isInvalidCertificateAllowedForUrl: (url: string) => boolean;
-    getWebSocketOptions: (
-      url: string,
-      options?: Record<string, unknown>,
-    ) => Record<string, unknown>;
+    getTlsVerificationOptions: (url: string) => Record<string, unknown>;
   };
 }
 
@@ -41,8 +38,7 @@ describe("linked server certificate exception", () => {
   it("covers WebSockets to the linked server", () => {
     const main = load({ origin: ORIGIN, allowInvalidCertificate: true });
     expect(main.isInvalidCertificateAllowedForUrl(TERMINAL)).toBe(true);
-    expect(main.getWebSocketOptions(TERMINAL, { headers: {} })).toEqual({
-      headers: {},
+    expect(main.getTlsVerificationOptions(TERMINAL)).toEqual({
       rejectUnauthorized: false,
     });
   });
@@ -58,7 +54,7 @@ describe("linked server certificate exception", () => {
 
   it("keeps verifying when the link does not allow it", () => {
     const main = load({ origin: ORIGIN, allowInvalidCertificate: false });
-    expect(main.getWebSocketOptions(TERMINAL)).toEqual({
+    expect(main.getTlsVerificationOptions(TERMINAL)).toEqual({
       rejectUnauthorized: true,
     });
   });

@@ -1078,3 +1078,25 @@ describe("layouts and themes", () => {
     expect(has('duplicates "dusk"')).toBe(true);
   });
 });
+
+describe("manifest runtime", () => {
+  it("accepts a desktop runtime plugin", () => {
+    expect(
+      validateManifest(
+        base({ runtime: "desktop", capabilities: ["desktop:local"] }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("rejects an unknown runtime", () => {
+    expect(validateManifest(base({ runtime: "cloud" })).join()).toMatch(
+      /runtime/,
+    );
+  });
+
+  it("rejects a desktop runtime that is mirrored or server only", () => {
+    expect(
+      validateManifest(base({ runtime: "desktop", desktop: "mirror" })).join(),
+    ).toMatch(/local/);
+  });
+});

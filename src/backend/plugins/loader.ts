@@ -656,6 +656,15 @@ export class PluginLoader {
 
     if (plugin.state === "active" || plugin.state === "activating") return;
 
+    if (
+      plugin.manifest.runtime === "desktop" &&
+      process.env.ELECTRON_EMBEDDED !== "true"
+    ) {
+      plugin.state = "blocked";
+      plugin.lastError = "only runs in the desktop app";
+      return;
+    }
+
     plugin.state = "activating";
     plugin.lastError = null;
 
@@ -719,8 +728,12 @@ export class PluginLoader {
         bundled:
           plugin.source === "bundled" || plugin.signedTier === "official",
       });
-      // A new table may be where core data is waiting to move.
-      if (applied.length > 0) {
+      // A new table, or a plugin that keeps its state in settings, may be
+      // where core data is waiting to move. Every move is idempotent.
+      if (
+        applied.length > 0 ||
+        plugin.manifest.contributes?.settings?.admin?.length
+      ) {
         const { runPluginDataMoves } =
           await import("../upgrade/plugin-data-moves.js");
         await runPluginDataMoves();

@@ -13,6 +13,7 @@ import {
   createCurrentPluginRepository,
 } from "../repositories/factory.js";
 import { getPluginRuntime } from "../../plugins/index.js";
+import { resolvePluginDesktopMode } from "@termix-ssh/plugin-sdk/manifest";
 import { describePluginFrontend } from "../../plugins/assets.js";
 import { isDefaultLookPlugin } from "../../plugins/bundled-index.js";
 import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
@@ -297,7 +298,9 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
         let features: string[] = [];
         let docs: string | undefined;
         let env: PluginEnvVar[] = [];
-        let desktopMode: unknown = loaded?.manifest.desktop;
+        let desktopMode: unknown = loaded
+          ? resolvePluginDesktopMode(loaded.manifest)
+          : undefined;
         try {
           const manifest = JSON.parse(record.manifestJson) as {
             contributes?: unknown;
@@ -313,8 +316,12 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
             dependencies?: Record<string, string>;
             optionalDependencies?: Record<string, string>;
             desktop?: unknown;
+            runtime?: unknown;
           };
-          desktopMode = loaded?.manifest.desktop ?? manifest?.desktop;
+          desktopMode = loaded
+            ? resolvePluginDesktopMode(loaded.manifest)
+            : (manifest?.desktop ??
+              (manifest?.runtime === "desktop" ? "local" : undefined));
           contributes = manifest?.contributes ?? null;
           capabilities = Array.isArray(manifest?.capabilities)
             ? (manifest.capabilities as string[])

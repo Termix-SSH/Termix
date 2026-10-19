@@ -1543,7 +1543,7 @@ registerUserSocketTicketRoutes(router, { authenticateJWT, authManager });
 registerTlsRoutes(router, authenticateJWT);
 
 registerUserApiKeyRoutes(router, requireAdmin);
-registerBrandingRoutes(router, requireAdmin);
+registerBrandingRoutes(router);
 
 registerAuthRoutes(router);
 registerAuthCompatRoutes(router);

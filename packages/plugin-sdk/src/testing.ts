@@ -14,7 +14,10 @@ import {
   PluginCapabilityError,
 } from "./backend.js";
 import type {
+  PluginAuditEntry,
+  PluginAuditFilters,
   PluginContext,
+  PluginDesktopLocal,
   PluginDisposables,
   PluginLogger,
 } from "./backend.js";
@@ -70,7 +73,10 @@ import type { PluginDatabase } from "./backend.js";
 import type {
   PluginExternalClientRequest,
   PluginProtocolTarget,
+  PluginHostProbeTarget,
   PluginHostStatusEntry,
+  PluginActivityProvider,
+  PluginHostStatusProvider,
   PluginNotification,
   PluginNotificationChannel,
   PluginNotifyHub,
@@ -101,6 +107,8 @@ export interface FakeContextOptions {
   settings?: Record<string, unknown>;
   /** Seed for the core settings ctx.settings.readCore can reach. */
   coreSettings?: Record<string, string>;
+  /** What ctx.files.dataDir() answers. Defaults to /tmp/<pluginId>. */
+  dataDir?: string;
   /** What ctx.ssh.connect and withConnection hand back as the client. */
   sshClient?: unknown;
   /** A real database behind ctx.db, usually createTestDb().database. */
@@ -134,8 +142,18 @@ export interface FakeContextOptions {
   sshKeyCredentials?: PluginSshKeyCredential[];
   /** What ctx.desktop.available() answers. Defaults to false. */
   desktopAvailable?: boolean;
+  /** What ctx.desktop.local is. Calls throw when this is not given. */
+  desktopLocal?: PluginDesktopLocal;
+  /** The stored audit lines ctx.audit.list and exportBatches serve. */
+  auditEntries?: PluginAuditEntry[];
   /** What ctx.hosts.status.get and check answer, by host id. */
   hostStatuses?: Record<number, PluginHostStatusEntry>;
+  /** What ctx.hosts.probeTargets answers. */
+  probeTargets?: PluginHostProbeTarget[];
+  /** Host ids ctx.hosts.sessionActive answers true for. */
+  activeSessions?: number[];
+  /** What ctx.network.tcpProbe and ctx.ssh.probe answer. Defaults to false. */
+  reachable?: (target: string | number, port?: number) => boolean;
   /** The acting user's channels, what ctx.notify.channels answers. */
   notificationChannels?: PluginNotificationChannel[];
   /**
@@ -263,6 +281,10 @@ export interface FakePluginContext {
   ) => Promise<Record<string, string>>;
   /** Everything the plugin registered through ctx.disposables. */
   disposals: Array<() => void | Promise<void>>;
+  /** Providers registered through ctx.hosts.status.provide. */
+  hostStatusProviders: PluginHostStatusProvider[];
+  /** Every provider passed to ctx.hosts.activity.provide that is still registered. */
+  activityProviders: PluginActivityProvider[];
   /** Topics emitted through ctx.events.emit, in order. */
   emitted: Array<{ topic: string; payload: unknown }>;
   /** Backing store behind ctx.kv. */
@@ -338,6 +360,8 @@ export interface FakePluginContext {
     challenges: Map<string, string>;
     renewers: number;
   };
+  /** Calls every ctx.audit.subscribe handler, like a line core just accepted. */
+  emitAudit: (entry: PluginAuditEntry) => void;
   /** Every ctx.audit.record entry, in order. */
   audits: Array<{ action: string; success: boolean; [key: string]: unknown }>;
   /** Every ctx.hosts.recordActivity call, in order. */
@@ -491,6 +515,8 @@ export function createFakeContext(
   const pluginId = options.pluginId ?? "test-plugin";
   const disposals: Array<() => void | Promise<void>> = [];
   const emitted: Array<{ topic: string; payload: unknown }> = [];
+  const hostStatusProviders: PluginHostStatusProvider[] = [];
+  const activityProviders: PluginActivityProvider[] = [];
   const kv = new Map<string, unknown>();
   const tables: PluginTableDefinition[] = [];
   const syncEntities: SyncEntityRegistration[] = [];
@@ -531,6 +557,7 @@ export function createFakeContext(
   };
   const secretStore = new Map<string, string>();
   const audits: FakePluginContext["audits"] = [];
+  const auditSubscribers = new Set<(entry: PluginAuditEntry) => void>();
   const activities: FakePluginContext["activities"] = [];
   const trackedSessions: number[] = [];
   const interactions: FakePluginContext["interactions"] = [];
@@ -665,7 +692,7 @@ export function createFakeContext(
     files: {
       // A fake path; a test that needs a real folder uses the OS temp dir
       // itself, not this double.
-      dataDir: async () => `/tmp/${pluginId}`,
+      dataDir: async () => options.dataDir ?? `/tmp/${pluginId}`,
     },
 
     db: options.db
@@ -902,6 +929,27 @@ export function createFakeContext(
     disposables,
 
     hosts: {
+      importMany: async (rows) => {
+        const created = rows.map(() => nextHostId++);
+        return {
+          success: created.length,
+          updated: 0,
+          skipped: 0,
+          failed: 0,
+          errors: [],
+          createdHostIds: created,
+        };
+      },
+      importSshConfig: async () => ({
+        success: 0,
+        updated: 0,
+        skipped: 0,
+        failed: 0,
+        errors: [],
+        createdHostIds: [],
+      }),
+      exportMany: async () => ({ hosts: [] }),
+      registerImportNormalizer: () => () => {},
       list: async () => [...hostsById.values()],
       get: async (hostId) => hostsById.get(hostId) ?? null,
       checkAccess: async (hostId): Promise<PluginHostAccess> => {
@@ -971,7 +1019,29 @@ export function createFakeContext(
       recordActivity: async (hostId, type, hostName) => {
         activities.push({ hostId, type, hostName });
       },
+      probeTargets: async (filter) =>
+        (options.probeTargets ?? []).filter(
+          (target) => !filter?.hostIds || filter.hostIds.includes(target.id),
+        ),
+      sessionActive: (hostId) =>
+        options.activeSessions?.includes(hostId) ?? false,
+      activity: {
+        provide: (provider) => {
+          activityProviders.push(provider);
+          return () => {
+            const at = activityProviders.indexOf(provider);
+            if (at >= 0) activityProviders.splice(at, 1);
+          };
+        },
+      },
       status: {
+        provide: (provider) => {
+          hostStatusProviders.push(provider);
+          return () => {
+            const at = hostStatusProviders.indexOf(provider);
+            if (at >= 0) hostStatusProviders.splice(at, 1);
+          };
+        },
         get: async (hostId) => hostStatuses.get(hostId) ?? null,
         check: async (hostId) => hostStatuses.get(hostId) ?? null,
         reportLogin: (hostId, outcome) => {
@@ -996,12 +1066,45 @@ export function createFakeContext(
     },
 
     audit: {
+      subscribe: (handler) => {
+        auditSubscribers.add(handler);
+        return () => {
+          auditSubscribers.delete(handler);
+        };
+      },
+      list: async (listOptions) => {
+        const matching = filterAuditEntries(
+          options.auditEntries ?? [],
+          listOptions?.filters,
+        ).reverse();
+        const offset = listOptions?.offset ?? 0;
+        return {
+          entries: matching.slice(offset, offset + (listOptions?.limit ?? 50)),
+          total: matching.length,
+        };
+      },
+      exportBatches: async function* (filters, batchSize) {
+        const matching = filterAuditEntries(
+          options.auditEntries ?? [],
+          filters,
+        );
+        const size = batchSize ?? 500;
+        for (let at = 0; at < matching.length; at += size) {
+          yield matching.slice(at, at + size);
+        }
+      },
       record: async (entry) => {
         audits.push({ ...entry });
       },
     },
 
+    network: {
+      tcpProbe: async (host, port) => options.reachable?.(host, port) ?? false,
+    },
+
     ssh: {
+      probe: async (hostId, probeOptions) =>
+        options.reachable?.(hostId, probeOptions?.port) ?? false,
       connect: async (host, connectOptions) => {
         sshConnections.push({ host, options: connectOptions });
         return {
@@ -1011,6 +1114,16 @@ export function createFakeContext(
             ? { id: host, ip: "", port: 22, username: "" }
             : host) as never,
           dispose: () => {},
+        };
+      },
+      exec: async (host) => {
+        sshConnections.push({ host });
+        return {
+          stdout: "",
+          stderr: "",
+          code: 0,
+          truncated: false,
+          timedOut: false,
         };
       },
       withConnection: async (host, connectOptions, fn) => {
@@ -1169,6 +1282,7 @@ export function createFakeContext(
         return { success: true };
       },
       available: () => options.desktopAvailable ?? false,
+      local: options.desktopLocal ?? unavailableDesktopLocal(),
     },
 
     credentials: {
@@ -1195,6 +1309,13 @@ export function createFakeContext(
         credentialReads.push({ hostId, protocol });
         return options.protocolTargets?.[`${hostId}:${protocol}`] ?? null;
       },
+      publicKey: async (credentialId) =>
+        (options.sshKeyCredentials ?? []).find((k) => k.id === credentialId)
+          ?.publicKey ?? null,
+      resolveKeyRefs: async (key, passphrase) => ({
+        key,
+        passphrase: passphrase ?? undefined,
+      }),
       registerSecretResolver: (scheme, resolve) => {
         auth.secretResolvers.set(scheme, resolve);
         disposals.push(() => {
@@ -1345,6 +1466,8 @@ export function createFakeContext(
       return errors;
     },
     disposals,
+    hostStatusProviders,
+    activityProviders,
     emitted,
     kv,
     tables,
@@ -1368,6 +1491,9 @@ export function createFakeContext(
     tls,
     secretStore,
     audits,
+    emitAudit: (entry) => {
+      for (const handler of auditSubscribers) handler(entry);
+    },
     activities,
     trackedSessions,
     interactions,
@@ -1409,6 +1535,8 @@ export interface MockContextOptions {
   settings?: Record<string, unknown>;
   /** Seed for the core settings readCore can reach. */
   coreSettings?: Record<string, string>;
+  /** What ctx.files.dataDir() answers. */
+  dataDir?: string;
   /** Acting user returned by currentActor and used by asUser. */
   actor?: string;
   /** What ctx.ssh.connect and withConnection hand back as the client. */
@@ -1434,8 +1562,18 @@ export interface MockContextOptions {
   sshKeyCredentials?: PluginSshKeyCredential[];
   /** What ctx.desktop.available() answers. */
   desktopAvailable?: boolean;
+  /** What ctx.desktop.local is. See FakeContextOptions. */
+  desktopLocal?: PluginDesktopLocal;
+  /** See FakeContextOptions. */
+  auditEntries?: PluginAuditEntry[];
   /** What ctx.hosts.status answers. See FakeContextOptions. */
   hostStatuses?: Record<number, PluginHostStatusEntry>;
+  /** What ctx.hosts.probeTargets answers. */
+  probeTargets?: PluginHostProbeTarget[];
+  /** Host ids ctx.hosts.sessionActive answers true for. */
+  activeSessions?: number[];
+  /** What ctx.network.tcpProbe and ctx.ssh.probe answer. */
+  reachable?: (target: string | number, port?: number) => boolean;
   /** The acting user's channels, what ctx.notify.channels answers. */
   notificationChannels?: PluginNotificationChannel[];
   /**
@@ -1481,6 +1619,63 @@ export interface MockPluginContext extends FakePluginContext {
  * (users:impersonate on issueUserToken), and users:read on ctx.users. Reading a plugin's own settings is deliberately
  * ungated. As the SDK grows a member, add its gate here in the same shape.
  */
+function filterAuditEntries(
+  entries: PluginAuditEntry[],
+  filters: PluginAuditFilters | undefined,
+): PluginAuditEntry[] {
+  return entries.filter(
+    (entry) =>
+      (filters?.userId === undefined || entry.userId === filters.userId) &&
+      (filters?.action === undefined || entry.action === filters.action) &&
+      (filters?.resourceType === undefined ||
+        entry.resourceType === filters.resourceType) &&
+      (filters?.success === undefined || entry.success === filters.success) &&
+      (filters?.startDate === undefined ||
+        entry.timestamp >= filters.startDate) &&
+      (filters?.endDate === undefined || entry.timestamp <= filters.endDate),
+  );
+}
+
+function gateDesktopLocal(
+  target: PluginDesktopLocal,
+  check: () => void,
+): PluginDesktopLocal {
+  const wrap = (value: unknown): unknown => {
+    if (typeof value === "function") {
+      return (...args: unknown[]) => {
+        check();
+        return (value as (...a: unknown[]) => unknown)(...args);
+      };
+    }
+    if (value && typeof value === "object") {
+      return new Proxy(value as object, {
+        get: (obj, key) => wrap((obj as Record<string | symbol, unknown>)[key]),
+      });
+    }
+    return value;
+  };
+  return new Proxy(target, {
+    get: (obj, key) =>
+      key === "available"
+        ? obj.available
+        : wrap((obj as unknown as Record<string | symbol, unknown>)[key]),
+  });
+}
+
+function unavailableDesktopLocal(): PluginDesktopLocal {
+  const fail = (): never => {
+    throw new Error("ctx.desktop.local needs the desktopLocal test option");
+  };
+  const deep = (): unknown =>
+    new Proxy(() => fail(), { get: () => deep(), apply: () => fail() });
+  return {
+    available: () => false,
+    info: fail,
+    fs: deep(),
+    pty: deep(),
+  } as unknown as PluginDesktopLocal;
+}
+
 export function createMockCtx(
   options: MockContextOptions = {},
 ): MockPluginContext {
@@ -1492,6 +1687,7 @@ export function createMockCtx(
     actor: options.actor,
     settings: options.settings,
     coreSettings: options.coreSettings,
+    dataDir: options.dataDir,
     sshClient: options.sshClient,
     db: options.db,
     router: options.router,
@@ -1504,7 +1700,12 @@ export function createMockCtx(
     protocolTargets: options.protocolTargets,
     sshKeyCredentials: options.sshKeyCredentials,
     desktopAvailable: options.desktopAvailable,
+    desktopLocal: options.desktopLocal,
+    auditEntries: options.auditEntries,
     hostStatuses: options.hostStatuses,
+    probeTargets: options.probeTargets,
+    activeSessions: options.activeSessions,
+    reachable: options.reachable,
     notificationChannels: options.notificationChannels,
     fetch: options.fetch,
     process: options.process,
@@ -1650,6 +1851,23 @@ export function createMockCtx(
     },
 
     hosts: {
+      importMany: async (rows, importOptions) => {
+        require("hosts:write");
+        if (importOptions?.credentials?.length) require("credentials:write");
+        return ctx.hosts.importMany(rows, importOptions);
+      },
+      importSshConfig: async (content, importOptions) => {
+        require("hosts:write");
+        return ctx.hosts.importSshConfig(content, importOptions);
+      },
+      exportMany: async (exportOptions) => {
+        require("hosts:export");
+        return ctx.hosts.exportMany(exportOptions);
+      },
+      registerImportNormalizer: (normalizer) => {
+        require("hosts:write");
+        return ctx.hosts.registerImportNormalizer(normalizer);
+      },
       list: async () => {
         require("hosts:read");
         return ctx.hosts.list();
@@ -1698,7 +1916,26 @@ export function createMockCtx(
         require("hosts:read");
         return ctx.hosts.recordActivity(hostId, type, hostName);
       },
+      probeTargets: async (filter) => {
+        require("hosts:read");
+        return ctx.hosts.probeTargets(filter);
+      },
+      sessionActive: (hostId) => {
+        require("hosts:read");
+        return ctx.hosts.sessionActive(hostId);
+      },
+      activity: {
+        provide: (provider) => {
+          require("hosts:activity-provide");
+          return ctx.hosts.activity.provide(provider);
+        },
+      },
       status: {
+        provide: (provider) => {
+          require("hosts:read");
+          require("hosts:status-provide");
+          return ctx.hosts.status.provide(provider);
+        },
         get: async (hostId) => {
           require("hosts:read");
           return ctx.hosts.status.get(hostId);
@@ -1720,10 +1957,19 @@ export function createMockCtx(
 
     ssh: {
       ...ctx.ssh,
+      probe: async (hostId, probeOptions) => {
+        require("ssh:connect");
+        return ctx.ssh.probe(hostId, probeOptions);
+      },
       connect: async (host, connectOptions) => {
         require("ssh:connect");
         require("credentials:use");
         return ctx.ssh.connect(host, connectOptions);
+      },
+      exec: async (host, command, execOptions) => {
+        require("ssh:connect");
+        require("credentials:use");
+        return ctx.ssh.exec(host, command, execOptions);
       },
       withConnection: async (host, connectOptions, fn) => {
         require("ssh:connect");
@@ -1820,6 +2066,22 @@ export function createMockCtx(
       },
     },
 
+    audit: {
+      record: (entry) => ctx.audit.record(entry),
+      subscribe: (handler) => {
+        require("audit:read");
+        return ctx.audit.subscribe(handler);
+      },
+      list: async (listOptions) => {
+        require("audit:read");
+        return ctx.audit.list(listOptions);
+      },
+      exportBatches: (filters, batchSize) => {
+        require("audit:read");
+        return ctx.audit.exportBatches(filters, batchSize);
+      },
+    },
+
     desktop: {
       openIsolatedWindow: async (request) => {
         require("desktop:window");
@@ -1830,6 +2092,9 @@ export function createMockCtx(
         return ctx.desktop.launchExternalClient(request);
       },
       available: () => ctx.desktop.available(),
+      local: gateDesktopLocal(ctx.desktop.local, () =>
+        require("desktop:local"),
+      ),
     },
 
     credentials: {
@@ -1850,6 +2115,14 @@ export function createMockCtx(
           );
         }
         return ctx.credentials.resolveHostProtocol(hostId, protocol);
+      },
+      publicKey: async (credentialId) => {
+        require("credentials:use");
+        return ctx.credentials.publicKey(credentialId);
+      },
+      resolveKeyRefs: async (key, passphrase) => {
+        require("credentials:read");
+        return ctx.credentials.resolveKeyRefs(key, passphrase);
       },
       registerSecretResolver: (scheme, resolve) => {
         require("auth:provide");
@@ -1875,6 +2148,13 @@ export function createMockCtx(
     fetch: async (url, init) => {
       require("network:outbound");
       return ctx.fetch(url, init);
+    },
+
+    network: {
+      tcpProbe: async (host, port, probeOptions) => {
+        require("network:probe");
+        return ctx.network.tcpProbe(host, port, probeOptions);
+      },
     },
 
     process: {

@@ -26,7 +26,10 @@ import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import { assertCapability, capabilityRefused } from "./permissions.js";
 import { hostSessionStatus } from "../hosts/host-session-status.js";
 import { getActor } from "./actor.js";
-import { hostStatusService } from "../hosts/status/host-status-service.js";
+import { hostStatus, provideHostStatus } from "./host-status-provider.js";
+import { provideActivity, recentActivity } from "./activity-provider.js";
+import { loadProbeTargets } from "./ctx-probe.js";
+import { createPluginHostImport } from "./ctx-host-import.js";
 import { parseSshOptions } from "../hosts/ssh-options.js";
 import { hostTerminalExport } from "../database/routes/host-normalizers.js";
 import type { DisposableBag } from "./disposables.js";
@@ -171,7 +174,7 @@ export function toRecord(
     connectionOrigin: origin === "local" || origin === "remote" ? origin : null,
     sshOptions: hostTerminalExport(host).sshOptions,
     pluginSettings,
-    status: Number.isInteger(id) ? hostStatusService.get(id) : null,
+    status: Number.isInteger(id) ? hostStatus.get(id) : null,
     localOnly: asFlag(host.localOnly, false),
     createdAt: (host.createdAt as string | null) ?? null,
     updatedAt: (host.updatedAt as string | null) ?? null,
@@ -389,6 +392,8 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
   };
 
   return {
+    ...createPluginHostImport({ manifest, bag, audit }),
+
     list: async () => {
       await requireRead();
       const userId = actingUser();
@@ -787,38 +792,100 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
       await requireRead();
       const userId = actingUser();
       if (!(await actorMayReach(hostId))) return;
-      const { recordRecentActivity } =
-        await import("../services/recent-activity.js");
-      await recordRecentActivity(userId, { type, hostId, hostName });
+      await recentActivity.record(userId, { type, hostId, hostName });
+    },
+
+    probeTargets: async (filter) => {
+      await requireRead();
+      const actor = getActor();
+      if (!actor) {
+        throw new Error("ctx.hosts.probeTargets needs an acting user");
+      }
+      const ids = filter?.hostIds?.filter((id) => Number.isInteger(id));
+      return loadProbeTargets(actor, ids);
+    },
+
+    sessionActive: (hostId) => {
+      requireReadSync();
+      return hostSessionStatus.hasActiveSession(hostId);
+    },
+
+    activity: {
+      provide: (provider) => {
+        if (!declared.includes("hosts:activity-provide")) {
+          throw capabilityRefused(pluginId, "hosts:activity-provide");
+        }
+        const remove = provideActivity(
+          pluginId,
+          provider as Parameters<typeof provideActivity>[1],
+        );
+        void audit(
+          "host_activity_provide",
+          `${pluginId} stores recent activity`,
+          {
+            success: true,
+          },
+        );
+        const drop = bag?.add(remove, "activity provider");
+        return () => {
+          drop?.();
+          remove();
+        };
+      },
     },
 
     // Not audited: pollers call these on every sample.
     status: {
+      provide: (provider) => {
+        requireReadSync();
+        if (!declared.includes("hosts:status-provide")) {
+          throw capabilityRefused(pluginId, "hosts:status-provide");
+        }
+        const remove = provideHostStatus(pluginId, {
+          start: () => provider.start(),
+          stop: () => provider.stop(),
+          get: (hostId) => provider.get(hostId),
+          statusesFor: (userId, requested) =>
+            provider.statusesFor(userId, requested ? [...requested] : null),
+          refresh: (userId) => provider.refresh(userId),
+          check: (hostId) => provider.check(hostId),
+          reportLogin: (hostId, outcome) =>
+            provider.reportLogin(hostId, outcome),
+          registerPort: (type, resolve) => provider.registerPort(type, resolve),
+          getIntervalSeconds: () => provider.getIntervalSeconds(),
+          setIntervalSeconds: (seconds) => provider.setIntervalSeconds(seconds),
+        });
+        void audit("host_status_provide", `${pluginId} provides host status`, {
+          success: true,
+        });
+        const drop = bag?.add(remove, "host status provider");
+        return () => {
+          drop?.();
+          remove();
+        };
+      },
       get: async (hostId) => {
         await requireRead();
         if (!(await actorMayReach(hostId))) return null;
-        return hostStatusService.get(hostId);
+        return hostStatus.get(hostId);
       },
       check: async (hostId) => {
         await requireRead();
         if (!(await actorMayReach(hostId))) return null;
-        return hostStatusService.check(hostId);
+        return hostStatus.check(hostId);
       },
       // Synchronous for the same reason as trackSession.
       reportLogin: (hostId, outcome) => {
         requireReadSync();
         void actorMayReach(hostId)
           .then((allowed) => {
-            if (allowed) hostStatusService.reportLogin(hostId, outcome);
+            if (allowed) hostStatus.reportLogin(hostId, outcome);
           })
           .catch(() => {});
       },
       registerPort: (connectionType, resolve) => {
         requireReadSync();
-        const unregister = hostStatusService.registerPort(
-          connectionType,
-          resolve,
-        );
+        const unregister = hostStatus.registerPort(connectionType, resolve);
         const drop = bag?.add(unregister, `status port for ${connectionType}`);
         return () => {
           drop?.();

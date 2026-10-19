@@ -414,28 +414,6 @@ export const hostDefaults = pgTable(
   ],
 );
 
-export const recentActivity = pgTable(
-  "recent_activity",
-  {
-    id: serial("id").primaryKey(),
-    userId: varchar("user_id", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    type: text("type").notNull(),
-    hostId: integer("host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-    hostName: text("host_name"),
-    timestamp: varchar("timestamp", { length: 255 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  // Always read newest-first for one user, so timestamp follows user_id.
-  (table) => [
-    index("idx_recent_activity_user_ts").on(table.userId, table.timestamp),
-  ],
-);
-
 export const hostAccess = pgTable(
   "host_access",
   {

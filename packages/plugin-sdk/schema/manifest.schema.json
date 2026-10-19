@@ -154,6 +154,7 @@
           "system:tls",
           "device:serial",
           "hosts:write",
+          "hosts:export",
           "credentials:use",
           "credentials:write",
           "network:outbound",
@@ -163,7 +164,11 @@
           "events:core",
           "notify:send",
           "audit:read",
+          "network:probe",
+          "hosts:status-provide",
+          "hosts:activity-provide",
           "desktop:window",
+          "desktop:local",
           "users:impersonate",
           "db:core-refs",
           "hosts:read",
@@ -1260,6 +1265,11 @@
       "type": "string",
       "enum": ["mirror", "local", "server"],
       "description": "How a desktop linked to a server treats this plugin: mirror follows the server, local is decided on each desktop, server never runs on a linked desktop. Defaults to mirror."
+    },
+    "runtime": {
+      "type": "string",
+      "enum": ["desktop"],
+      "description": "desktop: the plugin only loads on a desktop app's own embedded backend, never on a server. It implies desktop local and may declare desktop:local."
     },
     "nativeDependencies": {
       "type": "array",

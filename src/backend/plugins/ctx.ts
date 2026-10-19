@@ -22,6 +22,9 @@
 import { pluginLogger } from "../utils/logger.js";
 import { getRequestBaseUrlWithForceHTTPS } from "../utils/request-origin.js";
 import { pluginEvents } from "./events.js";
+import { createPluginDesktopLocal } from "./ctx-desktop-local.js";
+import { createPluginAuditReader } from "./ctx-audit.js";
+import { createPluginNetwork } from "./ctx-probe.js";
 import * as registry from "./registry.js";
 import * as serviceRegistry from "./service-registry.js";
 import type { ServiceRegistration } from "./service-registry.js";
@@ -950,6 +953,7 @@ export function createPluginContext(
       bag: handle.bag,
     }),
     fetch: createPluginFetch({ manifest, audit: auditCall }),
+    network: createPluginNetwork({ manifest, audit: auditCall }),
     process: createPluginProcess({
       manifest,
       bag: handle.bag,
@@ -964,6 +968,11 @@ export function createPluginContext(
       openIsolatedWindow: (request) => desktopOpenIsolatedWindow(request),
       launchExternalClient: (request) => desktopLaunchExternalClient(request),
       available: () => isElectronIpcAvailable(),
+      local: createPluginDesktopLocal({
+        manifest,
+        bag: handle.bag,
+        audit: auditCall,
+      }),
     },
 
     credentials: createPluginCredentials({
@@ -995,6 +1004,11 @@ export function createPluginContext(
           // Auditing must never break the caller.
         }
       },
+      ...createPluginAuditReader({
+        manifest,
+        bag: handle.bag,
+        audit: auditCall,
+      }),
     },
 
     /**

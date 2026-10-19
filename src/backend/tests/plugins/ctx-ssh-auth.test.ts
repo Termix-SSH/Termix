@@ -104,8 +104,8 @@ vi.mock("../../hosts/host-resolver.js", () => ({
   }),
   resolveHostBySyncId: async () => null,
 }));
-vi.mock("../../hosts/status/host-status-service.js", () => ({
-  hostStatusService: {
+vi.mock("../../plugins/host-status-provider.js", () => ({
+  hostStatus: {
     reportLogin: (hostId: number, outcome: unknown) =>
       h.logins.push({ hostId, outcome }),
   },

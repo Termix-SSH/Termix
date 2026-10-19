@@ -24,14 +24,12 @@ describe("RBAC coverage for split host routers", () => {
   it("gates bulk mutations by action and data-access permissions", () => {
     const router = express.Router();
     const authenticate = middleware();
-    const requireCreate = middleware();
     const requireEdit = middleware();
     const requireDataAccess = middleware();
 
     registerHostBulkRoutes(
       router,
       authenticate,
-      requireCreate,
       requireEdit,
       requireDataAccess,
     );
@@ -46,14 +44,6 @@ describe("RBAC coverage for split host routers", () => {
       requireEdit,
       requireDataAccess,
     ]);
-    for (const path of ["/bulk-import", "/ssh-config-import"]) {
-      expect(handlers(router, "post", path).slice(0, 4)).toEqual([
-        authenticate,
-        requireCreate,
-        requireEdit,
-        requireDataAccess,
-      ]);
-    }
   });
 
   it("gates folder reads and mutations with their matching permissions", () => {

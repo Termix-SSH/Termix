@@ -39,10 +39,22 @@ describe("Electron security boundary", () => {
     }
   });
 
-  it("launches only the editor saved from a file dialog", () => {
-    expect(main).not.toContain("fileData?.editorPath");
-    expect(main).toContain("readSetting(EXTERNAL_EDITOR_SETTING)");
+  it("saves an external editor only if it was chosen in a file dialog", () => {
     expect(main).toContain("dialogChosenPaths.has(value)");
+  });
+
+  it("keeps local files, the local terminal and the external editor out of Electron", () => {
+    for (const channel of [
+      "open-external-editor",
+      "close-external-editor",
+      "local-terminal-start",
+      "local-fs:",
+      "local-transfer:",
+      "list-local-directory",
+    ]) {
+      expect(main).not.toContain(channel);
+      expect(preload).not.toContain(channel);
+    }
   });
 
   it("scopes proxy headers and basic auth to the linked origin", () => {

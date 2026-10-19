@@ -414,28 +414,6 @@ export const hostDefaults = mysqlTable(
   ],
 );
 
-export const recentActivity = mysqlTable(
-  "recent_activity",
-  {
-    id: int("id").autoincrement().primaryKey(),
-    userId: varchar("user_id", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    type: text("type").notNull(),
-    hostId: int("host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-    hostName: text("host_name"),
-    timestamp: varchar("timestamp", { length: 255 })
-      .notNull()
-      .default(sql`(CURRENT_TIMESTAMP)`),
-  },
-  // Always read newest-first for one user, so timestamp follows user_id.
-  (table) => [
-    index("idx_recent_activity_user_ts").on(table.userId, table.timestamp),
-  ],
-);
-
 export const hostAccess = mysqlTable(
   "host_access",
   {

@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.12 | Plugin API 1.4.0
+SDK 1.0.13 | Plugin API 1.5.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -325,6 +325,24 @@ try {
 commands. `@termix-ssh/plugin-sdk/host-commands` has helpers to detect the OS and run package manager and
 sudo commands. Hosts from `ctx.hosts` never carry secrets. Pass the host or its id to `ctx.ssh`.
 
+### The desktop app
+
+Set `"runtime": "desktop"` in the manifest for a plugin that only makes sense on a desktop app. It never
+loads on a server, ignores server sync and may declare `desktop:local`. Any plugin can declare
+`desktop:local` and check `ctx.desktop.local.available()` at runtime.
+
+`ctx.desktop.local` works on the desktop app's own backend only:
+
+- `info()`: home folder, platform, user data folder, backend port and the linked server (url and token) or null
+- `fs`: `list`, `mkdir`, `createFile`, `rename`, `ensureDir`, `exists`, `walk`, `trash`, `reveal`, `open`,
+  `openRead` and `openDownload`. Downloads stay inside the folder the user picked, links in it are refused and
+  an existing file is never replaced by accident
+- `pty.spawn()`: a local shell, stopped when the plugin stops
+- `pluginFetch(origin, subPath, init)`: calls this plugin's own routes on the desktop's backend ("local") or the linked server ("remote") as the acting user. Bodies can be streams, so a plugin can move big files without the renderer
+
+Use `ctx.audit.subscribe`, `list` and `exportBatches` (`audit:read`) to read the audit trail. Subscribers
+are called after a line is accepted and never delay the action that wrote it.
+
 ### Events, timers, alerts, services
 
 ```ts
@@ -470,19 +488,31 @@ your plugin's error boundary and Suspense.
 | `registerHostEditorSection`                                                        | Your own host editor section (host settings get one for free)     |
 | `registerHostProtocol`                                                             | A connection protocol next to SSH                                 |
 | `registerHostBadge`, `registerHostContextMenuItem`                                 | Badges and menu items on host rows                                |
+| `registerHostStatusIndicator`                                                      | The status dot or stripe on a host row (a layout draws it)        |
+| `registerHostEditorToolbarItem`                                                    | A control in the host editor toolbar (a layout draws it)          |
 | `registerPaletteEntry`, `registerPaletteGroup`                                     | Command palette entries                                           |
 | `registerKeybindingAction`, `registerKeybindingDefault`                            | Bindable actions                                                  |
 | `registerSettingsComponent`                                                        | A component for a `custom` settings field                         |
 | `registerAction`, `invokeAction`                                                   | Actions across plugins                                            |
 | `registerSlotContribution`, `declareActionSlot`                                    | Fill or own a UI slot                                             |
 | `registerComponent`, `registerExtension`                                           | Offer a component by id, add to an extension point                |
-| `registerOnboardingStep`                                                           | A first run setup step                                            |
+| `registerOnboardingStep`                                                           | A first run setup step (`section`, `position`, `replaces`)        |
 | `registerLoginMethod`, `registerSecondFactorUI`, `registerSshAuthEditor`           | Sign in UI                                                        |
 | `registerLayout`                                                                   | A whole-app layout (`contributes.layouts`, API 1.4)               |
 | `api`                                                                              | Axios client for your `/plugin-api/<id>/` routes, auth included   |
 | `fetch(path)`, `wsUrl(path)`                                                       | Raw fetch for streams, socket URL and auth                        |
 | `docs`, `tabs`, `confirm`, `listHosts`, `getHost`, `t`, `hasPermission`, `desktop` | Helpers                                                           |
 | `onSettingsChanged`, `onDispose`                                                   | Hooks                                                             |
+
+Badges, status indicators and toolbar items take `{ id, when(host), component, order? }`; lower `order`
+comes first. An onboarding step sits in a section (`start`, `setup`, `explore`, `security`) or at an exact
+`position` from 1 to 99. `replaces: ["preset"]` lists older step keys the step took over, so people who saw
+those are not shown it again.
+
+Branding: a plugin that owns the app name, tagline and logo provides
+`ctx.registry.provide("<id>.brandingProvider", async () => ({ appName, tagline, logo }))` in its backend.
+Core reads it for `GET /users/branding` (the login page, the browser tab and the sync server name) and falls
+back to "Termix" with no logo when no plugin provides one. `logo` is a PNG data URL or null.
 
 Hooks from `@termix-ssh/plugin-sdk/frontend`: `useTranslation`, `usePermission`, `useSettings`, `useHost`,
 `useHosts`, `usePluginApi`, `useCurrentUser`, `useTheme`, `useToast`, `useDocsUrl`, `useTabs`,
@@ -828,60 +858,66 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 
 ## SDK entry points
 
-| Import                                                               | What it is                                                            |
-| -------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `@termix-ssh/plugin-sdk/backend`                                     | `PluginContext` and the backend types                                 |
-| `@termix-ssh/plugin-sdk/frontend`                                    | `TermixApp`, `TabProps` and the hooks                                 |
-| `@termix-ssh/plugin-sdk/ui`                                          | The UI kit, served by Termix at runtime                               |
-| `@termix-ssh/plugin-sdk/db`                                          | `defineTable` and column builders                                     |
-| `@termix-ssh/plugin-sdk/manifest`                                    | `PluginManifest` type and manifest checks                             |
-| `@termix-ssh/plugin-sdk/capabilities`                                | The capability catalog                                                |
-| `@termix-ssh/plugin-sdk/settings`                                    | Settings field validation                                             |
-| `@termix-ssh/plugin-sdk/testing`                                     | `createMockCtx`, `createTestDb`, `renderWithApp`, `createFakeContext` |
-| `@termix-ssh/plugin-sdk/vitest-preset`                               | `pluginVitestConfig`                                                  |
-| `@termix-ssh/plugin-sdk/host-commands`                               | OS detection, package manager and sudo helpers over ssh2              |
-| `@termix-ssh/plugin-sdk/ssh-certs`                                   | `applyCertificateAuth()` for certificate based SSH auth               |
-| `@termix-ssh/plugin-sdk/desktop`                                     | The desktop app bridge, typed. Check it exists before use             |
-| `@termix-ssh/plugin-sdk/openapi`                                     | `buildOpenApi()`                                                      |
-| `@termix-ssh/plugin-sdk/changelog`                                   | Changelog parsing and checks                                          |
-| `@termix-ssh/plugin-sdk/docs`                                        | Docs link and env var helpers                                         |
-| `@termix-ssh/plugin-sdk/ddl`, `@termix-ssh/plugin-sdk/table-builder` | Table to SQL and Drizzle mapping. You rarely need these               |
+| Import                                                               | What it is                                                                                     |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `@termix-ssh/plugin-sdk/backend`                                     | `PluginContext` and the backend types                                                          |
+| `@termix-ssh/plugin-sdk/frontend`                                    | `TermixApp`, `TabProps` and the hooks                                                          |
+| `@termix-ssh/plugin-sdk/ui`                                          | The UI kit, served by Termix at runtime                                                        |
+| `@termix-ssh/plugin-sdk/db`                                          | `defineTable` and column builders                                                              |
+| `@termix-ssh/plugin-sdk/manifest`                                    | `PluginManifest` type and manifest checks                                                      |
+| `@termix-ssh/plugin-sdk/capabilities`                                | The capability catalog                                                                         |
+| `@termix-ssh/plugin-sdk/settings`                                    | Settings field validation                                                                      |
+| `@termix-ssh/plugin-sdk/testing`                                     | `createMockCtx`, `createTestDb`, `renderWithApp`, `createFakeContext`                          |
+| `@termix-ssh/plugin-sdk/vitest-preset`                               | `pluginVitestConfig`                                                                           |
+| `@termix-ssh/plugin-sdk/host-commands`                               | OS detection, package manager and sudo helpers over ssh2                                       |
+| `@termix-ssh/plugin-sdk/ssh-certs`                                   | `applyCertificateAuth()` for certificate based SSH auth                                        |
+| `@termix-ssh/plugin-sdk/ssh-keys`                                    | `generateSshKeyPair()`, `detectSshKeyType()`, `publicKeyFromPrivate()`, `validateSshKeyPair()` |
+| `@termix-ssh/plugin-sdk/desktop`                                     | The desktop app bridge, typed. Check it exists before use                                      |
+| `@termix-ssh/plugin-sdk/openapi`                                     | `buildOpenApi()`                                                                               |
+| `@termix-ssh/plugin-sdk/changelog`                                   | Changelog parsing and checks                                                                   |
+| `@termix-ssh/plugin-sdk/docs`                                        | Docs link and env var helpers                                                                  |
+| `@termix-ssh/plugin-sdk/ddl`, `@termix-ssh/plugin-sdk/table-builder` | Table to SQL and Drizzle mapping. You rarely need these                                        |
 
 ## Capabilities
 
-| Capability           | Risk     | What it allows                                          |
-| -------------------- | -------- | ------------------------------------------------------- |
-| `credentials:read`   | critical | Read stored secrets for hosts the user can reach        |
-| `system:tls`         | critical | Replace the HTTPS certificate, answer CA domain checks  |
-| `ssh:connect`        | high     | Run any command on hosts, with the user's access        |
-| `process:spawn`      | high     | Run programs on the Termix server                       |
-| `users:write`        | high     | Add users and change their roles                        |
-| `users:impersonate`  | high     | Act as another user, or get a session for them, audited |
-| `db:core-refs`       | high     | Query core users, roles and hosts tables (read only)    |
-| `auth:provide`       | high     | Add login methods, second factors, SSH auth types       |
-| `device:serial`      | high     | Open serial and USB ports on the server                 |
-| `notify:hub`         | high     | Receive every alert (the alerts hub only)               |
-| `ui:layout`          | high     | Replace the whole app layout                            |
-| `hosts:write`        | medium   | Add and edit hosts                                      |
-| `credentials:use`    | medium   | Connect with saved credentials without seeing them      |
-| `credentials:write`  | medium   | Save new credentials                                    |
-| `network:outbound`   | medium   | Outbound HTTP through `ctx.fetch`                       |
-| `network:serve`      | medium   | HTTP routes and sockets                                 |
-| `network:broadcast`  | medium   | Local network broadcasts, like Wake-on-LAN              |
-| `users:read`         | medium   | Usernames, roles and UI language                        |
-| `events:core`        | medium   | Listen to core events                                   |
-| `notify:send`        | medium   | Send alerts                                             |
-| `audit:read`         | medium   | Read the audit log                                      |
-| `desktop:window`     | medium   | Open windows in the desktop app                         |
-| `hosts:read`         | low      | Read hosts the user can see                             |
-| `db:own`             | low      | Your own tables                                         |
-| `kv:own`             | low      | Small key value state                                   |
-| `files:own`          | low      | Your own folder on disk                                 |
-| `secrets:own`        | low      | Your own encrypted secrets                              |
-| `settings:read-core` | low      | Read Termix server settings                             |
-| `plugins:read`       | low      | See installed plugins                                   |
-| `ui:surface`         | low      | Add tabs, panels and settings                           |
-| `ui:theme`           | low      | Add color themes, CSS only                              |
+| Capability               | Risk     | What it allows                                          |
+| ------------------------ | -------- | ------------------------------------------------------- |
+| `credentials:read`       | critical | Read stored secrets for hosts the user can reach        |
+| `system:tls`             | critical | Replace the HTTPS certificate, answer CA domain checks  |
+| `ssh:connect`            | high     | Run any command on hosts, with the user's access        |
+| `process:spawn`          | high     | Run programs on the Termix server                       |
+| `users:write`            | high     | Add users and change their roles                        |
+| `users:impersonate`      | high     | Act as another user, or get a session for them, audited |
+| `db:core-refs`           | high     | Query core users, roles and hosts tables (read only)    |
+| `auth:provide`           | high     | Add login methods, second factors, SSH auth types       |
+| `device:serial`          | high     | Open serial and USB ports on the server                 |
+| `desktop:local`          | high     | Use the user's own computer, desktop app only           |
+| `hosts:export`           | high     | Export hosts with their saved logins                    |
+| `notify:hub`             | high     | Receive every alert (the alerts hub only)               |
+| `ui:layout`              | high     | Replace the whole app layout                            |
+| `hosts:write`            | medium   | Add and edit hosts                                      |
+| `hosts:status-provide`   | medium   | Be the source of host status dots                       |
+| `hosts:activity-provide` | medium   | Be the source of the recent activity list               |
+| `network:probe`          | medium   | Check that a host answers on a TCP port                 |
+| `credentials:use`        | medium   | Connect with saved credentials without seeing them      |
+| `credentials:write`      | medium   | Save new credentials                                    |
+| `network:outbound`       | medium   | Outbound HTTP through `ctx.fetch`                       |
+| `network:serve`          | medium   | HTTP routes and sockets                                 |
+| `network:broadcast`      | medium   | Local network broadcasts, like Wake-on-LAN              |
+| `users:read`             | medium   | Usernames, roles and UI language                        |
+| `events:core`            | medium   | Listen to core events                                   |
+| `notify:send`            | medium   | Send alerts                                             |
+| `audit:read`             | medium   | Read the audit log                                      |
+| `desktop:window`         | medium   | Open windows in the desktop app                         |
+| `hosts:read`             | low      | Read hosts the user can see                             |
+| `db:own`                 | low      | Your own tables                                         |
+| `kv:own`                 | low      | Small key value state                                   |
+| `files:own`              | low      | Your own folder on disk                                 |
+| `secrets:own`            | low      | Your own encrypted secrets                              |
+| `settings:read-core`     | low      | Read Termix server settings                             |
+| `plugins:read`           | low      | See installed plugins                                   |
+| `ui:surface`             | low      | Add tabs, panels and settings                           |
+| `ui:theme`               | low      | Add color themes, CSS only                              |
 
 An update that adds a capability waits for an admin to approve it.
 

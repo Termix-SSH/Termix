@@ -42,14 +42,21 @@ export interface OnboardingStepDef {
   forcePending?: (ctx: OnboardingCtx) => boolean;
   /** Skip stays hidden until this step has been confirmed. */
   required?: boolean;
+  /** Older step keys this one took over; seeing one counts as seeing this. */
+  replaces?: string[];
 }
 
 /** Where each section of plugin steps sits among the core steps. */
 export const SECTION_POSITION: Record<OnboardingSection, number> = {
+  start: 25,
   setup: 50,
   explore: 80,
   security: 95,
 };
+
+/** An explicit position stays inside the flow, before the last core step. */
+const MIN_POSITION = 1;
+const MAX_POSITION = 99;
 
 export const onboardingSteps = createRegistry<OnboardingStepDef>();
 
@@ -57,7 +64,11 @@ export const onboardingSteps = createRegistry<OnboardingStepDef>();
 export function sectionPosition(
   section: OnboardingSection | undefined,
   order = 0,
+  position?: number,
 ): number {
+  if (typeof position === "number" && Number.isFinite(position)) {
+    return Math.max(MIN_POSITION, Math.min(MAX_POSITION, position));
+  }
   const base = SECTION_POSITION[section ?? "explore"];
   return base + Math.max(-1, Math.min(1, order / 1000)) * 0.4;
 }

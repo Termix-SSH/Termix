@@ -26,6 +26,8 @@ import { getActor, getActorSessionId } from "./actor.js";
 import type { DisposableBag } from "./disposables.js";
 import { redactHostSecrets } from "./ctx-hosts.js";
 import { issueUserToken } from "./ctx-users.js";
+import { hostStatus } from "./host-status-provider.js";
+import { probeHost } from "./ctx-probe.js";
 import {
   getSshAuthProvider,
   listSshAuthProviders,
@@ -224,11 +226,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
   const reportLogin = (host: number | PluginSshHost) => {
     const hostId = typeof host === "number" ? host : lookup(host)?.host.id;
     if (!Number.isInteger(hostId) || hostId <= 0) return;
-    void import("../hosts/status/host-status-service.js")
-      .then(({ hostStatusService }) =>
-        hostStatusService.reportLogin(hostId, { ok: true }),
-      )
-      .catch(() => {});
+    hostStatus.reportLogin(hostId, { ok: true });
   };
 
   /** Checks, connects and audits one new connection. */
@@ -296,6 +294,11 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
     }`;
 
   return {
+    probe: async (hostId, probeOptions) => {
+      await assertCapability(pluginId, "ssh:connect", declared);
+      if (!Number.isInteger(hostId) || hostId <= 0) return false;
+      return probeHost(hostId, probeOptions);
+    },
     connect: async (host, options) => {
       const connection = await connectOnce(host, options);
       return {
@@ -304,6 +307,33 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
         host: connection.host,
         dispose: connection.dispose,
       };
+    },
+
+    exec: async (host, command, execOptions) => {
+      const connection = await connectOnce(host, {
+        ...execOptions,
+        purpose: execOptions?.purpose ?? "exec",
+        timeoutMs: undefined,
+      });
+      const details = `${describeHost(host)}: command run`;
+      try {
+        const { runExec } = await import("./ctx-ssh-exec.js");
+        const result = await runExec(
+          connection.client as never,
+          command,
+          execOptions,
+        );
+        await audit("ssh_exec", details, { success: true });
+        return result;
+      } catch (error) {
+        await audit("ssh_exec", details, {
+          success: false,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      } finally {
+        connection.dispose();
+      }
     },
 
     withConnection: async (host, options, fn) => {

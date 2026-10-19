@@ -9,6 +9,7 @@ import { syncLogger } from "../../utils/logger.js";
 import { getLocalVersion } from "../../utils/app-version.js";
 import { getEntity, listEntities } from "../../plugins/sync-registry.js";
 import { getPluginRuntime } from "../../plugins/index.js";
+import { resolvePluginDesktopMode } from "@termix-ssh/plugin-sdk/manifest";
 import {
   createCurrentSessionRepository,
   createCurrentSettingsRepository,
@@ -447,13 +448,13 @@ router.get(
   async (req: Request, res: Response) => {
     const userId = userOf(req);
     try {
-      const { hostStatusService } =
-        await import("../../hosts/status/host-status-service.js");
+      const { hostStatus } =
+        await import("../../plugins/host-status-provider.js");
       const { PermissionManager } =
         await import("../../utils/permission-manager.js");
       const { createCurrentHostRepository } =
         await import("../../database/repositories/factory.js");
-      const statuses = await hostStatusService.statusesFor(userId, null);
+      const statuses = await hostStatus.statusesFor(userId, null);
       const entries = [...statuses.entries()];
       const allowed =
         await PermissionManager.getInstance().filterAccessibleHostIds(
@@ -516,7 +517,7 @@ router.get(
           artifact: !!plugin.artifact,
           enabled: records.get(plugin.id)?.state === "enabled",
           active: plugin.state === "active",
-          desktop: plugin.manifest.desktop ?? "mirror",
+          desktop: resolvePluginDesktopMode(plugin.manifest),
           syncEntities: plugin.manifest.contributes?.syncEntities ?? [],
           granted: (await grants.listByPlugin(plugin.id)).map(
             (grant) => grant.capability,

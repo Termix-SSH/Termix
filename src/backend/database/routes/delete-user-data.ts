@@ -1,4 +1,5 @@
 import { authLogger } from "../../utils/logger.js";
+import { recentActivity } from "../../plugins/activity-provider.js";
 import {
   createCurrentApiKeyRepository,
   createCurrentAuditLogRepository,
@@ -9,7 +10,6 @@ import {
   createCurrentCredentialSidebarPreferenceRepository,
   createCurrentUiPreferenceRepository,
   createCurrentOpenTabRepository,
-  createCurrentRecentActivityRepository,
   createCurrentRbacAccessRepository,
   createCurrentRoleRepository,
   createCurrentSessionRepository,
@@ -64,7 +64,7 @@ export async function deleteUserAndRelatedData(
 
     await createCurrentSshCredentialUsageRepository().deleteByUserId(userId);
 
-    await createCurrentRecentActivityRepository().deleteByUserId(userId);
+    await recentActivity.deleteByUserId(userId);
 
     await createCurrentHostFolderRepository().deleteByUserId(userId);
 

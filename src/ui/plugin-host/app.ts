@@ -18,6 +18,8 @@ import {
 import {
   registerHostAction,
   registerHostBadge,
+  registerHostEditorToolbarItem,
+  registerHostStatusIndicator,
   registerHostContextMenuItem,
 } from "@/sidebar/host-contributions";
 import {
@@ -335,6 +337,31 @@ export function createPluginApp(
           pluginId,
           when: hostCallback(badge.when) as never,
           component: scoped(badge.component) as never,
+          order: badge.order,
+        }),
+      );
+    },
+
+    registerHostStatusIndicator(indicator) {
+      return track(
+        registerHostStatusIndicator({
+          id: indicator.id,
+          pluginId,
+          when: hostCallback(indicator.when) as never,
+          component: scoped(indicator.component) as never,
+          order: indicator.order,
+        }),
+      );
+    },
+
+    registerHostEditorToolbarItem(item) {
+      return track(
+        registerHostEditorToolbarItem({
+          id: item.id,
+          pluginId,
+          when: hostCallback(item.when) as never,
+          component: scoped(item.component) as never,
+          order: item.order,
         }),
       );
     },
@@ -525,7 +552,8 @@ export function createPluginApp(
           permission: step.permission
             ? resolvePluginPermission(pluginId, step.permission)
             : undefined,
-          position: sectionPosition(step.section, step.order),
+          position: sectionPosition(step.section, step.order, step.position),
+          replaces: step.replaces,
           isRelevant: when
             ? (ctx) =>
                 when({

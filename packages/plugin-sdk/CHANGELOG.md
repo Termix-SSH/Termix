@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.0.13
+
+Plugin API 1.5.0.
+
+### Added
+
+- `runtime: "desktop"` in the manifest for a plugin that only loads on the desktop app
+- `desktop:local` and `ctx.desktop.local`: file system, local shell and machine info on the desktop app's own backend
+- `ctx.audit.subscribe`, `ctx.audit.list` and `ctx.audit.exportBatches` under `audit:read`
+- `ctx.hosts.importMany`, `importSshConfig`, `exportMany` and `registerImportNormalizer`, with the `hosts:export` capability
+- `ctx.credentials.publicKey` and `resolveKeyRefs`, `ctx.ssh.exec`, and `@termix-ssh/plugin-sdk/ssh-keys`
+- `ctx.hosts.status.provide` and `ctx.hosts.activity.provide` so a plugin can own host status and recent activity, with `ctx.network.tcpProbe`, `ctx.ssh.probe`, `ctx.hosts.probeTargets` and `ctx.hosts.sessionActive`
+- `registerHostStatusIndicator` and `registerHostEditorToolbarItem`, and `order` for host badges
+- Onboarding steps can sit in a `start` section, take a `position` and `replaces` a core step
+- A plugin can provide the app name, tagline and logo through the `<id>.brandingProvider` registry key
+
 ## 1.0.12
 
 Plugin API 1.4.0.

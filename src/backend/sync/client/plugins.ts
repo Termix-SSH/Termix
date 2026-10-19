@@ -11,7 +11,10 @@
 import fs from "fs";
 import path from "path";
 import semver from "semver";
-import type { PluginDesktopMode } from "@termix-ssh/plugin-sdk/manifest";
+import {
+  resolvePluginDesktopMode,
+  type PluginDesktopMode,
+} from "@termix-ssh/plugin-sdk/manifest";
 import { syncLogger } from "../../utils/logger.js";
 import { sendCoreAlert } from "../../notify/core-notify.js";
 import {
@@ -227,7 +230,9 @@ async function mirrorOne(link: SyncLink, plugin: RemotePlugin): Promise<void> {
   }
   const { loader } = getPluginRuntime();
   let local = loader.get(plugin.id);
-  const mode = local?.manifest.desktop ?? plugin.desktop ?? "mirror";
+  const mode = local
+    ? resolvePluginDesktopMode(local.manifest)
+    : (plugin.desktop ?? "mirror");
 
   if (mode === "server") {
     if (local && (await isEnabledLocally(plugin.id))) {
@@ -328,7 +333,7 @@ export async function mirrorPlugins(link: SyncLink): Promise<void> {
   // A plugin the server no longer has is switched off here. Its data stays.
   for (const local of getPluginRuntime().loader.list()) {
     if (remoteIds.has(local.id) || local.source !== "user") continue;
-    if ((local.manifest.desktop ?? "mirror") !== "mirror") continue;
+    if (resolvePluginDesktopMode(local.manifest) !== "mirror") continue;
     if (await isEnabledLocally(local.id)) {
       await setPluginEnabled(local.id, false).catch(() => {});
     }
@@ -341,7 +346,7 @@ export async function mirrorPlugins(link: SyncLink): Promise<void> {
  */
 export function isServerManaged(pluginId: string): boolean {
   const local = getPluginRuntime().loader.get(pluginId);
-  const mode = local?.manifest.desktop ?? "mirror";
+  const mode = local ? resolvePluginDesktopMode(local.manifest) : "mirror";
   if (mode !== "mirror") return mode === "server";
   return local?.source !== "user" || vouchedHere(local);
 }

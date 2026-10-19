@@ -2,11 +2,11 @@ import type { Request, RequestHandler, Response, Router } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { databaseLogger, sshLogger } from "../../utils/logger.js";
 import { pluginEvents, TOPICS } from "../../plugins/events.js";
+import { recentActivity } from "../../plugins/activity-provider.js";
 import {
   createCurrentCredentialRepository,
   createCurrentHostFolderRepository,
   createCurrentFolderAccessRepository,
-  createCurrentRecentActivityRepository,
   createCurrentRbacAccessRepository,
   createCurrentSshCredentialUsageRepository,
 } from "../repositories/factory.js";
@@ -432,9 +432,7 @@ export function registerHostFolderRoutes(
             hostIds,
           );
 
-          await createCurrentRecentActivityRepository().deleteByHostIds(
-            hostIds,
-          );
+          await recentActivity.deleteByHostIds(hostIds);
 
           await createCurrentRbacAccessRepository().deleteHostAccessForHosts(
             hostIds,

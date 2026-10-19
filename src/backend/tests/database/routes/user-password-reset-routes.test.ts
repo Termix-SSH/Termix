@@ -28,9 +28,16 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   }),
   createCurrentSettingsRepository: () => ({}),
   createCurrentSshCredentialUsageRepository: deletingRepo("usage"),
-  createCurrentRecentActivityRepository: deletingRepo("activity"),
   createCurrentHostRepository: deletingRepo("hosts"),
   createCurrentCredentialRepository: deletingRepo("credentials"),
+}));
+
+vi.mock("../../../plugins/activity-provider.js", () => ({
+  recentActivity: {
+    deleteByUserId: async (userId: string) => {
+      calls.deletedFor.push(`activity:${userId}`);
+    },
+  },
 }));
 
 vi.mock("../../../plugins/events.js", () => ({

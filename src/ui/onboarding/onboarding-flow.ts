@@ -20,12 +20,22 @@ export function isStepRelevant(
   return true;
 }
 
+/** A step that took over older keys counts those as seen at version 1. */
+function effectiveSeen(
+  step: OnboardingStepDef,
+  seen: Record<string, number>,
+): number {
+  const own = seen[step.id] ?? 0;
+  if (own > 0 || !step.replaces) return own;
+  return step.replaces.some((key) => (seen[key] ?? 0) > 0) ? 1 : 0;
+}
+
 export function isStepPending(
   step: OnboardingStepDef,
   seen: Record<string, number>,
   ctx: OnboardingCtx,
 ): boolean {
-  if ((seen[step.id] ?? 0) < step.version) return true;
+  if (effectiveSeen(step, seen) < step.version) return true;
   try {
     return step.forcePending?.(ctx) === true;
   } catch {

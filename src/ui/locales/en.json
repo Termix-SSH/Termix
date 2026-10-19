@@ -213,11 +213,6 @@
     "pluginsSomeFailed": "Some plugins could not be changed. You can fix them later from the Plugins tab. Press Next to continue.",
     "pluginsApplyFailed": "Your choices could not be saved. Try again, or continue and change them later from the Plugins tab.",
     "pluginsLoadFailed": "The plugin list could not be loaded. You can choose plugins later from the Plugins tab.",
-    "presetTitle": "How much do you want on screen?",
-    "presetIntro": "Choose how much shows on screen.",
-    "presetChangeLater": "You can switch presets or change any single setting later in Settings, under Interface.",
-    "appearanceTitle": "Make it yours",
-    "appearanceIntro": "Pick a theme, an accent color, a font and your language. Changes show right away, and you can change them later in Settings.",
     "securityTitle": "Secure your account",
     "securityIntro": "Add a passkey or an authenticator app to your account. You can also do this later in Settings, under Security.",
     "desktopTitle": "How do you want to use Termix?",
@@ -279,10 +274,7 @@
     "retry": "Retry",
     "refresh": "Refresh",
     "optional": "Optional",
-    "downloadSample": "Download Sample",
     "failedToDeleteHost": "Failed to delete {{name}}",
-    "importSkipExisting": "Import (skip existing)",
-    "importSSHConfig": "Import from SSH config",
     "connectionDetails": "Connection Details",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -501,10 +493,7 @@
     "noFolder": "(No folder)",
     "deleteSelected": "Delete",
     "exitSelection": "Exit selection",
-    "importSkip": "Import (skip existing)",
-    "importOverwrite": "Import (overwrite)",
     "collapseBtn": "Collapse",
-    "importExportBtn": "Import / Export",
     "hostStatusesRefreshed": "Host statuses refreshed",
     "failedToRefreshHosts": "Failed to refresh hosts",
     "movedHostTo": "Moved {{host}} to \"{{folder}}\"",
@@ -669,35 +658,6 @@
     "addCredentialBtn2": "Add Credential",
     "checkingHostStatuses": "Checking host statuses...",
     "pinnedSection": "Pinned",
-    "hostsExported": "Hosts exported successfully",
-    "export": {
-      "menuItem": "Export...",
-      "title": "Export hosts",
-      "scope": "Scope",
-      "scopeAll": "All",
-      "scopeSelected": "Selected",
-      "searchHosts": "Search hosts...",
-      "include": "Include",
-      "groupConnection": "Connection",
-      "groupCredentials": "Credentials",
-      "groupNotes": "Notes",
-      "groupTags": "Tags & pin",
-      "groupProxy": "Proxy",
-      "groupJumpHosts": "Jump hosts",
-      "groupFeatureFlags": "Plugin settings",
-      "groupAdvanced": "Advanced config",
-      "preview": "Preview",
-      "moreHosts_one": "... {{count}} more host",
-      "moreHosts_other": "... {{count}} more hosts",
-      "summary": "{{selected}} of {{total}} hosts",
-      "credentialsIncluded": "credentials included",
-      "credentialsExcluded": "credentials excluded",
-      "noneSelected": "No hosts selected",
-      "cancel": "Cancel",
-      "confirm": "Export",
-      "fetchFailed": "Failed to load hosts for export",
-      "bulkButton": "Export"
-    },
     "sampleDownloaded": "Sample file downloaded",
     "failedToDeleteCredential2": "Failed to delete credential",
     "noFolderOption": "(No folder)",
@@ -860,11 +820,7 @@
     "editorUpdate": "Update Host",
     "editorAdd": "Add Host",
     "speedSearch": "Search hosts. Arrow keys to select, Enter to connect, Esc to close",
-    "speedSearchList": "Host list. Type or press / to search.",
-    "importNoHosts": "No hosts found in the file",
-    "importTooMany": "You can import up to {{max}} hosts at once",
-    "importSummary": "Import done: {{imported}} imported, {{updated}} updated, {{failed}} failed",
-    "importHostsFailed": "Failed to import hosts"
+    "speedSearchList": "Host list. Type or press / to search."
   },
   "splitScreen": {
     "title": "Split screen",
@@ -1196,6 +1152,10 @@
         "title": "Access serial and USB devices",
         "consequence": "It can open a physical serial port on the machine running Termix."
       },
+      "hosts:export": {
+        "title": "Export hosts with their secrets",
+        "consequence": "Can read your hosts in full, including saved passwords and keys, and hand them out. Every export is written to the audit log."
+      },
       "hosts:write": {
         "title": "Create and change hosts",
         "consequence": "It can add hosts and edit the ones you already have."
@@ -1240,9 +1200,25 @@
         "title": "Read the audit log",
         "consequence": "It can see who did what and when."
       },
+      "network:probe": {
+        "title": "Check if ports answer",
+        "consequence": "Can open a plain connection to any address from the server, to see if it is reachable."
+      },
+      "hosts:status-provide": {
+        "title": "Provide host status",
+        "consequence": "Becomes the source of the online and offline dots for every host."
+      },
+      "hosts:activity-provide": {
+        "title": "Store recent activity",
+        "consequence": "Becomes the store for the recent activity list of every user."
+      },
       "desktop:window": {
         "title": "Open desktop windows",
         "consequence": "Only in the Termix desktop app."
+      },
+      "desktop:local": {
+        "title": "Use this computer",
+        "consequence": "Can read and change files, run a shell and open local ports on this computer. Only in the Termix desktop app."
       },
       "users:impersonate": {
         "title": "Act as other users",

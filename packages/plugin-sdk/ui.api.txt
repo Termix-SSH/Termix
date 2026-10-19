@@ -115,13 +115,11 @@ DropdownMenuSubTrigger (value): ({ className, inset, children, ...props }: Dropd
 DropdownMenuTrigger (value): ({ ...props }: DropdownMenuTriggerProps & RefAttributes<HTMLButtonElement>) => Element
 EditingWidth (type): EditingWidth
 EmptyState (value): ({ icon: Icon, title, hint, action, className, }: { icon?: LucideIcon; title: string; hint?: string; action?: ReactNode; className?: string; }) => Element
-ExportPayload (type): ExportPayload
 FOLDER_COLORS (value): string[]
 FONT_SIZES (value): { id: FontSizeId; label: string; }[]
 Facts (value): ({ className, children, }: { className?: string; children: ReactNode; }) => Element
 FakeSwitch (value): ({ defaultChecked, disabled, checked, onChange, }: { defaultChecked?: boolean; disabled?: boolean; checked?: boolean; onChange?: (v: boolean) => void; }) => Element
 Field (value): ({ label, hint, error, aside, htmlFor, className, children, }: { label: string; hint?: ReactNode; error?: string; aside?: ReactNode; htmlFor?: string; className?: string; children: ReactNode; }) => Element
-FieldGroup (type): FieldGroup
 FieldPair (value): ({ children }: { children: ReactNode; }) => Element
 FolderAccessRule (type): FolderAccessRule
 FolderIconEl (value): ({ icon, className, style, }: { icon?: string; className?: string; style?: CSSProperties; }) => Element
@@ -200,6 +198,7 @@ NumberField (value): ({ label, value, onChange, placeholder, hint, error, min, m
 OPEN_PLUGINS_EVENT (value): "termix:open-plugins"
 OpenTabRecord (type): OpenTabRecord
 PANEL (value): { readonly body: "p-2.5"; readonly gap: "gap-2"; readonly band: "px-3 py-2"; readonly cardHead: "px-3 py-2.5"; readonly header: "h-12.5"; }
+PRESETS (value): Record<"simple" | "balanced" | "advanced", UiAreaPreferences>
 PROMPT_BUTTON (value): "inline-flex h-7 items-center justify-center gap-1.5 border border-border px-3 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
 PROMPT_DESTRUCTIVE_BUTTON (value): "inline-flex h-7 items-center justify-center gap-1.5 bg-destructive px-3 text-xs font-medium text-white transition-colors hover:bg-destructive/90 focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
 PROMPT_PRIMARY_BUTTON (value): "inline-flex h-7 items-center justify-center gap-1.5 border border-accent-brand/40 px-3 text-xs font-medium text-accent-brand transition-colors hover:bg-accent-brand/10 focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
@@ -344,13 +343,11 @@ adminUpdateUserCredential (value): (targetUserId: string, credentialId: number, 
 adminUpdateUserHost (value): (targetUserId: string, hostId: number, hostData: HostData) => Promise<Host>
 applyAccentColor (value): (colorValue: string) => void
 applyFontSize (value): (id: FontSizeId) => void
-applyPresetSideEffects (value): (preset: "advanced" | "simple" | "balanced") => Promise<void>
+applyPresetSideEffects (value): (preset: "simple" | "balanced" | "advanced") => Promise<void>
 applyUiFont (value): (id: UiFontId) => void
 assignRoleToUser (value): (userId: string, roleId: number) => Promise<{ success: boolean; }>
 beginSplitDrag (value): (source: SplitDragSource, x: number, y: number) => void
-buildExportPayload (value): (raw: ExportPayload, selected: Set<string>, groups: Set<FieldGroup>, withCredentials: boolean, pluginSecrets?: PluginSecretKeys) => ExportPayload
 buildOriginWsUrl (value): ({ origin, localPort, localPath, remotePath, includeJwt, }: { origin: ConnectionOrigin; localPort: number; localPath: string; remotePath: string; includeJwt?: boolean; }) => Promise<WebSocketConnectionTarget>
-bulkImportSSHHosts (value): (hosts: HostData[], overwrite?: boolean, credentials?: Record<string, unknown>[]) => Promise<{ message: string; success: number; updated: number; skipped: number; failed: number; errors: string[]; }>
 bulkUpdateSSHHosts (value): (hostIds: number[], updates: Record<string, unknown>) => Promise<{ updated: number; failed: number; errors: string[]; }>
 canConfigureUpdates (value): (state: DesktopUpdateState) => state is DesktopUpdateState
 canJoinSplit (value): (tab: Tab) => boolean
@@ -379,22 +376,17 @@ deleteOpenTab (value): (instanceId: string) => Promise<void>
 deleteRole (value): (roleId: number) => Promise<{ success: boolean; }>
 deleteSSHHost (value): (hostId: number) => Promise<Record<string, unknown>>
 deleteUser (value): (username: string, successorUserId?: string) => Promise<Record<string, unknown>>
-deployCredentialToHost (value): (credentialId: number, targetHostId: number) => Promise<Record<string, unknown>>
 desktopUpdates (value): () => DesktopUpdatesBridge
 docsUrl (value): (page?: "dashboard" | "users" | "sessions" | "roles" | "branding" | "database" | "manage" | "settings" | "plugins" | "install" | "cli" | "develop" | "home" | "updating" | "betas" | "envVars" | "https" | "reverseProxy" | "desktopSync" | "interface" | "hosts" | "portKnocking" | "hostDefaults" | "credentials" | "sharing" | "account" | "accountSecurity" | "accountData" | "apiKeys" | "commandPalette" | "interfaceSettings" | "appearance" | "keybindings" | "adminGeneral" | "adminDatabase" | "adminSsl" | "auditLog" | "importExport" | "pluginCatalog" | "communityRegistry" | "pluginRegistries" | "hostRegistry") => string
 duplicateCredential (value): (credentialId: number, data: Record<string, unknown>) => Promise<Record<string, unknown>>
 enabledHostProtocols (value): (host: { pluginSettings?: Record<string, Record<string, unknown>>; }, list?: HostProtocolDef[]) => HostProtocolDef[]
 endSplitDrag (value): (commit: boolean) => void
-exportAllSSHHosts (value): { (): Promise<{ hosts: Host[]; }>; (options: { share: true; }): Promise<{ version: string; exportedAt: string; credentials: Record<string, unknown>[]; hosts: Host[]; }>; }
 filterPaletteItems (value): (items: PaletteItemDef[], query: string, showWhenEmpty?: boolean) => PaletteItemDef[]
 findCoreHostDefault (value): (key: string) => CoreHostDefault
 findMatchingKeybinding (value): (e: KeyboardEvent, bindings: CustomKeybinding[]) => CustomKeybinding
-generateKeyPair (value): (keyType: "ssh-ed25519" | "ssh-rsa" | "ecdsa-sha2-nistp256", keySize?: number, passphrase?: string) => Promise<GeneratedKeyPair>
-generatePublicKeyFromPrivate (value): (privateKey: string, keyPassword?: string) => Promise<GeneratedPublicKey>
 getActiveSessions (value): () => Promise<ActiveSessionInfo[]>
 getAdaptiveResourceBudget (value): (kind: AdaptiveTaskKind) => AdaptiveResourceBudget
 getApiKeys (value): () => Promise<{ apiKeys: ApiKey[]; }>
-getAuditForwarding (value): () => Promise<AuditForwardingSettings>
 getAuditLogActions (value): () => Promise<{ actions: string[]; }>
 getAuditLogs (value): (filters?: AuditLogFilters) => Promise<AuditLogResponse>
 getBasePath (value): () => string
@@ -463,11 +455,11 @@ groupRailItems (value): (items: RailItemDef[]) => { group: RailGroup; items: Rai
 hasVisibleFields (value): (fields: PluginSettingsField[]) => boolean
 hostActionsFor (value): (all: HostActionDef[], host: Host, kind?: "open" | "connect") => HostActionDef[]
 hostBadgesFor (value): (all: HostBadgeDef[], host: Host) => HostBadgeDef[]
-hostKey (value): (host: Record<string, unknown>) => string
+hostEditorToolbarItemsFor (value): (all: HostBadgeDef[], host: Host) => HostBadgeDef[]
 hostMenuItemsFor (value): (all: HostContextMenuItemDef[], host: Host) => HostContextMenuItemDef[]
 hostProtocolFlags (value): (host: { enableSsh?: boolean; pluginSettings?: Record<string, Record<string, unknown>>; }, list?: HostProtocolDef[]) => HostProtocols
+hostStatusIndicatorsFor (value): (all: HostBadgeDef[], host: Host) => HostBadgeDef[]
 hydrateLocalSharedHostAuth (value): <T>(host: T) => Promise<T>
-importSSHConfigHosts (value): (content: string, overwrite?: boolean) => Promise<{ message: string; success: number; updated: number; skipped: number; failed: number; errors: string[]; }>
 invalidateHostsAndStatusCaches (value): () => void
 invalidateServerStatusCache (value): () => void
 isCoreRailView (value): (id: string) => boolean
@@ -492,7 +484,6 @@ makeUserAdmin (value): (userId: string) => Promise<Record<string, unknown>>
 mapCredentials (value): (res: unknown) => Credential[]
 markAdaptiveResourceUsed (value): (kind: AdaptiveTaskKind, action: string, now?: number) => void
 markTabSurfaceUsed (value): (type: TabType) => void
-maskSecrets (value): (payload: ExportPayload, pluginSecrets?: PluginSecretKeys) => ExportPayload
 moveRailItem (value): (items: RailItemDef[], id: string, beforeId: string) => string[]
 moveSplitDrag (value): (x: number, y: number) => void
 normalizeLanguageCode (value): (language?: string) => string
@@ -503,7 +494,6 @@ parseCustomKeybindings (value): (raw?: string) => CustomKeybinding[]
 parseServerTime (value): (ts: string) => Date
 pluginKey (value): { (pluginId: string, key: string): string; (pluginId: string, key: string): string; }
 pluginName (value): (t: Translator, plugin: { id: string; name: string; }) => string
-pluginSecretKeys (value): (summaries: { id: string; contributes?: { settings?: { host?: { fields?: { key: string; secretKeys?: string[]; }[]; }; }; }; }[]) => PluginSecretKeys
 pluginWsUrl (value): (pluginId: string, path: string, options?: { origin?: ConnectionOrigin; }) => Promise<WebSocketConnectionTarget>
 preloadTabSurface (value): (type: TabType) => void
 previewHostDefaultsLevel (value): (target: HostDefaultsTarget, change: HostDefaultsChange) => Promise<{ changedHosts: number; }>
@@ -576,8 +566,6 @@ tabJumpHotkeyKeys (value): () => string[]
 takePendingManageRequest (value): () => ManageRequest
 unlinkExternalFromPasswordAccount (value): (userId: string) => Promise<{ success: boolean; message: string; }>
 unlinkServer (value): (keepData: boolean) => Promise<SyncStatus>
-updateAuditForwarding (value): (url: string, token?: string) => Promise<{ url: string; hasToken: boolean; }>
-updateBranding (value): (update: BrandingSettingsUpdate) => Promise<BrandingSettings>
 updateCredential (value): (credentialId: number, credentialData: Record<string, unknown>) => Promise<Record<string, unknown>>
 updateExternalAutoProvision (value): (enabled: boolean) => Promise<Record<string, unknown>>
 updateFolderMetadata (value): (name: string, color?: string, icon?: string, credentialId?: number, localOnly?: boolean) => Promise<void>
@@ -613,8 +601,10 @@ useHostActions (value): () => HostActionDef[]
 useHostBadges (value): () => HostBadgeDef[]
 useHostContextMenuItems (value): () => HostContextMenuItemDef[]
 useHostEditorSections (value): () => HostEditorSectionDef[]
+useHostEditorToolbarItems (value): () => HostBadgeDef[]
 useHostProtocols (value): () => HostProtocolDef[]
 useHostStatus (value): (hostId: number, statusCheckEnabled?: boolean) => StatusValue
+useHostStatusIndicators (value): () => HostBadgeDef[]
 useInstalledPlugins (value): () => PluginSummary[]
 useIsDefaultsEditor (value): () => boolean
 useIsMobile (value): () => boolean

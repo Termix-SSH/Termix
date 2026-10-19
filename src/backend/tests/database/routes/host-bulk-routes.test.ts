@@ -3,7 +3,7 @@ import {
   importedHostUsername,
   notifyImportedHosts,
   parseSSHConfig,
-} from "../../../database/routes/host-bulk-routes.js";
+} from "../../../hosts/import/host-import.js";
 import { pluginEvents, TOPICS } from "../../../plugins/events.js";
 
 describe("parseSSHConfig", () => {

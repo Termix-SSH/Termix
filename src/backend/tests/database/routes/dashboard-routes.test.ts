@@ -34,15 +34,12 @@ vi.mock("../../../utils/data-crypto.js", () => ({
   },
 }));
 
-vi.mock("../../../database/repositories/factory.js", () => ({
-  createCurrentRecentActivityRepository: () => ({
-    listByUserId: async () => state.activity,
+vi.mock("../../../plugins/activity-provider.js", () => ({
+  recentActivity: {
+    list: async () => state.activity,
     deleteByUserId: async () => {},
-  }),
-}));
-
-vi.mock("../../../services/recent-activity.js", () => ({
-  recordRecentActivity: async () => state.recordResult,
+    record: async () => state.recordResult,
+  },
 }));
 
 const { default: dashboardRoutes } =

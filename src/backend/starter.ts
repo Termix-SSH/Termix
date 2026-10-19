@@ -200,9 +200,9 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     const { runCoreBootMigrations } = await import("./boot.js");
     await runCoreBootMigrations();
 
-    const { hostStatusService } =
-      await import("./hosts/status/host-status-service.js");
-    hostStatusService.start();
+    // Status comes from whichever plugin provides it; none means unknown.
+    const { hostStatus } = await import("./plugins/host-status-provider.js");
+    hostStatus.start();
 
     // Counted before the desktop user is provisioned, so a first desktop
     // run counts as a fresh install too.
@@ -226,7 +226,7 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     // Plugins serve their routes under /plugin-api/<id>/ and /plugin-ws/<id>/
     // through ctx on activate, and start their own schedulers there, so
     // disabling one answers 503 instead of leaving a dead import here. The
-    // dashboard's own uptime and recent-activity routes are core and are
+    // dashboard's uptime and recent-activity routes are core forwarders and are
     // mounted on the main server in database.ts.
 
     // Initialize log level from database settings

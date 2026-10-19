@@ -404,28 +404,6 @@ export const hostDefaults = sqliteTable(
   ],
 );
 
-export const recentActivity = sqliteTable(
-  "recent_activity",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    type: text("type").notNull(),
-    hostId: integer("host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-    hostName: text("host_name"),
-    timestamp: text("timestamp")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  // Always read newest-first for one user, so timestamp follows user_id.
-  (table) => [
-    index("idx_recent_activity_user_ts").on(table.userId, table.timestamp),
-  ],
-);
-
 export const hostAccess = sqliteTable(
   "host_access",
   {

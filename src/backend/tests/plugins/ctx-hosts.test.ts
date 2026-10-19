@@ -110,14 +110,14 @@ vi.mock("../../database/repositories/factory.js", () => ({
     listDecryptedByUserId: async () => h.ownedHosts,
   }),
 }));
-vi.mock("../../services/recent-activity.js", () => ({
-  recordRecentActivity: async (
-    userId: string,
-    entry: Record<string, unknown>,
-  ) => {
-    h.activities.push({ userId, ...entry });
-    return { status: "logged", id: 1 };
+vi.mock("../../plugins/activity-provider.js", () => ({
+  recentActivity: {
+    record: async (userId: string, entry: Record<string, unknown>) => {
+      h.activities.push({ userId, ...entry });
+      return { status: "logged", id: 1 };
+    },
   },
+  provideActivity: vi.fn(() => () => {}),
 }));
 vi.mock("../../hosts/host-session-status.js", () => ({
   hostSessionStatus: {
@@ -127,8 +127,9 @@ vi.mock("../../hosts/host-session-status.js", () => ({
     },
   },
 }));
-vi.mock("../../hosts/status/host-status-service.js", () => ({
-  hostStatusService: {
+vi.mock("../../plugins/host-status-provider.js", () => ({
+  provideHostStatus: vi.fn(() => () => {}),
+  hostStatus: {
     get: (hostId: number) =>
       hostId === 4 ? { status: "online", lastChecked: "t" } : null,
     check: async (hostId: number) => ({

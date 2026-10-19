@@ -22,6 +22,19 @@
 - The themes besides light and dark now come from a bundled themes plugin. It can be swapped but not removed, and Termix keeps a basic light and dark theme of its own
 - A theme that no longer exists shows as System instead of an unstyled page
 - Installs and updates from a registry check the Termix version a plugin needs, not only its plugin API
+- Host online and offline dots now come from the Host Status plugin. The check interval setting moved to its settings and keeps its value. Without the plugin hosts show no dot
+- Audit log forwarding and the CSV and NDJSON export now come from the Audit Tools plugin. The collector URL and token move to its settings on upgrade. The audit log viewer, retention and the audit log itself stay in Termix
+- Client tunnels on your own computer and opening a host in Windows Remote Desktop moved out of the desktop app into plugins, so fixes to them no longer need a new desktop build
+- The local terminal, the local side of the file manager with its transfers, and opening a file in an external editor moved out of the desktop app into plugins, so fixes to them no longer need a new desktop build
+- The recent activity list and the first run steps for the preset and for theme, accent, font and language now come from bundled plugins. Existing entries and choices are kept, and people who went through those steps are not asked again
+- Branding (app name, tagline and logo) is now saved by the bundled layout plugin. An existing setup keeps its branding, and the sign in screen still reads it from Termix
+- Without the plugin that stores recent activity, the list stays empty and nothing is recorded
+- Importing hosts from a JSON or SSH config file and exporting hosts now come from the Import and Export plugin. Exports are now written to the audit log. Without the plugin there is no import or export
+- Generating and checking SSH keys in the credential editor and deploying a key to a host now come from the Credential Tools plugin. Deploys are now written to the audit log. Without the plugin those buttons are hidden
+
+### Removed
+
+- The desktop app no longer has its own client tunnel and native Remote Desktop code
 
 ## 26.10.2
 

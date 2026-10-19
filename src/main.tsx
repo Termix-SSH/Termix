@@ -304,9 +304,6 @@ function App() {
       ]);
       await enterApp();
     })();
-    if (isElectron()) {
-      window.electronAPI?.startC2SAutoStartTunnels?.().catch(() => {});
-    }
   }
 
   function handleLogout(options?: LogoutOptions) {

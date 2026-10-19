@@ -23,7 +23,6 @@ import { PluginPermissionGrantRepository } from "./plugin-permission-grant-repos
 import { UserAuthRepository } from "./user-auth-repository.js";
 import { RbacAccessRepository } from "./rbac-access-repository.js";
 import { RbacPermissionRepository } from "./rbac-permission-repository.js";
-import { RecentActivityRepository } from "./recent-activity-repository.js";
 import { RoleRepository } from "./role-repository.js";
 import { SessionRepository } from "./session-repository.js";
 import { CredentialAccessRepository } from "./credential-access-repository.js";
@@ -266,13 +265,6 @@ export function createCurrentRbacAccessRepository(): RbacAccessRepository {
   return new RbacAccessRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("rbac_access_repository_write"),
-  );
-}
-
-export function createCurrentRecentActivityRepository(): RecentActivityRepository {
-  return new RecentActivityRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("recent_activity_repository_write"),
   );
 }
 

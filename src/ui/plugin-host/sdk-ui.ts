@@ -362,14 +362,6 @@ export { APP_VERSION } from "@/lib/app-version";
 // the shell's copy.
 export { Command as CommandPrimitive } from "cmdk";
 export {
-  buildExportPayload,
-  hostKey,
-  maskSecrets,
-  pluginSecretKeys,
-  type ExportPayload,
-  type FieldGroup,
-} from "@/sidebar/host-export-payload";
-export {
   type AuthOverrideProtocol,
   SSH_AUTH_PROTOCOL,
 } from "@/types/auth-protocols";
@@ -416,6 +408,7 @@ export type {
   SSHHostData,
 } from "@/types";
 export {
+  PRESETS,
   UI_AREA_KEYS,
   type UiAreaKey,
   type UiPreset,
@@ -437,10 +430,8 @@ export type {
 export {
   type AuditLog,
   type AuditLogFilters,
-  getAuditForwarding,
   getAuditLogActions,
   getAuditLogs,
-  updateAuditForwarding,
 } from "@/api/audit-log-api";
 export {
   getUserSecondFactors,
@@ -498,11 +489,7 @@ export {
   shareCredential,
   type ShareTarget,
 } from "@/api/rbac-api";
-export {
-  type BrandingSettings,
-  getBranding,
-  updateBranding,
-} from "@/api/settings-api";
+export { type BrandingSettings, getBranding } from "@/api/settings-api";
 export {
   getSyncConflicts,
   getSyncErrors,
@@ -645,7 +632,6 @@ export {
   adminUpdateUserHost,
   type ApiKey,
   assignRoleToUser,
-  bulkImportSSHHosts,
   bulkUpdateSSHHosts,
   changePassword,
   createApiKey,
@@ -661,11 +647,7 @@ export {
   deleteRole,
   deleteSSHHost,
   deleteUser,
-  deployCredentialToHost,
   duplicateCredential,
-  exportAllSSHHosts,
-  generateKeyPair,
-  generatePublicKeyFromPrivate,
   getActiveSessions,
   getApiKeys,
   getCredentialDetails,
@@ -689,7 +671,6 @@ export {
   getUserInfo,
   getUserList,
   getUserRoles,
-  importSSHConfigHosts,
   type LinkedAccountInfo,
   linkExternalToPasswordAccount,
   logoutUser,
@@ -816,12 +797,16 @@ export {
   type HostActionDef,
   hostActionsFor,
   hostBadgesFor,
+  hostEditorToolbarItemsFor,
   hostMenuItemsFor,
+  hostStatusIndicatorsFor,
   listHostActions,
   runHostAction,
   useHostActions,
   useHostBadges,
   useHostContextMenuItems,
+  useHostEditorToolbarItems,
+  useHostStatusIndicators,
 } from "@/sidebar/host-contributions";
 export { useEditorDefaultKeys } from "@/sidebar/host-defaults/catalog";
 export {

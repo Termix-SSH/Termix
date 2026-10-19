@@ -200,6 +200,38 @@ export async function remoteFetch(
   return response;
 }
 
+export interface RemoteStreamRequest {
+  method?: string;
+  headers?: Record<string, string>;
+  /** A string, a buffer or a Node stream. */
+  body?: unknown;
+  signal?: AbortSignal;
+}
+
+/**
+ * Sends a request with the link's proxy headers and certificate rules and a
+ * body that may be a stream. The response body is left unread for the caller.
+ */
+export async function remoteStreamFetch(
+  target: RemoteTarget,
+  pathname: string,
+  request: RemoteStreamRequest = {},
+) {
+  const headers = { ...request.headers, ...requestHeaders(target) };
+  try {
+    return await undiciFetch(remoteUrl(target.serverUrl, pathname), {
+      method: request.method ?? "GET",
+      headers,
+      body: request.body as never,
+      duplex: "half",
+      dispatcher: dispatcherFor(target),
+      signal: request.signal,
+    } as never);
+  } catch (error) {
+    throw describeNetworkError(error);
+  }
+}
+
 /** Sends a request and parses a JSON answer from Termix. */
 export async function remoteJson<T>(
   target: RemoteTarget,

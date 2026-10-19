@@ -877,14 +877,10 @@ export {
   getSSHHosts,
   createSSHHost,
   updateSSHHost,
-  bulkImportSSHHosts,
-  importSSHConfigHosts,
   bulkUpdateSSHHosts,
   reorderSSHHosts,
   deleteSSHHost,
   getSSHHostById,
-  exportSSHHostWithCredentials,
-  exportAllSSHHosts,
   testProxyConnection,
 } from "@/api/ssh-host-management-api";
 
@@ -1280,12 +1276,6 @@ export {
   deleteAllHostsInFolder,
   renameCredentialFolder,
   reorderCredentials,
-  detectKeyType,
-  detectPublicKeyType,
-  validateKeyPair,
-  generatePublicKeyFromPrivate,
-  generateKeyPair,
-  deployCredentialToHost,
 } from "@/api/credentials-api";
 
 // ============================================================================

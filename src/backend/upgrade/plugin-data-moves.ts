@@ -10,6 +10,8 @@ import { runOpksshConfigMigration } from "./opkssh-config-migration.js";
 import { runTermixIdentityCaMigration } from "./termix-identity-ca-migration.js";
 import { runSessionRecordingDataMigration } from "./session-recording-data-migration.js";
 import { runNotificationChannelMigration } from "./notification-channel-migration.js";
+import { runHostStatusSettingsMigration } from "./host-status-settings-migration.js";
+import { runAuditForwardingMigration } from "./audit-forwarding-migration.js";
 
 export async function runPluginDataMoves(): Promise<void> {
   await runLdapProviderMigration();
@@ -19,4 +21,8 @@ export async function runPluginDataMoves(): Promise<void> {
   await runSessionRecordingDataMigration();
   // Automations name channels by id, so they are in place before it starts.
   await runNotificationChannelMigration();
+  // The plugin forwards from its own settings, so they are in place first.
+  await runAuditForwardingMigration();
+  // Sets the check interval, which the plugin reads when it activates.
+  await runHostStatusSettingsMigration();
 }

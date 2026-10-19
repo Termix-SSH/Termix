@@ -653,7 +653,15 @@ export interface HostBadgeContribution {
   id: string;
   when: (host: PluginHostRecord) => boolean;
   component: ComponentType<{ host: PluginHostRecord }>;
+  /** Lower comes first. Ties sort by id. */
+  order?: number;
 }
+
+/** The dot or stripe that shows a host's status on its row. */
+export type HostStatusIndicatorContribution = HostBadgeContribution;
+
+/** A control in the host editor's toolbar. */
+export type HostEditorToolbarItemContribution = HostBadgeContribution;
 
 export interface HostContextMenuItemContribution {
   id: string;
@@ -838,10 +846,11 @@ export type OnboardingMode = "full" | "partial" | "rerun";
  * Where a plugin step sits in onboarding. "setup" comes right after the
  * appearance steps, for things that need doing before the feature works
  * (like pointing at a guacd server). "explore" (the default) comes after
- * that, "security" after the account security step. Onboarding is for
+ * that, "security" after the account security step. "start" comes before
+ * the appearance steps, for choices that shape how the rest looks. Onboarding is for
  * choices, not for explaining features.
  */
-export type OnboardingSection = "setup" | "explore" | "security";
+export type OnboardingSection = "start" | "setup" | "explore" | "security";
 
 export interface OnboardingStepProps {
   /**
@@ -884,6 +893,16 @@ export interface OnboardingStepContribution {
   permission?: string;
   section?: OnboardingSection;
   order?: number;
+  /**
+   * Exact place in the flow, 1 to 99, instead of a section. Core steps sit at
+   * 10 (plugins), 20, 25, 30 (preset), 40 (appearance) and 90 (security).
+   */
+  position?: number;
+  /**
+   * Older step keys this step took over, like "preset". People who already
+   * saw one of them are not shown this step again.
+   */
+  replaces?: string[];
   when?: (context: {
     isAdmin: boolean;
     isDesktop: boolean;
@@ -1055,6 +1074,14 @@ export interface TermixApp extends TermixAppInfo {
   registerHostAction: (action: HostActionContribution) => Disposer;
   registerHostProtocol: (protocol: HostProtocolContribution) => Disposer;
   registerHostBadge: (badge: HostBadgeContribution) => Disposer;
+  /** Draws a host row's status. A layout renders every registered one. */
+  registerHostStatusIndicator: (
+    indicator: HostStatusIndicatorContribution,
+  ) => Disposer;
+  /** Adds a control to the host editor's toolbar. */
+  registerHostEditorToolbarItem: (
+    item: HostEditorToolbarItemContribution,
+  ) => Disposer;
   registerHostContextMenuItem: (
     item: HostContextMenuItemContribution,
   ) => Disposer;

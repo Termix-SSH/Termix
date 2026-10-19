@@ -8,8 +8,6 @@ import { authLogger } from "../../utils/logger.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { parseKeyForStorage } from "../../hosts/stored-ssh-key.js";
-import { registerCredentialKeyRoutes } from "./credential-key-routes.js";
-import { registerCredentialDeployRoutes } from "./credential-deploy-routes.js";
 import { registerCredentialBulkRoutes } from "./credential-bulk-routes.js";
 import {
   logAudit,
@@ -1209,21 +1207,6 @@ router.put(
       res.status(500).json({ error: "Failed to rename folder" });
     }
   },
-);
-
-registerCredentialKeyRoutes(
-  router,
-  authenticateJWT,
-  permissionManager.requirePermission("credentials.view"),
-  requireDataAccess,
-);
-
-registerCredentialDeployRoutes(
-  router,
-  authenticateJWT,
-  permissionManager.requirePermission("credentials.view"),
-  permissionManager.requirePermission("hosts.edit"),
-  requireDataAccess,
 );
 
 export default router;

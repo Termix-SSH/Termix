@@ -52,12 +52,6 @@ vi.mock("../../../utils/logger.js", () => {
   };
   return { authLogger: log, sshLogger: log, databaseLogger: log };
 });
-vi.mock("../../../database/routes/credential-key-routes.js", () => ({
-  registerCredentialKeyRoutes: () => {},
-}));
-vi.mock("../../../database/routes/credential-deploy-routes.js", () => ({
-  registerCredentialDeployRoutes: () => {},
-}));
 vi.mock("../../../database/routes/credential-bulk-routes.js", () => ({
   registerCredentialBulkRoutes: () => {},
 }));

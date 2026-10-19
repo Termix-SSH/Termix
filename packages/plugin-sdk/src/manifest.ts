@@ -37,7 +37,7 @@ export {
  * "^1.2" needs 1.2 or later). engine.termix is checked against the core
  * version by the server.
  */
-export const PLUGIN_API_VERSION = "1.4.0";
+export const PLUGIN_API_VERSION = "1.5.0";
 
 /** The API major, the default engine.api for a new plugin. */
 export const SUPPORTED_PLUGIN_API_VERSION = String(
@@ -688,6 +688,21 @@ export interface PluginManifest {
   nativeDependencies?: string[];
   /** How a linked desktop treats this plugin. Defaults to "mirror". */
   desktop?: PluginDesktopMode;
+  /**
+   * "desktop": the plugin only loads on a desktop app's own embedded backend,
+   * never on a server. It implies desktop "local" and may declare desktop:local.
+   */
+  runtime?: PluginRuntime;
+}
+
+export type PluginRuntime = "desktop";
+export const PLUGIN_RUNTIMES: readonly PluginRuntime[] = ["desktop"];
+
+/** The desktop mode a manifest resolves to. */
+export function resolvePluginDesktopMode(
+  m: Pick<PluginManifest, "desktop" | "runtime">,
+): PluginDesktopMode {
+  return m.desktop ?? (m.runtime === "desktop" ? "local" : "mirror");
 }
 
 export const DEFAULT_BACKEND_ENTRY = "dist/backend.js";
@@ -727,6 +742,7 @@ const ALLOWED_TOP_LEVEL = new Set([
   "platforms",
   "nativeDependencies",
   "desktop",
+  "runtime",
 ]);
 
 const ALLOWED_CONTRIBUTES = new Set([
@@ -903,6 +919,21 @@ export function validateManifest(manifest: unknown): string[] {
     errors.push(
       `Field "desktop" must be one of: ${PLUGIN_DESKTOP_MODES.join(", ")}`,
     );
+  }
+  if (
+    m.runtime !== undefined &&
+    !PLUGIN_RUNTIMES.includes(m.runtime as PluginRuntime)
+  ) {
+    errors.push(
+      `Field "runtime" must be one of: ${PLUGIN_RUNTIMES.join(", ")}`,
+    );
+  }
+  if (
+    m.runtime === "desktop" &&
+    m.desktop !== undefined &&
+    m.desktop !== "local"
+  ) {
+    errors.push(`A "desktop" runtime plugin must use desktop "local"`);
   }
   validateDependencyMap(m.dependencies, "dependencies", errors);
   validateDependencyMap(m.optionalDependencies, "optionalDependencies", errors);
