@@ -9,10 +9,12 @@ import {
   formatBytes,
   formatCount,
   groupChanges,
+  kindsOf,
   matchesQuery,
   mergeReleaseNotes,
   mergePlugins,
   orderByRisk,
+  pageOf,
   pluginSource,
   pluginStatus,
   reportIssueUrl,
@@ -499,5 +501,77 @@ describe("betas", () => {
         lastError: null,
       }),
     ).toBeNull();
+  });
+});
+
+describe("plugin kinds", () => {
+  it("joins installed contributions with the registry list", () => {
+    const [row] = mergePlugins(
+      [summary({ contributes: { tabs: [{}] } as never })],
+      [entry({ contributes: ["layouts"] })],
+    );
+    expect(row.kinds.sort()).toEqual(["layouts", "tabs"]);
+  });
+
+  it("counts only the kinds worth filtering by", () => {
+    const rows = mergePlugins(
+      [],
+      [
+        entry({ id: "a", installed: false, contributes: ["layouts", "uses"] }),
+        entry({ id: "b", installed: false, contributes: ["layouts", "tabs"] }),
+      ],
+    );
+    expect(kindsOf(rows)).toEqual([
+      { kind: "layouts", count: 2 },
+      { kind: "tabs", count: 1 },
+    ]);
+  });
+});
+
+describe("unsupported plugins", () => {
+  it("marks a listed plugin with no release this build runs", () => {
+    const [row] = mergePlugins(
+      [],
+      [
+        entry({
+          installed: false,
+          latestVersion: null,
+          versions: [
+            {
+              version: "1.0.0",
+              compatible: false,
+              needsTermix: ">=26.11.0",
+              capabilities: [],
+              size: 1,
+            },
+          ],
+        }),
+      ],
+    );
+    expect(row.unsupported).toBe(true);
+    expect(row.needsTermix).toBe(">=26.11.0");
+  });
+
+  it("leaves a runnable plugin alone", () => {
+    const [row] = mergePlugins([], [entry({ installed: false })]);
+    expect(row.unsupported).toBe(false);
+    expect(row.needsTermix).toBeNull();
+  });
+});
+
+describe("pageOf", () => {
+  const rows = Array.from({ length: 50 }, (_, i) => i);
+
+  it("slices one page", () => {
+    expect(pageOf(rows, 2, 24)).toEqual({
+      items: rows.slice(24, 48),
+      page: 2,
+      pages: 3,
+    });
+  });
+
+  it("clamps a page past the end", () => {
+    expect(pageOf(rows, 9, 24).page).toBe(3);
+    expect(pageOf([], 4, 24)).toEqual({ items: [], page: 1, pages: 1 });
   });
 });

@@ -164,7 +164,7 @@ Unknown fields are refused at every level, so a typo fails validation. The schem
 | `icon`                                 | A [Lucide](https://lucide.dev/icons/) icon name, like `Hand`.                                                       |
 | `features`                             | Up to 20 short lines shown on the plugin's page.                                                                    |
 | `docs`                                 | An https link to your docs.                                                                                         |
-| `engine.termix`                        | Termix versions you work with, like `>=26.10.0`.                                                                    |
+| `engine.termix`                        | Termix versions you work with, like `>=26.10.0`. Older Termix builds don't list a release they can't run.           |
 | `engine.api`                           | Plugin API range, like `^1.2`. A major bump of the API is breaking.                                                 |
 | `capabilities`                         | What your code may do. See the reference at the end.                                                                |
 | `dependencies`, `optionalDependencies` | Other plugins, `{ "snippets": "^1.0.0" }`. You must keep working without optional ones.                             |

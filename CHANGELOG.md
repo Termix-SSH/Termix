@@ -11,6 +11,9 @@
 - Restore the bundled copy of a plugin from the repair screen, which also pins the shipped version
 - Switching layouts closes the tabs only the old layout could show, like its Settings tab
 - A chosen layout whose plugin was uninstalled falls back to the default instead of the repair screen
+- Filter plugins by type, like layouts, themes or tabs, from a filter list beside the results
+- Browse shows plugins a page at a time
+- Plugins that need a newer Termix are hidden in Browse, with a toggle to show them
 
 ### Changed
 
@@ -18,6 +21,7 @@
 - Your theme is saved to your account so your other devices use it too, unless you keep settings on this device only
 - The themes besides light and dark now come from a bundled themes plugin. It can be swapped but not removed, and Termix keeps a basic light and dark theme of its own
 - A theme that no longer exists shows as System instead of an unstyled page
+- Installs and updates from a registry check the Termix version a plugin needs, not only its plugin API
 
 ## 26.10.2
 

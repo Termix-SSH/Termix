@@ -308,6 +308,8 @@ export interface RegistryPluginVersion {
   /** A beta, offered only to plugins on the beta channel. */
   prerelease?: boolean;
   compatible: boolean;
+  /** The Termix range this version needs, when this build is too old. */
+  needsTermix?: string | null;
   capabilities: string[];
   publishedAt?: string;
   releaseNotesUrl?: string;
@@ -332,6 +334,8 @@ export interface RegistryPluginEntry {
   videoId?: string;
   features?: string[];
   docs?: string;
+  /** The manifest's contributes keys, like layouts or themes. */
+  contributes?: string[];
   versions: RegistryPluginVersion[];
   /** Newest release on the plugin's channel. */
   latestVersion: string | null;

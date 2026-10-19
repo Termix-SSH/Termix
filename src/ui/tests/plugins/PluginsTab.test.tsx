@@ -24,12 +24,31 @@ const plugin = {
   versions: [],
   downloads: null,
   managedByServer: false,
+  kinds: [] as string[],
+  category: "",
+  unsupported: false,
+  needsTermix: null as string | null,
 };
 let linked = false;
+let extra: Array<typeof plugin> = [];
+
+function listed(
+  id: string,
+  overrides: Partial<typeof plugin> = {},
+): typeof plugin {
+  return {
+    ...plugin,
+    id,
+    name: `Listed ${id}`,
+    installed: false,
+    status: null as never,
+    ...overrides,
+  };
+}
 
 vi.mock("@/plugins/use-plugins-manager", () => ({
   usePluginsManager: () => ({
-    plugins: [plugin],
+    plugins: [plugin, ...extra],
     loading: false,
     refreshing: false,
     refresh: vi.fn(),
@@ -50,6 +69,7 @@ async function renderTab() {
   await i18n.use(initReactI18next).init({
     lng: "en",
     resources: { en: { translation: en } },
+    interpolation: { escapeValue: false },
   });
   return render(
     <I18nextProvider i18n={i18n}>
@@ -61,6 +81,7 @@ async function renderTab() {
 beforeEach(() => {
   localStorage.clear();
   linked = false;
+  extra = [];
   plugin.managedByServer = false;
 });
 afterEach(cleanup);
@@ -90,6 +111,73 @@ describe("PluginsTab", () => {
 
     expect(screen.getByText("Demo Plugin")).toBeTruthy();
     expect(localStorage.getItem("pluginsTab.browseInstalled")).toBe("show");
+  });
+
+  it("filters Browse by what a plugin adds", async () => {
+    extra = [
+      listed("layout", { kinds: ["layouts", "tabs"] }),
+      listed("tabs", { kinds: ["tabs"] }),
+    ];
+    await renderTab();
+    fireEvent.click(screen.getByText(en.plugins.manager.tabs.browse));
+    expect(screen.getByText("Listed layout")).toBeTruthy();
+    expect(screen.getByText("Listed tabs")).toBeTruthy();
+
+    const [layoutsFilter] = screen.getAllByRole("button", {
+      name: new RegExp(`^${en.plugins.manager.kinds.layouts}`),
+    });
+    fireEvent.click(layoutsFilter);
+
+    expect(screen.getByText("Listed layout")).toBeTruthy();
+    expect(screen.queryByText("Listed tabs")).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `Remove filter ${en.plugins.manager.kinds.layouts}`,
+      }),
+    );
+    expect(screen.getByText("Listed tabs")).toBeTruthy();
+  });
+
+  it("hides plugins this build can't run until shown", async () => {
+    extra = [
+      listed("later", {
+        unsupported: true,
+        needsTermix: ">=26.11.0",
+        latestVersion: null as never,
+      }),
+    ];
+    await renderTab();
+    fireEvent.click(screen.getByText(en.plugins.manager.tabs.browse));
+    expect(screen.queryByText("Listed later")).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("switch", { name: /Show unsupported \(1\)/ }),
+    );
+
+    expect(screen.getByText("Listed later")).toBeTruthy();
+    expect(screen.getByText("Needs Termix >=26.11.0")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: en.plugins.manager.install }),
+    ).toBeNull();
+  });
+
+  it("pages a long Browse list", async () => {
+    extra = Array.from({ length: 30 }, (_, i) =>
+      listed(`p${String(i).padStart(2, "0")}`),
+    );
+    localStorage.setItem("pluginsTab.view", "list");
+    await renderTab();
+    fireEvent.click(screen.getByText(en.plugins.manager.tabs.browse));
+
+    expect(screen.getAllByText(/^Listed p/)).toHaveLength(24);
+    expect(screen.getByText("1-24 of 30")).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: en.plugins.manager.pager.next }),
+    );
+    expect(screen.getAllByText(/^Listed p/)).toHaveLength(6);
+    expect(screen.getByText("Page 2 of 2")).toBeTruthy();
   });
 
   it("switches to a table and remembers it", async () => {

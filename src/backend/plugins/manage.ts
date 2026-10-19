@@ -34,6 +34,7 @@ import {
 } from "./paths.js";
 import {
   OFFICIAL_REGISTRY_ID,
+  canRunRelease,
   downloadRelease,
   fetchRegistryIndex,
   channelReleases,
@@ -42,6 +43,7 @@ import {
   getRegistryStatus,
   isApiCompatible,
   latestOnChannel,
+  neededTermix,
   officialSource,
   parsePluginChannel,
   type PluginChannel,
@@ -257,10 +259,13 @@ export interface RegistryListing {
     videoId?: string;
     features: string[];
     docs?: string;
+    contributes: string[];
     versions: Array<{
       version: string;
       prerelease: boolean;
       compatible: boolean;
+      /** The Termix range this version needs, when this build is too old. */
+      needsTermix: string | null;
       capabilities: string[];
       publishedAt?: string;
       releaseNotesUrl?: string;
@@ -396,7 +401,7 @@ export async function listRegistry(
       const channel = channelOf(record);
       const latest = latestOnChannel(plugin, channel);
       const latestBeta =
-        plugin.prereleases.find((entry) => isApiCompatible(entry.api)) ?? null;
+        plugin.prereleases.find((entry) => canRunRelease(entry)) ?? null;
       const installedVersion =
         live?.manifest.version ?? record?.version ?? null;
       const updateAvailable = Boolean(
@@ -419,10 +424,12 @@ export async function listRegistry(
         videoId: plugin.videoId,
         features: plugin.features,
         docs: plugin.docs,
+        contributes: plugin.contributes,
         versions: channelReleases(plugin, "beta").map((entry) => ({
           version: entry.version,
           prerelease: Boolean(entry.prerelease),
-          compatible: isApiCompatible(entry.api),
+          compatible: canRunRelease(entry),
+          needsTermix: neededTermix(entry),
           capabilities: entry.capabilities,
           publishedAt: entry.publishedAt,
           releaseNotesUrl: entry.releaseNotesUrl,
@@ -902,9 +909,12 @@ async function requireRelease(
       "NOT_IN_REGISTRY",
     );
   }
-  if (!isApiCompatible(found.release.api)) {
+  if (!canRunRelease(found.release)) {
+    const termix = neededTermix(found.release);
     throw new PluginManageError(
-      `${pluginId} ${found.release.version} does not run on this version of Termix`,
+      termix
+        ? `${pluginId} ${found.release.version} needs Termix ${termix}`
+        : `${pluginId} ${found.release.version} does not run on this version of Termix`,
       409,
       "INCOMPATIBLE",
     );
@@ -1498,6 +1508,14 @@ function validateUpload(buffer: Buffer): PluginManifest {
   if (!isApiCompatible(String(manifest.engine.api))) {
     throw new PluginManageError(
       `${manifest.id} ${manifest.version} does not run on this version of Termix`,
+      409,
+      "INCOMPATIBLE",
+    );
+  }
+  const termix = neededTermix({ engine: manifest.engine });
+  if (termix) {
+    throw new PluginManageError(
+      `${manifest.id} ${manifest.version} needs Termix ${termix}`,
       409,
       "INCOMPATIBLE",
     );

@@ -12,6 +12,10 @@ vi.mock("../../utils/safe-outbound-fetch.js", () => ({
   safeOutboundFetch: fetchMock,
 }));
 
+vi.mock("../../utils/app-version.js", () => ({
+  getLocalVersion: () => "26.10.3",
+}));
+
 vi.mock("../../plugins/trust.js", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("../../plugins/trust.js")>();
@@ -44,7 +48,9 @@ import {
   findRelease,
   latestOnChannel,
   getStatsUrl,
+  canRunRelease,
   isApiCompatible,
+  neededTermix,
   parseRegistryIndex,
   parseRegistryStats,
   resetRegistryCache,
@@ -236,6 +242,56 @@ describe("findRelease", () => {
     );
     expect(findRelease(index, "docker", "9.9.9")).toBeNull();
     expect(findRelease(index, "missing")).toBeNull();
+  });
+});
+
+describe("engine ranges", () => {
+  const engine = (termix: string, api = "^1.0") => ({ api, termix });
+
+  it("reads gated releases into versions and prereleases", () => {
+    const index = parseRegistryIndex({
+      plugins: [
+        {
+          id: "classic-layout",
+          versions: [],
+          gated: [
+            version({ version: "1.1.0-beta.1", engine: engine(">=26.10.3") }),
+            version({ version: "1.0.0", engine: engine(">=26.10.3") }),
+          ],
+          contributes: ["layouts", "tabs", "not valid"],
+        },
+      ],
+    });
+    const [plugin] = index.plugins;
+    expect(plugin.versions.map((v) => v.version)).toEqual(["1.0.0"]);
+    expect(plugin.prereleases.map((v) => v.version)).toEqual(["1.1.0-beta.1"]);
+    expect(plugin.contributes).toEqual(["layouts", "tabs"]);
+  });
+
+  it("checks engine.termix and the full engine.api", () => {
+    expect(canRunRelease(version({ engine: engine(">=26.10.3") }))).toBe(true);
+    expect(canRunRelease(version({ engine: engine(">=26.11.0") }))).toBe(false);
+    expect(neededTermix(version({ engine: engine(">=26.11.0") }))).toBe(
+      ">=26.11.0",
+    );
+    expect(neededTermix(version({ engine: engine(">=26.10.0") }))).toBeNull();
+    expect(
+      canRunRelease(version({ engine: engine(">=26.10.0", "^1.99") })),
+    ).toBe(false);
+    expect(canRunRelease(version())).toBe(true);
+  });
+
+  it("skips a release this build is too old for", () => {
+    const index = parseRegistryIndex({
+      plugins: [
+        {
+          id: "docker",
+          versions: [version({ version: "1.0.0" })],
+          gated: [version({ version: "1.1.0", engine: engine(">=26.11.0") })],
+        },
+      ],
+    });
+    expect(findRelease(index, "docker")?.release.version).toBe("1.0.0");
   });
 });
 

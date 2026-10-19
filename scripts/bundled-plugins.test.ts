@@ -276,6 +276,33 @@ describe("pinsFromIndex", () => {
     expect(pins[0]).not.toHaveProperty("onboarding");
   });
 
+  it("pins a release kept in gated", () => {
+    const pins = pinsFromIndex(
+      {
+        plugins: [
+          {
+            id: "look",
+            versions: [],
+            gated: [
+              {
+                version: "1.1.0-beta.1",
+                url: "https://example.test/look-1.1.0-beta.1.tmxplug",
+                sha256: "d".repeat(64),
+              },
+              {
+                version: "1.0.0",
+                url: "https://example.test/look-1.0.0.tmxplug",
+                sha256: "e".repeat(64),
+              },
+            ],
+          },
+        ],
+      },
+      null,
+    );
+    expect(pins[0].url).toBe("https://example.test/look-1.0.0.tmxplug");
+  });
+
   it("pins only the ids asked for", () => {
     expect(pinsFromIndex(index, ["beta"]).map((pin) => pin.id)).toEqual([
       "beta",

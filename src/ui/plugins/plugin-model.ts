@@ -73,6 +73,12 @@ export interface PluginEntry {
   managedByServer: boolean;
   /** The app is drawn with it by default, so it can be swapped but not uninstalled. */
   defaultLook: boolean;
+  /** Contribution keys from the manifest or the registry, like layouts. */
+  kinds: string[];
+  /** Listed, but no release runs on this build. */
+  unsupported: boolean;
+  /** The Termix range the newest release needs, when this build is too old. */
+  needsTermix: string | null;
 }
 
 export type PluginSource =
@@ -171,6 +177,14 @@ export function mergePlugins(
       registryName: entry?.registryName ?? null,
       managedByServer: summary.managedByServer ?? false,
       defaultLook: summary.defaultLook ?? false,
+      kinds: [
+        ...new Set([
+          ...Object.keys(summary.contributes ?? {}),
+          ...(entry?.contributes ?? []),
+        ]),
+      ],
+      unsupported: false,
+      needsTermix: null,
     });
   }
 
@@ -216,6 +230,12 @@ export function mergePlugins(
       registryName: entry.registryName ?? null,
       managedByServer: false,
       defaultLook: false,
+      kinds: entry.contributes ?? [],
+      unsupported: entry.latestVersion === null,
+      needsTermix:
+        entry.latestVersion === null
+          ? (entry.versions.find((v) => v.needsTermix)?.needsTermix ?? null)
+          : null,
     });
   }
 
@@ -258,6 +278,9 @@ export function uploadEntry(preview: PluginUploadPreview): PluginEntry {
     registryName: null,
     managedByServer: false,
     defaultLook: false,
+    kinds: [],
+    unsupported: false,
+    needsTermix: null,
   };
 }
 
@@ -307,6 +330,46 @@ export function matchesQuery(row: PluginEntry, query: string): boolean {
 
 export function categoriesOf(rows: PluginEntry[]): string[] {
   return [...new Set(rows.map((row) => row.category).filter(Boolean))].sort();
+}
+
+/** Contribution keys worth filtering by, in the order the filter lists them. */
+export const PLUGIN_KINDS = [
+  "layouts",
+  "themes",
+  "tabs",
+  "panels",
+  "dashboardCards",
+  "protocols",
+  "auth",
+  "actions",
+  "hostCapability",
+] as const;
+
+export type PluginKind = (typeof PLUGIN_KINDS)[number];
+
+/** The filterable kinds present in a set of rows, with how many have each. */
+export function kindsOf(
+  rows: PluginEntry[],
+): Array<{ kind: PluginKind; count: number }> {
+  return PLUGIN_KINDS.map((kind) => ({
+    kind,
+    count: rows.filter((row) => row.kinds.includes(kind)).length,
+  })).filter((entry) => entry.count > 0);
+}
+
+/** One page of rows, with the page clamped to what exists. */
+export function pageOf<T>(
+  rows: T[],
+  page: number,
+  size: number,
+): { items: T[]; page: number; pages: number } {
+  const pages = Math.max(1, Math.ceil(rows.length / size));
+  const current = Math.min(Math.max(1, page), pages);
+  return {
+    items: rows.slice((current - 1) * size, current * size),
+    page: current,
+    pages,
+  };
 }
 
 export function capabilityRisk(capability: string): CapabilityRisk {

@@ -199,6 +199,17 @@ export function PluginDetail({
                 </Button>
               )}
             </>
+          ) : plugin.unsupported ? (
+            <span
+              className="text-xs text-muted-foreground"
+              title={t("plugins.manager.unsupportedHint")}
+            >
+              {plugin.needsTermix
+                ? t("plugins.manager.needsTermix", {
+                    range: plugin.needsTermix,
+                  })
+                : t("plugins.manager.unsupported")}
+            </span>
           ) : (
             <Button
               variant="outline"

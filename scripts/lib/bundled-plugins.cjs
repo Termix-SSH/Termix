@@ -25,6 +25,7 @@
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
+const semver = require("semver");
 
 const ID = /^[a-z0-9][a-z0-9-]*$/;
 const ENV_NAME = /^[A-Z][A-Z0-9_]*$/;
@@ -251,7 +252,12 @@ function pinsFromIndex(index, ids, current = []) {
   const currentById = new Map(current.map((entry) => [entry.id, entry]));
   const wanted = ids ?? plugins.map((plugin) => plugin.id);
   return [...wanted].sort().map((id) => {
-    const latest = byId.get(id)?.versions?.[0];
+    const listed = byId.get(id);
+    // gated holds releases that need a newer Termix than old builds check for.
+    const latest = [...(listed?.versions ?? []), ...(listed?.gated ?? [])]
+      .filter((entry) => semver.valid(entry.version))
+      .filter((entry) => !semver.prerelease(entry.version))
+      .sort((a, b) => semver.rcompare(a.version, b.version))[0];
     if (!latest) throw new Error(`${id} is not in the registry index`);
     const onboarding = currentById.get(id)?.onboarding;
     const defaultLook = currentById.get(id)?.defaultLook === true;

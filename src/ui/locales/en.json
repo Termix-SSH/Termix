@@ -1490,7 +1490,6 @@
       "noServerAccess": "No access to your servers",
       "searchInstalled": "Search installed",
       "searchPlugins": "Search plugins",
-      "allCategories": "All",
       "nothingMatches": "Nothing matches that.",
       "noneInstalled": "No plugins installed yet. Browse to add some.",
       "nothingHere": "Nothing here.",
@@ -1580,7 +1579,44 @@
       "documentation": "Documentation",
       "envVars": "Environment variables",
       "envRequired": "Required",
-      "envDefault": "Default: {{value}}"
+      "envDefault": "Default: {{value}}",
+      "kinds": {
+        "layouts": "Layouts",
+        "themes": "Themes",
+        "tabs": "Tabs",
+        "panels": "Sidebar panels",
+        "dashboardCards": "Dashboard cards",
+        "protocols": "Connection types",
+        "auth": "Sign in methods",
+        "actions": "Actions",
+        "hostCapability": "Host settings"
+      },
+      "filters": {
+        "type": "Type",
+        "allTypes": "All types",
+        "category": "Category",
+        "allCategories": "All categories",
+        "results_one": "{{count}} plugin",
+        "results_other": "{{count}} plugins",
+        "remove": "Remove filter {{name}}",
+        "clear": "Clear filters",
+        "button": "Filters",
+        "buttonCount": "Filters ({{count}})"
+      },
+      "pager": {
+        "range": "{{from}}-{{to}} of {{total}}",
+        "page": "Page {{page}} of {{pages}}",
+        "previous": "Previous page",
+        "next": "Next page",
+        "perPage": "{{count}} per page",
+        "perPageLabel": "Plugins per page"
+      },
+      "showUnsupportedHint": "These are listed but no release runs on this version yet. Update Termix to install them.",
+      "unsupported": "Needs a newer Termix",
+      "unsupportedHint": "No release of this plugin runs on this version of Termix. Update Termix to install it.",
+      "needsTermix": "Needs Termix {{range}}",
+      "showUnsupported": "Show unsupported ({{count}})",
+      "showMore": "Show {{count}} more ({{total}} left)"
     }
   },
   "settings": {
