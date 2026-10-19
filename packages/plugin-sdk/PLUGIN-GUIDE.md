@@ -563,8 +563,6 @@ export function activate(app: TermixApp) {
   `classic-layout.hostTree` and `classic-layout.dashboard` for other plugins to place with `PluginComponent`.
   It reads the shell with `useShellController()` from `@termix-ssh/plugin-sdk/ui`, which exposes more than
   `useShell()` and may change with Termix. A third party layout should start from `useShell()`.
-- Example Top Bar Layout (https://github.com/Termix-SSH/Plugin-Example-Topbar-Layout) is a small third party
-  style layout built only on `useShell()`, `TabStage` and `@termix-ssh/plugin-sdk/ui`, with a phone version.
 
 A theme is CSS only. Declare it in `contributes.themes` (`id`, `label`, `mode` light or dark, `css` path,
 optional `swatch` colors for the picker) with the `ui:theme` capability. The id becomes a class on `<html>`,
@@ -582,9 +580,7 @@ A plugin that only holds themes needs no code. Leave out `src/`: `termix-plugin 
 - Themes show in the picker in the order core lists its own, then the plugin's order.
 - A theme someone saved that no longer exists shows as System. It comes back when the plugin does.
 - Accent color, UI font, font size and density are not part of a theme. Core applies them on top.
-- Bundled Classic Themes (https://github.com/Termix-SSH/Plugin-Classic-Themes) is a full example, and
-  Example Theme (https://github.com/Termix-SSH/Plugin-Example-Theme) a small one with one light and one dark
-  theme.
+- Bundled Classic Themes (https://github.com/Termix-SSH/Plugin-Classic-Themes) is a full example.
 
 ## Looking native
 
