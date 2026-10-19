@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.13 | Plugin API 1.5.0
+SDK 1.0.14 | Plugin API 1.6.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -300,6 +300,11 @@ router.post("/notes", async (req, res) => {
 - `ctx.rbac.require("manage")` on a single route, `await ctx.rbac.has("manage")` in code. A full id like
   `hosts.edit` checks a core permission.
 - Host access: `ctx.hosts.checkAccess(hostId, "connect" | "view" | "edit" | "manage")`.
+- Managed hosts: with `hosts:lock`, `ctx.hosts.locks.provide({ isLocked, note, allowManualCreate })` makes
+  the hosts you manage read only for the UI, the API and other plugins (pins and order still work), and
+  `allowManualCreate: () => false` blocks adding hosts by hand. Your own `ctx.hosts` writes still go
+  through. `ctx.hosts.setShares(hostId, grants)` replaces a host's whole grant list, and
+  `ctx.credentials.list()` finds the acting user's credentials by name.
 
 ### Errors
 
@@ -898,6 +903,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `hosts:write`            | medium   | Add and edit hosts                                      |
 | `hosts:status-provide`   | medium   | Be the source of host status dots                       |
 | `hosts:activity-provide` | medium   | Be the source of the recent activity list               |
+| `hosts:lock`             | medium   | Make hosts it manages read only for everyone else       |
 | `network:probe`          | medium   | Check that a host answers on a TCP port                 |
 | `credentials:use`        | medium   | Connect with saved credentials without seeing them      |
 | `credentials:write`      | medium   | Save new credentials                                    |

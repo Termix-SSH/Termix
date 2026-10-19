@@ -698,6 +698,36 @@ export interface PluginHostCreateInput {
   sshOptions?: HostSshOptions | null;
   /** Host settings by plugin id, the shape a Termix export carries. */
   pluginSettings?: Record<string, Record<string, unknown>>;
+  /**
+   * Each plugin's own host switch (its manifest enableKey), by plugin id.
+   * A plugin that is not running is skipped and logged; one with no switch
+   * is refused.
+   */
+  pluginEnable?: Record<string, boolean>;
+  /**
+   * Secrets, stored encrypted with the owner's data key and never returned
+   * in a PluginHostRecord. An empty string or null clears the stored value.
+   */
+  password?: string | null;
+  key?: string | null;
+  keyPassword?: string | null;
+  keyType?: string | null;
+  sudoPassword?: string | null;
+  /**
+   * Logins for plugin protocols (contributes.protocols), keyed by protocol
+   * id. null removes that protocol's login. Unknown protocol ids are skipped.
+   */
+  protocolAuth?: Record<string, PluginHostProtocolAuthInput | null>;
+}
+
+/** One protocol login on a host write. Absent keys keep what is stored. */
+export interface PluginHostProtocolAuthInput {
+  authType?: "direct" | "credential" | "none";
+  credentialId?: number | null;
+  username?: string | null;
+  password?: string | null;
+  /** The protocol's declared credentialFields, secret ones included. */
+  fields?: Record<string, string>;
 }
 
 /** Fields a plugin may change on a host the acting user owns. */
@@ -725,6 +755,13 @@ export const PLUGIN_HOST_INPUT_KEYS = [
   "forceKeyboardInteractive",
   "sshOptions",
   "pluginSettings",
+  "pluginEnable",
+  "password",
+  "key",
+  "keyPassword",
+  "keyType",
+  "sudoPassword",
+  "protocolAuth",
 ] as const satisfies readonly (keyof PluginHostCreateInput)[];
 
 /** The same shape canAccessHost returns internally, without secrets. */
@@ -759,6 +796,34 @@ export interface PluginShareableRole {
   id: number;
   name: string;
   displayName: string | null;
+}
+
+/** One grant in ctx.hosts.setShares. */
+export interface PluginHostShareGrant {
+  target: PluginShareTarget;
+  permissionLevel: PluginHostShareLevel;
+  /** Omit for a grant that never expires. */
+  durationHours?: number;
+}
+
+/**
+ * Hosts a plugin manages itself, for example from a config file. Core refuses
+ * edits, deletes and share changes on a locked host from the UI, the API and
+ * other plugins, and marks it in host reads so a layout can show it read only.
+ * Pins and order stay with the user. Only the plugin that locks a host may
+ * still write it.
+ */
+export interface PluginHostLockProvider {
+  isLocked: (hostId: number) => boolean;
+  /** A short line shown under the managed note, or null. */
+  note: (hostId: number) => string | null;
+  /** False blocks adding hosts by hand (editor, import, other plugins). */
+  allowManualCreate: () => boolean;
+}
+
+export interface PluginHostLocksApi {
+  /** Registers this plugin's locks. Needs hosts:lock. Removed on deactivate. */
+  provide: (provider: PluginHostLockProvider) => () => void;
 }
 
 /**
@@ -822,6 +887,15 @@ export interface PluginHosts {
     targets: PluginShareTarget[],
     permissionLevel: PluginHostShareLevel,
     durationHours?: number,
+  ) => Promise<PluginHostShareResult>;
+  /**
+   * Replaces every grant on a host the acting user owns with this list.
+   * Grants that stay keep their row and counters, missing ones are revoked.
+   * Needs hosts:write.
+   */
+  setShares: (
+    hostId: number,
+    grants: PluginHostShareGrant[],
   ) => Promise<PluginHostShareResult>;
   /** Users the caller may pick as a share target, for building a picker UI. */
   listUsers: () => Promise<PluginShareableUser[]>;
@@ -896,6 +970,8 @@ export interface PluginHosts {
   ) => () => void;
   /** The recent activity list on the dashboard. */
   activity: PluginHostActivityApi;
+  /** Read only hosts this plugin manages. */
+  locks: PluginHostLocksApi;
 }
 
 export interface PluginHostImportOptions {
@@ -2011,6 +2087,15 @@ export interface PluginSshKeyCredential {
   publicKey: string | null;
 }
 
+/** A saved credential without its secrets. */
+export interface PluginCredentialSummary {
+  id: number;
+  name: string;
+  username: string | null;
+  authType: string;
+  folder: string | null;
+}
+
 /** A key pair to save as a new credential for the acting user. */
 export interface PluginSshKeyCredentialInput {
   name: string;
@@ -2032,6 +2117,12 @@ export interface PluginCredentials {
    * Needs credentials:use and the core credentials.view permission. Audited.
    */
   listSshKeys: () => Promise<PluginSshKeyCredential[]>;
+  /**
+   * The acting user's own credentials by name, with no secret material, so a
+   * plugin can point a host at one. Needs credentials:use and the core
+   * credentials.view permission. Audited.
+   */
+  list: () => Promise<PluginCredentialSummary[]>;
   /**
    * Saves a key pair as a new encrypted credential owned by the acting user
    * and returns its id. Needs credentials:write, the core credentials.create

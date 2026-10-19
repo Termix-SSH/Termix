@@ -14,6 +14,8 @@
 - Filter plugins by type, like layouts, themes or tabs, from a filter list beside the results
 - Browse shows plugins a page at a time
 - Plugins that need a newer Termix are hidden in Browse, with a toggle to show them
+- Hosts can be managed from a config file through a plugin. Managed hosts are read only for everyone, but pins and order still work
+- A plugin can block adding hosts by hand, so every host comes from one place
 
 ### Changed
 

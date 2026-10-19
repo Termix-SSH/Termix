@@ -402,6 +402,7 @@ export {
 } from "@/types/host-sidebar-preferences";
 export type {
   HostData,
+  HostLock,
   HostProtocolAuthInput,
   ProxyNode,
   SSHHost,
@@ -656,6 +657,8 @@ export {
   getHostAccess,
   getHostAuthOverride,
   getHostPassword,
+  getHostPolicy,
+  type HostPolicy,
   getHostSidebarPreferences,
   getLogLevel,
   getPasswordLoginAllowed,

@@ -150,6 +150,37 @@ export function createPluginCredentials({
       }
     },
 
+    list: async () => {
+      try {
+        await assertCapability(pluginId, "credentials:use", declared);
+        const userId = actingUser();
+        await requireCorePermission(userId, "credentials.view");
+        const { createCurrentCredentialRepository } =
+          await import("../database/repositories/factory.js");
+        const rows =
+          await createCurrentCredentialRepository().listDecryptedByUserId(
+            userId,
+          );
+        const list = rows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          username: row.username ?? null,
+          authType: String(row.authType ?? ""),
+          folder: row.folder ?? null,
+        }));
+        await audit("credentials_list", `${list.length} credentials`, {
+          success: true,
+        });
+        return list;
+      } catch (error) {
+        await audit("credentials_list", "saved credentials", {
+          success: false,
+          errorMessage: errorText(error),
+        });
+        throw error;
+      }
+    },
+
     createSshKey: async (input) => {
       const details = `SSH key "${input?.name ?? ""}"`;
       try {

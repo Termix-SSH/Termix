@@ -16,6 +16,31 @@ import {
   folderCredentialIds,
   setFolderCredentialDefault,
 } from "../../hosts/defaults/service.js";
+import {
+  assertHostsUnlocked,
+  hasHostLocks,
+  sendHostLocked,
+} from "../../hosts/locks.js";
+
+/** Refuses a folder change that would touch a locked host. */
+async function folderHostsUnlocked(
+  userId: string,
+  folderName: string,
+  res: Response,
+): Promise<boolean> {
+  if (!hasHostLocks()) return true;
+  const inFolder = await createCurrentHostFolderRepository().listHostsInFolder(
+    userId,
+    folderName,
+  );
+  try {
+    assertHostsUnlocked(inFolder.map((host) => host.id));
+    return true;
+  } catch (error) {
+    if (sendHostLocked(res, error)) return false;
+    throw error;
+  }
+}
 
 type HostFolderRoutesDeps = {
   authenticateJWT: RequestHandler;
@@ -86,6 +111,7 @@ export function registerHostFolderRoutes(
       }
 
       try {
+        if (!(await folderHostsUnlocked(userId, oldName, res))) return;
         const { updatedHosts, updatedCredentials } =
           await createCurrentHostFolderRepository().renameFolder(
             userId,
@@ -417,6 +443,7 @@ export function registerHostFolderRoutes(
       });
 
       try {
+        if (!(await folderHostsUnlocked(userId, folderName, res))) return;
         const hostFolderRepository = createCurrentHostFolderRepository();
         const hostsToDelete = await hostFolderRepository.listHostsInFolder(
           userId,

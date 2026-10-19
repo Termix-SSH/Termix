@@ -44,6 +44,7 @@ import {
   validateSettingsSave,
   type PluginSettingsScope,
 } from "../../plugins/settings.js";
+import { assertHostsUnlocked, sendHostLocked } from "../../hosts/locks.js";
 import {
   getAuditUsername,
   getRequestMeta,
@@ -1878,6 +1879,18 @@ router.put(
       const inherit = Array.isArray(inheritRaw)
         ? inheritRaw.filter((key): key is string => typeof key === "string")
         : [];
+      // A managed host keeps its settings; only personal ones stay per user.
+      const changesShared = [...Object.keys(written), ...inherit].some(
+        (key) => !findField(manifest, "host", key)?.personal,
+      );
+      if (changesShared) {
+        try {
+          assertHostsUnlocked([hostId]);
+        } catch (error) {
+          if (sendHostLocked(res, error)) return;
+          throw error;
+        }
+      }
       const errors = await applySettings(
         userId,
         manifest,

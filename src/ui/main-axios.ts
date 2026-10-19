@@ -879,6 +879,8 @@ export {
   updateSSHHost,
   bulkUpdateSSHHosts,
   reorderSSHHosts,
+  getHostPolicy,
+  type HostPolicy,
   deleteSSHHost,
   getSSHHostById,
   testProxyConnection,

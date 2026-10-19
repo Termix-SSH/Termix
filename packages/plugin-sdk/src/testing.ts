@@ -76,6 +76,9 @@ import type {
   PluginHostProbeTarget,
   PluginHostStatusEntry,
   PluginActivityProvider,
+  PluginHostLockProvider,
+  PluginCredentialSummary,
+  PluginHostShareGrant,
   PluginHostStatusProvider,
   PluginNotification,
   PluginNotificationChannel,
@@ -140,6 +143,8 @@ export interface FakeContextOptions {
   protocolTargets?: Record<string, PluginProtocolTarget>;
   /** What ctx.credentials.listSshKeys answers. */
   sshKeyCredentials?: PluginSshKeyCredential[];
+  /** What ctx.credentials.list answers. */
+  credentialSummaries?: PluginCredentialSummary[];
   /** What ctx.desktop.available() answers. Defaults to false. */
   desktopAvailable?: boolean;
   /** What ctx.desktop.local is. Calls throw when this is not given. */
@@ -285,6 +290,8 @@ export interface FakePluginContext {
   hostStatusProviders: PluginHostStatusProvider[];
   /** Every provider passed to ctx.hosts.activity.provide that is still registered. */
   activityProviders: PluginActivityProvider[];
+  /** Every provider passed to ctx.hosts.locks.provide that is still registered. */
+  hostLockProviders: PluginHostLockProvider[];
   /** Topics emitted through ctx.events.emit, in order. */
   emitted: Array<{ topic: string; payload: unknown }>;
   /** Backing store behind ctx.kv. */
@@ -317,6 +324,8 @@ export interface FakePluginContext {
     permissionLevel: string;
     durationHours?: number;
   }>;
+  /** Every ctx.hosts.setShares call, in order. */
+  hostShareSets: Array<{ hostId: number; grants: PluginHostShareGrant[] }>;
   /** Everything registered through ctx.auth. */
   auth: FakeAuthRegistrations;
   /** Every ctx.desktop.openIsolatedWindow call, in order. */
@@ -488,7 +497,14 @@ function applyHostInput(
   const {
     tags,
     pluginSettings: _settings,
+    pluginEnable: _pluginEnable,
     forceKeyboardInteractive: _fki,
+    password: _password,
+    key: _key,
+    keyPassword: _keyPassword,
+    keyType: _keyType,
+    sudoPassword: _sudoPassword,
+    protocolAuth: _protocolAuth,
     ...rest
   } = input;
   const next: PluginHostRecord = { ...record };
@@ -517,6 +533,7 @@ export function createFakeContext(
   const emitted: Array<{ topic: string; payload: unknown }> = [];
   const hostStatusProviders: PluginHostStatusProvider[] = [];
   const activityProviders: PluginActivityProvider[] = [];
+  const hostLockProviders: PluginHostLockProvider[] = [];
   const kv = new Map<string, unknown>();
   const tables: PluginTableDefinition[] = [];
   const syncEntities: SyncEntityRegistration[] = [];
@@ -534,6 +551,7 @@ export function createFakeContext(
   }>();
   const sshConnections: FakePluginContext["sshConnections"] = [];
   const hostShares: FakePluginContext["hostShares"] = [];
+  const hostShareSets: FakePluginContext["hostShareSets"] = [];
   const desktopWindows: FakePluginContext["desktopWindows"] = [];
   const externalClientLaunches: FakePluginContext["externalClientLaunches"] =
     [];
@@ -1004,6 +1022,10 @@ export function createFakeContext(
         hostShares.push({ hostId, targets, permissionLevel, durationHours });
         return { hostId, shared: true };
       },
+      setShares: async (hostId, grants) => {
+        hostShareSets.push({ hostId, grants: [...grants] });
+        return { hostId, shared: true };
+      },
       listUsers: async () => options.shareableUsers ?? [],
       listRoles: async () => options.shareableRoles ?? [],
       trackSession: (hostId) => {
@@ -1031,6 +1053,15 @@ export function createFakeContext(
           return () => {
             const at = activityProviders.indexOf(provider);
             if (at >= 0) activityProviders.splice(at, 1);
+          };
+        },
+      },
+      locks: {
+        provide: (provider) => {
+          hostLockProviders.push(provider);
+          return () => {
+            const at = hostLockProviders.indexOf(provider);
+            if (at >= 0) hostLockProviders.splice(at, 1);
           };
         },
       },
@@ -1286,6 +1317,7 @@ export function createFakeContext(
     },
 
     credentials: {
+      list: async () => [...(options.credentialSummaries ?? [])],
       listSshKeys: async () => [
         ...(options.sshKeyCredentials ?? []),
         ...createdSshKeys.map((key) => ({
@@ -1468,6 +1500,7 @@ export function createFakeContext(
     disposals,
     hostStatusProviders,
     activityProviders,
+    hostLockProviders,
     emitted,
     kv,
     tables,
@@ -1478,6 +1511,7 @@ export function createFakeContext(
     coreSettings,
     sshConnections,
     hostShares,
+    hostShareSets,
     auth,
     desktopWindows,
     externalClientLaunches,
@@ -1560,6 +1594,8 @@ export interface MockContextOptions {
   protocolTargets?: Record<string, PluginProtocolTarget>;
   /** What ctx.credentials.listSshKeys serves. */
   sshKeyCredentials?: PluginSshKeyCredential[];
+  /** What ctx.credentials.list serves. */
+  credentialSummaries?: PluginCredentialSummary[];
   /** What ctx.desktop.available() answers. */
   desktopAvailable?: boolean;
   /** What ctx.desktop.local is. See FakeContextOptions. */
@@ -1699,6 +1735,7 @@ export function createMockCtx(
     services: options.services,
     protocolTargets: options.protocolTargets,
     sshKeyCredentials: options.sshKeyCredentials,
+    credentialSummaries: options.credentialSummaries,
     desktopAvailable: options.desktopAvailable,
     desktopLocal: options.desktopLocal,
     auditEntries: options.auditEntries,
@@ -1900,6 +1937,10 @@ export function createMockCtx(
         require("hosts:write");
         return ctx.hosts.share(hostId, targets, permissionLevel, durationHours);
       },
+      setShares: async (hostId, grants) => {
+        require("hosts:write");
+        return ctx.hosts.setShares(hostId, grants);
+      },
       listUsers: async () => {
         require("hosts:write");
         return ctx.hosts.listUsers();
@@ -1928,6 +1969,12 @@ export function createMockCtx(
         provide: (provider) => {
           require("hosts:activity-provide");
           return ctx.hosts.activity.provide(provider);
+        },
+      },
+      locks: {
+        provide: (provider) => {
+          require("hosts:lock");
+          return ctx.hosts.locks.provide(provider);
         },
       },
       status: {
@@ -2098,6 +2145,10 @@ export function createMockCtx(
     },
 
     credentials: {
+      list: async () => {
+        require("credentials:use");
+        return ctx.credentials.list();
+      },
       listSshKeys: async () => {
         require("credentials:use");
         return ctx.credentials.listSshKeys();

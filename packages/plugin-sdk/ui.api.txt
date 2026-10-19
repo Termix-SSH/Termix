@@ -151,7 +151,9 @@ HostFeatureFieldsProps (type): HostFeatureFieldsProps
 HostFolder (type): HostFolder
 HostGroupKey (type): HostGroupKey
 HostKeyVerificationDialog (value): ({ isOpen, scenario, ip, port, hostname, fingerprint, oldFingerprint, onAccept, onReject, backgroundColor, }: HostKeyVerificationDialogProps) => Element
+HostLock (type): HostLock
 HostOnly (value): ({ children }: { children: ReactNode; }) => Element
+HostPolicy (type): HostPolicy
 HostProtocolAuthInput (type): HostProtocolAuthInput
 HostProtocolDef (type): HostProtocolDef
 HostProtocols (type): HostProtocols
@@ -411,6 +413,7 @@ getHostAuthOverride (value): (hostId: number, protocol: string, sharedCopySyncId
 getHostDefaultsLevel (value): (target: HostDefaultsTarget) => Promise<HostDefaultsLevelData>
 getHostEditorSection (value): (id: string) => HostEditorSectionDef
 getHostPassword (value): (hostId: number, field?: "key" | "password" | "sudoPassword" | "keyPassword") => Promise<string>
+getHostPolicy (value): () => Promise<HostPolicy>
 getHostSidebarPreferences (value): () => Promise<HostSidebarPreferences>
 getHostTags (value): () => Promise<string[]>
 getLiveHostStatus (value): (hostId: number) => StatusValue

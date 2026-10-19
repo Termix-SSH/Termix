@@ -11,6 +11,7 @@ import { sshLogger } from "../../utils/logger.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { createCurrentHostRepository } from "../repositories/factory.js";
 import { validateParentHostId } from "./host-parent-validation.js";
+import { assertHostsUnlocked, sendHostLocked } from "../../hosts/locks.js";
 
 import { setHostPluginEnabled } from "./host-plugin-settings.js";
 
@@ -141,6 +142,15 @@ export function registerHostBulkRoutes(
         );
 
         const ownedIds = ownedHosts.map((h) => h.id);
+        // Pins stay the user's own on a managed host.
+        if (Object.keys(updates).some((key) => key !== "pin")) {
+          try {
+            assertHostsUnlocked(ownedIds);
+          } catch (error) {
+            if (sendHostLocked(res, error)) return;
+            throw error;
+          }
+        }
         const unauthorizedIds = hostIds.filter(
           (id: number) => !ownedIds.includes(id),
         );

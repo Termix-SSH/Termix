@@ -167,6 +167,7 @@
           "network:probe",
           "hosts:status-provide",
           "hosts:activity-provide",
+          "hosts:lock",
           "desktop:window",
           "desktop:local",
           "users:impersonate",

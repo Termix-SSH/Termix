@@ -20,6 +20,7 @@ import type {
   PluginShareableUser,
   PluginShareableRole,
   PluginHostJumpHost,
+  PluginHostShareGrant,
 } from "@termix-ssh/plugin-sdk/backend";
 import { PLUGIN_HOST_INPUT_KEYS } from "@termix-ssh/plugin-sdk/backend";
 import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
@@ -35,6 +36,11 @@ import { hostTerminalExport } from "../database/routes/host-normalizers.js";
 import type { DisposableBag } from "./disposables.js";
 import { pluginEvents, TOPICS } from "./events.js";
 import { pluginLogger } from "../utils/logger.js";
+import {
+  assertHostsUnlocked,
+  assertManualCreateAllowed,
+  provideHostLocks,
+} from "../hosts/locks.js";
 
 type AuditFn = (
   action: string,
@@ -207,6 +213,8 @@ void inputKeysComplete;
 export function toHostWrite(input: PluginHostUpdateInput): {
   row: Record<string, unknown>;
   settings: Record<string, Record<string, unknown>>;
+  protocolAuth: Record<string, unknown> | null;
+  pluginEnable: Record<string, boolean>;
 } {
   const unknown = Object.keys(input ?? {}).filter(
     (key) => !INPUT_KEYS.has(key),
@@ -268,6 +276,32 @@ export function toHostWrite(input: PluginHostUpdateInput): {
         ? null
         : JSON.stringify(parseSshOptions(input.sshOptions)),
   );
+  for (const key of [
+    "password",
+    "key",
+    "keyPassword",
+    "keyType",
+    "sudoPassword",
+  ] as const) {
+    const value = input[key];
+    if (value !== undefined && value !== null && typeof value !== "string") {
+      throw new PluginHostInputError(`${key} must be a string`);
+    }
+    set(key, value === undefined ? undefined : value || null);
+  }
+
+  let protocolAuth: Record<string, unknown> | null = null;
+  if (input.protocolAuth !== undefined && input.protocolAuth !== null) {
+    if (
+      typeof input.protocolAuth !== "object" ||
+      Array.isArray(input.protocolAuth)
+    ) {
+      throw new PluginHostInputError(
+        "protocolAuth must map protocol ids to their logins",
+      );
+    }
+    protocolAuth = input.protocolAuth as Record<string, unknown>;
+  }
 
   const settings: Record<string, Record<string, unknown>> = {};
   if (input.pluginSettings !== undefined && input.pluginSettings !== null) {
@@ -288,7 +322,136 @@ export function toHostWrite(input: PluginHostUpdateInput): {
       settings[pluginId] = values;
     }
   }
-  return { row, settings };
+  const pluginEnable: Record<string, boolean> = {};
+  if (input.pluginEnable !== undefined && input.pluginEnable !== null) {
+    if (
+      typeof input.pluginEnable !== "object" ||
+      Array.isArray(input.pluginEnable)
+    ) {
+      throw new PluginHostInputError(
+        "pluginEnable must map plugin ids to true or false",
+      );
+    }
+    for (const [pluginId, enabled] of Object.entries(input.pluginEnable)) {
+      if (typeof enabled !== "boolean") {
+        throw new PluginHostInputError(
+          `pluginEnable.${pluginId} must be true or false`,
+        );
+      }
+      pluginEnable[pluginId] = enabled;
+    }
+  }
+  return { row, settings, protocolAuth, pluginEnable };
+}
+
+/** Folds pluginEnable into each plugin's settings under its enableKey. */
+async function foldPluginEnable(
+  settings: Record<string, Record<string, unknown>>,
+  pluginEnable: Record<string, boolean>,
+): Promise<Record<string, Record<string, unknown>>> {
+  const ids = Object.keys(pluginEnable);
+  if (ids.length === 0) return settings;
+  const { hostSettingsPlugins } =
+    await import("../database/routes/host-plugin-settings.js");
+  const running = hostSettingsPlugins();
+  const out = { ...settings };
+  for (const pluginId of ids) {
+    const manifest = running.find((m) => m.id === pluginId);
+    if (!manifest) {
+      // checkHostPluginSettingsInput skips and logs a plugin that is not running.
+      out[pluginId] = { ...out[pluginId] };
+      continue;
+    }
+    const enableKey = manifest.contributes?.settings?.host?.enableKey;
+    if (!enableKey) {
+      throw new PluginHostInputError(`${pluginId} has no host switch`);
+    }
+    out[pluginId] = { ...out[pluginId], [enableKey]: pluginEnable[pluginId] };
+  }
+  return out;
+}
+
+/** Writes a host's protocol logins; a credential the owner can't use is refused. */
+async function writeHostProtocolAuth(
+  ownerId: string,
+  hostId: number,
+  protocolAuth: Record<string, unknown> | null,
+): Promise<void> {
+  if (!protocolAuth) return;
+  const { readProtocolAuthPayload, writeProtocolAuth } =
+    await import("../hosts/protocol-auth/protocol-auth.js");
+  const patch = readProtocolAuthPayload({ protocolAuth });
+  if (!patch) return;
+  const { findUsableCredential } =
+    await import("../hosts/usable-credential.js");
+  for (const [protocol, login] of patch) {
+    const credentialId = Number(login?.credentialId);
+    if (
+      Number.isInteger(credentialId) &&
+      credentialId > 0 &&
+      !(await findUsableCredential(credentialId, ownerId))
+    ) {
+      throw new PluginHostInputError(
+        `protocolAuth.${protocol}: credential ${credentialId} not found`,
+      );
+    }
+  }
+  await writeProtocolAuth(ownerId, hostId, patch, { isOwner: true });
+}
+
+const SHARE_LEVELS: readonly string[] = ["connect", "view", "edit", "manage"];
+
+/** Upserts one grant and snapshots the host's secrets for it. */
+async function grantHostShare(
+  hostId: number,
+  ownerId: string,
+  grantedBy: string,
+  target: PluginShareTarget,
+  permissionLevel: PluginHostShareLevel,
+  expiresAt: string | null,
+): Promise<number> {
+  const { createCurrentRbacAccessRepository } =
+    await import("../database/repositories/factory.js");
+  const grant = await createCurrentRbacAccessRepository().upsertHostAccess({
+    hostId,
+    grantedBy,
+    permissionLevel,
+    expiresAt,
+    ...(target.type === "user"
+      ? { targetType: "user" as const, targetUserId: target.id as string }
+      : { targetType: "role" as const, targetRoleId: target.id as number }),
+  });
+
+  const { SharedHostSecretsManager } =
+    await import("../utils/shared-host-secrets-manager.js");
+  const secretsManager = SharedHostSecretsManager.getInstance();
+  try {
+    if (target.type === "user") {
+      await secretsManager.snapshotForUser(
+        grant.id,
+        hostId,
+        target.id as string,
+        ownerId,
+      );
+    } else {
+      await secretsManager.snapshotForRole(
+        grant.id,
+        hostId,
+        target.id as number,
+        ownerId,
+      );
+    }
+  } catch {
+    // A snapshot failure never blocks the grant: the recipient can
+    // still be prompted, or the owner can retry sharing later.
+  }
+  return grant.id;
+}
+
+function hoursFromNow(durationHours: number | undefined): string | null {
+  return durationHours && durationHours > 0
+    ? new Date(Date.now() + durationHours * 60 * 60 * 1000).toISOString()
+    : null;
 }
 
 function actingUser(): string {
@@ -476,6 +639,7 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
     create: async (host: PluginHostCreateInput): Promise<PluginHostRecord> => {
       try {
         await requireWrite();
+        assertManualCreateAllowed(pluginId);
       } catch (error) {
         await audit("hosts_create", host?.name ?? host?.ip ?? "host", {
           success: false,
@@ -484,8 +648,10 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
         throw error;
       }
       const userId = actingUser();
-      const { row, settings } = toHostWrite(host);
-      const writes = await checkSettings(settings);
+      const { row, settings, protocolAuth, pluginEnable } = toHostWrite(host);
+      const writes = await checkSettings(
+        await foldPluginEnable(settings, pluginEnable),
+      );
       const { createCurrentHostRepository } =
         await import("../database/repositories/factory.js");
       const { applyHostDefaultsToWrite, applyDefaultsAfterHostWrite } =
@@ -504,6 +670,7 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
           userId,
           columns,
         );
+      await writeHostProtocolAuth(userId, created.id, protocolAuth);
       await applyDefaultsAfterHostWrite(created.id);
       await writeSettings(created.id, writes);
       await markSettingsOwn(created.id, writes);
@@ -520,6 +687,7 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
     ): Promise<PluginHostRecord | null> => {
       try {
         await requireWrite();
+        assertHostsUnlocked([hostId], pluginId);
       } catch (error) {
         await audit("hosts_update", `host ${hostId}`, {
           success: false,
@@ -528,8 +696,10 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
         throw error;
       }
       const userId = actingUser();
-      const { row, settings } = toHostWrite(patch);
-      const writes = await checkSettings(settings);
+      const { row, settings, protocolAuth, pluginEnable } = toHostWrite(patch);
+      const writes = await checkSettings(
+        await foldPluginEnable(settings, pluginEnable),
+      );
       const { createCurrentHostRepository } =
         await import("../database/repositories/factory.js");
       const { applyHostDefaultsToWrite, applyDefaultsAfterHostWrite } =
@@ -560,6 +730,7 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
           columns,
         );
       if (updated) {
+        await writeHostProtocolAuth(userId, hostId, protocolAuth);
         await writeSettings(hostId, writes);
         await markSettingsOwn(hostId, writes);
         await applyDefaultsAfterHostWrite(hostId, {
@@ -584,6 +755,7 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
     delete: async (hostId: number): Promise<boolean> => {
       try {
         await requireWrite();
+        assertHostsUnlocked([hostId], pluginId);
         const userId = actingUser();
         const { PermissionManager } =
           await import("../utils/permission-manager.js");
@@ -631,6 +803,7 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
     ): Promise<PluginHostShareResult> => {
       try {
         await requireWrite();
+        assertHostsUnlocked([hostId], pluginId);
       } catch (error) {
         await audit("hosts_share", `host ${hostId}`, {
           success: false,
@@ -660,10 +833,8 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
         return result;
       }
 
-      const {
-        createCurrentHostResolutionRepository,
-        createCurrentRbacAccessRepository,
-      } = await import("../database/repositories/factory.js");
+      const { createCurrentHostResolutionRepository } =
+        await import("../database/repositories/factory.js");
       const ownerId =
         (await createCurrentHostResolutionRepository().findHostOwnerId(
           hostId,
@@ -677,53 +848,92 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
         return { hostId, shared: false, reason: "owner" };
       }
 
-      const expiresAt =
-        durationHours && durationHours > 0
-          ? new Date(Date.now() + durationHours * 60 * 60 * 1000).toISOString()
-          : null;
-
-      const rbacAccessRepository = createCurrentRbacAccessRepository();
-      const { SharedHostSecretsManager } =
-        await import("../utils/shared-host-secrets-manager.js");
-      const secretsManager = SharedHostSecretsManager.getInstance();
-
+      const expiresAt = hoursFromNow(durationHours);
       for (const target of targets) {
-        const grant = await rbacAccessRepository.upsertHostAccess({
+        await grantHostShare(
           hostId,
-          grantedBy: userId,
+          ownerId,
+          userId,
+          target,
           permissionLevel,
           expiresAt,
-          ...(target.type === "user"
-            ? { targetType: "user" as const, targetUserId: target.id as string }
-            : {
-                targetType: "role" as const,
-                targetRoleId: target.id as number,
-              }),
-        });
-
-        try {
-          if (target.type === "user") {
-            await secretsManager.snapshotForUser(
-              grant.id,
-              hostId,
-              target.id as string,
-              ownerId,
-            );
-          } else {
-            await secretsManager.snapshotForRole(
-              grant.id,
-              hostId,
-              target.id as number,
-              ownerId,
-            );
-          }
-        } catch {
-          // A snapshot failure never blocks the grant: the recipient can
-          // still be prompted, or the owner can retry sharing later.
-        }
+        );
       }
 
       await audit("hosts_share", `host ${hostId}`, { success: true });
+      return { hostId, shared: true };
+    },
+
+    setShares: async (
+      hostId: number,
+      grants: PluginHostShareGrant[],
+    ): Promise<PluginHostShareResult> => {
+      const fail = async (reason: string): Promise<PluginHostShareResult> => {
+        await audit("hosts_set_shares", `host ${hostId}`, {
+          success: false,
+          errorMessage: reason,
+        });
+        return { hostId, shared: false, reason };
+      };
+      try {
+        await requireWrite();
+        assertHostsUnlocked([hostId], pluginId);
+      } catch (error) {
+        await fail(error instanceof Error ? error.message : String(error));
+        throw error;
+      }
+      if (!Array.isArray(grants)) {
+        throw new PluginHostInputError("grants must be a list");
+      }
+      for (const grant of grants) {
+        const type = grant?.target?.type;
+        if (
+          (type !== "user" && type !== "role") ||
+          !SHARE_LEVELS.includes(grant.permissionLevel)
+        ) {
+          throw new PluginHostInputError(
+            "Each grant needs a user or role target and a share level",
+          );
+        }
+      }
+
+      const userId = actingUser();
+      const {
+        createCurrentHostResolutionRepository,
+        createCurrentRbacAccessRepository,
+      } = await import("../database/repositories/factory.js");
+      const ownerId =
+        await createCurrentHostResolutionRepository().findHostOwnerId(hostId);
+      if (ownerId !== userId) return fail("forbidden");
+      if (
+        grants.some((g) => g.target.type === "user" && g.target.id === userId)
+      ) {
+        return fail("owner");
+      }
+
+      const kept = new Set<number>();
+      for (const grant of grants) {
+        kept.add(
+          await grantHostShare(
+            hostId,
+            ownerId,
+            userId,
+            grant.target,
+            grant.permissionLevel,
+            hoursFromNow(grant.durationHours),
+          ),
+        );
+      }
+      const repository = createCurrentRbacAccessRepository();
+      for (const existing of await repository.listHostAccess(hostId)) {
+        if (!kept.has(existing.id)) {
+          await repository.revokeHostAccess(existing.id, hostId);
+        }
+      }
+      const { pruneHostGrants } = await import("../database/routes/rbac.js");
+      await pruneHostGrants(hostId);
+
+      await audit("hosts_set_shares", `host ${hostId}`, { success: true });
       return { hostId, shared: true };
     },
 
@@ -808,6 +1018,27 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
     sessionActive: (hostId) => {
       requireReadSync();
       return hostSessionStatus.hasActiveSession(hostId);
+    },
+
+    locks: {
+      provide: (provider) => {
+        if (!declared.includes("hosts:lock")) {
+          throw capabilityRefused(pluginId, "hosts:lock");
+        }
+        const remove = provideHostLocks(
+          pluginId,
+          manifest.name || pluginId,
+          provider,
+        );
+        void audit("host_locks_provide", `${pluginId} manages hosts`, {
+          success: true,
+        });
+        const drop = bag?.add(remove, "host lock provider");
+        return () => {
+          drop?.();
+          remove();
+        };
+      },
     },
 
     activity: {

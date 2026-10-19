@@ -548,6 +548,9 @@
     "deleteFolderConfirm_one": "Delete \"{{name}}\" and its {{count}} host? This cannot be undone.",
     "deleteFolderConfirm_other": "Delete \"{{name}}\" and its {{count}} hosts? This cannot be undone.",
     "failedToMoveHosts": "Failed to move hosts",
+    "managedBanner": "This host is managed by {{plugin}}. Change it there. You can still pin and reorder it.",
+    "managedTooltip": "Managed by {{plugin}}",
+    "addBlocked": "Hosts are managed by {{plugin}}, so new hosts can't be added here.",
     "failedToReorder": "Failed to reorder",
     "expandAll": "Expand all folders",
     "collapseAll": "Collapse all folders",
@@ -1211,6 +1214,10 @@
       "hosts:activity-provide": {
         "title": "Store recent activity",
         "consequence": "Becomes the store for the recent activity list of every user."
+      },
+      "hosts:lock": {
+        "title": "Manage hosts as read only",
+        "consequence": "Hosts it manages can't be edited, deleted or reshared by anyone else."
       },
       "desktop:window": {
         "title": "Open desktop windows",

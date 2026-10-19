@@ -86,6 +86,21 @@ export async function bulkUpdateSSHHosts(
   }
 }
 
+export interface HostPolicy {
+  manualCreate: boolean;
+  /** The plugin that manages hosts, when hosts can't be added by hand. */
+  blockedBy?: string;
+}
+
+export async function getHostPolicy(): Promise<HostPolicy> {
+  try {
+    const response = await sshHostApi.get("/policy");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "load host policy");
+  }
+}
+
 export async function reorderSSHHosts(
   positions: { id: number; sortOrder: number }[],
 ): Promise<{ updated: number }> {

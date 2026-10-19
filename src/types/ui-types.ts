@@ -1,4 +1,5 @@
 import type {
+  HostLock,
   HostProtocolAuthSummary,
   HostSshOptions,
   HostTerminalConfig,
@@ -104,6 +105,8 @@ export type Host = {
    * linked to. It arrives through sync and is managed on the server.
    */
   sharedCopy?: boolean;
+  /** Set when a plugin manages this host: read only, pins and order still work. */
+  lock?: HostLock;
   /** Desktop only: kept on this device, never synced to the server. */
   localOnly?: boolean;
 };

@@ -461,6 +461,40 @@ describe("ctx.credentials.registerSecretResolver", () => {
   });
 });
 
+describe("ctx.credentials.list", () => {
+  beforeEach(() => {
+    state.userCredentials.set("owner", [
+      { id: 3, name: "pw", authType: "password", password: "secret" },
+      { id: 4, name: "key", authType: "key", privateKey: "PRIVATE KEY" },
+    ]);
+  });
+
+  it("refuses without credentials:use", async () => {
+    grants.set("demo", []);
+    const ctx = contextFor([]);
+    await expect(
+      runAsActor("owner", "request", () => ctx.credentials.list()),
+    ).rejects.toThrow(/credentials:use/);
+  });
+
+  it("lists the actor's credentials without secrets", async () => {
+    grants.set("demo", ["credentials:use"]);
+    const ctx = contextFor(["credentials:use"]);
+    const list = await runAsActor("owner", "request", () =>
+      ctx.credentials.list(),
+    );
+    expect(list).toEqual([
+      { id: 3, name: "pw", username: null, authType: "password", folder: null },
+      { id: 4, name: "key", username: null, authType: "key", folder: null },
+    ]);
+    expect(JSON.stringify(list)).not.toMatch(/secret|PRIVATE/);
+    expect(auditEntries.at(-1)).toMatchObject({
+      action: "plugin_credentials_list",
+      success: true,
+    });
+  });
+});
+
 describe("ctx.credentials.listSshKeys", () => {
   const pair = ssh2.utils.generateKeyPairSync("rsa", { bits: 2048 });
   const derived = (() => {

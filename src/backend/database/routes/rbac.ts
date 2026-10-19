@@ -10,6 +10,12 @@ import {
 } from "../../utils/audit-logger.js";
 import { isAuthOverrideProtocol } from "../../hosts/protocol-auth/registry.js";
 import {
+  assertHostsUnlocked,
+  hasHostLocks,
+  requireUnlockedHost,
+  sendHostLocked,
+} from "../../hosts/locks.js";
+import {
   SharedHostAuthOverrideService,
   SharedHostAuthOverrideServiceError,
 } from "../../utils/shared-host-auth-override-service.js";
@@ -229,6 +235,7 @@ router.post(
   "/host/:id/share",
   authenticateJWT,
   permissionManager.requirePermission("hosts.share"),
+  requireUnlockedHost,
   async (req: AuthenticatedRequest, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const hostId = parseInt(id, 10);
@@ -451,6 +458,14 @@ router.post(
     }
 
     try {
+      if (hasHostLocks()) {
+        const inFolder =
+          await createCurrentHostFolderRepository().listHostsInFolder(
+            userId,
+            folder,
+          );
+        assertHostsUnlocked(inFolder.map((host) => host.id));
+      }
       const targets = parseShareTargets(req.body ?? {});
       if (!targets) {
         return res.status(400).json({
@@ -613,6 +628,7 @@ router.post(
         hostResults,
       });
     } catch (error) {
+      if (sendHostLocked(res, error)) return;
       databaseLogger.error("Failed to share folder", error, {
         operation: "share_folder",
         folder,
@@ -786,6 +802,7 @@ router.delete(
 router.patch(
   "/host/:id/access/:accessId",
   authenticateJWT,
+  requireUnlockedHost,
   async (req: AuthenticatedRequest, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const accessIdParam = Array.isArray(req.params.accessId)
@@ -908,6 +925,7 @@ router.patch(
 router.delete(
   "/host/:id/access/:accessId",
   authenticateJWT,
+  requireUnlockedHost,
   async (req: AuthenticatedRequest, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const accessIdParam = Array.isArray(req.params.accessId)

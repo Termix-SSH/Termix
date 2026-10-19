@@ -30,6 +30,7 @@ import {
   isValidPort,
   normalizeImportedHost,
 } from "../../database/routes/host-normalizers.js";
+import { hasHostLocks, hostLock, manualCreateBlockedBy } from "../locks.js";
 
 /** A request the caller got wrong. Routes answer it with a 400. */
 export class ImportError extends Error {
@@ -263,6 +264,19 @@ export function importResponse(results: ImportResults) {
 
 export const MAX_IMPORT_HOSTS = 100;
 
+/** Why an import row can't be written while a plugin manages hosts, if it can't. */
+function importLockError(existingId: number | undefined): string | null {
+  if (!hasHostLocks()) return null;
+  if (existingId === undefined) {
+    const blocked = manualCreateBlockedBy();
+    return blocked
+      ? `Hosts are managed by ${blocked.pluginName}, so new hosts can't be added`
+      : null;
+  }
+  const lock = hostLock(existingId);
+  return lock ? `This host is managed by ${lock.pluginName}` : null;
+}
+
 /** Deletes what an atomic import created, newest first. */
 async function rollBackCreated(
   userId: string,
@@ -444,6 +458,12 @@ export async function runBulkImport(
         // Hosts that jump through this one still resolve to the kept host.
         if (exportId !== undefined) importedIds.set(exportId, existing.id);
         results.skipped++;
+        continue;
+      }
+      const locked = importLockError(existing?.id);
+      if (locked) {
+        results.failed++;
+        results.errors.push(`Host ${i + 1}: ${locked}`);
         continue;
       }
 
@@ -743,6 +763,12 @@ export async function runSshConfigImport(
       const existing = existingHostMap?.get(lookupKey);
       if (existing && !overwrite) {
         results.skipped++;
+        continue;
+      }
+      const locked = importLockError(existing?.id);
+      if (locked) {
+        results.failed++;
+        results.errors.push(`Host "${parsed[i].name}": ${locked}`);
         continue;
       }
 

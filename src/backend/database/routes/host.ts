@@ -86,6 +86,11 @@ import {
 } from "../../hosts/protocol-auth/protocol-auth.js";
 import { findHostProtocol } from "../../hosts/protocol-auth/registry.js";
 import {
+  manualCreateBlockedBy,
+  requireManualCreate,
+  requireUnlockedHost,
+} from "../../hosts/locks.js";
+import {
   mergeStoredSshOptions,
   parseTerminalConfig,
 } from "./host-terminal-fields.js";
@@ -157,6 +162,7 @@ router.post(
   authenticateJWT,
   permissionManager.requirePermission("hosts.create"),
   requireDataAccess,
+  requireManualCreate,
   requireHostEnrollmentAccessForPath,
   upload.single("key"),
   async (req: Request, res: Response) => {
@@ -736,6 +742,7 @@ router.put(
   authenticateJWT,
   permissionManager.requirePermission("hosts.edit"),
   requireDataAccess,
+  requireUnlockedHost,
   upload.single("key"),
   async (req: Request, res: Response) => {
     const hostId = Array.isArray(req.params.id)
@@ -1204,6 +1211,27 @@ router.put(
     }
   },
 );
+
+/**
+ * @openapi
+ * /host/policy:
+ *   get:
+ *     summary: Host creation policy
+ *     description: Whether hosts can be added by hand, or a plugin manages them all.
+ *     tags:
+ *       - SSH
+ *     responses:
+ *       200:
+ *         description: "{ manualCreate, blockedBy? } where blockedBy is the managing plugin's name."
+ */
+router.get("/policy", authenticateJWT, (_req: Request, res: Response) => {
+  const blocked = manualCreateBlockedBy();
+  res.json(
+    blocked
+      ? { manualCreate: false, blockedBy: blocked.pluginName }
+      : { manualCreate: true },
+  );
+});
 
 /**
  * @openapi
@@ -1702,6 +1730,7 @@ router.delete(
   authenticateJWT,
   permissionManager.requirePermission("hosts.delete"),
   requireDataAccess,
+  requireUnlockedHost,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     const hostId = Array.isArray(req.params.id)

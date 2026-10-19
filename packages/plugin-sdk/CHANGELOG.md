@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.14
+
+Plugin API 1.6.0.
+
+### Added
+
+- `ctx.hosts.locks.provide` and the `hosts:lock` capability, so a plugin can manage hosts that stay read only for everyone else and block adding hosts by hand
+- `ctx.hosts.setShares` to replace every grant on a host in one call
+- `ctx.credentials.list` returns the acting user's credentials by name, without secrets
+- `ctx.hosts.create` and `update` take `password`, `key`, `keyPassword`, `keyType`, `sudoPassword`, `protocolAuth` and `pluginEnable`
+
 ## 1.0.13
 
 Plugin API 1.5.0.
