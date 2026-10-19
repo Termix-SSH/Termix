@@ -13,6 +13,7 @@ import {
   LAYOUT_SETTING,
   LOOK_ID_PATTERN,
   THEME_SETTING,
+  installedLayoutIds,
   resolveDefaultLook,
   safeLayoutForced,
   unavailableLooks,
@@ -35,7 +36,7 @@ async function adminDefaults() {
  * /user-preferences/look:
  *   get:
  *     summary: Get the layout and theme to show the current user
- *     description: The user's own choice, the admin defaults, the default look of the bundled plugins, whether TERMIX_SAFE_LAYOUT forces the repair view, and installed layout or theme plugins that could not load. The browser resolves the final look from these.
+ *     description: The user's own choice, the admin defaults (a layout no installed plugin brings reads as null), the default look of the bundled plugins, whether TERMIX_SAFE_LAYOUT forces the repair view, and installed layout or theme plugins that could not load. The browser resolves the final look from these.
  *     tags:
  *       - User Preferences
  *     responses:
@@ -101,10 +102,14 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
     const preferences =
       await createCurrentUserPreferenceRepository().findByUserId(userId);
     const { loader } = getPluginRuntime();
+    const installed = installedLayoutIds(loader);
+    const known = (id: string | null | undefined) =>
+      id && installed.has(id) ? id : null;
+    const defaults = await adminDefaults();
     res.json({
-      layoutId: preferences?.layoutId ?? null,
+      layoutId: known(preferences?.layoutId),
       themeId: preferences?.themeId ?? null,
-      defaults: await adminDefaults(),
+      defaults: { ...defaults, layout: known(defaults.layout) },
       defaultLook: resolveDefaultLook(loader),
       safeLayout: safeLayoutForced(),
       unavailable: unavailableLooks(loader),

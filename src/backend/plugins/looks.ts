@@ -14,6 +14,7 @@ export interface DefaultLook {
 
 interface LookLoader {
   get(pluginId: string): Pick<LoadedPlugin, "manifest"> | undefined;
+  list(): Array<Pick<LoadedPlugin, "manifest">>;
   skipped(): SkippedPlugin[];
 }
 
@@ -44,6 +45,24 @@ export function unavailableLooks(loader: LookLoader): SkippedPlugin[] {
   return loader
     .skipped()
     .filter((plugin) => plugin.layouts.length > 0 || plugin.themes.length > 0);
+}
+
+/**
+ * Layout ids some installed plugin brings, whether it runs, is turned off or
+ * failed to load. A choice outside this set was uninstalled, so the next
+ * choice down applies instead of the repair view.
+ */
+export function installedLayoutIds(loader: LookLoader): Set<string> {
+  const ids = new Set<string>();
+  for (const plugin of loader.list()) {
+    for (const layout of plugin.manifest.contributes?.layouts ?? []) {
+      ids.add(layout.id);
+    }
+  }
+  for (const plugin of loader.skipped()) {
+    for (const id of plugin.layouts) ids.add(id);
+  }
+  return ids;
 }
 
 /** TERMIX_SAFE_LAYOUT=1 starts everyone in the layout repair view. */

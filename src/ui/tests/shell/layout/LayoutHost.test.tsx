@@ -1,5 +1,23 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+
+vi.mock("@/main-axios", () => ({
+  getUserInfo: vi.fn(async () => ({ is_admin: false })),
+  getUserPreferences: vi.fn(async () => ({ reopenTabsOnLogin: false })),
+  saveUserPreferences: vi.fn(async () => {}),
+  getSSHHosts: vi.fn(async () => []),
+  getSSHFolders: vi.fn(async () => []),
+  getOpenTabs: vi.fn(async () => []),
+  getActiveSessions: vi.fn(async () => []),
+  addOpenTab: vi.fn(async () => {}),
+  deleteOpenTab: vi.fn(async () => {}),
+  patchOpenTab: vi.fn(async () => {}),
+  createSSHHost: vi.fn(async () => ({})),
+}));
+vi.mock("@/hooks/use-sync-status", () => ({
+  useSyncStatus: () => undefined,
+  useSyncAttentionCount: () => 0,
+}));
 
 const lookApi = vi.hoisted(() => ({
   getLook: vi.fn(),
@@ -36,7 +54,13 @@ vi.mock("@/look/RepairView", () => ({
 
 import { LayoutHost } from "@/shell/layout/LayoutHost";
 import { registerLayout, resetRegisteredLayouts } from "@/look/layout-registry";
-import { loadLook, resetLook } from "@/look/look-store";
+import { chooseLayout, loadLook, resetLook } from "@/look/look-store";
+import {
+  ShellControllerProvider,
+  useShellController,
+} from "@/shell/controller/ShellControllerProvider";
+import type { ShellController } from "@/shell/controller/types";
+import { registerTabType, resetTabTypes } from "@/shell/tab-registry";
 import {
   markPluginsSettled,
   resetPluginStore,
@@ -195,5 +219,66 @@ describe("LayoutHost", () => {
     await waitFor(() =>
       expect(loader.retryPluginFrontend).toHaveBeenCalledWith("fancy-layout"),
     );
+  });
+
+  it("closes the tabs the old layout plugin brought when the layout changes", async () => {
+    registerLayout({ id: "fancy", component: () => <p>fancy layout</p> });
+    registerLayout({ id: "plain", component: () => <p>plain layout</p> });
+    registerTabType({
+      id: "fancy-settings",
+      component: () => null,
+      hostless: true,
+      singleton: true,
+    });
+    registerTabType({
+      id: "notes",
+      component: () => null,
+      hostless: true,
+      multiInstance: true,
+    });
+    await start("fancy", [
+      plugin({
+        contributes: {
+          layouts: [{ id: "fancy", label: "Fancy" }],
+          tabs: [
+            {
+              id: "fancy-settings",
+              titleKey: "x",
+              icon: "Settings",
+              openFrom: [],
+            },
+          ],
+        },
+      }),
+      plugin({
+        id: "plain-layout",
+        contributes: { layouts: [{ id: "plain", label: "Plain" }] },
+      }),
+    ]);
+    let shell: ShellController | null = null;
+    function Capture() {
+      shell = useShellController();
+      return null;
+    }
+    render(
+      <ShellControllerProvider username="ada" onLogout={() => {}}>
+        <Capture />
+        <LayoutHost />
+      </ShellControllerProvider>,
+    );
+    await screen.findByText("fancy layout");
+    act(() => {
+      shell!.tabs.openSingleton("fancy-settings");
+      shell!.tabs.openMultiInstance("notes");
+    });
+    const types = () => shell!.tabs.list.map((tab) => tab.type).sort();
+    await waitFor(() =>
+      expect(types()).toEqual(["dashboard", "fancy-settings", "notes"]),
+    );
+
+    await act(() => chooseLayout("plain"));
+    await screen.findByText("plain layout");
+    await waitFor(() => expect(types()).toEqual(["dashboard", "notes"]));
+    resetTabTypes();
   });
 });

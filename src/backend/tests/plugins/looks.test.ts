@@ -6,6 +6,7 @@ vi.mock("../../plugins/bundled-index.js", () => ({
 }));
 
 import {
+  installedLayoutIds,
   resolveDefaultLook,
   safeLayoutForced,
   unavailableLooks,
@@ -23,6 +24,10 @@ function loaderWith(
       plugins[id]
         ? ({ manifest: { contributes: plugins[id] } } as never)
         : undefined,
+    list: () =>
+      Object.values(plugins).map(
+        (contributes) => ({ manifest: { contributes } }) as never,
+      ),
     skipped: () => skipped,
   };
 }
@@ -101,5 +106,16 @@ describe("safeLayoutForced", () => {
     expect(safeLayoutForced()).toBe(true);
     process.env.TERMIX_SAFE_LAYOUT = "0";
     expect(safeLayoutForced()).toBe(false);
+  });
+});
+
+describe("installedLayoutIds", () => {
+  it("lists layouts of loaded and skipped plugins", () => {
+    const ids = installedLayoutIds(
+      loaderWith({ a: { layouts: [{ id: "one" }], themes: [{ id: "t" }] } }, [
+        { id: "b", version: null, layouts: ["two"], themes: [], error: "x" },
+      ]),
+    );
+    expect([...ids].sort()).toEqual(["one", "two"]);
   });
 });

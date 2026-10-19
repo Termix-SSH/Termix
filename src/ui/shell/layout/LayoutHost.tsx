@@ -1,4 +1,11 @@
-import { Component, useMemo, useState, type ReactNode } from "react";
+import {
+  Component,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { isElectron } from "@/lib/electron";
 import { usePluginStore } from "@/plugin-host/plugin-store";
@@ -12,6 +19,7 @@ import { layoutStatus } from "@/look/layout-status";
 import { safeLayoutInUrl } from "@/look/resolve-look";
 import { useLookTheme } from "@/look/use-look-theme";
 import { RepairView } from "@/look/RepairView";
+import { useOptionalShellController } from "@/shell/controller/ShellControllerProvider";
 
 /** Catches a crash while a layout draws, so the repair view can take over. */
 class LayoutErrorBoundary extends Component<
@@ -32,6 +40,39 @@ class LayoutErrorBoundary extends Component<
   render() {
     return this.state.crashed ? null : this.props.children;
   }
+}
+
+/**
+ * Only the chosen layout plugin runs, so the tabs the old one brought (its
+ * settings screen, say) cannot draw after a switch. Close them; the home tab
+ * stays, since core keeps it in every layout.
+ */
+function useCloseLeftoverTabs(layoutId: string, tabTypes: string[]) {
+  const shell = useOptionalShellController();
+  const previous = useRef<{ layoutId: string; tabTypes: string[] } | null>(
+    null,
+  );
+  const current = { layoutId, tabTypes };
+  const latest = useRef(current);
+  latest.current = current;
+  const shellRef = useRef(shell);
+  shellRef.current = shell;
+
+  useEffect(() => {
+    const before = previous.current;
+    previous.current = latest.current;
+    if (!before || before.layoutId === layoutId || !shellRef.current) return;
+    const kept = new Set(latest.current.tabTypes);
+    for (const tab of shellRef.current.tabs.list) {
+      if (
+        tab.id !== "dashboard" &&
+        before.tabTypes.includes(tab.type) &&
+        !kept.has(tab.type)
+      ) {
+        void shellRef.current.tabs.close(tab.id);
+      }
+    }
+  }, [layoutId]);
 }
 
 interface CrashState {
@@ -63,6 +104,10 @@ export function LayoutHost() {
   const crashes = crash.layoutId === layoutId ? crash.count : 0;
   const owner = [...store.records.values()].find((record) =>
     record.summary.contributes?.layouts?.some((l) => l.id === layoutId),
+  );
+  useCloseLeftoverTabs(
+    layoutId,
+    owner?.summary.contributes?.tabs?.map((tab) => tab.id) ?? [],
   );
   const status = layoutStatus({
     layoutId,

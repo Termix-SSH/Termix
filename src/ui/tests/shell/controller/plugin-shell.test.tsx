@@ -30,8 +30,12 @@ vi.mock("@/hooks/use-permissions", () => ({
 
 import { ShellControllerProvider } from "@/shell/controller/ShellControllerProvider";
 import { usePluginShell } from "@/shell/controller/plugin-shell";
+import { registerTabType, resetTabTypes } from "@/shell/tab-registry";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  resetTabTypes();
+});
 
 let shell: PluginShell | null = null;
 function Capture() {
@@ -66,5 +70,23 @@ describe("usePluginShell", () => {
 
     act(() => shell!.palette.open());
     expect(shell!.palette.isOpen).toBe(true);
+  });
+
+  it("hides the home tab from a layout that gives it no tab type", async () => {
+    render(
+      <ShellControllerProvider username="ada" onLogout={() => {}}>
+        <Capture />
+      </ShellControllerProvider>,
+    );
+    await waitFor(() => expect(shell).not.toBeNull());
+    expect(shell!.tabs.list.map((tab) => tab.type)).not.toContain("dashboard");
+    expect(shell!.tabs.topLevel).toEqual([]);
+
+    act(() => {
+      registerTabType({ id: "dashboard", component: () => null });
+    });
+    await waitFor(() =>
+      expect(shell!.tabs.topLevel.map((tab) => tab.id)).toEqual(["dashboard"]),
+    );
   });
 });

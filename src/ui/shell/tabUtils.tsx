@@ -206,6 +206,8 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
 
     default: {
       const def = getTabType(tab.type);
+      // The home tab is empty until the layout gives it a tab type.
+      if (!def && tab.type === "dashboard") return null;
       if (!def) {
         const panel = getPanel(tab.type);
         if (panel) {

@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
   audits: [] as unknown[],
   skipped: [] as unknown[],
   defaultLookIds: [] as string[],
+  installed: [] as string[],
 }));
 
 vi.mock("../../../utils/logger.js", () => ({
@@ -69,6 +70,15 @@ vi.mock("../../../plugins/index.js", () => ({
               },
             }
           : undefined,
+      list: () => [
+        {
+          manifest: {
+            contributes: {
+              layouts: state.installed.map((id) => ({ id, label: id })),
+            },
+          },
+        },
+      ],
       skipped: () => state.skipped,
     },
   }),
@@ -90,6 +100,7 @@ beforeEach(async () => {
   state.audits = [];
   state.skipped = [];
   state.defaultLookIds = [];
+  state.installed = [];
   delete process.env.TERMIX_SAFE_LAYOUT;
 
   const app = express();
@@ -133,6 +144,7 @@ describe("GET /user-preferences/look", () => {
 
   it("returns the user's pick, the admin defaults and the default look", async () => {
     state.prefs = { layoutId: "mine", themeId: "nord" };
+    state.installed = ["mine", "admin-layout"];
     state.settings.set("ui.layout", "admin-layout");
     state.settings.set("ui.theme", "gruvbox");
     state.defaultLookIds = ["shipped-look"];
@@ -159,6 +171,31 @@ describe("GET /user-preferences/look", () => {
     expect(body.unavailable.map((plugin: { id: string }) => plugin.id)).toEqual(
       ["broken"],
     );
+  });
+});
+
+describe("GET /user-preferences/look with an uninstalled layout", () => {
+  it("drops a choice no installed plugin brings, so the next one applies", async () => {
+    state.prefs = { layoutId: "deleted", themeId: null };
+    state.settings.set("ui.layout", "also-deleted");
+    state.installed = ["kept"];
+    const { body } = await getLook();
+    expect(body.layoutId).toBeNull();
+    expect(body.defaults.layout).toBeNull();
+  });
+
+  it("keeps a choice whose plugin failed to load, for the repair view", async () => {
+    state.prefs = { layoutId: "b", themeId: null };
+    state.skipped = [
+      {
+        id: "broken",
+        version: "1.0.0",
+        layouts: ["b"],
+        themes: [],
+        error: "x",
+      },
+    ];
+    expect((await getLook()).body.layoutId).toBe("b");
   });
 });
 

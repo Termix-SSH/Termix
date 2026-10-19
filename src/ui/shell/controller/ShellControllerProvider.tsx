@@ -68,9 +68,10 @@ export function useTabStageStore(): TabStageStore {
  * renders it inside the scope its tab-close questions should show in.
  */
 export function ShellConfirmCapture(): null {
-  const { confirmRef } = useShellController();
+  // Optional, so the repair view still draws when the shell itself is broken.
+  const controller = useOptionalShellController();
   const confirm = useConfirm();
-  confirmRef.current = confirm;
+  if (controller) controller.confirmRef.current = confirm;
   return null;
 }
 

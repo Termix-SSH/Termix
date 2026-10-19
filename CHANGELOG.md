@@ -9,6 +9,8 @@
 - A repair screen shows when the chosen layout cannot load, with ways to update, switch, reset or turn it off. Open it any time with ?safe-layout=1, or for everyone with TERMIX_SAFE_LAYOUT=1
 - Hovering a theme in Settings previews it
 - Restore the bundled copy of a plugin from the repair screen, which also pins the shipped version
+- Switching layouts closes the tabs only the old layout could show, like its Settings tab
+- A chosen layout whose plugin was uninstalled falls back to the default instead of the repair screen
 
 ### Changed
 

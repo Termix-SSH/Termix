@@ -51,13 +51,22 @@ export function usePluginShell(pluginId: string): PluginShellController | null {
     () => (hosts ?? []).map((host) => toPluginHostRecord(host, pluginId)),
     [hosts, pluginId],
   );
+  // The shell always keeps a home tab. A layout that registers no tab type
+  // for it never sees it, so it has no dead tab to draw.
+  const hasHome = useTabTypes().some((type) => type.id === "dashboard");
 
   if (!shell) return null;
   const { tabs, split, regions } = shell;
+  const shown = (list: typeof tabs.list) =>
+    (hasHome
+      ? list
+      : list.filter(
+          (tab) => tab.type !== "dashboard",
+        )) as unknown as ShellTabState[];
   return {
     tabs: {
-      list: tabs.list as unknown as ShellTabState[],
-      topLevel: tabs.topLevel as unknown as ShellTabState[],
+      list: shown(tabs.list),
+      topLevel: shown(tabs.topLevel),
       activeId: tabs.activeId,
       ready: tabs.ready,
       showNumbers: tabs.showNumbers,
