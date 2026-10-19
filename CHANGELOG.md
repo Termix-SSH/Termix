@@ -16,6 +16,9 @@
 - Plugins that need a newer Termix are hidden in Browse, with a toggle to show them
 - Hosts can be managed from a config file through a plugin. Managed hosts are read only for everyone, but pins and order still work
 - A plugin can block adding hosts by hand, so every host comes from one place
+- Plugins can set login rules: sign out after a time without activity, limit how long a session lasts, turn off remember me and require a second factor
+- A user who must have a second factor but has none can sign in only to set one up
+- Admins can redirect HTTP to HTTPS and send HSTS while HTTPS is on. Off by default so reverse proxies keep working
 
 ### Changed
 

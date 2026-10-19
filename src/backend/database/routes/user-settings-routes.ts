@@ -15,6 +15,8 @@ import {
   createCurrentUserRepository,
 } from "../repositories/factory.js";
 import type { UserRecord } from "../repositories/user-repository.js";
+import { isForceHttpsEnabled, setForceHttps } from "../../tls/https-policy.js";
+import { getTlsConfig } from "../../tls/tls-service.js";
 
 async function getAdminActor(
   userId: string | undefined,
@@ -184,6 +186,90 @@ export function registerUserSettingsRoutes(
     } catch (err) {
       authLogger.error("Failed to set session timeout", err);
       res.status(500).json({ error: "Failed to set session timeout" });
+    }
+  });
+
+  /**
+   * @openapi
+   * /users/https-settings:
+   *   get:
+   *     summary: Get the HTTPS redirect setting (admin only)
+   *     description: Whether plain HTTP is redirected to HTTPS with HSTS, and whether HTTPS is on at all. The redirect only applies while HTTPS is on.
+   *     tags:
+   *       - Users
+   *     responses:
+   *       200:
+   *         description: forceHttps and tlsEnabled.
+   *       403:
+   *         description: Not authorized.
+   */
+  router.get("/https-settings", authenticateJWT, async (req, res) => {
+    try {
+      if (!(await getAdminActor((req as AuthenticatedRequest).userId))) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      res.json({
+        forceHttps: await isForceHttpsEnabled(),
+        tlsEnabled: getTlsConfig().enabled,
+      });
+    } catch (err) {
+      authLogger.error("Failed to get HTTPS settings", err);
+      res.status(500).json({ error: "Failed to get HTTPS settings" });
+    }
+  });
+
+  /**
+   * @openapi
+   * /users/https-settings:
+   *   patch:
+   *     summary: Update the HTTPS redirect setting (admin only)
+   *     description: Turns the redirect from HTTP to HTTPS and the HSTS header on or off. Off by default so reverse proxies keep working.
+   *     tags:
+   *       - Users
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               forceHttps:
+   *                 type: boolean
+   *     responses:
+   *       200:
+   *         description: Setting updated.
+   *       400:
+   *         description: Invalid value.
+   *       403:
+   *         description: Not authorized.
+   */
+  router.patch("/https-settings", authenticateJWT, async (req, res) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    try {
+      const actor = await getAdminActor(userId);
+      if (!actor) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      const { forceHttps } = req.body ?? {};
+      if (typeof forceHttps !== "boolean") {
+        return res.status(400).json({ error: "forceHttps must be a boolean" });
+      }
+      await setForceHttps(forceHttps);
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: actor.username ?? userId,
+        action: "update_force_https",
+        resourceType: "setting",
+        details: JSON.stringify({ forceHttps }),
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+      res.json({ forceHttps, tlsEnabled: getTlsConfig().enabled });
+    } catch (err) {
+      authLogger.error("Failed to set HTTPS settings", err);
+      res.status(500).json({ error: "Failed to set HTTPS settings" });
     }
   });
 

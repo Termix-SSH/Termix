@@ -38,9 +38,11 @@ import { classifyKeyboardInteractive } from "../hosts/connect/keyboard-interacti
 import { ensureCoreSshAuthProviders } from "../hosts/connect/core-providers.js";
 import {
   getLoginMethod,
+  listSecondFactors,
   registerLoginMethod,
   registerSecondFactor,
 } from "../auth/registry.js";
+import { provideAuthPolicy } from "../auth/policy.js";
 import type { VerifiedIdentity } from "../auth/types.js";
 import type {
   MutableConnectConfig,
@@ -856,6 +858,8 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
         getActor() === userId ? getActorSessionId() : undefined,
       );
       await createCurrentTrustedDeviceRepository().deleteByUserId(userId);
+      // The session that set it up may have been a setup only one.
+      await createCurrentSessionRepository().clearRestrictionForUser(userId);
       await audit("auth_factor_enrolled", `${factorId} for ${userId}`, {
         success: true,
       });
@@ -934,5 +938,28 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
     },
     issueUserToken: (userId, options) =>
       issueUserToken(manifest, userId, options),
+
+    policy: {
+      provide: (provider) => {
+        if (!declared.includes("auth:policy")) {
+          throw capabilityRefused(pluginId, "auth:policy");
+        }
+        const remove = provideAuthPolicy(pluginId, provider);
+        void audit("auth_policy_provide", `${pluginId} sets login rules`, {
+          success: true,
+        });
+        const drop = bag.add(remove, "login policy");
+        return () => {
+          drop();
+          remove();
+        };
+      },
+    },
+
+    listSecondFactors: () =>
+      listSecondFactors().map((factor) => ({
+        id: factor.id,
+        pluginId: factor.pluginId,
+      })),
   };
 }

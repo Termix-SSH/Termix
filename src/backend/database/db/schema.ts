@@ -47,6 +47,10 @@ export const sessions = sqliteTable(
     lastActiveAt: text("last_active_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
+    // Set while the session may only set up a second factor.
+    restriction: text("restriction", { length: 32 }),
+    // Seconds without a request before the session ends, from the login policy.
+    idleTimeout: integer("idle_timeout"),
   },
   // Listing a user's devices, and the startup sweep of expired rows.
   (table) => [

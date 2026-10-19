@@ -1761,6 +1761,54 @@ export interface PluginSecondFactor {
   reset?: (userId: string) => Promise<void>;
 }
 
+/** A login core is about to turn into a session. */
+export interface PluginAuthPolicyInput {
+  userId: string;
+  /** Login method id, `"proxy"` for a trusted proxy login. */
+  methodId: string;
+  /** The method signs in through an outside identity provider (SSO, LDAP). */
+  external: boolean;
+  deviceType: "web" | "desktop" | "mobile";
+  /** The device passed a second factor before and was remembered. */
+  trustedDevice: boolean;
+  /** The method itself proved a second factor, like a verified passkey. */
+  mfaSatisfied: boolean;
+  /** Every second factor core has, and whether this user set it up. */
+  secondFactors: { id: string; pluginId: string; enrolled: boolean }[];
+}
+
+export interface PluginAuthPolicyDecision {
+  /** False turns remember me off and ignores remembered devices. */
+  allowRememberDevice?: boolean;
+  /** Caps how long the session lasts. */
+  maxSessionSeconds?: number;
+  /** Ends the session after this many seconds without a request. */
+  idleTimeoutSeconds?: number;
+  /**
+   * Requires a second factor even for users who have none: they get a
+   * session that can only set one up. `"new-device"` skips it on a
+   * remembered device.
+   */
+  secondFactor?: "always" | "new-device";
+}
+
+/**
+ * Login rules from a plugin. Core asks every provider and the strictest
+ * answer wins. A provider that throws refuses the login.
+ */
+export interface PluginAuthPolicyProvider {
+  evaluate: (
+    input: PluginAuthPolicyInput,
+  ) => PluginAuthPolicyDecision | Promise<PluginAuthPolicyDecision>;
+  /** Whether the login page should offer remember me. */
+  allowRememberDevice?: () => boolean;
+}
+
+export interface PluginAuthPolicyApi {
+  /** Needs auth:policy. Removed on deactivate. */
+  provide: (provider: PluginAuthPolicyProvider) => () => void;
+}
+
 export interface PluginUserTokenOptions {
   /** Why the token exists, kept in the audit log and on the session. */
   purpose: string;
@@ -1850,6 +1898,10 @@ export interface PluginAuth {
     userId: string,
     options: PluginUserTokenOptions,
   ) => Promise<PluginUserToken>;
+  /** Login rules: idle timeout, session length, remember me, second factors. */
+  policy: PluginAuthPolicyApi;
+  /** Second factors from every running plugin. Needs no capability. */
+  listSecondFactors: () => { id: string; pluginId: string }[];
 }
 
 /** What a plugin may learn about a user. Needs users:read. */

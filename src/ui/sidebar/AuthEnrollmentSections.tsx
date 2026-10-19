@@ -5,9 +5,16 @@ import { useLoginMethods, useSecondFactors } from "@/plugin-host/auth-registry";
  * Enrolment sections login methods and second factors register, such as
  * adding a passkey or setting up an authenticator app.
  */
-export function AuthEnrollmentSections() {
+export function AuthEnrollmentSections({
+  factorsOnly = false,
+}: {
+  /** Only second factors, for a login policy that requires one. */
+  factorsOnly?: boolean;
+} = {}) {
   const { t } = useTranslation();
-  const sections = [...useLoginMethods(), ...useSecondFactors()].filter(
+  const methods = useLoginMethods();
+  const factors = useSecondFactors();
+  const sections = [...(factorsOnly ? [] : methods), ...factors].filter(
     (entry) => entry.enrollment,
   );
   if (sections.length === 0) return null;

@@ -68,6 +68,11 @@ export interface IssueSessionOptions {
   externalSession?: ExternalSessionRef | null;
   /** SSO logins keep desktop and mobile apps signed in for 30 days. */
   longLivedForApps?: boolean;
+  /** Login policy cap on the session length. */
+  maxAgeSeconds?: number | null;
+  /** See SECOND_FACTOR_SETUP. */
+  restriction?: string | null;
+  idleTimeoutSeconds?: number | null;
 }
 
 export interface IssuedSession {
@@ -93,6 +98,9 @@ export async function issueSession(
     deviceType: deviceInfo.type,
     deviceInfo: deviceInfo.deviceInfo,
     externalSession: options.externalSession ?? null,
+    maxAgeSeconds: options.maxAgeSeconds ?? null,
+    restriction: options.restriction ?? null,
+    idleTimeoutSeconds: options.idleTimeoutSeconds ?? null,
   });
 
   if (options.rateLimitUsername) {
@@ -123,11 +131,14 @@ export async function issueSession(
     method: options.methodId,
   });
 
-  const maxAge =
+  let maxAge =
     options.longLivedForApps &&
     (deviceInfo.type === "desktop" || deviceInfo.type === "mobile")
       ? THIRTY_DAYS_MS
       : await sessionCookieMaxAge(options.rememberMe);
+  if (options.maxAgeSeconds) {
+    maxAge = Math.min(maxAge, options.maxAgeSeconds * 1000);
+  }
 
   return {
     token,
@@ -142,6 +153,7 @@ export async function issueSession(
       totp_enabled: await createCurrentUserAuthRepository().hasSecondFactor(
         user.id,
       ),
+      ...(options.restriction ? { restriction: options.restriction } : {}),
       ...(isNativeAppRequest(req) ? { token } : {}),
     },
   };

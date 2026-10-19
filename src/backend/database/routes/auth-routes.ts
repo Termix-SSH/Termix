@@ -25,6 +25,7 @@ import {
 } from "../../auth/registry.js";
 import { isTrustedProxyAuthEnabled } from "../../utils/trusted-proxy-auth.js";
 import { LoginMethodError, type VerifiedIdentity } from "../../auth/types.js";
+import { rememberDeviceAllowed } from "../../auth/policy.js";
 
 export interface PublicLoginMethod {
   id: string;
@@ -243,7 +244,7 @@ export function registerAuthRoutes(router: Router): void {
    * /users/auth/methods:
    *   get:
    *     summary: List login methods
-   *     description: Public. The login methods with at least one enabled instance, for the login screen. Carries ids and labels only.
+   *     description: Public. The login methods with at least one enabled instance, for the login screen. Carries ids and labels only, plus rememberDevice, false when the login policy turned remember me off.
    *     tags:
    *       - Auth
    *     responses:
@@ -252,7 +253,10 @@ export function registerAuthRoutes(router: Router): void {
    */
   router.get("/auth/methods", async (_req, res) => {
     try {
-      res.json({ methods: await listPublicLoginMethods() });
+      res.json({
+        methods: await listPublicLoginMethods(),
+        rememberDevice: rememberDeviceAllowed(),
+      });
     } catch (error) {
       authLogger.error("Failed to list login methods", error);
       res.status(500).json({ error: "Failed to list login methods" });

@@ -73,6 +73,7 @@ import {
 } from "../plugins/user-data.js";
 import { configureDirectHttps, getTlsConfig } from "../tls/tls-service.js";
 import { acmeChallengeHandler } from "../tls/acme-challenges.js";
+import { httpsPolicyMiddleware } from "../tls/https-policy.js";
 import {
   createCurrentCredentialRepository,
   createCurrentHostRepository,
@@ -105,6 +106,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 app.set("trust proxy", "loopback");
+app.use(httpsPolicyMiddleware);
 
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();

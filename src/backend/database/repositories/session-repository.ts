@@ -69,6 +69,14 @@ export class SessionRepository {
     return true;
   }
 
+  async clearRestrictionForUser(userId: string): Promise<void> {
+    await this.context.drizzle
+      .update(sessions)
+      .set({ restriction: null })
+      .where(eq(sessions.userId, userId));
+    await this.afterWrite();
+  }
+
   async updateToken(
     id: string,
     jwtToken: string,

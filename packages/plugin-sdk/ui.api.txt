@@ -22,7 +22,7 @@ AlertTitle (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<H
 ApiKey (type): ApiKey
 AuditLog (type): AuditLog
 AuditLogFilters (type): AuditLogFilters
-AuthEnrollmentSections (value): () => Element
+AuthEnrollmentSections (value): ({ factorsOnly, }?: { factorsOnly?: boolean; }) => Element
 AuthOverrideProtocol (type): string
 BackButton (value): ({ onClick, label, className, }: { onClick: () => void; label?: string; className?: string; }) => Element
 Badge (value): ({ className, variant, asChild, ...props }: ClassAttributes<HTMLSpanElement> & HTMLAttributes<HTMLSpanElement> & VariantProps<(props?: ConfigVariants<{ variant: { default: string; secondary: string; destructive: string; outline: string; }; }> & ClassProp) => string> & { asChild?: boolean; }) => Element
@@ -161,6 +161,7 @@ HostRowFields (type): HostRowFields
 HostSidebarFilterState (type): HostSidebarFilterState
 HostSidebarPreferences (type): HostSidebarPreferences
 HostTrayTrigger (type): HostTrayTrigger
+HttpsSettings (type): HttpsSettings
 IconPicker (value): ({ value, color, onChange, }: { value: string; color?: string; onChange: (icon: string) => void; }) => Element
 InlineView (value): ({ open, onOpenChange, title, icon, status, actions, toolbar, footer, width, onBeforeClose, scroll, bare, className, children, }: { open: boolean; onOpenChange: (open: boolean) => void; title: ReactNode; icon?: ReactNode; status?: ReactNode; actions?: ReactNode; toolbar?: ReactNode; footer?: ReactNode; width?: EditingWidth; onBeforeClose?: () => boolean | Promise<boolean>; scroll?: boolean; bare?: boolean; className?: string; children: ReactNode; }) => ReactPortal
 Input (value): ({ className, type, ...props }: DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>) => Element
@@ -416,6 +417,7 @@ getHostPassword (value): (hostId: number, field?: "key" | "password" | "sudoPass
 getHostPolicy (value): () => Promise<HostPolicy>
 getHostSidebarPreferences (value): () => Promise<HostSidebarPreferences>
 getHostTags (value): () => Promise<string[]>
+getHttpsSettings (value): () => Promise<HttpsSettings>
 getLiveHostStatus (value): (hostId: number) => StatusValue
 getLogLevel (value): () => Promise<{ level: string; }>
 getNotificationPrivateEndpoints (value): () => Promise<string[]>
@@ -573,6 +575,7 @@ updateCredential (value): (credentialId: number, credentialData: Record<string, 
 updateExternalAutoProvision (value): (enabled: boolean) => Promise<Record<string, unknown>>
 updateFolderMetadata (value): (name: string, color?: string, icon?: string, credentialId?: number, localOnly?: boolean) => Promise<void>
 updateHostAccess (value): (hostId: number, accessId: number, update: { permissionLevel?: SharePermissionLevel; durationHours?: number; }, syncId?: string) => Promise<{ success: boolean; expiresAt: string; }>
+updateHttpsSettings (value): (forceHttps: boolean) => Promise<HttpsSettings>
 updateLogLevel (value): (level: string) => Promise<void>
 updatePasswordLoginAllowed (value): (allowed: boolean) => Promise<{ allowed: boolean; }>
 updatePasswordResetAllowed (value): (allowed: boolean) => Promise<{ allowed: boolean; }>

@@ -27,6 +27,12 @@ import {
 } from "./core-auth.js";
 import { findOrProvisionExternalUser } from "./provisioning.js";
 import {
+  SECOND_FACTOR_SETUP,
+  evaluateAuthPolicy,
+  hasAuthPolicies,
+  rememberDeviceAllowed,
+} from "./policy.js";
+import {
   getLoginMethod,
   getSecondFactor,
   listSecondFactors,
@@ -122,10 +128,13 @@ export async function evaluateSecondFactors(
  * governs external methods (SSO, LDAP) alone.
  */
 function shouldRunSecondFactors(methodId: string): boolean {
-  ensureCoreLoginProviders();
-  const method = getLoginMethod(methodId);
-  if (!method?.external) return true;
+  if (!isExternalMethod(methodId)) return true;
   return isSecondFactorAfterExternalLoginEnabled();
+}
+
+function isExternalMethod(methodId: string): boolean {
+  ensureCoreLoginProviders();
+  return !!getLoginMethod(methodId)?.external;
 }
 
 export const TRUST_DEVICE_COOKIE = "termix_trust_device";
@@ -294,9 +303,40 @@ export async function runLogin(
     `${context.methodId}_role_shared_credentials`,
   );
 
-  const factors = shouldRunSecondFactors(context.methodId)
-    ? await evaluateSecondFactors(user.id)
-    : { required: [], blocked: [] };
+  // A login policy may want a factor where core would skip it, so it always
+  // sees the full picture.
+  const runFactors = shouldRunSecondFactors(context.methodId);
+  const factors =
+    runFactors || hasAuthPolicies()
+      ? await evaluateSecondFactors(user.id)
+      : { required: [], blocked: [] };
+  const trusted =
+    factors.required.length > 0 || hasAuthPolicies()
+      ? await isTrustedDevice(req, user.id)
+      : false;
+  const policy = await evaluateAuthPolicy({
+    userId: user.id,
+    methodId: context.methodId,
+    external: isExternalMethod(context.methodId),
+    deviceType,
+    trustedDevice: trusted,
+    mfaSatisfied: !!identity.mfaSatisfied,
+    secondFactors: listSecondFactors().map((factor) => ({
+      id: factor.id,
+      pluginId: factor.pluginId,
+      enrolled: factors.required.some(
+        (required) =>
+          required.id === factor.id && required.pluginId === factor.pluginId,
+      ),
+    })),
+  });
+  if (!runFactors && !policy.secondFactor) {
+    factors.required = [];
+    factors.blocked = [];
+  }
+  const rememberMe = context.rememberMe && policy.allowRememberDevice;
+  const skipByDevice =
+    trusted && policy.allowRememberDevice && policy.secondFactor !== "always";
   if (factors.blocked.length > 0) {
     authLogger.warn("Login refused: an enrolled second factor is unavailable", {
       operation: "second_factor_unavailable",
@@ -324,11 +364,7 @@ export async function runLogin(
 
   const ssoClaims = { externalSession: identity.externalSession ?? null };
 
-  if (
-    factors.required.length > 0 &&
-    !identity.mfaSatisfied &&
-    !(await isTrustedDevice(req, user.id))
-  ) {
+  if (factors.required.length > 0 && !identity.mfaSatisfied && !skipByDevice) {
     const tempToken = await AuthManager.getInstance().generateJWTToken(
       user.id,
       { pendingTOTP: true, expiresIn: "10m" },
@@ -337,14 +373,17 @@ export async function runLogin(
     pendingLogins.set(pendingKey(tempToken), {
       userId: user.id,
       methodId: context.methodId,
-      rememberMe: context.rememberMe,
+      rememberMe,
+      allowRememberDevice: policy.allowRememberDevice,
+      maxSessionSeconds: policy.maxSessionSeconds,
+      idleTimeoutSeconds: policy.idleTimeoutSeconds,
       ...ssoClaims,
       createdAt: Date.now(),
     });
     return {
       kind: "second-factor",
       tempToken,
-      rememberMe: context.rememberMe,
+      rememberMe,
       factors: factors.required.map((factor) => ({
         id: factor.id,
         pluginId: factor.pluginId,
@@ -353,11 +392,22 @@ export async function runLogin(
     };
   }
 
+  // Required but nothing set up yet: a session that can only set one up.
+  const needsSetup =
+    !!policy.secondFactor &&
+    factors.required.length === 0 &&
+    !identity.mfaSatisfied &&
+    !skipByDevice;
+
   const session = await issueSession(req, user, {
     methodId: context.methodId,
-    rememberMe: context.rememberMe,
+    rememberMe,
     rateLimitUsername: context.rateLimitUsername ?? identity.rateLimitUsername,
-    longLivedForApps: identity.kind === "external",
+    longLivedForApps:
+      identity.kind === "external" && policy.allowRememberDevice,
+    maxAgeSeconds: policy.maxSessionSeconds,
+    idleTimeoutSeconds: policy.idleTimeoutSeconds,
+    restriction: needsSetup ? SECOND_FACTOR_SETUP : null,
     ...ssoClaims,
   });
   return { kind: "session", ...session };
@@ -510,10 +560,15 @@ export async function verifySecondFactorAndRespond(
   }
   loginRateLimiter.resetTOTPAttempts(user.id);
 
+  // A pending entry lost to a restart falls back to the current policy.
+  const allowRemember = lookup.pending
+    ? lookup.pending.allowRememberDevice !== false
+    : rememberDeviceAllowed();
   const rememberMe =
-    typeof req.body?.rememberMe === "boolean"
+    allowRemember &&
+    (typeof req.body?.rememberMe === "boolean"
       ? req.body.rememberMe
-      : (lookup.pending?.rememberMe ?? false);
+      : (lookup.pending?.rememberMe ?? false));
 
   let trustToken: string | null = null;
   if (rememberMe) {
@@ -545,6 +600,8 @@ export async function verifySecondFactorAndRespond(
     methodId: pending?.methodId ?? "password",
     rememberMe,
     externalSession: pending?.externalSession ?? null,
+    maxAgeSeconds: pending?.maxSessionSeconds ?? null,
+    idleTimeoutSeconds: pending?.idleTimeoutSeconds ?? null,
   });
 
   if (trustToken && isNativeAppRequest(req)) {

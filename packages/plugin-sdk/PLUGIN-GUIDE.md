@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.14 | Plugin API 1.6.0
+SDK 1.0.15 | Plugin API 1.7.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -226,6 +226,7 @@ Bundled as ESM for Node 22+ into `dist/backend.js`. Backend imports of your own 
 | `sync`                 | none                             | Sync your tables to a linked desktop                           |
 | `auth`                 | `auth:provide`                   | Login methods, second factors, SSH auth types                  |
 | `auth.issueUserToken`  | `users:impersonate`              | A short-lived session for calling Termix's API as a user       |
+| `auth.policy`          | `auth:policy`                    | Login rules: idle timeout, session length, second factors      |
 | `users.getLocale`      | `users:read`                     | A user's UI language                                           |
 | `system`               | `system:tls`                     | The server's HTTPS certificate                                 |
 | `plugins.list()`       | `plugins:read`                   | Which plugins are installed                                    |
@@ -699,6 +700,13 @@ closely. Declare ids in `contributes.auth` and register them with `ctx.auth.regi
 `registerSecondFactor` or `registerSshAuthProvider`. Connection protocols go in `contributes.protocols`
 and `app.registerHostProtocol`. Read https://docs.termix.site/develop/auth before starting one.
 
+Login rules need `auth:policy`. `ctx.auth.policy.provide({ evaluate, allowRememberDevice })` is asked at
+every login with the user, the method, the device and every second factor (`ctx.auth.listSecondFactors()`
+lists them too). `evaluate` returns `allowRememberDevice`, `maxSessionSeconds`, `idleTimeoutSeconds` and
+`secondFactor` (`"always"` or `"new-device"`). The strictest answer from all plugins wins, and a throw
+refuses the login. A user who must have a second factor but has none gets a session that can only set one
+up, and `/users/me` reports `restriction: "second-factor-setup"`.
+
 ## Testing
 
 ```ts
@@ -895,6 +903,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `users:impersonate`      | high     | Act as another user, or get a session for them, audited |
 | `db:core-refs`           | high     | Query core users, roles and hosts tables (read only)    |
 | `auth:provide`           | high     | Add login methods, second factors, SSH auth types       |
+| `auth:policy`            | high     | Set login rules: idle timeout, session length, 2FA      |
 | `device:serial`          | high     | Open serial and USB ports on the server                 |
 | `desktop:local`          | high     | Use the user's own computer, desktop app only           |
 | `hosts:export`           | high     | Export hosts with their saved logins                    |

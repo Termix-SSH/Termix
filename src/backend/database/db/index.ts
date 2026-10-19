@@ -1021,6 +1021,8 @@ const migrateSchema = () => {
   }
   enforceUniqueUsernames();
   addColumnIfNotExists("sessions", "external_session_ref", "TEXT");
+  addColumnIfNotExists("sessions", "restriction", "TEXT");
+  addColumnIfNotExists("sessions", "idle_timeout", "INTEGER");
 
   addColumnIfNotExists("ssh_data", "name", "TEXT");
   addColumnIfNotExists("ssh_data", "folder", "TEXT");

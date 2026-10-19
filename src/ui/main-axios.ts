@@ -911,6 +911,9 @@ export {
   updateLogLevel,
   getSessionTimeout,
   updateSessionTimeout,
+  getHttpsSettings,
+  updateHttpsSettings,
+  type HttpsSettings,
 } from "@/api/settings-api";
 
 // ============================================================================

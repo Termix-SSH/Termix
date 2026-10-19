@@ -1147,6 +1147,10 @@
         "title": "Handle sign in",
         "consequence": "It can add a login method, a second factor or an SSH sign-in type."
       },
+      "auth:policy": {
+        "title": "Set sign in rules",
+        "consequence": "It can sign people out when idle, limit session length, turn off remember me and require a second factor."
+      },
       "system:tls": {
         "title": "Manage certificates",
         "consequence": "It can replace the certificate Termix serves over HTTPS and answer domain checks from certificate authorities."

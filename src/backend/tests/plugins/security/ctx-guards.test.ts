@@ -71,6 +71,7 @@ const UNGATED: Record<string, string> = {
   "rbac.hasFor": "a yes/no about a role permission, grants nothing",
   "rbac.require": "route middleware for the plugin's own permissions",
   "capabilities.has": "a yes/no about the plugin's own grants",
+  "auth.listSecondFactors": "ids of the second factors, no user data",
   "disposables.add": "the plugin's own cleanup",
   "schedule.every": "the plugin's own timers",
   "schedule.after": "the plugin's own timers",

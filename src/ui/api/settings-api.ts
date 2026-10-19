@@ -43,6 +43,33 @@ export async function updateSessionTimeout(
   }
 }
 
+export interface HttpsSettings {
+  forceHttps: boolean;
+  tlsEnabled: boolean;
+}
+
+export async function getHttpsSettings(): Promise<HttpsSettings> {
+  try {
+    const response = await authApi.get("/users/https-settings");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch HTTPS settings");
+  }
+}
+
+export async function updateHttpsSettings(
+  forceHttps: boolean,
+): Promise<HttpsSettings> {
+  try {
+    const response = await authApi.patch("/users/https-settings", {
+      forceHttps,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "update HTTPS settings");
+  }
+}
+
 // ============================================================================
 // BRANDING SETTINGS
 // ============================================================================

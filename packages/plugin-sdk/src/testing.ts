@@ -77,6 +77,7 @@ import type {
   PluginHostStatusEntry,
   PluginActivityProvider,
   PluginHostLockProvider,
+  PluginAuthPolicyProvider,
   PluginCredentialSummary,
   PluginHostShareGrant,
   PluginHostStatusProvider,
@@ -195,6 +196,8 @@ export interface FakeContextOptions {
   baseUrl?: string;
   /** What ctx.auth.countLinkedUsers answers, by provider. Defaults to 0. */
   linkedUsers?: Record<string, number>;
+  /** Second factors from other plugins that ctx.auth.listSecondFactors adds. */
+  secondFactors?: { id: string; pluginId: string }[];
   /** Failures before ctx.auth.loginRateLimit locks a key. Defaults to 5. */
   loginAttemptLimit?: number;
   /** What ctx.users.getLocale answers, by user id. A missing user answers null. */
@@ -274,6 +277,8 @@ export interface FakeAuthRegistrations {
   loginFailures: Map<string, number>;
   /** Every ctx.auth.issueUserToken call, in order. */
   userTokens: Array<{ userId: string; purpose: string; ttlSeconds?: number }>;
+  /** Providers passed to ctx.auth.policy.provide that are still registered. */
+  policies: PluginAuthPolicyProvider[];
 }
 
 export interface FakePluginContext {
@@ -624,6 +629,7 @@ export function createFakeContext(
     revokedSessions: [],
     loginFailures: new Map(),
     userTokens: [],
+    policies: [],
   };
   const sshClient = options.sshClient ?? {};
   let actor = options.actor;
@@ -1297,6 +1303,22 @@ export function createFakeContext(
           expiresAt: new Date(Date.now() + ttl * 1000).toISOString(),
         };
       },
+      policy: {
+        provide: (provider) => {
+          auth.policies.push(provider);
+          return () => {
+            const at = auth.policies.indexOf(provider);
+            if (at >= 0) auth.policies.splice(at, 1);
+          };
+        },
+      },
+      listSecondFactors: () => [
+        ...auth.secondFactors.map((factor) => ({
+          id: factor.id,
+          pluginId,
+        })),
+        ...(options.secondFactors ?? []),
+      ],
     },
 
     users: {
@@ -1634,6 +1656,8 @@ export interface MockContextOptions {
   /** See FakeContextOptions. */
   loginAttemptLimit?: number;
   /** See FakeContextOptions. */
+  secondFactors?: FakeContextOptions["secondFactors"];
+  /** See FakeContextOptions. */
   locales?: Record<string, string>;
 }
 
@@ -1753,6 +1777,7 @@ export function createMockCtx(
     baseUrl: options.baseUrl,
     linkedUsers: options.linkedUsers,
     loginAttemptLimit: options.loginAttemptLimit,
+    secondFactors: options.secondFactors,
     locales: options.locales,
     manifest: {
       capabilities: options.capabilities ?? [],
@@ -2104,6 +2129,13 @@ export function createMockCtx(
         require("users:impersonate");
         return ctx.auth.issueUserToken(userId, tokenOptions);
       },
+      policy: {
+        provide: (provider) => {
+          require("auth:policy");
+          return ctx.auth.policy.provide(provider);
+        },
+      },
+      listSecondFactors: () => ctx.auth.listSecondFactors(),
     },
 
     users: {

@@ -61,6 +61,7 @@ import {
   syncSharedCredentialsForUserRoles,
 } from "../../auth/session-issuer.js";
 import { EXTERNAL_AUTO_PROVISION_KEY } from "../../auth/provisioning.js";
+import { evaluateAuthPolicy } from "../../auth/policy.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -420,9 +421,21 @@ router.post("/proxy-login", async (req, res) => {
       userRecord.id,
       "trusted_proxy_login_role_shared_credentials",
     );
+    // The proxy owns second factors, so only the session length applies.
+    const policy = await evaluateAuthPolicy({
+      userId: userRecord.id,
+      methodId: "proxy",
+      external: true,
+      deviceType: deviceInfo.type,
+      trustedDevice: false,
+      mfaSatisfied: false,
+      secondFactors: [],
+    });
     const token = await authManager.generateJWTToken(userRecord.id, {
       deviceType: deviceInfo.type,
       deviceInfo: deviceInfo.deviceInfo,
+      maxAgeSeconds: policy.maxSessionSeconds,
+      idleTimeoutSeconds: policy.idleTimeoutSeconds,
     });
     const payload = await authManager.verifyJWTToken(token);
     const { ipAddress, userAgent } = getRequestMeta(req);
@@ -443,7 +456,16 @@ router.post("/proxy-login", async (req, res) => {
     });
 
     return res
-      .cookie("jwt", token, authManager.getSecureCookieOptions(req))
+      .cookie(
+        "jwt",
+        token,
+        authManager.getSecureCookieOptions(
+          req,
+          policy.maxSessionSeconds
+            ? Math.min(24 * 60 * 60 * 1000, policy.maxSessionSeconds * 1000)
+            : undefined,
+        ),
+      )
       .json({
         enabled: true,
         success: true,
@@ -614,6 +636,8 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
         user.id,
       ),
       linked: await describeDesktopLink(user.id),
+      // "second-factor-setup" while the login policy wants a factor set up.
+      restriction: (req as AuthenticatedRequest).sessionRestriction ?? null,
     });
   } catch (err) {
     authLogger.error("Failed to get username", err);

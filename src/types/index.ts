@@ -328,6 +328,8 @@ export interface AuthenticatedRequest extends Request {
   sessionId?: string;
   apiKeyId?: string;
   actingAdminUserId?: string;
+  /** Set while the session may only set up a second factor. */
+  sessionRestriction?: string | null;
   user?: {
     id: string;
     username: string;

@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.15
+
+Plugin API 1.7.0.
+
+### Added
+
+- `ctx.auth.policy.provide` and the `auth:policy` capability, so a plugin can set an idle timeout, cap session length, turn off remember me and require a second factor
+- `ctx.auth.listSecondFactors` lists the second factors from every running plugin
+- `AuthEnrollmentSections` takes `factorsOnly`
+- `getHttpsSettings` and `updateHttpsSettings` in `@termix-ssh/plugin-sdk/ui`
+
+### Fixed
+
+- Plugin frontend tests against a locally linked SDK failed with a second copy of React
+
 ## 1.0.14
 
 Plugin API 1.6.0.
