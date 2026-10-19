@@ -584,6 +584,7 @@ useChooseTheme (value): () => (themeId: string) => void
 useConfirm (value): () => (options: ConfirmOptions) => Promise<boolean>
 useConnectionGate (value): () => ConnectionGateController
 useConnectionLog (value): () => ConnectionLogContextType
+useDesktopLinked (value): () => boolean
 useDesktopUpdate (value): () => DesktopUpdateState
 useEditorDefaultKeys (value): () => Map<string, EditorDefaultKey>
 useHostActions (value): () => HostActionDef[]

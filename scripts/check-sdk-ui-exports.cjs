@@ -605,6 +605,7 @@ const ALLOWED = [
   "useConfirm",
   "useConnectionGate",
   "useConnectionLog",
+  "useDesktopLinked",
   "useDesktopUpdate",
   "useEditorDefaultKeys",
   "useHostActions",

@@ -574,7 +574,7 @@ export {
   invalidateServerStatusCache,
 } from "@/lib/hosts-request-cache";
 export { reportBetaFeedbackUrl, reportCoreIssueUrl } from "@/lib/issue-url";
-export { notifySyncChanged } from "@/lib/linked-server";
+export { notifySyncChanged, useDesktopLinked } from "@/lib/linked-server";
 export {
   clearLocalAdaptivePreferences,
   getPreferredHostAction,
