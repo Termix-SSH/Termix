@@ -14,6 +14,7 @@ import {
   Auth,
   getStoredAuth,
   clearStoredAuth,
+  storeAuth,
   markDesktopManualLogout,
   clearDesktopManualLogout,
 } from "@/auth/Auth";
@@ -195,7 +196,12 @@ function App() {
     if (phase !== "verifying") return;
     appReadyPromise
       .then(() => getUserInfo())
-      .then(async () => {
+      .then(async (info) => {
+        // The stored name can be an earlier account, after a switch or rename.
+        if (info.username) {
+          setAuthUsername(info.username);
+          storeAuth(info.username);
+        }
         if (isElectron()) {
           try {
             const token = await getCurrentToken();

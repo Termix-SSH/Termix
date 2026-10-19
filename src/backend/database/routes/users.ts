@@ -27,6 +27,7 @@ import { registerUserSettingsRoutes } from "./user-settings-routes.js";
 import { registerTlsRoutes } from "./tls-routes.js";
 import { registerUserSessionRoutes } from "./user-session-routes.js";
 import { registerUserSocketTicketRoutes } from "./user-socket-ticket-routes.js";
+import { shownIdentity } from "../../sync/shown-identity.js";
 import { registerUserExternalAccountRoutes } from "./user-external-account-routes.js";
 import { registerUserPasswordResetRoutes } from "./user-password-reset-routes.js";
 import { registerUserAdminRoutes } from "./user-admin-routes.js";
@@ -569,30 +570,6 @@ router.post("/logout", authenticateJWT, async (req, res) => {
 });
 
 /**
- * On a desktop linked to a server, the account it is signed in to there.
- * That account is who the user is; the local profile only mirrors it.
- */
-async function describeDesktopLink(userId: string) {
-  if (process.env.ELECTRON_EMBEDDED !== "true") return null;
-  try {
-    const { getLink } = await import("../../sync/client/link-store.js");
-    const link = await getLink(userId);
-    if (!link) return null;
-    return {
-      serverUrl: link.serverUrl,
-      serverName: link.serverName,
-      username: link.account?.username ?? link.remoteUsername,
-      isAdmin: !!link.account?.isAdmin,
-      roles: link.account?.roles ?? [],
-      permissions: link.account?.permissions ?? [],
-      status: link.status,
-    };
-  } catch {
-    return null;
-  }
-}
-
-/**
  * @openapi
  * /users/me:
  *   get:
@@ -624,18 +601,19 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
 
     const hasPassword = user.passwordHash && user.passwordHash.trim() !== "";
     const isDualAuth = hasPassword && isExternalAccount(user);
+    const shown = await shownIdentity(user);
 
     res.json({
       userId: user.id,
-      username: user.username,
-      is_admin: !!user.isAdmin,
+      username: shown.username,
+      is_admin: shown.isAdmin,
       is_external: isExternalAccount(user),
       is_dual_auth: isDualAuth,
       // Any second factor; the name is what 2.8 clients read.
       totp_enabled: await createCurrentUserAuthRepository().hasSecondFactor(
         user.id,
       ),
-      linked: await describeDesktopLink(user.id),
+      linked: shown.linked,
       // "second-factor-setup" while the login policy wants a factor set up.
       restriction: (req as AuthenticatedRequest).sessionRestriction ?? null,
     });
@@ -758,10 +736,11 @@ router.post("/internal/auto-session", async (req, res) => {
     if (existingToken) {
       const existingPayload = await authManager.verifyJWTToken(existingToken);
       if (existingPayload?.userId === userRecord.id) {
+        const shownNow = await shownIdentity(userRecord);
         return res.json({
           success: true,
-          is_admin: !!userRecord.isAdmin,
-          username: userRecord.username,
+          is_admin: shownNow.isAdmin,
+          username: shownNow.username,
           token: existingToken,
         });
       }
@@ -773,10 +752,11 @@ router.post("/internal/auto-session", async (req, res) => {
       rememberMe: true,
     });
 
+    const shown = await shownIdentity(userRecord);
     const response = {
       success: true,
-      is_admin: !!userRecord.isAdmin,
-      username: userRecord.username,
+      is_admin: shown.isAdmin,
+      username: shown.username,
       token,
     };
 

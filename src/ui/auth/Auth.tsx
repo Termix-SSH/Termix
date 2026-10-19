@@ -138,7 +138,7 @@ function hasDesktopManualLogout() {
   return localStorage.getItem(DESKTOP_MANUAL_LOGOUT_KEY) === "true";
 }
 
-function storeAuth(username: string) {
+export function storeAuth(username: string) {
   localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify({ loggedIn: true, username }),
