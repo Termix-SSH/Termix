@@ -473,6 +473,24 @@ class AuthManager {
   }
 
   /**
+   * A one minute socket ticket for an API key. The key has no login session,
+   * so a two minute session a plugin could have minted carries the ticket. It
+   * can open plugin sockets and call nothing else.
+   */
+  async issueApiKeySocketTicket(
+    userId: string,
+    keyId: string,
+  ): Promise<string> {
+    const { token } = await this.issuePluginSession(userId, {
+      pluginId: "api-key",
+      purpose: `socket ${keyId.slice(0, 8)}`,
+      ttlSeconds: 120,
+    });
+    const sessionId = (jwt.decode(token) as JWTPayload).sessionId!;
+    return this.issueSocketTicket(userId, sessionId);
+  }
+
+  /**
    * A session a plugin mints for a user, to call core's API as them. It is
    * an ordinary session row, so it verifies, expires and shows up like a
    * login, marked with the plugin and why.

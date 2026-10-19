@@ -61,4 +61,38 @@ export function registerUserSocketTicketRoutes(
       res.status(500).json({ error: "Failed to issue a socket ticket" });
     }
   });
+
+  /**
+   * @openapi
+   * /users/ws-ticket/api-key:
+   *   post:
+   *     summary: Get a WebSocket ticket for an API key
+   *     description: For another Termix server that manages this one with an API key. Returns a token that is valid for one minute and only opens plugin WebSockets, as the key's user. It cannot call any other route.
+   *     tags:
+   *       - Users
+   *     responses:
+   *       200:
+   *         description: The ticket.
+   *       401:
+   *         description: The request did not use an API key.
+   *       500:
+   *         description: Failed to issue the ticket.
+   */
+  router.post("/ws-ticket/api-key", authenticateJWT, async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
+    if (!authReq.apiKeyId) {
+      return res.status(401).json({ error: "An API key is required" });
+    }
+    try {
+      const ticket = await authManager.issueApiKeySocketTicket(
+        authReq.userId,
+        authReq.apiKeyId,
+      );
+      res.setHeader("Cache-Control", "no-store");
+      res.json({ ticket });
+    } catch (err) {
+      authLogger.error("Failed to issue an API key socket ticket", err);
+      res.status(500).json({ error: "Failed to issue a socket ticket" });
+    }
+  });
 }

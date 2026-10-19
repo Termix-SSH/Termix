@@ -214,6 +214,30 @@ describe("AuthManager token handling", () => {
     expect(payload?.userId).toBe("user-1");
   });
 
+  it("gives an API key a ticket on a short session that only a socket takes", async () => {
+    mocks.created.length = 0;
+    const ticket = await authManager.issueApiKeySocketTicket(
+      "user-1",
+      "key-12345678",
+    );
+    const payload = jwt.decode(ticket) as Record<string, number | string>;
+
+    expect(payload.userId).toBe("user-1");
+    expect(payload.purpose).toBe("ws");
+    expect(Number(payload.exp) - Number(payload.iat)).toBe(60);
+
+    const [session] = mocks.created;
+    expect(session.userId).toBe("user-1");
+    expect(session.id).toBe(payload.sessionId);
+    expect(session.deviceInfo).toBe("api-key: socket key-1234");
+    const lifetime =
+      new Date(String(session.expiresAt)).getTime() -
+      new Date(String(session.createdAt)).getTime();
+    expect(lifetime).toBe(120_000);
+
+    expect(await authManager.verifyJWTToken(ticket)).toBeNull();
+  });
+
   it("rejects a socket ticket whose session has expired", async () => {
     const ticket = await authManager.issueSocketTicket("user-1", "expired");
     expect(
