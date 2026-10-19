@@ -15,10 +15,6 @@ const api = vi.hoisted(() => ({
   createSSHHost: vi.fn(async () => ({})),
 }));
 vi.mock("@/main-axios", () => api);
-vi.mock("@/hooks/use-sync-status", () => ({
-  useSyncStatus: () => undefined,
-  useSyncAttentionCount: () => 0,
-}));
 
 import {
   ShellControllerProvider,

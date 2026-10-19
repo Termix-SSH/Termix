@@ -15,10 +15,6 @@ vi.mock("@/main-axios", () => ({
   patchOpenTab: vi.fn(async () => {}),
   createSSHHost: vi.fn(async () => ({})),
 }));
-vi.mock("@/hooks/use-sync-status", () => ({
-  useSyncStatus: () => undefined,
-  useSyncAttentionCount: () => 0,
-}));
 vi.mock("@/hooks/use-permissions", () => ({
   usePermissions: () => ({
     permissions: ["hosts.view"],

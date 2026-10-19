@@ -8,6 +8,10 @@ Plugin API 1.8.0.
 
 - `ctx.sync.provide` and the `sync:provide` capability, so a plugin can answer every /sync request
 
+### Removed
+
+- The sync screens and calls in `@termix-ssh/plugin-sdk/ui`: `LinkServerDialog`, `ProxySettingsFields`, `useSyncStatus`, `refreshSyncStatus`, `setSyncStatus`, `getSyncConflicts`, `getSyncErrors`, `retrySyncErrors`, `settleSyncConflict`, `syncNow`, `unlinkServer`, `updateSyncSettings` and their types. They moved into the sync plugin
+
 ## 1.0.15
 
 Plugin API 1.7.0.

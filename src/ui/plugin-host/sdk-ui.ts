@@ -492,21 +492,6 @@ export {
 } from "@/api/rbac-api";
 export { type BrandingSettings, getBranding } from "@/api/settings-api";
 export {
-  getSyncConflicts,
-  getSyncErrors,
-  retrySyncErrors,
-  settleSyncConflict,
-  type SyncBasicAuth,
-  type SyncConflictItem,
-  type SyncEntityInfo,
-  type SyncErrorItem,
-  syncNow,
-  type SyncProxyHeader,
-  type SyncStatus,
-  unlinkServer,
-  updateSyncSettings,
-} from "@/api/sync-api";
-export {
   getChannelReleases,
   getUpdateChannel,
   type ReleaseInfo,
@@ -553,7 +538,6 @@ export {
   getStatusClasses,
   useStatusColorScheme,
 } from "@/hooks/use-status-color-scheme";
-export { useSyncStatus } from "@/hooks/use-sync-status";
 export { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
 export { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
 export { LANGUAGES } from "@/i18n/languages";
@@ -603,7 +587,6 @@ export { getConnectedRemoteApi } from "@/lib/remote-server-api";
 export { roleLabel } from "@/lib/role-label";
 export type { StatusValue } from "@/lib/server-status-store";
 export { parseServerTime } from "@/lib/server-time";
-export { refreshSyncStatus, setSyncStatus } from "@/lib/sync-status";
 export { tabJumpHotkeyKeys } from "@/lib/tab-jump-hotkey";
 export {
   ACCENT_PRESET_COLORS,
@@ -740,8 +723,6 @@ export {
   hasVisibleFields,
   isFieldShown,
 } from "@/settings/settings-fields-util";
-export { LinkServerDialog } from "@/settings/sync/LinkServerDialog";
-export { ProxySettingsFields } from "@/settings/sync/ProxySettingsFields";
 export { useShellController } from "@/shell/controller/ShellControllerProvider";
 export {
   type KeybindingActionDef,

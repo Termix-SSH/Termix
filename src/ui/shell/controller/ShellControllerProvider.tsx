@@ -11,7 +11,6 @@ import {
   useState,
 } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useSyncStatus } from "@/hooks/use-sync-status";
 import { isElectron } from "@/lib/electron";
 import {
   useConfirm,
@@ -127,10 +126,6 @@ export function ShellControllerProvider({
   });
   openSingletonRef.current = tabsState.openSingletonTab;
   const { tabs, activeTabId } = tabsState;
-
-  // Keeps the desktop's sync status polled while the app is open; a pass
-  // that changed data tells the panels to reload.
-  useSyncStatus();
 
   const palette: ShellPalette = {
     isOpen: paletteOpen,

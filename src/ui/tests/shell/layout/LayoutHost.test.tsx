@@ -14,10 +14,6 @@ vi.mock("@/main-axios", () => ({
   patchOpenTab: vi.fn(async () => {}),
   createSSHHost: vi.fn(async () => ({})),
 }));
-vi.mock("@/hooks/use-sync-status", () => ({
-  useSyncStatus: () => undefined,
-  useSyncAttentionCount: () => 0,
-}));
 
 const lookApi = vi.hoisted(() => ({
   getLook: vi.fn(),

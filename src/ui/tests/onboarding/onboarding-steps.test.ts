@@ -83,18 +83,11 @@ describe("CORE_STEPS", () => {
     expect(CORE_STEPS.find((s) => s.id === "plugins")?.required).toBe(true);
   });
 
-  it("asks how the desktop app is used only on the desktop", () => {
-    expect(ids(ctx({ isDesktop: true }))).toEqual(["desktop-sync"]);
-  });
-
   it("asks how the desktop app updates when it has an updater", () => {
     const win = window as unknown as { electronAPI?: unknown };
     win.electronAPI = { isElectron: true, updates: {} };
     try {
-      expect(ids(ctx({ isDesktop: true }))).toEqual([
-        "desktop-sync",
-        "desktop-updates",
-      ]);
+      expect(ids(ctx({ isDesktop: true }))).toEqual(["desktop-updates"]);
       expect(ids(ctx())).not.toContain("desktop-updates");
     } finally {
       delete win.electronAPI;

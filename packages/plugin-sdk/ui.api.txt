@@ -176,7 +176,6 @@ LANGUAGES (value): readonly { code: string; label: string; }[]
 Label (value): ({ className, ...props }: LabelProps & RefAttributes<HTMLLabelElement>) => Element
 LineChart (value): ({ series, timestamps, domain, yFormatter, height, className, }: LineChartProps) => Element
 LineChartSeries (type): LineChartSeries
-LinkServerDialog (value): ({ open, onOpenChange, onLinked, relogin, }: LinkServerDialogProps) => Element
 LinkedAccountInfo (type): LinkedAccountInfo
 ListBadge (value): ({ tone, className, children, }: { tone?: "destructive" | "muted" | "brand" | "warning" | "success"; className?: string; children: ReactNode; }) => Element
 ListRow (value): ({ title, icon, badges, meta, stripe, tone, color, selected, active, dimmed, leading, trailing, actions, onClick, className, children, ...rest }: { title: ReactNode; icon?: ReactNode; badges?: ReactNode; meta?: ReactNode; stripe?: number; tone?: ListRowTone; color?: string; selected?: boolean; active?: boolean; dimmed?: boolean; leading?: ReactNode; trailing?: ReactNode; actions?: ReactNode; onClick?: () => void; className?: string; children?: ReactNode; } & Omit<HTMLAttributes<HTMLDivElement>, "title" | "children" | "onClick">) => Element
@@ -227,7 +226,6 @@ PopoverAnchor (value): ({ ...props }: PopoverAnchorProps & RefAttributes<HTMLDiv
 PopoverContent (value): ({ className, align, sideOffset, ...props }: PopoverContentProps & RefAttributes<HTMLDivElement>) => Element
 PopoverTrigger (value): ({ ...props }: PopoverTriggerProps & RefAttributes<HTMLButtonElement>) => Element
 ProxyNode (type): ProxyNode
-ProxySettingsFields (value): ({ customHeaders, basicAuth, onChange, }: ProxySettingsFieldsProps) => Element
 RadialGauge (value): ({ value, label, caption, size, strokeWidth, className, colorClassName, }: RadialGaugeProps) => Element
 RadialGaugeProps (type): RadialGaugeProps
 RailGroup (type): RailGroup
@@ -288,12 +286,6 @@ SurfaceKind (type): SurfaceKind
 SurfaceScope (value): ({ kind, onEditingChange, onClose, className, children, }: { kind?: SurfaceKind; onClose?: () => void; onEditingChange?: (editing: EditingWidth) => void; className?: string; children: ReactNode; }) => Element
 Switch (value): ({ className, ...props }: SwitchProps & RefAttributes<HTMLButtonElement>) => Element
 SwitchRow (value): ({ label, description, badge, checked, onChange, disabled, defaultKey, rowId, }: { label: string; description?: ReactNode; badge?: string; checked: boolean; onChange: (value: boolean) => void; disabled?: boolean; defaultKey?: string; rowId?: string; }) => Element
-SyncBasicAuth (type): SyncBasicAuth
-SyncConflictItem (type): SyncConflictItem
-SyncEntityInfo (type): SyncEntityInfo
-SyncErrorItem (type): SyncErrorItem
-SyncProxyHeader (type): SyncProxyHeader
-SyncStatus (type): SyncStatus
 TOTPDialog (value): ({ isOpen, prompt, mode, waiting, onSubmit, onCancel, backgroundColor, }: TOTPDialogProps) => Element
 Tab (type): Tab
 TabShellCallbacks (type): TabShellCallbacks
@@ -443,8 +435,6 @@ getSessionTimeoutMinutes (value): () => Promise<number>
 getSessions (value): () => Promise<{ sessions: { id: string; userId: string; username?: string; deviceType: string; deviceInfo: string; createdAt: string; expiresAt: string; lastActiveAt: string; isRevoked?: boolean; isCurrentSession?: boolean; }[]; }>
 getStatusCheckSettings (value): () => Promise<{ statusCheckInterval: number; }>
 getStatusClasses (value): (status: boolean | "online" | "offline" | "unknown", scheme: StatusColorScheme, variant: "dot" | "stripe" | "badge", loading?: boolean) => string
-getSyncConflicts (value): () => Promise<SyncConflictItem[]>
-getSyncErrors (value): () => Promise<SyncErrorItem[]>
 getTabType (value): (id: string) => TabTypeDef
 getTlsStatus (value): () => Promise<TlsStatus>
 getUpdateChannel (value): () => Promise<UpdateChannelState>
@@ -509,7 +499,6 @@ quickConnectTargets (value): (all: HostActionDef[], host: Host) => HostActionDef
 railItemLabel (value): (id: string, t: (key: string) => string) => string
 readFromClipboard (value): () => Promise<string>
 recordHostActionPreference (value): (hostId: string, action: TabType) => void
-refreshSyncStatus (value): () => void
 registerLayout (value): (item: RegisteredLayout) => () => void
 registerTabCloseGuard (value): (tabId: string, guard: Guard) => () => void
 releaseUrlFrom (value): (info: VersionInfo) => string
@@ -532,7 +521,6 @@ resolveConnectionOrigin (value): (host: OriginResolvableHost, options?: { defaul
 resolveHostDefaults (value): (where: { hostId?: number; folder?: string; parentHostId?: number; }, adminTargetUserId?: string) => Promise<Record<string, ResolvedHostDefault>>
 resolveHostTabType (value): (host: Host, preferredType?: TabType) => TabType
 resolveRemoteHostId (value): (syncId: string) => Promise<number>
-retrySyncErrors (value): () => Promise<SyncStatus>
 revokeAllUserSessions (value): (userId: string) => Promise<{ success: boolean; message: string; }>
 revokeCredentialAccess (value): (credentialId: number, accessId: number) => Promise<void>
 revokeFolderAccess (value): (ruleId: number) => Promise<void>
@@ -556,21 +544,17 @@ setDeveloperMode (value): (enabled: boolean) => Promise<void>
 setHostAuthOverride (value): (hostId: number, protocol: string, credentialId: number, sharedCopySyncId?: string) => Promise<{ success: boolean; protocol: string; credentialId: number; }>
 setNotificationPrivateEndpoints (value): (hosts: string[]) => Promise<string[]>
 setPluginOptions (value): (pluginId: string, options: { autoUpdate?: boolean; pinned?: boolean; channel?: PluginChannel; }) => Promise<{ autoUpdate: boolean; pinnedVersion: string; channel: PluginChannel; }>
-setSyncStatus (value): (next: SyncStatus) => void
 setUpdateChannel (value): (channel: UpdateChannel) => Promise<UpdateChannelState>
-settleSyncConflict (value): (id: number, keep: "mine" | "server") => Promise<void>
 shareCredential (value): (credentialId: number, targets: ShareTarget[], permissionLevel: CredentialPermissionLevel, durationHours?: number) => Promise<{ success: boolean; expiresAt: string; }>
 shareFolder (value): (folder: string, shareData: { targets: ShareTarget[]; permissionLevel: SharePermissionLevel; durationHours?: number; }) => Promise<{ success: boolean; expiresAt: string; hostsShared: number; hostsTotal: number; hostResults: { hostId: number; shared: boolean; reason?: string; }[]; }>
 shareHost (value): (hostId: number, shareData: { targets: ShareTarget[]; permissionLevel: SharePermissionLevel; durationHours?: number; }, syncId?: string) => Promise<{ success: boolean; expiresAt: string; results: { type: "role" | "user"; id: string | number; accessId: number; created: boolean; }[]; }>
 shell (value): TabShellCallbacks
 splitDefaultKey (value): (fullKey: string) => [string, string]
 sshHostToHost (value): (h: SSHHostWithStatus) => Host
-syncNow (value): () => Promise<SyncStatus>
 tabIcon (value): (type: TabType) => Element
 tabJumpHotkeyKeys (value): () => string[]
 takePendingManageRequest (value): () => ManageRequest
 unlinkExternalFromPasswordAccount (value): (userId: string) => Promise<{ success: boolean; message: string; }>
-unlinkServer (value): (keepData: boolean) => Promise<SyncStatus>
 updateCredential (value): (credentialId: number, credentialData: Record<string, unknown>) => Promise<Record<string, unknown>>
 updateExternalAutoProvision (value): (enabled: boolean) => Promise<Record<string, unknown>>
 updateFolderMetadata (value): (name: string, color?: string, icon?: string, credentialId?: number, localOnly?: boolean) => Promise<void>
@@ -588,7 +572,6 @@ updateSSHHost (value): (hostId: number, hostData: HostData) => Promise<Host>
 updateSecondFactorAfterExternalLogin (value): (enabled: boolean) => Promise<Record<string, unknown>>
 updateSessionTimeout (value): (timeoutHours: number) => Promise<void>
 updateStatusCheckSettings (value): (settings: { statusCheckInterval: number; }) => Promise<void>
-updateSyncSettings (value): (settings: { disabledTypes?: string[]; customHeaders?: SyncProxyHeader[]; basicAuth?: SyncBasicAuth; allowInvalidCertificate?: boolean; }) => Promise<SyncStatus>
 uploadTlsCertificate (value): (payload: { certificate: string; privateKey: string; }) => Promise<TlsStatus & { success: boolean; reloadMessage?: string; }>
 usageBarColor (value): (percent: number) => string
 usageColor (value): (percent: number) => string
@@ -635,7 +618,6 @@ useSshAuthEditors (value): () => SshAuthEditorDef[]
 useSshAuthProviders (value): () => { providers: SshAuthTypeOption[]; loaded: boolean; find: (type: string) => SshAuthTypeOption; }
 useStatusColorScheme (value): () => StatusColorScheme
 useSurfaceKind (value): () => SurfaceKind
-useSyncStatus (value): () => any
 useTabHandlesVersion (value): () => number
 useTabs (value): () => TabContextType
 useTabsSafe (value): () => TabContextType

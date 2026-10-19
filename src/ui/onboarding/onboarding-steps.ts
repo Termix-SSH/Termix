@@ -1,8 +1,7 @@
-import { Monitor, MonitorDown, Puzzle, Shield } from "lucide-react";
+import { MonitorDown, Puzzle, Shield } from "lucide-react";
 import { CORE_ONBOARDING_STEPS } from "@/types/onboarding";
 import { PluginsStep } from "./steps/PluginsStep";
 import { SecurityStep } from "./steps/SecurityStep";
-import { DesktopSyncStep } from "./steps/DesktopSyncStep";
 import { DesktopUpdatesStep } from "./steps/DesktopUpdatesStep";
 import { desktopUpdates } from "@/lib/desktop-updates";
 import type { OnboardingStepDef } from "./onboarding-registry";
@@ -27,16 +26,6 @@ export const CORE_STEPS: OnboardingStepDef[] = [
     // plugins change after that, so a rerun leaves it out.
     isRelevant: (ctx) => !ctx.pluginsManagedElsewhere && ctx.pluginSetupPending,
     forcePending: (ctx) => ctx.pluginSetupPending,
-  },
-  {
-    id: "desktop-sync",
-    version: CORE_ONBOARDING_STEPS["desktop-sync"],
-    titleKey: "onboarding.desktopTitle",
-    icon: Monitor,
-    Component: DesktopSyncStep,
-    audience: "all",
-    position: 20,
-    isRelevant: (ctx) => ctx.isDesktop,
   },
   {
     id: "desktop-updates",
