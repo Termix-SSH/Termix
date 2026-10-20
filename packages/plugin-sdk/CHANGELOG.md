@@ -1,12 +1,19 @@
 # Changelog
 
+## 1.0.19
+
+Plugin API 1.11.0.
+
+### Added
+
+- `app.registerCompanionLayout` and `useCompanions`, so a plugin can let each host turn the panel bar on or off, move it and choose which panels show and in what order
+
 ## 1.0.18
 
 Plugin API 1.10.0.
 
 ### Added
 
-- `app.registerCompanionLayout` and `useCompanions`, so a plugin can let each host turn the panel bar on or off, move it and choose which panels show and in what order
 - `clientCert` on the sync link, link patch and remote target, and the `client_cert` remote error kind, so a sync plugin can link to a server that needs mutual TLS
 
 ## 1.0.17
