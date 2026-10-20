@@ -32,6 +32,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
     webFrame.setZoomFactor(Math.min(2, Math.max(0.5, value)));
   },
   getPlatform: () => ipcRenderer.invoke("get-platform"),
+
+  // Whether the app-drawn title bar shows in this window, and when it changes
+  // (full screen hides it).
+  getTitleBarVisible: () => ipcRenderer.invoke("get-title-bar-visible"),
+  onTitleBarVisibleChange: (callback) => {
+    const listener = (_event, visible) => callback(visible);
+    ipcRenderer.on("title-bar-visible-changed", listener);
+    return () =>
+      ipcRenderer.removeListener("title-bar-visible-changed", listener);
+  },
+  // Keeps the window controls the system draws in the colors of the theme.
+  setTitleBarOverlay: (colors) =>
+    ipcRenderer.invoke("set-title-bar-overlay", colors),
   getEmbeddedServerStatus: () =>
     ipcRenderer.invoke("get-embedded-server-status"),
 

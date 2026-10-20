@@ -1,5 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
 import { prepareClientCacheVersion } from "@/lib/client-cache-version";
+import {
+  TitleBar,
+  TITLE_BAR_OFFSET,
+  useTitleBarOverlayColors,
+} from "@/shell/TitleBar";
 import { StrictMode, Suspense, lazy, useState, useRef, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import "./ui/index.css";
@@ -160,6 +165,8 @@ function FullscreenAppGate() {
 }
 
 function App() {
+  // Keeps the window controls the system draws in the colors of the theme.
+  useTitleBarOverlayColors();
   const stored = getStoredAuth();
   const [phase, setPhase] = useState<Phase>(
     stored?.loggedIn ? "verifying" : "idle-auth",
@@ -370,10 +377,17 @@ function App() {
 
   const { t } = useTranslation();
   const isTransitioning = phase === "fading-in" || phase === "fading-out";
+  // The desktop app draws a title bar on top of the window, so everything
+  // below it starts lower. The bar sets the offset only while it shows.
+  const titleBarOffset = TITLE_BAR_OFFSET;
 
   if (phase === "verifying" || phase === "loading-app") {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
+      <div
+        className="fixed inset-0 flex items-center justify-center bg-background"
+        style={{ paddingTop: titleBarOffset }}
+      >
+        <TitleBar />
         <div className="flex flex-col items-center gap-4">
           <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
@@ -384,8 +398,13 @@ function App() {
 
   return (
     <>
+      <TitleBar />
+
       {isTransitioning && (
-        <div className="fixed inset-0 z-0 flex items-center justify-center bg-background">
+        <div
+          className="fixed inset-0 z-0 flex items-center justify-center bg-background"
+          style={{ paddingTop: titleBarOffset }}
+        >
           <div className="flex flex-col items-center gap-4">
             <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             <p className="text-sm text-muted-foreground">
@@ -416,6 +435,7 @@ function App() {
               style={{
                 opacity: appOpacity,
                 pointerEvents: phase === "idle-app" ? "auto" : "none",
+                paddingTop: titleBarOffset,
               }}
             >
               <Suspense fallback={null}>
@@ -432,6 +452,7 @@ function App() {
           style={{
             opacity: authOpacity,
             pointerEvents: phase === "idle-auth" ? "auto" : "none",
+            paddingTop: titleBarOffset,
           }}
         >
           <Auth onLogin={handleLogin} />
