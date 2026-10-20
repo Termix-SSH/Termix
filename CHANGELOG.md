@@ -27,6 +27,7 @@
 - Another Termix server can manage this one with an API key, which can now ask for a one minute ticket to open plugin sockets as its user
 - FIDO2 security keys (ed25519-sk and ecdsa-sk) work through SSH Agent authentication when Termix runs in the desktop app. The key asks for a touch or PIN on your own machine
 - Pasting a security key file now explains how to use it instead of failing to decode it
+- Plugins can add a panel that sits beside a host tab, like a terminal. You can open, resize and move it
 
 ### Changed
 

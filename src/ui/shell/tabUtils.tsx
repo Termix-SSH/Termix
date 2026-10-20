@@ -12,6 +12,7 @@ import {
   type TabTypeDef,
 } from "./tab-registry";
 import { getPanel, type PanelDef } from "./panel-registry";
+import { CompanionFrame } from "./CompanionFrame";
 import {
   markAdaptiveResourceUsed,
   runAdaptiveBackgroundTask,
@@ -144,7 +145,9 @@ const RegisteredTab = memo(function RegisteredTab({
     />
   );
   return withTabSuspense(
-    def.panelFrame ? <PanelTabFrame>{content}</PanelTabFrame> : content,
+    <CompanionFrame tab={tab} isVisible={isVisible}>
+      {def.panelFrame ? <PanelTabFrame>{content}</PanelTabFrame> : content}
+    </CompanionFrame>,
   );
 });
 

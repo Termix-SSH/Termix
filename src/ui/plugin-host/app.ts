@@ -1,4 +1,5 @@
-import type { ComponentType } from "react";
+import { useEffect, type ComponentType } from "react";
+import type { Tab } from "@/types/ui-types";
 import type {
   Disposer,
   PluginManifest,
@@ -10,6 +11,12 @@ import {
 } from "@/api/plugins-api";
 import { registerRailItem } from "@/sidebar/rail-items";
 import { registerTabType, type TabRenderProps } from "@/shell/tab-registry";
+import {
+  registerCompanionDef,
+  toggleCompanion,
+  type CompanionDefaults,
+  type CompanionRenderProps,
+} from "@/shell/companions";
 import { registerPanel, type PanelRenderProps } from "@/shell/panel-registry";
 import {
   registerHostEditorSection,
@@ -222,6 +229,46 @@ export function createPluginApp(
           ),
           keepMounted: options?.keepMounted,
         }),
+      );
+    },
+
+    registerCompanion(id, component, options = {}) {
+      const useDefaults = options.useDefaults;
+      const Defaults = useDefaults
+        ? scoped(function CompanionDefaultsReader({
+            onValue,
+          }: {
+            onValue: (value: CompanionDefaults) => void;
+          }) {
+            const value = useDefaults();
+            const { open, side, size, edgeButton } = value;
+            useEffect(() => {
+              onValue({ open, side, size, edgeButton });
+            }, [onValue, open, side, size, edgeButton]);
+            return null;
+          })
+        : undefined;
+      return track(
+        registerCompanionDef({
+          id: `${pluginId}.${id}`,
+          pluginId,
+          component: scoped(
+            component as unknown as ComponentType<CompanionRenderProps>,
+          ),
+          icon: withIconBoundary(pluginId, options.icon as never) as never,
+          titleKey: options.titleKey ? key(options.titleKey) : undefined,
+          order: options.order,
+          tabTypes: options.tabTypes,
+          when: options.when as never,
+          Defaults,
+        }),
+      );
+    },
+
+    toggleCompanion(tab, id) {
+      toggleCompanion(
+        tab as unknown as Tab,
+        id ? `${pluginId}.${id}` : undefined,
       );
     },
 

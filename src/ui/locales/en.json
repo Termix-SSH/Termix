@@ -235,6 +235,11 @@
     "ready": "Termix {{version}} is ready to install",
     "readyHint": "It installs the next time Termix restarts."
   },
+  "companion": {
+    "close": "Close panel",
+    "moveSide": "Move panel",
+    "resize": "Resize panel"
+  },
   "nav": {
     "home": "Home",
     "terminal": "Terminal",

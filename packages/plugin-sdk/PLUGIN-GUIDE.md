@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.16 | Plugin API 1.8.0
+SDK 1.0.17 | Plugin API 1.9.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -495,6 +495,7 @@ your plugin's error boundary and Suspense.
 | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | `registerRailItem`                                                                 | A sidebar rail button                                             |
 | `registerTab`, `registerPanel`                                                     | A tab type or sidebar panel (id in `contributes.tabs` / `panels`) |
+| `registerCompanion`, `toggleCompanion`                                             | A panel beside any host tab, bound to its host and handle         |
 | `registerDashboardCard`                                                            | A dashboard card (`contributes.dashboardCards`)                   |
 | `registerHostAction`                                                               | A host button, palette entry or default connect                   |
 | `registerHostEditorSection`                                                        | Your own host editor section (host settings get one for free)     |

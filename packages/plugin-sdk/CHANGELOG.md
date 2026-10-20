@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.17
+
+Plugin API 1.9.0.
+
+### Added
+
+- `app.registerCompanion` and `app.toggleCompanion`, so a plugin can add a panel beside any host tab. The user opens, resizes and moves it, and the tab keeps running
+
 ## 1.0.16
 
 Plugin API 1.8.0.

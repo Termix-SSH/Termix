@@ -814,6 +814,46 @@ export interface SettingsComponentProps {
   running: boolean;
 }
 
+/** What a companion starts with. Read from the plugin's own settings. */
+export interface CompanionDefaults {
+  /** Open by itself the first time a matching tab shows. */
+  open?: boolean;
+  side?: "left" | "right" | "bottom";
+  /** Pixels of width, or height at the bottom. */
+  size?: number;
+  /** Show the edge button that opens and closes it. Default true. */
+  edgeButton?: boolean;
+}
+
+export interface CompanionProps {
+  /** The tab it sits beside. */
+  tab: PluginTabRecord;
+  host?: PluginHostRecord;
+  /** The host in the shape the connection APIs take. */
+  sshHost?: Record<string, unknown>;
+  /** The tab's surface handle (see TabHandle), read at call time. */
+  getHandle: () => TabHandle | null;
+  side: "left" | "right" | "bottom";
+  /** False while the tab is in the background or the panel is closed. */
+  isVisible: boolean;
+  close: () => void;
+  setSide: (side: "left" | "right" | "bottom") => void;
+}
+
+export interface CompanionOptions {
+  icon?: IconComponent;
+  titleKey?: string;
+  order?: number;
+  /** Tab types it applies to. Any tab with a host when empty. */
+  tabTypes?: string[];
+  when?: (tab: PluginTabRecord, host?: PluginHostRecord) => boolean;
+  /**
+   * A hook returning the starting state. It runs in the plugin's scope, so it
+   * can read the plugin's settings.
+   */
+  useDefaults?: () => CompanionDefaults;
+}
+
 export type ActionHandler = (...args: never[]) => unknown;
 
 export interface ActionSlotDefinition {
@@ -1068,6 +1108,18 @@ export interface TermixApp extends TermixAppInfo {
     component: ComponentType<TabProps>,
     options?: TabOptions,
   ) => Disposer;
+  /**
+   * A panel that sits beside any host tab the options match (a terminal, a
+   * desktop, ...), bound to that tab's host. The user opens, resizes and moves
+   * it; the tab keeps running underneath.
+   */
+  registerCompanion: (
+    id: string,
+    component: ComponentType<CompanionProps>,
+    options?: CompanionOptions,
+  ) => Disposer;
+  /** Opens a companion on a tab, or closes it when it is showing. */
+  toggleCompanion: (tab: PluginTabRecord, id?: string) => void;
   registerHostEditorSection: (
     section: HostEditorSectionContribution,
   ) => Disposer;
