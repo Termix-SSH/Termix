@@ -236,6 +236,29 @@ export class HostFolderRepository {
       .where(and(eq(hosts.userId, userId), folderMatch(hosts.folder)));
   }
 
+  /** Drops the folder rows (and subfolders) only when no host is left in them. */
+  async deleteEmptyFolderRecords(
+    userId: string,
+    folderName: string,
+  ): Promise<boolean> {
+    if ((await this.listHostsInFolder(userId, folderName)).length > 0) {
+      return false;
+    }
+    await deleteReturning(
+      this.context,
+      sshFolders,
+      and(
+        eq(sshFolders.userId, userId),
+        or(
+          eq(sshFolders.name, folderName),
+          like(sshFolders.name, `${folderName} / %`),
+        ),
+      ),
+    );
+    await this.afterWrite();
+    return true;
+  }
+
   async deleteHostsAndFolderRecords(
     userId: string,
     folderName: string,

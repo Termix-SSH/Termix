@@ -1143,6 +1143,10 @@
         "title": "Set sign in rules",
         "consequence": "It can sign people out when idle, limit session length, turn off remember me and require a second factor."
       },
+      "ssh:transport": {
+        "title": "Choose how hosts are reached",
+        "consequence": "It can carry the SSH connection to a host over its own route, so it sees everything sent to and from those hosts, passwords included."
+      },
       "sync:provide": {
         "title": "Run sync",
         "consequence": "It can answer all sync requests, so it sees the data that devices and servers sync."

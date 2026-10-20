@@ -35,6 +35,7 @@ import {
   mountPluginLegacyPaths,
 } from "./routes/plugin-api-routes.js";
 import { attachPluginWebSockets } from "../plugins/ws.js";
+import { registerSshRelay } from "../hosts/ssh-relay.js";
 import pluginRoutes from "./routes/plugins.js";
 import { createPluginAssetsRouter } from "../plugins/assets.js";
 import { getPluginRuntime } from "../plugins/index.js";
@@ -1898,6 +1899,7 @@ const httpServer = http.createServer(app);
 // Plugin sockets ride this server at /plugin-ws/<id>/<path>. Anything else is
 // left alone, so core's own upgrade handling is unaffected.
 attachPluginWebSockets(httpServer);
+registerSshRelay();
 
 httpServer.on("error", (err: NodeJS.ErrnoException) => {
   if (err.code === "EADDRINUSE") {

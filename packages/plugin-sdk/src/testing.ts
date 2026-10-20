@@ -1070,6 +1070,10 @@ export function createFakeContext(
           };
         },
       },
+      folders: {
+        ensure: async () => {},
+        removeEmpty: async () => true,
+      },
       locks: {
         provide: (provider) => {
           hostLockProviders.push(provider);
@@ -1148,6 +1152,7 @@ export function createFakeContext(
     },
 
     ssh: {
+      transports: { provide: () => () => {} },
       probe: async (hostId, probeOptions) =>
         options.reachable?.(hostId, probeOptions?.port) ?? false,
       connect: async (host, connectOptions) => {
@@ -2007,6 +2012,16 @@ export function createMockCtx(
           return ctx.hosts.activity.provide(provider);
         },
       },
+      folders: {
+        ensure: async (name, style) => {
+          require("hosts:write");
+          return ctx.hosts.folders.ensure(name, style);
+        },
+        removeEmpty: async (name) => {
+          require("hosts:write");
+          return ctx.hosts.folders.removeEmpty(name);
+        },
+      },
       locks: {
         provide: (provider) => {
           require("hosts:lock");
@@ -2040,6 +2055,12 @@ export function createMockCtx(
 
     ssh: {
       ...ctx.ssh,
+      transports: {
+        provide: (provider) => {
+          require("ssh:transport");
+          return ctx.ssh.transports.provide(provider);
+        },
+      },
       probe: async (hostId, probeOptions) => {
         require("ssh:connect");
         return ctx.ssh.probe(hostId, probeOptions);

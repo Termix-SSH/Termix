@@ -1041,6 +1041,31 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
       },
     },
 
+    folders: {
+      ensure: async (name, style) => {
+        await requireWrite();
+        const userId = actingUser();
+        const { createCurrentHostFolderRepository } =
+          await import("../database/repositories/factory.js");
+        await createCurrentHostFolderRepository().upsertMetadata(
+          userId,
+          name,
+          style?.color ?? null,
+          style?.icon ?? null,
+        );
+      },
+      removeEmpty: async (name) => {
+        await requireWrite();
+        const userId = actingUser();
+        const { createCurrentHostFolderRepository } =
+          await import("../database/repositories/factory.js");
+        return createCurrentHostFolderRepository().deleteEmptyFolderRecords(
+          userId,
+          name,
+        );
+      },
+    },
+
     activity: {
       provide: (provider) => {
         if (!declared.includes("hosts:activity-provide")) {

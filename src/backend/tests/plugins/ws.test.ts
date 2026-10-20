@@ -154,6 +154,26 @@ describe("ctx.ws routing", () => {
     if (result.outcome === "open") result.socket.close();
   });
 
+  it("serves a socket core owns without any plugin grant", async () => {
+    state.granted = new Set();
+    const seen: string[] = [];
+    ws.registerCoreWsRoute("/relay", ({ userId }) => {
+      seen.push(userId);
+    });
+
+    const base = await startServer();
+    const signedIn = await connect(
+      `${base}/plugin-ws/core/relay`,
+      authProtocols(state.validToken),
+    );
+    const anonymous = await connect(`${base}/plugin-ws/core/relay`);
+
+    expect(signedIn.outcome).toBe("open");
+    expect(anonymous.outcome).toBe(401);
+    expect(seen).toEqual([state.userId]);
+    if (signedIn.outcome === "open") signedIn.socket.close();
+  });
+
   it("404s a path nothing registered", async () => {
     const base = await startServer();
 

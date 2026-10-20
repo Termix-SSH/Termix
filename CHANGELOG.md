@@ -22,6 +22,8 @@
 - A plugin can answer all sync requests and use the replica store, change feed and linked server list, so sync no longer lives in the core app
 - The desktop app can hold several accounts, each with its own copy of a server's data. The app signs in as the active one and its auto session follows a switch
 - The linked server list holds one link per account, with room for more connection options per server
+- A plugin can carry SSH connections over its own stream, and core relays a host's connection over a socket for another Termix
+- Plugins can create a folder with a color and icon and remove it when it is empty
 - Another Termix server can manage this one with an API key, which can now ask for a one minute ticket to open plugin sockets as its user
 
 ### Changed

@@ -49,6 +49,7 @@ export const CAPABILITY_CATALOG: readonly CapabilityInfo[] = [
   entry("auth:provide", "high"),
   entry("auth:policy", "high"),
   entry("sync:provide", "high"),
+  entry("ssh:transport", "high"),
   entry("device:serial", "high"),
   entry("notify:hub", "high"),
   entry("ui:layout", "high"),

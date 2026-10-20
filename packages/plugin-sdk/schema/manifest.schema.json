@@ -153,6 +153,7 @@
           "auth:provide",
           "auth:policy",
           "sync:provide",
+          "ssh:transport",
           "system:tls",
           "device:serial",
           "hosts:write",

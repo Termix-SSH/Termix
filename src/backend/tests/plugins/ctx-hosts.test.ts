@@ -30,6 +30,8 @@ const h = vi.hoisted(() => ({
   existingAccess: [] as Array<{ id: number }>,
   revoked: [] as number[],
   protocolWrites: [] as Array<{ hostId: number; protocols: string[] }>,
+  folderCalls: [] as Array<unknown[]>,
+  folderEmpty: true,
   roles: [] as Array<{
     id: number;
     name: string;
@@ -95,6 +97,15 @@ vi.mock("../../database/repositories/factory.js", () => ({
   }),
   createCurrentUserRepository: () => ({
     listAll: async () => h.users,
+  }),
+  createCurrentHostFolderRepository: () => ({
+    upsertMetadata: async (...args: unknown[]) => {
+      h.folderCalls.push(["ensure", ...args]);
+    },
+    deleteEmptyFolderRecords: async (...args: unknown[]) => {
+      h.folderCalls.push(["remove", ...args]);
+      return h.folderEmpty;
+    },
   }),
   createCurrentHostRepository: () => ({
     createEncryptedForUser: async (
@@ -959,5 +970,47 @@ describe("ctx.hosts.locks", () => {
     });
     await owner.update(4, { name: "y" });
     expect(h.updates).toHaveLength(1);
+  });
+});
+
+describe("ctx.hosts.folders", () => {
+  beforeEach(() => {
+    h.granted = new Set(["hosts:write"]);
+    h.actor = "user-1";
+    h.folderCalls = [];
+    h.folderEmpty = true;
+  });
+
+  it("needs hosts:write", async () => {
+    h.granted = new Set();
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    await expect(hosts.folders.ensure("Site")).rejects.toThrow(
+      PluginCapabilityError,
+    );
+  });
+
+  it("creates the folder row for the acting user with its style", async () => {
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    await hosts.folders.ensure("Site", { icon: "cloud-cog" });
+    expect(h.folderCalls).toEqual([
+      ["ensure", "user-1", "Site", null, "cloud-cog"],
+    ]);
+  });
+
+  it("removes only an empty folder", async () => {
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    expect(await hosts.folders.removeEmpty("Site")).toBe(true);
+    h.folderEmpty = false;
+    expect(await hosts.folders.removeEmpty("Site")).toBe(false);
+    expect(h.folderCalls[0]).toEqual(["remove", "user-1", "Site"]);
   });
 });

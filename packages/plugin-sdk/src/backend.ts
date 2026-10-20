@@ -1395,6 +1395,18 @@ export interface PluginHosts {
   activity: PluginHostActivityApi;
   /** Read only hosts this plugin manages. */
   locks: PluginHostLocksApi;
+  /** Folder rows for the acting user. Needs hosts:write. */
+  folders: PluginHostFoldersApi;
+}
+
+export interface PluginHostFoldersApi {
+  /** Creates the folder row if missing and sets its color and icon. */
+  ensure: (
+    name: string,
+    style?: { color?: string | null; icon?: string | null },
+  ) => Promise<void>;
+  /** Removes the folder row and subfolders once no host is left in them. */
+  removeEmpty: (name: string) => Promise<boolean>;
 }
 
 export interface PluginHostImportOptions {
@@ -1777,7 +1789,29 @@ export interface PluginNetwork {
   ) => Promise<boolean>;
 }
 
+/**
+ * A way to reach some hosts other than a plain TCP connection. `claims` is
+ * asked for every connection, so it must be quick. `open` returns a stream
+ * the SSH client runs over, like a relayed socket.
+ */
+export interface PluginSshTransportProvider {
+  claims: (hostId: number) => boolean;
+  open: (host: {
+    id: number;
+    ip: string;
+    port: number;
+  }) => Promise<import("node:stream").Duplex>;
+}
+
+export interface PluginSshTransports {
+  /** Needs ssh:transport. Removed on deactivate. */
+  provide: (provider: PluginSshTransportProvider) => () => void;
+}
+
 export interface PluginSsh {
+  /** Other ways to reach hosts, used by every connection to them. */
+  transports: PluginSshTransports;
+
   /**
    * Whether a TCP port answers through the host's jump host chain. Chains are
    * shared and closed when idle. The acting user must be able to connect to

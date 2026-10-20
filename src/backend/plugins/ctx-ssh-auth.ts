@@ -43,6 +43,7 @@ import {
   registerSecondFactor,
 } from "../auth/registry.js";
 import { provideAuthPolicy } from "../auth/policy.js";
+import { provideSshTransport } from "../hosts/connect/transport-providers.js";
 import type { VerifiedIdentity } from "../auth/types.js";
 import type {
   MutableConnectConfig,
@@ -296,6 +297,26 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
     }`;
 
   return {
+    transports: {
+      provide: (provider) => {
+        if (!declared.includes("ssh:transport")) {
+          throw capabilityRefused(pluginId, "ssh:transport");
+        }
+        const remove = provideSshTransport(pluginId, provider);
+        void audit(
+          "ssh_transport_provide",
+          `${pluginId} carries host connections`,
+          {
+            success: true,
+          },
+        );
+        const drop = bag.add(remove, "ssh transport");
+        return () => {
+          drop();
+          remove();
+        };
+      },
+    },
     probe: async (hostId, probeOptions) => {
       await assertCapability(pluginId, "ssh:connect", declared);
       if (!Number.isInteger(hostId) || hostId <= 0) return false;

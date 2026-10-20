@@ -202,38 +202,40 @@ Bundled as ESM for Node 22+ into `dist/backend.js`. Backend imports of your own 
 
 ### What ctx has
 
-| Member                 | Capability                       | What it does                                                   |
-| ---------------------- | -------------------------------- | -------------------------------------------------------------- |
-| `pluginId`, `manifest` | none                             | Your id and manifest                                           |
-| `log`                  | none                             | Log lines tagged with your plugin                              |
-| `db`                   | `db:own`                         | Your own tables                                                |
-| `kv`                   | `kv:own`                         | Small key value state                                          |
-| `files.dataDir()`      | `files:own`                      | A folder of your own                                           |
-| `settings`             | none                             | Your settings                                                  |
-| `secrets`              | `secrets:own`                    | Encrypted values per user, `seal`/`unseal` for your own tables |
-| `http`, `ws`           | `network:serve`                  | Routes and sockets                                             |
-| `rbac`                 | none                             | Check the actor's permissions                                  |
-| `hosts`                | `hosts:read`, `hosts:write`      | List, read, create, update and share hosts as the actor        |
-| `ssh`                  | `ssh:connect`, `credentials:use` | Connect to hosts through Termix's SSH pipeline                 |
-| `credentials`          | varies                           | The actor's saved keys, and protocol logins                    |
-| `services`             | per service                      | Call other plugins and offer your own                          |
-| `events`               | `events:core` for core topics    | Emit and listen for events                                     |
-| `notify`               | `notify:send`                    | Send alerts to the Alerts inbox                                |
-| `fetch`                | `network:outbound`               | Outbound HTTP with SSRF protection                             |
-| `process`              | `process:spawn`                  | Run programs on the server                                     |
-| `schedule`             | none                             | Timers that stop on disable and never overlap                  |
-| `audit.record`         | none                             | Write your own audit line                                      |
-| `sync`                 | none                             | Sync your tables to a linked desktop                           |
-| `auth`                 | `auth:provide`                   | Login methods, second factors, SSH auth types                  |
-| `auth.issueUserToken`  | `users:impersonate`              | A short-lived session for calling Termix's API as a user       |
-| `auth.policy`          | `auth:policy`                    | Login rules: idle timeout, session length, second factors      |
-| `sync.provide`         | `sync:provide`                   | Answers all /sync requests: server sync, linked desktops       |
-| `users.getLocale`      | `users:read`                     | A user's UI language                                           |
-| `system`               | `system:tls`                     | The server's HTTPS certificate                                 |
-| `plugins.list()`       | `plugins:read`                   | Which plugins are installed                                    |
-| `asUser(userId, fn)`   | always audited                   | Run background work as a user                                  |
-| `currentActor()`       | none                             | The user the current call runs for                             |
-| `disposables.add(fn)`  | none                             | Extra cleanup on disable                                       |
+| Member                 | Capability                       | What it does                                                    |
+| ---------------------- | -------------------------------- | --------------------------------------------------------------- |
+| `pluginId`, `manifest` | none                             | Your id and manifest                                            |
+| `log`                  | none                             | Log lines tagged with your plugin                               |
+| `db`                   | `db:own`                         | Your own tables                                                 |
+| `kv`                   | `kv:own`                         | Small key value state                                           |
+| `files.dataDir()`      | `files:own`                      | A folder of your own                                            |
+| `settings`             | none                             | Your settings                                                   |
+| `secrets`              | `secrets:own`                    | Encrypted values per user, `seal`/`unseal` for your own tables  |
+| `http`, `ws`           | `network:serve`                  | Routes and sockets                                              |
+| `rbac`                 | none                             | Check the actor's permissions                                   |
+| `hosts`                | `hosts:read`, `hosts:write`      | List, read, create, update and share hosts as the actor         |
+| `ssh`                  | `ssh:connect`, `credentials:use` | Connect to hosts through Termix's SSH pipeline                  |
+| `credentials`          | varies                           | The actor's saved keys, and protocol logins                     |
+| `services`             | per service                      | Call other plugins and offer your own                           |
+| `events`               | `events:core` for core topics    | Emit and listen for events                                      |
+| `notify`               | `notify:send`                    | Send alerts to the Alerts inbox                                 |
+| `fetch`                | `network:outbound`               | Outbound HTTP with SSRF protection                              |
+| `process`              | `process:spawn`                  | Run programs on the server                                      |
+| `schedule`             | none                             | Timers that stop on disable and never overlap                   |
+| `audit.record`         | none                             | Write your own audit line                                       |
+| `sync`                 | none                             | Sync your tables to a linked desktop                            |
+| `auth`                 | `auth:provide`                   | Login methods, second factors, SSH auth types                   |
+| `auth.issueUserToken`  | `users:impersonate`              | A short-lived session for calling Termix's API as a user        |
+| `auth.policy`          | `auth:policy`                    | Login rules: idle timeout, session length, second factors       |
+| `sync.provide`         | `sync:provide`                   | Answers all /sync requests: server sync, linked desktops        |
+| `ssh.transports`       | `ssh:transport`                  | Carries a host's SSH connection over your own stream            |
+| `hosts.folders`        | `hosts:write`                    | Create a folder row with a color and icon, remove it when empty |
+| `users.getLocale`      | `users:read`                     | A user's UI language                                            |
+| `system`               | `system:tls`                     | The server's HTTPS certificate                                  |
+| `plugins.list()`       | `plugins:read`                   | Which plugins are installed                                     |
+| `asUser(userId, fn)`   | always audited                   | Run background work as a user                                   |
+| `currentActor()`       | none                             | The user the current call runs for                              |
+| `disposables.add(fn)`  | none                             | Extra cleanup on disable                                        |
 
 ### The actor
 
@@ -302,6 +304,9 @@ router.post("/notes", async (req, res) => {
 - `ctx.rbac.require("manage")` on a single route, `await ctx.rbac.has("manage")` in code. A full id like
   `hosts.edit` checks a core permission.
 - Host access: `ctx.hosts.checkAccess(hostId, "connect" | "view" | "edit" | "manage")`.
+- Transports: with `ssh:transport`, `ctx.ssh.transports.provide({ claims(hostId), open({ id, ip, port }) })`
+  returns a stream the SSH client uses instead of a direct, proxy or jump host connection. Core also serves
+  `/plugin-ws/core/ssh-relay?hostId=` for callers with connect access, so one Termix can relay to another.
 - Managed hosts: with `hosts:lock`, `ctx.hosts.locks.provide({ isLocked, note, allowManualCreate })` makes
   the hosts you manage read only for the UI, the API and other plugins (pins and order still work), and
   `allowManualCreate: () => false` blocks adding hosts by hand. Your own `ctx.hosts` writes still go
@@ -902,47 +907,48 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 
 ## Capabilities
 
-| Capability               | Risk     | What it allows                                          |
-| ------------------------ | -------- | ------------------------------------------------------- |
-| `credentials:read`       | critical | Read stored secrets for hosts the user can reach        |
-| `system:tls`             | critical | Replace the HTTPS certificate, answer CA domain checks  |
-| `ssh:connect`            | high     | Run any command on hosts, with the user's access        |
-| `process:spawn`          | high     | Run programs on the Termix server                       |
-| `users:write`            | high     | Add users and change their roles                        |
-| `users:impersonate`      | high     | Act as another user, or get a session for them, audited |
-| `db:core-refs`           | high     | Query core users, roles and hosts tables (read only)    |
-| `auth:provide`           | high     | Add login methods, second factors, SSH auth types       |
-| `auth:policy`            | high     | Set login rules: idle timeout, session length, 2FA      |
-| `sync:provide`           | high     | Run sync: answer every /sync request                    |
-| `device:serial`          | high     | Open serial and USB ports on the server                 |
-| `desktop:local`          | high     | Use the user's own computer, desktop app only           |
-| `hosts:export`           | high     | Export hosts with their saved logins                    |
-| `notify:hub`             | high     | Receive every alert (the alerts hub only)               |
-| `ui:layout`              | high     | Replace the whole app layout                            |
-| `hosts:write`            | medium   | Add and edit hosts                                      |
-| `hosts:status-provide`   | medium   | Be the source of host status dots                       |
-| `hosts:activity-provide` | medium   | Be the source of the recent activity list               |
-| `hosts:lock`             | medium   | Make hosts it manages read only for everyone else       |
-| `network:probe`          | medium   | Check that a host answers on a TCP port                 |
-| `credentials:use`        | medium   | Connect with saved credentials without seeing them      |
-| `credentials:write`      | medium   | Save new credentials                                    |
-| `network:outbound`       | medium   | Outbound HTTP through `ctx.fetch`                       |
-| `network:serve`          | medium   | HTTP routes and sockets                                 |
-| `network:broadcast`      | medium   | Local network broadcasts, like Wake-on-LAN              |
-| `users:read`             | medium   | Usernames, roles and UI language                        |
-| `events:core`            | medium   | Listen to core events                                   |
-| `notify:send`            | medium   | Send alerts                                             |
-| `audit:read`             | medium   | Read the audit log                                      |
-| `desktop:window`         | medium   | Open windows in the desktop app                         |
-| `hosts:read`             | low      | Read hosts the user can see                             |
-| `db:own`                 | low      | Your own tables                                         |
-| `kv:own`                 | low      | Small key value state                                   |
-| `files:own`              | low      | Your own folder on disk                                 |
-| `secrets:own`            | low      | Your own encrypted secrets                              |
-| `settings:read-core`     | low      | Read Termix server settings                             |
-| `plugins:read`           | low      | See installed plugins                                   |
-| `ui:surface`             | low      | Add tabs, panels and settings                           |
-| `ui:theme`               | low      | Add color themes, CSS only                              |
+| Capability               | Risk     | What it allows                                                |
+| ------------------------ | -------- | ------------------------------------------------------------- |
+| `credentials:read`       | critical | Read stored secrets for hosts the user can reach              |
+| `system:tls`             | critical | Replace the HTTPS certificate, answer CA domain checks        |
+| `ssh:connect`            | high     | Run any command on hosts, with the user's access              |
+| `process:spawn`          | high     | Run programs on the Termix server                             |
+| `users:write`            | high     | Add users and change their roles                              |
+| `users:impersonate`      | high     | Act as another user, or get a session for them, audited       |
+| `db:core-refs`           | high     | Query core users, roles and hosts tables (read only)          |
+| `auth:provide`           | high     | Add login methods, second factors, SSH auth types             |
+| `auth:policy`            | high     | Set login rules: idle timeout, session length, 2FA            |
+| `sync:provide`           | high     | Run sync: answer every /sync request                          |
+| `device:serial`          | high     | Open serial and USB ports on the server                       |
+| `desktop:local`          | high     | Use the user's own computer, desktop app only                 |
+| `hosts:export`           | high     | Export hosts with their saved logins                          |
+| `notify:hub`             | high     | Receive every alert (the alerts hub only)                     |
+| `ui:layout`              | high     | Replace the whole app layout                                  |
+| `hosts:write`            | medium   | Add and edit hosts                                            |
+| `hosts:status-provide`   | medium   | Be the source of host status dots                             |
+| `hosts:activity-provide` | medium   | Be the source of the recent activity list                     |
+| `ssh:transport`          | high     | Carry SSH connections for hosts it claims over its own stream |
+| `hosts:lock`             | medium   | Make hosts it manages read only for everyone else             |
+| `network:probe`          | medium   | Check that a host answers on a TCP port                       |
+| `credentials:use`        | medium   | Connect with saved credentials without seeing them            |
+| `credentials:write`      | medium   | Save new credentials                                          |
+| `network:outbound`       | medium   | Outbound HTTP through `ctx.fetch`                             |
+| `network:serve`          | medium   | HTTP routes and sockets                                       |
+| `network:broadcast`      | medium   | Local network broadcasts, like Wake-on-LAN                    |
+| `users:read`             | medium   | Usernames, roles and UI language                              |
+| `events:core`            | medium   | Listen to core events                                         |
+| `notify:send`            | medium   | Send alerts                                                   |
+| `audit:read`             | medium   | Read the audit log                                            |
+| `desktop:window`         | medium   | Open windows in the desktop app                               |
+| `hosts:read`             | low      | Read hosts the user can see                                   |
+| `db:own`                 | low      | Your own tables                                               |
+| `kv:own`                 | low      | Small key value state                                         |
+| `files:own`              | low      | Your own folder on disk                                       |
+| `secrets:own`            | low      | Your own encrypted secrets                                    |
+| `settings:read-core`     | low      | Read Termix server settings                                   |
+| `plugins:read`           | low      | See installed plugins                                         |
+| `ui:surface`             | low      | Add tabs, panels and settings                                 |
+| `ui:theme`               | low      | Add color themes, CSS only                                    |
 
 An update that adds a capability waits for an admin to approve it.
 

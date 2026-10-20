@@ -7,6 +7,8 @@ Plugin API 1.8.0.
 ### Added
 
 - `ctx.sync.provide` and the `sync:provide` capability, so a plugin can answer every /sync request
+- `ctx.ssh.transports.provide` and the `ssh:transport` capability, so a plugin can carry SSH connections over its own stream
+- `ctx.hosts.folders.ensure` and `removeEmpty`
 
 ### Removed
 
