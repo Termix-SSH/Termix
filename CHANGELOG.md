@@ -53,6 +53,7 @@
 
 - Linking the desktop app to a server no longer stalls on the server dashboard after sign in
 - Exporting your data no longer fails when a plugin table has a text key, like saved passkeys
+- The Windows on ARM desktop app starts again instead of failing with a local server error
 
 ### Removed
 
