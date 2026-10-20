@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "تعذر تغيير بعض الإضافات. يمكنك إصلاحها لاحقاً من علامة التبويب الإضافات. اضغط التالي للمتابعة.",
     "pluginsApplyFailed": "تعذر حفظ اختياراتك. حاول مرة أخرى، أو تابع وقم بتغييرها لاحقاً من علامة التبويب الإضافات.",
     "pluginsLoadFailed": "تعذر تحميل قائمة الإضافات. يمكنك اختيار الإضافات لاحقاً من علامة التبويب الإضافات.",
-    "presetTitle": "كم تريد أن يظهر على الشاشة؟",
-    "presetIntro": "اختر مقدار ما يظهر على الشاشة.",
-    "presetChangeLater": "يمكنك التبديل بين الإعدادات الجاهزة أو تغيير أي إعداد فردي لاحقاً في الإعدادات، تحت واجهة المستخدم.",
-    "appearanceTitle": "اجعله خاصاً بك",
-    "appearanceIntro": "اختر سمة، ولوناً مميزاً، وخطاً، ولغتك. تظهر التغييرات فوراً، ويمكنك تغييرها لاحقاً في الإعدادات.",
     "securityTitle": "أمن حسابك",
     "securityIntro": "أضف مفتاح مرور أو تطبيق مصادقة إلى حسابك. يمكنك أيضاً القيام بذلك لاحقاً في الإعدادات، تحت الأمان.",
-    "desktopTitle": "كيف تريد استخدام Termix؟",
-    "desktopBody": "يمكنك تغيير ذلك في أي وقت من المزامنة في الشريط الجانبي.",
-    "desktopLocalTitle": "على هذا الجهاز فقط",
-    "desktopLocalBody": "يتم تخزين كل شيء هنا. لا حاجة للإعداد.",
-    "desktopLinkTitle": "مع خادم Termix الخاص بي",
-    "desktopLinkBody": "سجّل الدخول إلى خادمك لاستخدام نفس المضيفين والإعدادات على كل جهاز.",
-    "desktopLinked": "مرتبطة بـ {{server}}",
     "pluginsDocsLink": "اقرأ عن كل منها"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} جاهز للتثبيت",
     "readyHint": "سيتم تثبيته في المرة القادمة التي يعاد فيها تشغيل Termix."
   },
+  "companion": {
+    "close": "إغلاق اللوحة",
+    "moveSide": "نقل اللوحة",
+    "resize": "تغيير حجم اللوحة"
+  },
   "nav": {
     "home": "الرئيسية",
     "terminal": "الطرفية",
@@ -257,7 +250,6 @@
     "hosts": "المضيفين",
     "credentials": "بيانات الاعتماد",
     "connections": "الاتصالات",
-    "sync": "مزامنة",
     "reconnectDisconnectedTerminals": "إعادة توصيل جميع المحطات المنفصلة",
     "reconnectingTerminals_zero": "جاري إعادة توصيل {{count}} محطة",
     "reconnectingTerminals_one": "جاري إعادة توصيل {{count}} محطة",
@@ -291,10 +283,7 @@
     "retry": "إعادة المحاولة",
     "refresh": "تحديث",
     "optional": "اختياري",
-    "downloadSample": "تحميل نموذج",
     "failedToDeleteHost": "فشل في حذف {{name}}",
-    "importSkipExisting": "استيراد (تخطي الموجود)",
-    "importSSHConfig": "استيراد من إعدادات SSH",
     "connectionDetails": "تفاصيل الاتصال",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -517,10 +506,7 @@
     "noFolder": "(بدون مجلد)",
     "deleteSelected": "حذف",
     "exitSelection": "خروج من التحديد",
-    "importSkip": "استيراد (تخطي الموجود)",
-    "importOverwrite": "استيراد (استبدال)",
     "collapseBtn": "طي",
-    "importExportBtn": "استيراد / تصدير",
     "hostStatusesRefreshed": "تم تحديث حالات المضيفين",
     "failedToRefreshHosts": "فشل تحديث المضيفين",
     "movedHostTo": "تم نقل {{host}} إلى \"{{folder}}\"",
@@ -583,6 +569,9 @@
     "deleteFolderConfirm_many": "هل تريد حذف \"{{name}}\" و{{count}} مضيفًا؟ لا يمكن التراجع عن هذا الإجراء.",
     "deleteFolderConfirm_other": "هل تريد حذف \"{{name}}\" و{{count}} مضيف؟ لا يمكن التراجع عن هذا الإجراء.",
     "failedToMoveHosts": "فشل نقل الأجهزة",
+    "managedBanner": "هذا المضيف مُدار بواسطة {{plugin}}. قم بتغييره هناك. يمكنك لا يزال تثبيته وإعادة ترتيبه.",
+    "managedTooltip": "مُدار بواسطة {{plugin}}",
+    "addBlocked": "المضيفون مُدارون بواسطة {{plugin}}، لذا لا يمكن إضافة مضيفين جدد هنا.",
     "failedToReorder": "فشل إعادة الترتيب",
     "expandAll": "توسيع جميع المجلدات",
     "collapseAll": "طي جميع المجلدات",
@@ -697,39 +686,6 @@
     "addCredentialBtn2": "إضافة بيانات اعتماد",
     "checkingHostStatuses": "جاري التحقق من حالات المضيفين...",
     "pinnedSection": "مثبّتة",
-    "hostsExported": "تم تصدير المضيفين بنجاح",
-    "export": {
-      "menuItem": "تصدير...",
-      "title": "تصدير المضيفين",
-      "scope": "النطاق",
-      "scopeAll": "الكل",
-      "scopeSelected": "المحددة",
-      "searchHosts": "البحث عن المضيفين...",
-      "include": "تضمين",
-      "groupConnection": "الاتصال",
-      "groupCredentials": "بيانات الاعتماد",
-      "groupNotes": "ملاحظات",
-      "groupTags": "الوسوم والتثبيت",
-      "groupProxy": "الوكيل",
-      "groupJumpHosts": "مضيفي القفز",
-      "groupFeatureFlags": "إعدادات الإضافات",
-      "groupAdvanced": "إعدادات متقدمة",
-      "preview": "معاينة",
-      "moreHosts_zero": "... و{{count}} مضيف آخر",
-      "moreHosts_one": "... ومضيف واحد آخر",
-      "moreHosts_two": "... و{{count}} مضيفين آخرين",
-      "moreHosts_few": "... و{{count}} مضيفين آخرين",
-      "moreHosts_many": "... و{{count}} مضيفًا آخر",
-      "moreHosts_other": "... و{{count}} مضيف آخر",
-      "summary": "{{selected}} من أصل {{total}} مضيف",
-      "credentialsIncluded": "تم تضمين بيانات الاعتماد",
-      "credentialsExcluded": "تم استبعاد بيانات الاعتماد",
-      "noneSelected": "لم يتم تحديد أي مضيفين",
-      "cancel": "إلغاء",
-      "confirm": "تصدير",
-      "fetchFailed": "فشل في تحميل المضيفين للتصدير",
-      "bulkButton": "تصدير"
-    },
     "sampleDownloaded": "تم تنزيل الملف النموذجي",
     "failedToDeleteCredential2": "فشل في حذف بيانات الاعتماد",
     "noFolderOption": "(بدون مجلد)",
@@ -912,11 +868,7 @@
     "editorUpdate": "تحديث المضيف",
     "editorAdd": "إضافة مضيف",
     "speedSearch": "البحث عن المضيفين. مفاتيح الأسهم للاختيار، Enter للاتصال، Esc للإغلاق",
-    "speedSearchList": "قائمة المضيفين. اكتب أو اضغط / للبحث.",
-    "importNoHosts": "لم يتم العثور على مضيفين في الملف",
-    "importTooMany": "يمكنك استيراد ما يصل إلى {{max}} مضيفين في وقت واحد",
-    "importSummary": "اكتمل الاستيراد: {{imported}} تم استيرادها، {{updated}} تم تحديثها، {{failed}} فشلت",
-    "importHostsFailed": "فشل في استيراد المضيفين"
+    "speedSearchList": "قائمة المضيفين. اكتب أو اضغط / للبحث."
   },
   "splitScreen": {
     "title": "شاشة مقسمة",
@@ -1126,26 +1078,10 @@
     "hostCount_other": "{{count}} مضيف"
   },
   "admin": {
-    "usersCount_zero": "{{count}} مستخدم",
     "usersCount_one": "مستخدم واحد",
-    "usersCount_two": "{{count}} مستخدمين",
-    "usersCount_few": "{{count}} مستخدمين",
-    "usersCount_many": "{{count}} مستخدمًا",
-    "rolesCount_zero": "{{count}} دور",
     "rolesCount_one": "دور واحد",
-    "rolesCount_two": "{{count}} دورين",
-    "rolesCount_few": "{{count}} أدوار",
-    "rolesCount_many": "{{count}} دورًا",
-    "apiKeysCount_zero": "{{count}} مفتاح",
     "apiKeysCount_one": "مفتاح واحد",
-    "apiKeysCount_two": "{{count}} مفتاحين",
-    "apiKeysCount_few": "{{count}} مفاتيح",
-    "apiKeysCount_many": "{{count}} مفتاحًا",
-    "sessionsActive_zero": "0 نشط",
     "sessionsActive_one": "1 نشط",
-    "sessionsActive_two": "2 نشط",
-    "sessionsActive_few": "{{count}} نشطة",
-    "sessionsActive_many": "{{count}} نشطة",
     "hostsCount_zero": "{{count}} مضيف",
     "hostsCount_one": "مضيف واحد",
     "hostsCount_two": "{{count}} مضيفين",
@@ -1159,11 +1095,7 @@
     "credentialsCount_many": "{{count}} بيانات اعتماد",
     "credentialsCount_other": "{{count}} بيانات اعتماد",
     "rolePermissions": {
-      "count_zero": "{{count}} إذن",
       "count_one": "إذن واحد",
-      "count_two": "{{count}} إذنين",
-      "count_few": "{{count}} أذونات",
-      "count_many": "{{count}} إذنًا",
       "groups": {
         "hosts": "المضيفين",
         "credentials": "بيانات الاعتماد",
@@ -1203,23 +1135,59 @@
         "interfaceFontLabel": "خط الواجهة",
         "interfaceFontDescription": "يغيّر خط واجهة التطبيق. تحتفظ ملفات تعريف المحطة الطرفية بإعدادات الخط الخاصة بها.",
         "accentColorLabel": "لون التمييز",
-        "apiKeyCount_zero": "{{count}} مفتاح",
         "apiKeyCount_one": "مفتاح واحد",
-        "apiKeyCount_two": "{{count}} مفتاحين",
-        "apiKeyCount_few": "{{count}} مفاتيح",
-        "apiKeyCount_many": "{{count}} مفتاحًا",
         "colorPickerTooltip": "فتح منتقي الألوان",
         "themeSystem": "النظام",
         "themeLight": "فاتح",
-        "themeDark": "داكن",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "داكن"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "كيف يتم تخطيط التطبيق بأكمله. تأتي السمات والتخطيطات من الإضافات.",
+    "defaultsLabel": "الافتراضي للجميع",
+    "defaultsHint": "ما يراه الناس حتى يختاروا تخطيطهم أو سماتهم الخاصة.",
+    "followDefault": "استخدام الافتراضي",
+    "defaultSaved": "تم حفظ المظهر الافتراضي",
+    "saveFailed": "تعذر حفظ المظهر",
+    "repair": {
+      "title": "تعذر عرض هذا التخطيط",
+      "safeTitle": "الوضع الآمن",
+      "layout": "التخطيط",
+      "plugin": "الإضافة",
+      "reason": "السبب",
+      "error": "خطأ",
+      "noError": "لا توجد رسالة خطأ.",
+      "copy": "نسخ",
+      "copied": "تم النسخ",
+      "copyFailed": "تعذر نسخ التفاصيل",
+      "retry": "حاول مرة أخرى",
+      "reset": "إعادة تعيين إلى المظهر الافتراضي",
+      "resetEveryone": "إعادة تعيين الافتراضي للجميع",
+      "update": "تحديث {{name}} إلى {{version}}",
+      "disable": "إيقاف {{name}}",
+      "install": "البحث عن التخطيطات والسمات",
+      "installTitle": "التخطيطات والسمات",
+      "installButton": "تثبيت",
+      "nothingToInstall": "لا توجد تخطيطات أو سمات أخرى متاحة حالياً.",
+      "registryUnreachable": "تعذر الوصول إلى سجل الإضافات.",
+      "askAdmin": "اطلب من المسؤول تحديث أو إصلاح هذا التخطيط. يمكنك التبديل إلى تخطيط أو سمة أخرى لنفسك أدناه.",
+      "switchLayout": "تبديل التخطيط",
+      "switchTheme": "تبديل السمة",
+      "saveFailed": "تعذر حفظ اختيارك",
+      "reasons": {
+        "safe-url": "العنوان طلب الوضع الآمن. اختر تخطيطاً أدناه، أو احذف ?safe-layout=1 من العنوان.",
+        "safe-env": "تم تشغيل الخادم مع TERMIX_SAFE_LAYOUT، لذا يرى الجميع هذه الشاشة حتى يتم إزالته.",
+        "missing": "لا توجد إضافة مثبتة توفر هذا التخطيط.",
+        "disabled": "الإضافة التي توفر هذا التخطيط معطلة.",
+        "blocked": "الإضافة التي توفر هذا التخطيط تنتظر شيئاً تحتاجه.",
+        "incompatible": "الإضافة التي توفر هذا التخطيط لا تعمل مع هذه النسخة من Termix.",
+        "failed": "فشل التخطيط في البدء.",
+        "crashed": "تعطل التخطيط مرتين أثناء رسم التطبيق."
+      },
+      "noLayout": "لم يتم تعيين أي تخطيط",
+      "restore": "استعادة {{name}} المرفقة",
+      "restoreFailed": "تعذر استعادة النسخة المرفقة"
     }
   },
   "plugins": {
@@ -1244,6 +1212,18 @@
         "title": "إدارة تسجيل الدخول",
         "consequence": "يمكنه إضافة طريقة تسجيل دخول، أو عامل تحقق ثانٍ، أو نوع تسجيل دخول عبر SSH."
       },
+      "auth:policy": {
+        "title": "تعيين قواعد تسجيل الدخول",
+        "consequence": "يمكنه تسجيل خروج الأشخاص عند الخمول، وتقييد مدة الجلسة، وإيقاف تذكرني، ومتطلب عامل ثانٍ."
+      },
+      "ssh:transport": {
+        "title": "اختر كيفية الوصول إلى المضيفين",
+        "consequence": "يمكنه نقل اتصال SSH إلى مضيف عبر مساره الخاص، لذا يرى كل ما يُرسل إلى ومن تلك المضيفين، بما في ذلك كلمات المرور."
+      },
+      "sync:provide": {
+        "title": "تشغيل المزامنة",
+        "consequence": "يمكنه الإجابة على جميع طلبات المزامنة، لذا يرى البيانات التي تزامن الأجهزة والخوادم."
+      },
       "system:tls": {
         "title": "إدارة الشهادات",
         "consequence": "يمكنه استبدال الشهادة التي يقدمها Termix عبر HTTPS والرد على فحوصات النطاق من جهات إصدار الشهادات."
@@ -1251,6 +1231,10 @@
       "device:serial": {
         "title": "الوصول إلى الأجهزة التسلسلية و USB",
         "consequence": "يمكنه فتح منفذ تسلسلي مادي على الجهاز الذي يعمل عليه Termix."
+      },
+      "hosts:export": {
+        "title": "تصدير المضيفين مع أسرارهم",
+        "consequence": "يمكنه قراءة مضيفيك بالكامل، بما في ذلك كلمات المرور والمفاتيح المحفوظة، وتسليمها. يتم كتابة كل تصدير في سجل التدقيق."
       },
       "hosts:write": {
         "title": "إنشاء وتعديل الخوادم",
@@ -1296,9 +1280,29 @@
         "title": "قراءة سجل التدقيق",
         "consequence": "يمكنه رؤية من فعل ماذا ومتى."
       },
+      "network:probe": {
+        "title": "التحقق مما إذا كانت المنافذ تجيب",
+        "consequence": "يمكنه فتح اتصال عادي إلى أي عنوان من الخادم، لمعرفة ما إذا كان يمكن الوصول إليه."
+      },
+      "hosts:status-provide": {
+        "title": "توفير حالة المضيف",
+        "consequence": "يصبح مصدر النقاط عبر الإنترنت وغير المتصلة لكل مضيف."
+      },
+      "hosts:activity-provide": {
+        "title": "تخزين النشاط الأخير",
+        "consequence": "يُصبح مخزناً لقائمة النشاطات الأخيرة لكل مستخدم."
+      },
+      "hosts:lock": {
+        "title": "إدارة المضيفين كقراءة فقط",
+        "consequence": "لا يمكن لأي شخص آخر تعديل أو حذف أو إعادة مشاركة المضيفين التي يديرها."
+      },
       "desktop:window": {
         "title": "فتح نوافذ سطح المكتب",
         "consequence": "فقط في تطبيق سطح المكتب الخاص بـ Termix."
+      },
+      "desktop:local": {
+        "title": "استخدام هذا الكمبيوتر",
+        "consequence": "يمكنه قراءة وتغيير الملفات، وتشغيل shell، وفتح المنافذ المحلية على هذا الكمبيوتر. فقط في تطبيق Termix المكتبي."
       },
       "users:impersonate": {
         "title": "التصرف كمستخدمين آخرين",
@@ -1339,6 +1343,14 @@
       "ui:surface": {
         "title": "إضافة شاشات خاصة بها",
         "consequence": "علامات تبويب، ولوحات، وإعدادات يمكنك إخفاؤها لاحقاً."
+      },
+      "ui:layout": {
+        "title": "استبدال تخطيط التطبيق بالكامل",
+        "consequence": "عند اختياره، يقوم كوده برسم كل شاشة، بما في ذلك طرفياتك وإعداداتك."
+      },
+      "ui:theme": {
+        "title": "إضافة سمات ألوان",
+        "consequence": "ألوان وأنماط فقط. لا يتم تشغيل أي كود لسمات."
       }
     },
     "runtime": {
@@ -1516,6 +1528,7 @@
         "options": "تعذر حفظ خيارات {{name}}: {{error}}",
         "deleteData": "تعذر حذف بيانات {{name}}: {{error}}",
         "managedByServer": "هذا سطح المكتب مرتبط بخادم، وهو الذي يحدد إضافاته.",
+        "defaultLook": "{{name}} هو المظهر الافتراضي، لذا يمكن إيقافه أو استبداله ولكن لا يمكن إلغاء تثبيته.",
         "hasDependents": "{{name}} مطلوب من قبل {{list}}. قم بتعطيلها أو إلغاء تثبيتها أولاً.",
         "missingDependencies": "{{name}} يحتاج إلى {{list}}، وهو غير مثبت.",
         "consentChanged": "تغير ما تطلبه هذه الإضافة منذ أن نظرته. تحقق من القائمة مرة أخرى.",
@@ -1601,7 +1614,6 @@
       "noServerAccess": "لا يوجد وصول إلى خوادمك",
       "searchInstalled": "البحث في المثبتة",
       "searchPlugins": "البحث في الإضافات",
-      "allCategories": "الكل",
       "nothingMatches": "لا شيء يطابق ذلك.",
       "noneInstalled": "لم يتم تثبيت أي إضافات بعد. تصفح لإضافة بعض.",
       "nothingHere": "لا شيء هنا.",
@@ -1707,7 +1719,48 @@
       "documentation": "التوثيق",
       "envVars": "متغيرات البيئة",
       "envRequired": "مطلوب",
-      "envDefault": "الافتراضي: {{value}}"
+      "envDefault": "الافتراضي: {{value}}",
+      "kinds": {
+        "layouts": "التخطيطات",
+        "themes": "السمات",
+        "tabs": "العلامات",
+        "panels": "لوحات الشريط الجانبي",
+        "dashboardCards": "بطاقات لوحة التحكم",
+        "protocols": "أنواع الاتصال",
+        "auth": "طرق تسجيل الدخول",
+        "actions": "الإجراءات",
+        "hostCapability": "إعدادات المضيف"
+      },
+      "filters": {
+        "type": "النوع",
+        "allTypes": "جميع الأنواع",
+        "category": "الفئة",
+        "allCategories": "جميع الفئات",
+        "results_zero": "لا توجد إضافات",
+        "results_one": "إضافة واحدة",
+        "results_two": "إضافتان",
+        "results_few": "{{count}} إضافات",
+        "results_many": "{{count}} إضافة",
+        "results_other": "{{count}} إضافة",
+        "remove": "إزالة الفلتر {{name}}",
+        "clear": "مسح الفلاتر",
+        "button": "الفلاتر",
+        "buttonCount": "الفلاتر ({{count}})"
+      },
+      "pager": {
+        "range": "{{from}}-{{to}} من {{total}}",
+        "page": "الصفحة {{page}} من {{pages}}",
+        "previous": "الصفحة السابقة",
+        "next": "الصفحة التالية",
+        "perPage": "{{count}} في كل صفحة",
+        "perPageLabel": "الإضافات في كل صفحة"
+      },
+      "showUnsupportedHint": "هذه مدرجة ولكن لا يوجد إصدار يعمل على هذا الإصدار بعد. قم بتحديث Termix لتثبيتها.",
+      "unsupported": "يتطلب إصدار أحدث من Termix",
+      "unsupportedHint": "لا يوجد إصدار من هذه الإضافة يعمل على هذا الإصدار من Termix. قم بتحديث Termix لتثبيتها.",
+      "needsTermix": "يتطلب Termix {{range}}",
+      "showUnsupported": "إظهار غير المدعوم ({{count}})",
+      "showMore": "إظهار {{count}} أخرى ({{total}} متبقية)"
     }
   },
   "settings": {
@@ -1722,107 +1775,6 @@
     "sudoHint": "قم بتعيين كلمة مرور sudo لهذا المضيف في محرر المضيف لتمكين الإجراءات ذات الصلاحيات.",
     "noData": "لا توجد بيانات",
     "filter": "تصفية..."
-  },
-  "sync": {
-    "minutesAgo_zero": "منذ {{count}} دقائق",
-    "minutesAgo_one": "منذ دقيقة واحدة",
-    "minutesAgo_two": "منذ دقيقتين",
-    "minutesAgo_few": "منذ {{count}} دقائق",
-    "minutesAgo_many": "منذ {{count}} دقيقة",
-    "minutesAgo_other": "منذ {{count}} دقيقة",
-    "hoursAgo_zero": "منذ {{count}} ساعات",
-    "hoursAgo_one": "منذ ساعة واحدة",
-    "hoursAgo_two": "منذ ساعتين",
-    "hoursAgo_few": "منذ {{count}} ساعات",
-    "hoursAgo_many": "منذ {{count}} ساعة",
-    "hoursAgo_other": "منذ {{count}} ساعة",
-    "pending_zero": "{{count}} تغييرات في انتظار المزامنة",
-    "pending_one": "تغيير واحد في انتظار المزامنة",
-    "pending_two": "تغييران في انتظار المزامنة",
-    "pending_few": "{{count}} تغييرات في انتظار المزامنة",
-    "pending_many": "{{count}} تغييراً في انتظار المزامنة",
-    "pending_other": "{{count}} تغيير في انتظار المزامنة",
-    "proxy": {
-      "headersTitle": "رؤوس إضافية",
-      "headersHint": "تُرسَل مع كل طلب إلى الخادم، على سبيل المثال رمز خدمة Cloudflare Access.",
-      "headerName": "اسم الرأس",
-      "headerValue": "القيمة",
-      "savedValue": "تم الحفظ، اكتب لتغيير",
-      "addHeader": "إضافة رأس",
-      "removeHeader": "إزالة الرأس",
-      "basicAuthTitle": "اسم المستخدم وكلمة المرور",
-      "basicAuthHint": "لوكيل يطلب اسم مستخدم وكلمة مرور قبل Termix.",
-      "username": "اسم المستخدم",
-      "password": "كلمة المرور",
-      "allowInvalidCertificate": "الثقة بشهادة موقعة ذاتياً",
-      "allowInvalidCertificateHint": "فقط لخادمك الخاص، عندما لا تكون شهادته من جهة معروفة."
-    },
-    "problems": {
-      "invalidUrl": "هذا لا يبدو كعنوان ويب.",
-      "unreachable": "تعذر الوصول إلى الخادم. تحقق من العنوان وأن الخادم قيد التشغيل.",
-      "unreachableWithReason": "تعذر الوصول إلى الخادم: {{reason}}",
-      "tlsUntrusted": "شهادة الخادم غير موثوقة. إذا كان هذا خادمك الخاص بشهادة موقعة ذاتيًا، فعّل الخيار أدناه.",
-      "basicAuthRequired": "شيء ما أمام الخادم يطلب اسم مستخدم وكلمة مرور. أدخلهما أدناه.",
-      "proxyLogin": "صفحة تسجيل دخول أو وكيل (Proxy) أجابت بدلاً من Termix. أضف الرؤوس (Headers) التي يحتاجها أدناه، أو تحقق من العنوان.",
-      "notTermix": "لا يوجد خادم Termix عند هذا العنوان. إذا كان يعمل تحت مسار، فقم بتضمينه، مثل https://example.com/termix.",
-      "versionMismatch": "يعمل ذلك الخادم على إصدار أقدم من Termix. قم بتحديثه إلى 2.9 أو أحدث للربط.",
-      "differentAccount": "لقد قمت بتسجيل الدخول إلى حساب مختلف. سجّل الدخول إلى الحساب المرتبط بهذا الجهاز، أو قم بإلغاء الربط أولاً."
-    },
-    "wizard": {
-      "title": "الربط بخادم Termix",
-      "reloginTitle": "تسجيل الدخول مرة أخرى",
-      "savedServers": "الخوادم الأخيرة",
-      "removeServer": "إزالة من القائمة",
-      "serverDescription": "أدخل العنوان الذي تستخدمه لفتح Termix في متصفحك.",
-      "signinDescription": "تسجيل الدخول إلى {{url}}",
-      "chooseDescription": "هذا الجهاز يحتوي بالفعل على بيانات. ماذا يجب أن يحدث لها؟",
-      "finishingDescription": "جارٍ ربط هذا الجهاز.",
-      "serverUrl": "عنوان الخادم",
-      "serverUrlHint": "على سبيل المثال https://termix.example.com",
-      "showProxySettings": "إعدادات الوكيل العكسي",
-      "hideProxySettings": "إخفاء إعدادات الوكيل العكسي",
-      "continue": "متابعة",
-      "back": "رجوع",
-      "mergeTitle": "إضافته إلى حسابي",
-      "mergeBody_zero": "تمت إضافة العناصر الموجودة على هذا الجهاز إلى حسابك. العناصر التي يمتلكها حسابك بالفعل تبقى كما هي على الخادم.",
-      "mergeBody_one": "تمت إضافة العنصر الموجود على هذا الجهاز إلى حسابك. العناصر التي يمتلكها حسابك بالفعل تبقى كما هي على الخادم.",
-      "mergeBody_two": "تمت إضافة العنصرين الموجودين على هذا الجهاز إلى حسابك. العناصر التي يمتلكها حسابك بالفعل تبقى كما هي على الخادم.",
-      "mergeBody_few": "تمت إضافة العناصر الموجودة على هذا الجهاز إلى حسابك. العناصر التي يمتلكها حسابك بالفعل تبقى كما هي على الخادم.",
-      "mergeBody_many": "تمت إضافة العناصر الموجودة على هذا الجهاز إلى حسابك. العناصر التي يمتلكها حسابك بالفعل تبقى كما هي على الخادم.",
-      "mergeBody_other": "تمت إضافة {{count}} عنصرًا موجودًا على هذا الجهاز إلى حسابك. العناصر التي يمتلكها حسابك بالفعل تبقى كما هي على الخادم.",
-      "replaceTitle": "استبداله بحسابي",
-      "replaceBody_zero": "تمت إزالة العناصر الموجودة على هذا الجهاز، وسيأخذ هذا الجهاز كل شيء من حسابك. ستبقى المضيفات المحفوظة على هذا الجهاز فقط.",
-      "replaceBody_one": "تمت إزالة العنصر الموجود على هذا الجهاز، وسيأخذ هذا الجهاز كل شيء من حسابك. ستبقى المضيفات المحفوظة على هذا الجهاز فقط.",
-      "replaceBody_two": "تمت إزالة العنصرين الموجودين على هذا الجهاز، وسيأخذ هذا الجهاز كل شيء من حسابك. ستبقى المضيفات المحفوظة على هذا الجهاز فقط.",
-      "replaceBody_few": "تمت إزالة العناصر الموجودة على هذا الجهاز، وسيأخذ هذا الجهاز كل شيء من حسابك. ستبقى المضيفات المحفوظة على هذا الجهاز فقط.",
-      "replaceBody_many": "تمت إزالة العناصر الموجودة على هذا الجهاز، وسيأخذ هذا الجهاز كل شيء من حسابك. ستبقى المضيفات المحفوظة على هذا الجهاز فقط.",
-      "replaceBody_other": "تمت إزالة {{count}} عنصرًا موجودًا على هذا الجهاز، وسيأخذ هذا الجهاز كل شيء من حسابك. ستبقى المضيفات المحفوظة على هذا الجهاز فقط.",
-      "link": "ربط",
-      "linking": "جارٍ الربط وتشغيل المزامنة الأولى...",
-      "linked": "تم الربط. بياناتك تتم مزامنتها الآن.",
-      "signedInAgain": "تم تسجيل الدخول. المزامنة تعمل مرة أخرى."
-    },
-    "entities": {
-      "hosts": "المضيفين",
-      "sshCredentials": "بيانات الاعتماد",
-      "sshFolders": "المجلدات",
-      "userPreferences": "التفضيلات",
-      "pluginUserSettings": "إعدادات الإضافات",
-      "sharedHosts": "المضيفين المشتركين معك",
-      "sharedCredentials": "بيانات الاعتماد المشتركة معك",
-      "vaultProfiles": "ملفات تعريف Vault",
-      "snippetFolders": "مجلدات المقاطع",
-      "snippets": "المقاطع",
-      "dashboardServiceLinks": "روابط الخدمات",
-      "homepageItems": "عناصر الصفحة الرئيسية",
-      "networkTopology": "خريطة الشبكة",
-      "workspaces": "مساحات العمل",
-      "hostDefaults": "الإعدادات الافتراضية للمضيفين",
-      "hostDefaultsAdmin": "الإعدادات الافتراضية لمضيفي الخادم",
-      "aiProviders": "مزودي الذكاء الاصطناعي",
-      "homepageLayouts": "تخطيطات الصفحة الرئيسية",
-      "accountProfile": "ملف تعريف الحساب"
-    }
   },
   "hostDefaults": {
     "source": {

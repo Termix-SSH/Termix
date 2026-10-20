@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "Sommige plugins konden niet worden gewijzigd. Je kunt ze later oplossen via het tabblad Plugins. Druk op Volgende om door te gaan.",
     "pluginsApplyFailed": "Je keuzes konden niet worden opgeslagen. Probeer het opnieuw, of ga door en pas ze later aan via het tabblad Plugins.",
     "pluginsLoadFailed": "De pluginlijst kon niet worden geladen. Je kunt later plugins kiezen via het tabblad Plugins.",
-    "presetTitle": "Hoeveel wil je op het scherm zien?",
-    "presetIntro": "Kies hoeveel er op het scherm wordt weergegeven.",
-    "presetChangeLater": "Je kunt later van preset wisselen of individuele instellingen wijzigen in Instellingen, onder Interface.",
-    "appearanceTitle": "Maak het persoonlijk",
-    "appearanceIntro": "Kies een thema, een accentkleur, een lettertype en je taal. Wijzigingen worden direct weergegeven en je kunt ze later aanpassen in Instellingen.",
     "securityTitle": "Beveilig je account",
     "securityIntro": "Voeg een passkey of een authenticator-app toe aan je account. Je kunt dit ook later doen in Instellingen, onder Beveiliging.",
-    "desktopTitle": "Hoe wil je Termix gebruiken?",
-    "desktopBody": "Je kunt dit op elk moment wijzigen via Sync in de zijbalk.",
-    "desktopLocalTitle": "Alleen op dit apparaat",
-    "desktopLocalBody": "Alles wordt hierop opgeslagen. Niets in te stellen.",
-    "desktopLinkTitle": "Met mijn Termix-server",
-    "desktopLinkBody": "Meld je aan bij je server om dezelfde hosts en instellingen op elk apparaat te gebruiken.",
-    "desktopLinked": "Gekoppeld aan {{server}}",
     "pluginsDocsLink": "Lees meer over elk plugin"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} is klaar om te installeren",
     "readyHint": "Het wordt geïnstalleerd de volgende keer dat Termix herstart."
   },
+  "companion": {
+    "close": "Sluit paneel",
+    "moveSide": "Verplaats paneel",
+    "resize": "Wijzig grootte paneel"
+  },
   "nav": {
     "home": "Home",
     "terminal": "Terminal",
@@ -257,7 +250,6 @@
     "hosts": "Hosts",
     "credentials": "Aanmeldgegevens",
     "connections": "Verbindingen",
-    "sync": "Synchroniseren",
     "reconnectDisconnectedTerminals": "Alle verbroken terminals opnieuw verbinden",
     "reconnectingTerminals_one": "{{count}} terminal opnieuw verbinden",
     "reconnectingTerminals_other": "{{count}} terminals opnieuw verbinden",
@@ -279,10 +271,7 @@
     "retry": "Opnieuw proberen",
     "refresh": "Vernieuwen",
     "optional": "Optioneel",
-    "downloadSample": "Voorbeeld downloaden",
     "failedToDeleteHost": "Kon {{name}} niet verwijderen",
-    "importSkipExisting": "Importeren (bestaande overslaan)",
-    "importSSHConfig": "Importeren uit SSH-configuratie",
     "connectionDetails": "Verbindingsgegevens",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -501,10 +490,7 @@
     "noFolder": "(Geen map)",
     "deleteSelected": "Verwijderen",
     "exitSelection": "Selectie afsluiten",
-    "importSkip": "Importeren (bestaande overslaan)",
-    "importOverwrite": "Importeren (overschrijven)",
     "collapseBtn": "Samenvouwen",
-    "importExportBtn": "Importeren / Exporteren",
     "hostStatusesRefreshed": "Hoststatussen vernieuwd",
     "failedToRefreshHosts": "Hosts vernieuwen mislukt",
     "movedHostTo": "{{host}} verplaatst naar \"{{folder}}\"",
@@ -559,6 +545,9 @@
     "deleteFolderConfirm_one": "Verwijder \"{{name}}\" en de {{count}} host? Dit kan niet ongedaan worden gemaakt.",
     "deleteFolderConfirm_other": "Verwijder \"{{name}}\" en de {{count}} hosts? Dit kan niet ongedaan worden gemaakt.",
     "failedToMoveHosts": "Hosts konden niet worden verplaatst",
+    "managedBanner": "Deze host wordt beheerd door {{plugin}}. Pas deze daar aan. Je kunt deze host nog steeds vastmaken en van volgorde veranderen.",
+    "managedTooltip": "Beheerd door {{plugin}}",
+    "addBlocked": "Hosts worden beheerd door {{plugin}}, dus hier kunnen geen nieuwe hosts worden toegevoegd.",
     "failedToReorder": "Volgorde kon niet worden aangepast",
     "expandAll": "Alle mappen uitvouwen",
     "collapseAll": "Alle mappen inklappen",
@@ -669,35 +658,6 @@
     "addCredentialBtn2": "Aanmeldgegevens toevoegen",
     "checkingHostStatuses": "Hoststatussen controleren...",
     "pinnedSection": "Vastgepind",
-    "hostsExported": "Hosts succesvol geëxporteerd",
-    "export": {
-      "menuItem": "Exporteren...",
-      "title": "Hosts exporteren",
-      "scope": "Bereik",
-      "scopeAll": "Alles",
-      "scopeSelected": "Geselecteerd",
-      "searchHosts": "Hosts zoeken...",
-      "include": "Inbegrepen",
-      "groupConnection": "Verbinding",
-      "groupCredentials": "Inloggegevens",
-      "groupNotes": "Notities",
-      "groupTags": "Labels & vastpinnen",
-      "groupProxy": "Proxy",
-      "groupJumpHosts": "Jump hosts",
-      "groupFeatureFlags": "Plugin-instellingen",
-      "groupAdvanced": "Geavanceerde configuratie",
-      "preview": "Voorbeeld",
-      "moreHosts_one": "... {{count}} extra host",
-      "moreHosts_other": "... {{count}} extra hosts",
-      "summary": "{{selected}} van {{total}} hosts",
-      "credentialsIncluded": "inloggegevens inbegrepen",
-      "credentialsExcluded": "inloggegevens uitgesloten",
-      "noneSelected": "Geen hosts geselecteerd",
-      "cancel": "Annuleren",
-      "confirm": "Exporteren",
-      "fetchFailed": "Kan hosts voor export niet laden",
-      "bulkButton": "Exporteren"
-    },
     "sampleDownloaded": "Voorbeeldbestand gedownload",
     "failedToDeleteCredential2": "Kan inloggegevens niet verwijderen",
     "noFolderOption": "(Geen map)",
@@ -860,11 +820,7 @@
     "editorUpdate": "Host bijwerken",
     "editorAdd": "Host toevoegen",
     "speedSearch": "Zoek hosts. Pijltjestoetsen om te selecteren, Enter om te verbinden, Esc om te sluiten",
-    "speedSearchList": "Hostlijst. Typ of druk op / om te zoeken.",
-    "importNoHosts": "Geen hosts gevonden in het bestand",
-    "importTooMany": "Je kunt maximaal {{max}} hosts tegelijk importeren",
-    "importSummary": "Importeren voltooid: {{imported}} geïmporteerd, {{updated}} bijgewerkt, {{failed}} mislukt",
-    "importHostsFailed": "Kan hosts niet importeren"
+    "speedSearchList": "Hostlijst. Typ of druk op / om te zoeken."
   },
   "splitScreen": {
     "title": "Gesplitst scherm",
@@ -1115,15 +1071,55 @@
         "colorPickerTooltip": "Kleurkiezer openen",
         "themeSystem": "Systeem",
         "themeLight": "Licht",
-        "themeDark": "Donker",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "Donker"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "Hoe de hele app is opgebouwd. Thema's en lay-outs komen van plugins.",
+    "defaultsLabel": "Standaard voor iedereen",
+    "defaultsHint": "Wat mensen zien totdat ze hun eigen lay-out of thema kiezen.",
+    "followDefault": "Gebruik de standaard",
+    "defaultSaved": "Standaard uiterlijk opgeslagen",
+    "saveFailed": "Kon het uiterlijk niet opslaan",
+    "repair": {
+      "title": "Deze lay-out kon niet worden weergegeven",
+      "safeTitle": "Veilige modus",
+      "layout": "Lay-out",
+      "plugin": "Plugin",
+      "reason": "Reden",
+      "error": "Fout",
+      "noError": "Geen foutmelding.",
+      "copy": "Kopiëren",
+      "copied": "Gekopieerd",
+      "copyFailed": "Kon de details niet kopiëren",
+      "retry": "Opnieuw proberen",
+      "reset": "Terugzetten naar het standaard uiterlijk",
+      "resetEveryone": "Standaard voor iedereen terugzetten",
+      "update": "Update {{name}} naar {{version}}",
+      "disable": "Zet {{name}} uit",
+      "install": "Lay-outs en thema's zoeken",
+      "installTitle": "Lay-outs en thema's",
+      "installButton": "Installeren",
+      "nothingToInstall": "Er zijn momenteel geen andere lay-outs of thema's beschikbaar.",
+      "registryUnreachable": "De pluginregister kon niet worden bereikt.",
+      "askAdmin": "Vraag een beheerder om deze lay-out bij te werken of te repareren. Hieronder kun je voor jezelf overschakelen naar een andere lay-out of thema.",
+      "switchLayout": "Lay-out wisselen",
+      "switchTheme": "Thema wisselen",
+      "saveFailed": "Kon je keuze niet opslaan",
+      "reasons": {
+        "safe-url": "Het adres vroeg om veilige modus. Kies hieronder een lay-out, of verwijder ?safe-layout=1 uit het adres.",
+        "safe-env": "De server is gestart met TERMIX_SAFE_LAYOUT, dus iedereen ziet dit scherm totdat deze is verwijderd.",
+        "missing": "Geen enkele geïnstalleerde plugin biedt deze lay-out aan.",
+        "disabled": "De plugin die deze lay-out aanbiedt, is uitgeschakeld.",
+        "blocked": "De plugin die deze lay-out aanbiedt, wacht op iets wat het nodig heeft.",
+        "incompatible": "De plugin die deze lay-out aanbiedt, werkt niet met deze versie van Termix.",
+        "failed": "De lay-out kon niet worden gestart.",
+        "crashed": "De lay-out crashte twee keer tijdens het tekenen van de app."
+      },
+      "noLayout": "Geen lay-out ingesteld",
+      "restore": "Herstel de meegeleverde {{name}}",
+      "restoreFailed": "Kon de meegeleverde kopie niet herstellen"
     }
   },
   "plugins": {
@@ -1148,6 +1144,18 @@
         "title": "Inloggen afhandelen",
         "consequence": "Het kan een inlogmethode, een tweede factor of een SSH-inlogtype toevoegen."
       },
+      "auth:policy": {
+        "title": "Inlogregels instellen",
+        "consequence": "Het kan gebruikers uitloggen bij inactiviteit, de sessieduur beperken, 'Aangemeld blijven' uitschakelen en een tweede factor vereisen."
+      },
+      "ssh:transport": {
+        "title": "Kies hoe hosts worden bereikt",
+        "consequence": "Het kan de SSH-verbinding met een host via zijn eigen route verzenden, zodat het alles ziet wat naar en van die hosts wordt gestuurd, inclusief wachtwoorden."
+      },
+      "sync:provide": {
+        "title": "Synchronisatie uitvoeren",
+        "consequence": "Het kan alle synchronisatieverzoeken beantwoorden, zodat het de gegevens ziet die apparaten en servers synchroniseren."
+      },
       "system:tls": {
         "title": "Certificaten beheren",
         "consequence": "Het kan het certificaat vervangen dat Termix via HTTPS aanbiedt en domeincontroles van certificeringsinstanties beantwoorden."
@@ -1155,6 +1163,10 @@
       "device:serial": {
         "title": "Toegang tot seriële en USB-apparaten",
         "consequence": "Het kan een fysieke seriële poort openen op de machine waarop Termix draait."
+      },
+      "hosts:export": {
+        "title": "Hosts exporteren met hun geheimen",
+        "consequence": "Kan al je hosts volledig lezen, inclusief opgeslagen wachtwoorden en sleutels, en deze delen. Elke export wordt in het auditlogboek geregistreerd."
       },
       "hosts:write": {
         "title": "Maak hosts aan en wijzig ze",
@@ -1200,9 +1212,29 @@
         "title": "Lees het auditlogboek",
         "consequence": "Het kan zien wie wat en wanneer heeft gedaan."
       },
+      "network:probe": {
+        "title": "Controleren of poorten reageren",
+        "consequence": "Kan een eenvoudige verbinding openen naar elk adres vanaf de server, om te zien of het bereikbaar is."
+      },
+      "hosts:status-provide": {
+        "title": "Hoststatus verstrekken",
+        "consequence": "Wordt de bron van de online- en offline-puntjes voor elke host."
+      },
+      "hosts:activity-provide": {
+        "title": "Recente activiteit opslaan",
+        "consequence": "Wordt de opslag voor de recente activiteitenslijst van elke gebruiker."
+      },
+      "hosts:lock": {
+        "title": "Hosts als alleen-lezen beheren",
+        "consequence": "Hosts die hierdoor worden beheerd, kunnen door niemand anders worden bewerkt, verwijderd of opnieuw gedeeld."
+      },
       "desktop:window": {
         "title": "Open desktopvensters",
         "consequence": "Alleen in de Termix-desktopapp."
+      },
+      "desktop:local": {
+        "title": "Deze computer gebruiken",
+        "consequence": "Kan bestanden lezen en wijzigen, een shell uitvoeren en lokale poorten openen op deze computer. Alleen in de Termix-desktopapp."
       },
       "users:impersonate": {
         "title": "Handel namens andere gebruikers",
@@ -1243,6 +1275,14 @@
       "ui:surface": {
         "title": "Eigen schermen toevoegen",
         "consequence": "Tabbladen, panelen en instellingen die je later kunt verbergen."
+      },
+      "ui:layout": {
+        "title": "De volledige app-indeling vervangen",
+        "consequence": "Wanneer geselecteerd, tekent de code elk scherm, inclusief je terminals en instellingen."
+      },
+      "ui:theme": {
+        "title": "Kleurthema's toevoegen",
+        "consequence": "Alleen kleuren en stijlen. Er wordt geen code uitgevoerd voor een thema."
       }
     },
     "runtime": {
@@ -1372,6 +1412,7 @@
         "options": "Opties voor {{name}} konden niet worden opgeslagen: {{error}}",
         "deleteData": "Gegevens voor {{name}} konden niet worden verwijderd: {{error}}",
         "managedByServer": "Dit bureaublad is gekoppeld aan een server, die bepaalt welke plugins worden gebruikt.",
+        "defaultLook": "{{name}} is het standaard uiterlijk, dus het kan worden uitgeschakeld of vervangen, maar niet worden verwijderd.",
         "hasDependents": "{{name}} is nodig voor {{list}}. Schakel die eerst uit of verwijder ze.",
         "missingDependencies": "{{name}} heeft {{list}} nodig, wat niet is geïnstalleerd.",
         "consentChanged": "Wat deze plugin vraagt, is veranderd sinds je het laatste keer bekeek. Controleer de lijst opnieuw.",
@@ -1441,7 +1482,6 @@
       "noServerAccess": "Geen toegang tot je servers",
       "searchInstalled": "Zoeken in geïnstalleerde",
       "searchPlugins": "Zoeken in plugins",
-      "allCategories": "Alles",
       "nothingMatches": "Niets komt hiermee overeen.",
       "noneInstalled": "Nog geen plugins geïnstalleerd. Blader om er een paar toe te voegen.",
       "nothingHere": "Hier is niets.",
@@ -1531,7 +1571,44 @@
       "documentation": "Documentatie",
       "envVars": "Omgevingsvariabelen",
       "envRequired": "Verplicht",
-      "envDefault": "Standaard: {{value}}"
+      "envDefault": "Standaard: {{value}}",
+      "kinds": {
+        "layouts": "Indelingen",
+        "themes": "Thema's",
+        "tabs": "Tabbladen",
+        "panels": "Zijbalkpanelen",
+        "dashboardCards": "Dashboardkaarten",
+        "protocols": "Verbindingstypen",
+        "auth": "Inlogmethoden",
+        "actions": "Acties",
+        "hostCapability": "Hostinstellingen"
+      },
+      "filters": {
+        "type": "Type",
+        "allTypes": "Alle typen",
+        "category": "Categorie",
+        "allCategories": "Alle categorieën",
+        "results_one": "{{count}} plugin",
+        "results_other": "{{count}} plugins",
+        "remove": "Filter {{name}} verwijderen",
+        "clear": "Filters wissen",
+        "button": "Filters",
+        "buttonCount": "Filters ({{count}})"
+      },
+      "pager": {
+        "range": "{{from}}-{{to}} van {{total}}",
+        "page": "Pagina {{page}} van {{pages}}",
+        "previous": "Vorige pagina",
+        "next": "Volgende pagina",
+        "perPage": "{{count}} per pagina",
+        "perPageLabel": "Plugins per pagina"
+      },
+      "showUnsupportedHint": "Deze worden weergegeven, maar er is nog geen release die op deze versie werkt. Werk Termix bij om ze te installeren.",
+      "unsupported": "Vereist nieuwere Termix",
+      "unsupportedHint": "Er is geen release van deze plugin die op deze versie van Termix werkt. Werk Termix bij om deze te installeren.",
+      "needsTermix": "Vereist Termix {{range}}",
+      "showUnsupported": "Ongestuurde weergeven ({{count}})",
+      "showMore": "{{count}} meer weergeven ({{total}} over)"
     }
   },
   "settings": {
@@ -1546,87 +1623,6 @@
     "sudoHint": "Stel een sudo-wachtwoord in voor deze host in de host-editor om bevoorrechte acties mogelijk te maken.",
     "noData": "Geen gegevens",
     "filter": "Filteren..."
-  },
-  "sync": {
-    "minutesAgo_one": "{{count}} minuut geleden",
-    "minutesAgo_other": "{{count}} minuten geleden",
-    "hoursAgo_one": "{{count}} uur geleden",
-    "hoursAgo_other": "{{count}} uur geleden",
-    "pending_one": "{{count}} wijziging wacht op synchronisatie",
-    "pending_other": "{{count}} wijzigingen wachten op synchronisatie",
-    "proxy": {
-      "headersTitle": "Extra headers",
-      "headersHint": "Verzonden met elke aanvraag naar de server, bijvoorbeeld een Cloudflare Access servicetoken.",
-      "headerName": "Headernaam",
-      "headerValue": "Waarde",
-      "savedValue": "Opgeslagen, typ om te wijzigen",
-      "addHeader": "Header toevoegen",
-      "removeHeader": "Header verwijderen",
-      "basicAuthTitle": "Gebruikersnaam en wachtwoord",
-      "basicAuthHint": "Voor een proxy die om een gebruikersnaam en wachtwoord vraagt voordat Termix wordt geladen.",
-      "username": "Gebruikersnaam",
-      "password": "Wachtwoord",
-      "allowInvalidCertificate": "Een zelfondertekend certificaat vertrouwen",
-      "allowInvalidCertificateHint": "Alleen voor je eigen server, wanneer het certificaat niet van een bekende autoriteit is."
-    },
-    "problems": {
-      "invalidUrl": "Dit lijkt niet op een webadres.",
-      "unreachable": "De server is niet bereikbaar. Controleer het adres en of de server draait.",
-      "unreachableWithReason": "De server is niet bereikbaar: {{reason}}",
-      "tlsUntrusted": "Het certificaat van de server is niet vertrouwd. Als dit uw eigen server is met een zelfondertekend certificaat, schakel dan de onderstaande optie in.",
-      "basicAuthRequired": "Er wordt door iets voor de server om een gebruikersnaam en wachtwoord gevraagd. Voer deze hieronder in.",
-      "proxyLogin": "Er werd een inlogpagina of proxy teruggegeven in plaats van Termix. Voeg hieronder de benodigde headers toe, of controleer het adres.",
-      "notTermix": "Op dat adres draait geen Termix-server. Als het onder een pad draait, neem dat dan mee, zoals https://voorbeeld.nl/termix.",
-      "versionMismatch": "Die server draait een oudere versie van Termix. Werk deze bij naar 2.9 of nieuwer om te koppelen.",
-      "differentAccount": "U bent ingelogd bij een ander account. Log in bij het account waarmee dit apparaat is gekoppeld, of koppel het eerst los."
-    },
-    "wizard": {
-      "title": "Koppelen aan een Termix-server",
-      "reloginTitle": "Opnieuw inloggen",
-      "savedServers": "Recente servers",
-      "removeServer": "Verwijderen uit de lijst",
-      "serverDescription": "Voer het adres in dat u gebruikt om Termix in uw browser te openen.",
-      "signinDescription": "Inloggen bij {{url}}",
-      "chooseDescription": "Dit apparaat heeft al gegevens. Wat moet er mee gebeuren?",
-      "finishingDescription": "Dit apparaat wordt gekoppeld.",
-      "serverUrl": "Serveradres",
-      "serverUrlHint": "Bijvoorbeeld https://termix.voorbeeld.nl",
-      "showProxySettings": "Instellingen reverse proxy",
-      "hideProxySettings": "Instellingen reverse proxy verbergen",
-      "continue": "Verder",
-      "back": "Terug",
-      "mergeTitle": "Toevoegen aan mijn account",
-      "mergeBody_one": "Het item op dit apparaat wordt toegevoegd aan uw account. Items die uw account al heeft, blijven zoals ze zijn op de server.",
-      "mergeBody_other": "De {{count}} items op dit apparaat worden toegevoegd aan uw account. Items die uw account al heeft, blijven zoals ze zijn op de server.",
-      "replaceTitle": "Vervangen door mijn account",
-      "replaceBody_one": "Het item op dit apparaat wordt verwijderd en dit apparaat neemt alles over van uw account. Hosts die alleen op dit apparaat zijn bewaard, blijven behouden.",
-      "replaceBody_other": "De {{count}} items op dit apparaat worden verwijderd en dit apparaat neemt alles over van uw account. Hosts die alleen op dit apparaat zijn bewaard, blijven behouden.",
-      "link": "Koppelen",
-      "linking": "Koppelen en eerste synchronisatie uitvoeren...",
-      "linked": "Gekoppeld. Uw gegevens worden nu gesynchroniseerd.",
-      "signedInAgain": "Ingelogd. Synchronisatie loopt weer."
-    },
-    "entities": {
-      "hosts": "Hosts",
-      "sshCredentials": "Referenties",
-      "sshFolders": "Mappen",
-      "userPreferences": "Voorkeuren",
-      "pluginUserSettings": "Plugin-instellingen",
-      "sharedHosts": "Met jou gedeelde hosts",
-      "sharedCredentials": "Met jou gedeelde referenties",
-      "vaultProfiles": "Vault-profielen",
-      "snippetFolders": "Snippetmappen",
-      "snippets": "Snippets",
-      "dashboardServiceLinks": "Servicelinks",
-      "homepageItems": "Startpagina-items",
-      "networkTopology": "Netwerkkaart",
-      "workspaces": "Werkruimten",
-      "hostDefaults": "Hoststandaarden",
-      "hostDefaultsAdmin": "Serverhoststandaarden",
-      "aiProviders": "AI-aanbieders",
-      "homepageLayouts": "Startpaginalayouts",
-      "accountProfile": "Accountprofiel"
-    }
   },
   "hostDefaults": {
     "source": {

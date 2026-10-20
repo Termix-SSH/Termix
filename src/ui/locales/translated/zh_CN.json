@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "部分插件无法更改。您可以稍后从“插件”选项卡修复它们。按“下一步”继续。",
     "pluginsApplyFailed": "无法保存您的选择。请重试，或继续操作并稍后从“插件”选项卡更改它们。",
     "pluginsLoadFailed": "无法加载插件列表。您可以稍后从“插件”选项卡选择插件。",
-    "presetTitle": "您希望屏幕上显示多少内容？",
-    "presetIntro": "选择屏幕上显示的内容量。",
-    "presetChangeLater": "您可以稍后在“设置”中的“界面”下切换预设或更改任何单个设置。",
-    "appearanceTitle": "个性化设置",
-    "appearanceIntro": "选择主题、强调色、字体和语言。更改会立即生效，您可以稍后在“设置”中更改它们。",
     "securityTitle": "保护您的账户安全",
     "securityIntro": "为您的账户添加通行密钥或身份验证器应用。您也可以稍后在“设置”中的“安全”下执行此操作。",
-    "desktopTitle": "您希望如何使用 Termix？",
-    "desktopBody": "您可以随时从侧边栏的“同步”中更改此设置。",
-    "desktopLocalTitle": "仅在此设备上",
-    "desktopLocalBody": "所有内容都存储在此处。无需设置。",
-    "desktopLinkTitle": "与我的 Termix 服务器关联",
-    "desktopLinkBody": "登录到您的服务器，以便在每个设备上使用相同的主机和设置。",
-    "desktopLinked": "已关联到 {{server}}",
     "pluginsDocsLink": "阅读每个插件的说明"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} 已准备好安装",
     "readyHint": "下次重启 Termix 时将进行安装。"
   },
+  "companion": {
+    "close": "关闭面板",
+    "moveSide": "移动面板",
+    "resize": "调整面板大小"
+  },
   "nav": {
     "home": "主页",
     "terminal": "终端",
@@ -257,7 +250,6 @@
     "hosts": "主机",
     "credentials": "凭据",
     "connections": "连接",
-    "sync": "同步",
     "reconnectDisconnectedTerminals": "重新连接所有已断开的终端",
     "reconnectingTerminals_other": "正在重新连接 {{count}} 个终端",
     "noDisconnectedTerminals": "没有可重新连接的已断开终端",
@@ -276,10 +268,7 @@
     "retry": "重试",
     "refresh": "刷新",
     "optional": "可选",
-    "downloadSample": "下载示例",
     "failedToDeleteHost": "删除 {{name}} 失败",
-    "importSkipExisting": "导入（跳过已存在项）",
-    "importSSHConfig": "从 SSH 配置导入",
     "connectionDetails": "连接详情",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -497,10 +486,7 @@
     "noFolder": "（无文件夹）",
     "deleteSelected": "删除",
     "exitSelection": "退出选择",
-    "importSkip": "导入（跳过已存在）",
-    "importOverwrite": "导入（覆盖）",
     "collapseBtn": "折叠",
-    "importExportBtn": "导入 / 导出",
     "hostStatusesRefreshed": "主机状态已刷新",
     "failedToRefreshHosts": "刷新主机失败",
     "movedHostTo": "已将 {{host}} 移动到“{{folder}}”",
@@ -553,6 +539,9 @@
     "folderDeleted": "已删除文件夹“{{name}}”",
     "deleteFolderConfirm_other": "删除“{{name}}”及其包含的 {{count}} 个主机？此操作无法撤销。",
     "failedToMoveHosts": "移动主机失败",
+    "managedBanner": "此主机由 {{plugin}} 管理。请在那里进行修改。您仍然可以将其置顶或重新排序。",
+    "managedTooltip": "由 {{plugin}} 管理",
+    "addBlocked": "主机由 {{plugin}} 管理，因此无法在此处添加新主机。",
     "failedToReorder": "重新排序失败",
     "expandAll": "展开所有文件夹",
     "collapseAll": "折叠所有文件夹",
@@ -662,34 +651,6 @@
     "addCredentialBtn2": "添加凭据",
     "checkingHostStatuses": "正在检查主机状态...",
     "pinnedSection": "已置顶",
-    "hostsExported": "主机导出成功",
-    "export": {
-      "menuItem": "导出...",
-      "title": "导出主机",
-      "scope": "范围",
-      "scopeAll": "全部",
-      "scopeSelected": "已选",
-      "searchHosts": "搜索主机...",
-      "include": "包含",
-      "groupConnection": "连接",
-      "groupCredentials": "凭据",
-      "groupNotes": "备注",
-      "groupTags": "标签与置顶",
-      "groupProxy": "代理",
-      "groupJumpHosts": "跳板机",
-      "groupFeatureFlags": "插件设置",
-      "groupAdvanced": "高级配置",
-      "preview": "预览",
-      "moreHosts_other": "... 还有 {{count}} 个主机",
-      "summary": "{{selected}} / {{total}} 台主机",
-      "credentialsIncluded": "包含凭据",
-      "credentialsExcluded": "排除凭据",
-      "noneSelected": "未选择任何主机",
-      "cancel": "取消",
-      "confirm": "导出",
-      "fetchFailed": "加载用于导出的主机失败",
-      "bulkButton": "导出"
-    },
     "sampleDownloaded": "示例文件已下载",
     "failedToDeleteCredential2": "删除凭据失败",
     "noFolderOption": "（无文件夹）",
@@ -847,11 +808,7 @@
     "editorUpdate": "更新主机",
     "editorAdd": "添加主机",
     "speedSearch": "搜索主机。方向键选择，Enter 连接，Esc 关闭",
-    "speedSearchList": "主机列表。输入或按 / 搜索。",
-    "importNoHosts": "文件中未找到主机",
-    "importTooMany": "您一次最多可以导入 {{max}} 个主机",
-    "importSummary": "导入完成：{{imported}} 已导入，{{updated}} 已更新，{{failed}} 失败",
-    "importHostsFailed": "导入主机失败"
+    "speedSearchList": "主机列表。输入或按 / 搜索。"
   },
   "splitScreen": {
     "title": "分屏",
@@ -1046,9 +1003,14 @@
     "hostCount_other": "{{count}} 台主机"
   },
   "admin": {
+    "usersCount_one": "其他：{{count}} 个用户",
+    "rolesCount_one": "其他：{{count}} 个角色",
+    "apiKeysCount_one": "其他：{{count}} 个密钥",
+    "sessionsActive_one": "其他：{{count}} 个活跃",
     "hostsCount_other": "{{count}} 个主机",
     "credentialsCount_other": "{{count}} 个凭据",
     "rolePermissions": {
+      "count_one": "其他：{{count}} 个权限",
       "groups": {
         "hosts": "服务器",
         "credentials": "凭据",
@@ -1088,18 +1050,59 @@
         "interfaceFontLabel": "界面字体",
         "interfaceFontDescription": "更改应用程序界面字体。终端配置文件保留其各自的字体设置。",
         "accentColorLabel": "强调色",
+        "apiKeyCount_one": "其他：{{count}} 个密钥",
         "colorPickerTooltip": "打开颜色选择器",
         "themeSystem": "跟随系统",
         "themeLight": "浅色",
-        "themeDark": "深色",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "深色"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "整个应用的布局方式。主题和布局来自插件。",
+    "defaultsLabel": "所有人的默认设置",
+    "defaultsHint": "在用户选择自己的布局或主题之前，大家看到的内容。",
+    "followDefault": "使用默认设置",
+    "defaultSaved": "默认外观已保存",
+    "saveFailed": "无法保存外观",
+    "repair": {
+      "title": "无法显示此布局",
+      "safeTitle": "安全模式",
+      "layout": "布局",
+      "plugin": "插件",
+      "reason": "原因",
+      "error": "错误",
+      "noError": "无错误消息。",
+      "copy": "复制",
+      "copied": "已复制",
+      "copyFailed": "无法复制详细信息",
+      "retry": "重试",
+      "reset": "重置为默认外观",
+      "resetEveryone": "重置所有人的默认设置",
+      "update": "将 {{name}} 更新到 {{version}}",
+      "disable": "关闭 {{name}}",
+      "install": "查找布局和主题",
+      "installTitle": "布局和主题",
+      "installButton": "安装",
+      "nothingToInstall": "当前没有其他可用的布局或主题。",
+      "registryUnreachable": "无法连接到插件注册表。",
+      "askAdmin": "请联系管理员更新或修复此布局。您可以在下方为自己切换到其他布局或主题。",
+      "switchLayout": "切换布局",
+      "switchTheme": "切换主题",
+      "saveFailed": "无法保存您的选择",
+      "reasons": {
+        "safe-url": "地址请求了安全模式。请在下方选择一个布局，或从地址中移除 ?safe-layout=1。",
+        "safe-env": "服务器使用 TERMIX_SAFE_LAYOUT 启动，因此在移除该设置之前，所有人都会看到此屏幕。",
+        "missing": "没有已安装的插件提供此布局。",
+        "disabled": "提供此布局的插件已关闭。",
+        "blocked": "提供此布局的插件正在等待其所需的依赖项。",
+        "incompatible": "提供此布局的插件与此版本的 Termix 不兼容。",
+        "failed": "布局启动失败。",
+        "crashed": "在绘制应用时，布局崩溃了两次。"
+      },
+      "noLayout": "未设置布局",
+      "restore": "恢复内置的 {{name}}",
+      "restoreFailed": "无法恢复内置副本"
     }
   },
   "plugins": {
@@ -1124,6 +1127,18 @@
         "title": "处理登录",
         "consequence": "它可以添加登录方式、第二因素或 SSH 登录类型。"
       },
+      "auth:policy": {
+        "title": "设置登录规则",
+        "consequence": "它可以在用户空闲时注销、限制会话时长、关闭“记住我”功能并要求二次验证。"
+      },
+      "ssh:transport": {
+        "title": "选择如何连接主机",
+        "consequence": "它可以通过自己的路由承载到主机的 SSH 连接，因此可以看到发送到和来自这些主机的所有内容，包括密码。"
+      },
+      "sync:provide": {
+        "title": "运行同步",
+        "consequence": "它可以响应所有同步请求，因此可以看到设备和服务器同步的数据。"
+      },
       "system:tls": {
         "title": "管理证书",
         "consequence": "它可以替换 Termix 通过 HTTPS 提供的证书，并响应证书颁发机构的域名验证。"
@@ -1131,6 +1146,10 @@
       "device:serial": {
         "title": "访问串行和 USB 设备",
         "consequence": "它可以打开运行 Termix 的机器上的物理串行端口。"
+      },
+      "hosts:export": {
+        "title": "导出主机及其密钥",
+        "consequence": "可以完整读取您的主机信息，包括保存的密码和密钥，并将其导出。每次导出操作都会记录到审计日志中。"
       },
       "hosts:write": {
         "title": "创建和修改主机",
@@ -1176,9 +1195,29 @@
         "title": "读取审计日志",
         "consequence": "它可以查看谁在何时做了什么。"
       },
+      "network:probe": {
+        "title": "检查端口是否响应",
+        "consequence": "可以从服务器向任意地址建立普通连接，以检查其是否可达。"
+      },
+      "hosts:status-provide": {
+        "title": "提供主机状态",
+        "consequence": "成为所有主机在线和离线状态指示点的来源。"
+      },
+      "hosts:activity-provide": {
+        "title": "存储最近活动",
+        "consequence": "成为所有用户最近活动列表的存储位置。"
+      },
+      "hosts:lock": {
+        "title": "以只读方式管理主机",
+        "consequence": "由其管理的主机无法被其他人编辑、删除或重新共享。"
+      },
       "desktop:window": {
         "title": "打开桌面窗口",
         "consequence": "仅在 Termix 桌面应用中。"
+      },
+      "desktop:local": {
+        "title": "使用此计算机",
+        "consequence": "可以在此计算机上读取和修改文件、运行 Shell 并打开本地端口。仅限 Termix 桌面应用。"
       },
       "users:impersonate": {
         "title": "以其他用户身份操作",
@@ -1219,6 +1258,14 @@
       "ui:surface": {
         "title": "添加其自身的界面",
         "consequence": "标签页、面板和设置，您可以稍后隐藏它们。"
+      },
+      "ui:layout": {
+        "title": "替换整个应用布局",
+        "consequence": "选中后，其代码将绘制每个屏幕，包括您的终端和设置。"
+      },
+      "ui:theme": {
+        "title": "添加颜色主题",
+        "consequence": "仅包含颜色和样式。主题不会运行任何代码。"
       }
     },
     "runtime": {
@@ -1336,6 +1383,7 @@
         "options": "无法保存 {{name}} 的选项：{{error}}",
         "deleteData": "无法删除 {{name}} 的数据：{{error}}",
         "managedByServer": "此桌面已链接到服务器，插件由服务器决定。",
+        "defaultLook": "{{name}} 是默认外观，因此可以关闭或替换，但无法卸载。",
         "hasDependents": "{{name}} 被 {{list}} 依赖。请先禁用或卸载它们。",
         "missingDependencies": "{{name}} 需要 {{list}}，但未安装。",
         "consentChanged": "自您上次查看以来，此插件请求的权限已更改。请再次检查列表。",
@@ -1401,7 +1449,6 @@
       "noServerAccess": "无法访问您的服务器",
       "searchInstalled": "搜索已安装",
       "searchPlugins": "搜索插件",
-      "allCategories": "全部",
       "nothingMatches": "没有匹配的结果。",
       "noneInstalled": "尚未安装任何插件。浏览并添加一些。",
       "nothingHere": "这里什么都没有。",
@@ -1487,7 +1534,43 @@
       "documentation": "文档",
       "envVars": "环境变量",
       "envRequired": "必填",
-      "envDefault": "默认值：{{value}}"
+      "envDefault": "默认值：{{value}}",
+      "kinds": {
+        "layouts": "布局",
+        "themes": "主题",
+        "tabs": "标签页",
+        "panels": "侧边栏面板",
+        "dashboardCards": "仪表板卡片",
+        "protocols": "连接类型",
+        "auth": "登录方式",
+        "actions": "操作",
+        "hostCapability": "主机设置"
+      },
+      "filters": {
+        "type": "类型",
+        "allTypes": "所有类型",
+        "category": "类别",
+        "allCategories": "所有类别",
+        "results_other": "{{count}} 个插件",
+        "remove": "移除过滤器 {{name}}",
+        "clear": "清除过滤器",
+        "button": "过滤器",
+        "buttonCount": "过滤器 ({{count}})"
+      },
+      "pager": {
+        "range": "共 {{total}} 项中的第 {{from}}-{{to}} 项",
+        "page": "第 {{page}} 页，共 {{pages}} 页",
+        "previous": "上一页",
+        "next": "下一页",
+        "perPage": "每页 {{count}} 项",
+        "perPageLabel": "每页插件数"
+      },
+      "showUnsupportedHint": "这些插件已列出，但尚无适用于此版本的发布版。请更新 Termix 以安装它们。",
+      "unsupported": "需要更新 Termix",
+      "unsupportedHint": "此插件尚无适用于此版本 Termix 的发布版。请更新 Termix 以安装它。",
+      "needsTermix": "需要 Termix {{range}}",
+      "showUnsupported": "显示不兼容的插件 ({{count}})",
+      "showMore": "显示更多 {{count}} 项（剩余 {{total}} 项）"
     }
   },
   "settings": {
@@ -1502,82 +1585,6 @@
     "sudoHint": "在主机编辑器中为此主机设置 sudo 密码以启用特权操作。",
     "noData": "无数据",
     "filter": "筛选..."
-  },
-  "sync": {
-    "minutesAgo_other": "{{count}} 分钟前",
-    "hoursAgo_other": "{{count}} 小时前",
-    "pending_other": "{{count}} 项更改等待同步",
-    "proxy": {
-      "headersTitle": "额外标头",
-      "headersHint": "随每次请求发送到服务器，例如 Cloudflare Access 服务令牌。",
-      "headerName": "标头名称",
-      "headerValue": "值",
-      "savedValue": "已保存，输入以修改",
-      "addHeader": "添加标头",
-      "removeHeader": "移除标头",
-      "basicAuthTitle": "用户名和密码",
-      "basicAuthHint": "用于在 Termix 之前要求输入用户名和密码的代理。",
-      "username": "用户名",
-      "password": "密码",
-      "allowInvalidCertificate": "信任自签名证书",
-      "allowInvalidCertificateHint": "仅适用于您自己的服务器，且其证书不受知名机构信任时。"
-    },
-    "problems": {
-      "invalidUrl": "这看起来不像一个有效的网址。",
-      "unreachable": "无法连接到服务器。请检查地址并确认服务器正在运行。",
-      "unreachableWithReason": "无法连接到服务器：{{reason}}",
-      "tlsUntrusted": "服务器证书不受信任。如果您使用的是带有自签名证书的自有服务器，请启用下方的选项。",
-      "basicAuthRequired": "服务器前置组件要求输入用户名和密码。请在下方输入。",
-      "proxyLogin": "返回的是登录页面或代理，而非 Termix。请在下方添加所需的请求头，或检查地址。",
-      "notTermix": "该地址上没有 Termix 服务器。如果它运行在某个路径下，请包含该路径，例如 https://example.com/termix。",
-      "versionMismatch": "该服务器运行的是旧版 Termix。请将其更新到 2.9 或更高版本以进行链接。",
-      "differentAccount": "您登录了不同的账户。请登录与此设备链接的账户，或先取消链接。"
-    },
-    "wizard": {
-      "title": "链接到 Termix 服务器",
-      "reloginTitle": "重新登录",
-      "savedServers": "最近使用的服务器",
-      "removeServer": "从列表中移除",
-      "serverDescription": "输入您在浏览器中打开 Termix 时使用的地址。",
-      "signinDescription": "登录到 {{url}}",
-      "chooseDescription": "此设备已有数据。您希望如何处理？",
-      "finishingDescription": "正在链接此设备。",
-      "serverUrl": "服务器地址",
-      "serverUrlHint": "例如 https://termix.example.com",
-      "showProxySettings": "反向代理设置",
-      "hideProxySettings": "隐藏反向代理设置",
-      "continue": "继续",
-      "back": "返回",
-      "mergeTitle": "合并到我的账户",
-      "mergeBody_other": "此设备上的 {{count}} 个项目将添加到您的账户。您的账户中已存在的项目将保持服务器上的原样。",
-      "replaceTitle": "用我的账户替换",
-      "replaceBody_other": "此设备上的 {{count}} 个项目将被移除，此设备将从您的账户获取所有数据。仅保留在此设备上的主机将保留。",
-      "link": "链接",
-      "linking": "正在链接并运行首次同步...",
-      "linked": "已链接。您的数据正在同步。",
-      "signedInAgain": "已登录。同步已恢复运行。"
-    },
-    "entities": {
-      "hosts": "主机",
-      "sshCredentials": "凭据",
-      "sshFolders": "文件夹",
-      "userPreferences": "偏好设置",
-      "pluginUserSettings": "插件设置",
-      "sharedHosts": "与您共享的主机",
-      "sharedCredentials": "与您共享的凭据",
-      "vaultProfiles": "Vault 配置文件",
-      "snippetFolders": "代码片段文件夹",
-      "snippets": "代码片段",
-      "dashboardServiceLinks": "服务链接",
-      "homepageItems": "主页项目",
-      "networkTopology": "网络拓扑图",
-      "workspaces": "工作区",
-      "hostDefaults": "主机默认设置",
-      "hostDefaultsAdmin": "服务器主机默认设置",
-      "aiProviders": "AI 提供商",
-      "homepageLayouts": "主页布局",
-      "accountProfile": "账户资料"
-    }
   },
   "hostDefaults": {
     "source": {

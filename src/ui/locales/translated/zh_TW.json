@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "部分外掛無法變更。您可以稍後從「外掛」分頁修復。按「下一步」繼續。",
     "pluginsApplyFailed": "無法儲存您的選擇。請重試，或繼續並稍後從「外掛」分頁變更。",
     "pluginsLoadFailed": "無法載入外掛清單。您可以稍後從「外掛」分頁選擇外掛。",
-    "presetTitle": "您希望螢幕上顯示多少內容？",
-    "presetIntro": "選擇螢幕上顯示的內容量。",
-    "presetChangeLater": "您可以稍後在「設定」的「介面」中切換預設方案或變更任何單一設定。",
-    "appearanceTitle": "個人化您的介面",
-    "appearanceIntro": "選擇主題、強調色、字型與語言。變更會立即顯示，您也可以稍後在「設定」中變更。",
     "securityTitle": "保護您的帳戶",
     "securityIntro": "為您的帳戶新增通行金鑰或驗證器應用程式。您也可以稍後在「設定」的「安全性」中執行此操作。",
-    "desktopTitle": "您希望如何使用 Termix？",
-    "desktopBody": "您可以隨時從側邊欄的「同步」變更此設定。",
-    "desktopLocalTitle": "僅限此裝置",
-    "desktopLocalBody": "所有內容都儲存在此。無需設定。",
-    "desktopLinkTitle": "與我的 Termix 伺服器連線",
-    "desktopLinkBody": "登入您的伺服器，以便在所有裝置上使用相同的主機與設定。",
-    "desktopLinked": "已連線至 {{server}}",
     "pluginsDocsLink": "閱讀各外掛說明"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} 已準備好安裝",
     "readyHint": "下次重新啟動 Termix 時將進行安裝。"
   },
+  "companion": {
+    "close": "關閉面板",
+    "moveSide": "移動面板",
+    "resize": "調整面板大小"
+  },
   "nav": {
     "home": "首頁",
     "terminal": "終端機",
@@ -257,7 +250,6 @@
     "hosts": "主機",
     "credentials": "憑證",
     "connections": "連線",
-    "sync": "同步",
     "reconnectDisconnectedTerminals": "重新連線所有已斷線的終端機",
     "reconnectingTerminals_other": "正在重新連線 {{count}} 個終端機",
     "noDisconnectedTerminals": "沒有已斷線且準備好重新連線的終端機",
@@ -276,10 +268,7 @@
     "retry": "重試",
     "refresh": "重新整理",
     "optional": "選填",
-    "downloadSample": "下載範例",
     "failedToDeleteHost": "刪除 {{name}} 失敗",
-    "importSkipExisting": "匯入（跳過已存在）",
-    "importSSHConfig": "從 SSH 設定檔匯入",
     "connectionDetails": "連線詳細資訊",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -497,10 +486,7 @@
     "noFolder": "（無資料夾）",
     "deleteSelected": "刪除",
     "exitSelection": "取消選取",
-    "importSkip": "匯入（跳過已存在）",
-    "importOverwrite": "匯入（覆蓋）",
     "collapseBtn": "收合",
-    "importExportBtn": "匯入 / 匯出",
     "hostStatusesRefreshed": "主機狀態已重新整理",
     "failedToRefreshHosts": "重新整理主機失敗",
     "movedHostTo": "已將 {{host}} 移至「{{folder}}」",
@@ -553,6 +539,9 @@
     "folderDeleted": "已刪除資料夾「{{name}}」",
     "deleteFolderConfirm_other": "要刪除「{{name}}」及其中的 {{count}} 個主機嗎？此操作無法復原。",
     "failedToMoveHosts": "移動主機失敗",
+    "managedBanner": "此主機由 {{plugin}} 管理。請前往該處進行變更。您仍可以將其固定或重新排序。",
+    "managedTooltip": "由 {{plugin}} 管理",
+    "addBlocked": "主機由 {{plugin}} 管理，因此無法在此處新增主機。",
     "failedToReorder": "重新排序失敗",
     "expandAll": "展開所有資料夾",
     "collapseAll": "收合所有資料夾",
@@ -662,34 +651,6 @@
     "addCredentialBtn2": "新增憑證",
     "checkingHostStatuses": "正在檢查主機狀態...",
     "pinnedSection": "已釘選",
-    "hostsExported": "主機匯出成功",
-    "export": {
-      "menuItem": "匯出...",
-      "title": "匯出主機",
-      "scope": "範圍",
-      "scopeAll": "全部",
-      "scopeSelected": "已選取",
-      "searchHosts": "搜尋主機...",
-      "include": "包含",
-      "groupConnection": "連線",
-      "groupCredentials": "憑證",
-      "groupNotes": "備註",
-      "groupTags": "標籤與釘選",
-      "groupProxy": "Proxy",
-      "groupJumpHosts": "跳板主機",
-      "groupFeatureFlags": "外掛設定",
-      "groupAdvanced": "進階設定",
-      "preview": "預覽",
-      "moreHosts_other": "... 還有 {{count}} 個主機",
-      "summary": "{{selected}} / {{total}} 台主機",
-      "credentialsIncluded": "包含憑證",
-      "credentialsExcluded": "排除憑證",
-      "noneSelected": "未選取任何主機",
-      "cancel": "取消",
-      "confirm": "匯出",
-      "fetchFailed": "無法載入主機以供匯出",
-      "bulkButton": "匯出"
-    },
     "sampleDownloaded": "範例檔案已下載",
     "failedToDeleteCredential2": "刪除憑證失敗",
     "noFolderOption": "（無資料夾）",
@@ -847,11 +808,7 @@
     "editorUpdate": "更新主機",
     "editorAdd": "新增主機",
     "speedSearch": "搜尋主機。使用方向鍵選擇，Enter 連線，Esc 關閉",
-    "speedSearchList": "主機列表。輸入或按 / 以搜尋。",
-    "importNoHosts": "檔案中未找到任何主機",
-    "importTooMany": "您一次最多可匯入 {{max}} 個主機",
-    "importSummary": "匯入完成：{{imported}} 個已匯入，{{updated}} 個已更新，{{failed}} 個失敗",
-    "importHostsFailed": "匯入主機失敗"
+    "speedSearchList": "主機列表。輸入或按 / 以搜尋。"
   },
   "splitScreen": {
     "title": "分割畫面",
@@ -1046,9 +1003,14 @@
     "hostCount_other": "{{count}} 個主機"
   },
   "admin": {
+    "usersCount_one": "其他：{{count}} 位使用者",
+    "rolesCount_one": "其他：{{count}} 個角色",
+    "apiKeysCount_one": "其他：{{count}} 個金鑰",
+    "sessionsActive_one": "其他：{{count}} 個活躍",
     "hostsCount_other": "{{count}} 個主機",
     "credentialsCount_other": "{{count}} 個憑證",
     "rolePermissions": {
+      "count_one": "其他：{{count}} 項權限",
       "groups": {
         "hosts": "主機",
         "credentials": "憑證",
@@ -1088,18 +1050,59 @@
         "interfaceFontLabel": "介面字型",
         "interfaceFontDescription": "變更應用程式介面的字型。終端機設定檔會保留其各自的字型設定。",
         "accentColorLabel": "強調色",
+        "apiKeyCount_one": "其他：{{count}} 個金鑰",
         "colorPickerTooltip": "開啟色彩選擇器",
         "themeSystem": "系統",
         "themeLight": "淺色",
-        "themeDark": "深色",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "深色"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "整個應用程式的版面配置方式。主題與版面配置來自外掛程式。",
+    "defaultsLabel": "所有人的預設值",
+    "defaultsHint": "使用者選擇自己的版面配置或主題之前所看到的內容。",
+    "followDefault": "使用預設值",
+    "defaultSaved": "已儲存預設外觀",
+    "saveFailed": "無法儲存外觀",
+    "repair": {
+      "title": "無法顯示此版面配置",
+      "safeTitle": "安全模式",
+      "layout": "版面配置",
+      "plugin": "外掛程式",
+      "reason": "原因",
+      "error": "錯誤",
+      "noError": "無錯誤訊息。",
+      "copy": "複製",
+      "copied": "已複製",
+      "copyFailed": "無法複製詳細資訊",
+      "retry": "再試一次",
+      "reset": "重設為預設外觀",
+      "resetEveryone": "重設所有人的預設值",
+      "update": "將 {{name}} 更新至 {{version}}",
+      "disable": "關閉 {{name}}",
+      "install": "尋找版面配置與主題",
+      "installTitle": "版面配置與主題",
+      "installButton": "安裝",
+      "nothingToInstall": "目前沒有其他可用的版面配置或主題。",
+      "registryUnreachable": "無法連線至外掛程式登錄。",
+      "askAdmin": "請要求管理員更新或修復此版面配置。您可以在下方切換至其他版面配置或主題。",
+      "switchLayout": "切換版面配置",
+      "switchTheme": "切換主題",
+      "saveFailed": "無法儲存您的選擇",
+      "reasons": {
+        "safe-url": "網址要求進入安全模式。請在下方選擇版面配置，或從網址中移除 ?safe-layout=1。",
+        "safe-env": "伺服器以 TERMIX_SAFE_LAYOUT 啟動，因此在移除該設定前，所有人都會看到此畫面。",
+        "missing": "沒有已安裝的外掛程式提供此版面配置。",
+        "disabled": "提供此版面配置的外掛程式已關閉。",
+        "blocked": "提供此版面配置的外掛程式正在等待其所需的項目。",
+        "incompatible": "提供此版面配置的外掛程式與此版本的 Termix 不相容。",
+        "failed": "版面配置啟動失敗。",
+        "crashed": "版面配置在繪製應用程式時當機兩次。"
+      },
+      "noLayout": "未設定版面配置",
+      "restore": "還原內建的 {{name}}",
+      "restoreFailed": "無法還原內建副本"
     }
   },
   "plugins": {
@@ -1124,6 +1127,18 @@
         "title": "處理登入",
         "consequence": "它可以新增登入方式、第二層驗證或 SSH 登入類型。"
       },
+      "auth:policy": {
+        "title": "設定登入規則",
+        "consequence": "它可以在閒置時登出使用者、限制會話長度、關閉「記住我」功能，並要求第二因素驗證。"
+      },
+      "ssh:transport": {
+        "title": "選擇如何連線至主機",
+        "consequence": "它可以透過自己的路徑將 SSH 連線傳輸至主機，因此能看到傳送至這些主機及從這些主機傳出的所有內容，包括密碼。"
+      },
+      "sync:provide": {
+        "title": "執行同步",
+        "consequence": "它可以回應所有同步請求，因此能看到裝置與伺服器同步的資料。"
+      },
       "system:tls": {
         "title": "管理憑證",
         "consequence": "它可以替換 Termix 透過 HTTPS 提供的憑證，並回應憑證授權機構的網域檢查。"
@@ -1131,6 +1146,10 @@
       "device:serial": {
         "title": "存取序列埠與 USB 裝置",
         "consequence": "它可以開啟執行 Termix 之機器上的實體序列埠。"
+      },
+      "hosts:export": {
+        "title": "匯出主機及其機密資訊",
+        "consequence": "可完整讀取您的主機，包括已儲存的密碼與金鑰，並將其匯出。每次匯出都會記錄於稽核日誌中。"
       },
       "hosts:write": {
         "title": "建立與變更主機",
@@ -1176,9 +1195,29 @@
         "title": "讀取稽核日誌",
         "consequence": "它可以查看誰在何時做了什麼。"
       },
+      "network:probe": {
+        "title": "檢查埠號是否有回應",
+        "consequence": "可從伺服器開啟至任何位址的純文字連線，以確認其是否可達。"
+      },
+      "hosts:status-provide": {
+        "title": "提供主機狀態",
+        "consequence": "成為所有主機線上與離線狀態指示點的資料來源。"
+      },
+      "hosts:activity-provide": {
+        "title": "儲存近期活動",
+        "consequence": "成為每位使用者近期活動清單的儲存位置。"
+      },
+      "hosts:lock": {
+        "title": "以唯讀方式管理主機",
+        "consequence": "由其管理的主機無法被其他人編輯、刪除或重新分享。"
+      },
       "desktop:window": {
         "title": "開啟桌面視窗",
         "consequence": "僅限於 Termix 桌面應用程式。"
+      },
+      "desktop:local": {
+        "title": "使用本機電腦",
+        "consequence": "可讀取與修改本機電腦上的檔案、執行 Shell 並開啟本機埠。僅適用於 Termix 桌面應用程式。"
       },
       "users:impersonate": {
         "title": "模擬其他使用者",
@@ -1219,6 +1258,14 @@
       "ui:surface": {
         "title": "新增專屬畫面",
         "consequence": "您可以稍後隱藏的分頁、面板和設定。"
+      },
+      "ui:layout": {
+        "title": "替換整個應用程式版面配置",
+        "consequence": "選取後，其程式碼將繪製所有畫面，包括您的終端機與設定。"
+      },
+      "ui:theme": {
+        "title": "新增色彩主題",
+        "consequence": "僅限色彩與樣式。主題不會執行任何程式碼。"
       }
     },
     "runtime": {
@@ -1336,6 +1383,7 @@
         "options": "無法儲存 {{name}} 的選項：{{error}}",
         "deleteData": "無法刪除 {{name}} 的資料：{{error}}",
         "managedByServer": "此桌面已連結至伺服器，其外掛由伺服器決定。",
+        "defaultLook": "{{name}} 是預設外觀，因此可以關閉或替換，但無法解除安裝。",
         "hasDependents": "{{name}} 被 {{list}} 所依賴。請先停用或解除安裝這些項目。",
         "missingDependencies": "{{name}} 需要 {{list}}，但目前未安裝。",
         "consentChanged": "此外掛所需的權限自您上次查看後已變更。請再次檢查清單。",
@@ -1401,7 +1449,6 @@
       "noServerAccess": "無法存取您的伺服器",
       "searchInstalled": "搜尋已安裝項目",
       "searchPlugins": "搜尋外掛",
-      "allCategories": "全部",
       "nothingMatches": "找不到相符項目。",
       "noneInstalled": "尚未安裝任何外掛。瀏覽並安裝一些外掛吧。",
       "nothingHere": "此處無內容。",
@@ -1487,7 +1534,43 @@
       "documentation": "說明文件",
       "envVars": "環境變數",
       "envRequired": "必要",
-      "envDefault": "預設值：{{value}}"
+      "envDefault": "預設值：{{value}}",
+      "kinds": {
+        "layouts": "版面配置",
+        "themes": "主題",
+        "tabs": "分頁",
+        "panels": "側邊欄面板",
+        "dashboardCards": "儀表板卡片",
+        "protocols": "連線類型",
+        "auth": "登入方式",
+        "actions": "動作",
+        "hostCapability": "主機設定"
+      },
+      "filters": {
+        "type": "類型",
+        "allTypes": "所有類型",
+        "category": "類別",
+        "allCategories": "所有類別",
+        "results_other": "{{count}} 個外掛",
+        "remove": "移除篩選條件 {{name}}",
+        "clear": "清除篩選條件",
+        "button": "篩選條件",
+        "buttonCount": "篩選條件 ({{count}})"
+      },
+      "pager": {
+        "range": "第 {{from}}-{{to}} 項，共 {{total}} 項",
+        "page": "第 {{page}} 頁，共 {{pages}} 頁",
+        "previous": "上一頁",
+        "next": "下一頁",
+        "perPage": "每頁 {{count}} 項",
+        "perPageLabel": "每頁外掛數量"
+      },
+      "showUnsupportedHint": "這些項目已列出，但尚無版本可在此版本上執行。請更新 Termix 以安裝它們。",
+      "unsupported": "需要更新版本的 Termix",
+      "unsupportedHint": "此外掛尚無版本可在此版本的 Termix 上執行。請更新 Termix 以安裝它。",
+      "needsTermix": "需要 Termix {{range}}",
+      "showUnsupported": "顯示不支援的項目 ({{count}})",
+      "showMore": "顯示更多 {{count}} 項（剩餘 {{total}} 項）"
     }
   },
   "settings": {
@@ -1502,82 +1585,6 @@
     "sudoHint": "在主機編輯器中為此主機設定 sudo 密碼，以啟用特權操作。",
     "noData": "沒有資料",
     "filter": "篩選..."
-  },
-  "sync": {
-    "minutesAgo_other": "{{count}} 分鐘前",
-    "hoursAgo_other": "{{count}} 小時前",
-    "pending_other": "{{count}} 項變更等待同步",
-    "proxy": {
-      "headersTitle": "額外標頭",
-      "headersHint": "隨每個請求傳送至伺服器，例如 Cloudflare Access 服務權杖。",
-      "headerName": "標頭名稱",
-      "headerValue": "值",
-      "savedValue": "已儲存，輸入以變更",
-      "addHeader": "新增標頭",
-      "removeHeader": "移除標頭",
-      "basicAuthTitle": "使用者名稱與密碼",
-      "basicAuthHint": "用於在 Termix 之前要求輸入使用者名稱和密碼的代理伺服器。",
-      "username": "使用者名稱",
-      "password": "密碼",
-      "allowInvalidCertificate": "信任自簽名憑證",
-      "allowInvalidCertificateHint": "僅適用於您自己的伺服器，且其憑證並非來自知名憑證授權單位時。"
-    },
-    "problems": {
-      "invalidUrl": "這看起來不像有效的網址。",
-      "unreachable": "無法連線至伺服器。請檢查網址並確認伺服器正在執行。",
-      "unreachableWithReason": "無法連線至伺服器：{{reason}}",
-      "tlsUntrusted": "伺服器憑證不受信任。如果您使用的是自簽憑證的自有伺服器，請開啟下方的選項。",
-      "basicAuthRequired": "伺服器前方的設備要求輸入使用者名稱與密碼。請在下方輸入。",
-      "proxyLogin": "回應的是登入頁面或代理伺服器，而非 Termix。請在下方新增所需的標頭，或檢查網址。",
-      "notTermix": "該網址沒有 Termix 伺服器。如果伺服器運行在特定路徑下，請包含該路徑，例如 https://example.com/termix。",
-      "versionMismatch": "該伺服器運行的是舊版 Termix。請更新至 2.9 或更高版本以進行連結。",
-      "differentAccount": "您已登入不同的帳戶。請登入此裝置所連結的帳戶，或先解除連結。"
-    },
-    "wizard": {
-      "title": "連結至 Termix 伺服器",
-      "reloginTitle": "重新登入",
-      "savedServers": "近期的伺服器",
-      "removeServer": "從清單中移除",
-      "serverDescription": "輸入您在瀏覽器中開啟 Termix 所使用的網址。",
-      "signinDescription": "登入 {{url}}",
-      "chooseDescription": "此裝置已有資料。您希望如何處理？",
-      "finishingDescription": "正在連結此裝置。",
-      "serverUrl": "伺服器網址",
-      "serverUrlHint": "例如 https://termix.example.com",
-      "showProxySettings": "反向代理設定",
-      "hideProxySettings": "隱藏反向代理設定",
-      "continue": "繼續",
-      "back": "返回",
-      "mergeTitle": "加入我的帳戶",
-      "mergeBody_other": "此裝置上的 {{count}} 個項目將加入您的帳戶。您的帳戶中已存在的項目將保持伺服器上的原狀。",
-      "replaceTitle": "以我的帳戶取代",
-      "replaceBody_other": "此裝置上的 {{count}} 個項目將被移除，此裝置將從您的帳戶取得所有資料。僅保留在此裝置上的主機將不受影響。",
-      "link": "連結",
-      "linking": "正在連結並執行首次同步...",
-      "linked": "已連結。您的資料正在同步。",
-      "signedInAgain": "已登入。同步已重新執行。"
-    },
-    "entities": {
-      "hosts": "伺服器",
-      "sshCredentials": "憑證",
-      "sshFolders": "資料夾",
-      "userPreferences": "偏好設定",
-      "pluginUserSettings": "外掛設定",
-      "sharedHosts": "與您分享的伺服器",
-      "sharedCredentials": "與您分享的憑證",
-      "vaultProfiles": "Vault 設定檔",
-      "snippetFolders": "程式碼片段資料夾",
-      "snippets": "程式碼片段",
-      "dashboardServiceLinks": "服務連結",
-      "homepageItems": "首頁項目",
-      "networkTopology": "網路拓撲圖",
-      "workspaces": "工作區",
-      "hostDefaults": "伺服器預設值",
-      "hostDefaultsAdmin": "伺服器端預設值",
-      "aiProviders": "AI 服務提供者",
-      "homepageLayouts": "首頁版面配置",
-      "accountProfile": "帳戶設定檔"
-    }
   },
   "hostDefaults": {
     "source": {

@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "Některé pluginy se nepodařilo změnit. Opravíte je později ze záložky Pluginy. Stiskněte Další pro pokračování.",
     "pluginsApplyFailed": "Vaše volby se nepodařilo uložit. Zkuste to znovu, nebo pokračujte a změňte je později ze záložky Pluginy.",
     "pluginsLoadFailed": "Seznam pluginů se nepodařilo načíst. Pluginy můžete vybrat později ze záložky Pluginy.",
-    "presetTitle": "Kolik obsahu chcete na obrazovce?",
-    "presetIntro": "Vyberte, kolik obsahu se zobrazí na obrazovce.",
-    "presetChangeLater": "Přepínání předvoleb nebo změnu jednotlivých nastavení můžete provést později v Nastavení pod rozbalovací nabídkou Rozhraní.",
-    "appearanceTitle": "Přizpůsobte si vzhled",
-    "appearanceIntro": "Vyberte si motiv, akcentní barvu, písmo a jazyk. Změny se projeví okamžitě a později je můžete upravit v Nastavení.",
     "securityTitle": "Zabezpečte svůj účet",
     "securityIntro": "Přidejte do svého účtu passkey nebo aplikaci pro ověřování. Toto můžete provést také později v Nastavení pod Bezpečnost.",
-    "desktopTitle": "Jak chcete Termix používat?",
-    "desktopBody": "Toto můžete kdykoli změnit v Synchronizace v postranním panelu.",
-    "desktopLocalTitle": "Pouze na tomto zařízení",
-    "desktopLocalBody": "Vše je uloženo zde. Nic k nastavování.",
-    "desktopLinkTitle": "S mým serverem Termix",
-    "desktopLinkBody": "Přihlaste se ke svému serveru pro použití stejných hostitelů a nastavení na všech zařízeních.",
-    "desktopLinked": "Propojeno s {{server}}",
     "pluginsDocsLink": "Přečtěte si o každém z nich"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} je připraven k instalaci",
     "readyHint": "Nainstaluje se při příštím restartu Termixu."
   },
+  "companion": {
+    "close": "Zavřít panel",
+    "moveSide": "Přesunout panel",
+    "resize": "Změnit velikost panelu"
+  },
   "nav": {
     "home": "Domů",
     "terminal": "Terminál",
@@ -257,7 +250,6 @@
     "hosts": "Hostitelé",
     "credentials": "Přihlašovací údaje",
     "connections": "Připojení",
-    "sync": "Synchronizace",
     "reconnectDisconnectedTerminals": "Znovu připojit všechny odpojené terminály",
     "reconnectingTerminals_one": "Znovu se připojuji k {{count}} terminálu",
     "reconnectingTerminals_few": "Znovu se připojuji k {{count}} terminálům",
@@ -285,10 +277,7 @@
     "retry": "Zkusit znovu",
     "refresh": "Obnovit",
     "optional": "Volitelné",
-    "downloadSample": "Stáhnout vzor",
     "failedToDeleteHost": "Nepodařilo se smazat {{name}}",
-    "importSkipExisting": "Importovat (přeskočit existující)",
-    "importSSHConfig": "Importovat ze SSH konfigurace",
     "connectionDetails": "Podrobnosti o připojení",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -509,10 +498,7 @@
     "noFolder": "(Žádná složka)",
     "deleteSelected": "Smazat",
     "exitSelection": "Ukončit výběr",
-    "importSkip": "Importovat (přeskočit existující)",
-    "importOverwrite": "Importovat (přepsat)",
     "collapseBtn": "Sbalit",
-    "importExportBtn": "Import / Export",
     "hostStatusesRefreshed": "Stavy hostitelů obnoveny",
     "failedToRefreshHosts": "Nepodařilo se obnovit hostitele",
     "movedHostTo": "Přesunuto {{host}} do \"{{folder}}\"",
@@ -571,6 +557,9 @@
     "deleteFolderConfirm_many": "Smazat \"{{name}}\" a jeho {{count}} hostů? Tuto akci nelze vrátit zpět.",
     "deleteFolderConfirm_other": "Smazat \"{{name}}\" a jeho {{count}} hostů? Tuto akci nelze vrátit zpět.",
     "failedToMoveHosts": "Nepodařilo se přesunout hosty",
+    "managedBanner": "Tento hostitel je spravován prostřednictvím {{plugin}}. Změňte jej tam. Stále jej můžete připnout a změnit pořadí.",
+    "managedTooltip": "Spravováno prostřednictvím {{plugin}}",
+    "addBlocked": "Hostitelé jsou spravováni prostřednictvím {{plugin}}, takže zde nelze přidávat nové hostitele.",
     "failedToReorder": "Nepodařilo se změnit pořadí",
     "expandAll": "Rozbalit všechny složky",
     "collapseAll": "Sbalit všechny složky",
@@ -683,37 +672,6 @@
     "addCredentialBtn2": "Přidat přihlašovací údaje",
     "checkingHostStatuses": "Kontrola stavů hostitelů...",
     "pinnedSection": "Připnuté",
-    "hostsExported": "Hostitelé úspěšně exportováni",
-    "export": {
-      "menuItem": "Exportovat...",
-      "title": "Export hostitelů",
-      "scope": "Rozsah",
-      "scopeAll": "Všechny",
-      "scopeSelected": "Vybrané",
-      "searchHosts": "Hledat hostitele...",
-      "include": "Zahrnout",
-      "groupConnection": "Připojení",
-      "groupCredentials": "Přihlašovací údaje",
-      "groupNotes": "Poznámky",
-      "groupTags": "Štítky a připnutí",
-      "groupProxy": "Proxy",
-      "groupJumpHosts": "Překopové hostitele",
-      "groupFeatureFlags": "Nastavení pluginů",
-      "groupAdvanced": "Rozšířená konfigurace",
-      "preview": "Náhled",
-      "moreHosts_one": "... a {{count}} další host",
-      "moreHosts_few": "... a {{count}} další hosté",
-      "moreHosts_many": "... a {{count}} dalších hostů",
-      "moreHosts_other": "... a {{count}} dalších hostů",
-      "summary": "{{selected}} z {{total}} hostitelů",
-      "credentialsIncluded": "zahrnuty přihlašovací údaje",
-      "credentialsExcluded": "vynechány přihlašovací údaje",
-      "noneSelected": "Nejsou vybráni žádní hostitelé",
-      "cancel": "Zrušit",
-      "confirm": "Exportovat",
-      "fetchFailed": "Nepodařilo se načíst hostitele pro export",
-      "bulkButton": "Exportovat"
-    },
     "sampleDownloaded": "Vzorkový soubor stažen",
     "failedToDeleteCredential2": "Nepodařilo se smazat přihlašovací údaje",
     "noFolderOption": "(Žádná složka)",
@@ -886,11 +844,7 @@
     "editorUpdate": "Aktualizovat hostitele",
     "editorAdd": "Přidat hostitele",
     "speedSearch": "Hledat hostitele. Šipky pro výběr, Enter pro připojení, Esc pro uzavření",
-    "speedSearchList": "Seznam hostitelů. Píšte nebo stiskněte / pro hledání.",
-    "importNoHosts": "V souboru nebyly nalezeny žádné hostitele",
-    "importTooMany": "Naraz můžete importovat až {{max}} hostitelů",
-    "importSummary": "Import dokončen: {{imported}} importováno, {{updated}} aktualizováno, {{failed}} selhalo",
-    "importHostsFailed": "Nepodařilo se importovat hostitele"
+    "speedSearchList": "Seznam hostitelů. Píšte nebo stiskněte / pro hledání."
   },
   "splitScreen": {
     "title": "Rozdělená obrazovka",
@@ -1095,17 +1049,9 @@
   },
   "admin": {
     "usersCount_one": "{{count}} uživatel",
-    "usersCount_few": "{{count}} uživatelé",
-    "usersCount_many": "{{count}} uživatelů",
     "rolesCount_one": "{{count}} role",
-    "rolesCount_few": "{{count}} role",
-    "rolesCount_many": "{{count}} rolí",
     "apiKeysCount_one": "{{count}} klíč",
-    "apiKeysCount_few": "{{count}} klíče",
-    "apiKeysCount_many": "{{count}} klíčů",
     "sessionsActive_one": "{{count}} aktivní",
-    "sessionsActive_few": "{{count}} aktivní",
-    "sessionsActive_many": "{{count}} aktivních",
     "hostsCount_one": "{{count}} host",
     "hostsCount_few": "{{count}} hosté",
     "hostsCount_many": "{{count}} hostů",
@@ -1116,8 +1062,6 @@
     "credentialsCount_other": "{{count}} přihlašovacích údajů",
     "rolePermissions": {
       "count_one": "{{count}} oprávnění",
-      "count_few": "{{count}} oprávnění",
-      "count_many": "{{count}} oprávnění",
       "groups": {
         "hosts": "Hostitelé",
         "credentials": "Přihlašovací údaje",
@@ -1158,20 +1102,58 @@
         "interfaceFontDescription": "Změní písmo uživatelského rozhraní aplikace. Profily terminálu si zachovávají vlastní nastavení písma.",
         "accentColorLabel": "Akcentová barva",
         "apiKeyCount_one": "{{count}} klíč",
-        "apiKeyCount_few": "{{count}} klíče",
-        "apiKeyCount_many": "{{count}} klíčů",
         "colorPickerTooltip": "Otevřít výběr barev",
         "themeSystem": "Systém",
         "themeLight": "Světlý",
-        "themeDark": "Tmavý",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "Tmavý"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "Jak je celá aplikace rozložena. Motivy a rozložení pocházejí z pluginů.",
+    "defaultsLabel": "Výchozí pro všechny",
+    "defaultsHint": "Co lidé uvidí, dokud si nevyberou vlastní rozložení nebo motiv.",
+    "followDefault": "Použít výchozí nastavení",
+    "defaultSaved": "Vzhled uložen jako výchozí",
+    "saveFailed": "Vzhled se nepodařilo uložit",
+    "repair": {
+      "title": "Toto rozložení se nepodařilo zobrazit",
+      "safeTitle": "Bezpečný režim",
+      "layout": "Rozložení",
+      "plugin": "Plugin",
+      "reason": "Důvod",
+      "error": "Chyba",
+      "noError": "Žádná chybová zpráva.",
+      "copy": "Kopírovat",
+      "copied": "Zkopírováno",
+      "copyFailed": "Podrobnosti se nepodařilo zkopírovat",
+      "retry": "Zkusit znovu",
+      "reset": "Obnovit výchozí vzhled",
+      "resetEveryone": "Obnovit výchozí nastavení pro všechny",
+      "update": "Aktualizovat {{name}} na {{version}}",
+      "disable": "Vypnout {{name}}",
+      "install": "Hledat rozložení a motivy",
+      "installTitle": "Rozložení a motivy",
+      "installButton": "Instalovat",
+      "nothingToInstall": "Právě teď nejsou k dispozici žádná jiná rozložení ani motivy.",
+      "registryUnreachable": "Nelze se připojit k rejstříku pluginů.",
+      "askAdmin": "Požádejte správce, aby aktualizoval nebo opravil toto rozložení. Níže si můžete přepnout na jiné rozložení nebo motiv.",
+      "switchLayout": "Přepnout rozložení",
+      "switchTheme": "Přepnout motiv",
+      "saveFailed": "Vaše volba se nepodařilo uložit",
+      "reasons": {
+        "safe-url": "Adresa požadovala bezpečný režim. Vyberte rozložení níže nebo z adresy odeberte ?safe-layout=1.",
+        "safe-env": "Server byl spuštěn s TERMIX_SAFE_LAYOUT, takže všichni uvidí tuto obrazovku, dokud nebude odstraněn.",
+        "missing": "Žádný nainstalovaný plugin toto rozložení neposkytuje.",
+        "disabled": "Plugin, který toto rozložení poskytuje, je vypnutý.",
+        "blocked": "Plugin, který toto rozložení poskytuje, čeká na něco, co potřebuje.",
+        "incompatible": "Plugin, který toto rozložení poskytuje, nefunguje s touto verzí Termix.",
+        "failed": "Rozložení se nepodařilo spustit.",
+        "crashed": "Rozložení dvakrát selhalo při vykreslování aplikace."
+      },
+      "noLayout": "Není nastaveno žádné rozložení",
+      "restore": "Obnovit dodané {{name}}",
+      "restoreFailed": "Nepodařilo se obnovit dodanou kopii"
     }
   },
   "plugins": {
@@ -1196,6 +1178,18 @@
         "title": "Spravovat přihlašování",
         "consequence": "Může přidat metodu přihlášení, druhý faktor nebo typ SSH přihlášení."
       },
+      "auth:policy": {
+        "title": "Nastavit pravidla pro přihlášení",
+        "consequence": "Může odhlásit lidi při nečinnosti, omezit délku relace, vypnout funkci Zapamatovat si mě a vyžadovat druhé ověření."
+      },
+      "ssh:transport": {
+        "title": "Vyberte, jak se k hostitelům přistupuje",
+        "consequence": "Může přenášet SSH připojení k hostiteli přes vlastní trasu, takže vidí vše, co se k těmto hostitelům odesílá a od nich přijímá, včetně hesel."
+      },
+      "sync:provide": {
+        "title": "Spustit synchronizaci",
+        "consequence": "Může odpovídat na všechny požadavky na synchronizaci, takže vidí data, která synchronizují zařízení a servery."
+      },
       "system:tls": {
         "title": "Spravovat certifikáty",
         "consequence": "Může nahradit certifikát, který Termix poskytuje přes HTTPS, a odpovídat na ověřování domén od certifikačních autorit."
@@ -1203,6 +1197,10 @@
       "device:serial": {
         "title": "Přístup k sériovým a USB zařízením",
         "consequence": "Může otevřít fyzický sériový port na počítači, kde běží Termix."
+      },
+      "hosts:export": {
+        "title": "Exportovat hostitele s jejich tajnými informacemi",
+        "consequence": "Může číst vaše hostitele v plném rozsahu, včetně uložených hesel a klíčů, a předávat je dál. Každý export je zapsán do auditního protokolu."
       },
       "hosts:write": {
         "title": "Vytvářet a měnit hostitele",
@@ -1248,9 +1246,29 @@
         "title": "Číst auditní protokol",
         "consequence": "Může vidět, kdo co a kdy udělal."
       },
+      "network:probe": {
+        "title": "Zkontrolovat, zda porty odpovídají",
+        "consequence": "Může otevřít obyčejné připojení k libovolné adrese ze serveru, aby zjistil, zda je dosažitelná."
+      },
+      "hosts:status-provide": {
+        "title": "Poskytovat stav hostitele",
+        "consequence": "Stává se zdrojem teček online a offline pro každého hostitele."
+      },
+      "hosts:activity-provide": {
+        "title": "Ukládat nedávnou aktivitu",
+        "consequence": "Stává se úložištěm seznamu nedávné aktivity pro každého uživatele."
+      },
+      "hosts:lock": {
+        "title": "Spravovat hostitele jako pouze pro čtení",
+        "consequence": "Hostitele, které spravuje, nemůže nikdo jiný upravovat, mazat ani znovu sdílet."
+      },
       "desktop:window": {
         "title": "Otevírat okna plochy",
         "consequence": "Pouze v desktopové aplikaci Termix."
+      },
+      "desktop:local": {
+        "title": "Použít tento počítač",
+        "consequence": "Může číst a měnit soubory, spouštět shell a otevírat místní porty na tomto počítači. Pouze v desktopové aplikaci Termix."
       },
       "users:impersonate": {
         "title": "Jednat jménem jiných uživatelů",
@@ -1291,6 +1309,14 @@
       "ui:surface": {
         "title": "Přidat vlastní obrazovky",
         "consequence": "Záložky, panely a nastavení, která lze později skrýt."
+      },
+      "ui:layout": {
+        "title": "Nahradit celé rozložení aplikace",
+        "consequence": "Pokud je vybráno, jeho kód vykresluje každou obrazovku, včetně vašich terminálů a nastavení."
+      },
+      "ui:theme": {
+        "title": "Přidat barevná témata",
+        "consequence": "Pouze barvy a styly. Pro téma se žádný kód nespouští."
       }
     },
     "runtime": {
@@ -1444,6 +1470,7 @@
         "options": "Nelze uložit možnosti pro {{name}}: {{error}}",
         "deleteData": "Nelze smazat data pro {{name}}: {{error}}",
         "managedByServer": "Tento plocha je propojena se serverem, který určuje její pluginy.",
+        "defaultLook": "{{name}} je výchozí vzhled, takže lze vypnout nebo zaměnit, ale ne odinstalovat.",
         "hasDependents": "{{name}} je potřeba pro {{list}}. Nejprve je vypněte nebo odinstalujte.",
         "missingDependencies": "{{name}} potřebuje {{list}}, který není nainstalován.",
         "consentChanged": "Požadavky tohoto pluginu se od vašeho posledního zobrazení změnily. Zkontrolujte seznam znovu.",
@@ -1521,7 +1548,6 @@
       "noServerAccess": "Žádný přístup k vašim serverům",
       "searchInstalled": "Hledat mezi nainstalovanými",
       "searchPlugins": "Hledat pluginy",
-      "allCategories": "Vše",
       "nothingMatches": "Nic neodpovídá této položce.",
       "noneInstalled": "Zatím nejsou nainstalovány žádné pluginy. Prohledejte je a přidejte nějaké.",
       "nothingHere": "Nic zde není.",
@@ -1619,7 +1645,46 @@
       "documentation": "Dokumentace",
       "envVars": "Proměnné prostředí",
       "envRequired": "Povinné",
-      "envDefault": "Výchozí: {{value}}"
+      "envDefault": "Výchozí: {{value}}",
+      "kinds": {
+        "layouts": "Rozložení",
+        "themes": "Témata",
+        "tabs": "Záložky",
+        "panels": "Panely postranního panelu",
+        "dashboardCards": "Karty přehledu",
+        "protocols": "Typy připojení",
+        "auth": "Způsoby přihlášení",
+        "actions": "Akce",
+        "hostCapability": "Nastavení hostitele"
+      },
+      "filters": {
+        "type": "Typ",
+        "allTypes": "Všechny typy",
+        "category": "Kategorie",
+        "allCategories": "Všechny kategorie",
+        "results_one": "{{count}} plugin",
+        "results_few": "{{count}} pluginy",
+        "results_many": "{{count}} pluginů",
+        "results_other": "{{count}} pluginů",
+        "remove": "Odebrat filtr {{name}}",
+        "clear": "Vymazat filtry",
+        "button": "Filtry",
+        "buttonCount": "Filtry ({{count}})"
+      },
+      "pager": {
+        "range": "{{from}}-{{to}} z {{total}}",
+        "page": "Strana {{page}} z {{pages}}",
+        "previous": "Předchozí strana",
+        "next": "Další strana",
+        "perPage": "{{count}} na stranu",
+        "perPageLabel": "Pluginů na stranu"
+      },
+      "showUnsupportedHint": "Tyto jsou uvedeny, ale žádná verze zatím na této verzi neběží. Aktualizujte Termix pro jejich instalaci.",
+      "unsupported": "Vyžaduje novější Termix",
+      "unsupportedHint": "Žádná verze tohoto pluginu neběží na této verzi Termix. Aktualizujte Termix pro jeho instalaci.",
+      "needsTermix": "Vyžaduje Termix {{range}}",
+      "showUnsupported": "Zobrazit nepodporované ({{count}})",
+      "showMore": "Zobrazit {{count}} dalších (zbývá {{total}})"
     }
   },
   "settings": {
@@ -1634,97 +1699,6 @@
     "sudoHint": "Nastavte heslo pro sudo pro tohoto hostitele v editoru hostitele pro povolení oprávněných akcí.",
     "noData": "Žádná data",
     "filter": "Filtrovat..."
-  },
-  "sync": {
-    "minutesAgo_one": "před {{count}} minutou",
-    "minutesAgo_few": "před {{count}} minutami",
-    "minutesAgo_many": "před {{count}} minutami",
-    "minutesAgo_other": "před {{count}} minutami",
-    "hoursAgo_one": "před {{count}} hodinou",
-    "hoursAgo_few": "před {{count}} hodinami",
-    "hoursAgo_many": "před {{count}} hodinami",
-    "hoursAgo_other": "před {{count}} hodinami",
-    "pending_one": "{{count}} změna čeká na synchronizaci",
-    "pending_few": "{{count}} změny čekají na synchronizaci",
-    "pending_many": "{{count}} změn čeká na synchronizaci",
-    "pending_other": "{{count}} změn čeká na synchronizaci",
-    "proxy": {
-      "headersTitle": "Další hlavičky",
-      "headersHint": "Odesílány s každým požadavkem na server, například token služby Cloudflare Access.",
-      "headerName": "Název hlavičky",
-      "headerValue": "Hodnota",
-      "savedValue": "Uloženo, pro změnu napište novou hodnotu",
-      "addHeader": "Přidat hlavičku",
-      "removeHeader": "Odstranit hlavičku",
-      "basicAuthTitle": "Uživatelské jméno a heslo",
-      "basicAuthHint": "Pro proxy, která vyžaduje uživatelské jméno a heslo před Termixem.",
-      "username": "Uživatelské jméno",
-      "password": "Heslo",
-      "allowInvalidCertificate": "Důvěřovat certifikátu podepsanému sám sebou",
-      "allowInvalidCertificateHint": "Pouze pro váš vlastní server, pokud jeho certifikát není od známé autority."
-    },
-    "problems": {
-      "invalidUrl": "To nevypadá jako webová adresa.",
-      "unreachable": "Nelze se připojit k serveru. Zkontrolujte adresu a zda je server spuštěn.",
-      "unreachableWithReason": "Nelze se připojit k serveru: {{reason}}",
-      "tlsUntrusted": "Certifikát serveru není důvěryhodný. Pokud je to váš vlastní server se self-signed certifikátem, povolte možnost níže.",
-      "basicAuthRequired": "Něco před serverem vyžaduje uživatelské jméno a heslo. Zadejte je níže.",
-      "proxyLogin": "Místo Termix odpověděla přihlašovací stránka nebo proxy. Níže přidejte potřebné hlavičky nebo zkontrolujte adresu.",
-      "notTermix": "Na této adrese není žádný Termix server. Pokud běží na konkrétní cestě, uveďte ji, například https://example.com/termix.",
-      "versionMismatch": "Tento server používá starší verzi Termix. Pro propojení jej aktualizujte na verzi 2.9 nebo novější.",
-      "differentAccount": "Přihlásili jste se do jiného účtu. Přihlaste se do účtu, ke kterému je toto zařízení propojeno, nebo jej nejprve odpojte."
-    },
-    "wizard": {
-      "title": "Propojit s Termix serverem",
-      "reloginTitle": "Přihlásit se znovu",
-      "savedServers": "Nedávné servery",
-      "removeServer": "Odebrat ze seznamu",
-      "serverDescription": "Zadejte adresu, kterou používáte k otevření Termixu ve vašem prohlížeči.",
-      "signinDescription": "Přihlaste se do {{url}}",
-      "chooseDescription": "Toto zařízení již obsahuje data. Co s nimi máte udělat?",
-      "finishingDescription": "Propojuji toto zařízení.",
-      "serverUrl": "Adresa serveru",
-      "serverUrlHint": "Například https://termix.example.com",
-      "showProxySettings": "Nastavení reverzní proxy",
-      "hideProxySettings": "Skrýt nastavení reverzní proxy",
-      "continue": "Pokračovat",
-      "back": "Zpět",
-      "mergeTitle": "Přidat do mého účtu",
-      "mergeBody_one": "Položka na tomto zařízení je přidána do vašeho účtu. Položky, které váš účet již má, zůstanou na serveru beze změny.",
-      "mergeBody_few": "{{count}} položky na tomto zařízení jsou přidány do vašeho účtu. Položky, které váš účet již má, zůstanou na serveru beze změny.",
-      "mergeBody_many": "{{count}} položek na tomto zařízení je přidáno do vašeho účtu. Položky, které váš účet již má, zůstanou na serveru beze změny.",
-      "mergeBody_other": "{{count}} položek na tomto zařízení je přidáno do vašeho účtu. Položky, které váš účet již má, zůstanou na serveru beze změny.",
-      "replaceTitle": "Nahradit obsahem mého účtu",
-      "replaceBody_one": "Položka na tomto zařízení je odstraněna a toto zařízení přebere vše z vašeho účtu. Hosté uložené pouze na tomto zařízení zůstanou.",
-      "replaceBody_few": "{{count}} položky na tomto zařízení jsou odstraněny a toto zařízení přebere vše z vašeho účtu. Hosté uložené pouze na tomto zařízení zůstanou.",
-      "replaceBody_many": "{{count}} položek na tomto zařízení je odstraněno a toto zařízení přebere vše z vašeho účtu. Hosté uložené pouze na tomto zařízení zůstanou.",
-      "replaceBody_other": "{{count}} položek na tomto zařízení je odstraněno a toto zařízení přebere vše z vašeho účtu. Hosté uložené pouze na tomto zařízení zůstanou.",
-      "link": "Propojit",
-      "linking": "Probíhá propojování a první synchronizace...",
-      "linked": "Propojeno. Vaše data se nyní synchronizují.",
-      "signedInAgain": "Přihlášen. Synchronizace běží znovu."
-    },
-    "entities": {
-      "hosts": "Hostitelé",
-      "sshCredentials": "Přihlašovací údaje",
-      "sshFolders": "Složky",
-      "userPreferences": "Předvolby",
-      "pluginUserSettings": "Nastavení pluginů",
-      "sharedHosts": "Hostitelé sdílení s vámi",
-      "sharedCredentials": "Přihlašovací údaje sdílené s vámi",
-      "vaultProfiles": "Profily Vault",
-      "snippetFolders": "Složky úryvků",
-      "snippets": "Úryvky",
-      "dashboardServiceLinks": "Odkazy na služby",
-      "homepageItems": "Položky na domovské stránce",
-      "networkTopology": "Mapa sítě",
-      "workspaces": "Pracovní prostory",
-      "hostDefaults": "Výchozí hodnoty hostitelů",
-      "hostDefaultsAdmin": "Výchozí hodnoty hostitelů serveru",
-      "aiProviders": "Poskytovatelé AI",
-      "homepageLayouts": "Rozložení domovské stránky",
-      "accountProfile": "Profil účtu"
-    }
   },
   "hostDefaults": {
     "source": {

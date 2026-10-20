@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "Joitakin lisäosia ei voitu muuttaa. Voit korjata ne myöhemmin Lisäosat-välilehdeltä. Paina Seuraava jatkaaksesi.",
     "pluginsApplyFailed": "Valintojasi ei voitu tallentaa. Yritä uudelleen tai jatka ja muokkaa niitä myöhemmin Lisäosat-välilehdeltä.",
     "pluginsLoadFailed": "Lisäosien listaa ei voitu ladata. Voit valita lisäosat myöhemmin Lisäosat-välilehdeltä.",
-    "presetTitle": "Paljonko haluat näytöllä?",
-    "presetIntro": "Valitse, kuinka paljon näytetään ruudulla.",
-    "presetChangeLater": "Voit vaihtaa esiasetuksia tai muuttaa yksittäisiä asetuksia myöhemmin Asetukset-kohtaan, kohdassa Käyttöliittymä.",
-    "appearanceTitle": "Tee siitä omaasi",
-    "appearanceIntro": "Valitse teema, korostusväri, fontti ja kieli. Muutokset näkyvät välittömästi, ja voit muuttaa niitä myöhemmin Asetukset-kohtaan.",
     "securityTitle": "Turvaa tilisi",
     "securityIntro": "Lisää passkey tai todennussovellus tilillesi. Voit tehdä tämän myös myöhemmin Asetukset-kohtaan, kohdassa Turvallisuus.",
-    "desktopTitle": "Miten haluat käyttää Termixiä?",
-    "desktopBody": "Voit muuttaa tätä milloin tahansa Synkronointi-valikosta sivupalkissa.",
-    "desktopLocalTitle": "Vain tällä laitteella",
-    "desktopLocalBody": "Kaikki tallennetaan tähän. Ei mitään määritettävää.",
-    "desktopLinkTitle": "Termix-palvelimen kanssa",
-    "desktopLinkBody": "Kirjaudu palvelimeesi käyttääksesi samoja isäntiä ja asetuksia kaikilla laitteilla.",
-    "desktopLinked": "Linkitetty palvelimeen {{server}}",
     "pluginsDocsLink": "Lue lisää jokaisesta"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} on valmis asennettavaksi",
     "readyHint": "Se asennetaan seuraavan kerran, kun Termix käynnistetään uudelleen."
   },
+  "companion": {
+    "close": "Sulje paneeli",
+    "moveSide": "Siirrä paneeli",
+    "resize": "Muuta paneelin kokoa"
+  },
   "nav": {
     "home": "Koti",
     "terminal": "Pääte",
@@ -257,7 +250,6 @@
     "hosts": "Isännät",
     "credentials": "Tunnukset",
     "connections": "Yhteydet",
-    "sync": "Synkronoi",
     "reconnectDisconnectedTerminals": "Yhdistä kaikki katkenneet terminaaliyhteydet",
     "reconnectingTerminals_one": "Yhdistetään {{count}} terminaali",
     "reconnectingTerminals_other": "Yhdistetään {{count}} terminaalia",
@@ -279,10 +271,7 @@
     "retry": "Yritä uudelleen",
     "refresh": "Päivitä",
     "optional": "Valinnainen",
-    "downloadSample": "Lataa esimerkki",
     "failedToDeleteHost": "{{name}}:n poisto epäonnistui",
-    "importSkipExisting": "Tuo (ohita olemassa olevat)",
-    "importSSHConfig": "Tuo SSH-määrityksestä",
     "connectionDetails": "Yhteystiedot",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -501,10 +490,7 @@
     "noFolder": "(Ei kansiota)",
     "deleteSelected": "Poista",
     "exitSelection": "Poistu valinnasta",
-    "importSkip": "Tuo (ohita olemassa olevat)",
-    "importOverwrite": "Tuo (kirjoita päälle)",
     "collapseBtn": "Kutista",
-    "importExportBtn": "Tuo / Vie",
     "hostStatusesRefreshed": "Isäntäpalvelimien tilat päivitetty",
     "failedToRefreshHosts": "Isäntäpalvelimien päivitys epäonnistui",
     "movedHostTo": "Siirretty {{host}} kansioon \"{{folder}}\"",
@@ -559,6 +545,9 @@
     "deleteFolderConfirm_one": "Haluatko poistaa kohteen \"{{name}}\" ja sen {{count}} isännän? Toimintoa ei voi peruuttaa.",
     "deleteFolderConfirm_other": "Haluatko poistaa kohteen \"{{name}}\" ja sen {{count}} isännän? Toimintoa ei voi peruuttaa.",
     "failedToMoveHosts": "Isäntien siirto epäonnistui",
+    "managedBanner": "Tätä isäntää hallinnoi {{plugin}}. Muokkaa sitä sieltä. Voit edelleen kiinnittää ja järjestää sen uudelleen.",
+    "managedTooltip": "Hallinnoi {{plugin}}",
+    "addBlocked": "Isäntiä hallinnoi {{plugin}}, joten uusia isäntiä ei voi lisätä tähän.",
     "failedToReorder": "Järjestysmuutos epäonnistui",
     "expandAll": "Laajenna kaikki kansiot",
     "collapseAll": "Tiivistä kaikki kansiot",
@@ -669,35 +658,6 @@
     "addCredentialBtn2": "Lisää tunnistetiedot",
     "checkingHostStatuses": "Tarkistetaan isäntien tiloja...",
     "pinnedSection": "Kiinnitetyt",
-    "hostsExported": "Isännät vietyjä onnistuneesti",
-    "export": {
-      "menuItem": "Vie...",
-      "title": "Vie isännät",
-      "scope": "Kohde",
-      "scopeAll": "Kaikki",
-      "scopeSelected": "Valitut",
-      "searchHosts": "Hae isäntiä...",
-      "include": "Sisällytä",
-      "groupConnection": "Yhteys",
-      "groupCredentials": "Kirjautumistiedot",
-      "groupNotes": "Muistiinpanot",
-      "groupTags": "Tunnisteet ja kiinnitys",
-      "groupProxy": "Välityspalvelin",
-      "groupJumpHosts": "Hyppysisännät",
-      "groupFeatureFlags": "Liitännäisasennukset",
-      "groupAdvanced": "Edistynyt konfiguraatio",
-      "preview": "Esikatselu",
-      "moreHosts_one": "... {{count}} muu isäntä",
-      "moreHosts_other": "... {{count}} muuta isäntää",
-      "summary": "{{selected}} / {{total}} isäntää",
-      "credentialsIncluded": "kirjautumistiedot sisällytetty",
-      "credentialsExcluded": "kirjautumistiedot jätetty pois",
-      "noneSelected": "Isäntiä ei ole valittu",
-      "cancel": "Peruuta",
-      "confirm": "Vie",
-      "fetchFailed": "Isäntien lataus vientiä varten epäonnistui",
-      "bulkButton": "Vie"
-    },
     "sampleDownloaded": "Esimerkkitiedosto ladattu",
     "failedToDeleteCredential2": "Kirjautumistietojen poisto epäonnistui",
     "noFolderOption": "(Ei kansiota)",
@@ -860,11 +820,7 @@
     "editorUpdate": "Päivitä isäntäkone",
     "editorAdd": "Lisää isäntäkone",
     "speedSearch": "Hae isäntäkoneita. Nuolinäppäimet valintaan, Enter yhteyteen, Esc sulkemiseen",
-    "speedSearchList": "Isäntäkoneiden lista. Kirjoita tai paina / hakuun.",
-    "importNoHosts": "Tiedostosta ei löytynyt isäntäkoneita",
-    "importTooMany": "Voit tuoda kerralla enintään {{max}} isäntäkoneetta",
-    "importSummary": "Tuonti valmis: {{imported}} tuotu, {{updated}} päivitetty, {{failed}} epäonnistui",
-    "importHostsFailed": "Isäntäkoneiden tuonti epäonnistui"
+    "speedSearchList": "Isäntäkoneiden lista. Kirjoita tai paina / hakuun."
   },
   "splitScreen": {
     "title": "Jaettu näyttö",
@@ -1115,15 +1071,55 @@
         "colorPickerTooltip": "Avaa värivalitsin",
         "themeSystem": "Järjestelmä",
         "themeLight": "Vaalea",
-        "themeDark": "Tumma",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "Tumma"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "Koko sovelluksen asettelu. Teemat ja asettelut tulevat lisäosista.",
+    "defaultsLabel": "Oletus kaikille",
+    "defaultsHint": "Mitä ihmiset näkevät, ennen kuin valitsevat oman asettelun tai teeman.",
+    "followDefault": "Käytä oletusta",
+    "defaultSaved": "Oletusnäkö tallennettu",
+    "saveFailed": "Näköä ei voitu tallentaa",
+    "repair": {
+      "title": "Tätä asettelua ei voitu näyttää",
+      "safeTitle": "Turvatoiminto",
+      "layout": "Asettelu",
+      "plugin": "Lisäosa",
+      "reason": "Syy",
+      "error": "Virhe",
+      "noError": "Ei virheilmoitusta.",
+      "copy": "Kopioi",
+      "copied": "Kopioitu",
+      "copyFailed": "Yksityiskohtia ei voitu kopioida",
+      "retry": "Yritä uudelleen",
+      "reset": "Palauta oletusnäkö",
+      "resetEveryone": "Palauta oletus kaikille",
+      "update": "Päivitä {{name}} versioon {{version}}",
+      "disable": "Sammuta {{name}}",
+      "install": "Etsi asetteluja ja teemoja",
+      "installTitle": "Asettelut ja teemat",
+      "installButton": "Asenna",
+      "nothingToInstall": "Muuta asetteluja tai teemoja ei ole tällä hetkellä saatavilla.",
+      "registryUnreachable": "Lisäosarekisteriä ei voitu tavoittaa.",
+      "askAdmin": "Pyydä ylläpitäjää päivittämään tai korjaamaan tämä asettelu. Voit vaihtaa toiseen asetteluun tai teemaan itsellesi alla.",
+      "switchLayout": "Vaihda asettelua",
+      "switchTheme": "Vaihda teemaa",
+      "saveFailed": "Valintaa ei voitu tallentaa",
+      "reasons": {
+        "safe-url": "Osoite pyysi turvatoimintoa. Valitse asettelu alla tai poista ?safe-layout=1 osoitteesta.",
+        "safe-env": "Palvelin on käynnistetty TERMIX_SAFE_LAYOUT-muuttujalla, joten kaikki näkevät tämän näytteen, kunnes se poistetaan.",
+        "missing": "Yksikään asennettu lisäosa ei tarjoa tätä asettelua.",
+        "disabled": "Tätä asettelua tarjoava lisäosa on sammutettu.",
+        "blocked": "Tätä asettelua tarjoava lisäosa odottaa jotain, mitä se tarvitsee.",
+        "incompatible": "Tätä asettelua tarjoava lisäosa ei toimi tämän Termix-version kanssa.",
+        "failed": "Asettelun käynnistyminen epäonnistui.",
+        "crashed": "Asettelo kaatui kaksi kertaa sovellusta piirtäessä."
+      },
+      "noLayout": "Asettelua ei ole määritetty",
+      "restore": "Palauta mukana tuleva {{name}}",
+      "restoreFailed": "Mukana tulevaa kopiota ei voitu palauttaa"
     }
   },
   "plugins": {
@@ -1148,6 +1144,18 @@
         "title": "Hallita kirjautumista",
         "consequence": "Se voi lisätä kirjautumistavan, toisen todennustekijän tai SSH-kirjautumistyyppin."
       },
+      "auth:policy": {
+        "title": "Aseta kirjautumissäännöt",
+        "consequence": "Se voi kirjata ihmiset ulos, kun he ovat toimettomia, rajoittaa istunnon kestoa, sammutaa muista minut -toiminnon ja vaatia toisen tekijän."
+      },
+      "ssh:transport": {
+        "title": "Valitse, miten isäntiin yhdistetään",
+        "consequence": "Se voi kuljettaa SSH-yhteyden isäntään omalla reitillään, joten se näkee kaiken, mikä lähetetään näihin isäntiin ja niistä, salasanat mukaan lukien."
+      },
+      "sync:provide": {
+        "title": "Suorita synkronointi",
+        "consequence": "Se voi vastata kaikkiin synkronointipyyntöihin, joten se näkee tiedot, jotka laitteet ja palvelimet synkronoivat."
+      },
       "system:tls": {
         "title": "Hallita sertifikaatteja",
         "consequence": "Se voi korvata Termixin HTTPS-yhteyksissä käyttämän sertifikaatin ja vastata sertifikaattiviranomaisten verkkotunnustarkistuksiin."
@@ -1155,6 +1163,10 @@
       "device:serial": {
         "title": "Päästä käsiksi sarja- ja USB-laitteisiin",
         "consequence": "Se voi avata fyysisen sarjaportin Termixin suorittavassa laitteessa."
+      },
+      "hosts:export": {
+        "title": "Vie isännät niiden salaisuuksineen",
+        "consequence": "Voi lukea isäntiäsi täysin, mukaan lukien tallennetut salasanat ja avaimet, ja jakaa niitä. Jokainen vienti kirjataan tarkastuslokissa."
       },
       "hosts:write": {
         "title": "Luoda ja muuttaa isäntäpalvelimia",
@@ -1200,9 +1212,29 @@
         "title": "Lukea tarkastusloki",
         "consequence": "Se voi nähdä, kuka teki mitä ja milloin."
       },
+      "network:probe": {
+        "title": "Tarkista, vastaavatko portit",
+        "consequence": "Voi avata pelkän yhteyden mihin tahansa osoitteeseen palvelimelta, nähdäkseen, onko se tavoitettavissa."
+      },
+      "hosts:status-provide": {
+        "title": "Tarjoa isännän tila",
+        "consequence": "Tulee lähteeksi online- ja offline-pisteille jokaiselle isännälle."
+      },
+      "hosts:activity-provide": {
+        "title": "Tallenna viimeisin toiminta",
+        "consequence": "Toimii kaikkien käyttäjien viimeisimmän toiminnan listan tallennustilana."
+      },
+      "hosts:lock": {
+        "title": "Hallinnoi isäntiä vain lukuoikeudella",
+        "consequence": "Sen hallinnoimia isäntiä ei voi muokata, poistaa tai jakaa uudelleen kenenkään toisen toimesta."
+      },
       "desktop:window": {
         "title": "Avata työpöytäikkunoita",
         "consequence": "Vain Termix-työpöytäsovelluksessa."
+      },
+      "desktop:local": {
+        "title": "Käytä tätä tietokonetta",
+        "consequence": "Voi lukea ja muuttaa tiedostoja, suorittaa komentoriviä ja avata paikallisia portteja tässä tietokoneessa. Vain Termix-työpöytäsovelluksessa."
       },
       "users:impersonate": {
         "title": "Toimia muiden käyttäjien puolesta",
@@ -1243,6 +1275,14 @@
       "ui:surface": {
         "title": "Lisätä omat näkymänsä",
         "consequence": "Välilehtiä, paneelia ja asetuksia, jotka voit piilottaa myöhemmin."
+      },
+      "ui:layout": {
+        "title": "Korvaa koko sovelluksen asettelu",
+        "consequence": "Kun valittu, sen koodi piirtää jokaisen näytön, mukaan lukien terminaalisin ja asetukset."
+      },
+      "ui:theme": {
+        "title": "Lisää väriteemoja",
+        "consequence": "Vain värejä ja tyylejä. Teema ei suorita koodia."
       }
     },
     "runtime": {
@@ -1372,6 +1412,7 @@
         "options": "{{name}} -lisäosan asetuksia ei voitu tallentaa: {{error}}",
         "deleteData": "{{name}} -lisäosan tietoja ei voitu poistaa: {{error}}",
         "managedByServer": "Tämä työpöytä on linkitetty palvelimeen, joka päättää sen lisäosista.",
+        "defaultLook": "{{name}} on oletusnäkö, joten se voidaan poistaa käytöstä tai vaihtaa, mutta sitä ei voi poistaa asennuksesta.",
         "hasDependents": "{{name}} on tarpeen lisäosille {{list}}. Kytke ne pois päältä tai poista ne ensin.",
         "missingDependencies": "{{name}} tarvitsee {{list}}:ää, jota ei ole asennettu.",
         "consentChanged": "Tämän lisäosan pyytämät oikeudet ovat muuttuneet siitä lähtien, kun tarkastelit niitä. Tarkista lista uudelleen.",
@@ -1441,7 +1482,6 @@
       "noServerAccess": "Ei pääsyä palvelimiisi",
       "searchInstalled": "Hae asennetuista",
       "searchPlugins": "Hae lisäosia",
-      "allCategories": "Kaikki",
       "nothingMatches": "Ei vastaavia tuloksia.",
       "noneInstalled": "Lisäosia ei ole vielä asennettu. Selaa ja lisää joitakin.",
       "nothingHere": "Täällä ei ole mitään.",
@@ -1531,7 +1571,44 @@
       "documentation": "Dokumentaatio",
       "envVars": "Ympäristömuuttujat",
       "envRequired": "Vaadittu",
-      "envDefault": "Oletus: {{value}}"
+      "envDefault": "Oletus: {{value}}",
+      "kinds": {
+        "layouts": "Asettelut",
+        "themes": "Teemat",
+        "tabs": "Välilehdet",
+        "panels": "Sivupaneelit",
+        "dashboardCards": "Kojelaudan kortit",
+        "protocols": "Yhteydentyypit",
+        "auth": "Kirjautumistavat",
+        "actions": "Toiminnot",
+        "hostCapability": "Isäntäasetukset"
+      },
+      "filters": {
+        "type": "Tyyppi",
+        "allTypes": "Kaikki tyypit",
+        "category": "Kategoria",
+        "allCategories": "Kaikki kategoriat",
+        "results_one": "{{count}} lisäosa",
+        "results_other": "{{count}} lisäosaa",
+        "remove": "Poista suodatin {{name}}",
+        "clear": "Tyhjennä suodattimet",
+        "button": "Suodattimet",
+        "buttonCount": "Suodattimet ({{count}})"
+      },
+      "pager": {
+        "range": "{{from}}–{{to}} / {{total}}",
+        "page": "Sivu {{page}} / {{pages}}",
+        "previous": "Edellinen sivu",
+        "next": "Seuraava sivu",
+        "perPage": "{{count}} per sivu",
+        "perPageLabel": "Lisäosia per sivu"
+      },
+      "showUnsupportedHint": "Nämä on listattu, mutta mikään julkaisu ei vielä toimi tässä versiossa. Päivitä Termix asentamaan ne.",
+      "unsupported": "Vaatii uudemman Termixin",
+      "unsupportedHint": "Tämän lisäosan mikään julkaisu ei toimi tässä Termix-versiossa. Päivitä Termix asentamaan se.",
+      "needsTermix": "Vaatii Termix {{range}}",
+      "showUnsupported": "Näytä tukevat ({{count}})",
+      "showMore": "Näytä {{count}} lisää ({{total}} jäljellä)"
     }
   },
   "settings": {
@@ -1546,87 +1623,6 @@
     "sudoHint": "Aseta sudo-salasana tälle isäntäkonelle isäntätoimittimessa, jotta etuoikeutetut toiminnot ovat käytettävissä.",
     "noData": "Ei dataa",
     "filter": "Suodata..."
-  },
-  "sync": {
-    "minutesAgo_one": "{{count}} minuutti sitten",
-    "minutesAgo_other": "{{count}} minuuttia sitten",
-    "hoursAgo_one": "{{count}} tunti sitten",
-    "hoursAgo_other": "{{count}} tuntia sitten",
-    "pending_one": "{{count}} muutos odottaa synkronointia",
-    "pending_other": "{{count}} muutosta odottaa synkronointia",
-    "proxy": {
-      "headersTitle": "Lisäotsakkeet",
-      "headersHint": "Lähetetään jokaisen palvelimelle lähetetyn pyynnön mukana, esimerkiksi Cloudflare Access -palvelun tunnus.",
-      "headerName": "Otsikon nimi",
-      "headerValue": "Arvo",
-      "savedValue": "Tallennettu, kirjoita muuttaaksesi",
-      "addHeader": "Lisää otsake",
-      "removeHeader": "Poista otsake",
-      "basicAuthTitle": "Käyttäjänimi ja salasana",
-      "basicAuthHint": "Proxyä varten, joka kysyy käyttäjänimeä ja salasanaa ennen Termixiä.",
-      "username": "Käyttäjänimi",
-      "password": "Salasana",
-      "allowInvalidCertificate": "Luota itse allekirjoitettuun sertifikaattiin",
-      "allowInvalidCertificateHint": "Vain omaa palvelinta varten, kun sen sertifikaatti ei ole tunnetulta viranomaiselta."
-    },
-    "problems": {
-      "invalidUrl": "Tuo ei näytä verkkosoitteelta.",
-      "unreachable": "Palvelimeen ei saatu yhteyttä. Tarkista osoite ja että palvelin on käynnissä.",
-      "unreachableWithReason": "Palvelimeen ei saatu yhteyttä: {{reason}}",
-      "tlsUntrusted": "Palvelimen sertifikaattia ei luoteta. Jos tämä on oma palvelimesi, jossa on itseallekirjoitettu sertifikaatti, ota alla oleva vaihtoehto käyttöön.",
-      "basicAuthRequired": "Palvelimen edessä oleva komponentti pyytää käyttäjätunnusta ja salasanaa. Syötä ne alla.",
-      "proxyLogin": "Kirjautumissivu tai välityspalvelin vastasi Termixin sijaan. Lisää tarvittavat otsikot alla tai tarkista osoite.",
-      "notTermix": "Termix-palvelinta ei löydy kyseisestä osoitteesta. Jos se toimii polun takana, sisällytä se osoitteeseen, kuten https://example.com/termix.",
-      "versionMismatch": "Palvelimella on vanhempi Termix-versio. Päivitä se versioon 2.9 tai uudempi yhdistääksesi.",
-      "differentAccount": "Olet kirjautunut eri tiliin. Kirjaudu tiliin, johon tämä laite on linkitetty, tai irrota linkitys ensin."
-    },
-    "wizard": {
-      "title": "Linkitä Termix-palvelimeen",
-      "reloginTitle": "Kirjaudu sisään uudelleen",
-      "savedServers": "Viimeisimmät palvelimet",
-      "removeServer": "Poista listalta",
-      "serverDescription": "Syötä osoite, jota käytät Termixin avaamiseen selaimessasi.",
-      "signinDescription": "Kirjaudu sisään osoitteeseen {{url}}",
-      "chooseDescription": "Tässä laitteessa on jo dataa. Mitä sille pitäisi tehdä?",
-      "finishingDescription": "Linkitetään laitetta.",
-      "serverUrl": "Palvelimen osoite",
-      "serverUrlHint": "Esimerkiksi https://termix.example.com",
-      "showProxySettings": "Käänteisen välityspalvelimen asetukset",
-      "hideProxySettings": "Piilota käänteisen välityspalvelimen asetukset",
-      "continue": "Jatka",
-      "back": "Takaisin",
-      "mergeTitle": "Lisää se tililleni",
-      "mergeBody_one": "Tämän laitteen kohde lisätään tilillesi. Tililläsi jo olevat kohteet pysyvät ennallaan palvelimella.",
-      "mergeBody_other": "Tämän laitteen {{count}} kohdetta lisätään tilillesi. Tililläsi jo olevat kohteet pysyvät ennallaan palvelimella.",
-      "replaceTitle": "Korvaa se tililläni",
-      "replaceBody_one": "Tämän laitteen kohde poistetaan, ja laite ottaa kaiken tililtäsi. Vain tähän laitteeseen tallennetut isäntäkohteet säilyvät.",
-      "replaceBody_other": "Tämän laitteen {{count}} kohdetta poistetaan, ja laite ottaa kaiken tililtäsi. Vain tähän laitteeseen tallennetut isäntäkohteet säilyvät.",
-      "link": "Linkitä",
-      "linking": "Linkitetään ja suoritetaan ensimmäinen synkronointi...",
-      "linked": "Linkitetty. Dataasi synkronoidaan nyt.",
-      "signedInAgain": "Kirjauduttu sisään. Synkronointi jatkuu."
-    },
-    "entities": {
-      "hosts": "Isäntäpalvelimet",
-      "sshCredentials": "Tunnukset",
-      "sshFolders": "Kansiot",
-      "userPreferences": "Asetukset",
-      "pluginUserSettings": "Liitännäisasetykset",
-      "sharedHosts": "Sinulle jaetut isäntäpalvelimet",
-      "sharedCredentials": "Sinulle jaetut tunnukset",
-      "vaultProfiles": "Vault-profiilit",
-      "snippetFolders": "Koodinpätkien kansiot",
-      "snippets": "Koodinpätkät",
-      "dashboardServiceLinks": "Palvelulinkit",
-      "homepageItems": "Kotisivun kohteet",
-      "networkTopology": "Verkkokartta",
-      "workspaces": "Työtilat",
-      "hostDefaults": "Isäntäpalvelimen oletukset",
-      "hostDefaultsAdmin": "Palvelimen isäntäpalvelimen oletukset",
-      "aiProviders": "Te keinotekoinen älykkyyden tarjoajat",
-      "homepageLayouts": "Kotisivun asettelut",
-      "accountProfile": "Tilin profiili"
-    }
   },
   "hostDefaults": {
     "source": {

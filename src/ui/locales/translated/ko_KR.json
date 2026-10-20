@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "일부 플러그인을 변경할 수 없습니다. 나중에 플러그인 탭에서 수정할 수 있습니다. 계속하려면 다음을 누르세요.",
     "pluginsApplyFailed": "선택 사항을 저장할 수 없습니다. 다시 시도하거나 계속 진행한 후 플러그인 탭에서 나중에 변경하세요.",
     "pluginsLoadFailed": "플러그인 목록을 로드할 수 없습니다. 나중에 플러그인 탭에서 플러그인을 선택할 수 있습니다.",
-    "presetTitle": "화면에 얼마나 많은 내용을 표시하시겠습니까?",
-    "presetIntro": "화면에 표시할 내용을 선택하세요.",
-    "presetChangeLater": "나중에 설정의 인터페이스에서 프리셋을 전환하거나 개별 설정을 변경할 수 있습니다.",
-    "appearanceTitle": "나만의 스타일로 꾸미기",
-    "appearanceIntro": "테마, 강조 색상, 글꼴 및 언어를 선택하세요. 변경 사항은 즉시 적용되며, 나중에 설정에서 변경할 수 있습니다.",
     "securityTitle": "계정 보안 강화",
     "securityIntro": "계정에 패스키 또는 인증기 앱을 추가하세요. 나중에 설정의 보안에서 이 작업을 수행할 수도 있습니다.",
-    "desktopTitle": "Termix를 어떻게 사용하시겠습니까?",
-    "desktopBody": "사이드바의 동기화에서 언제든지 이를 변경할 수 있습니다.",
-    "desktopLocalTitle": "이 장치에서만",
-    "desktopLocalBody": "모든 데이터가 여기에 저장됩니다. 설정할 필요가 없습니다.",
-    "desktopLinkTitle": "내 Termix 서버와 함께",
-    "desktopLinkBody": "서버에 로그인하여 모든 기기에서 동일한 호스트와 설정을 사용하세요.",
-    "desktopLinked": "{{server}}(으)로 연결됨",
     "pluginsDocsLink": "각 항목에 대해 읽기"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} 설치 준비 완료",
     "readyHint": "Termix가 다음에 재시작될 때 설치됩니다."
   },
+  "companion": {
+    "close": "패널 닫기",
+    "moveSide": "패널 이동",
+    "resize": "패널 크기 조정"
+  },
   "nav": {
     "home": "홈",
     "terminal": "터미널",
@@ -257,7 +250,6 @@
     "hosts": "호스트",
     "credentials": "자격 증명",
     "connections": "연결",
-    "sync": "동기화",
     "reconnectDisconnectedTerminals": "모든 연결 끊긴 터미널 재연결",
     "reconnectingTerminals_other": "{{count}}개 터미널 재연결 중",
     "noDisconnectedTerminals": "재연결할 준비가 된 연결 끊긴 터미널이 없습니다",
@@ -276,10 +268,7 @@
     "retry": "다시 시도",
     "refresh": "새로고침",
     "optional": "선택 사항",
-    "downloadSample": "샘플 다운로드",
     "failedToDeleteHost": "{{name}} 삭제에 실패했습니다",
-    "importSkipExisting": "가져오기 (기존 항목 건너뛰기)",
-    "importSSHConfig": "SSH 구성에서 가져오기",
     "connectionDetails": "연결 세부 정보",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -497,10 +486,7 @@
     "noFolder": "(폴더 없음)",
     "deleteSelected": "삭제",
     "exitSelection": "선택 취소",
-    "importSkip": "가져오기 (기존 항목 건너뛰기)",
-    "importOverwrite": "가져오기 (덮어쓰기)",
     "collapseBtn": "접기",
-    "importExportBtn": "가져오기 / 내보내기",
     "hostStatusesRefreshed": "호스트 상태가 새로고침되었습니다",
     "failedToRefreshHosts": "호스트를 새로고침하지 못했습니다",
     "movedHostTo": "{{host}}(이)가 \"{{folder}}\"(으)로 이동되었습니다",
@@ -553,6 +539,9 @@
     "folderDeleted": "\"{{name}}\" 폴더 삭제됨",
     "deleteFolderConfirm_other": "\"{{name}}\"과(와) 포함된 {{count}}개 호스트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
     "failedToMoveHosts": "호스트 이동에 실패했습니다",
+    "managedBanner": "이 호스트는 {{plugin}}에서 관리합니다. 해당 곳에서 변경하세요. 고정 및 순서 변경은 여전히 가능합니다.",
+    "managedTooltip": "{{plugin}}에서 관리 중",
+    "addBlocked": "호스트는 {{plugin}}에서 관리하므로 여기서 새 호스트를 추가할 수 없습니다.",
     "failedToReorder": "순서 변경에 실패했습니다",
     "expandAll": "모든 폴더 펼치기",
     "collapseAll": "모든 폴더 접기",
@@ -662,34 +651,6 @@
     "addCredentialBtn2": "자격 증명 추가",
     "checkingHostStatuses": "호스트 상태 확인 중...",
     "pinnedSection": "고정됨",
-    "hostsExported": "호스트가 성공적으로 내보내졌습니다",
-    "export": {
-      "menuItem": "내보내기...",
-      "title": "호스트 내보내기",
-      "scope": "범위",
-      "scopeAll": "전체",
-      "scopeSelected": "선택됨",
-      "searchHosts": "호스트 검색...",
-      "include": "포함 항목",
-      "groupConnection": "연결",
-      "groupCredentials": "자격 증명",
-      "groupNotes": "메모",
-      "groupTags": "태그 및 고정",
-      "groupProxy": "프록시",
-      "groupJumpHosts": "점프 호스트",
-      "groupFeatureFlags": "플러그인 설정",
-      "groupAdvanced": "고급 설정",
-      "preview": "미리보기",
-      "moreHosts_other": "... {{count}}개 호스트 더 보기",
-      "summary": "총 {{total}}개 중 {{selected}}개 호스트",
-      "credentialsIncluded": "자격 증명 포함",
-      "credentialsExcluded": "자격 증명 제외",
-      "noneSelected": "선택된 호스트가 없습니다",
-      "cancel": "취소",
-      "confirm": "내보내기",
-      "fetchFailed": "내보낼 호스트를 불러오지 못했습니다",
-      "bulkButton": "내보내기"
-    },
     "sampleDownloaded": "샘플 파일이 다운로드되었습니다",
     "failedToDeleteCredential2": "자격 증명 삭제에 실패했습니다",
     "noFolderOption": "(폴더 없음)",
@@ -847,11 +808,7 @@
     "editorUpdate": "호스트 업데이트",
     "editorAdd": "호스트 추가",
     "speedSearch": "호스트 검색. 화살표 키로 선택, Enter로 연결, Esc로 닫기",
-    "speedSearchList": "호스트 목록. 입력하거나 /를 눌러 검색하세요.",
-    "importNoHosts": "파일에서 호스트를 찾을 수 없습니다",
-    "importTooMany": "한 번에 최대 {{max}}개의 호스트를 가져올 수 있습니다",
-    "importSummary": "가져오기 완료: {{imported}}개 가져옴, {{updated}}개 업데이트, {{failed}}개 실패",
-    "importHostsFailed": "호스트 가져오기 실패"
+    "speedSearchList": "호스트 목록. 입력하거나 /를 눌러 검색하세요."
   },
   "splitScreen": {
     "title": "분할 화면",
@@ -1046,9 +1003,14 @@
     "hostCount_other": "{{count}}개 호스트"
   },
   "admin": {
+    "usersCount_one": "사용자 {{count}}명",
+    "rolesCount_one": "역할 {{count}}개",
+    "apiKeysCount_one": "키 {{count}}개",
+    "sessionsActive_one": "활성 세션 {{count}}개",
     "hostsCount_other": "{{count}}개 호스트",
     "credentialsCount_other": "{{count}}개 자격 증명",
     "rolePermissions": {
+      "count_one": "권한 {{count}}개",
       "groups": {
         "hosts": "호스트",
         "credentials": "자격 증명",
@@ -1088,18 +1050,59 @@
         "interfaceFontLabel": "인터페이스 글꼴",
         "interfaceFontDescription": "애플리케이션 인터페이스 글꼴을 변경합니다. 터미널 프로필은 자체 글꼴 설정을 유지합니다.",
         "accentColorLabel": "강조 색상",
+        "apiKeyCount_one": "키 {{count}}개",
         "colorPickerTooltip": "색상 선택기 열기",
         "themeSystem": "시스템",
         "themeLight": "라이트",
-        "themeDark": "다크",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "다크"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "앱 전체 레이아웃 방식입니다. 테마와 레이아웃은 플러그인에서 제공됩니다.",
+    "defaultsLabel": "모두에게 기본값",
+    "defaultsHint": "사용자가 자체 레이아웃이나 테마를 선택할 때까지 보이는 내용입니다.",
+    "followDefault": "기본값 사용",
+    "defaultSaved": "기본 외관 저장됨",
+    "saveFailed": "외관을 저장할 수 없습니다",
+    "repair": {
+      "title": "이 레이아웃을 표시할 수 없습니다",
+      "safeTitle": "안전 모드",
+      "layout": "레이아웃",
+      "plugin": "플러그인",
+      "reason": "원인",
+      "error": "오류",
+      "noError": "오류 메시지가 없습니다.",
+      "copy": "복사",
+      "copied": "복사됨",
+      "copyFailed": "상세 정보를 복사할 수 없습니다",
+      "retry": "다시 시도",
+      "reset": "기본 외관으로 초기화",
+      "resetEveryone": "모두의 기본값 초기화",
+      "update": "{{name}}을(를) {{version}}(으)로 업데이트",
+      "disable": "{{name}} 끄기",
+      "install": "레이아웃 및 테마 찾기",
+      "installTitle": "레이아웃 및 테마",
+      "installButton": "설치",
+      "nothingToInstall": "현재 사용할 수 있는 다른 레이아웃이나 테마가 없습니다.",
+      "registryUnreachable": "플러그인 레지스트리에 연결할 수 없습니다.",
+      "askAdmin": "관리자에게 이 레이아웃을 업데이트하거나 수정해 달라고 요청하세요. 아래에서 다른 레이아웃이나 테마로 전환할 수 있습니다.",
+      "switchLayout": "레이아웃 전환",
+      "switchTheme": "테마 전환",
+      "saveFailed": "선택 사항을 저장할 수 없습니다",
+      "reasons": {
+        "safe-url": "주소에서 안전 모드를 요청했습니다. 아래에서 레이아웃을 선택하거나 주소에서 ?safe-layout=1을(를) 제거하세요.",
+        "safe-env": "서버가 TERMIX_SAFE_LAYOUT로 시작되었으므로, 해당 설정이 제거될 때까지 모든 사용자가 이 화면을 봅니다.",
+        "missing": "이 레이아웃을 제공하는 설치된 플러그인이 없습니다.",
+        "disabled": "이 레이아웃을 제공하는 플러그인이 꺼져 있습니다.",
+        "blocked": "이 레이아웃을 제공하는 플러그인이 필요한 항목을 기다리고 있습니다.",
+        "incompatible": "이 레이아웃을 제공하는 플러그인이 이 버전의 Termix와 호환되지 않습니다.",
+        "failed": "레이아웃 시작에 실패했습니다.",
+        "crashed": "앱을 렌더링하는 동안 레이아웃이 두 번 충돌했습니다."
+      },
+      "noLayout": "레이아웃이 설정되지 않았습니다",
+      "restore": "번들된 {{name}} 복원",
+      "restoreFailed": "번들된 복사본을 복원할 수 없습니다"
     }
   },
   "plugins": {
@@ -1124,6 +1127,18 @@
         "title": "로그인 처리",
         "consequence": "로그인 방법, 두 번째 인증 요소 또는 SSH 로그인 유형을 추가할 수 있습니다."
       },
+      "auth:policy": {
+        "title": "로그인 규칙 설정",
+        "consequence": "유휴 시 로그아웃 처리, 세션 시간 제한, '로그인 상태 유지' 기능 비활성화, 2차 인증 요구 등을 수행할 수 있습니다."
+      },
+      "ssh:transport": {
+        "title": "호스트 연결 방식 선택",
+        "consequence": "SSH 연결을 자체 경로를 통해 호스트로 전달할 수 있으므로, 해당 호스트로 주고받는 모든 데이터(비밀번호 포함)를 확인할 수 있습니다."
+      },
+      "sync:provide": {
+        "title": "동기화 실행",
+        "consequence": "모든 동기화 요청에 응답할 수 있으므로, 장치와 서버가 동기화하는 데이터를 확인할 수 있습니다."
+      },
       "system:tls": {
         "title": "인증서 관리",
         "consequence": "Termix가 HTTPS로 제공하는 인증서를 교체하고 인증 기관의 도메인 확인에 응답할 수 있습니다."
@@ -1131,6 +1146,10 @@
       "device:serial": {
         "title": "시리얼 및 USB 장치 접근",
         "consequence": "Termix가 실행되는 기계의 물리적 시리얼 포트를 열 수 있습니다."
+      },
+      "hosts:export": {
+        "title": "비밀번호 포함 호스트 내보내기",
+        "consequence": "저장된 비밀번호와 키를 포함한 호스트 정보를 전체적으로 읽을 수 있으며, 이를 외부로 제공할 수 있습니다. 모든 내보내기 작업은 감사 로그에 기록됩니다."
       },
       "hosts:write": {
         "title": "호스트 생성 및 변경",
@@ -1176,9 +1195,29 @@
         "title": "감사 로그 읽기",
         "consequence": "누가 언제 무엇을 했는지 볼 수 있습니다."
       },
+      "network:probe": {
+        "title": "포트 응답 확인",
+        "consequence": "서버에서 모든 주소에 대한 일반 연결을 열어 도달 가능한지 확인할 수 있습니다."
+      },
+      "hosts:status-provide": {
+        "title": "호스트 상태 제공",
+        "consequence": "모든 호스트의 온라인 및 오프라인 상태 표시점의 원천이 됩니다."
+      },
+      "hosts:activity-provide": {
+        "title": "최근 활동 저장",
+        "consequence": "모든 사용자의 최근 활동 목록 저장소가 됩니다."
+      },
+      "hosts:lock": {
+        "title": "호스트를 읽기 전용으로 관리",
+        "consequence": "관리하는 호스트는 다른 사용자가 수정, 삭제 또는 재공유할 수 없습니다."
+      },
       "desktop:window": {
         "title": "데스크톱 창 열기",
         "consequence": "Termix 데스크톱 앱에서만 가능합니다."
+      },
+      "desktop:local": {
+        "title": "이 컴퓨터 사용",
+        "consequence": "이 컴퓨터에서 파일을 읽고 수정하고, 셸을 실행하며 로컬 포트를 열 수 있습니다. Termix 데스크톱 앱에서만 가능합니다."
       },
       "users:impersonate": {
         "title": "다른 사용자로 행동",
@@ -1219,6 +1258,14 @@
       "ui:surface": {
         "title": "자체 화면 추가",
         "consequence": "나중에 숨길 수 있는 탭, 패널 및 설정을 추가합니다."
+      },
+      "ui:layout": {
+        "title": "전체 앱 레이아웃 교체",
+        "consequence": "선택 시, 터미널 및 설정을 포함한 모든 화면을 그리는 코드를 실행합니다."
+      },
+      "ui:theme": {
+        "title": "색상 테마 추가",
+        "consequence": "색상과 스타일만 변경합니다. 테마에는 실행되는 코드가 없습니다."
       }
     },
     "runtime": {
@@ -1336,6 +1383,7 @@
         "options": "{{name}}의 옵션을 저장하지 못했습니다: {{error}}",
         "deleteData": "{{name}}의 데이터를 삭제하지 못했습니다: {{error}}",
         "managedByServer": "이 데스크톱은 서버에 연결되어 있으며, 서버가 플러그인을 결정합니다.",
+        "defaultLook": "{{name}}은 기본 외관으로, 비활성화하거나 교체할 수는 있지만 제거할 수는 없습니다.",
         "hasDependents": "{{name}}은(는) {{list}}에서 필요합니다. 먼저 해당 플러그인을 끄거나 제거하세요.",
         "missingDependencies": "{{name}}은(는) 설치되지 않은 {{list}}가 필요합니다.",
         "consentChanged": "확인한 이후 이 플러그인이 요청하는 권한이 변경되었습니다. 목록을 다시 확인하세요.",
@@ -1401,7 +1449,6 @@
       "noServerAccess": "서버에 대한 접근 권한 없음",
       "searchInstalled": "설치된 플러그인 검색",
       "searchPlugins": "플러그인 검색",
-      "allCategories": "전체",
       "nothingMatches": "일치하는 항목이 없습니다.",
       "noneInstalled": "아직 플러그인이 설치되지 않았습니다. 둘러보고 추가해 보세요.",
       "nothingHere": "내용이 없습니다.",
@@ -1487,7 +1534,43 @@
       "documentation": "문서",
       "envVars": "환경 변수",
       "envRequired": "필수",
-      "envDefault": "기본값: {{value}}"
+      "envDefault": "기본값: {{value}}",
+      "kinds": {
+        "layouts": "레이아웃",
+        "themes": "테마",
+        "tabs": "탭",
+        "panels": "사이드바 패널",
+        "dashboardCards": "대시보드 카드",
+        "protocols": "연결 유형",
+        "auth": "로그인 방법",
+        "actions": "작업",
+        "hostCapability": "호스트 설정"
+      },
+      "filters": {
+        "type": "유형",
+        "allTypes": "모든 유형",
+        "category": "카테고리",
+        "allCategories": "모든 카테고리",
+        "results_other": "{{count}}개 플러그인",
+        "remove": "필터 {{name}} 제거",
+        "clear": "필터 초기화",
+        "button": "필터",
+        "buttonCount": "필터 ({{count}})"
+      },
+      "pager": {
+        "range": "{{from}}-{{to}} / 총 {{total}}",
+        "page": "{{pages}}페이지 중 {{page}}페이지",
+        "previous": "이전 페이지",
+        "next": "다음 페이지",
+        "perPage": "페이지당 {{count}}개",
+        "perPageLabel": "페이지당 플러그인 수"
+      },
+      "showUnsupportedHint": "이 플러그인들은 목록에 있지만, 현재 버전에서는 아직 릴리스가 실행되지 않습니다. 설치하려면 Termix를 업데이트하세요.",
+      "unsupported": "더 새로운 Termix 필요",
+      "unsupportedHint": "이 플러그인의 릴리스는 현재 Termix 버전에서 실행되지 않습니다. 설치하려면 Termix를 업데이트하세요.",
+      "needsTermix": "Termix {{range}} 필요",
+      "showUnsupported": "지원되지 않는 항목 표시 ({{count}})",
+      "showMore": "더 보기 {{count}}개 (남은 {{total}}개)"
     }
   },
   "settings": {
@@ -1502,82 +1585,6 @@
     "sudoHint": "권한이 필요한 작업을 활성화하려면 호스트 편집기에서 이 호스트의 sudo 비밀번호를 설정하세요.",
     "noData": "데이터 없음",
     "filter": "필터..."
-  },
-  "sync": {
-    "minutesAgo_other": "{{count}}분 전",
-    "hoursAgo_other": "{{count}}시간 전",
-    "pending_other": "동기화 대기 중인 변경 사항 {{count}}개",
-    "proxy": {
-      "headersTitle": "추가 헤더",
-      "headersHint": "서버로 보내는 모든 요청에 포함됩니다. 예를 들어 Cloudflare Access 서비스 토큰입니다.",
-      "headerName": "헤더 이름",
-      "headerValue": "값",
-      "savedValue": "저장됨, 변경하려면 입력하세요",
-      "addHeader": "헤더 추가",
-      "removeHeader": "헤더 제거",
-      "basicAuthTitle": "사용자 이름과 비밀번호",
-      "basicAuthHint": "Termix 전에 사용자 이름과 비밀번호를 묻는 프록시용입니다.",
-      "username": "사용자 이름",
-      "password": "비밀번호",
-      "allowInvalidCertificate": "자체 서명된 인증서 신뢰",
-      "allowInvalidCertificateHint": "인증서가 알려진 기관에서 발급되지 않은 경우에만 자신의 서버에 대해 사용하세요."
-    },
-    "problems": {
-      "invalidUrl": "웹 주소처럼 보이지 않습니다.",
-      "unreachable": "서버에 연결할 수 없습니다. 주소를 확인하고 서버가 실행 중인지 확인하세요.",
-      "unreachableWithReason": "서버에 연결할 수 없습니다: {{reason}}",
-      "tlsUntrusted": "서버 인증서가 신뢰되지 않습니다. 자체 서명 인증서를 사용하는 자체 서버인 경우 아래 옵션을 켜세요.",
-      "basicAuthRequired": "서버 앞에 있는 구성 요소에서 사용자 이름과 비밀번호를 요청합니다. 아래에 입력하세요.",
-      "proxyLogin": "Termix 대신 로그인 페이지나 프록시가 응답했습니다. 필요한 헤더를 아래에 추가하거나 주소를 확인하세요.",
-      "notTermix": "해당 주소에 Termix 서버가 없습니다. 경로 아래에서 실행 중이라면 https://example.com/termix 와 같이 포함하세요.",
-      "versionMismatch": "해당 서버에는 구버전 Termix가 실행 중입니다. 연결하려면 2.9 이상으로 업데이트하세요.",
-      "differentAccount": "다른 계정에 로그인했습니다. 이 기기와 연결된 계정에 로그인하거나 먼저 연결을 해제하세요."
-    },
-    "wizard": {
-      "title": "Termix 서버에 연결하기",
-      "reloginTitle": "다시 로그인하기",
-      "savedServers": "최근 서버",
-      "removeServer": "목록에서 제거",
-      "serverDescription": "브라우저에서 Termix를 열 때 사용하는 주소를 입력하세요.",
-      "signinDescription": "{{url}}에 로그인하기",
-      "chooseDescription": "이 기기에는 이미 데이터가 있습니다. 어떻게 처리하시겠습니까?",
-      "finishingDescription": "이 기기를 연결하는 중입니다.",
-      "serverUrl": "서버 주소",
-      "serverUrlHint": "예: https://termix.example.com",
-      "showProxySettings": "리버스 프록시 설정",
-      "hideProxySettings": "리버스 프록시 설정 숨기기",
-      "continue": "계속",
-      "back": "뒤로",
-      "mergeTitle": "내 계정에 추가하기",
-      "mergeBody_other": "이 기기의 {{count}}개 항목이 계정에 추가됩니다. 계정에 이미 있는 항목은 서버에서 그대로 유지됩니다.",
-      "replaceTitle": "내 계정으로 대체하기",
-      "replaceBody_other": "이 기기의 {{count}}개 항목이 제거되고, 이 기기는 계정에서 모든 항목을 가져옵니다. 이 기기에서만 유지된 호스트는 그대로 남습니다.",
-      "link": "연결",
-      "linking": "연결 중이며 첫 번째 동기화를 실행하는 중입니다...",
-      "linked": "연결 완료. 데이터가 동기화되고 있습니다.",
-      "signedInAgain": "로그인 완료. 동기화가 다시 실행되고 있습니다."
-    },
-    "entities": {
-      "hosts": "호스트",
-      "sshCredentials": "자격 증명",
-      "sshFolders": "폴더",
-      "userPreferences": "환경 설정",
-      "pluginUserSettings": "플러그인 설정",
-      "sharedHosts": "나와 공유된 호스트",
-      "sharedCredentials": "나와 공유된 자격 증명",
-      "vaultProfiles": "Vault 프로필",
-      "snippetFolders": "스니펫 폴더",
-      "snippets": "스니펫",
-      "dashboardServiceLinks": "서비스 링크",
-      "homepageItems": "홈페이지 항목",
-      "networkTopology": "네트워크 맵",
-      "workspaces": "작업 공간",
-      "hostDefaults": "호스트 기본값",
-      "hostDefaultsAdmin": "서버 호스트 기본값",
-      "aiProviders": "AI 제공자",
-      "homepageLayouts": "홈페이지 레이아웃",
-      "accountProfile": "계정 프로필"
-    }
   },
   "hostDefaults": {
     "source": {

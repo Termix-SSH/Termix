@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "Neki se dodatci nisu mogli promijeniti. Možete ih popraviti kasnije s kartice Dodaci. Pritisnite Dalje za nastavak.",
     "pluginsApplyFailed": "Vaši odabiri se nisu mogli spremiti. Pokušajte ponovno ili nastavite i promijenite ih kasnije s kartice Dodaci.",
     "pluginsLoadFailed": "Popis dodataka se nije mogao učitati. Dodatke možete odabrati kasnije s kartice Dodaci.",
-    "presetTitle": "Koliko želite na zaslonu?",
-    "presetIntro": "Odaberite koliko će se prikazivati na zaslonu.",
-    "presetChangeLater": "Možete prebaciti predloške ili promijeniti bilo koju pojedinačnu postavku kasnije u Postavkama, pod sučeljem.",
-    "appearanceTitle": "Prilagodite ga sebi",
-    "appearanceIntro": "Odaberite temu, naglašenu boju, font i jezik. Promjene se odmah prikazuju, a možete ih promijeniti kasnije u Postavkama.",
     "securityTitle": "Zaštitite svoj račun",
     "securityIntro": "Dodajte ključ za prijavu ili aplikaciju za provjeru autentičnosti svom računu. To možete učiniti i kasnije u Postavkama, pod Sigurnošću.",
-    "desktopTitle": "Kako želite koristiti Termix?",
-    "desktopBody": "Ovo možete promijeniti u bilo kojem trenutku iz Sinkronizacije u bočnoj traci.",
-    "desktopLocalTitle": "Samo na ovom uređaju",
-    "desktopLocalBody": "Sve se pohranjuje ovdje. Ništa za postavljati.",
-    "desktopLinkTitle": "S mojim Termix poslužiteljem",
-    "desktopLinkBody": "Prijavite se na svoj poslužitelj kako biste koristili iste domaćine i postavke na svakom uređaju.",
-    "desktopLinked": "Povezano s {{server}}",
     "pluginsDocsLink": "Pročitajte o svakom od njih"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} je spreman za instalaciju",
     "readyHint": "Instalirat će se sljedeći put kada se Termix ponovno pokrene."
   },
+  "companion": {
+    "close": "Zatvori panel",
+    "moveSide": "Pomakni panel",
+    "resize": "Promijeni veličinu panela"
+  },
   "nav": {
     "home": "Početna",
     "terminal": "Terminal",
@@ -257,7 +250,6 @@
     "hosts": "Domaćini",
     "credentials": "Povjerenja",
     "connections": "Veze",
-    "sync": "Sinkronizacija",
     "reconnectDisconnectedTerminals": "Ponovno poveži sve prekinute terminale",
     "reconnectingTerminals_one": "Ponovno povezivanje {{count}} terminala",
     "reconnectingTerminals_few": "Ponovno povezivanje {{count}} terminala",
@@ -282,10 +274,7 @@
     "retry": "Pokušaj ponovno",
     "refresh": "Osvježi",
     "optional": "Opcionalno",
-    "downloadSample": "Preuzmi primjer",
     "failedToDeleteHost": "Brisanje {{name}} nije uspjelo",
-    "importSkipExisting": "Uvezi (preskoči postojeće)",
-    "importSSHConfig": "Uvezi iz SSH konfiguracije",
     "connectionDetails": "Detalji veze",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -505,10 +494,7 @@
     "noFolder": "(Bez mape)",
     "deleteSelected": "Izbriši",
     "exitSelection": "Izađi iz odabira",
-    "importSkip": "Uvezi (preskoči postojeće)",
-    "importOverwrite": "Uvezi (prepiši)",
     "collapseBtn": "Sažmi",
-    "importExportBtn": "Uvoz / Izvoz",
     "hostStatusesRefreshed": "Statusi hostova osvježeni",
     "failedToRefreshHosts": "Neuspjelo osvježavanje hostova",
     "movedHostTo": "Premješteno {{host}} u \"{{folder}}\"",
@@ -565,6 +551,9 @@
     "deleteFolderConfirm_few": "Izbrisati \"{{name}}\" i njegovih {{count}} hostova? Ovo se ne može poništiti.",
     "deleteFolderConfirm_other": "Izbrisati \"{{name}}\" i njegovih {{count}} hostova? Ovo se ne može poništiti.",
     "failedToMoveHosts": "Neuspješno premještanje hostova",
+    "managedBanner": "Ovaj host upravlja {{plugin}}. Promijenite ga tamo. I dalje ga možete pričvrstiti i preurediti.",
+    "managedTooltip": "Upravlja {{plugin}}",
+    "addBlocked": "Hostove upravlja {{plugin}}, pa se ovdje ne mogu dodavati novi hostovi.",
     "failedToReorder": "Neuspješno ponovno poredavanje",
     "expandAll": "Proširi sve mape",
     "collapseAll": "Sažmi sve mape",
@@ -676,36 +665,6 @@
     "addCredentialBtn2": "Dodaj vjerodajnice",
     "checkingHostStatuses": "Provjeravanje statusa hostova...",
     "pinnedSection": "Prikvačeno",
-    "hostsExported": "Hostovi su uspješno izvezeni",
-    "export": {
-      "menuItem": "Izvoz...",
-      "title": "Izvoz hostova",
-      "scope": "Opseg",
-      "scopeAll": "Svi",
-      "scopeSelected": "Odabrani",
-      "searchHosts": "Pretraživanje hostova...",
-      "include": "Uključi",
-      "groupConnection": "Povezivanje",
-      "groupCredentials": "Prijavni podaci",
-      "groupNotes": "Bilješke",
-      "groupTags": "Oznake i prikvačivanje",
-      "groupProxy": "Proxy",
-      "groupJumpHosts": "Posrednički hostovi",
-      "groupFeatureFlags": "Postavke dodataka",
-      "groupAdvanced": "Napredna konfiguracija",
-      "preview": "Pregled",
-      "moreHosts_one": "... još {{count}} host",
-      "moreHosts_few": "... još {{count}} hostova",
-      "moreHosts_other": "... još {{count}} hostova",
-      "summary": "{{selected}} od {{total}} hostova",
-      "credentialsIncluded": "prijavni podaci uključeni",
-      "credentialsExcluded": "prijavni podaci isključeni",
-      "noneSelected": "Nijedan host nije odabran",
-      "cancel": "Odustani",
-      "confirm": "Izvoz",
-      "fetchFailed": "Neuspjelo učitavanje hostova za izvoz",
-      "bulkButton": "Izvoz"
-    },
     "sampleDownloaded": "Primjer datoteke preuzet",
     "failedToDeleteCredential2": "Neuspjelo brisanje prijavnih podataka",
     "noFolderOption": "(Bez mape)",
@@ -873,11 +832,7 @@
     "editorUpdate": "Ažuriraj host",
     "editorAdd": "Dodaj host",
     "speedSearch": "Pretraži hostove. Strelice za odabir, Enter za povezivanje, Esc za zatvaranje",
-    "speedSearchList": "Popis hostova. Upišite ili pritisnite / za pretraživanje.",
-    "importNoHosts": "Nema pronađenih hostova u datoteci",
-    "importTooMany": "Možete uvesti najviše {{max}} hostova odjednom",
-    "importSummary": "Uvoz završen: {{imported}} uvezeno, {{updated}} ažurirano, {{failed}} neuspješno",
-    "importHostsFailed": "Neuspjelo uvoz hostova"
+    "speedSearchList": "Popis hostova. Upišite ili pritisnite / za pretraživanje."
   },
   "splitScreen": {
     "title": "Podijeljeni zaslon",
@@ -1079,13 +1034,9 @@
   },
   "admin": {
     "usersCount_one": "{{count}} korisnik",
-    "usersCount_few": "{{count}} korisnika",
     "rolesCount_one": "{{count}} uloga",
-    "rolesCount_few": "{{count}} uloga",
     "apiKeysCount_one": "{{count}} ključ",
-    "apiKeysCount_few": "{{count}} ključeva",
     "sessionsActive_one": "{{count}} aktivno",
-    "sessionsActive_few": "{{count}} aktivna",
     "hostsCount_one": "{{count}} host",
     "hostsCount_few": "{{count}} hostova",
     "hostsCount_other": "{{count}} hostova",
@@ -1094,7 +1045,6 @@
     "credentialsCount_other": "{{count}} vjerodajnica",
     "rolePermissions": {
       "count_one": "{{count}} dozvola",
-      "count_few": "{{count}} dozvola",
       "groups": {
         "hosts": "Hostovi",
         "credentials": "Vjerodajnice",
@@ -1135,19 +1085,58 @@
         "interfaceFontDescription": "Mijenja font sučelja aplikacije. Profilni terminali zadržavaju vlastite postavke fonta.",
         "accentColorLabel": "Naglašena boja",
         "apiKeyCount_one": "{{count}} ključ",
-        "apiKeyCount_few": "{{count}} ključeva",
         "colorPickerTooltip": "Otvori odabir boja",
         "themeSystem": "Sustav",
         "themeLight": "Svijetla",
-        "themeDark": "Tamna",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "Tamna"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "Kako je cijela aplikacija raspoređena. Teme i rasporedi dolaze iz dodataka.",
+    "defaultsLabel": "Zadano za sve",
+    "defaultsHint": "Što ljudi vide dok ne odaberu vlastiti raspored ili temu.",
+    "followDefault": "Koristi zadano",
+    "defaultSaved": "Zadan izgled spremljen",
+    "saveFailed": "Izgled se nije mogao spremiti",
+    "repair": {
+      "title": "Ovaj raspored se nije mogao prikazati",
+      "safeTitle": "Sigurni način rada",
+      "layout": "Raspored",
+      "plugin": "Dodatak",
+      "reason": "Razlog",
+      "error": "Greška",
+      "noError": "Nema poruke o grešci.",
+      "copy": "Kopiraj",
+      "copied": "Kopirano",
+      "copyFailed": "Detalji se nisu mogli kopirati",
+      "retry": "Pokušaj ponovno",
+      "reset": "Vrati na zadani izgled",
+      "resetEveryone": "Vrati zadano za sve",
+      "update": "Ažuriraj {{name}} na {{version}}",
+      "disable": "Isključi {{name}}",
+      "install": "Pronađi rasporede i teme",
+      "installTitle": "Rasporedi i teme",
+      "installButton": "Instaliraj",
+      "nothingToInstall": "Trenutno nema drugih dostupnih rasporeda ili tema.",
+      "registryUnreachable": "Registar dodataka nije dostupan.",
+      "askAdmin": "Zatražite od administratora da ažurira ili popravi ovaj raspored. Ispod možete prebaciti na drugi raspored ili temu za sebe.",
+      "switchLayout": "Promijeni raspored",
+      "switchTheme": "Promijeni temu",
+      "saveFailed": "Vaš izbor se nije mogao spremiti",
+      "reasons": {
+        "safe-url": "Adresa je zatražila sigurni način rada. Odaberite raspored ispod ili uklonite ?safe-layout=1 iz adrese.",
+        "safe-env": "Poslužitelj je pokrenut s TERMIX_SAFE_LAYOUT, pa svi vide ovaj zaslon dok se ne ukloni.",
+        "missing": "Nijedan instalirani dodatak ne pruža ovaj raspored.",
+        "disabled": "Dodatak koji pruža ovaj raspored je isključen.",
+        "blocked": "Dodatak koji pruža ovaj raspored čeka nešto što mu treba.",
+        "incompatible": "Dodatak koji pruža ovaj raspored ne radi s ovom verzijom Termixa.",
+        "failed": "Raspored se nije mogao pokrenuti.",
+        "crashed": "Raspored se dvaput srušio tijekom crtanja aplikacije."
+      },
+      "noLayout": "Nema postavljenog rasporeda",
+      "restore": "Vrati priloženi {{name}}",
+      "restoreFailed": "Priložena kopija se nije mogla vratiti"
     }
   },
   "plugins": {
@@ -1172,6 +1161,18 @@
         "title": "Upravljanje prijavom",
         "consequence": "Može dodati metodu prijave, drugi faktor ili vrstu SSH prijave."
       },
+      "auth:policy": {
+        "title": "Postavi pravila za prijavu",
+        "consequence": "Može odjaviti korisnike kada su neaktivni, ograničiti duljinu sesije, isključiti opciju „Zapamti me“ i zahtijevati drugi faktor."
+      },
+      "ssh:transport": {
+        "title": "Odaberi kako se hostovi dosežu",
+        "consequence": "Može prenijeti SSH vezu do hosta putem vlastite rute, pa vidi sve što se šalje do i od tih hostova, uključujući lozinke."
+      },
+      "sync:provide": {
+        "title": "Pokreni sinkronizaciju",
+        "consequence": "Može odgovoriti na sve zahtjeve za sinkronizaciju, pa vidi podatke koje uređaji i poslužitelji sinkroniziraju."
+      },
       "system:tls": {
         "title": "Upravljanje certifikatima",
         "consequence": "Može zamijeniti certifikat koji Termix koristi za HTTPS i odgovoriti na provjere domena od strane izdavatelja certifikata."
@@ -1179,6 +1180,10 @@
       "device:serial": {
         "title": "Pristup serijskim i USB uređajima",
         "consequence": "Može otvoriti fizički serijski port na uređaju na kojem radi Termix."
+      },
+      "hosts:export": {
+        "title": "Izvezi hostove s njihovim tajnama",
+        "consequence": "Može pročitati vaše hostove u cijelosti, uključujući spremljene lozinke i ključeve, te ih predati. Svaki izvoz se bilježi u revizijski dnevnik."
       },
       "hosts:write": {
         "title": "Izrada i izmjena poslužitelja",
@@ -1224,9 +1229,29 @@
         "title": "Čitanje dnevnika revizije",
         "consequence": "Može vidjeti tko je što i kada učinio."
       },
+      "network:probe": {
+        "title": "Provjeri odgovaraju li portovi",
+        "consequence": "Može otvoriti običnu vezu na bilo koju adresu s poslužitelja, kako bi provjerio je li dostupna."
+      },
+      "hosts:status-provide": {
+        "title": "Pruži status hosta",
+        "consequence": "Postaje izvor točaka za online i offline status svakog hosta."
+      },
+      "hosts:activity-provide": {
+        "title": "Spremi nedavnu aktivnost",
+        "consequence": "Postaje spremište za popis nedavnih aktivnosti svakog korisnika."
+      },
+      "hosts:lock": {
+        "title": "Upravljanje domaćinima kao samo za čitanje",
+        "consequence": "Domaćine koje upravlja ne mogu uređivati, brisati niti dijeliti drugi korisnici."
+      },
       "desktop:window": {
         "title": "Otvaranje prozora radne površine",
         "consequence": "Samo u Termix aplikaciji za radnu površinu."
+      },
+      "desktop:local": {
+        "title": "Koristi ovaj računal",
+        "consequence": "Može čitati i mijenjati datoteke, pokretati shell i otvarati lokalne portove na ovom računalu. Samo u Termix desktop aplikaciji."
       },
       "users:impersonate": {
         "title": "Djelovanje u ime drugih korisnika",
@@ -1267,6 +1292,14 @@
       "ui:surface": {
         "title": "Dodaje vlastite ekrane",
         "consequence": "Kartice, panele i postavke koje kasnije možete sakriti."
+      },
+      "ui:layout": {
+        "title": "Zamijeni cijeli raspored aplikacije",
+        "consequence": "Kada se odabere, njegov kod crta svaki zaslon, uključujući vaše terminale i postavke."
+      },
+      "ui:theme": {
+        "title": "Dodaj teme boja",
+        "consequence": "Samo boje i stilovi. Za temu se ne pokreće nijedan kod."
       }
     },
     "runtime": {
@@ -1408,6 +1441,7 @@
         "options": "Nije moguće spremiti opcije za {{name}}: {{error}}",
         "deleteData": "Nije moguće izbrisati podatke za {{name}}: {{error}}",
         "managedByServer": "Ova radna površina povezana je s poslužiteljem koji određuje njezine dodatke.",
+        "defaultLook": "{{name}} je zadani izgled, pa se može isključiti ili zamijeniti, ali ne i deinstalirati.",
         "hasDependents": "{{name}} potreban je za {{list}}. Prvo isključite ili deinstalirajte te dodatke.",
         "missingDependencies": "{{name}} treba {{list}}, koji nije instaliran.",
         "consentChanged": "Što ovaj dodatak traži promijenilo se od kada ste ga zadnji put pregledali. Provjerite popis ponovno.",
@@ -1481,7 +1515,6 @@
       "noServerAccess": "Nema pristupa vašim poslužiteljima",
       "searchInstalled": "Pretraži instalirane",
       "searchPlugins": "Pretraži dodatke",
-      "allCategories": "Sve",
       "nothingMatches": "Ništa se ne podudara s tim.",
       "noneInstalled": "Još nema instaliranih dodataka. Pregledajte ih kako biste dodali neke.",
       "nothingHere": "Ovdje nema ništa.",
@@ -1575,7 +1608,45 @@
       "documentation": "Dokumentacija",
       "envVars": "Okolišne varijable",
       "envRequired": "Obavezno",
-      "envDefault": "Zadano: {{value}}"
+      "envDefault": "Zadano: {{value}}",
+      "kinds": {
+        "layouts": "Rasporedi",
+        "themes": "Teme",
+        "tabs": "Kartice",
+        "panels": "Paneli bočne trake",
+        "dashboardCards": "Kartice nadzorne ploče",
+        "protocols": "Vrste veza",
+        "auth": "Metode prijave",
+        "actions": "Radnje",
+        "hostCapability": "Postavke domaćina"
+      },
+      "filters": {
+        "type": "Vrsta",
+        "allTypes": "Sve vrste",
+        "category": "Kategorija",
+        "allCategories": "Sve kategorije",
+        "results_one": "{{count}} dodatak",
+        "results_few": "{{count}} dodatka",
+        "results_other": "{{count}} dodataka",
+        "remove": "Ukloni filter {{name}}",
+        "clear": "Obriši filtere",
+        "button": "Filteri",
+        "buttonCount": "Filteri ({{count}})"
+      },
+      "pager": {
+        "range": "{{from}}-{{to}} od {{total}}",
+        "page": "Stranica {{page}} od {{pages}}",
+        "previous": "Prethodna stranica",
+        "next": "Sljedeća stranica",
+        "perPage": "{{count}} po stranici",
+        "perPageLabel": "Dodaci po stranici"
+      },
+      "showUnsupportedHint": "Ovi su navedeni, ali još nema izdanja koje radi na ovoj verziji. Ažurirajte Termix da biste ih instalirali.",
+      "unsupported": "Zahtijeva noviji Termix",
+      "unsupportedHint": "Nijedno izdanje ovog dodatka ne radi na ovoj verziji Termixa. Ažurirajte Termix da biste ga instalirali.",
+      "needsTermix": "Zahtijeva Termix {{range}}",
+      "showUnsupported": "Prikaži nepodržane ({{count}})",
+      "showMore": "Prikaži još {{count}} (ostalo: {{total}})"
     }
   },
   "settings": {
@@ -1590,92 +1661,6 @@
     "sudoHint": "Postavite sudo lozinku za ovog hosta u uređivaču hosta kako biste omogućili privilegirane radnje.",
     "noData": "Nema podataka",
     "filter": "Filtriraj..."
-  },
-  "sync": {
-    "minutesAgo_one": "prije {{count}} minute",
-    "minutesAgo_few": "prije {{count}} minute",
-    "minutesAgo_other": "prije {{count}} minuta",
-    "hoursAgo_one": "prije {{count}} sat",
-    "hoursAgo_few": "prije {{count}} sata",
-    "hoursAgo_other": "prije {{count}} sati",
-    "pending_one": "{{count}} promjena čeka usklađivanje",
-    "pending_few": "{{count}} promjene čekaju usklađivanje",
-    "pending_other": "{{count}} promjena čeka usklađivanje",
-    "proxy": {
-      "headersTitle": "Dodatne zaglavlja",
-      "headersHint": "Šalju se s svakim zahtjevom poslužitelju, na primjer token usluge Cloudflare Access.",
-      "headerName": "Naziv zaglavlja",
-      "headerValue": "Vrijednost",
-      "savedValue": "Spremljeno, upišite za promjenu",
-      "addHeader": "Dodaj zaglavlje",
-      "removeHeader": "Ukloni zaglavlje",
-      "basicAuthTitle": "Korisničko ime i lozinka",
-      "basicAuthHint": "Za proxy koji traži korisničko ime i lozinku prije Termixa.",
-      "username": "Korisničko ime",
-      "password": "Lozinka",
-      "allowInvalidCertificate": "Povjeri samopotpisanom certifikatu",
-      "allowInvalidCertificateHint": "Samo za vlastiti poslužitelj, kada njegov certifikat nije izdan od poznatog izdavača."
-    },
-    "problems": {
-      "invalidUrl": "To ne izgleda kao web adresa.",
-      "unreachable": "Nije moguće doseći poslužitelj. Provjerite adresu i je li poslužitelj pokrenut.",
-      "unreachableWithReason": "Nije moguće doseći poslužitelj: {{reason}}",
-      "tlsUntrusted": "Certifikat poslužitelja nije pouzdan. Ako je ovo vaš vlastiti poslužitelj s samopotpisanim certifikatom, uključite opciju ispod.",
-      "basicAuthRequired": "Nešto ispred poslužitelja traži korisničko ime i lozinku. Unesite ih ispod.",
-      "proxyLogin": "Umjesto Termixa odgovorila je prijavna stranica ili proxy. Ispod dodajte zaglavlja koja su mu potrebna ili provjerite adresu.",
-      "notTermix": "Na toj adresi nema Termix poslužitelja. Ako se pokreće pod putanjom, uključite je, npr. https://primjer.com/termix.",
-      "versionMismatch": "Taj poslužitelj pokreće stariju verziju Termixa. Ažurirajte ga na verziju 2.9 ili noviju za povezivanje.",
-      "differentAccount": "Prijavili ste se na drugi račun. Prijavite se na račun s kojim je ovaj uređaj povezan ili ga prvo odspojite."
-    },
-    "wizard": {
-      "title": "Poveži s Termix poslužiteljem",
-      "reloginTitle": "Ponovna prijava",
-      "savedServers": "Nedavni poslužitelji",
-      "removeServer": "Ukloni s popisa",
-      "serverDescription": "Unesite adresu koju koristite za otvaranje Termixa u pregledniku.",
-      "signinDescription": "Prijavite se na {{url}}",
-      "chooseDescription": "Ovaj uređaj već ima podatke. Što bi se s njima trebalo dogoditi?",
-      "finishingDescription": "Povezivanje ovog uređaja.",
-      "serverUrl": "Adresa poslužitelja",
-      "serverUrlHint": "Na primjer https://termix.primjer.com",
-      "showProxySettings": "Postavke obrnutog proxyja",
-      "hideProxySettings": "Sakrij postavke obrnutog proxyja",
-      "continue": "Nastavi",
-      "back": "Natrag",
-      "mergeTitle": "Dodaj u moj račun",
-      "mergeBody_one": "Stavka na ovom uređaju dodaje se u vaš račun. Stavke koje vaš račun već ima ostaju nepromijenjene na poslužitelju.",
-      "mergeBody_few": "{{count}} stavke na ovom uređaju dodaju se u vaš račun. Stavke koje vaš račun već ima ostaju nepromijenjene na poslužitelju.",
-      "mergeBody_other": "{{count}} stavki na ovom uređaju dodaje se u vaš račun. Stavke koje vaš račun već ima ostaju nepromijenjene na poslužitelju.",
-      "replaceTitle": "Zamijeni svojim računom",
-      "replaceBody_one": "Stavka na ovom uređaju uklanja se, a ovaj uređaj preuzima sve iz vašeg računa. Hostovi koji su zadržani samo na ovom uređaju ostaju.",
-      "replaceBody_few": "{{count}} stavke na ovom uređaju uklanjaju se, a ovaj uređaj preuzima sve iz vašeg računa. Hostovi koji su zadržani samo na ovom uređaju ostaju.",
-      "replaceBody_other": "{{count}} stavki na ovom uređaju uklanja se, a ovaj uređaj preuzima sve iz vašeg računa. Hostovi koji su zadržani samo na ovom uređaju ostaju.",
-      "link": "Poveži",
-      "linking": "Povezivanje i pokretanje prvog sinkroniziranja...",
-      "linked": "Povezano. Vaši se podaci sada sinkroniziraju.",
-      "signedInAgain": "Prijavljeno. Sinkronizacija se ponovno pokreće."
-    },
-    "entities": {
-      "hosts": "Poslužitelji",
-      "sshCredentials": "Vjerodajnice",
-      "sshFolders": "Mape",
-      "userPreferences": "Postavke",
-      "pluginUserSettings": "Postavke dodataka",
-      "sharedHosts": "Poslužitelji dijeljeni s vama",
-      "sharedCredentials": "Vjerodajnice dijeljene s vama",
-      "vaultProfiles": "Vault profili",
-      "snippetFolders": "Mape isječaka",
-      "snippets": "Isječci",
-      "dashboardServiceLinks": "Veze usluga",
-      "homepageItems": "Stavke početne stranice",
-      "networkTopology": "Mrežna mapa",
-      "workspaces": "Radne površine",
-      "hostDefaults": "Zadane postavke poslužitelja",
-      "hostDefaultsAdmin": "Zadane postavke poslužitelja na serveru",
-      "aiProviders": "AI pružatelji",
-      "homepageLayouts": "Rasporedi početne stranice",
-      "accountProfile": "Profil računa"
-    }
   },
   "hostDefaults": {
     "source": {

@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "Kai kurių priedų pakeisti nepavyko. Juos galite sutvarkyti vėliau iš skirtuko „Priedai“. Paspauskite „Toliau“, kad tęstumėte.",
     "pluginsApplyFailed": "Jūsų pasirinkimų išsaugoti nepavyko. Bandykite dar kartą arba tęskite ir pakeiskite juos vėliau iš skirtuko „Priedai“.",
     "pluginsLoadFailed": "Priedų sąrašo įkelti nepavyko. Priedus galite pasirinkti vėliau iš skirtuko „Priedai“.",
-    "presetTitle": "Kiek norite matyti ekrane?",
-    "presetIntro": "Pasirinkite, kiek bus rodoma ekrane.",
-    "presetChangeLater": "Galite perjungti išankstinius nustatymus arba pakeisti bet kurį atskirą nustatymą vėliau „Nustatymuose“, skiltyje „Sąsaja“.",
-    "appearanceTitle": "Pritaikykite sau",
-    "appearanceIntro": "Pasirinkite temą, akcento spalvą, šriftą ir kalbą. Pakeitimai matomi iškart, o vėliau juos galite keisti „Nustatymuose“.",
     "securityTitle": "Apsaugokite savo paskyrą",
     "securityIntro": "Pridėkite prieigos raktą arba autentifikatoriaus programėlę prie savo paskyros. Tai taip pat galite padaryti vėliau „Nustatymuose“, skiltyje „Saugumas“.",
-    "desktopTitle": "Kaip norite naudoti Termix?",
-    "desktopBody": "Tai galite pakeisti bet kuriuo metu iš „Sinchronizavimo“ šoninėje juostoje.",
-    "desktopLocalTitle": "Tik šiame įrenginyje",
-    "desktopLocalBody": "Viskas saugoma čia. Nėra ko nustatyti.",
-    "desktopLinkTitle": "Su mano Termix serveriu",
-    "desktopLinkBody": "Prisijunkite prie savo serverio, kad naudotumėte tuos pačius hostus ir nustatymus visuose įrenginiuose.",
-    "desktopLinked": "Susietas su {{server}}",
     "pluginsDocsLink": "Skaityti apie kiekvieną"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} paruošta įdiegimui",
     "readyHint": "Ji bus įdiegta kitą kartą paleidus Termix iš naujo."
   },
+  "companion": {
+    "close": "Uždaryti skydelį",
+    "moveSide": "Perkelti skydelį",
+    "resize": "Keisti skydelio dydį"
+  },
   "nav": {
     "home": "Pradžia",
     "terminal": "Terminalas",
@@ -257,7 +250,6 @@
     "hosts": "Hostai",
     "credentials": "Pryminiai duomenys",
     "connections": "Ryšiai",
-    "sync": "Sinchronizuoti",
     "reconnectDisconnectedTerminals": "Perjungti visus atjungtus terminalus",
     "reconnectingTerminals_one": "Perjungiamas {{count}} terminalas",
     "reconnectingTerminals_few": "Perjungiami {{count}} terminalai",
@@ -285,10 +277,7 @@
     "retry": "Bandyti dar kartą",
     "refresh": "Atnaujinti",
     "optional": "Pasirinktinai",
-    "downloadSample": "Atsisiųsti pavyzdį",
     "failedToDeleteHost": "Nepavyko ištrinti „{{name}}“",
-    "importSkipExisting": "Importuoti (praleisti esamus)",
-    "importSSHConfig": "Importuoti iš SSH konfigūracijos",
     "connectionDetails": "Ryšio duomenys",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -509,10 +498,7 @@
     "noFolder": "(Be aplanko)",
     "deleteSelected": "Ištrinti",
     "exitSelection": "Išeiti iš pasirinkimo",
-    "importSkip": "Importuoti (praleisti esamus)",
-    "importOverwrite": "Importuoti (perrašyti)",
     "collapseBtn": "Sutraukti",
-    "importExportBtn": "Importuoti / Eksportuoti",
     "hostStatusesRefreshed": "Serverių būsenos atnaujintos",
     "failedToRefreshHosts": "Nepavyko atnaujinti serverių",
     "movedHostTo": "Serveris „{{host}}“ perkeltas į „{{folder}}“",
@@ -571,6 +557,9 @@
     "deleteFolderConfirm_many": "Ištrinti „{{name}}“ ir jo {{count}} serverio? Šio veiksmo negalima atšaukti.",
     "deleteFolderConfirm_other": "Ištrinti „{{name}}“ ir jo {{count}} serverio? Šio veiksmo negalima atšaukti.",
     "failedToMoveHosts": "Nepavyko perkelti serverių",
+    "managedBanner": "Šis serveris valdomas per {{plugin}}. Pakeiskite jį ten. Vis tiek galite jį prisegti ir keisti jo tvarką.",
+    "managedTooltip": "Valdoma per {{plugin}}",
+    "addBlocked": "Serveriai valdomi per {{plugin}}, todėl čia negalima pridėti naujų serverių.",
     "failedToReorder": "Nepavyko pakeisti tvarkos",
     "expandAll": "Išskleisti visus aplankus",
     "collapseAll": "Suskleisti visus aplankus",
@@ -683,37 +672,6 @@
     "addCredentialBtn2": "Pridėti prisijungimo duomenis",
     "checkingHostStatuses": "Tikrinami serverių būsenos...",
     "pinnedSection": "Pritvirtinti",
-    "hostsExported": "Serveriai sėkmingai eksportuoti",
-    "export": {
-      "menuItem": "Eksportuoti...",
-      "title": "Eksportuoti serverius",
-      "scope": "Apimtis",
-      "scopeAll": "Visi",
-      "scopeSelected": "Pasirinkti",
-      "searchHosts": "Ieškoti serverių...",
-      "include": "Įtraukti",
-      "groupConnection": "Ryšio nustatymai",
-      "groupCredentials": "Prijungimo duomenys",
-      "groupNotes": "Pastabos",
-      "groupTags": "Žymos ir prisegimas",
-      "groupProxy": "Tarpinis serveris",
-      "groupJumpHosts": "Tarpiniai serveriai",
-      "groupFeatureFlags": "Priedų nustatymai",
-      "groupAdvanced": "Išplėstinė konfigūracija",
-      "preview": "Peržiūra",
-      "moreHosts_one": "... dar {{count}} serveris",
-      "moreHosts_few": "... dar {{count}} serveriai",
-      "moreHosts_many": "... dar {{count}} serverio",
-      "moreHosts_other": "... dar {{count}} serverio",
-      "summary": "{{selected}} iš {{total}} serverių",
-      "credentialsIncluded": "įtraukti prisijungimo duomenys",
-      "credentialsExcluded": "neįtraukti prisijungimo duomenys",
-      "noneSelected": "Nepasirinkti jokie serveriai",
-      "cancel": "Atšaukti",
-      "confirm": "Eksportuoti",
-      "fetchFailed": "Nepavyko įkelti serverių eksportui",
-      "bulkButton": "Eksportuoti"
-    },
     "sampleDownloaded": "Pavyzdinis failas atsisiųstas",
     "failedToDeleteCredential2": "Nepavyko ištrinti prisijungimo duomenų",
     "noFolderOption": "(Be aplanko)",
@@ -886,11 +844,7 @@
     "editorUpdate": "Atnaujinti serverį",
     "editorAdd": "Pridėti serverį",
     "speedSearch": "Ieškoti serverių. Rodyklės klavišai pasirinkimui, Enter prisijungimui, Esc uždarymui",
-    "speedSearchList": "Serverių sąrašas. Rašykite arba paspauskite /, kad ieškotumėte.",
-    "importNoHosts": "Faile nerasta jokių serverių",
-    "importTooMany": "Galiite importuoti ne daugiau kaip {{max}} serverių vienu metu",
-    "importSummary": "Importas baigtas: {{imported}} importuota, {{updated}} atnaujinta, {{failed}} nepavyko",
-    "importHostsFailed": "Nepavyko importuoti serverių"
+    "speedSearchList": "Serverių sąrašas. Rašykite arba paspauskite /, kad ieškotumėte."
   },
   "splitScreen": {
     "title": "Padalintas ekranas",
@@ -1095,17 +1049,9 @@
   },
   "admin": {
     "usersCount_one": "{{count}} vartotojas",
-    "usersCount_few": "{{count}} vartotojai",
-    "usersCount_many": "{{count}} vartotojo",
     "rolesCount_one": "{{count}} vaidmuo",
-    "rolesCount_few": "{{count}} vaidmenys",
-    "rolesCount_many": "{{count}} vaidmens",
     "apiKeysCount_one": "{{count}} raktas",
-    "apiKeysCount_few": "{{count}} raktai",
-    "apiKeysCount_many": "{{count}} rakto",
     "sessionsActive_one": "{{count}} aktyvi",
-    "sessionsActive_few": "{{count}} aktyvios",
-    "sessionsActive_many": "{{count}} aktyvių",
     "hostsCount_one": "{{count}} serveris",
     "hostsCount_few": "{{count}} serveriai",
     "hostsCount_many": "{{count}} serverio",
@@ -1116,8 +1062,6 @@
     "credentialsCount_other": "{{count}} prisijungimo duomenų rinkinio",
     "rolePermissions": {
       "count_one": "{{count}} leidimas",
-      "count_few": "{{count}} leidimai",
-      "count_many": "{{count}} leidimo",
       "groups": {
         "hosts": "Serveriai",
         "credentials": "Prisijungimo duomenys",
@@ -1158,20 +1102,58 @@
         "interfaceFontDescription": "Keičia programos sąsajos šriftą. Terminalo profiliai išlaiko savo šrifto nustatymus.",
         "accentColorLabel": "Akcento spalva",
         "apiKeyCount_one": "{{count}} raktas",
-        "apiKeyCount_few": "{{count}} raktai",
-        "apiKeyCount_many": "{{count}} rakto",
         "colorPickerTooltip": "Atidaryti spalvų parinkiklį",
         "themeSystem": "Sistemos",
         "themeLight": "Šviesus",
-        "themeDark": "Tamsus",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "Tamsus"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "Kaip išdėstyta visa programa. Temų ir išdėstymų teikia priedai.",
+    "defaultsLabel": "Numatytasis visiems",
+    "defaultsHint": "Ką žmonės mato, kol nepasirinks savo išdėstymo ar temos.",
+    "followDefault": "Naudoti numatytąjį",
+    "defaultSaved": "Numatytasis vaizdas išsaugotas",
+    "saveFailed": "Nepavyko išsaugoti vaizdo",
+    "repair": {
+      "title": "Šio išdėstymo nepavyko parodyti",
+      "safeTitle": "Saugus režimas",
+      "layout": "Išdėstymas",
+      "plugin": "Priedas",
+      "reason": "Priežastis",
+      "error": "Klaida",
+      "noError": "Nėra klaidos pranešimo.",
+      "copy": "Kopijuoti",
+      "copied": "Nukopijuota",
+      "copyFailed": "Nepavyko nukopijuoti detalių",
+      "retry": "Bandyti dar kartą",
+      "reset": "Atstatyti numatytąjį vaizdą",
+      "resetEveryone": "Atstatyti numatytąjį visiems",
+      "update": "Atnaujinti {{name}} į {{version}}",
+      "disable": "Išjungti {{name}}",
+      "install": "Ieškoti išdėstymų ir temų",
+      "installTitle": "Išdėstymai ir temos",
+      "installButton": "Įdiegti",
+      "nothingToInstall": "Šiuo metu nėra kitų išdėstymų ar temų.",
+      "registryUnreachable": "Nepavyko pasiekti priedų registro.",
+      "askAdmin": "Paprašykite administratoriaus atnaujinti arba sutvarkyti šį išdėstymą. Žemiau galite pasirinkti kitą išdėstymą arba temą sau.",
+      "switchLayout": "Keisti išdėstymą",
+      "switchTheme": "Keisti temą",
+      "saveFailed": "Nepavyko išsaugoti jūsų pasirinkimo",
+      "reasons": {
+        "safe-url": "Adresas prašė saugaus režimo. Pasirinkite išdėstymą žemiau arba pašalinkite ?safe-layout=1 iš adreso.",
+        "safe-env": "Serveris paleistas su TERMIX_SAFE_LAYOUT, todėl visi mato šį ekraną, kol jis bus pašalintas.",
+        "missing": "Nėra įdiegto priedo, kuris teiktų šį išdėstymą.",
+        "disabled": "Priedas, teikiantis šį išdėstymą, yra išjungtas.",
+        "blocked": "Priedas, teikiantis šį išdėstymą, laukia kažko, ko jam reikia.",
+        "incompatible": "Priedas, teikiantis šį išdėstymą, neveikia su šia Termix versija.",
+        "failed": "Išdėstymui nepavyko paleisti.",
+        "crashed": "Išdėstymas sugedo du kartus piešiant programą."
+      },
+      "noLayout": "Nėra nustatyto išdėstymo",
+      "restore": "Atkurti standartinį {{name}}",
+      "restoreFailed": "Nepavyko atkurti standartinės kopijos"
     }
   },
   "plugins": {
@@ -1196,6 +1178,18 @@
         "title": "Tvarkyti prisijungimą",
         "consequence": "Jis gali pridėti prisijungimo būdą, antrąjį patvirtinimo veiksmą arba SSH prisijungimo tipą."
       },
+      "auth:policy": {
+        "title": "Nustatyti prisijungimo taisykles",
+        "consequence": "Jis gali atjungti žmones, kai jie neveiklūs, apriboti sesijos ilgį, išjungti prisiminimą ir reikalauti antrojo patvirtinimo veiksmo."
+      },
+      "ssh:transport": {
+        "title": "Pasirinkti, kaip pasiekiami serveriai",
+        "consequence": "Jis gali perduoti SSH ryšį su serveriu per savo maršrutą, todėl mato viską, kas siunčiama į ir iš tų serverių, įskaitant slaptažodžius."
+      },
+      "sync:provide": {
+        "title": "Vykdyti sinchronizavimą",
+        "consequence": "Jis gali atsakyti į visus sinchronizavimo užklausas, todėl mato duomenis, kuriuos sinchronizuoja įrenginiai ir serveriai."
+      },
       "system:tls": {
         "title": "Valdyti sertifikatus",
         "consequence": "Jis gali pakeisti sertifikatą, kurį Termix naudoja HTTPS ryšiams, ir atsakyti į domenų patikrinimus iš sertifikavimo institucijų."
@@ -1203,6 +1197,10 @@
       "device:serial": {
         "title": "Prieiga prie serijinių ir USB įrenginių",
         "consequence": "Jis gali atidaryti fizinį serijinį prievadą kompiuteryje, kuriame veikia Termix."
+      },
+      "hosts:export": {
+        "title": "Eksportuoti serverius su jų slaptais",
+        "consequence": "Gali perskaityti visus jūsų serverius, įskaitant išsaugotus slaptažodžius ir raktus, ir juos perduoti. Kiekvienas eksportas yra įrašomas į audito žurnalą."
       },
       "hosts:write": {
         "title": "Kurti ir keisti serverius",
@@ -1248,9 +1246,29 @@
         "title": "Skaityti audito žurnalą",
         "consequence": "Jis gali matyti, kas ką ir kada atliko."
       },
+      "network:probe": {
+        "title": "Patikrinti, ar portai atsako",
+        "consequence": "Gali atidaryti paprastą ryšį su bet kokia adrese nuo serverio, kad pamatytų, ar jis pasiekiamas."
+      },
+      "hosts:status-provide": {
+        "title": "Teikti serverio būseną",
+        "consequence": "Tampa šaltiniu, rodančiu, ar serveris yra prisijungęs, ar neprisijungęs."
+      },
+      "hosts:activity-provide": {
+        "title": "Saugoti naujausią veiklą",
+        "consequence": "Tampa vartotojų naujausių veiksmų sąrašo saugykla."
+      },
+      "hosts:lock": {
+        "title": "Tvarkyti serverius kaip tik skaitymo režimu",
+        "consequence": "Serverių, kuriuos jis tvarko, negalima redaguoti, ištrinti ar dalintis kitais būdais."
+      },
       "desktop:window": {
         "title": "Atidaryti darbalaukio langus",
         "consequence": "Tik Termix darbalaukio programoje."
+      },
+      "desktop:local": {
+        "title": "Naudoti šį kompiuterį",
+        "consequence": "Gali skaityti ir keisti failus, vykdyti komandas bei atidaryti vietinius prievadus šiame kompiuteryje. Tik Termix darbalaukio programoje."
       },
       "users:impersonate": {
         "title": "Veikti kaip kiti vartotojai",
@@ -1291,6 +1309,14 @@
       "ui:surface": {
         "title": "Pridėti savo ekranus",
         "consequence": "Kortelės, skydeliai ir nustatymai, kuriuos vėliau galėsite paslėpti."
+      },
+      "ui:layout": {
+        "title": "Pakeisti visą programos išdėstymą",
+        "consequence": "Pasirinkus, jo kodas nupiešia kiekvieną ekraną, įskaitant terminalus ir nustatymus."
+      },
+      "ui:theme": {
+        "title": "Pridėti spalvų temas",
+        "consequence": "Tik spalvos ir stiliai. Temoms joks kodas nevykdomas."
       }
     },
     "runtime": {
@@ -1444,6 +1470,7 @@
         "options": "Nepavyko išsaugoti „{{name}}“ parinkčių: {{error}}",
         "deleteData": "Nepavyko ištrinti „{{name}}“ duomenų: {{error}}",
         "managedByServer": "Šis darbalaukis susietas su serveriu, kuris nustato jo priedus.",
+        "defaultLook": "{{name}} yra numatytasis išvaizdos stilius, todėl jį galima išjungti ar pakeisti, bet ne išdiegti.",
         "hasDependents": "„{{name}}“ reikia „{{list}}“. Pirmiausia išjunkite arba pašalinkite juos.",
         "missingDependencies": "„{{name}}“ reikia „{{list}}“, kuris nėra įdiegtas.",
         "consentChanged": "Ką šis priedas prašo, pasikeitė nuo tada, kai jį peržiūrėjote. Patikrinkite sąrašą dar kartą.",
@@ -1521,7 +1548,6 @@
       "noServerAccess": "Nėra prieigos prie jūsų serverių",
       "searchInstalled": "Ieškoti įdiegtų",
       "searchPlugins": "Ieškoti priedų",
-      "allCategories": "Visi",
       "nothingMatches": "Nieko neatitinka.",
       "noneInstalled": "Dar nėra įdiegta jokių priedų. Naršykite, kad pridėtumėte.",
       "nothingHere": "Čia nieko nėra.",
@@ -1619,7 +1645,46 @@
       "documentation": "Dokumentacija",
       "envVars": "Aplinkos kintamieji",
       "envRequired": "Būtina",
-      "envDefault": "Numatyta: {{value}}"
+      "envDefault": "Numatyta: {{value}}",
+      "kinds": {
+        "layouts": "Išdėstymai",
+        "themes": "Temos",
+        "tabs": "Kortelės",
+        "panels": "Šoninės juostos skydeliai",
+        "dashboardCards": "Valdymo skydo kortelės",
+        "protocols": "Jungimo tipai",
+        "auth": "Prisijungimo būdai",
+        "actions": "Veiksmai",
+        "hostCapability": "Serverio nustatymai"
+      },
+      "filters": {
+        "type": "Tipas",
+        "allTypes": "Visi tipai",
+        "category": "Kategorija",
+        "allCategories": "Visos kategorijos",
+        "results_one": "{{count}} priedas",
+        "results_few": "{{count}} priedai",
+        "results_many": "{{count}} priedų",
+        "results_other": "{{count}} priedų",
+        "remove": "Pašalinti filtrą {{name}}",
+        "clear": "Išvalyti filtrus",
+        "button": "Filtrai",
+        "buttonCount": "Filtrai ({{count}})"
+      },
+      "pager": {
+        "range": "{{from}}–{{to}} iš {{total}}",
+        "page": "Puslapis {{page}} iš {{pages}}",
+        "previous": "Ankstesnis puslapis",
+        "next": "Kitas puslapis",
+        "perPage": "{{count}} puslapyje",
+        "perPageLabel": "Priedų skaičius puslapyje"
+      },
+      "showUnsupportedHint": "Šie yra išvardyti, tačiau šiai versijai dar nėra išleista. Atnaujinkite Termix, kad galėtumėte juos įdiegti.",
+      "unsupported": "Reikia naujesnės Termix versijos",
+      "unsupportedHint": "Šio priedo nėra išleista šiai Termix versijai. Atnaujinkite Termix, kad galėtumėte jį įdiegti.",
+      "needsTermix": "Reikia Termix {{range}}",
+      "showUnsupported": "Rodyti nepalaikomus ({{count}})",
+      "showMore": "Rodyti dar {{count}} (liko {{total}})"
     }
   },
   "settings": {
@@ -1634,97 +1699,6 @@
     "sudoHint": "Nustatykite sudo slaptažodį šiam hostui hostų redaktoriuje, kad galėtumėte atlikti privilegijuotus veiksmus.",
     "noData": "Duomenų nėra",
     "filter": "Filtruoti..."
-  },
-  "sync": {
-    "minutesAgo_one": "prieš {{count}} minutę",
-    "minutesAgo_few": "prieš {{count}} minutes",
-    "minutesAgo_many": "prieš {{count}} minučių",
-    "minutesAgo_other": "prieš {{count}} minutę",
-    "hoursAgo_one": "prieš {{count}} valandą",
-    "hoursAgo_few": "prieš {{count}} valandas",
-    "hoursAgo_many": "prieš {{count}} valandų",
-    "hoursAgo_other": "prieš {{count}} valandą",
-    "pending_one": "{{count}} pakeitimas laukia sinchronizavimo",
-    "pending_few": "{{count}} pakeitimai laukia sinchronizavimo",
-    "pending_many": "{{count}} pakeitimų laukia sinchronizavimo",
-    "pending_other": "{{count}} pakeitimas laukia sinchronizavimo",
-    "proxy": {
-      "headersTitle": "Papildomos antraštės",
-      "headersHint": "Siunčiamos su kiekvienu užklausimu į serverį, pavyzdžiui, Cloudflare Access paslaugos žetonu.",
-      "headerName": "Antraštės pavadinimas",
-      "headerValue": "Reikšmė",
-      "savedValue": "Išsaugota, rašykite, jei norite pakeisti",
-      "addHeader": "Pridėti antraštę",
-      "removeHeader": "Pašalinti antraštę",
-      "basicAuthTitle": "Vartotojo vardas ir slaptažodis",
-      "basicAuthHint": "Šliuzui, kuris prašo vartotojo vardo ir slaptažodžio prieš Termix.",
-      "username": "Vartotojo vardas",
-      "password": "Slaptažodis",
-      "allowInvalidCertificate": "Pasitikėti savarankiškai pasirašytu sertifikatu",
-      "allowInvalidCertificateHint": "Tik jūsų pačių serveriui, kai jo sertifikatas nėra iš žinomo centro."
-    },
-    "problems": {
-      "invalidUrl": "Tai neatrodo kaip tinklo adresas.",
-      "unreachable": "Nepavyko prisijungti prie serverio. Patikrinkite adresą ir ar serveris veikia.",
-      "unreachableWithReason": "Nepavyko prisijungti prie serverio: {{reason}}",
-      "tlsUntrusted": "Serverio sertifikatas nepatikimas. Jei tai jūsų serveris su savarankiškai pasirašytu sertifikatu, įjunkite žemiau esantį pasirinkimą.",
-      "basicAuthRequired": "Kažkas prieš serverį prašo vartotojo vardo ir slaptažodžio. Įveskite juos žemiau.",
-      "proxyLogin": "Vietoj Termix atsakė prisijungimo puslapis ar tarpinis serveris. Žemiau pridėkite reikiamus antraštes arba patikrinkite adresą.",
-      "notTermix": "Pateiktame adrese nėra Termix serverio. Jei jis veikia po keliu, įtraukite jį, pvz., https://example.com/termix.",
-      "versionMismatch": "Tame serveryje veikia senesnė Termix versija. Norėdami susieti, atnaujinkite ją į 2.9 arba naujesnę.",
-      "differentAccount": "Prisijungėte prie kitos paskyros. Prisijunkite prie paskyros, prie kurios susietas šis įrenginys, arba pirmiausia atjunkite."
-    },
-    "wizard": {
-      "title": "Susieti su Termix serveriu",
-      "reloginTitle": "Prisijunkite iš naujo",
-      "savedServers": "Naujausi serveriai",
-      "removeServer": "Pašalinti iš sąrašo",
-      "serverDescription": "Įveskite adresą, kurį naudojate Termix atidarymui naršyklėje.",
-      "signinDescription": "Prisijunkite prie {{url}}",
-      "chooseDescription": "Šiame įrenginyje jau yra duomenų. Ką su jais daryti?",
-      "finishingDescription": "Susiejamas šis įrenginys.",
-      "serverUrl": "Serverio adresas",
-      "serverUrlHint": "Pavyzdžiui, https://termix.example.com",
-      "showProxySettings": "Atvirkštinio šliuzo nustatymai",
-      "hideProxySettings": "Slėpti atvirkštinio šliuzo nustatymus",
-      "continue": "Tęsti",
-      "back": "Atgal",
-      "mergeTitle": "Pridėti prie mano paskyros",
-      "mergeBody_one": "Šio įrenginio elementas bus pridėtas prie jūsų paskyros. Elementai, kuriuos jūsų paskyra jau turi, serveryje liks nepakitę.",
-      "mergeBody_few": "Šio įrenginio {{count}} elementai bus pridėti prie jūsų paskyros. Elementai, kuriuos jūsų paskyra jau turi, serveryje liks nepakitę.",
-      "mergeBody_many": "Šio įrenginio {{count}} elementų bus pridėta prie jūsų paskyros. Elementai, kuriuos jūsų paskyra jau turi, serveryje liks nepakitę.",
-      "mergeBody_other": "Šio įrenginio {{count}} elementas bus pridėtas prie jūsų paskyros. Elementai, kuriuos jūsų paskyra jau turi, serveryje liks nepakitę.",
-      "replaceTitle": "Pakeisti mano paskyros duomenimis",
-      "replaceBody_one": "Šio įrenginio elementas bus pašalintas, o įrenginys perims viską iš jūsų paskyros. Liks tik tie hostai, kurie išsaugoti tik šiame įrenginyje.",
-      "replaceBody_few": "Šio įrenginio {{count}} elementai bus pašalinti, o įrenginys perims viską iš jūsų paskyros. Liks tik tie hostai, kurie išsaugoti tik šiame įrenginyje.",
-      "replaceBody_many": "Šio įrenginio {{count}} elementų bus pašalinta, o įrenginys perims viską iš jūsų paskyros. Liks tik tie hostai, kurie išsaugoti tik šiame įrenginyje.",
-      "replaceBody_other": "Šio įrenginio {{count}} elementas bus pašalintas, o įrenginys perims viską iš jūsų paskyros. Liks tik tie hostai, kurie išsaugoti tik šiame įrenginyje.",
-      "link": "Susieti",
-      "linking": "Susiejama ir vykdomas pirmasis sinchronizavimas...",
-      "linked": "Susieta. Jūsų duomenys dabar sinchronizuojami.",
-      "signedInAgain": "Prisijungta. Sinchronizavimas vėl vykdomas."
-    },
-    "entities": {
-      "hosts": "Serveriai",
-      "sshCredentials": "Prisijungimo duomenys",
-      "sshFolders": "Aplankai",
-      "userPreferences": "Nuostatos",
-      "pluginUserSettings": "Priedų nustatymai",
-      "sharedHosts": "Su jumis dalinami serveriai",
-      "sharedCredentials": "Su jumis dalinami prisijungimo duomenys",
-      "vaultProfiles": "Vault profiliai",
-      "snippetFolders": "Kodų fragmentų aplankai",
-      "snippets": "Kodų fragmentai",
-      "dashboardServiceLinks": "Paslaugų nuorodos",
-      "homepageItems": "Pradinio puslapio elementai",
-      "networkTopology": "Tinklo schema",
-      "workspaces": "Darbo aplinkos",
-      "hostDefaults": "Serverio numatytieji nustatymai",
-      "hostDefaultsAdmin": "Serverio serverių numatytieji nustatymai",
-      "aiProviders": "AI tiekėjai",
-      "homepageLayouts": "Pradinio puslapio išdėstymai",
-      "accountProfile": "Paskyros profilis"
-    }
   },
   "hostDefaults": {
     "source": {

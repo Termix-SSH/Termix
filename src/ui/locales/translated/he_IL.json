@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "לא ניתן היה לשנות חלק מהתוספים. תוכל לתקן אותם מאוחר יותר מהלשונית תוספים. לחץ על הבא כדי להמשיך.",
     "pluginsApplyFailed": "לא ניתן היה לשמור את הבחירות שלך. נסה שוב, או המשך ושנה אותם מאוחר יותר מהלשונית תוספים.",
     "pluginsLoadFailed": "לא ניתן היה לטעון את רשימת התוספים. תוכל לבחור תוספים מאוחר יותר מהלשונית תוספים.",
-    "presetTitle": "כמה פרטים אתה רוצה על המסך?",
-    "presetIntro": "בחר כמה יופיע על המסך.",
-    "presetChangeLater": "תוכל להחליף תבניות או לשנות כל הגדרה בודדת מאוחר יותר בהגדרות, תחת ממשק.",
-    "appearanceTitle": "הפוך אותו לשלך",
-    "appearanceIntro": "בחר ערכת נושא, צבע הדגשה, גופן ושפה. השינויים מופיעים מיד, ותוכל לשנות אותם מאוחר יותר בהגדרות.",
     "securityTitle": "אבטח את החשבון שלך",
     "securityIntro": "הוסף מפתח כניסה או אפליקציית אימות לחשבון שלך. תוכל גם לעשות זאת מאוחר יותר בהגדרות, תחת אבטחה.",
-    "desktopTitle": "איך אתה רוצה להשתמש ב-Termix?",
-    "desktopBody": "תוכל לשנות זאת בכל עת מ-סנכרון בסרגל הצד.",
-    "desktopLocalTitle": "על מכשיר זה בלבד",
-    "desktopLocalBody": "הכל מאוחסן כאן. אין מה להגדיר.",
-    "desktopLinkTitle": "עם שרת Termix שלי",
-    "desktopLinkBody": "התחבר לשרת שלך כדי להשתמש באותם מארחים והגדרות בכל מכשיר.",
-    "desktopLinked": "מקושר ל-{{server}}",
     "pluginsDocsLink": "קרא על כל אחד מהם"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} מוכן להתקנה",
     "readyHint": "הוא מותקן בפעם הבאה ש-Termix מופעל מחדש."
   },
+  "companion": {
+    "close": "סגור לוח",
+    "moveSide": "הזז לוח",
+    "resize": "שנה גודל לוח"
+  },
   "nav": {
     "home": "דף הבית",
     "terminal": "טרמינל",
@@ -257,7 +250,6 @@
     "hosts": "מארחים",
     "credentials": "אישורי גישה",
     "connections": "חיבורים",
-    "sync": "סנכרון",
     "reconnectDisconnectedTerminals": "חבר מחדש את כל המסופים המנותקים",
     "reconnectingTerminals_one": "מחבר מחדש מסוף אחד",
     "reconnectingTerminals_two": "מחבר מחדש שני מסופים",
@@ -282,10 +274,7 @@
     "retry": "נסה שוב",
     "refresh": "רענן",
     "optional": "אופציונלי",
-    "downloadSample": "הורד דוגמה",
     "failedToDeleteHost": "מחיקת {{name}} נכשלה",
-    "importSkipExisting": "ייבוא (דלג על קיימים)",
-    "importSSHConfig": "ייבוא מקובץ תצורת SSH",
     "connectionDetails": "פרטי חיבור",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -505,10 +494,7 @@
     "noFolder": "(ללא תיקייה)",
     "deleteSelected": "מחק",
     "exitSelection": "צא ממצב בחירה",
-    "importSkip": "ייבוא (דלג על קיימים)",
-    "importOverwrite": "ייבוא (דכא)",
     "collapseBtn": "כווץ",
-    "importExportBtn": "ייבוא / ייצוא",
     "hostStatusesRefreshed": "מצבי המארחים עודכנו",
     "failedToRefreshHosts": "הרענון של המארחים נכשל",
     "movedHostTo": "הועבר {{host}} ל\"{{folder}}\"",
@@ -565,6 +551,9 @@
     "deleteFolderConfirm_two": "למחוק את \"{{name}}\" ואת ה-{{count}} מארחים שלו? פעולה זו אינה ניתנת לביטול.",
     "deleteFolderConfirm_other": "למחוק את \"{{name}}\" ואת ה-{{count}} מארחים שלו? פעולה זו אינה ניתנת לביטול.",
     "failedToMoveHosts": "העברת המארחים נכשלה",
+    "managedBanner": "מארח זה מנוהל על ידי {{plugin}}. שנה אותו שם. עדיין ניתן להצמיד אותו ולסדר מחדש.",
+    "managedTooltip": "מנוהל על ידי {{plugin}}",
+    "addBlocked": "מארחים מנוהלים על ידי {{plugin}}, ולכן לא ניתן להוסיף מארחים חדשים כאן.",
     "failedToReorder": "מיוען מחדש נכשל",
     "expandAll": "הרחב את כל התיקיות",
     "collapseAll": "כווץ את כל התיקיות",
@@ -676,36 +665,6 @@
     "addCredentialBtn2": "הוסף אישור",
     "checkingHostStatuses": "בודק סטטוס מארחים...",
     "pinnedSection": "מוצמד",
-    "hostsExported": "המארחים יוצאו בהצלחה",
-    "export": {
-      "menuItem": "ייצוא...",
-      "title": "ייצוא מארחים",
-      "scope": "טווח",
-      "scopeAll": "הכל",
-      "scopeSelected": "נבחר",
-      "searchHosts": "חיפוש מארחים...",
-      "include": "הכלל",
-      "groupConnection": "חיבור",
-      "groupCredentials": "פרטי כניסה",
-      "groupNotes": "הערות",
-      "groupTags": "תגיות וצמידה",
-      "groupProxy": "פרוקסי",
-      "groupJumpHosts": "מארחי קפיצה",
-      "groupFeatureFlags": "הגדרות תוספים",
-      "groupAdvanced": "תצורה מתקדמת",
-      "preview": "תצוגה מקדימה",
-      "moreHosts_one": "... ועוד {{count}} מארח",
-      "moreHosts_two": "... ועוד {{count}} מארחים",
-      "moreHosts_other": "... ועוד {{count}} מארחים",
-      "summary": "{{selected}} מתוך {{total}} מארחים",
-      "credentialsIncluded": "פרטי כניסה כלולים",
-      "credentialsExcluded": "פרטי כניסה לא כלולים",
-      "noneSelected": "לא נבחרו מארחים",
-      "cancel": "ביטול",
-      "confirm": "ייצוא",
-      "fetchFailed": "טעינת המארחים לייצוא נכשלה",
-      "bulkButton": "ייצוא"
-    },
     "sampleDownloaded": "קובץ לדוגמה הורד",
     "failedToDeleteCredential2": "מחיקת פרטי הכניסה נכשלה",
     "noFolderOption": "(ללא תיקייה)",
@@ -873,11 +832,7 @@
     "editorUpdate": "עדכן מארח",
     "editorAdd": "הוסף מארח",
     "speedSearch": "חפש מארחים. מקשי חץ לבחירה, Enter לחיבור, Esc לסגירה",
-    "speedSearchList": "רשימת מארחים. הקלד או לחץ על / לחיפוש.",
-    "importNoHosts": "לא נמצאו מארחים בקובץ",
-    "importTooMany": "אתה יכול לייבא עד {{max}} מארחים בבת אחת",
-    "importSummary": "ייבוא הושלם: {{imported}} יובאו, {{updated}} עודכנו, {{failed}} נכשלו",
-    "importHostsFailed": "ייבוא המארחים נכשל"
+    "speedSearchList": "רשימת מארחים. הקלד או לחץ על / לחיפוש."
   },
   "splitScreen": {
     "title": "מסך מפוצל",
@@ -1079,13 +1034,9 @@
   },
   "admin": {
     "usersCount_one": "{{count}} משתמש",
-    "usersCount_two": "{{count}} משתמשים",
     "rolesCount_one": "{{count}} תפקיד",
-    "rolesCount_two": "{{count}} תפקידים",
     "apiKeysCount_one": "{{count}} מפתח",
-    "apiKeysCount_two": "{{count}} מפתחות",
     "sessionsActive_one": "{{count}} פעיל",
-    "sessionsActive_two": "{{count}} פעילים",
     "hostsCount_one": "{{count}} מארח",
     "hostsCount_two": "{{count}} מארחים",
     "hostsCount_other": "{{count}} מארחים",
@@ -1094,7 +1045,6 @@
     "credentialsCount_other": "{{count}} פרטי התחברות",
     "rolePermissions": {
       "count_one": "{{count}} הרשאה",
-      "count_two": "{{count}} הרשאות",
       "groups": {
         "hosts": "מארחים",
         "credentials": "אישורים",
@@ -1135,19 +1085,58 @@
         "interfaceFontDescription": "משנה את גופן ממשק היישום. פרופילי מסוף שומרים על הגדרות הגופן שלהם.",
         "accentColorLabel": "צבע הדגשה",
         "apiKeyCount_one": "{{count}} מפתח",
-        "apiKeyCount_two": "{{count}} מפתחות",
         "colorPickerTooltip": "פתח בוחר צבעים",
         "themeSystem": "מערכת",
         "themeLight": "בהיר",
-        "themeDark": "כהה",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "כהה"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "כיצד האפליקציה כולה מסודרת. ערכות נושא ופריסות מגיעות מתוספים.",
+    "defaultsLabel": "ברירת מחדל לכולם",
+    "defaultsHint": "מה שאנשים רואים עד שיבחרו פריסה או ערכת נושא משלהם.",
+    "followDefault": "השתמש בברירת המחדל",
+    "defaultSaved": "מראה ברירת המחדל נשמר",
+    "saveFailed": "לא ניתן לשמור את המראה",
+    "repair": {
+      "title": "לא ניתן להציג את הפריסה הזו",
+      "safeTitle": "מצב בטוח",
+      "layout": "פריסה",
+      "plugin": "תוסף",
+      "reason": "סיבה",
+      "error": "שגיאה",
+      "noError": "אין הודעת שגיאה.",
+      "copy": "העתק",
+      "copied": "הועתק",
+      "copyFailed": "לא ניתן להעתיק את הפרטים",
+      "retry": "נסה שוב",
+      "reset": "אפס למראה ברירת המחדל",
+      "resetEveryone": "אפס את ברירת המחדל לכולם",
+      "update": "עדכן את {{name}} ל-{{version}}",
+      "disable": "כבה את {{name}}",
+      "install": "חפש פריסות וערכות נושא",
+      "installTitle": "פריסות וערכות נושא",
+      "installButton": "התקן",
+      "nothingToInstall": "אין פריסות או ערכות נושא אחרות זמינות כרגע.",
+      "registryUnreachable": "לא ניתן להגיע למאגר התוספים.",
+      "askAdmin": "בקש ממנהל לעדכן או לתקן את הפריסה הזו. ניתן לעבור לפריסה או ערכת נושא אחרת עבורך למטה.",
+      "switchLayout": "החלף פריסה",
+      "switchTheme": "החלף ערכת נושא",
+      "saveFailed": "לא ניתן לשמור את הבחירה שלך",
+      "reasons": {
+        "safe-url": "הכתובת ביקשה מצב בטוח. בחר פריסה למטה, או הסר את ?safe-layout=1 מהכתובת.",
+        "safe-env": "השרת הופעל עם TERMIX_SAFE_LAYOUT, ולכן כולם רואים מסך זה עד להסרתו.",
+        "missing": "אף תוסף מותקן לא מספק את הפריסה הזו.",
+        "disabled": "התוסף שמספק את הפריסה הזו כבוי.",
+        "blocked": "התוסף שמספק את הפריסה הזו מחכה למשהו שהוא צריך.",
+        "incompatible": "התוסף שמספק את הפריסה הזו לא עובד עם הגרסה הזו של Termix.",
+        "failed": "הפריסה נכשלה בהפעלה.",
+        "crashed": "הפריסה קרסה פעמיים בזמן ציור האפליקציה."
+      },
+      "noLayout": "לא הוגדרה פריסה",
+      "restore": "שחזר את {{name}} המובנה",
+      "restoreFailed": "לא ניתן לשחזר את העותק המובנה"
     }
   },
   "plugins": {
@@ -1172,6 +1161,18 @@
         "title": "ניהול התחברות",
         "consequence": "התוסף יכול להוסיף שיטת התחברות, גורם אימות שני או סוג התחברות SSH."
       },
+      "auth:policy": {
+        "title": "הגדר חוקי התחברות",
+        "consequence": "הוא יכול להפריד אנשים כשהם לא פעילים, להגביל אורך הפעלה, לכבות את 'זכור אותי' ולדרוש גורם אימות שני."
+      },
+      "ssh:transport": {
+        "title": "בחר כיצד מגיעים למארחים",
+        "consequence": "הוא יכול לשאת את חיבור ה-SSH למארח דרך מסלול משלו, כך שהוא רואה הכל שנשלח אל וממארחים אלה, כולל סיסמאות."
+      },
+      "sync:provide": {
+        "title": "הפעל סנכרון",
+        "consequence": "הוא יכול לענות על כל בקשות הסנכרון, כך שהוא רואה את הנתונים שמכשירים ושרתים מסנכרנים."
+      },
       "system:tls": {
         "title": "ניהול תעודות",
         "consequence": "התוסף יכול להחליף את התעודה ש-HTTPS של Termix משתמש בה, ולענות על בדיקות דומיין מרשויות תעודה."
@@ -1179,6 +1180,10 @@
       "device:serial": {
         "title": "גישה למכשירים סריאליים ו-USB",
         "consequence": "התוסף יכול לפתוח פורט סריאלי פיזי במכשיר שרץ עליו Termix."
+      },
+      "hosts:export": {
+        "title": "ייצא מארחים עם הסודות שלהם",
+        "consequence": "יכול לקרוא את המארחים שלך במלואם, כולל סיסמאות ומפתחות שמורים, ולהפיץ אותם. כל ייצוא נכתב ליומן ביקורת."
       },
       "hosts:write": {
         "title": "יצירה ושינוי של שרתים",
@@ -1224,9 +1229,29 @@
         "title": "קריאת יומן הרישום (Audit Log)",
         "consequence": "התוסף יכול לראות מי עשה מה ומתי."
       },
+      "network:probe": {
+        "title": "בדוק אם פורטים עונים",
+        "consequence": "יכול לפתוח חיבור פשוט לכל כתובת מהשרת, כדי לראות אם היא נגישה."
+      },
+      "hosts:status-provide": {
+        "title": "ספק סטטוס מארח",
+        "consequence": "הופך למקור של הנקודות המקוונות והלא מקוונות לכל מארח."
+      },
+      "hosts:activity-provide": {
+        "title": "אחסן פעילות אחרונה",
+        "consequence": "הופך למאגר של רשימת הפעילויות האחרונות של כל משתמש."
+      },
+      "hosts:lock": {
+        "title": "ניהול מארחים כקריאה בלבד",
+        "consequence": "המארחים שבהם הוא מנהל לא יכולים לערוך, למחוק או לשתף מחדש על ידי אף אחד אחר."
+      },
       "desktop:window": {
         "title": "פתיחת חלונות שולחן עבודה",
         "consequence": "רק באפליקציית שולחן העבודה של Termix."
+      },
+      "desktop:local": {
+        "title": "השתמש במחשב הזה",
+        "consequence": "יכול לקרוא ולשנות קבצים, להפעיל שרשרת ולפתוח פורטים מקומיים במחשב הזה. רק באפליקציית Termix."
       },
       "users:impersonate": {
         "title": "פעולה כמשתמשים אחרים",
@@ -1267,6 +1292,14 @@
       "ui:surface": {
         "title": "להוסיף מסכים משלו",
         "consequence": "לשוניות, פאנלים והגדרות שתוכל להסתיר מאוחר יותר."
+      },
+      "ui:layout": {
+        "title": "החלף את כל פריסת האפליקציה",
+        "consequence": "כאשר נבחר, הקוד שלו מצייר כל מסך, כולל המסופים וההגדרות שלך."
+      },
+      "ui:theme": {
+        "title": "הוסף ערכות נושא",
+        "consequence": "רק צבעים וסגנונות. אין קוד שרץ עבור ערכת נושא."
       }
     },
     "runtime": {
@@ -1408,6 +1441,7 @@
         "options": "לא ניתן לשמור אפשרויות עבור {{name}}: {{error}}",
         "deleteData": "לא ניתן למחוק נתונים עבור {{name}}: {{error}}",
         "managedByServer": "שולחן העבודה הזה מקושר לשרת, שקובע את התוספים שלו.",
+        "defaultLook": "{{name}} הוא המראה המוגדר כברירת מחדל, כך שהוא יכול להיכבה או להחליף אך לא להסיר.",
         "hasDependents": "{{name}} נדרש על ידי {{list}}. כבה אותם או הסר אותם קודם.",
         "missingDependencies": "{{name}} זקוק ל-{{list}}, שלא מותקן.",
         "consentChanged": "מה שהתוסף הזה מבקש השתנה מאז שביצעת בדיקה. בדוק את הרשימה שוב.",
@@ -1481,7 +1515,6 @@
       "noServerAccess": "אין גישה לשרתים שלך",
       "searchInstalled": "חפש בהתקנים",
       "searchPlugins": "חפש תוספים",
-      "allCategories": "הכל",
       "nothingMatches": "אין תוצאות תואמות.",
       "noneInstalled": "אין תוספים מותקנים עדיין. דפדף כדי להוסיף כמה.",
       "nothingHere": "אין כאן כלום.",
@@ -1575,7 +1608,45 @@
       "documentation": "תיעוד",
       "envVars": "משתני סביבה",
       "envRequired": "נדרש",
-      "envDefault": "ברירת מחדל: {{value}}"
+      "envDefault": "ברירת מחדל: {{value}}",
+      "kinds": {
+        "layouts": "פריסות",
+        "themes": "ערכות נושא",
+        "tabs": "לשוניות",
+        "panels": "לוחות צד",
+        "dashboardCards": "כרטיסי לוח בקרה",
+        "protocols": "סוגי חיבור",
+        "auth": "שיטות כניסה",
+        "actions": "פעולות",
+        "hostCapability": "הגדרות מארח"
+      },
+      "filters": {
+        "type": "סוג",
+        "allTypes": "כל הסוגים",
+        "category": "קטגוריה",
+        "allCategories": "כל הקטגוריות",
+        "results_one": "{{count}} תוסף",
+        "results_two": "{{count}} תוספים",
+        "results_other": "{{count}} תוספים",
+        "remove": "הסר מסנן {{name}}",
+        "clear": "נקה מסננים",
+        "button": "מסננים",
+        "buttonCount": "מסננים ({{count}})"
+      },
+      "pager": {
+        "range": "{{from}}-{{to}} מתוך {{total}}",
+        "page": "עמוד {{page}} מתוך {{pages}}",
+        "previous": "עמוד קודם",
+        "next": "עמוד הבא",
+        "perPage": "{{count}} בעמוד",
+        "perPageLabel": "תוספים בעמוד"
+      },
+      "showUnsupportedHint": "אלה מופיעים אך אין גרסה שרצה על גרסה זו עדיין. עדכן את Termix כדי להתקין אותם.",
+      "unsupported": "דורש Termix חדש יותר",
+      "unsupportedHint": "אין גרסה של תוסף זה שרצה על גרסה זו של Termix. עדכן את Termix כדי להתקין אותו.",
+      "needsTermix": "דורש Termix {{range}}",
+      "showUnsupported": "הצג לא נתמך ({{count}})",
+      "showMore": "הצג עוד {{count}} (נשארו {{total}})"
     }
   },
   "settings": {
@@ -1590,92 +1661,6 @@
     "sudoHint": "הגדר סיסמת sudo עבור מארח זה בעורך המארחים כדי לאפשר פעולות מיוחסות.",
     "noData": "אין נתונים",
     "filter": "סנן..."
-  },
-  "sync": {
-    "minutesAgo_one": "לפני {{count}} דקה",
-    "minutesAgo_two": "לפני {{count}} דקות",
-    "minutesAgo_other": "לפני {{count}} דקות",
-    "hoursAgo_one": "לפני {{count}} שעה",
-    "hoursAgo_two": "לפני {{count}} שעות",
-    "hoursAgo_other": "לפני {{count}} שעות",
-    "pending_one": "שינוי אחד ממתין לסנכרון",
-    "pending_two": "{{count}} שינויים ממתינים לסנכרון",
-    "pending_other": "{{count}} שינויים ממתינים לסנכרון",
-    "proxy": {
-      "headersTitle": "כותרות נוספות",
-      "headersHint": "נשלח עם כל בקשה לשרת, למשל אסימון שירות של Cloudflare Access.",
-      "headerName": "שם כותרת",
-      "headerValue": "ערך",
-      "savedValue": "נשמר, הקלד כדי לשנות",
-      "addHeader": "הוסף כותרת",
-      "removeHeader": "הסר כותרת",
-      "basicAuthTitle": "שם משתמש וסיסמה",
-      "basicAuthHint": "לפרוקסי ששואל שם משתמש וסיסמה לפני Termix.",
-      "username": "שם משתמש",
-      "password": "סיסמה",
-      "allowInvalidCertificate": "לסמוך על תעודה עצמית",
-      "allowInvalidCertificateHint": "רק לשרת שלך, כשהתעודה שלו לא מגיעה מרשות מוכרת."
-    },
-    "problems": {
-      "invalidUrl": "זה לא נראה כמו כתובת אינטרנט.",
-      "unreachable": "לא ניתן להגיע לשרת. בדוק את הכתובת וודא שהשרת פועל.",
-      "unreachableWithReason": "לא ניתן להגיע לשרת: {{reason}}",
-      "tlsUntrusted": "תעודת השרת אינה מאומתת. אם זה שרת שלך עם תעודה עצמאית, הפעל את האפשרות למטה.",
-      "basicAuthRequired": "משהו לפני השרת מבקש שם משתמש וסיסמה. הזן אותם למטה.",
-      "proxyLogin": "דף התחברות או פרוקסי ענו במקום Termix. הוסף את הכותרות הנדרשות למטה, או בדוק את הכתובת.",
-      "notTermix": "אין שרת Termix בכתובת זו. אם הוא פועל תחת נתיב, כלול אותו, כמו https://example.com/termix.",
-      "versionMismatch": "השרת הזה מפעיל גרסה ישנה יותר של Termix. עדכן אותו ל-2.9 או חדש יותר כדי לקשר.",
-      "differentAccount": "התחברת לחשבון אחר. התחבר לחשבון שמכשיר זה מקושר אליו, או נתק קודם."
-    },
-    "wizard": {
-      "title": "קשר לשרת Termix",
-      "reloginTitle": "התחבר שוב",
-      "savedServers": "שרתים אחרונים",
-      "removeServer": "הסר מהרשימה",
-      "serverDescription": "הזן את הכתובת שבה אתה משתמש לפתיחת Termix בדפדפן שלך.",
-      "signinDescription": "התחבר ל-{{url}}",
-      "chooseDescription": "למכשיר הזה כבר יש נתונים. מה צריך לקרות להם?",
-      "finishingDescription": "מקשר את המכשיר הזה.",
-      "serverUrl": "כתובת שרת",
-      "serverUrlHint": "למשל https://termix.example.com",
-      "showProxySettings": "הגדרות פרוקסי הפוך",
-      "hideProxySettings": "הסתר הגדרות פרוקסי הפוך",
-      "continue": "המשך",
-      "back": "חזור",
-      "mergeTitle": "הוסף לחשבון שלי",
-      "mergeBody_one": "הפריט במכשיר הזה יתווסף לחשבון שלך. פריטים שכבר יש לחשבון שלך יישארו כמו שהם בשרת.",
-      "mergeBody_two": "שני הפריטים במכשיר הזה יתווספו לחשבון שלך. פריטים שכבר יש לחשבון שלך יישארו כמו שהם בשרת.",
-      "mergeBody_other": "ה-{{count}} פריטים במכשיר הזה יתווספו לחשבון שלך. פריטים שכבר יש לחשבון שלך יישארו כמו שהם בשרת.",
-      "replaceTitle": "החלף עם החשבון שלי",
-      "replaceBody_one": "הפריט במכשיר הזה יוסר, והמכשיר הזה ייקח הכל מהחשבון שלך. מארחים שנשמרו רק במכשיר הזה יישארו.",
-      "replaceBody_two": "שני הפריטים במכשיר הזה יוסרו, והמכשיר הזה ייקח הכל מהחשבון שלך. מארחים שנשמרו רק במכשיר הזה יישארו.",
-      "replaceBody_other": "ה-{{count}} פריטים במכשיר הזה יוסרו, והמכשיר הזה ייקח הכל מהחשבון שלך. מארחים שנשמרו רק במכשיר הזה יישארו.",
-      "link": "קשר",
-      "linking": "מקשר ומבצע את הסנכרון הראשון...",
-      "linked": "מקושר. הנתונים שלך מסונכרנים כעת.",
-      "signedInAgain": "התחבר. הסנכרון פועל שוב."
-    },
-    "entities": {
-      "hosts": "מארחים",
-      "sshCredentials": "פרטי התחברות",
-      "sshFolders": "תיקיות",
-      "userPreferences": "העדפות",
-      "pluginUserSettings": "הגדרות תוספים",
-      "sharedHosts": "מארחים ששיתפו איתך",
-      "sharedCredentials": "פרטי התחברות ששיתפו איתך",
-      "vaultProfiles": "פרופילי Vault",
-      "snippetFolders": "תיקיות קטעי קוד",
-      "snippets": "קטעי קוד",
-      "dashboardServiceLinks": "קישורי שירותים",
-      "homepageItems": "פריטי דף הבית",
-      "networkTopology": "מפת רשת",
-      "workspaces": "מרחבי עבודה",
-      "hostDefaults": "הגדרות ברירת מחדל למארחים",
-      "hostDefaultsAdmin": "הגדרות ברירת מחדל למארחים בשרת",
-      "aiProviders": "ספקי AI",
-      "homepageLayouts": "פריסות דף הבית",
-      "accountProfile": "פרופיל חשבון"
-    }
   },
   "hostDefaults": {
     "source": {

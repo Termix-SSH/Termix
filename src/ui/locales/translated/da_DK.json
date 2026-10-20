@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "Nogle plugins kunne ikke ændres. Du kan rette dem senere fra Plugins-fanen. Tryk på Næste for at fortsætte.",
     "pluginsApplyFailed": "Dine valg kunne ikke gemmes. Prøv igen, eller fortsæt og ændr dem senere fra Plugins-fanen.",
     "pluginsLoadFailed": "Pluginlisten kunne ikke indlæses. Du kan vælge plugins senere fra Plugins-fanen.",
-    "presetTitle": "Hvor meget vil du have på skærmen?",
-    "presetIntro": "Vælg, hvor meget der vises på skærmen.",
-    "presetChangeLater": "Du kan skifte forudindstillinger eller ændre enhver enkelt indstilling senere i Indstillinger under Grænseflade.",
-    "appearanceTitle": "Gør det dit eget",
-    "appearanceIntro": "Vælg et tema, en accentfarve, en skrifttype og dit sprog. Ændringer vises med det samme, og du kan ændre dem senere i Indstillinger.",
     "securityTitle": "Sikr din konto",
     "securityIntro": "Tilføj en passkey eller en autentifikator-app til din konto. Du kan også gøre dette senere i Indstillinger under Sikkerhed.",
-    "desktopTitle": "Hvordan vil du bruge Termix?",
-    "desktopBody": "Du kan ændre dette når som helst fra Sync i sidebjælken.",
-    "desktopLocalTitle": "Kun på denne enhed",
-    "desktopLocalBody": "Alt gemmes her. Intet skal opsættes.",
-    "desktopLinkTitle": "Med min Termix-server",
-    "desktopLinkBody": "Log ind på din server for at bruge de samme værter og indstillinger på alle enheder.",
-    "desktopLinked": "Linket til {{server}}",
     "pluginsDocsLink": "Læs om hver enkelt"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} er klar til installation",
     "readyHint": "Den installeres næste gang Termix genstartes."
   },
+  "companion": {
+    "close": "Luk panel",
+    "moveSide": "Flyt panel",
+    "resize": "Ændr størrelse på panel"
+  },
   "nav": {
     "home": "Hjem",
     "terminal": "Terminal",
@@ -257,7 +250,6 @@
     "hosts": "Værter",
     "credentials": "Legitimationsoplysninger",
     "connections": "Forbindelser",
-    "sync": "Synkroniser",
     "reconnectDisconnectedTerminals": "Genopret alle afbrudte terminaler",
     "reconnectingTerminals_one": "Genopretter {{count}} terminal",
     "reconnectingTerminals_other": "Genopretter {{count}} terminaler",
@@ -279,10 +271,7 @@
     "retry": "Prøv igen",
     "refresh": "Opdater",
     "optional": "Valgfrit",
-    "downloadSample": "Download eksempel",
     "failedToDeleteHost": "Kunne ikke slette {{name}}",
-    "importSkipExisting": "Importer (spring eksisterende over)",
-    "importSSHConfig": "Importer fra SSH-konfiguration",
     "connectionDetails": "Forbindelsesdetaljer",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -501,10 +490,7 @@
     "noFolder": "(Ingen mappe)",
     "deleteSelected": "Slet",
     "exitSelection": "Afslut markering",
-    "importSkip": "Importer (spring eksisterende over)",
-    "importOverwrite": "Importer (overskriv)",
     "collapseBtn": "Skjul",
-    "importExportBtn": "Importer / Eksporter",
     "hostStatusesRefreshed": "Værtstatusser opdateret",
     "failedToRefreshHosts": "Kunne ikke opdatere værter",
     "movedHostTo": "Flyttet {{host}} til \"{{folder}}\"",
@@ -559,6 +545,9 @@
     "deleteFolderConfirm_one": "Slet \"{{name}}\" og dens {{count}} vært? Dette kan ikke fortrydes.",
     "deleteFolderConfirm_other": "Slet \"{{name}}\" og dens {{count}} værter? Dette kan ikke fortrydes.",
     "failedToMoveHosts": "Kunne ikke flytte værter",
+    "managedBanner": "Denne vært styres af {{plugin}}. Ændr den der. Du kan stadig fastgøre og omorganisere den.",
+    "managedTooltip": "Styres af {{plugin}}",
+    "addBlocked": "Værter styres af {{plugin}}, så nye værter kan ikke tilføjes her.",
     "failedToReorder": "Kunne ikke omorganisere",
     "expandAll": "Udvid alle mapper",
     "collapseAll": "Skjul alle mapper",
@@ -669,35 +658,6 @@
     "addCredentialBtn2": "Tilføj legitimationsoplysninger",
     "checkingHostStatuses": "Tjekker værtstatus...",
     "pinnedSection": "Fastgjort",
-    "hostsExported": "Værter eksporteret succesfuldt",
-    "export": {
-      "menuItem": "Eksportér...",
-      "title": "Eksportér værter",
-      "scope": "Omfang",
-      "scopeAll": "Alle",
-      "scopeSelected": "Valgte",
-      "searchHosts": "Søg i værter...",
-      "include": "Inkluder",
-      "groupConnection": "Forbindelse",
-      "groupCredentials": "Legitimationsoplysninger",
-      "groupNotes": "Noter",
-      "groupTags": "Tags & fastgørelse",
-      "groupProxy": "Proxy",
-      "groupJumpHosts": "Jump hosts",
-      "groupFeatureFlags": "Plugin-indstillinger",
-      "groupAdvanced": "Avanceret konfiguration",
-      "preview": "Forhåndsvisning",
-      "moreHosts_one": "... {{count}} mere vært",
-      "moreHosts_other": "... {{count}} flere værter",
-      "summary": "{{selected}} af {{total}} værter",
-      "credentialsIncluded": "legitimationsoplysninger inkluderet",
-      "credentialsExcluded": "legitimationsoplysninger ekskluderet",
-      "noneSelected": "Ingen værter valgt",
-      "cancel": "Annuller",
-      "confirm": "Eksportér",
-      "fetchFailed": "Kunne ikke indlæse værter til eksport",
-      "bulkButton": "Eksportér"
-    },
     "sampleDownloaded": "Eksempelfil downloadet",
     "failedToDeleteCredential2": "Kunne ikke slette legitimationsoplysninger",
     "noFolderOption": "(Ingen mappe)",
@@ -860,11 +820,7 @@
     "editorUpdate": "Opdater vært",
     "editorAdd": "Tilføj vært",
     "speedSearch": "Søg i værter. Piltaster til valg, Enter til forbindelse, Esc til lukning",
-    "speedSearchList": "Værtliste. Skriv eller tryk / for at søge.",
-    "importNoHosts": "Ingen værter fundet i filen",
-    "importTooMany": "Du kan importere op til {{max}} værter ad gangen",
-    "importSummary": "Import fuldført: {{imported}} importeret, {{updated}} opdateret, {{failed}} fejlet",
-    "importHostsFailed": "Kunne ikke importere værter"
+    "speedSearchList": "Værtliste. Skriv eller tryk / for at søge."
   },
   "splitScreen": {
     "title": "Delt skærm",
@@ -1115,15 +1071,55 @@
         "colorPickerTooltip": "Åbn farvevælger",
         "themeSystem": "System",
         "themeLight": "Lys",
-        "themeDark": "Mørk",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "Mørk"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "Hvordan hele appen er indrettet. Temaer og layouts kommer fra plugins.",
+    "defaultsLabel": "Standard for alle",
+    "defaultsHint": "Hvad folk ser, indtil de vælger deres eget layout eller tema.",
+    "followDefault": "Brug standardindstillingen",
+    "defaultSaved": "Standardudseende gemt",
+    "saveFailed": "Kunne ikke gemme udseendet",
+    "repair": {
+      "title": "Dette layout kunne ikke vises",
+      "safeTitle": "Sikker tilstand",
+      "layout": "Layout",
+      "plugin": "Plugin",
+      "reason": "Årsag",
+      "error": "Fejl",
+      "noError": "Ingen fejlmeddelelse.",
+      "copy": "Kopiér",
+      "copied": "Kopieret",
+      "copyFailed": "Kunne ikke kopiere detaljerne",
+      "retry": "Prøv igen",
+      "reset": "Nulstil til standardudseende",
+      "resetEveryone": "Nulstil standardindstillingen for alle",
+      "update": "Opdater {{name}} til {{version}}",
+      "disable": "Sluk {{name}}",
+      "install": "Find layouts og temaer",
+      "installTitle": "Layouts og temaer",
+      "installButton": "Installer",
+      "nothingToInstall": "Der er ikke andre layouts eller temaer tilgængelige lige nu.",
+      "registryUnreachable": "Plugin-registret kunne ikke nås.",
+      "askAdmin": "Bed en administrator om at opdatere eller reparere dette layout. Du kan skifte til et andet layout eller tema for dig selv nedenfor.",
+      "switchLayout": "Skift layout",
+      "switchTheme": "Skift tema",
+      "saveFailed": "Kunne ikke gemme dit valg",
+      "reasons": {
+        "safe-url": "Adressen bad om sikker tilstand. Vælg et layout nedenfor, eller fjern ?safe-layout=1 fra adressen.",
+        "safe-env": "Serveren er startet med TERMIX_SAFE_LAYOUT, så alle ser denne skærm, indtil den fjernes.",
+        "missing": "Intet installeret plugin leverer dette layout.",
+        "disabled": "Pluginet, der leverer dette layout, er slukket.",
+        "blocked": "Pluginet, der leverer dette layout, venter på noget, det har brug for.",
+        "incompatible": "Pluginet, der leverer dette layout, fungerer ikke med denne version af Termix.",
+        "failed": "Layoutet kunne ikke starte.",
+        "crashed": "Layoutet kørte to gange i jorden, mens appen blev tegnet."
+      },
+      "noLayout": "Intet layout er indstillet",
+      "restore": "Gendan den medfølgende {{name}}",
+      "restoreFailed": "Kunne ikke gendanne den medfølgende kopi"
     }
   },
   "plugins": {
@@ -1148,6 +1144,18 @@
         "title": "Håndter login",
         "consequence": "Den kan tilføje en loginmetode, en anden faktor eller en SSH-login-type."
       },
+      "auth:policy": {
+        "title": "Indstil loginsregler",
+        "consequence": "Det kan logge folk ud, når de er inaktive, begrænse sessionens længde, slukke for \"Husk mig\" og kræve en anden faktor."
+      },
+      "ssh:transport": {
+        "title": "Vælg, hvordan værter nås",
+        "consequence": "Det kan bære SSH-forbindelsen til en vært over sin egen rute, så det ser alt, der sendes til og fra disse værter, inklusive adgangskoder."
+      },
+      "sync:provide": {
+        "title": "Kør synkronisering",
+        "consequence": "Det kan besvare alle synkroniseringsanmodninger, så det ser de data, som enheder og servere synkroniserer."
+      },
       "system:tls": {
         "title": "Administrer certifikater",
         "consequence": "Den kan erstatte det certifikat, Termix serverer over HTTPS, og besvare domænekontroller fra certifikatautoriteter."
@@ -1155,6 +1163,10 @@
       "device:serial": {
         "title": "Adgang til serielle og USB-enheder",
         "consequence": "Den kan åbne en fysisk seriell port på maskinen, der kører Termix."
+      },
+      "hosts:export": {
+        "title": "Eksportér værter med deres hemmeligheder",
+        "consequence": "Kan læse dine værter i fuld udstrækning, inklusive gemte adgangskoder og nøgler, og udlevere dem. Hver eksport skrives til revisionsloggen."
       },
       "hosts:write": {
         "title": "Opret og ændre værter",
@@ -1200,9 +1212,29 @@
         "title": "Læs revisionsloggen",
         "consequence": "Den kan se, hvem der gjorde hvad og hvornår."
       },
+      "network:probe": {
+        "title": "Tjek, om porte svarer",
+        "consequence": "Kan åbne en simpel forbindelse til enhver adresse fra serveren for at se, om den er tilgængelig."
+      },
+      "hosts:status-provide": {
+        "title": "Lever værstatus",
+        "consequence": "Bliver kilden til de online- og offline-prikker for hver vært."
+      },
+      "hosts:activity-provide": {
+        "title": "Gem seneste aktivitet",
+        "consequence": "Bliver lageret for den seneste aktivitetsliste for hver bruger."
+      },
+      "hosts:lock": {
+        "title": "Administrer værter som skrivebeskyttet",
+        "consequence": "Værter, den administrerer, kan ikke redigeres, slettes eller deles videre af andre."
+      },
       "desktop:window": {
         "title": "Åbn skrivebordsvinduer",
         "consequence": "Kun i Termix-skivebordsappen."
+      },
+      "desktop:local": {
+        "title": "Brug denne computer",
+        "consequence": "Kan læse og ændre filer, køre en shell og åbne lokale porte på denne computer. Kun i Termix desktop-appen."
       },
       "users:impersonate": {
         "title": "Udfør som andre brugere",
@@ -1243,6 +1275,14 @@
       "ui:surface": {
         "title": "Tilføje sine egne skærme",
         "consequence": "Faner, paneler og indstillinger, du kan skjule senere."
+      },
+      "ui:layout": {
+        "title": "Erstat hele appens layout",
+        "consequence": "Når valgt, tegner dens kode hver skærm, inklusive dine terminaler og indstillinger."
+      },
+      "ui:theme": {
+        "title": "Tilføj farvetemaer",
+        "consequence": "Kun farver og stilarter. Der køres ingen kode for et tema."
       }
     },
     "runtime": {
@@ -1372,6 +1412,7 @@
         "options": "Kunne ikke gemme indstillinger for {{name}}: {{error}}",
         "deleteData": "Kunne ikke slette data for {{name}}: {{error}}",
         "managedByServer": "Denne desktop er knyttet til en server, som bestemmer dens plugins.",
+        "defaultLook": "{{name}} er standardudseendet, så det kan slås fra eller skiftes, men ikke afinstalleres.",
         "hasDependents": "{{name}} er nødvendig for {{list}}. Sluk dem eller afinstaller dem først.",
         "missingDependencies": "{{name}} har brug for {{list}}, som ikke er installeret.",
         "consentChanged": "Det, dette plugin anmoder om, er ændret siden du kiggede. Tjek listen igen.",
@@ -1441,7 +1482,6 @@
       "noServerAccess": "Ingen adgang til dine servere",
       "searchInstalled": "Søg i installerede",
       "searchPlugins": "Søg i plugins",
-      "allCategories": "Alle",
       "nothingMatches": "Intet matcher dette.",
       "noneInstalled": "Ingen plugins er installeret endnu. Gennemse for at tilføje nogle.",
       "nothingHere": "Intet her.",
@@ -1531,7 +1571,44 @@
       "documentation": "Dokumentation",
       "envVars": "Miljøvariabler",
       "envRequired": "Påkrævet",
-      "envDefault": "Standard: {{value}}"
+      "envDefault": "Standard: {{value}}",
+      "kinds": {
+        "layouts": "Layouts",
+        "themes": "Temaer",
+        "tabs": "Faner",
+        "panels": "Sidepaneler",
+        "dashboardCards": "Dashboard-kort",
+        "protocols": "Forbindelsestyper",
+        "auth": "Login-metoder",
+        "actions": "Handlinger",
+        "hostCapability": "Værtsindstillinger"
+      },
+      "filters": {
+        "type": "Type",
+        "allTypes": "Alle typer",
+        "category": "Kategori",
+        "allCategories": "Alle kategorier",
+        "results_one": "{{count}} plugin",
+        "results_other": "{{count}} plugins",
+        "remove": "Fjern filter {{name}}",
+        "clear": "Ryd filtre",
+        "button": "Filtre",
+        "buttonCount": "Filtre ({{count}})"
+      },
+      "pager": {
+        "range": "{{from}}-{{to}} af {{total}}",
+        "page": "Side {{page}} af {{pages}}",
+        "previous": "Forrige side",
+        "next": "Næste side",
+        "perPage": "{{count}} pr. side",
+        "perPageLabel": "Plugins pr. side"
+      },
+      "showUnsupportedHint": "Disse er opført, men der er endnu ingen udgivelse, der kører på denne version. Opdater Termix for at installere dem.",
+      "unsupported": "Kræver en nyere Termix",
+      "unsupportedHint": "Der er ingen udgivelse af dette plugin, der kører på denne version af Termix. Opdater Termix for at installere det.",
+      "needsTermix": "Kræver Termix {{range}}",
+      "showUnsupported": "Vis understøttet ({{count}})",
+      "showMore": "Vis {{count}} mere ({{total}} tilbage)"
     }
   },
   "settings": {
@@ -1546,87 +1623,6 @@
     "sudoHint": "Indstil et sudo-adgangskode for denne vært i værten-editoren for at aktivere privilegerede handlinger.",
     "noData": "Ingen data",
     "filter": "Filtrer..."
-  },
-  "sync": {
-    "minutesAgo_one": "{{count}} minut siden",
-    "minutesAgo_other": "{{count}} minutter siden",
-    "hoursAgo_one": "{{count}} time siden",
-    "hoursAgo_other": "{{count}} timer siden",
-    "pending_one": "{{count}} ændring venter på synkronisering",
-    "pending_other": "{{count}} ændringer venter på synkronisering",
-    "proxy": {
-      "headersTitle": "Ekstra headers",
-      "headersHint": "Sendes med hver anmodning til serveren, f.eks. en Cloudflare Access service-token.",
-      "headerName": "Header-navn",
-      "headerValue": "Værdi",
-      "savedValue": "Gemt, skriv for at ændre",
-      "addHeader": "Tilføj header",
-      "removeHeader": "Fjern header",
-      "basicAuthTitle": "Brugernavn og adgangskode",
-      "basicAuthHint": "Til en proxy, der beder om brugernavn og adgangskode før Termix.",
-      "username": "Brugernavn",
-      "password": "Adgangskode",
-      "allowInvalidCertificate": "Stol på et selvsigneret certifikat",
-      "allowInvalidCertificateHint": "Kun til din egen server, når dens certifikat ikke er fra en kendt autoritet."
-    },
-    "problems": {
-      "invalidUrl": "Det ligner ikke en webadresse.",
-      "unreachable": "Kunne ikke nå serveren. Tjek adressen og at serveren kører.",
-      "unreachableWithReason": "Kunne ikke nå serveren: {{reason}}",
-      "tlsUntrusted": "Servercertifikatet er ikke betroet. Hvis dette er din egen server med et selvsigneret certifikat, skal du slå indstillingen nedenfor til.",
-      "basicAuthRequired": "Noget foran serveren beder om et brugernavn og en adgangskode. Indtast dem nedenfor.",
-      "proxyLogin": "En login-side eller en proxy svarede i stedet for Termix. Tilføj de headers, den har brug for, nedenfor, eller tjek adressen.",
-      "notTermix": "Der er ingen Termix-server på den adresse. Hvis den kører under en sti, skal du inkludere den, f.eks. https://example.com/termix.",
-      "versionMismatch": "Den server kører en ældre version af Termix. Opdater den til 2.9 eller nyere for at linke.",
-      "differentAccount": "Du er logget ind på en anden konto. Log ind på den konto, denne enhed er linket til, eller fjern linket først."
-    },
-    "wizard": {
-      "title": "Link til en Termix-server",
-      "reloginTitle": "Log ind igen",
-      "savedServers": "Seneste servere",
-      "removeServer": "Fjern fra listen",
-      "serverDescription": "Indtast den adresse, du bruger til at åbne Termix i din browser.",
-      "signinDescription": "Log ind på {{url}}",
-      "chooseDescription": "Denne enhed har allerede data. Hvad skal der ske med dem?",
-      "finishingDescription": "Linker denne enhed.",
-      "serverUrl": "Serveradresse",
-      "serverUrlHint": "For eksempel https://termix.example.com",
-      "showProxySettings": "Indstillinger for reverse proxy",
-      "hideProxySettings": "Skjul indstillinger for reverse proxy",
-      "continue": "Fortsæt",
-      "back": "Tilbage",
-      "mergeTitle": "Tilføj det til min konto",
-      "mergeBody_one": "Elementet på denne enhed tilføjes til din konto. Elementer, din konto allerede har, forbliver som de er på serveren.",
-      "mergeBody_other": "De {{count}} elementer på denne enhed tilføjes til din konto. Elementer, din konto allerede har, forbliver som de er på serveren.",
-      "replaceTitle": "Erstat det med min konto",
-      "replaceBody_one": "Elementet på denne enhed fjernes, og denne enhed tager alt fra din konto. Værter, der kun er gemt på denne enhed, forbliver.",
-      "replaceBody_other": "De {{count}} elementer på denne enhed fjernes, og denne enhed tager alt fra din konto. Værter, der kun er gemt på denne enhed, forbliver.",
-      "link": "Link",
-      "linking": "Linker og kører den første synkronisering...",
-      "linked": "Linket. Dine data synkroniseres nu.",
-      "signedInAgain": "Logget ind. Synkroniseringen kører igen."
-    },
-    "entities": {
-      "hosts": "Værter",
-      "sshCredentials": "Legitimationsoplysninger",
-      "sshFolders": "Mapper",
-      "userPreferences": "Præferencer",
-      "pluginUserSettings": "Plugin-indstillinger",
-      "sharedHosts": "Værter delt med dig",
-      "sharedCredentials": "Legitimationsoplysninger delt med dig",
-      "vaultProfiles": "Vault-profiler",
-      "snippetFolders": "Snippet-mapper",
-      "snippets": "Snippets",
-      "dashboardServiceLinks": "Service-links",
-      "homepageItems": "Startside-elementer",
-      "networkTopology": "Netværkskort",
-      "workspaces": "Arbejdsområder",
-      "hostDefaults": "Standardindstillinger for værter",
-      "hostDefaultsAdmin": "Standardindstillinger for serverværter",
-      "aiProviders": "AI-leverandører",
-      "homepageLayouts": "Startside-layouts",
-      "accountProfile": "Kontoprofil"
-    }
   },
   "hostDefaults": {
     "source": {

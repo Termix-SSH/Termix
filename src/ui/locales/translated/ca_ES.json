@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "No s'han pogut canviar alguns complements. Pots corregir-ho més tard des de la pestanya de complements. Prem Següent per continuar.",
     "pluginsApplyFailed": "No s'han pogut desar les teves eleccions. Torna-ho a provar o continua i canvia-les més tard des de la pestanya de complements.",
     "pluginsLoadFailed": "No s'ha pogut carregar la llista de complements. Pots triar complements més tard des de la pestanya de complements.",
-    "presetTitle": "Quant de contingut vols a la pantalla?",
-    "presetIntro": "Tria quant de contingut es mostra a la pantalla.",
-    "presetChangeLater": "Pots canviar els predefinits o qualsevol configuració individual més tard a Configuració, sota Interfície.",
-    "appearanceTitle": "Fes-ho teu",
-    "appearanceIntro": "Tria un tema, un color d'accentuació, una tipografia i la teva llengua. Els canvis es mostren immediatament i els pots modificar més tard a Configuració.",
     "securityTitle": "Seguretat del teu compte",
     "securityIntro": "Afegeix una clau de pas o una aplicació d'autenticació al teu compte. També pots fer-ho més tard a Configuració, sota Seguretat.",
-    "desktopTitle": "Com vols fer servir Termix?",
-    "desktopBody": "Pots canviar-ho en qualsevol moment des de Sincronització a la barra lateral.",
-    "desktopLocalTitle": "Només en aquest dispositiu",
-    "desktopLocalBody": "Tot s'emmagatzema aquí. No cal configurar res.",
-    "desktopLinkTitle": "Amb el meu servidor Termix",
-    "desktopLinkBody": "Inicia la sessió al teu servidor per fer servir els mateixos amfitrions i configuracions en tots els dispositius.",
-    "desktopLinked": "Vinculat a {{server}}",
     "pluginsDocsLink": "Llegeix sobre cadascun"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} està llest per instal·lar-se",
     "readyHint": "S'instal·larà la propera vegada que reiniciïs Termix."
   },
+  "companion": {
+    "close": "Tanca el panell",
+    "moveSide": "Mou el panell",
+    "resize": "Redimensiona el panell"
+  },
   "nav": {
     "home": "Inici",
     "terminal": "Terminal",
@@ -257,7 +250,6 @@
     "hosts": "Amfitrions",
     "credentials": "Credencials",
     "connections": "Connexions",
-    "sync": "Sincronitzar",
     "reconnectDisconnectedTerminals": "Tornar a connectar tots els terminals desconnectats",
     "reconnectingTerminals_one": "Tornant a connectar {{count}} terminal",
     "reconnectingTerminals_many": "Tornant a connectar {{count}} terminals",
@@ -282,10 +274,7 @@
     "retry": "Tornar-ho a provar",
     "refresh": "Actualitzar",
     "optional": "Opcional",
-    "downloadSample": "Descarregar l'exemple",
     "failedToDeleteHost": "No s'ha pogut eliminar {{name}}",
-    "importSkipExisting": "Importar (ometre els existents)",
-    "importSSHConfig": "Importar des de la configuració SSH",
     "connectionDetails": "Detalls de la connexió",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -505,10 +494,7 @@
     "noFolder": "(Sense carpeta)",
     "deleteSelected": "Suprimeix",
     "exitSelection": "Sorteix de la selecció",
-    "importSkip": "Importa (omet els existents)",
-    "importOverwrite": "Importa (sobreescriu)",
     "collapseBtn": "Replega",
-    "importExportBtn": "Importa / Exporta",
     "hostStatusesRefreshed": "Estat dels hosts actualitzat",
     "failedToRefreshHosts": "No s'han pogut actualitzar els hosts",
     "movedHostTo": "S'ha mogut {{host}} a «{{folder}}»",
@@ -565,6 +551,9 @@
     "deleteFolderConfirm_many": "Voleu suprimir «{{name}}» i els seus {{count}} amfitrions? Aquesta acció no es pot desfer.",
     "deleteFolderConfirm_other": "Voleu suprimir «{{name}}» i el seu {{count}} amfitrió? Aquesta acció no es pot desfer.",
     "failedToMoveHosts": "No s'han pogut moure els amfitrions",
+    "managedBanner": "Aquest host està gestionat per {{plugin}}. Fes-hi els canvis allà. Encara pots fixar-lo i reordenar-lo.",
+    "managedTooltip": "Gestionat per {{plugin}}",
+    "addBlocked": "Els hosts estan gestionats per {{plugin}}, per tant no es poden afegir hosts nous aquí.",
     "failedToReorder": "No s'ha pogut reordenar",
     "expandAll": "Expandeix totes les carpetes",
     "collapseAll": "Redueix totes les carpetes",
@@ -676,36 +665,6 @@
     "addCredentialBtn2": "Afegeix una credencial",
     "checkingHostStatuses": "Comprovant l'estat dels hosts...",
     "pinnedSection": "Fixats",
-    "hostsExported": "Hosts exportats correctament",
-    "export": {
-      "menuItem": "Exporta...",
-      "title": "Exporta hosts",
-      "scope": "Àmbit",
-      "scopeAll": "Tots",
-      "scopeSelected": "Seleccionats",
-      "searchHosts": "Cerca hosts...",
-      "include": "Inclou",
-      "groupConnection": "Connexió",
-      "groupCredentials": "Credencials",
-      "groupNotes": "Notes",
-      "groupTags": "Etiquetes i fixat",
-      "groupProxy": "Proxy",
-      "groupJumpHosts": "Hosts de salt",
-      "groupFeatureFlags": "Configuració dels plugins",
-      "groupAdvanced": "Configuració avançada",
-      "preview": "Vista prèvia",
-      "moreHosts_one": "... {{count}} amfitrió més",
-      "moreHosts_many": "... {{count}} amfitrions més",
-      "moreHosts_other": "... {{count}} amfitrió més",
-      "summary": "{{selected}} de {{total}} hosts",
-      "credentialsIncluded": "credencials incloses",
-      "credentialsExcluded": "credencials excloses",
-      "noneSelected": "Cap host seleccionat",
-      "cancel": "Cancel·la",
-      "confirm": "Exporta",
-      "fetchFailed": "No s'han pogut carregar els hosts per a l'exportació",
-      "bulkButton": "Exporta"
-    },
     "sampleDownloaded": "Fitxer d'exemple descarregat",
     "failedToDeleteCredential2": "No s'ha pogut eliminar la credencial",
     "noFolderOption": "(Sense carpeta)",
@@ -873,11 +832,7 @@
     "editorUpdate": "Actualitzar host",
     "editorAdd": "Afegir host",
     "speedSearch": "Cercar hosts. Fletxes per seleccionar, Retorn per connectar, Esc per tancar",
-    "speedSearchList": "Llista d'hosts. Escriviu o premeu / per cercar.",
-    "importNoHosts": "No s'han trobat hosts al fitxer",
-    "importTooMany": "Podeu importar fins a {{max}} hosts alhora",
-    "importSummary": "Importació completada: {{imported}} importats, {{updated}} actualitzats, {{failed}} fallits",
-    "importHostsFailed": "No s'han pogut importar els hosts"
+    "speedSearchList": "Llista d'hosts. Escriviu o premeu / per cercar."
   },
   "splitScreen": {
     "title": "Pantalla dividida",
@@ -1079,13 +1034,9 @@
   },
   "admin": {
     "usersCount_one": "{{count}} usuari",
-    "usersCount_many": "{{count}} usuaris",
     "rolesCount_one": "{{count}} rol",
-    "rolesCount_many": "{{count}} rols",
     "apiKeysCount_one": "{{count}} clau",
-    "apiKeysCount_many": "{{count}} claus",
     "sessionsActive_one": "{{count}} actiu",
-    "sessionsActive_many": "{{count}} actius",
     "hostsCount_one": "{{count}} amfitrió",
     "hostsCount_many": "{{count}} amfitrions",
     "hostsCount_other": "{{count}} amfitrió",
@@ -1094,7 +1045,6 @@
     "credentialsCount_other": "{{count}} credencial",
     "rolePermissions": {
       "count_one": "{{count}} permís",
-      "count_many": "{{count}} permisos",
       "groups": {
         "hosts": "Amfitrions",
         "credentials": "Credencials",
@@ -1135,19 +1085,58 @@
         "interfaceFontDescription": "Canvia la font de la interfície de l'aplicació. Els perfils de terminal conserven la seva pròpia configuració de font.",
         "accentColorLabel": "Color d'accent",
         "apiKeyCount_one": "{{count}} clau",
-        "apiKeyCount_many": "{{count}} claus",
         "colorPickerTooltip": "Obre el selector de color",
         "themeSystem": "Sistema",
         "themeLight": "Clar",
-        "themeDark": "Fosc",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "Fosc"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "Com s'organitza tota l'aplicació. Els temes i els dissenys provenen de connectors.",
+    "defaultsLabel": "Predeterminat per a tothom",
+    "defaultsHint": "El que veuran les persones fins que triïn el seu propi disseny o tema.",
+    "followDefault": "Utilitza el predeterminat",
+    "defaultSaved": "Aparença predeterminada desada",
+    "saveFailed": "No s'ha pogut desar l'aparença",
+    "repair": {
+      "title": "No s'ha pogut mostrar aquest disseny",
+      "safeTitle": "Mode segur",
+      "layout": "Disseny",
+      "plugin": "Connector",
+      "reason": "Motiu",
+      "error": "Error",
+      "noError": "No hi ha missatge d'error.",
+      "copy": "Copia",
+      "copied": "Copiat",
+      "copyFailed": "No s'han pogut copiar els detalls",
+      "retry": "Torna-ho a provar",
+      "reset": "Restableix l'aparença predeterminada",
+      "resetEveryone": "Restableix el predeterminat per a tothom",
+      "update": "Actualitza {{name}} a {{version}}",
+      "disable": "Desactiva {{name}}",
+      "install": "Cerca dissenys i temes",
+      "installTitle": "Disseny i temes",
+      "installButton": "Instal·la",
+      "nothingToInstall": "Actualment no hi ha altres dissenys o temes disponibles.",
+      "registryUnreachable": "No s'ha pogut accedir al registre de connectors.",
+      "askAdmin": "Demana a un administrador que actualitzi o corregeixi aquest disseny. A continuació pots canviar a un altre disseny o tema per a tu mateix.",
+      "switchLayout": "Canvia el disseny",
+      "switchTheme": "Canvia el tema",
+      "saveFailed": "No s'ha pogut desar la teva elecció",
+      "reasons": {
+        "safe-url": "L'adreça ha sol·licitat el mode segur. Tria un disseny a continuació o elimina ?safe-layout=1 de l'adreça.",
+        "safe-env": "El servidor s'ha iniciat amb TERMIX_SAFE_LAYOUT, per tant tothom veurà aquesta pantalla fins que s'elimini.",
+        "missing": "Cap connector instal·lat proporciona aquest disseny.",
+        "disabled": "El connector que proporciona aquest disseny està desactivat.",
+        "blocked": "El connector que proporciona aquest disseny està esperant alguna cosa que necessita.",
+        "incompatible": "El connector que proporciona aquest disseny no funciona amb aquesta versió de Termix.",
+        "failed": "El disseny no s'ha pogut iniciar.",
+        "crashed": "El disseny s'ha bloquejat dues vegades mentre dibuixava l'aplicació."
+      },
+      "noLayout": "No s'ha configurat cap disseny",
+      "restore": "Restaura {{name}} inclòs",
+      "restoreFailed": "No s'ha pogut restaurar la còpia inclosa"
     }
   },
   "plugins": {
@@ -1172,6 +1161,18 @@
         "title": "Gestionar l'inici de sessió",
         "consequence": "Pot afegir un mètode d'inici de sessió, un segon factor o un tipus d'inici de sessió SSH."
       },
+      "auth:policy": {
+        "title": "Estableix les regles d'inici de sessió",
+        "consequence": "Pot tancar la sessió de les persones quan estan inactives, limitar la durada de la sessió, desactivar l'opció «Recorda'm» i exigir un segon factor."
+      },
+      "ssh:transport": {
+        "title": "Tria com s'hi accedeix als hosts",
+        "consequence": "Pot transportar la connexió SSH a un host a través de la seva pròpia ruta, de manera que veu tot el que s'envia i rep d'aquests hosts, incloses les contrasenyes."
+      },
+      "sync:provide": {
+        "title": "Executa la sincronització",
+        "consequence": "Pot respondre a totes les sol·licituds de sincronització, de manera que veu les dades que sincronitzen els dispositius i els servidors."
+      },
       "system:tls": {
         "title": "Gestionar certificats",
         "consequence": "Pot substituir el certificat que Termix serveix per HTTPS i respondre a les comprovacions de domini de les autoritats de certificació."
@@ -1179,6 +1180,10 @@
       "device:serial": {
         "title": "Accedir a dispositius sèrie i USB",
         "consequence": "Pot obrir un port sèrie físic a l'ordinador que executa Termix."
+      },
+      "hosts:export": {
+        "title": "Exporta els hosts amb els seus secrets",
+        "consequence": "Pot llegir els teus hosts en tota la seva extensió, incloses les contrasenyes i les claus desades, i distribuir-los. Tota exportació s'escriu al registre d'auditoria."
       },
       "hosts:write": {
         "title": "Crear i modificar servidors",
@@ -1224,9 +1229,29 @@
         "title": "Llegir el registre d'auditoria",
         "consequence": "Pot veure qui ha fet què i quan."
       },
+      "network:probe": {
+        "title": "Comprova si els ports responen",
+        "consequence": "Pot obrir una connexió senzilla a qualsevol adreça des del servidor, per veure si és accessible."
+      },
+      "hosts:status-provide": {
+        "title": "Proporciona l'estat de l'host",
+        "consequence": "Esdevé la font dels punts en línia i fora de línia per a cada host."
+      },
+      "hosts:activity-provide": {
+        "title": "Emmagatzema l'activitat recent",
+        "consequence": "Esdevé l'emmagatzematge de la llista d'activitat recent de cada usuari."
+      },
+      "hosts:lock": {
+        "title": "Gestionar els amfitrions com a només lectura",
+        "consequence": "Els amfitrions que gestiona no es poden editar, suprimir ni tornar a compartir per ningú més."
+      },
       "desktop:window": {
         "title": "Obrir finestres d'escriptori",
         "consequence": "Només a l'aplicació d'escriptori de Termix."
+      },
+      "desktop:local": {
+        "title": "Utilitzar aquest ordinador",
+        "consequence": "Pot llegir i modificar fitxers, executar un shell i obrir ports locals en aquest ordinador. Només a l'aplicació d'escriptori de Termix."
       },
       "users:impersonate": {
         "title": "Actuar com a altres usuaris",
@@ -1267,6 +1292,14 @@
       "ui:surface": {
         "title": "Afegir les seves pròpies pantalles",
         "consequence": "Pestanyes, panells i configuració que pots amagar més endavant."
+      },
+      "ui:layout": {
+        "title": "Substituir la disposició completa de l'aplicació",
+        "consequence": "Quan s'escull, el seu codi dibuixa cada pantalla, inclosos els terminals i la configuració."
+      },
+      "ui:theme": {
+        "title": "Afegir temes de colors",
+        "consequence": "Només colors i estils. No s'executa cap codi per a un tema."
       }
     },
     "runtime": {
@@ -1408,6 +1441,7 @@
         "options": "No s'han pogut desar les opcions de {{name}}: {{error}}",
         "deleteData": "No s'han pogut eliminar les dades de {{name}}: {{error}}",
         "managedByServer": "Aquest escriptori està enllaçat a un servidor, que decideix els seus complements.",
+        "defaultLook": "{{name}} és l'aspecte predeterminat, per la qual cosa es pot desactivar o substituir, però no desinstal·lar.",
         "hasDependents": "{{name}} és necessari per a {{list}}. Desactiva'ls o desinstal·la'ls primer.",
         "missingDependencies": "{{name}} necessita {{list}}, que no està instal·lat.",
         "consentChanged": "El que demana aquest complement ha canviat des que ho vas consultar. Revisa la llista de nou.",
@@ -1481,7 +1515,6 @@
       "noServerAccess": "Sense accés als teus servidors",
       "searchInstalled": "Cercar entre els instal·lats",
       "searchPlugins": "Cercar complements",
-      "allCategories": "Tots",
       "nothingMatches": "Res no coincideix amb la cerca.",
       "noneInstalled": "Encara no tens cap complement instal·lat. Navega per afegir-ne alguns.",
       "nothingHere": "No hi ha res aquí.",
@@ -1575,7 +1608,45 @@
       "documentation": "Documentació",
       "envVars": "Variables d'entorn",
       "envRequired": "Obligatori",
-      "envDefault": "Per defecte: {{value}}"
+      "envDefault": "Per defecte: {{value}}",
+      "kinds": {
+        "layouts": "Disposicions",
+        "themes": "Temes",
+        "tabs": "Pestanyes",
+        "panels": "Panells de la barra lateral",
+        "dashboardCards": "Targetes del tauler de control",
+        "protocols": "Tipus de connexió",
+        "auth": "Mètodes d'inici de sessió",
+        "actions": "Accions",
+        "hostCapability": "Configuració de l'amfitrió"
+      },
+      "filters": {
+        "type": "Tipus",
+        "allTypes": "Tots els tipus",
+        "category": "Categoria",
+        "allCategories": "Totes les categories",
+        "results_one": "{{count}} complement",
+        "results_many": "{{count}} complements",
+        "results_other": "{{count}} complements",
+        "remove": "Eliminar el filtre {{name}}",
+        "clear": "Esborrar filtres",
+        "button": "Filtres",
+        "buttonCount": "Filtres ({{count}})"
+      },
+      "pager": {
+        "range": "{{from}}-{{to}} de {{total}}",
+        "page": "Pàgina {{page}} de {{pages}}",
+        "previous": "Pàgina anterior",
+        "next": "Pàgina següent",
+        "perPage": "{{count}} per pàgina",
+        "perPageLabel": "Complements per pàgina"
+      },
+      "showUnsupportedHint": "Aquests es llisten, però encara no hi ha cap versió que s'executi en aquesta versió. Actualitza Termix per instal·lar-los.",
+      "unsupported": "Cal una versió més recent de Termix",
+      "unsupportedHint": "Cap versió d'aquest complement s'executa en aquesta versió de Termix. Actualitza Termix per instal·lar-lo.",
+      "needsTermix": "Cal Termix {{range}}",
+      "showUnsupported": "Mostrar els no compatibles ({{count}})",
+      "showMore": "Mostrar {{count}} més ({{total}} restants)"
     }
   },
   "settings": {
@@ -1590,92 +1661,6 @@
     "sudoHint": "Estableix una contrasenya sudo per a aquest amfitrió a l'editor d'amfitrions per habilitar accions privilegiades.",
     "noData": "Sense dades",
     "filter": "Filtra..."
-  },
-  "sync": {
-    "minutesAgo_one": "fa {{count}} minut",
-    "minutesAgo_many": "fa {{count}} minuts",
-    "minutesAgo_other": "fa {{count}} minuts",
-    "hoursAgo_one": "fa {{count}} hora",
-    "hoursAgo_many": "fa {{count}} hores",
-    "hoursAgo_other": "fa {{count}} hores",
-    "pending_one": "{{count}} canvi pendent de sincronitzar",
-    "pending_many": "{{count}} canvis pendents de sincronitzar",
-    "pending_other": "{{count}} canvis pendents de sincronitzar",
-    "proxy": {
-      "headersTitle": "Encapçalaments addicionals",
-      "headersHint": "S'envien amb cada sol·licitud al servidor, per exemple, un testimoni de servei de Cloudflare Access.",
-      "headerName": "Nom de l'encapçalament",
-      "headerValue": "Valor",
-      "savedValue": "Desat, escriu per canviar",
-      "addHeader": "Afegeix encapçalament",
-      "removeHeader": "Elimina encapçalament",
-      "basicAuthTitle": "Nom d'usuari i contrasenya",
-      "basicAuthHint": "Per a un proxy que demana un nom d'usuari i contrasenya abans de Termix.",
-      "username": "Nom d'usuari",
-      "password": "Contrasenya",
-      "allowInvalidCertificate": "Confia en un certificat autofirmat",
-      "allowInvalidCertificateHint": "Només per al teu propi servidor, quan el seu certificat no prové d'una autoritat coneguda."
-    },
-    "problems": {
-      "invalidUrl": "Això no sembla una adreça web.",
-      "unreachable": "No s'ha pogut connectar al servidor. Comproveu l'adreça i que el servidor estigui en funcionament.",
-      "unreachableWithReason": "No s'ha pogut connectar al servidor: {{reason}}",
-      "tlsUntrusted": "El certificat del servidor no és de confiança. Si es tracta del vostre propi servidor amb un certificat autofirmat, activeu l'opció següent.",
-      "basicAuthRequired": "Alguna cosa davant del servidor demana un nom d'usuari i una contrasenya. Introduïu-los a continuació.",
-      "proxyLogin": "Una pàgina d'inici de sessió o un proxy ha respost en lloc de Termix. Afegiu els encapçalaments que necessita a continuació o comproveu l'adreça.",
-      "notTermix": "No hi ha cap servidor Termix en aquesta adreça. Si s'executa en una ruta, incloeu-la, com ara https://example.com/termix.",
-      "versionMismatch": "Aquest servidor executa una versió antiga de Termix. Actualitzeu-lo a la 2.9 o superior per enllaçar-lo.",
-      "differentAccount": "Heu iniciat sessió en un compte diferent. Inicieu sessió en el compte amb què està enllaçat aquest dispositiu o desenllaceu-lo primer."
-    },
-    "wizard": {
-      "title": "Enllaçar a un servidor Termix",
-      "reloginTitle": "Inicieu sessió de nou",
-      "savedServers": "Servidors recents",
-      "removeServer": "Eliminar de la llista",
-      "serverDescription": "Introduïu l'adreça que utilitzeu per obrir Termix al vostre navegador.",
-      "signinDescription": "Inicieu sessió a {{url}}",
-      "chooseDescription": "Aquest dispositiu ja té dades. Què s'ha de fer amb elles?",
-      "finishingDescription": "Vinculant aquest dispositiu.",
-      "serverUrl": "Adreça del servidor",
-      "serverUrlHint": "Per exemple, https://termix.example.com",
-      "showProxySettings": "Configuració del proxy invers",
-      "hideProxySettings": "Amaga la configuració del proxy invers",
-      "continue": "Continua",
-      "back": "Enrere",
-      "mergeTitle": "Afegeix-ho al meu compte",
-      "mergeBody_one": "L'element d'aquest dispositiu s'afegeix al teu compte. Els elements que el teu compte ja té es mantenen tal com són al servidor.",
-      "mergeBody_many": "Els {{count}} elements d'aquest dispositiu s'afegeixen al teu compte. Els elements que el teu compte ja té es mantenen tal com són al servidor.",
-      "mergeBody_other": "Els {{count}} elements d'aquest dispositiu s'afegeixen al teu compte. Els elements que el teu compte ja té es mantenen tal com són al servidor.",
-      "replaceTitle": "Substitueix-ho pel meu compte",
-      "replaceBody_one": "L'element d'aquest dispositiu s'elimina i aquest dispositiu pren tot del teu compte. Només es mantenen els amfitrions que es conserven només en aquest dispositiu.",
-      "replaceBody_many": "Els {{count}} elements d'aquest dispositiu s'eliminen i aquest dispositiu pren tot del teu compte. Només es mantenen els amfitrions que es conserven només en aquest dispositiu.",
-      "replaceBody_other": "Els {{count}} elements d'aquest dispositiu s'eliminen i aquest dispositiu pren tot del teu compte. Només es mantenen els amfitrions que es conserven només en aquest dispositiu.",
-      "link": "Vincula",
-      "linking": "Vinculant i executant la primera sincronització...",
-      "linked": "Vinculat. Les teves dades s'estan sincronitzant ara.",
-      "signedInAgain": "Iniciat la sessió. La sincronització s'ha tornat a executar."
-    },
-    "entities": {
-      "hosts": "Amfitrions",
-      "sshCredentials": "Credencials",
-      "sshFolders": "Carpetes",
-      "userPreferences": "Preferències",
-      "pluginUserSettings": "Configuració del complement",
-      "sharedHosts": "Amfitrions compartits amb tu",
-      "sharedCredentials": "Credencials compartides amb tu",
-      "vaultProfiles": "Perfils de Vault",
-      "snippetFolders": "Carpetes de fragments",
-      "snippets": "Fragments",
-      "dashboardServiceLinks": "Enllaços de servei",
-      "homepageItems": "Elements de la pàgina d'inici",
-      "networkTopology": "Mapa de xarxa",
-      "workspaces": "Espais de treball",
-      "hostDefaults": "Valors predeterminats de l'amfitrió",
-      "hostDefaultsAdmin": "Valors predeterminats de l'amfitrió del servidor",
-      "aiProviders": "Proveïdors d'IA",
-      "homepageLayouts": "Disseny de la pàgina d'inici",
-      "accountProfile": "Perfil del compte"
-    }
   },
   "hostDefaults": {
     "source": {

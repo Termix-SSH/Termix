@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "Nie udało się zmienić niektórych wtyczek. Możesz je naprawić później z karty Wtyczki. Naciśnij Dalej, aby kontynuować.",
     "pluginsApplyFailed": "Nie udało się zapisać wyborów. Spróbuj ponownie lub kontynuuj i zmień je później z karty Wtyczki.",
     "pluginsLoadFailed": "Nie udało się załadować listy wtyczek. Możesz wybrać wtyczki później z karty Wtyczki.",
-    "presetTitle": "Ile chcesz mieć na ekranie?",
-    "presetIntro": "Wybierz, ile ma być wyświetlanych na ekranie.",
-    "presetChangeLater": "Możesz przełączać profile lub zmieniać dowolne pojedyncze ustawienie później w Ustawieniach, w sekcji Interfejs.",
-    "appearanceTitle": "Dostosuj do siebie",
-    "appearanceIntro": "Wybierz motyw, kolor akcentu, czcionkę i język. Zmiany są widoczne natychmiast, a możesz je zmienić później w Ustawieniach.",
     "securityTitle": "Zabezpiecz swoje konto",
     "securityIntro": "Dodaj klucz dostępu lub aplikację uwierzytelniającą do swojego konta. Możesz to również zrobić później w Ustawieniach, w sekcji Bezpieczeństwo.",
-    "desktopTitle": "Jak chcesz korzystać z Termix?",
-    "desktopBody": "Możesz to zmienić w dowolnym momencie z Synchronizacji w pasku bocznym.",
-    "desktopLocalTitle": "Tylko na tym urządzeniu",
-    "desktopLocalBody": "Wszystko jest przechowywane tutaj. Nic do konfiguracji.",
-    "desktopLinkTitle": "Z moim serwerem Termix",
-    "desktopLinkBody": "Zaloguj się na swój serwer, aby korzystać z tych samych hostów i ustawień na każdym urządzeniu.",
-    "desktopLinked": "Połączono z {{server}}",
     "pluginsDocsLink": "Przeczytaj o każdej z nich"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} jest gotowy do instalacji",
     "readyHint": "Zostanie zainstalowany przy następnym ponownym uruchomieniu Termix."
   },
+  "companion": {
+    "close": "Zamknij panel",
+    "moveSide": "Przenieś panel",
+    "resize": "Zmień rozmiar panelu"
+  },
   "nav": {
     "home": "Strona główna",
     "terminal": "Terminal",
@@ -257,7 +250,6 @@
     "hosts": "Hosty",
     "credentials": "Poświadczenia",
     "connections": "Połączenia",
-    "sync": "Synchronizacja",
     "reconnectDisconnectedTerminals": "Połącz ponownie wszystkie rozłączone terminale",
     "reconnectingTerminals_one": "Ponowne łączenie {{count}} terminala",
     "reconnectingTerminals_few": "Ponowne łączenie {{count}} terminali",
@@ -285,10 +277,7 @@
     "retry": "Ponów próbę",
     "refresh": "Odśwież",
     "optional": "Opcjonalne",
-    "downloadSample": "Pobierz przykład",
     "failedToDeleteHost": "Nie udało się usunąć {{name}}",
-    "importSkipExisting": "Importuj (pomiń istniejące)",
-    "importSSHConfig": "Importuj z konfiguracji SSH",
     "connectionDetails": "Szczegóły połączenia",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -509,10 +498,7 @@
     "noFolder": "(Brak folderu)",
     "deleteSelected": "Usuń",
     "exitSelection": "Zakończ zaznaczanie",
-    "importSkip": "Importuj (pomiń istniejące)",
-    "importOverwrite": "Importuj (nadpisz)",
     "collapseBtn": "Zwiń",
-    "importExportBtn": "Importuj / Eksportuj",
     "hostStatusesRefreshed": "Statusy hostów zostały odświeżone",
     "failedToRefreshHosts": "Nie udało się odświeżyć hostów",
     "movedHostTo": "Przeniesiono {{host}} do \"{{folder}}\"",
@@ -571,6 +557,9 @@
     "deleteFolderConfirm_many": "Usunąć \"{{name}}\" i jego {{count}} hostów? Tej operacji nie można cofnąć.",
     "deleteFolderConfirm_other": "Usunąć \"{{name}}\" i jego {{count}} hosta? Tej operacji nie można cofnąć.",
     "failedToMoveHosts": "Nie udało się przenieść hostów",
+    "managedBanner": "Ten host jest zarządzany przez {{plugin}}. Zmień go tam. Możesz go nadal przypiąć i zmienić kolejność.",
+    "managedTooltip": "Zarządzane przez {{plugin}}",
+    "addBlocked": "Hosty są zarządzane przez {{plugin}}, więc nie można tutaj dodawać nowych hostów.",
     "failedToReorder": "Nie udało się zmienić kolejności",
     "expandAll": "Rozwiń wszystkie foldery",
     "collapseAll": "Zwiń wszystkie foldery",
@@ -683,37 +672,6 @@
     "addCredentialBtn2": "Dodaj dane logowania",
     "checkingHostStatuses": "Sprawdzanie statusów hostów...",
     "pinnedSection": "Przypięte",
-    "hostsExported": "Hosty wyeksportowane pomyślnie",
-    "export": {
-      "menuItem": "Eksportuj...",
-      "title": "Eksportuj hosty",
-      "scope": "Zakres",
-      "scopeAll": "Wszystkie",
-      "scopeSelected": "Zaznaczone",
-      "searchHosts": "Szukaj hostów...",
-      "include": "Uwzględnij",
-      "groupConnection": "Połączenie",
-      "groupCredentials": "Dane logowania",
-      "groupNotes": "Notatki",
-      "groupTags": "Tagi i przypięcie",
-      "groupProxy": "Proxy",
-      "groupJumpHosts": "Hosty przeskoku",
-      "groupFeatureFlags": "Ustawienia wtyczek",
-      "groupAdvanced": "Zaawansowana konfiguracja",
-      "preview": "Podgląd",
-      "moreHosts_one": "... {{count}} więcej hosta",
-      "moreHosts_few": "... {{count}} więcej hostów",
-      "moreHosts_many": "... {{count}} więcej hostów",
-      "moreHosts_other": "... {{count}} więcej hosta",
-      "summary": "{{selected}} z {{total}} hostów",
-      "credentialsIncluded": "uwzględniono dane logowania",
-      "credentialsExcluded": "pominięto dane logowania",
-      "noneSelected": "Nie zaznaczono żadnych hostów",
-      "cancel": "Anuluj",
-      "confirm": "Eksportuj",
-      "fetchFailed": "Nie udało się załadować hostów do eksportu",
-      "bulkButton": "Eksportuj"
-    },
     "sampleDownloaded": "Pobrano plik przykładowy",
     "failedToDeleteCredential2": "Nie udało się usunąć danych logowania",
     "noFolderOption": "(Brak folderu)",
@@ -886,11 +844,7 @@
     "editorUpdate": "Aktualizuj hosta",
     "editorAdd": "Dodaj hosta",
     "speedSearch": "Szukaj hostów. Strzałki do wyboru, Enter do połączenia, Esc do zamknięcia",
-    "speedSearchList": "Lista hostów. Pisz lub naciśnij / aby szukać.",
-    "importNoHosts": "Nie znaleziono hostów w pliku",
-    "importTooMany": "Możesz zaimportować maksymalnie {{max}} hostów naraz",
-    "importSummary": "Import zakończony: {{imported}} zaimportowano, {{updated}} zaktualizowano, {{failed}} nieudanych",
-    "importHostsFailed": "Nie udało się zaimportować hostów"
+    "speedSearchList": "Lista hostów. Pisz lub naciśnij / aby szukać."
   },
   "splitScreen": {
     "title": "Podzielony ekran",
@@ -1095,17 +1049,9 @@
   },
   "admin": {
     "usersCount_one": "{{count}} użytkownik",
-    "usersCount_few": "{{count}} użytkowników",
-    "usersCount_many": "{{count}} użytkowników",
     "rolesCount_one": "{{count}} rola",
-    "rolesCount_few": "{{count}} role",
-    "rolesCount_many": "{{count}} ról",
     "apiKeysCount_one": "{{count}} klucz",
-    "apiKeysCount_few": "{{count}} klucze",
-    "apiKeysCount_many": "{{count}} kluczy",
     "sessionsActive_one": "{{count}} aktywna",
-    "sessionsActive_few": "{{count}} aktywne",
-    "sessionsActive_many": "{{count}} aktywnych",
     "hostsCount_one": "{{count}} host",
     "hostsCount_few": "{{count}} hosty",
     "hostsCount_many": "{{count}} hostów",
@@ -1116,8 +1062,6 @@
     "credentialsCount_other": "{{count}} danych logowania",
     "rolePermissions": {
       "count_one": "{{count}} uprawnienie",
-      "count_few": "{{count}} uprawnienia",
-      "count_many": "{{count}} uprawnień",
       "groups": {
         "hosts": "Hosty",
         "credentials": "Poświadczenia",
@@ -1158,20 +1102,58 @@
         "interfaceFontDescription": "Zmienia czcionkę interfejsu aplikacji. Profile terminalu zachowują własne ustawienia czcionki.",
         "accentColorLabel": "Kolor akcentu",
         "apiKeyCount_one": "{{count}} klucz",
-        "apiKeyCount_few": "{{count}} klucze",
-        "apiKeyCount_many": "{{count}} kluczy",
         "colorPickerTooltip": "Otwórz wybór koloru",
         "themeSystem": "Systemowy",
         "themeLight": "Jasny",
-        "themeDark": "Ciemny",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "Ciemny"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "Jak wygląda układ całej aplikacji. Motywy i układy pochodzą z wtyczek.",
+    "defaultsLabel": "Domyślne dla wszystkich",
+    "defaultsHint": "To, co widzą użytkownicy, dopóki nie wybiorą własnego układu lub motywu.",
+    "followDefault": "Użyj domyślnego",
+    "defaultSaved": "Domyślny wygląd zapisany",
+    "saveFailed": "Nie udało się zapisać wyglądu",
+    "repair": {
+      "title": "Nie udało się wyświetlić tego układu",
+      "safeTitle": "Tryb bezpieczny",
+      "layout": "Układ",
+      "plugin": "Wtyczka",
+      "reason": "Powód",
+      "error": "Błąd",
+      "noError": "Brak komunikatu o błędzie.",
+      "copy": "Kopiuj",
+      "copied": "Skopiowano",
+      "copyFailed": "Nie udało się skopiować szczegółów",
+      "retry": "Spróbuj ponownie",
+      "reset": "Przywróć domyślny wygląd",
+      "resetEveryone": "Przywróć domyślne ustawienia dla wszystkich",
+      "update": "Aktualizuj {{name}} do wersji {{version}}",
+      "disable": "Wyłącz {{name}}",
+      "install": "Szukaj układów i motywów",
+      "installTitle": "Układy i motywy",
+      "installButton": "Zainstaluj",
+      "nothingToInstall": "Obecnie nie ma innych dostępnych układów ani motywów.",
+      "registryUnreachable": "Nie udało się połączyć z rejestrem wtyczek.",
+      "askAdmin": "Poproś administratora o aktualizację lub naprawę tego układu. Poniżej możesz przełączyć się na inny układ lub motyw dla siebie.",
+      "switchLayout": "Przełącz układ",
+      "switchTheme": "Przełącz motyw",
+      "saveFailed": "Nie udało się zapisać Twojego wyboru",
+      "reasons": {
+        "safe-url": "Adres żądał trybu bezpiecznego. Wybierz układ poniżej lub usuń ?safe-layout=1 z adresu.",
+        "safe-env": "Serwer został uruchomiony z opcją TERMIX_SAFE_LAYOUT, więc wszyscy widzą ten ekran, dopóki nie zostanie ona usunięta.",
+        "missing": "Żadna zainstalowana wtyczka nie dostarcza tego układu.",
+        "disabled": "Wtyczka dostarczająca ten układ jest wyłączona.",
+        "blocked": "Wtyczka dostarczająca ten układ oczekuje na coś, czego potrzebuje.",
+        "incompatible": "Wtyczka dostarczająca ten układ nie działa z tą wersją Termix.",
+        "failed": "Układ nie mógł się uruchomić.",
+        "crashed": "Układ zawiesił się dwa razy podczas renderowania aplikacji."
+      },
+      "noLayout": "Nie ustawiono układu",
+      "restore": "Przywróć dołączony {{name}}",
+      "restoreFailed": "Nie udało się przywrócić dołączonej kopii"
     }
   },
   "plugins": {
@@ -1196,6 +1178,18 @@
         "title": "Obsługa logowania",
         "consequence": "Może dodać metodę logowania, drugi czynnik uwierzytelniający lub typ logowania SSH."
       },
+      "auth:policy": {
+        "title": "Ustaw reguły logowania",
+        "consequence": "Może wylogowywać użytkowników po bezczynności, ograniczać długość sesji, wyłączać opcję „Zapamiętaj mnie” i wymagać drugiego czynnika uwierzytelniającego."
+      },
+      "ssh:transport": {
+        "title": "Wybierz sposób łączenia się z hostami",
+        "consequence": "Może przenosić połączenie SSH z hostem przez własną trasę, więc widzi wszystko wysyłane do i z tych hostów, w tym hasła."
+      },
+      "sync:provide": {
+        "title": "Uruchom synchronizację",
+        "consequence": "Może odpowiadać na wszystkie żądania synchronizacji, więc widzi dane synchronizowane przez urządzenia i serwery."
+      },
       "system:tls": {
         "title": "Zarządzanie certyfikatami",
         "consequence": "Może zastąpić certyfikat, który Termix udostępnia przez HTTPS, oraz odpowiadać na weryfikacje domen od autorytetów certyfikacji."
@@ -1203,6 +1197,10 @@
       "device:serial": {
         "title": "Dostęp do urządzeń szeregowych i USB",
         "consequence": "Może otwierać fizyczny port szeregowy na komputerze, na którym działa Termix."
+      },
+      "hosts:export": {
+        "title": "Eksportuj hosty wraz z ich sekretami",
+        "consequence": "Może czytać Twoje hosty w całości, w tym zapisane hasła i klucze, oraz je udostępniać. Każdy eksport jest zapisywany w dzienniku audytu."
       },
       "hosts:write": {
         "title": "Tworzenie i modyfikacja hostów",
@@ -1248,9 +1246,29 @@
         "title": "Odczytywanie dziennika audytu",
         "consequence": "Może widzieć, kto co zrobił i kiedy."
       },
+      "network:probe": {
+        "title": "Sprawdź, czy porty odpowiadają",
+        "consequence": "Może otwierać zwykłe połączenie z dowolnym adresem z serwera, aby sprawdzić, czy jest on osiągalny."
+      },
+      "hosts:status-provide": {
+        "title": "Dostarczaj status hosta",
+        "consequence": "Staje się źródłem kropek online i offline dla każdego hosta."
+      },
+      "hosts:activity-provide": {
+        "title": "Przechowuj ostatnią aktywność",
+        "consequence": "Staje się magazynem dla listy ostatniej aktywności każdego użytkownika."
+      },
+      "hosts:lock": {
+        "title": "Zarządzaj hostami w trybie tylko do odczytu",
+        "consequence": "Hosty nimi zarządzane nie mogą być edytowane, usuwane ani udostępniane ponownie przez innych użytkowników."
+      },
       "desktop:window": {
         "title": "Otwieranie okien pulpitu",
         "consequence": "Tylko w aplikacji pulpitu Termix."
+      },
+      "desktop:local": {
+        "title": "Użyj tego komputera",
+        "consequence": "Może odczytywać i zmieniać pliki, uruchamiać powłokę oraz otwierać lokalne porty na tym komputerze. Tylko w aplikacji Termix na komputerach."
       },
       "users:impersonate": {
         "title": "Działanie w imieniu innych użytkowników",
@@ -1291,6 +1309,14 @@
       "ui:surface": {
         "title": "Dodawanie własnych ekranów",
         "consequence": "Karty, panele i ustawienia, które możesz później ukryć."
+      },
+      "ui:layout": {
+        "title": "Zastąp cały układ aplikacji",
+        "consequence": "Po wybraniu, jego kod renderuje każdy ekran, w tym terminale i ustawienia."
+      },
+      "ui:theme": {
+        "title": "Dodaj motywy kolorystyczne",
+        "consequence": "Tylko kolory i style. Żaden kod nie jest uruchamiany dla motywu."
       }
     },
     "runtime": {
@@ -1444,6 +1470,7 @@
         "options": "Nie udało się zapisać opcji dla {{name}}: {{error}}",
         "deleteData": "Nie udało się usunąć danych dla {{name}}: {{error}}",
         "managedByServer": "Ten pulpit jest połączony z serwerem, który decyduje o jego wtyczkach.",
+        "defaultLook": "{{name}} to domyślny wygląd, więc można go wyłączyć lub zamienić, ale nie odinstalować.",
         "hasDependents": "{{name}} jest wymagane przez {{list}}. Najpierw wyłącz lub odinstaluj te elementy.",
         "missingDependencies": "{{name}} wymaga {{list}}, które nie jest zainstalowane.",
         "consentChanged": "To, czego ta wtyczka wymaga, zmieniło się od czasu ostatniego sprawdzenia. Sprawdź listę ponownie.",
@@ -1521,7 +1548,6 @@
       "noServerAccess": "Brak dostępu do Twoich serwerów",
       "searchInstalled": "Szukaj wśród zainstalowanych",
       "searchPlugins": "Szukaj wtyczek",
-      "allCategories": "Wszystkie",
       "nothingMatches": "Nic nie pasuje do tego.",
       "noneInstalled": "Nie zainstalowano jeszcze żadnych wtyczek. Przeglądaj, aby dodać kilka.",
       "nothingHere": "Nic tutaj nie ma.",
@@ -1619,7 +1645,46 @@
       "documentation": "Dokumentacja",
       "envVars": "Zmienne środowiskowe",
       "envRequired": "Wymagane",
-      "envDefault": "Domyślnie: {{value}}"
+      "envDefault": "Domyślnie: {{value}}",
+      "kinds": {
+        "layouts": "Układy",
+        "themes": "Motywy",
+        "tabs": "Karty",
+        "panels": "Panele boczne",
+        "dashboardCards": "Karty pulpitu",
+        "protocols": "Typy połączeń",
+        "auth": "Metody logowania",
+        "actions": "Akcje",
+        "hostCapability": "Ustawienia hosta"
+      },
+      "filters": {
+        "type": "Typ",
+        "allTypes": "Wszystkie typy",
+        "category": "Kategoria",
+        "allCategories": "Wszystkie kategorie",
+        "results_one": "{{count}} wtyczka",
+        "results_few": "{{count}} wtyczki",
+        "results_many": "{{count}} wtyczek",
+        "results_other": "{{count}} wtyczek",
+        "remove": "Usuń filtr {{name}}",
+        "clear": "Wyczyść filtry",
+        "button": "Filtry",
+        "buttonCount": "Filtry ({{count}})"
+      },
+      "pager": {
+        "range": "{{from}}-{{to}} z {{total}}",
+        "page": "Strona {{page}} z {{pages}}",
+        "previous": "Poprzednia strona",
+        "next": "Następna strona",
+        "perPage": "{{count}} na stronę",
+        "perPageLabel": "Wtyczki na stronę"
+      },
+      "showUnsupportedHint": "Są wymienione, ale żadna wersja nie działa jeszcze na tej wersji. Zaktualizuj Termix, aby je zainstalować.",
+      "unsupported": "Wymaga nowszej wersji Termix",
+      "unsupportedHint": "Żadna wersja tej wtyczki nie działa na tej wersji Termix. Zaktualizuj Termix, aby ją zainstalować.",
+      "needsTermix": "Wymaga Termix {{range}}",
+      "showUnsupported": "Pokaż nieobsługiwane ({{count}})",
+      "showMore": "Pokaż {{count}} więcej (pozostało {{total}})"
     }
   },
   "settings": {
@@ -1634,97 +1699,6 @@
     "sudoHint": "Ustaw hasło sudo dla tego hosta w edytorze hosta, aby włączyć działania uprzywilejowane.",
     "noData": "Brak danych",
     "filter": "Filtruj..."
-  },
-  "sync": {
-    "minutesAgo_one": "{{count}} minutę temu",
-    "minutesAgo_few": "{{count}} minuty temu",
-    "minutesAgo_many": "{{count}} minut temu",
-    "minutesAgo_other": "{{count}} minut temu",
-    "hoursAgo_one": "{{count}} godzinę temu",
-    "hoursAgo_few": "{{count}} godziny temu",
-    "hoursAgo_many": "{{count}} godzin temu",
-    "hoursAgo_other": "{{count}} godzin temu",
-    "pending_one": "{{count}} zmiana oczekuje na synchronizację",
-    "pending_few": "{{count}} zmiany oczekują na synchronizację",
-    "pending_many": "{{count}} zmian oczekuje na synchronizację",
-    "pending_other": "{{count}} zmian oczekuje na synchronizację",
-    "proxy": {
-      "headersTitle": "Dodatkowe nagłówki",
-      "headersHint": "Wysyłane z każdym żądaniem do serwera, na przykład token usługi Cloudflare Access.",
-      "headerName": "Nazwa nagłówka",
-      "headerValue": "Wartość",
-      "savedValue": "Zapisano, wpisz, aby zmienić",
-      "addHeader": "Dodaj nagłówek",
-      "removeHeader": "Usuń nagłówek",
-      "basicAuthTitle": "Nazwa użytkownika i hasło",
-      "basicAuthHint": "Dla proxy, które wymaga podania nazwy użytkownika i hasła przed Termix.",
-      "username": "Nazwa użytkownika",
-      "password": "Hasło",
-      "allowInvalidCertificate": "Ufaj certyfikatowi samopodpisanemu",
-      "allowInvalidCertificateHint": "Tylko dla własnego serwera, gdy jego certyfikat nie pochodzi od zaufanej instytucji."
-    },
-    "problems": {
-      "invalidUrl": "To nie wygląda na adres internetowy.",
-      "unreachable": "Nie udało się połączyć z serwerem. Sprawdź adres i czy serwer jest uruchomiony.",
-      "unreachableWithReason": "Nie udało się połączyć z serwerem: {{reason}}",
-      "tlsUntrusted": "Certyfikat serwera nie jest zaufany. Jeśli to Twój własny serwer z certyfikatem samopodpisanym, włącz opcję poniżej.",
-      "basicAuthRequired": "Coś przed serwerem żąda nazwy użytkownika i hasła. Wpisz je poniżej.",
-      "proxyLogin": "Zamiast Termix odpowiedziała strona logowania lub proxy. Dodaj poniżej wymagane nagłówki lub sprawdź adres.",
-      "notTermix": "Pod tym adresem nie ma serwera Termix. Jeśli działa pod ścieżką, podaj ją, np. https://example.com/termix.",
-      "versionMismatch": "Ten serwer używa starszej wersji Termix. Zaktualizuj go do wersji 2.9 lub nowszej, aby połączyć.",
-      "differentAccount": "Zalogowałeś się na inne konto. Zaloguj się na konto, z którym połączone jest to urządzenie, lub najpierw odłącz je."
-    },
-    "wizard": {
-      "title": "Połącz z serwerem Termix",
-      "reloginTitle": "Zaloguj się ponownie",
-      "savedServers": "Ostatnie serwery",
-      "removeServer": "Usuń z listy",
-      "serverDescription": "Wpisz adres, którego używasz do otwierania Termix w przeglądarce.",
-      "signinDescription": "Zaloguj się do {{url}}",
-      "chooseDescription": "To urządzenie już zawiera dane. Co należy z nimi zrobić?",
-      "finishingDescription": "Łączenie tego urządzenia.",
-      "serverUrl": "Adres serwera",
-      "serverUrlHint": "Na przykład https://termix.example.com",
-      "showProxySettings": "Ustawienia proxy odwrotnego",
-      "hideProxySettings": "Ukryj ustawienia proxy odwrotnego",
-      "continue": "Kontynuuj",
-      "back": "Wstecz",
-      "mergeTitle": "Dodaj do mojego konta",
-      "mergeBody_one": "Element z tego urządzenia zostanie dodany do Twojego konta. Elementy, które już są na Twoim koncie, pozostaną bez zmian na serwerze.",
-      "mergeBody_few": "{{count}} elementy z tego urządzenia zostaną dodane do Twojego konta. Elementy, które już są na Twoim koncie, pozostaną bez zmian na serwerze.",
-      "mergeBody_many": "{{count}} elementów z tego urządzenia zostanie dodanych do Twojego konta. Elementy, które już są na Twoim koncie, pozostaną bez zmian na serwerze.",
-      "mergeBody_other": "{{count}} elementu z tego urządzenia zostanie dodanych do Twojego konta. Elementy, które już są na Twoim koncie, pozostaną bez zmian na serwerze.",
-      "replaceTitle": "Zastąp danymi z mojego konta",
-      "replaceBody_one": "Element z tego urządzenia zostanie usunięty, a urządzenie pobierze wszystko z Twojego konta. Hosty przechowywane wyłącznie na tym urządzeniu pozostaną.",
-      "replaceBody_few": "{{count}} elementy z tego urządzenia zostaną usunięte, a urządzenie pobierze wszystko z Twojego konta. Hosty przechowywane wyłącznie na tym urządzeniu pozostaną.",
-      "replaceBody_many": "{{count}} elementów z tego urządzenia zostanie usuniętych, a urządzenie pobierze wszystko z Twojego konta. Hosty przechowywane wyłącznie na tym urządzeniu pozostaną.",
-      "replaceBody_other": "{{count}} elementu z tego urządzenia zostanie usuniętych, a urządzenie pobierze wszystko z Twojego konta. Hosty przechowywane wyłącznie na tym urządzeniu pozostaną.",
-      "link": "Połącz",
-      "linking": "Łączenie i uruchamianie pierwszej synchronizacji...",
-      "linked": "Połączono. Dane są teraz synchronizowane.",
-      "signedInAgain": "Zalogowano. Synchronizacja została wznowiona."
-    },
-    "entities": {
-      "hosts": "Hosty",
-      "sshCredentials": "Dane logowania",
-      "sshFolders": "Foldery",
-      "userPreferences": "Preferencje",
-      "pluginUserSettings": "Ustawienia wtyczek",
-      "sharedHosts": "Hosty udostępnione Tobie",
-      "sharedCredentials": "Dane logowania udostępnione Tobie",
-      "vaultProfiles": "Profile Vault",
-      "snippetFolders": "Foldery fragmentów",
-      "snippets": "Fragmenty",
-      "dashboardServiceLinks": "Linki do usług",
-      "homepageItems": "Elementy strony głównej",
-      "networkTopology": "Mapa sieci",
-      "workspaces": "Przestrzeze robocze",
-      "hostDefaults": "Domyślne ustawienia hostów",
-      "hostDefaultsAdmin": "Domyślne ustawienia hostów serwera",
-      "aiProviders": "Dostawcy AI",
-      "homepageLayouts": "Układy strony głównej",
-      "accountProfile": "Profil konta"
-    }
   },
   "hostDefaults": {
     "source": {

@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "Bazı eklentiler değiştirilemedi. Bunları daha sonra Eklentiler sekmesinden düzeltebilirsiniz. Devam etmek için İleri'ye basın.",
     "pluginsApplyFailed": "Seçimleriniz kaydedilemedi. Tekrar deneyin veya devam edin ve daha sonra Eklentiler sekmesinden değiştirin.",
     "pluginsLoadFailed": "Eklenti listesi yüklenemedi. Eklentileri daha sonra Eklentiler sekmesinden seçebilirsiniz.",
-    "presetTitle": "Ekranda ne kadar şey görmek istiyorsunuz?",
-    "presetIntro": "Ekranda ne kadarının gösterileceğini seçin.",
-    "presetChangeLater": "Ayarlar'da Arayüz altında farklı ön ayarlara geçebilir veya herhangi bir ayarı daha sonra değiştirebilirsiniz.",
-    "appearanceTitle": "Kendinize göre düzenleyin",
-    "appearanceIntro": "Bir tema, vurgu rengi, yazı tipi ve dil seçin. Değişiklikler hemen yansır ve daha sonra Ayarlar'dan değiştirebilirsiniz.",
     "securityTitle": "Hesabınızı güvence altına alın",
     "securityIntro": "Hesabınıza bir geçit anahtarı veya doğrulayıcı uygulama ekleyin. Bunu daha sonra Ayarlar'da Güvenlik altında da yapabilirsiniz.",
-    "desktopTitle": "Termix'i nasıl kullanmak istiyorsunuz?",
-    "desktopBody": "Bunu kenar çubuğundaki Senkronize et bölümünden istediğiniz zaman değiştirebilirsiniz.",
-    "desktopLocalTitle": "Sadece bu cihazda",
-    "desktopLocalBody": "Her şey burada saklanır. Kurulum gerekmez.",
-    "desktopLinkTitle": "Termix sunucumla birlikte",
-    "desktopLinkBody": "Her cihazda aynı ana bilgisayarları ve ayarları kullanmak için sunucunuza giriş yapın.",
-    "desktopLinked": "{{server}} ile bağlantılı",
     "pluginsDocsLink": "Her biri hakkında bilgi edinin"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} yüklenmeye hazır",
     "readyHint": "Termix yeniden başladığında yüklenir."
   },
+  "companion": {
+    "close": "Paneli kapat",
+    "moveSide": "Paneli taşı",
+    "resize": "Paneli yeniden boyutlandır"
+  },
   "nav": {
     "home": "Ana Sayfa",
     "terminal": "Terminal",
@@ -257,7 +250,6 @@
     "hosts": "Ana Bilgisayarlar",
     "credentials": "Kimlik Bilgileri",
     "connections": "Bağlantılar",
-    "sync": "Senkronize Et",
     "reconnectDisconnectedTerminals": "Bağlantısı kesilen tüm terminalleri yeniden bağla",
     "reconnectingTerminals_one": "{{count}} terminal yeniden bağlanıyor",
     "reconnectingTerminals_other": "{{count}} terminal yeniden bağlanıyor",
@@ -279,10 +271,7 @@
     "retry": "Tekrar Dene",
     "refresh": "Yenile",
     "optional": "İsteğe Bağlı",
-    "downloadSample": "Örnek İndir",
     "failedToDeleteHost": "{{name}} silinemedi",
-    "importSkipExisting": "İçe Aktar (var olanları atla)",
-    "importSSHConfig": "SSH yapılandırmasından içe aktar",
     "connectionDetails": "Bağlantı Ayrıntıları",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -501,10 +490,7 @@
     "noFolder": "(Klasör yok)",
     "deleteSelected": "Sil",
     "exitSelection": "Seçimi kapat",
-    "importSkip": "İçe Aktar (var olanları atla)",
-    "importOverwrite": "İçe Aktar (üzerine yaz)",
     "collapseBtn": "Daralt",
-    "importExportBtn": "İçe Aktar / Dışa Aktar",
     "hostStatusesRefreshed": "Ana bilgisayar durumları yenilendi",
     "failedToRefreshHosts": "Ana bilgisayarlar yenilenemedi",
     "movedHostTo": "{{host}}, \"{{folder}}\" klasörüne taşındı",
@@ -559,6 +545,9 @@
     "deleteFolderConfirm_one": "\"{{name}}\" ve içindeki {{count}} ana bilgisayar silinsin mi? Bu işlem geri alınamaz.",
     "deleteFolderConfirm_other": "\"{{name}}\" ve içindeki {{count}} ana bilgisayar silinsin mi? Bu işlem geri alınamaz.",
     "failedToMoveHosts": "Sunucular taşınamadı",
+    "managedBanner": "Bu ana bilgisayar {{plugin}} tarafından yönetiliyor. Değişiklikleri oradan yapın. Yine de sabitleyebilir ve sırasını değiştirebilirsiniz.",
+    "managedTooltip": "{{plugin}} tarafından yönetiliyor",
+    "addBlocked": "Ana bilgisayarlar {{plugin}} tarafından yönetildiği için buraya yeni ana bilgisayar eklenemez.",
     "failedToReorder": "Sıralama değiştirilemedi",
     "expandAll": "Tüm klasörleri genişlet",
     "collapseAll": "Tüm klasörleri daralt",
@@ -669,35 +658,6 @@
     "addCredentialBtn2": "Kimlik Bilgisi Ekle",
     "checkingHostStatuses": "Ana bilgisayar durumları kontrol ediliyor...",
     "pinnedSection": "Sabitlenmiş",
-    "hostsExported": "Ana bilgisayarlar başarıyla dışa aktarıldı",
-    "export": {
-      "menuItem": "Dışa Aktar...",
-      "title": "Ana bilgisayarları dışa aktar",
-      "scope": "Kapsam",
-      "scopeAll": "Tümü",
-      "scopeSelected": "Seçili",
-      "searchHosts": "Ana bilgisayarları ara...",
-      "include": "Dahil Et",
-      "groupConnection": "Bağlantı",
-      "groupCredentials": "Kimlik Bilgileri",
-      "groupNotes": "Notlar",
-      "groupTags": "Etiketler ve sabitleme",
-      "groupProxy": "Proxy",
-      "groupJumpHosts": "Atlayıcı ana bilgisayarlar",
-      "groupFeatureFlags": "Eklenti ayarları",
-      "groupAdvanced": "Gelişmiş yapılandırma",
-      "preview": "Önizleme",
-      "moreHosts_one": "... {{count}} ana bilgisayar daha",
-      "moreHosts_other": "... {{count}} ana bilgisayar daha",
-      "summary": "{{total}} ana bilgisayardan {{selected}}",
-      "credentialsIncluded": "kimlik bilgileri dahil",
-      "credentialsExcluded": "kimlik bilgileri hariç",
-      "noneSelected": "Hiçbir ana bilgisayar seçilmedi",
-      "cancel": "İptal",
-      "confirm": "Dışa Aktar",
-      "fetchFailed": "Dışa aktarma için ana bilgisayarlar yüklenemedi",
-      "bulkButton": "Dışa Aktar"
-    },
     "sampleDownloaded": "Örnek dosya indirildi",
     "failedToDeleteCredential2": "Kimlik bilgisi silinemedi",
     "noFolderOption": "(Klasör yok)",
@@ -860,11 +820,7 @@
     "editorUpdate": "Ana Bilgisayarı Güncelle",
     "editorAdd": "Ana Bilgisayar Ekle",
     "speedSearch": "Ana bilgisayarları ara. Seçmek için ok tuşları, bağlanmak için Enter, kapatmak için Esc",
-    "speedSearchList": "Ana bilgisayar listesi. Aramak için yazın veya / tuşuna basın.",
-    "importNoHosts": "Dosyada ana bilgisayar bulunamadı",
-    "importTooMany": "Tek seferde en fazla {{max}} ana bilgisayar içe aktarabilirsiniz",
-    "importSummary": "İçe aktarma tamamlandı: {{imported}} içe aktarıldı, {{updated}} güncellendi, {{failed}} başarısız oldu",
-    "importHostsFailed": "Ana bilgisayarlar içe aktarılamadı"
+    "speedSearchList": "Ana bilgisayar listesi. Aramak için yazın veya / tuşuna basın."
   },
   "splitScreen": {
     "title": "Bölünmüş ekran",
@@ -1115,15 +1071,55 @@
         "colorPickerTooltip": "Renk seçiciyi aç",
         "themeSystem": "Sistem",
         "themeLight": "Açık",
-        "themeDark": "Koyu",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "Koyu"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "Uygulamanın genel düzeni. Temalar ve düzenler eklentilerden gelir.",
+    "defaultsLabel": "Herkes için varsayılan",
+    "defaultsHint": "Kullanıcılar kendi düzen veya temalarını seçene kadar gördükleri görünüm.",
+    "followDefault": "Varsayılani kullan",
+    "defaultSaved": "Varsayılan görünüm kaydedildi",
+    "saveFailed": "Görünüm kaydedilemedi",
+    "repair": {
+      "title": "Bu düzen gösterilemedi",
+      "safeTitle": "Güvenli mod",
+      "layout": "Düzen",
+      "plugin": "Eklenti",
+      "reason": "Sebep",
+      "error": "Hata",
+      "noError": "Hata mesajı yok.",
+      "copy": "Kopyala",
+      "copied": "Kopyalandı",
+      "copyFailed": "Ayrıntılar kopyalanamadı",
+      "retry": "Tekrar dene",
+      "reset": "Varsayılan görünüme sıfırla",
+      "resetEveryone": "Herkes için varsayılanı sıfırla",
+      "update": "{{name}}'i {{version}} sürümüne güncelle",
+      "disable": "{{name}}'i kapat",
+      "install": "Düzen ve temaları bul",
+      "installTitle": "Düzenler ve temalar",
+      "installButton": "Yükle",
+      "nothingToInstall": "Şu anda başka düzen veya tema mevcut değil.",
+      "registryUnreachable": "Eklenti kayıt defterine ulaşılamadı.",
+      "askAdmin": "Bu düzeni güncellemek veya düzeltmek için bir yöneticiden yardım isteyin. Aşağıdan kendiniz için başka bir düzen veya temaya geçebilirsiniz.",
+      "switchLayout": "Düzeni değiştir",
+      "switchTheme": "Temayı değiştir",
+      "saveFailed": "Seçiminiz kaydedilemedi",
+      "reasons": {
+        "safe-url": "Adres güvenli mod istedi. Aşağıdan bir düzen seçin veya adresten ?safe-layout=1 kısmını kaldırın.",
+        "safe-env": "Sunucu TERMIX_SAFE_LAYOUT ile başlatıldığı için, bu kaldırılana kadar herkes bu ekranı görür.",
+        "missing": "Bu düzeni sağlayan yüklü bir eklenti yok.",
+        "disabled": "Bu düzeni sağlayan eklenti kapalı.",
+        "blocked": "Bu düzeni sağlayan eklenti, ihtiyaç duyduğu bir şeyi bekliyor.",
+        "incompatible": "Bu düzeni sağlayan eklenti, bu Termix sürümüyle çalışmıyor.",
+        "failed": "Düzen başlatılamadı.",
+        "crashed": "Uygulama çizilirken düzen iki kez çöktü."
+      },
+      "noLayout": "Hiçbir düzen ayarlanmamış",
+      "restore": "Paket içindeki {{name}}'i geri yükle",
+      "restoreFailed": "Paket içindeki kopya geri yüklenemedi"
     }
   },
   "plugins": {
@@ -1148,6 +1144,18 @@
         "title": "Giriş işlemlerini yönetebilir",
         "consequence": "Bir giriş yöntemi, ikinci bir doğruluk faktörü veya bir SSH giriş türü ekleyebilir."
       },
+      "auth:policy": {
+        "title": "Oturum açma kurallarını belirle",
+        "consequence": "Boşta kalan oturumları sonlandırabilir, oturum süresini sınırlayabilir, beni hatırla özelliğini kapatabilir ve ikinci bir doğrulama faktörü isteyebilir."
+      },
+      "ssh:transport": {
+        "title": "Ana bilgisayarlara nasıl erişileceğini seçin",
+        "consequence": "Bir ana bilgisayara olan SSH bağlantısını kendi rotası üzerinden taşıyabilir, böylece bu ana bilgisayarlara gönderilen ve onlardan gelen her şeyi, şifreler dahil görebilir."
+      },
+      "sync:provide": {
+        "title": "Senkronizasyonu çalıştır",
+        "consequence": "Tüm senkronizasyon isteklerine yanıt verebilir, böylece cihazların ve sunucuların senkronize ettiği verileri görebilir."
+      },
       "system:tls": {
         "title": "Sertifikaları yönetebilir",
         "consequence": "Termix'in HTTPS üzerinden sunduğu sertifikayı değiştirebilir ve sertifika otoritelerinden gelen alan adı kontrollerine yanıt verebilir."
@@ -1155,6 +1163,10 @@
       "device:serial": {
         "title": "Seri ve USB cihazlarına erişebilir",
         "consequence": "Termix'in çalıştığı makinedeki fiziksel seri portu açabilir."
+      },
+      "hosts:export": {
+        "title": "Ana bilgisayarları gizli bilgileriyle birlikte dışa aktar",
+        "consequence": "Kayıtlı şifreler ve anahtarlar dahil ana bilgisayarlarınızı tam olarak okuyabilir ve paylaşabilir. Her dışa aktarma denetleme günlüğüne yazılır."
       },
       "hosts:write": {
         "title": "Sunucular oluşturabilir ve değiştirebilir",
@@ -1200,9 +1212,29 @@
         "title": "Denetim günlüğünü okuyabilir",
         "consequence": "Kimin ne zaman ne yaptığını görebilir."
       },
+      "network:probe": {
+        "title": "Portların yanıt verip vermediğini kontrol et",
+        "consequence": "Sunucudan herhangi bir adrese düz bağlantı açabilir, erişilebilir olup olmadığını görebilir."
+      },
+      "hosts:status-provide": {
+        "title": "Ana bilgisayar durumunu sağla",
+        "consequence": "Her ana bilgisayar için çevrimiçi ve çevrimdışı noktalarının kaynağı olur."
+      },
+      "hosts:activity-provide": {
+        "title": "Son aktiviteleri sakla",
+        "consequence": "Tüm kullanıcıların son aktivite listesinin deposu olur."
+      },
+      "hosts:lock": {
+        "title": "Ana bilgisayarları salt okunur olarak yönet",
+        "consequence": "Yönettiği ana bilgisayarlar başka kimse tarafından düzenlenemez, silinemez veya yeniden paylaşılamaz."
+      },
       "desktop:window": {
         "title": "Masaüstü pencereleri açabilir",
         "consequence": "Sadece Termix masaüstü uygulamasında."
+      },
+      "desktop:local": {
+        "title": "Bu bilgisayarı kullan",
+        "consequence": "Bu bilgisayarda dosyaları okuyabilir ve değiştirebilir, kabuk çalıştırabilir ve yerel bağlantı noktalarını açabilir. Sadece Termix masaüstü uygulamasında."
       },
       "users:impersonate": {
         "title": "Diğer kullanıcılar adına hareket edebilir",
@@ -1243,6 +1275,14 @@
       "ui:surface": {
         "title": "Kendi ekranlarını ekle",
         "consequence": "Daha sonra gizleyebileceğiniz sekmeler, paneller ve ayarlar."
+      },
+      "ui:layout": {
+        "title": "Tüm uygulama düzenini değiştir",
+        "consequence": "Seçildiğinde, kodu terminalleriniz ve ayarlarınız dahil tüm ekranları çizer."
+      },
+      "ui:theme": {
+        "title": "Renk temaları ekle",
+        "consequence": "Sadece renkler ve stiller. Bir tema için hiçbir kod çalışmaz."
       }
     },
     "runtime": {
@@ -1372,6 +1412,7 @@
         "options": "{{name}} için seçenekler kaydedilemedi: {{error}}",
         "deleteData": "{{name}} için veriler silinemedi: {{error}}",
         "managedByServer": "Bu masaüstü bir sunucuya bağlıdır ve eklentileri sunucu belirler.",
+        "defaultLook": "{{name}} varsayılan görünümdür, bu nedenle kapatılabilir veya değiştirilebilir ancak kaldırılamaz.",
         "hasDependents": "{{name}}, {{list}} tarafından kullanılıyor. Önce bunları kapatın veya kaldırın.",
         "missingDependencies": "{{name}}, yüklü olmayan {{list}}'e ihtiyaç duyuyor.",
         "consentChanged": "Bu eklentinin istedikleri, baktığınızdan beri değişti. Listeyi tekrar kontrol edin.",
@@ -1441,7 +1482,6 @@
       "noServerAccess": "Sunucularınıza erişim yok",
       "searchInstalled": "Yüklenenleri ara",
       "searchPlugins": "Eklentileri ara",
-      "allCategories": "Tümü",
       "nothingMatches": "Hiçbiri eşleşmiyor.",
       "noneInstalled": "Henüz eklenti yüklenmedi. Eklemek için göz atın.",
       "nothingHere": "Burada hiçbir şey yok.",
@@ -1531,7 +1571,44 @@
       "documentation": "Dokümantasyon",
       "envVars": "Çevre değişkenleri",
       "envRequired": "Zorunlu",
-      "envDefault": "Varsayılan: {{value}}"
+      "envDefault": "Varsayılan: {{value}}",
+      "kinds": {
+        "layouts": "Düzenler",
+        "themes": "Temalar",
+        "tabs": "Sekmeler",
+        "panels": "Kenar çubuğu panelleri",
+        "dashboardCards": "Gösterge paneli kartları",
+        "protocols": "Bağlantı türleri",
+        "auth": "Giriş yöntemleri",
+        "actions": "Eylemler",
+        "hostCapability": "Ana bilgisayar ayarları"
+      },
+      "filters": {
+        "type": "Tür",
+        "allTypes": "Tüm türler",
+        "category": "Kategori",
+        "allCategories": "Tüm kategoriler",
+        "results_one": "{{count}} eklenti",
+        "results_other": "{{count}} eklenti",
+        "remove": "{{name}} filtresini kaldır",
+        "clear": "Filtreleri temizle",
+        "button": "Filtreler",
+        "buttonCount": "Filtreler ({{count}})"
+      },
+      "pager": {
+        "range": "{{total}} içinde {{from}}-{{to}}",
+        "page": "{{pages}} içinde {{page}}. sayfa",
+        "previous": "Önceki sayfa",
+        "next": "Sonraki sayfa",
+        "perPage": "Sayfa başına {{count}}",
+        "perPageLabel": "Sayfa başına eklenti"
+      },
+      "showUnsupportedHint": "Bu eklentiler listelenmiştir ancak bu sürümde henüz hiçbir sürüm çalışmıyor. Yüklemek için Termix'i güncelleyin.",
+      "unsupported": "Daha yeni bir Termix sürümü gerekiyor",
+      "unsupportedHint": "Bu eklentinin bu Termix sürümünde çalışan bir sürümü yok. Yüklemek için Termix'i güncelleyin.",
+      "needsTermix": "Termix {{range}} gerekiyor",
+      "showUnsupported": "Desteklenmeyenleri göster ({{count}})",
+      "showMore": "{{count}} tane daha göster ({{total}} kaldı)"
     }
   },
   "settings": {
@@ -1546,87 +1623,6 @@
     "sudoHint": "Ayrıcalıklı işlemleri etkinleştirmek için ana bilgisayar düzenleyicisinde bu ana bilgisayar için bir sudo şifresi belirleyin.",
     "noData": "Veri yok",
     "filter": "Filtrele..."
-  },
-  "sync": {
-    "minutesAgo_one": "{{count}} dakika önce",
-    "minutesAgo_other": "{{count}} dakika önce",
-    "hoursAgo_one": "{{count}} saat önce",
-    "hoursAgo_other": "{{count}} saat önce",
-    "pending_one": "Senkronize edilmek için bekleyen {{count}} değişiklik",
-    "pending_other": "Senkronize edilmek için bekleyen {{count}} değişiklik",
-    "proxy": {
-      "headersTitle": "Ek başlıklar",
-      "headersHint": "Sunucuya yapılan her istekle birlikte gönderilir, örneğin bir Cloudflare Access hizmet belirteci.",
-      "headerName": "Başlık adı",
-      "headerValue": "Değer",
-      "savedValue": "Kaydedildi, değiştirmek için yazın",
-      "addHeader": "Başlık ekle",
-      "removeHeader": "Başlığı kaldır",
-      "basicAuthTitle": "Kullanıcı adı ve şifre",
-      "basicAuthHint": "Termix'ten önce kullanıcı adı ve şifre isteyen bir proxy için.",
-      "username": "Kullanıcı adı",
-      "password": "Şifre",
-      "allowInvalidCertificate": "Kendi kendine imzalı bir sertifikaya güven",
-      "allowInvalidCertificateHint": "Sadece kendi sunucunuz için, sertifikası tanınan bir otoriteden gelmediğinde."
-    },
-    "problems": {
-      "invalidUrl": "Bu bir web adresi gibi görünmüyor.",
-      "unreachable": "Sunucuya ulaşılamadı. Adresi ve sunucunun çalıştığından emin olun.",
-      "unreachableWithReason": "Sunucuya ulaşılamadı: {{reason}}",
-      "tlsUntrusted": "Sunucu sertifikası güvenilir değil. Bu kendi kendine imzalı bir sertifikaya sahip kendi sunucunuzsa, aşağıdaki seçeneği açın.",
-      "basicAuthRequired": "Sunucunun önünde bir şey kullanıcı adı ve şifre istiyor. Bunları aşağıya girin.",
-      "proxyLogin": "Termix yerine bir giriş sayfası veya proxy yanıt verdi. Gerekli başlıkları aşağıya ekleyin veya adresi kontrol edin.",
-      "notTermix": "Bu adreste bir Termix sunucusu yok. Bir yol altında çalışıyorsa, https://example.com/termix gibi yolunu da ekleyin.",
-      "versionMismatch": "Bu sunucu daha eski bir Termix sürümü çalıştırıyor. Bağlamak için 2.9 veya üzeri bir sürüme güncelleyin.",
-      "differentAccount": "Farklı bir hesaba giriş yaptınız. Bu cihazın bağlandığı hesaba giriş yapın veya önce bağlantıyı kaldırın."
-    },
-    "wizard": {
-      "title": "Bir Termix sunucusuna bağlan",
-      "reloginTitle": "Tekrar giriş yap",
-      "savedServers": "Son sunucular",
-      "removeServer": "Listeden kaldır",
-      "serverDescription": "Tarayıcınızda Termix'i açmak için kullandığınız adresi girin.",
-      "signinDescription": "{{url}} adresine giriş yapın",
-      "chooseDescription": "Bu cihazda zaten veri var. Ne yapılması gerekiyor?",
-      "finishingDescription": "Bu cihaz bağlanıyor.",
-      "serverUrl": "Sunucu adresi",
-      "serverUrlHint": "Örneğin https://termix.example.com",
-      "showProxySettings": "Ters proxy ayarları",
-      "hideProxySettings": "Ters proxy ayarlarını gizle",
-      "continue": "Devam et",
-      "back": "Geri",
-      "mergeTitle": "Hesabıma ekle",
-      "mergeBody_one": "Bu cihazdaki öğe hesabınıza eklenir. Hesabınızda zaten olan öğeler sunucuda olduğu gibi kalır.",
-      "mergeBody_other": "Bu cihazdaki {{count}} öğe hesabınıza eklenir. Hesabınızda zaten olan öğeler sunucuda olduğu gibi kalır.",
-      "replaceTitle": "Hesabımla değiştir",
-      "replaceBody_one": "Bu cihazdaki öğe kaldırılır ve bu cihaz hesabınızdan her şeyi alır. Sadece bu cihazda tutulan ana bilgisayarlar kalır.",
-      "replaceBody_other": "Bu cihazdaki {{count}} öğe kaldırılır ve bu cihaz hesabınızdan her şeyi alır. Sadece bu cihazda tutulan ana bilgisayarlar kalır.",
-      "link": "Bağla",
-      "linking": "Bağlanıyor ve ilk eşitleme çalıştırılıyor...",
-      "linked": "Bağlandı. Verileriniz şimdi eşitleniyor.",
-      "signedInAgain": "Giriş yapıldı. Eşitleme tekrar çalışıyor."
-    },
-    "entities": {
-      "hosts": "Ana bilgisayarlar",
-      "sshCredentials": "Kimlik bilgileri",
-      "sshFolders": "Klasörler",
-      "userPreferences": "Tercihler",
-      "pluginUserSettings": "Eklenti ayarları",
-      "sharedHosts": "Sizinle paylaşılan ana bilgisayarlar",
-      "sharedCredentials": "Sizinle paylaşılan kimlik bilgileri",
-      "vaultProfiles": "Vault profilleri",
-      "snippetFolders": "Kod parçası klasörleri",
-      "snippets": "Kod parçaları",
-      "dashboardServiceLinks": "Hizmet bağlantıları",
-      "homepageItems": "Ana sayfa öğeleri",
-      "networkTopology": "Ağ haritası",
-      "workspaces": "Çalışma alanları",
-      "hostDefaults": "Ana bilgisayar varsayılanları",
-      "hostDefaultsAdmin": "Sunucu ana bilgisayar varsayılanları",
-      "aiProviders": "AI sağlayıcıları",
-      "homepageLayouts": "Ana sayfa düzenleri",
-      "accountProfile": "Hesap profili"
-    }
   },
   "hostDefaults": {
     "source": {

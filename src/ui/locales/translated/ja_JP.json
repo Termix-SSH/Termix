@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "一部のプラグインの変更ができませんでした。後でプラグインタブから修正できます。続行するには「次へ」を押してください。",
     "pluginsApplyFailed": "選択が保存できませんでした。再試行するか、続行して後でプラグインタブから変更してください。",
     "pluginsLoadFailed": "プラグインリストを読み込めませんでした。後でプラグインタブからプラグインを選択できます。",
-    "presetTitle": "画面にどれくらい表示させますか？",
-    "presetIntro": "画面に表示する量を選択してください。",
-    "presetChangeLater": "プリセットの切り替えや個々の設定の変更は、後で「設定」の「インターフェース」から行うことができます。",
-    "appearanceTitle": "自分好みにカスタマイズ",
-    "appearanceIntro": "テーマ、アクセントカラー、フォント、言語を選択してください。変更はすぐに反映され、後で「設定」から変更できます。",
     "securityTitle": "アカウントを保護",
     "securityIntro": "アカウントにパスキーまたは認証アプリを追加してください。これは後で「設定」の「セキュリティ」から行うこともできます。",
-    "desktopTitle": "Termix をどのように使いますか？",
-    "desktopBody": "これはサイドバーの「同期」からいつでも変更できます。",
-    "desktopLocalTitle": "このデバイスでのみ",
-    "desktopLocalBody": "すべてがここに保存されます。セットアップは不要です。",
-    "desktopLinkTitle": "Termix サーバーと連携",
-    "desktopLinkBody": "サーバーにサインインして、すべてのデバイスで同じホストと設定を使用します。",
-    "desktopLinked": "{{server}} と連携済み",
     "pluginsDocsLink": "各プラグインについて読む"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} のインストール準備ができました",
     "readyHint": "Termix を再起動したときにインストールされます。"
   },
+  "companion": {
+    "close": "パネルを閉じる",
+    "moveSide": "パネルを移動",
+    "resize": "パネルのサイズを変更"
+  },
   "nav": {
     "home": "ホーム",
     "terminal": "ターミナル",
@@ -257,7 +250,6 @@
     "hosts": "ホスト",
     "credentials": "認証情報",
     "connections": "接続",
-    "sync": "同期",
     "reconnectDisconnectedTerminals": "切断されたすべてのターミナルを再接続",
     "reconnectingTerminals_other": "{{count}} 個のターミナルを再接続中",
     "noDisconnectedTerminals": "再接続可能な切断されたターミナルはありません",
@@ -276,10 +268,7 @@
     "retry": "再試行",
     "refresh": "更新",
     "optional": "オプション",
-    "downloadSample": "サンプルをダウンロード",
     "failedToDeleteHost": "{{name}} の削除に失敗しました",
-    "importSkipExisting": "インポート（既存の項目をスキップ）",
-    "importSSHConfig": "SSH 設定からインポート",
     "connectionDetails": "接続詳細",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -497,10 +486,7 @@
     "noFolder": "(フォルダなし)",
     "deleteSelected": "削除",
     "exitSelection": "選択を解除",
-    "importSkip": "インポート（既存はスキップ）",
-    "importOverwrite": "インポート（上書き）",
     "collapseBtn": "折りたたむ",
-    "importExportBtn": "インポート / エクスポート",
     "hostStatusesRefreshed": "ホストのステータスを更新しました",
     "failedToRefreshHosts": "ホストの更新に失敗しました",
     "movedHostTo": "{{host}} を「{{folder}}」に移動しました",
@@ -553,6 +539,9 @@
     "folderDeleted": "フォルダ「{{name}}」を削除しました",
     "deleteFolderConfirm_other": "\"{{name}}\" とその {{count}} 台のホストを削除しますか？この操作は元に戻せません。",
     "failedToMoveHosts": "ホストの移動に失敗しました",
+    "managedBanner": "このホストは {{plugin}} によって管理されています。変更はそちらで行ってください。ピン留めや順序の変更は可能です。",
+    "managedTooltip": "{{plugin}} によって管理されています",
+    "addBlocked": "ホストは {{plugin}} によって管理されているため、ここで新しいホストを追加することはできません。",
     "failedToReorder": "順序の並べ替えに失敗しました",
     "expandAll": "すべてのフォルダを展開",
     "collapseAll": "すべてのフォルダを折りたたむ",
@@ -662,34 +651,6 @@
     "addCredentialBtn2": "認証情報を追加",
     "checkingHostStatuses": "ホストのステータスを確認しています...",
     "pinnedSection": "ピン留め",
-    "hostsExported": "ホストのエクスポートに成功しました",
-    "export": {
-      "menuItem": "エクスポート...",
-      "title": "ホストのエクスポート",
-      "scope": "範囲",
-      "scopeAll": "すべて",
-      "scopeSelected": "選択済み",
-      "searchHosts": "ホストを検索...",
-      "include": "含める項目",
-      "groupConnection": "接続",
-      "groupCredentials": "認証情報",
-      "groupNotes": "メモ",
-      "groupTags": "タグとピン留め",
-      "groupProxy": "プロキシ",
-      "groupJumpHosts": "ジャンプホスト",
-      "groupFeatureFlags": "プラグイン設定",
-      "groupAdvanced": "詳細設定",
-      "preview": "プレビュー",
-      "moreHosts_other": "... さらに {{count}} 台のホスト",
-      "summary": "{{total}} 件中 {{selected}} 件のホスト",
-      "credentialsIncluded": "認証情報を含む",
-      "credentialsExcluded": "認証情報を除く",
-      "noneSelected": "ホストが選択されていません",
-      "cancel": "キャンセル",
-      "confirm": "エクスポート",
-      "fetchFailed": "エクスポート用のホストの読み込みに失敗しました",
-      "bulkButton": "エクスポート"
-    },
     "sampleDownloaded": "サンプルファイルをダウンロードしました",
     "failedToDeleteCredential2": "認証情報の削除に失敗しました",
     "noFolderOption": "(フォルダなし)",
@@ -847,11 +808,7 @@
     "editorUpdate": "ホストを更新",
     "editorAdd": "ホストを追加",
     "speedSearch": "ホストを検索。矢印キーで選択、Enter で接続、Esc で閉じる",
-    "speedSearchList": "ホスト一覧。入力するか / を押して検索",
-    "importNoHosts": "ファイル内にホストが見つかりませんでした",
-    "importTooMany": "一度に最大 {{max}} 個のホストをインポートできます",
-    "importSummary": "インポート完了: {{imported}} 個インポート、{{updated}} 個更新、{{failed}} 個失敗",
-    "importHostsFailed": "ホストのインポートに失敗しました"
+    "speedSearchList": "ホスト一覧。入力するか / を押して検索"
   },
   "splitScreen": {
     "title": "分割画面",
@@ -1046,9 +1003,14 @@
     "hostCount_other": "{{count}} 台のホスト"
   },
   "admin": {
+    "usersCount_one": "ユーザー {{count}} 人",
+    "rolesCount_one": "ロール {{count}} 個",
+    "apiKeysCount_one": "キー {{count}} 個",
+    "sessionsActive_one": "アクティブ {{count}} 件",
     "hostsCount_other": "{{count}} 台のホスト",
     "credentialsCount_other": "{{count}} 個の認証情報",
     "rolePermissions": {
+      "count_one": "権限 {{count}} 個",
       "groups": {
         "hosts": "ホスト",
         "credentials": "認証情報",
@@ -1088,18 +1050,59 @@
         "interfaceFontLabel": "インターフェースフォント",
         "interfaceFontDescription": "アプリケーションのインターフェースフォントを変更します。ターミナルプロファイルは独自のフォント設定を保持します。",
         "accentColorLabel": "アクセントカラー",
+        "apiKeyCount_one": "キー {{count}} 個",
         "colorPickerTooltip": "カラーピッカーを開く",
         "themeSystem": "システム",
         "themeLight": "ライト",
-        "themeDark": "ダーク",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "ダーク"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "アプリ全体のレイアウトです。テーマとレイアウトはプラグインから提供されます。",
+    "defaultsLabel": "すべてのユーザーのデフォルト",
+    "defaultsHint": "ユーザーが独自のレイアウトやテーマを選択するまでに表示される内容です。",
+    "followDefault": "デフォルトを使用する",
+    "defaultSaved": "デフォルトの外観を保存しました",
+    "saveFailed": "外観を保存できませんでした",
+    "repair": {
+      "title": "このレイアウトを表示できませんでした",
+      "safeTitle": "セーフモード",
+      "layout": "レイアウト",
+      "plugin": "プラグイン",
+      "reason": "理由",
+      "error": "エラー",
+      "noError": "エラーメッセージはありません。",
+      "copy": "コピー",
+      "copied": "コピーしました",
+      "copyFailed": "詳細をコピーできませんでした",
+      "retry": "再試行",
+      "reset": "デフォルトの外観にリセット",
+      "resetEveryone": "すべてのユーザーのデフォルトをリセット",
+      "update": "{{name}} を {{version}} に更新",
+      "disable": "{{name}} を無効にする",
+      "install": "レイアウトとテーマを探す",
+      "installTitle": "レイアウトとテーマ",
+      "installButton": "インストール",
+      "nothingToInstall": "現在、他のレイアウトやテーマは利用できません。",
+      "registryUnreachable": "プラグインレジストリに接続できませんでした。",
+      "askAdmin": "管理者にこのレイアウトの更新または修正を依頼してください。以下で別のレイアウトやテーマに切り替えることもできます。",
+      "switchLayout": "レイアウトを切り替え",
+      "switchTheme": "テーマを切り替え",
+      "saveFailed": "選択内容を保存できませんでした",
+      "reasons": {
+        "safe-url": "アドレスでセーフモードが要求されました。以下からレイアウトを選択するか、アドレスから ?safe-layout=1 を削除してください。",
+        "safe-env": "サーバーが TERMIX_SAFE_LAYOUT で起動されたため、それが削除されるまで全員がこの画面を表示します。",
+        "missing": "このレイアウトを提供するインストール済みプラグインがありません。",
+        "disabled": "このレイアウトを提供するプラグインが無効になっています。",
+        "blocked": "このレイアウトを提供するプラグインが、必要なものを待機しています。",
+        "incompatible": "このレイアウトを提供するプラグインは、このバージョンの Termix と互換性がありません。",
+        "failed": "レイアウトの起動に失敗しました。",
+        "crashed": "アプリを描画する際に、レイアウトが2回クラッシュしました。"
+      },
+      "noLayout": "レイアウトが設定されていません",
+      "restore": "バンドル版の {{name}} を復元",
+      "restoreFailed": "バンドル版のコピーを復元できませんでした"
     }
   },
   "plugins": {
@@ -1124,6 +1127,18 @@
         "title": "サインインの処理",
         "consequence": "ログイン方法、2要素認証、または SSH サインインタイプの追加が可能です。"
       },
+      "auth:policy": {
+        "title": "サインインルールを設定",
+        "consequence": "アイドル時にユーザーをサインアウトさせたり、セッションの長さを制限したり、「ログイン状態を保持」を無効にしたり、2要素認証を要求したりできます。"
+      },
+      "ssh:transport": {
+        "title": "ホストへの接続方法を選択",
+        "consequence": "SSH 接続を独自のルートでホストに送信できるため、それらのホストへの送受信データ（パスワードを含む）をすべて確認できます。"
+      },
+      "sync:provide": {
+        "title": "同期を実行",
+        "consequence": "すべての同期リクエストに応答できるため、デバイスとサーバーが同期するデータを確認できます。"
+      },
       "system:tls": {
         "title": "証明書の管理",
         "consequence": "Termix が HTTPS で提供する証明書の置換や、認証局からのドメイン確認への応答が可能です。"
@@ -1131,6 +1146,10 @@
       "device:serial": {
         "title": "シリアルおよび USB デバイスへのアクセス",
         "consequence": "Termix を実行しているマシンの物理シリアルポートを開くことができます。"
+      },
+      "hosts:export": {
+        "title": "シークレットを含むホストをエクスポート",
+        "consequence": "保存されたパスワードやキーを含むホストを完全に読み取り、配布できます。すべてのエクスポートは監査ログに記録されます。"
       },
       "hosts:write": {
         "title": "ホストの作成と変更",
@@ -1176,9 +1195,29 @@
         "title": "監査ログの閲覧",
         "consequence": "誰がいつ何をしたかを確認できます。"
       },
+      "network:probe": {
+        "title": "ポートの応答を確認",
+        "consequence": "サーバーから任意のアドレスへ平文接続を開き、到達可能かどうかを確認できます。"
+      },
+      "hosts:status-provide": {
+        "title": "ホストのステータスを提供",
+        "consequence": "すべてのホストのオンライン/オフライン表示（ドット）のデータ源になります。"
+      },
+      "hosts:activity-provide": {
+        "title": "最近のアクティビティを保存",
+        "consequence": "すべてのユーザーの最近のアクティビティリストの保存先になります。"
+      },
+      "hosts:lock": {
+        "title": "ホストを読み取り専用として管理",
+        "consequence": "管理対象のホストは、他のユーザーによって編集、削除、再共有できません。"
+      },
       "desktop:window": {
         "title": "デスクトップウィンドウを開く",
         "consequence": "Termix デスクトップアプリでのみ可能です。"
+      },
+      "desktop:local": {
+        "title": "このコンピューターを使用",
+        "consequence": "このコンピューター上のファイルの読み書き、シェル実行、ローカルポートの開放が可能です。Termix デスクトップアプリでのみ利用できます。"
       },
       "users:impersonate": {
         "title": "他のユーザーとして動作",
@@ -1219,6 +1258,14 @@
       "ui:surface": {
         "title": "独自の画面を追加",
         "consequence": "後で非表示にできるタブ、パネル、設定を追加します。"
+      },
+      "ui:layout": {
+        "title": "アプリ全体のレイアウトを置き換え",
+        "consequence": "選択されると、ターミナルや設定を含むすべての画面を描画するコードが実行されます。"
+      },
+      "ui:theme": {
+        "title": "カラーテーマを追加",
+        "consequence": "色とスタイルのみです。テーマにはコードは実行されません。"
       }
     },
     "runtime": {
@@ -1336,6 +1383,7 @@
         "options": "{{name}} のオプションを保存できませんでした：{{error}}",
         "deleteData": "{{name}} のデータを削除できませんでした：{{error}}",
         "managedByServer": "このデスクトップはサーバーにリンクされており、プラグインはサーバーが決定します。",
+        "defaultLook": "{{name}} はデフォルトの見た目であるため、無効化または切り替えは可能ですが、アンインストールはできません。",
         "hasDependents": "{{name}} は {{list}} によって必要とされています。まずそれらを無効にしたりアンインストールしてください。",
         "missingDependencies": "{{name}} には {{list}} が必要ですが、インストールされていません。",
         "consentChanged": "確認してからこのプラグインの要求内容が変更されました。リストをもう一度確認してください。",
@@ -1401,7 +1449,6 @@
       "noServerAccess": "サーバーへのアクセスなし",
       "searchInstalled": "インストール済みを検索",
       "searchPlugins": "プラグインを検索",
-      "allCategories": "すべて",
       "nothingMatches": "一致するものはありません。",
       "noneInstalled": "まだプラグインがインストールされていません。閲覧して追加してください。",
       "nothingHere": "ここには何もありません。",
@@ -1487,7 +1534,43 @@
       "documentation": "ドキュメント",
       "envVars": "環境変数",
       "envRequired": "必須",
-      "envDefault": "デフォルト: {{value}}"
+      "envDefault": "デフォルト: {{value}}",
+      "kinds": {
+        "layouts": "レイアウト",
+        "themes": "テーマ",
+        "tabs": "タブ",
+        "panels": "サイドバーパネル",
+        "dashboardCards": "ダッシュボードカード",
+        "protocols": "接続タイプ",
+        "auth": "サインイン方法",
+        "actions": "アクション",
+        "hostCapability": "ホスト設定"
+      },
+      "filters": {
+        "type": "タイプ",
+        "allTypes": "すべてのタイプ",
+        "category": "カテゴリ",
+        "allCategories": "すべてのカテゴリ",
+        "results_other": "{{count}} 個のプラグイン",
+        "remove": "フィルター「{{name}}」を削除",
+        "clear": "フィルターをクリア",
+        "button": "フィルター",
+        "buttonCount": "フィルター ({{count}})"
+      },
+      "pager": {
+        "range": "{{total}} 件中 {{from}}-{{to}}",
+        "page": "{{pages}} ページ中 {{page}} ページ目",
+        "previous": "前のページ",
+        "next": "次のページ",
+        "perPage": "1ページあたり {{count}} 件",
+        "perPageLabel": "1ページあたりのプラグイン数"
+      },
+      "showUnsupportedHint": "これらはリストされていますが、このバージョンではまだリリースが実行されません。インストールするには Termix をアップデートしてください。",
+      "unsupported": "新しい Termix が必要です",
+      "unsupportedHint": "このプラグインのリリースは、このバージョンの Termix では実行されません。インストールするには Termix をアップデートしてください。",
+      "needsTermix": "Termix {{range}} が必要です",
+      "showUnsupported": "サポートされていないものを表示 ({{count}})",
+      "showMore": "さらに {{count}} 件を表示 (残り {{total}} 件)"
     }
   },
   "settings": {
@@ -1502,82 +1585,6 @@
     "sudoHint": "特権アクションを有効にするには、ホストエディタでこのホストの sudo パスワードを設定してください。",
     "noData": "データなし",
     "filter": "フィルター..."
-  },
-  "sync": {
-    "minutesAgo_other": "{{count}} 分前",
-    "hoursAgo_other": "{{count}} 時間前",
-    "pending_other": "{{count}} 件の変更が同期待ちです",
-    "proxy": {
-      "headersTitle": "追加ヘッダー",
-      "headersHint": "サーバーへのすべてのリクエストに送信されます。例えば、Cloudflare Access のサービストークンなどです。",
-      "headerName": "ヘッダー名",
-      "headerValue": "値",
-      "savedValue": "保存済み。変更するには入力してください",
-      "addHeader": "ヘッダーを追加",
-      "removeHeader": "ヘッダーを削除",
-      "basicAuthTitle": "ユーザー名とパスワード",
-      "basicAuthHint": "Termix の前にユーザー名とパスワードを要求するプロキシ用です。",
-      "username": "ユーザー名",
-      "password": "パスワード",
-      "allowInvalidCertificate": "自己署名証明書を信頼する",
-      "allowInvalidCertificateHint": "サーバーの証明書が既知の認証局から発行されていない場合のみ、自分のサーバーに対して使用してください。"
-    },
-    "problems": {
-      "invalidUrl": "これはWebアドレスのように見えません。",
-      "unreachable": "サーバーに接続できません。アドレスとサーバーが実行中であることを確認してください。",
-      "unreachableWithReason": "サーバーに接続できません: {{reason}}",
-      "tlsUntrusted": "サーバー証明書が信頼されていません。自己署名証明書を使用している自分のサーバーの場合は、以下のオプションを有効にしてください。",
-      "basicAuthRequired": "サーバーの前にある何かがユーザー名とパスワードを要求しています。以下に入力してください。",
-      "proxyLogin": "Termix の代わりにログインページまたはプロキシが応答しました。必要なヘッダーを以下に追加するか、アドレスを確認してください。",
-      "notTermix": "そのアドレスには Termix サーバーがありません。パスの下で実行されている場合は、https://example.com/termix のように含めてください。",
-      "versionMismatch": "そのサーバーは古いバージョンの Termix を実行しています。リンクするには 2.9 以降にアップデートしてください。",
-      "differentAccount": "別のアカウントにサインインしました。このデバイスがリンクされているアカウントにサインインするか、まずリンクを解除してください。"
-    },
-    "wizard": {
-      "title": "Termix サーバーにリンク",
-      "reloginTitle": "再度サインイン",
-      "savedServers": "最近のサーバー",
-      "removeServer": "リストから削除",
-      "serverDescription": "ブラウザで Termix を開く際に使用するアドレスを入力してください。",
-      "signinDescription": "{{url}} にサインイン",
-      "chooseDescription": "このデバイスには既にデータがあります。どうしますか？",
-      "finishingDescription": "このデバイスをリンクしています。",
-      "serverUrl": "サーバーアドレス",
-      "serverUrlHint": "例: https://termix.example.com",
-      "showProxySettings": "リバースプロキシ設定",
-      "hideProxySettings": "リバースプロキシ設定を隠す",
-      "continue": "続行",
-      "back": "戻る",
-      "mergeTitle": "マイアカウントに追加",
-      "mergeBody_other": "このデバイス上の {{count}} 個のアイテムがアカウントに追加されます。アカウントに既に存在するアイテムはサーバー上のまま変更されません。",
-      "replaceTitle": "マイアカウントで上書き",
-      "replaceBody_other": "このデバイス上の {{count}} 個のアイテムが削除され、このデバイスはアカウントからすべてのデータを取得します。このデバイスにのみ保持されているホストはそのまま残ります。",
-      "link": "リンク",
-      "linking": "リンクして最初の同期を実行しています...",
-      "linked": "リンクしました。データが同期されています。",
-      "signedInAgain": "サインインしました。同期が再開されました。"
-    },
-    "entities": {
-      "hosts": "ホスト",
-      "sshCredentials": "認証情報",
-      "sshFolders": "フォルダ",
-      "userPreferences": "環境設定",
-      "pluginUserSettings": "プラグイン設定",
-      "sharedHosts": "あなたと共有されたホスト",
-      "sharedCredentials": "あなたと共有された認証情報",
-      "vaultProfiles": "Vault プロファイル",
-      "snippetFolders": "スニペットフォルダ",
-      "snippets": "スニペット",
-      "dashboardServiceLinks": "サービスリンク",
-      "homepageItems": "ホームページ項目",
-      "networkTopology": "ネットワークマップ",
-      "workspaces": "ワークスペース",
-      "hostDefaults": "ホストのデフォルト設定",
-      "hostDefaultsAdmin": "サーバーのホストデフォルト設定",
-      "aiProviders": "AI プロバイダー",
-      "homepageLayouts": "ホームページレイアウト",
-      "accountProfile": "アカウントプロフィール"
-    }
   },
   "hostDefaults": {
     "source": {

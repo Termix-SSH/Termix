@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "Sebahagian plugin tidak dapat diubah. Anda boleh membetulkannya kemudian dari tab Plugin. Tekan Seterusnya untuk meneruskan.",
     "pluginsApplyFailed": "Pilihan anda tidak dapat disimpan. Cuba lagi, atau teruskan dan ubah kemudian dari tab Plugin.",
     "pluginsLoadFailed": "Senarai plugin tidak dapat dimuatkan. Anda boleh memilih plugin kemudian dari tab Plugin.",
-    "presetTitle": "Berapa banyak yang anda mahu pada skrin?",
-    "presetIntro": "Pilih berapa banyak yang dipaparkan pada skrin.",
-    "presetChangeLater": "Anda boleh menukar pratetap atau mengubah sebarang tetapan tunggal kemudian dalam Tetapan, di bawah Antaramuka.",
-    "appearanceTitle": "Jadikan ia milik anda",
-    "appearanceIntro": "Pilih tema, warna aksen, fon dan bahasa anda. Perubahan dipaparkan serta-merta, dan anda boleh mengubahnya kemudian dalam Tetapan.",
     "securityTitle": "Lindungi akaun anda",
     "securityIntro": "Tambahkan passkey atau aplikasi pengesah pada akaun anda. Anda juga boleh melakukan ini kemudian dalam Tetapan, di bawah Keselamatan.",
-    "desktopTitle": "Bagaimana anda ingin menggunakan Termix?",
-    "desktopBody": "Anda boleh mengubah ini pada bila-bila masa dari Sync di bar sisi.",
-    "desktopLocalTitle": "Hanya pada peranti ini",
-    "desktopLocalBody": "Semua disimpan di sini. Tiada apa-apa untuk disediakan.",
-    "desktopLinkTitle": "Dengan pelayan Termix saya",
-    "desktopLinkBody": "Log masuk ke pelayan anda untuk menggunakan hos dan tetapan yang sama pada setiap peranti.",
-    "desktopLinked": "Disambungkan ke {{server}}",
     "pluginsDocsLink": "Baca tentang setiap satu"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} sedia untuk dipasang",
     "readyHint": "Ia akan dipasang pada kali seterusnya Termix dimulakan semula."
   },
+  "companion": {
+    "close": "Tutup panel",
+    "moveSide": "Pindahkan panel",
+    "resize": "Ubah saiz panel"
+  },
   "nav": {
     "home": "Laman Utama",
     "terminal": "Terminal",
@@ -257,7 +250,6 @@
     "hosts": "Hos",
     "credentials": "Kelayakan",
     "connections": "Sambungan",
-    "sync": "Serentak",
     "reconnectDisconnectedTerminals": "Sambung semula semua terminal yang terputus",
     "reconnectingTerminals_other": "Menyambung semula {{count}} terminal",
     "noDisconnectedTerminals": "Tiada terminal yang terputus sedia untuk disambung semula",
@@ -276,10 +268,7 @@
     "retry": "Cuba Lagi",
     "refresh": "Muat Semula",
     "optional": "Pilihan",
-    "downloadSample": "Muat Turun Contoh",
     "failedToDeleteHost": "Gagal memadam {{name}}",
-    "importSkipExisting": "Import (langkau yang sedia ada)",
-    "importSSHConfig": "Import dari konfigurasi SSH",
     "connectionDetails": "Butiran Sambungan",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -497,10 +486,7 @@
     "noFolder": "(Tiada folder)",
     "deleteSelected": "Padam",
     "exitSelection": "Keluar daripada pemilihan",
-    "importSkip": "Import (langkau yang sedia ada)",
-    "importOverwrite": "Import (timpa)",
     "collapseBtn": "Runtuhkan",
-    "importExportBtn": "Import / Eksport",
     "hostStatusesRefreshed": "Status hos dikemas kini",
     "failedToRefreshHosts": "Gagal mengemas kini hos",
     "movedHostTo": "Memindahkan {{host}} ke \"{{folder}}\"",
@@ -553,6 +539,9 @@
     "folderDeleted": "Folder \"{{name}}\" dipadam",
     "deleteFolderConfirm_other": "Padam \"{{name}}\" dan {{count}} hosnya? Tindakan ini tidak boleh dibatalkan.",
     "failedToMoveHosts": "Gagal memindahkan hos",
+    "managedBanner": "Hos ini dikendalikan oleh {{plugin}}. Ubah di sana. Anda masih boleh menyemat dan menyusun semula susunannya.",
+    "managedTooltip": "Dikendalikan oleh {{plugin}}",
+    "addBlocked": "Hos dikendalikan oleh {{plugin}}, jadi hos baharu tidak boleh ditambah di sini.",
     "failedToReorder": "Gagal menyusun semula",
     "expandAll": "Kembangkan semua folder",
     "collapseAll": "Runtuhkan semua folder",
@@ -662,34 +651,6 @@
     "addCredentialBtn2": "Tambah Kelayakan",
     "checkingHostStatuses": "Menyahkan status hos...",
     "pinnedSection": "Disemat",
-    "hostsExported": "Hos berjaya dieksport",
-    "export": {
-      "menuItem": "Eksport...",
-      "title": "Eksport hos",
-      "scope": "Skop",
-      "scopeAll": "Semua",
-      "scopeSelected": "Dipilih",
-      "searchHosts": "Cari hos...",
-      "include": "Sertakan",
-      "groupConnection": "Sambungan",
-      "groupCredentials": "Kredensial",
-      "groupNotes": "Nota",
-      "groupTags": "Tag & semat",
-      "groupProxy": "Proksi",
-      "groupJumpHosts": "Hos loncat",
-      "groupFeatureFlags": "Tetapan plugin",
-      "groupAdvanced": "Konfigurasi lanjutan",
-      "preview": "Pratonton",
-      "moreHosts_other": "... {{count}} hos lagi",
-      "summary": "{{selected}} daripada {{total}} hos",
-      "credentialsIncluded": "kredensial disertakan",
-      "credentialsExcluded": "kredensial dikecualikan",
-      "noneSelected": "Tiada hos dipilih",
-      "cancel": "Batal",
-      "confirm": "Eksport",
-      "fetchFailed": "Gagal memuat hos untuk eksport",
-      "bulkButton": "Eksport"
-    },
     "sampleDownloaded": "Fail sampel dimuat turun",
     "failedToDeleteCredential2": "Gagal memadam kredensial",
     "noFolderOption": "(Tiada folder)",
@@ -847,11 +808,7 @@
     "editorUpdate": "Kemas Kini Hos",
     "editorAdd": "Tambah Hos",
     "speedSearch": "Cari hos. Kek panah untuk memilih, Enter untuk menyambung, Esc untuk menutup",
-    "speedSearchList": "Senarai hos. Taip atau tekan / untuk mencari.",
-    "importNoHosts": "Tiada hos ditemui dalam fail",
-    "importTooMany": "Anda boleh mengimport sehingga {{max}} hos sekaligus",
-    "importSummary": "Import selesai: {{imported}} diimport, {{updated}} dikemas kini, {{failed}} gagal",
-    "importHostsFailed": "Gagal mengimport hos"
+    "speedSearchList": "Senarai hos. Taip atau tekan / untuk mencari."
   },
   "splitScreen": {
     "title": "Skrin terbahagi",
@@ -1046,9 +1003,14 @@
     "hostCount_other": "{{count}} hos"
   },
   "admin": {
+    "usersCount_one": "pengguna {{count}}",
+    "rolesCount_one": "{{count}} peranan",
+    "apiKeysCount_one": "{{count}} kunci",
+    "sessionsActive_one": "aktif {{count}}",
     "hostsCount_other": "{{count}} hos",
     "credentialsCount_other": "{{count}} kelayakan",
     "rolePermissions": {
+      "count_one": "{{count}} kebenaran",
       "groups": {
         "hosts": "Hos",
         "credentials": "Kelayakan",
@@ -1091,15 +1053,55 @@
         "colorPickerTooltip": "Buka pemilih warna",
         "themeSystem": "Sistem",
         "themeLight": "Terang",
-        "themeDark": "Gelap",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "Gelap"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "Bagaimana keseluruhan aplikasi disusun. Tema dan susun atur berasal daripada plugin.",
+    "defaultsLabel": "Lalai untuk semua orang",
+    "defaultsHint": "Apa yang dilihat pengguna sehingga mereka memilih susun atur atau tema mereka sendiri.",
+    "followDefault": "Gunakan yang lalai",
+    "defaultSaved": "Rupa lalai disimpan",
+    "saveFailed": "Tidak dapat menyimpan rupa",
+    "repair": {
+      "title": "Susun atur ini tidak dapat dipaparkan",
+      "safeTitle": "Mod selamat",
+      "layout": "Susun atur",
+      "plugin": "Plugin",
+      "reason": "Sebab",
+      "error": "Ralat",
+      "noError": "Tiada mesej ralat.",
+      "copy": "Salin",
+      "copied": "Disalin",
+      "copyFailed": "Tidak dapat menyalin butiran",
+      "retry": "Cuba lagi",
+      "reset": "Set semula ke rupa lalai",
+      "resetEveryone": "Set semula lalai untuk semua orang",
+      "update": "Kemas kini {{name}} ke {{version}}",
+      "disable": "Matikan {{name}}",
+      "install": "Cari susun atur dan tema",
+      "installTitle": "Susun atur dan tema",
+      "installButton": "Pasang",
+      "nothingToInstall": "Tiada susun atur atau tema lain yang tersedia sekarang.",
+      "registryUnreachable": "Daftar plugin tidak dapat dicapai.",
+      "askAdmin": "Minta pentadbir mengemas kini atau membetulkan susun atur ini. Anda boleh beralih ke susun atur atau tema lain untuk diri anda di bawah.",
+      "switchLayout": "Tukar susun atur",
+      "switchTheme": "Tukar tema",
+      "saveFailed": "Tidak dapat menyimpan pilihan anda",
+      "reasons": {
+        "safe-url": "Alamat meminta mod selamat. Pilih susun atur di bawah, atau buang ?safe-layout=1 daripada alamat.",
+        "safe-env": "Pelayan dimulakan dengan TERMIX_SAFE_LAYOUT, jadi semua orang melihat skrin ini sehingga ia dibuang.",
+        "missing": "Tiada plugin yang dipasang menyediakan susun atur ini.",
+        "disabled": "Plugin yang menyediakan susun atur ini dimatikan.",
+        "blocked": "Plugin yang menyediakan susun atur ini sedang menunggu sesuatu yang diperlukan.",
+        "incompatible": "Plugin yang menyediakan susun atur ini tidak berfungsi dengan versi Termix ini.",
+        "failed": "Susun atur gagal dimulakan.",
+        "crashed": "Susun atur terhenti dua kali semasa melukis aplikasi."
+      },
+      "noLayout": "Tiada susun atur ditetapkan",
+      "restore": "Pulihkan {{name}} yang dibundel",
+      "restoreFailed": "Tidak dapat memulihkan salinan yang dibundel"
     }
   },
   "plugins": {
@@ -1124,6 +1126,18 @@
         "title": "Urus log masuk",
         "consequence": "Ia boleh menambah kaedah log masuk, faktor kedua atau jenis log masuk SSH."
       },
+      "auth:policy": {
+        "title": "Tetapkan peraturan log masuk",
+        "consequence": "Ia boleh mengeluarkan pengguna apabila tidak aktif, hadkan panjang sesi, matikan ingat saya dan memerlukan faktor kedua."
+      },
+      "ssh:transport": {
+        "title": "Pilih cara hos dicapai",
+        "consequence": "Ia boleh membawa sambungan SSH ke hos melalui laluan sendiri, jadi ia melihat segala yang dihantar ke dan dari hos tersebut, termasuk kata laluan."
+      },
+      "sync:provide": {
+        "title": "Jalankan segerak",
+        "consequence": "Ia boleh menjawab semua permintaan segerak, jadi ia melihat data yang disegerakkan oleh peranti dan pelayan."
+      },
       "system:tls": {
         "title": "Urus sijil",
         "consequence": "Ia boleh menggantikan sijil yang dilayan oleh Termix melalui HTTPS dan menjawab semakan domain daripada pihak berkuasa sijil."
@@ -1131,6 +1145,10 @@
       "device:serial": {
         "title": "Akses peranti siri dan USB",
         "consequence": "Ia boleh membuka port siri fizikal pada mesin yang menjalankan Termix."
+      },
+      "hosts:export": {
+        "title": "Eksport hos dengan rahsia mereka",
+        "consequence": "Boleh membaca semua hos anda sepenuhnya, termasuk kata laluan dan kunci yang disimpan, serta menyebarkannya. Setiap eksport dicatatkan dalam log audit."
       },
       "hosts:write": {
         "title": "Cipta dan ubah hos",
@@ -1176,9 +1194,29 @@
         "title": "Baca log audit",
         "consequence": "Ia boleh melihat siapa melakukan apa dan bila."
       },
+      "network:probe": {
+        "title": "Semak jika port bertindak balas",
+        "consequence": "Boleh membuka sambungan biasa ke mana-mana alamat dari pelayan, untuk melihat jika ia boleh dicapai."
+      },
+      "hosts:status-provide": {
+        "title": "Sediakan status hos",
+        "consequence": "Menjadi sumber titik dalam talian dan luar talian untuk setiap hos."
+      },
+      "hosts:activity-provide": {
+        "title": "Simpan aktiviti terkini",
+        "consequence": "Menjadi stor untuk senarai aktiviti terkini setiap pengguna."
+      },
+      "hosts:lock": {
+        "title": "Urus hos sebagai baca sahaja",
+        "consequence": "Hos yang diuruskan tidak boleh diedit, dipadam atau dikongsi semula oleh sesiapa pun."
+      },
       "desktop:window": {
         "title": "Buka tetingkap desktop",
         "consequence": "Hanya dalam aplikasi desktop Termix."
+      },
+      "desktop:local": {
+        "title": "Gunakan komputer ini",
+        "consequence": "Boleh membaca dan mengubah fail, menjalankan shell dan membuka port tempatan pada komputer ini. Hanya dalam aplikasi desktop Termix."
       },
       "users:impersonate": {
         "title": "Bertindak sebagai pengguna lain",
@@ -1219,6 +1257,14 @@
       "ui:surface": {
         "title": "Tambah skrin miliknya sendiri",
         "consequence": "Tab, panel dan tetapan yang boleh anda sembunyikan kemudian."
+      },
+      "ui:layout": {
+        "title": "Gantikan keseluruhan susun atur aplikasi",
+        "consequence": "Apabila dipilih, kodnya melukis setiap skrin, termasuk terminal dan tetapan anda."
+      },
+      "ui:theme": {
+        "title": "Tambah tema warna",
+        "consequence": "Hanya warna dan gaya. Tiada kod yang dijalankan untuk tema."
       }
     },
     "runtime": {
@@ -1336,6 +1382,7 @@
         "options": "Tidak dapat menyimpan pilihan untuk {{name}}: {{error}}",
         "deleteData": "Tidak dapat memadam data untuk {{name}}: {{error}}",
         "managedByServer": "Meja ini disambungkan ke pelayan, yang menentukan pluginnya.",
+        "defaultLook": "{{name}} adalah rupa lalai, jadi ia boleh dimatikan atau ditukar tetapi tidak boleh dinyahpasang.",
         "hasDependents": "{{name}} diperlukan oleh {{list}}. Matikan atau nyahpasang mereka dahulu.",
         "missingDependencies": "{{name}} memerlukan {{list}}, yang tidak dipasang.",
         "consentChanged": "Apa yang diminta oleh plugin ini telah berubah sejak anda melihatnya. Semak senarai sekali lagi.",
@@ -1401,7 +1448,6 @@
       "noServerAccess": "Tiada akses ke pelayan anda",
       "searchInstalled": "Cari yang dipasang",
       "searchPlugins": "Cari plugin",
-      "allCategories": "Semua",
       "nothingMatches": "Tiada padanan.",
       "noneInstalled": "Tiada plugin dipasang lagi. Layari untuk menambah beberapa.",
       "nothingHere": "Tiada apa-apa di sini.",
@@ -1487,7 +1533,43 @@
       "documentation": "Dokumentasi",
       "envVars": "Pembolehubah persekitaran",
       "envRequired": "Wajib",
-      "envDefault": "Lalai: {{value}}"
+      "envDefault": "Lalai: {{value}}",
+      "kinds": {
+        "layouts": "Susun atur",
+        "themes": "Tema",
+        "tabs": "Tab",
+        "panels": "Panel bar sisi",
+        "dashboardCards": "Kad papan pemuka",
+        "protocols": "Jenis sambungan",
+        "auth": "Kaedah log masuk",
+        "actions": "Tindakan",
+        "hostCapability": "Tetapan hos"
+      },
+      "filters": {
+        "type": "Jenis",
+        "allTypes": "Semua jenis",
+        "category": "Kategori",
+        "allCategories": "Semua kategori",
+        "results_other": "{{count}} plugin",
+        "remove": "Buang penapis {{name}}",
+        "clear": "Kosongkan penapis",
+        "button": "Penapis",
+        "buttonCount": "Penapis ({{count}})"
+      },
+      "pager": {
+        "range": "{{from}}-{{to}} daripada {{total}}",
+        "page": "Halaman {{page}} daripada {{pages}}",
+        "previous": "Halaman sebelumnya",
+        "next": "Halaman seterusnya",
+        "perPage": "{{count}} setiap halaman",
+        "perPageLabel": "Plugin setiap halaman"
+      },
+      "showUnsupportedHint": "Ini disenaraikan tetapi tiada pelepasan yang berjalan pada versi ini lagi. Kemas kini Termix untuk memasangnya.",
+      "unsupported": "Memerlukan Termix yang lebih baru",
+      "unsupportedHint": "Tiada pelepasan plugin ini berjalan pada versi Termix ini. Kemas kini Termix untuk memasangnya.",
+      "needsTermix": "Memerlukan Termix {{range}}",
+      "showUnsupported": "Papar yang tidak disokong ({{count}})",
+      "showMore": "Papar {{count}} lagi ({{total}} baki)"
     }
   },
   "settings": {
@@ -1502,80 +1584,6 @@
     "sudoHint": "Tetapkan kata laluan sudo untuk hos ini dalam penyunting hos untuk membolehkan tindakan istimewa.",
     "noData": "Tiada data",
     "filter": "Tapis..."
-  },
-  "sync": {
-    "minutesAgo_other": "{{count}} minit lalu",
-    "hoursAgo_other": "{{count}} jam lalu",
-    "pending_other": "{{count}} perubahan menunggu untuk disegerakkan",
-    "proxy": {
-      "headersTitle": "Header tambahan",
-      "headersHint": "Dihantar dengan setiap permintaan ke pelayan, contohnya token perkhidmatan Cloudflare Access.",
-      "headerName": "Nama header",
-      "headerValue": "Nilai",
-      "savedValue": "Disimpan, taip untuk mengubah",
-      "addHeader": "Tambah header",
-      "removeHeader": "Alih keluar header",
-      "basicAuthTitle": "Nama pengguna dan kata laluan",
-      "basicAuthHint": "Untuk proksi yang meminta nama pengguna dan kata laluan sebelum Termix.",
-      "username": "Nama pengguna",
-      "password": "Kata laluan",
-      "allowInvalidCertificate": "Percayai sijil tandatangan sendiri",
-      "allowInvalidCertificateHint": "Hanya untuk pelayan anda sendiri, apabila sijilnya bukan daripada pihak berkuasa yang dikenali."
-    },
-    "problems": {
-      "invalidUrl": "Itu tidak kelihatan seperti alamat web.",
-      "unreachable": "Tidak dapat menghubungi pelayan. Semak alamat dan pastikan pelayan sedang berjalan.",
-      "unreachableWithReason": "Tidak dapat menghubungi pelayan: {{reason}}",
-      "tlsUntrusted": "Sijil pelayan tidak dipercayai. Jika ini adalah pelayan anda sendiri dengan sijil tandatangan sendiri, hidupkan pilihan di bawah.",
-      "basicAuthRequired": "Sesuatu di hadapan pelayan meminta nama pengguna dan kata laluan. Masukkan di bawah.",
-      "proxyLogin": "Halaman log masuk atau proksi menjawab sebagai gantinya daripada Termix. Tambah pelayan yang diperlukan di bawah, atau semak alamat.",
-      "notTermix": "Tiada pelayan Termix di alamat tersebut. Jika ia berjalan di bawah laluan, sertakan ia, seperti https://contoh.com/termix.",
-      "versionMismatch": "Pelayan tersebut menjalankan Termix yang lebih lama. Kemaskini ke 2.9 atau lebih baru untuk menghubungkan.",
-      "differentAccount": "Anda telah log masuk ke akaun yang berbeza. Log masuk ke akaun yang peranti ini dihubungkan, atau putuskan hubungan terlebih dahulu."
-    },
-    "wizard": {
-      "title": "Sambungkan ke pelayan Termix",
-      "reloginTitle": "Log masuk semula",
-      "savedServers": "Pelayan terkini",
-      "removeServer": "Buang daripada senarai",
-      "serverDescription": "Masukkan alamat yang anda gunakan untuk membuka Termix dalam pelayar anda.",
-      "signinDescription": "Log masuk ke {{url}}",
-      "chooseDescription": "Peranti ini sudah mempunyai data. Apa yang perlu dilakukan dengannya?",
-      "finishingDescription": "Menyambungkan peranti ini.",
-      "serverUrl": "Alamat pelayan",
-      "serverUrlHint": "Contohnya https://termix.contoh.com",
-      "showProxySettings": "Tetapan proksi songsang",
-      "hideProxySettings": "Sembunyikan tetapan proksi songsang",
-      "continue": "Teruskan",
-      "back": "Kembali",
-      "mergeTitle": "Tambah ke akaun saya",
-      "replaceTitle": "Gantikan dengan akaun saya",
-      "link": "Sambungkan",
-      "linking": "Menyambungkan dan menjalankan penyegerakan pertama...",
-      "linked": "Disambungkan. Data anda sedang disegerakkan sekarang.",
-      "signedInAgain": "Telah log masuk. Penyegerakan sedang berjalan semula."
-    },
-    "entities": {
-      "hosts": "Hosten",
-      "sshCredentials": "Kelayakan",
-      "sshFolders": "Folder",
-      "userPreferences": "Keutamaan",
-      "pluginUserSettings": "Tetapan plugin",
-      "sharedHosts": "Hosten yang dikongsi dengan anda",
-      "sharedCredentials": "Kelayakan yang dikongsi dengan anda",
-      "vaultProfiles": "Profil Vault",
-      "snippetFolders": "Folder snippet",
-      "snippets": "Snippet",
-      "dashboardServiceLinks": "Pautan perkhidmatan",
-      "homepageItems": "Item halaman utama",
-      "networkTopology": "Peta rangkaian",
-      "workspaces": "Ruang kerja",
-      "hostDefaults": "Lalai hos",
-      "hostDefaultsAdmin": "Lalai hos pelayan",
-      "aiProviders": "Pembekal AI",
-      "homepageLayouts": "Susun atur halaman utama",
-      "accountProfile": "Profil akaun"
-    }
   },
   "hostDefaults": {
     "source": {

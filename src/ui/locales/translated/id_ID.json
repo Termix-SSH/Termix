@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "Beberapa plugin tidak dapat diubah. Anda dapat memperbaikinya nanti dari tab Plugin. Tekan Lanjut untuk melanjutkan.",
     "pluginsApplyFailed": "Pilihan Anda tidak dapat disimpan. Coba lagi, atau lanjutkan dan ubah nanti dari tab Plugin.",
     "pluginsLoadFailed": "Daftar plugin tidak dapat dimuat. Anda dapat memilih plugin nanti dari tab Plugin.",
-    "presetTitle": "Seberapa banyak yang ingin Anda tampilkan di layar?",
-    "presetIntro": "Pilih seberapa banyak yang ditampilkan di layar.",
-    "presetChangeLater": "Anda dapat mengganti preset atau mengubah pengaturan individual kapan saja di Pengaturan, di bawah Antarmuka.",
-    "appearanceTitle": "Sesuaikan dengan gaya Anda",
-    "appearanceIntro": "Pilih tema, warna aksen, font, dan bahasa Anda. Perubahan akan langsung terlihat, dan Anda dapat mengubahnya nanti di Pengaturan.",
     "securityTitle": "Amankan akun Anda",
     "securityIntro": "Tambahkan passkey atau aplikasi autentikator ke akun Anda. Anda juga dapat melakukan ini nanti di Pengaturan, di bawah Keamanan.",
-    "desktopTitle": "Bagaimana Anda ingin menggunakan Termix?",
-    "desktopBody": "Anda dapat mengubah ini kapan saja dari Sinkronisasi di sidebar.",
-    "desktopLocalTitle": "Hanya di perangkat ini",
-    "desktopLocalBody": "Semuanya disimpan di sini. Tidak perlu pengaturan.",
-    "desktopLinkTitle": "Dengan server Termix saya",
-    "desktopLinkBody": "Masuk ke server Anda untuk menggunakan host dan pengaturan yang sama di setiap perangkat.",
-    "desktopLinked": "Terhubung ke {{server}}",
     "pluginsDocsLink": "Baca tentang masing-masing"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} siap untuk diinstal",
     "readyHint": "Ini akan diinstal saat Termix dimulai ulang berikutnya."
   },
+  "companion": {
+    "close": "Tutup panel",
+    "moveSide": "Pindahkan panel",
+    "resize": "Ubah ukuran panel"
+  },
   "nav": {
     "home": "Beranda",
     "terminal": "Terminal",
@@ -257,7 +250,6 @@
     "hosts": "Host",
     "credentials": "Kredensial",
     "connections": "Koneksi",
-    "sync": "Sinkronisasi",
     "reconnectDisconnectedTerminals": "Hubungkan ulang semua terminal yang terputus",
     "reconnectingTerminals_other": "Menghubungkan ulang {{count}} terminal",
     "noDisconnectedTerminals": "Tidak ada terminal yang terputus dan siap untuk dihubungkan ulang",
@@ -276,10 +268,7 @@
     "retry": "Coba Lagi",
     "refresh": "Segarkan",
     "optional": "Opsional",
-    "downloadSample": "Unduh Contoh",
     "failedToDeleteHost": "Gagal menghapus {{name}}",
-    "importSkipExisting": "Impor (lewatkan yang sudah ada)",
-    "importSSHConfig": "Impor dari konfigurasi SSH",
     "connectionDetails": "Detail Koneksi",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -497,10 +486,7 @@
     "noFolder": "(Tidak ada folder)",
     "deleteSelected": "Hapus",
     "exitSelection": "Keluar dari pemilihan",
-    "importSkip": "Impor (lewatkan yang sudah ada)",
-    "importOverwrite": "Impor (timpa)",
     "collapseBtn": "Ciutkan",
-    "importExportBtn": "Impor / Ekspor",
     "hostStatusesRefreshed": "Status host diperbarui",
     "failedToRefreshHosts": "Gagal memperbarui host",
     "movedHostTo": "Memindahkan {{host}} ke \"{{folder}}\"",
@@ -553,6 +539,9 @@
     "folderDeleted": "Folder \"{{name}}\" dihapus",
     "deleteFolderConfirm_other": "Hapus \"{{name}}\" dan {{count}} host di dalamnya? Tindakan ini tidak dapat dibatalkan.",
     "failedToMoveHosts": "Gagal memindahkan host",
+    "managedBanner": "Host ini dikelola oleh {{plugin}}. Ubah pengaturan di sana. Anda masih bisa menancapkan dan mengubah urutannya.",
+    "managedTooltip": "Dikelola oleh {{plugin}}",
+    "addBlocked": "Host dikelola oleh {{plugin}}, jadi host baru tidak dapat ditambahkan di sini.",
     "failedToReorder": "Gagal mengurutkan ulang",
     "expandAll": "Bentangkan semua folder",
     "collapseAll": "Ciutkan semua folder",
@@ -662,34 +651,6 @@
     "addCredentialBtn2": "Tambah Kredensial",
     "checkingHostStatuses": "Memeriksa status host...",
     "pinnedSection": "Disematkan",
-    "hostsExported": "Host berhasil diekspor",
-    "export": {
-      "menuItem": "Ekspor...",
-      "title": "Ekspor host",
-      "scope": "Lingkup",
-      "scopeAll": "Semua",
-      "scopeSelected": "Dipilih",
-      "searchHosts": "Cari host...",
-      "include": "Sertakan",
-      "groupConnection": "Koneksi",
-      "groupCredentials": "Kredensial",
-      "groupNotes": "Catatan",
-      "groupTags": "Tag & sematan",
-      "groupProxy": "Proxy",
-      "groupJumpHosts": "Jump host",
-      "groupFeatureFlags": "Pengaturan plugin",
-      "groupAdvanced": "Konfigurasi lanjutan",
-      "preview": "Pratinjau",
-      "moreHosts_other": "... {{count}} host lainnya",
-      "summary": "{{selected}} dari {{total}} host",
-      "credentialsIncluded": "kredensial disertakan",
-      "credentialsExcluded": "kredensial tidak disertakan",
-      "noneSelected": "Tidak ada host yang dipilih",
-      "cancel": "Batal",
-      "confirm": "Ekspor",
-      "fetchFailed": "Gagal memuat host untuk diekspor",
-      "bulkButton": "Ekspor"
-    },
     "sampleDownloaded": "File contoh berhasil diunduh",
     "failedToDeleteCredential2": "Gagal menghapus kredensial",
     "noFolderOption": "(Tidak ada folder)",
@@ -847,11 +808,7 @@
     "editorUpdate": "Perbarui Host",
     "editorAdd": "Tambah Host",
     "speedSearch": "Cari host. Tombol panah untuk memilih, Enter untuk terhubung, Esc untuk menutup",
-    "speedSearchList": "Daftar host. Ketik atau tekan / untuk mencari.",
-    "importNoHosts": "Tidak ada host ditemukan di file",
-    "importTooMany": "Anda dapat mengimpor hingga {{max}} host sekaligus",
-    "importSummary": "Impor selesai: {{imported}} diimpor, {{updated}} diperbarui, {{failed}} gagal",
-    "importHostsFailed": "Gagal mengimpor host"
+    "speedSearchList": "Daftar host. Ketik atau tekan / untuk mencari."
   },
   "splitScreen": {
     "title": "Layar terbagi",
@@ -1046,9 +1003,14 @@
     "hostCount_other": "{{count}} host"
   },
   "admin": {
+    "usersCount_one": "{{count}} pengguna",
+    "rolesCount_one": "{{count}} peran",
+    "apiKeysCount_one": "{{count}} kunci",
+    "sessionsActive_one": "{{count}} aktif",
     "hostsCount_other": "{{count}} host",
     "credentialsCount_other": "{{count}} kredensial",
     "rolePermissions": {
+      "count_one": "{{count}} izin",
       "groups": {
         "hosts": "Host",
         "credentials": "Kredensial",
@@ -1088,18 +1050,59 @@
         "interfaceFontLabel": "Font Antarmuka",
         "interfaceFontDescription": "Mengubah font antarmuka aplikasi. Profil terminal tetap menggunakan pengaturan font masing-masing.",
         "accentColorLabel": "Warna Aksen",
+        "apiKeyCount_one": "{{count}} kunci",
         "colorPickerTooltip": "Buka pemilih warna",
         "themeSystem": "Sistem",
         "themeLight": "Terang",
-        "themeDark": "Gelap",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "Gelap"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "Cara tata letak seluruh aplikasi. Tema dan tata letak berasal dari plugin.",
+    "defaultsLabel": "Default untuk semua orang",
+    "defaultsHint": "Apa yang dilihat pengguna hingga mereka memilih tata letak atau tema sendiri.",
+    "followDefault": "Gunakan default",
+    "defaultSaved": "Tampilan default disimpan",
+    "saveFailed": "Gagal menyimpan tampilan",
+    "repair": {
+      "title": "Tata letak ini tidak dapat ditampilkan",
+      "safeTitle": "Mode aman",
+      "layout": "Tata letak",
+      "plugin": "Plugin",
+      "reason": "Alasan",
+      "error": "Kesalahan",
+      "noError": "Tidak ada pesan kesalahan.",
+      "copy": "Salin",
+      "copied": "Disalin",
+      "copyFailed": "Gagal menyalin detail",
+      "retry": "Coba lagi",
+      "reset": "Atur ulang ke tampilan default",
+      "resetEveryone": "Atur ulang default untuk semua orang",
+      "update": "Perbarui {{name}} ke {{version}}",
+      "disable": "Matikan {{name}}",
+      "install": "Cari tata letak dan tema",
+      "installTitle": "Tata letak dan tema",
+      "installButton": "Instal",
+      "nothingToInstall": "Tidak ada tata letak atau tema lain yang tersedia saat ini.",
+      "registryUnreachable": "Daftar plugin tidak dapat dijangkau.",
+      "askAdmin": "Minta admin untuk memperbarui atau memperbaiki tata letak ini. Anda dapat beralih ke tata letak atau tema lain untuk diri Anda sendiri di bawah ini.",
+      "switchLayout": "Beralih tata letak",
+      "switchTheme": "Beralih tema",
+      "saveFailed": "Gagal menyimpan pilihan Anda",
+      "reasons": {
+        "safe-url": "Alamat meminta mode aman. Pilih tata letak di bawah, atau hapus ?safe-layout=1 dari alamat.",
+        "safe-env": "Server dimulai dengan TERMIX_SAFE_LAYOUT, jadi semua orang melihat layar ini hingga dihapus.",
+        "missing": "Tidak ada plugin terinstal yang menyediakan tata letak ini.",
+        "disabled": "Plugin yang menyediakan tata letak ini dimatikan.",
+        "blocked": "Plugin yang menyediakan tata letak ini sedang menunggu sesuatu yang dibutuhkannya.",
+        "incompatible": "Plugin yang menyediakan tata letak ini tidak kompatibel dengan versi Termix ini.",
+        "failed": "Tata letak gagal dimulai.",
+        "crashed": "Tata letak mengalami crash dua kali saat merender aplikasi."
+      },
+      "noLayout": "Tidak ada tata letak yang diatur",
+      "restore": "Pulihkan {{name}} bawaan",
+      "restoreFailed": "Gagal memulihkan salinan bawaan"
     }
   },
   "plugins": {
@@ -1124,6 +1127,18 @@
         "title": "Menangani masuk",
         "consequence": "Plugin ini dapat menambahkan metode login, faktor kedua, atau jenis masuk SSH."
       },
+      "auth:policy": {
+        "title": "Atur aturan masuk",
+        "consequence": "Plugin ini dapat mengeluarkan pengguna saat tidak aktif, membatasi durasi sesi, menonaktifkan fitur 'ingat saya', dan memerlukan faktor kedua."
+      },
+      "ssh:transport": {
+        "title": "Pilih cara host dijangkau",
+        "consequence": "Plugin ini dapat membawa koneksi SSH ke host melalui rute sendiri, sehingga dapat melihat semua data yang dikirim ke dan dari host tersebut, termasuk kata sandi."
+      },
+      "sync:provide": {
+        "title": "Jalankan sinkronisasi",
+        "consequence": "Plugin ini dapat menjawab semua permintaan sinkronisasi, sehingga dapat melihat data yang disinkronkan oleh perangkat dan server."
+      },
       "system:tls": {
         "title": "Mengelola sertifikat",
         "consequence": "Plugin ini dapat mengganti sertifikat yang disajikan Termix melalui HTTPS dan menjawab pemeriksaan domain dari otoritas sertifikat."
@@ -1131,6 +1146,10 @@
       "device:serial": {
         "title": "Mengakses perangkat serial dan USB",
         "consequence": "Plugin ini dapat membuka port serial fisik di mesin yang menjalankan Termix."
+      },
+      "hosts:export": {
+        "title": "Ekspor host beserta rahasia mereka",
+        "consequence": "Dapat membaca semua host Anda secara lengkap, termasuk kata sandi dan kunci yang disimpan, serta membagikannya. Setiap ekspor dicatat dalam log audit."
       },
       "hosts:write": {
         "title": "Membuat dan mengubah host",
@@ -1176,9 +1195,29 @@
         "title": "Membaca log audit",
         "consequence": "Plugin ini dapat melihat siapa yang melakukan apa dan kapan."
       },
+      "network:probe": {
+        "title": "Periksa respons port",
+        "consequence": "Dapat membuka koneksi biasa ke alamat apa pun dari server, untuk melihat apakah alamat tersebut dapat dijangkau."
+      },
+      "hosts:status-provide": {
+        "title": "Sediakan status host",
+        "consequence": "Menjadi sumber titik online dan offline untuk setiap host."
+      },
+      "hosts:activity-provide": {
+        "title": "Simpan aktivitas terbaru",
+        "consequence": "Menjadi penyimpanan untuk daftar aktivitas terbaru setiap pengguna."
+      },
+      "hosts:lock": {
+        "title": "Kelola host sebagai baca saja",
+        "consequence": "Host yang dikelolanya tidak dapat diedit, dihapus, atau dibagikan ulang oleh siapa pun."
+      },
       "desktop:window": {
         "title": "Membuka jendela desktop",
         "consequence": "Hanya di aplikasi desktop Termix."
+      },
+      "desktop:local": {
+        "title": "Gunakan komputer ini",
+        "consequence": "Dapat membaca dan mengubah file, menjalankan shell, dan membuka port lokal di komputer ini. Hanya di aplikasi desktop Termix."
       },
       "users:impersonate": {
         "title": "Bertindak sebagai pengguna lain",
@@ -1219,6 +1258,14 @@
       "ui:surface": {
         "title": "Menambahkan layar miliknya sendiri",
         "consequence": "Tab, panel, dan pengaturan yang dapat disembunyikan nanti."
+      },
+      "ui:layout": {
+        "title": "Ganti seluruh tata letak aplikasi",
+        "consequence": "Ketika dipilih, kodenya menggambar setiap layar, termasuk terminal dan pengaturan Anda."
+      },
+      "ui:theme": {
+        "title": "Tambahkan tema warna",
+        "consequence": "Hanya warna dan gaya. Tidak ada kode yang dijalankan untuk tema."
       }
     },
     "runtime": {
@@ -1336,6 +1383,7 @@
         "options": "Tidak dapat menyimpan opsi untuk {{name}}: {{error}}",
         "deleteData": "Tidak dapat menghapus data untuk {{name}}: {{error}}",
         "managedByServer": "Desktop ini terhubung ke server, yang menentukan pluginnya.",
+        "defaultLook": "{{name}} adalah tampilan default, sehingga dapat dimatikan atau diganti tetapi tidak dapat dihapus.",
         "hasDependents": "{{name}} dibutuhkan oleh {{list}}. Matikan atau hapus instalasi mereka terlebih dahulu.",
         "missingDependencies": "{{name}} membutuhkan {{list}}, yang belum terinstal.",
         "consentChanged": "Apa yang diminta plugin ini telah berubah sejak Anda terakhir melihat. Periksa daftar lagi.",
@@ -1401,7 +1449,6 @@
       "noServerAccess": "Tidak ada akses ke server Anda",
       "searchInstalled": "Cari yang terpasang",
       "searchPlugins": "Cari plugin",
-      "allCategories": "Semua",
       "nothingMatches": "Tidak ada yang cocok.",
       "noneInstalled": "Belum ada plugin terpasang. Jelajahi untuk menambahkan beberapa.",
       "nothingHere": "Tidak ada di sini.",
@@ -1487,7 +1534,43 @@
       "documentation": "Dokumentasi",
       "envVars": "Variabel lingkungan",
       "envRequired": "Wajib",
-      "envDefault": "Bawaan: {{value}}"
+      "envDefault": "Bawaan: {{value}}",
+      "kinds": {
+        "layouts": "Tata letak",
+        "themes": "Tema",
+        "tabs": "Tab",
+        "panels": "Panel bilah sisi",
+        "dashboardCards": "Kartu dasbor",
+        "protocols": "Jenis koneksi",
+        "auth": "Metode masuk",
+        "actions": "Tindakan",
+        "hostCapability": "Pengaturan host"
+      },
+      "filters": {
+        "type": "Jenis",
+        "allTypes": "Semua jenis",
+        "category": "Kategori",
+        "allCategories": "Semua kategori",
+        "results_other": "{{count}} plugin",
+        "remove": "Hapus filter {{name}}",
+        "clear": "Hapus filter",
+        "button": "Filter",
+        "buttonCount": "Filter ({{count}})"
+      },
+      "pager": {
+        "range": "{{from}}-{{to}} dari {{total}}",
+        "page": "Halaman {{page}} dari {{pages}}",
+        "previous": "Halaman sebelumnya",
+        "next": "Halaman berikutnya",
+        "perPage": "{{count}} per halaman",
+        "perPageLabel": "Plugin per halaman"
+      },
+      "showUnsupportedHint": "Ini terdaftar tetapi belum ada rilis yang berjalan di versi ini. Perbarui Termix untuk menginstalnya.",
+      "unsupported": "Membutuhkan Termix yang lebih baru",
+      "unsupportedHint": "Tidak ada rilis plugin ini yang berjalan di versi Termix ini. Perbarui Termix untuk menginstalnya.",
+      "needsTermix": "Membutuhkan Termix {{range}}",
+      "showUnsupported": "Tampilkan yang tidak didukung ({{count}})",
+      "showMore": "Tampilkan {{count}} lagi ({{total}} tersisa)"
     }
   },
   "settings": {
@@ -1502,82 +1585,6 @@
     "sudoHint": "Atur kata sandi sudo untuk host ini di editor host untuk mengaktifkan tindakan istimewa.",
     "noData": "Tidak ada data",
     "filter": "Filter..."
-  },
-  "sync": {
-    "minutesAgo_other": "{{count}} menit yang lalu",
-    "hoursAgo_other": "{{count}} jam yang lalu",
-    "pending_other": "{{count}} perubahan menunggu sinkronisasi",
-    "proxy": {
-      "headersTitle": "Header tambahan",
-      "headersHint": "Dikirim dengan setiap permintaan ke server, misalnya token layanan Cloudflare Access.",
-      "headerName": "Nama header",
-      "headerValue": "Nilai",
-      "savedValue": "Tersimpan, ketik untuk mengubah",
-      "addHeader": "Tambahkan header",
-      "removeHeader": "Hapus header",
-      "basicAuthTitle": "Nama pengguna dan kata sandi",
-      "basicAuthHint": "Untuk proxy yang meminta nama pengguna dan kata sandi sebelum Termix.",
-      "username": "Nama pengguna",
-      "password": "Kata sandi",
-      "allowInvalidCertificate": "Percayai sertifikat yang ditandatangani sendiri",
-      "allowInvalidCertificateHint": "Hanya untuk server Anda sendiri, ketika sertifikatnya tidak berasal dari otoritas yang dikenal."
-    },
-    "problems": {
-      "invalidUrl": "Itu tidak terlihat seperti alamat web.",
-      "unreachable": "Tidak dapat menghubungi server. Periksa alamat dan pastikan server sedang berjalan.",
-      "unreachableWithReason": "Tidak dapat menghubungi server: {{reason}}",
-      "tlsUntrusted": "Sertifikat server tidak dipercaya. Jika ini adalah server Anda sendiri dengan sertifikat yang ditandatangani sendiri, aktifkan opsi di bawah.",
-      "basicAuthRequired": "Ada sesuatu di depan server yang meminta nama pengguna dan kata sandi. Masukkan di bawah.",
-      "proxyLogin": "Halaman login atau proxy menjawab alih-alih Termix. Tambahkan header yang diperlukan di bawah, atau periksa alamatnya.",
-      "notTermix": "Tidak ada server Termix di alamat tersebut. Jika berjalan di bawah jalur tertentu, sertakan jalur tersebut, seperti https://example.com/termix.",
-      "versionMismatch": "Server tersebut menjalankan Termix versi lama. Perbarui ke versi 2.9 atau lebih baru untuk terhubung.",
-      "differentAccount": "Anda masuk ke akun yang berbeda. Masuk ke akun yang terhubung dengan perangkat ini, atau putuskan hubungan terlebih dahulu."
-    },
-    "wizard": {
-      "title": "Hubungkan ke server Termix",
-      "reloginTitle": "Masuk kembali",
-      "savedServers": "Server terbaru",
-      "removeServer": "Hapus dari daftar",
-      "serverDescription": "Masukkan alamat yang Anda gunakan untuk membuka Termix di browser Anda.",
-      "signinDescription": "Masuk ke {{url}}",
-      "chooseDescription": "Perangkat ini sudah memiliki data. Apa yang harus dilakukan dengannya?",
-      "finishingDescription": "Menghubungkan perangkat ini.",
-      "serverUrl": "Alamat server",
-      "serverUrlHint": "Misalnya https://termix.example.com",
-      "showProxySettings": "Pengaturan reverse proxy",
-      "hideProxySettings": "Sembunyikan pengaturan reverse proxy",
-      "continue": "Lanjutkan",
-      "back": "Kembali",
-      "mergeTitle": "Tambahkan ke akun saya",
-      "mergeBody_other": "{{count}} item di perangkat ini ditambahkan ke akun Anda. Item yang sudah ada di akun Anda tetap seperti semula di server.",
-      "replaceTitle": "Ganti dengan akun saya",
-      "replaceBody_other": "{{count}} item di perangkat ini dihapus, dan perangkat ini mengambil semua dari akun Anda. Host yang hanya disimpan di perangkat ini tetap ada.",
-      "link": "Hubungkan",
-      "linking": "Menghubungkan dan menjalankan sinkronisasi pertama...",
-      "linked": "Terhubung. Data Anda sedang disinkronkan.",
-      "signedInAgain": "Berhasil masuk. Sinkronisasi berjalan kembali."
-    },
-    "entities": {
-      "hosts": "Host",
-      "sshCredentials": "Kredensial",
-      "sshFolders": "Folder",
-      "userPreferences": "Preferensi",
-      "pluginUserSettings": "Pengaturan plugin",
-      "sharedHosts": "Host yang dibagikan kepada Anda",
-      "sharedCredentials": "Kredensial yang dibagikan kepada Anda",
-      "vaultProfiles": "Profil Vault",
-      "snippetFolders": "Folder snippet",
-      "snippets": "Snippet",
-      "dashboardServiceLinks": "Tautan layanan",
-      "homepageItems": "Item beranda",
-      "networkTopology": "Peta jaringan",
-      "workspaces": "Ruang kerja",
-      "hostDefaults": "Pengaturan default host",
-      "hostDefaultsAdmin": "Pengaturan default host server",
-      "aiProviders": "Penyedia AI",
-      "homepageLayouts": "Tata letak beranda",
-      "accountProfile": "Profil akun"
-    }
   },
   "hostDefaults": {
     "source": {

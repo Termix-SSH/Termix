@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "Dažus spraudņus neizdevās mainīt. Jūs varat tos labot vēlāk no cilnes Spraudņi. Nospiediet Tālāk, lai turpinātu.",
     "pluginsApplyFailed": "Jūsu izvēles neizdevās saglabāt. Mēģiniet vēlreiz vai turpiniet un mainiet tās vēlāk no cilnes Spraudņi.",
     "pluginsLoadFailed": "Neizdevās ielādēt spraudņu sarakstu. Jūs varat izvēlēties spraudņus vēlāk no cilnes Spraudņi.",
-    "presetTitle": "Cik daudz vēlaties redzēt ekrānā?",
-    "presetIntro": "Izvēlieties, cik daudz tiek parādīts ekrānā.",
-    "presetChangeLater": "Jūs varat jebkurā laikā pārslēgties uz citu sagatavi vai mainīt jebkuru atsevišķu iestatījumu Iestatījumos sadaļā Interfeiss.",
-    "appearanceTitle": "Padariet to par savu",
-    "appearanceIntro": "Izvēlieties tēmu, akcenta krāsu, fontu un valodu. Izmaiņas tiek parādītas uzreiz, un jūs varat tās mainīt vēlāk Iestatījumos.",
     "securityTitle": "Apsargājiet savu kontu",
     "securityIntro": "Pievienojiet savam kontam pases atslēgu vai autentifikatora lietotni. Jūs varat to izdarīt arī vēlāk Iestatījumos sadaļā Drošība.",
-    "desktopTitle": "Kā vēlaties izmantot Termix?",
-    "desktopBody": "Jūs varat jebkurā laikā to mainīt no Sinhronizācija sānjoslā.",
-    "desktopLocalTitle": "Tikai uz šīs ierīces",
-    "desktopLocalBody": "Viss tiek glabāts šeit. Nekas nav jāiestata.",
-    "desktopLinkTitle": "Ar manu Termix serveri",
-    "desktopLinkBody": "Izrakstieties savā serverī, lai izmantotu tos pašus hostus un iestatījumus katrā ierīcē.",
-    "desktopLinked": "Saitēts ar {{server}}",
     "pluginsDocsLink": "Lasiet par katru no tiem"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} ir gatavs instalēšanai",
     "readyHint": "Tas tiks instalēts nākamajā reizi, kad Termix tiks restartēts."
   },
+  "companion": {
+    "close": "Aizvērt paneli",
+    "moveSide": "Pārvietot paneli",
+    "resize": "Mainīt panela izmēru"
+  },
   "nav": {
     "home": "Sākums",
     "terminal": "Terminālis",
@@ -257,7 +250,6 @@
     "hosts": "Hosti",
     "credentials": "Piekļuves dati",
     "connections": "Savienojumi",
-    "sync": "Sinhronizēt",
     "reconnectDisconnectedTerminals": "Atkārtoti savienot visus atvienotos termināļus",
     "reconnectingTerminals_zero": "Atkārtoti savieno {{count}} termināļus",
     "reconnectingTerminals_one": "Atkārtoti savieno {{count}} termināli",
@@ -282,10 +274,7 @@
     "retry": "Mēģināt vēlreiz",
     "refresh": "Atsvaidzināt",
     "optional": "Neobligāts",
-    "downloadSample": "Lejupielādēt paraugu",
     "failedToDeleteHost": "Neizdevās dzēst {{name}}",
-    "importSkipExisting": "Importēt (izlaist esošos)",
-    "importSSHConfig": "Importēt no SSH konfigurācijas",
     "connectionDetails": "Savienojuma detaļas",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -505,10 +494,7 @@
     "noFolder": "(Nav mapes)",
     "deleteSelected": "Dzēst",
     "exitSelection": "Iziet no atlases",
-    "importSkip": "Importēt (izlaist esošos)",
-    "importOverwrite": "Importēt (pārrakstīt)",
     "collapseBtn": "Sakļaut",
-    "importExportBtn": "Importēt / Eksportēt",
     "hostStatusesRefreshed": "Mezglpašnieku statusi atjaunināti",
     "failedToRefreshHosts": "Neizdevās atjaunināt mezglpašniekus",
     "movedHostTo": "Pārvietots {{host}} uz \"{{folder}}\"",
@@ -565,6 +551,9 @@
     "deleteFolderConfirm_one": "Dzēst \"{{name}}\" un tā {{count}} mezglu? Šo darbību nevar atsaukt.",
     "deleteFolderConfirm_other": "Dzēst \"{{name}}\" un tā {{count}} mezglus? Šo darbību nevar atsaukt.",
     "failedToMoveHosts": "Neizdevās pārvietot mezglus",
+    "managedBanner": "Šo hostu pārvalda {{plugin}}. Veiciet izmaiņas tur. Jūs joprojām varat piespraust to un mainīt tās secību.",
+    "managedTooltip": "Pārvalda {{plugin}}",
+    "addBlocked": "Hostus pārvalda {{plugin}}, tāpēc šeit nevar pievienot jaunus hostus.",
     "failedToReorder": "Neizdevās pārkārtot",
     "expandAll": "Izvērst visas mapes",
     "collapseAll": "Sakļaut visas mapes",
@@ -676,36 +665,6 @@
     "addCredentialBtn2": "Pievienot akreditācijas datus",
     "checkingHostStatuses": "Pārbauda mezglu statusus...",
     "pinnedSection": "Piesprausti",
-    "hostsExported": "Mezgli eksportēti veiksmīgi",
-    "export": {
-      "menuItem": "Eksportēt...",
-      "title": "Eksportēt mezglus",
-      "scope": "Aplieci",
-      "scopeAll": "Visus",
-      "scopeSelected": "Atlasītos",
-      "searchHosts": "Meklēt mezglus...",
-      "include": "Iekļaut",
-      "groupConnection": "Savienojums",
-      "groupCredentials": "Piekļuves dati",
-      "groupNotes": "Piezīmes",
-      "groupTags": "Birkas un piesprausts",
-      "groupProxy": "Proxy",
-      "groupJumpHosts": "Starpposma mezgli",
-      "groupFeatureFlags": "Spraudņu iestatījumi",
-      "groupAdvanced": "Paplašinātā konfigurācija",
-      "preview": "Priekšskatījums",
-      "moreHosts_zero": "... vēl 0 mezgli",
-      "moreHosts_one": "... vēl {{count}} mezgls",
-      "moreHosts_other": "... vēl {{count}} mezgli",
-      "summary": "{{selected}} no {{total}} mezgliem",
-      "credentialsIncluded": "iekļauti piekļuves dati",
-      "credentialsExcluded": "izslēgti piekļuves dati",
-      "noneSelected": "Nav atlasītu mezglu",
-      "cancel": "Atcelt",
-      "confirm": "Eksportēt",
-      "fetchFailed": "Neizdevās ielādēt mezglus eksportēšanai",
-      "bulkButton": "Eksportēt"
-    },
     "sampleDownloaded": "Parauga fails lejupielādēts",
     "failedToDeleteCredential2": "Neizdevās dzēst piekļuves datus",
     "noFolderOption": "(Nav mapes)",
@@ -873,11 +832,7 @@
     "editorUpdate": "Atjaunināt hostu",
     "editorAdd": "Pievienot hostu",
     "speedSearch": "Meklēt hostus. Bultiņu taustiņi izvēlei, Enter savienošanai, Esc aizvēršanai",
-    "speedSearchList": "Hostu saraksts. Rakstiet vai nospiediet /, lai meklētu.",
-    "importNoHosts": "Failā nav atrasts neviens hosts",
-    "importTooMany": "Varat importēt līdz {{max}} hostiem vienlaikus",
-    "importSummary": "Imports pabeigts: {{imported}} importēti, {{updated}} atjaunināti, {{failed}} neizdevās",
-    "importHostsFailed": "Neizdevās importēt hostus"
+    "speedSearchList": "Hostu saraksts. Rakstiet vai nospiediet /, lai meklētu."
   },
   "splitScreen": {
     "title": "Sadālīts ekrāns",
@@ -1078,13 +1033,9 @@
     "hostCount_other": "{{count}} mezgli"
   },
   "admin": {
-    "usersCount_zero": "0 lietotāji",
     "usersCount_one": "{{count}} lietotājs",
-    "rolesCount_zero": "0 lomas",
     "rolesCount_one": "{{count}} loma",
-    "apiKeysCount_zero": "0 atslēgas",
     "apiKeysCount_one": "{{count}} atslēga",
-    "sessionsActive_zero": "0 aktīvas",
     "sessionsActive_one": "{{count}} aktīva",
     "hostsCount_zero": "0 mezgli",
     "hostsCount_one": "{{count}} mezgls",
@@ -1093,7 +1044,6 @@
     "credentialsCount_one": "{{count}} akreditācijas dati",
     "credentialsCount_other": "{{count}} akreditācijas dati",
     "rolePermissions": {
-      "count_zero": "0 atļaujas",
       "count_one": "{{count}} atļauja",
       "groups": {
         "hosts": "Hosti",
@@ -1134,20 +1084,59 @@
         "interfaceFontLabel": "Saskarnes fonts",
         "interfaceFontDescription": "Maina lietotnes saskarnes fontu. Termināļa profili saglabā savus fonta iestatījumus.",
         "accentColorLabel": "Akcenta krāsa",
-        "apiKeyCount_zero": "0 atslēgas",
         "apiKeyCount_one": "{{count}} atslēga",
         "colorPickerTooltip": "Atvērt krāsu izvēlni",
         "themeSystem": "Sistēmas",
         "themeLight": "Gaišs",
-        "themeDark": "Tumšs",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "Tumšs"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "Kāda ir visas lietotnes izkārtojuma struktūra. Tēmas un izkārtojumi ir no spraudņiem.",
+    "defaultsLabel": "Noklusējums visiem",
+    "defaultsHint": "Ko cilvēki redz, līdz viņi izvēlas savu izkārtojumu vai tēmu.",
+    "followDefault": "Izmantot noklusējumu",
+    "defaultSaved": "Noklusējuma izskats saglabāts",
+    "saveFailed": "Neizdevās saglabāt izskatu",
+    "repair": {
+      "title": "Šo izkārtojumu nevarēja parādīt",
+      "safeTitle": "Drošais režīms",
+      "layout": "Izkārtojums",
+      "plugin": "Spraudnis",
+      "reason": "Iemesls",
+      "error": "Kļūda",
+      "noError": "Nav kļūdas ziņojuma.",
+      "copy": "Kopēt",
+      "copied": "Nokopēts",
+      "copyFailed": "Neizdevās nokopēt detaļas",
+      "retry": "Mēģināt vēlreiz",
+      "reset": "Atiestatīt uz noklusējuma izskatu",
+      "resetEveryone": "Atiestatīt noklusējumu visiem",
+      "update": "Atjaunināt {{name}} uz {{version}}",
+      "disable": "Izslēgt {{name}}",
+      "install": "Atrast izkārtojumus un tēmas",
+      "installTitle": "Izkārtojumi un tēmas",
+      "installButton": "Instalēt",
+      "nothingToInstall": "Pašlaik nav pieejami citi izkārtojumi vai tēmas.",
+      "registryUnreachable": "Neizdevās sasniegt spraudņu reģistru.",
+      "askAdmin": "Lūdziet administratoru atjaunināt vai labot šo izkārtojumu. Zemāk varat pārslēgties uz citu izkārtojumu vai tēmu sev.",
+      "switchLayout": "Pārslēgt izkārtojumu",
+      "switchTheme": "Pārslēgt tēmu",
+      "saveFailed": "Neizdevās saglabāt jūsu izvēli",
+      "reasons": {
+        "safe-url": "Adrese pieprasīja drošo režīmu. Izvēlieties izkārtojumu zemāk vai noņemiet ?safe-layout=1 no adreses.",
+        "safe-env": "Serveris ir palaidts ar TERMIX_SAFE_LAYOUT, tāpēc visi redz šo ekrānu, līdz tas tiek noņemts.",
+        "missing": "Neviens instalēts spraudnis nepiedāvā šo izkārtojumu.",
+        "disabled": "Spraudnis, kas piedāvā šo izkārtojumu, ir izslēgts.",
+        "blocked": "Spraudnis, kas piedāvā šo izkārtojumu, gaida kaut ko, kas tam nepieciešams.",
+        "incompatible": "Spraudnis, kas piedāvā šo izkārtojumu, nestrādā ar šo Termix versiju.",
+        "failed": "Izkārtojums neizdevās palaist.",
+        "crashed": "Izkārtojums divas reizes sabruka, zīmējot lietotni."
+      },
+      "noLayout": "Nav iestatīts izkārtojums",
+      "restore": "Atjaunot iekļauto {{name}}",
+      "restoreFailed": "Neizdevās atjaunot iekļauto kopiju"
     }
   },
   "plugins": {
@@ -1172,6 +1161,18 @@
         "title": "Pārvaldīt pieteikšanos",
         "consequence": "Tas var pievienot pieteikšanās metodi, otro autentifikācijas faktoru vai SSH pieteikšanās veidu."
       },
+      "auth:policy": {
+        "title": "Iestatīt pieteikšanās noteikumus",
+        "consequence": "Tas var izrakstīt cilvēkus, kad tie ir neaktīvi, ierobežot sesijas ilgumu, izslēgt atcerēties mani un prasīt otro autentifikācijas faktoru."
+      },
+      "ssh:transport": {
+        "title": "Izvēlieties, kā tiek sasniegti hosti",
+        "consequence": "Tas var pārvadāt SSH savienojumu ar hosti pa savu maršrutu, tāpēc tas redz visu, kas tiek nosūtīts uz šiem hostiem un no tiem, ieskaitot paroles."
+      },
+      "sync:provide": {
+        "title": "Palaist sinhronizāciju",
+        "consequence": "Tas var atbildēt uz visiem sinhronizācijas pieprasījumiem, tāpēc tas redz datus, ko ierīces un serveri sinhronizē."
+      },
       "system:tls": {
         "title": "Pārvaldīt sertifikātus",
         "consequence": "Tas var aizstāt sertifikātu, ko Termix izmanto HTTPS, un atbildēt uz domēna pārbaudēm no sertifikātu izsniedzējiem."
@@ -1179,6 +1180,10 @@
       "device:serial": {
         "title": "Piekļūt sērijveida un USB ierīcēm",
         "consequence": "Tas var atvērt fizisku sērijveida portu datorā, kurā darbojas Termix."
+      },
+      "hosts:export": {
+        "title": "Eksportēt hostus ar to noslēpumiem",
+        "consequence": "Var lasīt jūsu hostus pilnībā, ieskaitot saglabātās paroles un atslēgas, un tos izplatīt. Katrs eksports tiek ierakstīts revīzijas žurnālā."
       },
       "hosts:write": {
         "title": "Izveidot un mainīt serverus",
@@ -1224,9 +1229,29 @@
         "title": "Lasīt revīzijas žurnālu",
         "consequence": "Tas var redzēt, kas ko un kad ir darījis."
       },
+      "network:probe": {
+        "title": "Pārbaudīt, vai porti atbild",
+        "consequence": "Var atvērt vienkāršu savienojumu ar jebkuru adresi no servera, lai redzētu, vai tā ir sasniedzama."
+      },
+      "hosts:status-provide": {
+        "title": "Nodrošināt hosta statusu",
+        "consequence": "Kļūst par tiešsaistes un bezsaistes punktu avotu katram hostam."
+      },
+      "hosts:activity-provide": {
+        "title": "Glabāt nesenāko aktivitāti",
+        "consequence": "Kļūst par krātuvi visu lietotāju nesenās darbības sarakstam."
+      },
+      "hosts:lock": {
+        "title": "Pārvaldīt resursdatorus kā lasāmus",
+        "consequence": "Tos pārvaldītos resursdatorus neviens cits nevar rediģēt, dzēst vai atkārtoti kopīgot."
+      },
       "desktop:window": {
         "title": "Atvērt darbvirsmas logus",
         "consequence": "Tikai Termix darbvirsmas lietotnē."
+      },
+      "desktop:local": {
+        "title": "Izmantot šo datoru",
+        "consequence": "Var lasīt un mainīt failus, palaist komandrindu un atvērt lokālus portus šajā datorā. Tikai Termix darbvirsmas lietotnē."
       },
       "users:impersonate": {
         "title": "Rīkoties kā citi lietotāji",
@@ -1267,6 +1292,14 @@
       "ui:surface": {
         "title": "Pievienot savus ekrānus",
         "consequence": "Cilnes, paneļi un iestatījumi, kurus vēlāk varat slēpt."
+      },
+      "ui:layout": {
+        "title": "Aizstāt visu lietotnes izkārtojumu",
+        "consequence": "Kad izvēlēts, tā kods zīmē katru ekrānu, tostarp jūsu termināļus un iestatījumus."
+      },
+      "ui:theme": {
+        "title": "Pievienot krāsu tēmas",
+        "consequence": "Tikai krāsas un stili. Tēmai nekāds kods netiek palaists."
       }
     },
     "runtime": {
@@ -1408,6 +1441,7 @@
         "options": "Neizdevās saglabāt {{name}} opcijas: {{error}}",
         "deleteData": "Neizdevās dzēst {{name}} datus: {{error}}",
         "managedByServer": "Šis darbvirsma ir saistīta ar serveri, kas nosaka tās spraudņus.",
+        "defaultLook": "{{name}} ir noklusējuma izskats, tāpēc to var izslēgt vai aizstāt, bet neizinstalēt.",
         "hasDependents": "{{name}} ir nepieciešams {{list}}. Vispirms izslēdziet vai atinstalējiet tos.",
         "missingDependencies": "{{name}} ir nepieciešams {{list}}, kas nav instalēts.",
         "consentChanged": "Kas šis spraudnis pieprasa, ir mainījies kopš pēdējās reizes, kad to apskatījāt. Pārbaudiet sarakstu vēlreiz.",
@@ -1481,7 +1515,6 @@
       "noServerAccess": "Nav piekļuves jūsu serveriem",
       "searchInstalled": "Meklēt uzstādītos",
       "searchPlugins": "Meklēt spraudņus",
-      "allCategories": "Visi",
       "nothingMatches": "Nekas neatbilst.",
       "noneInstalled": "Vēl nav uzstādīti spraudņi. Pārlūkojiet, lai pievienotu.",
       "nothingHere": "Šeit nekas nav.",
@@ -1575,7 +1608,45 @@
       "documentation": "Dokumentācija",
       "envVars": "Vides mainīgie",
       "envRequired": "Nepieciešams",
-      "envDefault": "Noklusējums: {{value}}"
+      "envDefault": "Noklusējums: {{value}}",
+      "kinds": {
+        "layouts": "Izkārtojumi",
+        "themes": "Tēmas",
+        "tabs": "Cilnes",
+        "panels": "Sānjoslas paneļi",
+        "dashboardCards": "Panela kartītes",
+        "protocols": "Savienojuma veidi",
+        "auth": "Pieteikšanās metodes",
+        "actions": "Darbības",
+        "hostCapability": "Resursdatora iestatījumi"
+      },
+      "filters": {
+        "type": "Tips",
+        "allTypes": "Visi tipi",
+        "category": "Kategorija",
+        "allCategories": "Visas kategorijas",
+        "results_zero": "0 spraudņi",
+        "results_one": "{{count}} spraudnis",
+        "results_other": "{{count}} spraudņi",
+        "remove": "Noņemt filtru {{name}}",
+        "clear": "Notīrīt filtrus",
+        "button": "Filtri",
+        "buttonCount": "Filtri ({{count}})"
+      },
+      "pager": {
+        "range": "{{from}}–{{to}} no {{total}}",
+        "page": "Lapa {{page}} no {{pages}}",
+        "previous": "Iepriekšējā lapa",
+        "next": "Nākamā lapa",
+        "perPage": "{{count}} lapā",
+        "perPageLabel": "Spraudņi lapā"
+      },
+      "showUnsupportedHint": "Šie ir uzskaitīti, bet šajā versijā vēl nav pieejams neviens izlaidums. Atjauniniet Termix, lai tos instalētu.",
+      "unsupported": "Nepieciešams jaunāks Termix",
+      "unsupportedHint": "Šī spraudņa izlaidums nestrādā šajā Termix versijā. Atjauniniet Termix, lai to instalētu.",
+      "needsTermix": "Nepieciešams Termix {{range}}",
+      "showUnsupported": "Rādīt neatbalstītos ({{count}})",
+      "showMore": "Rādīt vēl {{count}} (atlicis {{total}})"
     }
   },
   "settings": {
@@ -1590,92 +1661,6 @@
     "sudoHint": "Iestatiet sudo paroli šim resursam resursa redaktora, lai iespējotu privilēģiju darbības.",
     "noData": "Nav datu",
     "filter": "Filtrēt..."
-  },
-  "sync": {
-    "minutesAgo_zero": "pirms {{count}} minūtēm",
-    "minutesAgo_one": "pirms {{count}} minūtes",
-    "minutesAgo_other": "pirms {{count}} minūtēm",
-    "hoursAgo_zero": "pirms {{count}} stundām",
-    "hoursAgo_one": "pirms {{count}} stundas",
-    "hoursAgo_other": "pirms {{count}} stundām",
-    "pending_zero": "gaida sinhronizāciju {{count}} izmaiņas",
-    "pending_one": "gaida sinhronizāciju {{count}} izmaiņa",
-    "pending_other": "gaida sinhronizāciju {{count}} izmaiņas",
-    "proxy": {
-      "headersTitle": "Papildu virsraksti",
-      "headersHint": "Nosūtīti kopā ar katru pieprasījumu serverim, piemēram, Cloudflare Access pakalpojuma marķieri.",
-      "headerName": "Virsraksta nosaukums",
-      "headerValue": "Vērtība",
-      "savedValue": "Saglabāts, ierakstiet, lai mainītu",
-      "addHeader": "Pievienot virsrakstu",
-      "removeHeader": "Noņemt virsrakstu",
-      "basicAuthTitle": "Lietotājvārds un parole",
-      "basicAuthHint": "Starpniekserverim, kas prasa lietotājvārdu un paroli pirms Termix.",
-      "username": "Lietotājvārds",
-      "password": "Parole",
-      "allowInvalidCertificate": "Uzticēties pašparakstītam sertifikātam",
-      "allowInvalidCertificateHint": "Tikai jūsu pašu serverim, ja tā sertifikāts nav no zināmas autoritātes."
-    },
-    "problems": {
-      "invalidUrl": "Šis neizskatās kā tīmekļa adrese.",
-      "unreachable": "Nevarēja sasniegt serveri. Pārbaudiet adresi un vai servers darbojas.",
-      "unreachableWithReason": "Nevarēja sasniegt serveri: {{reason}}",
-      "tlsUntrusted": "Servera sertifikāts nav uzticams. Ja šis ir jūsu pats servers ar pašparakstītu sertifikātu, ieslēdziet zemāk esošo opciju.",
-      "basicAuthRequired": "Kaut kas pirms servera pieprasa lietotājvārdu un paroli. Ievadiet tos zemāk.",
-      "proxyLogin": "Vietā Termix atbildēja pieteikšanās lapa vai proxys. Pievienojiet zemāk nepieciešamos galvenes datus vai pārbaudiet adresi.",
-      "notTermix": "Šajā adresē nav Termix servera. Ja tas darbojas zem ceļa, iekļaujiet to, piemēram, https://example.com/termix.",
-      "versionMismatch": "Šis servers izmanto vecāku Termix versiju. Atjauniniet to uz 2.9 vai jaunāku, lai saistītu.",
-      "differentAccount": "Jūs pieteicāties citā kontā. Piesakieties kontā, ar kuru ir saistīts šis ierīce, vai vispirms atsakaitiet saiti."
-    },
-    "wizard": {
-      "title": "Saistīt ar Termix serveri",
-      "reloginTitle": "Piesakieties vēlreiz",
-      "savedServers": "Nesenie serveri",
-      "removeServer": "Noņemt no saraksta",
-      "serverDescription": "Ievadiet adresi, kuru izmantojat, lai atvērtu Termix pārlūkprogrammā.",
-      "signinDescription": "Pieslēgties vietnē {{url}}",
-      "chooseDescription": "Šajā ierīcē jau ir dati. Kā ar tiem rīkoties?",
-      "finishingDescription": "Šīs ierīces saistīšana.",
-      "serverUrl": "Servera adrese",
-      "serverUrlHint": "Piemēram, https://termix.example.com",
-      "showProxySettings": "Apgrieztā starpniekservera iestatījumi",
-      "hideProxySettings": "Paslēpt apgrieztā starpniekservera iestatījumus",
-      "continue": "Turpināt",
-      "back": "Atpakaļ",
-      "mergeTitle": "Pievienot to savam kontam",
-      "mergeBody_zero": "Šī ierīce satur 0 vienumus, kas tiks pievienoti jūsu kontam. Vienumi, kas jau ir jūsu kontā, paliks serverī nemainīgi.",
-      "mergeBody_one": "Šī ierīce satur 1 vienumu, kas tiks pievienots jūsu kontam. Vienumi, kas jau ir jūsu kontā, paliks serverī nemainīgi.",
-      "mergeBody_other": "Šī ierīce satur {{count}} vienumus, kas tiks pievienoti jūsu kontam. Vienumi, kas jau ir jūsu kontā, paliks serverī nemainīgi.",
-      "replaceTitle": "Aizstāt ar sava konta datiem",
-      "replaceBody_zero": "No šīs ierīces tiks noņemti 0 vienumi, un ierīce saņems visus datus no jūsu konta. Hosti, kas saglabāti tikai šajā ierīcē, paliks.",
-      "replaceBody_one": "No šīs ierīces tiks noņemts 1 vienums, un ierīce saņems visus datus no jūsu konta. Hosti, kas saglabāti tikai šajā ierīcē, paliks.",
-      "replaceBody_other": "No šīs ierīces tiks noņemti {{count}} vienumi, un ierīce saņems visus datus no jūsu konta. Hosti, kas saglabāti tikai šajā ierīcē, paliks.",
-      "link": "Saites izveide",
-      "linking": "Notiek saites izveide un pirmā sinhronizācija...",
-      "linked": "Saite izveidota. Jūsu dati tagad tiek sinhronizēti.",
-      "signedInAgain": "Pieteicies. Sinhronizācija turpinās."
-    },
-    "entities": {
-      "hosts": "Mezgli",
-      "sshCredentials": "Pieteikšanās dati",
-      "sshFolders": "Mapes",
-      "userPreferences": "Iepriekšējas izvēles",
-      "pluginUserSettings": "Spraudņu iestatījumi",
-      "sharedHosts": "Ar jums kopīgotie mezgli",
-      "sharedCredentials": "Ar jums kopīgotie pieteikšanās dati",
-      "vaultProfiles": "Vault profili",
-      "snippetFolders": "Kodu fragmentu mapes",
-      "snippets": "Kodu fragmenti",
-      "dashboardServiceLinks": "Pakalpojumu saites",
-      "homepageItems": "Sākumlapas elementi",
-      "networkTopology": "Tīkla karte",
-      "workspaces": "Darbvietas",
-      "hostDefaults": "Mezglu noklusējuma vērtības",
-      "hostDefaultsAdmin": "Servera mezglu noklusējuma vērtības",
-      "aiProviders": "AI pakalpojumu sniedzēji",
-      "homepageLayouts": "Sākumlapas izkārtojumi",
-      "accountProfile": "Konta profils"
-    }
   },
   "hostDefaults": {
     "source": {

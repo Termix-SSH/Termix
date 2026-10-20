@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "Không thể thay đổi một số plugin. Bạn có thể khắc phục sau từ tab Plugin. Nhấn Tiếp theo để tiếp tục.",
     "pluginsApplyFailed": "Không thể lưu lựa chọn của bạn. Hãy thử lại, hoặc tiếp tục và thay đổi sau từ tab Plugin.",
     "pluginsLoadFailed": "Không thể tải danh sách plugin. Bạn có thể chọn plugin sau từ tab Plugin.",
-    "presetTitle": "Bạn muốn giao diện hiển thị như thế nào?",
-    "presetIntro": "Chọn mức độ hiển thị trên màn hình.",
-    "presetChangeLater": "Bạn có thể chuyển preset hoặc thay đổi bất kỳ cài đặt riêng lẻ nào sau này trong Cài đặt, mục Giao diện.",
-    "appearanceTitle": "Tùy chỉnh theo ý bạn",
-    "appearanceIntro": "Chọn chủ đề, màu nhấn, phông chữ và ngôn ngữ. Thay đổi sẽ hiển thị ngay lập tức, và bạn có thể thay đổi sau trong Cài đặt.",
     "securityTitle": "Bảo mật tài khoản",
     "securityIntro": "Thêm passkey hoặc ứng dụng xác thực vào tài khoản của bạn. Bạn cũng có thể làm điều này sau trong Cài đặt, mục Bảo mật.",
-    "desktopTitle": "Bạn muốn sử dụng Termix như thế nào?",
-    "desktopBody": "Bạn có thể thay đổi điều này bất cứ lúc nào từ Đồng bộ hóa trong thanh bên.",
-    "desktopLocalTitle": "Chỉ trên thiết bị này",
-    "desktopLocalBody": "Mọi thứ được lưu trữ tại đây. Không cần thiết lập gì thêm.",
-    "desktopLinkTitle": "Với máy chủ Termix của tôi",
-    "desktopLinkBody": "Đăng nhập vào máy chủ của bạn để sử dụng cùng các host và cài đặt trên mọi thiết bị.",
-    "desktopLinked": "Đã liên kết với {{server}}",
     "pluginsDocsLink": "Đọc về từng plugin"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} đã sẵn sàng để cài đặt",
     "readyHint": "Nó sẽ được cài đặt khi Termix khởi động lại lần tới."
   },
+  "companion": {
+    "close": "Đóng bảng",
+    "moveSide": "Di chuyển bảng",
+    "resize": "Thay đổi kích thước bảng"
+  },
   "nav": {
     "home": "Trang chủ",
     "terminal": "Terminal",
@@ -257,7 +250,6 @@
     "hosts": "Hosts",
     "credentials": "Thông tin đăng nhập",
     "connections": "Kết nối",
-    "sync": "Đồng bộ",
     "reconnectDisconnectedTerminals": "Kết nối lại tất cả các terminal đã ngắt kết nối",
     "reconnectingTerminals_other": "Đang kết nối lại {{count}} terminal",
     "noDisconnectedTerminals": "Không có terminal nào bị ngắt kết nối sẵn sàng để kết nối lại",
@@ -276,10 +268,7 @@
     "retry": "Thử lại",
     "refresh": "Làm mới",
     "optional": "Tùy chọn",
-    "downloadSample": "Tải mẫu xuống",
     "failedToDeleteHost": "Không thể xóa {{name}}",
-    "importSkipExisting": "Nhập (bỏ qua mục có sẵn)",
-    "importSSHConfig": "Nhập từ cấu hình SSH",
     "connectionDetails": "Chi tiết kết nối",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -497,10 +486,7 @@
     "noFolder": "(Không có thư mục)",
     "deleteSelected": "Xóa",
     "exitSelection": "Hủy chọn",
-    "importSkip": "Nhập (bỏ qua mục đã tồn tại)",
-    "importOverwrite": "Nhập (ghi đè)",
     "collapseBtn": "Thu gọn",
-    "importExportBtn": "Nhập / Xuất",
     "hostStatusesRefreshed": "Đã làm mới trạng thái máy chủ",
     "failedToRefreshHosts": "Không thể làm mới máy chủ",
     "movedHostTo": "Đã di chuyển {{host}} vào \"{{folder}}\"",
@@ -553,6 +539,9 @@
     "folderDeleted": "Đã xóa thư mục \"{{name}}\"",
     "deleteFolderConfirm_other": "Xóa \"{{name}}\" và {{count}} máy chủ của nó? Thao tác này không thể hoàn tác.",
     "failedToMoveHosts": "Không thể di chuyển host",
+    "managedBanner": "Máy chủ này được quản lý bởi {{plugin}}. Hãy thay đổi ở đó. Bạn vẫn có thể ghim và sắp xếp lại thứ tự.",
+    "managedTooltip": "Được quản lý bởi {{plugin}}",
+    "addBlocked": "Các máy chủ được quản lý bởi {{plugin}}, nên không thể thêm máy chủ mới ở đây.",
     "failedToReorder": "Không thể sắp xếp lại",
     "expandAll": "Mở rộng tất cả thư mục",
     "collapseAll": "Thu gọn tất cả thư mục",
@@ -662,34 +651,6 @@
     "addCredentialBtn2": "Thêm Credential",
     "checkingHostStatuses": "Đang kiểm tra trạng thái máy chủ...",
     "pinnedSection": "Đã ghim",
-    "hostsExported": "Đã xuất máy chủ thành công",
-    "export": {
-      "menuItem": "Xuất...",
-      "title": "Xuất máy chủ",
-      "scope": "Phạm vi",
-      "scopeAll": "Tất cả",
-      "scopeSelected": "Đã chọn",
-      "searchHosts": "Tìm kiếm máy chủ...",
-      "include": "Bao gồm",
-      "groupConnection": "Kết nối",
-      "groupCredentials": "Thông tin đăng nhập",
-      "groupNotes": "Ghi chú",
-      "groupTags": "Thẻ & ghim",
-      "groupProxy": "Proxy",
-      "groupJumpHosts": "Máy chủ nhảy",
-      "groupFeatureFlags": "Cài đặt plugin",
-      "groupAdvanced": "Cấu hình nâng cao",
-      "preview": "Xem trước",
-      "moreHosts_other": "... và {{count}} máy chủ khác",
-      "summary": "{{selected}} trong số {{total}} máy chủ",
-      "credentialsIncluded": "bao gồm thông tin đăng nhập",
-      "credentialsExcluded": "loại trừ thông tin đăng nhập",
-      "noneSelected": "Chưa chọn máy chủ nào",
-      "cancel": "Hủy",
-      "confirm": "Xuất",
-      "fetchFailed": "Không thể tải máy chủ để xuất",
-      "bulkButton": "Xuất"
-    },
     "sampleDownloaded": "Đã tải xuống tệp mẫu",
     "failedToDeleteCredential2": "Không thể xóa thông tin đăng nhập",
     "noFolderOption": "(Không có thư mục)",
@@ -847,11 +808,7 @@
     "editorUpdate": "Cập nhật máy chủ",
     "editorAdd": "Thêm máy chủ",
     "speedSearch": "Tìm kiếm máy chủ. Phím mũi tên để chọn, Enter để kết nối, Esc để đóng",
-    "speedSearchList": "Danh sách máy chủ. Nhập hoặc nhấn / để tìm kiếm.",
-    "importNoHosts": "Không tìm thấy máy chủ nào trong tệp",
-    "importTooMany": "Bạn có thể nhập tối đa {{max}} máy chủ cùng lúc",
-    "importSummary": "Nhập xong: {{imported}} đã nhập, {{updated}} đã cập nhật, {{failed}} thất bại",
-    "importHostsFailed": "Không thể nhập máy chủ"
+    "speedSearchList": "Danh sách máy chủ. Nhập hoặc nhấn / để tìm kiếm."
   },
   "splitScreen": {
     "title": "Chia màn hình",
@@ -1046,9 +1003,13 @@
     "hostCount_other": "{{count}} máy chủ"
   },
   "admin": {
+    "rolesCount_one": "vai trò {{count}}",
+    "apiKeysCount_one": "{{count}} khóa",
+    "sessionsActive_one": "còn {{count}} phiên đang hoạt động",
     "hostsCount_other": "{{count}} máy chủ",
     "credentialsCount_other": "{{count}} thông tin đăng nhập",
     "rolePermissions": {
+      "count_one": "quyền {{count}}",
       "groups": {
         "hosts": "Máy chủ",
         "credentials": "Thông tin đăng nhập",
@@ -1088,18 +1049,59 @@
         "interfaceFontLabel": "Phông chữ giao diện",
         "interfaceFontDescription": "Thay đổi phông chữ của giao diện ứng dụng. Hồ sơ terminal giữ nguyên cài đặt phông chữ riêng của chúng.",
         "accentColorLabel": "Màu nhấn",
+        "apiKeyCount_one": "khóa {{count}}",
         "colorPickerTooltip": "Mở bộ chọn màu",
         "themeSystem": "Hệ thống",
         "themeLight": "Sáng",
-        "themeDark": "Tối",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "Tối"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "Cách bố trí toàn bộ ứng dụng. Giao diện và bố cục được cung cấp bởi các plugin.",
+    "defaultsLabel": "Mặc định cho mọi người",
+    "defaultsHint": "Những gì mọi người thấy cho đến khi họ chọn bố cục hoặc giao diện riêng.",
+    "followDefault": "Sử dụng mặc định",
+    "defaultSaved": "Giao diện mặc định đã được lưu",
+    "saveFailed": "Không thể lưu giao diện",
+    "repair": {
+      "title": "Không thể hiển thị bố cục này",
+      "safeTitle": "Chế độ an toàn",
+      "layout": "Bố cục",
+      "plugin": "Plugin",
+      "reason": "Lý do",
+      "error": "Lỗi",
+      "noError": "Không có thông báo lỗi.",
+      "copy": "Sao chép",
+      "copied": "Đã sao chép",
+      "copyFailed": "Không thể sao chép chi tiết",
+      "retry": "Thử lại",
+      "reset": "Đặt lại về giao diện mặc định",
+      "resetEveryone": "Đặt lại mặc định cho mọi người",
+      "update": "Cập nhật {{name}} lên {{version}}",
+      "disable": "Tắt {{name}}",
+      "install": "Tìm bố cục và giao diện",
+      "installTitle": "Bố cục và giao diện",
+      "installButton": "Cài đặt",
+      "nothingToInstall": "Hiện tại không có bố cục hoặc giao diện nào khác khả dụng.",
+      "registryUnreachable": "Không thể kết nối đến sổ đăng ký plugin.",
+      "askAdmin": "Yêu cầu quản trị viên cập nhật hoặc sửa bố cục này. Bạn có thể chuyển sang bố cục hoặc giao diện khác cho mình ở bên dưới.",
+      "switchLayout": "Chuyển bố cục",
+      "switchTheme": "Chuyển giao diện",
+      "saveFailed": "Không thể lưu lựa chọn của bạn",
+      "reasons": {
+        "safe-url": "Địa chỉ yêu cầu chế độ an toàn. Hãy chọn một bố cục bên dưới, hoặc xóa ?safe-layout=1 khỏi địa chỉ.",
+        "safe-env": "Máy chủ được khởi động với TERMIX_SAFE_LAYOUT, nên mọi người sẽ thấy màn hình này cho đến khi nó được gỡ bỏ.",
+        "missing": "Không có plugin nào đã cài đặt cung cấp bố cục này.",
+        "disabled": "Plugin cung cấp bố cục này đã bị tắt.",
+        "blocked": "Plugin cung cấp bố cục này đang chờ một thành phần cần thiết.",
+        "incompatible": "Plugin cung cấp bố cục này không tương thích với phiên bản Termix này.",
+        "failed": "Bố cục không khởi động được.",
+        "crashed": "Bố cục bị lỗi hai lần khi vẽ ứng dụng."
+      },
+      "noLayout": "Chưa đặt bố cục",
+      "restore": "Khôi phục {{name}} đi kèm",
+      "restoreFailed": "Không thể khôi phục bản sao đi kèm"
     }
   },
   "plugins": {
@@ -1124,6 +1126,18 @@
         "title": "Xử lý đăng nhập",
         "consequence": "Nó có thể thêm phương thức đăng nhập, yếu tố xác thực thứ hai hoặc loại đăng nhập SSH."
       },
+      "auth:policy": {
+        "title": "Đặt quy tắc đăng nhập",
+        "consequence": "Nó có thể đăng xuất người dùng khi không hoạt động, giới hạn thời lượng phiên, tắt tùy chọn nhớ mật khẩu và yêu cầu xác thực hai yếu tố."
+      },
+      "ssh:transport": {
+        "title": "Chọn cách kết nối đến máy chủ",
+        "consequence": "Nó có thể truyền kết nối SSH đến máy chủ qua tuyến đường riêng của mình, nên nó sẽ thấy mọi dữ liệu gửi đến và từ những máy chủ đó, bao gồm cả mật khẩu."
+      },
+      "sync:provide": {
+        "title": "Chạy đồng bộ",
+        "consequence": "Nó có thể xử lý mọi yêu cầu đồng bộ, nên nó sẽ thấy dữ liệu mà các thiết bị và máy chủ đồng bộ hóa."
+      },
       "system:tls": {
         "title": "Quản lý chứng chỉ",
         "consequence": "Nó có thể thay thế chứng chỉ mà Termix cung cấp qua HTTPS và phản hồi các kiểm tra tên miền từ cơ quan cấp chứng chỉ."
@@ -1131,6 +1145,10 @@
       "device:serial": {
         "title": "Truy cập thiết bị nối tiếp và USB",
         "consequence": "Nó có thể mở cổng nối tiếp vật lý trên máy đang chạy Termix."
+      },
+      "hosts:export": {
+        "title": "Xuất máy chủ kèm theo thông tin bảo mật",
+        "consequence": "Có thể đọc toàn bộ danh sách máy chủ của bạn, bao gồm mật khẩu và khóa đã lưu, và chia sẻ chúng. Mọi lần xuất dữ liệu đều được ghi vào nhật ký kiểm toán."
       },
       "hosts:write": {
         "title": "Tạo và thay đổi máy chủ",
@@ -1176,9 +1194,29 @@
         "title": "Đọc nhật ký kiểm toán",
         "consequence": "Nó có thể xem ai đã làm gì và khi nào."
       },
+      "network:probe": {
+        "title": "Kiểm tra xem các cổng có phản hồi không",
+        "consequence": "Có thể mở kết nối thông thường đến bất kỳ địa chỉ nào từ máy chủ, để xem nó có thể truy cập được hay không."
+      },
+      "hosts:status-provide": {
+        "title": "Cung cấp trạng thái máy chủ",
+        "consequence": "Trở thành nguồn cung cấp các chấm trạng thái trực tuyến và ngoại tuyến cho mọi máy chủ."
+      },
+      "hosts:activity-provide": {
+        "title": "Lưu trữ hoạt động gần đây",
+        "consequence": "Trở thành kho lưu trữ cho danh sách hoạt động gần đây của mọi người dùng."
+      },
+      "hosts:lock": {
+        "title": "Quản lý máy chủ ở chế độ chỉ đọc",
+        "consequence": "Các máy chủ do nó quản lý không thể bị chỉnh sửa, xóa hoặc chia sẻ lại bởi bất kỳ ai khác."
+      },
       "desktop:window": {
         "title": "Mở cửa sổ máy tính để bàn",
         "consequence": "Chỉ trong ứng dụng máy tính để bàn Termix."
+      },
+      "desktop:local": {
+        "title": "Sử dụng máy tính này",
+        "consequence": "Có thể đọc và thay đổi tệp, chạy shell và mở cổng cục bộ trên máy tính này. Chỉ khả dụng trong ứng dụng Termix dành cho máy tính để bàn."
       },
       "users:impersonate": {
         "title": "Hoạt động thay mặt người dùng khác",
@@ -1219,6 +1257,14 @@
       "ui:surface": {
         "title": "Thêm màn hình riêng",
         "consequence": "Các tab, bảng và cài đặt mà bạn có thể ẩn sau này."
+      },
+      "ui:layout": {
+        "title": "Thay thế toàn bộ bố cục ứng dụng",
+        "consequence": "Khi được chọn, mã của nó sẽ vẽ mọi màn hình, bao gồm cả terminal và cài đặt của bạn."
+      },
+      "ui:theme": {
+        "title": "Thêm giao diện màu sắc",
+        "consequence": "Chỉ bao gồm màu sắc và kiểu dáng. Không có mã nào được thực thi cho một giao diện màu sắc."
       }
     },
     "runtime": {
@@ -1336,6 +1382,7 @@
         "options": "Không thể lưu tùy chọn cho {{name}}: {{error}}",
         "deleteData": "Không thể xóa dữ liệu của {{name}}: {{error}}",
         "managedByServer": "Màn hình này được liên kết với một máy chủ, người quyết định các plugin của nó.",
+        "defaultLook": "{{name}} là giao diện mặc định, nên có thể tắt hoặc thay thế nhưng không thể gỡ cài đặt.",
         "hasDependents": "{{name}} được cần bởi {{list}}. Tắt hoặc gỡ cài đặt chúng trước.",
         "missingDependencies": "{{name}} cần {{list}}, nhưng chưa được cài đặt.",
         "consentChanged": "Những gì plugin này yêu cầu đã thay đổi kể từ khi bạn xem. Vui lòng kiểm tra danh sách lại.",
@@ -1401,7 +1448,6 @@
       "noServerAccess": "Không truy cập vào máy chủ của bạn",
       "searchInstalled": "Tìm kiếm đã cài đặt",
       "searchPlugins": "Tìm kiếm plugin",
-      "allCategories": "Tất cả",
       "nothingMatches": "Không có kết quả phù hợp.",
       "noneInstalled": "Chưa cài đặt plugin nào. Hãy duyệt để thêm một số plugin.",
       "nothingHere": "Không có gì ở đây.",
@@ -1487,7 +1533,43 @@
       "documentation": "Tài liệu",
       "envVars": "Biến môi trường",
       "envRequired": "Bắt buộc",
-      "envDefault": "Mặc định: {{value}}"
+      "envDefault": "Mặc định: {{value}}",
+      "kinds": {
+        "layouts": "Bố cục",
+        "themes": "Giao diện màu sắc",
+        "tabs": "Thẻ",
+        "panels": "Bảng điều khiển thanh bên",
+        "dashboardCards": "Thẻ bảng điều khiển",
+        "protocols": "Loại kết nối",
+        "auth": "Phương thức đăng nhập",
+        "actions": "Hành động",
+        "hostCapability": "Cài đặt máy chủ"
+      },
+      "filters": {
+        "type": "Loại",
+        "allTypes": "Tất cả loại",
+        "category": "Danh mục",
+        "allCategories": "Tất cả danh mục",
+        "results_other": "{{count}} plugin",
+        "remove": "Xóa bộ lọc {{name}}",
+        "clear": "Xóa bộ lọc",
+        "button": "Bộ lọc",
+        "buttonCount": "Bộ lọc ({{count}})"
+      },
+      "pager": {
+        "range": "{{from}}-{{to}} trong tổng số {{total}}",
+        "page": "Trang {{page}} trong tổng số {{pages}}",
+        "previous": "Trang trước",
+        "next": "Trang sau",
+        "perPage": "{{count}} mỗi trang",
+        "perPageLabel": "Plugin mỗi trang"
+      },
+      "showUnsupportedHint": "Những plugin này được liệt kê nhưng chưa có bản phát hành nào chạy trên phiên bản này. Hãy cập nhật Termix để cài đặt chúng.",
+      "unsupported": "Yêu cầu phiên bản Termix mới hơn",
+      "unsupportedHint": "Không có bản phát hành nào của plugin này chạy trên phiên bản Termix hiện tại. Hãy cập nhật Termix để cài đặt nó.",
+      "needsTermix": "Yêu cầu Termix {{range}}",
+      "showUnsupported": "Hiển thị không hỗ trợ ({{count}})",
+      "showMore": "Hiển thị thêm {{count}} (còn {{total}})"
     }
   },
   "settings": {
@@ -1502,82 +1584,6 @@
     "sudoHint": "Đặt mật khẩu sudo cho máy chủ này trong trình chỉnh sửa máy chủ để kích hoạt các hành động đặc quyền.",
     "noData": "Không có dữ liệu",
     "filter": "Lọc..."
-  },
-  "sync": {
-    "minutesAgo_other": "{{count}} phút trước",
-    "hoursAgo_other": "{{count}} giờ trước",
-    "pending_other": "{{count}} thay đổi đang chờ đồng bộ",
-    "proxy": {
-      "headersTitle": "Tiêu đề bổ sung",
-      "headersHint": "Được gửi kèm với mọi yêu cầu đến máy chủ, ví dụ như token dịch vụ Cloudflare Access.",
-      "headerName": "Tên tiêu đề",
-      "headerValue": "Giá trị",
-      "savedValue": "Đã lưu, nhập để thay đổi",
-      "addHeader": "Thêm tiêu đề",
-      "removeHeader": "Xóa tiêu đề",
-      "basicAuthTitle": "Tên người dùng và mật khẩu",
-      "basicAuthHint": "Dành cho proxy yêu cầu tên người dùng và mật khẩu trước khi truy cập Termix.",
-      "username": "Tên người dùng",
-      "password": "Mật khẩu",
-      "allowInvalidCertificate": "Tin tưởng chứng chỉ tự ký",
-      "allowInvalidCertificateHint": "Chỉ dành cho máy chủ của riêng bạn, khi chứng chỉ của nó không đến từ cơ quan cấp chứng chỉ được biết đến."
-    },
-    "problems": {
-      "invalidUrl": "Điều này không giống một địa chỉ web.",
-      "unreachable": "Không thể kết nối đến máy chủ. Vui lòng kiểm tra địa chỉ và đảm bảo máy chủ đang hoạt động.",
-      "unreachableWithReason": "Không thể kết nối đến máy chủ: {{reason}}",
-      "tlsUntrusted": "Chứng chỉ của máy chủ không được tin cậy. Nếu đây là máy chủ của bạn với chứng chỉ tự ký, hãy bật tùy chọn bên dưới.",
-      "basicAuthRequired": "Có một thành phần phía trước máy chủ yêu cầu tên người dùng và mật khẩu. Vui lòng nhập chúng bên dưới.",
-      "proxyLogin": "Một trang đăng nhập hoặc proxy đã phản hồi thay vì Termix. Vui lòng thêm các tiêu đề (headers) mà nó yêu cầu bên dưới, hoặc kiểm tra lại địa chỉ.",
-      "notTermix": "Không có máy chủ Termix tại địa chỉ đó. Nếu nó chạy trên một đường dẫn cụ thể, hãy bao gồm đường dẫn đó, ví dụ: https://example.com/termix.",
-      "versionMismatch": "Máy chủ đó đang chạy phiên bản Termix cũ hơn. Vui lòng cập nhật lên phiên bản 2.9 trở lên để liên kết.",
-      "differentAccount": "Bạn đã đăng nhập vào một tài khoản khác. Vui lòng đăng nhập vào tài khoản mà thiết bị này đang liên kết, hoặc hủy liên kết trước."
-    },
-    "wizard": {
-      "title": "Liên kết với máy chủ Termix",
-      "reloginTitle": "Đăng nhập lại",
-      "savedServers": "Máy chủ gần đây",
-      "removeServer": "Xóa khỏi danh sách",
-      "serverDescription": "Nhập địa chỉ bạn sử dụng để mở Termix trong trình duyệt.",
-      "signinDescription": "Đăng nhập vào {{url}}",
-      "chooseDescription": "Thiết bị này đã có dữ liệu. Bạn muốn xử lý dữ liệu đó như thế nào?",
-      "finishingDescription": "Đang liên kết thiết bị này.",
-      "serverUrl": "Địa chỉ máy chủ",
-      "serverUrlHint": "Ví dụ: https://termix.example.com",
-      "showProxySettings": "Cài đặt proxy ngược",
-      "hideProxySettings": "Ẩn cài đặt proxy ngược",
-      "continue": "Tiếp tục",
-      "back": "Quay lại",
-      "mergeTitle": "Thêm vào tài khoản của tôi",
-      "mergeBody_other": "{{count}} mục trên thiết bị này sẽ được thêm vào tài khoản của bạn. Các mục mà tài khoản của bạn đã có sẽ giữ nguyên trên máy chủ.",
-      "replaceTitle": "Thay thế bằng tài khoản của tôi",
-      "replaceBody_other": "Các mục {{count}} trên thiết bị này sẽ bị xóa, và thiết bị này sẽ đồng bộ mọi thứ từ tài khoản của bạn. Các host chỉ được giữ trên thiết bị này sẽ vẫn còn.",
-      "link": "Liên kết",
-      "linking": "Đang liên kết và chạy đồng bộ hóa đầu tiên...",
-      "linked": "Đã liên kết. Dữ liệu của bạn đang được đồng bộ hóa.",
-      "signedInAgain": "Đã đăng nhập. Đồng bộ hóa đang chạy lại."
-    },
-    "entities": {
-      "hosts": "Máy chủ",
-      "sshCredentials": "Thông tin đăng nhập",
-      "sshFolders": "Thư mục",
-      "userPreferences": "Tùy chọn",
-      "pluginUserSettings": "Cài đặt plugin",
-      "sharedHosts": "Máy chủ được chia sẻ với bạn",
-      "sharedCredentials": "Thông tin đăng nhập được chia sẻ với bạn",
-      "vaultProfiles": "Hồ sơ Vault",
-      "snippetFolders": "Thư mục Snippet",
-      "snippets": "Snippets",
-      "dashboardServiceLinks": "Liên kết dịch vụ",
-      "homepageItems": "Mục trang chủ",
-      "networkTopology": "Sơ đồ mạng",
-      "workspaces": "Không gian làm việc",
-      "hostDefaults": "Cài đặt mặc định máy chủ",
-      "hostDefaultsAdmin": "Cài đặt mặc định máy chủ của quản trị viên",
-      "aiProviders": "Nhà cung cấp AI",
-      "homepageLayouts": "Bố cục trang chủ",
-      "accountProfile": "Hồ sơ tài khoản"
-    }
   },
   "hostDefaults": {
     "source": {

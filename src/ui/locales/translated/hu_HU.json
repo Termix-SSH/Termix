@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "Néhány bővítmény nem módosítható. Ezeket később javíthatja a Bővítmények fülön. Nyomja meg a Tovább gombot a folytatáshoz.",
     "pluginsApplyFailed": "Választásai nem menthetők. Próbálja újra, vagy folytassa, és módosítsa őket később a Bővítmények fülön.",
     "pluginsLoadFailed": "A bővítménylista nem tölthető be. Később választhat bővítményeket a Bővítmények fülön.",
-    "presetTitle": "Mennyit szeretne látni a képernyőn?",
-    "presetIntro": "Válassza ki, mennyi jelenjen meg a képernyőn.",
-    "presetChangeLater": "Később váltogathat elrendezéseket vagy módosíthat bármelyik beállítást a Beállítások > Felület menüpontban.",
-    "appearanceTitle": "Tegye személyessé",
-    "appearanceIntro": "Válasszon témát, kiemelő színt, betűtípust és nyelvet. A változtatások azonnal megjelennek, és később módosíthatja őket a Beállításokban.",
     "securityTitle": "Fiókja biztonsága",
     "securityIntro": "Adjon hozzá passkey-t vagy hitelesítő alkalmazást a fiókjához. Ezt később is megteheti a Beállítások > Biztonság menüpontban.",
-    "desktopTitle": "Hogyan szeretné használni a Termixet?",
-    "desktopBody": "Ezt bármikor módosíthatja az oldalsáv Szinkronizálás menüpontjából.",
-    "desktopLocalTitle": "Csak ezen az eszközön",
-    "desktopLocalBody": "Minden itt tárolódik. Nincs mit beállítani.",
-    "desktopLinkTitle": "A Termix szerveremmel",
-    "desktopLinkBody": "Jelentkezzen be a szerverére, hogy ugyanazokat a hosztokat és beállításokat használja minden eszközön.",
-    "desktopLinked": "Csatolva a(z) {{server}} szerverhez",
     "pluginsDocsLink": "Olvasson el többet mindegyikről"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "A Termix {{version}} verziója készen áll a telepítésre",
     "readyHint": "A következő újraindításkor települ."
   },
+  "companion": {
+    "close": "Panel bezárása",
+    "moveSide": "Panel áthelyezése",
+    "resize": "Panel átméretezése"
+  },
   "nav": {
     "home": "Főoldal",
     "terminal": "Terminál",
@@ -257,7 +250,6 @@
     "hosts": "Hosztok",
     "credentials": "Hitelek",
     "connections": "Kapcsolatok",
-    "sync": "Szinkronizálás",
     "reconnectDisconnectedTerminals": "Minden levált terminál újracsatlakoztatása",
     "reconnectingTerminals_one": "{{count}} terminál újracsatlakoztatása",
     "reconnectingTerminals_other": "{{count}} terminál újracsatlakoztatása",
@@ -279,10 +271,7 @@
     "retry": "Újrapróbálkozás",
     "refresh": "Frissítés",
     "optional": "Opcionális",
-    "downloadSample": "Minta letöltése",
     "failedToDeleteHost": "Nem sikerült törölni: {{name}}",
-    "importSkipExisting": "Importálás (létezők kihagyása)",
-    "importSSHConfig": "Importálás SSH konfigurációból",
     "connectionDetails": "Kapcsolati adatok",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -501,10 +490,7 @@
     "noFolder": "(Nincs mappa)",
     "deleteSelected": "Törlés",
     "exitSelection": "Kijelölés megszüntése",
-    "importSkip": "Importálás (létezők kihagyása)",
-    "importOverwrite": "Importálás (felülírás)",
     "collapseBtn": "Összecsukás",
-    "importExportBtn": "Importálás / Exportálás",
     "hostStatusesRefreshed": "A gazdagépek státuszai frissítve",
     "failedToRefreshHosts": "Nem sikerült frissíteni a gazdagépeket",
     "movedHostTo": "{{host}} áthelyezve a \"{{folder}}\" mappába",
@@ -559,6 +545,9 @@
     "deleteFolderConfirm_one": "A(z) \"{{name}}\" és annak {{count}} hostjának törlése? Ez a művelet nem vonható vissza.",
     "deleteFolderConfirm_other": "A(z) \"{{name}}\" és annak {{count}} hostjának törlése? Ez a művelet nem vonható vissza.",
     "failedToMoveHosts": "A kiszolgálók áthelyezése sikertelen",
+    "managedBanner": "Ezt a hosztot a {{plugin}} kezeli. A módosítást ott végezze el. Rögzítheti és átrendezheti.",
+    "managedTooltip": "Kezelő: {{plugin}}",
+    "addBlocked": "A hosztokat a {{plugin}} kezeli, így itt nem adhat hozzá újakat.",
     "failedToReorder": "Az átrendezés sikertelen",
     "expandAll": "Összes mappa kibontása",
     "collapseAll": "Összes mappa összecsukása",
@@ -669,35 +658,6 @@
     "addCredentialBtn2": "Hitelesítő adat hozzáadása",
     "checkingHostStatuses": "Host állapotok ellenőrzése...",
     "pinnedSection": "Kitűzve",
-    "hostsExported": "A hostok sikeresen exportálva",
-    "export": {
-      "menuItem": "Exportálás...",
-      "title": "Hostok exportálása",
-      "scope": "Tartomány",
-      "scopeAll": "Összes",
-      "scopeSelected": "Kijelöltek",
-      "searchHosts": "Hostok keresése...",
-      "include": "Befoglalás",
-      "groupConnection": "Csatlakozás",
-      "groupCredentials": "Hitelesítő adatok",
-      "groupNotes": "Jegyzetek",
-      "groupTags": "Címkék és kitűzés",
-      "groupProxy": "Proxy",
-      "groupJumpHosts": "Átjáró hostok",
-      "groupFeatureFlags": "Bővítménybeállítások",
-      "groupAdvanced": "Haladó konfiguráció",
-      "preview": "Előnézet",
-      "moreHosts_one": "... még {{count}} host",
-      "moreHosts_other": "... még {{count}} host",
-      "summary": "{{selected}} / {{total}} host",
-      "credentialsIncluded": "hitelesítő adatok beletartoznak",
-      "credentialsExcluded": "hitelesítő adatok kizárva",
-      "noneSelected": "Nincs kijelölt host",
-      "cancel": "Mégse",
-      "confirm": "Exportálás",
-      "fetchFailed": "Nem sikerült betölteni a hostokat az exportáláshoz",
-      "bulkButton": "Exportálás"
-    },
     "sampleDownloaded": "Mintafile letöltve",
     "failedToDeleteCredential2": "Nem sikerült törölni a hitelesítő adatot",
     "noFolderOption": "(Nincs mappa)",
@@ -860,11 +820,7 @@
     "editorUpdate": "Hoszt frissítése",
     "editorAdd": "Hoszt hozzáadása",
     "speedSearch": "Hosztok keresése. Nyilak a kiválasztáshoz, Enter a kapcsolódáshoz, Esc a bezáráshoz",
-    "speedSearchList": "Hosztlista. Írj be valamit, vagy nyomj /-t a kereséshez.",
-    "importNoHosts": "Nem találtam hosztokat a fájlban",
-    "importTooMany": "Egyszerre legfeljebb {{max}} hosztot importálhatsz",
-    "importSummary": "Importálás kész: {{imported}} importálva, {{updated}} frissítve, {{failed}} sikertelen",
-    "importHostsFailed": "Nem sikerült importálni a hosztokat"
+    "speedSearchList": "Hosztlista. Írj be valamit, vagy nyomj /-t a kereséshez."
   },
   "splitScreen": {
     "title": "Osztott képernyő",
@@ -1115,15 +1071,55 @@
         "colorPickerTooltip": "Színválasztó megnyitása",
         "themeSystem": "Rendszer",
         "themeLight": "Világos",
-        "themeDark": "Sötét",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "Sötét"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "Az alkalmazás teljes elrendezése. A témák és elrendezések bővítményekből származnak.",
+    "defaultsLabel": "Alapértelmezett mindenkinek",
+    "defaultsHint": "Amit a felhasználók látnak, amíg saját elrendezést vagy témát nem választanak.",
+    "followDefault": "Alapértelmezett használata",
+    "defaultSaved": "Alapértelmezett megjelenés mentve",
+    "saveFailed": "A megjelenés nem menthető",
+    "repair": {
+      "title": "Ez az elrendezés nem jeleníthető meg",
+      "safeTitle": "Biztonságos mód",
+      "layout": "Elrendezés",
+      "plugin": "Bővítmény",
+      "reason": "Ok",
+      "error": "Hiba",
+      "noError": "Nincs hibaüzenet.",
+      "copy": "Másolás",
+      "copied": "Másolva",
+      "copyFailed": "A részletek nem másolhatók",
+      "retry": "Újrapróbál",
+      "reset": "Visszaállítás az alapértelmezett megjelenésre",
+      "resetEveryone": "Az alapértelmezett visszaállítása mindenkinek",
+      "update": "{{name}} frissítése a {{version}} verzióra",
+      "disable": "{{name}} kikapcsolása",
+      "install": "Elrendezések és témák keresése",
+      "installTitle": "Elrendezések és témák",
+      "installButton": "Telepítés",
+      "nothingToInstall": "Jelenleg nincs más elérhető elrendezés vagy téma.",
+      "registryUnreachable": "A bővítményregiszter nem érhető el.",
+      "askAdmin": "Kérjen meg egy rendszergazdát, hogy frissítse vagy javítsa ezt az elrendezést. Lent átállhat egy másik elrendezésre vagy témára saját magának.",
+      "switchLayout": "Elrendezés váltása",
+      "switchTheme": "Téma váltása",
+      "saveFailed": "A választás nem menthető",
+      "reasons": {
+        "safe-url": "A cím biztonságos módot kért. Válasszon elrendezést lent, vagy távolítsa el a ?safe-layout=1 paramétert a címből.",
+        "safe-env": "A szerver a TERMIX_SAFE_LAYOUT környezeti változóval indult, így mindenki ezt a képernyőt látja, amíg ezt el nem távolítják.",
+        "missing": "Nincs telepített bővítmény, amely ezt az elrendezést biztosítaná.",
+        "disabled": "A bővítmény, amely ezt az elrendezést biztosítja, kikapcsolva van.",
+        "blocked": "A bővítmény, amely ezt az elrendezést biztosítja, valami szükséges dologra vár.",
+        "incompatible": "A bővítmény, amely ezt az elrendezést biztosítja, nem működik ezzel a Termix-verzióval.",
+        "failed": "Az elrendezés indítása sikertelen volt.",
+        "crashed": "Az elrendezés kétszer összeomlott az alkalmazás rajzolása közben."
+      },
+      "noLayout": "Nincs beállított elrendezés",
+      "restore": "A csomagolt {{name}} visszaállítása",
+      "restoreFailed": "A csomagolt másolat nem állítható vissza"
     }
   },
   "plugins": {
@@ -1148,6 +1144,18 @@
         "title": "Bejelentkezés kezelése",
         "consequence": "Bejelentkezési módszert, második hitelesítési tényezőt vagy SSH bejelentkezési típust adhat hozzá."
       },
+      "auth:policy": {
+        "title": "Bejelentkezési szabályok beállítása",
+        "consequence": "Kijelentkezhet az inaktív felhasználókat, korlátozhatja a munkamenet hosszát, letilthatja az \"Emlékezz rám\" funkciót, és megkövetelhet egy második hitelesítési tényezőt."
+      },
+      "ssh:transport": {
+        "title": "A hosztok elérési módjának kiválasztása",
+        "consequence": "Az SSH-kapcsolatot a hoszthoz saját útvonalon keresztül viheti, így látja az összes oda-vissza küldött adatot, a jelszavakat is beleértve."
+      },
+      "sync:provide": {
+        "title": "Szinkronizálás futtatása",
+        "consequence": "Megválaszolhatja az összes szinkronizálási kérést, így látja azokat az adatokat, amelyeket az eszközök és szerverek szinkronizálnak."
+      },
       "system:tls": {
         "title": "Tanúsítványok kezelése",
         "consequence": "Cserélheti a Termix által HTTPS-en keresztül szolgáltatott tanúsítványt, és válaszolhat a tanúsítványkiadók domain ellenőrzéseire."
@@ -1155,6 +1163,10 @@
       "device:serial": {
         "title": "Soros és USB eszközök hozzáférése",
         "consequence": "Megnyithat egy fizikai soros portot azon a gépen, amelyen a Termix fut."
+      },
+      "hosts:export": {
+        "title": "Hosztok exportálása titkaikkal együtt",
+        "consequence": "Olvashatja a hosztokat teljes körűen, beleértve a mentett jelszavakat és kulcsokat, és továbbíthatja azokat. Minden exportálás felkerül az ellenőrzési naplóba."
       },
       "hosts:write": {
         "title": "Hosztok létrehozása és módosítása",
@@ -1200,9 +1212,29 @@
         "title": "Ellenőrzési napló olvasása",
         "consequence": "Láthatja, ki mit és mikor csinált."
       },
+      "network:probe": {
+        "title": "Portok válaszának ellenőrzése",
+        "consequence": "Nyithat egy sima kapcsolatot bármely címre a szerverről, hogy ellenőrizze, elérhető-e."
+      },
+      "hosts:status-provide": {
+        "title": "Hoszt állapotának biztosítása",
+        "consequence": "Minden hoszt online és offline pontjainak forrása lesz."
+      },
+      "hosts:activity-provide": {
+        "title": "Legutóbbi tevékenység tárolása",
+        "consequence": "Minden felhasználó legutóbbi tevékenységi listájának tárolója lesz."
+      },
+      "hosts:lock": {
+        "title": "Hostok kezelése csak olvashatóként",
+        "consequence": "A kezelt hostokat senki más nem szerkesztheti, törölheti vagy újra megoszthatja."
+      },
       "desktop:window": {
         "title": "Asztali ablakok megnyitása",
         "consequence": "Csak a Termix asztali alkalmazásban."
+      },
+      "desktop:local": {
+        "title": "Ezen számítógép használata",
+        "consequence": "Fájlokat olvashat és módosíthat, shellt futtathat és helyi portokat nyithat meg ezen a számítógépen. Csak a Termix asztali alkalmazásban."
       },
       "users:impersonate": {
         "title": "Más felhasználók nevének használata",
@@ -1243,6 +1275,14 @@
       "ui:surface": {
         "title": "Saját képernyők hozzáadása",
         "consequence": "Fülek, panelek és beállítások, amelyeket később elrejthetsz."
+      },
+      "ui:layout": {
+        "title": "Az egész alkalmazás elrendezésének felülírása",
+        "consequence": "Ha kiválasztják, a kódja minden képernyőt kirajzol, beleértve a terminálokat és a beállításokat is."
+      },
+      "ui:theme": {
+        "title": "Színtémák hozzáadása",
+        "consequence": "Csak színek és stílusok. Egy téma nem futtat kódot."
       }
     },
     "runtime": {
@@ -1372,6 +1412,7 @@
         "options": "Nem sikerült menteni a(z) {{name}} beállításait: {{error}}",
         "deleteData": "Nem sikerült törölni a(z) {{name}} adatait: {{error}}",
         "managedByServer": "Ez az asztali felület egy szerverhez van kapcsolva, amely meghatározza a bővítményeket.",
+        "defaultLook": "A(z) {{name}} az alapértelmezett megjelenés, ezért kikapcsolható vagy cserélhető, de nem távolítható el.",
         "hasDependents": "A(z) {{name}} bővítményre szükség van a(z) {{list}} működéséhez. Először kapcsolja ki vagy távolítsa el azokat.",
         "missingDependencies": "A(z) {{name}} bővítménynek szüksége van a(z) {{list}} bővítményre, amely nincs telepítve.",
         "consentChanged": "Mióta megnézte, megváltozott, amit ez a bővítmény kér. Ellenőrizze újra a listát.",
@@ -1441,7 +1482,6 @@
       "noServerAccess": "Nincs hozzáférése a szervereihez",
       "searchInstalled": "Telepítettek keresése",
       "searchPlugins": "Bővítmények keresése",
-      "allCategories": "Összes",
       "nothingMatches": "Nincs találat.",
       "noneInstalled": "Még nincsenek telepített bővítmények. Böngésszen, és adjon hozzá néhányat.",
       "nothingHere": "Itt nincs semmi.",
@@ -1531,7 +1571,44 @@
       "documentation": "Dokumentáció",
       "envVars": "Környezeti változók",
       "envRequired": "Kötelező",
-      "envDefault": "Alapértelmezett: {{value}}"
+      "envDefault": "Alapértelmezett: {{value}}",
+      "kinds": {
+        "layouts": "Elrendezések",
+        "themes": "Témák",
+        "tabs": "Fülek",
+        "panels": "Oldalsáv paneljei",
+        "dashboardCards": "Vezérlőpult kártyák",
+        "protocols": "Csatlakozási típusok",
+        "auth": "Bejelentkezési módszerek",
+        "actions": "Műveletek",
+        "hostCapability": "Host beállítások"
+      },
+      "filters": {
+        "type": "Típus",
+        "allTypes": "Minden típus",
+        "category": "Kategória",
+        "allCategories": "Minden kategória",
+        "results_one": "{{count}} bővítmény",
+        "results_other": "{{count}} bővítmény",
+        "remove": "Szűrő eltávolítása: {{name}}",
+        "clear": "Szűrők törlése",
+        "button": "Szűrők",
+        "buttonCount": "Szűrők ({{count}})"
+      },
+      "pager": {
+        "range": "{{from}}-{{to}} / {{total}}",
+        "page": "{{page}}. oldal / {{pages}} összesen",
+        "previous": "Előző oldal",
+        "next": "Következő oldal",
+        "perPage": "{{count}} oldalanként",
+        "perPageLabel": "Bővítmények oldalanként"
+      },
+      "showUnsupportedHint": "Ezek szerepelnek a listában, de még nincs kiadás, amely ezen a verzión futna. Frissítse a Termixet a telepítéshez.",
+      "unsupported": "Újabb Termix verzió szükséges",
+      "unsupportedHint": "Nincs olyan kiadása ennek a bővítménynek, amely ezen a Termix verzión futna. Frissítse a Termixet a telepítéshez.",
+      "needsTermix": "Termix {{range}} szükséges",
+      "showUnsupported": "Nem támogatottak megjelenítése ({{count}})",
+      "showMore": "Még {{count}} megjelenítése ({{total}} hátralévő)"
     }
   },
   "settings": {
@@ -1546,87 +1623,6 @@
     "sudoHint": "Állíts be sudo jelszót ennek a hosztnak a szerkesztőjében a jogosult műveletek engedélyezéséhez.",
     "noData": "Nincs adat",
     "filter": "Szűrés..."
-  },
-  "sync": {
-    "minutesAgo_one": "{{count}} perce",
-    "minutesAgo_other": "{{count}} perce",
-    "hoursAgo_one": "{{count}} órája",
-    "hoursAgo_other": "{{count}} órája",
-    "pending_one": "{{count}} változás vár a szinkronizálásra",
-    "pending_other": "{{count}} változás vár a szinkronizálásra",
-    "proxy": {
-      "headersTitle": "További fejlécek",
-      "headersHint": "Minden kérésnél elküldésre kerül a szerver felé, például egy Cloudflare Access szolgáltatási token.",
-      "headerName": "Fejléc neve",
-      "headerValue": "Érték",
-      "savedValue": "Mentve, gépeljen a módosításhoz",
-      "addHeader": "Fejléc hozzáadása",
-      "removeHeader": "Fejléc eltávolítása",
-      "basicAuthTitle": "Felhasználónév és jelszó",
-      "basicAuthHint": "Olyan proxyhoz, amely a Termix előtt kér felhasználónevet és jelszót.",
-      "username": "Felhasználónév",
-      "password": "Jelszó",
-      "allowInvalidCertificate": "Önaláírt tanúsítvány megbízása",
-      "allowInvalidCertificateHint": "Csak saját szerver esetén, ha annak tanúsítványa nem ismert hatóságtól származik."
-    },
-    "problems": {
-      "invalidUrl": "Ez nem úgy néz ki, mint egy webcím.",
-      "unreachable": "Nem sikerült elérni a szervert. Ellenőrizze a címet, és hogy a szerver fut-e.",
-      "unreachableWithReason": "Nem sikerült elérni a szervert: {{reason}}",
-      "tlsUntrusted": "A szerver tanúsítványa nem megbízható. Ha ez a saját szervert, amelyik saját aláírással rendelkezik, kapcsolja be az alábbi lehetőséget.",
-      "basicAuthRequired": "A szerver előtt található valami felhasználónevet és jelszót kér. Adja meg az alábbiakban.",
-      "proxyLogin": "Bejelentkezési oldal vagy proxy válaszolt a Termix helyett. Adja meg az alábbiakban a szükséges fejléceket, vagy ellenőrizze a címet.",
-      "notTermix": "Nincs Termix szerver ezen a címen. Ha egy útvonal alatt fut, adja meg azt is, például https://example.com/termix.",
-      "versionMismatch": "Ez a szerver egy régebbi Termix verziót futtat. Frissítse 2.9 vagy újabb verzióra a kapcsolathoz.",
-      "differentAccount": "Egy másik fiókba jelentkezett be. Jelentkezzen be abba a fiókba, amelyikhez ez az eszköz van kapcsolva, vagy először bontsa a kapcsolatot."
-    },
-    "wizard": {
-      "title": "Kapcsolódás egy Termix szerverhez",
-      "reloginTitle": "Újra bejelentkezés",
-      "savedServers": "Legutóbbi szerverek",
-      "removeServer": "Eltávolítás a listából",
-      "serverDescription": "Adja meg azt a címet, amelyet a böngészőben a Termix megnyitásához használ.",
-      "signinDescription": "Bejelentkezés ide: {{url}}",
-      "chooseDescription": "Ezen az eszközön már vannak adatok. Mit tegyünk velük?",
-      "finishingDescription": "Az eszköz összekapcsolása folyamatban.",
-      "serverUrl": "Szervercím",
-      "serverUrlHint": "Például: https://termix.example.com",
-      "showProxySettings": "Fordított proxy beállításai",
-      "hideProxySettings": "Fordított proxy beállításainak elrejtése",
-      "continue": "Tovább",
-      "back": "Vissza",
-      "mergeTitle": "Hozzáadása a fiókhoz",
-      "mergeBody_one": "Az eszközön lévő elem hozzáadásra kerül a fiókhoz. A fiókban már meglévő elemek változatlanul maradnak a szerveren.",
-      "mergeBody_other": "Az eszközön lévő {{count}} elem hozzáadásra kerül a fiókhoz. A fiókban már meglévő elemek változatlanul maradnak a szerveren.",
-      "replaceTitle": "Csere a fiókból származóval",
-      "replaceBody_one": "Az eszközön lévő elem törlésre kerül, és az eszköz átvállalja a fiók összes adatát. Azok a hostok, amelyeket csak ezen az eszközön tartottál meg, megmaradnak.",
-      "replaceBody_other": "Az eszközön lévő {{count}} elem törlésre kerül, és az eszköz átvállalja a fiók összes adatát. Azok a hostok, amelyeket csak ezen az eszközön tartottál meg, megmaradnak.",
-      "link": "Összekötés",
-      "linking": "Összekötés és az első szinkronizálás futtatása...",
-      "linked": "Összekötve. Az adataid szinkronizálódnak.",
-      "signedInAgain": "Bejelentkezve. A szinkronizálás újra fut."
-    },
-    "entities": {
-      "hosts": "Gazdagépek",
-      "sshCredentials": "Hitelesítő adatok",
-      "sshFolders": "Mappák",
-      "userPreferences": "Beállítások",
-      "pluginUserSettings": "Bővítménybeállítások",
-      "sharedHosts": "Önnel megosztott gazdagépek",
-      "sharedCredentials": "Önnel megosztott hitelesítő adatok",
-      "vaultProfiles": "Vault-profilok",
-      "snippetFolders": "Kódrészlet-mappák",
-      "snippets": "Kódrészletek",
-      "dashboardServiceLinks": "Szolgáltatás-hivatkozások",
-      "homepageItems": "Főoldal-elemek",
-      "networkTopology": "Hálózati térkép",
-      "workspaces": "Munkaterületek",
-      "hostDefaults": "Gazdagép alapértelmezései",
-      "hostDefaultsAdmin": "Szerveri gazdagép-alapértelmezések",
-      "aiProviders": "AI-szolgáltatók",
-      "homepageLayouts": "Főoldal-elrendezések",
-      "accountProfile": "Fiókprofil"
-    }
   },
   "hostDefaults": {
     "source": {

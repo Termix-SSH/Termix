@@ -213,20 +213,8 @@
     "pluginsSomeFailed": "Unele plugin-uri nu au putut fi modificate. Le poți repara mai târziu din fila Plugin-uri. Apasă Înainte pentru a continua.",
     "pluginsApplyFailed": "Alegerile tale nu au putut fi salvate. Încearcă din nou sau continuă și modifică-le mai târziu din fila Plugin-uri.",
     "pluginsLoadFailed": "Lista de plugin-uri nu a putut fi încărcată. Poți alege plugin-uri mai târziu din fila Plugin-uri.",
-    "presetTitle": "Cât de mult vrei să apară pe ecran?",
-    "presetIntro": "Alege cât de mult se afișează pe ecran.",
-    "presetChangeLater": "Poți schimba presetările sau orice setare individuală mai târziu în Setări, la secțiunea Interfață.",
-    "appearanceTitle": "Personalizează-l",
-    "appearanceIntro": "Alege o temă, o culoare de accent, un font și limba ta. Modificările apar imediat și le poți schimba mai târziu în Setări.",
     "securityTitle": "Securizează-ți contul",
     "securityIntro": "Adaugă o cheie de acces sau o aplicație de autentificare la contul tău. Poți face acest lucru și mai târziu în Setări, la secțiunea Securitate.",
-    "desktopTitle": "Cum vrei să folosești Termix?",
-    "desktopBody": "Poți modifica acest lucru oricând din Sincronizare în bara laterală.",
-    "desktopLocalTitle": "Doar pe acest dispozitiv",
-    "desktopLocalBody": "Totul este stocat aici. Nu este nevoie de configurare.",
-    "desktopLinkTitle": "Cu serverul meu Termix",
-    "desktopLinkBody": "Conectează-te la serverul tău pentru a folosi aceleași gazde și setări pe fiecare dispozitiv.",
-    "desktopLinked": "Legat de {{server}}",
     "pluginsDocsLink": "Citește despre fiecare"
   },
   "desktopUpdates": {
@@ -247,6 +235,11 @@
     "ready": "Termix {{version}} este gata de instalare",
     "readyHint": "Se instalează data viitoare când Termix se repornește."
   },
+  "companion": {
+    "close": "Închide panoul",
+    "moveSide": "Mută panoul",
+    "resize": "Redimensionează panoul"
+  },
   "nav": {
     "home": "Acasă",
     "terminal": "Terminal",
@@ -257,7 +250,6 @@
     "hosts": "Gazde",
     "credentials": "Credențiale",
     "connections": "Conexiuni",
-    "sync": "Sincronizare",
     "reconnectDisconnectedTerminals": "Reconectează toate terminalele deconectate",
     "reconnectingTerminals_one": "Se reconectează {{count}} terminal",
     "reconnectingTerminals_few": "Se reconectează {{count}} terminale",
@@ -282,10 +274,7 @@
     "retry": "Reîncearcă",
     "refresh": "Reîmprospătează",
     "optional": "Opțional",
-    "downloadSample": "Descarcă exemplul",
     "failedToDeleteHost": "Ștergerea lui {{name}} a eșuat",
-    "importSkipExisting": "Importă (omite existentele)",
-    "importSSHConfig": "Importă din configurația SSH",
     "connectionDetails": "Detalii conexiune",
     "ssh": "SSH",
     "telnet": "Telnet",
@@ -505,10 +494,7 @@
     "noFolder": "(Fără dosar)",
     "deleteSelected": "Șterge",
     "exitSelection": "Ieși din selecție",
-    "importSkip": "Importă (sari peste existente)",
-    "importOverwrite": "Importă (suprascrie)",
     "collapseBtn": "Restrânge",
-    "importExportBtn": "Importă / Exportă",
     "hostStatusesRefreshed": "Stările gazdelor au fost reîmprospătate",
     "failedToRefreshHosts": "Reîmprospătarea gazdelor a eșuat",
     "movedHostTo": "{{host}} mutat în \"{{folder}}\"",
@@ -565,6 +551,9 @@
     "deleteFolderConfirm_few": "Ștergeți \"{{name}}\" și {{count}} gazdele sale? Această acțiune nu poate fi anulată.",
     "deleteFolderConfirm_other": "Ștergeți \"{{name}}\" și {{count}} gazdele sale? Această acțiune nu poate fi anulată.",
     "failedToMoveHosts": "Mutarea gazdelor a eșuat",
+    "managedBanner": "Acest gazdă este gestionată de {{plugin}}. Modifică-l acolo. Îl poți ancora și rearanja.",
+    "managedTooltip": "Gestionat de {{plugin}}",
+    "addBlocked": "Gazdele sunt gestionate de {{plugin}}, așa că nu se pot adăuga gazde noi aici.",
     "failedToReorder": "Reordonarea a eșuat",
     "expandAll": "Extinde toate dosarele",
     "collapseAll": "Restrânge toate dosarele",
@@ -676,36 +665,6 @@
     "addCredentialBtn2": "Adaugă Acreditare",
     "checkingHostStatuses": "Se verifică stările gazdelor...",
     "pinnedSection": "Fixate",
-    "hostsExported": "Gazdele au fost exportate cu succes",
-    "export": {
-      "menuItem": "Exportă...",
-      "title": "Exportă gazde",
-      "scope": "Domeniu",
-      "scopeAll": "Toate",
-      "scopeSelected": "Selectate",
-      "searchHosts": "Caută gazde...",
-      "include": "Include",
-      "groupConnection": "Conexiune",
-      "groupCredentials": "Credențiale",
-      "groupNotes": "Note",
-      "groupTags": "Etichete și fixare",
-      "groupProxy": "Proxy",
-      "groupJumpHosts": "Gazde intermediare",
-      "groupFeatureFlags": "Setări plugin",
-      "groupAdvanced": "Configurare avansată",
-      "preview": "Previzualizare",
-      "moreHosts_one": "... încă {{count}} gazdă",
-      "moreHosts_few": "... încă {{count}} gazde",
-      "moreHosts_other": "... încă {{count}} gazde",
-      "summary": "{{selected}} din {{total}} gazde",
-      "credentialsIncluded": "credințiale incluse",
-      "credentialsExcluded": "credințiale excluse",
-      "noneSelected": "Nicio gazdă selectată",
-      "cancel": "Anulează",
-      "confirm": "Exportă",
-      "fetchFailed": "Nu s-au putut încărca gazdele pentru export",
-      "bulkButton": "Exportă"
-    },
     "sampleDownloaded": "Fișierul de exemplu a fost descărcat",
     "failedToDeleteCredential2": "Nu s-a putut șterge credențiala",
     "noFolderOption": "(Fără dosar)",
@@ -873,11 +832,7 @@
     "editorUpdate": "Actualizează gazda",
     "editorAdd": "Adaugă gazdă",
     "speedSearch": "Caută gazde. Tastele săgeată pentru selectare, Enter pentru conectare, Esc pentru închidere",
-    "speedSearchList": "Lista de gazde. Tastează sau apasă / pentru căutare.",
-    "importNoHosts": "Nicio gazdă găsită în fișier",
-    "importTooMany": "Poți importa până la {{max}} gazde simultan",
-    "importSummary": "Import finalizat: {{imported}} importate, {{updated}} actualizate, {{failed}} eșuate",
-    "importHostsFailed": "Nu s-au putut importa gazdele"
+    "speedSearchList": "Lista de gazde. Tastează sau apasă / pentru căutare."
   },
   "splitScreen": {
     "title": "Ecran divizat",
@@ -1079,13 +1034,9 @@
   },
   "admin": {
     "usersCount_one": "{{count}} utilizator",
-    "usersCount_few": "{{count}} utilizatori",
     "rolesCount_one": "{{count}} rol",
-    "rolesCount_few": "{{count}} roluri",
     "apiKeysCount_one": "{{count}} cheie",
-    "apiKeysCount_few": "{{count}} chei",
     "sessionsActive_one": "{{count}} activ",
-    "sessionsActive_few": "{{count}} active",
     "hostsCount_one": "{{count}} gazdă",
     "hostsCount_few": "{{count}} gazde",
     "hostsCount_other": "{{count}} gazde",
@@ -1094,7 +1045,6 @@
     "credentialsCount_other": "{{count}} acreditări",
     "rolePermissions": {
       "count_one": "{{count}} permisiune",
-      "count_few": "{{count}} permisiuni",
       "groups": {
         "hosts": "Gazde",
         "credentials": "Acreditări",
@@ -1135,19 +1085,58 @@
         "interfaceFontDescription": "Modifică fontul interfeței aplicației. Profilele de terminal își păstrează propriile setări de font.",
         "accentColorLabel": "Culoare accent",
         "apiKeyCount_one": "{{count}} cheie",
-        "apiKeyCount_few": "{{count}} chei",
         "colorPickerTooltip": "Deschide selectorul de culori",
         "themeSystem": "Sistem",
         "themeLight": "Luminos",
-        "themeDark": "Întunecat",
-        "themeDracula": "Dracula",
-        "themeCatppuccin": "Catppuccin",
-        "themeNord": "Nord",
-        "themeSolarized": "Solarized",
-        "themeTokyoNight": "Tokyo Night",
-        "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeDark": "Întunecat"
       }
+    }
+  },
+  "looks": {
+    "layoutHint": "Cum este organizată întreaga aplicație. Temele și aspectele provin din plugin-uri.",
+    "defaultsLabel": "Implicit pentru toți",
+    "defaultsHint": "Ce văd utilizatorii până își aleg propriul aspect sau temă.",
+    "followDefault": "Folosește implicitul",
+    "defaultSaved": "Aspectul implicit a fost salvat",
+    "saveFailed": "Nu s-a putut salva aspectul",
+    "repair": {
+      "title": "Acest aspect nu a putut fi afișat",
+      "safeTitle": "Mod sigur",
+      "layout": "Aspect",
+      "plugin": "Plugin",
+      "reason": "Motiv",
+      "error": "Eroare",
+      "noError": "Niciun mesaj de eroare.",
+      "copy": "Copiază",
+      "copied": "Copiat",
+      "copyFailed": "Nu s-au putut copia detaliile",
+      "retry": "Încearcă din nou",
+      "reset": "Resetează la aspectul implicit",
+      "resetEveryone": "Resetează implicitul pentru toți",
+      "update": "Actualizează {{name}} la {{version}}",
+      "disable": "Dezactivează {{name}}",
+      "install": "Găsește aspecte și teme",
+      "installTitle": "Aspecte și teme",
+      "installButton": "Instalează",
+      "nothingToInstall": "Nu sunt disponibile alte aspecte sau teme în acest moment.",
+      "registryUnreachable": "Registrul de plugin-uri nu a putut fi contactat.",
+      "askAdmin": "Cere unui administrator să actualizeze sau să repare acest aspect. Mai jos poți comuta la un alt aspect sau temă pentru tine.",
+      "switchLayout": "Comută aspectul",
+      "switchTheme": "Comută tema",
+      "saveFailed": "Nu s-a putut salva alegerea ta",
+      "reasons": {
+        "safe-url": "Adresa a solicitat modul sigur. Alege un aspect mai jos sau elimină ?safe-layout=1 din adresă.",
+        "safe-env": "Serverul a fost pornit cu TERMIX_SAFE_LAYOUT, așa că toți văd acest ecran până când este eliminat.",
+        "missing": "Niciun plugin instalat nu oferă acest aspect.",
+        "disabled": "Plugin-ul care oferă acest aspect este dezactivat.",
+        "blocked": "Plugin-ul care oferă acest aspect așteaptă ceva de care are nevoie.",
+        "incompatible": "Plugin-ul care oferă acest aspect nu funcționează cu această versiune de Termix.",
+        "failed": "Aspectul nu a putut fi pornit.",
+        "crashed": "Aspectul a eșuat de două ori în timpul randării aplicației."
+      },
+      "noLayout": "Niciun aspect nu este setat",
+      "restore": "Restaurează {{name}} inclus",
+      "restoreFailed": "Nu s-a putut restaura copia inclusă"
     }
   },
   "plugins": {
@@ -1172,6 +1161,18 @@
         "title": "Gestionează autentificarea",
         "consequence": "Poate adăuga o metodă de autentificare, un al doilea factor sau un tip de autentificare SSH."
       },
+      "auth:policy": {
+        "title": "Setează reguli de autentificare",
+        "consequence": "Poate deconecta utilizatorii când sunt inactivi, limita durata sesiunii, dezactiva opțiunea „Ține-mă minte” și cere un al doilea factor."
+      },
+      "ssh:transport": {
+        "title": "Alege cum sunt accesate gazdele",
+        "consequence": "Poate transporta conexiunea SSH către o gazdă pe propriul său traseu, așa că vede tot ce este trimis către și de la acele gazde, inclusiv parolele."
+      },
+      "sync:provide": {
+        "title": "Rulează sincronizarea",
+        "consequence": "Poate răspunde la toate cererile de sincronizare, așa că vede datele pe care dispozitivele și serverele le sincronizează."
+      },
       "system:tls": {
         "title": "Gestionează certificatele",
         "consequence": "Poate înlocui certificatul pe care Termix îl servește prin HTTPS și poate răspunde la verificările de domeniu de la autoritățile de certificare."
@@ -1179,6 +1180,10 @@
       "device:serial": {
         "title": "Accesează dispozitivele seriale și USB",
         "consequence": "Poate deschide un port serial fizic pe mașina care rulează Termix."
+      },
+      "hosts:export": {
+        "title": "Exportă gazdele cu secretele lor",
+        "consequence": "Poate citi gazdele tale în totalitate, inclusiv parolele și cheile salvate, și le poate distribui. Fiecare export este înregistrat în jurnalul de audit."
       },
       "hosts:write": {
         "title": "Creează și modifică host-uri",
@@ -1224,9 +1229,29 @@
         "title": "Citește jurnalul de audit",
         "consequence": "Poate vedea cine a făcut ce și când."
       },
+      "network:probe": {
+        "title": "Verifică dacă porturile răspund",
+        "consequence": "Poate deschide o conexiune simplă către orice adresă de pe server, pentru a vedea dacă este accesibilă."
+      },
+      "hosts:status-provide": {
+        "title": "Furnizează starea gazdei",
+        "consequence": "Devine sursa punctelor online și offline pentru fiecare gazdă."
+      },
+      "hosts:activity-provide": {
+        "title": "Păstrează activitatea recentă",
+        "consequence": "Devine stocul pentru lista de activitate recentă a fiecărui utilizator."
+      },
+      "hosts:lock": {
+        "title": "Gestionează gazdele ca doar pentru citire",
+        "consequence": "Gazdele pe care le gestionează nu pot fi editate, șterse sau redistribuite de nimeni altcineva."
+      },
       "desktop:window": {
         "title": "Deschide ferestre desktop",
         "consequence": "Doar în aplicația desktop Termix."
+      },
+      "desktop:local": {
+        "title": "Folosește acest calculator",
+        "consequence": "Poate citi și modifica fișiere, rula un shell și deschide porturi locale pe acest calculator. Doar în aplicația desktop Termix."
       },
       "users:impersonate": {
         "title": "Acționează în numele altor utilizatori",
@@ -1267,6 +1292,14 @@
       "ui:surface": {
         "title": "Să adauge propriile ecrane",
         "consequence": "File, panouri și setări pe care le poți ascunde ulterior."
+      },
+      "ui:layout": {
+        "title": "Înlocuiește întreaga structură a aplicației",
+        "consequence": "Când este selectat, codul său desenează fiecare ecran, inclusiv terminalele și setările tale."
+      },
+      "ui:theme": {
+        "title": "Adaugă teme de culori",
+        "consequence": "Doar culori și stiluri. Nu se execută niciun cod pentru o temă."
       }
     },
     "runtime": {
@@ -1408,6 +1441,7 @@
         "options": "Nu s-au putut salva opțiunile pentru {{name}}: {{error}}",
         "deleteData": "Nu s-au putut șterge datele pentru {{name}}: {{error}}",
         "managedByServer": "Acest desktop este legat de un server, care decide plugin-urile sale.",
+        "defaultLook": "{{name}} este aspectul implicit, așa că poate fi dezactivat sau înlocuit, dar nu dezinstalat.",
         "hasDependents": "{{name}} este necesar pentru {{list}}. Dezactivează-le sau dezinstalează-le mai întâi.",
         "missingDependencies": "{{name}} are nevoie de {{list}}, care nu este instalat.",
         "consentChanged": "Ceea ce solicită acest plugin s-a schimbat de când l-ai verificat. Verifică din nou lista.",
@@ -1481,7 +1515,6 @@
       "noServerAccess": "Fără acces la serverele tale",
       "searchInstalled": "Caută în instalate",
       "searchPlugins": "Caută plugin-uri",
-      "allCategories": "Toate",
       "nothingMatches": "Nimic nu se potrivește.",
       "noneInstalled": "Nu sunt plugin-uri instalate încă. Răsfoiește pentru a adăuga unele.",
       "nothingHere": "Nimic aici.",
@@ -1575,7 +1608,45 @@
       "documentation": "Documentație",
       "envVars": "Variabile de mediu",
       "envRequired": "Obligatoriu",
-      "envDefault": "Implicit: {{value}}"
+      "envDefault": "Implicit: {{value}}",
+      "kinds": {
+        "layouts": "Structuri",
+        "themes": "Teme",
+        "tabs": "File",
+        "panels": "Pânouri laterale",
+        "dashboardCards": "Carduri de tablou de bord",
+        "protocols": "Tipuri de conexiune",
+        "auth": "Metode de autentificare",
+        "actions": "Acțiuni",
+        "hostCapability": "Setări gazdă"
+      },
+      "filters": {
+        "type": "Tip",
+        "allTypes": "Toate tipurile",
+        "category": "Categorie",
+        "allCategories": "Toate categoriile",
+        "results_one": "{{count}} plugin",
+        "results_few": "{{count}} pluginuri",
+        "results_other": "{{count}} pluginuri",
+        "remove": "Elimină filtrul {{name}}",
+        "clear": "Șterge filtrele",
+        "button": "Filtre",
+        "buttonCount": "Filtre ({{count}})"
+      },
+      "pager": {
+        "range": "{{from}}-{{to}} din {{total}}",
+        "page": "Pagina {{page}} din {{pages}}",
+        "previous": "Pagina anterioară",
+        "next": "Pagina următoare",
+        "perPage": "{{count}} per pagină",
+        "perPageLabel": "Pluginuri per pagină"
+      },
+      "showUnsupportedHint": "Acestea sunt listate, dar nicio versiune nu rulează încă pe această versiune. Actualizează Termix pentru a le instala.",
+      "unsupported": "Necesită o versiune mai nouă de Termix",
+      "unsupportedHint": "Nicio versiune a acestui plugin nu rulează pe această versiune de Termix. Actualizează Termix pentru a-l instala.",
+      "needsTermix": "Necesită Termix {{range}}",
+      "showUnsupported": "Afișează nesuportate ({{count}})",
+      "showMore": "Afișează încă {{count}} (mai rămân {{total}})"
     }
   },
   "settings": {
@@ -1590,92 +1661,6 @@
     "sudoHint": "Setează o parolă sudo pentru acest gazdă în editorul de gazde pentru a activa acțiuni privilegiate.",
     "noData": "Fără date",
     "filter": "Filtrează..."
-  },
-  "sync": {
-    "minutesAgo_one": "{{count}} minut în urmă",
-    "minutesAgo_few": "{{count}} minute în urmă",
-    "minutesAgo_other": "{{count}} minute în urmă",
-    "hoursAgo_one": "{{count}} oră în urmă",
-    "hoursAgo_few": "{{count}} ore în urmă",
-    "hoursAgo_other": "{{count}} ore în urmă",
-    "pending_one": "{{count}} modificare în așteptarea sincronizării",
-    "pending_few": "{{count}} modificări în așteptarea sincronizării",
-    "pending_other": "{{count}} modificări în așteptarea sincronizării",
-    "proxy": {
-      "headersTitle": "Antete suplimentare",
-      "headersHint": "Trimise cu fiecare cerere către server, de exemplu un token de serviciu Cloudflare Access.",
-      "headerName": "Nume antet",
-      "headerValue": "Valoare",
-      "savedValue": "Salvat, tastați pentru a modifica",
-      "addHeader": "Adaugă antet",
-      "removeHeader": "Elimină antet",
-      "basicAuthTitle": "Nume utilizator și parolă",
-      "basicAuthHint": "Pentru un proxy care solicită un nume de utilizator și o parolă înainte de Termix.",
-      "username": "Nume utilizator",
-      "password": "Parolă",
-      "allowInvalidCertificate": "Încredere într-un certificat auto-semnat",
-      "allowInvalidCertificateHint": "Doar pentru serverul dvs. propriu, când certificatul său nu provine de la o autoritate cunoscută."
-    },
-    "problems": {
-      "invalidUrl": "Acesta nu pare a fi o adresă web.",
-      "unreachable": "Nu s-a putut accesa serverul. Verificați adresa și că serverul rulează.",
-      "unreachableWithReason": "Nu s-a putut accesa serverul: {{reason}}",
-      "tlsUntrusted": "Certificatul serverului nu este de încredere. Dacă acesta este serverul dvs. cu un certificat semnat de sine, activați opțiunea de mai jos.",
-      "basicAuthRequired": "Un element din fața serverului solicită un nume de utilizator și o parolă. Introduceți-le mai jos.",
-      "proxyLogin": "O pagină de autentificare sau un proxy a răspuns în loc de Termix. Adăugați anteturile necesare mai jos sau verificați adresa.",
-      "notTermix": "Nu există un server Termix la această adresă. Dacă rulează pe o cale, includeți-o, de exemplu https://example.com/termix.",
-      "versionMismatch": "Acest server rulează o versiune mai veche de Termix. Actualizați-l la 2.9 sau mai nou pentru a-l conecta.",
-      "differentAccount": "V-ați autentificat într-un cont diferit. Autentificați-vă în contul cu care este legat acest dispozitiv sau deconectați-l mai întâi."
-    },
-    "wizard": {
-      "title": "Conectare la un server Termix",
-      "reloginTitle": "Autentificare din nou",
-      "savedServers": "Servere recente",
-      "removeServer": "Eliminare din listă",
-      "serverDescription": "Introduceți adresa pe care o folosiți pentru a deschide Termix în browser.",
-      "signinDescription": "Autentificare la {{url}}",
-      "chooseDescription": "Acest dispozitiv are deja date. Ce ar trebui să se întâmple cu ele?",
-      "finishingDescription": "Se conectează acest dispozitiv.",
-      "serverUrl": "Adresa serverului",
-      "serverUrlHint": "De exemplu https://termix.example.com",
-      "showProxySettings": "Setări proxy invers",
-      "hideProxySettings": "Ascunde setările proxy invers",
-      "continue": "Continuare",
-      "back": "Înapoi",
-      "mergeTitle": "Adaugă-l în contul meu",
-      "mergeBody_one": "Elementul de pe acest dispozitiv este adăugat în contul dvs. Elementele pe care contul dvs. le are deja rămân neschimbate pe server.",
-      "mergeBody_few": "Cele {{count}} elemente de pe acest dispozitiv sunt adăugate în contul dvs. Elementele pe care contul dvs. le are deja rămân neschimbate pe server.",
-      "mergeBody_other": "Cele {{count}} elemente de pe acest dispozitiv sunt adăugate în contul dvs. Elementele pe care contul dvs. le are deja rămân neschimbate pe server.",
-      "replaceTitle": "Înlocuiește-l cu contul meu",
-      "replaceBody_one": "Elementul de pe acest dispozitiv este eliminat, iar acest dispozitiv preia totul din contul dvs. Gazdele păstrate doar pe acest dispozitiv rămân.",
-      "replaceBody_few": "Cele {{count}} elemente de pe acest dispozitiv sunt eliminate, iar acest dispozitiv preia totul din contul dvs. Gazdele păstrate doar pe acest dispozitiv rămân.",
-      "replaceBody_other": "Cele {{count}} elemente de pe acest dispozitiv sunt eliminate, iar acest dispozitiv preia totul din contul dvs. Gazdele păstrate doar pe acest dispozitiv rămân.",
-      "link": "Conectare",
-      "linking": "Se conectează și se rulează prima sincronizare...",
-      "linked": "Conectat. Datele dvs. se sincronizează acum.",
-      "signedInAgain": "Autentificat. Sincronizarea rulează din nou."
-    },
-    "entities": {
-      "hosts": "Gazde",
-      "sshCredentials": "Acreditări",
-      "sshFolders": "Foldere",
-      "userPreferences": "Preferințe",
-      "pluginUserSettings": "Setări plugin",
-      "sharedHosts": "Gazde partajate cu dvs.",
-      "sharedCredentials": "Acreditări partajate cu dvs.",
-      "vaultProfiles": "Profiluri Vault",
-      "snippetFolders": "Foldere de snippet-uri",
-      "snippets": "Snippet-uri",
-      "dashboardServiceLinks": "Legături la servicii",
-      "homepageItems": "Elemente pagină principală",
-      "networkTopology": "Hartă de rețea",
-      "workspaces": "Spații de lucru",
-      "hostDefaults": "Setări implicite gazdă",
-      "hostDefaultsAdmin": "Setări implicite gazdă server",
-      "aiProviders": "Furnizori AI",
-      "homepageLayouts": "Aspecte pagină principală",
-      "accountProfile": "Profil cont"
-    }
   },
   "hostDefaults": {
     "source": {
