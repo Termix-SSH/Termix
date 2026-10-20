@@ -21,6 +21,8 @@ const packages = [
   "@img/sharp-win32-x64",
 ].map((name) => `${name}@${sharpPackage.optionalDependencies[name]}`);
 
+// A .cmd file only starts through a shell on current Node.
 execFileSync("npm.cmd", ["install", "--force", "--no-save", ...packages], {
   stdio: "inherit",
+  shell: true,
 });
