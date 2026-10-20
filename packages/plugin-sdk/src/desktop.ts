@@ -35,6 +35,17 @@ export interface ElectronAPI {
   getAppVersion: () => Promise<string>;
   setZoomFactor?: (factor: number) => void;
   getPlatform: () => Promise<string>;
+  /** Whether the app-drawn title bar shows in this window. */
+  getTitleBarVisible?: () => Promise<boolean>;
+  /** Calls back when the title bar shows or hides; returns an unsubscribe. */
+  onTitleBarVisibleChange?: (
+    callback: (visible: boolean) => void,
+  ) => () => void;
+  /** Keeps the window controls the system draws in the colors of the theme. */
+  setTitleBarOverlay?: (colors: {
+    color?: string;
+    symbolColor?: string;
+  }) => Promise<void>;
   getSetting?: (key: string) => Promise<string | null | undefined>;
   setSetting?: (key: string, value: string) => Promise<void>;
 

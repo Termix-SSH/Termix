@@ -555,3 +555,28 @@ html.fs-xl {
   background-color: color-mix(in oklab, var(--accent-brand) 35%, transparent);
   color: inherit;
 }
+
+/*
+ * The title bar the desktop app draws on top of its window. The window has
+ * no native frame, so this strip is what moves the window around: the whole
+ * bar drags, everything inside it that takes clicks does not.
+ */
+.termix-titlebar {
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.termix-titlebar button,
+.termix-titlebar a,
+.termix-titlebar input,
+.termix-titlebar [role="button"] {
+  -webkit-app-region: no-drag;
+}
+
+/*
+ * Layouts size themselves to the viewport with h-dvh. Under the app-drawn
+ * title bar the usable height is shorter, so trim it while the bar shows.
+ */
+.h-dvh {
+  height: calc(100dvh - var(--termix-titlebar-height, 0px));
+}

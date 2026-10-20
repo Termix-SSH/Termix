@@ -31,6 +31,10 @@ const { quitApp } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
 // Saved by the file manager after the user picks an editor in a file dialog.
 const EXTERNAL_EDITOR_SETTING = "fileManager.externalEditorPath";
+
+// The height of the title bar the app draws itself. The renderer uses the
+// same number, so the bar and the window controls always line up.
+const TITLE_BAR_HEIGHT = 40;
 const { isExternalLoginUrl, isCallbackPort } = require("./external-login.cjs");
 
 // The main process's Node.js networking (the global `fetch`) only
@@ -1327,12 +1331,27 @@ function createWindow() {
         ? "macOS"
         : "Linux";
 
+  const isMac = process.platform === "darwin";
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 800,
     minHeight: 600,
     title: "Termix",
+    // The app draws its own title bar so it follows the active theme. macOS
+    // keeps the traffic lights on top of it, Windows and Linux get the
+    // native controls as an overlay whose colors the renderer keeps in sync.
+    titleBarStyle: isMac ? "hiddenInset" : "hidden",
+    ...(isMac
+      ? { trafficLightPosition: { x: 14, y: 16 } }
+      : {
+          titleBarOverlay: {
+            color: "#0f0f14",
+            symbolColor: "#e6e6ea",
+            height: TITLE_BAR_HEIGHT,
+          },
+        }),
     icon: path.join(
       appRoot,
       "public",
@@ -1545,6 +1564,16 @@ function createWindow() {
     }
   });
 
+  const sendTitleBarVisible = () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    mainWindow.webContents.send(
+      "title-bar-visible-changed",
+      titleBarVisible(mainWindow),
+    );
+  };
+  mainWindow.on("enter-full-screen", sendTitleBarVisible);
+  mainWindow.on("leave-full-screen", sendTitleBarVisible);
+
   mainWindow.on("closed", () => {
     embeddedViews.destroyAll();
     mainWindow = null;
@@ -1574,8 +1603,48 @@ ipcMain.handle("get-app-version", () => {
   return app.getVersion();
 });
 
+/** The window an IPC call came from, so the main window and the extra
+ * windows (isolated views, sign-in) can each answer for themselves. */
+function windowFor(event) {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win && !win.isDestroyed()) return win;
+  if (mainWindow && !mainWindow.isDestroyed()) return mainWindow;
+  return null;
+}
+
 ipcMain.handle("get-platform", () => {
   return process.platform;
+});
+
+// Whether the app-drawn title bar shows in the window that asks. Only the
+// main window hides the native bar, and in full screen macOS hides the
+// traffic lights, so the bar goes away there too.
+function titleBarVisible(win) {
+  return !!win && win === mainWindow && !win.isFullScreen();
+}
+
+ipcMain.handle("get-title-bar-visible", (event) => {
+  return titleBarVisible(windowFor(event));
+});
+
+// The renderer sends the colors of the active theme so the window controls
+// the system draws (Windows and Linux) match the app.
+ipcMain.handle("set-title-bar-overlay", (event, colors) => {
+  const win = windowFor(event);
+  if (!win || process.platform === "darwin") return;
+  const options = {};
+  if (typeof colors?.color === "string" && colors.color) {
+    options.color = colors.color;
+  }
+  if (typeof colors?.symbolColor === "string" && colors.symbolColor) {
+    options.symbolColor = colors.symbolColor;
+  }
+  if (Object.keys(options).length === 0) return;
+  try {
+    win.setTitleBarOverlay(options);
+  } catch (error) {
+    logToFile("setTitleBarOverlay failed:", error);
+  }
 });
 
 ipcMain.handle("get-embedded-server-status", () => {

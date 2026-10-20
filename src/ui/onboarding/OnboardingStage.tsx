@@ -6,6 +6,7 @@ import { SurfaceScope } from "@/components/surface/surface-scope";
 import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import { usePermissions } from "@/hooks/use-permissions";
 import { isElectron } from "@/lib/electron";
+import { TITLE_BAR_OFFSET } from "@/shell/TitleBar";
 import {
   getOnboardingPlugins,
   type OnboardingPluginList,
@@ -236,6 +237,7 @@ export function OnboardingStage({
     <OnboardingStageContext.Provider value={stageValue}>
       <div
         className="fixed inset-0 z-[60] overflow-y-auto bg-background text-foreground"
+        style={{ paddingTop: TITLE_BAR_OFFSET }}
         role="dialog"
         aria-modal="true"
         aria-label={t("onboarding.stageLabel")}
