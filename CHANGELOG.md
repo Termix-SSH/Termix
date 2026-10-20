@@ -49,6 +49,10 @@
 - Importing hosts from a JSON or SSH config file and exporting hosts now come from the Import and Export plugin. Exports are now written to the audit log. Without the plugin there is no import or export
 - Generating and checking SSH keys in the credential editor and deploying a key to a host now come from the Credential Tools plugin. Deploys are now written to the audit log. Without the plugin those buttons are hidden
 
+### Fixed
+
+- Linking the desktop app to a server no longer stalls on the server dashboard after sign in
+
 ### Removed
 
 - The desktop app no longer has its own client tunnel and native Remote Desktop code
