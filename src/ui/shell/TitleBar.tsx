@@ -85,7 +85,7 @@ export function TitleBar() {
 
   return (
     <div
-      className="termix-titlebar fixed inset-x-0 top-0 z-[70] flex items-center bg-background border-b border-border"
+      className="termix-titlebar fixed inset-x-0 top-0 z-[70] flex items-center bg-sidebar border-b border-border"
       style={{ height: TITLE_BAR_HEIGHT }}
     >
       {isMac && (
@@ -140,7 +140,8 @@ export function useTitleBarOverlayColors() {
       // Computed colors always come back as rgb(), whatever format the
       // theme uses (hex, oklch, ...).
       const styles = getComputedStyle(document.body);
-      const color = toHexColor(styles.backgroundColor);
+      const color =
+        toHexColor(sidebarColor()) || toHexColor(styles.backgroundColor);
       if (!color) return;
       api.setTitleBarOverlay({
         color,
@@ -158,8 +159,31 @@ export function useTitleBarOverlayColors() {
   }, []);
 }
 
-/** Turns a computed rgb()/rgba() color into a hex string. */
+/** The sidebar color of the active theme, which the bar is drawn with. */
+function sidebarColor(): string {
+  const probe = document.createElement("div");
+  probe.style.cssText =
+    "position:fixed;visibility:hidden;background-color:var(--sidebar)";
+  document.body.appendChild(probe);
+  const color = getComputedStyle(probe).backgroundColor;
+  probe.remove();
+  return color;
+}
+
+/** Browsers keep oklch() and similar as written, so let a canvas convert. */
+function canvasRgb(color: string): string {
+  const context = document.createElement("canvas").getContext?.("2d");
+  if (!context) return "";
+  context.clearRect(0, 0, 1, 1);
+  context.fillStyle = color;
+  context.fillRect(0, 0, 1, 1);
+  const [r, g, b, a] = context.getImageData(0, 0, 1, 1).data;
+  return a === 0 ? "" : `rgb(${r}, ${g}, ${b})`;
+}
+
+/** Turns a computed color into a hex string. */
 function toHexColor(color: string): string {
+  if (/^(oklch|oklab|lab|lch|color)\(/.test(color)) color = canvasRgb(color);
   const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?/);
   // A fully transparent color has nothing to show; keep the last one.
   if (!match || match[4] === "0") return "";
