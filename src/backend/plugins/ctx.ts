@@ -56,7 +56,10 @@ import type { PluginTableDefinition } from "@termix-ssh/plugin-sdk/db";
 import * as syncRegistry from "./sync-registry.js";
 import { provideSync } from "../sync/provider.js";
 import { createSyncHost } from "../sync/host.js";
-import type { PluginSyncHost } from "@termix-ssh/plugin-sdk/backend";
+import type {
+  PluginSync,
+  PluginSyncHost,
+} from "@termix-ssh/plugin-sdk/backend";
 import {
   needsExplicitPersist,
   resolveDatabaseDialect,
@@ -193,7 +196,7 @@ export function createPluginContext(
 ): PluginContext {
   const pluginId = manifest.id;
   let syncHost: PluginSyncHost | undefined;
-  const syncApi: PluginContext["sync"] = {
+  const syncApi: PluginSync = {
     registerEntity: (entity) => {
       const dispose = syncRegistry.registerEntity(pluginId, entity);
       handle.bag.add(dispose, `sync entity ${entity.type}`);
@@ -209,7 +212,7 @@ export function createPluginContext(
         remove();
       };
     },
-  } as PluginContext["sync"];
+  } as PluginSync;
   // Not enumerable, so tools that walk the context do not trip the check.
   Object.defineProperty(syncApi, "host", {
     enumerable: false,
