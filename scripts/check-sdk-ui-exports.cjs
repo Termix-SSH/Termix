@@ -217,6 +217,8 @@ const ALLOWED = [
   "Meter",
   "MetricCard",
   "MiniStat",
+  "NativeView",
+  "NativeViewProps",
   "NumberField",
   "OPEN_PLUGINS_EVENT",
   "OpenTabRecord",

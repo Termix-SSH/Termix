@@ -1,6 +1,7 @@
 const {
   app,
   BrowserWindow,
+  WebContentsView,
   shell,
   ipcMain,
   dialog,
@@ -497,10 +498,36 @@ app.commandLine.appendSwitch("--enable-features=NetworkService");
 
 let mainWindow = null;
 const { createIsolatedWindows } = require("./isolated-window.cjs");
+const { createEmbeddedViews } = require("./embedded-view.cjs");
 const isolatedWindows = createIsolatedWindows({
   BrowserWindow,
   session,
   getMainWindow: () => mainWindow,
+});
+
+const embeddedViews = createEmbeddedViews({
+  WebContentsView,
+  session,
+  getMainWindow: () => mainWindow,
+});
+
+// Only the app's own page may place native views, never a frame inside it.
+function fromMainFrame(event) {
+  return !!mainWindow && event.senderFrame === mainWindow.webContents.mainFrame;
+}
+
+ipcMain.handle("embedded-view-open", (event, options) => {
+  if (!fromMainFrame(event)) throw new Error("Not allowed");
+  return embeddedViews.open(options);
+});
+ipcMain.handle("embedded-view-bounds", (event, id, bounds) => {
+  if (fromMainFrame(event)) embeddedViews.setBounds(String(id), bounds);
+});
+ipcMain.handle("embedded-view-visible", (event, id, visible) => {
+  if (fromMainFrame(event)) embeddedViews.setVisible(String(id), visible);
+});
+ipcMain.handle("embedded-view-close", (event, id) => {
+  if (fromMainFrame(event)) embeddedViews.destroy(String(id));
 });
 
 // Requests from the embedded backend over the fork IPC channel (the other
@@ -729,6 +756,10 @@ app.on(
   (event, _webContents, url, error, certificate, callback) => {
     if (
       isolatedWindows.handleCertificateError(event, _webContents, url, callback)
+    )
+      return;
+    if (
+      embeddedViews.handleCertificateError(event, _webContents, url, callback)
     )
       return;
     if (isWebEndpointCertificateAllowed(url)) {
@@ -1508,7 +1539,14 @@ function createWindow() {
     }
   });
 
+  mainWindow.webContents.on("did-start-navigation", (details) => {
+    if (details.isMainFrame && !details.isSameDocument) {
+      embeddedViews.destroyAll();
+    }
+  });
+
   mainWindow.on("closed", () => {
+    embeddedViews.destroyAll();
     mainWindow = null;
   });
 

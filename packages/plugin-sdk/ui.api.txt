@@ -196,6 +196,8 @@ ManagerSearch (value): ({ value, onChange, placeholder, count, extra, }: { value
 Meter (value): ({ percent, className, }: { percent: number; className?: string; }) => Element
 MetricCard (value): ({ title, icon, action, children, bodyClassName, scroll, scrollMax, }: { title: string; icon: ReactNode; action?: ReactNode; children: ReactNode; bodyClassName?: string; scroll?: boolean; scrollMax?: number; }) => Element
 MiniStat (value): ({ caption, value, valueClassName, className, }: { caption: ReactNode; value: ReactNode; valueClassName?: string; className?: string; }) => Element
+NativeView (value): ({ url, ignoreCert, hidden, fallback, className, style, }: NativeViewProps) => Element
+NativeViewProps (type): NativeViewProps
 NumberField (value): ({ label, value, onChange, placeholder, hint, error, min, max, disabled, className, }: { label: string; value: number; onChange: (value: number) => void; placeholder?: string; hint?: ReactNode; error?: string; min?: number; max?: number; disabled?: boolean; className?: string; }) => Element
 OPEN_PLUGINS_EVENT (value): "termix:open-plugins"
 OpenTabRecord (type): OpenTabRecord

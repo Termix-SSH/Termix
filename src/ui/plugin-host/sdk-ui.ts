@@ -723,6 +723,7 @@ export {
   hasVisibleFields,
   isFieldShown,
 } from "@/settings/settings-fields-util";
+export { NativeView, type NativeViewProps } from "./NativeView";
 export { useShellController } from "@/shell/controller/ShellControllerProvider";
 export {
   type KeybindingActionDef,

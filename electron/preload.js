@@ -80,6 +80,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("start-drag-to-desktop", dragData),
   cleanupTempFile: (tempId) => ipcRenderer.invoke("cleanup-temp-file", tempId),
 
+  // Native web views placed over an element of the page (WebContentsView).
+  embeddedView: {
+    open: (options) => ipcRenderer.invoke("embedded-view-open", options),
+    setBounds: (id, bounds) =>
+      ipcRenderer.invoke("embedded-view-bounds", id, bounds),
+    setVisible: (id, visible) =>
+      ipcRenderer.invoke("embedded-view-visible", id, visible),
+    close: (id) => ipcRenderer.invoke("embedded-view-close", id),
+  },
+
   invoke: invokeAllowed,
 });
 

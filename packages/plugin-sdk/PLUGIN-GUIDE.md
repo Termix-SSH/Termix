@@ -631,6 +631,9 @@ Build UI from `@termix-ssh/plugin-sdk/ui` so it matches Termix and follows the t
 exports with props is `ui.api.txt` in the Termix repo
 (https://github.com/Termix-SSH/Termix/blob/main/packages/plugin-sdk/ui.api.txt).
 
+- Web pages that break in an iframe: `NativeView` (props `url`, `ignoreCert`, `hidden`, `fallback`) shows the
+  page in a native view in the desktop app. It fills its element, hides while a dialog or menu is open and renders
+  `fallback` in a browser.
 - Square: panels, cards and containers have no rounded corners. Small controls may stay rounded.
 - Flat: borders, not shadows. Use theme tokens like `border-border`, `bg-background`,
   `text-muted-foreground`, `text-destructive`. One accent, `text-accent-brand`. Don't add colors.
