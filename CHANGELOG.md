@@ -30,6 +30,7 @@
 - Plugins can add a panel that sits beside a host tab, like a terminal. You can open, resize and move it
 - The desktop app can link to a server that requires a client certificate (mutual TLS). It uses a PFX or P12 file for sync and the certificate in your system store for the app window
 - Plugins can show a web page in a native view in the desktop app, for sites that do not load in an iframe
+- The desktop app draws its own title bar in the colors of your theme instead of the native white one
 
 ### Changed
 
