@@ -52,6 +52,7 @@
 ### Fixed
 
 - Linking the desktop app to a server no longer stalls on the server dashboard after sign in
+- Exporting your data no longer fails when a plugin table has a text key, like saved passkeys
 
 ### Removed
 
