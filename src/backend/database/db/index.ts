@@ -370,17 +370,6 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
-    CREATE TABLE IF NOT EXISTS recent_activity (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        type TEXT NOT NULL,
-        host_id INTEGER NOT NULL,
-        host_name TEXT,
-        timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
-    );
-
     CREATE TABLE IF NOT EXISTS host_access (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         host_id INTEGER NOT NULL,
@@ -985,6 +974,8 @@ const migrateSchema = () => {
   addColumnIfNotExists("user_preferences", "compact_host_view", "INTEGER");
   addColumnIfNotExists("user_preferences", "status_color_scheme", "TEXT");
   addColumnIfNotExists("user_preferences", "custom_keybindings", "TEXT");
+  addColumnIfNotExists("user_preferences", "layout_id", "TEXT");
+  addColumnIfNotExists("user_preferences", "theme_id", "TEXT");
 
   addColumnIfNotExists("users", "is_admin", "INTEGER NOT NULL DEFAULT 0");
 
@@ -1030,6 +1021,8 @@ const migrateSchema = () => {
   }
   enforceUniqueUsernames();
   addColumnIfNotExists("sessions", "external_session_ref", "TEXT");
+  addColumnIfNotExists("sessions", "restriction", "TEXT");
+  addColumnIfNotExists("sessions", "idle_timeout", "INTEGER");
 
   addColumnIfNotExists("ssh_data", "name", "TEXT");
   addColumnIfNotExists("ssh_data", "folder", "TEXT");

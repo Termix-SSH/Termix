@@ -2,10 +2,10 @@ import {
   createCurrentHostRepository,
   createCurrentHostResolutionRepository,
   createCurrentRbacAccessRepository,
-  createCurrentRecentActivityRepository,
   createCurrentSshCredentialUsageRepository,
 } from "../database/repositories/factory.js";
 import { pluginEvents, TOPICS } from "../plugins/events.js";
+import { recentActivity } from "../plugins/activity-provider.js";
 import { sshLogger } from "../utils/logger.js";
 import { emitInternalEvent } from "./internal-events.js";
 
@@ -33,7 +33,7 @@ export async function deleteOwnedHost(
 
   // Plugin rows tied to a host cascade on their refHost() foreign keys.
   await createCurrentSshCredentialUsageRepository().deleteByHostId(hostId);
-  await createCurrentRecentActivityRepository().deleteByHostId(hostId);
+  await recentActivity.deleteByHostId(hostId);
   await createCurrentRbacAccessRepository().deleteHostAccessForHost(hostId);
   await createCurrentHostRepository().deleteForUser(userId, hostId);
 

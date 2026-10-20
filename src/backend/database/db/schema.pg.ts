@@ -59,6 +59,10 @@ export const sessions = pgTable(
     lastActiveAt: text("last_active_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
+    // Set while the session may only set up a second factor.
+    restriction: text("restriction"),
+    // Seconds without a request before the session ends, from the login policy.
+    idleTimeout: integer("idle_timeout"),
   },
   // Listing a user's devices, and the startup sweep of expired rows.
   (table) => [
@@ -414,28 +418,6 @@ export const hostDefaults = pgTable(
   ],
 );
 
-export const recentActivity = pgTable(
-  "recent_activity",
-  {
-    id: serial("id").primaryKey(),
-    userId: varchar("user_id", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    type: text("type").notNull(),
-    hostId: integer("host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-    hostName: text("host_name"),
-    timestamp: varchar("timestamp", { length: 255 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  // Always read newest-first for one user, so timestamp follows user_id.
-  (table) => [
-    index("idx_recent_activity_user_ts").on(table.userId, table.timestamp),
-  ],
-);
-
 export const hostAccess = pgTable(
   "host_access",
   {
@@ -709,6 +691,8 @@ export const userPreferences = pgTable("user_preferences", {
   compactHostView: boolean("compact_host_view"),
   statusColorScheme: text("status_color_scheme"),
   customKeybindings: text("custom_keybindings"),
+  layoutId: text("layout_id"),
+  themeId: text("theme_id"),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import type { Router, RequestHandler, Request, Response } from "express";
+import type { RequestHandler, Request, Response } from "express";
 
 const mocks = vi.hoisted(() => ({
   create: vi.fn(),
@@ -35,23 +35,35 @@ vi.mock("../../../database/repositories/factory.js", () => ({
     findHostsByUserId: mocks.list,
   }),
 }));
-import { registerHostBulkRoutes } from "../../../database/routes/host-bulk-routes.js";
-import { buildExportPayload } from "../../../../ui/sidebar/host-export-payload";
+import {
+  ImportError,
+  importResponse,
+  runBulkImport,
+  runSshConfigImport,
+} from "../../../hosts/import/host-import.js";
 import { pluginEvents, TOPICS } from "../../../plugins/events.js";
 
-let handler: RequestHandler;
-let sshConfigHandler: RequestHandler;
-const router = {
-  post: (path: string, ...handlers: RequestHandler[]) => {
-    if (path === "/bulk-import") handler = handlers.at(-1)!;
-    if (path === "/ssh-config-import") sshConfigHandler = handlers.at(-1)!;
-  },
-  put: () => {},
-  patch: () => {},
-  delete: () => {},
-} as unknown as Router;
-const pass: RequestHandler = (_req, _res, next) => next();
-registerHostBulkRoutes(router, pass, pass, pass, pass);
+// The same wrapping the plugin's routes give the shared import code.
+const wrap =
+  (run: typeof runBulkImport): RequestHandler =>
+  async (req, res) => {
+    try {
+      const body = (req as unknown as { body: never }).body;
+      res.json(
+        importResponse(
+          await run((req as unknown as { userId: string }).userId, body),
+        ),
+      );
+    } catch (error) {
+      if (error instanceof ImportError) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      throw error;
+    }
+  };
+const handler = wrap(runBulkImport);
+const sshConfigHandler = wrap(runSshConfigImport as typeof runBulkImport);
 const host = {
   ip: "192.0.2.1",
   port: 22,
@@ -76,12 +88,7 @@ it.each([false, true])(
   "carries plugin host settings through export selection and import (overwrite=%s)",
   async (overwrite) => {
     if (overwrite) mocks.list.mockResolvedValue([{ ...host, id: 19 }]);
-    const payload = buildExportPayload(
-      { hosts: [host] },
-      null,
-      new Set(["featureFlags", "advanced"]),
-      false,
-    );
+    const payload = { hosts: [host] };
     expect(payload.hosts[0]).toMatchObject(host);
     const json = vi.fn();
     await handler(
@@ -130,12 +137,7 @@ it.each([20, "20"])(
         { ...host, ip: "192.0.2.2", exportId: 20 },
       ],
     };
-    const payload = buildExportPayload(
-      raw,
-      null,
-      new Set(["jumpHosts"]),
-      false,
-    );
+    const payload = raw;
     const res = await importHosts(payload.hosts);
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ success: 2, failed: 0 }),

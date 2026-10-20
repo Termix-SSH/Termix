@@ -289,6 +289,32 @@ describe("uninstall and reinstall of a bundled plugin", () => {
     expect(loader.get("docker")?.source).toBe("user");
   });
 
+  it("refuses to uninstall the default look but lets it be turned off", async () => {
+    createFixturePlugin({ id: "some-look", root: bundled });
+    fs.writeFileSync(
+      path.join(bundled, "bundled-index.json"),
+      JSON.stringify({
+        version: 1,
+        plugins: { "some-look": { defaultLook: true } },
+      }),
+    );
+    const { resetBundledIndexCache } =
+      await import("../../plugins/bundled-index.js");
+    resetBundledIndexCache();
+    try {
+      const loader = await boot();
+      await expect(manage.uninstallPlugin("some-look")).rejects.toMatchObject({
+        code: "DEFAULT_LOOK",
+        status: 409,
+      });
+      expect(loader.get("some-look")?.state).toBe("active");
+      expect(fs.existsSync(path.join(bundled, "some-look"))).toBe(true);
+    } finally {
+      fs.rmSync(path.join(bundled, "bundled-index.json"), { force: true });
+      resetBundledIndexCache();
+    }
+  });
+
   it("deletes a plugin dropped in as a plain folder", async () => {
     createFixturePlugin({ id: "notes", root: path.join(data, "plugins") });
     const loader = await boot();
@@ -632,6 +658,54 @@ describe("reloading a bundled plugin for the dev runner", () => {
     const result = await manage.reloadBundledPlugin("base");
     expect(result.state).toBe("stopped");
     expect(loader.get("base")?.state).toBe("loaded");
+  });
+});
+
+describe("restoring the bundled copy", () => {
+  it("drops a downloaded update, loads the shipped copy and pins it", async () => {
+    createFixturePlugin({ id: "docker", root: bundled });
+    const loader = await boot();
+    // What a signed update leaves behind next to the shipped copy.
+    const artifact = path.join(data, "plugins", "docker.tmxplug");
+    fs.mkdirSync(path.dirname(artifact), { recursive: true });
+    fs.writeFileSync(artifact, "update");
+    fs.writeFileSync(`${artifact}.sig`, "sig");
+
+    const result = await manage.restoreBundledPlugin("docker");
+
+    expect(result).toEqual({ id: "docker", version: "1.0.0", state: "active" });
+    expect(loader.get("docker")?.manifest.version).toBe("1.0.0");
+    expect(fs.existsSync(artifact)).toBe(false);
+    expect(fs.existsSync(`${artifact}.sig`)).toBe(false);
+    expect(db.rows.get("docker")).toMatchObject({
+      pinnedVersion: "1.0.0",
+      autoUpdate: false,
+    });
+  });
+
+  it("keeps a plugin that is turned off stopped", async () => {
+    createFixturePlugin({ id: "docker", root: bundled });
+    const loader = await boot();
+    await manage.setPluginState("docker", false);
+    const result = await manage.restoreBundledPlugin("docker");
+    expect(result.state).toBe("stopped");
+    expect(loader.get("docker")?.state).toBe("loaded");
+  });
+
+  it("refuses a plugin that has no bundled copy", async () => {
+    createFixturePlugin({ id: "notes", root: path.join(data, "plugins") });
+    await boot();
+    await expect(manage.restoreBundledPlugin("notes")).rejects.toMatchObject({
+      code: "NO_BUNDLED_COPY",
+      status: 409,
+    });
+  });
+
+  it("refuses a bad id", async () => {
+    await expect(manage.restoreBundledPlugin("../x")).rejects.toMatchObject({
+      code: "INVALID_ID",
+      status: 400,
+    });
   });
 });
 

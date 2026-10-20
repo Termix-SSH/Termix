@@ -10,10 +10,7 @@
 
 export const CORE_ONBOARDING_STEPS = {
   plugins: 1,
-  "desktop-sync": 1,
   "desktop-updates": 1,
-  preset: 1,
-  appearance: 1,
   security: 1,
 } as const;
 
@@ -26,7 +23,6 @@ export type CoreOnboardingStepKey = keyof typeof CORE_ONBOARDING_STEPS;
  */
 export const LEGACY_SEEN: Readonly<Record<string, number>> = Object.freeze({
   plugins: 1,
-  "desktop-sync": 1,
   preset: 1,
   appearance: 1,
   security: 1,

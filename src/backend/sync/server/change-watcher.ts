@@ -1,14 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 import { markChanged } from "./feed.js";
+import { notifyLocalWrite } from "./write-listeners.js";
 
 const READS = new Set(["GET", "HEAD", "OPTIONS"]);
-const writeListeners = new Set<() => void>();
-
-/** Called after every successful write request, for a linked desktop's engine. */
-export function onLocalWrite(listener: () => void): () => void {
-  writeListeners.add(listener);
-  return () => writeListeners.delete(listener);
-}
 
 /**
  * Any successful write may change what a linked desktop should have, so it
@@ -23,7 +17,7 @@ export function syncChangeWatcher(
     res.on("finish", () => {
       if (res.statusCode >= 400) return;
       markChanged();
-      for (const listener of writeListeners) listener();
+      notifyLocalWrite();
     });
   }
   next();

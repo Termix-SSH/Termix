@@ -37,6 +37,13 @@ export interface JumpHost {
   hostId: number;
 }
 
+/** The plugin that manages a host, from ctx.hosts.locks. */
+export interface HostLock {
+  pluginId: string;
+  pluginName: string;
+  note: string | null;
+}
+
 export type Host = {
   id: number;
   name: string;
@@ -116,6 +123,8 @@ export type Host = {
   ownerUsername?: string;
   /** A read-only copy of a host shared with the linked account. */
   sharedCopy?: boolean;
+  /** Set when a plugin manages this host: read only, pins and order still work. */
+  lock?: HostLock;
   /** Desktop only: kept on this device, never synced to the server. */
   localOnly?: boolean;
 
@@ -319,6 +328,8 @@ export interface AuthenticatedRequest extends Request {
   sessionId?: string;
   apiKeyId?: string;
   actingAdminUserId?: string;
+  /** Set while the session may only set up a second factor. */
+  sessionRestriction?: string | null;
   user?: {
     id: string;
     username: string;

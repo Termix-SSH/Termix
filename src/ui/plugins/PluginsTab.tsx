@@ -1,12 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowDownWideNarrow,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Columns3,
   Download,
   Globe,
   Library,
+  ListFilter,
   Puzzle,
   RefreshCw,
   RotateCcw,
@@ -14,6 +17,7 @@ import {
   Trash2,
   TriangleAlert,
   Upload,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/button";
 import { Card } from "@/components/card";
@@ -53,10 +57,13 @@ import {
   categoriesOf,
   describeContributions,
   isSevere,
+  kindsOf,
   matchesQuery,
   orderByRisk,
+  pageOf,
   sortPlugins,
   type PluginEntry,
+  type PluginKind,
   type SortKey,
 } from "./plugin-model";
 import { usePluginsManager, type PluginsManager } from "./use-plugins-manager";
@@ -190,7 +197,7 @@ function PluginsTabBody() {
           />
         }
       >
-        <div className="min-h-0 flex-1 overflow-y-auto thin-scrollbar">
+        <div className="flex min-h-0 flex-1 flex-col">
           {manager.managedByServer && (
             <Notice>{t("plugins.manager.managedByServer")}</Notice>
           )}
@@ -225,14 +232,18 @@ function PluginsTabBody() {
               layout={layout}
               layoutControls={layoutControls}
             />
-          ) : section === "updates" ? (
-            <UpdatesSection
-              plugins={updates}
-              manager={manager}
-              onOpen={setDetailId}
-            />
           ) : (
-            <RegistriesSection manager={manager} />
+            <div className="min-h-0 flex-1 overflow-y-auto thin-scrollbar">
+              {section === "updates" ? (
+                <UpdatesSection
+                  plugins={updates}
+                  manager={manager}
+                  onOpen={setDetailId}
+                />
+              ) : (
+                <RegistriesSection manager={manager} />
+              )}
+            </div>
           )}
         </div>
       </PanelShell>
@@ -313,7 +324,7 @@ function Toolbar({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="relative min-w-40 max-w-xs flex-1">
+      <div className="relative min-w-40 max-w-md flex-1">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={query}
@@ -470,6 +481,368 @@ function stop(e: React.MouseEvent) {
   e.stopPropagation();
 }
 
+interface Facets {
+  kind: PluginKind | null;
+  category: string | null;
+  registry: string | null;
+}
+
+const NO_FACETS: Facets = { kind: null, category: null, registry: null };
+
+/** Rows that pass every facet but `skip`, so a group counts what picking it would show. */
+function applyFacets(
+  rows: PluginEntry[],
+  facets: Facets,
+  skip?: keyof Facets,
+): PluginEntry[] {
+  return rows.filter(
+    (p) =>
+      (skip === "kind" || !facets.kind || p.kinds.includes(facets.kind)) &&
+      (skip === "category" ||
+        !facets.category ||
+        p.category === facets.category) &&
+      (skip === "registry" ||
+        !facets.registry ||
+        p.registryId === facets.registry),
+  );
+}
+
+function activeFacets(facets: Facets): number {
+  return [facets.kind, facets.category, facets.registry].filter(Boolean).length;
+}
+
+const PAGE_SIZES = ["24", "48", "96"] as const;
+type PageSize = (typeof PAGE_SIZES)[number];
+
+/** A page number that goes back to 1 whenever what is listed changes. */
+function usePage(signature: string) {
+  const [state, setState] = useState({ signature, page: 1 });
+  const page = state.signature === signature ? state.page : 1;
+  return [page, (next: number) => setState({ signature, page: next })] as const;
+}
+
+function FacetGroup<T extends string>({
+  title,
+  allLabel,
+  options,
+  value,
+  onChange,
+}: {
+  title: string;
+  allLabel: string;
+  options: Array<{ value: T; label: string; count: number }>;
+  value: T | null;
+  onChange: (next: T | null) => void;
+}) {
+  if (options.length === 0) return null;
+  const row = (key: T | null, label: string, count?: number) => {
+    const active = value === key;
+    return (
+      <button
+        key={key ?? "__all"}
+        type="button"
+        aria-pressed={active}
+        onClick={() => onChange(key)}
+        className={cn(
+          "flex w-full items-center gap-2 border-l-2 px-2.5 py-1 text-left text-xs transition-colors",
+          active
+            ? "border-accent-brand bg-accent-brand/10 text-accent-brand"
+            : "border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+          count === 0 && !active && "opacity-50",
+        )}
+      >
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        {count !== undefined && (
+          <span className="shrink-0 text-[10px] tabular-nums opacity-70">
+            {count}
+          </span>
+        )}
+      </button>
+    );
+  };
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="px-2.5 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+        {title}
+      </span>
+      {row(null, allLabel)}
+      {options.map((o) => row(o.value, o.label, o.count))}
+    </div>
+  );
+}
+
+function FilterRail({
+  rows,
+  facets,
+  onFacets,
+  registries,
+  children,
+}: {
+  /** What the search and toggles leave, before any facet. */
+  rows: PluginEntry[];
+  facets: Facets;
+  onFacets: (next: Facets) => void;
+  registries?: Array<{ id: string; name: string }>;
+  /** Toggles shown under the groups. */
+  children?: React.ReactNode;
+}) {
+  const { t } = useTranslation();
+  const byKind = applyFacets(rows, facets, "kind");
+  const kinds = kindsOf(rows).map(({ kind }) => ({
+    value: kind,
+    label: t(`plugins.manager.kinds.${kind}`),
+    count: byKind.filter((p) => p.kinds.includes(kind)).length,
+  }));
+  const byCategory = applyFacets(rows, facets, "category");
+  const categories = categoriesOf(rows).map((c) => ({
+    value: c,
+    label: c,
+    count: byCategory.filter((p) => p.category === c).length,
+  }));
+  const byRegistry = applyFacets(rows, facets, "registry");
+  const registryOptions =
+    registries && registries.length > 1
+      ? registries.map((r) => ({
+          value: r.id,
+          label: r.name,
+          count: byRegistry.filter((p) => p.registryId === r.id).length,
+        }))
+      : [];
+  return (
+    <div className="flex flex-col gap-4 py-3">
+      <FacetGroup
+        title={t("plugins.manager.filters.type")}
+        allLabel={t("plugins.manager.filters.allTypes")}
+        options={kinds}
+        value={facets.kind}
+        onChange={(kind) => onFacets({ ...facets, kind })}
+      />
+      <FacetGroup
+        title={t("plugins.manager.filters.category")}
+        allLabel={t("plugins.manager.filters.allCategories")}
+        options={categories}
+        value={facets.category}
+        onChange={(category) => onFacets({ ...facets, category })}
+      />
+      <FacetGroup
+        title={t("plugins.manager.registries.filter")}
+        allLabel={t("plugins.manager.registries.allRegistries")}
+        options={registryOptions}
+        value={facets.registry}
+        onChange={(registry) => onFacets({ ...facets, registry })}
+      />
+      {children && (
+        <div className="flex flex-col gap-2.5 border-t border-border px-2.5 pt-3">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RailToggle({
+  label,
+  hint,
+  checked,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center justify-between gap-2" title={hint}>
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <FakeSwitch checked={checked} onChange={onChange} />
+    </label>
+  );
+}
+
+/** Chips for the picked facets, so it is clear why the list is short. */
+function ActiveFilters({
+  facets,
+  onFacets,
+  registries,
+  shown,
+}: {
+  facets: Facets;
+  onFacets: (next: Facets) => void;
+  registries?: Array<{ id: string; name: string }>;
+  shown: number;
+}) {
+  const { t } = useTranslation();
+  const chips: Array<{ key: keyof Facets; label: string }> = [];
+  if (facets.kind) {
+    chips.push({
+      key: "kind",
+      label: t(`plugins.manager.kinds.${facets.kind}`),
+    });
+  }
+  if (facets.category) chips.push({ key: "category", label: facets.category });
+  if (facets.registry) {
+    chips.push({
+      key: "registry",
+      label:
+        registries?.find((r) => r.id === facets.registry)?.name ??
+        facets.registry,
+    });
+  }
+  return (
+    <div className="flex min-h-6 flex-wrap items-center gap-1.5">
+      <span className="text-[11px] text-muted-foreground">
+        {t("plugins.manager.filters.results", { count: shown })}
+      </span>
+      {chips.map((chip) => (
+        <button
+          key={chip.key}
+          type="button"
+          onClick={() => onFacets({ ...facets, [chip.key]: null })}
+          className="flex items-center gap-1 border border-accent-brand/40 bg-accent-brand/10 px-1.5 py-0.5 text-[11px] text-accent-brand hover:bg-accent-brand/20"
+          aria-label={t("plugins.manager.filters.remove", {
+            name: chip.label,
+          })}
+        >
+          {chip.label}
+          <X className="size-3" />
+        </button>
+      ))}
+      {chips.length > 1 && (
+        <button
+          type="button"
+          onClick={() => onFacets(NO_FACETS)}
+          className="text-[11px] text-muted-foreground hover:text-foreground"
+        >
+          {t("plugins.manager.filters.clear")}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Pager({
+  page,
+  pages,
+  total,
+  size,
+  onPage,
+  onSize,
+}: {
+  page: number;
+  pages: number;
+  total: number;
+  size: PageSize;
+  onPage: (next: number) => void;
+  onSize: (next: PageSize) => void;
+}) {
+  const { t } = useTranslation();
+  const per = Number(size);
+  if (total <= Number(PAGE_SIZES[0])) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-t border-border pt-2.5">
+      <span className="text-[11px] tabular-nums text-muted-foreground">
+        {t("plugins.manager.pager.range", {
+          from: (page - 1) * per + 1,
+          to: Math.min(page * per, total),
+          total,
+        })}
+      </span>
+      <div className="ml-auto flex items-center gap-1.5">
+        <Select value={size} onValueChange={(v) => onSize(v as PageSize)}>
+          <SelectTrigger
+            size="sm"
+            className="w-auto text-xs"
+            aria-label={t("plugins.manager.pager.perPageLabel")}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PAGE_SIZES.map((n) => (
+              <SelectItem key={n} value={n} className="text-xs">
+                {t("plugins.manager.pager.perPage", { count: Number(n) })}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          variant="outline"
+          size="icon-sm"
+          disabled={page <= 1}
+          onClick={() => onPage(page - 1)}
+          title={t("plugins.manager.pager.previous")}
+          aria-label={t("plugins.manager.pager.previous")}
+        >
+          <ChevronLeft className="size-3.5" />
+        </Button>
+        <span className="px-1 text-[11px] tabular-nums text-muted-foreground">
+          {t("plugins.manager.pager.page", { page, pages })}
+        </span>
+        <Button
+          variant="outline"
+          size="icon-sm"
+          disabled={page >= pages}
+          onClick={() => onPage(page + 1)}
+          title={t("plugins.manager.pager.next")}
+          aria-label={t("plugins.manager.pager.next")}
+        >
+          <ChevronRight className="size-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Filters in a rail beside the results. A narrow tab folds the rail behind
+ * a Filters button instead.
+ */
+function FilteredLayout({
+  rail,
+  activeCount,
+  scrollRef,
+  children,
+}: {
+  rail: React.ReactNode;
+  activeCount: number;
+  scrollRef?: React.Ref<HTMLDivElement>;
+  children: (filtersButton: React.ReactNode) => React.ReactNode;
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const button = (
+    <Button
+      variant="outline"
+      className={cn(
+        "gap-1.5 @3xl:hidden",
+        activeCount > 0 && "border-accent-brand/40 text-accent-brand",
+      )}
+      aria-expanded={open}
+      onClick={() => setOpen((v) => !v)}
+    >
+      <ListFilter className="size-3.5" />
+      {activeCount > 0
+        ? t("plugins.manager.filters.buttonCount", { count: activeCount })
+        : t("plugins.manager.filters.button")}
+    </Button>
+  );
+  return (
+    <div className="@container flex min-h-0 flex-1">
+      <aside className="hidden w-52 shrink-0 overflow-y-auto border-r border-border thin-scrollbar @3xl:block">
+        {rail}
+      </aside>
+      <div
+        ref={scrollRef}
+        className="min-h-0 flex-1 overflow-y-auto thin-scrollbar"
+      >
+        {open && (
+          <div className="border-b border-border @3xl:hidden">{rail}</div>
+        )}
+        {children(button)}
+      </div>
+    </div>
+  );
+}
+
 function InstalledSection({
   plugins,
   manager,
@@ -489,10 +862,9 @@ function InstalledSection({
 }) {
   const { t } = useTranslation();
   const [sort, setSort] = useState<SortKey>("name");
-  const rows = sortPlugins(
-    plugins.filter((p) => matchesQuery(p, query)),
-    sort,
-  );
+  const [facets, setFacets] = useState<Facets>(NO_FACETS);
+  const searched = plugins.filter((p) => matchesQuery(p, query));
+  const rows = sortPlugins(applyFacets(searched, facets), sort);
   const running = rows.filter((p) => p.status === "running");
   const onServer = rows.filter((p) => p.status === "server");
   const stopped = rows.filter(
@@ -554,72 +926,88 @@ function InstalledSection({
   );
 
   return (
-    <div className={`flex flex-col ${PANEL.gap} ${PANEL.body}`}>
-      <Toolbar
-        query={query}
-        onQuery={onQuery}
-        placeholder={t("plugins.manager.searchInstalled")}
-      >
-        <div className="ml-auto flex items-center gap-2">
-          <SortSelect value={sort} onChange={setSort} />
-          {layoutControls}
-          {manager.developerMode && !manager.signedOnly && (
-            <UploadButton manager={manager} />
-          )}
-          <Button
-            variant="outline"
-            className="gap-1.5"
-            disabled={
-              pending.length === 0 ||
-              manager.busy.size > 0 ||
-              manager.managedByServer
-            }
-            onClick={() => void manager.updateAll()}
+    <FilteredLayout
+      activeCount={activeFacets(facets)}
+      rail={<FilterRail rows={searched} facets={facets} onFacets={setFacets} />}
+    >
+      {(filtersButton) => (
+        <div className={`flex flex-col ${PANEL.gap} ${PANEL.body}`}>
+          <Toolbar
+            query={query}
+            onQuery={onQuery}
+            placeholder={t("plugins.manager.searchInstalled")}
           >
-            <Download className="size-3.5" />
-            {t("plugins.manager.updateAll")}
-          </Button>
-        </div>
-      </Toolbar>
+            {filtersButton}
+            <div className="ml-auto flex items-center gap-2">
+              <SortSelect value={sort} onChange={setSort} />
+              {layoutControls}
+              {manager.developerMode && !manager.signedOnly && (
+                <UploadButton manager={manager} />
+              )}
+              <Button
+                variant="outline"
+                className="gap-1.5"
+                disabled={
+                  pending.length === 0 ||
+                  manager.busy.size > 0 ||
+                  manager.managedByServer
+                }
+                onClick={() => void manager.updateAll()}
+              >
+                <Download className="size-3.5" />
+                {t("plugins.manager.updateAll")}
+              </Button>
+            </div>
+          </Toolbar>
 
-      {rows.length === 0 ? (
-        <EmptyState
-          icon={Puzzle}
-          title={
-            plugins.length === 0
-              ? t("plugins.manager.noneInstalled")
-              : t("plugins.manager.nothingMatches")
-          }
-        />
-      ) : (
-        <>
-          {running.length > 0 && (
-            <Group
-              title={t("plugins.manager.groups.running")}
-              count={running.length}
-            >
-              {collection(running)}
-            </Group>
+          {activeFacets(facets) > 0 && (
+            <ActiveFilters
+              facets={facets}
+              onFacets={setFacets}
+              shown={rows.length}
+            />
           )}
-          {onServer.length > 0 && (
-            <Group
-              title={t("plugins.manager.groups.onServer")}
-              count={onServer.length}
-            >
-              {collection(onServer)}
-            </Group>
+
+          {rows.length === 0 ? (
+            <EmptyState
+              icon={Puzzle}
+              title={
+                plugins.length === 0
+                  ? t("plugins.manager.noneInstalled")
+                  : t("plugins.manager.nothingMatches")
+              }
+            />
+          ) : (
+            <>
+              {running.length > 0 && (
+                <Group
+                  title={t("plugins.manager.groups.running")}
+                  count={running.length}
+                >
+                  {collection(running)}
+                </Group>
+              )}
+              {onServer.length > 0 && (
+                <Group
+                  title={t("plugins.manager.groups.onServer")}
+                  count={onServer.length}
+                >
+                  {collection(onServer)}
+                </Group>
+              )}
+              {stopped.length > 0 && (
+                <Group
+                  title={t("plugins.manager.groups.notRunning")}
+                  count={stopped.length}
+                >
+                  {collection(stopped)}
+                </Group>
+              )}
+            </>
           )}
-          {stopped.length > 0 && (
-            <Group
-              title={t("plugins.manager.groups.notRunning")}
-              count={stopped.length}
-            >
-              {collection(stopped)}
-            </Group>
-          )}
-        </>
+        </div>
       )}
-    </div>
+    </FilteredLayout>
   );
 }
 
@@ -806,20 +1194,22 @@ function InstalledCard({
           variant="icon"
           className="ml-auto size-6"
         />
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          disabled={busy || locked}
-          title={t("plugins.manager.uninstall")}
-          aria-label={t("plugins.manager.uninstall")}
-          className={cn(
-            "text-muted-foreground hover:text-destructive",
-            !plugin.docs && "ml-auto",
-          )}
-          onClick={() => void manager.uninstall(plugin)}
-        >
-          <Trash2 className="size-3" />
-        </Button>
+        {!plugin.defaultLook && (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            disabled={busy || locked}
+            title={t("plugins.manager.uninstall")}
+            aria-label={t("plugins.manager.uninstall")}
+            className={cn(
+              "text-muted-foreground hover:text-destructive",
+              !plugin.docs && "ml-auto",
+            )}
+            onClick={() => void manager.uninstall(plugin)}
+          >
+            <Trash2 className="size-3" />
+          </Button>
+        )}
       </div>
     </Card>
   );
@@ -916,17 +1306,19 @@ function InstalledRowActions({
         </Button>
       )}
       <DocsLink href={plugin.docs} variant="icon" className="size-6" />
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        disabled={busy || locked}
-        title={t("plugins.manager.uninstall")}
-        aria-label={t("plugins.manager.uninstall")}
-        className="text-muted-foreground hover:text-destructive"
-        onClick={() => void manager.uninstall(plugin)}
-      >
-        <Trash2 className="size-3" />
-      </Button>
+      {!plugin.defaultLook && (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          disabled={busy || locked}
+          title={t("plugins.manager.uninstall")}
+          aria-label={t("plugins.manager.uninstall")}
+          className="text-muted-foreground hover:text-destructive"
+          onClick={() => void manager.uninstall(plugin)}
+        >
+          <Trash2 className="size-3" />
+        </Button>
+      )}
     </div>
   );
 }
@@ -949,31 +1341,46 @@ function BrowseSection({
   layoutControls: React.ReactNode;
 }) {
   const { t } = useTranslation();
-  const [category, setCategory] = useState<string | null>(null);
-  const [registry, setRegistry] = useState<string | null>(null);
+  const [facets, setFacets] = useState<Facets>(NO_FACETS);
   const [sort, setSort] = useState<SortKey>("popular");
   const [installedChoice, setInstalledChoice] = useStoredChoice(
     "pluginsTab.browseInstalled",
     ["hide", "show"],
     "hide",
   );
-  const showInstalled = installedChoice === "show";
-  const categories = useMemo(() => categoriesOf(plugins), [plugins]);
-  const registries = manager.registries;
-  const registryFilter = registries.some((entry) => entry.id === registry)
-    ? registry
-    : null;
-
-  const rows = sortPlugins(
-    plugins.filter(
-      (p) =>
-        (showInstalled || !p.installed) &&
-        matchesQuery(p, query) &&
-        (category === null || p.category === category) &&
-        (registryFilter === null || p.registryId === registryFilter),
-    ),
-    sort,
+  const [unsupportedChoice, setUnsupportedChoice] = useStoredChoice(
+    "pluginsTab.browseUnsupported",
+    ["hide", "show"],
+    "hide",
   );
+  const [pageSize, setPageSize] = useStoredChoice<PageSize>(
+    "pluginsTab.pageSize",
+    PAGE_SIZES,
+    "24",
+  );
+  const scroller = useRef<HTMLDivElement>(null);
+  const showInstalled = installedChoice === "show";
+  const showUnsupported = unsupportedChoice === "show";
+  const registries = manager.registries;
+  const unsupportedCount = plugins.filter(
+    (p) => p.unsupported && !p.installed,
+  ).length;
+
+  const searched = plugins.filter(
+    (p) =>
+      (showInstalled || !p.installed) &&
+      (showUnsupported || !p.unsupported || p.installed) &&
+      matchesQuery(p, query),
+  );
+  const rows = sortPlugins(applyFacets(searched, facets), sort);
+  const [page, setPage] = usePage(
+    JSON.stringify([query, facets, sort, showInstalled, showUnsupported]),
+  );
+  const paged = pageOf(rows, page, Number(pageSize));
+  const goTo = (next: number) => {
+    setPage(next);
+    if (scroller.current) scroller.current.scrollTop = 0;
+  };
 
   const allInstalledHidden =
     !showInstalled && plugins.length > 0 && plugins.every((p) => p.installed);
@@ -983,7 +1390,7 @@ function BrowseSection({
       key: "name",
       header: t("plugins.manager.table.name"),
       width: "minmax(0,1.3fr)",
-      cell: (p) => <NameCell plugin={p} />,
+      cell: (p) => <NameCell plugin={p} muted={p.unsupported} />,
     },
     {
       key: "description",
@@ -1025,124 +1432,117 @@ function BrowseSection({
     {
       key: "actions",
       header: "",
-      width: "120px",
+      width: "150px",
       align: "end",
       cell: (p) => <BrowseAction plugin={p} manager={manager} />,
     },
   ];
 
   return (
-    <div className={`flex flex-col ${PANEL.gap} ${PANEL.body}`}>
-      <Toolbar
-        query={query}
-        onQuery={onQuery}
-        placeholder={t("plugins.manager.searchPlugins")}
-      >
-        <div className="ml-auto flex items-center gap-2">
-          <label className="flex items-center gap-1.5">
-            <span className="text-xs text-muted-foreground">
-              {t("plugins.manager.showInstalled")}
-            </span>
-            <FakeSwitch
-              checked={showInstalled}
-              onChange={(v) => setInstalledChoice(v ? "show" : "hide")}
+    <FilteredLayout
+      activeCount={activeFacets(facets)}
+      scrollRef={scroller}
+      rail={
+        <FilterRail
+          rows={searched}
+          facets={facets}
+          onFacets={setFacets}
+          registries={registries}
+        >
+          <RailToggle
+            label={t("plugins.manager.showInstalled")}
+            checked={showInstalled}
+            onChange={(v) => setInstalledChoice(v ? "show" : "hide")}
+          />
+          {unsupportedCount > 0 && (
+            <RailToggle
+              label={t("plugins.manager.showUnsupported", {
+                count: unsupportedCount,
+              })}
+              hint={t("plugins.manager.showUnsupportedHint")}
+              checked={showUnsupported}
+              onChange={(v) => setUnsupportedChoice(v ? "show" : "hide")}
             />
-          </label>
-          {registries.length > 1 && (
-            <Select
-              value={registryFilter ?? "__all"}
-              onValueChange={(v) => setRegistry(v === "__all" ? null : v)}
-            >
-              <SelectTrigger
-                size="sm"
-                className="w-auto gap-1.5 text-xs"
-                aria-label={t("plugins.manager.registries.filter")}
-              >
-                <Library className="size-3.5 text-muted-foreground" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all" className="text-xs">
-                  {t("plugins.manager.registries.allRegistries")}
-                </SelectItem>
-                {registries.map((entry) => (
-                  <SelectItem
-                    key={entry.id}
-                    value={entry.id}
-                    className="text-xs"
-                  >
-                    {entry.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           )}
-          <SortSelect value={sort} onChange={setSort} />
-          {layoutControls}
-        </div>
-      </Toolbar>
+        </FilterRail>
+      }
+    >
+      {(filtersButton) => (
+        <div className={`flex flex-col ${PANEL.gap} ${PANEL.body}`}>
+          <Toolbar
+            query={query}
+            onQuery={onQuery}
+            placeholder={t("plugins.manager.searchPlugins")}
+          >
+            {filtersButton}
+            <div className="ml-auto flex items-center gap-2">
+              <SortSelect value={sort} onChange={setSort} />
+              {layoutControls}
+            </div>
+          </Toolbar>
 
-      {categories.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1">
-          {[null, ...categories].map((c) => (
-            <button
-              key={c ?? "__all"}
-              type="button"
-              onClick={() => setCategory(c)}
-              className={cn(
-                "border px-2 py-1 text-[11px] font-medium transition-colors",
-                category === c
-                  ? "border-accent-brand bg-accent-brand/10 text-accent-brand"
-                  : "border-border text-muted-foreground hover:text-foreground",
+          <ActiveFilters
+            facets={facets}
+            onFacets={setFacets}
+            registries={registries}
+            shown={rows.length}
+          />
+
+          {rows.length === 0 ? (
+            allInstalledHidden ? (
+              <EmptyState
+                icon={Puzzle}
+                title={t("plugins.manager.allInstalled")}
+                hint={t("plugins.manager.allInstalledHint")}
+              />
+            ) : (
+              <EmptyState
+                icon={Puzzle}
+                title={t("plugins.manager.nothingHere")}
+                hint={
+                  plugins.length === 0
+                    ? undefined
+                    : t("plugins.manager.nothingHereHint")
+                }
+              />
+            )
+          ) : (
+            <PluginCollection
+              plugins={paged.items}
+              layout={layout}
+              renderCard={(p) => (
+                <BrowseCard
+                  plugin={p}
+                  manager={manager}
+                  onOpen={() => onOpen(p.id)}
+                />
               )}
-            >
-              {c ?? t("plugins.manager.allCategories")}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {rows.length === 0 ? (
-        allInstalledHidden ? (
-          <EmptyState
-            icon={Puzzle}
-            title={t("plugins.manager.allInstalled")}
-            hint={t("plugins.manager.allInstalledHint")}
-          />
-        ) : (
-          <EmptyState
-            icon={Puzzle}
-            title={t("plugins.manager.nothingHere")}
-            hint={
-              plugins.length === 0
-                ? undefined
-                : t("plugins.manager.nothingHereHint")
-            }
-          />
-        )
-      ) : (
-        <PluginCollection
-          plugins={rows}
-          layout={layout}
-          renderCard={(p) => (
-            <BrowseCard
-              plugin={p}
-              manager={manager}
-              onOpen={() => onOpen(p.id)}
+              listColumns={listColumns}
+              onOpen={onOpen}
             />
           )}
-          listColumns={listColumns}
-          onOpen={onOpen}
-        />
-      )}
 
-      <p className="text-[11px] text-muted-foreground">
-        {t("plugins.manager.registries.browseHint")}{" "}
-        <DocsLink core="communityRegistry" className="text-[11px]">
-          {t("plugins.manager.communitySubmit")}
-        </DocsLink>
-      </p>
-    </div>
+          <Pager
+            page={paged.page}
+            pages={paged.pages}
+            total={rows.length}
+            size={pageSize}
+            onPage={goTo}
+            onSize={(next) => {
+              setPageSize(next);
+              goTo(1);
+            }}
+          />
+
+          <p className="text-[11px] text-muted-foreground">
+            {t("plugins.manager.registries.browseHint")}{" "}
+            <DocsLink core="communityRegistry" className="text-[11px]">
+              {t("plugins.manager.communitySubmit")}
+            </DocsLink>
+          </p>
+        </div>
+      )}
+    </FilteredLayout>
   );
 }
 
@@ -1162,6 +1562,7 @@ function BrowseCard({
     <Card className="gap-0 overflow-hidden py-0">
       <CardHead
         plugin={plugin}
+        muted={plugin.unsupported}
         onOpen={onOpen}
         facts={
           <>
@@ -1178,12 +1579,14 @@ function BrowseCard({
       />
       <div className="flex items-center gap-2 border-t border-border px-3 py-2">
         <span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground">
-          {severe.length > 0
-            ? t(`plugins.capabilities.${severe[0]}.title`, {
-                defaultValue: severe[0],
-                nsSeparator: false,
-              })
-            : t("plugins.manager.noServerAccess")}
+          {plugin.unsupported && !plugin.installed
+            ? ""
+            : severe.length > 0
+              ? t(`plugins.capabilities.${severe[0]}.title`, {
+                  defaultValue: severe[0],
+                  nsSeparator: false,
+                })
+              : t("plugins.manager.noServerAccess")}
         </span>
         <BrowseAction plugin={plugin} manager={manager} />
       </div>
@@ -1210,6 +1613,15 @@ function BrowseAction({
         <span className="flex shrink-0 items-center gap-1 text-[11px] font-medium text-accent-brand">
           <Check className="size-3" />
           {t("plugins.manager.installedBadge")}
+        </span>
+      ) : plugin.unsupported ? (
+        <span
+          className="shrink-0 text-[11px] text-muted-foreground"
+          title={t("plugins.manager.unsupportedHint")}
+        >
+          {plugin.needsTermix
+            ? t("plugins.manager.needsTermix", { range: plugin.needsTermix })
+            : t("plugins.manager.unsupported")}
         </span>
       ) : (
         <Button

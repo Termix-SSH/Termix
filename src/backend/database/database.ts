@@ -22,12 +22,12 @@ import sshAuthRoutes from "./routes/ssh-auth-routes.js";
 import rbacRoutes from "./routes/rbac.js";
 import openTabsRoutes from "./routes/open-tabs.js";
 import userPreferencesRoutes from "./routes/user-preferences.js";
+import lookRoutes from "./routes/look.js";
 import hostSidebarPreferencesRoutes from "./routes/host-sidebar-preferences.js";
 import credentialSidebarPreferencesRoutes from "./routes/credential-sidebar-preferences.js";
 import uiPreferencesRoutes from "./routes/ui-preferences.js";
 import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
-import syncRoutes from "../sync/server/routes.js";
-import syncLinkRoutes from "../sync/client/routes.js";
+import { syncForwarder } from "../sync/provider.js";
 import { syncChangeWatcher } from "../sync/server/change-watcher.js";
 import dashboardRoutes from "./routes/dashboard-routes.js";
 import {
@@ -35,6 +35,7 @@ import {
   mountPluginLegacyPaths,
 } from "./routes/plugin-api-routes.js";
 import { attachPluginWebSockets } from "../plugins/ws.js";
+import { registerSshRelay } from "../hosts/ssh-relay.js";
 import pluginRoutes from "./routes/plugins.js";
 import { createPluginAssetsRouter } from "../plugins/assets.js";
 import { getPluginRuntime } from "../plugins/index.js";
@@ -72,6 +73,7 @@ import {
 } from "../plugins/user-data.js";
 import { configureDirectHttps, getTlsConfig } from "../tls/tls-service.js";
 import { acmeChallengeHandler } from "../tls/acme-challenges.js";
+import { httpsPolicyMiddleware } from "../tls/https-policy.js";
 import {
   createCurrentCredentialRepository,
   createCurrentHostRepository,
@@ -104,6 +106,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 app.set("trust proxy", "loopback");
+app.use(httpsPolicyMiddleware);
 
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
@@ -1616,13 +1619,13 @@ app.use("/credentials", credentialsRoutes);
 app.use("/ssh-auth", sshAuthRoutes);
 app.use("/rbac", rbacRoutes);
 app.use("/open-tabs", openTabsRoutes);
+app.use("/user-preferences/look", lookRoutes);
 app.use("/user-preferences", userPreferencesRoutes);
 app.use("/host-sidebar/preferences", hostSidebarPreferencesRoutes);
 app.use("/credential-sidebar/preferences", credentialSidebarPreferencesRoutes);
 app.use("/ui-preferences", uiPreferencesRoutes);
 registerAuditLogRoutes(app, authenticateJWT);
-app.use("/sync", syncRoutes);
-app.use("/sync", syncLinkRoutes);
+app.use("/sync", syncForwarder);
 app.use("/dashboard", dashboardRoutes);
 app.use("/plugins", pluginRoutes);
 app.use(
@@ -1896,6 +1899,7 @@ const httpServer = http.createServer(app);
 // Plugin sockets ride this server at /plugin-ws/<id>/<path>. Anything else is
 // left alone, so core's own upgrade handling is unaffected.
 attachPluginWebSockets(httpServer);
+registerSshRelay();
 
 httpServer.on("error", (err: NodeJS.ErrnoException) => {
   if (err.code === "EADDRINUSE") {

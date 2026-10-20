@@ -47,15 +47,13 @@ describe("CORE_STEPS", () => {
     }
   });
 
-  it("is only choices: preset and appearance for everyone", () => {
-    expect(ids(ctx())).toEqual(["preset", "appearance"]);
+  it("has no core step for everyone: look choices come from the layout", () => {
+    expect(ids(ctx())).toEqual([]);
   });
 
   it("opens on the plugin picker for an admin on a fresh install", () => {
     expect(ids(ctx({ isAdmin: true, pluginSetupPending: true }))).toEqual([
       "plugins",
-      "preset",
-      "appearance",
     ]);
   });
 
@@ -85,24 +83,11 @@ describe("CORE_STEPS", () => {
     expect(CORE_STEPS.find((s) => s.id === "plugins")?.required).toBe(true);
   });
 
-  it("asks how the desktop app is used only on the desktop", () => {
-    expect(ids(ctx({ isDesktop: true }))).toEqual([
-      "desktop-sync",
-      "preset",
-      "appearance",
-    ]);
-  });
-
   it("asks how the desktop app updates when it has an updater", () => {
     const win = window as unknown as { electronAPI?: unknown };
     win.electronAPI = { isElectron: true, updates: {} };
     try {
-      expect(ids(ctx({ isDesktop: true }))).toEqual([
-        "desktop-sync",
-        "desktop-updates",
-        "preset",
-        "appearance",
-      ]);
+      expect(ids(ctx({ isDesktop: true }))).toEqual(["desktop-updates"]);
       expect(ids(ctx())).not.toContain("desktop-updates");
     } finally {
       delete win.electronAPI;
@@ -110,11 +95,7 @@ describe("CORE_STEPS", () => {
   });
 
   it("offers account security only when there is something to set up", () => {
-    expect(ids(ctx({ canEnrollSecondFactor: true }))).toEqual([
-      "preset",
-      "appearance",
-      "security",
-    ]);
+    expect(ids(ctx({ canEnrollSecondFactor: true }))).toEqual(["security"]);
   });
 
   it("skips account security on the desktop, which signs in by itself", () => {
@@ -127,8 +108,6 @@ describe("CORE_STEPS", () => {
 describe("onboarding translations", () => {
   it("has the copy the stage and the steps show", () => {
     for (const key of [
-      "presetIntro",
-      "appearanceIntro",
       "securityIntro",
       "pluginsIntro",
       "pluginsRemoveNote",

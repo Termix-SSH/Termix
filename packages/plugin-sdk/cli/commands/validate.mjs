@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { readManifest } from "../lib/plugin-dir.mjs";
+import { readManifest, isThemeOnly } from "../lib/plugin-dir.mjs";
 
 /**
  * The manifest rules live in src/manifest.ts, which the server uses too, so
@@ -17,7 +17,7 @@ export async function loadSdkModule(name) {
 
 export async function validate({ cwd }) {
   const raw = readManifest(cwd);
-  const { parseManifest } = await loadSdkModule("manifest");
+  const { parseManifest, validateThemeCss } = await loadSdkModule("manifest");
   const { errors } = parseManifest(raw);
 
   const problems = [...errors];
@@ -25,7 +25,8 @@ export async function validate({ cwd }) {
   // The manifest names files. They have to be there.
   const referenced = [
     raw.backend ?? "dist/backend.js",
-    raw.frontend ?? "dist/frontend.js",
+    // A theme only plugin has no frontend code.
+    ...(isThemeOnly(raw) ? [] : [raw.frontend ?? "dist/frontend.js"]),
     raw.locales ?? "locales",
   ];
   for (const rel of referenced) {
@@ -34,6 +35,8 @@ export async function validate({ cwd }) {
     }
   }
 
+  problems.push(...validateThemeFiles(cwd, raw, validateThemeCss));
+  problems.push(...validateLookCapabilities(cwd, raw));
   problems.push(
     ...(await validateMigrations(cwd, raw.id ?? path.basename(cwd))),
   );
@@ -51,6 +54,63 @@ export async function validate({ cwd }) {
   }
 
   console.log(`ok  ${raw.id ?? path.basename(cwd)}`);
+}
+
+/** Every declared theme file exists and holds only CSS a theme may hold. */
+export function validateThemeFiles(cwd, raw, validateThemeCss) {
+  const problems = [];
+  const themes = raw?.contributes?.themes;
+  if (!Array.isArray(themes)) return problems;
+  for (const theme of themes) {
+    if (typeof theme?.css !== "string" || typeof theme?.id !== "string") {
+      continue;
+    }
+    const file = path.join(cwd, theme.css);
+    if (!fs.existsSync(file)) {
+      problems.push(`theme ${theme.id}: ${theme.css} does not exist`);
+      continue;
+    }
+    for (const error of validateThemeCss(
+      fs.readFileSync(file, "utf8"),
+      theme.id,
+    )) {
+      problems.push(`theme ${theme.id}: ${error}`);
+    }
+  }
+  return problems;
+}
+
+/**
+ * ui:layout and ui:theme must match what the manifest contributes, both
+ * ways. The manifest check already flags a contribution without its
+ * capability; this flags a capability with nothing behind it, and a layout
+ * with no frontend to register it.
+ */
+export function validateLookCapabilities(cwd, raw) {
+  const problems = [];
+  const capabilities = Array.isArray(raw?.capabilities) ? raw.capabilities : [];
+  const layouts = raw?.contributes?.layouts;
+  const themes = raw?.contributes?.themes;
+  const hasLayouts = Array.isArray(layouts) && layouts.length > 0;
+  const hasThemes = Array.isArray(themes) && themes.length > 0;
+  if (capabilities.includes("ui:layout") && !hasLayouts) {
+    problems.push('"ui:layout" is declared but contributes.layouts is empty');
+  }
+  if (capabilities.includes("ui:theme") && !hasThemes) {
+    problems.push('"ui:theme" is declared but contributes.themes is empty');
+  }
+  if (hasLayouts) {
+    const entries = ["index.tsx", "index.ts", "index.mjs", "index.js"];
+    const frontend = entries.some((entry) =>
+      fs.existsSync(path.join(cwd, "src", "frontend", entry)),
+    );
+    if (!frontend && raw.frontend === undefined) {
+      problems.push(
+        "contributes.layouts needs a frontend that calls app.registerLayout",
+      );
+    }
+  }
+  return problems;
 }
 
 /** Env vars core sets for everyone, so a plugin need not list them. */

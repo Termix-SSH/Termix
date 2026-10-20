@@ -12,6 +12,12 @@ import { getEntity } from "../../plugins/sync-registry.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { syncLogger } from "../../utils/logger.js";
 import {
+  hasHostLocks,
+  hostLock,
+  manualCreateBlockedBy,
+} from "../../hosts/locks.js";
+import { createCurrentHostResolutionRepository } from "../../database/repositories/factory.js";
+import {
   createResolvers,
   deleteStoredRow,
   loadWireRow,
@@ -47,6 +53,22 @@ export type PushResult =
     };
 
 export const MAX_PUSH_OPS = 500;
+
+/** A host a plugin manages can't be changed from a desktop either. */
+async function hostPushLocked(
+  userId: string,
+  syncId: string,
+  exists: boolean,
+): Promise<boolean> {
+  if (!hasHostLocks()) return false;
+  if (!exists) return manualCreateBlockedBy() !== null;
+  const hostId =
+    await createCurrentHostResolutionRepository().findHostIdBySyncIdForUser(
+      syncId,
+      userId,
+    );
+  return hostId !== null && hostId !== undefined && hostLock(hostId) !== null;
+}
 
 function isPushOp(value: unknown): value is PushOp {
   if (!value || typeof value !== "object") return false;
@@ -164,6 +186,13 @@ export async function applyPush(
           : entity.permissions?.create;
     if (permission && !(await permissions.hasPermission(userId, permission))) {
       results.set(key, { ...base, status: "rejected", reason: "permission" });
+      continue;
+    }
+    if (
+      op.entityType === "hosts" &&
+      (await hostPushLocked(userId, op.syncId, exists))
+    ) {
+      results.set(key, { ...base, status: "rejected", reason: "locked" });
       continue;
     }
 

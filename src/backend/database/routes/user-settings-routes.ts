@@ -7,11 +7,6 @@ import {
 } from "../../utils/logger.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import {
-  AUDIT_FORWARD_TOKEN_SETTING,
-  AUDIT_FORWARD_URL_ENV,
-  AUDIT_FORWARD_URL_SETTING,
-} from "../../utils/audit-forwarder.js";
-import {
   NOTIFICATION_PRIVATE_ALLOWLIST_KEY,
   parseNotificationAllowlist,
 } from "../../utils/notification-egress.js";
@@ -20,6 +15,8 @@ import {
   createCurrentUserRepository,
 } from "../repositories/factory.js";
 import type { UserRecord } from "../repositories/user-repository.js";
+import { isForceHttpsEnabled, setForceHttps } from "../../tls/https-policy.js";
+import { getTlsConfig } from "../../tls/tls-service.js";
 
 async function getAdminActor(
   userId: string | undefined,
@@ -194,46 +191,39 @@ export function registerUserSettingsRoutes(
 
   /**
    * @openapi
-   * /users/audit-forwarding:
+   * /users/https-settings:
    *   get:
-   *     summary: Get audit log forwarding settings (admin only)
+   *     summary: Get the HTTPS redirect setting (admin only)
+   *     description: Whether plain HTTP is redirected to HTTPS with HSTS, and whether HTTPS is on at all. The redirect only applies while HTTPS is on.
    *     tags:
    *       - Users
    *     responses:
    *       200:
-   *         description: Forwarding target. The token itself is never returned.
+   *         description: forceHttps and tlsEnabled.
+   *       403:
+   *         description: Not authorized.
    */
-  router.get("/audit-forwarding", authenticateJWT, async (req, res) => {
-    const userId = (req as AuthenticatedRequest).userId;
+  router.get("/https-settings", authenticateJWT, async (req, res) => {
     try {
-      if (!(await getAdminActor(userId))) {
+      if (!(await getAdminActor((req as AuthenticatedRequest).userId))) {
         return res.status(403).json({ error: "Not authorized" });
       }
-      const settingsRepository = createCurrentSettingsRepository();
-      const url =
-        (await settingsRepository.get(AUDIT_FORWARD_URL_SETTING)) ?? "";
-      const hasToken = !!(await settingsRepository.get(
-        AUDIT_FORWARD_TOKEN_SETTING,
-      ));
       res.json({
-        url,
-        hasToken,
-        envConfigured: !!process.env[AUDIT_FORWARD_URL_ENV]?.trim(),
+        forceHttps: await isForceHttpsEnabled(),
+        tlsEnabled: getTlsConfig().enabled,
       });
     } catch (err) {
-      authLogger.error("Failed to get audit forwarding settings", err);
-      res
-        .status(500)
-        .json({ error: "Failed to get audit forwarding settings" });
+      authLogger.error("Failed to get HTTPS settings", err);
+      res.status(500).json({ error: "Failed to get HTTPS settings" });
     }
   });
 
   /**
    * @openapi
-   * /users/audit-forwarding:
+   * /users/https-settings:
    *   patch:
-   *     summary: Update audit log forwarding settings (admin only)
-   *     description: Sets the collector URL audit entries are shipped to. An empty URL disables forwarding and clears the stored token. Omitting token keeps the stored one.
+   *     summary: Update the HTTPS redirect setting (admin only)
+   *     description: Turns the redirect from HTTP to HTTPS and the HSTS header on or off. Off by default so reverse proxies keep working.
    *     tags:
    *       - Users
    *     requestBody:
@@ -243,71 +233,43 @@ export function registerUserSettingsRoutes(
    *           schema:
    *             type: object
    *             properties:
-   *               url:
-   *                 type: string
-   *               token:
-   *                 type: string
+   *               forceHttps:
+   *                 type: boolean
    *     responses:
    *       200:
    *         description: Setting updated.
+   *       400:
+   *         description: Invalid value.
    *       403:
    *         description: Not authorized.
    */
-  router.patch("/audit-forwarding", authenticateJWT, async (req, res) => {
+  router.patch("/https-settings", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
       const actor = await getAdminActor(userId);
       if (!actor) {
         return res.status(403).json({ error: "Not authorized" });
       }
-      const { url, token } = req.body ?? {};
-      if (
-        typeof url !== "string" ||
-        (token !== undefined && typeof token !== "string")
-      ) {
-        return res.status(400).json({ error: "url must be a string" });
+      const { forceHttps } = req.body ?? {};
+      if (typeof forceHttps !== "boolean") {
+        return res.status(400).json({ error: "forceHttps must be a boolean" });
       }
-      const trimmedUrl = url.trim();
-      if (trimmedUrl && !/^https?:\/\//i.test(trimmedUrl)) {
-        return res.status(400).json({ error: "url must be http(s)" });
-      }
-
-      const settingsRepository = createCurrentSettingsRepository();
-      if (!trimmedUrl) {
-        await settingsRepository.delete(AUDIT_FORWARD_URL_SETTING);
-        await settingsRepository.delete(AUDIT_FORWARD_TOKEN_SETTING);
-      } else {
-        await settingsRepository.set(AUDIT_FORWARD_URL_SETTING, trimmedUrl);
-        if (token !== undefined) {
-          if (token.trim()) {
-            await settingsRepository.set(
-              AUDIT_FORWARD_TOKEN_SETTING,
-              token.trim(),
-            );
-          } else {
-            await settingsRepository.delete(AUDIT_FORWARD_TOKEN_SETTING);
-          }
-        }
-      }
-
+      await setForceHttps(forceHttps);
       const { ipAddress, userAgent } = getRequestMeta(req);
       await logAudit({
         userId,
         username: actor.username ?? userId,
-        action: "update_audit_forwarding",
+        action: "update_force_https",
         resourceType: "setting",
-        details: JSON.stringify({ enabled: !!trimmedUrl }),
+        details: JSON.stringify({ forceHttps }),
         ipAddress,
         userAgent,
         success: true,
       });
-
-      res.json({ url: trimmedUrl, hasToken: !!token?.trim() });
+      res.json({ forceHttps, tlsEnabled: getTlsConfig().enabled });
     } catch (err) {
-      authLogger.error("Failed to update audit forwarding settings", err);
-      res
-        .status(500)
-        .json({ error: "Failed to update audit forwarding settings" });
+      authLogger.error("Failed to set HTTPS settings", err);
+      res.status(500).json({ error: "Failed to set HTTPS settings" });
     }
   });
 

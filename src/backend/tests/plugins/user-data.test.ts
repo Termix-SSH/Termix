@@ -155,6 +155,30 @@ describe("plugin user data", () => {
     });
   });
 
+  it("exports a table with a text primary key", async () => {
+    const credentials = defineTable("credential", {
+      id: varchar(64).primaryKey(),
+      userId: refUser().notNull(),
+      label: text(),
+    });
+    for (const statement of createTableSql("sqlite", "fixture", credentials)) {
+      sqlite.exec(statement);
+    }
+    registerTable("fixture", credentials);
+    sqlite.exec(
+      "INSERT INTO p_fixture_credential (id, user_id, label) VALUES ('abc', 'u1', 'key')",
+    );
+
+    const file = new Database(":memory:");
+    file.exec("CREATE TABLE users (id TEXT PRIMARY KEY)");
+    file.exec("CREATE TABLE ssh_data (id INTEGER PRIMARY KEY)");
+    file.exec("INSERT INTO users (id) VALUES ('u1')");
+    await writeUserPluginTables(file, "u1");
+    expect(file.prepare("SELECT * FROM p_fixture_credential").all()).toEqual([
+      { id: "abc", user_id: "u1", label: "key" },
+    ]);
+  });
+
   it("writes large tables in chunks and lets the event loop run between them", async () => {
     const insert = sqlite.prepare(
       "INSERT INTO p_fixture_bookmark (user_id, path) VALUES ('u1', ?)",

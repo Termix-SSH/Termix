@@ -7,25 +7,21 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, { type Request, type Response } from "express";
 import multer from "multer";
 import { sshLogger, databaseLogger } from "../../utils/logger.js";
+import { resolveHostCredentials } from "../../hosts/resolve-host-credentials.js";
 import { pluginEvents, TOPICS } from "../../plugins/events.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { parseKeyForStorage } from "../../hosts/stored-ssh-key.js";
-import {
-  pickResolvedPassword,
-  pickResolvedUsername,
-} from "../../hosts/credential-username.js";
+import { pickResolvedPassword } from "../../hosts/credential-username.js";
 import { emitInternalEvent } from "../../hosts/internal-events.js";
 import { deleteOwnedHost } from "../../hosts/delete-host.js";
 import {
-  createCurrentCredentialRepository,
   createCurrentRbacAccessRepository,
   createCurrentRoleRepository,
   createCurrentHostResolutionRepository,
   createCurrentHostRepository,
   createCurrentUserRepository,
-  createCurrentSharedHostAuthOverrideRepository,
   createCurrentHostDefaultsRepository,
 } from "../repositories/factory.js";
 import {
@@ -41,7 +37,6 @@ import {
   OWNER_PRIVATE_AUTH_FIELDS,
   OWNER_PRIVATE_SSH_OPTION_FIELDS,
   OWNER_PRIVATE_TERMINAL_CONFIG_FIELDS,
-  hostTerminalExport,
   sanitizeHostForRecipient,
   stripSensitiveFields,
   transformHostResponse,
@@ -67,14 +62,8 @@ import {
   getAuditUsername,
   getRequestMeta,
 } from "../../utils/audit-logger.js";
-import type {
-  HostResolutionCredentialRecord,
-  HostResolutionHostRecord,
-} from "../repositories/host-resolution-repository.js";
-import {
-  requiresPersonalHostAuthentication,
-  resolveRecipientSharedHostAuthentication,
-} from "../../utils/shared-host-auth-resolver.js";
+import type { HostResolutionCredentialRecord } from "../repositories/host-resolution-repository.js";
+
 import { rejectSharedCopyWrites } from "../../sync/shared-copy-guard.js";
 import { sshOptionsForWrite } from "../../hosts/ssh-options.js";
 import {
@@ -91,15 +80,16 @@ import {
   planProtocolAuthWrite,
   ProtocolAuthWriteError,
   readProtocolAuthPayload,
-  toPortableLogins,
   withProtocolAuth,
   writeProtocolAuth,
   type PlannedProtocolAuth,
 } from "../../hosts/protocol-auth/protocol-auth.js";
+import { findHostProtocol } from "../../hosts/protocol-auth/registry.js";
 import {
-  findHostProtocol,
-  listHostProtocols,
-} from "../../hosts/protocol-auth/registry.js";
+  manualCreateBlockedBy,
+  requireManualCreate,
+  requireUnlockedHost,
+} from "../../hosts/locks.js";
 import {
   mergeStoredSshOptions,
   parseTerminalConfig,
@@ -172,6 +162,7 @@ router.post(
   authenticateJWT,
   permissionManager.requirePermission("hosts.create"),
   requireDataAccess,
+  requireManualCreate,
   requireHostEnrollmentAccessForPath,
   upload.single("key"),
   async (req: Request, res: Response) => {
@@ -751,6 +742,7 @@ router.put(
   authenticateJWT,
   permissionManager.requirePermission("hosts.edit"),
   requireDataAccess,
+  requireUnlockedHost,
   upload.single("key"),
   async (req: Request, res: Response) => {
     const hostId = Array.isArray(req.params.id)
@@ -1222,6 +1214,27 @@ router.put(
 
 /**
  * @openapi
+ * /host/policy:
+ *   get:
+ *     summary: Host creation policy
+ *     description: Whether hosts can be added by hand, or a plugin manages them all.
+ *     tags:
+ *       - SSH
+ *     responses:
+ *       200:
+ *         description: "{ manualCreate, blockedBy? } where blockedBy is the managing plugin's name."
+ */
+router.get("/policy", authenticateJWT, (_req: Request, res: Response) => {
+  const blocked = manualCreateBlockedBy();
+  res.json(
+    blocked
+      ? { manualCreate: false, blockedBy: blocked.pluginName }
+      : { manualCreate: true },
+  );
+});
+
+/**
+ * @openapi
  * /host/db/host:
  *   get:
  *     summary: Get all SSH hosts
@@ -1690,340 +1703,6 @@ router.get(
 
 /**
  * @openapi
- * /host/db/host/{id}/export:
- *   get:
- *     summary: Export SSH host
- *     description: Exports a specific SSH host with decrypted credentials.
- *     tags:
- *       - SSH
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: The exported SSH host.
- *       400:
- *         description: Invalid userId or hostId.
- *       404:
- *         description: SSH host not found.
- *       500:
- *         description: Failed to export SSH host.
- */
-router.get(
-  "/db/host/:id/export",
-  authenticateJWT,
-  requireDataAccess,
-  async (req: Request, res: Response) => {
-    const hostId = Array.isArray(req.params.id)
-      ? req.params.id[0]
-      : req.params.id;
-    const userId = (req as AuthenticatedRequest).userId;
-
-    if (!isNonEmptyString(userId) || !hostId) {
-      return res.status(400).json({ error: "Invalid userId or hostId" });
-    }
-
-    try {
-      const host =
-        await createCurrentHostResolutionRepository().findHostByIdForUser(
-          Number(hostId),
-          userId,
-        );
-
-      if (!host) {
-        return res.status(404).json({ error: "SSH host not found" });
-      }
-
-      const resolvedHost = (await resolveHostCredentials(host, userId)) || host;
-      const hostPluginSettings = (
-        await loadHostPluginSettings([Number(hostId)])
-      ).get(Number(hostId));
-
-      const exportedConnectionType =
-        (resolvedHost.connectionType as string) || "ssh";
-      const isRemoteDesktop = exportedConnectionType !== "ssh";
-
-      const baseExportData = {
-        exportId: resolvedHost.id,
-        connectionType: exportedConnectionType,
-        name: resolvedHost.name,
-        ip: resolvedHost.ip,
-        port: resolvedHost.port,
-        username: resolvedHost.username,
-        password: resolvedHost.password || null,
-        folder: resolvedHost.folder,
-        tags:
-          typeof resolvedHost.tags === "string"
-            ? resolvedHost.tags.split(",").filter(Boolean)
-            : resolvedHost.tags || [],
-        pin: !!resolvedHost.pin,
-        notes: resolvedHost.notes || null,
-        // Every plugin's host settings, secrets redacted, for import to hand back.
-        pluginSettings: hostPluginSettings ?? {},
-        // Each plugin protocol's login, secrets included like the SSH ones.
-        protocolAuth: toPortableLogins(
-          await listProtocolLogins(Number(hostId), userId),
-        ),
-      };
-
-      const exportData = isRemoteDesktop
-        ? baseExportData
-        : {
-            ...baseExportData,
-            authType: resolvedHost.authType,
-            key: resolvedHost.key || null,
-            keyPassword: resolvedHost.keyPassword || null,
-            keyType: resolvedHost.keyType || null,
-            credentialId: resolvedHost.credentialId || null,
-            overrideCredentialUsername:
-              !!resolvedHost.overrideCredentialUsername,
-            sudoPassword: resolvedHost.sudoPassword || null,
-            jumpHosts: resolvedHost.jumpHosts
-              ? JSON.parse(resolvedHost.jumpHosts as string)
-              : null,
-            terminalConfig:
-              hostTerminalExport(resolvedHost).terminalConfig ?? null,
-            sshOptions: hostTerminalExport(resolvedHost).sshOptions,
-            forceKeyboardInteractive:
-              resolvedHost.forceKeyboardInteractive === "true",
-            useSocks5: !!resolvedHost.useSocks5,
-            socks5Host: resolvedHost.socks5Host || null,
-            socks5Port: resolvedHost.socks5Port || null,
-            socks5Username: resolvedHost.socks5Username || null,
-            socks5Password: resolvedHost.socks5Password || null,
-            socks5ProxyChain: resolvedHost.socks5ProxyChain
-              ? JSON.parse(resolvedHost.socks5ProxyChain as string)
-              : null,
-            portKnockSequence: resolvedHost.portKnockSequence
-              ? JSON.parse(resolvedHost.portKnockSequence as string)
-              : null,
-          };
-
-      sshLogger.success("Host exported with decrypted credentials", {
-        operation: "host_export",
-        hostId: parseInt(hostId),
-        userId,
-      });
-
-      res.json(exportData);
-    } catch (err) {
-      sshLogger.error("Failed to export SSH host", err, {
-        operation: "host_export",
-        hostId: parseInt(hostId),
-        userId,
-      });
-      res.status(500).json({ error: "Failed to export SSH host" });
-    }
-  },
-);
-
-/**
- * @openapi
- * /host/db/hosts/export:
- *   get:
- *     summary: Export all SSH hosts
- *     description: Exports all SSH hosts for the current user. By default credentials are decrypted and embedded. With `share=1`, secrets are omitted and credential-authenticated hosts instead reference a scrubbed `credentials` array by alias, suitable for handing off to another user.
- *     tags:
- *       - SSH
- *     parameters:
- *       - in: query
- *         name: share
- *         required: false
- *         schema:
- *           type: string
- *         description: Set to "1" to export without embedded secrets.
- *     responses:
- *       200:
- *         description: All exported SSH hosts.
- *       400:
- *         description: Invalid userId.
- *       500:
- *         description: Failed to export SSH hosts.
- */
-router.get(
-  "/db/hosts/export",
-  authenticateJWT,
-  requireDataAccess,
-  async (req: Request, res: Response) => {
-    const userId = (req as AuthenticatedRequest).userId;
-    const shareMode = req.query.share === "1" || req.query.share === "true";
-
-    if (!isNonEmptyString(userId)) {
-      return res.status(400).json({ error: "Invalid userId" });
-    }
-
-    try {
-      const allHosts =
-        await createCurrentHostResolutionRepository().findHostsByUserId(userId);
-      const pluginSettingsByHost = await loadHostPluginSettings(
-        allHosts.map((h) => h.id as number),
-      );
-
-      const exportedHosts = [];
-      const usedCredentialIds = new Set<number>();
-
-      for (const host of allHosts) {
-        const resolvedHost = shareMode
-          ? host
-          : (await resolveHostCredentials(host, userId)) || host;
-        const hostPluginSettings = pluginSettingsByHost.get(host.id as number);
-
-        const exportedConnectionType =
-          (resolvedHost.connectionType as string) || "ssh";
-        const isRemoteDesktop = exportedConnectionType !== "ssh";
-
-        const baseExportData = {
-          exportId: resolvedHost.id,
-          connectionType: exportedConnectionType,
-          name: resolvedHost.name,
-          ip: resolvedHost.ip,
-          port: resolvedHost.port,
-          username: resolvedHost.username,
-          password: shareMode ? null : resolvedHost.password || null,
-          folder: resolvedHost.folder,
-          tags:
-            typeof resolvedHost.tags === "string"
-              ? resolvedHost.tags.split(",").filter(Boolean)
-              : resolvedHost.tags || [],
-          pin: !!resolvedHost.pin,
-          notes: resolvedHost.notes || null,
-          // Every plugin's host settings, secrets redacted, for import to hand back.
-          pluginSettings: hostPluginSettings ?? {},
-          protocolAuth: shareableLogins(
-            toPortableLogins(
-              await listProtocolLogins(host.id as number, userId),
-            ),
-            shareMode,
-          ),
-        };
-
-        const exportData = isRemoteDesktop
-          ? baseExportData
-          : {
-              ...baseExportData,
-              authType: resolvedHost.authType,
-              key: shareMode ? null : resolvedHost.key || null,
-              keyPassword: shareMode ? null : resolvedHost.keyPassword || null,
-              keyType: resolvedHost.keyType || null,
-              credentialId: resolvedHost.credentialId || null,
-              overrideCredentialUsername:
-                !!resolvedHost.overrideCredentialUsername,
-              sudoPassword: shareMode
-                ? null
-                : resolvedHost.sudoPassword || null,
-              jumpHosts: resolvedHost.jumpHosts
-                ? JSON.parse(resolvedHost.jumpHosts as string)
-                : null,
-              terminalConfig:
-                hostTerminalExport(resolvedHost).terminalConfig ?? null,
-              sshOptions: hostTerminalExport(resolvedHost).sshOptions,
-              forceKeyboardInteractive:
-                resolvedHost.forceKeyboardInteractive === "true",
-              useSocks5: !!resolvedHost.useSocks5,
-              socks5Host: resolvedHost.socks5Host || null,
-              socks5Port: resolvedHost.socks5Port || null,
-              socks5Username: resolvedHost.socks5Username || null,
-              socks5Password: shareMode
-                ? null
-                : resolvedHost.socks5Password || null,
-              socks5ProxyChain: resolvedHost.socks5ProxyChain
-                ? JSON.parse(resolvedHost.socks5ProxyChain as string)
-                : null,
-            };
-
-        if (
-          shareMode &&
-          !isRemoteDesktop &&
-          resolvedHost.authType === "credential" &&
-          resolvedHost.credentialId
-        ) {
-          usedCredentialIds.add(resolvedHost.credentialId as number);
-        }
-
-        exportedHosts.push(exportData);
-      }
-
-      if (!shareMode) {
-        sshLogger.success("All hosts exported with decrypted credentials", {
-          operation: "hosts_export_all",
-          count: exportedHosts.length,
-          userId,
-        });
-
-        return res.json({ hosts: exportedHosts });
-      }
-
-      const exportedCredentials: Record<string, unknown>[] = [];
-      if (usedCredentialIds.size > 0) {
-        const credentialRepository = createCurrentCredentialRepository();
-        const ownedCredentials =
-          await credentialRepository.listDecryptedByUserId(userId);
-        const credentialById = new Map(
-          ownedCredentials.map((credential) => [credential.id, credential]),
-        );
-
-        for (const host of exportedHosts as Record<string, unknown>[]) {
-          const credentialId = host.credentialId as number | null;
-          if (!credentialId) continue;
-          const credential = credentialById.get(credentialId);
-          if (!credential) continue;
-
-          host.credentialAlias = credential.name;
-
-          if (
-            !exportedCredentials.some(
-              (entry) => entry.alias === credential.name,
-            )
-          ) {
-            exportedCredentials.push({
-              alias: credential.name,
-              name: credential.name,
-              description: credential.description || null,
-              folder: credential.folder || null,
-              tags:
-                typeof credential.tags === "string"
-                  ? credential.tags.split(",").filter(Boolean)
-                  : [],
-              authType: credential.authType,
-              username: credential.username || null,
-              keyType: credential.keyType || null,
-            });
-          }
-        }
-      }
-
-      for (const host of exportedHosts as Record<string, unknown>[]) {
-        delete host.credentialId;
-      }
-
-      sshLogger.success("All hosts exported for sharing without secrets", {
-        operation: "hosts_export_all_share",
-        count: exportedHosts.length,
-        credentialCount: exportedCredentials.length,
-        userId,
-      });
-
-      res.json({
-        version: "1",
-        exportedAt: new Date().toISOString(),
-        credentials: exportedCredentials,
-        hosts: exportedHosts,
-      });
-    } catch (err) {
-      sshLogger.error("Failed to export all SSH hosts", err, {
-        operation: "hosts_export_all",
-        userId,
-      });
-      res.status(500).json({ error: "Failed to export SSH hosts" });
-    }
-  },
-);
-
-/**
- * @openapi
  * /host/db/host/{id}:
  *   delete:
  *     summary: Delete SSH host
@@ -2051,6 +1730,7 @@ router.delete(
   authenticateJWT,
   permissionManager.requirePermission("hosts.delete"),
   requireDataAccess,
+  requireUnlockedHost,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     const hostId = Array.isArray(req.params.id)
@@ -2117,231 +1797,6 @@ router.delete(
 // the file-manager plugin, under /plugin-api/file-manager/, and command
 // history to the ssh-terminal plugin, under /plugin-api/ssh-terminal/.
 
-/**
- * A share export leaves out every secret and credential link, the same as
- * it does for SSH.
- */
-function shareableLogins(
-  logins: ReturnType<typeof toPortableLogins>,
-  shareMode: boolean,
-): ReturnType<typeof toPortableLogins> {
-  if (!shareMode) return logins;
-  const out: ReturnType<typeof toPortableLogins> = {};
-  for (const [protocol, login] of Object.entries(logins)) {
-    const declared = findHostProtocol(protocol);
-    const secret = new Set(
-      (declared?.credentialFields ?? [])
-        .filter((field) => field.secret)
-        .map((field) => field.key),
-    );
-    out[protocol] = {
-      authType: login.authType === "credential" ? "direct" : login.authType,
-      credentialId: null,
-      username: login.username,
-      password: null,
-      fields: Object.fromEntries(
-        Object.entries(login.fields).filter(
-          ([key]) => declared && !secret.has(key),
-        ),
-      ),
-    };
-  }
-  return out;
-}
-
-async function resolveHostCredentials(
-  host: Record<string, unknown>,
-  requestingUserId?: string,
-  /**
-   * Credentials already fetched for this request, keyed by id. The host list
-   * preloads them in one query; single-host callers omit it and fall back to
-   * fetching the one credential they need.
-   */
-  preloadedCredentials?: Map<number, HostResolutionCredentialRecord>,
-): Promise<Record<string, unknown>> {
-  try {
-    const ownerId = (host.ownerId || host.userId) as string | undefined;
-    if (
-      requestingUserId &&
-      ownerId &&
-      requestingUserId !== ownerId &&
-      typeof host.id === "number"
-    ) {
-      const authHost = host as unknown as HostResolutionHostRecord;
-      const needsPersonalCredential = requiresPersonalHostAuthentication(
-        authHost,
-        "ssh",
-      );
-      const baseSshOverrideState = {
-        required: needsPersonalCredential,
-        ownerAuthShared: !!host.shareSshAuth,
-      };
-      // Owner auth for the remote desktop protocols is always snapshotted
-      // for recipients; only their own override credential varies per user.
-      const authOverrides: Record<string, unknown> = {
-        ssh: baseSshOverrideState,
-      };
-      const overrideCredentialIds =
-        await createCurrentSharedHostAuthOverrideRepository().listCredentialIds(
-          host.id,
-          requestingUserId,
-        );
-      // Whether a plugin protocol is on is its plugin's host setting; the
-      // client only offers an override for one that is.
-      for (const { id: protocol } of listHostProtocols()) {
-        authOverrides[protocol] = {
-          credentialId: overrideCredentialIds[protocol],
-          required: false,
-          ownerAuthShared: true,
-        };
-      }
-      const recipientHost: Record<string, unknown> = {
-        ...host,
-        credentialId: null,
-        password: null,
-        key: null,
-        keyPassword: null,
-        keyType: null,
-        authOverrides,
-      };
-
-      try {
-        const resolution = await resolveRecipientSharedHostAuthentication(
-          authHost,
-          host.id,
-          requestingUserId,
-          "ssh",
-        );
-
-        if (resolution.source === "personal-override") {
-          const credential = resolution.credential;
-          return {
-            ...recipientHost,
-            authOverrides: {
-              ...authOverrides,
-              ssh: {
-                credentialId: resolution.credentialId,
-                required: false,
-                ownerAuthShared: !!host.shareSshAuth,
-              },
-            },
-            authType:
-              credential.key || credential.privateKey
-                ? "key"
-                : credential.password
-                  ? "password"
-                  : "none",
-            username: credential.username || recipientHost.username,
-            password: credential.password,
-            key: credential.privateKey || credential.key,
-            keyPassword: credential.keyPassword,
-            keyType: credential.keyType,
-          };
-        }
-
-        if (resolution.source === "owner-shared") {
-          if (resolution.authType === "agent") {
-            return {
-              ...recipientHost,
-              authOverrides: {
-                ...authOverrides,
-                ssh: {
-                  required: false,
-                  ownerAuthShared: true,
-                },
-              },
-              authType: "agent",
-            };
-          }
-
-          const sharedAuth = resolution.secret;
-          if (sharedAuth) {
-            const resolvedUsername = pickResolvedUsername(
-              recipientHost.username,
-              sharedAuth.username,
-              host.overrideCredentialUsername,
-            );
-            return {
-              ...recipientHost,
-              authOverrides: {
-                ...authOverrides,
-                ssh: {
-                  required: false,
-                  ownerAuthShared: true,
-                },
-              },
-              authType: sharedAuth.key
-                ? "key"
-                : sharedAuth.password
-                  ? "password"
-                  : "none",
-              username: resolvedUsername,
-              password: sharedAuth.password,
-              key: sharedAuth.key,
-              keyPassword: sharedAuth.keyPassword,
-              keyType: sharedAuth.keyType,
-            };
-          }
-        }
-
-        if (resolution.source === "secretless") {
-          return {
-            ...recipientHost,
-            authOverrides: {
-              ...authOverrides,
-              ssh: {
-                required: false,
-                ownerAuthShared: !!host.shareSshAuth,
-              },
-            },
-          };
-        }
-      } catch {
-        // A missing/deleted override or snapshot behaves like unavailable auth.
-      }
-
-      return recipientHost;
-    }
-
-    if (host.credentialId && (host.userId || host.ownerId)) {
-      const credentialId = host.credentialId as number;
-      const credentialOwnerId = (host.ownerId || host.userId) as string;
-
-      const credential =
-        preloadedCredentials?.get(credentialId) ??
-        (await findUsableCredential(credentialId, credentialOwnerId));
-
-      if (credential) {
-        const resolvedHost: Record<string, unknown> = {
-          ...host,
-          password: pickResolvedPassword(host.password, credential.password),
-          key: credential.key,
-          keyPassword: credential.keyPassword,
-          keyType: credential.keyType,
-        };
-
-        const resolvedUsername = pickResolvedUsername(
-          host.username,
-          credential.username,
-          host.overrideCredentialUsername,
-        );
-        if (resolvedUsername !== undefined) {
-          resolvedHost.username = resolvedUsername;
-        }
-
-        return resolvedHost;
-      }
-    }
-
-    return { ...host };
-  } catch (error) {
-    sshLogger.warn(
-      `Failed to resolve credentials for host ${host.id}: ${getErrorMessage(error)}`,
-    );
-    return host;
-  }
-}
-
 registerHostFolderRoutes(router, {
   authenticateJWT,
   requireViewPermission: permissionManager.requirePermission("hosts.view"),
@@ -2355,7 +1810,6 @@ registerHostFolderRoutes(router, {
 registerHostBulkRoutes(
   router,
   authenticateJWT,
-  permissionManager.requirePermission("hosts.create"),
   permissionManager.requirePermission("hosts.edit"),
   requireDataAccess,
 );

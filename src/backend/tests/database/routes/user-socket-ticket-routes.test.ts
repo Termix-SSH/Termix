@@ -25,6 +25,10 @@ const issueSocketTicket = vi.fn(
   async (userId: string, sessionId: string) => `ticket:${userId}:${sessionId}`,
 );
 
+const issueApiKeySocketTicket = vi.fn(
+  async (userId: string, keyId: string) => `key-ticket:${userId}:${keyId}`,
+);
+
 const authenticate: RequestHandler = (req, _res, next) => {
   Object.assign(req, {
     userId: "u1",
@@ -38,7 +42,10 @@ function app() {
   const router = express.Router();
   registerUserSocketTicketRoutes(router, {
     authenticateJWT: authenticate,
-    authManager: { issueSocketTicket } as unknown as AuthManager,
+    authManager: {
+      issueSocketTicket,
+      issueApiKeySocketTicket,
+    } as unknown as AuthManager,
   });
   const server = express();
   server.use(cookieParser());
@@ -50,6 +57,7 @@ beforeEach(() => {
   state.sessionId = "s1";
   state.apiKeyId = undefined;
   issueSocketTicket.mockClear();
+  issueApiKeySocketTicket.mockClear();
 });
 
 describe("POST /users/ws-ticket", () => {
@@ -96,5 +104,25 @@ describe("POST /users/ws-ticket", () => {
 
     expect(res.status).toBe(401);
     expect(issueSocketTicket).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /users/ws-ticket/api-key", () => {
+  it("gives an API key a ticket as its user", async () => {
+    state.sessionId = undefined;
+    state.apiKeyId = "key-1";
+
+    const res = await request(app()).post("/users/ws-ticket/api-key");
+
+    expect(res.status).toBe(200);
+    expect(res.body.ticket).toBe("key-ticket:u1:key-1");
+    expect(res.headers["cache-control"]).toBe("no-store");
+  });
+
+  it("refuses a login session, which has its own ticket", async () => {
+    const res = await request(app()).post("/users/ws-ticket/api-key");
+
+    expect(res.status).toBe(401);
+    expect(issueApiKeySocketTicket).not.toHaveBeenCalled();
   });
 });

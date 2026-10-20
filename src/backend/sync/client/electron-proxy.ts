@@ -14,7 +14,11 @@ export async function applyElectronProxyConfig(
   link:
     | (Pick<
         SyncLink,
-        "serverUrl" | "customHeaders" | "basicAuth" | "allowInvalidCertificate"
+        | "serverUrl"
+        | "customHeaders"
+        | "basicAuth"
+        | "allowInvalidCertificate"
+        | "clientCert"
       > & { sessionToken?: string | null; status?: string })
     | null,
 ): Promise<void> {
@@ -30,6 +34,7 @@ export async function applyElectronProxyConfig(
           headers: link.customHeaders ?? [],
           basicAuth: link.basicAuth ?? null,
           allowInvalidCertificate: !!link.allowInvalidCertificate,
+          clientCert: link.clientCert ?? null,
         }
       : null,
   );

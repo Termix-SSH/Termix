@@ -5,7 +5,12 @@ import { fileURLToPath } from "node:url";
 import * as esbuild from "esbuild";
 import { BACKEND_EXTERNALS, FRONTEND_EXTERNALS } from "../lib/externals.mjs";
 import { staticUrlImports } from "../lib/static-url-imports.mjs";
-import { readManifest, resolveEntry, copyDir } from "../lib/plugin-dir.mjs";
+import {
+  readManifest,
+  resolveEntry,
+  copyDir,
+  isThemeOnly,
+} from "../lib/plugin-dir.mjs";
 import { openapi } from "./openapi.mjs";
 import { splitByCoreClasses } from "../lib/css-classes.mjs";
 
@@ -232,32 +237,41 @@ export async function build({ cwd }) {
   fs.mkdirSync(outDir, { recursive: true });
 
   const backendEntry = resolveEntry(cwd, BACKEND_ENTRIES);
-  if (!backendEntry) {
+  if (!backendEntry && !isThemeOnly(manifest)) {
     throw new Error(
       `${pluginId}: no backend entry (looked for ${BACKEND_ENTRIES.join(", ")})`,
     );
   }
 
-  await esbuild.build({
-    entryPoints: [backendEntry],
-    outfile: path.join(outDir, "backend.js"),
-    bundle: true,
-    format: "esm",
-    platform: "node",
-    target: "node22",
-    sourcemap: true,
-    logLevel: "warning",
-    // A native dependency's compiled .node binary is resolved by the
-    // package's own relative paths, which break once esbuild inlines its JS
-    // elsewhere. Declaring it in nativeDependencies keeps it a real
-    // node_modules import instead, resolved at runtime like a host-provided
-    // package.
-    external: [...BACKEND_EXTERNALS, ...(manifest.nativeDependencies ?? [])],
-    loader: BINARY_LOADERS,
-    // Bundled CJS deps still call require() for Node builtins at runtime.
-    // ESM has no ambient require, so give esbuild's require shim a real one.
-    banner: { js: REQUIRE_BANNER },
-  });
+  if (backendEntry) {
+    await esbuild.build({
+      entryPoints: [backendEntry],
+      outfile: path.join(outDir, "backend.js"),
+      bundle: true,
+      format: "esm",
+      platform: "node",
+      target: "node22",
+      sourcemap: true,
+      logLevel: "warning",
+      // A native dependency's compiled .node binary is resolved by the
+      // package's own relative paths, which break once esbuild inlines its JS
+      // elsewhere. Declaring it in nativeDependencies keeps it a real
+      // node_modules import instead, resolved at runtime like a host-provided
+      // package.
+      external: [...BACKEND_EXTERNALS, ...(manifest.nativeDependencies ?? [])],
+      loader: BINARY_LOADERS,
+      // Bundled CJS deps still call require() for Node builtins at runtime.
+      // ESM has no ambient require, so give esbuild's require shim a real one.
+      banner: { js: REQUIRE_BANNER },
+    });
+  } else {
+    // Core loads every plugin through a backend entry, so a theme only
+    // plugin gets an empty one.
+    fs.writeFileSync(
+      path.join(outDir, "backend.js"),
+      "export function activate() {}\n",
+    );
+  }
 
   for (const worker of readWorkerEntries(cwd, pluginId)) {
     await esbuild.build({

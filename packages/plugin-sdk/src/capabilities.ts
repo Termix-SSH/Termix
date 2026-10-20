@@ -47,20 +47,30 @@ export const CAPABILITY_CATALOG: readonly CapabilityInfo[] = [
   entry("users:impersonate", "high"),
   entry("db:core-refs", "high"),
   entry("auth:provide", "high"),
+  entry("auth:policy", "high"),
+  entry("sync:provide", "high"),
+  entry("ssh:transport", "high"),
   entry("device:serial", "high"),
   entry("notify:hub", "high"),
+  entry("ui:layout", "high"),
 
   entry("hosts:write", "medium"),
+  entry("hosts:export", "high"),
   entry("credentials:use", "medium"),
   entry("credentials:write", "medium"),
   entry("network:outbound", "medium"),
   entry("network:serve", "medium"),
   entry("network:broadcast", "medium"),
+  entry("network:probe", "medium"),
+  entry("hosts:status-provide", "medium"),
+  entry("hosts:activity-provide", "medium"),
+  entry("hosts:lock", "medium"),
   entry("users:read", "medium"),
   entry("events:core", "medium"),
   entry("notify:send", "medium"),
   entry("audit:read", "medium"),
   entry("desktop:window", "medium"),
+  entry("desktop:local", "high"),
 
   entry("hosts:read", "low"),
   entry("db:own", "low"),
@@ -70,6 +80,7 @@ export const CAPABILITY_CATALOG: readonly CapabilityInfo[] = [
   entry("settings:read-core", "low"),
   entry("plugins:read", "low"),
   entry("ui:surface", "low"),
+  entry("ui:theme", "low"),
 ] as const;
 
 export const CAPABILITY_IDS: readonly string[] = CAPABILITY_CATALOG.map(

@@ -75,3 +75,55 @@ describe("toHostRecord", () => {
     expect(loose).not.toHaveProperty("enableDocker");
   });
 });
+
+describe("useTheme", () => {
+  it("reports the mode of the shown theme, plugin themes included", async () => {
+    const { ThemeProvider, useTheme: useAppTheme } =
+      await import("@/components/theme-provider");
+    const { setPluginThemes, resetPluginThemes } =
+      await import("@/look/theme-registry");
+    const { createElement } = await import("react");
+    let setTheme: ((id: string) => void) | null = null;
+    const { result } = renderHook(
+      () => {
+        setTheme = useAppTheme().setTheme;
+        return pluginHostBridge.useTheme();
+      },
+      {
+        wrapper: ({ children }: { children: React.ReactNode }) =>
+          createElement(ThemeProvider, {
+            storageKey: "bridge-theme",
+            children,
+          }),
+      },
+    );
+    expect(result.current.theme).toBe("dark");
+    act(() => setTheme!("light"));
+    expect(result.current.theme).toBe("light");
+    act(() =>
+      setPluginThemes([
+        {
+          id: "paper",
+          label: "Paper",
+          mode: "light",
+          swatch: { background: "#fff", panel: "#eee", text: "#111" },
+          pluginId: "x",
+        },
+      ]),
+    );
+    act(() => setTheme!("paper"));
+    expect(result.current.theme).toBe("light");
+    // Gone themes follow the OS once the plugin list is known.
+    act(() => setTheme!("dracula"));
+    expect(["light", "dark"]).toContain(result.current.theme);
+    resetPluginThemes();
+    localStorage.removeItem("bridge-theme");
+  });
+});
+
+describe("useShell", () => {
+  it("is null outside the signed-in shell", () => {
+    const { result } = renderHook(() => pluginHostBridge.useShell());
+    expect(result.current).toBeNull();
+  });
+});

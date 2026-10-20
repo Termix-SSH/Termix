@@ -26,6 +26,8 @@ vi.mock("../../../utils/audit-logger.js", () => ({
 vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentSettingsRepository: () => ({
     get: async (key: string) => state.settings[key] ?? null,
+    getBoolean: async (key: string, fallback: boolean) =>
+      key in state.settings ? state.settings[key] === "true" : fallback,
     set: async (key: string, value: string) => {
       state.settings[key] = value;
     },
@@ -39,6 +41,12 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   }),
 }));
 
+vi.mock("../../../tls/tls-service.js", () => ({
+  getTlsConfig: () => ({ enabled: true, port: 8443 }),
+}));
+
+const { resetHttpsPolicyForTests } =
+  await import("../../../tls/https-policy.js");
 const { registerUserSettingsRoutes } =
   await import("../../../database/routes/user-settings-routes.js");
 
@@ -59,6 +67,7 @@ function app() {
 beforeEach(() => {
   state.settings = {};
   state.admin = true;
+  resetHttpsPolicyForTests();
 });
 
 describe("/users/host-defaults", () => {
@@ -75,5 +84,37 @@ describe("/users/host-defaults", () => {
       .send({ useSocks5: false });
     expect(write.status).toBe(404);
     expect(JSON.parse(state.settings.host_defaults).useSocks5).toBe(true);
+  });
+});
+
+describe("/users/https-settings", () => {
+  it("is off by default and saves a change", async () => {
+    const read = await request(app()).get("/users/https-settings");
+    expect(read.body).toEqual({ forceHttps: false, tlsEnabled: true });
+
+    const write = await request(app())
+      .patch("/users/https-settings")
+      .send({ forceHttps: true });
+    expect(write.status).toBe(200);
+    expect(state.settings.force_https).toBe("true");
+    const after = await request(app()).get("/users/https-settings");
+    expect(after.body.forceHttps).toBe(true);
+  });
+
+  it("is admin only and checks the value", async () => {
+    const bad = await request(app())
+      .patch("/users/https-settings")
+      .send({ forceHttps: "yes" });
+    expect(bad.status).toBe(400);
+
+    state.admin = false;
+    expect((await request(app()).get("/users/https-settings")).status).toBe(
+      403,
+    );
+    const write = await request(app())
+      .patch("/users/https-settings")
+      .send({ forceHttps: true });
+    expect(write.status).toBe(403);
+    expect(state.settings.force_https).toBeUndefined();
   });
 });

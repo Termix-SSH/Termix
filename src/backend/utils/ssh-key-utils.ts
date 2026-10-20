@@ -245,10 +245,30 @@ function getUnsupportedPrivateKeyError(privateKeyData: string): string {
   return "Unsupported private key format. Use an OpenSSH, PEM, or PuTTY PPK v2 RSA/DSA private key.";
 }
 
+const SECURITY_KEY_ERROR =
+  "This is a security key (FIDO2) key file. It only holds a handle, so the key itself must sign on your device. Load it with ssh-add and use SSH agent authentication in the desktop app.";
+
+/** An OpenSSH private key file for a FIDO2 security key (sk-ssh-ed25519, sk-ecdsa). */
+export function isSecurityKeyFile(privateKeyData: string): boolean {
+  const match = privateKeyData.match(
+    /-----BEGIN OPENSSH PRIVATE KEY-----([\s\S]*?)-----END OPENSSH PRIVATE KEY-----/,
+  );
+  if (!match) return false;
+  try {
+    const body = Buffer.from(match[1].replace(/\s+/g, ""), "base64");
+    return /sk-(?:ssh-ed25519|ecdsa-sha2-nistp256)@openssh\.com/.test(
+      body.toString("latin1"),
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function preparePrivateKeyForSSH2(
   privateKeyData: string,
   passphrase?: string,
 ): Buffer {
+  if (isSecurityKeyFile(privateKeyData)) throw new Error(SECURITY_KEY_ERROR);
   let cleanKey = normalizePrivateKeyText(privateKeyData);
   if (
     /^-----BEGIN (?:ENCRYPTED )?PRIVATE KEY-----/.test(cleanKey) &&

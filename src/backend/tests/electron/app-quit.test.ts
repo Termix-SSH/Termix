@@ -8,7 +8,7 @@ const main = fs.readFileSync(
   "utf8",
 );
 const shell = fs.readFileSync(
-  new URL("../../../ui/AppShell.tsx", import.meta.url),
+  new URL("../../../ui/shell/controller/use-tabs.ts", import.meta.url),
   "utf8",
 );
 

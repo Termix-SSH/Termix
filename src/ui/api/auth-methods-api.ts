@@ -46,6 +46,16 @@ export async function getLoginMethods(): Promise<PublicLoginMethod[]> {
   }
 }
 
+/** False when the login policy turned remember me off. Public. */
+export async function getRememberDeviceAllowed(): Promise<boolean> {
+  try {
+    const response = await authApi.get("/users/auth/methods");
+    return response.data?.rememberDevice !== false;
+  } catch {
+    return true;
+  }
+}
+
 export async function submitLoginMethod(
   methodId: string,
   body: Record<string, unknown>,

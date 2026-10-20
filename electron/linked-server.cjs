@@ -34,6 +34,8 @@ function setLinkedServer(config) {
     basicAuth:
       config.basicAuth && config.basicAuth.username ? config.basicAuth : null,
     allowInvalidCertificate: !!config.allowInvalidCertificate,
+    clientCert:
+      config.clientCert && config.clientCert.pfx ? config.clientCert : null,
   };
 }
 
@@ -43,6 +45,16 @@ function getLinkedServer() {
 
 function isLinkedOrigin(url) {
   return !!linked && getOrigin(url) === linked.origin;
+}
+
+// The PFX of the link's client certificate, for TLS this process makes itself
+// to the linked origin. Null for any other origin.
+function clientCertOptionsFor(url) {
+  if (!isLinkedOrigin(url) || !linked.clientCert) return {};
+  return {
+    pfx: Buffer.from(linked.clientCert.pfx, "base64"),
+    passphrase: linked.clientCert.passphrase || "",
+  };
 }
 
 function basicAuthValue(basicAuth) {
@@ -99,6 +111,7 @@ module.exports = {
   setLinkedServer,
   getLinkedServer,
   isLinkedOrigin,
+  clientCertOptionsFor,
   applyLinkHeaders,
   linkedRequestHeaders,
   answerLogin,

@@ -512,6 +512,27 @@
       "when": 1791935282340,
       "tag": "0072_unique_username",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1792357128746,
+      "tag": "0073_user_look_preferences",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1792374488837,
+      "tag": "0074_bouncy_sersi",
+      "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1792430770990,
+      "tag": "0075_session_policy",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,7 @@ import { readStatusColorScheme } from "@/hooks/use-status-color-scheme";
 import { enabledHostProtocols } from "@/sidebar/host-protocols";
 import { useHostActions } from "@/sidebar/host-contributions";
 import { tabTypeForActivity, useTabTypes } from "@/shell/tab-registry";
+import { useCompanionDefs } from "@/shell/companions";
 import { getExtension, useExtensions } from "./extension-registry";
 import { useTranslation as useI18nTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -48,6 +49,8 @@ import { invokeAction } from "@/shell/action-registry";
 import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
 import { useActionSlot } from "@/hooks/use-action-slot";
 import { usePluginComponent } from "./component-registry";
+import { themeMode, useThemes } from "@/look/theme-registry";
+import { usePluginShell } from "@/shell/controller/plugin-shell";
 import {
   getLiveHostStatus,
   useOptionalHostStatusEntry,
@@ -337,15 +340,13 @@ export const pluginHostBridge: PluginHostBridge = {
 
   useTheme() {
     const { theme } = useTheme();
-    if (theme === "light") return { theme: "light" };
-    if ((theme as string) === "system" && typeof window !== "undefined") {
-      return {
-        theme: window.matchMedia?.("(prefers-color-scheme: light)").matches
-          ? "light"
-          : "dark",
-      };
-    }
-    return { theme: "dark" };
+    // Re-render when plugin themes arrive, since they carry their mode.
+    useThemes();
+    return { theme: themeMode(theme) };
+  },
+
+  useShell() {
+    return usePluginShell(usePluginScope());
   },
 
   toast: {
@@ -400,6 +401,17 @@ export const pluginHostBridge: PluginHostBridge = {
   },
 
   useHostActions: () => useHostActions() as unknown as HostActionContribution[],
+
+  useCompanions: (tabType) => {
+    const defs = useCompanionDefs();
+    return defs
+      .filter((def) => !def.tabTypes?.length || def.tabTypes.includes(tabType))
+      .map((def) => ({
+        id: def.id,
+        titleKey: def.titleKey ?? def.id,
+        icon: def.icon as never,
+      }));
+  },
 
   useActivityTypes: () => {
     const defs = useTabTypes();

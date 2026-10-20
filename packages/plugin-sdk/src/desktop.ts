@@ -3,8 +3,6 @@
  * only inside the Termix desktop app; check isElectron before calling it.
  */
 
-import type { PluginSshPromptRequest } from "./backend.js";
-
 export interface ServerConfig {
   serverUrl?: string;
   allowInvalidCertificate?: boolean;
@@ -33,31 +31,21 @@ export interface DialogResult {
   [key: string]: unknown;
 }
 
-export interface LocalDirectoryResult {
-  success: boolean;
-  path: string;
-  parent?: string;
-  entries: LocalFileEntry[];
-  error?: string;
-}
-
-export interface LocalCollectedFile {
-  path: string;
-  name: string;
-  relativePath: string;
-  size: number;
-  created?: string;
-  modified: string;
-}
-
-export type LocalPathMutationResult =
-  | ({ success: true } & Partial<LocalFileEntry>)
-  | { success: false; error?: string };
-
 export interface ElectronAPI {
   getAppVersion: () => Promise<string>;
   setZoomFactor?: (factor: number) => void;
   getPlatform: () => Promise<string>;
+  /** Whether the app-drawn title bar shows in this window. */
+  getTitleBarVisible?: () => Promise<boolean>;
+  /** Calls back when the title bar shows or hides; returns an unsubscribe. */
+  onTitleBarVisibleChange?: (
+    callback: (visible: boolean) => void,
+  ) => () => void;
+  /** Keeps the window controls the system draws in the colors of the theme. */
+  setTitleBarOverlay?: (colors: {
+    color?: string;
+    symbolColor?: string;
+  }) => Promise<void>;
   getSetting?: (key: string) => Promise<string | null | undefined>;
   setSetting?: (key: string, value: string) => Promise<void>;
 
@@ -67,60 +55,6 @@ export interface ElectronAPI {
     serverUrl: string,
     allowInvalidCertificate?: boolean,
   ) => Promise<ConnectionTestResult>;
-  answerC2SAuth: (id: string, answer: string | null) => Promise<boolean>;
-  onC2SAuthPrompt: (
-    callback: (prompt: {
-      id: string;
-      closed?: boolean;
-      tunnelName?: string;
-      request?: PluginSshPromptRequest;
-    }) => void,
-  ) => () => void;
-  getC2STunnelConfig: () => Promise<unknown[]>;
-  saveC2STunnelConfig: (
-    config: unknown[],
-  ) => Promise<{ success: boolean; error?: string }>;
-  checkLocalPortAvailable: (
-    host: string,
-    port: number,
-  ) => Promise<{ available: boolean; error?: string }>;
-  getC2STunnelPresetDefaultName: () => Promise<string>;
-  startC2STunnel: (
-    tunnel: unknown,
-    index: number,
-    authToken?: string,
-  ) => Promise<{
-    success: boolean;
-    tunnelName?: string;
-    error?: string;
-    code?: string;
-  }>;
-  testC2STunnel: (
-    tunnel: unknown,
-    index: number,
-    authToken?: string,
-  ) => Promise<{
-    success: boolean;
-    message?: string;
-    error?: string;
-    code?: string;
-  }>;
-  stopC2STunnel: (
-    tunnelName: string,
-  ) => Promise<{ success: boolean; error?: string }>;
-  getC2STunnelStatuses: () => Promise<Record<string, unknown>>;
-  onC2STunnelStatuses?: (
-    callback: (statuses: Record<string, unknown>) => void,
-  ) => () => void;
-  startC2SAutoStartTunnels: () => Promise<{
-    success: boolean;
-    started: number;
-    errors: string[];
-  }>;
-  /** Where the linked server relays client tunnel streams, a /plugin-ws/ path. */
-  setC2SRelayPath?: (
-    relayPath: string,
-  ) => Promise<{ success: boolean; error?: string }>;
   onCloseActiveTab?: (callback: () => void) => () => void;
   clearSessionCookies: () => Promise<void>;
   getSessionCookie: (
@@ -136,62 +70,6 @@ export interface ElectronAPI {
 
   showSaveDialog: (options: DialogOptions) => Promise<DialogResult>;
   showOpenDialog: (options: DialogOptions) => Promise<DialogResult>;
-  getLocalHomeDirectory?: () => Promise<string>;
-  listLocalDirectory?: (path?: string) => Promise<LocalDirectoryResult>;
-  statLocalPaths?: (
-    paths: string[],
-  ) => Promise<
-    Array<
-      | (LocalFileEntry & { success: true })
-      | { success: false; path: string; error?: string }
-    >
-  >;
-  collectLocalFiles?: (paths: string[]) => Promise<{
-    success: boolean;
-    files: LocalCollectedFile[];
-    truncated?: boolean;
-    error?: string;
-  }>;
-  createLocalFolder?: (
-    parentPath: string,
-    folderName: string,
-  ) => Promise<LocalPathMutationResult>;
-  renameLocalPath?: (
-    path: string,
-    newName: string,
-  ) => Promise<LocalPathMutationResult>;
-  trashLocalPath?: (path: string) => Promise<LocalPathMutationResult>;
-  chmodLocalPath?: (
-    path: string,
-    permissions: string,
-  ) => Promise<LocalPathMutationResult>;
-
-  openExternalEditor: (fileData: {
-    fileName: string;
-    content: string;
-    encoding?: "utf8" | "base64";
-    editorPath?: string | null;
-  }) => Promise<{
-    success: boolean;
-    editId?: string;
-    path?: string;
-    error?: string;
-  }>;
-
-  closeExternalEditor: (editId: string) => Promise<{
-    success: boolean;
-    error?: string;
-  }>;
-
-  onExternalEditorSaved?: (
-    callback: (payload: {
-      editId: string;
-      content: string;
-      encoding: "utf8";
-      path: string;
-    }) => void,
-  ) => () => void;
-
   onUpdateAvailable: (callback: () => void) => void;
   onUpdateDownloaded: (callback: () => void) => void;
 
@@ -238,159 +116,6 @@ export interface ElectronAPI {
     success: boolean;
     error?: string;
   }>;
-
-  startLocalTerminal(dimensions: {
-    cols: number;
-    rows: number;
-    shell?: "default" | "wsl";
-  }): Promise<{ sessionId: string; shell: string }>;
-  readyLocalTerminal(sessionId: string): Promise<boolean>;
-  writeLocalTerminal(sessionId: string, data: string): Promise<boolean>;
-  resizeLocalTerminal(
-    sessionId: string,
-    cols: number,
-    rows: number,
-  ): Promise<boolean>;
-  closeLocalTerminal(sessionId: string): Promise<boolean>;
-  onLocalTerminalData(
-    sessionId: string,
-    callback: (data: string) => void,
-  ): () => void;
-  onLocalTerminalExit(
-    sessionId: string,
-    callback: (exitCode: number) => void,
-  ): () => void;
-
-  /** Local disk browsing for the dual-pane file manager (desktop only). */
-  localFs?: {
-    home: () => Promise<LocalFsResult<LocalFsHomeInfo>>;
-    list: (dirPath: string) => Promise<LocalFsResult<LocalDirectoryListing>>;
-    mkdir: (
-      parentPath: string,
-      name: string,
-    ) => Promise<LocalFsResult<{ path: string }>>;
-    createFile: (
-      parentPath: string,
-      name: string,
-    ) => Promise<LocalFsResult<{ path: string }>>;
-    rename: (
-      oldPath: string,
-      newName: string,
-    ) => Promise<LocalFsResult<{ path: string }>>;
-    trash: (paths: string[]) => Promise<LocalFsResult<LocalTrashResult>>;
-    ensureDir: (
-      dirPath: string,
-      rootPath?: string,
-    ) => Promise<LocalFsResult<{ path: string }>>;
-    exists: (paths: string[]) => Promise<LocalFsResult<{ existing: string[] }>>;
-    walk: (paths: string[]) => Promise<LocalFsResult<LocalWalkResult>>;
-    reveal: (targetPath: string) => Promise<LocalFsResult<unknown>>;
-    open: (targetPath: string) => Promise<LocalFsResult<unknown>>;
-  };
-
-  /** Streamed local<->remote transfers driven by the main process. */
-  localTransfer?: {
-    /** The /plugin-api/<id> path that serves the streaming routes. */
-    setApiPath?: (apiPath: string) => Promise<LocalFsResult<object>>;
-    upload: (
-      options: LocalUploadRequest,
-    ) => Promise<LocalFsResult<{ bytes: number }>>;
-    download: (
-      options: LocalDownloadRequest,
-    ) => Promise<LocalFsResult<{ path: string }>>;
-    cancel: (
-      transferId: string,
-    ) => Promise<LocalFsResult<{ cancelled: boolean }>>;
-    onProgress: (
-      callback: (payload: LocalTransferProgress) => void,
-    ) => () => void;
-  };
-}
-
-export type LocalFsResult<T> =
-  ({ success: true } & T) | { success: false; error: string; code?: string };
-
-export interface LocalFsHomeInfo {
-  home: string;
-  separator: string;
-  platform: string;
-}
-
-export interface LocalFileEntry {
-  name: string;
-  path: string;
-  type: "file" | "directory" | "link" | "other";
-  created?: string;
-  modified?: string;
-  permissions?: string;
-  owner?: string;
-  group?: string;
-  size: number;
-  modifiedTimestamp?: number;
-  linkTarget?: string;
-  hidden: boolean;
-}
-
-export interface LocalDirectoryListing {
-  path: string;
-  parent: string | null;
-  entries: LocalFileEntry[];
-}
-
-export interface LocalTrashResult {
-  trashed: number;
-  failed: Array<{ path: string; error: string }>;
-}
-
-export interface LocalWalkFile {
-  localPath: string;
-  /** Path relative to the drop root; "/"-separated and includes the root's own name. */
-  relativePath: string;
-  size: number;
-}
-
-export interface LocalWalkResult {
-  files: LocalWalkFile[];
-  emptyDirs: string[];
-  totalBytes: number;
-}
-
-/**
- * Which Termix backend a transfer talks to. The main process resolves the
- * actual URL and credentials for the origin; the renderer never supplies them.
- */
-export type LocalTransferOrigin = "local" | "remote";
-
-export interface LocalUploadRequest {
-  transferId: string;
-  origin: LocalTransferOrigin;
-  fields: Record<string, string>;
-  localPath: string;
-  fileName: string;
-  deviceId?: string;
-  /** The renderer's token for the embedded backend (origin "local"); sent as a Bearer header. */
-  authToken?: string;
-}
-
-export interface LocalDownloadRequest {
-  transferId: string;
-  origin: LocalTransferOrigin;
-  body: Record<string, unknown>;
-  destPath: string;
-  /** Selected download folder; destPath must resolve strictly inside it (code EINVAL otherwise). */
-  rootPath: string;
-  expectedSize?: number;
-  /** Replace an existing file at destPath; otherwise the transfer is refused with code EEXIST. */
-  overwrite?: boolean;
-  deviceId?: string;
-  /** The renderer's token for the embedded backend (origin "local"); sent as a Bearer header. */
-  authToken?: string;
-}
-
-export interface LocalTransferProgress {
-  transferId: string;
-  transferred: number;
-  total?: number;
 }
 
 declare global {

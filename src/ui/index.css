@@ -136,288 +136,6 @@
   --terminal-bg: #0c0d0b;
 }
 
-/* ── Dracula ────────────────────────────────────────────────── */
-.dracula {
-  --background: #282a36;
-  --foreground: #f8f8f2;
-  --card: #2d303d;
-  --card-foreground: #f8f8f2;
-  --popover: #2d303d;
-  --popover-foreground: #f8f8f2;
-  --primary: #8be9fd;
-  --primary-foreground: #282a36;
-  --secondary: #50536b;
-  --secondary-foreground: #f8f8f2;
-  --surface: #2d303d;
-  --surface-dim: #21222c;
-  --muted: #50536b;
-  --muted-foreground: #a8b3d9;
-  --accent: #5a5e7a;
-  --accent-foreground: #f8f8f2;
-  --destructive: #ff5555;
-  --border: rgba(168, 179, 217, 0.18);
-  --input: rgba(168, 179, 217, 0.14);
-  --ring: #8be9fd;
-  --chart-1: #ff79c6;
-  --chart-2: #8be9fd;
-  --chart-3: #50fa7b;
-  --chart-4: #ffb86c;
-  --chart-5: #bd93f9;
-  --radius: 0.625rem;
-  --sidebar: #21222c;
-  --sidebar-foreground: #f8f8f2;
-  --sidebar-primary: #8be9fd;
-  --sidebar-primary-foreground: #282a36;
-  --sidebar-accent: #5a5e7a;
-  --sidebar-accent-foreground: #f8f8f2;
-  --sidebar-border: rgba(168, 179, 217, 0.18);
-  --sidebar-ring: #8be9fd;
-  --warning: #f1fa8c;
-  --terminal-bg: #282a36;
-}
-
-/* ── Catppuccin Mocha ───────────────────────────────────────── */
-.catppuccin {
-  --background: #1e1e2e;
-  --foreground: #cdd6f4;
-  --card: #202235;
-  --card-foreground: #cdd6f4;
-  --popover: #202235;
-  --popover-foreground: #cdd6f4;
-  --primary: #89b4fa;
-  --primary-foreground: #1e1e2e;
-  --secondary: #3b3d52;
-  --secondary-foreground: #cdd6f4;
-  --surface: #202235;
-  --surface-dim: #181825;
-  --muted: #3b3d52;
-  --muted-foreground: #b8c0e0;
-  --accent: #45475a;
-  --accent-foreground: #cdd6f4;
-  --destructive: #f38ba8;
-  --border: rgba(186, 194, 222, 0.18);
-  --input: rgba(186, 194, 222, 0.14);
-  --ring: #89b4fa;
-  --chart-1: #f38ba8;
-  --chart-2: #89dceb;
-  --chart-3: #a6e3a1;
-  --chart-4: #fab387;
-  --chart-5: #cba6f7;
-  --radius: 0.625rem;
-  --sidebar: #181825;
-  --sidebar-foreground: #cdd6f4;
-  --sidebar-primary: #89b4fa;
-  --sidebar-primary-foreground: #1e1e2e;
-  --sidebar-accent: #45475a;
-  --sidebar-accent-foreground: #cdd6f4;
-  --sidebar-border: rgba(186, 194, 222, 0.18);
-  --sidebar-ring: #89b4fa;
-  --warning: #f9e2af;
-  --terminal-bg: #1e1e2e;
-}
-
-/* ── Nord ───────────────────────────────────────────────────── */
-.nord {
-  --background: #2e3440;
-  --foreground: #eceff4;
-  --card: #353c4a;
-  --card-foreground: #eceff4;
-  --popover: #353c4a;
-  --popover-foreground: #eceff4;
-  --primary: #88c0d0;
-  --primary-foreground: #2e3440;
-  --secondary: #434c5e;
-  --secondary-foreground: #eceff4;
-  --surface: #353c4a;
-  --surface-dim: #2a303b;
-  --muted: #434c5e;
-  --muted-foreground: #b4c0d4;
-  --accent: #4c566a;
-  --accent-foreground: #eceff4;
-  --destructive: #bf616a;
-  --border: rgba(180, 192, 212, 0.18);
-  --input: rgba(180, 192, 212, 0.14);
-  --ring: #88c0d0;
-  --chart-1: #bf616a;
-  --chart-2: #88c0d0;
-  --chart-3: #a3be8c;
-  --chart-4: #ebcb8b;
-  --chart-5: #b48ead;
-  --radius: 0.625rem;
-  --sidebar: #2a303b;
-  --sidebar-foreground: #eceff4;
-  --sidebar-primary: #88c0d0;
-  --sidebar-primary-foreground: #2e3440;
-  --sidebar-accent: #4c566a;
-  --sidebar-accent-foreground: #eceff4;
-  --sidebar-border: rgba(180, 192, 212, 0.18);
-  --sidebar-ring: #88c0d0;
-  --warning: #ebcb8b;
-  --terminal-bg: #2e3440;
-}
-
-/* ── Solarized Dark ─────────────────────────────────────────── */
-.solarized {
-  --background: #002b36;
-  --foreground: #b7c4c4;
-  --card: #073642;
-  --card-foreground: #b7c4c4;
-  --popover: #073642;
-  --popover-foreground: #b7c4c4;
-  --primary: #268bd2;
-  --primary-foreground: #002b36;
-  --secondary: #0b4654;
-  --secondary-foreground: #b7c4c4;
-  --surface: #073642;
-  --surface-dim: #00212b;
-  --muted: #0b4654;
-  --muted-foreground: #9fb3b3;
-  --accent: #105667;
-  --accent-foreground: #d5dddd;
-  --destructive: #dc322f;
-  --border: rgba(159, 179, 179, 0.2);
-  --input: rgba(159, 179, 179, 0.16);
-  --ring: #268bd2;
-  --chart-1: #dc322f;
-  --chart-2: #2aa198;
-  --chart-3: #859900;
-  --chart-4: #b58900;
-  --chart-5: #6c71c4;
-  --radius: 0.625rem;
-  --sidebar: #073642;
-  --sidebar-foreground: #b7c4c4;
-  --sidebar-primary: #268bd2;
-  --sidebar-primary-foreground: #002b36;
-  --sidebar-accent: #105667;
-  --sidebar-accent-foreground: #d5dddd;
-  --sidebar-border: rgba(159, 179, 179, 0.2);
-  --sidebar-ring: #268bd2;
-  --warning: #b58900;
-  --terminal-bg: #002b36;
-}
-
-/* ── Tokyo Night ────────────────────────────────────────────── */
-
-.tokyo-night {
-  --background: #1a1b26;
-  --foreground: #c0caf5;
-  --card: #1f2335;
-  --card-foreground: #c0caf5;
-  --popover: #1f2335;
-  --popover-foreground: #c0caf5;
-  --primary: #7aa2f7;
-  --primary-foreground: #1a1b26;
-  --secondary: #2a2f47;
-  --secondary-foreground: #c0caf5;
-  --surface: #1f2335;
-  --surface-dim: #16161e;
-  --muted: #2a2f47;
-  --muted-foreground: #8b93bd;
-  --accent: #2f3654;
-  --accent-foreground: #c0caf5;
-  --destructive: #f7768e;
-  --border: rgba(139, 147, 189, 0.2);
-  --input: rgba(139, 147, 189, 0.16);
-  --ring: #7aa2f7;
-  --chart-1: #f7768e;
-  --chart-2: #7dcfff;
-  --chart-3: #9ece6a;
-  --chart-4: #e0af68;
-  --chart-5: #bb9af7;
-  --radius: 0.625rem;
-  --sidebar: #16161e;
-  --sidebar-foreground: #c0caf5;
-  --sidebar-primary: #7aa2f7;
-  --sidebar-primary-foreground: #1a1b26;
-  --sidebar-accent: #2f3654;
-  --sidebar-accent-foreground: #c0caf5;
-  --sidebar-border: rgba(139, 147, 189, 0.2);
-  --sidebar-ring: #7aa2f7;
-  --warning: #e0af68;
-  --terminal-bg: #1a1b26;
-}
-
-/* ── One Dark ───────────────────────────────────────────────── */
-.one-dark {
-  --background: #282c34;
-  --foreground: #abb2bf;
-  --card: #2f343d;
-  --card-foreground: #abb2bf;
-  --popover: #2f343d;
-  --popover-foreground: #abb2bf;
-  --primary: #61afef;
-  --primary-foreground: #282c34;
-  --secondary: #3a404b;
-  --secondary-foreground: #abb2bf;
-  --surface: #2f343d;
-  --surface-dim: #21252b;
-  --muted: #3a404b;
-  --muted-foreground: #9aa3b2;
-  --accent: #424957;
-  --accent-foreground: #abb2bf;
-  --destructive: #e06c75;
-  --border: rgba(154, 163, 178, 0.18);
-  --input: rgba(154, 163, 178, 0.14);
-  --ring: #61afef;
-  --chart-1: #e06c75;
-  --chart-2: #56b6c2;
-  --chart-3: #98c379;
-  --chart-4: #e5c07b;
-  --chart-5: #c678dd;
-  --radius: 0.625rem;
-  --sidebar: #21252b;
-  --sidebar-foreground: #abb2bf;
-  --sidebar-primary: #61afef;
-  --sidebar-primary-foreground: #282c34;
-  --sidebar-accent: #424957;
-  --sidebar-accent-foreground: #abb2bf;
-  --sidebar-border: rgba(154, 163, 178, 0.18);
-  --sidebar-ring: #61afef;
-  --warning: #e5c07b;
-  --terminal-bg: #282c34;
-}
-
-/* ── Gruvbox Dark ───────────────────────────────────────────── */
-
-.gruvbox {
-  --background: #282828;
-  --foreground: #ebdbb2;
-  --card: #32302f;
-  --card-foreground: #ebdbb2;
-  --popover: #32302f;
-  --popover-foreground: #ebdbb2;
-  --primary: #fabd2f;
-  --primary-foreground: #282828;
-  --secondary: #45403d;
-  --secondary-foreground: #ebdbb2;
-  --surface: #32302f;
-  --surface-dim: #1d2021;
-  --muted: #45403d;
-  --muted-foreground: #c4b59d;
-  --accent: #504945;
-  --accent-foreground: #ebdbb2;
-  --destructive: #fb4934;
-  --border: rgba(196, 181, 157, 0.18);
-  --input: rgba(196, 181, 157, 0.14);
-  --ring: #fabd2f;
-  --chart-1: #fb4934;
-  --chart-2: #8ec07c;
-  --chart-3: #b8bb26;
-  --chart-4: #fabd2f;
-  --chart-5: #d3869b;
-  --radius: 0.625rem;
-  --sidebar: #1d2021;
-  --sidebar-foreground: #ebdbb2;
-  --sidebar-primary: #fabd2f;
-  --sidebar-primary-foreground: #282828;
-  --sidebar-accent: #504945;
-  --sidebar-accent-foreground: #ebdbb2;
-  --sidebar-border: rgba(196, 181, 157, 0.18);
-  --sidebar-ring: #fabd2f;
-  --warning: #fabd2f;
-  --terminal-bg: #282828;
-}
-
 @layer base {
   * {
     /* Tailwind v4 defaults border-color to currentColor, so any bare "border"
@@ -836,4 +554,29 @@ html.fs-xl {
 ::highlight(settings-search) {
   background-color: color-mix(in oklab, var(--accent-brand) 35%, transparent);
   color: inherit;
+}
+
+/*
+ * The title bar the desktop app draws on top of its window. The window has
+ * no native frame, so this strip is what moves the window around: the whole
+ * bar drags, everything inside it that takes clicks does not.
+ */
+.termix-titlebar {
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.termix-titlebar button,
+.termix-titlebar a,
+.termix-titlebar input,
+.termix-titlebar [role="button"] {
+  -webkit-app-region: no-drag;
+}
+
+/*
+ * Layouts size themselves to the viewport with h-dvh. Under the app-drawn
+ * title bar the usable height is shorter, so trim it while the bar shows.
+ */
+.h-dvh {
+  height: calc(100dvh - var(--termix-titlebar-height, 0px));
 }

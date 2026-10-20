@@ -16,6 +16,7 @@ import { nanoid } from "nanoid";
 import { inArray, isNotNull } from "drizzle-orm";
 import type { ExternalSessionRef } from "../auth/types.js";
 import { listSecondFactors } from "../auth/registry.js";
+import { SECOND_FACTOR_SETUP } from "../auth/policy.js";
 import type { DeviceType } from "./user-agent-parser.js";
 import { getDb } from "../database/db/index.js";
 import { sessions } from "../database/db/schema.js";
@@ -50,6 +51,8 @@ interface JWTPayload {
    * from the token, so a refreshed token stays marked.
    */
   pluginSession?: boolean;
+  /** sessions.restriction, read from the row on verify. */
+  restriction?: string | null;
   dataKeyWrap?: WrappedDataKey;
   iat?: number;
   exp?: number;
@@ -69,6 +72,7 @@ interface AuthenticatedRequest extends Request {
   pendingTOTP?: boolean;
   dataKey?: Buffer;
   actingAdminUserId?: string;
+  sessionRestriction?: string | null;
 }
 
 interface RequestWithHeaders extends Request {
@@ -127,6 +131,28 @@ export function allowsPluginSession(path: string): boolean {
   }
   const plugin = PLUGIN_API_PATH.exec(path)?.[1];
   return !listSecondFactors().some((factor) => factor.pluginId === plugin);
+}
+
+// What a session that must set up a second factor first may call: who am I,
+// sign out, the login and factor routes, plugin bundles, and the plugins that
+// provide a second factor.
+const SETUP_SESSION_ALLOWLIST = [
+  /^\/users\/(me|logout)$/,
+  /^\/users\/auth\//,
+  /^\/user-preferences\/look(\/|$)/,
+  /^\/plugins(\/|$)/,
+  /^\/plugin-assets\//,
+];
+
+/** Whether a session restricted to second factor setup may call this path. */
+export function allowsSetupSession(path: string): boolean {
+  if (SETUP_SESSION_ALLOWLIST.some((pattern) => pattern.test(path))) {
+    return true;
+  }
+  const plugin = PLUGIN_API_PATH.exec(path)?.[1];
+  return (
+    !!plugin && listSecondFactors().some((factor) => factor.pluginId === plugin)
+  );
 }
 
 let pluginAllowsImpersonation: (pluginId: string) => boolean = () => false;
@@ -336,6 +362,11 @@ class AuthManager {
       deviceType?: DeviceType;
       deviceInfo?: string;
       externalSession?: ExternalSessionRef | null;
+      /** Caps the lifetime, from the login policy. */
+      maxAgeSeconds?: number | null;
+      /** Stored on the session, see SECOND_FACTOR_SETUP. */
+      restriction?: string | null;
+      idleTimeoutSeconds?: number | null;
     } = {},
   ): Promise<string> {
     const jwtSecret = await this.systemCrypto.getJWTSecret();
@@ -354,6 +385,12 @@ class AuthManager {
       }
     } else if (!expiresIn) {
       expiresIn = defaultExpiry;
+    }
+    if (
+      options.maxAgeSeconds &&
+      options.maxAgeSeconds * 1000 < this.parseExpiresIn(expiresIn)
+    ) {
+      expiresIn = `${Math.floor(options.maxAgeSeconds)}s`;
     }
 
     const payload: JWTPayload = { userId };
@@ -385,6 +422,8 @@ class AuthManager {
           createdAt,
           expiresAt,
           lastActiveAt: createdAt,
+          restriction: options.restriction ?? null,
+          idleTimeout: options.idleTimeoutSeconds ?? null,
         });
       } catch (error) {
         databaseLogger.error("Failed to create session", error, {
@@ -431,6 +470,24 @@ class AuthManager {
     return jwt.sign(payload, await this.systemCrypto.getJWTSecret(), {
       expiresIn: 60,
     } as jwt.SignOptions);
+  }
+
+  /**
+   * A one minute socket ticket for an API key. The key has no login session,
+   * so a two minute session a plugin could have minted carries the ticket. It
+   * can open plugin sockets and call nothing else.
+   */
+  async issueApiKeySocketTicket(
+    userId: string,
+    keyId: string,
+  ): Promise<string> {
+    const { token } = await this.issuePluginSession(userId, {
+      pluginId: "api-key",
+      purpose: `socket ${keyId.slice(0, 8)}`,
+      ttlSeconds: 120,
+    });
+    const sessionId = (jwt.decode(token) as JWTPayload).sessionId!;
+    return this.issueSocketTicket(userId, sessionId);
   }
 
   /**
@@ -500,6 +557,19 @@ class AuthManager {
           }
           payload.pluginSession =
             sessionRecord.deviceType === PLUGIN_SESSION_DEVICE_TYPE;
+          payload.restriction = sessionRecord.restriction ?? null;
+
+          if (this.idleExpired(sessionRecord)) {
+            databaseLogger.info("Session ended after idle timeout", {
+              operation: "session_idle_timeout",
+              sessionId: payload.sessionId,
+              userId: payload.userId,
+            });
+            await createCurrentSessionRepository()
+              .revoke(payload.sessionId)
+              .catch(() => {});
+            return null;
+          }
 
           await this.migrateDataKeyFromPayload(payload);
         } catch (dbError) {
@@ -529,6 +599,15 @@ class AuthManager {
       });
       return null;
     }
+  }
+
+  private idleExpired(session: {
+    idleTimeout: number | null;
+    lastActiveAt: string;
+  }): boolean {
+    if (!session.idleTimeout) return false;
+    const idleMs = Date.now() - new Date(session.lastActiveAt).getTime();
+    return idleMs > session.idleTimeout * 1000;
   }
 
   async refreshSessionToken(
@@ -921,6 +1000,7 @@ class AuthManager {
       authReq.userId = payload.userId;
       authReq.sessionId = payload.sessionId;
       authReq.pendingTOTP = payload.pendingTOTP;
+      authReq.sessionRestriction = payload.restriction ?? null;
 
       if (authReq.headers[ADMIN_TARGET_USER_HEADER]) {
         const handled = await this.applyAdminImpersonation(
@@ -1022,6 +1102,16 @@ class AuthManager {
     payload: JWTPayload,
   ): boolean {
     const path = (req.originalUrl || req.url || "").split("?")[0];
+    if (
+      payload.restriction === SECOND_FACTOR_SETUP &&
+      !allowsSetupSession(path)
+    ) {
+      res.status(403).json({
+        error: "Set up a second factor before using Termix",
+        code: "SECOND_FACTOR_SETUP_REQUIRED",
+      });
+      return true;
+    }
     if (!payload.pluginSession || allowsPluginSession(path)) return false;
     res.status(403).json({
       error: "A session a plugin issued cannot use this route",

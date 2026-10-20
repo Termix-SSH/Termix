@@ -18,7 +18,11 @@ import path from "node:path";
 import semver from "semver";
 import * as tar from "tar";
 import { pluginLogger } from "../utils/logger.js";
-import { isTermixCompatible, parseManifest } from "./manifest.js";
+import {
+  isTermixCompatible,
+  parseManifest,
+  validateThemeCss,
+} from "./manifest.js";
 import { getLocalVersion } from "../utils/app-version.js";
 import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import {
@@ -85,6 +89,19 @@ export interface LoadedPlugin {
   signedTier?: KeyTier;
 }
 
+/**
+ * A plugin folder that did not load. Kept so the layout repair view can say
+ * why a chosen layout or theme is missing instead of only "not installed".
+ */
+export interface SkippedPlugin {
+  /** Manifest id when it could be read, else the folder or file name. */
+  id: string;
+  version: string | null;
+  layouts: string[];
+  themes: string[];
+  error: string;
+}
+
 export interface PluginLoaderOptions {
   errorThreshold?: number;
   errorWindowMs?: number;
@@ -92,8 +109,70 @@ export interface PluginLoaderOptions {
   onFailed?: (plugin: LoadedPlugin) => void;
 }
 
+/**
+ * Every theme file a manifest declares must sit inside the plugin and hold
+ * only what a theme may hold. Refusing the plugin keeps a bad file from ever
+ * being served.
+ */
+function validatePluginThemes(dir: string, manifest: PluginManifest): void {
+  for (const theme of manifest.contributes?.themes ?? []) {
+    const file = path.join(dir, theme.css);
+    if (!fs.existsSync(file) || !isRealPathInside(dir, file)) {
+      throw new Error(
+        `Plugin ${manifest.id} theme ${theme.id} file ${theme.css} is missing`,
+      );
+    }
+    const errors = validateThemeCss(fs.readFileSync(file, "utf8"), theme.id);
+    if (errors.length > 0) {
+      throw new Error(
+        `Plugin ${manifest.id} theme ${theme.id} is not allowed: ${errors.join("; ")}`,
+      );
+    }
+  }
+}
+
+/** What can still be said about a plugin folder that failed to load. */
+function describeSkipped(
+  dir: string,
+  name: string,
+  isArtifact: boolean,
+  error: unknown,
+): SkippedPlugin {
+  const skipped: SkippedPlugin = {
+    id: isArtifact ? name.replace(/(-\d[^/]*)?\.tmxplug$/, "") : name,
+    version: null,
+    layouts: [],
+    themes: [],
+    error: error instanceof Error ? error.message : String(error),
+  };
+  if (isArtifact) return skipped;
+  try {
+    const raw = JSON.parse(
+      fs.readFileSync(getPluginManifestPath(dir), "utf8"),
+    ) as {
+      id?: unknown;
+      version?: unknown;
+      contributes?: { layouts?: unknown; themes?: unknown };
+    };
+    const ids = (list: unknown) =>
+      Array.isArray(list)
+        ? list
+            .map((entry) => (entry as { id?: unknown })?.id)
+            .filter((id): id is string => typeof id === "string")
+        : [];
+    if (typeof raw.id === "string") skipped.id = raw.id;
+    if (typeof raw.version === "string") skipped.version = raw.version;
+    skipped.layouts = ids(raw.contributes?.layouts);
+    skipped.themes = ids(raw.contributes?.themes);
+  } catch {
+    // An unreadable manifest leaves only the folder name.
+  }
+  return skipped;
+}
+
 export class PluginLoader {
   private readonly plugins = new Map<string, LoadedPlugin>();
+  private skippedPlugins: SkippedPlugin[] = [];
   /** Version of each bundled plugin as shipped, the floor for any update. */
   private readonly bundledVersions = new Map<string, string>();
   /** Activation order, so shutdown can run it backwards. */
@@ -111,6 +190,11 @@ export class PluginLoader {
 
   list(): LoadedPlugin[] {
     return [...this.plugins.values()];
+  }
+
+  /** Plugin folders the last full load skipped, with the reason. */
+  skipped(): SkippedPlugin[] {
+    return [...this.skippedPlugins];
   }
 
   get(pluginId: string): LoadedPlugin | undefined {
@@ -210,6 +294,8 @@ export class PluginLoader {
       );
     }
 
+    validatePluginThemes(dir, manifest);
+
     if (this.plugins.has(manifest.id)) {
       throw new Error(`another plugin already uses the id "${manifest.id}"`);
     }
@@ -258,6 +344,7 @@ export class PluginLoader {
   async loadAll(): Promise<LoadedPlugin[]> {
     this.plugins.clear();
     this.bundledVersions.clear();
+    this.skippedPlugins = [];
     await removeStaleStaging();
     const loaded: LoadedPlugin[] = [];
     // Every bundled folder name, loaded or not: a bundled plugin that fails
@@ -322,6 +409,9 @@ export class PluginLoader {
           }
           loaded.push(plugin);
         } catch (error) {
+          this.skippedPlugins.push(
+            describeSkipped(dir, entry.name, isArtifact, error),
+          );
           pluginLogger.error(
             `Skipping plugin directory ${entry.name} in ${root}`,
             error instanceof Error ? error : new Error(String(error)),
@@ -566,6 +656,15 @@ export class PluginLoader {
 
     if (plugin.state === "active" || plugin.state === "activating") return;
 
+    if (
+      plugin.manifest.runtime === "desktop" &&
+      process.env.ELECTRON_EMBEDDED !== "true"
+    ) {
+      plugin.state = "blocked";
+      plugin.lastError = "only runs in the desktop app";
+      return;
+    }
+
     plugin.state = "activating";
     plugin.lastError = null;
 
@@ -629,8 +728,12 @@ export class PluginLoader {
         bundled:
           plugin.source === "bundled" || plugin.signedTier === "official",
       });
-      // A new table may be where core data is waiting to move.
-      if (applied.length > 0) {
+      // A new table, or a plugin that keeps its state in settings, may be
+      // where core data is waiting to move. Every move is idempotent.
+      if (
+        applied.length > 0 ||
+        plugin.manifest.contributes?.settings?.admin?.length
+      ) {
         const { runPluginDataMoves } =
           await import("../upgrade/plugin-data-moves.js");
         await runPluginDataMoves();

@@ -7,7 +7,9 @@
  * sha256 and signature checks and stays marked unverified. Bundled plugins ship in the
  * image and can still be uninstalled: their files are deleted and the id is
  * recorded in the settings table, so the shipped copy is ignored from then
- * on and a reinstall downloads the plugin like any other.
+ * on and a reinstall downloads the plugin like any other. The one exception
+ * is a default-look plugin (bundled-index.ts): the app is drawn with it, so
+ * it can be disabled or swapped but never uninstalled.
  */
 
 import crypto from "node:crypto";
@@ -15,6 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 import semver from "semver";
 import { pluginLogger } from "../utils/logger.js";
+import { isDefaultLookPlugin } from "./bundled-index.js";
 import {
   activatePlugin,
   deactivatePlugin,
@@ -31,6 +34,7 @@ import {
 } from "./paths.js";
 import {
   OFFICIAL_REGISTRY_ID,
+  canRunRelease,
   downloadRelease,
   fetchRegistryIndex,
   channelReleases,
@@ -39,6 +43,7 @@ import {
   getRegistryStatus,
   isApiCompatible,
   latestOnChannel,
+  neededTermix,
   officialSource,
   parsePluginChannel,
   type PluginChannel,
@@ -254,10 +259,13 @@ export interface RegistryListing {
     videoId?: string;
     features: string[];
     docs?: string;
+    contributes: string[];
     versions: Array<{
       version: string;
       prerelease: boolean;
       compatible: boolean;
+      /** The Termix range this version needs, when this build is too old. */
+      needsTermix: string | null;
       capabilities: string[];
       publishedAt?: string;
       releaseNotesUrl?: string;
@@ -393,7 +401,7 @@ export async function listRegistry(
       const channel = channelOf(record);
       const latest = latestOnChannel(plugin, channel);
       const latestBeta =
-        plugin.prereleases.find((entry) => isApiCompatible(entry.api)) ?? null;
+        plugin.prereleases.find((entry) => canRunRelease(entry)) ?? null;
       const installedVersion =
         live?.manifest.version ?? record?.version ?? null;
       const updateAvailable = Boolean(
@@ -416,10 +424,12 @@ export async function listRegistry(
         videoId: plugin.videoId,
         features: plugin.features,
         docs: plugin.docs,
+        contributes: plugin.contributes,
         versions: channelReleases(plugin, "beta").map((entry) => ({
           version: entry.version,
           prerelease: Boolean(entry.prerelease),
-          compatible: isApiCompatible(entry.api),
+          compatible: canRunRelease(entry),
+          needsTermix: neededTermix(entry),
           capabilities: entry.capabilities,
           publishedAt: entry.publishedAt,
           releaseNotesUrl: entry.releaseNotesUrl,
@@ -899,9 +909,12 @@ async function requireRelease(
       "NOT_IN_REGISTRY",
     );
   }
-  if (!isApiCompatible(found.release.api)) {
+  if (!canRunRelease(found.release)) {
+    const termix = neededTermix(found.release);
     throw new PluginManageError(
-      `${pluginId} ${found.release.version} does not run on this version of Termix`,
+      termix
+        ? `${pluginId} ${found.release.version} needs Termix ${termix}`
+        : `${pluginId} ${found.release.version} does not run on this version of Termix`,
       409,
       "INCOMPATIBLE",
     );
@@ -1154,6 +1167,13 @@ export async function uninstallPluginUnlocked(
     throw new PluginManageError("Plugin not found", 404, "NOT_FOUND");
   }
   const shipped = loader.bundledIds().has(pluginId);
+  if (shipped && isDefaultLookPlugin(pluginId)) {
+    throw new PluginManageError(
+      "The default look cannot be uninstalled",
+      409,
+      "DEFAULT_LOOK",
+    );
+  }
 
   const dependents = dependentChain(pluginId, await enabledIds());
   if (dependents.length > 0) {
@@ -1492,6 +1512,14 @@ function validateUpload(buffer: Buffer): PluginManifest {
       "INCOMPATIBLE",
     );
   }
+  const termix = neededTermix({ engine: manifest.engine });
+  if (termix) {
+    throw new PluginManageError(
+      `${manifest.id} ${manifest.version} needs Termix ${termix}`,
+      409,
+      "INCOMPATIBLE",
+    );
+  }
   return manifest;
 }
 
@@ -1635,40 +1663,93 @@ export function installUpload(
 }
 
 /**
+ * Loads the copy in the bundled folder again. Running dependents stop first
+ * and start again after. `prepare` runs once the plugin is stopped, for work
+ * that needs its files out of use.
+ */
+async function reloadBundledUnlocked(
+  pluginId: string,
+  prepare?: (previous: LoadedPlugin | undefined) => Promise<void>,
+): Promise<{ id: string; version: string; state: string }> {
+  const { loader } = getPluginRuntime();
+  const previous = loader.get(pluginId);
+  if (previous && previous.source !== "bundled" && !prepare) {
+    throw new PluginManageError(
+      `${pluginId} is not loaded from the bundled folder`,
+      409,
+      "NOT_BUNDLED",
+    );
+  }
+  const dependents = previous
+    ? dependentChain(pluginId, await enabledIds()).filter(
+        (id) => loader.get(id)?.state === "active",
+      )
+    : [];
+  for (const id of dependents) await deactivatePlugin(id);
+  await unloadPlugin(pluginId);
+  if (prepare) await prepare(previous);
+
+  const plugin = await loader.loadBundled(pluginId);
+  await registerLoadedPlugins([plugin]);
+
+  let state = "stopped";
+  if ((await enabledIds()).has(pluginId)) {
+    const { missing } = dependencyChain(pluginId);
+    state = missing.length > 0 ? "blocked" : await startAndRecord(pluginId);
+  }
+  for (const id of [...dependents].reverse()) await startAndRecord(id);
+  return { id: pluginId, version: plugin.manifest.version, state };
+}
+
+/**
  * Loads the copy in the bundled folder again after it was rebuilt, for the
- * dev runner. Running dependents stop first and start again after.
+ * dev runner.
  */
 export function reloadBundledPlugin(
   pluginId: string,
 ): Promise<{ id: string; version: string; state: string }> {
+  return serialized(() => reloadBundledUnlocked(pluginId));
+}
+
+/**
+ * Puts a bundled plugin back to the copy that shipped with this install,
+ * dropping any update downloaded over it. The shipped version is pinned so
+ * auto update does not bring a broken release straight back; unpin it in the
+ * Plugins tab to follow updates again.
+ */
+export function restoreBundledPlugin(
+  pluginId: string,
+): Promise<{ id: string; version: string; state: string }> {
   return serialized(async () => {
+    if (!ID_PATTERN.test(pluginId)) {
+      throw new PluginManageError("Invalid plugin id", 400, "INVALID_ID");
+    }
     const { loader } = getPluginRuntime();
-    const previous = loader.get(pluginId);
-    if (previous && previous.source !== "bundled") {
+    if (!loader.bundledIds().has(pluginId) || !isBundledOnDisk(pluginId)) {
       throw new PluginManageError(
-        `${pluginId} is not loaded from the bundled folder`,
+        "This plugin has no bundled copy",
         409,
-        "NOT_BUNDLED",
+        "NO_BUNDLED_COPY",
       );
     }
-    const dependents = previous
-      ? dependentChain(pluginId, await enabledIds()).filter(
-          (id) => loader.get(id)?.state === "active",
-        )
-      : [];
-    for (const id of dependents) await deactivatePlugin(id);
-    await unloadPlugin(pluginId);
-
-    const plugin = await loader.loadBundled(pluginId);
-    await registerLoadedPlugins([plugin]);
-
-    let state = "stopped";
-    if ((await enabledIds()).has(pluginId)) {
-      const { missing } = dependencyChain(pluginId);
-      state = missing.length > 0 ? "blocked" : await startAndRecord(pluginId);
-    }
-    for (const id of [...dependents].reverse()) await startAndRecord(id);
-    return { id: pluginId, version: plugin.manifest.version, state };
+    const { createCurrentPluginRepository } = await repos();
+    const repository = createCurrentPluginRepository();
+    const result = await reloadBundledUnlocked(pluginId, async (previous) => {
+      await removeArtifactFiles(pluginId, previous?.artifact);
+      await fs.promises.rm(path.join(getUnpackedPluginsDir(), pluginId), {
+        recursive: true,
+        force: true,
+      });
+    });
+    await repository.update(pluginId, {
+      autoUpdate: false,
+      pinnedVersion: result.version,
+    });
+    await applyPin(pluginId, result.version);
+    pluginLogger.info(`Restored the bundled copy of ${pluginId}`, {
+      operation: "plugin_restore_bundled",
+    });
+    return result;
   });
 }
 

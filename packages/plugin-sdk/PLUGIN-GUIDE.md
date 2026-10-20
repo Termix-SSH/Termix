@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.11 | Plugin API 1.3.0
+SDK 1.0.19 | Plugin API 1.11.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -164,7 +164,7 @@ Unknown fields are refused at every level, so a typo fails validation. The schem
 | `icon`                                 | A [Lucide](https://lucide.dev/icons/) icon name, like `Hand`.                                                       |
 | `features`                             | Up to 20 short lines shown on the plugin's page.                                                                    |
 | `docs`                                 | An https link to your docs.                                                                                         |
-| `engine.termix`                        | Termix versions you work with, like `>=26.10.0`.                                                                    |
+| `engine.termix`                        | Termix versions you work with, like `>=26.10.0`. Older Termix builds don't list a release they can't run.           |
 | `engine.api`                           | Plugin API range, like `^1.2`. A major bump of the API is breaking.                                                 |
 | `capabilities`                         | What your code may do. See the reference at the end.                                                                |
 | `dependencies`, `optionalDependencies` | Other plugins, `{ "snippets": "^1.0.0" }`. You must keep working without optional ones.                             |
@@ -175,7 +175,7 @@ Unknown fields are refused at every level, so a typo fails validation. The schem
 
 `contributes` holds `tabs`, `panels`, `dashboardCards`, `actions`, `actionSlots`, `permissions`,
 `settings`, `protocols`, `auth`, `syncEntities`, `keybindingActions`, `http`, `guest`, `guestViews`,
-`uiPresets` and `uses`. Frontend `register*` calls need their ids declared here first.
+`uiPresets`, `uses`, `layouts` and `themes`. Frontend `register*` calls need their ids declared here first.
 
 Capabilities and permissions are different things. A capability (`hosts:read`, with a colon) is what your
 code may reach. A permission (`hello.use`, with a dot) is what a user may do.
@@ -202,36 +202,40 @@ Bundled as ESM for Node 22+ into `dist/backend.js`. Backend imports of your own 
 
 ### What ctx has
 
-| Member                 | Capability                       | What it does                                                   |
-| ---------------------- | -------------------------------- | -------------------------------------------------------------- |
-| `pluginId`, `manifest` | none                             | Your id and manifest                                           |
-| `log`                  | none                             | Log lines tagged with your plugin                              |
-| `db`                   | `db:own`                         | Your own tables                                                |
-| `kv`                   | `kv:own`                         | Small key value state                                          |
-| `files.dataDir()`      | `files:own`                      | A folder of your own                                           |
-| `settings`             | none                             | Your settings                                                  |
-| `secrets`              | `secrets:own`                    | Encrypted values per user, `seal`/`unseal` for your own tables |
-| `http`, `ws`           | `network:serve`                  | Routes and sockets                                             |
-| `rbac`                 | none                             | Check the actor's permissions                                  |
-| `hosts`                | `hosts:read`, `hosts:write`      | List, read, create, update and share hosts as the actor        |
-| `ssh`                  | `ssh:connect`, `credentials:use` | Connect to hosts through Termix's SSH pipeline                 |
-| `credentials`          | varies                           | The actor's saved keys, and protocol logins                    |
-| `services`             | per service                      | Call other plugins and offer your own                          |
-| `events`               | `events:core` for core topics    | Emit and listen for events                                     |
-| `notify`               | `notify:send`                    | Send alerts to the Alerts inbox                                |
-| `fetch`                | `network:outbound`               | Outbound HTTP with SSRF protection                             |
-| `process`              | `process:spawn`                  | Run programs on the server                                     |
-| `schedule`             | none                             | Timers that stop on disable and never overlap                  |
-| `audit.record`         | none                             | Write your own audit line                                      |
-| `sync`                 | none                             | Sync your tables to a linked desktop                           |
-| `auth`                 | `auth:provide`                   | Login methods, second factors, SSH auth types                  |
-| `auth.issueUserToken`  | `users:impersonate`              | A short-lived session for calling Termix's API as a user       |
-| `users.getLocale`      | `users:read`                     | A user's UI language                                           |
-| `system`               | `system:tls`                     | The server's HTTPS certificate                                 |
-| `plugins.list()`       | `plugins:read`                   | Which plugins are installed                                    |
-| `asUser(userId, fn)`   | always audited                   | Run background work as a user                                  |
-| `currentActor()`       | none                             | The user the current call runs for                             |
-| `disposables.add(fn)`  | none                             | Extra cleanup on disable                                       |
+| Member                 | Capability                       | What it does                                                    |
+| ---------------------- | -------------------------------- | --------------------------------------------------------------- |
+| `pluginId`, `manifest` | none                             | Your id and manifest                                            |
+| `log`                  | none                             | Log lines tagged with your plugin                               |
+| `db`                   | `db:own`                         | Your own tables                                                 |
+| `kv`                   | `kv:own`                         | Small key value state                                           |
+| `files.dataDir()`      | `files:own`                      | A folder of your own                                            |
+| `settings`             | none                             | Your settings                                                   |
+| `secrets`              | `secrets:own`                    | Encrypted values per user, `seal`/`unseal` for your own tables  |
+| `http`, `ws`           | `network:serve`                  | Routes and sockets                                              |
+| `rbac`                 | none                             | Check the actor's permissions                                   |
+| `hosts`                | `hosts:read`, `hosts:write`      | List, read, create, update and share hosts as the actor         |
+| `ssh`                  | `ssh:connect`, `credentials:use` | Connect to hosts through Termix's SSH pipeline                  |
+| `credentials`          | varies                           | The actor's saved keys, and protocol logins                     |
+| `services`             | per service                      | Call other plugins and offer your own                           |
+| `events`               | `events:core` for core topics    | Emit and listen for events                                      |
+| `notify`               | `notify:send`                    | Send alerts to the Alerts inbox                                 |
+| `fetch`                | `network:outbound`               | Outbound HTTP with SSRF protection                              |
+| `process`              | `process:spawn`                  | Run programs on the server                                      |
+| `schedule`             | none                             | Timers that stop on disable and never overlap                   |
+| `audit.record`         | none                             | Write your own audit line                                       |
+| `sync`                 | none                             | Sync your tables to a linked desktop                            |
+| `auth`                 | `auth:provide`                   | Login methods, second factors, SSH auth types                   |
+| `auth.issueUserToken`  | `users:impersonate`              | A short-lived session for calling Termix's API as a user        |
+| `auth.policy`          | `auth:policy`                    | Login rules: idle timeout, session length, second factors       |
+| `sync.provide`         | `sync:provide`                   | Answers all /sync requests: server sync, linked desktops        |
+| `ssh.transports`       | `ssh:transport`                  | Carries a host's SSH connection over your own stream            |
+| `hosts.folders`        | `hosts:write`                    | Create a folder row with a color and icon, remove it when empty |
+| `users.getLocale`      | `users:read`                     | A user's UI language                                            |
+| `system`               | `system:tls`                     | The server's HTTPS certificate                                  |
+| `plugins.list()`       | `plugins:read`                   | Which plugins are installed                                     |
+| `asUser(userId, fn)`   | always audited                   | Run background work as a user                                   |
+| `currentActor()`       | none                             | The user the current call runs for                              |
+| `disposables.add(fn)`  | none                             | Extra cleanup on disable                                        |
 
 ### The actor
 
@@ -300,6 +304,14 @@ router.post("/notes", async (req, res) => {
 - `ctx.rbac.require("manage")` on a single route, `await ctx.rbac.has("manage")` in code. A full id like
   `hosts.edit` checks a core permission.
 - Host access: `ctx.hosts.checkAccess(hostId, "connect" | "view" | "edit" | "manage")`.
+- Transports: with `ssh:transport`, `ctx.ssh.transports.provide({ claims(hostId), open({ id, ip, port }) })`
+  returns a stream the SSH client uses instead of a direct, proxy or jump host connection. Core also serves
+  `/plugin-ws/core/ssh-relay?hostId=` for callers with connect access, so one Termix can relay to another.
+- Managed hosts: with `hosts:lock`, `ctx.hosts.locks.provide({ isLocked, note, allowManualCreate })` makes
+  the hosts you manage read only for the UI, the API and other plugins (pins and order still work), and
+  `allowManualCreate: () => false` blocks adding hosts by hand. Your own `ctx.hosts` writes still go
+  through. `ctx.hosts.setShares(hostId, grants)` replaces a host's whole grant list, and
+  `ctx.credentials.list()` finds the acting user's credentials by name.
 
 ### Errors
 
@@ -324,6 +336,24 @@ try {
 `ctx.ssh.withConnection(hostId, { pool, purpose }, fn)` borrows a pooled connection for frequent short
 commands. `@termix-ssh/plugin-sdk/host-commands` has helpers to detect the OS and run package manager and
 sudo commands. Hosts from `ctx.hosts` never carry secrets. Pass the host or its id to `ctx.ssh`.
+
+### The desktop app
+
+Set `"runtime": "desktop"` in the manifest for a plugin that only makes sense on a desktop app. It never
+loads on a server, ignores server sync and may declare `desktop:local`. Any plugin can declare
+`desktop:local` and check `ctx.desktop.local.available()` at runtime.
+
+`ctx.desktop.local` works on the desktop app's own backend only:
+
+- `info()`: home folder, platform, user data folder, backend port and the linked server (url and token) or null
+- `fs`: `list`, `mkdir`, `createFile`, `rename`, `ensureDir`, `exists`, `walk`, `trash`, `reveal`, `open`,
+  `openRead` and `openDownload`. Downloads stay inside the folder the user picked, links in it are refused and
+  an existing file is never replaced by accident
+- `pty.spawn()`: a local shell, stopped when the plugin stops
+- `pluginFetch(origin, subPath, init)`: calls this plugin's own routes on the desktop's backend ("local") or the linked server ("remote") as the acting user. Bodies can be streams, so a plugin can move big files without the renderer
+
+Use `ctx.audit.subscribe`, `list` and `exportBatches` (`audit:read`) to read the audit trail. Subscribers
+are called after a line is accepted and never delay the action that wrote it.
 
 ### Events, timers, alerts, services
 
@@ -465,27 +495,42 @@ your plugin's error boundary and Suspense.
 | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | `registerRailItem`                                                                 | A sidebar rail button                                             |
 | `registerTab`, `registerPanel`                                                     | A tab type or sidebar panel (id in `contributes.tabs` / `panels`) |
+| `registerCompanion`, `toggleCompanion`                                             | A panel beside any host tab, bound to its host and handle         |
+| `registerCompanionLayout`                                                          | Per host on/off, side, order and hidden panels for a tab type     |
 | `registerDashboardCard`                                                            | A dashboard card (`contributes.dashboardCards`)                   |
 | `registerHostAction`                                                               | A host button, palette entry or default connect                   |
 | `registerHostEditorSection`                                                        | Your own host editor section (host settings get one for free)     |
 | `registerHostProtocol`                                                             | A connection protocol next to SSH                                 |
 | `registerHostBadge`, `registerHostContextMenuItem`                                 | Badges and menu items on host rows                                |
+| `registerHostStatusIndicator`                                                      | The status dot or stripe on a host row (a layout draws it)        |
+| `registerHostEditorToolbarItem`                                                    | A control in the host editor toolbar (a layout draws it)          |
 | `registerPaletteEntry`, `registerPaletteGroup`                                     | Command palette entries                                           |
 | `registerKeybindingAction`, `registerKeybindingDefault`                            | Bindable actions                                                  |
 | `registerSettingsComponent`                                                        | A component for a `custom` settings field                         |
 | `registerAction`, `invokeAction`                                                   | Actions across plugins                                            |
 | `registerSlotContribution`, `declareActionSlot`                                    | Fill or own a UI slot                                             |
 | `registerComponent`, `registerExtension`                                           | Offer a component by id, add to an extension point                |
-| `registerOnboardingStep`                                                           | A first run setup step                                            |
+| `registerOnboardingStep`                                                           | A first run setup step (`section`, `position`, `replaces`)        |
 | `registerLoginMethod`, `registerSecondFactorUI`, `registerSshAuthEditor`           | Sign in UI                                                        |
+| `registerLayout`                                                                   | A whole-app layout (`contributes.layouts`, API 1.4)               |
 | `api`                                                                              | Axios client for your `/plugin-api/<id>/` routes, auth included   |
 | `fetch(path)`, `wsUrl(path)`                                                       | Raw fetch for streams, socket URL and auth                        |
 | `docs`, `tabs`, `confirm`, `listHosts`, `getHost`, `t`, `hasPermission`, `desktop` | Helpers                                                           |
 | `onSettingsChanged`, `onDispose`                                                   | Hooks                                                             |
 
+Badges, status indicators and toolbar items take `{ id, when(host), component, order? }`; lower `order`
+comes first. An onboarding step sits in a section (`start`, `setup`, `explore`, `security`) or at an exact
+`position` from 1 to 99. `replaces: ["preset"]` lists older step keys the step took over, so people who saw
+those are not shown it again.
+
+Branding: a plugin that owns the app name, tagline and logo provides
+`ctx.registry.provide("<id>.brandingProvider", async () => ({ appName, tagline, logo }))` in its backend.
+Core reads it for `GET /users/branding` (the login page, the browser tab and the sync server name) and falls
+back to "Termix" with no logo when no plugin provides one. `logo` is a PNG data URL or null.
+
 Hooks from `@termix-ssh/plugin-sdk/frontend`: `useTranslation`, `usePermission`, `useSettings`, `useHost`,
 `useHosts`, `usePluginApi`, `useCurrentUser`, `useTheme`, `useToast`, `useDocsUrl`, `useTabs`,
-`useSlotContributions`, `useSshAuthTypes`, `useExtensions`.
+`useSlotContributions`, `useSshAuthTypes`, `useExtensions`, `useShell`.
 
 Shared from Termix and never bundled: `react`, `react-dom`, `i18next`, `react-i18next`, `sonner` and the
 SDK's `frontend` and `ui`. Anything else, like `lucide-react`, is bundled. A host your code gets only carries
@@ -496,12 +541,100 @@ Slots you can fill include `terminal.toolbar`, `terminal.toolbarStatus`, `termin
 `hosts.panel`, `credentials.badges`, `shell.overlay`, `shell.rightEdge` and `tab.menu`. See
 https://docs.termix.site/develop/more-extension-points.
 
+## Layouts and themes
+
+A plugin can replace the whole app layout or add themes (API 1.4). Users pick both in Settings, Appearance;
+admins set the default for everyone.
+
+A layout is declared in `contributes.layouts` (`id`, `label`, optional `description` and `defaultTheme`) and
+needs the `ui:layout` capability, which admins see as high risk because a layout draws every screen. Register
+it in `activate`:
+
+```tsx
+import { useShell, type TermixApp } from "@termix-ssh/plugin-sdk/frontend";
+import {
+  ShellConfirmCapture,
+  SurfaceScope,
+  TabStage,
+} from "@termix-ssh/plugin-sdk/ui";
+
+function MyLayout() {
+  const shell = useShell();
+  if (!shell) return null;
+  return (
+    <div className="flex h-dvh w-screen flex-col bg-background">
+      <header>
+        {/* tabs from shell.tabs.topLevel, shell.palette.open() and so on */}
+      </header>
+      <SurfaceScope kind="tab">
+        <ShellConfirmCapture />
+        <TabStage />
+      </SurfaceScope>
+    </div>
+  );
+}
+
+export function activate(app: TermixApp) {
+  app.registerLayout({
+    id: "my-layout",
+    label: "layout.name",
+    component: MyLayout,
+  });
+}
+```
+
+- `useShell()` is the live shell with nothing drawn: tabs, splits, hosts, the left and right docks, the
+  command palette, the registries as hooks and the user. Core keeps all the state, so switching layouts keeps
+  every session.
+- `TabStage` is where tabs show. Place it anywhere; tabs are never remounted when it moves, so a terminal
+  keeps its connection. Wrap it in `SurfaceScope kind="tab"` with a `ShellConfirmCapture` inside, so
+  close questions and inline views show over the tab area. Overlays and onboarding stay in core.
+- The layout draws the command palette. Core keeps whether it is open (`palette.isOpen`, Ctrl+K calls
+  `palette.open()`) and what is in it (`usePaletteEntries`, `usePaletteGroups`, rail items, hosts).
+- The shell always keeps a home tab with the id and type `dashboard`. `useShell()` leaves it out until some
+  plugin registers a `dashboard` tab type, so a layout without a home screen has no empty tab to draw.
+- Settings, Manage and the host editor belong to Classic Layout. A layout without them should still render
+  `LookSettings` somewhere so people can switch back. `tabs.openSingleton("plugins")` opens core's own
+  Plugins tab in any layout. Switching layouts closes the tabs the old layout's plugin declared.
+- `mobileComponent` is used on phones and narrow windows. The desktop app always gets `component`.
+- Only the chosen layout's plugin is loaded. If it fails to load or crashes twice, Termix shows a repair
+  screen where people can switch, reset, update, turn it off or (for a bundled plugin) restore the copy that
+  shipped. `?safe-layout=1` opens it any time.
+- Termix has no layout of its own. The default is the bundled Classic Layout plugin
+  (https://github.com/Termix-SSH/Plugin-Classic-Layout), which is also a full example. It owns the rail,
+  sidebar, tab bar, docks, Dashboard, Manage, Settings and command palette, registers the `dashboard`,
+  `host-manager` and `settings` tab types, and offers the host list and dashboard as the components
+  `classic-layout.hostTree` and `classic-layout.dashboard` for other plugins to place with `PluginComponent`.
+  It reads the shell with `useShellController()` from `@termix-ssh/plugin-sdk/ui`, which exposes more than
+  `useShell()` and may change with Termix. A third party layout should start from `useShell()`.
+
+A theme is CSS only. Declare it in `contributes.themes` (`id`, `label`, `mode` light or dark, `css` path,
+optional `swatch` colors for the picker) with the `ui:theme` capability. The id becomes a class on `<html>`,
+so the file may only hold rules whose selectors start with `.<id>`, `:root.<id>` or `html.<id>`, optionally
+inside `@media` or `@supports`. `@import`, `url()` to another host and other at-rules are refused by
+`termix-plugin validate` and by the server. Set the same tokens core's themes set (`--background`,
+`--foreground`, `--card`, `--border`, `--muted` and the rest).
+
+A plugin that only holds themes needs no code. Leave out `src/`: `termix-plugin build` writes an empty backend and
+`validate` does not ask for a frontend. Keep the CSS in `themes/` and a test that checks it with
+`validateThemeCss()`. Notes:
+
+- A theme with the id of a built-in (`light` or `dark`) replaces core's basic copy while the plugin runs.
+- The first theme a bundled default-look plugin lists is the default for new installs.
+- Themes show in the picker in the order core lists its own, then the plugin's order.
+- A theme someone saved that no longer exists shows as System. It comes back when the plugin does.
+- Accent color, UI font, font size and density are not part of a theme. Core applies them on top.
+- Bundled Classic Themes (https://github.com/Termix-SSH/Plugin-Classic-Themes) is a full example.
+
 ## Looking native
 
 Build UI from `@termix-ssh/plugin-sdk/ui` so it matches Termix and follows the theme. The full list of
 exports with props is `ui.api.txt` in the Termix repo
 (https://github.com/Termix-SSH/Termix/blob/main/packages/plugin-sdk/ui.api.txt).
 
+- Web pages that break in an iframe: `NativeView` (props `url`, `ignoreCert`, `hidden`, `fallback`) shows the
+  page in a native view in the desktop app. It fills its element, hides while a dialog or menu is open and renders
+  `fallback` in a browser.
 - Square: panels, cards and containers have no rounded corners. Small controls may stay rounded.
 - Flat: borders, not shadows. Use theme tokens like `border-border`, `bg-background`,
   `text-muted-foreground`, `text-destructive`. One accent, `text-accent-brand`. Don't add colors.
@@ -577,6 +710,21 @@ Login methods, second factors and SSH auth types need `auth:provide`, which is h
 closely. Declare ids in `contributes.auth` and register them with `ctx.auth.registerLoginMethod`,
 `registerSecondFactor` or `registerSshAuthProvider`. Connection protocols go in `contributes.protocols`
 and `app.registerHostProtocol`. Read https://docs.termix.site/develop/auth before starting one.
+
+Login rules need `auth:policy`. `ctx.auth.policy.provide({ evaluate, allowRememberDevice })` is asked at
+every login with the user, the method, the device and every second factor (`ctx.auth.listSecondFactors()`
+lists them too). `evaluate` returns `allowRememberDevice`, `maxSessionSeconds`, `idleTimeoutSeconds` and
+`secondFactor` (`"always"` or `"new-device"`). The strictest answer from all plugins wins, and a throw
+refuses the login. A user who must have a second factor but has none gets a session that can only set one
+up, and `/users/me` reports `restriction: "second-factor-setup"`.
+
+Sync is answered by one plugin. `sync:provide` is high risk: `ctx.sync.provide({ handle })` takes over every
+request under `/sync` (an Express style handler, 404 when nothing provides it), and `ctx.sync.host` hands
+over the neutral parts core keeps: the replica store (`replica`), the change feed and push applier
+(`feed`), the linked server list (`links`, one per local user), desktop accounts (`accounts`), sessions
+(`sessions`), host lookups, plugin mirroring and the proxy settings the desktop app needs. A test passes its
+own `syncHost` to `createMockCtx`. An API key can ask `POST /users/ws-ticket/api-key` for a one minute
+ticket that opens plugin sockets as its user, which is how one server opens sessions through another.
 
 ## Testing
 
@@ -742,58 +890,70 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 
 ## SDK entry points
 
-| Import                                                               | What it is                                                            |
-| -------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `@termix-ssh/plugin-sdk/backend`                                     | `PluginContext` and the backend types                                 |
-| `@termix-ssh/plugin-sdk/frontend`                                    | `TermixApp`, `TabProps` and the hooks                                 |
-| `@termix-ssh/plugin-sdk/ui`                                          | The UI kit, served by Termix at runtime                               |
-| `@termix-ssh/plugin-sdk/db`                                          | `defineTable` and column builders                                     |
-| `@termix-ssh/plugin-sdk/manifest`                                    | `PluginManifest` type and manifest checks                             |
-| `@termix-ssh/plugin-sdk/capabilities`                                | The capability catalog                                                |
-| `@termix-ssh/plugin-sdk/settings`                                    | Settings field validation                                             |
-| `@termix-ssh/plugin-sdk/testing`                                     | `createMockCtx`, `createTestDb`, `renderWithApp`, `createFakeContext` |
-| `@termix-ssh/plugin-sdk/vitest-preset`                               | `pluginVitestConfig`                                                  |
-| `@termix-ssh/plugin-sdk/host-commands`                               | OS detection, package manager and sudo helpers over ssh2              |
-| `@termix-ssh/plugin-sdk/ssh-certs`                                   | `applyCertificateAuth()` for certificate based SSH auth               |
-| `@termix-ssh/plugin-sdk/desktop`                                     | The desktop app bridge, typed. Check it exists before use             |
-| `@termix-ssh/plugin-sdk/openapi`                                     | `buildOpenApi()`                                                      |
-| `@termix-ssh/plugin-sdk/changelog`                                   | Changelog parsing and checks                                          |
-| `@termix-ssh/plugin-sdk/docs`                                        | Docs link and env var helpers                                         |
-| `@termix-ssh/plugin-sdk/ddl`, `@termix-ssh/plugin-sdk/table-builder` | Table to SQL and Drizzle mapping. You rarely need these               |
+| Import                                                               | What it is                                                                                     |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `@termix-ssh/plugin-sdk/backend`                                     | `PluginContext` and the backend types                                                          |
+| `@termix-ssh/plugin-sdk/frontend`                                    | `TermixApp`, `TabProps` and the hooks                                                          |
+| `@termix-ssh/plugin-sdk/ui`                                          | The UI kit, served by Termix at runtime                                                        |
+| `@termix-ssh/plugin-sdk/db`                                          | `defineTable` and column builders                                                              |
+| `@termix-ssh/plugin-sdk/manifest`                                    | `PluginManifest` type and manifest checks                                                      |
+| `@termix-ssh/plugin-sdk/capabilities`                                | The capability catalog                                                                         |
+| `@termix-ssh/plugin-sdk/settings`                                    | Settings field validation                                                                      |
+| `@termix-ssh/plugin-sdk/testing`                                     | `createMockCtx`, `createTestDb`, `renderWithApp`, `createFakeContext`                          |
+| `@termix-ssh/plugin-sdk/vitest-preset`                               | `pluginVitestConfig`                                                                           |
+| `@termix-ssh/plugin-sdk/host-commands`                               | OS detection, package manager and sudo helpers over ssh2                                       |
+| `@termix-ssh/plugin-sdk/ssh-certs`                                   | `applyCertificateAuth()` for certificate based SSH auth                                        |
+| `@termix-ssh/plugin-sdk/ssh-keys`                                    | `generateSshKeyPair()`, `detectSshKeyType()`, `publicKeyFromPrivate()`, `validateSshKeyPair()` |
+| `@termix-ssh/plugin-sdk/desktop`                                     | The desktop app bridge, typed. Check it exists before use                                      |
+| `@termix-ssh/plugin-sdk/openapi`                                     | `buildOpenApi()`                                                                               |
+| `@termix-ssh/plugin-sdk/changelog`                                   | Changelog parsing and checks                                                                   |
+| `@termix-ssh/plugin-sdk/docs`                                        | Docs link and env var helpers                                                                  |
+| `@termix-ssh/plugin-sdk/ddl`, `@termix-ssh/plugin-sdk/table-builder` | Table to SQL and Drizzle mapping. You rarely need these                                        |
 
 ## Capabilities
 
-| Capability           | Risk     | What it allows                                          |
-| -------------------- | -------- | ------------------------------------------------------- |
-| `credentials:read`   | critical | Read stored secrets for hosts the user can reach        |
-| `system:tls`         | critical | Replace the HTTPS certificate, answer CA domain checks  |
-| `ssh:connect`        | high     | Run any command on hosts, with the user's access        |
-| `process:spawn`      | high     | Run programs on the Termix server                       |
-| `users:write`        | high     | Add users and change their roles                        |
-| `users:impersonate`  | high     | Act as another user, or get a session for them, audited |
-| `db:core-refs`       | high     | Query core users, roles and hosts tables (read only)    |
-| `auth:provide`       | high     | Add login methods, second factors, SSH auth types       |
-| `device:serial`      | high     | Open serial and USB ports on the server                 |
-| `notify:hub`         | high     | Receive every alert (the alerts hub only)               |
-| `hosts:write`        | medium   | Add and edit hosts                                      |
-| `credentials:use`    | medium   | Connect with saved credentials without seeing them      |
-| `credentials:write`  | medium   | Save new credentials                                    |
-| `network:outbound`   | medium   | Outbound HTTP through `ctx.fetch`                       |
-| `network:serve`      | medium   | HTTP routes and sockets                                 |
-| `network:broadcast`  | medium   | Local network broadcasts, like Wake-on-LAN              |
-| `users:read`         | medium   | Usernames, roles and UI language                        |
-| `events:core`        | medium   | Listen to core events                                   |
-| `notify:send`        | medium   | Send alerts                                             |
-| `audit:read`         | medium   | Read the audit log                                      |
-| `desktop:window`     | medium   | Open windows in the desktop app                         |
-| `hosts:read`         | low      | Read hosts the user can see                             |
-| `db:own`             | low      | Your own tables                                         |
-| `kv:own`             | low      | Small key value state                                   |
-| `files:own`          | low      | Your own folder on disk                                 |
-| `secrets:own`        | low      | Your own encrypted secrets                              |
-| `settings:read-core` | low      | Read Termix server settings                             |
-| `plugins:read`       | low      | See installed plugins                                   |
-| `ui:surface`         | low      | Add tabs, panels and settings                           |
+| Capability               | Risk     | What it allows                                                |
+| ------------------------ | -------- | ------------------------------------------------------------- |
+| `credentials:read`       | critical | Read stored secrets for hosts the user can reach              |
+| `system:tls`             | critical | Replace the HTTPS certificate, answer CA domain checks        |
+| `ssh:connect`            | high     | Run any command on hosts, with the user's access              |
+| `process:spawn`          | high     | Run programs on the Termix server                             |
+| `users:write`            | high     | Add users and change their roles                              |
+| `users:impersonate`      | high     | Act as another user, or get a session for them, audited       |
+| `db:core-refs`           | high     | Query core users, roles and hosts tables (read only)          |
+| `auth:provide`           | high     | Add login methods, second factors, SSH auth types             |
+| `auth:policy`            | high     | Set login rules: idle timeout, session length, 2FA            |
+| `sync:provide`           | high     | Run sync: answer every /sync request                          |
+| `device:serial`          | high     | Open serial and USB ports on the server                       |
+| `desktop:local`          | high     | Use the user's own computer, desktop app only                 |
+| `hosts:export`           | high     | Export hosts with their saved logins                          |
+| `notify:hub`             | high     | Receive every alert (the alerts hub only)                     |
+| `ui:layout`              | high     | Replace the whole app layout                                  |
+| `hosts:write`            | medium   | Add and edit hosts                                            |
+| `hosts:status-provide`   | medium   | Be the source of host status dots                             |
+| `hosts:activity-provide` | medium   | Be the source of the recent activity list                     |
+| `ssh:transport`          | high     | Carry SSH connections for hosts it claims over its own stream |
+| `hosts:lock`             | medium   | Make hosts it manages read only for everyone else             |
+| `network:probe`          | medium   | Check that a host answers on a TCP port                       |
+| `credentials:use`        | medium   | Connect with saved credentials without seeing them            |
+| `credentials:write`      | medium   | Save new credentials                                          |
+| `network:outbound`       | medium   | Outbound HTTP through `ctx.fetch`                             |
+| `network:serve`          | medium   | HTTP routes and sockets                                       |
+| `network:broadcast`      | medium   | Local network broadcasts, like Wake-on-LAN                    |
+| `users:read`             | medium   | Usernames, roles and UI language                              |
+| `events:core`            | medium   | Listen to core events                                         |
+| `notify:send`            | medium   | Send alerts                                                   |
+| `audit:read`             | medium   | Read the audit log                                            |
+| `desktop:window`         | medium   | Open windows in the desktop app                               |
+| `hosts:read`             | low      | Read hosts the user can see                                   |
+| `db:own`                 | low      | Your own tables                                               |
+| `kv:own`                 | low      | Small key value state                                         |
+| `files:own`              | low      | Your own folder on disk                                       |
+| `secrets:own`            | low      | Your own encrypted secrets                                    |
+| `settings:read-core`     | low      | Read Termix server settings                                   |
+| `plugins:read`           | low      | See installed plugins                                         |
+| `ui:surface`             | low      | Add tabs, panels and settings                                 |
+| `ui:theme`               | low      | Add color themes, CSS only                                    |
 
 An update that adds a capability waits for an admin to approve it.
 

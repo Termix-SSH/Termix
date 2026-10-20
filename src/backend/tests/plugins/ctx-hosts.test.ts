@@ -27,6 +27,11 @@ const h = vi.hoisted(() => ({
   statusPortsRemoved: [] as string[],
   userPermissions: new Set<string>(),
   deleted: [] as Array<{ userId: string; hostId: number }>,
+  existingAccess: [] as Array<{ id: number }>,
+  revoked: [] as number[],
+  protocolWrites: [] as Array<{ hostId: number; protocols: string[] }>,
+  folderCalls: [] as Array<unknown[]>,
+  folderEmpty: true,
   roles: [] as Array<{
     id: number;
     name: string;
@@ -85,9 +90,22 @@ vi.mock("../../database/repositories/factory.js", () => ({
       h.upserts.push(input);
       return { id: h.upserts.length, created: true };
     },
+    listHostAccess: async () => h.existingAccess,
+    revokeHostAccess: async (accessId: number) => {
+      h.revoked.push(accessId);
+    },
   }),
   createCurrentUserRepository: () => ({
     listAll: async () => h.users,
+  }),
+  createCurrentHostFolderRepository: () => ({
+    upsertMetadata: async (...args: unknown[]) => {
+      h.folderCalls.push(["ensure", ...args]);
+    },
+    deleteEmptyFolderRecords: async (...args: unknown[]) => {
+      h.folderCalls.push(["remove", ...args]);
+      return h.folderEmpty;
+    },
   }),
   createCurrentHostRepository: () => ({
     createEncryptedForUser: async (
@@ -110,14 +128,14 @@ vi.mock("../../database/repositories/factory.js", () => ({
     listDecryptedByUserId: async () => h.ownedHosts,
   }),
 }));
-vi.mock("../../services/recent-activity.js", () => ({
-  recordRecentActivity: async (
-    userId: string,
-    entry: Record<string, unknown>,
-  ) => {
-    h.activities.push({ userId, ...entry });
-    return { status: "logged", id: 1 };
+vi.mock("../../plugins/activity-provider.js", () => ({
+  recentActivity: {
+    record: async (userId: string, entry: Record<string, unknown>) => {
+      h.activities.push({ userId, ...entry });
+      return { status: "logged", id: 1 };
+    },
   },
+  provideActivity: vi.fn(() => () => {}),
 }));
 vi.mock("../../hosts/host-session-status.js", () => ({
   hostSessionStatus: {
@@ -127,8 +145,9 @@ vi.mock("../../hosts/host-session-status.js", () => ({
     },
   },
 }));
-vi.mock("../../hosts/status/host-status-service.js", () => ({
-  hostStatusService: {
+vi.mock("../../plugins/host-status-provider.js", () => ({
+  provideHostStatus: vi.fn(() => () => {}),
+  hostStatus: {
     get: (hostId: number) =>
       hostId === 4 ? { status: "online", lastChecked: "t" } : null,
     check: async (hostId: number) => ({
@@ -144,6 +163,13 @@ vi.mock("../../hosts/status/host-status-service.js", () => ({
   },
 }));
 vi.mock("../../database/routes/host-plugin-settings.js", () => ({
+  hostSettingsPlugins: () => [
+    {
+      id: "metrics",
+      contributes: { settings: { host: { enableKey: "enableMetrics" } } },
+    },
+    { id: "noswitch", contributes: { settings: { host: { fields: [] } } } },
+  ],
   loadHostPluginSettings: async (hostIds: number[]) =>
     new Map(
       hostIds.map((id) => [
@@ -197,6 +223,25 @@ vi.mock("../../hosts/defaults/overrides.js", () => ({
   changeHostOverrides: async () => {},
 }));
 
+vi.mock("../../database/routes/rbac.js", () => ({
+  pruneHostGrants: async () => 0,
+}));
+vi.mock("../../hosts/usable-credential.js", () => ({
+  findUsableCredential: async (credentialId: number) =>
+    credentialId === 5 ? { id: 5 } : null,
+}));
+vi.mock("../../hosts/protocol-auth/protocol-auth.js", () => ({
+  readProtocolAuthPayload: (data: { protocolAuth: Record<string, unknown> }) =>
+    new Map(Object.entries(data.protocolAuth)),
+  writeProtocolAuth: async (
+    _ownerId: string,
+    hostId: number,
+    patch: Map<string, unknown>,
+  ) => {
+    h.protocolWrites.push({ hostId, protocols: [...patch.keys()] });
+  },
+}));
+
 vi.mock("../../hosts/delete-host.js", () => ({
   deleteOwnedHost: async (userId: string, hostId: number) => {
     h.deleted.push({ userId, hostId });
@@ -208,6 +253,8 @@ const { createPluginHosts } = await import("../../plugins/ctx-hosts.js");
 const { PluginCapabilityError } =
   await import("@termix-ssh/plugin-sdk/backend");
 const { pluginEvents, TOPICS } = await import("../../plugins/events.js");
+const { clearHostLocks, hostLock, provideHostLocks } =
+  await import("../../hosts/locks.js");
 
 function manifest(capabilities: string[]) {
   return {
@@ -235,6 +282,10 @@ beforeEach(() => {
   h.roles = [];
   h.userPermissions = new Set();
   h.deleted = [];
+  h.existingAccess = [];
+  h.revoked = [];
+  h.protocolWrites = [];
+  clearHostLocks();
 });
 
 describe("ctx.hosts", () => {
@@ -702,5 +753,264 @@ describe("ctx.hosts.status", () => {
     expect(h.statusPorts).toEqual(["rdp"]);
     await bag.disposeAll();
     expect(h.statusPortsRemoved).toEqual(["rdp"]);
+  });
+});
+
+describe("ctx.hosts secrets and protocol logins", () => {
+  it("stores secrets on create and writes protocol logins", async () => {
+    h.granted = new Set(["hosts:write"]);
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    const created = await hosts.create({
+      name: "rdp",
+      ip: "10.0.0.9",
+      port: 3389,
+      username: "",
+      authType: "password",
+      password: "s3cret",
+      sudoPassword: "",
+      protocolAuth: { rdp: { authType: "direct", username: "admin" } },
+    });
+    expect(h.created[0]).toMatchObject({
+      password: "s3cret",
+      sudoPassword: null,
+    });
+    expect(created).not.toHaveProperty("password");
+    expect(h.protocolWrites).toEqual([{ hostId: 99, protocols: ["rdp"] }]);
+  });
+
+  it("refuses a protocol credential the owner cannot use", async () => {
+    h.granted = new Set(["hosts:write"]);
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    await expect(
+      hosts.create({
+        name: "vnc",
+        ip: "10.0.0.9",
+        port: 5900,
+        username: "",
+        authType: "password",
+        protocolAuth: { vnc: { authType: "credential", credentialId: 6 } },
+      }),
+    ).rejects.toThrow(/credential 6/);
+  });
+
+  it("refuses a secret that is not a string", async () => {
+    h.granted = new Set(["hosts:write"]);
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    await expect(hosts.update(5, { password: 12 as never })).rejects.toThrow(
+      /password/,
+    );
+  });
+});
+
+describe("ctx.hosts pluginEnable", () => {
+  it("writes each plugin's switch under its enableKey", async () => {
+    h.granted = new Set(["hosts:write"]);
+    h.importRows = [];
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    await hosts.create({
+      name: "n",
+      ip: "10.0.0.1",
+      port: 22,
+      username: "root",
+      authType: "password",
+      pluginEnable: { metrics: false },
+    });
+    expect(h.importRows).toEqual([
+      { hostId: 99, row: { metrics: { enableMetrics: false } } },
+    ]);
+  });
+
+  it("refuses a plugin with no switch", async () => {
+    h.granted = new Set(["hosts:write"]);
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    await expect(
+      hosts.update(5, { pluginEnable: { noswitch: true } }),
+    ).rejects.toThrow(/no host switch/);
+    expect(h.updates).toHaveLength(0);
+  });
+});
+
+describe("ctx.hosts.setShares", () => {
+  it("upserts the listed grants and revokes the rest", async () => {
+    h.granted = new Set(["hosts:write"]);
+    h.existingAccess = [{ id: 1 }, { id: 7 }];
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    const result = await hosts.setShares(3, [
+      { target: { type: "role", id: 2 }, permissionLevel: "connect" },
+    ]);
+    expect(result).toEqual({ hostId: 3, shared: true });
+    expect(h.upserts).toEqual([
+      expect.objectContaining({
+        hostId: 3,
+        targetType: "role",
+        targetRoleId: 2,
+        permissionLevel: "connect",
+        expiresAt: null,
+      }),
+    ]);
+    expect(h.revoked).toEqual([7]);
+  });
+
+  it("only works for the host owner", async () => {
+    h.granted = new Set(["hosts:write"]);
+    h.ownerId = "someone-else";
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    expect(await hosts.setShares(3, [])).toEqual({
+      hostId: 3,
+      shared: false,
+      reason: "forbidden",
+    });
+    expect(h.revoked).toEqual([]);
+  });
+
+  it("refuses a bad level", async () => {
+    h.granted = new Set(["hosts:write"]);
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    await expect(
+      hosts.setShares(3, [
+        { target: { type: "user", id: "u2" }, permissionLevel: "own" as never },
+      ]),
+    ).rejects.toThrow(/share level/);
+  });
+});
+
+describe("ctx.hosts.locks", () => {
+  const provider = (locked: number[], allowManualCreate = true) => ({
+    isLocked: (hostId: number) => locked.includes(hostId),
+    note: () => "From hosts.yaml",
+    allowManualCreate: () => allowManualCreate,
+  });
+
+  it("needs hosts:lock", () => {
+    const hosts = createPluginHosts({
+      manifest: manifest([]),
+      audit: vi.fn(async () => {}),
+    });
+    expect(() => hosts.locks.provide(provider([1]))).toThrow(
+      PluginCapabilityError,
+    );
+  });
+
+  it("locks hosts until the plugin removes its provider", () => {
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:lock"]),
+      audit: vi.fn(async () => {}),
+    });
+    const remove = hosts.locks.provide(provider([4]));
+    expect(hostLock(4)).toEqual({
+      pluginId: "fixture",
+      pluginName: "Fixture",
+      note: "From hosts.yaml",
+    });
+    expect(hostLock(5)).toBeNull();
+    remove();
+    expect(hostLock(4)).toBeNull();
+  });
+
+  it("blocks other plugins on a locked host but not the plugin that locks it", async () => {
+    h.granted = new Set(["hosts:write"]);
+    h.updateResult = { id: 4, name: "x" };
+    h.userPermissions = new Set(["hosts.delete"]);
+    provideHostLocks("hosts-file", "Hosts File", provider([4], false));
+    const other = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    await expect(other.update(4, { name: "y" })).rejects.toThrow(
+      /managed by Hosts File/,
+    );
+    await expect(other.delete(4)).rejects.toThrow(/managed by Hosts File/);
+    await expect(
+      other.share(4, [{ type: "user", id: "u2" }], "view"),
+    ).rejects.toThrow(/managed by Hosts File/);
+    await expect(
+      other.create({
+        name: "n",
+        ip: "10.0.0.1",
+        port: 22,
+        username: "root",
+        authType: "password",
+      }),
+    ).rejects.toThrow(/new hosts can't be added/);
+    expect(h.updates).toHaveLength(0);
+    expect(h.deleted).toHaveLength(0);
+
+    const owner = createPluginHosts({
+      manifest: {
+        id: "hosts-file",
+        name: "Hosts File",
+        version: "1.0.0",
+        capabilities: ["hosts:write"],
+      } as never,
+      audit: vi.fn(async () => {}),
+    });
+    await owner.update(4, { name: "y" });
+    expect(h.updates).toHaveLength(1);
+  });
+});
+
+describe("ctx.hosts.folders", () => {
+  beforeEach(() => {
+    h.granted = new Set(["hosts:write"]);
+    h.actor = "user-1";
+    h.folderCalls = [];
+    h.folderEmpty = true;
+  });
+
+  it("needs hosts:write", async () => {
+    h.granted = new Set();
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    await expect(hosts.folders.ensure("Site")).rejects.toThrow(
+      PluginCapabilityError,
+    );
+  });
+
+  it("creates the folder row for the acting user with its style", async () => {
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    await hosts.folders.ensure("Site", { icon: "cloud-cog" });
+    expect(h.folderCalls).toEqual([
+      ["ensure", "user-1", "Site", null, "cloud-cog"],
+    ]);
+  });
+
+  it("removes only an empty folder", async () => {
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    expect(await hosts.folders.removeEmpty("Site")).toBe(true);
+    h.folderEmpty = false;
+    expect(await hosts.folders.removeEmpty("Site")).toBe(false);
+    expect(h.folderCalls[0]).toEqual(["remove", "user-1", "Site"]);
   });
 });

@@ -114,6 +114,28 @@ export function withPluginScope<P extends object>(
   return Scoped;
 }
 
+/**
+ * The plugin id for the hooks without the error boundary, for a component
+ * whose caller handles a crash itself (a layout, which the repair view takes
+ * over from).
+ */
+export function withPluginContext<P extends object>(
+  pluginId: string,
+  Inner: ComponentType<P>,
+): ComponentType<P> {
+  function Scoped(props: P) {
+    return (
+      <PluginScopeContext.Provider value={pluginId}>
+        <Suspense fallback={null}>
+          <Inner {...props} />
+        </Suspense>
+      </PluginScopeContext.Provider>
+    );
+  }
+  Scoped.displayName = `Plugin(${pluginId}:${Inner.displayName ?? Inner.name ?? "Component"})`;
+  return Scoped;
+}
+
 /** Renders nothing when a plugin's icon throws, instead of a crash notice. */
 class IconBoundary extends Component<BoundaryProps, { error: boolean }> {
   state = { error: false };

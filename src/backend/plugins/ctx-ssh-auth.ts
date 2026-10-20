@@ -26,6 +26,8 @@ import { getActor, getActorSessionId } from "./actor.js";
 import type { DisposableBag } from "./disposables.js";
 import { redactHostSecrets } from "./ctx-hosts.js";
 import { issueUserToken } from "./ctx-users.js";
+import { hostStatus } from "./host-status-provider.js";
+import { probeHost } from "./ctx-probe.js";
 import {
   getSshAuthProvider,
   listSshAuthProviders,
@@ -36,9 +38,12 @@ import { classifyKeyboardInteractive } from "../hosts/connect/keyboard-interacti
 import { ensureCoreSshAuthProviders } from "../hosts/connect/core-providers.js";
 import {
   getLoginMethod,
+  listSecondFactors,
   registerLoginMethod,
   registerSecondFactor,
 } from "../auth/registry.js";
+import { provideAuthPolicy } from "../auth/policy.js";
+import { provideSshTransport } from "../hosts/connect/transport-providers.js";
 import type { VerifiedIdentity } from "../auth/types.js";
 import type {
   MutableConnectConfig,
@@ -224,11 +229,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
   const reportLogin = (host: number | PluginSshHost) => {
     const hostId = typeof host === "number" ? host : lookup(host)?.host.id;
     if (!Number.isInteger(hostId) || hostId <= 0) return;
-    void import("../hosts/status/host-status-service.js")
-      .then(({ hostStatusService }) =>
-        hostStatusService.reportLogin(hostId, { ok: true }),
-      )
-      .catch(() => {});
+    hostStatus.reportLogin(hostId, { ok: true });
   };
 
   /** Checks, connects and audits one new connection. */
@@ -296,6 +297,31 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
     }`;
 
   return {
+    transports: {
+      provide: (provider) => {
+        if (!declared.includes("ssh:transport")) {
+          throw capabilityRefused(pluginId, "ssh:transport");
+        }
+        const remove = provideSshTransport(pluginId, provider);
+        void audit(
+          "ssh_transport_provide",
+          `${pluginId} carries host connections`,
+          {
+            success: true,
+          },
+        );
+        const drop = bag.add(remove, "ssh transport");
+        return () => {
+          drop();
+          remove();
+        };
+      },
+    },
+    probe: async (hostId, probeOptions) => {
+      await assertCapability(pluginId, "ssh:connect", declared);
+      if (!Number.isInteger(hostId) || hostId <= 0) return false;
+      return probeHost(hostId, probeOptions);
+    },
     connect: async (host, options) => {
       const connection = await connectOnce(host, options);
       return {
@@ -304,6 +330,33 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
         host: connection.host,
         dispose: connection.dispose,
       };
+    },
+
+    exec: async (host, command, execOptions) => {
+      const connection = await connectOnce(host, {
+        ...execOptions,
+        purpose: execOptions?.purpose ?? "exec",
+        timeoutMs: undefined,
+      });
+      const details = `${describeHost(host)}: command run`;
+      try {
+        const { runExec } = await import("./ctx-ssh-exec.js");
+        const result = await runExec(
+          connection.client as never,
+          command,
+          execOptions,
+        );
+        await audit("ssh_exec", details, { success: true });
+        return result;
+      } catch (error) {
+        await audit("ssh_exec", details, {
+          success: false,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      } finally {
+        connection.dispose();
+      }
     },
 
     withConnection: async (host, options, fn) => {
@@ -826,6 +879,8 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
         getActor() === userId ? getActorSessionId() : undefined,
       );
       await createCurrentTrustedDeviceRepository().deleteByUserId(userId);
+      // The session that set it up may have been a setup only one.
+      await createCurrentSessionRepository().clearRestrictionForUser(userId);
       await audit("auth_factor_enrolled", `${factorId} for ${userId}`, {
         success: true,
       });
@@ -904,5 +959,28 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
     },
     issueUserToken: (userId, options) =>
       issueUserToken(manifest, userId, options),
+
+    policy: {
+      provide: (provider) => {
+        if (!declared.includes("auth:policy")) {
+          throw capabilityRefused(pluginId, "auth:policy");
+        }
+        const remove = provideAuthPolicy(pluginId, provider);
+        void audit("auth_policy_provide", `${pluginId} sets login rules`, {
+          success: true,
+        });
+        const drop = bag.add(remove, "login policy");
+        return () => {
+          drop();
+          remove();
+        };
+      },
+    },
+
+    listSecondFactors: () =>
+      listSecondFactors().map((factor) => ({
+        id: factor.id,
+        pluginId: factor.pluginId,
+      })),
   };
 }

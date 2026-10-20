@@ -22,6 +22,9 @@
 import { pluginLogger } from "../utils/logger.js";
 import { getRequestBaseUrlWithForceHTTPS } from "../utils/request-origin.js";
 import { pluginEvents } from "./events.js";
+import { createPluginDesktopLocal } from "./ctx-desktop-local.js";
+import { createPluginAuditReader } from "./ctx-audit.js";
+import { createPluginNetwork } from "./ctx-probe.js";
 import * as registry from "./registry.js";
 import * as serviceRegistry from "./service-registry.js";
 import type { ServiceRegistration } from "./service-registry.js";
@@ -51,6 +54,12 @@ import {
 } from "@termix-ssh/plugin-sdk/backend";
 import type { PluginTableDefinition } from "@termix-ssh/plugin-sdk/db";
 import * as syncRegistry from "./sync-registry.js";
+import { provideSync } from "../sync/provider.js";
+import { createSyncHost } from "../sync/host.js";
+import type {
+  PluginSync,
+  PluginSyncHost,
+} from "@termix-ssh/plugin-sdk/backend";
 import {
   needsExplicitPersist,
   resolveDatabaseDialect,
@@ -186,6 +195,34 @@ export function createPluginContext(
   handle: PluginHandle,
 ): PluginContext {
   const pluginId = manifest.id;
+  let syncHost: PluginSyncHost | undefined;
+  const syncApi: PluginSync = {
+    registerEntity: (entity) => {
+      const dispose = syncRegistry.registerEntity(pluginId, entity);
+      handle.bag.add(dispose, `sync entity ${entity.type}`);
+    },
+    provide: (provider) => {
+      if (!manifest.capabilities.includes("sync:provide")) {
+        throw capabilityRefused(pluginId, "sync:provide");
+      }
+      const remove = provideSync(pluginId, provider);
+      const drop = handle.bag.add(remove, "sync provider");
+      return () => {
+        drop();
+        remove();
+      };
+    },
+  } as PluginSync;
+  // Not enumerable, so tools that walk the context do not trip the check.
+  Object.defineProperty(syncApi, "host", {
+    enumerable: false,
+    get() {
+      if (!manifest.capabilities.includes("sync:provide")) {
+        throw capabilityRefused(pluginId, "sync:provide");
+      }
+      return (syncHost ??= createSyncHost());
+    },
+  });
   const auditCall = (
     action: string,
     details: string,
@@ -517,12 +554,7 @@ export function createPluginContext(
       },
     },
 
-    sync: {
-      registerEntity: (entity) => {
-        const dispose = syncRegistry.registerEntity(pluginId, entity);
-        handle.bag.add(dispose, `sync entity ${entity.type}`);
-      },
-    },
+    sync: syncApi,
 
     kv: {
       get: (key) => kvGet(key),
@@ -950,6 +982,7 @@ export function createPluginContext(
       bag: handle.bag,
     }),
     fetch: createPluginFetch({ manifest, audit: auditCall }),
+    network: createPluginNetwork({ manifest, audit: auditCall }),
     process: createPluginProcess({
       manifest,
       bag: handle.bag,
@@ -964,6 +997,11 @@ export function createPluginContext(
       openIsolatedWindow: (request) => desktopOpenIsolatedWindow(request),
       launchExternalClient: (request) => desktopLaunchExternalClient(request),
       available: () => isElectronIpcAvailable(),
+      local: createPluginDesktopLocal({
+        manifest,
+        bag: handle.bag,
+        audit: auditCall,
+      }),
     },
 
     credentials: createPluginCredentials({
@@ -995,6 +1033,11 @@ export function createPluginContext(
           // Auditing must never break the caller.
         }
       },
+      ...createPluginAuditReader({
+        manifest,
+        bag: handle.bag,
+        audit: auditCall,
+      }),
     },
 
     /**

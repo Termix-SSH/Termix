@@ -12,6 +12,7 @@ const h = vi.hoisted(() => ({
   sessionId: undefined as string | undefined,
   revoked: [] as Array<{ userId: string; except?: string }>,
   trustedCleared: [] as string[],
+  unrestricted: [] as string[],
   policyError: null as Error | null,
   logins: [] as Array<{ hostId: number; outcome: unknown }>,
   connectError: null as Error | null,
@@ -104,8 +105,8 @@ vi.mock("../../hosts/host-resolver.js", () => ({
   }),
   resolveHostBySyncId: async () => null,
 }));
-vi.mock("../../hosts/status/host-status-service.js", () => ({
-  hostStatusService: {
+vi.mock("../../plugins/host-status-provider.js", () => ({
+  hostStatus: {
     reportLogin: (hostId: number, outcome: unknown) =>
       h.logins.push({ hostId, outcome }),
   },
@@ -126,6 +127,9 @@ vi.mock("../../database/repositories/factory.js", () => ({
       h.revoked.push({ userId, except });
       return 0;
     },
+    clearRestrictionForUser: async (userId: string) => {
+      h.unrestricted.push(userId);
+    },
   }),
   createCurrentTrustedDeviceRepository: () => ({
     deleteByUserId: async (userId: string) => {
@@ -145,6 +149,8 @@ const { getLoginMethod, getSecondFactor } =
   await import("../../auth/registry.js");
 const { PluginCapabilityError } =
   await import("@termix-ssh/plugin-sdk/backend");
+const { hasAuthPolicies, clearAuthPolicies } =
+  await import("../../auth/policy.js");
 
 function manifest(capabilities: string[], auth: Record<string, string[]> = {}) {
   return {
@@ -655,6 +661,7 @@ describe("ctx.auth", () => {
     h.factors = [];
     h.revoked = [];
     h.trustedCleared = [];
+    h.unrestricted = [];
     h.policyError = null;
     h.actor = "user-1";
     h.sessionId = "session-a";
@@ -666,8 +673,63 @@ describe("ctx.auth", () => {
     await auth.recordEnrollment("user-1", "pin");
     expect(h.revoked).toEqual([{ userId: "user-1", except: "session-a" }]);
     expect(h.trustedCleared).toEqual(["user-1"]);
+    expect(h.unrestricted).toEqual(["user-1"]);
     h.actor = undefined;
     h.sessionId = undefined;
+  });
+
+  it("needs auth:policy for a login policy and drops it on deactivate", async () => {
+    clearAuthPolicies();
+    const plain = createPluginAuth({
+      manifest: manifest(["auth:provide"]),
+      bag: new DisposableBag("fixture"),
+      audit: vi.fn(async () => {}),
+    });
+    expect(() => plain.policy.provide({ evaluate: () => ({}) })).toThrow(
+      PluginCapabilityError,
+    );
+
+    const bag = new DisposableBag("fixture");
+    const audit = vi.fn(async () => {});
+    const auth = createPluginAuth({
+      manifest: manifest(["auth:policy"]),
+      bag,
+      audit,
+    });
+    const remove = auth.policy.provide({ evaluate: () => ({}) });
+    expect(hasAuthPolicies()).toBe(true);
+    expect(audit).toHaveBeenCalledWith(
+      "auth_policy_provide",
+      "fixture sets login rules",
+      { success: true },
+    );
+    remove();
+    expect(hasAuthPolicies()).toBe(false);
+
+    auth.policy.provide({ evaluate: () => ({}) });
+    await bag.disposeAll();
+    expect(hasAuthPolicies()).toBe(false);
+  });
+
+  it("lists second factors from every plugin", async () => {
+    h.granted = new Set(["auth:provide"]);
+    const bag = new DisposableBag("fixture");
+    const auth = createPluginAuth({
+      manifest: manifest(["auth:provide"], { secondFactors: ["pin"] }),
+      bag,
+      audit: vi.fn(async () => {}),
+    });
+    auth.registerSecondFactor({
+      id: "pin",
+      labelKey: "pin",
+      isEnrolled: async () => false,
+      verify: async () => true,
+    });
+    expect(auth.listSecondFactors()).toContainEqual({
+      id: "pin",
+      pluginId: "fixture",
+    });
+    await bag.disposeAll();
   });
 
   it("refuses enrolment when core policy forbids second factors", async () => {

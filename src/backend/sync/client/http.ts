@@ -9,7 +9,7 @@
 
 import { Agent, ProxyAgent, fetch as undiciFetch } from "undici";
 import type { Dispatcher } from "undici";
-import type { BasicAuth, ProxyHeader } from "./link-store.js";
+import type { BasicAuth, ClientCert, ProxyHeader } from "./link-store.js";
 
 export interface RemoteTarget {
   serverUrl: string;
@@ -17,6 +17,7 @@ export interface RemoteTarget {
   customHeaders?: ProxyHeader[];
   basicAuth?: BasicAuth | null;
   allowInvalidCertificate?: boolean;
+  clientCert?: ClientCert | null;
 }
 
 export type RemoteErrorKind =
@@ -24,6 +25,8 @@ export type RemoteErrorKind =
   | "offline"
   /** TLS failed and the certificate is not allowed. */
   | "tls"
+  /** The server wants a client certificate and none was accepted. */
+  | "client_cert"
   /** A proxy answered instead of Termix (its login page, a 404 page). */
   | "proxy"
   /** The proxy wants basic auth. */
@@ -51,6 +54,13 @@ const TLS_CODES = new Set([
   "CERT_HAS_EXPIRED",
   "ERR_TLS_CERT_ALTNAME_INVALID",
   "CERT_UNTRUSTED",
+]);
+
+const CLIENT_CERT_CODES = new Set([
+  "ERR_SSL_TLSV13_ALERT_CERTIFICATE_REQUIRED",
+  "ERR_SSL_SSLV3_ALERT_BAD_CERTIFICATE",
+  "ERR_SSL_TLSV1_ALERT_UNKNOWN_CA",
+  "ERR_SSL_SSLV3_ALERT_HANDSHAKE_FAILURE",
 ]);
 
 function envProxy(url: string): string | null {
@@ -84,10 +94,16 @@ const dispatchers = new Map<string, Dispatcher>();
 function dispatcherFor(target: RemoteTarget): Dispatcher {
   const insecure = !!target.allowInvalidCertificate;
   const proxy = envProxy(target.serverUrl);
-  const key = `${insecure}|${proxy ?? ""}`;
+  const cert = target.clientCert;
+  const key = `${insecure}|${proxy ?? ""}|${cert ? `${cert.passphrase}|${cert.pfx}` : ""}`;
   let dispatcher = dispatchers.get(key);
   if (!dispatcher) {
-    const tls = insecure ? { rejectUnauthorized: false } : {};
+    const tls = {
+      ...(insecure ? { rejectUnauthorized: false } : {}),
+      ...(cert
+        ? { pfx: Buffer.from(cert.pfx, "base64"), passphrase: cert.passphrase }
+        : {}),
+    };
     dispatcher = proxy
       ? new ProxyAgent({ uri: proxy, requestTls: tls })
       : new Agent({ connect: tls });
@@ -141,10 +157,22 @@ export function requestHeaders(target: RemoteTarget): Record<string, string> {
   return headers;
 }
 
-function describeNetworkError(error: unknown): RemoteError {
+// A server that requires a client certificate often just drops the
+// connection when it gets none, or one it does not accept.
+const DROPPED_CODES = new Set(["UND_ERR_SOCKET", "ECONNRESET"]);
+
+function describeNetworkError(
+  error: unknown,
+  target?: RemoteTarget,
+): RemoteError {
   const cause = (error as { cause?: { code?: string; message?: string } })
     ?.cause;
   const code = cause?.code ?? (error as { code?: string })?.code ?? "";
+  const droppedOverTls =
+    DROPPED_CODES.has(code) && target?.serverUrl.startsWith("https:");
+  if (CLIENT_CERT_CODES.has(code) || droppedOverTls) {
+    return new RemoteError("client_cert", cause?.message || code);
+  }
   if (TLS_CODES.has(code) || /certificate/i.test(cause?.message ?? "")) {
     return new RemoteError("tls", cause?.message || code);
   }
@@ -193,11 +221,43 @@ export async function remoteFetch(
       signal: controller.signal,
     });
   } catch (error) {
-    throw describeNetworkError(error);
+    throw describeNetworkError(error, target);
   } finally {
     if (timeout) clearTimeout(timeout);
   }
   return response;
+}
+
+export interface RemoteStreamRequest {
+  method?: string;
+  headers?: Record<string, string>;
+  /** A string, a buffer or a Node stream. */
+  body?: unknown;
+  signal?: AbortSignal;
+}
+
+/**
+ * Sends a request with the link's proxy headers and certificate rules and a
+ * body that may be a stream. The response body is left unread for the caller.
+ */
+export async function remoteStreamFetch(
+  target: RemoteTarget,
+  pathname: string,
+  request: RemoteStreamRequest = {},
+) {
+  const headers = { ...request.headers, ...requestHeaders(target) };
+  try {
+    return await undiciFetch(remoteUrl(target.serverUrl, pathname), {
+      method: request.method ?? "GET",
+      headers,
+      body: request.body as never,
+      duplex: "half",
+      dispatcher: dispatcherFor(target),
+      signal: request.signal,
+    } as never);
+  } catch (error) {
+    throw describeNetworkError(error, target);
+  }
 }
 
 /** Sends a request and parses a JSON answer from Termix. */

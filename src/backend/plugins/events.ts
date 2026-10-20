@@ -22,7 +22,7 @@ export const TOPICS = {
   hostSessionStatus: "host.session.status",
   /** A generic named internal event (host_deleted, user_login, ...). */
   internalEvent: "internal.event",
-  /** A host's status dot changed (hosts/status/host-status-service.ts). */
+  /** A host's status dot changed (the host status provider). */
   hostStatus: "host.status",
   /** A host's key was accepted again after it changed. */
   hostKeyUpdated: "host.key.updated",

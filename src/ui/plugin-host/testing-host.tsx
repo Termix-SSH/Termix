@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * The Termix side of @termix-ssh/plugin-sdk/testing's renderWithApp.
  *
@@ -462,3 +463,43 @@ export async function renderPlugin(
     },
   };
 }
+
+// Registries a shell-level plugin's own tests fill directly, since they
+// render parts of the shell without activating a plugin.
+export {
+  registerHostAction,
+  resetHostContributions,
+} from "@/sidebar/host-contributions";
+export { registerHostProtocol } from "@/sidebar/host-protocols";
+export {
+  RAIL_ITEMS,
+  registerRailItem,
+  resetRegisteredRailItems,
+} from "@/sidebar/rail-items";
+export {
+  declareActionSlot,
+  registerAction,
+  registerSlotContribution,
+  resetActionRegistry,
+} from "@/shell/action-registry";
+export { trackTabHandle } from "@/shell/tab-handles";
+export {
+  registerKeybindingAction,
+  registerKeybindingDefault,
+  resetKeybindingRegistry,
+} from "@/shell/keybinding-registry";
+export { LOCAL_ADAPTIVE_PREFERENCES_KEY } from "@/lib/local-adaptive-preferences";
+export { HostPluginSections } from "@/settings/HostPluginSections";
+export {
+  registerDashboardCard,
+  resetDashboardCards,
+} from "@/dashboard/dashboard-cards-registry";
+export {
+  resetPluginStore,
+  setPluginSummaries,
+} from "@/plugin-host/plugin-store";
+export { setPermissionsForTesting } from "@/hooks/use-permissions";
+export { getRegisteredLayout } from "@/look/layout-registry";
+export { ShellControllerProvider } from "@/shell/controller/ShellControllerProvider";
+export { ServerStatusProvider } from "@/lib/ServerStatusContext";
+export { TabPortals } from "@/shell/stage/TabPortals";

@@ -2,13 +2,13 @@ import type { Router } from "express";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
+import { recentActivity } from "../../plugins/activity-provider.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { authLogger } from "../../utils/logger.js";
 import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
 import {
   createCurrentCredentialRepository,
   createCurrentHostRepository,
-  createCurrentRecentActivityRepository,
   createCurrentSettingsRepository,
   createCurrentSshCredentialUsageRepository,
   createCurrentUserRepository,
@@ -68,7 +68,7 @@ export async function resetUserPassword(
   await userRepository.update(userId, { passwordHash });
 
   await createCurrentSshCredentialUsageRepository().deleteByUserId(userId);
-  await createCurrentRecentActivityRepository().deleteByUserId(userId);
+  await recentActivity.deleteByUserId(userId);
   await createCurrentHostRepository().deleteByUserId(userId);
   await createCurrentCredentialRepository().deleteByUserId(userId);
   // A plugin holding this user's data (anything keyed by

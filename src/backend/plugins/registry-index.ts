@@ -15,11 +15,14 @@ import fs from "node:fs";
 import path from "node:path";
 import semver from "semver";
 import {
+  isApiCompatible as satisfiesPluginApi,
+  isTermixCompatible,
   pluginDocsUrl,
   pluginFeatures,
   SUPPORTED_PLUGIN_API_VERSION,
   youtubeVideoId,
 } from "@termix-ssh/plugin-sdk/manifest";
+import { getLocalVersion } from "../utils/app-version.js";
 import { safeOutboundFetch } from "../utils/safe-outbound-fetch.js";
 import { pluginLogger } from "../utils/logger.js";
 import {
@@ -59,7 +62,10 @@ const ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
 export interface RegistryVersion {
   version: string;
+  /** The API major, all that builds before engine ranges read. */
   api: string;
+  /** The manifest's engine ranges, when the index lists them. */
+  engine?: { api: string; termix: string };
   url: string;
   sha256: string;
   signature: string;
@@ -92,6 +98,8 @@ export interface RegistryPlugin {
   features: string[];
   /** https docs link from the index. */
   docs?: string;
+  /** The manifest's contributes keys, like layouts, themes or tabs. */
+  contributes: string[];
   /** Stable releases, newest first. */
   versions: RegistryVersion[];
   /**
@@ -149,6 +157,9 @@ function parseVersion(raw: unknown): RegistryVersion | null {
     return null;
   }
   if (!/^[a-f0-9]{64}$/i.test(sha256)) return null;
+  const engine = entry.engine as Record<string, unknown> | undefined;
+  const engineApi = asString(engine?.api);
+  const engineTermix = asString(engine?.termix);
   try {
     if (new URL(url).protocol !== "https:") return null;
   } catch {
@@ -157,6 +168,9 @@ function parseVersion(raw: unknown): RegistryVersion | null {
   return {
     version,
     api: asString(entry.api) ?? "",
+    ...(engineApi && engineTermix
+      ? { engine: { api: engineApi, termix: engineTermix } }
+      : {}),
     url,
     sha256: sha256.toLowerCase(),
     signature,
@@ -191,11 +205,15 @@ export function parseRegistryIndex(raw: unknown): RegistryIndex {
         .map(parseVersion)
         .filter((v): v is RegistryVersion => v !== null)
         .sort((a, b) => semver.rcompare(a.version, b.version));
-    const versions = parseList(entry.versions).filter(
-      (v) => !semver.prerelease(v.version),
-    );
-    const prereleases = parseList(entry.prereleases)
+    // gated holds releases that need a newer Termix than builds which skip
+    // the engine.termix check, so only builds that check it read the list.
+    const gated = parseList(entry.gated);
+    const versions = [...parseList(entry.versions), ...gated]
+      .filter((v) => !semver.prerelease(v.version))
+      .sort((a, b) => semver.rcompare(a.version, b.version));
+    const prereleases = [...parseList(entry.prereleases), ...gated]
       .filter((v) => semver.prerelease(v.version))
+      .sort((a, b) => semver.rcompare(a.version, b.version))
       .map((v) => ({ ...v, prerelease: true }));
     if (versions.length === 0 && prereleases.length === 0) continue;
     plugins.push({
@@ -209,6 +227,14 @@ export function parseRegistryIndex(raw: unknown): RegistryIndex {
       videoId: youtubeVideoId(entry.video) ?? undefined,
       features: pluginFeatures(entry.features),
       docs: pluginDocsUrl(entry.docs) ?? undefined,
+      contributes: Array.isArray(entry.contributes)
+        ? entry.contributes
+            .filter(
+              (kind): kind is string =>
+                typeof kind === "string" && /^[A-Za-z]+$/.test(kind),
+            )
+            .slice(0, 50)
+        : [],
       versions,
       prereleases,
     });
@@ -227,6 +253,29 @@ export function parseRegistryIndex(raw: unknown): RegistryIndex {
 export function isApiCompatible(api: string): boolean {
   const major = semver.coerce(api)?.major;
   return major !== undefined && String(major) === SUPPORTED_PLUGIN_API_VERSION;
+}
+
+/**
+ * The Termix range a release needs when this build is too old for it, or
+ * null when this build satisfies it.
+ */
+export function neededTermix(
+  release: Pick<RegistryVersion, "engine">,
+): string | null {
+  const range = release.engine?.termix;
+  if (!range) return null;
+  return isTermixCompatible(range, getLocalVersion()) ? null : range;
+}
+
+/** Whether this build can run a release: its API and its engine ranges. */
+export function canRunRelease(
+  release: Pick<RegistryVersion, "api" | "engine">,
+): boolean {
+  if (!isApiCompatible(release.api)) return false;
+  if (!release.engine) return true;
+  return (
+    satisfiesPluginApi(release.engine.api) && neededTermix(release) === null
+  );
 }
 
 /** Follows redirects by hand so each hop still gets the outbound checks. */
@@ -427,9 +476,8 @@ export function latestOnChannel(
   channel: PluginChannel,
 ): RegistryVersion | null {
   return (
-    channelReleases(plugin, channel).find((entry) =>
-      isApiCompatible(entry.api),
-    ) ?? null
+    channelReleases(plugin, channel).find((entry) => canRunRelease(entry)) ??
+    null
   );
 }
 
@@ -486,9 +534,12 @@ export async function downloadRelease(
   release: RegistryVersion,
   keys: readonly TrustedPluginKey[] = TRUSTED_PLUGIN_KEYS,
 ): Promise<{ file: string; signatureFile: string }> {
-  if (!isApiCompatible(release.api)) {
+  if (!canRunRelease(release)) {
+    const termix = neededTermix(release);
     throw new Error(
-      `${pluginId} ${release.version} needs plugin API ${release.api}, this build runs ${SUPPORTED_PLUGIN_API_VERSION}`,
+      termix
+        ? `${pluginId} ${release.version} needs Termix ${termix}, this is ${getLocalVersion()}`
+        : `${pluginId} ${release.version} needs plugin API ${release.engine?.api ?? release.api}, this build runs ${SUPPORTED_PLUGIN_API_VERSION}`,
     );
   }
 

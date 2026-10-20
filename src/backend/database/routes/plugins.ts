@@ -13,7 +13,9 @@ import {
   createCurrentPluginRepository,
 } from "../repositories/factory.js";
 import { getPluginRuntime } from "../../plugins/index.js";
+import { resolvePluginDesktopMode } from "@termix-ssh/plugin-sdk/manifest";
 import { describePluginFrontend } from "../../plugins/assets.js";
+import { isDefaultLookPlugin } from "../../plugins/bundled-index.js";
 import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
 import { getPluginPublicHttpRoutes } from "../../plugins/http.js";
 import { getPluginPublicWsRoutes } from "../../plugins/ws.js";
@@ -42,6 +44,7 @@ import {
   validateSettingsSave,
   type PluginSettingsScope,
 } from "../../plugins/settings.js";
+import { assertHostsUnlocked, sendHostLocked } from "../../hosts/locks.js";
 import {
   getAuditUsername,
   getRequestMeta,
@@ -296,7 +299,9 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
         let features: string[] = [];
         let docs: string | undefined;
         let env: PluginEnvVar[] = [];
-        let desktopMode: unknown = loaded?.manifest.desktop;
+        let desktopMode: unknown = loaded
+          ? resolvePluginDesktopMode(loaded.manifest)
+          : undefined;
         try {
           const manifest = JSON.parse(record.manifestJson) as {
             contributes?: unknown;
@@ -312,8 +317,12 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
             dependencies?: Record<string, string>;
             optionalDependencies?: Record<string, string>;
             desktop?: unknown;
+            runtime?: unknown;
           };
-          desktopMode = loaded?.manifest.desktop ?? manifest?.desktop;
+          desktopMode = loaded
+            ? resolvePluginDesktopMode(loaded.manifest)
+            : (manifest?.desktop ??
+              (manifest?.runtime === "desktop" ? "local" : undefined));
           contributes = manifest?.contributes ?? null;
           capabilities = Array.isArray(manifest?.capabilities)
             ? (manifest.capabilities as string[])
@@ -352,6 +361,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
           dependencies,
           optionalDependencies,
           docs,
+          defaultLook: isDefaultLookPlugin(record.id),
           ...describePluginFrontend(loaded),
         };
 
@@ -1869,6 +1879,18 @@ router.put(
       const inherit = Array.isArray(inheritRaw)
         ? inheritRaw.filter((key): key is string => typeof key === "string")
         : [];
+      // A managed host keeps its settings; only personal ones stay per user.
+      const changesShared = [...Object.keys(written), ...inherit].some(
+        (key) => !findField(manifest, "host", key)?.personal,
+      );
+      if (changesShared) {
+        try {
+          assertHostsUnlocked([hostId]);
+        } catch (error) {
+          if (sendHostLocked(res, error)) return;
+          throw error;
+        }
+      }
       const errors = await applySettings(
         userId,
         manifest,
@@ -2281,6 +2303,63 @@ router.post(
 
 /**
  * @openapi
+ * /plugins/{id}/restore-bundled:
+ *   post:
+ *     summary: Restore the bundled copy of a plugin
+ *     description: >
+ *       Drops any update downloaded over a plugin that ships with Termix and
+ *       loads the copy from the image again, so a broken release can be rolled
+ *       back from the layout repair view. The shipped version is pinned so
+ *       auto update does not bring the release back. Dependents restart.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: The restored version and the plugin's state.
+ *       400:
+ *         description: Invalid plugin id.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       409:
+ *         description: The plugin has no bundled copy, or a linked server manages it.
+ */
+router.post(
+  "/:id/restore-bundled",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    const pluginId = String(req.params.id);
+    if (!ID_PATTERN.test(pluginId)) {
+      res.status(400).json({ error: "Invalid plugin id" });
+      return;
+    }
+    if (await refuseOnLinkedDesktop(res)) return;
+    try {
+      const { restoreBundledPlugin } = await import("../../plugins/manage.js");
+      const result = await restoreBundledPlugin(pluginId);
+      await auditPluginAction(req, "restore_bundled_plugin", pluginId, {
+        version: result.version,
+      });
+      res.json(result);
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to restore the bundled copy",
+        "plugin_restore_bundled",
+      );
+    }
+  },
+);
+
+/**
+ * @openapi
  * /plugins/{id}:
  *   delete:
  *     summary: Uninstall a plugin
@@ -2306,7 +2385,7 @@ router.post(
  *       404:
  *         description: No such plugin.
  *       409:
- *         description: Other running plugins depend on it, or managed by a linked server.
+ *         description: Other running plugins depend on it, it is the default look, or a linked server manages it.
  */
 router.delete(
   "/:id",

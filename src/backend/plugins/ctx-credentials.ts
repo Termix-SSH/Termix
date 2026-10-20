@@ -150,6 +150,37 @@ export function createPluginCredentials({
       }
     },
 
+    list: async () => {
+      try {
+        await assertCapability(pluginId, "credentials:use", declared);
+        const userId = actingUser();
+        await requireCorePermission(userId, "credentials.view");
+        const { createCurrentCredentialRepository } =
+          await import("../database/repositories/factory.js");
+        const rows =
+          await createCurrentCredentialRepository().listDecryptedByUserId(
+            userId,
+          );
+        const list = rows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          username: row.username ?? null,
+          authType: String(row.authType ?? ""),
+          folder: row.folder ?? null,
+        }));
+        await audit("credentials_list", `${list.length} credentials`, {
+          success: true,
+        });
+        return list;
+      } catch (error) {
+        await audit("credentials_list", "saved credentials", {
+          success: false,
+          errorMessage: errorText(error),
+        });
+        throw error;
+      }
+    },
+
     createSshKey: async (input) => {
       const details = `SSH key "${input?.name ?? ""}"`;
       try {
@@ -187,6 +218,74 @@ export function createPluginCredentials({
         return { id: created.id };
       } catch (error) {
         await audit("credentials_create_key", details, {
+          success: false,
+          errorMessage: errorText(error),
+        });
+        throw error;
+      }
+    },
+
+    publicKey: async (credentialId) => {
+      const details = `public key of credential ${credentialId}`;
+      try {
+        await assertCapability(pluginId, "credentials:use", declared);
+        const userId = actingUser();
+        await requireCorePermission(userId, "credentials.view");
+        if (!Number.isInteger(credentialId) || credentialId <= 0) {
+          throw new Error("A credential id is required");
+        }
+        const { createCurrentHostResolutionRepository } =
+          await import("../database/repositories/factory.js");
+        const credential =
+          await createCurrentHostResolutionRepository().findCredentialByIdForUser(
+            credentialId,
+            userId,
+          );
+        const row = credential as unknown as Record<string, unknown> | null;
+        if (!row || row.authType !== "key") {
+          await audit("credentials_public_key", details, { success: true });
+          return null;
+        }
+        let publicKey =
+          typeof row.publicKey === "string" && row.publicKey.trim()
+            ? row.publicKey.trim()
+            : null;
+        if (!publicKey) {
+          const stored = str(row.privateKey) || str(row.key);
+          if (stored) {
+            const { resolveKeyReferences } =
+              await import("../hosts/stored-ssh-key.js");
+            const resolved = await resolveKeyReferences(
+              userId,
+              stored,
+              typeof row.keyPassword === "string" ? row.keyPassword : null,
+            );
+            publicKey = derivePublicKey(resolved.key, resolved.passphrase);
+          }
+        }
+        await audit("credentials_public_key", details, { success: true });
+        return publicKey;
+      } catch (error) {
+        await audit("credentials_public_key", details, {
+          success: false,
+          errorMessage: errorText(error),
+        });
+        throw error;
+      }
+    },
+
+    resolveKeyRefs: async (key, passphrase) => {
+      const details = "resolved key references";
+      try {
+        await assertCapability(pluginId, "credentials:read", declared);
+        const userId = actingUser();
+        const { resolveKeyReferences } =
+          await import("../hosts/stored-ssh-key.js");
+        const resolved = await resolveKeyReferences(userId, key, passphrase);
+        await audit("credentials_resolve_key", details, { success: true });
+        return resolved;
+      } catch (error) {
+        await audit("credentials_resolve_key", details, {
           success: false,
           errorMessage: errorText(error),
         });

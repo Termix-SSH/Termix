@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { isElectron } from "@/lib/electron";
 import { authApi } from "@/main-axios";
 import { SYNC_CHANGED_EVENT } from "@/lib/sync-events";
@@ -47,4 +48,23 @@ export async function getLinkedSession(): Promise<LinkedSession | null> {
 export function notifySyncChanged(): void {
   cached = null;
   window.dispatchEvent(new CustomEvent(SYNC_CHANGED_EVENT));
+}
+
+/** Whether this desktop is linked to a server, kept current as it changes. */
+export function useDesktopLinked(): boolean {
+  const [linked, setLinked] = useState(false);
+  useEffect(() => {
+    let live = true;
+    const read = () =>
+      void getLinkedSession().then((session) => {
+        if (live) setLinked(!!session);
+      });
+    read();
+    window.addEventListener(SYNC_CHANGED_EVENT, read);
+    return () => {
+      live = false;
+      window.removeEventListener(SYNC_CHANGED_EVENT, read);
+    };
+  }, []);
+  return linked;
 }

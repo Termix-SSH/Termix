@@ -42,6 +42,7 @@ import {
 import {
   challengeSecondFactor,
   getLoginMethods,
+  getRememberDeviceAllowed,
   startLoginRedirect,
   submitLoginMethod,
   verifySecondFactor,
@@ -137,7 +138,7 @@ function hasDesktopManualLogout() {
   return localStorage.getItem(DESKTOP_MANUAL_LOGOUT_KEY) === "true";
 }
 
-function storeAuth(username: string) {
+export function storeAuth(username: string) {
   localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify({ loggedIn: true, username }),
@@ -232,6 +233,7 @@ export function Auth({ onLogin }: AuthProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [rememberAllowed, setRememberAllowed] = useState(true);
   const [rememberMe, setRememberMe] = useState(() => {
     try {
       return localStorage.getItem("rememberMe") === "true";
@@ -395,6 +397,12 @@ export function Auth({ onLogin }: AuthProps) {
     void startPreLoginPlugins()
       .catch(() => {})
       .finally(() => setAuthPluginsLoading(false));
+    getRememberDeviceAllowed()
+      .then((allowed) => {
+        setRememberAllowed(allowed);
+        if (!allowed) setRememberMe(false);
+      })
+      .catch(() => {});
     getLoginMethods()
       .then((methods) => setAuthMethods(methods))
       .catch(() => setAuthMethods([]))
@@ -1525,19 +1533,21 @@ export function Auth({ onLogin }: AuthProps) {
 
                 {view === "external" && (
                   <div className="flex flex-col gap-4">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="rememberSSO"
-                        checked={rememberMe}
-                        onCheckedChange={(v) => setRememberMe(v === true)}
-                      />
-                      <label
-                        htmlFor="rememberSSO"
-                        className="text-xs text-muted-foreground cursor-pointer"
-                      >
-                        {t("auth.rememberMe")}
-                      </label>
-                    </div>
+                    {rememberAllowed && (
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="rememberSSO"
+                          checked={rememberMe}
+                          onCheckedChange={(v) => setRememberMe(v === true)}
+                        />
+                        <label
+                          htmlFor="rememberSSO"
+                          className="text-xs text-muted-foreground cursor-pointer"
+                        >
+                          {t("auth.rememberMe")}
+                        </label>
+                      </div>
+                    )}
 
                     <div className="flex flex-col gap-3">
                       {externalMethods.map((method) =>
@@ -1573,20 +1583,24 @@ export function Auth({ onLogin }: AuthProps) {
                       />
                     </Field>
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id="rememberMe"
-                          checked={rememberMe}
-                          onCheckedChange={(v) => setRememberMe(v === true)}
-                          disabled={loading}
-                        />
-                        <label
-                          htmlFor="rememberMe"
-                          className="text-xs text-muted-foreground cursor-pointer"
-                        >
-                          {t("auth.rememberMe")}
-                        </label>
-                      </div>
+                      {rememberAllowed ? (
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="rememberMe"
+                            checked={rememberMe}
+                            onCheckedChange={(v) => setRememberMe(v === true)}
+                            disabled={loading}
+                          />
+                          <label
+                            htmlFor="rememberMe"
+                            className="text-xs text-muted-foreground cursor-pointer"
+                          >
+                            {t("auth.rememberMe")}
+                          </label>
+                        </div>
+                      ) : (
+                        <span />
+                      )}
                       {passwordResetAllowed && (
                         <button
                           type="button"

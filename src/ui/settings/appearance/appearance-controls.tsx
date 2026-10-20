@@ -17,50 +17,55 @@ import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
 import { LANGUAGES } from "@/i18n/languages";
 import { getUserPreferences, saveUserPreferences } from "@/api/open-tabs-api";
 import type { FontSizeId, ThemeId, UiFontId } from "@/types/ui-types";
+import {
+  BUILTIN_THEMES,
+  SYSTEM_THEME,
+  themeLabel,
+  useThemes,
+  type ThemeSwatch,
+} from "@/look/theme-registry";
+import { useChooseTheme } from "@/look/use-look-theme";
 
 export const DEFAULT_ACCENT = "#f59145";
 
+/** The built-in themes, with System first. Plugin themes come from useThemeOptions. */
 export const THEMES: { id: ThemeId; preview: string }[] = [
-  { id: "system", preview: "auto" },
-  { id: "light", preview: "#ffffff" },
-  { id: "dark", preview: "#1a1c22" },
-  { id: "dracula", preview: "#282a36" },
-  { id: "catppuccin", preview: "#1e1e2e" },
-  { id: "nord", preview: "#2e3440" },
-  { id: "solarized", preview: "#002b36" },
-  { id: "tokyo-night", preview: "#1a1b26" },
-  { id: "one-dark", preview: "#282c34" },
-  { id: "gruvbox", preview: "#282828" },
+  { id: SYSTEM_THEME, preview: "auto" },
+  ...BUILTIN_THEMES.map((theme) => ({
+    id: theme.id,
+    preview: theme.swatch.background,
+  })),
 ];
 
-/** Background, panel and text colours for the little theme previews. */
-const THEME_PALETTES: Record<
-  Exclude<ThemeId, "system">,
-  { bg: string; panel: string; text: string }
-> = {
-  light: { bg: "#ffffff", panel: "#eef0f3", text: "#1f2937" },
-  dark: { bg: "#1a1c22", panel: "#25272e", text: "#e5e7eb" },
-  dracula: { bg: "#282a36", panel: "#44475a", text: "#f8f8f2" },
-  catppuccin: { bg: "#1e1e2e", panel: "#313244", text: "#cdd6f4" },
-  nord: { bg: "#2e3440", panel: "#3b4252", text: "#eceff4" },
-  solarized: { bg: "#002b36", panel: "#073642", text: "#93a1a1" },
-  "tokyo-night": { bg: "#1a1b26", panel: "#24283b", text: "#c0caf5" },
-  "one-dark": { bg: "#282c34", panel: "#21252b", text: "#abb2bf" },
-  gruvbox: { bg: "#282828", panel: "#3c3836", text: "#ebdbb2" },
-};
+export interface ThemeOption {
+  id: ThemeId;
+  label: string;
+  /** Null for System, which previews light and dark side by side. */
+  swatch: ThemeSwatch | null;
+}
 
-export const THEME_LABEL_KEYS: Record<ThemeId, string> = {
-  system: "newUi.sidebar.userProfile.themeSystem",
-  light: "newUi.sidebar.userProfile.themeLight",
-  dark: "newUi.sidebar.userProfile.themeDark",
-  dracula: "newUi.sidebar.userProfile.themeDracula",
-  catppuccin: "newUi.sidebar.userProfile.themeCatppuccin",
-  nord: "newUi.sidebar.userProfile.themeNord",
-  solarized: "newUi.sidebar.userProfile.themeSolarized",
-  "tokyo-night": "newUi.sidebar.userProfile.themeTokyoNight",
-  "one-dark": "newUi.sidebar.userProfile.themeOneDark",
-  gruvbox: "newUi.sidebar.userProfile.themeGruvbox",
-};
+/** Every theme to pick from, System first, plugin themes included. */
+export function useThemeOptions(): ThemeOption[] {
+  const { t } = useTranslation();
+  const themes = useThemes();
+  return [
+    {
+      id: SYSTEM_THEME,
+      label: t("newUi.sidebar.userProfile.themeSystem"),
+      swatch: null,
+    },
+    ...themes.map((theme) => ({
+      id: theme.id,
+      label: themeLabel(theme, t),
+      swatch: theme.swatch,
+    })),
+  ];
+}
+
+const LIGHT_SWATCH = BUILTIN_THEMES.find(
+  (theme) => theme.id === "light",
+)!.swatch;
+const DARK_SWATCH = BUILTIN_THEMES.find((theme) => theme.id === "dark")!.swatch;
 
 export function isHexColor(value: string): boolean {
   return /^#[0-9a-fA-F]{6}$/.test(value) || /^#[0-9a-fA-F]{3}$/.test(value);
@@ -83,7 +88,8 @@ async function saveIfCloud(prefs: CloudPrefs): Promise<void> {
  * way the profile settings store them.
  */
 export function useAppearanceSettings() {
-  const { theme, setTheme } = useTheme();
+  const { theme } = useTheme();
+  const chooseTheme = useChooseTheme();
   const [accent, setAccentState] = useState(
     () => localStorage.getItem("termix-accent") ?? DEFAULT_ACCENT,
   );
@@ -105,8 +111,7 @@ export function useAppearanceSettings() {
     uiFont,
     language,
     setTheme(id: ThemeId) {
-      setTheme(id);
-      void saveIfCloud({ theme: id });
+      chooseTheme(id);
     },
     setAccent(value: string) {
       setAccentState(value);
@@ -134,37 +139,29 @@ export function useAppearanceSettings() {
   };
 }
 
-function ThemePreview({ id }: { id: ThemeId }) {
-  if (id === "system") {
+function ThemePreview({ swatch }: { swatch: ThemeSwatch | null }) {
+  if (!swatch) {
     return (
       <div className="flex h-14 w-full">
         <div className="flex-1">
-          <MiniWindow {...THEME_PALETTES.light} />
+          <MiniWindow {...LIGHT_SWATCH} />
         </div>
         <div className="flex-1">
-          <MiniWindow {...THEME_PALETTES.dark} />
+          <MiniWindow {...DARK_SWATCH} />
         </div>
       </div>
     );
   }
   return (
     <div className="h-14 w-full">
-      <MiniWindow {...THEME_PALETTES[id]} />
+      <MiniWindow {...swatch} />
     </div>
   );
 }
 
-function MiniWindow({
-  bg,
-  panel,
-  text,
-}: {
-  bg: string;
-  panel: string;
-  text: string;
-}) {
+function MiniWindow({ background, panel, text }: ThemeSwatch) {
   return (
-    <div className="flex h-full w-full" style={{ background: bg }}>
+    <div className="flex h-full w-full" style={{ background }}>
       <div
         className="flex w-1/4 flex-col gap-1 p-1"
         style={{ background: panel }}
@@ -198,26 +195,34 @@ export function ThemeGrid({
   value: ThemeId;
   onChange: (id: ThemeId) => void;
 }) {
-  const { t } = useTranslation();
+  const { setThemePreview } = useTheme();
+  const options = useThemeOptions();
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-      {THEMES.map(({ id }) => {
+      {options.map(({ id, label, swatch }) => {
         const active = value === id;
         return (
           <button
             key={id}
             type="button"
             aria-pressed={active}
-            onClick={() => onChange(id)}
+            onClick={() => {
+              setThemePreview(null);
+              onChange(id);
+            }}
+            onMouseEnter={() => setThemePreview(id)}
+            onMouseLeave={() => setThemePreview(null)}
+            onFocus={() => setThemePreview(id)}
+            onBlur={() => setThemePreview(null)}
             className={`flex flex-col overflow-hidden border text-left transition-colors ${
               active
                 ? "border-accent-brand ring-1 ring-accent-brand"
                 : "border-border hover:border-foreground/40"
             }`}
           >
-            <ThemePreview id={id} />
+            <ThemePreview swatch={swatch} />
             <span className="flex items-center justify-between gap-1 border-t border-border bg-card px-2 py-1.5 text-[11px]">
-              {t(THEME_LABEL_KEYS[id])}
+              {label}
               {active && <Check size={11} className="text-accent-brand" />}
             </span>
           </button>

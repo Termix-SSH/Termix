@@ -27,7 +27,7 @@ export interface UserOwnedTable {
   otherUserColumns: string[];
   /** refHost columns. */
   hostColumns: string[];
-  /** Columns that travel, as SQL names. The primary key and secrets do not. */
+  /** Columns that travel, as SQL names. Auto ids and secrets do not. */
   columns: string[];
   /** The owner column is the primary key: one row per user. */
   userIsKey: boolean;
@@ -57,9 +57,7 @@ export function listUserOwnedTables(): UserOwnedTable[] {
         .filter(
           ([, column]) =>
             column === user[1] ||
-            (column.type !== "id" &&
-              !column.primaryKey &&
-              column.type !== "encryptedText"),
+            (column.type !== "id" && column.type !== "encryptedText"),
         )
         .map(([property, column]) => columnName(property, column)),
       userIsKey: !!user[1].primaryKey,

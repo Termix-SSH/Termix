@@ -98,12 +98,7 @@ export const PERFORMANCE_INDEXES: PerformanceIndex[] = [
     columns: "user_id",
   },
 
-  // Per-user history and file manager surfaces.
-  {
-    name: "idx_recent_activity_user_ts",
-    table: "recent_activity",
-    columns: "user_id, timestamp",
-  },
+  // Per-user open tabs.
   {
     name: "idx_user_open_tabs_user_id",
     table: "user_open_tabs",

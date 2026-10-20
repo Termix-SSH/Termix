@@ -184,19 +184,32 @@ export function PluginDetail({
                   ? t("plugins.manager.disable")
                   : t("plugins.manager.enable")}
               </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="gap-1.5"
-                disabled={busy || locked}
-                onClick={async () => {
-                  if (await manager.uninstall(plugin)) onUninstalled();
-                }}
-              >
-                <Trash2 className="size-3.5" />
-                {t("plugins.manager.uninstall")}
-              </Button>
+              {!plugin.defaultLook && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={busy || locked}
+                  onClick={async () => {
+                    if (await manager.uninstall(plugin)) onUninstalled();
+                  }}
+                >
+                  <Trash2 className="size-3.5" />
+                  {t("plugins.manager.uninstall")}
+                </Button>
+              )}
             </>
+          ) : plugin.unsupported ? (
+            <span
+              className="text-xs text-muted-foreground"
+              title={t("plugins.manager.unsupportedHint")}
+            >
+              {plugin.needsTermix
+                ? t("plugins.manager.needsTermix", {
+                    range: plugin.needsTermix,
+                  })
+                : t("plugins.manager.unsupported")}
+            </span>
           ) : (
             <Button
               variant="outline"

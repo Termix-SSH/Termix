@@ -54,6 +54,8 @@ interface Route {
   rawHandler?: RawUpgradeHandler;
   /** Sockets handed to rawHandler, destroyed when the route goes away. */
   rawSockets?: Set<Duplex>;
+  /** Core's own socket: served under /plugin-ws/core/, no plugin grant. */
+  core?: boolean;
 }
 
 /** Largest frame a plugin socket accepts. ws defaults to 100MB. */
@@ -163,7 +165,10 @@ async function handlePluginUpgrade(
   // checked per upgrade rather than at registration, and a revoke takes effect
   // on the next connection without a restart.
   const { hasCapability } = await import("./permissions.js");
-  if (!(await hasCapability(route.pluginId, "network:serve", route.declared))) {
+  if (
+    !route.core &&
+    !(await hasCapability(route.pluginId, "network:serve", route.declared))
+  ) {
     reject(socket, 403, "Forbidden");
     return true;
   }
@@ -301,6 +306,32 @@ export function registerPluginWsRoute(
   });
 
   return () => disposeRoute(routeKey, pluginId, normalized);
+}
+
+/**
+ * A socket core itself serves, at /plugin-ws/core/<path>, so it rides the same
+ * proxy rules and token checks as plugin sockets. Authenticated like them.
+ */
+export function registerCoreWsRoute(
+  path: string,
+  handler: PluginWebSocketHandler,
+): () => void {
+  const routeKey = key("core", path);
+  const normalized = normalizePath(path);
+  if (routes.has(routeKey)) return () => {};
+  routes.set(routeKey, {
+    pluginId: "core",
+    path: normalized,
+    options: {},
+    declared: [],
+    handler,
+    core: true,
+  });
+  servers.set(
+    routeKey,
+    new WebSocketServer({ noServer: true, maxPayload: MAX_PAYLOAD_BYTES }),
+  );
+  return () => disposeRoute(routeKey, "core", normalized);
 }
 
 export function registerPluginWsUpgrade(

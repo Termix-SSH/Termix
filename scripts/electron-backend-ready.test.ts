@@ -48,7 +48,11 @@ function start() {
       writeFileSync: vi.fn(),
     },
     fork: () => child,
-    app: { isPackaged: true, getVersion: () => "2.9.0" },
+    app: {
+      isPackaged: true,
+      getVersion: () => "2.9.0",
+      getPath: () => "/user-data",
+    },
     process: { env: { LOG_LEVEL: "error" } },
     isDev: false,
     appRoot: "/app",

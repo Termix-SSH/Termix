@@ -9,6 +9,7 @@
  * Two projects: tests/backend runs in node, tests/frontend in jsdom.
  */
 
+import { createRequire } from "node:module";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -117,9 +118,41 @@ export function pluginVitestConfig(
 
   const plugins = [wasmBinaryPlugin()];
 
+  // A local SDK linked into node_modules sits outside the plugin folder, so
+  // Vite must be allowed to read it, and React must come from the plugin.
+  const sdkDir = fs.realpathSync(fileURLToPath(new URL("..", import.meta.url)));
+  const server = { fs: { allow: [pluginDir, sdkDir] } };
+  // dedupe alone is not enough: react-dom or the testing library loaded from
+  // the linked SDK's own node_modules pull in a second React, and hooks then
+  // see no renderer.
+  if (!sdkDir.startsWith(pluginDir)) {
+    const pluginRequire = createRequire(path.join(pluginDir, "package.json"));
+    for (const name of [
+      "react",
+      "react-dom",
+      "@testing-library/react",
+      "react-i18next",
+      "i18next",
+    ]) {
+      if (alias[name]) continue;
+      try {
+        alias[name] = path.dirname(
+          pluginRequire.resolve(`${name}/package.json`),
+        );
+      } catch {
+        // Not installed in the plugin: leave it to normal resolution.
+      }
+    }
+  }
+  const resolve = {
+    alias,
+    dedupe: ["react", "react-dom", "react-i18next", "i18next"],
+  };
+
   return {
     plugins,
-    resolve: { alias },
+    server,
+    resolve,
     test: {
       globals: true,
       setupFiles: [setupFile],
@@ -127,7 +160,8 @@ export function pluginVitestConfig(
       projects: [
         {
           plugins,
-          resolve: { alias },
+          server,
+          resolve,
           test: {
             name: `${pluginId}:backend`,
             root: pluginDir,
@@ -140,7 +174,8 @@ export function pluginVitestConfig(
         },
         {
           plugins,
-          resolve: { alias },
+          server,
+          resolve,
           test: {
             name: `${pluginId}:frontend`,
             root: pluginDir,

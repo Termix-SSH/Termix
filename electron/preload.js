@@ -32,6 +32,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
     webFrame.setZoomFactor(Math.min(2, Math.max(0.5, value)));
   },
   getPlatform: () => ipcRenderer.invoke("get-platform"),
+
+  // Whether the app-drawn title bar shows in this window, and when it changes
+  // (full screen hides it).
+  getTitleBarVisible: () => ipcRenderer.invoke("get-title-bar-visible"),
+  onTitleBarVisibleChange: (callback) => {
+    const listener = (_event, visible) => callback(visible);
+    ipcRenderer.on("title-bar-visible-changed", listener);
+    return () =>
+      ipcRenderer.removeListener("title-bar-visible-changed", listener);
+  },
+  // Keeps the window controls the system draws in the colors of the theme.
+  setTitleBarOverlay: (colors) =>
+    ipcRenderer.invoke("set-title-bar-overlay", colors),
   getEmbeddedServerStatus: () =>
     ipcRenderer.invoke("get-embedded-server-status"),
 
@@ -58,36 +71,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   getSetting: (key) => ipcRenderer.invoke("get-setting", key),
   setSetting: (key, value) => ipcRenderer.invoke("set-setting", key, value),
-  answerC2SAuth: (id, answer) =>
-    ipcRenderer.invoke("answer-c2s-auth", id, answer),
-  onC2SAuthPrompt: (callback) => {
-    const listener = (_event, prompt) => callback(prompt);
-    ipcRenderer.on("c2s-auth-prompt", listener);
-    return () => ipcRenderer.removeListener("c2s-auth-prompt", listener);
-  },
-  getC2STunnelConfig: () => ipcRenderer.invoke("get-c2s-tunnel-config"),
-  saveC2STunnelConfig: (config) =>
-    ipcRenderer.invoke("save-c2s-tunnel-config", config),
-  checkLocalPortAvailable: (host, port) =>
-    ipcRenderer.invoke("check-local-port-available", host, port),
-  getC2STunnelPresetDefaultName: () =>
-    ipcRenderer.invoke("get-c2s-tunnel-preset-default-name"),
-  startC2STunnel: (tunnel, index, authToken) =>
-    ipcRenderer.invoke("start-c2s-tunnel", tunnel, index, authToken),
-  testC2STunnel: (tunnel, index, authToken) =>
-    ipcRenderer.invoke("test-c2s-tunnel", tunnel, index, authToken),
-  stopC2STunnel: (tunnelName) =>
-    ipcRenderer.invoke("stop-c2s-tunnel", tunnelName),
-  getC2STunnelStatuses: () => ipcRenderer.invoke("get-c2s-tunnel-statuses"),
-  onC2STunnelStatuses: (callback) => {
-    const listener = (_event, statuses) => callback(statuses);
-    ipcRenderer.on("c2s-tunnel-statuses", listener);
-    return () => ipcRenderer.removeListener("c2s-tunnel-statuses", listener);
-  },
-  startC2SAutoStartTunnels: () =>
-    ipcRenderer.invoke("start-c2s-autostart-tunnels"),
-  setC2SRelayPath: (relayPath) =>
-    ipcRenderer.invoke("set-c2s-relay-path", relayPath),
 
   onCloseActiveTab: (callback) => {
     const listener = () => callback();
@@ -100,32 +83,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   externalBrowserLogin: (authUrl, callbackPort) =>
     ipcRenderer.invoke("external-browser-login", authUrl, callbackPort),
 
-  openExternalEditor: (fileData) =>
-    ipcRenderer.invoke("open-external-editor", fileData),
-  closeExternalEditor: (editId) =>
-    ipcRenderer.invoke("close-external-editor", editId),
-  onExternalEditorSaved: (callback) => {
-    const listener = (_event, payload) => callback(payload);
-    ipcRenderer.on("external-editor-saved", listener);
-    return () => ipcRenderer.removeListener("external-editor-saved", listener);
-  },
-
   showSaveDialog: (options) => ipcRenderer.invoke("show-save-dialog", options),
   showOpenDialog: (options) => ipcRenderer.invoke("show-open-dialog", options),
-  getLocalHomeDirectory: () => ipcRenderer.invoke("get-local-home-directory"),
-  listLocalDirectory: (dirPath) =>
-    ipcRenderer.invoke("list-local-directory", dirPath),
-  statLocalPaths: (paths) => ipcRenderer.invoke("stat-local-paths", paths),
-  collectLocalFiles: (paths) =>
-    ipcRenderer.invoke("collect-local-files", paths),
-  createLocalFolder: (parentPath, folderName) =>
-    ipcRenderer.invoke("create-local-folder", parentPath, folderName),
-  renameLocalPath: (entryPath, newName) =>
-    ipcRenderer.invoke("rename-local-path", entryPath, newName),
-  trashLocalPath: (entryPath) =>
-    ipcRenderer.invoke("trash-local-path", entryPath),
-  chmodLocalPath: (entryPath, permissions) =>
-    ipcRenderer.invoke("chmod-local-path", entryPath, permissions),
   createTempFile: (fileData) =>
     ipcRenderer.invoke("create-temp-file", fileData),
   createTempFolder: (folderData) =>
@@ -134,61 +93,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("start-drag-to-desktop", dragData),
   cleanupTempFile: (tempId) => ipcRenderer.invoke("cleanup-temp-file", tempId),
 
-  startLocalTerminal: (dimensions) =>
-    ipcRenderer.invoke("local-terminal-start", dimensions),
-  writeLocalTerminal: (sessionId, data) =>
-    ipcRenderer.invoke("local-terminal-write", sessionId, data),
-  readyLocalTerminal: (sessionId) =>
-    ipcRenderer.invoke("local-terminal-ready", sessionId),
-  resizeLocalTerminal: (sessionId, cols, rows) =>
-    ipcRenderer.invoke("local-terminal-resize", sessionId, cols, rows),
-  closeLocalTerminal: (sessionId) =>
-    ipcRenderer.invoke("local-terminal-close", sessionId),
-  onLocalTerminalData: (sessionId, callback) => {
-    const channel = `local-terminal:data:${sessionId}`;
-    const listener = (_event, data) => callback(data);
-    ipcRenderer.on(channel, listener);
-    return () => ipcRenderer.removeListener(channel, listener);
-  },
-  onLocalTerminalExit: (sessionId, callback) => {
-    const channel = `local-terminal:exit:${sessionId}`;
-    const listener = (_event, exitCode) => callback(exitCode);
-    ipcRenderer.on(channel, listener);
-    return () => ipcRenderer.removeListener(channel, listener);
-  },
-
-  // Dual-pane file manager: local disk browsing and streamed transfers.
-  localFs: {
-    home: () => ipcRenderer.invoke("local-fs:home"),
-    list: (dirPath) => ipcRenderer.invoke("local-fs:list", dirPath),
-    mkdir: (parentPath, name) =>
-      ipcRenderer.invoke("local-fs:mkdir", parentPath, name),
-    createFile: (parentPath, name) =>
-      ipcRenderer.invoke("local-fs:create-file", parentPath, name),
-    rename: (oldPath, newName) =>
-      ipcRenderer.invoke("local-fs:rename", oldPath, newName),
-    trash: (paths) => ipcRenderer.invoke("local-fs:trash", paths),
-    ensureDir: (dirPath, rootPath) =>
-      ipcRenderer.invoke("local-fs:ensure-dir", dirPath, rootPath),
-    exists: (paths) => ipcRenderer.invoke("local-fs:exists", paths),
-    walk: (paths) => ipcRenderer.invoke("local-fs:walk", paths),
-    reveal: (targetPath) => ipcRenderer.invoke("local-fs:reveal", targetPath),
-    open: (targetPath) => ipcRenderer.invoke("local-fs:open", targetPath),
-  },
-  localTransfer: {
-    setApiPath: (apiPath) =>
-      ipcRenderer.invoke("local-transfer:set-api", apiPath),
-    upload: (options) => ipcRenderer.invoke("local-transfer:upload", options),
-    download: (options) =>
-      ipcRenderer.invoke("local-transfer:download", options),
-    cancel: (transferId) =>
-      ipcRenderer.invoke("local-transfer:cancel", transferId),
-    onProgress: (callback) => {
-      const listener = (_event, payload) => callback(payload);
-      ipcRenderer.on("local-transfer:progress", listener);
-      return () =>
-        ipcRenderer.removeListener("local-transfer:progress", listener);
-    },
+  // Native web views placed over an element of the page (WebContentsView).
+  embeddedView: {
+    open: (options) => ipcRenderer.invoke("embedded-view-open", options),
+    setBounds: (id, bounds) =>
+      ipcRenderer.invoke("embedded-view-bounds", id, bounds),
+    setVisible: (id, visible) =>
+      ipcRenderer.invoke("embedded-view-visible", id, visible),
+    close: (id) => ipcRenderer.invoke("embedded-view-close", id),
   },
 
   invoke: invokeAllowed,

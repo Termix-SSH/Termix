@@ -71,6 +71,7 @@ const UNGATED: Record<string, string> = {
   "rbac.hasFor": "a yes/no about a role permission, grants nothing",
   "rbac.require": "route middleware for the plugin's own permissions",
   "capabilities.has": "a yes/no about the plugin's own grants",
+  "auth.listSecondFactors": "ids of the second factors, no user data",
   "disposables.add": "the plugin's own cleanup",
   "schedule.every": "the plugin's own timers",
   "schedule.after": "the plugin's own timers",
@@ -79,6 +80,7 @@ const UNGATED: Record<string, string> = {
     "audited as plugin_as_user (identical successful repeats coalesced for 10 minutes)",
   currentActor: "reads the actor, cannot set it",
   "desktop.available": "a yes/no about the environment",
+  "desktop.local.available": "a yes/no about the environment",
   "http.baseUrl": "reads the request's public origin",
   "ssh.poolKey": "a string built from a host the plugin already holds",
   "ssh.dropPooled": "closes only this plugin's own pooled connections",
@@ -162,7 +164,15 @@ describe("every privileged ctx member is guarded", () => {
       let caught: unknown;
       await runAsActor(ACTOR, "request", async () => {
         try {
-          await member.fn(...PLACEHOLDER_ARGS);
+          const result = await member.fn(...PLACEHOLDER_ARGS);
+          // An async generator only runs its guard on the first next().
+          if (
+            result &&
+            typeof (result as AsyncGenerator).next === "function" &&
+            Symbol.asyncIterator in (result as object)
+          ) {
+            await (result as AsyncGenerator).next();
+          }
         } catch (error) {
           caught = error;
         }

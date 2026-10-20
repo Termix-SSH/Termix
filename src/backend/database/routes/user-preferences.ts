@@ -32,7 +32,12 @@ const pickPreferences = (row?: UserPreferenceRecord | null) => ({
   compactHostView: row?.compactHostView ?? null,
   statusColorScheme: row?.statusColorScheme ?? null,
   customKeybindings: row?.customKeybindings ?? null,
+  layoutId: row?.layoutId ?? null,
+  themeId: row?.themeId ?? null,
 });
+
+/** Layout and theme ids, the same shape the plugin manifest allows. */
+const LOOK_ID = /^[a-z][a-z0-9-]{1,39}$/;
 
 /**
  * @openapi
@@ -104,6 +109,14 @@ const pickPreferences = (row?: UserPreferenceRecord | null) => ({
  *                   type: string
  *                   nullable: true
  *                   description: JSON-encoded array of the user's custom keybindings. An action's type is one of the shell's own or one a plugin declares in contributes.keybindingActions.
+ *                 layoutId:
+ *                   type: string
+ *                   nullable: true
+ *                   description: The layout this user chose, overriding the admin default. Null follows the default.
+ *                 themeId:
+ *                   type: string
+ *                   nullable: true
+ *                   description: The theme this user chose, overriding the admin default. Null follows the default.
  */
 router.get("/", authenticateJWT, async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
@@ -165,6 +178,14 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
  *               customKeybindings:
  *                 type: string
  *                 description: JSON-encoded array of the user's custom keybindings. Each action is checked against the shell's own types and the parameters a plugin declares for its type.
+ *               layoutId:
+ *                 type: string
+ *                 nullable: true
+ *                 description: A layout id, or null to follow the admin default.
+ *               themeId:
+ *                 type: string
+ *                 nullable: true
+ *                 description: A theme id, or null to follow the admin default.
  *     responses:
  *       200:
  *         description: Preferences updated successfully.
@@ -186,6 +207,8 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     confirmTabClose,
     hiddenRailTabs,
     customKeybindings,
+    layoutId,
+    themeId,
   } = req.body as {
     reopenTabsOnLogin?: boolean;
     theme?: string | null;
@@ -201,6 +224,8 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     confirmTabClose?: boolean | null;
     hiddenRailTabs?: string | null;
     customKeybindings?: string | null;
+    layoutId?: string | null;
+    themeId?: string | null;
   };
   // showHostTags, hostTrayOnClick, compactHostView, statusColorScheme are no
   // longer writable here -- they moved to /host-sidebar/preferences as of the
@@ -258,6 +283,18 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     }
   }
 
+  for (const [key, value] of Object.entries({ layoutId, themeId })) {
+    if (
+      value !== undefined &&
+      value !== null &&
+      (typeof value !== "string" || !LOOK_ID.test(value))
+    ) {
+      return res
+        .status(400)
+        .json({ error: `${key} must be a layout or theme id, or null` });
+    }
+  }
+
   const boolFields: Record<string, boolean | null | undefined> = {
     commandPaletteEnabled,
     pinAppRail,
@@ -290,6 +327,8 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
   if (confirmTabClose !== undefined) updates.confirmTabClose = confirmTabClose;
   if (customKeybindings !== undefined)
     updates.customKeybindings = customKeybindings;
+  if (layoutId !== undefined) updates.layoutId = layoutId;
+  if (themeId !== undefined) updates.themeId = themeId;
 
   if (Object.keys(updates).length === 1) {
     return res.status(400).json({ error: "No preferences provided" });

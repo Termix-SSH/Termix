@@ -15,11 +15,17 @@
  * enabledByEnv counts the plugin as recommended when any of those
  * environment variables is set, for a server configured before first boot.
  * Plugins without it start unchecked.
+ *
+ * "defaultLook": true marks the plugin whose layout (and that layout's
+ * theme) a fresh install shows. Core finds the default look this way, so it
+ * never names a plugin. Such a plugin always starts enabled and cannot be
+ * uninstalled, only swapped for another look.
  */
 
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
+const semver = require("semver");
 
 const ID = /^[a-z0-9][a-z0-9-]*$/;
 const ENV_NAME = /^[A-Z][A-Z0-9_]*$/;
@@ -110,6 +116,12 @@ function parseBundledPlugins(raw) {
       }
       const before = problems.length;
       const onboarding = parseOnboarding(entry.onboarding, entry.id, problems);
+      if (
+        entry.defaultLook !== undefined &&
+        typeof entry.defaultLook !== "boolean"
+      ) {
+        problems.push(`${entry.id} defaultLook must be a boolean`);
+      }
       if (problems.length > before) continue;
       plugins.push({
         id: entry.id,
@@ -118,6 +130,7 @@ function parseBundledPlugins(raw) {
         path: hasPath ? entry.path : null,
         sha256: entry.sha256,
         onboarding,
+        defaultLook: entry.defaultLook === true,
       });
     } else {
       problems.push(`${entry.id} has an unknown source "${entry.source}"`);
@@ -218,8 +231,12 @@ function buildBundledIndex(plugins, stagedIds) {
   const staged = new Set(stagedIds);
   const out = {};
   for (const plugin of plugins) {
-    if (!staged.has(plugin.id) || !plugin.onboarding) continue;
-    out[plugin.id] = { onboarding: plugin.onboarding };
+    if (!staged.has(plugin.id)) continue;
+    if (!plugin.onboarding && !plugin.defaultLook) continue;
+    out[plugin.id] = {
+      ...(plugin.onboarding ? { onboarding: plugin.onboarding } : {}),
+      ...(plugin.defaultLook ? { defaultLook: true } : {}),
+    };
   }
   return { version: 1, plugins: out };
 }
@@ -235,15 +252,22 @@ function pinsFromIndex(index, ids, current = []) {
   const currentById = new Map(current.map((entry) => [entry.id, entry]));
   const wanted = ids ?? plugins.map((plugin) => plugin.id);
   return [...wanted].sort().map((id) => {
-    const latest = byId.get(id)?.versions?.[0];
+    const listed = byId.get(id);
+    // gated holds releases that need a newer Termix than old builds check for.
+    const latest = [...(listed?.versions ?? []), ...(listed?.gated ?? [])]
+      .filter((entry) => semver.valid(entry.version))
+      .filter((entry) => !semver.prerelease(entry.version))
+      .sort((a, b) => semver.rcompare(a.version, b.version))[0];
     if (!latest) throw new Error(`${id} is not in the registry index`);
     const onboarding = currentById.get(id)?.onboarding;
+    const defaultLook = currentById.get(id)?.defaultLook === true;
     return {
       id,
       source: "tmxplug",
       url: latest.url,
       sha256: latest.sha256,
       ...(onboarding ? { onboarding } : {}),
+      ...(defaultLook ? { defaultLook } : {}),
     };
   });
 }
@@ -357,9 +381,26 @@ function rebuildLocalPlugins(dir, ids, run) {
 }
 
 /** Copies a local plugin build into the staging folder. */
+/** Theme CSS files the repo's manifest declares, which ship with it too. */
+function localThemeFiles(repo) {
+  try {
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(repo, "manifest.json"), "utf8"),
+    );
+    const themes = manifest?.contributes?.themes;
+    return Array.isArray(themes)
+      ? themes
+          .map((theme) => theme?.css)
+          .filter((css) => typeof css === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 function copyLocalBuild(repo, destination) {
   fs.mkdirSync(destination, { recursive: true });
-  for (const entry of LOCAL_FILES) {
+  for (const entry of new Set([...LOCAL_FILES, ...localThemeFiles(repo)])) {
     const from = path.join(repo, entry);
     if (fs.existsSync(from)) {
       fs.cpSync(from, path.join(destination, entry), { recursive: true });

@@ -19,6 +19,7 @@ import {
   type PluginEnvVar,
 } from "./docs.js";
 
+export { validateThemeCss } from "./theme-css.js";
 export {
   ENV_NAME_PATTERN,
   MAX_ENV_DESCRIPTION_LENGTH,
@@ -36,7 +37,7 @@ export {
  * "^1.2" needs 1.2 or later). engine.termix is checked against the core
  * version by the server.
  */
-export const PLUGIN_API_VERSION = "1.3.0";
+export const PLUGIN_API_VERSION = "1.11.0";
 
 /** The API major, the default engine.api for a new plugin. */
 export const SUPPORTED_PLUGIN_API_VERSION = String(
@@ -426,6 +427,40 @@ export interface PluginAuthContribution {
   keyboardInteractive?: string[];
 }
 
+/** A layout id or theme id: short, lowercase, used as a CSS class for themes. */
+export const LOOK_ID_PATTERN = /^[a-z][a-z0-9-]{1,39}$/;
+
+/**
+ * A whole-app layout the frontend registers with app.registerLayout. Needs
+ * the ui:layout capability. Declared here so core can list and choose it
+ * before any plugin code runs.
+ */
+export interface PluginLayoutContribution {
+  id: string;
+  /** i18n key in the plugin's namespace, or plain text. */
+  label: string;
+  description?: string;
+  /** Theme picked with this layout when nobody chose one. */
+  defaultTheme?: string;
+  /** The layout a default-look plugin starts with. */
+  default?: boolean;
+}
+
+/**
+ * A theme: one CSS file of token rules scoped under `.<id>`, applied as a
+ * class on <html>. Needs the ui:theme capability. No code runs for a theme.
+ */
+export interface PluginThemeContribution {
+  id: string;
+  /** i18n key in the plugin's namespace, or plain text. */
+  label: string;
+  mode: "light" | "dark";
+  /** Path of the CSS file inside the plugin. */
+  css: string;
+  /** Colors the theme picker previews it with. */
+  swatch?: { background: string; panel: string; text: string };
+}
+
 export interface PluginContributions {
   tabs?: PluginTabContribution[];
   panels?: PluginViewContribution[];
@@ -487,6 +522,10 @@ export interface PluginContributions {
    * ctx.credentials.resolveHostProtocol.
    */
   protocols?: PluginProtocolContribution[];
+  /** Whole-app layouts. Needs the ui:layout capability. */
+  layouts?: PluginLayoutContribution[];
+  /** Themes. Needs the ui:theme capability. */
+  themes?: PluginThemeContribution[];
 }
 
 /** A field a protocol login carries besides username and password. */
@@ -649,6 +688,21 @@ export interface PluginManifest {
   nativeDependencies?: string[];
   /** How a linked desktop treats this plugin. Defaults to "mirror". */
   desktop?: PluginDesktopMode;
+  /**
+   * "desktop": the plugin only loads on a desktop app's own embedded backend,
+   * never on a server. It implies desktop "local" and may declare desktop:local.
+   */
+  runtime?: PluginRuntime;
+}
+
+export type PluginRuntime = "desktop";
+export const PLUGIN_RUNTIMES: readonly PluginRuntime[] = ["desktop"];
+
+/** The desktop mode a manifest resolves to. */
+export function resolvePluginDesktopMode(
+  m: Pick<PluginManifest, "desktop" | "runtime">,
+): PluginDesktopMode {
+  return m.desktop ?? (m.runtime === "desktop" ? "local" : "mirror");
 }
 
 export const DEFAULT_BACKEND_ENTRY = "dist/backend.js";
@@ -688,6 +742,7 @@ const ALLOWED_TOP_LEVEL = new Set([
   "platforms",
   "nativeDependencies",
   "desktop",
+  "runtime",
 ]);
 
 const ALLOWED_CONTRIBUTES = new Set([
@@ -708,6 +763,8 @@ const ALLOWED_CONTRIBUTES = new Set([
   "uses",
   "keybindingActions",
   "protocols",
+  "layouts",
+  "themes",
 ]);
 
 const ALLOWED_SETTINGS_FIELD = [
@@ -862,6 +919,21 @@ export function validateManifest(manifest: unknown): string[] {
     errors.push(
       `Field "desktop" must be one of: ${PLUGIN_DESKTOP_MODES.join(", ")}`,
     );
+  }
+  if (
+    m.runtime !== undefined &&
+    !PLUGIN_RUNTIMES.includes(m.runtime as PluginRuntime)
+  ) {
+    errors.push(
+      `Field "runtime" must be one of: ${PLUGIN_RUNTIMES.join(", ")}`,
+    );
+  }
+  if (
+    m.runtime === "desktop" &&
+    m.desktop !== undefined &&
+    m.desktop !== "local"
+  ) {
+    errors.push(`A "desktop" runtime plugin must use desktop "local"`);
   }
   validateDependencyMap(m.dependencies, "dependencies", errors);
   validateDependencyMap(m.optionalDependencies, "optionalDependencies", errors);
@@ -1300,6 +1372,111 @@ function validateContributes(
   validateUiPresets(contributes.uiPresets, errors);
   validateKeybindingActions(contributes.keybindingActions, errors);
   validateProtocols(contributes.protocols, errors);
+  validateLayouts(contributes.layouts, errors);
+  validateThemes(contributes.themes, errors);
+}
+
+/** An array of objects with unique look ids; calls `each` for every valid entry. */
+function validateLookList(
+  value: unknown,
+  field: string,
+  allowed: string[],
+  errors: string[],
+  each: (raw: Record<string, unknown>, where: string) => void,
+): void {
+  if (value === undefined) return;
+  if (!Array.isArray(value)) {
+    errors.push(`Field "contributes.${field}" must be an array`);
+    return;
+  }
+  const seen = new Set<string>();
+  value.forEach((raw, index) => {
+    const where = `contributes.${field}[${index}]`;
+    if (!isPlainObject(raw)) {
+      errors.push(`${where} must be an object`);
+      return;
+    }
+    rejectUnknown(raw, allowed, where, errors);
+    if (typeof raw.id !== "string" || !LOOK_ID_PATTERN.test(raw.id)) {
+      errors.push(
+        `${where}.id must match ${LOOK_ID_PATTERN} (lowercase letters, digits, dashes)`,
+      );
+    } else {
+      if (seen.has(raw.id)) errors.push(`${where}.id duplicates "${raw.id}"`);
+      seen.add(raw.id);
+    }
+    requireString(raw.label, `${where}.label`, errors);
+    each(raw, where);
+  });
+}
+
+function validateLayouts(value: unknown, errors: string[]): void {
+  validateLookList(
+    value,
+    "layouts",
+    ["id", "label", "description", "defaultTheme", "default"],
+    errors,
+    (raw, where) => {
+      if (raw.description !== undefined)
+        requireString(raw.description, `${where}.description`, errors);
+      if (
+        raw.defaultTheme !== undefined &&
+        (typeof raw.defaultTheme !== "string" ||
+          !LOOK_ID_PATTERN.test(raw.defaultTheme))
+      ) {
+        errors.push(`${where}.defaultTheme must be a theme id`);
+      }
+      if (raw.default !== undefined && typeof raw.default !== "boolean") {
+        errors.push(`${where}.default must be a boolean`);
+      }
+    },
+  );
+  if (
+    Array.isArray(value) &&
+    value.filter((raw) => isPlainObject(raw) && raw.default === true).length > 1
+  ) {
+    errors.push('Only one entry in "contributes.layouts" may set default');
+  }
+}
+
+const HEX_COLOR = /^#[0-9a-fA-F]{3,8}$/;
+
+function validateThemes(value: unknown, errors: string[]): void {
+  validateLookList(
+    value,
+    "themes",
+    ["id", "label", "mode", "css", "swatch"],
+    errors,
+    (raw, where) => {
+      if (raw.mode !== "light" && raw.mode !== "dark") {
+        errors.push(`${where}.mode must be "light" or "dark"`);
+      }
+      if (requireString(raw.css, `${where}.css`, errors)) {
+        requireRelativePath(raw.css, `${where}.css`, errors);
+        if (!raw.css.endsWith(".css")) {
+          errors.push(`${where}.css must be a .css file`);
+        }
+      }
+      if (raw.swatch !== undefined) {
+        if (!isPlainObject(raw.swatch)) {
+          errors.push(`${where}.swatch must be an object`);
+          return;
+        }
+        rejectUnknown(
+          raw.swatch,
+          ["background", "panel", "text"],
+          `${where}.swatch`,
+          errors,
+        );
+        for (const key of ["background", "panel", "text"]) {
+          const color = raw.swatch[key];
+          if (typeof color !== "string" || !HEX_COLOR.test(color)) {
+            errors.push(`${where}.swatch.${key} must be a hex color`);
+          }
+        }
+      }
+    },
+  );
 }
 
 export const PROTOCOL_ID_PATTERN = /^[a-z][a-z0-9-]{0,31}$/;
@@ -2321,6 +2498,23 @@ export function parseManifest(raw: unknown): ParsedManifest {
   if (contributesAuth && !manifest.capabilities.includes("auth:provide")) {
     errors.push(
       'contributes.auth needs the "auth:provide" capability in the capabilities array',
+    );
+  }
+
+  if (
+    (manifest.contributes?.layouts?.length ?? 0) > 0 &&
+    !manifest.capabilities.includes("ui:layout")
+  ) {
+    errors.push(
+      'contributes.layouts needs the "ui:layout" capability in the capabilities array',
+    );
+  }
+  if (
+    (manifest.contributes?.themes?.length ?? 0) > 0 &&
+    !manifest.capabilities.includes("ui:theme")
+  ) {
+    errors.push(
+      'contributes.themes needs the "ui:theme" capability in the capabilities array',
     );
   }
 

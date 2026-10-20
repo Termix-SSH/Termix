@@ -5,6 +5,7 @@ import {
   render,
   renderHook,
   screen,
+  waitFor,
 } from "@testing-library/react";
 
 const prefsApi = vi.hoisted(() => ({
@@ -13,9 +14,24 @@ const prefsApi = vi.hoisted(() => ({
 }));
 vi.mock("@/api/open-tabs-api", () => prefsApi);
 
-const theme = vi.hoisted(() => ({ value: "dark", setTheme: vi.fn() }));
+const lookApi = vi.hoisted(() => ({
+  getLook: vi.fn(),
+  saveUserLook: vi.fn(async () => {}),
+  saveDefaultLook: vi.fn(),
+}));
+vi.mock("@/api/look-api", () => lookApi);
+
+const theme = vi.hoisted(() => ({
+  value: "dark",
+  setTheme: vi.fn(),
+  setThemePreview: vi.fn(),
+}));
 vi.mock("@/components/theme-provider", () => ({
-  useTheme: () => ({ theme: theme.value, setTheme: theme.setTheme }),
+  useTheme: () => ({
+    theme: theme.value,
+    setTheme: theme.setTheme,
+    setThemePreview: theme.setThemePreview,
+  }),
 }));
 
 import {
@@ -31,6 +47,8 @@ beforeEach(() => {
   prefsApi.getUserPreferences.mockReset();
   prefsApi.saveUserPreferences.mockClear();
   theme.setTheme.mockClear();
+  theme.setThemePreview.mockClear();
+  lookApi.saveUserLook.mockClear();
 });
 
 describe("isHexColor", () => {
@@ -59,9 +77,12 @@ describe("useAppearanceSettings", () => {
       result.current.setFontSize("lg");
     });
     expect(theme.setTheme).toHaveBeenCalledWith("nord");
-    expect(prefsApi.saveUserPreferences).toHaveBeenCalledWith({
-      theme: "nord",
-    });
+    await waitFor(() =>
+      expect(prefsApi.saveUserPreferences).toHaveBeenCalledWith({
+        theme: "nord",
+      }),
+    );
+    expect(lookApi.saveUserLook).toHaveBeenCalledWith({ themeId: "nord" });
     expect(prefsApi.saveUserPreferences).toHaveBeenCalledWith({
       fontSize: "lg",
     });
@@ -74,8 +95,34 @@ describe("ThemeGrid", () => {
     render(<ThemeGrid value="dark" onChange={onChange} />);
     const buttons = screen.getAllByRole("button");
     expect(buttons).toHaveLength(THEMES.length);
-    fireEvent.click(buttons[THEMES.findIndex((t) => t.id === "gruvbox")]);
-    expect(onChange).toHaveBeenCalledWith("gruvbox");
+    fireEvent.click(buttons[THEMES.findIndex((t) => t.id === "light")]);
+    expect(onChange).toHaveBeenCalledWith("light");
+  });
+
+  it("previews a theme while it is hovered", () => {
+    render(<ThemeGrid value="dark" onChange={vi.fn()} />);
+    const light =
+      screen.getAllByRole("button")[THEMES.findIndex((t) => t.id === "light")];
+    fireEvent.mouseEnter(light);
+    expect(theme.setThemePreview).toHaveBeenLastCalledWith("light");
+    fireEvent.mouseLeave(light);
+    expect(theme.setThemePreview).toHaveBeenLastCalledWith(null);
+  });
+});
+
+describe("useAppearanceSettings in local mode", () => {
+  it("keeps the theme off the account", async () => {
+    prefsApi.getUserPreferences.mockResolvedValue({ storageMode: "local" });
+    const { result } = renderHook(() => useAppearanceSettings());
+    await act(async () => {
+      result.current.setTheme("nord");
+    });
+    await waitFor(() =>
+      expect(lookApi.saveUserLook).toHaveBeenCalledWith({ themeId: null }),
+    );
+    expect(prefsApi.saveUserPreferences).not.toHaveBeenCalledWith({
+      theme: "nord",
+    });
   });
 });
 

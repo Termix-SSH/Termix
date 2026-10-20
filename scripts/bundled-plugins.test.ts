@@ -276,6 +276,33 @@ describe("pinsFromIndex", () => {
     expect(pins[0]).not.toHaveProperty("onboarding");
   });
 
+  it("pins a release kept in gated", () => {
+    const pins = pinsFromIndex(
+      {
+        plugins: [
+          {
+            id: "look",
+            versions: [],
+            gated: [
+              {
+                version: "1.1.0-beta.1",
+                url: "https://example.test/look-1.1.0-beta.1.tmxplug",
+                sha256: "d".repeat(64),
+              },
+              {
+                version: "1.0.0",
+                url: "https://example.test/look-1.0.0.tmxplug",
+                sha256: "e".repeat(64),
+              },
+            ],
+          },
+        ],
+      },
+      null,
+    );
+    expect(pins[0].url).toBe("https://example.test/look-1.0.0.tmxplug");
+  });
+
   it("pins only the ids asked for", () => {
     expect(pinsFromIndex(index, ["beta"]).map((pin) => pin.id)).toEqual([
       "beta",
@@ -414,5 +441,73 @@ describe("rebuilding local plugins", () => {
     const run: string[] = [];
     rebuildLocalPlugins(dir, null, (_repo: string, id: string) => run.push(id));
     expect(run.sort()).toEqual(["a", "b"]);
+  });
+});
+
+describe("default look", () => {
+  const entry = { source: "tmxplug", path: "a", sha256: SHA };
+
+  it("reads the defaultLook flag and refuses anything but a boolean", () => {
+    const { plugins, problems } = parseBundledPlugins({
+      plugins: [
+        { ...entry, id: "look", defaultLook: true },
+        { ...entry, id: "plain" },
+        { ...entry, id: "odd", defaultLook: "yes" },
+      ],
+    });
+    expect(problems).toEqual(["odd defaultLook must be a boolean"]);
+    expect(
+      plugins.map((p: { id: string; defaultLook: boolean }) => [
+        p.id,
+        p.defaultLook,
+      ]),
+    ).toEqual([
+      ["look", true],
+      ["plain", false],
+    ]);
+  });
+
+  it("carries it into the bundled index and through a re-pin", () => {
+    expect(
+      buildBundledIndex(
+        [
+          { id: "look", onboarding: null, defaultLook: true },
+          { id: "plain", onboarding: null, defaultLook: false },
+        ],
+        ["look", "plain"],
+      ),
+    ).toEqual({ version: 1, plugins: { look: { defaultLook: true } } });
+
+    const index = {
+      plugins: [
+        {
+          id: "look",
+          versions: [
+            { version: "1.0.0", url: "https://x/l.tmxplug", sha256: SHA },
+          ],
+        },
+      ],
+    };
+    expect(
+      pinsFromIndex(index, null, [{ id: "look", defaultLook: true }])[0],
+    ).toMatchObject({ id: "look", defaultLook: true });
+  });
+
+  it("copies a local build's theme files", () => {
+    const repo = tempDir();
+    fs.mkdirSync(path.join(repo, "dist"), { recursive: true });
+    fs.mkdirSync(path.join(repo, "themes"), { recursive: true });
+    fs.writeFileSync(path.join(repo, "dist", "backend.js"), "export {}");
+    fs.writeFileSync(path.join(repo, "themes", "paper.css"), ".paper{}");
+    fs.writeFileSync(
+      path.join(repo, "manifest.json"),
+      JSON.stringify({
+        id: "inks",
+        contributes: { themes: [{ id: "paper", css: "themes/paper.css" }] },
+      }),
+    );
+    const out = path.join(tempDir(), "inks");
+    copyLocalBuild(repo, out);
+    expect(fs.existsSync(path.join(out, "themes", "paper.css"))).toBe(true);
   });
 });

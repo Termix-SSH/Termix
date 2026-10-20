@@ -15,7 +15,8 @@ const service = vi.hoisted(() => ({
   get: vi.fn(),
   check: vi.fn(),
   refresh: vi.fn(),
-  retimeAll: vi.fn(),
+  getIntervalSeconds: vi.fn(),
+  setIntervalSeconds: vi.fn(),
 }));
 
 vi.mock("../../../utils/logger.js", () => ({
@@ -35,18 +36,8 @@ vi.mock("../../../utils/permission-manager.js", () => ({
     }),
   },
 }));
-vi.mock("../../../database/repositories/factory.js", () => ({
-  createCurrentSettingsRepository: () => ({
-    get: async (key: string) => state.settings[key] ?? null,
-    set: async (key: string, value: string) => {
-      state.settings[key] = value;
-    },
-  }),
-}));
-vi.mock("../../../hosts/status/host-status-service.js", () => ({
-  DEFAULT_STATUS_INTERVAL: 60,
-  GLOBAL_STATUS_INTERVAL_KEY: "global_status_check_interval",
-  hostStatusService: service,
+vi.mock("../../../plugins/host-status-provider.js", () => ({
+  hostStatus: service,
 }));
 
 const { registerHostStatusRoutes, parseStatusHostIds } =
@@ -83,6 +74,8 @@ async function call(method: string, path: string, body?: unknown) {
 
 beforeEach(() => {
   state.settings = {};
+  service.getIntervalSeconds.mockResolvedValue(60);
+  service.setIntervalSeconds.mockResolvedValue(undefined);
   state.locked = false;
   state.accessible = new Set([1, 2]);
   state.statuses = new Map([
@@ -149,14 +142,13 @@ describe("status settings", () => {
     });
   });
 
-  it("saves a new interval and re-times the checks", async () => {
+  it("saves a new interval through the provider", async () => {
     await start();
     const { status } = await call("PUT", "/host/status/settings", {
       statusCheckInterval: 90,
     });
     expect(status).toBe(200);
-    expect(state.settings.global_status_check_interval).toBe("90");
-    expect(service.retimeAll).toHaveBeenCalledOnce();
+    expect(service.setIntervalSeconds).toHaveBeenCalledWith(90);
   });
 
   it("rejects an interval out of range", async () => {

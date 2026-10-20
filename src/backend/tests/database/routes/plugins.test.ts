@@ -169,6 +169,7 @@ const manageMock = vi.hoisted(() => ({
   updatePlugin: vi.fn(),
   updateAllPlugins: vi.fn(),
   uninstallPlugin: vi.fn(),
+  restoreBundledPlugin: vi.fn(),
   setPluginOptions: vi.fn(),
   setAllPluginChannels: vi.fn(),
   getPluginDataSummary: vi.fn(),
@@ -433,6 +434,7 @@ describe("plugins route", () => {
             "name",
             "optionalDependencies",
             "state",
+            "themeVersion",
             "version",
           ].sort(),
         );
@@ -624,10 +626,12 @@ describe("plugins route", () => {
         contributes: null,
         dependencies: {},
         optionalDependencies: {},
+        defaultLook: false,
         frontend: false,
         css: false,
         assetVersion: null,
         locales: [],
+        themeVersion: null,
       });
     });
 
@@ -1136,6 +1140,35 @@ describe("plugins route", () => {
       });
       expect(res.status).toBe(200);
       expect(manageMock.uninstallPlugin).toHaveBeenCalledWith("docker");
+    });
+
+    it("restores the bundled copy", async () => {
+      manageMock.restoreBundledPlugin.mockResolvedValue({
+        id: "docker",
+        version: "1.0.0",
+        state: "active",
+      });
+      const res = await post("/plugins/docker/restore-bundled");
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({
+        id: "docker",
+        version: "1.0.0",
+        state: "active",
+      });
+      expect(manageMock.restoreBundledPlugin).toHaveBeenCalledWith("docker");
+    });
+
+    it("answers 409 when a plugin has no bundled copy", async () => {
+      manageMock.restoreBundledPlugin.mockRejectedValue(
+        new PluginManageError(
+          "This plugin has no bundled copy",
+          409,
+          "NO_BUNDLED_COPY",
+        ),
+      );
+      const res = await post("/plugins/docker/restore-bundled");
+      expect(res.status).toBe(409);
+      expect((await res.json()).code).toBe("NO_BUNDLED_COPY");
     });
 
     it("refuses changes on a linked desktop", async () => {

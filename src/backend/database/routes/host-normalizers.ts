@@ -5,6 +5,7 @@ import {
 } from "../../hosts/ssh-options.js";
 import { listHostProtocols } from "../../hosts/protocol-auth/registry.js";
 import { sanitizeProtocolAuthForRecipient } from "../../hosts/protocol-auth/summary.js";
+import { hostLock } from "../../hosts/locks.js";
 
 export function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -337,6 +338,7 @@ const CONNECT_LEVEL_FIELDS = new Set([
   "sshPort",
   "protocolAuth",
   "jumpHosts",
+  "lock",
   "createdAt",
   "updatedAt",
 ]);
@@ -439,8 +441,10 @@ export function transformHostResponse(
   host: Record<string, unknown>,
 ): Record<string, unknown> {
   const shared = parseSharedSource(host.sharedSource);
+  const lock = typeof host.id === "number" ? hostLock(host.id) : null;
   return {
     ...host,
+    ...(lock ? { lock } : {}),
     sharedSource: undefined,
     localOnly: !!host.localOnly,
     sharedCopy: !!shared,

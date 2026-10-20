@@ -1,112 +1,159 @@
 /**
- * ctx.audit.record: a plugin writes an audit line under its own action name,
- * and the user it names is always the runtime's actor, never one the plugin
- * picked.
+ * ctx.audit.subscribe, list and exportBatches: audit:read gates reading, and
+ * subscribers see lines after they are accepted without delaying the writer.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const auditEntries: Array<Record<string, unknown>> = [];
+const grants = new Map<string, string[]>();
+const rows = vi.hoisted(() => ({ list: [] as Array<Record<string, unknown>> }));
 
 vi.mock("../../database/repositories/factory.js", () => ({
   createCurrentPluginPermissionGrantRepository: () => ({
-    listByPlugin: async () => [],
+    listByPlugin: async (pluginId: string) =>
+      (grants.get(pluginId) ?? []).map((capability) => ({
+        pluginId,
+        capability,
+      })),
   }),
-}));
-
-vi.mock("../../utils/audit-logger.js", () => ({
-  logAudit: async (entry: Record<string, unknown>) => {
-    auditEntries.push(entry);
-  },
+  createCurrentAuditLogRepository: () => ({
+    listPage: async ({ limit }: { limit: number }) => ({
+      logs: rows.list.slice(0, limit),
+      total: rows.list.length,
+    }),
+    listForExport: async ({
+      limit,
+      offset,
+    }: {
+      limit: number;
+      offset: number;
+    }) => rows.list.slice(offset, offset + limit),
+    create: async () => {},
+  }),
+  createCurrentUserRepository: () => ({ findById: async () => null }),
 }));
 
 import { createPluginContext, createPluginHandle } from "../../plugins/ctx.js";
-import { runAsActor } from "../../plugins/actor.js";
+import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
+import { emitAuditEntry } from "../../utils/audit-hooks.js";
 import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 
-function contextFor(pluginId: string) {
+function contextFor(pluginId: string, capabilities: string[]) {
   const manifest = {
     id: pluginId,
-    name: "Audit Fixture",
+    name: pluginId,
     version: "1.0.0",
     description: "",
     author: { name: "test" },
     license: "MIT",
     category: "Productivity",
-    engine: { termix: ">=2.9.0", api: "1" },
-    capabilities: [],
+    engine: { termix: ">=26.10.3", api: "1" },
+    capabilities,
   } as PluginManifest;
   const handle = createPluginHandle(pluginId, { activate: () => {} });
-  return createPluginContext(manifest, handle);
+  return { ctx: createPluginContext(manifest, handle), handle };
 }
 
+const line = (id: number) => ({
+  id,
+  timestamp: new Date(1_700_000_000_000 + id),
+  userId: null,
+  username: "root",
+  action: "login",
+  resourceType: "user",
+  resourceId: null,
+  resourceName: null,
+  details: null,
+  ipAddress: null,
+  userAgent: null,
+  success: true,
+  errorMessage: null,
+});
+
 beforeEach(() => {
-  auditEntries.length = 0;
+  grants.clear();
+  invalidatePluginPermissionCache();
+  rows.list = [line(1), line(2), line(3)];
 });
 
-describe("ctx.audit.record", () => {
-  it("writes the plugin's action for the acting user", async () => {
-    const ctx = contextFor("audit-fixture");
-    await runAsActor("user-3", "request", () =>
-      ctx.audit.record({
-        action: "ssh_connect",
-        resourceType: "host",
-        resourceId: "12",
-        resourceName: "root@10.0.0.1:22",
-        success: true,
-      }),
+describe("ctx.audit reading", () => {
+  it("refuses list and export without audit:read", async () => {
+    grants.set("demo", []);
+    const { ctx } = contextFor("demo", []);
+
+    await expect(ctx.audit.list()).rejects.toThrow(/audit:read/);
+    await expect(ctx.audit.exportBatches().next()).rejects.toThrow(
+      /audit:read/,
     );
-    expect(auditEntries).toEqual([
-      expect.objectContaining({
-        userId: "user-3",
-        action: "ssh_connect",
-        resourceType: "host",
-        resourceId: "12",
-        resourceName: "root@10.0.0.1:22",
-        details: "via plugin audit-fixture",
-        success: true,
-      }),
-    ]);
+    expect(() => ctx.audit.subscribe(() => {})).toThrow(/audit:read/);
   });
 
-  it("falls back to the plugin as the resource and system as the user", async () => {
-    const ctx = contextFor("audit-fixture");
-    await ctx.audit.record({ action: "cleanup", success: false });
-    expect(auditEntries[0]).toMatchObject({
+  it("lists stored lines", async () => {
+    grants.set("demo", ["audit:read"]);
+    const { ctx } = contextFor("demo", ["audit:read"]);
+
+    const page = await ctx.audit.list({ limit: 2 });
+    expect(page.total).toBe(3);
+    expect(page.entries.map((entry) => entry.id)).toEqual([1, 2]);
+    expect(page.entries[0].timestamp).toMatch(/^20\d\d-/);
+  });
+
+  it("exports in batches", async () => {
+    grants.set("demo", ["audit:read"]);
+    const { ctx } = contextFor("demo", ["audit:read"]);
+
+    const sizes: number[] = [];
+    for await (const batch of ctx.audit.exportBatches({}, 2)) {
+      sizes.push(batch.length);
+    }
+    expect(sizes).toEqual([2, 1]);
+  });
+
+  it("delivers new lines to a subscriber until it unsubscribes", async () => {
+    grants.set("demo", ["audit:read"]);
+    const { ctx } = contextFor("demo", ["audit:read"]);
+    const seen: string[] = [];
+
+    const stop = ctx.audit.subscribe((entry) => seen.push(entry.action));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    emitAuditEntry({
       userId: null,
-      username: "system",
-      resourceType: "plugin",
-      resourceId: "audit-fixture",
-      resourceName: "Audit Fixture",
-      success: false,
-    });
-  });
-});
-
-describe("ctx.audit.record with a request", () => {
-  it("records the request's IP address and user agent", async () => {
-    const ctx = contextFor("audit-fixture");
-    await ctx.audit.record({
-      action: "collab_room_end",
+      username: "root",
+      action: "one",
+      resourceType: "x",
       success: true,
-      request: {
-        ip: "203.0.113.4",
-        headers: { "user-agent": "TestAgent/1.0" },
-      },
     });
-    expect(auditEntries[0]).toMatchObject({
-      ipAddress: "203.0.113.4",
-      userAgent: "TestAgent/1.0",
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    stop();
+    emitAuditEntry({
+      userId: null,
+      username: "root",
+      action: "two",
+      resourceType: "x",
+      success: true,
     });
+    await new Promise((resolve) => setTimeout(resolve, 5));
+
+    expect(seen).toEqual(["one"]);
   });
 
-  it("falls back to the socket address on an upgrade request", async () => {
-    const ctx = contextFor("audit-fixture");
-    await ctx.audit.record({
-      action: "collab_join",
+  it("stops delivering when the plugin deactivates", async () => {
+    grants.set("demo", ["audit:read"]);
+    const { ctx, handle } = contextFor("demo", ["audit:read"]);
+    const seen: string[] = [];
+    ctx.audit.subscribe((entry) => seen.push(entry.action));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    await handle.bag.disposeAll();
+    emitAuditEntry({
+      userId: null,
+      username: "root",
+      action: "late",
+      resourceType: "x",
       success: true,
-      request: { headers: {}, socket: { remoteAddress: "198.51.100.9" } },
     });
-    expect(auditEntries[0]).toMatchObject({ ipAddress: "198.51.100.9" });
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(seen).toEqual([]);
   });
 });

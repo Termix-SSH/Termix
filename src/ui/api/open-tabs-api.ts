@@ -116,6 +116,10 @@ export interface UserPreferences {
   compactHostView?: boolean | null;
   statusColorScheme?: string | null;
   customKeybindings?: string | null;
+  /** Layout this user chose; null follows the admin default. */
+  layoutId?: string | null;
+  /** Theme this user chose; null follows the admin default. */
+  themeId?: string | null;
 }
 
 export function parseCustomKeybindings(

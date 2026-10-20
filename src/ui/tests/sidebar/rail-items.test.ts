@@ -58,13 +58,13 @@ describe("RAIL_ITEMS", () => {
     // "port-forwarding" to the tunnels plugin's, "serial" to the serial
     // plugin's, "collab" to the session-sharing plugin's, and "session-logs"
     // to the session-recording plugin's, "termix-id" to the termix-identity
-    // plugin's, "ssh-tools" and "macros" to the ssh-terminal plugin's.
+    // plugin's, "ssh-tools" and "macros" to the ssh-terminal plugin's, and "sync" to
+    // the sync plugin's.
     expect(RAIL_ITEMS.map((item) => item.id)).toEqual([
       "hosts",
       "credentials",
       "connections",
       "quick-connect",
-      "sync",
       "plugins",
     ]);
   });

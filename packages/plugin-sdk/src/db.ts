@@ -256,6 +256,7 @@ export const LEGACY_TABLE_OWNERS: Readonly<Record<string, string>> = {
   homepage_items: "homepage",
   homepage_layouts: "homepage",
   dashboard_service_links: "homepage",
+  recent_activity: "homepage",
   secret_sources: "secret-sources",
   opkssh_tokens: "opkssh",
   vault_profiles: "vault",

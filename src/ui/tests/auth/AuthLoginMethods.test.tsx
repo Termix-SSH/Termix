@@ -40,6 +40,7 @@ const mainAxios = vi.hoisted(() => ({
 
 const authMethodsApi = vi.hoisted(() => ({
   getLoginMethods: vi.fn(),
+  getRememberDeviceAllowed: vi.fn(async () => true),
   submitLoginMethod: vi.fn(),
   startLoginRedirect: vi.fn(),
   verifySecondFactor: vi.fn(),
@@ -150,6 +151,18 @@ async function openExternalTab() {
 }
 
 describe("login methods on the login screen", () => {
+  it("offers remember me unless the login policy turned it off", async () => {
+    await openExternalTab();
+    expect(screen.getByText("auth.rememberMe")).toBeTruthy();
+    cleanup();
+
+    authMethodsApi.getRememberDeviceAllowed.mockResolvedValueOnce(false);
+    await openExternalTab();
+    await waitFor(() =>
+      expect(screen.queryByText("auth.rememberMe")).toBeNull(),
+    );
+  });
+
   it("lists every enabled method", async () => {
     await openExternalTab();
     // A redirect method whose plugin UI is not loaded gets a plain button.

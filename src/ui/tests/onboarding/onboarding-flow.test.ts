@@ -172,3 +172,42 @@ describe("mergeStepDefs", () => {
     expect(sectionPosition("security")).toBeLessThan(100);
   });
 });
+
+describe("start section and explicit position", () => {
+  it("puts the start section before the setup section", () => {
+    expect(sectionPosition("start")).toBe(25);
+    expect(sectionPosition("start")).toBeLessThan(sectionPosition("setup"));
+  });
+
+  it("uses an explicit position over the section and clamps it", () => {
+    expect(sectionPosition("explore", 0, 30)).toBe(30);
+    expect(sectionPosition("explore", 0, -5)).toBe(1);
+    expect(sectionPosition("explore", 0, 500)).toBe(99);
+  });
+});
+
+describe("replaced steps", () => {
+  const replacing = step("layout:preset", 30, {
+    pluginId: "layout",
+    replaces: ["preset"],
+  });
+
+  it("is not pending for someone who saw the step it replaces", () => {
+    const flow = computeFlow([replacing], { preset: 1 }, ctx());
+    expect(flow).toEqual([]);
+  });
+
+  it("is pending for someone who saw neither", () => {
+    expect(ids(computeFlow([replacing], {}, ctx()))).toEqual(["layout:preset"]);
+  });
+
+  it("is pending again when its own version goes up", () => {
+    const bumped = { ...replacing, version: 2 };
+    expect(ids(computeFlow([bumped], { preset: 1 }, ctx()))).toEqual([
+      "layout:preset",
+    ]);
+    expect(
+      computeFlow([bumped], { preset: 1, "layout:preset": 2 }, ctx()),
+    ).toEqual([]);
+  });
+});

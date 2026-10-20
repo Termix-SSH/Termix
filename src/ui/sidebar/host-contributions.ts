@@ -45,6 +45,12 @@ export interface HostBadgeDef {
   order?: number;
 }
 
+/** The dot or stripe on a host row that shows its status. */
+export type HostStatusIndicatorDef = HostBadgeDef;
+
+/** A button in the host editor's toolbar. */
+export type HostEditorToolbarItemDef = HostBadgeDef;
+
 export interface HostContextMenuItemDef {
   id: string;
   pluginId?: string;
@@ -57,6 +63,9 @@ export interface HostContextMenuItemDef {
 
 const actions = createRegistry<HostActionDef>(byOrderThenId);
 const badges = createRegistry<HostBadgeDef>(byOrderThenId);
+const statusIndicators = createRegistry<HostStatusIndicatorDef>(byOrderThenId);
+const editorToolbarItems =
+  createRegistry<HostEditorToolbarItemDef>(byOrderThenId);
 const menuItems = createRegistry<HostContextMenuItemDef>(byOrderThenId);
 
 export const registerHostAction = actions.register;
@@ -69,6 +78,10 @@ export function actionOrder(action: HostActionDef): number {
 export const listHostActions = actions.list;
 export const registerHostBadge = badges.register;
 export const useHostBadges = badges.useList;
+export const registerHostStatusIndicator = statusIndicators.register;
+export const useHostStatusIndicators = statusIndicators.useList;
+export const registerHostEditorToolbarItem = editorToolbarItems.register;
+export const useHostEditorToolbarItems = editorToolbarItems.useList;
 export const registerHostContextMenuItem = menuItems.register;
 export const useHostContextMenuItems = menuItems.useList;
 
@@ -105,6 +118,20 @@ export function hostBadgesFor(all: HostBadgeDef[], host: Host): HostBadgeDef[] {
   return all.filter((badge) => safeWhen(badge.when, host));
 }
 
+export function hostStatusIndicatorsFor(
+  all: HostStatusIndicatorDef[],
+  host: Host,
+): HostStatusIndicatorDef[] {
+  return all.filter((item) => safeWhen(item.when, host));
+}
+
+export function hostEditorToolbarItemsFor(
+  all: HostEditorToolbarItemDef[],
+  host: Host,
+): HostEditorToolbarItemDef[] {
+  return all.filter((item) => safeWhen(item.when, host));
+}
+
 export function hostMenuItemsFor(
   all: HostContextMenuItemDef[],
   host: Host,
@@ -125,5 +152,7 @@ export function runHostAction(
 export function resetHostContributions(): void {
   actions.reset();
   badges.reset();
+  statusIndicators.reset();
+  editorToolbarItems.reset();
   menuItems.reset();
 }

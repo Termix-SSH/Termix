@@ -1,4 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const lookApi = vi.hoisted(() => ({
+  getLook: vi.fn(async (): Promise<unknown> => {
+    throw new Error("no server");
+  }),
+  saveUserLook: vi.fn(),
+  saveDefaultLook: vi.fn(),
+}));
+vi.mock("@/api/look-api", () => lookApi);
 import { Puzzle } from "lucide-react";
 import type {
   FrontendModule,
@@ -25,6 +34,14 @@ import {
 } from "@/sidebar/rail-items";
 import { getTabType, resetTabTypes } from "@/shell/tab-registry";
 import i18n from "@/i18n/i18n";
+import { resetLook } from "@/look/look-store";
+import {
+  getRegisteredLayout,
+  listLayouts,
+  resetPluginLayouts,
+  resetRegisteredLayouts,
+} from "@/look/layout-registry";
+import { getTheme, resetPluginThemes } from "@/look/theme-registry";
 
 function summary(
   id: string,
@@ -84,6 +101,11 @@ beforeEach(() => {
 
 afterEach(async () => {
   await resetPluginLoader();
+  resetLook();
+  resetRegisteredLayouts();
+  resetPluginLayouts();
+  resetPluginThemes();
+  window.history.replaceState(null, "", "/");
   resetPluginStore();
   resetRegisteredRailItems();
   resetTabTypes();
@@ -391,5 +413,105 @@ describe("activation order", () => {
 
     expect(railIds()).toContain("alpha-panel");
     expect(railIds()).toContain("beta-panel");
+  });
+});
+
+describe("layouts and themes", () => {
+  function look(layoutId: string | null) {
+    return {
+      layoutId,
+      themeId: null,
+      defaults: { layout: null, theme: null },
+      defaultLook: { layout: null, theme: null },
+      safeLayout: false,
+      unavailable: [],
+    };
+  }
+
+  function layoutPlugin(id: string, layout: string): FrontendModule {
+    return {
+      activate(app: TermixApp) {
+        app.registerLayout({
+          id: layout,
+          label: layout,
+          component: () => null,
+        });
+      },
+    };
+  }
+
+  function layoutSummary(id: string, layout: string) {
+    return summary(id, {
+      contributes: { layouts: [{ id: layout, label: layout }] },
+    });
+  }
+
+  it("loads only the chosen layout's plugin", async () => {
+    lookApi.getLook.mockResolvedValueOnce(look("two"));
+    modules["one-layout"] = layoutPlugin("one-layout", "one");
+    modules["two-layout"] = layoutPlugin("two-layout", "two");
+    modules.alpha = railPlugin("alpha");
+    plugins = [
+      layoutSummary("one-layout", "one"),
+      layoutSummary("two-layout", "two"),
+      summary("alpha"),
+    ];
+
+    await startPluginRuntime();
+    expect(getPluginRecord("one-layout")?.frontend).toBe("inactive");
+    expect(getPluginRecord("two-layout")?.frontend).toBe("active");
+    expect(getPluginRecord("alpha")?.frontend).toBe("active");
+    expect(getRegisteredLayout("two")).toBeDefined();
+    expect(getRegisteredLayout("one")).toBeUndefined();
+    // Both can still be chosen.
+    expect(listLayouts().map((layout) => layout.id)).toEqual(
+      expect.arrayContaining(["one", "two"]),
+    );
+  });
+
+  it("loads no layout plugin in safe mode", async () => {
+    window.history.replaceState(null, "", "/?safe-layout=1");
+    lookApi.getLook.mockResolvedValueOnce(look("two"));
+    modules["two-layout"] = layoutPlugin("two-layout", "two");
+    plugins = [layoutSummary("two-layout", "two")];
+    await startPluginRuntime();
+    expect(getPluginRecord("two-layout")?.frontend).toBe("inactive");
+  });
+
+  it("refuses a layout the manifest does not declare", async () => {
+    lookApi.getLook.mockResolvedValueOnce(look("two"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    modules["two-layout"] = layoutPlugin("two-layout", "undeclared");
+    plugins = [layoutSummary("two-layout", "two")];
+    await startPluginRuntime();
+    expect(getPluginRecord("two-layout")?.frontend).toBe("failed");
+    expect(getPluginRecord("two-layout")?.error).toContain(
+      "contributes.layouts",
+    );
+  });
+
+  it("offers a running plugin's themes with their stylesheet", async () => {
+    plugins = [
+      summary("paper", {
+        frontend: false,
+        themeVersion: "t1",
+        contributes: {
+          themes: [
+            {
+              id: "paper",
+              label: "Paper",
+              mode: "light",
+              css: "themes/paper.css",
+            },
+          ],
+        },
+      }),
+    ];
+    await syncPlugins();
+    const theme = getTheme("paper");
+    expect(theme?.mode).toBe("light");
+    expect(theme?.cssHref).toContain(
+      "/plugin-assets/paper/_themes/paper.css?v=t1",
+    );
   });
 });

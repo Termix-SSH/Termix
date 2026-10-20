@@ -48,8 +48,8 @@ export const runPluginDataMigrations = DatabaseSaveTrigger.batched(
  */
 async function applyHostDefaults(): Promise<void> {
   try {
-    const { getLink } = await import("../sync/client/link-store.js");
-    if (await getLink().catch(() => null)) return;
+    const { listLinks } = await import("../sync/client/link-store.js");
+    if ((await listLinks().catch(() => [])).length > 0) return;
     const { recomputeEverything } =
       await import("../hosts/defaults/recompute.js");
     recomputeEverything("plugins started");

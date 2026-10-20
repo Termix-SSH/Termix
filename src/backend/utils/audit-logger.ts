@@ -1,5 +1,5 @@
 import type { Request } from "express";
-import { forwardAuditEntry } from "./audit-forwarder.js";
+import { emitAuditEntry } from "./audit-hooks.js";
 import {
   createCurrentAuditLogRepository,
   createCurrentUserRepository,
@@ -78,9 +78,9 @@ function isCoalescedRoutine(params: AuditLogParams): boolean {
 export async function logAudit(params: AuditLogParams): Promise<void> {
   if (isCoalescedRoutine(params)) return;
 
-  // Local storage is the source of truth and runs first; forwarding is a copy
-  // and must never delay or fail the audited operation.
-  void forwardAuditEntry(params).catch(() => {});
+  // Hooks (plugins copying the log elsewhere) never delay or fail the
+  // audited operation.
+  emitAuditEntry(params);
 
   try {
     await createCurrentAuditLogRepository().create({

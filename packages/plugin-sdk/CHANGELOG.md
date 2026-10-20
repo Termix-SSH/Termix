@@ -1,5 +1,107 @@
 # Changelog
 
+## 1.0.19
+
+Plugin API 1.11.0.
+
+### Added
+
+- `app.registerCompanionLayout` and `useCompanions`, so a plugin can let each host turn the panel bar on or off, move it and choose which panels show and in what order
+
+## 1.0.18
+
+Plugin API 1.10.0.
+
+### Added
+
+- `clientCert` on the sync link, link patch and remote target, and the `client_cert` remote error kind, so a sync plugin can link to a server that needs mutual TLS
+
+## 1.0.17
+
+Plugin API 1.9.0.
+
+### Added
+
+- `app.registerCompanion` and `app.toggleCompanion`, so a plugin can add a panel beside any host tab. The user opens, resizes and moves it, and the tab keeps running
+- `NativeView` in `@termix-ssh/plugin-sdk/ui`, which shows a web page in a native view in the desktop app, for sites that do not work in an iframe
+
+## 1.0.16
+
+Plugin API 1.8.0.
+
+### Added
+
+- `ctx.sync.provide` and the `sync:provide` capability, so a plugin can answer every /sync request
+- `ctx.ssh.transports.provide` and the `ssh:transport` capability, so a plugin can carry SSH connections over its own stream
+- `ctx.hosts.folders.ensure` and `removeEmpty`
+
+### Removed
+
+- The sync screens and calls in `@termix-ssh/plugin-sdk/ui`: `LinkServerDialog`, `ProxySettingsFields`, `useSyncStatus`, `refreshSyncStatus`, `setSyncStatus`, `getSyncConflicts`, `getSyncErrors`, `retrySyncErrors`, `settleSyncConflict`, `syncNow`, `unlinkServer`, `updateSyncSettings` and their types. They moved into the sync plugin
+
+## 1.0.15
+
+Plugin API 1.7.0.
+
+### Added
+
+- `ctx.auth.policy.provide` and the `auth:policy` capability, so a plugin can set an idle timeout, cap session length, turn off remember me and require a second factor
+- `ctx.auth.listSecondFactors` lists the second factors from every running plugin
+- `AuthEnrollmentSections` takes `factorsOnly`
+- `getHttpsSettings` and `updateHttpsSettings` in `@termix-ssh/plugin-sdk/ui`
+
+### Fixed
+
+- Plugin frontend tests against a locally linked SDK failed with a second copy of React
+
+## 1.0.14
+
+Plugin API 1.6.0.
+
+### Added
+
+- `ctx.hosts.locks.provide` and the `hosts:lock` capability, so a plugin can manage hosts that stay read only for everyone else and block adding hosts by hand
+- `ctx.hosts.setShares` to replace every grant on a host in one call
+- `ctx.credentials.list` returns the acting user's credentials by name, without secrets
+- `ctx.hosts.create` and `update` take `password`, `key`, `keyPassword`, `keyType`, `sudoPassword`, `protocolAuth` and `pluginEnable`
+
+## 1.0.13
+
+Plugin API 1.5.0.
+
+### Added
+
+- `runtime: "desktop"` in the manifest for a plugin that only loads on the desktop app
+- `desktop:local` and `ctx.desktop.local`: file system, local shell and machine info on the desktop app's own backend
+- `ctx.audit.subscribe`, `ctx.audit.list` and `ctx.audit.exportBatches` under `audit:read`
+- `ctx.hosts.importMany`, `importSshConfig`, `exportMany` and `registerImportNormalizer`, with the `hosts:export` capability
+- `ctx.credentials.publicKey` and `resolveKeyRefs`, `ctx.ssh.exec`, and `@termix-ssh/plugin-sdk/ssh-keys`
+- `ctx.hosts.status.provide` and `ctx.hosts.activity.provide` so a plugin can own host status and recent activity, with `ctx.network.tcpProbe`, `ctx.ssh.probe`, `ctx.hosts.probeTargets` and `ctx.hosts.sessionActive`
+- `registerHostStatusIndicator` and `registerHostEditorToolbarItem`, and `order` for host badges
+- Onboarding steps can sit in a `start` section, take a `position` and `replaces` a core step
+- A plugin can provide the app name, tagline and logo through the `<id>.brandingProvider` registry key
+
+## 1.0.12
+
+Plugin API 1.4.0.
+
+### Added
+
+- `contributes.layouts` and `app.registerLayout()` for a whole-app layout, with the `ui:layout` capability. Needs `engine.api` 1.4
+- `contributes.themes` for CSS-only themes, with the `ui:theme` capability. `termix-plugin validate` checks theme CSS and `pack` ships it
+- `useShell()` gives a layout the live shell: tabs, splits, hosts, docks, the command palette and the registries. The shell's home tab is left out until some plugin registers a `dashboard` tab type
+- `TabStage` and `ShellConfirmCapture` in `@termix-ssh/plugin-sdk/ui`, for a layout to place tabs
+- `validateThemeCss()` in `@termix-ssh/plugin-sdk/manifest`
+- `@termix-ssh/plugin-sdk/ui` also exports what a whole layout is built from: the API client, shared types, hooks, `useShellController()` and `APP_VERSION`. These reach into core, so they can change with a core release
+- `@termix-ssh/plugin-sdk/testing-host` exports the registries and permission seam a layout's own tests fill directly
+- A plugin that only holds themes needs no source: `termix-plugin build` writes an empty backend and `validate` does not ask for a frontend
+- `termix-plugin validate` flags `ui:layout` or `ui:theme` with nothing contributed, and a layout plugin with no frontend
+
+### Fixed
+
+- The manifest JSON schema lists the `notify:hub` and `plugins:read` capabilities
+- Plugin tests and type checks work with the SDK linked from a local Termix checkout
+
 ## 1.0.11
 
 Plugin API 1.3.0.

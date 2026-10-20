@@ -41,6 +41,18 @@ export function revoke(key: string, value?: unknown): boolean {
   return providers.delete(key);
 }
 
+/**
+ * The provider under "<some plugin id>.<name>", for a well-known name core
+ * reads without knowing which plugin supplies it. First match wins.
+ */
+export function consumeByName<T>(name: string): T | undefined {
+  const suffix = `.${name}`;
+  for (const [key, value] of providers) {
+    if (key.endsWith(suffix)) return value as T;
+  }
+  return undefined;
+}
+
 export function has(key: string): boolean {
   return providers.has(key);
 }

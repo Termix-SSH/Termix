@@ -43,6 +43,33 @@ export async function updateSessionTimeout(
   }
 }
 
+export interface HttpsSettings {
+  forceHttps: boolean;
+  tlsEnabled: boolean;
+}
+
+export async function getHttpsSettings(): Promise<HttpsSettings> {
+  try {
+    const response = await authApi.get("/users/https-settings");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch HTTPS settings");
+  }
+}
+
+export async function updateHttpsSettings(
+  forceHttps: boolean,
+): Promise<HttpsSettings> {
+  try {
+    const response = await authApi.patch("/users/https-settings", {
+      forceHttps,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "update HTTPS settings");
+  }
+}
+
 // ============================================================================
 // BRANDING SETTINGS
 // ============================================================================
@@ -54,12 +81,6 @@ export interface BrandingSettings {
   logo: string | null;
 }
 
-export interface BrandingSettingsUpdate {
-  appName?: string;
-  tagline?: string;
-  logo?: string | null;
-}
-
 /** Public endpoint -- no auth required, so the login screen can read it. */
 export async function getBranding(): Promise<BrandingSettings> {
   try {
@@ -67,16 +88,5 @@ export async function getBranding(): Promise<BrandingSettings> {
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch branding settings");
-  }
-}
-
-export async function updateBranding(
-  update: BrandingSettingsUpdate,
-): Promise<BrandingSettings> {
-  try {
-    const response = await authApi.patch("/users/branding", update);
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "update branding settings");
   }
 }

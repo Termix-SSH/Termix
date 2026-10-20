@@ -35,5 +35,9 @@ export interface PendingLogin {
   methodId: string;
   rememberMe: boolean;
   externalSession?: ExternalSessionRef | null;
+  /** Login policy that applied when the login paused. */
+  allowRememberDevice?: boolean;
+  maxSessionSeconds?: number | null;
+  idleTimeoutSeconds?: number | null;
   createdAt: number;
 }

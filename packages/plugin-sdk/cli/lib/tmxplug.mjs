@@ -2,6 +2,15 @@ import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 
+/** Theme CSS files a manifest declares, which travel with the plugin too. */
+export function themeFiles(manifest) {
+  const themes = manifest?.contributes?.themes;
+  if (!Array.isArray(themes)) return [];
+  return themes
+    .map((theme) => theme?.css)
+    .filter((css) => typeof css === "string");
+}
+
 /** What a .tmxplug holds, in the order the spec lists it. */
 export const TMXPLUG_CONTENTS = [
   "manifest.json",

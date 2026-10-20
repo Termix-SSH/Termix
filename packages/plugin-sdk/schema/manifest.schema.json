@@ -82,7 +82,11 @@
     "features": {
       "type": "array",
       "maxItems": 20,
-      "items": { "type": "string", "minLength": 1, "maxLength": 160 },
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+      },
       "description": "Short lines listing what the plugin does, shown on its page."
     },
     "docs": {
@@ -98,11 +102,24 @@
         "additionalProperties": false,
         "required": ["name", "description"],
         "properties": {
-          "name": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$" },
-          "description": { "type": "string", "minLength": 1, "maxLength": 300 },
-          "default": { "type": "string" },
-          "required": { "type": "boolean" },
-          "secret": { "type": "boolean" }
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "default": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "secret": {
+            "type": "boolean"
+          }
         }
       }
     },
@@ -134,9 +151,13 @@
           "process:spawn",
           "users:write",
           "auth:provide",
+          "auth:policy",
+          "sync:provide",
+          "ssh:transport",
           "system:tls",
           "device:serial",
           "hosts:write",
+          "hosts:export",
           "credentials:use",
           "credentials:write",
           "network:outbound",
@@ -146,7 +167,12 @@
           "events:core",
           "notify:send",
           "audit:read",
+          "network:probe",
+          "hosts:status-provide",
+          "hosts:activity-provide",
+          "hosts:lock",
           "desktop:window",
+          "desktop:local",
           "users:impersonate",
           "db:core-refs",
           "hosts:read",
@@ -155,7 +181,11 @@
           "files:own",
           "secrets:own",
           "settings:read-core",
-          "ui:surface"
+          "ui:surface",
+          "notify:hub",
+          "plugins:read",
+          "ui:layout",
+          "ui:theme"
         ]
       }
     },
@@ -944,7 +974,9 @@
                       "defaultLevels": {
                         "type": "array",
                         "minItems": 1,
-                        "items": { "enum": ["admin", "user", "folder"] },
+                        "items": {
+                          "enum": ["admin", "user", "folder"]
+                        },
                         "description": "Levels that may set a default for the field. All three by default."
                       },
                       "personal": {
@@ -1127,6 +1159,86 @@
             "type": "string",
             "pattern": "^[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)+$"
           }
+        },
+        "layouts": {
+          "type": "array",
+          "description": "Whole-app layouts the frontend registers with app.registerLayout. Needs the ui:layout capability.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]{1,39}$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "description": "i18n key in the plugin namespace, or plain text."
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1
+              },
+              "defaultTheme": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]{1,39}$",
+                "description": "Theme picked with this layout when nobody chose one."
+              },
+              "default": {
+                "type": "boolean",
+                "description": "The layout a default-look plugin starts with. At most one."
+              }
+            }
+          }
+        },
+        "themes": {
+          "type": "array",
+          "description": "Themes: one CSS file each with token rules scoped under .<id>. Needs the ui:theme capability.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label", "mode", "css"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]{1,39}$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "mode": {
+                "type": "string",
+                "enum": ["light", "dark"]
+              },
+              "css": {
+                "type": "string",
+                "pattern": ".css$",
+                "description": "Path of the CSS file inside the plugin."
+              },
+              "swatch": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["background", "panel", "text"],
+                "properties": {
+                  "background": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{3,8}$"
+                  },
+                  "panel": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{3,8}$"
+                  },
+                  "text": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{3,8}$"
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -1157,6 +1269,11 @@
       "type": "string",
       "enum": ["mirror", "local", "server"],
       "description": "How a desktop linked to a server treats this plugin: mirror follows the server, local is decided on each desktop, server never runs on a linked desktop. Defaults to mirror."
+    },
+    "runtime": {
+      "type": "string",
+      "enum": ["desktop"],
+      "description": "desktop: the plugin only loads on a desktop app's own embedded backend, never on a server. It implies desktop local and may declare desktop:local."
     },
     "nativeDependencies": {
       "type": "array",

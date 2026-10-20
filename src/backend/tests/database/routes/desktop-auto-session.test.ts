@@ -136,6 +136,22 @@ describe("isNativeTokenExportRequest", () => {
 });
 
 describe("resolveDesktopAutoSessionUser", () => {
+  it("returns the account the user switched to, while it exists", () => {
+    const admin = makeUser({ id: "admin", isAdmin: true });
+    const chosen = makeUser({ id: "chosen" });
+    expect(resolveDesktopAutoSessionUser([admin, chosen], "chosen")).toBe(
+      chosen,
+    );
+  });
+
+  it("falls back to the usual pick when the chosen account is gone", () => {
+    const admin = makeUser({ id: "admin", isAdmin: true });
+    const other = makeUser({ id: "other" });
+    expect(resolveDesktopAutoSessionUser([admin, other], "deleted")).toBe(
+      admin,
+    );
+  });
+
   it("returns the sole local user regardless of having a real password", () => {
     const user = makeUser({ passwordHash: "$2a$10$realbcryptvaluehere" });
     expect(resolveDesktopAutoSessionUser([user])).toBe(user);

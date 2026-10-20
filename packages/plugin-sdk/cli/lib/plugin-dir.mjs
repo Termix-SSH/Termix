@@ -14,6 +14,17 @@ export function readManifest(cwd) {
 }
 
 /** The first of these that exists, or null. */
+/** Only themes: CSS files and no code, so no source entry is needed. */
+export function isThemeOnly(manifest) {
+  const capabilities = manifest.capabilities ?? [];
+  return (
+    capabilities.length > 0 &&
+    capabilities.every((capability) => capability === "ui:theme") &&
+    Array.isArray(manifest.contributes?.themes) &&
+    manifest.contributes.themes.length > 0
+  );
+}
+
 export function resolveEntry(cwd, candidates) {
   for (const candidate of candidates) {
     const full = path.join(cwd, candidate);

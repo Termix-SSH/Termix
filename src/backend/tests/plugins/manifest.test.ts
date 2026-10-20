@@ -1002,3 +1002,101 @@ describe("docs and env fields", () => {
     expect(pluginDocsPage(base, "", "top")).toBe(`${base}#top`);
   });
 });
+
+describe("layouts and themes", () => {
+  const layouts = [
+    {
+      id: "fancy",
+      label: "layout.fancy",
+      defaultTheme: "paper",
+      default: true,
+    },
+  ];
+  const themes = [
+    {
+      id: "paper",
+      label: "theme.paper",
+      mode: "light",
+      css: "themes/paper.css",
+      swatch: { background: "#ffffff", panel: "#eeeeee", text: "#111111" },
+    },
+  ];
+
+  it("accepts layouts and themes with their capabilities", () => {
+    const { manifest, errors } = parseManifest(
+      base({
+        capabilities: ["ui:layout", "ui:theme"],
+        contributes: { layouts, themes },
+      }),
+    );
+    expect(errors).toEqual([]);
+    expect(manifest?.contributes?.layouts?.[0].id).toBe("fancy");
+    expect(manifest?.contributes?.themes?.[0].mode).toBe("light");
+  });
+
+  it("needs ui:layout for layouts and ui:theme for themes", () => {
+    const { errors } = parseManifest(
+      base({ capabilities: ["kv:own"], contributes: { layouts, themes } }),
+    );
+    expect(errors.some((e) => e.includes('"ui:layout"'))).toBe(true);
+    expect(errors.some((e) => e.includes('"ui:theme"'))).toBe(true);
+  });
+
+  it("refuses bad ids, modes, paths and swatches", () => {
+    const errors = validateManifest(
+      base({
+        capabilities: ["ui:layout", "ui:theme"],
+        contributes: {
+          layouts: [
+            { id: "Fancy", label: "x" },
+            { id: "two", label: "x", default: true },
+            { id: "three", label: "x", default: true, extra: 1 },
+          ],
+          themes: [
+            { id: "paper", label: "x", mode: "sepia", css: "../paper.css" },
+            { id: "ink", label: "x", mode: "dark", css: "ink.scss" },
+            {
+              id: "dusk",
+              label: "x",
+              mode: "dark",
+              css: "dusk.css",
+              swatch: { background: "red", panel: "#000", text: "#fff" },
+            },
+            { id: "dusk", label: "x", mode: "dark", css: "dusk2.css" },
+          ],
+        },
+      }),
+    );
+    const has = (text: string) => errors.some((e) => e.includes(text));
+    expect(has("contributes.layouts[0].id must match")).toBe(true);
+    expect(has("Only one entry")).toBe(true);
+    expect(has('Unknown field "extra"')).toBe(true);
+    expect(has('mode must be "light" or "dark"')).toBe(true);
+    expect(has("relative path inside the plugin")).toBe(true);
+    expect(has("must be a .css file")).toBe(true);
+    expect(has("swatch.background must be a hex color")).toBe(true);
+    expect(has('duplicates "dusk"')).toBe(true);
+  });
+});
+
+describe("manifest runtime", () => {
+  it("accepts a desktop runtime plugin", () => {
+    expect(
+      validateManifest(
+        base({ runtime: "desktop", capabilities: ["desktop:local"] }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("rejects an unknown runtime", () => {
+    expect(validateManifest(base({ runtime: "cloud" })).join()).toMatch(
+      /runtime/,
+    );
+  });
+
+  it("rejects a desktop runtime that is mirrored or server only", () => {
+    expect(
+      validateManifest(base({ runtime: "desktop", desktop: "mirror" })).join(),
+    ).toMatch(/local/);
+  });
+});

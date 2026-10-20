@@ -49,6 +49,10 @@ describe("renderTabContent", () => {
     expect(screen.getByText("tab")).toBeInTheDocument();
     expect(screen.queryByText("panel")).toBeNull();
   });
+
+  it("draws nothing for the home tab when no layout gave it a type", () => {
+    expect(renderTabContent(tabOf("dashboard"), { shell })).toBeNull();
+  });
 });
 
 describe("promotableIds", () => {

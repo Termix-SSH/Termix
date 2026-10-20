@@ -32,6 +32,7 @@ import {
 } from "../../hosts/defaults/service.js";
 import { changeHostOverrides } from "../../hosts/defaults/overrides.js";
 import { readDefaultsReset } from "./host-bulk-routes.js";
+import { assertHostsUnlocked, sendHostLocked } from "../../hosts/locks.js";
 
 type HostDefaultsRoutesDeps = {
   authenticateJWT: RequestHandler;
@@ -678,6 +679,7 @@ export function registerHostDefaultsRoutes(
       const reset = readDefaultsReset(req.body);
       if (!reset) return res.status(400).json({ error: "Nothing to reset" });
       try {
+        assertHostsUnlocked([hostId]);
         const access = await PermissionManager.getInstance().canAccessHost(
           userId,
           hostId,
@@ -700,6 +702,7 @@ export function registerHostDefaultsRoutes(
         await changeHostOverrides([hostId], reset);
         res.json({ message: "Host reset to its defaults" });
       } catch (error) {
+        if (sendHostLocked(res, error)) return;
         databaseLogger.error("Failed to reset host defaults", error);
         res.status(500).json({ error: "Failed to reset host defaults" });
       }

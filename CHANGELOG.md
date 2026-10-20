@@ -1,5 +1,65 @@
 # Changelog
 
+## 26.10.3
+
+### Added
+
+- Choose the layout of the whole app in Settings, Appearance. Admins can also set the default layout and theme for everyone
+- Plugins can add layouts and themes
+- A repair screen shows when the chosen layout cannot load, with ways to update, switch, reset or turn it off. Open it any time with ?safe-layout=1, or for everyone with TERMIX_SAFE_LAYOUT=1
+- Hovering a theme in Settings previews it
+- Restore the bundled copy of a plugin from the repair screen, which also pins the shipped version
+- Switching layouts closes the tabs only the old layout could show, like its Settings tab
+- A chosen layout whose plugin was uninstalled falls back to the default instead of the repair screen
+- Filter plugins by type, like layouts, themes or tabs, from a filter list beside the results
+- Browse shows plugins a page at a time
+- Plugins that need a newer Termix are hidden in Browse, with a toggle to show them
+- Hosts can be managed from a config file through a plugin. Managed hosts are read only for everyone, but pins and order still work
+- A plugin can block adding hosts by hand, so every host comes from one place
+- Plugins can set login rules: sign out after a time without activity, limit how long a session lasts, turn off remember me and require a second factor
+- A user who must have a second factor but has none can sign in only to set one up
+- Admins can redirect HTTP to HTTPS and send HSTS while HTTPS is on. Off by default so reverse proxies keep working
+- A plugin can answer all sync requests and use the replica store, change feed and linked server list, so sync no longer lives in the core app
+- The desktop app can hold several accounts, each with its own copy of a server's data. The app signs in as the active one and its auto session follows a switch
+- The linked server list holds one link per account, with room for more connection options per server
+- A plugin can carry SSH connections over its own stream, and core relays a host's connection over a socket for another Termix
+- Plugins can create a folder with a color and icon and remove it when it is empty
+- Another Termix server can manage this one with an API key, which can now ask for a one minute ticket to open plugin sockets as its user
+- FIDO2 security keys (ed25519-sk and ecdsa-sk) work through SSH Agent authentication when Termix runs in the desktop app. The key asks for a touch or PIN on your own machine
+- Pasting a security key file now explains how to use it instead of failing to decode it
+- Plugins can add a panel that sits beside a host tab, like a terminal. You can open, resize and move it
+- The desktop app can link to a server that requires a client certificate (mutual TLS). It uses a PFX or P12 file for sync and the certificate in your system store for the app window
+- Plugins can show a web page in a native view in the desktop app, for sites that do not load in an iframe
+- The desktop app draws its own title bar in the colors of your theme instead of the native white one
+
+### Changed
+
+- Server and desktop sync moved out of the core app into a plugin, including the Sync screen, the link wizard and the first run step. Existing links and offline copies keep working
+- The icon rail, sidebar, tab bar, dock, Dashboard, Manage, Settings and command palette now come from a bundled layout. It can be swapped for another layout but not removed, and a fix to it no longer needs a Termix release
+- Your theme is saved to your account so your other devices use it too, unless you keep settings on this device only
+- The themes besides light and dark now come from a bundled themes plugin. It can be swapped but not removed, and Termix keeps a basic light and dark theme of its own
+- A theme that no longer exists shows as System instead of an unstyled page
+- Installs and updates from a registry check the Termix version a plugin needs, not only its plugin API
+- Host online and offline dots now come from the Host Status plugin. The check interval setting moved to its settings and keeps its value. Without the plugin hosts show no dot
+- Audit log forwarding and the CSV and NDJSON export now come from the Audit Tools plugin. The collector URL and token move to its settings on upgrade. The audit log viewer, retention and the audit log itself stay in Termix
+- Client tunnels on your own computer and opening a host in Windows Remote Desktop moved out of the desktop app into plugins, so fixes to them no longer need a new desktop build
+- The local terminal, the local side of the file manager with its transfers, and opening a file in an external editor moved out of the desktop app into plugins, so fixes to them no longer need a new desktop build
+- The recent activity list and the first run steps for the preset and for theme, accent, font and language now come from bundled plugins. Existing entries and choices are kept, and people who went through those steps are not asked again
+- Branding (app name, tagline and logo) is now saved by the bundled layout plugin. An existing setup keeps its branding, and the sign in screen still reads it from Termix
+- Without the plugin that stores recent activity, the list stays empty and nothing is recorded
+- Importing hosts from a JSON or SSH config file and exporting hosts now come from the Import and Export plugin. Exports are now written to the audit log. Without the plugin there is no import or export
+- Generating and checking SSH keys in the credential editor and deploying a key to a host now come from the Credential Tools plugin. Deploys are now written to the audit log. Without the plugin those buttons are hidden
+
+### Fixed
+
+- Linking the desktop app to a server no longer stalls on the server dashboard after sign in
+- Exporting your data no longer fails when a plugin table has a text key, like saved passkeys
+- The Windows on ARM desktop app starts again instead of failing with a local server error
+
+### Removed
+
+- The desktop app no longer has its own client tunnel and native Remote Desktop code
+
 ## 26.10.2
 
 ### Added

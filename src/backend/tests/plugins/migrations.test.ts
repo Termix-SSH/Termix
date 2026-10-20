@@ -200,6 +200,10 @@ describe("assertOwnedTables", () => {
     const owners = Object.entries(LEGACY_TABLE_OWNERS);
     expect(new Set(owners.map(([table]) => table)).size).toBe(owners.length);
   });
+
+  it("lets the homepage plugin adopt recent_activity", () => {
+    expect(LEGACY_TABLE_OWNERS.recent_activity).toBe("homepage");
+  });
 });
 
 describe("applyPluginMigrations", () => {

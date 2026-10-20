@@ -1,5 +1,4 @@
 import {
-  Cloud,
   KeyRound,
   Plug,
   Server,
@@ -12,7 +11,6 @@ import {
 import { useMemo, useSyncExternalStore } from "react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useAreaPreferences } from "@/contexts/UiPreferencesContext";
-import { useSyncAttentionCount } from "@/hooks/use-sync-status";
 import { isElectron } from "@/lib/electron";
 import { createRegistry } from "@/lib/registry";
 import { getPanel } from "@/shell/panel-registry";
@@ -110,15 +108,6 @@ export const RAIL_ITEMS: RailItemDef[] = [
     separatorAfter: true,
     mobilePrimary: true,
     group: "tools",
-  },
-  {
-    id: "sync",
-    icon: Cloud,
-    labelKey: "nav.sync",
-    electronOnly: true,
-    placement: "footer",
-    group: "system",
-    useBadge: useSyncAttentionCount,
   },
   {
     id: "plugins",

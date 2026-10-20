@@ -3,8 +3,7 @@ import express, { type Request, type Response } from "express";
 import { dashboardLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
-import { createCurrentRecentActivityRepository } from "../repositories/factory.js";
-import { recordRecentActivity } from "../../services/recent-activity.js";
+import { recentActivity } from "../../plugins/activity-provider.js";
 
 const router = express.Router();
 
@@ -99,11 +98,7 @@ router.get(
 
       const limit = Number(req.query.limit) || 20;
 
-      const activities =
-        await createCurrentRecentActivityRepository().listByUserId(
-          userId,
-          limit,
-        );
+      const activities = await recentActivity.list(userId, limit);
 
       res.json(activities);
     } catch (err) {
@@ -169,7 +164,7 @@ router.post(
         });
       }
 
-      const result = await recordRecentActivity(userId, {
+      const result = await recentActivity.record(userId, {
         type,
         hostId,
         hostName,
@@ -184,6 +179,11 @@ router.post(
         return res.json({
           message: "Activity already logged recently (rate limited)",
         });
+      }
+      if (result.status === "unavailable") {
+        return res
+          .status(404)
+          .json({ error: "Recent activity is not available" });
       }
       if (result.status === "denied") {
         return res
@@ -222,7 +222,7 @@ router.delete(
     try {
       const userId = (req as AuthenticatedRequest).userId;
 
-      await createCurrentRecentActivityRepository().deleteByUserId(userId);
+      await recentActivity.deleteByUserId(userId);
 
       dashboardLogger.success("Recent activity cleared", {
         operation: "reset_recent_activity",

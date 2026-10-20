@@ -1,17 +1,7 @@
-import {
-  LayoutTemplate,
-  Monitor,
-  MonitorDown,
-  Palette,
-  Puzzle,
-  Shield,
-} from "lucide-react";
+import { MonitorDown, Puzzle, Shield } from "lucide-react";
 import { CORE_ONBOARDING_STEPS } from "@/types/onboarding";
 import { PluginsStep } from "./steps/PluginsStep";
-import { PresetStep } from "./steps/PresetStep";
-import { AppearanceStep } from "./steps/AppearanceStep";
 import { SecurityStep } from "./steps/SecurityStep";
-import { DesktopSyncStep } from "./steps/DesktopSyncStep";
 import { DesktopUpdatesStep } from "./steps/DesktopUpdatesStep";
 import { desktopUpdates } from "@/lib/desktop-updates";
 import type { OnboardingStepDef } from "./onboarding-registry";
@@ -38,16 +28,6 @@ export const CORE_STEPS: OnboardingStepDef[] = [
     forcePending: (ctx) => ctx.pluginSetupPending,
   },
   {
-    id: "desktop-sync",
-    version: CORE_ONBOARDING_STEPS["desktop-sync"],
-    titleKey: "onboarding.desktopTitle",
-    icon: Monitor,
-    Component: DesktopSyncStep,
-    audience: "all",
-    position: 20,
-    isRelevant: (ctx) => ctx.isDesktop,
-  },
-  {
     id: "desktop-updates",
     version: CORE_ONBOARDING_STEPS["desktop-updates"],
     titleKey: "desktopUpdates.onboardingTitle",
@@ -57,24 +37,6 @@ export const CORE_STEPS: OnboardingStepDef[] = [
     position: 25,
     // App Store builds have no updater.
     isRelevant: (ctx) => ctx.isDesktop && desktopUpdates() !== null,
-  },
-  {
-    id: "preset",
-    version: CORE_ONBOARDING_STEPS.preset,
-    titleKey: "onboarding.presetTitle",
-    icon: LayoutTemplate,
-    Component: PresetStep,
-    audience: "all",
-    position: 30,
-  },
-  {
-    id: "appearance",
-    version: CORE_ONBOARDING_STEPS.appearance,
-    titleKey: "onboarding.appearanceTitle",
-    icon: Palette,
-    Component: AppearanceStep,
-    audience: "all",
-    position: 40,
   },
   {
     id: "security",

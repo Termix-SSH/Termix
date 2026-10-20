@@ -115,7 +115,9 @@ jobs:
           Write-Host "Spectre libs present: $($found.FullName)"
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm ci
+          node scripts/install-windows-sharp.cjs
 
       # Bundled plugins are counted as downloads in the plugin store, so a
       # build only fetches them when the pins change.
