@@ -5,6 +5,7 @@
  * system key. Without a user, a call means the active account's link.
  */
 
+import { createSecureContext } from "node:tls";
 import { eq } from "drizzle-orm";
 import { getActiveUserId } from "../accounts.js";
 import { syncLink } from "../../database/db/schema.js";
@@ -36,6 +37,14 @@ export interface BasicAuth {
   password: string;
 }
 
+/** A PFX/P12 client certificate for servers that require mutual TLS. */
+export interface ClientCert {
+  /** Base64 of the PFX/P12 file. */
+  pfx: string;
+  passphrase: string;
+  name: string | null;
+}
+
 export interface SyncLink {
   id: number;
   userId: string;
@@ -46,6 +55,7 @@ export interface SyncLink {
   customHeaders: ProxyHeader[];
   basicAuth: BasicAuth | null;
   allowInvalidCertificate: boolean;
+  clientCert: ClientCert | null;
   remoteUserId: string | null;
   remoteUsername: string | null;
   account: LinkAccount | null;
@@ -98,6 +108,7 @@ async function fromRow(row: Row): Promise<SyncLink> {
   const scope = parseJson<{
     disabled?: string[];
     options?: Record<string, unknown>;
+    clientCert?: string;
   }>(row.scope, {});
   return {
     id: row.id,
@@ -109,6 +120,10 @@ async function fromRow(row: Row): Promise<SyncLink> {
     customHeaders: await decryptJson<ProxyHeader[]>(row.customHeaders, []),
     basicAuth: await decryptJson<BasicAuth | null>(row.basicAuth, null),
     allowInvalidCertificate: !!row.allowInvalidCertificate,
+    clientCert: await decryptJson<ClientCert | null>(
+      scope.clientCert ?? null,
+      null,
+    ),
     remoteUserId: row.remoteUserId,
     remoteUsername: row.remoteUsername,
     account: parseJson<LinkAccount | null>(row.account, null),
@@ -150,11 +165,39 @@ export interface NewLink {
   customHeaders?: ProxyHeader[];
   basicAuth?: BasicAuth | null;
   allowInvalidCertificate?: boolean;
+  clientCert?: ClientCert | null;
   remoteUserId?: string | null;
   remoteUsername?: string | null;
 }
 
+/** Throws when the PFX is unreadable or the passphrase is wrong. */
+export function assertClientCert(cert: ClientCert): void {
+  try {
+    createSecureContext({
+      pfx: Buffer.from(cert.pfx, "base64"),
+      passphrase: cert.passphrase,
+    });
+  } catch {
+    throw new Error("The client certificate or its passphrase is not valid");
+  }
+}
+
+async function sealScope(
+  disabled: string[],
+  options: Record<string, unknown>,
+  clientCert: ClientCert | null,
+): Promise<string> {
+  return JSON.stringify({
+    disabled,
+    options,
+    ...(clientCert
+      ? { clientCert: await encryptSystemSecret(JSON.stringify(clientCert)) }
+      : {}),
+  });
+}
+
 export async function createLink(link: NewLink): Promise<SyncLink> {
+  if (link.clientCert) assertClientCert(link.clientCert);
   await db().delete(syncLink).where(eq(syncLink.userId, link.userId));
   await db()
     .insert(syncLink)
@@ -171,6 +214,7 @@ export async function createLink(link: NewLink): Promise<SyncLink> {
         ? await encryptSystemSecret(JSON.stringify(link.basicAuth))
         : null,
       allowInvalidCertificate: !!link.allowInvalidCertificate,
+      scope: link.clientCert ? await sealScope([], {}, link.clientCert) : null,
       remoteUserId: link.remoteUserId ?? null,
       remoteUsername: link.remoteUsername ?? null,
       cursor: 0,
@@ -189,6 +233,7 @@ export interface LinkPatch {
   customHeaders?: ProxyHeader[];
   basicAuth?: BasicAuth | null;
   allowInvalidCertificate?: boolean;
+  clientCert?: ClientCert | null;
   remoteUserId?: string | null;
   remoteUsername?: string | null;
   account?: LinkAccount | null;
@@ -207,6 +252,7 @@ export async function updateLink(
 ): Promise<SyncLink | null> {
   const current = await getLink(userId);
   if (!current) return null;
+  if (patch.clientCert) assertClientCert(patch.clientCert);
   const set: Partial<Row> = {};
   if (patch.serverName !== undefined) set.serverName = patch.serverName;
   if (patch.serverVersion !== undefined)
@@ -236,11 +282,16 @@ export async function updateLink(
   if (patch.account !== undefined) {
     set.account = patch.account ? JSON.stringify(patch.account) : null;
   }
-  if (patch.disabledTypes !== undefined || patch.options !== undefined) {
-    set.scope = JSON.stringify({
-      disabled: patch.disabledTypes ?? current.disabledTypes,
-      options: patch.options ?? current.options,
-    });
+  if (
+    patch.disabledTypes !== undefined ||
+    patch.options !== undefined ||
+    patch.clientCert !== undefined
+  ) {
+    set.scope = await sealScope(
+      patch.disabledTypes ?? current.disabledTypes,
+      patch.options ?? current.options,
+      patch.clientCert === undefined ? current.clientCert : patch.clientCert,
+    );
   }
   if (patch.knownTypes !== undefined) {
     set.knownTypes = JSON.stringify(patch.knownTypes);

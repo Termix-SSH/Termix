@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 const require = createRequire(import.meta.url);
 const linkedServer = require("../../../../electron/linked-server.cjs") as {
   setLinkedServer: (config: unknown) => void;
+  clientCertOptionsFor: (url: string) => Record<string, unknown>;
 };
 
 const source = fs.readFileSync(
@@ -57,5 +58,28 @@ describe("linked server certificate exception", () => {
     expect(main.getTlsVerificationOptions(TERMINAL)).toEqual({
       rejectUnauthorized: true,
     });
+  });
+});
+
+describe("linked server client certificate", () => {
+  const clientCert = {
+    pfx: Buffer.from("pfx-bytes").toString("base64"),
+    passphrase: "pw",
+  };
+
+  it("hands the PFX to TLS made for the linked origin only", () => {
+    linkedServer.setLinkedServer({ origin: ORIGIN, clientCert });
+    expect(linkedServer.clientCertOptionsFor(TERMINAL)).toEqual({
+      pfx: Buffer.from("pfx-bytes"),
+      passphrase: "pw",
+    });
+    expect(
+      linkedServer.clientCertOptionsFor("https://elsewhere.example/"),
+    ).toEqual({});
+  });
+
+  it("offers nothing when the link has no certificate", () => {
+    linkedServer.setLinkedServer({ origin: ORIGIN });
+    expect(linkedServer.clientCertOptionsFor(TERMINAL)).toEqual({});
   });
 });

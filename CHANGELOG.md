@@ -28,6 +28,7 @@
 - FIDO2 security keys (ed25519-sk and ecdsa-sk) work through SSH Agent authentication when Termix runs in the desktop app. The key asks for a touch or PIN on your own machine
 - Pasting a security key file now explains how to use it instead of failing to decode it
 - Plugins can add a panel that sits beside a host tab, like a terminal. You can open, resize and move it
+- The desktop app can link to a server that requires a client certificate (mutual TLS). It uses a PFX or P12 file for sync and the certificate in your system store for the app window
 
 ### Changed
 

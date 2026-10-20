@@ -459,6 +459,7 @@ function isInvalidCertificateAllowedForUrl(url) {
 function getTlsVerificationOptions(url) {
   return {
     rejectUnauthorized: !isInvalidCertificateAllowedForUrl(url),
+    ...linkedServer.clientCertOptionsFor(url),
   };
 }
 
@@ -689,6 +690,39 @@ ipcMain.handle("allow-invalid-certificate-for-origin", (_event, origin) => {
     return { success: false };
   }
 });
+
+// Mutual TLS for the linked server: Chromium asks which certificate from the
+// OS store to present. Other origins keep Chromium's default (none).
+const chosenClientCerts = new Map();
+
+app.on(
+  "select-client-certificate",
+  async (event, _webContents, url, list, callback) => {
+    if (!linkedServer.isLinkedOrigin(url) || !list.length) return;
+    event.preventDefault();
+    const origin = new URL(url).origin;
+    const remembered = list.find(
+      (cert) => cert.fingerprint === chosenClientCerts.get(origin),
+    );
+    let chosen = remembered || (list.length === 1 ? list[0] : null);
+    if (!chosen) {
+      const { response } = await dialog.showMessageBox(mainWindow, {
+        type: "question",
+        title: "Client certificate",
+        message: "Choose the certificate for this server",
+        detail: origin,
+        buttons: [
+          ...list.slice(0, 8).map((cert) => cert.subjectName),
+          "Cancel",
+        ],
+        cancelId: Math.min(list.length, 8),
+      });
+      chosen = list[response] || null;
+    }
+    if (chosen) chosenClientCerts.set(origin, chosen.fingerprint);
+    callback(chosen || undefined);
+  },
+);
 
 app.on(
   "certificate-error",

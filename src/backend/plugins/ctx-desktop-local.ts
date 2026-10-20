@@ -157,6 +157,7 @@ export function createPluginDesktopLocal(deps: Deps): PluginDesktopLocal {
           customHeaders: link.customHeaders,
           basicAuth: link.basicAuth,
           allowInvalidCertificate: link.allowInvalidCertificate,
+          clientCert: link.clientCert,
         },
         pathname,
       );
