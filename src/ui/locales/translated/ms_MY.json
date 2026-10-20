@@ -1050,6 +1050,7 @@
         "interfaceFontLabel": "Fon Antara Muka",
         "interfaceFontDescription": "Menukar fon antara muka aplikasi. Profil terminal mengekalkan tetapan fon mereka sendiri.",
         "accentColorLabel": "Warna Aksen",
+        "apiKeyCount_one": "{{count}} kunci",
         "colorPickerTooltip": "Buka pemilih warna",
         "themeSystem": "Sistem",
         "themeLight": "Terang",

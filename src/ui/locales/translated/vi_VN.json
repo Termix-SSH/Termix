@@ -1003,6 +1003,7 @@
     "hostCount_other": "{{count}} máy chủ"
   },
   "admin": {
+    "usersCount_one": "{{count}} người dùng",
     "rolesCount_one": "vai trò {{count}}",
     "apiKeysCount_one": "{{count}} khóa",
     "sessionsActive_one": "còn {{count}} phiên đang hoạt động",
