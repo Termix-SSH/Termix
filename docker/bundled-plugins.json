@@ -37,8 +37,8 @@
     {
       "id": "classic-layout",
       "source": "tmxplug",
-      "url": "https://github.com/Termix-SSH/Plugin-Classic-Layout/releases/download/v1.0.0/classic-layout-1.0.0.tmxplug",
-      "sha256": "295e1a5aa457c5dca2f991b536bd6352e174194d580944978f6a16b76605fcf4",
+      "url": "https://github.com/Termix-SSH/Plugin-Classic-Layout/releases/download/v1.0.1/classic-layout-1.0.1.tmxplug",
+      "sha256": "6b2d9acd77ef4b33fa0761c1aea7ed3c6171c325ee8febcedff94b5b2bc7be34",
       "defaultLook": true
     },
     {
