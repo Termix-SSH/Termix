@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.18
+
+Plugin API 1.10.0.
+
+### Added
+
+- `clientCert` on the sync link, link patch and remote target, and the `client_cert` remote error kind, so a sync plugin can link to a server that needs mutual TLS
+
 ## 1.0.17
 
 Plugin API 1.9.0.

@@ -308,6 +308,15 @@ export interface SyncBasicAuth {
   password: string;
 }
 
+/** A client certificate for a server that asks for mutual TLS. */
+export interface SyncClientCert {
+  /** Base64 of the PFX/P12 file. */
+  pfx: string;
+  passphrase: string;
+  /** The file name, to show which certificate is saved. */
+  name: string | null;
+}
+
 /** Extra per server connection options. Kept open so new ones need no migration. */
 export type SyncLinkOptions = Record<string, unknown>;
 
@@ -323,6 +332,7 @@ export interface SyncLinkInfo {
   customHeaders: SyncProxyHeader[];
   basicAuth: SyncBasicAuth | null;
   allowInvalidCertificate: boolean;
+  clientCert: SyncClientCert | null;
   remoteUserId: string | null;
   remoteUsername: string | null;
   account: {
@@ -352,6 +362,7 @@ export interface SyncLinkCreate {
   customHeaders?: SyncProxyHeader[];
   basicAuth?: SyncBasicAuth | null;
   allowInvalidCertificate?: boolean;
+  clientCert?: SyncClientCert | null;
   remoteUserId?: string | null;
   remoteUsername?: string | null;
 }
@@ -365,6 +376,7 @@ export type SyncLinkPatch = Partial<
     | "customHeaders"
     | "basicAuth"
     | "allowInvalidCertificate"
+    | "clientCert"
     | "remoteUserId"
     | "remoteUsername"
     | "account"
@@ -379,7 +391,13 @@ export type SyncLinkPatch = Partial<
 >;
 
 export type SyncRemoteErrorKind =
-  "offline" | "tls" | "proxy" | "basic_auth" | "signed_out" | "server";
+  | "offline"
+  | "tls"
+  | "client_cert"
+  | "proxy"
+  | "basic_auth"
+  | "signed_out"
+  | "server";
 
 export interface SyncRemoteError extends Error {
   readonly kind: SyncRemoteErrorKind;
@@ -392,6 +410,7 @@ export interface SyncRemoteTarget {
   customHeaders?: SyncProxyHeader[];
   basicAuth?: SyncBasicAuth | null;
   allowInvalidCertificate?: boolean;
+  clientCert?: SyncClientCert | null;
 }
 
 export interface SyncRemoteRequest {
