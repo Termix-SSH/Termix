@@ -13,6 +13,7 @@ import { registerRailItem } from "@/sidebar/rail-items";
 import { registerTabType, type TabRenderProps } from "@/shell/tab-registry";
 import {
   registerCompanionDef,
+  registerCompanionLayoutDef,
   toggleCompanion,
   type CompanionDefaults,
   type CompanionRenderProps,
@@ -261,6 +262,16 @@ export function createPluginApp(
           tabTypes: options.tabTypes,
           when: options.when as never,
           Defaults,
+        }),
+      );
+    },
+
+    registerCompanionLayout(tabType, resolve) {
+      return track(
+        registerCompanionLayoutDef({
+          id: `${pluginId}.${tabType}`,
+          tabTypes: [tabType],
+          resolve: resolve as never,
         }),
       );
     },

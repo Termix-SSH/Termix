@@ -4,6 +4,7 @@ import { readStatusColorScheme } from "@/hooks/use-status-color-scheme";
 import { enabledHostProtocols } from "@/sidebar/host-protocols";
 import { useHostActions } from "@/sidebar/host-contributions";
 import { tabTypeForActivity, useTabTypes } from "@/shell/tab-registry";
+import { useCompanionDefs } from "@/shell/companions";
 import { getExtension, useExtensions } from "./extension-registry";
 import { useTranslation as useI18nTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -400,6 +401,17 @@ export const pluginHostBridge: PluginHostBridge = {
   },
 
   useHostActions: () => useHostActions() as unknown as HostActionContribution[],
+
+  useCompanions: (tabType) => {
+    const defs = useCompanionDefs();
+    return defs
+      .filter((def) => !def.tabTypes?.length || def.tabTypes.includes(tabType))
+      .map((def) => ({
+        id: def.id,
+        titleKey: def.titleKey ?? def.id,
+        icon: def.icon as never,
+      }));
+  },
 
   useActivityTypes: () => {
     const defs = useTabTypes();

@@ -48,10 +48,62 @@ export const listCompanionDefs = registry.list;
 export const useCompanionDefs = registry.useList;
 export const resetCompanions = registry.reset;
 
+/** How a host wants its panel bar: on or off, where, which buttons in what order. */
+export interface CompanionLayout {
+  enabled?: boolean;
+  side?: CompanionSide;
+  order?: string[];
+  hidden?: string[];
+}
+
+export interface CompanionLayoutDef {
+  id: string;
+  tabTypes: string[];
+  resolve: (host: Host | undefined) => CompanionLayout;
+}
+
+const layouts = createRegistry<CompanionLayoutDef>();
+
+export const registerCompanionLayoutDef = layouts.register;
+export const useCompanionLayoutDefs = layouts.useList;
+export const resetCompanionLayouts = layouts.reset;
+
+export function resolveCompanionLayout(
+  tabType: string,
+  host: Host | undefined,
+): CompanionLayout {
+  const def = layouts.list().find((entry) => entry.tabTypes.includes(tabType));
+  if (!def) return {};
+  try {
+    return def.resolve(host) ?? {};
+  } catch {
+    return {};
+  }
+}
+
 export function companionApplies(def: CompanionDef, tab: Tab): boolean {
   if (!tab.host) return false;
   if (def.tabTypes?.length && !def.tabTypes.includes(tab.type)) return false;
+  const layout = resolveCompanionLayout(tab.type, tab.host);
+  if (layout.enabled === false || layout.hidden?.includes(def.id)) return false;
   return def.when ? def.when(tab, tab.host) : true;
+}
+
+/** Orders defs by a saved layout. Ones it has not seen keep their place after. */
+export function arrangeCompanions<T extends { id: string }>(
+  defs: T[],
+  order: string[] | undefined,
+): T[] {
+  if (!order?.length) return defs;
+  const rank = new Map(order.map((id, index) => [id, index]));
+  return defs
+    .map((def, index) => ({ def, index }))
+    .sort(
+      (a, b) =>
+        (rank.get(a.def.id) ?? order.length + a.index) -
+        (rank.get(b.def.id) ?? order.length + b.index),
+    )
+    .map(({ def }) => def);
 }
 
 export interface CompanionTabState {

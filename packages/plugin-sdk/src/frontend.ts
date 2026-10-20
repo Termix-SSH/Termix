@@ -825,6 +825,26 @@ export interface CompanionDefaults {
   edgeButton?: boolean;
 }
 
+/** A panel a tab type can show beside it, for a picker. */
+export interface CompanionInfo {
+  /** The id registerCompanionLayout's hidden and order lists use. */
+  id: string;
+  titleKey: string;
+  icon?: IconComponent;
+}
+
+/** How a host wants the panel bar beside a tab. */
+export interface CompanionLayout {
+  /** False removes the bar and its panels. */
+  enabled?: boolean;
+  /** Where a panel opens until the user moves it. */
+  side?: "left" | "right" | "bottom";
+  /** Companion ids in bar order. */
+  order?: string[];
+  /** Companion ids left out. */
+  hidden?: string[];
+}
+
 export interface CompanionProps {
   /** The tab it sits beside. */
   tab: PluginTabRecord;
@@ -1118,6 +1138,14 @@ export interface TermixApp extends TermixAppInfo {
     component: ComponentType<CompanionProps>,
     options?: CompanionOptions,
   ) => Disposer;
+  /**
+   * Lets a plugin decide, per host, how the panel bar looks on one tab type.
+   * Read from the host payload, so it must not call hooks.
+   */
+  registerCompanionLayout: (
+    tabType: string,
+    resolve: (host: PluginHostRecord | undefined) => CompanionLayout,
+  ) => Disposer;
   /** Opens a companion on a tab, or closes it when it is showing. */
   toggleCompanion: (tab: PluginTabRecord, id?: string) => void;
   registerHostEditorSection: (
@@ -1347,6 +1375,7 @@ export interface PluginHostBridge {
   hostProtocols: (host: PluginHostRecord) => string[];
   useHostStatus: (hostId: number | undefined) => HostStatusInfo | null;
   useHostActions: () => HostActionContribution[];
+  useCompanions: (tabType: string) => CompanionInfo[];
   useActivityTypes: () => string[];
   activityTarget: (type: string) => ActivityTargetInfo | undefined;
   useExtensions: (pointId: string) => ExtensionContribution[];
@@ -1754,6 +1783,14 @@ export function useSlotContributions(
  */
 export function useHostActions(): HostActionContribution[] {
   return requireHost().useHostActions();
+}
+
+/**
+ * Every panel that can open beside a tab of this type, for a settings screen
+ * that lets the user hide or reorder them. Reactive.
+ */
+export function useCompanions(tabType: string): CompanionInfo[] {
+  return requireHost().useCompanions(tabType);
 }
 
 /**

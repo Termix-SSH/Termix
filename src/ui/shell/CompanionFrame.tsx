@@ -20,10 +20,13 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { hostToSSHHost } from "@/lib/host-to-ssh-host";
 import type { Tab } from "@/types/ui-types";
 import {
+  arrangeCompanions,
   companionApplies,
   companionKey,
   patchCompanionState,
+  resolveCompanionLayout,
   useCompanionDefs,
+  useCompanionLayoutDefs,
   useCompanionState,
   type CompanionDef,
   type CompanionDefaults,
@@ -69,11 +72,16 @@ export const CompanionFrame = memo(function CompanionFrame({
   children: ReactNode;
 }) {
   const defs = useCompanionDefs();
+  const layoutDefs = useCompanionLayoutDefs();
   const applicable = useMemo(
-    () => defs.filter((def) => companionApplies(def, tab)),
+    () =>
+      arrangeCompanions(
+        defs.filter((def) => companionApplies(def, tab)),
+        resolveCompanionLayout(tab.type, tab.host).order,
+      ),
     // tab.host and tab.type decide it
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [defs, tab.type, tab.host],
+    [defs, layoutDefs, tab.type, tab.host],
   );
   if (applicable.length === 0) return <>{children}</>;
   return (
@@ -142,9 +150,13 @@ function CompanionLayout({
   }, [active]);
 
   const activeDefaults = active ? defaults[active.id] : undefined;
+  const layout = useMemo(
+    () => resolveCompanionLayout(tab.type, tab.host),
+    [tab.type, tab.host],
+  );
   const side: CompanionSide = isMobile
     ? "bottom"
-    : (state.side ?? activeDefaults?.side ?? "right");
+    : (state.side ?? layout.side ?? activeDefaults?.side ?? "right");
   const baseSize =
     state.size ??
     activeDefaults?.size ??

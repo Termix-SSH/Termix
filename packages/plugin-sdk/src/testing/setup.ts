@@ -139,6 +139,7 @@ const offline = () =>
   }),
   hostProtocols: () => ["ssh"],
   useHostActions: () => [],
+  useCompanions: () => [],
   useActivityTypes: () => [],
   activityTarget: () => undefined,
   useExtensions: () => [],
