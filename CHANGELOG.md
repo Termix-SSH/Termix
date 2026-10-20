@@ -25,6 +25,8 @@
 - A plugin can carry SSH connections over its own stream, and core relays a host's connection over a socket for another Termix
 - Plugins can create a folder with a color and icon and remove it when it is empty
 - Another Termix server can manage this one with an API key, which can now ask for a one minute ticket to open plugin sockets as its user
+- FIDO2 security keys (ed25519-sk and ecdsa-sk) work through SSH Agent authentication when Termix runs in the desktop app. The key asks for a touch or PIN on your own machine
+- Pasting a security key file now explains how to use it instead of failing to decode it
 
 ### Changed
 
