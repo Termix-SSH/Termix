@@ -43,9 +43,11 @@ vi.mock("../../plugins/trust.js", async (importOriginal) => {
 import {
   communitySource,
   downloadRelease,
+  fetchIndexAt,
   fetchRegistryIndex,
   fetchRegistryStats,
   findRelease,
+  getRegistryPrivateHosts,
   latestOnChannel,
   getStatsUrl,
   canRunRelease,
@@ -406,6 +408,66 @@ describe("fetchRegistryIndex", () => {
   it("throws when there is nothing cached", async () => {
     fetchMock.mockResolvedValueOnce(response("down", 503));
     await expect(fetchRegistryIndex()).rejects.toThrow(/503/);
+  });
+});
+
+describe("private registry hosts", () => {
+  afterEach(() => {
+    delete process.env.TERMIX_PLUGIN_REGISTRY_PRIVATE_HOSTS;
+  });
+
+  it("reads a comma separated list of host names", () => {
+    process.env.TERMIX_PLUGIN_REGISTRY_PRIVATE_HOSTS =
+      " GitLab.lan ,, 192.168.1.5 ";
+    expect(getRegistryPrivateHosts()).toEqual(["gitlab.lan", "192.168.1.5"]);
+    delete process.env.TERMIX_PLUGIN_REGISTRY_PRIVATE_HOSTS;
+    expect(getRegistryPrivateHosts()).toEqual([]);
+  });
+
+  it("brings each entry into the form the fetch compares against", () => {
+    process.env.TERMIX_PLUGIN_REGISTRY_PRIVATE_HOSTS =
+      "GitLab.LAN,[FD00::0001],fd00::2,bücher.lan";
+    expect(getRegistryPrivateHosts()).toEqual([
+      "gitlab.lan",
+      "fd00::1",
+      "fd00::2",
+      "xn--bcher-kva.lan",
+    ]);
+  });
+
+  it("drops entries with more than a host", () => {
+    process.env.TERMIX_PLUGIN_REGISTRY_PRIVATE_HOSTS =
+      "gitlab.lan:8443,https://git.lan,[fd00::1]:80,nas.lan";
+    expect(getRegistryPrivateHosts()).toEqual(["nas.lan"]);
+  });
+
+  it("allows the listed hosts on every hop", async () => {
+    process.env.TERMIX_PLUGIN_REGISTRY_PRIVATE_HOSTS = "gitlab.lan";
+    fetchMock
+      .mockResolvedValueOnce(
+        response("", 302, { location: "https://gitlab.lan/raw/index.json" }),
+      )
+      .mockResolvedValueOnce(response(JSON.stringify({ plugins: [] })));
+    await fetchIndexAt("https://gitlab.lan/index.json");
+    expect(fetchMock.mock.calls.map((call) => call[2])).toEqual([
+      ["gitlab.lan"],
+      ["gitlab.lan"],
+    ]);
+  });
+
+  it("still blocks a redirect to a private host that is not listed", async () => {
+    process.env.TERMIX_PLUGIN_REGISTRY_PRIVATE_HOSTS = "gitlab.lan";
+    const actual = await vi.importActual<
+      typeof import("../../utils/safe-outbound-fetch.js")
+    >("../../utils/safe-outbound-fetch.js");
+    fetchMock
+      .mockResolvedValueOnce(
+        response("", 302, { location: "https://127.0.0.1/index.json" }),
+      )
+      .mockImplementationOnce(actual.safeOutboundFetch);
+    await expect(fetchIndexAt("https://gitlab.lan/index.json")).rejects.toThrow(
+      "Private destinations are not allowed",
+    );
   });
 });
 

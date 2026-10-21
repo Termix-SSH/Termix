@@ -12,6 +12,7 @@
 
 import crypto from "node:crypto";
 import fs from "node:fs";
+import { isIP } from "node:net";
 import path from "node:path";
 import semver from "semver";
 import {
@@ -278,15 +279,48 @@ export function canRunRelease(
   );
 }
 
+/**
+ * Hosts the admin lets registry fetches reach on a private address, like a
+ * registry in the LAN. Matched by host name on any port, also when another
+ * index or a redirect points there; every other host stays blocked.
+ */
+export function getRegistryPrivateHosts(): string[] {
+  return (process.env.TERMIX_PLUGIN_REGISTRY_PRIVATE_HOSTS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map(normalizePrivateHost)
+    .filter((host): host is string => host !== undefined);
+}
+
+/**
+ * The host in the form safeOutboundFetch compares against, or undefined when
+ * the entry carries more than a host, like a scheme, port, path or user.
+ */
+function normalizePrivateHost(entry: string): string | undefined {
+  const candidate = isIP(entry) === 6 ? `[${entry}]` : entry;
+  if (/[/?#@\\]|:\d*$/.test(candidate)) return undefined;
+  try {
+    return new URL(`http://${candidate}`).hostname.replace(/^\[|\]$/g, "");
+  } catch {
+    return undefined;
+  }
+}
+
 /** Follows redirects by hand so each hop still gets the outbound checks. */
 async function fetchFollowing(url: string): Promise<Response> {
+  const privateHosts = getRegistryPrivateHosts();
   let current = url;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const response = await safeOutboundFetch(current, {
-      method: "GET",
-      redirect: "manual",
-      headers: { "User-Agent": "Termix" },
-    });
+    const response = await safeOutboundFetch(
+      current,
+      {
+        method: "GET",
+        redirect: "manual",
+        headers: { "User-Agent": "Termix" },
+      },
+      privateHosts,
+    );
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("location");
       if (!location) throw new Error(`redirect without a location: ${current}`);
