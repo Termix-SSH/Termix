@@ -137,9 +137,19 @@ function verifyArtifact(artifact) {
     console.log(`Verified macOS sharp packaging: ${path.basename(artifact)}`);
   } finally {
     if (mountedAt) {
-      spawnSync("hdiutil", ["detach", mountedAt], { stdio: "ignore" });
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const args =
+          attempt < 3 ? ["detach", mountedAt] : ["detach", "-force", mountedAt];
+        if (spawnSync("hdiutil", args, { stdio: "ignore" }).status === 0) break;
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000);
+      }
     }
-    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+    fs.rmSync(temporaryRoot, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 1000,
+    });
   }
 }
 
