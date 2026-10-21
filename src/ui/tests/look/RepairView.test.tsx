@@ -53,6 +53,8 @@ vi.mock("@/look/use-look-theme", () => ({
   useChooseTheme: () => look.chooseTheme,
 }));
 
+const fancy = vi.hoisted(() => ({ enabled: true }));
+
 const manager = vi.hoisted(() => ({
   requestUpdate: vi.fn(),
   requestInstall: vi.fn(),
@@ -72,7 +74,7 @@ vi.mock("@/plugins/use-plugins-manager", () => ({
         id: "fancy-layout",
         name: "Fancy",
         installed: true,
-        enabled: true,
+        enabled: fancy.enabled,
         updateAvailable: true,
         latestVersion: "1.1.0",
         managedByServer: false,
@@ -115,6 +117,7 @@ const onRetry = vi.fn();
 
 beforeEach(() => {
   permissions.isAdmin = true;
+  fancy.enabled = true;
   for (const fn of [
     ...Object.values(look),
     ...Object.values(manager),
@@ -188,6 +191,31 @@ describe("RepairView", () => {
     expect(manager.toggle).toHaveBeenCalledWith(
       expect.objectContaining({ id: "fancy-layout" }),
     );
+  });
+
+  it("lets an admin turn the plugin back on and then tries again", async () => {
+    fancy.enabled = false;
+    manager.toggle.mockResolvedValue(undefined);
+    render(
+      <RepairView
+        status={{ ...status, reason: "disabled", error: null }}
+        onRetry={onRetry}
+      />,
+    );
+    expect(screen.queryByText(/looks\.repair\.disable/)).toBeNull();
+    fireEvent.click(screen.getByText('looks.repair.enable:{"name":"Fancy"}'));
+    expect(manager.toggle).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "fancy-layout", enabled: false }),
+    );
+    await waitFor(() => expect(onRetry).toHaveBeenCalled());
+  });
+
+  it("offers to start a failed plugin again", () => {
+    fancy.enabled = false;
+    render(<RepairView status={status} onRetry={onRetry} />);
+    expect(
+      screen.getByText('looks.repair.startAgain:{"name":"Fancy"}'),
+    ).toBeTruthy();
   });
 
   it("lets an admin restore the bundled copy and then tries again", async () => {

@@ -1098,6 +1098,8 @@
       "resetEveryone": "Reset the default for everyone",
       "update": "Update {{name}} to {{version}}",
       "disable": "Turn off {{name}}",
+      "enable": "Turn on {{name}}",
+      "startAgain": "Start {{name}} again",
       "install": "Find layouts and themes",
       "installTitle": "Layouts and themes",
       "installButton": "Install",

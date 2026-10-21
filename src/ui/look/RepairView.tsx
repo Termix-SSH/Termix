@@ -81,6 +81,18 @@ function AdminTools({
           })}
         </Button>
       )}
+      {entry?.installed && !entry.enabled && (
+        <Button
+          size="sm"
+          onClick={() => void manager.toggle(entry).then(onRetry)}
+          disabled={manager.busy.has(entry.id)}
+        >
+          <Power />
+          {status.reason === "disabled"
+            ? t("looks.repair.enable", { name: entry.name })
+            : t("looks.repair.startAgain", { name: entry.name })}
+        </Button>
+      )}
       {entry?.installed && entry.enabled && !entry.managedByServer && (
         <Button
           size="sm"

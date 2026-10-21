@@ -120,6 +120,19 @@ describe("layoutStatus", () => {
     ).toMatchObject({ reason: "failed", error: "server" });
   });
 
+  it("says failed, not disabled, when the server could not start it", () => {
+    expect(
+      layoutStatus(
+        input({
+          owner: owner(
+            { enabled: false, state: "failed", lastError: "bad bundle" },
+            "none",
+          ),
+        }),
+      ),
+    ).toMatchObject({ reason: "failed", error: "bad bundle" });
+  });
+
   it("says incompatible when the server skipped its plugin", () => {
     expect(
       layoutStatus(

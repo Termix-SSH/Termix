@@ -79,13 +79,15 @@ export function layoutStatus(input: LayoutStatusInput): LayoutStatus {
   const owner = input.owner;
   if (!owner) return repair("missing");
   const summary = owner.summary;
-  if (!summary.enabled) return repair("disabled");
+  // Before the enabled check: the server reports a plugin that failed to
+  // start as not enabled, which hid the real error behind "turned off".
   if (owner.frontend === "blocked" || summary.state === "blocked") {
     return repair("blocked", { error: owner.error ?? summary.lastError });
   }
   if (owner.frontend === "failed" || summary.state === "failed") {
     return repair("failed", { error: owner.error ?? summary.lastError });
   }
+  if (!summary.enabled) return repair("disabled");
   if (owner.frontend === "loading") return { kind: "loading" };
   // Just chosen: the runtime is about to load its code.
   if (
