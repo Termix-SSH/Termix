@@ -1,5 +1,11 @@
 # Changelog
 
+## 26.10.4
+
+### Fixed
+
+- Pin classic layout plugin (fixes proxmox install)
+
 ## 26.10.3
 
 ### Added
