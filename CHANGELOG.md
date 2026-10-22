@@ -17,6 +17,7 @@
 ### Fixed
 
 - The macOS app asks for Local Network access, so it can reach servers on your LAN
+- The desktop app can change the connection origin of a host shared with you, instead of failing to save
 
 ## 26.10.4
 
