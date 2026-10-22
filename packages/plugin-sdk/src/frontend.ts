@@ -1711,28 +1711,49 @@ export function usePluginUiPreferences<
   return bridge.usePluginUiPreferences(bridge.usePluginId()) as never;
 }
 
+type PanelGridSize = "auto" | "1" | "2" | "3" | "4" | "5" | "6";
+const PANEL_GRID_SIZES: readonly string[] = [
+  "auto",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+];
+
 /**
- * Grid or list and row density for one of this plugin's views, kept in its
- * Appearance area as `<prefix>viewMode` and `<prefix>density`. Declare those
- * keys in contributes.uiPresets so each preset level can pick a default.
+ * Grid or list, row density and cards per row for one of this plugin's
+ * views, kept in its Appearance area as `<prefix>viewMode`, `<prefix>density`
+ * and `<prefix>columns`. Declare those keys in contributes.uiPresets so each
+ * preset level can pick a default. Hand columns to ViewToggle and DataView.
  */
 export function usePluginPanelView(prefix = ""): {
   view: "grid" | "list";
   density: "comfortable" | "compact";
   compact: boolean;
+  columns: PanelGridSize;
   setView: (view: "grid" | "list") => void;
   setDensity: (density: "comfortable" | "compact") => void;
+  setColumns: (columns: PanelGridSize) => void;
 } {
   const { values, set } = usePluginUiPreferences();
   const view = values[`${prefix}viewMode`] === "list" ? "list" : "grid";
   const density =
     values[`${prefix}density`] === "compact" ? "compact" : "comfortable";
+  const saved = values[`${prefix}columns`];
+  const columns =
+    typeof saved === "string" && PANEL_GRID_SIZES.includes(saved)
+      ? (saved as PanelGridSize)
+      : "auto";
   return {
     view,
     density,
     compact: density === "compact",
+    columns,
     setView: (next) => set(`${prefix}viewMode`, next),
     setDensity: (next) => set(`${prefix}density`, next),
+    setColumns: (next) => set(`${prefix}columns`, next),
   };
 }
 

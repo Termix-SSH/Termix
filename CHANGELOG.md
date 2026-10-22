@@ -1,5 +1,11 @@
 # Changelog
 
+## 26.10.5
+
+### Changed
+
+- Card grids in the Plugins tab and in plugins can show Auto (as many as fit) or a set number of cards per row
+
 ## 26.10.4
 
 ### Fixed

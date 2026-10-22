@@ -2,6 +2,8 @@ import type React from "react";
 import { cn } from "@/lib/utils";
 import {
   PANEL,
+  gridSizeStyle,
+  type GridSize,
   type PanelDensity,
   type PanelViewMode,
 } from "@/components/panel-layout";
@@ -67,6 +69,8 @@ export function DataView<T>({
   getKey,
   renderCard,
   columns,
+  size,
+  minCardWidth,
   listColumns,
   onRowClick,
   isRowActive,
@@ -78,7 +82,12 @@ export function DataView<T>({
   density?: PanelDensity;
   getKey: (item: T) => string;
   renderCard: (item: T) => React.ReactNode;
+  /** Breakpoint columns, used when no size is given. */
   columns: GridColumns;
+  /** Columns the user picked with ViewToggle. Wins over columns. */
+  size?: GridSize;
+  /** Narrowest card in auto mode, in px. */
+  minCardWidth?: number;
   listColumns: DataColumn<T>[];
   onRowClick?: (item: T) => void;
   isRowActive?: (item: T) => boolean;
@@ -93,9 +102,19 @@ export function DataView<T>({
 
   if (view === "grid") {
     return (
-      <div className={cn("grid", PANEL.gap, gridClass(columns), className)}>
+      <div
+        className={cn(
+          "grid",
+          PANEL.gap,
+          !size && gridClass(columns),
+          className,
+        )}
+        style={size ? gridSizeStyle(size, minCardWidth) : undefined}
+      >
         {items.map((item) => (
-          <div key={getKey(item)}>{renderCard(item)}</div>
+          <div key={getKey(item)} className="flex flex-col *:flex-1">
+            {renderCard(item)}
+          </div>
         ))}
       </div>
     );

@@ -183,17 +183,13 @@ describe("PluginsTab", () => {
   it("switches to a table and remembers it", async () => {
     await renderTab();
     expect(screen.queryByRole("table")).toBeNull();
-    expect(
-      screen.getByLabelText(en.plugins.manager.columns.title),
-    ).toBeTruthy();
+    expect(screen.getByLabelText(en.panel.columns.title)).toBeTruthy();
 
     fireEvent.click(screen.getByLabelText(en.panel.listView));
 
     expect(screen.getByRole("table")).toBeTruthy();
     expect(screen.getByText(en.plugins.manager.table.version)).toBeTruthy();
-    expect(
-      screen.queryByLabelText(en.plugins.manager.columns.title),
-    ).toBeNull();
+    expect(screen.queryByLabelText(en.panel.columns.title)).toBeNull();
     expect(localStorage.getItem("pluginsTab.view")).toBe("list");
 
     cleanup();

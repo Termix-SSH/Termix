@@ -37,7 +37,7 @@ export {
  * "^1.2" needs 1.2 or later). engine.termix is checked against the core
  * version by the server.
  */
-export const PLUGIN_API_VERSION = "1.11.0";
+export const PLUGIN_API_VERSION = "1.12.0";
 
 /** The API major, the default engine.api for a new plugin. */
 export const SUPPORTED_PLUGIN_API_VERSION = String(

@@ -1,11 +1,26 @@
 /* eslint-disable react-refresh/only-export-components */
 import { Children, Fragment, isValidElement, useRef } from "react";
 import type React from "react";
-import { ArrowLeft, Grid3X3, List, Rows3, Search, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Columns3,
+  Grid3X3,
+  List,
+  Rows3,
+  Search,
+  X,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/separator";
 import { DocsLink } from "@/components/docs-link";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/select";
 
 /** One spacing rhythm for every panel and tab. */
 export const PANEL = {
@@ -18,6 +33,37 @@ export const PANEL = {
 
 export type PanelViewMode = "grid" | "list";
 export type PanelDensity = "comfortable" | "compact";
+
+/** Cards per row. "auto" fits as many as the pane has room for. */
+export type GridSize = "auto" | "1" | "2" | "3" | "4" | "5" | "6";
+
+export const GRID_SIZES: readonly GridSize[] = [
+  "auto",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+];
+
+// Sized off the pane's own width, not the window. Cards keep a min width,
+// so narrow panes drop columns on their own.
+export function gridSizeStyle(
+  size: GridSize,
+  minCardWidth = 320,
+  gap = "0.5rem",
+): React.CSSProperties {
+  if (size === "auto") {
+    return {
+      gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${minCardWidth}px), 1fr))`,
+    };
+  }
+  const n = Number(size);
+  return {
+    gridTemplateColumns: `repeat(auto-fill, minmax(max(min(100%, 220px), calc((100% - ${n - 1} * ${gap}) / ${n} - 0.5px)), 1fr))`,
+  };
+}
 
 /** The header, toolbar band and body every tab and panel draws. */
 export function PanelShell({
@@ -308,20 +354,25 @@ export function Segmented<T extends string>({
   );
 }
 
-/** Grid or list, plus the compact rows toggle. */
+/** Grid or list, plus the compact rows toggle and the cards per row picker. */
 export function ViewToggle({
   view,
   onView,
   density,
   onDensity,
+  columns,
+  onColumns,
 }: {
   view: PanelViewMode;
   onView: (next: PanelViewMode) => void;
   density?: PanelDensity;
   onDensity?: (next: PanelDensity) => void;
+  /** Cards per row in grid view. Pass with onColumns to show the picker. */
+  columns?: GridSize;
+  onColumns?: (next: GridSize) => void;
 }) {
   const { t } = useTranslation();
-  return (
+  const toggle = (
     <div className="flex items-center border border-border">
       <ToggleButton
         active={view === "grid"}
@@ -354,6 +405,34 @@ export function ViewToggle({
           <Rows3 className="size-4" />
         </ToggleButton>
       )}
+    </div>
+  );
+
+  if (!columns || !onColumns || view !== "grid") return toggle;
+
+  return (
+    <div className="flex items-center gap-2">
+      <Select value={columns} onValueChange={(v) => onColumns(v as GridSize)}>
+        <SelectTrigger
+          size="sm"
+          className="w-auto gap-1.5 text-xs"
+          title={t("panel.columns.title")}
+          aria-label={t("panel.columns.title")}
+        >
+          <Columns3 className="size-3.5 text-muted-foreground" />
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {GRID_SIZES.map((size) => (
+            <SelectItem key={size} value={size} className="text-xs">
+              {size === "auto"
+                ? t("panel.columns.auto")
+                : t("panel.columns.count", { count: Number(size) })}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {toggle}
     </div>
   );
 }

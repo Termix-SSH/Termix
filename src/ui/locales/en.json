@@ -1325,11 +1325,6 @@
         "updated": "Recently updated",
         "category": "Category"
       },
-      "columns": {
-        "title": "Columns",
-        "auto": "Auto",
-        "count": "{{count}} wide"
-      },
       "table": {
         "name": "Name",
         "description": "Description",
@@ -1654,7 +1649,12 @@
     "gridView": "Grid",
     "listView": "List",
     "compactRows": "Compact rows",
-    "comfortableRows": "Comfortable rows"
+    "comfortableRows": "Comfortable rows",
+    "columns": {
+      "title": "Columns",
+      "auto": "Auto",
+      "count": "{{count}} wide"
+    }
   },
   "fields": {
     "secretSaved": "Saved. Type to replace it."
