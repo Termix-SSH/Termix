@@ -24,7 +24,11 @@ import {
   youtubeVideoId,
 } from "@termix-ssh/plugin-sdk/manifest";
 import { getLocalVersion } from "../utils/app-version.js";
-import { safeOutboundFetch } from "../utils/safe-outbound-fetch.js";
+import {
+  isBlockedAddress,
+  safeOutboundFetch,
+} from "../utils/safe-outbound-fetch.js";
+import { fetchWithProxy, getProxyAgent } from "../utils/proxy-agent.js";
 import { pluginLogger } from "../utils/logger.js";
 import {
   COMMUNITY_PLUGIN_KEYS,
@@ -307,20 +311,44 @@ function normalizePrivateHost(entry: string): string | undefined {
   }
 }
 
+/**
+ * With HTTP_PROXY or HTTPS_PROXY set, registry traffic goes through the proxy,
+ * which does its own name lookup. Only the URL itself is checked here: web
+ * pages only, no logins in it, and no private address typed in as a literal.
+ */
+function fetchThroughProxy(
+  url: string,
+  options: RequestInit,
+  privateHosts: readonly string[],
+): Promise<Response> {
+  const parsed = new URL(url);
+  const host = parsed.hostname.replace(/^\[|\]$/g, "");
+  if (
+    !["http:", "https:"].includes(parsed.protocol) ||
+    parsed.username ||
+    parsed.password
+  ) {
+    throw new Error("Invalid outbound URL");
+  }
+  if (isIP(host) && isBlockedAddress(host) && !privateHosts.includes(host)) {
+    throw new Error("Private destinations are not allowed");
+  }
+  return fetchWithProxy(url, options);
+}
+
 /** Follows redirects by hand so each hop still gets the outbound checks. */
 async function fetchFollowing(url: string): Promise<Response> {
   const privateHosts = getRegistryPrivateHosts();
   let current = url;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const response = await safeOutboundFetch(
-      current,
-      {
-        method: "GET",
-        redirect: "manual",
-        headers: { "User-Agent": "Termix" },
-      },
-      privateHosts,
-    );
+    const options: RequestInit = {
+      method: "GET",
+      redirect: "manual",
+      headers: { "User-Agent": "Termix" },
+    };
+    const response = getProxyAgent(current)
+      ? await fetchThroughProxy(current, options, privateHosts)
+      : await safeOutboundFetch(current, options, privateHosts);
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("location");
       if (!location) throw new Error(`redirect without a location: ${current}`);

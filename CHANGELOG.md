@@ -6,6 +6,7 @@
 
 - Safe mode: start the server with TERMIX_SAFE_MODE=1 to run only layout and theme plugins, so a broken plugin can be turned off
 - TERMIX_PLUGIN_REGISTRY_PRIVATE_HOSTS lets plugin registries live on a private address, like a registry in your LAN
+- Plugin registry browsing and downloads use HTTP_PROXY and HTTPS_PROXY when they are set
 - Docker image sizes: the default image now ships the most used plugins, the minimal tag ships only the look plugins and the full tag ships every official plugin
 - Plugins an older image shipped and you had on are downloaded from the registry on the first start of a smaller image, so nothing goes missing
 

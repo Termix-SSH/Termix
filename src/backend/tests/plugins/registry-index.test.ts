@@ -8,8 +8,21 @@ import * as tar from "tar";
 const fetchMock = vi.hoisted(() => vi.fn());
 const testKey = vi.hoisted(() => ({ value: null as null | object }));
 
-vi.mock("../../utils/safe-outbound-fetch.js", () => ({
+vi.mock("../../utils/safe-outbound-fetch.js", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("../../utils/safe-outbound-fetch.js")
+  >()),
   safeOutboundFetch: fetchMock,
+}));
+
+const proxyMock = vi.hoisted(() => ({
+  on: false,
+  fetch: vi.fn(),
+}));
+
+vi.mock("../../utils/proxy-agent.js", () => ({
+  getProxyAgent: () => (proxyMock.on ? {} : undefined),
+  fetchWithProxy: proxyMock.fetch,
 }));
 
 vi.mock("../../utils/app-version.js", () => ({
@@ -408,6 +421,31 @@ describe("fetchRegistryIndex", () => {
   it("throws when there is nothing cached", async () => {
     fetchMock.mockResolvedValueOnce(response("down", 503));
     await expect(fetchRegistryIndex()).rejects.toThrow(/503/);
+  });
+});
+
+describe("registry fetches with a proxy", () => {
+  afterEach(() => {
+    proxyMock.on = false;
+    proxyMock.fetch.mockReset();
+  });
+
+  it("goes through the proxy when one is configured", async () => {
+    proxyMock.on = true;
+    proxyMock.fetch.mockResolvedValueOnce(
+      response(JSON.stringify({ plugins: [] })),
+    );
+    await fetchIndexAt("https://registry.example/index.json");
+    expect(proxyMock.fetch).toHaveBeenCalledTimes(1);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("still refuses a private address typed in as a literal", async () => {
+    proxyMock.on = true;
+    await expect(fetchIndexAt("https://127.0.0.1/index.json")).rejects.toThrow(
+      "Private destinations are not allowed",
+    );
+    expect(proxyMock.fetch).not.toHaveBeenCalled();
   });
 });
 
