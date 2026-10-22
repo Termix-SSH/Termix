@@ -161,9 +161,10 @@ jobs:
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
           echo "prev_ref=$PREV" >> "$GITHUB_OUTPUT"
 
-  # Translates new or changed strings with the Termix LLM server and commits
-  # them to the dev branch, so the beta or stable build includes them. If the
-  # server is down it warns and the release goes on with what is there.
+  # Translates new or changed strings with the Termix LLM server and pins the
+  # bundled plugins to their newest registry releases, then commits both to the
+  # dev branch so the beta or stable build includes them. If the server is down
+  # it warns and the release goes on with what is there.
   translate:
     needs: [prep]
     if: ${{ needs.prep.outputs.skip != 'true' && needs.prep.outputs.mode != 'Overwrite release' }}
@@ -191,19 +192,26 @@ jobs:
           languages: src/ui/locales/languages.json
           api-key: ${{ secrets.TERMIX_LLM_API_KEY }}
 
-      - name: Commit translations
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      # Newest stable plugin release whose engine.termix allows this version.
+      - name: Pin bundled plugins
+        run: node scripts/pin-bundled-plugins.cjs --all --core-version "${{ needs.prep.outputs.version }}"
+
+      - name: Commit translations and plugin pins
         id: commit
         run: |
-          git add src/ui/locales
+          git add src/ui/locales docker/bundled-plugins.json
           if git diff --cached --quiet; then
             echo "No translation changes."
           elif [ "${{ needs.prep.outputs.mode }}" = "Dry run" ]; then
-            echo "DRY RUN: would commit these translation changes:"
+            echo "DRY RUN: would commit these translation and pin changes:"
             git --no-pager diff --cached --stat
           else
             git config user.name "LukeGus"
             git config user.email "bugattiguy527@gmail.com"
-            git commit -m "chore: update translations"
+            git commit -m "chore: update translations and plugin pins"
             git push origin HEAD:"${{ needs.prep.outputs.dev_branch }}"
           fi
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"

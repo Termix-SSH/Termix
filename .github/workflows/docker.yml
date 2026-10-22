@@ -41,9 +41,15 @@ on:
         default: ""
 
 jobs:
+  # One image per plugin profile (docker/bundled-plugins.json). standard keeps
+  # the plain tags; minimal and full add a suffix.
   build:
     runs-on: blacksmith-8vcpu-ubuntu-2404
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [standard, minimal, full]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -80,12 +86,17 @@ jobs:
           TAGS=()
           ALL_TAGS=()
 
+          SUFFIX=""
+          if [ "${{ matrix.profile }}" != "standard" ]; then
+            SUFFIX="-${{ matrix.profile }}"
+          fi
+
           if [ "$BUILD_TYPE" = "Production" ]; then
-            TAGS+=("$VERSION" "latest")
+            TAGS+=("$VERSION$SUFFIX" "latest$SUFFIX")
           elif [ "$BUILD_TYPE" = "Beta" ]; then
-            TAGS+=("beta" "$VERSION")
+            TAGS+=("beta$SUFFIX" "$VERSION$SUFFIX")
           else
-            TAGS+=("dev-$VERSION")
+            TAGS+=("dev-$VERSION$SUFFIX")
           fi
 
           for tag in "${TAGS[@]}"; do
@@ -124,6 +135,7 @@ jobs:
           tags: ${{ env.ALL_TAGS }}
           build-args: |
             BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
+            PLUGIN_PROFILE=${{ matrix.profile }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ env.SOURCE_SHA }}
