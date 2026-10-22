@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} đã sẵn sàng để cài đặt",
     "readyHint": "Nó sẽ được cài đặt khi Termix khởi động lại lần tới."
   },
+  "safeMode": {
+    "title": "Chế độ an toàn",
+    "description": "Chỉ có các plugin bố cục và giao diện đang chạy. Khởi động lại máy chủ mà không có TERMIX_SAFE_MODE để bật lại các plugin còn lại."
+  },
   "companion": {
     "close": "Đóng bảng",
     "moveSide": "Di chuyển bảng",
@@ -1081,6 +1085,8 @@
       "resetEveryone": "Đặt lại mặc định cho mọi người",
       "update": "Cập nhật {{name}} lên {{version}}",
       "disable": "Tắt {{name}}",
+      "enable": "Bật {{name}}",
+      "startAgain": "Khởi động lại {{name}}",
       "install": "Tìm bố cục và giao diện",
       "installTitle": "Bố cục và giao diện",
       "installButton": "Cài đặt",
@@ -1292,7 +1298,8 @@
         "disabled": "Đã tắt",
         "failed": "Dừng bất ngờ",
         "blocked": "Đang chờ plugin khác",
-        "server": "Chạy trên máy chủ của bạn"
+        "server": "Chạy trên máy chủ của bạn",
+        "safeMode": "Tắt trong chế độ an toàn"
       },
       "groups": {
         "running": "Đang chạy",
@@ -1305,11 +1312,6 @@
         "name": "Tên",
         "updated": "Mới cập nhật",
         "category": "Danh mục"
-      },
-      "columns": {
-        "title": "Cột",
-        "auto": "Tự động",
-        "count": "Rộng {{count}}"
       },
       "table": {
         "name": "Tên",
@@ -1610,7 +1612,12 @@
     "gridView": "Lưới",
     "listView": "Danh sách",
     "compactRows": "Hàng gọn",
-    "comfortableRows": "Hàng rộng"
+    "comfortableRows": "Hàng rộng",
+    "columns": {
+      "title": "Cột",
+      "auto": "Tự động",
+      "count": "Rộng {{count}}"
+    }
   },
   "fields": {
     "secretSaved": "Đã lưu. Nhập để thay thế."

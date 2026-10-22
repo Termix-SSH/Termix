@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} je spreman za instalaciju",
     "readyHint": "Instalirat će se sljedeći put kada se Termix ponovno pokrene."
   },
+  "safeMode": {
+    "title": "Sigurni način rada",
+    "description": "Pokreću se samo dodaci za raspored i temu. Ponovno pokrenite poslužitelj bez postavke TERMIX_SAFE_MODE da biste ponovno omogućili ostale dodatke."
+  },
   "companion": {
     "close": "Zatvori panel",
     "moveSide": "Pomakni panel",
@@ -1115,6 +1119,8 @@
       "resetEveryone": "Vrati zadano za sve",
       "update": "Ažuriraj {{name}} na {{version}}",
       "disable": "Isključi {{name}}",
+      "enable": "Uključi {{name}}",
+      "startAgain": "Ponovno pokreni {{name}}",
       "install": "Pronađi rasporede i teme",
       "installTitle": "Rasporedi i teme",
       "installButton": "Instaliraj",
@@ -1326,7 +1332,8 @@
         "disabled": "Onemogućeno",
         "failed": "Neočekivano zaustavljeno",
         "blocked": "Čeka drugi dodatak",
-        "server": "Radi na vašem poslužitelju"
+        "server": "Radi na vašem poslužitelju",
+        "safeMode": "Isključeno u sigurnom načinu rada"
       },
       "groups": {
         "running": "Pokrenuto",
@@ -1339,11 +1346,6 @@
         "name": "Naziv",
         "updated": "Nedavno ažurirano",
         "category": "Kategorija"
-      },
-      "columns": {
-        "title": "Stupci",
-        "auto": "Automatski",
-        "count": "{{count}} široko"
       },
       "table": {
         "name": "Naziv",
@@ -1694,7 +1696,12 @@
     "gridView": "Mreža",
     "listView": "Popis",
     "compactRows": "Kompaktni redovi",
-    "comfortableRows": "Prostrani redovi"
+    "comfortableRows": "Prostrani redovi",
+    "columns": {
+      "title": "Stupci",
+      "auto": "Automatski",
+      "count": "Širina: {{count}}"
+    }
   },
   "fields": {
     "secretSaved": "Spremljeno. Upišite za zamjenu."

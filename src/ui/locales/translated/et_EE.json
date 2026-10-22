@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} on paigaldamiseks valmis",
     "readyHint": "See paigaldatakse järgmisel Termixi taaskäivitamisel."
   },
+  "safeMode": {
+    "title": "Turvarežiim",
+    "description": "Töötavad ainult paigutuse ja teema lisad. Taaskäivitage server ilma TERMIX_SAFE_MODE määramata, et ülejäänud lisad uuesti lubada."
+  },
   "companion": {
     "close": "Sulge paneel",
     "moveSide": "Liiguta paneeli",
@@ -1098,6 +1102,8 @@
       "resetEveryone": "Taasta vaikimisi seadistus kõigile",
       "update": "Uuenda {{name}} versioonile {{version}}",
       "disable": "Lülita {{name}} välja",
+      "enable": "Lülita {{name}} sisse",
+      "startAgain": "Käivita {{name}} uuesti",
       "install": "Otsi paigutusi ja teemasid",
       "installTitle": "Paigutused ja teemad",
       "installButton": "Paigalda",
@@ -1309,7 +1315,8 @@
         "disabled": "Keelatud",
         "failed": "Peatati ootamatult",
         "blocked": "Ootab teist pistikprogrammi",
-        "server": "Töötab sinu serveris"
+        "server": "Töötab sinu serveris",
+        "safeMode": "Turvarežiimis välja lülitatud"
       },
       "groups": {
         "running": "Käimas",
@@ -1322,11 +1329,6 @@
         "name": "Nimi",
         "updated": "Hiljuti uuendatud",
         "category": "Kategooria"
-      },
-      "columns": {
-        "title": "Veerud",
-        "auto": "Automaatne",
-        "count": "{{count}} lai"
       },
       "table": {
         "name": "Nimi",
@@ -1652,7 +1654,12 @@
     "gridView": "Ruudustik",
     "listView": "Loend",
     "compactRows": "Kompaktsead read",
-    "comfortableRows": "Mugavad read"
+    "comfortableRows": "Mugavad read",
+    "columns": {
+      "title": "Veerud",
+      "auto": "Automaatne",
+      "count": "{{count}} veeru laiune"
+    }
   },
   "fields": {
     "secretSaved": "Salvestatud. Tüüpi, et asendada."

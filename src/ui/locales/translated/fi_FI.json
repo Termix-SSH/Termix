@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} on valmis asennettavaksi",
     "readyHint": "Se asennetaan seuraavan kerran, kun Termix käynnistetään uudelleen."
   },
+  "safeMode": {
+    "title": "Turvatoiminto",
+    "description": "Vain asettelun ja teeman lisäosat ovat käytössä. Käynnistä palvelin uudelleen ilman TERMIX_SAFE_MODE-muuttujaa ottaaksesi muut lisäosat takaisin käyttöön."
+  },
   "companion": {
     "close": "Sulje paneeli",
     "moveSide": "Siirrä paneeli",
@@ -1098,6 +1102,8 @@
       "resetEveryone": "Palauta oletus kaikille",
       "update": "Päivitä {{name}} versioon {{version}}",
       "disable": "Sammuta {{name}}",
+      "enable": "Ota {{name}} käyttöön",
+      "startAgain": "Käynnistä {{name}} uudelleen",
       "install": "Etsi asetteluja ja teemoja",
       "installTitle": "Asettelut ja teemat",
       "installButton": "Asenna",
@@ -1309,7 +1315,8 @@
         "disabled": "Poistettu käytöstä",
         "failed": "Pysähtyi odottamatta",
         "blocked": "Odottaa toista lisäosaa",
-        "server": "Käynnistyy palvelimellasi"
+        "server": "Käynnistyy palvelimellasi",
+        "safeMode": "Pois käytöstä turvatoiminnossa"
       },
       "groups": {
         "running": "Käynnissä",
@@ -1322,11 +1329,6 @@
         "name": "Nimi",
         "updated": "Viimeksi päivitetty",
         "category": "Kategoria"
-      },
-      "columns": {
-        "title": "Sarakkeet",
-        "auto": "Automaattinen",
-        "count": "{{count}} saraketta leveä"
       },
       "table": {
         "name": "Nimi",
@@ -1652,7 +1654,12 @@
     "gridView": "Ruudukko",
     "listView": "Lista",
     "compactRows": "Tiiviit rivit",
-    "comfortableRows": "Mukavat rivit"
+    "comfortableRows": "Mukavat rivit",
+    "columns": {
+      "title": "Sarakkeet",
+      "auto": "Automaattinen",
+      "count": "{{count}} saraketta leveä"
+    }
   },
   "fields": {
     "secretSaved": "Tallennettu. Kirjoita korvataksesi sen."

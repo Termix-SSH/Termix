@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} paruošta įdiegimui",
     "readyHint": "Ji bus įdiegta kitą kartą paleidus Termix iš naujo."
   },
+  "safeMode": {
+    "title": "Saugus režimas",
+    "description": "Veikia tik išdėstymo ir temos priedai. Paleiskite serverį iš naujo be kintamojo TERMIX_SAFE_MODE, kad įjungtumėte likusius priedus."
+  },
   "companion": {
     "close": "Uždaryti skydelį",
     "moveSide": "Perkelti skydelį",
@@ -1132,6 +1136,8 @@
       "resetEveryone": "Atstatyti numatytąjį visiems",
       "update": "Atnaujinti {{name}} į {{version}}",
       "disable": "Išjungti {{name}}",
+      "enable": "Įjungti „{{name}}“",
+      "startAgain": "Paleisti „{{name}}“ iš naujo",
       "install": "Ieškoti išdėstymų ir temų",
       "installTitle": "Išdėstymai ir temos",
       "installButton": "Įdiegti",
@@ -1343,7 +1349,8 @@
         "disabled": "Išjungta",
         "failed": "Nenumatomai sustabdyta",
         "blocked": "Laukiama kito priedo",
-        "server": "Veikia jūsų serveryje"
+        "server": "Veikia jūsų serveryje",
+        "safeMode": "Išjungta saugiu režimu"
       },
       "groups": {
         "running": "Veikia",
@@ -1356,11 +1363,6 @@
         "name": "Pavadinimas",
         "updated": "Neseniai atnaujinti",
         "category": "Kategorija"
-      },
-      "columns": {
-        "title": "Stulpeliai",
-        "auto": "Automatiškai",
-        "count": "{{count}} pločio"
       },
       "table": {
         "name": "Pavadinimas",
@@ -1736,7 +1738,12 @@
     "gridView": "Tinklelis",
     "listView": "Sąrašas",
     "compactRows": "Kompaktiškos eilutės",
-    "comfortableRows": "Patogios eilutės"
+    "comfortableRows": "Patogios eilutės",
+    "columns": {
+      "title": "Stulpeliai",
+      "auto": "Automatiškai",
+      "count": "{{count}} pločio"
+    }
   },
   "fields": {
     "secretSaved": "Išsaugota. Įveskite, kad pakeistumėte."

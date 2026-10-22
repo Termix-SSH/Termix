@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} est prêt à être installé",
     "readyHint": "Il sera installé au prochain redémarrage de Termix."
   },
+  "safeMode": {
+    "title": "Mode sans échec",
+    "description": "Seuls les plugins de mise en page et de thème sont actifs. Redémarrez le serveur sans la variable TERMIX_SAFE_MODE pour réactiver les autres."
+  },
   "companion": {
     "close": "Fermer le panneau",
     "moveSide": "Déplacer le panneau",
@@ -1115,6 +1119,8 @@
       "resetEveryone": "Réinitialiser la valeur par défaut pour tout le monde",
       "update": "Mettre à jour {{name}} vers {{version}}",
       "disable": "Désactiver {{name}}",
+      "enable": "Activer {{name}}",
+      "startAgain": "Relancer {{name}}",
       "install": "Trouver des dispositions et des thèmes",
       "installTitle": "Dispositions et thèmes",
       "installButton": "Installer",
@@ -1326,7 +1332,8 @@
         "disabled": "Désactivé",
         "failed": "Arrêt inattendu",
         "blocked": "En attente d'un autre plugin",
-        "server": "Exécute sur votre serveur"
+        "server": "Exécute sur votre serveur",
+        "safeMode": "Désactivé en mode sans échec"
       },
       "groups": {
         "running": "En cours d'exécution",
@@ -1339,11 +1346,6 @@
         "name": "Nom",
         "updated": "Récemment mis à jour",
         "category": "Catégorie"
-      },
-      "columns": {
-        "title": "Colonnes",
-        "auto": "Auto",
-        "count": "{{count}} de large"
       },
       "table": {
         "name": "Nom",
@@ -1694,7 +1696,12 @@
     "gridView": "Grille",
     "listView": "Liste",
     "compactRows": "Lignes compactes",
-    "comfortableRows": "Lignes confortables"
+    "comfortableRows": "Lignes confortables",
+    "columns": {
+      "title": "Colonnes",
+      "auto": "Auto",
+      "count": "{{count}} de large"
+    }
   },
   "fields": {
     "secretSaved": "Enregistré. Tapez pour le remplacer."

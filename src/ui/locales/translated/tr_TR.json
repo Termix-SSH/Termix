@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} yüklenmeye hazır",
     "readyHint": "Termix yeniden başladığında yüklenir."
   },
+  "safeMode": {
+    "title": "Güvenli mod",
+    "description": "Sadece düzen ve tema eklentileri çalışıyor. Geri kalanını tekrar açmak için sunucuyu TERMIX_SAFE_MODE olmadan yeniden başlatın."
+  },
   "companion": {
     "close": "Paneli kapat",
     "moveSide": "Paneli taşı",
@@ -1098,6 +1102,8 @@
       "resetEveryone": "Herkes için varsayılanı sıfırla",
       "update": "{{name}}'i {{version}} sürümüne güncelle",
       "disable": "{{name}}'i kapat",
+      "enable": "{{name}}'i aç",
+      "startAgain": "{{name}}'i yeniden başlat",
       "install": "Düzen ve temaları bul",
       "installTitle": "Düzenler ve temalar",
       "installButton": "Yükle",
@@ -1309,7 +1315,8 @@
         "disabled": "Devre dışı",
         "failed": "Beklenmedik şekilde durdu",
         "blocked": "Başka bir eklentiyi bekliyor",
-        "server": "Sunucunuzda çalışır"
+        "server": "Sunucunuzda çalışır",
+        "safeMode": "Güvenli modda kapalı"
       },
       "groups": {
         "running": "Çalışıyor",
@@ -1322,11 +1329,6 @@
         "name": "Ad",
         "updated": "Son güncellenen",
         "category": "Kategori"
-      },
-      "columns": {
-        "title": "Sütunlar",
-        "auto": "Otomatik",
-        "count": "{{count}} geniş"
       },
       "table": {
         "name": "Ad",
@@ -1652,7 +1654,12 @@
     "gridView": "Izgara",
     "listView": "Liste",
     "compactRows": "Sıkı satırlar",
-    "comfortableRows": "Rahat satırlar"
+    "comfortableRows": "Rahat satırlar",
+    "columns": {
+      "title": "Sütunlar",
+      "auto": "Otomatik",
+      "count": "{{count}} geniş"
+    }
   },
   "fields": {
     "secretSaved": "Kaydedildi. Değiştirmek için yazın."

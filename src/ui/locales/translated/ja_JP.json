@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} のインストール準備ができました",
     "readyHint": "Termix を再起動したときにインストールされます。"
   },
+  "safeMode": {
+    "title": "セーフモード",
+    "description": "レイアウトとテーマのプラグインのみが実行されています。TERMIX_SAFE_MODE を設定せずにサーバーを再起動すると、他のプラグインが再度有効になります。"
+  },
   "companion": {
     "close": "パネルを閉じる",
     "moveSide": "パネルを移動",
@@ -1081,6 +1085,8 @@
       "resetEveryone": "すべてのユーザーのデフォルトをリセット",
       "update": "{{name}} を {{version}} に更新",
       "disable": "{{name}} を無効にする",
+      "enable": "{{name}} を有効にする",
+      "startAgain": "{{name}} を再起動する",
       "install": "レイアウトとテーマを探す",
       "installTitle": "レイアウトとテーマ",
       "installButton": "インストール",
@@ -1292,7 +1298,8 @@
         "disabled": "無効",
         "failed": "予期せず停止",
         "blocked": "他のプラグインを待機中",
-        "server": "サーバー上で実行"
+        "server": "サーバー上で実行",
+        "safeMode": "セーフモードで無効"
       },
       "groups": {
         "running": "実行中",
@@ -1305,11 +1312,6 @@
         "name": "名前",
         "updated": "最近更新",
         "category": "カテゴリ"
-      },
-      "columns": {
-        "title": "列",
-        "auto": "自動",
-        "count": "{{count}} 列"
       },
       "table": {
         "name": "名前",
@@ -1610,7 +1612,12 @@
     "gridView": "グリッド",
     "listView": "リスト",
     "compactRows": "コンパクトな行",
-    "comfortableRows": "ゆったりした行"
+    "comfortableRows": "ゆったりした行",
+    "columns": {
+      "title": "カラム",
+      "auto": "自動",
+      "count": "{{count}} カラム"
+    }
   },
   "fields": {
     "secretSaved": "保存しました。入力して置き換えてください。"

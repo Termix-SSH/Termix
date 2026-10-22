@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} ir gatavs instalēšanai",
     "readyHint": "Tas tiks instalēts nākamajā reizi, kad Termix tiks restartēts."
   },
+  "safeMode": {
+    "title": "Drošais režīms",
+    "description": "Darbojas tikai izkārtojuma un temas spraudņi. Restartējiet serveri bez TERMIX_SAFE_MODE, lai atkal ieslēgtu pārējos."
+  },
   "companion": {
     "close": "Aizvērt paneli",
     "moveSide": "Pārvietot paneli",
@@ -1115,6 +1119,8 @@
       "resetEveryone": "Atiestatīt noklusējumu visiem",
       "update": "Atjaunināt {{name}} uz {{version}}",
       "disable": "Izslēgt {{name}}",
+      "enable": "Ieslēgt {{name}}",
+      "startAgain": "Atkārtoti palaist {{name}}",
       "install": "Atrast izkārtojumus un tēmas",
       "installTitle": "Izkārtojumi un tēmas",
       "installButton": "Instalēt",
@@ -1326,7 +1332,8 @@
         "disabled": "Atspējots",
         "failed": "Gaidāms apstājās",
         "blocked": "Gaida citu spraudni",
-        "server": "Darbojas jūsu serverī"
+        "server": "Darbojas jūsu serverī",
+        "safeMode": "Izslēgts drošajā režīmā"
       },
       "groups": {
         "running": "Darbojas",
@@ -1339,11 +1346,6 @@
         "name": "Nosaukums",
         "updated": "Nesen atjaunināti",
         "category": "Kategorija"
-      },
-      "columns": {
-        "title": "Kolonnas",
-        "auto": "Automātiski",
-        "count": "{{count}} kolonnu platums"
       },
       "table": {
         "name": "Nosaukums",
@@ -1694,7 +1696,12 @@
     "gridView": "Režģis",
     "listView": "Saraksts",
     "compactRows": "Kompaktas rindas",
-    "comfortableRows": "Plašas rindas"
+    "comfortableRows": "Plašas rindas",
+    "columns": {
+      "title": "Kolonnas",
+      "auto": "Automātiski",
+      "count": "{{count}} kolonnu platums"
+    }
   },
   "fields": {
     "secretSaved": "Saglabāts. Ierakstiet, lai to aizvietotu."

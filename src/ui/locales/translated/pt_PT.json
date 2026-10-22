@@ -235,6 +235,10 @@
     "ready": "O Termix {{version}} está pronto para instalar",
     "readyHint": "Será instalado na próxima reinicialização do Termix."
   },
+  "safeMode": {
+    "title": "Modo seguro",
+    "description": "Apenas os plugins de layout e tema estão em execução. Reinicie o servidor sem a variável TERMIX_SAFE_MODE para reativar os restantes."
+  },
   "companion": {
     "close": "Fechar painel",
     "moveSide": "Mover painel",
@@ -1115,6 +1119,8 @@
       "resetEveryone": "Repor a predefinição para todos",
       "update": "Atualizar {{name}} para {{version}}",
       "disable": "Desativar {{name}}",
+      "enable": "Ativar {{name}}",
+      "startAgain": "Reiniciar {{name}}",
       "install": "Procurar layouts e temas",
       "installTitle": "Layouts e temas",
       "installButton": "Instalar",
@@ -1326,7 +1332,8 @@
         "disabled": "Desativado",
         "failed": "Parado inesperadamente",
         "blocked": "À espera de outro plugin",
-        "server": "Executa no seu servidor"
+        "server": "Executa no seu servidor",
+        "safeMode": "Desativado no modo seguro"
       },
       "groups": {
         "running": "Em execução",
@@ -1339,11 +1346,6 @@
         "name": "Nome",
         "updated": "Atualizados recentemente",
         "category": "Categoria"
-      },
-      "columns": {
-        "title": "Colunas",
-        "auto": "Automático",
-        "count": "{{count}} de largura"
       },
       "table": {
         "name": "Nome",
@@ -1694,7 +1696,12 @@
     "gridView": "Grelha",
     "listView": "Lista",
     "compactRows": "Linhas compactas",
-    "comfortableRows": "Linhas confortáveis"
+    "comfortableRows": "Linhas confortáveis",
+    "columns": {
+      "title": "Colunas",
+      "auto": "Automático",
+      "count": "{{count}} de largura"
+    }
   },
   "fields": {
     "secretSaved": "Guardado. Escreva para substituir."

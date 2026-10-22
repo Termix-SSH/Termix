@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} جاهز للتثبيت",
     "readyHint": "سيتم تثبيته في المرة القادمة التي يعاد فيها تشغيل Termix."
   },
+  "safeMode": {
+    "title": "الوضع الآمن",
+    "description": "لا تعمل سوى إضافات التخطيط والمظهر. أعد تشغيل الخادم بدون TERMIX_SAFE_MODE لإعادة تشغيل الباقي."
+  },
   "companion": {
     "close": "إغلاق اللوحة",
     "moveSide": "نقل اللوحة",
@@ -1166,6 +1170,8 @@
       "resetEveryone": "إعادة تعيين الافتراضي للجميع",
       "update": "تحديث {{name}} إلى {{version}}",
       "disable": "إيقاف {{name}}",
+      "enable": "تفعيل {{name}}",
+      "startAgain": "إعادة تشغيل {{name}}",
       "install": "البحث عن التخطيطات والسمات",
       "installTitle": "التخطيطات والسمات",
       "installButton": "تثبيت",
@@ -1377,7 +1383,8 @@
         "disabled": "معطلة",
         "failed": "توقفت بشكل غير متوقع",
         "blocked": "في انتظار إضافة أخرى",
-        "server": "يعمل على خادمك"
+        "server": "يعمل على خادمك",
+        "safeMode": "معطل في الوضع الآمن"
       },
       "groups": {
         "running": "تعمل",
@@ -1390,11 +1397,6 @@
         "name": "الاسم",
         "updated": "تم تحديثها مؤخراً",
         "category": "الفئة"
-      },
-      "columns": {
-        "title": "الأعمدة",
-        "auto": "تلقائي",
-        "count": "عرض {{count}}"
       },
       "table": {
         "name": "الاسم",
@@ -1820,7 +1822,12 @@
     "gridView": "شبكة",
     "listView": "قائمة",
     "compactRows": "صفوف مدمجة",
-    "comfortableRows": "صفوف مريحة"
+    "comfortableRows": "صفوف مريحة",
+    "columns": {
+      "title": "الأعمدة",
+      "auto": "تلقائي",
+      "count": "عرض {{count}}"
+    }
   },
   "fields": {
     "secretSaved": "تم الحفظ. اكتب لاستبداله."

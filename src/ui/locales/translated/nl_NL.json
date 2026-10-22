@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} is klaar om te installeren",
     "readyHint": "Het wordt geïnstalleerd de volgende keer dat Termix herstart."
   },
+  "safeMode": {
+    "title": "Veilige modus",
+    "description": "Alleen layout- en thema-plugins zijn actief. Herstart de server zonder TERMIX_SAFE_MODE om de rest weer in te schakelen."
+  },
   "companion": {
     "close": "Sluit paneel",
     "moveSide": "Verplaats paneel",
@@ -1098,6 +1102,8 @@
       "resetEveryone": "Standaard voor iedereen terugzetten",
       "update": "Update {{name}} naar {{version}}",
       "disable": "Zet {{name}} uit",
+      "enable": "{{name}} inschakelen",
+      "startAgain": "{{name}} opnieuw starten",
       "install": "Lay-outs en thema's zoeken",
       "installTitle": "Lay-outs en thema's",
       "installButton": "Installeren",
@@ -1309,7 +1315,8 @@
         "disabled": "Uitgeschakeld",
         "failed": "Onverwacht gestopt",
         "blocked": "Wachten op een andere plugin",
-        "server": "Wordt uitgevoerd op je server"
+        "server": "Wordt uitgevoerd op je server",
+        "safeMode": "Uitgeschakeld in veilige modus"
       },
       "groups": {
         "running": "Actief",
@@ -1322,11 +1329,6 @@
         "name": "Naam",
         "updated": "Recent bijgewerkt",
         "category": "Categorie"
-      },
-      "columns": {
-        "title": "Kolommen",
-        "auto": "Automatisch",
-        "count": "{{count}} kolommen breed"
       },
       "table": {
         "name": "Naam",
@@ -1652,7 +1654,12 @@
     "gridView": "Raster",
     "listView": "Lijst",
     "compactRows": "Compacte rijen",
-    "comfortableRows": "Ruime rijen"
+    "comfortableRows": "Ruime rijen",
+    "columns": {
+      "title": "Kolommen",
+      "auto": "Automatisch",
+      "count": "{{count}} kolommen breed"
+    }
   },
   "fields": {
     "secretSaved": "Opgeslagen. Typ om het te vervangen."
