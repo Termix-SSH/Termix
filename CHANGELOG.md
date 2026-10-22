@@ -1,5 +1,24 @@
 # Changelog
 
+## 26.10.5
+
+### Added
+
+- Safe mode: start the server with TERMIX_SAFE_MODE=1 to run only layout and theme plugins, so a broken plugin can be turned off
+- TERMIX_PLUGIN_REGISTRY_PRIVATE_HOSTS lets plugin registries live on a private address, like a registry in your LAN
+- Plugin registry browsing and downloads use HTTP_PROXY and HTTPS_PROXY when they are set
+- Docker image sizes: the default image now ships the most used plugins, the minimal tag ships only the look plugins and the full tag ships every official plugin
+- Plugins an older image shipped and you had on are downloaded from the registry on the first start of a smaller image, so nothing goes missing
+
+### Changed
+
+- Card grids in the Plugins tab and in plugins can show Auto (as many as fit) or a set number of cards per row
+
+### Fixed
+
+- The macOS app asks for Local Network access, so it can reach servers on your LAN
+- The desktop app can change the connection origin of a host shared with you, instead of failing to save
+
 ## 26.10.4
 
 ### Fixed

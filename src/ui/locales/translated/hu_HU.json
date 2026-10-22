@@ -235,6 +235,10 @@
     "ready": "A Termix {{version}} verziója készen áll a telepítésre",
     "readyHint": "A következő újraindításkor települ."
   },
+  "safeMode": {
+    "title": "Biztonságos mód",
+    "description": "Csak a elrendezés- és témabővítmények futnak. Indítsa újra a szervert a TERMIX_SAFE_MODE nélkül, hogy a többit is újra bekapcsolja."
+  },
   "companion": {
     "close": "Panel bezárása",
     "moveSide": "Panel áthelyezése",
@@ -1098,6 +1102,8 @@
       "resetEveryone": "Az alapértelmezett visszaállítása mindenkinek",
       "update": "{{name}} frissítése a {{version}} verzióra",
       "disable": "{{name}} kikapcsolása",
+      "enable": "{{name}} bekapcsolása",
+      "startAgain": "{{name}} újraindítása",
       "install": "Elrendezések és témák keresése",
       "installTitle": "Elrendezések és témák",
       "installButton": "Telepítés",
@@ -1309,7 +1315,8 @@
         "disabled": "Letiltva",
         "failed": "Váratlanul leállt",
         "blocked": "Várakozás egy másik bővítményre",
-        "server": "A szerverén fut"
+        "server": "A szerverén fut",
+        "safeMode": "Kikapcsolva biztonságos módban"
       },
       "groups": {
         "running": "Fut",
@@ -1322,11 +1329,6 @@
         "name": "Név",
         "updated": "Legutóbb frissítve",
         "category": "Kategória"
-      },
-      "columns": {
-        "title": "Oszlopok",
-        "auto": "Automatikus",
-        "count": "{{count}} oszlop széles"
       },
       "table": {
         "name": "Név",
@@ -1652,7 +1654,12 @@
     "gridView": "Rács",
     "listView": "Lista",
     "compactRows": "Kompakt sorok",
-    "comfortableRows": "Kényelmes sorok"
+    "comfortableRows": "Kényelmes sorok",
+    "columns": {
+      "title": "Oszlopok",
+      "auto": "Automatikus",
+      "count": "{{count}} oszlop széles"
+    }
   },
   "fields": {
     "secretSaved": "Mentve. Írjon be új értéket a helyettesítéshez."

@@ -5,7 +5,6 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Columns3,
   Download,
   Globe,
   Library,
@@ -37,7 +36,9 @@ import {
   GroupHeading,
   PANEL,
   PanelShell,
+  GRID_SIZES,
   ViewToggle,
+  type GridSize,
   type PanelViewMode,
 } from "@/components/panel-layout";
 import { DataView, type DataColumn } from "@/components/data-view";
@@ -71,9 +72,6 @@ import { docsUrl } from "@/lib/docs";
 import { DocsLink } from "@/components/docs-link";
 
 type Section = "installed" | "browse" | "updates" | "registries";
-
-const GRID_SIZES = ["auto", "2", "3", "4", "5", "6"] as const;
-type GridSize = (typeof GRID_SIZES)[number];
 
 interface Layout {
   view: PanelViewMode;
@@ -364,52 +362,14 @@ function LayoutControls({
   onView: (next: PanelViewMode) => void;
   onColumns: (next: GridSize) => void;
 }) {
-  const { t } = useTranslation();
   return (
-    <>
-      {layout.view === "grid" && (
-        <Select
-          value={layout.columns}
-          onValueChange={(v) => onColumns(v as GridSize)}
-        >
-          <SelectTrigger
-            size="sm"
-            className="w-auto gap-1.5 text-xs"
-            title={t("plugins.manager.columns.title")}
-            aria-label={t("plugins.manager.columns.title")}
-          >
-            <Columns3 className="size-3.5 text-muted-foreground" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {GRID_SIZES.map((size) => (
-              <SelectItem key={size} value={size} className="text-xs">
-                {size === "auto"
-                  ? t("plugins.manager.columns.auto")
-                  : t("plugins.manager.columns.count", { count: Number(size) })}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
-      <ViewToggle view={layout.view} onView={onView} />
-    </>
+    <ViewToggle
+      view={layout.view}
+      onView={onView}
+      columns={layout.columns}
+      onColumns={onColumns}
+    />
   );
-}
-
-// Sized off the tab's own width, not the window. Cards keep a min width,
-// so narrow panes drop columns on their own.
-function gridStyle(columns: GridSize): React.CSSProperties {
-  if (columns === "auto") {
-    return {
-      gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 400px), 1fr))",
-    };
-  }
-  const n = Number(columns);
-  const gaps = (n - 1) * 12;
-  return {
-    gridTemplateColumns: `repeat(auto-fill, minmax(max(220px, calc((100% - ${gaps}px) / ${n} - 0.5px)), 1fr))`,
-  };
 }
 
 function PluginCollection({
@@ -440,13 +400,17 @@ function PluginCollection({
     );
   }
   return (
-    <div className="grid gap-3" style={gridStyle(layout.columns)}>
-      {plugins.map((p) => (
-        <div key={p.id} className="flex flex-col *:flex-1">
-          {renderCard(p)}
-        </div>
-      ))}
-    </div>
+    <DataView
+      items={plugins}
+      view="grid"
+      getKey={(p) => p.id}
+      renderCard={renderCard}
+      columns={{}}
+      size={layout.columns}
+      minCardWidth={400}
+      listColumns={listColumns}
+      empty={null}
+    />
   );
 }
 
@@ -1133,7 +1097,9 @@ function InstalledCard({
           <span className="text-[11px] text-muted-foreground">
             {plugin.status === "server"
               ? t("plugins.manager.status.server")
-              : t("plugins.manager.status.disabled")}
+              : plugin.status === "safeMode"
+                ? t("plugins.manager.status.safeMode")
+                : t("plugins.manager.status.disabled")}
           </span>
         </div>
       ) : (
@@ -1226,11 +1192,15 @@ function StatusCell({ plugin }: { plugin: PluginEntry }) {
         ? t("plugins.manager.status.failed")
         : plugin.status === "server"
           ? t("plugins.manager.status.server")
-          : !running
-            ? t("plugins.manager.status.disabled")
-            : plugin.pinnedVersion
-              ? t("plugins.manager.pinnedTo", { version: plugin.pinnedVersion })
-              : t("plugins.manager.status.running");
+          : plugin.status === "safeMode"
+            ? t("plugins.manager.status.safeMode")
+            : !running
+              ? t("plugins.manager.status.disabled")
+              : plugin.pinnedVersion
+                ? t("plugins.manager.pinnedTo", {
+                    version: plugin.pinnedVersion,
+                  })
+                : t("plugins.manager.status.running");
   return (
     <span
       className="flex min-w-0 items-center gap-1.5 text-muted-foreground"

@@ -18,6 +18,7 @@ import {
   safeLayoutForced,
   unavailableLooks,
 } from "../../plugins/looks.js";
+import { safeModeOn } from "../../plugins/safe-mode.js";
 
 const router = express.Router();
 const authManager = AuthManager.getInstance();
@@ -36,7 +37,7 @@ async function adminDefaults() {
  * /user-preferences/look:
  *   get:
  *     summary: Get the layout and theme to show the current user
- *     description: The user's own choice, the admin defaults (a layout no installed plugin brings reads as null), the default look of the bundled plugins, whether TERMIX_SAFE_LAYOUT forces the repair view, and installed layout or theme plugins that could not load. The browser resolves the final look from these.
+ *     description: The user's own choice, the admin defaults (a layout no installed plugin brings reads as null), the default look of the bundled plugins, whether TERMIX_SAFE_LAYOUT forces the repair view, whether TERMIX_SAFE_MODE runs only layout and theme plugins, and installed layout or theme plugins that could not load. The browser resolves the final look from these.
  *     tags:
  *       - User Preferences
  *     responses:
@@ -75,6 +76,8 @@ async function adminDefaults() {
  *                       nullable: true
  *                 safeLayout:
  *                   type: boolean
+ *                 safeMode:
+ *                   type: boolean
  *                 unavailable:
  *                   type: array
  *                   items:
@@ -112,6 +115,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
       defaults: { ...defaults, layout: known(defaults.layout) },
       defaultLook: resolveDefaultLook(loader),
       safeLayout: safeLayoutForced(),
+      safeMode: safeModeOn(),
       unavailable: unavailableLooks(loader),
     });
   } catch (error) {

@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} jest gotowy do instalacji",
     "readyHint": "Zostanie zainstalowany przy następnym ponownym uruchomieniu Termix."
   },
+  "safeMode": {
+    "title": "Tryb awaryjny",
+    "description": "Uruchomione są tylko wtyczki układu i motywu. Uruchom ponownie serwer bez zmiennej środowiskowej TERMIX_SAFE_MODE, aby włączyć pozostałe wtyczki."
+  },
   "companion": {
     "close": "Zamknij panel",
     "moveSide": "Przenieś panel",
@@ -1132,6 +1136,8 @@
       "resetEveryone": "Przywróć domyślne ustawienia dla wszystkich",
       "update": "Aktualizuj {{name}} do wersji {{version}}",
       "disable": "Wyłącz {{name}}",
+      "enable": "Włącz {{name}}",
+      "startAgain": "Uruchom ponownie {{name}}",
       "install": "Szukaj układów i motywów",
       "installTitle": "Układy i motywy",
       "installButton": "Zainstaluj",
@@ -1343,7 +1349,8 @@
         "disabled": "Wyłączone",
         "failed": "Zatrzymane nieoczekiwanie",
         "blocked": "Oczekiwanie na inną wtyczkę",
-        "server": "Uruchamiane na Twoim serwerze"
+        "server": "Uruchamiane na Twoim serwerze",
+        "safeMode": "Wyłączone w trybie awaryjnym"
       },
       "groups": {
         "running": "Uruchomione",
@@ -1356,11 +1363,6 @@
         "name": "Nazwa",
         "updated": "Ostatnio zaktualizowane",
         "category": "Kategoria"
-      },
-      "columns": {
-        "title": "Kolumny",
-        "auto": "Automatycznie",
-        "count": "{{count}} kolumn"
       },
       "table": {
         "name": "Nazwa",
@@ -1736,7 +1738,12 @@
     "gridView": "Siatka",
     "listView": "Lista",
     "compactRows": "Zwięzłe wiersze",
-    "comfortableRows": "Przestrzenne wiersze"
+    "comfortableRows": "Przestrzenne wiersze",
+    "columns": {
+      "title": "Kolumny",
+      "auto": "Automatycznie",
+      "count": "Szerokość: {{count}}"
+    }
   },
   "fields": {
     "secretSaved": "Zapisano. Wpisz nową wartość, aby ją zmienić."

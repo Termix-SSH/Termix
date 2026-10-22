@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} is gereed om te installeer",
     "readyHint": "Dit word die volgende keer wat Termix herbegin geïnstalleer."
   },
+  "safeMode": {
+    "title": "Veilige modus",
+    "description": "Slegs uitleg- en tema-plug-ins word uitgevoer. Herbegin die bediener sonder TERMIX_SAFE_MODE om die res weer aan te skakel."
+  },
   "companion": {
     "close": "Maak paneel toe",
     "moveSide": "Skuif paneel",
@@ -1098,6 +1102,8 @@
       "resetEveryone": "Stel die verstek vir almal terug",
       "update": "Dateer {{name}} op na {{version}}",
       "disable": "Skakel {{name}} af",
+      "enable": "Skakel {{name}} aan",
+      "startAgain": "Begin {{name}} weer",
       "install": "Vind lêe en temas",
       "installTitle": "Lêe en temas",
       "installButton": "Installeer",
@@ -1309,7 +1315,8 @@
         "disabled": "Afgeskakel",
         "failed": "Onverwags gestop",
         "blocked": "Wag op 'n ander plugin",
-        "server": "Loop op jou bediener"
+        "server": "Loop op jou bediener",
+        "safeMode": "Af in veilige modus"
       },
       "groups": {
         "running": "Aktief",
@@ -1322,11 +1329,6 @@
         "name": "Naam",
         "updated": "Onlangs opgedateer",
         "category": "Kategorie"
-      },
-      "columns": {
-        "title": "Kolomme",
-        "auto": "Outo",
-        "count": "{{count}} breed"
       },
       "table": {
         "name": "Naam",
@@ -1652,7 +1654,12 @@
     "gridView": "Rooster",
     "listView": "Lys",
     "compactRows": "Kompakte rye",
-    "comfortableRows": "Gerieflike rye"
+    "comfortableRows": "Gerieflike rye",
+    "columns": {
+      "title": "Kolomme",
+      "auto": "Outo",
+      "count": "{{count}} breed"
+    }
   },
   "fields": {
     "secretSaved": "Opgeslaan. Tik om dit te vervang."

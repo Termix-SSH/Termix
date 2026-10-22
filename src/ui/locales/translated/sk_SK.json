@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} je pripravený na inštaláciu",
     "readyHint": "Nainštaluje sa pri ďalšom reštarte Termixu."
   },
+  "safeMode": {
+    "title": "Režim bezpečnosti",
+    "description": "Bežia len zásuvné moduly rozloženia a témy. Reštartujte server bez premennej TERMIX_SAFE_MODE, aby ste ostatné moduly opäť povolili."
+  },
   "companion": {
     "close": "Zatvoriť panel",
     "moveSide": "Presunúť panel",
@@ -1132,6 +1136,8 @@
       "resetEveryone": "Obnoviť predvolené nastavenie pre všetkých",
       "update": "Aktualizovať {{name}} na verziu {{version}}",
       "disable": "Vypnúť {{name}}",
+      "enable": "Povoliť {{name}}",
+      "startAgain": "Spustiť {{name}} znova",
       "install": "Nájsť rozloženia a témy",
       "installTitle": "Rozloženia a témy",
       "installButton": "Nainštalovať",
@@ -1343,7 +1349,8 @@
         "disabled": "Zakázané",
         "failed": "Neočakávane zastavené",
         "blocked": "Čaká na iný plugin",
-        "server": "Beží na vašom serveri"
+        "server": "Beží na vašom serveri",
+        "safeMode": "Vypnuté v režime bezpečnosti"
       },
       "groups": {
         "running": "Bežiaci",
@@ -1356,11 +1363,6 @@
         "name": "Názov",
         "updated": "Nedávno aktualizované",
         "category": "Kategória"
-      },
-      "columns": {
-        "title": "Stĺpce",
-        "auto": "Automaticky",
-        "count": "{{count}} stĺpcov široké"
       },
       "table": {
         "name": "Názov",
@@ -1736,7 +1738,12 @@
     "gridView": "Mriežka",
     "listView": "Zoznam",
     "compactRows": "Kompaktné riadky",
-    "comfortableRows": "Pohodlné riadky"
+    "comfortableRows": "Pohodlné riadky",
+    "columns": {
+      "title": "Stĺpce",
+      "auto": "Automaticky",
+      "count": "Šírka {{count}}"
+    }
   },
   "fields": {
     "secretSaved": "Uložené. Pre nahradenie zadajte novú hodnotu."

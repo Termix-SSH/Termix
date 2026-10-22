@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} je pripravljen za namestitev",
     "readyHint": "Namesti se naslednjič, ko se Termix ponovno zažene."
   },
+  "safeMode": {
+    "title": "Varen način",
+    "description": "Zagnani so le vtičniki za postavitev in temo. Ponovno zaženite strežnik brez TERMIX_SAFE_MODE, da ponovno vklopite ostale."
+  },
   "companion": {
     "close": "Zapri ploščo",
     "moveSide": "Premakni ploščo",
@@ -1132,6 +1136,8 @@
       "resetEveryone": "Ponastavi privzeto za vse",
       "update": "Posodobi {{name}} na {{version}}",
       "disable": "Izklopi {{name}}",
+      "enable": "Vklopi {{name}}",
+      "startAgain": "Znova zaženi {{name}}",
       "install": "Poišči razporede in teme",
       "installTitle": "Razporedi in teme",
       "installButton": "Namesti",
@@ -1343,7 +1349,8 @@
         "disabled": "Onemogočen",
         "failed": "Nepričakovano ustavljen",
         "blocked": "Čaka na drug vtičnik",
-        "server": "Zažene se na vašem strežniku"
+        "server": "Zažene se na vašem strežniku",
+        "safeMode": "Izklopljeno v varnem načinu"
       },
       "groups": {
         "running": "Delujoči",
@@ -1356,11 +1363,6 @@
         "name": "Ime",
         "updated": "Nedavno posodobljeni",
         "category": "Kategorija"
-      },
-      "columns": {
-        "title": "Stolpci",
-        "auto": "Samodejno",
-        "count": "{{count}} širok"
       },
       "table": {
         "name": "Ime",
@@ -1736,7 +1738,12 @@
     "gridView": "Mreža",
     "listView": "Seznam",
     "compactRows": "Kompaktni vrstice",
-    "comfortableRows": "Udobne vrstice"
+    "comfortableRows": "Udobne vrstice",
+    "columns": {
+      "title": "Stolpci",
+      "auto": "Samodejno",
+      "count": "{{count}} širok"
+    }
   },
   "fields": {
     "secretSaved": "Shranjeno. Vnesite za zamenjavo."

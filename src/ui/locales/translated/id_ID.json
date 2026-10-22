@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} siap untuk diinstal",
     "readyHint": "Ini akan diinstal saat Termix dimulai ulang berikutnya."
   },
+  "safeMode": {
+    "title": "Mode aman",
+    "description": "Hanya plugin tata letak dan tema yang berjalan. Mulai ulang server tanpa TERMIX_SAFE_MODE untuk mengaktifkan kembali yang lainnya."
+  },
   "companion": {
     "close": "Tutup panel",
     "moveSide": "Pindahkan panel",
@@ -1081,6 +1085,8 @@
       "resetEveryone": "Atur ulang default untuk semua orang",
       "update": "Perbarui {{name}} ke {{version}}",
       "disable": "Matikan {{name}}",
+      "enable": "Aktifkan {{name}}",
+      "startAgain": "Mulai ulang {{name}}",
       "install": "Cari tata letak dan tema",
       "installTitle": "Tata letak dan tema",
       "installButton": "Instal",
@@ -1292,7 +1298,8 @@
         "disabled": "Dinonaktifkan",
         "failed": "Berhenti secara tak terduga",
         "blocked": "Menunggu plugin lain",
-        "server": "Berjalan di server Anda"
+        "server": "Berjalan di server Anda",
+        "safeMode": "Nonaktif di mode aman"
       },
       "groups": {
         "running": "Berjalan",
@@ -1305,11 +1312,6 @@
         "name": "Nama",
         "updated": "Baru diperbarui",
         "category": "Kategori"
-      },
-      "columns": {
-        "title": "Kolom",
-        "auto": "Otomatis",
-        "count": "Lebar {{count}}"
       },
       "table": {
         "name": "Nama",
@@ -1610,7 +1612,12 @@
     "gridView": "Grid",
     "listView": "Daftar",
     "compactRows": "Baris ringkas",
-    "comfortableRows": "Baris nyaman"
+    "comfortableRows": "Baris nyaman",
+    "columns": {
+      "title": "Kolom",
+      "auto": "Otomatis",
+      "count": "Lebar {{count}}"
+    }
   },
   "fields": {
     "secretSaved": "Tersimpan. Ketik untuk menggantinya."

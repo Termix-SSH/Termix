@@ -289,6 +289,7 @@ export {
   PanelShell,
   Segmented,
   ViewToggle,
+  type GridSize,
   type PanelDensity,
   type PanelViewMode,
 } from "@/components/panel-layout";

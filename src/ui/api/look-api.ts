@@ -19,6 +19,8 @@ export interface LookResponse {
   defaultLook: { layout: string | null; theme: string | null };
   /** TERMIX_SAFE_LAYOUT is set on the server. */
   safeLayout: boolean;
+  /** TERMIX_SAFE_MODE is set: only layout and theme plugins run. */
+  safeMode?: boolean;
   unavailable: UnavailableLook[];
 }
 

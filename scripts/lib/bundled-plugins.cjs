@@ -16,6 +16,11 @@
  * environment variables is set, for a server configured before first boot.
  * Plugins without it start unchecked.
  *
+ * "tier" says which image profile ships the plugin: "minimal" (only what the
+ * app cannot start without, the default look), "standard" (the default image)
+ * or "full" (everything else). A profile includes its own tier and every
+ * smaller one. A plugin with no tier counts as "full".
+ *
  * "defaultLook": true marks the plugin whose layout (and that layout's
  * theme) a fresh install shows. Core finds the default look this way, so it
  * never names a plugin. Such a plugin always starts enabled and cannot be
@@ -31,6 +36,8 @@ const ID = /^[a-z0-9][a-z0-9-]*$/;
 const ENV_NAME = /^[A-Z][A-Z0-9_]*$/;
 const ONBOARDING_KEYS = new Set(["recommended", "consent", "enabledByEnv"]);
 const SHA256 = /^[0-9a-f]{64}$/;
+const PROFILES = ["minimal", "standard", "full"];
+const DEFAULT_PROFILE = "standard";
 
 function parseOnboarding(value, id, problems) {
   if (value === undefined) return null;
@@ -122,6 +129,9 @@ function parseBundledPlugins(raw) {
       ) {
         problems.push(`${entry.id} defaultLook must be a boolean`);
       }
+      if (entry.tier !== undefined && !PROFILES.includes(entry.tier)) {
+        problems.push(`${entry.id} tier must be one of ${PROFILES.join(", ")}`);
+      }
       if (problems.length > before) continue;
       plugins.push({
         id: entry.id,
@@ -131,6 +141,7 @@ function parseBundledPlugins(raw) {
         sha256: entry.sha256,
         onboarding,
         defaultLook: entry.defaultLook === true,
+        tier: entry.tier ?? "full",
       });
     } else {
       problems.push(`${entry.id} has an unknown source "${entry.source}"`);
@@ -241,12 +252,35 @@ function buildBundledIndex(plugins, stagedIds) {
   return { version: 1, plugins: out };
 }
 
+/** The profile to build: --profile, then TERMIX_PLUGIN_PROFILE, then standard. */
+function resolveProfile(argv = process.argv, env = process.env) {
+  const flag = argv.indexOf("--profile");
+  const value =
+    (flag !== -1 ? argv[flag + 1] : env.TERMIX_PLUGIN_PROFILE) ||
+    DEFAULT_PROFILE;
+  if (!PROFILES.includes(value)) {
+    throw new Error(
+      `unknown plugin profile "${value}", use ${PROFILES.join(", ")}`,
+    );
+  }
+  return value;
+}
+
+/** The plugins a profile ships: its own tier and every smaller one. */
+function pluginsForProfile(plugins, profile) {
+  const rank = PROFILES.indexOf(profile);
+  return plugins.filter((plugin) => PROFILES.indexOf(plugin.tier) <= rank);
+}
+
 /**
  * Pins the newest registry version of each wanted plugin. `ids` is the list
  * to pin, or null for every plugin in the index. `current` is the existing
- * pin list, so fields the registry does not know (onboarding) carry over.
+ * pin list, so fields the registry does not know (onboarding, tier) carry over;
+ * a plugin new to the list starts in the full tier. coreVersion, when given,
+ * skips releases whose engine.termix range does not include it, so the image
+ * never ships a plugin its own core cannot run.
  */
-function pinsFromIndex(index, ids, current = []) {
+function pinsFromIndex(index, ids, current = [], coreVersion = null) {
   const plugins = Array.isArray(index?.plugins) ? index.plugins : [];
   const byId = new Map(plugins.map((plugin) => [plugin.id, plugin]));
   const currentById = new Map(current.map((entry) => [entry.id, entry]));
@@ -257,15 +291,25 @@ function pinsFromIndex(index, ids, current = []) {
     const latest = [...(listed?.versions ?? []), ...(listed?.gated ?? [])]
       .filter((entry) => semver.valid(entry.version))
       .filter((entry) => !semver.prerelease(entry.version))
+      .filter(
+        (entry) =>
+          !coreVersion ||
+          !entry.engine?.termix ||
+          semver.satisfies(coreVersion, entry.engine.termix, {
+            includePrerelease: true,
+          }),
+      )
       .sort((a, b) => semver.rcompare(a.version, b.version))[0];
     if (!latest) throw new Error(`${id} is not in the registry index`);
     const onboarding = currentById.get(id)?.onboarding;
     const defaultLook = currentById.get(id)?.defaultLook === true;
+    const tier = currentById.get(id)?.tier ?? "full";
     return {
       id,
       source: "tmxplug",
       url: latest.url,
       sha256: latest.sha256,
+      tier,
       ...(onboarding ? { onboarding } : {}),
       ...(defaultLook ? { defaultLook } : {}),
     };
@@ -409,6 +453,9 @@ function copyLocalBuild(repo, destination) {
 }
 
 module.exports = {
+  PROFILES,
+  resolveProfile,
+  pluginsForProfile,
   findLocalPluginBuilds,
   isLocalBuildStale,
   localSdkBuildCommand,

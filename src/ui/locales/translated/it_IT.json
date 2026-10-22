@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} è pronto per l'installazione",
     "readyHint": "Verrà installato al prossimo riavvio di Termix."
   },
+  "safeMode": {
+    "title": "Modalità sicura",
+    "description": "Sono attivi solo i plugin per layout e temi. Riavvia il server senza TERMIX_SAFE_MODE per riattivare gli altri."
+  },
   "companion": {
     "close": "Chiudi pannello",
     "moveSide": "Sposta pannello",
@@ -1115,6 +1119,8 @@
       "resetEveryone": "Reimposta il predefinito per tutti",
       "update": "Aggiorna {{name}} a {{version}}",
       "disable": "Disattiva {{name}}",
+      "enable": "Attiva {{name}}",
+      "startAgain": "Riavvia {{name}}",
       "install": "Trova layout e temi",
       "installTitle": "Layout e temi",
       "installButton": "Installa",
@@ -1326,7 +1332,8 @@
         "disabled": "Disabilitato",
         "failed": "Arrestato inaspettatamente",
         "blocked": "In attesa di un altro plugin",
-        "server": "Eseguito sul tuo server"
+        "server": "Eseguito sul tuo server",
+        "safeMode": "Disattivato in modalità sicura"
       },
       "groups": {
         "running": "In esecuzione",
@@ -1339,11 +1346,6 @@
         "name": "Nome",
         "updated": "Aggiornati di recente",
         "category": "Categoria"
-      },
-      "columns": {
-        "title": "Colonne",
-        "auto": "Automatico",
-        "count": "Larghezza {{count}}"
       },
       "table": {
         "name": "Nome",
@@ -1694,7 +1696,12 @@
     "gridView": "Griglia",
     "listView": "Elenco",
     "compactRows": "Righe compatte",
-    "comfortableRows": "Righe spaziose"
+    "comfortableRows": "Righe spaziose",
+    "columns": {
+      "title": "Colonne",
+      "auto": "Automatico",
+      "count": "{{count}} colonne"
+    }
   },
   "fields": {
     "secretSaved": "Salvato. Digita per sostituirlo."

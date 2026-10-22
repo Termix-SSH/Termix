@@ -130,6 +130,7 @@ function serverAllowsFrontend(summary: PluginSummary): boolean {
     summary.enabled &&
     summary.state !== "failed" &&
     summary.state !== "blocked" &&
+    summary.state !== "safe-mode" &&
     !!summary.frontend
   );
 }

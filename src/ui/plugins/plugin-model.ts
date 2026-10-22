@@ -25,7 +25,7 @@ import {
 } from "@/lib/issue-url";
 
 export type PluginStatus =
-  "running" | "disabled" | "failed" | "blocked" | "server";
+  "running" | "disabled" | "failed" | "blocked" | "server" | "safeMode";
 
 /** One row of the Plugins tab: what is installed merged with the registry. */
 export interface PluginEntry {
@@ -121,6 +121,7 @@ export function pluginStatus(summary: PluginSummary): PluginStatus {
   if (summary.state === "failed") return "failed";
   if (summary.state === "blocked") return "blocked";
   if (!summary.enabled) return "disabled";
+  if (summary.state === "safe-mode") return "safeMode";
   return "running";
 }
 

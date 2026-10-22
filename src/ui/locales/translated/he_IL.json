@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} מוכן להתקנה",
     "readyHint": "הוא מותקן בפעם הבאה ש-Termix מופעל מחדש."
   },
+  "safeMode": {
+    "title": "מצב בטוח",
+    "description": "רק תוספי פריסה ועיצוב פועלים. הפעל מחדש את השרת ללא המשתנה TERMIX_SAFE_MODE כדי להפעיל מחדש את שאר התוספים."
+  },
   "companion": {
     "close": "סגור לוח",
     "moveSide": "הזז לוח",
@@ -1115,6 +1119,8 @@
       "resetEveryone": "אפס את ברירת המחדל לכולם",
       "update": "עדכן את {{name}} ל-{{version}}",
       "disable": "כבה את {{name}}",
+      "enable": "הפעל את {{name}}",
+      "startAgain": "הפעל מחדש את {{name}}",
       "install": "חפש פריסות וערכות נושא",
       "installTitle": "פריסות וערכות נושא",
       "installButton": "התקן",
@@ -1326,7 +1332,8 @@
         "disabled": "מושבת",
         "failed": "הופסק ללא ציפייה",
         "blocked": "ממתין לתוסף אחר",
-        "server": "רץ על השרת שלך"
+        "server": "רץ על השרת שלך",
+        "safeMode": "כבוי במצב בטוח"
       },
       "groups": {
         "running": "פעילים",
@@ -1339,11 +1346,6 @@
         "name": "שם",
         "updated": "עודכן לאחרונה",
         "category": "קטגוריה"
-      },
-      "columns": {
-        "title": "עמודות",
-        "auto": "אוטומטי",
-        "count": "רוחב של {{count}}"
       },
       "table": {
         "name": "שם",
@@ -1694,7 +1696,12 @@
     "gridView": "רשת",
     "listView": "רשימה",
     "compactRows": "שורות צפופות",
-    "comfortableRows": "שורות נוחות"
+    "comfortableRows": "שורות נוחות",
+    "columns": {
+      "title": "עמודות",
+      "auto": "אוטומטי",
+      "count": "רוחב של {{count}}"
+    }
   },
   "fields": {
     "secretSaved": "נשמר. הקלד כדי להחליף אותו."

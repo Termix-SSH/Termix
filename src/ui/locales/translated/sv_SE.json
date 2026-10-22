@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} är redo att installeras",
     "readyHint": "Den installeras nästa gång Termix startas om."
   },
+  "safeMode": {
+    "title": "Säkerhetsläge",
+    "description": "Endast layout- och temapluggar är aktiva. Starta om servern utan TERMIX_SAFE_MODE för att aktivera de övriga igen."
+  },
   "companion": {
     "close": "Stäng panel",
     "moveSide": "Flytta panel",
@@ -1098,6 +1102,8 @@
       "resetEveryone": "Återställ standarden för alla",
       "update": "Uppdatera {{name}} till {{version}}",
       "disable": "Stäng av {{name}}",
+      "enable": "Aktivera {{name}}",
+      "startAgain": "Starta {{name}} igen",
       "install": "Hitta layouter och teman",
       "installTitle": "Layouter och teman",
       "installButton": "Installera",
@@ -1309,7 +1315,8 @@
         "disabled": "Inaktiverad",
         "failed": "Stoppades oväntat",
         "blocked": "Väntar på ett annat plugin",
-        "server": "Kör på din server"
+        "server": "Kör på din server",
+        "safeMode": "Avstängd i säkert läge"
       },
       "groups": {
         "running": "Körs",
@@ -1322,11 +1329,6 @@
         "name": "Namn",
         "updated": "Nyligen uppdaterade",
         "category": "Kategori"
-      },
-      "columns": {
-        "title": "Kolumner",
-        "auto": "Auto",
-        "count": "{{count}} breda"
       },
       "table": {
         "name": "Namn",
@@ -1652,7 +1654,12 @@
     "gridView": "Rutnät",
     "listView": "Lista",
     "compactRows": "Kompakta rader",
-    "comfortableRows": "Bekväma rader"
+    "comfortableRows": "Bekväma rader",
+    "columns": {
+      "title": "Kolumner",
+      "auto": "Automatiskt",
+      "count": "{{count}} bred"
+    }
   },
   "fields": {
     "secretSaved": "Sparat. Skriv för att ersätta det."

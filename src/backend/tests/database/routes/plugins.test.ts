@@ -488,6 +488,26 @@ describe("plugins route", () => {
     }
   });
 
+  it("reports an enabled plugin that safe mode keeps off", async () => {
+    state.plugins.set("sample-plugin", makePlugin({ state: "enabled" }));
+
+    const read = async () =>
+      (
+        (await (await fetch(`${baseUrl}/plugins`)).json()) as Array<{
+          state: string;
+          enabled: boolean;
+        }>
+      )[0];
+
+    expect((await read()).state).not.toBe("safe-mode");
+    process.env.TERMIX_SAFE_MODE = "1";
+    try {
+      expect(await read()).toMatchObject({ state: "safe-mode", enabled: true });
+    } finally {
+      delete process.env.TERMIX_SAFE_MODE;
+    }
+  });
+
   it("grants a declared capability", async () => {
     state.plugins.set("sample-plugin", makePlugin());
 

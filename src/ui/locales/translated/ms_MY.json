@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} sedia untuk dipasang",
     "readyHint": "Ia akan dipasang pada kali seterusnya Termix dimulakan semula."
   },
+  "safeMode": {
+    "title": "Modus selamat",
+    "description": "Hanya plugin susun atur dan tema yang sedang berjalan. Mulakan semula pelayan tanpa TERMIX_SAFE_MODE untuk menghidupkan kembali yang lain."
+  },
   "companion": {
     "close": "Tutup panel",
     "moveSide": "Pindahkan panel",
@@ -1081,6 +1085,8 @@
       "resetEveryone": "Set semula lalai untuk semua orang",
       "update": "Kemas kini {{name}} ke {{version}}",
       "disable": "Matikan {{name}}",
+      "enable": "Hidupkan {{name}}",
+      "startAgain": "Mulakan {{name}} semula",
       "install": "Cari susun atur dan tema",
       "installTitle": "Susun atur dan tema",
       "installButton": "Pasang",
@@ -1292,7 +1298,8 @@
         "disabled": "Dilumpuhkan",
         "failed": "Berhenti secara tidak dijangka",
         "blocked": "Menunggu plugin lain",
-        "server": "Berjalan pada pelayan anda"
+        "server": "Berjalan pada pelayan anda",
+        "safeMode": "Mati dalam modus selamat"
       },
       "groups": {
         "running": "Berjalan",
@@ -1305,11 +1312,6 @@
         "name": "Nama",
         "updated": "Dikemas kini baru-baru ini",
         "category": "Kategori"
-      },
-      "columns": {
-        "title": "Lajur",
-        "auto": "Auto",
-        "count": "Lebar {{count}}"
       },
       "table": {
         "name": "Nama",
@@ -1610,7 +1612,12 @@
     "gridView": "Grid",
     "listView": "Senarai",
     "compactRows": "Baris padat",
-    "comfortableRows": "Baris selesa"
+    "comfortableRows": "Baris selesa",
+    "columns": {
+      "title": "Lajur",
+      "auto": "Auto",
+      "count": "Lebar {{count}}"
+    }
   },
   "fields": {
     "secretSaved": "Disimpan. Taip untuk menggantikannya."

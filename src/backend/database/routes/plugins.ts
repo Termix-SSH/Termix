@@ -16,6 +16,7 @@ import { getPluginRuntime } from "../../plugins/index.js";
 import { resolvePluginDesktopMode } from "@termix-ssh/plugin-sdk/manifest";
 import { describePluginFrontend } from "../../plugins/assets.js";
 import { isDefaultLookPlugin } from "../../plugins/bundled-index.js";
+import { mayRunInSafeMode } from "../../plugins/safe-mode.js";
 import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
 import { getPluginPublicHttpRoutes } from "../../plugins/http.js";
 import { getPluginPublicWsRoutes } from "../../plugins/ws.js";
@@ -249,6 +250,9 @@ export async function listPreLoginPlugins(): Promise<
  *       only run on that server and stay off here on purpose, and, for
  *       admins, `managedByServer` marks plugins whose on/off state the server
  *       decides.
+ *
+ *       While TERMIX_SAFE_MODE is on, an enabled plugin that safe mode keeps
+ *       off reports `state: "safe-mode"`.
  *     tags:
  *       - Plugins
  *     responses:
@@ -354,7 +358,12 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
           name: record.name,
           version: record.version,
           enabled: record.state === "enabled",
-          state: loaded?.state ?? record.state,
+          state:
+            record.state === "enabled" &&
+            loaded?.state !== "active" &&
+            !mayRunInSafeMode(record.id, loader.list())
+              ? "safe-mode"
+              : (loaded?.state ?? record.state),
           runsOnServer: linked && desktopMode === "server",
           contributes,
           icon,
@@ -936,7 +945,7 @@ router.delete(
  *       404:
  *         description: No such plugin.
  *       409:
- *         description: This desktop is linked to a server, which decides whether the plugin runs.
+ *         description: This desktop is linked to a server, which decides whether the plugin runs, or safe mode is on and the plugin is not a layout or theme.
  */
 router.patch(
   "/:id/state",
@@ -1050,6 +1059,8 @@ router.patch(
  *         description: The caller lacks admin.plugins.manage.
  *       404:
  *         description: No such plugin, or it is not on disk.
+ *       409:
+ *         description: Safe mode is on and the plugin is not a layout or theme.
  *       500:
  *         description: The plugin failed to start again.
  */
@@ -1071,6 +1082,13 @@ router.post(
       const { loader } = getPluginRuntime();
       if (!loader.get(pluginId)) {
         res.status(404).json({ error: "Plugin is not present on disk" });
+        return;
+      }
+      if (!mayRunInSafeMode(pluginId, loader.list())) {
+        res.status(409).json({
+          error: "Safe mode is on, so only layout and theme plugins can start",
+          code: "SAFE_MODE",
+        });
         return;
       }
 

@@ -3,6 +3,8 @@
  *
  * getBundledPluginsDir() in src/backend/plugins/paths.ts resolves
  * dist/backend/backend/plugins -> dist/plugins, which is where this writes.
+ * --profile minimal|standard|full (or TERMIX_PLUGIN_PROFILE, default standard)
+ * picks which tiers of the file are staged.
  * Each .tmxplug is downloaded (or read from a path), checked against its
  * pinned sha256 and unpacked.
  *
@@ -25,13 +27,16 @@ const {
   localSdkBuildCommand,
   copyLocalBuild,
   buildBundledIndex,
+  resolveProfile,
+  pluginsForProfile,
 } = require("./lib/bundled-plugins.cjs");
 
 const root = path.resolve(__dirname, "..");
 const destination = path.join(root, "dist", "plugins");
 
 async function main() {
-  const plugins = loadBundledPlugins(root);
+  const profile = resolveProfile();
+  const plugins = pluginsForProfile(loadBundledPlugins(root), profile);
   const flag = process.argv.indexOf("--local");
   const localArg =
     flag !== -1 ? process.argv[flag + 1] : process.env.TERMIX_LOCAL_PLUGINS;
@@ -74,7 +79,7 @@ async function main() {
   );
 
   console.log(
-    `Bundled ${plugins.length + extra.length} plugin(s): ${[...pinned, ...extra].join(", ")}`,
+    `Bundled ${plugins.length + extra.length} plugin(s) (${profile}): ${[...pinned, ...extra].join(", ")}`,
   );
 }
 

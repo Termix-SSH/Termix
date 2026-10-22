@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} is ready to install",
     "readyHint": "It installs the next time Termix restarts."
   },
+  "safeMode": {
+    "title": "Safe mode",
+    "description": "Only layout and theme plugins are running. Restart the server without TERMIX_SAFE_MODE to turn the rest back on."
+  },
   "companion": {
     "close": "Close panel",
     "moveSide": "Move panel",
@@ -1311,7 +1315,8 @@
         "disabled": "Disabled",
         "failed": "Stopped unexpectedly",
         "blocked": "Waiting on another plugin",
-        "server": "Runs on your server"
+        "server": "Runs on your server",
+        "safeMode": "Off in safe mode"
       },
       "groups": {
         "running": "Running",
@@ -1324,11 +1329,6 @@
         "name": "Name",
         "updated": "Recently updated",
         "category": "Category"
-      },
-      "columns": {
-        "title": "Columns",
-        "auto": "Auto",
-        "count": "{{count}} wide"
       },
       "table": {
         "name": "Name",
@@ -1654,7 +1654,12 @@
     "gridView": "Grid",
     "listView": "List",
     "compactRows": "Compact rows",
-    "comfortableRows": "Comfortable rows"
+    "comfortableRows": "Comfortable rows",
+    "columns": {
+      "title": "Columns",
+      "auto": "Auto",
+      "count": "{{count}} wide"
+    }
   },
   "fields": {
     "secretSaved": "Saved. Type to replace it."

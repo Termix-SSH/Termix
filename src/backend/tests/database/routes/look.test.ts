@@ -102,6 +102,7 @@ beforeEach(async () => {
   state.defaultLookIds = [];
   state.installed = [];
   delete process.env.TERMIX_SAFE_LAYOUT;
+  delete process.env.TERMIX_SAFE_MODE;
 
   const app = express();
   app.use(express.json());
@@ -113,6 +114,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   delete process.env.TERMIX_SAFE_LAYOUT;
+  delete process.env.TERMIX_SAFE_MODE;
   await new Promise<void>((resolve) => server.close(() => resolve()));
 });
 
@@ -138,6 +140,7 @@ describe("GET /user-preferences/look", () => {
       defaults: { layout: null, theme: null },
       defaultLook: { layout: null, theme: null },
       safeLayout: false,
+      safeMode: false,
       unavailable: [],
     });
   });
@@ -159,6 +162,7 @@ describe("GET /user-preferences/look", () => {
       { id: "other", version: null, layouts: [], themes: [], error: "y" },
     ];
     process.env.TERMIX_SAFE_LAYOUT = "1";
+    process.env.TERMIX_SAFE_MODE = "1";
 
     const { body } = await getLook();
     expect(body).toMatchObject({
@@ -167,6 +171,7 @@ describe("GET /user-preferences/look", () => {
       defaults: { layout: "admin-layout", theme: "gruvbox" },
       defaultLook: { layout: "shipped", theme: "ink" },
       safeLayout: true,
+      safeMode: true,
     });
     expect(body.unavailable.map((plugin: { id: string }) => plugin.id)).toEqual(
       ["broken"],

@@ -236,6 +236,13 @@ describe("plugin loader", () => {
     expect(railIds()).not.toContain("headless-panel");
   });
 
+  it("skips plugins safe mode keeps off", async () => {
+    modules.paused = railPlugin("paused");
+    plugins = [summary("paused", { state: "safe-mode" })];
+    await syncPlugins();
+    expect(railIds()).not.toContain("paused-panel");
+  });
+
   it("keeps every plugin when the pre-login list lands after sign-in", async () => {
     modules.login = railPlugin("login");
     modules.alpha = railPlugin("alpha");

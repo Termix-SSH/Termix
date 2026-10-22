@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} 已準備好安裝",
     "readyHint": "下次重新啟動 Termix 時將進行安裝。"
   },
+  "safeMode": {
+    "title": "安全模式",
+    "description": "目前僅執行版面配置與主題外掛。請在移除 TERMIX_SAFE_MODE 環境變數後重新啟動伺服器，以恢復其他外掛。"
+  },
   "companion": {
     "close": "關閉面板",
     "moveSide": "移動面板",
@@ -1081,6 +1085,8 @@
       "resetEveryone": "重設所有人的預設值",
       "update": "將 {{name}} 更新至 {{version}}",
       "disable": "關閉 {{name}}",
+      "enable": "啟用 {{name}}",
+      "startAgain": "重新啟動 {{name}}",
       "install": "尋找版面配置與主題",
       "installTitle": "版面配置與主題",
       "installButton": "安裝",
@@ -1292,7 +1298,8 @@
         "disabled": "已停用",
         "failed": "意外停止",
         "blocked": "等待其他外掛",
-        "server": "在您的伺服器上執行"
+        "server": "在您的伺服器上執行",
+        "safeMode": "安全模式下已停用"
       },
       "groups": {
         "running": "執行中",
@@ -1305,11 +1312,6 @@
         "name": "名稱",
         "updated": "最近更新",
         "category": "類別"
-      },
-      "columns": {
-        "title": "欄數",
-        "auto": "自動",
-        "count": "寬度 {{count}}"
       },
       "table": {
         "name": "名稱",
@@ -1610,7 +1612,12 @@
     "gridView": "網格",
     "listView": "清單",
     "compactRows": "緊湊列",
-    "comfortableRows": "寬鬆列"
+    "comfortableRows": "寬鬆列",
+    "columns": {
+      "title": "欄位",
+      "auto": "自動",
+      "count": "寬度 {{count}}"
+    }
   },
   "fields": {
     "secretSaved": "已儲存。輸入以取代。"

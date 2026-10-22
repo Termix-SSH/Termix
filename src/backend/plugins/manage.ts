@@ -18,6 +18,7 @@ import path from "node:path";
 import semver from "semver";
 import { pluginLogger } from "../utils/logger.js";
 import { isDefaultLookPlugin } from "./bundled-index.js";
+import { mayRunInSafeMode } from "./safe-mode.js";
 import {
   activatePlugin,
   deactivatePlugin,
@@ -25,6 +26,7 @@ import {
   registerLoadedPlugins,
   unloadPlugin,
 } from "./index.js";
+import { missingShippedPluginIds } from "./boot-state.js";
 import type { LoadedPlugin, PluginLoader } from "./loader.js";
 import {
   getBundledPluginsDir,
@@ -763,6 +765,13 @@ export async function setPluginStateUnlocked(
   if (!loader.get(pluginId)) {
     throw new PluginManageError("Plugin not found", 404, "NOT_FOUND");
   }
+  if (enabled && !mayRunInSafeMode(pluginId, loader.list())) {
+    throw new PluginManageError(
+      "Safe mode is on, so only layout and theme plugins can start",
+      409,
+      "SAFE_MODE",
+    );
+  }
   const plan = await planStateChange(pluginId, enabled);
 
   if (enabled) {
@@ -959,7 +968,11 @@ export function installPlugin(
   return serialized(async () => {
     const { createCurrentPluginRepository } = await repos();
     const repository = createCurrentPluginRepository();
-    if (await repository.findById(pluginId)) {
+    // A record with no code is a plugin an older image shipped: install fills it in.
+    if (
+      (await repository.findById(pluginId)) &&
+      getPluginRuntime().loader.get(pluginId)
+    ) {
       throw new PluginManageError(
         "Plugin is already installed",
         409,
@@ -1015,6 +1028,63 @@ export function installPlugin(
       operation: "plugin_install",
     });
     return { id: pluginId, version: release.version, state };
+  });
+}
+
+/**
+ * Called at boot before plugins start. A plugin the database has on but the
+ * image no longer ships (an update to a smaller image tag) is fetched from the
+ * official registry, so nothing an install used goes missing. One that cannot
+ * be fetched stays as it was and is tried again on the next start.
+ */
+export function restoreMissingPlugins(): Promise<LoadedPlugin[]> {
+  return serialized(async () => {
+    const { createCurrentPluginRepository } = await repos();
+    const repository = createCurrentPluginRepository();
+    const { loader } = getPluginRuntime();
+    const ids = missingShippedPluginIds(
+      await repository.listAll(),
+      new Set(loader.list().map((plugin) => plugin.id)),
+      await readUninstalled(),
+    );
+    const restored: LoadedPlugin[] = [];
+    for (const id of ids) {
+      try {
+        const record = await repository.findById(id);
+        const { source, release } = await requireRelease(
+          id,
+          record?.pinnedVersion ?? undefined,
+          channelOf(record),
+          OFFICIAL_REGISTRY_ID,
+        );
+        const plugin = await swapIn(id, { release, source });
+        await repository.update(id, {
+          registryId: source.id,
+          tier: tierFor(plugin, source),
+        });
+        await grantDeclared(plugin, null);
+        restored.push(plugin);
+        pluginLogger.info(
+          `Restored ${id}@${release.version} from the registry`,
+          {
+            operation: "plugin_restore_missing",
+          },
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        pluginLogger.warn(`Could not restore ${id}: ${message}`, {
+          operation: "plugin_restore_missing",
+        });
+        // The registry is down or offline, so the rest would fail the same way.
+        if (
+          error instanceof PluginManageError &&
+          error.code === "REGISTRY_UNREACHABLE"
+        ) {
+          break;
+        }
+      }
+    }
+    return restored;
   });
 }
 

@@ -34,6 +34,24 @@ describe("DataView", () => {
     expect(screen.queryByText("Name")).toBeNull();
   });
 
+  it("uses the picked size over breakpoint columns", () => {
+    const { container } = render(
+      <DataView
+        items={items}
+        view="grid"
+        getKey={(item) => item.id}
+        renderCard={(item) => <div>card {item.name}</div>}
+        columns={{ base: 1, md: 2 }}
+        size="3"
+        listColumns={[]}
+        empty={null}
+      />,
+    );
+    const grid = container.firstElementChild as HTMLElement;
+    expect(grid.className).not.toContain("md:grid-cols-2");
+    expect(grid.style.gridTemplateColumns).toContain("/ 3");
+  });
+
   it("renders a header and clickable rows in list mode", () => {
     const onRowClick = vi.fn();
     renderView("list", onRowClick);

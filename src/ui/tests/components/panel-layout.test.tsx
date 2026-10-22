@@ -11,6 +11,7 @@ import {
   PanelShell,
   Segmented,
   ViewToggle,
+  gridSizeStyle,
 } from "@/components/panel-layout";
 
 afterEach(cleanup);
@@ -71,6 +72,34 @@ describe("ViewToggle", () => {
     expect(onView).toHaveBeenCalledWith("list");
     fireEvent.click(screen.getByLabelText("panel.compactRows"));
     expect(onDensity).toHaveBeenCalledWith("compact");
+  });
+
+  it("shows the columns picker only in grid view", () => {
+    const props = { onView: vi.fn(), columns: "auto" as const };
+    const { rerender } = render(
+      <ViewToggle view="grid" {...props} onColumns={vi.fn()} />,
+    );
+    expect(screen.getByLabelText("panel.columns.title")).toBeTruthy();
+
+    rerender(<ViewToggle view="list" {...props} onColumns={vi.fn()} />);
+    expect(screen.queryByLabelText("panel.columns.title")).toBeNull();
+
+    rerender(<ViewToggle view="grid" {...props} />);
+    expect(screen.queryByLabelText("panel.columns.title")).toBeNull();
+  });
+});
+
+describe("gridSizeStyle", () => {
+  it("fits auto cards to the pane", () => {
+    expect(gridSizeStyle("auto", 280).gridTemplateColumns).toBe(
+      "repeat(auto-fill, minmax(min(100%, 280px), 1fr))",
+    );
+  });
+
+  it("splits the width for a fixed count", () => {
+    expect(gridSizeStyle("4").gridTemplateColumns).toContain(
+      "(100% - 3 * 0.5rem) / 4",
+    );
   });
 });
 

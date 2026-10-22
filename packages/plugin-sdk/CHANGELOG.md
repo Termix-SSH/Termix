@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.20
+
+Plugin API 1.12.0.
+
+### Added
+
+- `columns` and `onColumns` on `ViewToggle` show a cards per row picker: Auto fits as many as the pane has room for, or pick 1 to 6
+- `size` and `minCardWidth` on `DataView`, so a card grid follows that pick, and the `GridSize` type
+- `usePluginPanelView` also keeps `columns`, the cards per row pick, with `setColumns`
+
 ## 1.0.19
 
 Plugin API 1.11.0.

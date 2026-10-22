@@ -151,6 +151,7 @@ const ALLOWED = [
   "GridCardCatalogEntry",
   "GridColSpan",
   "GridColumns",
+  "GridSize",
   "GridLayout",
   "GridSlot",
   "GroupHeading",

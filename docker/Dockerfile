@@ -34,9 +34,20 @@ WORKDIR /app
 
 COPY . .
 
+RUN npm run build:backend:core
+
+# Stage 3b: Stage the bundled plugins for one profile (minimal, standard or
+# full, see docker/bundled-plugins.json). Only this stage and the final one
+# differ between profiles, so the other stages are built once.
+FROM deps AS plugins
+WORKDIR /app
+ARG PLUGIN_PROFILE=standard
+COPY scripts/build-plugins.cjs ./scripts/build-plugins.cjs
+COPY scripts/lib/bundled-plugins.cjs ./scripts/lib/bundled-plugins.cjs
+COPY docker/bundled-plugins.json ./docker/bundled-plugins.json
 # Bundled plugin downloads show in the plugin store, so keep them between builds.
 RUN --mount=type=cache,target=/app/node_modules/.cache/termix-bundled-plugins \
-    npm run build:backend
+    node scripts/build-plugins.cjs --profile "$PLUGIN_PROFILE"
 
 # Stage 4: Download OPKSSH binary for the target platform so the image works offline
 FROM node:24-slim AS opkssh-downloader
@@ -117,9 +128,9 @@ COPY --chown=node:node --from=frontend-builder /app/dist /app/html
 
 COPY --chown=node:node --from=production-deps /app/node_modules /app/node_modules
 COPY --chown=node:node --from=backend-builder /app/dist/backend ./dist/backend
-# Plugins pinned in docker/bundled-plugins.json, resolved as dist/plugins by
-# getBundledPluginsDir().
-COPY --chown=node:node --from=backend-builder /app/dist/plugins ./dist/plugins
+# Plugins of the chosen profile pinned in docker/bundled-plugins.json, resolved
+# as dist/plugins by getBundledPluginsDir().
+COPY --chown=node:node --from=plugins /app/dist/plugins ./dist/plugins
 # Target of node_modules/@termix-ssh/plugin-sdk, which core and the plugins import.
 COPY --chown=node:node --from=backend-builder /app/packages/plugin-sdk/package.json ./packages/plugin-sdk/package.json
 COPY --chown=node:node --from=backend-builder /app/packages/plugin-sdk/dist ./packages/plugin-sdk/dist

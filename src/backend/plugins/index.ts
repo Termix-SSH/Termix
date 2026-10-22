@@ -23,6 +23,11 @@ import { setHostProtocolSource } from "../hosts/protocol-auth/registry.js";
 import { setSecretResolverOwnerSource } from "../hosts/connect/secret-resolver-registry.js";
 import { recordConflict } from "./conflicts.js";
 import { startablePluginIds } from "./boot-state.js";
+import {
+  mayRunInSafeMode,
+  safeModeOn,
+  safeModePluginIds,
+} from "./safe-mode.js";
 import { setPluginImpersonationCheck } from "../utils/auth-manager.js";
 import { setKeybindingActionSource } from "../database/routes/keybinding-validation.js";
 
@@ -237,6 +242,10 @@ export async function initializePlugins(
   if (loaded.length === 0) return [];
 
   const fresh = await seedPlugins(loaded, options.freshInstall === true);
+  if (!fresh) {
+    const { restoreMissingPlugins } = await import("./manage.js");
+    loaded.push(...(await restoreMissingPlugins()));
+  }
   await syncCapabilityGrants(loaded);
   if (loaded.some((plugin) => plugin.source === "bundled")) {
     const { offerPluginSetup } = await import("./onboarding.js");
@@ -248,8 +257,17 @@ export async function initializePlugins(
   const records = await createCurrentPluginRepository().listAll();
   const enabled = startablePluginIds(records);
 
+  const safe = safeModeOn() ? safeModePluginIds(loaded) : null;
+  if (safe) {
+    pluginLogger.warn(
+      "Safe mode is on (TERMIX_SAFE_MODE). Only layout and theme plugins start",
+      { operation: "plugin_init" },
+    );
+  }
+
   const candidates = loaded
     .filter((plugin) => enabled.has(plugin.id))
+    .filter((plugin) => !safe || safe.has(plugin.id))
     .map((plugin) => plugin.id);
 
   for (const pluginId of candidates) {
@@ -539,6 +557,8 @@ export async function activatePlugin(pluginId: string): Promise<void> {
   // Before activate: a plugin's own activate() may already want to check one
   // of its permissions.
   const plugin = pluginLoader.get(pluginId);
+  // Stays enabled and starts on the next boot without safe mode.
+  if (!mayRunInSafeMode(pluginId, pluginLoader.list())) return;
   if (plugin) await registerPluginPermissions(plugin);
 
   await pluginLoader.activate(pluginId);

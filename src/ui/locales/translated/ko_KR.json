@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} 설치 준비 완료",
     "readyHint": "Termix가 다음에 재시작될 때 설치됩니다."
   },
+  "safeMode": {
+    "title": "안전 모드",
+    "description": "레이아웃 및 테마 플러그인만 실행 중입니다. TERMIX_SAFE_MODE 없이 서버를 다시 시작하여 나머지 기능을 다시 활성화하세요."
+  },
   "companion": {
     "close": "패널 닫기",
     "moveSide": "패널 이동",
@@ -1081,6 +1085,8 @@
       "resetEveryone": "모두의 기본값 초기화",
       "update": "{{name}}을(를) {{version}}(으)로 업데이트",
       "disable": "{{name}} 끄기",
+      "enable": "{{name}} 켜기",
+      "startAgain": "{{name}} 다시 시작",
       "install": "레이아웃 및 테마 찾기",
       "installTitle": "레이아웃 및 테마",
       "installButton": "설치",
@@ -1292,7 +1298,8 @@
         "disabled": "비활성화됨",
         "failed": "예기치 않게 중지됨",
         "blocked": "다른 플러그인 대기 중",
-        "server": "서버에서 실행 중"
+        "server": "서버에서 실행 중",
+        "safeMode": "안전 모드에서 꺼짐"
       },
       "groups": {
         "running": "실행 중",
@@ -1305,11 +1312,6 @@
         "name": "이름순",
         "updated": "최근 업데이트순",
         "category": "카테고리순"
-      },
-      "columns": {
-        "title": "열",
-        "auto": "자동",
-        "count": "{{count}}열 너비"
       },
       "table": {
         "name": "이름",
@@ -1610,7 +1612,12 @@
     "gridView": "그리드",
     "listView": "목록",
     "compactRows": "간결한 행",
-    "comfortableRows": "넓은 행"
+    "comfortableRows": "넓은 행",
+    "columns": {
+      "title": "열",
+      "auto": "자동",
+      "count": "{{count}}열 너비"
+    }
   },
   "fields": {
     "secretSaved": "저장되었습니다. 입력하여 교체하세요."

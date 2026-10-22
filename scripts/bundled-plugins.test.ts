@@ -16,6 +16,8 @@ import {
   localSdkBuildCommand,
   rebuildLocalPlugins,
   copyLocalBuild,
+  resolveProfile,
+  pluginsForProfile,
 } from "./lib/bundled-plugins.cjs";
 
 const cleanups: Array<() => void> = [];
@@ -263,8 +265,50 @@ describe("pinsFromIndex", () => {
       source: "tmxplug",
       url: "https://example.test/beta-1.1.0.tmxplug",
       sha256: "b".repeat(64),
+      tier: "full",
     });
     expect(parseBundledPlugins({ plugins: pins }).problems).toEqual([]);
+  });
+
+  it("keeps the tier of an existing pin", () => {
+    const pins = pinsFromIndex(index, null, [
+      { id: "alpha", tier: "standard" },
+    ]);
+    expect(pins[0].tier).toBe("standard");
+    expect(pins[1].tier).toBe("full");
+  });
+
+  it("skips releases whose engine.termix excludes the core version", () => {
+    const withEngine = {
+      plugins: [
+        {
+          id: "gamma",
+          versions: [
+            {
+              version: "2.0.0",
+              url: "https://example.test/gamma-2.0.0.tmxplug",
+              sha256: "d".repeat(64),
+              engine: { api: "^1", termix: ">=26.10.6" },
+            },
+            {
+              version: "1.0.0",
+              url: "https://example.test/gamma-1.0.0.tmxplug",
+              sha256: "e".repeat(64),
+              engine: { api: "^1", termix: ">=26.10.0" },
+            },
+          ],
+        },
+      ],
+    };
+    expect(pinsFromIndex(withEngine, null, [], "26.10.5")[0].url).toBe(
+      "https://example.test/gamma-1.0.0.tmxplug",
+    );
+    expect(pinsFromIndex(withEngine, null, [], "26.10.6")[0].url).toBe(
+      "https://example.test/gamma-2.0.0.tmxplug",
+    );
+    expect(pinsFromIndex(withEngine, null)[0].url).toBe(
+      "https://example.test/gamma-2.0.0.tmxplug",
+    );
   });
 
   it("keeps the onboarding defaults of an existing pin", () => {
@@ -509,5 +553,63 @@ describe("default look", () => {
     const out = path.join(tempDir(), "inks");
     copyLocalBuild(repo, out);
     expect(fs.existsSync(path.join(out, "themes", "paper.css"))).toBe(true);
+  });
+});
+
+describe("plugin profiles", () => {
+  const entry = (id: string, tier?: string) => ({
+    id,
+    source: "tmxplug",
+    url: `https://x/${id}.tmxplug`,
+    sha256: SHA,
+    ...(tier ? { tier } : {}),
+  });
+  const { plugins } = parseBundledPlugins({
+    plugins: [
+      entry("look", "minimal"),
+      entry("term", "standard"),
+      entry("extra", "full"),
+      entry("untiered"),
+    ],
+  });
+  const ids = (profile: string) =>
+    pluginsForProfile(plugins, profile).map((p: { id: string }) => p.id);
+
+  it("ships each tier and every smaller one", () => {
+    expect(ids("minimal")).toEqual(["look"]);
+    expect(ids("standard")).toEqual(["look", "term"]);
+    expect(ids("full")).toEqual(["look", "term", "extra", "untiered"]);
+  });
+
+  it("rejects an unknown tier", () => {
+    const { problems } = parseBundledPlugins({ plugins: [entry("x", "huge")] });
+    expect(problems[0]).toMatch(/tier must be one of/);
+  });
+
+  it("reads the profile from the flag, then the environment", () => {
+    expect(resolveProfile(["node", "x"], {})).toBe("standard");
+    expect(
+      resolveProfile(["node", "x"], { TERMIX_PLUGIN_PROFILE: "full" }),
+    ).toBe("full");
+    expect(
+      resolveProfile(["node", "x", "--profile", "minimal"], {
+        TERMIX_PLUGIN_PROFILE: "full",
+      }),
+    ).toBe("minimal");
+    expect(() =>
+      resolveProfile(["node", "x", "--profile", "tiny"], {}),
+    ).toThrow(/unknown plugin profile/);
+  });
+
+  it("keeps the real file valid with a default look in the minimal tier", () => {
+    const real = loadBundledPlugins(path.resolve(__dirname, ".."));
+    const minimal = pluginsForProfile(real, "minimal");
+    expect(minimal.length).toBeGreaterThan(0);
+    expect(minimal.every((p: { defaultLook: boolean }) => p.defaultLook)).toBe(
+      true,
+    );
+    expect(pluginsForProfile(real, "standard").length).toBeLessThan(
+      real.length,
+    );
   });
 });

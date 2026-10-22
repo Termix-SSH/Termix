@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} está listo para instalar",
     "readyHint": "Se instalará la próxima vez que reinicies Termix."
   },
+  "safeMode": {
+    "title": "Modo seguro",
+    "description": "Solo se están ejecutando los complementos de diseño y tema. Reinicia el servidor sin TERMIX_SAFE_MODE para volver a activar el resto."
+  },
   "companion": {
     "close": "Cerrar panel",
     "moveSide": "Mover panel",
@@ -1115,6 +1119,8 @@
       "resetEveryone": "Restablecer el valor predeterminado para todos",
       "update": "Actualizar {{name}} a {{version}}",
       "disable": "Desactivar {{name}}",
+      "enable": "Activar {{name}}",
+      "startAgain": "Reiniciar {{name}}",
       "install": "Buscar diseños y temas",
       "installTitle": "Diseños y temas",
       "installButton": "Instalar",
@@ -1326,7 +1332,8 @@
         "disabled": "Desactivado",
         "failed": "Detenido inesperadamente",
         "blocked": "Esperando a otro complemento",
-        "server": "Se ejecuta en tu servidor"
+        "server": "Se ejecuta en tu servidor",
+        "safeMode": "Desactivado en modo seguro"
       },
       "groups": {
         "running": "En ejecución",
@@ -1339,11 +1346,6 @@
         "name": "Nombre",
         "updated": "Actualizados recientemente",
         "category": "Categoría"
-      },
-      "columns": {
-        "title": "Columnas",
-        "auto": "Automático",
-        "count": "{{count}} de ancho"
       },
       "table": {
         "name": "Nombre",
@@ -1694,7 +1696,12 @@
     "gridView": "Cuadrícula",
     "listView": "Lista",
     "compactRows": "Filas compactas",
-    "comfortableRows": "Filas cómodas"
+    "comfortableRows": "Filas cómodas",
+    "columns": {
+      "title": "Columnas",
+      "auto": "Automático",
+      "count": "{{count}} de ancho"
+    }
   },
   "fields": {
     "secretSaved": "Guardado. Escribe para reemplazarlo."

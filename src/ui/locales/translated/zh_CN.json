@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} 已准备好安装",
     "readyHint": "下次重启 Termix 时将进行安装。"
   },
+  "safeMode": {
+    "title": "安全模式",
+    "description": "仅运行布局和主题插件。重启服务器并移除 TERMIX_SAFE_MODE 环境变量以恢复其他插件。"
+  },
   "companion": {
     "close": "关闭面板",
     "moveSide": "移动面板",
@@ -1081,6 +1085,8 @@
       "resetEveryone": "重置所有人的默认设置",
       "update": "将 {{name}} 更新到 {{version}}",
       "disable": "关闭 {{name}}",
+      "enable": "启用 {{name}}",
+      "startAgain": "重新启动 {{name}}",
       "install": "查找布局和主题",
       "installTitle": "布局和主题",
       "installButton": "安装",
@@ -1292,7 +1298,8 @@
         "disabled": "已禁用",
         "failed": "意外停止",
         "blocked": "等待其他插件",
-        "server": "在您的服务器上运行"
+        "server": "在您的服务器上运行",
+        "safeMode": "安全模式下已关闭"
       },
       "groups": {
         "running": "正在运行",
@@ -1305,11 +1312,6 @@
         "name": "名称",
         "updated": "最近更新",
         "category": "类别"
-      },
-      "columns": {
-        "title": "列数",
-        "auto": "自动",
-        "count": "{{count}} 列宽"
       },
       "table": {
         "name": "名称",
@@ -1610,7 +1612,12 @@
     "gridView": "网格",
     "listView": "列表",
     "compactRows": "紧凑行",
-    "comfortableRows": "宽松行"
+    "comfortableRows": "宽松行",
+    "columns": {
+      "title": "列数",
+      "auto": "自动",
+      "count": "{{count}} 列宽"
+    }
   },
   "fields": {
     "secretSaved": "已保存。输入以替换。"

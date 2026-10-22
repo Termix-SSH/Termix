@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} està llest per instal·lar-se",
     "readyHint": "S'instal·larà la propera vegada que reiniciïs Termix."
   },
+  "safeMode": {
+    "title": "Mode segur",
+    "description": "Només s'estan executant els complements de disseny i tema. Reinicia el servidor sense TERMIX_SAFE_MODE per activar la resta."
+  },
   "companion": {
     "close": "Tanca el panell",
     "moveSide": "Mou el panell",
@@ -1115,6 +1119,8 @@
       "resetEveryone": "Restableix el predeterminat per a tothom",
       "update": "Actualitza {{name}} a {{version}}",
       "disable": "Desactiva {{name}}",
+      "enable": "Activar {{name}}",
+      "startAgain": "Reiniciar {{name}}",
       "install": "Cerca dissenys i temes",
       "installTitle": "Disseny i temes",
       "installButton": "Instal·la",
@@ -1326,7 +1332,8 @@
         "disabled": "Desactivat",
         "failed": "Aturat inesperadament",
         "blocked": "Esperant un altre plugin",
-        "server": "S'executa al teu servidor"
+        "server": "S'executa al teu servidor",
+        "safeMode": "Desactivat en mode segur"
       },
       "groups": {
         "running": "En execució",
@@ -1339,11 +1346,6 @@
         "name": "Nom",
         "updated": "Actualitzats recentment",
         "category": "Categoria"
-      },
-      "columns": {
-        "title": "Columnes",
-        "auto": "Automàtic",
-        "count": "{{count}} d'amplada"
       },
       "table": {
         "name": "Nom",
@@ -1694,7 +1696,12 @@
     "gridView": "Graella",
     "listView": "Llista",
     "compactRows": "Files compactes",
-    "comfortableRows": "Files còmodes"
+    "comfortableRows": "Files còmodes",
+    "columns": {
+      "title": "Columnes",
+      "auto": "Automàtic",
+      "count": "{{count}} d'ample"
+    }
   },
   "fields": {
     "secretSaved": "Desat. Escriu per substituir-lo."

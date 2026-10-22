@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} er klar til installation",
     "readyHint": "Den installeres næste gang Termix genstartes."
   },
+  "safeMode": {
+    "title": "Sikker tilstand",
+    "description": "Kun layout- og tema-plugins kører. Genstart serveren uden TERMIX_SAFE_MODE for at aktivere de øvrige plugins igen."
+  },
   "companion": {
     "close": "Luk panel",
     "moveSide": "Flyt panel",
@@ -1098,6 +1102,8 @@
       "resetEveryone": "Nulstil standardindstillingen for alle",
       "update": "Opdater {{name}} til {{version}}",
       "disable": "Sluk {{name}}",
+      "enable": "Aktivér {{name}}",
+      "startAgain": "Start {{name}} igen",
       "install": "Find layouts og temaer",
       "installTitle": "Layouts og temaer",
       "installButton": "Installer",
@@ -1309,7 +1315,8 @@
         "disabled": "Deaktiveret",
         "failed": "Stoppet uventet",
         "blocked": "Venter på et andet plugin",
-        "server": "Kører på din server"
+        "server": "Kører på din server",
+        "safeMode": "Deaktiveret i sikker tilstand"
       },
       "groups": {
         "running": "Kører",
@@ -1322,11 +1329,6 @@
         "name": "Navn",
         "updated": "Nyligt opdateret",
         "category": "Kategori"
-      },
-      "columns": {
-        "title": "Kolonner",
-        "auto": "Auto",
-        "count": "{{count}} bred"
       },
       "table": {
         "name": "Navn",
@@ -1652,7 +1654,12 @@
     "gridView": "Gitter",
     "listView": "Liste",
     "compactRows": "Kompakte rækker",
-    "comfortableRows": "Komfortable rækker"
+    "comfortableRows": "Komfortable rækker",
+    "columns": {
+      "title": "Søjler",
+      "auto": "Automatisk",
+      "count": "{{count}} bred"
+    }
   },
   "fields": {
     "secretSaved": "Gemt. Skriv for at erstatte det."

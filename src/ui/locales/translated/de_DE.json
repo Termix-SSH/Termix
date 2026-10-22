@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} ist bereit zur Installation",
     "readyHint": "Es wird beim nächsten Neustart von Termix installiert."
   },
+  "safeMode": {
+    "title": "Sicherer Modus",
+    "description": "Nur Layout- und Themen-Plugins sind aktiv. Starten Sie den Server ohne TERMIX_SAFE_MODE neu, um die restlichen Plugins wieder zu aktivieren."
+  },
   "companion": {
     "close": "Panel schließen",
     "moveSide": "Panel verschieben",
@@ -1098,6 +1102,8 @@
       "resetEveryone": "Standard für alle zurücksetzen",
       "update": "{{name}} auf {{version}} aktualisieren",
       "disable": "{{name}} deaktivieren",
+      "enable": "{{name}} aktivieren",
+      "startAgain": "{{name}} neu starten",
       "install": "Layouts und Themes finden",
       "installTitle": "Layouts und Themes",
       "installButton": "Installieren",
@@ -1309,7 +1315,8 @@
         "disabled": "Deaktiviert",
         "failed": "Unerwartet gestoppt",
         "blocked": "Wartet auf ein anderes Plugin",
-        "server": "Läuft auf deinem Server"
+        "server": "Läuft auf deinem Server",
+        "safeMode": "Im sicheren Modus deaktiviert"
       },
       "groups": {
         "running": "Aktiv",
@@ -1322,11 +1329,6 @@
         "name": "Name",
         "updated": "Kürzlich aktualisiert",
         "category": "Kategorie"
-      },
-      "columns": {
-        "title": "Spalten",
-        "auto": "Auto",
-        "count": "{{count}} Spalten breit"
       },
       "table": {
         "name": "Name",
@@ -1652,7 +1654,12 @@
     "gridView": "Raster",
     "listView": "Liste",
     "compactRows": "Kompakte Zeilen",
-    "comfortableRows": "Bequeme Zeilen"
+    "comfortableRows": "Bequeme Zeilen",
+    "columns": {
+      "title": "Spalten",
+      "auto": "Automatisch",
+      "count": "{{count}} Spalten breit"
+    }
   },
   "fields": {
     "secretSaved": "Gespeichert. Tippen, um es zu ersetzen."

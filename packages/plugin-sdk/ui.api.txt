@@ -80,7 +80,7 @@ DEFAULT_FOLDER_COLOR (value): "#f59145"
 DEFAULT_FOLDER_ICON (value): "folder"
 DashboardCardId (type): DashboardCardId
 DataColumn (type): DataColumn<T>
-DataView (value): <T>({ items, view, density, getKey, renderCard, columns, listColumns, onRowClick, isRowActive, empty, className, }: { items: T[]; view: PanelViewMode; density?: PanelDensity; getKey: (item: T) => string; renderCard: (item: T) => ReactNode; columns: GridColumns; listColumns: DataColumn<T>[]; onRowClick?: (item: T) => void; isRowActive?: (item: T) => boolean; empty: ReactNode; className?: string; }) => Element
+DataView (value): <T>({ items, view, density, getKey, renderCard, columns, size, minCardWidth, listColumns, onRowClick, isRowActive, empty, className, }: { items: T[]; view: PanelViewMode; density?: PanelDensity; getKey: (item: T) => string; renderCard: (item: T) => ReactNode; columns: GridColumns; size?: GridSize; minCardWidth?: number; listColumns: DataColumn<T>[]; onRowClick?: (item: T) => void; isRowActive?: (item: T) => boolean; empty: ReactNode; className?: string; }) => Element
 DefaultOverrides (type): DefaultOverrides
 DefaultsOnly (value): ({ settingKey, children, }: { settingKey: string; children: ReactNode; }) => Element
 DesktopUpdateMode (type): DesktopUpdateMode
@@ -131,6 +131,7 @@ GridCardCatalogEntry (type): GridCardCatalogEntry
 GridColSpan (type): GridColSpan
 GridColumns (type): GridColumns
 GridLayout (type): GridLayout
+GridSize (type): GridSize
 GridSlot (type): GridSlot
 GroupHeading (value): ({ title, count, action, className, }: { title: string; count?: number; action?: ReactNode; className?: string; }) => Element
 HexColorPicker (value): ({ value, onChange, }: { value: string; onChange: (hex: string) => void; }) => Element
@@ -321,7 +322,7 @@ UserRole (type): UserRole
 UserSecondFactorSummary (type): UserSecondFactorSummary
 VersionBadge (value): ({ status, releaseUrl, className, }: VersionBadgeProps) => Element
 VersionInfo (type): VersionInfo
-ViewToggle (value): ({ view, onView, density, onDensity, }: { view: PanelViewMode; onView: (next: PanelViewMode) => void; density?: PanelDensity; onDensity?: (next: PanelDensity) => void; }) => Element
+ViewToggle (value): ({ view, onView, density, onDensity, columns, onColumns, }: { view: PanelViewMode; onView: (next: PanelViewMode) => void; density?: PanelDensity; onDensity?: (next: PanelDensity) => void; columns?: GridSize; onColumns?: (next: GridSize) => void; }) => Element
 WebSocketConnectionTarget (type): WebSocketConnectionTarget
 WidgetTitle (value): ({ title, icon, fallback }: WidgetTitleProps) => Element
 actionOrder (value): (action: HostActionDef) => number

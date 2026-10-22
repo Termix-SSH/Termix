@@ -235,6 +235,10 @@
     "ready": "Termix {{version}} este gata de instalare",
     "readyHint": "Se instalează data viitoare când Termix se repornește."
   },
+  "safeMode": {
+    "title": "Mod sigur",
+    "description": "Doar plugin-urile de aspect și temă sunt active. Repornește serverul fără variabila TERMIX_SAFE_MODE pentru a reactiva restul."
+  },
   "companion": {
     "close": "Închide panoul",
     "moveSide": "Mută panoul",
@@ -1115,6 +1119,8 @@
       "resetEveryone": "Resetează implicitul pentru toți",
       "update": "Actualizează {{name}} la {{version}}",
       "disable": "Dezactivează {{name}}",
+      "enable": "Activează {{name}}",
+      "startAgain": "Pornește din nou {{name}}",
       "install": "Găsește aspecte și teme",
       "installTitle": "Aspecte și teme",
       "installButton": "Instalează",
@@ -1326,7 +1332,8 @@
         "disabled": "Dezactivat",
         "failed": "Oprit neașteptat",
         "blocked": "Așteaptă un alt plugin",
-        "server": "Rulează pe serverul tău"
+        "server": "Rulează pe serverul tău",
+        "safeMode": "Oprit în modul sigur"
       },
       "groups": {
         "running": "În execuție",
@@ -1339,11 +1346,6 @@
         "name": "Nume",
         "updated": "Actualizate recent",
         "category": "Categorie"
-      },
-      "columns": {
-        "title": "Coloane",
-        "auto": "Automat",
-        "count": "{{count}} coloane"
       },
       "table": {
         "name": "Nume",
@@ -1694,7 +1696,12 @@
     "gridView": "Grilă",
     "listView": "Listă",
     "compactRows": "Rânduri compacte",
-    "comfortableRows": "Rânduri confortabile"
+    "comfortableRows": "Rânduri confortabile",
+    "columns": {
+      "title": "Coloane",
+      "auto": "Automat",
+      "count": "{{count}} coloane"
+    }
   },
   "fields": {
     "secretSaved": "Salvat. Tastează pentru a-l înlocui."

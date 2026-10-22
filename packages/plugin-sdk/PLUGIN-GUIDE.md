@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.19 | Plugin API 1.11.0
+SDK 1.0.20 | Plugin API 1.12.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -643,6 +643,9 @@ exports with props is `ui.api.txt` in the Termix repo
   `PanePrompt` for small prompts.
 - Every tab or panel sits in `PanelShell`. Lists use `PanelList` and `ListRow`, add with `AddButton`,
   forms end with `FormFooter`, empty lists show `EmptyState`.
+- Card grids use `DataView` with `ViewToggle`. Pass `columns` and `onColumns` to `ViewToggle` and the same
+  value as `size` to `DataView`, so users can pick Auto (as many as fit) or a fixed number of cards per
+  row. `usePluginPanelView` keeps the choice as `columns`. Older Termix versions ignore both props.
 - Forms: `TextField`, `NumberField`, `SelectField`, `SwitchRow`, `SecretField`, `SettingRow` and friends.
 - Host sessions use `ConnectionGate` for the whole connect flow (host keys, TOTP, passphrases, errors).
 - Mobile: check `useIsMobile()` and give small screens a layout that works. The desktop app always uses the
