@@ -237,7 +237,7 @@ export interface PluginSummary {
   name: string;
   version: string;
   enabled: boolean;
-  /** enabled | disabled | blocked | failed, or the loader's live state. */
+  /** enabled | disabled | blocked | failed | safe-mode, or the loader's live state. */
   state: string;
   /** A linked desktop leaves this plugin to its server. */
   runsOnServer?: boolean;

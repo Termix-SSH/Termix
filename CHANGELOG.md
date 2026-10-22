@@ -2,6 +2,10 @@
 
 ## 26.10.5
 
+### Added
+
+- Safe mode: start the server with TERMIX_SAFE_MODE=1 to run only layout and theme plugins, so a broken plugin can be turned off
+
 ### Changed
 
 - Card grids in the Plugins tab and in plugins can show Auto (as many as fit) or a set number of cards per row

@@ -621,6 +621,26 @@ describe("dependencies", () => {
   });
 });
 
+describe("safe mode", () => {
+  afterEach(() => {
+    delete process.env.TERMIX_SAFE_MODE;
+  });
+
+  it("refuses to start a plugin that is not a layout or theme, but still stops one", async () => {
+    createFixturePlugin({ id: "base", root: bundled });
+    const loader = await boot();
+    await manage.setPluginState("base", false);
+
+    process.env.TERMIX_SAFE_MODE = "1";
+    await expect(manage.setPluginState("base", true)).rejects.toMatchObject({
+      status: 409,
+      code: "SAFE_MODE",
+    });
+    expect(loader.get("base")?.state).toBe("stopped");
+    expect(db.rows.get("base")?.state).toBe("disabled");
+  });
+});
+
 describe("reloading a bundled plugin for the dev runner", () => {
   it("loads the rebuilt copy and restarts what depends on it", async () => {
     createFixturePlugin({ id: "base", root: bundled });

@@ -18,6 +18,7 @@ import path from "node:path";
 import semver from "semver";
 import { pluginLogger } from "../utils/logger.js";
 import { isDefaultLookPlugin } from "./bundled-index.js";
+import { mayRunInSafeMode } from "./safe-mode.js";
 import {
   activatePlugin,
   deactivatePlugin,
@@ -762,6 +763,13 @@ export async function setPluginStateUnlocked(
   const { loader } = getPluginRuntime();
   if (!loader.get(pluginId)) {
     throw new PluginManageError("Plugin not found", 404, "NOT_FOUND");
+  }
+  if (enabled && !mayRunInSafeMode(pluginId, loader.list())) {
+    throw new PluginManageError(
+      "Safe mode is on, so only layout and theme plugins can start",
+      409,
+      "SAFE_MODE",
+    );
   }
   const plan = await planStateChange(pluginId, enabled);
 

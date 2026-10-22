@@ -157,6 +157,7 @@ describe("pluginStatus", () => {
       "disabled",
     );
     expect(pluginStatus(summary())).toBe("running");
+    expect(pluginStatus(summary({ state: "safe-mode" }))).toBe("safeMode");
     expect(pluginStatus(summary({ state: "failed", runsOnServer: true }))).toBe(
       "server",
     );

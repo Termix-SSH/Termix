@@ -74,7 +74,9 @@ export function unregisteredViewStatus(
     return { status: getPluginStoreState().loaded ? "missing" : "loading" };
   }
   const serverState = owner.summary.state;
-  if (!owner.summary.enabled) return { status: "disabled", owner };
+  if (!owner.summary.enabled || serverState === "safe-mode") {
+    return { status: "disabled", owner };
+  }
   if (
     owner.frontend === "failed" ||
     owner.frontend === "blocked" ||

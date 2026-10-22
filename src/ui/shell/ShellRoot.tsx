@@ -3,6 +3,7 @@ import { ServerStatusProvider } from "@/lib/ServerStatusContext";
 import { ComponentSlot } from "@/shell/ActionSlot";
 import { OnboardingHost } from "@/onboarding/OnboardingHost";
 import { DesktopUpdateToasts } from "@/shell/DesktopUpdateToasts";
+import { SafeModeNotice } from "@/shell/SafeModeNotice";
 import { TabPortals } from "@/shell/stage/TabPortals";
 import { LayoutHost } from "@/shell/layout/LayoutHost";
 import { ShellControllerProvider } from "@/shell/controller/ShellControllerProvider";
@@ -25,6 +26,7 @@ export function ShellRoot({
         <TabPortals />
         <ComponentSlot slotId="shell.overlay" />
         <OnboardingHost />
+        <SafeModeNotice />
         {isElectron() && <DesktopUpdateToasts />}
       </ShellControllerProvider>
     </ServerStatusProvider>

@@ -1097,7 +1097,9 @@ function InstalledCard({
           <span className="text-[11px] text-muted-foreground">
             {plugin.status === "server"
               ? t("plugins.manager.status.server")
-              : t("plugins.manager.status.disabled")}
+              : plugin.status === "safeMode"
+                ? t("plugins.manager.status.safeMode")
+                : t("plugins.manager.status.disabled")}
           </span>
         </div>
       ) : (
@@ -1190,11 +1192,15 @@ function StatusCell({ plugin }: { plugin: PluginEntry }) {
         ? t("plugins.manager.status.failed")
         : plugin.status === "server"
           ? t("plugins.manager.status.server")
-          : !running
-            ? t("plugins.manager.status.disabled")
-            : plugin.pinnedVersion
-              ? t("plugins.manager.pinnedTo", { version: plugin.pinnedVersion })
-              : t("plugins.manager.status.running");
+          : plugin.status === "safeMode"
+            ? t("plugins.manager.status.safeMode")
+            : !running
+              ? t("plugins.manager.status.disabled")
+              : plugin.pinnedVersion
+                ? t("plugins.manager.pinnedTo", {
+                    version: plugin.pinnedVersion,
+                  })
+                : t("plugins.manager.status.running");
   return (
     <span
       className="flex min-w-0 items-center gap-1.5 text-muted-foreground"
