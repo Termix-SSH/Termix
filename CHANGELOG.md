@@ -10,6 +10,10 @@
 
 - Card grids in the Plugins tab and in plugins can show Auto (as many as fit) or a set number of cards per row
 
+### Fixed
+
+- The macOS app asks for Local Network access, so it can reach servers on your LAN
+
 ## 26.10.4
 
 ### Fixed
