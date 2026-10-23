@@ -1,9 +1,11 @@
 /* eslint-disable react-refresh/only-export-components */
 import {
+  isEmbeddedAuthFrame,
   isInElectronWebView,
   isInMobileWebView,
   type EmbeddedFrameWindow,
 } from "@/lib/embedded-frame";
+import { handOffToApp, pendingAppReturn } from "@/lib/app-return";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
@@ -143,6 +145,13 @@ export function storeAuth(username: string) {
     STORAGE_KEY,
     JSON.stringify({ loggedIn: true, username }),
   );
+}
+
+/** A browser login the mobile app asked for goes back to the app. */
+async function handOffLogin(token?: string | null): Promise<boolean> {
+  if (!pendingAppReturn() || isEmbeddedAuthFrame()) return false;
+  const value = token || (await getCurrentToken());
+  return handOffToApp(value ? { token: value } : { error: "no_token" });
 }
 
 type AuthView = "login" | "register" | "reset" | "second-factor" | "external";
@@ -331,8 +340,9 @@ export function Auth({ onLogin }: AuthProps) {
     if (proxySigninHandledRef.current || isElectron()) return;
     proxySigninHandledRef.current = true;
     requestTrustedProxyLogin()
-      .then((result) => {
+      .then(async (result) => {
         if (!result.enabled || !result.success) return;
+        if (await handOffLogin()) return;
         storeAuth(result.username || "");
         onLogin(
           result.username || "",
@@ -625,24 +635,27 @@ export function Auth({ onLogin }: AuthProps) {
         }
         return;
       }
-      getUserInfo()
-        .then((meRes) => {
-          storeAuth(meRes.username || "");
-          clearDesktopManualLogout();
-          onLogin(
-            meRes.username || "",
-            meRes.userId || undefined,
-            !!meRes.is_admin,
-          );
-          window.history.replaceState(
-            {},
-            document.title,
-            window.location.pathname,
-          );
-        })
-        .catch(() => {
-          toast.error(t("errors.failedUserInfo"));
-        });
+      void handOffLogin(urlParams.get("token")).then((handedOff) => {
+        if (handedOff) return;
+        getUserInfo()
+          .then((meRes) => {
+            storeAuth(meRes.username || "");
+            clearDesktopManualLogout();
+            onLogin(
+              meRes.username || "",
+              meRes.userId || undefined,
+              !!meRes.is_admin,
+            );
+            window.history.replaceState(
+              {},
+              document.title,
+              window.location.pathname,
+            );
+          })
+          .catch(() => {
+            toast.error(t("errors.failedUserInfo"));
+          });
+      });
     }
   }, [onLogin, t]);
 
@@ -746,6 +759,7 @@ export function Auth({ onLogin }: AuthProps) {
       setWebviewAuthSuccess(true);
       return;
     }
+    if (await handOffLogin(res?.token)) return;
     const meRes = await getUserInfo();
     const name =
       meRes.username || res.username || options.fallbackUsername || "";

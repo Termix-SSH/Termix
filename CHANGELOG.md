@@ -1,5 +1,11 @@
 # Changelog
 
+## 26.10.6
+
+### Added
+
+- The mobile app can sign in through your browser with any login method, including passkeys and security keys
+
 ## 26.10.5
 
 ### Added
