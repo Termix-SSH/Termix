@@ -30,6 +30,8 @@ Termix is a free, open source, self-hosted server management platform built on p
 
 It runs on web, desktop and mobile. Think of it as a free, self-hosted Termius.
 
+[![Deploy to Railyard](https://app.railyard.run/deploy/badge)](https://app.railyard.run/deploy?repo=https://github.com/Termix-SSH/Termix)
+
 <br />
 
 ## Try the Demo
