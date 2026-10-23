@@ -14,9 +14,30 @@ export interface DataColumn<T> {
   /** Any grid track: "1fr", "120px", "minmax(0,2fr)". */
   width: string;
   cell: (item: T) => React.ReactNode;
-  /** Dropped below md, for columns that are nice rather than necessary. */
+  /** Hidden when the table itself is narrower than md (48rem) / lg (64rem). */
   hideBelow?: "md" | "lg";
   align?: "start" | "end";
+}
+
+/** Tracks for the columns visible at each width, so hidden ones take no space. */
+function listColumnTemplates<T>(columns: DataColumn<T>[]): {
+  base: string;
+  md: string;
+  lg: string;
+} {
+  return {
+    base:
+      columns
+        .filter((column) => column.hideBelow === undefined)
+        .map((column) => column.width)
+        .join(" ") || "none",
+    md:
+      columns
+        .filter((column) => column.hideBelow !== "lg")
+        .map((column) => column.width)
+        .join(" ") || "none",
+    lg: columns.map((column) => column.width).join(" ") || "none",
+  };
 }
 
 export interface GridColumns {
@@ -52,6 +73,9 @@ const XL_COLS: Record<number, string> = {
   4: "xl:grid-cols-4",
 };
 
+const LIST_GRID_CLASS =
+  "grid grid-cols-[var(--data-view-cols)] @min-[48rem]:grid-cols-[var(--data-view-cols-md)] @min-[64rem]:grid-cols-[var(--data-view-cols-lg)] gap-x-2 px-3";
+
 function gridClass(columns: GridColumns): string {
   return cn(
     COLS[columns.base ?? 1],
@@ -59,6 +83,12 @@ function gridClass(columns: GridColumns): string {
     columns.lg && LG_COLS[columns.lg],
     columns.xl && XL_COLS[columns.xl],
   );
+}
+
+function columnVisibility(hideBelow?: "md" | "lg"): string {
+  if (hideBelow === "md") return "hidden @min-[48rem]:block";
+  if (hideBelow === "lg") return "hidden @min-[64rem]:block";
+  return "";
 }
 
 /** One collection as a card grid or a dense row table. */
@@ -120,14 +150,26 @@ export function DataView<T>({
     );
   }
 
-  const template = listColumns.map((c) => c.width).join(" ");
-  const rowHeight = density === "compact" ? "h-7" : "h-9";
+  const templates = listColumnTemplates(listColumns);
+  const rowHeight = density === "compact" ? "min-h-7" : "min-h-9";
 
   return (
-    <div className={cn("border border-border bg-card", className)} role="table">
+    <div
+      className={cn("@container border border-border bg-card", className)}
+      style={
+        {
+          "--data-view-cols": templates.base,
+          "--data-view-cols-md": templates.md,
+          "--data-view-cols-lg": templates.lg,
+        } as React.CSSProperties
+      }
+      role="table"
+    >
       <div
-        className="sticky top-0 z-10 grid items-center border-b border-border bg-card px-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"
-        style={{ gridTemplateColumns: template }}
+        className={cn(
+          LIST_GRID_CLASS,
+          "sticky top-0 z-10 items-center border-b border-border bg-card text-[10px] font-semibold uppercase tracking-widest text-muted-foreground",
+        )}
       >
         {listColumns.map((column) => (
           <span
@@ -135,8 +177,7 @@ export function DataView<T>({
             className={cn(
               "truncate py-2",
               column.align === "end" && "text-right",
-              column.hideBelow === "md" && "hidden md:block",
-              column.hideBelow === "lg" && "hidden lg:block",
+              columnVisibility(column.hideBelow),
             )}
           >
             {column.header}
@@ -152,12 +193,12 @@ export function DataView<T>({
               key={getKey(item)}
               onClick={onRowClick ? () => onRowClick(item) : undefined}
               className={cn(
-                "grid items-center gap-x-2 border-b border-border/50 px-3 text-xs transition-colors last:border-0",
+                LIST_GRID_CLASS,
+                "items-center border-b border-border/50 text-xs transition-colors last:border-0",
                 rowHeight,
                 onRowClick && "cursor-pointer",
                 active ? "bg-accent-brand/10" : "hover:bg-muted/40",
               )}
-              style={{ gridTemplateColumns: template }}
             >
               {listColumns.map((column) => (
                 <div
@@ -165,8 +206,7 @@ export function DataView<T>({
                   className={cn(
                     "min-w-0 truncate",
                     column.align === "end" && "text-right",
-                    column.hideBelow === "md" && "hidden md:block",
-                    column.hideBelow === "lg" && "hidden lg:block",
+                    columnVisibility(column.hideBelow),
                   )}
                 >
                   {column.cell(item)}
