@@ -46,7 +46,8 @@ describe("TitleBar", () => {
     installBridge();
     render(<TitleBar />);
     expect(await screen.findByText("Termix")).toBeTruthy();
-    expect(heightVar()).toBe("40px");
+    // The offset is set in an effect that can run after the bar shows up.
+    await waitFor(() => expect(heightVar()).toBe("40px"));
   });
 
   it("stays hidden in windows without the app-drawn bar", async () => {
