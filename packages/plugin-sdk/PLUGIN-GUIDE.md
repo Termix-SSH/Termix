@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.20 | Plugin API 1.12.0
+SDK 1.0.21 | Plugin API 1.12.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -335,7 +335,9 @@ try {
 
 `ctx.ssh.withConnection(hostId, { pool, purpose }, fn)` borrows a pooled connection for frequent short
 commands. `@termix-ssh/plugin-sdk/host-commands` has helpers to detect the OS and run package manager and
-sudo commands. Hosts from `ctx.hosts` never carry secrets. Pass the host or its id to `ctx.ssh`.
+sudo commands. `@termix-ssh/plugin-sdk/host-scripts` builds Docker, metrics, systemd and journal
+commands and parses their output; send a script on stdin to the command `scriptShell()` returns. Hosts from
+`ctx.hosts` never carry secrets. Pass the host or its id to `ctx.ssh`.
 
 ### The desktop app
 
@@ -905,6 +907,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `@termix-ssh/plugin-sdk/testing`                                     | `createMockCtx`, `createTestDb`, `renderWithApp`, `createFakeContext`                          |
 | `@termix-ssh/plugin-sdk/vitest-preset`                               | `pluginVitestConfig`                                                                           |
 | `@termix-ssh/plugin-sdk/host-commands`                               | OS detection, package manager and sudo helpers over ssh2                                       |
+| `@termix-ssh/plugin-sdk/host-scripts`                                | Docker, metrics, systemd and journal command builders and parsers, scripts sent to `bash -s`   |
 | `@termix-ssh/plugin-sdk/ssh-certs`                                   | `applyCertificateAuth()` for certificate based SSH auth                                        |
 | `@termix-ssh/plugin-sdk/ssh-keys`                                    | `generateSshKeyPair()`, `detectSshKeyType()`, `publicKeyFromPrivate()`, `validateSshKeyPair()` |
 | `@termix-ssh/plugin-sdk/desktop`                                     | The desktop app bridge, typed. Check it exists before use                                      |

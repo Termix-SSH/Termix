@@ -11,6 +11,9 @@
 
 export type { Client, ClientChannel } from "ssh2";
 import type { Client, ClientChannel } from "ssh2";
+// Homebrew and OrbStack paths a non-interactive shell misses.
+import { EXTRA_PATH_DIRS } from "./host-scripts/docker.js";
+export { EXTRA_PATH_DIRS };
 
 export interface ExecResult {
   stdout: string;
@@ -113,14 +116,6 @@ export interface PlatformInfo {
   hasDocker: boolean;
   osPrettyName: string | null;
 }
-
-/**
- * Non-interactive SSH shells don't source ~/.zprofile or ~/.bash_profile,
- * so PATH additions from installers like Homebrew or OrbStack are missing.
- * Extend PATH with their common install locations before probing.
- */
-export const EXTRA_PATH_DIRS =
-  '/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:"$HOME/.orbstack/bin"';
 
 const DOCKER_PROBE =
   `command -v docker >/dev/null 2>&1` +

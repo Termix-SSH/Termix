@@ -1,6 +1,6 @@
 {
   "name": "@termix-ssh/plugin-sdk",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "description": "The contract between Termix core and a plugin: types, the capability catalog and the manifest schema.",
   "license": "Apache-2.0",
   "repository": {
@@ -80,6 +80,10 @@
     "./host-commands": {
       "types": "./dist/host-commands.d.ts",
       "default": "./dist/host-commands.js"
+    },
+    "./host-scripts": {
+      "types": "./dist/host-scripts/index.d.ts",
+      "default": "./dist/host-scripts/index.js"
     },
     "./ssh-certs": {
       "types": "./dist/ssh-certs.d.ts",

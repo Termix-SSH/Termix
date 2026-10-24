@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.21
+
+Plugin API 1.12.0.
+
+### Added
+
+- `@termix-ssh/plugin-sdk/host-scripts`: Docker, Linux metrics, systemd, journal and OpenRC command builders and parsers, plus `scriptShell()` and `passwordSudoScript()` to send scripts to `bash -s` on stdin. It has no Node or ssh2 imports, so the Termix mobile app runs the same code
+
 ## 1.0.20
 
 Plugin API 1.12.0.
