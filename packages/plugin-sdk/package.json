@@ -102,6 +102,10 @@
     "./testing-host": {
       "default": "./dist/host/testing-host.js"
     },
+    "./frame-host": {
+      "default": "./dist/host/frame-host.js"
+    },
+    "./frame-host.css": "./dist/host/frame-host.css",
     "./theme.css": "./dist/host/theme.css"
   },
   "files": [

@@ -8,6 +8,7 @@ Plugin API 1.13.0.
 
 - `contributes.mobile` in the manifest says how a plugin shows in the Termix mobile app: `webview`, `native` or `none`, with an optional mobile bundle, screen sizes, views and a note
 - `termix-plugin build` bundles `src/mobile` into the `contributes.mobile.entry` file, and `validate` checks that it exists
+- `@termix-ssh/plugin-sdk/frame-host` runs one plugin view outside the shell, with core's bridge, registries and CSS, so the mobile app can show `webview` plugins
 
 ## 1.0.21
 

@@ -1,9 +1,11 @@
 /**
- * Builds the two pieces of the plugin SDK that come from core:
+ * Builds the pieces of the plugin SDK that come from core:
  *
  *   dist/host/ui.js            @termix-ssh/plugin-sdk/ui, the shell's UI kit
  *   dist/host/testing-host.js  what renderWithApp() renders plugins into
  *   dist/host/core-classes.json  the classes core's CSS has rules for
+ *   dist/host/frame-host.js    runs one plugin outside the shell (mobile app)
+ *   dist/host/frame-host.css   core's compiled CSS for that frame
  *
  * Inside Termix the page's import map points @termix-ssh/plugin-sdk/ui at the
  * shell's own copy, so ui.js is never loaded there. It exists so a plugin in
@@ -46,6 +48,7 @@ await esbuild.build({
   entryPoints: {
     ui: path.join(root, "src/ui/plugin-host/sdk-ui.ts"),
     "testing-host": path.join(root, "src/ui/plugin-host/testing-host.tsx"),
+    "frame-host": path.join(root, "src/ui/plugin-host/frame-host.tsx"),
   },
   outdir: outDir,
   bundle: true,
@@ -157,14 +160,16 @@ const rootSource =
 const scanner = new Scanner({
   sources: [...rootSource, ...compiler.sources],
 });
-const coreClasses = [
-  ...classNamesInCss(
-    optimize(compiler.build(scanner.scan()), { minify: true }).code,
-  ),
-].sort();
+const coreCss = optimize(compiler.build(scanner.scan()), {
+  minify: true,
+}).code;
+const coreClasses = [...classNamesInCss(coreCss)].sort();
 fs.writeFileSync(
   path.join(outDir, "core-classes.json"),
   `${JSON.stringify(coreClasses)}\n`,
 );
+
+// The frame host has no Vite build to load core's CSS, so it gets it here.
+fs.writeFileSync(path.join(outDir, "frame-host.css"), coreCss);
 
 console.log(`Built the SDK host modules into ${path.relative(root, outDir)}`);

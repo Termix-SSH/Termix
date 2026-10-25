@@ -197,6 +197,20 @@ plugin as having nothing to show (official plugins are mapped by the app itself)
 
 `build` makes `entry` from `src/mobile/index.tsx`, and it shares `frontend.css`.
 
+How a `webview` plugin runs in the app:
+
+- Only your plugin loads, with the same app object, SDK hooks and `/ui` kit as the web app. Each view opens
+  on its own screen: a tab with `host-context-menu` in `openFrom` opens from a host, the rest from the app's
+  plugin list.
+- Every request and socket goes through the app, which adds the login, proxy headers and client
+  certificate. The app only lets through your own `/plugin-api`, `/plugin-ws` and `/plugin-assets`, your
+  settings and a short list of core reads (hosts, folders, permissions, current user, version, health,
+  activity). Other core routes answer 403, so call your own backend instead.
+- Images load straight from the server, without proxy headers or a client certificate.
+- Nothing in `localStorage` survives closing the view. Keep preferences in settings.
+- Other plugins' views, extensions and components are not there, and neither is the shell (`useShell()`
+  is null). `/ui` names newer than the app's copy of the SDK make the view say it needs a newer app.
+
 Termix 26.10.5 and older refuse any manifest with `mobile`, so a plugin that declares it needs
 `"engine": { "termix": ">=26.10.6", "api": "^1.13" }`.
 
