@@ -30,6 +30,33 @@ export function applyHostKeyTypeUpdate(
   }
 }
 
+const HOST_COLOR = /^#[0-9a-fA-F]{6}$/;
+const HOST_ICON = /^[a-z0-9-]{1,64}$/;
+
+/**
+ * Color and icon from a host write. A field left out stays as stored, so
+ * editors that don't know about them never clear them. Bad values store null.
+ */
+export function normalizeHostLookFields(values: Record<string, unknown>): {
+  color?: string | null;
+  icon?: string | null;
+} {
+  const result: { color?: string | null; icon?: string | null } = {};
+  if (values.color !== undefined) {
+    result.color =
+      typeof values.color === "string" && HOST_COLOR.test(values.color)
+        ? values.color.toLowerCase()
+        : null;
+  }
+  if (values.icon !== undefined) {
+    result.icon =
+      typeof values.icon === "string" && HOST_ICON.test(values.icon)
+        ? values.icon
+        : null;
+  }
+  return result;
+}
+
 const PROTOCOL_ENABLE_FIELDS = ["enableSsh"] as const;
 
 export function normalizeProtocolEnableFields(

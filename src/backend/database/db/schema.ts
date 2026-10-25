@@ -183,6 +183,9 @@ export const hosts = sqliteTable(
     // legacy algorithms, agent, environment). JSON.
     sshOptions: text("ssh_options"),
     notes: text("notes"),
+    // Hex color and Lucide icon name a layout may show next to the host.
+    color: text("color"),
+    icon: text("icon"),
     enableSsh: integer("enable_ssh", { mode: "boolean" }).notNull().default(true),
 
     sshPort: integer("ssh_port").default(22),

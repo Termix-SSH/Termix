@@ -73,6 +73,8 @@ async function exportRow(
         : resolvedHost.tags || [],
     pin: !!resolvedHost.pin,
     notes: resolvedHost.notes || null,
+    color: resolvedHost.color || null,
+    icon: resolvedHost.icon || null,
     // Every plugin's host settings, secrets redacted, for import to hand back.
     pluginSettings: pluginSettings.get(host.id as number) ?? {},
     // Each plugin protocol's login, secrets included like the SSH ones.

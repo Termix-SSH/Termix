@@ -193,6 +193,9 @@ export const hosts = mysqlTable(
     // legacy algorithms, agent, environment). JSON.
     sshOptions: text("ssh_options"),
     notes: text("notes"),
+    // Hex color and Lucide icon name a layout may show next to the host.
+    color: text("color"),
+    icon: text("icon"),
     enableSsh: boolean("enable_ssh").notNull().default(true),
 
     sshPort: int("ssh_port").default(22),

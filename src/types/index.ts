@@ -72,6 +72,10 @@ export type Host = {
   terminalConfig?: HostTerminalConfig;
   sshOptions?: HostSshOptions;
   notes?: string;
+  /** Hex color, like #3b82f6. */
+  color?: string | null;
+  /** Lucide icon name. */
+  icon?: string | null;
 
   useSocks5?: boolean;
   socks5Host?: string;
@@ -182,6 +186,10 @@ export interface HostData {
   terminalConfig?: HostTerminalConfig;
   sshOptions?: HostSshOptions;
   notes?: string;
+  /** Hex color, like #3b82f6. */
+  color?: string | null;
+  /** Lucide icon name. */
+  icon?: string | null;
 
   useSocks5?: boolean;
   socks5Host?: string;

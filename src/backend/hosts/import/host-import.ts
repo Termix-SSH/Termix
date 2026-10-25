@@ -28,6 +28,7 @@ import { applyPluginHostImportSettings } from "../../database/routes/host-plugin
 import {
   isNonEmptyString,
   isValidPort,
+  normalizeHostLookFields,
   normalizeImportedHost,
 } from "../../database/routes/host-normalizers.js";
 import { hasHostLocks, hostLock, manualCreateBlockedBy } from "../locks.js";
@@ -571,6 +572,7 @@ export async function runBulkImport(
           ? "true"
           : "false",
         notes: hostData.notes || null,
+        ...normalizeHostLookFields(hostData as Record<string, unknown>),
         useSocks5: hostData.useSocks5 ? 1 : 0,
         socks5Host: hostData.socks5Host || null,
         socks5Port: hostData.socks5Port || null,

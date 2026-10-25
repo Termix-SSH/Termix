@@ -1316,6 +1316,8 @@ const migrateSchema = () => {
     { column: "ssh_port", sql: "ALTER TABLE ssh_data ADD COLUMN ssh_port INTEGER DEFAULT 22" },
     { column: "connection_origin", sql: "ALTER TABLE ssh_data ADD COLUMN connection_origin TEXT" },
     { column: "parent_host_id", sql: "ALTER TABLE ssh_data ADD COLUMN parent_host_id INTEGER REFERENCES ssh_data(id) ON DELETE SET NULL" },
+    { column: "color", sql: "ALTER TABLE ssh_data ADD COLUMN color TEXT" },
+    { column: "icon", sql: "ALTER TABLE ssh_data ADD COLUMN icon TEXT" },
   ];
 
   for (const migration of sshDataMigrations) {

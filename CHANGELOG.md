@@ -7,6 +7,7 @@
 - The mobile app can sign in through your browser with any login method, including passkeys and security keys
 - Plugins can say how they show in the mobile app
 - The plugin list tells the mobile app which plugin API each plugin needs, so the app can say when it or a plugin needs an update
+- Hosts can have a color and an icon, which sync to the desktop and mobile apps
 
 ## 26.10.5
 

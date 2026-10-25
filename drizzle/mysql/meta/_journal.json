@@ -533,6 +533,13 @@
       "when": 1792430772041,
       "tag": "0075_session_policy",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "5",
+      "when": 1792945361809,
+      "tag": "0076_host_color_icon",
+      "breakpoints": true
     }
   ]
 }

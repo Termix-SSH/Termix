@@ -498,6 +498,13 @@
       "when": 1792430769899,
       "tag": "0070_session_policy",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "6",
+      "when": 1792945434651,
+      "tag": "0071_host_color_icon",
+      "breakpoints": true
     }
   ]
 }
