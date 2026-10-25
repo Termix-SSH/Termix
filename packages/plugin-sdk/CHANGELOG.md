@@ -10,6 +10,10 @@ Plugin API 1.13.0.
 - `termix-plugin build` bundles `src/mobile` into the `contributes.mobile.entry` file, and `validate` checks that it exists
 - `@termix-ssh/plugin-sdk/frame-host` runs one plugin view outside the shell, with core's bridge, registries and CSS, so the mobile app can show `webview` plugins
 
+### Fixed
+
+- `@termix-ssh/plugin-sdk/ui` is built in production mode, so outside Termix it no longer sends requests to the Vite dev server path
+
 ## 1.0.21
 
 Plugin API 1.12.0.
