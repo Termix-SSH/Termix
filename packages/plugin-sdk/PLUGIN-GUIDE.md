@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.21 | Plugin API 1.12.0
+SDK 1.0.22 | Plugin API 1.13.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -175,7 +175,30 @@ Unknown fields are refused at every level, so a typo fails validation. The schem
 
 `contributes` holds `tabs`, `panels`, `dashboardCards`, `actions`, `actionSlots`, `permissions`,
 `settings`, `protocols`, `auth`, `syncEntities`, `keybindingActions`, `http`, `guest`, `guestViews`,
-`uiPresets`, `uses`, `layouts` and `themes`. Frontend `register*` calls need their ids declared here first.
+`uiPresets`, `uses`, `layouts`, `themes` and `mobile`. Frontend `register*` calls need their ids declared here first.
+
+### Mobile app
+
+`contributes.mobile` says how the plugin shows in the Termix mobile app. Leave it out and the app treats the
+plugin as having nothing to show (official plugins are mapped by the app itself).
+
+```json
+"mobile": { "mode": "webview", "views": ["hello"], "sizes": ["phone", "tablet"] }
+```
+
+| Field     | Notes                                                                                                                                             |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mode`    | `webview` (the app shows your UI from the server), `native` (the app has its own screens) or `none`.                                              |
+| `entry`   | `webview` only. A bundle made for the app, like `dist/mobile.js`, next to `frontend.js`. Unset: your normal frontend runs in a phone sized frame. |
+| `sizes`   | `webview` only. `phone`, `tablet` or both (the default).                                                                                          |
+| `views`   | `webview` only. Ids from your `tabs`, `panels` or `dashboardCards` the app offers. Default: every tab.                                            |
+| `feature` | `native` only. The app feature that stands in for the plugin. Default: the plugin id.                                                             |
+| `note`    | A locale key or plain text the app shows next to the plugin.                                                                                      |
+
+`build` makes `entry` from `src/mobile/index.tsx`, and it shares `frontend.css`.
+
+Termix 26.10.5 and older refuse any manifest with `mobile`, so a plugin that declares it needs
+`"engine": { "termix": ">=26.10.6", "api": "^1.13" }`.
 
 Capabilities and permissions are different things. A capability (`hosts:read`, with a colon) is what your
 code may reach. A permission (`hello.use`, with a dot) is what a user may do.

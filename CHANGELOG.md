@@ -5,6 +5,7 @@
 ### Added
 
 - The mobile app can sign in through your browser with any login method, including passkeys and security keys
+- Plugins can say how they show in the mobile app
 
 ## 26.10.5
 

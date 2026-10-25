@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.22
+
+Plugin API 1.13.0.
+
+### Added
+
+- `contributes.mobile` in the manifest says how a plugin shows in the Termix mobile app: `webview`, `native` or `none`, with an optional mobile bundle, screen sizes, views and a note
+- `termix-plugin build` bundles `src/mobile` into the `contributes.mobile.entry` file, and `validate` checks that it exists
+
 ## 1.0.21
 
 Plugin API 1.12.0.

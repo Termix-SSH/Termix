@@ -28,6 +28,10 @@ export async function validate({ cwd }) {
     // A theme only plugin has no frontend code.
     ...(isThemeOnly(raw) ? [] : [raw.frontend ?? "dist/frontend.js"]),
     raw.locales ?? "locales",
+    // Built from src/mobile by termix-plugin build.
+    ...(typeof raw.contributes?.mobile?.entry === "string"
+      ? [raw.contributes.mobile.entry]
+      : []),
   ];
   for (const rel of referenced) {
     if (!fs.existsSync(path.join(cwd, rel))) {
