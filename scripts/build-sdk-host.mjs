@@ -75,6 +75,9 @@ await esbuild.build({
   // so the translated locale files it would list are simply none.
   banner: { js: "const __termixNoGlob = () => ({});" },
   define: {
+    // esbuild picks "development" for an unminified build, which sends core's
+    // requests to the Vite dev proxy on any server without a port.
+    "process.env.NODE_ENV": '"production"',
     "import.meta.glob": "__termixNoGlob",
     "import.meta.env.DEV": "false",
     "import.meta.env.PROD": "true",
