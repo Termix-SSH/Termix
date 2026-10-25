@@ -210,6 +210,11 @@ How a `webview` plugin runs in the app:
 - Nothing in `localStorage` survives closing the view. Keep preferences in settings.
 - Other plugins' views, extensions and components are not there, and neither is the shell (`useShell()`
   is null). `/ui` names newer than the app's copy of the SDK make the view say it needs a newer app.
+- The app checks your `engine.api` against the plugin API of its own copy of the SDK. When the app's API
+  is too old for the range, it asks the user to update the app instead of opening the view. When the range
+  is for an older API major, it asks to update the plugin. Ask only for the API you use.
+- Turning a plugin off on the server hides it in the app the next time the app checks: when it comes back
+  to the front, when the list is pulled down, or when any request answers 503 with your `pluginId`.
 
 Termix 26.10.5 and older refuse any manifest with `mobile`, so a plugin that declares it needs
 `"engine": { "termix": ">=26.10.6", "api": "^1.13" }`.
