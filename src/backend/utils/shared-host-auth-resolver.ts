@@ -12,6 +12,7 @@ import type {
 } from "../database/repositories/host-resolution-repository.js";
 import { getSshAuthProvider } from "../hosts/connect/auth-provider-registry.js";
 import { ensureCoreSshAuthProviders } from "../hosts/connect/core-providers.js";
+import { findUsableCredential } from "../hosts/usable-credential.js";
 import {
   SharedHostSecretsManager,
   type SharedSecretData,
@@ -80,10 +81,7 @@ export async function resolveRecipientSharedHostAuthentication(
   }
 
   if (overrideCredentialId) {
-    const credential = await repository.findCredentialByIdForUser(
-      overrideCredentialId,
-      userId,
-    );
+    const credential = await findUsableCredential(overrideCredentialId, userId);
     if (credential) {
       return {
         source: "personal-override",
@@ -142,6 +140,17 @@ export async function resolveRecipientSharedHostAuthentication(
       }
     } catch {
       // An unreadable owner snapshot cannot expose the owner's auth.
+    }
+  }
+
+  if (protocol === "ssh" && host.credentialId) {
+    const credential = await findUsableCredential(host.credentialId, userId);
+    if (credential) {
+      return {
+        source: "personal-override",
+        credentialId: host.credentialId,
+        credential,
+      };
     }
   }
 
