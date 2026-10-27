@@ -17,8 +17,14 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("../../hosts/usable-credential.js", () => ({
-  findUsableCredential: async (credentialId: number) =>
-    state.credentials.get(credentialId) ?? null,
+  findUsableCredential: async (credentialId: number, userId: string) => {
+    const credential = state.credentials.get(credentialId);
+    if (!credential) return null;
+    const sharedWith = (credential.sharedWith as string[] | undefined) ?? [];
+    return credential.userId === userId || sharedWith.includes(userId)
+      ? credential
+      : null;
+  },
 }));
 
 vi.mock("../../database/repositories/factory.js", () => ({
@@ -29,8 +35,10 @@ vi.mock("../../database/repositories/factory.js", () => ({
     findHostById: async (hostId: number) => state.hosts.get(hostId) ?? null,
     findHostOwnerId: async (hostId: number) =>
       (state.hosts.get(hostId)?.userId as string) ?? null,
-    findCredentialByIdForUser: async (credentialId: number) =>
-      state.credentials.get(credentialId) ?? null,
+    findCredentialByIdForUser: async (credentialId: number, userId: string) =>
+      state.credentials.get(credentialId)?.userId === userId
+        ? state.credentials.get(credentialId)
+        : null,
   }),
   createCurrentSharedHostSecretsRepository: () => ({
     upsert: async (row: Record<string, unknown>) => {
@@ -257,6 +265,39 @@ describe("SharedHostSecretsManager", () => {
     expect(x2go).toMatchObject({
       username: "x-user",
       password: "x-pass",
+    });
+  });
+
+  it("snapshots SSH auth from a credential shared with the host owner", async () => {
+    state.credentials.set(123, {
+      id: 123,
+      userId: "cred-owner",
+      sharedWith: ["owner"],
+      username: "cred-user",
+      authType: "password",
+      password: "cred-pass",
+      privateKey: null,
+      key: null,
+      keyPassword: null,
+      keyType: null,
+    });
+    state.hosts.set(
+      42,
+      baseHost({
+        authType: "credential",
+        credentialId: 123,
+        shareSshAuth: true,
+        password: null,
+      }),
+    );
+
+    await manager.snapshotForUser(7, 42, "target", "owner");
+
+    expect(state.secretRows.map((row) => row.protocol)).toEqual(["ssh"]);
+    expect(await manager.getSecretForUser(42, "target", "ssh")).toMatchObject({
+      username: "cred-user",
+      authType: "password",
+      password: "cred-pass",
     });
   });
 
