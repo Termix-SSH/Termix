@@ -12,6 +12,7 @@
 ### Fixed
 
 - The log line for a rejected proxy login now shows the source address, so you can add it to TRUSTED_PROXY_AUTH_TRUSTED_PROXIES
+- Deleting your own account now removes all of its data, like an admin delete does, instead of leaving some behind
 
 ## 26.10.5
 
