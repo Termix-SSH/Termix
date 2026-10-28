@@ -6,7 +6,14 @@ import type { PluginSummary } from "@/api/plugins-api";
 vi.mock("@/main-axios", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/main-axios")>()),
   getSSHHosts: vi.fn(async () => [
-    { id: 7, name: "web-01", ip: "10.0.0.7", port: 22, username: "root" },
+    {
+      id: 7,
+      name: "web-01",
+      ip: "10.0.0.7",
+      port: 22,
+      username: "root",
+      pluginSettings: { gizmo: { enableGizmo: true } },
+    },
   ]),
 }));
 
@@ -59,8 +66,19 @@ function Home() {
   );
 }
 
-function HostView({ host }: { host?: { name: string } }) {
-  return <p>host view: {host?.name ?? "none"}</p>;
+function HostView({
+  host,
+  sshHost,
+}: {
+  host?: { name: string };
+  sshHost?: { pluginSettings?: { gizmo?: { enableGizmo?: boolean } } };
+}) {
+  const on = sshHost?.pluginSettings?.gizmo?.enableGizmo === true;
+  return (
+    <p>
+      host view: {host?.name ?? "none"} {on ? "on" : "off"}
+    </p>
+  );
 }
 
 const module = {
@@ -159,7 +177,7 @@ describe("startPluginFrame", () => {
         shell: makeShell(),
       }),
     );
-    await waitFor(() => screen.getByText("host view: web-01"));
+    await waitFor(() => screen.getByText("host view: web-01 on"));
     act(() => frame!.setView({ view: "gizmo-home" }));
     await waitFor(() => screen.getByText("hosts: web-01"));
     act(() => frame!.setTheme({ id: "nord", mode: "dark" }));

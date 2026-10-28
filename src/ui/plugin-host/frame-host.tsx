@@ -20,6 +20,7 @@ import { getTabType, type TabRenderProps } from "@/shell/tab-registry";
 import { getPanel } from "@/shell/panel-registry";
 import { getSSHHosts } from "@/main-axios";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
+import { hostToSSHHost } from "@/lib/host-to-ssh-host";
 import type { Host, Tab } from "@/types/ui-types";
 import { createPluginApp } from "./app";
 import { installPluginHostBridge } from "./bridge";
@@ -150,6 +151,11 @@ function FrameBody({
         key={`${view.view}:${view.hostId ?? ""}:${version}`}
         tab={record}
         host={host}
+        sshHost={
+          host
+            ? (hostToSSHHost(host) as unknown as Record<string, unknown>)
+            : undefined
+        }
         label={view.view}
         isVisible
         isFocusedPane
