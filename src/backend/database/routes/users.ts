@@ -318,7 +318,7 @@ router.post("/proxy-login", async (req, res) => {
   try {
     if (!isTrustedProxyAddress(sourceAddress, config.trustedProxies)) {
       authLogger.warn(
-        "Rejected proxy authentication from an untrusted source",
+        `Rejected proxy authentication from an untrusted source: ${sourceAddress ?? "unknown"}`,
         {
           operation: "trusted_proxy_auth_rejected",
           sourceAddress,

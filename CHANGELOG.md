@@ -9,6 +9,10 @@
 - The plugin list tells the mobile app which plugin API each plugin needs, so the app can say when it or a plugin needs an update
 - Hosts can have a color and an icon, which sync to the desktop and mobile apps
 
+### Fixed
+
+- The log line for a rejected proxy login now shows the source address, so you can add it to TRUSTED_PROXY_AUTH_TRUSTED_PROXIES
+
 ## 26.10.5
 
 ### Added
