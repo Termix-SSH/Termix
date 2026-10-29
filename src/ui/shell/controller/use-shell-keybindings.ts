@@ -208,11 +208,12 @@ export function useShellKeybindings({
         return;
       }
 
-      // Cmd+1..9 on macOS, Alt+1..9 elsewhere: jump directly to the tab at that position
+      // Cmd+1..9 on macOS, Alt+1..9 elsewhere: jump directly to the tab at that
+      // position. The home tab has its own button, so the count starts after it.
       const tabDigit = getTabJumpDigit(e);
       if (tabDigit !== null) {
         const currentTabs = tabsRef.current.filter(
-          (tab) => !tab.parentSplitTabId,
+          (tab) => !tab.parentSplitTabId && tab.type !== "dashboard",
         );
         const index = tabDigit - 1;
         if (index < currentTabs.length) {

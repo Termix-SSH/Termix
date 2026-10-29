@@ -17,6 +17,7 @@
 - An SSH key with a passphrase is unlocked once and kept unlocked in memory for a short time, so connecting to many hosts with it no longer freezes the server for minutes
 - A change pushed from one linked desktop or phone now reaches your other linked devices right away, instead of on their next check a few minutes later
 - The macOS menu bar icon shows the Termix logo instead of an empty square
+- Cmd+1 (Alt+1 on Windows and Linux) and the other number shortcuts pick the open tabs as numbered in the tab bar, not the home tab
 
 ## 26.10.5
 
