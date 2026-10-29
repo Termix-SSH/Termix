@@ -8,7 +8,7 @@ const state = vi.hoisted(() => ({
     isShared: true,
     isAdminBypass: false,
   },
-  credentialOwned: true,
+  credentialUsable: true,
   credentialId: 7 as number | null,
   writes: [] as Array<{ protocol: string; credentialId: number | null }>,
   auditCalls: [] as Array<Record<string, unknown>>,
@@ -70,11 +70,12 @@ vi.mock("../../../utils/permission-manager.js", () => ({
   },
 }));
 
+vi.mock("../../../hosts/usable-credential.js", () => ({
+  findUsableCredential: async (credentialId: number) =>
+    state.credentialUsable ? { id: credentialId } : null,
+}));
+
 vi.mock("../../../database/repositories/factory.js", () => ({
-  createCurrentCredentialRepository: () => ({
-    findByIdForUser: async () =>
-      state.credentialOwned ? { id: state.credentialId } : null,
-  }),
   createCurrentSharedHostAuthOverrideRepository: () => ({
     findCredentialId: async () => state.credentialId,
     setCredential: async (
@@ -206,7 +207,7 @@ describe("shared host authentication override routes", () => {
       isShared: true,
       isAdminBypass: false,
     };
-    state.credentialOwned = true;
+    state.credentialUsable = true;
     state.credentialId = 7;
     state.writes = [];
     state.auditCalls = [];
@@ -254,7 +255,7 @@ describe("shared host authentication override routes", () => {
     const invalidResponse = await invoke("put", { credentialId: 0 });
     expect(invalidResponse.status).toBe(400);
 
-    state.credentialOwned = false;
+    state.credentialUsable = false;
     const foreignResponse = await invoke("put", { credentialId: 99 });
     expect(foreignResponse.status).toBe(404);
 

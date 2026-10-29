@@ -6,6 +6,7 @@ const state = vi.hoisted(() => ({
   isAdminBypass: false,
   overrideCredentialId: null as number | null,
   credentials: new Map<string, Record<string, unknown>>(),
+  sharedCredentials: new Map<string, Record<string, unknown>>(),
   auditCalls: [] as Record<string, unknown>[],
   sharedSecret: null as Record<string, unknown> | null,
   activeHostAccessId: null as number | null,
@@ -35,6 +36,13 @@ vi.mock("../../database/repositories/factory.js", () => ({
         ? { id: state.activeHostAccessId }
         : null,
   }),
+}));
+
+vi.mock("../../hosts/usable-credential.js", () => ({
+  findUsableCredential: async (credentialId: number, userId: string) =>
+    state.credentials.get(`${credentialId}:${userId}`) ??
+    state.sharedCredentials.get(`${credentialId}:${userId}`) ??
+    null,
 }));
 
 vi.mock("../../utils/audit-logger.js", () => ({
@@ -125,6 +133,7 @@ beforeEach(() => {
   state.isAdminBypass = false;
   state.overrideCredentialId = null;
   state.credentials.clear();
+  state.sharedCredentials.clear();
   state.auditCalls = [];
   state.sharedSecret = null;
   state.activeHostAccessId = null;
@@ -374,6 +383,61 @@ describe("resolveHostById", () => {
       unknown
     >;
     expect(host.username).toBe("shared-login");
+  });
+
+  it("uses a credential shared with the recipient as their personal override", async () => {
+    state.overrideCredentialId = 7;
+    state.sharedCredentials.set("7:recipient", {
+      id: 7,
+      username: "shared-cred-user",
+      password: "shared-cred-pass",
+      privateKey: null,
+      key: null,
+      keyPassword: null,
+      keyType: null,
+    });
+
+    const host = (await resolveHostById(42, "recipient")) as Record<
+      string,
+      unknown
+    >;
+    expect(host.username).toBe("shared-cred-user");
+    expect(host.password).toBe("shared-cred-pass");
+  });
+
+  it("uses the host's credential when it is also shared with the recipient", async () => {
+    state.host = baseHost({
+      authType: "credential",
+      password: null,
+      credentialId: 1,
+    });
+    state.sharedCredentials.set("1:recipient", {
+      id: 1,
+      username: "deploy",
+      password: null,
+      privateKey: "OWNER-KEY-COPY",
+      key: null,
+      keyPassword: null,
+      keyType: "ssh-ed25519",
+    });
+
+    const host = (await resolveHostById(42, "recipient")) as Record<
+      string,
+      unknown
+    >;
+    expect(host.authType).toBe("key");
+    expect(host.key).toBe("OWNER-KEY-COPY");
+    expect(host.username).toBe("deploy");
+  });
+
+  it("denies a recipient when the host's credential is not shared with them", async () => {
+    state.host = baseHost({
+      authType: "credential",
+      password: null,
+      credentialId: 1,
+    });
+
+    expect(await resolveHostById(42, "recipient")).toBeNull();
   });
 
   it("denies a non-owner when a secret-bearing host has no personal credential", async () => {
