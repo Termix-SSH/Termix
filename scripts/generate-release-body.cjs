@@ -45,6 +45,18 @@ function buildTable(version, mobileVersion, mobileTag) {
   ].join("\n");
 }
 
+function buildFullBuilds(version) {
+  const base = `https://github.com/Termix-SSH/Termix/releases/download/v${version}`;
+  const link = (label, file) => `[${label}](${base}/${file})`;
+  return [
+    "The builds above include the standard plugins. The full builds include every official plugin, which helps on a network with no internet. You can still turn plugins on or off in the Plugins tab. Full builds are x64 only (universal on Mac):",
+    "",
+    `- Windows: ${link("EXE", "termix_windows_x64_full_nsis.exe")}`,
+    `- Linux: ${link("AppImage", "termix_linux_x64_full_appimage.AppImage")} · ${link("DEB", "termix_linux_x64_full_deb.deb")}`,
+    `- Mac: ${link("DMG", "termix_macos_universal_full_dmg.dmg")}`,
+  ].join("\n");
+}
+
 function buildBody({ version, mobileVersion, mobileTag, changelog }) {
   const notes = changelogSection(changelog, version);
   if (!notes) fail(`CHANGELOG.md has no notes for ${version}`);
@@ -62,6 +74,8 @@ function buildBody({ version, mobileVersion, mobileTag, changelog }) {
     "### Downloads",
     "",
     buildTable(version, mobileVersion, mobileTag),
+    "",
+    buildFullBuilds(version),
   ].join("\n");
 }
 

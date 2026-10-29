@@ -34,6 +34,18 @@ describe("buildBody", () => {
     );
   });
 
+  it("links the full builds", () => {
+    const body = buildBody({
+      version: "26.10.0",
+      mobileVersion: "1.2.0",
+      changelog: CHANGELOG,
+    });
+    expect(body).toContain("v26.10.0/termix_windows_x64_full_nsis.exe");
+    expect(body).toContain("v26.10.0/termix_linux_x64_full_appimage.AppImage");
+    expect(body).toContain("v26.10.0/termix_linux_x64_full_deb.deb");
+    expect(body).toContain("v26.10.0/termix_macos_universal_full_dmg.dmg");
+  });
+
   it("works for the real changelog", () => {
     const fs = require("fs");
     const body = buildBody({

@@ -127,15 +127,15 @@ Want to build your own? Start from the [plugin template](https://github.com/Term
 </tr>
 <tr>
 <td align="center"><b>Windows</b> <sub>x64/ia32</sub></td>
-<td>Portable | EXE and MSI Installer | Chocolatey</td>
+<td>Portable | EXE and MSI Installer | Full EXE (all plugins) | Chocolatey</td>
 </tr>
 <tr>
 <td align="center"><b>Linux</b> <sub>x64/arm64/armv7l</sub></td>
-<td>Portable | AUR | AppImage | Deb | Flatpak</td>
+<td>Portable | AUR | AppImage | Deb | Full AppImage and Deb (all plugins) | Flatpak</td>
 </tr>
 <tr>
 <td align="center"><b>macOS</b> <sub>Universal/x64/arm64, v12.0+</sub></td>
-<td>Apple App Store | DMG | Homebrew</td>
+<td>Apple App Store | DMG | Full DMG (all plugins) | Homebrew</td>
 </tr>
 <tr>
 <td align="center"><b>iOS/iPadOS</b> <sub>v15.1+</sub></td>
