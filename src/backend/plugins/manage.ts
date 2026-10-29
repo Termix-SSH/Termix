@@ -1048,7 +1048,15 @@ export function restoreMissingPlugins(): Promise<LoadedPlugin[]> {
       await readUninstalled(),
     );
     const restored: LoadedPlugin[] = [];
-    for (const id of ids) {
+    // Shown on the Plugins tab, so a plugin that could not be fetched is not
+    // listed as working. It stays on and is tried again on the next start.
+    const markMissing = (id: string, message: string) =>
+      recordState(
+        id,
+        "failed",
+        `Not in this image and could not be downloaded: ${message}`,
+      ).catch(() => {});
+    for (const [index, id] of ids.entries()) {
       try {
         const record = await repository.findById(id);
         const { source, release } = await requireRelease(
@@ -1075,11 +1083,14 @@ export function restoreMissingPlugins(): Promise<LoadedPlugin[]> {
         pluginLogger.warn(`Could not restore ${id}: ${message}`, {
           operation: "plugin_restore_missing",
         });
+        await markMissing(id, message);
         // The registry is down or offline, so the rest would fail the same way.
         if (
           error instanceof PluginManageError &&
           error.code === "REGISTRY_UNREACHABLE"
         ) {
+          for (const rest of ids.slice(index + 1))
+            await markMissing(rest, message);
           break;
         }
       }

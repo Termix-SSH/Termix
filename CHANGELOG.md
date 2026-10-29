@@ -18,6 +18,7 @@
 - A change pushed from one linked desktop or phone now reaches your other linked devices right away, instead of on their next check a few minutes later
 - The macOS menu bar icon shows the Termix logo instead of an empty square
 - Cmd+1 (Alt+1 on Windows and Linux) and the other number shortcuts pick the open tabs as numbered in the tab bar, not the home tab
+- A plugin the app no longer ships and could not download (for example on a locked down network) shows as failed with the reason on the Plugins tab, instead of as installed
 
 ## 26.10.5
 
