@@ -591,7 +591,7 @@
     "showFolderPaths": "Show folder paths",
     "showFolderPathsDesc": "Show the parent folder path above nested subfolder names. Subfolders stay indented either way.",
     "stripedRows": "Alternating row colors",
-    "stripedRowsDesc": "Shade every other row in the host and login lists",
+    "stripedRowsDesc": "Shade every other row in the host list",
     "rowDetailsTitle": "Row details",
     "rowDetailsDesc": "Choose what shows on each host.",
     "showAddress": "Address",
