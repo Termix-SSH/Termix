@@ -580,9 +580,18 @@ function watchPlugins(dir) {
     queue(() => rebuildPlugin(byId.get(id))),
   );
   for (const plugin of plugins) {
-    watch(plugin.repo, true, (_event, filename) => {
-      if (isPluginEdit(plugin.repo, filename)) changed(plugin.id);
-    });
+    // Only source folders, so node_modules and .git are never watched
+    const onEvent = (prefix) => (_event, filename) => {
+      const name = prefix
+        ? path.join(prefix, String(filename ?? ""))
+        : filename;
+      if (isPluginEdit(plugin.repo, name)) changed(plugin.id);
+    };
+    watch(plugin.repo, false, onEvent(""));
+    for (const sub of ["src", "locales", "migrations"]) {
+      const target = path.join(plugin.repo, sub);
+      if (fs.existsSync(target)) watch(target, true, onEvent(sub));
+    }
   }
   log(`watching ${plugins.length} plugin(s) in ${dir}`);
 }
