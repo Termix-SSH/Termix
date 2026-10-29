@@ -288,9 +288,7 @@
       "onboarding": {
         "recommended": false,
         "consent": false,
-        "enabledByEnv": [
-          "OIDC_CLIENT_ID"
-        ]
+        "enabledByEnv": ["OIDC_CLIENT_ID"]
       }
     },
     {
