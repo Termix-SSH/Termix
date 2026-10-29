@@ -12,6 +12,10 @@
 - TERMIX_NGINX_TEMPLATE, TERMIX_NGINX_CONF, TERMIX_NGINX_PID and TERMIX_APP_DIR let an install outside Docker, like the Proxmox LXC script, switch nginx to HTTPS when a certificate is added
 - Removing a user or role from a shared folder can also remove their access from every host in the folder and its subfolders
 
+### Changed
+
+- body-parser is updated to 2.4.0 for a security fix
+
 ### Fixed
 
 - The log line for a rejected proxy login now shows the source address, so you can add it to TRUSTED_PROXY_AUTH_TRUSTED_PROXIES
@@ -24,6 +28,8 @@
 - The desktop app no longer shows This layout could not be shown when the layout is asked for before its plugin has finished starting; it tries again
 - On the desktop, a plugin installed from the registry that uses core's packages through require (like ACME SSL and axios) starts instead of failing with Cannot find module
 - Adding a certificate on an install where Termix cannot manage nginx says what to set instead of only asking for a restart
+- A login someone shared with you works on a host shared with you, for personal SSH authentication and when the owner shares SSH authentication
+- Lists in plugins (like the AI Assets table) use their full width on narrow screens, keep cells under the right header and no longer overlap rows
 
 ## 26.10.5
 
