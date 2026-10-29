@@ -425,6 +425,11 @@ export interface RailItemContribution {
    * Zero or nothing shows no badge.
    */
   useBadge?: () => number | null | undefined;
+  /**
+   * A hook for a small status dot on the icon: "ok" (green), "warning" or
+   * "error". Nothing shows no dot. Layouts from Termix 26.10.6 draw it.
+   */
+  useStatus?: () => "ok" | "warning" | "error" | null | undefined;
 }
 
 export interface PanelProps {
