@@ -85,13 +85,47 @@ function absolute(url: string): string {
   return new URL(url, window.location.href).href;
 }
 
+const IMPORT_RETRY_DELAYS_MS = [500, 1500, 3000];
+
+/**
+ * A bundle asked for while its plugin is still starting (a slow desktop boot)
+ * answers 404, and the browser then keeps that failure for the URL. So a
+ * failed import is tried again a few times, each under a new URL.
+ */
+export async function importWithRetry<T>(
+  url: string,
+  load: (url: string) => Promise<T>,
+  sleep: (ms: number) => Promise<void> = (ms) =>
+    new Promise((resolve) => setTimeout(resolve, ms)),
+): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    const next =
+      attempt === 0
+        ? url
+        : `${url}${url.includes("?") ? "&" : "?"}retry=${attempt}`;
+    try {
+      return await load(next);
+    } catch (error) {
+      // A bundle that loaded but threw is broken, not late.
+      const fetchFailed =
+        error instanceof TypeError &&
+        /dynamically imported module|importing a module script/i.test(
+          error.message,
+        );
+      if (!fetchFailed || attempt >= IMPORT_RETRY_DELAYS_MS.length) throw error;
+      await sleep(IMPORT_RETRY_DELAYS_MS[attempt]);
+    }
+  }
+}
+
 const defaultDeps: PluginLoaderDeps = {
   fetchPlugins: getPlugins,
 
   async importFrontend(summary) {
-    return (await import(
-      /* @vite-ignore */ absolute(assetUrl(summary, "frontend.js"))
-    )) as FrontendModule;
+    return importWithRetry(
+      absolute(assetUrl(summary, "frontend.js")),
+      (url) => import(/* @vite-ignore */ url) as Promise<FrontendModule>,
+    );
   },
 
   async loadLocale(summary, file) {
