@@ -9,6 +9,7 @@
 - The plugin list tells the mobile app which plugin API each plugin needs, so the app can say when it or a plugin needs an update
 - Hosts can have a color and an icon, which sync to the desktop and mobile apps
 - A sidebar setting to turn off alternating row colors
+- TERMIX_NGINX_TEMPLATE, TERMIX_NGINX_CONF, TERMIX_NGINX_PID and TERMIX_APP_DIR let an install outside Docker, like the Proxmox LXC script, switch nginx to HTTPS when a certificate is added
 
 ### Fixed
 
@@ -21,6 +22,7 @@
 - A plugin the app no longer ships and could not download (for example on a locked down network) shows as failed with the reason on the Plugins tab, instead of as installed
 - The desktop app no longer shows This layout could not be shown when the layout is asked for before its plugin has finished starting; it tries again
 - On the desktop, a plugin installed from the registry that uses core's packages through require (like ACME SSL and axios) starts instead of failing with Cannot find module
+- Adding a certificate on an install where Termix cannot manage nginx says what to set instead of only asking for a restart
 
 ## 26.10.5
 

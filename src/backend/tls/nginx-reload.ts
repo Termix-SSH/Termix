@@ -3,9 +3,40 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 import path from "path";
 import { authLogger } from "../utils/logger.js";
 
-const NGINX_TEMPLATE = "/app/nginx/nginx-https.conf.template";
-const NGINX_CONF = "/tmp/nginx/nginx.conf";
-const NGINX_PID = "/tmp/nginx/nginx.pid";
+// The Docker image's paths. An install outside Docker (a Proxmox LXC script,
+// a source checkout) points these at its own nginx instead.
+const nginxTemplate = () =>
+  process.env.TERMIX_NGINX_TEMPLATE || "/app/nginx/nginx-https.conf.template";
+const nginxConf = () =>
+  process.env.TERMIX_NGINX_CONF || "/tmp/nginx/nginx.conf";
+const nginxPid = () => process.env.TERMIX_NGINX_PID || "/tmp/nginx/nginx.pid";
+
+/** The template with Termix's own folder in place of the image's /app. */
+export function renderNginxTemplate(
+  template: string,
+  values: {
+    port: string;
+    sslPort: string;
+    certPath: string;
+    keyPath: string;
+    appDir?: string;
+  },
+): string {
+  let rendered = template
+    .split("${PORT}")
+    .join(values.port)
+    .split("${SSL_PORT}")
+    .join(values.sslPort)
+    .split("${SSL_CERT_PATH}")
+    .join(values.certPath)
+    .split("${SSL_KEY_PATH}")
+    .join(values.keyPath);
+  const appDir = values.appDir?.replace(/\/+$/, "");
+  if (appDir && appDir !== "/app") {
+    rendered = rendered.replace(/(^|[\s;])\/app\//gm, `$1${appDir}/`);
+  }
+  return rendered;
+}
 
 const DATA_DIR = process.env.DATA_DIR || "./db/data";
 const SSL_DIR = path.join(DATA_DIR, "ssl");
@@ -51,11 +82,13 @@ export function persistSSLEnv(
  * restart. No-ops outside the Docker image (template/binary won't exist).
  */
 export function reloadNginxWithSSL(): { applied: boolean; message: string } {
-  if (!existsSync(NGINX_TEMPLATE) || !existsSync(NGINX_PID)) {
+  const NGINX_TEMPLATE = nginxTemplate();
+  const NGINX_CONF = nginxConf();
+  if (!existsSync(NGINX_TEMPLATE) || !existsSync(nginxPid())) {
     return {
       applied: false,
       message:
-        "nginx is not managed by this environment; restart Termix with ENABLE_SSL=true to apply the certificate.",
+        "Termix could not find the nginx it runs with, so HTTPS is not on yet. In Docker, restart Termix with ENABLE_SSL=true. On another install, set TERMIX_NGINX_TEMPLATE, TERMIX_NGINX_CONF and TERMIX_NGINX_PID (and TERMIX_APP_DIR if it is not /app), or add a listen 443 ssl block with this certificate to your nginx config.",
     };
   }
 
@@ -66,16 +99,13 @@ export function reloadNginxWithSSL(): { applied: boolean; message: string } {
   const keyPath = process.env.SSL_KEY_PATH || path.join(SSL_DIR, "termix.key");
 
   try {
-    const template = readFileSync(NGINX_TEMPLATE, "utf8");
-    const rendered = template
-      .split("${PORT}")
-      .join(port)
-      .split("${SSL_PORT}")
-      .join(sslPort)
-      .split("${SSL_CERT_PATH}")
-      .join(certPath)
-      .split("${SSL_KEY_PATH}")
-      .join(keyPath);
+    const rendered = renderNginxTemplate(readFileSync(NGINX_TEMPLATE, "utf8"), {
+      port,
+      sslPort,
+      certPath,
+      keyPath,
+      appDir: process.env.TERMIX_APP_DIR,
+    });
 
     writeFileSync(NGINX_CONF, rendered);
 
