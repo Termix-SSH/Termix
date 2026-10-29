@@ -643,11 +643,24 @@ export interface PluginUploadPreview {
   features?: string[];
   capabilities: string[];
   replaces: string | null;
+  official?: boolean;
 }
 
-export async function uploadPlugin(file: Blob): Promise<PluginUploadPreview> {
+export async function uploadPlugin(
+  file: Blob,
+  signature?: string,
+): Promise<PluginUploadPreview> {
   const response = await rbacApi.post("/plugins/upload", file, {
-    headers: { "Content-Type": "application/octet-stream" },
+    headers: {
+      "Content-Type": "application/octet-stream",
+      ...(signature
+        ? {
+            "X-Termix-Plugin-Signature": btoa(
+              String.fromCharCode(...new TextEncoder().encode(signature)),
+            ),
+          }
+        : {}),
+    },
   });
   return response.data;
 }

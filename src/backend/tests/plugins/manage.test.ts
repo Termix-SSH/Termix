@@ -902,6 +902,57 @@ describe("installing from a file", () => {
     expect(db.rows.get("notes")?.tier).toBe(manage.UNVERIFIED_TIER);
   });
 
+  it("refuses a signature that does not match the file", async () => {
+    await boot();
+    await manage.setDeveloperMode(true);
+    await expect(
+      manage.stageUpload(await artifactBuffer("notes"), "bm90IGEgc2ln"),
+    ).rejects.toMatchObject({ code: "INVALID_SIGNATURE" });
+  });
+
+  it("keeps a signature from a non official key unverified", async () => {
+    const { setCustomPluginKeys } = await import("../../plugins/trust.js");
+    const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519");
+    setCustomPluginKeys([
+      {
+        id: "mine",
+        publicKey: publicKey
+          .export({ format: "der", type: "spki" })
+          .subarray(12)
+          .toString("base64"),
+        addedIn: "26.10.6",
+      },
+    ]);
+    try {
+      await boot();
+      await manage.setDeveloperMode(true);
+      setCustomPluginKeys([
+        {
+          id: "mine",
+          publicKey: publicKey
+            .export({ format: "der", type: "spki" })
+            .subarray(12)
+            .toString("base64"),
+          addedIn: "26.10.6",
+        },
+      ]);
+      const buffer = await artifactBuffer("notes");
+      const digest = crypto.createHash("sha256").update(buffer).digest();
+      const signature = crypto
+        .sign(null, digest, privateKey)
+        .toString("base64");
+      const preview = await manage.stageUpload(buffer, signature);
+      expect(preview.official).toBe(false);
+      await manage.installUpload(preview.token, {
+        userId: "admin",
+        capabilities: preview.capabilities,
+      });
+      expect(db.rows.get("notes")?.tier).toBe(manage.UNVERIFIED_TIER);
+    } finally {
+      setCustomPluginKeys([]);
+    }
+  });
+
   it("refuses a file that is not a plugin archive", async () => {
     await boot();
     await manage.setDeveloperMode(true);

@@ -2706,6 +2706,10 @@ router.put(
  *     summary: Upload a .tmxplug to install from a file
  *     description: >
  *       Developer mode only. The body is the raw .tmxplug (at most 50 MB).
+       The release's .sig may come base64 encoded in the
+       X-Termix-Plugin-Signature header; an official one makes the file
+       install as an official plugin, and it may then fill in a plugin
+       whose download failed.
  *       The file is checked (archive, manifest, plugin API) and held for 30
  *       minutes, but nothing is loaded. The answer lists what it asks for so
  *       the admin can agree, then POST /plugins/upload/{token}/install
@@ -2751,7 +2755,13 @@ router.post(
     }
     try {
       const { stageUpload } = await import("../../plugins/manage.js");
-      res.json(await stageUpload(req.body));
+      // The release's .sig, base64 encoded, so an official file installs as
+      // official (and may write the tables its 2.8 version left).
+      const header = req.get("x-termix-plugin-signature");
+      const signature = header
+        ? Buffer.from(header, "base64").toString("utf8")
+        : null;
+      res.json(await stageUpload(req.body, signature));
     } catch (error) {
       sendManageError(
         res,

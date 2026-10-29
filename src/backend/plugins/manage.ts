@@ -73,7 +73,7 @@ import {
   pluginFeatures,
   type PluginManifest,
 } from "./manifest.js";
-import { requireSignedPlugins } from "./trust.js";
+import { requireSignedPlugins, verifyAnyTrusted } from "./trust.js";
 import {
   parseChangelog,
   parseReleaseNotes,
@@ -1525,6 +1525,8 @@ interface StagedUpload {
   file: string;
   manifest: PluginManifest;
   expiresAt: number;
+  /** Set when the upload came with a .sig an official key made. */
+  official: boolean;
 }
 
 const uploads = new Map<string, StagedUpload>();
@@ -1548,6 +1550,29 @@ export interface UploadPreview {
   capabilities: string[];
   /** The version of an earlier upload this one replaces. */
   replaces: string | null;
+  /** The .sig sent with it was made by the official Termix key. */
+  official: boolean;
+}
+
+/**
+ * Checks a .sig sent with an upload. An official signature makes the file
+ * the same as a registry download, so it may stand in for one that could not
+ * be fetched (an offline install). Anything else is refused.
+ */
+function checkUploadSignature(
+  buffer: Buffer,
+  signature: string,
+): { official: boolean } {
+  const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
+  const result = verifyAnyTrusted(buffer, sha256, signature);
+  if (result.ok === false) {
+    throw new PluginManageError(
+      `The signature does not match this file: ${result.reason}`,
+      400,
+      "INVALID_SIGNATURE",
+    );
+  }
+  return { official: result.tier === "official" };
 }
 
 async function assertUploadsAllowed(): Promise<void> {
@@ -1604,9 +1629,17 @@ function validateUpload(buffer: Buffer): PluginManifest {
   return manifest;
 }
 
-/** Only another upload of the same id can be replaced from a file. */
-async function assertReplaceable(pluginId: string): Promise<string | null> {
+/**
+ * Only another upload of the same id can be replaced from a file. An
+ * officially signed file may also fill in a plugin whose code is missing, like
+ * one that was on but could not be downloaded.
+ */
+async function assertReplaceable(
+  pluginId: string,
+  official = false,
+): Promise<string | null> {
   const { loader } = getPluginRuntime();
+  if (official && !loader.get(pluginId)) return null;
   if (loader.bundledIds().has(pluginId)) {
     throw new PluginManageError(
       `${pluginId} ships with Termix and can only be replaced by a signed release`,
@@ -1631,21 +1664,30 @@ async function assertReplaceable(pluginId: string): Promise<string | null> {
  * Checks an uploaded .tmxplug and holds it until the admin agrees to what
  * it asks for. Nothing is loaded yet.
  */
-export async function stageUpload(buffer: Buffer): Promise<UploadPreview> {
+export async function stageUpload(
+  buffer: Buffer,
+  signature: string | null = null,
+): Promise<UploadPreview> {
   await assertUploadsAllowed();
   await clearUploads(Date.now());
   const manifest = validateUpload(buffer);
-  const replaces = await assertReplaceable(manifest.id);
+  const { official } = signature
+    ? checkUploadSignature(buffer, signature)
+    : { official: false };
+  const replaces = await assertReplaceable(manifest.id, official);
 
   const token = crypto.randomBytes(16).toString("hex");
   const dir = getDownloadsDir();
   await fs.promises.mkdir(dir, { recursive: true });
   const file = path.join(dir, `upload-${token}.tmxplug`);
   await fs.promises.writeFile(file, buffer);
+  // Next to the file, where the loader looks for it.
+  if (signature) await fs.promises.writeFile(`${file}.sig`, signature);
   uploads.set(token, {
     file,
     manifest,
     expiresAt: Date.now() + UPLOAD_TTL_MS,
+    official,
   });
 
   return {
@@ -1658,6 +1700,7 @@ export async function stageUpload(buffer: Buffer): Promise<UploadPreview> {
     features: pluginFeatures(manifest.features),
     capabilities: [...manifest.capabilities],
     replaces,
+    official,
   };
 }
 
@@ -1687,7 +1730,7 @@ export function installUpload(
       );
     }
     assertConsent(options.capabilities, manifest.capabilities);
-    await assertReplaceable(pluginId);
+    await assertReplaceable(pluginId, upload.official);
 
     const { createCurrentPluginRepository } = await repos();
     const repository = createCurrentPluginRepository();
@@ -1700,6 +1743,7 @@ export function installUpload(
       plugin = await swapIn(pluginId, { upload: upload.file });
     } catch (error) {
       await fs.promises.rm(upload.file, { force: true });
+      await fs.promises.rm(`${upload.file}.sig`, { force: true });
       const { loader } = getPluginRuntime();
       if (before && wasEnabled && loader.get(pluginId)) {
         await startAndRecord(pluginId);
@@ -1712,7 +1756,7 @@ export function installUpload(
     }
 
     await repository.update(pluginId, {
-      tier: UNVERIFIED_TIER,
+      tier: upload.official ? "official" : UNVERIFIED_TIER,
       registryId: null,
       pinnedVersion: null,
       autoUpdate: false,
@@ -1736,7 +1780,7 @@ export function installUpload(
     }
     const state = await startAndRecord(pluginId);
     pluginLogger.warn(
-      `Installed unverified plugin ${pluginId}@${manifest.version} from a file`,
+      `Installed ${upload.official ? "officially signed" : "unverified"} plugin ${pluginId}@${manifest.version} from a file`,
       { operation: "plugin_install" },
     );
     return { id: pluginId, version: manifest.version, state };

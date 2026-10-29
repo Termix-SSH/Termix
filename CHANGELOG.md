@@ -30,6 +30,7 @@
 - Adding a certificate on an install where Termix cannot manage nginx says what to set instead of only asking for a restart
 - A login someone shared with you works on a host shared with you, for personal SSH authentication and when the owner shares SSH authentication
 - Lists in plugins (like the AI Assets table) use their full width on narrow screens, keep cells under the right header and no longer overlap rows
+- Installing an official plugin from a file works offline: pick the .tmxplug and its .sig from the release together and it installs as official, so plugins like Fleets no longer stop with migration refused. It can also fill in a plugin that was on but could not be downloaded
 
 ## 26.10.5
 

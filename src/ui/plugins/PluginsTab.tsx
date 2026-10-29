@@ -983,12 +983,16 @@ function UploadButton({ manager }: { manager: PluginsManager }) {
       <input
         ref={input}
         type="file"
-        accept=".tmxplug"
+        accept=".tmxplug,.sig"
+        multiple
         className="hidden"
         onChange={(e) => {
-          const file = e.target.files?.[0];
+          // A release's .sig can be picked with it, so it installs as official.
+          const files = [...(e.target.files ?? [])];
           e.target.value = "";
-          if (file) void manager.requestUpload(file);
+          const file = files.find((f) => f.name.endsWith(".tmxplug"));
+          const signature = files.find((f) => f.name.endsWith(".sig"));
+          if (file) void manager.requestUpload(file, signature);
         }}
       />
       <Button
