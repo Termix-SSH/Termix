@@ -9,6 +9,7 @@ Plugin API 1.13.0.
 - `contributes.mobile` in the manifest says how a plugin shows in the Termix mobile app: `webview`, `native` or `none`, with an optional mobile bundle, screen sizes, views and a note
 - `termix-plugin build` bundles `src/mobile` into the `contributes.mobile.entry` file, and `validate` checks that it exists
 - `@termix-ssh/plugin-sdk/frame-host` runs one plugin view outside the shell, with core's bridge, registries and CSS, so the mobile app can show `webview` plugins
+- SSH transport providers get the host's owner, sync id, connection origin and local only flag in `claims` and `open`, and core's SSH relay takes a `syncId` instead of a host id
 
 ### Fixed
 

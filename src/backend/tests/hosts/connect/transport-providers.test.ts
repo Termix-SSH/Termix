@@ -37,6 +37,29 @@ afterEach(() => {
 });
 
 describe("ssh transport providers", () => {
+  it("tells providers the owner, sync id and origin of the host", async () => {
+    const claims = vi.fn(() => false);
+    provideSshTransport("a", { claims, open: vi.fn() });
+    await openSshTransport(
+      {
+        ...host,
+        userId: "u1",
+        syncId: "s1",
+        connectionOrigin: "remote",
+      } as never,
+      {} as never,
+    ).catch(() => {});
+    expect(claims).toHaveBeenCalledWith(7, {
+      id: 7,
+      ip: "10.0.0.7",
+      port: 22,
+      userId: "u1",
+      syncId: "s1",
+      connectionOrigin: "remote",
+      localOnly: false,
+    });
+  });
+
   it("opens nothing when no provider claims the host", async () => {
     provideSshTransport("a", { claims: () => false, open: vi.fn() });
     expect(await openProvidedTransport(host)).toBeNull();

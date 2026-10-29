@@ -346,7 +346,7 @@ router.post("/notes", async (req, res) => {
 - `ctx.rbac.require("manage")` on a single route, `await ctx.rbac.has("manage")` in code. A full id like
   `hosts.edit` checks a core permission.
 - Host access: `ctx.hosts.checkAccess(hostId, "connect" | "view" | "edit" | "manage")`.
-- Transports: with `ssh:transport`, `ctx.ssh.transports.provide({ claims(hostId), open({ id, ip, port }) })`
+- Transports: with `ssh:transport`, `ctx.ssh.transports.provide({ claims(hostId, host), open(host) })`, where `host` has `id`, `ip`, `port` and on Termix 26.10.6+ also `userId`, `syncId`, `connectionOrigin` and `localOnly`
   returns a stream the SSH client uses instead of a direct, proxy or jump host connection. Core also serves
   `/plugin-ws/core/ssh-relay?hostId=` for callers with connect access, so one Termix can relay to another.
 - Managed hosts: with `hosts:lock`, `ctx.hosts.locks.provide({ isLocked, note, allowManualCreate })` makes

@@ -24,6 +24,9 @@ export interface SshConnectHost {
   port: number;
   username: string;
   userId?: string | null;
+  syncId?: string | null;
+  connectionOrigin?: "local" | "remote" | null;
+  localOnly?: boolean | null;
   authType?: string | null;
   password?: string | null;
   key?: string | Buffer | null;

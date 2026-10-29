@@ -7,7 +7,10 @@
  */
 
 import type { Duplex } from "node:stream";
-import type { PluginSshTransportProvider } from "@termix-ssh/plugin-sdk/backend";
+import type {
+  PluginSshTransportHost,
+  PluginSshTransportProvider,
+} from "@termix-ssh/plugin-sdk/backend";
 
 interface Entry {
   pluginId: string;
@@ -33,15 +36,13 @@ export function clearSshTransports(): void {
 }
 
 /** Opens a stream to the host if a provider claims it, else null. */
-export async function openProvidedTransport(host: {
-  id: number;
-  ip: string;
-  port: number;
-}): Promise<Duplex | null> {
+export async function openProvidedTransport(
+  host: PluginSshTransportHost,
+): Promise<Duplex | null> {
   for (const { provider } of providers.values()) {
     let claimed = false;
     try {
-      claimed = provider.claims(host.id);
+      claimed = provider.claims(host.id, host);
     } catch {
       claimed = false;
     }

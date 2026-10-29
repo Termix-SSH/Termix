@@ -99,6 +99,10 @@ export async function openSshTransport(
     id: host.id,
     ip: host.ip,
     port: host.port || 22,
+    userId: host.userId ?? null,
+    syncId: host.syncId ?? null,
+    connectionOrigin: host.connectionOrigin ?? null,
+    localOnly: Boolean(host.localOnly),
   });
   if (provided) {
     config.sock = provided;

@@ -1813,13 +1813,21 @@ export interface PluginNetwork {
  * asked for every connection, so it must be quick. `open` returns a stream
  * the SSH client runs over, like a relayed socket.
  */
+/** The host a transport is asked about. Fields past port come from Termix 26.10.6. */
+export interface PluginSshTransportHost {
+  id: number;
+  ip: string;
+  port: number;
+  /** Owner of the host row. */
+  userId?: string | null;
+  syncId?: string | null;
+  connectionOrigin?: "local" | "remote" | null;
+  localOnly?: boolean;
+}
+
 export interface PluginSshTransportProvider {
-  claims: (hostId: number) => boolean;
-  open: (host: {
-    id: number;
-    ip: string;
-    port: number;
-  }) => Promise<import("node:stream").Duplex>;
+  claims: (hostId: number, host?: PluginSshTransportHost) => boolean;
+  open: (host: PluginSshTransportHost) => Promise<import("node:stream").Duplex>;
 }
 
 export interface PluginSshTransports {
