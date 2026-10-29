@@ -13,6 +13,7 @@ Plugin API 1.13.0.
 ### Fixed
 
 - `@termix-ssh/plugin-sdk/ui` is built in production mode, so outside Termix it no longer sends requests to the Vite dev server path
+- `execCommand` buffers output and decodes it once as strict UTF-8 with a GBK fallback, exposed as `decodeCommandOutput`, so messages from a Windows host on a legacy codepage are readable instead of � characters
 
 ## 1.0.21
 
