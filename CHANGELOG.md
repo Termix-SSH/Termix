@@ -10,6 +10,7 @@
 - Hosts can have a color and an icon, which sync to the desktop and mobile apps
 - A sidebar setting to turn off alternating row colors
 - TERMIX_NGINX_TEMPLATE, TERMIX_NGINX_CONF, TERMIX_NGINX_PID and TERMIX_APP_DIR let an install outside Docker, like the Proxmox LXC script, switch nginx to HTTPS when a certificate is added
+- Removing a user or role from a shared folder can also remove their access from every host in the folder and its subfolders
 
 ### Fixed
 

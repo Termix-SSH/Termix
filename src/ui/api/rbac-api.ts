@@ -238,9 +238,14 @@ export async function getFolderAccess(
   }
 }
 
-export async function revokeFolderAccess(ruleId: number): Promise<void> {
+export async function revokeFolderAccess(
+  ruleId: number,
+  options: { fromHosts?: boolean } = {},
+): Promise<void> {
   try {
-    await rbacApi.delete(`/rbac/folder/access/${ruleId}`);
+    await rbacApi.delete(`/rbac/folder/access/${ruleId}`, {
+      params: options.fromHosts ? { fromHosts: "true" } : undefined,
+    });
   } catch (error) {
     throw handleApiError(error, "revoke folder access");
   }

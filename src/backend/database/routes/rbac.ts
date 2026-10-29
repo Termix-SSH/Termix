@@ -11,6 +11,7 @@ import {
 import { isAuthOverrideProtocol } from "../../hosts/protocol-auth/registry.js";
 import {
   assertHostsUnlocked,
+  hostLock,
   hasHostLocks,
   requireUnlockedHost,
   sendHostLocked,
@@ -722,14 +723,40 @@ router.get(
   },
 );
 
+/** The host grants that went to the same user or role as a folder rule. */
+export function grantsForFolderRule<
+  T extends { userId?: string | null; roleId?: number | null },
+>(entries: T[], rule: { userId?: string | null; roleId?: number | null }): T[] {
+  return entries.filter((entry) =>
+    rule.userId
+      ? entry.userId === rule.userId
+      : rule.roleId != null && entry.roleId === rule.roleId,
+  );
+}
+
 /**
  * @openapi
  * /rbac/folder/access/{id}:
  *   delete:
  *     summary: Stop a folder share from applying to hosts added later
- *     description: Grants already fanned out to hosts stay; revoke those per host.
+ *     description: Grants already fanned out to hosts stay, unless fromHosts=true, which also removes the same user's or role's access from every host in the folder and its subfolders that the caller may manage sharing on.
  *     tags:
  *       - RBAC
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: fromHosts
+ *         schema:
+ *           type: boolean
+ *     responses:
+ *       200:
+ *         description: Removed. removedFromHosts counts the host grants removed.
+ *       404:
+ *         description: No such rule.
  */
 router.delete(
   "/folder/access/:id",
@@ -741,11 +768,35 @@ router.delete(
     }
     try {
       const repository = createCurrentFolderAccessRepository();
-      if (!(await repository.findById(ruleId, req.userId!))) {
+      const rule = await repository.findById(ruleId, req.userId!);
+      if (!rule) {
         return res.status(404).json({ error: "Rule not found" });
       }
       await repository.deleteById(ruleId, req.userId!);
-      res.json({ success: true });
+
+      let removedFromHosts = 0;
+      if (req.query.fromHosts === "true") {
+        const hosts =
+          await createCurrentHostFolderRepository().listHostsInFolder(
+            req.userId!,
+            rule.folder,
+          );
+        const access = createCurrentRbacAccessRepository();
+        for (const host of hosts) {
+          if (hostLock(host.id)) continue;
+          if (!(await canManageHostSharing(req.userId!, host.id)).allowed)
+            continue;
+          let changed = false;
+          const entries = await access.listHostAccess(host.id);
+          for (const entry of grantsForFolderRule(entries, rule)) {
+            await access.revokeHostAccess(entry.id, host.id);
+            removedFromHosts++;
+            changed = true;
+          }
+          if (changed) await pruneHostGrants(host.id);
+        }
+      }
+      res.json({ success: true, removedFromHosts });
     } catch (error) {
       databaseLogger.error("Failed to delete folder access rule", error, {
         operation: "delete_folder_access",

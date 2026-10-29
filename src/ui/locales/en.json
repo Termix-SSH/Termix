@@ -777,6 +777,7 @@
       "sharedBadge": "Shared",
       "sharedBadgeTooltip": "Shared by {{owner}} ({{level}} access)",
       "viewOnlyBanner": "This host is shared with you by {{owner}} with view access. The configuration is read-only.",
+      "folderRuleRemoveFromHosts": "Also remove this access from every host in the folder and its subfolders",
       "sharedCopyBanner": "This host is shared with you by {{owner}}. The desktop keeps a read-only copy, so change it on the server and it syncs here.",
       "sharedEditBanner": "This host is shared with you by {{owner}} with edit access. Changes apply to the real host; authentication references can only be changed by the owner.",
       "ownerOnlyControl": "Only the host owner can change this",
