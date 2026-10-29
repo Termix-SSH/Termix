@@ -173,6 +173,10 @@ export function ShellControllerProvider({
     },
     openHostEditor: (draft) =>
       requestManage({ kind: "host", hostId: null, draft }),
+    editHost: (hostId) => {
+      requestManage({ kind: "host", hostId });
+      if (isMobile) regions.left.setOpen(false);
+    },
     saveQuickConnect: tabsState.saveQuickConnectHost,
     confirm: (options) =>
       confirmRef.current ? confirmRef.current(options) : Promise.resolve(false),
@@ -196,6 +200,7 @@ export function ShellControllerProvider({
       closeRailView: (...args) => shellImplRef.current.closeRailView(...args),
       openHostEditor: (...args) =>
         shellImplRef.current.openHostEditor?.(...args),
+      editHost: (...args) => shellImplRef.current.editHost?.(...args),
       saveQuickConnect: (...args) =>
         shellImplRef.current.saveQuickConnect!(...args),
       confirm: (...args) => shellImplRef.current.confirm!(...args),

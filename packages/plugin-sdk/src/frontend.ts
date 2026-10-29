@@ -206,6 +206,8 @@ export interface ShellApi {
    * user reviews and saves it. Absent in some shells.
    */
   openHostEditor?: (draft?: HostDraft) => void;
+  /** Opens the editor of a saved host. Termix 26.10.6+, absent in some shells. */
+  editHost?: (hostId: number) => void;
   /** Opens a rail view in the left sidebar. */
   openRailView: (id: string) => void;
   /** Closes a rail view wherever it is shown. */

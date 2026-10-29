@@ -12,6 +12,7 @@ Plugin API 1.13.0.
 - SSH transport providers get the host's owner, sync id, connection origin and local only flag in `claims` and `open`, and core's SSH relay takes a `syncId` instead of a host id
 - `ctx.sync.host.entities.idsOf` maps sync ids to the local ids of the user's own rows of one type
 - Rail items take `useStatus` for a small ok, warning or error dot on the icon
+- `shell.editHost(hostId)` opens the editor of a saved host
 
 ### Fixed
 
