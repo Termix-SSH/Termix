@@ -161,7 +161,7 @@ async function reconcileListeners(): Promise<void> {
   }
 }
 
-function notifyListeners(userId: string): void {
+export function notifyListeners(userId: string): void {
   const set = listeners.get(userId);
   if (!set) return;
   for (const res of set) {
