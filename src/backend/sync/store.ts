@@ -112,6 +112,21 @@ export async function findStoredRow(
   return row ?? null;
 }
 
+/** The local ids of the user's own rows, by sync id. Unknown ones are left out. */
+export async function findStoredIds(
+  entity: RegisteredSyncEntity,
+  userId: string,
+  syncIds: string[],
+): Promise<Record<string, number>> {
+  const ids: Record<string, number> = {};
+  if (entity.singleton || !entity.table) return ids;
+  for (const syncId of new Set(syncIds)) {
+    const row = await findStoredRow(entity, userId, syncId);
+    if (row && typeof row.id === "number") ids[syncId] = row.id;
+  }
+  return ids;
+}
+
 /** Gives an old row with no syncId one, so it can take part. */
 async function ensureSyncId(
   entity: RegisteredSyncEntity,

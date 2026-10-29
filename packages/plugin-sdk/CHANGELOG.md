@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.0.22
+
+Plugin API 1.13.0.
+
+### Added
+
+- `contributes.mobile` in the manifest says how a plugin shows in the Termix mobile app: `webview`, `native` or `none`, with an optional mobile bundle, screen sizes, views and a note
+- `termix-plugin build` bundles `src/mobile` into the `contributes.mobile.entry` file, and `validate` checks that it exists
+- `@termix-ssh/plugin-sdk/frame-host` runs one plugin view outside the shell, with core's bridge, registries and CSS, so the mobile app can show `webview` plugins
+- SSH transport providers get the host's owner, sync id, connection origin and local only flag in `claims` and `open`, and core's SSH relay takes a `syncId` instead of a host id
+- `ctx.sync.host.entities.idsOf` maps sync ids to the local ids of the user's own rows of one type
+- Rail items take `useStatus` for a small ok, warning or error dot on the icon
+- `shell.editHost(hostId)` opens the editor of a saved host
+- A sync entity can be read only with `load`, `write` and `erase`, so a plugin can sync rows a user does not own, like a shared library, down to linked desktops
+- `getFolderAuthOverride` and `setFolderAuthOverride` in `@termix-ssh/plugin-sdk/ui` read and set a user's own login for the shared hosts in a folder
+
+### Fixed
+
+- `@termix-ssh/plugin-sdk/ui` is built in production mode, so outside Termix it no longer sends requests to the Vite dev server path
+- `execCommand` buffers output and decodes it once as strict UTF-8 with a GBK fallback, exposed as `decodeCommandOutput`, so messages from a Windows host on a legacy codepage are readable instead of � characters
+
+## 1.0.21
+
+Plugin API 1.12.0.
+
+### Added
+
+- `@termix-ssh/plugin-sdk/host-scripts`: Docker, Linux metrics, systemd, journal and OpenRC command builders and parsers, plus `scriptShell()` and `passwordSudoScript()` to send scripts to `bash -s` on stdin. It has no Node or ssh2 imports, so the Termix mobile app runs the same code
+
 ## 1.0.20
 
 Plugin API 1.12.0.

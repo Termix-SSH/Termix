@@ -206,6 +206,8 @@ export interface ShellApi {
    * user reviews and saves it. Absent in some shells.
    */
   openHostEditor?: (draft?: HostDraft) => void;
+  /** Opens the editor of a saved host. Termix 26.10.6+, absent in some shells. */
+  editHost?: (hostId: number) => void;
   /** Opens a rail view in the left sidebar. */
   openRailView: (id: string) => void;
   /** Closes a rail view wherever it is shown. */
@@ -425,6 +427,11 @@ export interface RailItemContribution {
    * Zero or nothing shows no badge.
    */
   useBadge?: () => number | null | undefined;
+  /**
+   * A hook for a small status dot on the icon: "ok" (green), "warning" or
+   * "error". Nothing shows no dot. Layouts from Termix 26.10.6 draw it.
+   */
+  useStatus?: () => "ok" | "warning" | "error" | null | undefined;
 }
 
 export interface PanelProps {

@@ -16,6 +16,8 @@ const SDK = path.join(ROOT, "packages", "plugin-sdk");
 const INTERNAL_EXPORTS = new Set([
   "./testing/setup",
   "./testing-host",
+  "./frame-host",
+  "./frame-host.css",
   "./tsconfig.plugin.json",
   "./schema/manifest.schema.json",
   "./theme.css",

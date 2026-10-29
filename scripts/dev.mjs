@@ -404,6 +404,7 @@ function watchBackend() {
     { cwd: root, stdio: ["ignore", "pipe", "inherit"] },
   );
   let first = true;
+  let restartQueued = false;
   let buffer = "";
   tsc.stdout.on("data", (chunk) => {
     buffer += chunk.toString();
@@ -423,14 +424,21 @@ function watchBackend() {
         ? "starting the backend"
         : "backend changed, restarting it";
       first = false;
-      void queue(() => restartBackend(reason));
+      if (restartQueued) continue;
+      restartQueued = true;
+      void queue(() => {
+        restartQueued = false;
+        return restartBackend(reason);
+      });
     }
   });
 }
 
 function watchSdk() {
+  let buildStarted = Date.now();
   const changed = createDebouncer(300, () =>
     queue(async () => {
+      buildStarted = Date.now();
       try {
         await run("npm", ["run", "build:sdk"]);
       } catch (error) {
@@ -440,7 +448,16 @@ function watchSdk() {
       await restartBackend("SDK changed, restarting the backend");
     }),
   );
-  watch(SDK_SRC, true, () => changed("sdk"));
+  // Windows also reports reads (access time), so only a file saved after the last build counts
+  watch(SDK_SRC, true, (_event, filename) => {
+    try {
+      const stat = fs.statSync(path.join(SDK_SRC, String(filename ?? "")));
+      if (stat.isDirectory() || stat.mtimeMs < buildStarted) return;
+    } catch {
+      // deleted or renamed, still a change
+    }
+    changed("sdk");
+  });
 }
 
 function watchElectron() {
@@ -580,9 +597,18 @@ function watchPlugins(dir) {
     queue(() => rebuildPlugin(byId.get(id))),
   );
   for (const plugin of plugins) {
-    watch(plugin.repo, true, (_event, filename) => {
-      if (isPluginEdit(plugin.repo, filename)) changed(plugin.id);
-    });
+    // Only source folders, so node_modules and .git are never watched
+    const onEvent = (prefix) => (_event, filename) => {
+      const name = prefix
+        ? path.join(prefix, String(filename ?? ""))
+        : filename;
+      if (isPluginEdit(plugin.repo, name)) changed(plugin.id);
+    };
+    watch(plugin.repo, false, onEvent(""));
+    for (const sub of ["src", "locales", "migrations"]) {
+      const target = path.join(plugin.repo, sub);
+      if (fs.existsSync(target)) watch(target, true, onEvent(sub));
+    }
   }
   log(`watching ${plugins.length} plugin(s) in ${dir}`);
 }

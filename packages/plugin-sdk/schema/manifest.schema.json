@@ -1239,6 +1239,48 @@
               }
             }
           }
+        },
+        "mobile": {
+          "type": "object",
+          "description": "How the plugin shows in the Termix mobile app. Needs plugin API 1.13 (Termix 26.10.6).",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["webview", "native", "none"],
+              "description": "webview: the app shows the plugin's UI from the server. native: the app has its own screens. none: nothing to show in the app."
+            },
+            "entry": {
+              "type": "string",
+              "pattern": "\\.js$",
+              "description": "webview only. A bundle built for the app, in the same folder as the frontend bundle. Unset means the normal frontend runs in a phone sized frame."
+            },
+            "sizes": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "string", "enum": ["phone", "tablet"] },
+              "description": "webview only. Screen sizes the UI works at. Defaults to both."
+            },
+            "views": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "string", "minLength": 1 },
+              "description": "webview only. Tab, panel or card ids the app offers. Defaults to every tab."
+            },
+            "feature": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{1,39}$",
+              "description": "native only. The app feature that stands in for this plugin. Defaults to the plugin id."
+            },
+            "note": {
+              "type": "string",
+              "minLength": 1,
+              "description": "i18n key in the plugin's namespace, or plain text, shown in the app."
+            }
+          }
         }
       }
     },

@@ -25,7 +25,7 @@ import {
 } from "../store.js";
 import { allocateSeq, getRecord, putRecord, recordKey } from "../records.js";
 import { orderSelfReferences } from "../wire.js";
-import { reconcileUser } from "./feed.js";
+import { markChanged, notifyListeners, reconcileUser } from "./feed.js";
 
 export interface PushOp {
   entityType: string;
@@ -278,6 +278,12 @@ export async function applyPush(
 
   // Refresh the snapshot so the next pull serves what was just written.
   await reconcileUser(userId, { force: true });
+  // The reconcile finds nothing new, since the push wrote the records itself,
+  // so tell this user's other clients, and other users who may share a row.
+  if ([...results.values()].some((result) => result.status === "ok")) {
+    notifyListeners(userId);
+    markChanged();
+  }
   return ops.map(
     (op) =>
       results.get(recordKey(op.entityType, op.syncId)) ?? {

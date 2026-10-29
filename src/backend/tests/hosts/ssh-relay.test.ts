@@ -7,6 +7,7 @@ import { WebSocket, WebSocketServer } from "ws";
 
 const mocks = vi.hoisted(() => ({
   resolveHostById: vi.fn(),
+  resolveHostBySyncId: vi.fn(),
   openSshTransport: vi.fn(),
   handler: null as null | ((connection: unknown) => Promise<void>),
 }));
@@ -17,6 +18,7 @@ vi.mock("../../utils/logger.js", () => {
 });
 vi.mock("../../hosts/host-resolver.js", () => ({
   resolveHostById: mocks.resolveHostById,
+  resolveHostBySyncId: mocks.resolveHostBySyncId,
 }));
 vi.mock("../../hosts/connect/transport.js", () => ({
   openSshTransport: mocks.openSshTransport,
@@ -112,6 +114,23 @@ describe("ssh relay", () => {
     expect(await received).toBe("ping");
     socket.close();
     await vi.waitFor(() => expect(end).toHaveBeenCalled());
+  });
+
+  it("finds the host by sync id for a linked desktop", async () => {
+    mocks.resolveHostBySyncId.mockResolvedValue({
+      id: 9,
+      ip: "127.0.0.1",
+      port: echoPort,
+    });
+    const { socket } = await open("?syncId=abc");
+    const received = new Promise<string>((resolve) =>
+      socket.once("message", (data) => resolve(data.toString())),
+    );
+    socket.send("ping");
+    expect(await received).toBe("ping");
+    expect(mocks.resolveHostBySyncId).toHaveBeenCalledWith("abc", "user-1");
+    expect(mocks.resolveHostById).not.toHaveBeenCalled();
+    socket.close();
   });
 
   it("refuses a host the user can't connect to", async () => {

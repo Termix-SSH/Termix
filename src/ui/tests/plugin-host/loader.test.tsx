@@ -22,6 +22,7 @@ import {
   startPluginRuntime,
   startPreLoginPlugins,
   syncPlugins,
+  importWithRetry,
 } from "@/plugin-host/loader";
 import {
   getPluginRecord,
@@ -520,5 +521,31 @@ describe("layouts and themes", () => {
     expect(theme?.cssHref).toContain(
       "/plugin-assets/paper/_themes/paper.css?v=t1",
     );
+  });
+});
+
+describe("importWithRetry", () => {
+  const noWait = async () => {};
+
+  it("tries a bundle that failed to load again under a new URL", async () => {
+    const load = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new TypeError("Failed to fetch dynamically imported module: x"),
+      )
+      .mockResolvedValueOnce({ ok: true });
+    await expect(
+      importWithRetry("http://h/plugin-assets/a/frontend.js?v=1", load, noWait),
+    ).resolves.toEqual({ ok: true });
+    expect(load.mock.calls.map((call) => call[0])).toEqual([
+      "http://h/plugin-assets/a/frontend.js?v=1",
+      "http://h/plugin-assets/a/frontend.js?v=1&retry=1",
+    ]);
+  });
+
+  it("does not retry a bundle that threw while running", async () => {
+    const load = vi.fn().mockRejectedValue(new Error("boom"));
+    await expect(importWithRetry("u", load, noWait)).rejects.toThrow("boom");
+    expect(load).toHaveBeenCalledTimes(1);
   });
 });

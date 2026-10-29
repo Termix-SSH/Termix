@@ -381,12 +381,11 @@ class SharedHostSecretsManager {
     host: HostResolutionHostRecord,
     ownerId: string,
   ): Promise<ProtocolSnapshot[]> {
-    const repository = createCurrentHostResolutionRepository();
     const snapshots: ProtocolSnapshot[] = [];
 
     if (sshEnabled(host) && host.shareSshAuth) {
       if (host.credentialId) {
-        const credential = await repository.findCredentialByIdForUser(
+        const credential = await findUsableCredential(
           host.credentialId,
           ownerId,
         );

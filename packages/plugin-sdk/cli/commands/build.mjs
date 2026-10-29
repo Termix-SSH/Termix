@@ -25,6 +25,43 @@ const FRONTEND_ENTRIES = [
   "src/frontend/index.mjs",
   "src/frontend/index.js",
 ];
+const MOBILE_ENTRIES = [
+  "src/mobile/index.tsx",
+  "src/mobile/index.ts",
+  "src/mobile/index.mjs",
+  "src/mobile/index.js",
+];
+
+/** Builds a bundle that runs in a browser against core's shared modules. */
+async function buildBrowserBundle(entry, outfile, outDir) {
+  await esbuild.build({
+    entryPoints: [entry],
+    outfile,
+    bundle: true,
+    format: "esm",
+    platform: "browser",
+    target: "es2022",
+    jsx: "automatic",
+    sourcemap: true,
+    logLevel: "warning",
+    external: FRONTEND_EXTERNALS,
+    // Vite replaces these in the dev server; a plugin bundle has to have
+    // them too, or code that reads them throws when the plugin loads.
+    define: {
+      "process.env.NODE_ENV": '"production"',
+      "import.meta.env.DEV": "false",
+      "import.meta.env.PROD": "true",
+      "import.meta.env.MODE": '"production"',
+      "import.meta.env.SSR": "false",
+      "import.meta.env":
+        '{"DEV":false,"PROD":true,"MODE":"production","SSR":false,"BASE_URL":"/"}',
+    },
+    plugins: [
+      externalRequireInterop(FRONTEND_EXTERNALS),
+      staticUrlImports({ outDir }),
+    ],
+  });
+}
 
 /**
  * A bundled CommonJS package that calls require("react/jsx-runtime") (or any
@@ -192,15 +229,12 @@ export async function buildTailwind(cwd, outDir) {
   // build() adds to what a compiler already emitted, so each half gets its own.
   const compiler = () =>
     compile(input, { base: path.dirname(THEME_CSS), onDependency: () => {} });
-  const scanner = new Scanner({
-    sources: [
-      {
-        base: path.join(cwd, "src", "frontend"),
-        pattern: "**/*",
-        negated: false,
-      },
-    ],
-  });
+  // The mobile bundle uses the same stylesheet.
+  const sources = ["frontend", "mobile"]
+    .map((dir) => path.join(cwd, "src", dir))
+    .filter((dir, index) => index === 0 || fs.existsSync(dir))
+    .map((base) => ({ base, pattern: "**/*", negated: false }));
+  const scanner = new Scanner({ sources });
   // Flattened and minified the way core's own CSS is, so it does not rely
   // on native CSS nesting.
   const emit = async (candidates, options) =>
@@ -297,33 +331,18 @@ export async function build({ cwd }) {
 
   const frontendEntry = resolveEntry(cwd, FRONTEND_ENTRIES);
   if (frontendEntry) {
-    await esbuild.build({
-      entryPoints: [frontendEntry],
-      outfile: path.join(outDir, "frontend.js"),
-      bundle: true,
-      format: "esm",
-      platform: "browser",
-      target: "es2022",
-      jsx: "automatic",
-      sourcemap: true,
-      logLevel: "warning",
-      external: FRONTEND_EXTERNALS,
-      // Vite replaces these in the dev server; a plugin bundle has to have
-      // them too, or code that reads them throws when the plugin loads.
-      define: {
-        "process.env.NODE_ENV": '"production"',
-        "import.meta.env.DEV": "false",
-        "import.meta.env.PROD": "true",
-        "import.meta.env.MODE": '"production"',
-        "import.meta.env.SSR": "false",
-        "import.meta.env":
-          '{"DEV":false,"PROD":true,"MODE":"production","SSR":false,"BASE_URL":"/"}',
-      },
-      plugins: [
-        externalRequireInterop(FRONTEND_EXTERNALS),
-        staticUrlImports({ outDir }),
-      ],
-    });
+    await buildBrowserBundle(
+      frontendEntry,
+      path.join(outDir, "frontend.js"),
+      outDir,
+    );
+  }
+
+  // A bundle the mobile app loads in its WebView, next to the frontend one.
+  const mobileEntry = resolveEntry(cwd, MOBILE_ENTRIES);
+  const mobileOut = manifest.contributes?.mobile?.entry;
+  if (mobileEntry && typeof mobileOut === "string") {
+    await buildBrowserBundle(mobileEntry, path.join(cwd, mobileOut), outDir);
   }
 
   if (frontendEntry) await buildTailwind(cwd, outDir);

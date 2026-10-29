@@ -33,6 +33,7 @@ import {
   isOptionalAuthType,
   isOptionalBoolean,
   isValidPort,
+  normalizeHostLookFields,
   normalizeProtocolEnableFields,
   OWNER_PRIVATE_AUTH_FIELDS,
   OWNER_PRIVATE_SSH_OPTION_FIELDS,
@@ -335,6 +336,7 @@ router.post(
         ? JSON.stringify(portKnockSequence)
         : null,
       ...normalizeProtocolEnableFields(hostData),
+      ...normalizeHostLookFields(hostData),
       sshPort: sshPort || port || 22,
     };
 
@@ -912,6 +914,7 @@ router.put(
         ? JSON.stringify(portKnockSequence)
         : null,
       ...normalizeProtocolEnableFields(hostData),
+      ...normalizeHostLookFields(hostData),
       sshPort: sshPort || port || 22,
     };
 

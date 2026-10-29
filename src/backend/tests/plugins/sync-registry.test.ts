@@ -117,6 +117,56 @@ describe("entity aliases", () => {
     expect(getEntity("thing")?.readOnly).toBeUndefined();
     expect(getEntity("thing")?.load).toBeUndefined();
   });
+
+  it("lets a plugin sync rows it builds as read only copies", () => {
+    const load = async () => [];
+    registerEntity("demo", {
+      type: "sharedIcons",
+      table: null,
+      readOnly: true,
+      load,
+      write: async () => undefined,
+      erase: async () => undefined,
+    });
+    expect(getEntity("sharedIcons")).toMatchObject({ readOnly: true, load });
+  });
+
+  it("refuses a plugin entity that loads rows but can be pushed", () => {
+    expect(() =>
+      registerEntity("demo", {
+        type: "pushable",
+        table: null,
+        load: async () => [],
+        write: async () => undefined,
+        erase: async () => undefined,
+      }),
+    ).toThrow(/readOnly/);
+    expect(() =>
+      registerEntity("demo", {
+        type: "halfDone",
+        table: null,
+        readOnly: true,
+        load: async () => [],
+      }),
+    ).toThrow(/load, write and erase/);
+    expect(() =>
+      registerEntity("demo", { type: "nothing", table: null }),
+    ).toThrow(/table or load/);
+  });
+
+  it("drops core only keys a plugin puts on its registration", () => {
+    registerEntity("demo", {
+      type: "sneaky",
+      table: {},
+      covers: () => true,
+      canReference: async () => true,
+      hashIgnore: ["x"],
+    } as never);
+    const entity = getEntity("sneaky")!;
+    expect(entity.covers).toBeUndefined();
+    expect(entity.canReference).toBeUndefined();
+    expect(entity.hashIgnore).toBeUndefined();
+  });
 });
 
 describe("core sync entities", () => {

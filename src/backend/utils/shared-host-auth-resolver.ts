@@ -4,6 +4,7 @@ import {
   createCurrentHostResolutionRepository,
   createCurrentRbacAccessRepository,
   createCurrentRoleRepository,
+  createCurrentSharedFolderAuthOverrideRepository,
   createCurrentSharedHostAuthOverrideRepository,
 } from "../database/repositories/factory.js";
 import type {
@@ -12,6 +13,7 @@ import type {
 } from "../database/repositories/host-resolution-repository.js";
 import { getSshAuthProvider } from "../hosts/connect/auth-provider-registry.js";
 import { ensureCoreSshAuthProviders } from "../hosts/connect/core-providers.js";
+import { findUsableCredential } from "../hosts/usable-credential.js";
 import {
   SharedHostSecretsManager,
   type SharedSecretData,
@@ -22,6 +24,8 @@ export type RecipientSharedHostAuthResolution =
       source: "personal-override";
       credentialId: number;
       credential: HostResolutionCredentialRecord;
+      /** Set when the login comes from the folder, not the host itself. */
+      folder?: string;
     }
   | {
       source: "owner-shared";
@@ -53,8 +57,8 @@ function isOwnerAuthShared(
 
 /**
  * Applies the shared-host authentication precedence independently from any
- * transport: recipient override, shared owner auth, secretless auth, then
- * "required".
+ * transport: recipient override on the host, then on its folder, shared
+ * owner auth, secretless auth, then "required".
  */
 export async function resolveRecipientSharedHostAuthentication(
   host: HostResolutionHostRecord,
@@ -80,10 +84,7 @@ export async function resolveRecipientSharedHostAuthentication(
   }
 
   if (overrideCredentialId) {
-    const credential = await repository.findCredentialByIdForUser(
-      overrideCredentialId,
-      userId,
-    );
+    const credential = await findUsableCredential(overrideCredentialId, userId);
     if (credential) {
       return {
         source: "personal-override",
@@ -91,6 +92,31 @@ export async function resolveRecipientSharedHostAuthentication(
         credential,
       };
     }
+  }
+
+  try {
+    const folderOverride =
+      await createCurrentSharedFolderAuthOverrideRepository().findClosest(
+        userId,
+        host.folder,
+        protocol,
+      );
+    if (folderOverride) {
+      const credential = await findUsableCredential(
+        folderOverride.credentialId,
+        userId,
+      );
+      if (credential) {
+        return {
+          source: "personal-override",
+          credentialId: folderOverride.credentialId,
+          credential,
+          folder: folderOverride.folder,
+        };
+      }
+    }
+  } catch {
+    // Same as a host override: an unreadable one counts as none.
   }
 
   if (isOwnerAuthShared(host, protocol)) {
@@ -142,6 +168,17 @@ export async function resolveRecipientSharedHostAuthentication(
       }
     } catch {
       // An unreadable owner snapshot cannot expose the owner's auth.
+    }
+  }
+
+  if (protocol === "ssh" && host.credentialId) {
+    const credential = await findUsableCredential(host.credentialId, userId);
+    if (credential) {
+      return {
+        source: "personal-override",
+        credentialId: host.credentialId,
+        credential,
+      };
     }
   }
 

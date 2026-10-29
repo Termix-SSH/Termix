@@ -244,7 +244,9 @@ export async function listPreLoginPlugins(): Promise<
  *       `assetVersion` is its cache key, `css` says a stylesheet sits beside
  *       it, and `locales` lists the languages it ships ("en" and xx_YY).
  *       `dependencies` and `optionalDependencies` let the loader activate
- *       frontends in the same order the server does.
+ *       frontends in the same order the server does. `engine` holds the
+ *       manifest's `api` and `termix` ranges, so other clients (the mobile
+ *       app) can tell whether they understand the plugin.
  *
  *       On a desktop linked to a server, `runsOnServer` marks plugins that
  *       only run on that server and stay off here on purpose, and, for
@@ -303,6 +305,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
         let features: string[] = [];
         let docs: string | undefined;
         let env: PluginEnvVar[] = [];
+        const engine: { api?: string; termix?: string } = {};
         let desktopMode: unknown = loaded
           ? resolvePluginDesktopMode(loaded.manifest)
           : undefined;
@@ -322,7 +325,14 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
             optionalDependencies?: Record<string, string>;
             desktop?: unknown;
             runtime?: unknown;
+            engine?: { api?: unknown; termix?: unknown };
           };
+          if (typeof manifest?.engine?.api === "string") {
+            engine.api = manifest.engine.api;
+          }
+          if (typeof manifest?.engine?.termix === "string") {
+            engine.termix = manifest.engine.termix;
+          }
           desktopMode = loaded
             ? resolvePluginDesktopMode(loaded.manifest)
             : (manifest?.desktop ??
@@ -365,6 +375,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
               ? "safe-mode"
               : (loaded?.state ?? record.state),
           runsOnServer: linked && desktopMode === "server",
+          engine,
           contributes,
           icon,
           dependencies,
@@ -2695,6 +2706,10 @@ router.put(
  *     summary: Upload a .tmxplug to install from a file
  *     description: >
  *       Developer mode only. The body is the raw .tmxplug (at most 50 MB).
+       The release's .sig may come base64 encoded in the
+       X-Termix-Plugin-Signature header; an official one makes the file
+       install as an official plugin, and it may then fill in a plugin
+       whose download failed.
  *       The file is checked (archive, manifest, plugin API) and held for 30
  *       minutes, but nothing is loaded. The answer lists what it asks for so
  *       the admin can agree, then POST /plugins/upload/{token}/install
@@ -2740,7 +2755,13 @@ router.post(
     }
     try {
       const { stageUpload } = await import("../../plugins/manage.js");
-      res.json(await stageUpload(req.body));
+      // The release's .sig, base64 encoded, so an official file installs as
+      // official (and may write the tables its 2.8 version left).
+      const header = req.get("x-termix-plugin-signature");
+      const signature = header
+        ? Buffer.from(header, "base64").toString("utf8")
+        : null;
+      res.json(await stageUpload(req.body, signature));
     } catch (error) {
       sendManageError(
         res,

@@ -38,6 +38,7 @@ import { hosts, sshCredentials } from "../database/db/schema.js";
 import {
   createResolvers,
   deleteStoredRow,
+  findStoredIds,
   listStoredRows,
   loadWireRow,
   loadWireRows,
@@ -271,6 +272,11 @@ export function createSyncHost(): PluginSyncHost {
       ensureCore: () => ensureCoreEntities(),
       onChanged: (listener) => onEntitiesChanged(listener),
       onLocalWrite: (listener) => onLocalWrite(listener),
+      idsOf: async (type, userId, syncIds) => {
+        const entity = getEntity(type);
+        if (!entity || entity.load) return {};
+        return findStoredIds(entity, userId, syncIds);
+      },
     },
 
     replica: {

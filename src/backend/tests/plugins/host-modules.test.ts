@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   isBareSpecifier,
   isUserPluginFile,
+  shouldUseHostModule,
 } from "../../plugins/host-modules.js";
 
 describe("isBareSpecifier", () => {
@@ -43,6 +44,36 @@ describe("isUserPluginFile", () => {
     expect(isUserPluginFile(pathToFileURL(root).href, root)).toBe(false);
     expect(isUserPluginFile(undefined, root)).toBe(false);
     expect(isUserPluginFile("data:text/javascript,1", root)).toBe(false);
+  });
+});
+
+describe("shouldUseHostModule", () => {
+  const root = path.resolve(os.tmpdir(), "termix-data", "plugins");
+  const parent = pathToFileURL(
+    path.join(root, ".unpacked", "demo", "dist", "backend.js"),
+  ).href;
+
+  it("falls back for import and require misses from a plugin", () => {
+    for (const code of ["ERR_MODULE_NOT_FOUND", "MODULE_NOT_FOUND"]) {
+      expect(shouldUseHostModule({ code }, "axios", parent, root)).toBe(true);
+    }
+  });
+
+  it("leaves other errors and files alone", () => {
+    expect(
+      shouldUseHostModule({ code: "ERR_REQUIRE_ESM" }, "axios", parent, root),
+    ).toBe(false);
+    expect(
+      shouldUseHostModule({ code: "MODULE_NOT_FOUND" }, "./x.js", parent, root),
+    ).toBe(false);
+    expect(
+      shouldUseHostModule(
+        { code: "MODULE_NOT_FOUND" },
+        "axios",
+        undefined,
+        root,
+      ),
+    ).toBe(false);
   });
 });
 

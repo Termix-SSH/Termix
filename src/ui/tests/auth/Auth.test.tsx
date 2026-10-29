@@ -29,6 +29,12 @@ const mainAxios = vi.hoisted(() => ({
 }));
 
 vi.mock("@/main-axios", () => mainAxios);
+
+const appReturn = vi.hoisted(() => ({
+  pendingAppReturn: vi.fn((): string | null => null),
+  handOffToApp: vi.fn(() => true),
+}));
+vi.mock("@/lib/app-return", () => appReturn);
 vi.mock("@/i18n/i18n", () => ({
   changeAppLanguage: vi.fn(async (code: string) => code),
   normalizeLanguageCode: vi.fn((code: string | null) => code || "en"),
@@ -182,5 +188,40 @@ describe("Auth local desktop flow", () => {
       expect(screen.getAllByText("common.register").length).toBeGreaterThan(0);
     });
     expect(mainAxios.requestDesktopAutoSession).not.toHaveBeenCalled();
+  });
+});
+
+describe("Auth sign in for the mobile app", () => {
+  it("sends a trusted proxy login back to the app instead of opening Termix", async () => {
+    appReturn.pendingAppReturn.mockReturnValue("termix-mobile://oidc-callback");
+    mainAxios.requestTrustedProxyLogin.mockResolvedValue({
+      enabled: true,
+      success: true,
+      username: "alice",
+    });
+    mainAxios.getCurrentToken.mockResolvedValue("tok-1");
+    const onLogin = vi.fn();
+
+    render(<Auth onLogin={onLogin} />);
+
+    await waitFor(() =>
+      expect(appReturn.handOffToApp).toHaveBeenCalledWith({ token: "tok-1" }),
+    );
+    expect(onLogin).not.toHaveBeenCalled();
+  });
+
+  it("signs in normally when no app asked", async () => {
+    appReturn.pendingAppReturn.mockReturnValue(null);
+    mainAxios.requestTrustedProxyLogin.mockResolvedValue({
+      enabled: true,
+      success: true,
+      username: "alice",
+    });
+    const onLogin = vi.fn();
+
+    render(<Auth onLogin={onLogin} />);
+
+    await waitFor(() => expect(onLogin).toHaveBeenCalled());
+    expect(appReturn.handOffToApp).not.toHaveBeenCalled();
   });
 });

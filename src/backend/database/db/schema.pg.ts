@@ -193,6 +193,9 @@ export const hosts = pgTable(
     // legacy algorithms, agent, environment). JSON.
     sshOptions: text("ssh_options"),
     notes: text("notes"),
+    // Hex color and Lucide icon name a layout may show next to the host.
+    color: text("color"),
+    icon: text("icon"),
     enableSsh: boolean("enable_ssh").notNull().default(true),
 
     sshPort: integer("ssh_port").default(22),
@@ -482,6 +485,38 @@ export const sharedHostAuthOverrides = pgTable(
     uniqueIndex("shared_host_auth_overrides_host_user_protocol_unique").on(
       table.hostId,
       table.userId,
+      table.protocol,
+    ),
+  ],
+);
+
+/**
+ * A recipient's own login for the shared hosts in a folder ("Parent / Child")
+ * and its subfolders. A host's own override still wins.
+ */
+export const sharedFolderAuthOverrides = pgTable(
+  "shared_folder_auth_overrides",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    folder: varchar("folder", { length: 255 }).notNull(),
+    protocol: varchar("protocol", { length: 255 }).notNull().default("ssh"),
+    credentialId: integer("credential_id")
+      .notNull()
+      .references(() => sshCredentials.id, { onDelete: "cascade" }),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("shared_folder_auth_overrides_user_folder_protocol_unique").on(
+      table.userId,
+      table.folder,
       table.protocol,
     ),
   ],

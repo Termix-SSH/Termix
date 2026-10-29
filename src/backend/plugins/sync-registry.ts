@@ -16,7 +16,7 @@ import type {
   SyncRow,
 } from "@termix-ssh/plugin-sdk/backend";
 
-/** Core-only extras a plugin registration cannot set. */
+/** Extras core sets for its own entities. A plugin may set the first four. */
 export interface CoreSyncEntityOptions {
   /** Server-to-desktop only. A desktop never pushes it. */
   readOnly?: boolean;
@@ -58,6 +58,54 @@ export interface RegisteredSyncEntity
   encryptedFields: readonly string[];
 }
 
+/** What a plugin registration may carry. Anything else is dropped. */
+const PLUGIN_KEYS = [
+  "type",
+  "table",
+  "userColumn",
+  "encryptedFields",
+  "references",
+  "order",
+  "readOnlyFields",
+  "singleton",
+  "answersTo",
+  "shouldSync",
+  "permissions",
+  "serialize",
+  "deserialize",
+  "afterWrite",
+  "remove",
+  "readOnly",
+  "load",
+  "write",
+  "erase",
+] as const;
+
+function pluginEntity(entity: SyncEntityRegistration): SyncEntityRegistration {
+  const picked: Record<string, unknown> = {};
+  for (const key of PLUGIN_KEYS) {
+    if (entity[key] !== undefined) picked[key] = entity[key];
+  }
+  const out = picked as unknown as SyncEntityRegistration;
+  if (out.load || out.write || out.erase) {
+    if (!out.load || !out.write || !out.erase) {
+      throw new Error(
+        `Sync entity "${entity.type}" needs load, write and erase together`,
+      );
+    }
+    // A plugin only ever syncs its own rows both ways; rows it builds for
+    // a user come down as read only copies.
+    if (out.readOnly !== true) {
+      throw new Error(
+        `Sync entity "${entity.type}" with load must be readOnly`,
+      );
+    }
+  } else if (!out.table) {
+    throw new Error(`Sync entity "${entity.type}" needs a table or load`);
+  }
+  return out;
+}
+
 const entities = new Map<string, RegisteredSyncEntity>();
 const listeners = new Set<() => void>();
 
@@ -81,7 +129,7 @@ export function registerEntity(
   }
 
   const registered: RegisteredSyncEntity = {
-    ...entity,
+    ...(owner === CORE_OWNER ? entity : pluginEntity(entity)),
     ...(owner === CORE_OWNER ? core : {}),
     owner,
     order: entity.order ?? 100,

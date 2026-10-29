@@ -8,6 +8,7 @@ import {
   keepsStoredSshAuth,
   isOptionalBoolean,
   isValidPort,
+  normalizeHostLookFields,
   normalizeImportedHost,
   normalizeProtocolEnableFields,
   renameFolderPath,
@@ -527,5 +528,27 @@ describe("impliedSshAuthType", () => {
     );
     expect(impliedSshAuthType({ password: "pw" })).toBe("password");
     expect(impliedSshAuthType({})).toBeUndefined();
+  });
+});
+
+describe("normalizeHostLookFields", () => {
+  it("leaves both fields out when the write does not send them", () => {
+    expect(normalizeHostLookFields({ name: "web" })).toEqual({});
+  });
+
+  it("keeps a hex color and a Lucide name", () => {
+    expect(
+      normalizeHostLookFields({ color: "#3B82F6", icon: "server-cog" }),
+    ).toEqual({ color: "#3b82f6", icon: "server-cog" });
+  });
+
+  it("stores null for cleared or bad values", () => {
+    expect(normalizeHostLookFields({ color: "red", icon: "<script>" })).toEqual(
+      { color: null, icon: null },
+    );
+    expect(normalizeHostLookFields({ color: null, icon: "" })).toEqual({
+      color: null,
+      icon: null,
+    });
   });
 });

@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.20 | Plugin API 1.12.0
+SDK 1.0.22 | Plugin API 1.13.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -175,7 +175,49 @@ Unknown fields are refused at every level, so a typo fails validation. The schem
 
 `contributes` holds `tabs`, `panels`, `dashboardCards`, `actions`, `actionSlots`, `permissions`,
 `settings`, `protocols`, `auth`, `syncEntities`, `keybindingActions`, `http`, `guest`, `guestViews`,
-`uiPresets`, `uses`, `layouts` and `themes`. Frontend `register*` calls need their ids declared here first.
+`uiPresets`, `uses`, `layouts`, `themes` and `mobile`. Frontend `register*` calls need their ids declared here first.
+
+### Mobile app
+
+`contributes.mobile` says how the plugin shows in the Termix mobile app. Leave it out and the app treats the
+plugin as having nothing to show (official plugins are mapped by the app itself).
+
+```json
+"mobile": { "mode": "webview", "views": ["hello"], "sizes": ["phone", "tablet"] }
+```
+
+| Field     | Notes                                                                                                                                             |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mode`    | `webview` (the app shows your UI from the server), `native` (the app has its own screens) or `none`.                                              |
+| `entry`   | `webview` only. A bundle made for the app, like `dist/mobile.js`, next to `frontend.js`. Unset: your normal frontend runs in a phone sized frame. |
+| `sizes`   | `webview` only. `phone`, `tablet` or both (the default).                                                                                          |
+| `views`   | `webview` only. Ids from your `tabs`, `panels` or `dashboardCards` the app offers. Default: every tab.                                            |
+| `feature` | `native` only. The app feature that stands in for the plugin. Default: the plugin id.                                                             |
+| `note`    | A locale key or plain text the app shows next to the plugin.                                                                                      |
+
+`build` makes `entry` from `src/mobile/index.tsx`, and it shares `frontend.css`.
+
+How a `webview` plugin runs in the app:
+
+- Only your plugin loads, with the same app object, SDK hooks and `/ui` kit as the web app. Each view opens
+  on its own screen: a tab with `host-context-menu` in `openFrom` opens from a host, the rest from the app's
+  plugin list.
+- Every request and socket goes through the app, which adds the login, proxy headers and client
+  certificate. The app only lets through your own `/plugin-api`, `/plugin-ws` and `/plugin-assets`, your
+  settings and a short list of core reads (hosts, folders, permissions, current user, version, health,
+  activity). Other core routes answer 403, so call your own backend instead.
+- Images load straight from the server, without proxy headers or a client certificate.
+- Nothing in `localStorage` survives closing the view. Keep preferences in settings.
+- Other plugins' views, extensions and components are not there, and neither is the shell (`useShell()`
+  is null). `/ui` names newer than the app's copy of the SDK make the view say it needs a newer app.
+- The app checks your `engine.api` against the plugin API of its own copy of the SDK. When the app's API
+  is too old for the range, it asks the user to update the app instead of opening the view. When the range
+  is for an older API major, it asks to update the plugin. Ask only for the API you use.
+- Turning a plugin off on the server hides it in the app the next time the app checks: when it comes back
+  to the front, when the list is pulled down, or when any request answers 503 with your `pluginId`.
+
+Termix 26.10.5 and older refuse any manifest with `mobile`, so a plugin that declares it needs
+`"engine": { "termix": ">=26.10.6", "api": "^1.13" }`.
 
 Capabilities and permissions are different things. A capability (`hosts:read`, with a colon) is what your
 code may reach. A permission (`hello.use`, with a dot) is what a user may do.
@@ -304,7 +346,7 @@ router.post("/notes", async (req, res) => {
 - `ctx.rbac.require("manage")` on a single route, `await ctx.rbac.has("manage")` in code. A full id like
   `hosts.edit` checks a core permission.
 - Host access: `ctx.hosts.checkAccess(hostId, "connect" | "view" | "edit" | "manage")`.
-- Transports: with `ssh:transport`, `ctx.ssh.transports.provide({ claims(hostId), open({ id, ip, port }) })`
+- Transports: with `ssh:transport`, `ctx.ssh.transports.provide({ claims(hostId, host), open(host) })`, where `host` has `id`, `ip`, `port` and on Termix 26.10.6+ also `userId`, `syncId`, `connectionOrigin` and `localOnly`
   returns a stream the SSH client uses instead of a direct, proxy or jump host connection. Core also serves
   `/plugin-ws/core/ssh-relay?hostId=` for callers with connect access, so one Termix can relay to another.
 - Managed hosts: with `hosts:lock`, `ctx.hosts.locks.provide({ isLocked, note, allowManualCreate })` makes
@@ -335,7 +377,9 @@ try {
 
 `ctx.ssh.withConnection(hostId, { pool, purpose }, fn)` borrows a pooled connection for frequent short
 commands. `@termix-ssh/plugin-sdk/host-commands` has helpers to detect the OS and run package manager and
-sudo commands. Hosts from `ctx.hosts` never carry secrets. Pass the host or its id to `ctx.ssh`.
+sudo commands. `@termix-ssh/plugin-sdk/host-scripts` builds Docker, metrics, systemd and journal
+commands and parses their output; send a script on stdin to the command `scriptShell()` returns. Hosts from
+`ctx.hosts` never carry secrets. Pass the host or its id to `ctx.ssh`.
 
 ### The desktop app
 
@@ -450,6 +494,23 @@ Query through `const db = await ctx.db.client()`, then `await ctx.db.persist()` 
 Other storage: `ctx.kv` for a few values, `ctx.settings` for settings, `ctx.secrets` for secrets,
 `ctx.files.dataDir()` for files. To sync a table to a linked desktop, use `ctx.sync.registerEntity` and
 `contributes.syncEntities`. The entity name is part of the protocol and never changes.
+
+A registered table syncs the rows each user owns, both ways. For data you keep for the whole server (a shared
+library, rows other users share), register a read only entity with `table: null`, `readOnly: true` and `load`,
+`write` and `erase` (Termix 26.10.6+). `load(userId)` returns the rows that user should get, each with a
+`syncId`. The desktop keeps them with `write` and drops them with `erase`, and never pushes them back:
+
+```ts
+ctx.sync.registerEntity({
+  type: "sharedIcons",
+  table: null,
+  readOnly: true,
+  order: 70,
+  load: (userId) => iconsVisibleTo(userId),
+  write: (userId, row) => storeCopy(userId, row),
+  erase: (userId, syncId) => dropCopy(userId, syncId),
+});
+```
 
 ## Frontend
 
@@ -905,6 +966,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `@termix-ssh/plugin-sdk/testing`                                     | `createMockCtx`, `createTestDb`, `renderWithApp`, `createFakeContext`                          |
 | `@termix-ssh/plugin-sdk/vitest-preset`                               | `pluginVitestConfig`                                                                           |
 | `@termix-ssh/plugin-sdk/host-commands`                               | OS detection, package manager and sudo helpers over ssh2                                       |
+| `@termix-ssh/plugin-sdk/host-scripts`                                | Docker, metrics, systemd and journal command builders and parsers, scripts sent to `bash -s`   |
 | `@termix-ssh/plugin-sdk/ssh-certs`                                   | `applyCertificateAuth()` for certificate based SSH auth                                        |
 | `@termix-ssh/plugin-sdk/ssh-keys`                                    | `generateSshKeyPair()`, `detectSshKeyType()`, `publicKeyFromPrivate()`, `validateSshKeyPair()` |
 | `@termix-ssh/plugin-sdk/desktop`                                     | The desktop app bridge, typed. Check it exists before use                                      |

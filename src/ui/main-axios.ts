@@ -1317,6 +1317,8 @@ export {
   revokeHostAccess,
   getHostAuthOverride,
   setHostAuthOverride,
+  getFolderAuthOverride,
+  setFolderAuthOverride,
   getPermissionsCatalog,
   getSharedHosts,
 } from "@/api/rbac-api";

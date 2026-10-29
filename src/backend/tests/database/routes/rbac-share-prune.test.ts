@@ -69,7 +69,7 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   }),
 }));
 
-const { pruneHostGrants, pruneCredentialGrants } =
+const { pruneHostGrants, pruneCredentialGrants, grantsForFolderRule } =
   await import("../../../database/routes/rbac.js");
 
 const chain = (): Grant[] => [
@@ -103,5 +103,29 @@ describe("share pruning", () => {
   it("drops credential shares the same way", async () => {
     expect(await pruneCredentialGrants(5)).toBe(2);
     expect(state.credentialGrants.map((g) => g.userId)).toEqual(["dave"]);
+  });
+});
+
+describe("grantsForFolderRule", () => {
+  const entries = [
+    { id: 1, userId: "bob", roleId: null },
+    { id: 2, userId: null, roleId: 7 },
+    { id: 3, userId: "carol", roleId: null },
+  ];
+
+  it("picks the grants of the rule's user or role", () => {
+    expect(
+      grantsForFolderRule(entries, { userId: "bob", roleId: null }).map(
+        (e) => e.id,
+      ),
+    ).toEqual([1]);
+    expect(
+      grantsForFolderRule(entries, { userId: null, roleId: 7 }).map(
+        (e) => e.id,
+      ),
+    ).toEqual([2]);
+    expect(
+      grantsForFolderRule(entries, { userId: null, roleId: null }),
+    ).toEqual([]);
   });
 });

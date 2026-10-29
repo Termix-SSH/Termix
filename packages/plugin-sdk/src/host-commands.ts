@@ -11,11 +11,38 @@
 
 export type { Client, ClientChannel } from "ssh2";
 import type { Client, ClientChannel } from "ssh2";
+// Homebrew and OrbStack paths a non-interactive shell misses.
+import { EXTRA_PATH_DIRS } from "./host-scripts/docker.js";
+export { EXTRA_PATH_DIRS };
 
 export interface ExecResult {
   stdout: string;
   stderr: string;
   code: number | null;
+}
+
+/**
+ * Decodes raw command output. Strict UTF-8 first; when that fails, tries GBK,
+ * which is what a Chinese-locale Windows console sends (its bytes are almost
+ * never valid UTF-8) and keeps it only when it decodes without replacement
+ * characters. Anything else falls back to lossy UTF-8, the old behavior.
+ */
+export function decodeCommandOutput(buf: Buffer): string {
+  try {
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(
+      buf,
+    );
+  } catch {
+    // not valid UTF-8, try the legacy codepage
+  }
+  try {
+    // A Node built with small-ICU has no GBK decoder and throws here.
+    const gbk = new TextDecoder("gbk").decode(buf);
+    if (!gbk.includes("�")) return gbk;
+  } catch {
+    // expected - fall through to lossy UTF-8
+  }
+  return buf.toString("utf8");
 }
 
 /** Runs one non-interactive command over an existing ssh2 client. */
@@ -62,8 +89,10 @@ export function execCommand(
       }
 
       stream = _stream;
-      let stdout = "";
-      let stderr = "";
+      // Chunks are buffered and decoded once on close: a multi-byte character
+      // can be split across chunks, and charset detection needs it whole.
+      const stdout: Buffer[] = [];
+      const stderr: Buffer[] = [];
       let exitCode: number | null = null;
 
       stream
@@ -72,11 +101,15 @@ export function execCommand(
             settled = true;
             exitCode = typeof code === "number" ? code : null;
             cleanup();
-            resolve({ stdout, stderr, code: exitCode });
+            resolve({
+              stdout: decodeCommandOutput(Buffer.concat(stdout)),
+              stderr: decodeCommandOutput(Buffer.concat(stderr)),
+              code: exitCode,
+            });
           }
         })
         .on("data", (data: Buffer) => {
-          stdout += data.toString("utf8");
+          stdout.push(data);
         })
         .on("error", (streamErr: Error) => {
           if (!settled) {
@@ -89,7 +122,7 @@ export function execCommand(
       if (stream.stderr) {
         stream.stderr
           .on("data", (data: Buffer) => {
-            stderr += data.toString("utf8");
+            stderr.push(data);
           })
           .on("error", (stderrErr: Error) => {
             if (!settled) {
@@ -113,14 +146,6 @@ export interface PlatformInfo {
   hasDocker: boolean;
   osPrettyName: string | null;
 }
-
-/**
- * Non-interactive SSH shells don't source ~/.zprofile or ~/.bash_profile,
- * so PATH additions from installers like Homebrew or OrbStack are missing.
- * Extend PATH with their common install locations before probing.
- */
-export const EXTRA_PATH_DIRS =
-  '/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:"$HOME/.orbstack/bin"';
 
 const DOCKER_PROBE =
   `command -v docker >/dev/null 2>&1` +

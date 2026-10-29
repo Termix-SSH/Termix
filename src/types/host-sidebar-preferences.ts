@@ -87,6 +87,8 @@ export interface HostSidebarDisplayPreferences extends HostRowFields {
   openOnDoubleClick: boolean;
   /** When false, nested folders hide the parent-path breadcrumb before their name. */
   showFolderPaths: boolean;
+  /** When false, rows keep one background instead of alternating. */
+  stripedRows: boolean;
   hostClickBehavior: HostClickBehavior;
   /** When true, the sidebar closes after a host is opened from it. */
   closeOnOpen: boolean;
@@ -164,6 +166,7 @@ export function defaultHostSidebarPreferences(): HostSidebarPreferences {
       statusColorScheme: "accent",
       openOnDoubleClick: false,
       showFolderPaths: true,
+      stripedRows: true,
       hostClickBehavior: "newTab",
       closeOnOpen: false,
       barActions: {},
@@ -272,6 +275,10 @@ export function sanitizeHostSidebarPreferences(
       typeof displayObj.showFolderPaths === "boolean"
         ? displayObj.showFolderPaths
         : defaults.display.showFolderPaths,
+    stripedRows:
+      typeof displayObj.stripedRows === "boolean"
+        ? displayObj.stripedRows
+        : defaults.display.stripedRows,
     hostClickBehavior: HOST_CLICK_BEHAVIORS.includes(
       displayObj.hostClickBehavior as HostClickBehavior,
     )

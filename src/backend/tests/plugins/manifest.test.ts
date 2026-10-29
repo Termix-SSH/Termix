@@ -650,6 +650,110 @@ describe("panels, dashboard cards and guest pages", () => {
   });
 });
 
+describe("contributes.mobile", () => {
+  const tabs = [
+    { id: "sample", titleKey: "nav.sample", icon: "Box", openFrom: ["rail"] },
+  ];
+
+  it("accepts each mode with its own fields", () => {
+    for (const mobile of [
+      {
+        mode: "webview",
+        entry: "dist/mobile.js",
+        sizes: ["phone", "tablet"],
+        views: ["sample"],
+        note: "mobile.note",
+      },
+      { mode: "webview" },
+      { mode: "native", feature: "file-manager" },
+      { mode: "none", note: "Not on phones" },
+    ]) {
+      expect(validateManifest(base({ contributes: { tabs, mobile } }))).toEqual(
+        [],
+      );
+    }
+  });
+
+  it("needs a known mode and rejects unknown fields", () => {
+    const errors = validateManifest(
+      base({ contributes: { mobile: { mode: "app", width: 3 } } }),
+    ).join();
+    expect(errors).toMatch(/Unknown field "width" in "contributes\.mobile"/);
+    expect(errors).toMatch(/contributes\.mobile\.mode must be one of/);
+    expect(
+      validateManifest(base({ contributes: { mobile: "webview" } })).join(),
+    ).toMatch(/"contributes\.mobile" must be an object/);
+  });
+
+  it("keeps webview and native fields to their own mode", () => {
+    const errors = validateManifest(
+      base({
+        contributes: {
+          tabs,
+          mobile: {
+            mode: "native",
+            entry: "dist/mobile.js",
+            views: ["sample"],
+          },
+        },
+      }),
+    ).join();
+    expect(errors).toMatch(/mobile\.entry is only for mode "webview"/);
+    expect(errors).toMatch(/mobile\.views is only for mode "webview"/);
+    expect(
+      validateManifest(
+        base({ contributes: { mobile: { mode: "webview", feature: "x1" } } }),
+      ).join(),
+    ).toMatch(/mobile\.feature is only for mode "native"/);
+  });
+
+  it("puts the entry beside the frontend bundle", () => {
+    const check = (entry: string, frontend?: string) =>
+      validateManifest(
+        base({
+          ...(frontend ? { frontend } : {}),
+          contributes: { mobile: { mode: "webview", entry } },
+        }),
+      ).join();
+    expect(check("dist/mobile.js")).toBe("");
+    expect(check("./dist/mobile.js")).toBe("");
+    expect(check("build/mobile.js", "build/frontend.js")).toBe("");
+    expect(check("mobile.js")).toMatch(/same folder as the frontend bundle/);
+    expect(check("dist/mobile.css")).toMatch(/entry must be a \.js file/);
+    expect(check("../dist/mobile.js")).toMatch(/relative path inside/);
+  });
+
+  it("checks sizes, views and the feature id", () => {
+    const errors = validateManifest(
+      base({
+        contributes: {
+          tabs,
+          panels: [{ id: "side", titleKey: "nav.side" }],
+          mobile: {
+            mode: "webview",
+            sizes: ["phone", "phone", "watch"],
+            views: ["sample", "side", "missing"],
+          },
+        },
+      }),
+    ).join();
+    expect(errors).toMatch(/sizes duplicates "phone"/);
+    expect(errors).toMatch(/sizes entries must be one of: phone, tablet/);
+    expect(errors).toMatch(/views entries must be ids .*"missing"/);
+    expect(errors).not.toMatch(/"side"/);
+    expect(
+      validateManifest(
+        base({ contributes: { mobile: { mode: "webview", sizes: [] } } }),
+      ).join(),
+    ).toMatch(/sizes must be a non-empty array/);
+    expect(
+      validateManifest(
+        base({ contributes: { mobile: { mode: "native", feature: "Files" } } }),
+      ).join(),
+    ).toMatch(/mobile\.feature must match/);
+  });
+});
+
 describe("named service providers", () => {
   const provides = (names: unknown) => [
     {

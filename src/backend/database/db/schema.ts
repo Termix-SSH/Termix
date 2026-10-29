@@ -183,6 +183,9 @@ export const hosts = sqliteTable(
     // legacy algorithms, agent, environment). JSON.
     sshOptions: text("ssh_options"),
     notes: text("notes"),
+    // Hex color and Lucide icon name a layout may show next to the host.
+    color: text("color"),
+    icon: text("icon"),
     enableSsh: integer("enable_ssh", { mode: "boolean" }).notNull().default(true),
 
     sshPort: integer("ssh_port").default(22),
@@ -472,6 +475,38 @@ export const sharedHostAuthOverrides = sqliteTable(
     uniqueIndex("shared_host_auth_overrides_host_user_protocol_unique").on(
       table.hostId,
       table.userId,
+      table.protocol,
+    ),
+  ],
+);
+
+/**
+ * A recipient's own login for the shared hosts in a folder ("Parent / Child")
+ * and its subfolders. A host's own override still wins.
+ */
+export const sharedFolderAuthOverrides = sqliteTable(
+  "shared_folder_auth_overrides",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    folder: text("folder").notNull(),
+    protocol: text("protocol").notNull().default("ssh"),
+    credentialId: integer("credential_id")
+      .notNull()
+      .references(() => sshCredentials.id, { onDelete: "cascade" }),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("shared_folder_auth_overrides_user_folder_protocol_unique").on(
+      table.userId,
+      table.folder,
       table.protocol,
     ),
   ],

@@ -333,11 +333,17 @@ export function usePluginsManager() {
     [run, t, failToast],
   );
 
-  /** Reads a picked .tmxplug and asks for consent before anything loads. */
+  /**
+   * Reads a picked .tmxplug, with its .sig when one was picked too, and asks
+   * for consent before anything loads.
+   */
   const requestUpload = useCallback(
-    async (file: File) => {
+    async (file: File, signatureFile?: File) => {
       try {
-        const preview = await uploadPlugin(file);
+        const preview = await uploadPlugin(
+          file,
+          signatureFile ? await signatureFile.text() : undefined,
+        );
         setConsent({
           plugin: uploadEntry(preview),
           mode: "upload",

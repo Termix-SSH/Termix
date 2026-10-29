@@ -1,10 +1,10 @@
 import type { AuthOverrideProtocol } from "../../types/auth-protocols.js";
 import { isAuthOverrideProtocol } from "../hosts/protocol-auth/registry.js";
 import {
-  createCurrentCredentialRepository,
   createCurrentSharedHostAuthOverrideRepository,
   createCurrentUserRepository,
 } from "../database/repositories/factory.js";
+import { findUsableCredential } from "../hosts/usable-credential.js";
 import { logAudit } from "./audit-logger.js";
 import { PermissionManager } from "./permission-manager.js";
 
@@ -60,11 +60,7 @@ export class SharedHostAuthOverrideService {
     await this.requireSharedHostAccess(hostId, userId);
 
     if (credentialId !== null) {
-      const credential =
-        await createCurrentCredentialRepository().findByIdForUser(
-          userId,
-          credentialId,
-        );
+      const credential = await findUsableCredential(credentialId, userId);
       if (!credential) {
         throw new SharedHostAuthOverrideServiceError(
           "Credential not found",

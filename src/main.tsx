@@ -12,6 +12,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import "./ui/i18n/i18n";
 import { isElectron } from "@/lib/electron";
 import { isEmbeddedAuthFrame } from "@/lib/embedded-frame";
+import { captureAppReturn } from "@/lib/app-return";
 import { rememberViewLink, resumeViewLink } from "@/lib/view-link-resume";
 import { getEmbeddedServerFailure } from "@/lib/embedded-server-status";
 import { Toaster } from "@/components/sonner";
@@ -168,8 +169,11 @@ function App() {
   // Keeps the window controls the system draws in the colors of the theme.
   useTitleBarOverlayColors();
   const stored = getStoredAuth();
+  // A sign in for the mobile app always shows the login form, so the app gets
+  // its own fresh session.
+  const [appReturn] = useState(captureAppReturn);
   const [phase, setPhase] = useState<Phase>(
-    stored?.loggedIn ? "verifying" : "idle-auth",
+    stored?.loggedIn && !appReturn ? "verifying" : "idle-auth",
   );
   const [authUsername, setAuthUsername] = useState(stored?.username ?? "");
   const [verifyRetryCount, setVerifyRetryCount] = useState(0);

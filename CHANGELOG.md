@@ -1,5 +1,38 @@
 # Changelog
 
+## 26.10.6
+
+### Added
+
+- The mobile app can sign in through your browser with any login method, including passkeys and security keys
+- Plugins can say how they show in the mobile app
+- The plugin list tells the mobile app which plugin API each plugin needs, so the app can say when it or a plugin needs an update
+- Hosts can have a color and an icon, which sync to the desktop and mobile apps
+- A sidebar setting to turn off alternating row colors
+- TERMIX_NGINX_TEMPLATE, TERMIX_NGINX_CONF, TERMIX_NGINX_PID and TERMIX_APP_DIR let an install outside Docker, like the Proxmox LXC script, switch nginx to HTTPS when a certificate is added
+- Removing a user or role from a shared folder can also remove their access from every host in the folder and its subfolders
+- A personal login set once on a folder is used for every host shared with you in it and its subfolders, unless a host has its own
+
+### Changed
+
+- body-parser is updated to 2.4.0 for a security fix
+
+### Fixed
+
+- The log line for a rejected proxy login now shows the source address, so you can add it to TRUSTED_PROXY_AUTH_TRUSTED_PROXIES
+- Deleting your own account now removes all of its data, like an admin delete does, instead of leaving some behind
+- An SSH key with a passphrase is unlocked once and kept unlocked in memory for a short time, so connecting to many hosts with it no longer freezes the server for minutes
+- A change pushed from one linked desktop or phone now reaches your other linked devices right away, instead of on their next check a few minutes later
+- The macOS menu bar icon shows the Termix logo instead of an empty square
+- Cmd+1 (Alt+1 on Windows and Linux) and the other number shortcuts pick the open tabs as numbered in the tab bar, not the home tab
+- A plugin the app no longer ships and could not download (for example on a locked down network) shows as failed with the reason on the Plugins tab, instead of as installed
+- The desktop app no longer shows This layout could not be shown when the layout is asked for before its plugin has finished starting; it tries again
+- On the desktop, a plugin installed from the registry that uses core's packages through require (like ACME SSL and axios) starts instead of failing with Cannot find module
+- Adding a certificate on an install where Termix cannot manage nginx says what to set instead of only asking for a restart
+- A login someone shared with you works on a host shared with you, for personal SSH authentication and when the owner shares SSH authentication
+- Lists in plugins (like the AI Assets table) use their full width on narrow screens, keep cells under the right header and no longer overlap rows
+- Installing an official plugin from a file works offline: pick the .tmxplug and its .sig from the release together and it installs as official, so plugins like Fleets no longer stop with migration refused. It can also fill in a plugin that was on but could not be downloaded
+
 ## 26.10.5
 
 ### Added

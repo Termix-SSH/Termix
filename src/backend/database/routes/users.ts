@@ -31,6 +31,7 @@ import { shownIdentity } from "../../sync/shown-identity.js";
 import { registerUserExternalAccountRoutes } from "./user-external-account-routes.js";
 import { registerUserPasswordResetRoutes } from "./user-password-reset-routes.js";
 import { registerUserAdminRoutes } from "./user-admin-routes.js";
+import { registerUserDeleteAccountRoutes } from "./user-delete-account-routes.js";
 import { registerUserDataAccessRoutes } from "./user-data-access-routes.js";
 import { listExternalLoginMethods, registerAuthRoutes } from "./auth-routes.js";
 import { registerAuthCompatRoutes } from "./auth-compat-routes.js";
@@ -318,7 +319,7 @@ router.post("/proxy-login", async (req, res) => {
   try {
     if (!isTrustedProxyAddress(sourceAddress, config.trustedProxies)) {
       authLogger.warn(
-        "Rejected proxy authentication from an untrusted source",
+        `Rejected proxy authentication from an untrusted source: ${sourceAddress ?? "unknown"}`,
         {
           operation: "trusted_proxy_auth_rejected",
           sourceAddress,
@@ -1229,86 +1230,7 @@ router.patch("/password-reset-allowed", authenticateJWT, async (req, res) => {
   }
 });
 
-/**
- * @openapi
- * /users/delete-account:
- *   delete:
- *     summary: Delete user account
- *     description: Deletes the authenticated user's account.
- *     tags:
- *       - Users
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               password:
- *                 type: string
- *     responses:
- *       200:
- *         description: Account deleted successfully.
- *       400:
- *         description: Password is required.
- *       401:
- *         description: Incorrect password.
- *       403:
- *         description: Cannot delete external authentication accounts or the last admin user.
- *       404:
- *         description: User not found.
- *       500:
- *         description: Failed to delete account.
- */
-router.delete("/delete-account", authenticateJWT, async (req, res) => {
-  const userId = (req as AuthenticatedRequest).userId;
-  const { password } = req.body;
-
-  if (!isNonEmptyString(password)) {
-    return res
-      .status(400)
-      .json({ error: "Password is required to delete account" });
-  }
-
-  try {
-    const userRecord = await findCurrentUser(userId);
-    if (!userRecord) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    if (userRecord.isExternal) {
-      return res.status(403).json({
-        error:
-          "Cannot delete external authentication accounts through this endpoint",
-      });
-    }
-
-    const isMatch = await bcrypt.compare(password, userRecord.passwordHash);
-    if (!isMatch) {
-      authLogger.warn(
-        `Incorrect password provided for account deletion: ${userRecord.username}`,
-      );
-      return res.status(401).json({ error: "Incorrect password" });
-    }
-
-    if (userRecord.isAdmin) {
-      const adminCount = await createCurrentUserRepository().countAdmins();
-      if (adminCount <= 1) {
-        return res
-          .status(403)
-          .json({ error: "Cannot delete the last admin user" });
-      }
-    }
-
-    await createCurrentUserRepository().delete(userId);
-
-    authLogger.success(`User account deleted: ${userRecord.username}`);
-    res.json({ message: "Account deleted successfully" });
-  } catch (err) {
-    authLogger.error("Failed to delete user account", err);
-    res.status(500).json({ error: "Failed to delete account" });
-  }
-});
+registerUserDeleteAccountRoutes(router, authenticateJWT);
 
 registerUserPasswordResetRoutes(router, { authManager });
 

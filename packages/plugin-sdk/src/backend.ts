@@ -177,8 +177,24 @@ export interface SyncWriteEvent {
 export interface SyncEntityRegistration {
   /** Stable wire name. Never change it: records on both sides match on it. */
   type: string;
-  /** The table, as returned by ctx.db.define. */
+  /** The table, as returned by ctx.db.define. Null for an entity with `load`. */
   table: unknown;
+  /**
+   * Server to desktop only: a desktop never pushes these rows. Required with
+   * `load`.
+   */
+  readOnly?: boolean;
+  /**
+   * Builds the rows the user gets instead of reading the rows they own in
+   * `table`, for data kept for the whole server (a shared library, rows other
+   * users share with them). Rows are on the wire: plaintext, each with a
+   * syncId. Needs `readOnly: true`, `write` and `erase`.
+   */
+  load?: (userId: string) => Promise<SyncRow[]>;
+  /** Keeps a copy of an inbound row on the desktop, for an entity with `load`. */
+  write?: (userId: string, wire: SyncRow) => Promise<void>;
+  /** Drops the desktop copy with this syncId, for an entity with `load`. */
+  erase?: (userId: string, syncId: string) => Promise<void>;
   /** Column holding the owning user id. Defaults to "userId". */
   userColumn?: string;
   /** Fields stored encrypted with the owner's data key. Plaintext on the wire. */
@@ -470,6 +486,12 @@ export interface PluginSyncHost {
     ensureCore: () => Promise<void>;
     onChanged: (listener: () => void) => () => void;
     onLocalWrite: (listener: () => void) => () => void;
+    /** Local ids of the user's own rows of a type, by sync id. Termix 26.10.6+. */
+    idsOf?: (
+      type: string,
+      userId: string,
+      syncIds: string[],
+    ) => Promise<Record<string, number>>;
   };
 
   /** Rows and bookkeeping of one local user's replica. */
@@ -1813,13 +1835,21 @@ export interface PluginNetwork {
  * asked for every connection, so it must be quick. `open` returns a stream
  * the SSH client runs over, like a relayed socket.
  */
+/** The host a transport is asked about. Fields past port come from Termix 26.10.6. */
+export interface PluginSshTransportHost {
+  id: number;
+  ip: string;
+  port: number;
+  /** Owner of the host row. */
+  userId?: string | null;
+  syncId?: string | null;
+  connectionOrigin?: "local" | "remote" | null;
+  localOnly?: boolean;
+}
+
 export interface PluginSshTransportProvider {
-  claims: (hostId: number) => boolean;
-  open: (host: {
-    id: number;
-    ip: string;
-    port: number;
-  }) => Promise<import("node:stream").Duplex>;
+  claims: (hostId: number, host?: PluginSshTransportHost) => boolean;
+  open: (host: PluginSshTransportHost) => Promise<import("node:stream").Duplex>;
 }
 
 export interface PluginSshTransports {

@@ -144,3 +144,32 @@ describe("termix-plugin validate layouts and capabilities", () => {
     expect(output).not.toContain("is declared but");
   });
 });
+
+describe("termix-plugin validate mobile entry", () => {
+  function mobile(built: boolean) {
+    const root = plugin([]);
+    fs.writeFileSync(
+      path.join(root, "manifest.json"),
+      JSON.stringify({
+        id: "fixture",
+        version: "1.0.0",
+        contributes: { mobile: { mode: "webview", entry: "dist/mobile.js" } },
+      }),
+    );
+    if (built) {
+      fs.mkdirSync(path.join(root, "dist"), { recursive: true });
+      fs.writeFileSync(path.join(root, "dist", "mobile.js"), "");
+    }
+    return root;
+  }
+
+  it("reports a mobile entry that was not built", async () => {
+    expect(await problems(mobile(false))).toContain(
+      "manifest references dist/mobile.js, which does not exist",
+    );
+  });
+
+  it("finds a built mobile entry", async () => {
+    expect(await problems(mobile(true))).not.toContain("dist/mobile.js");
+  });
+});

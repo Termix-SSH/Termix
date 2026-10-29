@@ -13,7 +13,7 @@ import net from "node:net";
 import type { Duplex } from "node:stream";
 import { createWebSocketStream, type WebSocket } from "ws";
 import type { PluginWebSocketConnection } from "@termix-ssh/plugin-sdk/backend";
-import { resolveHostById } from "./host-resolver.js";
+import { resolveHostById, resolveHostBySyncId } from "./host-resolver.js";
 import { openSshTransport } from "./connect/transport.js";
 import type { MutableConnectConfig, SshConnectHost } from "./connect/types.js";
 import { sshLogger } from "../utils/logger.js";
@@ -35,12 +35,13 @@ async function handleRelay(
 ): Promise<void> {
   const ws = connection.socket as WebSocket;
   const url = String((connection.request as { url?: string }).url ?? "");
-  const hostId = Number(
-    new URL(url, "http://relay").searchParams.get("hostId"),
-  );
+  const params = new URL(url, "http://relay").searchParams;
+  const hostId = Number(params.get("hostId"));
+  // A linked desktop knows its hosts by sync id, not by this server's id.
+  const syncId = params.get("syncId");
   const userId = connection.userId;
 
-  if (!userId || !Number.isSafeInteger(hostId) || hostId <= 0) {
+  if (!userId || (!syncId && (!Number.isSafeInteger(hostId) || hostId <= 0))) {
     close(ws, 1008, "A host is required");
     return;
   }
@@ -49,7 +50,9 @@ async function handleRelay(
     return;
   }
 
-  const host = await resolveHostById(hostId, userId);
+  const host = syncId
+    ? await resolveHostBySyncId(syncId, userId)
+    : await resolveHostById(hostId, userId);
   if (!host) {
     close(ws, 1008, "Host not found or access denied");
     return;
@@ -93,7 +96,8 @@ async function handleRelay(
   } catch (error) {
     sshLogger.warn("A relay could not reach its host", {
       operation: "ssh_relay_open",
-      hostId,
+      hostId: syncId ? undefined : hostId,
+      syncId,
       error: error instanceof Error ? error.message : String(error),
     });
     finish();

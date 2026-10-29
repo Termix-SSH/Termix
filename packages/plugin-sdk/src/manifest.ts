@@ -37,7 +37,7 @@ export {
  * "^1.2" needs 1.2 or later). engine.termix is checked against the core
  * version by the server.
  */
-export const PLUGIN_API_VERSION = "1.12.0";
+export const PLUGIN_API_VERSION = "1.13.0";
 
 /** The API major, the default engine.api for a new plugin. */
 export const SUPPORTED_PLUGIN_API_VERSION = String(
@@ -526,6 +526,36 @@ export interface PluginContributions {
   layouts?: PluginLayoutContribution[];
   /** Themes. Needs the ui:theme capability. */
   themes?: PluginThemeContribution[];
+  /** How the plugin shows in the Termix mobile app. Plugin API 1.13. */
+  mobile?: PluginMobileContribution;
+}
+
+/**
+ * - "webview": the app shows the plugin's UI from the server in a WebView.
+ * - "native": the app has its own screens for this plugin.
+ * - "none": nothing to show in the app.
+ */
+export const MOBILE_MODES = ["webview", "native", "none"] as const;
+export type PluginMobileMode = (typeof MOBILE_MODES)[number];
+
+export const MOBILE_SIZES = ["phone", "tablet"] as const;
+export type PluginMobileSize = (typeof MOBILE_SIZES)[number];
+
+export interface PluginMobileContribution {
+  mode: PluginMobileMode;
+  /**
+   * webview: a bundle built for the app, in the same folder as the frontend
+   * bundle. Unset means the normal frontend runs in a phone sized frame.
+   */
+  entry?: string;
+  /** webview: screen sizes the UI works at. Defaults to both. */
+  sizes?: PluginMobileSize[];
+  /** webview: tab, panel or card ids the app offers. Defaults to every tab. */
+  views?: string[];
+  /** native: the app feature that stands in for it. Defaults to the plugin id. */
+  feature?: string;
+  /** i18n key in the plugin's namespace, or plain text, shown in the app. */
+  note?: string;
 }
 
 /** A field a protocol login carries besides username and password. */
@@ -765,6 +795,7 @@ const ALLOWED_CONTRIBUTES = new Set([
   "protocols",
   "layouts",
   "themes",
+  "mobile",
 ]);
 
 const ALLOWED_SETTINGS_FIELD = [
@@ -946,8 +977,133 @@ export function validateManifest(manifest: unknown): string[] {
     typeof m.id === "string" ? m.id : undefined,
     errors,
   );
+  if (isPlainObject(m.contributes)) {
+    validateMobile(
+      m.contributes,
+      typeof m.frontend === "string" ? m.frontend : DEFAULT_FRONTEND_ENTRY,
+      errors,
+    );
+  }
 
   return errors;
+}
+
+function folderOf(file: string): string {
+  const parts = file.split("/").filter((part) => part !== "" && part !== ".");
+  return parts.slice(0, -1).join("/");
+}
+
+function validateMobile(
+  contributes: Record<string, unknown>,
+  frontend: string,
+  errors: string[],
+): void {
+  const mobile = contributes.mobile;
+  if (mobile === undefined) return;
+  const where = "contributes.mobile";
+  if (!isPlainObject(mobile)) {
+    errors.push(`Field "${where}" must be an object`);
+    return;
+  }
+  rejectUnknown(
+    mobile,
+    ["mode", "entry", "sizes", "views", "feature", "note"],
+    `"${where}"`,
+    errors,
+  );
+  const mode = mobile.mode;
+  if (!(MOBILE_MODES as readonly unknown[]).includes(mode)) {
+    errors.push(`${where}.mode must be one of: ${MOBILE_MODES.join(", ")}`);
+    return;
+  }
+  for (const key of ["entry", "sizes", "views"]) {
+    if (mobile[key] !== undefined && mode !== "webview") {
+      errors.push(`${where}.${key} is only for mode "webview"`);
+    }
+  }
+  if (mobile.feature !== undefined && mode !== "native") {
+    errors.push(`${where}.feature is only for mode "native"`);
+  }
+
+  if (
+    mobile.entry !== undefined &&
+    requireString(mobile.entry, `${where}.entry`, errors)
+  ) {
+    const before = errors.length;
+    requireRelativePath(mobile.entry, `${where}.entry`, errors);
+    if (!mobile.entry.endsWith(".js")) {
+      errors.push(`${where}.entry must be a .js file`);
+    } else if (
+      errors.length === before &&
+      folderOf(mobile.entry) !== folderOf(frontend)
+    ) {
+      // Core only serves the folder the frontend bundle sits in.
+      errors.push(
+        `${where}.entry must sit in the same folder as the frontend bundle (${frontend})`,
+      );
+    }
+  }
+
+  if (mobile.sizes !== undefined) {
+    const sizes = mobile.sizes;
+    if (!Array.isArray(sizes) || sizes.length === 0) {
+      errors.push(`${where}.sizes must be a non-empty array`);
+    } else {
+      const seen = new Set<unknown>();
+      for (const size of sizes) {
+        if (!(MOBILE_SIZES as readonly unknown[]).includes(size)) {
+          errors.push(
+            `${where}.sizes entries must be one of: ${MOBILE_SIZES.join(", ")}`,
+          );
+        } else if (seen.has(size)) {
+          errors.push(`${where}.sizes duplicates "${String(size)}"`);
+        }
+        seen.add(size);
+      }
+    }
+  }
+
+  if (mobile.views !== undefined) {
+    const views = mobile.views;
+    if (!Array.isArray(views) || views.length === 0) {
+      errors.push(`${where}.views must be a non-empty array`);
+    } else {
+      const declared = new Set<string>();
+      for (const field of ["tabs", "panels", "dashboardCards"]) {
+        const list = contributes[field];
+        if (!Array.isArray(list)) continue;
+        for (const view of list) {
+          if (isPlainObject(view) && typeof view.id === "string") {
+            declared.add(view.id);
+          }
+        }
+      }
+      const seen = new Set<unknown>();
+      for (const view of views) {
+        if (typeof view !== "string" || !declared.has(view)) {
+          errors.push(
+            `${where}.views entries must be ids from contributes.tabs, panels or dashboardCards, got: ${JSON.stringify(view)}`,
+          );
+        } else if (seen.has(view)) {
+          errors.push(`${where}.views duplicates "${view}"`);
+        }
+        seen.add(view);
+      }
+    }
+  }
+
+  if (
+    mobile.feature !== undefined &&
+    (typeof mobile.feature !== "string" ||
+      !LOOK_ID_PATTERN.test(mobile.feature))
+  ) {
+    errors.push(
+      `${where}.feature must match ${LOOK_ID_PATTERN} (lowercase letters, digits, dashes)`,
+    );
+  }
+  if (mobile.note !== undefined) {
+    requireString(mobile.note, `${where}.note`, errors);
+  }
 }
 
 function validateFeatures(features: unknown, errors: string[]): void {

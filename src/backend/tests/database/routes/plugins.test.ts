@@ -488,6 +488,35 @@ describe("plugins route", () => {
     }
   });
 
+  it("lists a plugin's engine ranges to any user", async () => {
+    state.plugins.set(
+      "sample-plugin",
+      makePlugin({
+        manifestJson: JSON.stringify({
+          engine: { api: "^1.13", termix: ">=26.10.6", extra: 1 },
+        }),
+      }),
+    );
+    state.plugins.set(
+      "bad-engine",
+      makePlugin({
+        id: "bad-engine",
+        manifestJson: JSON.stringify({ engine: { api: 2 } }),
+      }),
+    );
+
+    const res = await fetch(`${baseUrl}/plugins`, {
+      headers: { "x-test-user-id": "regular-user" },
+    });
+    const body = (await res.json()) as Array<{ id: string; engine: unknown }>;
+
+    expect(body.find((p) => p.id === "sample-plugin")?.engine).toEqual({
+      api: "^1.13",
+      termix: ">=26.10.6",
+    });
+    expect(body.find((p) => p.id === "bad-engine")?.engine).toEqual({});
+  });
+
   it("reports an enabled plugin that safe mode keeps off", async () => {
     state.plugins.set("sample-plugin", makePlugin({ state: "enabled" }));
 
@@ -643,6 +672,7 @@ describe("plugins route", () => {
         enabled: true,
         state: "enabled",
         runsOnServer: false,
+        engine: {},
         contributes: null,
         dependencies: {},
         optionalDependencies: {},
