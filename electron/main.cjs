@@ -1246,8 +1246,9 @@ function createTray() {
     let trayIcon;
     if (process.platform === "darwin") {
       const iconPath = path.join(publicRoot, "icons", "16x16.png");
+      // The logo is full color on a solid tile. As a template image macOS
+      // keeps only its outline, which showed as an empty square.
       trayIcon = nativeImage.createFromPath(iconPath);
-      trayIcon.setTemplateImage(true);
     } else if (process.platform === "win32") {
       trayIcon = path.join(publicRoot, "icon.ico");
     } else {
