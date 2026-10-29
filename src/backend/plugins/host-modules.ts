@@ -38,6 +38,20 @@ export function isUserPluginFile(
   );
 }
 
+/** Whether a failed import from a plugin should try core's copy. */
+export function shouldUseHostModule(
+  error: unknown,
+  specifier: string,
+  parentURL: string | undefined,
+  pluginsDir: string,
+): boolean {
+  const code = (error as { code?: string })?.code;
+  // import() says ERR_MODULE_NOT_FOUND, a CommonJS require MODULE_NOT_FOUND.
+  if (code !== "ERR_MODULE_NOT_FOUND" && code !== "MODULE_NOT_FOUND")
+    return false;
+  return isBareSpecifier(specifier) && isUserPluginFile(parentURL, pluginsDir);
+}
+
 export function installHostModuleFallback(): void {
   if (installed) return;
   installed = true;
@@ -49,9 +63,12 @@ export function installHostModuleFallback(): void {
         return nextResolve(specifier, context);
       } catch (error) {
         if (
-          (error as { code?: string })?.code !== "ERR_MODULE_NOT_FOUND" ||
-          !isBareSpecifier(specifier) ||
-          !isUserPluginFile(context.parentURL, getPluginsDir())
+          !shouldUseHostModule(
+            error,
+            specifier,
+            context.parentURL,
+            getPluginsDir(),
+          )
         ) {
           throw error;
         }

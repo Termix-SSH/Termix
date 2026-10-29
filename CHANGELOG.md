@@ -20,6 +20,7 @@
 - Cmd+1 (Alt+1 on Windows and Linux) and the other number shortcuts pick the open tabs as numbered in the tab bar, not the home tab
 - A plugin the app no longer ships and could not download (for example on a locked down network) shows as failed with the reason on the Plugins tab, instead of as installed
 - The desktop app no longer shows This layout could not be shown when the layout is asked for before its plugin has finished starting; it tries again
+- On the desktop, a plugin installed from the registry that uses core's packages through require (like ACME SSL and axios) starts instead of failing with Cannot find module
 
 ## 26.10.5
 
