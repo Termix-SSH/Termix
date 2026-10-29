@@ -11,6 +11,7 @@ import {
   getFriendlyKeyTypeName,
   validateKeyPair,
   isSecurityKeyFile,
+  clearUnlockedKeyCache,
 } from "../../utils/ssh-key-utils.js";
 
 const { parsePrivateKey } = sshpk;
@@ -223,6 +224,32 @@ describe("PKCS#8 runtime key normalization", () => {
         "-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----",
       ),
     ).toThrow();
+  });
+});
+
+describe("encrypted OpenSSH keys", () => {
+  const key = sshpk.generatePrivateKey("ed25519");
+  const encrypted = key.toString("openssh", { passphrase: "pw" }).trim();
+
+  it("unlocks once and hands ssh2 a key that needs no passphrase", () => {
+    clearUnlockedKeyCache();
+    const first = preparePrivateKeyForSSH2(encrypted, "pw");
+    const parsed = ssh2.utils.parseKey(first);
+    expect(parsed).not.toBeInstanceOf(Error);
+    expect(parsePrivateKey(first.toString()).fingerprint().toString()).toBe(
+      key.fingerprint().toString(),
+    );
+    expect(preparePrivateKeyForSSH2(encrypted, "pw").toString()).toBe(
+      first.toString(),
+    );
+  });
+
+  it("leaves the key locked for a wrong or missing passphrase", () => {
+    clearUnlockedKeyCache();
+    expect(preparePrivateKeyForSSH2(encrypted, "wrong").toString()).toBe(
+      encrypted,
+    );
+    expect(preparePrivateKeyForSSH2(encrypted).toString()).toBe(encrypted);
   });
 });
 

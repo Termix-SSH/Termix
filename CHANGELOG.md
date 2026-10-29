@@ -13,6 +13,7 @@
 
 - The log line for a rejected proxy login now shows the source address, so you can add it to TRUSTED_PROXY_AUTH_TRUSTED_PROXIES
 - Deleting your own account now removes all of its data, like an admin delete does, instead of leaving some behind
+- An SSH key with a passphrase is unlocked once and kept unlocked in memory for a short time, so connecting to many hosts with it no longer freezes the server for minutes
 
 ## 26.10.5
 
