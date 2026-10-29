@@ -404,6 +404,7 @@ function watchBackend() {
     { cwd: root, stdio: ["ignore", "pipe", "inherit"] },
   );
   let first = true;
+  let restartQueued = false;
   let buffer = "";
   tsc.stdout.on("data", (chunk) => {
     buffer += chunk.toString();
@@ -423,14 +424,21 @@ function watchBackend() {
         ? "starting the backend"
         : "backend changed, restarting it";
       first = false;
-      void queue(() => restartBackend(reason));
+      if (restartQueued) continue;
+      restartQueued = true;
+      void queue(() => {
+        restartQueued = false;
+        return restartBackend(reason);
+      });
     }
   });
 }
 
 function watchSdk() {
+  let buildStarted = Date.now();
   const changed = createDebouncer(300, () =>
     queue(async () => {
+      buildStarted = Date.now();
       try {
         await run("npm", ["run", "build:sdk"]);
       } catch (error) {
@@ -440,7 +448,16 @@ function watchSdk() {
       await restartBackend("SDK changed, restarting the backend");
     }),
   );
-  watch(SDK_SRC, true, () => changed("sdk"));
+  // Windows also reports reads (access time), so only a file saved after the last build counts
+  watch(SDK_SRC, true, (_event, filename) => {
+    try {
+      const stat = fs.statSync(path.join(SDK_SRC, String(filename ?? "")));
+      if (stat.isDirectory() || stat.mtimeMs < buildStarted) return;
+    } catch {
+      // deleted or renamed, still a change
+    }
+    changed("sdk");
+  });
 }
 
 function watchElectron() {
