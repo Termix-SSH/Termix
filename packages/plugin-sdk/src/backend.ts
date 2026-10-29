@@ -177,8 +177,24 @@ export interface SyncWriteEvent {
 export interface SyncEntityRegistration {
   /** Stable wire name. Never change it: records on both sides match on it. */
   type: string;
-  /** The table, as returned by ctx.db.define. */
+  /** The table, as returned by ctx.db.define. Null for an entity with `load`. */
   table: unknown;
+  /**
+   * Server to desktop only: a desktop never pushes these rows. Required with
+   * `load`.
+   */
+  readOnly?: boolean;
+  /**
+   * Builds the rows the user gets instead of reading the rows they own in
+   * `table`, for data kept for the whole server (a shared library, rows other
+   * users share with them). Rows are on the wire: plaintext, each with a
+   * syncId. Needs `readOnly: true`, `write` and `erase`.
+   */
+  load?: (userId: string) => Promise<SyncRow[]>;
+  /** Keeps a copy of an inbound row on the desktop, for an entity with `load`. */
+  write?: (userId: string, wire: SyncRow) => Promise<void>;
+  /** Drops the desktop copy with this syncId, for an entity with `load`. */
+  erase?: (userId: string, syncId: string) => Promise<void>;
   /** Column holding the owning user id. Defaults to "userId". */
   userColumn?: string;
   /** Fields stored encrypted with the owner's data key. Plaintext on the wire. */

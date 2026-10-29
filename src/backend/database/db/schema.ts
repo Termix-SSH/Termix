@@ -480,6 +480,38 @@ export const sharedHostAuthOverrides = sqliteTable(
   ],
 );
 
+/**
+ * A recipient's own login for the shared hosts in a folder ("Parent / Child")
+ * and its subfolders. A host's own override still wins.
+ */
+export const sharedFolderAuthOverrides = sqliteTable(
+  "shared_folder_auth_overrides",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    folder: text("folder").notNull(),
+    protocol: text("protocol").notNull().default("ssh"),
+    credentialId: integer("credential_id")
+      .notNull()
+      .references(() => sshCredentials.id, { onDelete: "cascade" }),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("shared_folder_auth_overrides_user_folder_protocol_unique").on(
+      table.userId,
+      table.folder,
+      table.protocol,
+    ),
+  ],
+);
+
 export const sharedHostSecrets = sqliteTable(
   "shared_host_secrets",
   {

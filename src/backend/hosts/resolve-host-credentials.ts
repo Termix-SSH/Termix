@@ -87,11 +87,18 @@ export async function resolveHostCredentials(
             ...recipientHost,
             authOverrides: {
               ...authOverrides,
-              ssh: {
-                credentialId: resolution.credentialId,
-                required: false,
-                ownerAuthShared: !!host.shareSshAuth,
-              },
+              ssh: resolution.folder
+                ? {
+                    required: false,
+                    ownerAuthShared: !!host.shareSshAuth,
+                    folder: resolution.folder,
+                    folderCredentialId: resolution.credentialId,
+                  }
+                : {
+                    credentialId: resolution.credentialId,
+                    required: false,
+                    ownerAuthShared: !!host.shareSshAuth,
+                  },
             },
             authType:
               credential.key || credential.privateKey

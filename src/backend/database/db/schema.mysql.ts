@@ -490,6 +490,38 @@ export const sharedHostAuthOverrides = mysqlTable(
   ],
 );
 
+/**
+ * A recipient's own login for the shared hosts in a folder ("Parent / Child")
+ * and its subfolders. A host's own override still wins.
+ */
+export const sharedFolderAuthOverrides = mysqlTable(
+  "shared_folder_auth_overrides",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    folder: varchar("folder", { length: 255 }).notNull(),
+    protocol: varchar("protocol", { length: 255 }).notNull().default("ssh"),
+    credentialId: int("credential_id")
+      .notNull()
+      .references(() => sshCredentials.id, { onDelete: "cascade" }),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    uniqueIndex("shared_folder_auth_overrides_user_folder_protocol_unique").on(
+      table.userId,
+      table.folder,
+      table.protocol,
+    ),
+  ],
+);
+
 export const sharedHostSecrets = mysqlTable(
   "shared_host_secrets",
   {

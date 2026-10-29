@@ -540,6 +540,13 @@
       "when": 1792945361809,
       "tag": "0076_host_color_icon",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "5",
+      "when": 1793304929772,
+      "tag": "0077_shared_folder_auth_overrides",
+      "breakpoints": true
     }
   ]
 }

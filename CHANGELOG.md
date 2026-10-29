@@ -11,6 +11,7 @@
 - A sidebar setting to turn off alternating row colors
 - TERMIX_NGINX_TEMPLATE, TERMIX_NGINX_CONF, TERMIX_NGINX_PID and TERMIX_APP_DIR let an install outside Docker, like the Proxmox LXC script, switch nginx to HTTPS when a certificate is added
 - Removing a user or role from a shared folder can also remove their access from every host in the folder and its subfolders
+- A personal login set once on a folder is used for every host shared with you in it and its subfolders, unless a host has its own
 
 ### Changed
 

@@ -31,6 +31,7 @@ import { FolderAccessRepository } from "./folder-access-repository.js";
 import { SettingsRepository } from "./settings-repository.js";
 import { HostProtocolAuthRepository } from "./host-protocol-auth-repository.js";
 import { SharedHostAuthOverrideRepository } from "./shared-host-auth-override-repository.js";
+import { SharedFolderAuthOverrideRepository } from "./shared-folder-auth-override-repository.js";
 import { SharedHostSecretsRepository } from "./shared-host-secrets-repository.js";
 import { SshCredentialUsageRepository } from "./ssh-credential-usage-repository.js";
 import { TrustedDeviceRepository } from "./trusted-device-repository.js";
@@ -312,6 +313,15 @@ export function createCurrentSharedHostAuthOverrideRepository(): SharedHostAuthO
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook(
       "shared_host_auth_override_repository_write",
+    ),
+  );
+}
+
+export function createCurrentSharedFolderAuthOverrideRepository(): SharedFolderAuthOverrideRepository {
+  return new SharedFolderAuthOverrideRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook(
+      "shared_folder_auth_override_repository_write",
     ),
   );
 }

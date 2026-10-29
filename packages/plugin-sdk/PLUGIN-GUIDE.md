@@ -495,6 +495,23 @@ Other storage: `ctx.kv` for a few values, `ctx.settings` for settings, `ctx.secr
 `ctx.files.dataDir()` for files. To sync a table to a linked desktop, use `ctx.sync.registerEntity` and
 `contributes.syncEntities`. The entity name is part of the protocol and never changes.
 
+A registered table syncs the rows each user owns, both ways. For data you keep for the whole server (a shared
+library, rows other users share), register a read only entity with `table: null`, `readOnly: true` and `load`,
+`write` and `erase` (Termix 26.10.6+). `load(userId)` returns the rows that user should get, each with a
+`syncId`. The desktop keeps them with `write` and drops them with `erase`, and never pushes them back:
+
+```ts
+ctx.sync.registerEntity({
+  type: "sharedIcons",
+  table: null,
+  readOnly: true,
+  order: 70,
+  load: (userId) => iconsVisibleTo(userId),
+  write: (userId, row) => storeCopy(userId, row),
+  erase: (userId, syncId) => dropCopy(userId, syncId),
+});
+```
+
 ## Frontend
 
 ```tsx

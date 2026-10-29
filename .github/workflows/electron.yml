@@ -250,6 +250,27 @@ jobs:
           path: termix_windows_arm64_portable.zip
           retention-days: 30
 
+      # The same app with every official plugin, for installs without
+      # internet. Built last so nothing above packs the full set, and with
+      # no update files: a full install updates through the normal build and
+      # downloads the plugins it had on.
+      - name: Build Windows x64 full installer
+        if: inputs.artifact_destination != 'none'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TERMIX_PLUGIN_PROFILE: full
+        run: |
+          npm run build:plugins
+          npx electron-builder --win nsis --x64 --publish never '-c.nsis.artifactName=termix_windows_x64_full_nsis.${ext}'
+
+      - name: Upload Windows x64 full installer
+        uses: actions/upload-artifact@v7
+        if: hashFiles('release/termix_windows_x64_full_nsis.exe') != '' && inputs.artifact_destination != 'none'
+        with:
+          name: termix_windows_x64_full_nsis
+          path: release/termix_windows_x64_full_nsis.exe
+          retention-days: 30
+
   build-linux:
     runs-on: blacksmith-8vcpu-ubuntu-2404
     if: (inputs.build_type == 'all' || inputs.build_type == 'linux' || inputs.build_type == '') && inputs.artifact_destination != 'submit'
@@ -486,6 +507,28 @@ jobs:
         with:
           name: termix_linux_flatpakref
           path: release/com.karmaa.termix.flatpakref
+          retention-days: 30
+
+      # Every official plugin, for installs without internet. No update files.
+      - name: Build Linux x64 full packages
+        if: inputs.artifact_destination != 'none'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TERMIX_PLUGIN_PROFILE: full
+        run: |
+          npm run build:plugins
+          npx electron-builder --linux AppImage deb --x64 --publish never \
+            '-c.appImage.artifactName=termix_linux_x64_full_appimage.${ext}' \
+            '-c.deb.artifactName=termix_linux_x64_full_deb.${ext}'
+
+      - name: Upload Linux x64 full packages
+        uses: actions/upload-artifact@v7
+        if: hashFiles('release/termix_linux_x64_full_appimage.AppImage') != '' && inputs.artifact_destination != 'none'
+        with:
+          name: termix_linux_x64_full
+          path: |
+            release/termix_linux_x64_full_appimage.AppImage
+            release/termix_linux_x64_full_deb.deb
           retention-days: 30
 
   build-macos:
@@ -762,6 +805,32 @@ jobs:
           }
 
           gh release upload "$RELEASE_TAG" homebrew-generated/termix.rb --repo ${{ github.repository }} --clobber
+
+      # Every official plugin, for installs without internet. Signed like the
+      # normal DMG, with no update files.
+      - name: Build macOS universal full DMG
+        if: inputs.artifact_destination != 'none'
+        env:
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          NODE_OPTIONS: --max-old-space-size=4096
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TERMIX_PLUGIN_PROFILE: full
+        run: |
+          npm run build:plugins
+          npx electron-builder --mac dmg --universal --publish never \
+            '-c.dmg.artifactName=termix_macos_${arch}_full_dmg.${ext}'
+
+      - name: Upload macOS universal full DMG
+        uses: actions/upload-artifact@v7
+        if: hashFiles('release/termix_macos_universal_full_dmg.dmg') != '' && inputs.artifact_destination != 'none'
+        with:
+          name: termix_macos_universal_full_dmg
+          path: release/termix_macos_universal_full_dmg.dmg
+          retention-days: 30
 
       - name: Clean up keychains
         if: always()

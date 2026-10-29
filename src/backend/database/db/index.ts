@@ -484,6 +484,19 @@ async function initializeCompleteDatabase(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS idx_folder_access_owner_folder ON folder_access (owner_user_id, folder);
 
+    CREATE TABLE IF NOT EXISTS shared_folder_auth_overrides (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        folder TEXT NOT NULL,
+        protocol TEXT NOT NULL DEFAULT 'ssh',
+        credential_id INTEGER NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (credential_id) REFERENCES ssh_credentials (id) ON DELETE CASCADE
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS shared_folder_auth_overrides_user_folder_protocol_unique ON shared_folder_auth_overrides (user_id, folder, protocol);
+
     CREATE TABLE IF NOT EXISTS plugins (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,

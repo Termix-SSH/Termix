@@ -13,6 +13,8 @@ Plugin API 1.13.0.
 - `ctx.sync.host.entities.idsOf` maps sync ids to the local ids of the user's own rows of one type
 - Rail items take `useStatus` for a small ok, warning or error dot on the icon
 - `shell.editHost(hostId)` opens the editor of a saved host
+- A sync entity can be read only with `load`, `write` and `erase`, so a plugin can sync rows a user does not own, like a shared library, down to linked desktops
+- `getFolderAuthOverride` and `setFolderAuthOverride` in `@termix-ssh/plugin-sdk/ui` read and set a user's own login for the shared hosts in a folder
 
 ### Fixed
 

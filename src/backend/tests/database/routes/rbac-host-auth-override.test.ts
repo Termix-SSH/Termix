@@ -11,6 +11,11 @@ const state = vi.hoisted(() => ({
   credentialUsable: true,
   credentialId: 7 as number | null,
   writes: [] as Array<{ protocol: string; credentialId: number | null }>,
+  folderWrites: [] as Array<{
+    folder: string;
+    protocol: string;
+    credentialId: number | null;
+  }>,
   auditCalls: [] as Array<Record<string, unknown>>,
 }));
 
@@ -97,6 +102,25 @@ vi.mock("../../../database/repositories/factory.js", () => ({
       return true;
     },
   }),
+  createCurrentSharedFolderAuthOverrideRepository: () => ({
+    findCredentialId: async () => 7,
+    setCredential: async (
+      _userId: string,
+      folder: string,
+      protocol: string,
+      credentialId: number,
+    ) => {
+      state.folderWrites.push({ folder, protocol, credentialId });
+    },
+    clearCredential: async (
+      _userId: string,
+      folder: string,
+      protocol: string,
+    ) => {
+      state.folderWrites.push({ folder, protocol, credentialId: null });
+      return true;
+    },
+  }),
   createCurrentUserRepository: () => ({
     findById: async () => ({ id: "recipient", username: "recipient" }),
   }),
@@ -109,6 +133,7 @@ vi.mock("../../../database/repositories/factory.js", () => ({
 
 vi.mock("../../../utils/audit-logger.js", () => ({
   getRequestMeta: () => ({ ipAddress: "", userAgent: "" }),
+  getAuditUsername: async (userId: string) => userId,
   logAudit: vi.fn(async (entry: Record<string, unknown>) => {
     state.auditCalls.push(entry);
   }),
@@ -134,6 +159,8 @@ describe("shared host authentication override routes", () => {
     method: "get" | "put",
     body: Record<string, unknown> = {},
     protocol = "ssh",
+    path = "/host-access/:hostId/auth/:protocol",
+    query: Record<string, unknown> = {},
   ): Promise<{ status: number; body: unknown }> {
     const routeLayer = (
       router as unknown as {
@@ -152,15 +179,14 @@ describe("shared host authentication override routes", () => {
         }>;
       }
     ).stack.find(
-      (layer) =>
-        layer.route?.path === "/host-access/:hostId/auth/:protocol" &&
-        layer.route.methods[method],
+      (layer) => layer.route?.path === path && layer.route.methods[method],
     );
     if (!routeLayer?.route) throw new Error(`Missing ${method} route`);
 
     const handlers = routeLayer.route.stack.map((layer) => layer.handle);
     const req = {
       params: { hostId: "42", protocol },
+      query,
       body,
       headers: {},
       ip: "127.0.0.1",
@@ -210,7 +236,101 @@ describe("shared host authentication override routes", () => {
     state.credentialUsable = true;
     state.credentialId = 7;
     state.writes = [];
+    state.folderWrites = [];
     state.auditCalls = [];
+  });
+
+  describe("folder logins", () => {
+    const FOLDER = "/folder-auth/:protocol";
+
+    it("reads the login for a folder", async () => {
+      const response = await invoke("get", {}, "ssh", FOLDER, {
+        folder: " Prod /  Web ",
+      });
+      expect(response).toEqual({
+        status: 200,
+        body: { folder: "Prod / Web", protocol: "ssh", credentialId: 7 },
+      });
+    });
+
+    it("sets and clears the login and audits both", async () => {
+      expect(
+        (
+          await invoke(
+            "put",
+            { folder: "Prod", credentialId: 8 },
+            "ssh",
+            FOLDER,
+          )
+        ).status,
+      ).toBe(200);
+      expect(
+        (
+          await invoke(
+            "put",
+            { folder: "Prod", credentialId: null },
+            "ssh",
+            FOLDER,
+          )
+        ).status,
+      ).toBe(200);
+      expect(state.folderWrites).toEqual([
+        { folder: "Prod", protocol: "ssh", credentialId: 8 },
+        { folder: "Prod", protocol: "ssh", credentialId: null },
+      ]);
+      expect(state.auditCalls.map((call) => call.action)).toEqual([
+        "set_shared_folder_auth_override",
+        "clear_shared_folder_auth_override",
+      ]);
+    });
+
+    it("rejects a bad folder, protocol or credential", async () => {
+      expect(
+        (await invoke("get", {}, "ssh", FOLDER, { folder: "" })).status,
+      ).toBe(400);
+      expect(
+        (
+          await invoke(
+            "put",
+            { folder: "x".repeat(300), credentialId: 8 },
+            "ssh",
+            FOLDER,
+          )
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await invoke(
+            "put",
+            { folder: "Prod", credentialId: 8 },
+            "smtp",
+            FOLDER,
+          )
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await invoke(
+            "put",
+            { folder: "Prod", credentialId: -1 },
+            "ssh",
+            FOLDER,
+          )
+        ).status,
+      ).toBe(400);
+      state.credentialUsable = false;
+      expect(
+        (
+          await invoke(
+            "put",
+            { folder: "Prod", credentialId: 99 },
+            "ssh",
+            FOLDER,
+          )
+        ).status,
+      ).toBe(404);
+      expect(state.folderWrites).toEqual([]);
+    });
   });
 
   it("returns the current override for a role-derived shared recipient", async () => {

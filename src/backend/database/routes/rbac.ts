@@ -37,8 +37,10 @@ import {
   createCurrentHostResolutionRepository,
   createCurrentRbacAccessRepository,
   createCurrentRoleRepository,
+  createCurrentSharedFolderAuthOverrideRepository,
   createCurrentUserRepository,
 } from "../repositories/factory.js";
+import { findUsableCredential } from "../../hosts/usable-credential.js";
 
 const router = express.Router();
 
@@ -2221,6 +2223,159 @@ router.get(
       }
       databaseLogger.error("Failed to get override credential", error);
       res.status(500).json({ error: "Failed to fetch credential" });
+    }
+  },
+);
+
+/** A folder path as hosts store it ("Parent / Child"), or null. */
+function folderParam(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const folder = value
+    .split(" / ")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(" / ");
+  return folder && folder.length <= 255 ? folder : null;
+}
+
+/**
+ * @openapi
+ * /rbac/folder-auth/{protocol}:
+ *   get:
+ *     summary: Get the current user's personal login for shared hosts in a folder
+ *     tags: [RBAC]
+ *     parameters:
+ *       - in: path
+ *         name: protocol
+ *         required: true
+ *         schema: { type: string }
+ *       - in: query
+ *         name: folder
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: The folder, protocol and credential id, or null when none is set.
+ *       400:
+ *         description: Invalid folder or protocol.
+ */
+router.get(
+  "/folder-auth/:protocol",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: express.Request, res: express.Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).userId!;
+      const protocol = req.params.protocol;
+      const folder = folderParam(req.query.folder);
+      if (!folder) return res.status(400).json({ error: "Invalid folder" });
+      if (!isAuthOverrideProtocol(protocol)) {
+        return res
+          .status(400)
+          .json({ error: "Invalid authentication protocol" });
+      }
+      const credentialId =
+        await createCurrentSharedFolderAuthOverrideRepository().findCredentialId(
+          userId,
+          folder,
+          protocol,
+        );
+      res.json({ folder, protocol, credentialId });
+    } catch (error) {
+      databaseLogger.error("Failed to get folder login", error);
+      res.status(500).json({ error: "Failed to fetch credential" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /rbac/folder-auth/{protocol}:
+ *   put:
+ *     summary: Set the current user's personal login for shared hosts in a folder
+ *     description: >
+ *       Used for every host shared with the user in this folder and its
+ *       subfolders that has no personal login of its own. credentialId null
+ *       clears it.
+ *     tags: [RBAC]
+ *     parameters:
+ *       - in: path
+ *         name: protocol
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [folder, credentialId]
+ *             properties:
+ *               folder: { type: string }
+ *               credentialId: { type: integer, nullable: true }
+ *     responses:
+ *       200:
+ *         description: Saved.
+ *       400:
+ *         description: Invalid folder, protocol or credential id.
+ *       404:
+ *         description: The credential is not one the user can use.
+ */
+router.put(
+  "/folder-auth/:protocol",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: express.Request, res: express.Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).userId!;
+      const protocol = req.params.protocol;
+      const folder = folderParam(req.body?.folder);
+      const credentialId = req.body?.credentialId ?? null;
+      if (!folder) return res.status(400).json({ error: "Invalid folder" });
+      if (!isAuthOverrideProtocol(protocol)) {
+        return res
+          .status(400)
+          .json({ error: "Invalid authentication protocol" });
+      }
+      if (
+        credentialId !== null &&
+        (!Number.isInteger(credentialId) || credentialId <= 0)
+      ) {
+        return res.status(400).json({
+          error: "credentialId must be a positive integer or null",
+        });
+      }
+
+      const repository = createCurrentSharedFolderAuthOverrideRepository();
+      if (credentialId === null) {
+        await repository.clearCredential(userId, folder, protocol);
+      } else {
+        if (!(await findUsableCredential(credentialId, userId))) {
+          return res.status(404).json({ error: "Credential not found" });
+        }
+        await repository.setCredential(userId, folder, protocol, credentialId);
+      }
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: await getAuditUsername(userId),
+        action:
+          credentialId === null
+            ? "clear_shared_folder_auth_override"
+            : "set_shared_folder_auth_override",
+        resourceType: "folder",
+        resourceName: folder,
+        details: JSON.stringify({ protocol, credentialId }),
+        ipAddress,
+        userAgent,
+        success: true,
+      }).catch(() => undefined);
+
+      res.json({ success: true, folder, protocol, credentialId });
+    } catch (error) {
+      databaseLogger.error("Failed to set folder login", error);
+      res.status(500).json({ error: "Failed to update credential" });
     }
   },
 );

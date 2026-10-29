@@ -4,6 +4,7 @@ import {
   createCurrentHostResolutionRepository,
   createCurrentRbacAccessRepository,
   createCurrentRoleRepository,
+  createCurrentSharedFolderAuthOverrideRepository,
   createCurrentSharedHostAuthOverrideRepository,
 } from "../database/repositories/factory.js";
 import type {
@@ -23,6 +24,8 @@ export type RecipientSharedHostAuthResolution =
       source: "personal-override";
       credentialId: number;
       credential: HostResolutionCredentialRecord;
+      /** Set when the login comes from the folder, not the host itself. */
+      folder?: string;
     }
   | {
       source: "owner-shared";
@@ -54,8 +57,8 @@ function isOwnerAuthShared(
 
 /**
  * Applies the shared-host authentication precedence independently from any
- * transport: recipient override, shared owner auth, secretless auth, then
- * "required".
+ * transport: recipient override on the host, then on its folder, shared
+ * owner auth, secretless auth, then "required".
  */
 export async function resolveRecipientSharedHostAuthentication(
   host: HostResolutionHostRecord,
@@ -89,6 +92,31 @@ export async function resolveRecipientSharedHostAuthentication(
         credential,
       };
     }
+  }
+
+  try {
+    const folderOverride =
+      await createCurrentSharedFolderAuthOverrideRepository().findClosest(
+        userId,
+        host.folder,
+        protocol,
+      );
+    if (folderOverride) {
+      const credential = await findUsableCredential(
+        folderOverride.credentialId,
+        userId,
+      );
+      if (credential) {
+        return {
+          source: "personal-override",
+          credentialId: folderOverride.credentialId,
+          credential,
+          folder: folderOverride.folder,
+        };
+      }
+    }
+  } catch {
+    // Same as a host override: an unreadable one counts as none.
   }
 
   if (isOwnerAuthShared(host, protocol)) {

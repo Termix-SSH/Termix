@@ -388,6 +388,54 @@ export async function getHostAuthOverride(
   }
 }
 
+/**
+ * The user's own login for hosts shared with them in a folder. On a desktop
+ * linked to a server, pass a shared host from the folder so the call goes to
+ * that server.
+ */
+export async function getFolderAuthOverride(
+  folder: string,
+  protocol: AuthOverrideProtocol,
+  sharedCopySyncId?: string | null,
+): Promise<{
+  folder: string;
+  protocol: AuthOverrideProtocol;
+  credentialId: number | null;
+}> {
+  try {
+    const target = await getSharedCopyTarget(0, sharedCopySyncId);
+    const response = await target.api.get(`/rbac/folder-auth/${protocol}`, {
+      params: { folder },
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch folder authentication override");
+  }
+}
+
+export async function setFolderAuthOverride(
+  folder: string,
+  protocol: AuthOverrideProtocol,
+  credentialId: number | null,
+  sharedCopySyncId?: string | null,
+): Promise<{
+  success: boolean;
+  folder: string;
+  protocol: AuthOverrideProtocol;
+  credentialId: number | null;
+}> {
+  try {
+    const target = await getSharedCopyTarget(0, sharedCopySyncId);
+    const response = await target.api.put(`/rbac/folder-auth/${protocol}`, {
+      folder,
+      credentialId,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "update folder authentication override");
+  }
+}
+
 export async function setHostAuthOverride(
   hostId: number,
   protocol: AuthOverrideProtocol,
