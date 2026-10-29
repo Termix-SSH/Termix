@@ -174,7 +174,7 @@ export function ShellControllerProvider({
     openHostEditor: (draft) =>
       requestManage({ kind: "host", hostId: null, draft }),
     editHost: (hostId) => {
-      requestManage({ kind: "host", hostId });
+      requestManage({ kind: "host", hostId: String(hostId) });
       if (isMobile) regions.left.setOpen(false);
     },
     saveQuickConnect: tabsState.saveQuickConnectHost,
