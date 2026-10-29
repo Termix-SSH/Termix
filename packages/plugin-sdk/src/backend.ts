@@ -470,6 +470,12 @@ export interface PluginSyncHost {
     ensureCore: () => Promise<void>;
     onChanged: (listener: () => void) => () => void;
     onLocalWrite: (listener: () => void) => () => void;
+    /** Local ids of the user's own rows of a type, by sync id. Termix 26.10.6+. */
+    idsOf?: (
+      type: string,
+      userId: string,
+      syncIds: string[],
+    ) => Promise<Record<string, number>>;
   };
 
   /** Rows and bookkeeping of one local user's replica. */

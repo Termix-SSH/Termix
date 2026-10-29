@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   getLink: vi.fn(),
   generateJWTToken: vi.fn(),
   revokeSession: vi.fn(),
+  getEntity: vi.fn(),
+  findStoredIds: vi.fn(),
 }));
 
 vi.mock("../../utils/auth-manager.js", () => ({
@@ -28,7 +30,7 @@ vi.mock("../../utils/app-version.js", () => ({
 vi.mock("../../notify/core-notify.js", () => ({ sendCoreAlert: vi.fn() }));
 vi.mock("../../plugins/index.js", () => ({ getPluginRuntime: vi.fn() }));
 vi.mock("../../plugins/sync-registry.js", () => ({
-  getEntity: vi.fn(),
+  getEntity: mocks.getEntity,
   listEntities: () => [{ type: "hosts", owner: "core", order: 10 }],
   onEntitiesChanged: vi.fn(),
 }));
@@ -55,7 +57,9 @@ vi.mock("../../utils/permission-manager.js", () => ({
 vi.mock("../../sync/entities.js", () => ({
   registerCoreSyncEntities: vi.fn(),
 }));
-vi.mock("../../sync/store.js", () => ({}));
+vi.mock("../../sync/store.js", () => ({
+  findStoredIds: mocks.findStoredIds,
+}));
 vi.mock("../../sync/wire.js", () => ({}));
 vi.mock("../../sync/records.js", () => ({
   listChanges: mocks.listChanges,
@@ -213,5 +217,24 @@ describe("host.links", () => {
       id: 1,
       serverUrl: "https://a.example",
     });
+  });
+});
+
+describe("host.entities.idsOf", () => {
+  it("maps sync ids to the user's own row ids", async () => {
+    const entity = { type: "snippets", table: {} };
+    mocks.getEntity.mockReturnValue(entity);
+    mocks.findStoredIds.mockResolvedValue({ a: 3 });
+    expect(
+      await createSyncHost().entities.idsOf!("snippets", "u", ["a", "b"]),
+    ).toEqual({ a: 3 });
+    expect(mocks.findStoredIds).toHaveBeenCalledWith(entity, "u", ["a", "b"]);
+  });
+
+  it("answers nothing for an unknown or built type", async () => {
+    mocks.getEntity.mockReturnValue(undefined);
+    expect(await createSyncHost().entities.idsOf!("x", "u", ["a"])).toEqual({});
+    mocks.getEntity.mockReturnValue({ type: "y", load: vi.fn() });
+    expect(await createSyncHost().entities.idsOf!("y", "u", ["a"])).toEqual({});
   });
 });
