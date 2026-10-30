@@ -676,6 +676,18 @@ function initializeApiInstances() {
 
   // Authentication API (port 30001)
   authApi = createApiInstance(getApiUrl("", 30001), "AUTH");
+  const healthApi = authApi;
+  dbHealthMonitor.setReachabilityProbe(() =>
+    healthApi
+      .get("/health", {
+        timeout: 5000,
+        __silentRetry: true,
+      } as AxiosRequestConfigExtended)
+      .then(
+        () => true,
+        () => false,
+      ),
+  );
 
   // RBAC API (port 30001)
   rbacApi = createApiInstance(getApiUrl("", 30001), "RBAC");

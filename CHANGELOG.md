@@ -1,5 +1,12 @@
 # Changelog
 
+## 26.10.7
+
+### Fixed
+
+- One slow request, like a plugin waiting on an SSH host, no longer shows Server connection lost. The app now checks the server first
+- Canceled requests no longer show Server connection lost
+
 ## 26.10.6
 
 ### Added
