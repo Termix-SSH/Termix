@@ -2021,6 +2021,19 @@ function createMenu() {
           { type: "separator" },
           { role: "front" },
           { type: "separator" },
+          {
+            label: app.name,
+            accelerator: "CmdOrCtrl+0",
+            click: () => {
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                if (mainWindow.isMinimized()) mainWindow.restore();
+                mainWindow.show();
+                mainWindow.focus();
+              } else {
+                createWindow();
+              }
+            },
+          },
           { role: "window" },
         ],
       },
