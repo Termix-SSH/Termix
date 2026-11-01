@@ -1,9 +1,12 @@
 # Changelog
 
-## 26.10.7
+## 26.11.0
 
 ### Fixed
 
+- Saving the database no longer holds up the whole server while it encrypts and writes. A big database is also saved less often by background writes, which fixes slow requests and dropped connections
+- The macOS menu bar icon shows the logo instead of an empty shape on multi-architecture builds
+- Disabled plugins no longer show update or review buttons, and no longer count as pending updates
 - One slow request, like a plugin waiting on an SSH host, no longer shows Server connection lost. The app now checks the server first
 - Canceled requests no longer show Server connection lost
 

@@ -1,7 +1,33 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
+import {
+  DatabaseSaveTrigger,
+  lazySaveGapMs,
+} from "../../utils/database-save-trigger.js";
+
+describe("lazySaveGapMs", () => {
+  it("waits longer after slow saves, within limits", () => {
+    expect(lazySaveGapMs(0)).toBe(30_000);
+    expect(lazySaveGapMs(2_000)).toBe(60_000);
+    expect(lazySaveGapMs(60_000)).toBe(300_000);
+  });
+});
 
 describe("DatabaseSaveTrigger", () => {
+  it("stays dirty when a write lands while a save is running", async () => {
+    let finish: () => void = () => {};
+    const save = vi.fn(
+      () => new Promise<void>((resolve) => (finish = resolve)),
+    );
+    DatabaseSaveTrigger.initialize(save);
+    DatabaseSaveTrigger.markDirty();
+    const running = DatabaseSaveTrigger.forceSave("first");
+    await new Promise((resolve) => setImmediate(resolve));
+    DatabaseSaveTrigger.markDirty();
+    finish();
+    await running;
+    expect(DatabaseSaveTrigger.isDirty).toBe(true);
+  });
+
   afterEach(() => {
     vi.useRealTimers();
     DatabaseSaveTrigger.cleanup();

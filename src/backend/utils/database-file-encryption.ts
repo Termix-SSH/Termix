@@ -16,6 +16,8 @@ interface EncryptedFileMetadata {
   dataSize?: number;
 }
 
+const ENCRYPT_CHUNK_BYTES = 4 * 1024 * 1024;
+
 class DatabaseFileEncryption {
   private static readonly VERSION = "v2";
   private static readonly ALGORITHM = "aes-256-gcm";
@@ -27,7 +29,7 @@ class DatabaseFileEncryption {
     buffer: Buffer,
     targetPath: string,
   ): Promise<string> {
-    const tmpPath = `${targetPath}.tmp-${Date.now()}-${process.pid}`;
+    const tmpPath = `${targetPath}.tmp-${Date.now()}-${process.pid}-${crypto.randomBytes(4).toString("hex")}`;
     const metadataPath = `${targetPath}${this.METADATA_FILE_SUFFIX}`;
 
     try {
@@ -38,7 +40,21 @@ class DatabaseFileEncryption {
         key,
         iv,
       ) as crypto.CipherGCM;
-      const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
+      // This runs on every save, so a big database must not hold up the event
+      // loop for the whole encryption.
+      const parts: Buffer[] = [];
+      for (
+        let offset = 0;
+        offset < buffer.length;
+        offset += ENCRYPT_CHUNK_BYTES
+      ) {
+        parts.push(
+          cipher.update(buffer.subarray(offset, offset + ENCRYPT_CHUNK_BYTES)),
+        );
+        await new Promise<void>((resolve) => setImmediate(resolve));
+      }
+      parts.push(cipher.final());
+      const encrypted = Buffer.concat(parts);
       const tag = cipher.getAuthTag();
 
       const metadata: EncryptedFileMetadata = {
@@ -62,8 +78,8 @@ class DatabaseFileEncryption {
         encrypted,
       ]);
 
-      fs.writeFileSync(tmpPath, finalBuffer);
-      fs.renameSync(tmpPath, targetPath);
+      await fs.promises.writeFile(tmpPath, finalBuffer);
+      await fs.promises.rename(tmpPath, targetPath);
 
       try {
         if (fs.existsSync(metadataPath)) {
