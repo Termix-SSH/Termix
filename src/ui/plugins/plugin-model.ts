@@ -155,10 +155,12 @@ export function mergePlugins(
       latestBeta: entry?.latestBeta ?? null,
       channel: summary.channel ?? entry?.channel ?? "stable",
       isBeta: isPrerelease(summary.version),
-      // The server keeps its own copy up to date.
-      updateAvailable: summary.runsOnServer
-        ? false
-        : (entry?.updateAvailable ?? false),
+      // The server keeps its own copy up to date, and a plugin that is off
+      // should not ask for attention.
+      updateAvailable:
+        summary.runsOnServer || !summary.enabled
+          ? false
+          : (entry?.updateAvailable ?? false),
       addedCapabilities: entry?.addedCapabilities ?? [],
       versions: entry?.versions ?? [],
       capabilities: summary.capabilities ?? [],
