@@ -31,6 +31,8 @@ class DatabaseHealthMonitor {
   private static instance: DatabaseHealthMonitor;
   private listeners: Map<string, EventListener[]> = new Map();
   private degradedActive: boolean = false;
+  private probe: (() => Promise<boolean>) | null = null;
+  private probing: Promise<void> | null = null;
 
   private constructor() {}
 
@@ -83,22 +85,48 @@ class DatabaseHealthMonitor {
       errorCode === "DATABASE_ERROR" ||
       errorCode === "DB_CONNECTION_FAILED";
 
+    // A cancel is on purpose and says nothing about the backend.
+    if (errorCode === "ERR_CANCELED" || lowerMessage === "canceled") return;
+
     const isBackendUnreachable =
       errorCode === "ERR_NETWORK" ||
       errorCode === "ECONNREFUSED" ||
-      errorCode === "ECONNABORTED" ||
       errorCode === "ECONNRESET" ||
-      errorCode === "ETIMEDOUT" ||
-      errorCode === "ERR_CANCELED" ||
       (lowerMessage.includes("network error") &&
-        errorLike.response === undefined) ||
+        errorLike.response === undefined);
+
+    // One slow request (like a plugin waiting on an SSH host) is not a lost
+    // backend, so a timeout only counts when a quick check fails too.
+    const isTimeout =
+      errorCode === "ECONNABORTED" ||
+      errorCode === "ETIMEDOUT" ||
       lowerMessage.includes("request aborted") ||
       lowerMessage.includes("timeout");
 
-    if (!(isDatabaseError || isBackendUnreachable)) {
-      return;
+    if (isDatabaseError || isBackendUnreachable) {
+      this.markDegraded(errorMessage, errorCode);
+    } else if (isTimeout) {
+      if (!this.probe) {
+        this.markDegraded(errorMessage, errorCode);
+        return;
+      }
+      this.probing ??= this.probe()
+        .catch(() => false)
+        .then((reachable) => {
+          if (!reachable) this.markDegraded(errorMessage, errorCode);
+        })
+        .finally(() => {
+          this.probing = null;
+        });
     }
+  }
 
+  /** Sets the quick check used after a request times out. */
+  setReachabilityProbe(probe: (() => Promise<boolean>) | null) {
+    this.probe = probe;
+  }
+
+  private markDegraded(errorMessage: string, errorCode: string | undefined) {
     if (!this.degradedActive) {
       this.degradedActive = true;
       this.emit("database-connection-degraded", {

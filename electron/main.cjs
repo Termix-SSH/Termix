@@ -1235,13 +1235,7 @@ function createTray() {
     // use the unpacked path so the OS sees a real file.
     const publicRoot = isDev
       ? path.join(appRoot, "public")
-      : path.join(
-          appRoot.replace(
-            /app(-[a-z0-9]+)?\.asar(?!\.unpacked)/,
-            "app.asar.unpacked",
-          ),
-          "public",
-        );
+      : path.join(getUnpackedAppRoot(appRoot), "public");
 
     let trayIcon;
     if (process.platform === "darwin") {
@@ -2027,6 +2021,19 @@ function createMenu() {
           { type: "separator" },
           { role: "front" },
           { type: "separator" },
+          {
+            label: app.name,
+            accelerator: "CmdOrCtrl+0",
+            click: () => {
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                if (mainWindow.isMinimized()) mainWindow.restore();
+                mainWindow.show();
+                mainWindow.focus();
+              } else {
+                createWindow();
+              }
+            },
+          },
           { role: "window" },
         ],
       },

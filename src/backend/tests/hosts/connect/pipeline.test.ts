@@ -205,6 +205,11 @@ describe("buildConnectConfig per auth type", () => {
     expect(Buffer.isBuffer(config.privateKey)).toBe(true);
     expect(config.passphrase).toBe("secret");
     expect(config.password).toBe("fallback");
+    expect(config.authHandler).toEqual([
+      "publickey",
+      "password",
+      "keyboard-interactive",
+    ]);
     expect(mocks.applyCertificateAuth).not.toHaveBeenCalled();
   });
 

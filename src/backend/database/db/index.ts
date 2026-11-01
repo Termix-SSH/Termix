@@ -1812,6 +1812,8 @@ async function saveMemoryDatabaseToFile(): Promise<void> {
   if (!memoryDatabase) return;
 
   try {
+    // Before the copy, so a write during the slow part below stays dirty.
+    DatabaseSaveTrigger.markClean();
     const buffer = memoryDatabase.serialize();
 
     if (!fs.existsSync(dataDir)) {
@@ -1832,11 +1834,10 @@ async function saveMemoryDatabaseToFile(): Promise<void> {
         encryptedDbPath,
       );
     } else {
-      fs.writeFileSync(dbPath, buffer);
+      await fs.promises.writeFile(dbPath, buffer);
     }
-
-    DatabaseSaveTrigger.markClean();
   } catch (error) {
+    DatabaseSaveTrigger.markDirty();
     databaseLogger.error("Failed to save in-memory database", error, {
       operation: "memory_db_save_failed",
       enableFileEncryption,
@@ -1855,7 +1856,8 @@ async function handlePostInitFileEncryption() {
 
       setInterval(() => {
         if (DatabaseSaveTrigger.isDirty) {
-          saveMemoryDatabaseToFile();
+          // Through the trigger so it waits for any save already running.
+          void DatabaseSaveTrigger.forceSave("periodic_save").catch(() => {});
         }
       }, 5 * 60 * 1000);
     }

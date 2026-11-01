@@ -1316,7 +1316,9 @@ jobs:
             --app_identifier "com.karmaa.termix" \
             --skip_metadata false \
             --metadata_path "${{ steps.asc_notes.outputs.metadata_path }}" \
-            --skip_screenshots true \
+            --skip_screenshots false \
+            --screenshots_path packaging/appstore/screenshots \
+            --overwrite_screenshots true \
             --skip_app_version_update false \
             --submit_for_review true \
             --automatic_release true \

@@ -99,7 +99,12 @@ async function prepareKey(
 
   if (passphrase) config.passphrase = passphrase;
   // Lets a server that wants key then password (or password only) still work.
-  if (host.password) config.password = host.password;
+  // ssh2 tries password first by default, so it has none left to answer with
+  // once the key was accepted as the first step.
+  if (host.password) {
+    config.password = host.password;
+    config.authHandler = ["publickey", "password", "keyboard-interactive"];
+  }
 
   const certPublicKey = host.certPublicKey;
   if (certPublicKey && certPublicKey.trim()) {

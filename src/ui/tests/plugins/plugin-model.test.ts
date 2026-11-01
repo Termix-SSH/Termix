@@ -142,6 +142,14 @@ describe("mergePlugins", () => {
     expect(row).toMatchObject({ status: "server", updateAvailable: false });
   });
 
+  it("offers no update or review for a disabled plugin", () => {
+    const [row] = mergePlugins(
+      [summary({ enabled: false, state: "disabled" })],
+      [entry({ addedCapabilities: ["host:read"] })],
+    );
+    expect(row.updateAvailable).toBe(false);
+  });
+
   it("keeps installed plugins when the registry is unreachable", () => {
     const rows = mergePlugins([summary()], null);
     expect(rows).toHaveLength(1);

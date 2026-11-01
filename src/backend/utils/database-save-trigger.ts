@@ -6,6 +6,17 @@ const DEBOUNCE_MS = 2000;
 // Every save rewrites the whole database file, so background writes (metrics
 // samples, audit rows) may only cause one save per this window.
 const MIN_LAZY_SAVE_GAP_MS = 30_000;
+const MAX_LAZY_SAVE_GAP_MS = 5 * 60_000;
+// A database that takes long to save is saved less often by background writes.
+const LAZY_GAP_PER_SAVE_MS = 30;
+
+/** How long background writes wait after a save that took saveMs. */
+export function lazySaveGapMs(saveMs: number): number {
+  return Math.min(
+    MAX_LAZY_SAVE_GAP_MS,
+    Math.max(MIN_LAZY_SAVE_GAP_MS, saveMs * LAZY_GAP_PER_SAVE_MS),
+  );
+}
 
 export class DatabaseSaveTrigger {
   private static saveFunction: (() => Promise<void>) | null = null;
@@ -14,6 +25,7 @@ export class DatabaseSaveTrigger {
   private static activeSave: Promise<void> | null = null;
   private static saveTimeout: NodeJS.Timeout | null = null;
   private static lastSaveAt = 0;
+  private static lastSaveMs = 0;
   private static _dirty = false;
   private static batch = new AsyncLocalStorage<{
     open: boolean;
@@ -56,7 +68,7 @@ export class DatabaseSaveTrigger {
 
     const delay = Math.max(
       DEBOUNCE_MS,
-      this.lastSaveAt + MIN_LAZY_SAVE_GAP_MS - Date.now(),
+      this.lastSaveAt + lazySaveGapMs(this.lastSaveMs) - Date.now(),
     );
 
     this.saveTimeout = setTimeout(async () => {
@@ -64,7 +76,6 @@ export class DatabaseSaveTrigger {
 
       try {
         await this.runSave();
-        this._dirty = false;
       } catch (error) {
         databaseLogger.error("Database save failed", error, {
           operation: "db_save_trigger_failed",
@@ -122,7 +133,6 @@ export class DatabaseSaveTrigger {
 
     try {
       await this.runSave();
-      this._dirty = false;
     } catch (error) {
       databaseLogger.error("Database force save failed", error, {
         operation: "db_save_trigger_force_failed",
@@ -152,10 +162,17 @@ export class DatabaseSaveTrigger {
     this.activeSave = save;
     this.pendingSave = true;
     this.lastSaveAt = Date.now();
+    // Cleared up front: saves are slow, and a write landing during one must
+    // stay dirty for the next.
+    this._dirty = false;
 
     try {
       await save;
+    } catch (error) {
+      this._dirty = true;
+      throw error;
     } finally {
+      this.lastSaveMs = Date.now() - this.lastSaveAt;
       if (this.activeSave === save) {
         this.activeSave = null;
         this.pendingSave = false;
@@ -181,6 +198,7 @@ export class DatabaseSaveTrigger {
       this.saveTimeout = null;
     }
     this.lastSaveAt = 0;
+    this.lastSaveMs = 0;
 
     this.pendingSave = false;
     this.activeSave = null;
