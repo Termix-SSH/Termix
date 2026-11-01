@@ -9,7 +9,6 @@
 - Disabled plugins no longer show update or review buttons, and no longer count as pending updates
 - One slow request, like a plugin waiting on an SSH host, no longer shows Server connection lost. The app now checks the server first
 - Canceled requests no longer show Server connection lost
-- The Mac App Store listing now uploads its screenshots with each release
 - The macOS Window menu has an item to reopen the main window after it is closed
 - Hosts with both an SSH key and a password can log in to servers set to AuthenticationMethods publickey,password
 
