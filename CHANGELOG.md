@@ -1,5 +1,11 @@
 # Changelog
 
+## 26.11.1
+
+### Fixed
+
+- The first run plugin picker no longer sets the default layout and themes to Remove. They always stay on
+
 ## 26.11.0
 
 ### Fixed
