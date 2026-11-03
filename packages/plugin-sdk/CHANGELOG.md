@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.23
+
+### Added
+
+- `ctx.credentials.setSshKeyCertificate` stores a CA-signed OpenSSH certificate on an existing SSH key credential, so the credential Termix connects with carries the certificate a plugin just issued. Clearing it with `null` works too
+
 ## 1.0.22
 
 Plugin API 1.13.0.

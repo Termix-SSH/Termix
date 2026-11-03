@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.22 | Plugin API 1.13.0
+SDK 1.0.23 | Plugin API 1.13.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -354,6 +354,10 @@ router.post("/notes", async (req, res) => {
   `allowManualCreate: () => false` blocks adding hosts by hand. Your own `ctx.hosts` writes still go
   through. `ctx.hosts.setShares(hostId, grants)` replaces a host's whole grant list, and
   `ctx.credentials.list()` finds the acting user's credentials by name.
+- `ctx.credentials.setSshKeyCertificate(credentialId, certificate)` stores a CA-signed OpenSSH
+  certificate (a `-cert.pub` line, or `null` to clear it) on one of the acting user's SSH key
+  credentials. Core then offers key plus certificate on every connection through that credential, so a
+  plugin that issues certificates can keep the credential current instead of asking the user to paste it.
 
 ### Errors
 

@@ -2,6 +2,10 @@
 
 ## 26.11.1
 
+### Added
+
+- Plugins can store a CA-signed SSH certificate on an existing SSH key credential with `ctx.credentials.setSshKeyCertificate`, so a credential that Termix connects with carries the certificate a plugin just issued instead of a stale one
+
 ### Fixed
 
 - The first run plugin picker no longer sets the default layout and themes to Remove. They always stay on

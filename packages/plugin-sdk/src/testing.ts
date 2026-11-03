@@ -348,6 +348,11 @@ export interface FakePluginContext {
   credentialReads: Array<{ hostId: number; protocol: string }>;
   /** Every ctx.credentials.createSshKey call, with the id it answered. */
   createdSshKeys: Array<PluginSshKeyCredentialInput & { id: number }>;
+  /** Every ctx.credentials.setSshKeyCertificate call, in order. */
+  certificateWrites: Array<{
+    credentialId: number;
+    certificate: string | null;
+  }>;
   /** Every ctx.notify.send call, with the actor it ran as. */
   notifications: Array<{
     actor: string | undefined;
@@ -564,6 +569,7 @@ export function createFakeContext(
     [];
   const credentialReads: FakePluginContext["credentialReads"] = [];
   const createdSshKeys: FakePluginContext["createdSshKeys"] = [];
+  const certificateWrites: FakePluginContext["certificateWrites"] = [];
   const notifications: FakePluginContext["notifications"] = [];
   const notifyHub: FakePluginContext["notifyHub"] = { current: null };
   const fetches: FakePluginContext["fetches"] = [];
@@ -1379,6 +1385,10 @@ export function createFakeContext(
       publicKey: async (credentialId) =>
         (options.sshKeyCredentials ?? []).find((k) => k.id === credentialId)
           ?.publicKey ?? null,
+      setSshKeyCertificate: async (credentialId, certificate) => {
+        certificateWrites.push({ credentialId, certificate });
+        return { id: credentialId, changed: true };
+      },
       resolveKeyRefs: async (key, passphrase) => ({
         key,
         passphrase: passphrase ?? undefined,
@@ -1552,6 +1562,7 @@ export function createFakeContext(
     externalClientLaunches,
     credentialReads,
     createdSshKeys,
+    certificateWrites,
     notifications,
     notifyHub,
     fetches,
@@ -2234,6 +2245,10 @@ export function createMockCtx(
       publicKey: async (credentialId) => {
         require("credentials:use");
         return ctx.credentials.publicKey(credentialId);
+      },
+      setSshKeyCertificate: async (credentialId, certificate) => {
+        require("credentials:write");
+        return ctx.credentials.setSshKeyCertificate(credentialId, certificate);
       },
       resolveKeyRefs: async (key, passphrase) => {
         require("credentials:read");
