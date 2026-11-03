@@ -200,8 +200,8 @@
     {
       "id": "reverse-proxy",
       "source": "tmxplug",
-      "url": "https://github.com/Termix-SSH/Plugin-Reverse-Proxy/releases/download/v1.1.0/reverse-proxy-1.1.0.tmxplug",
-      "sha256": "c8a9851da7ca6291c1f47cf6ab235da5057455a86b4ed0dc1c1a3026afb30aa7",
+      "url": "https://github.com/Termix-SSH/Plugin-Reverse-Proxy/releases/download/v1.1.1/reverse-proxy-1.1.1.tmxplug",
+      "sha256": "f5e0089ca5eae1254f21ce18b222e70eb2beeae3bd874c2abc4faa1a68d3e47a",
       "tier": "full"
     },
     {
@@ -288,7 +288,9 @@
       "onboarding": {
         "recommended": false,
         "consent": false,
-        "enabledByEnv": ["OIDC_CLIENT_ID"]
+        "enabledByEnv": [
+          "OIDC_CLIENT_ID"
+        ]
       }
     },
     {
@@ -351,8 +353,8 @@
     {
       "id": "tunnels",
       "source": "tmxplug",
-      "url": "https://github.com/Termix-SSH/Plugin-Tunnels/releases/download/v1.2.2/tunnels-1.2.2.tmxplug",
-      "sha256": "92d89c5bf7fa43fff790cc5240ae75eaf05c3c9089c6a0dfb68bbc37c517bf04",
+      "url": "https://github.com/Termix-SSH/Plugin-Tunnels/releases/download/v1.2.3/tunnels-1.2.3.tmxplug",
+      "sha256": "5a23953ee19b2951bb895e033d2099b8f6d5abc0121253ef3da25328134984ad",
       "tier": "standard",
       "onboarding": {
         "recommended": true,
