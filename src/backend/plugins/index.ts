@@ -243,8 +243,10 @@ export async function initializePlugins(
 
   const fresh = await seedPlugins(loaded, options.freshInstall === true);
   if (!fresh) {
-    const { restoreMissingPlugins } = await import("./manage.js");
+    const { installNewShippedPlugins, restoreMissingPlugins } =
+      await import("./manage.js");
     loaded.push(...(await restoreMissingPlugins()));
+    loaded.push(...(await installNewShippedPlugins()));
   }
   await syncCapabilityGrants(loaded);
   if (loaded.some((plugin) => plugin.source === "bundled")) {

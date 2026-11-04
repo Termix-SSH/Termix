@@ -8,14 +8,18 @@ import {
   isDefaultLookPlugin,
   onboardingDefaults,
   resetBundledIndexCache,
+  shippedCatalog,
 } from "../../plugins/bundled-index.js";
 
 let dir: string;
 
-function writeIndex(plugins: Record<string, unknown>) {
+function writeIndex(
+  plugins: Record<string, unknown>,
+  extra: Record<string, unknown> = {},
+) {
   fs.writeFileSync(
     path.join(dir, "bundled-index.json"),
-    JSON.stringify({ version: 1, plugins }),
+    JSON.stringify({ version: 1, plugins, ...extra }),
   );
   resetBundledIndexCache();
 }
@@ -89,9 +93,10 @@ describe("initialPluginState", () => {
     });
   });
 
-  it("enables every bundled plugin on an existing install", () => {
-    expect(initialPluginState("other", "bundled", false)).toBe("enabled");
-    expect(initialPluginState("ask", "bundled", false)).toBe("enabled");
+  it("enables only recommended plugins an existing install sees for the first time", () => {
+    expect(initialPluginState("kept", "bundled", false)).toBe("enabled");
+    expect(initialPluginState("other", "bundled", false)).toBe("disabled");
+    expect(initialPluginState("ask", "bundled", false)).toBe("disabled");
   });
 
   it("enables only recommended, non-consent plugins on a fresh install", () => {
@@ -103,6 +108,40 @@ describe("initialPluginState", () => {
   it("never enables a plugin dropped into the data directory", () => {
     expect(initialPluginState("kept", "user", true)).toBe("disabled");
     expect(initialPluginState("kept", "user", false)).toBe("disabled");
+  });
+});
+
+describe("shippedCatalog", () => {
+  it("is empty for an index without a catalog", () => {
+    writeIndex({});
+    expect(shippedCatalog().size).toBe(0);
+  });
+
+  it("keeps the pins of the image's tier and smaller ones", () => {
+    writeIndex(
+      {},
+      {
+        profile: "standard",
+        catalog: {
+          look: { tier: "minimal", version: "1.0.0" },
+          ops: { tier: "standard", version: "1.0.0" },
+          big: { tier: "full", version: "2.0.0" },
+          odd: { tier: "huge" },
+        },
+      },
+    );
+    expect([...shippedCatalog().keys()].sort()).toEqual(["look", "ops"]);
+  });
+
+  it("follows a minimal image", () => {
+    writeIndex(
+      {},
+      {
+        profile: "minimal",
+        catalog: { look: { tier: "minimal" }, ops: { tier: "standard" } },
+      },
+    );
+    expect([...shippedCatalog().keys()]).toEqual(["look"]);
   });
 });
 

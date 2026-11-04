@@ -236,12 +236,22 @@ async function extractArtifact(buffer, outDir, id) {
 
 /**
  * What dist/plugins/bundled-index.json holds: the onboarding defaults of each
- * staged plugin, read by the backend when it seeds a fresh install.
+ * staged plugin, read by the backend when it seeds a fresh install, plus the
+ * profile and every pin it ships, so an existing install can fetch a shipped
+ * plugin it finds missing.
  */
-function buildBundledIndex(plugins, stagedIds) {
+function buildBundledIndex(plugins, stagedIds, profile = DEFAULT_PROFILE) {
   const staged = new Set(stagedIds);
   const out = {};
+  const catalog = {};
   for (const plugin of plugins) {
+    const version = /-(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\.tmxplug$/.exec(
+      plugin.url ?? plugin.path ?? "",
+    )?.[1];
+    catalog[plugin.id] = {
+      tier: plugin.tier ?? "full",
+      ...(version ? { version } : {}),
+    };
     if (!staged.has(plugin.id)) continue;
     if (!plugin.onboarding && !plugin.defaultLook) continue;
     out[plugin.id] = {
@@ -249,7 +259,7 @@ function buildBundledIndex(plugins, stagedIds) {
       ...(plugin.defaultLook ? { defaultLook: true } : {}),
     };
   }
-  return { version: 1, plugins: out };
+  return { version: 1, profile, plugins: out, catalog };
 }
 
 /** The profile to build: --profile, then TERMIX_PLUGIN_PROFILE, then standard. */

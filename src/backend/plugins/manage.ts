@@ -17,7 +17,11 @@ import fs from "node:fs";
 import path from "node:path";
 import semver from "semver";
 import { pluginLogger } from "../utils/logger.js";
-import { isDefaultLookPlugin } from "./bundled-index.js";
+import {
+  isDefaultLookPlugin,
+  shippedCatalog,
+  startsEnabled,
+} from "./bundled-index.js";
 import { mayRunInSafeMode } from "./safe-mode.js";
 import {
   activatePlugin,
@@ -26,7 +30,7 @@ import {
   registerLoadedPlugins,
   unloadPlugin,
 } from "./index.js";
-import { missingShippedPluginIds } from "./boot-state.js";
+import { missingShippedPluginIds, newShippedPluginIds } from "./boot-state.js";
 import type { LoadedPlugin, PluginLoader } from "./loader.js";
 import {
   getBundledPluginsDir,
@@ -1096,6 +1100,67 @@ export function restoreMissingPlugins(): Promise<LoadedPlugin[]> {
       }
     }
     return restored;
+  });
+}
+
+/**
+ * Called at boot on an existing install. A plugin this image's profile ships
+ * that the install never had and that is not on disk is fetched from the
+ * official registry and starts on only if it is recommended. Offline, nothing
+ * is recorded, so the next start tries again.
+ */
+export function installNewShippedPlugins(): Promise<LoadedPlugin[]> {
+  return serialized(async () => {
+    if (await isLinkedDesktop()) return [];
+    const catalog = shippedCatalog();
+    if (catalog.size === 0) return [];
+    const { createCurrentPluginRepository } = await repos();
+    const repository = createCurrentPluginRepository();
+    const { loader } = getPluginRuntime();
+    const ids = newShippedPluginIds(
+      catalog.keys(),
+      await repository.listAll(),
+      new Set(loader.list().map((plugin) => plugin.id)),
+      await readUninstalled(),
+    );
+    const added: LoadedPlugin[] = [];
+    for (const id of ids) {
+      try {
+        const { source, release } = await requireRelease(
+          id,
+          catalog.get(id)?.version,
+          "stable",
+          OFFICIAL_REGISTRY_ID,
+        );
+        const plugin = await swapIn(id, { release, source });
+        const enabled = startsEnabled(id);
+        await repository.update(id, {
+          registryId: source.id,
+          tier: "bundled",
+          state: enabled ? "enabled" : "disabled",
+          lastError: null,
+        });
+        await grantDeclared(plugin, null);
+        added.push(plugin);
+        pluginLogger.info(
+          `Added ${id}@${release.version} from the registry (${enabled ? "on" : "off"})`,
+          { operation: "plugin_install_shipped" },
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        pluginLogger.warn(`Could not add ${id}: ${message}`, {
+          operation: "plugin_install_shipped",
+        });
+        // A half made row would hide the plugin from the next try.
+        if (!loader.get(id)) await repository.delete(id).catch(() => false);
+        if (
+          error instanceof PluginManageError &&
+          error.code === "REGISTRY_UNREACHABLE"
+        )
+          break;
+      }
+    }
+    return added;
   });
 }
 

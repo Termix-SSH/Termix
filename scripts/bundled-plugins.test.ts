@@ -221,7 +221,34 @@ describe("buildBundledIndex", () => {
     ];
     expect(buildBundledIndex(plugins, ["a", "c", "local"])).toEqual({
       version: 1,
+      profile: "standard",
       plugins: { a: { onboarding: { recommended: true, consent: false } } },
+      catalog: {
+        a: { tier: "full" },
+        b: { tier: "full" },
+        c: { tier: "full" },
+      },
+    });
+  });
+
+  it("lists every pin with its tier and version", () => {
+    const plugins = [
+      {
+        id: "a",
+        tier: "standard",
+        url: "https://example.com/v1.2.0/a-1.2.0.tmxplug",
+        onboarding: null,
+      },
+      {
+        id: "b",
+        tier: "minimal",
+        path: "x/b-2.0.0-beta.1.tmxplug",
+        onboarding: null,
+      },
+    ];
+    expect(buildBundledIndex(plugins, [], "minimal").catalog).toEqual({
+      a: { tier: "standard", version: "1.2.0" },
+      b: { tier: "minimal", version: "2.0.0-beta.1" },
     });
   });
 });
@@ -520,7 +547,7 @@ describe("default look", () => {
         ],
         ["look", "plain"],
       ),
-    ).toEqual({ version: 1, plugins: { look: { defaultLook: true } } });
+    ).toMatchObject({ version: 1, plugins: { look: { defaultLook: true } } });
 
     const index = {
       plugins: [
