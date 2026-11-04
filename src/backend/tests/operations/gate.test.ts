@@ -451,6 +451,15 @@ describe("policy", () => {
     expect(outcome.status).toBe("success");
   });
 
+  it("lets a request a person approved in a plugin go by RBAC", async () => {
+    register();
+    const outcome = await runOperation({
+      ...base,
+      origin: { kind: "plugin", pluginId: "x", via: "approved" },
+    });
+    expect(outcome.status).toBe("success");
+  });
+
   it("treats a community read as a change", async () => {
     state.plugin.source = "user";
     state.plugin.signedTier = "community";

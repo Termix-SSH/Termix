@@ -69,7 +69,8 @@ export function clearApprovalPolicies(): void {
 }
 
 const RANK = { allow: 0, approve: 1, deny: 2 } as const;
-const TRUSTED_VIA = new Set(["automation", "rollout", "fleet"]);
+// approved: a person approved this exact request in the plugin's own UI.
+const TRUSTED_VIA = new Set(["automation", "rollout", "fleet", "approved"]);
 const SELF_APPROVE_VIA = new Set(["assistant", "mcp", "automation"]);
 
 /** A person is the check when the request came from something else. */
