@@ -5,6 +5,7 @@
 ### Fixed
 
 - The first run plugin picker no longer sets the default layout and themes to Remove. They always stay on
+- Alerts with no icon no longer squeeze their text to one word per line
 
 ## 26.11.0
 
