@@ -409,6 +409,15 @@ export class PluginLoader {
           }
           loaded.push(plugin);
         } catch (error) {
+          // A newer image ships a newer copy, so the old update can go.
+          if (isArtifact && error instanceof SupersededUpdateError) {
+            await fs.promises.rm(dir, { force: true }).catch(() => {});
+            await fs.promises.rm(`${dir}.sig`, { force: true }).catch(() => {});
+            pluginLogger.info(`Removed ${entry.name}: ${error.message}`, {
+              operation: "plugin_load",
+            });
+            continue;
+          }
           this.skippedPlugins.push(
             describeSkipped(dir, entry.name, isArtifact, error),
           );
@@ -948,6 +957,16 @@ function withTimeout<T>(
 
 const PLUGIN_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
+/** An installed update that the bundled copy has caught up with. */
+export class SupersededUpdateError extends Error {
+  constructor(id: string, version: string, bundledVersion: string) {
+    super(
+      `update for "${id}" is ${version}, which is not newer than the bundled ${bundledVersion}`,
+    );
+    this.name = "SupersededUpdateError";
+  }
+}
+
 /**
  * Throws unless an artifact may replace the bundled plugin with the same id:
  * a trusted key signed it and its version is strictly higher, so an old
@@ -971,9 +990,7 @@ export function assertBundledUpdate(
   // An admin pinning an exact older release is the one allowed downgrade.
   if (pinnedVersion && pinnedVersion === version) return;
   if (bundledVersion && !semver.gt(version, bundledVersion)) {
-    throw new Error(
-      `update for "${id}" is ${version}, which is not newer than the bundled ${bundledVersion}`,
-    );
+    throw new SupersededUpdateError(id, version, bundledVersion);
   }
 }
 

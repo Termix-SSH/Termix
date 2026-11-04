@@ -20,6 +20,7 @@
 - Alerts with no icon no longer squeeze their text to one word per line
 - Password fields with the show button are the same height as the other fields next to them
 - The Secure your account setup step no longer shows up empty when no passkey or authenticator plugin is on
+- An installed plugin update older than the copy in a newer image is removed at startup instead of logging an error every boot
 
 ## 26.11.0
 
