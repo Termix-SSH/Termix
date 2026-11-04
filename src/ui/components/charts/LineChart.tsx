@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { parseServerTime } from "@/lib/server-time";
+import { formatTimestamp, pickXTicks } from "./x-ticks";
 
 export interface LineChartSeries {
   key: string;
@@ -23,26 +24,6 @@ const Y_LABEL_W = 44;
 const X_LABEL_H = 20;
 const TOP_PAD = 6;
 const TICK_COUNT = 5;
-
-function formatTimestamp(ts: string, rangeMs: number): string {
-  const d = parseServerTime(ts);
-  // A live chart covers a minute or two, so minutes alone would repeat.
-  if (rangeMs <= 10 * 60 * 1000) {
-    return d.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-  }
-  if (rangeMs <= 25 * 60 * 60 * 1000) {
-    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }
-  return (
-    d.toLocaleDateString([], { month: "short", day: "numeric" }) +
-    " " +
-    d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-  );
-}
 
 function valToY(v: number, drawH: number, domain: [number, number]): number {
   const [lo, hi] = domain;
@@ -119,18 +100,7 @@ export function LineChart({
     return Array.from({ length: TICK_COUNT }, (_, i) => lo + i * step);
   })();
 
-  const xTickIndices: number[] = [];
-  if (timestamps.length > 1 && chartW > 0) {
-    const n = timestamps.length;
-    // Long labels ("Jun 28 14:30") are ~80px; short ("14:30") are ~40px.
-    // Use at most 3 ticks for long labels, 5 for short, so they never crowd.
-    const longLabel = rangeMs > 25 * 60 * 60 * 1000;
-    const maxTicks = longLabel ? 3 : 5;
-    const count = Math.min(maxTicks, n);
-    for (let k = 0; k < count; k++) {
-      xTickIndices.push(Math.round((k / (count - 1)) * (n - 1)));
-    }
-  }
+  const xTickIndices = pickXTicks(timestamps, rangeMs, chartW);
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<SVGElement>) => {
