@@ -14,6 +14,7 @@
 - The first run plugin picker no longer sets the default layout and themes to Remove. They always stay on
 - Alerts with no icon no longer squeeze their text to one word per line
 - Password fields with the show button are the same height as the other fields next to them
+- The Secure your account setup step no longer shows up empty when no passkey or authenticator plugin is on
 
 ## 26.11.0
 
