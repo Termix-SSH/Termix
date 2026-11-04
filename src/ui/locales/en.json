@@ -1214,6 +1214,18 @@
         "title": "Send alerts",
         "consequence": "To you or other users, and through the channels they set up."
       },
+      "operations:provide": {
+        "title": "Offer actions",
+        "consequence": "Its actions can be run from Automations, the CLI, the phone app and other places, by people allowed to use them."
+      },
+      "operations:invoke": {
+        "title": "Run other plugins' actions",
+        "consequence": "Acts for the signed-in user on the actions its manifest lists. Approval rules still apply."
+      },
+      "operations:approve": {
+        "title": "Decide what needs approval",
+        "consequence": "Can let actions run with no approval, or block them, for every user."
+      },
       "notify:hub": {
         "title": "Receive every alert",
         "consequence": "Stores and delivers the alerts all plugins send, including their contents."

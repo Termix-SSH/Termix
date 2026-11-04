@@ -17,6 +17,7 @@ import { inArray, isNotNull } from "drizzle-orm";
 import type { ExternalSessionRef } from "../auth/types.js";
 import { listSecondFactors } from "../auth/registry.js";
 import { SECOND_FACTOR_SETUP } from "../auth/policy.js";
+import { keyScopeAllows, parseKeyScopes } from "../operations/key-scopes.js";
 import type { DeviceType } from "./user-agent-parser.js";
 import { getDb } from "../database/db/index.js";
 import { sessions } from "../database/db/schema.js";
@@ -69,6 +70,7 @@ interface AuthenticatedRequest extends Request {
   userId?: string;
   sessionId?: string;
   apiKeyId?: string;
+  apiKeyScopes?: string[] | null;
   pendingTOTP?: boolean;
   dataKey?: Buffer;
   actingAdminUserId?: string;
@@ -879,8 +881,18 @@ class AuthManager {
           });
         });
 
+      const scopes = parseKeyScopes(matchedKey.scopes);
+      if (!keyScopeAllows(scopes, req.method, req.originalUrl ?? "")) {
+        res.status(403).json({
+          error: "This API key may not use this route",
+          code: "API_KEY_SCOPE",
+        });
+        return;
+      }
+
       req.userId = matchedKey.userId;
       req.apiKeyId = matchedKey.id;
+      req.apiKeyScopes = scopes;
       next();
     } catch (error) {
       databaseLogger.error("API key authentication failed", error, {

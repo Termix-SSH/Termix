@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.23
+
+Plugin API 1.14.0.
+
+### Added
+
+- `contributes.operations` declares a plugin's actions, events, resources and signals, so Automations, Fleets, the assistant, the CLI, the phone app and the command palette can find them with no wiring
+- `ctx.operations` registers handlers, runs other plugins' declared actions, emits events and provides approval rules, with the new `operations:provide`, `operations:invoke` and `operations:approve` capabilities
+- `@termix-ssh/plugin-sdk/operations` has the types, input checks, redaction and JSON Schema for declared actions
+- `contributes.hostSections` declares cards for the host page
+
 ## 1.0.22
 
 Plugin API 1.13.0.

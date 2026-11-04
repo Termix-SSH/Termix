@@ -13,6 +13,11 @@
 import semver from "semver";
 import { isKnownCapability } from "./capabilities.js";
 import {
+  checkOperationReferences,
+  validateOperations,
+  type PluginOperationsContribution,
+} from "./operations.js";
+import {
   ENV_NAME_PATTERN,
   MAX_ENV_DESCRIPTION_LENGTH,
   pluginDocsUrl,
@@ -37,7 +42,7 @@ export {
  * "^1.2" needs 1.2 or later). engine.termix is checked against the core
  * version by the server.
  */
-export const PLUGIN_API_VERSION = "1.13.0";
+export const PLUGIN_API_VERSION = "1.14.0";
 
 /** The API major, the default engine.api for a new plugin. */
 export const SUPPORTED_PLUGIN_API_VERSION = String(
@@ -465,6 +470,10 @@ export interface PluginContributions {
   tabs?: PluginTabContribution[];
   panels?: PluginViewContribution[];
   dashboardCards?: PluginViewContribution[];
+  /** Cards on the host page, filled with app.registerHostSection. */
+  hostSections?: PluginViewContribution[];
+  /** What this plugin can do, for every surface to find on its own. */
+  operations?: PluginOperationsContribution;
   /**
    * The frontend also runs on anonymous guest pages (shared-session and
    * collab links), where it is activated with app.guest set.
@@ -779,6 +788,8 @@ const ALLOWED_CONTRIBUTES = new Set([
   "tabs",
   "panels",
   "dashboardCards",
+  "hostSections",
+  "operations",
   "guest",
   "guestViews",
   "actions",
@@ -1500,6 +1511,8 @@ function validateContributes(
   validateTabs(contributes.tabs, errors);
   validateViews(contributes.panels, "panels", errors);
   validateViews(contributes.dashboardCards, "dashboardCards", errors);
+  validateViews(contributes.hostSections, "hostSections", errors);
+  validateOperations(contributes.operations, pluginId, errors);
   if (
     contributes.guest !== undefined &&
     typeof contributes.guest !== "boolean"
@@ -2622,6 +2635,12 @@ export function parseManifest(raw: unknown): ParsedManifest {
       );
     }
   }
+  checkOperationReferences(
+    manifest.contributes?.operations,
+    manifest.capabilities,
+    (name) => declared.has(qualifyPermission(manifest.id, name)),
+    errors,
+  );
   // A settings field may gate on one of this plugin's own permissions, or on
   // a core/other-plugin id used as given. Only the first form is checkable
   // here, and an undeclared one would hide the field from every admin.

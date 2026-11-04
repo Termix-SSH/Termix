@@ -68,7 +68,11 @@ import type {
   PluginSshKeyCredential,
   PluginSshKeyCredentialInput,
 } from "./backend.js";
-import type { PluginSyncHost, SyncEntityRegistration } from "./backend.js";
+import type {
+  PluginOperationHandler,
+  PluginSyncHost,
+  SyncEntityRegistration,
+} from "./backend.js";
 import type { PluginDatabase } from "./backend.js";
 import type {
   PluginExternalClientRequest,
@@ -355,6 +359,10 @@ export interface FakePluginContext {
   }>;
   /** The hub the plugin registered with ctx.notify.serve, if any. */
   notifyHub: { current: PluginNotifyHub | null };
+  /** Handlers from ctx.operations.register, by action id. */
+  operationHandlers: Map<string, PluginOperationHandler>;
+  /** Every ctx.operations.emit call. */
+  operationEvents: { eventId: string; payload: unknown; hostId?: number }[];
   /** Backing store behind ctx.secrets.get/set, keyed "<userId>:<key>". */
   secretStore: Map<string, string>;
   /** Every ctx.fetch call, in order. */
@@ -566,6 +574,8 @@ export function createFakeContext(
   const createdSshKeys: FakePluginContext["createdSshKeys"] = [];
   const notifications: FakePluginContext["notifications"] = [];
   const notifyHub: FakePluginContext["notifyHub"] = { current: null };
+  const operationHandlers: FakePluginContext["operationHandlers"] = new Map();
+  const operationEvents: FakePluginContext["operationEvents"] = [];
   const fetches: FakePluginContext["fetches"] = [];
   const processRuns: FakePluginContext["processRuns"] = [];
   const binaries: FakePluginContext["binaries"] = [];
@@ -1391,6 +1401,46 @@ export function createFakeContext(
       },
     },
 
+    operations: {
+      register: (id, handler) => {
+        operationHandlers.set(id, handler);
+      },
+      run: async (actionId, options = {}) => {
+        const handler = operationHandlers.get(actionId);
+        if (!handler) throw new Error(`No action "${actionId}"`);
+        const result = await handler.run(options.input ?? {}, {
+          hostId: options.hostId,
+          resourceKey: options.resourceKey,
+          runId: null,
+          dryRun: options.dryRun === true,
+          signal: new AbortController().signal,
+          log: () => {},
+        });
+        return { runId: null, status: "success", ...result };
+      },
+      invoke: async (actionId, options = {}) => {
+        const handler = operationHandlers.get(actionId);
+        if (!handler) throw new Error(`No action "${actionId}"`);
+        const result = await handler.run(options.input ?? {}, {
+          hostId: options.hostId,
+          resourceKey: options.resourceKey,
+          runId: null,
+          dryRun: options.dryRun === true,
+          signal: new AbortController().signal,
+          log: () => {},
+        });
+        return { runId: null, status: "success", ...result };
+      },
+      list: async () => ({
+        actions: manifest.contributes?.operations?.actions ?? [],
+      }),
+      emit: async (eventId, payload, options) => {
+        operationEvents.push({ eventId, payload, hostId: options?.hostId });
+      },
+      onEvent: () => () => {},
+      approvals: { provide: () => () => {} },
+    },
+
     notify: {
       channels: async () => {
         if (!actor) throw new Error("ctx.notify needs an acting user");
@@ -1554,6 +1604,8 @@ export function createFakeContext(
     createdSshKeys,
     notifications,
     notifyHub,
+    operationHandlers,
+    operationEvents,
     fetches,
     processRuns,
     binaries,

@@ -52,6 +52,8 @@ export const CAPABILITY_CATALOG: readonly CapabilityInfo[] = [
   entry("ssh:transport", "high"),
   entry("device:serial", "high"),
   entry("notify:hub", "high"),
+  entry("operations:invoke", "high"),
+  entry("operations:approve", "high"),
   entry("ui:layout", "high"),
 
   entry("hosts:write", "medium"),
@@ -68,6 +70,7 @@ export const CAPABILITY_CATALOG: readonly CapabilityInfo[] = [
   entry("users:read", "medium"),
   entry("events:core", "medium"),
   entry("notify:send", "medium"),
+  entry("operations:provide", "medium"),
   entry("audit:read", "medium"),
   entry("desktop:window", "medium"),
   entry("desktop:local", "high"),

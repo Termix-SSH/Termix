@@ -2,6 +2,11 @@
 
 ## 26.11.1
 
+### Added
+
+- Termix actions: plugins can declare what they do once, and it works from the API with permission checks, dry runs, run history and approvals
+- API keys can be limited to reading or running actions
+
 ### Changed
 
 - Host status, import and export, and credential tools now start on for new installs

@@ -536,6 +536,31 @@
             }
           }
         },
+        "hostSections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "titleKey"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "titleKey": { "type": "string", "minLength": 1 },
+              "icon": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "operations": {
+          "type": "object",
+          "description": "What this plugin can do. Every surface finds these on its own. See the operations section of PLUGIN-GUIDE.md.",
+          "additionalProperties": false,
+          "properties": {
+            "actions": { "type": "array", "items": { "type": "object" } },
+            "events": { "type": "array", "items": { "type": "object" } },
+            "resources": { "type": "array", "items": { "type": "object" } },
+            "signals": { "type": "array", "items": { "type": "object" } },
+            "invokes": { "type": "array", "items": { "type": "string" } }
+          }
+        },
         "dashboardCards": {
           "type": "array",
           "items": {

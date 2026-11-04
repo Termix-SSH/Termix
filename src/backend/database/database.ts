@@ -30,6 +30,7 @@ import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
 import { syncForwarder } from "../sync/provider.js";
 import { syncChangeWatcher } from "../sync/server/change-watcher.js";
 import dashboardRoutes from "./routes/dashboard-routes.js";
+import operationsRoutes from "./routes/operations-routes.js";
 import {
   mountPluginApi,
   mountPluginLegacyPaths,
@@ -1627,6 +1628,7 @@ app.use("/ui-preferences", uiPreferencesRoutes);
 registerAuditLogRoutes(app, authenticateJWT);
 app.use("/sync", syncForwarder);
 app.use("/dashboard", dashboardRoutes);
+app.use("/operations", operationsRoutes);
 app.use("/plugins", pluginRoutes);
 app.use(
   "/plugin-assets",

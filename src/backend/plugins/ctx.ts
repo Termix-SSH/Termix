@@ -68,6 +68,7 @@ import { createPluginAuth, createPluginSsh } from "./ctx-ssh-auth.js";
 import { createPluginHosts } from "./ctx-hosts.js";
 import { createPluginSchedule } from "./schedule.js";
 import { createPluginFetch, createPluginNotify } from "./ctx-notify.js";
+import { createPluginOperations } from "./ctx-operations.js";
 import { createPluginProcess } from "./ctx-process.js";
 import { createPluginSystem } from "./ctx-system.js";
 import { createPluginPlugins } from "./ctx-plugins.js";
@@ -976,6 +977,8 @@ export function createPluginContext(
       void reportRuntimeError(pluginId, error);
     }),
     ssh: createPluginSsh({ manifest, bag: handle.bag, audit: auditCall }),
+    operations: createPluginOperations({ manifest, bag: handle.bag }),
+
     notify: createPluginNotify({
       manifest,
       audit: auditCall,

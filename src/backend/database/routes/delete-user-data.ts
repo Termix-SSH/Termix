@@ -3,6 +3,7 @@ import { recentActivity } from "../../plugins/activity-provider.js";
 import {
   createCurrentApiKeyRepository,
   createCurrentAuditLogRepository,
+  createCurrentOperationRepository,
   createCurrentCredentialRepository,
   createCurrentHostFolderRepository,
   createCurrentHostRepository,
@@ -61,6 +62,7 @@ export async function deleteUserAndRelatedData(
 
     await createCurrentRoleRepository().removeAllRolesFromUser(userId);
     await createCurrentAuditLogRepository().anonymizeByUserId(userId);
+    await createCurrentOperationRepository().anonymizeUser(userId);
 
     await createCurrentSshCredentialUsageRepository().deleteByUserId(userId);
 

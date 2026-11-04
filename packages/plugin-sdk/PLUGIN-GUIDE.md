@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.22 | Plugin API 1.13.0
+SDK 1.0.23 | Plugin API 1.14.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -413,6 +413,70 @@ ctx.schedule.every(60_000, () => refresh(), { jitterMs: 5_000 });
   from `ctx.currentActor()`.
 - Use a service: declare it in `requires`, then `ctx.services.get<T>("snippets.access")`. It returns
   nothing while no provider runs, so always handle that.
+
+### Operations
+
+Declare what your plugin can do in `contributes.operations`, and it shows up in Automations, Fleets, the
+assistant, the CLI, the phone app and the command palette with no other wiring. It also gets per host results,
+dry runs, run history, approvals and drift checks.
+
+```json
+"capabilities": ["operations:provide"],
+"engine": { "termix": ">=26.11.1-0", "api": "^1.13" },
+"contributes": {
+  "operations": {
+    "actions": [{
+      "id": "demo.restart",
+      "titleKey": "ops.restart.title",
+      "scope": "host",
+      "inputs": [{ "key": "name", "type": "string", "labelKey": "ops.restart.name", "required": true }],
+      "risk": "change",
+      "permission": "use",
+      "hostAccess": "edit",
+      "dryRun": "describe"
+    }]
+  }
+}
+```
+
+```ts
+ctx.operations.register("demo.restart", {
+  describe: (input) => `Would restart ${input.name}`,
+  run: async (input, { hostId, signal, log }) => {
+    return { summary: `Restarted ${input.name}`, changed: true };
+  },
+});
+```
+
+- Actions: `scope` is `host`, `resource` or `server`. `risk` is `read`, `change` or `destructive`. Host actions declare
+  `hostAccess`. Use `edit` for changes unless people with `connect` already do this today. A destructive action
+  must use `edit` or `manage` and needs a confirm.
+- Inputs use the settings field types, plus `required`, `pattern`, `optionsFrom` (a read action fills the choices)
+  and type `resource`. Keys you did not declare are refused before your handler runs. `secret` values reach the handler
+  but are never stored or shown. Mark private outputs `sensitive`.
+- `dryRun`: `native` calls `run` with `dryRun: true` and nothing may change. `describe` calls `describe` instead.
+- `check` names a read action that proves the result, used for drift. `undo` names the reverse action, and `run` returns
+  `undoInput`. `idempotent` lets a rollout retry it. `exclusive` allows one at a time per host. `when` limits it to
+  hosts by setting or OS.
+- `surfaces`: the assistant and MCP are off until you set them true. Only do that for actions safe for a model to
+  ask for. The rest are on unless you set them false.
+- Resources describe a kind of thing, such as a container: a read action on one host returns `{ rows }` as `data`, and
+  core draws the All hosts table and host page section. Attach actions with `scope: "resource"`.
+- Signals are status tiles: a read action returns `{ value, status, label }` as `data`, with status `ok`, `warn`, `fail` or
+  `unknown`. `fix` names the action offered when it is not ok. Keep these reads cheap, they run for every host.
+- Events: declare them, then call `ctx.operations.emit(id, payload, { hostId })`.
+- Handlers must watch `signal` and stop when it fires. Throw on failure; a failed run never counts against your
+  plugin's error budget. Throw an error with `code = "NEEDS_INTERACTION"` when a host needs a person to sign in first.
+- Handlers have no request and no session. Take what you need from the input and `hostId`.
+- Keep your REST routes. Inside one, call `ctx.operations.run(id, { hostId, input })` so a button press goes through
+  the same checks and lands in the same history.
+- To run another plugin's action, add `operations:invoke`, list it in `operations.invokes` and call
+  `ctx.operations.invoke(id, { hostId, input, via: "automation" })`. It acts as the current user and rules still apply.
+- `risk` is your plugin's claim. Plugins run in-process, so this is not a sandbox. Actions from plugins not signed as
+  official count as `change` when rules decide what needs a person, and stay off the assistant and MCP until an admin
+  allows them.
+- Set `engine.termix` to at least `>=26.11.1-0`. Keep `engine.api` as it was unless you import something new from
+  `/ui`, or the phone app will ask people to update to see your plugin.
 
 ### Shared packages
 
@@ -962,6 +1026,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `@termix-ssh/plugin-sdk/db`                                          | `defineTable` and column builders                                                              |
 | `@termix-ssh/plugin-sdk/manifest`                                    | `PluginManifest` type and manifest checks                                                      |
 | `@termix-ssh/plugin-sdk/capabilities`                                | The capability catalog                                                                         |
+| `@termix-ssh/plugin-sdk/operations`                                  | Types, input checks and JSON Schema for declared actions                                       |
 | `@termix-ssh/plugin-sdk/settings`                                    | Settings field validation                                                                      |
 | `@termix-ssh/plugin-sdk/testing`                                     | `createMockCtx`, `createTestDb`, `renderWithApp`, `createFakeContext`                          |
 | `@termix-ssh/plugin-sdk/vitest-preset`                               | `pluginVitestConfig`                                                                           |
@@ -993,6 +1058,8 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `desktop:local`          | high     | Use the user's own computer, desktop app only                 |
 | `hosts:export`           | high     | Export hosts with their saved logins                          |
 | `notify:hub`             | high     | Receive every alert (the alerts hub only)                     |
+| `operations:invoke`      | high     | Run other plugins' declared actions, listed in `invokes`      |
+| `operations:approve`     | high     | Decide which actions need a person                            |
 | `ui:layout`              | high     | Replace the whole app layout                                  |
 | `hosts:write`            | medium   | Add and edit hosts                                            |
 | `hosts:status-provide`   | medium   | Be the source of host status dots                             |
@@ -1008,6 +1075,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `users:read`             | medium   | Usernames, roles and UI language                              |
 | `events:core`            | medium   | Listen to core events                                         |
 | `notify:send`            | medium   | Send alerts                                                   |
+| `operations:provide`     | medium   | Offer declared actions and events                             |
 | `audit:read`             | medium   | Read the audit log                                            |
 | `desktop:window`         | medium   | Open windows in the desktop app                               |
 | `hosts:read`             | low      | Read hosts the user can see                                   |
