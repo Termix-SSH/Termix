@@ -670,6 +670,22 @@ export type HostStatusIndicatorContribution = HostBadgeContribution;
 /** A control in the host editor's toolbar. */
 export type HostEditorToolbarItemContribution = HostBadgeContribution;
 
+export interface HostSectionProps {
+  host: PluginHostRecord;
+  isVisible: boolean;
+  shell: ShellApi;
+}
+
+export interface HostSectionContribution {
+  /** Declare it in manifest contributes.hostSections too. */
+  id: string;
+  titleKey: string;
+  /** Lower sorts first. */
+  order?: number;
+  when?: (host: PluginHostRecord) => boolean;
+  component: ComponentType<HostSectionProps>;
+}
+
 export interface HostContextMenuItemContribution {
   id: string;
   titleKey: string;
@@ -1172,6 +1188,11 @@ export interface TermixApp extends TermixAppInfo {
   registerHostContextMenuItem: (
     item: HostContextMenuItemContribution,
   ) => Disposer;
+  /**
+   * A card on the host page. Core 26.11.1 and newer; call it as
+   * app.registerHostSection?.(...) if your plugin allows older cores.
+   */
+  registerHostSection: (section: HostSectionContribution) => Disposer;
   registerPaletteEntry: (entry: PaletteEntryContribution) => Disposer;
   registerPaletteGroup: (group: PaletteGroupContribution) => Disposer;
   registerKeybindingAction: (action: KeybindingActionContribution) => Disposer;

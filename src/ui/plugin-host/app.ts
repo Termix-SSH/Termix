@@ -42,6 +42,10 @@ import {
 } from "@/shell/keybinding-registry";
 import { registerHostProtocol } from "@/sidebar/host-protocols";
 import {
+  registerHostSection,
+  type HostSectionRenderProps,
+} from "@/shell/host-sections";
+import {
   registerDashboardCard,
   type DashboardCardRenderProps,
 } from "@/dashboard/dashboard-cards-registry";
@@ -420,6 +424,21 @@ export function createPluginApp(
           when: hostCallback(item.when) as never,
           component: scoped(item.component) as never,
           order: item.order,
+        }),
+      );
+    },
+
+    registerHostSection(section) {
+      return track(
+        registerHostSection({
+          id: section.id,
+          pluginId,
+          titleKey: key(section.titleKey),
+          order: section.order,
+          when: hostCallback(section.when ?? (() => true)) as never,
+          component: scoped(
+            section.component as unknown as ComponentType<HostSectionRenderProps>,
+          ),
         }),
       );
     },

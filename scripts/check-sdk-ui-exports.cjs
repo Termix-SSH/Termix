@@ -19,6 +19,12 @@ const SDK_UI = path.join(ROOT, "src", "ui", "plugin-host", "sdk-ui.ts");
 const TSCONFIG = path.join(ROOT, "tsconfig.app.json");
 
 const ALLOWED = [
+  "useHostSections",
+  "operationsApi",
+  "listHostSections",
+  "hostSectionsFor",
+  "HostTabEmbed",
+  "HostSectionDef",
   "ACCENT_PRESET_COLORS",
   "APP_VERSION",
   "AccessRecord",

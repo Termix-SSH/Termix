@@ -10,6 +10,8 @@ Plugin API 1.14.0.
 - `ctx.operations` registers handlers, runs other plugins' declared actions, emits events and provides approval rules, with the new `operations:provide`, `operations:invoke` and `operations:approve` capabilities
 - `@termix-ssh/plugin-sdk/operations` has the types, input checks, redaction and JSON Schema for declared actions
 - `contributes.hostSections` declares cards for the host page
+- `app.registerHostSection` adds a card to the host page
+- `/ui` exports `HostTabEmbed`, which draws any tab type inside another view, the host section registry, and `operationsApi` for core's `/operations` routes
 
 ## 1.0.22
 

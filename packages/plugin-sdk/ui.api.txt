@@ -159,8 +159,10 @@ HostProtocolAuthInput (type): HostProtocolAuthInput
 HostProtocolDef (type): HostProtocolDef
 HostProtocols (type): HostProtocols
 HostRowFields (type): HostRowFields
+HostSectionDef (type): HostSectionDef
 HostSidebarFilterState (type): HostSidebarFilterState
 HostSidebarPreferences (type): HostSidebarPreferences
+HostTabEmbed (value): ({ host, type, label, data, isVisible, shell, }: { host: Host; type: string; label?: string; data?: Record<string, unknown>; isVisible?: boolean; shell: TabShellCallbacks; }) => Element
 HostTrayTrigger (type): HostTrayTrigger
 HttpsSettings (type): HttpsSettings
 IconPicker (value): ({ value, color, onChange, }: { value: string; color?: string; onChange: (icon: string) => void; }) => Element
@@ -457,6 +459,7 @@ hostBadgesFor (value): (all: HostBadgeDef[], host: Host) => HostBadgeDef[]
 hostEditorToolbarItemsFor (value): (all: HostBadgeDef[], host: Host) => HostBadgeDef[]
 hostMenuItemsFor (value): (all: HostContextMenuItemDef[], host: Host) => HostContextMenuItemDef[]
 hostProtocolFlags (value): (host: { enableSsh?: boolean; pluginSettings?: Record<string, Record<string, unknown>>; }, list?: HostProtocolDef[]) => HostProtocols
+hostSectionsFor (value): (all: HostSectionDef[], host: Host) => HostSectionDef[]
 hostStatusIndicatorsFor (value): (all: HostBadgeDef[], host: Host) => HostBadgeDef[]
 hydrateLocalSharedHostAuth (value): <T>(host: T) => Promise<T>
 invalidateHostsAndStatusCaches (value): () => void
@@ -475,6 +478,7 @@ linkExternalToPasswordAccount (value): (externalUserId: string, targetUsername: 
 linkedServerUrl (value): () => Promise<string>
 listHostActions (value): () => HostActionDef[]
 listHostProtocols (value): () => HostProtocolDef[]
+listHostSections (value): () => HostSectionDef[]
 loadPaletteGroup (value): (group: PaletteGroupDef) => Promise<PaletteItemDef[]>
 logoutUser (value): () => Promise<{ success: boolean; message: string; }>
 makeHostSshSubTabs (value): (t: (key: string, options?: { defaultValue?: string; }) => string, protocols?: Record<string, boolean>, defaultsMode?: boolean) => HostTab[]
@@ -488,6 +492,7 @@ moveSplitDrag (value): (x: number, y: number) => void
 normalizeLanguageCode (value): (language?: string) => string
 notifySyncChanged (value): () => void
 openInSplit (value): (target: SplitOpenTarget, open: () => void) => void
+operationsApi (value): AxiosInstance
 paletteEntriesFor (value): (all: PaletteEntryDef[], scope: "global" | "host", host?: Host) => PaletteEntryDef[]
 parseCustomKeybindings (value): (raw?: string) => CustomKeybinding[]
 parseServerTime (value): (ts: string) => Date
@@ -598,6 +603,7 @@ useHostContextMenuItems (value): () => HostContextMenuItemDef[]
 useHostEditorSections (value): () => HostEditorSectionDef[]
 useHostEditorToolbarItems (value): () => HostBadgeDef[]
 useHostProtocols (value): () => HostProtocolDef[]
+useHostSections (value): () => HostSectionDef[]
 useHostStatus (value): (hostId: number, statusCheckEnabled?: boolean) => StatusValue
 useHostStatusIndicators (value): () => HostBadgeDef[]
 useInstalledPlugins (value): () => PluginSummary[]

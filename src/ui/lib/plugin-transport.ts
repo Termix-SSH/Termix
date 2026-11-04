@@ -80,6 +80,34 @@ export function createPluginApi(pluginId: string): AxiosInstance {
 }
 
 /**
+ * An axios client rooted at core's /operations routes: the action catalog,
+ * runs, approvals, events, signals and cross host resources.
+ */
+export function createOperationsApi(): AxiosInstance {
+  return new Proxy(authApi, {
+    get(target, property, receiver) {
+      const value = Reflect.get(target, property, receiver);
+      if (typeof value !== "function") return value;
+      if (
+        property === "get" ||
+        property === "delete" ||
+        property === "post" ||
+        property === "put" ||
+        property === "patch"
+      ) {
+        return (url: string, ...rest: unknown[]) =>
+          (value as (...args: unknown[]) => unknown).call(
+            target,
+            `/operations${url.startsWith("/") ? url : `/${url}`}`,
+            ...rest,
+          );
+      }
+      return value.bind(target);
+    },
+  }) as AxiosInstance;
+}
+
+/**
  * A raw fetch on this plugin's /plugin-api mount point, for a response the
  * caller reads as a stream (server-sent events). axios buffers the whole
  * body, so it cannot. Sends the same auth the shared client does.

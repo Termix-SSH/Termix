@@ -823,3 +823,13 @@ export {
   rightDockableIds,
   useRailItems,
 } from "@/sidebar/rail-items";
+export {
+  hostSectionsFor,
+  type HostSectionDef,
+  listHostSections,
+  useHostSections,
+} from "@/shell/host-sections";
+export { HostTabEmbed } from "@/shell/HostTabEmbed";
+import { createOperationsApi } from "@/lib/plugin-transport";
+/** Core's /operations routes, with the user's own session. */
+export const operationsApi = createOperationsApi();
