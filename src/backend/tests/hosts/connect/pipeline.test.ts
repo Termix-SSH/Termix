@@ -148,8 +148,23 @@ async function build(
   });
 }
 
+// Building a hop's config parses keys, which is slow while the whole suite
+// runs, so give the multi hop steps more than vi.waitFor's 1 s.
+const settle = (check: () => void) => vi.waitFor(check, { timeout: 10_000 });
+vi.setConfig({ testTimeout: 30_000 });
+
 beforeEach(() => {
   vi.clearAllMocks();
+  // clearAllMocks keeps queued Once values, so a test that stopped early
+  // would hand its leftovers to the next one.
+  for (const mock of [
+    mocks.resolveHostById,
+    mocks.createJumpHostChain,
+    mocks.createSocks5Connection,
+    mocks.applyCertificateAuth,
+    mocks.applyAgentAuth,
+  ])
+    mock.mockReset();
   FakeSshClient.nextBehaviour = [];
   FakeSshClient.instances = [];
   mocks.createHostVerifier.mockResolvedValue(mocks.verifier);
@@ -532,7 +547,7 @@ describe("connectHost", () => {
       "user-1",
       prompt,
     );
-    await vi.waitFor(() =>
+    await settle(() =>
       expect(FakeSshClient.instances[0]?.connectConfig).toBeTruthy(),
     );
     const first = FakeSshClient.instances[0];
@@ -546,11 +561,9 @@ describe("connectHost", () => {
       [{ prompt: "Verification code:", echo: false }],
       firstAnswer,
     );
-    await vi.waitFor(() =>
-      expect(firstAnswer).toHaveBeenCalledWith(["111111"]),
-    );
+    await settle(() => expect(firstAnswer).toHaveBeenCalledWith(["111111"]));
     first.emit("ready");
-    await vi.waitFor(() =>
+    await settle(() =>
       expect(FakeSshClient.instances[1]?.connectConfig).toBeTruthy(),
     );
     const second = FakeSshClient.instances[1];
@@ -566,7 +579,7 @@ describe("connectHost", () => {
       ],
       secondAnswer,
     );
-    await vi.waitFor(() =>
+    await settle(() =>
       expect(secondAnswer).toHaveBeenCalledWith(["hop-password", "222222"]),
     );
     second.emit("ready");
@@ -674,7 +687,7 @@ describe("connectHost", () => {
   it("auto-fills the stored password in keyboard-interactive with nobody to ask", async () => {
     FakeSshClient.nextBehaviour = ["hang"];
     const attempt = connectHost(host(), { userId: "user-1", purpose: "fleet" });
-    await vi.waitFor(() => {
+    await settle(() => {
       const last = FakeSshClient.instances.at(-1)!;
       expect(last.connectConfig).not.toBeNull();
     });
@@ -704,7 +717,7 @@ describe("connectHost", () => {
       purpose: "file-manager",
       prompt: { ask },
     });
-    await vi.waitFor(() =>
+    await settle(() =>
       expect(FakeSshClient.instances.at(-1)!.connectConfig).not.toBeNull(),
     );
     const client = FakeSshClient.instances.at(-1)!;
@@ -720,7 +733,7 @@ describe("connectHost", () => {
       ],
       finish,
     );
-    await vi.waitFor(() => expect(finish).toHaveBeenCalled());
+    await settle(() => expect(finish).toHaveBeenCalled());
     expect(ask).toHaveBeenCalledWith({
       kind: "totp",
       prompt: "Verification code: ",
@@ -751,7 +764,7 @@ describe("connectHost", () => {
         purpose: "fleet",
       }),
     ).rejects.toThrow(/All configured authentication methods failed/);
-    await vi.waitFor(() =>
+    await settle(() =>
       expect(mocks.forgetCert).toHaveBeenCalledWith("user-1", 7),
     );
     dispose();
