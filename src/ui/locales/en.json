@@ -609,6 +609,7 @@
     "hostClickBehavior": "Clicking a host",
     "hostClickBehaviorDesc": "What happens when you click a host that already has an open tab. Ctrl/Cmd click, middle click, or \"Open in new tab\" always start a new one.",
     "hostClickNewTab": "Always open a new tab",
+    "hostClickHostPage": "Open the host page, when a plugin offers one",
     "hostClickFocusExisting": "Switch to the open tab",
     "hostClickFocusExistingDoubleNew": "Click to switch, double click for a new tab",
     "openInNewTab": "Open in new tab",

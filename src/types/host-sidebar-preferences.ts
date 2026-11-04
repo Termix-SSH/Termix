@@ -34,7 +34,7 @@ export type HostTrayTrigger = "always" | "hover" | "click" | "actionsOnly";
 
 /** What clicking a host does when it already has an open tab. */
 export type HostClickBehavior =
-  "newTab" | "focusExisting" | "focusExistingDoubleClickNew";
+  "newTab" | "focusExisting" | "focusExistingDoubleClickNew" | "hostPage";
 
 export interface HostSidebarFilterState {
   status: ("online" | "offline" | "pinned")[];
@@ -136,6 +136,7 @@ const HOST_CLICK_BEHAVIORS: HostClickBehavior[] = [
   "newTab",
   "focusExisting",
   "focusExistingDoubleClickNew",
+  "hostPage",
 ];
 const STATUS_COLOR_SCHEMES: StatusColorScheme[] = ["accent", "status"];
 const FILTER_STATUS: HostSidebarFilterState["status"] = [
