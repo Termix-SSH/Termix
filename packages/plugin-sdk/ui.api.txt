@@ -291,6 +291,7 @@ SurfaceKind (type): SurfaceKind
 SurfaceScope (value): ({ kind, onEditingChange, onClose, className, children, }: { kind?: SurfaceKind; onClose?: () => void; onEditingChange?: (editing: EditingWidth) => void; className?: string; children: ReactNode; }) => Element
 Switch (value): ({ className, ...props }: SwitchProps & RefAttributes<HTMLButtonElement>) => Element
 SwitchRow (value): ({ label, description, badge, checked, onChange, disabled, defaultKey, rowId, }: { label: string; description?: ReactNode; badge?: string; checked: boolean; onChange: (value: boolean) => void; disabled?: boolean; defaultKey?: string; rowId?: string; }) => Element
+TILE_COLUMNS (value): 12
 TOTPDialog (value): ({ isOpen, prompt, mode, waiting, onSubmit, onCancel, backgroundColor, }: TOTPDialogProps) => Element
 Tab (type): Tab
 TabShellCallbacks (type): TabShellCallbacks
@@ -305,6 +306,13 @@ TextField (value): ({ label, value, onChange, placeholder, hint, error, aside, d
 Textarea (value): ForwardRefExoticComponent<TextareaProps & RefAttributes<HTMLTextAreaElement>>
 TextareaProps (type): TextareaProps
 ThemeId (type): string
+TileFrame (value): ({ title, icon, actions, bare, onTitleClick, className, bodyClassName, children, }: { title?: ReactNode; icon?: ReactNode; actions?: ReactNode; bare?: boolean; onTitleClick?: () => void; className?: string; bodyClassName?: string; children: ReactNode; }) => Element
+TileGrid (value): ({ slots, editMode, renderTile, tileLabel, onChange, onSettings, gap, stackBelow, minColumns, minHeight, empty, className, }: TileGridProps) => Element
+TileGridProps (type): TileGridProps
+TileKind (type): TileKind
+TilePicker (value): ({ entries, onAdd, onClose, className, }: { entries: TilePickerEntry[]; onAdd: (entry: TilePickerEntry) => void; onClose?: () => void; className?: string; }) => Element
+TilePickerEntry (type): TilePickerEntry
+TileSlot (type): TileSlot
 TlsStatus (type): TlsStatus
 ToolsTab (type): ToolsTab
 Tooltip (value): ({ ...props }: TooltipProps) => Element
@@ -341,6 +349,7 @@ adminGetUserHosts (value): (targetUserId: string) => Promise<Host[]>
 adminResetUserPassword (value): (userId: string, newPassword: string, confirmDataWipe?: boolean) => Promise<{ message: string; dataWiped?: boolean; }>
 adminUpdateUserCredential (value): (targetUserId: string, credentialId: number, credentialData: Record<string, unknown>) => Promise<Record<string, unknown>>
 adminUpdateUserHost (value): (targetUserId: string, hostId: number, hostData: HostData) => Promise<Host>
+appendTile (value): (slots: TileSlot[], tile: { id: string; w?: number; h?: number; }) => TileSlot[]
 applyAccentColor (value): (colorValue: string) => void
 applyFontSize (value): (id: FontSizeId) => void
 applyPresetSideEffects (value): (preset: "simple" | "balanced" | "advanced") => Promise<void>
@@ -384,6 +393,7 @@ endSplitDrag (value): (commit: boolean) => void
 filterPaletteItems (value): (items: PaletteItemDef[], query: string, showWhenEmpty?: boolean) => PaletteItemDef[]
 findCoreHostDefault (value): (key: string) => CoreHostDefault
 findMatchingKeybinding (value): (e: KeyboardEvent, bindings: CustomKeybinding[]) => CustomKeybinding
+flowTiles (value): (tiles: { id: string; w: number; h?: number; }[], rowHeight?: number) => TileSlot[]
 getActiveSessions (value): () => Promise<ActiveSessionInfo[]>
 getAdaptiveResourceBudget (value): (kind: AdaptiveTaskKind) => AdaptiveResourceBudget
 getApiKeys (value): () => Promise<{ apiKeys: ApiKey[]; }>
@@ -514,6 +524,7 @@ releaseUrlFrom (value): (info: VersionInfo) => string
 rem (value): (px: number) => string
 removeAdminStatus (value): (userId: string) => Promise<Record<string, unknown>>
 removeRoleFromUser (value): (userId: string, roleId: number) => Promise<{ success: boolean; }>
+removeTile (value): (slots: TileSlot[], id: string) => TileSlot[]
 renameCredentialFolder (value): (oldName: string, newName: string) => Promise<Record<string, unknown>>
 renameFolder (value): (oldName: string, newName: string) => Promise<Record<string, unknown>>
 reorderCredentials (value): (positions: { id: number; sortOrder: number; }[]) => Promise<{ updated: number; }>
@@ -543,6 +554,7 @@ runHostAction (value): (action: HostActionDef, host: Host, shell: TabShellCallba
 runVisibleInterval (value): (tick: () => void, intervalMs: number) => () => void
 sanitizeCredentialSidebarPreferences (value): (input: unknown) => CredentialSidebarPreferences
 sanitizeHostSidebarPreferences (value): (input: unknown) => HostSidebarPreferences
+sanitizeTiles (value): (value: unknown, min?: number) => TileSlot[]
 saveCredentialSidebarPreferences (value): (preferences: CredentialSidebarPreferences) => Promise<void>
 saveHostDefaultsLevel (value): (target: HostDefaultsTarget, change: HostDefaultsChange) => Promise<{ changedHosts?: number; jobId?: string; }>
 saveHostSidebarPreferences (value): (preferences: HostSidebarPreferences) => Promise<void>

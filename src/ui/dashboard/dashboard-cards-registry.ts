@@ -6,6 +6,24 @@ export interface DashboardCardRenderProps {
   isVisible: boolean;
   /** The shell, e.g. to open the full-page version of the card. */
   shell: TabShellCallbacks;
+  /** This copy's settings, for cards with entries. Empty otherwise. */
+  config?: Record<string, unknown>;
+  setConfig?: (config: Record<string, unknown>) => void;
+  /** True while the user is arranging the dashboard. */
+  editMode?: boolean;
+}
+
+/** One thing the add list offers from a card that can be placed many times. */
+export interface DashboardCardEntry {
+  /** Stable within the card, used to mark entries already placed. */
+  key: string;
+  title: string;
+  description?: string;
+  /** Group heading in the add list. Defaults to the card title. */
+  group?: string;
+  kind?: "card" | "chart" | "signal" | "action" | "resource" | "session";
+  config: Record<string, unknown>;
+  defaultSize?: { w: number; h?: number | null };
 }
 
 /**
@@ -23,6 +41,10 @@ export interface RegisteredDashboardCard {
   defaultPanel?: "main" | "side";
   /** "framed" gets a titled header from the dashboard; "bare" draws its own. */
   frame?: "framed" | "bare";
+  /** Size on the 12 column dashboard grid when added. */
+  defaultSize?: { w: number; h?: number | null };
+  /** Lists what this card can show; each entry becomes its own tile. */
+  entries?: (language: string) => Promise<DashboardCardEntry[]>;
   component: ComponentType<DashboardCardRenderProps>;
 }
 

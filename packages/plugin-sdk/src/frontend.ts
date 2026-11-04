@@ -799,6 +799,26 @@ export interface KeybindingDefaultContribution {
 export interface DashboardCardProps {
   isVisible: boolean;
   shell: ShellApi;
+  /** This tile's settings, for cards with `entries`. Empty otherwise. Core 26.11.1+. */
+  config?: Record<string, unknown>;
+  /** Saves this tile's settings. Keep it small, it is stored in one line. */
+  setConfig?: (config: Record<string, unknown>) => void;
+  /** True while the user is arranging the dashboard. */
+  editMode?: boolean;
+}
+
+/** One tile a card with `entries` offers in the dashboard's add list. */
+export interface DashboardCardEntry {
+  /** Stable within the card, used to mark entries already placed. */
+  key: string;
+  title: string;
+  description?: string;
+  /** Group heading in the add list. Defaults to the card title. */
+  group?: string;
+  kind?: "card" | "chart" | "signal" | "action" | "resource" | "session";
+  /** Passed back as `config`. */
+  config: Record<string, unknown>;
+  defaultSize?: { w: number; h?: number | null };
 }
 
 export interface DashboardCardContribution {
@@ -813,6 +833,13 @@ export interface DashboardCardContribution {
    * edge, for a strip of numbers. Defaults to "framed".
    */
   frame?: "framed" | "bare";
+  /** Size on the 12 column dashboard grid when added. Core 26.11.1+. */
+  defaultSize?: { w: number; h?: number | null };
+  /**
+   * Lets the card be placed many times, once per entry, each with its own
+   * `config`. Titles come back already translated. Core 26.11.1+.
+   */
+  entries?: (language: string) => Promise<DashboardCardEntry[]>;
   component: ComponentType<DashboardCardProps>;
 }
 

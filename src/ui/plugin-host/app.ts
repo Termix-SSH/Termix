@@ -534,6 +534,8 @@ export function createPluginApp(
           defaultHeight: card.defaultHeight,
           defaultPanel: card.defaultPanel,
           frame: card.frame,
+          defaultSize: card.defaultSize,
+          entries: card.entries,
           component: scoped(
             card.component as unknown as ComponentType<DashboardCardRenderProps>,
           ),

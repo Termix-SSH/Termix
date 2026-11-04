@@ -127,6 +127,20 @@ export {
   type GridLayout,
   type GridSlot,
 } from "@/components/card-grid/types";
+export {
+  TileFrame,
+  TileGrid,
+  TilePicker,
+  appendTile,
+  flowTiles,
+  removeTile,
+  sanitizeTiles,
+  TILE_COLUMNS,
+  type TileGridProps,
+  type TileKind,
+  type TilePickerEntry,
+  type TileSlot,
+} from "@/components/tile-grid";
 export { ConnectionScreen } from "@/components/connection/ConnectionScreen";
 export { type ConnectionStatus } from "@/components/connection/connection-status";
 export {

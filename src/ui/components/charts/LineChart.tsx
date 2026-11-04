@@ -26,6 +26,14 @@ const TICK_COUNT = 5;
 
 function formatTimestamp(ts: string, rangeMs: number): string {
   const d = parseServerTime(ts);
+  // A live chart covers a minute or two, so minutes alone would repeat.
+  if (rangeMs <= 10 * 60 * 1000) {
+    return d.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  }
   if (rangeMs <= 25 * 60 * 60 * 1000) {
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }

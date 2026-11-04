@@ -1694,5 +1694,27 @@
       "admin": "Admin",
       "user": "User"
     }
+  },
+  "tileGrid": {
+    "empty": "No tiles yet. Add some from the list.",
+    "move": "Drag to move",
+    "moveTile": "Move {{tile}}",
+    "settings": "{{tile}} settings",
+    "remove": "Remove {{tile}}",
+    "width": "Width",
+    "height": "Height",
+    "addTiles": "Add tiles",
+    "closePicker": "Close",
+    "search": "Search tiles",
+    "noMatches": "Nothing matches.",
+    "kind": {
+      "all": "All",
+      "card": "Cards",
+      "chart": "Charts",
+      "signal": "Status",
+      "action": "Actions",
+      "resource": "Lists",
+      "session": "Sessions"
+    }
   }
 }

@@ -19,6 +19,18 @@ const SDK_UI = path.join(ROOT, "src", "ui", "plugin-host", "sdk-ui.ts");
 const TSCONFIG = path.join(ROOT, "tsconfig.app.json");
 
 const ALLOWED = [
+  "TileFrame",
+  "TileGrid",
+  "TilePicker",
+  "appendTile",
+  "flowTiles",
+  "removeTile",
+  "sanitizeTiles",
+  "TILE_COLUMNS",
+  "TileGridProps",
+  "TileKind",
+  "TilePickerEntry",
+  "TileSlot",
   "useHostSections",
   "operationsApi",
   "listHostSections",

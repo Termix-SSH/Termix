@@ -7,8 +7,14 @@
 - Termix actions: plugins can declare what they do once, and it works from the API with permission checks, dry runs, run history and approvals
 - API keys can be limited to reading or running actions, when an admin makes them
 - A click on a host can open its host page, when a plugin offers one
+- Plugins can build pages of tiles you drag and resize, and add many copies of one dashboard card, each with its own settings
+- A plugin a newer release ships is downloaded on its own when your image does not have it, and tried again on the next start when offline
 
 ### Changed
+
+- Plugin cards placed on a tile grid take the dashboard look, with shared lines and no gaps
+- Line charts that cover a few minutes show seconds in their times
+- Plugins a new release adds to the image start on only when they are recommended. The rest are installed and left off for an admin to turn on
 
 - Host status, import and export, and credential tools now start on for new installs
 - Sync now starts on in a new desktop app, so it can link to a server
@@ -21,6 +27,7 @@
 - Password fields with the show button are the same height as the other fields next to them
 - The Secure your account setup step no longer shows up empty when no passkey or authenticator plugin is on
 - An installed plugin update older than the copy in a newer image is removed at startup instead of logging an error every boot
+- Canceling a download to the desktop app right as it starts no longer leaves a partial file behind
 
 ## 26.11.0
 

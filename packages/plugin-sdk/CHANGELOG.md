@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.26
+
+Plugin API 1.15.0.
+
+### Added
+
+- `/ui` exports `TileGrid`, `TileFrame` and `TilePicker`, the 12 column tile grid the dashboard, the host page and Host Metrics share, plus `appendTile`, `flowTiles`, `removeTile`, `sanitizeTiles` and the `TileSlot` type
+- `registerDashboardCard` takes `entries`, so one card can be placed many times with its own `config`, and `defaultSize` for the grid
+- Dashboard cards get `config`, `setConfig` and `editMode`
+
 ## 1.0.25
 
 Plugin API 1.14.0.
