@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.25
+
+Plugin API 1.14.0.
+
+### Added
+
+- Host click behavior `hostPage` opens a host page when a plugin offers one
+- `createApiKey` takes scopes, to limit a key to actions
+
 ## 1.0.24
 
 Plugin API 1.14.0.

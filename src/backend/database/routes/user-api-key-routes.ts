@@ -1,5 +1,6 @@
 import type { RequestHandler, Router } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
+import { API_KEY_SCOPES } from "../../operations/key-scopes.js";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
@@ -42,6 +43,12 @@ export function registerUserApiKeyRoutes(
    *                 type: string
    *                 format: date-time
    *                 description: Optional expiration date. Null means the key never expires.
+   *               scopes:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                   enum: [operations:read, operations:run]
+   *                 description: Limits the key to actions only. Leave out for full access.
    *     responses:
    *       201:
    *         description: API key created. Contains the full token (shown only once).
@@ -56,7 +63,7 @@ export function registerUserApiKeyRoutes(
    */
   router.post("/api-keys", requireAdmin, async (req, res) => {
     try {
-      const { name, userId: targetUserId, expiresAt } = req.body;
+      const { name, userId: targetUserId, expiresAt, scopes } = req.body;
       const apiKeyRepository = createCurrentApiKeyRepository();
       const userRepository = createCurrentUserRepository();
 
@@ -86,6 +93,21 @@ export function registerUserApiKeyRoutes(
         expiresAtValue = parsed.toISOString();
       }
 
+      let scopesValue: string[] | null = null;
+      if (scopes !== undefined && scopes !== null) {
+        if (
+          !Array.isArray(scopes) ||
+          scopes.some(
+            (scope) =>
+              !(API_KEY_SCOPES as readonly string[]).includes(String(scope)),
+          )
+        ) {
+          return res.status(400).json({ error: "Unknown API key scope" });
+        }
+        scopesValue =
+          scopes.length > 0 ? [...new Set(scopes as string[])] : null;
+      }
+
       const rawToken = "tmx_" + crypto.randomBytes(32).toString("hex");
       const tokenPrefix = rawToken.substring(0, 12);
       const tokenHash = await bcrypt.hash(rawToken, 10);
@@ -102,6 +124,7 @@ export function registerUserApiKeyRoutes(
         expiresAt: expiresAtValue,
         lastUsedAt: null,
         isActive: true,
+        scopes: scopesValue ? JSON.stringify(scopesValue) : null,
       });
 
       const actorId = (req as AuthenticatedRequest).userId;
@@ -119,6 +142,7 @@ export function registerUserApiKeyRoutes(
         details: JSON.stringify({
           targetUserId,
           targetUsername: targetUser.username,
+          scopes: scopesValue,
         }),
         ipAddress,
         userAgent,
@@ -133,6 +157,7 @@ export function registerUserApiKeyRoutes(
         tokenPrefix,
         createdAt: now,
         expiresAt: expiresAtValue,
+        scopes: scopesValue,
         token: rawToken,
       });
     } catch (err) {

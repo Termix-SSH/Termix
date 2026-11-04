@@ -17,6 +17,8 @@ export interface ApiKeyListRecord {
   expiresAt: string | null;
   lastUsedAt: string | null;
   isActive: boolean;
+  /** JSON list, or null for full access. */
+  scopes: string | null;
 }
 
 export class ApiKeyRepository {
@@ -43,6 +45,7 @@ export class ApiKeyRepository {
         expiresAt: apiKeys.expiresAt,
         lastUsedAt: apiKeys.lastUsedAt,
         isActive: apiKeys.isActive,
+        scopes: apiKeys.scopes,
       })
       .from(apiKeys)
       .leftJoin(users, eq(apiKeys.userId, users.id))
