@@ -4,7 +4,7 @@
  * re-released.
  *
  *   node scripts/pin-bundled-plugins.cjs          refresh the plugins already listed
- *   node scripts/pin-bundled-plugins.cjs --all    also add plugins new to the index (tier full)
+ *   node scripts/pin-bundled-plugins.cjs --all    also add plugins new to the index that have a stable release (tier full)
  *   --core-version X                              skip releases whose engine.termix excludes X
  *
  * The release workflow runs it with --all and the version being released.

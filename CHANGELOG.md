@@ -5,7 +5,6 @@
 ### Changed
 
 - Host status, import and export, and credential tools now start on for new installs
-- Service Manager is now in the standard image and starts on for new installs
 - Sync now starts on in a new desktop app, so it can link to a server
 - The first run plugin picker leaves plugins you did not choose off instead of removing them
 

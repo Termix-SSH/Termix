@@ -537,6 +537,38 @@ describe("default look", () => {
     ).toMatchObject({ id: "look", defaultLook: true });
   });
 
+  it("leaves out new plugins with no usable release when pinning all", () => {
+    const stable = {
+      version: "1.0.0",
+      url: "https://x/a.tmxplug",
+      sha256: SHA,
+    };
+    const index = {
+      plugins: [
+        { id: "ready", versions: [stable] },
+        {
+          id: "beta-only",
+          versions: [],
+          prereleases: [{ ...stable, version: "1.0.0-beta.1" }],
+        },
+        {
+          id: "too-new",
+          versions: [],
+          gated: [{ ...stable, engine: { termix: ">=99.0.0" } }],
+        },
+      ],
+    };
+    expect(
+      pinsFromIndex(index, null, [], "26.11.1").map(
+        (pin: { id: string }) => pin.id,
+      ),
+    ).toEqual(["ready"]);
+    expect(() =>
+      pinsFromIndex(index, null, [{ id: "beta-only" }], "26.11.1"),
+    ).toThrow(/beta-only/);
+    expect(() => pinsFromIndex(index, ["beta-only"])).toThrow(/beta-only/);
+  });
+
   it("copies a local build's theme files", () => {
     const repo = tempDir();
     fs.mkdirSync(path.join(repo, "dist"), { recursive: true });

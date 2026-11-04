@@ -67,7 +67,11 @@
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-Credential-Tools/releases/download/v1.0.0/credential-tools-1.0.0.tmxplug",
       "sha256": "413eff710b5c832a2575a890bbab1c90d28ea55f10cd7a7b94b851d51dd77dce",
-      "tier": "standard"
+      "tier": "standard",
+      "onboarding": {
+        "recommended": true,
+        "consent": false
+      }
     },
     {
       "id": "databases",
@@ -128,7 +132,11 @@
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-Host-Status/releases/download/v1.0.0/host-status-1.0.0.tmxplug",
       "sha256": "1ba62577dc7373a2a2787bab7efdb89b544a30a8003b1de91ce51f372fc4f170",
-      "tier": "standard"
+      "tier": "standard",
+      "onboarding": {
+        "recommended": true,
+        "consent": false
+      }
     },
     {
       "id": "hosts-config",
@@ -142,7 +150,11 @@
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-Import-Export/releases/download/v1.0.1/import-export-1.0.1.tmxplug",
       "sha256": "d8f2f865e1e6b226f4fe38501bf69b752f47a643bed1d9d127181083e27da2f0",
-      "tier": "standard"
+      "tier": "standard",
+      "onboarding": {
+        "recommended": true,
+        "consent": false
+      }
     },
     {
       "id": "kubernetes",
@@ -288,9 +300,7 @@
       "onboarding": {
         "recommended": false,
         "consent": false,
-        "enabledByEnv": [
-          "OIDC_CLIENT_ID"
-        ]
+        "enabledByEnv": ["OIDC_CLIENT_ID"]
       }
     },
     {
@@ -305,7 +315,11 @@
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-Sync/releases/download/v1.1.0/sync-1.1.0.tmxplug",
       "sha256": "9023d547f0e0bcef582c6ba7b7a8ab2ef68d8d0b973dde17d9e8c84d92b6429e",
-      "tier": "standard"
+      "tier": "standard",
+      "onboarding": {
+        "recommended": "desktop",
+        "consent": false
+      }
     },
     {
       "id": "tailscale",

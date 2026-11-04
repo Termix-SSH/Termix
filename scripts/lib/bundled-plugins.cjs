@@ -278,14 +278,15 @@ function pluginsForProfile(plugins, profile) {
  * pin list, so fields the registry does not know (onboarding, tier) carry over;
  * a plugin new to the list starts in the full tier. coreVersion, when given,
  * skips releases whose engine.termix range does not include it, so the image
- * never ships a plugin its own core cannot run.
+ * never ships a plugin its own core cannot run. With ids null, a plugin new to
+ * the list that has no usable release (only betas, say) is left out.
  */
 function pinsFromIndex(index, ids, current = [], coreVersion = null) {
   const plugins = Array.isArray(index?.plugins) ? index.plugins : [];
   const byId = new Map(plugins.map((plugin) => [plugin.id, plugin]));
   const currentById = new Map(current.map((entry) => [entry.id, entry]));
   const wanted = ids ?? plugins.map((plugin) => plugin.id);
-  return [...wanted].sort().map((id) => {
+  const pins = [...wanted].sort().map((id) => {
     const listed = byId.get(id);
     // gated holds releases that need a newer Termix than old builds check for.
     const latest = [...(listed?.versions ?? []), ...(listed?.gated ?? [])]
@@ -300,7 +301,10 @@ function pinsFromIndex(index, ids, current = [], coreVersion = null) {
           }),
       )
       .sort((a, b) => semver.rcompare(a.version, b.version))[0];
-    if (!latest) throw new Error(`${id} is not in the registry index`);
+    if (!latest) {
+      if (ids === null && !currentById.has(id)) return null;
+      throw new Error(`${id} is not in the registry index`);
+    }
     const onboarding = currentById.get(id)?.onboarding;
     const defaultLook = currentById.get(id)?.defaultLook === true;
     const tier = currentById.get(id)?.tier ?? "full";
@@ -314,6 +318,7 @@ function pinsFromIndex(index, ids, current = [], coreVersion = null) {
       ...(defaultLook ? { defaultLook } : {}),
     };
   });
+  return pins.filter(Boolean);
 }
 
 const LOCAL_FILES = [
