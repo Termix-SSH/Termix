@@ -2,10 +2,18 @@
 
 ## 26.11.1
 
+### Changed
+
+- Host status, import and export, and credential tools now start on for new installs
+- Service Manager is now in the standard image and starts on for new installs
+- Sync now starts on in a new desktop app, so it can link to a server
+- The first run plugin picker leaves plugins you did not choose off instead of removing them
+
 ### Fixed
 
 - The first run plugin picker no longer sets the default layout and themes to Remove. They always stay on
 - Alerts with no icon no longer squeeze their text to one word per line
+- Password fields with the show button are the same height as the other fields next to them
 
 ## 26.11.0
 
