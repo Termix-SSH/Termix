@@ -388,7 +388,7 @@ export function Segmented<T extends string>({
             title={option.title ?? option.label}
             onClick={() => onChange(option.value)}
             className={cn(
-              "flex h-8 items-center justify-center gap-1.5 px-2.5 text-[11px] font-medium transition-colors focus-visible:relative focus-visible:z-10 focus-visible:ring-1 focus-visible:ring-ring",
+              "flex h-[30px] items-center justify-center gap-1.5 px-2.5 text-[11px] font-medium transition-colors focus-visible:relative focus-visible:z-10 focus-visible:ring-1 focus-visible:ring-ring",
               i > 0 && "border-l border-border",
               active
                 ? "bg-accent-brand/10 text-accent-brand"
@@ -513,7 +513,7 @@ function ToggleButton({
       aria-label={title}
       aria-pressed={active}
       className={cn(
-        "flex size-8 items-center justify-center transition-colors focus-visible:relative focus-visible:z-10 focus-visible:ring-1 focus-visible:ring-ring",
+        "flex size-[30px] items-center justify-center transition-colors focus-visible:relative focus-visible:z-10 focus-visible:ring-1 focus-visible:ring-ring",
         bordered && "border-l border-border",
         active
           ? "bg-accent-brand/10 text-accent-brand"
