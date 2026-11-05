@@ -20,7 +20,7 @@ interface LineChartProps {
   className?: string;
 }
 
-const Y_LABEL_W = 44;
+const Y_LABEL_MIN = 44;
 const X_LABEL_H = 20;
 const TOP_PAD = 6;
 const TICK_COUNT = 5;
@@ -84,7 +84,18 @@ export function LineChart({
     return () => ro.disconnect();
   }, []);
 
-  const chartW = Math.max(0, width - Y_LABEL_W);
+  const yTicks = (() => {
+    const [lo, hi] = domain;
+    const step = (hi - lo) / (TICK_COUNT - 1);
+    return Array.from({ length: TICK_COUNT }, (_, i) => lo + i * step);
+  })();
+
+  // Wide enough for the longest tick label, like "1.5 KiB/s".
+  const yLabelW = Math.max(
+    Y_LABEL_MIN,
+    Math.max(...yTicks.map((tick) => yFormatter(tick).length)) * 6 + 12,
+  );
+  const chartW = Math.max(0, width - yLabelW);
   const drawH = height - TOP_PAD;
   const svgH = height + X_LABEL_H;
 
@@ -94,25 +105,19 @@ export function LineChart({
         parseServerTime(timestamps[0]).getTime()
       : 0;
 
-  const yTicks = (() => {
-    const [lo, hi] = domain;
-    const step = (hi - lo) / (TICK_COUNT - 1);
-    return Array.from({ length: TICK_COUNT }, (_, i) => lo + i * step);
-  })();
-
   const xTickIndices = pickXTicks(timestamps, rangeMs, chartW);
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<SVGElement>) => {
       if (timestamps.length < 2 || chartW <= 0) return;
       const rect = (e.currentTarget as SVGElement).getBoundingClientRect();
-      const relX = e.clientX - rect.left - Y_LABEL_W;
+      const relX = e.clientX - rect.left - yLabelW;
       const index = Math.round(
         Math.max(0, Math.min(1, relX / chartW)) * (timestamps.length - 1),
       );
       setTooltip({ x: e.clientX - rect.left, index });
     },
-    [timestamps.length, chartW],
+    [timestamps.length, chartW, yLabelW],
   );
 
   return (
@@ -134,7 +139,7 @@ export function LineChart({
             return (
               <g key={ti}>
                 <line
-                  x1={Y_LABEL_W}
+                  x1={yLabelW}
                   y1={y}
                   x2={width}
                   y2={y}
@@ -143,7 +148,7 @@ export function LineChart({
                   strokeOpacity={0.6}
                 />
                 <text
-                  x={Y_LABEL_W - 6}
+                  x={yLabelW - 6}
                   y={y + 4}
                   fontSize={10}
                   textAnchor="end"
@@ -157,15 +162,15 @@ export function LineChart({
 
           {/* Left + bottom border */}
           <line
-            x1={Y_LABEL_W}
+            x1={yLabelW}
             y1={TOP_PAD}
-            x2={Y_LABEL_W}
+            x2={yLabelW}
             y2={TOP_PAD + drawH}
             stroke="var(--border)"
             strokeWidth={1}
           />
           <line
-            x1={Y_LABEL_W}
+            x1={yLabelW}
             y1={TOP_PAD + drawH}
             x2={width}
             y2={TOP_PAD + drawH}
@@ -187,7 +192,7 @@ export function LineChart({
                   strokeWidth={1.5}
                   strokeLinejoin="round"
                   strokeLinecap="round"
-                  transform={`translate(${Y_LABEL_W},0)`}
+                  transform={`translate(${yLabelW},0)`}
                 />
               );
             })}
@@ -195,13 +200,9 @@ export function LineChart({
           {/* Crosshair */}
           {tooltip !== null && timestamps.length > 1 && chartW > 0 && (
             <line
-              x1={
-                Y_LABEL_W + (tooltip.index / (timestamps.length - 1)) * chartW
-              }
+              x1={yLabelW + (tooltip.index / (timestamps.length - 1)) * chartW}
               y1={TOP_PAD}
-              x2={
-                Y_LABEL_W + (tooltip.index / (timestamps.length - 1)) * chartW
-              }
+              x2={yLabelW + (tooltip.index / (timestamps.length - 1)) * chartW}
               y2={TOP_PAD + drawH}
               stroke="var(--muted-foreground)"
               strokeOpacity={0.4}
@@ -215,7 +216,7 @@ export function LineChart({
             const isFirst = li === 0;
             const isLast = li === xTickIndices.length - 1;
             const x =
-              Y_LABEL_W + (i / Math.max(1, timestamps.length - 1)) * chartW;
+              yLabelW + (i / Math.max(1, timestamps.length - 1)) * chartW;
             return (
               <text
                 key={i}

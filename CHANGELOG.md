@@ -39,6 +39,7 @@
 - The plugin video no longer has a second border around it
 - The hint at the bottom of Browse and the stored data footer on plugin pages have the same padding as the rest of the page
 - Sign in methods on the Security page have a line between them
+- Chart axis labels with long units, like KiB/s, are no longer cut off
 
 ## 26.11.0
 
