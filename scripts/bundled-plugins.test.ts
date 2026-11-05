@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -469,6 +469,27 @@ describe("rebuilding local plugins", () => {
     touch(path.join(cli, "index.mjs"), 0);
     expect(isLocalBuildStale(root, cli)).toBe(true);
     expect(isLocalBuildStale(root)).toBe(false);
+  });
+
+  it("survives a build replacing dist during the scan", () => {
+    const root = repo(tempDir(), "Plugin-A", "a");
+    const gone = path.join(root, "dist", "migrations", "postgres");
+    fs.mkdirSync(gone, { recursive: true });
+    fs.writeFileSync(path.join(root, "manifest.json"), "{}");
+    const realStat = fs.statSync;
+    const spy = vi.spyOn(fs, "statSync").mockImplementation(((
+      target: string,
+    ) => {
+      if (target === gone) {
+        throw Object.assign(new Error("gone"), { code: "ENOENT" });
+      }
+      return realStat(target);
+    }) as typeof fs.statSync);
+    try {
+      expect(() => isLocalBuildStale(root)).not.toThrow();
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("builds with this checkout's SDK CLI, not the plugin's own", () => {

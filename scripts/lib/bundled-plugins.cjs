@@ -370,15 +370,20 @@ const BUILD_INPUTS = [
   "package.json",
 ];
 
+// A build can replace dist while this walks it, so a path can vanish mid scan.
 function newestMtime(target) {
-  if (!fs.existsSync(target)) return 0;
-  const stat = fs.statSync(target);
-  if (!stat.isDirectory()) return stat.mtimeMs;
-  let newest = 0;
-  for (const name of fs.readdirSync(target)) {
-    newest = Math.max(newest, newestMtime(path.join(target, name)));
+  try {
+    const stat = fs.statSync(target);
+    if (!stat.isDirectory()) return stat.mtimeMs;
+    let newest = 0;
+    for (const name of fs.readdirSync(target)) {
+      newest = Math.max(newest, newestMtime(path.join(target, name)));
+    }
+    return newest;
+  } catch (error) {
+    if (error.code === "ENOENT") return 0;
+    throw error;
   }
-  return newest;
 }
 
 /** True when a plugin repo has never been built or its sources changed since. */
