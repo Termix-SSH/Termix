@@ -1052,7 +1052,8 @@
         "actionNextTab": "Switch to next tab",
         "actionPreviousTab": "Switch to previous tab",
         "actionOpenCommandPalette": "Open quick search",
-        "actionReconnectSession": "Reconnect current session"
+        "actionReconnectSession": "Reconnect current session",
+        "actionToggleSidebar": "Toggle sidebar"
       },
       "userProfile": {
         "preset_simple": "Simple",
