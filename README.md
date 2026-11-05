@@ -116,6 +116,7 @@ Plugins add everything else. The official ones ship with Termix, and admins can 
 | [Wake-on-LAN](https://github.com/Termix-SSH/Plugin-Wake-On-LAN)             | Wake, shut down and track your machines from one power dashboard.                                                               |
 | [Warpgate](https://github.com/Termix-SSH/Plugin-Warpgate)                   | Connect to hosts through a Warpgate SSH bastion.                                                                                |
 | [Web Endpoint](https://github.com/Termix-SSH/Plugin-Web-Endpoint)           | Open a host's web UI inside Termix, directly or over an SSH tunnel.                                                             |
+| [Web Servers](https://github.com/Termix-SSH/Plugin-Web-Servers)             | Manage nginx, Apache and Caddy on your hosts: sites, config, logs and HTTPS, with every change tested first.                    |
 | [WireGuard](https://github.com/Termix-SSH/Plugin-WireGuard)                 | Install WireGuard on your hosts and manage interfaces, clients and configs from one tab.                                        |
 | [Workspaces](https://github.com/Termix-SSH/Plugin-Workspaces)               | Save your open tabs and split layouts and reopen them in one click.                                                             |
 
