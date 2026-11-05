@@ -89,6 +89,7 @@ Plugins add everything else. The official ones ship with Termix, and admins can 
 | [OPKSSH](https://github.com/Termix-SSH/Plugin-OPKSSH)                       | Connect to hosts with short-lived OpenPubkey SSH certificates after signing in with your identity provider.                     |
 | [Packages](https://github.com/Termix-SSH/Plugin-Package-Manager)            | See and install updates on your hosts, search, install and remove packages, and read the package history.                       |
 | [Passkeys](https://github.com/Termix-SSH/Plugin-WebAuthn)                   | Sign in with a passkey or security key instead of a password.                                                                   |
+| [Process Manager](https://github.com/Termix-SSH/Plugin-Process-Manager)     | See and control running processes, pm2 and supervisor apps on your hosts, read their logs and get alerts when they fail.        |
 | [Proxmox](https://github.com/Termix-SSH/Plugin-Proxmox)                     | Import Proxmox VE guests as hosts, keep them in sync and watch node stats.                                                      |
 | [Remote Desktop](https://github.com/Termix-SSH/Plugin-Remote-Desktop)       | RDP, VNC and Telnet sessions in your browser, with clipboard, file transfer, sharing and recording.                             |
 | [Reverse Proxy](https://github.com/Termix-SSH/Plugin-Reverse-Proxy)         | Reverse proxy for TCP, UDP, HTTP and HTTPS with free certificates and Termix login, managed per host.                           |
