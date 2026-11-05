@@ -591,3 +591,8 @@ export function youtubeEmbedUrl(videoId: string | undefined): string | null {
     ? `https://www.youtube-nocookie.com/embed/${videoId}?rel=0`
     : null;
 }
+
+/** True when SourceBadge draws something, so lists can skip the empty slot. */
+export function hasSourceBadge(source: string): boolean {
+  return source === "community" || source === "custom";
+}

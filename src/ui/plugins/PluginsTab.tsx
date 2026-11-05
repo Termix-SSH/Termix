@@ -59,6 +59,7 @@ import { PluginDetail } from "./PluginDetail";
 import {
   categoriesOf,
   describeContributions,
+  hasSourceBadge,
   isSevere,
   kindsOf,
   matchesQuery,
@@ -1078,10 +1079,12 @@ function InstalledCard({
         facts={
           <>
             {plugin.unverified && <UnverifiedBadge />}
-            <SourceBadge
-              source={plugin.source}
-              registryName={plugin.registryName}
-            />
+            {hasSourceBadge(plugin.source) && (
+              <SourceBadge
+                source={plugin.source}
+                registryName={plugin.registryName}
+              />
+            )}
             {plugin.isBeta && <BetaBadge />}
             {plugin.author && <span>{plugin.author}</span>}
             <span>v{plugin.version}</span>
@@ -1503,7 +1506,7 @@ function BrowseSection({
             }}
           />
 
-          <p className="text-[11px] text-muted-foreground">
+          <p className="px-3 py-2 text-[11px] text-muted-foreground">
             {t("plugins.manager.registries.browseHint")}{" "}
             <DocsLink core="communityRegistry" className="text-[11px]">
               {t("plugins.manager.communitySubmit")}
@@ -1535,10 +1538,12 @@ function BrowseCard({
         onOpen={onOpen}
         facts={
           <>
-            <SourceBadge
-              source={plugin.source}
-              registryName={plugin.registryName}
-            />
+            {hasSourceBadge(plugin.source) && (
+              <SourceBadge
+                source={plugin.source}
+                registryName={plugin.registryName}
+              />
+            )}
             {plugin.author && <span>{plugin.author}</span>}
             {plugin.latestVersion && <span>v{plugin.latestVersion}</span>}
             {plugin.category && <span>{plugin.category}</span>}

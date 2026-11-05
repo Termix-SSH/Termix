@@ -20,6 +20,8 @@
 - Host status, import and export, and credential tools now start on for new installs
 - Sync now starts on in a new desktop app, so it can link to a server
 - The first run plugin picker leaves plugins you did not choose off instead of removing them
+- Dropdowns and text areas are the same size as the text fields next to them
+- A page's own tabs sit above its search bar
 
 ### Fixed
 
@@ -30,6 +32,13 @@
 - An installed plugin update older than the copy in a newer image is removed at startup instead of logging an error every boot
 - Canceling a download to the desktop app right as it starts no longer leaves a partial file behind
 - Changing two interface settings at once, like resetting the dashboard, now saves both instead of only the last one
+- Release notes on a plugin's page are no longer cut off on the left
+- The Community badge in Browse is no longer missing its top border
+- Official plugin pages no longer show a stray divider before the author
+- The version picker on a plugin's page is no longer empty for a plugin installed from a local build
+- The plugin video no longer has a second border around it
+- The hint at the bottom of Browse and the stored data footer on plugin pages have the same padding as the rest of the page
+- Sign in methods on the Security page have a line between them
 
 ## 26.11.0
 

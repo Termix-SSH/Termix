@@ -42,6 +42,7 @@ import {
   betaToTry,
   describeContributions,
   formatBytes,
+  hasSourceBadge,
   orderByRisk,
   reportIssueUrl,
   requestFeatureUrl,
@@ -70,13 +71,16 @@ export function PluginDetail({
   const running = plugin.status === "running";
   const failed = plugin.status === "failed" || plugin.status === "blocked";
   const compatible = plugin.versions.filter((v) => v.compatible);
-  const [picked, setPicked] = useState<string>(
-    plugin.version ?? plugin.latestVersion ?? "",
-  );
+  // A local build can be a version the registry never listed.
+  const startVersion =
+    plugin.version && compatible.some((v) => v.version === plugin.version)
+      ? plugin.version
+      : (plugin.latestVersion ?? compatible[0]?.version ?? "");
+  const [picked, setPicked] = useState<string>(startVersion);
 
   useEffect(() => {
-    setPicked(plugin.version ?? plugin.latestVersion ?? "");
-  }, [plugin.version, plugin.latestVersion]);
+    setPicked(startVersion);
+  }, [startVersion]);
 
   const contributions = describeContributions(plugin.contributes);
   // Only people who can manage plugins get here, and they see admin settings
@@ -108,10 +112,12 @@ export function PluginDetail({
           </span>
           <Facts className="text-[11px] text-muted-foreground/70">
             {plugin.unverified && <UnverifiedBadge />}
-            <SourceBadge
-              source={plugin.source}
-              registryName={plugin.registryName}
-            />
+            {hasSourceBadge(plugin.source) && (
+              <SourceBadge
+                source={plugin.source}
+                registryName={plugin.registryName}
+              />
+            )}
             {plugin.isBeta && <BetaBadge />}
             {plugin.author && <span>{plugin.author}</span>}
             {plugin.version ? (
@@ -671,7 +677,7 @@ function DataCard({
               ))}
             </div>
           )}
-          <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border py-2 text-[11px] text-muted-foreground">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border px-3 py-2 text-[11px] text-muted-foreground">
             <span>
               {t("plugins.manager.data.migrations", {
                 count: data.migrations.length,

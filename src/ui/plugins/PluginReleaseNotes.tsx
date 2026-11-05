@@ -62,7 +62,7 @@ function Release({
     .filter((group) => group.items.length > 0);
 
   return (
-    <div className="flex flex-col gap-2 py-3">
+    <div className="flex flex-col gap-2 px-3 py-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold">{row.version}</span>
         {row.version === installedVersion && (
@@ -180,7 +180,7 @@ export function PluginReleaseNotes({ plugin }: { plugin: PluginEntry }) {
         ) : undefined
       }
     >
-      <div className="-mx-3 -my-1 md:-mx-4">
+      <div className="-mx-3 -my-1">
         <Release row={latest} installedVersion={plugin.version} />
         {showOlder && older.length > 0 && (
           <div className="max-h-96 divide-y divide-border overflow-y-auto border-t border-border">
@@ -211,7 +211,7 @@ export function PluginVideo({
   if (!src) return null;
 
   return (
-    <div className="aspect-video w-full border border-border bg-black">
+    <div className="aspect-video w-full bg-black">
       <iframe
         src={src}
         title={t("plugins.manager.videoTitle", { name })}

@@ -1,7 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { PluginIcon } from "@/lib/plugin-icon";
 import { cn } from "@/lib/utils";
-import { capabilityRisk, formatCount, isSevere } from "./plugin-model";
+import {
+  capabilityRisk,
+  formatCount,
+  hasSourceBadge,
+  isSevere,
+} from "./plugin-model";
 
 export function PluginIconBox({
   name,
@@ -80,7 +85,7 @@ export function UnverifiedBadge() {
   const { t } = useTranslation();
   return (
     <span
-      className="shrink-0 border border-warning/40 bg-warning/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-warning"
+      className="inline-block shrink-0 border border-warning/40 bg-warning/10 px-1.5 py-0.5 leading-none text-[10px] font-bold uppercase tracking-wider text-warning"
       title={t("plugins.manager.unverifiedHint")}
     >
       {t("plugins.manager.unverified")}
@@ -97,14 +102,14 @@ export function SourceBadge({
   registryName?: string | null;
 }) {
   const { t } = useTranslation();
-  if (source !== "community" && source !== "custom") return null;
+  if (!hasSourceBadge(source)) return null;
   const label =
     source === "community"
       ? t("plugins.manager.registries.communityBadge")
       : (registryName ?? t("plugins.manager.registries.customBadge"));
   return (
     <span
-      className="max-w-32 shrink-0 truncate border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
+      className="inline-block max-w-32 shrink-0 truncate border border-border bg-muted/40 px-1.5 py-0.5 leading-none align-middle text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
       title={t(`plugins.manager.registries.${source}BadgeHint`, {
         name: label,
       })}
@@ -118,7 +123,7 @@ export function BetaBadge() {
   const { t } = useTranslation();
   return (
     <span
-      className="shrink-0 border border-accent-brand/40 bg-accent-brand/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent-brand"
+      className="inline-block shrink-0 border border-accent-brand/40 bg-accent-brand/10 px-1.5 py-0.5 leading-none text-[10px] font-bold uppercase tracking-wider text-accent-brand"
       title={t("plugins.manager.beta.badgeHint")}
     >
       {t("plugins.manager.beta.badge")}

@@ -19,13 +19,13 @@ export function AuthEnrollmentSections({
   );
   if (sections.length === 0) return null;
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col divide-y divide-border">
       {sections.map((entry) => {
         const Enrollment = entry.enrollment!;
         return (
           <div
             key={`${entry.pluginId}:${entry.id}`}
-            className="flex flex-col gap-2"
+            className="flex flex-col gap-2 py-3 first:pt-0"
           >
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               {t(entry.titleKey)}

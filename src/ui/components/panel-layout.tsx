@@ -118,15 +118,15 @@ export function PanelShell({
 
   const bands = (
     <>
+      {tabs && (
+        <div className="shrink-0 border-b border-border px-1">{tabs}</div>
+      )}
       {toolbar && (
         <div
           className={`flex shrink-0 items-center gap-2 border-b border-border ${PANEL.band}`}
         >
           {toolbar}
         </div>
-      )}
-      {tabs && (
-        <div className="shrink-0 border-b border-border px-1">{tabs}</div>
       )}
     </>
   );
