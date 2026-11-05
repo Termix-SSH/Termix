@@ -88,6 +88,7 @@ Plugins add everything else. The official ones ship with Termix, and admins can 
 | [Login Security](https://github.com/Termix-SSH/Plugin-Login-Security)       | Sign people out when idle, limit session length, turn off remember me and require a second factor at login.                     |
 | [Network Devices](https://github.com/Termix-SSH/Plugin-Network-Devices)     | See and manage routers, switches and access points over SNMP and router APIs.                                                   |
 | [Network Topology](https://github.com/Termix-SSH/Plugin-Network-Topology)   | Draws your hosts and the links between them as a live, interactive graph.                                                       |
+| [Notes](https://github.com/Termix-SSH/Plugin-Notes)                         | Write markdown notes for each host, folder or yourself, with commands you can copy or send to the terminal.                     |
 | [Operations Center](https://github.com/Termix-SSH/Plugin-Operations-Center) | Run, roll out, approve and track every plugin action across your hosts, with a page per host and tables across all of them.     |
 | [OPKSSH](https://github.com/Termix-SSH/Plugin-OPKSSH)                       | Connect to hosts with short-lived OpenPubkey SSH certificates after signing in with your identity provider.                     |
 | [Packages](https://github.com/Termix-SSH/Plugin-Package-Manager)            | See and install updates on your hosts, search, install and remove packages, and read the package history.                       |
