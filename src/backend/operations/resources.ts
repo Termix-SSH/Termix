@@ -78,6 +78,8 @@ interface ReadOptions {
   actionId: string;
   hostIds?: number[];
   refresh?: boolean;
+  /** How long a cached answer stays fresh. Defaults to RESOURCE_FRESH_MS. */
+  freshMs?: number;
   input?: Record<string, unknown>;
   origin: ActorOrigin;
 }
@@ -155,7 +157,9 @@ export async function readAcrossHosts<T>(
 
     const key = cacheKey(options.userId, options.actionId, hostId);
     const cached = cache.get(key);
-    const fresh = cached && Date.now() - cached.fetchedAt < RESOURCE_FRESH_MS;
+    const fresh =
+      cached &&
+      Date.now() - cached.fetchedAt < (options.freshMs ?? RESOURCE_FRESH_MS);
 
     if (isOffline(hostId)) {
       reads.push({

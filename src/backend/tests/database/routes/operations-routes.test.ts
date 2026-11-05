@@ -275,3 +275,27 @@ describe("GET /operations/catalog", () => {
     expect(response.body.actions).toEqual([{ id: "demo.restart" }]);
   });
 });
+
+describe("GET /operations/signals", () => {
+  it("keeps a signal's answer for its refreshSec", async () => {
+    const { buildCatalog } = await import("../../../operations/catalog.js");
+    const { readAcrossHosts } =
+      await import("../../../operations/resources.js");
+    vi.mocked(buildCatalog).mockResolvedValueOnce({
+      actions: [],
+      events: [],
+      resources: [],
+      signals: [
+        { id: "a", read: "demo.a", scope: "host", refreshSec: 600 },
+        { id: "b", read: "demo.b", scope: "host" },
+      ],
+    } as never);
+    await request(app).get("/operations/signals").expect(200);
+    expect(vi.mocked(readAcrossHosts)).toHaveBeenCalledWith(
+      expect.objectContaining({ actionId: "demo.a", freshMs: 600_000 }),
+    );
+    expect(vi.mocked(readAcrossHosts)).toHaveBeenCalledWith(
+      expect.objectContaining({ actionId: "demo.b", freshMs: undefined }),
+    );
+  });
+});

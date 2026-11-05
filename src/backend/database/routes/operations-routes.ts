@@ -622,6 +622,7 @@ router.get("/signals", authenticateJWT, async (req, res) => {
           userId: authReq.userId,
           actionId: signal.read,
           hostIds,
+          freshMs: signal.refreshSec ? signal.refreshSec * 1000 : undefined,
           origin: originOf(authReq),
         }),
       });
