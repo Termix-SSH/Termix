@@ -42,17 +42,20 @@ function useReachesBottom(ref: React.RefObject<HTMLElement | null>) {
     if (!element || !scroller) return;
     // Measured without the line itself, so showing it never flips the answer.
     const update = () => {
+      const line = reachesRef.current ? 0 : 1;
       const end =
         element.getBoundingClientRect().bottom -
         scroller.getBoundingClientRect().top +
         scroller.scrollTop -
-        (reachesRef.current ? 0 : 1);
-      setReaches(end >= scroller.clientHeight - 0.5);
+        line;
+      // Compared with the whole scrollable height, so content below keeps the line.
+      setReaches(end >= scroller.scrollHeight - line - 0.5);
     };
     update();
     const observer = new ResizeObserver(update);
     observer.observe(scroller);
     observer.observe(element);
+    for (const child of Array.from(scroller.children)) observer.observe(child);
     return () => observer.disconnect();
   }, [ref]);
   return reaches;
