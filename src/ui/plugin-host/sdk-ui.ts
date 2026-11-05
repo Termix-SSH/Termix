@@ -128,9 +128,15 @@ export {
   type GridSlot,
 } from "@/components/card-grid/types";
 export {
+  SeamlessTileContext,
+  TileEditBar,
   TileFrame,
   TileGrid,
   TilePicker,
+  TileColumn,
+  TileStack,
+  TileWall,
+  useInSeamlessTile,
   appendTile,
   flowTiles,
   removeTile,
@@ -217,6 +223,19 @@ export { WidgetTitle } from "@/lib/widget-title";
 export { runVisibleInterval } from "@/lib/visible-interval";
 export { useIsMobile } from "@/hooks/use-mobile";
 export { EmptyState } from "@/components/empty-state";
+export { NoticePanel } from "@/components/notice-panel";
+export { LoadingState } from "@/components/loading-state";
+export {
+  StatusBadge,
+  StatusDot,
+  statusTone,
+  type StatusTone,
+} from "@/components/status";
+export { StatTile } from "@/components/stat-tile";
+export { InfoGrid, type InfoItem } from "@/components/info-grid";
+export { Pager, pageOf, usePaged } from "@/components/pager";
+export { DataTable, DataTableRow } from "@/components/data-table";
+export { SideNav, SideNavItem, type SideNavEntry } from "@/components/side-nav";
 export { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog";
 export { HostKeyVerificationDialog } from "@/ssh/dialogs/HostKeyVerificationDialog";
 
@@ -299,8 +318,10 @@ export {
   Facts,
   GroupHeading,
   PANEL,
+  PanelFrame,
   PanelSearch,
   PanelShell,
+  RefreshButton,
   Segmented,
   ViewToggle,
   type GridSize,

@@ -28,6 +28,7 @@ import {
 } from "./layout";
 import { SeamlessTileContext } from "./context";
 import { gridLines } from "./layout";
+import { scrollParent } from "./edge";
 
 type Edge = "left" | "right" | "bottom" | "corner";
 interface Proposal {
@@ -81,14 +82,6 @@ const clamp = (value: number, min: number, max: number) =>
 
 function propose(base: TileSlot[], id: string, proposal: Proposal) {
   return base.map((slot) => (slot.id === id ? { ...slot, ...proposal } : slot));
-}
-
-function scrollParent(element: HTMLElement | null) {
-  for (let node = element?.parentElement; node; node = node.parentElement) {
-    const { overflowY } = getComputedStyle(node);
-    if (overflowY === "auto" || overflowY === "scroll") return node;
-  }
-  return null;
 }
 
 const NO_DRAG =

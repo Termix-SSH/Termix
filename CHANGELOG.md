@@ -12,7 +12,8 @@
 
 ### Changed
 
-- Plugin cards placed on a tile grid take the dashboard look, with shared lines and no gaps
+- Plugin cards and pages use the dashboard look everywhere, with shared lines between sections instead of separate boxes with gaps
+- The Plugins tab and plugin pages use the same look
 - Line charts that cover a few minutes show seconds in their times
 - Plugins a new release adds to the image start on only when they are recommended. The rest are installed and left off for an admin to turn on
 

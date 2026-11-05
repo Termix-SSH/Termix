@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.26 | Plugin API 1.15.0
+SDK 1.1.0 | Plugin API 1.15.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -766,15 +766,28 @@ exports with props is `ui.api.txt` in the Termix repo
 - Small type: most text 11 to 13px.
 - No new modal dialogs. Ask with `useConfirm()`, open views in place with `InlineView`, and use
   `PanePrompt` for small prompts.
-- Every tab or panel sits in `PanelShell`. Lists use `PanelList` and `ListRow`, add with `AddButton`,
-  forms end with `FormFooter`, empty lists show `EmptyState`.
+- Every tab or panel sits in `PanelShell` (inside `PanelFrame` when it is a tab). Lists use `PanelList` and
+  `ListRow`, add with `AddButton`, forms end with `FormFooter`, empty lists show `EmptyState`, loading shows
+  `LoadingState`, and "not installed" or "no access" shows `NoticePanel`.
+- The tile look: page content sits edge to edge on the page background, with one line between sections and
+  no gaps, padding or card fill around them. The body of a `PanelShell` has no padding. Stack sections with
+  `TileStack` (or `TileColumn` when cards sit deeper), put numbers and small cards in a `TileWall` of
+  `StatTile` or `MetricCard`, and use `TileFrame` for a titled section. Cards drop their own box inside
+  these. Forms keep `PANEL.body` padding inside their section. An `InlineView` form made of `SectionCard`s
+  takes `stacked`.
+- Page views go in `PanelShell`'s `tabs` band as a `TabStrip`. `Segmented` is for filters and view modes.
+  A page with many sections uses `SideNav` on the left. Put the refresh button in the header with
+  `RefreshButton`, and the docs link with the `docs` prop.
+- States and data: `StatusBadge` and `StatusDot` (pass a state like "running" and the color follows),
+  `InfoGrid` for label and value pairs, `DataTable` for a plain table, `Pager` and `usePaged` under long lists.
 - Tile pages use `TileGrid` with `TileFrame` around each tile and `TilePicker` beside it while editing. Slots are
   `{ id, x, y, w, h }` on 12 columns (`h` null for the natural height); save them where your plugin keeps
-  preferences and run saved ones through `sanitizeTiles`. Add with `appendTile`. Needs Termix 26.11.1.
+  preferences and run saved ones through `sanitizeTiles`. Add with `appendTile`. While editing, show
+  `TileEditBar` over the grid. Needs Termix 26.11.1.
 - A dashboard card with `entries` can be placed many times: each entry has a title, a group and a `config` the
   card gets back as `config` (save changes with `setConfig`, keep it small). Operations Center uses this for
   status and action tiles.
-- Card grids use `DataView` with `ViewToggle`. Pass `columns` and `onColumns` to `ViewToggle` and the same
+- Card grids use `DataView` with `ViewToggle` (the cards share lines like a `TileWall`). Pass `columns` and `onColumns` to `ViewToggle` and the same
   value as `size` to `DataView`, so users can pick Auto (as many as fit) or a fixed number of cards per
   row. `usePluginPanelView` keeps the choice as `columns`. Older Termix versions ignore both props.
 - Forms: `TextField`, `NumberField`, `SelectField`, `SwitchRow`, `SecretField`, `SettingRow` and friends.

@@ -96,7 +96,7 @@ export function TabStrip({
     <div
       className={cn(
         "flex min-w-0 items-center",
-        variant === "secondary" && "border-t border-border bg-card",
+        variant === "secondary" && "border-t border-border",
         className,
       )}
     >

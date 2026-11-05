@@ -6,6 +6,7 @@ import {
   Columns3,
   Grid3X3,
   List,
+  RefreshCw,
   Rows3,
   Search,
   X,
@@ -14,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/separator";
 import { DocsLink } from "@/components/docs-link";
+import { useInSeamlessTile } from "@/components/tile-grid/context";
 import {
   Select,
   SelectContent,
@@ -215,6 +217,59 @@ export function BackButton({
 }
 
 /** Search box sized to match toolbar buttons. Esc clears it. */
+/** The refresh button panel headers show, spinning while it loads. */
+export function RefreshButton({
+  onClick,
+  loading = false,
+  disabled,
+  label,
+  className,
+}: {
+  onClick: () => void;
+  loading?: boolean;
+  disabled?: boolean;
+  label?: string;
+  className?: string;
+}) {
+  const { t } = useTranslation();
+  const text = label ?? t("common.refresh");
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled ?? loading}
+      title={text}
+      aria-label={text}
+      className={cn(
+        "flex size-8 shrink-0 items-center justify-center text-accent-brand transition-colors hover:bg-muted/40 disabled:opacity-60",
+        className,
+      )}
+    >
+      <RefreshCw className={cn("size-4", loading && "animate-spin")} />
+    </button>
+  );
+}
+
+/**
+ * The outer box of a plugin tab: fills the tab and clips, so the PanelShell
+ * inside can scroll its own body.
+ */
+export function PanelFrame({
+  className,
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={cn("h-full w-full overflow-hidden", className)}>
+      <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function PanelSearch({
   value,
   onChange,
@@ -513,13 +568,18 @@ export function GroupHeading({
   title,
   count,
   action,
+  plain,
   className,
 }: {
   title: string;
   count?: number;
   action?: React.ReactNode;
+  /** No rule after the title. The default inside a tile layout. */
+  plain?: boolean;
   className?: string;
 }) {
+  const tiled = useInSeamlessTile();
+  const noRule = plain ?? tiled;
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
@@ -530,7 +590,11 @@ export function GroupHeading({
           {count}
         </span>
       )}
-      <div className="h-px flex-1 bg-border" />
+      {noRule ? (
+        <div className="flex-1" />
+      ) : (
+        <div className="h-px flex-1 bg-border" />
+      )}
       {action}
     </div>
   );

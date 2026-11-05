@@ -35,9 +35,10 @@ export function MetricCard({
   const tiled = useInSeamlessTile();
   return (
     <div
+      data-tile-card=""
       className={cn(
         "flex min-h-0 flex-col overflow-hidden",
-        !tiled && "border border-border bg-card",
+        !tiled && "border border-border",
       )}
     >
       <div

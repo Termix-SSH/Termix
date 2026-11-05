@@ -279,7 +279,7 @@ describe("TileGrid", () => {
       ).container.querySelector(".tg-content > div")!.className;
     expect(card()).not.toContain("bg-card");
     cleanup();
-    expect(card(12)).toContain("border border-border bg-card");
+    expect(card(12)).toContain("border border-border");
   });
 
   it("stacks cards with no edit controls on narrow screens", () => {

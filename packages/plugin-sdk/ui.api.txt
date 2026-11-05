@@ -80,6 +80,8 @@ DEFAULT_FOLDER_COLOR (value): "#f59145"
 DEFAULT_FOLDER_ICON (value): "folder"
 DashboardCardId (type): DashboardCardId
 DataColumn (type): DataColumn<T>
+DataTable (value): ({ className, containerClassName, children, ...props }: ClassAttributes<HTMLTableElement> & TableHTMLAttributes<HTMLTableElement> & { containerClassName?: string; }) => Element
+DataTableRow (value): ({ active, className, onClick, ...props }: ClassAttributes<HTMLTableRowElement> & HTMLAttributes<HTMLTableRowElement> & { active?: boolean; }) => Element
 DataView (value): <T>({ items, view, density, getKey, renderCard, columns, size, minCardWidth, listColumns, onRowClick, isRowActive, empty, className, }: { items: T[]; view: PanelViewMode; density?: PanelDensity; getKey: (item: T) => string; renderCard: (item: T) => ReactNode; columns: GridColumns; size?: GridSize; minCardWidth?: number; listColumns: DataColumn<T>[]; onRowClick?: (item: T) => void; isRowActive?: (item: T) => boolean; empty: ReactNode; className?: string; }) => Element
 DefaultOverrides (type): DefaultOverrides
 DefaultsOnly (value): ({ settingKey, children, }: { settingKey: string; children: ReactNode; }) => Element
@@ -133,7 +135,7 @@ GridColumns (type): GridColumns
 GridLayout (type): GridLayout
 GridSize (type): GridSize
 GridSlot (type): GridSlot
-GroupHeading (value): ({ title, count, action, className, }: { title: string; count?: number; action?: ReactNode; className?: string; }) => Element
+GroupHeading (value): ({ title, count, action, plain, className, }: { title: string; count?: number; action?: ReactNode; plain?: boolean; className?: string; }) => Element
 HexColorPicker (value): ({ value, onChange, }: { value: string; onChange: (hex: string) => void; }) => Element
 Host (type): Host
 HostActionDef (type): HostActionDef
@@ -166,7 +168,9 @@ HostTabEmbed (value): ({ host, type, label, data, isVisible, shell, }: { host: H
 HostTrayTrigger (type): HostTrayTrigger
 HttpsSettings (type): HttpsSettings
 IconPicker (value): ({ value, color, onChange, }: { value: string; color?: string; onChange: (icon: string) => void; }) => Element
-InlineView (value): ({ open, onOpenChange, title, icon, status, actions, toolbar, footer, width, onBeforeClose, scroll, bare, className, children, }: { open: boolean; onOpenChange: (open: boolean) => void; title: ReactNode; icon?: ReactNode; status?: ReactNode; actions?: ReactNode; toolbar?: ReactNode; footer?: ReactNode; width?: EditingWidth; onBeforeClose?: () => boolean | Promise<boolean>; scroll?: boolean; bare?: boolean; className?: string; children: ReactNode; }) => ReactPortal
+InfoGrid (value): ({ items, className, }: { items: InfoItem[]; className?: string; }) => Element
+InfoItem (type): InfoItem
+InlineView (value): ({ open, onOpenChange, title, icon, status, actions, toolbar, footer, width, onBeforeClose, scroll, bare, stacked, className, children, }: { open: boolean; onOpenChange: (open: boolean) => void; title: ReactNode; icon?: ReactNode; status?: ReactNode; actions?: ReactNode; toolbar?: ReactNode; footer?: ReactNode; width?: EditingWidth; onBeforeClose?: () => boolean | Promise<boolean>; scroll?: boolean; bare?: boolean; stacked?: boolean; className?: string; children: ReactNode; }) => ReactPortal
 Input (value): ({ className, type, ...props }: DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>) => Element
 Kbd (value): ForwardRefExoticComponent<KbdProps & RefAttributes<HTMLElement>>
 KbdKey (value): { ({ className, ...props }: HTMLAttributes<HTMLSpanElement>): Element; displayName: string; }
@@ -180,11 +184,12 @@ Label (value): ({ className, ...props }: LabelProps & RefAttributes<HTMLLabelEle
 LineChart (value): ({ series, timestamps, domain, yFormatter, height, className, }: LineChartProps) => Element
 LineChartSeries (type): LineChartSeries
 LinkedAccountInfo (type): LinkedAccountInfo
-ListBadge (value): ({ tone, className, children, }: { tone?: "destructive" | "muted" | "brand" | "warning" | "success"; className?: string; children: ReactNode; }) => Element
+ListBadge (value): ({ tone, className, children, }: { tone?: "destructive" | "warning" | "muted" | "brand" | "success"; className?: string; children: ReactNode; }) => Element
 ListRow (value): ({ title, icon, badges, meta, stripe, tone, color, selected, active, dimmed, leading, trailing, actions, onClick, className, children, ...rest }: { title: ReactNode; icon?: ReactNode; badges?: ReactNode; meta?: ReactNode; stripe?: number; tone?: ListRowTone; color?: string; selected?: boolean; active?: boolean; dimmed?: boolean; leading?: ReactNode; trailing?: ReactNode; actions?: ReactNode; onClick?: () => void; className?: string; children?: ReactNode; } & Omit<HTMLAttributes<HTMLDivElement>, "title" | "children" | "onClick">) => Element
 ListRowAction (value): ({ label, tone, className, children, ...rest }: { label: string; tone?: "default" | "destructive" | "brand"; className?: string; children: ReactNode; } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & { ref?: Ref<HTMLButtonElement>; }) => Element
 ListRowFolder (value): ({ name, icon, count, open, onToggle, stripe, actions, dropActive, onDropItem, emptyText, className, children, }: { name: ReactNode; icon?: ReactNode; count?: number; open: boolean; onToggle: () => void; stripe?: number; actions?: ReactNode; dropActive?: boolean; onDropItem?: () => void; emptyText?: ReactNode; className?: string; children?: ReactNode; }) => Element
 ListRowTone (type): ListRowTone
+LoadingState (value): ({ label, compact, className, }: { label?: string; compact?: boolean; className?: string; }) => Element
 LogContext (type): LogContext
 LogEntry (type): LogEntry
 LookSettings (value): ({ isAdmin }: { isAdmin: boolean; }) => Element
@@ -201,6 +206,7 @@ MetricCard (value): ({ title, icon, action, children, bodyClassName, scroll, scr
 MiniStat (value): ({ caption, value, valueClassName, className, }: { caption: ReactNode; value: ReactNode; valueClassName?: string; className?: string; }) => Element
 NativeView (value): ({ url, ignoreCert, hidden, fallback, className, style, }: NativeViewProps) => Element
 NativeViewProps (type): NativeViewProps
+NoticePanel (value): ({ icon: Icon, title, children, action, tone, className, }: { icon?: LucideIcon; title: ReactNode; children?: ReactNode; action?: ReactNode; tone?: "default" | "destructive" | "warning"; className?: string; }) => Element
 NumberField (value): ({ label, value, onChange, placeholder, hint, error, min, max, disabled, className, }: { label: string; value: number; onChange: (value: number) => void; placeholder?: string; hint?: ReactNode; error?: string; min?: number; max?: number; disabled?: boolean; className?: string; }) => Element
 OPEN_PLUGINS_EVENT (value): "termix:open-plugins"
 OpenTabRecord (type): OpenTabRecord
@@ -209,9 +215,11 @@ PRESETS (value): Record<"simple" | "balanced" | "advanced", UiAreaPreferences>
 PROMPT_BUTTON (value): "inline-flex h-7 items-center justify-center gap-1.5 border border-border px-3 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
 PROMPT_DESTRUCTIVE_BUTTON (value): "inline-flex h-7 items-center justify-center gap-1.5 bg-destructive px-3 text-xs font-medium text-white transition-colors hover:bg-destructive/90 focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
 PROMPT_PRIMARY_BUTTON (value): "inline-flex h-7 items-center justify-center gap-1.5 border border-accent-brand/40 px-3 text-xs font-medium text-accent-brand transition-colors hover:bg-accent-brand/10 focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+Pager (value): ({ page, pages, hasNext, onPage, className, }: { page: number; pages?: number; hasNext?: boolean; onPage: (next: number) => void; className?: string; }) => Element
 PaletteItemDef (type): PaletteItemDef
 PanePrompt (value): ({ open, title, titleId, description, icon, tone, actions, onCancel, role, labelledBy, layer, backgroundColor, className, children, }: { open: boolean; title: ReactNode; titleId?: string; description?: ReactNode; icon?: ReactNode; tone?: "default" | "destructive"; actions?: ReactNode; onCancel?: () => void; role?: "dialog" | "alertdialog"; labelledBy?: string; layer?: "connection" | "pane"; backgroundColor?: string; className?: string; children?: ReactNode; }) => Element
 PanelDensity (type): PanelDensity
+PanelFrame (value): ({ className, children, }: { className?: string; children: ReactNode; }) => Element
 PanelList (value): ({ empty, className, children, }: { empty?: ReactNode; className?: string; children?: ReactNode; }) => Element
 PanelSearch (value): ({ value, onChange, placeholder, fill, autoFocus, disabled, title, onEnter, inputRef, className, }: { value: string; onChange: (next: string) => void; placeholder?: string; fill?: boolean; autoFocus?: boolean; disabled?: boolean; title?: string; onEnter?: () => void; inputRef?: Ref<HTMLInputElement>; className?: string; }) => Element
 PanelShell (value): ({ chrome, icon, title, status, leading, actions, toolbar, tabs, footer, scroll, docs, className, children, }: { chrome?: boolean; icon?: ReactNode; title?: ReactNode; status?: ReactNode; leading?: ReactNode; actions?: ReactNode; toolbar?: ReactNode; tabs?: ReactNode; footer?: ReactNode; scroll?: boolean; docs?: string; className?: string; children: ReactNode; }) => Element
@@ -236,6 +244,7 @@ RadialGaugeProps (type): RadialGaugeProps
 RailGroup (type): RailGroup
 RailItemDef (type): RailItemDef
 RecentActivityItem (type): RecentActivityItem
+RefreshButton (value): ({ onClick, loading, disabled, label, className, }: { onClick: () => void; loading?: boolean; disabled?: boolean; label?: string; className?: string; }) => Element
 ReleaseInfo (type): ReleaseInfo
 Repeater (value): <T>({ label, items, onChange, makeItem, empty, addLabel, hint, renderItem, }: { label: string; items: T[]; onChange: (items: T[]) => void; makeItem: () => T; empty: string; addLabel: string; hint?: ReactNode; renderItem: (item: T, update: (next: T) => void, index: number) => ReactNode; }) => Element
 ResolvedHostDefault (type): ResolvedHostDefault
@@ -248,6 +257,7 @@ SSHHostWithStatus (type): SSHHostWithStatus
 SSH_AUTH_PROTOCOL (value): "ssh"
 ScrollArea (value): ({ className, children, ...props }: ScrollAreaProps & RefAttributes<HTMLDivElement>) => Element
 ScrollBar (value): ({ className, orientation, ...props }: ScrollAreaScrollbarProps & RefAttributes<HTMLDivElement>) => Element
+SeamlessTileContext (value): Context<boolean>
 SecretField (value): ({ label, value, onChange, placeholder, hint, error, disabled, className, }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; hint?: ReactNode; error?: string; disabled?: boolean; className?: string; }) => Element
 SectionCard (value): ({ title, icon, action, children, className, rowId, }: { title: string; icon: ReactNode; action?: ReactNode; children: ReactNode; className?: string; rowId?: string; }) => Element
 Segmented (value): <T extends string>({ value, onChange, options, className, }: { value: T; onChange: (next: T) => void; options: readonly { value: NoInfer<T>; label: string; icon?: ReactNode; count?: number; title?: string; }[]; className?: string; }) => Element
@@ -277,6 +287,9 @@ SheetHeader (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<
 SheetTitle (value): ({ className, ...props }: DialogTitleProps & RefAttributes<HTMLHeadingElement>) => Element
 SheetTrigger (value): ({ ...props }: DialogTriggerProps & RefAttributes<HTMLButtonElement>) => Element
 ShellConfirmCapture (value): () => null
+SideNav (value): ({ entries, active, onSelect, footer, label, className, }: { entries: SideNavEntry[]; label?: string; active: string; onSelect: (id: string) => void; footer?: ReactNode; className?: string; }) => Element
+SideNavEntry (type): SideNavEntry
+SideNavItem (value): ({ entry, active, onClick, }: { entry: SideNavEntry; active: boolean; onClick: () => void; }) => Element
 Skeleton (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
 Slider (value): ({ className, defaultValue, value, min, max, ...props }: SliderProps & RefAttributes<HTMLSpanElement>) => Element
 SortKey (type): SortKey
@@ -286,6 +299,10 @@ SplitLayoutMenu (value): ({ activeIsSplit, canAddPane, onSplit, onPreset, }: { a
 SplitOpenTarget (type): SplitOpenTarget
 SplitSummary (type): SplitSummary
 StatRow (value): ({ label, value, mono, className, }: { label: ReactNode; value: ReactNode; mono?: boolean; className?: string; }) => Element
+StatTile (value): ({ label, icon, value, unit, percent, hint, tone, actions, onClick, children, className, }: { label: ReactNode; icon?: ReactNode; value: ReactNode; unit?: ReactNode; percent?: number; hint?: ReactNode; tone?: "default" | "ok" | "warn" | "bad"; actions?: ReactNode; onClick?: () => void; children?: ReactNode; className?: string; }) => Element
+StatusBadge (value): ({ tone, state, className, children, }: { tone?: StatusTone; state?: string; className?: string; children?: ReactNode; }) => Element
+StatusDot (value): ({ tone, state, pulse, className, title, }: { tone?: StatusTone; state?: string; pulse?: boolean; className?: string; title?: string; }) => Element
+StatusTone (type): StatusTone
 StatusValue (type): StatusValue
 SurfaceKind (type): SurfaceKind
 SurfaceScope (value): ({ kind, onEditingChange, onClose, className, children, }: { kind?: SurfaceKind; onClose?: () => void; onEditingChange?: (editing: EditingWidth) => void; className?: string; children: ReactNode; }) => Element
@@ -306,6 +323,8 @@ TextField (value): ({ label, value, onChange, placeholder, hint, error, aside, d
 Textarea (value): ForwardRefExoticComponent<TextareaProps & RefAttributes<HTMLTextAreaElement>>
 TextareaProps (type): TextareaProps
 ThemeId (type): string
+TileColumn (value): ({ className, children, }: { className?: string; children: ReactNode; }) => Element
+TileEditBar (value): ({ children, onReset, onAdd, onDone, className, }: { children?: ReactNode; onReset?: () => void; onAdd?: () => void; onDone: () => void; className?: string; }) => Element
 TileFrame (value): ({ title, icon, actions, bare, onTitleClick, className, bodyClassName, children, }: { title?: ReactNode; icon?: ReactNode; actions?: ReactNode; bare?: boolean; onTitleClick?: () => void; className?: string; bodyClassName?: string; children: ReactNode; }) => Element
 TileGrid (value): ({ slots, editMode, renderTile, tileLabel, onChange, onSettings, gap, stackBelow, minColumns, minHeight, empty, className, }: TileGridProps) => Element
 TileGridProps (type): TileGridProps
@@ -313,6 +332,8 @@ TileKind (type): TileKind
 TilePicker (value): ({ entries, onAdd, onClose, className, }: { entries: TilePickerEntry[]; onAdd: (entry: TilePickerEntry) => void; onClose?: () => void; className?: string; }) => Element
 TilePickerEntry (type): TilePickerEntry
 TileSlot (type): TileSlot
+TileStack (value): ({ className, children, }: { className?: string; children: ReactNode; }) => Element
+TileWall (value): ({ size, minWidth, gridClassName, className, children, }: { size?: GridSize; minWidth?: number; gridClassName?: string; className?: string; children: ReactNode; }) => Element
 TlsStatus (type): TlsStatus
 ToolsTab (type): ToolsTab
 Tooltip (value): ({ ...props }: TooltipProps) => Element
@@ -503,6 +524,7 @@ normalizeLanguageCode (value): (language?: string) => string
 notifySyncChanged (value): () => void
 openInSplit (value): (target: SplitOpenTarget, open: () => void) => void
 operationsApi (value): AxiosInstance
+pageOf (value): <T>(items: T[], page: number, size: number) => { rows: T[]; page: number; pages: number; }
 paletteEntriesFor (value): (all: PaletteEntryDef[], scope: "global" | "host", host?: Host) => PaletteEntryDef[]
 parseCustomKeybindings (value): (raw?: string) => CustomKeybinding[]
 parseServerTime (value): (ts: string) => Date
@@ -573,6 +595,7 @@ shareHost (value): (hostId: number, shareData: { targets: ShareTarget[]; permiss
 shell (value): TabShellCallbacks
 splitDefaultKey (value): (fullKey: string) => [string, string]
 sshHostToHost (value): (h: SSHHostWithStatus) => Host
+statusTone (value): (state: string) => StatusTone
 tabIcon (value): (type: TabType) => Element
 tabJumpHotkeyKeys (value): () => string[]
 takePendingManageRequest (value): () => ManageRequest
@@ -618,6 +641,7 @@ useHostProtocols (value): () => HostProtocolDef[]
 useHostSections (value): () => HostSectionDef[]
 useHostStatus (value): (hostId: number, statusCheckEnabled?: boolean) => StatusValue
 useHostStatusIndicators (value): () => HostBadgeDef[]
+useInSeamlessTile (value): () => boolean
 useInstalledPlugins (value): () => PluginSummary[]
 useIsDefaultsEditor (value): () => boolean
 useIsMobile (value): () => boolean
@@ -625,6 +649,7 @@ useKeybindingActions (value): () => KeybindingActionDef[]
 useKeybindingDefaults (value): () => KeybindingDefaultDef[]
 useOptionalConnectionLog (value): () => ConnectionLogContextType
 usePageVisibleInterval (value): (callback: () => void, intervalMs: number, enabled?: boolean, options?: Options) => void
+usePaged (value): <T>(items: T[], size: number, reset?: unknown) => { setPage: Dispatch<SetStateAction<number>>; rows: T[]; page: number; pages: number; }
 usePaletteEntries (value): () => PaletteEntryDef[]
 usePaletteGroups (value): () => PaletteGroupDef[]
 usePanels (value): () => PanelDef[]

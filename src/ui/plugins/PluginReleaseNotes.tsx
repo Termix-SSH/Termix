@@ -62,7 +62,7 @@ function Release({
     .filter((group) => group.items.length > 0);
 
   return (
-    <div className="flex flex-col gap-2 px-4 py-3">
+    <div className="flex flex-col gap-2 py-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold">{row.version}</span>
         {row.version === installedVersion && (

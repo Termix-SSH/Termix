@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.26
+## 1.1.0
 
 Plugin API 1.15.0.
 
@@ -9,6 +9,14 @@ Plugin API 1.15.0.
 - `/ui` exports `TileGrid`, `TileFrame` and `TilePicker`, the 12 column tile grid the dashboard, the host page and Host Metrics share, plus `appendTile`, `flowTiles`, `removeTile`, `sanitizeTiles` and the `TileSlot` type
 - `registerDashboardCard` takes `entries`, so one card can be placed many times with its own `config`, and `defaultSize` for the grid
 - Dashboard cards get `config`, `setConfig` and `editMode`
+- `/ui` exports `TileWall` (a fixed grid of tiles with shared lines), `TileStack` and `TileColumn` (sections stacked with a line between), `TileEditBar`, and `SeamlessTileContext` with `useInSeamlessTile`
+- `/ui` exports `StatTile`, `InfoGrid`, `StatusDot`, `StatusBadge` and `statusTone`, `LoadingState`, `NoticePanel`, `Pager` with `usePaged` and `pageOf`, `DataTable` with `DataTableRow`, `SideNav` with `SideNavItem`, `PanelFrame` and `RefreshButton`
+- `InlineView` takes `stacked`, which lays SectionCards out in one column with lines between them
+- `GroupHeading` takes `plain`, which drops the rule after the title. Inside a tile layout that is the default
+
+### Changed
+
+- `Card`, `SectionCard`, `MetricCard` and `DataView` use the tile look: no fill, and inside a tile layout no box either. `DataView` grids sit edge to edge with shared lines
 
 ## 1.0.25
 

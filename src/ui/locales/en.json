@@ -1676,6 +1676,12 @@
       "title": "Columns",
       "auto": "Auto",
       "count": "{{count}} wide"
+    },
+    "pager": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {{page}}",
+      "pageOf": "Page {{page}} of {{pages}}"
     }
   },
   "fields": {
@@ -1715,6 +1721,8 @@
       "action": "Actions",
       "resource": "Lists",
       "session": "Sessions"
-    }
+    },
+    "reset": "Reset",
+    "done": "Done"
   }
 }
