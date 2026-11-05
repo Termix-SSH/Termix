@@ -91,6 +91,7 @@ Plugins add everything else. The official ones ship with Termix, and admins can 
 | [Notes](https://github.com/Termix-SSH/Plugin-Notes)                         | Write markdown notes for each host, folder or yourself, with commands you can copy or send to the terminal.                     |
 | [Operations Center](https://github.com/Termix-SSH/Plugin-Operations-Center) | Run, roll out, approve and track every plugin action across your hosts, with a page per host and tables across all of them.     |
 | [OPKSSH](https://github.com/Termix-SSH/Plugin-OPKSSH)                       | Connect to hosts with short-lived OpenPubkey SSH certificates after signing in with your identity provider.                     |
+| [Out-of-band](https://github.com/Termix-SSH/Plugin-Out-Of-Band)             | Power, sensors, event logs and consoles for server BMCs over Redfish, IPMI and Intel AMT.                                       |
 | [Packages](https://github.com/Termix-SSH/Plugin-Package-Manager)            | See and install updates on your hosts, search, install and remove packages, and read the package history.                       |
 | [Passkeys](https://github.com/Termix-SSH/Plugin-WebAuthn)                   | Sign in with a passkey or security key instead of a password.                                                                   |
 | [Process Manager](https://github.com/Termix-SSH/Plugin-Process-Manager)     | See and control running processes, pm2 and supervisor apps on your hosts, read their logs and get alerts when they fail.        |
