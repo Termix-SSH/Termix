@@ -29,6 +29,7 @@
 - The Secure your account setup step no longer shows up empty when no passkey or authenticator plugin is on
 - An installed plugin update older than the copy in a newer image is removed at startup instead of logging an error every boot
 - Canceling a download to the desktop app right as it starts no longer leaves a partial file behind
+- Changing two interface settings at once, like resetting the dashboard, now saves both instead of only the last one
 
 ## 26.11.0
 
