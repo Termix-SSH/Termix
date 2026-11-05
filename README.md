@@ -77,6 +77,7 @@ Plugins add everything else. The official ones ship with Termix, and admins can 
 | [File Manager](https://github.com/Termix-SSH/Plugin-File-Manager)           | Browse, edit and move files over SFTP, including straight from one server to another.                                           |
 | [Firewall](https://github.com/Termix-SSH/Plugin-Firewall)                   | Manage UFW, firewalld, nftables and iptables rules on your hosts over SSH, with lockout protection.                             |
 | [Fleets](https://github.com/Termix-SSH/Plugin-Fleets)                       | Group hosts into fleets and run commands, package actions and file transfers on all of them at once.                            |
+| [Git](https://github.com/Termix-SSH/Plugin-Git)                             | See, pull, commit and push git repos on your hosts, and keep them up to date with auto pull.                                    |
 | [Homepage](https://github.com/Termix-SSH/Plugin-Homepage)                   | A drag and drop widget page for your servers and services, plus service links for the dashboard.                                |
 | [Host Metrics](https://github.com/Termix-SSH/Plugin-Host-Metrics)           | Live CPU, memory, disk, network and GPU stats, plus tools to manage your hosts.                                                 |
 | [Host Status](https://github.com/Termix-SSH/Plugin-Host-Status)             | Shows if each host is online with a dot in the host list, checked by connecting to its port.                                    |
