@@ -84,6 +84,7 @@ Plugins add everything else. The official ones ship with Termix, and admins can 
 | [Kubernetes](https://github.com/Termix-SSH/Plugin-Kubernetes)               | Manage Kubernetes clusters from your hosts over SSH, with logs, metrics, YAML and a shell.                                      |
 | [LDAP](https://github.com/Termix-SSH/Plugin-LDAP)                           | Sign in with your LDAP or Active Directory username and password.                                                               |
 | [Login Security](https://github.com/Termix-SSH/Plugin-Login-Security)       | Sign people out when idle, limit session length, turn off remember me and require a second factor at login.                     |
+| [Network Devices](https://github.com/Termix-SSH/Plugin-Network-Devices)     | See and manage routers, switches and access points over SNMP and router APIs.                                                   |
 | [Network Topology](https://github.com/Termix-SSH/Plugin-Network-Topology)   | Draws your hosts and the links between them as a live, interactive graph.                                                       |
 | [Operations Center](https://github.com/Termix-SSH/Plugin-Operations-Center) | Run, roll out, approve and track every plugin action across your hosts, with a page per host and tables across all of them.     |
 | [OPKSSH](https://github.com/Termix-SSH/Plugin-OPKSSH)                       | Connect to hosts with short-lived OpenPubkey SSH certificates after signing in with your identity provider.                     |
@@ -111,6 +112,7 @@ Plugins add everything else. The official ones ship with Termix, and admins can 
 | [Tmux Monitor](https://github.com/Termix-SSH/Plugin-Tmux-Monitor)           | Browse and control tmux sessions, windows and panes across your hosts.                                                          |
 | [TOTP](https://github.com/Termix-SSH/Plugin-TOTP)                           | Two-factor sign in with a code from an authenticator app, with backup codes.                                                    |
 | [Tunnels](https://github.com/Termix-SSH/Plugin-Tunnels)                     | SSH port forwarding that reconnects on its own, plus client tunnels from the desktop app.                                       |
+| [UPS Manager](https://github.com/Termix-SSH/Plugin-UPS-Manager)             | Watch your UPS devices over NUT, apcupsd or SNMP, with history, alerts and self tests.                                          |
 | [Uptime](https://github.com/Termix-SSH/Plugin-Uptime)                       | Watch websites, ports, hosts and services, get alerts when they go down, and publish status pages.                              |
 | [Usage Statistics](https://github.com/Termix-SSH/Plugin-Telemetry)          | Sends a small anonymous daily report so we can see how Termix is used.                                                          |
 | [Users](https://github.com/Termix-SSH/Plugin-User-Manager)                  | Manage the user accounts, groups, passwords and SSH keys on your hosts.                                                         |
