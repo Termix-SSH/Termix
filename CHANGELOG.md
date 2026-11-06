@@ -22,6 +22,7 @@
 - Host status, import and export, and credential tools now start on for new installs
 - Sync now starts on in a new desktop app, so it can link to a server
 - The first run plugin picker leaves plugins you did not choose off instead of removing them
+- The Linux Flatpak now installs from flatpak.termix.site on x86_64 and arm64, and `flatpak update` keeps it current
 - Dropdowns and text areas are the same size as the text fields next to them
 - A page's own tabs sit above its search bar
 

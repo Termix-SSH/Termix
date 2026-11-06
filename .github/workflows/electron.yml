@@ -293,7 +293,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libfuse2 flatpak flatpak-builder imagemagick
+          sudo apt-get install -y libfuse2
 
       - name: Install dependencies
         run: |
@@ -424,89 +424,6 @@ jobs:
         with:
           name: termix_linux_armv7l_portable
           path: release/termix_linux_armv7l_portable.tar.gz
-          retention-days: 30
-
-      - name: Add Flathub repository
-        run: |
-          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-
-      - name: Install Flatpak runtime and SDK
-        run: |
-          sudo flatpak install -y flathub org.freedesktop.Platform//24.08
-          sudo flatpak install -y flathub org.freedesktop.Sdk//24.08
-          sudo flatpak install -y flathub org.electronjs.Electron2.BaseApp//24.08
-
-      - name: Get version for Flatpak
-        id: flatpak-version
-        run: |
-          VERSION="${{ inputs.version_override }}"
-          if [ -z "$VERSION" ]; then
-            VERSION=$(node -p "require('./package.json').version")
-          fi
-          RELEASE_DATE=$(date +%Y-%m-%d)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "release_date=$RELEASE_DATE" >> $GITHUB_OUTPUT
-
-      - name: Prepare Flatpak files
-        run: |
-          VERSION="${{ steps.flatpak-version.outputs.version }}"
-          RELEASE_DATE="${{ steps.flatpak-version.outputs.release_date }}"
-
-          CHECKSUM_X64=$(sha256sum "release/termix_linux_x64_appimage.AppImage" | awk '{print $1}')
-          CHECKSUM_ARM64=$(sha256sum "release/termix_linux_arm64_appimage.AppImage" | awk '{print $1}')
-
-          mkdir -p flatpak-build
-          cp packaging/flatpak/com.karmaa.termix.yml flatpak-build/
-          cp packaging/flatpak/com.karmaa.termix.desktop flatpak-build/
-          cp packaging/flatpak/com.karmaa.termix.metainfo.xml flatpak-build/
-          cp public/icon.svg flatpak-build/com.karmaa.termix.svg
-          convert public/icon.png -resize 256x256 flatpak-build/icon-256.png
-          convert public/icon.png -resize 128x128 flatpak-build/icon-128.png
-
-          cd flatpak-build
-          sed -i "s|https://github.com/Termix-SSH/Termix/releases/download/vVERSION_PLACEHOLDER/termix_linux_x64_appimage.AppImage|file://$(realpath ../release/termix_linux_x64_appimage.AppImage)|g" com.karmaa.termix.yml
-          sed -i "s|https://github.com/Termix-SSH/Termix/releases/download/vVERSION_PLACEHOLDER/termix_linux_arm64_appimage.AppImage|file://$(realpath ../release/termix_linux_arm64_appimage.AppImage)|g" com.karmaa.termix.yml
-          sed -i "s/CHECKSUM_X64_PLACEHOLDER/$CHECKSUM_X64/g" com.karmaa.termix.yml
-          sed -i "s/CHECKSUM_ARM64_PLACEHOLDER/$CHECKSUM_ARM64/g" com.karmaa.termix.yml
-          sed -i "s/VERSION_PLACEHOLDER/$VERSION/g" com.karmaa.termix.metainfo.xml
-          sed -i "s/DATE_PLACEHOLDER/$RELEASE_DATE/g" com.karmaa.termix.metainfo.xml
-
-      - name: Build Flatpak bundle
-        run: |
-          cd flatpak-build
-          flatpak-builder --repo=repo --force-clean --disable-rofiles-fuse build-dir com.karmaa.termix.yml
-
-          ARCH=$(uname -m)
-          if [ "$ARCH" = "x86_64" ]; then
-            FLATPAK_ARCH="x86_64"
-          elif [ "$ARCH" = "aarch64" ]; then
-            FLATPAK_ARCH="aarch64"
-          else
-            FLATPAK_ARCH="$ARCH"
-          fi
-
-          flatpak build-bundle repo ../release/termix_linux_flatpak.flatpak com.karmaa.termix --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
-
-      - name: Create flatpakref file
-        run: |
-          VERSION="${{ steps.flatpak-version.outputs.version }}"
-          cp packaging/flatpak/com.karmaa.termix.flatpakref release/
-          sed -i "s|VERSION_PLACEHOLDER|v${VERSION}|g" release/com.karmaa.termix.flatpakref
-
-      - name: Upload Flatpak bundle
-        uses: actions/upload-artifact@v7
-        if: hashFiles('release/termix_linux_flatpak.flatpak') != '' && inputs.artifact_destination != 'none'
-        with:
-          name: termix_linux_flatpak
-          path: release/termix_linux_flatpak.flatpak
-          retention-days: 30
-
-      - name: Upload Flatpakref
-        uses: actions/upload-artifact@v7
-        if: hashFiles('release/com.karmaa.termix.flatpakref') != '' && inputs.artifact_destination != 'none'
-        with:
-          name: termix_linux_flatpakref
-          path: release/com.karmaa.termix.flatpakref
           retention-days: 30
 
       # Every official plugin, for installs without internet. No update files.
