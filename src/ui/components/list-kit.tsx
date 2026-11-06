@@ -4,6 +4,7 @@ import { ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/button";
+import { useStatusColorScheme } from "@/hooks/use-status-color-scheme";
 
 export type ListRowTone =
   "brand" | "muted" | "success" | "warning" | "destructive" | "none";
@@ -14,6 +15,16 @@ const STRIPE: Record<ListRowTone, string> = {
   success: "bg-green-500/70",
   warning: "bg-warning/70",
   destructive: "bg-destructive/70",
+  none: "bg-transparent",
+};
+
+// Accent scheme, like the host list: good is the accent, anything else is dim.
+const ACCENT_STRIPE: Record<ListRowTone, string> = {
+  brand: "bg-accent-brand/60",
+  muted: "bg-muted-foreground/30",
+  success: "bg-accent-brand/60",
+  warning: "bg-muted-foreground/30",
+  destructive: "bg-muted-foreground/30",
   none: "bg-transparent",
 };
 
@@ -96,6 +107,7 @@ export function ListRow({
   React.HTMLAttributes<HTMLDivElement>,
   "title" | "onClick" | "children"
 >) {
+  const stripes = useStatusColorScheme() === "status" ? STRIPE : ACCENT_STRIPE;
   return (
     <div
       {...rest}
@@ -127,7 +139,7 @@ export function ListRow({
       <div
         className={cn(
           "w-[3px] shrink-0",
-          selected ? "bg-accent-brand" : !color && STRIPE[tone],
+          selected ? "bg-accent-brand" : !color && stripes[tone],
         )}
         style={color && !selected ? { backgroundColor: color } : undefined}
       />
