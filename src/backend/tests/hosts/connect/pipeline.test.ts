@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ssh2 from "ssh2";
 import { FakeSshClient } from "./pipeline-test-helpers.js";
 
@@ -83,6 +83,10 @@ import {
 } from "../../../hosts/connect/auth-provider-registry.js";
 import { ensureCoreSshAuthProviders } from "../../../hosts/connect/core-providers.js";
 import type { SshConnectHost } from "../../../hosts/connect/types.js";
+import {
+  clearConnectPolicies,
+  provideConnectPolicy,
+} from "../../../hosts/connect-policy.js";
 
 const plainKey = ssh2.utils.generateKeyPairSync("ed25519").private;
 const encryptedKey = ssh2.utils.generateKeyPairSync("ed25519", {
@@ -402,6 +406,46 @@ describe("profile defaults", () => {
     expect(terminal.config.keepaliveInterval).toBe(10000);
     const fleet = await build(withSettings, "background");
     expect(fleet.config.keepaliveInterval).toBe(30000);
+  });
+});
+
+describe("connect policy", () => {
+  afterEach(() => clearConnectPolicies());
+
+  it("refuses before auth is prepared", async () => {
+    const check = vi.fn(() => ({
+      decision: "request" as const,
+      reason: "Ask first",
+      requestTab: "access",
+    }));
+    provideConnectPolicy("pa", { check });
+    const built = await build(host());
+    expect(built.provider).toBeNull();
+    expect(built.outcome).toEqual({
+      status: "error",
+      code: "access-required",
+      message: "Ask first",
+      requestTab: "access",
+    });
+    expect(check).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "user-1",
+        hostId: 7,
+        protocol: "ssh",
+        profile: "terminal",
+        origin: "core",
+      }),
+    );
+  });
+
+  it("connectHost throws with the policy code", async () => {
+    provideConnectPolicy("pa", { check: () => ({ decision: "deny" }) });
+    const error = await connectHost(host(), {
+      userId: "user-1",
+      purpose: "test",
+    }).catch((e) => e);
+    expect(error).toBeInstanceOf(SshConnectError);
+    expect(error.code).toBe("access-denied");
   });
 });
 

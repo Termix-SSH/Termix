@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.1.0 | Plugin API 1.15.0
+SDK 1.2.0 | Plugin API 1.16.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -354,6 +354,13 @@ router.post("/notes", async (req, res) => {
   `allowManualCreate: () => false` blocks adding hosts by hand. Your own `ctx.hosts` writes still go
   through. `ctx.hosts.setShares(hostId, grants)` replaces a host's whole grant list, and
   `ctx.credentials.list()` finds the acting user's credentials by name.
+- Connect policy: with `hosts:connect-policy`, `ctx.hosts.connectPolicy.provide({ check(input) })` is asked
+  before every SSH config is built and every remote desktop login is handed out (`input` has `userId`,
+  `hostId`, `protocol`, `purpose`, `profile`, `interactive`, `origin`). Return `{ decision: "allow" }`,
+  `{ decision: "deny", reason }` or `{ decision: "request", reason, requestTab }`. The strictest answer of
+  all providers wins and a provider that throws denies. SSH prepare then gives an error outcome with code
+  `access-denied` or `access-required`, and `ctx.credentials.resolveHostProtocol` throws an error with that
+  `code` and a `toJSON()` body for a 403. Keep `check` fast, it also runs for background polling.
 
 ### Errors
 
@@ -1085,6 +1092,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `hosts:activity-provide` | medium   | Be the source of the recent activity list                     |
 | `ssh:transport`          | high     | Carry SSH connections for hosts it claims over its own stream |
 | `hosts:lock`             | medium   | Make hosts it manages read only for everyone else             |
+| `hosts:connect-policy`   | high     | Allow, deny or ask for approval before sessions open          |
 | `network:probe`          | medium   | Check that a host answers on a TCP port                       |
 | `credentials:use`        | medium   | Connect with saved credentials without seeing them            |
 | `credentials:write`      | medium   | Save new credentials                                          |

@@ -263,6 +263,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
         userId,
         purpose: purposeOf(options),
         profile: profileOf(options),
+        origin: pluginId,
         timeoutMs: options?.timeoutMs,
         prompt: options?.prompt,
         overrides: options?.overrides as Partial<MutableConnectConfig>,
@@ -478,6 +479,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
         serverHostId: options.serverHostId,
         log: options.log,
         interactive: options.interactive,
+        origin: pluginId,
         hostKeySocket: (options.hostKeySocket ?? null) as never,
       });
       await audit("ssh_prepare", describeHost(host), {

@@ -67,6 +67,7 @@ export const CAPABILITY_CATALOG: readonly CapabilityInfo[] = [
   entry("hosts:status-provide", "medium"),
   entry("hosts:activity-provide", "medium"),
   entry("hosts:lock", "medium"),
+  entry("hosts:connect-policy", "high"),
   entry("users:read", "medium"),
   entry("events:core", "medium"),
   entry("notify:send", "medium"),

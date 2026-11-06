@@ -354,6 +354,27 @@ export function createPluginCredentials({
         );
       }
 
+      // Same connect policy as SSH: a remote desktop login is a session.
+      const { assertConnectAllowed } =
+        await import("../hosts/connect-policy.js");
+      try {
+        await assertConnectAllowed({
+          userId,
+          hostId,
+          protocol: String(protocol),
+          purpose: "desktop-login",
+          profile: "desktop",
+          interactive: true,
+          origin: pluginId,
+        });
+      } catch (error) {
+        await audit("credentials_read", details, {
+          success: false,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
+
       const { createCurrentHostResolutionRepository } =
         await import("../database/repositories/factory.js");
       const repository = createCurrentHostResolutionRepository();

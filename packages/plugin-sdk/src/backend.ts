@@ -1295,6 +1295,54 @@ export interface PluginHostLocksApi {
   provide: (provider: PluginHostLockProvider) => () => void;
 }
 
+/** What core asks a connect policy before a session to a host opens. */
+export interface PluginConnectPolicyInput {
+  /** The person connecting. */
+  userId: string;
+  hostId: number;
+  /** "ssh", or a remote desktop protocol id such as "rdp", "vnc" or "telnet". */
+  protocol: string;
+  /** Free form purpose the caller gave, such as "terminal" or "sftp". */
+  purpose: string;
+  /**
+   * SSH profile: terminal, session, stream, forward, background or jump.
+   * "desktop" for remote desktop logins.
+   */
+  profile: string;
+  /** True when a person waits on this connect (a prompt channel is open). */
+  interactive: boolean;
+  /** Plugin id that asked for the connection, or "core". */
+  origin: string;
+}
+
+export type PluginConnectPolicyDecision =
+  | { decision: "allow" }
+  | { decision: "deny"; reason?: string }
+  | {
+      decision: "request";
+      reason?: string;
+      /** A tab id of the providing plugin where the user can ask for access. */
+      requestTab?: string;
+    };
+
+/**
+ * Decides whether a user may open a session to a host. Core asks every
+ * provider before it builds an SSH config (terminal, file manager, tunnels,
+ * background exec) and before it hands out remote desktop logins. The
+ * strictest answer wins and a provider that throws denies. Keep check fast:
+ * it runs on every connect, including background polling.
+ */
+export interface PluginConnectPolicyProvider {
+  check: (
+    input: PluginConnectPolicyInput,
+  ) => PluginConnectPolicyDecision | Promise<PluginConnectPolicyDecision>;
+}
+
+export interface PluginConnectPolicyApi {
+  /** Registers this plugin's policy. Needs hosts:connect-policy. Removed on deactivate. */
+  provide: (provider: PluginConnectPolicyProvider) => () => void;
+}
+
 /**
  * Hosts the acting user can see, and the RBAC + sharing operations a plugin
  * needs to build a feature (like fleets) on top of hosts it does not own.
@@ -1441,6 +1489,8 @@ export interface PluginHosts {
   activity: PluginHostActivityApi;
   /** Read only hosts this plugin manages. */
   locks: PluginHostLocksApi;
+  /** Who may open sessions to which hosts. */
+  connectPolicy: PluginConnectPolicyApi;
   /** Folder rows for the acting user. Needs hosts:write. */
   folders: PluginHostFoldersApi;
 }
@@ -1668,8 +1718,12 @@ export type PluginSshAuthOutcome =
         | "invalid-key"
         | "passphrase-required"
         | "provider-missing"
-        | "failed";
+        | "failed"
+        | "access-denied"
+        | "access-required";
       message: string;
+      /** For access-required: a tab of the policy plugin where access is asked for. */
+      requestTab?: string;
     }
   | {
       /** Try once more with these config changes. */
@@ -2695,7 +2749,9 @@ export interface PluginCredentials {
   /**
    * The host's login for one of this plugin's own contributes.protocols.
    * Null when the host does not exist or the acting user cannot connect to
-   * it. Needs credentials:read. Audited.
+   * it. Throws an error with `code` "access-denied" or "access-required"
+   * (and `requestTab`, `toJSON()` for a 403 body) when a connect policy
+   * refuses the session. Needs credentials:read. Audited.
    */
   resolveHostProtocol: (
     hostId: number,

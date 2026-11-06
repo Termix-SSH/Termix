@@ -81,6 +81,7 @@ import type {
   PluginHostStatusEntry,
   PluginActivityProvider,
   PluginHostLockProvider,
+  PluginConnectPolicyProvider,
   PluginAuthPolicyProvider,
   PluginCredentialSummary,
   PluginHostShareGrant,
@@ -303,6 +304,8 @@ export interface FakePluginContext {
   activityProviders: PluginActivityProvider[];
   /** Every provider passed to ctx.hosts.locks.provide that is still registered. */
   hostLockProviders: PluginHostLockProvider[];
+  /** Every provider passed to ctx.hosts.connectPolicy.provide that is still registered. */
+  connectPolicyProviders: PluginConnectPolicyProvider[];
   /** Topics emitted through ctx.events.emit, in order. */
   emitted: Array<{ topic: string; payload: unknown }>;
   /** Backing store behind ctx.kv. */
@@ -549,6 +552,7 @@ export function createFakeContext(
   const hostStatusProviders: PluginHostStatusProvider[] = [];
   const activityProviders: PluginActivityProvider[] = [];
   const hostLockProviders: PluginHostLockProvider[] = [];
+  const connectPolicyProviders: PluginConnectPolicyProvider[] = [];
   const kv = new Map<string, unknown>();
   const tables: PluginTableDefinition[] = [];
   const syncEntities: SyncEntityRegistration[] = [];
@@ -1093,6 +1097,15 @@ export function createFakeContext(
           };
         },
       },
+      connectPolicy: {
+        provide: (provider) => {
+          connectPolicyProviders.push(provider);
+          return () => {
+            const at = connectPolicyProviders.indexOf(provider);
+            if (at >= 0) connectPolicyProviders.splice(at, 1);
+          };
+        },
+      },
       status: {
         provide: (provider) => {
           hostStatusProviders.push(provider);
@@ -1586,6 +1599,7 @@ export function createFakeContext(
     hostStatusProviders,
     activityProviders,
     hostLockProviders,
+    connectPolicyProviders,
     emitted,
     kv,
     tables,
@@ -2078,6 +2092,12 @@ export function createMockCtx(
         provide: (provider) => {
           require("hosts:lock");
           return ctx.hosts.locks.provide(provider);
+        },
+      },
+      connectPolicy: {
+        provide: (provider) => {
+          require("hosts:connect-policy");
+          return ctx.hosts.connectPolicy.provide(provider);
         },
       },
       status: {

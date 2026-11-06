@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.0
+
+Plugin API 1.16.0.
+
+### Added
+
+- `ctx.hosts.connectPolicy.provide` and the `hosts:connect-policy` capability, so a plugin can allow, deny or ask for an access request before an SSH or remote desktop session opens
+- SSH prepare outcomes can carry the error codes `access-denied` and `access-required` with a `requestTab`
+
 ## 1.1.0
 
 Plugin API 1.15.0.

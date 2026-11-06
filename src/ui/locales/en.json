@@ -1251,6 +1251,10 @@
         "title": "Manage hosts as read only",
         "consequence": "Hosts it manages can't be edited, deleted or reshared by anyone else."
       },
+      "hosts:connect-policy": {
+        "title": "Decide who can connect",
+        "consequence": "Can block or allow every SSH and remote desktop connection to any host."
+      },
       "desktop:window": {
         "title": "Open desktop windows",
         "consequence": "Only in the Termix desktop app."

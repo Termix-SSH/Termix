@@ -9,6 +9,7 @@
 - A click on a host can open its host page, when a plugin offers one
 - Plugins can build pages of tiles you drag and resize, and add many copies of one dashboard card, each with its own settings
 - A plugin a newer release ships is downloaded on its own when your image does not have it, and tried again on the next start when offline
+- Plugins can decide who may connect to a host, so a host can need approved access before an SSH or remote desktop session opens
 
 ### Changed
 

@@ -171,6 +171,7 @@
           "hosts:status-provide",
           "hosts:activity-provide",
           "hosts:lock",
+          "hosts:connect-policy",
           "desktop:window",
           "desktop:local",
           "users:impersonate",
