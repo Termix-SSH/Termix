@@ -1,8 +1,8 @@
 # Changelog
 
-## 1.2.0
+## 1.1.1
 
-Plugin API 1.16.0.
+Plugin API 1.15.0.
 
 ### Added
 

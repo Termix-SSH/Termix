@@ -98,6 +98,7 @@ Plugins add everything else. The official ones ship with Termix, and admins can 
 | [Out-of-band](https://github.com/Termix-SSH/Plugin-Out-Of-Band)             | Power, sensors, event logs and consoles for server BMCs over Redfish, IPMI and Intel AMT.                                       |
 | [Packages](https://github.com/Termix-SSH/Plugin-Package-Manager)            | See and install updates on your hosts, search, install and remove packages, and read the package history.                       |
 | [Passkeys](https://github.com/Termix-SSH/Plugin-WebAuthn)                   | Sign in with a passkey or security key instead of a password.                                                                   |
+| [Privileged Access](https://github.com/Termix-SSH/Plugin-Privileged-Access) | Ask for approval before anyone connects to a privileged host, with access that ends on its own and a full audit trail.          |
 | [Process Manager](https://github.com/Termix-SSH/Plugin-Process-Manager)     | See and control running processes, pm2 and supervisor apps on your hosts, read their logs and get alerts when they fail.        |
 | [Proxmox](https://github.com/Termix-SSH/Plugin-Proxmox)                     | Import Proxmox VE guests as hosts, keep them in sync and watch node stats.                                                      |
 | [Remote Desktop](https://github.com/Termix-SSH/Plugin-Remote-Desktop)       | RDP, VNC and Telnet sessions in your browser, with clipboard, file transfer, sharing and recording.                             |

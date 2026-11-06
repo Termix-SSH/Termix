@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.2.0 | Plugin API 1.16.0
+SDK 1.1.1 | Plugin API 1.15.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
