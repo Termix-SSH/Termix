@@ -621,6 +621,7 @@
     "hostClickBehavior": "Kliknutí na hostitele",
     "hostClickBehaviorDesc": "Co se stane, když kliknete na hostitele, který již má otevřenou kartu. Kliknutí s Ctrl/Cmd, prostředním tlačítkem nebo možnost „Otevřít v nové kartě“ vždy vytvoří novou kartu.",
     "hostClickNewTab": "Vždy otevřít novou kartu",
+    "hostClickHostPage": "Otevřít stránku hostitele, pokud ji plugin nabízí",
     "hostClickFocusExisting": "Přepnout na otevřenou kartu",
     "hostClickFocusExistingDoubleNew": "Kliknutím přepnout, dvojklikem otevřít novou kartu",
     "openInNewTab": "Otevřít v nové kartě",
@@ -1248,6 +1249,18 @@
         "title": "Odesílat upozornění",
         "consequence": "Vám nebo ostatním uživatelům a prostřednictvím kanálů, které nastavili."
       },
+      "operations:provide": {
+        "title": "Nabízet akce",
+        "consequence": "Jeho akce mohou spouštět povolení uživatelé z automatizací, příkazového řádku, mobilní aplikace a dalších míst."
+      },
+      "operations:invoke": {
+        "title": "Spouštět akce jiných pluginů",
+        "consequence": "Koná se jménem přihlášeného uživatele u akcí uvedených v manifestu. Pravidla schvalování se nadále uplatňují."
+      },
+      "operations:approve": {
+        "title": "Rozhodovat, co vyžaduje schválení",
+        "consequence": "Může povolit spuštění akcí bez schválení nebo je blokovat pro každého uživatele."
+      },
       "notify:hub": {
         "title": "Přijímat všechna upozornění",
         "consequence": "Ukládá a doručuje upozornění, která odesílají všechny pluginy, včetně jejich obsahu."
@@ -1271,6 +1284,10 @@
       "hosts:lock": {
         "title": "Spravovat hostitele jako pouze pro čtení",
         "consequence": "Hostitele, které spravuje, nemůže nikdo jiný upravovat, mazat ani znovu sdílet."
+      },
+      "hosts:connect-policy": {
+        "title": "Rozhodovat, kdo se může připojit",
+        "consequence": "Může blokovat nebo povolit každé SSH a vzdálené plošné připojení k libovolnému hostiteli."
       },
       "desktop:window": {
         "title": "Otevírat okna plochy",
@@ -1747,6 +1764,12 @@
       "title": "Sloupce",
       "auto": "Automaticky",
       "count": "šířka {{count}}"
+    },
+    "pager": {
+      "previous": "Předchozí",
+      "next": "Další",
+      "page": "Strana {{page}}",
+      "pageOf": "Strana {{page}} z {{pages}}"
     }
   },
   "fields": {
@@ -1771,5 +1794,29 @@
       "admin": "Administrátor",
       "user": "Uživatel"
     }
+  },
+  "tileGrid": {
+    "empty": "Zatím žádné dlaždice. Přidejte některé ze seznamu.",
+    "move": "Tažením přesunout",
+    "moveTile": "Přesunout {{tile}}",
+    "settings": "Nastavení {{tile}}",
+    "remove": "Odebrat {{tile}}",
+    "width": "Šířka",
+    "height": "Výška",
+    "addTiles": "Přidat dlaždice",
+    "closePicker": "Zavřít",
+    "search": "Hledat dlaždice",
+    "noMatches": "Žádné shody.",
+    "kind": {
+      "all": "Vše",
+      "card": "Karty",
+      "chart": "Grafy",
+      "signal": "Stav",
+      "action": "Akce",
+      "resource": "Seznamy",
+      "session": "Relace"
+    },
+    "reset": "Obnovit",
+    "done": "Hotovo"
   }
 }

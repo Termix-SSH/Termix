@@ -609,6 +609,7 @@
     "hostClickBehavior": "Hostra kattintás",
     "hostClickBehaviorDesc": "Mi történjen, ha egy már megnyitott fület tartalmazó hostra kattint. A Ctrl/Cmd+kattintás, középső kattintás vagy az \"Új fülben megnyitás\" mindig újat indít.",
     "hostClickNewTab": "Mindig új fülben megnyitás",
+    "hostClickHostPage": "Megnyitja a host oldalát, ha egy bővítmény biztosít ilyet",
     "hostClickFocusExisting": "Váltás a megnyitott fülre",
     "hostClickFocusExistingDoubleNew": "Kattintás a váltáshoz, dupla kattintás új fülhöz",
     "openInNewTab": "Új fülben megnyitás",
@@ -1214,6 +1215,18 @@
         "title": "Riasztások küldése",
         "consequence": "Neked vagy más felhasználóknak, és az általuk beállított csatornákon keresztül."
       },
+      "operations:provide": {
+        "title": "Műveletek biztosítása",
+        "consequence": "A műveleteit az automatizálásokból, a CLI-ből, a mobilalkalmazásból és más helyekről futtathatják azok, akiknek engedélyük van a használatukra."
+      },
+      "operations:invoke": {
+        "title": "Más bővítmények műveleteinek futtatása",
+        "consequence": "A bejelentkezett felhasználó nevében hajtja végre a manifestjében felsorolt műveleteket. A jóváhagyási szabályok továbbra is érvényesek."
+      },
+      "operations:approve": {
+        "title": "Jóváhagyási követelmények meghatározása",
+        "consequence": "Engedélyezheti, hogy a műveletek jóváhagyás nélkül fussanak, vagy blokkolhatja azokat minden felhasználó számára."
+      },
       "notify:hub": {
         "title": "Minden riasztás fogadása",
         "consequence": "Tárolja és kézbesíti az összes plugin által küldött riasztást, beleértve azok tartalmát is."
@@ -1237,6 +1250,10 @@
       "hosts:lock": {
         "title": "Hostok kezelése csak olvashatóként",
         "consequence": "A kezelt hostokat senki más nem szerkesztheti, törölheti vagy újra megoszthatja."
+      },
+      "hosts:connect-policy": {
+        "title": "Csatlakozási jogosultságok meghatározása",
+        "consequence": "Blokkolhatja vagy engedélyezheti minden SSH és távoli asztali kapcsolatot bármely host felé."
       },
       "desktop:window": {
         "title": "Asztali ablakok megnyitása",
@@ -1663,6 +1680,12 @@
       "title": "Oszlopok",
       "auto": "Automatikus",
       "count": "{{count}} oszlop széles"
+    },
+    "pager": {
+      "previous": "Előző",
+      "next": "Következő",
+      "page": "{{page}}. oldal",
+      "pageOf": "{{page}}. oldal a {{pages}}-ból"
     }
   },
   "fields": {
@@ -1681,5 +1704,29 @@
       "admin": "Adminisztrátor",
       "user": "Felhasználó"
     }
+  },
+  "tileGrid": {
+    "empty": "Még nincsenek csempék. Adj hozzá néhányat a listából.",
+    "move": "Húzd a mozgatáshoz",
+    "moveTile": "{{tile}} mozgatása",
+    "settings": "{{tile}} beállításai",
+    "remove": "{{tile}} eltávolítása",
+    "width": "Szélesség",
+    "height": "Magasság",
+    "addTiles": "Csempék hozzáadása",
+    "closePicker": "Bezárás",
+    "search": "Csempék keresése",
+    "noMatches": "Nincs találat.",
+    "kind": {
+      "all": "Összes",
+      "card": "Kártyák",
+      "chart": "Diagramok",
+      "signal": "Státusz",
+      "action": "Műveletek",
+      "resource": "Listák",
+      "session": "Munkamenetek"
+    },
+    "reset": "Visszaállítás",
+    "done": "Kész"
   }
 }

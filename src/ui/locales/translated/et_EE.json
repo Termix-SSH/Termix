@@ -609,6 +609,7 @@
     "hostClickBehavior": "Hosti klõpsamine",
     "hostClickBehaviorDesc": "Mis juhtub, kui klõpsad hostil, millel on juba avatud vahekaart. Ctrl/Cmd klõps, kesklõpu klõps või „Ava uuel vahekaardil” alustavad alati uut.",
     "hostClickNewTab": "Ava alati uus vahekaart",
+    "hostClickHostPage": "Ava peremehe leht, kui pistmikul on selline võimalus",
     "hostClickFocusExisting": "Lülitu avatud vahekaardile",
     "hostClickFocusExistingDoubleNew": "Klõpsa lülitumiseks, kahekordne klõps uue vahekaardi jaoks",
     "openInNewTab": "Ava uuel vahekaardil",
@@ -1214,6 +1215,18 @@
         "title": "Hoiatuste saatmine",
         "consequence": "Sulle või teistele kasutajatele ning nende poolt seadistatud kanalite kaudu."
       },
+      "operations:provide": {
+        "title": "Toimingute pakkumine",
+        "consequence": "Selle toiminguid saavad käivitada automatsioonid, käsurea liides, mobiilirakendus ja muud kohad, kui kasutajal on selleks õigus."
+      },
+      "operations:invoke": {
+        "title": "Teiste pistmike toimingute käivitamine",
+        "consequence": "Toimib sisseloginud kasutaja nimel oma manifestis loetletud toimingute puhul. Kinnituse reeglid kehtivad endiselt."
+      },
+      "operations:approve": {
+        "title": "Määra, mis vajab kinnitust",
+        "consequence": "Võib lubada toiminguid käivitada ilma kinnitust või blokeerida neid igale kasutajale."
+      },
       "notify:hub": {
         "title": "Kõigi hoiatuste vastuvõtmine",
         "consequence": "Salvestab ja edastab kõikide pluginatelt saadetud hoiatused, sealhulgas nende sisu."
@@ -1237,6 +1250,10 @@
       "hosts:lock": {
         "title": "Hostide haldamine kirjutuskaitstult",
         "consequence": "Ülejäänud kasutajad ei saa selle haldatavaid hoste muuta, kustutada ega uuesti jagada."
+      },
+      "hosts:connect-policy": {
+        "title": "Määra, kes saab ühendust luua",
+        "consequence": "Võib blokeerida või lubada igat SSH ja kauglaua ühendust mis tahes peremeheni."
       },
       "desktop:window": {
         "title": "Töölaua akende avamine",
@@ -1663,6 +1680,12 @@
       "title": "Veerud",
       "auto": "Automaatne",
       "count": "{{count}} veeru laiune"
+    },
+    "pager": {
+      "previous": "Eelmine",
+      "next": "Järgmine",
+      "page": "Lehekülg {{page}}",
+      "pageOf": "Lehekülg {{page}} / {{pages}}"
     }
   },
   "fields": {
@@ -1681,5 +1704,29 @@
       "admin": "Administraator",
       "user": "Kasutaja"
     }
+  },
+  "tileGrid": {
+    "empty": "Plaatseid pole veel. Lisa neid nimekirjast.",
+    "move": "Lohista, et liigutada",
+    "moveTile": "Liiguta {{tile}}",
+    "settings": "{{tile}} seaded",
+    "remove": "Eemalda {{tile}}",
+    "width": "Laius",
+    "height": "Kõrgus",
+    "addTiles": "Lisa plaate",
+    "closePicker": "Sulge",
+    "search": "Otsi plaate",
+    "noMatches": "Ühtegi sobivat tulemust ei leitud.",
+    "kind": {
+      "all": "Kõik",
+      "card": "Kaardid",
+      "chart": "Diagrammid",
+      "signal": "Olek",
+      "action": "Toimingud",
+      "resource": "Nimekirjad",
+      "session": "Seansid"
+    },
+    "reset": "Lähtesta",
+    "done": "Valmis"
   }
 }

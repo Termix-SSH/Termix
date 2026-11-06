@@ -603,6 +603,7 @@
     "hostClickBehavior": "点击主机",
     "hostClickBehaviorDesc": "点击已打开标签页的主机时的行为。Ctrl/Cmd 点击、中键点击或“在新标签页中打开”始终会打开新标签页。",
     "hostClickNewTab": "始终打开新标签页",
+    "hostClickHostPage": "当插件提供时，打开主机页面",
     "hostClickFocusExisting": "切换到已打开的标签页",
     "hostClickFocusExistingDoubleNew": "单击切换，双击打开新标签页",
     "openInNewTab": "在新标签页中打开",
@@ -1197,6 +1198,18 @@
         "title": "发送警报",
         "consequence": "发送给您或其他用户，并通过他们设置的渠道发送。"
       },
+      "operations:provide": {
+        "title": "提供操作",
+        "consequence": "其操作可由自动化、CLI、手机应用及其他位置中获授权的用户执行。"
+      },
+      "operations:invoke": {
+        "title": "运行其他插件的操作",
+        "consequence": "代表已登录用户执行其清单中列出的操作。审批规则仍然适用。"
+      },
+      "operations:approve": {
+        "title": "决定哪些操作需要审批",
+        "consequence": "可为所有用户允许操作无需审批直接运行，或阻止它们。"
+      },
       "notify:hub": {
         "title": "接收所有警报",
         "consequence": "存储并分发所有插件发送的警报，包括其内容。"
@@ -1220,6 +1233,10 @@
       "hosts:lock": {
         "title": "以只读方式管理主机",
         "consequence": "由其管理的主机无法被其他人编辑、删除或重新共享。"
+      },
+      "hosts:connect-policy": {
+        "title": "决定谁可以连接",
+        "consequence": "可阻止或允许对任何主机的所有 SSH 和远程桌面连接。"
       },
       "desktop:window": {
         "title": "打开桌面窗口",
@@ -1621,6 +1638,12 @@
       "title": "列数",
       "auto": "自动",
       "count": "{{count}} 列宽"
+    },
+    "pager": {
+      "previous": "上一页",
+      "next": "下一页",
+      "page": "第 {{page}} 页",
+      "pageOf": "第 {{page}} 页，共 {{pages}} 页"
     }
   },
   "fields": {
@@ -1636,5 +1659,29 @@
       "admin": "管理员",
       "user": "用户"
     }
+  },
+  "tileGrid": {
+    "empty": "暂无卡片。从列表中添加一些。",
+    "move": "拖拽移动",
+    "moveTile": "移动 {{tile}}",
+    "settings": "{{tile}} 设置",
+    "remove": "移除 {{tile}}",
+    "width": "宽度",
+    "height": "高度",
+    "addTiles": "添加卡片",
+    "closePicker": "关闭",
+    "search": "搜索卡片",
+    "noMatches": "无匹配结果。",
+    "kind": {
+      "all": "全部",
+      "card": "卡片",
+      "chart": "图表",
+      "signal": "状态",
+      "action": "操作",
+      "resource": "列表",
+      "session": "会话"
+    },
+    "reset": "重置",
+    "done": "完成"
   }
 }

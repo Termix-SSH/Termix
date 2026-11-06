@@ -603,6 +603,7 @@
     "hostClickBehavior": "Mengklik hos",
     "hostClickBehaviorDesc": "Apa yang berlaku apabila anda mengklik hos yang sudah mempunyai tab terbuka. Klik Ctrl/Cmd, klik tengah, atau \"Buka dalam tab baru\" sentiasa memulakan yang baru.",
     "hostClickNewTab": "Sentiasa buka tab baru",
+    "hostClickHostPage": "Buka halaman hos, jika plugin menawarkan satu",
     "hostClickFocusExisting": "Tukar ke tab yang terbuka",
     "hostClickFocusExistingDoubleNew": "Klik untuk tukar, klik dua kali untuk tab baru",
     "openInNewTab": "Buka dalam tab baru",
@@ -1197,6 +1198,18 @@
         "title": "Hantar amaran",
         "consequence": "Kepada anda atau pengguna lain, dan melalui saluran yang mereka tetapkan."
       },
+      "operations:provide": {
+        "title": "Tawar tindakan",
+        "consequence": "Tindakannya boleh dijalankan dari Automasi, CLI, aplikasi telefon dan tempat lain, oleh orang yang dibenarkan menggunakannya."
+      },
+      "operations:invoke": {
+        "title": "Jalankan tindakan plugin lain",
+        "consequence": "Bertindak bagi pengguna yang log masuk pada tindakan yang disenaraikan dalam manifestnya. Peraturan kelulusan masih terpakai."
+      },
+      "operations:approve": {
+        "title": "Tentukan apa yang memerlukan kelulusan",
+        "consequence": "Boleh membiarkan tindakan berjalan tanpa kelulusan, atau menyekatnya, untuk setiap pengguna."
+      },
       "notify:hub": {
         "title": "Terima setiap amaran",
         "consequence": "Menyimpan dan menghantar semua amaran yang dihantar oleh plugin, termasuk kandungannya."
@@ -1220,6 +1233,10 @@
       "hosts:lock": {
         "title": "Urus hos sebagai baca sahaja",
         "consequence": "Hos yang diuruskan tidak boleh diedit, dipadam atau dikongsi semula oleh sesiapa pun."
+      },
+      "hosts:connect-policy": {
+        "title": "Tentukan siapa yang boleh menyambung",
+        "consequence": "Boleh menyekat atau membenarkan setiap sambungan SSH dan desktop jauh ke mana-mana hos."
       },
       "desktop:window": {
         "title": "Buka tetingkap desktop",
@@ -1621,6 +1638,12 @@
       "title": "Lajur",
       "auto": "Auto",
       "count": "Lebar {{count}}"
+    },
+    "pager": {
+      "previous": "Sebelumnya",
+      "next": "Seterusnya",
+      "page": "Halaman {{page}}",
+      "pageOf": "Halaman {{page}} daripada {{pages}}"
     }
   },
   "fields": {
@@ -1636,5 +1659,29 @@
       "admin": "Admin",
       "user": "Pengguna"
     }
+  },
+  "tileGrid": {
+    "empty": "Tiada jubin lagi. Tambah beberapa daripada senarai.",
+    "move": "Seret untuk bergerak",
+    "moveTile": "Pindah {{tile}}",
+    "settings": "Tetapan {{tile}}",
+    "remove": "Buang {{tile}}",
+    "width": "Lebar",
+    "height": "Tinggi",
+    "addTiles": "Tambah jubin",
+    "closePicker": "Tutup",
+    "search": "Cari jubin",
+    "noMatches": "Tiada padanan.",
+    "kind": {
+      "all": "Semua",
+      "card": "Kad",
+      "chart": "Carta",
+      "signal": "Status",
+      "action": "Tindakan",
+      "resource": "Senarai",
+      "session": "Sesi"
+    },
+    "reset": "Set semula",
+    "done": "Selesai"
   }
 }
