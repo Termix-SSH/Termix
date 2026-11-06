@@ -4,6 +4,7 @@
 
 ### Added
 
+- Plugins in the desktop app can drag files out to Explorer or Finder
 - Termix actions: plugins can declare what they do once, and it works from the API with permission checks, dry runs, run history and approvals
 - API keys can be limited to reading or running actions, when an admin makes them
 - A click on a host can open its host page, when a plugin offers one

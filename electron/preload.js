@@ -91,6 +91,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("create-temp-folder", folderData),
   startDragToDesktop: (dragData) =>
     ipcRenderer.invoke("start-drag-to-desktop", dragData),
+  startDragFiles: (tempIds) => ipcRenderer.send("start-drag-files", tempIds),
   cleanupTempFile: (tempId) => ipcRenderer.invoke("cleanup-temp-file", tempId),
 
   // Native web views placed over an element of the page (WebContentsView).

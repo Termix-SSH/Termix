@@ -657,6 +657,12 @@ function createManagedTempFile(fileName, content, encoding = "utf8") {
   return { tempId, path: filePath };
 }
 
+function dragIcon() {
+  // Windows cancels a drag with an empty icon
+  const buf = Buffer.alloc(16 * 16 * 4, 0x99);
+  return nativeImage.createFromBitmap(buf, { width: 16, height: 16 });
+}
+
 function cleanupManagedTempFile(tempId) {
   const temp = tempFiles.get(tempId);
   if (!temp) return;
@@ -1958,6 +1964,23 @@ ipcMain.handle("start-drag-to-desktop", (event, dragData) => {
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
+  }
+});
+
+// Must run synchronously inside the renderer's dragstart, files must exist.
+ipcMain.on("start-drag-files", (event, tempIds) => {
+  try {
+    const files = (Array.isArray(tempIds) ? tempIds : [])
+      .map((id) => tempFiles.get(id)?.path)
+      .filter((p) => p && fs.existsSync(p));
+    if (files.length === 0) return;
+    event.sender.startDrag({
+      file: files[0],
+      files,
+      icon: dragIcon(),
+    });
+  } catch (error) {
+    logToFile("Failed to start drag:", error.message);
   }
 });
 

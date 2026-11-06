@@ -112,6 +112,9 @@ export interface ElectronAPI {
     error?: string;
   }>;
 
+  /** Start a native drag of temp files. Call it synchronously in dragstart. */
+  startDragFiles?: (tempIds: string[]) => void;
+
   cleanupTempFile: (tempId: string) => Promise<{
     success: boolean;
     error?: string;
