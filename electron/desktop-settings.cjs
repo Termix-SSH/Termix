@@ -32,7 +32,11 @@ function writeJson(filePath, value) {
   }
 }
 
-const DEFAULTS = { defaultConnectionOrigin: "local", updateMode: "prompt" };
+const DEFAULTS = {
+  defaultConnectionOrigin: "local",
+  updateMode: "prompt",
+  macTrayIcon: "monochrome",
+};
 
 function getDesktopSettings() {
   return { ...DEFAULTS, ...readJson(dataPath("desktop-settings.json"), {}) };
