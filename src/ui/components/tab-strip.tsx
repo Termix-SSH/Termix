@@ -138,7 +138,9 @@ export function TabStrip({
         </button>
       )}
       {trailing && (
-        <div className="flex shrink-0 items-center gap-1 px-1">{trailing}</div>
+        <div className="flex shrink-0 items-center gap-1 px-2 [&_[data-slot=button]]:!h-6 [&_[data-slot=button][data-size^=icon]]:!size-6 [&_[data-slot=input]]:!h-6 [&_[data-slot=select-trigger]]:!h-6">
+          {trailing}
+        </div>
       )}
     </div>
   );
