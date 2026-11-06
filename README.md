@@ -87,6 +87,7 @@ Plugins add everything else. The official ones ship with Termix, and admins can 
 | [IP-KVM](https://github.com/Termix-SSH/Plugin-IP-KVM)                       | See and control machines through PiKVM, NanoKVM and JetKVM devices.                                                             |
 | [Kubernetes](https://github.com/Termix-SSH/Plugin-Kubernetes)               | Manage Kubernetes clusters from your hosts over SSH, with logs, metrics, YAML and a shell.                                      |
 | [LDAP](https://github.com/Termix-SSH/Plugin-LDAP)                           | Sign in with your LDAP or Active Directory username and password.                                                               |
+| [Log Search](https://github.com/Termix-SSH/Plugin-Log-Search)               | Search logs from the journal, log files and Docker containers across many hosts at once.                                        |
 | [Login Security](https://github.com/Termix-SSH/Plugin-Login-Security)       | Sign people out when idle, limit session length, turn off remember me and require a second factor at login.                     |
 | [Network Devices](https://github.com/Termix-SSH/Plugin-Network-Devices)     | See and manage routers, switches and access points over SNMP and router APIs.                                                   |
 | [Network Topology](https://github.com/Termix-SSH/Plugin-Network-Topology)   | Draws your hosts and the links between them as a live, interactive graph.                                                       |
