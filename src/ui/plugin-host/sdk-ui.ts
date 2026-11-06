@@ -323,6 +323,9 @@ export {
   PanelShell,
   RefreshButton,
   Segmented,
+  TOOLBAR_FIT,
+  ToolbarBand,
+  ToolbarSelect,
   ViewToggle,
   type GridSize,
   type PanelDensity,
@@ -834,6 +837,7 @@ export {
   useHostEditorToolbarItems,
   useHostStatusIndicators,
 } from "@/sidebar/host-contributions";
+export { HostDotGroup } from "@/sidebar/HostDotGroup";
 export { useEditorDefaultKeys } from "@/sidebar/host-defaults/catalog";
 export {
   enabledHostProtocols,

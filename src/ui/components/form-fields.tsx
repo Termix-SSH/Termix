@@ -253,6 +253,7 @@ export function TextAreaField({
   aside,
   mono,
   disabled,
+  fill,
   className,
 }: {
   label: string;
@@ -265,6 +266,8 @@ export function TextAreaField({
   aside?: ReactNode;
   mono?: boolean;
   disabled?: boolean;
+  /** Takes the rest of the height, for config and log editors. */
+  fill?: boolean;
   className?: string;
 }) {
   return (
@@ -273,7 +276,7 @@ export function TextAreaField({
       hint={hint}
       error={error}
       aside={aside}
-      className={className}
+      className={cn(fill && "min-h-0 flex-1", className)}
     >
       <textarea
         rows={rows}
@@ -284,6 +287,7 @@ export function TextAreaField({
         className={cn(
           "w-full resize-none border border-input bg-background px-3 py-2 text-xs text-foreground transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30",
           mono && "font-mono text-[10px]",
+          fill && "min-h-40 flex-1",
         )}
       />
     </Field>

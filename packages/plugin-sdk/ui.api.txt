@@ -149,6 +149,7 @@ HostDefaultsContextValue (type): HostDefaultsContextValue
 HostDefaultsLevel (type): HostDefaultsLevel
 HostDefaultsTarget (type): HostDefaultsTarget
 HostDensity (type): HostDensity
+HostDotGroup (value): ({ host, badges, className, }: { host: Host; badges: HostBadgeDef[]; className?: string; }) => Element
 HostFeatureFields (value): ({ form, updateForm, }: HostFeatureFieldsProps) => Element
 HostFeatureFieldsProps (type): HostFeatureFieldsProps
 HostFolder (type): HostFolder
@@ -210,7 +211,7 @@ NoticePanel (value): ({ icon: Icon, title, children, action, tone, className, }:
 NumberField (value): ({ label, value, onChange, placeholder, hint, error, min, max, disabled, className, }: { label: string; value: number; onChange: (value: number) => void; placeholder?: string; hint?: ReactNode; error?: string; min?: number; max?: number; disabled?: boolean; className?: string; }) => Element
 OPEN_PLUGINS_EVENT (value): "termix:open-plugins"
 OpenTabRecord (type): OpenTabRecord
-PANEL (value): { readonly body: "p-2.5"; readonly gap: "gap-2"; readonly band: "px-3 py-2"; readonly cardHead: "px-3 py-2.5"; readonly header: "h-12.5"; }
+PANEL (value): { readonly body: "p-3"; readonly section: "flex flex-col gap-3 py-3"; readonly gap: "gap-2"; readonly band: "px-3 py-2"; readonly cardHead: "px-3 py-2.5"; readonly header: "h-12.5"; }
 PRESETS (value): Record<"simple" | "balanced" | "advanced", UiAreaPreferences>
 PROMPT_BUTTON (value): "inline-flex h-7 items-center justify-center gap-1.5 border border-border px-3 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
 PROMPT_DESTRUCTIVE_BUTTON (value): "inline-flex h-7 items-center justify-center gap-1.5 bg-destructive px-3 text-xs font-medium text-white transition-colors hover:bg-destructive/90 focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
@@ -309,6 +310,7 @@ SurfaceScope (value): ({ kind, onEditingChange, onClose, className, children, }:
 Switch (value): ({ className, ...props }: SwitchProps & RefAttributes<HTMLButtonElement>) => Element
 SwitchRow (value): ({ label, description, badge, checked, onChange, disabled, defaultKey, rowId, }: { label: string; description?: ReactNode; badge?: string; checked: boolean; onChange: (value: boolean) => void; disabled?: boolean; defaultKey?: string; rowId?: string; }) => Element
 TILE_COLUMNS (value): 12
+TOOLBAR_FIT (value): "[&_[data-slot=button][data-size=sm]]:h-8 [&_[data-slot=button][data-size=xs]]:h-8 [&_[data-slot=button][data-size=icon-sm]]:size-8 [&_[data-slot=button][data-size=icon-xs]]:size-8 [&_[data-slot=input]]:h-8 [&_[data-slot=select-trigger]]:h-8"
 TOTPDialog (value): ({ isOpen, prompt, mode, waiting, onSubmit, onCancel, backgroundColor, }: TOTPDialogProps) => Element
 Tab (type): Tab
 TabShellCallbacks (type): TabShellCallbacks
@@ -318,7 +320,7 @@ TabStrip (value): ({ tabs, activeTab, onTabChange, isActive, variant, trailing, 
 TabStripItem (type): TabStripItem
 TabType (type): TabType
 TagInput (value): ({ tags, input, placeholder, onTagsChange, onInputChange, }: { tags: string[]; input: string; placeholder: string; onTagsChange: (tags: string[]) => void; onInputChange: (value: string) => void; }) => Element
-TextAreaField (value): ({ label, value, onChange, placeholder, rows, hint, error, aside, mono, disabled, className, }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; rows?: number; hint?: ReactNode; error?: string; aside?: ReactNode; mono?: boolean; disabled?: boolean; className?: string; }) => Element
+TextAreaField (value): ({ label, value, onChange, placeholder, rows, hint, error, aside, mono, disabled, fill, className, }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; rows?: number; hint?: ReactNode; error?: string; aside?: ReactNode; mono?: boolean; disabled?: boolean; fill?: boolean; className?: string; }) => Element
 TextField (value): ({ label, value, onChange, placeholder, hint, error, aside, disabled, mono, className, }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; hint?: ReactNode; error?: string; aside?: ReactNode; disabled?: boolean; mono?: boolean; className?: string; }) => Element
 Textarea (value): ForwardRefExoticComponent<TextareaProps & RefAttributes<HTMLTextAreaElement>>
 TextareaProps (type): TextareaProps
@@ -335,6 +337,8 @@ TileSlot (type): TileSlot
 TileStack (value): ({ className, children, }: { className?: string; children: ReactNode; }) => Element
 TileWall (value): ({ size, minWidth, gridClassName, className, children, }: { size?: GridSize; minWidth?: number; gridClassName?: string; className?: string; children: ReactNode; }) => Element
 TlsStatus (type): TlsStatus
+ToolbarBand (value): ({ className, children, }: { className?: string; children: ReactNode; }) => Element
+ToolbarSelect (value): <T extends string>({ value, onChange, options, label, disabled, className, }: { value: T; onChange: (value: NoInfer<T>) => void; options: { value: NoInfer<T>; label: string; }[]; label: string; disabled?: boolean; className?: string; }) => Element
 ToolsTab (type): ToolsTab
 Tooltip (value): ({ ...props }: TooltipProps) => Element
 TooltipContent (value): ({ className, sideOffset, children, ...props }: TooltipContentProps & RefAttributes<HTMLDivElement>) => Element

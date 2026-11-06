@@ -11,6 +11,7 @@
 - Plugins can build pages of tiles you drag and resize, and add many copies of one dashboard card, each with its own settings
 - A plugin a newer release ships is downloaded on its own when your image does not have it, and tried again on the next start when offline
 - Plugins can decide who may connect to a host, so a host can need approved access before an SSH or remote desktop session opens
+- When more than one plugin flags a host, its row shows one status dot with every reason in its tooltip
 
 ### Changed
 
@@ -25,6 +26,7 @@
 - The Linux Flatpak now installs from flatpak.termix.site on x86_64 and arm64, and `flatpak update` keeps it current
 - Dropdowns and text areas are the same size as the text fields next to them
 - A page's own tabs sit above its search bar
+- A plugin view that is still starting shows the same loading spinner as the rest of Termix
 
 ### Fixed
 
@@ -43,6 +45,9 @@
 - The hint at the bottom of Browse and the stored data footer on plugin pages have the same padding as the rest of the page
 - Sign in methods on the Security page have a line between them
 - Chart axis labels with long units, like KiB/s, are no longer cut off
+- Filters, view toggles and small buttons in a toolbar are the same height as the search box next to them
+- Save and Cancel at the bottom of a form are the same height as other buttons
+- State badges in tables no longer stretch across the whole column
 
 ## 26.11.0
 

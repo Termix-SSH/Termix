@@ -26,6 +26,7 @@ import {
 import {
   registerHostAction,
   registerHostBadge,
+  hostDotReporter,
   registerHostEditorToolbarItem,
   registerHostStatusIndicator,
   registerHostContextMenuItem,
@@ -398,7 +399,12 @@ export function createPluginApp(
           id: badge.id,
           pluginId,
           when: hostCallback(badge.when) as never,
-          component: scoped(badge.component) as never,
+          component: badge.component
+            ? (scoped(badge.component) as never)
+            : undefined,
+          dot: badge.useDot
+            ? (scoped(hostDotReporter(badge.useDot)) as never)
+            : undefined,
           order: badge.order,
         }),
       );

@@ -21,7 +21,7 @@ export function TileStack({
           {Children.toArray(children).map((section, index) => (
             <div
               key={keyOf(section, index)}
-              className="min-w-0 shrink-0 border-b border-border"
+              className="min-w-0 shrink-0 border-b border-border [&>[data-slot=toolbar-band]]:border-b-0"
             >
               {section}
             </div>

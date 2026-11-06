@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.1.1 | Plugin API 1.15.0
+SDK 1.1.2 | Plugin API 1.15.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -782,9 +782,27 @@ exports with props is `ui.api.txt` in the Termix repo
   `StatTile` or `MetricCard`, and use `TileFrame` for a titled section. Cards drop their own box inside
   these. Forms keep `PANEL.body` padding inside their section. An `InlineView` form made of `SectionCard`s
   takes `stacked`.
-- Page views go in `PanelShell`'s `tabs` band as a `TabStrip`. `Segmented` is for filters and view modes.
-  A page with many sections uses `SideNav` on the left. Put the refresh button in the header with
-  `RefreshButton`, and the docs link with the `docs` prop.
+- Page views go in `PanelShell`'s `tabs` band as a `TabStrip`. `Segmented` is for filters and view modes and
+  keeps its natural width, never stretched across the pane. A page with many sections uses `SideNav` on the
+  left. Put the refresh button in the header with `RefreshButton`, and the docs link with the `docs` prop.
+- Toolbars: search, filters and buttons go in `PanelShell`'s `toolbar` slot, or in a `ToolbarBand` for a second
+  row. Both make every control in the row 32px, so a `size="sm"` button lines up with a search box. Use
+  `ToolbarSelect` for a small select there, never a native `<select>`. Don't build your own row with its own
+  padding.
+- Padding: loose content in a page body (a hint, a single field) takes `PANEL.body`. A `SectionCard` body uses
+  `PANEL.section` for its fields.
+- Headers have no background. Label a group with `GroupHeading`, never a row with `bg-muted`.
+- Sub views: a detail or edit view opens as an `InlineView`, which has the one back button. Anywhere else use
+  `BackButton` in `PanelShell`'s `leading` slot. Never make a smaller back button.
+- Save and Add always sit pinned at the bottom: pass `FormFooter` to `InlineView` or `PanelShell` as `footer`.
+  Inside a tab body, wrap the form in `<PanelShell chrome={false} footer={...}>`.
+- Loading: `LoadingState` for anything still loading (`compact` in cards and rows). A spinner on its own is
+  only for a button or an activity like "working".
+- Config and log editors fill the rest of the view: `TextAreaField fill`, or `min-h-0 flex-1` on a log, never a
+  fixed number of rows or a `max-h-[60vh]`.
+- Host row dots: report a problem with `registerHostBadge({ useDot })` instead of drawing a dot. The layout
+  merges every plugin's dots into one.
+- `termix-plugin validate` lists drift from these rules under `ui`. They are warnings, so fix what applies.
 - States and data: `StatusBadge` and `StatusDot` (pass a state like "running" and the color follows),
   `InfoGrid` for label and value pairs, `DataTable` for a plain table, `Pager` and `usePaged` under long lists.
 - Tile pages use `TileGrid` with `TileFrame` around each tile and `TilePicker` beside it while editing. Slots are

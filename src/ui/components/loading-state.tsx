@@ -19,6 +19,7 @@ export function LoadingState({
     return (
       <div
         role="status"
+        data-slot="loading-state"
         className={cn(
           "flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground",
           className,
@@ -32,6 +33,7 @@ export function LoadingState({
   return (
     <div
       role="status"
+      data-slot="loading-state"
       className={cn(
         "flex flex-1 flex-col items-center justify-center gap-2 px-4 py-12 text-xs text-muted-foreground",
         className,

@@ -50,7 +50,7 @@ const SNAP = 8;
 const SCROLL_EDGE = 48;
 
 const styles = `
-.tg-grid { position: relative; }
+.tg-grid { position: relative; overflow-x: clip; }
 .tg-tile { position: absolute; left: 0; top: 0; min-width: 0; display: flex; flex-direction: column; }
 .tg-grid[data-animate="true"] .tg-tile:not([data-active]) { transition: transform 160ms ease, width 160ms ease, height 160ms ease; }
 .tg-tile[data-active] { z-index: 40; }

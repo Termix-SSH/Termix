@@ -20,6 +20,10 @@ const TSCONFIG = path.join(ROOT, "tsconfig.app.json");
 
 const ALLOWED = [
   "SeamlessTileContext",
+  "ToolbarBand",
+  "ToolbarSelect",
+  "HostDotGroup",
+  "TOOLBAR_FIT",
   "TileEditBar",
   "TileStack",
   "TileColumn",

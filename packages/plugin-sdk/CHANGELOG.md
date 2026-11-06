@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.1.2
+
+Plugin API 1.15.0.
+
+### Added
+
+- `/ui` exports `ToolbarBand` (a toolbar row outside the PanelShell toolbar), `ToolbarSelect` (a small select for those rows) and `TOOLBAR_FIT` (the classes that make every control in a row 32px)
+- `PANEL.section`, the one inner layout for a SectionCard body
+- `TextAreaField` takes `fill`, so a config or log editor uses the rest of the height
+- `registerHostBadge` takes `useDot`. Every plugin's dots merge into one dot on the host row, with the worst tone and each reason in its tooltip. `/ui` exports `HostDotGroup` for layouts that draw host rows
+
+### Changed
+
+- Controls in the PanelShell toolbar, tab band and footer are all 32px, so small buttons line up with search boxes and selects
+- `Segmented` and `ViewToggle` match the height of inputs and buttons, and `Segmented` keeps its natural width
+- `FormFooter` buttons are full height
+- `PANEL.body` is `p-3`, the same padding `InlineView` gives a form
+- A body with a pinned footer no longer draws a closing line just above the footer's own line
+- The placeholder for a plugin view that is still starting uses `LoadingState`
+- `termix-plugin validate` warns about UI drift: raw loading spinners, small back buttons, native selects, stretched filters, filled headers, capped log views and footers that scroll away
+- A `ToolbarBand` right inside a `TileStack` leaves the line under it to the stack
+- `ListBadge` and `StatusBadge` keep their own width in a table cell instead of filling it
+
 ## 1.1.1
 
 Plugin API 1.15.0.
