@@ -98,7 +98,8 @@ export function BottomEdge({
   const ref = useRef<HTMLDivElement>(null);
   const reaches = useReachesBottom(ref);
   return (
-    <div ref={ref} className={cn("min-w-0 overflow-clip", className)}>
+    // flow-root keeps the -1px margin inside, overflow clip alone lets it escape.
+    <div ref={ref} className={cn("flow-root min-w-0 overflow-clip", className)}>
       <div
         className={cn((owned || closed || reaches) && "-mb-px", innerClassName)}
       >
