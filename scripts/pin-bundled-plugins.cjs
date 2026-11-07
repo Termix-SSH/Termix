@@ -43,7 +43,13 @@ async function main() {
     coreVersion,
     loadPluginTiers(root),
   );
-  fs.writeFileSync(configPath, `${JSON.stringify({ plugins }, null, 2)}\n`);
+  // Format like prettier so lint stays green after the release job pins
+  const prettier = require("prettier");
+  const text = await prettier.format(JSON.stringify({ plugins }, null, 2), {
+    ...(await prettier.resolveConfig(configPath)),
+    filepath: configPath,
+  });
+  fs.writeFileSync(configPath, text);
   console.log(
     `Pinned ${plugins.length} plugin(s) in docker/bundled-plugins.json`,
   );
