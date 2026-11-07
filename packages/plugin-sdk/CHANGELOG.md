@@ -6,6 +6,7 @@ Plugin API 1.15.0.
 
 ### Added
 
+- `ctx.credentials.setSshKeyCertificate` stores an OpenSSH certificate on one of the acting user's SSH key credentials, or clears it with `null`
 - `/ui` exports `ToolbarBand` (a toolbar row outside the PanelShell toolbar), `ToolbarSelect` (a small select for those rows) and `TOOLBAR_FIT` (the classes that make every control in a row 32px)
 - `PANEL.section`, the one inner layout for a SectionCard body
 - `TextAreaField` takes `fill`, so a config or log editor uses the rest of the height

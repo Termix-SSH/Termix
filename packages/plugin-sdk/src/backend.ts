@@ -2789,6 +2789,18 @@ export interface PluginCredentials {
     key: string,
     passphrase?: string | null,
   ) => Promise<{ key: string; passphrase?: string }>;
+  /**
+   * Stores a CA-signed OpenSSH certificate next to an existing SSH key
+   * credential, so core offers key plus certificate when it connects through
+   * that credential. Only key credentials can carry one; core refuses the
+   * other auth types instead of dropping the certificate silently. Pass null
+   * to clear a stored one. Needs credentials:write and the core
+   * credentials.update permission. Audited.
+   */
+  setSshKeyCertificate: (
+    credentialId: number,
+    certificate: string | null,
+  ) => Promise<{ id: number; changed: boolean }>;
 }
 
 /**

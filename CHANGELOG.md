@@ -12,6 +12,7 @@
 - A plugin a newer release ships is downloaded on its own when your image does not have it, and tried again on the next start when offline
 - Plugins can decide who may connect to a host, so a host can need approved access before an SSH or remote desktop session opens
 - When more than one plugin flags a host, its row shows one status dot with every reason in its tooltip
+- Plugins that issue SSH certificates can save them on the SSH key login they were issued for
 
 ### Changed
 
