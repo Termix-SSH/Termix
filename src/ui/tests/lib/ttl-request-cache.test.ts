@@ -69,4 +69,44 @@ describe("createTtlRequestCache", () => {
     await expect(cache.get(loader)).resolves.toBe("v2");
     expect(loader).toHaveBeenCalledTimes(2);
   });
+
+  it("does not hand out a load that started before invalidate", async () => {
+    const cache = createTtlRequestCache<string>(5_000);
+    let finishOld!: (value: string) => void;
+    const loader = vi
+      .fn<() => Promise<string>>()
+      .mockImplementationOnce(
+        () => new Promise((resolve) => (finishOld = resolve)),
+      )
+      .mockResolvedValue("after");
+
+    const before = cache.get(loader);
+    cache.invalidate();
+    const after = cache.get(loader);
+    finishOld("before");
+
+    await expect(after).resolves.toBe("after");
+    await expect(before).resolves.toBe("after");
+    expect(cache.peek()).toBe("after");
+  });
+
+  it("keeps the newer value when an older load fails after invalidate", async () => {
+    const cache = createTtlRequestCache<string>(5_000);
+    let failOld!: (error: Error) => void;
+    const loader = vi
+      .fn<() => Promise<string>>()
+      .mockImplementationOnce(
+        () => new Promise((_, reject) => (failOld = reject)),
+      )
+      .mockResolvedValue("after");
+
+    const before = cache.get(loader);
+    cache.invalidate();
+    const after = cache.get(loader);
+    failOld(new Error("boom"));
+
+    await expect(after).resolves.toBe("after");
+    await expect(before).rejects.toThrow("boom");
+    expect(cache.peek()).toBe("after");
+  });
 });
