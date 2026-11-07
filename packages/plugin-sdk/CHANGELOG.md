@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.3
+
+Plugin API 1.16.0.
+
+### Fixed
+
+- `generateSshKeyPair` no longer hands out an unreadable key. ssh2 broke about 1 in 256 ed25519 keys
+
 ## 1.1.2
 
 Plugin API 1.16.0.

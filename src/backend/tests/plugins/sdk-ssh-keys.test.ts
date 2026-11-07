@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import ssh2 from "ssh2";
 import {
   detectSshKeyType,
   generateSshKeyPair,
@@ -56,5 +57,37 @@ describe("plugin SDK ssh-keys", () => {
 
   it("rejects an unknown key type", () => {
     expect(() => generateSshKeyPair("ssh-dss" as never)).toThrow(/Unsupported/);
+  });
+});
+
+describe("generateSshKeyPair with a broken key from ssh2", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("makes another one until it reads back", () => {
+    const real = ssh2.utils.generateKeyPairSync("ed25519");
+    const spy = vi
+      .spyOn(ssh2.utils, "generateKeyPairSync")
+      .mockReturnValueOnce({ private: "broken", public: real.public } as never)
+      .mockReturnValueOnce(real as never);
+    const pair = generateSshKeyPair("ssh-ed25519");
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(pair.privateKey).toBe(real.private);
+  });
+
+  it("refuses a public key that does not match", () => {
+    const one = ssh2.utils.generateKeyPairSync("ed25519");
+    const two = ssh2.utils.generateKeyPairSync("ed25519");
+    vi.spyOn(ssh2.utils, "generateKeyPairSync").mockReturnValue({
+      private: one.private,
+      public: two.public,
+    } as never);
+    expect(() => generateSshKeyPair("ssh-ed25519")).toThrow("usable SSH key");
+  });
+
+  it("gives readable keys every time", () => {
+    for (let i = 0; i < 1500; i += 1) {
+      const pair = generateSshKeyPair("ssh-ed25519");
+      expect(publicKeyFromPrivate(pair.privateKey)).not.toBeNull();
+    }
   });
 });

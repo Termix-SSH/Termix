@@ -22,6 +22,8 @@ export interface GenerateSshKeyPairOptions {
   comment?: string;
 }
 
+const MAX_GENERATE_ATTEMPTS = 8;
+
 /** Makes a new key pair; the public half is one authorized_keys line. */
 export function generateSshKeyPair(
   type: SshKeyKind,
@@ -52,15 +54,36 @@ export function generateSshKeyPair(
   }
   if (type === "ecdsa-sha2-nistp256") generateOptions.bits = 256;
 
-  const pair = ssh2.utils.generateKeyPairSync(
-    algorithm as "rsa",
-    generateOptions as never,
-  );
-  return {
-    privateKey: pair.private,
-    publicKey: pair.public.trim(),
-    keyType: type,
-  };
+  // ssh2 drops a leading zero byte from about 1 in 256 ed25519 keys, which
+  // leaves a key nothing can read, so only a key that reads back is handed out.
+  for (let attempt = 0; attempt < MAX_GENERATE_ATTEMPTS; attempt += 1) {
+    const pair = ssh2.utils.generateKeyPairSync(
+      algorithm as "rsa",
+      generateOptions as never,
+    );
+    if (isUsablePair(pair.private, pair.public, options.passphrase)) {
+      return {
+        privateKey: pair.private,
+        publicKey: pair.public.trim(),
+        keyType: type,
+      };
+    }
+  }
+  throw new Error("Could not make a usable SSH key");
+}
+
+function isUsablePair(
+  privateKey: string,
+  publicKey: string,
+  passphrase?: string,
+): boolean {
+  try {
+    return parse(privateKey, passphrase)
+      .getPublicSSH()
+      .equals(parse(publicKey).getPublicSSH());
+  } catch {
+    return false;
+  }
 }
 
 function parse(key: string, passphrase?: string) {
