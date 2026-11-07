@@ -24,6 +24,10 @@ Plugin API 1.15.0.
 - A `ToolbarBand` right inside a `TileStack` leaves the line under it to the stack
 - `ListBadge` and `StatusBadge` keep their own width in a table cell instead of filling it
 
+### Fixed
+
+- `parseCpuLine` no longer counts guest and guest_nice twice, so CPU percent on hosts running VMs is no longer too high
+
 ## 1.1.1
 
 Plugin API 1.15.0.
