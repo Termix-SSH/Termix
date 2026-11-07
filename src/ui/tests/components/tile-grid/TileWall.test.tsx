@@ -113,6 +113,19 @@ describe("TileStack", () => {
     expect(screen.getByText("first").parentElement).toHaveClass("border-b");
     expect(screen.getByText("second").parentElement).toHaveClass("border-b");
   });
+
+  it("hides a section whose child renders nothing, like a closed editor", () => {
+    const Closed = () => null;
+    const { container } = render(
+      <TileStack>
+        <span>first</span>
+        <Closed />
+      </TileStack>,
+    );
+    const sections = container.querySelectorAll(".border-b");
+    expect(sections[sections.length - 1]).toHaveClass("empty:hidden");
+    expect(sections[sections.length - 1]).toBeEmptyDOMElement();
+  });
 });
 
 describe("cards outside a tile layout", () => {
