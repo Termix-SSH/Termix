@@ -10,6 +10,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
+  matchesWhen,
   onSurface,
   toJsonSchema,
   type OperationAction,
@@ -19,6 +20,7 @@ import {
   type OperationSignal,
   type OperationSurfaces,
 } from "@termix-ssh/plugin-sdk/operations";
+import { settingsFor } from "./hosts.js";
 import { getAction } from "./registry.js";
 import { qualifyPermission, type PluginManifest } from "../plugins/manifest.js";
 import { PermissionManager } from "../utils/permission-manager.js";
@@ -51,6 +53,11 @@ export interface CatalogAction extends Omit<
   outputs: CatalogField[];
   inputSchema: Record<string, unknown>;
   available: boolean;
+  /**
+   * For a host or resource action with `when`: the user's hosts it fits.
+   * Plugins only see their own host settings, so a client can't work it out.
+   */
+  hostIds?: number[];
 }
 
 export interface CatalogEvent extends OperationEvent {
@@ -169,9 +176,32 @@ export async function buildCatalog(options: {
     signals: [],
   };
 
+  // The user's hosts, loaded once and only when some action has a `when`.
+  let targets: number[] | null = null;
+  const userHosts = async () => {
+    if (!targets) {
+      const { loadProbeTargets } = await import("../plugins/ctx-probe.js");
+      targets = (await loadProbeTargets(options.userId)).map((t) => t.id);
+    }
+    return targets;
+  };
+
   for (const plugin of await runningPlugins()) {
     const operations = plugin.manifest.contributes?.operations;
     if (!operations) continue;
+    // Each host's settings for this plugin, read once for all its actions.
+    let hostSettings: Map<number, Record<string, unknown>> | null = null;
+    const fittingHosts = async (when: OperationAction["when"]) => {
+      if (!hostSettings) {
+        hostSettings = new Map();
+        for (const id of await userHosts()) {
+          hostSettings.set(id, await settingsFor(plugin.manifest, id));
+        }
+      }
+      return [...hostSettings]
+        .filter(([, settings]) => matchesWhen(when, { settings }))
+        .map(([id]) => id);
+    };
     const strings = stringsFor(plugin, lang);
     const text = (key: string) => strings[key] ?? key;
 
@@ -210,6 +240,10 @@ export async function buildCatalog(options: {
             inputs.find((input) => input.key === field.key)?.description,
         ),
         available: getAction(action.id) !== undefined,
+        hostIds:
+          action.when && action.scope !== "server"
+            ? await fittingHosts(action.when)
+            : undefined,
       });
     }
 

@@ -25,7 +25,8 @@ export function splitTags(tags: string | null | undefined): string[] {
     .filter(Boolean);
 }
 
-async function settingsFor(
+/** The host settings a plugin's `when` rules read, by key. */
+export async function settingsFor(
   manifest: PluginManifest,
   hostId: number,
 ): Promise<Record<string, unknown>> {
