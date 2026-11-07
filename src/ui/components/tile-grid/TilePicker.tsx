@@ -100,7 +100,7 @@ export function TilePicker({
   return (
     <div
       className={cn(
-        "flex h-full w-72 shrink-0 flex-col border-l border-border bg-surface/40",
+        "flex h-full w-72 shrink-0 flex-col border-l border-border bg-background",
         className,
       )}
     >
