@@ -4,7 +4,7 @@
  * re-released.
  *
  *   node scripts/pin-bundled-plugins.cjs          refresh the plugins already listed
- *   node scripts/pin-bundled-plugins.cjs --all    also add plugins new to the index that have a stable release (tier full)
+ *   node scripts/pin-bundled-plugins.cjs --all    also add plugins new to the index that have a stable release (tier from docker/plugin-tiers.json, else full)
  *   --core-version X                              skip releases whose engine.termix excludes X
  *
  * The release workflow runs it with --all and the version being released.
@@ -14,6 +14,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {
   loadBundledPlugins,
+  loadPluginTiers,
   pinsFromIndex,
 } = require("./lib/bundled-plugins.cjs");
 
@@ -35,7 +36,13 @@ async function main() {
 
   const current = loadBundledPlugins(root);
   const ids = all ? null : current.map((plugin) => plugin.id);
-  const plugins = pinsFromIndex(index, ids, current, coreVersion);
+  const plugins = pinsFromIndex(
+    index,
+    ids,
+    current,
+    coreVersion,
+    loadPluginTiers(root),
+  );
   fs.writeFileSync(configPath, `${JSON.stringify({ plugins }, null, 2)}\n`);
   console.log(
     `Pinned ${plugins.length} plugin(s) in docker/bundled-plugins.json`,

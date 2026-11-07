@@ -10,6 +10,7 @@ import {
   fetchArtifact,
   extractArtifact,
   pinsFromIndex,
+  parsePluginTiers,
   buildBundledIndex,
   findLocalPluginBuilds,
   isLocalBuildStale,
@@ -253,6 +254,34 @@ describe("buildBundledIndex", () => {
   });
 });
 
+describe("parsePluginTiers", () => {
+  it("reads tiers and onboarding", () => {
+    expect(
+      parsePluginTiers({
+        plugins: {
+          a: { tier: "full" },
+          b: { tier: "standard", onboarding: { recommended: true } },
+        },
+      }),
+    ).toEqual({
+      tiers: {
+        a: { tier: "full" },
+        b: {
+          tier: "standard",
+          onboarding: { recommended: true, consent: false },
+        },
+      },
+      problems: [],
+    });
+  });
+
+  it("reports a bad tier", () => {
+    expect(
+      parsePluginTiers({ plugins: { a: { tier: "huge" } } }).problems,
+    ).toEqual(["a tier must be one of minimal, standard, full"]);
+  });
+});
+
 describe("pinsFromIndex", () => {
   const index = {
     plugins: [
@@ -303,6 +332,26 @@ describe("pinsFromIndex", () => {
     ]);
     expect(pins[0].tier).toBe("standard");
     expect(pins[1].tier).toBe("full");
+  });
+
+  it("takes tier and onboarding for a new plugin from the tier map", () => {
+    const defaults = {
+      beta: {
+        tier: "standard",
+        onboarding: { recommended: true, consent: false },
+      },
+      alpha: { tier: "minimal" },
+    };
+    const pins = pinsFromIndex(
+      index,
+      null,
+      [{ id: "alpha", tier: "full" }],
+      null,
+      defaults,
+    );
+    expect(pins[0].tier).toBe("full");
+    expect(pins[1].tier).toBe("standard");
+    expect(pins[1].onboarding).toEqual({ recommended: true, consent: false });
   });
 
   it("skips releases whose engine.termix excludes the core version", () => {

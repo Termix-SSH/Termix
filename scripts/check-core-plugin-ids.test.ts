@@ -86,6 +86,20 @@ describe("scan beyond src", () => {
     expect(scan(dir)["src/ui/x.ts"]).toContain("/plugin-ws/extra-thing");
   });
 
+  it("knows ids from plugin-tiers.json, but not core words alone", () => {
+    const dir = fixture({
+      "docker/plugin-tiers.json": JSON.stringify({
+        plugins: { "next-thing": { tier: "full" }, notes: { tier: "full" } },
+      }),
+      "src/ui/x.ts": 'const a = "next-thing";\nconst b = "notes";\n',
+      "src/ui/y.ts": 'const route = "/plugin-api/notes/list";\n',
+    });
+    expect(scan(dir)).toEqual({
+      "src/ui/x.ts": ["next-thing"],
+      "src/ui/y.ts": ["/plugin-api/notes"],
+    });
+  });
+
   it("reads electron", () => {
     const dir = fixture({
       "electron/main.cjs": 'invoke("/plugin-api/tunnels/list");\n',
