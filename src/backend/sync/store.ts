@@ -112,6 +112,27 @@ export async function findStoredRow(
   return row ?? null;
 }
 
+/** The user's row whose matchOn columns equal the inbound row's. */
+async function findMatchingRow(
+  entity: RegisteredSyncEntity,
+  userId: string,
+  resolved: SyncRow,
+): Promise<SyncRow | null> {
+  const table = tableOf(entity);
+  const conditions: SQL[] = [eq(ownerColumn(entity), userId)];
+  for (const field of entity.matchOn ?? []) {
+    const value = resolved[field];
+    if (value === null || value === undefined || !table[field]) return null;
+    conditions.push(eq(table[field], value));
+  }
+  const [row] = (await db()
+    .select()
+    .from(table)
+    .where(and(...conditions))
+    .limit(1)) as SyncRow[];
+  return row ?? null;
+}
+
 /** The local ids of the user's own rows, by sync id. Unknown ones are left out. */
 export async function findStoredIds(
   entity: RegisteredSyncEntity,
@@ -327,16 +348,27 @@ export async function writeWireRow(
       ([field]) => columns.has(field),
     ),
   );
+  let where = locate(entity, userId, syncId);
+  let target = current;
+  let adopted = false;
+  if (!target && entity.matchOn?.length && !entity.singleton) {
+    target = await findMatchingRow(entity, userId, resolved);
+    if (target) {
+      // Same row made on both sides: keep it and take the inbound syncId.
+      where = eq(table.id, target.id);
+      adopted = true;
+    }
+  }
   const encrypted = encryptFields(
     entity,
     writable,
     DataCrypto.getUserDataKey(userId),
-    current ? String(current.id) : `sync-${syncId}`,
+    target ? String(target.id) : `sync-${syncId}`,
   );
+  if (adopted) encrypted.syncId = syncId;
   if (columns.has("updatedAt")) encrypted.updatedAt = new Date().toISOString();
 
-  const where = locate(entity, userId, syncId);
-  if (current) {
+  if (target) {
     await db().update(table).set(encrypted).where(where);
   } else {
     const insert: SyncRow = { ...encrypted, [entity.userColumn]: userId };
@@ -351,12 +383,12 @@ export async function writeWireRow(
       id,
       userId,
       wire,
-      created: !current,
+      created: !target,
       resolveId: resolvers.resolveId,
     });
   }
   DatabaseSaveTrigger.triggerSave("sync_write");
-  return { id, created: !current };
+  return { id, created: !target };
 }
 
 /** Deletes the user's row, through the entity's own remove when it has one. */

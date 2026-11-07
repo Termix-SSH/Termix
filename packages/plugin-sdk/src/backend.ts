@@ -213,6 +213,13 @@ export interface SyncEntityRegistration {
    * inbound row, and ignored when deciding whether a row changed.
    */
   readOnlyFields?: readonly string[];
+  /**
+   * Columns that identify a row besides its syncId, checked after references
+   * are resolved. An inbound row with an unknown syncId takes over the user's
+   * row with the same values here instead of inserting a second one, for
+   * tables with a unique key such as one row per host. API 1.16.
+   */
+  matchOn?: readonly string[];
   /** One row per user rather than many, keyed on the owner. */
   singleton?: boolean;
   /**

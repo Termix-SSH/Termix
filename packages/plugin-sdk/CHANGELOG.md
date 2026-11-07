@@ -2,10 +2,11 @@
 
 ## 1.1.2
 
-Plugin API 1.15.0.
+Plugin API 1.16.0.
 
 ### Added
 
+- Sync entities take `matchOn`, columns that identify a row besides its syncId, so a row made on both sides (one per host) is merged instead of failing
 - `PluginHostRecord` has `hasPassword` and `hasSudoPassword`, so a plugin knows a saved password exists without seeing it
 - `ctx.credentials.setSshKeyCertificate` stores an OpenSSH certificate on one of the acting user's SSH key credentials, or clears it with `null`
 - `/ui` exports `ToolbarBand` (a toolbar row outside the PanelShell toolbar), `ToolbarSelect` (a small select for those rows) and `TOOLBAR_FIT` (the classes that make every control in a row 32px)

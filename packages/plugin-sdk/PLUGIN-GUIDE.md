@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.1.2 | Plugin API 1.15.0
+SDK 1.1.2 | Plugin API 1.16.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -570,7 +570,9 @@ Other storage: `ctx.kv` for a few values, `ctx.settings` for settings, `ctx.secr
 `ctx.files.dataDir()` for files. To sync a table to a linked desktop, use `ctx.sync.registerEntity` and
 `contributes.syncEntities`. The entity name is part of the protocol and never changes.
 
-A registered table syncs the rows each user owns, both ways. For data you keep for the whole server (a shared
+A registered table syncs the rows each user owns, both ways. A table with a unique key besides `id` (one row per
+host) should set `matchOn: ["hostId"]` (Termix 26.11.1+): when both sides made that row, the inbound one takes over
+the local row instead of failing on the key. For data you keep for the whole server (a shared
 library, rows other users share), register a read only entity with `table: null`, `readOnly: true` and `load`,
 `write` and `erase` (Termix 26.10.6+). `load(userId)` returns the rows that user should get, each with a
 `syncId`. The desktop keeps them with `write` and drops them with `erase`, and never pushes them back:
