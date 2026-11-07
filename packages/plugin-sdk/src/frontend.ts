@@ -51,6 +51,10 @@ export interface PluginHostRecord {
   authType?: string;
   credentialId?: string | number | null;
   overrideCredentialUsername?: boolean;
+  /** Whether the host has a saved SSH password. The value never reaches plugins. */
+  hasPassword?: boolean;
+  /** Whether the host has a saved sudo password. The value never reaches plugins. */
+  hasSudoPassword?: boolean;
   /** "ssh", or the id of the plugin protocol a host without SSH uses. */
   connectionType?: string;
   /** Desktop app: where connections to this host start from. */

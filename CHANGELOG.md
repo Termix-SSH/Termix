@@ -60,6 +60,7 @@
 - SSH logins to servers that only offer group exchange no longer stall for up to a minute while checking a large key exchange group
 - Plugin views can open the host editor again, so the terminal's Edit host button works after a failed connection
 - The Linux arm64 and armv7l desktop builds start again instead of failing to load the image library
+- The terminal offers to fill a saved sudo or SSH password at a password prompt again
 
 ## 26.11.0
 

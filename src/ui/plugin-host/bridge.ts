@@ -182,6 +182,8 @@ export function toHostRecord(host: ShellHost): PluginHostRecord {
     authType: host.authType,
     credentialId: host.credentialId,
     overrideCredentialUsername: host.overrideCredentialUsername,
+    hasPassword: host.hasPassword,
+    hasSudoPassword: host.hasSudoPassword,
     connectionType: host.connectionType,
     connectionOrigin: host.connectionOrigin,
     enableSsh: host.enableSsh,

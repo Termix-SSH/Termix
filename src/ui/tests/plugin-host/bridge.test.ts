@@ -74,6 +74,17 @@ describe("toHostRecord", () => {
     expect(loose).not.toHaveProperty("terminalConfig");
     expect(loose).not.toHaveProperty("enableDocker");
   });
+
+  it("passes the saved password flags so a terminal can offer to fill them", () => {
+    const record = toHostRecord({
+      id: 7,
+      hasPassword: true,
+      hasSudoPassword: true,
+      sudoPassword: "secret",
+    } as never);
+    expect(record).toMatchObject({ hasPassword: true, hasSudoPassword: true });
+    expect(record).not.toHaveProperty("sudoPassword");
+  });
 });
 
 describe("useTheme", () => {
