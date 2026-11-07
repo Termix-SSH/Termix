@@ -61,6 +61,7 @@
 - Plugin views can open the host editor again, so the terminal's Edit host button works after a failed connection
 - The Linux arm64 and armv7l desktop builds start again instead of failing to load the image library
 - The terminal offers to fill a saved sudo or SSH password at a password prompt again
+- Closing the desktop app on GNOME, like Fedora Workstation, quits it instead of minimizing, since GNOME has no tray to bring it back from
 
 ## 26.11.0
 

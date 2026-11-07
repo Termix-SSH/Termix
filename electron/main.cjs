@@ -1564,16 +1564,18 @@ function createWindow() {
 
   mainWindow.on("close", (event) => {
     if (!isQuitting && tray && !tray.isDestroyed()) {
-      event.preventDefault();
-      // Stock GNOME has no tray to bring a hidden window back from.
+      // Stock GNOME has no tray to bring a hidden window back from, and its
+      // dock Quit only closes windows, so closing quits there.
       if (
         process.platform === "linux" &&
         /gnome/i.test(process.env.XDG_CURRENT_DESKTOP || "")
       ) {
-        mainWindow.minimize();
-      } else {
-        mainWindow.hide();
+        isQuitting = true;
+        app.quit();
+        return;
       }
+      event.preventDefault();
+      mainWindow.hide();
     }
   });
 

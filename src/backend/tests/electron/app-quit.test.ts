@@ -20,7 +20,7 @@ function harness(
     env: {},
   },
 ) {
-  const app = new EventEmitter();
+  const app = Object.assign(new EventEmitter(), { quit: vi.fn() });
   const window = Object.assign(new EventEmitter(), {
     webContents: new EventEmitter(),
     hide: vi.fn(),
@@ -74,7 +74,7 @@ function harness(
     window.webContents.emit("will-prevent-unload", prevented);
     return prevented.preventDefault.mock.calls.length > 0;
   }
-  return { window, rendererUnload, attemptQuit };
+  return { app, window, rendererUnload, attemptQuit };
 }
 
 describe("desktop quit with active connections", () => {
@@ -100,16 +100,20 @@ describe("desktop quit with active connections", () => {
     expect(event.preventDefault).toHaveBeenCalledOnce();
     expect(app.window.hide).toHaveBeenCalledOnce();
   });
-  it("minimizes instead of hiding on GNOME, which has no tray by default", () => {
+  it("quits on close on GNOME, which has no tray to come back from", () => {
     const app = harness(true, true, {
       platform: "linux",
       env: { XDG_CURRENT_DESKTOP: "ubuntu:GNOME" },
     });
     const event = { preventDefault: vi.fn() };
     app.window.emit("close", event);
-    expect(event.preventDefault).toHaveBeenCalledOnce();
-    expect(app.window.minimize).toHaveBeenCalledOnce();
+    expect(event.preventDefault).not.toHaveBeenCalled();
     expect(app.window.hide).not.toHaveBeenCalled();
+    expect(app.app.quit).toHaveBeenCalledOnce();
+    // The renderer's connection guard must not block this quit.
+    const unload = { preventDefault: vi.fn() };
+    app.window.webContents.emit("will-prevent-unload", unload);
+    expect(unload.preventDefault).toHaveBeenCalledOnce();
   });
   it("quits normally when no connection blocks unloading", () => {
     expect(harness(false).attemptQuit()).toBe(true);
