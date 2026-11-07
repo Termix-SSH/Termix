@@ -37,6 +37,7 @@ import { useTabs } from "./use-tabs";
 import { useSplit } from "./use-split";
 import { useWorkspaceLayout } from "./use-workspace-layout";
 import { useShellKeybindings } from "./use-shell-keybindings";
+import { useMouseHistoryGuard } from "./use-mouse-history-guard";
 import { useShellLifecycle } from "./use-shell-lifecycle";
 import { publishShellController } from "./shell-store";
 import type { ShellController, ShellPalette } from "./types";
@@ -259,6 +260,7 @@ export function ShellControllerProvider({
   ]);
 
   useWorkspaceLayout(tabsState, regions);
+  useMouseHistoryGuard();
   useShellKeybindings({
     tabsState,
     regions,
