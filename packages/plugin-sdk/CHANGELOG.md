@@ -14,6 +14,7 @@ Plugin API 1.16.0.
 - `TextAreaField` takes `fill`, so a config or log editor uses the rest of the height
 - `registerHostBadge` takes `useDot`. Every plugin's dots merge into one dot on the host row, with the worst tone and each reason in its tooltip. `/ui` exports `HostDotGroup` for layouts that draw host rows
 - `/ui` exports `getCredentialStorage` and `updateCredentialStorage`, and `HostPolicy` has `credentialStorage`
+- `LoginMethodUIProps` has `view`, the login page a method is drawn on
 
 ### Changed
 

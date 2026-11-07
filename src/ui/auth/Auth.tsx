@@ -1040,6 +1040,7 @@ export function Auth({ onLogin }: AuthProps) {
       rememberMe,
       disabled: loading,
       username,
+      view: view === "external" ? ("external" as const) : ("password" as const),
       submit: (body: Record<string, unknown>, instanceId?: string) =>
         submitMethod(method.id, body, instanceId),
       startRedirect: (instanceId?: string) =>

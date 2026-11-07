@@ -1068,6 +1068,11 @@ export interface LoginMethodUIProps {
   /** What the user typed in the username field, when there is one. */
   username?: string;
   /**
+   * Which page of the login screen this is drawn on, for a button that only
+   * belongs on one. Termix 26.11.1+.
+   */
+  view?: "password" | "external";
+  /**
    * Form methods: posts the body to the method's verify endpoint, then the
    * login screen finishes the login or shows the second-factor step.
    */
