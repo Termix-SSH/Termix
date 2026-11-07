@@ -603,6 +603,7 @@
     "hostClickBehavior": "點擊主機",
     "hostClickBehaviorDesc": "當您點擊已開啟分頁的主機時會發生的動作。Ctrl/Cmd 點擊、中鍵點擊或「在新分頁中開啟」總是會開啟新分頁。",
     "hostClickNewTab": "總是開啟新分頁",
+    "hostClickHostPage": "當外掛提供時，開啟主機頁面",
     "hostClickFocusExisting": "切換至已開啟的分頁",
     "hostClickFocusExistingDoubleNew": "單擊切換，雙擊開啟新分頁",
     "openInNewTab": "在新分頁中開啟",
@@ -1197,6 +1198,18 @@
         "title": "傳送警示",
         "consequence": "傳送給您或其他使用者，並透過他們設定的管道進行。"
       },
+      "operations:provide": {
+        "title": "提供操作",
+        "consequence": "其操作可由獲授權的使用者從自動化、CLI、手機應用程式及其他地方執行。"
+      },
+      "operations:invoke": {
+        "title": "執行其他外掛的操作",
+        "consequence": "代表已登入的使用者執行其清單中列出的操作。仍需遵守核准規則。"
+      },
+      "operations:approve": {
+        "title": "決定哪些需要核准",
+        "consequence": "可針對所有使用者，允許操作無需核准即可執行，或將其封鎖。"
+      },
       "notify:hub": {
         "title": "接收所有警示",
         "consequence": "儲存並傳遞所有外掛程式發送的警示，包括其內容。"
@@ -1220,6 +1233,10 @@
       "hosts:lock": {
         "title": "以唯讀方式管理主機",
         "consequence": "由其管理的主機無法被其他人編輯、刪除或重新分享。"
+      },
+      "hosts:connect-policy": {
+        "title": "決定誰可以連線",
+        "consequence": "可封鎖或允許對任何主機的 SSH 與遠端桌面連線。"
       },
       "desktop:window": {
         "title": "開啟桌面視窗",
@@ -1621,6 +1638,12 @@
       "title": "欄位",
       "auto": "自動",
       "count": "寬度 {{count}}"
+    },
+    "pager": {
+      "previous": "上一頁",
+      "next": "下一頁",
+      "page": "第 {{page}} 頁",
+      "pageOf": "第 {{page}} 頁，共 {{pages}} 頁"
     }
   },
   "fields": {
@@ -1636,5 +1659,29 @@
       "admin": "管理員",
       "user": "使用者"
     }
+  },
+  "tileGrid": {
+    "empty": "尚無磁片。請從清單中新增一些。",
+    "move": "拖曳以移動",
+    "moveTile": "移動 {{tile}}",
+    "settings": "{{tile}} 設定",
+    "remove": "移除 {{tile}}",
+    "width": "寬度",
+    "height": "高度",
+    "addTiles": "新增磁片",
+    "closePicker": "關閉",
+    "search": "搜尋磁片",
+    "noMatches": "沒有符合的結果。",
+    "kind": {
+      "all": "全部",
+      "card": "卡片",
+      "chart": "圖表",
+      "signal": "狀態",
+      "action": "操作",
+      "resource": "清單",
+      "session": "工作階段"
+    },
+    "reset": "重設",
+    "done": "完成"
   }
 }

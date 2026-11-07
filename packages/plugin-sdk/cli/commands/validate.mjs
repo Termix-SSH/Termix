@@ -51,6 +51,9 @@ export async function validate({ cwd }) {
   for (const warning of docsWarnings(cwd, raw)) {
     console.warn(`  warn  ${warning}`);
   }
+  for (const warning of uiWarnings(cwd)) {
+    console.warn(`  ui    ${warning}`);
+  }
 
   if (problems.length > 0) {
     for (const problem of problems) console.error(`  ${problem}`);
@@ -150,6 +153,92 @@ function walkSources(dir, out = []) {
     else if (/\.(ts|tsx|js|mjs|cjs)$/.test(entry.name)) out.push(full);
   }
   return out;
+}
+
+/** Whether line i sits inside a still open Button within the lines before it. */
+function insideButton(lines, i, reach = 12) {
+  const before = lines.slice(Math.max(0, i - reach), i + 1).join("\n");
+  const open = before.lastIndexOf("<Button");
+  const openLower = before.lastIndexOf("<button");
+  const start = Math.max(open, openLower);
+  if (start < 0) return false;
+  return !/<\/(Button|button)>/.test(before.slice(start));
+}
+
+const UI_RULES = [
+  {
+    test: (line) => /animate-spin|<Loader2\b/.test(line),
+    // Spinners inside a button, and activity spinners like "working", are fine.
+    skip: (lines, i) =>
+      insideButton(lines, i) ||
+      !/loading|Loading/.test(lines.slice(Math.max(0, i - 4), i + 4).join(" ")),
+    message: "raw spinner while loading, use LoadingState",
+  },
+  {
+    test: (line) => /<(ArrowLeft|ChevronLeft)\b/.test(line),
+    // Only real back buttons, not previous page or month arrows.
+    skip: (lines, i) =>
+      !insideButton(lines, i, 6) ||
+      !/back|onBack|close\b/i.test(
+        lines.slice(Math.max(0, i - 6), i + 4).join(" "),
+      ),
+    message:
+      "hand made back button, use BackButton in PanelShell leading or InlineView",
+  },
+  {
+    test: (line) => /<select\b/.test(line),
+    message: "native select, use Select or SelectField",
+  },
+  {
+    test: (line) => /\[&>button\]:flex-1/.test(line),
+    message: "stretched Segmented, keep filters at their natural width",
+  },
+  {
+    test: (line) =>
+      /(^|[\s"'`])bg-(muted|card|accent)(\/\d+)?(?=[\s"'`]|$)/.test(line) &&
+      /\bborder-b\b/.test(line) &&
+      /(uppercase|GroupHeading|py-1\.5)/.test(line),
+    message: "filled section header, headers have no background",
+  },
+  {
+    test: (line) => /max-h-\[\d+vh\]/.test(line),
+    message: "viewer capped by screen height, let it fill the view",
+  },
+  {
+    test: (line) => /<FormFooter\b/.test(line),
+    skip: (lines, i) =>
+      /footer\s*=/i.test(lines.slice(Math.max(0, i - 4), i + 1).join(" ")),
+    message:
+      "FormFooter in the body, pass it to an InlineView or PanelShell footer (PanelShell chrome={false} inside a tab) so it stays pinned",
+  },
+  {
+    test: (line) =>
+      /\{t\(["'][\w.]*[Ll]oading["']\)\}/.test(line) && !/label=/.test(line),
+    message: "plain loading text, use LoadingState",
+  },
+];
+
+/**
+ * Drift from the shared UI kit in src/frontend: raw spinners, hand made back
+ * buttons, native selects, stretched filters, filled headers and footers that
+ * scroll away. Warnings only, since some cases are on purpose.
+ */
+export function uiWarnings(cwd) {
+  const warnings = [];
+  for (const file of walkSources(path.join(cwd, "src", "frontend"))) {
+    if (!file.endsWith(".tsx")) continue;
+    const lines = fs.readFileSync(file, "utf8").split(/\r?\n/);
+    const rel = path.relative(cwd, file).replace(/\\/g, "/");
+    lines.forEach((line, i) => {
+      if (/^\s*(\/\/|\*|import\b)/.test(line)) return;
+      for (const rule of UI_RULES) {
+        if (rule.test(line) && !(rule.skip && rule.skip(lines, i))) {
+          warnings.push(`${rel}:${i + 1} ${rule.message}`);
+        }
+      }
+    });
+  }
+  return warnings;
 }
 
 /**

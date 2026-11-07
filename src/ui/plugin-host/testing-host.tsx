@@ -471,6 +471,7 @@ export {
   resetHostContributions,
 } from "@/sidebar/host-contributions";
 export { registerHostProtocol } from "@/sidebar/host-protocols";
+export { registerHostSection, resetHostSections } from "@/shell/host-sections";
 export {
   RAIL_ITEMS,
   registerRailItem,

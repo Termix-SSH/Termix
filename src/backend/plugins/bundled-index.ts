@@ -18,7 +18,14 @@ export interface OnboardingDefaults {
 
 type Recommended = boolean | "desktop";
 
+export interface BundledCatalogEntry {
+  tier: string;
+  version?: string;
+}
+
 interface BundledIndex {
+  profile?: string;
+  catalog?: Record<string, BundledCatalogEntry>;
   plugins: Record<
     string,
     {
@@ -45,7 +52,14 @@ export function readBundledIndex(): BundledIndex | null {
     );
     cached =
       raw && typeof raw.plugins === "object" && raw.plugins
-        ? { plugins: raw.plugins }
+        ? {
+            plugins: raw.plugins,
+            profile: typeof raw.profile === "string" ? raw.profile : undefined,
+            catalog:
+              raw.catalog && typeof raw.catalog === "object"
+                ? raw.catalog
+                : undefined,
+          }
         : null;
   } catch {
     cached = null;
@@ -101,21 +115,45 @@ export function onboardingDefaults(pluginId: string): OnboardingDefaults {
   };
 }
 
+const PROFILES = ["minimal", "standard", "full"];
+
 /**
- * The state a newly seen plugin's row starts in. Bundled plugins start
- * enabled, except on a fresh install, where only recommended ones do and
- * consent plugins wait for the admin. A plugin dropped into the data
- * directory always starts disabled.
+ * Plugins the image's profile ships (its tier and every smaller one), with
+ * the version it pins. Read from the bundled index, so core never names them.
+ */
+export function shippedCatalog(): Map<string, BundledCatalogEntry> {
+  const index = readBundledIndex();
+  const out = new Map<string, BundledCatalogEntry>();
+  if (!index?.catalog) return out;
+  const rank = PROFILES.indexOf(index.profile ?? "standard");
+  for (const [id, entry] of Object.entries(index.catalog)) {
+    if (!entry || typeof entry !== "object") continue;
+    const tier = PROFILES.indexOf(entry.tier);
+    if (tier === -1 || rank === -1 || tier > rank) continue;
+    out.set(id, entry);
+  }
+  return out;
+}
+
+/** Whether a shipped plugin should be on when an install first sees it. */
+export function startsEnabled(pluginId: string): boolean {
+  // The default look is what the app is drawn with.
+  if (isDefaultLookPlugin(pluginId)) return true;
+  const { recommended, consent } = onboardingDefaults(pluginId);
+  return recommended && !consent;
+}
+
+/**
+ * The state a newly seen plugin's row starts in. A bundled plugin starts on
+ * only when it is recommended, so a plugin a later release adds to the image
+ * does not switch itself on everywhere. Consent plugins wait for the admin.
+ * A plugin dropped into the data directory always starts disabled.
  */
 export function initialPluginState(
   pluginId: string,
   source: "bundled" | "user",
-  freshInstall: boolean,
+  _freshInstall: boolean,
 ): "enabled" | "disabled" {
   if (source !== "bundled") return "disabled";
-  if (!freshInstall) return "enabled";
-  // The default look is what the app is drawn with.
-  if (isDefaultLookPlugin(pluginId)) return "enabled";
-  const { recommended, consent } = onboardingDefaults(pluginId);
-  return recommended && !consent ? "enabled" : "disabled";
+  return startsEnabled(pluginId) ? "enabled" : "disabled";
 }

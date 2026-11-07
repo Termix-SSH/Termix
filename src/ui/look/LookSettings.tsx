@@ -48,7 +48,7 @@ export function LookSettings({ isAdmin }: { isAdmin: boolean }) {
       </p>
 
       {isAdmin && response && (
-        <div className="flex flex-col gap-1.5 border border-border p-2">
+        <div className="mt-1 flex flex-col gap-1.5 border-t border-border pt-3">
           <span className="text-[11px] font-medium text-foreground">
             {t("looks.defaultsLabel")}
           </span>

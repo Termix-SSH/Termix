@@ -15,6 +15,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { BackButton, PanelShell } from "@/components/panel-layout";
+import { TileColumn } from "@/components/tile-grid/TileColumn";
 import {
   PROMPT_BUTTON,
   PROMPT_DESTRUCTIVE_BUTTON,
@@ -397,6 +398,7 @@ export function InlineView({
   onBeforeClose,
   scroll = true,
   bare = false,
+  stacked = false,
   className,
   children,
 }: {
@@ -416,6 +418,11 @@ export function InlineView({
   scroll?: boolean;
   /** Draw children edge to edge, for views with their own bands. */
   bare?: boolean;
+  /**
+   * Cards stacked in one column with a line between them and no padding,
+   * like a settings page. For forms built from SectionCards.
+   */
+  stacked?: boolean;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -462,6 +469,10 @@ export function InlineView({
       >
         {bare ? (
           children
+        ) : stacked ? (
+          <TileColumn className={cn("w-full", className)}>
+            {children}
+          </TileColumn>
         ) : (
           <div
             className={cn(

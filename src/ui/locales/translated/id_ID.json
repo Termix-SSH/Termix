@@ -603,6 +603,7 @@
     "hostClickBehavior": "Mengklik host",
     "hostClickBehaviorDesc": "Apa yang terjadi saat Anda mengklik host yang sudah memiliki tab terbuka. Klik Ctrl/Cmd, klik tengah, atau \"Buka di tab baru\" selalu memulai yang baru.",
     "hostClickNewTab": "Selalu buka tab baru",
+    "hostClickHostPage": "Buka halaman host, jika plugin menyediakan",
     "hostClickFocusExisting": "Beralih ke tab yang terbuka",
     "hostClickFocusExistingDoubleNew": "Klik untuk beralih, klik dua kali untuk tab baru",
     "openInNewTab": "Buka di tab baru",
@@ -1197,6 +1198,18 @@
         "title": "Mengirim peringatan",
         "consequence": "Ke Anda atau pengguna lain, dan melalui saluran yang mereka atur."
       },
+      "operations:provide": {
+        "title": "Menawarkan tindakan",
+        "consequence": "Tindakannya dapat dijalankan dari Otomasi, CLI, aplikasi ponsel, dan tempat lain, oleh pengguna yang diizinkan."
+      },
+      "operations:invoke": {
+        "title": "Jalankan tindakan plugin lain",
+        "consequence": "Bertindak atas nama pengguna yang masuk untuk tindakan yang tercantum dalam manifestnya. Aturan persetujuan tetap berlaku."
+      },
+      "operations:approve": {
+        "title": "Tentukan apa yang memerlukan persetujuan",
+        "consequence": "Dapat mengizinkan tindakan berjalan tanpa persetujuan, atau memblokirnya, untuk setiap pengguna."
+      },
       "notify:hub": {
         "title": "Menerima setiap peringatan",
         "consequence": "Menyimpan dan mengirimkan semua peringatan yang dikirim plugin, termasuk isinya."
@@ -1220,6 +1233,10 @@
       "hosts:lock": {
         "title": "Kelola host sebagai baca saja",
         "consequence": "Host yang dikelolanya tidak dapat diedit, dihapus, atau dibagikan ulang oleh siapa pun."
+      },
+      "hosts:connect-policy": {
+        "title": "Tentukan siapa yang dapat terhubung",
+        "consequence": "Dapat memblokir atau mengizinkan setiap koneksi SSH dan desktop jarak jauh ke host apa pun."
       },
       "desktop:window": {
         "title": "Membuka jendela desktop",
@@ -1621,6 +1638,12 @@
       "title": "Kolom",
       "auto": "Otomatis",
       "count": "Lebar {{count}}"
+    },
+    "pager": {
+      "previous": "Sebelumnya",
+      "next": "Selanjutnya",
+      "page": "Halaman {{page}}",
+      "pageOf": "Halaman {{page}} dari {{pages}}"
     }
   },
   "fields": {
@@ -1636,5 +1659,29 @@
       "admin": "Admin",
       "user": "Pengguna"
     }
+  },
+  "tileGrid": {
+    "empty": "Belum ada ubin. Tambahkan beberapa dari daftar.",
+    "move": "Seret untuk memindahkan",
+    "moveTile": "Pindahkan {{tile}}",
+    "settings": "Pengaturan {{tile}}",
+    "remove": "Hapus {{tile}}",
+    "width": "Lebar",
+    "height": "Tinggi",
+    "addTiles": "Tambahkan ubin",
+    "closePicker": "Tutup",
+    "search": "Cari ubin",
+    "noMatches": "Tidak ada yang cocok.",
+    "kind": {
+      "all": "Semua",
+      "card": "Kartu",
+      "chart": "Bagan",
+      "signal": "Status",
+      "action": "Tindakan",
+      "resource": "Daftar",
+      "session": "Sesi"
+    },
+    "reset": "Setel ulang",
+    "done": "Selesai"
   }
 }

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useInSeamlessTile } from "@/components/tile-grid/context";
 import { cn } from "@/lib/utils";
 
 /** Default cap (px) for a scrollable card body before it scrolls. */
@@ -29,11 +30,37 @@ export function MetricCard({
   /** Max body height in px for scrollable cards. */
   scrollMax?: number;
 }) {
+  // In an edge to edge tile grid the grid draws the lines, so the card takes
+  // the dashboard tile look: no border or fill, the small title row.
+  const tiled = useInSeamlessTile();
   return (
-    <div className="flex min-h-0 flex-col overflow-hidden border border-border bg-card">
-      <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-2.5">
-        <span className="text-muted-foreground">{icon}</span>
-        <span className="flex-1 truncate text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+    <div
+      data-tile-card=""
+      className={cn(
+        "flex min-h-0 flex-col overflow-hidden",
+        !tiled && "border border-border",
+      )}
+    >
+      <div
+        className={cn(
+          "flex shrink-0 items-center gap-2 border-b border-border",
+          tiled ? "px-3 py-1.5" : "px-4 py-2.5",
+        )}
+      >
+        <span
+          className={cn(
+            "text-muted-foreground",
+            tiled && "flex [&_svg]:size-3",
+          )}
+        >
+          {icon}
+        </span>
+        <span
+          className={cn(
+            "flex-1 truncate font-semibold uppercase tracking-widest text-muted-foreground",
+            tiled ? "text-[10px]" : "text-xs",
+          )}
+        >
           {title}
         </span>
         {action && <div className="ml-auto shrink-0">{action}</div>}

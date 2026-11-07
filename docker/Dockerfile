@@ -114,7 +114,7 @@ ENV DATA_DIR=/app/data \
     PORT=8080 \
     NODE_ENV=production
 
-RUN apt-get update && apt-get install -y nginx gettext-base openssl ca-certificates gosu wget && \
+RUN apt-get update && apt-get install -y nginx gettext-base openssl ca-certificates gosu wget iputils-ping && \
     update-ca-certificates && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir -p /app/data /app/uploads /app/nginx /tmp/nginx && \

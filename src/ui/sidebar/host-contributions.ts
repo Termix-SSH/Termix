@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import { useEffect, type ComponentType } from "react";
 import type { Host } from "@/types/ui-types";
 import { byOrderThenId, createRegistry } from "@/lib/registry";
 import type { TabShellCallbacks } from "@/shell/tab-registry";
@@ -37,11 +37,26 @@ export interface HostActionDef {
   }[];
 }
 
+/** A problem a plugin wants shown as the host row's one status dot. */
+export interface HostDot {
+  tone: "bad" | "warn";
+  label: string;
+}
+
+/** Calls a plugin's dot hook and passes the answer up to the dot group. */
+export type HostDotReporter = ComponentType<{
+  host: Host;
+  report: (dot: HostDot | null) => void;
+}>;
+
 export interface HostBadgeDef {
   id: string;
   pluginId?: string;
   when: (host: Host) => boolean;
-  component: ComponentType<{ host: Host }>;
+  /** Drawn as is. Leave out when the badge is only a dot. */
+  component?: ComponentType<{ host: Host }>;
+  /** Merged with every other dot into one dot on the row. */
+  dot?: HostDotReporter;
   order?: number;
 }
 
@@ -112,6 +127,22 @@ export function defaultConnectAction(
   return hostActionsFor(all, host, "connect").sort(
     (a, b) => (b.priority ?? 0) - (a.priority ?? 0),
   )[0];
+}
+
+/** Turns a plugin's dot hook into a component the dot group can mount. */
+export function hostDotReporter(
+  useDot: (host: Host) => HostDot | null,
+): HostDotReporter {
+  return function HostDotReport({ host, report }) {
+    const dot = useDot(host);
+    const tone = dot?.tone;
+    const label = dot?.label ?? "";
+    useEffect(() => {
+      report(tone ? { tone, label } : null);
+    }, [tone, label, report]);
+    useEffect(() => () => report(null), [report]);
+    return null;
+  };
 }
 
 export function hostBadgesFor(all: HostBadgeDef[], host: Host): HostBadgeDef[] {

@@ -609,6 +609,7 @@
     "hostClickBehavior": "När du klickar på en värd",
     "hostClickBehaviorDesc": "Vad som händer när du klickar på en värd som redan har en öppen flik. Ctrl/Cmd-klick, mellanklick eller \"Öppna i ny flik\" startar alltid en ny.",
     "hostClickNewTab": "Öppna alltid en ny flik",
+    "hostClickHostPage": "Öppna värdens sida, om ett tillägg erbjuder en",
     "hostClickFocusExisting": "Byt till den öppna fliken",
     "hostClickFocusExistingDoubleNew": "Klicka för att byta, dubbelklicka för ny flik",
     "openInNewTab": "Öppna i ny flik",
@@ -1214,6 +1215,18 @@
         "title": "Skicka aviseringar",
         "consequence": "Till dig eller andra användare, och via de kanaler de har konfigurerat."
       },
+      "operations:provide": {
+        "title": "Erbjud åtgärder",
+        "consequence": "Dess åtgärder kan köras från automatiseringar, kommandoraden, mobilappen och andra platser, av personer som har tillstånd att använda dem."
+      },
+      "operations:invoke": {
+        "title": "Kör andra tilläggs åtgärder",
+        "consequence": "Utför åtgärder för den inloggade användaren enligt dess manifest. Godkännanderegler gäller fortfarande."
+      },
+      "operations:approve": {
+        "title": "Bestäm vad som kräver godkännande",
+        "consequence": "Kan låta åtgärder köras utan godkännande eller blockera dem, för varje användare."
+      },
       "notify:hub": {
         "title": "Ta emot alla aviseringar",
         "consequence": "Lagrar och levererar de aviseringar alla plugins skickar, inklusive deras innehåll."
@@ -1237,6 +1250,10 @@
       "hosts:lock": {
         "title": "Hantera värdar som skrivskyddade",
         "consequence": "Värdar som den hanterar kan inte redigeras, raderas eller delas om av någon annan."
+      },
+      "hosts:connect-policy": {
+        "title": "Bestäm vem som kan ansluta",
+        "consequence": "Kan blockera eller tillåta varje SSH- och fjärrskrivbordsanslutning till vilken värd som helst."
       },
       "desktop:window": {
         "title": "Öppna skrivbordsfönster",
@@ -1663,6 +1680,12 @@
       "title": "Kolumner",
       "auto": "Automatiskt",
       "count": "{{count}} bred"
+    },
+    "pager": {
+      "previous": "Föregående",
+      "next": "Nästa",
+      "page": "Sida {{page}}",
+      "pageOf": "Sida {{page}} av {{pages}}"
     }
   },
   "fields": {
@@ -1681,5 +1704,29 @@
       "admin": "Administratör",
       "user": "Användare"
     }
+  },
+  "tileGrid": {
+    "empty": "Inga kakel ännu. Lägg till några från listan.",
+    "move": "Dra för att flytta",
+    "moveTile": "Flytta {{tile}}",
+    "settings": "Inställningar för {{tile}}",
+    "remove": "Ta bort {{tile}}",
+    "width": "Bredd",
+    "height": "Höjd",
+    "addTiles": "Lägg till kakel",
+    "closePicker": "Stäng",
+    "search": "Sök bland kakel",
+    "noMatches": "Inga träffar.",
+    "kind": {
+      "all": "Alla",
+      "card": "Kort",
+      "chart": "Diagram",
+      "signal": "Status",
+      "action": "Åtgärder",
+      "resource": "Listor",
+      "session": "Sessioner"
+    },
+    "reset": "Återställ",
+    "done": "Klar"
   }
 }

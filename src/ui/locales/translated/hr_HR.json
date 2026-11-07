@@ -615,6 +615,7 @@
     "hostClickBehavior": "Klik na host",
     "hostClickBehaviorDesc": "Što se događa kada kliknete na host koji već ima otvoren tab. Ctrl/Cmd klik, srednji klik ili „Otvori u novom tabu“ uvijek otvaraju novi tab.",
     "hostClickNewTab": "Uvijek otvori novi tab",
+    "hostClickHostPage": "Otvori stranicu hosta, ako je plugin nudi",
     "hostClickFocusExisting": "Prebaci se na otvoreni tab",
     "hostClickFocusExistingDoubleNew": "Klik za prebacivanje, dvostruki klik za novi tab",
     "openInNewTab": "Otvori u novom tabu",
@@ -1231,6 +1232,18 @@
         "title": "Slanje obavijesti",
         "consequence": "Vama ili drugim korisnicima, putem kanala koje su oni postavili."
       },
+      "operations:provide": {
+        "title": "Nudi radnje",
+        "consequence": "Njegove radnje mogu se pokretati iz Automatizacija, CLI sučelja, mobilne aplikacije i drugih mjesta, od strane korisnika koji imaju dopuštenje za njihovo korištenje."
+      },
+      "operations:invoke": {
+        "title": "Pokreće radnje drugih pluginova",
+        "consequence": "Djeluje u ime prijavljenog korisnika na radnje navedene u njegovom manifestu. Pravila odobrenja i dalje vrijede."
+      },
+      "operations:approve": {
+        "title": "Određuje što zahtijeva odobrenje",
+        "consequence": "Može dopustiti radnjama da se pokrenu bez odobrenja ili ih blokirati za svakog korisnika."
+      },
       "notify:hub": {
         "title": "Primanje svih obavijesti",
         "consequence": "Sprema i dostavlja sve obavijesti koje šalju dodaci, uključujući njihov sadržaj."
@@ -1254,6 +1267,10 @@
       "hosts:lock": {
         "title": "Upravljanje domaćinima kao samo za čitanje",
         "consequence": "Domaćine koje upravlja ne mogu uređivati, brisati niti dijeliti drugi korisnici."
+      },
+      "hosts:connect-policy": {
+        "title": "Određuje tko se može povezati",
+        "consequence": "Može blokirati ili dopustiti svaku SSH i daljinsku desktop vezu s bilo kojim hostom."
       },
       "desktop:window": {
         "title": "Otvaranje prozora radne površine",
@@ -1705,6 +1722,12 @@
       "title": "Stupci",
       "auto": "Automatski",
       "count": "Širina: {{count}}"
+    },
+    "pager": {
+      "previous": "Prethodna",
+      "next": "Sljedeća",
+      "page": "Stranica {{page}}",
+      "pageOf": "Stranica {{page}} od {{pages}}"
     }
   },
   "fields": {
@@ -1726,5 +1749,29 @@
       "admin": "Administrator",
       "user": "Korisnik"
     }
+  },
+  "tileGrid": {
+    "empty": "Još nema pločica. Dodajte ih s popisa.",
+    "move": "Povucite za pomicanje",
+    "moveTile": "Premjesti {{tile}}",
+    "settings": "Postavke za {{tile}}",
+    "remove": "Ukloni {{tile}}",
+    "width": "Širina",
+    "height": "Visina",
+    "addTiles": "Dodaj pločice",
+    "closePicker": "Zatvori",
+    "search": "Pretraži pločice",
+    "noMatches": "Nema rezultata.",
+    "kind": {
+      "all": "Sve",
+      "card": "Kartice",
+      "chart": "Grafikon",
+      "signal": "Status",
+      "action": "Radnje",
+      "resource": "Popisi",
+      "session": "Sesije"
+    },
+    "reset": "Poništi",
+    "done": "Gotovo"
   }
 }

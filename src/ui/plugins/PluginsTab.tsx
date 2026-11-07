@@ -42,6 +42,8 @@ import {
   type PanelViewMode,
 } from "@/components/panel-layout";
 import { DataView, type DataColumn } from "@/components/data-view";
+import { StatusDot } from "@/components/status";
+import { TileStack } from "@/components/tile-grid/TileStack";
 import { InlineView, SurfaceScope } from "@/components/surface/surface-scope";
 import { cn } from "@/lib/utils";
 import {
@@ -57,6 +59,7 @@ import { PluginDetail } from "./PluginDetail";
 import {
   categoriesOf,
   describeContributions,
+  hasSourceBadge,
   isSevere,
   kindsOf,
   matchesQuery,
@@ -321,7 +324,7 @@ function Toolbar({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
       <div className="relative min-w-40 max-w-md flex-1">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -346,8 +349,13 @@ function Group({
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-2.5">
-      <GroupHeading title={title} count={count} />
+    <section className="flex flex-col">
+      <GroupHeading
+        plain
+        title={title}
+        count={count}
+        className="border-b border-border px-3 py-1.5"
+      />
       {children}
     </section>
   );
@@ -653,7 +661,7 @@ function ActiveFilters({
     });
   }
   return (
-    <div className="flex min-h-6 flex-wrap items-center gap-1.5">
+    <div className="flex min-h-6 flex-wrap items-center gap-1.5 border-b border-border px-3 py-1.5">
       <span className="text-[11px] text-muted-foreground">
         {t("plugins.manager.filters.results", { count: shown })}
       </span>
@@ -703,7 +711,7 @@ function Pager({
   const per = Number(size);
   if (total <= Number(PAGE_SIZES[0])) return null;
   return (
-    <div className="flex flex-wrap items-center gap-2 border-t border-border pt-2.5">
+    <div className="flex flex-wrap items-center gap-2 px-3 py-2">
       <span className="text-[11px] tabular-nums text-muted-foreground">
         {t("plugins.manager.pager.range", {
           from: (page - 1) * per + 1,
@@ -895,7 +903,7 @@ function InstalledSection({
       rail={<FilterRail rows={searched} facets={facets} onFacets={setFacets} />}
     >
       {(filtersButton) => (
-        <div className={`flex flex-col ${PANEL.gap} ${PANEL.body}`}>
+        <div className="flex flex-col">
           <Toolbar
             query={query}
             onQuery={onQuery}
@@ -1071,10 +1079,12 @@ function InstalledCard({
         facts={
           <>
             {plugin.unverified && <UnverifiedBadge />}
-            <SourceBadge
-              source={plugin.source}
-              registryName={plugin.registryName}
-            />
+            {hasSourceBadge(plugin.source) && (
+              <SourceBadge
+                source={plugin.source}
+                registryName={plugin.registryName}
+              />
+            )}
             {plugin.isBeta && <BetaBadge />}
             {plugin.author && <span>{plugin.author}</span>}
             <span>v{plugin.version}</span>
@@ -1083,43 +1093,38 @@ function InstalledCard({
         }
       />
 
-      {failed ? (
-        <div className="flex items-center gap-2 border-t border-border bg-destructive/5 px-3 py-2">
-          <TriangleAlert className="size-3.5 shrink-0 text-destructive" />
+      <div className="flex items-center gap-1.5 px-3 pb-2.5">
+        {failed ? (
           <span
-            className="flex-1 truncate text-[11px] text-muted-foreground"
+            className="flex min-w-0 items-center gap-1.5 text-[11px] text-destructive"
             title={plugin.lastError ?? undefined}
           >
-            {plugin.status === "blocked"
-              ? t("plugins.manager.status.blocked")
-              : t("plugins.manager.status.failed")}
+            <TriangleAlert className="size-3 shrink-0" />
+            <span className="truncate">
+              {plugin.status === "blocked"
+                ? t("plugins.manager.status.blocked")
+                : t("plugins.manager.status.failed")}
+            </span>
           </span>
-        </div>
-      ) : !running ? (
-        <div className="flex items-center gap-2 border-t border-border px-3 py-2">
-          <span className="size-1.5 shrink-0 bg-muted-foreground/40" />
-          <span className="text-[11px] text-muted-foreground">
-            {plugin.status === "server"
-              ? t("plugins.manager.status.server")
-              : plugin.status === "safeMode"
-                ? t("plugins.manager.status.safeMode")
-                : t("plugins.manager.status.disabled")}
+        ) : (
+          <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+            <StatusDot tone={running ? "ok" : "idle"} className="size-1.5" />
+            <span className="truncate">
+              {!running
+                ? plugin.status === "server"
+                  ? t("plugins.manager.status.server")
+                  : plugin.status === "safeMode"
+                    ? t("plugins.manager.status.safeMode")
+                    : t("plugins.manager.status.disabled")
+                : plugin.pinnedVersion
+                  ? t("plugins.manager.pinnedTo", {
+                      version: plugin.pinnedVersion,
+                    })
+                  : t("plugins.manager.status.running")}
+            </span>
           </span>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 border-t border-border px-3 py-2">
-          <span className="size-1.5 shrink-0 bg-green-500" />
-          <span className="text-[11px] text-muted-foreground">
-            {plugin.pinnedVersion
-              ? t("plugins.manager.pinnedTo", {
-                  version: plugin.pinnedVersion,
-                })
-              : t("plugins.manager.status.running")}
-          </span>
-        </div>
-      )}
-
-      <div className="flex items-center gap-1.5 border-t border-border px-3 py-2">
+        )}
+        <div className="flex-1" />
         {plugin.updateAvailable && !plugin.pinnedVersion && !failed && (
           <Button
             variant="outline"
@@ -1159,11 +1164,7 @@ function InstalledCard({
               : t("plugins.manager.enable")}
           </Button>
         )}
-        <DocsLink
-          href={plugin.docs}
-          variant="icon"
-          className="ml-auto size-6"
-        />
+        <DocsLink href={plugin.docs} variant="icon" className="size-6" />
         {!plugin.defaultLook && (
           <Button
             variant="ghost"
@@ -1171,10 +1172,7 @@ function InstalledCard({
             disabled={busy || locked}
             title={t("plugins.manager.uninstall")}
             aria-label={t("plugins.manager.uninstall")}
-            className={cn(
-              "text-muted-foreground hover:text-destructive",
-              !plugin.docs && "ml-auto",
-            )}
+            className="text-muted-foreground hover:text-destructive"
             onClick={() => void manager.uninstall(plugin)}
           >
             <Trash2 className="size-3" />
@@ -1442,7 +1440,7 @@ function BrowseSection({
       }
     >
       {(filtersButton) => (
-        <div className={`flex flex-col ${PANEL.gap} ${PANEL.body}`}>
+        <div className="flex flex-col">
           <Toolbar
             query={query}
             onQuery={onQuery}
@@ -1508,7 +1506,7 @@ function BrowseSection({
             }}
           />
 
-          <p className="text-[11px] text-muted-foreground">
+          <p className="px-3 py-2 text-[11px] text-muted-foreground">
             {t("plugins.manager.registries.browseHint")}{" "}
             <DocsLink core="communityRegistry" className="text-[11px]">
               {t("plugins.manager.communitySubmit")}
@@ -1540,10 +1538,12 @@ function BrowseCard({
         onOpen={onOpen}
         facts={
           <>
-            <SourceBadge
-              source={plugin.source}
-              registryName={plugin.registryName}
-            />
+            {hasSourceBadge(plugin.source) && (
+              <SourceBadge
+                source={plugin.source}
+                registryName={plugin.registryName}
+              />
+            )}
             {plugin.author && <span>{plugin.author}</span>}
             {plugin.latestVersion && <span>v{plugin.latestVersion}</span>}
             {plugin.category && <span>{plugin.category}</span>}
@@ -1551,7 +1551,7 @@ function BrowseCard({
           </>
         }
       />
-      <div className="flex items-center gap-2 border-t border-border px-3 py-2">
+      <div className="flex items-center gap-2 px-3 pb-2.5">
         <span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground">
           {plugin.unsupported && !plugin.installed
             ? ""
@@ -1646,9 +1646,9 @@ function UpdatesSection({
   }
 
   return (
-    <div className={`flex flex-col ${PANEL.gap} ${PANEL.body}`}>
+    <TileStack>
       {plain.length > 0 && (
-        <Card className="flex-row items-center gap-3 px-3 py-2.5">
+        <div className="flex items-center gap-3 px-3 py-2.5">
           <span className="flex-1 text-xs text-muted-foreground">
             {t("plugins.manager.updatesReady", { count: plain.length })}
             {gated.length > 0 &&
@@ -1664,20 +1664,17 @@ function UpdatesSection({
             <Download className="size-3.5" />
             {t("plugins.manager.updateAll")}
           </Button>
-        </Card>
+        </div>
       )}
-
-      <div className="flex flex-col gap-3">
-        {[...gated, ...plain, ...pinned].map((p) => (
-          <UpdateRow
-            key={p.id}
-            plugin={p}
-            manager={manager}
-            onOpen={() => onOpen(p.id)}
-          />
-        ))}
-      </div>
-    </div>
+      {[...gated, ...plain, ...pinned].map((p) => (
+        <UpdateRow
+          key={p.id}
+          plugin={p}
+          manager={manager}
+          onOpen={() => onOpen(p.id)}
+        />
+      ))}
+    </TileStack>
   );
 }
 

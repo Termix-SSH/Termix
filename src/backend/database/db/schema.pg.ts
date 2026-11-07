@@ -673,8 +673,100 @@ export const apiKeys = pgTable(
     expiresAt: text("expires_at"),
     lastUsedAt: text("last_used_at"),
     isActive: boolean("is_active").notNull().default(true),
+    // JSON list. Null means full access, which every older key has.
+    scopes: text("scopes"),
   },
   (table) => [index("idx_api_keys_user_id").on(table.userId)],
+);
+
+export const operationRuns = pgTable(
+  "operation_runs",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    actionId: text("action_id").notNull(),
+    actionVersion: integer("action_version").notNull().default(1),
+    pluginId: text("plugin_id").notNull(),
+    pluginVersion: text("plugin_version").notNull(),
+
+    // Nullable on purpose: history outlives the account, like audit_logs.
+    userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "set null" }),
+    username: text("username").notNull(),
+
+    origin: text("origin").notNull(),
+    hostId: integer("host_id"),
+    hostName: text("host_name"),
+    batchId: varchar("batch_id", { length: 255 }),
+    dryRun: boolean("dry_run").notNull().default(false),
+    risk: text("risk").notNull(),
+    status: varchar("status", { length: 255 }).notNull(),
+    summary: text("summary"),
+    changed: boolean("changed"),
+    input: text("input"),
+    // Only until the run ends, then wiped.
+    sealedInput: text("sealed_input"),
+    output: text("output"),
+    undoInput: text("undo_input"),
+    error: text("error"),
+    errorCode: text("error_code"),
+    undoOf: text("undo_of"),
+    idempotencyKey: text("idempotency_key"),
+    createdAt: varchar("created_at", { length: 255 }).notNull(),
+    startedAt: text("started_at"),
+    finishedAt: text("finished_at"),
+  },
+  (table) => [
+    index("idx_operation_runs_created").on(table.createdAt),
+    index("idx_operation_runs_user_created").on(table.userId, table.createdAt),
+    index("idx_operation_runs_host_created").on(table.hostId, table.createdAt),
+    index("idx_operation_runs_status").on(table.status),
+    index("idx_operation_runs_batch").on(table.batchId),
+  ],
+);
+
+export const operationApprovals = pgTable(
+  "operation_approvals",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    runId: varchar("run_id", { length: 255 })
+      .notNull()
+      .references(() => operationRuns.id, { onDelete: "cascade" }),
+    requestedBy: text("requested_by"),
+    reason: text("reason"),
+    allowSelf: boolean("allow_self")
+      .notNull()
+      .default(false),
+    status: varchar("status", { length: 255 }).notNull(),
+    decidedBy: text("decided_by"),
+    comment: text("comment"),
+    createdAt: text("created_at").notNull(),
+    expiresAt: varchar("expires_at", { length: 255 }).notNull(),
+    decidedAt: text("decided_at"),
+  },
+  (table) => [
+    index("idx_operation_approvals_status").on(table.status, table.expiresAt),
+    index("idx_operation_approvals_run").on(table.runId),
+  ],
+);
+
+export const operationEvents = pgTable(
+  "operation_events",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    eventId: text("event_id").notNull(),
+    pluginId: text("plugin_id").notNull(),
+    hostId: integer("host_id"),
+    severity: text("severity"),
+    payload: text("payload"),
+    runId: text("run_id"),
+    createdAt: varchar("created_at", { length: 255 }).notNull(),
+  },
+  (table) => [
+    index("idx_operation_events_created").on(table.createdAt),
+    index("idx_operation_events_host_created").on(
+      table.hostId,
+      table.createdAt,
+    ),
+  ],
 );
 
 export const userOpenTabs = pgTable(

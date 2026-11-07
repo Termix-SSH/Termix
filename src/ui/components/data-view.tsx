@@ -1,8 +1,8 @@
 import type React from "react";
 import { cn } from "@/lib/utils";
+import { TileWall } from "@/components/tile-grid/TileWall";
+import { BottomEdge } from "@/components/tile-grid/edge";
 import {
-  PANEL,
-  gridSizeStyle,
   type GridSize,
   type PanelDensity,
   type PanelViewMode,
@@ -91,7 +91,10 @@ function columnVisibility(hideBelow?: "md" | "lg"): string {
   return "";
 }
 
-/** One collection as a card grid or a dense row table. */
+/**
+ * One collection as a card grid or a dense row table, edge to edge with
+ * shared lines like the rest of the tile look.
+ */
 export function DataView<T>({
   items,
   view,
@@ -132,21 +135,18 @@ export function DataView<T>({
 
   if (view === "grid") {
     return (
-      <div
-        className={cn(
-          "grid",
-          PANEL.gap,
-          !size && gridClass(columns),
-          className,
-        )}
-        style={size ? gridSizeStyle(size, minCardWidth) : undefined}
+      <TileWall
+        size={size}
+        minWidth={minCardWidth ?? 320}
+        gridClassName={size ? undefined : gridClass(columns)}
+        className={className}
       >
         {items.map((item) => (
           <div key={getKey(item)} className="flex flex-col *:flex-1">
             {renderCard(item)}
           </div>
         ))}
-      </div>
+      </TileWall>
     );
   }
 
@@ -154,68 +154,70 @@ export function DataView<T>({
   const rowHeight = density === "compact" ? "min-h-7" : "min-h-9";
 
   return (
-    <div
-      className={cn("@container border border-border bg-card", className)}
-      style={
-        {
-          "--data-view-cols": templates.base,
-          "--data-view-cols-md": templates.md,
-          "--data-view-cols-lg": templates.lg,
-        } as React.CSSProperties
-      }
-      role="table"
-    >
+    <BottomEdge>
       <div
-        className={cn(
-          LIST_GRID_CLASS,
-          "sticky top-0 z-10 items-center border-b border-border bg-card text-[10px] font-semibold uppercase tracking-widest text-muted-foreground",
-        )}
+        className={cn("@container", className)}
+        style={
+          {
+            "--data-view-cols": templates.base,
+            "--data-view-cols-md": templates.md,
+            "--data-view-cols-lg": templates.lg,
+          } as React.CSSProperties
+        }
+        role="table"
       >
-        {listColumns.map((column) => (
-          <span
-            key={column.key}
-            className={cn(
-              "truncate py-2",
-              column.align === "end" && "text-right",
-              columnVisibility(column.hideBelow),
-            )}
-          >
-            {column.header}
-          </span>
-        ))}
-      </div>
-
-      <div>
-        {items.map((item) => {
-          const active = isRowActive?.(item) ?? false;
-          return (
-            <div
-              key={getKey(item)}
-              onClick={onRowClick ? () => onRowClick(item) : undefined}
+        <div
+          className={cn(
+            LIST_GRID_CLASS,
+            "sticky top-0 z-10 items-center border-b border-border bg-background text-[10px] font-semibold uppercase tracking-widest text-muted-foreground",
+          )}
+        >
+          {listColumns.map((column) => (
+            <span
+              key={column.key}
               className={cn(
-                LIST_GRID_CLASS,
-                "items-center border-b border-border/50 text-xs transition-colors last:border-0",
-                rowHeight,
-                onRowClick && "cursor-pointer",
-                active ? "bg-accent-brand/10" : "hover:bg-muted/40",
+                "truncate py-2",
+                column.align === "end" && "text-right",
+                columnVisibility(column.hideBelow),
               )}
             >
-              {listColumns.map((column) => (
-                <div
-                  key={column.key}
-                  className={cn(
-                    "min-w-0 truncate",
-                    column.align === "end" && "text-right",
-                    columnVisibility(column.hideBelow),
-                  )}
-                >
-                  {column.cell(item)}
-                </div>
-              ))}
-            </div>
-          );
-        })}
+              {column.header}
+            </span>
+          ))}
+        </div>
+
+        <div>
+          {items.map((item) => {
+            const active = isRowActive?.(item) ?? false;
+            return (
+              <div
+                key={getKey(item)}
+                onClick={onRowClick ? () => onRowClick(item) : undefined}
+                className={cn(
+                  LIST_GRID_CLASS,
+                  "items-center border-b border-border/50 text-xs transition-colors last:border-border",
+                  rowHeight,
+                  onRowClick && "cursor-pointer",
+                  active ? "bg-accent-brand/10" : "hover:bg-muted/40",
+                )}
+              >
+                {listColumns.map((column) => (
+                  <div
+                    key={column.key}
+                    className={cn(
+                      "min-w-0 truncate",
+                      column.align === "end" && "text-right",
+                      columnVisibility(column.hideBelow),
+                    )}
+                  >
+                    {column.cell(item)}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </BottomEdge>
   );
 }

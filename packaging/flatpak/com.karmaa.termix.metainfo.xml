@@ -7,7 +7,9 @@
     <metadata_license>CC0-1.0</metadata_license>
     <project_license>Apache-2.0</project_license>
 
-    <developer_name>bugattiguy527</developer_name>
+    <developer id="site.termix">
+        <name>Termix</name>
+    </developer>
 
     <description>
         <p>
@@ -59,9 +61,6 @@
 
     </keywords>
 
-    <provides>
-        <binary>termix</binary>
-    </provides>
 
     <requires>
         <internet>always</internet>

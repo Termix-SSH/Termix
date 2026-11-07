@@ -49,11 +49,11 @@ const LIST: OnboardingPluginList = {
 };
 
 describe("defaultChoices", () => {
-  it("keeps recommended plugins and removes the rest on a fresh install", () => {
+  it("keeps recommended plugins on and the rest off on a fresh install", () => {
     expect(defaultChoices(LIST)).toEqual({
       term: "enabled",
-      base: "remove",
-      addon: "remove",
+      base: "disabled",
+      addon: "disabled",
       stats: "enabled",
     });
   });
@@ -139,8 +139,8 @@ describe("PluginsStep", () => {
       resolved: {},
       adjustments: [],
       enabled: [],
-      disabled: [],
-      removed: ["base", "addon"],
+      disabled: ["base", "addon"],
+      removed: [],
       failed: [],
     });
     api.getOnboardingPlugins.mockResolvedValueOnce(LIST).mockResolvedValue({
@@ -155,8 +155,8 @@ describe("PluginsStep", () => {
     expect(ok).toBe(true);
     expect(api.applyOnboardingPlugins).toHaveBeenCalledWith({
       term: "enabled",
-      base: "remove",
-      addon: "remove",
+      base: "disabled",
+      addon: "disabled",
       stats: "enabled",
     });
     expect(loader.syncPlugins).toHaveBeenCalled();

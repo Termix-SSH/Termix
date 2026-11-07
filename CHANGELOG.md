@@ -4,11 +4,55 @@
 
 ### Added
 
-- Plugins can store a CA-signed SSH certificate on an existing SSH key credential with `ctx.credentials.setSshKeyCertificate`, so a credential that Termix connects with carries the certificate a plugin just issued instead of a stale one
+- Plugins in the desktop app can drag files out to Explorer or Finder
+- Termix actions: plugins can declare what they do once, and it works from the API with permission checks, dry runs, run history and approvals
+- API keys can be limited to reading or running actions, when an admin makes them
+- A click on a host can open its host page, when a plugin offers one
+- Plugins can build pages of tiles you drag and resize, and add many copies of one dashboard card, each with its own settings
+- A plugin a newer release ships is downloaded on its own when your image does not have it, and tried again on the next start when offline
+- Plugins can decide who may connect to a host, so a host can need approved access before an SSH or remote desktop session opens
+- When more than one plugin flags a host, its row shows one status dot with every reason in its tooltip
+- Plugins that issue SSH certificates can save them on the SSH key login they were issued for
+
+### Changed
+
+- Plugin cards and pages use the dashboard look everywhere, with shared lines between sections instead of separate boxes with gaps
+- The Plugins tab and plugin pages use the same look
+- List rows in plugins follow the host list status colors: accent for good, dark for offline or bad
+- Line charts that cover a few minutes show seconds in their times
+- Plugins a new release adds to the image start on only when they are recommended. The rest are installed and left off for an admin to turn on
+
+- Host status, import and export, and credential tools now start on for new installs
+- Sync now starts on in a new desktop app, so it can link to a server
+- The first run plugin picker leaves plugins you did not choose off instead of removing them
+- The Linux Flatpak now installs from flatpak.termix.site on x86_64 and arm64, and `flatpak update` keeps it current
+- Dropdowns and text areas are the same size as the text fields next to them
+- A page's own tabs sit above its search bar
+- A plugin view that is still starting shows the same loading spinner as the rest of Termix
 
 ### Fixed
 
 - The first run plugin picker no longer sets the default layout and themes to Remove. They always stay on
+- Alerts with no icon no longer squeeze their text to one word per line
+- Password fields with the show button are the same height as the other fields next to them
+- Button groups next to tabs no longer touch the lines of the tab row
+- The Secure your account setup step no longer shows up empty when no passkey or authenticator plugin is on
+- An installed plugin update older than the copy in a newer image is removed at startup instead of logging an error every boot
+- Canceling a download to the desktop app right as it starts no longer leaves a partial file behind
+- Changing two interface settings at once, like resetting the dashboard, now saves both instead of only the last one
+- Release notes on a plugin's page are no longer cut off on the left
+- The Community badge in Browse is no longer missing its top border
+- Official plugin pages no longer show a stray divider before the author
+- The version picker on a plugin's page is no longer empty for a plugin installed from a local build
+- The plugin video no longer has a second border around it
+- The hint at the bottom of Browse and the stored data footer on plugin pages have the same padding as the rest of the page
+- Sign in methods on the Security page have a line between them
+- Chart axis labels with long units, like KiB/s, are no longer cut off
+- Filters, view toggles and small buttons in a toolbar are the same height as the search box next to them
+- Save and Cancel at the bottom of a form are the same height as other buttons
+- State badges in tables no longer stretch across the whole column
+- Text boxes, dropdowns, checkboxes and button groups share one border color
+- Small icons in buttons sit centered instead of half a pixel off
 
 ## 26.11.0
 

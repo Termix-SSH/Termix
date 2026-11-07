@@ -4,6 +4,7 @@ import { ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/button";
+import { useStatusColorScheme } from "@/hooks/use-status-color-scheme";
 
 export type ListRowTone =
   "brand" | "muted" | "success" | "warning" | "destructive" | "none";
@@ -14,6 +15,16 @@ const STRIPE: Record<ListRowTone, string> = {
   success: "bg-green-500/70",
   warning: "bg-warning/70",
   destructive: "bg-destructive/70",
+  none: "bg-transparent",
+};
+
+// Accent scheme, like the host list: good is the accent, anything else is dim.
+const ACCENT_STRIPE: Record<ListRowTone, string> = {
+  brand: "bg-accent-brand/60",
+  muted: "bg-muted-foreground/30",
+  success: "bg-accent-brand/60",
+  warning: "bg-muted-foreground/30",
+  destructive: "bg-muted-foreground/30",
   none: "bg-transparent",
 };
 
@@ -96,6 +107,7 @@ export function ListRow({
   React.HTMLAttributes<HTMLDivElement>,
   "title" | "onClick" | "children"
 >) {
+  const stripes = useStatusColorScheme() === "status" ? STRIPE : ACCENT_STRIPE;
   return (
     <div
       {...rest}
@@ -127,7 +139,7 @@ export function ListRow({
       <div
         className={cn(
           "w-[3px] shrink-0",
-          selected ? "bg-accent-brand" : !color && STRIPE[tone],
+          selected ? "bg-accent-brand" : !color && stripes[tone],
         )}
         style={color && !selected ? { backgroundColor: color } : undefined}
       />
@@ -220,7 +232,7 @@ export function ListBadge({
   return (
     <span
       className={cn(
-        "flex shrink-0 items-center gap-0.5 border px-1 py-px text-[9px] uppercase leading-none tracking-wider [&_svg]:size-2.5",
+        "inline-flex w-fit shrink-0 items-center gap-0.5 border px-1 py-px text-[9px] uppercase leading-none tracking-wider [&_svg]:size-2.5",
         tone === "brand" &&
           "border-accent-brand/30 bg-accent-brand/10 text-accent-brand",
         tone === "warning" && "border-warning/30 bg-warning/10 text-warning",
@@ -382,7 +394,8 @@ export function AddButton({
         className,
       )}
     >
-      <Plus className="size-3.5" />
+      {/* Whole pixels so the plus sits centered; the root font is 14px. */}
+      <Plus className="size-[12px]" />
       {!compact && <span>{text}</span>}
     </Button>
   );
@@ -428,7 +441,6 @@ export function FormFooter({
       {onDelete && (
         <Button
           variant="ghost"
-          size="sm"
           onClick={onDelete}
           disabled={saving}
           className="text-destructive hover:bg-destructive/10 hover:text-destructive dark:hover:bg-destructive/10"
@@ -444,7 +456,7 @@ export function FormFooter({
           ))}
       </div>
       {onCancel && (
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>
+        <Button variant="ghost" onClick={onCancel} disabled={saving}>
           {cancelLabel ?? t("common.cancel")}
         </Button>
       )}
@@ -454,7 +466,6 @@ export function FormFooter({
           type={saveType}
           form={form}
           variant="outline"
-          size="sm"
           onClick={onSave}
           disabled={disabled || saving}
           className="border-accent-brand/40 px-6 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand dark:border-accent-brand/40 dark:bg-transparent dark:hover:bg-accent-brand/10"

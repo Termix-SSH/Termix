@@ -1,10 +1,84 @@
 # Changelog
 
-## 1.0.23
+## 1.1.2
+
+Plugin API 1.15.0.
 
 ### Added
 
-- `ctx.credentials.setSshKeyCertificate` stores a CA-signed OpenSSH certificate on an existing SSH key credential, so the credential Termix connects with carries the certificate a plugin just issued. Clearing it with `null` works too
+- `ctx.credentials.setSshKeyCertificate` stores an OpenSSH certificate on one of the acting user's SSH key credentials, or clears it with `null`
+- `/ui` exports `ToolbarBand` (a toolbar row outside the PanelShell toolbar), `ToolbarSelect` (a small select for those rows) and `TOOLBAR_FIT` (the classes that make every control in a row 32px)
+- `PANEL.section`, the one inner layout for a SectionCard body
+- `TextAreaField` takes `fill`, so a config or log editor uses the rest of the height
+- `registerHostBadge` takes `useDot`. Every plugin's dots merge into one dot on the host row, with the worst tone and each reason in its tooltip. `/ui` exports `HostDotGroup` for layouts that draw host rows
+
+### Changed
+
+- Controls in the PanelShell toolbar, tab band and footer are all 32px, so small buttons line up with search boxes and selects
+- `Segmented` and `ViewToggle` match the height of inputs and buttons, and `Segmented` keeps its natural width
+- `FormFooter` buttons are full height
+- `PANEL.body` is `p-3`, the same padding `InlineView` gives a form
+- A body with a pinned footer no longer draws a closing line just above the footer's own line
+- The placeholder for a plugin view that is still starting uses `LoadingState`
+- `termix-plugin validate` warns about UI drift: raw loading spinners, small back buttons, native selects, stretched filters, filled headers, capped log views and footers that scroll away
+- A `ToolbarBand` right inside a `TileStack` leaves the line under it to the stack
+- `ListBadge` and `StatusBadge` keep their own width in a table cell instead of filling it
+
+## 1.1.1
+
+Plugin API 1.15.0.
+
+### Added
+
+- `ctx.hosts.connectPolicy.provide` and the `hosts:connect-policy` capability, so a plugin can allow, deny or ask for an access request before an SSH or remote desktop session opens
+- SSH prepare outcomes can carry the error codes `access-denied` and `access-required` with a `requestTab`
+
+## 1.1.0
+
+Plugin API 1.15.0.
+
+### Added
+
+- `/ui` exports `TileGrid`, `TileFrame` and `TilePicker`, the 12 column tile grid the dashboard, the host page and Host Metrics share, plus `appendTile`, `flowTiles`, `removeTile`, `sanitizeTiles` and the `TileSlot` type
+- `registerDashboardCard` takes `entries`, so one card can be placed many times with its own `config`, and `defaultSize` for the grid
+- Dashboard cards get `config`, `setConfig` and `editMode`
+- `/ui` exports `TileWall` (a fixed grid of tiles with shared lines), `TileStack` and `TileColumn` (sections stacked with a line between), `TileEditBar`, and `SeamlessTileContext` with `useInSeamlessTile`
+- `/ui` exports `StatTile`, `InfoGrid`, `StatusDot`, `StatusBadge` and `statusTone`, `LoadingState`, `NoticePanel`, `Pager` with `usePaged` and `pageOf`, `DataTable` with `DataTableRow`, `SideNav` with `SideNavItem`, `PanelFrame` and `RefreshButton`
+- `InlineView` takes `stacked`, which lays SectionCards out in one column with lines between them
+- `GroupHeading` takes `plain`, which drops the rule after the title. Inside a tile layout that is the default
+
+### Changed
+
+- `Card`, `SectionCard`, `MetricCard` and `DataView` use the tile look: no fill, and inside a tile layout no box either. `DataView` grids sit edge to edge with shared lines
+
+## 1.0.25
+
+Plugin API 1.14.0.
+
+### Added
+
+- Host click behavior `hostPage` opens a host page when a plugin offers one
+- `createApiKey` takes scopes, to limit a key to actions
+
+## 1.0.24
+
+Plugin API 1.14.0.
+
+### Added
+
+- `app.registerHostSection` adds a card to the host page
+- `/ui` exports `HostTabEmbed`, which draws any tab type inside another view, the host section registry, and `operationsApi` for core's `/operations` routes
+
+## 1.0.23
+
+Plugin API 1.14.0.
+
+### Added
+
+- `contributes.operations` declares a plugin's actions, events, resources and signals, so Automations, Fleets, the assistant, the CLI, the phone app and the command palette can find them with no wiring
+- `ctx.operations` registers handlers, runs other plugins' declared actions, emits events and provides approval rules, with the new `operations:provide`, `operations:invoke` and `operations:approve` capabilities
+- `@termix-ssh/plugin-sdk/operations` has the types, input checks, redaction and JSON Schema for declared actions
+- `contributes.hostSections` declares cards for the host page
 
 ## 1.0.22
 

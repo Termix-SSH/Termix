@@ -656,7 +656,7 @@ export interface HostProtocolContribution {
   quickConnect?: { showDomain?: boolean };
 }
 
-export interface HostBadgeContribution {
+export interface HostRowContribution {
   id: string;
   when: (host: PluginHostRecord) => boolean;
   component: ComponentType<{ host: PluginHostRecord }>;
@@ -664,11 +664,48 @@ export interface HostBadgeContribution {
   order?: number;
 }
 
+/** A problem shown as the host row's status dot. */
+export interface HostDot {
+  tone: "bad" | "warn";
+  label: string;
+}
+
+export interface HostBadgeContribution {
+  id: string;
+  when: (host: PluginHostRecord) => boolean;
+  /** Drawn as is on the row. Leave out for a badge that is only a dot. */
+  component?: ComponentType<{ host: PluginHostRecord }>;
+  /**
+   * A hook that returns a problem or null. Every plugin's dots merge into one
+   * dot on the row, with the worst tone and each label in its tooltip, so two
+   * plugins reporting the same host never draw two dots. Core 26.11.1+.
+   */
+  useDot?: (host: PluginHostRecord) => HostDot | null;
+  /** Lower comes first. Ties sort by id. */
+  order?: number;
+}
+
 /** The dot or stripe that shows a host's status on its row. */
-export type HostStatusIndicatorContribution = HostBadgeContribution;
+export type HostStatusIndicatorContribution = HostRowContribution;
 
 /** A control in the host editor's toolbar. */
-export type HostEditorToolbarItemContribution = HostBadgeContribution;
+export type HostEditorToolbarItemContribution = HostRowContribution;
+
+export interface HostSectionProps {
+  host: PluginHostRecord;
+  isVisible: boolean;
+  shell: ShellApi;
+}
+
+export interface HostSectionContribution {
+  /** Declare it in manifest contributes.hostSections too. */
+  id: string;
+  titleKey: string;
+  /** Lower sorts first. */
+  order?: number;
+  when?: (host: PluginHostRecord) => boolean;
+  component: ComponentType<HostSectionProps>;
+}
 
 export interface HostContextMenuItemContribution {
   id: string;
@@ -783,6 +820,26 @@ export interface KeybindingDefaultContribution {
 export interface DashboardCardProps {
   isVisible: boolean;
   shell: ShellApi;
+  /** This tile's settings, for cards with `entries`. Empty otherwise. Core 26.11.1+. */
+  config?: Record<string, unknown>;
+  /** Saves this tile's settings. Keep it small, it is stored in one line. */
+  setConfig?: (config: Record<string, unknown>) => void;
+  /** True while the user is arranging the dashboard. */
+  editMode?: boolean;
+}
+
+/** One tile a card with `entries` offers in the dashboard's add list. */
+export interface DashboardCardEntry {
+  /** Stable within the card, used to mark entries already placed. */
+  key: string;
+  title: string;
+  description?: string;
+  /** Group heading in the add list. Defaults to the card title. */
+  group?: string;
+  kind?: "card" | "chart" | "signal" | "action" | "resource" | "session";
+  /** Passed back as `config`. */
+  config: Record<string, unknown>;
+  defaultSize?: { w: number; h?: number | null };
 }
 
 export interface DashboardCardContribution {
@@ -797,6 +854,13 @@ export interface DashboardCardContribution {
    * edge, for a strip of numbers. Defaults to "framed".
    */
   frame?: "framed" | "bare";
+  /** Size on the 12 column dashboard grid when added. Core 26.11.1+. */
+  defaultSize?: { w: number; h?: number | null };
+  /**
+   * Lets the card be placed many times, once per entry, each with its own
+   * `config`. Titles come back already translated. Core 26.11.1+.
+   */
+  entries?: (language: string) => Promise<DashboardCardEntry[]>;
   component: ComponentType<DashboardCardProps>;
 }
 
@@ -1172,6 +1236,11 @@ export interface TermixApp extends TermixAppInfo {
   registerHostContextMenuItem: (
     item: HostContextMenuItemContribution,
   ) => Disposer;
+  /**
+   * A card on the host page. Core 26.11.1 and newer; call it as
+   * app.registerHostSection?.(...) if your plugin allows older cores.
+   */
+  registerHostSection: (section: HostSectionContribution) => Disposer;
   registerPaletteEntry: (entry: PaletteEntryContribution) => Disposer;
   registerPaletteGroup: (group: PaletteGroupContribution) => Disposer;
   registerKeybindingAction: (action: KeybindingActionContribution) => Disposer;

@@ -615,6 +615,7 @@
     "hostClickBehavior": "Klikšķinot uz mezgla",
     "hostClickBehaviorDesc": "Kas notiek, kad noklikšķināt uz mezgla, kuram jau ir atvērta cilne. Ctrl/Cmd klikšķis, vidējā pogas klikšķis vai \"Atvērt jaunā cilnē\" vienmēr atver jaunu.",
     "hostClickNewTab": "Vienmēr atvērt jaunā cilnē",
+    "hostClickHostPage": "Atvērt resursa lapu, ja spraudnis to piedāvā",
     "hostClickFocusExisting": "Pārslēgties uz atvērto cilni",
     "hostClickFocusExistingDoubleNew": "Klikšķiniet, lai pārslēgtos, dubultklikšķis jaunai cilnei",
     "openInNewTab": "Atvērt jaunā cilnē",
@@ -1231,6 +1232,18 @@
         "title": "Nosūtīt brīdinājumus",
         "consequence": "Jums vai citiem lietotājiem, caur kanāliem, ko tie ir iestatījuši."
       },
+      "operations:provide": {
+        "title": "Piedāvāt darbības",
+        "consequence": "Tās darbības var izpildīt no Automatizācijām, komandrindas rīka, tālruņa lietotnes un citām vietām, personām, kurām ir atļauts tās izmantot."
+      },
+      "operations:invoke": {
+        "title": "Izpildīt citu spraudņu darbības",
+        "consequence": "Rīkojas no pieteiktā lietotāja vārda attiecībā uz darbībām, kas uzskaitītas tā manifestā. Apstiprināšanas noteikumi joprojām ir spēkā."
+      },
+      "operations:approve": {
+        "title": "Noteikt, kam nepieciešams apstiprinājums",
+        "consequence": "Var ļaut darbībām izpildīties bez apstiprinājuma vai bloķēt tās katram lietotājam."
+      },
       "notify:hub": {
         "title": "Saņemt katru brīdinājumu",
         "consequence": "Glabā un piegādā visus brīdinājumus, ko nosūta visi spraudņi, ieskaitot to saturu."
@@ -1254,6 +1267,10 @@
       "hosts:lock": {
         "title": "Pārvaldīt resursdatorus kā lasāmus",
         "consequence": "Tos pārvaldītos resursdatorus neviens cits nevar rediģēt, dzēst vai atkārtoti kopīgot."
+      },
+      "hosts:connect-policy": {
+        "title": "Noteikt, kam ir atļauts izveidot savienojumu",
+        "consequence": "Var bloķēt vai atļaut katru SSH un attālinātā darbvirsas savienojumu ar jebkuru resursu."
       },
       "desktop:window": {
         "title": "Atvērt darbvirsmas logus",
@@ -1705,6 +1722,12 @@
       "title": "Kolonnas",
       "auto": "Automātiski",
       "count": "{{count}} kolonnu platums"
+    },
+    "pager": {
+      "previous": "Iepriekšējais",
+      "next": "Nākamais",
+      "page": "{{page}}. lapa",
+      "pageOf": "{{page}}. lapa no {{pages}}"
     }
   },
   "fields": {
@@ -1726,5 +1749,29 @@
       "admin": "Administrators",
       "user": "Lietotājs"
     }
+  },
+  "tileGrid": {
+    "empty": "Vēl nav flīžu. Pievienojiet dažas no saraksta.",
+    "move": "Velciet, lai pārvietotu",
+    "moveTile": "Pārvietot {{tile}}",
+    "settings": "{{tile}} iestatījumi",
+    "remove": "Noņemt {{tile}}",
+    "width": "Platums",
+    "height": "Augstums",
+    "addTiles": "Pievienot flīzes",
+    "closePicker": "Aizvērt",
+    "search": "Meklēt flīzes",
+    "noMatches": "Nav atrasts nekas.",
+    "kind": {
+      "all": "Visas",
+      "card": "Kartiņas",
+      "chart": "Diagrammas",
+      "signal": "Statuss",
+      "action": "Darbības",
+      "resource": "Saraksti",
+      "session": "Sesijas"
+    },
+    "reset": "Atiestatīt",
+    "done": "Gatavs"
   }
 }

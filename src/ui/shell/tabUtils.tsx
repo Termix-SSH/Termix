@@ -73,9 +73,7 @@ function withTabSuspense(node: React.ReactNode) {
 function PanelTabFrame({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-full w-full justify-center overflow-y-auto bg-background">
-      <div className="flex flex-col flex-1 min-h-0 w-full max-w-5xl">
-        {children}
-      </div>
+      <div className="flex flex-col flex-1 min-h-0 w-full">{children}</div>
     </div>
   );
 }

@@ -19,6 +19,7 @@ import {
 } from "./onboarding-registry";
 import {
   computeFlow,
+  isStepRelevant,
   ONBOARDING_ADMIN_PERMISSION,
   seenFor,
 } from "./onboarding-flow";
@@ -109,10 +110,13 @@ export function OnboardingStage({
     const live = computeFlow(candidates, seenAtStart.current, ctx);
     for (const step of live) sticky.current.add(step.id);
     // A step that was in the run stays in it (the picker stops being
-    // pending once applied), unless its plugin went away.
+    // pending once applied), unless its plugin went away or it no longer
+    // applies, like Security once no sign in plugin offers anything.
     const kept = allSteps.filter(
       (step) =>
-        sticky.current.has(step.id) && !live.some((s) => s.id === step.id),
+        sticky.current.has(step.id) &&
+        !live.some((s) => s.id === step.id) &&
+        (!!step.forcePending || isStepRelevant(step, ctx)),
     );
     return sortSteps([...live, ...kept]);
   }, [allSteps, ctx]);

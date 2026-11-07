@@ -603,6 +603,7 @@
     "hostClickBehavior": "Khi nhấp vào host",
     "hostClickBehaviorDesc": "Điều xảy ra khi bạn nhấp vào một host đã có tab đang mở. Nhấp Ctrl/Cmd, nhấp chuột giữa hoặc \"Mở trong tab mới\" luôn luôn mở một tab mới.",
     "hostClickNewTab": "Luôn mở tab mới",
+    "hostClickHostPage": "Mở trang chủ cơ, nếu plugin cung cấp",
     "hostClickFocusExisting": "Chuyển sang tab đang mở",
     "hostClickFocusExistingDoubleNew": "Nhấp để chuyển, nhấp đúp để mở tab mới",
     "openInNewTab": "Mở trong tab mới",
@@ -1197,6 +1198,18 @@
         "title": "Gửi cảnh báo",
         "consequence": "Đến bạn hoặc người dùng khác, và qua các kênh họ đã thiết lập."
       },
+      "operations:provide": {
+        "title": "Cung cấp thao tác",
+        "consequence": "Các thao tác của nó có thể được chạy từ Tự động hóa, CLI, ứng dụng điện thoại và các nơi khác, bởi những người được phép sử dụng."
+      },
+      "operations:invoke": {
+        "title": "Chạy thao tác của plugin khác",
+        "consequence": "Thay mặt người dùng đang đăng nhập thực hiện các thao tác được liệt kê trong manifest của plugin. Quy tắc phê duyệt vẫn được áp dụng."
+      },
+      "operations:approve": {
+        "title": "Quyết định thao tác nào cần phê duyệt",
+        "consequence": "Có thể cho phép thao tác chạy mà không cần phê duyệt, hoặc chặn chúng, đối với mọi người dùng."
+      },
       "notify:hub": {
         "title": "Nhận mọi cảnh báo",
         "consequence": "Lưu trữ và phân phối các cảnh báo mà tất cả plugin gửi, bao gồm cả nội dung của chúng."
@@ -1220,6 +1233,10 @@
       "hosts:lock": {
         "title": "Quản lý máy chủ ở chế độ chỉ đọc",
         "consequence": "Các máy chủ do nó quản lý không thể bị chỉnh sửa, xóa hoặc chia sẻ lại bởi bất kỳ ai khác."
+      },
+      "hosts:connect-policy": {
+        "title": "Quyết định ai có thể kết nối",
+        "consequence": "Có thể chặn hoặc cho phép mọi kết nối SSH và máy tính từ xa đến bất kỳ host nào."
       },
       "desktop:window": {
         "title": "Mở cửa sổ máy tính để bàn",
@@ -1621,6 +1638,12 @@
       "title": "Cột",
       "auto": "Tự động",
       "count": "Rộng {{count}}"
+    },
+    "pager": {
+      "previous": "Trước",
+      "next": "Tiếp",
+      "page": "Trang {{page}}",
+      "pageOf": "Trang {{page}} trong tổng số {{pages}}"
     }
   },
   "fields": {
@@ -1636,5 +1659,29 @@
       "admin": "Quản trị viên",
       "user": "Người dùng"
     }
+  },
+  "tileGrid": {
+    "empty": "Chưa có ô nào. Thêm một số từ danh sách.",
+    "move": "Kéo để di chuyển",
+    "moveTile": "Di chuyển {{tile}}",
+    "settings": "Cài đặt {{tile}}",
+    "remove": "Xóa {{tile}}",
+    "width": "Chiều rộng",
+    "height": "Chiều cao",
+    "addTiles": "Thêm ô",
+    "closePicker": "Đóng",
+    "search": "Tìm kiếm ô",
+    "noMatches": "Không có kết quả phù hợp.",
+    "kind": {
+      "all": "Tất cả",
+      "card": "Thẻ",
+      "chart": "Biểu đồ",
+      "signal": "Trạng thái",
+      "action": "Thao tác",
+      "resource": "Danh sách",
+      "session": "Phiên làm việc"
+    },
+    "reset": "Đặt lại",
+    "done": "Xong"
   }
 }

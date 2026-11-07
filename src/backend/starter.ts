@@ -243,6 +243,9 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     // Last, so a plugin's activate() sees a fully wired server. A plugin that
     // fails to load must not stop the backend, so this never rejects.
     try {
+      const { startOperationsMaintenance } =
+        await import("./operations/maintenance.js");
+      await startOperationsMaintenance();
       const { initializePlugins } = await import("./plugins/index.js");
       const loaded = await initializePlugins({ freshInstall });
       if (loaded.length > 0) {

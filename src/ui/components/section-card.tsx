@@ -1,5 +1,7 @@
 import { DefaultsOnly, HostDefaultBadge } from "@/lib/host-defaults-context";
 import { useState } from "react";
+import { useInSeamlessTile } from "@/components/tile-grid/context";
+import { cn } from "@/lib/utils";
 import type React from "react";
 
 export function SectionCard({
@@ -18,19 +20,28 @@ export function SectionCard({
   /** Lets settings search jump to this card. */
   rowId?: string;
 }) {
+  // Inside an edge to edge tile layout the layout draws the lines.
+  const tiled = useInSeamlessTile();
   return (
     <div
+      data-tile-card=""
       data-setting-row={rowId}
-      className={`flex flex-col border border-border bg-card overflow-hidden ${className ?? ""}`}
+      className={cn(
+        "flex flex-col overflow-hidden",
+        !tiled && "border border-border",
+        className,
+      )}
     >
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border shrink-0">
-        <span className="text-muted-foreground">{icon}</span>
+      <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-1.5">
+        <span className="flex text-muted-foreground [&_svg]:size-3">
+          {icon}
+        </span>
         <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground flex-1">
           {title}
         </span>
         {action && <div className="ml-auto">{action}</div>}
       </div>
-      <div className="px-3 md:px-4 py-1">{children}</div>
+      <div className="px-3 py-1">{children}</div>
     </div>
   );
 }

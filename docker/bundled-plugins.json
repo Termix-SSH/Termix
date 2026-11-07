@@ -67,7 +67,11 @@
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-Credential-Tools/releases/download/v1.0.0/credential-tools-1.0.0.tmxplug",
       "sha256": "413eff710b5c832a2575a890bbab1c90d28ea55f10cd7a7b94b851d51dd77dce",
-      "tier": "standard"
+      "tier": "standard",
+      "onboarding": {
+        "recommended": true,
+        "consent": false
+      }
     },
     {
       "id": "databases",
@@ -128,7 +132,11 @@
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-Host-Status/releases/download/v1.0.0/host-status-1.0.0.tmxplug",
       "sha256": "1ba62577dc7373a2a2787bab7efdb89b544a30a8003b1de91ce51f372fc4f170",
-      "tier": "standard"
+      "tier": "standard",
+      "onboarding": {
+        "recommended": true,
+        "consent": false
+      }
     },
     {
       "id": "hosts-config",
@@ -142,7 +150,11 @@
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-Import-Export/releases/download/v1.0.1/import-export-1.0.1.tmxplug",
       "sha256": "d8f2f865e1e6b226f4fe38501bf69b752f47a643bed1d9d127181083e27da2f0",
-      "tier": "standard"
+      "tier": "standard",
+      "onboarding": {
+        "recommended": true,
+        "consent": false
+      }
     },
     {
       "id": "kubernetes",
@@ -200,8 +212,8 @@
     {
       "id": "reverse-proxy",
       "source": "tmxplug",
-      "url": "https://github.com/Termix-SSH/Plugin-Reverse-Proxy/releases/download/v1.1.0/reverse-proxy-1.1.0.tmxplug",
-      "sha256": "c8a9851da7ca6291c1f47cf6ab235da5057455a86b4ed0dc1c1a3026afb30aa7",
+      "url": "https://github.com/Termix-SSH/Plugin-Reverse-Proxy/releases/download/v1.1.1/reverse-proxy-1.1.1.tmxplug",
+      "sha256": "f5e0089ca5eae1254f21ce18b222e70eb2beeae3bd874c2abc4faa1a68d3e47a",
       "tier": "full"
     },
     {
@@ -303,7 +315,11 @@
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-Sync/releases/download/v1.1.0/sync-1.1.0.tmxplug",
       "sha256": "9023d547f0e0bcef582c6ba7b7a8ab2ef68d8d0b973dde17d9e8c84d92b6429e",
-      "tier": "standard"
+      "tier": "standard",
+      "onboarding": {
+        "recommended": "desktop",
+        "consent": false
+      }
     },
     {
       "id": "tailscale",
@@ -351,8 +367,8 @@
     {
       "id": "tunnels",
       "source": "tmxplug",
-      "url": "https://github.com/Termix-SSH/Plugin-Tunnels/releases/download/v1.2.2/tunnels-1.2.2.tmxplug",
-      "sha256": "92d89c5bf7fa43fff790cc5240ae75eaf05c3c9089c6a0dfb68bbc37c517bf04",
+      "url": "https://github.com/Termix-SSH/Plugin-Tunnels/releases/download/v1.2.3/tunnels-1.2.3.tmxplug",
+      "sha256": "5a23953ee19b2951bb895e033d2099b8f6d5abc0121253ef3da25328134984ad",
       "tier": "standard",
       "onboarding": {
         "recommended": true,

@@ -63,6 +63,15 @@ writeFileSync(
 copyFileSync(join(publicDir, "icon.ico"), join(iconsDir, "icon.ico"));
 copyFileSync(join(publicDir, "icon.icns"), join(iconsDir, "icon.icns"));
 
+// Transparent foreground from public/icon.svg; macOS colors this template.
+const traySvg = readFileSync(join(iconsDir, "trayTemplate.svg"));
+for (const scale of [1, 2]) {
+  await sharp(traySvg, { density: 72 * scale })
+    .resize(16 * scale, 16 * scale)
+    .png()
+    .toFile(join(iconsDir, `trayTemplate${scale === 2 ? "@2x" : ""}.png`));
+}
+
 console.log("Icons generated from public/icon-square.svg");
 
 function buildIco(pngBuffers, sizes) {

@@ -87,6 +87,8 @@ export interface ApiKey {
   expiresAt: string | null;
   lastUsedAt: string | null;
   isActive: boolean;
+  /** Null for full access. */
+  scopes?: string[] | null;
 }
 
 export interface CreatedApiKey extends ApiKey {
@@ -97,12 +99,14 @@ export async function createApiKey(
   name: string,
   userId: string,
   expiresAt?: string,
+  scopes?: string[] | null,
 ): Promise<CreatedApiKey> {
   try {
     const response = await authApi.post("/users/api-keys", {
       name,
       userId,
       expiresAt: expiresAt ?? null,
+      scopes: scopes?.length ? scopes : null,
     });
     return response.data;
   } catch (error) {

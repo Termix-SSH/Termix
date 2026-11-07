@@ -80,6 +80,7 @@ import { OnboardingStage } from "@/onboarding/OnboardingStage";
 import { UiPreferencesProvider } from "@/contexts/UiPreferencesContext";
 import { setPermissionsForTesting } from "@/hooks/use-permissions";
 import { onboardingSteps } from "@/onboarding/onboarding-registry";
+import { registerSecondFactor } from "@/plugin-host/auth-registry";
 import {
   defaultUiPreferences,
   type UiPreferences,
@@ -215,5 +216,35 @@ describe("OnboardingStage", () => {
       fireEvent.click(screen.getByRole("button", { name: /finish|Done/ })),
     );
     await waitFor(() => expect(onDone).toHaveBeenCalled());
+  });
+  it("drops a step that stops applying after it joined the run", async () => {
+    const offFactor = registerSecondFactor({
+      id: "totp",
+      pluginId: "totp",
+      titleKey: "totp",
+      component: () => null,
+      enrollment: () => <p>enroll body</p>,
+    });
+    const offStep = onboardingSteps.register({
+      id: "x:factor",
+      pluginId: "x",
+      version: 1,
+      titleKey: "factor",
+      Component: () => <Plain label="factor" />,
+      audience: "all",
+      position: 50,
+      isRelevant: (ctx) => ctx.canEnrollSecondFactor === true,
+    });
+    renderStage("full");
+    await screen.findByText("preset body");
+    act(() => offFactor());
+    next();
+    await screen.findByText("picker body");
+    await act(async () => next());
+    await screen.findByText("appearance body");
+    next();
+    await screen.findByText("security body");
+    expect(screen.queryByText("factor body")).toBeNull();
+    offStep();
   });
 });

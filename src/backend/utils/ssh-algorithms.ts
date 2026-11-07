@@ -97,8 +97,10 @@ export function buildSSHAlgorithms(
   ];
   const cipher = filterCiphers([
     "chacha20-poly1305@openssh.com",
-    "aes256-gcm@openssh.com",
+    // ssh2 sizes DH group exchange from the cipher key length. Prefer
+    // AES-128-GCM to avoid 8192-bit prime validation on GEX-only hosts.
     "aes128-gcm@openssh.com",
+    "aes256-gcm@openssh.com",
     "aes256-ctr",
     "aes192-ctr",
     "aes128-ctr",

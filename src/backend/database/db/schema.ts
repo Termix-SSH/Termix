@@ -663,8 +663,100 @@ export const apiKeys = sqliteTable(
     expiresAt: text("expires_at"),
     lastUsedAt: text("last_used_at"),
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    // JSON list. Null means full access, which every older key has.
+    scopes: text("scopes"),
   },
   (table) => [index("idx_api_keys_user_id").on(table.userId)],
+);
+
+export const operationRuns = sqliteTable(
+  "operation_runs",
+  {
+    id: text("id").primaryKey(),
+    actionId: text("action_id").notNull(),
+    actionVersion: integer("action_version").notNull().default(1),
+    pluginId: text("plugin_id").notNull(),
+    pluginVersion: text("plugin_version").notNull(),
+
+    // Nullable on purpose: history outlives the account, like audit_logs.
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    username: text("username").notNull(),
+
+    origin: text("origin").notNull(),
+    hostId: integer("host_id"),
+    hostName: text("host_name"),
+    batchId: text("batch_id"),
+    dryRun: integer("dry_run", { mode: "boolean" }).notNull().default(false),
+    risk: text("risk").notNull(),
+    status: text("status").notNull(),
+    summary: text("summary"),
+    changed: integer("changed", { mode: "boolean" }),
+    input: text("input"),
+    // Only until the run ends, then wiped.
+    sealedInput: text("sealed_input"),
+    output: text("output"),
+    undoInput: text("undo_input"),
+    error: text("error"),
+    errorCode: text("error_code"),
+    undoOf: text("undo_of"),
+    idempotencyKey: text("idempotency_key"),
+    createdAt: text("created_at").notNull(),
+    startedAt: text("started_at"),
+    finishedAt: text("finished_at"),
+  },
+  (table) => [
+    index("idx_operation_runs_created").on(table.createdAt),
+    index("idx_operation_runs_user_created").on(table.userId, table.createdAt),
+    index("idx_operation_runs_host_created").on(table.hostId, table.createdAt),
+    index("idx_operation_runs_status").on(table.status),
+    index("idx_operation_runs_batch").on(table.batchId),
+  ],
+);
+
+export const operationApprovals = sqliteTable(
+  "operation_approvals",
+  {
+    id: text("id").primaryKey(),
+    runId: text("run_id")
+      .notNull()
+      .references(() => operationRuns.id, { onDelete: "cascade" }),
+    requestedBy: text("requested_by"),
+    reason: text("reason"),
+    allowSelf: integer("allow_self", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    status: text("status").notNull(),
+    decidedBy: text("decided_by"),
+    comment: text("comment"),
+    createdAt: text("created_at").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    decidedAt: text("decided_at"),
+  },
+  (table) => [
+    index("idx_operation_approvals_status").on(table.status, table.expiresAt),
+    index("idx_operation_approvals_run").on(table.runId),
+  ],
+);
+
+export const operationEvents = sqliteTable(
+  "operation_events",
+  {
+    id: text("id").primaryKey(),
+    eventId: text("event_id").notNull(),
+    pluginId: text("plugin_id").notNull(),
+    hostId: integer("host_id"),
+    severity: text("severity"),
+    payload: text("payload"),
+    runId: text("run_id"),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    index("idx_operation_events_created").on(table.createdAt),
+    index("idx_operation_events_host_created").on(
+      table.hostId,
+      table.createdAt,
+    ),
+  ],
 );
 
 export const userOpenTabs = sqliteTable(

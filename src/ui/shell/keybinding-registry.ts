@@ -84,6 +84,11 @@ const SHELL_ACTIONS: KeybindingActionDef[] = [
     "newUi.sidebar.keybindings.actionReconnectSession",
     1003,
   ),
+  shellAction(
+    "toggleSidebar",
+    "newUi.sidebar.keybindings.actionToggleSidebar",
+    1004,
+  ),
 ];
 
 export const SHELL_KEYBINDING_ACTION_IDS = SHELL_ACTIONS.map(
@@ -96,6 +101,21 @@ const defaults = createRegistry<KeybindingDefaultDef>(byOrderThenId);
 function install(): void {
   for (const action of SHELL_ACTIONS) {
     if (!actions.get(action.id)) actions.register(action);
+  }
+  if (!defaults.get("toggleSidebar")) {
+    defaults.register({
+      id: "toggleSidebar",
+      combo: {
+        key: "KeyB",
+        isCode: true,
+        ctrl: false,
+        alt: false,
+        shift: false,
+        meta: true,
+      },
+      descriptionKey: "newUi.sidebar.keybindings.actionToggleSidebar",
+      order: 1004,
+    });
   }
 }
 install();

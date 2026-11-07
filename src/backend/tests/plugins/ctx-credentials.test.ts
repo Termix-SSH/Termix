@@ -251,6 +251,36 @@ describe("ctx.credentials.resolveHostProtocol", () => {
     expect(state.ownerDecrypts).toBe(0);
   });
 
+  it("asks the connect policy and refuses before decrypting", async () => {
+    grants.set("demo", ["credentials:read"]);
+    const { provideConnectPolicy, clearConnectPolicies } =
+      await import("../../hosts/connect-policy.js");
+    const check = vi.fn(() => ({
+      decision: "request" as const,
+      requestTab: "access",
+    }));
+    provideConnectPolicy("pa", { check });
+    try {
+      const ctx = spiceContext(["credentials:read"]);
+      const error = await runAsActor("owner", "request", () =>
+        ctx.credentials.resolveHostProtocol(7, "spice"),
+      ).catch((e) => e);
+      expect(error.code).toBe("access-required");
+      expect(check).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: "owner",
+          hostId: 7,
+          protocol: "spice",
+          profile: "desktop",
+          origin: "demo",
+        }),
+      );
+      expect(state.ownerDecrypts).toBe(0);
+    } finally {
+      clearConnectPolicies();
+    }
+  });
+
   it("returns the owner's stored login and audits it", async () => {
     grants.set("demo", ["credentials:read"]);
     const ctx = spiceContext(["credentials:read"]);

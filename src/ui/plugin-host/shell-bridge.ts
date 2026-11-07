@@ -114,6 +114,11 @@ export const shell: TabShellCallbacks = {
   openRailView: (...args) => callbacks?.openRailView(...args),
   closeRailView: (...args) => callbacks?.closeRailView(...args),
   openHostEditor: (...args) => callbacks?.openHostEditor?.(...args),
+  get editHost() {
+    return callbacks?.editHost
+      ? (hostId: number) => callbacks?.editHost?.(hostId)
+      : undefined;
+  },
   saveQuickConnect: (...args) =>
     callbacks?.saveQuickConnect?.(...args) ?? Promise.resolve(),
   confirm: (options) =>

@@ -47,8 +47,9 @@ describe("DataView", () => {
         empty={null}
       />,
     );
-    const grid = container.firstElementChild as HTMLElement;
+    const grid = container.querySelector(".grid") as HTMLElement;
     expect(grid.className).not.toContain("md:grid-cols-2");
+    expect(grid.className).not.toContain("gap-");
     expect(grid.style.gridTemplateColumns).toContain("/ 3");
   });
 

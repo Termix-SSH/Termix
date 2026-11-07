@@ -154,7 +154,7 @@ function Select2({
           aria-expanded={open}
           aria-required={required}
           className={cn(
-            "border-input bg-transparent dark:bg-input/30 dark:hover:bg-input/50 text-foreground flex h-9 w-full items-center justify-between gap-2 rounded-none border px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
+            "border-border bg-transparent dark:bg-input/30 dark:hover:bg-input/50 text-foreground flex h-8 w-full items-center justify-between gap-2 rounded-none border px-2.5 py-1 text-xs shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
             className,
           )}
           onKeyDown={(event) => {
@@ -189,7 +189,7 @@ function Select2({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t("common.search")}
-            className="h-9 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            className="h-8 w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground"
             autoFocus
           />
         </div>
@@ -198,7 +198,7 @@ function Select2({
           className="max-h-64 overflow-y-auto p-1 thin-scrollbar"
         >
           {filteredOptions.length === 0 ? (
-            <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+            <div className="px-2 py-6 text-center text-xs text-muted-foreground">
               {t("common.noResults")}
             </div>
           ) : (
@@ -222,7 +222,7 @@ function Select2({
                     aria-selected={isSelected}
                     disabled={option.disabled}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-none px-2 py-1.5 text-left text-sm outline-none transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50",
+                      "flex w-full items-center gap-2 rounded-none px-2 py-1.5 text-left text-xs outline-none transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50",
                       isSelected && "bg-muted text-accent-foreground",
                     )}
                     onClick={() => selectValue(option.value)}

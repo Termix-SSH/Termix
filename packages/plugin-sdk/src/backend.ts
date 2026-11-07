@@ -14,6 +14,11 @@ import type { HostSshOptions } from "./ssh-options.js";
 export type { HostSshOptions } from "./ssh-options.js";
 import type { PluginManifest, PluginSettingsField } from "./manifest.js";
 import type { PluginTableDefinition } from "./db.js";
+import type {
+  OperationResult,
+  OperationRisk,
+  OperationSurfaces,
+} from "./operations.js";
 
 /**
  * Thrown when a plugin calls a guarded member without the capability.
@@ -1290,6 +1295,54 @@ export interface PluginHostLocksApi {
   provide: (provider: PluginHostLockProvider) => () => void;
 }
 
+/** What core asks a connect policy before a session to a host opens. */
+export interface PluginConnectPolicyInput {
+  /** The person connecting. */
+  userId: string;
+  hostId: number;
+  /** "ssh", or a remote desktop protocol id such as "rdp", "vnc" or "telnet". */
+  protocol: string;
+  /** Free form purpose the caller gave, such as "terminal" or "sftp". */
+  purpose: string;
+  /**
+   * SSH profile: terminal, session, stream, forward, background or jump.
+   * "desktop" for remote desktop logins.
+   */
+  profile: string;
+  /** True when a person waits on this connect (a prompt channel is open). */
+  interactive: boolean;
+  /** Plugin id that asked for the connection, or "core". */
+  origin: string;
+}
+
+export type PluginConnectPolicyDecision =
+  | { decision: "allow" }
+  | { decision: "deny"; reason?: string }
+  | {
+      decision: "request";
+      reason?: string;
+      /** A tab id of the providing plugin where the user can ask for access. */
+      requestTab?: string;
+    };
+
+/**
+ * Decides whether a user may open a session to a host. Core asks every
+ * provider before it builds an SSH config (terminal, file manager, tunnels,
+ * background exec) and before it hands out remote desktop logins. The
+ * strictest answer wins and a provider that throws denies. Keep check fast:
+ * it runs on every connect, including background polling.
+ */
+export interface PluginConnectPolicyProvider {
+  check: (
+    input: PluginConnectPolicyInput,
+  ) => PluginConnectPolicyDecision | Promise<PluginConnectPolicyDecision>;
+}
+
+export interface PluginConnectPolicyApi {
+  /** Registers this plugin's policy. Needs hosts:connect-policy. Removed on deactivate. */
+  provide: (provider: PluginConnectPolicyProvider) => () => void;
+}
+
 /**
  * Hosts the acting user can see, and the RBAC + sharing operations a plugin
  * needs to build a feature (like fleets) on top of hosts it does not own.
@@ -1436,6 +1489,8 @@ export interface PluginHosts {
   activity: PluginHostActivityApi;
   /** Read only hosts this plugin manages. */
   locks: PluginHostLocksApi;
+  /** Who may open sessions to which hosts. */
+  connectPolicy: PluginConnectPolicyApi;
   /** Folder rows for the acting user. Needs hosts:write. */
   folders: PluginHostFoldersApi;
 }
@@ -1663,8 +1718,12 @@ export type PluginSshAuthOutcome =
         | "invalid-key"
         | "passphrase-required"
         | "provider-missing"
-        | "failed";
+        | "failed"
+        | "access-denied"
+        | "access-required";
       message: string;
+      /** For access-required: a tab of the policy plugin where access is asked for. */
+      requestTab?: string;
     }
   | {
       /** Try once more with these config changes. */
@@ -2690,7 +2749,9 @@ export interface PluginCredentials {
   /**
    * The host's login for one of this plugin's own contributes.protocols.
    * Null when the host does not exist or the acting user cannot connect to
-   * it. Needs credentials:read. Audited.
+   * it. Throws an error with `code` "access-denied" or "access-required"
+   * (and `requestTab`, `toJSON()` for a 403 body) when a connect policy
+   * refuses the session. Needs credentials:read. Audited.
    */
   resolveHostProtocol: (
     hostId: number,
@@ -3116,6 +3177,136 @@ export interface PluginPlugins {
   list: () => Promise<PluginSummary[]>;
 }
 
+/** What a handler gets besides its input. */
+export interface PluginOperationContext {
+  hostId?: number;
+  /** The row a resource action targets. */
+  resourceKey?: string;
+  /** Null for a background read. */
+  runId: string | null;
+  /** Nothing may change when this is set. */
+  dryRun: boolean;
+  /** Fires when the run is cancelled, times out or the plugin stops. */
+  signal: AbortSignal;
+  log: (line: string) => void;
+}
+
+export interface PluginOperationHandler {
+  run: (
+    input: Record<string, unknown>,
+    context: PluginOperationContext,
+  ) => Promise<OperationResult> | OperationResult;
+  /** The dry run text for an action declared with dryRun "describe". */
+  describe?: (
+    input: Record<string, unknown>,
+    context: PluginOperationContext,
+  ) => string | Promise<string>;
+}
+
+export interface PluginOperationInvokeOptions {
+  hostId?: number;
+  resourceKey?: string;
+  input?: Record<string, unknown>;
+  dryRun?: boolean;
+  /** A person agreed to a destructive action. */
+  confirmed?: boolean;
+  idempotencyKey?: string;
+  batchId?: string;
+  /** What this plugin is doing: automation, assistant, mcp, rollout and so on. */
+  via?: string;
+}
+
+export interface PluginOperationOutcome {
+  runId: string | null;
+  status: string;
+  summary?: string;
+  changed?: boolean;
+  data?: unknown;
+  error?: string;
+  errorCode?: string;
+  approvalId?: string;
+}
+
+export interface PluginOperationApprovalInput {
+  actionId: string;
+  pluginId: string;
+  risk: OperationRisk;
+  /** What rules should use. Plugins not signed as official count as change. */
+  effectiveRisk: OperationRisk;
+  origin: { kind: string; pluginId?: string; via?: string };
+  userId: string;
+  hostId?: number;
+  hostTags?: string[];
+  batchId?: string;
+}
+
+export interface PluginOperationApprovalDecision {
+  decision: "allow" | "approve" | "deny";
+  reason?: string;
+  allowSelf?: boolean;
+  expiresInMinutes?: number;
+}
+
+export interface PluginOperationEvent {
+  id: string;
+  eventId: string;
+  pluginId: string;
+  hostId?: number;
+  severity?: string;
+  payload?: unknown;
+  runId?: string;
+  depth: number;
+  at: string;
+}
+
+/**
+ * Declared actions and events. See contributes.operations in the manifest.
+ * register and emit need operations:provide. invoke, list and onEvent need
+ * operations:invoke, and invoke only reaches ids in the manifest's invokes list.
+ */
+export interface PluginOperations {
+  register: (id: string, handler: PluginOperationHandler) => void;
+  /**
+   * Runs one of this plugin's own actions from its route, so a button press
+   * goes through the same checks and lands in the same history.
+   */
+  run: (
+    actionId: string,
+    options?: PluginOperationInvokeOptions,
+  ) => Promise<PluginOperationOutcome>;
+  invoke: (
+    actionId: string,
+    options?: PluginOperationInvokeOptions,
+  ) => Promise<PluginOperationOutcome>;
+  list: (options?: {
+    lang?: string;
+    surface?: keyof OperationSurfaces;
+  }) => Promise<unknown>;
+  emit: (
+    eventId: string,
+    payload?: unknown,
+    options?: { hostId?: number },
+  ) => Promise<void>;
+  onEvent: (subscription: {
+    pattern: string;
+    handler: (event: PluginOperationEvent) => void | Promise<void>;
+    userId?: string;
+    cooldownMs?: number;
+  }) => () => void;
+  /** Rules for what needs a person. Needs operations:approve. */
+  approvals: {
+    provide: (
+      provider: (
+        input: PluginOperationApprovalInput,
+      ) =>
+        | PluginOperationApprovalDecision
+        | null
+        | undefined
+        | Promise<PluginOperationApprovalDecision | null | undefined>,
+    ) => () => void;
+  };
+}
+
 export interface PluginContext {
   readonly pluginId: string;
   readonly manifest: PluginManifest;
@@ -3156,6 +3347,8 @@ export interface PluginContext {
   readonly schedule: PluginSchedule;
   /** Core's notification channels. Needs notify:send. */
   readonly notify: PluginNotify;
+  /** Declared actions and events, reachable from every surface. */
+  readonly operations: PluginOperations;
   /** Outbound HTTP through core's SSRF guard. Needs network:outbound. */
   readonly fetch: PluginFetch;
   /** Plain reachability checks. Needs network:probe. */

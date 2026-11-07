@@ -609,6 +609,7 @@
     "hostClickBehavior": "Klik op een host",
     "hostClickBehaviorDesc": "Wat er gebeurt als je op een host klikt die al een geopend tabblad heeft. Ctrl/Cmd-klik, middelklik of \"Openen in nieuw tabblad\" starten altijd een nieuw tabblad.",
     "hostClickNewTab": "Altijd een nieuw tabblad openen",
+    "hostClickHostPage": "Open de hostpagina, als een plugin die aanbiedt",
     "hostClickFocusExisting": "Schakel naar het geopende tabblad",
     "hostClickFocusExistingDoubleNew": "Klik om te schakelen, dubbelklik voor een nieuw tabblad",
     "openInNewTab": "Openen in nieuw tabblad",
@@ -1214,6 +1215,18 @@
         "title": "Verstuur meldingen",
         "consequence": "Naar jou of andere gebruikers, via de kanalen die zij hebben ingesteld."
       },
+      "operations:provide": {
+        "title": "Acties aanbieden",
+        "consequence": "De acties kunnen worden uitgevoerd vanuit Automatiseringen, de CLI, de mobiele app en andere plaatsen, door gebruikers die daar toestemming voor hebben."
+      },
+      "operations:invoke": {
+        "title": "Acties van andere plugins uitvoeren",
+        "consequence": "Handelt namens de ingelogde gebruiker voor de acties die in het manifest staan vermeld. Goedkeuringsregels blijven van toepassing."
+      },
+      "operations:approve": {
+        "title": "Bepalen wat goedkeuring vereist",
+        "consequence": "Kan acties zonder goedkeuring laten uitvoeren of blokkeren, voor elke gebruiker."
+      },
       "notify:hub": {
         "title": "Ontvang elke melding",
         "consequence": "Bewaart en levert de meldingen die alle plugins versturen, inclusief de inhoud."
@@ -1237,6 +1250,10 @@
       "hosts:lock": {
         "title": "Hosts als alleen-lezen beheren",
         "consequence": "Hosts die hierdoor worden beheerd, kunnen door niemand anders worden bewerkt, verwijderd of opnieuw gedeeld."
+      },
+      "hosts:connect-policy": {
+        "title": "Bepalen wie kan verbinden",
+        "consequence": "Kan elke SSH- en remote desktopverbinding met elke host blokkeren of toestaan."
       },
       "desktop:window": {
         "title": "Open desktopvensters",
@@ -1663,6 +1680,12 @@
       "title": "Kolommen",
       "auto": "Automatisch",
       "count": "{{count}} kolommen breed"
+    },
+    "pager": {
+      "previous": "Vorige",
+      "next": "Volgende",
+      "page": "Pagina {{page}}",
+      "pageOf": "Pagina {{page}} van {{pages}}"
     }
   },
   "fields": {
@@ -1681,5 +1704,29 @@
       "admin": "Beheerder",
       "user": "Gebruiker"
     }
+  },
+  "tileGrid": {
+    "empty": "Nog geen tegels. Voeg er een paar toe uit de lijst.",
+    "move": "Slepen om te verplaatsen",
+    "moveTile": "Verplaats {{tile}}",
+    "settings": "Instellingen voor {{tile}}",
+    "remove": "Verwijder {{tile}}",
+    "width": "Breedte",
+    "height": "Hoogte",
+    "addTiles": "Tegels toevoegen",
+    "closePicker": "Sluiten",
+    "search": "Zoek tegels",
+    "noMatches": "Geen resultaten gevonden.",
+    "kind": {
+      "all": "Alles",
+      "card": "Kaarten",
+      "chart": "Grafieken",
+      "signal": "Status",
+      "action": "Acties",
+      "resource": "Lijsten",
+      "session": "Sessies"
+    },
+    "reset": "Resetten",
+    "done": "Klaar"
   }
 }

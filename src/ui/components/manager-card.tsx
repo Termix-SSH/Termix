@@ -102,7 +102,7 @@ export function ManagerSearch({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder ?? t("managerCard.filter")}
-          className="h-7 w-full border border-border bg-background pl-7 pr-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+          className="h-8 w-full border border-border bg-background pl-7 pr-2 text-xs outline-none focus:ring-1 focus:ring-ring"
         />
       </div>
       {count != null && (

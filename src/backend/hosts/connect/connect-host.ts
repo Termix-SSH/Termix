@@ -72,6 +72,8 @@ export interface ConnectHostOptions {
    */
   sock?: MutableConnectConfig["sock"];
   log?: SshAuthLog;
+  /** Plugin id that asked for the connection. For connect policies. */
+  origin?: string;
 }
 
 export interface SshConnection {
@@ -107,6 +109,7 @@ export async function connectHost(
     client,
     hostKeySocket: options.prompt?.hostKeySocket ?? null,
     interactive: !!options.prompt,
+    origin: options.origin,
     log: options.log,
     overrides: options.overrides,
   });
