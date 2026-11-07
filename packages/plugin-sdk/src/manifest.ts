@@ -631,6 +631,7 @@ export const CORE_KEYBINDING_ACTIONS: readonly string[] = [
   "previousTab",
   "openCommandPalette",
   "reconnectSession",
+  "toggleSidebar",
 ];
 
 /**

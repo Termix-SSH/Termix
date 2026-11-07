@@ -8,7 +8,10 @@ import {
 } from "@/lib/app-keyboard-shortcuts";
 import { getUserPreferences } from "@/main-axios";
 import { parseCustomKeybindings } from "@/api/open-tabs-api";
-import { findMatchingKeybinding } from "@/lib/keybinding-match";
+import {
+  eventMatchesCombo,
+  findMatchingKeybinding,
+} from "@/lib/keybinding-match";
 import type {
   CustomKeybinding,
   KeybindingActionType,
@@ -16,6 +19,7 @@ import type {
 import {
   GLOBAL_KEYBINDING_EVENT,
   getKeybindingAction,
+  listKeybindingDefaults,
   runKeybindingAction,
 } from "@/shell/keybinding-registry";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
@@ -53,7 +57,7 @@ export function useShellKeybindings({
           if (cancelled) return;
           globalKeybindingsRef.current = parseCustomKeybindings(
             prefs.customKeybindings,
-          ).filter((binding) => binding.enabled);
+          );
         })
         .catch(() => {});
     };
@@ -78,6 +82,10 @@ export function useShellKeybindings({
         (termRef?.current as TabHandle | null)?.reconnect?.();
         return;
       }
+      if (type === "toggleSidebar") {
+        regions.left.setOpen((open) => !open);
+        return;
+      }
       const currentTabs = tabsRef.current.filter(
         (tab) => !tab.parentSplitTabId,
       );
@@ -97,16 +105,32 @@ export function useShellKeybindings({
       )
         return;
       // Only actions that run anywhere; a terminal's own are its to handle.
+      const customBindings = globalKeybindingsRef.current;
       const binding = findMatchingKeybinding(
         event,
-        globalKeybindingsRef.current.filter(
-          (entry) => getKeybindingAction(entry.action.type)?.scope === "global",
+        customBindings.filter(
+          (entry) =>
+            entry.enabled &&
+            getKeybindingAction(entry.action.type)?.scope === "global",
         ),
       );
-      if (!binding) return;
+      if (binding) {
+        event.preventDefault();
+        event.stopPropagation();
+        runKeybindingAction(binding.action);
+        return;
+      }
+
+      const defaultBinding = listKeybindingDefaults().find(
+        (entry) =>
+          !customBindings.some(
+            (custom) => custom.overridesDefaultId === entry.id,
+          ) && eventMatchesCombo(event, entry.combo),
+      );
+      if (!defaultBinding || !getKeybindingAction(defaultBinding.id)) return;
       event.preventDefault();
       event.stopPropagation();
-      runKeybindingAction(binding.action);
+      runKeybindingAction({ type: defaultBinding.id });
     };
     const handleAction = (event: Event) =>
       runAction(
