@@ -104,6 +104,8 @@ export type SshAuthOutcome =
       message: string;
       /** For access-required: a tab of the policy plugin where access is asked for. */
       requestTab?: string;
+      /** For access-required: "verify" when that tab asks for a second factor. */
+      requestKind?: string;
     }
   | {
       /** Try once more with these config changes. Used by Tailscale. */

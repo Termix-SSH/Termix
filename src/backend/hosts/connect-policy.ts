@@ -13,6 +13,7 @@ import type {
   PluginConnectPolicyProvider,
 } from "@termix-ssh/plugin-sdk/backend";
 import { pluginLogger } from "../utils/logger.js";
+import { stepUpAt } from "../auth/step-up.js";
 
 interface Entry {
   pluginId: string;
@@ -28,6 +29,7 @@ export type ConnectPolicyResult =
       reason: string;
       pluginId: string;
       requestTab: string | null;
+      requestKind?: "verify";
     };
 
 export class ConnectPolicyError extends Error {
@@ -47,12 +49,16 @@ export class ConnectPolicyError extends Error {
     error: string;
     code: string;
     requestTab: string | null;
+    requestKind?: string;
     pluginId: string;
   } {
     return {
       error: this.message,
       code: this.code,
       requestTab: this.result.requestTab,
+      ...(this.result.requestKind
+        ? { requestKind: this.result.requestKind }
+        : {}),
       pluginId: this.result.pluginId,
     };
   }
@@ -91,10 +97,11 @@ export async function evaluateConnectPolicy(
   input: PluginConnectPolicyInput,
 ): Promise<ConnectPolicyResult> {
   let result: ConnectPolicyResult = { decision: "allow" };
+  const asked = { ...input, stepUpAt: stepUpAt(input.userId) };
   for (const entry of providers.values()) {
     let decision: PluginConnectPolicyDecision;
     try {
-      decision = (await entry.provider.check(input)) ?? { decision: "allow" };
+      decision = (await entry.provider.check(asked)) ?? { decision: "allow" };
     } catch (error) {
       pluginLogger.warn("Connect policy failed, refusing the connection", {
         operation: "connect_policy",
@@ -129,6 +136,11 @@ export async function evaluateConnectPolicy(
         kind === "request" && "requestTab" in decision
           ? plainTab(decision.requestTab)
           : null,
+      ...(kind === "request" &&
+      "requestKind" in decision &&
+      decision.requestKind === "verify"
+        ? { requestKind: "verify" as const }
+        : {}),
     };
   }
   return result;

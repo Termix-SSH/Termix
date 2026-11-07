@@ -1328,6 +1328,11 @@ export interface PluginConnectPolicyInput {
   interactive: boolean;
   /** Plugin id that asked for the connection, or "core". */
   origin: string;
+  /**
+   * When this user last proved a second factor while signed in, in ms since
+   * the epoch, or null. Filled in by core. Termix 26.11.1+.
+   */
+  stepUpAt?: number | null;
 }
 
 export type PluginConnectPolicyDecision =
@@ -1338,6 +1343,8 @@ export type PluginConnectPolicyDecision =
       reason?: string;
       /** A tab id of the providing plugin where the user can ask for access. */
       requestTab?: string;
+      /** "verify" when the tab asks the user to prove who they are, so clients say Verify. */
+      requestKind?: "access" | "verify";
     };
 
 /**
@@ -1739,6 +1746,8 @@ export type PluginSshAuthOutcome =
       message: string;
       /** For access-required: a tab of the policy plugin where access is asked for. */
       requestTab?: string;
+      /** For access-required: "verify" when that tab asks for a second factor. */
+      requestKind?: string;
     }
   | {
       /** Try once more with these config changes. */

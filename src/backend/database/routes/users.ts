@@ -39,6 +39,8 @@ import { registerUserDeleteAccountRoutes } from "./user-delete-account-routes.js
 import { registerUserDataAccessRoutes } from "./user-data-access-routes.js";
 import { listExternalLoginMethods, registerAuthRoutes } from "./auth-routes.js";
 import { registerAuthCompatRoutes } from "./auth-compat-routes.js";
+import { registerStepUpRoutes } from "./step-up-routes.js";
+import { clearStepUp } from "../../auth/step-up.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import {
   createCurrentSettingsRepository,
@@ -558,6 +560,7 @@ router.post("/logout", authenticateJWT, async (req, res) => {
       const sessionId = authReq.sessionId;
 
       await authManager.logoutUser(userId, sessionId);
+      clearStepUp(userId);
       authLogger.info("User logged out", {
         operation: "user_logout",
         userId,
@@ -1549,6 +1552,7 @@ registerUserApiKeyRoutes(router, requireAdmin);
 registerBrandingRoutes(router);
 
 registerAuthRoutes(router);
+registerStepUpRoutes(router, authenticateJWT);
 registerAuthCompatRoutes(router);
 
 export default router;

@@ -477,6 +477,9 @@ export {
   getUserSecondFactors,
   resetUserSecondFactors,
   type UserSecondFactorSummary,
+  challengeStepUp,
+  listStepUpFactors,
+  verifyStepUp,
 } from "@/api/auth-methods-api";
 export { getCredentials } from "@/api/credentials-api";
 export {
@@ -874,3 +877,4 @@ export { HostTabEmbed } from "@/shell/HostTabEmbed";
 import { createOperationsApi } from "@/lib/plugin-transport";
 /** Core's /operations routes, with the user's own session. */
 export const operationsApi = createOperationsApi();
+export { useSecondFactors } from "@/plugin-host/auth-registry";

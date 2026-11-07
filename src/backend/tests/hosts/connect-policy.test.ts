@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { clearStepUp, recordStepUp } from "../../auth/step-up.js";
+
 const logAudit = vi.fn();
 vi.mock("../../utils/logger.js", () => ({
   pluginLogger: { warn: vi.fn() },
@@ -44,7 +46,29 @@ describe("connect policy", () => {
     const check = vi.fn(() => ({ decision: "allow" as const }));
     provideConnectPolicy("p", { check });
     await assertConnectAllowed(input);
-    expect(check).toHaveBeenCalledWith(input);
+    expect(check).toHaveBeenCalledWith({ ...input, stepUpAt: null });
+  });
+
+  it("tells the provider when the user last proved a second factor", async () => {
+    const check = vi.fn(() => ({ decision: "allow" as const }));
+    provideConnectPolicy("p", { check });
+    recordStepUp(input.userId, 1234);
+    await assertConnectAllowed(input);
+    clearStepUp(input.userId);
+    expect(check).toHaveBeenCalledWith({ ...input, stepUpAt: 1234 });
+  });
+
+  it("keeps a verify request, so clients can say Verify", async () => {
+    provideConnectPolicy("p", {
+      check: () => ({
+        decision: "request",
+        requestTab: "verify-tab",
+        requestKind: "verify",
+      }),
+    });
+    await expect(assertConnectAllowed(input)).rejects.toMatchObject({
+      result: { requestKind: "verify", requestTab: "verify-tab" },
+    });
   });
 
   it("picks the strictest answer", async () => {

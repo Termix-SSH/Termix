@@ -223,6 +223,9 @@ export async function buildConnectConfig(
           ...(error.result.requestTab
             ? { requestTab: error.result.requestTab }
             : {}),
+          ...(error.result.requestKind
+            ? { requestKind: error.result.requestKind }
+            : {}),
         },
       };
     }

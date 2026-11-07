@@ -358,6 +358,9 @@ router.post("/notes", async (req, res) => {
   certificate (a `-cert.pub` line, or `null` to clear it) on one of the acting user's SSH key
   credentials. Core then offers key plus certificate on every connection through that credential, so a
   plugin that issues certificates can keep the credential current instead of asking the user to paste it.
+- Second factor checks: `input.stepUpAt` is when the user last proved a second factor while signed in (Termix
+  26.11.1+). Answer `request` with `requestKind: "verify"` and a tab of yours that calls `/ui` `listStepUpFactors`,
+  `challengeStepUp` and `verifyStepUp`, drawing the factor with `useSecondFactors`.
 - Connect policy: with `hosts:connect-policy`, `ctx.hosts.connectPolicy.provide({ check(input) })` is asked
   before every SSH config is built and every remote desktop login is handed out (`input` has `userId`,
   `hostId`, `protocol`, `purpose`, `profile`, `interactive`, `origin`). Return `{ decision: "allow" }`,

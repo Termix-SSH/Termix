@@ -16,6 +16,8 @@ Plugin API 1.16.0.
 - `/ui` exports `getCredentialStorage` and `updateCredentialStorage`, and `HostPolicy` has `credentialStorage`
 - `LoginMethodUIProps` has `view`, the login page a method is drawn on
 - `ctx.auth.identities` lists, links and unlinks a user's external identities
+- Connect policy input has `stepUpAt`, and a `request` decision can set `requestKind: "verify"`
+- `/ui` exports `listStepUpFactors`, `challengeStepUp`, `verifyStepUp` and `useSecondFactors`, to ask a signed in user for a second factor
 
 ### Changed
 
