@@ -188,7 +188,7 @@ Want to build your own? Start from the [plugin template](https://github.com/Term
 
 See the [docs](https://docs.termix.site/install) for install steps on every platform.
 
-On macOS, choose **Termix → Menu Bar Icon** to use a monochrome icon (the default), a color icon, or hide it. The choice is saved on this device. You can restore a hidden icon from the same menu after opening Termix from the Dock; closing the last window while the icon is hidden quits the app.
+On macOS, Termix, Menu Bar Icon picks a monochrome icon (the default), a color icon or no icon. The choice is saved on this device. With the icon hidden, open Termix from the Dock to change it back, and closing the last window quits the app.
 
 Sample Docker Compose file. Remote desktop (RDP, VNC and Telnet) is built in, so nothing else needs to run next to it:
 

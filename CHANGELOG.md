@@ -13,6 +13,8 @@
 - Plugins can decide who may connect to a host, so a host can need approved access before an SSH or remote desktop session opens
 - When more than one plugin flags a host, its row shows one status dot with every reason in its tooltip
 - Plugins that issue SSH certificates can save them on the SSH key login they were issued for
+- Cmd+B shows or hides the sidebar, and can be changed in keybindings
+- The macOS menu bar icon can be monochrome (the default), in color or hidden, from the Termix menu
 
 ### Changed
 
@@ -53,6 +55,11 @@
 - State badges in tables no longer stretch across the whole column
 - Text boxes, dropdowns, checkboxes and button groups share one border color
 - Small icons in buttons sit centered instead of half a pixel off
+- Installing Termix as an app works behind a proxy that needs a login cookie
+- The hosts Import / Export button and menu entry show their name again instead of a text key
+- SSH logins to servers that only offer group exchange no longer stall for up to a minute while checking a large key exchange group
+- Plugin views can open the host editor again, so the terminal's Edit host button works after a failed connection
+- The Linux arm64 and armv7l desktop builds start again instead of failing to load the image library
 
 ## 26.11.0
 
