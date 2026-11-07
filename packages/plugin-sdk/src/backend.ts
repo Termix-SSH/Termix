@@ -159,6 +159,14 @@ export interface SyncEntityReference {
   idType?: "number" | "string";
 }
 
+/** An external identity tied to a Termix account. */
+export interface PluginLinkedIdentity {
+  /** The `provider` of the identities the plugin returns from a login. */
+  provider: string;
+  subject: string;
+  email?: string | null;
+}
+
 export interface SyncEntityPermissions {
   /** Checked before a pushed row that does not exist yet is written. */
   create?: string;
@@ -2456,6 +2464,26 @@ export interface PluginAuth {
    * delete a provider people still sign in with.
    */
   countLinkedUsers: (provider: string) => Promise<number>;
+  /**
+   * The external identities tied to an account, so a signed in user can link
+   * one and sign in with it from then on. Every change is audited. Needs
+   * Termix 26.11.1.
+   */
+  identities: {
+    list: (userId: string) => Promise<PluginLinkedIdentity[]>;
+    /**
+     * Ties an identity to the user. Throws a LoginMethodError with code
+     * `identity_in_use` when another account has it, and `provider_linked`
+     * when the user already has a different one from this provider.
+     */
+    link: (userId: string, identity: PluginLinkedIdentity) => Promise<void>;
+    /**
+     * Removes the user's identities from a provider. Throws a
+     * LoginMethodError with code `last_login` when the user could no longer
+     * sign in.
+     */
+    unlink: (userId: string, provider: string) => Promise<void>;
+  };
   /**
    * A short-lived session for an existing user, for calling core's own HTTP
    * API as them from work with no request behind it, like a scheduled task

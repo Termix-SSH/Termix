@@ -14,7 +14,10 @@ import type {
   PluginSshHost,
 } from "@termix-ssh/plugin-sdk/backend";
 import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
-import { PluginSshInteractionError } from "@termix-ssh/plugin-sdk/backend";
+import {
+  LoginMethodError,
+  PluginSshInteractionError,
+} from "@termix-ssh/plugin-sdk/backend";
 import {
   assertCapability,
   capabilityRefused,
@@ -958,6 +961,82 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
       const { createCurrentUserAuthRepository } =
         await import("../database/repositories/factory.js");
       return createCurrentUserAuthRepository().countUsersForProvider(provider);
+    },
+    identities: {
+      list: async (userId) => {
+        await granted();
+        const { createCurrentUserAuthRepository } =
+          await import("../database/repositories/factory.js");
+        const rows =
+          await createCurrentUserAuthRepository().listIdentitiesForUser(userId);
+        return rows.map((row) => ({
+          provider: row.providerId,
+          subject: row.subject,
+          email: row.email,
+        }));
+      },
+      link: async (userId, identity) => {
+        await granted();
+        const { createCurrentUserAuthRepository } =
+          await import("../database/repositories/factory.js");
+        const repository = createCurrentUserAuthRepository();
+        const held = await repository.findIdentity(
+          identity.provider,
+          identity.subject,
+        );
+        if (held?.userId === userId) return;
+        if (held) {
+          throw new LoginMethodError(
+            "This sign in is linked to another account",
+            409,
+            "identity_in_use",
+          );
+        }
+        const own = await repository.listIdentitiesForUser(userId);
+        if (own.some((row) => row.providerId === identity.provider)) {
+          throw new LoginMethodError(
+            "This account is already linked to this provider",
+            409,
+            "provider_linked",
+          );
+        }
+        await repository.linkIdentity({
+          userId,
+          providerId: identity.provider,
+          subject: identity.subject,
+          email: identity.email ?? null,
+        });
+        void audit(
+          "auth_identity_linked",
+          `${identity.provider} for ${userId}`,
+          {
+            success: true,
+          },
+        );
+      },
+      unlink: async (userId, provider) => {
+        await granted();
+        const { createCurrentUserAuthRepository, createCurrentUserRepository } =
+          await import("../database/repositories/factory.js");
+        const repository = createCurrentUserAuthRepository();
+        const own = await repository.listIdentitiesForUser(userId);
+        const user = await createCurrentUserRepository().findById(userId);
+        if (
+          !user?.passwordHash &&
+          !own.some((row) => row.providerId !== provider)
+        ) {
+          throw new LoginMethodError(
+            "Set a password before unlinking your only sign in",
+            409,
+            "last_login",
+          );
+        }
+        if ((await repository.unlinkProviderForUser(userId, provider)) > 0) {
+          void audit("auth_identity_unlinked", `${provider} for ${userId}`, {
+            success: true,
+          });
+        }
+      },
     },
     issueUserToken: (userId, options) =>
       issueUserToken(manifest, userId, options),

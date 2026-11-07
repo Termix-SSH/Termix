@@ -889,6 +889,10 @@ closely. Declare ids in `contributes.auth` and register them with `ctx.auth.regi
 `registerSecondFactor` or `registerSshAuthProvider`. Connection protocols go in `contributes.protocols`
 and `app.registerHostProtocol`. Read https://docs.termix.site/develop/auth before starting one.
 
+To tie an external identity to an account that already exists, `ctx.auth.identities` has `list(userId)`,
+`link(userId, { provider, subject, email })` and `unlink(userId, provider)` (Termix 26.11.1+). `link` refuses an
+identity another account holds and `unlink` refuses to take away a user's last way to sign in. Both are audited.
+
 Login rules need `auth:policy`. `ctx.auth.policy.provide({ evaluate, allowRememberDevice })` is asked at
 every login with the user, the method, the device and every second factor (`ctx.auth.listSecondFactors()`
 lists them too). `evaluate` returns `allowRememberDevice`, `maxSessionSeconds`, `idleTimeoutSeconds` and

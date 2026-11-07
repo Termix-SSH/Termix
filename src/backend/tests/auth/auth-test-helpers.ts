@@ -103,6 +103,13 @@ export function fakeFactory(state: AuthState) {
           email: input.email ?? null,
         });
       },
+      unlinkProviderForUser: async (userId: string, providerId: string) => {
+        const before = state.identities.length;
+        state.identities = state.identities.filter(
+          (row) => !(row.userId === userId && row.providerId === providerId),
+        );
+        return before - state.identities.length;
+      },
       countUsersForProvider: async (providerId: string) =>
         new Set(
           state.identities
