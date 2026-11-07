@@ -1,4 +1,9 @@
 import {
+  credentialStorageAllowed,
+  sendCredentialStorageOff,
+  storedSecretFields,
+} from "../../hosts/credential-storage.js";
+import {
   changeHostOverrides,
   type OverrideChange,
 } from "../../hosts/defaults/overrides.js";
@@ -115,6 +120,14 @@ export function registerHostBulkRoutes(
         return res
           .status(400)
           .json({ error: "hostIds array is required and must not be empty" });
+      }
+      if (
+        !credentialStorageAllowed() &&
+        updates &&
+        typeof updates === "object" &&
+        storedSecretFields("ssh_data", updates).length > 0
+      ) {
+        return sendCredentialStorageOff(res);
       }
 
       if (hostIds.length > 1000) {

@@ -249,6 +249,28 @@ export async function updateExternalAutoProvision(
   }
 }
 
+export async function getCredentialStorage(): Promise<{ enabled: boolean }> {
+  try {
+    const response = await authApi.get("/users/credential-storage");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "check credential storage setting");
+  }
+}
+
+export async function updateCredentialStorage(
+  enabled: boolean,
+): Promise<{ enabled: boolean }> {
+  try {
+    const response = await authApi.patch("/users/credential-storage", {
+      enabled,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "update credential storage setting");
+  }
+}
+
 export async function getSecondFactorAfterExternalLogin(): Promise<{
   enabled: boolean;
 }> {

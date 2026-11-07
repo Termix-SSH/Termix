@@ -1,3 +1,7 @@
+import {
+  CREDENTIAL_STORAGE_SETTING,
+  credentialStorageAllowed,
+} from "../../hosts/credential-storage.js";
 import { isExternalAccount } from "../../auth/external-account.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, {
@@ -1074,6 +1078,75 @@ router.patch(
     }
   },
 );
+
+/**
+ * @openapi
+ * /users/credential-storage:
+ *   get:
+ *     summary: Get the credential storage setting
+ *     description: Whether passwords and private keys can be saved on hosts and credentials on this server.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Credential storage setting.
+ *       401:
+ *         description: Not signed in.
+ */
+router.get("/credential-storage", authenticateJWT, (_req, res) => {
+  res.json({ enabled: credentialStorageAllowed() });
+});
+
+/**
+ * @openapi
+ * /users/credential-storage:
+ *   patch:
+ *     summary: Set the credential storage setting
+ *     description: Turns saving passwords and private keys on or off for everyone. Logins already saved stay until they are removed.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               enabled:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Credential storage setting updated.
+ *       400:
+ *         description: Invalid value for enabled.
+ *       403:
+ *         description: Not authorized.
+ *       500:
+ *         description: Failed to set the credential storage setting.
+ */
+router.patch("/credential-storage", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    const user = await requireCurrentAdmin(userId);
+    if (!user) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const { enabled } = req.body;
+    if (typeof enabled !== "boolean") {
+      return res.status(400).json({ error: "Invalid value for enabled" });
+    }
+    await createCurrentSettingsRepository().set(
+      CREDENTIAL_STORAGE_SETTING,
+      enabled ? "true" : "false",
+    );
+    res.json({ enabled });
+  } catch (err) {
+    authLogger.error("Failed to set the credential storage setting", err);
+    res
+      .status(500)
+      .json({ error: "Failed to set the credential storage setting" });
+  }
+});
 
 /**
  * @openapi

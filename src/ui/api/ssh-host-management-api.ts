@@ -90,6 +90,8 @@ export interface HostPolicy {
   manualCreate: boolean;
   /** The plugin that manages hosts, when hosts can't be added by hand. */
   blockedBy?: string;
+  /** False when an admin turned off saving passwords and keys. */
+  credentialStorage?: boolean;
 }
 
 export async function getHostPolicy(): Promise<HostPolicy> {

@@ -1,3 +1,9 @@
+import {
+  CredentialStorageError,
+  credentialStorageAllowed,
+  sendCredentialStorageOff,
+  storedSecretFields,
+} from "../../hosts/credential-storage.js";
 import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { listCredentialTypes } from "../../hosts/connect/auth-provider-registry.js";
@@ -109,6 +115,13 @@ router.post(
       keyType,
       certPublicKey,
     } = req.body;
+
+    if (
+      !credentialStorageAllowed() &&
+      storedSecretFields("ssh_credentials", req.body ?? {}).length > 0
+    ) {
+      return sendCredentialStorageOff(res);
+    }
 
     if (!isNonEmptyString(userId) || !isNonEmptyString(name)) {
       authLogger.warn("Invalid credential creation data validation failed", {
@@ -237,6 +250,9 @@ router.post(
 
       res.status(201).json(formatCredentialOutput(created));
     } catch (err) {
+      if (err instanceof CredentialStorageError) {
+        return sendCredentialStorageOff(res);
+      }
       authLogger.error("Failed to create credential in database", err, {
         operation: "credential_create",
         userId,
@@ -574,6 +590,9 @@ router.post(
 
       res.status(201).json(formatCredentialOutput(created));
     } catch (err) {
+      if (err instanceof CredentialStorageError) {
+        return sendCredentialStorageOff(res);
+      }
       authLogger.error("Failed to duplicate credential", err, {
         operation: "credential_duplicate",
         userId,
@@ -780,6 +799,9 @@ router.put(
 
       res.json(formatCredentialOutput(updatedCredential ?? existingCredential));
     } catch (err) {
+      if (err instanceof CredentialStorageError) {
+        return sendCredentialStorageOff(res);
+      }
       authLogger.error("Failed to update credential", err);
       res.status(500).json({
         error: getErrorMessage(err, "Failed to update credential"),

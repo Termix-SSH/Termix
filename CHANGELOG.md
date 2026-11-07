@@ -17,6 +17,7 @@
 - The macOS menu bar icon can be monochrome (the default), in color or hidden, from the Termix menu
 - Browser back and forward, and the mouse back and forward buttons, move between the tabs you used instead of leaving Termix
 - Closing a tab goes back to the tab you used before it
+- Admin setting to stop anyone saving passwords and keys on hosts and credentials. Termix asks for them when connecting (#1753)
 
 ### Changed
 
@@ -25,6 +26,7 @@
 - List rows in plugins follow the host list status colors: accent for good, dark for offline or bad
 - Line charts that cover a few minutes show seconds in their times
 - Plugins a new release adds to the image start on only when they are recommended. The rest are installed and left off for an admin to turn on
+- Session tokens are stored as hashes, so a database copy holds no working logins (#1753)
 
 - Host status, import and export, and credential tools now start on for new installs
 - Sync now starts on in a new desktop app, so it can link to a server

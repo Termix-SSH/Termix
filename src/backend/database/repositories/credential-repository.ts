@@ -1,3 +1,8 @@
+import {
+  assertSecretsAllowed,
+  changedFields,
+  credentialStorageAllowed,
+} from "../../hosts/credential-storage.js";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { sshCredentials, sshCredentialUsage } from "../db/schema.js";
@@ -35,6 +40,7 @@ export class CredentialRepository {
     userId: string,
     credential: NewCredentialRecord | Record<string, unknown>,
   ): Promise<CredentialRecord> {
+    assertSecretsAllowed("ssh_credentials", credential);
     const userDataKey = DataCrypto.validateUserAccess(userId);
     const tempId = credential.id ?? Date.now();
     const dataWithTempId = {
@@ -191,6 +197,10 @@ export class CredentialRepository {
     credentialId: number,
     update: CredentialUpdate,
   ): Promise<CredentialRecord | null> {
+    if (!credentialStorageAllowed()) {
+      const current = await this.findDecryptedByIdForUser(userId, credentialId);
+      assertSecretsAllowed("ssh_credentials", changedFields(update, current));
+    }
     const userDataKey = DataCrypto.validateUserAccess(userId);
     const encryptedUpdate = this.encryptCredentialRecordForWrite(
       update,

@@ -14,6 +14,7 @@ import { DataCrypto } from "../utils/data-crypto.js";
 import { SystemCrypto } from "../utils/system-crypto.js";
 import { DatabaseSaveTrigger } from "../utils/database-save-trigger.js";
 import { syncLogger } from "../utils/logger.js";
+import { stripSecrets } from "../hosts/credential-storage.js";
 import {
   getEntity,
   type RegisteredSyncEntity,
@@ -110,6 +111,19 @@ export async function findStoredRow(
     .where(locate(entity, userId, syncId))
     .limit(1)) as SyncRow[];
   return row ?? null;
+}
+
+/** A desktop keeps syncing while this server refuses to save passwords and keys. */
+function withoutRefusedSecrets(
+  entity: RegisteredSyncEntity,
+  row: SyncRow,
+): SyncRow {
+  if (entity.owner !== "core") return row;
+  if (entity.type === "hosts") return stripSecrets("ssh_data", row) as SyncRow;
+  if (entity.type === "sshCredentials") {
+    return stripSecrets("ssh_credentials", row) as SyncRow;
+  }
+  return row;
 }
 
 /** The user's row whose matchOn columns equal the inbound row's. */
@@ -343,9 +357,12 @@ export async function writeWireRow(
     current,
   );
   const columns = columnsOf(entity);
-  const writable = Object.fromEntries(
-    Object.entries({ ...toWritable(entity, resolved), ...extra }).filter(
-      ([field]) => columns.has(field),
+  const writable = withoutRefusedSecrets(
+    entity,
+    Object.fromEntries(
+      Object.entries({ ...toWritable(entity, resolved), ...extra }).filter(
+        ([field]) => columns.has(field),
+      ),
     ),
   );
   let where = locate(entity, userId, syncId);

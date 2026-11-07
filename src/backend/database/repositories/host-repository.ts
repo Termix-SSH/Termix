@@ -1,3 +1,8 @@
+import {
+  assertSecretsAllowed,
+  changedFields,
+  credentialStorageAllowed,
+} from "../../hosts/credential-storage.js";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { hostAccess, hosts, pluginSettings } from "../db/schema.js";
@@ -37,6 +42,7 @@ export class HostRepository {
     userId: string,
     host: NewHostRecord | Record<string, unknown>,
   ): Promise<HostRecord> {
+    assertSecretsAllowed("ssh_data", host);
     const userDataKey = DataCrypto.validateUserAccess(userId);
     const tempId = host.id ?? Date.now();
     const dataWithTempId = {
@@ -200,6 +206,17 @@ export class HostRepository {
     update: HostUpdate,
   ): Promise<HostRecord | null> {
     const userDataKey = DataCrypto.validateUserAccess(userId);
+    if (!credentialStorageAllowed()) {
+      const [stored] = await this.context.drizzle
+        .select()
+        .from(hosts)
+        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
+        .limit(1);
+      const current = stored
+        ? DataCrypto.decryptRecord("ssh_data", stored, userId, userDataKey)
+        : null;
+      assertSecretsAllowed("ssh_data", changedFields(update, current));
+    }
     const encryptedUpdate = DataCrypto.encryptRecord(
       "ssh_data",
       update,
@@ -245,6 +262,7 @@ export class HostRepository {
     if (hostIds.length === 0 || Object.keys(update).length === 0) {
       return 0;
     }
+    assertSecretsAllowed("ssh_data", update);
 
     const result = await this.context.drizzle
       .update(hosts)

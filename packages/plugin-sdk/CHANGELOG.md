@@ -13,6 +13,7 @@ Plugin API 1.16.0.
 - `PANEL.section`, the one inner layout for a SectionCard body
 - `TextAreaField` takes `fill`, so a config or log editor uses the rest of the height
 - `registerHostBadge` takes `useDot`. Every plugin's dots merge into one dot on the host row, with the worst tone and each reason in its tooltip. `/ui` exports `HostDotGroup` for layouts that draw host rows
+- `/ui` exports `getCredentialStorage` and `updateCredentialStorage`, and `HostPolicy` has `credentialStorage`
 
 ### Changed
 

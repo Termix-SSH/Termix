@@ -752,6 +752,7 @@ class AuthManager {
     try {
       const sessionRepository = createCurrentSessionRepository();
       const now = new Date();
+      await sessionRepository.hashStoredTokens();
       const expiredSessions = await sessionRepository.listExpired(now);
 
       const expiredCount = expiredSessions.length;
