@@ -1,3 +1,4 @@
+import { deviceLoginsAvailable } from "../../hosts/device-auth.js";
 import {
   CredentialStorageError,
   credentialStorageAllowed,
@@ -215,6 +216,7 @@ router.post(
           authType === "key" && certPublicKey ? certPublicKey.trim() : null,
         usageCount: 0,
         lastUsed: null,
+        localOnly: deviceLoginsAvailable() && req.body?.localOnly === true,
       };
 
       const created =
@@ -1129,6 +1131,7 @@ function formatCredentialOutput(
     lastUsed: credential.lastUsed,
     createdAt: credential.createdAt,
     updatedAt: credential.updatedAt,
+    localOnly: !!credential.localOnly,
     ...sharedCopyFields(credential.sharedSource),
   };
 }

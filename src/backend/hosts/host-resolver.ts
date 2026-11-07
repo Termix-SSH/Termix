@@ -1,3 +1,4 @@
+import { resolveDeviceLogin } from "./device-auth.js";
 import { getErrorMessage } from "../utils/error-message.js";
 import { parseSshOptions } from "./ssh-options.js";
 import { findUsableCredential } from "./usable-credential.js";
@@ -169,6 +170,21 @@ export async function resolveHostById(
         });
       }
     }
+  }
+
+  // A login kept on this desktop beats the one synced for a shared host.
+  const deviceLogin = await resolveDeviceLogin(host, userId, "ssh").catch(
+    () => null,
+  );
+  if (deviceLogin) {
+    host.password = deviceLogin.password;
+    host.key = deviceLogin.privateKey || deviceLogin.key;
+    host.keyPassword = deviceLogin.keyPassword;
+    host.keyType = deviceLogin.keyType;
+    host.certPublicKey = deviceLogin.certPublicKey || null;
+    host.username = deviceLogin.username || host.username;
+    host.authType = host.key ? "key" : host.password ? "password" : "none";
+    host.credentialId = null;
   }
 
   host.username = await expandExternalUsername(

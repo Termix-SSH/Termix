@@ -279,6 +279,7 @@ export const sshCredentials = sqliteTable(
   lastUsed: text("last_used"),
   syncId: text("sync_id").unique(),
   sharedSource: text("shared_source"),
+  localOnly: integer("local_only", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

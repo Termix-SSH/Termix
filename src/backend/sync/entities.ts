@@ -91,8 +91,8 @@ export function registerCoreSyncEntities(): void {
       table: sshCredentials,
       order: 10,
       encryptedFields: FieldCrypto.fieldsFor("ssh_credentials"),
-      readOnlyFields: ["usageCount", "lastUsed", "sharedSource"],
-      shouldSync: (row) => !row.sharedSource,
+      readOnlyFields: ["usageCount", "lastUsed", "sharedSource", "localOnly"],
+      shouldSync: (row) => !row.sharedSource && !row.localOnly,
       permissions: {
         create: "credentials.create",
         update: "credentials.edit",

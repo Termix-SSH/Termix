@@ -19,6 +19,7 @@
 - Closing a tab goes back to the tab you used before it
 - Admin setting to stop anyone saving passwords and keys on hosts and credentials. Termix asks for them when connecting (#1753)
 - A signed in user can prove a second factor again, for plugins that ask before something sensitive
+- Desktop app: a credential can be kept on this device only, and used as a personal login for a shared host or folder. It is never sent to the server (#1749)
 
 ### Changed
 

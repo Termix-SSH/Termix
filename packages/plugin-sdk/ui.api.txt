@@ -87,6 +87,7 @@ DefaultOverrides (type): DefaultOverrides
 DefaultsOnly (value): ({ settingKey, children, }: { settingKey: string; children: ReactNode; }) => Element
 DesktopUpdateMode (type): DesktopUpdateMode
 DesktopUpdateState (type): DesktopUpdateState
+DeviceLogin (type): DeviceLogin
 Dialog (value): ({ ...props }: DialogProps) => Element
 DialogClose (value): ({ ...props }: DialogCloseProps & RefAttributes<HTMLButtonElement>) => Element
 DialogContent (value): ({ className, children, showCloseButton, ...props }: DialogContentProps & RefAttributes<HTMLDivElement> & { showCloseButton?: boolean; }) => Element
@@ -444,9 +445,11 @@ getExternalAutoProvision (value): () => Promise<{ enabled: boolean; }>
 getFolderAccess (value): (folder: string) => Promise<{ rules: FolderAccessRule[]; }>
 getFolderAuthOverride (value): (folder: string, protocol: string, sharedCopySyncId?: string) => Promise<{ folder: string; protocol: string; credentialId: number; }>
 getFolderDefaultsId (value): (name: string) => Promise<number>
+getFolderDeviceAuth (value): (folder: string, protocol: string) => Promise<DeviceLogin>
 getHostAccess (value): (hostId: number, syncId?: string) => Promise<{ accessList: AccessRecord[]; isOwner?: boolean; }>
 getHostAuthOverride (value): (hostId: number, protocol: string, sharedCopySyncId?: string) => Promise<{ protocol: string; credentialId: number; }>
 getHostDefaultsLevel (value): (target: HostDefaultsTarget) => Promise<HostDefaultsLevelData>
+getHostDeviceAuth (value): (hostId: number, protocol: string) => Promise<DeviceLogin>
 getHostEditorSection (value): (id: string) => HostEditorSectionDef
 getHostPassword (value): (hostId: number, field?: "key" | "password" | "sudoPassword" | "keyPassword") => Promise<string>
 getHostPolicy (value): () => Promise<HostPolicy>
@@ -592,7 +595,9 @@ saveUserPreferences (value): (prefs: Partial<UserPreferences>) => Promise<void>
 setAllPluginChannels (value): (channel: PluginChannel) => Promise<{ changed: string[]; }>
 setDeveloperMode (value): (enabled: boolean) => Promise<void>
 setFolderAuthOverride (value): (folder: string, protocol: string, credentialId: number, sharedCopySyncId?: string) => Promise<{ success: boolean; folder: string; protocol: string; credentialId: number; }>
+setFolderDeviceAuth (value): (folder: string, protocol: string, credentialId: number) => Promise<void>
 setHostAuthOverride (value): (hostId: number, protocol: string, credentialId: number, sharedCopySyncId?: string) => Promise<{ success: boolean; protocol: string; credentialId: number; }>
+setHostDeviceAuth (value): (hostId: number, protocol: string, credentialId: number) => Promise<void>
 setNotificationPrivateEndpoints (value): (hosts: string[]) => Promise<string[]>
 setPluginOptions (value): (pluginId: string, options: { autoUpdate?: boolean; pinned?: boolean; channel?: PluginChannel; }) => Promise<{ autoUpdate: boolean; pinnedVersion: string; channel: PluginChannel; }>
 setUpdateChannel (value): (channel: UpdateChannel) => Promise<UpdateChannelState>

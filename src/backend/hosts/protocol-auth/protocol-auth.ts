@@ -8,6 +8,7 @@
  * needs no core change.
  */
 
+import type { AuthOverrideProtocol } from "../../../types/auth-protocols.js";
 import {
   CredentialStorageError,
   credentialStorageAllowed,
@@ -564,6 +565,18 @@ export async function resolveOwnerProtocolLogin(
     // Only the login itself comes from a stored credential, never the fields.
     if (credential?.username) username = credential.username;
     if (credential?.password) password = credential.password;
+  }
+
+  // A login kept on this desktop beats the one synced for a shared host.
+  const { resolveDeviceLogin } = await import("../device-auth.js");
+  const deviceLogin = await resolveDeviceLogin(
+    host,
+    ownerId,
+    declared.id as AuthOverrideProtocol,
+  ).catch(() => null);
+  if (deviceLogin) {
+    username = deviceLogin.username || username;
+    password = deviceLogin.password || password;
   }
 
   const fallback = declared.hostLoginFallback ?? [];

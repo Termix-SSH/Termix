@@ -86,6 +86,72 @@ export async function bulkUpdateSSHHosts(
   }
 }
 
+export interface DeviceLogin {
+  credentialId: number | null;
+  credentials: { id: number; name: string; username: string | null }[];
+}
+
+/** Desktop: a shared host's login kept on this device. */
+export async function getHostDeviceAuth(
+  hostId: number,
+  protocol: string,
+): Promise<DeviceLogin> {
+  try {
+    const response = await sshHostApi.get(
+      `/db/host/${hostId}/device-auth/${encodeURIComponent(protocol)}`,
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "load device login");
+  }
+}
+
+export async function setHostDeviceAuth(
+  hostId: number,
+  protocol: string,
+  credentialId: number | null,
+): Promise<void> {
+  try {
+    await sshHostApi.put(
+      `/db/host/${hostId}/device-auth/${encodeURIComponent(protocol)}`,
+      { credentialId },
+    );
+  } catch (error) {
+    handleApiError(error, "save device login");
+  }
+}
+
+/** Desktop: a shared folder's login kept on this device. */
+export async function getFolderDeviceAuth(
+  folder: string,
+  protocol: string,
+): Promise<DeviceLogin> {
+  try {
+    const response = await sshHostApi.get(
+      `/device-auth/folder/${encodeURIComponent(protocol)}`,
+      { params: { folder } },
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "load device login");
+  }
+}
+
+export async function setFolderDeviceAuth(
+  folder: string,
+  protocol: string,
+  credentialId: number | null,
+): Promise<void> {
+  try {
+    await sshHostApi.put(
+      `/device-auth/folder/${encodeURIComponent(protocol)}`,
+      { folder, credentialId },
+    );
+  } catch (error) {
+    handleApiError(error, "save device login");
+  }
+}
+
 export interface HostPolicy {
   manualCreate: boolean;
   /** The plugin that manages hosts, when hosts can't be added by hand. */

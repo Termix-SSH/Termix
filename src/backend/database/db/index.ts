@@ -1751,6 +1751,11 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "ssh_options", "TEXT");
   addColumnIfNotExists("ssh_credentials", "shared_source", "TEXT");
   addColumnIfNotExists(
+    "ssh_credentials",
+    "local_only",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  addColumnIfNotExists(
     "ssh_folders",
     "local_only",
     "INTEGER NOT NULL DEFAULT 0",

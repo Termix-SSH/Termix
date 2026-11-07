@@ -1,3 +1,4 @@
+import { registerDeviceAuthRoutes } from "./device-auth-routes.js";
 import {
   CredentialStorageError,
   credentialStorageAllowed,
@@ -144,6 +145,7 @@ function notifyStatsHostUpdated(
 const authManager = AuthManager.getInstance();
 const permissionManager = PermissionManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
+registerDeviceAuthRoutes(router, authenticateJWT);
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
 registerHostTagRoutes(

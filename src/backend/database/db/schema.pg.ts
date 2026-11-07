@@ -289,6 +289,7 @@ export const sshCredentials = pgTable(
   lastUsed: text("last_used"),
   syncId: varchar("sync_id", { length: 255 }).unique(),
   sharedSource: text("shared_source"),
+  localOnly: boolean("local_only").notNull().default(false),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
