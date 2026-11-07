@@ -281,7 +281,7 @@ export async function loadWireRows(
       const wire = toWire(entity, serialized, syncId);
       rows.set(syncId, { syncId, wire, hash: hashWire(entity, wire, key) });
     } catch (error) {
-      syncLogger.warn("Could not serialize a sync row", {
+      syncLogger.warn(`Could not serialize a ${entity.type} sync row`, {
         operation: "sync_serialize",
         entityType: entity.type,
         syncId,
