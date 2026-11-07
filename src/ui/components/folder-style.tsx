@@ -165,7 +165,7 @@ export function HexColorPicker({
           type="color"
           value={safe}
           onChange={(e) => onChange(e.target.value)}
-          className="h-8 w-10 shrink-0 cursor-pointer rounded-none border border-input bg-transparent p-0.5"
+          className="h-8 w-10 shrink-0 cursor-pointer rounded-none border border-border bg-transparent p-0.5"
         />
         <Input
           value={value}

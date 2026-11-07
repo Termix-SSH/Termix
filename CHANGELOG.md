@@ -50,6 +50,8 @@
 - Filters, view toggles and small buttons in a toolbar are the same height as the search box next to them
 - Save and Cancel at the bottom of a form are the same height as other buttons
 - State badges in tables no longer stretch across the whole column
+- Text boxes, dropdowns, checkboxes and button groups share one border color
+- Small icons in buttons sit centered instead of half a pixel off
 
 ## 26.11.0
 

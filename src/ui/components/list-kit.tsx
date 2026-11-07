@@ -394,7 +394,8 @@ export function AddButton({
         className,
       )}
     >
-      <Plus className="size-3.5" />
+      {/* Whole pixels so the plus sits centered; the root font is 14px. */}
+      <Plus className="size-[12px]" />
       {!compact && <span>{text}</span>}
     </Button>
   );

@@ -318,6 +318,16 @@ html.fs-xl {
   font-size: 20px;
 }
 
+/* Small icons in buttons snap to even pixels so they sit centered and sharp at every font size. */
+:is(button, [role="button"]) svg:is(.size-3, .size-3\.5) {
+  width: round(nearest, 0.875rem, 2px);
+  height: round(nearest, 0.875rem, 2px);
+}
+:is(button, [role="button"]) svg.size-3 {
+  width: round(nearest, 0.75rem, 2px);
+  height: round(nearest, 0.75rem, 2px);
+}
+
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
