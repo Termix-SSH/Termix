@@ -301,6 +301,7 @@ jobs:
           npm install --force @rollup/rollup-linux-x64-gnu
           npm install --force @rollup/rollup-linux-arm64-gnu
           npm install --force @rollup/rollup-linux-arm-gnueabihf
+          node scripts/install-linux-sharp.cjs
 
       # Bundled plugins are counted as downloads in the plugin store, so a
       # build only fetches them when the pins change.
