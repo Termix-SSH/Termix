@@ -20,6 +20,7 @@ import {
   GLOBAL_KEYBINDING_EVENT,
   getKeybindingAction,
   listKeybindingDefaults,
+  SHELL_KEYBINDING_ACTION_IDS,
   runKeybindingAction,
 } from "@/shell/keybinding-registry";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
@@ -121,11 +122,14 @@ export function useShellKeybindings({
         return;
       }
 
+      // Plugins run their own defaults, so only the shell's are handled here.
       const defaultBinding = listKeybindingDefaults().find(
         (entry) =>
+          SHELL_KEYBINDING_ACTION_IDS.includes(entry.id) &&
           !customBindings.some(
             (custom) => custom.overridesDefaultId === entry.id,
-          ) && eventMatchesCombo(event, entry.combo),
+          ) &&
+          eventMatchesCombo(event, entry.combo),
       );
       if (!defaultBinding || !getKeybindingAction(defaultBinding.id)) return;
       event.preventDefault();
