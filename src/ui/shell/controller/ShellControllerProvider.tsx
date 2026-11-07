@@ -260,7 +260,7 @@ export function ShellControllerProvider({
   ]);
 
   useWorkspaceLayout(tabsState, regions);
-  useMouseHistoryGuard();
+  useMouseHistoryGuard(tabsState.tabHistory);
   useShellKeybindings({
     tabsState,
     regions,

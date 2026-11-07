@@ -15,7 +15,8 @@
 - Plugins that issue SSH certificates can save them on the SSH key login they were issued for
 - Cmd+B shows or hides the sidebar, and can be changed in keybindings
 - The macOS menu bar icon can be monochrome (the default), in color or hidden, from the Termix menu
-- The mouse back and forward buttons no longer leave Termix in a browser
+- Browser back and forward, and the mouse back and forward buttons, move between the tabs you used instead of leaving Termix
+- Closing a tab goes back to the tab you used before it
 
 ### Changed
 

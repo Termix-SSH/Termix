@@ -63,6 +63,7 @@ import {
   OPEN_PLUGIN_SETTINGS_EVENT,
 } from "@/plugins/open-plugins";
 import type { OpenTabOptions, RestoreTarget } from "./types";
+import { useTabHistory } from "./use-tab-history";
 
 const PENDING_TARGET_MS = 60_000;
 
@@ -145,6 +146,17 @@ export function useTabs({
   useEffect(() => {
     activeTabIdRef.current = activeTabId;
   }, [activeTabId]);
+  const tabHistory = useTabHistory({
+    activeTabId,
+    isOpen: (id) =>
+      tabsRef.current.some((tab) => tab.id === id && !tab.parentSplitTabId),
+    isTopLevel: useCallback(
+      (id: string) =>
+        tabsRef.current.some((tab) => tab.id === id && !tab.parentSplitTabId),
+      [],
+    ),
+    setActiveTabId,
+  });
 
   const terminalRefs = useRef<Map<string, ReturnType<typeof createRef>>>(
     new Map(),
@@ -802,8 +814,14 @@ export function useTabs({
       const remaining = tabs.filter(
         (tab) => tab.id !== id && !tab.parentSplitTabId,
       );
+      // Go back to the tab used before this one, like closing a browser tab.
+      const previous = tabHistory.recent(id);
       setActiveTabId(
-        remaining.length > 0 ? remaining[remaining.length - 1].id : "dashboard",
+        previous && remaining.some((tab) => tab.id === previous)
+          ? previous
+          : remaining.length > 0
+            ? remaining[remaining.length - 1].id
+            : "dashboard",
       );
     }
     setTabs((prev) => {
@@ -907,6 +925,7 @@ export function useTabs({
     setTabs,
     activeTabId,
     setActiveTabId,
+    tabHistory,
     tabsReady,
     backgroundTabRecords,
     setBackgroundTabRecords,

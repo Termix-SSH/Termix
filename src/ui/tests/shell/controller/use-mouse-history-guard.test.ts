@@ -34,3 +34,21 @@ describe("mouse history guard", () => {
     document.body.removeEventListener("mouseup", seen);
   });
 });
+
+describe("mouse history guard tab navigation", () => {
+  it("moves between tabs unless a view claimed the click", () => {
+    const nav = { back: vi.fn(), forward: vi.fn() };
+    const { unmount } = renderHook(() => useMouseHistoryGuard(nav));
+    click("mouseup", 3);
+    click("mouseup", 4);
+    expect(nav.back).toHaveBeenCalledOnce();
+    expect(nav.forward).toHaveBeenCalledOnce();
+
+    const claim = (event: Event) => event.preventDefault();
+    document.body.addEventListener("mouseup", claim);
+    click("mouseup", 3);
+    expect(nav.back).toHaveBeenCalledOnce();
+    document.body.removeEventListener("mouseup", claim);
+    unmount();
+  });
+});
