@@ -1233,7 +1233,21 @@ if (!gotTheLock) {
   });
 }
 
+function setMacTrayIcon(style) {
+  desktopSettings.saveDesktopSettings({ macTrayIcon: style });
+  if (tray && !tray.isDestroyed()) tray.destroy();
+  tray = null;
+  createTray();
+  createMenu();
+  if (style === "hidden" && mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+    mainWindow.focus();
+  }
+}
+
 function createTray() {
+  const macStyle = desktopSettings.getDesktopSettings().macTrayIcon;
+  if (process.platform === "darwin" && macStyle === "hidden") return;
   try {
     const { nativeImage } = require("electron");
 
@@ -1245,10 +1259,14 @@ function createTray() {
 
     let trayIcon;
     if (process.platform === "darwin") {
-      const iconPath = path.join(publicRoot, "icons", "16x16.png");
-      // The logo is full color on a solid tile. As a template image macOS
-      // keeps only its outline, which showed as an empty square.
+      const monochrome = macStyle !== "color";
+      const iconPath = path.join(
+        publicRoot,
+        "icons",
+        monochrome ? "trayTemplate.png" : "16x16.png",
+      );
       trayIcon = nativeImage.createFromPath(iconPath);
+      trayIcon.setTemplateImage(monochrome);
     } else if (process.platform === "win32") {
       trayIcon = path.join(publicRoot, "icon.ico");
     } else {
@@ -2000,6 +2018,20 @@ function createMenu() {
         label: app.name,
         submenu: [
           { role: "about" },
+          {
+            label: "Menu Bar Icon",
+            submenu: [
+              ["monochrome", "Monochrome"],
+              ["color", "Color"],
+              ["hidden", "Hidden"],
+            ].map(([style, label]) => ({
+              label,
+              type: "radio",
+              checked:
+                desktopSettings.getDesktopSettings().macTrayIcon === style,
+              click: () => setMacTrayIcon(style),
+            })),
+          },
           { type: "separator" },
           { role: "services" },
           { type: "separator" },
