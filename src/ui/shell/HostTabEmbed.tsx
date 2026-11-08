@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { Host, Tab } from "@/types/ui-types";
 import type { TabShellCallbacks } from "@/shell/tab-registry";
 import { renderTabContent } from "@/shell/tabUtils";
+import { withShellHost } from "@/plugin-host/shell-bridge";
 
 /**
  * Draws a registered tab type inside another view, such as a host page, with
@@ -29,13 +30,14 @@ export function HostTabEmbed({
       instanceId: `embed-${type}-${host.id}`,
       type,
       label: label ?? host.name ?? host.ip,
-      host,
+      // A plugin's host holds only its own settings; companions need all.
+      host: withShellHost(host) ?? host,
       openedAt: Date.now(),
       data,
     }),
-    // A new host or tool is a new tab; label and data changes keep it.
+    // Label and data changes keep the tab.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [type, host.id],
+    [type, host],
   );
   return (
     <div className="h-full min-h-0 flex flex-col">
