@@ -41,6 +41,7 @@
 
 ### Fixed
 
+- Exporting hosts keeps each host status check setting and interval (#1787)
 - A linked desktop app now updates a plugin that came with the app when the server has a newer copy (#1785)
 - The first run plugin picker no longer sets the default layout and themes to Remove. They always stay on
 - Alerts with no icon no longer squeeze their text to one word per line
