@@ -121,7 +121,7 @@ EmptyState (value): ({ icon: Icon, title, hint, action, className, }: { icon?: L
 FOLDER_COLORS (value): string[]
 FONT_SIZES (value): { id: FontSizeId; label: string; }[]
 Facts (value): ({ className, children, }: { className?: string; children: ReactNode; }) => Element
-FakeSwitch (value): ({ defaultChecked, disabled, checked, onChange, }: { defaultChecked?: boolean; disabled?: boolean; checked?: boolean; onChange?: (v: boolean) => void; }) => Element
+FakeSwitch (value): ({ defaultChecked, disabled, checked, onChange, "aria-label": ariaLabel, }: { defaultChecked?: boolean; disabled?: boolean; checked?: boolean; onChange?: (v: boolean) => void; "aria-label"?: string; }) => Element
 Field (value): ({ label, hint, error, aside, htmlFor, className, children, }: { label: string; hint?: ReactNode; error?: string; aside?: ReactNode; htmlFor?: string; className?: string; children: ReactNode; }) => Element
 FieldPair (value): ({ children }: { children: ReactNode; }) => Element
 FolderAccessRule (type): FolderAccessRule
