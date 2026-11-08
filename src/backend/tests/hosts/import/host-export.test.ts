@@ -78,6 +78,43 @@ beforeEach(() => {
 });
 
 describe("exportAllHosts", () => {
+  it.each([
+    ["ssh", false],
+    ["ssh", true],
+    ["rdp", false],
+    ["rdp", true],
+  ])(
+    "preserves status checks for %s hosts (share mode: %s)",
+    async (connectionType, shareMode) => {
+      state.hosts = [
+        {
+          ...sshHost,
+          connectionType,
+          statusCheckEnabled: false,
+          statusCheckInterval: 120,
+        },
+        {
+          ...sshHost,
+          id: 2,
+          connectionType,
+          statusCheckEnabled: true,
+          statusCheckInterval: null,
+        },
+      ];
+      const result = JSON.parse(
+        JSON.stringify(await exportAllHosts("u1", shareMode)),
+      );
+      expect(result.hosts[0]).toMatchObject({
+        statusCheckEnabled: false,
+        statusCheckInterval: 120,
+      });
+      expect(result.hosts[1]).toMatchObject({
+        statusCheckEnabled: true,
+        statusCheckInterval: null,
+      });
+    },
+  );
+
   it("includes decrypted secrets without share mode", async () => {
     const result = await exportAllHosts("u1", false);
     expect(result.credentials).toBeUndefined();
