@@ -47,7 +47,12 @@ export function SideNav({
       >
         {entries.map((entry) => (
           <div key={entry.id} className="contents">
-            {entry.divider && <div className="my-1 h-px bg-border" />}
+            {entry.divider && (
+              <div
+                role="separator"
+                className="-mx-2 my-1.5 shrink-0 border-t border-border"
+              />
+            )}
             <SideNavItem
               entry={entry}
               active={entry.id === active}
