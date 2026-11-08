@@ -26,6 +26,7 @@ import {
 import { getPluginRuntime } from "../../plugins/index.js";
 import { consume } from "../../plugins/registry.js";
 import { sshLogger } from "../../utils/logger.js";
+import { canWriteSettingField } from "../../plugins/settings-access.js";
 
 export type HostPluginSettings = Record<string, Record<string, unknown>>;
 
@@ -251,6 +252,23 @@ export async function withHostPluginSettings(
   return result;
 }
 
+/** Whether a user may write a host field, logging when they may not. */
+async function mayWrite(
+  actorId: string,
+  manifest: PluginManifest,
+  key: string,
+): Promise<boolean> {
+  const field = findField(manifest, "host", key);
+  if (!field) return true;
+  if (await canWriteSettingField(actorId, manifest, "host", field)) return true;
+  sshLogger.warn("Skipped a plugin host setting the user may not change", {
+    operation: "host_plugin_settings_permission",
+    pluginId: manifest.id,
+    key,
+  });
+  return false;
+}
+
 /**
  * Writes a set of host-scope plugin settings in one call, through the same
  * path as every other settings write: an undeclared key is refused, a value
@@ -260,9 +278,11 @@ export async function writeHostPluginSettings(
   manifest: PluginManifest,
   hostId: number,
   values: Record<string, unknown>,
+  actorId?: string,
 ): Promise<void> {
   for (const [key, value] of Object.entries(values)) {
     if (value === undefined) continue;
+    if (actorId && !(await mayWrite(actorId, manifest, key))) continue;
     const error = await setSetting(manifest, "host", hostId, key, value);
     if (error) {
       sshLogger.warn("Refused a plugin host setting on import", {
@@ -344,6 +364,7 @@ export type PluginHostImportNormalizer = (
 export async function applyPluginHostImportSettings(
   hostId: number,
   raw: Record<string, unknown>,
+  actorId?: string,
 ): Promise<void> {
   const exported =
     raw.pluginSettings && typeof raw.pluginSettings === "object"
@@ -358,6 +379,8 @@ export async function applyPluginHostImportSettings(
       if (carried && typeof carried === "object") {
         for (const field of declaredFields(manifest, "host")) {
           if (field.type === "secret" || !(field.key in carried)) continue;
+          if (actorId && !(await mayWrite(actorId, manifest, field.key)))
+            continue;
           await setSetting(
             manifest,
             "host",
@@ -372,7 +395,8 @@ export async function applyPluginHostImportSettings(
         `${manifest.id}.hostImportNormalizer`,
       );
       const values = normalizer?.(raw);
-      if (values) await writeHostPluginSettings(manifest, hostId, values);
+      if (values)
+        await writeHostPluginSettings(manifest, hostId, values, actorId);
     } catch (error) {
       sshLogger.warn("Plugin host import normalizer failed", {
         operation: "host_import_plugin_settings",
@@ -385,17 +409,21 @@ export async function applyPluginHostImportSettings(
 }
 
 /**
- * Turns one plugin's host switch on or off for a set of hosts. Returns false
- * when the plugin is not running or declares no enableKey.
+ * Turns one plugin's host switch on or off for a set of hosts. "missing" when
+ * the plugin is not running or declares no enableKey, "forbidden" when the
+ * switch has a permission the user lacks.
  */
 export async function setHostPluginEnabled(
   pluginId: string,
   hostIds: number[],
   enabled: boolean,
-): Promise<boolean> {
+  actorId?: string,
+): Promise<"ok" | "missing" | "forbidden"> {
   const manifest = hostSettingsPlugins().find((m) => m.id === pluginId);
   const enableKey = manifest?.contributes?.settings?.host?.enableKey;
-  if (!manifest || !enableKey) return false;
+  if (!manifest || !enableKey) return "missing";
+  if (actorId && !(await mayWrite(actorId, manifest, enableKey)))
+    return "forbidden";
   for (const hostId of hostIds) {
     await setSetting(manifest, "host", hostId, enableKey, enabled);
     await touchHost(hostId);
@@ -403,5 +431,5 @@ export async function setHostPluginEnabled(
   const { changeHostOverrides } =
     await import("../../hosts/defaults/overrides.js");
   await changeHostOverrides(hostIds, { own: [[pluginId, enableKey]] });
-  return true;
+  return "ok";
 }

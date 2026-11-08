@@ -70,6 +70,11 @@ vi.mock("../../../utils/crypto-migration/raw-rows.js", () => ({
 }));
 
 const registryProviders = new Map<string, unknown>();
+const canWrite = vi.fn(async () => true);
+vi.mock("../../../plugins/settings-access.js", () => ({
+  canWriteSettingField: (...args: unknown[]) => canWrite(...(args as [])),
+}));
+
 vi.mock("../../../plugins/registry.js", () => ({
   consume: (key: string) => registryProviders.get(key),
 }));
@@ -110,6 +115,8 @@ beforeEach(() => {
   loaded.length = 0;
   setCalls.length = 0;
   registryProviders.clear();
+  canWrite.mockReset();
+  canWrite.mockResolvedValue(true);
   getAllForScopeIds.mockClear();
   set.mockClear();
 });
@@ -449,12 +456,35 @@ describe("share levels, legacy fields and generic writes", () => {
 
   it("flips a plugin's host switch for many hosts", async () => {
     loaded.push({ id: "docker", manifest: DOCKER, state: "active" });
-    expect(await setHostPluginEnabled("docker", [3, 4], true)).toBe(true);
+    expect(await setHostPluginEnabled("docker", [3, 4], true)).toBe("ok");
     expect(setCalls.map((call) => [call[2], call[3], call[4]])).toEqual([
       ["3", "enableDocker", "true"],
       ["4", "enableDocker", "true"],
     ]);
-    expect(await setHostPluginEnabled("missing", [3], true)).toBe(false);
+    expect(await setHostPluginEnabled("missing", [3], true)).toBe("missing");
+  });
+
+  it("refuses a host switch the user may not change", async () => {
+    loaded.push({ id: "docker", manifest: DOCKER, state: "active" });
+    canWrite.mockResolvedValue(false);
+    expect(await setHostPluginEnabled("docker", [3], false, "u2")).toBe(
+      "forbidden",
+    );
+    expect(setCalls).toEqual([]);
+  });
+
+  it("skips imported values the user may not change", async () => {
+    loaded.push({ id: "docker", manifest: DOCKER, state: "active" });
+    canWrite.mockImplementation(
+      (async (...args: unknown[]) =>
+        (args[3] as { key: string }).key !== "enableDocker") as never,
+    );
+    await applyPluginHostImportSettings(
+      5,
+      { pluginSettings: { docker: { enableDocker: false, socketPath: "/s" } } },
+      "u2",
+    );
+    expect(setCalls.map((call) => call[3])).toEqual(["socketPath"]);
   });
 });
 

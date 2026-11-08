@@ -185,6 +185,7 @@ export function registerCoreSyncEntities(): void {
           id,
           wire.pluginSettings,
           onServer ? parseDefaultOverrides(wire.defaultOverrides) : null,
+          onServer ? String(userId) : undefined,
         );
         await importProtocolLogins(id, userId, wire.protocolAuth, resolveId);
         await dropInvalidParent(userId, id);

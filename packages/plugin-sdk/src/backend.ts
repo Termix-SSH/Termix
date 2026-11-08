@@ -75,6 +75,7 @@ export interface PluginEvents {
 
 /** Small key/value state owned by this plugin. Requires kv:own. */
 export interface PluginKeyValue {
+  /** The stored value, or null when the key was never set. */
   get: (key: string) => Promise<unknown>;
   set: (key: string, value: unknown) => Promise<void>;
   delete: (key: string) => Promise<boolean>;

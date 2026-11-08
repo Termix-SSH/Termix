@@ -1403,39 +1403,16 @@ async function loadManifestForSettings(
   }
 }
 
-/**
- * Whether the caller may write a given field.
- *
- * Admin fields fall back to admin.plugins.manage, so a plugin that declares no
- * permission of its own still cannot have its install-wide settings changed by
- * an ordinary user. A field naming its own permission uses that instead.
- */
+/** Whether the caller may write a given field. See settings-access.ts. */
 async function canWriteField(
   userId: string,
   manifest: PluginManifest,
   scope: PluginSettingsScope,
   field: PluginSettingsField,
 ): Promise<boolean> {
-  // Admin scope always needs admin.plugins.manage. A field-level permission
-  // narrows who may write it; it never widens the scope's own gate, so a
-  // plugin cannot hand an ordinary user install-wide configuration by naming
-  // a permission that user happens to hold.
-  if (
-    scope === "admin" &&
-    !(await permissionManager.hasPermission(userId, "admin.plugins.manage"))
-  ) {
-    return false;
-  }
-
-  if (field.permission) {
-    const { resolvePermission } = await import("../../plugins/rbac.js");
-    return permissionManager.hasPermission(
-      userId,
-      resolvePermission(manifest, field.permission),
-    );
-  }
-
-  return true;
+  const { canWriteSettingField } =
+    await import("../../plugins/settings-access.js");
+  return canWriteSettingField(userId, manifest, scope, field);
 }
 
 /** Applies a body of values to one scope, collecting per-field errors. */

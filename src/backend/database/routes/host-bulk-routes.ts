@@ -240,8 +240,16 @@ export function registerHostBulkRoutes(
             updates.pluginEnable as Record<string, unknown>,
           )) {
             if (typeof enabled !== "boolean") continue;
-            if (!(await setHostPluginEnabled(pluginId, ownedIds, enabled))) {
+            const result = await setHostPluginEnabled(
+              pluginId,
+              ownedIds,
+              enabled,
+              userId,
+            );
+            if (result === "missing") {
               errors.push(`Plugin ${pluginId} has no host switch`);
+            } else if (result === "forbidden") {
+              errors.push(`You may not change the ${pluginId} host switch`);
             }
           }
         }

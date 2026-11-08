@@ -34,6 +34,8 @@ import {
   folderChainPaths,
   type HostLevels,
 } from "./resolve.js";
+import { canWriteSettingField } from "../../plugins/settings-access.js";
+import { hostSettingsPlugins } from "../../database/routes/host-plugin-settings.js";
 
 export interface LevelChangeInput {
   set?: Record<string, unknown>;
@@ -179,6 +181,18 @@ export async function validateLevelChange(
       continue;
     }
     const field = info.field!;
+    if (field.permission) {
+      const manifest = hostSettingsPlugins().find(
+        (m) => m.id === info.namespace,
+      );
+      if (
+        !manifest ||
+        !(await canWriteSettingField(context.actorId, manifest, "host", field))
+      ) {
+        errors[fullKey] = "You may not set this default";
+        continue;
+      }
+    }
     const coerced = coerceSettingValue(field, raw);
     const error = validateSettingValue(field, coerced);
     if (error) {

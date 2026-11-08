@@ -42,7 +42,7 @@ export {
  * "^1.2" needs 1.2 or later). engine.termix is checked against the core
  * version by the server.
  */
-export const PLUGIN_API_VERSION = "1.16.0";
+export const PLUGIN_API_VERSION = "1.17.0";
 
 /** The API major, the default engine.api for a new plugin. */
 export const SUPPORTED_PLUGIN_API_VERSION = String(
@@ -401,6 +401,11 @@ export interface PluginHostSettingsContribution {
   enableDescriptionKey?: string;
   /** What the enable switch reads before a host saves it. Off by default. */
   enableDefault?: boolean;
+  /**
+   * Who may change the enable switch, like a field's permission. Without it
+   * anyone with host edit can. Core 26.11.1+.
+   */
+  enablePermission?: string;
   /** Host editor strip the generated tab sits in. Defaults to "top". */
   editorGroup?: "top" | "ssh";
   /** Position among that strip's tabs, core ones included. */
@@ -2066,6 +2071,7 @@ function validateSettings(settings: unknown, errors: string[]): void {
         "enableLabelKey",
         "enableDescriptionKey",
         "enableDefault",
+        "enablePermission",
         "editorGroup",
         "editorOrder",
         "fields",
@@ -2090,6 +2096,9 @@ function validateSettings(settings: unknown, errors: string[]): void {
         `${at}.enableDescriptionKey`,
         errors,
       );
+    }
+    if ("enablePermission" in host) {
+      requireString(host.enablePermission, `${at}.enablePermission`, errors);
     }
     if ("enableDefault" in host && typeof host.enableDefault !== "boolean") {
       errors.push(`${at}.enableDefault must be a boolean`);

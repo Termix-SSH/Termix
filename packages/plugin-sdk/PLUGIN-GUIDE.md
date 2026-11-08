@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.1.3 | Plugin API 1.16.0
+SDK 1.1.4 | Plugin API 1.17.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -569,7 +569,7 @@ touch your own tables. `createTestDb` applies them in tests, so a broken one fai
 Query through `const db = await ctx.db.client()`, then `await ctx.db.persist()` after writes
 (`persist({ lazy: true })` for frequent low value writes). `ctx.db.dialect` says which database runs.
 
-Other storage: `ctx.kv` for a few values, `ctx.settings` for settings, `ctx.secrets` for secrets,
+Other storage: `ctx.kv` for a few values (`get` answers `null` for a key never set), `ctx.settings` for settings, `ctx.secrets` for secrets,
 `ctx.files.dataDir()` for files. To sync a table to a linked desktop, use `ctx.sync.registerEntity` and
 `contributes.syncEntities`. The entity name is part of the protocol and never changes.
 
@@ -840,7 +840,10 @@ checks saves. You don't build settings UI.
   `enableKey` switch first).
 - Types: `boolean`, `string`, `number`, `select`, `multiselect`, `secret`, `textarea`, `json`, `custom`.
 - Options: `labelKey`, `descriptionKey`, `placeholderKey`, `default`, `options`, `min`, `max`, `requires`,
-  `group`, `permission`, `hidden`, `component`.
+  `group`, `permission`, `hidden`, `component`. `permission` is checked on every write: the editor, host imports,
+  bulk edits, host defaults and sync.
+- `contributes.settings.host.enablePermission` limits who may flip the host switch, the same way (API 1.17,
+  core 26.11.1+). Without it anyone with host edit can.
 - Read: `ctx.settings.get(key)`, `getUser(userId, key)`, `getHost(hostId, key)`. Write: `set`, `setHost`.
   React: `ctx.settings.onChange`. Check: `ctx.settings.onValidate("admin", values => ({ key: "message" }))`.
 - Frontend: `useSettings("user")` gives values and `save`.

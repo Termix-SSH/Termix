@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.4
+
+Plugin API 1.17.0.
+
+### Added
+
+- `contributes.settings.host.enablePermission` limits who may change a plugin's host switch
+
 ## 1.1.3
 
 Plugin API 1.16.0.
