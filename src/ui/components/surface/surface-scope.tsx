@@ -443,7 +443,6 @@ export function InlineView({
 
   if (!open) return null;
 
-  const padded = scope?.kind === "tab" || scope?.kind === "pane";
   const view = (
     <div
       className={cn(
@@ -476,8 +475,7 @@ export function InlineView({
         ) : (
           <div
             className={cn(
-              "flex w-full flex-col gap-3",
-              padded ? "mx-auto max-w-3xl p-3" : "p-3",
+              "flex w-full flex-col gap-3 p-3",
               !scroll && "min-h-0 flex-1",
               className,
             )}
