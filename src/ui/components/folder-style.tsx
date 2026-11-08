@@ -213,7 +213,7 @@ export function IconPicker({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 px-2.5 h-8 bg-muted/60 border border-border/60 rounded-none">
+      <div className="flex items-center gap-2 px-2.5 h-8 bg-popover border border-border rounded-none">
         <Search className="size-3 text-muted-foreground/60 shrink-0" />
         <input
           value={query}

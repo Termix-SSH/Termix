@@ -407,7 +407,7 @@ export function PanelSearch({
             onEnter();
           }
         }}
-        className="h-8 w-full min-w-0 border border-border bg-transparent pl-8 pr-7 text-xs outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
+        className="h-8 w-full min-w-0 border border-border bg-popover pl-8 pr-7 text-xs outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
       />
       {value && (
         <button
@@ -450,7 +450,7 @@ export function Segmented<T extends string>({
       role="radiogroup"
       data-slot="segmented"
       className={cn(
-        "flex w-fit shrink-0 items-center border border-border",
+        "flex h-8 w-fit shrink-0 items-center border border-border bg-popover",
         className,
       )}
     >
@@ -465,7 +465,7 @@ export function Segmented<T extends string>({
             title={option.title ?? option.label}
             onClick={() => onChange(option.value)}
             className={cn(
-              "flex h-[calc(2rem-2px)] items-center justify-center gap-1.5 px-2.5 text-[11px] font-medium transition-colors focus-visible:relative focus-visible:z-10 focus-visible:ring-1 focus-visible:ring-ring",
+              "flex h-full items-center justify-center gap-1.5 px-2.5 text-[11px] font-medium transition-colors focus-visible:relative focus-visible:z-10 focus-visible:ring-1 focus-visible:ring-ring",
               i > 0 && "border-l border-border",
               active
                 ? "bg-accent-brand/10 text-accent-brand"
@@ -507,7 +507,7 @@ export function ViewToggle({
   const toggle = (
     <div
       data-slot="view-toggle"
-      className="flex items-center border border-border"
+      className="flex h-8 items-center border border-border bg-popover"
     >
       <ToggleButton
         active={view === "grid"}
@@ -593,7 +593,7 @@ function ToggleButton({
       aria-label={title}
       aria-pressed={active}
       className={cn(
-        "flex size-[calc(2rem-2px)] items-center justify-center transition-colors focus-visible:relative focus-visible:z-10 focus-visible:ring-1 focus-visible:ring-ring",
+        "flex aspect-square h-full items-center justify-center transition-colors focus-visible:relative focus-visible:z-10 focus-visible:ring-1 focus-visible:ring-ring",
         bordered && "border-l border-border",
         active
           ? "bg-accent-brand/10 text-accent-brand"

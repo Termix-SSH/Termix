@@ -154,7 +154,7 @@ function Select2({
           aria-expanded={open}
           aria-required={required}
           className={cn(
-            "border-border bg-transparent dark:bg-input/30 dark:hover:bg-input/50 text-foreground flex h-8 w-full items-center justify-between gap-2 rounded-none border px-2.5 py-1 text-xs shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
+            "border-border bg-popover hover:bg-muted/50 text-foreground flex h-8 w-full items-center justify-between gap-2 rounded-none border px-2.5 py-1 text-xs shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
             className,
           )}
           onKeyDown={(event) => {

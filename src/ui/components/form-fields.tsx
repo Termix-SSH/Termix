@@ -285,7 +285,7 @@ export function TextAreaField({
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
         className={cn(
-          "w-full resize-none border border-border bg-background px-3 py-2 text-xs text-foreground transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30",
+          "w-full resize-none border border-border bg-popover px-3 py-2 text-xs text-foreground transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50",
           mono && "font-mono text-[10px]",
           fill && "min-h-40 flex-1",
         )}
@@ -422,7 +422,7 @@ export function TagInput({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex min-h-8 flex-wrap items-center gap-1 border border-border bg-background px-2 py-1 focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/50 dark:bg-input/30">
+    <div className="flex min-h-8 flex-wrap items-center gap-1 border border-border bg-popover px-2 py-1 focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/50">
       {tags.map((tag) => (
         <span
           key={tag}

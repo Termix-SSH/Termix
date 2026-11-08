@@ -23,6 +23,7 @@
 
 ### Changed
 
+- Inputs, selects, tab groups and menus share one fill and one border color
 - Plugin cards and pages use the dashboard look everywhere, with shared lines between sections instead of separate boxes with gaps
 - The Plugins tab and plugin pages use the same look
 - List rows in plugins follow the host list status colors: accent for good, dark for offline or bad
