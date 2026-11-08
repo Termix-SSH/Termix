@@ -146,7 +146,7 @@ export function registerUserExternalAccountRoutes(
       await identities.moveIdentities(externalUserId, targetUser.id);
 
       await authManager.revokeAllUserSessions(externalUserId);
-      authManager.logoutUser(externalUserId);
+      await authManager.logoutUser(externalUserId);
       await deleteUserAndRelatedData(externalUserId);
 
       try {

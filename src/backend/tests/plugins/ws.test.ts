@@ -15,6 +15,7 @@ import { WebSocket } from "ws";
 const state = vi.hoisted(() => ({
   validToken: "valid-token",
   ticket: "socket-ticket",
+  setupToken: "setup-token",
   userId: "user-1",
   granted: new Set<string>(["network:serve"]),
 }));
@@ -36,10 +37,12 @@ vi.mock("../../utils/auth-manager.js", () => ({
         token: string,
         options: { allowSocketTicket?: boolean } = {},
       ) =>
-        token === state.validToken ||
-        (token === state.ticket && options.allowSocketTicket)
-          ? { userId: state.userId }
-          : null,
+        token === state.setupToken
+          ? { userId: state.userId, restriction: "second-factor-setup" }
+          : token === state.validToken ||
+              (token === state.ticket && options.allowSocketTicket)
+            ? { userId: state.userId }
+            : null,
     }),
   },
 }));
@@ -289,6 +292,18 @@ describe("ctx.ws authentication", () => {
     const result = await connect(
       `${base}/plugin-ws/sample-plugin/socket`,
       authProtocols("nope"),
+    );
+
+    expect(result.outcome).toBe(401);
+  });
+
+  it("rejects a session that still has to set up a second factor", async () => {
+    ws.registerPluginWsRoute("sample-plugin", "/socket", () => {}, DECLARED);
+
+    const base = await startServer();
+    const result = await connect(
+      `${base}/plugin-ws/sample-plugin/socket`,
+      authProtocols(state.setupToken),
     );
 
     expect(result.outcome).toBe(401);

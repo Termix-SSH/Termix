@@ -118,7 +118,8 @@ async function verifyToken(request: IncomingMessage): Promise<string | null> {
     const payload = await AuthManager.getInstance().verifyJWTToken(token, {
       allowSocketTicket: true,
     });
-    if (!payload || payload.pendingTOTP) return null;
+    // A session that still has to set up a second factor gets no sockets either.
+    if (!payload || payload.pendingTOTP || payload.restriction) return null;
     return payload.userId ?? null;
   } catch {
     return null;

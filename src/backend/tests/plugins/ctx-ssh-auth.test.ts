@@ -76,6 +76,13 @@ vi.mock("../../hosts/ssh-connection-pool.js", () => ({
   },
 }));
 vi.mock("../../hosts/connect/connect-host.js", () => ({
+  SshConnectError: class extends Error {
+    code: string;
+    constructor(outcome: { code: string; message: string }) {
+      super(outcome.message);
+      this.code = outcome.code;
+    }
+  },
   resolveConnectHost: async (target: unknown) =>
     typeof target === "number"
       ? {
@@ -372,7 +379,9 @@ describe("ctx.ssh pooled connections", () => {
     await metrics.bag.disposeAll();
 
     expect(h.clearedAll).toBe(0);
-    expect(h.cleared).toEqual(["stats:user-1:10.0.0.7:22:root"]);
+    expect(h.cleared).toEqual([
+      "stats:host-metrics:user-1:user-1:10.0.0.7:22:root",
+    ]);
     await expect(
       other.ssh.withConnection(8, { pool: "fleet" }, async () => "still"),
     ).resolves.toBe("still");
@@ -386,12 +395,44 @@ describe("ctx.ssh pooled connections", () => {
 
     metrics.ssh.dropPooled("stats", 7);
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(h.cleared).toEqual(["stats:user-1:10.0.0.7:22:root"]);
+    expect(h.cleared).toEqual([
+      "stats:host-metrics:user-1:user-1:10.0.0.7:22:root",
+    ]);
 
     // Dropped keys are forgotten, so deactivate only clears what is left.
     h.cleared = [];
     await metrics.bag.disposeAll();
-    expect(h.cleared).toEqual(["stats:user-1:10.0.0.8:22:root"]);
+    expect(h.cleared).toEqual([
+      "stats:host-metrics:user-1:user-1:10.0.0.8:22:root",
+    ]);
+  });
+
+  it("keeps pooled connections apart per acting user", async () => {
+    h.granted = new Set(both);
+    const metrics = plugin("host-metrics");
+    await metrics.ssh.withConnection(7, { pool: "stats" }, async () => 1);
+    h.actor = "user-2";
+    await metrics.ssh.withConnection(7, { pool: "stats" }, async () => 1);
+    expect(new Set(h.pooled).size).toBe(2);
+    expect(h.pooled[1]).toContain(":user-2:");
+  });
+
+  it("asks the connect policy before reusing a pooled connection", async () => {
+    h.granted = new Set(both);
+    const { provideConnectPolicy } =
+      await import("../../hosts/connect-policy.js");
+    const remove = provideConnectPolicy("privileged-access", {
+      check: async () => ({ decision: "deny", reason: "Grant expired" }),
+    });
+    try {
+      const metrics = plugin("host-metrics");
+      await expect(
+        metrics.ssh.withConnection(7, { pool: "stats" }, async () => 1),
+      ).rejects.toMatchObject({ code: "access-denied" });
+      expect(h.pooled).toEqual([]);
+    } finally {
+      remove();
+    }
   });
 
   it("dropPooled ignores another pool and an unknown host", async () => {

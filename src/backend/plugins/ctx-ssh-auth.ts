@@ -295,10 +295,21 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
     }
   };
 
-  const poolKey = (pool: string, host: PluginSshHost) =>
-    `${pool}:${host.userId}:${host.ip}:${host.port}:${host.username}${
+  // Per plugin and acting user: a pooled connection skips auth, so a shared
+  // host's recipient must never reuse the owner's or another user's.
+  const keyFor = (pool: string, host: PluginSshHost, actor: string) =>
+    `${pool}:${pluginId}:${actor}:${host.userId}:${host.ip}:${host.port}:${host.username}${
       host.useSocks5 ? `:socks5:${host.socks5Host}:${host.socks5Port}` : ""
     }`;
+  const poolKey = (pool: string, host: PluginSshHost) => {
+    let actor = "";
+    try {
+      actor = userFor(host);
+    } catch {
+      // no acting user, the key still names the plugin and host
+    }
+    return keyFor(pool, host, actor);
+  };
 
   return {
     transports: {
@@ -373,7 +384,37 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
         userId,
       );
       remember(resolved, resolved, userId);
-      const key = poolKey(options.pool, resolved as PluginSshHost);
+      // A reused connection skips the connect pipeline, so ask the connect
+      // policy on every use or an expired grant would keep working.
+      const { assertConnectAllowed, ConnectPolicyError } =
+        await import("../hosts/connect-policy.js");
+      try {
+        await assertConnectAllowed({
+          userId,
+          hostId: resolved.id,
+          protocol: "ssh",
+          purpose: String(purposeOf(options)),
+          profile: profileOf(options),
+          interactive: false,
+          origin: pluginId,
+        });
+      } catch (error) {
+        if (!(error instanceof ConnectPolicyError)) throw error;
+        const { SshConnectError } =
+          await import("../hosts/connect/connect-host.js");
+        throw new SshConnectError({
+          status: "error",
+          code: error.code,
+          message: error.message,
+          ...(error.result.requestTab
+            ? { requestTab: error.result.requestTab }
+            : {}),
+          ...(error.result.requestKind
+            ? { requestKind: error.result.requestKind }
+            : {}),
+        });
+      }
+      const key = keyFor(options.pool, resolved as PluginSshHost, userId);
       poolKeys.set(key, resolved.id);
       const { withConnection } =
         await import("../hosts/ssh-connection-pool.js");

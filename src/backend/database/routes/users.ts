@@ -1388,7 +1388,8 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
     passwordHash: password_hash,
   });
 
-  authManager.logoutUser(userId);
+  await authManager.logoutUser(userId);
+  clearStepUp(userId);
   authLogger.success("Password changed successfully", {
     operation: "password_change_complete",
     userId,

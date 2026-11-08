@@ -212,6 +212,8 @@ export async function buildConnectConfig(
     });
   } catch (error) {
     if (error instanceof ConnectPolicyError) {
+      // A caller that ignores the outcome still can't connect with this.
+      config.hostVerifier = () => false;
       return {
         config,
         provider: null,
