@@ -72,6 +72,8 @@ async function exportRow(
         ? resolvedHost.tags.split(",").filter(Boolean)
         : resolvedHost.tags || [],
     pin: !!resolvedHost.pin,
+    statusCheckEnabled: resolvedHost.statusCheckEnabled,
+    statusCheckInterval: resolvedHost.statusCheckInterval,
     notes: resolvedHost.notes || null,
     color: resolvedHost.color || null,
     icon: resolvedHost.icon || null,
