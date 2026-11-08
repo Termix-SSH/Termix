@@ -349,6 +349,11 @@ export function createPluginRouter({
     // /plugin-api so this limit is the one that actually applies.
     outer.use(express.json({ limit }));
     outer.use(express.urlencoded({ limit, extended: true }));
+    // No body leaves req.body undefined in Express 5; give handlers {}.
+    outer.use((req: Request, _res: Response, next: NextFunction) => {
+      req.body ??= {};
+      next();
+    });
   }
 
   // After auth, so the actor is the user core authenticated rather than

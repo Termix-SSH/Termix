@@ -59,6 +59,8 @@ export function registerHostNetworkRoutes(
    *     responses:
    *       200:
    *         description: Test result
+   *       400:
+   *         description: No proxy given
    *       500:
    *         description: Proxy connection failed
    */
@@ -70,6 +72,11 @@ export function registerHostNetworkRoutes(
     async (req: AuthenticatedRequest, res: Response) => {
       try {
         const { singleProxy, proxyChain, testTarget } = req.body;
+        if (!singleProxy && !(Array.isArray(proxyChain) && proxyChain.length)) {
+          return res
+            .status(400)
+            .json({ success: false, error: "No proxy configuration provided" });
+        }
 
         const { testProxyConnectivity } =
           await import("../../utils/proxy-helper.js");

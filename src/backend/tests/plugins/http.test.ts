@@ -130,6 +130,22 @@ describe("ctx.http mounting", () => {
     expect(await response.json()).toEqual({ ok: true });
   });
 
+  it("hands a handler an empty object when no body was sent", async () => {
+    const router = http.createPluginRouter({
+      manifest: manifest(),
+      reportError: () => {},
+    });
+    router.delete("/thing", (req, res) => res.json({ body: req.body }));
+
+    const base = await startServer();
+    const response = await fetch(`${base}/plugin-api/sample-plugin/thing`, {
+      method: "DELETE",
+      headers: authed,
+    });
+
+    expect(await response.json()).toEqual({ body: {} });
+  });
+
   it("404s a plugin id that never registered a router", async () => {
     const base = await startServer();
 

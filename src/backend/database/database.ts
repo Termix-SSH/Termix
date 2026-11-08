@@ -190,6 +190,12 @@ app.use((req, res, next) => {
   if (req.path.startsWith("/plugin-api/")) return next();
   coreUrlencodedParser(req, res, next);
 });
+// Express 5 leaves req.body undefined with no body, so handlers that
+// destructure it would throw a 500 instead of answering 400.
+app.use((req, _res, next) => {
+  if (!req.path.startsWith("/plugin-api/")) req.body ??= {};
+  next();
+});
 app.use(cookieParser());
 app.use((_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
@@ -1376,6 +1382,7 @@ app.post(
               await applyPluginHostImportSettings(
                 Number(created.id),
                 importedHostPluginSettings(importDb, host),
+                userId,
               );
               importedHostIds.push(Number(created.id));
               await importHostProtocolLogins(

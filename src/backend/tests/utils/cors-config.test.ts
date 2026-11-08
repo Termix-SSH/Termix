@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { Request } from "express";
 import {
+  createCorsMiddleware,
   isCorsOriginAllowed,
   isDesktopAppOrigin,
 } from "../../utils/cors-config.js";
@@ -81,5 +82,42 @@ describe("isDesktopAppOrigin", () => {
   it("rejects websites", () => {
     expect(isDesktopAppOrigin("https://evil.example")).toBe(false);
     expect(isDesktopAppOrigin("null")).toBe(false);
+  });
+});
+
+describe("createCorsMiddleware", () => {
+  it("answers 403 to an origin it refuses", () => {
+    const before = process.env.ELECTRON_EMBEDDED;
+    process.env.ELECTRON_EMBEDDED = "true";
+    const middleware = createCorsMiddleware();
+    const res = {
+      statusCode: 200,
+      body: undefined as unknown,
+      setHeader() {},
+      getHeader() {},
+      status(code: number) {
+        this.statusCode = code;
+        return this;
+      },
+      json(body: unknown) {
+        this.body = body;
+        return this;
+      },
+    };
+    let nextCalled = false;
+    middleware(
+      Object.assign(
+        request({ origin: "https://evil.example", host: "termix.test" }),
+        { method: "GET" },
+      ),
+      res as never,
+      () => {
+        nextCalled = true;
+      },
+    );
+    if (before === undefined) delete process.env.ELECTRON_EMBEDDED;
+    else process.env.ELECTRON_EMBEDDED = before;
+    expect(nextCalled).toBe(false);
+    expect(res.statusCode).toBe(403);
   });
 });
