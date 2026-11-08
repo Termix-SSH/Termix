@@ -159,7 +159,13 @@ export function ShellControllerProvider({
       tabsState.openTab(host, type, undefined, options);
     },
     openSingletonTab: (type, options) =>
-      tabsState.openSingletonTab(type, undefined, undefined, options?.data),
+      tabsState.openSingletonTab(
+        type,
+        undefined,
+        undefined,
+        options?.data,
+        options?.label,
+      ),
     connectHost: (host, type) => tabsState.connectHost(host, type as TabType),
     closeTab: (tabId) => tabsState.closeTab(tabId),
     renameTab: (tabId, label) => tabsState.renameTab(tabId, label),

@@ -68,3 +68,19 @@ it("reveals clipped tabs and updates the scroll controls after scrolling and res
   act(resize);
   expect(screen.queryByLabelText("common.scrollTabsRight")).toBeNull();
 });
+
+it("leaves the wheel to the page when the tabs fit", () => {
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(600);
+  vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(600);
+  const view = render(
+    <TabStrip
+      tabs={[{ id: "a", label: "A" }]}
+      activeTab="a"
+      onTabChange={() => {}}
+    />,
+  );
+  const scroller = view.container.querySelector(".overflow-x-auto")!;
+  const wheel = new WheelEvent("wheel", { deltaY: 40, cancelable: true });
+  scroller.dispatchEvent(wheel);
+  expect(wheel.defaultPrevented).toBe(false);
+});

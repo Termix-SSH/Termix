@@ -6,6 +6,7 @@ import type { Tab, TabType } from "@/types/ui-types";
 import { trackTabHandle } from "@/shell/tab-handles";
 import { hostToSSHHost } from "@/lib/host-to-ssh-host";
 import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
+import { LoadingState } from "@/components/loading-state";
 import {
   getTabType,
   type TabShellCallbacks,
@@ -54,11 +55,7 @@ function EmptyState({
 }
 
 function TabChunkFallback() {
-  return (
-    <div className="flex h-full w-full items-center justify-center bg-background">
-      <div className="size-5 rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground/70 animate-spin" />
-    </div>
-  );
+  return <LoadingState className="h-full w-full bg-background" />;
 }
 
 function withTabSuspense(node: React.ReactNode) {

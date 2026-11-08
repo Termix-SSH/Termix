@@ -520,7 +520,6 @@ export function useTabs({
     const ref = isSessionTabType(type) ? createRef() : undefined;
     if (ref) terminalRefs.current.set(tabId, ref);
 
-    let finalLabel = host.name;
     const savedLabel = restore?.savedLabel;
     // A saved label that doesn't match the bare host name or the auto-numbered pattern is a custom label
     const isCustomLabel =
@@ -528,17 +527,29 @@ export function useTabs({
       savedLabel !== host.name &&
       !/^.+ \(\d+\)$/.test(savedLabel);
 
+    // Worked out here, not in the updater: React may run that later, and
+    // the saved tab below needs the same label.
+    const labelFor = (current: Tab[]) => {
+      if (isCustomLabel && savedLabel) return savedLabel;
+      if (options?.label) return options.label;
+      const count = current.filter(
+        (t) =>
+          t.type === type && t.label.replace(/ \(\d+\)$/, "") === host.name,
+      ).length;
+      return count === 0 ? host.name : `${host.name} (${count + 1})`;
+    };
+    const finalLabel = labelFor(tabsRef.current);
+
     setTabs((prev) => {
       if (isCustomLabel && savedLabel) {
-        finalLabel = savedLabel;
         return [
           ...prev,
           {
             id: tabId,
             instanceId,
             type,
-            label: finalLabel,
-            customLabel: finalLabel,
+            label: savedLabel,
+            customLabel: savedLabel,
             host,
             openedAt,
             terminalRef: ref,
@@ -552,11 +563,7 @@ export function useTabs({
         (t) =>
           t.type === type && t.label.replace(/ \(\d+\)$/, "") === host.name,
       );
-      finalLabel = options?.label
-        ? options.label
-        : same.length === 0
-          ? host.name
-          : `${host.name} (${same.length + 1})`;
+      const label = labelFor(prev);
 
       // Retrofit the first duplicate's label to "(1)" if needed
       const next =
@@ -572,7 +579,7 @@ export function useTabs({
           id: tabId,
           instanceId,
           type,
-          label: finalLabel,
+          label,
           host,
           openedAt,
           terminalRef: ref,
@@ -698,6 +705,7 @@ export function useTabs({
       // label so the two stay in sync.
       const titleKey = getTabType(type)?.titleKey;
       const label =
+        tabLabel ??
         singletonLabels[type] ??
         (titleKey ? t(titleKey) : railItemLabel(type, t));
       setTabs((prev) => {

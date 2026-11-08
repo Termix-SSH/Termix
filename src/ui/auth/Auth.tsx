@@ -55,6 +55,7 @@ import {
 import { useLoginMethods, useSecondFactors } from "@/plugin-host/auth-registry";
 import { startPreLoginPlugins } from "@/plugin-host/loader";
 import { Checkbox } from "@/components/checkbox";
+import { LoadingState } from "@/components/loading-state";
 import { useBranding } from "@/contexts/BrandingContext";
 import { BrandPanel, CompactBrand } from "./auth-bits";
 import {
@@ -174,6 +175,7 @@ function PasswordInput({
   disabled?: boolean;
   id?: string;
 }) {
+  const { t } = useTranslation();
   const [show, setShow] = useState(false);
   return (
     <div className="relative">
@@ -190,6 +192,7 @@ function PasswordInput({
         type="button"
         tabIndex={-1}
         onClick={() => setShow((o) => !o)}
+        aria-label={show ? t("common.hidePassword") : t("common.showPassword")}
         className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
       >
         {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -1012,7 +1015,7 @@ export function Auth({ onLogin }: AuthProps) {
               );
               return;
             }
-            throw new Error(result.error || "Authentication failed");
+            throw new Error(result.error || t("errors.failedExternalLogin"));
           }
         }
         const authUrl = await startLoginRedirect(methodId, {
@@ -1074,7 +1077,7 @@ export function Auth({ onLogin }: AuthProps) {
     if (!authMethodsLoaded || silentSigninHandledRef.current) return;
 
     // A login method may ask to start without a click (the sso plugin's
-    // silent sign-in setting); ?silent_signin asks for it once.
+    // silent sign-in setting); ?silentSignin asks for it once.
     const autoStart = externalMethods
       .filter((method) => method.kind === "redirect")
       .flatMap((method) =>
@@ -1154,11 +1157,7 @@ export function Auth({ onLogin }: AuthProps) {
     !isInElectronWebView() &&
     desktopAutoSessionDone === null
   ) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <LoadingState className="fixed inset-0 bg-background" />;
   }
 
   if (webviewAuthSuccess || (isInElectronWebView() && webviewAuthSuccess))
@@ -1201,11 +1200,7 @@ export function Auth({ onLogin }: AuthProps) {
     );
 
   if (dbHealthChecking)
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <LoadingState className="fixed inset-0 bg-background" />;
 
   if (localDesktopAuth)
     return (
@@ -1423,7 +1418,7 @@ export function Auth({ onLogin }: AuthProps) {
                         id="reset-user"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
-                        placeholder="your_username"
+                        placeholder={t("placeholders.username")}
                         disabled={loading}
                       />
                     </Field>
@@ -1582,7 +1577,7 @@ export function Auth({ onLogin }: AuthProps) {
                           id="login-user"
                           value={username}
                           onChange={(e) => setUsername(e.target.value)}
-                          placeholder="username"
+                          placeholder={t("placeholders.username")}
                           className="pl-8"
                           disabled={loading}
                           autoFocus
@@ -1656,7 +1651,7 @@ export function Auth({ onLogin }: AuthProps) {
                           id="reg-user"
                           value={username}
                           onChange={(e) => setUsername(e.target.value)}
-                          placeholder="choose_a_username"
+                          placeholder={t("placeholders.newUsername")}
                           className="pl-8"
                           disabled={loading}
                           autoFocus

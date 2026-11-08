@@ -71,6 +71,22 @@
 - The terminal offers to fill a saved sudo or SSH password at a password prompt again
 - Closing the desktop app on GNOME, like Fedora Workstation, quits it instead of minimizing, since GNOME has no tray to bring it back from
 - A deleted or changed host no longer stays in the host list when a list refresh was already running (#1782)
+- Plugin connections to a shared host are no longer reused between people, so each person connects with their own login
+- A session that still has to set up a second factor can no longer open terminals or other live connections
+- A login still waiting on its second factor can no longer be used for desktop sync
+- Someone with time limited manage access can no longer share a host or credential so it outlasts their own access
+- Changing your password signs out your other sessions before it answers
+- A host setting that needs a permission can no longer be changed through host import, bulk edits, host defaults or desktop sync without it
+- Requests sent with no body get a clear error instead of a server error
+- On PostgreSQL and MySQL, a link with an invalid id finds nothing instead of failing with a server error
+- On MySQL, a plugin update that stopped halfway through its database changes finishes on the next start
+- Plugin host settings no longer show the previous host's values for a moment after you switch hosts
+- Switching layouts closes the old layout's tabs again when you sign in
+- A plugin panel beside a tab that fails no longer blanks every open tab
+- Scrolling with the pointer over a row of tabs scrolls the page again
+- A host list refresh that finishes late no longer puts an older list back on screen
+- Switches in settings and the host editor are named for screen readers
+- The show password button and the sign in fields are translated
 
 ## 26.11.0
 

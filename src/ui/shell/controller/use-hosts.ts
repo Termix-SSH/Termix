@@ -14,12 +14,17 @@ export function useHostList() {
   const listRef = useRef(list);
   listRef.current = list;
 
+  // Reloads can overlap; only the newest one may write.
+  const requestRef = useRef(0);
+
   const reload = useCallback(async () => {
+    const request = ++requestRef.current;
     try {
       const [raw, folders] = await Promise.all([
         getSSHHosts(),
         getSSHFolders().catch(() => []),
       ]);
+      if (request !== requestRef.current) return;
       const converted = raw.map(sshHostToHost);
       setList(converted);
       const folderMeta = new Map<
@@ -45,8 +50,10 @@ export function useHostList() {
     } catch {
       // Keep empty state on error
     } finally {
-      setLoading(false);
-      setLoaded(true);
+      if (request === requestRef.current) {
+        setLoading(false);
+        setLoaded(true);
+      }
     }
   }, []);
 

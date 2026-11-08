@@ -49,20 +49,20 @@ class LayoutErrorBoundary extends Component<
  */
 function useCloseLeftoverTabs(layoutId: string, tabTypes: string[]) {
   const shell = useOptionalShellController();
+  // What the layout shown last brought, kept current on every render: its
+  // plugin often loads after the first render, when it still listed none.
   const previous = useRef<{ layoutId: string; tabTypes: string[] } | null>(
     null,
   );
-  const current = { layoutId, tabTypes };
-  const latest = useRef(current);
-  latest.current = current;
   const shellRef = useRef(shell);
   shellRef.current = shell;
+  const typesKey = tabTypes.join(",");
 
   useEffect(() => {
     const before = previous.current;
-    previous.current = latest.current;
+    previous.current = { layoutId, tabTypes };
     if (!before || before.layoutId === layoutId || !shellRef.current) return;
-    const kept = new Set(latest.current.tabTypes);
+    const kept = new Set(tabTypes);
     for (const tab of shellRef.current.tabs.list) {
       if (
         tab.id !== "dashboard" &&
@@ -72,7 +72,8 @@ function useCloseLeftoverTabs(layoutId: string, tabTypes: string[]) {
         void shellRef.current.tabs.close(tab.id);
       }
     }
-  }, [layoutId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layoutId, typesKey]);
 }
 
 interface CrashState {

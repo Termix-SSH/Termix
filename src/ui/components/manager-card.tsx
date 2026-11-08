@@ -44,6 +44,7 @@ export function ManagerCardShell({
             onClick={onRefresh}
             className="flex size-6 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
             title={t("managerCard.refresh")}
+            aria-label={t("managerCard.refresh")}
           >
             <RefreshCw className={`size-3 ${loading ? "animate-spin" : ""}`} />
           </button>

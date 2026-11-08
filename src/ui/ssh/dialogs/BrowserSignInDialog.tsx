@@ -90,7 +90,7 @@ export function BrowserSignInDialog({
             <button
               type="button"
               onClick={handleCopyUrl}
-              className={`${PROMPT_BUTTON} h-9 w-9 shrink-0 px-0`}
+              className={`${PROMPT_BUTTON} h-8 w-8 shrink-0 px-0`}
               title={t("common.copy")}
               aria-label={t("common.copy")}
             >

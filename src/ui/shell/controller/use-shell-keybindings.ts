@@ -182,23 +182,26 @@ export function useShellKeybindings({
     };
   }, [commandPaletteShortcutEnabled]);
 
-  // Ctrl+Shift+E toggles between the two most recent sidebar panels.
-  const railView = regions.left.view;
-  const sidebarOpen = regions.left.open;
+  // Ctrl+Shift+E toggles between the two most recent sidebar panels. Read
+  // through a ref: railClick also depends on what the right dock shows.
+  const regionsRef = useRef(regions);
+  regionsRef.current = regions;
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!e.ctrlKey || !e.shiftKey || e.altKey || e.code !== "KeyE") return;
       e.preventDefault();
-      const previous = regions.previousView();
-      if (!sidebarOpen) {
-        regions.left.setOpen(true);
+      const current = regionsRef.current;
+      const previous = current.previousView();
+      if (!current.left.open) {
+        current.left.setOpen(true);
         return;
       }
-      if (previous && previous !== railView) regions.railClick(previous);
+      if (previous && previous !== current.left.view)
+        current.railClick(previous);
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [railView, sidebarOpen]);
+  }, []);
 
   // Split-screen and tab navigation hotkeys
   // Also registered in globalShortcutHandler so xterm can invoke directly

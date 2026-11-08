@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, ArrowRight, Loader2, LogOut } from "lucide-react";
 import { Button } from "@/components/button";
+import { LoadingState } from "@/components/loading-state";
 import { SurfaceScope } from "@/components/surface/surface-scope";
 import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -227,11 +228,7 @@ export function OnboardingStage({
   const stageValue = useMemo(() => ({ plugins, setPlugins }), [plugins]);
 
   if (!permissionsLoaded || !step) {
-    return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-background">
-        <Loader2 className="size-5 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <LoadingState className="fixed inset-0 z-[60] bg-background" />;
   }
 
   const StepComponent = step.Component;

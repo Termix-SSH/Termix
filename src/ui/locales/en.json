@@ -131,6 +131,8 @@
     "updateLinkLabel": "Update available. Open the release notes on GitHub"
   },
   "common": {
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "scrollTabsLeft": "Scroll tabs left",
     "scrollTabsRight": "Scroll tabs right",
     "close": "Close",
@@ -1012,6 +1014,8 @@
     "registrationSuccess": "Registration successful"
   },
   "placeholders": {
+    "username": "Your username",
+    "newUsername": "Choose a username",
     "keyPassword": "key password",
     "pastePrivateKey": "Paste your private key here...",
     "enterPassword": "Enter your password"

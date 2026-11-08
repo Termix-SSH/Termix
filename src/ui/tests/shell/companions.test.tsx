@@ -40,6 +40,17 @@ describe("companions", () => {
     expect(companionApplies(def, tab({ host: undefined }))).toBe(false);
   });
 
+  it("treats a when that throws as not applying", () => {
+    const def = {
+      id: "a",
+      component: () => null,
+      when: () => {
+        throw new Error("boom");
+      },
+    };
+    expect(companionApplies(def, tab())).toBe(false);
+  });
+
   it("toggles open and closed, defaulting to the first match", () => {
     registerCompanionDef({ id: "a", component: () => null });
     toggleCompanion(tab());

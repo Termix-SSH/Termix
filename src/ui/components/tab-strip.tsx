@@ -57,7 +57,9 @@ export function TabStrip({
     const el = ref.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
-      if (e.deltaY === 0) return;
+      // Only a strip that overflows turns the wheel sideways; otherwise the
+      // page under it keeps scrolling.
+      if (e.deltaY === 0 || el.scrollWidth <= el.clientWidth) return;
       e.preventDefault();
       el.scrollLeft += e.deltaY;
     };
