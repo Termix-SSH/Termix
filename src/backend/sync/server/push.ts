@@ -24,7 +24,7 @@ import {
   writeWireRow,
 } from "../store.js";
 import { allocateSeq, getRecord, putRecord, recordKey } from "../records.js";
-import { orderSelfReferences } from "../wire.js";
+import { orderSelfReferences, unheldFields } from "../wire.js";
 import { markChanged, notifyListeners, reconcileUser } from "./feed.js";
 
 export interface PushOp {
@@ -234,6 +234,28 @@ export async function applyPush(
         deleted: false,
       });
       if (written) wire.set(key, written.wire);
+      // Part of the push did not take. Answering ok would leave the desktop
+      // sure it is in sync while the server holds something else, for good:
+      // its next pull skips this revision. Send what the server has instead.
+      const unheld =
+        written && !missed ? unheldFields(entity, row, written.wire) : [];
+      if (written && unheld.length > 0) {
+        syncLogger.warn("A pushed sync change was not fully applied", {
+          operation: "sync_push",
+          userId,
+          entityType: op.entityType,
+          syncId: op.syncId,
+          fields: unheld,
+        });
+        results.set(key, {
+          ...base,
+          status: "conflict",
+          revision: currentRevision + 1,
+          deleted: false,
+          row: written.wire,
+        });
+        continue;
+      }
       results.set(key, {
         ...base,
         status: "ok",

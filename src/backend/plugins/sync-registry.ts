@@ -38,6 +38,12 @@ export interface CoreSyncEntityOptions {
   /** Keys kept off the content hash and out of writes. */
   hashIgnore?: readonly string[];
   /**
+   * Fields a server checks it stored as pushed. One it stored differently
+   * makes the push a conflict carrying the server's row, so the desktop does
+   * not keep a value the server refused while both sides read as in sync.
+   */
+  verifyFields?: readonly string[];
+  /**
    * Widens reference lookups past rows the user owns, e.g. a credential
    * shared with them is a valid target for their host's credentialId.
    */
