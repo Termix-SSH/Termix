@@ -131,6 +131,8 @@
     "updateLinkLabel": "Dostępna aktualizacja. Otwórz informacje o wydaniu na GitHubie"
   },
   "common": {
+    "showPassword": "Pokaż hasło",
+    "hidePassword": "Ukryj hasło",
     "scrollTabsLeft": "Przewiń karty w lewo",
     "scrollTabsRight": "Przewiń karty w prawo",
     "close": "Zamknij",
@@ -503,6 +505,7 @@
     "deleteSelected": "Usuń",
     "exitSelection": "Zakończ zaznaczanie",
     "collapseBtn": "Zwiń",
+    "importExportBtn": "Importuj / Eksportuj",
     "hostStatusesRefreshed": "Statusy hostów zostały odświeżone",
     "failedToRefreshHosts": "Nie udało się odświeżyć hostów",
     "movedHostTo": "Przeniesiono {{host}} do \"{{folder}}\"",
@@ -1037,6 +1040,8 @@
     "registrationSuccess": "Rejestracja udana"
   },
   "placeholders": {
+    "username": "Twój login",
+    "newUsername": "Wybierz login",
     "keyPassword": "hasło klucza",
     "pastePrivateKey": "Wklej tutaj swój klucz prywatny...",
     "enterPassword": "Wprowadź swoje hasło"
@@ -1087,7 +1092,8 @@
         "actionNextTab": "Przełącz na następną kartę",
         "actionPreviousTab": "Przełącz na poprzednią kartę",
         "actionOpenCommandPalette": "Otwórz szybkie wyszukiwanie",
-        "actionReconnectSession": "Ponownie połącz bieżącą sesję"
+        "actionReconnectSession": "Ponownie połącz bieżącą sesję",
+        "actionToggleSidebar": "Przełącz pasek boczny"
       },
       "userProfile": {
         "preset_simple": "Prosty",

@@ -131,6 +131,8 @@
     "updateLinkLabel": "Διαθέσιμη ενημέρωση. Άνοιγμα των σημειώσεων έκδοσης στο GitHub"
   },
   "common": {
+    "showPassword": "Εμφάνιση κωδικού",
+    "hidePassword": "Απόκρυψη κωδικού",
     "scrollTabsLeft": "Μετακίνηση καρτελών αριστερά",
     "scrollTabsRight": "Μετακίνηση καρτελών δεξιά",
     "close": "Κλείσιμο",
@@ -495,6 +497,7 @@
     "deleteSelected": "Διαγραφή",
     "exitSelection": "Έξοδος από επιλογή",
     "collapseBtn": "Σύμπτυξη",
+    "importExportBtn": "Εισαγωγή / Εξαγωγή",
     "hostStatusesRefreshed": "Οι καταστάσεις των hosts ανανεώθηκαν",
     "failedToRefreshHosts": "Αποτυχία ανανέωσης των hosts",
     "movedHostTo": "Μετακίνηση του {{host}} στον «{{folder}}»",
@@ -1011,6 +1014,8 @@
     "registrationSuccess": "Επιτυχής εγγραφή"
   },
   "placeholders": {
+    "username": "Το όνομα χρήστη σας",
+    "newUsername": "Επιλέξτε ένα όνομα χρήστη",
     "keyPassword": "κωδικός πρόσβασης κλειδιού",
     "pastePrivateKey": "Επικολλήστε το ιδιωτικό σας κλειδί εδώ...",
     "enterPassword": "Εισάγετε τον κωδικό πρόσβασής σας"
@@ -1053,7 +1058,8 @@
         "actionNextTab": "Μετάβαση στην επόμενη καρτέλα",
         "actionPreviousTab": "Μετάβαση στην προηγούμενη καρτέλα",
         "actionOpenCommandPalette": "Άνοιγμα γρήγορης αναζήτησης",
-        "actionReconnectSession": "Επανασύνδεση της τρέχουσας συνεδρίας"
+        "actionReconnectSession": "Επανασύνδεση της τρέχουσας συνεδρίας",
+        "actionToggleSidebar": "Εναλλαγή πλαϊνής μπάρας"
       },
       "userProfile": {
         "preset_simple": "Απλό",

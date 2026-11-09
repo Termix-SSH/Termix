@@ -131,6 +131,8 @@
     "updateLinkLabel": "Uppdatering tillgänglig. Öppna versionsinformationen på GitHub"
   },
   "common": {
+    "showPassword": "Visa lösenord",
+    "hidePassword": "Dölj lösenord",
     "scrollTabsLeft": "Rulla flikarna åt vänster",
     "scrollTabsRight": "Rulla flikarna åt höger",
     "close": "Stäng",
@@ -495,6 +497,7 @@
     "deleteSelected": "Ta bort",
     "exitSelection": "Avsluta markering",
     "collapseBtn": "Komprimera",
+    "importExportBtn": "Importera / Exportera",
     "hostStatusesRefreshed": "Värdstatus har uppdaterats",
     "failedToRefreshHosts": "Misslyckades med att uppdatera värdar",
     "movedHostTo": "Flyttade {{host}} till \"{{folder}}\"",
@@ -1011,6 +1014,8 @@
     "registrationSuccess": "Registreringen lyckades"
   },
   "placeholders": {
+    "username": "Ditt användarnamn",
+    "newUsername": "Välj ett användarnamn",
     "keyPassword": "nyckellösenord",
     "pastePrivateKey": "Klistra in din privata nyckel här...",
     "enterPassword": "Ange ditt lösenord"
@@ -1053,7 +1058,8 @@
         "actionNextTab": "Byt till nästa flik",
         "actionPreviousTab": "Byt till föregående flik",
         "actionOpenCommandPalette": "Öppna snabb sökning",
-        "actionReconnectSession": "Återanslut nuvarande session"
+        "actionReconnectSession": "Återanslut nuvarande session",
+        "actionToggleSidebar": "Visa/dölj sidofält"
       },
       "userProfile": {
         "preset_simple": "Enkel",

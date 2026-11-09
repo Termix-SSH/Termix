@@ -131,6 +131,8 @@
     "updateLinkLabel": "有可用更新。在 GitHub 上查看發行說明"
   },
   "common": {
+    "showPassword": "顯示密碼",
+    "hidePassword": "隱藏密碼",
     "scrollTabsLeft": "向左捲動分頁",
     "scrollTabsRight": "向右捲動分頁",
     "close": "關閉",
@@ -491,6 +493,7 @@
     "deleteSelected": "刪除",
     "exitSelection": "取消選取",
     "collapseBtn": "收合",
+    "importExportBtn": "匯入 / 匯出",
     "hostStatusesRefreshed": "主機狀態已重新整理",
     "failedToRefreshHosts": "重新整理主機失敗",
     "movedHostTo": "已將 {{host}} 移至「{{folder}}」",
@@ -998,6 +1001,8 @@
     "registrationSuccess": "註冊成功"
   },
   "placeholders": {
+    "username": "您的使用者名稱",
+    "newUsername": "選擇使用者名稱",
     "keyPassword": "金鑰密碼",
     "pastePrivateKey": "在此貼上您的私密金鑰...",
     "enterPassword": "輸入您的密碼"
@@ -1036,7 +1041,8 @@
         "actionNextTab": "切換至下一個分頁",
         "actionPreviousTab": "切換至上一個分頁",
         "actionOpenCommandPalette": "開啟快速搜尋",
-        "actionReconnectSession": "重新連線目前工作階段"
+        "actionReconnectSession": "重新連線目前工作階段",
+        "actionToggleSidebar": "切換側邊欄"
       },
       "userProfile": {
         "preset_simple": "簡易",

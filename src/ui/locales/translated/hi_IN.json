@@ -131,6 +131,8 @@
     "updateLinkLabel": "अपडेट उपलब्ध है। GitHub पर रिलीज नोट्स खोलें"
   },
   "common": {
+    "showPassword": "पासवर्ड दिखाएं",
+    "hidePassword": "पासवर्ड छिपाएं",
     "scrollTabsLeft": "टैब्स बाईं ओर स्क्रॉल करें",
     "scrollTabsRight": "टैब्स दाईं ओर स्क्रॉल करें",
     "close": "बंद करें",
@@ -495,6 +497,7 @@
     "deleteSelected": "हटाएं",
     "exitSelection": "चयन से बाहर निकलें",
     "collapseBtn": "संक्षिप्त करें",
+    "importExportBtn": "आयात / निर्यात",
     "hostStatusesRefreshed": "होस्ट स्थितियां ताज़ा की गईं",
     "failedToRefreshHosts": "होस्ट्स ताज़ा करने में विफल",
     "movedHostTo": "{{host}} को \"{{folder}}\" में स्थानांतरित किया गया",
@@ -1011,6 +1014,8 @@
     "registrationSuccess": "पंजीकरण सफल"
   },
   "placeholders": {
+    "username": "आपका उपयोगकर्ता नाम",
+    "newUsername": "एक उपयोगकर्ता नाम चुनें",
     "keyPassword": "की पासवर्ड",
     "pastePrivateKey": "अपनी प्राइवेट की यहाँ पेस्ट करें...",
     "enterPassword": "अपना पासवर्ड दर्ज करें"
@@ -1053,7 +1058,8 @@
         "actionNextTab": "अगले टैब पर जाएँ",
         "actionPreviousTab": "पिछले टैब पर जाएँ",
         "actionOpenCommandPalette": "क्विक सर्च खोलें",
-        "actionReconnectSession": "वर्तमान सत्र को पुनः कनेक्ट करें"
+        "actionReconnectSession": "वर्तमान सत्र को पुनः कनेक्ट करें",
+        "actionToggleSidebar": "साइडबार टॉगल करें"
       },
       "userProfile": {
         "preset_simple": "सरल",

@@ -131,6 +131,8 @@
     "updateLinkLabel": "Oppdatering tilgjengelig. Åpne utgivelsesnotatene på GitHub"
   },
   "common": {
+    "showPassword": "Vis passord",
+    "hidePassword": "Skjul passord",
     "scrollTabsLeft": "Rull faner til venstre",
     "scrollTabsRight": "Rull faner til høyre",
     "close": "Lukk",
@@ -495,6 +497,7 @@
     "deleteSelected": "Slett",
     "exitSelection": "Avslutt valg",
     "collapseBtn": "Skjul",
+    "importExportBtn": "Importer / Eksporter",
     "hostStatusesRefreshed": "Vertstatuser oppdatert",
     "failedToRefreshHosts": "Kunne ikke oppdatere verter",
     "movedHostTo": "Flyttet {{host}} til \"{{folder}}\"",
@@ -1011,6 +1014,8 @@
     "registrationSuccess": "Registrering vellykket"
   },
   "placeholders": {
+    "username": "Brukernavnet ditt",
+    "newUsername": "Velg et brukernavn",
     "keyPassword": "nøkkel-passord",
     "pastePrivateKey": "Lim inn din private nøkkel her...",
     "enterPassword": "Skriv inn passordet ditt"
@@ -1053,7 +1058,8 @@
         "actionNextTab": "Bytt til neste fane",
         "actionPreviousTab": "Bytt til forrige fane",
         "actionOpenCommandPalette": "Åpne hurtigsøk",
-        "actionReconnectSession": "Koble til gjeldende økt på nytt"
+        "actionReconnectSession": "Koble til gjeldende økt på nytt",
+        "actionToggleSidebar": "Vis/skjul sidepanel"
       },
       "userProfile": {
         "preset_simple": "Enkel",

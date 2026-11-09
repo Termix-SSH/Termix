@@ -131,6 +131,8 @@
     "updateLinkLabel": "Actualizare disponibilă. Deschideți notele de lansare pe GitHub"
   },
   "common": {
+    "showPassword": "Afișează parola",
+    "hidePassword": "Ascunde parola",
     "scrollTabsLeft": "Derulați filele la stânga",
     "scrollTabsRight": "Derulați filele la dreapta",
     "close": "Închide",
@@ -499,6 +501,7 @@
     "deleteSelected": "Șterge",
     "exitSelection": "Ieși din selecție",
     "collapseBtn": "Restrânge",
+    "importExportBtn": "Importă / Exportă",
     "hostStatusesRefreshed": "Stările gazdelor au fost reîmprospătate",
     "failedToRefreshHosts": "Reîmprospătarea gazdelor a eșuat",
     "movedHostTo": "{{host}} mutat în \"{{folder}}\"",
@@ -1024,6 +1027,8 @@
     "registrationSuccess": "Înregistrare reușită"
   },
   "placeholders": {
+    "username": "Numele tău de utilizator",
+    "newUsername": "Alege un nume de utilizator",
     "keyPassword": "parola cheii",
     "pastePrivateKey": "Lipiți cheia privată aici...",
     "enterPassword": "Introduceți parola"
@@ -1070,7 +1075,8 @@
         "actionNextTab": "Comută la fila următoare",
         "actionPreviousTab": "Comută la fila anterioară",
         "actionOpenCommandPalette": "Deschide căutarea rapidă",
-        "actionReconnectSession": "Reconectează sesiunea curentă"
+        "actionReconnectSession": "Reconectează sesiunea curentă",
+        "actionToggleSidebar": "Comută bara laterală"
       },
       "userProfile": {
         "preset_simple": "Simplă",

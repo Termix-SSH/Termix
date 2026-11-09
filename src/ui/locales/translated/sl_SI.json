@@ -131,6 +131,8 @@
     "updateLinkLabel": "Na voljo je posodobitev. Odprite opombe k izdaji na GitHubu"
   },
   "common": {
+    "showPassword": "Prikaži geslo",
+    "hidePassword": "Skrij geslo",
     "scrollTabsLeft": "Premakni zavihke levo",
     "scrollTabsRight": "Premakni zavihke desno",
     "close": "Zapri",
@@ -503,6 +505,7 @@
     "deleteSelected": "Izbriši",
     "exitSelection": "Izhod iz izbire",
     "collapseBtn": "Strni",
+    "importExportBtn": "Uvoz / Izvoz",
     "hostStatusesRefreshed": "Stanja gostiteljev osvežena",
     "failedToRefreshHosts": "Osveževanje gostiteljev ni uspelo",
     "movedHostTo": "Premaknjeno {{host}} v \"{{folder}}\"",
@@ -1037,6 +1040,8 @@
     "registrationSuccess": "Registracija je bila uspešna"
   },
   "placeholders": {
+    "username": "Vaše uporabniško ime",
+    "newUsername": "Izberite uporabniško ime",
     "keyPassword": "geslo za ključ",
     "pastePrivateKey": "Prilepite svoj zasebni ključ sem...",
     "enterPassword": "Vnesite svoje geslo"
@@ -1087,7 +1092,8 @@
         "actionNextTab": "Preklopi na naslednji zavihek",
         "actionPreviousTab": "Preklopi na prejšnji zavihek",
         "actionOpenCommandPalette": "Odpri hitro iskanje",
-        "actionReconnectSession": "Ponovno poveži trenutno sejo"
+        "actionReconnectSession": "Ponovno poveži trenutno sejo",
+        "actionToggleSidebar": "Preklopi stransko vrstico"
       },
       "userProfile": {
         "preset_simple": "Preprosto",

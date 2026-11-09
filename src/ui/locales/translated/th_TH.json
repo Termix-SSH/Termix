@@ -131,6 +131,8 @@
     "updateLinkLabel": "มีอัปเดตพร้อมใช้งาน เปิดบันทึกการเปลี่ยนแปลงบน GitHub"
   },
   "common": {
+    "showPassword": "แสดงรหัสผ่าน",
+    "hidePassword": "ซ่อนรหัสผ่าน",
     "scrollTabsLeft": "เลื่อนแท็บไปทางซ้าย",
     "scrollTabsRight": "เลื่อนแท็บไปทางขวา",
     "close": "ปิด",
@@ -491,6 +493,7 @@
     "deleteSelected": "ลบ",
     "exitSelection": "ยกเลิกการเลือก",
     "collapseBtn": "ยุบ",
+    "importExportBtn": "นำเข้า / ส่งออก",
     "hostStatusesRefreshed": "รีเฟรชสถานะโฮสต์แล้ว",
     "failedToRefreshHosts": "ไม่สามารถรีเฟรชโฮสต์ได้",
     "movedHostTo": "ย้าย {{host}} ไปยัง \"{{folder}}\"",
@@ -998,6 +1001,8 @@
     "registrationSuccess": "ลงทะเบียนสำเร็จ"
   },
   "placeholders": {
+    "username": "ชื่อผู้ใช้ของคุณ",
+    "newUsername": "เลือกชื่อผู้ใช้",
     "keyPassword": "รหัสผ่านของคีย์",
     "pastePrivateKey": "วางคีย์ส่วนตัวของคุณที่นี่...",
     "enterPassword": "กรอกรหัสผ่านของคุณ"
@@ -1036,7 +1041,8 @@
         "actionNextTab": "สลับไปยังแท็บถัดไป",
         "actionPreviousTab": "สลับไปยังแท็บก่อนหน้า",
         "actionOpenCommandPalette": "เปิดการค้นหาด่วน",
-        "actionReconnectSession": "เชื่อมต่อเซสชันปัจจุบันใหม่"
+        "actionReconnectSession": "เชื่อมต่อเซสชันปัจจุบันใหม่",
+        "actionToggleSidebar": "สลับแถบด้านข้าง"
       },
       "userProfile": {
         "preset_simple": "เรียบง่าย",

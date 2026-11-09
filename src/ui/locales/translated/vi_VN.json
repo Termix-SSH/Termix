@@ -131,6 +131,8 @@
     "updateLinkLabel": "Có bản cập nhật mới. Xem ghi chú phát hành trên GitHub"
   },
   "common": {
+    "showPassword": "Hiển thị mật khẩu",
+    "hidePassword": "Ẩn mật khẩu",
     "scrollTabsLeft": "Cuộn tab sang trái",
     "scrollTabsRight": "Cuộn tab sang phải",
     "close": "Đóng",
@@ -491,6 +493,7 @@
     "deleteSelected": "Xóa",
     "exitSelection": "Hủy chọn",
     "collapseBtn": "Thu gọn",
+    "importExportBtn": "Nhập / Xuất",
     "hostStatusesRefreshed": "Đã làm mới trạng thái máy chủ",
     "failedToRefreshHosts": "Không thể làm mới máy chủ",
     "movedHostTo": "Đã di chuyển {{host}} vào \"{{folder}}\"",
@@ -998,6 +1001,8 @@
     "registrationSuccess": "Đăng ký thành công"
   },
   "placeholders": {
+    "username": "Tên người dùng của bạn",
+    "newUsername": "Chọn tên người dùng",
     "keyPassword": "mật khẩu khóa",
     "pastePrivateKey": "Dán khóa riêng của bạn vào đây...",
     "enterPassword": "Nhập mật khẩu của bạn"
@@ -1036,7 +1041,8 @@
         "actionNextTab": "Chuyển sang tab tiếp theo",
         "actionPreviousTab": "Chuyển sang tab trước",
         "actionOpenCommandPalette": "Mở tìm kiếm nhanh",
-        "actionReconnectSession": "Kết nối lại phiên hiện tại"
+        "actionReconnectSession": "Kết nối lại phiên hiện tại",
+        "actionToggleSidebar": "Bật/tắt thanh bên"
       },
       "userProfile": {
         "preset_simple": "Đơn giản",

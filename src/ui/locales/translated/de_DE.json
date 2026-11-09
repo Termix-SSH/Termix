@@ -131,6 +131,8 @@
     "updateLinkLabel": "Update verfügbar. Öffnen Sie die Versionshinweise auf GitHub"
   },
   "common": {
+    "showPassword": "Passwort anzeigen",
+    "hidePassword": "Passwort ausblenden",
     "scrollTabsLeft": "Tabs nach links scrollen",
     "scrollTabsRight": "Tabs nach rechts scrollen",
     "close": "Schließen",
@@ -495,6 +497,7 @@
     "deleteSelected": "Löschen",
     "exitSelection": "Auswahl beenden",
     "collapseBtn": "Einklappen",
+    "importExportBtn": "Importieren / Exportieren",
     "hostStatusesRefreshed": "Host-Status aktualisiert",
     "failedToRefreshHosts": "Aktualisieren der Hosts fehlgeschlagen",
     "movedHostTo": "{{host}} nach \"{{folder}}\" verschoben",
@@ -1011,6 +1014,8 @@
     "registrationSuccess": "Registrierung erfolgreich"
   },
   "placeholders": {
+    "username": "Dein Benutzername",
+    "newUsername": "Wähle einen Benutzernamen",
     "keyPassword": "Schlüsselpasswort",
     "pastePrivateKey": "Fügen Sie Ihren privaten Schlüssel hier ein...",
     "enterPassword": "Geben Sie Ihr Passwort ein"
@@ -1053,7 +1058,8 @@
         "actionNextTab": "Zum nächsten Tab wechseln",
         "actionPreviousTab": "Zum vorherigen Tab wechseln",
         "actionOpenCommandPalette": "Schnellsuche öffnen",
-        "actionReconnectSession": "Aktuelle Sitzung neu verbinden"
+        "actionReconnectSession": "Aktuelle Sitzung neu verbinden",
+        "actionToggleSidebar": "Seitenleiste umschalten"
       },
       "userProfile": {
         "preset_simple": "Einfach",

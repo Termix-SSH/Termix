@@ -131,6 +131,8 @@
     "updateLinkLabel": "Yra naujinimas. Atidarykite išleidimo pastabas GitHub"
   },
   "common": {
+    "showPassword": "Rodyti slaptažodį",
+    "hidePassword": "Slėpti slaptažodį",
     "scrollTabsLeft": "Slinkti korteles į kairę",
     "scrollTabsRight": "Slinkti korteles į dešinę",
     "close": "Uždaryti",
@@ -503,6 +505,7 @@
     "deleteSelected": "Ištrinti",
     "exitSelection": "Išeiti iš pasirinkimo",
     "collapseBtn": "Sutraukti",
+    "importExportBtn": "Importuoti / Eksportuoti",
     "hostStatusesRefreshed": "Serverių būsenos atnaujintos",
     "failedToRefreshHosts": "Nepavyko atnaujinti serverių",
     "movedHostTo": "Serveris „{{host}}“ perkeltas į „{{folder}}“",
@@ -1037,6 +1040,8 @@
     "registrationSuccess": "Registracija sėkminga"
   },
   "placeholders": {
+    "username": "Jūsų vartotojo vardas",
+    "newUsername": "Pasirinkite vartotojo vardą",
     "keyPassword": "rakto slaptažodis",
     "pastePrivateKey": "Įklijuokite savo privačią raktą čia...",
     "enterPassword": "Įveskite savo slaptažodį"
@@ -1087,7 +1092,8 @@
         "actionNextTab": "Perjungti į kitą skirtuką",
         "actionPreviousTab": "Perjungti į ankstesnį skirtuką",
         "actionOpenCommandPalette": "Atidaryti greitąją paiešką",
-        "actionReconnectSession": "Perjungti dabartinę sesiją"
+        "actionReconnectSession": "Perjungti dabartinę sesiją",
+        "actionToggleSidebar": "Perjungti šoninę juostą"
       },
       "userProfile": {
         "preset_simple": "Paprasta",

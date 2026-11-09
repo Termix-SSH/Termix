@@ -131,6 +131,8 @@
     "updateLinkLabel": "업데이트 가능. GitHub에서 릴리스 노트 보기"
   },
   "common": {
+    "showPassword": "비밀번호 표시",
+    "hidePassword": "비밀번호 숨기기",
     "scrollTabsLeft": "탭 왼쪽으로 스크롤",
     "scrollTabsRight": "탭 오른쪽으로 스크롤",
     "close": "닫기",
@@ -491,6 +493,7 @@
     "deleteSelected": "삭제",
     "exitSelection": "선택 취소",
     "collapseBtn": "접기",
+    "importExportBtn": "가져오기 / 내보내기",
     "hostStatusesRefreshed": "호스트 상태가 새로고침되었습니다",
     "failedToRefreshHosts": "호스트를 새로고침하지 못했습니다",
     "movedHostTo": "{{host}}(이)가 \"{{folder}}\"(으)로 이동되었습니다",
@@ -998,6 +1001,8 @@
     "registrationSuccess": "등록 성공"
   },
   "placeholders": {
+    "username": "사용자 이름",
+    "newUsername": "사용자 이름 선택",
     "keyPassword": "키 비밀번호",
     "pastePrivateKey": "개인 키를 여기에 붙여넣으세요...",
     "enterPassword": "비밀번호를 입력하세요"
@@ -1036,7 +1041,8 @@
         "actionNextTab": "다음 탭으로 전환",
         "actionPreviousTab": "이전 탭으로 전환",
         "actionOpenCommandPalette": "빠른 검색 열기",
-        "actionReconnectSession": "현재 세션 재연결"
+        "actionReconnectSession": "현재 세션 재연결",
+        "actionToggleSidebar": "사이드바 전환"
       },
       "userProfile": {
         "preset_simple": "간단함",

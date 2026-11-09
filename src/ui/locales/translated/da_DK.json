@@ -131,6 +131,8 @@
     "updateLinkLabel": "Opdatering tilgængelig. Åbn udgivelsesnoterne på GitHub"
   },
   "common": {
+    "showPassword": "Vis adgangskode",
+    "hidePassword": "Skjul adgangskode",
     "scrollTabsLeft": "Rul faner til venstre",
     "scrollTabsRight": "Rul faner til højre",
     "close": "Luk",
@@ -495,6 +497,7 @@
     "deleteSelected": "Slet",
     "exitSelection": "Afslut markering",
     "collapseBtn": "Skjul",
+    "importExportBtn": "Importér / Eksportér",
     "hostStatusesRefreshed": "Værtstatusser opdateret",
     "failedToRefreshHosts": "Kunne ikke opdatere værter",
     "movedHostTo": "Flyttet {{host}} til \"{{folder}}\"",
@@ -1011,6 +1014,8 @@
     "registrationSuccess": "Registrering lykkedes"
   },
   "placeholders": {
+    "username": "Dit brugernavn",
+    "newUsername": "Vælg et brugernavn",
     "keyPassword": "nøgleadgangskode",
     "pastePrivateKey": "Indsæt din private nøgle her...",
     "enterPassword": "Indtast din adgangskode"
@@ -1053,7 +1058,8 @@
         "actionNextTab": "Skift til næste fane",
         "actionPreviousTab": "Skift til forrige fane",
         "actionOpenCommandPalette": "Åbn hurtigsøgning",
-        "actionReconnectSession": "Genopret forbindelse til nuværende session"
+        "actionReconnectSession": "Genopret forbindelse til nuværende session",
+        "actionToggleSidebar": "Skjul/vis sidebjælke"
       },
       "userProfile": {
         "preset_simple": "Enkel",

@@ -131,6 +131,8 @@
     "updateLinkLabel": "Je k dispozici aktualizace. Otevřít poznámky k vydání na GitHubu"
   },
   "common": {
+    "showPassword": "Zobrazit heslo",
+    "hidePassword": "Skrýt heslo",
     "scrollTabsLeft": "Posunout karty doleva",
     "scrollTabsRight": "Posunout karty doprava",
     "close": "Zavřít",
@@ -503,6 +505,7 @@
     "deleteSelected": "Smazat",
     "exitSelection": "Ukončit výběr",
     "collapseBtn": "Sbalit",
+    "importExportBtn": "Import / Export",
     "hostStatusesRefreshed": "Stavy hostitelů obnoveny",
     "failedToRefreshHosts": "Nepodařilo se obnovit hostitele",
     "movedHostTo": "Přesunuto {{host}} do \"{{folder}}\"",
@@ -1037,6 +1040,8 @@
     "registrationSuccess": "Registrace úspěšná"
   },
   "placeholders": {
+    "username": "Vaše uživatelské jméno",
+    "newUsername": "Vyberte uživatelské jméno",
     "keyPassword": "heslo k klíči",
     "pastePrivateKey": "Sem vložte svůj soukromý klíč...",
     "enterPassword": "Zadejte své heslo"
@@ -1087,7 +1092,8 @@
         "actionNextTab": "Přepnout na další kartu",
         "actionPreviousTab": "Přepnout na předchozí kartu",
         "actionOpenCommandPalette": "Otevřít rychlé vyhledávání",
-        "actionReconnectSession": "Znovu připojit aktuální relaci"
+        "actionReconnectSession": "Znovu připojit aktuální relaci",
+        "actionToggleSidebar": "Přepnout postranní panel"
       },
       "userProfile": {
         "preset_simple": "Jednoduché",

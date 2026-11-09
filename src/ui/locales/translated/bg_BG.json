@@ -131,6 +131,8 @@
     "updateLinkLabel": "Налична е актуализация. Отворете бележките към версията в GitHub"
   },
   "common": {
+    "showPassword": "Покажи парола",
+    "hidePassword": "Скрий парола",
     "scrollTabsLeft": "Превъртете табове наляво",
     "scrollTabsRight": "Превъртете табове надясно",
     "close": "Затвори",
@@ -495,6 +497,7 @@
     "deleteSelected": "Изтриване",
     "exitSelection": "Изход от избора",
     "collapseBtn": "Свиване",
+    "importExportBtn": "Импорт / Експорт",
     "hostStatusesRefreshed": "Статусите на хостовете са обновени",
     "failedToRefreshHosts": "Грешка при обновяването на хостовете",
     "movedHostTo": "Преместихте {{host}} в \"{{folder}}\"",
@@ -1011,6 +1014,8 @@
     "registrationSuccess": "Регистрацията е успешна"
   },
   "placeholders": {
+    "username": "Вашето потребителско име",
+    "newUsername": "Изберете потребителско име",
     "keyPassword": "парола за ключ",
     "pastePrivateKey": "Поставете вашия личен ключ тук...",
     "enterPassword": "Въведете вашата парола"
@@ -1053,7 +1058,8 @@
         "actionNextTab": "Превключване към следващия раздел",
         "actionPreviousTab": "Превключване към предишния раздел",
         "actionOpenCommandPalette": "Отваряне на бързо търсене",
-        "actionReconnectSession": "Повторно свързване на текущата сесия"
+        "actionReconnectSession": "Повторно свързване на текущата сесия",
+        "actionToggleSidebar": "Превключване на страничната лента"
       },
       "userProfile": {
         "preset_simple": "Прост",

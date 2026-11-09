@@ -131,6 +131,8 @@
     "updateLinkLabel": "Доступно ажурирање. Отворите белешке о издању на GitHub-у"
   },
   "common": {
+    "showPassword": "Прикажи лозинку",
+    "hidePassword": "Сакриј лозинку",
     "scrollTabsLeft": "Помери табове лево",
     "scrollTabsRight": "Помери табове десно",
     "close": "Затвори",
@@ -499,6 +501,7 @@
     "deleteSelected": "Обриши",
     "exitSelection": "Изађи из избора",
     "collapseBtn": "Склопи",
+    "importExportBtn": "Увоз / Извоз",
     "hostStatusesRefreshed": "Статуси хостова су освежени",
     "failedToRefreshHosts": "Неуспешно освежавање хостова",
     "movedHostTo": "Премештен {{host}} у \"{{folder}}\"",
@@ -1024,6 +1027,8 @@
     "registrationSuccess": "Регистрација је успешна"
   },
   "placeholders": {
+    "username": "Ваше корисничко име",
+    "newUsername": "Изаберите корисничко име",
     "keyPassword": "лозинка кључа",
     "pastePrivateKey": "Налепите свој приватни кључ овде...",
     "enterPassword": "Унесите своју лозинку"
@@ -1070,7 +1075,8 @@
         "actionNextTab": "Пређи на следећи таб",
         "actionPreviousTab": "Пређи на претходни таб",
         "actionOpenCommandPalette": "Отвори брзу претрагу",
-        "actionReconnectSession": "Повези тренутну сесију поново"
+        "actionReconnectSession": "Повези тренутну сесију поново",
+        "actionToggleSidebar": "Прикажи/сакриј бочну траку"
       },
       "userProfile": {
         "preset_simple": "Једноставан",

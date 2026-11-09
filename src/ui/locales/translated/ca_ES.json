@@ -131,6 +131,8 @@
     "updateLinkLabel": "Hi ha una actualització disponible. Obre les notes de la versió a GitHub"
   },
   "common": {
+    "showPassword": "Mostra la contrasenya",
+    "hidePassword": "Amaga la contrasenya",
     "scrollTabsLeft": "Desplaça les pestanes a l'esquerra",
     "scrollTabsRight": "Desplaça les pestanes a la dreta",
     "close": "Tanca",
@@ -499,6 +501,7 @@
     "deleteSelected": "Suprimeix",
     "exitSelection": "Sorteix de la selecció",
     "collapseBtn": "Replega",
+    "importExportBtn": "Importa / Exporta",
     "hostStatusesRefreshed": "Estat dels hosts actualitzat",
     "failedToRefreshHosts": "No s'han pogut actualitzar els hosts",
     "movedHostTo": "S'ha mogut {{host}} a «{{folder}}»",
@@ -1024,6 +1027,8 @@
     "registrationSuccess": "Registre correcte"
   },
   "placeholders": {
+    "username": "El teu nom d'usuari",
+    "newUsername": "Tria un nom d'usuari",
     "keyPassword": "contrasenya de la clau",
     "pastePrivateKey": "Enganxa la teva clau privada aquí...",
     "enterPassword": "Introdueix la teva contrasenya"
@@ -1070,7 +1075,8 @@
         "actionNextTab": "Canvia a la pestanya següent",
         "actionPreviousTab": "Canvia a la pestanya anterior",
         "actionOpenCommandPalette": "Obre la cerca ràpida",
-        "actionReconnectSession": "Torna a connectar la sessió actual"
+        "actionReconnectSession": "Torna a connectar la sessió actual",
+        "actionToggleSidebar": "Alterna la barra lateral"
       },
       "userProfile": {
         "preset_simple": "Senzill",

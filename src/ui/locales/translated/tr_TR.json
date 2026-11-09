@@ -131,6 +131,8 @@
     "updateLinkLabel": "Güncelleme mevcut. GitHub'da sürüm notlarını açın"
   },
   "common": {
+    "showPassword": "Şifreyi göster",
+    "hidePassword": "Şifreyi gizle",
     "scrollTabsLeft": "Sekmeleri sola kaydır",
     "scrollTabsRight": "Sekmeleri sağa kaydır",
     "close": "Kapat",
@@ -495,6 +497,7 @@
     "deleteSelected": "Sil",
     "exitSelection": "Seçimi kapat",
     "collapseBtn": "Daralt",
+    "importExportBtn": "İçe Aktar / Dışa Aktar",
     "hostStatusesRefreshed": "Ana bilgisayar durumları yenilendi",
     "failedToRefreshHosts": "Ana bilgisayarlar yenilenemedi",
     "movedHostTo": "{{host}}, \"{{folder}}\" klasörüne taşındı",
@@ -1011,6 +1014,8 @@
     "registrationSuccess": "Kayıt başarılı"
   },
   "placeholders": {
+    "username": "Kullanıcı adınız",
+    "newUsername": "Bir kullanıcı adı seçin",
     "keyPassword": "anahtar şifresi",
     "pastePrivateKey": "Özel anahtarınızı buraya yapıştırın...",
     "enterPassword": "Şifrenizi girin"
@@ -1053,7 +1058,8 @@
         "actionNextTab": "Sonraki sekmeye geç",
         "actionPreviousTab": "Önceki sekmeye geç",
         "actionOpenCommandPalette": "Hızlı aramayı aç",
-        "actionReconnectSession": "Mevcut oturumu yeniden bağla"
+        "actionReconnectSession": "Mevcut oturumu yeniden bağla",
+        "actionToggleSidebar": "Kenar çubuğunu aç/kapat"
       },
       "userProfile": {
         "preset_simple": "Basit",

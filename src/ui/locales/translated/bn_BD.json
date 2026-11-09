@@ -131,6 +131,8 @@
     "updateLinkLabel": "আপডেট উপলব্ধ। GitHub এ রিলিজ নোট খুলুন"
   },
   "common": {
+    "showPassword": "পাসওয়ার্ড দেখান",
+    "hidePassword": "পাসওয়ার্ড লুকান",
     "scrollTabsLeft": "ট্যাব বাম দিকে স্ক্রল করুন",
     "scrollTabsRight": "ট্যাব ডান দিকে স্ক্রল করুন",
     "close": "বন্ধ করুন",
@@ -495,6 +497,7 @@
     "deleteSelected": "মুছে ফেলুন",
     "exitSelection": "নির্বাচন থেকে বের হন",
     "collapseBtn": "সংকুচিত করুন",
+    "importExportBtn": "আমদানি / রপ্তানি",
     "hostStatusesRefreshed": "হোস্টের অবস্থা রিফ্রেশ করা হয়েছে",
     "failedToRefreshHosts": "হোস্ট রিফ্রেশ করতে ব্যর্থ হয়েছে",
     "movedHostTo": "{{host}} কে \"{{folder}}\" এ সরানো হয়েছে",
@@ -1011,6 +1014,8 @@
     "registrationSuccess": "রেজিস্ট্রেশন সফল হয়েছে"
   },
   "placeholders": {
+    "username": "আপনার ব্যবহারকারীর নাম",
+    "newUsername": "একটি ব্যবহারকারীর নাম নির্বাচন করুন",
     "keyPassword": "কী পাসওয়ার্ড",
     "pastePrivateKey": "আপনার প্রাইভেট কী এখানে পেস্ট করুন...",
     "enterPassword": "আপনার পাসওয়ার্ড লিখুন"
@@ -1053,7 +1058,8 @@
         "actionNextTab": "পরবর্তী ট্যাবে যান",
         "actionPreviousTab": "পূর্ববর্তী ট্যাবে যান",
         "actionOpenCommandPalette": "দ্রুত অনুসন্ধান খুলুন",
-        "actionReconnectSession": "বর্তমান সেশন পুনরায় সংযোগ করুন"
+        "actionReconnectSession": "বর্তমান সেশন পুনরায় সংযোগ করুন",
+        "actionToggleSidebar": "সাইডবার টগল করুন"
       },
       "userProfile": {
         "preset_simple": "সহজ",

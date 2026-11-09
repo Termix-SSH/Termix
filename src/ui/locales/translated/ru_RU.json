@@ -131,6 +131,8 @@
     "updateLinkLabel": "Доступно обновление. Открыть примечания к выпуску на GitHub"
   },
   "common": {
+    "showPassword": "Показать пароль",
+    "hidePassword": "Скрыть пароль",
     "scrollTabsLeft": "Прокрутить вкладки влево",
     "scrollTabsRight": "Прокрутить вкладки вправо",
     "close": "Закрыть",
@@ -503,6 +505,7 @@
     "deleteSelected": "Удалить",
     "exitSelection": "Отменить выделение",
     "collapseBtn": "Свернуть",
+    "importExportBtn": "Импорт / Экспорт",
     "hostStatusesRefreshed": "Статусы хостов обновлены",
     "failedToRefreshHosts": "Не удалось обновить хосты",
     "movedHostTo": "Хост {{host}} перемещен в «{{folder}}»",
@@ -1037,6 +1040,8 @@
     "registrationSuccess": "Регистрация прошла успешно"
   },
   "placeholders": {
+    "username": "Ваше имя пользователя",
+    "newUsername": "Выберите имя пользователя",
     "keyPassword": "пароль ключа",
     "pastePrivateKey": "Вставьте ваш закрытый ключ здесь...",
     "enterPassword": "Введите ваш пароль"
@@ -1087,7 +1092,8 @@
         "actionNextTab": "Переключиться на следующую вкладку",
         "actionPreviousTab": "Переключиться на предыдущую вкладку",
         "actionOpenCommandPalette": "Открыть быстрый поиск",
-        "actionReconnectSession": "Переподключить текущую сессию"
+        "actionReconnectSession": "Переподключить текущую сессию",
+        "actionToggleSidebar": "Показать/скрыть боковую панель"
       },
       "userProfile": {
         "preset_simple": "Простой",

@@ -131,6 +131,8 @@
     "updateLinkLabel": "Mise à jour disponible. Ouvrir les notes de version sur GitHub"
   },
   "common": {
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe",
     "scrollTabsLeft": "Faire défiler les onglets vers la gauche",
     "scrollTabsRight": "Faire défiler les onglets vers la droite",
     "close": "Fermer",
@@ -499,6 +501,7 @@
     "deleteSelected": "Supprimer",
     "exitSelection": "Quitter la sélection",
     "collapseBtn": "Réduire",
+    "importExportBtn": "Importer / Exporter",
     "hostStatusesRefreshed": "Statuts des hôtes actualisés",
     "failedToRefreshHosts": "Échec de l'actualisation des hôtes",
     "movedHostTo": "{{host}} déplacé vers \"{{folder}}\"",
@@ -1024,6 +1027,8 @@
     "registrationSuccess": "Inscription réussie"
   },
   "placeholders": {
+    "username": "Votre nom d'utilisateur",
+    "newUsername": "Choisissez un nom d'utilisateur",
     "keyPassword": "mot de passe de la clé",
     "pastePrivateKey": "Collez votre clé privée ici...",
     "enterPassword": "Entrez votre mot de passe"
@@ -1070,7 +1075,8 @@
         "actionNextTab": "Passer à l'onglet suivant",
         "actionPreviousTab": "Passer à l'onglet précédent",
         "actionOpenCommandPalette": "Ouvrir la recherche rapide",
-        "actionReconnectSession": "Reconnecter la session actuelle"
+        "actionReconnectSession": "Reconnecter la session actuelle",
+        "actionToggleSidebar": "Afficher/masquer la barre latérale"
       },
       "userProfile": {
         "preset_simple": "Simple",

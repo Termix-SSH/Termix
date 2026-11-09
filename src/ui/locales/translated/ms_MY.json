@@ -131,6 +131,8 @@
     "updateLinkLabel": "Kemas kini tersedia. Buka nota keluaran di GitHub"
   },
   "common": {
+    "showPassword": "Paparkan kata laluan",
+    "hidePassword": "Sembunyikan kata laluan",
     "scrollTabsLeft": "Skrol tab ke kiri",
     "scrollTabsRight": "Skrol tab ke kanan",
     "close": "Tutup",
@@ -491,6 +493,7 @@
     "deleteSelected": "Padam",
     "exitSelection": "Keluar daripada pemilihan",
     "collapseBtn": "Runtuhkan",
+    "importExportBtn": "Import / Eksport",
     "hostStatusesRefreshed": "Status hos dikemas kini",
     "failedToRefreshHosts": "Gagal mengemas kini hos",
     "movedHostTo": "Memindahkan {{host}} ke \"{{folder}}\"",
@@ -998,6 +1001,8 @@
     "registrationSuccess": "Pendaftaran berjaya"
   },
   "placeholders": {
+    "username": "Nama pengguna anda",
+    "newUsername": "Pilih nama pengguna",
     "keyPassword": "kata laluan kunci",
     "pastePrivateKey": "Tampal kunci peribadi anda di sini...",
     "enterPassword": "Masukkan kata laluan anda"
@@ -1036,7 +1041,8 @@
         "actionNextTab": "Tukar ke tab seterusnya",
         "actionPreviousTab": "Tukar ke tab sebelumnya",
         "actionOpenCommandPalette": "Buka carian pantas",
-        "actionReconnectSession": "Sambung semula sesi semasa"
+        "actionReconnectSession": "Sambung semula sesi semasa",
+        "actionToggleSidebar": "Togol bar sisi"
       },
       "userProfile": {
         "preset_simple": "Ringkas",

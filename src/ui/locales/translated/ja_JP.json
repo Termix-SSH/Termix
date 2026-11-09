@@ -131,6 +131,8 @@
     "updateLinkLabel": "アップデートが利用可能です。GitHub でリリースノートを開く"
   },
   "common": {
+    "showPassword": "パスワードを表示",
+    "hidePassword": "パスワードを非表示",
     "scrollTabsLeft": "タブを左にスクロール",
     "scrollTabsRight": "タブを右にスクロール",
     "close": "閉じる",
@@ -491,6 +493,7 @@
     "deleteSelected": "削除",
     "exitSelection": "選択を解除",
     "collapseBtn": "折りたたむ",
+    "importExportBtn": "インポート / エクスポート",
     "hostStatusesRefreshed": "ホストのステータスを更新しました",
     "failedToRefreshHosts": "ホストの更新に失敗しました",
     "movedHostTo": "{{host}} を「{{folder}}」に移動しました",
@@ -998,6 +1001,8 @@
     "registrationSuccess": "登録に成功しました"
   },
   "placeholders": {
+    "username": "ユーザー名",
+    "newUsername": "ユーザー名を入力",
     "keyPassword": "キーのパスワード",
     "pastePrivateKey": "ここに秘密鍵を貼り付けてください...",
     "enterPassword": "パスワードを入力してください"
@@ -1036,7 +1041,8 @@
         "actionNextTab": "次のタブに切り替え",
         "actionPreviousTab": "前のタブに切り替え",
         "actionOpenCommandPalette": "クイック検索を開く",
-        "actionReconnectSession": "現在のセッションを再接続"
+        "actionReconnectSession": "現在のセッションを再接続",
+        "actionToggleSidebar": "サイドバーの表示/非表示を切り替え"
       },
       "userProfile": {
         "preset_simple": "シンプル",

@@ -131,6 +131,8 @@
     "updateLinkLabel": "Frissítés elérhető. A kiadási jegyzetek megnyitása a GitHubon"
   },
   "common": {
+    "showPassword": "Jelszó megjelenítése",
+    "hidePassword": "Jelszó elrejtése",
     "scrollTabsLeft": "Fülek görgetése balra",
     "scrollTabsRight": "Fülek görgetése jobbra",
     "close": "Bezárás",
@@ -495,6 +497,7 @@
     "deleteSelected": "Törlés",
     "exitSelection": "Kijelölés megszüntése",
     "collapseBtn": "Összecsukás",
+    "importExportBtn": "Importálás / Exportálás",
     "hostStatusesRefreshed": "A gazdagépek státuszai frissítve",
     "failedToRefreshHosts": "Nem sikerült frissíteni a gazdagépeket",
     "movedHostTo": "{{host}} áthelyezve a \"{{folder}}\" mappába",
@@ -1011,6 +1014,8 @@
     "registrationSuccess": "Sikeres regisztráció"
   },
   "placeholders": {
+    "username": "Felhasználóneved",
+    "newUsername": "Válassz felhasználónevet",
     "keyPassword": "kulcs jelszava",
     "pastePrivateKey": "Illessze be a privát kulcsát ide...",
     "enterPassword": "Adja meg a jelszavát"
@@ -1053,7 +1058,8 @@
         "actionNextTab": "Váltás a következő fülre",
         "actionPreviousTab": "Váltás az előző fülre",
         "actionOpenCommandPalette": "Gyorskeresés megnyitása",
-        "actionReconnectSession": "Jelenlegi munkamenet újracsatlakoztatása"
+        "actionReconnectSession": "Jelenlegi munkamenet újracsatlakoztatása",
+        "actionToggleSidebar": "Oldalsáv be/ki"
       },
       "userProfile": {
         "preset_simple": "Egyszerű",

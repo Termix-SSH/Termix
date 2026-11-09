@@ -131,6 +131,8 @@
     "updateLinkLabel": "Päivitys saatavilla. Avaa julkaisutiedot GitHubissa"
   },
   "common": {
+    "showPassword": "Näytä salasana",
+    "hidePassword": "Piilota salasana",
     "scrollTabsLeft": "Vieritä välilehtiä vasemmalle",
     "scrollTabsRight": "Vieritä välilehtiä oikealle",
     "close": "Sulje",
@@ -495,6 +497,7 @@
     "deleteSelected": "Poista",
     "exitSelection": "Poistu valinnasta",
     "collapseBtn": "Kutista",
+    "importExportBtn": "Tuo / Vie",
     "hostStatusesRefreshed": "Isäntäpalvelimien tilat päivitetty",
     "failedToRefreshHosts": "Isäntäpalvelimien päivitys epäonnistui",
     "movedHostTo": "Siirretty {{host}} kansioon \"{{folder}}\"",
@@ -1011,6 +1014,8 @@
     "registrationSuccess": "Rekisteröityminen onnistui"
   },
   "placeholders": {
+    "username": "Käyttäjänimesi",
+    "newUsername": "Valitse käyttäjänimi",
     "keyPassword": "avaimen salasana",
     "pastePrivateKey": "Liitä yksityinen avain tähän...",
     "enterPassword": "Syötä salasanasi"
@@ -1053,7 +1058,8 @@
         "actionNextTab": "Vaihda seuraavaan välilehteen",
         "actionPreviousTab": "Vaihda edelliseen välilehteen",
         "actionOpenCommandPalette": "Avaa pikahaku",
-        "actionReconnectSession": "Yhdistä nykyinen istunto uudelleen"
+        "actionReconnectSession": "Yhdistä nykyinen istunto uudelleen",
+        "actionToggleSidebar": "Näytä/piilota sivupalkki"
       },
       "userProfile": {
         "preset_simple": "Yksinkertainen",

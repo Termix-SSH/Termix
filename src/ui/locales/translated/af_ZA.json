@@ -131,6 +131,8 @@
     "updateLinkLabel": "Opdatering beskikbaar. Open die vrygawenoetes op GitHub"
   },
   "common": {
+    "showPassword": "Wys wagwoord",
+    "hidePassword": "Versteek wagwoord",
     "scrollTabsLeft": "Skakel oortjies links",
     "scrollTabsRight": "Skakel oortjies regs",
     "close": "Maak toe",
@@ -495,6 +497,7 @@
     "deleteSelected": "Vee uit",
     "exitSelection": "Verlaat seleksie",
     "collapseBtn": "Vou in",
+    "importExportBtn": "Voer in / Voer uit",
     "hostStatusesRefreshed": "Gasheer-statusse opgedateer",
     "failedToRefreshHosts": "Kon nie gasheer opdateer nie",
     "movedHostTo": "Het {{host}} na \"{{folder}}\" geskuif",
@@ -1011,6 +1014,8 @@
     "registrationSuccess": "Registrasie suksesvol"
   },
   "placeholders": {
+    "username": "Jou gebruikersnaam",
+    "newUsername": "Kies 'n gebruikersnaam",
     "keyPassword": "sleutelwagwoord",
     "pastePrivateKey": "Plak jou privaat sleutel hier...",
     "enterPassword": "Voer jou wagwoord in"
@@ -1053,7 +1058,8 @@
         "actionNextTab": "Wissel na volgende tab",
         "actionPreviousTab": "Wissel na vorige tab",
         "actionOpenCommandPalette": "Maak vinnige soek oop",
-        "actionReconnectSession": "Herstel huidige sessie"
+        "actionReconnectSession": "Herstel huidige sessie",
+        "actionToggleSidebar": "Wissel sybalk"
       },
       "userProfile": {
         "preset_simple": "Eenvoudig",

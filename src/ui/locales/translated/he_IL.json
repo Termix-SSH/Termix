@@ -131,6 +131,8 @@
     "updateLinkLabel": "עדכון זמין. פתח את דברי ההוצאה לאור ב-GitHub"
   },
   "common": {
+    "showPassword": "הצג סיסמה",
+    "hidePassword": "הסתר סיסמה",
     "scrollTabsLeft": "גלול לשמאל",
     "scrollTabsRight": "גלול לימין",
     "close": "סגור",
@@ -499,6 +501,7 @@
     "deleteSelected": "מחק",
     "exitSelection": "צא ממצב בחירה",
     "collapseBtn": "כווץ",
+    "importExportBtn": "ייבוא / ייצוא",
     "hostStatusesRefreshed": "מצבי המארחים עודכנו",
     "failedToRefreshHosts": "הרענון של המארחים נכשל",
     "movedHostTo": "הועבר {{host}} ל\"{{folder}}\"",
@@ -1024,6 +1027,8 @@
     "registrationSuccess": "ההרשמה בוצעה בהצלחה"
   },
   "placeholders": {
+    "username": "שם המשתמש שלך",
+    "newUsername": "בחר שם משתמש",
     "keyPassword": "סיסמת מפתח",
     "pastePrivateKey": "הדבק כאן את המפתח הפרטי שלך...",
     "enterPassword": "הזן את הסיסמה שלך"
@@ -1070,7 +1075,8 @@
         "actionNextTab": "עבור ללשונית הבאה",
         "actionPreviousTab": "עבור ללשונית הקודמת",
         "actionOpenCommandPalette": "פתח חיפוש מהיר",
-        "actionReconnectSession": "חבר מחדש את הפעולה הנוכחית"
+        "actionReconnectSession": "חבר מחדש את הפעולה הנוכחית",
+        "actionToggleSidebar": "הצג/הסתר סרגל צד"
       },
       "userProfile": {
         "preset_simple": "פשוט",

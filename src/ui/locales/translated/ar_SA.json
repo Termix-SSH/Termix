@@ -131,6 +131,8 @@
     "updateLinkLabel": "يتوفر تحديث. عرض ملاحظات الإصدار على GitHub"
   },
   "common": {
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور",
     "scrollTabsLeft": "تمرير علامات التبويب لليسار",
     "scrollTabsRight": "تمرير علامات التبويب لليمين",
     "close": "إغلاق",
@@ -511,6 +513,7 @@
     "deleteSelected": "حذف",
     "exitSelection": "خروج من التحديد",
     "collapseBtn": "طي",
+    "importExportBtn": "استيراد / تصدير",
     "hostStatusesRefreshed": "تم تحديث حالات المضيفين",
     "failedToRefreshHosts": "فشل تحديث المضيفين",
     "movedHostTo": "تم نقل {{host}} إلى \"{{folder}}\"",
@@ -1063,6 +1066,8 @@
     "registrationSuccess": "تم التسجيل بنجاح"
   },
   "placeholders": {
+    "username": "اسم المستخدم الخاص بك",
+    "newUsername": "اختر اسم مستخدم",
     "keyPassword": "كلمة مرور المفتاح",
     "pastePrivateKey": "الصق مفتاحك الخاص هنا...",
     "enterPassword": "أدخل كلمة المرور الخاصة بك"
@@ -1121,7 +1126,8 @@
         "actionNextTab": "التبديل إلى علامة التبويب التالية",
         "actionPreviousTab": "التبديل إلى علامة التبويب السابقة",
         "actionOpenCommandPalette": "فتح البحث السريع",
-        "actionReconnectSession": "إعادة الاتصال بالجلسة الحالية"
+        "actionReconnectSession": "إعادة الاتصال بالجلسة الحالية",
+        "actionToggleSidebar": "تبديل الشريط الجانبي"
       },
       "userProfile": {
         "preset_simple": "بسيط",

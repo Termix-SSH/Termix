@@ -131,6 +131,8 @@
     "updateLinkLabel": "有可用更新。在 GitHub 上查看发行说明"
   },
   "common": {
+    "showPassword": "显示密码",
+    "hidePassword": "隐藏密码",
     "scrollTabsLeft": "向左滚动标签页",
     "scrollTabsRight": "向右滚动标签页",
     "close": "关闭",
@@ -491,6 +493,7 @@
     "deleteSelected": "删除",
     "exitSelection": "退出选择",
     "collapseBtn": "折叠",
+    "importExportBtn": "导入 / 导出",
     "hostStatusesRefreshed": "主机状态已刷新",
     "failedToRefreshHosts": "刷新主机失败",
     "movedHostTo": "已将 {{host}} 移动到“{{folder}}”",
@@ -998,6 +1001,8 @@
     "registrationSuccess": "注册成功"
   },
   "placeholders": {
+    "username": "您的用户名",
+    "newUsername": "选择一个用户名",
     "keyPassword": "密钥密码",
     "pastePrivateKey": "在此粘贴您的私钥...",
     "enterPassword": "输入您的密码"
@@ -1036,7 +1041,8 @@
         "actionNextTab": "切换到下一个标签页",
         "actionPreviousTab": "切换到上一个标签页",
         "actionOpenCommandPalette": "打开快速搜索",
-        "actionReconnectSession": "重新连接当前会话"
+        "actionReconnectSession": "重新连接当前会话",
+        "actionToggleSidebar": "切换侧边栏"
       },
       "userProfile": {
         "preset_simple": "简洁",

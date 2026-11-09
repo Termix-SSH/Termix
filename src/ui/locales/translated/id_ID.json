@@ -131,6 +131,8 @@
     "updateLinkLabel": "Pembaruan tersedia. Buka catatan rilis di GitHub"
   },
   "common": {
+    "showPassword": "Tampilkan kata sandi",
+    "hidePassword": "Sembunyikan kata sandi",
     "scrollTabsLeft": "Gulir tab ke kiri",
     "scrollTabsRight": "Gulir tab ke kanan",
     "close": "Tutup",
@@ -491,6 +493,7 @@
     "deleteSelected": "Hapus",
     "exitSelection": "Keluar dari pemilihan",
     "collapseBtn": "Ciutkan",
+    "importExportBtn": "Impor / Ekspor",
     "hostStatusesRefreshed": "Status host diperbarui",
     "failedToRefreshHosts": "Gagal memperbarui host",
     "movedHostTo": "Memindahkan {{host}} ke \"{{folder}}\"",
@@ -998,6 +1001,8 @@
     "registrationSuccess": "Pendaftaran berhasil"
   },
   "placeholders": {
+    "username": "Nama pengguna Anda",
+    "newUsername": "Pilih nama pengguna",
     "keyPassword": "kata sandi kunci",
     "pastePrivateKey": "Tempelkan kunci pribadi Anda di sini...",
     "enterPassword": "Masukkan kata sandi Anda"
@@ -1036,7 +1041,8 @@
         "actionNextTab": "Beralih ke tab berikutnya",
         "actionPreviousTab": "Beralih ke tab sebelumnya",
         "actionOpenCommandPalette": "Buka pencarian cepat",
-        "actionReconnectSession": "Sambungkan ulang sesi saat ini"
+        "actionReconnectSession": "Sambungkan ulang sesi saat ini",
+        "actionToggleSidebar": "Alihkan bilah sisi"
       },
       "userProfile": {
         "preset_simple": "Sederhana",

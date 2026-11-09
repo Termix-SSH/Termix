@@ -131,6 +131,8 @@
     "updateLinkLabel": "Dostupno ažuriranje. Otvori bilješke o izdanju na GitHubu"
   },
   "common": {
+    "showPassword": "Prikaži lozinku",
+    "hidePassword": "Sakrij lozinku",
     "scrollTabsLeft": "Pomakni kartice lijevo",
     "scrollTabsRight": "Pomakni kartice desno",
     "close": "Zatvori",
@@ -499,6 +501,7 @@
     "deleteSelected": "Izbriši",
     "exitSelection": "Izađi iz odabira",
     "collapseBtn": "Sažmi",
+    "importExportBtn": "Uvoz / Izvoz",
     "hostStatusesRefreshed": "Statusi hostova osvježeni",
     "failedToRefreshHosts": "Neuspjelo osvježavanje hostova",
     "movedHostTo": "Premješteno {{host}} u \"{{folder}}\"",
@@ -1024,6 +1027,8 @@
     "registrationSuccess": "Registracija uspješna"
   },
   "placeholders": {
+    "username": "Vaše korisničko ime",
+    "newUsername": "Odaberite korisničko ime",
     "keyPassword": "lozinka ključa",
     "pastePrivateKey": "Ovdje zalijepite svoj privatni ključ...",
     "enterPassword": "Unesite svoju lozinku"
@@ -1070,7 +1075,8 @@
         "actionNextTab": "Prebaci na sljedeću karticu",
         "actionPreviousTab": "Prebaci na prethodnu karticu",
         "actionOpenCommandPalette": "Otvori brzu pretragu",
-        "actionReconnectSession": "Ponovno poveži trenutnu sesiju"
+        "actionReconnectSession": "Ponovno poveži trenutnu sesiju",
+        "actionToggleSidebar": "Prikaži/sakrij bočnu traku"
       },
       "userProfile": {
         "preset_simple": "Jednostavno",

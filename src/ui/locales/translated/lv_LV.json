@@ -131,6 +131,8 @@
     "updateLinkLabel": "Pieejams atjauninājums. Atveriet izlaišanas piezīmes GitHub"
   },
   "common": {
+    "showPassword": "Rādīt paroli",
+    "hidePassword": "Paslēpt paroli",
     "scrollTabsLeft": "Ritināt cilnes pa kreisi",
     "scrollTabsRight": "Ritināt cilnes pa labi",
     "close": "Aizvērt",
@@ -499,6 +501,7 @@
     "deleteSelected": "Dzēst",
     "exitSelection": "Iziet no atlases",
     "collapseBtn": "Sakļaut",
+    "importExportBtn": "Importēt / Eksportēt",
     "hostStatusesRefreshed": "Mezglpašnieku statusi atjaunināti",
     "failedToRefreshHosts": "Neizdevās atjaunināt mezglpašniekus",
     "movedHostTo": "Pārvietots {{host}} uz \"{{folder}}\"",
@@ -1024,6 +1027,8 @@
     "registrationSuccess": "Reģistrācija veiksmīga"
   },
   "placeholders": {
+    "username": "Jūsu lietotājvārds",
+    "newUsername": "Izvēlieties lietotājvārdu",
     "keyPassword": "atslēgas parole",
     "pastePrivateKey": "Ielīmējiet savu privāto atslēgu šeit...",
     "enterPassword": "Ievadiet savu paroli"
@@ -1070,7 +1075,8 @@
         "actionNextTab": "Pārslēgties uz nākamo cilni",
         "actionPreviousTab": "Pārslēgties uz iepriekšējo cilni",
         "actionOpenCommandPalette": "Atvērt ātro meklēšanu",
-        "actionReconnectSession": "Atkārtoti savienot pašreizējo sesiju"
+        "actionReconnectSession": "Atkārtoti savienot pašreizējo sesiju",
+        "actionToggleSidebar": "Pārslēgt sānjoslu"
       },
       "userProfile": {
         "preset_simple": "Vienkāršs",

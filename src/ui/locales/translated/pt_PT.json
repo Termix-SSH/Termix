@@ -131,6 +131,8 @@
     "updateLinkLabel": "Atualização disponível. Abrir notas de lançamento no GitHub"
   },
   "common": {
+    "showPassword": "Mostrar palavra-passe",
+    "hidePassword": "Ocultar palavra-passe",
     "scrollTabsLeft": "Deslizar separadores para a esquerda",
     "scrollTabsRight": "Deslizar separadores para a direita",
     "close": "Fechar",
@@ -499,6 +501,7 @@
     "deleteSelected": "Eliminar",
     "exitSelection": "Sair da seleção",
     "collapseBtn": "Recolher",
+    "importExportBtn": "Importar / Exportar",
     "hostStatusesRefreshed": "Estados dos hosts atualizados",
     "failedToRefreshHosts": "Falha ao atualizar hosts",
     "movedHostTo": "Movido {{host}} para \"{{folder}}\"",
@@ -1024,6 +1027,8 @@
     "registrationSuccess": "Registo bem-sucedido"
   },
   "placeholders": {
+    "username": "O seu nome de utilizador",
+    "newUsername": "Escolha um nome de utilizador",
     "keyPassword": "palavra-passe da chave",
     "pastePrivateKey": "Cole a sua chave privada aqui...",
     "enterPassword": "Introduza a sua palavra-passe"
@@ -1070,7 +1075,8 @@
         "actionNextTab": "Mudar para a próxima separador",
         "actionPreviousTab": "Mudar para o separador anterior",
         "actionOpenCommandPalette": "Abrir pesquisa rápida",
-        "actionReconnectSession": "Reconectar sessão atual"
+        "actionReconnectSession": "Reconectar sessão atual",
+        "actionToggleSidebar": "Alternar barra lateral"
       },
       "userProfile": {
         "preset_simple": "Simples",

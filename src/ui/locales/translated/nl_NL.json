@@ -131,6 +131,8 @@
     "updateLinkLabel": "Update beschikbaar. Open de release notes op GitHub"
   },
   "common": {
+    "showPassword": "Toon wachtwoord",
+    "hidePassword": "Verberg wachtwoord",
     "scrollTabsLeft": "Tabbladen naar links scrollen",
     "scrollTabsRight": "Tabbladen naar rechts scrollen",
     "close": "Sluiten",
@@ -495,6 +497,7 @@
     "deleteSelected": "Verwijderen",
     "exitSelection": "Selectie afsluiten",
     "collapseBtn": "Samenvouwen",
+    "importExportBtn": "Importeren / Exporteren",
     "hostStatusesRefreshed": "Hoststatussen vernieuwd",
     "failedToRefreshHosts": "Hosts vernieuwen mislukt",
     "movedHostTo": "{{host}} verplaatst naar \"{{folder}}\"",
@@ -1011,6 +1014,8 @@
     "registrationSuccess": "Registratie gelukt"
   },
   "placeholders": {
+    "username": "Uw gebruikersnaam",
+    "newUsername": "Kies een gebruikersnaam",
     "keyPassword": "sleutelwachtwoord",
     "pastePrivateKey": "Plak uw privésleutel hier...",
     "enterPassword": "Voer uw wachtwoord in"
@@ -1053,7 +1058,8 @@
         "actionNextTab": "Naar volgende tabblad",
         "actionPreviousTab": "Naar vorige tabblad",
         "actionOpenCommandPalette": "Snelle zoekopdracht openen",
-        "actionReconnectSession": "Huidige sessie opnieuw verbinden"
+        "actionReconnectSession": "Huidige sessie opnieuw verbinden",
+        "actionToggleSidebar": "Zijbalk in-/uitschakelen"
       },
       "userProfile": {
         "preset_simple": "Eenvoudig",
