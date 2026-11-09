@@ -31,7 +31,69 @@ env:
   FLATPAK_REPO_URL: https://flatpak.termix.site
 
 jobs:
+  # aarch64 builds on an ARM runner, since qemu could not run the SDK under bwrap here
+  build-arm:
+    runs-on: blacksmith-8vcpu-ubuntu-2404-arm
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_tag }}
+          fetch-depth: 1
+
+      # A tag from before this workflow has no build script.
+      - name: Use the newest packaging files
+        env:
+          WORKFLOW_SHA: ${{ github.sha }}
+        run: |
+          git fetch --depth 1 origin "$WORKFLOW_SHA"
+          git checkout "$WORKFLOW_SHA" -- packaging/flatpak
+
+      - name: Install tools
+        run: |
+          sudo add-apt-repository -y ppa:flatpak/stable
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder imagemagick
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+      - name: Download release tarball
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir tarballs \
+            --pattern termix_linux_arm64_portable.tar.gz
+
+      - name: Import signing key
+        env:
+          FLATPAK_GPG_KEY: ${{ secrets.FLATPAK_GPG_KEY }}
+        run: |
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          mkdir -m 700 "$GNUPGHOME"
+          printf '%s' "$FLATPAK_GPG_KEY" | gpg --batch --import
+          echo "FLATPAK_GPG_HOME=$GNUPGHOME" >> "$GITHUB_ENV"
+          echo "FLATPAK_GPG_KEY_ID=$(gpg --list-keys --with-colons | awk -F: '/^fpr/ { print $10; exit }')" >> "$GITHUB_ENV"
+
+      - name: Build
+        env:
+          TAG: ${{ inputs.release_tag }}
+          FLATPAK_ARCHES: aarch64
+        run: |
+          bash packaging/flatpak/build-repo.sh "${TAG#v}" tarballs out
+          mkdir bundle
+          mv out/termix_linux_aarch64_flatpak.flatpak bundle/aarch64.flatpak
+
+      - name: Upload bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: flatpak-aarch64
+          path: bundle/aarch64.flatpak
+          retention-days: 1
+
   build:
+    needs: build-arm
     runs-on: blacksmith-8vcpu-ubuntu-2404
     permissions:
       contents: write
@@ -57,20 +119,19 @@ jobs:
           sudo apt-get install -y flatpak flatpak-builder imagemagick
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
-      # The apt package does not register binfmt here, and bwrap needs the F flag
-      - name: Set up qemu for aarch64
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
       - name: Download release tarballs
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.release_tag }}
         run: |
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir tarballs \
-            --pattern termix_linux_x64_portable.tar.gz \
-            --pattern termix_linux_arm64_portable.tar.gz
+            --pattern termix_linux_x64_portable.tar.gz
+
+      - name: Download aarch64 bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: flatpak-aarch64
+          path: import
 
       - name: Import signing key
         env:
@@ -85,8 +146,9 @@ jobs:
       - name: Build
         env:
           TAG: ${{ inputs.release_tag }}
+          FLATPAK_ARCHES: x86_64
         run: |
-          bash packaging/flatpak/build-repo.sh "${TAG#v}" tarballs out
+          FLATPAK_IMPORT="$PWD/import" bash packaging/flatpak/build-repo.sh "${TAG#v}" tarballs out
           chmod -R a+rX out/site
 
       - name: Add bundles to the release
