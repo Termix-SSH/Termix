@@ -34,6 +34,13 @@ async function handleRelay(
   connection: PluginWebSocketConnection,
 ): Promise<void> {
   const ws = connection.socket as WebSocket;
+  // Read the socket from the start. The client speaks first (its SSH greeting)
+  // and the host lookups below take a while for a host given by name, so a
+  // message nobody listens for yet would be dropped. The stream keeps it.
+  const pipe = createWebSocketStream(ws);
+  // Errors before the pipes are set up end the socket on their own; this only
+  // keeps one from being rethrown with nobody listening.
+  pipe.on("error", () => {});
   const url = String((connection.request as { url?: string }).url ?? "");
   const params = new URL(url, "http://relay").searchParams;
   const hostId = Number(params.get("hostId"));
@@ -87,7 +94,6 @@ async function handleRelay(
         port: Number(config.port),
       });
     }
-    const pipe = createWebSocketStream(ws);
     stream.once("error", finish);
     stream.once("close", finish);
     pipe.once("error", finish);
