@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Termix Flatpak</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 48px 16px;
+        background: #09090b;
+        color: #fafafa;
+        font-family: system-ui, sans-serif;
+        line-height: 1.5;
+      }
+      main {
+        max-width: 640px;
+        margin: 0 auto;
+      }
+      p {
+        color: #a1a1aa;
+      }
+      pre {
+        background: #18181b;
+        border: 1px solid #27272a;
+        padding: 12px;
+        overflow-x: auto;
+      }
+      a {
+        color: #fafafa;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Termix Flatpak</h1>
+      <p>Self-hosted, plugin-based server management.</p>
+      <p>Install Termix from this repo:</p>
+      <pre>flatpak install --user --from https://flatpak.termix.site/com.karmaa.termix.flatpakref
+flatpak run com.karmaa.termix</pre>
+      <p>
+        <code>flatpak update</code> keeps it up to date. More in the
+        <a href="https://docs.termix.site/install/apps/linux">install guide</a>.
+      </p>
+    </main>
+  </body>
+</html>

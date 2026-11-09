@@ -67,4 +67,5 @@ for file in $APP_ID.flatpakref termix.flatpakrepo; do
   sed "s|REPO_URL_PLACEHOLDER|$FLATPAK_REPO_URL|; s|GPG_KEY_PLACEHOLDER|$GPG_KEY|" \
     "$ROOT/packaging/flatpak/$file" > "$OUTPUT/site/$file"
 done
+cp "$ROOT/packaging/flatpak/index.html" "$OUTPUT/site/"
 cp "$OUTPUT/site/$APP_ID.flatpakref" "$OUTPUT/"
