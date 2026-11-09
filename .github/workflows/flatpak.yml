@@ -54,8 +54,14 @@ jobs:
         run: |
           sudo add-apt-repository -y ppa:flatpak/stable
           sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder imagemagick qemu-user-static
+          sudo apt-get install -y flatpak flatpak-builder imagemagick
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+      # The apt package does not register binfmt here, and bwrap needs the F flag
+      - name: Set up qemu for aarch64
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
 
       - name: Download release tarballs
         env:
