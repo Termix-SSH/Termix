@@ -4,6 +4,7 @@ import {
   SHELL_KEYBINDING_ACTION_IDS,
   getKeybindingAction,
   listKeybindingActions,
+  listKeybindingDefaults,
   registerKeybindingAction,
   resetKeybindingRegistry,
   runKeybindingAction,
@@ -17,6 +18,13 @@ describe("keybinding registry", () => {
       SHELL_KEYBINDING_ACTION_IDS,
     );
     expect(getKeybindingAction("nextTab")?.scope).toBe("global");
+    expect(getKeybindingAction("toggleSidebar")?.scope).toBe("global");
+    expect(listKeybindingDefaults()).toEqual([
+      expect.objectContaining({
+        id: "toggleSidebar",
+        combo: expect.objectContaining({ key: "KeyB", meta: true }),
+      }),
+    ]);
   });
 
   it("runs a shell action by telling the shell", () => {

@@ -131,6 +131,8 @@
     "updateLinkLabel": "Mise à jour disponible. Ouvrir les notes de version sur GitHub"
   },
   "common": {
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe",
     "scrollTabsLeft": "Faire défiler les onglets vers la gauche",
     "scrollTabsRight": "Faire défiler les onglets vers la droite",
     "close": "Fermer",
@@ -499,6 +501,7 @@
     "deleteSelected": "Supprimer",
     "exitSelection": "Quitter la sélection",
     "collapseBtn": "Réduire",
+    "importExportBtn": "Importer / Exporter",
     "hostStatusesRefreshed": "Statuts des hôtes actualisés",
     "failedToRefreshHosts": "Échec de l'actualisation des hôtes",
     "movedHostTo": "{{host}} déplacé vers \"{{folder}}\"",
@@ -615,6 +618,7 @@
     "hostClickBehavior": "Cliquer sur un hôte",
     "hostClickBehaviorDesc": "Que se passe-t-il lorsque vous cliquez sur un hôte qui possède déjà un onglet ouvert. Ctrl/Cmd + clic, clic du milieu ou « Ouvrir dans un nouvel onglet » ouvrent toujours un nouvel onglet.",
     "hostClickNewTab": "Toujours ouvrir un nouvel onglet",
+    "hostClickHostPage": "Ouvrir la page de l'hôte, si un plugin en propose une",
     "hostClickFocusExisting": "Basculer vers l'onglet ouvert",
     "hostClickFocusExistingDoubleNew": "Clic pour basculer, double-clic pour un nouvel onglet",
     "openInNewTab": "Ouvrir dans un nouvel onglet",
@@ -1023,6 +1027,8 @@
     "registrationSuccess": "Inscription réussie"
   },
   "placeholders": {
+    "username": "Votre nom d'utilisateur",
+    "newUsername": "Choisissez un nom d'utilisateur",
     "keyPassword": "mot de passe de la clé",
     "pastePrivateKey": "Collez votre clé privée ici...",
     "enterPassword": "Entrez votre mot de passe"
@@ -1069,7 +1075,8 @@
         "actionNextTab": "Passer à l'onglet suivant",
         "actionPreviousTab": "Passer à l'onglet précédent",
         "actionOpenCommandPalette": "Ouvrir la recherche rapide",
-        "actionReconnectSession": "Reconnecter la session actuelle"
+        "actionReconnectSession": "Reconnecter la session actuelle",
+        "actionToggleSidebar": "Afficher/masquer la barre latérale"
       },
       "userProfile": {
         "preset_simple": "Simple",
@@ -1231,6 +1238,18 @@
         "title": "Envoyer des alertes",
         "consequence": "À vous ou à d'autres utilisateurs, et via les canaux qu'ils ont configurés."
       },
+      "operations:provide": {
+        "title": "Proposer des actions",
+        "consequence": "Ses actions peuvent être exécutées depuis les automatisations, l'interface en ligne de commande, l'application mobile et d'autres endroits, par les utilisateurs autorisés à les utiliser."
+      },
+      "operations:invoke": {
+        "title": "Exécuter les actions d'autres plugins",
+        "consequence": "Agit au nom de l'utilisateur connecté sur les actions listées dans son manifeste. Les règles d'approbation s'appliquent toujours."
+      },
+      "operations:approve": {
+        "title": "Décider ce qui nécessite une approbation",
+        "consequence": "Peut permettre aux actions de s'exécuter sans approbation, ou les bloquer, pour chaque utilisateur."
+      },
       "notify:hub": {
         "title": "Recevoir toutes les alertes",
         "consequence": "Stocke et distribue les alertes envoyées par tous les plugins, y compris leur contenu."
@@ -1254,6 +1273,10 @@
       "hosts:lock": {
         "title": "Gérer les hôtes en lecture seule",
         "consequence": "Les hôtes qu'il gère ne peuvent pas être modifiés, supprimés ou partagés à nouveau par quiconque."
+      },
+      "hosts:connect-policy": {
+        "title": "Décider qui peut se connecter",
+        "consequence": "Peut bloquer ou autoriser chaque connexion SSH et bureau à distance vers n'importe quel hôte."
       },
       "desktop:window": {
         "title": "Ouvrir des fenêtres de bureau",
@@ -1705,6 +1728,12 @@
       "title": "Colonnes",
       "auto": "Auto",
       "count": "{{count}} de large"
+    },
+    "pager": {
+      "previous": "Précédent",
+      "next": "Suivant",
+      "page": "Page {{page}}",
+      "pageOf": "Page {{page}} sur {{pages}}"
     }
   },
   "fields": {
@@ -1726,5 +1755,29 @@
       "admin": "Administrateur",
       "user": "Utilisateur"
     }
+  },
+  "tileGrid": {
+    "empty": "Aucune tuile pour le moment. Ajoutez-en depuis la liste.",
+    "move": "Glisser pour déplacer",
+    "moveTile": "Déplacer {{tile}}",
+    "settings": "Paramètres de {{tile}}",
+    "remove": "Supprimer {{tile}}",
+    "width": "Largeur",
+    "height": "Hauteur",
+    "addTiles": "Ajouter des tuiles",
+    "closePicker": "Fermer",
+    "search": "Rechercher des tuiles",
+    "noMatches": "Aucun résultat.",
+    "kind": {
+      "all": "Tout",
+      "card": "Cartes",
+      "chart": "Graphiques",
+      "signal": "Statut",
+      "action": "Actions",
+      "resource": "Listes",
+      "session": "Sessions"
+    },
+    "reset": "Réinitialiser",
+    "done": "Terminé"
   }
 }

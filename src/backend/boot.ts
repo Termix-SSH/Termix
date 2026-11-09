@@ -46,6 +46,7 @@ export async function runCoreBootMigrations(): Promise<void> {
 
   await AuthManager.getInstance().initialize();
   DataCrypto.initialize();
+  await AuthManager.getInstance().cleanupExpiredSessions();
 
   // Before anything snapshots shared secrets, which would drop a protocol
   // snapshot whose login has not been copied yet.

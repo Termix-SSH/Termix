@@ -444,7 +444,7 @@ export function createSyncHost(): PluginSyncHost {
       },
       verify: async (token) => {
         const payload = await authManager.verifyJWTToken(token);
-        return payload
+        return payload && !payload.pendingTOTP && payload.sessionId
           ? { userId: payload.userId, sessionId: payload.sessionId }
           : null;
       },

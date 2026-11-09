@@ -127,6 +127,26 @@ export {
   type GridLayout,
   type GridSlot,
 } from "@/components/card-grid/types";
+export {
+  SeamlessTileContext,
+  TileEditBar,
+  TileFrame,
+  TileGrid,
+  TilePicker,
+  TileColumn,
+  TileStack,
+  TileWall,
+  useInSeamlessTile,
+  appendTile,
+  flowTiles,
+  removeTile,
+  sanitizeTiles,
+  TILE_COLUMNS,
+  type TileGridProps,
+  type TileKind,
+  type TilePickerEntry,
+  type TileSlot,
+} from "@/components/tile-grid";
 export { ConnectionScreen } from "@/components/connection/ConnectionScreen";
 export { type ConnectionStatus } from "@/components/connection/connection-status";
 export {
@@ -203,6 +223,19 @@ export { WidgetTitle } from "@/lib/widget-title";
 export { runVisibleInterval } from "@/lib/visible-interval";
 export { useIsMobile } from "@/hooks/use-mobile";
 export { EmptyState } from "@/components/empty-state";
+export { NoticePanel } from "@/components/notice-panel";
+export { LoadingState } from "@/components/loading-state";
+export {
+  StatusBadge,
+  StatusDot,
+  statusTone,
+  type StatusTone,
+} from "@/components/status";
+export { StatTile } from "@/components/stat-tile";
+export { InfoGrid, type InfoItem } from "@/components/info-grid";
+export { Pager, pageOf, usePaged } from "@/components/pager";
+export { DataTable, DataTableRow } from "@/components/data-table";
+export { SideNav, SideNavItem, type SideNavEntry } from "@/components/side-nav";
 export { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog";
 export { HostKeyVerificationDialog } from "@/ssh/dialogs/HostKeyVerificationDialog";
 
@@ -285,9 +318,14 @@ export {
   Facts,
   GroupHeading,
   PANEL,
+  PanelFrame,
   PanelSearch,
   PanelShell,
+  RefreshButton,
   Segmented,
+  TOOLBAR_FIT,
+  ToolbarBand,
+  ToolbarSelect,
   ViewToggle,
   type GridSize,
   type PanelDensity,
@@ -439,6 +477,9 @@ export {
   getUserSecondFactors,
   resetUserSecondFactors,
   type UserSecondFactorSummary,
+  challengeStepUp,
+  listStepUpFactors,
+  verifyStepUp,
 } from "@/api/auth-methods-api";
 export { getCredentials } from "@/api/credentials-api";
 export {
@@ -642,7 +683,12 @@ export {
   getHostAuthOverride,
   getFolderAuthOverride,
   getHostPassword,
+  getFolderDeviceAuth,
+  getHostDeviceAuth,
   getHostPolicy,
+  setFolderDeviceAuth,
+  setHostDeviceAuth,
+  type DeviceLogin,
   type HostPolicy,
   getHostSidebarPreferences,
   getHttpsSettings,
@@ -652,6 +698,7 @@ export {
   getPasswordResetAllowed,
   getPermissionsCatalog,
   getRegistrationAllowed,
+  getCredentialStorage,
   getSecondFactorAfterExternalLogin,
   getSessions,
   getSessionTimeout,
@@ -698,6 +745,7 @@ export {
   updatePasswordResetAllowed,
   updateRegistrationAllowed,
   updateRole,
+  updateCredentialStorage,
   updateSecondFactorAfterExternalLogin,
   updateSessionTimeout,
   updateSSHHost,
@@ -799,6 +847,7 @@ export {
   useHostEditorToolbarItems,
   useHostStatusIndicators,
 } from "@/sidebar/host-contributions";
+export { HostDotGroup } from "@/sidebar/HostDotGroup";
 export { useEditorDefaultKeys } from "@/sidebar/host-defaults/catalog";
 export {
   enabledHostProtocols,
@@ -823,3 +872,14 @@ export {
   rightDockableIds,
   useRailItems,
 } from "@/sidebar/rail-items";
+export {
+  hostSectionsFor,
+  type HostSectionDef,
+  listHostSections,
+  useHostSections,
+} from "@/shell/host-sections";
+export { HostTabEmbed } from "@/shell/HostTabEmbed";
+import { createOperationsApi } from "@/lib/plugin-transport";
+/** Core's /operations routes, with the user's own session. */
+export const operationsApi = createOperationsApi();
+export { useSecondFactors } from "@/plugin-host/auth-registry";

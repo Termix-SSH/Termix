@@ -74,7 +74,7 @@ async function main() {
   const staged = [...pinned, ...extra];
   fs.writeFileSync(
     path.join(destination, "bundled-index.json"),
-    `${JSON.stringify(buildBundledIndex(plugins, staged), null, 2)}
+    `${JSON.stringify(buildBundledIndex(plugins, staged, profile), null, 2)}
 `,
   );
 

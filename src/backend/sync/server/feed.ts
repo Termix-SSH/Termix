@@ -82,7 +82,7 @@ export async function reconcileUser(
     } catch (error) {
       // An entity that cannot load right now is left alone rather than read
       // as every row deleted.
-      syncLogger.warn("Could not read a sync entity", {
+      syncLogger.warn(`Could not read the ${entity.type} sync entity`, {
         operation: "sync_reconcile",
         entityType: entity.type,
         userId,

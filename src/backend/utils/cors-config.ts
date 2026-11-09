@@ -71,6 +71,13 @@ export function createCorsMiddleware(
       methods,
       allowedHeaders,
     });
-    handler(req, res, next);
+    // A refused origin is a 403, not a server error.
+    handler(req, res, (error?: unknown) => {
+      if (error) {
+        res.status(403).json({ error: "Origin not allowed" });
+        return;
+      }
+      next();
+    });
   };
 }

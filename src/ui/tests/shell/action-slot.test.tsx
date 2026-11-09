@@ -70,6 +70,25 @@ describe("ActionSlot", () => {
     resetActionRegistry();
   });
 
+  it("logs a handler that throws instead of leaving a rejected promise", async () => {
+    perms.permissions = ["ai.services.use"];
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    contributeAi(
+      vi.fn(() => {
+        throw new Error("boom");
+      }),
+    );
+    render(<ActionSlot slotId={SLOT} />);
+    await act(async () => {
+      screen.getByRole("button").click();
+    });
+    expect(error).toHaveBeenCalledWith(
+      `[actions] ${ACTION} failed`,
+      expect.any(Error),
+    );
+    error.mockRestore();
+  });
+
   it("renders nothing when no plugin has contributed", () => {
     const { container } = render(<ActionSlot slotId={SLOT} />);
 

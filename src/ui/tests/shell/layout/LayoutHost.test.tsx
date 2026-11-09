@@ -277,4 +277,60 @@ describe("LayoutHost", () => {
     await waitFor(() => expect(types()).toEqual(["dashboard", "notes"]));
     resetTabTypes();
   });
+  it("closes the old layout tabs when its plugin listed them after the first render", async () => {
+    registerLayout({ id: "fancy", component: () => <p>fancy layout</p> });
+    registerLayout({ id: "plain", component: () => <p>plain layout</p> });
+    registerTabType({
+      id: "fancy-settings",
+      component: () => null,
+      hostless: true,
+      singleton: true,
+    });
+    await start("fancy", []);
+    let shell: ShellController | null = null;
+    function Capture() {
+      shell = useShellController();
+      return null;
+    }
+    render(
+      <ShellControllerProvider username="ada" onLogout={() => {}}>
+        <Capture />
+        <LayoutHost />
+      </ShellControllerProvider>,
+    );
+    await screen.findByText("fancy layout");
+    act(() => {
+      setPluginSummaries([
+        plugin({
+          contributes: {
+            layouts: [{ id: "fancy", label: "Fancy" }],
+            tabs: [
+              {
+                id: "fancy-settings",
+                titleKey: "x",
+                icon: "Settings",
+                openFrom: [],
+              },
+            ],
+          },
+        }),
+        plugin({
+          id: "plain-layout",
+          contributes: { layouts: [{ id: "plain", label: "Plain" }] },
+        }),
+      ]);
+    });
+    act(() => {
+      shell!.tabs.openSingleton("fancy-settings");
+    });
+    const types = () => shell!.tabs.list.map((tab) => tab.type).sort();
+    await waitFor(() =>
+      expect(types()).toEqual(["dashboard", "fancy-settings"]),
+    );
+
+    await act(() => chooseLayout("plain"));
+    await screen.findByText("plain layout");
+    await waitFor(() => expect(types()).toEqual(["dashboard"]));
+    resetTabTypes();
+  });
 });

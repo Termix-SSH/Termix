@@ -270,6 +270,17 @@ export async function build({ cwd }) {
   fs.rmSync(outDir, { recursive: true, force: true });
   fs.mkdirSync(outDir, { recursive: true });
 
+  try {
+    await buildInto(cwd, manifest, pluginId, outDir);
+  } catch (error) {
+    // A half build looks newer than the sources, so dev would keep staging it.
+    fs.rmSync(outDir, { recursive: true, force: true });
+    throw error;
+  }
+  console.log(`built ${pluginId}`);
+}
+
+async function buildInto(cwd, manifest, pluginId, outDir) {
   const backendEntry = resolveEntry(cwd, BACKEND_ENTRIES);
   if (!backendEntry && !isThemeOnly(manifest)) {
     throw new Error(
@@ -350,6 +361,4 @@ export async function build({ cwd }) {
   copyDir(path.join(cwd, "locales"), path.join(outDir, "locales"));
   copyDir(path.join(cwd, "migrations"), path.join(outDir, "migrations"));
   await openapi({ cwd, quiet: true });
-
-  console.log(`built ${pluginId}`);
 }

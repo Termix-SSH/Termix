@@ -1,5 +1,7 @@
 import { DefaultsOnly, HostDefaultBadge } from "@/lib/host-defaults-context";
-import { useState } from "react";
+import { createContext, useContext, useId, useState } from "react";
+import { useInSeamlessTile } from "@/components/tile-grid/context";
+import { cn } from "@/lib/utils";
 import type React from "react";
 
 export function SectionCard({
@@ -18,22 +20,34 @@ export function SectionCard({
   /** Lets settings search jump to this card. */
   rowId?: string;
 }) {
+  // Inside an edge to edge tile layout the layout draws the lines.
+  const tiled = useInSeamlessTile();
   return (
     <div
+      data-tile-card=""
       data-setting-row={rowId}
-      className={`flex flex-col border border-border bg-card overflow-hidden ${className ?? ""}`}
+      className={cn(
+        "flex flex-col overflow-hidden",
+        !tiled && "border border-border",
+        className,
+      )}
     >
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border shrink-0">
-        <span className="text-muted-foreground">{icon}</span>
+      <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-1.5">
+        <span className="flex text-muted-foreground [&_svg]:size-3">
+          {icon}
+        </span>
         <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground flex-1">
           {title}
         </span>
         {action && <div className="ml-auto">{action}</div>}
       </div>
-      <div className="px-3 md:px-4 py-1">{children}</div>
+      <div className="px-3 py-1">{children}</div>
     </div>
   );
 }
+
+/** The label id of the SettingRow around a control, so a switch is named. */
+const RowLabelContext = createContext<string | undefined>(undefined);
 
 export function SettingRow({
   label,
@@ -55,6 +69,7 @@ export function SettingRow({
   rowId?: string;
   children: React.ReactNode;
 }) {
+  const labelId = useId();
   return (
     <DefaultsOnly settingKey={defaultKey ?? ""}>
       {/* In a gap-4 form stack the gap already spaces the row, so its own
@@ -65,7 +80,9 @@ export function SettingRow({
       >
         <div className="flex flex-col gap-0.5 min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-sm font-medium leading-snug">{label}</span>
+            <span id={labelId} className="text-sm font-medium leading-snug">
+              {label}
+            </span>
             {badge && (
               <span className="text-[10px] font-bold text-warning border border-warning/40 px-1 shrink-0">
                 {badge}
@@ -79,7 +96,11 @@ export function SettingRow({
             </span>
           )}
         </div>
-        <div className="shrink-0">{children}</div>
+        <div className="shrink-0">
+          <RowLabelContext.Provider value={labelId}>
+            {children}
+          </RowLabelContext.Provider>
+        </div>
       </div>
     </DefaultsOnly>
   );
@@ -90,12 +111,15 @@ export function FakeSwitch({
   disabled = false,
   checked,
   onChange,
+  "aria-label": ariaLabel,
 }: {
   defaultChecked?: boolean;
   disabled?: boolean;
   checked?: boolean;
   onChange?: (v: boolean) => void;
+  "aria-label"?: string;
 }) {
+  const rowLabel = useContext(RowLabelContext);
   const [internalOn, setInternalOn] = useState(defaultChecked);
   const on = checked !== undefined ? checked : internalOn;
   return (
@@ -103,6 +127,8 @@ export function FakeSwitch({
       type="button"
       role="switch"
       aria-checked={on}
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabel ? undefined : rowLabel}
       disabled={disabled}
       onClick={() => {
         const next = !on;

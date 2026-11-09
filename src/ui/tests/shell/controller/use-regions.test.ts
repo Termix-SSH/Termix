@@ -54,6 +54,14 @@ describe("useRegions", () => {
     expect(again.result.current.left.width).toBe(DOCK_DEFAULT_WIDTH);
   });
 
+  it("ignores a garbled saved width and clamps a huge one", () => {
+    localStorage.setItem("termix_sidebarWidth", "wide");
+    localStorage.setItem("termix_rightSidebarWidth", "9000");
+    const { result } = renderHook(() => useRegions(false));
+    expect(result.current.left.width).toBe(DOCK_DEFAULT_WIDTH);
+    expect(result.current.right.width).toBe(480);
+  });
+
   it("closes the sidebar on mobile and restores it after", () => {
     const { result, rerender } = renderHook(
       ({ mobile }) => useRegions(mobile),

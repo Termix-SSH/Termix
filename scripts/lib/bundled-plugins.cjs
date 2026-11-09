@@ -161,6 +161,46 @@ function loadBundledPlugins(root) {
   return plugins;
 }
 
+/**
+ * docker/plugin-tiers.json: tier and onboarding for official plugins that are
+ * not pinned yet, used the first time `--all` pins them.
+ */
+function parsePluginTiers(raw) {
+  const problems = [];
+  const tiers = {};
+  const map = raw?.plugins;
+  if (!map || typeof map !== "object" || Array.isArray(map)) {
+    return { tiers, problems: ['plugin-tiers.json needs a "plugins" object'] };
+  }
+  for (const [id, entry] of Object.entries(map)) {
+    if (!ID.test(id) || !entry || typeof entry !== "object") {
+      problems.push(`${id} needs an object`);
+      continue;
+    }
+    if (!PROFILES.includes(entry.tier)) {
+      problems.push(`${id} tier must be one of ${PROFILES.join(", ")}`);
+      continue;
+    }
+    const before = problems.length;
+    const onboarding = parseOnboarding(entry.onboarding, id, problems);
+    if (problems.length > before) continue;
+    tiers[id] = { tier: entry.tier, ...(onboarding ? { onboarding } : {}) };
+  }
+  return { tiers, problems };
+}
+
+function loadPluginTiers(root) {
+  const file = path.join(root, "docker", "plugin-tiers.json");
+  if (!fs.existsSync(file)) return {};
+  const { tiers, problems } = parsePluginTiers(
+    JSON.parse(fs.readFileSync(file, "utf8")),
+  );
+  if (problems.length > 0) {
+    throw new Error(`docker/plugin-tiers.json:\n  ${problems.join("\n  ")}`);
+  }
+  return tiers;
+}
+
 /** Refuses an artifact whose bytes are not the ones the config pinned. */
 function checkSha256(buffer, expected, id) {
   const actual = crypto.createHash("sha256").update(buffer).digest("hex");
@@ -236,12 +276,22 @@ async function extractArtifact(buffer, outDir, id) {
 
 /**
  * What dist/plugins/bundled-index.json holds: the onboarding defaults of each
- * staged plugin, read by the backend when it seeds a fresh install.
+ * staged plugin, read by the backend when it seeds a fresh install, plus the
+ * profile and every pin it ships, so an existing install can fetch a shipped
+ * plugin it finds missing.
  */
-function buildBundledIndex(plugins, stagedIds) {
+function buildBundledIndex(plugins, stagedIds, profile = DEFAULT_PROFILE) {
   const staged = new Set(stagedIds);
   const out = {};
+  const catalog = {};
   for (const plugin of plugins) {
+    const version = /-(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\.tmxplug$/.exec(
+      plugin.url ?? plugin.path ?? "",
+    )?.[1];
+    catalog[plugin.id] = {
+      tier: plugin.tier ?? "full",
+      ...(version ? { version } : {}),
+    };
     if (!staged.has(plugin.id)) continue;
     if (!plugin.onboarding && !plugin.defaultLook) continue;
     out[plugin.id] = {
@@ -249,7 +299,7 @@ function buildBundledIndex(plugins, stagedIds) {
       ...(plugin.defaultLook ? { defaultLook: true } : {}),
     };
   }
-  return { version: 1, plugins: out };
+  return { version: 1, profile, plugins: out, catalog };
 }
 
 /** The profile to build: --profile, then TERMIX_PLUGIN_PROFILE, then standard. */
@@ -276,16 +326,24 @@ function pluginsForProfile(plugins, profile) {
  * Pins the newest registry version of each wanted plugin. `ids` is the list
  * to pin, or null for every plugin in the index. `current` is the existing
  * pin list, so fields the registry does not know (onboarding, tier) carry over;
- * a plugin new to the list starts in the full tier. coreVersion, when given,
+ * a plugin new to the list takes them from `defaults` (plugin-tiers.json),
+ * else starts in the full tier. coreVersion, when given,
  * skips releases whose engine.termix range does not include it, so the image
- * never ships a plugin its own core cannot run.
+ * never ships a plugin its own core cannot run. With ids null, a plugin new to
+ * the list that has no usable release (only betas, say) is left out.
  */
-function pinsFromIndex(index, ids, current = [], coreVersion = null) {
+function pinsFromIndex(
+  index,
+  ids,
+  current = [],
+  coreVersion = null,
+  defaults = {},
+) {
   const plugins = Array.isArray(index?.plugins) ? index.plugins : [];
   const byId = new Map(plugins.map((plugin) => [plugin.id, plugin]));
   const currentById = new Map(current.map((entry) => [entry.id, entry]));
   const wanted = ids ?? plugins.map((plugin) => plugin.id);
-  return [...wanted].sort().map((id) => {
+  const pins = [...wanted].sort().map((id) => {
     const listed = byId.get(id);
     // gated holds releases that need a newer Termix than old builds check for.
     const latest = [...(listed?.versions ?? []), ...(listed?.gated ?? [])]
@@ -300,10 +358,16 @@ function pinsFromIndex(index, ids, current = [], coreVersion = null) {
           }),
       )
       .sort((a, b) => semver.rcompare(a.version, b.version))[0];
-    if (!latest) throw new Error(`${id} is not in the registry index`);
-    const onboarding = currentById.get(id)?.onboarding;
-    const defaultLook = currentById.get(id)?.defaultLook === true;
-    const tier = currentById.get(id)?.tier ?? "full";
+    if (!latest) {
+      if (ids === null && !currentById.has(id)) return null;
+      throw new Error(`${id} is not in the registry index`);
+    }
+    const existing = currentById.get(id);
+    const onboarding = existing
+      ? existing.onboarding
+      : defaults[id]?.onboarding;
+    const defaultLook = existing?.defaultLook === true;
+    const tier = existing?.tier ?? defaults[id]?.tier ?? "full";
     return {
       id,
       source: "tmxplug",
@@ -314,6 +378,7 @@ function pinsFromIndex(index, ids, current = [], coreVersion = null) {
       ...(defaultLook ? { defaultLook } : {}),
     };
   });
+  return pins.filter(Boolean);
 }
 
 const LOCAL_FILES = [
@@ -355,15 +420,20 @@ const BUILD_INPUTS = [
   "package.json",
 ];
 
+// A build can replace dist while this walks it, so a path can vanish mid scan.
 function newestMtime(target) {
-  if (!fs.existsSync(target)) return 0;
-  const stat = fs.statSync(target);
-  if (!stat.isDirectory()) return stat.mtimeMs;
-  let newest = 0;
-  for (const name of fs.readdirSync(target)) {
-    newest = Math.max(newest, newestMtime(path.join(target, name)));
+  try {
+    const stat = fs.statSync(target);
+    if (!stat.isDirectory()) return stat.mtimeMs;
+    let newest = 0;
+    for (const name of fs.readdirSync(target)) {
+      newest = Math.max(newest, newestMtime(path.join(target, name)));
+    }
+    return newest;
+  } catch (error) {
+    if (error.code === "ENOENT") return 0;
+    throw error;
   }
-  return newest;
 }
 
 /** True when a plugin repo has never been built or its sources changed since. */
@@ -465,6 +535,8 @@ module.exports = {
   buildBundledIndex,
   pinsFromIndex,
   loadBundledPlugins,
+  parsePluginTiers,
+  loadPluginTiers,
   checkSha256,
   fetchArtifact,
   extractArtifact,

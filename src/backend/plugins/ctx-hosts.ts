@@ -41,6 +41,7 @@ import {
   assertManualCreateAllowed,
   provideHostLocks,
 } from "../hosts/locks.js";
+import { provideConnectPolicy } from "../hosts/connect-policy.js";
 
 type AuditFn = (
   action: string,
@@ -1034,6 +1035,25 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
           success: true,
         });
         const drop = bag?.add(remove, "host lock provider");
+        return () => {
+          drop?.();
+          remove();
+        };
+      },
+    },
+
+    connectPolicy: {
+      provide: (provider) => {
+        if (!declared.includes("hosts:connect-policy")) {
+          throw capabilityRefused(pluginId, "hosts:connect-policy");
+        }
+        const remove = provideConnectPolicy(pluginId, provider);
+        void audit(
+          "host_connect_policy_provide",
+          `${pluginId} decides who can connect`,
+          { success: true },
+        );
+        const drop = bag?.add(remove, "connect policy provider");
         return () => {
           drop?.();
           remove();

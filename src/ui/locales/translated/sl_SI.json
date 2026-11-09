@@ -131,6 +131,8 @@
     "updateLinkLabel": "Na voljo je posodobitev. Odprite opombe k izdaji na GitHubu"
   },
   "common": {
+    "showPassword": "Prikaži geslo",
+    "hidePassword": "Skrij geslo",
     "scrollTabsLeft": "Premakni zavihke levo",
     "scrollTabsRight": "Premakni zavihke desno",
     "close": "Zapri",
@@ -503,6 +505,7 @@
     "deleteSelected": "Izbriši",
     "exitSelection": "Izhod iz izbire",
     "collapseBtn": "Strni",
+    "importExportBtn": "Uvoz / Izvoz",
     "hostStatusesRefreshed": "Stanja gostiteljev osvežena",
     "failedToRefreshHosts": "Osveževanje gostiteljev ni uspelo",
     "movedHostTo": "Premaknjeno {{host}} v \"{{folder}}\"",
@@ -621,6 +624,7 @@
     "hostClickBehavior": "Klik na gostitelja",
     "hostClickBehaviorDesc": "Kaj se zgodi, ko klikneš na gostitelja, ki že ima odprt zavihek. Ctrl/Cmd klik, sredinski klik ali »Odpri v novem zavihku« vedno odprejo nov zavihek.",
     "hostClickNewTab": "Vedno odpri nov zavihek",
+    "hostClickHostPage": "Odpri stran gostitelja, če vtičnik ponuja takšno",
     "hostClickFocusExisting": "Preklopi na odprt zavihek",
     "hostClickFocusExistingDoubleNew": "Klik za preklop, dvojni klik za nov zavihek",
     "openInNewTab": "Odpri v novem zavihku",
@@ -1036,6 +1040,8 @@
     "registrationSuccess": "Registracija je bila uspešna"
   },
   "placeholders": {
+    "username": "Vaše uporabniško ime",
+    "newUsername": "Izberite uporabniško ime",
     "keyPassword": "geslo za ključ",
     "pastePrivateKey": "Prilepite svoj zasebni ključ sem...",
     "enterPassword": "Vnesite svoje geslo"
@@ -1086,7 +1092,8 @@
         "actionNextTab": "Preklopi na naslednji zavihek",
         "actionPreviousTab": "Preklopi na prejšnji zavihek",
         "actionOpenCommandPalette": "Odpri hitro iskanje",
-        "actionReconnectSession": "Ponovno poveži trenutno sejo"
+        "actionReconnectSession": "Ponovno poveži trenutno sejo",
+        "actionToggleSidebar": "Preklopi stransko vrstico"
       },
       "userProfile": {
         "preset_simple": "Preprosto",
@@ -1248,6 +1255,18 @@
         "title": "Pošiljanje opozoril",
         "consequence": "Vam ali drugim uporabnikom, prek kanalov, ki so jih nastavili."
       },
+      "operations:provide": {
+        "title": "Ponudi ukaze",
+        "consequence": "Njegove ukaze lahko izvajajo avtomatizacije, ukazna vrstica, mobilna aplikacija in drugi deli programa, in sicer uporabniki, ki imajo za to dovoljenje."
+      },
+      "operations:invoke": {
+        "title": "Izvajaj ukaze drugih vtičnikov",
+        "consequence": "Ureja ukaze, navedene v njegovem manifestu, v imenu prijavljenega uporabnika. Pravila odobritve se še vedno uporabljajo."
+      },
+      "operations:approve": {
+        "title": "Odloči, kaj zahteva odobritev",
+        "consequence": "Lahko omogoči izvajanje ukazov brez odobritve ali jih blokira za vse uporabnike."
+      },
       "notify:hub": {
         "title": "Prejemanje vseh opozoril",
         "consequence": "Shranjuje in dostavlja opozorila, ki jih pošiljajo vsi vtičniki, vključno z njihovo vsebino."
@@ -1271,6 +1290,10 @@
       "hosts:lock": {
         "title": "Upravljanje gostiteljev kot samo za branje",
         "consequence": "Gostiteljev, ki jih upravlja, ne morejo urejati, brisati ali ponovno deliti drugi uporabniki."
+      },
+      "hosts:connect-policy": {
+        "title": "Odloči, kdo se lahko poveže",
+        "consequence": "Lahko blokira ali dovoli vsako SSH in daljinsko namizno povezavo do katerega koli gostitelja."
       },
       "desktop:window": {
         "title": "Odpiranje oken namizja",
@@ -1747,6 +1770,12 @@
       "title": "Stolpci",
       "auto": "Samodejno",
       "count": "{{count}} širok"
+    },
+    "pager": {
+      "previous": "Prejšnja",
+      "next": "Naslednja",
+      "page": "Stran {{page}}",
+      "pageOf": "Stran {{page}} od {{pages}}"
     }
   },
   "fields": {
@@ -1771,5 +1800,29 @@
       "admin": "Upravitelj",
       "user": "Uporabnik"
     }
+  },
+  "tileGrid": {
+    "empty": "Še ni ploščic. Dodajte jih s seznama.",
+    "move": "Povlecite za premik",
+    "moveTile": "Premakni {{tile}}",
+    "settings": "Nastavitve za {{tile}}",
+    "remove": "Odstrani {{tile}}",
+    "width": "Širina",
+    "height": "Višina",
+    "addTiles": "Dodaj ploščice",
+    "closePicker": "Zapri",
+    "search": "Išči ploščice",
+    "noMatches": "Ni ujemajočih se rezultatov.",
+    "kind": {
+      "all": "Vse",
+      "card": "Kartice",
+      "chart": "Grafikon",
+      "signal": "Stanje",
+      "action": "Ukazi",
+      "resource": "Seznami",
+      "session": "Seje"
+    },
+    "reset": "Ponastavi",
+    "done": "Končano"
   }
 }

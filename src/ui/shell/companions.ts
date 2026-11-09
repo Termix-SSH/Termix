@@ -86,7 +86,13 @@ export function companionApplies(def: CompanionDef, tab: Tab): boolean {
   if (def.tabTypes?.length && !def.tabTypes.includes(tab.type)) return false;
   const layout = resolveCompanionLayout(tab.type, tab.host);
   if (layout.enabled === false || layout.hidden?.includes(def.id)) return false;
-  return def.when ? def.when(tab, tab.host) : true;
+  if (!def.when) return true;
+  // A plugin callback run while the tab draws: a throw must not take the tab.
+  try {
+    return def.when(tab, tab.host);
+  } catch {
+    return false;
+  }
 }
 
 /** Orders defs by a saved layout. Ones it has not seen keep their place after. */

@@ -30,6 +30,7 @@ import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
 import { syncForwarder } from "../sync/provider.js";
 import { syncChangeWatcher } from "../sync/server/change-watcher.js";
 import dashboardRoutes from "./routes/dashboard-routes.js";
+import operationsRoutes from "./routes/operations-routes.js";
 import {
   mountPluginApi,
   mountPluginLegacyPaths,
@@ -188,6 +189,12 @@ app.use((req, res, next) => {
 app.use((req, res, next) => {
   if (req.path.startsWith("/plugin-api/")) return next();
   coreUrlencodedParser(req, res, next);
+});
+// Express 5 leaves req.body undefined with no body, so handlers that
+// destructure it would throw a 500 instead of answering 400.
+app.use((req, _res, next) => {
+  if (!req.path.startsWith("/plugin-api/")) req.body ??= {};
+  next();
 });
 app.use(cookieParser());
 app.use((_req, res, next) => {
@@ -1375,6 +1382,7 @@ app.post(
               await applyPluginHostImportSettings(
                 Number(created.id),
                 importedHostPluginSettings(importDb, host),
+                userId,
               );
               importedHostIds.push(Number(created.id));
               await importHostProtocolLogins(
@@ -1627,6 +1635,7 @@ app.use("/ui-preferences", uiPreferencesRoutes);
 registerAuditLogRoutes(app, authenticateJWT);
 app.use("/sync", syncForwarder);
 app.use("/dashboard", dashboardRoutes);
+app.use("/operations", operationsRoutes);
 app.use("/plugins", pluginRoutes);
 app.use(
   "/plugin-assets",

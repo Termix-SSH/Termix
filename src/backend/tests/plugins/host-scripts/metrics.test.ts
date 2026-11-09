@@ -33,6 +33,13 @@ describe("parseCpuLine", () => {
     expect(parseCpuLine("intr 12345")).toBeUndefined();
   });
 
+  it("leaves out guest and guest_nice, which user and nice already hold", () => {
+    // Proxmox sample from Plugin-Host-Metrics#24
+    const result = parseCpuLine("cpu 4048 0 532 924 38 0 394 0 2082 0");
+    expect(result?.total).toBe(5936);
+    expect(result?.idle).toBe(962);
+  });
+
   it("returns undefined when there are fewer than 4 numeric fields", () => {
     expect(parseCpuLine("cpu 1 2 3")).toBeUndefined();
   });

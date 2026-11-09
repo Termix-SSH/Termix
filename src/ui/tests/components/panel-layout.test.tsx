@@ -10,9 +10,12 @@ import {
   PanelSearch,
   PanelShell,
   Segmented,
+  ToolbarBand,
   ViewToggle,
   gridSizeStyle,
 } from "@/components/panel-layout";
+import { TileColumn } from "@/components/tile-grid/TileColumn";
+import { TileStack } from "@/components/tile-grid/TileStack";
 
 afterEach(cleanup);
 
@@ -146,5 +149,63 @@ describe("PanelShell", () => {
     expect(screen.getByText("2 running")).toBeTruthy();
     expect(screen.getByText("toolbar")).toBeTruthy();
     expect(screen.getByText("footer")).toBeTruthy();
+  });
+});
+
+describe("toolbar sizing", () => {
+  it("fits small controls in the toolbar and in ToolbarBand", () => {
+    render(
+      <>
+        <PanelShell title="X" toolbar={<span>tools</span>}>
+          body
+        </PanelShell>
+        <ToolbarBand>band</ToolbarBand>
+      </>,
+    );
+    const band = screen.getByText("band");
+    expect(band.className).toContain(
+      "[&_[data-slot=button][data-size=sm]]:h-8",
+    );
+    expect(screen.getByText("tools").parentElement!.className).toContain(
+      "[&_[data-slot=input]]:h-8",
+    );
+  });
+
+  it("keeps Segmented at its natural width", () => {
+    render(
+      <Segmented<"a" | "b">
+        value="a"
+        onChange={() => {}}
+        options={[
+          { value: "a", label: "A" },
+          { value: "b", label: "B" },
+        ]}
+      />,
+    );
+    expect(screen.getByRole("radiogroup").className).toContain("w-fit");
+  });
+
+  it("clips the last tile line when a footer is pinned", () => {
+    const { container } = render(
+      <PanelShell title="Form" footer={<span>save</span>}>
+        <TileColumn>
+          <div>field</div>
+        </TileColumn>
+      </PanelShell>,
+    );
+    expect(container.querySelector(".-mb-px")).toBeTruthy();
+  });
+});
+
+describe("ToolbarBand in a tile stack", () => {
+  it("leaves the line under it to the stack", () => {
+    render(
+      <TileStack>
+        <ToolbarBand>inside</ToolbarBand>
+      </TileStack>,
+    );
+    expect(screen.getByText("inside").parentElement!.className).toContain(
+      "[&>[data-slot=toolbar-band]]:border-b-0",
+    );
   });
 });

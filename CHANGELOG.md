@@ -1,5 +1,94 @@
 # Changelog
 
+## 26.11.1
+
+### Added
+
+- Plugins in the desktop app can drag files out to Explorer or Finder
+- Termix actions: plugins can declare what they do once, and it works from the API with permission checks, dry runs, run history and approvals
+- API keys can be limited to reading or running actions, when an admin makes them
+- A click on a host can open its host page, when a plugin offers one
+- Plugins can build pages of tiles you drag and resize, and add many copies of one dashboard card, each with its own settings
+- A plugin a newer release ships is downloaded on its own when your image does not have it, and tried again on the next start when offline
+- Plugins can decide who may connect to a host, so a host can need approved access before an SSH or remote desktop session opens
+- When more than one plugin flags a host, its row shows one status dot with every reason in its tooltip
+- Plugins that issue SSH certificates can save them on the SSH key login they were issued for
+- Cmd+B shows or hides the sidebar, and can be changed in keybindings
+- The macOS menu bar icon can be monochrome (the default), in color or hidden, from the Termix menu
+- Browser back and forward, and the mouse back and forward buttons, move between the tabs you used instead of leaving Termix
+- Closing a tab goes back to the tab you used before it
+- Admin setting to stop anyone saving passwords and keys on hosts and credentials. Termix asks for them when connecting (#1753)
+- A signed in user can prove a second factor again, for plugins that ask before something sensitive
+- Desktop app: a credential can be kept on this device only, and used as a personal login for a shared host or folder. It is never sent to the server (#1749)
+
+### Changed
+
+- Inputs, selects, tab groups and menus share one fill and one border color
+- Plugin cards and pages use the dashboard look everywhere, with shared lines between sections instead of separate boxes with gaps
+- The Plugins tab and plugin pages use the same look
+- List rows in plugins follow the host list status colors: accent for good, dark for offline or bad
+- Line charts that cover a few minutes show seconds in their times
+- Plugins a new release adds to the image start on only when they are recommended. The rest are installed and left off for an admin to turn on
+- Session tokens are stored as hashes, so a database copy holds no working logins (#1753)
+
+- Host status, import and export, and credential tools now start on for new installs
+- Sync now starts on in a new desktop app, so it can link to a server
+- The first run plugin picker leaves plugins you did not choose off instead of removing them
+- The Linux Flatpak now installs from flatpak.termix.site on x86_64 and arm64, and `flatpak update` keeps it current
+- Dropdowns and text areas are the same size as the text fields next to them
+- A page's own tabs sit above its search bar
+- A plugin view that is still starting shows the same loading spinner as the rest of Termix
+
+### Fixed
+
+- Exporting hosts keeps each host status check setting and interval (#1787)
+- A linked desktop app now updates a plugin that came with the app when the server has a newer copy (#1785)
+- The first run plugin picker no longer sets the default layout and themes to Remove. They always stay on
+- Alerts with no icon no longer squeeze their text to one word per line
+- Password fields with the show button are the same height as the other fields next to them
+- Button groups next to tabs no longer touch the lines of the tab row
+- The Secure your account setup step no longer shows up empty when no passkey or authenticator plugin is on
+- An installed plugin update older than the copy in a newer image is removed at startup instead of logging an error every boot
+- Canceling a download to the desktop app right as it starts no longer leaves a partial file behind
+- Changing two interface settings at once, like resetting the dashboard, now saves both instead of only the last one
+- Release notes on a plugin's page are no longer cut off on the left
+- The Community badge in Browse is no longer missing its top border
+- Official plugin pages no longer show a stray divider before the author
+- The version picker on a plugin's page is no longer empty for a plugin installed from a local build
+- The plugin video no longer has a second border around it
+- The hint at the bottom of Browse and the stored data footer on plugin pages have the same padding as the rest of the page
+- Sign in methods on the Security page have a line between them
+- Chart axis labels with long units, like KiB/s, are no longer cut off
+- Filters, view toggles and small buttons in a toolbar are the same height as the search box next to them
+- Save and Cancel at the bottom of a form are the same height as other buttons
+- State badges in tables no longer stretch across the whole column
+- Text boxes, dropdowns, checkboxes and button groups share one border color
+- Small icons in buttons sit centered instead of half a pixel off
+- Installing Termix as an app works behind a proxy that needs a login cookie
+- The hosts Import / Export button and menu entry show their name again instead of a text key
+- SSH logins to servers that only offer group exchange no longer stall for up to a minute while checking a large key exchange group
+- Plugin views can open the host editor again, so the terminal's Edit host button works after a failed connection
+- The Linux arm64 and armv7l desktop builds start again instead of failing to load the image library
+- The terminal offers to fill a saved sudo or SSH password at a password prompt again
+- Closing the desktop app on GNOME, like Fedora Workstation, quits it instead of minimizing, since GNOME has no tray to bring it back from
+- A deleted or changed host no longer stays in the host list when a list refresh was already running (#1782)
+- Plugin connections to a shared host are no longer reused between people, so each person connects with their own login
+- A session that still has to set up a second factor can no longer open terminals or other live connections
+- A login still waiting on its second factor can no longer be used for desktop sync
+- Someone with time limited manage access can no longer share a host or credential so it outlasts their own access
+- Changing your password signs out your other sessions before it answers
+- A host setting that needs a permission can no longer be changed through host import, bulk edits, host defaults or desktop sync without it
+- Requests sent with no body get a clear error instead of a server error
+- On PostgreSQL and MySQL, a link with an invalid id finds nothing instead of failing with a server error
+- On MySQL, a plugin update that stopped halfway through its database changes finishes on the next start
+- Plugin host settings no longer show the previous host's values for a moment after you switch hosts
+- Switching layouts closes the old layout's tabs again when you sign in
+- A plugin panel beside a tab that fails no longer blanks every open tab
+- Scrolling with the pointer over a row of tabs scrolls the page again
+- A host list refresh that finishes late no longer puts an older list back on screen
+- Switches in settings and the host editor are named for screen readers
+- The show password button and the sign in fields are translated
+
 ## 26.11.0
 
 ### Fixed

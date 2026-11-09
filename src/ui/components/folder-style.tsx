@@ -165,7 +165,7 @@ export function HexColorPicker({
           type="color"
           value={safe}
           onChange={(e) => onChange(e.target.value)}
-          className="h-8 w-10 shrink-0 cursor-pointer rounded-none border border-input bg-transparent p-0.5"
+          className="h-8 w-10 shrink-0 cursor-pointer rounded-none border border-border bg-transparent p-0.5"
         />
         <Input
           value={value}
@@ -213,7 +213,7 @@ export function IconPicker({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 px-2.5 h-8 bg-muted/60 border border-border/60 rounded-none">
+      <div className="flex items-center gap-2 px-2.5 h-8 bg-popover border border-border rounded-none">
         <Search className="size-3 text-muted-foreground/60 shrink-0" />
         <input
           value={query}

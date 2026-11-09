@@ -283,7 +283,7 @@ export function PluginsStep({
                 <div
                   role="radiogroup"
                   aria-label={pluginName(t, plugin)}
-                  className="flex shrink-0 border border-border"
+                  className="flex shrink-0 border border-border bg-popover"
                 >
                   {CHOICES.map((option) => (
                     <button

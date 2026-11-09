@@ -8,7 +8,10 @@ import {
 } from "@/lib/app-keyboard-shortcuts";
 import { getUserPreferences } from "@/main-axios";
 import { parseCustomKeybindings } from "@/api/open-tabs-api";
-import { findMatchingKeybinding } from "@/lib/keybinding-match";
+import {
+  eventMatchesCombo,
+  findMatchingKeybinding,
+} from "@/lib/keybinding-match";
 import type {
   CustomKeybinding,
   KeybindingActionType,
@@ -16,6 +19,8 @@ import type {
 import {
   GLOBAL_KEYBINDING_EVENT,
   getKeybindingAction,
+  listKeybindingDefaults,
+  SHELL_KEYBINDING_ACTION_IDS,
   runKeybindingAction,
 } from "@/shell/keybinding-registry";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
@@ -53,7 +58,7 @@ export function useShellKeybindings({
           if (cancelled) return;
           globalKeybindingsRef.current = parseCustomKeybindings(
             prefs.customKeybindings,
-          ).filter((binding) => binding.enabled);
+          );
         })
         .catch(() => {});
     };
@@ -78,6 +83,10 @@ export function useShellKeybindings({
         (termRef?.current as TabHandle | null)?.reconnect?.();
         return;
       }
+      if (type === "toggleSidebar") {
+        regions.left.setOpen((open) => !open);
+        return;
+      }
       const currentTabs = tabsRef.current.filter(
         (tab) => !tab.parentSplitTabId,
       );
@@ -97,16 +106,35 @@ export function useShellKeybindings({
       )
         return;
       // Only actions that run anywhere; a terminal's own are its to handle.
+      const customBindings = globalKeybindingsRef.current;
       const binding = findMatchingKeybinding(
         event,
-        globalKeybindingsRef.current.filter(
-          (entry) => getKeybindingAction(entry.action.type)?.scope === "global",
+        customBindings.filter(
+          (entry) =>
+            entry.enabled &&
+            getKeybindingAction(entry.action.type)?.scope === "global",
         ),
       );
-      if (!binding) return;
+      if (binding) {
+        event.preventDefault();
+        event.stopPropagation();
+        runKeybindingAction(binding.action);
+        return;
+      }
+
+      // Plugins run their own defaults, so only the shell's are handled here.
+      const defaultBinding = listKeybindingDefaults().find(
+        (entry) =>
+          SHELL_KEYBINDING_ACTION_IDS.includes(entry.id) &&
+          !customBindings.some(
+            (custom) => custom.overridesDefaultId === entry.id,
+          ) &&
+          eventMatchesCombo(event, entry.combo),
+      );
+      if (!defaultBinding || !getKeybindingAction(defaultBinding.id)) return;
       event.preventDefault();
       event.stopPropagation();
-      runKeybindingAction(binding.action);
+      runKeybindingAction({ type: defaultBinding.id });
     };
     const handleAction = (event: Event) =>
       runAction(
@@ -154,23 +182,26 @@ export function useShellKeybindings({
     };
   }, [commandPaletteShortcutEnabled]);
 
-  // Ctrl+Shift+E toggles between the two most recent sidebar panels.
-  const railView = regions.left.view;
-  const sidebarOpen = regions.left.open;
+  // Ctrl+Shift+E toggles between the two most recent sidebar panels. Read
+  // through a ref: railClick also depends on what the right dock shows.
+  const regionsRef = useRef(regions);
+  regionsRef.current = regions;
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!e.ctrlKey || !e.shiftKey || e.altKey || e.code !== "KeyE") return;
       e.preventDefault();
-      const previous = regions.previousView();
-      if (!sidebarOpen) {
-        regions.left.setOpen(true);
+      const current = regionsRef.current;
+      const previous = current.previousView();
+      if (!current.left.open) {
+        current.left.setOpen(true);
         return;
       }
-      if (previous && previous !== railView) regions.railClick(previous);
+      if (previous && previous !== current.left.view)
+        current.railClick(previous);
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [railView, sidebarOpen]);
+  }, []);
 
   // Split-screen and tab navigation hotkeys
   // Also registered in globalShortcutHandler so xterm can invoke directly

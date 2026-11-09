@@ -1,4 +1,5 @@
 import type { DatabaseDialect } from "./dialect.js";
+import { guardMysqlPool, guardPgPool } from "./nan-params.js";
 import type { PortableDatabase } from "../repositories/database-context.js";
 
 export const DATABASE_URL_ENV = "DATABASE_URL";
@@ -113,19 +114,25 @@ export async function connectRemoteDatabase(
   // see the note in schema.pg.ts on why the generated schemas are DDL-only.
   if (dialect === "postgres") {
     const { drizzle } = await import("drizzle-orm/node-postgres");
-    return drizzle({
-      connection: { connectionString: url, max, ...(ssl ? { ssl } : {}) },
-    }) as unknown as PortableDatabase;
+    const pg = await import("pg");
+    const Pool = pg.default?.Pool ?? pg.Pool;
+    const pool = guardPgPool(
+      new Pool({ connectionString: url, max, ...(ssl ? { ssl } : {}) }),
+    );
+    return drizzle({ client: pool }) as unknown as PortableDatabase;
   }
 
   // mysql2 names the pool limit differently and wants no `ssl` key at all when
   // TLS is off, passing false is not the same as omitting it.
   const { drizzle } = await import("drizzle-orm/mysql2");
-  return drizzle({
-    connection: {
+  const mysql = await import("mysql2");
+  const createPool = mysql.default?.createPool ?? mysql.createPool;
+  const pool = guardMysqlPool(
+    createPool({
       uri: url,
       connectionLimit: max,
       ...(ssl ? { ssl } : {}),
-    },
-  }) as unknown as PortableDatabase;
+    }),
+  );
+  return drizzle({ client: pool }) as unknown as PortableDatabase;
 }

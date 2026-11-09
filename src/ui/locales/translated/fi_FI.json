@@ -131,6 +131,8 @@
     "updateLinkLabel": "Päivitys saatavilla. Avaa julkaisutiedot GitHubissa"
   },
   "common": {
+    "showPassword": "Näytä salasana",
+    "hidePassword": "Piilota salasana",
     "scrollTabsLeft": "Vieritä välilehtiä vasemmalle",
     "scrollTabsRight": "Vieritä välilehtiä oikealle",
     "close": "Sulje",
@@ -495,6 +497,7 @@
     "deleteSelected": "Poista",
     "exitSelection": "Poistu valinnasta",
     "collapseBtn": "Kutista",
+    "importExportBtn": "Tuo / Vie",
     "hostStatusesRefreshed": "Isäntäpalvelimien tilat päivitetty",
     "failedToRefreshHosts": "Isäntäpalvelimien päivitys epäonnistui",
     "movedHostTo": "Siirretty {{host}} kansioon \"{{folder}}\"",
@@ -609,6 +612,7 @@
     "hostClickBehavior": "Isännän napsauttaminen",
     "hostClickBehaviorDesc": "Mitä tapahtuu, kun napsautat isäntää, jolla on jo avoin välilehti. Ctrl/Cmd-napsautus, keskinapsautus tai \"Avaa uudella välilehdellä\" aloittavat aina uuden.",
     "hostClickNewTab": "Avaa aina uusi välilehti",
+    "hostClickHostPage": "Avaa isäntäpalvelimen sivu, jos lisäosa tarjoaa sellaisen",
     "hostClickFocusExisting": "Vaihda avoimeen välilehteen",
     "hostClickFocusExistingDoubleNew": "Napsauta vaihtaaksesi, kaksoisnapsauta uuden välilehden avaamiseksi",
     "openInNewTab": "Avaa uudella välilehdellä",
@@ -1010,6 +1014,8 @@
     "registrationSuccess": "Rekisteröityminen onnistui"
   },
   "placeholders": {
+    "username": "Käyttäjänimesi",
+    "newUsername": "Valitse käyttäjänimi",
     "keyPassword": "avaimen salasana",
     "pastePrivateKey": "Liitä yksityinen avain tähän...",
     "enterPassword": "Syötä salasanasi"
@@ -1052,7 +1058,8 @@
         "actionNextTab": "Vaihda seuraavaan välilehteen",
         "actionPreviousTab": "Vaihda edelliseen välilehteen",
         "actionOpenCommandPalette": "Avaa pikahaku",
-        "actionReconnectSession": "Yhdistä nykyinen istunto uudelleen"
+        "actionReconnectSession": "Yhdistä nykyinen istunto uudelleen",
+        "actionToggleSidebar": "Näytä/piilota sivupalkki"
       },
       "userProfile": {
         "preset_simple": "Yksinkertainen",
@@ -1214,6 +1221,18 @@
         "title": "Lähettää hälytyksiä",
         "consequence": "Sinulle tai muille käyttäjille ja heidän asettamiensa kanavien kautta."
       },
+      "operations:provide": {
+        "title": "Tarjoa toimintoja",
+        "consequence": "Toimintoja voidaan suorittaa Automaatioissa, komentoriviltä, puhelinsovelluksesta ja muista paikoista käyttäjien toimesta, joilla on siihen oikeus."
+      },
+      "operations:invoke": {
+        "title": "Suorita muiden lisäosien toimintoja",
+        "consequence": "Toimii kirjautuneen käyttäjän puolesta sen manifestissa lueteltujen toimintojen osalta. Hyväksyntäsäännöt ovat edelleen voimassa."
+      },
+      "operations:approve": {
+        "title": "Päätä, mikä vaatii hyväksynnän",
+        "consequence": "Voittaa sallita toimintojen suorittaminen ilman hyväksyntää tai estää ne kaikille käyttäjille."
+      },
       "notify:hub": {
         "title": "Vastaanottaa kaikki hälytykset",
         "consequence": "Tallentaa ja toimittaa kaikki lisäosien lähettämät hälytykset, mukaan lukien niiden sisällöt."
@@ -1237,6 +1256,10 @@
       "hosts:lock": {
         "title": "Hallinnoi isäntiä vain lukuoikeudella",
         "consequence": "Sen hallinnoimia isäntiä ei voi muokata, poistaa tai jakaa uudelleen kenenkään toisen toimesta."
+      },
+      "hosts:connect-policy": {
+        "title": "Päätä, kenen on mahdollista muodostaa yhteys",
+        "consequence": "Voii estää tai sallia kaikki SSH- ja etätyöpöytäyhteydet mihin tahansa isäntäpalvelimeen."
       },
       "desktop:window": {
         "title": "Avata työpöytäikkunoita",
@@ -1663,6 +1686,12 @@
       "title": "Sarakkeet",
       "auto": "Automaattinen",
       "count": "{{count}} saraketta leveä"
+    },
+    "pager": {
+      "previous": "Edellinen",
+      "next": "Seuraava",
+      "page": "Sivu {{page}}",
+      "pageOf": "Sivu {{page}} / {{pages}}"
     }
   },
   "fields": {
@@ -1681,5 +1710,29 @@
       "admin": "Ylläpitäjä",
       "user": "Käyttäjä"
     }
+  },
+  "tileGrid": {
+    "empty": "Ei vielä laattoja. Lisää niitä listasta.",
+    "move": "Vedä siirtääksesi",
+    "moveTile": "Siirrä {{tile}}",
+    "settings": "{{tile}}-asetukset",
+    "remove": "Poista {{tile}}",
+    "width": "Leveys",
+    "height": "Korkeus",
+    "addTiles": "Lisää laattoja",
+    "closePicker": "Sulje",
+    "search": "Hae laattoja",
+    "noMatches": "Ei osumia.",
+    "kind": {
+      "all": "Kaikki",
+      "card": "Kortit",
+      "chart": "Kaaviot",
+      "signal": "Tila",
+      "action": "Toiminnot",
+      "resource": "Listat",
+      "session": "Istunnot"
+    },
+    "reset": "Palauta",
+    "done": "Valmis"
   }
 }

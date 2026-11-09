@@ -131,6 +131,8 @@
     "updateLinkLabel": "עדכון זמין. פתח את דברי ההוצאה לאור ב-GitHub"
   },
   "common": {
+    "showPassword": "הצג סיסמה",
+    "hidePassword": "הסתר סיסמה",
     "scrollTabsLeft": "גלול לשמאל",
     "scrollTabsRight": "גלול לימין",
     "close": "סגור",
@@ -499,6 +501,7 @@
     "deleteSelected": "מחק",
     "exitSelection": "צא ממצב בחירה",
     "collapseBtn": "כווץ",
+    "importExportBtn": "ייבוא / ייצוא",
     "hostStatusesRefreshed": "מצבי המארחים עודכנו",
     "failedToRefreshHosts": "הרענון של המארחים נכשל",
     "movedHostTo": "הועבר {{host}} ל\"{{folder}}\"",
@@ -615,6 +618,7 @@
     "hostClickBehavior": "לחיצה על מארח",
     "hostClickBehaviorDesc": "מה קורה כשלוחצים על מארח שכבר יש לו לשונית פתוחה. לחיצה עם Ctrl/Cmd, לחיצה באמצע, או \"פתח בלשונית חדשה\" תמיד יפתחו לשונית חדשה.",
     "hostClickNewTab": "תמיד פתח לשונית חדשה",
+    "hostClickHostPage": "פתח את דף המארח, כאשר תוסף מציע אחד כזה",
     "hostClickFocusExisting": "עבור ללשונית הפתוחה",
     "hostClickFocusExistingDoubleNew": "לחיצה לעבור, לחיצה כפולה ללשונית חדשה",
     "openInNewTab": "פתח בלשונית חדשה",
@@ -1023,6 +1027,8 @@
     "registrationSuccess": "ההרשמה בוצעה בהצלחה"
   },
   "placeholders": {
+    "username": "שם המשתמש שלך",
+    "newUsername": "בחר שם משתמש",
     "keyPassword": "סיסמת מפתח",
     "pastePrivateKey": "הדבק כאן את המפתח הפרטי שלך...",
     "enterPassword": "הזן את הסיסמה שלך"
@@ -1069,7 +1075,8 @@
         "actionNextTab": "עבור ללשונית הבאה",
         "actionPreviousTab": "עבור ללשונית הקודמת",
         "actionOpenCommandPalette": "פתח חיפוש מהיר",
-        "actionReconnectSession": "חבר מחדש את הפעולה הנוכחית"
+        "actionReconnectSession": "חבר מחדש את הפעולה הנוכחית",
+        "actionToggleSidebar": "הצג/הסתר סרגל צד"
       },
       "userProfile": {
         "preset_simple": "פשוט",
@@ -1231,6 +1238,18 @@
         "title": "שליחת התראות",
         "consequence": "אליך או למשתמשים אחרים, דרך הערוצים שהם הגדירו."
       },
+      "operations:provide": {
+        "title": "הצעת פעולות",
+        "consequence": "הפעולות שלו ניתנות להפעלה מאוטומציות, שורת הפקודה, אפליקציית הטלפון ומקומות אחרים, על ידי אנשים שמונו להשתמש בהן."
+      },
+      "operations:invoke": {
+        "title": "הפעלת פעולות של תוספים אחרים",
+        "consequence": "פועל בשם המשתמש המחובר על הפעולות המופיעות במניפסט שלו. כללי אישור עדיין חלים."
+      },
+      "operations:approve": {
+        "title": "החלטה על מה דורש אישור",
+        "consequence": "יכול לאפשר לפעולות להיבצע ללא אישור, או לחסום אותן, עבור כל משתמש."
+      },
       "notify:hub": {
         "title": "קבלת כל ההתראות",
         "consequence": "שומר ומעביר את כל ההתראות שהתוספים שולחים, כולל התוכן שלהן."
@@ -1254,6 +1273,10 @@
       "hosts:lock": {
         "title": "ניהול מארחים כקריאה בלבד",
         "consequence": "המארחים שבהם הוא מנהל לא יכולים לערוך, למחוק או לשתף מחדש על ידי אף אחד אחר."
+      },
+      "hosts:connect-policy": {
+        "title": "החלטה על מי יכול להתחבר",
+        "consequence": "יכול לחסום או לאשר כל חיבור SSH ודסקטופ מרוחק לכל מארח."
       },
       "desktop:window": {
         "title": "פתיחת חלונות שולחן עבודה",
@@ -1705,6 +1728,12 @@
       "title": "עמודות",
       "auto": "אוטומטי",
       "count": "רוחב של {{count}}"
+    },
+    "pager": {
+      "previous": "קודם",
+      "next": "הבא",
+      "page": "עמוד {{page}}",
+      "pageOf": "עמוד {{page}} מתוך {{pages}}"
     }
   },
   "fields": {
@@ -1726,5 +1755,29 @@
       "admin": "מנהל",
       "user": "משתמש"
     }
+  },
+  "tileGrid": {
+    "empty": "אין אריחים עדיין. הוסף כמה מהרשימה.",
+    "move": "גרור להזזה",
+    "moveTile": "הזז את {{tile}}",
+    "settings": "הגדרות של {{tile}}",
+    "remove": "הסר את {{tile}}",
+    "width": "רוחב",
+    "height": "גובה",
+    "addTiles": "הוסף אריחים",
+    "closePicker": "סגור",
+    "search": "חפש אריחים",
+    "noMatches": "אין תוצאות תואמות.",
+    "kind": {
+      "all": "הכל",
+      "card": "כרטיסיות",
+      "chart": "תרשימים",
+      "signal": "סטטוס",
+      "action": "פעולות",
+      "resource": "רשימות",
+      "session": "סשנים"
+    },
+    "reset": "אפס",
+    "done": "בוצע"
   }
 }

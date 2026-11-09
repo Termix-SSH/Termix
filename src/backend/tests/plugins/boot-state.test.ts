@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   missingShippedPluginIds,
+  newShippedPluginIds,
   startablePluginIds,
 } from "../../plugins/boot-state.js";
 
@@ -36,5 +37,22 @@ describe("missingShippedPluginIds", () => {
   it("finds nothing when every plugin is present", () => {
     const present = new Set(records.map((record) => record.id));
     expect(missingShippedPluginIds(records, present, new Set())).toEqual([]);
+  });
+});
+
+describe("newShippedPluginIds", () => {
+  it("lists shipped plugins the install never had and that are not on disk", () => {
+    expect(
+      newShippedPluginIds(
+        ["new", "known", "here", "removed", "another"],
+        [{ id: "known" }],
+        new Set(["here"]),
+        new Set(["removed"]),
+      ),
+    ).toEqual(["another", "new"]);
+  });
+
+  it("finds nothing for an empty catalog", () => {
+    expect(newShippedPluginIds([], [], new Set(), new Set())).toEqual([]);
   });
 });

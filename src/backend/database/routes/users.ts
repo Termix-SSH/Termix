@@ -1,3 +1,7 @@
+import {
+  CREDENTIAL_STORAGE_SETTING,
+  credentialStorageAllowed,
+} from "../../hosts/credential-storage.js";
 import { isExternalAccount } from "../../auth/external-account.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, {
@@ -35,6 +39,8 @@ import { registerUserDeleteAccountRoutes } from "./user-delete-account-routes.js
 import { registerUserDataAccessRoutes } from "./user-data-access-routes.js";
 import { listExternalLoginMethods, registerAuthRoutes } from "./auth-routes.js";
 import { registerAuthCompatRoutes } from "./auth-compat-routes.js";
+import { registerStepUpRoutes } from "./step-up-routes.js";
+import { clearStepUp } from "../../auth/step-up.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import {
   createCurrentSettingsRepository,
@@ -554,6 +560,7 @@ router.post("/logout", authenticateJWT, async (req, res) => {
       const sessionId = authReq.sessionId;
 
       await authManager.logoutUser(userId, sessionId);
+      clearStepUp(userId);
       authLogger.info("User logged out", {
         operation: "user_logout",
         userId,
@@ -1077,6 +1084,75 @@ router.patch(
 
 /**
  * @openapi
+ * /users/credential-storage:
+ *   get:
+ *     summary: Get the credential storage setting
+ *     description: Whether passwords and private keys can be saved on hosts and credentials on this server.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Credential storage setting.
+ *       401:
+ *         description: Not signed in.
+ */
+router.get("/credential-storage", authenticateJWT, (_req, res) => {
+  res.json({ enabled: credentialStorageAllowed() });
+});
+
+/**
+ * @openapi
+ * /users/credential-storage:
+ *   patch:
+ *     summary: Set the credential storage setting
+ *     description: Turns saving passwords and private keys on or off for everyone. Logins already saved stay until they are removed.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               enabled:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Credential storage setting updated.
+ *       400:
+ *         description: Invalid value for enabled.
+ *       403:
+ *         description: Not authorized.
+ *       500:
+ *         description: Failed to set the credential storage setting.
+ */
+router.patch("/credential-storage", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    const user = await requireCurrentAdmin(userId);
+    if (!user) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const { enabled } = req.body;
+    if (typeof enabled !== "boolean") {
+      return res.status(400).json({ error: "Invalid value for enabled" });
+    }
+    await createCurrentSettingsRepository().set(
+      CREDENTIAL_STORAGE_SETTING,
+      enabled ? "true" : "false",
+    );
+    res.json({ enabled });
+  } catch (err) {
+    authLogger.error("Failed to set the credential storage setting", err);
+    res
+      .status(500)
+      .json({ error: "Failed to set the credential storage setting" });
+  }
+});
+
+/**
+ * @openapi
  * /users/password-login-allowed:
  *   get:
  *     summary: Get password login status
@@ -1312,7 +1388,8 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
     passwordHash: password_hash,
   });
 
-  authManager.logoutUser(userId);
+  await authManager.logoutUser(userId);
+  clearStepUp(userId);
   authLogger.success("Password changed successfully", {
     operation: "password_change_complete",
     userId,
@@ -1476,6 +1553,7 @@ registerUserApiKeyRoutes(router, requireAdmin);
 registerBrandingRoutes(router);
 
 registerAuthRoutes(router);
+registerStepUpRoutes(router, authenticateJWT);
 registerAuthCompatRoutes(router);
 
 export default router;

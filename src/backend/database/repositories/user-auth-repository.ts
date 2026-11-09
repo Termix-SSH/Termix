@@ -93,6 +93,23 @@ export class UserAuthRepository {
     await this.onWrite?.();
   }
 
+  async unlinkProviderForUser(
+    userId: string,
+    providerId: string,
+  ): Promise<number> {
+    const result = await this.context.drizzle
+      .delete(userExternalIdentities)
+      .where(
+        and(
+          eq(userExternalIdentities.userId, userId),
+          eq(userExternalIdentities.providerId, providerId),
+        ),
+      );
+    const affected = rowsAffected(result);
+    if (affected > 0) await this.onWrite?.();
+    return affected;
+  }
+
   async unlinkIdentitiesForUser(userId: string): Promise<number> {
     const result = await this.context.drizzle
       .delete(userExternalIdentities)

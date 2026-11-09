@@ -131,6 +131,8 @@
     "updateLinkLabel": "Je k dispozícii aktualizácia. Otvoriť poznámky k vydaniu na GitHub"
   },
   "common": {
+    "showPassword": "Zobraziť heslo",
+    "hidePassword": "Skryť heslo",
     "scrollTabsLeft": "Posunúť karty doľava",
     "scrollTabsRight": "Posunúť karty doprava",
     "close": "Zavrieť",
@@ -503,6 +505,7 @@
     "deleteSelected": "Odstrániť",
     "exitSelection": "Ukončiť výber",
     "collapseBtn": "Zbaliť",
+    "importExportBtn": "Import / Export",
     "hostStatusesRefreshed": "Stavy hostiteľov boli obnovené",
     "failedToRefreshHosts": "Nepodarilo sa obnoviť hostiteľov",
     "movedHostTo": "Presunutý {{host}} do \"{{folder}}\"",
@@ -621,6 +624,7 @@
     "hostClickBehavior": "Kliknutie na hostiteľa",
     "hostClickBehaviorDesc": "Čo sa stane, keď kliknete na hostiteľa, ktorý už má otvorený panel. Kliknutie s Ctrl/Cmd, stredným tlačidlom alebo možnosť „Otvoriť v novom paneli“ vždy spustí nový.",
     "hostClickNewTab": "Vždy otvoriť nový panel",
+    "hostClickHostPage": "Otvoriť stránku hostiteľa, ak ju plugin ponúka",
     "hostClickFocusExisting": "Prepnúť na otvorený panel",
     "hostClickFocusExistingDoubleNew": "Kliknutím prepnúť, dvojklikom otvoriť nový panel",
     "openInNewTab": "Otvoriť v novom paneli",
@@ -1036,6 +1040,8 @@
     "registrationSuccess": "Registrácia bola úspešná"
   },
   "placeholders": {
+    "username": "Vaše používateľské meno",
+    "newUsername": "Zvoľte si používateľské meno",
     "keyPassword": "heslo k kľúču",
     "pastePrivateKey": "Sem vložte svoj súkromný kľúč...",
     "enterPassword": "Zadajte svoje heslo"
@@ -1086,7 +1092,8 @@
         "actionNextTab": "Prepnúť na ďalšiu kartu",
         "actionPreviousTab": "Prepnúť na predchádzajúcu kartu",
         "actionOpenCommandPalette": "Otvoriť rýchle vyhľadávanie",
-        "actionReconnectSession": "Znova pripojiť aktuálnu reláciu"
+        "actionReconnectSession": "Znova pripojiť aktuálnu reláciu",
+        "actionToggleSidebar": "Prepnúť bočný panel"
       },
       "userProfile": {
         "preset_simple": "Jednoduché",
@@ -1248,6 +1255,18 @@
         "title": "Posielať upozornenia",
         "consequence": "Vám alebo iným používateľom a cez kanály, ktoré si nastavili."
       },
+      "operations:provide": {
+        "title": "Ponúkať akcie",
+        "consequence": "Jeho akcie môžu spúšťať automatizácie, príkazový riadok, mobilná aplikácia a ďalšie miesta, a to používateľmi, ktorí majú povolenie na ich použitie."
+      },
+      "operations:invoke": {
+        "title": "Spúšťať akcie iných pluginov",
+        "consequence": "Koná v mene prihláseného používateľa pri akciách uvedených v jeho manifeste. Stále sa uplatňujú pravidlá schvaľovania."
+      },
+      "operations:approve": {
+        "title": "Rozhodnúť, čo vyžaduje schválenie",
+        "consequence": "Môže povoliť spúšťanie akcií bez schválenia alebo ich blokovať pre každého používateľa."
+      },
       "notify:hub": {
         "title": "Prijať každé upozornenie",
         "consequence": "Ukladá a doručuje upozornenia, ktoré posielajú všetky pluginy, vrátane ich obsahu."
@@ -1271,6 +1290,10 @@
       "hosts:lock": {
         "title": "Spravovať hostov ako len na čítanie",
         "consequence": "Hostov, ktoré spravuje, nemôže nikto iný upravovať, mazať ani zdieľať."
+      },
+      "hosts:connect-policy": {
+        "title": "Rozhodnúť, kto sa môže pripojiť",
+        "consequence": "Môže blokovať alebo povoliť každé SSH pripojenie a pripojenie na vzdialenú plochu k akémukoľvek hostiteľovi."
       },
       "desktop:window": {
         "title": "Otvoriť okná plochy",
@@ -1747,6 +1770,12 @@
       "title": "Stĺpce",
       "auto": "Automaticky",
       "count": "Šírka {{count}}"
+    },
+    "pager": {
+      "previous": "Predchádzajúca",
+      "next": "Nasledujúca",
+      "page": "Strana {{page}}",
+      "pageOf": "Strana {{page}} z {{pages}}"
     }
   },
   "fields": {
@@ -1771,5 +1800,29 @@
       "admin": "Administrátor",
       "user": "Používateľ"
     }
+  },
+  "tileGrid": {
+    "empty": "Zatiaľ žiadne dlaždice. Pridajte niektoré zo zoznamu.",
+    "move": "Ťahaním presunúť",
+    "moveTile": "Presunúť {{tile}}",
+    "settings": "Nastavenia {{tile}}",
+    "remove": "Odstrániť {{tile}}",
+    "width": "Šírka",
+    "height": "Výška",
+    "addTiles": "Pridať dlaždice",
+    "closePicker": "Zavrieť",
+    "search": "Hľadať dlaždice",
+    "noMatches": "Žiadne zhody.",
+    "kind": {
+      "all": "Všetky",
+      "card": "Karty",
+      "chart": "Grafy",
+      "signal": "Stav",
+      "action": "Akcie",
+      "resource": "Zoznamy",
+      "session": "Sedenia"
+    },
+    "reset": "Obnoviť",
+    "done": "Hotovo"
   }
 }

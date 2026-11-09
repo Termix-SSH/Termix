@@ -186,6 +186,21 @@ describe("ctx.desktop.local", () => {
     expect(fs.readdirSync(dir)).toEqual([]);
   });
 
+  it("leaves no partial file when aborted before the file has opened", async () => {
+    grants.set("demo", ["desktop:local"]);
+    const ctx = contextFor("demo", ["desktop:local"]);
+    for (let i = 0; i < 20; i++) {
+      const download = await ctx.desktop.local.fs.openDownload({
+        rootPath: dir,
+        destPath: path.join(dir, `early-${i}.txt`),
+        transferId: `early-${i}`,
+      });
+      await download.abort();
+    }
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(fs.readdirSync(dir)).toEqual([]);
+  });
+
   it("sends trash and open through Electron main and audits each call", async () => {
     grants.set("demo", ["desktop:local"]);
     const ctx = contextFor("demo", ["desktop:local"]);

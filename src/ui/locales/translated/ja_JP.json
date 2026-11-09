@@ -131,6 +131,8 @@
     "updateLinkLabel": "アップデートが利用可能です。GitHub でリリースノートを開く"
   },
   "common": {
+    "showPassword": "パスワードを表示",
+    "hidePassword": "パスワードを非表示",
     "scrollTabsLeft": "タブを左にスクロール",
     "scrollTabsRight": "タブを右にスクロール",
     "close": "閉じる",
@@ -491,6 +493,7 @@
     "deleteSelected": "削除",
     "exitSelection": "選択を解除",
     "collapseBtn": "折りたたむ",
+    "importExportBtn": "インポート / エクスポート",
     "hostStatusesRefreshed": "ホストのステータスを更新しました",
     "failedToRefreshHosts": "ホストの更新に失敗しました",
     "movedHostTo": "{{host}} を「{{folder}}」に移動しました",
@@ -603,6 +606,7 @@
     "hostClickBehavior": "ホストをクリックしたとき",
     "hostClickBehaviorDesc": "既にタブが開いているホストをクリックしたときの動作を指定します。Ctrl/Cmd + クリック、中央クリック、または「新しいタブで開く」は常に新しいタブを開きます。",
     "hostClickNewTab": "常に新しいタブで開く",
+    "hostClickHostPage": "プラグインが提供している場合、ホストページを開きます",
     "hostClickFocusExisting": "開いているタブに切り替える",
     "hostClickFocusExistingDoubleNew": "クリックで切り替え、ダブルクリックで新しいタブ",
     "openInNewTab": "新しいタブで開く",
@@ -997,6 +1001,8 @@
     "registrationSuccess": "登録に成功しました"
   },
   "placeholders": {
+    "username": "ユーザー名",
+    "newUsername": "ユーザー名を入力",
     "keyPassword": "キーのパスワード",
     "pastePrivateKey": "ここに秘密鍵を貼り付けてください...",
     "enterPassword": "パスワードを入力してください"
@@ -1035,7 +1041,8 @@
         "actionNextTab": "次のタブに切り替え",
         "actionPreviousTab": "前のタブに切り替え",
         "actionOpenCommandPalette": "クイック検索を開く",
-        "actionReconnectSession": "現在のセッションを再接続"
+        "actionReconnectSession": "現在のセッションを再接続",
+        "actionToggleSidebar": "サイドバーの表示/非表示を切り替え"
       },
       "userProfile": {
         "preset_simple": "シンプル",
@@ -1197,6 +1204,18 @@
         "title": "アラートの送信",
         "consequence": "あなたや他のユーザーへ、設定されたチャネルを通じて送信します。"
       },
+      "operations:provide": {
+        "title": "アクションを提供する",
+        "consequence": "そのアクションは、自動化、CLI、モバイルアプリ、その他の場所から、使用が許可されたユーザーによって実行できます。"
+      },
+      "operations:invoke": {
+        "title": "他のプラグインのアクションを実行する",
+        "consequence": "マニフェストにリストされたアクションに対して、サインインしているユーザーに代わって動作します。承認ルールは依然として適用されます。"
+      },
+      "operations:approve": {
+        "title": "承認が必要なものを決定する",
+        "consequence": "すべてのユーザーに対して、アクションを承認なしで実行できるようにするか、ブロックするかを制御できます。"
+      },
       "notify:hub": {
         "title": "すべてのアラートを受信",
         "consequence": "すべてのプラグインが送信するアラート（内容を含む）を保存・配信します。"
@@ -1220,6 +1239,10 @@
       "hosts:lock": {
         "title": "ホストを読み取り専用として管理",
         "consequence": "管理対象のホストは、他のユーザーによって編集、削除、再共有できません。"
+      },
+      "hosts:connect-policy": {
+        "title": "接続を許可するユーザーを決定する",
+        "consequence": "任意のホストへのすべてのSSHおよびリモートデスクトップ接続をブロックまたは許可できます。"
       },
       "desktop:window": {
         "title": "デスクトップウィンドウを開く",
@@ -1621,6 +1644,12 @@
       "title": "カラム",
       "auto": "自動",
       "count": "{{count}} カラム"
+    },
+    "pager": {
+      "previous": "前へ",
+      "next": "次へ",
+      "page": "{{page}}ページ目",
+      "pageOf": "{{pages}}ページ中{{page}}ページ目"
     }
   },
   "fields": {
@@ -1636,5 +1665,29 @@
       "admin": "管理者",
       "user": "ユーザー"
     }
+  },
+  "tileGrid": {
+    "empty": "まだタイルがありません。リストからいくつか追加してください。",
+    "move": "ドラッグして移動",
+    "moveTile": "{{tile}}を移動",
+    "settings": "{{tile}}の設定",
+    "remove": "{{tile}}を削除",
+    "width": "幅",
+    "height": "高さ",
+    "addTiles": "タイルを追加",
+    "closePicker": "閉じる",
+    "search": "タイルを検索",
+    "noMatches": "一致するものはありません。",
+    "kind": {
+      "all": "すべて",
+      "card": "カード",
+      "chart": "チャート",
+      "signal": "ステータス",
+      "action": "アクション",
+      "resource": "リスト",
+      "session": "セッション"
+    },
+    "reset": "リセット",
+    "done": "完了"
   }
 }

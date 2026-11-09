@@ -1,6 +1,7 @@
 import { CircleSlash } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/button";
+import { LoadingState } from "@/components/loading-state";
 import { usePermissions } from "@/hooks/use-permissions";
 import { pluginName } from "@/lib/plugin-i18n";
 import { OPEN_PLUGINS_EVENT } from "@/plugins/open-plugins";
@@ -32,12 +33,11 @@ export function PluginViewPlaceholder({
 
   if (status === "loading") {
     return (
-      <div
-        className="flex h-full w-full items-center justify-center"
-        aria-label={t("plugins.runtime.loading", { name })}
-      >
-        <div className="size-5 rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground/70 animate-spin" />
-      </div>
+      <LoadingState
+        compact={compact}
+        label={t("plugins.runtime.loading", { name })}
+        className={compact ? undefined : "h-full w-full"}
+      />
     );
   }
 

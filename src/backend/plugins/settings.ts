@@ -190,6 +190,9 @@ export function declaredFields(
           labelKey: host.enableLabelKey,
           descriptionKey: host.enableDescriptionKey,
           default: host.enableDefault ?? false,
+          ...(host.enablePermission
+            ? { permission: host.enablePermission }
+            : {}),
         },
       ]
     : [];

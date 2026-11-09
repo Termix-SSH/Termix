@@ -179,10 +179,24 @@ export function UiPreferencesProvider({
       const merged = { ...pendingPatch.current };
       for (const [key, value] of Object.entries(patch)) {
         if (key === "overrides" && value && typeof value === "object") {
-          merged.overrides = {
+          // Two levels deep like the server, so two keys set in one area
+          // in the same burst both get sent.
+          const areas = {
             ...((merged.overrides as Record<string, unknown>) ?? {}),
-            ...(value as Record<string, unknown>),
           };
+          for (const [area, keys] of Object.entries(
+            value as Record<string, unknown>,
+          )) {
+            const prev = areas[area];
+            areas[area] =
+              keys &&
+              typeof keys === "object" &&
+              prev &&
+              typeof prev === "object"
+                ? { ...prev, ...keys }
+                : keys;
+          }
+          merged.overrides = areas;
         } else if (key === "onboarding" && value && typeof value === "object") {
           const prev = (merged.onboarding ?? {}) as Record<string, unknown>;
           const next = value as Record<string, unknown>;

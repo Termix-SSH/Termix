@@ -231,6 +231,16 @@ describe("updating a bundled plugin", () => {
     expect(loader.get("bundled-one")?.manifest.version).toBe("1.0.0");
   });
 
+  it("removes an update the bundled copy caught up with", async () => {
+    const { userDir } = setup();
+    const file = await writeArtifact(userDir, "bundled-one", "valid", "0.9.0");
+    const loader = new PluginLoader();
+    await loader.loadAll();
+    expect(fs.existsSync(file)).toBe(false);
+    expect(fs.existsSync(`${file}.sig`)).toBe(false);
+    expect(loader.skipped()).toEqual([]);
+  });
+
   it("refuses a downgrade after the bundled copy was unloaded", async () => {
     const { userDir } = setup();
     const loader = new PluginLoader();

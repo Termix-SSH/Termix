@@ -131,6 +131,8 @@
     "updateLinkLabel": "업데이트 가능. GitHub에서 릴리스 노트 보기"
   },
   "common": {
+    "showPassword": "비밀번호 표시",
+    "hidePassword": "비밀번호 숨기기",
     "scrollTabsLeft": "탭 왼쪽으로 스크롤",
     "scrollTabsRight": "탭 오른쪽으로 스크롤",
     "close": "닫기",
@@ -491,6 +493,7 @@
     "deleteSelected": "삭제",
     "exitSelection": "선택 취소",
     "collapseBtn": "접기",
+    "importExportBtn": "가져오기 / 내보내기",
     "hostStatusesRefreshed": "호스트 상태가 새로고침되었습니다",
     "failedToRefreshHosts": "호스트를 새로고침하지 못했습니다",
     "movedHostTo": "{{host}}(이)가 \"{{folder}}\"(으)로 이동되었습니다",
@@ -603,6 +606,7 @@
     "hostClickBehavior": "호스트 클릭 시 동작",
     "hostClickBehaviorDesc": "이미 열린 탭이 있는 호스트를 클릭했을 때의 동작을 설정합니다. Ctrl/Cmd 클릭, 마우스 가운데 클릭 또는 \"새 탭에서 열기\"는 항상 새 탭을 엽니다.",
     "hostClickNewTab": "항상 새 탭에서 열기",
+    "hostClickHostPage": "플러그인이 제공하면 호스트 페이지 열기",
     "hostClickFocusExisting": "열린 탭으로 전환",
     "hostClickFocusExistingDoubleNew": "클릭 시 전환, 더블 클릭 시 새 탭",
     "openInNewTab": "새 탭에서 열기",
@@ -997,6 +1001,8 @@
     "registrationSuccess": "등록 성공"
   },
   "placeholders": {
+    "username": "사용자 이름",
+    "newUsername": "사용자 이름 선택",
     "keyPassword": "키 비밀번호",
     "pastePrivateKey": "개인 키를 여기에 붙여넣으세요...",
     "enterPassword": "비밀번호를 입력하세요"
@@ -1035,7 +1041,8 @@
         "actionNextTab": "다음 탭으로 전환",
         "actionPreviousTab": "이전 탭으로 전환",
         "actionOpenCommandPalette": "빠른 검색 열기",
-        "actionReconnectSession": "현재 세션 재연결"
+        "actionReconnectSession": "현재 세션 재연결",
+        "actionToggleSidebar": "사이드바 전환"
       },
       "userProfile": {
         "preset_simple": "간단함",
@@ -1197,6 +1204,18 @@
         "title": "알림 전송",
         "consequence": "사용자나 다른 사용자에게 설정된 채널을 통해 알림을 보냅니다."
       },
+      "operations:provide": {
+        "title": "작업 제공",
+        "consequence": "사용이 허용된 사용자는 자동화, CLI, 모바일 앱 및 기타 위치에서 이 작업을 실행할 수 있습니다."
+      },
+      "operations:invoke": {
+        "title": "다른 플러그인의 작업 실행",
+        "consequence": "매니페스트에 나열된 작업에 대해 로그인한 사용자를 대신하여 행동합니다. 승인 규칙은 여전히 적용됩니다."
+      },
+      "operations:approve": {
+        "title": "승인 필요 여부 결정",
+        "consequence": "모든 사용자에게 대해 작업을 승인 없이 실행하거나 차단할 수 있습니다."
+      },
       "notify:hub": {
         "title": "모든 알림 수신",
         "consequence": "모든 플러그인이 보내는 알림(내용 포함)을 저장하고 전달합니다."
@@ -1220,6 +1239,10 @@
       "hosts:lock": {
         "title": "호스트를 읽기 전용으로 관리",
         "consequence": "관리하는 호스트는 다른 사용자가 수정, 삭제 또는 재공유할 수 없습니다."
+      },
+      "hosts:connect-policy": {
+        "title": "연결 권한 결정",
+        "consequence": "모든 호스트에 대한 SSH 및 원격 데스크톱 연결을 차단하거나 허용할 수 있습니다."
       },
       "desktop:window": {
         "title": "데스크톱 창 열기",
@@ -1621,6 +1644,12 @@
       "title": "열",
       "auto": "자동",
       "count": "{{count}}열 너비"
+    },
+    "pager": {
+      "previous": "이전",
+      "next": "다음",
+      "page": "{{page}}페이지",
+      "pageOf": "{{pages}} 중 {{page}}페이지"
     }
   },
   "fields": {
@@ -1636,5 +1665,29 @@
       "admin": "관리자",
       "user": "사용자"
     }
+  },
+  "tileGrid": {
+    "empty": "타일이 없습니다. 목록에서 추가하세요.",
+    "move": "드래그하여 이동",
+    "moveTile": "{{tile}} 이동",
+    "settings": "{{tile}} 설정",
+    "remove": "{{tile}} 제거",
+    "width": "너비",
+    "height": "높이",
+    "addTiles": "타일 추가",
+    "closePicker": "닫기",
+    "search": "타일 검색",
+    "noMatches": "일치하는 항목이 없습니다.",
+    "kind": {
+      "all": "전체",
+      "card": "카드",
+      "chart": "차트",
+      "signal": "상태",
+      "action": "작업",
+      "resource": "목록",
+      "session": "세션"
+    },
+    "reset": "초기화",
+    "done": "완료"
   }
 }

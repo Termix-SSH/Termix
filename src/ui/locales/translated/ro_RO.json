@@ -131,6 +131,8 @@
     "updateLinkLabel": "Actualizare disponibilă. Deschideți notele de lansare pe GitHub"
   },
   "common": {
+    "showPassword": "Afișează parola",
+    "hidePassword": "Ascunde parola",
     "scrollTabsLeft": "Derulați filele la stânga",
     "scrollTabsRight": "Derulați filele la dreapta",
     "close": "Închide",
@@ -499,6 +501,7 @@
     "deleteSelected": "Șterge",
     "exitSelection": "Ieși din selecție",
     "collapseBtn": "Restrânge",
+    "importExportBtn": "Importă / Exportă",
     "hostStatusesRefreshed": "Stările gazdelor au fost reîmprospătate",
     "failedToRefreshHosts": "Reîmprospătarea gazdelor a eșuat",
     "movedHostTo": "{{host}} mutat în \"{{folder}}\"",
@@ -615,6 +618,7 @@
     "hostClickBehavior": "Click pe o gazdă",
     "hostClickBehaviorDesc": "Ce se întâmplă când dai click pe o gazdă care are deja un tab deschis. Ctrl/Cmd click, click cu butonul din mijloc sau „Deschide într-un tab nou” pornesc întotdeauna unul nou.",
     "hostClickNewTab": "Deschide întotdeauna un tab nou",
+    "hostClickHostPage": "Deschide pagina gazdei, dacă un plugin oferă una",
     "hostClickFocusExisting": "Comută la tab-ul deschis",
     "hostClickFocusExistingDoubleNew": "Click pentru a comuta, dublu click pentru un tab nou",
     "openInNewTab": "Deschide într-un tab nou",
@@ -1023,6 +1027,8 @@
     "registrationSuccess": "Înregistrare reușită"
   },
   "placeholders": {
+    "username": "Numele tău de utilizator",
+    "newUsername": "Alege un nume de utilizator",
     "keyPassword": "parola cheii",
     "pastePrivateKey": "Lipiți cheia privată aici...",
     "enterPassword": "Introduceți parola"
@@ -1069,7 +1075,8 @@
         "actionNextTab": "Comută la fila următoare",
         "actionPreviousTab": "Comută la fila anterioară",
         "actionOpenCommandPalette": "Deschide căutarea rapidă",
-        "actionReconnectSession": "Reconectează sesiunea curentă"
+        "actionReconnectSession": "Reconectează sesiunea curentă",
+        "actionToggleSidebar": "Comută bara laterală"
       },
       "userProfile": {
         "preset_simple": "Simplă",
@@ -1231,6 +1238,18 @@
         "title": "Trimite alerte",
         "consequence": "Către tine sau către alți utilizatori, prin canalele configurate de aceștia."
       },
+      "operations:provide": {
+        "title": "Oferă acțiuni",
+        "consequence": "Acțiunile sale pot fi executate din Automatizări, linia de comandă, aplicația mobilă și alte locații, de către persoanele autorizate să le folosească."
+      },
+      "operations:invoke": {
+        "title": "Execută acțiuni ale altor plugin-uri",
+        "consequence": "Acționează în numele utilizatorului autentificat pentru acțiunile listate în manifestul său. Regulile de aprobare se aplică în continuare."
+      },
+      "operations:approve": {
+        "title": "Stabilește ce necesită aprobare",
+        "consequence": "Poate permite ca acțiunile să se execute fără aprobare sau le poate bloca, pentru fiecare utilizator."
+      },
       "notify:hub": {
         "title": "Primește fiecare alertă",
         "consequence": "Stochează și livrează alertele trimise de toate plugin-urile, inclusiv conținutul acestora."
@@ -1254,6 +1273,10 @@
       "hosts:lock": {
         "title": "Gestionează gazdele ca doar pentru citire",
         "consequence": "Gazdele pe care le gestionează nu pot fi editate, șterse sau redistribuite de nimeni altcineva."
+      },
+      "hosts:connect-policy": {
+        "title": "Stabilește cine se poate conecta",
+        "consequence": "Poate bloca sau permite fiecare conexiune SSH și desktop la distanță către orice gazdă."
       },
       "desktop:window": {
         "title": "Deschide ferestre desktop",
@@ -1705,6 +1728,12 @@
       "title": "Coloane",
       "auto": "Automat",
       "count": "{{count}} coloane"
+    },
+    "pager": {
+      "previous": "Anterior",
+      "next": "Următor",
+      "page": "Pagina {{page}}",
+      "pageOf": "Pagina {{page}} din {{pages}}"
     }
   },
   "fields": {
@@ -1726,5 +1755,29 @@
       "admin": "Administrator",
       "user": "Utilizator"
     }
+  },
+  "tileGrid": {
+    "empty": "Încă nu există plăcuțe. Adaugă unele din listă.",
+    "move": "Trage pentru a muta",
+    "moveTile": "Mută {{tile}}",
+    "settings": "Setări {{tile}}",
+    "remove": "Elimină {{tile}}",
+    "width": "Lățime",
+    "height": "Înălțime",
+    "addTiles": "Adaugă plăcuțe",
+    "closePicker": "Închide",
+    "search": "Caută plăcuțe",
+    "noMatches": "Niciun rezultat.",
+    "kind": {
+      "all": "Toate",
+      "card": "Carduri",
+      "chart": "Grafice",
+      "signal": "Stare",
+      "action": "Acțiuni",
+      "resource": "Liste",
+      "session": "Sesiuni"
+    },
+    "reset": "Resetează",
+    "done": "Gata"
   }
 }

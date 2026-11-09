@@ -131,6 +131,8 @@
     "updateLinkLabel": "Aggiornamento disponibile. Apri le note di rilascio su GitHub"
   },
   "common": {
+    "showPassword": "Mostra password",
+    "hidePassword": "Nascondi password",
     "scrollTabsLeft": "Sposta le schede a sinistra",
     "scrollTabsRight": "Sposta le schede a destra",
     "close": "Chiudi",
@@ -499,6 +501,7 @@
     "deleteSelected": "Elimina",
     "exitSelection": "Esci dalla selezione",
     "collapseBtn": "Comprimi",
+    "importExportBtn": "Importa / Esporta",
     "hostStatusesRefreshed": "Stati degli host aggiornati",
     "failedToRefreshHosts": "Impossibile aggiornare gli host",
     "movedHostTo": "Spostato {{host}} in \"{{folder}}\"",
@@ -615,6 +618,7 @@
     "hostClickBehavior": "Cliccando su un host",
     "hostClickBehaviorDesc": "Cosa succede quando clicchi su un host che ha già una scheda aperta. Ctrl/Cmd + clic, clic centrale o \"Apri in nuova scheda\" avviano sempre una nuova scheda.",
     "hostClickNewTab": "Apri sempre una nuova scheda",
+    "hostClickHostPage": "Apri la pagina dell'host, se un plugin ne offre una",
     "hostClickFocusExisting": "Passa alla scheda aperta",
     "hostClickFocusExistingDoubleNew": "Clic per passare, doppio clic per una nuova scheda",
     "openInNewTab": "Apri in nuova scheda",
@@ -1023,6 +1027,8 @@
     "registrationSuccess": "Registrazione completata con successo"
   },
   "placeholders": {
+    "username": "Il tuo nome utente",
+    "newUsername": "Scegli un nome utente",
     "keyPassword": "password della chiave",
     "pastePrivateKey": "Incolla qui la tua chiave privata...",
     "enterPassword": "Inserisci la tua password"
@@ -1069,7 +1075,8 @@
         "actionNextTab": "Passa alla scheda successiva",
         "actionPreviousTab": "Passa alla scheda precedente",
         "actionOpenCommandPalette": "Apri ricerca rapida",
-        "actionReconnectSession": "Riconnetti la sessione corrente"
+        "actionReconnectSession": "Riconnetti la sessione corrente",
+        "actionToggleSidebar": "Attiva/disattiva barra laterale"
       },
       "userProfile": {
         "preset_simple": "Semplice",
@@ -1231,6 +1238,18 @@
         "title": "Invia avvisi",
         "consequence": "A te o ad altri utenti, e attraverso i canali da loro configurati."
       },
+      "operations:provide": {
+        "title": "Offri azioni",
+        "consequence": "Le sue azioni possono essere eseguite da Automazioni, dalla CLI, dall'app mobile e da altri luoghi, da parte degli utenti autorizzati."
+      },
+      "operations:invoke": {
+        "title": "Esegui azioni di altri plugin",
+        "consequence": "Agisce per l'utente autenticato sulle azioni elencate nel suo manifesto. Le regole di approvazione rimangono valide."
+      },
+      "operations:approve": {
+        "title": "Decidi cosa richiede approvazione",
+        "consequence": "Può consentire l'esecuzione delle azioni senza approvazione o bloccarle, per ogni utente."
+      },
       "notify:hub": {
         "title": "Ricevi ogni avviso",
         "consequence": "Memorizza e distribuisce gli avvisi inviati da tutti i plugin, inclusi i loro contenuti."
@@ -1254,6 +1273,10 @@
       "hosts:lock": {
         "title": "Gestisci gli host in sola lettura",
         "consequence": "Gli host gestiti non possono essere modificati, eliminati o condivisi nuovamente da nessun altro."
+      },
+      "hosts:connect-policy": {
+        "title": "Decidi chi può connettersi",
+        "consequence": "Può bloccare o consentire ogni connessione SSH e desktop remoto a qualsiasi host."
       },
       "desktop:window": {
         "title": "Apri finestre desktop",
@@ -1705,6 +1728,12 @@
       "title": "Colonne",
       "auto": "Automatico",
       "count": "{{count}} colonne"
+    },
+    "pager": {
+      "previous": "Precedente",
+      "next": "Successivo",
+      "page": "Pagina {{page}}",
+      "pageOf": "Pagina {{page}} di {{pages}}"
     }
   },
   "fields": {
@@ -1726,5 +1755,29 @@
       "admin": "Amministratore",
       "user": "Utente"
     }
+  },
+  "tileGrid": {
+    "empty": "Nessun tile ancora. Aggiungine alcuni dall'elenco.",
+    "move": "Trascina per spostare",
+    "moveTile": "Sposta {{tile}}",
+    "settings": "Impostazioni di {{tile}}",
+    "remove": "Rimuovi {{tile}}",
+    "width": "Larghezza",
+    "height": "Altezza",
+    "addTiles": "Aggiungi tile",
+    "closePicker": "Chiudi",
+    "search": "Cerca tile",
+    "noMatches": "Nessun risultato.",
+    "kind": {
+      "all": "Tutti",
+      "card": "Schede",
+      "chart": "Grafici",
+      "signal": "Stato",
+      "action": "Azioni",
+      "resource": "Elenchi",
+      "session": "Sessioni"
+    },
+    "reset": "Reimposta",
+    "done": "Fatto"
   }
 }

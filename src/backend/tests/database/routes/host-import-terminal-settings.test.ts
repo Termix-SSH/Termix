@@ -106,6 +106,7 @@ it.each([false, true])(
     expect(mocks.applyPluginSettings).toHaveBeenCalledWith(
       overwrite ? 19 : 71,
       expect.objectContaining({ pluginSettings: host.pluginSettings }),
+      "user-1",
     );
     // The 2.8 terminalConfig reaches the plugin, never a host column.
     expect(saved).not.toHaveProperty("terminalConfig");

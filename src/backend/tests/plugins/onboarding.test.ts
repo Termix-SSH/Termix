@@ -197,6 +197,13 @@ describe("describeOnboardingPlugins", () => {
     });
     expect(byId.extra).toMatchObject({ recommended: true, consent: true });
   });
+
+  it("leaves out the default look", async () => {
+    writeIndex({ extra: { defaultLook: true } });
+    await chain();
+    const list = await onboarding.describeOnboardingPlugins();
+    expect(list.plugins.map((p) => p.id).sort()).toEqual(["addon", "base"]);
+  });
 });
 
 describe("applyOnboardingChoices", () => {
@@ -261,6 +268,22 @@ describe("applyOnboardingChoices", () => {
     expect(result.disabled).toEqual(["addon", "base"]);
     expect(loader.get("extra")?.state).toBe("active");
     expect(db.settings.get(onboarding.PLUGIN_SETUP_PENDING_KEY)).toBe("1");
+  });
+
+  it("never turns off or removes the default look", async () => {
+    writeIndex({ extra: { defaultLook: true } });
+    const loader = await chain();
+    const result = await onboarding.applyOnboardingChoices({
+      extra: "remove",
+      base: "remove",
+      addon: "remove",
+    });
+    expect(result.failed).toEqual([]);
+    expect(result.removed).toEqual(["addon", "base"]);
+    expect(loader.get("extra")?.state).toBe("active");
+
+    await onboarding.applyOnboardingChoices({ extra: "disabled" });
+    expect(loader.get("extra")?.state).toBe("active");
   });
 
   it("ignores ids that are not installed", async () => {

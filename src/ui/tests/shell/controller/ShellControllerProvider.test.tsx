@@ -88,6 +88,47 @@ describe("ShellControllerProvider", () => {
     expect(shell!.tabs.activeId).toBe("dashboard");
   });
 
+  it("saves each host tab with the label it shows", async () => {
+    registerTabType({ id: "shell-x", component: () => null, persistent: true });
+    mount();
+    await waitFor(() => expect(shell).not.toBeNull());
+    const host = { id: "4", name: "web" } as never;
+    act(() => {
+      shell!.tabs.open(host, "shell-x", undefined, { forceNewTab: true });
+    });
+    act(() => {
+      shell!.tabs.open(host, "shell-x", undefined, { forceNewTab: true });
+    });
+    act(() => {
+      shell!.tabs.open(host, "shell-x", undefined, {
+        forceNewTab: true,
+        label: "Logs",
+      });
+    });
+    const saved = api.addOpenTab.mock.calls.map(
+      (call) => (call as unknown as [{ label: string }])[0].label,
+    );
+    expect(saved).toEqual(["web", "web (2)", "Logs"]);
+    expect(shell!.tabs.list.map((tab) => tab.label)).toEqual([
+      expect.any(String),
+      "web (1)",
+      "web (2)",
+      "Logs",
+    ]);
+  });
+
+  it("names a singleton tab with the label a plugin passes", async () => {
+    registerTabType({ id: "ops", component: () => null, singleton: true });
+    mount();
+    await waitFor(() => expect(shell).not.toBeNull());
+    act(() => {
+      shell!.callbacks.openSingletonTab("ops", { label: "Operations" });
+    });
+    expect(shell!.tabs.list.find((tab) => tab.id === "ops")?.label).toBe(
+      "Operations",
+    );
+  });
+
   it("opens the settings singleton once and passes the section on", async () => {
     mount();
     await waitFor(() => expect(shell).not.toBeNull());

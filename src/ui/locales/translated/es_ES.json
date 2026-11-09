@@ -131,6 +131,8 @@
     "updateLinkLabel": "Hay una actualización disponible. Abre las notas de la versión en GitHub"
   },
   "common": {
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña",
     "scrollTabsLeft": "Desplazar pestañas a la izquierda",
     "scrollTabsRight": "Desplazar pestañas a la derecha",
     "close": "Cerrar",
@@ -499,6 +501,7 @@
     "deleteSelected": "Eliminar",
     "exitSelection": "Salir de la selección",
     "collapseBtn": "Contraer",
+    "importExportBtn": "Importar / Exportar",
     "hostStatusesRefreshed": "Estados de los hosts actualizados",
     "failedToRefreshHosts": "Error al actualizar los hosts",
     "movedHostTo": "Se ha movido {{host}} a \"{{folder}}\"",
@@ -615,6 +618,7 @@
     "hostClickBehavior": "Al hacer clic en un host",
     "hostClickBehaviorDesc": "Qué ocurre al hacer clic en un host que ya tiene una pestaña abierta. Ctrl/Cmd + clic, clic central o «Abrir en nueva pestaña» siempre inician una nueva.",
     "hostClickNewTab": "Abrir siempre una nueva pestaña",
+    "hostClickHostPage": "Abre la página del host, si un complemento la ofrece",
     "hostClickFocusExisting": "Cambiar a la pestaña abierta",
     "hostClickFocusExistingDoubleNew": "Clic para cambiar, doble clic para nueva pestaña",
     "openInNewTab": "Abrir en nueva pestaña",
@@ -1023,6 +1027,8 @@
     "registrationSuccess": "Registro correcto"
   },
   "placeholders": {
+    "username": "Tu nombre de usuario",
+    "newUsername": "Elige un nombre de usuario",
     "keyPassword": "contraseña de la clave",
     "pastePrivateKey": "Pegue su clave privada aquí...",
     "enterPassword": "Introduzca su contraseña"
@@ -1069,7 +1075,8 @@
         "actionNextTab": "Cambiar a la siguiente pestaña",
         "actionPreviousTab": "Cambiar a la pestaña anterior",
         "actionOpenCommandPalette": "Abrir búsqueda rápida",
-        "actionReconnectSession": "Reconectar la sesión actual"
+        "actionReconnectSession": "Reconectar la sesión actual",
+        "actionToggleSidebar": "Alternar barra lateral"
       },
       "userProfile": {
         "preset_simple": "Simple",
@@ -1231,6 +1238,18 @@
         "title": "Enviar alertas",
         "consequence": "A ti u otros usuarios, y a través de los canales que hayan configurado."
       },
+      "operations:provide": {
+        "title": "Ofrecer acciones",
+        "consequence": "Sus acciones se pueden ejecutar desde Automatizaciones, la CLI, la app móvil y otros lugares, por los usuarios autorizados para usarlas."
+      },
+      "operations:invoke": {
+        "title": "Ejecutar acciones de otros complementos",
+        "consequence": "Actúa en nombre del usuario conectado sobre las acciones que enumera su manifiesto. Las reglas de aprobación siguen aplicándose."
+      },
+      "operations:approve": {
+        "title": "Decidir qué requiere aprobación",
+        "consequence": "Puede permitir que las acciones se ejecuten sin aprobación o bloquearlas, para cada usuario."
+      },
       "notify:hub": {
         "title": "Recibir todas las alertas",
         "consequence": "Almacena y entrega las alertas que envían todos los complementos, incluido su contenido."
@@ -1254,6 +1273,10 @@
       "hosts:lock": {
         "title": "Gestionar hosts como de solo lectura",
         "consequence": "Los hosts que gestiona no pueden ser editados, eliminados ni compartidos por nadie más."
+      },
+      "hosts:connect-policy": {
+        "title": "Decidir quién puede conectarse",
+        "consequence": "Puede bloquear o permitir cualquier conexión SSH y de escritorio remoto a cualquier host."
       },
       "desktop:window": {
         "title": "Abrir ventanas de escritorio",
@@ -1705,6 +1728,12 @@
       "title": "Columnas",
       "auto": "Automático",
       "count": "{{count}} de ancho"
+    },
+    "pager": {
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "page": "Página {{page}}",
+      "pageOf": "Página {{page}} de {{pages}}"
     }
   },
   "fields": {
@@ -1726,5 +1755,29 @@
       "admin": "Administrador",
       "user": "Usuario"
     }
+  },
+  "tileGrid": {
+    "empty": "Aún no hay widgets. Añade algunos desde la lista.",
+    "move": "Arrastra para mover",
+    "moveTile": "Mover {{tile}}",
+    "settings": "Configuración de {{tile}}",
+    "remove": "Eliminar {{tile}}",
+    "width": "Ancho",
+    "height": "Alto",
+    "addTiles": "Añadir widgets",
+    "closePicker": "Cerrar",
+    "search": "Buscar widgets",
+    "noMatches": "No hay coincidencias.",
+    "kind": {
+      "all": "Todos",
+      "card": "Tarjetas",
+      "chart": "Gráficos",
+      "signal": "Estado",
+      "action": "Acciones",
+      "resource": "Listas",
+      "session": "Sesiones"
+    },
+    "reset": "Restablecer",
+    "done": "Listo"
   }
 }

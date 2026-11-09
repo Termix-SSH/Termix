@@ -131,6 +131,8 @@
     "updateLinkLabel": "Opdatering beskikbaar. Open die vrygawenoetes op GitHub"
   },
   "common": {
+    "showPassword": "Wys wagwoord",
+    "hidePassword": "Versteek wagwoord",
     "scrollTabsLeft": "Skakel oortjies links",
     "scrollTabsRight": "Skakel oortjies regs",
     "close": "Maak toe",
@@ -495,6 +497,7 @@
     "deleteSelected": "Vee uit",
     "exitSelection": "Verlaat seleksie",
     "collapseBtn": "Vou in",
+    "importExportBtn": "Voer in / Voer uit",
     "hostStatusesRefreshed": "Gasheer-statusse opgedateer",
     "failedToRefreshHosts": "Kon nie gasheer opdateer nie",
     "movedHostTo": "Het {{host}} na \"{{folder}}\" geskuif",
@@ -609,6 +612,7 @@
     "hostClickBehavior": "Klik op 'n gasheer",
     "hostClickBehaviorDesc": "Wat gebeur wanneer jy op 'n gasheer klik wat reeds 'n oop tab het. Ctrl/Cmd-klik, middel-klik, of \"Maak oop in nuwe tab\" begin altyd 'n nuwe een.",
     "hostClickNewTab": "Maak altyd 'n nuwe tab oop",
+    "hostClickHostPage": "Open die gasheerblad, as 'n invoegprogram een bied",
     "hostClickFocusExisting": "Skakel oor na die oop tab",
     "hostClickFocusExistingDoubleNew": "Klik om te skakel, dubbelklik vir 'n nuwe tab",
     "openInNewTab": "Maak oop in nuwe tab",
@@ -1010,6 +1014,8 @@
     "registrationSuccess": "Registrasie suksesvol"
   },
   "placeholders": {
+    "username": "Jou gebruikersnaam",
+    "newUsername": "Kies 'n gebruikersnaam",
     "keyPassword": "sleutelwagwoord",
     "pastePrivateKey": "Plak jou privaat sleutel hier...",
     "enterPassword": "Voer jou wagwoord in"
@@ -1052,7 +1058,8 @@
         "actionNextTab": "Wissel na volgende tab",
         "actionPreviousTab": "Wissel na vorige tab",
         "actionOpenCommandPalette": "Maak vinnige soek oop",
-        "actionReconnectSession": "Herstel huidige sessie"
+        "actionReconnectSession": "Herstel huidige sessie",
+        "actionToggleSidebar": "Wissel sybalk"
       },
       "userProfile": {
         "preset_simple": "Eenvoudig",
@@ -1214,6 +1221,18 @@
         "title": "Stuur waarskuwings",
         "consequence": "Na jou of ander gebruikers, en deur die kanale wat hulle opgestel het."
       },
+      "operations:provide": {
+        "title": "Bied aksies aan",
+        "consequence": "Sy aksies kan uitgevoer word outomaties, vanaf die CLI, die foon-app en ander plekke, deur mense wat toestemming het om dit te gebruik."
+      },
+      "operations:invoke": {
+        "title": "Voer aksies van ander invoegprogramme uit",
+        "consequence": "Handel namens die aangemelde gebruiker op die aksies wat in sy manifest gelys word. Goedkeuringsreëls geld steeds."
+      },
+      "operations:approve": {
+        "title": "Bepaal wat goedkeuring benodig",
+        "consequence": "Kan aksies laat uitvoer sonder goedkeuring, of dit blokkeer, vir elke gebruiker."
+      },
       "notify:hub": {
         "title": "Ontvang elke waarskuwing",
         "consequence": "Bewaar en lewer die waarskuwings wat alle plugins stuur, insluitend hul inhoud."
@@ -1237,6 +1256,10 @@
       "hosts:lock": {
         "title": "Bestuur gasheer as slegs-lees",
         "consequence": "Gasheer wat dit bestuur, kan nie deur iemand anders redigeer, verwyder of hergedeel word nie."
+      },
+      "hosts:connect-policy": {
+        "title": "Bepaal wie kan verbind",
+        "consequence": "Kan elke SSH- en afstandsbureaubladverbinding na enige gasheer blokkeer of toelaat."
       },
       "desktop:window": {
         "title": "Maak burebladvensters oop",
@@ -1663,6 +1686,12 @@
       "title": "Kolomme",
       "auto": "Outo",
       "count": "{{count}} breed"
+    },
+    "pager": {
+      "previous": "Vorige",
+      "next": "Volgende",
+      "page": "Bladsy {{page}}",
+      "pageOf": "Bladsy {{page}} van {{pages}}"
     }
   },
   "fields": {
@@ -1681,5 +1710,29 @@
       "admin": "Admin",
       "user": "Gebruiker"
     }
+  },
+  "tileGrid": {
+    "empty": "Nog geen teëls nie. Voeg 'n paar by vanaf die lys.",
+    "move": "Sleep om te beweeg",
+    "moveTile": "Beweeg {{tile}}",
+    "settings": "{{tile}}-instellings",
+    "remove": "Verwyder {{tile}}",
+    "width": "Wydte",
+    "height": "Hoogte",
+    "addTiles": "Voeg teëls by",
+    "closePicker": "Maak toe",
+    "search": "Soek teëls",
+    "noMatches": "Niets pas nie.",
+    "kind": {
+      "all": "Almal",
+      "card": "Kaarte",
+      "chart": "Grafieke",
+      "signal": "Status",
+      "action": "Aksies",
+      "resource": "Lyste",
+      "session": "Sessies"
+    },
+    "reset": "Stel terug",
+    "done": "Klaar"
   }
 }

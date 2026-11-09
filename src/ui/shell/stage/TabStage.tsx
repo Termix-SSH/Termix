@@ -65,6 +65,7 @@ export function TabStage({ className }: { className?: string }) {
       elements) by TabPortals. Hidden while a split is active. */}
       <div
         ref={store.setNormalView}
+        data-slot="tab-stage"
         className="absolute inset-0"
         style={{ display: activeSplit ? "none" : undefined }}
       />

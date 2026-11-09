@@ -547,6 +547,20 @@
       "when": 1793304928399,
       "tag": "0077_shared_folder_auth_overrides",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1793765382955,
+      "tag": "0078_clean_living_mummy",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1794025748495,
+      "tag": "0079_glamorous_salo",
+      "breakpoints": true
     }
   ]
 }

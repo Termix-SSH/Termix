@@ -1,0 +1,1 @@
+ALTER TABLE `ssh_credentials` ADD `local_only` integer DEFAULT false NOT NULL;

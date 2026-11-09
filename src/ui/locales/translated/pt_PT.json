@@ -131,6 +131,8 @@
     "updateLinkLabel": "Atualização disponível. Abrir notas de lançamento no GitHub"
   },
   "common": {
+    "showPassword": "Mostrar palavra-passe",
+    "hidePassword": "Ocultar palavra-passe",
     "scrollTabsLeft": "Deslizar separadores para a esquerda",
     "scrollTabsRight": "Deslizar separadores para a direita",
     "close": "Fechar",
@@ -499,6 +501,7 @@
     "deleteSelected": "Eliminar",
     "exitSelection": "Sair da seleção",
     "collapseBtn": "Recolher",
+    "importExportBtn": "Importar / Exportar",
     "hostStatusesRefreshed": "Estados dos hosts atualizados",
     "failedToRefreshHosts": "Falha ao atualizar hosts",
     "movedHostTo": "Movido {{host}} para \"{{folder}}\"",
@@ -615,6 +618,7 @@
     "hostClickBehavior": "Ao clicar num host",
     "hostClickBehaviorDesc": "O que acontece ao clicar num host que já tem uma aba aberta. Ctrl/Cmd + clique, clique do meio ou \"Abrir em nova aba\" iniciam sempre uma nova.",
     "hostClickNewTab": "Abrir sempre uma nova aba",
+    "hostClickHostPage": "Abrir a página do host, quando um plugin a disponibilizar",
     "hostClickFocusExisting": "Mudar para a aba aberta",
     "hostClickFocusExistingDoubleNew": "Clique para mudar, duplo clique para nova aba",
     "openInNewTab": "Abrir em nova aba",
@@ -1023,6 +1027,8 @@
     "registrationSuccess": "Registo bem-sucedido"
   },
   "placeholders": {
+    "username": "O seu nome de utilizador",
+    "newUsername": "Escolha um nome de utilizador",
     "keyPassword": "palavra-passe da chave",
     "pastePrivateKey": "Cole a sua chave privada aqui...",
     "enterPassword": "Introduza a sua palavra-passe"
@@ -1069,7 +1075,8 @@
         "actionNextTab": "Mudar para a próxima separador",
         "actionPreviousTab": "Mudar para o separador anterior",
         "actionOpenCommandPalette": "Abrir pesquisa rápida",
-        "actionReconnectSession": "Reconectar sessão atual"
+        "actionReconnectSession": "Reconectar sessão atual",
+        "actionToggleSidebar": "Alternar barra lateral"
       },
       "userProfile": {
         "preset_simple": "Simples",
@@ -1231,6 +1238,18 @@
         "title": "Enviar alertas",
         "consequence": "Para si ou para outros utilizadores, e através dos canais que configuraram."
       },
+      "operations:provide": {
+        "title": "Oferecer ações",
+        "consequence": "As suas ações podem ser executadas a partir de Automações, da CLI, da aplicação móvel e noutros locais, por pessoas autorizadas a utilizá-las."
+      },
+      "operations:invoke": {
+        "title": "Executar ações de outros plugins",
+        "consequence": "Atua em nome do utilizador autenticado nas ações listadas no seu manifesto. As regras de aprovação continuam a aplicar-se."
+      },
+      "operations:approve": {
+        "title": "Decidir o que necessita de aprovação",
+        "consequence": "Pode permitir que ações sejam executadas sem aprovação ou bloqueá-las, para todos os utilizadores."
+      },
       "notify:hub": {
         "title": "Receber todos os alertas",
         "consequence": "Armazena e entrega os alertas enviados por todos os plugins, incluindo o seu conteúdo."
@@ -1254,6 +1273,10 @@
       "hosts:lock": {
         "title": "Gerir hosts como apenas leitura",
         "consequence": "Os hosts que gere não podem ser editados, eliminados ou partilhados novamente por ninguém."
+      },
+      "hosts:connect-policy": {
+        "title": "Decidir quem pode ligar",
+        "consequence": "Pode bloquear ou permitir todas as ligações SSH e de ambiente de trabalho remoto a qualquer host."
       },
       "desktop:window": {
         "title": "Abrir janelas de ambiente de trabalho",
@@ -1705,6 +1728,12 @@
       "title": "Colunas",
       "auto": "Automático",
       "count": "{{count}} de largura"
+    },
+    "pager": {
+      "previous": "Anterior",
+      "next": "Seguinte",
+      "page": "Página {{page}}",
+      "pageOf": "Página {{page}} de {{pages}}"
     }
   },
   "fields": {
@@ -1726,5 +1755,29 @@
       "admin": "Administrador",
       "user": "Utilizador"
     }
+  },
+  "tileGrid": {
+    "empty": "Ainda não há widgets. Adicione alguns a partir da lista.",
+    "move": "Arrastar para mover",
+    "moveTile": "Mover {{tile}}",
+    "settings": "Definições de {{tile}}",
+    "remove": "Remover {{tile}}",
+    "width": "Largura",
+    "height": "Altura",
+    "addTiles": "Adicionar widgets",
+    "closePicker": "Fechar",
+    "search": "Pesquisar widgets",
+    "noMatches": "Nenhum resultado.",
+    "kind": {
+      "all": "Todos",
+      "card": "Cartões",
+      "chart": "Gráficos",
+      "signal": "Estado",
+      "action": "Ações",
+      "resource": "Listas",
+      "session": "Sessões"
+    },
+    "reset": "Repor",
+    "done": "Concluído"
   }
 }

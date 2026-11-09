@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -10,6 +10,7 @@ import {
   fetchArtifact,
   extractArtifact,
   pinsFromIndex,
+  parsePluginTiers,
   buildBundledIndex,
   findLocalPluginBuilds,
   isLocalBuildStale,
@@ -221,8 +222,63 @@ describe("buildBundledIndex", () => {
     ];
     expect(buildBundledIndex(plugins, ["a", "c", "local"])).toEqual({
       version: 1,
+      profile: "standard",
       plugins: { a: { onboarding: { recommended: true, consent: false } } },
+      catalog: {
+        a: { tier: "full" },
+        b: { tier: "full" },
+        c: { tier: "full" },
+      },
     });
+  });
+
+  it("lists every pin with its tier and version", () => {
+    const plugins = [
+      {
+        id: "a",
+        tier: "standard",
+        url: "https://example.com/v1.2.0/a-1.2.0.tmxplug",
+        onboarding: null,
+      },
+      {
+        id: "b",
+        tier: "minimal",
+        path: "x/b-2.0.0-beta.1.tmxplug",
+        onboarding: null,
+      },
+    ];
+    expect(buildBundledIndex(plugins, [], "minimal").catalog).toEqual({
+      a: { tier: "standard", version: "1.2.0" },
+      b: { tier: "minimal", version: "2.0.0-beta.1" },
+    });
+  });
+});
+
+describe("parsePluginTiers", () => {
+  it("reads tiers and onboarding", () => {
+    expect(
+      parsePluginTiers({
+        plugins: {
+          a: { tier: "full" },
+          b: { tier: "standard", onboarding: { recommended: true } },
+        },
+      }),
+    ).toEqual({
+      tiers: {
+        a: { tier: "full" },
+        b: {
+          tier: "standard",
+          onboarding: { recommended: true, consent: false },
+        },
+      },
+      problems: [],
+    });
+  });
+
+  it("reports a bad tier", () => {
+    expect(
+      parsePluginTiers({ plugins: { a: { tier: "huge" } } }).problems,
+    ).toEqual(["a tier must be one of minimal, standard, full"]);
   });
 });
 
@@ -276,6 +332,26 @@ describe("pinsFromIndex", () => {
     ]);
     expect(pins[0].tier).toBe("standard");
     expect(pins[1].tier).toBe("full");
+  });
+
+  it("takes tier and onboarding for a new plugin from the tier map", () => {
+    const defaults = {
+      beta: {
+        tier: "standard",
+        onboarding: { recommended: true, consent: false },
+      },
+      alpha: { tier: "minimal" },
+    };
+    const pins = pinsFromIndex(
+      index,
+      null,
+      [{ id: "alpha", tier: "full" }],
+      null,
+      defaults,
+    );
+    expect(pins[0].tier).toBe("full");
+    expect(pins[1].tier).toBe("standard");
+    expect(pins[1].onboarding).toEqual({ recommended: true, consent: false });
   });
 
   it("skips releases whose engine.termix excludes the core version", () => {
@@ -444,6 +520,27 @@ describe("rebuilding local plugins", () => {
     expect(isLocalBuildStale(root)).toBe(false);
   });
 
+  it("survives a build replacing dist during the scan", () => {
+    const root = repo(tempDir(), "Plugin-A", "a");
+    const gone = path.join(root, "dist", "migrations", "postgres");
+    fs.mkdirSync(gone, { recursive: true });
+    fs.writeFileSync(path.join(root, "manifest.json"), "{}");
+    const realStat = fs.statSync;
+    const spy = vi.spyOn(fs, "statSync").mockImplementation(((
+      target: string,
+    ) => {
+      if (target === gone) {
+        throw Object.assign(new Error("gone"), { code: "ENOENT" });
+      }
+      return realStat(target);
+    }) as typeof fs.statSync);
+    try {
+      expect(() => isLocalBuildStale(root)).not.toThrow();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("builds with this checkout's SDK CLI, not the plugin's own", () => {
     const [command, args] = localSdkBuildCommand();
     expect(command).toBe(process.execPath);
@@ -520,7 +617,7 @@ describe("default look", () => {
         ],
         ["look", "plain"],
       ),
-    ).toEqual({ version: 1, plugins: { look: { defaultLook: true } } });
+    ).toMatchObject({ version: 1, plugins: { look: { defaultLook: true } } });
 
     const index = {
       plugins: [
@@ -535,6 +632,38 @@ describe("default look", () => {
     expect(
       pinsFromIndex(index, null, [{ id: "look", defaultLook: true }])[0],
     ).toMatchObject({ id: "look", defaultLook: true });
+  });
+
+  it("leaves out new plugins with no usable release when pinning all", () => {
+    const stable = {
+      version: "1.0.0",
+      url: "https://x/a.tmxplug",
+      sha256: SHA,
+    };
+    const index = {
+      plugins: [
+        { id: "ready", versions: [stable] },
+        {
+          id: "beta-only",
+          versions: [],
+          prereleases: [{ ...stable, version: "1.0.0-beta.1" }],
+        },
+        {
+          id: "too-new",
+          versions: [],
+          gated: [{ ...stable, engine: { termix: ">=99.0.0" } }],
+        },
+      ],
+    };
+    expect(
+      pinsFromIndex(index, null, [], "26.11.1").map(
+        (pin: { id: string }) => pin.id,
+      ),
+    ).toEqual(["ready"]);
+    expect(() =>
+      pinsFromIndex(index, null, [{ id: "beta-only" }], "26.11.1"),
+    ).toThrow(/beta-only/);
+    expect(() => pinsFromIndex(index, ["beta-only"])).toThrow(/beta-only/);
   });
 
   it("copies a local build's theme files", () => {

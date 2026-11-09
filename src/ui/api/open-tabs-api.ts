@@ -71,7 +71,17 @@ export async function patchOpenTab(
   >,
 ): Promise<void> {
   if (!hasPersistableHostId(updates)) return;
-  await authApi.patch(`/open-tabs/${instanceId}`, updates);
+  try {
+    // Embedded tabs, like a terminal inside a host page, are never saved, so a
+    // 404 here just means there is nothing to update.
+    await authApi.patch(`/open-tabs/${instanceId}`, updates, {
+      __silentRetry: true,
+    } as Record<string, unknown>);
+  } catch (error) {
+    if ((error as { response?: { status?: number } }).response?.status === 404)
+      return;
+    throw error;
+  }
 }
 
 export async function addOpenTab(tab: OpenTabUpsertPayload): Promise<void> {

@@ -8,6 +8,11 @@
  * needs no core change.
  */
 
+import type { AuthOverrideProtocol } from "../../../types/auth-protocols.js";
+import {
+  CredentialStorageError,
+  credentialStorageAllowed,
+} from "../credential-storage.js";
 import { createCurrentHostProtocolAuthRepository } from "../../database/repositories/factory.js";
 import {
   decryptProtocolLogin,
@@ -175,6 +180,18 @@ export function readProtocolAuthPayload(
   return patch.size ? patch : null;
 }
 
+/** Whether a patch holds a password or secret field to save. */
+export function protocolPatchHasSecret(patch: ProtocolAuthPatch): boolean {
+  const filled = (value: unknown) => typeof value === "string" && !!value;
+  for (const [protocolId, input] of patch) {
+    if (!input) continue;
+    if (filled(input.password)) return true;
+    const secrets = secretFieldKeys(findHostProtocol(protocolId));
+    if (secrets.some((key) => filled(input.fields?.[key]))) return true;
+  }
+  return false;
+}
+
 /** Folds a client's input over the stored login. Pure. */
 export function mergeProtocolLogin(
   protocolId: string,
@@ -271,6 +288,9 @@ export async function planProtocolAuthWrite(
   patch: ProtocolAuthPatch,
   options: { isOwner: boolean },
 ): Promise<PlannedProtocolAuth> {
+  if (!credentialStorageAllowed() && protocolPatchHasSecret(patch)) {
+    throw new CredentialStorageError();
+  }
   const repository = createCurrentHostProtocolAuthRepository();
   const dek = ownerKey(ownerId);
 
@@ -545,6 +565,18 @@ export async function resolveOwnerProtocolLogin(
     // Only the login itself comes from a stored credential, never the fields.
     if (credential?.username) username = credential.username;
     if (credential?.password) password = credential.password;
+  }
+
+  // A login kept on this desktop beats the one synced for a shared host.
+  const { resolveDeviceLogin } = await import("../device-auth.js");
+  const deviceLogin = await resolveDeviceLogin(
+    host,
+    ownerId,
+    declared.id as AuthOverrideProtocol,
+  ).catch(() => null);
+  if (deviceLogin) {
+    username = deviceLogin.username || username;
+    password = deviceLogin.password || password;
   }
 
   const fallback = declared.hostLoginFallback ?? [];

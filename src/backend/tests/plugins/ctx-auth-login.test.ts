@@ -313,6 +313,62 @@ describe("the other ctx.auth helpers", () => {
     expect(await auth.countLinkedUsers("ldap:4")).toBe(1);
     expect(await auth.countLinkedUsers("3")).toBe(0);
   });
+
+  it("links an identity to an account and audits it", async () => {
+    const { auth } = setup();
+    await auth.identities.link("u-1", {
+      provider: "3",
+      subject: "bob",
+      email: "bob@example.com",
+    });
+    expect(await auth.identities.list("u-1")).toEqual([
+      { provider: "3", subject: "bob", email: "bob@example.com" },
+    ]);
+    expect(h.audits).toContain("auth_identity_linked");
+  });
+
+  it("never takes an identity from another account", async () => {
+    const { auth } = setup();
+    h.state.identities.push({
+      id: 1,
+      userId: "u-2",
+      providerId: "3",
+      subject: "bob",
+      email: null,
+    });
+    await expect(
+      auth.identities.link("u-1", { provider: "3", subject: "bob" }),
+    ).rejects.toMatchObject({ code: "identity_in_use" });
+    expect(h.state.identities[0].userId).toBe("u-2");
+  });
+
+  it("refuses a second identity from the same provider", async () => {
+    const { auth } = setup();
+    await auth.identities.link("u-1", { provider: "3", subject: "bob" });
+    await expect(
+      auth.identities.link("u-1", { provider: "3", subject: "other" }),
+    ).rejects.toMatchObject({ code: "provider_linked" });
+  });
+
+  it("will not unlink a user's last way to sign in", async () => {
+    const { auth } = setup();
+    h.state.users.set("sso-only", {
+      id: "sso-only",
+      username: "sso-only",
+      passwordHash: null,
+    } as never);
+    h.state.identities.push({
+      id: 1,
+      userId: "sso-only",
+      providerId: "3",
+      subject: "bob",
+      email: null,
+    });
+    await expect(auth.identities.unlink("sso-only", "3")).rejects.toMatchObject(
+      { code: "last_login" },
+    );
+    expect(h.state.identities).toHaveLength(1);
+  });
 });
 
 describe("a disabled plugin", () => {

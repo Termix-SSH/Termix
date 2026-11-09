@@ -14,7 +14,10 @@ import type {
   PluginSshHost,
 } from "@termix-ssh/plugin-sdk/backend";
 import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
-import { PluginSshInteractionError } from "@termix-ssh/plugin-sdk/backend";
+import {
+  LoginMethodError,
+  PluginSshInteractionError,
+} from "@termix-ssh/plugin-sdk/backend";
 import {
   assertCapability,
   capabilityRefused,
@@ -263,6 +266,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
         userId,
         purpose: purposeOf(options),
         profile: profileOf(options),
+        origin: pluginId,
         timeoutMs: options?.timeoutMs,
         prompt: options?.prompt,
         overrides: options?.overrides as Partial<MutableConnectConfig>,
@@ -291,10 +295,21 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
     }
   };
 
-  const poolKey = (pool: string, host: PluginSshHost) =>
-    `${pool}:${host.userId}:${host.ip}:${host.port}:${host.username}${
+  // Per plugin and acting user: a pooled connection skips auth, so a shared
+  // host's recipient must never reuse the owner's or another user's.
+  const keyFor = (pool: string, host: PluginSshHost, actor: string) =>
+    `${pool}:${pluginId}:${actor}:${host.userId}:${host.ip}:${host.port}:${host.username}${
       host.useSocks5 ? `:socks5:${host.socks5Host}:${host.socks5Port}` : ""
     }`;
+  const poolKey = (pool: string, host: PluginSshHost) => {
+    let actor = "";
+    try {
+      actor = userFor(host);
+    } catch {
+      // no acting user, the key still names the plugin and host
+    }
+    return keyFor(pool, host, actor);
+  };
 
   return {
     transports: {
@@ -369,7 +384,37 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
         userId,
       );
       remember(resolved, resolved, userId);
-      const key = poolKey(options.pool, resolved as PluginSshHost);
+      // A reused connection skips the connect pipeline, so ask the connect
+      // policy on every use or an expired grant would keep working.
+      const { assertConnectAllowed, ConnectPolicyError } =
+        await import("../hosts/connect-policy.js");
+      try {
+        await assertConnectAllowed({
+          userId,
+          hostId: resolved.id,
+          protocol: "ssh",
+          purpose: String(purposeOf(options)),
+          profile: profileOf(options),
+          interactive: false,
+          origin: pluginId,
+        });
+      } catch (error) {
+        if (!(error instanceof ConnectPolicyError)) throw error;
+        const { SshConnectError } =
+          await import("../hosts/connect/connect-host.js");
+        throw new SshConnectError({
+          status: "error",
+          code: error.code,
+          message: error.message,
+          ...(error.result.requestTab
+            ? { requestTab: error.result.requestTab }
+            : {}),
+          ...(error.result.requestKind
+            ? { requestKind: error.result.requestKind }
+            : {}),
+        });
+      }
+      const key = keyFor(options.pool, resolved as PluginSshHost, userId);
       poolKeys.set(key, resolved.id);
       const { withConnection } =
         await import("../hosts/ssh-connection-pool.js");
@@ -478,6 +523,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
         serverHostId: options.serverHostId,
         log: options.log,
         interactive: options.interactive,
+        origin: pluginId,
         hostKeySocket: (options.hostKeySocket ?? null) as never,
       });
       await audit("ssh_prepare", describeHost(host), {
@@ -956,6 +1002,82 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
       const { createCurrentUserAuthRepository } =
         await import("../database/repositories/factory.js");
       return createCurrentUserAuthRepository().countUsersForProvider(provider);
+    },
+    identities: {
+      list: async (userId) => {
+        await granted();
+        const { createCurrentUserAuthRepository } =
+          await import("../database/repositories/factory.js");
+        const rows =
+          await createCurrentUserAuthRepository().listIdentitiesForUser(userId);
+        return rows.map((row) => ({
+          provider: row.providerId,
+          subject: row.subject,
+          email: row.email,
+        }));
+      },
+      link: async (userId, identity) => {
+        await granted();
+        const { createCurrentUserAuthRepository } =
+          await import("../database/repositories/factory.js");
+        const repository = createCurrentUserAuthRepository();
+        const held = await repository.findIdentity(
+          identity.provider,
+          identity.subject,
+        );
+        if (held?.userId === userId) return;
+        if (held) {
+          throw new LoginMethodError(
+            "This sign in is linked to another account",
+            409,
+            "identity_in_use",
+          );
+        }
+        const own = await repository.listIdentitiesForUser(userId);
+        if (own.some((row) => row.providerId === identity.provider)) {
+          throw new LoginMethodError(
+            "This account is already linked to this provider",
+            409,
+            "provider_linked",
+          );
+        }
+        await repository.linkIdentity({
+          userId,
+          providerId: identity.provider,
+          subject: identity.subject,
+          email: identity.email ?? null,
+        });
+        void audit(
+          "auth_identity_linked",
+          `${identity.provider} for ${userId}`,
+          {
+            success: true,
+          },
+        );
+      },
+      unlink: async (userId, provider) => {
+        await granted();
+        const { createCurrentUserAuthRepository, createCurrentUserRepository } =
+          await import("../database/repositories/factory.js");
+        const repository = createCurrentUserAuthRepository();
+        const own = await repository.listIdentitiesForUser(userId);
+        const user = await createCurrentUserRepository().findById(userId);
+        if (
+          !user?.passwordHash &&
+          !own.some((row) => row.providerId !== provider)
+        ) {
+          throw new LoginMethodError(
+            "Set a password before unlinking your only sign in",
+            409,
+            "last_login",
+          );
+        }
+        if ((await repository.unlinkProviderForUser(userId, provider)) > 0) {
+          void audit("auth_identity_unlinked", `${provider} for ${userId}`, {
+            success: true,
+          });
+        }
+      },
     },
     issueUserToken: (userId, options) =>
       issueUserToken(manifest, userId, options),

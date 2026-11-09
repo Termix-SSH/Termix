@@ -98,8 +98,14 @@ export type SshAuthOutcome =
         | "invalid-key"
         | "passphrase-required"
         | "provider-missing"
-        | "failed";
+        | "failed"
+        | "access-denied"
+        | "access-required";
       message: string;
+      /** For access-required: a tab of the policy plugin where access is asked for. */
+      requestTab?: string;
+      /** For access-required: "verify" when that tab asks for a second factor. */
+      requestKind?: string;
     }
   | {
       /** Try once more with these config changes. Used by Tailscale. */

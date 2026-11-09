@@ -37,6 +37,7 @@ import { useTabs } from "./use-tabs";
 import { useSplit } from "./use-split";
 import { useWorkspaceLayout } from "./use-workspace-layout";
 import { useShellKeybindings } from "./use-shell-keybindings";
+import { useMouseHistoryGuard } from "./use-mouse-history-guard";
 import { useShellLifecycle } from "./use-shell-lifecycle";
 import { publishShellController } from "./shell-store";
 import type { ShellController, ShellPalette } from "./types";
@@ -158,7 +159,13 @@ export function ShellControllerProvider({
       tabsState.openTab(host, type, undefined, options);
     },
     openSingletonTab: (type, options) =>
-      tabsState.openSingletonTab(type, undefined, undefined, options?.data),
+      tabsState.openSingletonTab(
+        type,
+        undefined,
+        undefined,
+        options?.data,
+        options?.label,
+      ),
     connectHost: (host, type) => tabsState.connectHost(host, type as TabType),
     closeTab: (tabId) => tabsState.closeTab(tabId),
     renameTab: (tabId, label) => tabsState.renameTab(tabId, label),
@@ -259,6 +266,7 @@ export function ShellControllerProvider({
   ]);
 
   useWorkspaceLayout(tabsState, regions);
+  useMouseHistoryGuard(tabsState.tabHistory);
   useShellKeybindings({
     tabsState,
     regions,

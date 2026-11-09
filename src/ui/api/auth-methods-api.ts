@@ -127,6 +127,39 @@ export async function challengeSecondFactor(
   return response.data?.challenge ?? null;
 }
 
+/** The second factors the signed in user can prove. */
+export async function listStepUpFactors(): Promise<{ id: string }[]> {
+  try {
+    const response = await authApi.get("/users/auth/step-up/factors");
+    return response.data?.factors ?? [];
+  } catch (error) {
+    throw handleApiError(error, "list second factors");
+  }
+}
+
+export async function challengeStepUp(factorId: string): Promise<unknown> {
+  const response = await authApi.post(
+    `/users/auth/step-up/${encodeURIComponent(factorId)}/challenge`,
+    {},
+  );
+  return response.data?.challenge ?? null;
+}
+
+/** Throws when the answer is wrong. */
+export async function verifyStepUp(
+  factorId: string,
+  body: Record<string, unknown>,
+): Promise<void> {
+  try {
+    await authApi.post(
+      `/users/auth/step-up/${encodeURIComponent(factorId)}/verify`,
+      body,
+    );
+  } catch (error) {
+    throw handleApiError(error, "verify second factor");
+  }
+}
+
 export interface UserSecondFactorSummary {
   pluginId: string;
   factorId: string;

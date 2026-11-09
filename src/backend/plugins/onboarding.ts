@@ -5,7 +5,7 @@
 
 import { pluginLogger } from "../utils/logger.js";
 import { getPluginRuntime } from "./index.js";
-import { onboardingDefaults } from "./bundled-index.js";
+import { isDefaultLookPlugin, onboardingDefaults } from "./bundled-index.js";
 import {
   isLinkedDesktop,
   serialized,
@@ -99,6 +99,11 @@ export async function offerPluginSetup(fresh: boolean): Promise<void> {
   await settings.set(PLUGIN_SETUP_OFFERED_KEY, "1");
 }
 
+// The shipped default look always stays on, so the picker never offers it.
+function inPicker(plugin: { id: string; source: string }): boolean {
+  return !(plugin.source === "bundled" && isDefaultLookPlugin(plugin.id));
+}
+
 function choicePlugins(): ChoicePlugin[] {
   return getPluginRuntime()
     .loader.list()
@@ -118,6 +123,7 @@ export async function describeOnboardingPlugins(): Promise<OnboardingPluginList>
   );
   const plugins = getPluginRuntime()
     .loader.list()
+    .filter(inPicker)
     .map((plugin): OnboardingPluginInfo => {
       const defaults =
         plugin.source === "bundled"
@@ -158,7 +164,12 @@ export function applyOnboardingChoices(
 ): Promise<OnboardingApplyResult> {
   return serialized(async () => {
     const plugins = choicePlugins();
-    const installed = new Set(plugins.map((plugin) => plugin.id));
+    const installed = new Set(
+      getPluginRuntime()
+        .loader.list()
+        .filter(inPicker)
+        .map((plugin) => plugin.id),
+    );
     const wanted: Record<string, PluginChoice> = {};
     for (const [id, choice] of Object.entries(choices)) {
       if (installed.has(id)) wanted[id] = choice;

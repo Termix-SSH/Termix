@@ -182,6 +182,8 @@ export function toHostRecord(host: ShellHost): PluginHostRecord {
     authType: host.authType,
     credentialId: host.credentialId,
     overrideCredentialUsername: host.overrideCredentialUsername,
+    hasPassword: host.hasPassword,
+    hasSudoPassword: host.hasSudoPassword,
     connectionType: host.connectionType,
     connectionOrigin: host.connectionOrigin,
     enableSsh: host.enableSsh,
@@ -252,10 +254,12 @@ export const pluginHostBridge: PluginHostBridge = {
   useSettings(pluginId, scope, hostId) {
     const numericHostId =
       hostId === undefined ? undefined : Number.parseInt(String(hostId), 10);
+    const key = `${pluginId}|${scope}|${numericHostId ?? ""}`;
     const [state, setState] = useState<{
+      key: string;
       values: Record<string, unknown>;
       loaded: boolean;
-    }>({ values: {}, loaded: false });
+    }>({ key, values: {}, loaded: false });
 
     useEffect(() => {
       let cancelled = false;
@@ -263,10 +267,15 @@ export const pluginHostBridge: PluginHostBridge = {
       const read = () =>
         SETTINGS_READERS[scope](pluginId, numericHostId)
           .then((values) => {
-            if (!cancelled) setState({ values, loaded: true });
+            if (!cancelled) setState({ key, values, loaded: true });
           })
           .catch(() => {
-            if (!cancelled) setState((prev) => ({ ...prev, loaded: true }));
+            if (!cancelled)
+              setState((prev) =>
+                prev.key === key
+                  ? { ...prev, loaded: true }
+                  : { key, values: {}, loaded: true },
+              );
           });
       void read();
       // Saved from the settings page, which keeps its own copy of the form.
@@ -281,7 +290,7 @@ export const pluginHostBridge: PluginHostBridge = {
         cancelled = true;
         window.removeEventListener(PLUGIN_SETTINGS_CHANGED_EVENT, onChanged);
       };
-    }, [pluginId, scope, numericHostId]);
+    }, [pluginId, scope, numericHostId, key]);
 
     const save = useCallback(
       async (values: Record<string, unknown>) => {
@@ -290,12 +299,21 @@ export const pluginHostBridge: PluginHostBridge = {
           values,
           numericHostId,
         );
-        setState({ values: saved, loaded: true });
+        setState({ key, values: saved, loaded: true });
       },
-      [pluginId, scope, numericHostId],
+      [pluginId, scope, numericHostId, key],
     );
 
-    return useMemo<SettingsState>(() => ({ ...state, save }), [state, save]);
+    // Values read for another host or scope are never shown for this one.
+    const current = state.key === key;
+    return useMemo<SettingsState>(
+      () => ({
+        values: current ? state.values : {},
+        loaded: current && state.loaded,
+        save,
+      }),
+      [current, state, save],
+    );
   },
 
   useHost(hostId) {

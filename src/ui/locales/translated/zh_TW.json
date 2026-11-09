@@ -131,6 +131,8 @@
     "updateLinkLabel": "有可用更新。在 GitHub 上查看發行說明"
   },
   "common": {
+    "showPassword": "顯示密碼",
+    "hidePassword": "隱藏密碼",
     "scrollTabsLeft": "向左捲動分頁",
     "scrollTabsRight": "向右捲動分頁",
     "close": "關閉",
@@ -491,6 +493,7 @@
     "deleteSelected": "刪除",
     "exitSelection": "取消選取",
     "collapseBtn": "收合",
+    "importExportBtn": "匯入 / 匯出",
     "hostStatusesRefreshed": "主機狀態已重新整理",
     "failedToRefreshHosts": "重新整理主機失敗",
     "movedHostTo": "已將 {{host}} 移至「{{folder}}」",
@@ -603,6 +606,7 @@
     "hostClickBehavior": "點擊主機",
     "hostClickBehaviorDesc": "當您點擊已開啟分頁的主機時會發生的動作。Ctrl/Cmd 點擊、中鍵點擊或「在新分頁中開啟」總是會開啟新分頁。",
     "hostClickNewTab": "總是開啟新分頁",
+    "hostClickHostPage": "當外掛提供時，開啟主機頁面",
     "hostClickFocusExisting": "切換至已開啟的分頁",
     "hostClickFocusExistingDoubleNew": "單擊切換，雙擊開啟新分頁",
     "openInNewTab": "在新分頁中開啟",
@@ -997,6 +1001,8 @@
     "registrationSuccess": "註冊成功"
   },
   "placeholders": {
+    "username": "您的使用者名稱",
+    "newUsername": "選擇使用者名稱",
     "keyPassword": "金鑰密碼",
     "pastePrivateKey": "在此貼上您的私密金鑰...",
     "enterPassword": "輸入您的密碼"
@@ -1035,7 +1041,8 @@
         "actionNextTab": "切換至下一個分頁",
         "actionPreviousTab": "切換至上一個分頁",
         "actionOpenCommandPalette": "開啟快速搜尋",
-        "actionReconnectSession": "重新連線目前工作階段"
+        "actionReconnectSession": "重新連線目前工作階段",
+        "actionToggleSidebar": "切換側邊欄"
       },
       "userProfile": {
         "preset_simple": "簡易",
@@ -1197,6 +1204,18 @@
         "title": "傳送警示",
         "consequence": "傳送給您或其他使用者，並透過他們設定的管道進行。"
       },
+      "operations:provide": {
+        "title": "提供操作",
+        "consequence": "其操作可由獲授權的使用者從自動化、CLI、手機應用程式及其他地方執行。"
+      },
+      "operations:invoke": {
+        "title": "執行其他外掛的操作",
+        "consequence": "代表已登入的使用者執行其清單中列出的操作。仍需遵守核准規則。"
+      },
+      "operations:approve": {
+        "title": "決定哪些需要核准",
+        "consequence": "可針對所有使用者，允許操作無需核准即可執行，或將其封鎖。"
+      },
       "notify:hub": {
         "title": "接收所有警示",
         "consequence": "儲存並傳遞所有外掛程式發送的警示，包括其內容。"
@@ -1220,6 +1239,10 @@
       "hosts:lock": {
         "title": "以唯讀方式管理主機",
         "consequence": "由其管理的主機無法被其他人編輯、刪除或重新分享。"
+      },
+      "hosts:connect-policy": {
+        "title": "決定誰可以連線",
+        "consequence": "可封鎖或允許對任何主機的 SSH 與遠端桌面連線。"
       },
       "desktop:window": {
         "title": "開啟桌面視窗",
@@ -1621,6 +1644,12 @@
       "title": "欄位",
       "auto": "自動",
       "count": "寬度 {{count}}"
+    },
+    "pager": {
+      "previous": "上一頁",
+      "next": "下一頁",
+      "page": "第 {{page}} 頁",
+      "pageOf": "第 {{page}} 頁，共 {{pages}} 頁"
     }
   },
   "fields": {
@@ -1636,5 +1665,29 @@
       "admin": "管理員",
       "user": "使用者"
     }
+  },
+  "tileGrid": {
+    "empty": "尚無磁片。請從清單中新增一些。",
+    "move": "拖曳以移動",
+    "moveTile": "移動 {{tile}}",
+    "settings": "{{tile}} 設定",
+    "remove": "移除 {{tile}}",
+    "width": "寬度",
+    "height": "高度",
+    "addTiles": "新增磁片",
+    "closePicker": "關閉",
+    "search": "搜尋磁片",
+    "noMatches": "沒有符合的結果。",
+    "kind": {
+      "all": "全部",
+      "card": "卡片",
+      "chart": "圖表",
+      "signal": "狀態",
+      "action": "操作",
+      "resource": "清單",
+      "session": "工作階段"
+    },
+    "reset": "重設",
+    "done": "完成"
   }
 }

@@ -69,8 +69,12 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   }),
 }));
 
-const { pruneHostGrants, pruneCredentialGrants, grantsForFolderRule } =
-  await import("../../../database/routes/rbac.js");
+const {
+  pruneHostGrants,
+  pruneCredentialGrants,
+  grantsForFolderRule,
+  clampToGrantorExpiry,
+} = await import("../../../database/routes/rbac.js");
 
 const chain = (): Grant[] => [
   { id: 2, userId: "bob", grantedBy: "alice", permissionLevel: "manage" },
@@ -127,5 +131,21 @@ describe("grantsForFolderRule", () => {
     expect(
       grantsForFolderRule(entries, { userId: null, roleId: null }),
     ).toEqual([]);
+  });
+});
+
+describe("clampToGrantorExpiry", () => {
+  const soon = "2030-01-01T00:00:00.000Z";
+  const later = "2031-01-01T00:00:00.000Z";
+
+  it("keeps any expiry when the grantor has none", () => {
+    expect(clampToGrantorExpiry(null, null)).toBeNull();
+    expect(clampToGrantorExpiry(later, null)).toBe(later);
+  });
+
+  it("never outlives the grantor's own grant", () => {
+    expect(clampToGrantorExpiry(null, soon)).toBe(soon);
+    expect(clampToGrantorExpiry(later, soon)).toBe(soon);
+    expect(clampToGrantorExpiry(soon, later)).toBe(soon);
   });
 });

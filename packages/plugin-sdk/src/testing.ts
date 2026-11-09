@@ -68,7 +68,11 @@ import type {
   PluginSshKeyCredential,
   PluginSshKeyCredentialInput,
 } from "./backend.js";
-import type { PluginSyncHost, SyncEntityRegistration } from "./backend.js";
+import type {
+  PluginOperationHandler,
+  PluginSyncHost,
+  SyncEntityRegistration,
+} from "./backend.js";
 import type { PluginDatabase } from "./backend.js";
 import type {
   PluginExternalClientRequest,
@@ -77,6 +81,7 @@ import type {
   PluginHostStatusEntry,
   PluginActivityProvider,
   PluginHostLockProvider,
+  PluginConnectPolicyProvider,
   PluginAuthPolicyProvider,
   PluginCredentialSummary,
   PluginHostShareGrant,
@@ -279,6 +284,13 @@ export interface FakeAuthRegistrations {
   loginFailures: Map<string, number>;
   /** Every ctx.auth.issueUserToken call, in order. */
   userTokens: Array<{ userId: string; purpose: string; ttlSeconds?: number }>;
+  /** Identities ctx.auth.identities holds, by user. */
+  identities: Array<{
+    userId: string;
+    provider: string;
+    subject: string;
+    email?: string | null;
+  }>;
   /** Providers passed to ctx.auth.policy.provide that are still registered. */
   policies: PluginAuthPolicyProvider[];
 }
@@ -299,6 +311,8 @@ export interface FakePluginContext {
   activityProviders: PluginActivityProvider[];
   /** Every provider passed to ctx.hosts.locks.provide that is still registered. */
   hostLockProviders: PluginHostLockProvider[];
+  /** Every provider passed to ctx.hosts.connectPolicy.provide that is still registered. */
+  connectPolicyProviders: PluginConnectPolicyProvider[];
   /** Topics emitted through ctx.events.emit, in order. */
   emitted: Array<{ topic: string; payload: unknown }>;
   /** Backing store behind ctx.kv. */
@@ -348,6 +362,11 @@ export interface FakePluginContext {
   credentialReads: Array<{ hostId: number; protocol: string }>;
   /** Every ctx.credentials.createSshKey call, with the id it answered. */
   createdSshKeys: Array<PluginSshKeyCredentialInput & { id: number }>;
+  /** Every ctx.credentials.setSshKeyCertificate call, in order. */
+  certificateWrites: Array<{
+    credentialId: number;
+    certificate: string | null;
+  }>;
   /** Every ctx.notify.send call, with the actor it ran as. */
   notifications: Array<{
     actor: string | undefined;
@@ -355,6 +374,10 @@ export interface FakePluginContext {
   }>;
   /** The hub the plugin registered with ctx.notify.serve, if any. */
   notifyHub: { current: PluginNotifyHub | null };
+  /** Handlers from ctx.operations.register, by action id. */
+  operationHandlers: Map<string, PluginOperationHandler>;
+  /** Every ctx.operations.emit call. */
+  operationEvents: { eventId: string; payload: unknown; hostId?: number }[];
   /** Backing store behind ctx.secrets.get/set, keyed "<userId>:<key>". */
   secretStore: Map<string, string>;
   /** Every ctx.fetch call, in order. */
@@ -541,6 +564,7 @@ export function createFakeContext(
   const hostStatusProviders: PluginHostStatusProvider[] = [];
   const activityProviders: PluginActivityProvider[] = [];
   const hostLockProviders: PluginHostLockProvider[] = [];
+  const connectPolicyProviders: PluginConnectPolicyProvider[] = [];
   const kv = new Map<string, unknown>();
   const tables: PluginTableDefinition[] = [];
   const syncEntities: SyncEntityRegistration[] = [];
@@ -564,8 +588,11 @@ export function createFakeContext(
     [];
   const credentialReads: FakePluginContext["credentialReads"] = [];
   const createdSshKeys: FakePluginContext["createdSshKeys"] = [];
+  const certificateWrites: FakePluginContext["certificateWrites"] = [];
   const notifications: FakePluginContext["notifications"] = [];
   const notifyHub: FakePluginContext["notifyHub"] = { current: null };
+  const operationHandlers: FakePluginContext["operationHandlers"] = new Map();
+  const operationEvents: FakePluginContext["operationEvents"] = [];
   const fetches: FakePluginContext["fetches"] = [];
   const processRuns: FakePluginContext["processRuns"] = [];
   const binaries: FakePluginContext["binaries"] = [];
@@ -631,6 +658,7 @@ export function createFakeContext(
     revokedSessions: [],
     loginFailures: new Map(),
     userTokens: [],
+    identities: [],
     policies: [],
   };
   const sshClient = options.sshClient ?? {};
@@ -1083,6 +1111,15 @@ export function createFakeContext(
           };
         },
       },
+      connectPolicy: {
+        provide: (provider) => {
+          connectPolicyProviders.push(provider);
+          return () => {
+            const at = connectPolicyProviders.indexOf(provider);
+            if (at >= 0) connectPolicyProviders.splice(at, 1);
+          };
+        },
+      },
       status: {
         provide: (provider) => {
           hostStatusProviders.push(provider);
@@ -1308,6 +1345,46 @@ export function createFakeContext(
       },
       countLinkedUsers: async (provider) =>
         options.linkedUsers?.[provider] ?? 0,
+      identities: {
+        list: async (userId) =>
+          auth.identities
+            .filter((entry) => entry.userId === userId)
+            .map(({ userId: _owner, ...identity }) => identity),
+        link: async (userId, identity) => {
+          const held = auth.identities.find(
+            (entry) =>
+              entry.provider === identity.provider &&
+              entry.subject === identity.subject,
+          );
+          if (held?.userId === userId) return;
+          if (held) {
+            throw new LoginMethodError(
+              "This sign in is linked to another account",
+              409,
+              "identity_in_use",
+            );
+          }
+          if (
+            auth.identities.some(
+              (entry) =>
+                entry.userId === userId && entry.provider === identity.provider,
+            )
+          ) {
+            throw new LoginMethodError(
+              "This account is already linked to this provider",
+              409,
+              "provider_linked",
+            );
+          }
+          auth.identities.push({ userId, ...identity });
+        },
+        unlink: async (userId, provider) => {
+          auth.identities = auth.identities.filter(
+            (entry) =>
+              !(entry.userId === userId && entry.provider === provider),
+          );
+        },
+      },
       issueUserToken: async (userId, tokenOptions) => {
         auth.userTokens.push({ userId, ...tokenOptions });
         const ttl = Math.min(tokenOptions.ttlSeconds ?? 300, 900);
@@ -1379,6 +1456,10 @@ export function createFakeContext(
       publicKey: async (credentialId) =>
         (options.sshKeyCredentials ?? []).find((k) => k.id === credentialId)
           ?.publicKey ?? null,
+      setSshKeyCertificate: async (credentialId, certificate) => {
+        certificateWrites.push({ credentialId, certificate });
+        return { id: credentialId, changed: true };
+      },
       resolveKeyRefs: async (key, passphrase) => ({
         key,
         passphrase: passphrase ?? undefined,
@@ -1389,6 +1470,46 @@ export function createFakeContext(
           auth.secretResolvers.delete(scheme);
         });
       },
+    },
+
+    operations: {
+      register: (id, handler) => {
+        operationHandlers.set(id, handler);
+      },
+      run: async (actionId, options = {}) => {
+        const handler = operationHandlers.get(actionId);
+        if (!handler) throw new Error(`No action "${actionId}"`);
+        const result = await handler.run(options.input ?? {}, {
+          hostId: options.hostId,
+          resourceKey: options.resourceKey,
+          runId: null,
+          dryRun: options.dryRun === true,
+          signal: new AbortController().signal,
+          log: () => {},
+        });
+        return { runId: null, status: "success", ...result };
+      },
+      invoke: async (actionId, options = {}) => {
+        const handler = operationHandlers.get(actionId);
+        if (!handler) throw new Error(`No action "${actionId}"`);
+        const result = await handler.run(options.input ?? {}, {
+          hostId: options.hostId,
+          resourceKey: options.resourceKey,
+          runId: null,
+          dryRun: options.dryRun === true,
+          signal: new AbortController().signal,
+          log: () => {},
+        });
+        return { runId: null, status: "success", ...result };
+      },
+      list: async () => ({
+        actions: manifest.contributes?.operations?.actions ?? [],
+      }),
+      emit: async (eventId, payload, options) => {
+        operationEvents.push({ eventId, payload, hostId: options?.hostId });
+      },
+      onEvent: () => () => {},
+      approvals: { provide: () => () => {} },
     },
 
     notify: {
@@ -1536,6 +1657,7 @@ export function createFakeContext(
     hostStatusProviders,
     activityProviders,
     hostLockProviders,
+    connectPolicyProviders,
     emitted,
     kv,
     tables,
@@ -1552,8 +1674,11 @@ export function createFakeContext(
     externalClientLaunches,
     credentialReads,
     createdSshKeys,
+    certificateWrites,
     notifications,
     notifyHub,
+    operationHandlers,
+    operationEvents,
     fetches,
     processRuns,
     binaries,
@@ -2028,6 +2153,12 @@ export function createMockCtx(
           return ctx.hosts.locks.provide(provider);
         },
       },
+      connectPolicy: {
+        provide: (provider) => {
+          require("hosts:connect-policy");
+          return ctx.hosts.connectPolicy.provide(provider);
+        },
+      },
       status: {
         provide: (provider) => {
           require("hosts:read");
@@ -2157,6 +2288,20 @@ export function createMockCtx(
         require("auth:provide");
         return ctx.auth.countLinkedUsers(provider);
       },
+      identities: {
+        list: async (userId) => {
+          require("auth:provide");
+          return ctx.auth.identities.list(userId);
+        },
+        link: async (userId, identity) => {
+          require("auth:provide");
+          return ctx.auth.identities.link(userId, identity);
+        },
+        unlink: async (userId, provider) => {
+          require("auth:provide");
+          return ctx.auth.identities.unlink(userId, provider);
+        },
+      },
       issueUserToken: async (userId, tokenOptions) => {
         require("users:impersonate");
         return ctx.auth.issueUserToken(userId, tokenOptions);
@@ -2234,6 +2379,10 @@ export function createMockCtx(
       publicKey: async (credentialId) => {
         require("credentials:use");
         return ctx.credentials.publicKey(credentialId);
+      },
+      setSshKeyCertificate: async (credentialId, certificate) => {
+        require("credentials:write");
+        return ctx.credentials.setSshKeyCertificate(credentialId, certificate);
       },
       resolveKeyRefs: async (key, passphrase) => {
         require("credentials:read");

@@ -54,7 +54,10 @@ export function ActionSlot({
     <>
       {contributions.map((contribution) => {
         const invoke = () => {
-          void invokeAction(contribution.actionId, ...(context?.() ?? []));
+          invokeAction(contribution.actionId, ...(context?.() ?? [])).catch(
+            (error) =>
+              console.error(`[actions] ${contribution.actionId} failed`, error),
+          );
         };
 
         if (renderItem) {

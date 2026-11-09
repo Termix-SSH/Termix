@@ -1,0 +1,112 @@
+name: Publish Flatpak
+
+# Builds the Flatpak from a release's portable tarballs and adds the bundles to
+# that release. Stable releases also replace the repo at flatpak.termix.site,
+# which is what `flatpak update` reads.
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to package, like v26.11.1"
+        required: true
+        type: string
+      publish:
+        description: "Replace the live Flatpak repo"
+        required: true
+        default: true
+        type: boolean
+  workflow_call:
+    inputs:
+      release_tag:
+        description: "Release tag to package"
+        required: true
+        type: string
+      publish:
+        description: "Replace the live Flatpak repo"
+        required: true
+        type: boolean
+
+env:
+  FLATPAK_REPO_URL: https://flatpak.termix.site
+
+jobs:
+  build:
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_tag }}
+          fetch-depth: 1
+
+      # A tag from before this workflow has no build script.
+      - name: Use the newest packaging files
+        env:
+          WORKFLOW_SHA: ${{ github.sha }}
+        run: |
+          git fetch --depth 1 origin "$WORKFLOW_SHA"
+          git checkout "$WORKFLOW_SHA" -- packaging/flatpak
+
+      - name: Install tools
+        run: |
+          sudo add-apt-repository -y ppa:flatpak/stable
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder imagemagick qemu-user-static
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+      - name: Download release tarballs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir tarballs \
+            --pattern termix_linux_x64_portable.tar.gz \
+            --pattern termix_linux_arm64_portable.tar.gz
+
+      - name: Import signing key
+        env:
+          FLATPAK_GPG_KEY: ${{ secrets.FLATPAK_GPG_KEY }}
+        run: |
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          mkdir -m 700 "$GNUPGHOME"
+          printf '%s' "$FLATPAK_GPG_KEY" | gpg --batch --import
+          echo "FLATPAK_GPG_HOME=$GNUPGHOME" >> "$GITHUB_ENV"
+          echo "FLATPAK_GPG_KEY_ID=$(gpg --list-keys --with-colons | awk -F: '/^fpr/ { print $10; exit }')" >> "$GITHUB_ENV"
+
+      - name: Build
+        env:
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          bash packaging/flatpak/build-repo.sh "${TAG#v}" tarballs out
+          chmod -R a+rX out/site
+
+      - name: Add bundles to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          gh release upload "$TAG" out/*.flatpak out/com.karmaa.termix.flatpakref \
+            --repo "$GITHUB_REPOSITORY" --clobber
+
+      - name: Upload repo for Pages
+        if: inputs.publish
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: out/site
+
+  deploy:
+    needs: build
+    if: inputs.publish
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ env.FLATPAK_REPO_URL }}
+    steps:
+      - name: Deploy
+        uses: actions/deploy-pages@v5

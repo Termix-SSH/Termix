@@ -12,6 +12,12 @@ function clampWidth(width: number): number {
   return Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, width));
 }
 
+/** A saved width, clamped, or the default when it is missing or garbled. */
+function savedWidth(key: string): number {
+  const value = Number.parseInt(localStorage.getItem(key) ?? "", 10);
+  return Number.isFinite(value) ? clampWidth(value) : 291;
+}
+
 /** A drag on a dock edge, one width update per frame. `sign` is -1 for the right dock. */
 function startDockDrag(
   e: React.MouseEvent,
@@ -53,10 +59,9 @@ export const DOCK_DEFAULT_WIDTH = 291;
 export function useRegions(isMobile: boolean): ShellRegions {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railView, setRailView] = useState<string>("hosts");
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const saved = localStorage.getItem("termix_sidebarWidth");
-    return saved ? parseInt(saved, 10) : 291;
-  });
+  const [sidebarWidth, setSidebarWidth] = useState(() =>
+    savedWidth("termix_sidebarWidth"),
+  );
   const [sidebarDragging, setSidebarDragging] = useState(false);
   // How far each panel wants the sidebar widened: what the panel says itself,
   // and what its open inline views say.
@@ -96,10 +101,9 @@ export function useRegions(isMobile: boolean): ShellRegions {
     const saved = localStorage.getItem("termix_rightRailView");
     return saved && rightDockableIds().includes(saved) ? saved : null;
   });
-  const [rightSidebarWidth, setRightSidebarWidth] = useState(() => {
-    const saved = localStorage.getItem("termix_rightSidebarWidth");
-    return saved ? parseInt(saved, 10) : 291;
-  });
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(() =>
+    savedWidth("termix_rightSidebarWidth"),
+  );
   const [rightSidebarDragging, setRightSidebarDragging] = useState(false);
   // Remembers the last panel shown in the dock so the tab bar toggle can bring
   // it back instead of always falling back to the same default.

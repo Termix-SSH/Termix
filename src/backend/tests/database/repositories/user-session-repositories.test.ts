@@ -1,6 +1,12 @@
+import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it } from "vitest";
+import { sessions } from "../../../database/db/schema.js";
+import type { DatabaseContext } from "../../../database/repositories/database-context.js";
 import { TestSqliteDatabase } from "./test-support.js";
-import { SessionRepository } from "../../../database/repositories/session-repository.js";
+import {
+  SessionRepository,
+  hashSessionToken,
+} from "../../../database/repositories/session-repository.js";
 import { UserRepository } from "../../../database/repositories/user-repository.js";
 
 describe("UserRepository and SessionRepository", () => {
@@ -318,5 +324,63 @@ describe("UserRepository and SessionRepository", () => {
     expect(
       (await repo.sessions.listByUserId("user-1")).map((s) => s.id),
     ).toEqual(["active"]);
+  });
+
+  it("keeps only a hash of each session token", async () => {
+    const repo = await createRepositories();
+    await repo.users.create({
+      id: "user-1",
+      username: "user",
+      passwordHash: "hash",
+      isAdmin: false,
+    });
+    await repo.sessions.create({
+      id: "s1",
+      userId: "user-1",
+      jwtToken: "secret-token",
+      deviceType: "desktop",
+      deviceInfo: "Firefox",
+      expiresAt: "2026-06-27T00:00:00.000Z",
+    });
+    const stored = (await repo.sessions.findById("s1"))?.jwtToken;
+    expect(stored).toBe(hashSessionToken("secret-token"));
+    expect(stored).not.toContain("secret-token");
+
+    await repo.sessions.updateToken("s1", "next-token");
+    expect((await repo.sessions.findById("s1"))?.jwtToken).toBe(
+      hashSessionToken("next-token"),
+    );
+    expect(hashSessionToken(hashSessionToken("x"))).toBe(hashSessionToken("x"));
+  });
+
+  it("hashes tokens saved by older versions", async () => {
+    const repo = await createRepositories();
+    await repo.users.create({
+      id: "user-1",
+      username: "user",
+      passwordHash: "hash",
+      isAdmin: false,
+    });
+    await repo.sessions.create({
+      id: "s1",
+      userId: "user-1",
+      jwtToken: "x",
+      deviceType: "desktop",
+      deviceInfo: "Firefox",
+      expiresAt: "2026-06-27T00:00:00.000Z",
+    });
+    // Write a raw token the way older versions did.
+    const context = (repo.sessions as unknown as { context: DatabaseContext })
+      .context;
+    await context.drizzle
+      .update(sessions)
+      .set({ jwtToken: "old-raw" })
+      .where(eq(sessions.id, "s1"));
+
+    expect(await repo.sessions.hashStoredTokens()).toBe(1);
+    expect((await repo.sessions.findById("s1"))?.jwtToken).toBe(
+      hashSessionToken("old-raw"),
+    );
+    expect(await repo.sessions.hashStoredTokens()).toBe(0);
   });
 });

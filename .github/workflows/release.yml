@@ -543,6 +543,19 @@ jobs:
       source_ref: ${{ needs.merge-to-main.outputs.build_ref || needs.translate.outputs.sha || needs.prep.outputs.sha }}
     secrets: inherit
 
+  flatpak:
+    needs: [prep, electron-release]
+    if: ${{ always() && needs.electron-release.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/flatpak.yml
+    with:
+      release_tag: ${{ needs.prep.outputs.release_tag }}
+      publish: ${{ needs.prep.outputs.channel == 'Stable' }}
+    secrets: inherit
+
   electron-submit:
     needs: [prep, merge-to-main, electron-release]
     if: ${{ always() && needs.electron-release.result == 'success' && needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' && needs.prep.outputs.mode != 'Skip submit' }}

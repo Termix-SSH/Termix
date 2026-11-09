@@ -8,6 +8,7 @@ import {
   requireSshAuthProvider,
 } from "./auth-provider-registry.js";
 import { ensureCoreSshAuthProviders } from "./core-providers.js";
+import { ConnectPolicyError, assertConnectAllowed } from "../connect-policy.js";
 import type {
   MutableConnectConfig,
   SshAuthEnv,
@@ -113,6 +114,8 @@ export interface BuildConnectConfigOptions {
   /** Terminal socket for the changed-host-key prompt. */
   hostKeySocket?: WebSocket | null;
   interactive?: boolean;
+  /** Plugin id that asked for the connection, or "core". For connect policies. */
+  origin?: string;
   log?: SshAuthLog;
   /** Applied after the purpose defaults and before auth is prepared. */
   overrides?: Partial<MutableConnectConfig>;
@@ -196,6 +199,40 @@ export async function buildConnectConfig(
     interactive: options.interactive ?? false,
     log: options.log ?? noopLog,
   };
+
+  try {
+    await assertConnectAllowed({
+      userId: options.userId,
+      hostId: serverHostId,
+      protocol: "ssh",
+      purpose: String(options.purpose),
+      profile,
+      interactive: options.interactive ?? false,
+      origin: options.origin ?? "core",
+    });
+  } catch (error) {
+    if (error instanceof ConnectPolicyError) {
+      // A caller that ignores the outcome still can't connect with this.
+      config.hostVerifier = () => false;
+      return {
+        config,
+        provider: null,
+        env,
+        outcome: {
+          status: "error",
+          code: error.code,
+          message: error.message,
+          ...(error.result.requestTab
+            ? { requestTab: error.result.requestTab }
+            : {}),
+          ...(error.result.requestKind
+            ? { requestKind: error.result.requestKind }
+            : {}),
+        },
+      };
+    }
+    throw error;
+  }
 
   let provider: SshAuthProvider;
   try {

@@ -131,6 +131,8 @@
     "updateLinkLabel": "Oppdatering tilgjengelig. Åpne utgivelsesnotatene på GitHub"
   },
   "common": {
+    "showPassword": "Vis passord",
+    "hidePassword": "Skjul passord",
     "scrollTabsLeft": "Rull faner til venstre",
     "scrollTabsRight": "Rull faner til høyre",
     "close": "Lukk",
@@ -495,6 +497,7 @@
     "deleteSelected": "Slett",
     "exitSelection": "Avslutt valg",
     "collapseBtn": "Skjul",
+    "importExportBtn": "Importer / Eksporter",
     "hostStatusesRefreshed": "Vertstatuser oppdatert",
     "failedToRefreshHosts": "Kunne ikke oppdatere verter",
     "movedHostTo": "Flyttet {{host}} til \"{{folder}}\"",
@@ -609,6 +612,7 @@
     "hostClickBehavior": "Å klikke på en vertsmaskin",
     "hostClickBehaviorDesc": "Hva som skjer når du klikker på en vertsmaskin som allerede har en åpen fane. Ctrl/Cmd-klikk, midtklikk eller «Åpne i ny fane» starter alltid en ny.",
     "hostClickNewTab": "Alltid åpne en ny fane",
+    "hostClickHostPage": "Åpne vertsiden, hvis et programtillegg tilbyr en",
     "hostClickFocusExisting": "Bytt til den åpne fanen",
     "hostClickFocusExistingDoubleNew": "Klikk for å bytte, dobbeltklikk for ny fane",
     "openInNewTab": "Åpne i ny fane",
@@ -1010,6 +1014,8 @@
     "registrationSuccess": "Registrering vellykket"
   },
   "placeholders": {
+    "username": "Brukernavnet ditt",
+    "newUsername": "Velg et brukernavn",
     "keyPassword": "nøkkel-passord",
     "pastePrivateKey": "Lim inn din private nøkkel her...",
     "enterPassword": "Skriv inn passordet ditt"
@@ -1052,7 +1058,8 @@
         "actionNextTab": "Bytt til neste fane",
         "actionPreviousTab": "Bytt til forrige fane",
         "actionOpenCommandPalette": "Åpne hurtigsøk",
-        "actionReconnectSession": "Koble til gjeldende økt på nytt"
+        "actionReconnectSession": "Koble til gjeldende økt på nytt",
+        "actionToggleSidebar": "Vis/skjul sidepanel"
       },
       "userProfile": {
         "preset_simple": "Enkel",
@@ -1214,6 +1221,18 @@
         "title": "Send varsler",
         "consequence": "Til deg eller andre brukere, og gjennom kanalene de har satt opp."
       },
+      "operations:provide": {
+        "title": "Tilby handlinger",
+        "consequence": "Handlingene kan kjøres fra automatiseringer, kommandolinjen, mobilappen og andre steder, av brukere som har tillatelse til å bruke dem."
+      },
+      "operations:invoke": {
+        "title": "Kjør andre programtilleggs handlinger",
+        "consequence": "Utfører handlinger på vegne av den innloggede brukeren, basert på listen i manifestet. Godkjenningsregler gjelder fortsatt."
+      },
+      "operations:approve": {
+        "title": "Avgjør hva som krever godkjenning",
+        "consequence": "Kan la handlinger kjøre uten godkjenning, eller blokkere dem, for alle brukere."
+      },
       "notify:hub": {
         "title": "Motta alle varsler",
         "consequence": "Lagrer og leverer varslene alle plugins sender, inkludert innholdet deres."
@@ -1237,6 +1256,10 @@
       "hosts:lock": {
         "title": "Administrere vertsmaskiner som skrivebeskyttet",
         "consequence": "Vertsmaskinene den administrerer kan ikke redigeres, slettes eller deles på nytt av noen andre."
+      },
+      "hosts:connect-policy": {
+        "title": "Avgjør hvem som kan koble til",
+        "consequence": "Kan blokkere eller tillate alle SSH- og fjernskrivebordsforbindelser til enhver vert."
       },
       "desktop:window": {
         "title": "Åpne skrivebordsvinduer",
@@ -1663,6 +1686,12 @@
       "title": "Kolonner",
       "auto": "Auto",
       "count": "{{count}} bred"
+    },
+    "pager": {
+      "previous": "Forrige",
+      "next": "Neste",
+      "page": "Side {{page}}",
+      "pageOf": "Side {{page}} av {{pages}}"
     }
   },
   "fields": {
@@ -1681,5 +1710,29 @@
       "admin": "Administrator",
       "user": "Bruker"
     }
+  },
+  "tileGrid": {
+    "empty": "Ingen fliser ennå. Legg til noen fra listen.",
+    "move": "Dra for å flytte",
+    "moveTile": "Flytt {{tile}}",
+    "settings": "Innstillinger for {{tile}}",
+    "remove": "Fjern {{tile}}",
+    "width": "Bredde",
+    "height": "Høyde",
+    "addTiles": "Legg til fliser",
+    "closePicker": "Lukk",
+    "search": "Søk etter fliser",
+    "noMatches": "Ingen treff.",
+    "kind": {
+      "all": "Alle",
+      "card": "Kort",
+      "chart": "Diagrammer",
+      "signal": "Status",
+      "action": "Handlinger",
+      "resource": "Lister",
+      "session": "Økter"
+    },
+    "reset": "Tilbakestill",
+    "done": "Ferdig"
   }
 }

@@ -302,8 +302,7 @@ function SecretControl({
         </span>
         <Button
           variant="outline"
-          size="sm"
-          className="h-7 text-xs"
+          className="text-xs"
           disabled={readOnly}
           onClick={() => setValue(field.key, "")}
         >
@@ -326,8 +325,7 @@ function SecretControl({
       </div>
       <Button
         variant="ghost"
-        size="sm"
-        className="h-7 text-xs"
+        className="text-xs"
         disabled={readOnly}
         onClick={() => setValue(field.key, { set: stored })}
       >

@@ -54,6 +54,7 @@ export const PERMISSION_CATALOG: PermissionCatalogEntry[] = [
       "admin.roles.manage",
       "admin.settings.manage",
       "admin.sessions.manage",
+      "admin.operations.view",
       "admin.plugins.manage",
     ],
   },

@@ -1,0 +1,7 @@
+[Flatpak Repo]
+Title=Termix
+Url=REPO_URL_PLACEHOLDER
+Homepage=https://github.com/Termix-SSH/Termix
+Comment=Self-hosted, plugin-based server management.
+Icon=https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.png
+GPGKey=GPG_KEY_PLACEHOLDER

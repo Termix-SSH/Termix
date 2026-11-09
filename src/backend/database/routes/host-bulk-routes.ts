@@ -1,4 +1,9 @@
 import {
+  credentialStorageAllowed,
+  sendCredentialStorageOff,
+  storedSecretFields,
+} from "../../hosts/credential-storage.js";
+import {
   changeHostOverrides,
   type OverrideChange,
 } from "../../hosts/defaults/overrides.js";
@@ -116,6 +121,14 @@ export function registerHostBulkRoutes(
           .status(400)
           .json({ error: "hostIds array is required and must not be empty" });
       }
+      if (
+        !credentialStorageAllowed() &&
+        updates &&
+        typeof updates === "object" &&
+        storedSecretFields("ssh_data", updates).length > 0
+      ) {
+        return sendCredentialStorageOff(res);
+      }
 
       if (hostIds.length > 1000) {
         return res
@@ -227,8 +240,16 @@ export function registerHostBulkRoutes(
             updates.pluginEnable as Record<string, unknown>,
           )) {
             if (typeof enabled !== "boolean") continue;
-            if (!(await setHostPluginEnabled(pluginId, ownedIds, enabled))) {
+            const result = await setHostPluginEnabled(
+              pluginId,
+              ownedIds,
+              enabled,
+              userId,
+            );
+            if (result === "missing") {
               errors.push(`Plugin ${pluginId} has no host switch`);
+            } else if (result === "forbidden") {
+              errors.push(`You may not change the ${pluginId} host switch`);
             }
           }
         }

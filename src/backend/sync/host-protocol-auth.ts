@@ -16,6 +16,7 @@ import {
 } from "../hosts/protocol-auth/protocol-auth.js";
 import { findHostProtocol } from "../hosts/protocol-auth/registry.js";
 import { syncLogger } from "../utils/logger.js";
+import { credentialStorageAllowed } from "../hosts/credential-storage.js";
 
 type ResolveSyncId = (entityType: string, id: number) => Promise<string | null>;
 type ResolveId = (entityType: string, syncId: string) => Promise<number | null>;
@@ -93,6 +94,8 @@ export async function importProtocolLogins(
   if (!carried || typeof carried !== "object" || Array.isArray(carried)) {
     return;
   }
+  // Keeps what is stored, so a pushed secret never reaches the database.
+  if (!credentialStorageAllowed()) return;
   try {
     const current = new Map(
       (await listProtocolLogins(hostId, userId)).map((login) => [

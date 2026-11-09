@@ -60,14 +60,17 @@ export interface LivePrev {
   net: Map<string, { rx: number; tx: number }>;
 }
 
-/** Total and idle ticks from a /proc/stat `cpu` line. */
+/**
+ * Total and idle ticks from a /proc/stat `cpu` line. Only the first 8 fields
+ * count: guest and guest_nice are already inside user and nice.
+ */
 export function parseCpuLine(
   cpuLine: string,
 ): { total: number; idle: number } | undefined {
   const parts = cpuLine.trim().split(/\s+/);
   if (parts[0] !== "cpu") return undefined;
   const nums = parts
-    .slice(1)
+    .slice(1, 9)
     .map((n) => Number(n))
     .filter((n) => Number.isFinite(n));
   if (nums.length < 4) return undefined;

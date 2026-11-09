@@ -131,6 +131,8 @@
     "updateLinkLabel": "Dostępna aktualizacja. Otwórz informacje o wydaniu na GitHubie"
   },
   "common": {
+    "showPassword": "Pokaż hasło",
+    "hidePassword": "Ukryj hasło",
     "scrollTabsLeft": "Przewiń karty w lewo",
     "scrollTabsRight": "Przewiń karty w prawo",
     "close": "Zamknij",
@@ -503,6 +505,7 @@
     "deleteSelected": "Usuń",
     "exitSelection": "Zakończ zaznaczanie",
     "collapseBtn": "Zwiń",
+    "importExportBtn": "Importuj / Eksportuj",
     "hostStatusesRefreshed": "Statusy hostów zostały odświeżone",
     "failedToRefreshHosts": "Nie udało się odświeżyć hostów",
     "movedHostTo": "Przeniesiono {{host}} do \"{{folder}}\"",
@@ -621,6 +624,7 @@
     "hostClickBehavior": "Kliknięcie hosta",
     "hostClickBehaviorDesc": "Co się stanie, gdy klikniesz hosta, który ma już otwartą kartę. Kliknięcie z Ctrl/Cmd, kliknięcie środkowym przyciskiem lub opcja „Otwórz w nowej karcie” zawsze tworzą nową kartę.",
     "hostClickNewTab": "Zawsze otwieraj nową kartę",
+    "hostClickHostPage": "Otwórz stronę hosta, jeśli wtyczka ją oferuje",
     "hostClickFocusExisting": "Przełącz na otwartą kartę",
     "hostClickFocusExistingDoubleNew": "Kliknij, aby przełączyć, podwójne kliknięcie dla nowej karty",
     "openInNewTab": "Otwórz w nowej karcie",
@@ -1036,6 +1040,8 @@
     "registrationSuccess": "Rejestracja udana"
   },
   "placeholders": {
+    "username": "Twój login",
+    "newUsername": "Wybierz login",
     "keyPassword": "hasło klucza",
     "pastePrivateKey": "Wklej tutaj swój klucz prywatny...",
     "enterPassword": "Wprowadź swoje hasło"
@@ -1086,7 +1092,8 @@
         "actionNextTab": "Przełącz na następną kartę",
         "actionPreviousTab": "Przełącz na poprzednią kartę",
         "actionOpenCommandPalette": "Otwórz szybkie wyszukiwanie",
-        "actionReconnectSession": "Ponownie połącz bieżącą sesję"
+        "actionReconnectSession": "Ponownie połącz bieżącą sesję",
+        "actionToggleSidebar": "Przełącz pasek boczny"
       },
       "userProfile": {
         "preset_simple": "Prosty",
@@ -1248,6 +1255,18 @@
         "title": "Wysyłanie alertów",
         "consequence": "Do Ciebie lub innych użytkowników, przez skonfigurowane przez nich kanały."
       },
+      "operations:provide": {
+        "title": "Oferuj akcje",
+        "consequence": "Jej akcje mogą być uruchamiane z Automatyzacji, CLI, aplikacji mobilnej i innych miejsc przez użytkowników, którzy mają do nich uprawnienia."
+      },
+      "operations:invoke": {
+        "title": "Uruchamiaj akcje innych wtyczek",
+        "consequence": "Działa w imieniu zalogowanego użytkownika dla akcji wymienionych w jej manifeście. Zasady zatwierdzania nadal obowiązują."
+      },
+      "operations:approve": {
+        "title": "Decyduj, co wymaga zatwierdzenia",
+        "consequence": "Może pozwalać na uruchamianie akcji bez zatwierdzenia lub je blokować dla każdego użytkownika."
+      },
       "notify:hub": {
         "title": "Otrzymywanie wszystkich alertów",
         "consequence": "Przechowuje i dostarcza alerty wysyłane przez wszystkie wtyczki, w tym ich treść."
@@ -1271,6 +1290,10 @@
       "hosts:lock": {
         "title": "Zarządzaj hostami w trybie tylko do odczytu",
         "consequence": "Hosty nimi zarządzane nie mogą być edytowane, usuwane ani udostępniane ponownie przez innych użytkowników."
+      },
+      "hosts:connect-policy": {
+        "title": "Decyduj, kto może się łączyć",
+        "consequence": "Może blokować lub zezwalać na każde połączenie SSH i zdalnego pulpitu z dowolnym hostem."
       },
       "desktop:window": {
         "title": "Otwieranie okien pulpitu",
@@ -1747,6 +1770,12 @@
       "title": "Kolumny",
       "auto": "Automatycznie",
       "count": "Szerokość: {{count}}"
+    },
+    "pager": {
+      "previous": "Poprzednia",
+      "next": "Następna",
+      "page": "Strona {{page}}",
+      "pageOf": "Strona {{page}} z {{pages}}"
     }
   },
   "fields": {
@@ -1771,5 +1800,29 @@
       "admin": "Administrator",
       "user": "Użytkownik"
     }
+  },
+  "tileGrid": {
+    "empty": "Brak kafelków. Dodaj kilka z listy.",
+    "move": "Przeciągnij, aby przenieść",
+    "moveTile": "Przenieś {{tile}}",
+    "settings": "Ustawienia {{tile}}",
+    "remove": "Usuń {{tile}}",
+    "width": "Szerokość",
+    "height": "Wysokość",
+    "addTiles": "Dodaj kafelki",
+    "closePicker": "Zamknij",
+    "search": "Szukaj kafelków",
+    "noMatches": "Brak wyników.",
+    "kind": {
+      "all": "Wszystkie",
+      "card": "Karty",
+      "chart": "Wykresy",
+      "signal": "Status",
+      "action": "Akcje",
+      "resource": "Listy",
+      "session": "Sesje"
+    },
+    "reset": "Resetuj",
+    "done": "Gotowe"
   }
 }

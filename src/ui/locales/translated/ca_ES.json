@@ -131,6 +131,8 @@
     "updateLinkLabel": "Hi ha una actualització disponible. Obre les notes de la versió a GitHub"
   },
   "common": {
+    "showPassword": "Mostra la contrasenya",
+    "hidePassword": "Amaga la contrasenya",
     "scrollTabsLeft": "Desplaça les pestanes a l'esquerra",
     "scrollTabsRight": "Desplaça les pestanes a la dreta",
     "close": "Tanca",
@@ -499,6 +501,7 @@
     "deleteSelected": "Suprimeix",
     "exitSelection": "Sorteix de la selecció",
     "collapseBtn": "Replega",
+    "importExportBtn": "Importa / Exporta",
     "hostStatusesRefreshed": "Estat dels hosts actualitzat",
     "failedToRefreshHosts": "No s'han pogut actualitzar els hosts",
     "movedHostTo": "S'ha mogut {{host}} a «{{folder}}»",
@@ -615,6 +618,7 @@
     "hostClickBehavior": "En fer clic en un host",
     "hostClickBehaviorDesc": "Què passa quan fas clic en un host que ja té una pestanya oberta. Ctrl/Cmd + clic, clic central o «Obre en una pestanya nova» sempre en inicien una de nova.",
     "hostClickNewTab": "Obre sempre una pestanya nova",
+    "hostClickHostPage": "Obre la pàgina de l'amfitrió, si un complement en proporciona una",
     "hostClickFocusExisting": "Canvia a la pestanya oberta",
     "hostClickFocusExistingDoubleNew": "Clic per canviar, doble clic per a una pestanya nova",
     "openInNewTab": "Obre en una pestanya nova",
@@ -1023,6 +1027,8 @@
     "registrationSuccess": "Registre correcte"
   },
   "placeholders": {
+    "username": "El teu nom d'usuari",
+    "newUsername": "Tria un nom d'usuari",
     "keyPassword": "contrasenya de la clau",
     "pastePrivateKey": "Enganxa la teva clau privada aquí...",
     "enterPassword": "Introdueix la teva contrasenya"
@@ -1069,7 +1075,8 @@
         "actionNextTab": "Canvia a la pestanya següent",
         "actionPreviousTab": "Canvia a la pestanya anterior",
         "actionOpenCommandPalette": "Obre la cerca ràpida",
-        "actionReconnectSession": "Torna a connectar la sessió actual"
+        "actionReconnectSession": "Torna a connectar la sessió actual",
+        "actionToggleSidebar": "Alterna la barra lateral"
       },
       "userProfile": {
         "preset_simple": "Senzill",
@@ -1231,6 +1238,18 @@
         "title": "Enviar alertes",
         "consequence": "A vosaltres o a altres usuaris, i a través dels canals que hagin configurat."
       },
+      "operations:provide": {
+        "title": "Ofereix accions",
+        "consequence": "Les seves accions es poden executar des d'Automatitzacions, la CLI, l'aplicació mòbil i altres llocs, per part de les persones autoritzades a utilitzar-les."
+      },
+      "operations:invoke": {
+        "title": "Executa accions d'altres complements",
+        "consequence": "Actua en nom de l'usuari autenticat sobre les accions que llista el seu manifest. Les regles d'aprovació continuen sent d'aplicació."
+      },
+      "operations:approve": {
+        "title": "Decideix què necessita aprovació",
+        "consequence": "Pot permetre que les accions s'executin sense aprovació o bloquejar-les, per a cada usuari."
+      },
       "notify:hub": {
         "title": "Rebre totes les alertes",
         "consequence": "Emmagatzema i distribueix les alertes que envien tots els plugins, inclosos els seus continguts."
@@ -1254,6 +1273,10 @@
       "hosts:lock": {
         "title": "Gestionar els amfitrions com a només lectura",
         "consequence": "Els amfitrions que gestiona no es poden editar, suprimir ni tornar a compartir per ningú més."
+      },
+      "hosts:connect-policy": {
+        "title": "Decideix qui pot connectar-se",
+        "consequence": "Pot bloquejar o permetre totes les connexions SSH i d'escriptori remot a qualsevol amfitrió."
       },
       "desktop:window": {
         "title": "Obrir finestres d'escriptori",
@@ -1705,6 +1728,12 @@
       "title": "Columnes",
       "auto": "Automàtic",
       "count": "{{count}} d'ample"
+    },
+    "pager": {
+      "previous": "Anterior",
+      "next": "Següent",
+      "page": "Pàgina {{page}}",
+      "pageOf": "Pàgina {{page}} de {{pages}}"
     }
   },
   "fields": {
@@ -1726,5 +1755,29 @@
       "admin": "Administrador",
       "user": "Usuari"
     }
+  },
+  "tileGrid": {
+    "empty": "Encara no hi ha cap mosaic. Afegeix-ne alguns de la llista.",
+    "move": "Arrossega per moure",
+    "moveTile": "Mou {{tile}}",
+    "settings": "Configuració de {{tile}}",
+    "remove": "Elimina {{tile}}",
+    "width": "Amplada",
+    "height": "Alçada",
+    "addTiles": "Afegeix mosaics",
+    "closePicker": "Tanca",
+    "search": "Cerca mosaics",
+    "noMatches": "Cap resultat coincideix.",
+    "kind": {
+      "all": "Tots",
+      "card": "Targetes",
+      "chart": "Gràfics",
+      "signal": "Estat",
+      "action": "Accions",
+      "resource": "Llistes",
+      "session": "Sessions"
+    },
+    "reset": "Restableix",
+    "done": "Fet"
   }
 }

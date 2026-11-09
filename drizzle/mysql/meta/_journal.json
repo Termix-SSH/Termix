@@ -547,6 +547,20 @@
       "when": 1793304929772,
       "tag": "0077_shared_folder_auth_overrides",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "5",
+      "when": 1793765383557,
+      "tag": "0078_sweet_king_cobra",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "5",
+      "when": 1794025749101,
+      "tag": "0079_large_skrulls",
+      "breakpoints": true
     }
   ]
 }

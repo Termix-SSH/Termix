@@ -75,13 +75,36 @@ export function expiryFromDuration(durationHours: unknown): string | null {
 async function canManageHostSharing(
   userId: string,
   hostId: number,
-): Promise<{ allowed: boolean; isOwner: boolean }> {
+): Promise<{
+  allowed: boolean;
+  isOwner: boolean;
+  expiresAt: string | null;
+}> {
   const access = await permissionManager.canAccessHost(
     userId,
     hostId,
     "manage",
   );
-  return { allowed: access.hasAccess, isOwner: access.isOwner };
+  return {
+    allowed: access.hasAccess,
+    isOwner: access.isOwner,
+    expiresAt: access.isShared ? (access.expiresAt ?? null) : null,
+  };
+}
+
+/**
+ * A recipient who manages sharing can't hand out (or give themselves) access
+ * that outlives their own grant.
+ */
+export function clampToGrantorExpiry(
+  expiresAt: string | null,
+  grantorExpiresAt: string | null,
+): string | null {
+  if (!grantorExpiresAt) return expiresAt;
+  if (!expiresAt) return grantorExpiresAt;
+  return new Date(expiresAt) < new Date(grantorExpiresAt)
+    ? expiresAt
+    : grantorExpiresAt;
 }
 
 /**
@@ -317,7 +340,10 @@ router.post(
         }
       }
 
-      const expiresAt = expiryFromDuration(durationHours);
+      const expiresAt = clampToGrantorExpiry(
+        expiryFromDuration(durationHours),
+        sharing.expiresAt,
+      );
 
       const rbacAccessRepository = createCurrentRbacAccessRepository();
       const { SharedHostSecretsManager } =
@@ -910,8 +936,10 @@ router.patch(
         update.permissionLevel = permissionLevel;
       }
       if (durationHours !== undefined) {
-        update.expiresAt =
-          durationHours === null ? null : expiryFromDuration(durationHours);
+        update.expiresAt = clampToGrantorExpiry(
+          durationHours === null ? null : expiryFromDuration(durationHours),
+          sharing.expiresAt,
+        );
       }
 
       await rbacAccessRepository.updateHostAccessGrant(
@@ -1903,7 +1931,11 @@ type CredentialLevel = (typeof CREDENTIAL_LEVELS)[number];
 async function canManageCredentialSharing(
   userId: string,
   credentialId: number,
-): Promise<{ allowed: boolean; ownerId: string | null }> {
+): Promise<{
+  allowed: boolean;
+  ownerId: string | null;
+  expiresAt?: string | null;
+}> {
   const row = await createCurrentCredentialRepository().findById(credentialId);
   if (!row) return { allowed: false, ownerId: null };
   if (row.userId === userId) return { allowed: true, ownerId: row.userId };
@@ -1913,7 +1945,11 @@ async function canManageCredentialSharing(
     userId,
     roleIds,
   );
-  return { allowed: grant?.permissionLevel === "manage", ownerId: row.userId };
+  return {
+    allowed: grant?.permissionLevel === "manage",
+    ownerId: row.userId,
+    expiresAt: grant?.expiresAt ?? null,
+  };
 }
 
 /**
@@ -1975,7 +2011,10 @@ router.post(
         }
       }
 
-      const expiresAt = expiryFromDuration(durationHours);
+      const expiresAt = clampToGrantorExpiry(
+        expiryFromDuration(durationHours),
+        sharing.expiresAt ?? null,
+      );
       const accessRepository = createCurrentCredentialAccessRepository();
       const { SharedCredentialSecretsManager } =
         await import("../../utils/shared-credential-secrets-manager.js");

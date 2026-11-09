@@ -37,7 +37,19 @@ it("still persists local hosts and updates labels without a host ID", async () =
   await addOpenTab(local);
   await patchOpenTab(tab.id, { label: "Renamed" });
   expect(authApi.post).toHaveBeenCalledWith("/open-tabs", local);
-  expect(authApi.patch).toHaveBeenCalledWith("/open-tabs/instance", {
-    label: "Renamed",
-  });
+  expect(authApi.patch).toHaveBeenCalledWith(
+    "/open-tabs/instance",
+    { label: "Renamed" },
+    { __silentRetry: true },
+  );
+});
+it("treats an unsaved tab as nothing to update", async () => {
+  authApi.patch.mockRejectedValueOnce({ response: { status: 404 } });
+  await expect(
+    patchOpenTab("embed-terminal-9", { backendSessionId: "s1" }),
+  ).resolves.toBeUndefined();
+  authApi.patch.mockRejectedValueOnce({ response: { status: 500 } });
+  await expect(
+    patchOpenTab("embed-terminal-9", { backendSessionId: "s1" }),
+  ).rejects.toBeTruthy();
 });

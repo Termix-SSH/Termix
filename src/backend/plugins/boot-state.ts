@@ -35,3 +35,20 @@ export function missingShippedPluginIds(
     .map((record) => record.id)
     .sort();
 }
+
+/**
+ * Plugins this image's profile ships that the install has never seen and
+ * that are not on disk. They get fetched from the registry once, the first
+ * boot that can reach it.
+ */
+export function newShippedPluginIds(
+  shipped: Iterable<string>,
+  records: { id: string }[],
+  presentIds: ReadonlySet<string>,
+  ignored: ReadonlySet<string>,
+): string[] {
+  const known = new Set(records.map((record) => record.id));
+  return [...shipped]
+    .filter((id) => !known.has(id) && !presentIds.has(id) && !ignored.has(id))
+    .sort();
+}

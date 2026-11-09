@@ -129,13 +129,40 @@ async function sqliteTransaction(fn: () => Promise<void>): Promise<void> {
   }
 }
 
-async function executeNamingFailure(statements: string[]): Promise<void> {
+/**
+ * MySQL error numbers that mean a statement's change is already there: a
+ * table, column or index that exists, or an index already gone. MySQL cannot
+ * roll back DDL, so a migration that failed partway is retried from the top
+ * and these let it skip the part that already ran.
+ */
+const ALREADY_DONE_ERRNOS = new Set([1050, 1060, 1061, 1091]);
+
+export function mysqlErrno(error: unknown): number | undefined {
+  for (let e = error; e && typeof e === "object";) {
+    const errno = (e as { errno?: unknown }).errno;
+    if (typeof errno === "number") return errno;
+    e = (e as { cause?: unknown }).cause;
+  }
+  return undefined;
+}
+
+export async function executeNamingFailure(
+  statements: string[],
+): Promise<void> {
   const { runStatement } =
     await import("../utils/crypto-migration/raw-rows.js");
   for (const [index, statement] of statements.entries()) {
     try {
       await runStatement(sql.raw(statement));
     } catch (error) {
+      const errno = mysqlErrno(error);
+      if (errno !== undefined && ALREADY_DONE_ERRNOS.has(errno)) {
+        pluginLogger.warn(
+          `Skipped a migration statement that already ran (MySQL error ${errno})`,
+          { operation: "plugin_migrate" },
+        );
+        continue;
+      }
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(
         `statement ${index + 1} of ${statements.length} failed (earlier ones are already applied on MySQL): ${message}`,

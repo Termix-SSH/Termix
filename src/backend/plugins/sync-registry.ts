@@ -68,6 +68,7 @@ const PLUGIN_KEYS = [
   "order",
   "readOnlyFields",
   "singleton",
+  "matchOn",
   "answersTo",
   "shouldSync",
   "permissions",

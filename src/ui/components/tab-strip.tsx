@@ -57,7 +57,9 @@ export function TabStrip({
     const el = ref.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
-      if (e.deltaY === 0) return;
+      // Only a strip that overflows turns the wheel sideways; otherwise the
+      // page under it keeps scrolling.
+      if (e.deltaY === 0 || el.scrollWidth <= el.clientWidth) return;
       e.preventDefault();
       el.scrollLeft += e.deltaY;
     };
@@ -96,7 +98,7 @@ export function TabStrip({
     <div
       className={cn(
         "flex min-w-0 items-center",
-        variant === "secondary" && "border-t border-border bg-card",
+        variant === "secondary" && "border-t border-border",
         className,
       )}
     >
@@ -138,7 +140,9 @@ export function TabStrip({
         </button>
       )}
       {trailing && (
-        <div className="flex shrink-0 items-center gap-1 px-1">{trailing}</div>
+        <div className="flex shrink-0 items-center gap-1 px-2 [&_[data-slot=button]]:!h-6 [&_[data-slot=button][data-size^=icon]]:!size-6 [&_[data-slot=input]]:!h-6 [&_[data-slot=select-trigger]]:!h-6 [&_[data-slot=segmented]]:!h-6 [&_[data-slot=view-toggle]]:!h-6">
+          {trailing}
+        </div>
       )}
     </div>
   );

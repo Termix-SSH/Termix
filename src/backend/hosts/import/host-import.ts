@@ -658,6 +658,7 @@ export async function runBulkImport(
       await applyPluginHostImportSettings(
         savedHostId,
         hostData as Record<string, unknown>,
+        userId,
       );
       writtenHostIds.push(savedHostId);
     } catch (error) {

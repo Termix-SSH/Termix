@@ -560,7 +560,13 @@ export async function openDownload(
         }
       },
       abort: async () => {
-        stream.destroy();
+        // The file opens in the background, so wait for the stream to close
+        // or a late open would leave the partial file behind.
+        await new Promise<void>((resolve) => {
+          if (stream.closed) return resolve();
+          stream.once("close", () => resolve());
+          stream.destroy();
+        });
         await fsp.rm(partialPath, { force: true }).catch(() => {});
         release();
       },

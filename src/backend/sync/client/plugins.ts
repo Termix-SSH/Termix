@@ -268,11 +268,19 @@ async function mirrorOne(link: SyncLink, plugin: RemotePlugin): Promise<void> {
     }
     if (!local) return;
   } else if (plugin.enabled || local) {
+    // A newer server copy replaces an older shipped one. The loader still
+    // checks the signature and that the version is newer.
+    const olderShipped =
+      local?.source === "bundled" &&
+      local.state !== "activating" &&
+      plugin.artifact &&
+      semver.valid(plugin.version) !== null &&
+      semver.gt(plugin.version, local.manifest.version);
     const outdated =
       !local ||
       local.source !== "user" ||
       local.manifest.version !== plugin.version;
-    if (outdated && (!local || local.source === "user")) {
+    if (outdated && (!local || local.source === "user" || olderShipped)) {
       const wasEnabled = local ? await isEnabledLocally(plugin.id) : false;
       const downloaded = await download(link, plugin);
       local = await replaceWithDownload(

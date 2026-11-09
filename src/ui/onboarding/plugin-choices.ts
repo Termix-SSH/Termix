@@ -10,8 +10,9 @@ export function currentChoice(plugin: OnboardingPluginInfo): PluginChoice {
 
 /**
  * What the picker starts on. On a fresh install recommended plugins are on
- * and the rest are set to be removed; consent ones start on. Later runs
- * start from how things are now.
+ * and the rest stay installed but off, so a full image keeps every plugin
+ * unless the admin picks Remove; consent ones start on. Later runs start from
+ * how things are now.
  */
 export function defaultChoices(
   list: OnboardingPluginList,
@@ -26,7 +27,7 @@ export function defaultChoices(
         return [plugin.id, currentChoice(plugin)];
       }
       if (plugin.consent) return [plugin.id, "enabled"];
-      return [plugin.id, plugin.recommended ? "enabled" : "remove"];
+      return [plugin.id, plugin.recommended ? "enabled" : "disabled"];
     }),
   );
 }
@@ -37,7 +38,7 @@ export function recommendedChoices(
   return Object.fromEntries(
     list.plugins.map((plugin) => [
       plugin.id,
-      plugin.recommended || plugin.consent ? "enabled" : "remove",
+      plugin.recommended || plugin.consent ? "enabled" : "disabled",
     ]),
   );
 }

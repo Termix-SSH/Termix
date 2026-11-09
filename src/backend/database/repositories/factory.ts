@@ -13,6 +13,7 @@ import { HostSidebarPreferenceRepository } from "./host-sidebar-preference-repos
 import { CredentialSidebarPreferenceRepository } from "./credential-sidebar-preference-repository.js";
 import { UiPreferenceRepository } from "./ui-preference-repository.js";
 import { OpenTabRepository } from "./open-tab-repository.js";
+import { OperationRepository } from "./operation-repository.js";
 import { PluginRepository } from "./plugin-repository.js";
 import { PluginStorageRepository } from "./plugin-storage-repository.js";
 import { PluginSettingsRepository } from "./plugin-settings-repository.js";
@@ -131,6 +132,14 @@ export function createCurrentAuditLogRepository(): AuditLogRepository {
     createCurrentRepositoryContext(),
     // Rows land on every audited call; the audited action saves on its own.
     createCurrentRepositoryLazyWriteHook("audit_log_repository_write"),
+  );
+}
+
+export function createCurrentOperationRepository(): OperationRepository {
+  return new OperationRepository(
+    createCurrentRepositoryContext(),
+    // Rows land on every run. A rollout saves once on its own when it starts.
+    createCurrentRepositoryLazyWriteHook("operation_repository_write"),
   );
 }
 

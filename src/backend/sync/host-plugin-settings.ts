@@ -11,6 +11,7 @@ import {
   getAllSettings,
   setSetting,
 } from "../plugins/settings.js";
+import { canWriteSettingField } from "../plugins/settings-access.js";
 import { databaseLogger } from "../utils/logger.js";
 import type { DefaultOverrides } from "../../types/host-defaults.js";
 import {
@@ -88,6 +89,7 @@ export async function importHostPluginSettings(
   hostId: number,
   carried: unknown,
   only?: DefaultOverrides | null,
+  actorId?: string,
 ): Promise<void> {
   if (!carried || typeof carried !== "object") return;
   const byPlugin = carried as HostPluginSettings;
@@ -101,6 +103,12 @@ export async function importHostPluginSettings(
     for (const field of declaredFields(manifest, "host")) {
       if (field.type === "secret" || !(field.key in own)) continue;
       if (ownKeys && !ownKeys.includes(field.key)) continue;
+      // A pushed value goes through the same field permission as the editor.
+      if (
+        actorId &&
+        !(await canWriteSettingField(actorId, manifest, "host", field))
+      )
+        continue;
       try {
         const value = hook?.importValue
           ? await hook.importValue(field.key, own[field.key])

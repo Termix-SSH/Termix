@@ -131,6 +131,8 @@
     "updateLinkLabel": "Update verfügbar. Öffnen Sie die Versionshinweise auf GitHub"
   },
   "common": {
+    "showPassword": "Passwort anzeigen",
+    "hidePassword": "Passwort ausblenden",
     "scrollTabsLeft": "Tabs nach links scrollen",
     "scrollTabsRight": "Tabs nach rechts scrollen",
     "close": "Schließen",
@@ -495,6 +497,7 @@
     "deleteSelected": "Löschen",
     "exitSelection": "Auswahl beenden",
     "collapseBtn": "Einklappen",
+    "importExportBtn": "Importieren / Exportieren",
     "hostStatusesRefreshed": "Host-Status aktualisiert",
     "failedToRefreshHosts": "Aktualisieren der Hosts fehlgeschlagen",
     "movedHostTo": "{{host}} nach \"{{folder}}\" verschoben",
@@ -609,6 +612,7 @@
     "hostClickBehavior": "Klick auf einen Host",
     "hostClickBehaviorDesc": "Was passiert, wenn du auf einen Host klickst, der bereits einen offenen Tab hat. Strg/Cmd-Klick, Mittelklick oder „In neuem Tab öffnen“ starten immer einen neuen Tab.",
     "hostClickNewTab": "Immer einen neuen Tab öffnen",
+    "hostClickHostPage": "Host-Seite öffnen, wenn ein Plugin eine anbietet",
     "hostClickFocusExisting": "Zum offenen Tab wechseln",
     "hostClickFocusExistingDoubleNew": "Klick zum Wechseln, Doppelklick für neuen Tab",
     "openInNewTab": "In neuem Tab öffnen",
@@ -1010,6 +1014,8 @@
     "registrationSuccess": "Registrierung erfolgreich"
   },
   "placeholders": {
+    "username": "Dein Benutzername",
+    "newUsername": "Wähle einen Benutzernamen",
     "keyPassword": "Schlüsselpasswort",
     "pastePrivateKey": "Fügen Sie Ihren privaten Schlüssel hier ein...",
     "enterPassword": "Geben Sie Ihr Passwort ein"
@@ -1052,7 +1058,8 @@
         "actionNextTab": "Zum nächsten Tab wechseln",
         "actionPreviousTab": "Zum vorherigen Tab wechseln",
         "actionOpenCommandPalette": "Schnellsuche öffnen",
-        "actionReconnectSession": "Aktuelle Sitzung neu verbinden"
+        "actionReconnectSession": "Aktuelle Sitzung neu verbinden",
+        "actionToggleSidebar": "Seitenleiste umschalten"
       },
       "userProfile": {
         "preset_simple": "Einfach",
@@ -1214,6 +1221,18 @@
         "title": "Benachrichtigungen senden",
         "consequence": "An Sie oder andere Benutzer und über die von ihnen eingerichteten Kanäle."
       },
+      "operations:provide": {
+        "title": "Aktionen anbieten",
+        "consequence": "Seine Aktionen können von autorisierten Personen über Automatisierungen, die CLI, die Handy-App und andere Stellen ausgeführt werden."
+      },
+      "operations:invoke": {
+        "title": "Aktionen anderer Plugins ausführen",
+        "consequence": "Führt im Namen des angemeldeten Benutzers die in seinem Manifest aufgeführten Aktionen aus. Genehmigungsregeln gelten weiterhin."
+      },
+      "operations:approve": {
+        "title": "Entscheiden, was eine Genehmigung benötigt",
+        "consequence": "Kann Aktionen für jeden Benutzer ohne Genehmigung ausführen oder blockieren."
+      },
       "notify:hub": {
         "title": "Alle Benachrichtigungen empfangen",
         "consequence": "Speichert und liefert die Benachrichtigungen aller Plugins aus, einschließlich deren Inhalt."
@@ -1237,6 +1256,10 @@
       "hosts:lock": {
         "title": "Hosts schreibgeschützt verwalten",
         "consequence": "Die verwalteten Hosts können von niemandem anderem bearbeitet, gelöscht oder erneut geteilt werden."
+      },
+      "hosts:connect-policy": {
+        "title": "Entscheiden, wer sich verbinden darf",
+        "consequence": "Kann jede SSH- und Remotedesktopverbindung zu jedem Host blockieren oder zulassen."
       },
       "desktop:window": {
         "title": "Desktop-Fenster öffnen",
@@ -1663,6 +1686,12 @@
       "title": "Spalten",
       "auto": "Automatisch",
       "count": "{{count}} Spalten breit"
+    },
+    "pager": {
+      "previous": "Zurück",
+      "next": "Weiter",
+      "page": "Seite {{page}}",
+      "pageOf": "Seite {{page}} von {{pages}}"
     }
   },
   "fields": {
@@ -1681,5 +1710,29 @@
       "admin": "Administrator",
       "user": "Benutzer"
     }
+  },
+  "tileGrid": {
+    "empty": "Noch keine Kacheln. Füge einige aus der Liste hinzu.",
+    "move": "Zum Verschieben ziehen",
+    "moveTile": "{{tile}} verschieben",
+    "settings": "{{tile}}-Einstellungen",
+    "remove": "{{tile}} entfernen",
+    "width": "Breite",
+    "height": "Höhe",
+    "addTiles": "Kacheln hinzufügen",
+    "closePicker": "Schließen",
+    "search": "Kacheln durchsuchen",
+    "noMatches": "Keine Übereinstimmungen.",
+    "kind": {
+      "all": "Alle",
+      "card": "Karten",
+      "chart": "Diagramme",
+      "signal": "Status",
+      "action": "Aktionen",
+      "resource": "Listen",
+      "session": "Sitzungen"
+    },
+    "reset": "Zurücksetzen",
+    "done": "Fertig"
   }
 }

@@ -116,7 +116,7 @@
   --accent: oklch(0.255 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 12%);
+  --border: #292a28;
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
   --chart-1: oklch(0.87 0 0);
@@ -130,7 +130,7 @@
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.255 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-border: #303130;
   --sidebar-ring: oklch(0.556 0 0);
   --warning: oklch(0.852 0.156 91.94);
   --terminal-bg: #0c0d0b;
@@ -316,6 +316,16 @@ html.fs-lg {
 }
 html.fs-xl {
   font-size: 20px;
+}
+
+/* Small icons in buttons snap to even pixels so they sit centered and sharp at every font size. */
+:is(button, [role="button"]) svg:is(.size-3, .size-3\.5) {
+  width: round(nearest, 0.875rem, 2px);
+  height: round(nearest, 0.875rem, 2px);
+}
+:is(button, [role="button"]) svg.size-3 {
+  width: round(nearest, 0.75rem, 2px);
+  height: round(nearest, 0.75rem, 2px);
 }
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {

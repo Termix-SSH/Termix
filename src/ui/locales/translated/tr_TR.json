@@ -131,6 +131,8 @@
     "updateLinkLabel": "Güncelleme mevcut. GitHub'da sürüm notlarını açın"
   },
   "common": {
+    "showPassword": "Şifreyi göster",
+    "hidePassword": "Şifreyi gizle",
     "scrollTabsLeft": "Sekmeleri sola kaydır",
     "scrollTabsRight": "Sekmeleri sağa kaydır",
     "close": "Kapat",
@@ -495,6 +497,7 @@
     "deleteSelected": "Sil",
     "exitSelection": "Seçimi kapat",
     "collapseBtn": "Daralt",
+    "importExportBtn": "İçe Aktar / Dışa Aktar",
     "hostStatusesRefreshed": "Ana bilgisayar durumları yenilendi",
     "failedToRefreshHosts": "Ana bilgisayarlar yenilenemedi",
     "movedHostTo": "{{host}}, \"{{folder}}\" klasörüne taşındı",
@@ -609,6 +612,7 @@
     "hostClickBehavior": "Ana bilgisayara tıklama",
     "hostClickBehaviorDesc": "Zaten açık bir sekmesi olan bir ana bilgisayara tıkladığınızda ne olacağını belirler. Ctrl/Cmd + tıklama, orta tıklama veya \"Yeni sekmede aç\" her zaman yeni bir sekme başlatır.",
     "hostClickNewTab": "Her zaman yeni bir sekme aç",
+    "hostClickHostPage": "Bir eklenti sunuyorsa ana bilgisayar sayfasını aç",
     "hostClickFocusExisting": "Açık sekmeye geç",
     "hostClickFocusExistingDoubleNew": "Geçmek için tıkla, yeni sekme için çift tıkla",
     "openInNewTab": "Yeni sekmede aç",
@@ -1010,6 +1014,8 @@
     "registrationSuccess": "Kayıt başarılı"
   },
   "placeholders": {
+    "username": "Kullanıcı adınız",
+    "newUsername": "Bir kullanıcı adı seçin",
     "keyPassword": "anahtar şifresi",
     "pastePrivateKey": "Özel anahtarınızı buraya yapıştırın...",
     "enterPassword": "Şifrenizi girin"
@@ -1052,7 +1058,8 @@
         "actionNextTab": "Sonraki sekmeye geç",
         "actionPreviousTab": "Önceki sekmeye geç",
         "actionOpenCommandPalette": "Hızlı aramayı aç",
-        "actionReconnectSession": "Mevcut oturumu yeniden bağla"
+        "actionReconnectSession": "Mevcut oturumu yeniden bağla",
+        "actionToggleSidebar": "Kenar çubuğunu aç/kapat"
       },
       "userProfile": {
         "preset_simple": "Basit",
@@ -1214,6 +1221,18 @@
         "title": "Uyarılar gönderebilir",
         "consequence": "Size veya diğer kullanıcılara ve ayarladıkları kanallar üzerinden."
       },
+      "operations:provide": {
+        "title": "İşlem sunma",
+        "consequence": "İzin verilen kişiler tarafından Otomasyonlar, CLI, telefon uygulaması ve diğer yerlerden çalıştırılabilir."
+      },
+      "operations:invoke": {
+        "title": "Diğer eklentilerin işlemlerini çalıştır",
+        "consequence": "Manifestosunda listelenen işlemlerde oturum açmış kullanıcı adına hareket eder. Onay kuralları hâlâ geçerlidir."
+      },
+      "operations:approve": {
+        "title": "Onaya neyin ihtiyacı olduğunu belirle",
+        "consequence": "Her kullanıcı için işlemlerin onaysız çalışmasına izin verebilir veya engelleyebilir."
+      },
       "notify:hub": {
         "title": "Tüm uyarıları alabilir",
         "consequence": "Tüm eklentilerin gönderdiği uyarıları, içerikleri dahil olmak üzere depolar ve iletir."
@@ -1237,6 +1256,10 @@
       "hosts:lock": {
         "title": "Ana bilgisayarları salt okunur olarak yönet",
         "consequence": "Yönettiği ana bilgisayarlar başka kimse tarafından düzenlenemez, silinemez veya yeniden paylaşılamaz."
+      },
+      "hosts:connect-policy": {
+        "title": "Bağlanabilen kişileri belirle",
+        "consequence": "Herhangi bir ana bilgisayara yapılan her SSH ve uzaktan masaüstü bağlantısını engelleyebilir veya izin verebilir."
       },
       "desktop:window": {
         "title": "Masaüstü pencereleri açabilir",
@@ -1663,6 +1686,12 @@
       "title": "Sütunlar",
       "auto": "Otomatik",
       "count": "{{count}} geniş"
+    },
+    "pager": {
+      "previous": "Önceki",
+      "next": "Sonraki",
+      "page": "{{page}}. sayfa",
+      "pageOf": "{{pages}} sayfadaki {{page}}. sayfa"
     }
   },
   "fields": {
@@ -1681,5 +1710,29 @@
       "admin": "Yönetici",
       "user": "Kullanıcı"
     }
+  },
+  "tileGrid": {
+    "empty": "Henüz karo yok. Listeden bazıları ekleyin.",
+    "move": "Taşımak için sürükleyin",
+    "moveTile": "{{tile}} taşı",
+    "settings": "{{tile}} ayarları",
+    "remove": "{{tile}} kaldır",
+    "width": "Genişlik",
+    "height": "Yükseklik",
+    "addTiles": "Karo ekle",
+    "closePicker": "Kapat",
+    "search": "Karoları ara",
+    "noMatches": "Hiçbir şey eşleşmiyor.",
+    "kind": {
+      "all": "Tümü",
+      "card": "Kartlar",
+      "chart": "Grafikler",
+      "signal": "Durum",
+      "action": "İşlemler",
+      "resource": "Listeler",
+      "session": "Oturumlar"
+    },
+    "reset": "Sıfırla",
+    "done": "Tamam"
   }
 }

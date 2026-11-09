@@ -1,3 +1,10 @@
+import { registerDeviceAuthRoutes } from "./device-auth-routes.js";
+import {
+  CredentialStorageError,
+  credentialStorageAllowed,
+  sendCredentialStorageOff,
+  storedSecretFields,
+} from "../../hosts/credential-storage.js";
 import { getErrorMessage } from "../../utils/error-message.js";
 import { isQuickConnectAuthType } from "../../hosts/connect/auth-provider-registry.js";
 import { ensureCoreSshAuthProviders } from "../../hosts/connect/core-providers.js";
@@ -80,6 +87,7 @@ import {
   loadProtocolAuthSummaries,
   planProtocolAuthWrite,
   ProtocolAuthWriteError,
+  protocolPatchHasSecret,
   readProtocolAuthPayload,
   withProtocolAuth,
   writeProtocolAuth,
@@ -100,6 +108,14 @@ const router = express.Router();
 router.use(rejectSharedCopyWrites("host", /^\/db\/host\/(\d+)$/));
 
 const upload = multer({ storage: multer.memoryStorage() });
+
+/** A host body with a password or key, while saving those is turned off. */
+function hostWriteHasSecret(hostData: Record<string, unknown>): boolean {
+  if (credentialStorageAllowed()) return false;
+  if (storedSecretFields("ssh_data", hostData).length > 0) return true;
+  const patch = readProtocolAuthPayload(hostData);
+  return !!patch && protocolPatchHasSecret(patch);
+}
 
 /**
  * Tells whoever is polling this host that its details changed.
@@ -129,6 +145,7 @@ function notifyStatsHostUpdated(
 const authManager = AuthManager.getInstance();
 const permissionManager = PermissionManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
+registerDeviceAuthRoutes(router, authenticateJWT);
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
 registerHostTagRoutes(
@@ -200,6 +217,7 @@ router.post(
     if (req.path === "/enroll") {
       hostData = applyHostEnrollmentDefaults(hostData);
     }
+    if (hostWriteHasSecret(hostData)) return sendCredentialStorageOff(res);
 
     const {
       connectionType,
@@ -482,6 +500,9 @@ router.post(
       pluginEvents.emit(TOPICS.hostCreated, { hostId: createdHost.id, userId });
       notifyStatsHostUpdated(createdHost.id as number, userId, "host_create");
     } catch (err) {
+      if (err instanceof CredentialStorageError) {
+        return sendCredentialStorageOff(res);
+      }
       sshLogger.error("Failed to save SSH host to database", err, {
         operation: "host_create",
         userId,
@@ -781,6 +802,7 @@ router.put(
     } else {
       hostData = req.body;
     }
+    if (hostWriteHasSecret(hostData)) return sendCredentialStorageOff(res);
 
     const {
       connectionType,
@@ -1201,6 +1223,9 @@ router.put(
       res.json(await withProtocolAuth(stripSensitiveFields(resolvedHost)));
       notifyStatsHostUpdated(parseInt(hostId), userId, "host_update");
     } catch (err) {
+      if (err instanceof CredentialStorageError) {
+        return sendCredentialStorageOff(res);
+      }
       sshLogger.error("Failed to update SSH host in database", err, {
         operation: "host_update",
         hostId: parseInt(hostId),
@@ -1225,14 +1250,19 @@ router.put(
  *       - SSH
  *     responses:
  *       200:
- *         description: "{ manualCreate, blockedBy? } where blockedBy is the managing plugin's name."
+ *         description: "{ manualCreate, blockedBy?, credentialStorage } where blockedBy is the managing plugin's name and credentialStorage says whether passwords and keys can be saved."
  */
 router.get("/policy", authenticateJWT, (_req: Request, res: Response) => {
   const blocked = manualCreateBlockedBy();
+  const credentialStorage = credentialStorageAllowed();
   res.json(
     blocked
-      ? { manualCreate: false, blockedBy: blocked.pluginName }
-      : { manualCreate: true },
+      ? {
+          manualCreate: false,
+          blockedBy: blocked.pluginName,
+          credentialStorage,
+        }
+      : { manualCreate: true, credentialStorage },
   );
 });
 

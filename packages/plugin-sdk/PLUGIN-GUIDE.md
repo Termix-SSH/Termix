@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.0.22 | Plugin API 1.13.0
+SDK 1.1.4 | Plugin API 1.17.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -354,6 +354,20 @@ router.post("/notes", async (req, res) => {
   `allowManualCreate: () => false` blocks adding hosts by hand. Your own `ctx.hosts` writes still go
   through. `ctx.hosts.setShares(hostId, grants)` replaces a host's whole grant list, and
   `ctx.credentials.list()` finds the acting user's credentials by name.
+- `ctx.credentials.setSshKeyCertificate(credentialId, certificate)` stores a CA-signed OpenSSH
+  certificate (a `-cert.pub` line, or `null` to clear it) on one of the acting user's SSH key
+  credentials. Core then offers key plus certificate on every connection through that credential, so a
+  plugin that issues certificates can keep the credential current instead of asking the user to paste it.
+- Second factor checks: `input.stepUpAt` is when the user last proved a second factor while signed in (Termix
+  26.11.1+). Answer `request` with `requestKind: "verify"` and a tab of yours that calls `/ui` `listStepUpFactors`,
+  `challengeStepUp` and `verifyStepUp`, drawing the factor with `useSecondFactors`.
+- Connect policy: with `hosts:connect-policy`, `ctx.hosts.connectPolicy.provide({ check(input) })` is asked
+  before every SSH config is built and every remote desktop login is handed out (`input` has `userId`,
+  `hostId`, `protocol`, `purpose`, `profile`, `interactive`, `origin`). Return `{ decision: "allow" }`,
+  `{ decision: "deny", reason }` or `{ decision: "request", reason, requestTab }`. The strictest answer of
+  all providers wins and a provider that throws denies. SSH prepare then gives an error outcome with code
+  `access-denied` or `access-required`, and `ctx.credentials.resolveHostProtocol` throws an error with that
+  `code` and a `toJSON()` body for a 403. Keep `check` fast, it also runs for background polling.
 
 ### Errors
 
@@ -413,6 +427,70 @@ ctx.schedule.every(60_000, () => refresh(), { jitterMs: 5_000 });
   from `ctx.currentActor()`.
 - Use a service: declare it in `requires`, then `ctx.services.get<T>("snippets.access")`. It returns
   nothing while no provider runs, so always handle that.
+
+### Operations
+
+Declare what your plugin can do in `contributes.operations`, and it shows up in Automations, Fleets, the
+assistant, the CLI, the phone app and the command palette with no other wiring. It also gets per host results,
+dry runs, run history, approvals and drift checks.
+
+```json
+"capabilities": ["operations:provide"],
+"engine": { "termix": ">=26.11.1-0", "api": "^1.13" },
+"contributes": {
+  "operations": {
+    "actions": [{
+      "id": "demo.restart",
+      "titleKey": "ops.restart.title",
+      "scope": "host",
+      "inputs": [{ "key": "name", "type": "string", "labelKey": "ops.restart.name", "required": true }],
+      "risk": "change",
+      "permission": "use",
+      "hostAccess": "edit",
+      "dryRun": "describe"
+    }]
+  }
+}
+```
+
+```ts
+ctx.operations.register("demo.restart", {
+  describe: (input) => `Would restart ${input.name}`,
+  run: async (input, { hostId, signal, log }) => {
+    return { summary: `Restarted ${input.name}`, changed: true };
+  },
+});
+```
+
+- Actions: `scope` is `host`, `resource` or `server`. `risk` is `read`, `change` or `destructive`. Host actions declare
+  `hostAccess`. Use `edit` for changes unless people with `connect` already do this today. A destructive action
+  must use `edit` or `manage` and needs a confirm.
+- Inputs use the settings field types, plus `required`, `pattern`, `optionsFrom` (a read action fills the choices)
+  and type `resource`. Keys you did not declare are refused before your handler runs. `secret` values reach the handler
+  but are never stored or shown. Mark private outputs `sensitive`.
+- `dryRun`: `native` calls `run` with `dryRun: true` and nothing may change. `describe` calls `describe` instead.
+- `check` names a read action that proves the result, used for drift. `undo` names the reverse action, and `run` returns
+  `undoInput`. `idempotent` lets a rollout retry it. `exclusive` allows one at a time per host. `when` limits it to
+  hosts by setting or OS.
+- `surfaces`: the assistant and MCP are off until you set them true. Only do that for actions safe for a model to
+  ask for. The rest are on unless you set them false.
+- Resources describe a kind of thing, such as a container: a read action on one host returns `{ rows }` as `data`, and
+  core draws the All hosts table and host page section. Attach actions with `scope: "resource"`.
+- Signals are status tiles: a read action returns `{ value, status, label }` as `data`, with status `ok`, `warn`, `fail` or
+  `unknown`. `fix` names the action offered when it is not ok. Keep these reads cheap, they run for every host.
+- Events: declare them, then call `ctx.operations.emit(id, payload, { hostId })`.
+- Handlers must watch `signal` and stop when it fires. Throw on failure; a failed run never counts against your
+  plugin's error budget. Throw an error with `code = "NEEDS_INTERACTION"` when a host needs a person to sign in first.
+- Handlers have no request and no session. Take what you need from the input and `hostId`.
+- Keep your REST routes. Inside one, call `ctx.operations.run(id, { hostId, input })` so a button press goes through
+  the same checks and lands in the same history.
+- To run another plugin's action, add `operations:invoke`, list it in `operations.invokes` and call
+  `ctx.operations.invoke(id, { hostId, input, via: "automation" })`. It acts as the current user and rules still apply.
+- `risk` is your plugin's claim. Plugins run in-process, so this is not a sandbox. Actions from plugins not signed as
+  official count as `change` when rules decide what needs a person, and stay off the assistant and MCP until an admin
+  allows them.
+- Set `engine.termix` to at least `>=26.11.1-0`. Keep `engine.api` as it was unless you import something new from
+  `/ui`, or the phone app will ask people to update to see your plugin.
 
 ### Shared packages
 
@@ -491,11 +569,13 @@ touch your own tables. `createTestDb` applies them in tests, so a broken one fai
 Query through `const db = await ctx.db.client()`, then `await ctx.db.persist()` after writes
 (`persist({ lazy: true })` for frequent low value writes). `ctx.db.dialect` says which database runs.
 
-Other storage: `ctx.kv` for a few values, `ctx.settings` for settings, `ctx.secrets` for secrets,
+Other storage: `ctx.kv` for a few values (`get` answers `null` for a key never set), `ctx.settings` for settings, `ctx.secrets` for secrets,
 `ctx.files.dataDir()` for files. To sync a table to a linked desktop, use `ctx.sync.registerEntity` and
 `contributes.syncEntities`. The entity name is part of the protocol and never changes.
 
-A registered table syncs the rows each user owns, both ways. For data you keep for the whole server (a shared
+A registered table syncs the rows each user owns, both ways. A table with a unique key besides `id` (one row per
+host) should set `matchOn: ["hostId"]` (Termix 26.11.1+): when both sides made that row, the inbound one takes over
+the local row instead of failing on the key. For data you keep for the whole server (a shared
 library, rows other users share), register a read only entity with `table: null`, `readOnly: true` and `load`,
 `write` and `erase` (Termix 26.10.6+). `load(userId)` returns the rows that user should get, each with a
 `syncId`. The desktop keeps them with `write` and drops them with `erase`, and never pushes them back:
@@ -702,9 +782,46 @@ exports with props is `ui.api.txt` in the Termix repo
 - Small type: most text 11 to 13px.
 - No new modal dialogs. Ask with `useConfirm()`, open views in place with `InlineView`, and use
   `PanePrompt` for small prompts.
-- Every tab or panel sits in `PanelShell`. Lists use `PanelList` and `ListRow`, add with `AddButton`,
-  forms end with `FormFooter`, empty lists show `EmptyState`.
-- Card grids use `DataView` with `ViewToggle`. Pass `columns` and `onColumns` to `ViewToggle` and the same
+- Every tab or panel sits in `PanelShell` (inside `PanelFrame` when it is a tab). Lists use `PanelList` and
+  `ListRow`, add with `AddButton`, forms end with `FormFooter`, empty lists show `EmptyState`, loading shows
+  `LoadingState`, and "not installed" or "no access" shows `NoticePanel`.
+- The tile look: page content sits edge to edge on the page background, with one line between sections and
+  no gaps, padding or card fill around them. The body of a `PanelShell` has no padding. Stack sections with
+  `TileStack` (or `TileColumn` when cards sit deeper), put numbers and small cards in a `TileWall` of
+  `StatTile` or `MetricCard`, and use `TileFrame` for a titled section. Cards drop their own box inside
+  these. Forms keep `PANEL.body` padding inside their section. An `InlineView` form made of `SectionCard`s
+  takes `stacked`.
+- Page views go in `PanelShell`'s `tabs` band as a `TabStrip`. `Segmented` is for filters and view modes and
+  keeps its natural width, never stretched across the pane. A page with many sections uses `SideNav` on the
+  left. Put the refresh button in the header with `RefreshButton`, and the docs link with the `docs` prop.
+- Toolbars: search, filters and buttons go in `PanelShell`'s `toolbar` slot, or in a `ToolbarBand` for a second
+  row. Both make every control in the row 32px, so a `size="sm"` button lines up with a search box. Use
+  `ToolbarSelect` for a small select there, never a native `<select>`. Don't build your own row with its own
+  padding.
+- Padding: loose content in a page body (a hint, a single field) takes `PANEL.body`. A `SectionCard` body uses
+  `PANEL.section` for its fields.
+- Headers have no background. Label a group with `GroupHeading`, never a row with `bg-muted`.
+- Sub views: a detail or edit view opens as an `InlineView`, which has the one back button. Anywhere else use
+  `BackButton` in `PanelShell`'s `leading` slot. Never make a smaller back button.
+- Save and Add always sit pinned at the bottom: pass `FormFooter` to `InlineView` or `PanelShell` as `footer`.
+  Inside a tab body, wrap the form in `<PanelShell chrome={false} footer={...}>`.
+- Loading: `LoadingState` for anything still loading (`compact` in cards and rows). A spinner on its own is
+  only for a button or an activity like "working".
+- Config and log editors fill the rest of the view: `TextAreaField fill`, or `min-h-0 flex-1` on a log, never a
+  fixed number of rows or a `max-h-[60vh]`.
+- Host row dots: report a problem with `registerHostBadge({ useDot })` instead of drawing a dot. The layout
+  merges every plugin's dots into one.
+- `termix-plugin validate` lists drift from these rules under `ui`. They are warnings, so fix what applies.
+- States and data: `StatusBadge` and `StatusDot` (pass a state like "running" and the color follows),
+  `InfoGrid` for label and value pairs, `DataTable` for a plain table, `Pager` and `usePaged` under long lists.
+- Tile pages use `TileGrid` with `TileFrame` around each tile and `TilePicker` beside it while editing. Slots are
+  `{ id, x, y, w, h }` on 12 columns (`h` null for the natural height); save them where your plugin keeps
+  preferences and run saved ones through `sanitizeTiles`. Add with `appendTile`. While editing, show
+  `TileEditBar` over the grid. Needs Termix 26.11.1.
+- A dashboard card with `entries` can be placed many times: each entry has a title, a group and a `config` the
+  card gets back as `config` (save changes with `setConfig`, keep it small). Operations Center uses this for
+  status and action tiles.
+- Card grids use `DataView` with `ViewToggle` (the cards share lines like a `TileWall`). Pass `columns` and `onColumns` to `ViewToggle` and the same
   value as `size` to `DataView`, so users can pick Auto (as many as fit) or a fixed number of cards per
   row. `usePluginPanelView` keeps the choice as `columns`. Older Termix versions ignore both props.
 - Forms: `TextField`, `NumberField`, `SelectField`, `SwitchRow`, `SecretField`, `SettingRow` and friends.
@@ -723,7 +840,10 @@ checks saves. You don't build settings UI.
   `enableKey` switch first).
 - Types: `boolean`, `string`, `number`, `select`, `multiselect`, `secret`, `textarea`, `json`, `custom`.
 - Options: `labelKey`, `descriptionKey`, `placeholderKey`, `default`, `options`, `min`, `max`, `requires`,
-  `group`, `permission`, `hidden`, `component`.
+  `group`, `permission`, `hidden`, `component`. `permission` is checked on every write: the editor, host imports,
+  bulk edits, host defaults and sync.
+- `contributes.settings.host.enablePermission` limits who may flip the host switch, the same way (API 1.17,
+  core 26.11.1+). Without it anyone with host edit can.
 - Read: `ctx.settings.get(key)`, `getUser(userId, key)`, `getHost(hostId, key)`. Write: `set`, `setHost`.
   React: `ctx.settings.onChange`. Check: `ctx.settings.onValidate("admin", values => ({ key: "message" }))`.
 - Frontend: `useSettings("user")` gives values and `save`.
@@ -774,6 +894,10 @@ Login methods, second factors and SSH auth types need `auth:provide`, which is h
 closely. Declare ids in `contributes.auth` and register them with `ctx.auth.registerLoginMethod`,
 `registerSecondFactor` or `registerSshAuthProvider`. Connection protocols go in `contributes.protocols`
 and `app.registerHostProtocol`. Read https://docs.termix.site/develop/auth before starting one.
+
+To tie an external identity to an account that already exists, `ctx.auth.identities` has `list(userId)`,
+`link(userId, { provider, subject, email })` and `unlink(userId, provider)` (Termix 26.11.1+). `link` refuses an
+identity another account holds and `unlink` refuses to take away a user's last way to sign in. Both are audited.
 
 Login rules need `auth:policy`. `ctx.auth.policy.provide({ evaluate, allowRememberDevice })` is asked at
 every login with the user, the method, the device and every second factor (`ctx.auth.listSecondFactors()`
@@ -962,6 +1086,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `@termix-ssh/plugin-sdk/db`                                          | `defineTable` and column builders                                                              |
 | `@termix-ssh/plugin-sdk/manifest`                                    | `PluginManifest` type and manifest checks                                                      |
 | `@termix-ssh/plugin-sdk/capabilities`                                | The capability catalog                                                                         |
+| `@termix-ssh/plugin-sdk/operations`                                  | Types, input checks and JSON Schema for declared actions                                       |
 | `@termix-ssh/plugin-sdk/settings`                                    | Settings field validation                                                                      |
 | `@termix-ssh/plugin-sdk/testing`                                     | `createMockCtx`, `createTestDb`, `renderWithApp`, `createFakeContext`                          |
 | `@termix-ssh/plugin-sdk/vitest-preset`                               | `pluginVitestConfig`                                                                           |
@@ -993,12 +1118,15 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `desktop:local`          | high     | Use the user's own computer, desktop app only                 |
 | `hosts:export`           | high     | Export hosts with their saved logins                          |
 | `notify:hub`             | high     | Receive every alert (the alerts hub only)                     |
+| `operations:invoke`      | high     | Run other plugins' declared actions, listed in `invokes`      |
+| `operations:approve`     | high     | Decide which actions need a person                            |
 | `ui:layout`              | high     | Replace the whole app layout                                  |
 | `hosts:write`            | medium   | Add and edit hosts                                            |
 | `hosts:status-provide`   | medium   | Be the source of host status dots                             |
 | `hosts:activity-provide` | medium   | Be the source of the recent activity list                     |
 | `ssh:transport`          | high     | Carry SSH connections for hosts it claims over its own stream |
 | `hosts:lock`             | medium   | Make hosts it manages read only for everyone else             |
+| `hosts:connect-policy`   | high     | Allow, deny or ask for approval before sessions open          |
 | `network:probe`          | medium   | Check that a host answers on a TCP port                       |
 | `credentials:use`        | medium   | Connect with saved credentials without seeing them            |
 | `credentials:write`      | medium   | Save new credentials                                          |
@@ -1008,6 +1136,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `users:read`             | medium   | Usernames, roles and UI language                              |
 | `events:core`            | medium   | Listen to core events                                         |
 | `notify:send`            | medium   | Send alerts                                                   |
+| `operations:provide`     | medium   | Offer declared actions and events                             |
 | `audit:read`             | medium   | Read the audit log                                            |
 | `desktop:window`         | medium   | Open windows in the desktop app                               |
 | `hosts:read`             | low      | Read hosts the user can see                                   |

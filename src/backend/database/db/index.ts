@@ -599,6 +599,70 @@ async function initializeCompleteDatabase(): Promise<void> {
         UNIQUE (role_name, permission)
     );
 
+    CREATE TABLE IF NOT EXISTS operation_runs (
+      id TEXT PRIMARY KEY,
+      action_id TEXT NOT NULL,
+      action_version INTEGER NOT NULL DEFAULT 1,
+      plugin_id TEXT NOT NULL,
+      plugin_version TEXT NOT NULL,
+      user_id TEXT REFERENCES users (id) ON DELETE SET NULL,
+      username TEXT NOT NULL,
+      origin TEXT NOT NULL,
+      host_id INTEGER,
+      host_name TEXT,
+      batch_id TEXT,
+      dry_run INTEGER NOT NULL DEFAULT 0,
+      risk TEXT NOT NULL,
+      status TEXT NOT NULL,
+      summary TEXT,
+      changed INTEGER,
+      input TEXT,
+      sealed_input TEXT,
+      output TEXT,
+      undo_input TEXT,
+      error TEXT,
+      error_code TEXT,
+      undo_of TEXT,
+      idempotency_key TEXT,
+      created_at TEXT NOT NULL,
+      started_at TEXT,
+      finished_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_operation_runs_created ON operation_runs (created_at);
+    CREATE INDEX IF NOT EXISTS idx_operation_runs_user_created ON operation_runs (user_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_operation_runs_host_created ON operation_runs (host_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_operation_runs_status ON operation_runs (status);
+    CREATE INDEX IF NOT EXISTS idx_operation_runs_batch ON operation_runs (batch_id);
+
+    CREATE TABLE IF NOT EXISTS operation_approvals (
+      id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL REFERENCES operation_runs (id) ON DELETE CASCADE,
+      requested_by TEXT,
+      reason TEXT,
+      allow_self INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL,
+      decided_by TEXT,
+      comment TEXT,
+      created_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      decided_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_operation_approvals_status ON operation_approvals (status, expires_at);
+    CREATE INDEX IF NOT EXISTS idx_operation_approvals_run ON operation_approvals (run_id);
+
+    CREATE TABLE IF NOT EXISTS operation_events (
+      id TEXT PRIMARY KEY,
+      event_id TEXT NOT NULL,
+      plugin_id TEXT NOT NULL,
+      host_id INTEGER,
+      severity TEXT,
+      payload TEXT,
+      run_id TEXT,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_operation_events_created ON operation_events (created_at);
+    CREATE INDEX IF NOT EXISTS idx_operation_events_host_created ON operation_events (host_id, created_at);
+
     CREATE TABLE IF NOT EXISTS api_keys (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
@@ -961,6 +1025,7 @@ const enforceUniqueUsernames = () => {
 
 const migrateSchema = () => {
   repairSnippetsColumns(sqlite);
+  addColumnIfNotExists("api_keys", "scopes", "TEXT");
   addColumnIfNotExists("user_preferences", "theme", "TEXT");
   addColumnIfNotExists("user_preferences", "font_size", "TEXT");
   addColumnIfNotExists("user_preferences", "accent_color", "TEXT");
@@ -1685,6 +1750,11 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "shared_source", "TEXT");
   addColumnIfNotExists("ssh_data", "ssh_options", "TEXT");
   addColumnIfNotExists("ssh_credentials", "shared_source", "TEXT");
+  addColumnIfNotExists(
+    "ssh_credentials",
+    "local_only",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
   addColumnIfNotExists(
     "ssh_folders",
     "local_only",

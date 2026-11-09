@@ -131,6 +131,8 @@
     "updateLinkLabel": "Yra naujinimas. Atidarykite išleidimo pastabas GitHub"
   },
   "common": {
+    "showPassword": "Rodyti slaptažodį",
+    "hidePassword": "Slėpti slaptažodį",
     "scrollTabsLeft": "Slinkti korteles į kairę",
     "scrollTabsRight": "Slinkti korteles į dešinę",
     "close": "Uždaryti",
@@ -503,6 +505,7 @@
     "deleteSelected": "Ištrinti",
     "exitSelection": "Išeiti iš pasirinkimo",
     "collapseBtn": "Sutraukti",
+    "importExportBtn": "Importuoti / Eksportuoti",
     "hostStatusesRefreshed": "Serverių būsenos atnaujintos",
     "failedToRefreshHosts": "Nepavyko atnaujinti serverių",
     "movedHostTo": "Serveris „{{host}}“ perkeltas į „{{folder}}“",
@@ -621,6 +624,7 @@
     "hostClickBehavior": "Paspaudus serverį",
     "hostClickBehaviorDesc": "Kas nutinka, kai paspaudžiate serverį, kurio skirtukas jau atidarytas. Paspaudus su Ctrl/Cmd, vidiniu pelės mygtuku arba pasirinkus „Atidaryti naujame skirtuke“, visada atidaromas naujas skirtukas.",
     "hostClickNewTab": "Visada atidaryti naują skirtuką",
+    "hostClickHostPage": "Atidaryti serverio puslapį, jei priedas jį siūlo",
     "hostClickFocusExisting": "Perjungti į atidarytą skirtuką",
     "hostClickFocusExistingDoubleNew": "Paspaudus – perjungti, dukart paspaudus – naujas skirtukas",
     "openInNewTab": "Atidaryti naujame skirtuke",
@@ -1036,6 +1040,8 @@
     "registrationSuccess": "Registracija sėkminga"
   },
   "placeholders": {
+    "username": "Jūsų vartotojo vardas",
+    "newUsername": "Pasirinkite vartotojo vardą",
     "keyPassword": "rakto slaptažodis",
     "pastePrivateKey": "Įklijuokite savo privačią raktą čia...",
     "enterPassword": "Įveskite savo slaptažodį"
@@ -1086,7 +1092,8 @@
         "actionNextTab": "Perjungti į kitą skirtuką",
         "actionPreviousTab": "Perjungti į ankstesnį skirtuką",
         "actionOpenCommandPalette": "Atidaryti greitąją paiešką",
-        "actionReconnectSession": "Perjungti dabartinę sesiją"
+        "actionReconnectSession": "Perjungti dabartinę sesiją",
+        "actionToggleSidebar": "Perjungti šoninę juostą"
       },
       "userProfile": {
         "preset_simple": "Paprasta",
@@ -1248,6 +1255,18 @@
         "title": "Siųsti įspėjimus",
         "consequence": "Jums arba kitiems vartotojams, per nustatytus kanalus."
       },
+      "operations:provide": {
+        "title": "Siūlyti veiksmus",
+        "consequence": "Jo veiksmus gali vykdyti Automations, CLI, telefono programėlė ir kitur, naudotojai, kuriems tai leidžiama."
+      },
+      "operations:invoke": {
+        "title": "Vykdyti kitų priedų veiksmus",
+        "consequence": "Veikia prisijungusio naudotojo vardu su manifeste išvardytais veiksmais. Toliau taikomos patvirtinimo taisyklės."
+      },
+      "operations:approve": {
+        "title": "Nustatyti, kas reikalauja patvirtinimo",
+        "consequence": "Gali leisti veiksmus vykdyti be patvirtinimo arba juos blokuoti visiems naudotojams."
+      },
       "notify:hub": {
         "title": "Gauti visus įspėjimus",
         "consequence": "Laiko ir pristato visus įskiepių siunčiamus įspėjimus, įskaitant jų turinį."
@@ -1271,6 +1290,10 @@
       "hosts:lock": {
         "title": "Tvarkyti serverius kaip tik skaitymo režimu",
         "consequence": "Serverių, kuriuos jis tvarko, negalima redaguoti, ištrinti ar dalintis kitais būdais."
+      },
+      "hosts:connect-policy": {
+        "title": "Nustatyti, kas gali prisijungti",
+        "consequence": "Gali blokuoti arba leisti visus SSH ir nuotolinio darbalaukio prisijungimus prie bet kurio serverio."
       },
       "desktop:window": {
         "title": "Atidaryti darbalaukio langus",
@@ -1747,6 +1770,12 @@
       "title": "Stulpeliai",
       "auto": "Automatiškai",
       "count": "{{count}} pločio"
+    },
+    "pager": {
+      "previous": "Ankstesnis",
+      "next": "Kitas",
+      "page": "{{page}} puslapis",
+      "pageOf": "{{page}} iš {{pages}} puslapio"
     }
   },
   "fields": {
@@ -1771,5 +1800,29 @@
       "admin": "Administratorius",
       "user": "Vartotojas"
     }
+  },
+  "tileGrid": {
+    "empty": "Dar nėra plytelių. Pridėkite keletą iš sąrašo.",
+    "move": "Vilkite, kad perkeltumėte",
+    "moveTile": "Perkelti „{{tile}}“",
+    "settings": "„{{tile}}“ nustatymai",
+    "remove": "Pašalinti „{{tile}}“",
+    "width": "Plotis",
+    "height": "Aukštis",
+    "addTiles": "Pridėti plyteles",
+    "closePicker": "Uždaryti",
+    "search": "Ieškoti plytelių",
+    "noMatches": "Nėra sutapimų.",
+    "kind": {
+      "all": "Visos",
+      "card": "Kortelės",
+      "chart": "Grafikai",
+      "signal": "Būsena",
+      "action": "Veiksmai",
+      "resource": "Sąrašai",
+      "session": "Sesijos"
+    },
+    "reset": "Atstatyti",
+    "done": "Atlikta"
   }
 }

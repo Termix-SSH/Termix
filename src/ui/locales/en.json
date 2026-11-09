@@ -131,6 +131,8 @@
     "updateLinkLabel": "Update available. Open the release notes on GitHub"
   },
   "common": {
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "scrollTabsLeft": "Scroll tabs left",
     "scrollTabsRight": "Scroll tabs right",
     "close": "Close",
@@ -495,6 +497,7 @@
     "deleteSelected": "Delete",
     "exitSelection": "Exit selection",
     "collapseBtn": "Collapse",
+    "importExportBtn": "Import / Export",
     "hostStatusesRefreshed": "Host statuses refreshed",
     "failedToRefreshHosts": "Failed to refresh hosts",
     "movedHostTo": "Moved {{host}} to \"{{folder}}\"",
@@ -609,6 +612,7 @@
     "hostClickBehavior": "Clicking a host",
     "hostClickBehaviorDesc": "What happens when you click a host that already has an open tab. Ctrl/Cmd click, middle click, or \"Open in new tab\" always start a new one.",
     "hostClickNewTab": "Always open a new tab",
+    "hostClickHostPage": "Open the host page, when a plugin offers one",
     "hostClickFocusExisting": "Switch to the open tab",
     "hostClickFocusExistingDoubleNew": "Click to switch, double click for a new tab",
     "openInNewTab": "Open in new tab",
@@ -1010,6 +1014,8 @@
     "registrationSuccess": "Registration successful"
   },
   "placeholders": {
+    "username": "Your username",
+    "newUsername": "Choose a username",
     "keyPassword": "key password",
     "pastePrivateKey": "Paste your private key here...",
     "enterPassword": "Enter your password"
@@ -1052,7 +1058,8 @@
         "actionNextTab": "Switch to next tab",
         "actionPreviousTab": "Switch to previous tab",
         "actionOpenCommandPalette": "Open quick search",
-        "actionReconnectSession": "Reconnect current session"
+        "actionReconnectSession": "Reconnect current session",
+        "actionToggleSidebar": "Toggle sidebar"
       },
       "userProfile": {
         "preset_simple": "Simple",
@@ -1214,6 +1221,18 @@
         "title": "Send alerts",
         "consequence": "To you or other users, and through the channels they set up."
       },
+      "operations:provide": {
+        "title": "Offer actions",
+        "consequence": "Its actions can be run from Automations, the CLI, the phone app and other places, by people allowed to use them."
+      },
+      "operations:invoke": {
+        "title": "Run other plugins' actions",
+        "consequence": "Acts for the signed-in user on the actions its manifest lists. Approval rules still apply."
+      },
+      "operations:approve": {
+        "title": "Decide what needs approval",
+        "consequence": "Can let actions run with no approval, or block them, for every user."
+      },
       "notify:hub": {
         "title": "Receive every alert",
         "consequence": "Stores and delivers the alerts all plugins send, including their contents."
@@ -1237,6 +1256,10 @@
       "hosts:lock": {
         "title": "Manage hosts as read only",
         "consequence": "Hosts it manages can't be edited, deleted or reshared by anyone else."
+      },
+      "hosts:connect-policy": {
+        "title": "Decide who can connect",
+        "consequence": "Can block or allow every SSH and remote desktop connection to any host."
       },
       "desktop:window": {
         "title": "Open desktop windows",
@@ -1663,6 +1686,12 @@
       "title": "Columns",
       "auto": "Auto",
       "count": "{{count}} wide"
+    },
+    "pager": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {{page}}",
+      "pageOf": "Page {{page}} of {{pages}}"
     }
   },
   "fields": {
@@ -1681,5 +1710,29 @@
       "admin": "Admin",
       "user": "User"
     }
+  },
+  "tileGrid": {
+    "empty": "No tiles yet. Add some from the list.",
+    "move": "Drag to move",
+    "moveTile": "Move {{tile}}",
+    "settings": "{{tile}} settings",
+    "remove": "Remove {{tile}}",
+    "width": "Width",
+    "height": "Height",
+    "addTiles": "Add tiles",
+    "closePicker": "Close",
+    "search": "Search tiles",
+    "noMatches": "Nothing matches.",
+    "kind": {
+      "all": "All",
+      "card": "Cards",
+      "chart": "Charts",
+      "signal": "Status",
+      "action": "Actions",
+      "resource": "Lists",
+      "session": "Sessions"
+    },
+    "reset": "Reset",
+    "done": "Done"
   }
 }

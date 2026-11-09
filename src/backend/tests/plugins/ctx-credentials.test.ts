@@ -17,6 +17,7 @@ const state = vi.hoisted(() => ({
   resolverCalls: [] as Array<Record<string, unknown>>,
   savedCredentials: [] as Array<Record<string, unknown>>,
   userCredentials: new Map<string, Array<Record<string, unknown>>>(),
+  credentialUpdates: [] as Array<Record<string, unknown>>,
   corePermissions: new Set<string>(["credentials.view", "credentials.create"]),
   logins: new Map<string, Record<string, unknown>>(),
   ownerDecrypts: 0,
@@ -33,6 +34,23 @@ vi.mock("../../database/repositories/factory.js", () => ({
   createCurrentCredentialRepository: () => ({
     listDecryptedByUserId: async (userId: string) =>
       state.userCredentials.get(userId) ?? [],
+    findByIdForUser: async (userId: string, credentialId: number) =>
+      (state.userCredentials.get(userId) ?? []).find(
+        (row) => row.id === credentialId,
+      ) ?? null,
+    updateForUser: async (
+      userId: string,
+      credentialId: number,
+      update: Record<string, unknown>,
+    ) => {
+      const row = (state.userCredentials.get(userId) ?? []).find(
+        (entry) => entry.id === credentialId,
+      );
+      if (!row) return null;
+      Object.assign(row, update);
+      state.credentialUpdates.push({ userId, credentialId, update });
+      return row;
+    },
     createEncryptedForUser: async (
       userId: string,
       data: Record<string, unknown>,
@@ -177,6 +195,7 @@ beforeEach(() => {
   state.resolverCalls.length = 0;
   state.savedCredentials.length = 0;
   state.userCredentials.clear();
+  state.credentialUpdates.length = 0;
   state.corePermissions = new Set(["credentials.view", "credentials.create"]);
   state.hosts.set(7, { ...baseHost });
   state.logins.clear();
@@ -230,6 +249,36 @@ describe("ctx.credentials.resolveHostProtocol", () => {
       ),
     ).rejects.toThrow(/does not declare/);
     expect(state.ownerDecrypts).toBe(0);
+  });
+
+  it("asks the connect policy and refuses before decrypting", async () => {
+    grants.set("demo", ["credentials:read"]);
+    const { provideConnectPolicy, clearConnectPolicies } =
+      await import("../../hosts/connect-policy.js");
+    const check = vi.fn(() => ({
+      decision: "request" as const,
+      requestTab: "access",
+    }));
+    provideConnectPolicy("pa", { check });
+    try {
+      const ctx = spiceContext(["credentials:read"]);
+      const error = await runAsActor("owner", "request", () =>
+        ctx.credentials.resolveHostProtocol(7, "spice"),
+      ).catch((e) => e);
+      expect(error.code).toBe("access-required");
+      expect(check).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: "owner",
+          hostId: 7,
+          protocol: "spice",
+          profile: "desktop",
+          origin: "demo",
+        }),
+      );
+      expect(state.ownerDecrypts).toBe(0);
+    } finally {
+      clearConnectPolicies();
+    }
   });
 
   it("returns the owner's stored login and audits it", async () => {
@@ -609,5 +658,145 @@ describe("ctx.credentials.createSshKey", () => {
       action: "plugin_credentials_create_key",
       success: true,
     });
+  });
+});
+
+describe("ctx.credentials.setSshKeyCertificate", () => {
+  const certificate =
+    "ssh-ed25519-cert-v01@openssh.com AAAAC3NzaC1lZDI1NTE5AAAAIBtest termix:@owner:7";
+
+  beforeEach(() => {
+    state.corePermissions.add("credentials.update");
+    state.userCredentials.set("owner", [
+      {
+        id: 7,
+        userId: "owner",
+        authType: "key",
+        name: "Laptop",
+        certPublicKey: null,
+      },
+      {
+        id: 8,
+        userId: "owner",
+        authType: "password",
+        name: "Legacy",
+        certPublicKey: null,
+      },
+    ]);
+  });
+
+  it("refuses without credentials:write and audits the refusal", async () => {
+    grants.set("demo", ["credentials:use"]);
+    const ctx = contextFor(["credentials:use"]);
+
+    await expect(
+      runAsActor("owner", "request", () =>
+        ctx.credentials.setSshKeyCertificate(7, certificate),
+      ),
+    ).rejects.toThrow(/credentials:write/);
+    expect(state.credentialUpdates).toHaveLength(0);
+    expect(auditEntries.at(-1)).toMatchObject({
+      action: "plugin_credentials_set_certificate",
+      success: false,
+    });
+  });
+
+  it("refuses without the core credentials.update permission", async () => {
+    grants.set("demo", ["credentials:write"]);
+    state.corePermissions.delete("credentials.update");
+    const ctx = contextFor(["credentials:write"]);
+
+    await expect(
+      runAsActor("owner", "request", () =>
+        ctx.credentials.setSshKeyCertificate(7, certificate),
+      ),
+    ).rejects.toThrow(/credentials.update/);
+    expect(state.credentialUpdates).toHaveLength(0);
+  });
+
+  it("stores the certificate on the actor's key credential", async () => {
+    grants.set("demo", ["credentials:write"]);
+    const ctx = contextFor(["credentials:write"]);
+
+    const result = await runAsActor("owner", "request", () =>
+      ctx.credentials.setSshKeyCertificate(7, certificate),
+    );
+
+    expect(result).toEqual({ id: 7, changed: true });
+    expect(state.credentialUpdates[0]).toMatchObject({
+      userId: "owner",
+      credentialId: 7,
+      update: { certPublicKey: certificate },
+    });
+    expect(state.userCredentials.get("owner")?.[0].certPublicKey).toBe(
+      certificate,
+    );
+    expect(auditEntries.at(-1)).toMatchObject({
+      action: "plugin_credentials_set_certificate",
+      success: true,
+    });
+  });
+
+  it("clears a stored certificate with null", async () => {
+    grants.set("demo", ["credentials:write"]);
+    state.userCredentials.get("owner")![0].certPublicKey = certificate;
+    const ctx = contextFor(["credentials:write"]);
+
+    const result = await runAsActor("owner", "request", () =>
+      ctx.credentials.setSshKeyCertificate(7, null),
+    );
+
+    expect(result).toEqual({ id: 7, changed: true });
+    expect(state.userCredentials.get("owner")?.[0].certPublicKey).toBeNull();
+  });
+
+  it("refuses a credential core never sends a certificate for", async () => {
+    grants.set("demo", ["credentials:write"]);
+    const ctx = contextFor(["credentials:write"]);
+
+    await expect(
+      runAsActor("owner", "request", () =>
+        ctx.credentials.setSshKeyCertificate(8, certificate),
+      ),
+    ).rejects.toThrow(/Only SSH key credentials/);
+    expect(state.credentialUpdates).toHaveLength(0);
+  });
+
+  it("refuses a credential the actor does not own", async () => {
+    grants.set("demo", ["credentials:write"]);
+    const ctx = contextFor(["credentials:write"]);
+
+    await expect(
+      runAsActor("owner", "request", () =>
+        ctx.credentials.setSshKeyCertificate(99, certificate),
+      ),
+    ).rejects.toThrow(/Credential not found/);
+  });
+
+  it("refuses a line that is not an OpenSSH user certificate", async () => {
+    grants.set("demo", ["credentials:write"]);
+    const ctx = contextFor(["credentials:write"]);
+
+    await expect(
+      runAsActor("owner", "request", () =>
+        ctx.credentials.setSshKeyCertificate(7, "ssh-ed25519 AAAAC3Nza"),
+      ),
+    ).rejects.toThrow(/not an OpenSSH user certificate/);
+    expect(state.credentialUpdates).toHaveLength(0);
+  });
+
+  it("refuses a multi-line paste", async () => {
+    grants.set("demo", ["credentials:write"]);
+    const ctx = contextFor(["credentials:write"]);
+
+    await expect(
+      runAsActor("owner", "request", () =>
+        ctx.credentials.setSshKeyCertificate(
+          7,
+          `${certificate}\n${certificate}`,
+        ),
+      ),
+    ).rejects.toThrow(/single line/);
+    expect(state.credentialUpdates).toHaveLength(0);
   });
 });

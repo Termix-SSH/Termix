@@ -657,6 +657,12 @@ function createManagedTempFile(fileName, content, encoding = "utf8") {
   return { tempId, path: filePath };
 }
 
+function dragIcon() {
+  // Windows cancels a drag with an empty icon
+  const buf = Buffer.alloc(16 * 16 * 4, 0x99);
+  return nativeImage.createFromBitmap(buf, { width: 16, height: 16 });
+}
+
 function cleanupManagedTempFile(tempId) {
   const temp = tempFiles.get(tempId);
   if (!temp) return;
@@ -1227,7 +1233,21 @@ if (!gotTheLock) {
   });
 }
 
+function setMacTrayIcon(style) {
+  desktopSettings.saveDesktopSettings({ macTrayIcon: style });
+  if (tray && !tray.isDestroyed()) tray.destroy();
+  tray = null;
+  createTray();
+  createMenu();
+  if (style === "hidden" && mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+    mainWindow.focus();
+  }
+}
+
 function createTray() {
+  const macStyle = desktopSettings.getDesktopSettings().macTrayIcon;
+  if (process.platform === "darwin" && macStyle === "hidden") return;
   try {
     const { nativeImage } = require("electron");
 
@@ -1239,10 +1259,14 @@ function createTray() {
 
     let trayIcon;
     if (process.platform === "darwin") {
-      const iconPath = path.join(publicRoot, "icons", "16x16.png");
-      // The logo is full color on a solid tile. As a template image macOS
-      // keeps only its outline, which showed as an empty square.
+      const monochrome = macStyle !== "color";
+      const iconPath = path.join(
+        publicRoot,
+        "icons",
+        monochrome ? "trayTemplate.png" : "16x16.png",
+      );
       trayIcon = nativeImage.createFromPath(iconPath);
+      trayIcon.setTemplateImage(monochrome);
     } else if (process.platform === "win32") {
       trayIcon = path.join(publicRoot, "icon.ico");
     } else {
@@ -1540,16 +1564,18 @@ function createWindow() {
 
   mainWindow.on("close", (event) => {
     if (!isQuitting && tray && !tray.isDestroyed()) {
-      event.preventDefault();
-      // Stock GNOME has no tray to bring a hidden window back from.
+      // Stock GNOME has no tray to bring a hidden window back from, and its
+      // dock Quit only closes windows, so closing quits there.
       if (
         process.platform === "linux" &&
         /gnome/i.test(process.env.XDG_CURRENT_DESKTOP || "")
       ) {
-        mainWindow.minimize();
-      } else {
-        mainWindow.hide();
+        isQuitting = true;
+        app.quit();
+        return;
       }
+      event.preventDefault();
+      mainWindow.hide();
     }
   });
 
@@ -1961,6 +1987,23 @@ ipcMain.handle("start-drag-to-desktop", (event, dragData) => {
   }
 });
 
+// Must run synchronously inside the renderer's dragstart, files must exist.
+ipcMain.on("start-drag-files", (event, tempIds) => {
+  try {
+    const files = (Array.isArray(tempIds) ? tempIds : [])
+      .map((id) => tempFiles.get(id)?.path)
+      .filter((p) => p && fs.existsSync(p));
+    if (files.length === 0) return;
+    event.sender.startDrag({
+      file: files[0],
+      files,
+      icon: dragIcon(),
+    });
+  } catch (error) {
+    logToFile("Failed to start drag:", error.message);
+  }
+});
+
 ipcMain.handle("cleanup-temp-file", (_event, tempId) => {
   try {
     cleanupManagedTempFile(tempId);
@@ -1977,6 +2020,20 @@ function createMenu() {
         label: app.name,
         submenu: [
           { role: "about" },
+          {
+            label: "Menu Bar Icon",
+            submenu: [
+              ["monochrome", "Monochrome"],
+              ["color", "Color"],
+              ["hidden", "Hidden"],
+            ].map(([style, label]) => ({
+              label,
+              type: "radio",
+              checked:
+                desktopSettings.getDesktopSettings().macTrayIcon === style,
+              click: () => setMacTrayIcon(style),
+            })),
+          },
           { type: "separator" },
           { role: "services" },
           { type: "separator" },

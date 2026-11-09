@@ -1,4 +1,5 @@
-import { and, eq, lte, ne } from "drizzle-orm";
+import crypto from "crypto";
+import { and, eq, lte, ne, notLike } from "drizzle-orm";
 import { sessions } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
@@ -8,6 +9,18 @@ export type SessionRecord = typeof sessions.$inferSelect;
 export type NewSessionRecord = typeof sessions.$inferInsert;
 
 const SESSION_ACTIVITY_PERSIST_INTERVAL_MS = 60_000;
+const TOKEN_HASH_PREFIX = "sha256:";
+
+/**
+ * Sessions are looked up by id, so the token itself is never needed again.
+ * Only a hash is kept, so a database copy holds no working logins.
+ */
+export function hashSessionToken(token: string): string {
+  if (token.startsWith(TOKEN_HASH_PREFIX)) return token;
+  return (
+    TOKEN_HASH_PREFIX + crypto.createHash("sha256").update(token).digest("hex")
+  );
+}
 
 export class SessionRepository {
   constructor(
@@ -18,7 +31,10 @@ export class SessionRepository {
   ) {}
 
   async create(session: NewSessionRecord): Promise<SessionRecord> {
-    const rows = await insertReturning(this.context, sessions, session);
+    const rows = await insertReturning(this.context, sessions, {
+      ...session,
+      jwtToken: hashSessionToken(session.jwtToken),
+    });
     await this.afterWrite();
     return rows[0];
   }
@@ -84,9 +100,25 @@ export class SessionRepository {
   ): Promise<void> {
     await this.context.drizzle
       .update(sessions)
-      .set({ jwtToken, lastActiveAt })
+      .set({ jwtToken: hashSessionToken(jwtToken), lastActiveAt })
       .where(eq(sessions.id, id));
     await this.afterWrite();
+  }
+
+  /** Replaces tokens saved before only hashes were kept. Returns how many. */
+  async hashStoredTokens(): Promise<number> {
+    const rows = await this.context.drizzle
+      .select({ id: sessions.id, jwtToken: sessions.jwtToken })
+      .from(sessions)
+      .where(notLike(sessions.jwtToken, `${TOKEN_HASH_PREFIX}%`));
+    for (const row of rows) {
+      await this.context.drizzle
+        .update(sessions)
+        .set({ jwtToken: hashSessionToken(row.jwtToken) })
+        .where(eq(sessions.id, row.id));
+    }
+    if (rows.length > 0) await this.afterWrite();
+    return rows.length;
   }
 
   async revoke(id: string): Promise<boolean> {

@@ -185,6 +185,44 @@ describe("mirrorPlugins", () => {
     expect(state.enabled.has("ssh-terminal")).toBe(true);
   });
 
+  it("replaces an older shipped copy with a newer one the server installed itself", async () => {
+    vi.mocked(remoteJson).mockResolvedValue({
+      plugins: [
+        {
+          id: "ssh-terminal",
+          name: "SSH Terminal",
+          version: "1.1.0",
+          source: "user",
+          artifact: true,
+          enabled: true,
+          active: true,
+          desktop: "mirror",
+          syncEntities: [],
+          granted: [],
+        },
+      ],
+    });
+    state.fetch.mockResolvedValue({
+      ok: true,
+      arrayBuffer: async () => new ArrayBuffer(4),
+      headers: new Headers(),
+    });
+    state.install.mockImplementation(async () => {
+      const plugin = {
+        id: "ssh-terminal",
+        source: "user",
+        state: "active",
+        manifest: { id: "ssh-terminal", version: "1.1.0", capabilities: [] },
+      };
+      state.loaded.set("ssh-terminal", plugin);
+      return plugin;
+    });
+
+    await mirrorPlugins({} as never);
+
+    expect(state.install).toHaveBeenCalledTimes(1);
+  });
+
   describe("a user plugin the server has on", () => {
     function serverRunsSignedBy(
       keyId: string,
