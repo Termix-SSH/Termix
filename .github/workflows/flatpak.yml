@@ -34,6 +34,7 @@ jobs:
   # aarch64 builds on an ARM runner, since qemu could not run the SDK under bwrap here
   build-arm:
     runs-on: blacksmith-8vcpu-ubuntu-2404-arm
+    environment: build
     permissions:
       contents: read
     steps:
@@ -95,6 +96,7 @@ jobs:
   build:
     needs: build-arm
     runs-on: blacksmith-8vcpu-ubuntu-2404
+    environment: build
     permissions:
       contents: write
     steps:

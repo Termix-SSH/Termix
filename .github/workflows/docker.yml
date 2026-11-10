@@ -45,6 +45,7 @@ jobs:
   # the plain tags; minimal and full add a suffix.
   build:
     runs-on: blacksmith-8vcpu-ubuntu-2404
+    environment: build
     timeout-minutes: 20
     strategy:
       fail-fast: false

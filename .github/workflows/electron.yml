@@ -451,6 +451,7 @@ jobs:
 
   build-macos:
     runs-on: blacksmith-6vcpu-macos-latest
+    environment: build
     if: (inputs.build_type == 'macos' || inputs.build_type == 'all') && inputs.artifact_destination != 'submit'
     needs: []
     permissions:
@@ -758,6 +759,7 @@ jobs:
 
   submit-to-chocolatey:
     runs-on: blacksmith-4vcpu-windows-2025
+    environment: build
     if: inputs.artifact_destination == 'submit' && (inputs.build_type == 'all' || inputs.build_type == 'windows' || inputs.build_type == '')
     permissions:
       contents: read
@@ -975,6 +977,7 @@ jobs:
 
   submit-to-app-store:
     runs-on: blacksmith-6vcpu-macos-latest
+    environment: build
     if: inputs.artifact_destination == 'submit' && (inputs.build_type == 'all' || inputs.build_type == 'macos')
     needs: []
     permissions:

@@ -38,6 +38,7 @@ concurrency:
 jobs:
   prep:
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
     outputs:
       channel: ${{ steps.mode.outputs.channel }}
       mode: ${{ steps.mode.outputs.mode }}
@@ -169,6 +170,7 @@ jobs:
     needs: [prep]
     if: ${{ needs.prep.outputs.skip != 'true' && needs.prep.outputs.mode != 'Overwrite release' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
     outputs:
       sha: ${{ steps.commit.outputs.sha }}
     steps:
@@ -264,6 +266,7 @@ jobs:
     needs: [prep, translate]
     if: ${{ needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Overwrite release' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
     steps:
       - name: Checkout dev branch
         uses: actions/checkout@v7
@@ -321,6 +324,7 @@ jobs:
     needs: [prep, normalize]
     if: ${{ needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' && needs.prep.outputs.mode != 'Overwrite release' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
     steps:
       - name: Checkout dev branch
         uses: actions/checkout@v7
@@ -351,6 +355,7 @@ jobs:
     needs: [prep, translate, normalize, sync-main]
     if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.channel == 'Stable' && (needs.translate.result == 'success' || needs.translate.result == 'skipped') && (needs.normalize.result == 'success' || needs.normalize.result == 'skipped') && (needs.sync-main.result == 'success' || needs.sync-main.result == 'skipped') }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
     outputs:
       main_sha: ${{ steps.merge.outputs.main_sha }}
       build_ref: ${{ steps.merge.outputs.build_ref }}
@@ -431,6 +436,7 @@ jobs:
     needs: [prep, merge-to-main, docker]
     if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.docker.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
     permissions:
       contents: write
     steps:
@@ -485,6 +491,7 @@ jobs:
     needs: [prep, translate, docker]
     if: ${{ always() && needs.prep.outputs.channel == 'Beta' && needs.docker.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
     permissions:
       contents: write
     steps:
@@ -570,6 +577,7 @@ jobs:
     needs: [prep, electron-release]
     if: ${{ always() && needs.electron-release.result == 'success' && needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
     permissions:
       contents: write
     steps:
@@ -612,6 +620,7 @@ jobs:
     needs: [prep, create-release]
     if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.create-release.result == 'success' && needs.prep.outputs.mode != 'Overwrite release' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
     steps:
       - name: Delete this version's beta releases (tags stay)
         env:
@@ -632,6 +641,7 @@ jobs:
     needs: [prep, electron-release]
     if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.electron-release.result == 'success' && needs.prep.outputs.mode != 'Dry run' && needs.prep.outputs.mode != 'Overwrite release' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
     steps:
       - name: Merge the docs dev branch into main
         env:
@@ -670,6 +680,7 @@ jobs:
     needs: [prep, electron-release, docs-merge]
     if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.electron-release.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
     steps:
       - name: Tell the docs site
         env:
@@ -680,6 +691,7 @@ jobs:
     needs: [prep, merge-to-main, electron-release, cask-commit-back]
     if: ${{ always() && needs.prep.outputs.channel == 'Stable' && (needs.prep.outputs.mode == 'Everything' || needs.prep.outputs.mode == 'Skip submit') && needs.merge-to-main.result == 'success' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7

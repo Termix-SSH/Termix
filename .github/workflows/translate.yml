@@ -19,6 +19,7 @@ jobs:
   translate:
     if: ${{ startsWith(github.ref, 'refs/heads/dev-') }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
