@@ -1515,7 +1515,7 @@ function createWindow() {
   mainWindow.webContents.setUserAgent(customUserAgent);
 
   mainWindow.webContents.on("before-input-event", (event, input) => {
-    if (process.platform !== "win32" || !isCloseActiveTabInput(input)) return;
+    if (!isCloseActiveTabInput(input)) return;
 
     event.preventDefault();
     mainWindow.webContents.send("close-active-tab");
