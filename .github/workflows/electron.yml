@@ -63,6 +63,14 @@ jobs:
     if: (inputs.build_type == 'all' || inputs.build_type == 'windows' || inputs.build_type == '') && inputs.artifact_destination != 'submit'
     permissions:
       contents: write
+      id-token: write
+    # Stable and beta releases sign with the live profile from the release
+    # environment, whose reviewers approve the job and whose secrets and
+    # variables replace the organization's test ones. Dry runs and file builds
+    # stay unsigned.
+    environment: ${{ inputs.artifact_destination == 'release' && inputs.release_tag != '' && 'release' || '' }}
+    env:
+      SIGN_WINDOWS: ${{ inputs.artifact_destination == 'release' && inputs.release_tag != '' && 'true' || 'false' }}
 
     steps:
       - name: Checkout repository
@@ -128,6 +136,17 @@ jobs:
           key: bundled-plugins-${{ hashFiles('docker/bundled-plugins.json') }}
           enableCrossOsArchive: true
 
+      # electron-builder signs each file with Azure Artifact Signing as it makes
+      # it, so the update files and blockmaps match what ships. It signs in
+      # through the session this opens.
+      - name: Azure login
+        if: env.SIGN_WINDOWS == 'true'
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       # A beta build has to know it is a beta, or it reports the stable version.
       - name: Stamp beta version
         if: inputs.version_override != ''
@@ -145,7 +164,26 @@ jobs:
       - name: Build Windows (All Architectures)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run build && npx electron-builder --win --x64 --ia32 --arm64 --publish never
+          TRUSTED_SIGNING_ENDPOINT: ${{ vars.TRUSTED_SIGNING_ENDPOINT }}
+          TRUSTED_SIGNING_ACCOUNT: ${{ vars.TRUSTED_SIGNING_ACCOUNT }}
+          TRUSTED_SIGNING_PROFILE: ${{ vars.TRUSTED_SIGNING_PROFILE }}
+          TRUSTED_SIGNING_PUBLISHER: ${{ vars.TRUSTED_SIGNING_PUBLISHER }}
+        run: |
+          $sign = @()
+          if ($env:SIGN_WINDOWS -eq 'true') {
+            # Invoke-TrustedSigning wants a URL, the variable holds the host
+            $endpoint = $env:TRUSTED_SIGNING_ENDPOINT
+            if ($endpoint -notmatch '^https?://') { $endpoint = "https://$endpoint" }
+            $sign = @(
+              "-c.win.azureSignOptions.endpoint=$endpoint",
+              "-c.win.azureSignOptions.codeSigningAccountName=$env:TRUSTED_SIGNING_ACCOUNT",
+              "-c.win.azureSignOptions.certificateProfileName=$env:TRUSTED_SIGNING_PROFILE",
+              "-c.win.azureSignOptions.publisherName=$env:TRUSTED_SIGNING_PUBLISHER"
+            )
+          }
+          npm run build
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          npx electron-builder --win --x64 --ia32 --arm64 --publish never @sign
 
       # The updater only installs the x64 NSIS build; 32-bit and ARM installs get a link.
       # The combined multi-arch installer is never uploaded.
@@ -259,9 +297,26 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TERMIX_PLUGIN_PROFILE: full
+          TRUSTED_SIGNING_ENDPOINT: ${{ vars.TRUSTED_SIGNING_ENDPOINT }}
+          TRUSTED_SIGNING_ACCOUNT: ${{ vars.TRUSTED_SIGNING_ACCOUNT }}
+          TRUSTED_SIGNING_PROFILE: ${{ vars.TRUSTED_SIGNING_PROFILE }}
+          TRUSTED_SIGNING_PUBLISHER: ${{ vars.TRUSTED_SIGNING_PUBLISHER }}
         run: |
+          $sign = @()
+          if ($env:SIGN_WINDOWS -eq 'true') {
+            # Invoke-TrustedSigning wants a URL, the variable holds the host
+            $endpoint = $env:TRUSTED_SIGNING_ENDPOINT
+            if ($endpoint -notmatch '^https?://') { $endpoint = "https://$endpoint" }
+            $sign = @(
+              "-c.win.azureSignOptions.endpoint=$endpoint",
+              "-c.win.azureSignOptions.codeSigningAccountName=$env:TRUSTED_SIGNING_ACCOUNT",
+              "-c.win.azureSignOptions.certificateProfileName=$env:TRUSTED_SIGNING_PROFILE",
+              "-c.win.azureSignOptions.publisherName=$env:TRUSTED_SIGNING_PUBLISHER"
+            )
+          }
           npm run build:plugins
-          npx electron-builder --win nsis --x64 --publish never '-c.nsis.artifactName=termix_windows_x64_full_nsis.${ext}'
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          npx electron-builder --win nsis --x64 --publish never '-c.nsis.artifactName=termix_windows_x64_full_nsis.${ext}' @sign
 
       - name: Upload Windows x64 full installer
         uses: actions/upload-artifact@v7
