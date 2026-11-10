@@ -541,6 +541,9 @@ jobs:
         create-beta-release,
       ]
     if: ${{ always() && needs.prep.outputs.skip != 'true' && needs.docker.result == 'success' && needs.create-release.result != 'failure' && needs.create-beta-release.result != 'failure' }}
+    permissions:
+      contents: write
+      id-token: write
     uses: ./.github/workflows/electron.yml
     with:
       build_type: all
@@ -566,6 +569,9 @@ jobs:
   electron-submit:
     needs: [prep, merge-to-main, electron-release]
     if: ${{ always() && needs.electron-release.result == 'success' && needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' && needs.prep.outputs.mode != 'Skip submit' }}
+    permissions:
+      contents: write
+      id-token: write
     uses: ./.github/workflows/electron.yml
     with:
       build_type: all
