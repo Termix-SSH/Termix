@@ -6,18 +6,27 @@ import { sshLogger } from "./logger.js";
 import { isBlockedAddress } from "./safe-outbound-fetch.js";
 import type { ProxyNode } from "../../types/index.js";
 
-async function validateHost(host: string): Promise<void> {
-  if (net.isIP(host)) {
-    if (isBlockedAddress(host)) {
+/**
+ * Resolves a name once and checks every answer. Callers connect to the
+ * address this returns, so a second lookup can't send them somewhere else.
+ */
+async function resolveChecked(host: string): Promise<string> {
+  const bare = host.replace(/^\[|\]$/g, "");
+  if (net.isIP(bare)) {
+    if (isBlockedAddress(bare)) {
       throw new Error("Proxy target address is not allowed");
     }
-    return;
+    return bare;
   }
 
-  const { address } = await dns.lookup(host);
-  if (isBlockedAddress(address)) {
+  const answers = await dns.lookup(bare, { all: true, verbatim: true });
+  if (answers.length === 0) {
+    throw new Error("Proxy target did not resolve");
+  }
+  if (answers.some(({ address }) => isBlockedAddress(address))) {
     throw new Error("Proxy target address is not allowed");
   }
+  return answers[0].address;
 }
 
 export interface SOCKS5Config {
@@ -112,7 +121,11 @@ async function createHttpConnectConnection(
     }, 15000);
 
     function sendConnect(socket: net.Socket) {
-      let connectReq = `CONNECT ${targetHost}:${targetPort} HTTP/1.1\r\nHost: ${targetHost}:${targetPort}\r\n`;
+      const authority =
+        net.isIP(targetHost) === 6
+          ? `[${targetHost}]:${targetPort}`
+          : `${targetHost}:${targetPort}`;
+      let connectReq = `CONNECT ${authority} HTTP/1.1\r\nHost: ${authority}\r\n`;
       if (username && password) {
         const credentials = Buffer.from(`${username}:${password}`).toString(
           "base64",
@@ -302,30 +315,38 @@ export async function testProxyConnectivity(options: {
   proxyChain?: ProxyNode[];
   testTarget?: { host: string; port: number };
 }): Promise<{ success: boolean; latencyMs: number }> {
-  const target = options.testTarget ?? { host: "google.com", port: 443 };
-
-  await validateHost(target.host);
-  if (options.singleProxy) {
-    await validateHost(options.singleProxy.host);
-  }
-  if (options.proxyChain) {
-    for (const node of options.proxyChain) {
-      await validateHost(node.host);
-    }
-  }
+  const requested = options.testTarget ?? { host: "google.com", port: 443 };
+  const target = {
+    host: await resolveChecked(requested.host),
+    port: requested.port,
+  };
+  const singleProxy = options.singleProxy
+    ? {
+        ...options.singleProxy,
+        host: await resolveChecked(options.singleProxy.host),
+      }
+    : undefined;
+  const proxyChain: ProxyNode[] | undefined = options.proxyChain
+    ? await Promise.all(
+        options.proxyChain.map(async (node) => ({
+          ...node,
+          host: await resolveChecked(node.host),
+        })),
+      )
+    : undefined;
 
   const start = Date.now();
 
   let socket: net.Socket | null = null;
   try {
-    if (options.proxyChain && options.proxyChain.length > 0) {
+    if (proxyChain && proxyChain.length > 0) {
       socket = await createMixedProxyChainConnection(
         target.host,
         target.port,
-        options.proxyChain,
+        proxyChain,
       );
-    } else if (options.singleProxy) {
-      const proxy = options.singleProxy;
+    } else if (singleProxy) {
+      const proxy = singleProxy;
       if (proxy.type === "http") {
         socket = await createHttpConnectConnection(
           target.host,

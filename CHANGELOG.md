@@ -16,6 +16,7 @@
 - Desktop app: the page can only change the desktop settings meant for it
 - Database exports always write inside their own temp folder, whatever the username
 - New usernames can't contain slashes or control characters
+- Proxy tests connect to the exact address they checked
 
 ## 26.11.1
 
