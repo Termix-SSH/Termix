@@ -11,10 +11,16 @@ const {
   Tray,
   clipboard,
   nativeImage,
+  Notification,
 } = require("electron");
 const path = require("path");
 const { getUnpackedAppRoot } = require("./backend-paths.cjs");
 const { classifyBackendFailure } = require("./backend-failure.cjs");
+const {
+  backendSpawnOptions,
+  killProcessTree,
+  stopBackendProcess,
+} = require("./backend-process.cjs");
 const fs = require("fs");
 const http = require("http");
 const net = require("net");
@@ -27,7 +33,7 @@ const linkedServer = require("./linked-server.cjs");
 const desktopSettings = require("./desktop-settings.cjs");
 const autoUpdates = require("./auto-updater.cjs");
 const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
-const { quitApp } = require("./app-quit.cjs");
+const { quitApp, closeAction } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
 // Saved by the file manager after the user picks an editor in a file dialog.
 const EXTERNAL_EDITOR_SETTING = "fileManager.externalEditorPath";
@@ -1006,11 +1012,7 @@ function reapOrphanedBackendProcess() {
   logToFile(
     `Found orphaned backend process from a previous session (pid ${recordedPid}), terminating it before starting a new one`,
   );
-  try {
-    process.kill(recordedPid, "SIGKILL");
-  } catch {
-    // already gone
-  }
+  killProcessTree(recordedPid);
   try {
     fs.unlinkSync(pidFilePath);
   } catch {
@@ -1093,6 +1095,7 @@ function startBackendServer() {
         VERSION: app.getVersion(),
       },
       stdio: ["pipe", "pipe", "pipe", "ipc"],
+      ...backendSpawnOptions(),
     });
 
     logToFile("Backend process spawned, pid:", backendProcess.pid);
@@ -1189,31 +1192,25 @@ function clearBackendPidFile() {
   }
 }
 
+let backendStopping = null;
+
+// Resolves once the backend and everything it started are gone.
 function stopBackendServer() {
-  if (!backendProcess) return;
+  if (backendStopping) return backendStopping;
+  const child = backendProcess;
+  if (!child) return Promise.resolve();
 
-  console.log("Stopping embedded backend server...");
+  logToFile("Stopping embedded backend server...");
   backendStopRequested = true;
-
-  try {
-    backendProcess.send({ type: "shutdown" });
-  } catch {
-    // IPC channel may already be closed
-  }
-
-  const forceKillTimeout = setTimeout(() => {
-    if (backendProcess) {
-      console.log("Force killing backend process...");
-      backendProcess.kill("SIGKILL");
-      backendProcess = null;
-    }
-  }, 5000);
-
-  backendProcess.on("exit", () => {
-    clearTimeout(forceKillTimeout);
-    backendProcess = null;
-    clearBackendPidFile();
-  });
+  backendStopping = stopBackendProcess(child, { log: logToFile }).then(
+    (how) => {
+      logToFile(`Embedded backend stopped (${how})`);
+      if (backendProcess === child) backendProcess = null;
+      clearBackendPidFile();
+      backendStopping = null;
+    },
+  );
+  return backendStopping;
 }
 
 // App Sandbox denies the singleton socket bind, which reads as a held lock and
@@ -1563,19 +1560,20 @@ function createWindow() {
   });
 
   mainWindow.on("close", (event) => {
-    if (!isQuitting && tray && !tray.isDestroyed()) {
-      // Stock GNOME has no tray to bring a hidden window back from, and its
-      // dock Quit only closes windows, so closing quits there.
-      if (
-        process.platform === "linux" &&
-        /gnome/i.test(process.env.XDG_CURRENT_DESKTOP || "")
-      ) {
-        isQuitting = true;
-        app.quit();
-        return;
-      }
+    const action = closeAction({
+      isQuitting,
+      hasTray: !!tray && !tray.isDestroyed(),
+      platform: process.platform,
+      env: process.env,
+      closeToTray: desktopSettings.getDesktopSettings().closeToTray,
+    });
+    if (action === "quit") {
+      isQuitting = true;
+      app.quit();
+    } else if (action === "hide") {
       event.preventDefault();
       mainWindow.hide();
+      showTrayNoticeOnce();
     }
   });
 
@@ -1777,8 +1775,38 @@ ipcMain.handle("get-desktop-settings", () => {
 });
 
 ipcMain.handle("save-desktop-settings", (_event, settings) => {
-  return desktopSettings.saveDesktopSettings(settings);
+  return desktopSettings.saveDesktopSettings(
+    desktopSettings.rendererSettings(settings),
+  );
 });
+
+// Text for the first close to tray notice, in the user's language. The main
+// process has no translations of its own.
+let trayNoticeText = null;
+
+ipcMain.on("set-tray-notice-text", (event, text) => {
+  if (
+    fromMainFrame(event) &&
+    text &&
+    typeof text.title === "string" &&
+    typeof text.body === "string" &&
+    text.title.length <= 200 &&
+    text.body.length <= 500
+  ) {
+    trayNoticeText = { title: text.title, body: text.body };
+  }
+});
+
+function showTrayNoticeOnce() {
+  if (!trayNoticeText || !Notification.isSupported()) return;
+  if (desktopSettings.getDesktopSettings().trayNoticeShown) return;
+  try {
+    new Notification({ ...trayNoticeText, silent: true }).show();
+    desktopSettings.saveDesktopSettings({ trayNoticeShown: true });
+  } catch (error) {
+    logToFile("Failed to show the tray notice:", error.message);
+  }
+}
 
 let appUpdater = null;
 
@@ -2138,7 +2166,11 @@ app.whenReady().then(async () => {
 });
 
 app.on("window-all-closed", () => {
-  if (!tray || tray.isDestroyed()) {
+  if (
+    !tray ||
+    tray.isDestroyed() ||
+    desktopSettings.getDesktopSettings().closeToTray === false
+  ) {
     app.quit();
   }
 });
@@ -2156,12 +2188,21 @@ app.on("before-quit", () => {
   isQuitting = true;
 });
 
-app.on("will-quit", () => {
-  console.log("App will quit...");
+let backendStoppedForQuit = false;
+
+// The app waits for the backend to exit before it goes, or the backend and
+// its plugins keep their ports after the window is gone.
+app.on("will-quit", (event) => {
   for (const tempId of tempFiles.keys()) {
     cleanupManagedTempFile(tempId);
   }
-  stopBackendServer();
+  if (backendStoppedForQuit || !backendProcess) return;
+  event.preventDefault();
+  if (backendStopping) return;
+  void stopBackendServer().finally(() => {
+    backendStoppedForQuit = true;
+    app.quit();
+  });
 });
 
 process.on("uncaughtException", (error) => {

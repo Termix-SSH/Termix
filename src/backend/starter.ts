@@ -12,6 +12,71 @@ import {
   setGlobalLogLevel,
 } from "./utils/logger.js";
 import { getTrustedProxyAuthConfig } from "./utils/trusted-proxy-auth.js";
+import { createShutdown, exitWithParent } from "./utils/shutdown.js";
+
+const embedded = process.env.ELECTRON_EMBEDDED === "true";
+// The desktop app kills the backend after 5 s, Docker after 10 s.
+const SHUTDOWN_TOTAL_MS = embedded ? 4000 : 8500;
+// Kept back from plugins so the database still gets saved.
+const SHUTDOWN_DATABASE_RESERVE_MS = 1500;
+
+let databaseOpen = false;
+let persistOnShutdown = false;
+
+const gracefulShutdown = createShutdown(
+  () => [
+    {
+      // Plugin workers and processes stop before the database goes away, so
+      // a plugin mid-write cannot outlive it.
+      name: "plugins",
+      maxMs: SHUTDOWN_TOTAL_MS - SHUTDOWN_DATABASE_RESERVE_MS,
+      run: async () => {
+        const { shutdownPlugins } = await import("./plugins/index.js");
+        await shutdownPlugins();
+      },
+    },
+    {
+      // Only SQLite has anything to flush. On a client-server engine the
+      // writes committed as they happened.
+      name: "database",
+      run: async () => {
+        if (!databaseOpen) return;
+        if (persistOnShutdown) {
+          try {
+            await DatabaseSaveTrigger.forceSave("shutdown_explicit_save");
+            systemLogger.info("Database saved to disk before exit", {
+              operation: "shutdown_db_saved",
+            });
+          } catch (error) {
+            systemLogger.error(
+              "Failed to save database during shutdown",
+              error,
+              { operation: "shutdown_db_save_failed" },
+            );
+          }
+        }
+        const { closeDatabase } = await import("./database/db/index.js");
+        closeDatabase();
+      },
+    },
+  ],
+  {
+    totalMs: SHUTDOWN_TOTAL_MS,
+    exit: (code) => process.exit(code),
+    log: (message) => systemLogger.info(message, { operation: "shutdown" }),
+  },
+);
+
+// Registered before startup, so quitting while the backend still starts
+// works too.
+process.on("SIGINT", () => void gracefulShutdown("SIGINT"));
+process.on("SIGTERM", () => void gracefulShutdown("SIGTERM"));
+process.on("message", (msg: { type?: string }) => {
+  if (msg?.type === "shutdown") void gracefulShutdown("IPC shutdown");
+});
+if (process.send) {
+  exitWithParent(gracefulShutdown, { exit: (code) => process.exit(code) });
+}
 
 /**
  * host:port from DATABASE_URL for the startup log. Parsed rather than printed
@@ -161,6 +226,8 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
 
     const dbModule = await import("./database/db/index.js");
     await dbModule.initializeDatabase();
+    databaseOpen = true;
+    persistOnShutdown = needsExplicitPersist(databaseDialect);
     // Naming the engine makes a misconfiguration obvious: without it, a bad
     // DATABASE_DIALECT silently falls back to SQLite and looks like data loss.
     systemLogger.success(`Database initialized (${databaseDialect})`, {
@@ -296,47 +363,6 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     ) {
       process.send?.({ type: "backend-ready" });
     }
-
-    const gracefulShutdown = async (signal: string) => {
-      systemLogger.info(`Received ${signal}, initiating graceful shutdown...`, {
-        operation: "shutdown",
-      });
-
-      // Terminate plugin workers before the database goes away, so a plugin
-      // mid-write cannot outlive it.
-      try {
-        const { shutdownPlugins } = await import("./plugins/index.js");
-        await shutdownPlugins();
-      } catch {
-        // Nothing to stop.
-      }
-
-      // Only SQLite has anything to flush. On a client-server engine the writes
-      // committed as they happened, so there is no file to save and claiming
-      // otherwise in the log would be untrue.
-      if (needsExplicitPersist(databaseDialect)) {
-        try {
-          await DatabaseSaveTrigger.forceSave("shutdown_explicit_save");
-          systemLogger.info("Database saved to disk before exit", {
-            operation: "shutdown_db_saved",
-          });
-        } catch (error) {
-          systemLogger.error("Failed to save database during shutdown", error, {
-            operation: "shutdown_db_save_failed",
-          });
-        }
-      }
-      process.exit(0);
-    };
-
-    process.on("SIGINT", () => gracefulShutdown("SIGINT"));
-    process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-
-    process.on("message", (msg: { type?: string }) => {
-      if (msg?.type === "shutdown") {
-        gracefulShutdown("IPC shutdown");
-      }
-    });
 
     if (process.env.TERMIX_DEV_RELOAD === "true") {
       const { listenForDevReloads } = await import("./plugins/dev-reload.js");

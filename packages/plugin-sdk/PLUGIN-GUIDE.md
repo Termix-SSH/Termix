@@ -240,6 +240,8 @@ export async function deactivate() {
 }
 ```
 
+Keep `deactivate()` quick. When the server shuts down, core gives each plugin 2 seconds to stop and then moves on, and programs started with `ctx.process.run` are ended either way.
+
 Bundled as ESM for Node 22+ into `dist/backend.js`. Backend imports of your own files use `.js`.
 
 ### What ctx has

@@ -15,7 +15,10 @@ const starter = readFileSync(
 );
 const announceReady = starter.slice(
   starter.indexOf('systemLogger.success("Termix backend started successfully"'),
-  starter.indexOf("const gracefulShutdown"),
+  starter.lastIndexOf(
+    "if (process.env.TERMIX_DEV_RELOAD",
+    starter.indexOf("const { listenForDevReloads }"),
+  ),
 );
 
 const main = readFileSync(
@@ -48,6 +51,7 @@ function start() {
       writeFileSync: vi.fn(),
     },
     fork: () => child,
+    backendSpawnOptions: () => ({}),
     app: {
       isPackaged: true,
       getVersion: () => "2.9.0",

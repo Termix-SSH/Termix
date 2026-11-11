@@ -1,5 +1,20 @@
 # Changelog
 
+## 26.11.2
+
+### Added
+
+- Desktop app: closing the window can quit Termix instead of keeping it in the tray
+- Desktop app: the first time closing the window keeps Termix in the tray, a notice says it is still running and how to quit
+
+### Fixed
+
+- Desktop app: quitting waits for the local server to stop, so it no longer keeps its ports after the app closes
+- Desktop app: the local server and everything it started stop when the app closes or crashes
+- A plugin that hangs while stopping no longer keeps the server from shutting down
+- Stopping the server with Ctrl+C or docker stop waits for plugins to stop before it closes the database
+- Desktop app: the page can only change the desktop settings meant for it
+
 ## 26.11.1
 
 ### Added

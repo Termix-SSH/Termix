@@ -219,6 +219,10 @@
     "securityIntro": "Add a passkey or an authenticator app to your account. You can also do this later in Settings, under Security.",
     "pluginsDocsLink": "Read about each one"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix is still running",
+    "noticeBody": "Closing the window keeps Termix running in the tray. To quit, open the tray icon menu and pick Quit. You can turn this off in Settings."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automatic",
     "modePrompt": "Ask first",

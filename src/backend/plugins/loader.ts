@@ -913,10 +913,16 @@ export class PluginLoader {
   }
 
   /** Stops everything, reverse activation order. */
-  async shutdown(): Promise<void> {
+  /** perPluginMs keeps one stuck plugin from holding up the rest. */
+  async shutdown(options: { perPluginMs?: number } = {}): Promise<void> {
+    const perPluginMs = options.perPluginMs ?? SHUTDOWN_PER_PLUGIN_MS;
     for (const id of [...this.activationOrder].reverse()) {
       try {
-        await this.deactivate(id);
+        await withTimeout(
+          this.deactivate(id),
+          perPluginMs,
+          `Plugin ${id} did not stop within ${perPluginMs} ms`,
+        );
       } catch (error) {
         pluginLogger.error(
           `Failed to deactivate plugin ${id} during shutdown`,
@@ -934,6 +940,8 @@ export class PluginLoader {
     return plugin;
   }
 }
+
+const SHUTDOWN_PER_PLUGIN_MS = 2000;
 
 function withTimeout<T>(
   promise: Promise<T>,

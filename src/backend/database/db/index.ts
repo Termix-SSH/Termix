@@ -2140,21 +2140,12 @@ async function initializeRemoteDatabase(
 
 export { initializeDatabase };
 
-async function cleanupDatabase() {
-  if (memoryDatabase) {
-    try {
-      await saveMemoryDatabaseToFile();
-    } catch (error) {
-      databaseLogger.error(
-        "Failed to save in-memory database before shutdown",
-        error,
-        {
-          operation: "shutdown_save_failed",
-        },
-      );
-    }
-  }
-
+/**
+ * Closes SQLite and clears temp files. Run by the backend's shutdown after its
+ * final save, never on a signal of its own: a second handler used to exit
+ * while plugins were still stopping.
+ */
+export function closeDatabase(): void {
   try {
     if (sqlite) {
       sqlite.close();
@@ -2197,22 +2188,6 @@ process.on("exit", () => {
       // expected - database may already be closed
     }
   }
-});
-
-process.on("SIGINT", async () => {
-  databaseLogger.info("Received SIGINT, cleaning up...", {
-    operation: "shutdown",
-  });
-  await cleanupDatabase();
-  process.exit(0);
-});
-
-process.on("SIGTERM", async () => {
-  databaseLogger.info("Received SIGTERM, cleaning up...", {
-    operation: "shutdown",
-  });
-  await cleanupDatabase();
-  process.exit(0);
 });
 
 let db: PortableDatabase;

@@ -3,6 +3,7 @@ import { ServerStatusProvider } from "@/lib/ServerStatusContext";
 import { ComponentSlot } from "@/shell/ActionSlot";
 import { OnboardingHost } from "@/onboarding/OnboardingHost";
 import { DesktopUpdateToasts } from "@/shell/DesktopUpdateToasts";
+import { DesktopTrayNotice } from "@/shell/DesktopTrayNotice";
 import { SafeModeNotice } from "@/shell/SafeModeNotice";
 import { TabPortals } from "@/shell/stage/TabPortals";
 import { LayoutHost } from "@/shell/layout/LayoutHost";
@@ -28,6 +29,7 @@ export function ShellRoot({
         <OnboardingHost />
         <SafeModeNotice />
         {isElectron() && <DesktopUpdateToasts />}
+        {isElectron() && <DesktopTrayNotice />}
       </ShellControllerProvider>
     </ServerStatusProvider>
   );
