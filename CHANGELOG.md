@@ -28,6 +28,7 @@
 - API key connections end when the key is deleted or expires
 - Live connections follow the same sign in rules as the rest of Termix, including the second factor setup step
 - A database save that fails is now reported to the action that asked for it, and a failed save never leaves a cut database file
+- Updated dependencies with known security fixes, including undici, multer and Electron
 
 ## 26.11.1
 
