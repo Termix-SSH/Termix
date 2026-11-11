@@ -64,6 +64,7 @@ function fail(res: Response, error: unknown): void {
 export function registerDeviceAuthRoutes(
   router: Router,
   authenticateJWT: RequestHandler,
+  requireViewPermission: RequestHandler,
 ): void {
   /**
    * @openapi
@@ -126,6 +127,7 @@ export function registerDeviceAuthRoutes(
   router.get(
     "/db/host/:id/device-auth/:protocol",
     authenticateJWT,
+    requireViewPermission,
     onDesktop,
     async (req, res) => {
       try {

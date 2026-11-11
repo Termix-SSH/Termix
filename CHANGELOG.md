@@ -23,6 +23,7 @@
 - A credential shared for use only stays hidden. Quick Connect, copying a host's password, host export and desktop sync no longer hand out its secret
 - Hosts shared at connect or view level reach linked desktops without their login and connect through the server there
 - Quick Connect can log in with a saved credential, the server reads it when connecting
+- Copying a host's password or key and reading host status need the View hosts permission, like every other host read
 
 ## 26.11.1
 

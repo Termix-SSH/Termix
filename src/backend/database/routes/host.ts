@@ -148,8 +148,15 @@ function notifyStatsHostUpdated(
 const authManager = AuthManager.getInstance();
 const permissionManager = PermissionManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
-registerDeviceAuthRoutes(router, authenticateJWT);
 const requireDataAccess = authManager.createDataAccessMiddleware();
+// Built once so every host route checks the same guard.
+const hostGuards = {
+  view: permissionManager.requirePermission("hosts.view"),
+  create: permissionManager.requirePermission("hosts.create"),
+  edit: permissionManager.requirePermission("hosts.edit"),
+  delete: permissionManager.requirePermission("hosts.delete"),
+};
+registerDeviceAuthRoutes(router, authenticateJWT, hostGuards.view);
 
 registerHostTagRoutes(
   router,
@@ -159,6 +166,7 @@ registerHostTagRoutes(
 
 registerHostStatusRoutes(router, {
   authenticateJWT,
+  requireViewPermission: hostGuards.view,
   requireAdmin: authManager.createAdminMiddleware(),
 });
 
@@ -181,7 +189,7 @@ registerHostStatusRoutes(router, {
 router.post(
   ["/db/host", "/enroll"],
   authenticateJWT,
-  permissionManager.requirePermission("hosts.create"),
+  hostGuards.create,
   requireDataAccess,
   requireManualCreate,
   requireHostEnrollmentAccessForPath,
@@ -790,7 +798,7 @@ router.post(
 router.put(
   "/db/host/:id",
   authenticateJWT,
-  permissionManager.requirePermission("hosts.edit"),
+  hostGuards.edit,
   requireDataAccess,
   requireUnlockedHost,
   upload.single("key"),
@@ -1312,7 +1320,7 @@ router.get("/policy", authenticateJWT, (_req: Request, res: Response) => {
 router.get(
   "/db/host",
   authenticateJWT,
-  permissionManager.requirePermission("hosts.view"),
+  hostGuards.view,
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -1472,7 +1480,7 @@ router.get(
 router.get(
   "/db/host/:id",
   authenticateJWT,
-  permissionManager.requirePermission("hosts.view"),
+  hostGuards.view,
   requireDataAccess,
   async (req: Request, res: Response) => {
     const hostId = Array.isArray(req.params.id)
@@ -1600,7 +1608,7 @@ router.get(
 router.get(
   "/db/host/:id/local-connection-auth",
   authenticateJWT,
-  permissionManager.requirePermission("hosts.view"),
+  hostGuards.view,
   requireDataAccess,
   async (req: Request, res: Response) => {
     const hostId = Number(req.params.id);
@@ -1706,6 +1714,7 @@ router.get(
 router.get(
   "/db/host/:id/password",
   authenticateJWT,
+  hostGuards.view,
   requireDataAccess,
   async (req: Request, res: Response) => {
     const hostId = Number(req.params.id);
@@ -1802,7 +1811,7 @@ router.get(
 router.delete(
   "/db/host/:id",
   authenticateJWT,
-  permissionManager.requirePermission("hosts.delete"),
+  hostGuards.delete,
   requireDataAccess,
   requireUnlockedHost,
   async (req: Request, res: Response) => {
@@ -1873,9 +1882,9 @@ router.delete(
 
 registerHostFolderRoutes(router, {
   authenticateJWT,
-  requireViewPermission: permissionManager.requirePermission("hosts.view"),
-  requireEditPermission: permissionManager.requirePermission("hosts.edit"),
-  requireDeletePermission: permissionManager.requirePermission("hosts.delete"),
+  requireViewPermission: hostGuards.view,
+  requireEditPermission: hostGuards.edit,
+  requireDeletePermission: hostGuards.delete,
   requireCredentialEditPermission:
     permissionManager.requirePermission("credentials.edit"),
   requireDataAccess,
@@ -1884,19 +1893,19 @@ registerHostFolderRoutes(router, {
 registerHostBulkRoutes(
   router,
   authenticateJWT,
-  permissionManager.requirePermission("hosts.edit"),
+  hostGuards.edit,
   requireDataAccess,
 );
 
 registerHostNetworkRoutes(router, {
   authenticateJWT,
-  requireViewPermission: permissionManager.requirePermission("hosts.view"),
+  requireViewPermission: hostGuards.view,
   requireDataAccess,
 });
 
 registerHostDefaultsRoutes(router, {
   authenticateJWT,
-  requireEditPermission: permissionManager.requirePermission("hosts.edit"),
+  requireEditPermission: hostGuards.edit,
   requireDataAccess,
   requireAdminSettings: permissionManager.requirePermission(
     "admin.settings.manage",
