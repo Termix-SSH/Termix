@@ -27,6 +27,7 @@
 - Signing out, revoking a session, changing a password, an expired session or an idle timeout now also closes that login's open terminals and other live connections within seconds
 - API key connections end when the key is deleted or expires
 - Live connections follow the same sign in rules as the rest of Termix, including the second factor setup step
+- A database save that fails is now reported to the action that asked for it, and a failed save never leaves a cut database file
 
 ## 26.11.1
 

@@ -14,6 +14,7 @@ import {
   migrateLegacySharedHostAuthOverrides,
 } from "../../utils/shared-host-auth-override-migration.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
+import { saveSnapshot, writeFileAtomic } from "./snapshot-save.js";
 import { migrateAuditRetention } from "../../utils/audit-retention-migration.js";
 import { createPerformanceIndexes } from "./performance-indexes.js";
 import {
@@ -1879,40 +1880,26 @@ function vacuumIfFreelistBloated(): void {
 }
 
 async function saveMemoryDatabaseToFile(): Promise<void> {
-  if (!memoryDatabase) return;
+  const database = memoryDatabase;
+  if (!database) return;
 
-  try {
-    // Before the copy, so a write during the slow part below stays dirty.
-    DatabaseSaveTrigger.markClean();
-    const buffer = memoryDatabase.serialize();
-
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-
-    try {
-      memoryDatabase
-        .prepare("SELECT COUNT(*) as count FROM sessions")
-        .get() as { count: number };
-    } catch {
-      // expected - sessions table may not exist yet
-    }
-
-    if (enableFileEncryption) {
-      await DatabaseFileEncryption.encryptDatabaseFromBuffer(
-        buffer,
-        encryptedDbPath,
-      );
-    } else {
-      await fs.promises.writeFile(dbPath, buffer);
-    }
-  } catch (error) {
-    DatabaseSaveTrigger.markDirty();
-    databaseLogger.error("Failed to save in-memory database", error, {
-      operation: "memory_db_save_failed",
-      enableFileEncryption,
-    });
-  }
+  await saveSnapshot({
+    serialize: () => database.serialize(),
+    encrypted: enableFileEncryption,
+    write: async (buffer) => {
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      if (enableFileEncryption) {
+        await DatabaseFileEncryption.encryptDatabaseFromBuffer(
+          buffer,
+          encryptedDbPath,
+        );
+      } else {
+        await writeFileAtomic(dbPath, buffer);
+      }
+    },
+  });
 }
 
 async function handlePostInitFileEncryption() {
@@ -1921,7 +1908,9 @@ async function handlePostInitFileEncryption() {
       DatabaseSaveTrigger.initialize(saveMemoryDatabaseToFile);
 
       if (enableFileEncryption) {
-        await saveMemoryDatabaseToFile();
+        await saveMemoryDatabaseToFile().catch(() => {
+          // Logged by the save; the periodic save below tries again.
+        });
       }
 
       setInterval(() => {
