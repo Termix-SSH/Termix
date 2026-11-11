@@ -22,7 +22,7 @@ interface OriginResolvableHost {
  * `defaultRemote` makes a host left on Default resolve to "remote" instead of
  * following the desktop-wide setting. Remote desktop passes it when this
  * desktop is set to use an external guacd, so a host is not moved onto a
- * guacd that isn't there (see Termix-SSH/Support#1240). With the built-in
+ * guacd that isn't there. With the built-in
  * engine it runs locally like SSH.
  */
 export async function resolveConnectionOrigin(
