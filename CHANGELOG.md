@@ -14,6 +14,8 @@
 - A plugin that hangs while stopping no longer keeps the server from shutting down
 - Stopping the server with Ctrl+C or docker stop waits for plugins to stop before it closes the database
 - Desktop app: the page can only change the desktop settings meant for it
+- Database exports always write inside their own temp folder, whatever the username
+- New usernames can't contain slashes or control characters
 
 ## 26.11.1
 

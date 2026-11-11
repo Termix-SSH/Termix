@@ -45,7 +45,7 @@ import { createCorsMiddleware } from "../utils/cors-config.js";
 import { createCompressionMiddleware } from "../utils/compression-config.js";
 import fs from "fs";
 import path from "path";
-import os from "os";
+import { randomUUID } from "crypto";
 import "dotenv/config";
 import { databaseLogger, apiLogger } from "../utils/logger.js";
 import { getLocalVersion } from "../utils/app-version.js";
@@ -68,6 +68,12 @@ import { DataCrypto } from "../utils/data-crypto.js";
 import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
 import { DatabaseMigration } from "../utils/database-migration.js";
 import { UserDataExport } from "../utils/user-data-export.js";
+import {
+  createExportFile,
+  exportDownloadName,
+  removeExportFile,
+  type ExportFile,
+} from "./export-file.js";
 import {
   importUserPluginRows,
   writeUserPluginTables,
@@ -151,8 +157,7 @@ const storage = multer.diskStorage({
     cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
-    const timestamp = Date.now();
-    cb(null, `${timestamp}-${file.originalname}`);
+    cb(null, `${Date.now()}-${randomUUID()}.sqlite`);
   },
 });
 
@@ -771,25 +776,20 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       throw new Error("User data not unlocked");
     }
 
-    const tempDir = path.join(os.tmpdir(), "termix-exports");
-
+    let exportFile: ExportFile;
     try {
-      if (!fs.existsSync(tempDir)) {
-        fs.mkdirSync(tempDir, { recursive: true });
-      }
+      exportFile = createExportFile();
     } catch (dirError) {
       apiLogger.error("Failed to create temp directory", dirError, {
         operation: "export_temp_dir_error",
-        tempDir,
       });
       throw new Error(`Failed to create temp directory: ${dirError.message}`, {
         cause: dirError,
       });
     }
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const filename = `termix-export-${user.username}-${timestamp}.sqlite`;
-    const tempPath = path.join(tempDir, filename);
+    const filename = exportDownloadName(String(user.username ?? ""));
+    const tempPath = exportFile.path;
 
     apiLogger.info("Creating export database", {
       operation: "export_db_creation",
@@ -1056,12 +1056,15 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         await getExportableSettings(!!user.isAdmin),
       );
       await writeHostDefaultsToExport(exportDb, userId);
-    } finally {
+    } catch (writeError) {
       exportDb.close();
+      removeExportFile(exportFile);
+      throw writeError;
     }
+    exportDb.close();
 
     res.setHeader("Content-Type", "application/x-sqlite3");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.attachment(filename);
 
     const fileStream = fs.createReadStream(tempPath);
 
@@ -1089,17 +1092,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
 
     // "close" also fires when the client aborts mid download, which "end"
     // does not, so the decrypted export never stays behind on disk.
-    fileStream.on("close", () => {
-      fs.unlink(tempPath, (err) => {
-        if (err && err.code !== "ENOENT") {
-          apiLogger.warn("Failed to clean up export file", {
-            operation: "export_cleanup_failed",
-            path: tempPath,
-            error: err.message,
-          });
-        }
-      });
-    });
+    fileStream.on("close", () => removeExportFile(exportFile));
     res.on("close", () => fileStream.destroy());
 
     fileStream.pipe(res);

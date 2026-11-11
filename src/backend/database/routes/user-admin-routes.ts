@@ -1,3 +1,7 @@
+import {
+  isAcceptableUsername,
+  USERNAME_RULE_ERROR,
+} from "../../utils/username.js";
 import { isExternalAccount } from "../../auth/external-account.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
@@ -454,6 +458,9 @@ export function registerUserAdminRoutes(
       return res
         .status(400)
         .json({ error: "Username and password are required" });
+    }
+    if (!isAcceptableUsername(username)) {
+      return res.status(400).json({ error: USERNAME_RULE_ERROR });
     }
 
     try {

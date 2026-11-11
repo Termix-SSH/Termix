@@ -1,4 +1,8 @@
 import {
+  isAcceptableUsername,
+  USERNAME_RULE_ERROR,
+} from "../../utils/username.js";
+import {
   CREDENTIAL_STORAGE_SETTING,
   credentialStorageAllowed,
 } from "../../hosts/credential-storage.js";
@@ -178,6 +182,9 @@ router.post("/create", async (req, res) => {
     return res
       .status(400)
       .json({ error: "Username and password are required" });
+  }
+  if (!isAcceptableUsername(username)) {
+    return res.status(400).json({ error: USERNAME_RULE_ERROR });
   }
 
   try {
