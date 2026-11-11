@@ -344,7 +344,11 @@ router.post("/notes", async (req, res) => {
   `publicRateLimit` raises that for a proxied page that loads its own assets.
 - `ctx.http.baseUrl(req)` is the public address, for callback URLs.
 - `ctx.ws.route("/live", (socket, conn) => ...)`. Long lived sockets should check
-  `conn.isDataUnlocked()` per message.
+  `conn.isDataUnlocked()` per message. Core closes a socket (code 1008) within a few seconds of the login
+  that opened it ending: sign out, revoke, password change, expiry or idle timeout. A public socket that came
+  with a login ends with it too. Keep your own detach and reattach logic for that close. Sockets follow the
+  same session rules as HTTP, so a session that must set up a second factor only reaches second factor
+  plugins.
 - `ctx.rbac.require("manage")` on a single route, `await ctx.rbac.has("manage")` in code. A full id like
   `hosts.edit` checks a core permission.
 - Host access: `ctx.hosts.checkAccess(hostId, "connect" | "view" | "edit" | "manage")`.

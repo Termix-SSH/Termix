@@ -1,9 +1,13 @@
 import crypto from "crypto";
-import { and, eq, lte, ne, notLike } from "drizzle-orm";
+import { and, eq, inArray, lte, ne, notLike } from "drizzle-orm";
 import { sessions } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
 import { insertReturning } from "./returning.js";
+import {
+  endSocketSession,
+  endUserSocketSessions,
+} from "../../auth/socket-sessions.js";
 
 export type SessionRecord = typeof sessions.$inferSelect;
 export type NewSessionRecord = typeof sessions.$inferInsert;
@@ -51,6 +55,14 @@ export class SessionRepository {
       .limit(1);
 
     return rows[0] ?? null;
+  }
+
+  async findManyByIds(ids: string[]): Promise<SessionRecord[]> {
+    if (ids.length === 0) return [];
+    return this.context.drizzle
+      .select()
+      .from(sessions)
+      .where(inArray(sessions.id, ids));
   }
 
   async listByUserId(userId: string): Promise<SessionRecord[]> {
@@ -105,6 +117,15 @@ export class SessionRepository {
     await this.afterWrite();
   }
 
+  /** Moves a session's expiry, for an API key carrier while its socket is open. */
+  async extendExpiry(id: string, expiresAt: string): Promise<void> {
+    await this.context.drizzle
+      .update(sessions)
+      .set({ expiresAt })
+      .where(eq(sessions.id, id));
+    await this.onActivity?.();
+  }
+
   /** Replaces tokens saved before only hashes were kept. Returns how many. */
   async hashStoredTokens(): Promise<number> {
     const rows = await this.context.drizzle
@@ -126,6 +147,7 @@ export class SessionRepository {
       .delete(sessions)
       .where(eq(sessions.id, id));
 
+    endSocketSession(id);
     await this.afterWrite();
     return rowsAffected(result) > 0;
   }
@@ -140,6 +162,7 @@ export class SessionRepository {
 
     const result = await this.context.drizzle.delete(sessions).where(where);
 
+    endUserSocketSessions(userId, exceptSessionId);
     await this.afterWrite();
     return rowsAffected(result);
   }

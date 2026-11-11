@@ -15,8 +15,8 @@ import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { inArray, isNotNull } from "drizzle-orm";
 import type { ExternalSessionRef } from "../auth/types.js";
-import { listSecondFactors } from "../auth/registry.js";
-import { SECOND_FACTOR_SETUP } from "../auth/policy.js";
+import { sessionAccessRefusal } from "../auth/session-access.js";
+import { endSocketSession, idleExpired } from "../auth/socket-sessions.js";
 import { keyScopeAllows, parseKeyScopes } from "../operations/key-scopes.js";
 import type { DeviceType } from "./user-agent-parser.js";
 import { getDb } from "../database/db/index.js";
@@ -54,6 +54,8 @@ interface JWTPayload {
   pluginSession?: boolean;
   /** sessions.restriction, read from the row on verify. */
   restriction?: string | null;
+  /** On a socket ticket an API key asked for: the socket lives as long as the key. */
+  apiKeyId?: string;
   dataKeyWrap?: WrappedDataKey;
   iat?: number;
   exp?: number;
@@ -118,44 +120,10 @@ const PLUGIN_API_PATH = /^\/plugin-api\/([a-z][a-z0-9-]*)(\/|$)/;
 /** sessions.device_type of a session a plugin minted with ctx.auth.issueUserToken. */
 export const PLUGIN_SESSION_DEVICE_TYPE = "plugin";
 
-// Routes that change how a user signs in or mint a credential that outlives
-// the session. A plugin-minted session is refused on them, and on every
-// route of a plugin that provides a second factor.
-const PLUGIN_SESSION_BLOCKLIST = [
-  /^\/users\/(change-password|api-keys|link-external-to-password|unlink-external-from-password|admin\/reset-password)(\/|$)/,
-  /^\/users\/admin\/[^/]+\/second-factors(\/|$)/,
-];
-
-/** Whether a session a plugin minted may call this path. */
-export function allowsPluginSession(path: string): boolean {
-  if (PLUGIN_SESSION_BLOCKLIST.some((pattern) => pattern.test(path))) {
-    return false;
-  }
-  const plugin = PLUGIN_API_PATH.exec(path)?.[1];
-  return !listSecondFactors().some((factor) => factor.pluginId === plugin);
-}
-
-// What a session that must set up a second factor first may call: who am I,
-// sign out, the login and factor routes, plugin bundles, and the plugins that
-// provide a second factor.
-const SETUP_SESSION_ALLOWLIST = [
-  /^\/users\/(me|logout)$/,
-  /^\/users\/auth\//,
-  /^\/user-preferences\/look(\/|$)/,
-  /^\/plugins(\/|$)/,
-  /^\/plugin-assets\//,
-];
-
-/** Whether a session restricted to second factor setup may call this path. */
-export function allowsSetupSession(path: string): boolean {
-  if (SETUP_SESSION_ALLOWLIST.some((pattern) => pattern.test(path))) {
-    return true;
-  }
-  const plugin = PLUGIN_API_PATH.exec(path)?.[1];
-  return (
-    !!plugin && listSecondFactors().some((factor) => factor.pluginId === plugin)
-  );
-}
+export {
+  allowsPluginSession,
+  allowsSetupSession,
+} from "../auth/session-access.js";
 
 let pluginAllowsImpersonation: (pluginId: string) => boolean = () => false;
 
@@ -467,8 +435,13 @@ class AuthManager {
    * HttpOnly cookie, and a proxy that rewrites Host makes the cookie look
    * like it came from another site, so the page asks for one of these.
    */
-  async issueSocketTicket(userId: string, sessionId: string): Promise<string> {
+  async issueSocketTicket(
+    userId: string,
+    sessionId: string,
+    apiKeyId?: string,
+  ): Promise<string> {
     const payload: JWTPayload = { userId, sessionId, purpose: "ws" };
+    if (apiKeyId) payload.apiKeyId = apiKeyId;
     return jwt.sign(payload, await this.systemCrypto.getJWTSecret(), {
       expiresIn: 60,
     } as jwt.SignOptions);
@@ -489,7 +462,7 @@ class AuthManager {
       ttlSeconds: 120,
     });
     const sessionId = (jwt.decode(token) as JWTPayload).sessionId!;
-    return this.issueSocketTicket(userId, sessionId);
+    return this.issueSocketTicket(userId, sessionId, keyId);
   }
 
   /**
@@ -607,9 +580,7 @@ class AuthManager {
     idleTimeout: number | null;
     lastActiveAt: string;
   }): boolean {
-    if (!session.idleTimeout) return false;
-    const idleMs = Date.now() - new Date(session.lastActiveAt).getTime();
-    return idleMs > session.idleTimeout * 1000;
+    return idleExpired(session);
   }
 
   async refreshSessionToken(
@@ -724,6 +695,7 @@ class AuthManager {
       if (matchedIds.length === 0) return 0;
 
       await db.delete(sessions).where(inArray(sessions.id, matchedIds));
+      for (const id of matchedIds) endSocketSession(id);
 
       authLogger.info("Sessions revoked via back-channel logout", {
         operation: "external_backchannel_logout",
@@ -932,14 +904,7 @@ class AuthManager {
           .json({ error: "Invalid token" });
       }
 
-      if (payload.pendingTOTP) {
-        return res.status(401).json({
-          error: "TOTP verification required",
-          code: "TOTP_REQUIRED",
-        });
-      }
-
-      if (this.refusePluginSession(req, res, payload)) return;
+      if (this.refuseSession(req, res, payload)) return;
 
       if (payload.sessionId) {
         try {
@@ -1108,28 +1073,18 @@ class AuthManager {
     return false;
   }
 
-  /** Sends the 403 and returns true when a plugin session may not use this route. */
-  private refusePluginSession(
+  /** Sends the refusal and returns true when this session may not use the route. */
+  private refuseSession(
     req: Request,
     res: Response,
     payload: JWTPayload,
   ): boolean {
     const path = (req.originalUrl || req.url || "").split("?")[0];
-    if (
-      payload.restriction === SECOND_FACTOR_SETUP &&
-      !allowsSetupSession(path)
-    ) {
-      res.status(403).json({
-        error: "Set up a second factor before using Termix",
-        code: "SECOND_FACTOR_SETUP_REQUIRED",
-      });
-      return true;
-    }
-    if (!payload.pluginSession || allowsPluginSession(path)) return false;
-    res.status(403).json({
-      error: "A session a plugin issued cannot use this route",
-      code: "PLUGIN_SESSION_NOT_ALLOWED",
-    });
+    const refusal = sessionAccessRefusal(payload, path);
+    if (!refusal) return false;
+    res
+      .status(refusal.status)
+      .json({ error: refusal.error, code: refusal.code });
     return true;
   }
 
@@ -1180,14 +1135,7 @@ class AuthManager {
           .json({ error: "Invalid token" });
       }
 
-      if (payload.pendingTOTP) {
-        return res.status(401).json({
-          error: "TOTP verification required",
-          code: "TOTP_REQUIRED",
-        });
-      }
-
-      if (this.refusePluginSession(req, res, payload)) return;
+      if (this.refuseSession(req, res, payload)) return;
 
       try {
         const user = await createCurrentUserRepository().findById(

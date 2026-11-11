@@ -38,10 +38,14 @@ vi.mock("../../utils/auth-manager.js", () => ({
         options: { allowSocketTicket?: boolean } = {},
       ) =>
         token === state.setupToken
-          ? { userId: state.userId, restriction: "second-factor-setup" }
+          ? {
+              userId: state.userId,
+              sessionId: "s-setup",
+              restriction: "second-factor-setup",
+            }
           : token === state.validToken ||
               (token === state.ticket && options.allowSocketTicket)
-            ? { userId: state.userId }
+            ? { userId: state.userId, sessionId: "s-1" }
             : null,
     }),
   },
@@ -63,6 +67,7 @@ vi.mock("../../plugins/permissions.js", () => ({
 }));
 
 const ws = await import("../../plugins/ws.js");
+const socketSessions = await import("../../auth/socket-sessions.js");
 
 const DECLARED = ["network:serve"] as const;
 
@@ -122,11 +127,13 @@ function authProtocols(token: string): string[] {
 
 beforeEach(() => {
   ws.resetPluginWebSockets();
+  socketSessions.resetSocketSessions();
   state.granted = new Set(["network:serve"]);
 });
 
 afterEach(async () => {
   ws.resetPluginWebSockets();
+  socketSessions.resetSocketSessions();
   if (server) {
     await new Promise((resolve) => server!.close(() => resolve(undefined)));
     server = null;

@@ -3,6 +3,7 @@ import { apiKeys, users } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
 import { deleteReturning, insertReturning } from "./returning.js";
+import { endApiKeySockets } from "../../auth/socket-sessions.js";
 
 export type ApiKeyRecord = typeof apiKeys.$inferSelect;
 export type NewApiKeyRecord = typeof apiKeys.$inferInsert;
@@ -86,6 +87,7 @@ export class ApiKeyRepository {
       eq(apiKeys.id, id),
     );
 
+    endApiKeySockets(id);
     await this.afterWrite();
     return rows[0] ?? null;
   }

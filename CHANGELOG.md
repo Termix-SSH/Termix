@@ -24,6 +24,9 @@
 - Hosts shared at connect or view level reach linked desktops without their login and connect through the server there
 - Quick Connect can log in with a saved credential, the server reads it when connecting
 - Copying a host's password or key and reading host status need the View hosts permission, like every other host read
+- Signing out, revoking a session, changing a password, an expired session or an idle timeout now also closes that login's open terminals and other live connections within seconds
+- API key connections end when the key is deleted or expires
+- Live connections follow the same sign in rules as the rest of Termix, including the second factor setup step
 
 ## 26.11.1
 
