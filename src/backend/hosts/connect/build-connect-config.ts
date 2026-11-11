@@ -1,4 +1,5 @@
 import type { Client } from "ssh2";
+import { explainHostKeyRefusal } from "../host-key-policy.js";
 import type { WebSocket } from "ws";
 import { buildSSHAlgorithms } from "../../utils/ssh-algorithms.js";
 import { SSHHostKeyVerifier } from "../host-key-verifier.js";
@@ -185,6 +186,11 @@ export async function buildConnectConfig(
       options.userId,
       isJumpHost,
       preloaded,
+      {
+        onRefused: (code) => {
+          if (options.client) explainHostKeyRefusal(options.client, code);
+        },
+      },
     ),
     algorithms: buildSSHAlgorithms(sshOptions?.allowLegacyAlgorithms !== false),
   };

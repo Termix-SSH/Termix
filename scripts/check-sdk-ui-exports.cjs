@@ -507,6 +507,8 @@ const ALLOWED = [
   "getSSHFolders",
   "getSSHHosts",
   "getCredentialStorage",
+  "getHostKeyPolicy",
+  "updateHostKeyPolicy",
   "challengeStepUp",
   "getSecondFactorAfterExternalLogin",
   "getSessionTimeout",

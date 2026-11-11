@@ -6,6 +6,7 @@
 
 - Desktop app: closing the window can quit Termix instead of keeping it in the tray
 - Desktop app: the first time closing the window keeps Termix in the tray, a notice says it is still running and how to quit
+- Admin setting to trust a host's first key without a prompt when nobody can confirm it. Each such key is audited
 
 ### Fixed
 
@@ -17,6 +18,8 @@
 - Database exports always write inside their own temp folder, whatever the username
 - New usernames can't contain slashes or control characters
 - Proxy tests connect to the exact address they checked
+- A host whose key was never checked is no longer trusted when a plugin, schedule or the API connects with nobody to ask. Open a terminal to the host once, or turn on the new admin setting
+- A jump host's first key is asked about like any other host's
 
 ## 26.11.1
 

@@ -59,8 +59,8 @@ describe("quick connect host keys", () => {
     expect(await verifyUnsaved(no.socket)).toBe(false);
   });
 
-  it("still connects when there is no socket to ask on", async () => {
-    expect(await verifyUnsaved(null)).toBe(true);
+  it("refuses when there is no socket to ask on", async () => {
+    expect(await verifyUnsaved(null)).toBe(false);
   });
 });
 

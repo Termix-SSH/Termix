@@ -2,6 +2,11 @@ import { pluginEvents, TOPICS } from "../plugins/events.js";
 import type { WebSocket } from "ws";
 import { createCurrentHostResolutionRepository } from "../database/repositories/factory.js";
 import { sshLogger } from "../utils/logger.js";
+import {
+  HOST_KEY_MESSAGES,
+  hostKeyTrustOnFirstUse,
+  type HostKeyRefusalCode,
+} from "./host-key-policy.js";
 
 interface HostKeyVerificationData {
   scenario: "new" | "changed";
@@ -17,6 +22,11 @@ interface HostKeyVerificationData {
 
 interface VerificationResponse {
   action: "accept" | "reject";
+}
+
+export interface HostVerifierOptions {
+  /** Told why a key was refused, before ssh2 reports its own error. */
+  onRefused?: (code: HostKeyRefusalCode, message: string) => void;
 }
 
 export class SSHHostKeyVerifier {
@@ -53,7 +63,19 @@ export class SSHHostKeyVerifier {
     preloadedHost?: Awaited<
       ReturnType<typeof SSHHostKeyVerifier.preloadHostData>
     >,
+    verifierOptions: HostVerifierOptions = {},
   ): Promise<(hostkey: Buffer, verify: (valid: boolean) => void) => void> {
+    const refuse = (
+      verify: (valid: boolean) => void,
+      code: HostKeyRefusalCode,
+    ) => {
+      try {
+        verifierOptions.onRefused?.(code, HOST_KEY_MESSAGES[code]);
+      } catch {
+        // the refusal stands either way
+      }
+      verify(false);
+    };
     return (hostkey: Buffer, verify: (valid: boolean) => void): void => {
       (async () => {
         try {
@@ -89,11 +111,17 @@ export class SSHHostKeyVerifier {
             return;
           }
 
+          // Nobody can check the key and there is nowhere to pin it.
           if (!hostId) {
-            sshLogger.info(
-              "Host key verification skipped (no hostId - quick connect)",
+            const trusted = hostKeyTrustOnFirstUse();
+            sshLogger.warn(
+              trusted
+                ? "Unsaved host key trusted for this session (trust on first use)"
+                : "Unsaved host key refused, nobody to ask",
               {
-                operation: "host_key_skip",
+                operation: trusted
+                  ? "host_key_tofu_session"
+                  : "host_key_unverified",
                 ip,
                 port,
                 fingerprint,
@@ -101,7 +129,8 @@ export class SSHHostKeyVerifier {
                 userId,
               },
             );
-            verify(true);
+            if (trusted) verify(true);
+            else refuse(verify, "HOST_KEY_UNVERIFIED");
             return;
           }
 
@@ -157,9 +186,24 @@ export class SSHHostKeyVerifier {
           }
 
           if (!host.hostKeyFingerprint) {
-            if (isJumpHost) {
+            // With nobody to ask, the first key is only pinned when the admin
+            // allows trust on first use.
+            if (!ws) {
+              if (!hostKeyTrustOnFirstUse()) {
+                sshLogger.warn("Host has no saved key and nobody to ask", {
+                  operation: "host_key_unverified",
+                  hostId,
+                  ip,
+                  port,
+                  userId,
+                  isJumpHost,
+                });
+                refuse(verify, "HOST_KEY_UNVERIFIED");
+                return;
+              }
               await this.storeHostKey(hostId, fingerprint, keyType, algorithm);
-              sshLogger.info("Jump host key auto-accepted and stored", {
+              await this.auditFirstUse(hostId, host.name, userId, fingerprint);
+              sshLogger.warn("Host key pinned on first use", {
                 operation: "host_key_stored",
                 hostId,
                 ip,
@@ -167,23 +211,8 @@ export class SSHHostKeyVerifier {
                 fingerprint,
                 keyType,
                 userId,
-                isJumpHost: true,
+                isJumpHost,
               });
-              verify(true);
-              return;
-            }
-
-            if (!ws) {
-              sshLogger.warn(
-                "No WebSocket available for host key verification prompt",
-                {
-                  operation: "host_key_no_ws",
-                  hostId,
-                  ip,
-                  port,
-                  userId,
-                },
-              );
               verify(true);
               return;
             }
@@ -265,18 +294,16 @@ export class SSHHostKeyVerifier {
 
           if (!ws) {
             sshLogger.error(
-              "Host key changed - please connect via Terminal to verify the new key",
+              "Host key changed, open a terminal to check the new key",
               {
                 operation: "host_key_no_ws_reject",
                 hostId,
                 ip,
                 port,
                 userId,
-                message:
-                  "SSH host key has changed. For security, please open a Terminal connection to this host first to verify and accept the new key fingerprint.",
               },
             );
-            verify(false);
+            refuse(verify, "HOST_KEY_CHANGED");
             return;
           }
 
@@ -333,6 +360,30 @@ export class SSHHostKeyVerifier {
         }
       })();
     };
+  }
+
+  private static async auditFirstUse(
+    hostId: number,
+    hostName: string | null,
+    userId: string,
+    fingerprint: string,
+  ): Promise<void> {
+    try {
+      const audit = await import("../utils/audit-logger.js");
+      const username = await audit.getAuditUsername(userId).catch(() => userId);
+      await audit.logAudit({
+        userId,
+        username,
+        action: "host_key_trusted_first_use",
+        resourceType: "host",
+        resourceId: String(hostId),
+        resourceName: hostName ?? undefined,
+        details: JSON.stringify({ fingerprint }),
+        success: true,
+      });
+    } catch {
+      // audit bookkeeping never blocks the connection
+    }
   }
 
   private static async storeHostKey(

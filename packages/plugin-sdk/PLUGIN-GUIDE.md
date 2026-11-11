@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.1.4 | Plugin API 1.17.0
+SDK 1.1.5 | Plugin API 1.17.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -396,6 +396,10 @@ commands. `@termix-ssh/plugin-sdk/host-commands` has helpers to detect the OS an
 sudo commands. `@termix-ssh/plugin-sdk/host-scripts` builds Docker, metrics, systemd and journal
 commands and parses their output; send a script on stdin to the command `scriptShell()` returns. Hosts from
 `ctx.hosts` never carry secrets. Pass the host or its id to `ctx.ssh`.
+
+A connection with no terminal to prompt on refuses a host whose key was never trusted, unless the admin
+turned on trust on first use. The error has code `HOST_KEY_UNVERIFIED` (or `HOST_KEY_CHANGED`) and tells the
+user to open a terminal to the host once. Show that message as it is.
 
 ### The desktop app
 

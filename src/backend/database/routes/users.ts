@@ -1,4 +1,8 @@
 import {
+  HOST_KEY_TOFU_SETTING,
+  hostKeyTrustOnFirstUse,
+} from "../../hosts/host-key-policy.js";
+import {
   isAcceptableUsername,
   USERNAME_RULE_ERROR,
 } from "../../utils/username.js";
@@ -1155,6 +1159,75 @@ router.patch("/credential-storage", authenticateJWT, async (req, res) => {
     res
       .status(500)
       .json({ error: "Failed to set the credential storage setting" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/host-key-policy:
+ *   get:
+ *     summary: Get the host key trust setting
+ *     description: Whether connections with nobody to confirm a host key (plugins, schedules, the API) may trust and save a host's first key.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Host key trust setting.
+ *       401:
+ *         description: Not signed in.
+ */
+router.get("/host-key-policy", authenticateJWT, (_req, res) => {
+  res.json({ trustOnFirstUse: hostKeyTrustOnFirstUse() });
+});
+
+/**
+ * @openapi
+ * /users/host-key-policy:
+ *   patch:
+ *     summary: Set the host key trust setting
+ *     description: When on, a host's first key is saved without a prompt when nobody can confirm it, and the event is audited. When off, such connections are refused until someone trusts the key from a terminal.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               trustOnFirstUse:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Host key trust setting updated.
+ *       400:
+ *         description: Invalid value for trustOnFirstUse.
+ *       403:
+ *         description: Not authorized.
+ *       500:
+ *         description: Failed to set the host key trust setting.
+ */
+router.patch("/host-key-policy", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    const user = await requireCurrentAdmin(userId);
+    if (!user) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const { trustOnFirstUse } = req.body;
+    if (typeof trustOnFirstUse !== "boolean") {
+      return res
+        .status(400)
+        .json({ error: "Invalid value for trustOnFirstUse" });
+    }
+    await createCurrentSettingsRepository().set(
+      HOST_KEY_TOFU_SETTING,
+      trustOnFirstUse ? "true" : "false",
+    );
+    res.json({ trustOnFirstUse });
+  } catch (err) {
+    authLogger.error("Failed to set the host key trust setting", err);
+    res.status(500).json({ error: "Failed to set the host key trust setting" });
   }
 });
 

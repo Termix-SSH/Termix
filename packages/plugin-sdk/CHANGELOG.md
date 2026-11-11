@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.5
+
+Plugin API 1.17.0.
+
+### Added
+
+- `/ui` exports `getHostKeyPolicy` and `updateHostKeyPolicy`, the admin switch that lets connections with nobody to ask trust a host's first key
+
 ## 1.1.4
 
 Plugin API 1.17.0.

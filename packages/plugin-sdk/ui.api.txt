@@ -451,6 +451,7 @@ getHostAuthOverride (value): (hostId: number, protocol: string, sharedCopySyncId
 getHostDefaultsLevel (value): (target: HostDefaultsTarget) => Promise<HostDefaultsLevelData>
 getHostDeviceAuth (value): (hostId: number, protocol: string) => Promise<DeviceLogin>
 getHostEditorSection (value): (id: string) => HostEditorSectionDef
+getHostKeyPolicy (value): () => Promise<{ trustOnFirstUse: boolean; }>
 getHostPassword (value): (hostId: number, field?: "key" | "password" | "sudoPassword" | "keyPassword") => Promise<string>
 getHostPolicy (value): () => Promise<HostPolicy>
 getHostSidebarPreferences (value): () => Promise<HostSidebarPreferences>
@@ -617,6 +618,7 @@ updateCredentialStorage (value): (enabled: boolean) => Promise<{ enabled: boolea
 updateExternalAutoProvision (value): (enabled: boolean) => Promise<Record<string, unknown>>
 updateFolderMetadata (value): (name: string, color?: string, icon?: string, credentialId?: number, localOnly?: boolean) => Promise<void>
 updateHostAccess (value): (hostId: number, accessId: number, update: { permissionLevel?: SharePermissionLevel; durationHours?: number; }, syncId?: string) => Promise<{ success: boolean; expiresAt: string; }>
+updateHostKeyPolicy (value): (trustOnFirstUse: boolean) => Promise<{ trustOnFirstUse: boolean; }>
 updateHttpsSettings (value): (forceHttps: boolean) => Promise<HttpsSettings>
 updateLogLevel (value): (level: string) => Promise<void>
 updatePasswordLoginAllowed (value): (allowed: boolean) => Promise<{ allowed: boolean; }>

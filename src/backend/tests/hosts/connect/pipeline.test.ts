@@ -374,6 +374,7 @@ describe("buildConnectConfig per auth type", () => {
       "user-1",
       true,
       null,
+      expect.objectContaining({ onRefused: expect.any(Function) }),
     );
   });
 });

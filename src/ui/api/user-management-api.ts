@@ -271,6 +271,30 @@ export async function updateCredentialStorage(
   }
 }
 
+export async function getHostKeyPolicy(): Promise<{
+  trustOnFirstUse: boolean;
+}> {
+  try {
+    const response = await authApi.get("/users/host-key-policy");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "check host key trust setting");
+  }
+}
+
+export async function updateHostKeyPolicy(
+  trustOnFirstUse: boolean,
+): Promise<{ trustOnFirstUse: boolean }> {
+  try {
+    const response = await authApi.patch("/users/host-key-policy", {
+      trustOnFirstUse,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "update host key trust setting");
+  }
+}
+
 export async function getSecondFactorAfterExternalLogin(): Promise<{
   enabled: boolean;
 }> {
