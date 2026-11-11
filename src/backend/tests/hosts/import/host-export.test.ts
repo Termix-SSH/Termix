@@ -4,6 +4,7 @@ const state = vi.hoisted(() => ({
   hosts: [] as Record<string, unknown>[],
   credentials: [] as Record<string, unknown>[],
   resolve: vi.fn(),
+  reveal: true,
 }));
 
 vi.mock("../../../database/repositories/factory.js", () => ({
@@ -38,6 +39,9 @@ vi.mock("../../../hosts/protocol-auth/registry.js", () => ({
   findHostProtocol: () => ({
     credentialFields: [{ key: "token", secret: true }, { key: "domain" }],
   }),
+}));
+vi.mock("../../../hosts/usable-credential.js", () => ({
+  canRevealCredential: async () => state.reveal,
 }));
 vi.mock("../../../hosts/resolve-host-credentials.js", () => ({
   resolveHostCredentials: state.resolve,
@@ -129,6 +133,18 @@ describe("exportAllHosts", () => {
       forceKeyboardInteractive: true,
     });
     expect(state.resolve).toHaveBeenCalled();
+  });
+
+  it("GHSA-w53f-cpmg-pxvx keeps a use level credential by reference", async () => {
+    state.reveal = false;
+    try {
+      const result = await exportAllHosts("u1", false);
+      expect(state.resolve).not.toHaveBeenCalled();
+      expect(JSON.stringify(result.hosts)).not.toContain("RESOLVED-KEY");
+      expect(result.hosts[0]).toMatchObject({ credentialId: 7 });
+    } finally {
+      state.reveal = true;
+    }
   });
 
   it("leaves out every secret and credential id in share mode", async () => {

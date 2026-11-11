@@ -25,6 +25,11 @@ const mocks = vi.hoisted(() => ({
   createJumpHostChain: vi.fn(),
   createSocks5Connection: vi.fn(),
   resolveHostById: vi.fn(),
+  findUsableCredential: vi.fn(),
+}));
+
+vi.mock("../../../hosts/usable-credential.js", () => ({
+  findUsableCredential: mocks.findUsableCredential,
 }));
 
 vi.mock("../../../utils/logger.js", () => {
@@ -284,6 +289,27 @@ describe("buildConnectConfig per auth type", () => {
 
     const empty = await build(host({ authType: "credential", password: null }));
     expect(empty.outcome).toMatchObject({ code: "missing-secret" });
+  });
+
+  it("expands a credential id on the server for an unsaved host", async () => {
+    mocks.findUsableCredential.mockResolvedValueOnce({
+      username: "root",
+      password: "from-credential",
+    });
+    const built = await build(
+      host({ authType: "credential", password: null, credentialId: 5 }),
+    );
+    expect(built.config.password).toBe("from-credential");
+    expect(mocks.findUsableCredential).toHaveBeenCalledWith(
+      5,
+      expect.any(String),
+    );
+
+    mocks.findUsableCredential.mockResolvedValueOnce(null);
+    const refused = await build(
+      host({ authType: "credential", password: null, credentialId: 6 }),
+    );
+    expect(refused.outcome).toMatchObject({ code: "missing-secret" });
   });
 
   it("agent hands the config to the agent helper", async () => {

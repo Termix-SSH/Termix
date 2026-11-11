@@ -20,6 +20,10 @@ import {
   registerEntity,
 } from "../plugins/sync-registry.js";
 import { FieldCrypto } from "../utils/field-crypto.js";
+import {
+  findHostProtocol,
+  secretFieldKeys,
+} from "../hosts/protocol-auth/registry.js";
 import { syncLogger } from "../utils/logger.js";
 import { getPluginRuntime } from "../plugins/index.js";
 import { pluginEvents, TOPICS } from "../plugins/events.js";
@@ -498,6 +502,50 @@ const SHARED_HOST_DROP = [
   ...HOST_LOCAL_FIELDS,
 ];
 
+const SECRET_LEVELS = new Set(["edit", "manage"]);
+
+const SHARED_HOST_SECRETS = [
+  "password",
+  "key",
+  "keyPassword",
+  "sudoPassword",
+  "socks5Password",
+];
+
+function withoutPasswords(value: unknown): unknown {
+  let list: unknown = value;
+  if (typeof value === "string") {
+    try {
+      list = JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }
+  if (!Array.isArray(list)) return value;
+  const cleaned = list.map((node) =>
+    node && typeof node === "object"
+      ? { ...(node as Record<string, unknown>), password: null }
+      : node,
+  );
+  return typeof value === "string" ? JSON.stringify(cleaned) : cleaned;
+}
+
+function withoutLoginSecrets(logins: SyncRow): SyncRow {
+  const out: SyncRow = {};
+  for (const [protocol, login] of Object.entries(logins)) {
+    const entry = (login ?? {}) as Record<string, unknown>;
+    const declared = findHostProtocol(protocol);
+    const secretKeys = new Set(declared ? secretFieldKeys(declared) : []);
+    const fields = Object.fromEntries(
+      Object.entries((entry.fields ?? {}) as Record<string, unknown>).filter(
+        ([key]) => !secretKeys.has(key),
+      ),
+    );
+    out[protocol] = { ...entry, password: null, fields };
+  }
+  return out;
+}
+
 const HOST_TEXT_COLUMNS = new Set(
   Object.entries(getTableColumns(hosts))
     .filter(([, column]) => column.dataType === "string")
@@ -561,22 +609,32 @@ async function loadSharedHosts(userId: string): Promise<SyncRow[]> {
         );
       }
 
+      // Connect and view recipients reach the host through the server, so
+      // their copy carries no login.
+      const withheld = !SECRET_LEVELS.has(permissionLevel);
       const wire: SyncRow = {};
       for (const [field, value] of Object.entries(host)) {
         if (SHARED_HOST_DROP.includes(field)) continue;
+        if (withheld && SHARED_HOST_SECRETS.includes(field)) continue;
         wire[field] = storedForm(field, value);
+      }
+      if (withheld) {
+        wire.socks5ProxyChain = withoutPasswords(wire.socks5ProxyChain);
       }
       wire.jumpHosts = await jumpHostsToSyncIds(host.jumpHosts);
       wire.pluginSettings = await exportHostPluginSettings(hostId, {
         userId,
         permissionLevel,
       });
-      wire.protocolAuth = await exportSharedProtocolLogins(host, userId);
+      wire.protocolAuth = withheld
+        ? withoutLoginSecrets(await exportSharedProtocolLogins(host, userId))
+        : await exportSharedProtocolLogins(host, userId);
       wire.syncId = host.syncId;
       wire.shared = {
         hostId,
         owner: ownerNames.get(ownerId) ?? "",
         permissionLevel,
+        ...(withheld ? { secretWithheld: true } : {}),
       };
       rows.push(wire);
     } catch (error) {
@@ -635,6 +693,8 @@ async function loadSharedCredentials(userId: string): Promise<SyncRow[]> {
         userId,
       )) as unknown as SyncRow | null;
       if (!row || !usable || typeof row.syncId !== "string") continue;
+      // A use grant connects through the server and never ships the secret.
+      const withheld = grant.permissionLevel !== "manage";
       rows.push({
         syncId: row.syncId,
         name: row.name,
@@ -642,9 +702,9 @@ async function loadSharedCredentials(userId: string): Promise<SyncRow[]> {
         tags: row.tags ?? null,
         authType: usable.authType,
         username: usable.username ?? null,
-        password: usable.password ?? null,
-        privateKey: usable.privateKey ?? null,
-        keyPassword: usable.keyPassword ?? null,
+        password: withheld ? null : (usable.password ?? null),
+        privateKey: withheld ? null : (usable.privateKey ?? null),
+        keyPassword: withheld ? null : (usable.keyPassword ?? null),
         keyType: usable.keyType ?? null,
         publicKey: usable.publicKey ?? null,
         certPublicKey: usable.certPublicKey ?? null,
@@ -652,6 +712,7 @@ async function loadSharedCredentials(userId: string): Promise<SyncRow[]> {
           credentialId: grant.credentialId,
           owner: (await users.findById(grant.ownerId))?.username ?? "",
           permissionLevel: grant.permissionLevel,
+          ...(withheld ? { secretWithheld: true } : {}),
         },
       });
     } catch (error) {
@@ -665,6 +726,21 @@ async function loadSharedCredentials(userId: string): Promise<SyncRow[]> {
   return rows;
 }
 
+async function hasChosenOrigin(
+  userId: string,
+  syncId: unknown,
+): Promise<boolean> {
+  if (typeof syncId !== "string") return false;
+  const { createCurrentRepositoryContext } =
+    await import("../database/repositories/factory.js");
+  const [row] = await createCurrentRepositoryContext()
+    .drizzle.select({ connectionOrigin: hosts.connectionOrigin })
+    .from(hosts)
+    .where(and(eq(hosts.userId, userId), eq(hosts.syncId, syncId)))
+    .limit(1);
+  return !!row?.connectionOrigin;
+}
+
 /** Stores a read-only copy of something shared with the linked account. */
 async function writeSharedCopy(
   entityType: "hosts" | "sshCredentials",
@@ -676,9 +752,18 @@ async function writeSharedCopy(
   const entity = getEntity(entityType);
   if (!entity) return;
   const { shared, ...rest } = wire;
-  await writeWireRow(entity, userId, rest, createResolvers(userId), {
-    sharedSource: JSON.stringify(shared ?? {}),
-  });
+  const extra: SyncRow = { sharedSource: JSON.stringify(shared ?? {}) };
+  // A copy that came without its login connects through the server, unless
+  // the user already picked an origin for it (a device login sets local).
+  if (
+    entityType === "hosts" &&
+    (shared as { secretWithheld?: unknown } | undefined)?.secretWithheld ===
+      true &&
+    !(await hasChosenOrigin(userId, rest.syncId))
+  ) {
+    extra.connectionOrigin = "remote";
+  }
+  await writeWireRow(entity, userId, rest, createResolvers(userId), extra);
 }
 
 async function eraseSharedCopy(

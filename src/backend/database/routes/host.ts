@@ -9,7 +9,10 @@ import { getErrorMessage } from "../../utils/error-message.js";
 import { isQuickConnectAuthType } from "../../hosts/connect/auth-provider-registry.js";
 import { ensureCoreSshAuthProviders } from "../../hosts/connect/core-providers.js";
 import { applyFolderAccessRules } from "../../utils/folder-access-inheritance.js";
-import { findUsableCredential } from "../../hosts/usable-credential.js";
+import {
+  canRevealCredential,
+  findUsableCredential,
+} from "../../hosts/usable-credential.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, { type Request, type Response } from "express";
 import multer from "multer";
@@ -681,6 +684,30 @@ router.post(
 
         if (!cred) {
           return res.status(404).json({ error: "Credential not found" });
+        }
+
+        // A use grant lets the server connect with it, never shows it.
+        if (!(await canRevealCredential(Number(credentialId), userId))) {
+          return res.status(200).json({
+            id: -Date.now(),
+            userId,
+            name: `${overrideCredentialUsername ? username : cred.username}@${ip}:${port}`,
+            ip,
+            port: Number(port),
+            username: overrideCredentialUsername ? username : cred.username,
+            folder: "",
+            tags: [],
+            pin: false,
+            authType: "credential",
+            credentialId: Number(credentialId),
+            overrideCredentialUsername: !!overrideCredentialUsername,
+            jumpHosts: [],
+            statusCheckEnabled: true,
+            statusCheckInterval: null,
+            notes: "",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
         }
 
         resolvedPassword = pickResolvedPassword(password, cred.password) as
@@ -1592,6 +1619,15 @@ router.get(
       if (!access.hasAccess || !access.isShared) {
         return res.status(404).json({ error: "Shared host not found" });
       }
+      // Connect and view recipients connect through the server only.
+      if (
+        access.permissionLevel !== "edit" &&
+        access.permissionLevel !== "manage"
+      ) {
+        return res.status(403).json({
+          error: "This host is shared for connecting through the server only",
+        });
+      }
 
       const repository = createCurrentHostResolutionRepository();
       const ownerId = await repository.findHostOwnerId(hostId);
@@ -1715,7 +1751,12 @@ router.get(
         return res.json({ value: login.password });
       }
 
-      const resolved = (await resolveHostCredentials(host, userId)) || host;
+      const revealable =
+        !host.credentialId ||
+        (await canRevealCredential(Number(host.credentialId), userId));
+      const resolved = revealable
+        ? (await resolveHostCredentials(host, userId)) || host
+        : host;
       const value = resolved[field];
 
       if (!value) {

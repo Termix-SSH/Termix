@@ -20,6 +20,9 @@
 - Proxy tests connect to the exact address they checked
 - A host whose key was never checked is no longer trusted when a plugin, schedule or the API connects with nobody to ask. Open a terminal to the host once, or turn on the new admin setting
 - A jump host's first key is asked about like any other host's
+- A credential shared for use only stays hidden. Quick Connect, copying a host's password, host export and desktop sync no longer hand out its secret
+- Hosts shared at connect or view level reach linked desktops without their login and connect through the server there
+- Quick Connect can log in with a saved credential, the server reads it when connecting
 
 ## 26.11.1
 

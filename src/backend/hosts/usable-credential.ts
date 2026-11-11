@@ -48,3 +48,23 @@ export async function findUsableCredential(
     ? snapshotAsCredentialRecord(credentialId, row.userId, data)
     : null;
 }
+
+/**
+ * Whether the user may see a credential's secret, not just connect with it.
+ * Owners and manage grants may; a use grant only lets the server connect.
+ */
+export async function canRevealCredential(
+  credentialId: number,
+  userId: string,
+): Promise<boolean> {
+  const row = await createCurrentCredentialRepository().findById(credentialId);
+  if (!row) return false;
+  if (row.userId === userId) return true;
+  const roleIds = await createCurrentRoleRepository().listUserRoleIds(userId);
+  const grant = await createCurrentCredentialAccessRepository().findActiveGrant(
+    credentialId,
+    userId,
+    roleIds,
+  );
+  return grant?.permissionLevel === "manage";
+}

@@ -10,6 +10,7 @@ import {
 } from "../protocol-auth/protocol-auth.js";
 import { findHostProtocol } from "../protocol-auth/registry.js";
 import { resolveHostCredentials } from "../resolve-host-credentials.js";
+import { canRevealCredential } from "../usable-credential.js";
 
 /**
  * A share export leaves out every secret and credential link, the same as
@@ -52,9 +53,14 @@ async function exportRow(
   shareMode: boolean,
   pluginSettings: Awaited<ReturnType<typeof loadHostPluginSettings>>,
 ): Promise<{ data: Row; isRemoteDesktop: boolean; resolved: Row }> {
-  const resolvedHost = shareMode
-    ? host
-    : (await resolveHostCredentials(host, userId)) || host;
+  // A credential shared at use level is exported by reference only.
+  const revealable =
+    !host.credentialId ||
+    (await canRevealCredential(Number(host.credentialId), userId));
+  const resolvedHost =
+    shareMode || !revealable
+      ? host
+      : (await resolveHostCredentials(host, userId)) || host;
   const connectionType = (resolvedHost.connectionType as string) || "ssh";
   const isRemoteDesktop = connectionType !== "ssh";
 
