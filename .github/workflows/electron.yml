@@ -197,7 +197,7 @@ jobs:
       # A beta build has to know it is a beta, or it reports the stable version.
       - name: Stamp beta version
         if: inputs.version_override != ''
-        run: node scripts/sync-version.cjs --version "$VERSION_OVERRIDE"
+        run: node scripts/sync-version.cjs --version "$env:VERSION_OVERRIDE"
 
       - name: Get version
         id: package-version

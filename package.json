@@ -16,7 +16,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs && node scripts/patch-node-pty.cjs && node scripts/patch-ssh2-agent.cjs && node scripts/patch-ssh2-sk.cjs",
-    "ci:install": "npm ci --ignore-scripts --no-audit --no-fund && npm run postinstall && npm rebuild node-pty",
+    "ci:install": "npm ci --ignore-scripts --no-audit --no-fund && npm run postinstall && node scripts/drop-cpu-features.cjs && npm rebuild node-pty",
     "sbom": "cyclonedx-npm --omit dev --package-lock-only --ignore-npm-errors --output-reproducible --output-format JSON --output-file sbom.cdx.json",
     "prepare": "husky || true",
     "prebuild": "node scripts/write-electron-build-info.cjs",
