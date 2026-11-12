@@ -21,11 +21,21 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
           fetch-depth: 1
-          token: ${{ secrets.TERMIX_PAT }}
+          token: ${{ steps.app.outputs.token }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v7

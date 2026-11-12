@@ -47,6 +47,9 @@ jobs:
     runs-on: blacksmith-8vcpu-ubuntu-2404
     environment: build
     timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -116,8 +119,8 @@ jobs:
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
-          username: lukegus
-          password: ${{ secrets.TERMIX_PAT }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login to Docker Hub (prod and beta only)
         if: ${{ (inputs.build_type == 'Production' || inputs.build_type == 'Beta') && !inputs.dry_run }}

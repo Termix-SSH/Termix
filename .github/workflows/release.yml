@@ -51,6 +51,16 @@ jobs:
       sha: ${{ steps.beta.outputs.sha }}
       prev_ref: ${{ steps.beta.outputs.prev_ref }}
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix,Mobile
+          permission-contents: read
+
       - name: Resolve channel and mode
         id: mode
         run: |
@@ -123,7 +133,7 @@ jobs:
         id: beta
         if: ${{ steps.mode.outputs.channel == 'Beta' }}
         env:
-          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
           if [ "${{ github.event_name }}" = "schedule" ]; then
             REFS=$(gh api "repos/${{ github.repository }}/branches" --paginate -q '.[].name')
@@ -174,12 +184,22 @@ jobs:
     outputs:
       sha: ${{ steps.commit.outputs.sha }}
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+
       - name: Checkout dev branch
         uses: actions/checkout@v7
         with:
           ref: ${{ needs.prep.outputs.sha || needs.prep.outputs.dev_branch }}
           fetch-depth: 1
-          token: ${{ secrets.TERMIX_PAT }}
+          token: ${{ steps.app.outputs.token }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -268,12 +288,23 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+          permission-workflows: write
+
       - name: Checkout dev branch
         uses: actions/checkout@v7
         with:
           ref: ${{ needs.prep.outputs.dev_branch }}
           fetch-depth: 0
-          token: ${{ secrets.TERMIX_PAT }}
+          token: ${{ steps.app.outputs.token }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -326,12 +357,23 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+          permission-workflows: write
+
       - name: Checkout dev branch
         uses: actions/checkout@v7
         with:
           ref: ${{ needs.prep.outputs.dev_branch }}
           fetch-depth: 0
-          token: ${{ secrets.TERMIX_PAT }}
+          token: ${{ steps.app.outputs.token }}
 
       - name: Merge main into dev branch
         run: |
@@ -360,6 +402,18 @@ jobs:
       main_sha: ${{ steps.merge.outputs.main_sha }}
       build_ref: ${{ steps.merge.outputs.build_ref }}
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+          permission-pull-requests: write
+          permission-workflows: write
+
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
@@ -381,7 +435,7 @@ jobs:
       - name: Open and squash-merge PR to main
         id: merge
         env:
-          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
           DEV_BRANCH="${{ needs.prep.outputs.dev_branch }}"
           TITLE="v${{ needs.prep.outputs.version }}"
@@ -425,6 +479,9 @@ jobs:
     needs: [prep, translate, verify-beta, merge-to-main]
     if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && (needs.merge-to-main.result == 'success' || needs.verify-beta.result == 'success') }}
     uses: ./.github/workflows/docker.yml
+    permissions:
+      contents: read
+      packages: write
     with:
       version: ${{ needs.prep.outputs.version }}
       build_type: ${{ needs.prep.outputs.channel == 'Beta' && 'Beta' || 'Production' }}
@@ -440,6 +497,16 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+
       - name: Checkout main
         uses: actions/checkout@v7
         with:
@@ -454,7 +521,7 @@ jobs:
       - name: Clear existing release artifacts (overwrite mode)
         if: ${{ needs.prep.outputs.mode == 'Overwrite release' }}
         env:
-          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
           TAG="${{ needs.prep.outputs.release_tag }}"
           if ! gh release view "$TAG" --repo ${{ github.repository }} >/dev/null 2>&1; then
@@ -477,7 +544,7 @@ jobs:
       - name: Create or update GitHub release
         if: ${{ needs.prep.outputs.mode != 'Overwrite release' }}
         env:
-          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
           TAG="${{ needs.prep.outputs.release_tag }}"
           TITLE="Termix v${{ needs.prep.outputs.version }}"
@@ -495,6 +562,16 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+
       - name: Checkout beta commit
         uses: actions/checkout@v7
         with:
@@ -516,7 +593,7 @@ jobs:
 
       - name: Create beta release
         env:
-          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
           VERSION="${{ needs.prep.outputs.version }}"
           TITLE="Termix v${VERSION%-beta.*} Beta ${VERSION##*-beta.}"
@@ -587,12 +664,22 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+
       - name: Checkout main
         uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 1
-          token: ${{ secrets.TERMIX_PAT }}
+          token: ${{ steps.app.outputs.token }}
 
       - name: Bump and commit Homebrew cask
         env:
@@ -628,9 +715,19 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+
       - name: Delete this version's beta releases (tags stay)
         env:
-          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
           PREFIX="v${{ needs.prep.outputs.version }}-beta."
           gh release list --repo ${{ github.repository }} --limit 200 --json tagName -q '.[].tagName' \
@@ -649,9 +746,21 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Docs
+          permission-contents: write
+          permission-pull-requests: write
+          permission-workflows: write
+
       - name: Merge the docs dev branch into main
         env:
-          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
           REPO: Termix-SSH/Docs
           VERSION: ${{ needs.prep.outputs.version }}
         run: |
@@ -688,9 +797,19 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Docs
+          permission-contents: write
+
       - name: Tell the docs site
         env:
-          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
         run: gh api repos/Termix-SSH/Docs/dispatches -f event_type=core-released
 
   cleanup:
@@ -699,6 +818,16 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
@@ -707,7 +836,7 @@ jobs:
 
       - name: Delete dev branch in Termix
         env:
-          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
-          git push https://x-access-token:${{ secrets.TERMIX_PAT }}@github.com/${{ github.repository }}.git \
+          git push https://x-access-token:${{ steps.app.outputs.token }}@github.com/${{ github.repository }}.git \
             --delete "${{ needs.prep.outputs.dev_branch }}" || true
