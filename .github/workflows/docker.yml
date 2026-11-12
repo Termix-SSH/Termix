@@ -39,6 +39,14 @@ on:
         required: false
         type: string
         default: ""
+    # The values come from the build environment.
+    secrets:
+      DOCKERHUB_BUGATTIGUY527_TOKEN:
+        required: false
+      DOCKERHUB_TERMIXSSH_TOKEN:
+        required: false
+
+permissions: {}
 
 jobs:
   # One image per plugin profile (docker/bundled-plugins.json). standard keeps
@@ -56,10 +64,11 @@ jobs:
         profile: [standard, minimal, full]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Resolve source revision
         run: |
@@ -69,30 +78,33 @@ jobs:
       # The image reads its version from package.json, so a beta has to say so.
       - name: Stamp beta version
         if: ${{ inputs.build_type == 'Beta' }}
-        run: node scripts/sync-version.cjs --version "${{ inputs.version }}"
+        env:
+          VERSION: ${{ inputs.version }}
+        run: node scripts/sync-version.cjs --version "$VERSION"
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
         with:
           platforms: linux/amd64,linux/arm64
 
       - name: Setup Docker Buildx
-        uses: useblacksmith/setup-docker-builder@v2
+        uses: useblacksmith/setup-docker-builder@06dd9c83a5d541274d2e3ac67625560979275267 # v2.3.0
         with:
           cache-key: termix-ssh/termix
 
       - name: Determine tags
         id: tags
+        env:
+          VERSION: ${{ inputs.version }}
+          BUILD_TYPE: ${{ inputs.build_type }}
+          PROFILE: ${{ matrix.profile }}
         run: |
-          VERSION=${{ inputs.version }}
-          BUILD_TYPE=${{ inputs.build_type }}
-
           TAGS=()
           ALL_TAGS=()
 
           SUFFIX=""
-          if [ "${{ matrix.profile }}" != "standard" ]; then
-            SUFFIX="-${{ matrix.profile }}"
+          if [ "$PROFILE" != "standard" ]; then
+            SUFFIX="-$PROFILE"
           fi
 
           if [ "$BUILD_TYPE" = "Production" ]; then
@@ -111,12 +123,14 @@ jobs:
             fi
           done
 
-          echo "ALL_TAGS=$(IFS=,; echo "${ALL_TAGS[*]}")" >> $GITHUB_ENV
-          echo "TAGS=${TAGS[*]}" >> $GITHUB_ENV
+          {
+            echo "ALL_TAGS=$(IFS=,; echo "${ALL_TAGS[*]}")"
+            echo "TAGS=${TAGS[*]}"
+          } >> "$GITHUB_ENV"
 
       - name: Login to GHCR
         if: ${{ !inputs.dry_run }}
-        uses: docker/login-action@v4
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -124,13 +138,13 @@ jobs:
 
       - name: Login to Docker Hub (prod and beta only)
         if: ${{ (inputs.build_type == 'Production' || inputs.build_type == 'Beta') && !inputs.dry_run }}
-        uses: docker/login-action@v4
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           username: bugattiguy527
           password: ${{ secrets.DOCKERHUB_BUGATTIGUY527_TOKEN }}
 
       - name: Build and push multi-arch image
-        uses: useblacksmith/build-push-action@v2
+        uses: useblacksmith/build-push-action@9b0579bbec7a6cad2f171596c57e7ac1e7658850 # v2.3.0
         with:
           context: .
           file: ./docker/Dockerfile

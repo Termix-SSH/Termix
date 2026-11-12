@@ -4,19 +4,25 @@ on:
   pull_request:
     branches: [main, dev-*]
 
+permissions: {}
+
 jobs:
   lint-and-build:
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      contents: read
 
     env:
       NODE_OPTIONS: "--max-old-space-size=4096"
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
@@ -27,7 +33,7 @@ jobs:
       # Bundled plugins are counted as downloads in the plugin store, so a
       # build only fetches them when the pins change.
       - name: Cache bundled plugins
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.cache/termix-bundled-plugins
           key: bundled-plugins-${{ hashFiles('docker/bundled-plugins.json') }}
@@ -54,6 +60,8 @@ jobs:
   database-dialects:
     name: Postgres and MySQL
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      contents: read
 
     services:
       postgres:
@@ -87,10 +95,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
@@ -118,3 +128,23 @@ jobs:
           TEST_DIALECT: mysql
           TEST_DATABASE_URL: mysql://termix:termix@127.0.0.1:3306/termix_test
         run: npx vitest run src/backend/tests/database/repositories --no-file-parallelism
+
+  # Fails on high severity zizmor findings in this repo's workflows.
+  workflow-lint:
+    name: Workflow lint
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: zizmor
+        uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
+        with:
+          version: 1.32.0
+          advanced-security: false
+          annotations: true
+          min-severity: high

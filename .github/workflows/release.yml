@@ -28,8 +28,8 @@ on:
           - Dry run
           - Skip submit
 
-permissions:
-  contents: write
+# Writes go through the Termix CI App, so the job token mostly only reads.
+permissions: {}
 
 concurrency:
   group: release
@@ -39,6 +39,8 @@ jobs:
   prep:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
+    permissions:
+      contents: read
     outputs:
       channel: ${{ steps.mode.outputs.channel }}
       mode: ${{ steps.mode.outputs.mode }}
@@ -53,7 +55,7 @@ jobs:
     steps:
       - name: App token
         id: app
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ vars.CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
@@ -63,9 +65,10 @@ jobs:
 
       - name: Resolve channel and mode
         id: mode
+        env:
+          CHANNEL: ${{ inputs.channel || 'Beta' }}
+          MODE: ${{ inputs.mode || 'Everything' }}
         run: |
-          CHANNEL="${{ inputs.channel || 'Beta' }}"
-          MODE="${{ inputs.mode || 'Everything' }}"
           echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"
           if [ "$CHANNEL" = "Beta" ] && [ "$MODE" = "Overwrite release" ]; then
@@ -76,22 +79,23 @@ jobs:
       - name: Guard branch (release modes)
         if: ${{ github.event_name == 'workflow_dispatch' && steps.mode.outputs.mode != 'Overwrite release' && !startsWith(github.ref, 'refs/heads/dev-') }}
         run: |
-          echo "This mode must be run from a dev branch (got ${{ github.ref }})."
+          echo "This mode must be run from a dev branch (got $GITHUB_REF)."
           exit 1
 
       - name: Guard branch (overwrite mode)
         if: ${{ steps.mode.outputs.mode == 'Overwrite release' && github.ref != 'refs/heads/main' }}
         run: |
-          echo "Overwrite release must be run from main (got ${{ github.ref }})."
+          echo "Overwrite release must be run from main (got $GITHUB_REF)."
           exit 1
 
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
 
@@ -100,17 +104,20 @@ jobs:
         if: ${{ steps.mode.outputs.channel == 'Stable' }}
         env:
           GH_TOKEN: ${{ github.token }}
+          MODE: ${{ steps.mode.outputs.mode }}
         run: |
-          if [ "${{ steps.mode.outputs.mode }}" = "Overwrite release" ]; then
+          if [ "$MODE" = "Overwrite release" ]; then
             DEV_BRANCH=""
             VERSION=$(node -p "require('./package.json').version")
           else
             DEV_BRANCH="${GITHUB_REF#refs/heads/}"
             VERSION=$(node scripts/parse-dev-branch.cjs "$DEV_BRANCH")
           fi
-          echo "dev_branch=$DEV_BRANCH" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "release_tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          {
+            echo "dev_branch=$DEV_BRANCH"
+            echo "version=$VERSION"
+            echo "release_tag=v$VERSION"
+          } >> "$GITHUB_OUTPUT"
 
           MOBILE_RAW=$(gh release view -R Termix-SSH/Mobile --json tagName -q .tagName)
           MOBILE_VERSION=$(echo "$MOBILE_RAW" | sed -E 's/^release-//; s/-tag$//; s/^v//')
@@ -118,16 +125,22 @@ jobs:
             echo "Failed to resolve the latest Termix-SSH/Mobile release version."
             exit 1
           fi
-          echo "mobile_version=$MOBILE_VERSION" >> "$GITHUB_OUTPUT"
-          echo "mobile_tag=$MOBILE_RAW" >> "$GITHUB_OUTPUT"
+          {
+            echo "mobile_version=$MOBILE_VERSION"
+            echo "mobile_tag=$MOBILE_RAW"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Check CHANGELOG.md has notes for this version
         if: ${{ steps.mode.outputs.channel == 'Stable' }}
+        env:
+          VERSION: ${{ steps.info.outputs.version }}
+          MOBILE_VERSION: ${{ steps.info.outputs.mobile_version }}
+          MOBILE_TAG: ${{ steps.info.outputs.mobile_tag }}
         run: |
           node scripts/generate-release-body.cjs \
-            --version "${{ steps.info.outputs.version }}" \
-            --mobile-version "${{ steps.info.outputs.mobile_version }}" \
-            --mobile-tag "${{ steps.info.outputs.mobile_tag }}" > /dev/null
+            --version "$VERSION" \
+            --mobile-version "$MOBILE_VERSION" \
+            --mobile-tag "$MOBILE_TAG" > /dev/null
 
       - name: Resolve beta version
         id: beta
@@ -135,8 +148,8 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            REFS=$(gh api "repos/${{ github.repository }}/branches" --paginate -q '.[].name')
+          if [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
+            REFS=$(gh api "repos/$GITHUB_REPOSITORY/branches" --paginate -q '.[].name')
             if ! DEV_BRANCH=$(printf '%s\n' "$REFS" | node scripts/latest-dev-branch.cjs 2>/dev/null); then
               echo "No dev-X.Y.Z branch is open, so no beta today."
               echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -147,30 +160,32 @@ jobs:
           fi
 
           BASE=$(node scripts/parse-dev-branch.cjs "$DEV_BRANCH")
-          SHA=$(gh api "repos/${{ github.repository }}/branches/$DEV_BRANCH" -q .commit.sha)
-          TAGS=$(gh api "repos/${{ github.repository }}/git/matching-refs/tags/v$BASE-beta." -q '.[].ref' | sed 's#^refs/tags/##')
+          SHA=$(gh api "repos/$GITHUB_REPOSITORY/branches/$DEV_BRANCH" -q .commit.sha)
+          TAGS=$(gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/v$BASE-beta." -q '.[].ref' | sed 's#^refs/tags/##')
           LATEST=$(printf '%s\n' "$TAGS" | node scripts/beta-version.cjs "$BASE" --latest)
           VERSION=$(printf '%s\n' "$TAGS" | node scripts/beta-version.cjs "$BASE")
 
           if [ -n "$LATEST" ]; then
-            LATEST_SHA=$(gh api "repos/${{ github.repository }}/commits/$LATEST" -q .sha)
-            if [ "$LATEST_SHA" = "$SHA" ] && [ "${{ github.event_name }}" = "schedule" ]; then
+            LATEST_SHA=$(gh api "repos/$GITHUB_REPOSITORY/commits/$LATEST" -q .sha)
+            if [ "$LATEST_SHA" = "$SHA" ] && [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
               echo "$DEV_BRANCH has not moved since $LATEST, so no beta today."
               echo "skip=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             PREV="$LATEST"
           else
-            PREV=$(gh release view --repo ${{ github.repository }} --json tagName -q .tagName 2>/dev/null || true)
+            PREV=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName 2>/dev/null || true)
           fi
 
           echo "Beta $VERSION from $DEV_BRANCH @ $SHA, changes since ${PREV:-nothing}"
-          echo "skip=false" >> "$GITHUB_OUTPUT"
-          echo "dev_branch=$DEV_BRANCH" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "release_tag=v$VERSION" >> "$GITHUB_OUTPUT"
-          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
-          echo "prev_ref=$PREV" >> "$GITHUB_OUTPUT"
+          {
+            echo "skip=false"
+            echo "dev_branch=$DEV_BRANCH"
+            echo "version=$VERSION"
+            echo "release_tag=v$VERSION"
+            echo "sha=$SHA"
+            echo "prev_ref=$PREV"
+          } >> "$GITHUB_OUTPUT"
 
   # Translates new or changed strings with the Termix LLM server and pins the
   # bundled plugins to their newest registry releases, then commits both to the
@@ -181,12 +196,18 @@ jobs:
     if: ${{ needs.prep.outputs.skip != 'true' && needs.prep.outputs.mode != 'Overwrite release' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.prep.outputs.version }}
+      MODE: ${{ needs.prep.outputs.mode }}
+      DEV_BRANCH: ${{ needs.prep.outputs.dev_branch }}
     outputs:
       sha: ${{ steps.commit.outputs.sha }}
     steps:
       - name: App token
         id: app
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ vars.CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
@@ -195,14 +216,16 @@ jobs:
           permission-contents: write
 
       - name: Checkout dev branch
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.prep.outputs.sha || needs.prep.outputs.dev_branch }}
           fetch-depth: 1
           token: ${{ steps.app.outputs.token }}
+          # The commit step pushes with it.
+          persist-credentials: true
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
 
@@ -219,7 +242,7 @@ jobs:
 
       # Newest stable plugin release whose engine.termix allows this version.
       - name: Pin bundled plugins
-        run: node scripts/pin-bundled-plugins.cjs --all --core-version "${{ needs.prep.outputs.version }}"
+        run: node scripts/pin-bundled-plugins.cjs --all --core-version "$VERSION"
 
       - name: Commit translations and plugin pins
         id: commit
@@ -227,14 +250,14 @@ jobs:
           git add src/ui/locales docker/bundled-plugins.json
           if git diff --cached --quiet; then
             echo "No translation changes."
-          elif [ "${{ needs.prep.outputs.mode }}" = "Dry run" ]; then
+          elif [ "$MODE" = "Dry run" ]; then
             echo "DRY RUN: would commit these translation and pin changes:"
             git --no-pager diff --cached --stat
           else
             git config user.name "LukeGus"
             git config user.email "bugattiguy527@gmail.com"
             git commit -m "chore: update translations and plugin pins"
-            git push origin HEAD:"${{ needs.prep.outputs.dev_branch }}"
+            git push origin HEAD:"$DEV_BRANCH"
           fi
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
@@ -242,15 +265,18 @@ jobs:
     needs: [prep, translate]
     if: ${{ needs.prep.outputs.channel == 'Beta' && needs.prep.outputs.skip != 'true' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      contents: read
     steps:
       - name: Checkout beta commit
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.translate.outputs.sha || needs.prep.outputs.sha }}
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
@@ -261,7 +287,7 @@ jobs:
       # Bundled plugins are counted as downloads in the plugin store, so a
       # build only fetches them when the pins change.
       - name: Cache bundled plugins
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.cache/termix-bundled-plugins
           key: bundled-plugins-${{ hashFiles('docker/bundled-plugins.json') }}
@@ -287,10 +313,16 @@ jobs:
     if: ${{ needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Overwrite release' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.prep.outputs.version }}
+      MODE: ${{ needs.prep.outputs.mode }}
+      DEV_BRANCH: ${{ needs.prep.outputs.dev_branch }}
     steps:
       - name: App token
         id: app
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ vars.CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
@@ -300,14 +332,16 @@ jobs:
           permission-workflows: write
 
       - name: Checkout dev branch
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.prep.outputs.dev_branch }}
           fetch-depth: 0
           token: ${{ steps.app.outputs.token }}
+          # Pushes back to the dev branch.
+          persist-credentials: true
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
@@ -329,7 +363,7 @@ jobs:
         run: npm run test
 
       - name: Sync version
-        run: node scripts/sync-version.cjs --version "${{ needs.prep.outputs.version }}"
+        run: node scripts/sync-version.cjs --version "$VERSION"
 
       - name: Commit changes to dev branch
         run: |
@@ -341,25 +375,29 @@ jobs:
             exit 0
           fi
 
-          if [ "${{ needs.prep.outputs.mode }}" = "Dry run" ]; then
-            echo "DRY RUN: would commit and push the following changes to ${{ needs.prep.outputs.dev_branch }}:"
+          if [ "$MODE" = "Dry run" ]; then
+            echo "DRY RUN: would commit and push the following changes to $DEV_BRANCH:"
             git --no-pager diff --stat
             exit 0
           fi
 
           git add -A
-          git commit -m "chore: lint, format, and bump version to ${{ needs.prep.outputs.version }}"
-          git push origin HEAD:"${{ needs.prep.outputs.dev_branch }}"
+          git commit -m "chore: lint, format, and bump version to $VERSION"
+          git push origin HEAD:"$DEV_BRANCH"
 
   sync-main:
     needs: [prep, normalize]
     if: ${{ needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' && needs.prep.outputs.mode != 'Overwrite release' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
+    permissions:
+      contents: read
+    env:
+      DEV_BRANCH: ${{ needs.prep.outputs.dev_branch }}
     steps:
       - name: App token
         id: app
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ vars.CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
@@ -369,11 +407,13 @@ jobs:
           permission-workflows: write
 
       - name: Checkout dev branch
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.prep.outputs.dev_branch }}
           fetch-depth: 0
           token: ${{ steps.app.outputs.token }}
+          # Pushes back to the dev branch.
+          persist-credentials: true
 
       - name: Merge main into dev branch
         run: |
@@ -391,20 +431,28 @@ jobs:
             done
             git commit --no-edit
           fi
-          git push origin HEAD:"${{ needs.prep.outputs.dev_branch }}"
+          git push origin HEAD:"$DEV_BRANCH"
 
   merge-to-main:
     needs: [prep, translate, normalize, sync-main]
     if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.channel == 'Stable' && (needs.translate.result == 'success' || needs.translate.result == 'skipped') && (needs.normalize.result == 'success' || needs.normalize.result == 'skipped') && (needs.sync-main.result == 'success' || needs.sync-main.result == 'skipped') }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.prep.outputs.version }}
+      MODE: ${{ needs.prep.outputs.mode }}
+      DEV_BRANCH: ${{ needs.prep.outputs.dev_branch }}
+      MOBILE_VERSION: ${{ needs.prep.outputs.mobile_version }}
+      MOBILE_TAG: ${{ needs.prep.outputs.mobile_tag }}
     outputs:
       main_sha: ${{ steps.merge.outputs.main_sha }}
       build_ref: ${{ steps.merge.outputs.build_ref }}
     steps:
       - name: App token
         id: app
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ vars.CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
@@ -415,12 +463,13 @@ jobs:
           permission-workflows: write
 
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
 
@@ -428,52 +477,55 @@ jobs:
         id: body
         run: |
           node scripts/generate-release-body.cjs \
-            --version "${{ needs.prep.outputs.version }}" \
-            --mobile-version "${{ needs.prep.outputs.mobile_version }}" \
-            --mobile-tag "${{ needs.prep.outputs.mobile_tag }}" > PR_BODY.md
+            --version "$VERSION" \
+            --mobile-version "$MOBILE_VERSION" \
+            --mobile-tag "$MOBILE_TAG" > PR_BODY.md
 
       - name: Open and squash-merge PR to main
         id: merge
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
-          DEV_BRANCH="${{ needs.prep.outputs.dev_branch }}"
-          TITLE="v${{ needs.prep.outputs.version }}"
+          TITLE="v$VERSION"
 
-          if [ "${{ needs.prep.outputs.mode }}" = "Overwrite release" ]; then
+          if [ "$MODE" = "Overwrite release" ]; then
             echo "OVERWRITE: no merge; building from main as-is."
             echo "build_ref=main" >> "$GITHUB_OUTPUT"
-            echo "main_sha=$(gh api repos/${{ github.repository }}/commits/main -q .sha)" >> "$GITHUB_OUTPUT"
+            echo "main_sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" -q .sha)" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          if [ "${{ needs.prep.outputs.mode }}" = "Dry run" ]; then
+          if [ "$MODE" = "Dry run" ]; then
             echo "DRY RUN: would open and squash-merge a PR from $DEV_BRANCH into main."
             echo "DRY RUN: downstream jobs will build from $DEV_BRANCH instead of main."
-            echo "build_ref=$DEV_BRANCH" >> "$GITHUB_OUTPUT"
-            echo "main_sha=" >> "$GITHUB_OUTPUT"
+            {
+              echo "build_ref=$DEV_BRANCH"
+              echo "main_sha="
+            } >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          PR_NUMBER=$(gh pr list --repo ${{ github.repository }} --head "$DEV_BRANCH" --base main --state open --json number -q '.[0].number' || true)
+          PR_NUMBER=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$DEV_BRANCH" --base main --state open --json number -q '.[0].number' || true)
           if [ -z "$PR_NUMBER" ]; then
-            PR_NUMBER=$(gh pr create --repo ${{ github.repository }} \
+            PR_NUMBER=$(gh pr create --repo "$GITHUB_REPOSITORY" \
               --base main --head "$DEV_BRANCH" \
               --title "$TITLE" --body-file PR_BODY.md \
               | grep -oE '[0-9]+$')
           fi
 
-          gh pr merge "$PR_NUMBER" --repo ${{ github.repository }} --squash --admin
+          gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --admin
 
-          STATE=$(gh pr view "$PR_NUMBER" --repo ${{ github.repository }} --json state -q .state)
+          STATE=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json state -q .state)
           if [ "$STATE" != "MERGED" ]; then
             echo "PR #$PR_NUMBER did not merge (state: $STATE)."
             exit 1
           fi
 
-          MAIN_SHA=$(gh api repos/${{ github.repository }}/commits/main -q .sha)
-          echo "main_sha=$MAIN_SHA" >> "$GITHUB_OUTPUT"
-          echo "build_ref=$MAIN_SHA" >> "$GITHUB_OUTPUT"
+          MAIN_SHA=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" -q .sha)
+          {
+            echo "main_sha=$MAIN_SHA"
+            echo "build_ref=$MAIN_SHA"
+          } >> "$GITHUB_OUTPUT"
 
   docker:
     needs: [prep, translate, verify-beta, merge-to-main]
@@ -487,7 +539,9 @@ jobs:
       build_type: ${{ needs.prep.outputs.channel == 'Beta' && 'Beta' || 'Production' }}
       dry_run: ${{ needs.prep.outputs.mode == 'Dry run' }}
       source_ref: ${{ needs.merge-to-main.outputs.build_ref || needs.translate.outputs.sha || needs.prep.outputs.sha }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_BUGATTIGUY527_TOKEN: ${{ secrets.DOCKERHUB_BUGATTIGUY527_TOKEN }}
+      DOCKERHUB_TERMIXSSH_TOKEN: ${{ secrets.DOCKERHUB_TERMIXSSH_TOKEN }}
 
   create-release:
     needs: [prep, merge-to-main, docker]
@@ -495,11 +549,17 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     permissions:
-      contents: write
+      contents: read
+    env:
+      VERSION: ${{ needs.prep.outputs.version }}
+      TAG: ${{ needs.prep.outputs.release_tag }}
+      MOBILE_VERSION: ${{ needs.prep.outputs.mobile_version }}
+      MOBILE_TAG: ${{ needs.prep.outputs.mobile_tag }}
+      MAIN_SHA: ${{ needs.merge-to-main.outputs.main_sha }}
     steps:
       - name: App token
         id: app
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ vars.CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
@@ -508,13 +568,14 @@ jobs:
           permission-contents: write
 
       - name: Checkout main
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
 
@@ -523,35 +584,33 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
-          TAG="${{ needs.prep.outputs.release_tag }}"
-          if ! gh release view "$TAG" --repo ${{ github.repository }} >/dev/null 2>&1; then
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "Overwrite release: no existing release $TAG to overwrite."
             exit 1
           fi
           echo "Clearing existing assets from $TAG..."
-          gh release view "$TAG" --repo ${{ github.repository }} --json assets -q '.assets[].name' | while read -r ASSET; do
-            [ -n "$ASSET" ] && gh release delete-asset "$TAG" "$ASSET" --repo ${{ github.repository }} --yes || true
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | while read -r ASSET; do
+            [ -n "$ASSET" ] && gh release delete-asset "$TAG" "$ASSET" --repo "$GITHUB_REPOSITORY" --yes || true
           done
 
       - name: Generate release body
         if: ${{ needs.prep.outputs.mode != 'Overwrite release' }}
         run: |
           node scripts/generate-release-body.cjs \
-            --version "${{ needs.prep.outputs.version }}" \
-            --mobile-version "${{ needs.prep.outputs.mobile_version }}" \
-            --mobile-tag "${{ needs.prep.outputs.mobile_tag }}" > RELEASE_BODY.md
+            --version "$VERSION" \
+            --mobile-version "$MOBILE_VERSION" \
+            --mobile-tag "$MOBILE_TAG" > RELEASE_BODY.md
 
       - name: Create or update GitHub release
         if: ${{ needs.prep.outputs.mode != 'Overwrite release' }}
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
-          TAG="${{ needs.prep.outputs.release_tag }}"
-          TITLE="Termix v${{ needs.prep.outputs.version }}"
-          if gh release view "$TAG" --repo ${{ github.repository }} >/dev/null 2>&1; then
-            gh release edit "$TAG" --repo ${{ github.repository }} --title "$TITLE" --notes-file RELEASE_BODY.md
+          TITLE="Termix v$VERSION"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TITLE" --notes-file RELEASE_BODY.md
           else
-            gh release create "$TAG" --repo ${{ github.repository }} --title "$TITLE" --notes-file RELEASE_BODY.md --target "${{ needs.merge-to-main.outputs.main_sha }}"
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TITLE" --notes-file RELEASE_BODY.md --target "$MAIN_SHA"
           fi
 
   create-beta-release:
@@ -560,11 +619,17 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     permissions:
-      contents: write
+      contents: read
+    env:
+      VERSION: ${{ needs.prep.outputs.version }}
+      TAG: ${{ needs.prep.outputs.release_tag }}
+      DEV_BRANCH: ${{ needs.prep.outputs.dev_branch }}
+      BETA_SHA: ${{ needs.translate.outputs.sha || needs.prep.outputs.sha }}
+      PREV_REF: ${{ needs.prep.outputs.prev_ref }}
     steps:
       - name: App token
         id: app
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ vars.CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
@@ -573,38 +638,37 @@ jobs:
           permission-contents: write
 
       - name: Checkout beta commit
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.translate.outputs.sha || needs.prep.outputs.sha }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
 
       - name: Generate beta release body
         run: |
           node scripts/generate-beta-body.cjs \
-            --version "${{ needs.prep.outputs.version }}" \
-            --branch "${{ needs.prep.outputs.dev_branch }}" \
-            --sha "${{ needs.translate.outputs.sha || needs.prep.outputs.sha }}" \
-            --prev "${{ needs.prep.outputs.prev_ref }}" > BETA_BODY.md
+            --version "$VERSION" \
+            --branch "$DEV_BRANCH" \
+            --sha "$BETA_SHA" \
+            --prev "$PREV_REF" > BETA_BODY.md
 
       - name: Create beta release
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
-          VERSION="${{ needs.prep.outputs.version }}"
           TITLE="Termix v${VERSION%-beta.*} Beta ${VERSION##*-beta.}"
-          TAG="${{ needs.prep.outputs.release_tag }}"
-          if gh release view "$TAG" --repo ${{ github.repository }} >/dev/null 2>&1; then
-            gh release edit "$TAG" --repo ${{ github.repository }} \
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" \
               --title "$TITLE" --notes-file BETA_BODY.md --prerelease
           else
-            gh release create "$TAG" --repo ${{ github.repository }} \
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
               --title "$TITLE" --notes-file BETA_BODY.md \
-              --prerelease --target "${{ needs.translate.outputs.sha || needs.prep.outputs.sha }}"
+              --prerelease --target "$BETA_SHA"
           fi
 
   electron-release:
@@ -628,7 +692,24 @@ jobs:
       release_tag: ${{ needs.prep.outputs.release_tag }}
       version_override: ${{ needs.prep.outputs.channel == 'Beta' && needs.prep.outputs.version || '' }}
       source_ref: ${{ needs.merge-to-main.outputs.build_ref || needs.translate.outputs.sha || needs.prep.outputs.sha }}
-    secrets: inherit
+    secrets:
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+      APPLE_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
+      APPLE_KEY_CONTENT: ${{ secrets.APPLE_KEY_CONTENT }}
+      APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+      DEVELOPER_ID_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_BASE64 }}
+      DEVELOPER_ID_INSTALLER_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_INSTALLER_CERTIFICATE_BASE64 }}
+      DEVELOPER_ID_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+      MAC_BUILD_CERTIFICATE_BASE64: ${{ secrets.MAC_BUILD_CERTIFICATE_BASE64 }}
+      MAC_INSTALLER_CERTIFICATE_BASE64: ${{ secrets.MAC_INSTALLER_CERTIFICATE_BASE64 }}
+      MAC_KEYCHAIN_PASSWORD: ${{ secrets.MAC_KEYCHAIN_PASSWORD }}
+      MAC_P12_PASSWORD: ${{ secrets.MAC_P12_PASSWORD }}
 
   flatpak:
     needs: [prep, electron-release]
@@ -641,7 +722,8 @@ jobs:
     with:
       release_tag: ${{ needs.prep.outputs.release_tag }}
       publish: ${{ needs.prep.outputs.channel == 'Stable' }}
-    secrets: inherit
+    secrets:
+      FLATPAK_GPG_KEY: ${{ secrets.FLATPAK_GPG_KEY }}
 
   electron-submit:
     needs: [prep, merge-to-main, electron-release]
@@ -654,7 +736,24 @@ jobs:
       build_type: all
       artifact_destination: submit
       source_ref: ${{ needs.merge-to-main.outputs.build_ref }}
-    secrets: inherit
+    secrets:
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+      APPLE_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
+      APPLE_KEY_CONTENT: ${{ secrets.APPLE_KEY_CONTENT }}
+      APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+      DEVELOPER_ID_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_BASE64 }}
+      DEVELOPER_ID_INSTALLER_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_INSTALLER_CERTIFICATE_BASE64 }}
+      DEVELOPER_ID_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+      MAC_BUILD_CERTIFICATE_BASE64: ${{ secrets.MAC_BUILD_CERTIFICATE_BASE64 }}
+      MAC_INSTALLER_CERTIFICATE_BASE64: ${{ secrets.MAC_INSTALLER_CERTIFICATE_BASE64 }}
+      MAC_KEYCHAIN_PASSWORD: ${{ secrets.MAC_KEYCHAIN_PASSWORD }}
+      MAC_P12_PASSWORD: ${{ secrets.MAC_P12_PASSWORD }}
 
   cask-commit-back:
     needs: [prep, electron-release]
@@ -662,11 +761,11 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     permissions:
-      contents: write
+      contents: read
     steps:
       - name: App token
         id: app
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ vars.CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
@@ -675,11 +774,13 @@ jobs:
           permission-contents: write
 
       - name: Checkout main
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
           fetch-depth: 1
           token: ${{ steps.app.outputs.token }}
+          # Pushes the cask bump to main.
+          persist-credentials: true
 
       - name: Bump and commit Homebrew cask
         env:
@@ -714,10 +815,11 @@ jobs:
     if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.create-release.result == 'success' && needs.prep.outputs.mode != 'Overwrite release' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
+    permissions: {}
     steps:
       - name: App token
         id: app
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ vars.CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
@@ -728,12 +830,12 @@ jobs:
       - name: Delete this version's beta releases (tags stay)
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
+          PREFIX: v${{ needs.prep.outputs.version }}-beta.
         run: |
-          PREFIX="v${{ needs.prep.outputs.version }}-beta."
-          gh release list --repo ${{ github.repository }} --limit 200 --json tagName -q '.[].tagName' \
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 200 --json tagName -q '.[].tagName' \
             | grep -F "$PREFIX" | while read -r TAG; do
               echo "Deleting release $TAG"
-              gh release delete "$TAG" --repo ${{ github.repository }} --yes || true
+              gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes || true
             done
 
   # The docs site reads the env catalog, API spec and download list from the
@@ -745,10 +847,11 @@ jobs:
     if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.electron-release.result == 'success' && needs.prep.outputs.mode != 'Dry run' && needs.prep.outputs.mode != 'Overwrite release' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
+    permissions: {}
     steps:
       - name: App token
         id: app
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ vars.CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
@@ -796,10 +899,11 @@ jobs:
     if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.electron-release.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
+    permissions: {}
     steps:
       - name: App token
         id: app
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ vars.CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
@@ -817,10 +921,11 @@ jobs:
     if: ${{ always() && needs.prep.outputs.channel == 'Stable' && (needs.prep.outputs.mode == 'Everything' || needs.prep.outputs.mode == 'Skip submit') && needs.merge-to-main.result == 'success' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
+    permissions: {}
     steps:
       - name: App token
         id: app
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ vars.CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
@@ -828,15 +933,8 @@ jobs:
           repositories: Termix
           permission-contents: write
 
-      - name: Checkout repository
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-
       - name: Delete dev branch in Termix
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
-        run: |
-          git push https://x-access-token:${{ steps.app.outputs.token }}@github.com/${{ github.repository }}.git \
-            --delete "${{ needs.prep.outputs.dev_branch }}" || true
+          DEV_BRANCH: ${{ needs.prep.outputs.dev_branch }}
+        run: gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$DEV_BRANCH" || true

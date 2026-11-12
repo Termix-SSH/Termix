@@ -26,6 +26,12 @@ on:
         description: "Replace the live Flatpak repo"
         required: true
         type: boolean
+    # The value comes from the build environment.
+    secrets:
+      FLATPAK_GPG_KEY:
+        required: false
+
+permissions: {}
 
 env:
   FLATPAK_REPO_URL: https://flatpak.termix.site
@@ -39,10 +45,11 @@ jobs:
       contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.release_tag }}
           fetch-depth: 1
+          persist-credentials: false
 
       # A tag from before this workflow has no build script.
       - name: Use the newest packaging files
@@ -74,8 +81,10 @@ jobs:
           export GNUPGHOME="$RUNNER_TEMP/gnupg"
           mkdir -m 700 "$GNUPGHOME"
           printf '%s' "$FLATPAK_GPG_KEY" | gpg --batch --import
-          echo "FLATPAK_GPG_HOME=$GNUPGHOME" >> "$GITHUB_ENV"
-          echo "FLATPAK_GPG_KEY_ID=$(gpg --list-keys --with-colons | awk -F: '/^fpr/ { print $10; exit }')" >> "$GITHUB_ENV"
+          {
+            echo "FLATPAK_GPG_HOME=$GNUPGHOME"
+            echo "FLATPAK_GPG_KEY_ID=$(gpg --list-keys --with-colons | awk -F: '/^fpr/ { print $10; exit }')"
+          } >> "$GITHUB_ENV"
 
       - name: Build
         env:
@@ -87,7 +96,7 @@ jobs:
           mv out/termix_linux_aarch64_flatpak.flatpak bundle/aarch64.flatpak
 
       - name: Upload bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: flatpak-aarch64
           path: bundle/aarch64.flatpak
@@ -101,10 +110,11 @@ jobs:
       contents: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.release_tag }}
           fetch-depth: 1
+          persist-credentials: false
 
       # A tag from before this workflow has no build script.
       - name: Use the newest packaging files
@@ -130,7 +140,7 @@ jobs:
             --pattern termix_linux_x64_portable.tar.gz
 
       - name: Download aarch64 bundle
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: flatpak-aarch64
           path: import
@@ -142,8 +152,10 @@ jobs:
           export GNUPGHOME="$RUNNER_TEMP/gnupg"
           mkdir -m 700 "$GNUPGHOME"
           printf '%s' "$FLATPAK_GPG_KEY" | gpg --batch --import
-          echo "FLATPAK_GPG_HOME=$GNUPGHOME" >> "$GITHUB_ENV"
-          echo "FLATPAK_GPG_KEY_ID=$(gpg --list-keys --with-colons | awk -F: '/^fpr/ { print $10; exit }')" >> "$GITHUB_ENV"
+          {
+            echo "FLATPAK_GPG_HOME=$GNUPGHOME"
+            echo "FLATPAK_GPG_KEY_ID=$(gpg --list-keys --with-colons | awk -F: '/^fpr/ { print $10; exit }')"
+          } >> "$GITHUB_ENV"
 
       - name: Build
         env:
@@ -163,7 +175,7 @@ jobs:
 
       - name: Upload repo for Pages
         if: inputs.publish
-        uses: actions/upload-pages-artifact@v5
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: out/site
 
@@ -179,4 +191,4 @@ jobs:
       url: ${{ env.FLATPAK_REPO_URL }}
     steps:
       - name: Deploy
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

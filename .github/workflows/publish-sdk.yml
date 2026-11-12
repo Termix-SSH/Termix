@@ -12,38 +12,45 @@ on:
           - Publish
           - Dry run
 
-permissions:
-  contents: write
-  id-token: write
+permissions: {}
 
 jobs:
   publish:
     name: Publish @termix-ssh/plugin-sdk
     runs-on: ubuntu-latest
+    permissions:
+      # The GitHub release, and npm trusted publishing with provenance.
+      contents: write
+      id-token: write
 
     env:
       NODE_OPTIONS: "--max-old-space-size=4096"
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      # No npm cache in a job that publishes.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
-          cache: npm
           registry-url: https://registry.npmjs.org
 
       - name: Update npm
-        run: npm install -g npm@^11.19.0
+        # Trusted publishing needs npm 11.5 or newer, pinned to one release.
+        run: npm install -g npm@11.21.2 # zizmor: ignore[adhoc-packages]
 
       - run: npm ci
 
       - name: Check the version is new
+        env:
+          MODE: ${{ inputs.mode }}
         run: |
           VERSION=$(node -p "require('./packages/plugin-sdk/package.json').version")
           if npm view "@termix-ssh/plugin-sdk@$VERSION" version >/dev/null 2>&1; then
             echo "@termix-ssh/plugin-sdk@$VERSION is already on npm. Bump packages/plugin-sdk/package.json first."
-            if [ "${{ inputs.mode }}" = "Publish" ]; then
+            if [ "$MODE" = "Publish" ]; then
               exit 1
             fi
           fi
@@ -58,8 +65,10 @@ jobs:
       - run: npm run test
 
       - name: Publish
+        env:
+          MODE: ${{ inputs.mode }}
         run: |
-          if [ "${{ inputs.mode }}" = "Dry run" ]; then
+          if [ "$MODE" = "Dry run" ]; then
             npm publish --workspace @termix-ssh/plugin-sdk --provenance --access public --dry-run
           else
             npm publish --workspace @termix-ssh/plugin-sdk --provenance --access public
@@ -78,7 +87,7 @@ jobs:
             fs.writeFileSync('sdk-notes.md', notes);
           " "$VERSION"
           gh release create "sdk-v$VERSION" \
-            --target "${{ github.sha }}" \
+            --target "$GITHUB_SHA" \
             --title "Plugin SDK v$VERSION" \
             --notes-file sdk-notes.md \
             --latest=false

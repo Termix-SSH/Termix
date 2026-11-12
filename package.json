@@ -197,5 +197,8 @@
     "@xmldom/xmldom": "^0.8.15",
     "browserslist": "^4.28.7",
     "qs": "^6.16.1"
+  },
+  "optionalDependencies": {
+    "dmg-license": "1.0.11"
   }
 }

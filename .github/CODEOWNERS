@@ -1,0 +1,35 @@
+# These paths need a review from LukeGus. Rulesets require code owner review
+# on pull requests to main and dev-* branches.
+
+# Workflows, CI config and repo settings
+/.github/ @LukeGus
+
+# Docker image, desktop app and packaging
+/docker/ @LukeGus
+/electron/ @LukeGus
+/electron-builder.json @LukeGus
+/packaging/ @LukeGus
+/Casks/ @LukeGus
+
+# Plugin trust keys and the code that checks signatures
+/src/backend/plugins/trust.ts @LukeGus
+/src/backend/plugins/registries.ts @LukeGus
+/src/backend/plugins/registry-index.ts @LukeGus
+/packages/plugin-sdk/cli/commands/sign.mjs @LukeGus
+/packages/plugin-sdk/cli/lib/signing.mjs @LukeGus
+
+# Scripts the release and publish workflows run
+/scripts/beta-version.cjs @LukeGus
+/scripts/fix-update-info.cjs @LukeGus
+/scripts/generate-appstore-notes.cjs @LukeGus
+/scripts/generate-beta-body.cjs @LukeGus
+/scripts/generate-release-body.cjs @LukeGus
+/scripts/install-linux-sharp.cjs @LukeGus
+/scripts/install-macos-sharp.cjs @LukeGus
+/scripts/install-windows-sharp.cjs @LukeGus
+/scripts/latest-dev-branch.cjs @LukeGus
+/scripts/parse-dev-branch.cjs @LukeGus
+/scripts/pin-bundled-plugins.cjs @LukeGus
+/scripts/sync-version.cjs @LukeGus
+/scripts/verify-macos-sharp.cjs @LukeGus
+/scripts/check-workflow-secrets.cjs @LukeGus

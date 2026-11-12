@@ -2,7 +2,9 @@
 /**
  * Release secrets live in the build and release environments, which only
  * dev-* and main can deploy to. This keeps every workflow that way:
- * - a job reading a secret other than GITHUB_TOKEN names an environment
+ * - a job reading a secret other than GITHUB_TOKEN names an environment, or
+ *   passes it by name to one of this repo's reusable workflows (checked itself)
+ * - no job passes secrets: inherit
  * - a workflow with environment jobs has no pull_request_target or
  *   workflow_run trigger (those run with the base branch's rights)
  * - nothing reads the retired TERMIX_PAT
@@ -45,7 +47,15 @@ function checkWorkflow(name, text) {
   for (const [id, job] of Object.entries(doc.jobs ?? {})) {
     const { secrets: passed, ...rest } = job;
     const read = secretsIn(rest);
-    if (passed && passed !== "inherit") {
+    if (passed === "inherit") {
+      problems.push(
+        `${name} ${id}: secrets: inherit, pass each secret by name`,
+      );
+    }
+    // A call job can't have an environment. The called workflow's own jobs
+    // must, and this check covers them when the file is local.
+    const localCall = typeof job.uses === "string" && job.uses.startsWith("./");
+    if (passed && passed !== "inherit" && !localCall) {
       for (const secret of secretsIn(passed)) read.add(secret);
     }
     if (read.size && !job.environment) {

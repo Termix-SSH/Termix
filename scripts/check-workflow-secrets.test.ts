@@ -45,7 +45,7 @@ jobs:
     ]);
   });
 
-  it("allows GITHUB_TOKEN and inherited secrets anywhere", () => {
+  it("allows GITHUB_TOKEN anywhere and named secrets to a local workflow", () => {
     const text = `
 on: push
 jobs:
@@ -57,9 +57,37 @@ jobs:
         run: gh api user
   call:
     uses: ./.github/workflows/docker.yml
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TERMIXSSH_TOKEN: \${{ secrets.DOCKERHUB_TERMIXSSH_TOKEN }}
 `;
     expect(checkWorkflow("x.yml", text)).toEqual([]);
+  });
+
+  it("flags secrets: inherit", () => {
+    const text = `
+on: push
+jobs:
+  call:
+    uses: ./.github/workflows/docker.yml
+    secrets: inherit
+`;
+    expect(checkWorkflow("x.yml", text)).toEqual([
+      "x.yml call: secrets: inherit, pass each secret by name",
+    ]);
+  });
+
+  it("flags named secrets passed to another repo's workflow", () => {
+    const text = `
+on: push
+jobs:
+  call:
+    uses: someone/else/.github/workflows/x.yml@main
+    secrets:
+      KEY: \${{ secrets.TERMIX_LLM_API_KEY }}
+`;
+    expect(checkWorkflow("x.yml", text)).toEqual([
+      "x.yml call: reads TERMIX_LLM_API_KEY without an environment",
+    ]);
   });
 
   it("flags environment jobs in pull_request_target workflows", () => {
