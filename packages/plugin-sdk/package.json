@@ -93,6 +93,10 @@
       "types": "./dist/ssh-certs.d.ts",
       "default": "./dist/ssh-certs.js"
     },
+    "./net-guard": {
+      "types": "./dist/net-guard.d.ts",
+      "default": "./dist/net-guard.js"
+    },
     "./ssh-keys": {
       "types": "./dist/ssh-keys.d.ts",
       "default": "./dist/ssh-keys.js"

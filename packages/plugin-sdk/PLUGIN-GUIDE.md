@@ -39,7 +39,11 @@ Break one of these and the plugin fails to load, fails validation or gets reject
 4. Never call `process.exit` or touch signals.
 5. Never open your own SSH connection. Use `ctx.ssh` so jump hosts, proxies, host keys, every auth type and
    sharing work the way the user set them up.
-6. Outbound HTTP goes through `ctx.fetch` (needs `network:outbound`), not a raw `fetch` or axios.
+6. Outbound HTTP goes through `ctx.fetch` (needs `network:outbound`), not a raw `fetch` or axios. A socket you
+   open yourself (net, tls, dgram, http.request) to an address a user typed goes through `resolveTarget()` from
+   `@termix-ssh/plugin-sdk/net-guard` (Termix 26.11.2+), and you connect to the address it returns. Fill
+   `allowPrivateHosts` from an admin setting or a saved device address, never from the request or the URL itself.
+   Values in shell scripts go through `shellQuote()` or base64 on stdin, and secrets never go in argv.
 7. Ask for the fewest capabilities you can. A call that needs one you didn't list throws
    `PluginCapabilityError`.
 8. Never take a user id from a request body or a service caller. Use `ctx.currentActor()`.
@@ -1121,6 +1125,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `@termix-ssh/plugin-sdk/host-scripts`                                | Docker, metrics, systemd and journal command builders and parsers, scripts sent to `bash -s`   |
 | `@termix-ssh/plugin-sdk/ssh-certs`                                   | `applyCertificateAuth()` for certificate based SSH auth                                        |
 | `@termix-ssh/plugin-sdk/ssh-keys`                                    | `generateSshKeyPair()`, `detectSshKeyType()`, `publicKeyFromPrivate()`, `validateSshKeyPair()` |
+| `@termix-ssh/plugin-sdk/net-guard`                                   | `resolveTarget()`, `pinnedLookup()`, `isPrivateAddress()` for sockets you open yourself        |
 | `@termix-ssh/plugin-sdk/desktop`                                     | The desktop app bridge, typed. Check it exists before use                                      |
 | `@termix-ssh/plugin-sdk/openapi`                                     | `buildOpenApi()`                                                                               |
 | `@termix-ssh/plugin-sdk/changelog`                                   | Changelog parsing and checks                                                                   |

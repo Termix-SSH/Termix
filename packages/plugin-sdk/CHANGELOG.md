@@ -6,6 +6,7 @@ Plugin API 1.17.0.
 
 ### Added
 
+- `@termix-ssh/plugin-sdk/net-guard` with `resolveTarget`, `pinnedLookup` and `isPrivateAddress`, so sockets a plugin opens itself get the same private address check as `ctx.fetch`
 - `/ui` exports `getHostKeyPolicy` and `updateHostKeyPolicy`, the admin switch that lets connections with nobody to ask trust a host's first key
 
 ## 1.1.4
