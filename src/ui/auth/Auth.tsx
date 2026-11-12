@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import {
+  desktopParentTarget,
   isEmbeddedAuthFrame,
   isInElectronWebView,
   isInMobileWebView,
@@ -610,6 +611,8 @@ export function Auth({ onLogin }: AuthProps) {
         // Electron Remote Sync embeds the remote server in an iframe. The
         // OIDC callback authenticates by setting the remote origin's
         // HttpOnly cookie, so read the JWT back before notifying the parent.
+        const target = desktopParentTarget();
+        if (!target) return;
         const postToken = (token: string | null) => {
           window.parent.postMessage(
             {
@@ -619,7 +622,7 @@ export function Auth({ onLogin }: AuthProps) {
               token,
               timestamp: Date.now(),
             },
-            "*",
+            target,
           );
           setWebviewAuthSuccess(true);
           window.history.replaceState(
@@ -745,7 +748,8 @@ export function Auth({ onLogin }: AuthProps) {
       setWebviewAuthSuccess(true);
       return;
     }
-    if (isInElectronWebView()) {
+    const desktopTarget = isInElectronWebView() ? desktopParentTarget() : null;
+    if (desktopTarget) {
       // The iframe never sends X-Electron-App, so the JWT only lands in an
       // HttpOnly cookie on this origin. Read it back for the parent window.
       const token = res?.token ?? (await getCurrentToken());
@@ -757,7 +761,7 @@ export function Auth({ onLogin }: AuthProps) {
           token: token ?? null,
           timestamp: Date.now(),
         },
-        "*",
+        desktopTarget,
       );
       setWebviewAuthSuccess(true);
       return;
@@ -955,7 +959,10 @@ export function Auth({ onLogin }: AuthProps) {
       setLoading(true);
       try {
         const callbackPort = 17832 + Math.floor(Math.random() * 100);
-        if (isInElectronWebView()) {
+        const desktopTarget = isInElectronWebView()
+          ? desktopParentTarget()
+          : null;
+        if (desktopTarget) {
           const authUrl = await startLoginRedirect(methodId, {
             instanceId,
             rememberMe,
@@ -970,7 +977,7 @@ export function Auth({ onLogin }: AuthProps) {
               callbackPort,
               providerId: -1,
             },
-            "*",
+            desktopTarget,
           );
           return;
         }

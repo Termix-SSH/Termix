@@ -41,3 +41,22 @@ export function isInElectronWebView(): boolean {
 export function isEmbeddedAuthFrame(): boolean {
   return isInMobileWebView() || isInElectronWebView();
 }
+
+const LOOPBACK_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
+
+/**
+ * The target origin for handing a token to the desktop app that framed this
+ * page, or null when the frame's parent is anything else. Other pages inside
+ * the desktop app have its user agent too, so the parent's origin decides.
+ */
+export function desktopParentTarget(
+  ancestors: ArrayLike<string> | undefined = window.location.ancestorOrigins,
+  own: string = window.location.origin,
+): string | null {
+  const parent = ancestors && ancestors.length > 0 ? ancestors[0] : null;
+  if (!parent) return null;
+  // The packaged app's page. A file:// origin cannot be named as a target.
+  if (parent === "file://") return "*";
+  if (LOOPBACK_ORIGIN.test(parent) || parent === own) return parent;
+  return null;
+}

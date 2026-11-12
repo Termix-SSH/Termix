@@ -36,6 +36,10 @@
 - Live connections follow the same sign in rules as the rest of Termix, including the second factor setup step
 - A database save that fails is now reported to the action that asked for it, and a failed save never leaves a cut database file
 - Updated dependencies with known security fixes, including undici, multer and Electron
+- Desktop app: a server's login page only hands its session to the desktop app itself, never to another page shown inside it
+- Restoring a database backup only reads and writes files inside the data folder
+- Encrypted values with a cut short check tag are refused
+- The Docker image bundles opkssh 0.19.2 and no longer ships npm, which the server never uses
 
 ## 26.11.1
 
