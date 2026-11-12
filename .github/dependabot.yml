@@ -1,5 +1,24 @@
 version: 2
 updates:
+  # npm waits 3 days after a release. Minor and patch updates come as one
+  # weekly PR, each major as its own PR. Security updates skip the wait.
+  - package-ecosystem: npm
+    directories:
+      - "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    groups:
+      npm-minor-patch:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: chore
+
   # Keeps the SHA pinned actions current. The cooldown skips releases younger
   # than a week.
   - package-ecosystem: github-actions
@@ -10,6 +29,21 @@ updates:
       default-days: 7
     groups:
       actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: chore
+
+  # Base images are pinned by digest. This refreshes the digest and tag.
+  - package-ecosystem: docker
+    directories:
+      - "/docker"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    groups:
+      docker:
         patterns:
           - "*"
     commit-message:

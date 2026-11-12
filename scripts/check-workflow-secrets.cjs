@@ -8,6 +8,8 @@
  * - a workflow with environment jobs has no pull_request_target or
  *   workflow_run trigger (those run with the base branch's rights)
  * - nothing reads the retired TERMIX_PAT
+ * - npm installs run with scripts off (npm run ci:install rebuilds the few
+ *   native modules that need theirs)
  */
 
 const fs = require("node:fs");
@@ -17,6 +19,9 @@ const YAML = require("yaml");
 const ROOT = path.resolve(__dirname, "..");
 const SECRET = /secrets\.([A-Za-z0-9_]+)/g;
 const RISKY_TRIGGERS = ["pull_request_target", "workflow_run"];
+const INSTALL = /\bnpm (ci|install|i)\b/;
+// Global npm itself, or an install with scripts off.
+const SAFE_INSTALL = /--ignore-scripts|npm install -g npm@/;
 
 function secretsIn(value) {
   const found = new Set();
@@ -62,6 +67,15 @@ function checkWorkflow(name, text) {
       problems.push(
         `${name} ${id}: reads ${[...read].join(", ")} without an environment`,
       );
+    }
+    for (const step of job.steps ?? []) {
+      for (const line of String(step.run ?? "").split("\n")) {
+        if (INSTALL.test(line) && !SAFE_INSTALL.test(line)) {
+          problems.push(
+            `${name} ${id}: install scripts on, use npm run ci:install or --ignore-scripts`,
+          );
+        }
+      }
     }
     if (job.environment) {
       for (const trigger of RISKY_TRIGGERS) {

@@ -1,7 +1,8 @@
 # Stage 1: Install dependencies
+# Base images are pinned by digest, Dependabot refreshes them.
 # The builders only produce JS, so they run on the build machine's own arch
 # once instead of under QEMU per target. Rolldown hangs under arm64 emulation.
-FROM --platform=$BUILDPLATFORM node:24-slim AS deps
+FROM --platform=$BUILDPLATFORM node:24-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54 AS deps
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
@@ -36,6 +37,9 @@ COPY . .
 
 RUN npm run build:backend:core
 
+# CycloneDX SBOM of the runtime dependencies, shipped in the image.
+RUN npm run sbom
+
 # Stage 3b: Stage the bundled plugins for one profile (minimal, standard or
 # full, see docker/bundled-plugins.json). Only this stage and the final one
 # differ between profiles, so the other stages are built once.
@@ -50,7 +54,7 @@ RUN --mount=type=cache,target=/app/node_modules/.cache/termix-bundled-plugins \
     node scripts/build-plugins.cjs --profile "$PLUGIN_PROFILE"
 
 # Stage 4: Download OPKSSH binary for the target platform so the image works offline
-FROM node:24-slim AS opkssh-downloader
+FROM node:24-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54 AS opkssh-downloader
 ARG TARGETARCH
 ARG OPKSSH_VERSION=v0.16.0
 ARG OPKSSH_SHA256_AMD64=c018c3e7baf98612b923e742dd87be38650bf61e3b755fb2bc90de177568b1bf
@@ -71,7 +75,7 @@ RUN case "$TARGETARCH" in \
     echo -n "$OPKSSH_VERSION" > version.txt
 
 # Stage 5: Production dependencies only
-FROM node:24-slim AS production-deps
+FROM node:24-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54 AS production-deps
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
@@ -97,7 +101,7 @@ RUN npm ci --omit=dev --ignore-scripts && \
     npm cache clean --force
 
 # Stage 6: Final optimized image
-FROM node:24-slim
+FROM node:24-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54
 WORKDIR /app
 
 # The release the opkssh-downloader stage baked in, so the plugin trusts that
@@ -138,6 +142,7 @@ COPY --chown=node:node --from=backend-builder /app/packages/plugin-sdk/dist ./pa
 # matches, so an offline install never downloads one.
 COPY --chown=node:node --from=opkssh-downloader /opkssh /app/opkssh-bundled
 COPY --chown=node:node package.json ./
+COPY --chown=node:node --from=backend-builder /app/sbom.cdx.json ./sbom.cdx.json
 # Schema for Postgres and MySQL. Unused by the default SQLite deployment, which
 # builds its tables at startup instead.
 COPY --chown=node:node drizzle ./drizzle

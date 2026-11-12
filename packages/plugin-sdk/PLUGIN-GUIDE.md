@@ -1027,6 +1027,16 @@ CI also lints your workflows with zizmor and fails on high severity findings, li
 full commit SHA or an `${{ }}` value inside a `run:` line (pass it through `env:` instead). Termix-SSH
 workflows may stay on `@main`. Add `.github/zizmor.yml` to change the rules.
 
+Before it installs anything, CI checks `package-lock.json`: every package must come from registry.npmjs.org over
+https with a sha512 integrity hash, and osv-scanner fails the run on a known vulnerability that already has a fixed
+version. Update the lockfile, or add an `overrides` entry in `package.json` when a dependency pins the old version.
+A vulnerability with no fix yet is only a warning. If one does not affect your plugin, ignore it in
+`osv-scanner.toml` next to the lockfile with a `reason` and an `ignoreUntil` date. CI and the release then run
+`npm ci --ignore-scripts`, so package install scripts don't run. Only `better-sqlite3`, `node-pty` and
+`@serialport/bindings-cpp` get their install step back through `npm rebuild`. The template's
+`.github/dependabot.yml` keeps npm packages and actions current: it waits 3 days after a release, groups minor and
+patch updates into one weekly PR, and gives each major its own PR. Security updates come right away.
+
 ## Submitting to the community registry
 
 Before you submit:

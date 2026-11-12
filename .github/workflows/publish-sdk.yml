@@ -41,7 +41,7 @@ jobs:
         # Trusted publishing needs npm 11.5 or newer, pinned to one release.
         run: npm install -g npm@11.21.2 # zizmor: ignore[adhoc-packages]
 
-      - run: npm ci
+      - run: npm run ci:install
 
       - name: Check the version is new
         env:

@@ -16,6 +16,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs && node scripts/patch-node-pty.cjs && node scripts/patch-ssh2-agent.cjs && node scripts/patch-ssh2-sk.cjs",
+    "ci:install": "npm ci --ignore-scripts --no-audit --no-fund && npm run postinstall && npm rebuild node-pty",
+    "sbom": "cyclonedx-npm --omit dev --package-lock-only --ignore-npm-errors --output-reproducible --output-format JSON --output-file sbom.cdx.json",
     "prepare": "husky || true",
     "prebuild": "node scripts/write-electron-build-info.cjs",
     "lint": "node scripts/generate-dialect-schema.cjs --check && eslint . && node scripts/check-importmap-csp.cjs && node scripts/check-core-plugin-ids.cjs && node scripts/check-sdk-ui-exports.cjs && node scripts/check-button-colors.cjs && node scripts/check-sdk-guide.cjs && node scripts/check-test-locations.cjs && node scripts/check-changelog.cjs && node scripts/check-env-catalog.cjs && node scripts/check-workflow-secrets.cjs",
@@ -86,6 +88,7 @@
     "@codemirror/view": "^6.43.12",
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.0",
+    "@cyclonedx/cyclonedx-npm": "6.0.1",
     "@deadendjs/swagger-jsdoc": "^8.1.2",
     "@electron/notarize": "^3.1.1",
     "@electron/rebuild": "^4.2.0",
@@ -196,7 +199,11 @@
     "undici@7": "^7.30.1",
     "@xmldom/xmldom": "^0.8.15",
     "browserslist": "^4.28.7",
-    "qs": "^6.16.1"
+    "qs": "^6.16.1",
+    "glob@12": "^14.0.4",
+    "glob@13": "^14.0.4",
+    "minimatch@9": "^11.0.5",
+    "minimatch@10": "^11.0.5"
   },
   "optionalDependencies": {
     "dmg-license": "1.0.11"

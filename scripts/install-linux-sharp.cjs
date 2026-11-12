@@ -34,7 +34,13 @@ if (require.main === module) {
   const sharpPackage = findPackage(require.resolve("sharp"));
   execFileSync(
     "npm",
-    ["install", "--force", "--no-save", ...linuxSharpPackages(sharpPackage)],
+    [
+      "install",
+      "--force",
+      "--no-save",
+      "--ignore-scripts",
+      ...linuxSharpPackages(sharpPackage),
+    ],
     { stdio: "inherit" },
   );
 }

@@ -66,3 +66,4 @@ pids
 .parcel-cache
 *.tgz
 .node_repl_history
+sbom.cdx.json

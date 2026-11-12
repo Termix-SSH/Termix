@@ -28,7 +28,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm run ci:install
 
       # Bundled plugins are counted as downloads in the plugin store, so a
       # build only fetches them when the pins change.
@@ -56,6 +56,9 @@ jobs:
 
       - name: Run unit tests
         run: npm run test
+
+      - name: SBOM
+        run: npm run sbom
 
   database-dialects:
     name: Postgres and MySQL
@@ -106,7 +109,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm run ci:install
 
       - name: Build plugin SDK
         run: npm run build:sdk
@@ -128,6 +131,27 @@ jobs:
           TEST_DIALECT: mysql
           TEST_DATABASE_URL: mysql://termix:termix@127.0.0.1:3306/termix_test
         run: npx vitest run src/backend/tests/database/repositories --no-file-parallelism
+
+  # Lockfile lint (npm registry only, https, integrity) and known
+  # vulnerabilities that already have a fix.
+  supply-chain:
+    name: Supply chain
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Lockfile lint and osv-scanner
+        uses: Termix-SSH/Termix-Registry/.github/actions/supply-chain@main
 
   # Fails on high severity zizmor findings in this repo's workflows.
   workflow-lint:

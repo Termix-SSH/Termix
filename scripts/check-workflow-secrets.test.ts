@@ -105,4 +105,21 @@ jobs:
       "x.yml go: environment job in a pull_request_target workflow",
     ]);
   });
+
+  it("flags installs that run package scripts", () => {
+    const text = `
+on: pull_request
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm ci
+      - run: npm ci --ignore-scripts
+      - run: npm run ci:install
+      - run: npm install -g npm@11.21.2
+`;
+    expect(checkWorkflow("x.yml", text)).toEqual([
+      "x.yml go: install scripts on, use npm run ci:install or --ignore-scripts",
+    ]);
+  });
 });

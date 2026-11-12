@@ -22,6 +22,6 @@ const packages = [
 
 execFileSync(
   process.platform === "win32" ? "npm.cmd" : "npm",
-  ["install", "--force", "--no-save", ...packages],
+  ["install", "--force", "--no-save", "--ignore-scripts", ...packages],
   { stdio: "inherit" },
 );

@@ -167,7 +167,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm ci
+          npm run ci:install
           node scripts/install-windows-sharp.cjs
 
       # Bundled plugins are counted as downloads in the plugin store, so a
@@ -398,7 +398,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm ci
+          npm run ci:install
           node scripts/install-linux-sharp.cjs
 
       # Bundled plugins are counted as downloads in the plugin store, so a
@@ -444,6 +444,21 @@ jobs:
             --rename termix_linux_amd64_deb.deb=termix_linux_x64_deb.deb \
             --rename termix_linux_x86_64_appimage.AppImage=termix_linux_x64_appimage.AppImage \
             release/*-linux*.yml
+
+      # One CycloneDX SBOM per build, from the lockfile's runtime dependencies.
+      # It goes up with the installers.
+      - name: SBOM
+        run: |
+          npm run sbom
+          mv sbom.cdx.json release/termix_sbom.cdx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: inputs.artifact_destination != 'none'
+        with:
+          name: termix_sbom
+          path: release/termix_sbom.cdx.json
+          retention-days: 30
 
       - name: Upload Linux update files
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -576,7 +591,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm ci
+          npm run ci:install
           node scripts/install-macos-sharp.cjs
 
       # Bundled plugins are counted as downloads in the plugin store, so a
@@ -1122,7 +1137,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm ci
+          npm run ci:install
           node scripts/install-macos-sharp.cjs
 
       # Bundled plugins are counted as downloads in the plugin store, so a
