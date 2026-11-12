@@ -684,16 +684,28 @@ export class PluginLoader {
       `${plugin.manifest.version}-${fileStamp(entryPath)}`,
     )}`;
 
+    // Spike: TERMIX_PLUGIN_SANDBOX=id,id runs those plugins in a child process.
+    const sandboxed = (process.env.TERMIX_PLUGIN_SANDBOX ?? "")
+      .split(",")
+      .map((id) => id.trim())
+      .includes(plugin.id);
+
     try {
       installHostModuleFallback();
-      const imported = (await import(entry)) as {
-        activate?: PluginModule["activate"];
-        deactivate?: PluginModule["deactivate"];
-        default?: PluginModule;
-      };
+      const imported = sandboxed
+        ? { activate: () => undefined, deactivate: () => undefined }
+        : ((await import(entry)) as {
+            activate?: PluginModule["activate"];
+            deactivate?: PluginModule["deactivate"];
+            default?: PluginModule;
+          });
 
-      const activate = imported.activate ?? imported.default?.activate;
-      const deactivate = imported.deactivate ?? imported.default?.deactivate;
+      const activate =
+        imported.activate ??
+        (imported as { default?: PluginModule }).default?.activate;
+      const deactivate =
+        imported.deactivate ??
+        (imported as { default?: PluginModule }).default?.deactivate;
 
       if (typeof activate !== "function") {
         throw new Error(
@@ -755,6 +767,33 @@ export class PluginLoader {
       // few things and then throws still has to be cleaned up, and the catch
       // below can only do that if it can reach the handle.
       plugin.handle = handle;
+
+      if (sandboxed) {
+        const { SandboxedPlugin } = await import("./sandbox/host.js");
+        const sandbox = new SandboxedPlugin(
+          plugin.manifest,
+          plugin.dir,
+          entryPath,
+          ctx as unknown as Record<string, unknown>,
+          {
+            allowNet: (process.env.TERMIX_PLUGIN_SANDBOX_NET ?? "")
+              .split(",")
+              .includes(plugin.id),
+            log: (line) =>
+              pluginLogger.info(line, { operation: "plugin_sandbox" }),
+          },
+        );
+        handle.bag.add(() => sandbox.stop(), "sandboxed plugin process");
+        await withTimeout(
+          sandbox.start(),
+          ACTIVATION_TIMEOUT_MS,
+          `Plugin ${plugin.id} did not activate within ${ACTIVATION_TIMEOUT_MS}ms`,
+        );
+        pluginLogger.info(
+          `Plugin ${plugin.id} runs sandboxed (ready in ${Math.round(sandbox.readyAt - sandbox.startedAt)}ms)`,
+          { operation: "plugin_sandbox" },
+        );
+      }
 
       await withTimeout(
         Promise.resolve(activate(ctx)),
