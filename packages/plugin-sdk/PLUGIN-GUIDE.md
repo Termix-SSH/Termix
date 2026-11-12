@@ -1010,12 +1010,15 @@ Sections: `### Added`, `### Changed`, `### Fixed`, `### Removed`, `### Deprecate
 
 Run the Release workflow by hand from the dev branch on GitHub:
 
-| Choice    | What it does                                                                      |
-| --------- | --------------------------------------------------------------------------------- |
-| stable    | Tests, builds and publishes `X.Y.Z`, merges the branch into `main` and deletes it |
-| beta      | Publishes `X.Y.Z-beta.N`, N counts up on its own                                  |
-| overwrite | Releases the manifest version again from this commit                              |
-| dry-run   | Builds and packs, publishes nothing                                               |
+| Choice  | What it does                                                                      |
+| ------- | --------------------------------------------------------------------------------- |
+| stable  | Tests, builds and publishes `X.Y.Z`, merges the branch into `main` and deletes it |
+| beta    | Publishes `X.Y.Z-beta.N`, N counts up on its own                                  |
+| dry-run | Builds and packs, publishes nothing                                               |
+
+Releases are immutable. The workflow makes a draft, uploads the `.tmxplug`, then publishes, and after that
+the tag and files can't change. A version that already has a release is refused, so a fix is a new version.
+Turn on immutable releases in the plugin repo settings.
 
 No secrets are needed. The workflow records GitHub build provenance for the `.tmxplug`, and the run summary
 shows the `sha256` for a registry submission. If a dev branch changes `.github/workflows`, add a
@@ -1077,8 +1080,8 @@ Reviewers check that:
 - Secrets are only used for what the plugin is for.
 - The name and icon don't pretend to be an official plugin.
 
-Every version needs its own PR that adds it to the top of `versions`. Overwriting a reviewed release drops
-it from the registry until a new version is submitted. Admins see the plugin once they turn on the community
+Every version needs its own PR that adds it to the top of `versions`. Releases are immutable, so a fix
+is always a new version. Admins see the plugin once they turn on the community
 registry in Plugins, Registries.
 
 To run your own registry instead, see https://docs.termix.site/develop/registries.
