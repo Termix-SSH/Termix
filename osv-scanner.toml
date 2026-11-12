@@ -1,0 +1,7 @@
+# glob 10 only comes in with node-gyp, through libxmljs2, an optional part of
+# the SBOM tool that runs at build time. The fix is glob 14, which node-gyp
+# does not take yet. Drop this entry once npm ls glob shows no glob 10.
+[[IgnoredVulns]]
+id = "GHSA-3g3m-2fjr-6pw4"
+ignoreUntil = 2027-02-28
+reason = "glob 10 is only a build time dependency of node-gyp under the SBOM tool"

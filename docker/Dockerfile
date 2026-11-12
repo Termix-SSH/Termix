@@ -5,7 +5,7 @@
 FROM --platform=$BUILDPLATFORM node:24-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54 AS deps
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
 COPY packages/plugin-sdk/package.json ./packages/plugin-sdk/package.json
@@ -56,12 +56,12 @@ RUN --mount=type=cache,target=/app/node_modules/.cache/termix-bundled-plugins \
 # Stage 4: Download OPKSSH binary for the target platform so the image works offline
 FROM node:24-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54 AS opkssh-downloader
 ARG TARGETARCH
-ARG OPKSSH_VERSION=v0.16.0
-ARG OPKSSH_SHA256_AMD64=c018c3e7baf98612b923e742dd87be38650bf61e3b755fb2bc90de177568b1bf
-ARG OPKSSH_SHA256_ARM64=9dd10c2b6ce99cde18e52c054877ca014134b291fd82afe71741c68db4f83d44
+ARG OPKSSH_VERSION=v0.19.2
+ARG OPKSSH_SHA256_AMD64=e799b780d5477e8d986a2e6784773ebb2451d860dd842d23e271baf88aee2da3
+ARG OPKSSH_SHA256_ARM64=4f31e47addec3b0beebef7d5d99d11e2d459b9a8e5298077879b2df34d13aedf
 WORKDIR /opkssh
 
-RUN apt-get update && apt-get install -y curl ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 RUN case "$TARGETARCH" in \
       amd64) OPKSSH_ARCH=amd64; OPKSSH_SHA256="$OPKSSH_SHA256_AMD64" ;; \
@@ -78,7 +78,7 @@ RUN case "$TARGETARCH" in \
 FROM node:24-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54 AS production-deps
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
 # The plugin SDK is a workspace package core imports at runtime, so npm ci
@@ -101,14 +101,15 @@ RUN npm ci --omit=dev --ignore-scripts && \
     npm cache clean --force
 
 # Stage 6: Final optimized image
+# The runtime never calls npm, so the copy the base image ships is removed.
 FROM node:24-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54
 WORKDIR /app
 
 # The release the opkssh-downloader stage baked in, so the plugin trusts that
 # binary when the build picks a version other than its pinned one.
-ARG OPKSSH_VERSION=v0.16.0
-ARG OPKSSH_SHA256_AMD64=c018c3e7baf98612b923e742dd87be38650bf61e3b755fb2bc90de177568b1bf
-ARG OPKSSH_SHA256_ARM64=9dd10c2b6ce99cde18e52c054877ca014134b291fd82afe71741c68db4f83d44
+ARG OPKSSH_VERSION=v0.19.2
+ARG OPKSSH_SHA256_AMD64=e799b780d5477e8d986a2e6784773ebb2451d860dd842d23e271baf88aee2da3
+ARG OPKSSH_SHA256_ARM64=4f31e47addec3b0beebef7d5d99d11e2d459b9a8e5298077879b2df34d13aedf
 
 ENV DATA_DIR=/app/data \
     OPKSSH_BUNDLED_DIR=/app/opkssh-bundled \
@@ -118,12 +119,14 @@ ENV DATA_DIR=/app/data \
     PORT=8080 \
     NODE_ENV=production
 
-RUN apt-get update && apt-get install -y nginx gettext-base openssl ca-certificates gosu wget iputils-ping && \
+RUN apt-get update && apt-get install -y --no-install-recommends nginx gettext-base openssl ca-certificates gosu wget iputils-ping && \
     update-ca-certificates && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir -p /app/data /app/uploads /app/nginx /tmp/nginx && \
     chown -R node:node /app /tmp/nginx && \
-    chmod 755 /app/data /app/uploads /app/nginx /tmp/nginx
+    chmod 755 /app/data /app/uploads /app/nginx /tmp/nginx && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+      /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
 
 COPY docker/nginx.conf /app/nginx/nginx.conf.template
 COPY docker/nginx-https.conf /app/nginx/nginx-https.conf.template
