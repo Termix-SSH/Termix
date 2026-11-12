@@ -65,6 +65,7 @@ jobs:
   authz-matrix:
     name: Authorization matrix
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 30
     permissions:
       contents: read
 
@@ -91,7 +92,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.cache/termix-bundled-plugins
-          key: bundled-plugins-${{ hashFiles('docker/bundled-plugins.json') }}
+          key: bundled-plugins-full-${{ hashFiles('docker/bundled-plugins.json') }}
           enableCrossOsArchive: true
 
       - name: Build backend with every plugin
@@ -192,6 +193,12 @@ jobs:
 
       - name: Lockfile lint and osv-scanner
         uses: Termix-SSH/Termix-Registry/.github/actions/supply-chain@main
+        with:
+          aliases: >-
+            prebuild-install:@mmomtchev/prebuild-install
+            string-width-cjs:string-width
+            strip-ansi-cjs:strip-ansi
+            wrap-ansi-cjs:wrap-ansi
 
   # Fails on high severity zizmor findings in this repo's workflows.
   workflow-lint:

@@ -34,6 +34,7 @@ export async function call(
     init.headers["content-type"] = "application/json";
     init.body = JSON.stringify(body);
   }
+  let waited = 0;
   for (let attempt = 0; ; attempt++) {
     let res;
     try {
@@ -45,12 +46,12 @@ export async function call(
       };
     }
     // Rate limits are not an answer about access; wait and ask again.
-    if (res.status === 429 && attempt < 6) {
+    if (res.status === 429 && attempt < 6 && waited < 60) {
       await res.arrayBuffer().catch(() => {});
-      const wait = Number(res.headers.get("retry-after")) || 2 ** attempt * 2;
-      await new Promise((resolve) =>
-        setTimeout(resolve, Math.min(wait, 70) * 1000),
-      );
+      const asked = Number(res.headers.get("retry-after")) || 2 ** attempt * 2;
+      const wait = Math.min(asked, 60 - waited, 30);
+      waited += wait;
+      await new Promise((resolve) => setTimeout(resolve, wait * 1000));
       continue;
     }
     const text = await res.text().catch(() => "");

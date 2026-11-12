@@ -267,6 +267,7 @@ export async function runMatrix(base, tables, world, { only, log } = {}) {
           failures.push({ key, identity, why: verdict.why, file: table.file });
         continue;
       }
+      const started = Date.now();
       const res = await call(base, {
         method,
         path: filled.path,
@@ -275,6 +276,12 @@ export async function runMatrix(base, tables, world, { only, log } = {}) {
         query,
         headers: entry.headers,
       });
+      const took = Date.now() - started;
+      if (took > 10_000) {
+        log?.(
+          `slow: ${key} as ${identity} took ${Math.round(took / 1000)}s (${res.status})`,
+        );
+      }
       results[identity] = res.status;
       // A scoped route answers a stranger with a no-op success; the owner's
       // copy is checked after the entry instead.
@@ -326,8 +333,14 @@ export async function runMatrix(base, tables, world, { only, log } = {}) {
   // Reads can run side by side; writes go one at a time.
   const reads = cells.filter((cell) => methodOrder(cell.method) <= 1);
   const writes = cells.filter((cell) => methodOrder(cell.method) > 1);
-  await pool(reads, 6, runCell);
-  for (const cell of writes) await runCell(cell);
+  let done = 0;
+  const step = async (cell) => {
+    await runCell(cell);
+    done++;
+    if (done % 100 === 0) log?.(`${done}/${cells.length} entries`);
+  };
+  await pool(reads, 6, step);
+  for (const cell of writes) await step(cell);
   log?.(`ran ${cells.length} entries, ${calls} calls`);
   return failures;
 }

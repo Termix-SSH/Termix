@@ -7,7 +7,13 @@ import ssh2 from "ssh2";
 const { Server } = ssh2;
 
 export async function startFakeSsh({ username, password }) {
-  const { private: privateKey } = ssh2.utils.generateKeyPairSync("ed25519");
+  // RSA from node:crypto: ssh2's own ed25519 generator makes a key it can't
+  // parse about once in 256 runs.
+  const { privateKey } = crypto.generateKeyPairSync("rsa", {
+    modulusLength: 2048,
+    privateKeyEncoding: { type: "pkcs1", format: "pem" },
+    publicKeyEncoding: { type: "pkcs1", format: "pem" },
+  });
   const received = [];
   const server = new Server({ hostKeys: [privateKey] }, (client) => {
     client.on("authentication", (ctx) => {
