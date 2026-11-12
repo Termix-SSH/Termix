@@ -219,6 +219,10 @@
     "securityIntro": "Dodajte geslo za dostop (passkey) ali aplikacijo za preverjanje pristnosti k svojemu računu. To lahko storite tudi kasneje v Nastavitvah pod razdelkom Varnost.",
     "pluginsDocsLink": "Preberite o vsakem posebej"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix še vedno teče",
+    "noticeBody": "Zapiranje okna Termix pušča v ozadju. Za izhod odprite meni ikone v obvestilnem območju in izberite Izhod. To lahko onemogočite v nastavitvah."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Samodejno",
     "modePrompt": "Vprašaj najprej",

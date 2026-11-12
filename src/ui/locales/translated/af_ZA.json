@@ -219,6 +219,10 @@
     "securityIntro": "Voeg 'n passkey of 'n autentikator-toepassing by jou rekening. Jy kan dit ook later doen in Instellings, onder Beveiliging.",
     "pluginsDocsLink": "Lees oor elkeen"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix loop nog",
+    "noticeBody": "As jy die venster sluit, loop Termix steeds in die taakbalk. Om af te sluit, open die taakbalk-ikoon se kieslys en kies Afsluit. Jy kan dit afskakel in Instellings."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Outomaties",
     "modePrompt": "Vra eers",

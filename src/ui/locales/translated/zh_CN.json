@@ -219,6 +219,10 @@
     "securityIntro": "为您的账户添加通行密钥或身份验证器应用。您也可以稍后在“设置”中的“安全”下执行此操作。",
     "pluginsDocsLink": "阅读每个插件的说明"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix 仍在运行",
+    "noticeBody": "关闭窗口后，Termix 将继续在系统托盘中运行。若要退出，请打开托盘图标菜单并选择“退出”。您可以在设置中关闭此功能。"
+  },
   "desktopUpdates": {
     "modeAutomatic": "自动",
     "modePrompt": "先询问",

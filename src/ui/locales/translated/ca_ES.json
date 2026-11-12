@@ -219,6 +219,10 @@
     "securityIntro": "Afegeix una clau de pas o una aplicació d'autenticació al teu compte. També pots fer-ho més tard a Configuració, sota Seguretat.",
     "pluginsDocsLink": "Llegeix sobre cadascun"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix encara s'està executant",
+    "noticeBody": "Tancar la finestra manté Termix en execució a la safata. Per sortir, obriu el menú de la icona de la safata i seleccioneu Sortir. Podeu desactivar aquesta opció a Configuració."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automàtic",
     "modePrompt": "Pregunta primer",

@@ -219,6 +219,10 @@
     "securityIntro": "Pridėkite prieigos raktą arba autentifikatoriaus programėlę prie savo paskyros. Tai taip pat galite padaryti vėliau „Nustatymuose“, skiltyje „Saugumas“.",
     "pluginsDocsLink": "Skaityti apie kiekvieną"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix vis dar veikia",
+    "noticeBody": "Uždarius langą, Termix toliau veikia sistemos dėkle. Norėdami visiškai užbaigti veikimą, atidarykite sistemos dėkle esančio piktogramos meniu ir pasirinkite „Išeiti“. Šią funkciją galite išjungti nustatymuose."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automatiškai",
     "modePrompt": "Paklausti pirmiausia",

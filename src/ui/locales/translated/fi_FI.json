@@ -219,6 +219,10 @@
     "securityIntro": "Lisää passkey tai todennussovellus tilillesi. Voit tehdä tämän myös myöhemmin Asetukset-kohtaan, kohdassa Turvallisuus.",
     "pluginsDocsLink": "Lue lisää jokaisesta"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix on edelleen käynnissä",
+    "noticeBody": "Ikkunan sulkeminen pitää Termixin käynnissä ilmoitusalueella. Lopettaaksesi ohjelman, avaa ilmoitusalueen kuvakkeen valikko ja valitse Lopeta. Voit poistaa tämän toiminnon käytöstä Asetuksissa."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automaattinen",
     "modePrompt": "Kysy ensin",

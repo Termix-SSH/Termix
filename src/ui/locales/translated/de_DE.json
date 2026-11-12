@@ -219,6 +219,10 @@
     "securityIntro": "Fügen Sie Ihrem Konto einen Passkey oder eine Authenticator-App hinzu. Sie können dies auch später in den Einstellungen unter „Sicherheit“ tun.",
     "pluginsDocsLink": "Mehr über jedes Plugin erfahren"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix läuft weiterhin",
+    "noticeBody": "Wenn Sie das Fenster schließen, läuft Termix weiterhin im System Tray. Um die App zu beenden, öffnen Sie das Menü des Tray-Symbols und wählen Sie Beenden. Sie können dieses Verhalten in den Einstellungen deaktivieren."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automatisch",
     "modePrompt": "Zuerst fragen",

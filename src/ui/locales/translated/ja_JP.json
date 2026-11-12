@@ -219,6 +219,10 @@
     "securityIntro": "アカウントにパスキーまたは認証アプリを追加してください。これは後で「設定」の「セキュリティ」から行うこともできます。",
     "pluginsDocsLink": "各プラグインについて読む"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix は実行中です",
+    "noticeBody": "ウィンドウを閉じても、Termix はトレイで実行され続けます。終了するには、トレイアイコンのメニューを開き、「終了」を選択してください。この動作は設定で無効にできます。"
+  },
   "desktopUpdates": {
     "modeAutomatic": "自動",
     "modePrompt": "確認してから",

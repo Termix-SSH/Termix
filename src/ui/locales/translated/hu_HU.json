@@ -219,6 +219,10 @@
     "securityIntro": "Adjon hozzá passkey-t vagy hitelesítő alkalmazást a fiókjához. Ezt később is megteheti a Beállítások > Biztonság menüpontban.",
     "pluginsDocsLink": "Olvasson el többet mindegyikről"
   },
+  "desktopTray": {
+    "noticeTitle": "A Termix továbbra is fut",
+    "noticeBody": "Az ablak bezárása után a Termix a tálcán fut tovább. A kilépéshez nyissa meg a tálcán lévő ikon menüjét, és válassza a Kilépés lehetőséget. Ezt a beállításokban letilthatja."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automatikus",
     "modePrompt": "Először kérdezzen",

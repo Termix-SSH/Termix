@@ -219,6 +219,10 @@
     "securityIntro": "Pievienojiet savam kontam pases atslēgu vai autentifikatora lietotni. Jūs varat to izdarīt arī vēlāk Iestatījumos sadaļā Drošība.",
     "pluginsDocsLink": "Lasiet par katru no tiem"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix joprojām darbojas",
+    "noticeBody": "Aizverot logu, Termix turpina darboties sistēmas joslas ikonā. Lai izslēgtu programmu, atveriet sistēmas joslas ikonas izvēlni un izvēlieties Iziet. Šo funkciju var atspējot Iestatījumos."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automātiski",
     "modePrompt": "Vispirms vaicāt",

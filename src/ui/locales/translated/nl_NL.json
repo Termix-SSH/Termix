@@ -219,6 +219,10 @@
     "securityIntro": "Voeg een passkey of een authenticator-app toe aan je account. Je kunt dit ook later doen in Instellingen, onder Beveiliging.",
     "pluginsDocsLink": "Lees meer over elk plugin"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix draait nog",
+    "noticeBody": "Als je het venster sluit, blijft Termix actief in de systeemvak. Om af te sluiten, open je het menu van het systeemvakpictogram en kies je Afsluiten. Je kunt dit uitschakelen in Instellingen."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automatisch",
     "modePrompt": "Eerst vragen",

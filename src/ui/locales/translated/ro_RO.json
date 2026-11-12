@@ -219,6 +219,10 @@
     "securityIntro": "Adaugă o cheie de acces sau o aplicație de autentificare la contul tău. Poți face acest lucru și mai târziu în Setări, la secțiunea Securitate.",
     "pluginsDocsLink": "Citește despre fiecare"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix rulează încă",
+    "noticeBody": "Închiderea ferestrei păstrează Termix activ în zona de notificări. Pentru a ieși, deschideți meniul din pictograma din zona de notificări și selectați Ieșire. Puteți dezactiva această opțiune în Setări."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automat",
     "modePrompt": "Întreabă mai întâi",

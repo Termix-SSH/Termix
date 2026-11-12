@@ -219,6 +219,10 @@
     "securityIntro": "Adicione uma chave de acesso ou um aplicativo autenticador à sua conta. Você também pode fazer isso mais tarde em Configurações, em Segurança.",
     "pluginsDocsLink": "Leia sobre cada um"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix ainda está em execução",
+    "noticeBody": "Fechar a janela mantém o Termix rodando na bandeja. Para sair, abra o menu do ícone da bandeja e selecione Sair. Você pode desativar isso nas Configurações."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automático",
     "modePrompt": "Perguntar primeiro",

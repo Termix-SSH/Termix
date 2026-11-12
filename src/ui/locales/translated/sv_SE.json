@@ -219,6 +219,10 @@
     "securityIntro": "Lägg till en passkey eller en autentiseringsapp till ditt konto. Du kan också göra detta senare i Inställningar, under Säkerhet.",
     "pluginsDocsLink": "Läs om varje plugin"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix körs fortfarande",
+    "noticeBody": "Om du stänger fönstret fortsätter Termix att köras i aktivitetsfältet. För att avsluta, öppna menyn för aktivitetsfältsikonen och välj Avsluta. Du kan stänga av detta i Inställningar."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automatisk",
     "modePrompt": "Fråga först",

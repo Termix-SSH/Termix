@@ -219,6 +219,10 @@
     "securityIntro": "Aggiungi una passkey o un'app di autenticazione al tuo account. Puoi farlo anche in seguito in Impostazioni, sotto Sicurezza.",
     "pluginsDocsLink": "Leggi la descrizione di ciascuno"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix è ancora in esecuzione",
+    "noticeBody": "Chiudere la finestra mantiene Termix in esecuzione nella barra delle applicazioni. Per uscire, apri il menu dell'icona nella barra delle applicazioni e seleziona Esci. Puoi disabilitare questa opzione nelle Impostazioni."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automatico",
     "modePrompt": "Chiedi prima",

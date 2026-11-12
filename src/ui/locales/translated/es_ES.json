@@ -219,6 +219,10 @@
     "securityIntro": "Añade una clave de acceso o una aplicación de autenticación a tu cuenta. También puedes hacerlo más tarde en Configuración, bajo Seguridad.",
     "pluginsDocsLink": "Lee sobre cada uno"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix sigue en ejecución",
+    "noticeBody": "Cerrar la ventana mantiene Termix en ejecución en la bandeja del sistema. Para salir, abre el menú del icono de la bandeja y selecciona Salir. Puedes desactivar esta opción en Configuración."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automática",
     "modePrompt": "Preguntar primero",

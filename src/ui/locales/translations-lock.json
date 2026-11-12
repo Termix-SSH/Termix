@@ -207,6 +207,8 @@
   "onboarding.securityTitle": "faef010d0932",
   "onboarding.securityIntro": "330a03cbcf77",
   "onboarding.pluginsDocsLink": "e4ffb8fd289c",
+  "desktopTray.noticeTitle": "a4aee74bcd4f",
+  "desktopTray.noticeBody": "55430863ebd7",
   "desktopUpdates.modeAutomatic": "ac9041e76816",
   "desktopUpdates.modePrompt": "1aeb84dfd695",
   "desktopUpdates.modeNever": "80c3052d33cc",

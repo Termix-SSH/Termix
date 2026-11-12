@@ -219,6 +219,10 @@
     "securityIntro": "Tilføj en passkey eller en autentifikator-app til din konto. Du kan også gøre dette senere i Indstillinger under Sikkerhed.",
     "pluginsDocsLink": "Læs om hver enkelt"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix kører stadig",
+    "noticeBody": "Når du lukker vinduet, fortsætter Termix med at køre i statuslinjen. For at afslutte, skal du åbne menuen for statuslinjeikonet og vælge Afslut. Du kan slå dette fra i Indstillinger."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automatisk",
     "modePrompt": "Spørg først",

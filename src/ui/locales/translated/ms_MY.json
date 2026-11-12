@@ -219,6 +219,10 @@
     "securityIntro": "Tambahkan passkey atau aplikasi pengesah pada akaun anda. Anda juga boleh melakukan ini kemudian dalam Tetapan, di bawah Keselamatan.",
     "pluginsDocsLink": "Baca tentang setiap satu"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix masih berjalan",
+    "noticeBody": "Menutup tingkap mengekalkan Termix berjalan di trey. Untuk keluar, buka menu ikon trey dan pilih Quit. Anda boleh mematikan ini dalam Tetapan."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automatik",
     "modePrompt": "Tanya dahulu",

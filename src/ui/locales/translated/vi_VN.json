@@ -219,6 +219,10 @@
     "securityIntro": "Thêm passkey hoặc ứng dụng xác thực vào tài khoản của bạn. Bạn cũng có thể làm điều này sau trong Cài đặt, mục Bảo mật.",
     "pluginsDocsLink": "Đọc về từng plugin"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix vẫn đang chạy",
+    "noticeBody": "Đóng cửa sổ sẽ giữ Termix chạy trong khay hệ thống. Để thoát, hãy mở menu biểu tượng khay và chọn Thoát. Bạn có thể tắt tính năng này trong Cài đặt."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Tự động",
     "modePrompt": "Hỏi trước",
