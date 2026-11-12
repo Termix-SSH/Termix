@@ -60,6 +60,46 @@ jobs:
       - name: SBOM
         run: npm run sbom
 
+  # Boots the backend with every plugin and calls each core route and socket
+  # as every kind of caller. See scripts/authz/run.mjs and authz.json.
+  authz-matrix:
+    name: Authorization matrix
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      contents: read
+
+    env:
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      TERMIX_PLUGIN_PROFILE: full
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm run ci:install
+
+      - name: Cache bundled plugins
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: node_modules/.cache/termix-bundled-plugins
+          key: bundled-plugins-${{ hashFiles('docker/bundled-plugins.json') }}
+          enableCrossOsArchive: true
+
+      - name: Build backend with every plugin
+        run: npm run build:backend
+
+      - name: Authorization matrix
+        run: npm run test:authz
+
   database-dialects:
     name: Postgres and MySQL
     runs-on: blacksmith-2vcpu-ubuntu-2404

@@ -90,6 +90,10 @@ export function getPluginPublicHttpRoutes(pluginId: string): string[] {
   return [...(publicRoutes.get(pluginId) ?? [])];
 }
 
+export function listRouterIds(): string[] {
+  return [...routers.keys()];
+}
+
 export function getPluginRouter(pluginId: string): Router | undefined {
   return routers.get(pluginId);
 }

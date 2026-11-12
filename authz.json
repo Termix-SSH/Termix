@@ -1,0 +1,1171 @@
+{
+  "$schema": "./scripts/authz/authz.schema.json",
+  "routes": {
+    "GET /.well-known/acme-challenge/:token": {
+      "access": "public"
+    },
+    "GET /audit-logs": {
+      "access": "admin"
+    },
+    "GET /audit-logs/actions": {
+      "access": "admin"
+    },
+    "GET /credential-sidebar/preferences": {
+      "access": "user"
+    },
+    "PUT /credential-sidebar/preferences": {
+      "access": "user"
+    },
+    "GET /credentials": {
+      "access": "user",
+      "permission": "credentials.view"
+    },
+    "POST /credentials": {
+      "access": "user",
+      "permission": "credentials.create"
+    },
+    "DELETE /credentials/:id": {
+      "access": "user",
+      "permission": "credentials.delete",
+      "resource": {
+        "kind": "credential",
+        "min": "manage"
+      },
+      "destructive": true
+    },
+    "GET /credentials/:id": {
+      "access": "user",
+      "permission": "credentials.view",
+      "resource": {
+        "kind": "credential",
+        "min": "use"
+      }
+    },
+    "PUT /credentials/:id": {
+      "access": "user",
+      "permission": "credentials.edit",
+      "resource": {
+        "kind": "credential",
+        "min": "manage"
+      }
+    },
+    "POST /credentials/:id/apply-to-host/:hostId": {
+      "access": "user",
+      "permission": "credentials.edit",
+      "resource": {
+        "kind": "credential",
+        "min": "manage"
+      }
+    },
+    "POST /credentials/:id/duplicate": {
+      "access": "user",
+      "permission": "credentials.create",
+      "resource": {
+        "kind": "credential",
+        "min": "manage"
+      },
+      "body": {
+        "name": "authz-copy"
+      }
+    },
+    "GET /credentials/:id/hosts": {
+      "access": "user",
+      "permission": "credentials.view",
+      "note": "Lists only the caller's own hosts that use this credential id"
+    },
+    "GET /credentials/folders": {
+      "access": "user",
+      "permission": "credentials.view"
+    },
+    "PUT /credentials/folders/rename": {
+      "access": "user",
+      "permission": "credentials.edit"
+    },
+    "PUT /credentials/reorder": {
+      "access": "user"
+    },
+    "POST /dashboard/activity/log": {
+      "access": "user"
+    },
+    "GET /dashboard/activity/recent": {
+      "access": "user"
+    },
+    "DELETE /dashboard/activity/reset": {
+      "access": "user",
+      "destructive": true
+    },
+    "GET /dashboard/uptime": {
+      "access": "user"
+    },
+    "POST /database/export": {
+      "access": "user"
+    },
+    "POST /database/export/preview": {
+      "access": "user"
+    },
+    "POST /database/import": {
+      "access": "user"
+    },
+    "GET /database/migration/history": {
+      "access": "admin"
+    },
+    "GET /database/migration/status": {
+      "access": "admin"
+    },
+    "POST /database/restore": {
+      "access": "admin",
+      "destructive": true
+    },
+    "POST /encryption/initialize": {
+      "access": "admin"
+    },
+    "POST /encryption/regenerate": {
+      "access": "admin",
+      "destructive": true
+    },
+    "POST /encryption/regenerate-jwt": {
+      "access": "admin",
+      "destructive": true
+    },
+    "GET /encryption/status": {
+      "access": "admin"
+    },
+    "GET /health": {
+      "access": "public"
+    },
+    "GET /host-sidebar/preferences": {
+      "access": "user"
+    },
+    "PUT /host-sidebar/preferences": {
+      "access": "user"
+    },
+    "PATCH /host/bulk-update": {
+      "access": "user"
+    },
+    "GET /host/db/host": {
+      "access": "user",
+      "permission": "hosts.view"
+    },
+    "POST /host/db/host": {
+      "access": "user"
+    },
+    "DELETE /host/db/host/:id": {
+      "access": "user",
+      "resource": {
+        "kind": "host",
+        "min": "edit"
+      },
+      "destructive": true
+    },
+    "GET /host/db/host/:id": {
+      "access": "user",
+      "resource": {
+        "kind": "host",
+        "min": "connect"
+      },
+      "note": "Connect shares see the host without secrets"
+    },
+    "PUT /host/db/host/:id": {
+      "access": "user",
+      "resource": {
+        "kind": "host",
+        "min": "edit"
+      },
+      "body": {
+        "name": "authz-host",
+        "ip": "127.0.0.1",
+        "port": 22,
+        "username": "authz",
+        "authType": "password"
+      }
+    },
+    "GET /host/db/host/:id/device-auth/:protocol": {
+      "access": "user",
+      "resource": {
+        "kind": "host",
+        "min": "view"
+      },
+      "allowed": "any",
+      "note": "Device logins exist only on the desktop app; a server answers 404"
+    },
+    "PUT /host/db/host/:id/device-auth/:protocol": {
+      "access": "user",
+      "resource": {
+        "kind": "host",
+        "min": "edit"
+      },
+      "allowed": "any",
+      "note": "Device logins exist only on the desktop app; a server answers 404"
+    },
+    "GET /host/db/host/:id/local-connection-auth": {
+      "access": "user",
+      "resource": {
+        "kind": "host",
+        "min": "connect"
+      },
+      "expect": {
+        "owner": "refuse",
+        "key-ops-read": "refuse",
+        "key-ops-run": "refuse",
+        "share-connect": "any",
+        "share-view": "any",
+        "share-edit": "any",
+        "share-manage": "any"
+      },
+      "note": "For share recipients that connect from their own device; depends on the share's connect origin"
+    },
+    "GET /host/db/host/:id/password": {
+      "access": "user",
+      "resource": {
+        "kind": "own",
+        "fixture": "host"
+      },
+      "note": "Secret copy is owner only (findHostByIdForUser)"
+    },
+    "POST /host/db/host/:id/reset-defaults": {
+      "access": "user",
+      "resource": {
+        "kind": "host",
+        "min": "edit"
+      },
+      "destructive": true,
+      "body": {
+        "all": true
+      }
+    },
+    "POST /host/db/proxy/test": {
+      "access": "user"
+    },
+    "GET /host/defaults/admin": {
+      "access": "admin"
+    },
+    "PUT /host/defaults/admin": {
+      "access": "admin"
+    },
+    "POST /host/defaults/folders": {
+      "access": "user"
+    },
+    "GET /host/defaults/folders/:folderId": {
+      "access": "user",
+      "resource": {
+        "kind": "own",
+        "fixture": "folderId"
+      },
+      "params": {
+        "folderId": "folderId"
+      }
+    },
+    "PUT /host/defaults/folders/:folderId": {
+      "access": "user",
+      "resource": {
+        "kind": "own",
+        "fixture": "folderId"
+      },
+      "params": {
+        "folderId": "folderId"
+      }
+    },
+    "GET /host/defaults/jobs/:id": {
+      "access": "admin",
+      "allowed": "any",
+      "note": "No job exists in the test data"
+    },
+    "POST /host/defaults/preview": {
+      "access": "user"
+    },
+    "GET /host/defaults/resolve": {
+      "access": "user"
+    },
+    "GET /host/defaults/user": {
+      "access": "user"
+    },
+    "PUT /host/defaults/user": {
+      "access": "user"
+    },
+    "GET /host/device-auth/folder/:protocol": {
+      "access": "user",
+      "allowed": "any",
+      "note": "Device logins exist only on the desktop app; a server answers 404"
+    },
+    "PUT /host/device-auth/folder/:protocol": {
+      "access": "user",
+      "allowed": "any",
+      "note": "Device logins exist only on the desktop app; a server answers 404"
+    },
+    "POST /host/enroll": {
+      "access": "user"
+    },
+    "GET /host/folders": {
+      "access": "user",
+      "permission": "hosts.view"
+    },
+    "DELETE /host/folders/:name/hosts": {
+      "access": "user",
+      "destructive": true,
+      "note": "Folder names are per user, so this only reaches the caller's own folder"
+    },
+    "PUT /host/folders/metadata": {
+      "access": "user"
+    },
+    "PUT /host/folders/rename": {
+      "access": "user"
+    },
+    "PUT /host/folders/reorder": {
+      "access": "user"
+    },
+    "GET /host/policy": {
+      "access": "user"
+    },
+    "POST /host/quick-connect": {
+      "access": "user"
+    },
+    "PUT /host/reorder": {
+      "access": "user"
+    },
+    "GET /host/status": {
+      "access": "user",
+      "permission": "hosts.view"
+    },
+    "GET /host/status/:id": {
+      "access": "user",
+      "resource": {
+        "kind": "host",
+        "min": "connect"
+      }
+    },
+    "POST /host/status/refresh": {
+      "access": "user"
+    },
+    "GET /host/status/settings": {
+      "access": "admin"
+    },
+    "PUT /host/status/settings": {
+      "access": "admin"
+    },
+    "GET /host/tags": {
+      "access": "user"
+    },
+    "PUT /host/tags": {
+      "access": "admin"
+    },
+    "GET /open-tabs": {
+      "access": "user"
+    },
+    "POST /open-tabs": {
+      "access": "user"
+    },
+    "PUT /open-tabs": {
+      "access": "user"
+    },
+    "DELETE /open-tabs/:id": {
+      "access": "user",
+      "destructive": true,
+      "resource": {
+        "kind": "own",
+        "fixture": "openTab"
+      },
+      "params": {
+        "id": "openTab"
+      },
+      "body": {
+        "label": "x"
+      },
+      "scoped": {
+        "path": "/open-tabs",
+        "contains": "{{openTab}}"
+      },
+      "note": "Deletes only within the caller's tabs and answers 200 either way (clients close unsaved tabs too)"
+    },
+    "PATCH /open-tabs/:id": {
+      "access": "user",
+      "resource": {
+        "kind": "own",
+        "fixture": "openTab"
+      },
+      "params": {
+        "id": "openTab"
+      },
+      "body": {
+        "label": "x"
+      }
+    },
+    "GET /open-tabs/active-sessions": {
+      "access": "user"
+    },
+    "GET /open-tabs/session-timeout": {
+      "access": "user"
+    },
+    "POST /operations/:id/run": {
+      "access": "user"
+    },
+    "GET /operations/approvals": {
+      "access": "user"
+    },
+    "POST /operations/approvals/:id": {
+      "access": "user"
+    },
+    "GET /operations/catalog": {
+      "access": "user"
+    },
+    "GET /operations/catalog/:id": {
+      "access": "user",
+      "params": {
+        "id": "operation"
+      },
+      "expect": {
+        "noperm": "refuse"
+      }
+    },
+    "GET /operations/events": {
+      "access": "user"
+    },
+    "GET /operations/resources/:id": {
+      "access": "user",
+      "allowed": "any",
+      "note": "No resource id in the test data"
+    },
+    "GET /operations/runs": {
+      "access": "user"
+    },
+    "GET /operations/runs/:id": {
+      "access": "user",
+      "resource": {
+        "kind": "own",
+        "fixture": "run",
+        "admin": true
+      },
+      "params": {
+        "id": "run"
+      }
+    },
+    "POST /operations/runs/:id/cancel": {
+      "access": "user",
+      "resource": {
+        "kind": "own",
+        "fixture": "run",
+        "admin": true
+      },
+      "params": {
+        "id": "run"
+      }
+    },
+    "POST /operations/runs/:id/undo": {
+      "access": "user",
+      "resource": {
+        "kind": "own",
+        "fixture": "run",
+        "admin": true
+      },
+      "params": {
+        "id": "run"
+      },
+      "note": "Read only run, so an allowed caller gets a refusal to undo"
+    },
+    "GET /operations/signals": {
+      "access": "user"
+    },
+    "GET /operations/timeline": {
+      "access": "user"
+    },
+    "GET /plugin-assets/:pluginId/*": {
+      "access": "public",
+      "params": {
+        "pluginId": "=ssh-terminal"
+      }
+    },
+    "WS /plugin-ws/core/ssh-relay": {
+      "access": "user",
+      "resource": {
+        "kind": "own",
+        "fixture": "host"
+      },
+      "query": {
+        "hostId": "{{host}}"
+      },
+      "note": "Remote site relay; resolves hosts the caller owns"
+    },
+    "GET /plugins": {
+      "access": "user",
+      "allow": ["setup"]
+    },
+    "DELETE /plugins/:id": {
+      "access": "admin",
+      "destructive": true,
+      "params": {
+        "id": "=ssh-terminal"
+      }
+    },
+    "GET /plugins/:id/changelog": {
+      "access": "admin",
+      "params": {
+        "id": "=ssh-terminal"
+      }
+    },
+    "DELETE /plugins/:id/data": {
+      "access": "admin",
+      "destructive": true,
+      "params": {
+        "id": "=ssh-terminal"
+      }
+    },
+    "GET /plugins/:id/data": {
+      "access": "admin",
+      "params": {
+        "id": "=ssh-terminal"
+      }
+    },
+    "POST /plugins/:id/grants": {
+      "access": "admin",
+      "params": {
+        "id": "=ssh-terminal"
+      }
+    },
+    "DELETE /plugins/:id/grants/:capability": {
+      "access": "admin",
+      "destructive": true,
+      "params": {
+        "id": "=ssh-terminal"
+      }
+    },
+    "POST /plugins/:id/install": {
+      "access": "admin",
+      "destructive": true,
+      "params": {
+        "id": "=ssh-terminal"
+      }
+    },
+    "PATCH /plugins/:id/options": {
+      "access": "admin",
+      "params": {
+        "id": "=ssh-terminal"
+      }
+    },
+    "POST /plugins/:id/restore-bundled": {
+      "access": "admin",
+      "destructive": true,
+      "params": {
+        "id": "=ssh-terminal"
+      }
+    },
+    "POST /plugins/:id/retry": {
+      "access": "admin",
+      "params": {
+        "id": "=ssh-terminal"
+      }
+    },
+    "GET /plugins/:id/settings/admin": {
+      "access": "admin",
+      "params": {
+        "id": "=ssh-terminal"
+      }
+    },
+    "PUT /plugins/:id/settings/admin": {
+      "access": "admin",
+      "params": {
+        "id": "=ssh-terminal"
+      }
+    },
+    "GET /plugins/:id/settings/host/:hostId": {
+      "access": "user",
+      "resource": {
+        "kind": "host",
+        "min": "edit"
+      },
+      "params": {
+        "id": "=ssh-terminal"
+      }
+    },
+    "PUT /plugins/:id/settings/host/:hostId": {
+      "access": "user",
+      "resource": {
+        "kind": "host",
+        "min": "edit"
+      },
+      "params": {
+        "id": "=ssh-terminal"
+      }
+    },
+    "GET /plugins/:id/settings/user": {
+      "access": "user",
+      "params": {
+        "id": "=ssh-terminal"
+      },
+      "allow": ["setup"]
+    },
+    "PUT /plugins/:id/settings/user": {
+      "access": "user",
+      "params": {
+        "id": "=ssh-terminal"
+      }
+    },
+    "PATCH /plugins/:id/state": {
+      "access": "admin",
+      "params": {
+        "id": "=ssh-terminal"
+      }
+    },
+    "POST /plugins/:id/update": {
+      "access": "admin",
+      "params": {
+        "id": "=ssh-terminal"
+      }
+    },
+    "POST /plugins/channel": {
+      "access": "admin",
+      "destructive": true
+    },
+    "GET /plugins/developer-mode": {
+      "access": "admin"
+    },
+    "PUT /plugins/developer-mode": {
+      "access": "admin"
+    },
+    "GET /plugins/onboarding": {
+      "access": "admin"
+    },
+    "POST /plugins/onboarding/apply": {
+      "access": "admin"
+    },
+    "GET /plugins/public": {
+      "access": "public"
+    },
+    "GET /plugins/public-manifest": {
+      "access": "public"
+    },
+    "GET /plugins/registries": {
+      "access": "admin"
+    },
+    "POST /plugins/registries": {
+      "access": "admin"
+    },
+    "DELETE /plugins/registries/:id": {
+      "access": "admin",
+      "destructive": true
+    },
+    "PATCH /plugins/registries/:id": {
+      "access": "admin"
+    },
+    "POST /plugins/registries/preview": {
+      "access": "admin"
+    },
+    "GET /plugins/registry": {
+      "access": "admin"
+    },
+    "POST /plugins/update-all": {
+      "access": "admin",
+      "destructive": true
+    },
+    "POST /plugins/upload": {
+      "access": "admin",
+      "destructive": true
+    },
+    "POST /plugins/upload/:token/install": {
+      "access": "admin",
+      "destructive": true
+    },
+    "GET /rbac/credential/:id/access": {
+      "access": "user",
+      "resource": {
+        "kind": "credential",
+        "min": "manage"
+      }
+    },
+    "DELETE /rbac/credential/:id/access/:accessId": {
+      "access": "user",
+      "resource": {
+        "kind": "credential",
+        "min": "manage"
+      },
+      "destructive": true,
+      "params": {
+        "id": "credential",
+        "accessId": "credentialAccess"
+      }
+    },
+    "POST /rbac/credential/:id/share": {
+      "access": "user",
+      "permission": "credentials.share",
+      "resource": {
+        "kind": "credential",
+        "min": "manage"
+      },
+      "body": {
+        "targets": [
+          {
+            "type": "user",
+            "id": "{{user:other}}"
+          }
+        ],
+        "permissionLevel": "use"
+      }
+    },
+    "GET /rbac/folder-auth/:protocol": {
+      "access": "user"
+    },
+    "PUT /rbac/folder-auth/:protocol": {
+      "access": "user"
+    },
+    "GET /rbac/folder/access": {
+      "access": "user"
+    },
+    "DELETE /rbac/folder/access/:id": {
+      "access": "user",
+      "resource": {
+        "kind": "own",
+        "fixture": "folderAccess"
+      },
+      "params": {
+        "id": "folderAccess"
+      },
+      "destructive": true
+    },
+    "POST /rbac/folder/share": {
+      "access": "user",
+      "permission": "hosts.share"
+    },
+    "GET /rbac/host-access/:hostId/auth/:protocol": {
+      "access": "user",
+      "resource": {
+        "kind": "host",
+        "min": "connect"
+      },
+      "expect": {
+        "owner": "refuse",
+        "key-ops-read": "refuse",
+        "key-ops-run": "refuse"
+      },
+      "note": "A share recipient's own login for a shared host; the owner has none"
+    },
+    "PUT /rbac/host-access/:hostId/auth/:protocol": {
+      "access": "user",
+      "resource": {
+        "kind": "host",
+        "min": "connect"
+      },
+      "expect": {
+        "owner": "refuse",
+        "key-ops-read": "refuse",
+        "key-ops-run": "refuse"
+      },
+      "body": {
+        "credentialId": null
+      },
+      "note": "A share recipient's own login for a shared host; the owner has none"
+    },
+    "GET /rbac/host/:id/access": {
+      "access": "user",
+      "resource": {
+        "kind": "host",
+        "min": "manage"
+      }
+    },
+    "DELETE /rbac/host/:id/access/:accessId": {
+      "access": "user",
+      "resource": {
+        "kind": "host",
+        "min": "manage"
+      },
+      "destructive": true,
+      "params": {
+        "id": "host",
+        "accessId": "hostAccess"
+      }
+    },
+    "PATCH /rbac/host/:id/access/:accessId": {
+      "access": "user",
+      "resource": {
+        "kind": "host",
+        "min": "manage"
+      },
+      "params": {
+        "id": "host",
+        "accessId": "hostAccess"
+      },
+      "body": {
+        "permissionLevel": "connect"
+      }
+    },
+    "POST /rbac/host/:id/share": {
+      "access": "user",
+      "permission": "hosts.share",
+      "resource": {
+        "kind": "host",
+        "min": "edit"
+      },
+      "body": {
+        "targets": [
+          {
+            "type": "user",
+            "id": "{{user:other}}"
+          }
+        ],
+        "permissionLevel": "connect"
+      }
+    },
+    "GET /rbac/permissions/catalog": {
+      "access": "user"
+    },
+    "GET /rbac/permissions/me": {
+      "access": "user"
+    },
+    "GET /rbac/roles": {
+      "access": "user"
+    },
+    "POST /rbac/roles": {
+      "access": "user",
+      "permission": "admin.roles.manage"
+    },
+    "DELETE /rbac/roles/:id": {
+      "access": "user",
+      "permission": "admin.roles.manage",
+      "destructive": true
+    },
+    "PUT /rbac/roles/:id": {
+      "access": "user",
+      "permission": "admin.roles.manage"
+    },
+    "GET /rbac/roles/:id/members": {
+      "access": "user",
+      "permission": "admin.roles.manage",
+      "params": {
+        "id": "role"
+      }
+    },
+    "GET /rbac/shared-hosts": {
+      "access": "user"
+    },
+    "GET /rbac/users/:userId/roles": {
+      "access": "user",
+      "resource": {
+        "kind": "own",
+        "fixture": "user:owner",
+        "admin": true
+      },
+      "params": {
+        "userId": "user:owner"
+      }
+    },
+    "POST /rbac/users/:userId/roles": {
+      "access": "user",
+      "permission": "admin.roles.manage"
+    },
+    "DELETE /rbac/users/:userId/roles/:roleId": {
+      "access": "user",
+      "permission": "admin.roles.manage",
+      "destructive": true
+    },
+    "GET /releases/rss": {
+      "access": "user"
+    },
+    "GET /ssh-auth/providers": {
+      "access": "user"
+    },
+    "GET /ui-preferences": {
+      "access": "user"
+    },
+    "PUT /ui-preferences": {
+      "access": "user"
+    },
+    "GET /user-preferences": {
+      "access": "user"
+    },
+    "PUT /user-preferences": {
+      "access": "user"
+    },
+    "GET /user-preferences/look": {
+      "access": "user",
+      "allow": ["setup"]
+    },
+    "PUT /user-preferences/look/defaults": {
+      "access": "user"
+    },
+    "GET /users/:method/authorize": {
+      "access": "public"
+    },
+    "POST /users/:method/login": {
+      "access": "public"
+    },
+    "POST /users/admin-create": {
+      "access": "admin"
+    },
+    "DELETE /users/admin/:userId/second-factors": {
+      "access": "admin",
+      "destructive": true,
+      "params": {
+        "userId": "user:other"
+      }
+    },
+    "GET /users/admin/:userId/second-factors": {
+      "access": "admin",
+      "params": {
+        "userId": "user:other"
+      }
+    },
+    "GET /users/admin/export/:userId": {
+      "access": "admin",
+      "params": {
+        "userId": "user:other"
+      }
+    },
+    "POST /users/admin/reset-password": {
+      "access": "admin",
+      "destructive": true,
+      "body": {
+        "username": "authz-other",
+        "newPassword": "Authz-unused-123!"
+      }
+    },
+    "GET /users/api-keys": {
+      "access": "admin"
+    },
+    "POST /users/api-keys": {
+      "access": "admin"
+    },
+    "DELETE /users/api-keys/:keyId": {
+      "access": "admin",
+      "destructive": true
+    },
+    "GET /users/auth/:methodId/callback": {
+      "access": "public"
+    },
+    "POST /users/auth/:methodId/callback": {
+      "access": "public"
+    },
+    "GET /users/auth/:methodId/start": {
+      "access": "public"
+    },
+    "POST /users/auth/:methodId/verify": {
+      "access": "public"
+    },
+    "GET /users/auth/methods": {
+      "access": "public"
+    },
+    "POST /users/auth/second-factor/:factorId/challenge": {
+      "access": "public"
+    },
+    "POST /users/auth/second-factor/:factorId/verify": {
+      "access": "public"
+    },
+    "POST /users/auth/step-up/:factorId/challenge": {
+      "access": "user",
+      "allow": ["setup"]
+    },
+    "POST /users/auth/step-up/:factorId/verify": {
+      "access": "user",
+      "allow": ["setup"]
+    },
+    "GET /users/auth/step-up/factors": {
+      "access": "user",
+      "allow": ["setup"]
+    },
+    "GET /users/branding": {
+      "access": "public"
+    },
+    "POST /users/change-password": {
+      "access": "user"
+    },
+    "POST /users/complete-reset": {
+      "access": "public",
+      "destructive": true
+    },
+    "GET /users/count": {
+      "access": "admin"
+    },
+    "POST /users/create": {
+      "access": "public"
+    },
+    "GET /users/credential-storage": {
+      "access": "user"
+    },
+    "PATCH /users/credential-storage": {
+      "access": "admin"
+    },
+    "GET /users/data-status": {
+      "access": "user"
+    },
+    "GET /users/db-health": {
+      "access": "admin"
+    },
+    "DELETE /users/delete-account": {
+      "access": "user",
+      "destructive": true
+    },
+    "DELETE /users/delete-user": {
+      "access": "user",
+      "destructive": true
+    },
+    "GET /users/external-auto-provision": {
+      "access": "public"
+    },
+    "PATCH /users/external-auto-provision": {
+      "access": "admin"
+    },
+    "GET /users/host-key-policy": {
+      "access": "user"
+    },
+    "PATCH /users/host-key-policy": {
+      "access": "admin"
+    },
+    "GET /users/https-settings": {
+      "access": "admin"
+    },
+    "PATCH /users/https-settings": {
+      "access": "admin"
+    },
+    "POST /users/initiate-reset": {
+      "access": "public",
+      "destructive": true
+    },
+    "POST /users/internal/auto-session": {
+      "access": "public"
+    },
+    "POST /users/link-external-to-password": {
+      "access": "user"
+    },
+    "GET /users/list": {
+      "access": "user",
+      "note": "Share pickers need every username; hashes and admin details stay hidden"
+    },
+    "GET /users/log-level": {
+      "access": "user"
+    },
+    "PATCH /users/log-level": {
+      "access": "admin"
+    },
+    "POST /users/login": {
+      "access": "public"
+    },
+    "POST /users/logout": {
+      "access": "user",
+      "destructive": true,
+      "allow": ["setup"]
+    },
+    "POST /users/make-admin": {
+      "access": "admin",
+      "body": {
+        "username": "authz-other"
+      }
+    },
+    "GET /users/me": {
+      "access": "user",
+      "allow": ["setup"]
+    },
+    "GET /users/me/token": {
+      "access": "user",
+      "headers": {
+        "User-Agent": "Termix-Desktop/1.0"
+      }
+    },
+    "GET /users/notification-private-endpoints": {
+      "access": "admin"
+    },
+    "PATCH /users/notification-private-endpoints": {
+      "access": "admin"
+    },
+    "GET /users/password-login-allowed": {
+      "access": "public"
+    },
+    "PATCH /users/password-login-allowed": {
+      "access": "admin"
+    },
+    "GET /users/password-reset-allowed": {
+      "access": "public",
+      "destructive": true
+    },
+    "PATCH /users/password-reset-allowed": {
+      "access": "admin",
+      "destructive": true
+    },
+    "POST /users/proxy-login": {
+      "access": "public"
+    },
+    "GET /users/registration-allowed": {
+      "access": "public"
+    },
+    "PATCH /users/registration-allowed": {
+      "access": "admin"
+    },
+    "POST /users/remove-admin": {
+      "access": "admin",
+      "body": {
+        "username": "authz-admin"
+      }
+    },
+    "GET /users/second-factor-after-external-login": {
+      "access": "public"
+    },
+    "PATCH /users/second-factor-after-external-login": {
+      "access": "admin"
+    },
+    "GET /users/session-timeout": {
+      "access": "user"
+    },
+    "PATCH /users/session-timeout": {
+      "access": "admin"
+    },
+    "GET /users/sessions": {
+      "access": "user"
+    },
+    "DELETE /users/sessions/:sessionId": {
+      "access": "user",
+      "resource": {
+        "kind": "own",
+        "fixture": "ownerSession",
+        "admin": true
+      },
+      "params": {
+        "sessionId": "ownerSession"
+      },
+      "destructive": true
+    },
+    "POST /users/sessions/revoke-all": {
+      "access": "user",
+      "destructive": true
+    },
+    "GET /users/setup-required": {
+      "access": "public"
+    },
+    "GET /users/sso-providers": {
+      "access": "public"
+    },
+    "GET /users/tls-certificate": {
+      "access": "admin"
+    },
+    "POST /users/tls-certificate": {
+      "access": "user"
+    },
+    "POST /users/totp/verify-login": {
+      "access": "public"
+    },
+    "POST /users/unlink-external-from-password": {
+      "access": "user"
+    },
+    "POST /users/unlock-data": {
+      "access": "user"
+    },
+    "POST /users/verify-reset-code": {
+      "access": "public",
+      "destructive": true
+    },
+    "POST /users/ws-ticket": {
+      "access": "user"
+    },
+    "POST /users/ws-ticket/api-key": {
+      "access": "user"
+    },
+    "GET /version": {
+      "access": "user"
+    },
+    "GET /version/channel": {
+      "access": "user",
+      "destructive": true
+    },
+    "PUT /version/channel": {
+      "access": "admin",
+      "destructive": true
+    },
+    "GET /version/releases": {
+      "access": "user"
+    }
+  }
+}

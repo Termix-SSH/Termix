@@ -328,6 +328,13 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       const { startPluginAutoUpdate } =
         await import("./plugins/auto-update.js");
       startPluginAutoUpdate();
+
+      const inventoryFile = process.env.TERMIX_ROUTE_INVENTORY_FILE;
+      if (inventoryFile) {
+        const { writeRouteInventory } =
+          await import("./plugins/route-inventory.js");
+        writeRouteInventory(inventoryFile);
+      }
     } catch (error) {
       systemLogger.warn("Plugin runtime failed to initialize", {
         operation: "plugin_init",

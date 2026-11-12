@@ -42,6 +42,7 @@
 - Encrypted values with a cut short check tag are refused
 - The Docker image bundles opkssh 0.19.2 and no longer ships npm, which the server never uses
 - Plugins that run commands with sudo send the sudo password on stdin, so it never shows up in the host's process list
+- A login that still has to set up a second factor can only open the setup screen, not manage plugins
 
 ## 26.11.1
 

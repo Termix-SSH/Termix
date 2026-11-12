@@ -66,6 +66,7 @@ Break one of these and the plugin fails to load, fails validation or gets reject
 
 ```
 manifest.json            what the plugin is, adds and may do
+authz.json               who may call each route and socket, checked in CI
 package.json             npm scripts and dependencies
 CHANGELOG.md             release notes, one section per version
 README.md                the repo front page
@@ -111,6 +112,7 @@ Before you call a change finished:
 - [ ] `npx termix-plugin migrations --check` passes (you ran `npm run migrations` after changing tables)
 - [ ] New strings are in `locales/en.json`, and `plugin.name` / `plugin.description` match the manifest
 - [ ] New routes have an `@openapi` block and a test, including without the permission
+- [ ] New routes and sockets have an entry in `authz.json` (CI fails without one)
 - [ ] New env vars are listed in `env` in the manifest
 - [ ] `docs/` and the "About this plugin" section of `AGENTS.md` still match what the plugin does
 - [ ] User facing changes are in `CHANGELOG.md` under the version they will ship in
@@ -974,6 +976,79 @@ expect(app.registered.tabs()).toContain("hello");
 
 Test every route, with and without the permission. Test that disable then enable works, and that the plugin
 works when an optional dependency is missing.
+
+## Authorization table
+
+`authz.json` at the repo root says who may call each route and socket. The shared plugin CI boots the newest
+core with your plugin, makes a set of callers and calls every entry as each of them:
+
+- no login, an expired login, a signed out login, a login still waiting for its second factor, a login that
+  must set up a second factor first, and a share link guest
+- a user with no permissions, another user, one user per host share level (connect, view, edit, manage),
+  the owner, an admin, and API keys scoped to operations
+
+A route your plugin serves with no entry fails the run, and so does an entry for a route that is gone. Write
+what the route should allow, not what it happens to do. Each entry is short and the rest is worked out:
+
+```json
+{
+  "seed": [
+    {
+      "as": "owner",
+      "method": "POST",
+      "path": "/plugin-api/hello/notes",
+      "body": { "title": "authz-own-note" },
+      "capture": { "hello.note": "note.id" }
+    }
+  ],
+  "routes": {
+    "GET /plugin-api/hello/notes": {
+      "access": "user",
+      "permission": "hello.use",
+      "filtered": true
+    },
+    "GET /plugin-api/hello/notes/:id": {
+      "access": "user",
+      "permission": "hello.use",
+      "resource": { "kind": "own", "fixture": "hello.note" },
+      "params": { "id": "hello.note" }
+    },
+    "POST /plugin-api/hello/hosts/:hostId/run": {
+      "access": "user",
+      "permission": "hello.use",
+      "resource": { "kind": "host", "min": "edit" },
+      "body": { "command": "uptime" },
+      "destructive": true
+    },
+    "WS /plugin-ws/hello/live": {
+      "access": "user",
+      "resource": { "kind": "host", "min": "connect" },
+      "send": [{ "type": "connect", "data": { "hostId": "{{host}}" } }],
+      "refuseReply": "Host not found"
+    }
+  }
+}
+```
+
+- `access`: `public`, `user` or `admin`. Any non public entry must refuse every bad login.
+- `permission`: what the route requires. One the plain user role lacks means only admins get in.
+- `resource`: whose thing the route touches. `host` and `folder` follow share levels (`min`), `credential` is
+  `use` or `manage`, anything else is the owner's alone. Another user must get 401, 403 or 404.
+- `seed` makes the owner's rows first; `capture` names them for `params` and `{{name}}` in bodies. Give the
+  owner's rows names starting with `authz-own-`: a `filtered` list may answer other users with 200, but never
+  with anything holding that marker.
+- A refused caller that gets 400 fails: the body never reached the check, so give the entry a `body`.
+- `destructive` writes are never called as an allowed caller. Writes are only checked for refusals unless
+  `callAllowed` is set.
+- `allowed: "any"` skips the allowed side when there is no test data (needs a real device, desktop only);
+  say why in `note`. Refusals are still checked.
+
+Every field is in `scripts/authz/authz.schema.json` in the core repo. Run it locally from a core checkout next
+to your plugin, after `npm run build:backend:core` there and `npm run build` here:
+
+```bash
+node ../Termix/scripts/authz/run.mjs --no-core --plugin . --local-plugin . --local-plugins ../Plugins
+```
 
 ## Running it on a server
 

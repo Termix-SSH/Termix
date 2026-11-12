@@ -1088,7 +1088,7 @@ class AuthManager {
     payload: JWTPayload,
   ): boolean {
     const path = (req.originalUrl || req.url || "").split("?")[0];
-    const refusal = sessionAccessRefusal(payload, path);
+    const refusal = sessionAccessRefusal(payload, path, req.method);
     if (!refusal) return false;
     res
       .status(refusal.status)

@@ -22,9 +22,16 @@ const PLUGIN_SESSION_BLOCKLIST = [
 const SETUP_SESSION_ALLOWLIST = [
   /^\/users\/(me|logout)$/,
   /^\/users\/auth\//,
-  /^\/user-preferences\/look(\/|$)/,
-  /^\/plugins(\/|$)/,
   /^\/plugin-assets\//,
+];
+
+// Reads the setup screen needs to draw the app shell. Writes and admin views
+// under the same prefixes stay closed until a factor is set up.
+const SETUP_SESSION_READS = [
+  /^\/user-preferences\/look$/,
+  /^\/plugins$/,
+  /^\/plugins\/public(-manifest)?$/,
+  /^\/plugins\/[^/]+\/settings\/user$/,
 ];
 
 function isSecondFactorPlugin(path: string): boolean {
@@ -42,9 +49,16 @@ export function allowsPluginSession(path: string): boolean {
   return !isSecondFactorPlugin(path);
 }
 
-/** Whether a session restricted to second factor setup may call this path. */
-export function allowsSetupSession(path: string): boolean {
+/**
+ * Whether a session restricted to second factor setup may call this path. A
+ * socket upgrade has no method of its own and counts as a read.
+ */
+export function allowsSetupSession(path: string, method = "GET"): boolean {
   if (SETUP_SESSION_ALLOWLIST.some((pattern) => pattern.test(path))) {
+    return true;
+  }
+  const read = method === "GET" || method === "HEAD";
+  if (read && SETUP_SESSION_READS.some((pattern) => pattern.test(path))) {
     return true;
   }
   return isSecondFactorPlugin(path);
@@ -66,6 +80,7 @@ export interface SessionRefusal {
 export function sessionAccessRefusal(
   session: SessionAccessInput,
   path: string,
+  method = "GET",
 ): SessionRefusal | null {
   if (session.pendingTOTP) {
     return {
@@ -75,7 +90,7 @@ export function sessionAccessRefusal(
     };
   }
   // Any restriction this code does not know is treated like setup.
-  if (session.restriction && !allowsSetupSession(path)) {
+  if (session.restriction && !allowsSetupSession(path, method)) {
     return {
       status: 403,
       code:

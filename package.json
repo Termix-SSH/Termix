@@ -28,6 +28,7 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
+    "test:authz": "node scripts/authz/run.mjs",
     "dev": "node scripts/dev.mjs",
     "dev:electron": "node scripts/dev.mjs electron",
     "dev:docker": "node scripts/dev.mjs docker",

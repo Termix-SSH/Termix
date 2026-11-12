@@ -288,6 +288,21 @@ async function handlePluginUpgrade(
   return true;
 }
 
+/** Every socket route served right now, core's own included. */
+export function listWsRoutes(): {
+  pluginId: string;
+  path: string;
+  public?: boolean;
+  optionalAuth?: boolean;
+}[] {
+  return [...routes.values()].map((route) => ({
+    pluginId: route.pluginId,
+    path: route.path,
+    public: route.options.public,
+    optionalAuth: route.options.optionalAuth,
+  }));
+}
+
 /** Wires the upgrade handler onto a server. Idempotent per server. */
 export function attachPluginWebSockets(server: HttpServer): void {
   if (attachedServers.has(server)) return;

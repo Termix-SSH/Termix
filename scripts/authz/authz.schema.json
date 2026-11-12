@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Termix authorization table",
+  "description": "Who may call each route and socket. Read by scripts/authz/run.mjs.",
+  "type": "object",
+  "required": ["routes"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "seed": {
+      "description": "Requests run before the matrix, usually as the owner, to make the rows that id routes point at.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path"],
+        "additionalProperties": false,
+        "properties": {
+          "as": { "$ref": "#/$defs/identity" },
+          "method": { "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"] },
+          "path": { "type": "string" },
+          "body": {},
+          "query": { "type": "object" },
+          "capture": {
+            "description": "Fixture name to a dotted path in the reply. -1 picks the last item of a list.",
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          },
+          "todo": { "type": "string" }
+        }
+      }
+    },
+    "routes": {
+      "description": "Keys are \"METHOD /path\", with WS for sockets.",
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^(GET|POST|PUT|PATCH|DELETE|ALL|WS) /"
+      },
+      "additionalProperties": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "identity": {
+      "enum": [
+        "anon",
+        "expired",
+        "revoked",
+        "pending",
+        "setup",
+        "noperm",
+        "other",
+        "share-connect",
+        "share-view",
+        "share-edit",
+        "share-manage",
+        "owner",
+        "admin",
+        "key-ops-read",
+        "key-ops-run",
+        "guest"
+      ]
+    },
+    "outcome": { "enum": ["allow", "refuse", "any"] },
+    "entry": {
+      "type": "object",
+      "required": ["access"],
+      "additionalProperties": false,
+      "properties": {
+        "access": {
+          "description": "public: anyone. user: any full session. admin: admins only.",
+          "enum": ["public", "user", "admin"]
+        },
+        "permission": {
+          "description": "Permission or permissions the caller needs. A permission the plain user role lacks means only admins.",
+          "oneOf": [
+            { "type": "string" },
+            { "type": "array", "items": { "type": "string" } }
+          ]
+        },
+        "resource": {
+          "description": "The owner's resource the route acts on. host and folder follow share levels, credential follows use and manage, anything else is the owner's alone.",
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "type": "string" },
+            "min": { "enum": ["connect", "view", "edit", "manage", "use"] },
+            "fixture": { "type": "string" },
+            "key": {
+              "description": "The body and query field that carries the id, when it is not in the path.",
+              "type": "string"
+            },
+            "admin": {
+              "description": "Whether an admin may reach another user's resource. Unchecked when left out.",
+              "type": "boolean"
+            }
+          }
+        },
+        "params": {
+          "description": "Path param to a fixture name, or =literal.",
+          "type": "object",
+          "additionalProperties": { "type": ["string", "number"] }
+        },
+        "allow": {
+          "description": "Session states let through: pending, setup or guest.",
+          "type": "array",
+          "items": { "enum": ["pending", "setup", "guest"] }
+        },
+        "expect": {
+          "description": "Overrides the derived outcome for single identities.",
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/identity" },
+          "additionalProperties": { "$ref": "#/$defs/outcome" }
+        },
+        "allowed": {
+          "description": "any: allowed cells are not checked (no test data or desktop only). Refusals still are.",
+          "const": "any"
+        },
+        "filtered": {
+          "description": "Refused callers may get a 2xx as long as nothing of the owner's is in it.",
+          "type": "boolean"
+        },
+        "scoped": {
+          "description": "Refused callers may get a no-op 2xx; afterwards the owner's copy is checked.",
+          "type": "object",
+          "required": ["path", "contains"],
+          "additionalProperties": false,
+          "properties": {
+            "path": { "type": "string" },
+            "contains": { "type": "string" },
+            "as": { "$ref": "#/$defs/identity" }
+          }
+        },
+        "refuse400": {
+          "description": "Why a 400 counts as a refusal here: the body names something of the owner's.",
+          "type": "string"
+        },
+        "body": {},
+        "query": { "type": "object" },
+        "headers": { "type": "object" },
+        "send": {
+          "description": "Socket messages sent once open, to reach a check made per message.",
+          "type": "array"
+        },
+        "refuseReply": {
+          "description": "Pattern that marks a socket reply as a refusal.",
+          "type": "string"
+        },
+        "refusalCloseCodes": {
+          "type": "array",
+          "items": { "type": "integer" }
+        },
+        "waitMs": { "type": "integer" },
+        "destructive": {
+          "description": "Never called as an allowed caller.",
+          "type": "boolean"
+        },
+        "callAllowed": {
+          "description": "Call this write as allowed callers too.",
+          "type": "boolean"
+        },
+        "unlisted": {
+          "description": "Why this route is not in the served list (desktop only, served at /sync).",
+          "type": "string"
+        },
+        "skip": {
+          "description": "Not called at all; say why.",
+          "type": "string"
+        },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}
