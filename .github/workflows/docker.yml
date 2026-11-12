@@ -173,6 +173,27 @@ jobs:
             org.opencontainers.image.created=${{ env.BUILD_CREATED }}
           outputs: ${{ inputs.dry_run && 'type=cacheonly' || 'type=registry,compression=zstd' }}
 
+      # Keyless signature on the image digest in every repository it went to.
+      # The attestations from the build ride inside the same image index.
+      # Runs before the termixssh login, which replaces the bugattiguy527 one.
+      - name: Sign the images
+        if: ${{ !inputs.dry_run }}
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          BUILD_TYPE: ${{ inputs.build_type }}
+        run: |
+          REPOS=(ghcr.io/lukegus/termix ghcr.io/termix-ssh/termix)
+          if [ "$BUILD_TYPE" != "Development" ]; then
+            REPOS+=(docker.io/bugattiguy527/termix)
+          fi
+          if [ -z "$DIGEST" ]; then
+            echo "The build gave no image digest."
+            exit 1
+          fi
+          for repo in "${REPOS[@]}"; do
+            cosign sign --yes "$repo@$DIGEST"
+          done
+
       - name: Login to Docker Hub as termixssh
         id: termix_hub
         if: ${{ (inputs.build_type == 'Production' || inputs.build_type == 'Beta') && !inputs.dry_run }}
@@ -193,29 +214,11 @@ jobs:
             docker buildx imagetools create --tag "docker.io/termixssh/termix:$tag" "ghcr.io/termix-ssh/termix:$tag"
           done
 
-      # Keyless signature on the image digest in every repository it went to.
-      # The attestations from the build ride inside the same image index.
-      - name: Sign the images
-        if: ${{ !inputs.dry_run }}
+      - name: Sign the termixssh copy
+        if: ${{ steps.termix_hub.outputs.ready == 'true' }}
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
-          BUILD_TYPE: ${{ inputs.build_type }}
-          HUB_READY: ${{ steps.termix_hub.outputs.ready }}
-        run: |
-          REPOS=(ghcr.io/lukegus/termix ghcr.io/termix-ssh/termix)
-          if [ "$BUILD_TYPE" != "Development" ]; then
-            REPOS+=(docker.io/bugattiguy527/termix)
-          fi
-          if [ "$HUB_READY" = "true" ]; then
-            REPOS+=(docker.io/termixssh/termix)
-          fi
-          if [ -z "$DIGEST" ]; then
-            echo "The build gave no image digest."
-            exit 1
-          fi
-          for repo in "${REPOS[@]}"; do
-            cosign sign --yes "$repo@$DIGEST"
-          done
+        run: cosign sign --yes "docker.io/termixssh/termix@$DIGEST"
 
       - name: Cleanup Docker
         if: always()
