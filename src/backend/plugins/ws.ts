@@ -37,6 +37,7 @@ import { sessionAccessRefusal } from "../auth/session-access.js";
 import { bindSocket } from "../auth/socket-sessions.js";
 import { isPluginInstalled } from "./http.js";
 import { normalizeCookieHeader } from "../auth/session-cookie.js";
+import { embeddedHostRefused } from "../utils/embedded-host.js";
 
 const PLUGIN_WS_PREFIX = "/plugin-ws/";
 
@@ -310,6 +311,10 @@ export function attachPluginWebSockets(server: HttpServer): void {
   attachedServers.add(server);
 
   server.on("upgrade", (request, socket, head) => {
+    if (embeddedHostRefused(request as IncomingMessage)) {
+      reject(socket as Duplex, 403, "Forbidden");
+      return;
+    }
     const cookie = (request as IncomingMessage).headers.cookie;
     if (cookie) {
       (request as IncomingMessage).headers.cookie =

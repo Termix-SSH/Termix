@@ -145,6 +145,17 @@
     "sign": true
   },
   "afterPack": "packaging/build/after-pack.cjs",
+  "electronFuses": {
+    "runAsNode": false,
+    "enableCookieEncryption": true,
+    "enableNodeOptionsEnvironmentVariable": false,
+    "enableNodeCliInspectArguments": false,
+    "enableEmbeddedAsarIntegrityValidation": true,
+    "onlyLoadAppFromAsar": true,
+    "loadBrowserProcessSpecificV8Snapshot": false,
+    "grantFileProtocolExtraPrivileges": false,
+    "resetAdHocDarwinSignature": true
+  },
   "afterSign": "packaging/build/notarize.cjs",
   "mas": {
     "provisioningProfile": "packaging/build/Termix_Mac_App_Store.provisionprofile",

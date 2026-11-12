@@ -9,9 +9,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const require = createRequire(import.meta.url);
 const {
-  backendSpawnOptions,
   killProcessTree,
+  listDescendants,
   stopBackendProcess,
+  wrapUtilityProcess,
 } = require("../../../../electron/backend-process.cjs");
 
 const cleanups: Array<() => void> = [];
@@ -40,11 +41,52 @@ function isListening(port: number): Promise<boolean> {
   });
 }
 
-describe("backendSpawnOptions", () => {
-  it("puts the backend in its own process group outside Windows", () => {
-    expect(backendSpawnOptions("linux")).toEqual({ detached: true });
-    expect(backendSpawnOptions("darwin")).toEqual({ detached: true });
-    expect(backendSpawnOptions("win32")).toEqual({});
+describe("listDescendants", () => {
+  it("walks the tree from ps, deepest first", () => {
+    const run = vi.fn(() => ({
+      status: 0,
+      stdout: [
+        "  1     0",
+        " 10     1",
+        " 11    10",
+        " 12    11",
+        " 13    10",
+        " 99     1",
+        "",
+      ].join("\n"),
+    }));
+    expect(listDescendants(10, { spawnSync: run })).toEqual([12, 11, 13]);
+    expect(run).toHaveBeenCalledWith(
+      "ps",
+      ["-A", "-o", "pid=,ppid="],
+      expect.anything(),
+    );
+  });
+
+  it("gives nothing when ps fails or the pid is not real", () => {
+    expect(listDescendants(10, { spawnSync: () => ({ status: 1 }) })).toEqual(
+      [],
+    );
+    expect(listDescendants(0)).toEqual([]);
+  });
+});
+
+describe("wrapUtilityProcess", () => {
+  it("sends through postMessage and records the exit", () => {
+    const proc = Object.assign(new EventEmitter(), {
+      pid: 7,
+      postMessage: vi.fn(),
+      kill: vi.fn(),
+      stdout: null,
+      stderr: null,
+    });
+    const child = wrapUtilityProcess(proc);
+    child.send({ type: "shutdown" });
+    expect(proc.postMessage).toHaveBeenCalledWith({ type: "shutdown" });
+    expect(child.killed).toBe(false);
+    proc.emit("exit", 0);
+    expect(child.exitCode).toBe(0);
+    expect(child.killed).toBe(true);
   });
 });
 
@@ -164,7 +206,6 @@ describe("stopBackendProcess", () => {
 
     const child = fork(backend, [], {
       stdio: ["ignore", "ignore", "ignore", "ipc"],
-      ...backendSpawnOptions(),
     });
     cleanups.push(() => killProcessTree(child.pid));
     const { port } = await new Promise<{ port: number }>((resolve) =>

@@ -77,6 +77,7 @@ describe("isolated windows", () => {
       nodeIntegration: false,
       webviewTag: false,
       webSecurity: true,
+      disableBlinkFeatures: "Auxclick",
     });
   });
   it("uses a caller-supplied partition when given one", async () => {

@@ -432,6 +432,9 @@ loads on a server, ignores server sync and may declare `desktop:local`. Any plug
 - `pty.spawn()`: a local shell, stopped when the plugin stops
 - `pluginFetch(origin, subPath, init)`: calls this plugin's own routes on the desktop's backend ("local") or the linked server ("remote") as the acting user. Bodies can be streams, so a plugin can move big files without the renderer
 
+On the desktop app `process.execPath` is the Electron app, which can't start as plain Node. Never spawn it
+to run a script; run that code in a `worker_threads` Worker (with its own `env` and `argv`) instead.
+
 Use `ctx.audit.subscribe`, `list` and `exportBatches` (`audit:read`) to read the audit trail. Subscribers
 are called after a line is accepted and never delay the action that wrote it.
 

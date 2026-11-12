@@ -22,6 +22,9 @@
 - Over HTTPS the login cookies use the `__Host-` prefix, so another site on a sibling domain can't set or replace them
 - The Docker health check uses Node instead of wget, which is no longer in the image. ping needs no extra capability
 - Server logs mask API keys, tokens, passwords and private keys, also inside error messages
+- Desktop app: the app page is served from its own `app://termix` address instead of from files on disk. Saved view settings move over on the first start. A server older than 26.11.2 that sets `CORS_ALLOWED_ORIGINS` needs `app://termix` added
+- Desktop app: updates install on Windows, macOS, AppImage and deb only after the release's signed `SHA256SUMS` checks out. Releases without it are offered as a download link
+- Desktop app: the local server runs as an Electron utility process, and the app binary can no longer be started as a plain Node or with Node debug flags
 
 ### Fixed
 
@@ -43,6 +46,10 @@
 - Signing out, revoking a session, changing a password, an expired session or an idle timeout now also closes that login's open terminals and other live connections within seconds
 - API key connections end when the key is deleted or expires
 - Live connections follow the same sign in rules as the rest of Termix, including the second factor setup step
+- Desktop app: the local server answers only requests sent to its loopback address, and only the app itself can sign in to it
+- Desktop app: only the app page in the main window can call the desktop app, and every call's input is checked
+- Desktop app: pages opened from an embedded web view keep the same limits as the view
+- Desktop app: settings from the local server for the linked server are checked before use
 - A database save that fails is now reported to the action that asked for it, and a failed save never leaves a cut database file
 - Updated dependencies with known security fixes, including undici, multer and Electron
 - Desktop app: a server's login page only hands its session to the desktop app itself, never to another page shown inside it

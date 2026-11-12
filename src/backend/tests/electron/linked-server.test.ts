@@ -125,3 +125,33 @@ describe("linked server in Electron main", () => {
     expect(linked.isLinkedOrigin(`${ORIGIN}/`)).toBe(false);
   });
 });
+
+describe("link config from the backend", () => {
+  it.each(["file:///etc", "javascript:alert(1)", "not a url", 42])(
+    "drops a link to %s",
+    (origin) => {
+      linked.setLinkedServer({ origin });
+      expect(linked.getLinkedServer()).toBeNull();
+    },
+  );
+
+  it("stores the parsed origin, not the given string", () => {
+    linked.setLinkedServer({ origin: "https://termix.example/some/path" });
+    expect(linked.getLinkedServer()?.origin).toBe(ORIGIN);
+  });
+
+  it("drops headers that could split a request", () => {
+    linked.setLinkedServer({
+      origin: ORIGIN,
+      headers: [
+        { name: "X-Good", value: "ok" },
+        { name: "X-Bad", value: "a\r\nInjected: 1" },
+        { name: "Bad Name", value: "x" },
+        { name: "X-Num", value: 1 },
+      ],
+    });
+    expect(linked.applyLinkHeaders(`${ORIGIN}/`, {})).toEqual({
+      "X-Good": "ok",
+    });
+  });
+});

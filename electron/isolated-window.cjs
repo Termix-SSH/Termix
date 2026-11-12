@@ -55,6 +55,8 @@ function createIsolatedWindows({ BrowserWindow, session, getMainWindow }) {
       nodeIntegration: false,
       webviewTag: false,
       webSecurity: true,
+      // Middle clicks on links never open windows of their own.
+      disableBlinkFeatures: "Auxclick",
     };
     const windows = new Set();
     const allowedCertificateOrigin =

@@ -276,14 +276,33 @@ describe("createUpdater", () => {
       emitter.emit("update-available", { version: "26.10.2" });
     });
     emitter.downloadUpdate = vi.fn(async () => {
-      emitter.emit("update-downloaded", { version: "26.10.2" });
+      emitter.emit("update-downloaded", {
+        version: "26.10.2",
+        downloadedFile: "/cache/Termix-Setup.exe",
+        files: [{ url: "Termix-Setup.exe" }],
+      });
     });
     emitter.quitAndInstall = vi.fn();
     return emitter;
   }
 
-  function setup(kind = "auto", mode = "prompt") {
+  function fakeVerifier(
+    release: () => Promise<unknown> = async () => ({ sums: new Map() }),
+    download: () => Promise<unknown> = async () => "Termix-Setup.exe",
+  ) {
+    return {
+      verifyRelease: vi.fn(release),
+      verifyDownload: vi.fn(download),
+    };
+  }
+
+  function setup(
+    kind = "auto",
+    mode = "prompt",
+    verifier: ReturnType<typeof fakeVerifier> | null = fakeVerifier(),
+  ) {
     const auto = fakeAutoUpdater();
+    const removeFile = vi.fn();
     const saved: string[] = [];
     const sent: Array<Record<string, unknown>> = [];
     const beforeInstall = vi.fn();
@@ -298,8 +317,10 @@ describe("createUpdater", () => {
       send: (state: Record<string, unknown>) => sent.push(state),
       log: () => {},
       beforeInstall,
+      verifier,
+      removeFile,
     });
-    return { auto, updater, saved, sent, beforeInstall };
+    return { auto, updater, saved, sent, beforeInstall, removeFile };
   }
 
   it("asks before downloading in prompt mode", async () => {
@@ -333,6 +354,76 @@ describe("createUpdater", () => {
     expect(beforeInstall).toHaveBeenCalled();
     vi.runAllTimers();
     expect(auto.quitAndInstall).toHaveBeenCalled();
+  });
+
+  it("installs only after the signed checksums and the download pass", async () => {
+    const verifier = fakeVerifier();
+    const { auto, updater } = setup("auto", "prompt", verifier);
+    await updater.check();
+    expect(verifier.verifyRelease).toHaveBeenCalledWith(
+      expect.objectContaining({ tag: "v26.10.2", channelFile: "latest.yml" }),
+    );
+    // The check runs before electron-updater reads the channel file.
+    expect(verifier.verifyRelease.mock.invocationCallOrder[0]).toBeLessThan(
+      (auto.checkForUpdates as ReturnType<typeof vi.fn>).mock
+        .invocationCallOrder[0],
+    );
+    expect(auto.autoInstallOnAppQuit).toBe(false);
+    await updater.download();
+    expect(verifier.verifyDownload).toHaveBeenCalled();
+    expect(auto.autoInstallOnAppQuit).toBe(true);
+  });
+
+  it("offers only a link for a release with no signed checksums", async () => {
+    const unsigned = Object.assign(new Error("none"), { code: "unsigned" });
+    const { auto, updater } = setup(
+      "auto",
+      "automatic",
+      fakeVerifier(async () => {
+        throw unsigned;
+      }),
+    );
+    const state = await updater.check();
+    expect(state).toMatchObject({ kind: "manual", status: "available" });
+    expect(auto.checkForUpdates).not.toHaveBeenCalled();
+    expect((await updater.download()).status).toBe("available");
+    expect(updater.install()).toBe(false);
+  });
+
+  it("refuses a release whose signature fails", async () => {
+    const bad = Object.assign(new Error("bad"), { code: "signature" });
+    const { auto, updater } = setup(
+      "auto",
+      "automatic",
+      fakeVerifier(async () => {
+        throw bad;
+      }),
+    );
+    expect((await updater.check()).status).toBe("error");
+    expect(auto.checkForUpdates).not.toHaveBeenCalled();
+    expect(updater.install()).toBe(false);
+  });
+
+  it("throws away a download that does not match", async () => {
+    const { auto, updater, removeFile } = setup(
+      "auto",
+      "prompt",
+      fakeVerifier(undefined, async () => {
+        throw new Error("mismatch");
+      }),
+    );
+    await updater.check();
+    expect((await updater.download()).status).toBe("error");
+    expect(removeFile).toHaveBeenCalledWith("/cache/Termix-Setup.exe");
+    expect(auto.autoInstallOnAppQuit).toBe(false);
+    expect(updater.install()).toBe(false);
+    expect(auto.quitAndInstall).not.toHaveBeenCalled();
+  });
+
+  it("never updates without a verifier", async () => {
+    const { auto, updater } = setup("auto", "automatic", null);
+    expect((await updater.check()).status).toBe("error");
+    expect(auto.checkForUpdates).not.toHaveBeenCalled();
   });
 
   it("only links the release for installs that can not update", async () => {

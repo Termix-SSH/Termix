@@ -74,6 +74,62 @@ describe("embedded views", () => {
     expect(allow).toHaveBeenCalledWith(false);
   });
 
+  it("gives popups the view's locked down settings and rules", () => {
+    manager.open({
+      id: "p",
+      url: "https://pve.example:8006/",
+      bounds,
+      ignoreCert: true,
+    });
+    const [view] = views;
+    const openHandler = view.webContents.setWindowOpenHandler.mock.calls[0][0];
+    expect(openHandler({ url: "file:///etc/passwd" })).toEqual({
+      action: "deny",
+    });
+    const allowed = openHandler({ url: "https://pve.example:8006/console" });
+    expect(allowed.action).toBe("allow");
+    expect(allowed.overrideBrowserWindowOptions.webPreferences).toMatchObject({
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      webviewTag: false,
+      webSecurity: true,
+      session,
+    });
+
+    // The popup gets the same navigation and window rules as the view.
+    const popupContents = Object.assign(new EventEmitter(), {
+      setWindowOpenHandler: vi.fn(),
+    });
+    const popup = Object.assign(new EventEmitter(), {
+      webContents: popupContents,
+      setMenu: vi.fn(),
+      isDestroyed: () => false,
+      destroy: vi.fn(),
+    });
+    view.webContents.emit("did-create-window", popup);
+    expect(popupContents.setWindowOpenHandler).toHaveBeenCalled();
+    const navigation = { preventDefault: vi.fn() };
+    popupContents.emit("will-navigate", navigation, "file:///tmp/secret");
+    expect(navigation.preventDefault).toHaveBeenCalled();
+
+    // Its certificate errors follow the view's own origin rule.
+    const allow = vi.fn();
+    const event = { preventDefault: vi.fn() };
+    expect(
+      manager.handleCertificateError(
+        event,
+        popupContents,
+        "https://evil.example/",
+        allow,
+      ),
+    ).toBe(true);
+    expect(allow).toHaveBeenCalledWith(false);
+
+    manager.destroy("p");
+    expect(popup.destroy).toHaveBeenCalled();
+  });
+
   it("refuses urls that are not plain http or https", () => {
     expect(() =>
       manager.open({ id: "a", url: "file:///etc/passwd", bounds }),

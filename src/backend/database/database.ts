@@ -41,6 +41,7 @@ import { createPluginAssetsRouter } from "../plugins/assets.js";
 import { getPluginRuntime } from "../plugins/index.js";
 import { pluginEvents, TOPICS } from "../plugins/events.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
+import { embeddedHostGuard } from "../utils/embedded-host.js";
 import { createCompressionMiddleware } from "../utils/compression-config.js";
 import fs from "fs";
 import path from "path";
@@ -123,6 +124,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 app.set("trust proxy", "loopback");
+app.use(embeddedHostGuard);
 app.use(httpsPolicyMiddleware);
 app.use(securityHeadersMiddleware());
 
