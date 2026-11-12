@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const findHostIdBySyncId = vi.fn();
 const canAccessHost = vi.fn();
@@ -30,6 +30,14 @@ vi.mock("../../utils/shared-host-auth-resolver.js", () => ({
  * and host key. `sync_id` is the same string on both sides.
  */
 describe("resolveHostBySyncId", () => {
+  let resolveHostBySyncId: typeof import("../../hosts/host-resolver.js").resolveHostBySyncId;
+
+  // A cold import of the resolver can take longer than one test's timeout
+  // when the whole suite runs.
+  beforeAll(async () => {
+    ({ resolveHostBySyncId } = await import("../../hosts/host-resolver.js"));
+  }, 30_000);
+
   beforeEach(() => {
     vi.clearAllMocks();
     canAccessHost.mockResolvedValue({ hasAccess: true });
@@ -44,9 +52,6 @@ describe("resolveHostBySyncId", () => {
       ip: "10.0.0.7",
       userId: "user-1",
     });
-
-    const { resolveHostBySyncId } =
-      await import("../../hosts/host-resolver.js");
     const host = await resolveHostBySyncId("sync-abc", "user-1");
 
     expect(findHostIdBySyncId).toHaveBeenCalledWith("sync-abc");
@@ -57,9 +62,6 @@ describe("resolveHostBySyncId", () => {
   it("returns null for a sync id this server does not have", async () => {
     // Falling back to the numeric id here is what picked the wrong machine.
     findHostIdBySyncId.mockResolvedValue(null);
-
-    const { resolveHostBySyncId } =
-      await import("../../hosts/host-resolver.js");
 
     await expect(resolveHostBySyncId("sync-unknown", "user-1")).resolves.toBe(
       null,
@@ -72,9 +74,6 @@ describe("resolveHostBySyncId", () => {
     // the id-based path, which must not be bypassed.
     findHostIdBySyncId.mockResolvedValue(41);
     canAccessHost.mockResolvedValue({ hasAccess: false });
-
-    const { resolveHostBySyncId } =
-      await import("../../hosts/host-resolver.js");
 
     await expect(resolveHostBySyncId("sync-abc", "intruder")).resolves.toBe(
       null,
