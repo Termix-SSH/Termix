@@ -12,6 +12,7 @@ import { databaseLogger, authLogger } from "./logger.js";
 import { logAudit, getRequestMeta } from "./audit-logger.js";
 import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
+import { cachedApiKeyMatch, rememberApiKeyMatch } from "./api-key-cache.js";
 import { nanoid } from "nanoid";
 import { inArray, isNotNull } from "drizzle-orm";
 import type { ExternalSessionRef } from "../auth/types.js";
@@ -816,11 +817,17 @@ class AuthManager {
         return;
       }
 
-      let matchedKey: (typeof candidates)[0] | null = null;
-      for (const candidate of candidates) {
-        if (await bcrypt.compare(token, candidate.tokenHash)) {
-          matchedKey = candidate;
-          break;
+      let matchedKey: (typeof candidates)[0] | null = cachedApiKeyMatch(
+        token,
+        candidates,
+      );
+      if (!matchedKey) {
+        for (const candidate of candidates) {
+          if (await bcrypt.compare(token, candidate.tokenHash)) {
+            matchedKey = candidate;
+            rememberApiKeyMatch(token, candidate);
+            break;
+          }
         }
       }
 

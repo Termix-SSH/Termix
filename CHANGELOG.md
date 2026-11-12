@@ -17,6 +17,7 @@
 
 ### Fixed
 
+- API key requests are much faster: the slow key check no longer runs on every request
 - Desktop app: quitting waits for the local server to stop, so it no longer keeps its ports after the app closes
 - Desktop app: the local server and everything it started stop when the app closes or crashes
 - A plugin that hangs while stopping no longer keeps the server from shutting down
