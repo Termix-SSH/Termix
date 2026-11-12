@@ -306,10 +306,14 @@ class DatabaseFileEncryption {
         throw new Error(`Unsupported encryption version: ${metadata.version}`);
       }
 
+      if (metadata.algorithm !== this.ALGORITHM) {
+        throw new Error(`Unsupported algorithm: ${metadata.algorithm}`);
+      }
       const decipher = crypto.createDecipheriv(
-        metadata.algorithm,
+        this.ALGORITHM,
         key,
         Buffer.from(metadata.iv, "hex"),
+        { authTagLength: 16 },
       ) as crypto.DecipherGCM;
       decipher.setAuthTag(Buffer.from(metadata.tag, "hex"));
 
@@ -670,7 +674,7 @@ class DatabaseFileEncryption {
 
   static async restoreFromEncryptedBackup(
     backupPath: string,
-    targetPath: string,
+    targetPath?: string,
   ): Promise<string> {
     if (!this.isEncryptedDatabaseFile(backupPath)) {
       throw new Error("Invalid encrypted backup file");

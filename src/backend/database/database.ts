@@ -75,6 +75,7 @@ import {
   removeExportFile,
   type ExportFile,
 } from "./export-file.js";
+import { resolveRestorePaths } from "./restore-paths.js";
 import {
   importUserPluginRows,
   writeUserPluginTables,
@@ -1583,11 +1584,21 @@ app.post("/database/export/preview", authenticateJWT, async (req, res) => {
  */
 app.post("/database/restore", requireAdmin, async (req, res) => {
   try {
-    const { backupPath, targetPath } = req.body;
-
-    if (!backupPath) {
+    if (!req.body.backupPath) {
       return res.status(400).json({ error: "Backup path is required" });
     }
+
+    const paths = resolveRestorePaths(
+      process.env.DATA_DIR || "./db/data",
+      req.body.backupPath,
+      req.body.targetPath,
+    );
+    if (!paths) {
+      return res
+        .status(400)
+        .json({ error: "Backup and target must be inside the data folder" });
+    }
+    const { backupPath, targetPath } = paths;
 
     if (!DatabaseFileEncryption.isEncryptedDatabaseFile(backupPath)) {
       return res.status(400).json({ error: "Invalid encrypted backup file" });
