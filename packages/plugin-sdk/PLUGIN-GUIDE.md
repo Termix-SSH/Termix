@@ -1023,6 +1023,10 @@ shows the `sha256` for a registry submission. If a dev branch changes `.github/w
 `TERMIX_PLUGIN_SIGNING_KEY`. Keep `.github/workflows/release.yml` as the template has it: the community
 registry checks provenance from it.
 
+CI also lints your workflows with zizmor and fails on high severity findings, like an action not pinned to a
+full commit SHA or an `${{ }}` value inside a `run:` line (pass it through `env:` instead). Termix-SSH
+workflows may stay on `@main`. Add `.github/zizmor.yml` to change the rules.
+
 ## Submitting to the community registry
 
 Before you submit:
