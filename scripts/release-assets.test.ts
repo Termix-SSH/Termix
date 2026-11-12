@@ -12,8 +12,11 @@ const {
   compareAssets,
   createClient,
   expectedAssets,
+  formatSums,
   releaseState,
   stripUploadingLine,
+  sumsFromAssets,
+  sumsFromDir,
   uploadOrder,
   uploadToDraft,
 } = require("./release-assets.cjs");
@@ -38,6 +41,59 @@ const files = (names: string[]) =>
   new Map(names.map((name) => [name, `/tmp/${name}`]));
 
 describe("release-assets", () => {
+  it("expects the signed checksum files on every channel", () => {
+    for (const channel of ["stable", "beta"]) {
+      const names = expectedAssets(channel);
+      expect(names).toContain("SHA256SUMS");
+      expect(names).toContain("SHA256SUMS.sigstore.json");
+    }
+  });
+
+  it("writes sha256sum -c lines sorted by name", () => {
+    const a = "a".repeat(64);
+    const b = "b".repeat(64);
+    expect(
+      formatSums([
+        { name: "z.bin", sha256: b },
+        { name: "a.bin", sha256: a },
+      ]),
+    ).toBe(`${a}  a.bin\n${b}  z.bin\n`);
+  });
+
+  it("builds checksums from the draft digests and skips its own files", () => {
+    const hex = "c".repeat(64);
+    const text = sumsFromAssets([
+      { name: "x.dmg", state: "uploaded", digest: `sha256:${hex}` },
+      { name: "SHA256SUMS", state: "uploaded", digest: `sha256:${hex}` },
+      {
+        name: "SHA256SUMS.sigstore.json",
+        state: "uploaded",
+        digest: `sha256:${hex}`,
+      },
+    ]);
+    expect(text).toBe(`${hex}  x.dmg\n`);
+  });
+
+  it("refuses checksums for an unfinished or digest-less asset", () => {
+    expect(() =>
+      sumsFromAssets([{ name: "x.dmg", state: "starter", digest: "" }]),
+    ).toThrow(/x\.dmg/);
+    expect(() =>
+      sumsFromAssets([{ name: "x.dmg", state: "uploaded", digest: "md5:1" }]),
+    ).toThrow(/x\.dmg/);
+  });
+
+  it("hashes a folder of files", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sums-"));
+    fs.writeFileSync(path.join(dir, "one.txt"), "hello");
+    fs.writeFileSync(path.join(dir, "SHA256SUMS"), "old");
+    const text = sumsFromDir(dir);
+    expect(text).toBe(
+      "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824  one.txt\n",
+    );
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
   it("lists the stable and beta files", () => {
     const stable = expectedAssets("stable");
     const beta = expectedAssets("beta");

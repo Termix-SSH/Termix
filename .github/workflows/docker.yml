@@ -58,6 +58,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -143,12 +144,19 @@ jobs:
           username: bugattiguy527
           password: ${{ secrets.DOCKERHUB_BUGATTIGUY527_TOKEN }}
 
+      - name: Install cosign
+        if: ${{ !inputs.dry_run }}
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+
       - name: Build and push multi-arch image
+        id: build
         uses: useblacksmith/build-push-action@9b0579bbec7a6cad2f171596c57e7ac1e7658850 # v2.3.0
         with:
           context: .
           file: ./docker/Dockerfile
           push: ${{ !inputs.dry_run }}
+          provenance: mode=max
+          sbom: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ env.ALL_TAGS }}
           build-args: |
@@ -178,6 +186,30 @@ jobs:
         run: |
           for tag in $TAGS; do
             docker buildx imagetools create --tag "docker.io/termixssh/termix:$tag" "ghcr.io/termix-ssh/termix:$tag"
+          done
+
+      # Keyless signature on the image digest in every repository it went to.
+      # The attestations from the build ride inside the same image index.
+      - name: Sign the images
+        if: ${{ !inputs.dry_run }}
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          BUILD_TYPE: ${{ inputs.build_type }}
+          HUB_READY: ${{ steps.termix_hub.outputs.ready }}
+        run: |
+          REPOS=(ghcr.io/lukegus/termix ghcr.io/termix-ssh/termix)
+          if [ "$BUILD_TYPE" != "Development" ]; then
+            REPOS+=(docker.io/bugattiguy527/termix)
+          fi
+          if [ "$HUB_READY" = "true" ]; then
+            REPOS+=(docker.io/termixssh/termix)
+          fi
+          if [ -z "$DIGEST" ]; then
+            echo "The build gave no image digest."
+            exit 1
+          fi
+          for repo in "${REPOS[@]}"; do
+            cosign sign --yes "$repo@$DIGEST"
           done
 
       - name: Cleanup Docker

@@ -7,6 +7,8 @@
 - Desktop app: closing the window can quit Termix instead of keeping it in the tray
 - Desktop app: the first time closing the window keeps Termix in the tray, a notice says it is still running and how to quit
 - Admin setting to trust a host's first key without a prompt when nobody can confirm it. Each such key is audited
+- Every desktop file, tarball and Flatpak bundle on a release carries signed build provenance, and each release has a signed `SHA256SUMS` file. Check them with the new Verify your download page in the docs
+- Docker images are signed with cosign and carry build provenance and an SBOM attestation
 - A CycloneDX SBOM of the server's dependencies ships with each build: `/app/sbom.cdx.json` in the Docker image and `termix_sbom.cdx.json` on the release
 
 ### Changed

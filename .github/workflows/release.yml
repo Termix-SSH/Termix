@@ -516,6 +516,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
     with:
       version: ${{ needs.prep.outputs.version }}
       build_type: ${{ needs.prep.outputs.channel == 'Beta' && 'Beta' || 'Production' }}
@@ -641,6 +642,7 @@ jobs:
     permissions:
       contents: write
       id-token: write
+      attestations: write
     uses: ./.github/workflows/electron.yml
     with:
       build_type: all
@@ -676,6 +678,7 @@ jobs:
       contents: write
       pages: write
       id-token: write
+      attestations: write
     uses: ./.github/workflows/flatpak.yml
     with:
       release_tag: ${{ needs.prep.outputs.release_tag }}
@@ -687,11 +690,109 @@ jobs:
     secrets:
       FLATPAK_GPG_KEY: ${{ secrets.FLATPAK_GPG_KEY }}
 
+  # SHA256SUMS over every file, signed keyless with cosign. It goes up last so
+  # it covers the whole draft. Real runs read each file's sha256 from GitHub, so
+  # nothing is downloaded and the download counts stay true.
+  checksums:
+    needs: [prep, create-draft, docker, electron-release, flatpak]
+    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && needs.docker.result == 'success' && needs.electron-release.result == 'success' && needs.flatpak.result == 'success' && (needs.create-draft.result == 'success' || (needs.create-draft.result == 'skipped' && needs.prep.outputs.mode == 'Dry run')) }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TAG: ${{ needs.prep.outputs.release_tag }}
+      RELEASE_ID: ${{ needs.create-draft.outputs.release_id }}
+      MODE: ${{ needs.prep.outputs.mode }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+
+      - name: Download desktop files (dry run)
+        if: ${{ needs.prep.outputs.mode == 'Dry run' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: termix_*
+          path: artifacts
+
+      - name: Download Flatpak bundles (dry run)
+        if: ${{ needs.prep.outputs.mode == 'Dry run' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: flatpak-bundles
+          path: artifacts/flatpak-bundles
+
+      - name: App token
+        id: app
+        if: ${{ needs.prep.outputs.mode != 'Dry run' }}
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+
+      # A rerun after the bundle is up must not sign again.
+      - name: Look for an earlier run
+        id: earlier
+        if: ${{ needs.prep.outputs.mode != 'Dry run' }}
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          NAMES=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets" -q '.[].name')
+          if printf '%s\n' "$NAMES" | grep -qx 'SHA256SUMS.sigstore.json'; then
+            echo "The draft already has its signed checksums."
+            echo "done=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write the checksums
+        if: ${{ steps.earlier.outputs.done != 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          mkdir sums
+          if [ "$MODE" = "Dry run" ]; then
+            node scripts/release-assets.cjs sums --dir artifacts --out sums/SHA256SUMS
+          else
+            node scripts/release-assets.cjs sums --tag "$TAG" --out sums/SHA256SUMS
+          fi
+
+      - name: Sign the checksums
+        if: ${{ steps.earlier.outputs.done != 'true' }}
+        run: cosign sign-blob --yes --bundle sums/SHA256SUMS.sigstore.json sums/SHA256SUMS
+
+      - name: Add to the draft release
+        if: ${{ needs.prep.outputs.mode != 'Dry run' && steps.earlier.outputs.done != 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: node scripts/release-assets.cjs upload --tag "$TAG" --dir sums
+
+      - name: Keep the checksums (dry run)
+        if: ${{ needs.prep.outputs.mode == 'Dry run' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-checksums
+          path: sums
+          retention-days: 7
+
   # Needs every build. Checks the draft holds exactly the expected files, then
   # publishes it. A failed build leaves the draft a draft.
   publish:
-    needs: [prep, create-draft, docker, electron-release, flatpak]
-    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && needs.docker.result == 'success' && needs.electron-release.result == 'success' && needs.flatpak.result == 'success' && (needs.create-draft.result == 'success' || (needs.create-draft.result == 'skipped' && needs.prep.outputs.mode == 'Dry run')) }}
+    needs: [prep, create-draft, docker, electron-release, flatpak, checksums]
+    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && needs.checksums.result == 'success' && needs.docker.result == 'success' && needs.electron-release.result == 'success' && needs.flatpak.result == 'success' && (needs.create-draft.result == 'success' || (needs.create-draft.result == 'skipped' && needs.prep.outputs.mode == 'Dry run')) }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     permissions:
@@ -725,6 +826,13 @@ jobs:
         with:
           name: flatpak-bundles
           path: artifacts/flatpak-bundles
+
+      - name: Download checksums (dry run)
+        if: ${{ needs.prep.outputs.mode == 'Dry run' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-checksums
+          path: artifacts/checksums
 
       - name: Check the files (dry run)
         if: ${{ needs.prep.outputs.mode == 'Dry run' }}
@@ -788,6 +896,7 @@ jobs:
     permissions:
       contents: write
       id-token: write
+      attestations: write
     uses: ./.github/workflows/electron.yml
     with:
       build_type: all

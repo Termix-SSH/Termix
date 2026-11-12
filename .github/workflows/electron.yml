@@ -1071,6 +1071,8 @@ jobs:
     needs: [build-windows, build-linux, build-macos]
     permissions:
       contents: write
+      id-token: write
+      attestations: write
 
     env:
       RELEASE_TAG: ${{ inputs.release_tag }}
@@ -1099,6 +1101,12 @@ jobs:
         with:
           pattern: termix_*
           path: artifacts
+
+      # Signed build provenance for every desktop file, the tarballs and the SBOM.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: artifacts/**
 
       # Uploads only to a draft and never replaces a file, so a rerun skips
       # what is already there. Update files go up last.

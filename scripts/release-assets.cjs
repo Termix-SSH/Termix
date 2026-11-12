@@ -10,6 +10,7 @@
  *   upload --tag <tag> --dir <dir>          upload files to the draft
  *   check --channel <c> (--tag <t> | --dir <d>)
  *                                           fail on missing or unexpected files
+ *   sums (--tag <t> | --dir <d>) --out <f>  write SHA256SUMS over every file
  *
  * Uploads never replace a file. A file already on the draft with the same
  * sha256 is skipped, so rerunning a failed job is safe. Anything else fails.
@@ -25,7 +26,14 @@ const UPLOADS = "https://uploads.github.com";
 const UPLOADING_LINE =
   "Desktop files are still uploading. This release is published when they are done.";
 
+// The signed checksum list and its Sigstore bundle. They are made last and
+// never listed inside the checksums themselves.
+const SUMS_FILE = "SHA256SUMS";
+const SUMS_BUNDLE = "SHA256SUMS.sigstore.json";
+
 const COMMON = [
+  SUMS_BUNDLE,
+  SUMS_FILE,
   "com.karmaa.termix.flatpakref",
   "termix_linux_aarch64_flatpak.flatpak",
   "termix_linux_arm64_appimage.AppImage",
@@ -95,6 +103,44 @@ function compareAssets(channel, names) {
     missing: [...want].filter((name) => !have.has(name)).sort(),
     unexpected: [...have].filter((name) => !want.has(name)).sort(),
   };
+}
+
+/** sha256sum -c format: "<hex>  <name>", sorted by name. */
+function formatSums(entries) {
+  return (
+    [...entries]
+      .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+      .map(({ name, sha256 }) => `${sha256}  ${name}`)
+      .join("\n") + "\n"
+  );
+}
+
+const isSumsFile = (name) => name === SUMS_FILE || name === SUMS_BUNDLE;
+
+/** Checksums of a folder of files, read from disk. */
+function sumsFromDir(dir, hash = sha256File) {
+  const entries = [];
+  for (const [name, file] of collectFiles(dir)) {
+    if (!isSumsFile(name)) entries.push({ name, sha256: hash(file) });
+  }
+  return formatSums(entries);
+}
+
+/**
+ * Checksums of a draft's files from the sha256 GitHub recorded at upload, so
+ * nothing is downloaded (downloads would add to the public counts).
+ */
+function sumsFromAssets(assets) {
+  const entries = [];
+  for (const asset of assets) {
+    if (isSumsFile(asset.name)) continue;
+    const match = /^sha256:([0-9a-f]{64})$/.exec(String(asset.digest || ""));
+    if (asset.state !== "uploaded" || !match) {
+      throw new Error(`${asset.name} has no finished upload with a sha256`);
+    }
+    entries.push({ name: asset.name, sha256: match[1] });
+  }
+  return formatSums(entries);
 }
 
 function addUploadingLine(body) {
@@ -317,6 +363,19 @@ async function main(argv) {
     console.log(
       `Uploaded ${uploaded.length}, already there ${skipped.length}.`,
     );
+  } else if (command === "sums") {
+    if (!args.out)
+      throw new Error("usage: sums (--tag <t> | --dir <d>) --out <f>");
+    let text;
+    if (args.dir) {
+      text = sumsFromDir(args.dir);
+    } else {
+      const c = client();
+      const release = await draftFor(c, args.tag);
+      text = sumsFromAssets(await c.listAssets(release.id));
+    }
+    fs.writeFileSync(args.out, text);
+    console.log(`Wrote ${text.trim().split("\n").length} checksums.`);
   } else if (command === "check") {
     if (args.dir) {
       report(args.channel, [...collectFiles(args.dir).keys()]);
@@ -354,7 +413,10 @@ module.exports = {
   compareAssets,
   createClient,
   expectedAssets,
+  formatSums,
   releaseState,
+  sumsFromAssets,
+  sumsFromDir,
   stripUploadingLine,
   uploadOrder,
   uploadToDraft,
