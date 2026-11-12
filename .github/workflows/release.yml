@@ -621,7 +621,12 @@ jobs:
               FLAGS=(--draft --title "$TITLE" --notes-file RELEASE_BODY.md --target "$TARGET_SHA")
               if [ "$PRERELEASE" = "true" ]; then FLAGS+=(--prerelease); fi
               gh release create "$TAG" --repo "$GITHUB_REPOSITORY" "${FLAGS[@]}" > /dev/null
-              ID=$(node scripts/release-assets.cjs state --tag "$TAG" | sed -n 's/^id=//p')
+              # A new draft can take a few seconds to show up in the list.
+              for _ in 1 2 3 4 5 6 7 8 9 10; do
+                ID=$(node scripts/release-assets.cjs state --tag "$TAG" | sed -n 's/^id=//p')
+                if [ -n "$ID" ]; then break; fi
+                sleep 3
+              done
               ;;
             *)
               echo "Could not read the state of $TAG."
