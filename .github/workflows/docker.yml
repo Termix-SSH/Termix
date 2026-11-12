@@ -41,6 +41,8 @@ on:
         default: ""
     # The values come from the build environment.
     secrets:
+      GHCR_LUKEGUS_TOKEN:
+        required: false
       DOCKERHUB_BUGATTIGUY527_TOKEN:
         required: false
       DOCKERHUB_TERMIXSSH_TOKEN:
@@ -129,13 +131,16 @@ jobs:
             echo "TAGS=${TAGS[*]}"
           } >> "$GITHUB_ENV"
 
+      # ghcr.io/lukegus/termix belongs to a personal account, which an org
+      # repo's GITHUB_TOKEN can't push to. A classic token from that account
+      # with only write:packages pushes to both GHCR repositories.
       - name: Login to GHCR
         if: ${{ !inputs.dry_run }}
         uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: lukegus
+          password: ${{ secrets.GHCR_LUKEGUS_TOKEN }}
 
       - name: Login to Docker Hub (prod and beta only)
         if: ${{ (inputs.build_type == 'Production' || inputs.build_type == 'Beta') && !inputs.dry_run }}

@@ -523,6 +523,7 @@ jobs:
       dry_run: ${{ needs.prep.outputs.mode == 'Dry run' }}
       source_ref: ${{ needs.merge-to-main.outputs.build_ref || needs.translate.outputs.sha || needs.prep.outputs.sha }}
     secrets:
+      GHCR_LUKEGUS_TOKEN: ${{ secrets.GHCR_LUKEGUS_TOKEN }}
       DOCKERHUB_BUGATTIGUY527_TOKEN: ${{ secrets.DOCKERHUB_BUGATTIGUY527_TOKEN }}
       DOCKERHUB_TERMIXSSH_TOKEN: ${{ secrets.DOCKERHUB_TERMIXSSH_TOKEN }}
 
