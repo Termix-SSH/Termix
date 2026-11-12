@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.6
+
+Plugin API 1.17.0.
+
+### Fixed
+
+- `execElevated` sends the sudo password on stdin instead of putting it in the command. `buildSudoCommand` no longer takes the password: send `sudoStdin(password)` as the command's stdin
+- `execCommand` takes an optional `stdin`
+
 ## 1.1.5
 
 Plugin API 1.17.0.
