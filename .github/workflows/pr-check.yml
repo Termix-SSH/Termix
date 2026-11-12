@@ -192,6 +192,12 @@ jobs:
 
       - name: Lockfile lint and osv-scanner
         uses: Termix-SSH/Termix-Registry/.github/actions/supply-chain@main
+        with:
+          aliases: >-
+            prebuild-install:@mmomtchev/prebuild-install
+            string-width-cjs:string-width
+            strip-ansi-cjs:strip-ansi
+            wrap-ansi-cjs:wrap-ansi
 
   # Fails on high severity zizmor findings in this repo's workflows.
   workflow-lint:
