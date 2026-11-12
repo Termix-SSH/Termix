@@ -115,6 +115,7 @@ class FieldCrypto {
       this.ALGORITHM,
       fieldKey,
       Buffer.from(encrypted.iv, "hex"),
+      { authTagLength: 16 },
     ) as crypto.DecipherGCM;
     decipher.setAuthTag(Buffer.from(encrypted.tag, "hex"));
 

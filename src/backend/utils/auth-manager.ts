@@ -288,6 +288,7 @@ class AuthManager {
       "aes-256-gcm",
       encryptionKey,
       Buffer.from(wrapped.iv, "base64url"),
+      { authTagLength: 16 },
     );
     decipher.setAAD(this.getDataKeyAAD(userId, sessionId));
     decipher.setAuthTag(Buffer.from(wrapped.tag, "base64url"));

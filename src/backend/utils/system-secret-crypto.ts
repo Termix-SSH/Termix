@@ -77,6 +77,7 @@ export async function decryptSystemSecret(stored: string): Promise<string> {
     ALGORITHM,
     key,
     Buffer.from(ivPart, "base64"),
+    { authTagLength: 16 },
   );
   decipher.setAuthTag(Buffer.from(tagPart, "base64"));
 

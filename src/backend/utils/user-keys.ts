@@ -213,6 +213,7 @@ export class UserKeyManager {
       WRAP_ALGORITHM,
       wrapKey,
       Buffer.from(wrapped.iv, "base64"),
+      { authTagLength: 16 },
     );
     decipher.setAAD(Buffer.from(userId, "utf8"));
     decipher.setAuthTag(Buffer.from(wrapped.tag, "base64"));
