@@ -198,6 +198,24 @@ describe("release-assets", () => {
     expect(client.uploads).toEqual([]);
   });
 
+  it("finds a draft by id when its tag reads untagged", async () => {
+    const draft = { id: 9, tag_name: "untagged-abc", draft: true };
+    const client = fakeClient([draft]);
+    const upload = (id?: number) =>
+      uploadToDraft(client, {
+        tag: "v1.0.0",
+        id,
+        files: files(["a.exe"]),
+        log: () => {},
+        hash: () => "x",
+        read: () => Buffer.from(""),
+      });
+    await expect(upload()).rejects.toThrow(/no draft release/);
+    expect(await upload(9)).toEqual({ uploaded: ["a.exe"], skipped: [] });
+    client.getRelease = async () => ({ ...draft, draft: false });
+    await expect(upload(9)).rejects.toThrow(/already published/);
+  });
+
   it("stops when the release is published mid upload", async () => {
     const release = { id: 1, tag_name: "v1.0.0", draft: true };
     const client = fakeClient([release]);

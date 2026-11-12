@@ -24,6 +24,11 @@ on:
         description: "Release tag to package"
         required: true
         type: string
+      release_id:
+        description: "Id of the draft to upload to"
+        required: false
+        type: string
+        default: ""
       source_ref:
         description: "Commit to build the packaging from (the draft has no tag yet)"
         required: false
@@ -233,6 +238,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.release_tag }}
+          RELEASE_ID: ${{ inputs.release_id }}
         run: node scripts/release-assets.cjs upload --tag "$TAG" --dir bundles
 
       - name: Upload repo for Pages

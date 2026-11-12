@@ -615,7 +615,8 @@ jobs:
               fi
               gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$ID" \
                 -f name="$TITLE" -F body=@RELEASE_BODY.md \
-                -f target_commitish="$TARGET_SHA" -F prerelease="$PRERELEASE" > /dev/null
+                -f tag_name="$TAG" -f target_commitish="$TARGET_SHA" \
+                -F prerelease="$PRERELEASE" > /dev/null
               ;;
             none)
               FLAGS=(--draft --title "$TITLE" --notes-file RELEASE_BODY.md --target "$TARGET_SHA")
@@ -653,6 +654,7 @@ jobs:
       build_type: all
       artifact_destination: ${{ needs.prep.outputs.mode == 'Dry run' && 'file' || 'release' }}
       release_tag: ${{ needs.prep.outputs.release_tag }}
+      release_id: ${{ needs.create-draft.outputs.release_id }}
       version_override: ${{ needs.prep.outputs.channel == 'Beta' && needs.prep.outputs.version || '' }}
       source_ref: ${{ needs.merge-to-main.outputs.build_ref || needs.translate.outputs.sha || needs.prep.outputs.sha }}
     secrets:
@@ -677,7 +679,7 @@ jobs:
   # Builds from this run's tarballs and adds the bundles to the draft. The live
   # Flatpak repo only moves after the release is published.
   flatpak:
-    needs: [prep, translate, merge-to-main, electron-release]
+    needs: [prep, translate, merge-to-main, create-draft, electron-release]
     if: ${{ always() && needs.electron-release.result == 'success' }}
     permissions:
       contents: write
@@ -687,6 +689,7 @@ jobs:
     uses: ./.github/workflows/flatpak.yml
     with:
       release_tag: ${{ needs.prep.outputs.release_tag }}
+      release_id: ${{ needs.create-draft.outputs.release_id }}
       source_ref: ${{ needs.merge-to-main.outputs.build_ref || needs.translate.outputs.sha || needs.prep.outputs.sha }}
       from_run: true
       upload: ${{ needs.prep.outputs.mode != 'Dry run' }}
@@ -872,7 +875,8 @@ jobs:
           LATEST=false
           if [ "$CHANNEL" = "stable" ]; then LATEST=true; fi
           gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" \
-            -F draft=false -f make_latest="$LATEST" -F body=@RELEASE_BODY.md > /dev/null
+            -f tag_name="$TAG" -F draft=false -f make_latest="$LATEST" \
+            -F body=@RELEASE_BODY.md > /dev/null
 
           STATE=$(node scripts/release-assets.cjs state --tag "$TAG" | sed -n 's/^state=//p')
           if [ "$STATE" != "published" ]; then

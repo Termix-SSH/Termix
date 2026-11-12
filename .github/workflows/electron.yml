@@ -46,6 +46,11 @@ on:
         required: false
         type: string
         default: ""
+      release_id:
+        description: "Id of that draft, which finds it even when its tag reads untagged"
+        required: false
+        type: string
+        default: ""
       version_override:
         description: "Version string to stamp into built artifacts instead of package.json's version"
         required: false
@@ -1076,6 +1081,7 @@ jobs:
 
     env:
       RELEASE_TAG: ${{ inputs.release_tag }}
+      RELEASE_ID: ${{ inputs.release_id }}
     steps:
       - name: Need a draft release tag
         run: |

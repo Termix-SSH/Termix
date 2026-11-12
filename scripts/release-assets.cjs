@@ -257,7 +257,18 @@ async function releaseState(client, tag) {
   return { state: "draft", release: matches[0] };
 }
 
-async function draftFor(client, tag) {
+// By id when there is one: a draft's tag can read "untagged-..." in the API
+// until it is published, so a tag search can miss it.
+async function draftFor(client, tag, id) {
+  if (id) {
+    const release = await client.getRelease(id);
+    if (!release.draft) {
+      throw new Error(
+        `${tag} is already published and can't change; cut a new patch version`,
+      );
+    }
+    return release;
+  }
   const { state, release } = await releaseState(client, tag);
   if (state === "none") throw new Error(`no draft release for ${tag}`);
   if (state === "published") {
@@ -270,9 +281,16 @@ async function draftFor(client, tag) {
 
 async function uploadToDraft(
   client,
-  { tag, files, log = console.log, hash = sha256File, read = fs.readFileSync },
+  {
+    tag,
+    id,
+    files,
+    log = console.log,
+    hash = sha256File,
+    read = fs.readFileSync,
+  },
 ) {
-  const release = await draftFor(client, tag);
+  const release = await draftFor(client, tag, id);
   const assets = new Map(
     (await client.listAssets(release.id)).map((asset) => [asset.name, asset]),
   );
@@ -330,6 +348,7 @@ function report(channel, names) {
 
 async function main(argv) {
   const args = parseArgs(argv);
+  const draftId = args.id || process.env.RELEASE_ID || "";
   const [command, sub, file] = args._;
   const client = () =>
     createClient({
@@ -358,6 +377,7 @@ async function main(argv) {
     const files = collectFiles(args.dir);
     const { uploaded, skipped } = await uploadToDraft(client(), {
       tag: args.tag,
+      id: draftId,
       files,
     });
     console.log(
@@ -371,7 +391,7 @@ async function main(argv) {
       text = sumsFromDir(args.dir);
     } else {
       const c = client();
-      const release = await draftFor(c, args.tag);
+      const release = await draftFor(c, args.tag, draftId);
       text = sumsFromAssets(await c.listAssets(release.id));
     }
     fs.writeFileSync(args.out, text);
@@ -381,7 +401,7 @@ async function main(argv) {
       report(args.channel, [...collectFiles(args.dir).keys()]);
     } else {
       const c = client();
-      const release = await draftFor(c, args.tag);
+      const release = await draftFor(c, args.tag, draftId);
       const assets = await c.listAssets(release.id);
       const broken = assets.filter((asset) => asset.state !== "uploaded");
       if (broken.length) {
