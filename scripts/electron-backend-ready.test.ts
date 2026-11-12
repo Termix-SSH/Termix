@@ -50,8 +50,8 @@ function start() {
       statSync: () => ({ isDirectory: () => true }),
       writeFileSync: vi.fn(),
     },
-    fork: () => child,
-    backendSpawnOptions: () => ({}),
+    utilityProcess: { fork: () => child },
+    wrapUtilityProcess: (proc: unknown) => proc,
     app: {
       isPackaged: true,
       getVersion: () => "2.9.0",
@@ -135,7 +135,8 @@ describe("backend readiness announcement", () => {
         setGlobalLogLevel(level);
         runInNewContext(announceReady, {
           systemLogger,
-          process: { env: { ELECTRON_EMBEDDED: "true" }, send },
+          process: { env: { ELECTRON_EMBEDDED: "true" } },
+          sendToParent: send,
           initStartTime: Date.now(),
         });
         expect(log).not.toHaveBeenCalled();
@@ -152,6 +153,7 @@ describe("backend readiness announcement", () => {
       runInNewContext(announceReady, {
         systemLogger: { success: vi.fn() },
         process: { env: {} },
+        sendToParent: () => false,
         initStartTime: Date.now(),
       }),
     ).not.toThrow();

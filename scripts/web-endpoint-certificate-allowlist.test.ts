@@ -39,7 +39,7 @@ describe("web endpoint certificate allowlist", () => {
     expect(check.slice(0, 700)).toContain('parsed.protocol !== "https:"');
 
     const handler = source.slice(
-      source.indexOf('ipcMain.handle("allow-invalid-certificate-for-origin"'),
+      source.indexOf('ipc.handle("allow-invalid-certificate-for-origin"'),
     );
     expect(handler.slice(0, 800)).toContain('parsed.protocol !== "https:"');
   });
@@ -59,7 +59,7 @@ describe("web endpoint certificate allowlist", () => {
     // Otherwise a path or a wildcard in the supplied value could widen the
     // allowance beyond one exact origin.
     const handler = source.slice(
-      source.indexOf('ipcMain.handle("allow-invalid-certificate-for-origin"'),
+      source.indexOf('ipc.handle("allow-invalid-certificate-for-origin"'),
     );
     const body = handler.slice(0, 800);
     expect(body).toContain(

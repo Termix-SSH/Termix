@@ -5,6 +5,11 @@
  */
 
 import { pluginLogger } from "../utils/logger.js";
+import {
+  hasParentChannel,
+  onParentMessage,
+  sendToParent,
+} from "../utils/parent-channel.js";
 
 interface ReloadRequest {
   type: "plugin-reload";
@@ -24,10 +29,7 @@ function isReloadRequest(msg: unknown): msg is ReloadRequest {
 }
 
 export function isDevReloadEnabled(): boolean {
-  return (
-    process.env.TERMIX_DEV_RELOAD === "true" &&
-    typeof process.send === "function"
-  );
+  return process.env.TERMIX_DEV_RELOAD === "true" && hasParentChannel();
 }
 
 export async function handleDevMessage(
@@ -53,10 +55,10 @@ export async function handleDevMessage(
 
 export function listenForDevReloads(): void {
   if (!isDevReloadEnabled()) return;
-  process.on("message", (msg: unknown) => {
+  onParentMessage((msg: unknown) => {
     void handleDevMessage(
       msg,
-      (reply) => process.send?.(reply),
+      (reply) => sendToParent(reply),
       async (id) => {
         const { reloadBundledPlugin } = await import("./manage.js");
         return reloadBundledPlugin(id);

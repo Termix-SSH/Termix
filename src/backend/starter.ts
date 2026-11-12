@@ -13,6 +13,7 @@ import {
 } from "./utils/logger.js";
 import { getTrustedProxyAuthConfig } from "./utils/trusted-proxy-auth.js";
 import { createShutdown, exitWithParent } from "./utils/shutdown.js";
+import { onParentMessage, sendToParent } from "./utils/parent-channel.js";
 
 const embedded = process.env.ELECTRON_EMBEDDED === "true";
 // The desktop app kills the backend after 5 s, Docker after 10 s.
@@ -71,8 +72,10 @@ const gracefulShutdown = createShutdown(
 // works too.
 process.on("SIGINT", () => void gracefulShutdown("SIGINT"));
 process.on("SIGTERM", () => void gracefulShutdown("SIGTERM"));
-process.on("message", (msg: { type?: string }) => {
-  if (msg?.type === "shutdown") void gracefulShutdown("IPC shutdown");
+onParentMessage((msg) => {
+  if ((msg as { type?: string } | null)?.type === "shutdown") {
+    void gracefulShutdown("IPC shutdown");
+  }
 });
 if (process.send) {
   exitWithParent(gracefulShutdown, { exit: (code) => process.exit(code) });
@@ -368,7 +371,7 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       process.env.ELECTRON_EMBEDDED === "true" ||
       process.env.TERMIX_DEV_RELOAD === "true"
     ) {
-      process.send?.({ type: "backend-ready" });
+      sendToParent({ type: "backend-ready" });
     }
 
     if (process.env.TERMIX_DEV_RELOAD === "true") {

@@ -1,15 +1,72 @@
 // Starting and stopping the embedded backend so nothing it started outlives
-// the app. On macOS and Linux the backend leads its own process group, so the
-// whole group can be killed at once. Windows has no groups, taskkill /T walks
-// the tree instead.
+// the app. The backend runs as an Electron utility process, which is not a
+// process group leader, so on macOS and Linux its descendants are found from
+// ps and killed leaves first. Windows uses taskkill /T.
 
 const { spawnSync } = require("child_process");
 
 const BACKEND_STOP_TIMEOUT_MS = 5000;
 
-function backendSpawnOptions(platform = process.platform) {
-  // detached on Windows opens a console window and does not make a group.
-  return platform === "win32" ? {} : { detached: true };
+/** Every process below pid, deepest first, read from `ps`. */
+function listDescendants(pid, deps = {}) {
+  const run = deps.spawnSync ?? spawnSync;
+  if (!Number.isInteger(pid) || pid <= 0) return [];
+  const result = run("ps", ["-A", "-o", "pid=,ppid="], {
+    encoding: "utf8",
+    timeout: 5000,
+  });
+  if (result?.status !== 0 || typeof result.stdout !== "string") return [];
+  const children = new Map();
+  for (const line of result.stdout.split(/\r?\n/)) {
+    const [child, parent] = line.trim().split(/\s+/).map(Number);
+    if (!Number.isInteger(child) || !Number.isInteger(parent)) continue;
+    if (!children.has(parent)) children.set(parent, []);
+    children.get(parent).push(child);
+  }
+  const out = [];
+  const walk = (id, seen) => {
+    for (const child of children.get(id) ?? []) {
+      if (seen.has(child)) continue;
+      seen.add(child);
+      walk(child, seen);
+      out.push(child);
+    }
+  };
+  walk(pid, new Set([pid]));
+  return out;
+}
+
+/**
+ * Makes an Electron utility process look like a forked child to the code
+ * below: send, exitCode and the exit event.
+ */
+function wrapUtilityProcess(proc) {
+  const wrapper = {
+    get pid() {
+      return proc.pid;
+    },
+    exitCode: null,
+    signalCode: null,
+    get killed() {
+      return wrapper.exitCode !== null;
+    },
+    stdout: proc.stdout,
+    stderr: proc.stderr,
+    send: (message) => proc.postMessage(message),
+    kill: () => proc.kill(),
+    on: (event, listener) => {
+      proc.on(event, listener);
+      return wrapper;
+    },
+    once: (event, listener) => {
+      proc.once(event, listener);
+      return wrapper;
+    },
+  };
+  proc.once("exit", (code) => {
+    wrapper.exitCode = typeof code === "number" ? code : 1;
+  });
+  return wrapper;
 }
 
 function killProcessTree(pid, deps = {}) {
@@ -25,6 +82,16 @@ function killProcessTree(pid, deps = {}) {
       timeout: 5000,
     });
     return result?.status === 0;
+  }
+
+  if (!deps.groupOnly) {
+    for (const child of listDescendants(pid, { spawnSync: run })) {
+      try {
+        kill(child, "SIGKILL");
+      } catch {
+        // Already gone.
+      }
+    }
   }
 
   try {
@@ -66,6 +133,11 @@ function stopBackendProcess(child, deps = {}) {
     return Promise.resolve("exited");
   }
   const pid = child.pid;
+  // Taken before the backend exits: once it is gone its children belong to
+  // init and can no longer be found from its pid.
+  const tree =
+    platform === "win32" ? [] : (deps.listDescendants ?? listDescendants)(pid);
+  const kill = deps.kill ?? process.kill.bind(process);
 
   return new Promise((resolve) => {
     let done = false;
@@ -74,8 +146,18 @@ function stopBackendProcess(child, deps = {}) {
       if (done) return;
       done = true;
       clearTimeout(timer);
-      // Anything the backend left behind in its group goes with it.
-      if (platform !== "win32") killTree(pid, { groupOnly: true });
+      // Anything the backend left behind goes with it.
+      if (platform !== "win32") {
+        killTree(pid, { groupOnly: true });
+        for (const leftover of tree) {
+          if (!isAlive(leftover, kill)) continue;
+          try {
+            kill(leftover, "SIGKILL");
+          } catch {
+            // Already gone.
+          }
+        }
+      }
       resolve(killed ? "killed" : "exited");
     };
 
@@ -99,8 +181,9 @@ function stopBackendProcess(child, deps = {}) {
 
 module.exports = {
   BACKEND_STOP_TIMEOUT_MS,
-  backendSpawnOptions,
   killProcessTree,
+  listDescendants,
+  wrapUtilityProcess,
   isAlive,
   stopBackendProcess,
 };

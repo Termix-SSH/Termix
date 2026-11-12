@@ -57,9 +57,17 @@ describe("isCorsOriginAllowed", () => {
     it("still allows the desktop app and the dev server", () => {
       process.env.ELECTRON_EMBEDDED = "true";
       const req = request({ host: "127.0.0.1:30001" });
-      expect(isCorsOriginAllowed(req, "file://")).toBe(true);
+      expect(isCorsOriginAllowed(req, "app://termix")).toBe(true);
       expect(isCorsOriginAllowed(req, "http://localhost:5173")).toBe(true);
       expect(isCorsOriginAllowed(req, undefined)).toBe(true);
+    });
+
+    it("refuses the old file:// page and look alike schemes", () => {
+      process.env.ELECTRON_EMBEDDED = "true";
+      const req = request({ host: "127.0.0.1:30001" });
+      expect(isCorsOriginAllowed(req, "file://")).toBe(false);
+      expect(isCorsOriginAllowed(req, "app://evil")).toBe(false);
+      expect(isCorsOriginAllowed(req, "app://termix.evil")).toBe(false);
     });
 
     it("allows an explicitly configured origin", () => {
@@ -73,9 +81,10 @@ describe("isCorsOriginAllowed", () => {
 });
 
 describe("isDesktopAppOrigin", () => {
-  it("accepts no origin, file:// and the dev server", () => {
+  it("accepts no origin, the app and the dev server", () => {
     expect(isDesktopAppOrigin(undefined)).toBe(true);
-    expect(isDesktopAppOrigin("file://")).toBe(true);
+    expect(isDesktopAppOrigin("app://termix")).toBe(true);
+    expect(isDesktopAppOrigin("file://")).toBe(false);
     expect(isDesktopAppOrigin("http://127.0.0.1:5173")).toBe(true);
   });
 

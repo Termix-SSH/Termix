@@ -6,6 +6,7 @@ const own = "https://termix.example.com";
 
 describe("GHSA-53h8-rg9m-4r6c desktop login frame token target", () => {
   it.each([
+    [["app://termix"], "app://termix"],
     [["file://"], "*"],
     [["http://localhost:5173"], "http://localhost:5173"],
     [["http://127.0.0.1:30001"], "http://127.0.0.1:30001"],
@@ -18,6 +19,8 @@ describe("GHSA-53h8-rg9m-4r6c desktop login frame token target", () => {
     [["https://evil.example"]],
     [["https://evil.example", "file://"]],
     [["null"]],
+    [["app://evil"]],
+    [["https://evil.example", "app://termix"]],
     [["http://localhost.evil.example"]],
     [["https://localhost:5173"]],
     [[]],

@@ -3,7 +3,9 @@ import type { Request, Response, NextFunction } from "express";
 import { getRequestOrigin } from "./request-origin.js";
 
 const DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"];
-const ELECTRON_FILE_ORIGIN = "file://";
+export const DESKTOP_APP_ORIGIN = "app://termix";
+// Desktop builds before 26.11.2 load their page from file://.
+const LEGACY_DESKTOP_ORIGIN = "file://";
 
 function getAllowedOrigins(): string[] {
   const envOrigins = process.env.CORS_ALLOWED_ORIGINS;
@@ -21,9 +23,7 @@ function getAllowedOrigins(): string[] {
  */
 export function isDesktopAppOrigin(origin: string | undefined): boolean {
   if (!origin) return true;
-  return (
-    DEV_ORIGINS.includes(origin) || origin.startsWith(ELECTRON_FILE_ORIGIN)
-  );
+  return DEV_ORIGINS.includes(origin) || origin === DESKTOP_APP_ORIGIN;
 }
 
 export function isCorsOriginAllowed(
@@ -34,8 +34,10 @@ export function isCorsOriginAllowed(
 
   const configured = getAllowedOrigins();
   if (process.env.ELECTRON_EMBEDDED === "true") {
+    // Only the desktop app of the same build talks to this backend.
     return configured.includes(origin) || origin === getRequestOrigin(req);
   }
+  if (origin === LEGACY_DESKTOP_ORIGIN) return true;
   if (configured.length === 0) return true;
   if (configured.includes(origin)) return true;
 

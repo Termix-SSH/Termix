@@ -55,7 +55,9 @@ export function desktopParentTarget(
 ): string | null {
   const parent = ancestors && ancestors.length > 0 ? ancestors[0] : null;
   if (!parent) return null;
-  // The packaged app's page. A file:// origin cannot be named as a target.
+  // The packaged app's page.
+  if (parent === "app://termix") return parent;
+  // Desktop builds before 26.11.2 ran from file://, which cannot be named.
   if (parent === "file://") return "*";
   if (LOOPBACK_ORIGIN.test(parent) || parent === own) return parent;
   return null;

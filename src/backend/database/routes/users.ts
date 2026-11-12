@@ -23,11 +23,9 @@ import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { parseUserAgent } from "../../utils/user-agent-parser.js";
-import { isDesktopAppOrigin } from "../../utils/cors-config.js";
 import { deleteUserAndRelatedData } from "./delete-user-data.js";
 import {
-  allowsDesktopAutoSession,
-  isLoopbackRequest,
+  desktopAutoSessionRefusal,
   extractBearerOrCookieToken,
   isNativeTokenExportRequest,
   resolveDesktopAutoSessionUser,
@@ -730,11 +728,7 @@ router.get("/setup-required", async (req, res) => {
  */
 router.post("/internal/auto-session", async (req, res) => {
   try {
-    if (
-      !allowsDesktopAutoSession() ||
-      !isLoopbackRequest(req) ||
-      !isDesktopAppOrigin(req.headers.origin)
-    ) {
+    if (desktopAutoSessionRefusal(req)) {
       authLogger.warn(
         "Rejected non-loopback attempt to access auto-session endpoint",
         { source: req.ip },

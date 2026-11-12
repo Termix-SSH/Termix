@@ -74,6 +74,7 @@ function resolveRelease(releases, { currentVersion, platform, arch }) {
     tag: release.tag_name,
     version: release.tag_name.slice(1),
     channel,
+    channelFile: file,
     feedUrl: `${DOWNLOAD_BASE}${release.tag_name}`,
     releaseUrl:
       release.html_url ||
@@ -151,6 +152,8 @@ function createUpdater({
   send,
   log,
   beforeInstall,
+  verifier,
+  removeFile = () => {},
 }) {
   const state = {
     kind,
@@ -166,6 +169,11 @@ function createUpdater({
   let updater = null;
   let timer = null;
   let checkedOnce = false;
+  // The release whose signed checksums passed, and whether the downloaded
+  // file matched them. Nothing installs until both are set.
+  let verified = null;
+  let downloadVerified = false;
+  let pendingCheck = null;
 
   function update(patch) {
     Object.assign(state, patch);
@@ -181,7 +189,9 @@ function createUpdater({
       error: (...args) => log("[updater]", ...args),
       debug: () => {},
     };
-    updater.autoInstallOnAppQuit = true;
+    // Turned on only once the downloaded file is checked. On macOS this also
+    // keeps the file away from Squirrel until then.
+    updater.autoInstallOnAppQuit = false;
     updater.on("update-available", (info) =>
       update({
         status: updater.autoDownload ? "downloading" : "available",
@@ -199,19 +209,44 @@ function createUpdater({
         progress: Math.round(progress.percent || 0),
       }),
     );
-    updater.on("update-downloaded", (info) =>
-      update({
-        status: "downloaded",
-        version: info.version,
-        progress: 100,
-        error: null,
-      }),
-    );
+    updater.on("update-downloaded", (info) => {
+      pendingCheck = checkDownload(info);
+    });
     updater.on("error", (error) => {
       log("[updater] error:", error?.message || String(error));
       update({ status: "error", error: error?.message || String(error) });
     });
     return updater;
+  }
+
+  async function checkDownload(info) {
+    update({ status: "downloading", progress: 100 });
+    try {
+      if (!verifier) throw new Error("No update check");
+      const name = await verifier.verifyDownload(verified, info);
+      log("[updater] download matches the signed checksum of", name);
+      downloadVerified = true;
+      if (updater) updater.autoInstallOnAppQuit = true;
+      update({
+        status: "downloaded",
+        version: info.version,
+        progress: 100,
+        error: null,
+      });
+    } catch (error) {
+      downloadVerified = false;
+      if (updater) updater.autoInstallOnAppQuit = false;
+      log("[updater] refused download:", error?.message || String(error));
+      try {
+        removeFile(info?.downloadedFile);
+      } catch {
+        // Left for electron-updater to replace on the next download.
+      }
+      update({
+        status: "error",
+        error: "The downloaded update did not pass the signature check",
+      });
+    }
   }
 
   async function check() {
@@ -240,9 +275,34 @@ function createUpdater({
       return { ...state };
     }
 
-    update({ version: release.version, releaseUrl: release.releaseUrl });
+    update({
+      kind,
+      version: release.version,
+      releaseUrl: release.releaseUrl,
+    });
     if (kind === "manual") {
       update({ status: "available" });
+      return { ...state };
+    }
+
+    // The release's signed checksums are checked before electron-updater
+    // reads its channel file, which then pins every file by sha512.
+    verified = null;
+    downloadVerified = false;
+    try {
+      if (!verifier) throw new Error("No update check");
+      verified = await verifier.verifyRelease(release);
+    } catch (error) {
+      log("[updater] release check failed:", error?.message || String(error));
+      if (error?.code === "unsigned") {
+        // Older releases have no signature: offer the link, never install.
+        update({ kind: "manual", status: "available" });
+      } else {
+        update({
+          status: "error",
+          error: "The update did not pass the signature check",
+        });
+      }
       return { ...state };
     }
 
@@ -261,10 +321,13 @@ function createUpdater({
   }
 
   async function download() {
-    if (kind !== "auto" || state.status !== "available") return { ...state };
+    if (kind !== "auto" || !verified || state.status !== "available") {
+      return { ...state };
+    }
     update({ status: "downloading", progress: 0 });
     try {
       await getUpdater().downloadUpdate();
+      if (pendingCheck) await pendingCheck;
     } catch (error) {
       log("[updater] download failed:", error?.message || String(error));
       update({ status: "error", error: error?.message || String(error) });
@@ -273,7 +336,14 @@ function createUpdater({
   }
 
   function install() {
-    if (kind !== "auto" || state.status !== "downloaded") return false;
+    if (
+      kind !== "auto" ||
+      !verified ||
+      !downloadVerified ||
+      state.status !== "downloaded"
+    ) {
+      return false;
+    }
     // The tray keeps windows alive on close, so mark the quit first.
     beforeInstall?.();
     setImmediate(() => getUpdater().quitAndInstall());
@@ -312,6 +382,7 @@ function createUpdater({
 
 module.exports = {
   DEFAULT_MODE,
+  DOWNLOAD_BASE,
   RELEASES_API,
   channelFile,
   compareVersions,
