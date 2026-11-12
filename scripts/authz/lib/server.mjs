@@ -60,6 +60,7 @@ export async function startServer({
       EMBEDDED_BACKEND_PORT: String(port),
       TERMIX_BUNDLED_PLUGINS_DIR: pluginsDir,
       TERMIX_ROUTE_INVENTORY_FILE: inventoryFile,
+      TERMIX_AUTHZ_NO_RATE_LIMITS: "1",
       ...env,
     },
     stdio: ["ignore", out, out, "ipc"],

@@ -127,6 +127,10 @@
       "access": "admin",
       "destructive": true
     },
+    "POST /encryption/rotate-key": {
+      "access": "admin",
+      "destructive": true
+    },
     "GET /encryption/status": {
       "access": "admin"
     },

@@ -96,6 +96,8 @@ function refuse(res: Response, retryAfter: number): void {
 /** One middleware that applies every matching rule. */
 export function rateLimitMiddleware(rules: RateLimitRule[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
+    // The authorization matrix calls every route from one address.
+    if (process.env.TERMIX_AUTHZ_NO_RATE_LIMITS === "1") return next();
     for (const rule of rules) {
       if (!rule.methods.includes(req.method)) continue;
       if (!rule.path.test(req.path)) continue;
