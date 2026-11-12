@@ -144,7 +144,7 @@
     "i18next": "^26.4.2",
     "i18next-browser-languagedetector": "^8.2.1",
     "js-yaml": "^4.3.2",
-    "jsdom": "^30.0.1",
+    "jsdom": "^31.0.0",
     "lint-staged": "^17.2.0",
     "lucide-react": "^1.33.0",
     "postcss-pxtorem": "^6.1.0",
