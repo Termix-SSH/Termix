@@ -9,6 +9,10 @@
 - Admin setting to trust a host's first key without a prompt when nobody can confirm it. Each such key is audited
 - A CycloneDX SBOM of the server's dependencies ships with each build: `/app/sbom.cdx.json` in the Docker image and `termix_sbom.cdx.json` on the release
 
+### Changed
+
+- GitHub releases stay drafts until every download is uploaded, and a published release never changes its files
+
 ### Fixed
 
 - Desktop app: quitting waits for the local server to stop, so it no longer keeps its ports after the app closes

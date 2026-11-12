@@ -53,6 +53,7 @@ import {
   fetchGitHubAPI,
   fetchLatestRelease,
   isPrereleaseVersion,
+  publishedReleases,
   REPO_NAME,
   REPO_OWNER,
   updateStatus,
@@ -525,7 +526,7 @@ app.get("/releases/rss", authenticateJWT, async (req, res) => {
       cacheKey,
     );
 
-    const rssItems = releasesData.data.map((release) => ({
+    const rssItems = publishedReleases(releasesData.data).map((release) => ({
       id: release.id,
       title: release.name || release.tag_name,
       description: release.body,

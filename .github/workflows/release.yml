@@ -3,6 +3,10 @@ name: Release
 # Stable: run by hand from a dev-X.Y.Z branch. Beta: run by hand from a dev
 # branch, or let the Tuesday and Friday schedule snapshot the newest dev
 # branch when it moved since the last beta.
+#
+# The release stays a draft until every build has uploaded its files. Then
+# publish checks them against scripts/release-assets.cjs and publishes once.
+# A published release never changes, so a late fix gets a new patch version.
 
 on:
   schedule:
@@ -18,13 +22,12 @@ on:
           - Stable
           - Beta
       mode:
-        description: "Release mode (Overwrite release is stable only)"
+        description: "Release mode"
         required: true
         default: Everything
         type: choice
         options:
           - Everything
-          - Overwrite release
           - Dry run
           - Skip submit
 
@@ -71,21 +74,12 @@ jobs:
         run: |
           echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"
-          if [ "$CHANNEL" = "Beta" ] && [ "$MODE" = "Overwrite release" ]; then
-            echo "Overwrite release is for stable releases only."
-            exit 1
-          fi
 
-      - name: Guard branch (release modes)
-        if: ${{ github.event_name == 'workflow_dispatch' && steps.mode.outputs.mode != 'Overwrite release' && !startsWith(github.ref, 'refs/heads/dev-') }}
+      # A published release never changes, so a late fix gets a new patch version.
+      - name: Guard branch
+        if: ${{ github.event_name == 'workflow_dispatch' && !startsWith(github.ref, 'refs/heads/dev-') }}
         run: |
-          echo "This mode must be run from a dev branch (got $GITHUB_REF)."
-          exit 1
-
-      - name: Guard branch (overwrite mode)
-        if: ${{ steps.mode.outputs.mode == 'Overwrite release' && github.ref != 'refs/heads/main' }}
-        run: |
-          echo "Overwrite release must be run from main (got $GITHUB_REF)."
+          echo "Releases must be run from a dev branch (got $GITHUB_REF)."
           exit 1
 
       - name: Checkout repository
@@ -106,13 +100,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           MODE: ${{ steps.mode.outputs.mode }}
         run: |
-          if [ "$MODE" = "Overwrite release" ]; then
-            DEV_BRANCH=""
-            VERSION=$(node -p "require('./package.json').version")
-          else
-            DEV_BRANCH="${GITHUB_REF#refs/heads/}"
-            VERSION=$(node scripts/parse-dev-branch.cjs "$DEV_BRANCH")
-          fi
+          DEV_BRANCH="${GITHUB_REF#refs/heads/}"
+          VERSION=$(node scripts/parse-dev-branch.cjs "$DEV_BRANCH")
           {
             echo "dev_branch=$DEV_BRANCH"
             echo "version=$VERSION"
@@ -193,7 +182,7 @@ jobs:
   # it warns and the release goes on with what is there.
   translate:
     needs: [prep]
-    if: ${{ needs.prep.outputs.skip != 'true' && needs.prep.outputs.mode != 'Overwrite release' }}
+    if: ${{ needs.prep.outputs.skip != 'true' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     permissions:
@@ -310,7 +299,7 @@ jobs:
 
   normalize:
     needs: [prep, translate]
-    if: ${{ needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Overwrite release' }}
+    if: ${{ needs.prep.outputs.channel == 'Stable' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     permissions:
@@ -387,7 +376,7 @@ jobs:
 
   sync-main:
     needs: [prep, normalize]
-    if: ${{ needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' && needs.prep.outputs.mode != 'Overwrite release' }}
+    if: ${{ needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     permissions:
@@ -488,13 +477,6 @@ jobs:
         run: |
           TITLE="v$VERSION"
 
-          if [ "$MODE" = "Overwrite release" ]; then
-            echo "OVERWRITE: no merge; building from main as-is."
-            echo "build_ref=main" >> "$GITHUB_OUTPUT"
-            echo "main_sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" -q .sha)" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
           if [ "$MODE" = "Dry run" ]; then
             echo "DRY RUN: would open and squash-merge a PR from $DEV_BRANCH into main."
             echo "DRY RUN: downstream jobs will build from $DEV_BRANCH instead of main."
@@ -543,9 +525,11 @@ jobs:
       DOCKERHUB_BUGATTIGUY527_TOKEN: ${{ secrets.DOCKERHUB_BUGATTIGUY527_TOKEN }}
       DOCKERHUB_TERMIXSSH_TOKEN: ${{ secrets.DOCKERHUB_TERMIXSSH_TOKEN }}
 
-  create-release:
-    needs: [prep, merge-to-main, docker]
-    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.docker.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
+  # The release starts as a draft so nobody sees it before every file is up.
+  # Its tag is only made when it is published.
+  create-draft:
+    needs: [prep, translate, verify-beta, merge-to-main]
+    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && needs.prep.outputs.mode != 'Dry run' && (needs.merge-to-main.result == 'success' || needs.verify-beta.result == 'success') }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     permissions:
@@ -553,79 +537,14 @@ jobs:
     env:
       VERSION: ${{ needs.prep.outputs.version }}
       TAG: ${{ needs.prep.outputs.release_tag }}
+      CHANNEL: ${{ needs.prep.outputs.channel }}
+      DEV_BRANCH: ${{ needs.prep.outputs.dev_branch }}
       MOBILE_VERSION: ${{ needs.prep.outputs.mobile_version }}
       MOBILE_TAG: ${{ needs.prep.outputs.mobile_tag }}
-      MAIN_SHA: ${{ needs.merge-to-main.outputs.main_sha }}
-    steps:
-      - name: App token
-        id: app
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
-        with:
-          client-id: ${{ vars.CI_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
-          owner: Termix-SSH
-          repositories: Termix
-          permission-contents: write
-
-      - name: Checkout main
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: main
-          fetch-depth: 1
-          persist-credentials: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: ".nvmrc"
-
-      - name: Clear existing release artifacts (overwrite mode)
-        if: ${{ needs.prep.outputs.mode == 'Overwrite release' }}
-        env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
-        run: |
-          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Overwrite release: no existing release $TAG to overwrite."
-            exit 1
-          fi
-          echo "Clearing existing assets from $TAG..."
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | while read -r ASSET; do
-            [ -n "$ASSET" ] && gh release delete-asset "$TAG" "$ASSET" --repo "$GITHUB_REPOSITORY" --yes || true
-          done
-
-      - name: Generate release body
-        if: ${{ needs.prep.outputs.mode != 'Overwrite release' }}
-        run: |
-          node scripts/generate-release-body.cjs \
-            --version "$VERSION" \
-            --mobile-version "$MOBILE_VERSION" \
-            --mobile-tag "$MOBILE_TAG" > RELEASE_BODY.md
-
-      - name: Create or update GitHub release
-        if: ${{ needs.prep.outputs.mode != 'Overwrite release' }}
-        env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
-        run: |
-          TITLE="Termix v$VERSION"
-          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TITLE" --notes-file RELEASE_BODY.md
-          else
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TITLE" --notes-file RELEASE_BODY.md --target "$MAIN_SHA"
-          fi
-
-  create-beta-release:
-    needs: [prep, translate, docker]
-    if: ${{ always() && needs.prep.outputs.channel == 'Beta' && needs.docker.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
-    runs-on: blacksmith-2vcpu-ubuntu-2404
-    environment: build
-    permissions:
-      contents: read
-    env:
-      VERSION: ${{ needs.prep.outputs.version }}
-      TAG: ${{ needs.prep.outputs.release_tag }}
-      DEV_BRANCH: ${{ needs.prep.outputs.dev_branch }}
-      BETA_SHA: ${{ needs.translate.outputs.sha || needs.prep.outputs.sha }}
       PREV_REF: ${{ needs.prep.outputs.prev_ref }}
+      TARGET_SHA: ${{ needs.merge-to-main.outputs.main_sha || needs.translate.outputs.sha || needs.prep.outputs.sha }}
+    outputs:
+      release_id: ${{ steps.draft.outputs.id }}
     steps:
       - name: App token
         id: app
@@ -637,10 +556,10 @@ jobs:
           repositories: Termix
           permission-contents: write
 
-      - name: Checkout beta commit
+      - name: Checkout release commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ needs.translate.outputs.sha || needs.prep.outputs.sha }}
+          ref: ${{ env.TARGET_SHA }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -649,39 +568,76 @@ jobs:
         with:
           node-version-file: ".nvmrc"
 
-      - name: Generate beta release body
+      - name: Generate release notes
         run: |
-          node scripts/generate-beta-body.cjs \
-            --version "$VERSION" \
-            --branch "$DEV_BRANCH" \
-            --sha "$BETA_SHA" \
-            --prev "$PREV_REF" > BETA_BODY.md
+          if [ "$CHANNEL" = "Beta" ]; then
+            node scripts/generate-beta-body.cjs \
+              --version "$VERSION" \
+              --branch "$DEV_BRANCH" \
+              --sha "$TARGET_SHA" \
+              --prev "$PREV_REF" > RELEASE_BODY.md
+          else
+            node scripts/generate-release-body.cjs \
+              --version "$VERSION" \
+              --mobile-version "$MOBILE_VERSION" \
+              --mobile-tag "$MOBILE_TAG" > RELEASE_BODY.md
+          fi
+          node scripts/release-assets.cjs notes add RELEASE_BODY.md
 
-      - name: Create beta release
+      - name: Create the draft release
+        id: draft
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
-          TITLE="Termix v${VERSION%-beta.*} Beta ${VERSION##*-beta.}"
-          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" \
-              --title "$TITLE" --notes-file BETA_BODY.md --prerelease
+          if [ "$CHANNEL" = "Beta" ]; then
+            TITLE="Termix v${VERSION%-beta.*} Beta ${VERSION##*-beta.}"
+            PRERELEASE=true
           else
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
-              --title "$TITLE" --notes-file BETA_BODY.md \
-              --prerelease --target "$BETA_SHA"
+            TITLE="Termix v$VERSION"
+            PRERELEASE=false
           fi
 
+          OUT=$(node scripts/release-assets.cjs state --tag "$TAG")
+          STATE=$(printf '%s\n' "$OUT" | sed -n 's/^state=//p')
+          ID=$(printf '%s\n' "$OUT" | sed -n 's/^id=//p')
+          ASSETS=$(printf '%s\n' "$OUT" | sed -n 's/^assets=//p')
+
+          case "$STATE" in
+            published)
+              echo "$TAG is already published and can't change. Cut a new patch version."
+              exit 1
+              ;;
+            draft)
+              if [ "$ASSETS" != "0" ]; then
+                echo "A $TAG draft from an earlier run already has files. Rerun that run's failed jobs, or delete the draft and run again."
+                exit 1
+              fi
+              gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$ID" \
+                -f name="$TITLE" -F body=@RELEASE_BODY.md \
+                -f target_commitish="$TARGET_SHA" -F prerelease="$PRERELEASE" > /dev/null
+              ;;
+            none)
+              FLAGS=(--draft --title "$TITLE" --notes-file RELEASE_BODY.md --target "$TARGET_SHA")
+              if [ "$PRERELEASE" = "true" ]; then FLAGS+=(--prerelease); fi
+              gh release create "$TAG" --repo "$GITHUB_REPOSITORY" "${FLAGS[@]}" > /dev/null
+              ID=$(node scripts/release-assets.cjs state --tag "$TAG" | sed -n 's/^id=//p')
+              ;;
+            *)
+              echo "Could not read the state of $TAG."
+              exit 1
+              ;;
+          esac
+
+          if [ -z "$ID" ]; then
+            echo "No draft id for $TAG."
+            exit 1
+          fi
+          echo "Draft $TAG is release $ID."
+          echo "id=$ID" >> "$GITHUB_OUTPUT"
+
   electron-release:
-    needs:
-      [
-        prep,
-        translate,
-        merge-to-main,
-        docker,
-        create-release,
-        create-beta-release,
-      ]
-    if: ${{ always() && needs.prep.outputs.skip != 'true' && needs.docker.result == 'success' && needs.create-release.result != 'failure' && needs.create-beta-release.result != 'failure' }}
+    needs: [prep, translate, verify-beta, merge-to-main, create-draft]
+    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && (needs.merge-to-main.result == 'success' || needs.verify-beta.result == 'success') && (needs.create-draft.result == 'success' || (needs.create-draft.result == 'skipped' && needs.prep.outputs.mode == 'Dry run')) }}
     permissions:
       contents: write
       id-token: write
@@ -711,9 +667,11 @@ jobs:
       MAC_KEYCHAIN_PASSWORD: ${{ secrets.MAC_KEYCHAIN_PASSWORD }}
       MAC_P12_PASSWORD: ${{ secrets.MAC_P12_PASSWORD }}
 
+  # Builds from this run's tarballs and adds the bundles to the draft. The live
+  # Flatpak repo only moves after the release is published.
   flatpak:
-    needs: [prep, electron-release]
-    if: ${{ always() && needs.electron-release.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
+    needs: [prep, translate, merge-to-main, electron-release]
+    if: ${{ always() && needs.electron-release.result == 'success' }}
     permissions:
       contents: write
       pages: write
@@ -721,13 +679,112 @@ jobs:
     uses: ./.github/workflows/flatpak.yml
     with:
       release_tag: ${{ needs.prep.outputs.release_tag }}
-      publish: ${{ needs.prep.outputs.channel == 'Stable' }}
+      source_ref: ${{ needs.merge-to-main.outputs.build_ref || needs.translate.outputs.sha || needs.prep.outputs.sha }}
+      from_run: true
+      upload: ${{ needs.prep.outputs.mode != 'Dry run' }}
+      pages: ${{ needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' }}
+      publish: false
     secrets:
       FLATPAK_GPG_KEY: ${{ secrets.FLATPAK_GPG_KEY }}
 
+  # Needs every build. Checks the draft holds exactly the expected files, then
+  # publishes it. A failed build leaves the draft a draft.
+  publish:
+    needs: [prep, create-draft, docker, electron-release, flatpak]
+    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && needs.docker.result == 'success' && needs.electron-release.result == 'success' && needs.flatpak.result == 'success' && (needs.create-draft.result == 'success' || (needs.create-draft.result == 'skipped' && needs.prep.outputs.mode == 'Dry run')) }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
+    permissions:
+      contents: read
+    env:
+      TAG: ${{ needs.prep.outputs.release_tag }}
+      CHANNEL: ${{ needs.prep.outputs.channel == 'Beta' && 'beta' || 'stable' }}
+      RELEASE_ID: ${{ needs.create-draft.outputs.release_id }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Download desktop files (dry run)
+        if: ${{ needs.prep.outputs.mode == 'Dry run' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: termix_*
+          path: artifacts
+
+      - name: Download Flatpak bundles (dry run)
+        if: ${{ needs.prep.outputs.mode == 'Dry run' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: flatpak-bundles
+          path: artifacts/flatpak-bundles
+
+      - name: Check the files (dry run)
+        if: ${{ needs.prep.outputs.mode == 'Dry run' }}
+        run: |
+          node scripts/release-assets.cjs check --channel "$CHANNEL" --dir artifacts
+          echo "DRY RUN: would publish $TAG with these files."
+
+      - name: App token
+        id: app
+        if: ${{ needs.prep.outputs.mode != 'Dry run' }}
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+
+      - name: Check the draft has every file
+        if: ${{ needs.prep.outputs.mode != 'Dry run' }}
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: node scripts/release-assets.cjs check --channel "$CHANNEL" --tag "$TAG"
+
+      - name: Publish
+        if: ${{ needs.prep.outputs.mode != 'Dry run' }}
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" -q .body > RELEASE_BODY.md
+          node scripts/release-assets.cjs notes strip RELEASE_BODY.md
+          LATEST=false
+          if [ "$CHANNEL" = "stable" ]; then LATEST=true; fi
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" \
+            -F draft=false -f make_latest="$LATEST" -F body=@RELEASE_BODY.md > /dev/null
+
+          STATE=$(node scripts/release-assets.cjs state --tag "$TAG" | sed -n 's/^state=//p')
+          if [ "$STATE" != "published" ]; then
+            echo "$TAG did not publish (state: $STATE)."
+            exit 1
+          fi
+          echo "Published $TAG."
+
+  flatpak-deploy:
+    needs: [prep, publish]
+    if: ${{ always() && needs.publish.result == 'success' && needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: https://flatpak.termix.site
+    steps:
+      - name: Deploy the Flatpak repo
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
   electron-submit:
-    needs: [prep, merge-to-main, electron-release]
-    if: ${{ always() && needs.electron-release.result == 'success' && needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' && needs.prep.outputs.mode != 'Skip submit' }}
+    needs: [prep, merge-to-main, publish]
+    if: ${{ always() && needs.publish.result == 'success' && needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' && needs.prep.outputs.mode != 'Skip submit' }}
     permissions:
       contents: write
       id-token: write
@@ -756,8 +813,8 @@ jobs:
       MAC_P12_PASSWORD: ${{ secrets.MAC_P12_PASSWORD }}
 
   cask-commit-back:
-    needs: [prep, electron-release]
-    if: ${{ always() && needs.electron-release.result == 'success' && needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' }}
+    needs: [prep, electron-release, publish]
+    if: ${{ always() && needs.publish.result == 'success' && needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     permissions:
@@ -811,8 +868,8 @@ jobs:
           git push origin HEAD:main
 
   prune-betas:
-    needs: [prep, create-release]
-    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.create-release.result == 'success' && needs.prep.outputs.mode != 'Overwrite release' }}
+    needs: [prep, publish]
+    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.publish.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     permissions: {}
@@ -843,8 +900,8 @@ jobs:
   # Docs written for this release live on dev-X.Y.Z in the Docs repo. Squash
   # merge it into main once the release is out. No branch means nothing to do.
   docs-merge:
-    needs: [prep, electron-release]
-    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.electron-release.result == 'success' && needs.prep.outputs.mode != 'Dry run' && needs.prep.outputs.mode != 'Overwrite release' }}
+    needs: [prep, publish]
+    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.publish.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     permissions: {}
@@ -895,8 +952,8 @@ jobs:
           fi
 
   docs-refresh:
-    needs: [prep, electron-release, docs-merge]
-    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.electron-release.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
+    needs: [prep, publish, docs-merge]
+    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.publish.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     permissions: {}
@@ -917,8 +974,8 @@ jobs:
         run: gh api repos/Termix-SSH/Docs/dispatches -f event_type=core-released
 
   cleanup:
-    needs: [prep, merge-to-main, electron-release, cask-commit-back]
-    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && (needs.prep.outputs.mode == 'Everything' || needs.prep.outputs.mode == 'Skip submit') && needs.merge-to-main.result == 'success' }}
+    needs: [prep, merge-to-main, publish, cask-commit-back]
+    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && (needs.prep.outputs.mode == 'Everything' || needs.prep.outputs.mode == 'Skip submit') && needs.merge-to-main.result == 'success' && needs.publish.result == 'success' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     permissions: {}

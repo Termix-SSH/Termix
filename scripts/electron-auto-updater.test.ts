@@ -95,6 +95,19 @@ describe("resolveRelease", () => {
     ).toBeNull();
   });
 
+  it("skips a newer draft with every file and takes the published one", () => {
+    const beta = ["beta.yml", ...ALL];
+    expect(
+      updates.resolveRelease(
+        [
+          release("v26.11.3-beta.1", beta, { draft: true }),
+          release("v26.11.2-beta.2", beta),
+        ],
+        { currentVersion: "26.11.2-beta.1", ...win },
+      )?.tag,
+    ).toBe("v26.11.2-beta.2");
+  });
+
   it("returns null when nothing is newer", () => {
     expect(
       updates.resolveRelease([release("v26.10.1", ALL)], {

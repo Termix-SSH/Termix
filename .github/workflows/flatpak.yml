@@ -1,14 +1,16 @@
 name: Publish Flatpak
 
-# Builds the Flatpak from a release's portable tarballs and adds the bundles to
-# that release. Stable releases also replace the repo at flatpak.termix.site,
-# which is what `flatpak update` reads.
+# Builds the Flatpak from the portable tarballs. From the Release workflow it
+# takes them from the same run, adds the bundles to the draft release and
+# leaves the live repo at flatpak.termix.site to Release, which deploys it
+# after publishing. Run by hand it takes the tarballs from a published release
+# and can replace the live repo, which is what `flatpak update` reads.
 
 on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Release tag to package, like v26.11.1"
+        description: "Published release to package, like v26.11.1"
         required: true
         type: string
       publish:
@@ -22,6 +24,26 @@ on:
         description: "Release tag to package"
         required: true
         type: string
+      source_ref:
+        description: "Commit to build the packaging from (the draft has no tag yet)"
+        required: false
+        type: string
+        default: ""
+      from_run:
+        description: "Take the tarballs from this run's artifacts"
+        required: false
+        type: boolean
+        default: false
+      upload:
+        description: "Add the bundles to the draft release"
+        required: false
+        type: boolean
+        default: false
+      pages:
+        description: "Keep the repo as a Pages artifact for a later deploy"
+        required: false
+        type: boolean
+        default: false
       publish:
         description: "Replace the live Flatpak repo"
         required: true
@@ -47,7 +69,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.release_tag }}
+          ref: ${{ inputs.source_ref || inputs.release_tag }}
           fetch-depth: 1
           persist-credentials: false
 
@@ -66,7 +88,15 @@ jobs:
           sudo apt-get install -y flatpak flatpak-builder imagemagick
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
+      - name: Download tarball from this run
+        if: inputs.from_run
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: termix_linux_arm64_portable
+          path: tarballs
+
       - name: Download release tarball
+        if: ${{ !inputs.from_run }}
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.release_tag }}
@@ -112,7 +142,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.release_tag }}
+          ref: ${{ inputs.source_ref || inputs.release_tag }}
           fetch-depth: 1
           persist-credentials: false
 
@@ -122,7 +152,7 @@ jobs:
           WORKFLOW_SHA: ${{ github.sha }}
         run: |
           git fetch --depth 1 origin "$WORKFLOW_SHA"
-          git checkout "$WORKFLOW_SHA" -- packaging/flatpak
+          git checkout "$WORKFLOW_SHA" -- packaging/flatpak scripts/release-assets.cjs
 
       - name: Install tools
         run: |
@@ -131,7 +161,15 @@ jobs:
           sudo apt-get install -y flatpak flatpak-builder imagemagick
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
+      - name: Download tarball from this run
+        if: inputs.from_run
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: termix_linux_x64_portable
+          path: tarballs
+
       - name: Download release tarballs
+        if: ${{ !inputs.from_run }}
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.release_tag }}
@@ -164,17 +202,33 @@ jobs:
         run: |
           FLATPAK_IMPORT="$PWD/import" bash packaging/flatpak/build-repo.sh "${TAG#v}" tarballs out
           chmod -R a+rX out/site
+          mkdir bundles
+          cp out/*.flatpak out/com.karmaa.termix.flatpakref bundles/
 
-      - name: Add bundles to the release
+      # The Release workflow checks these in a dry run.
+      - name: Keep the bundles
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: flatpak-bundles
+          path: bundles
+          retention-days: 7
+
+      - name: Setup Node.js
+        if: inputs.upload
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+
+      # Only ever a draft, and never replaces a file already there.
+      - name: Add bundles to the draft release
+        if: inputs.upload
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.release_tag }}
-        run: |
-          gh release upload "$TAG" out/*.flatpak out/com.karmaa.termix.flatpakref \
-            --repo "$GITHUB_REPOSITORY" --clobber
+        run: node scripts/release-assets.cjs upload --tag "$TAG" --dir bundles
 
       - name: Upload repo for Pages
-        if: inputs.publish
+        if: inputs.publish || inputs.pages
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: out/site

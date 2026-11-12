@@ -23,6 +23,10 @@ on:
           - file
           - release
           - submit
+      release_tag:
+        description: "Draft release to upload to (release only)"
+        required: false
+        default: ""
       source_ref:
         description: "Git ref/SHA to build (defaults to the workflow ref)"
         required: false
@@ -38,7 +42,7 @@ on:
         required: true
         type: string
       release_tag:
-        description: "Explicit release tag to upload assets to (defaults to latest release when empty)"
+        description: "Draft release tag to upload to (needed for release)"
         required: false
         type: string
         default: ""
@@ -827,26 +831,11 @@ jobs:
 
       - name: Upload Homebrew Cask as artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: hashFiles('homebrew-generated/termix.rb') != '' && inputs.artifact_destination == 'file'
+        if: hashFiles('homebrew-generated/termix.rb') != '' && (inputs.artifact_destination == 'file' || inputs.artifact_destination == 'release')
         with:
           name: termix_macos_homebrew_cask
           path: homebrew-generated/termix.rb
           retention-days: 30
-
-      - name: Upload Homebrew Cask to release
-        if: hashFiles('homebrew-generated/termix.rb') != '' && inputs.version_override == '' && inputs.artifact_destination == 'release'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.homebrew-version.outputs.version }}
-        run: |
-          RELEASE_TAG="v$VERSION"
-
-          gh release list --repo "$GITHUB_REPOSITORY" --limit 100 | grep -q "$RELEASE_TAG" || {
-            echo "Release $RELEASE_TAG not found"
-            exit 1
-          }
-
-          gh release upload "$RELEASE_TAG" homebrew-generated/termix.rb --repo "$GITHUB_REPOSITORY" --clobber
 
       # Every official plugin, for installs without internet. Signed like the
       # normal DMG, with no update files.
@@ -1083,36 +1072,40 @@ jobs:
     permissions:
       contents: write
 
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
     steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          path: artifacts
-
-      - name: Resolve release tag
-        id: get_release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          INPUT_TAG: ${{ inputs.release_tag }}
+      - name: Need a draft release tag
         run: |
-          if [ -n "$INPUT_TAG" ]; then
-            echo "RELEASE_TAG=$INPUT_TAG" >> "$GITHUB_ENV"
-          else
-            echo "RELEASE_TAG=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName -q '.[0].tagName')" >> "$GITHUB_ENV"
+          if [ -z "$RELEASE_TAG" ]; then
+            echo "release needs release_tag, the tag of a draft release."
+            exit 1
           fi
 
-      # Update files go up last: the desktop updater treats a release as ready
-      # once its update file is there, so every installer must already be up.
-      - name: Upload artifacts to latest release
-        run: |
-          find artifacts -type f ! -name '*.yml' -print0 | while IFS= read -r -d '' file; do
-            gh release upload "$RELEASE_TAG" "$file" --repo "$GITHUB_REPOSITORY" --clobber
-          done
-          find artifacts -type f -name '*.yml' -print0 | while IFS= read -r -d '' file; do
-            gh release upload "$RELEASE_TAG" "$file" --repo "$GITHUB_REPOSITORY" --clobber
-          done
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+
+      # Only this workflow's files, never other artifacts in the same run.
+      - name: Download desktop files
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: termix_*
+          path: artifacts
+
+      # Uploads only to a draft and never replaces a file, so a rerun skips
+      # what is already there. Update files go up last.
+      - name: Upload to the draft release
         env:
           GH_TOKEN: ${{ github.token }}
+        run: node scripts/release-assets.cjs upload --tag "$RELEASE_TAG" --dir artifacts
 
   submit-to-app-store:
     runs-on: blacksmith-6vcpu-macos-latest

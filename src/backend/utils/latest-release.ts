@@ -120,6 +120,11 @@ export async function fetchGitHubAPI<T>(
   }
 }
 
+/** Drops drafts: a release is a draft until all its files are uploaded. */
+export function publishedReleases(releases: GitHubRelease[]): GitHubRelease[] {
+  return releases.filter((release) => release && !release.draft);
+}
+
 export type UpdateChannel = "stable" | "beta";
 
 export interface LatestRelease {
@@ -165,8 +170,7 @@ export async function fetchLatestRelease(
     "latest_releases",
   );
   let newest: LatestRelease | null = null;
-  for (const release of releases.data) {
-    if (release.draft) continue;
+  for (const release of publishedReleases(releases.data)) {
     const parsed = toLatestRelease(release);
     if (parsed && (!newest || semver.gt(parsed.version, newest.version))) {
       newest = parsed;
