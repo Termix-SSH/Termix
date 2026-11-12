@@ -315,7 +315,12 @@ function rememberElectronAuthCookieFromHeader(url, header) {
   const origin = getCookieOrigin(url);
   if (!origin) return;
 
-  const cookie = parseSetCookieHeader(header);
+  const parsed = parseSetCookieHeader(header);
+  // Over HTTPS the server names it __Host-jwt; it reads either name.
+  const cookie =
+    parsed && parsed.name === "__Host-jwt"
+      ? { ...parsed, name: "jwt" }
+      : parsed;
   if (!cookie || cookie.name !== "jwt") return;
 
   const key = getElectronAuthCookieKey(cookie.name, origin);
@@ -921,7 +926,10 @@ async function clearElectronJwtCookiesAtStartup() {
 
   for (const targetSession of targetSessions) {
     try {
-      const cookies = await targetSession.cookies.get({ name: "jwt" });
+      const cookies = [
+        ...(await targetSession.cookies.get({ name: "jwt" })),
+        ...(await targetSession.cookies.get({ name: "__Host-jwt" })),
+      ];
       await Promise.all(
         cookies.map((cookie) =>
           targetSession.cookies.remove(

@@ -72,7 +72,29 @@ export async function decryptSystemSecret(stored: string): Promise<string> {
     throw new Error("Malformed system-encrypted secret");
   }
 
-  const key = await SystemCrypto.getInstance().getEncryptionKey();
+  const system = SystemCrypto.getInstance();
+  const current = await system.getEncryptionKey();
+  try {
+    return decryptWith(current, ivPart, tagPart, dataPart);
+  } catch (error) {
+    // Sealed before a key rotation and not moved to the new key yet.
+    for (const previous of await system.getPreviousKeys("ENCRYPTION_KEY")) {
+      try {
+        return decryptWith(previous, ivPart, tagPart, dataPart);
+      } catch {
+        // try the next one
+      }
+    }
+    throw error;
+  }
+}
+
+function decryptWith(
+  key: Buffer,
+  ivPart: string,
+  tagPart: string,
+  dataPart: string,
+): string {
   const decipher = crypto.createDecipheriv(
     ALGORITHM,
     key,
@@ -85,4 +107,24 @@ export async function decryptSystemSecret(stored: string): Promise<string> {
     decipher.update(Buffer.from(dataPart, "base64")),
     decipher.final(),
   ]).toString("utf8");
+}
+
+/**
+ * Re-seals a value with the current key. Returns null when it already uses
+ * the current key or is not a sealed value.
+ */
+export async function resealSystemSecret(
+  stored: string,
+): Promise<string | null> {
+  if (!isSystemEncrypted(stored)) return null;
+  const [ivPart, tagPart, dataPart] = stored.slice(PREFIX.length).split(":");
+  if (!ivPart || !tagPart || !dataPart) return null;
+  const current = await SystemCrypto.getInstance().getEncryptionKey();
+  try {
+    decryptWith(current, ivPart, tagPart, dataPart);
+    return null;
+  } catch {
+    // sealed with an older key
+  }
+  return encryptSystemSecret(await decryptSystemSecret(stored));
 }

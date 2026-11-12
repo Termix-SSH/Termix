@@ -26,6 +26,7 @@ import {
   type UserRecord,
   type UserRepository,
 } from "../repositories/user-repository.js";
+import { attachmentHeader } from "../../http/content-disposition.js";
 
 function isNonEmptyString(val: unknown): val is string {
   return typeof val === "string" && val.trim().length > 0;
@@ -874,7 +875,7 @@ export function registerUserAdminRoutes(
       res.setHeader("Content-Type", "application/json");
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="termix-user-${targetUser.username}-export.json"`,
+        attachmentHeader(`termix-user-${targetUser.username}-export.json`),
       );
       res.json(exportData);
     } catch (err) {

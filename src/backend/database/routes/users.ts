@@ -78,6 +78,7 @@ import {
 } from "../../auth/session-issuer.js";
 import { EXTERNAL_AUTO_PROVISION_KEY } from "../../auth/provisioning.js";
 import { evaluateAuthPolicy } from "../../auth/policy.js";
+import { setAuthCookie, clearAuthCookie } from "../../auth/session-cookie.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -474,25 +475,25 @@ router.post("/proxy-login", async (req, res) => {
       mappedRoles,
     });
 
-    return res
-      .cookie(
-        "jwt",
-        token,
-        authManager.getSecureCookieOptions(
-          req,
-          policy.maxSessionSeconds
-            ? Math.min(24 * 60 * 60 * 1000, policy.maxSessionSeconds * 1000)
-            : undefined,
-        ),
-      )
-      .json({
-        enabled: true,
-        success: true,
-        username: userRecord.username,
-        userId: userRecord.id,
-        is_admin: !!userRecord.isAdmin,
-        ...(isNativeAppRequest(req) ? { token } : {}),
-      });
+    return setAuthCookie(
+      req,
+      res,
+      "jwt",
+      token,
+      authManager.getSecureCookieOptions(
+        req,
+        policy.maxSessionSeconds
+          ? Math.min(24 * 60 * 60 * 1000, policy.maxSessionSeconds * 1000)
+          : undefined,
+      ),
+    ).json({
+      enabled: true,
+      success: true,
+      username: userRecord.username,
+      userId: userRecord.id,
+      is_admin: !!userRecord.isAdmin,
+      ...(isNativeAppRequest(req) ? { token } : {}),
+    });
   } catch (error) {
     authLogger.error("Trusted proxy login failed", error);
     return res.status(500).json({ error: "Proxy authentication failed" });
@@ -579,9 +580,12 @@ router.post("/logout", authenticateJWT, async (req, res) => {
       });
     }
 
-    return res
-      .clearCookie("jwt", authManager.getClearCookieOptions(req))
-      .json({ success: true, message: "Logged out successfully" });
+    return clearAuthCookie(
+      req,
+      res,
+      "jwt",
+      authManager.getClearCookieOptions(req),
+    ).json({ success: true, message: "Logged out successfully" });
   } catch (err) {
     authLogger.error("Logout failed", err);
     return res.status(500).json({ error: "Logout failed" });
@@ -779,13 +783,13 @@ router.post("/internal/auto-session", async (req, res) => {
       token,
     };
 
-    return res
-      .cookie(
-        "jwt",
-        token,
-        authManager.getSecureCookieOptions(req, 30 * 24 * 60 * 60 * 1000),
-      )
-      .json(response);
+    return setAuthCookie(
+      req,
+      res,
+      "jwt",
+      token,
+      authManager.getSecureCookieOptions(req, 30 * 24 * 60 * 60 * 1000),
+    ).json(response);
   } catch (err) {
     authLogger.error("Failed to create auto-session", err);
     res.status(500).json({ error: "Failed to create auto-session" });

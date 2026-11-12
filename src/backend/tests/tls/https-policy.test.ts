@@ -31,6 +31,7 @@ function run(
     path,
     originalUrl: path,
     url: path,
+    headers: all,
     get: (name: string) => all[name.toLowerCase()],
   };
   const res = {

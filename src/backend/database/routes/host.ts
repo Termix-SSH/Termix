@@ -110,7 +110,11 @@ import {
 const router = express.Router();
 router.use(rejectSharedCopyWrites("host", /^\/db\/host\/(\d+)$/));
 
-const upload = multer({ storage: multer.memoryStorage() });
+// Only SSH key files go through here.
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 1024 * 1024, files: 1 },
+});
 
 /** A host body with a password or key, while saving those is turned off. */
 function hostWriteHasSecret(hostData: Record<string, unknown>): boolean {

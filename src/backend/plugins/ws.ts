@@ -36,6 +36,7 @@ import { runAsActor } from "./actor.js";
 import { sessionAccessRefusal } from "../auth/session-access.js";
 import { bindSocket } from "../auth/socket-sessions.js";
 import { isPluginInstalled } from "./http.js";
+import { normalizeCookieHeader } from "../auth/session-cookie.js";
 
 const PLUGIN_WS_PREFIX = "/plugin-ws/";
 
@@ -309,6 +310,11 @@ export function attachPluginWebSockets(server: HttpServer): void {
   attachedServers.add(server);
 
   server.on("upgrade", (request, socket, head) => {
+    const cookie = (request as IncomingMessage).headers.cookie;
+    if (cookie) {
+      (request as IncomingMessage).headers.cookie =
+        normalizeCookieHeader(cookie);
+    }
     void handlePluginUpgrade(
       request as IncomingMessage,
       socket as Duplex,

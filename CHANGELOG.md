@@ -10,10 +10,18 @@
 - Every desktop file, tarball and Flatpak bundle on a release carries signed build provenance, and each release has a signed `SHA256SUMS` file. Check them with the new Verify your download page in the docs
 - Docker images are signed with cosign and carry build provenance and an SBOM attestation
 - A CycloneDX SBOM of the server's dependencies ships with each build: `/app/sbom.cdx.json` in the Docker image and `termix_sbom.cdx.json` on the release
+- The server sends the same security headers with or without the bundled nginx: a strict Content-Security-Policy, Referrer-Policy, Permissions-Policy, Cross-Origin-Opener-Policy and HSTS over HTTPS
+- Desktop app: the app page carries a Content-Security-Policy
+- Limits on how often logins, second factor checks, password resets, sign ups, API key creation, exports and imports can be tried, per address and per account. Too many bad API keys from one address are refused for a while
+- Rotate the encryption key from the API (`POST /encryption/rotate-key`) or with `ENCRYPTION_KEY_PREVIOUS`, and the database key with `DATABASE_KEY_PREVIOUS`. Everything moves to the new key at start
+- The example Docker compose drops every capability it doesn't need, sets no-new-privileges and shows a read-only, non-root setup. The image runs on a read-only root filesystem
 
 ### Changed
 
 - GitHub releases stay drafts until every download is uploaded, and a published release never changes its files
+- Over HTTPS the login cookies use the `__Host-` prefix, so another site on a sibling domain can't set or replace them
+- The Docker health check uses Node instead of wget, which is no longer in the image. ping needs no extra capability
+- Server logs mask API keys, tokens, passwords and private keys, also inside error messages
 
 ### Fixed
 
@@ -43,6 +51,11 @@
 - The Docker image bundles opkssh 0.19.2 and no longer ships npm, which the server never uses
 - Plugins that run commands with sudo send the sudo password on stdin, so it never shows up in the host's process list
 - A login that still has to set up a second factor can only open the setup screen, not manage plugins
+- Rotating the JWT secret from the API now really replaces it and signs everyone out
+- Error answers from the server no longer include internal error text
+- Bad JSON and too large uploads get a 400 or 413 answer instead of a server error
+- SSH key uploads on a host are limited to 1 MB
+- Download names with unusual characters in a user export are kept safe
 
 ## 26.11.1
 

@@ -13,6 +13,16 @@ export async function restrictToOwner(filePath: string): Promise<void> {
   }
 }
 
+/** A rotation asked for a secret that is set outside .env. */
+export class ExternalSecretError extends Error {
+  constructor(readonly secretName: string) {
+    super(
+      `${secretName} is set through the environment or a file. Rotate it there.`,
+    );
+    this.name = "ExternalSecretError";
+  }
+}
+
 class SystemCrypto {
   private static instance: SystemCrypto;
   private jwtSecret: string | null = null;
@@ -197,6 +207,13 @@ class SystemCrypto {
   async getEncryptionKey(): Promise<Buffer> {
     if (!this.encryptionKey) {
       await this.initializeEncryptionKey();
+      const previous = await this.getPreviousKeys("ENCRYPTION_KEY");
+      if (previous.some((key) => key.equals(this.encryptionKey!))) {
+        this.encryptionKey = null;
+        throw new Error(
+          "ENCRYPTION_KEY is one of the keys in ENCRYPTION_KEY_PREVIOUS. An environment variable may still hold the old key after a rotation: set it to the new key or remove it",
+        );
+      }
     }
     return this.encryptionKey!;
   }
@@ -352,6 +369,103 @@ class SystemCrypto {
       algorithm: "HS256",
       note: "Using simplified key management without encryption layers",
     };
+  }
+
+  /** Whether name comes from the environment or a _FILE secret, not .env. */
+  async isExternalSecret(name: string): Promise<boolean> {
+    if (process.env[`${name}_FILE`]?.trim()) return true;
+    const direct = process.env[name]?.trim();
+    if (!direct) return false;
+    // The starter loads .env into process.env, but never over a real variable.
+    const line = (await this.readDotEnv()).match(
+      new RegExp(`^${name}=(.+)$`, "m"),
+    );
+    return !line || line[1].trim() !== direct;
+  }
+
+  /**
+   * Keys a rotation replaced, newest first. Set as NAME_PREVIOUS (comma
+   * separated hex), NAME_PREVIOUS_FILE or a NAME_PREVIOUS line in .env.
+   */
+  async getPreviousKeys(name: string): Promise<Buffer[]> {
+    const values: string[] = [];
+    const direct = process.env[`${name}_PREVIOUS`]?.trim();
+    if (direct) values.push(direct);
+    const file = process.env[`${name}_PREVIOUS_FILE`]?.trim();
+    if (file) values.push((await fs.readFile(file, "utf8")).trim());
+    if (!direct) {
+      const fromEnvFile = (await this.readDotEnv()).match(
+        new RegExp(`^${name}_PREVIOUS=(.+)$`, "m"),
+      );
+      if (fromEnvFile) values.push(fromEnvFile[1].trim());
+    }
+    const keys: Buffer[] = [];
+    for (const part of values.join(",").split(",")) {
+      const hex = part.trim();
+      if (!hex) continue;
+      keys.push(this.parseExternalHexKey(`${name}_PREVIOUS`, hex));
+    }
+    return keys;
+  }
+
+  private async readDotEnv(): Promise<string> {
+    const dataDir = process.env.DATA_DIR || "./db/data";
+    try {
+      return await fs.readFile(path.join(dataDir, ".env"), "utf8");
+    } catch {
+      return "";
+    }
+  }
+
+  /**
+   * Replaces the JWT secret kept in .env. Every token signed with the old one
+   * stops verifying. Refused when the secret comes from outside.
+   */
+  async rotateJWTSecret(): Promise<void> {
+    if (await this.isExternalSecret("JWT_SECRET")) {
+      throw new ExternalSecretError("JWT_SECRET");
+    }
+    const next = crypto.randomBytes(32).toString("hex");
+    await this.updateEnvFile("JWT_SECRET", next);
+    this.jwtSecret = next;
+  }
+
+  /**
+   * Replaces the encryption key kept in .env and keeps the old one as
+   * ENCRYPTION_KEY_PREVIOUS, so data sealed with it still opens until the
+   * re-encryption pass has moved everything to the new key.
+   */
+  async rotateEncryptionKey(): Promise<Buffer> {
+    if (await this.isExternalSecret("ENCRYPTION_KEY")) {
+      throw new ExternalSecretError("ENCRYPTION_KEY");
+    }
+    const current = await this.getEncryptionKey();
+    const previous = (await this.getPreviousKeys("ENCRYPTION_KEY")).map((key) =>
+      key.toString("hex"),
+    );
+    const next = crypto.randomBytes(32);
+    await this.updateEnvFile(
+      "ENCRYPTION_KEY_PREVIOUS",
+      [current.toString("hex"), ...previous].join(","),
+    );
+    await this.updateEnvFile("ENCRYPTION_KEY", next.toString("hex"));
+    this.encryptionKey = next;
+    return next;
+  }
+
+  /** Drops ENCRYPTION_KEY_PREVIOUS from .env once nothing needs it. */
+  async forgetPreviousEncryptionKeys(): Promise<void> {
+    const content = await this.readDotEnv();
+    if (!/^ENCRYPTION_KEY_PREVIOUS=/m.test(content)) return;
+    await this.updateEnvFile("ENCRYPTION_KEY_PREVIOUS", "");
+  }
+
+  /** Test seam. */
+  resetForTests(): void {
+    this.jwtSecret = null;
+    this.databaseKey = null;
+    this.encryptionKey = null;
+    this.internalAuthToken = null;
   }
 
   private async updateEnvFile(key: string, value: string): Promise<void> {

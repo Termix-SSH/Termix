@@ -1,4 +1,5 @@
 import type { IncomingMessage } from "http";
+import { normalizeCookieHeader } from "../auth/session-cookie.js";
 
 const JWT_PROTOCOL_PREFIX = "termix.jwt.";
 
@@ -50,7 +51,9 @@ export function extractWebSocketToken(
 ): string | undefined {
   const cookieHeader = req.headers.cookie;
   if (cookieHeader && isCookieOriginAllowed(req)) {
-    const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
+    const match = normalizeCookieHeader(cookieHeader).match(
+      /(?:^|;\s*)jwt=([^;]+)/,
+    );
     if (match) return decodeURIComponent(match[1]);
   }
 

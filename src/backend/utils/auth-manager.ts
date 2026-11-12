@@ -125,6 +125,13 @@ export {
   allowsPluginSession,
   allowsSetupSession,
 } from "../auth/session-access.js";
+import { clearAuthCookie } from "../auth/session-cookie.js";
+import {
+  apiKeyFailureWait,
+  recordApiKeyFailure,
+  sendRateLimited,
+} from "./rate-limit.js";
+import { getClientIp } from "./request-origin.js";
 
 let pluginAllowsImpersonation: (pluginId: string) => boolean = () => false;
 
@@ -805,6 +812,12 @@ class AuthManager {
       });
       return;
     }
+    const clientIp = getClientIp(req);
+    const wait = apiKeyFailureWait(clientIp);
+    if (wait) {
+      sendRateLimited(res, wait);
+      return;
+    }
     try {
       const tokenPrefix = token.substring(0, 12);
       const apiKeyRepository = createCurrentApiKeyRepository();
@@ -813,6 +826,7 @@ class AuthManager {
         await apiKeyRepository.listActiveByTokenPrefix(tokenPrefix);
 
       if (candidates.length === 0) {
+        recordApiKeyFailure(clientIp);
         res.status(401).json({ error: "Invalid API key" });
         return;
       }
@@ -832,6 +846,7 @@ class AuthManager {
       }
 
       if (!matchedKey) {
+        recordApiKeyFailure(clientIp);
         res.status(401).json({ error: "Invalid API key" });
         return;
       }
@@ -906,8 +921,7 @@ class AuthManager {
       const payload = await this.verifyJWTToken(token);
 
       if (!payload) {
-        return res
-          .clearCookie("jwt", this.getClearCookieOptions(req))
+        return clearAuthCookie(req, res, "jwt", this.getClearCookieOptions(req))
           .status(401)
           .json({ error: "Invalid token" });
       }
@@ -925,8 +939,12 @@ class AuthManager {
               sessionId: payload.sessionId,
               userId: payload.userId,
             });
-            return res
-              .clearCookie("jwt", this.getClearCookieOptions(req))
+            return clearAuthCookie(
+              req,
+              res,
+              "jwt",
+              this.getClearCookieOptions(req),
+            )
               .status(401)
               .json({
                 error: "Session not found",
@@ -955,8 +973,12 @@ class AuthManager {
               });
             });
 
-            return res
-              .clearCookie("jwt", this.getClearCookieOptions(req))
+            return clearAuthCookie(
+              req,
+              res,
+              "jwt",
+              this.getClearCookieOptions(req),
+            )
               .status(401)
               .json({
                 error: "Session has expired",
@@ -1137,8 +1159,7 @@ class AuthManager {
       const payload = await this.verifyJWTToken(token);
 
       if (!payload) {
-        return res
-          .clearCookie("jwt", this.getClearCookieOptions(req))
+        return clearAuthCookie(req, res, "jwt", this.getClearCookieOptions(req))
           .status(401)
           .json({ error: "Invalid token" });
       }

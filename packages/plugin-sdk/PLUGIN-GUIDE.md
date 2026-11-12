@@ -381,6 +381,12 @@ router.post("/notes", async (req, res) => {
   `access-denied` or `access-required`, and `ctx.credentials.resolveHostProtocol` throws an error with that
   `code` and a `toJSON()` body for a 403. Keep `check` fast, it also runs for background polling.
 
+Headers and cookies (Termix 26.11.2+): every answer from `/plugin-api/<id>/` and `/plugin-assets/<id>/` carries
+`X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy` and a default
+`Content-Security-Policy: object-src 'none'; base-uri 'none'`. A route that serves its own HTML page sets its own
+`Content-Security-Policy`, which replaces the default. Over HTTPS the session cookie is `__Host-jwt`; core
+rewrites the request so plugins still read it as `req.cookies.jwt` and in the `Cookie` header as `jwt`.
+
 ### Errors
 
 Errors from routes, sockets, listeners and timers count against an error budget. Five in a minute and

@@ -42,8 +42,10 @@ interface CacheEntry {
   expiresAt: number;
 }
 
+const USER_DEK_PREFIX = "user_dek_v3_";
+
 export function userDekSettingsKey(userId: string): string {
-  return `user_dek_v3_${userId}`;
+  return `${USER_DEK_PREFIX}${userId}`;
 }
 
 const LEGACY_WRAP_KEY_PREFIXES = [
@@ -55,6 +57,8 @@ export class UserKeyManager {
   private static instance: UserKeyManager | null = null;
 
   private masterKey: Buffer | null = null;
+  /** Keys a rotation replaced, so wraps made with them still open. */
+  private previousKeys: Buffer[] = [];
   private cache = new Map<string, CacheEntry>();
 
   static getInstance(): UserKeyManager {
@@ -65,8 +69,11 @@ export class UserKeyManager {
   }
 
   async initialize(masterKey?: Buffer): Promise<void> {
-    this.masterKey =
-      masterKey ?? (await SystemCrypto.getInstance().getEncryptionKey());
+    const system = SystemCrypto.getInstance();
+    this.masterKey = masterKey ?? (await system.getEncryptionKey());
+    this.previousKeys = masterKey
+      ? []
+      : await system.getPreviousKeys("ENCRYPTION_KEY");
     this.cache.clear();
   }
 
@@ -161,15 +168,43 @@ export class UserKeyManager {
     this.cache.set(userId, { dek, expiresAt: Date.now() + CACHE_TTL_MS });
   }
 
-  private deriveWrapKey(userId: string): Buffer {
-    if (!this.masterKey) {
+  /**
+   * Re-wraps every stored DEK with the current master key. Returns how many
+   * were moved off an older key.
+   */
+  async rewrapAll(): Promise<number> {
+    const rows = await createCurrentSettingsRepository().listAll();
+    let moved = 0;
+    for (const row of rows) {
+      if (!row.key.startsWith(USER_DEK_PREFIX)) continue;
+      const userId = row.key.slice(USER_DEK_PREFIX.length);
+      if (this.unwrapsWithCurrent(userId, row.value)) continue;
+      const dek = this.unwrap(userId, row.value);
+      await this.persistDEK(userId, dek);
+      moved++;
+    }
+    return moved;
+  }
+
+  private unwrapsWithCurrent(userId: string, raw: string): boolean {
+    try {
+      this.unwrapWith(userId, raw, this.deriveWrapKey(userId));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private deriveWrapKey(userId: string, masterKey?: Buffer): Buffer {
+    const key = masterKey ?? this.masterKey;
+    if (!key) {
       throw new Error("UserKeyManager is not initialized");
     }
 
     return Buffer.from(
       crypto.hkdfSync(
         "sha256",
-        this.masterKey,
+        key,
         Buffer.alloc(0),
         `${WRAP_INFO_PREFIX}${userId}`,
         DEK_LENGTH,
@@ -208,7 +243,26 @@ export class UserKeyManager {
       );
     }
 
-    const wrapKey = this.deriveWrapKey(userId);
+    try {
+      return this.unwrapWith(userId, raw, this.deriveWrapKey(userId));
+    } catch (error) {
+      for (const previous of this.previousKeys) {
+        try {
+          return this.unwrapWith(
+            userId,
+            raw,
+            this.deriveWrapKey(userId, previous),
+          );
+        } catch {
+          // try the next one
+        }
+      }
+      throw error;
+    }
+  }
+
+  private unwrapWith(userId: string, raw: string, wrapKey: Buffer): Buffer {
+    const wrapped = JSON.parse(raw) as WrappedDek;
     const decipher = crypto.createDecipheriv(
       WRAP_ALGORITHM,
       wrapKey,

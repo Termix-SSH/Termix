@@ -5,6 +5,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
 import { termixPluginHost } from "./scripts/vite-plugin-termix-plugins.mjs";
+import { desktopMetaCsp } from "./src/backend/http/security-headers";
 
 const sslCertPath = path.join(process.cwd(), "ssl/termix.crt");
 const sslKeyPath = path.join(process.cwd(), "ssl/termix.key");
@@ -86,7 +87,12 @@ export default defineConfig({
     react(),
     tailwindcss(),
     svgr(),
-    termixPluginHost({ repoRoot: __dirname, sdkFrontendEntry, sdkUiEntry }),
+    termixPluginHost({
+      repoRoot: __dirname,
+      sdkFrontendEntry,
+      sdkUiEntry,
+      metaCsp: desktopMetaCsp,
+    }),
   ],
   define: {
     "import.meta.env.VITE_APP_VERSION": JSON.stringify(

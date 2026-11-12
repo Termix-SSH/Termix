@@ -7,6 +7,25 @@ services:
       - "8080:8080"
     volumes:
       - termix-data:/app/data
+    # The container starts as root only to hand /app/data to PUID/PGID, then
+    # runs as that user. These are the only capabilities that step needs.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETUID
+      - SETGID
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    # Stricter: run as a fixed user on a read-only root filesystem. The data
+    # volume must already belong to that user (chown -R 1000:1000 once). Use
+    # these lines and drop cap_add above.
+    # user: "1000:1000"
+    # read_only: true
     environment:
       PORT: "8080"
       # Multi-instance deployments should point every backend at the same

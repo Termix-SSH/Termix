@@ -49,6 +49,7 @@ import {
   type PendingLogin,
   type VerifiedIdentity,
 } from "./types.js";
+import { setAuthCookie, clearAuthCookie } from "./session-cookie.js";
 
 const PENDING_TTL_MS = 10 * 60 * 1000;
 const PENDING_LOGIN_COOKIE = "termix_pending_login";
@@ -580,7 +581,9 @@ export async function verifySecondFactorAndRespond(
       deviceInfo.type,
       deviceInfo.deviceInfo,
     );
-    res.cookie(
+    setAuthCookie(
+      req,
+      res,
       TRUST_DEVICE_COOKIE,
       trustToken,
       AuthManager.getInstance().getSecureCookieOptions(
@@ -609,7 +612,9 @@ export async function verifySecondFactorAndRespond(
   }
 
   consumePendingLogin(lookup.token);
-  res.clearCookie(
+  clearAuthCookie(
+    req,
+    res,
     PENDING_LOGIN_COOKIE,
     AuthManager.getInstance().getClearCookieOptions(req),
   );
@@ -645,7 +650,7 @@ export async function respondWithRedirectLogin(
 
   const url = new URL(returnTo);
   const tokenCallback = isTokenCallback(returnTo);
-  res.clearCookie("jwt", authManager.getClearCookieOptions(req));
+  clearAuthCookie(req, res, "jwt", authManager.getClearCookieOptions(req));
 
   if (result.kind === "second-factor") {
     url.searchParams.set("second_factor", "1");
@@ -658,13 +663,13 @@ export async function respondWithRedirectLogin(
       res.redirect(url.toString());
       return;
     }
-    res
-      .cookie(
-        PENDING_LOGIN_COOKIE,
-        result.tempToken,
-        authManager.getSecureCookieOptions(req, PENDING_TTL_MS),
-      )
-      .redirect(url.toString());
+    setAuthCookie(
+      req,
+      res,
+      PENDING_LOGIN_COOKIE,
+      result.tempToken,
+      authManager.getSecureCookieOptions(req, PENDING_TTL_MS),
+    ).redirect(url.toString());
     return;
   }
 
@@ -674,13 +679,13 @@ export async function respondWithRedirectLogin(
     res.redirect(url.toString());
     return;
   }
-  res
-    .cookie(
-      "jwt",
-      result.token,
-      authManager.getSecureCookieOptions(req, result.maxAge),
-    )
-    .redirect(url.toString());
+  setAuthCookie(
+    req,
+    res,
+    "jwt",
+    result.token,
+    authManager.getSecureCookieOptions(req, result.maxAge),
+  ).redirect(url.toString());
 }
 
 export function redirectWithLoginError(

@@ -119,9 +119,14 @@ ENV DATA_DIR=/app/data \
     PORT=8080 \
     NODE_ENV=production
 
-RUN apt-get update && apt-get install -y --no-install-recommends nginx gettext-base openssl ca-certificates gosu wget iputils-ping && \
+RUN apt-get update && apt-get install -y --no-install-recommends nginx gettext-base openssl ca-certificates gosu iputils-ping && \
     update-ca-certificates && \
     rm -rf /var/lib/apt/lists/* && \
+    # Plain copy drops ping's file capability, so it uses unprivileged ICMP
+    # sockets (net.ipv4.ping_group_range) and works with every capability
+    # dropped and no-new-privileges set.
+    cp /usr/bin/ping /usr/bin/ping.plain && chmod 755 /usr/bin/ping.plain && \
+    mv /usr/bin/ping.plain /usr/bin/ping && \
     mkdir -p /app/data /app/uploads /app/nginx /tmp/nginx && \
     chown -R node:node /app /tmp/nginx && \
     chmod 755 /app/data /app/uploads /app/nginx /tmp/nginx && \
@@ -154,8 +159,9 @@ VOLUME ["/app/data"]
 
 EXPOSE ${PORT}
 
+# Node is already in the image, so no curl or wget is needed.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD wget -q -O /dev/null http://localhost:30001/health || exit 1
+    CMD ["node", "-e", "fetch('http://127.0.0.1:30001/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

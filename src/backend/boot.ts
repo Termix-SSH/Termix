@@ -73,4 +73,14 @@ export async function runCoreBootMigrations(): Promise<void> {
   const { runAuditNoiseCleanup } =
     await import("./upgrade/audit-noise-cleanup.js");
   await runAuditNoiseCleanup();
+
+  // After a key rotation: move everything to the new keys.
+  const { runKeyRotation } = await import("./utils/key-rotation.js");
+  try {
+    await runKeyRotation();
+  } catch (error) {
+    systemLogger.error("Moving data to the new keys failed", error, {
+      operation: "key_rotation_failed",
+    });
+  }
 }

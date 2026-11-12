@@ -1,4 +1,3 @@
-import { getErrorMessage } from "../utils/error-message.js";
 import { sshOptionsForWrite } from "../hosts/ssh-options.js";
 import {
   applyDefaultsAfterHostWrites,
@@ -84,6 +83,15 @@ import { configureDirectHttps, getTlsConfig } from "../tls/tls-service.js";
 import { acmeChallengeHandler } from "../tls/acme-challenges.js";
 import { httpsPolicyMiddleware } from "../tls/https-policy.js";
 import {
+  readImportMapHash,
+  securityHeadersMiddleware,
+  setAppShellHeaders,
+} from "../http/security-headers.js";
+import { normalizeCookiesMiddleware } from "../auth/session-cookie.js";
+import { finalErrorHandler } from "../http/error-handler.js";
+import { registerEncryptionRoutes } from "./routes/encryption-routes.js";
+import { CORE_RATE_LIMITS, rateLimitMiddleware } from "../utils/rate-limit.js";
+import {
   createCurrentCredentialRepository,
   createCurrentHostRepository,
   createCurrentPluginSettingsRepository,
@@ -116,6 +124,7 @@ const app = express();
 
 app.set("trust proxy", "loopback");
 app.use(httpsPolicyMiddleware);
+app.use(securityHeadersMiddleware());
 
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
@@ -167,6 +176,7 @@ const upload = multer({
   storage: storage,
   limits: {
     fileSize: 1024 * 1024 * 1024,
+    files: 1,
   },
   fileFilter: (req, file, cb) => {
     if (
@@ -175,7 +185,12 @@ const upload = multer({
     ) {
       cb(null, true);
     } else {
-      cb(new Error("Only .termix-export.sqlite files are allowed"));
+      cb(
+        Object.assign(
+          new Error("Only .termix-export.sqlite files are allowed"),
+          { status: 400 },
+        ),
+      );
     }
   },
 });
@@ -203,7 +218,9 @@ app.use((req, _res, next) => {
   if (!req.path.startsWith("/plugin-api/")) req.body ??= {};
   next();
 });
+app.use(normalizeCookiesMiddleware);
 app.use(cookieParser());
+app.use(rateLimitMiddleware(CORE_RATE_LIMITS));
 app.use((_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   next();
@@ -564,7 +581,6 @@ app.get("/releases/rss", authenticateJWT, async (req, res) => {
     });
     res.status(500).json({
       error: "Failed to generate RSS format",
-      details: getErrorMessage(error),
     });
   }
 });
@@ -641,74 +657,7 @@ app.post("/encryption/initialize", requireAdmin, async (req, res) => {
   }
 });
 
-/**
- * @openapi
- * /encryption/regenerate:
- *   post:
- *     summary: Regenerate JWT secret
- *     description: Regenerates the system JWT secret. This will invalidate all existing JWT tokens.
- *     tags:
- *       - Encryption
- *     responses:
- *       200:
- *         description: System JWT secret regenerated.
- *       500:
- *         description: Failed to regenerate JWT secret.
- */
-app.post("/encryption/regenerate", requireAdmin, async (req, res) => {
-  try {
-    apiLogger.warn("System JWT secret regenerated via API", {
-      operation: "jwt_regenerate_api",
-    });
-
-    res.json({
-      success: true,
-      message: "System JWT secret regenerated",
-      warning:
-        "All existing JWT tokens are now invalid - users must re-authenticate",
-      note: "User data encryption keys are protected by passwords and cannot be regenerated",
-    });
-  } catch (error) {
-    apiLogger.error("Failed to regenerate JWT secret", error, {
-      operation: "jwt_regenerate_failed",
-    });
-    res.status(500).json({ error: "Failed to regenerate JWT secret" });
-  }
-});
-
-/**
- * @openapi
- * /encryption/regenerate-jwt:
- *   post:
- *     summary: Regenerate JWT secret
- *     description: Regenerates the JWT secret. This will invalidate all existing JWT tokens.
- *     tags:
- *       - Encryption
- *     responses:
- *       200:
- *         description: New JWT secret generated.
- *       500:
- *         description: Failed to regenerate JWT secret.
- */
-app.post("/encryption/regenerate-jwt", requireAdmin, async (req, res) => {
-  try {
-    apiLogger.warn("JWT secret regenerated via API", {
-      operation: "jwt_secret_regenerate_api",
-    });
-
-    res.json({
-      success: true,
-      message: "New JWT secret generated",
-      warning:
-        "All existing JWT tokens are now invalid - users must re-authenticate",
-    });
-  } catch (error) {
-    apiLogger.error("Failed to regenerate JWT secret", error, {
-      operation: "jwt_secret_regenerate_failed",
-    });
-    res.status(500).json({ error: "Failed to regenerate JWT secret" });
-  }
-});
+registerEncryptionRoutes(app, requireAdmin);
 
 /**
  * @openapi
@@ -1079,7 +1028,6 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       if (!res.headersSent) {
         res.status(500).json({
           error: "Failed to stream export file",
-          details: streamError.message,
         });
       }
     });
@@ -1104,7 +1052,6 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
     });
     res.status(500).json({
       error: "Failed to export user data",
-      details: getErrorMessage(error),
     });
   }
 });
@@ -1478,7 +1425,6 @@ app.post(
       });
       res.status(500).json({
         error: "Failed to import SQLite data",
-        details: getErrorMessage(error),
       });
     } finally {
       if (req.file) {
@@ -1550,7 +1496,6 @@ app.post("/database/export/preview", authenticateJWT, async (req, res) => {
     });
     res.status(500).json({
       error: "Failed to generate export preview",
-      details: getErrorMessage(error),
     });
   }
 });
@@ -1621,7 +1566,6 @@ app.post("/database/restore", requireAdmin, async (req, res) => {
     });
     res.status(500).json({
       error: "Database restore failed",
-      details: getErrorMessage(error),
     });
   }
 });
@@ -1672,6 +1616,8 @@ const frontendDist = frontendDistPaths.find((p) =>
   fs.existsSync(path.join(p, "index.html")),
 );
 
+const importMapHash = readImportMapHash(frontendDist);
+
 if (frontendDist) {
   databaseLogger.info(`Serving frontend from: ${frontendDist}`, {
     operation: "static_files",
@@ -1679,6 +1625,7 @@ if (frontendDist) {
   app.use(
     express.static(frontendDist, {
       setHeaders: (res, filePath) => {
+        setAppShellHeaders(res, importMapHash);
         const relativePath = path
           .relative(frontendDist, filePath)
           .replaceAll(path.sep, "/");
@@ -1712,6 +1659,7 @@ if (frontendDist) {
         "Cache-Control",
         "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
       );
+      setAppShellHeaders(res, importMapHash);
       res.sendFile(path.join(frontendDist, "index.html"));
     } else {
       next();
@@ -1719,23 +1667,7 @@ if (frontendDist) {
   });
 }
 
-app.use(
-  (
-    err: unknown,
-    req: express.Request,
-    res: express.Response,
-    _next: express.NextFunction,
-  ) => {
-    void _next;
-    apiLogger.error("Unhandled error in request", err, {
-      operation: "error_handler",
-      method: req.method,
-      url: req.url,
-      userAgent: req.get("User-Agent"),
-    });
-    res.status(500).json({ error: "Internal Server Error" });
-  },
-);
+app.use(finalErrorHandler);
 
 // The desktop app moves its embedded backend off 30001 when that is taken.
 const HTTP_PORT = Number(process.env.EMBEDDED_BACKEND_PORT) || 30001;
@@ -1824,7 +1756,6 @@ app.get(
       });
       res.status(500).json({
         error: "Failed to get migration status",
-        details: getErrorMessage(error),
       });
     }
   },
@@ -1902,7 +1833,6 @@ app.get(
       });
       res.status(500).json({
         error: "Failed to get migration history",
-        details: getErrorMessage(error),
       });
     }
   },

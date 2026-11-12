@@ -18,6 +18,7 @@ import {
 } from "../database/repositories/factory.js";
 import type { UserRecord } from "../database/repositories/user-repository.js";
 import type { ExternalSessionRef } from "./types.js";
+import { setAuthCookie } from "./session-cookie.js";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -166,11 +167,11 @@ export function sendSession(
   session: IssuedSession,
 ): Response {
   const authManager = AuthManager.getInstance();
-  return res
-    .cookie(
-      "jwt",
-      session.token,
-      authManager.getSecureCookieOptions(req, session.maxAge),
-    )
-    .json(session.body);
+  return setAuthCookie(
+    req,
+    res,
+    "jwt",
+    session.token,
+    authManager.getSecureCookieOptions(req, session.maxAge),
+  ).json(session.body);
 }

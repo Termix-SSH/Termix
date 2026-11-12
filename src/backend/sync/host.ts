@@ -85,6 +85,7 @@ import {
 import { applyElectronProxyConfig } from "./client/electron-proxy.js";
 import { lastRemotePlugins, mirrorPlugins } from "./client/plugins.js";
 import { defaultDeviceName } from "./client/device.js";
+import { setAuthCookie, clearAuthCookie } from "../auth/session-cookie.js";
 
 function entityOf(type: string): RegisteredSyncEntity {
   const entity = getEntity(type);
@@ -449,7 +450,9 @@ export function createSyncHost(): PluginSyncHost {
           : null;
       },
       setCookie: (req, res, value, options) => {
-        (res as Response).cookie(
+        setAuthCookie(
+          req as Request,
+          res as Response,
           options?.name ?? "jwt",
           value,
           authManager.getSecureCookieOptions(
@@ -459,7 +462,9 @@ export function createSyncHost(): PluginSyncHost {
         );
       },
       clearCookie: (req, res, name) => {
-        (res as Response).clearCookie(
+        clearAuthCookie(
+          req as Request,
+          res as Response,
           name ?? "jwt",
           authManager.getClearCookieOptions(req as Request),
         );

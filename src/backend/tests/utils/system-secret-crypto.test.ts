@@ -5,7 +5,9 @@ const systemKey = crypto.randomBytes(32);
 const getEncryptionKey = vi.hoisted(() => vi.fn());
 
 vi.mock("../../utils/system-crypto.js", () => ({
-  SystemCrypto: { getInstance: () => ({ getEncryptionKey }) },
+  SystemCrypto: {
+    getInstance: () => ({ getEncryptionKey, getPreviousKeys: async () => [] }),
+  },
 }));
 
 const { decryptSystemSecret, encryptSystemSecret, isSystemEncrypted } =

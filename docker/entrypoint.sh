@@ -14,7 +14,9 @@ if [ "$(id -u)" = "0" ]; then
         groupmod -o -g "$PGID" node 2>/dev/null || true
         usermod -o -u "$PUID" node 2>/dev/null || true
 
-        chown -R node:node /app/data /app/uploads /app/html /tmp/nginx 2>/dev/null || true
+        chown -R node:node /app/data /app/uploads /tmp/nginx 2>/dev/null || true
+        # /app/html is patched in place below, unless it is read-only.
+        if [ -w /app/html ]; then chown -R node:node /app/html 2>/dev/null || true; fi
 
         echo "User node is now UID: $PUID, GID: $PGID"
 
@@ -176,8 +178,21 @@ EOF
     fi
 fi
 
+# A read-only root filesystem (or a user that can't write /app/html) gets a
+# copy of the frontend in /tmp, which nginx then serves instead.
+HTML_DIR=/app/html
+if touch /app/html/.write-test 2>/dev/null; then
+    rm -f /app/html/.write-test
+else
+    echo "/app/html is read-only, serving the frontend from /tmp/html"
+    rm -rf /tmp/html
+    cp -r /app/html /tmp/html
+    HTML_DIR=/tmp/html
+    sed -i 's|root /app/html;|root /tmp/html;|g' /tmp/nginx/nginx.conf
+fi
+
 echo "Starting nginx..."
-nginx -c /tmp/nginx/nginx.conf
+nginx -e /tmp/nginx/error.log -c /tmp/nginx/nginx.conf
 
 # Inject runtime BASE_PATH into frontend if configured
 if [ -n "$BASE_PATH" ]; then
@@ -191,12 +206,12 @@ if [ -n "$BASE_PATH" ]; then
     case "$CLEAN_BASE_PATH" in
         *[!A-Za-z0-9_./~-]*) echo "BASE_PATH contains unsupported characters" >&2; exit 1 ;;
     esac
-    find /app/html -name "index.html" -exec sed -i "s|name=\"termix-base-path\" content=\"\"|name=\"termix-base-path\" content=\"$CLEAN_BASE_PATH\"|g" {} \;
+    find "$HTML_DIR" -name "index.html" -exec sed -i "s|name=\"termix-base-path\" content=\"\"|name=\"termix-base-path\" content=\"$CLEAN_BASE_PATH\"|g" {} \;
     # Patch sw.js static asset paths with the base path prefix
-    find /app/html -name "sw.js" -exec sed -i "s|__TERMIX_SW_BASE_PATH__|$CLEAN_BASE_PATH|g" {} \;
+    find "$HTML_DIR" -name "sw.js" -exec sed -i "s|__TERMIX_SW_BASE_PATH__|$CLEAN_BASE_PATH|g" {} \;
 else
     # No base path - replace placeholder with empty string so paths stay absolute from root
-    find /app/html -name "sw.js" -exec sed -i "s|__TERMIX_SW_BASE_PATH__||g" {} \;
+    find "$HTML_DIR" -name "sw.js" -exec sed -i "s|__TERMIX_SW_BASE_PATH__||g" {} \;
 fi
 
 echo "Starting backend services..."

@@ -6,7 +6,6 @@ import type {
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { databaseLogger } from "../../utils/logger.js";
-import { getErrorMessage } from "../../utils/error-message.js";
 import { createCurrentOperationRepository } from "../repositories/factory.js";
 import type { OperationRunRecord } from "../repositories/operation-repository.js";
 import { buildCatalog } from "../../operations/catalog.js";
@@ -51,7 +50,7 @@ function sendError(res: Response, error: unknown, operation: string): void {
     return;
   }
   databaseLogger.error("Operations route failed", error, { operation });
-  res.status(500).json({ error: getErrorMessage(error, "Request failed") });
+  res.status(500).json({ error: "Request failed" });
 }
 
 function parseJson(text: string | null): unknown {
