@@ -1,11 +1,16 @@
 # Stage 1: Install dependencies
-# Base images are pinned by digest, Dependabot refreshes them.
+# Base images are pinned by digest, Dependabot refreshes them. With
+# SOURCE_DATE_EPOCH set (the commit time), apt reads the Debian snapshot from
+# that moment, so a rebuild of the same commit gets the same packages.
 # The builders only produce JS, so they run on the build machine's own arch
 # once instead of under QEMU per target. Rolldown hangs under arm64 emulation.
 FROM --platform=$BUILDPLATFORM node:26-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS deps
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
+ARG SOURCE_DATE_EPOCH
+RUN if [ -n "$SOURCE_DATE_EPOCH" ]; then cp /etc/apt/sources.list.d/debian.sources /tmp/debian.sources && snap=$(date -u -d "@$SOURCE_DATE_EPOCH" +%Y%m%dT%H%M%SZ) && sed -i -e "s|http://deb.debian.org/debian-security|http://snapshot.debian.org/archive/debian-security/$snap|" -e "s|http://deb.debian.org/debian|http://snapshot.debian.org/archive/debian/$snap|" /etc/apt/sources.list.d/debian.sources; fi && \
+    apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Retries=5 update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/* && \
+    if [ -f /tmp/debian.sources ]; then mv /tmp/debian.sources /etc/apt/sources.list.d/debian.sources; fi
 
 COPY package*.json ./
 COPY packages/plugin-sdk/package.json ./packages/plugin-sdk/package.json
@@ -78,7 +83,10 @@ RUN case "$TARGETARCH" in \
 FROM node:26-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS production-deps
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
+ARG SOURCE_DATE_EPOCH
+RUN if [ -n "$SOURCE_DATE_EPOCH" ]; then cp /etc/apt/sources.list.d/debian.sources /tmp/debian.sources && snap=$(date -u -d "@$SOURCE_DATE_EPOCH" +%Y%m%dT%H%M%SZ) && sed -i -e "s|http://deb.debian.org/debian-security|http://snapshot.debian.org/archive/debian-security/$snap|" -e "s|http://deb.debian.org/debian|http://snapshot.debian.org/archive/debian/$snap|" /etc/apt/sources.list.d/debian.sources; fi && \
+    apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Retries=5 update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/* && \
+    if [ -f /tmp/debian.sources ]; then mv /tmp/debian.sources /etc/apt/sources.list.d/debian.sources; fi
 
 COPY package*.json ./
 # The plugin SDK is a workspace package core imports at runtime, so npm ci
@@ -96,6 +104,7 @@ RUN npm ci --omit=dev --ignore-scripts && \
     rm -rf node_modules/better-sqlite3/prebuilds && \
     npm run build-release --prefix node_modules/better-sqlite3 && \
     test -f node_modules/better-sqlite3/build/Release/better_sqlite3.node && \
+    rm -rf node_modules/better-sqlite3/build/Release/obj.target node_modules/better-sqlite3/build/Release/.deps && \
     npm rebuild bcryptjs && \
     rm -rf node_modules/ssh2/lib/protocol/crypto/build && \
     npm cache clean --force
@@ -123,9 +132,15 @@ ENV DATA_DIR=/app/data \
     NODE_ENV=production
 
 # nftables: plugin firewall rules when the admin adds NET_ADMIN.
-RUN apt-get update && apt-get install -y --no-install-recommends nginx gettext-base openssl ca-certificates gosu iputils-ping nftables && \
+ARG SOURCE_DATE_EPOCH
+RUN if [ -n "$SOURCE_DATE_EPOCH" ]; then cp /etc/apt/sources.list.d/debian.sources /tmp/debian.sources && snap=$(date -u -d "@$SOURCE_DATE_EPOCH" +%Y%m%dT%H%M%SZ) && sed -i -e "s|http://deb.debian.org/debian-security|http://snapshot.debian.org/archive/debian-security/$snap|" -e "s|http://deb.debian.org/debian|http://snapshot.debian.org/archive/debian/$snap|" /etc/apt/sources.list.d/debian.sources; fi && \
+    apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Retries=5 update && apt-get install -y --no-install-recommends nginx gettext-base openssl ca-certificates gosu iputils-ping nftables && \
     update-ca-certificates && \
     rm -rf /var/lib/apt/lists/* && \
+    if [ -f /tmp/debian.sources ]; then mv /tmp/debian.sources /etc/apt/sources.list.d/debian.sources; fi && \
+    # Logs and caches that hold build times, left out so rebuilds match.
+    rm -rf /var/log/apt /var/log/dpkg.log /var/log/alternatives.log /var/cache/ldconfig/aux-cache \
+      /var/cache/debconf/*-old /var/lib/dpkg/*-old && \
     # Plain copy drops ping's file capability, so it uses unprivileged ICMP
     # sockets (net.ipv4.ping_group_range) and works with every capability
     # dropped and no-new-privileges set.

@@ -1,0 +1,81 @@
+name: Reproduce Docker image
+
+# Builds the image twice on separate machines from the same commit and fails
+# if the two image digests differ. Uses the minimal profile, because bundled
+# plugin downloads count in the plugin store.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "docker/**"
+      - ".github/workflows/reproduce-docker.yml"
+
+permissions: {}
+
+jobs:
+  build:
+    name: Build ${{ matrix.run }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        run: [a, b]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build
+        env:
+          RUN_ID: ${{ matrix.run }}
+        run: |
+          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          export SOURCE_DATE_EPOCH
+          docker buildx build \
+            --platform linux/amd64 \
+            --no-cache \
+            --provenance=false \
+            --sbom=false \
+            --build-arg SOURCE_DATE_EPOCH \
+            --build-arg PLUGIN_PROFILE=minimal \
+            --output "type=oci,dest=image-${RUN_ID}.tar,rewrite-timestamp=true" \
+            -f docker/Dockerfile .
+          tar -xOf "image-${RUN_ID}.tar" index.json | jq -r '.manifests[0].digest' | tee "digest-${RUN_ID}.txt"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: image-${{ matrix.run }}
+          path: |
+            image-${{ matrix.run }}.tar
+            digest-${{ matrix.run }}.txt
+          retention-days: 2
+
+  compare:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+
+      - name: Compare
+        run: |
+          a="$(cat image-a/digest-a.txt)"
+          b="$(cat image-b/digest-b.txt)"
+          echo "a: $a"
+          echo "b: $b"
+          if [ "$a" = "$b" ]; then
+            echo "Both builds produced the same image."
+            exit 0
+          fi
+          bash scripts/diff-oci.sh image-a/image-a.tar image-b/image-b.tar
+          exit 1

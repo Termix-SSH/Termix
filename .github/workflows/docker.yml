@@ -76,7 +76,10 @@ jobs:
       - name: Resolve source revision
         run: |
           echo "SOURCE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-          echo "BUILD_CREATED=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+          # Times come from the commit, so a rebuild of it matches byte for byte.
+          epoch="$(git log -1 --format=%ct)"
+          echo "SOURCE_DATE_EPOCH=$epoch" >> "$GITHUB_ENV"
+          echo "BUILD_CREATED=$(date -u -d "@$epoch" +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
 
       # The image reads its version from package.json, so a beta has to say so.
       - name: Stamp beta version
@@ -167,11 +170,12 @@ jobs:
           build-args: |
             BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
             PLUGIN_PROFILE=${{ matrix.profile }}
+            SOURCE_DATE_EPOCH=${{ env.SOURCE_DATE_EPOCH }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ env.SOURCE_SHA }}
             org.opencontainers.image.created=${{ env.BUILD_CREATED }}
-          outputs: ${{ inputs.dry_run && 'type=cacheonly' || 'type=registry,compression=zstd' }}
+          outputs: ${{ inputs.dry_run && 'type=cacheonly' || 'type=registry,compression=zstd,rewrite-timestamp=true' }}
 
       # Keyless signature on the image digest in every repository it went to.
       # The attestations from the build ride inside the same image index.

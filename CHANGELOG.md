@@ -34,6 +34,7 @@
 - `termix-recover` on the server (`docker exec termix termix-recover`) lists admins, removes a locked out admin's second factor and signs people out, without signing in
 - The sign in event plugins get now says which sign in method and device were used
 - The server answers `/.well-known/security.txt` with where to report a security problem in Termix
+- Docker images are reproducible: building the same commit again gives the same image, byte for byte
 
 ### Changed
 
