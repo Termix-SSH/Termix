@@ -39,8 +39,12 @@ export async function resolveHostBySyncId(
   userId: string,
   options: ResolveHostOptions = {},
 ): Promise<SSHHost | null> {
+  // On a desktop two linked accounts can each hold a copy with this sync id,
+  // so the caller's own copy comes first.
+  const repository = createCurrentHostResolutionRepository();
   const hostId =
-    await createCurrentHostResolutionRepository().findHostIdBySyncId(syncId);
+    (await repository.findHostIdBySyncIdForUser(syncId, userId)) ??
+    (await repository.findHostIdBySyncId(syncId));
   if (hostId === null) return null;
 
   // Permissions, decryption, shared-host handling and auditing all belong to

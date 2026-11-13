@@ -26,6 +26,8 @@ import { SYSTEM_ROLE_DEFAULTS } from "../../utils/permission-catalog.js";
 import { connectRemoteDatabase } from "./connect.js";
 import { runRemoteMigrations } from "./migrate.js";
 import { assertNotPre29Database } from "./upgrade-guard.js";
+import { isEmbeddedBackend } from "../../utils/embedded-host.js";
+import { syncIdIndexStatements } from "./sync-id-index.js";
 import {
   LEGACY_USERNAME_PLACEHOLDER_UPDATES,
   legacySudoMoves,
@@ -1754,9 +1756,12 @@ const migrateSchema = () => {
           { operation: "sync_id_backfill", table },
         );
       }
-      sqlite.exec(
-        `CREATE UNIQUE INDEX IF NOT EXISTS idx_${table}_sync_id ON ${table}(sync_id)`,
-      );
+      for (const statement of syncIdIndexStatements(
+        table,
+        isEmbeddedBackend(),
+      )) {
+        sqlite.exec(statement);
+      }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       databaseLogger.warn(

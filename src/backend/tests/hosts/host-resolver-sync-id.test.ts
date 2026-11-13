@@ -1,6 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const findHostIdBySyncId = vi.fn();
+const findHostIdBySyncIdForUser = vi.fn();
 const canAccessHost = vi.fn();
 const findHostOwnerId = vi.fn();
 const findHostById = vi.fn();
@@ -8,6 +9,7 @@ const findHostById = vi.fn();
 vi.mock("../../database/repositories/factory.js", () => ({
   createCurrentHostResolutionRepository: () => ({
     findHostIdBySyncId,
+    findHostIdBySyncIdForUser,
     findHostOwnerId,
     findHostById,
   }),
@@ -40,6 +42,7 @@ describe("resolveHostBySyncId", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    findHostIdBySyncIdForUser.mockResolvedValue(null);
     canAccessHost.mockResolvedValue({ hasAccess: true });
     findHostOwnerId.mockResolvedValue("user-1");
   });
@@ -57,6 +60,21 @@ describe("resolveHostBySyncId", () => {
     expect(findHostIdBySyncId).toHaveBeenCalledWith("sync-abc");
     expect(findHostById).toHaveBeenCalledWith(41, "user-1");
     expect(host?.ip).toBe("10.0.0.7");
+  });
+
+  it("prefers the caller's own copy when two accounts hold one", async () => {
+    // A desktop with two linked accounts keeps a copy for each.
+    findHostIdBySyncIdForUser.mockResolvedValue(7);
+    findHostIdBySyncId.mockResolvedValue(41);
+    findHostById.mockResolvedValue({ id: 7, ip: "10.0.0.7", userId: "user-1" });
+    const host = await resolveHostBySyncId("sync-abc", "user-1");
+
+    expect(findHostIdBySyncIdForUser).toHaveBeenCalledWith(
+      "sync-abc",
+      "user-1",
+    );
+    expect(findHostById).toHaveBeenCalledWith(7, "user-1");
+    expect(host?.id).toBe(7);
   });
 
   it("returns null for a sync id this server does not have", async () => {
@@ -96,6 +114,7 @@ describe("shared host with no login for the recipient", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    findHostIdBySyncIdForUser.mockResolvedValue(null);
     canAccessHost.mockResolvedValue({ hasAccess: true, isShared: true });
     findHostOwnerId.mockResolvedValue("owner");
     findHostIdBySyncId.mockResolvedValue(41);
