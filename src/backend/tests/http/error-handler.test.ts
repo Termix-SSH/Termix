@@ -59,4 +59,18 @@ describe("final error handler", () => {
     expect(res.status).toBe(413);
     expect(res.body).toEqual({ error: "Request is too large" });
   });
+
+  it("answers a broken multipart body with 400", async () => {
+    for (const body of [
+      "--b\r\nbroken header line\r\n\r\nx\r\n--b--\r\n",
+      '--b\r\nContent-Disposition: form-data; name="key"; filename="k"\r\n\r\npart',
+    ]) {
+      const res = await request(app())
+        .post("/upload")
+        .set("Content-Type", "multipart/form-data; boundary=b")
+        .send(body);
+      expect(res.status).toBe(400);
+      expect(res.body).toEqual({ error: "Invalid request" });
+    }
+  });
 });

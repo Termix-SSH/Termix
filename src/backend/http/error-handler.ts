@@ -5,6 +5,9 @@ import { apiLogger } from "../utils/logger.js";
  * Status of an error that is the caller's fault (bad JSON, body too large,
  * upload too big), or null. Upload errors from multer carry a code instead.
  */
+const BAD_BODY =
+  /^(Malformed part header|Unexpected end of form|Multipart: Boundary not found|Malformed urlencoded form)$/;
+
 export function clientErrorStatus(error: unknown): number | null {
   const value = error as {
     status?: unknown;
@@ -14,6 +17,14 @@ export function clientErrorStatus(error: unknown): number | null {
   } | null;
   if (value?.name === "MulterError") {
     return value.code === "LIMIT_FILE_SIZE" ? 413 : 400;
+  }
+  // Multer hands on busboy's parse errors as plain errors: a bad body, not a fault.
+  if (
+    error instanceof Error &&
+    BAD_BODY.test(error.message) &&
+    /busboy|multer/.test(error.stack ?? "")
+  ) {
+    return 400;
   }
   const status = value?.status ?? value?.statusCode;
   return typeof status === "number" && status >= 400 && status < 500

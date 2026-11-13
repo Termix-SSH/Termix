@@ -76,7 +76,8 @@ export const API_CSP = "default-src 'none'; frame-ancestors 'none'";
  * Default for plugin routes and assets. A plugin page (status page, login
  * result) sets its own policy, which replaces this one.
  */
-export const PLUGIN_CSP = "object-src 'none'; base-uri 'none'";
+export const PLUGIN_CSP =
+  "object-src 'none'; base-uri 'none'; frame-ancestors 'self'";
 
 const PLUGIN_PREFIXES = ["/plugin-api/", "/plugin-assets/", "/plugin-ws/"];
 
@@ -123,6 +124,7 @@ export function readImportMapHash(dir: string | undefined): ScriptHash | null {
  */
 export function securityHeadersMiddleware() {
   return (req: Request, res: Response, next: NextFunction): void => {
+    res.removeHeader("X-Powered-By");
     for (const [name, value] of Object.entries(COMMON_HEADERS)) {
       res.setHeader(name, value);
     }

@@ -383,8 +383,9 @@ router.post("/notes", async (req, res) => {
 
 Headers and cookies (Termix 26.11.2+): every answer from `/plugin-api/<id>/` and `/plugin-assets/<id>/` carries
 `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy` and a default
-`Content-Security-Policy: object-src 'none'; base-uri 'none'`. A route that serves its own HTML page sets its own
-`Content-Security-Policy`, which replaces the default. Over HTTPS the session cookie is `__Host-jwt`; core
+`Content-Security-Policy: object-src 'none'; base-uri 'none'; frame-ancestors 'self'`, so only Termix itself can
+frame a plugin page. A route that serves its own HTML page sets its own `Content-Security-Policy`, which replaces
+the default. Over HTTPS the session cookie is `__Host-jwt`; core
 rewrites the request so plugins still read it as `req.cookies.jwt` and in the `Cookie` header as `jwt`.
 
 ### Errors

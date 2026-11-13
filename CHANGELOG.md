@@ -60,6 +60,9 @@
 - A password reset request gives the same answer whether or not the username exists
 - The code step of a sign in with a second factor can only be finished once
 - Pages on other subdomains or ports of the same host can no longer act as the signed in user or read their data. Add origins that need this to CORS_ALLOWED_ORIGINS
+- Server answers no longer name the web framework the server runs on
+- A broken file upload is answered as a bad request instead of a server error
+- Plugin pages can only be shown inside Termix itself, not framed by other sites
 - Plugins that run commands with sudo send the sudo password on stdin, so it never shows up in the host's process list
 - A login that still has to set up a second factor can only open the setup screen, not manage plugins
 - Rotating the JWT secret from the API now really replaces it and signs everyone out

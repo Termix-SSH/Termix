@@ -41,6 +41,13 @@ describe("security headers", () => {
     }
   });
 
+  it("never says what the server runs on", async () => {
+    for (const path of ["/users/me", "/plugin-api/demo/page", "/"]) {
+      const res = await request(app()).get(path);
+      expect(res.headers["x-powered-by"]).toBeUndefined();
+    }
+  });
+
   it("locks core API responses down", async () => {
     const res = await request(app()).get("/users/me");
     expect(res.headers["content-security-policy"]).toBe(API_CSP);
@@ -62,6 +69,9 @@ describe("security headers", () => {
     const plain = await request(app()).get("/plugin-api/demo/page");
     expect(plain.headers["content-security-policy"]).toBe(PLUGIN_CSP);
     expect(plain.headers["x-frame-options"]).toBeUndefined();
+    expect(plain.headers["content-security-policy"]).toContain(
+      "frame-ancestors 'self'",
+    );
 
     const own = await request(app()).get("/plugin-api/demo/own-csp");
     expect(own.headers["content-security-policy"]).toBe("default-src 'self'");

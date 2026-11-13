@@ -122,6 +122,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.disable("x-powered-by");
 
 app.set("trust proxy", "loopback");
 app.use(embeddedHostGuard);
@@ -666,25 +667,16 @@ registerEncryptionRoutes(app, requireAdmin);
  * /database/export:
  *   post:
  *     summary: Export user data
- *     description: Exports the user's data as a SQLite database file.
+ *     description: Exports the signed in user's data as a SQLite database file, with saved passwords and keys in plain text. Takes no body.
  *     tags:
  *       - Database
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               password:
- *                 type: string
  *     responses:
  *       200:
  *         description: User data exported successfully.
- *       400:
- *         description: Password required for export.
- *       401:
- *         description: Invalid password.
+ *       403:
+ *         description: The user's data is locked; sign in again.
+ *       404:
+ *         description: User not found.
  *       500:
  *         description: Failed to export user data.
  */
