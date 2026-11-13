@@ -152,7 +152,7 @@
     "radix-ui": "^1.6.7",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-i18next": "^17.0.14",
+    "react-i18next": "^18.0.1",
     "reflect-metadata": "^0.2.2",
     "sonner": "^2.0.8",
     "supertest": "^7.3.0",
