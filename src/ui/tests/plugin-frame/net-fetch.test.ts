@@ -3,7 +3,11 @@
  * routes, core paths go through the shell, and nothing else is reachable.
  */
 import { describe, expect, it, vi } from "vitest";
-import { createFrameFetch, createFrameXhr } from "@/plugin-frame/net";
+import {
+  createFrameFetch,
+  createFrameXhr,
+  type CoreResponse,
+} from "@/plugin-frame/net";
 
 const BASE = "https://termix.test/base";
 
@@ -15,7 +19,7 @@ function setup() {
         headers: { "content-type": "text/plain" },
       }),
   );
-  const core = vi.fn(async () => ({
+  const core = vi.fn(async (): Promise<CoreResponse> => ({
     status: 200,
     headers: { "content-type": "application/json" },
     body: new TextEncoder().encode('{"ok":true}').buffer as ArrayBuffer,
@@ -173,7 +177,7 @@ describe("createFrameXhr", () => {
     const timedOut = done(c);
     c.send();
     expect(await timedOut).toBe("timeout");
-    c.overrideMimeType();
+    c.overrideMimeType("text/plain");
     c.abort();
   });
 });
