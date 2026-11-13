@@ -17,6 +17,7 @@ import { syncLogger } from "../utils/logger.js";
 import { stripSecrets } from "../hosts/credential-storage.js";
 import {
   getEntity,
+  rowSyncs,
   type RegisteredSyncEntity,
 } from "../plugins/sync-registry.js";
 import {
@@ -268,7 +269,7 @@ export async function loadWireRows(
 
   const dataKey = DataCrypto.getUserDataKey(userId);
   for (const stored of await listStoredRows(entity, userId)) {
-    if (entity.shouldSync && entity.shouldSync(stored) === false) continue;
+    if (!(await rowSyncs(entity, stored))) continue;
     if (options.filter && !options.filter(stored)) continue;
     const syncId = await ensureSyncId(entity, stored);
     try {
@@ -306,7 +307,7 @@ export async function loadWireRow(
   }
   const stored = await findStoredRow(entity, userId, syncId);
   if (!stored) return null;
-  if (entity.shouldSync && entity.shouldSync(stored) === false) return null;
+  if (!(await rowSyncs(entity, stored))) return null;
   const plain = decryptFields(
     entity,
     stored,

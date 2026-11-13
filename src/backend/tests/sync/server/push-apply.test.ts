@@ -129,7 +129,8 @@ beforeEach(() => {
     type: "snippets",
     table: {},
     order: 20,
-    shouldSync: (row: Record<string, unknown>) => row.private !== true,
+    // Async, as a plugin process answers it.
+    shouldSync: async (row: Record<string, unknown>) => row.private !== true,
   });
 });
 

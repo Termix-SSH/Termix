@@ -913,7 +913,9 @@ export class PluginBridge {
 
     if (typeof ctx.fetch === "function") {
       endpoint.handle("ctx.fetch", async ([url, init]) => {
-        const response = await ctx.fetch!(String(url), plainObject(init));
+        // A signal from the child arrives as plain data, not an AbortSignal.
+        const { signal: _signal, ...rest } = plainObject(init);
+        const response = await ctx.fetch!(String(url), rest);
         const body = new Uint8Array(await response.arrayBuffer());
         const headers: Record<string, string> = {};
         response.headers.forEach((value: string, key: string) => {

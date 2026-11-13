@@ -253,7 +253,7 @@ export interface SyncEntityRegistration {
    * Rows this returns false for are left out of sync in both directions, for
    * state that belongs to one install (a per-device "last session").
    */
-  shouldSync?: (row: SyncRow) => boolean;
+  shouldSync?: (row: SyncRow) => boolean | Promise<boolean>;
   /** RBAC permissions a pushed change needs on the server. */
   permissions?: SyncEntityPermissions;
   /**

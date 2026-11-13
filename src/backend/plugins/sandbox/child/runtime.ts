@@ -370,7 +370,20 @@ function buildCtx(): Record<string, unknown> {
   );
   if (has("fetch")) {
     setPath(ctx, "fetch", async (url: string, init?: unknown) => {
-      const r = (await endpoint.call("ctx.fetch", [url, init])) as {
+      // An AbortSignal can't cross, so it stops the wait here instead.
+      const { signal, ...rest } = (init ?? {}) as { signal?: AbortSignal };
+      signal?.throwIfAborted();
+      const call = endpoint.call("ctx.fetch", [url, rest]);
+      const r = (await (signal
+        ? Promise.race([
+            call,
+            new Promise<never>((_, reject) => {
+              signal.addEventListener("abort", () => reject(signal.reason), {
+                once: true,
+              });
+            }),
+          ])
+        : call)) as {
         status: number;
         statusText: string;
         headers: Record<string, string>;

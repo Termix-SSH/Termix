@@ -7,6 +7,7 @@ import {
   listEntityTypes,
   registerEntity,
   resetSyncRegistry,
+  rowSyncs,
   unregisterByOwner,
 } from "../../plugins/sync-registry.js";
 import {
@@ -91,6 +92,15 @@ describe("sync registry", () => {
     expect(() => registerEntity("demo", { type: "", table: {} })).toThrow(
       /needs a type/,
     );
+  });
+  it("waits for a shouldSync answer from a plugin process", async () => {
+    const entity = {
+      shouldSync: async (row: Record<string, unknown>) =>
+        row.kind !== "last_session",
+    };
+    expect(await rowSyncs(entity, { kind: "last_session" })).toBe(false);
+    expect(await rowSyncs(entity, { kind: "saved" })).toBe(true);
+    expect(await rowSyncs({}, { kind: "last_session" })).toBe(true);
   });
 });
 

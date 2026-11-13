@@ -12,6 +12,7 @@
  * registered in core is undone, and it is started again after a backoff. Too
  * many crashes in a row and the plugin is marked failed.
  */
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
@@ -150,19 +151,36 @@ function runtimeReadPaths(pluginDir: string): string[] {
   ];
 }
 
+type Deployment = "desktop" | "docker" | "server"; // plugin-id-ok: not the plugin
+
+/** Where core runs. A plugin process can't look for itself. */
+export function deploymentKind(
+  source: NodeJS.ProcessEnv = process.env,
+  exists: (file: string) => boolean = existsSync,
+): Deployment {
+  if (source.ELECTRON_EMBEDDED === "true") return "desktop";
+  if (exists("/.dockerenv")) return "docker"; // plugin-id-ok: not the plugin
+  return "server";
+}
+
 /**
  * The plugin process's environment: nothing of core's, only the variables
  * the plugin's manifest lists in env (never a core secret or a variable that
- * changes how Node starts).
+ * changes how Node starts), plus core's version and where it runs.
  */
 export function pluginEnv(
   manifest: PluginManifest,
   source: NodeJS.ProcessEnv = process.env,
+  exists: (file: string) => boolean = existsSync,
 ): Record<string, string> {
   const env: Record<string, string> = {
     NODE_ENV: source.NODE_ENV ?? "production",
     TERMIX_SANDBOX_PLUGIN: manifest.id,
+    TERMIX_DEPLOYMENT: deploymentKind(source, exists),
   };
+  if (typeof source.VERSION === "string" && source.VERSION.length <= 64) {
+    env.VERSION = source.VERSION;
+  }
   for (const entry of manifest.env ?? []) {
     const name = entry?.name;
     if (typeof name !== "string" || !isPassableEnv(name)) continue;

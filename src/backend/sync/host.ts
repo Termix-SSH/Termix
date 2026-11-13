@@ -21,6 +21,7 @@ import {
   getEntity,
   listEntities,
   onEntitiesChanged,
+  rowSyncs,
   type RegisteredSyncEntity,
 } from "../plugins/sync-registry.js";
 import {
@@ -117,7 +118,7 @@ async function wipeSyncedData(userId: string): Promise<void> {
       }
       if (!entity.table || entity.singleton) continue;
       for (const row of await listStoredRows(entity, userId)) {
-        if (entity.shouldSync && entity.shouldSync(row) === false) continue;
+        if (!(await rowSyncs(entity, row))) continue;
         if (typeof row.syncId !== "string") continue;
         await deleteStoredRow(entity, userId, row.syncId);
       }
@@ -173,9 +174,11 @@ async function counts(userId: string): Promise<Record<string, number>> {
         continue;
       }
       if (!entity.table) continue;
-      result[entity.type] = (await listStoredRows(entity, userId)).filter(
-        (row) => !entity.shouldSync || entity.shouldSync(row) !== false,
-      ).length;
+      let synced = 0;
+      for (const row of await listStoredRows(entity, userId)) {
+        if (await rowSyncs(entity, row)) synced += 1;
+      }
+      result[entity.type] = synced;
     } catch {
       result[entity.type] = 0;
     }

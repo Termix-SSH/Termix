@@ -446,12 +446,26 @@ describe("plugin process env", () => {
         NODE_OPTIONS: "--inspect",
         DATABASE_KEY: "core only",
       },
+      () => false,
     );
     expect(env).toEqual({
       NODE_ENV: "production",
       TERMIX_SANDBOX_PLUGIN: "snippets",
+      TERMIX_DEPLOYMENT: "server",
       SNIPPET_EXECUTION_TIMEOUT_SECONDS: "60",
     });
+  });
+
+  it("passes core's version and where it runs", async () => {
+    const { pluginEnv } =
+      await import("../../../plugins/sandbox/supervisor.js");
+    const manifest = { id: "telemetry" } as never;
+    expect(
+      pluginEnv(manifest, { VERSION: "26.11.2" }, (f) => f === "/.dockerenv"),
+    ).toMatchObject({ VERSION: "26.11.2", TERMIX_DEPLOYMENT: "docker" });
+    expect(
+      pluginEnv(manifest, { ELECTRON_EMBEDDED: "true" }, () => true),
+    ).toMatchObject({ TERMIX_DEPLOYMENT: "desktop" });
   });
 });
 
@@ -481,6 +495,7 @@ export function activate(ctx) {
         body: "grant_type=authorization_code&code=c",
         tls: { ca: "PEM" },
         allowPrivateHosts: ["idp"],
+        signal: AbortSignal.timeout(60000),
       });
       if ((await token.text()) !== "ok") throw new Error("fetch body lost");
       request.res.cookie("tmxp_loginp_state", "s1", { httpOnly: true, domain: "evil.example" });

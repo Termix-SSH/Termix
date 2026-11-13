@@ -151,6 +151,18 @@ export function registerEntity(
   };
 }
 
+/**
+ * Whether a stored row syncs. A plugin process answers shouldSync with a
+ * Promise, so always await this.
+ */
+export async function rowSyncs(
+  entity: Pick<SyncEntityRegistration, "shouldSync">,
+  row: Record<string, unknown>,
+): Promise<boolean> {
+  if (!entity.shouldSync) return true;
+  return (await entity.shouldSync(row as never)) !== false;
+}
+
 export function getEntity(type: string): RegisteredSyncEntity | undefined {
   const direct = entities.get(type);
   if (direct) return direct;

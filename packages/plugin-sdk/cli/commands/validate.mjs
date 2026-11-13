@@ -184,6 +184,7 @@ const CORE_ENV = new Set([
   "LOCALAPPDATA",
   "USERPROFILE",
   "ELECTRON_EMBEDDED",
+  "TERMIX_DEPLOYMENT",
 ]);
 
 const ENV_READS = [

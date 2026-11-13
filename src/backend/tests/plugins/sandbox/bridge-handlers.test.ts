@@ -479,6 +479,16 @@ describe("log and fetch", () => {
     expect(Buffer.from(reply.v.body).toString()).toBe("pong");
   });
 
+  it("drops a signal that arrives as plain data", async () => {
+    const h = harness();
+    await h.send("ctx.fetch", [
+      "https://example.test",
+      { method: "GET", signal: {} },
+    ]);
+    const init = (h.ctx.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    expect(init).toEqual({ method: "GET" });
+  });
+
   it("logs a plugin line with its id", () => {
     const write = vi.spyOn(console, "log").mockImplementation(() => {});
     const info = vi.spyOn(console, "info").mockImplementation(() => {});

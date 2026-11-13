@@ -300,6 +300,7 @@ layout or theme, or `network:sockets` keeps it running.
   `Proxy-Authorization` before a request reaches you.
 - Your process gets no environment of core's. Variables you list in the manifest's `env` are passed
   through, except core's own secrets and anything that changes how Node starts.
+  `VERSION` (the Termix version) and `TERMIX_DEPLOYMENT` (`desktop`, `docker` or `server`) are always set.
 - SSH auth providers work: `prepare` gets a copy of the config without secrets and may set only
   `username`, `password`, `privateKey`, `passphrase`, `tryKeyboard`, `readyTimeout`, `timeout`,
   `keepaliveInterval` and `keepaliveCountMax` (a `retry` patch and `connectOptions` too). `env.client` is a stand-in;
@@ -316,9 +317,9 @@ res)` works from inside one of your own requests: Termix finishes the login on t
   answer with a Promise, with the same 5 second limit. Anything that reads `ctx.ssh.classifyKeyboardInteractive`
   or a prepared `onBanner` must await it.
 - `ctx.process.run` works as before; core runs the program and `exited` resolves when it ends.
-- Cookies: requests reach you with only cookies named `tmxp_<your id with _>_...`, and a
 - Looking up a host name with `node:dns` needs `network:sockets`. With `network:probe`, call
   `ctx.network.lookup(name, { family: 4 })` instead: Termix looks it up and answers the first address or null.
+- Cookies: requests reach you with only cookies named `tmxp_<your id with _>_...`, and a
   `Set-Cookie` you send is kept only for those names and without a `Domain`. Core's own login
   cookies never reach your process.
 - `files:own` lets your process read and write its data folder.

@@ -8,7 +8,7 @@
  */
 
 import type { SyncRow } from "@termix-ssh/plugin-sdk/backend";
-import { getEntity } from "../../plugins/sync-registry.js";
+import { getEntity, rowSyncs } from "../../plugins/sync-registry.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { syncLogger } from "../../utils/logger.js";
 import {
@@ -219,7 +219,7 @@ export async function applyPush(
       }
 
       const row = { ...(op.row as SyncRow), syncId: op.syncId };
-      if (entity.shouldSync && entity.shouldSync(row) === false) {
+      if (!(await rowSyncs(entity, row))) {
         results.set(key, { ...base, status: "rejected", reason: "not_synced" });
         continue;
       }
