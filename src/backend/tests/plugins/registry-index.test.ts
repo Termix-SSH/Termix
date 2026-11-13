@@ -72,6 +72,18 @@ import {
   type RegistrySource,
   type RegistryVersion,
 } from "../../plugins/registry-index.js";
+import { setTrustRootsForTests } from "../../plugins/trust.js";
+import {
+  clearRevocationLists,
+  setRevocationList,
+} from "../../plugins/revocation-state.js";
+import {
+  envelopeFor,
+  makeCert,
+  makeOnlineKey,
+  makeRoot,
+  rootsFor,
+} from "../fixtures/trust-chain.js";
 
 const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519");
 testKey.value = {
@@ -83,11 +95,17 @@ testKey.value = {
   addedIn: "26.10.0",
 };
 
-function sign(buffer: Buffer) {
+const root = makeRoot();
+const online = makeOnlineKey();
+const cert = makeCert(root, online);
+
+/** A legacy signature plus a chain envelope, like the index lists both. */
+function sign(buffer: Buffer, chainCert = cert) {
   const digest = crypto.createHash("sha256").update(buffer).digest();
   return {
     sha256: digest.toString("hex"),
     signature: crypto.sign(null, digest, privateKey).toString("base64"),
+    chain: [envelopeFor(buffer, online, chainCert)],
   };
 }
 
@@ -105,16 +123,19 @@ function version(overrides: Partial<RegistryVersion> = {}) {
     url: "https://example.com/p-1.0.0.tmxplug",
     sha256: "a".repeat(64),
     signature: "sig",
+    chain: [],
     size: 10,
     capabilities: ["kv:own"],
     publishedAt: "2026-10-01T00:00:00Z",
     ...overrides,
-  };
+  } as RegistryVersion;
 }
 
 let dataDir: string;
 
 beforeEach(() => {
+  setTrustRootsForTests(rootsFor([root]));
+  clearRevocationLists();
   dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "termix-registry-"));
   process.env.DATA_DIR = dataDir;
   fetchMock.mockReset();
@@ -122,6 +143,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  setTrustRootsForTests(null);
+  clearRevocationLists();
   delete process.env.DATA_DIR;
   fs.rmSync(dataDir, { recursive: true, force: true });
 });
@@ -530,7 +553,7 @@ describe("downloadRelease", () => {
     capabilities: ["kv:own"],
   });
 
-  it("writes a verified artifact and its signature to staging", async () => {
+  it("writes a verified artifact and its chain signature to staging", async () => {
     const signed = sign(artifact);
     fetchMock.mockResolvedValueOnce(response(artifact));
 
@@ -539,28 +562,83 @@ describe("downloadRelease", () => {
       version({ ...signed, size: artifact.length }),
     );
     expect(fs.readFileSync(result.file)).toEqual(artifact);
-    expect(fs.readFileSync(result.signatureFile, "utf8")).toBe(
-      signed.signature,
+    expect(JSON.parse(fs.readFileSync(result.signatureFile, "utf8"))).toEqual(
+      signed.chain[0],
     );
     expect(
       result.file.startsWith(path.join(dataDir, "plugins", ".downloads")),
     ).toBe(true);
   });
 
-  it("refuses a file signed by a key this build does not trust", async () => {
-    const other = crypto.generateKeyPairSync("ed25519").privateKey;
-    const digest = crypto.createHash("sha256").update(artifact).digest();
+  it("refuses a file whose key no root certified", async () => {
+    const otherRoot = makeRoot();
+    const signed = sign(artifact, makeCert(otherRoot, online));
     fetchMock.mockResolvedValueOnce(response(artifact));
     await expect(
-      downloadRelease(
-        "docker",
-        version({
-          sha256: digest.toString("hex"),
-          signature: crypto.sign(null, digest, other).toString("base64"),
-          size: artifact.length,
-        }),
-      ),
-    ).rejects.toThrow(/trusted key/);
+      downloadRelease("docker", version({ ...signed, size: artifact.length })),
+    ).rejects.toThrow(/not a root/);
+  });
+
+  it("refuses an official release with only a pre-chain signature", async () => {
+    const { chain: _chain, ...legacy } = sign(artifact);
+    fetchMock.mockResolvedValueOnce(response(artifact));
+    await expect(
+      downloadRelease("docker", version({ ...legacy, size: artifact.length })),
+    ).rejects.toThrow(/root trusts/);
+  });
+
+  it("takes the pre-chain signature while a tier has no root keys", async () => {
+    setTrustRootsForTests({ official: [], community: [] });
+    const { chain: _chain, ...legacy } = sign(artifact);
+    fetchMock.mockResolvedValueOnce(response(artifact));
+    const result = await downloadRelease(
+      "docker",
+      version({ ...legacy, size: artifact.length }),
+    );
+    expect(fs.readFileSync(result.signatureFile, "utf8")).toBe(
+      legacy.signature,
+    );
+  });
+
+  it("refuses a release signed by an expired certificate", async () => {
+    const signed = sign(
+      artifact,
+      makeCert(root, online, { expires: "2026-01-02T00:00:00Z" }),
+    );
+    fetchMock.mockResolvedValueOnce(response(artifact));
+    await expect(
+      downloadRelease("docker", version({ ...signed, size: artifact.length })),
+    ).rejects.toThrow(/expired/);
+  });
+
+  it("refuses a release signed by a revoked key", async () => {
+    setRevocationList("official", {
+      type: "termix-revocations",
+      tier: "official",
+      version: 2,
+      issued: "",
+      keys: [{ keyId: online.keyId }],
+      plugins: [],
+      versions: [],
+    });
+    const signed = sign(artifact);
+    fetchMock.mockResolvedValueOnce(response(artifact));
+    await expect(
+      downloadRelease("docker", version({ ...signed, size: artifact.length })),
+    ).rejects.toThrow(/revoked/);
+  });
+
+  it("refuses a community certified key for an official release", async () => {
+    const community = makeRoot();
+    setTrustRootsForTests(rootsFor([root], [community]));
+    const signed = sign(
+      artifact,
+      makeCert(community, online, { tier: "community" }),
+    );
+    fetchMock.mockResolvedValueOnce(response(artifact));
+    await expect(
+      downloadRelease("docker", version({ ...signed, size: artifact.length })),
+    ).rejects.toThrow(/community tier/);
   });
 
   it.each([
@@ -609,9 +687,10 @@ describe("downloadRelease", () => {
     };
     fetchMock.mockResolvedValueOnce(response(artifact));
     await expect(
-      downloadRelease("docker", version({ ...signed, size: artifact.length }), [
-        ownKey,
-      ]),
+      downloadRelease("docker", version({ ...signed, size: artifact.length }), {
+        tier: "custom",
+        keys: [ownKey],
+      }),
     ).rejects.toThrow(/trusted key/);
 
     const digest = crypto.createHash("sha256").update(artifact).digest();
@@ -623,7 +702,7 @@ describe("downloadRelease", () => {
         signature: crypto.sign(null, digest, own.privateKey).toString("base64"),
         size: artifact.length,
       }),
-      [ownKey],
+      { tier: "custom", keys: [ownKey] },
     );
     expect(fs.readFileSync(result.file)).toEqual(artifact);
   });
@@ -688,5 +767,51 @@ describe("registry stats", () => {
     );
     const stats = await fetchRegistryStats();
     expect(stats?.plugins.get("docker")).toBe(3);
+  });
+});
+
+describe("parseRegistryIndex chain signatures", () => {
+  const entry = (release: Record<string, unknown>) => ({
+    certs: [cert],
+    plugins: [
+      {
+        id: "docker",
+        versions: [
+          {
+            version: "1.0.0",
+            url: "https://example.com/d.tmxplug",
+            sha256: "a".repeat(64),
+            ...release,
+          },
+        ],
+      },
+    ],
+  });
+
+  it("pairs each signature with the certificate for its key", () => {
+    const index = parseRegistryIndex(
+      entry({
+        signature: "legacy",
+        signatures: [{ keyId: online.keyId, sig: "c2ln" }],
+      }),
+    );
+    expect(index.plugins[0].versions[0].chain).toEqual([
+      { v: 2, keyId: online.keyId, sig: "c2ln", cert },
+    ]);
+    expect(index.plugins[0].versions[0].signature).toBe("legacy");
+  });
+
+  it("keeps a release that only has chain signatures", () => {
+    const index = parseRegistryIndex(
+      entry({ signatures: [{ keyId: online.keyId, sig: "c2ln" }] }),
+    );
+    expect(index.plugins[0].versions[0].signature).toBe("");
+  });
+
+  it("drops signatures with no certificate, and a release left with none", () => {
+    const index = parseRegistryIndex(
+      entry({ signatures: [{ keyId: "unknown", sig: "c2ln" }] }),
+    );
+    expect(index.plugins).toEqual([]);
   });
 });

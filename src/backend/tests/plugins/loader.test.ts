@@ -19,6 +19,10 @@ import {
   unsafeArchivePath,
 } from "../../plugins/loader.js";
 import { createFixturePlugin } from "./fixture-plugin.js";
+import {
+  clearRevocationLists,
+  setRevocationList,
+} from "../../plugins/revocation-state.js";
 
 vi.mock("../../database/repositories/factory.js", () => ({
   createCurrentPluginStorageRepository: () => ({
@@ -366,6 +370,36 @@ describe("PluginLoader lifecycle", () => {
     await loader.deactivate("sample-plugin");
     expect(loader.get("sample-plugin")?.state).toBe("stopped");
     expect(fs.readFileSync(marker, "utf8")).toBe("up\ndown\n");
+  });
+
+  it("never starts a plugin version Termix revoked", async () => {
+    const marker = path.join(tempRoot("termix-revoked-"), "ran.txt");
+    const loader = await single(`
+      import fs from "node:fs";
+      export async function activate() {
+        fs.writeFileSync(${JSON.stringify(marker)}, "ran");
+      }
+    `);
+    const version = loader.get("sample-plugin")!.manifest.version;
+    setRevocationList("official", {
+      type: "termix-revocations",
+      tier: "official",
+      version: 1,
+      issued: "",
+      keys: [],
+      plugins: [],
+      versions: [{ id: "sample-plugin", version, reason: "bad build" }],
+    });
+    try {
+      await loader.activate("sample-plugin");
+      expect(loader.get("sample-plugin")?.state).toBe("blocked");
+      expect(loader.get("sample-plugin")?.lastError).toMatch(
+        /revoked: bad build/,
+      );
+      expect(fs.existsSync(marker)).toBe(false);
+    } finally {
+      clearRevocationLists();
+    }
   });
 
   it("marks a plugin failed when activate throws", async () => {

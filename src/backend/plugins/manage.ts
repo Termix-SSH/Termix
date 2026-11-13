@@ -531,7 +531,7 @@ async function swapIn(
   const staged = useBundled
     ? null
     : "release" in source
-      ? await downloadRelease(pluginId, source.release, source.source.keys)
+      ? await downloadRelease(pluginId, source.release, source.source)
       : { file: source.upload, signatureFile: `${source.upload}.sig` };
 
   const finalFile = path.join(getPluginsDir(), `${pluginId}.tmxplug`);
@@ -1683,7 +1683,9 @@ function checkUploadSignature(
   signature: string,
 ): { official: boolean } {
   const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
-  const result = verifyAnyTrusted(buffer, sha256, signature);
+  const result = verifyAnyTrusted(buffer, sha256, signature, {
+    mode: "download",
+  });
   if (result.ok === false) {
     throw new PluginManageError(
       `The signature does not match this file: ${result.reason}`,

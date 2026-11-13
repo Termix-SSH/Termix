@@ -249,6 +249,9 @@ export async function initializePlugins(
   const { applyStoredPluginChoices } = await import("./manage.js");
   await applyStoredPluginChoices(pluginLoader);
 
+  const { loadStoredRevocations } = await import("./revocations.js");
+  await loadStoredRevocations();
+
   const loaded = await pluginLoader.loadAll();
   if (loaded.length === 0) return [];
 
@@ -273,6 +276,8 @@ export async function initializePlugins(
   const { seedUnisolatedSwitches } =
     await import("../upgrade/unisolated-plugins.js");
   await seedUnisolatedSwitches(loaded, created);
+  const { noteSignerChanges } = await import("./signers.js");
+  await noteSignerChanges(loaded);
   if (loaded.some((plugin) => plugin.source === "bundled")) {
     const { offerPluginSetup } = await import("./onboarding.js");
     await offerPluginSetup(fresh);
@@ -660,6 +665,8 @@ export async function registerLoadedPlugins(
 ): Promise<void> {
   await seedPlugins(loaded, false);
   await syncCapabilityGrants(loaded);
+  const { noteSignerChanges } = await import("./signers.js");
+  await noteSignerChanges(loaded);
 }
 
 /** Stops a plugin and forgets it, before a new version is installed. */

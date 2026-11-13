@@ -1086,8 +1086,12 @@ describe("more registries", () => {
       capabilities: DEFAULT_CAPS,
     });
     expect(result.state).toBe("active");
-    const keys = registry.download.mock.calls[0][2] as Array<{ id: string }>;
-    expect(keys.map((key) => key.id)).toEqual(["be5b24ea07b36624"]);
+    const source = registry.download.mock.calls[0][2] as {
+      tier: string;
+      keys: Array<{ id: string }>;
+    };
+    expect(source.tier).toBe("community");
+    expect(source.keys.map((key) => key.id)).toEqual(["be5b24ea07b36624"]);
     expect(db.rows.get("neat")).toMatchObject({
       registryId: "community",
       tier: "community",
@@ -1120,9 +1124,10 @@ describe("more registries", () => {
     );
     const result = await manage.updatePlugin("neat", { userId: "admin" });
     expect(result.version).toBe("1.1.0");
-    const [, release, keys] = registry.download.mock.calls[0];
+    const [, release, source] = registry.download.mock.calls[0];
     expect(release.url).toContain("neat-1.1.0");
-    expect(keys.map((key: { id: string }) => key.id)).toEqual([
+    expect(source.tier).toBe("community");
+    expect(source.keys.map((key: { id: string }) => key.id)).toEqual([
       "be5b24ea07b36624",
     ]);
     expect(db.rows.get("neat")).toMatchObject({ registryId: "community" });

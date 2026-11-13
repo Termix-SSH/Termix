@@ -35,6 +35,7 @@ const appProtocol = require("./app-protocol.cjs");
 const { createIpcGuard } = require("./ipc-guard.cjs");
 const { IPC_ARGS } = require("./ipc-args.cjs");
 const {
+  REVOCATIONS_URL,
   createReleaseVerifier,
   sigstoreBundleVerifier,
 } = require("./update-verify.cjs");
@@ -1953,6 +1954,17 @@ function startAppUpdater() {
       verifyBundle: sigstoreBundleVerifier({
         cachePath: path.join(app.getPath("userData"), "sigstore-tuf"),
       }),
+      fetchRevocations: async () => {
+        const { net } = require("electron");
+        const response = await net.fetch(REVOCATIONS_URL);
+        if (!response.ok) {
+          throw new Error(`revocation list returned ${response.status}`);
+        }
+        const text = await response.text();
+        if (text.length > 1024 * 1024)
+          throw new Error("revocation list too big");
+        return JSON.parse(text);
+      },
       fs,
       log: logToFile,
     }),

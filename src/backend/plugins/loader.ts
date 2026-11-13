@@ -44,6 +44,7 @@ import {
   type KeyTier,
 } from "./trust.js";
 import { moveWithRetry } from "./fs-retry.js";
+import { revocationReason } from "./revocation-state.js";
 import {
   createPluginContext,
   createPluginHandle,
@@ -93,6 +94,8 @@ export interface LoadedPlugin {
   signedBy?: string;
   /** Which set of keys that key belongs to. */
   signedTier?: KeyTier;
+  /** Root key that certified the signing key, for chain signatures. */
+  signedRoot?: string;
   /** An admin let this API 1 plugin run inside the server process. */
   runUnisolated?: boolean;
   /** Set while the plugin runs in its own process. */
@@ -468,6 +471,7 @@ export class PluginLoader {
     const sigFile = `${file}.sig`;
     let signedBy: string | undefined;
     let signedTier: KeyTier | undefined;
+    let signedRoot: string | undefined;
 
     if (fs.existsSync(sigFile)) {
       const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
@@ -481,6 +485,7 @@ export class PluginLoader {
       }
       signedBy = result.keyId;
       signedTier = result.tier;
+      signedRoot = result.rootId;
     } else if (requireSignedPlugins()) {
       throw new Error(
         `TERMIX_REQUIRE_SIGNED_PLUGINS is on and ${path.basename(file)} has no .sig next to it`,
@@ -552,6 +557,7 @@ export class PluginLoader {
         plugin.artifact = file;
         plugin.signedBy = signedBy;
         plugin.signedTier = signedTier;
+        plugin.signedRoot = signedRoot;
         if (replaced) {
           pluginLogger.info(
             `Plugin ${id} updated from ${replaced.manifest.version} to ${plugin.manifest.version}`,
@@ -688,6 +694,22 @@ export class PluginLoader {
     ) {
       plugin.state = "blocked";
       plugin.lastError = "only runs in the desktop app";
+      return;
+    }
+
+    const revoked = revocationReason({
+      id: plugin.id,
+      version: plugin.manifest.version,
+      signedTier: plugin.signedTier,
+      signedBy: plugin.signedBy,
+      signedRoot: plugin.signedRoot,
+    });
+    if (revoked) {
+      plugin.state = "blocked";
+      plugin.lastError = revoked;
+      pluginLogger.warn(`Plugin ${plugin.id} is blocked: ${revoked}`, {
+        operation: "plugin_activate",
+      });
       return;
     }
 

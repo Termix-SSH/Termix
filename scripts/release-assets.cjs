@@ -26,12 +26,14 @@ const UPLOADS = "https://uploads.github.com";
 const UPLOADING_LINE =
   "Desktop files are still uploading. This release is published when they are done.";
 
-// The signed checksum list and its Sigstore bundle. They are made last and
-// never listed inside the checksums themselves.
+// The signed checksum list, its Sigstore bundle and its release key
+// signature. They are made last and never listed inside the checksums.
 const SUMS_FILE = "SHA256SUMS";
 const SUMS_BUNDLE = "SHA256SUMS.sigstore.json";
+const SUMS_CHAIN = "SHA256SUMS.sig";
 
 const COMMON = [
+  SUMS_CHAIN,
   SUMS_BUNDLE,
   SUMS_FILE,
   "com.karmaa.termix.flatpakref",
@@ -115,7 +117,8 @@ function formatSums(entries) {
   );
 }
 
-const isSumsFile = (name) => name === SUMS_FILE || name === SUMS_BUNDLE;
+const isSumsFile = (name) =>
+  name === SUMS_FILE || name === SUMS_BUNDLE || name === SUMS_CHAIN;
 
 /** Checksums of a folder of files, read from disk. */
 function sumsFromDir(dir, hash = sha256File) {

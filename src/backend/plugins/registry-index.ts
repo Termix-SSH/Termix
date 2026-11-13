@@ -4,10 +4,10 @@
  * An index is a plain JSON file. Official and community live in
  * Termix-SSH/Termix-Registry, custom ones anywhere an admin points to.
  * Nothing in an index is trusted on its own: every download is checked
- * against the sha256 and Ed25519 signature listed for it, and the signature
- * must come from that registry's keys (built in for official and community,
- * pinned when an admin added a custom one). A tampered index can at most
- * point at a file that then fails the check.
+ * against the sha256 and Ed25519 signature listed for it. Official and
+ * community releases need a key the Termix root certified (trust-chain.ts);
+ * a custom registry's releases need the key pinned when an admin added it.
+ * A tampered index can at most point at a file that then fails the check.
  */
 
 import crypto from "node:crypto";
@@ -35,9 +35,12 @@ import {
   COMMUNITY_PLUGIN_KEYS,
   TRUSTED_PLUGIN_KEYS,
   isPluginPublicKey,
+  legacyAllowed,
+  verifyChainSignature,
   verifyPluginArtifact,
   type TrustedPluginKey,
 } from "./trust.js";
+import type { KeyCertificate, SignatureEnvelope } from "./trust-chain.js";
 import { readArtifactManifest, sameCapabilities } from "./artifact-manifest.js";
 import { getPluginsDir } from "./paths.js";
 
@@ -74,7 +77,10 @@ export interface RegistryVersion {
   engine?: { api: string; termix: string };
   url: string;
   sha256: string;
+  /** Pre-chain signature, "" when the index has none. */
   signature: string;
+  /** Signatures by root certified keys, each with its certificate. */
+  chain: SignatureEnvelope[];
   size: number;
   capabilities: string[];
   releaseNotesUrl?: string;
@@ -152,14 +158,53 @@ function asString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
-function parseVersion(raw: unknown): RegistryVersion | null {
+const MAX_CHAIN_SIGNATURES = 4;
+
+/** Pairs each listed signature with the certificate for its key. */
+function parseChain(
+  raw: unknown,
+  certs: ReadonlyMap<string, KeyCertificate>,
+): SignatureEnvelope[] {
+  if (!Array.isArray(raw)) return [];
+  const out: SignatureEnvelope[] = [];
+  for (const item of raw.slice(0, MAX_CHAIN_SIGNATURES)) {
+    const entry = item as Record<string, unknown> | null;
+    const keyId = asString(entry?.keyId);
+    const sig = asString(entry?.sig);
+    const cert = keyId ? certs.get(keyId) : undefined;
+    if (keyId && sig && cert) out.push({ v: 2, keyId, sig, cert });
+  }
+  return out;
+}
+
+function parseCerts(raw: unknown): Map<string, KeyCertificate> {
+  const certs = new Map<string, KeyCertificate>();
+  if (!Array.isArray(raw)) return certs;
+  for (const item of raw.slice(0, 20)) {
+    const keyId = (item as KeyCertificate | null)?.signed?.keyId;
+    if (typeof keyId === "string") certs.set(keyId, item as KeyCertificate);
+  }
+  return certs;
+}
+
+function parseVersion(
+  raw: unknown,
+  certs: ReadonlyMap<string, KeyCertificate> = new Map(),
+): RegistryVersion | null {
   if (!raw || typeof raw !== "object") return null;
   const entry = raw as Record<string, unknown>;
   const version = asString(entry.version);
   const url = asString(entry.url);
   const sha256 = asString(entry.sha256);
-  const signature = asString(entry.signature);
-  if (!version || !semver.valid(version) || !url || !sha256 || !signature) {
+  const signature = asString(entry.signature) ?? "";
+  const chain = parseChain(entry.signatures, certs);
+  if (
+    !version ||
+    !semver.valid(version) ||
+    !url ||
+    !sha256 ||
+    (!signature && chain.length === 0)
+  ) {
     return null;
   }
   if (!/^[a-f0-9]{64}$/i.test(sha256)) return null;
@@ -180,6 +225,7 @@ function parseVersion(raw: unknown): RegistryVersion | null {
     url,
     sha256: sha256.toLowerCase(),
     signature,
+    chain,
     size: typeof entry.size === "number" ? entry.size : 0,
     capabilities: Array.isArray(entry.capabilities)
       ? entry.capabilities.filter((c): c is string => typeof c === "string")
@@ -200,6 +246,7 @@ export function parseRegistryIndex(raw: unknown): RegistryIndex {
     throw new Error("registry index has no plugins list");
   }
 
+  const certs = parseCerts(index.certs);
   const plugins: RegistryPlugin[] = [];
   for (const item of index.plugins) {
     if (!item || typeof item !== "object") continue;
@@ -208,7 +255,7 @@ export function parseRegistryIndex(raw: unknown): RegistryIndex {
     if (!id || !ID_PATTERN.test(id)) continue;
     const parseList = (list: unknown) =>
       (Array.isArray(list) ? list : [])
-        .map(parseVersion)
+        .map((raw) => parseVersion(raw, certs))
         .filter((v): v is RegistryVersion => v !== null)
         .sort((a, b) => semver.rcompare(a.version, b.version));
     // gated holds releases that need a newer Termix than builds which skip
@@ -597,13 +644,71 @@ export function assertArtifactMatches(
 }
 
 /**
+ * Checks a downloaded release and gives the .sig text to keep next to it:
+ * the chain envelope for official and community, the pinned key's plain
+ * signature for a custom registry.
+ */
+export function verifyRelease(
+  buffer: Buffer,
+  release: RegistryVersion,
+  source: Pick<RegistrySource, "tier" | "keys">,
+  now?: number,
+): { ok: true; sig: string } | { ok: false; reason: string } {
+  const legacy = () => {
+    const result = verifyPluginArtifact(
+      buffer,
+      release.sha256,
+      release.signature,
+      source.keys,
+    );
+    return result.ok === true
+      ? { ok: true as const, sig: release.signature.trim() }
+      : result;
+  };
+  if (source.tier === "custom") return legacy();
+
+  const digest = crypto.createHash("sha256").update(buffer).digest("hex");
+  if (digest !== release.sha256) {
+    return { ok: false, reason: "sha256 does not match the file" };
+  }
+  let reason = "not signed by a key the Termix root trusts";
+  for (const envelope of release.chain) {
+    const result = verifyChainSignature(
+      buffer,
+      release.sha256,
+      envelope,
+      source.tier,
+      { mode: "download", now },
+    );
+    if (result.ok === true) return { ok: true, sig: JSON.stringify(envelope) };
+    reason = result.reason;
+  }
+  if (
+    release.signature &&
+    legacyAllowed(source.tier, { mode: "download", now })
+  ) {
+    return legacy();
+  }
+  return { ok: false, reason };
+}
+
+/** Fetches a small JSON file through the same path as the index. */
+export async function fetchRegistryJson(
+  url: string,
+  maxBytes = 1024 * 1024,
+): Promise<unknown> {
+  const response = await fetchFollowing(url);
+  return JSON.parse((await readLimited(response, maxBytes)).toString("utf8"));
+}
+
+/**
  * Downloads a release, verifies it, and leaves it in a staging folder the
  * loader never scans. The caller moves it into place.
  */
 export async function downloadRelease(
   pluginId: string,
   release: RegistryVersion,
-  keys: readonly TrustedPluginKey[] = TRUSTED_PLUGIN_KEYS,
+  source: Pick<RegistrySource, "tier" | "keys"> = officialSource(),
 ): Promise<{ file: string; signatureFile: string }> {
   if (!canRunRelease(release)) {
     const termix = neededTermix(release);
@@ -622,12 +727,7 @@ export async function downloadRelease(
     Math.min(limit, MAX_ARTIFACT_BYTES),
   );
 
-  const verified = verifyPluginArtifact(
-    buffer,
-    release.sha256,
-    release.signature,
-    keys,
-  );
+  const verified = verifyRelease(buffer, release, source);
   if (verified.ok === false) {
     throw new Error(`${pluginId} ${release.version}: ${verified.reason}`);
   }
@@ -640,7 +740,7 @@ export async function downloadRelease(
     `${pluginId}-${release.version}-${crypto.randomBytes(4).toString("hex")}.tmxplug`,
   );
   await fs.promises.writeFile(base, buffer);
-  await fs.promises.writeFile(`${base}.sig`, release.signature.trim());
+  await fs.promises.writeFile(`${base}.sig`, verified.sig);
   return { file: base, signatureFile: `${base}.sig` };
 }
 

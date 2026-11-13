@@ -1,13 +1,18 @@
 // Checks a desktop update against the release's signed checksum file before
-// anything is installed. The release workflow signs SHA256SUMS keyless with
-// Sigstore from its own GitHub Actions identity, so a release file that was
-// swapped, or a release made anywhere else, is refused on every platform.
+// anything is installed. SHA256SUMS carries two signatures and both must
+// hold: Sigstore, keyless from core's own release workflow, and the release
+// key the offline Termix root certified (trust-chain.cjs). A swapped release
+// file, a release made anywhere else or a revoked release key is refused.
 
 const crypto = require("crypto");
 const path = require("path");
+const trustChain = require("./trust-chain.cjs");
 
 const SUMS_FILE = "SHA256SUMS";
 const SUMS_BUNDLE = "SHA256SUMS.sigstore.json";
+const SUMS_CHAIN = "SHA256SUMS.sig";
+const REVOCATIONS_URL =
+  "https://raw.githubusercontent.com/Termix-SSH/Termix-Registry/main/trust/official/revocations.json";
 
 // Who may sign: core's release workflow, run from a branch or tag.
 const SIGNER_ISSUER = "https://token.actions.githubusercontent.com";
@@ -101,24 +106,83 @@ function sigstoreBundleVerifier({
 }
 
 /**
+ * Checks SHA256SUMS.sig: a release key certificate from the official root,
+ * in date, for releases, with the key not on the root signed revocation
+ * list. A list that can't be fetched or checked counts as empty, so being
+ * offline never blocks the check, only a revoked key does.
+ */
+async function verifyChain(
+  sumsData,
+  chainData,
+  { fetchRevocations, roots, now, log },
+) {
+  let envelope;
+  try {
+    envelope = JSON.parse(chainData.toString("utf8"));
+  } catch {
+    throw new UpdateVerifyError(
+      "signature",
+      "The release key signature is not valid",
+    );
+  }
+  let revokedKeys = new Set();
+  try {
+    const raw = fetchRevocations ? await fetchRevocations() : null;
+    revokedKeys = (raw && trustChain.revokedKeysFrom(raw, roots)) || new Set();
+  } catch (error) {
+    log(
+      "[updater] revocation list not checked:",
+      error?.message || String(error),
+    );
+  }
+  const result = trustChain.verifyEnvelopeFor(sumsData, envelope, {
+    tier: "official",
+    role: "releases",
+    checkDates: true,
+    now,
+    revokedKeys,
+    roots,
+  });
+  if (!result.ok) {
+    log("[updater] release key check failed:", result.reason);
+    throw new UpdateVerifyError(
+      "signature",
+      "The update's release key could not be checked",
+    );
+  }
+  return result;
+}
+
+/**
  * fetchAsset(tag, name) gives a Buffer, or null when the release has no
  * such file. verifyBundle(bundleJson, data) throws unless the signature is
- * good and made by the release workflow.
+ * good and made by the release workflow. fetchRevocations() gives the
+ * parsed official revocation list. roots and now are test seams.
  */
 function createReleaseVerifier({
   fetchAsset,
   verifyBundle,
+  fetchRevocations,
   fs,
   log = () => {},
+  roots = trustChain.ROOT_KEYS,
+  now,
 }) {
   async function verifyRelease({ tag, channelFile }) {
-    const [sumsData, bundleData] = await Promise.all([
+    const [sumsData, bundleData, chainData] = await Promise.all([
       fetchAsset(tag, SUMS_FILE),
       fetchAsset(tag, SUMS_BUNDLE),
+      fetchAsset(tag, SUMS_CHAIN),
     ]);
-    if (!sumsData || !bundleData) {
+    if (!sumsData || !bundleData || !chainData) {
       throw new UpdateVerifyError("unsigned", `${tag} has no signed checksums`);
     }
+    await verifyChain(sumsData, chainData, {
+      fetchRevocations,
+      roots,
+      now: typeof now === "function" ? now() : now,
+      log,
+    });
     let bundleJson;
     try {
       bundleJson = JSON.parse(bundleData.toString("utf8"));
@@ -180,9 +244,11 @@ function createReleaseVerifier({
 }
 
 module.exports = {
+  REVOCATIONS_URL,
   SIGNER_IDENTITY,
   SIGNER_ISSUER,
   SUMS_BUNDLE,
+  SUMS_CHAIN,
   SUMS_FILE,
   UpdateVerifyError,
   createReleaseVerifier,

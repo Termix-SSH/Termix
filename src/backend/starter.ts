@@ -331,6 +331,8 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       const { startPluginAutoUpdate } =
         await import("./plugins/auto-update.js");
       startPluginAutoUpdate();
+      const { startTrustChecks } = await import("./plugins/revocations.js");
+      startTrustChecks();
 
       const inventoryFile = process.env.TERMIX_ROUTE_INVENTORY_FILE;
       if (inventoryFile) {

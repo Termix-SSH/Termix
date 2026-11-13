@@ -20,6 +20,10 @@
 - In the Docker image each plugin also runs as its own Linux user, so it can't read the database, keys or other plugins' data. With `NET_ADMIN`, plugins that may not open connections are also blocked by a firewall rule
 - Plugins that only serve pages start on their first use and stop after 10 idle minutes (`TERMIX_PLUGIN_IDLE_MINUTES`). A plugin process that crashes, hangs, uses too much memory (`TERMIX_PLUGIN_MEMORY_MB`) or CPU (`TERMIX_PLUGIN_CPU_LIMIT`) is restarted, and marked failed if it keeps crashing
 - Run without isolation: an official plugin made for an older Termix runs inside the server only when an admin turns this on in its page. The plugins page warns about each one. Plugins that were on before the upgrade keep running with it on. Community plugins made for an older Termix no longer run
+- Plugin signing keys now come from an offline Termix root key. Official and community plugins install only when a key the root vouched for signed them, and each signing key expires
+- Termix checks a root signed revocation list on start and once a day. A revoked plugin, plugin version or signing key is turned off and every admin gets an alert. Servers without internet keep the last list they had
+- Admins get an alert when a plugin update is signed by a different key than the version before
+- Desktop app: an update also has to carry a signature from the Termix release key before it installs
 
 ### Changed
 
@@ -32,6 +36,7 @@
 - Desktop app: the local server runs as an Electron utility process, and the app binary can no longer be started as a plain Node or with Node debug flags
 - The Docker image runs on Node 26
 - A plugin can no longer turn on the server's debugger
+- Plugins signed with the old single key keep loading until 2027-05-01. Termix moves installed plugins over to the new signatures on its own, without downloading them again
 
 ### Fixed
 

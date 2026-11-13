@@ -3,9 +3,22 @@ import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { describe, expect, it, vi } from "vitest";
+import {
+  envelopeFor,
+  makeCert,
+  makeOnlineKey,
+  makeRevocations,
+  makeRoot,
+  rootsFor,
+} from "../fixtures/trust-chain.js";
 
 const require = createRequire(import.meta.url);
 const uv = require("../../../../electron/update-verify.cjs");
+
+const root = makeRoot();
+const roots = rootsFor([root]);
+const releaseKey = makeOnlineKey();
+const releaseCert = makeCert(root, releaseKey, { role: "releases" });
 
 const yml = Buffer.from("version: 26.12.0\npath: Termix-Setup.exe\n");
 const installer = Buffer.from("installer bytes");
@@ -18,7 +31,15 @@ function sumsFor(files: Record<string, Buffer>) {
   );
 }
 
-function release(overrides: Record<string, Buffer | null> = {}) {
+/** The release key's envelope over SHA256SUMS, made after overrides. */
+function chainSig(sums: Buffer, key = releaseKey, cert = releaseCert) {
+  return Buffer.from(JSON.stringify(envelopeFor(sums, key, cert)));
+}
+
+function release(
+  overrides: Record<string, Buffer | null> = {},
+  sign: (sums: Buffer) => Buffer | null = (sums) => chainSig(sums),
+) {
   const assets: Record<string, Buffer | null> = {
     "latest.yml": yml,
     "Termix-Setup.exe": installer,
@@ -26,17 +47,27 @@ function release(overrides: Record<string, Buffer | null> = {}) {
     "SHA256SUMS.sigstore.json": Buffer.from("{}"),
     ...overrides,
   };
+  if (!("SHA256SUMS.sig" in overrides) && assets.SHA256SUMS) {
+    assets["SHA256SUMS.sig"] = sign(assets.SHA256SUMS);
+  }
   return vi.fn(async (_tag: string, name: string) => assets[name] ?? null);
 }
 
 function verifier(
   fetchAsset = release(),
   verifyBundle = vi.fn(async () => ({})),
+  fetchRevocations: () => Promise<unknown> = async () => null,
 ) {
   return {
     fetchAsset,
     verifyBundle,
-    ...uv.createReleaseVerifier({ fetchAsset, verifyBundle, fs }),
+    ...uv.createReleaseVerifier({
+      fetchAsset,
+      verifyBundle,
+      fetchRevocations,
+      fs,
+      roots,
+    }),
   };
 }
 
@@ -85,6 +116,86 @@ describe("verifyRelease", () => {
     await expect(v.verifyRelease(target)).rejects.toMatchObject({
       code: "mismatch",
     });
+  });
+
+  it("calls a release without the release key signature unsigned", async () => {
+    const v = verifier(release({}, () => null));
+    await expect(v.verifyRelease(target)).rejects.toMatchObject({
+      code: "unsigned",
+    });
+  });
+
+  it("refuses sums signed by a key no root certified", async () => {
+    const stranger = makeRoot();
+    const v = verifier(
+      release({}, (sums) =>
+        chainSig(
+          sums,
+          releaseKey,
+          makeCert(stranger, releaseKey, { role: "releases" }),
+        ),
+      ),
+    );
+    await expect(v.verifyRelease(target)).rejects.toMatchObject({
+      code: "signature",
+    });
+  });
+
+  it("refuses a plugin key used to sign a release", async () => {
+    const v = verifier(
+      release({}, (sums) =>
+        chainSig(
+          sums,
+          releaseKey,
+          makeCert(root, releaseKey, { role: "plugins" }),
+        ),
+      ),
+    );
+    await expect(v.verifyRelease(target)).rejects.toMatchObject({
+      code: "signature",
+    });
+  });
+
+  it("refuses a release key whose certificate expired", async () => {
+    const expired = makeCert(root, releaseKey, {
+      role: "releases",
+      expires: "2026-01-02T00:00:00Z",
+    });
+    const v = verifier(
+      release({}, (sums) => chainSig(sums, releaseKey, expired)),
+    );
+    await expect(v.verifyRelease(target)).rejects.toMatchObject({
+      code: "signature",
+    });
+  });
+
+  it("refuses a release signature over other sums", async () => {
+    const v = verifier(
+      release({}, () => chainSig(Buffer.from("other sums\n"))),
+    );
+    await expect(v.verifyRelease(target)).rejects.toMatchObject({
+      code: "signature",
+    });
+  });
+
+  it("refuses a release key on the revocation list", async () => {
+    const list = makeRevocations(root, { keys: [{ keyId: releaseKey.keyId }] });
+    const v = verifier(release(), undefined, async () => list);
+    await expect(v.verifyRelease(target)).rejects.toMatchObject({
+      code: "signature",
+    });
+  });
+
+  it("still checks when the revocation list can't be fetched or is forged", async () => {
+    const offline = verifier(release(), undefined, async () => {
+      throw new Error("offline");
+    });
+    await expect(offline.verifyRelease(target)).resolves.toBeTruthy();
+    const forged = makeRevocations(makeRoot(), {
+      keys: [{ keyId: releaseKey.keyId }],
+    });
+    const v = verifier(release(), undefined, async () => forged);
+    await expect(v.verifyRelease(target)).resolves.toBeTruthy();
   });
 
   it("refuses junk in the sums file", async () => {
