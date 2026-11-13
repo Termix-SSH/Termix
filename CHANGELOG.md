@@ -42,6 +42,7 @@
 
 ### Fixed
 
+- Hosts shared with you without a login now sync to the desktop and mobile apps, and connecting asks you to add a login instead of saying the host is not on the sync server
 - API key requests are much faster: the slow key check no longer runs on every request
 - Desktop app: quitting waits for the local server to stop, so it no longer keeps its ports after the app closes
 - Desktop app: the local server and everything it started stop when the app closes or crashes

@@ -37,6 +37,7 @@ const sshLogger = logger;
 export async function resolveHostBySyncId(
   syncId: string,
   userId: string,
+  options: ResolveHostOptions = {},
 ): Promise<SSHHost | null> {
   const hostId =
     await createCurrentHostResolutionRepository().findHostIdBySyncId(syncId);
@@ -44,7 +45,15 @@ export async function resolveHostBySyncId(
 
   // Permissions, decryption, shared-host handling and auditing all belong to
   // the id-based path; this only decides which row it is pointed at.
-  return resolveHostById(hostId, userId);
+  return resolveHostById(hostId, userId, options);
+}
+
+export interface ResolveHostOptions {
+  /**
+   * A shared host the user can reach but has no login for comes back without
+   * one and with `loginRequired: true`, instead of null.
+   */
+  allowMissingLogin?: boolean;
 }
 
 /**
@@ -54,6 +63,7 @@ export async function resolveHostBySyncId(
 export async function resolveHostById(
   hostId: number,
   userId: string,
+  options: ResolveHostOptions = {},
 ): Promise<SSHHost | null> {
   const { PermissionManager } = await import("../utils/permission-manager.js");
   const access = await PermissionManager.getInstance().canAccessHost(
@@ -130,7 +140,13 @@ export async function resolveHostById(
   let sharedAuthResolution: SharedAuthResolution | undefined;
   if (!ownerEquivalent) {
     sharedAuthResolution = await resolveRecipientSshAuth(host, hostId, userId);
-    if (!sharedAuthResolution) return null;
+    if (!sharedAuthResolution) {
+      if (!options.allowMissingLogin) return null;
+      // resolveRecipientSshAuth already cleared the owner's login.
+      host.authType = "none";
+      host.loginRequired = true;
+      sharedAuthResolution = "secretless";
+    }
   } else {
     const effectiveCredentialId = host.credentialId as
       number | null | undefined;

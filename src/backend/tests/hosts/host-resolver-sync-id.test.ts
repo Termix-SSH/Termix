@@ -81,3 +81,55 @@ describe("resolveHostBySyncId", () => {
     expect(findHostById).not.toHaveBeenCalled();
   });
 });
+
+describe("shared host with no login for the recipient", () => {
+  let resolveHostBySyncId: typeof import("../../hosts/host-resolver.js").resolveHostBySyncId;
+  let resolveRecipientSharedHostAuthentication: ReturnType<typeof vi.fn>;
+
+  beforeAll(async () => {
+    ({ resolveHostBySyncId } = await import("../../hosts/host-resolver.js"));
+    ({ resolveRecipientSharedHostAuthentication } =
+      (await import("../../utils/shared-host-auth-resolver.js")) as unknown as {
+        resolveRecipientSharedHostAuthentication: ReturnType<typeof vi.fn>;
+      });
+  }, 30_000);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    canAccessHost.mockResolvedValue({ hasAccess: true, isShared: true });
+    findHostOwnerId.mockResolvedValue("owner");
+    findHostIdBySyncId.mockResolvedValue(41);
+    findHostById.mockResolvedValue({
+      id: 41,
+      ip: "10.0.0.7",
+      userId: "owner",
+      authType: "password",
+      password: "owner-secret",
+    });
+    resolveRecipientSharedHostAuthentication.mockResolvedValue({
+      source: "required",
+    });
+  });
+
+  it("returns null by default", async () => {
+    await expect(resolveHostBySyncId("sync-abc", "user-1")).resolves.toBe(null);
+  });
+
+  it("returns the host without a login when asked", async () => {
+    const host = (await resolveHostBySyncId("sync-abc", "user-1", {
+      allowMissingLogin: true,
+    })) as unknown as Record<string, unknown>;
+
+    expect(host.ip).toBe("10.0.0.7");
+    expect(host.loginRequired).toBe(true);
+    expect(host.authType).toBe("none");
+    expect(host.password).toBeNull();
+  });
+
+  it("still refuses a host the caller may not reach", async () => {
+    canAccessHost.mockResolvedValue({ hasAccess: false });
+    await expect(
+      resolveHostBySyncId("sync-abc", "intruder", { allowMissingLogin: true }),
+    ).resolves.toBe(null);
+  });
+});

@@ -514,9 +514,15 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
       const userId = actingUser();
       const { resolveHostById, resolveHostBySyncId } =
         await import("../hosts/host-resolver.js");
+      // Not in the SDK types yet; plugins pass it through a cast.
+      const allowMissingLogin =
+        (options as { allowMissingLogin?: unknown } | undefined)
+          ?.allowMissingLogin === true;
       const resolved = options?.syncId
-        ? await resolveHostBySyncId(options.syncId, userId)
-        : await resolveHostById(hostId, userId);
+        ? await resolveHostBySyncId(options.syncId, userId, {
+            allowMissingLogin,
+          })
+        : await resolveHostById(hostId, userId, { allowMissingLogin });
       await audit("ssh_resolve_host", describeHost(hostId), {
         success: !!resolved,
         errorMessage: resolved ? undefined : "Host not found",

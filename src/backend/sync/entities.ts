@@ -596,11 +596,13 @@ async function loadSharedHosts(userId: string): Promise<SyncRow[]> {
 
   for (const [hostId, permissionLevel] of levels) {
     try {
-      const host = (await resolveHostById(
-        hostId,
-        userId,
-      )) as unknown as SyncRow | null;
+      // A host shared without its login still syncs. The copy has no login
+      // and connects through the server, which asks for one.
+      const host = (await resolveHostById(hostId, userId, {
+        allowMissingLogin: true,
+      })) as unknown as SyncRow | null;
       if (!host || typeof host.syncId !== "string") continue;
+      const loginRequired = host.loginRequired === true;
       const ownerId = String(host.userId);
       if (!ownerNames.has(ownerId)) {
         ownerNames.set(
@@ -611,10 +613,11 @@ async function loadSharedHosts(userId: string): Promise<SyncRow[]> {
 
       // Connect and view recipients reach the host through the server, so
       // their copy carries no login.
-      const withheld = !SECRET_LEVELS.has(permissionLevel);
+      const withheld = loginRequired || !SECRET_LEVELS.has(permissionLevel);
       const wire: SyncRow = {};
       for (const [field, value] of Object.entries(host)) {
         if (SHARED_HOST_DROP.includes(field)) continue;
+        if (field === "loginRequired") continue;
         if (withheld && SHARED_HOST_SECRETS.includes(field)) continue;
         wire[field] = storedForm(field, value);
       }
@@ -635,6 +638,7 @@ async function loadSharedHosts(userId: string): Promise<SyncRow[]> {
         owner: ownerNames.get(ownerId) ?? "",
         permissionLevel,
         ...(withheld ? { secretWithheld: true } : {}),
+        ...(loginRequired ? { loginRequired: true } : {}),
       };
       rows.push(wire);
     } catch (error) {
