@@ -70,6 +70,26 @@ describe("createShutdown", () => {
     expect(later).not.toHaveBeenCalled();
   });
 
+  it("skips later steps when the clock lags the timer that ended a step", async () => {
+    const exit = vi.fn();
+    const later = vi.fn();
+    const now = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+    try {
+      const shutdown = createShutdown(
+        () => [
+          { name: "stuck", run: never },
+          { name: "later", run: later },
+        ],
+        { totalMs: 20, exit },
+      );
+      await shutdown("test");
+    } finally {
+      now.mockRestore();
+    }
+    expect(later).not.toHaveBeenCalled();
+    expect(exit).toHaveBeenCalledWith(0);
+  });
+
   it("keeps time for later steps when a step has its own limit", async () => {
     const exit = vi.fn();
     const later = vi.fn();

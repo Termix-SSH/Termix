@@ -122,9 +122,14 @@ export function createShutdown(
 
     running = (async () => {
       const deadline = Date.now() + deps.totalMs;
+      // A timer can fire a moment before Date.now() reaches the deadline, so
+      // a step that used up the whole budget marks it spent.
+      let spent = false;
       for (const step of steps()) {
-        const left = Math.min(deadline - Date.now(), step.maxMs ?? Infinity);
-        if (left <= 0) {
+        const total = deadline - Date.now();
+        const own = step.maxMs ?? Infinity;
+        const left = Math.min(total, own);
+        if (spent || left <= 0) {
           log(`Shutdown step "${step.name}" skipped, no time left`);
           continue;
         }
@@ -132,7 +137,10 @@ export function createShutdown(
           Promise.resolve().then(step.run),
           left,
         );
-        if (!finished) log(`Shutdown step "${step.name}" ran out of time`);
+        if (!finished) {
+          log(`Shutdown step "${step.name}" ran out of time`);
+          if (total <= own) spent = true;
+        }
       }
       const killed = killTrackedChildren();
       if (killed > 0) log(`Ended ${killed} child process(es)`);
