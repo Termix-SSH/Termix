@@ -66,4 +66,4 @@ jobs:
           --exclude "**/tests/**"
 
       - name: Summary
-        run: node scripts/coverage-merged.mjs coverage/unit/coverage-final.json coverage/authz/coverage-final.json >> "$GITHUB_STEP_SUMMARY"
+        run: node scripts/coverage-merged.mjs coverage/unit/coverage-final.json coverage/authz/coverage-final.json | tee -a "$GITHUB_STEP_SUMMARY"
