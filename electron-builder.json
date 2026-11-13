@@ -12,6 +12,8 @@
   "asarUnpack": [
     "dist/backend/**/*",
     "dist/plugins/**/*",
+    "dist/frame/**/*",
+    "dist/fonts/**/*",
     "node_modules/**/*",
     "public/icons/**/*",
     "public/icon.*"
