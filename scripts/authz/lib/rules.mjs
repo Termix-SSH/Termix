@@ -47,6 +47,9 @@ const SHAREABLE = {
 /** Same rule as core's operations/key-scopes.ts keyScopeAllows. */
 export function keyScopeAllows(scopes, method, path) {
   if (scopes === null) return true;
+  if (scopes.includes("read") && (method === "GET" || method === "HEAD")) {
+    return true;
+  }
   const clean = path.split("?")[0];
   if (/^\/plugin-api\/[a-z0-9-]+\/mcp(\/|$)/.test(clean)) {
     return (

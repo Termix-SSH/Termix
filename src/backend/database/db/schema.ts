@@ -638,6 +638,11 @@ export const auditLogs = sqliteTable(
     timestamp: text("timestamp")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
+
+    // Each row's hash covers the one before, so an edit or a removed row shows.
+    // Null on rows written before the chain existed.
+    prevHash: text("prev_hash"),
+    hash: text("hash"),
   },
   // This table only grows, and is always read newest-first with an optional
   // filter. Each composite leads with the filtered column so the same index
@@ -648,6 +653,29 @@ export const auditLogs = sqliteTable(
     index("idx_audit_logs_action_ts").on(table.action, table.timestamp),
     index("idx_audit_logs_resource_ts").on(table.resourceType, table.timestamp),
   ],
+);
+
+// Dangerous admin changes waiting out the cooling-off time.
+export const adminHolds = sqliteTable(
+  "admin_holds",
+  {
+    id: text("id").primaryKey(),
+    kind: text("kind").notNull(),
+    // Ids and flags only, never secrets.
+    payload: text("payload").notNull(),
+    summary: text("summary").notNull(),
+    requestedBy: text("requested_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    requestedByName: text("requested_by_name").notNull(),
+    requestedAt: text("requested_at").notNull(),
+    runsAt: text("runs_at").notNull(),
+    status: text("status").notNull().default("pending"),
+    decidedBy: text("decided_by"),
+    decidedAt: text("decided_at"),
+    error: text("error"),
+  },
+  (table) => [index("idx_admin_holds_status_runs").on(table.status, table.runsAt)],
 );
 
 export const apiKeys = sqliteTable(

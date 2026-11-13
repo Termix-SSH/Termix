@@ -7,7 +7,12 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
-import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import {
+  getAuditUsername,
+  logAudit,
+  getRequestMeta,
+} from "../../utils/audit-logger.js";
+import { holdIfNeeded, registerHoldKind } from "../../auth/admin-holds.js";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -41,6 +46,69 @@ async function getUserByPreferredIdentifier(
     ? userRepository.findById(userId)
     : userRepository.findByUsername(username!);
 }
+
+/** Makes a user an admin, now or once a held change's wait is over. */
+export async function promoteToAdmin(
+  actorId: string,
+  targetUserId: string,
+  meta: { ipAddress?: string; userAgent?: string } = {},
+  afterWait = false,
+): Promise<void> {
+  const userRepository = createCurrentUserRepository();
+  const targetUser = await userRepository.findById(targetUserId);
+  if (!targetUser) throw new Error("User not found");
+  if (targetUser.isAdmin) return;
+
+  await userRepository.update(targetUser.id, { isAdmin: true });
+
+  try {
+    await createCurrentRoleRepository().switchUserRoleName({
+      userId: targetUser.id,
+      addRoleName: "admin",
+      removeRoleName: "user",
+      grantedBy: actorId,
+    });
+  } catch (roleError) {
+    authLogger.error("Failed to sync admin role on make-admin", roleError, {
+      operation: "make_admin_role_sync",
+      userId: targetUser.id,
+    });
+  }
+
+  try {
+    await DatabaseSaveTrigger.forceSave("make_admin_explicit_save");
+  } catch (saveError) {
+    authLogger.error("Failed to persist admin promotion to disk", saveError, {
+      operation: "make_admin_save_failed",
+      userId: targetUser.id,
+      username: targetUser.username,
+    });
+  }
+
+  authLogger.info("Admin privileges granted", {
+    operation: "admin_grant",
+    adminId: actorId,
+    targetUserId: targetUser.id,
+    targetUsername: targetUser.username,
+  });
+
+  await logAudit({
+    userId: actorId,
+    username: await getAuditUsername(actorId),
+    action: "make_admin",
+    resourceType: "user",
+    resourceId: targetUser.id,
+    resourceName: targetUser.username,
+    ...(afterWait ? { details: JSON.stringify({ afterWait: true }) } : {}),
+    ...meta,
+    success: true,
+  });
+}
+
+registerHoldKind("make_admin", {
+  apply: (payload, requesterId) =>
+    promoteToAdmin(requesterId, String(payload.userId), {}, true),
+});
 
 export function registerUserAdminRoutes(
   router: Router,
@@ -215,55 +283,18 @@ export function registerUserAdminRoutes(
         return res.status(400).json({ error: "User is already an admin" });
       }
 
-      await userRepository.update(targetUser.id, { isAdmin: true });
-
-      try {
-        await createCurrentRoleRepository().switchUserRoleName({
-          userId: targetUser.id,
-          addRoleName: "admin",
-          removeRoleName: "user",
-          grantedBy: userId,
-        });
-      } catch (roleError) {
-        authLogger.error("Failed to sync admin role on make-admin", roleError, {
-          operation: "make_admin_role_sync",
-          userId: targetUser.id,
-        });
+      if (
+        await holdIfNeeded(req, res, {
+          kind: "make_admin",
+          payload: { userId: targetUser.id },
+          summary: `make ${targetUser.username} an admin`,
+          requesterId: userId,
+        })
+      ) {
+        return;
       }
 
-      try {
-        await DatabaseSaveTrigger.forceSave("make_admin_explicit_save");
-      } catch (saveError) {
-        authLogger.error(
-          "Failed to persist admin promotion to disk",
-          saveError,
-          {
-            operation: "make_admin_save_failed",
-            userId: targetUser.id,
-            username: targetUser.username,
-          },
-        );
-      }
-
-      authLogger.info("Admin privileges granted", {
-        operation: "admin_grant",
-        adminId: userId,
-        targetUserId: targetUser.id,
-        targetUsername: targetUser.username,
-      });
-
-      const { ipAddress, userAgent } = getRequestMeta(req);
-      await logAudit({
-        userId,
-        username: adminUser.username ?? userId,
-        action: "make_admin",
-        resourceType: "user",
-        resourceId: targetUser.id,
-        resourceName: targetUser.username,
-        ipAddress,
-        userAgent,
-        success: true,
-      });
+      await promoteToAdmin(userId, targetUser.id, getRequestMeta(req));
 
       res.json({ message: `User ${targetUser.username} is now an admin` });
     } catch (err) {

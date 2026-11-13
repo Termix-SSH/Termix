@@ -568,6 +568,13 @@
       "when": 1794526286265,
       "tag": "0080_strong_blockbuster",
       "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1794585754186,
+      "tag": "0081_powerful_black_knight",
+      "breakpoints": true
     }
   ]
 }

@@ -196,6 +196,26 @@ describe("password login through the pipeline", () => {
     ]);
   });
 
+  it("tells listeners which device and method signed in", async () => {
+    const { emitInternalEvent } =
+      await import("../../hosts/internal-events.js");
+    vi.mocked(emitInternalEvent).mockClear();
+    addUser();
+    await passwordLogin({ username: "alice", password: PASSWORD });
+    expect(emitInternalEvent).toHaveBeenCalledWith(
+      "user_login",
+      "u1",
+      undefined,
+      expect.objectContaining({
+        username: "alice",
+        ipAddress: "10.0.0.1",
+        methodId: "password",
+        deviceType: "web",
+        deviceInfo: expect.any(String),
+      }),
+    );
+  });
+
   it("remembers the session for 30 days and follows session_timeout_hours otherwise", async () => {
     addUser();
     const remembered = await passwordLogin({

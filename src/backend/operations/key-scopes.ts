@@ -4,7 +4,18 @@
  * key with no scopes has full access, which is every key made before this.
  */
 
-export const API_KEY_SCOPES = ["operations:read", "operations:run"] as const;
+export const API_KEY_SCOPES = [
+  "read",
+  "operations:read",
+  "operations:run",
+] as const;
+
+/** Asked for on create to get a key with no limits. Stored as no scopes. */
+export const FULL_ACCESS_SCOPE = "full";
+
+/** What a new key gets when the creator picks nothing. */
+export const DEFAULT_KEY_SCOPES = ["read"];
+export const DEFAULT_KEY_DAYS = 90;
 
 const MCP_PATH = /^\/plugin-api\/[a-z0-9-]+\/mcp(\/|$)/;
 const OPERATIONS_PATH = /^\/operations(\/|$)/;
@@ -30,6 +41,10 @@ export function keyScopeAllows(
   path: string,
 ): boolean {
   if (scopes === null) return true;
+  // Reads anything its user can read, changes nothing.
+  if (scopes.includes("read") && (method === "GET" || method === "HEAD")) {
+    return true;
+  }
   const clean = path.split("?")[0];
   if (MCP_PATH.test(clean)) {
     return (

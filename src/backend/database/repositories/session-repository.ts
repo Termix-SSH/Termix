@@ -167,6 +167,23 @@ export class SessionRepository {
     return rowsAffected(result);
   }
 
+  /** Ends every session on the server except one. Returns how many ended. */
+  async revokeAll(exceptSessionId?: string): Promise<number> {
+    const rows = await this.context.drizzle
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(exceptSessionId ? ne(sessions.id, exceptSessionId) : undefined);
+    const ids = rows.map((row) => row.id);
+    for (let at = 0; at < ids.length; at += 500) {
+      await this.context.drizzle
+        .delete(sessions)
+        .where(inArray(sessions.id, ids.slice(at, at + 500)));
+    }
+    for (const id of ids) endSocketSession(id);
+    if (ids.length > 0) await this.afterWrite();
+    return ids.length;
+  }
+
   async deleteExpired(now = new Date()): Promise<number> {
     const result = await this.context.drizzle
       .delete(sessions)

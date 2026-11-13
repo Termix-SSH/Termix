@@ -3,6 +3,7 @@ import { getDb, getSqlite } from "../db/index.js";
 import { needsExplicitPersist, resolveDatabaseDialect } from "../db/dialect.js";
 import { primeSettingsCache, readCachedSetting } from "./settings-cache.js";
 import type { DatabaseContext } from "./database-context.js";
+import { AdminHoldRepository } from "./admin-hold-repository.js";
 import { ApiKeyRepository } from "./api-key-repository.js";
 import { AuditLogRepository } from "./audit-log-repository.js";
 import { CredentialRepository } from "./credential-repository.js";
@@ -118,6 +119,13 @@ export function getCurrentSettingValue(key: string): string | null {
     .get(key) as { value?: string } | undefined;
 
   return row?.value ?? null;
+}
+
+export function createCurrentAdminHoldRepository(): AdminHoldRepository {
+  return new AdminHoldRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("admin_hold_repository_write"),
+  );
 }
 
 export function createCurrentApiKeyRepository(): ApiKeyRepository {

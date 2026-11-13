@@ -2908,6 +2908,54 @@ export interface PluginAudit {
     filters?: PluginAuditFilters,
     batchSize?: number,
   ) => AsyncGenerator<PluginAuditEntry[]>;
+  /**
+   * The audit log's hash chain: every stored line carries the hash of the one
+   * before. Core checks it every hour and alerts admins when it breaks.
+   * Needs audit:read.
+   */
+  chain: PluginAuditChain;
+}
+
+/** The newest line of the chain: keep it somewhere else to compare later. */
+export interface PluginAuditChainHead {
+  id: number;
+  hash: string;
+  timestamp?: string;
+}
+
+export interface PluginAuditChainResult {
+  ok: boolean;
+  /** Chained lines checked. */
+  checked: number;
+  /** Lines written before the chain existed. */
+  unchained: number;
+  head: PluginAuditChainHead | null;
+  /** First line id where the chain stops holding. */
+  brokenAt?: number;
+  problem?: "row_changed" | "row_missing" | "hash_removed" | "head_mismatch";
+  /** ISO date-time. */
+  checkedAt: string;
+}
+
+export interface PluginAuditSavedHeadResult {
+  /** The saved line is still there with the same hash. */
+  found: boolean;
+  /** And the chain from it to now holds. */
+  ok: boolean;
+  /** The saved line was pruned since, so it can't be compared any more. */
+  pruned: boolean;
+  chain: PluginAuditChainResult;
+}
+
+export interface PluginAuditChain {
+  /** The last hourly check, or null before the first one ran. */
+  status: () => Promise<PluginAuditChainResult | null>;
+  /** Checks the whole chain now. */
+  verify: () => Promise<PluginAuditChainResult>;
+  /** Compares a head saved earlier with what the server holds now. */
+  checkHead: (
+    head: PluginAuditChainHead,
+  ) => Promise<PluginAuditSavedHeadResult>;
 }
 
 export interface PluginAuditFilters {
@@ -2937,6 +2985,12 @@ export interface PluginAuditEntry {
   userAgent: string | null;
   success: boolean;
   errorMessage: string | null;
+  /**
+   * This line's chain hash and the one before it. Set on stored lines and on
+   * subscribed lines that were stored; null on lines from before the chain.
+   */
+  hash?: string | null;
+  prevHash?: string | null;
 }
 
 /** A notification channel a user set up. Its config never leaves the hub. */

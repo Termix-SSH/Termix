@@ -2,6 +2,10 @@ import type { AuditLogParams } from "./audit-logger.js";
 
 export interface AuditHookEntry extends AuditLogParams {
   timestamp: Date;
+  /** Set once the line is stored. */
+  id?: number;
+  hash?: string;
+  prevHash?: string;
 }
 
 type AuditHook = (entry: AuditHookEntry) => void;
@@ -17,9 +21,16 @@ export function onAuditEntry(hook: AuditHook): () => void {
 }
 
 /** Never throws and never waits: a hook cannot delay the audited action. */
-export function emitAuditEntry(params: AuditLogParams): void {
+export function emitAuditEntry(
+  params: AuditLogParams,
+  stored?: { id: number; hash: string; prevHash: string },
+): void {
   if (hooks.size === 0) return;
-  const entry: AuditHookEntry = { ...params, timestamp: new Date() };
+  const entry: AuditHookEntry = {
+    ...params,
+    ...(stored ?? {}),
+    timestamp: new Date(),
+  };
   for (const hook of hooks) {
     queueMicrotask(() => {
       try {

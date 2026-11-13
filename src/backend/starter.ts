@@ -313,6 +313,22 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     // Last, so a plugin's activate() sees a fully wired server. A plugin that
     // fails to load must not stop the backend, so this never rejects.
     try {
+      const { startAdminAlerts } = await import("./notify/admin-alerts.js");
+      startAdminAlerts();
+      const { startAuditChainChecks } = await import("./utils/audit-chain.js");
+      startAuditChainChecks();
+      const { startAdminHolds } = await import("./auth/admin-holds.js");
+      startAdminHolds();
+      const { startRecoveryWatch } = await import("./recovery/requests.js");
+      startRecoveryWatch();
+    } catch (error) {
+      systemLogger.warn("Security checks failed to start", {
+        operation: "security_checks_start",
+        error: getErrorMessage(error),
+      });
+    }
+
+    try {
       const { startOperationsMaintenance } =
         await import("./operations/maintenance.js");
       await startOperationsMaintenance();

@@ -1436,7 +1436,8 @@
         "updatedMany_other": "{{count}} plugins updated",
         "uninstalled": "{{name}} uninstalled",
         "dataDeleted": "Data for {{name}} deleted",
-        "failedToStart": "{{name}} could not start. Open it to see why."
+        "failedToStart": "{{name}} could not start. Open it to see why.",
+        "held": "{{name}} waits {{minutes}} minutes before the change applies, so the other admins can see it"
       },
       "errors": {
         "generic": "Something went wrong",

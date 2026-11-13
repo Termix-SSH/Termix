@@ -95,18 +95,22 @@ export interface CreatedApiKey extends ApiKey {
   token: string;
 }
 
+/**
+ * Leave expiresAt out for the server's 90 days, or pass null for never.
+ * Leave scopes out for read only, or pass ["full"] for no limits.
+ */
 export async function createApiKey(
   name: string,
   userId: string,
-  expiresAt?: string,
+  expiresAt?: string | null,
   scopes?: string[] | null,
 ): Promise<CreatedApiKey> {
   try {
     const response = await authApi.post("/users/api-keys", {
       name,
       userId,
-      expiresAt: expiresAt ?? null,
-      scopes: scopes?.length ? scopes : null,
+      ...(expiresAt !== undefined ? { expiresAt } : {}),
+      ...(scopes?.length ? { scopes } : {}),
     });
     return response.data;
   } catch (error) {
@@ -131,6 +135,137 @@ export async function deleteApiKey(
     return response.data;
   } catch (error) {
     handleApiError(error, "delete API key");
+  }
+}
+
+/** The signed in user's own API keys. */
+export async function getMyApiKeys(): Promise<{ apiKeys: ApiKey[] }> {
+  try {
+    const response = await authApi.get("/users/api-keys/mine");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch your API keys");
+  }
+}
+
+export async function revokeMyApiKey(
+  keyId: string,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await authApi.delete(
+      `/users/api-keys/mine/${encodeURIComponent(keyId)}`,
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "revoke your API key");
+  }
+}
+
+export async function revokeAllMyApiKeys(): Promise<{ count: number }> {
+  try {
+    const response = await authApi.post("/users/api-keys/mine/revoke-all");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "revoke your API keys");
+  }
+}
+
+/** Admin only: ends every session but this one, and every key when asked. */
+export async function revokeEveryoneSessions(options?: {
+  apiKeys?: boolean;
+}): Promise<{ sessions: number; apiKeys: number }> {
+  try {
+    const response = await authApi.post("/users/sessions/revoke-everyone", {
+      apiKeys: options?.apiKeys === true,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "sign everyone out");
+  }
+}
+
+/** What a held admin change answers instead of applying (HTTP 202). */
+export interface AdminHoldTicket {
+  held: true;
+  holdId: string;
+  runsAt: string;
+  minutes: number;
+  message?: string;
+}
+
+export function isAdminHoldTicket(value: unknown): value is AdminHoldTicket {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    (value as { held?: unknown }).held === true &&
+    typeof (value as { holdId?: unknown }).holdId === "string"
+  );
+}
+
+export interface AdminHoldSettings {
+  /** 0 means off. */
+  minutes: number;
+  forcedByEnv: boolean;
+  adminCount: number;
+  active: boolean;
+  envName: string;
+}
+
+export interface AdminHold {
+  id: string;
+  kind: string;
+  summary: string;
+  requestedBy: string | null;
+  requestedByName: string;
+  requestedAt: string;
+  runsAt: string;
+  status: "pending" | "applying" | "applied" | "cancelled" | "failed";
+  decidedBy: string | null;
+  decidedAt: string | null;
+  error: string | null;
+}
+
+export async function getAdminHoldSettings(): Promise<AdminHoldSettings> {
+  try {
+    const response = await authApi.get("/users/admin-holds/settings");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "read the admin wait setting");
+  }
+}
+
+export async function setAdminHoldMinutes(
+  minutes: number,
+): Promise<{ held: false; minutes: number } | AdminHoldTicket> {
+  try {
+    const response = await authApi.put("/users/admin-holds/settings", {
+      minutes,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "save the admin wait setting");
+  }
+}
+
+export async function getAdminHolds(): Promise<{ holds: AdminHold[] }> {
+  try {
+    const response = await authApi.get("/users/admin-holds");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "list waiting admin changes");
+  }
+}
+
+export async function cancelAdminHold(
+  holdId: string,
+): Promise<{ cancelled: boolean }> {
+  try {
+    const response = await authApi.post(
+      `/users/admin-holds/${encodeURIComponent(holdId)}/cancel`,
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "cancel the admin change");
   }
 }
 

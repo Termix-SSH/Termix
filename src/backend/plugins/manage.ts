@@ -483,6 +483,39 @@ async function removeArtifactFiles(
   }
 }
 
+/**
+ * With the admin wait on, dangerous capabilities are not granted at install
+ * or update: they wait as one held change. Returns the ones held back.
+ */
+async function holdDangerousGrants(
+  plugin: LoadedPlugin,
+  missing: string[],
+  userId: string,
+): Promise<string[]> {
+  const { createHold, getHoldSettings, listHolds, needsHold } =
+    await import("../auth/admin-holds.js");
+  const held = needsHold(missing);
+  if (held.length === 0) return [];
+  const settings = await getHoldSettings();
+  if (!settings.active) return [];
+  const pending = (await listHolds()).some(
+    (hold) =>
+      hold.status === "pending" &&
+      hold.kind === "plugin_grant" &&
+      hold.summary.includes(`(${plugin.id})`),
+  );
+  if (!pending) {
+    await createHold({
+      kind: "plugin_grant",
+      payload: { pluginId: plugin.id, capabilities: held },
+      summary: `give the plugin ${plugin.manifest.name ?? plugin.id} (${plugin.id}) ${held.join(", ")}`,
+      requesterId: userId,
+      minutes: settings.minutes,
+    });
+  }
+  return held;
+}
+
 /** Grants every capability the manifest declares, after the admin agreed. */
 async function grantDeclared(
   plugin: LoadedPlugin,
@@ -494,8 +527,12 @@ async function grantDeclared(
   const granted = new Set(
     (await repository.listByPlugin(plugin.id)).map((g) => g.capability),
   );
-  for (const capability of plugin.manifest.capabilities) {
-    if (granted.has(capability)) continue;
+  const missing = plugin.manifest.capabilities.filter((c) => !granted.has(c));
+  const waiting = userId
+    ? await holdDangerousGrants(plugin, missing, userId)
+    : [];
+  for (const capability of missing) {
+    if (waiting.includes(capability)) continue;
     await repository.grant({
       pluginId: plugin.id,
       capability,

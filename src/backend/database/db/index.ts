@@ -425,8 +425,26 @@ async function initializeCompleteDatabase(): Promise<void> {
         success INTEGER NOT NULL,
         error_message TEXT,
         timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        prev_hash TEXT,
+        hash TEXT,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
     );
+
+    CREATE TABLE IF NOT EXISTS admin_holds (
+        id TEXT PRIMARY KEY,
+        kind TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        requested_by TEXT REFERENCES users (id) ON DELETE SET NULL,
+        requested_by_name TEXT NOT NULL,
+        requested_at TEXT NOT NULL,
+        runs_at TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        decided_by TEXT,
+        decided_at TEXT,
+        error TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_admin_holds_status_runs ON admin_holds (status, runs_at);
 
     CREATE TABLE IF NOT EXISTS credential_access (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1712,6 +1730,8 @@ const migrateSchema = () => {
     "run_unisolated",
     "INTEGER NOT NULL DEFAULT 0",
   );
+  addColumnIfNotExists("audit_logs", "prev_hash", "TEXT");
+  addColumnIfNotExists("audit_logs", "hash", "TEXT");
   addColumnIfNotExists(
     "plugin_permission_grants",
     "source",

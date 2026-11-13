@@ -34,6 +34,41 @@ export class ApiKeyRepository {
     return rows[0];
   }
 
+  /** One user's keys, without their hashes. */
+  async listByUser(userId: string): Promise<ApiKeyListRecord[]> {
+    return this.context.drizzle
+      .select({
+        id: apiKeys.id,
+        name: apiKeys.name,
+        userId: apiKeys.userId,
+        username: users.username,
+        tokenPrefix: apiKeys.tokenPrefix,
+        createdAt: apiKeys.createdAt,
+        expiresAt: apiKeys.expiresAt,
+        lastUsedAt: apiKeys.lastUsedAt,
+        isActive: apiKeys.isActive,
+        scopes: apiKeys.scopes,
+      })
+      .from(apiKeys)
+      .leftJoin(users, eq(apiKeys.userId, users.id))
+      .where(eq(apiKeys.userId, userId))
+      .orderBy(apiKeys.createdAt);
+  }
+
+  /** Deletes every key, or every key of one user. Returns how many went. */
+  async deleteAll(userId?: string): Promise<number> {
+    const rows = await this.context.drizzle
+      .select({ id: apiKeys.id })
+      .from(apiKeys)
+      .where(userId ? eq(apiKeys.userId, userId) : undefined);
+    for (const row of rows) {
+      await this.context.drizzle.delete(apiKeys).where(eq(apiKeys.id, row.id));
+      endApiKeySockets(row.id);
+    }
+    if (rows.length > 0) await this.afterWrite();
+    return rows.length;
+  }
+
   async listAllWithUsers(): Promise<ApiKeyListRecord[]> {
     return this.context.drizzle
       .select({

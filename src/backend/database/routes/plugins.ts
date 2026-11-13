@@ -51,6 +51,12 @@ import {
 } from "../../plugins/settings.js";
 import { assertHostsUnlocked, sendHostLocked } from "../../hosts/locks.js";
 import {
+  getHoldSettings,
+  holdIfNeeded,
+  needsHold,
+  registerHoldKind,
+} from "../../auth/admin-holds.js";
+import {
   getAuditUsername,
   getRequestMeta,
   logAudit,
@@ -510,6 +516,101 @@ async function isManagedByLinkedServer(pluginId: string): Promise<boolean> {
   const { isServerManaged } = await import("../../sync/client/plugins.js");
   return isServerManaged(pluginId);
 }
+
+const SIGN_IN_CAPABILITIES = ["auth:provide", "auth:policy"];
+
+function declaredCapabilities(manifestJson: string): string[] {
+  try {
+    const manifest = JSON.parse(manifestJson) as { capabilities?: unknown };
+    return Array.isArray(manifest?.capabilities)
+      ? (manifest.capabilities as unknown[]).filter(
+          (item): item is string => typeof item === "string",
+        )
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function pluginName(manifestJson: string, fallback: string): string {
+  try {
+    const name = (JSON.parse(manifestJson) as { name?: unknown }).name;
+    return typeof name === "string" && name ? name : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/** Audit line for a change a held request applied after its wait. */
+async function auditAppliedPluginChange(
+  userId: string,
+  action: string,
+  pluginId: string,
+  details: Record<string, unknown>,
+): Promise<void> {
+  await logAudit({
+    userId,
+    username: await getAuditUsername(userId),
+    action,
+    resourceType: "plugin",
+    resourceId: pluginId,
+    resourceName: pluginId,
+    details: JSON.stringify({ ...details, afterWait: true }),
+    success: true,
+  }).catch(() => undefined);
+}
+
+for (const enabled of [true, false]) {
+  registerHoldKind(enabled ? "plugin_enable" : "plugin_disable", {
+    apply: async (payload, requesterId) => {
+      const pluginId = String(payload.pluginId);
+      const { setPluginState } = await import("../../plugins/manage.js");
+      const result = await setPluginState(pluginId, enabled);
+      await auditAppliedPluginChange(
+        requesterId,
+        enabled ? "enable_plugin" : "disable_plugin",
+        pluginId,
+        { enable: result.enable, disable: result.disable },
+      );
+    },
+  });
+}
+
+registerHoldKind("plugin_grant", {
+  apply: async (payload, requesterId) => {
+    const pluginId = String(payload.pluginId);
+    const record = await createCurrentPluginRepository().findById(pluginId);
+    if (!record) throw new Error("The plugin is no longer installed");
+    const declared = declaredCapabilities(record.manifestJson);
+    const wanted = Array.isArray(payload.capabilities)
+      ? (payload.capabilities as unknown[]).map(String)
+      : [];
+    const grantRepository = createCurrentPluginPermissionGrantRepository();
+    for (const capability of wanted) {
+      if (!declared.includes(capability)) continue;
+      if (await grantRepository.findGrant(pluginId, capability)) continue;
+      await grantRepository.grant({
+        pluginId,
+        capability,
+        grantedBy: requesterId,
+      });
+      await auditAppliedPluginChange(
+        requesterId,
+        "grant_plugin_capability",
+        pluginId,
+        { capability },
+      );
+    }
+    invalidatePluginPermissionCache(pluginId);
+    // Restart it so anything it set up at start sees the new access.
+    if (record.state === "enabled") {
+      const { deactivatePlugin, activatePlugin } =
+        await import("../../plugins/index.js");
+      await deactivatePlugin(pluginId).catch(() => undefined);
+      await activatePlugin(pluginId);
+    }
+  },
+});
 
 async function auditPluginAction(
   req: Request,
@@ -1070,7 +1171,27 @@ router.patch(
       const { planStateChange, setPluginState } =
         await import("../../plugins/manage.js");
 
-      if (req.query.dryRun === "1" || req.query.dryRun === "true") {
+      const isDryRun = req.query.dryRun === "1" || req.query.dryRun === "true";
+      const declared = declaredCapabilities(record.manifestJson);
+      const heldReason = enabled
+        ? needsHold(declared).length > 0
+        : declared.some((capability) =>
+            SIGN_IN_CAPABILITIES.includes(capability),
+          );
+      if (
+        !isDryRun &&
+        heldReason &&
+        (await holdIfNeeded(req, res, {
+          kind: enabled ? "plugin_enable" : "plugin_disable",
+          payload: { pluginId },
+          summary: `${enabled ? "turn on" : "turn off"} the plugin ${pluginName(record.manifestJson, pluginId)}`,
+          requesterId: (req as AuthenticatedRequest).userId as string,
+        }))
+      ) {
+        return;
+      }
+
+      if (isDryRun) {
         res.json({
           id: pluginId,
           enabled,
@@ -1298,6 +1419,18 @@ router.post(
 
       const grantRepository = createCurrentPluginPermissionGrantRepository();
       const existing = await grantRepository.findGrant(pluginId, capability);
+      if (
+        !existing &&
+        needsHold([capability]).length > 0 &&
+        (await holdIfNeeded(req, res, {
+          kind: "plugin_grant",
+          payload: { pluginId, capabilities: [capability] },
+          summary: `give the plugin ${pluginName(record.manifestJson, pluginId)} ${capability}`,
+          requesterId: userId,
+        }))
+      ) {
+        return;
+      }
       if (!existing) {
         await grantRepository.grant({
           pluginId,
@@ -1305,6 +1438,9 @@ router.post(
           grantedBy: userId,
         });
         invalidatePluginPermissionCache(pluginId);
+        await auditPluginAction(req, "grant_plugin_capability", pluginId, {
+          capability,
+        });
       }
 
       databaseLogger.info(`Granted ${capability} to plugin ${pluginId}`, {
@@ -1369,6 +1505,9 @@ router.delete(
         return;
       }
       invalidatePluginPermissionCache(pluginId);
+      await auditPluginAction(req, "revoke_plugin_capability", pluginId, {
+        capability,
+      });
 
       databaseLogger.info(`Revoked ${capability} from plugin ${pluginId}`, {
         operation: "plugin_grant_revoke",
@@ -2485,6 +2624,22 @@ router.delete(
     }
     if (await refuseOnLinkedDesktop(res)) return;
     try {
+      const record = await createCurrentPluginRepository().findById(pluginId);
+      if (
+        record &&
+        record.state === "enabled" &&
+        declaredCapabilities(record.manifestJson).some((capability) =>
+          SIGN_IN_CAPABILITIES.includes(capability),
+        ) &&
+        (await getHoldSettings()).active
+      ) {
+        res.status(409).json({
+          error:
+            "Turn this sign-in plugin off first. That change waits for the other admins.",
+          code: "TURN_OFF_FIRST",
+        });
+        return;
+      }
       const { uninstallPlugin } = await import("../../plugins/manage.js");
       const result = await uninstallPlugin(pluginId);
       await auditPluginAction(req, "uninstall_plugin", pluginId, {

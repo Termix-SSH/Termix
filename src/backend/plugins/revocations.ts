@@ -129,9 +129,44 @@ export async function loadStoredRevocations(): Promise<void> {
 }
 
 /** Fetches both lists. Returns the tiers whose list changed. */
+const FAILING_KEY = "revocation_check_failing";
+
+/**
+ * Writes one audit line (and so one admin alert) when the check starts
+ * failing, and nothing more until it works again. Kept in settings so an
+ * offline server doesn't report it on every restart.
+ */
+async function noteCheckOutcome(failures: string[]): Promise<void> {
+  try {
+    const { createCurrentSettingsRepository } =
+      await import("../database/repositories/factory.js");
+    const settings = createCurrentSettingsRepository();
+    const failing = (await settings.get(FAILING_KEY)) === "true";
+    if (failures.length === 0) {
+      if (failing) await settings.set(FAILING_KEY, "false");
+      return;
+    }
+    if (failing) return;
+    await settings.set(FAILING_KEY, "true");
+    const { logAudit } = await import("../utils/audit-logger.js");
+    await logAudit({
+      userId: null,
+      username: "system",
+      action: "revocation_check_failed",
+      resourceType: "plugin_trust",
+      details: JSON.stringify({ failures }),
+      success: false,
+      errorMessage: failures.join("; ").slice(0, 500),
+    });
+  } catch {
+    // reporting must not stop the check
+  }
+}
+
 export async function fetchRevocations(): Promise<ChainTier[]> {
   const { fetchRegistryJson } = await import("./registry-index.js");
   const changed: ChainTier[] = [];
+  const failures: string[] = [];
   for (const tier of TIERS) {
     try {
       const raw = await fetchRegistryJson(await revocationsUrl(tier));
@@ -140,14 +175,15 @@ export async function fetchRevocations(): Promise<ChainTier[]> {
         changed.push(tier);
       }
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      failures.push(`${tier}: ${message}`);
       pluginLogger.warn(
-        `Could not update the ${tier} revocation list: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        `Could not update the ${tier} revocation list: ${message}`,
         { operation: "plugin_trust" },
       );
     }
   }
+  await noteCheckOutcome(failures);
   return changed;
 }
 

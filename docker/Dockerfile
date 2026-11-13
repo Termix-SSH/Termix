@@ -168,6 +168,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD ["node", "-e", "fetch('http://127.0.0.1:30001/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
 
 COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY docker/termix-recover.sh /usr/local/bin/termix-recover
+RUN chmod +x /entrypoint.sh /usr/local/bin/termix-recover
 
 CMD ["/entrypoint.sh"]

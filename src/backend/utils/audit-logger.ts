@@ -79,11 +79,10 @@ export async function logAudit(params: AuditLogParams): Promise<void> {
   if (isCoalescedRoutine(params)) return;
 
   // Hooks (plugins copying the log elsewhere) never delay or fail the
-  // audited operation.
-  emitAuditEntry(params);
-
+  // audited operation. They run after the insert so they get the line's hash.
+  let stored: { id: number; hash: string; prevHash: string } | undefined;
   try {
-    await createCurrentAuditLogRepository().create({
+    stored = await createCurrentAuditLogRepository().create({
       userId: params.userId,
       username: params.username,
       action: params.action,
@@ -99,6 +98,7 @@ export async function logAudit(params: AuditLogParams): Promise<void> {
   } catch {
     // audit logging must never throw and break the caller
   }
+  emitAuditEntry(params, stored);
 }
 
 export function getRequestMeta(req: Request): {
@@ -107,4 +107,26 @@ export function getRequestMeta(req: Request): {
 } {
   const userAgent = (req.headers["user-agent"] as string) || "";
   return { ipAddress: getClientIp(req), userAgent };
+}
+
+/** One line for a sign-in or security switch an admin flipped. */
+export async function auditSettingChange(
+  req: Request,
+  key: string,
+  value: boolean | number | string,
+): Promise<void> {
+  const userId = (req as Request & { userId?: string }).userId ?? null;
+  const { ipAddress, userAgent } = getRequestMeta(req);
+  await logAudit({
+    userId,
+    username: userId ? await getAuditUsername(userId) : "unknown",
+    action: "update_auth_setting",
+    resourceType: "setting",
+    resourceId: key,
+    resourceName: key,
+    details: JSON.stringify({ value }),
+    ipAddress,
+    userAgent,
+    success: true,
+  });
 }

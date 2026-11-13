@@ -5,16 +5,27 @@ import {
   eq,
   gte,
   inArray,
+  gt,
+  isNotNull,
   isNull,
   lt,
   lte,
+  max,
   sql,
 } from "drizzle-orm";
-import { auditLogs } from "../db/schema.js";
+import { auditLogs, settings } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
-import { sqlTimestampDaysAgo } from "./sql-timestamp.js";
+import { formatSqlTimestamp, sqlTimestampDaysAgo } from "./sql-timestamp.js";
 import { databaseLogger } from "../../utils/logger.js";
-import { countValue, rowsAffected } from "./mutation-result.js";
+import { countValue, insertedId, rowsAffected } from "./mutation-result.js";
+import {
+  AUDIT_CHAIN_ANCHOR_KEY,
+  AUDIT_CHAIN_GENESIS,
+  AUDIT_CHAIN_HEAD_KEY,
+  auditRowHash,
+  parseChainPoint,
+  type AuditChainPoint,
+} from "../../utils/audit-chain-hash.js";
 
 export type AuditLogRecord = typeof auditLogs.$inferSelect;
 export type NewAuditLogRecord = typeof auditLogs.$inferInsert;
@@ -79,6 +90,9 @@ export class AuditLogRepository {
    */
   private static cachedCount: number | null = null;
 
+  /** Writes in this process run one at a time so each sees the last hash. */
+  private static writeQueue: Promise<unknown> = Promise.resolve();
+
   /** Drops the cached count so a test starts from a known state. */
   static resetPruneThrottleForTests(): void {
     AuditLogRepository.cachedCount = null;
@@ -89,10 +103,142 @@ export class AuditLogRepository {
     private readonly onWrite?: () => void | Promise<void>,
   ) {}
 
-  async create(entry: NewAuditLogRecord): Promise<void> {
-    await this.context.drizzle.insert(auditLogs).values(entry);
+  async create(
+    entry: NewAuditLogRecord,
+  ): Promise<{ id: number; hash: string; prevHash: string }> {
+    const row = {
+      ...entry,
+      timestamp: entry.timestamp ?? formatSqlTimestamp(new Date()),
+    };
+    const run = AuditLogRepository.writeQueue.then(() =>
+      this.insertChained(row),
+    );
+    AuditLogRepository.writeQueue = run.catch(() => undefined);
+    const stored = await run;
     await this.pruneIfDue();
     await this.afterWrite();
+    return stored;
+  }
+
+  /**
+   * Inserts one row linked to the newest one. The head settings row is read
+   * and written in the same transaction; on Postgres and MySQL the update
+   * takes its row lock first, so two servers on one database can't fork the
+   * chain.
+   */
+  private async insertChained(
+    row: NewAuditLogRecord & { timestamp: string },
+  ): Promise<{ id: number; hash: string; prevHash: string }> {
+    const build = (headRaw: string | null) => {
+      const prevHash = parseChainPoint(headRaw)?.hash ?? AUDIT_CHAIN_GENESIS;
+      return { ...row, prevHash, hash: auditRowHash(prevHash, row) };
+    };
+    const headValue = (id: number, hash: string) =>
+      JSON.stringify({ id, hash, timestamp: row.timestamp });
+
+    if (this.context.dialect === "sqlite") {
+      return this.context.drizzle.transaction((tx) => {
+        const head = tx
+          .select({ value: settings.value })
+          .from(settings)
+          .where(eq(settings.key, AUDIT_CHAIN_HEAD_KEY))
+          .get();
+        const values = build(head?.value ?? null);
+        const id = insertedId(tx.insert(auditLogs).values(values).run());
+        if (id === null) throw new Error("audit insert returned no id");
+        const value = headValue(id, values.hash);
+        if (head) {
+          tx.update(settings)
+            .set({ value })
+            .where(eq(settings.key, AUDIT_CHAIN_HEAD_KEY))
+            .run();
+        } else {
+          tx.insert(settings)
+            .values({ key: AUDIT_CHAIN_HEAD_KEY, value })
+            .run();
+        }
+        return { id, hash: values.hash, prevHash: values.prevHash };
+      });
+    }
+
+    return this.context.drizzle.transaction(async (tx) => {
+      const locked = await tx
+        .update(settings)
+        .set({ value: sql`${settings.value}` })
+        .where(eq(settings.key, AUDIT_CHAIN_HEAD_KEY));
+      const exists = rowsAffected(locked) > 0;
+      const head = exists
+        ? await tx
+            .select({ value: settings.value })
+            .from(settings)
+            .where(eq(settings.key, AUDIT_CHAIN_HEAD_KEY))
+            .limit(1)
+        : [];
+      const values = build(head[0]?.value ?? null);
+      let id: number | null;
+      if (this.context.dialect === "postgres") {
+        // Postgres only branch: RETURNING is fine here, MySQL takes the else.
+        // eslint-disable-next-line no-restricted-syntax
+        const inserted = await tx
+          .insert(auditLogs)
+          .values(values)
+          .returning({ id: auditLogs.id });
+        id = inserted[0]?.id ?? null;
+      } else {
+        id = insertedId(await tx.insert(auditLogs).values(values));
+      }
+      if (id === null) throw new Error("audit insert returned no id");
+      const value = headValue(id, values.hash);
+      if (exists) {
+        await tx
+          .update(settings)
+          .set({ value })
+          .where(eq(settings.key, AUDIT_CHAIN_HEAD_KEY));
+      } else {
+        await tx.insert(settings).values({ key: AUDIT_CHAIN_HEAD_KEY, value });
+      }
+      return { id, hash: values.hash, prevHash: values.prevHash };
+    });
+  }
+
+  /** The newest chained row and the last pruned one, as stored. */
+  async readChainPoints(): Promise<{
+    head: AuditChainPoint | null;
+    anchor: AuditChainPoint | null;
+  }> {
+    const rows = await this.context.drizzle
+      .select({ key: settings.key, value: settings.value })
+      .from(settings)
+      .where(
+        inArray(settings.key, [AUDIT_CHAIN_HEAD_KEY, AUDIT_CHAIN_ANCHOR_KEY]),
+      );
+    const byKey = new Map(rows.map((row) => [row.key, row.value]));
+    return {
+      head: parseChainPoint(byKey.get(AUDIT_CHAIN_HEAD_KEY)),
+      anchor: parseChainPoint(byKey.get(AUDIT_CHAIN_ANCHOR_KEY)),
+    };
+  }
+
+  /** Rows after an id in id order, for walking the chain. */
+  async listChainBatch(
+    afterId: number,
+    limit: number,
+  ): Promise<AuditLogRecord[]> {
+    return this.context.drizzle
+      .select()
+      .from(auditLogs)
+      .where(gt(auditLogs.id, afterId))
+      .orderBy(asc(auditLogs.id))
+      .limit(limit);
+  }
+
+  async findById(id: number): Promise<AuditLogRecord | null> {
+    const rows = await this.context.drizzle
+      .select()
+      .from(auditLogs)
+      .where(eq(auditLogs.id, id))
+      .limit(1);
+    return rows[0] ?? null;
   }
 
   async listPage(input: {
@@ -174,30 +320,16 @@ export class AuditLogRepository {
     return rowsAffected(result);
   }
 
-  async deleteByUserId(userId: string): Promise<number> {
-    // Row count changed outside the insert path; force a re-read.
-    AuditLogRepository.cachedCount = null;
-    const result = await this.context.drizzle
-      .delete(auditLogs)
-      .where(eq(auditLogs.userId, userId));
-
-    if (rowsAffected(result) > 0) {
-      await this.afterWrite();
-    }
-
-    return rowsAffected(result);
-  }
-
   async deleteRoutinePluginNoise(): Promise<number> {
     AuditLogRepository.cachedCount = null;
-    const result = await this.context.drizzle
-      .delete(auditLogs)
-      .where(
-        and(
-          isNull(auditLogs.userId),
-          inArray(auditLogs.action, ROUTINE_PLUGIN_AUDIT_ACTIONS),
-        ),
-      );
+    const result = await this.context.drizzle.delete(auditLogs).where(
+      and(
+        isNull(auditLogs.userId),
+        // Chained rows are never removed from the middle.
+        isNull(auditLogs.hash),
+        inArray(auditLogs.action, ROUTINE_PLUGIN_AUDIT_ACTIONS),
+      ),
+    );
 
     if (rowsAffected(result) > 0) {
       await this.afterWrite();
@@ -302,9 +434,17 @@ export class AuditLogRepository {
     if (days === null) return;
 
     const cutoff = sqlTimestampDaysAgo(days);
+    // Pruned by id so only the front of the chain ever goes.
+    const [last] = await this.context.drizzle
+      .select({ id: max(auditLogs.id) })
+      .from(auditLogs)
+      .where(lt(auditLogs.timestamp, cutoff));
+    const lastId = last?.id == null ? null : Number(last.id);
+    if (lastId === null) return;
+    await this.saveAnchor(lastId);
     const result = await this.context.drizzle
       .delete(auditLogs)
-      .where(lt(auditLogs.timestamp, cutoff));
+      .where(lte(auditLogs.id, lastId));
 
     if (rowsAffected(result) > 0) {
       databaseLogger.info(
@@ -337,16 +477,15 @@ export class AuditLogRepository {
     const rows = await this.context.drizzle
       .select({ id: auditLogs.id, timestamp: auditLogs.timestamp })
       .from(auditLogs)
-      .orderBy(asc(auditLogs.timestamp))
+      .orderBy(asc(auditLogs.id))
       .limit(deleteCount);
     if (rows.length === 0) return;
 
-    await this.context.drizzle.delete(auditLogs).where(
-      inArray(
-        auditLogs.id,
-        rows.map((row) => row.id),
-      ),
-    );
+    const lastId = rows[rows.length - 1].id;
+    await this.saveAnchor(lastId);
+    await this.context.drizzle
+      .delete(auditLogs)
+      .where(lte(auditLogs.id, lastId));
 
     databaseLogger.warn(
       `Audit log hit its ${max}-entry cap; discarded ${rows.length} entries`,
@@ -359,6 +498,30 @@ export class AuditLogRepository {
         hint: `Raise ${AUDIT_MAX_ENTRIES_ENV}, or set ${AUDIT_RETENTION_DAYS_ENV} and export older entries before they are dropped.`,
       },
     );
+  }
+
+  /**
+   * Remembers the last row about to be pruned, so the chain still checks out
+   * from the first row that stays.
+   */
+  private async saveAnchor(lastId: number): Promise<void> {
+    const [row] = await this.context.drizzle
+      .select({ id: auditLogs.id, hash: auditLogs.hash })
+      .from(auditLogs)
+      .where(and(lte(auditLogs.id, lastId), isNotNull(auditLogs.hash)))
+      .orderBy(desc(auditLogs.id))
+      .limit(1);
+    if (!row?.hash) return;
+    const value = JSON.stringify({ id: row.id, hash: row.hash });
+    const updated = await this.context.drizzle
+      .update(settings)
+      .set({ value })
+      .where(eq(settings.key, AUDIT_CHAIN_ANCHOR_KEY));
+    if (rowsAffected(updated) === 0) {
+      await this.context.drizzle
+        .insert(settings)
+        .values({ key: AUDIT_CHAIN_ANCHOR_KEY, value });
+    }
   }
 
   private async afterWrite(): Promise<void> {

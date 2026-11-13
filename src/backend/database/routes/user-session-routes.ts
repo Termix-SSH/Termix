@@ -4,6 +4,7 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { authLogger } from "../../utils/logger.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import {
+  createCurrentApiKeyRepository,
   createCurrentSessionRepository,
   createCurrentUserRepository,
 } from "../repositories/factory.js";
@@ -17,6 +18,68 @@ export function registerUserSessionRoutes(
   router: Router,
   { authenticateJWT, authManager }: UserSessionRoutesDeps,
 ): void {
+  /**
+   * @openapi
+   * /users/sessions/revoke-everyone:
+   *   post:
+   *     summary: Sign everyone out (admin only)
+   *     description: Ends every session on the server except the caller's own. With apiKeys true, every API key is revoked too.
+   *     tags:
+   *       - Users
+   *     requestBody:
+   *       required: false
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               apiKeys:
+   *                 type: boolean
+   *     responses:
+   *       200:
+   *         description: Sessions ended. Returns how many sessions and keys.
+   *       403:
+   *         description: Admin access required.
+   *       500:
+   *         description: Failed to end sessions.
+   */
+  router.post(
+    "/sessions/revoke-everyone",
+    authenticateJWT,
+    async (req, res) => {
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.userId;
+      try {
+        const userRecord = await createCurrentUserRepository().findById(userId);
+        if (!userRecord?.isAdmin) {
+          return res.status(403).json({ error: "Admin access required" });
+        }
+        const sessions = await createCurrentSessionRepository().revokeAll(
+          authReq.sessionId,
+        );
+        const apiKeys =
+          req.body?.apiKeys === true
+            ? await createCurrentApiKeyRepository().deleteAll()
+            : 0;
+        const { ipAddress, userAgent } = getRequestMeta(req);
+        await logAudit({
+          userId,
+          username: userRecord.username ?? userId,
+          action: "revoke_everyone_sessions",
+          resourceType: "session",
+          details: JSON.stringify({ sessions, apiKeys }),
+          ipAddress,
+          userAgent,
+          success: true,
+        });
+        res.json({ sessions, apiKeys });
+      } catch (err) {
+        authLogger.error("Failed to end every session", err);
+        res.status(500).json({ error: "Failed to end sessions" });
+      }
+    },
+  );
+
   /**
    * @openapi
    * /users/sessions:

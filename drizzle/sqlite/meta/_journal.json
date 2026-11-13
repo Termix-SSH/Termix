@@ -533,6 +533,13 @@
       "when": 1794526285654,
       "tag": "0075_adorable_barracuda",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "6",
+      "when": 1794585753588,
+      "tag": "0076_zippy_lockheed",
+      "breakpoints": true
     }
   ]
 }

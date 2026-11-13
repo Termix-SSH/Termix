@@ -25,6 +25,11 @@ const RULES: Rule[] = [
       new RegExp(`^/plugins/${esc(id)}/settings/(admin|user|host/\\d+)$`),
   },
   { methods: READ, path: () => /^\/users\/me$/ },
+  // Your own sessions and keys. Revoking other people's stays out of frames.
+  { methods: READ, path: () => /^\/users\/(sessions|api-keys\/mine)$/ },
+  { methods: ["DELETE"], path: () => /^\/users\/api-keys\/mine\/[\w-]+$/ },
+  { methods: ["POST"], path: () => /^\/users\/api-keys\/mine\/revoke-all$/ },
+  { methods: READ, path: () => /^\/users\/admin-holds(\/settings)?$/ },
   { methods: READ, path: () => /^\/rbac\/permissions\/me$/ },
   { methods: READ, path: () => /^\/user-preferences$/ },
   { methods: READ, path: () => /^\/(health|version)$/ },

@@ -12,6 +12,8 @@ const runtime = vi.hoisted(() => ({
   alerts: [] as Array<Record<string, unknown>>,
   fetched: new Map<string, unknown>(),
   index: null as unknown,
+  settings: new Map<string, string>(),
+  audits: [] as Array<Record<string, unknown>>,
 }));
 
 vi.mock("../../plugins/index.js", () => ({
@@ -26,7 +28,19 @@ vi.mock("../../plugins/index.js", () => ({
   },
 }));
 
+vi.mock("../../utils/audit-logger.js", () => ({
+  logAudit: async (entry: Record<string, unknown>) => {
+    runtime.audits.push(entry);
+  },
+}));
+
 vi.mock("../../database/repositories/factory.js", () => ({
+  createCurrentSettingsRepository: () => ({
+    get: async (key: string) => runtime.settings.get(key) ?? null,
+    set: async (key: string, value: string) => {
+      runtime.settings.set(key, value);
+    },
+  }),
   createCurrentPluginRepository: () => ({
     listAll: async () => [...runtime.records.values()],
     update: async (id: string, patch: { state: string }) => {
@@ -99,6 +113,8 @@ beforeEach(() => {
   runtime.alerts = [];
   runtime.fetched.clear();
   runtime.index = null;
+  runtime.settings.clear();
+  runtime.audits = [];
 });
 
 afterEach(() => {
@@ -190,6 +206,27 @@ describe("fetchRevocations and loadStoredRevocations", () => {
     expect(getRevocationList("official")?.plugins).toEqual([
       { id: "x", reason: undefined },
     ]);
+  });
+
+  it("audits a failing check once until it works again", async () => {
+    await fetchRevocations();
+    await fetchRevocations();
+    const failed = () =>
+      runtime.audits.filter((a) => a.action === "revocation_check_failed");
+    expect(failed()).toHaveLength(1);
+    expect(failed()[0]).toMatchObject({ success: false, userId: null });
+
+    setTrustRootsForTests(rootsFor([a, b], [a]));
+    runtime.fetched.set(OFFICIAL_URL, makeRevocations(a, { version: 1 }));
+    runtime.fetched.set(
+      OFFICIAL_URL.replace("/official/", "/community/"),
+      makeRevocations(a, { version: 1, tier: "community" }),
+    );
+    await fetchRevocations();
+    expect(runtime.settings.get("revocation_check_failing")).toBe("false");
+    runtime.fetched.clear();
+    await fetchRevocations();
+    expect(failed()).toHaveLength(2);
   });
 
   it("ignores a stored list someone edited on disk", async () => {

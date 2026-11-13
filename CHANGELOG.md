@@ -25,10 +25,19 @@
 - Termix checks a root signed revocation list on start and once a day. A revoked plugin, plugin version or signing key is turned off and every admin gets an alert. Servers without internet keep the last list they had
 - Admins get an alert when a plugin update is signed by a different key than the version before
 - Desktop app: an update also has to carry a signature from the Termix release key before it installs
+- Each audit log entry carries a hash of the one before, so a changed or removed entry shows. Termix checks the chain every hour and alerts every admin when it breaks. Plugins can show the chain's state and its newest hash to keep somewhere else
+- Every admin gets an alert for a new admin, role changes, plugin installs, updates, turning a plugin on or giving it access, sign in setting changes, new API keys and a failed plugin revocation check
+- Role changes, plugin access grants and sign in switches are written to the audit log
+- Each user can list their own API keys with when they were last used, and revoke one or all of them. Admins can sign everyone out at once, and revoke every API key with it
+- New API key scope `read`: the key can only read. A new key gets it, and expires after 90 days, unless the creator asks for something else
+- Optional admin wait for servers with two or more admins: a new admin, turning off password login, turning off a sign in plugin or a plugin with dangerous access waits a set time, the other admins get an alert and can cancel it. Off by default. Turning it off or shortening it waits too. `TERMIX_ADMIN_HOLD_MINUTES` sets it from the server
+- `termix-recover` on the server (`docker exec termix termix-recover`) lists admins, removes a locked out admin's second factor and signs people out, without signing in
+- The sign in event plugins get now says which sign in method and device were used
 - The server answers `/.well-known/security.txt` with where to report a security problem in Termix
 
 ### Changed
 
+- An API key made without picking scopes or an expiry is now read only and lasts 90 days. Ask for `full` and no expiry to get the old behavior. Existing keys keep what they had
 - GitHub releases stay drafts until every download is uploaded, and a published release never changes its files
 - Over HTTPS the login cookies use the `__Host-` prefix, so another site on a sibling domain can't set or replace them
 - The Docker health check uses Node instead of wget, which is no longer in the image. ping needs no extra capability
@@ -86,6 +95,7 @@
 - Bad JSON and too large uploads get a 400 or 413 answer instead of a server error
 - SSH key uploads on a host are limited to 1 MB
 - Download names with unusual characters in a user export are kept safe
+- A settings import no longer brings in password reset codes or the audit forwarding token
 
 ## 26.11.1
 

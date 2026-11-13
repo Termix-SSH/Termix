@@ -1184,6 +1184,37 @@
     },
     "GET /version/releases": {
       "access": "user"
+    },
+    "GET /users/api-keys/mine": {
+      "access": "user"
+    },
+    "POST /users/api-keys/mine/revoke-all": {
+      "access": "user",
+      "destructive": true
+    },
+    "DELETE /users/api-keys/mine/:keyId": {
+      "access": "user",
+      "destructive": true
+    },
+    "POST /users/sessions/revoke-everyone": {
+      "access": "admin",
+      "destructive": true
+    },
+    "GET /users/admin-holds/settings": {
+      "access": "admin"
+    },
+    "PUT /users/admin-holds/settings": {
+      "access": "admin",
+      "body": {
+        "minutes": 0
+      }
+    },
+    "GET /users/admin-holds": {
+      "access": "admin"
+    },
+    "POST /users/admin-holds/:holdId/cancel": {
+      "access": "admin",
+      "destructive": true
     }
   }
 }

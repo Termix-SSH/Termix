@@ -14,6 +14,7 @@ import {
   PluginCapabilityError,
 } from "./backend.js";
 import type {
+  PluginAuditChainResult,
   PluginAuditEntry,
   PluginAuditFilters,
   PluginContext,
@@ -160,6 +161,8 @@ export interface FakeContextOptions {
   desktopLocal?: PluginDesktopLocal;
   /** The stored audit lines ctx.audit.list and exportBatches serve. */
   auditEntries?: PluginAuditEntry[];
+  /** What ctx.audit.chain.status and verify answer. Defaults to a good chain. */
+  auditChain?: PluginAuditChainResult;
   /** What ctx.hosts.status.get and check answer, by host id. */
   hostStatuses?: Record<number, PluginHostStatusEntry>;
   /** What ctx.hosts.probeTargets answers. */
@@ -1189,6 +1192,27 @@ export function createFakeContext(
       record: async (entry) => {
         audits.push({ ...entry });
       },
+      chain: {
+        status: async () => options.auditChain ?? null,
+        verify: async () =>
+          options.auditChain ?? {
+            ok: true,
+            checked: 0,
+            unchained: 0,
+            head: null,
+            checkedAt: new Date().toISOString(),
+          },
+        checkHead: async () => {
+          const chain = options.auditChain ?? {
+            ok: true,
+            checked: 0,
+            unchained: 0,
+            head: null,
+            checkedAt: new Date().toISOString(),
+          };
+          return { found: chain.ok, ok: chain.ok, pruned: false, chain };
+        },
+      },
     },
 
     network: {
@@ -1771,6 +1795,8 @@ export interface MockContextOptions {
   desktopLocal?: PluginDesktopLocal;
   /** See FakeContextOptions. */
   auditEntries?: PluginAuditEntry[];
+  /** What ctx.audit.chain answers. */
+  auditChain?: PluginAuditChainResult;
   /** What ctx.hosts.status answers. See FakeContextOptions. */
   hostStatuses?: Record<number, PluginHostStatusEntry>;
   /** What ctx.hosts.probeTargets answers. */
@@ -1917,6 +1943,7 @@ export function createMockCtx(
     desktopAvailable: options.desktopAvailable,
     desktopLocal: options.desktopLocal,
     auditEntries: options.auditEntries,
+    auditChain: options.auditChain,
     hostStatuses: options.hostStatuses,
     probeTargets: options.probeTargets,
     activeSessions: options.activeSessions,
@@ -2352,6 +2379,20 @@ export function createMockCtx(
       exportBatches: (filters, batchSize) => {
         require("audit:read");
         return ctx.audit.exportBatches(filters, batchSize);
+      },
+      chain: {
+        status: async () => {
+          require("audit:read");
+          return ctx.audit.chain.status();
+        },
+        verify: async () => {
+          require("audit:read");
+          return ctx.audit.chain.verify();
+        },
+        checkHead: async (head) => {
+          require("audit:read");
+          return ctx.audit.chain.checkHead(head);
+        },
       },
     },
 

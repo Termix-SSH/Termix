@@ -123,6 +123,11 @@ export async function issueSession(
   emitInternalEvent("user_login", user.id, undefined, {
     username: user.username,
     ipAddress,
+    userAgent,
+    methodId: options.methodId,
+    deviceType: deviceInfo.type,
+    deviceInfo: deviceInfo.deviceInfo,
+    restricted: Boolean(options.restriction),
   });
 
   authLogger.success("User login successful", {

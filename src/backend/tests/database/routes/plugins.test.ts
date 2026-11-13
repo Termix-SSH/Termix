@@ -207,6 +207,31 @@ const manageMock = vi.hoisted(() => ({
 }));
 const auditMock = vi.hoisted(() => ({ logAudit: vi.fn(async () => {}) }));
 
+// The admin wait is off unless a test turns it on.
+const holdMock = vi.hoisted(() => ({
+  active: false,
+  calls: [] as Array<{ kind: string; payload: unknown }>,
+}));
+vi.mock("../../../auth/admin-holds.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../auth/admin-holds.js")>()),
+  getHoldSettings: async () => ({
+    minutes: holdMock.active ? 60 : 0,
+    forcedByEnv: false,
+    adminCount: 2,
+    active: holdMock.active,
+  }),
+  holdIfNeeded: async (
+    _req: unknown,
+    res: { status: (code: number) => { json: (body: unknown) => void } },
+    input: { kind: string; payload: unknown },
+  ) => {
+    if (!holdMock.active) return false;
+    holdMock.calls.push({ kind: input.kind, payload: input.payload });
+    res.status(202).json({ held: true, holdId: "h1" });
+    return true;
+  },
+}));
+
 vi.mock("../../../plugins/manage.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../plugins/manage.js")>()),
   ...manageMock,
@@ -267,6 +292,8 @@ describe("plugins route", () => {
   let baseUrl = "";
 
   beforeEach(async () => {
+    holdMock.active = false;
+    holdMock.calls = [];
     state.plugins = new Map();
     state.grants = [];
     state.managers = new Set(["admin-1"]);
@@ -634,6 +661,13 @@ describe("plugins route", () => {
         grantedBy: "admin-1",
       },
     ]);
+    expect(auditMock.logAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "grant_plugin_capability",
+        resourceId: "sample-plugin",
+        details: JSON.stringify({ capability: "hosts:read" }),
+      }),
+    );
   });
 
   it("rejects granting a capability the manifest does not declare", async () => {
@@ -696,6 +730,12 @@ describe("plugins route", () => {
       granted: false,
     });
     expect(state.grants).toEqual([]);
+    expect(auditMock.logAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "revoke_plugin_capability",
+        resourceId: "sample-plugin",
+      }),
+    );
   });
 
   it("404s revoking a capability that was not granted", async () => {
@@ -799,6 +839,92 @@ describe("plugins route", () => {
 
       expect(res.status).toBe(403);
       expect(state.plugins.get("sample-plugin")?.state).toBe("enabled");
+    });
+
+    describe("with the admin wait on", () => {
+      const dangerous = () =>
+        makePlugin({
+          state: "disabled",
+          manifestJson: JSON.stringify({
+            name: "Runner",
+            capabilities: ["process:spawn", "kv:own"],
+          }),
+        });
+
+      const patchState = (enabled: boolean) =>
+        fetch(`${baseUrl}/plugins/sample-plugin/state`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ enabled }),
+        });
+
+      it("holds turning on a plugin with dangerous access", async () => {
+        holdMock.active = true;
+        state.plugins.set("sample-plugin", dangerous());
+        const res = await patchState(true);
+        expect(res.status).toBe(202);
+        expect(holdMock.calls).toEqual([
+          { kind: "plugin_enable", payload: { pluginId: "sample-plugin" } },
+        ]);
+        expect(manageMock.setPluginState).not.toHaveBeenCalled();
+      });
+
+      it("lets a plain plugin through", async () => {
+        holdMock.active = true;
+        state.plugins.set("sample-plugin", makePlugin({ state: "disabled" }));
+        manageMock.setPluginState.mockResolvedValueOnce({
+          enable: ["sample-plugin"],
+          disable: [],
+        });
+        expect((await patchState(true)).status).toBe(200);
+        expect(holdMock.calls).toEqual([]);
+      });
+
+      it("holds turning off a sign-in plugin", async () => {
+        holdMock.active = true;
+        state.plugins.set(
+          "sample-plugin",
+          makePlugin({
+            manifestJson: JSON.stringify({ capabilities: ["auth:provide"] }),
+          }),
+        );
+        expect((await patchState(false)).status).toBe(202);
+        expect(holdMock.calls[0]?.kind).toBe("plugin_disable");
+      });
+
+      it("holds granting a dangerous capability", async () => {
+        holdMock.active = true;
+        state.plugins.set("sample-plugin", dangerous());
+        const res = await fetch(`${baseUrl}/plugins/sample-plugin/grants`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ capability: "process:spawn" }),
+        });
+        expect(res.status).toBe(202);
+        expect(holdMock.calls[0]).toEqual({
+          kind: "plugin_grant",
+          payload: {
+            pluginId: "sample-plugin",
+            capabilities: ["process:spawn"],
+          },
+        });
+        expect(state.grants).toEqual([]);
+      });
+
+      it("asks to turn a sign-in plugin off before removing it", async () => {
+        holdMock.active = true;
+        state.plugins.set(
+          "sample-plugin",
+          makePlugin({
+            manifestJson: JSON.stringify({ capabilities: ["auth:policy"] }),
+          }),
+        );
+        const res = await fetch(`${baseUrl}/plugins/sample-plugin`, {
+          method: "DELETE",
+        });
+        expect(res.status).toBe(409);
+        expect((await res.json()).code).toBe("TURN_OFF_FIRST");
+      });
     });
 
     it("403s a non-admin granting a capability", async () => {

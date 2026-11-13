@@ -1252,6 +1252,18 @@ export {
   adminExportUserData,
   type ApiKey,
   type CreatedApiKey,
+  getMyApiKeys,
+  revokeMyApiKey,
+  revokeAllMyApiKeys,
+  revokeEveryoneSessions,
+  isAdminHoldTicket,
+  getAdminHoldSettings,
+  setAdminHoldMinutes,
+  getAdminHolds,
+  cancelAdminHold,
+  type AdminHoldTicket,
+  type AdminHoldSettings,
+  type AdminHold,
 } from "@/api/user-management-api";
 
 // ADMIN USER DATA MANAGEMENT

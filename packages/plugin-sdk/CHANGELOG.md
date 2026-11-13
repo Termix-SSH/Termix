@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.2.0
+
+Plugin API 2.2.0. Needs Termix 26.11.2.
+
+### Added
+
+- `ctx.audit.chain` (`audit:read`): `status()`, `verify()` and `checkHead(head)` for the audit log's hash chain
+- Stored and subscribed audit lines carry `hash` and `prevHash`
+- `/ui`: `getMyApiKeys`, `revokeMyApiKey`, `revokeAllMyApiKeys`, `revokeEveryoneSessions`, `getAdminHoldSettings`, `setAdminHoldMinutes`, `getAdminHolds`, `cancelAdminHold` and `isAdminHoldTicket`
+- `createMockCtx` takes `auditChain` for what `ctx.audit.chain` answers
+
+### Changed
+
+- `/ui` `createApiKey`: leave `expiresAt` out for the server's 90 days or pass null for never, and leave `scopes` out for read only or pass `["full"]`
+
 ## 2.1.0
 
 Plugin API 2.1.0. A plugin API 2 frontend now runs in sandboxed frames. See "Frames" in PLUGIN-GUIDE.md.

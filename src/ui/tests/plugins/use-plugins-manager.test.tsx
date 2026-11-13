@@ -53,7 +53,12 @@ const i18n = vi.hoisted(() => {
   };
 });
 vi.mock("react-i18next", () => ({ useTranslation: () => i18n }));
-vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+const toasts = vi.hoisted(() => ({
+  error: vi.fn(),
+  success: vi.fn(),
+  info: vi.fn(),
+}));
+vi.mock("sonner", () => ({ toast: toasts }));
 
 import { usePluginsManager } from "@/plugins/use-plugins-manager";
 
@@ -143,4 +148,23 @@ it("asks before letting an older plugin run without isolation", async () => {
   expect(api.setPluginOptions).toHaveBeenLastCalledWith("sample-plugin", {
     runUnisolated: false,
   });
+});
+
+it("says when turning a plugin on waits for the other admins", async () => {
+  api.setPluginState.mockResolvedValueOnce({
+    held: true,
+    holdId: "h1",
+    runsAt: "2026-11-13T01:00:00.000Z",
+    minutes: 60,
+  } as never);
+  const { result } = renderHook(() => usePluginsManager());
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  await act(async () => {
+    await result.current.toggle(result.current.plugins[0]);
+  });
+  await act(async () => {
+    await result.current.confirmConsent();
+  });
+  expect(toasts.info).toHaveBeenCalledWith("plugins.manager.toast.held");
+  expect(toasts.error).not.toHaveBeenCalled();
 });

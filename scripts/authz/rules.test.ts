@@ -158,13 +158,20 @@ describe("keyScopeAllows", () => {
       [["operations:read"], "GET", "/plugin-api/operations-center/mcp"],
       [["operations:run"], "GET", "/plugin-api/snippets/"],
       [[], "GET", "/operations/runs"],
+      [["read"], "GET", "/host/db/host"],
+      [["read"], "POST", "/host/db/host"],
+      [["read"], "POST", "/operations/x/run"],
     ];
     for (const [scopes, method, path] of cases) {
       expect(keyScopeAllows(scopes, method, path)).toBe(
         coreKeyScopeAllows(scopes, method, path),
       );
     }
-    expect(API_KEY_SCOPES).toEqual(["operations:read", "operations:run"]);
+    expect(API_KEY_SCOPES).toEqual([
+      "read",
+      "operations:read",
+      "operations:run",
+    ]);
   });
 });
 

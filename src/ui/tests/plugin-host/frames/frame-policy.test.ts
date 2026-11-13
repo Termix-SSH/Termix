@@ -20,6 +20,35 @@ describe("checkCoreRequest", () => {
     }
   });
 
+  it("lets a frame show and revoke only the user's own keys", () => {
+    for (const [method, path] of [
+      ["GET", "/users/sessions"],
+      ["GET", "/users/api-keys/mine"],
+      ["DELETE", "/users/api-keys/mine/abc_DEF-1"],
+      ["POST", "/users/api-keys/mine/revoke-all"],
+      ["GET", "/users/admin-holds"],
+      ["GET", "/users/admin-holds/settings"],
+    ]) {
+      expect(checkCoreRequest("login-security", method, path).ok, path).toBe(
+        true,
+      );
+    }
+    for (const [method, path] of [
+      ["GET", "/users/api-keys"],
+      ["DELETE", "/users/api-keys/abc"],
+      ["DELETE", "/users/sessions/abc"],
+      ["POST", "/users/sessions/revoke-all"],
+      ["POST", "/users/sessions/revoke-everyone"],
+      ["POST", "/users/admin-holds/abc/cancel"],
+      ["PUT", "/users/admin-holds/settings"],
+    ]) {
+      expect(
+        checkCoreRequest("login-security", method, path).ok,
+        `${method} ${path}`,
+      ).toBe(false);
+    }
+  });
+
   it("allows only the asking plugin's own settings", () => {
     expect(
       checkCoreRequest("docker", "GET", "/plugins/docker/settings/user").ok,

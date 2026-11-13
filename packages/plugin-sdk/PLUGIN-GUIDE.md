@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 2.1.0 | Plugin API 2.1.0
+SDK 2.2.0 | Plugin API 2.2.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -507,7 +507,12 @@ On the desktop app `process.execPath` is the Electron app, which can't start as 
 to run a script; run that code in a `worker_threads` Worker (with its own `env` and `argv`) instead.
 
 Use `ctx.audit.subscribe`, `list` and `exportBatches` (`audit:read`) to read the audit trail. Subscribers
-are called after a line is accepted and never delay the action that wrote it.
+are called after a line is stored and never delay the action that wrote it.
+
+Every stored line carries `hash` and `prevHash`: each hash covers the line before, so a changed or removed line
+breaks the chain. `ctx.audit.chain.status()` gives core's last hourly check, `verify()` runs one now and
+`checkHead({ id, hash })` compares a head someone saved earlier (Termix 26.11.2+, API 2.2). Core alerts admins
+itself when the chain breaks, so a plugin only shows it.
 
 ### Events, timers, alerts, services
 
@@ -1049,6 +1054,15 @@ lists them too). `evaluate` returns `allowRememberDevice`, `maxSessionSeconds`, 
 `secondFactor` (`"always"` or `"new-device"`). The strictest answer from all plugins wins, and a throw
 refuses the login. A user who must have a second factor but has none gets a session that can only set one
 up, and `/users/me` reports `restriction: "second-factor-setup"`.
+
+Every login also fires `internal.event` with `event: "user_login"` and `details` holding `username`,
+`ipAddress`, `userAgent`, `methodId`, `deviceType` and `deviceInfo`, for things like new device notices.
+
+Some admin changes can wait (Termix 26.11.2+). With the admin wait on and two or more admins, making an admin,
+turning off password login, turning a sign in plugin off, or turning on or granting a plugin with dangerous
+access answers HTTP 202 with `{ held: true, holdId, runsAt }` instead of applying. Check answers with
+`isAdminHoldTicket` from `/ui` and say when it applies. `/ui` has `getAdminHoldSettings`,
+`setAdminHoldMinutes`, `getAdminHolds` and `cancelAdminHold` for a page that manages it.
 
 Sync is answered by one plugin. `sync:provide` is high risk: `ctx.sync.provide({ handle })` takes over every
 request under `/sync` (an Express style handler, 404 when nothing provides it), and `ctx.sync.host` hands

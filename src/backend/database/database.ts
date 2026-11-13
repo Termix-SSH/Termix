@@ -110,6 +110,7 @@ import {
 } from "./repositories/factory.js";
 import { applyPluginHostImportSettings } from "./routes/host-plugin-settings.js";
 import {
+  isImportableSetting,
   selectExportableSettings,
   type SettingData,
 } from "../utils/export-settings.js";
@@ -163,9 +164,9 @@ function writeSettingsToExportDatabase(
 }
 
 function readImportedSettings(importDb: Database.Database): SettingData[] {
-  return importDb
-    .prepare("SELECT key, value FROM settings")
-    .all() as SettingData[];
+  return (
+    importDb.prepare("SELECT key, value FROM settings").all() as SettingData[]
+  ).filter((row) => isImportableSetting(row.key));
 }
 
 async function upsertImportedSetting(setting: SettingData): Promise<void> {

@@ -47,7 +47,11 @@ import { listExternalLoginMethods, registerAuthRoutes } from "./auth-routes.js";
 import { registerAuthCompatRoutes } from "./auth-compat-routes.js";
 import { registerStepUpRoutes } from "./step-up-routes.js";
 import { clearStepUp } from "../../auth/step-up.js";
-import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import {
+  auditSettingChange,
+  logAudit,
+  getRequestMeta,
+} from "../../utils/audit-logger.js";
 import {
   createCurrentSettingsRepository,
   getCurrentSettingValue,
@@ -68,6 +72,17 @@ import {
 } from "../../utils/trusted-proxy-auth.js";
 
 import { getPasswordLoginStatus } from "../../auth/core-auth.js";
+import {
+  ADMIN_HOLD_ENV,
+  HoldSettingLocked,
+  MAX_HOLD_MINUTES,
+  cancelHold,
+  getHoldSettings,
+  holdIfNeeded,
+  listHolds,
+  registerHoldKind,
+  updateHoldMinutes,
+} from "../../auth/admin-holds.js";
 import { verifyPasswordLogin } from "../../auth/builtin-login-methods.js";
 import { respondWithLogin, sendLoginError } from "../../auth/login-pipeline.js";
 import {
@@ -127,6 +142,25 @@ async function requireCurrentAdmin(userId: string): Promise<UserRecord | null> {
 }
 
 const authenticateJWT = authManager.createAuthMiddleware();
+
+registerHoldKind("password_login_off", {
+  apply: async (_payload, requesterId) => {
+    await createCurrentSettingsRepository().set(
+      "allow_password_login",
+      "false",
+    );
+    await logAudit({
+      userId: requesterId,
+      username: (await findCurrentUser(requesterId))?.username ?? requesterId,
+      action: "update_auth_setting",
+      resourceType: "setting",
+      resourceId: "allow_password_login",
+      resourceName: "allow_password_login",
+      details: JSON.stringify({ value: false, afterWait: true }),
+      success: true,
+    });
+  },
+});
 const requireAdmin = authManager.createAdminMiddleware();
 
 /**
@@ -911,6 +945,7 @@ router.patch("/registration-allowed", authenticateJWT, async (req, res) => {
       "allow_registration",
       allowed ? "true" : "false",
     );
+    await auditSettingChange(req, "allow_registration", allowed);
     res.json({ allowed });
   } catch (err) {
     authLogger.error("Failed to set registration allowed", err);
@@ -988,6 +1023,7 @@ const setExternalAutoProvision: RequestHandler = async (req, res) => {
       EXTERNAL_AUTO_PROVISION_KEY,
       enabled ? "true" : "false",
     );
+    await auditSettingChange(req, EXTERNAL_AUTO_PROVISION_KEY, enabled);
     res.json({ enabled });
   } catch (err) {
     authLogger.error("Failed to set external auto-provision", err);
@@ -1078,6 +1114,11 @@ router.patch(
         "second_factor_after_external_login",
         enabled ? "true" : "false",
       );
+      await auditSettingChange(
+        req,
+        "second_factor_after_external_login",
+        enabled,
+      );
       res.json({ enabled });
     } catch (err) {
       authLogger.error(
@@ -1151,6 +1192,7 @@ router.patch("/credential-storage", authenticateJWT, async (req, res) => {
       CREDENTIAL_STORAGE_SETTING,
       enabled ? "true" : "false",
     );
+    await auditSettingChange(req, CREDENTIAL_STORAGE_SETTING, enabled);
     res.json({ enabled });
   } catch (err) {
     authLogger.error("Failed to set the credential storage setting", err);
@@ -1222,6 +1264,7 @@ router.patch("/host-key-policy", authenticateJWT, async (req, res) => {
       HOST_KEY_TOFU_SETTING,
       trustOnFirstUse ? "true" : "false",
     );
+    await auditSettingChange(req, HOST_KEY_TOFU_SETTING, trustOnFirstUse);
     res.json({ trustOnFirstUse });
   } catch (err) {
     authLogger.error("Failed to set the host key trust setting", err);
@@ -1300,11 +1343,22 @@ router.patch("/password-login-allowed", authenticateJWT, async (req, res) => {
             "Cannot disable password login while 2FA is enabled for one or more users. Disable 2FA first.",
         });
       }
+      if (
+        await holdIfNeeded(req, res, {
+          kind: "password_login_off",
+          payload: {},
+          summary: "turn off password login",
+          requesterId: userId,
+        })
+      ) {
+        return;
+      }
     }
     await createCurrentSettingsRepository().set(
       "allow_password_login",
       allowed ? "true" : "false",
     );
+    await auditSettingChange(req, "allow_password_login", allowed);
     res.json({ allowed });
   } catch (err) {
     authLogger.error("Failed to set password login allowed", err);
@@ -1377,6 +1431,7 @@ router.patch("/password-reset-allowed", authenticateJWT, async (req, res) => {
       "allow_password_reset",
       allowed ? "true" : "false",
     );
+    await auditSettingChange(req, "allow_password_reset", allowed);
     res.json({ allowed });
   } catch (err) {
     authLogger.error("Failed to set password reset allowed", err);
@@ -1613,6 +1668,162 @@ registerUserDataAccessRoutes(router, {
   authManager,
 });
 
+/**
+ * @openapi
+ * /users/admin-holds/settings:
+ *   get:
+ *     summary: Get the admin wait setting (admin only)
+ *     description: How long dangerous admin changes wait on a server with two or more admins. 0 means off.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Minutes, whether the server forces it, the admin count and whether changes wait right now.
+ *       403:
+ *         description: Not authorized.
+ */
+router.get("/admin-holds/settings", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    if (!(await requireCurrentAdmin(userId))) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    res.json({ ...(await getHoldSettings()), envName: ADMIN_HOLD_ENV });
+  } catch (err) {
+    authLogger.error("Failed to read the admin wait setting", err);
+    res.status(500).json({ error: "Failed to read the admin wait setting" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/admin-holds/settings:
+ *   put:
+ *     summary: Set the admin wait (admin only)
+ *     description: Turning it on or making it longer applies at once. Turning it off or making it shorter waits out the current time first.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               minutes:
+ *                 type: integer
+ *                 description: 0 turns it off.
+ *     responses:
+ *       200:
+ *         description: Saved.
+ *       202:
+ *         description: The change waits for the other admins.
+ *       400:
+ *         description: Invalid minutes.
+ *       403:
+ *         description: Not authorized.
+ *       409:
+ *         description: Set on the server with an environment variable.
+ */
+router.put("/admin-holds/settings", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    if (!(await requireCurrentAdmin(userId))) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const minutes = req.body?.minutes;
+    if (
+      typeof minutes !== "number" ||
+      !Number.isInteger(minutes) ||
+      minutes < 0 ||
+      minutes > MAX_HOLD_MINUTES
+    ) {
+      return res.status(400).json({ error: "Invalid minutes" });
+    }
+    const result = await updateHoldMinutes(minutes, userId, req);
+    res.status(result.held ? 202 : 200).json(result);
+  } catch (err) {
+    if (err instanceof HoldSettingLocked) {
+      return res.status(409).json({ error: err.message, code: "SET_BY_ENV" });
+    }
+    authLogger.error("Failed to save the admin wait setting", err);
+    res.status(500).json({ error: "Failed to save the admin wait setting" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/admin-holds:
+ *   get:
+ *     summary: List waiting and past admin changes (admin only)
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Newest first.
+ *       403:
+ *         description: Not authorized.
+ */
+router.get("/admin-holds", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    if (!(await requireCurrentAdmin(userId))) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    res.json({ holds: await listHolds() });
+  } catch (err) {
+    authLogger.error("Failed to list admin changes", err);
+    res.status(500).json({ error: "Failed to list admin changes" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/admin-holds/{holdId}/cancel:
+ *   post:
+ *     summary: Cancel a waiting admin change (admin only)
+ *     tags:
+ *       - Users
+ *     parameters:
+ *       - in: path
+ *         name: holdId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Cancelled.
+ *       403:
+ *         description: Not authorized.
+ *       404:
+ *         description: No such change.
+ *       409:
+ *         description: Already applied or cancelled.
+ */
+router.post(
+  "/admin-holds/:holdId/cancel",
+  authenticateJWT,
+  async (req, res) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    try {
+      if (!(await requireCurrentAdmin(userId))) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      const outcome = await cancelHold(String(req.params.holdId), userId, req);
+      if (outcome === "not_found") {
+        return res.status(404).json({ error: "Change not found" });
+      }
+      if (outcome === "not_pending") {
+        return res.status(409).json({ error: "This change is not waiting" });
+      }
+      res.json({ cancelled: true });
+    } catch (err) {
+      authLogger.error("Failed to cancel an admin change", err);
+      res.status(500).json({ error: "Failed to cancel the change" });
+    }
+  },
+);
+
 registerUserSessionRoutes(router, {
   authenticateJWT,
   authManager,
@@ -1627,7 +1838,7 @@ registerUserSettingsRoutes(router, authenticateJWT);
 registerUserSocketTicketRoutes(router, { authenticateJWT, authManager });
 registerTlsRoutes(router, authenticateJWT);
 
-registerUserApiKeyRoutes(router, requireAdmin);
+registerUserApiKeyRoutes(router, requireAdmin, authenticateJWT);
 registerBrandingRoutes(router);
 
 registerAuthRoutes(router);

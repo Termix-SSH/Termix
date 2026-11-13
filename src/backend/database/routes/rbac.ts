@@ -1217,6 +1217,30 @@ router.get(
   },
 );
 
+/** One audit line per role change, so admins hear about them. */
+async function auditRoleChange(
+  req: AuthenticatedRequest,
+  action: string,
+  roleId: number,
+  roleName: string,
+  details: Record<string, unknown> = {},
+): Promise<void> {
+  const userId = req.userId!;
+  const { ipAddress, userAgent } = getRequestMeta(req);
+  await logAudit({
+    userId,
+    username: await getAuditUsername(userId),
+    action,
+    resourceType: "role",
+    resourceId: String(roleId),
+    resourceName: roleName,
+    details: JSON.stringify(details),
+    ipAddress,
+    userAgent,
+    success: true,
+  }).catch(() => undefined);
+}
+
 /**
  * @openapi
  * /rbac/roles:
@@ -1284,6 +1308,7 @@ router.post(
         isSystem: false,
         permissions: null,
       });
+      await auditRoleChange(req, "create_role", newRoleId, name);
 
       res.status(201).json({
         success: true,
@@ -1422,6 +1447,10 @@ router.put(
           permissionManager.invalidateUserPermissionCache(memberId);
         }
       }
+      await auditRoleChange(req, "update_role", roleId, existingRole.name, {
+        ...(permissions !== undefined ? { permissions } : {}),
+        ...(displayName ? { displayName } : {}),
+      });
 
       res.json({
         success: true,
@@ -1557,6 +1586,9 @@ router.delete(
         permissionManager.invalidateUserPermissionCache(userId);
       }
       await pruneGrantsBy(deletedUserIds);
+      await auditRoleChange(req, "delete_role", roleId, role.name, {
+        members: deletedUserIds.length,
+      });
 
       res.json({
         success: true,
@@ -1734,6 +1766,9 @@ router.post(
       }
 
       permissionManager.invalidateUserPermissionCache(targetUserId);
+      await auditRoleChange(req, "assign_role", roleId, role.name, {
+        targetUserId,
+      });
       databaseLogger.info("Role assigned to user", {
         operation: "rbac_role_assign",
         adminId: currentUserId,
@@ -1850,6 +1885,9 @@ router.delete(
 
       permissionManager.invalidateUserPermissionCache(targetUserId);
       await pruneGrantsBy([targetUserId]);
+      await auditRoleChange(req, "remove_role", roleId, role.name, {
+        targetUserId,
+      });
       databaseLogger.info("Role removed from user", {
         operation: "rbac_role_remove",
         adminId: req.userId!,

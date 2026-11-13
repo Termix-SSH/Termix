@@ -46,12 +46,14 @@ function toEntry(row: AuditLogRecord): PluginAuditEntry {
     userAgent: row.userAgent ?? null,
     success: Boolean(row.success),
     errorMessage: row.errorMessage ?? null,
+    hash: row.hash ?? null,
+    prevHash: row.prevHash ?? null,
   };
 }
 
 export function createPluginAuditReader(
   deps: Deps,
-): Pick<PluginAudit, "subscribe" | "list" | "exportBatches"> {
+): Pick<PluginAudit, "subscribe" | "list" | "exportBatches" | "chain"> {
   const { manifest, bag, audit } = deps;
   const require = (action: string) =>
     assertCapability(manifest.id, "audit:read", manifest.capabilities, action);
@@ -84,6 +86,9 @@ export function createPluginAuditReader(
               userAgent: entry.userAgent ?? null,
               success: entry.success,
               errorMessage: entry.errorMessage ?? null,
+              ...(entry.id !== undefined ? { id: entry.id } : {}),
+              hash: entry.hash ?? null,
+              prevHash: entry.prevHash ?? null,
             });
           });
         })
@@ -108,6 +113,44 @@ export function createPluginAuditReader(
       });
       await audit("audit_list", "read audit log entries", { success: true });
       return { entries: page.logs.map(toEntry), total: page.total };
+    },
+
+    chain: {
+      status: async () => {
+        await require("audit_chain_status");
+        const { lastAuditChainResult } =
+          await import("../utils/audit-chain.js");
+        return lastAuditChainResult();
+      },
+      verify: async () => {
+        await require("audit_chain_verify");
+        const { runAuditChainCheck } = await import("../utils/audit-chain.js");
+        const result = await runAuditChainCheck();
+        await audit("audit_chain_verify", "checked the audit log chain", {
+          success: true,
+        });
+        return result;
+      },
+      checkHead: async (head) => {
+        await require("audit_chain_check_head");
+        if (
+          !head ||
+          typeof head.id !== "number" ||
+          !Number.isInteger(head.id) ||
+          typeof head.hash !== "string" ||
+          !/^[0-9a-f]{64}$/.test(head.hash)
+        ) {
+          throw new Error("A head needs a whole number id and a sha256 hash");
+        }
+        const { checkSavedHead } = await import("../utils/audit-chain.js");
+        const result = await checkSavedHead({ id: head.id, hash: head.hash });
+        await audit(
+          "audit_chain_check_head",
+          `compared a saved head at entry ${head.id}`,
+          { success: true },
+        );
+        return result;
+      },
     },
 
     exportBatches: async function* (

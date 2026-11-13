@@ -4,6 +4,9 @@ AccessRecord (type): AccessRecord
 ActionSlot (value): ({ slotId, context, className, enabled, renderItem, hideLabels, when, }: ActionSlotProps) => Element
 ActiveSessionInfo (type): ActiveSessionInfo
 AddButton (value): ({ label, compact, className, ...rest }: { label?: string; compact?: boolean; className?: string; } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & { ref?: Ref<HTMLButtonElement>; }) => Element
+AdminHold (type): AdminHold
+AdminHoldSettings (type): AdminHoldSettings
+AdminHoldTicket (type): AdminHoldTicket
 AdminSection (type): AdminSection
 Alert (value): ({ className, variant, ...props }: ClassAttributes<HTMLDivElement> & HTMLAttributes<HTMLDivElement> & VariantProps<(props?: ConfigVariants<{ variant: { default: string; destructive: string; }; }> & ClassProp) => string>) => Element
 AlertDescription (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
@@ -386,6 +389,7 @@ buildOriginWsUrl (value): ({ origin, localPort, localPath, remotePath, includeJw
 bulkUpdateSSHHosts (value): (hostIds: number[], updates: Record<string, unknown>) => Promise<{ updated: number; failed: number; errors: string[]; }>
 canConfigureUpdates (value): (state: DesktopUpdateState) => state is DesktopUpdateState
 canJoinSplit (value): (tab: Tab) => boolean
+cancelAdminHold (value): (holdId: string) => Promise<{ cancelled: boolean; }>
 challengeStepUp (value): (factorId: string) => Promise<unknown>
 changeAppLanguage (value): (language: string) => Promise<string>
 changePassword (value): (oldPassword: string, newPassword: string) => Promise<any>
@@ -423,6 +427,8 @@ findMatchingKeybinding (value): (e: KeyboardEvent, bindings: CustomKeybinding[])
 flowTiles (value): (tiles: { id: string; w: number; h?: number; }[], rowHeight?: number) => TileSlot[]
 getActiveSessions (value): () => Promise<ActiveSessionInfo[]>
 getAdaptiveResourceBudget (value): (kind: AdaptiveTaskKind) => AdaptiveResourceBudget
+getAdminHoldSettings (value): () => Promise<AdminHoldSettings>
+getAdminHolds (value): () => Promise<{ holds: AdminHold[]; }>
 getApiKeys (value): () => Promise<{ apiKeys: ApiKey[]; }>
 getAuditLogActions (value): () => Promise<{ actions: string[]; }>
 getAuditLogs (value): (filters?: AuditLogFilters) => Promise<AuditLogResponse>
@@ -459,6 +465,7 @@ getHostTags (value): () => Promise<string[]>
 getHttpsSettings (value): () => Promise<HttpsSettings>
 getLiveHostStatus (value): (hostId: number) => StatusValue
 getLogLevel (value): () => Promise<{ level: string; }>
+getMyApiKeys (value): () => Promise<{ apiKeys: ApiKey[]; }>
 getNotificationPrivateEndpoints (value): () => Promise<string[]>
 getPanel (value): (id: string) => PanelDef
 getPasswordLoginAllowed (value): () => Promise<{ allowed: boolean; forced?: boolean; }>
@@ -505,6 +512,7 @@ hostStatusIndicatorsFor (value): (all: HostBadgeDef[], host: Host) => HostBadgeD
 hydrateLocalSharedHostAuth (value): <T>(host: T) => Promise<T>
 invalidateHostsAndStatusCaches (value): () => void
 invalidateServerStatusCache (value): () => void
+isAdminHoldTicket (value): (value: unknown) => value is AdminHoldTicket
 isCoreRailView (value): (id: string) => boolean
 isElectron (value): () => boolean
 isFieldShown (value): (field: PluginSettingsField, values: Record<string, unknown>) => boolean
@@ -574,10 +582,13 @@ resolveConnectionOrigin (value): (host: OriginResolvableHost, options?: { defaul
 resolveHostDefaults (value): (where: { hostId?: number; folder?: string; parentHostId?: number; }, adminTargetUserId?: string) => Promise<Record<string, ResolvedHostDefault>>
 resolveHostTabType (value): (host: Host, preferredType?: TabType) => TabType
 resolveRemoteHostId (value): (syncId: string) => Promise<number>
+revokeAllMyApiKeys (value): () => Promise<{ count: number; }>
 revokeAllUserSessions (value): (userId: string) => Promise<{ success: boolean; message: string; }>
 revokeCredentialAccess (value): (credentialId: number, accessId: number) => Promise<void>
+revokeEveryoneSessions (value): (options?: { apiKeys?: boolean; }) => Promise<{ sessions: number; apiKeys: number; }>
 revokeFolderAccess (value): (ruleId: number, options?: { fromHosts?: boolean; }) => Promise<void>
 revokeHostAccess (value): (hostId: number, accessId: number, syncId?: string) => Promise<{ success: boolean; }>
+revokeMyApiKey (value): (keyId: string) => Promise<{ success: boolean; }>
 revokeSession (value): (sessionId: string) => Promise<{ success: boolean; message: string; }>
 rightDockableIds (value): () => string[]
 roleLabel (value): <T extends string | null | undefined>(t: Translator, displayName: T) => string | T
@@ -593,6 +604,7 @@ saveHostDefaultsLevel (value): (target: HostDefaultsTarget, change: HostDefaults
 saveHostSidebarPreferences (value): (preferences: HostSidebarPreferences) => Promise<void>
 saveHostTags (value): (tags: string[]) => Promise<string[]>
 saveUserPreferences (value): (prefs: Partial<UserPreferences>) => Promise<void>
+setAdminHoldMinutes (value): (minutes: number) => Promise<AdminHoldTicket | { held: false; minutes: number; }>
 setAllPluginChannels (value): (channel: PluginChannel) => Promise<{ changed: string[]; }>
 setDeveloperMode (value): (enabled: boolean) => Promise<void>
 setFolderAuthOverride (value): (folder: string, protocol: string, credentialId: number, sharedCopySyncId?: string) => Promise<{ success: boolean; folder: string; protocol: string; credentialId: number; }>
