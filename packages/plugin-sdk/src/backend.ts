@@ -1934,6 +1934,15 @@ export interface PluginNetwork {
     port: number,
     options?: { timeoutMs?: number },
   ) => Promise<boolean>;
+  /**
+   * Looks up a host name on the Termix server and returns the first address,
+   * or null when it has none. A plugin process can't look names up itself
+   * without network:sockets. Pass family 4 or 6 to ask for one kind.
+   */
+  lookup: (
+    host: string,
+    options?: { family?: 4 | 6 },
+  ) => Promise<string | null>;
 }
 
 /**

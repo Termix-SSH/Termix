@@ -1,5 +1,5 @@
 /**
- * ctx.network.tcpProbe, ctx.ssh.probe and ctx.hosts.probeTargets: gated by
+ * ctx.network.tcpProbe, ctx.network.lookup, ctx.ssh.probe and ctx.hosts.probeTargets: gated by
  * capability, and only ever offered hosts the actor may connect to.
  */
 
@@ -51,6 +51,10 @@ vi.mock("../../utils/permission-manager.js", () => ({
     }),
   },
 }));
+const dns = vi.hoisted(() => ({
+  lookup: vi.fn(),
+}));
+vi.mock("node:dns/promises", () => ({ lookup: dns.lookup }));
 vi.mock("../../utils/audit-logger.js", () => ({ logAudit: async () => {} }));
 
 import { createPluginContext, createPluginHandle } from "../../plugins/ctx.js";
@@ -92,6 +96,7 @@ let port = 0;
 
 beforeEach(async () => {
   grants.clear();
+  dns.lookup.mockReset();
   invalidatePluginPermissionCache();
   state.owned = [row(1, "alice")];
   state.shared = [row(2, "bob"), row(3, "bob")];
@@ -129,6 +134,45 @@ describe("ctx.network.tcpProbe", () => {
     await expect(
       contextFor(["network:probe"]).network.tcpProbe("127.0.0.1", 0),
     ).rejects.toThrow(/port/);
+  });
+});
+
+describe("ctx.network.lookup", () => {
+  it("refuses without network:probe", async () => {
+    await expect(
+      contextFor([]).network.lookup("web.example.com"),
+    ).rejects.toThrow(/network:probe/);
+    expect(dns.lookup).not.toHaveBeenCalled();
+  });
+
+  it("answers the first address of the family asked for", async () => {
+    grants.set("demo", ["network:probe"]);
+    dns.lookup.mockResolvedValueOnce({ address: "2001:db8::5", family: 6 });
+    const ctx = contextFor(["network:probe"]);
+    expect(await ctx.network.lookup(" web.example.com ", { family: 6 })).toBe(
+      "2001:db8::5",
+    );
+    expect(dns.lookup).toHaveBeenLastCalledWith("web.example.com", {
+      family: 6,
+    });
+  });
+
+  it("answers null when the name has no address", async () => {
+    grants.set("demo", ["network:probe"]);
+    dns.lookup.mockRejectedValueOnce(
+      Object.assign(new Error("not found"), { code: "ENOTFOUND" }),
+    );
+    expect(
+      await contextFor(["network:probe"]).network.lookup("gone.example.com"),
+    ).toBeNull();
+  });
+
+  it("rejects a bad name", async () => {
+    grants.set("demo", ["network:probe"]);
+    const ctx = contextFor(["network:probe"]);
+    await expect(ctx.network.lookup("")).rejects.toThrow(/host name/);
+    await expect(ctx.network.lookup("a b")).rejects.toThrow(/host name/);
+    expect(dns.lookup).not.toHaveBeenCalled();
   });
 });
 

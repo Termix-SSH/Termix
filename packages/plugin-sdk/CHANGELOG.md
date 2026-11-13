@@ -4,6 +4,11 @@
 
 Plugin API 2.2.0. Needs Termix 26.11.2.
 
+### Added
+
+- `ctx.network.lookup(name, { family })` looks up a host name on the Termix server and answers the first address or null. Needs `network:probe`. A plugin process can't look names up itself without `network:sockets`
+- `createMockCtx({ resolve })` answers `ctx.network.lookup`
+
 ### Changed
 
 - Login methods, keyboard-interactive handlers and `ctx.auth.completeRedirectLogin` work in a plugin process. A login method gets a plain copy of the request, and `request.res.cookie`/`clearCookie` only set cookies named `tmxp_<id>_*`

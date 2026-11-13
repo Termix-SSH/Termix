@@ -171,6 +171,8 @@ export interface FakeContextOptions {
   activeSessions?: number[];
   /** What ctx.network.tcpProbe and ctx.ssh.probe answer. Defaults to false. */
   reachable?: (target: string | number, port?: number) => boolean;
+  /** What ctx.network.lookup answers. Defaults to null. */
+  resolve?: (host: string, family?: 4 | 6) => string | null;
   /** The acting user's channels, what ctx.notify.channels answers. */
   notificationChannels?: PluginNotificationChannel[];
   /**
@@ -1217,6 +1219,8 @@ export function createFakeContext(
 
     network: {
       tcpProbe: async (host, port) => options.reachable?.(host, port) ?? false,
+      lookup: async (host, lookupOptions) =>
+        options.resolve?.(host, lookupOptions?.family) ?? null,
     },
 
     ssh: {
@@ -1805,6 +1809,8 @@ export interface MockContextOptions {
   activeSessions?: number[];
   /** What ctx.network.tcpProbe and ctx.ssh.probe answer. */
   reachable?: (target: string | number, port?: number) => boolean;
+  /** What ctx.network.lookup answers. Defaults to null. */
+  resolve?: (host: string, family?: 4 | 6) => string | null;
   /** The acting user's channels, what ctx.notify.channels answers. */
   notificationChannels?: PluginNotificationChannel[];
   /**
@@ -1948,6 +1954,7 @@ export function createMockCtx(
     probeTargets: options.probeTargets,
     activeSessions: options.activeSessions,
     reachable: options.reachable,
+    resolve: options.resolve,
     notificationChannels: options.notificationChannels,
     fetch: options.fetch,
     process: options.process,
@@ -2476,6 +2483,10 @@ export function createMockCtx(
       tcpProbe: async (host, port, probeOptions) => {
         require("network:probe");
         return ctx.network.tcpProbe(host, port, probeOptions);
+      },
+      lookup: async (host, lookupOptions) => {
+        require("network:probe");
+        return ctx.network.lookup(host, lookupOptions);
       },
     },
 

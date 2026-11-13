@@ -317,6 +317,8 @@ res)` works from inside one of your own requests: Termix finishes the login on t
   or a prepared `onBanner` must await it.
 - `ctx.process.run` works as before; core runs the program and `exited` resolves when it ends.
 - Cookies: requests reach you with only cookies named `tmxp_<your id with _>_...`, and a
+- Looking up a host name with `node:dns` needs `network:sockets`. With `network:probe`, call
+  `ctx.network.lookup(name, { family: 4 })` instead: Termix looks it up and answers the first address or null.
   `Set-Cookie` you send is kept only for those names and without a `Domain`. Core's own login
   cookies never reach your process.
 - `files:own` lets your process read and write its data folder.
@@ -1406,7 +1408,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `ssh:transport`          | high     | Carry SSH connections for hosts it claims over its own stream |
 | `hosts:lock`             | medium   | Make hosts it manages read only for everyone else             |
 | `hosts:connect-policy`   | high     | Allow, deny or ask for approval before sessions open          |
-| `network:probe`          | medium   | Check that a host answers on a TCP port                       |
+| `network:probe`          | medium   | Check that a host answers on a TCP port, look up a host name  |
 | `credentials:use`        | medium   | Connect with saved credentials without seeing them            |
 | `credentials:write`      | medium   | Save new credentials                                          |
 | `network:outbound`       | medium   | Outbound HTTP through `ctx.fetch`                             |
