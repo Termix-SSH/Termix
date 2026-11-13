@@ -11,6 +11,10 @@ Plugin API 2.2.0. Needs Termix 26.11.2.
 - An SSH auth provider in a plugin process may also set the socket `timeout`
 - `createMockCtx({ sandbox: true })` takes login methods, keyboard-interactive handlers, `completeRedirectLogin` and async banner hooks, and refuses a login method cookie outside `tmxp_<id>_*`
 
+### Fixed
+
+- The test setup no longer fails a test now and then with "server closed before listening" when a test server first lands on a port fetch refuses
+
 ## 2.2.1
 
 Plugin API 2.2.0. Needs Termix 26.11.2.
