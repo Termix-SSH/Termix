@@ -57,6 +57,53 @@ describe("createMockCtx sandbox mode", () => {
     ).resolves.toBeUndefined();
   });
 
+  it("lets a process handle's exit Promise through", async () => {
+    const { ctx } = createMockCtx({
+      sandbox: true,
+      capabilities: ["process:spawn"],
+      manifest,
+      process: {
+        run: async () => ({
+          pid: 1,
+          onStdout: () => {},
+          onStderr: () => {},
+          kill: () => {},
+          exited: Promise.resolve({ code: 0, signal: null }),
+        }),
+      },
+    });
+    const handle = await ctx.process.run("/bin/true", []);
+    await expect(handle.exited).resolves.toEqual({ code: 0, signal: null });
+  });
+
+  it("reads the base URL from a live request, as the plugin process does", () => {
+    const { ctx } = createMockCtx({
+      sandbox: true,
+      manifest,
+      baseUrl: "https://termix.test",
+    });
+    expect(ctx.http.baseUrl(new Handle() as never)).toBe("https://termix.test");
+  });
+
+  it("refuses auth hooks core reads synchronously", () => {
+    const { ctx } = createMockCtx({
+      sandbox: true,
+      capabilities: ["auth:provide"],
+      manifest: {
+        ...manifest,
+        contributes: { auth: { sshAuthTypes: ["x"] } },
+      },
+    });
+    expect(() =>
+      ctx.auth.registerSshAuthProvider({
+        type: "x",
+        labelKey: "x",
+        prepare: async () => ({ status: "ready" }),
+        onBanner: () => undefined,
+      }),
+    ).toThrow(/onBanner is not available/);
+  });
+
   it("refuses methods core can't serve to a plugin process", () => {
     const { ctx } = createMockCtx({ sandbox: true, manifest });
     expect(() =>

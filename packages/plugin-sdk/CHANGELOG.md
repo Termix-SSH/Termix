@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.2.1
+
+Plugin API 2.2.0. Needs Termix 26.11.2.
+
+### Added
+
+- `applyCertificateAuth` works in a plugin process: it puts the certificate on the config and Termix applies it to the real client. `isSandboxSshClient` and `SANDBOX_CERTIFICATE_FIELD` in `/ssh-certs`
+
+### Changed
+
+- An SSH auth provider's `onAuthFailed` and `connectOptions`, and `onAuthFailed` from `ctx.ssh.prepare`, may return a Promise. Await them
+- `createMockCtx({ sandbox: true })` lets a `process.run` handle's `exited` Promise through, reads `ctx.http.baseUrl(req)` without checking the request, and refuses `onBanner` and `onKeyboardInteractive` on an SSH auth provider, the way a plugin process does
+
 ## 2.2.0
 
 Plugin API 2.2.0. Needs Termix 26.11.2.

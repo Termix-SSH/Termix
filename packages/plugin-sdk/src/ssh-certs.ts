@@ -301,9 +301,25 @@ export interface CertificateCredentials {
 }
 
 /**
+ * Config field a plugin process uses to hand its certificate to core, which
+ * applies it to the real client.
+ */
+export const SANDBOX_CERTIFICATE_FIELD = "termixCertificate";
+
+/** The stand-in env.client an auth provider gets in a plugin process. */
+export function isSandboxSshClient(client: unknown): boolean {
+  return (
+    !!client &&
+    typeof client === "object" &&
+    (client as { termixSandboxClient?: unknown }).termixSandboxClient === true
+  );
+}
+
+/**
  * Sets up certificate publickey auth on an ssh2 client. Call before
  * `client.connect(config)`; it sets `config.authHandler` and
- * `config.username`.
+ * `config.username`. In a plugin process the client stays in core, so the
+ * certificate is put on the config and core applies it.
  */
 export async function applyCertificateAuth(
   config: ConnectConfig,
@@ -311,6 +327,18 @@ export async function applyCertificateAuth(
   credentials: CertificateCredentials,
   username: string,
 ): Promise<void> {
+  if (isSandboxSshClient(client)) {
+    const record = config as Record<string, unknown>;
+    record.username = username;
+    record[SANDBOX_CERTIFICATE_FIELD] = {
+      privateKey: Buffer.isBuffer(credentials.privateKey)
+        ? credentials.privateKey.toString("utf8")
+        : credentials.privateKey,
+      certificate: credentials.certificate,
+      ...(credentials.passphrase ? { passphrase: credentials.passphrase } : {}),
+    };
+    return;
+  }
   const { createRequire } = await import("node:module");
   const esmRequire = createRequire(import.meta.url);
   const {

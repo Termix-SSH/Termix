@@ -2123,13 +2123,19 @@ export interface PluginSshPrepared {
   authType: string | null;
   /** The provider's banner hook, bound to this host and connection. */
   onBanner?: (banner: string) => PluginSshBannerDecision | undefined;
-  /** The provider's auth failure hook, bound to this host and connection. */
+  /**
+   * The provider's auth failure hook, bound to this host and connection.
+   * Await it: a provider in a plugin process answers with a Promise.
+   */
   onAuthFailed?: (context: {
     error: Error;
     retries: number;
     canRetry: boolean;
     methodNotAvailable: boolean;
-  }) => PluginSshAuthOutcome | undefined;
+  }) =>
+    | PluginSshAuthOutcome
+    | undefined
+    | Promise<PluginSshAuthOutcome | undefined>;
 }
 
 /** Thrown by ctx.ssh.startInteraction when no provider can start it. */
@@ -2175,10 +2181,11 @@ export interface PluginSshAuthProvider {
   quickConnect?: boolean;
   /** Interaction name its outcomes use, for startInteraction routing. */
   interaction?: string;
+  /** In a plugin process this returns a Promise; core waits for it. */
   connectOptions?: (
     host: PluginSshHost,
     purpose: string,
-  ) => Record<string, unknown>;
+  ) => Record<string, unknown> | Promise<Record<string, unknown>>;
   /** Fills the ssh2 config for this host. Never connects. */
   prepare: (
     config: Record<string, unknown>,
@@ -2194,7 +2201,10 @@ export interface PluginSshAuthProvider {
     },
     host: PluginSshHost,
   ) => PluginKeyboardInteractiveDecision | null;
-  /** Synchronous: decide on a retry before the socket closes. */
+  /**
+   * Decide on a retry before the socket closes. In a plugin process this
+   * returns a Promise, so callers await it.
+   */
   onAuthFailed?: (
     host: PluginSshHost,
     env: PluginSshAuthEnv,
@@ -2204,7 +2214,10 @@ export interface PluginSshAuthProvider {
       canRetry: boolean;
       methodNotAvailable: boolean;
     },
-  ) => PluginSshAuthOutcome | undefined;
+  ) =>
+    | PluginSshAuthOutcome
+    | undefined
+    | Promise<PluginSshAuthOutcome | undefined>;
   /**
    * Claims an ssh2 "banner" event during the handshake, for a server that
    * holds the connection open pending an out-of-band step (Tailscale SSH

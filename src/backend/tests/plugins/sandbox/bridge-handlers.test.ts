@@ -112,6 +112,16 @@ function harness() {
       error: (m: string) => logs.push(`error ${m}`),
     },
     fetch: vi.fn(async () => new Response("pong", { status: 201 })),
+    process: {
+      run: vi.fn(async () => ({
+        pid: 42,
+        onStdout: vi.fn(),
+        onStderr: vi.fn(),
+        kill: vi.fn(),
+        exited: Promise.resolve({ code: 0, signal: null }),
+      })),
+    },
+    auth: { registerSshAuthProvider: vi.fn() },
   };
   const bridge = new PluginBridge(transport, {
     manifest: { id: pluginId, capabilities: [], sandbox: {} } as never,
@@ -120,8 +130,17 @@ function harness() {
     dialect: "sqlite",
   });
   let id = 0;
-  const send = async (m: string, a: unknown[] = [], k?: string) => {
-    const message = { t: "call", id: ++id, m, a, k } as Wire;
+  const send = async (
+    m: string,
+    a: unknown[] = [],
+    k?: string,
+    kind: "call" | "fn" = "call",
+  ) => {
+    const message = (
+      kind === "fn"
+        ? { t: "fn", id: ++id, f: m, a, k }
+        : { t: "call", id: ++id, m, a, k }
+    ) as Wire;
     toHost.forEach((h) => h(message));
     for (let i = 0; i < 20; i++) {
       const reply = replies.find(
@@ -457,6 +476,69 @@ describe("log and fetch", () => {
     sandboxLog("docker", "started");
     write.mockRestore();
     info.mockRestore();
+  });
+});
+
+describe("child processes", () => {
+  it("runs in core with plain options and hands back a way to wait", async () => {
+    const h = harness();
+    const reply = (await h.send(
+      "ctx.process.run",
+      [
+        "/usr/bin/opkssh",
+        ["login", 5],
+        { cwd: "/tmp", shell: true, env: { A: "1" } },
+      ],
+      h.token(),
+    )) as { t: string; v: Record<string, { $f?: string }> & { pid: number } };
+    expect(reply.t).toBe("ok");
+    expect(h.ctx.process.run).toHaveBeenCalledWith(
+      "/usr/bin/opkssh",
+      ["login", "5"],
+      { cwd: "/tmp", env: { A: "1" } },
+    );
+    expect(reply.v.pid).toBe(42);
+    expect(Object.keys(reply.v).sort()).toEqual([
+      "kill",
+      "onStderr",
+      "onStdout",
+      "pid",
+      "waitExit",
+    ]);
+    const waited = await h.send(
+      String(reply.v.waitExit.$f),
+      [],
+      h.token(),
+      "fn",
+    );
+    expect(waited).toMatchObject({ t: "ok", v: { code: 0, signal: null } });
+  });
+});
+
+describe("ssh auth providers", () => {
+  it("refuses hooks core reads synchronously", async () => {
+    const h = harness();
+    expect(
+      await h.send("ctx.auth.registerSshAuthProvider", [
+        { type: "x", prepare: { $f: "cf1" }, onBanner: { $f: "cf2" } },
+      ]),
+    ).toMatchObject({ t: "err", e: { code: "SANDBOX_UNSUPPORTED" } });
+    expect(h.ctx.auth.registerSshAuthProvider).not.toHaveBeenCalled();
+  });
+
+  it("registers a wrapped provider with core", async () => {
+    const h = harness();
+    expect(
+      await h.send("ctx.auth.registerSshAuthProvider", [
+        { type: "vault", labelKey: "k", prepare: { $f: "cf1" } },
+      ]),
+    ).toMatchObject({ t: "ok", v: true });
+    const provider = h.ctx.auth.registerSshAuthProvider.mock.calls[0][0] as {
+      type: string;
+      prepare: unknown;
+    };
+    expect(provider.type).toBe("vault");
+    expect(typeof provider.prepare).toBe("function");
   });
 });
 

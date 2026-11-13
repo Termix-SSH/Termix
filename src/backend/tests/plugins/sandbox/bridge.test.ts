@@ -14,7 +14,11 @@ vi.mock("../../../plugins/permissions.js", () => ({
 
 import { getActor, runAsActor } from "../../../plugins/actor.js";
 import {
+  isRefusedPath,
+  ownCookieHeader,
+  ownSetCookies,
   PluginBridge,
+  pluginCookiePrefix,
   scrubSecrets,
   safeHeaders,
   validCloseCode,
@@ -272,6 +276,14 @@ describe("what may cross", () => {
     });
   });
 
+  it("refuses login methods and keyboard-interactive handlers", () => {
+    expect(isRefusedPath("auth.registerLoginMethod")).toMatch(/live request/);
+    expect(isRefusedPath("auth.registerKeyboardInteractiveHandler")).toMatch(
+      /synchronously/,
+    );
+    expect(isRefusedPath("auth.registerSecondFactor")).toBeNull();
+  });
+
   it("drops the headers that would let a plugin act as the user", () => {
     expect(
       safeHeaders({
@@ -282,6 +294,35 @@ describe("what may cross", () => {
         "content-type": "application/json",
       }),
     ).toEqual({ "content-type": "application/json" });
+  });
+
+  it("lets a plugin read and set only its own cookies", () => {
+    const prefix = pluginCookiePrefix("my-plugin");
+    expect(prefix).toBe("tmxp_my_plugin_");
+    expect(
+      ownCookieHeader(
+        "jwt=x; tmxp_my_plugin_state=abc; __Host-jwt=y; tmxp_other_a=1",
+        prefix,
+      ),
+    ).toBe("tmxp_my_plugin_state=abc");
+    expect(ownCookieHeader("jwt=x", prefix)).toBeUndefined();
+    expect(ownCookieHeader(undefined, prefix)).toBeUndefined();
+    expect(
+      ownSetCookies(
+        [
+          "tmxp_my_plugin_state=abc; Path=/; HttpOnly",
+          "jwt=forged; Path=/",
+          "tmxp_my_plugin_wide=1; Domain=example.com",
+          "tmxp_other_x=1",
+          "tmxp_my_plugin_=",
+        ],
+        prefix,
+      ),
+    ).toEqual([
+      "tmxp_my_plugin_state=abc; Path=/; HttpOnly",
+      "tmxp_my_plugin_=",
+    ]);
+    expect(ownSetCookies("jwt=x", prefix)).toEqual([]);
   });
 
   it("scrubs nested secrets but keeps functions and plain data", () => {

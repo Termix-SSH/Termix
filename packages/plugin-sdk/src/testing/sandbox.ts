@@ -22,6 +22,9 @@ const REFUSED: Record<string, string> = {
   "ssh.jumpChain": "returns live ssh clients",
   "hosts.locks.provide": "core reads host locks synchronously",
   "hosts.status.provide": "core reads host status synchronously",
+  "auth.registerKeyboardInteractiveHandler":
+    "core reads keyboard-interactive handlers synchronously",
+  "auth.registerLoginMethod": "core passes login methods the live request",
   "sync.provide": "the sync engine runs in process",
 };
 const REFUSED_PREFIXES = ["desktop.local."];
@@ -104,6 +107,15 @@ function isPlain(value: unknown): value is Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const proto = Object.getPrototypeOf(value);
   return proto === Object.prototype || proto === null;
+}
+
+const ANSWERED_IN_PROCESS = new Set(["http.baseUrl", "currentActor"]);
+
+/** What of a result crosses: core sends a process's exit Promise its own way. */
+function crossing(dotted: string, value: unknown): unknown {
+  return dotted === "process.run" && isPlain(value)
+    ? { ...value, exited: undefined }
+    : value;
 }
 
 /** Results that are core objects in the fake (routers, clients) pass as they are. */
@@ -215,6 +227,16 @@ export function sandboxContext<T extends PluginContext>(
         "SANDBOX_UNSUPPORTED",
       );
     }
+    if (dotted === "auth.registerSshAuthProvider" && isPlain(args[0])) {
+      for (const hook of ["onBanner", "onKeyboardInteractive"]) {
+        if (typeof (args[0] as Record<string, unknown>)[hook] === "function") {
+          throw new SandboxRuleError(
+            `${hook} is not available to auth providers in a plugin process yet`,
+            "SANDBOX_UNSUPPORTED",
+          );
+        }
+      }
+    }
     if (dotted === "schedule.every") {
       const id = (args[2] as { id?: string } | undefined)?.id;
       if (!id || !schedules.has(id)) {
@@ -236,6 +258,8 @@ export function sandboxContext<T extends PluginContext>(
         "SANDBOX_UNDECLARED",
       );
     }
+    // Answered inside the plugin process, so its arguments never cross.
+    if (ANSWERED_IN_PROCESS.has(dotted)) return;
     args.forEach((arg, index) => {
       if (typeof arg !== "function") {
         assertCrossable(arg, `ctx.${dotted} argument ${index + 1}`);
@@ -280,13 +304,16 @@ export function sandboxContext<T extends PluginContext>(
           ) {
             return (result as Promise<unknown>).then((resolved) => {
               if (typeof resolved !== "function") {
-                assertCrossable(resolved, `ctx.${dotted} result`);
+                assertCrossable(
+                  crossing(dotted, resolved),
+                  `ctx.${dotted} result`,
+                );
               }
               return resolved;
             });
           }
           if (typeof result !== "function") {
-            assertCrossable(result, `ctx.${dotted} result`);
+            assertCrossable(crossing(dotted, result), `ctx.${dotted} result`);
           }
           return result;
         };

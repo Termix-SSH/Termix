@@ -182,7 +182,7 @@ export interface SshAuthProvider {
   connectOptions?: (
     host: SshConnectHost,
     purpose: SshConnectPurpose,
-  ) => Partial<MutableConnectConfig>;
+  ) => Partial<MutableConnectConfig> | Promise<Partial<MutableConnectConfig>>;
   /** The interaction name this provider's outcomes use, e.g. "browser-signin". */
   interaction?: string;
   /**
@@ -202,15 +202,16 @@ export interface SshAuthProvider {
     env: SshAuthEnv,
   ) => Promise<SshAuthOutcome>;
   /**
-   * Called when the server rejected auth. Synchronous on purpose: transports
-   * decide on a retry before the socket's close event arrives. Cache cleanup
-   * inside runs in the background.
+   * Called when the server rejected auth. In process providers answer
+   * synchronously so transports can decide on a retry before the socket's
+   * close event; a provider in a plugin process answers with a Promise.
+   * Cache cleanup inside runs in the background.
    */
   onAuthFailed?: (
     host: SshConnectHost,
     env: SshAuthEnv,
     context: SshAuthFailureContext,
-  ) => SshAuthOutcome | undefined;
+  ) => SshAuthOutcome | undefined | Promise<SshAuthOutcome | undefined>;
   /**
    * Claims an ssh2 "banner" event during the handshake, for a provider whose
    * server holds the connection open pending an out-of-band step (Tailscale

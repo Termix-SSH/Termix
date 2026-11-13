@@ -233,6 +233,31 @@ function buildCtx(): Record<string, unknown> {
     });
   }
 
+  if (has("process.run")) {
+    setPath(ctx, "process.run", async (...args: unknown[]) => {
+      const handle = (await endpoint.call("ctx.process.run", args)) as {
+        pid?: number;
+        onStdout: AnyFn;
+        onStderr: AnyFn;
+        kill: AnyFn;
+        waitExit: () => Promise<unknown>;
+      };
+      const exited = handle.waitExit();
+      // Same as core: a caller that never awaits exited sees no rejection.
+      exited.catch(() => {});
+      return {
+        pid: handle.pid,
+        onStdout: (listener: AnyFn) => void handle.onStdout(listener),
+        onStderr: (listener: AnyFn) => void handle.onStderr(listener),
+        kill: (signal?: string) => void handle.kill(signal),
+        exited,
+      };
+    });
+  }
+  if (has("auth.registerSshAuthProvider")) {
+    setPath(ctx, "auth.registerSshAuthProvider", sshAuthProvider);
+  }
+
   // Answered here: core would only be asked who it is already acting as.
   setPath(ctx, "currentActor", () => als.getStore()?.userId || undefined);
   setPath(ctx, "disposables.add", (dispose: AnyFn) => {
@@ -384,6 +409,79 @@ function buildCtx(): Record<string, unknown> {
     });
   }
   return ctx;
+}
+
+/** Config values prepare may hand back: plain values and the certificate. */
+function returnedConfig(config: Record<string, unknown>) {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(config)) {
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean" ||
+      Buffer.isBuffer(value)
+    ) {
+      out[key] = value;
+    }
+  }
+  const cert = config.termixCertificate;
+  if (cert && typeof cert === "object") out.termixCertificate = { ...cert };
+  return out;
+}
+
+/**
+ * The ssh2 client stays in core, so prepare gets a stand-in client and its
+ * config changes go back as data. SDK applyCertificateAuth knows the
+ * stand-in and puts the certificate on the config for core.
+ */
+function sshAuthProvider(provider: Record<string, unknown>): Promise<void> {
+  const wrapped: Record<string, unknown> = { ...provider };
+  const prepare = provider.prepare;
+  if (typeof prepare === "function") {
+    wrapped.prepare = async (
+      config: Record<string, unknown>,
+      host: unknown,
+      env: Record<string, unknown>,
+    ) => {
+      const own = { ...config };
+      const outcome = await (prepare as AnyFn)(own, host, {
+        ...env,
+        client: { termixSandboxClient: true },
+      });
+      return { outcome, config: returnedConfig(own) };
+    };
+  }
+  const start = provider.startInteraction;
+  if (typeof start === "function") {
+    wrapped.startInteraction = (request: Record<string, unknown>) => {
+      const remote = (request.socket ?? {}) as {
+        send?: AnyFn;
+        onClose?: AnyFn;
+      };
+      const socket = {
+        send: (data: unknown) => {
+          void Promise.resolve(remote.send?.(String(data))).catch(() => {});
+        },
+        on: (event: string, listener: AnyFn) => {
+          if (event !== "close") return;
+          void Promise.resolve(remote.onClose?.(listener)).catch(() => {});
+        },
+      };
+      return (start as AnyFn)({ ...request, socket });
+    };
+  }
+  return (
+    endpoint.call("ctx.auth.registerSshAuthProvider", [
+      wrapped,
+    ]) as Promise<void>
+  ).catch((error: unknown) => {
+    endpoint.notify("log", [
+      "error",
+      `SSH auth type ${String(provider.type)} was not registered: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    ]);
+  });
 }
 
 /** What core reads from a request for an audit line: the address and agent. */

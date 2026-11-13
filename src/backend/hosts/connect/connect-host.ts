@@ -172,12 +172,14 @@ export async function connectHost(
       );
       if (authFailed && provider?.onAuthFailed) {
         try {
-          provider.onAuthFailed(host, env, {
-            error,
-            retries: 0,
-            canRetry: false,
-            methodNotAvailable: false,
-          });
+          void Promise.resolve(
+            provider.onAuthFailed(host, env, {
+              error,
+              retries: 0,
+              canRetry: false,
+              methodNotAvailable: false,
+            }),
+          ).catch(() => undefined);
         } catch {
           // cleanup hooks never mask the connect error
         }

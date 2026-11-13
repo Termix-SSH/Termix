@@ -278,7 +278,7 @@ export async function buildConnectConfig(
   }
 
   if (provider.connectOptions) {
-    Object.assign(config, provider.connectOptions(host, options.purpose));
+    Object.assign(config, await provider.connectOptions(host, options.purpose));
   }
   if (options.overrides) {
     Object.assign(config, options.overrides);

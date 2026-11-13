@@ -33,6 +33,10 @@ import { Endpoint, type StreamPort, type Transport } from "./rpc.js";
 import { SandboxTokenStore, type ActorGrant } from "./tokens.js";
 import { checkPluginSql, type SqlDialect } from "./sql-guard.js";
 import { runPluginSql, runPluginSqlBatch } from "./db-exec.js";
+import {
+  remoteSshAuthProvider,
+  SshAuthBridgeError,
+} from "./ssh-auth-bridge.js";
 
 /** Grace after a call ends before its token stops working. */
 export const REQUEST_TOKEN_GRACE_MS = 30_000;
@@ -59,6 +63,8 @@ const SPECIAL_PATHS = new Set([
   "fetch",
   "services.get",
   "audit.exportBatches",
+  "auth.registerSshAuthProvider",
+  "process.run",
   "currentActor",
   "disposables.add",
 ]);
@@ -73,6 +79,11 @@ const REFUSED_PATHS: ReadonlyMap<string, string> = new Map([
   ["ssh.jumpChain", "returns live ssh clients"],
   ["hosts.locks.provide", "core reads host locks synchronously"],
   ["hosts.status.provide", "core reads host status synchronously"],
+  [
+    "auth.registerKeyboardInteractiveHandler",
+    "core reads keyboard-interactive handlers synchronously",
+  ],
+  ["auth.registerLoginMethod", "core passes login methods the live request"],
   // plugin-id-ok: ctx.sync is a core namespace, not the Sync plugin
   ["sync.provide", "the sync engine runs in process"], // plugin-id-ok: ctx.sync path
 ]);
@@ -162,6 +173,39 @@ export function safeHeaders(
     if (!STRIPPED_HEADERS.has(key.toLowerCase())) out[key] = value;
   }
   return out;
+}
+
+/**
+ * Cookies a plugin may set and read: names starting with this prefix. Core's
+ * own cookies never reach a plugin process.
+ */
+export function pluginCookiePrefix(pluginId: string): string {
+  return `tmxp_${pluginId.replace(/[^A-Za-z0-9]/g, "_")}_`;
+}
+
+/** The request's Cookie header cut down to the plugin's own cookies. */
+export function ownCookieHeader(
+  header: unknown,
+  prefix: string,
+): string | undefined {
+  if (typeof header !== "string") return undefined;
+  const kept = header
+    .split(";")
+    .map((part) => part.trim())
+    .filter((part) => part.startsWith(prefix) && part.includes("="));
+  return kept.length ? kept.join("; ") : undefined;
+}
+
+/** Set-Cookie values naming only the plugin's own cookies, with no Domain. */
+export function ownSetCookies(value: unknown, prefix: string): string[] {
+  const list = Array.isArray(value) ? value : [value];
+  return list.filter(
+    (item): item is string =>
+      typeof item === "string" &&
+      item.startsWith(prefix) &&
+      /^[^=;\s]+=/.test(item) &&
+      !/;\s*domain\s*=/i.test(item),
+  );
 }
 
 const SECRET_FIELDS = new Set<string>(HOST_SECRET_FIELDS);
@@ -486,6 +530,91 @@ export class PluginBridge {
           error ? reject(error) : resolve({ next: true }),
         );
       });
+    });
+
+    // SSH auth providers: the client and real config stay here.
+    endpoint.handle("ctx.auth.registerSshAuthProvider", async ([raw]) => {
+      const register = readPath(this.ctx, "auth.registerSshAuthProvider");
+      if (typeof register !== "function") {
+        throw new SandboxError(
+          "ctx.auth.registerSshAuthProvider is not available",
+          "SANDBOX_UNSUPPORTED",
+          501,
+        );
+      }
+      let provider: unknown;
+      try {
+        provider = remoteSshAuthProvider(plainObject(raw), {
+          visibleHost: async (host) =>
+            (await this.mayReadCredentials()) ? host : scrubSecrets(host),
+          applyCertificate: async (config, client, cert, username) => {
+            const { applyCertificateAuth } =
+              await import("@termix-ssh/plugin-sdk/ssh-certs");
+            await applyCertificateAuth(
+              config as never,
+              client as never,
+              cert,
+              username,
+            );
+          },
+        });
+      } catch (error) {
+        if (error instanceof SshAuthBridgeError) {
+          throw new SandboxError(error.message, error.code, 501);
+        }
+        throw error;
+      }
+      (register as AnyFn).call(readPath(this.ctx, "auth") as object, provider);
+      return true;
+    });
+
+    // Child processes run in core. The exit Promise can't cross, so the
+    // child asks for it through waitExit and builds its own.
+    endpoint.handle("ctx.process.run", async (args) => {
+      const run = readPath(this.ctx, "process.run");
+      if (typeof run !== "function") {
+        throw new SandboxError(
+          "ctx.process.run is not available",
+          "SANDBOX_UNSUPPORTED",
+          501,
+        );
+      }
+      const [file, list, options] = args;
+      const opts = plainObject(options);
+      const handle = (await (run as AnyFn).call(
+        readPath(this.ctx, "process") as object,
+        String(file),
+        Array.isArray(list) ? list.map(String) : [],
+        {
+          ...(typeof opts.cwd === "string" ? { cwd: opts.cwd } : {}),
+          ...(opts.env && typeof opts.env === "object"
+            ? { env: plainObject(opts.env) }
+            : {}),
+          ...(typeof opts.timeoutMs === "number"
+            ? { timeoutMs: opts.timeoutMs }
+            : {}),
+        },
+      )) as {
+        pid?: number;
+        onStdout: AnyFn;
+        onStderr: AnyFn;
+        exited: Promise<unknown>;
+        kill: AnyFn;
+      };
+      return {
+        pid: handle.pid,
+        onStdout: (listener: unknown) =>
+          typeof listener === "function"
+            ? handle.onStdout(listener)
+            : undefined,
+        onStderr: (listener: unknown) =>
+          typeof listener === "function"
+            ? handle.onStderr(listener)
+            : undefined,
+        kill: (signal?: unknown) =>
+          handle.kill(signal === "SIGKILL" ? "SIGKILL" : "SIGTERM"),
+        waitExit: () => handle.exited,
+      };
     });
 
     // WebSockets: core owns the socket; the child gets a message stream.
@@ -985,6 +1114,7 @@ export class PluginBridge {
     }
     this.touch();
     const endpoint = this.endpoint;
+    const cookiePrefix = pluginCookiePrefix(this.pluginId);
     const port = endpoint.openStream();
     let headSent = false;
     port.on(
@@ -998,6 +1128,11 @@ export class PluginBridge {
           if (res.headersSent) return;
           res.status(validStatus(chunk.h.status));
           for (const [key, value] of Object.entries(chunk.h.headers ?? {})) {
+            if (key.toLowerCase() === "set-cookie") {
+              const own = ownSetCookies(value, cookiePrefix);
+              if (own.length) res.append("Set-Cookie", own);
+              continue;
+            }
             if (value === undefined || !isSafeHeaderName(key)) continue;
             res.setHeader(key, value as string);
           }
@@ -1033,7 +1168,7 @@ export class PluginBridge {
           method: req.method,
           url: req.url,
           originalUrl: req.originalUrl,
-          headers: safeHeaders(req.headers as Record<string, unknown>),
+          headers: this.requestHeaders(req, cookiePrefix),
           body: parsed ? req.body : undefined,
           ip: req.ip,
           userId: (req as Request & { userId?: string }).userId ?? "",
@@ -1056,6 +1191,16 @@ export class PluginBridge {
       if (res.headersSent) res.end();
       else next(error);
     }
+  }
+
+  private requestHeaders(
+    req: Request,
+    cookiePrefix: string,
+  ): Record<string, unknown> {
+    const headers = safeHeaders(req.headers as Record<string, unknown>);
+    const own = ownCookieHeader(req.headers.cookie, cookiePrefix);
+    if (own) headers.cookie = own;
+    return headers;
   }
 
   private safeBaseUrl(req: Request): string {
