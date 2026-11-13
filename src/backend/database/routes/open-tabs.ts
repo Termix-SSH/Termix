@@ -133,6 +133,8 @@ router.post("/", authenticateJWT, async (req: Request, res: Response) => {
  *             properties:
  *               tabs:
  *                 type: array
+ *                 items:
+ *                   type: object
  *     responses:
  *       200:
  *         description: Tabs updated successfully.

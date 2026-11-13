@@ -726,6 +726,9 @@ router.post(
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: The result.
  */
 router.get(
   "/folder/access",
@@ -1956,10 +1959,19 @@ async function canManageCredentialSharing(
  * @openapi
  * /rbac/credential/{id}/share:
  *   post:
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
  *     summary: Share a credential with users or roles
  *     description: Recipients get a copy of the secrets re-encrypted under their own key. "use" lets them attach it to hosts and connect; "manage" also lets them edit and re-share. Owner or a "manage" recipient only.
  *     tags:
  *       - RBAC
+ *     responses:
+ *       200:
+ *         description: Done.
  */
 router.post(
   "/credential/:id/share",
@@ -2088,9 +2100,18 @@ router.post(
  * @openapi
  * /rbac/credential/{id}/access:
  *   get:
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
  *     summary: List who a credential is shared with
  *     tags:
  *       - RBAC
+ *     responses:
+ *       200:
+ *         description: The result.
  */
 router.get(
   "/credential/:id/access",
@@ -2129,9 +2150,23 @@ router.get(
  * @openapi
  * /rbac/credential/{id}/access/{accessId}:
  *   delete:
+ *     parameters:
+ *       - in: path
+ *         name: accessId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
  *     summary: Revoke a credential share (recipients' copies are removed with it)
  *     tags:
  *       - RBAC
+ *     responses:
+ *       200:
+ *         description: Done.
  */
 router.delete(
   "/credential/:id/access/:accessId",
@@ -2172,9 +2207,23 @@ router.delete(
  * @openapi
  * /rbac/host-access/{hostId}/auth/{protocol}:
  *   put:
+ *     parameters:
+ *       - in: path
+ *         name: protocol
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: hostId
+ *         required: true
+ *         schema:
+ *           type: integer
  *     summary: Set personal authentication for a shared host protocol
  *     description: Selects one of the authenticated recipient's own credentials, or clears the selection with null. The protocol is "ssh" or one a plugin declares.
  *     tags: [RBAC]
+ *     responses:
+ *       200:
+ *         description: Done.
  */
 router.put(
   "/host-access/:hostId/auth/:protocol",
@@ -2228,8 +2277,22 @@ router.put(
  * @openapi
  * /rbac/host-access/{hostId}/auth/{protocol}:
  *   get:
+ *     parameters:
+ *       - in: path
+ *         name: protocol
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: hostId
+ *         required: true
+ *         schema:
+ *           type: integer
  *     summary: Get the current recipient's shared-host protocol authentication override
  *     tags: [RBAC]
+ *     responses:
+ *       200:
+ *         description: The result.
  */
 router.get(
   "/host-access/:hostId/auth/:protocol",

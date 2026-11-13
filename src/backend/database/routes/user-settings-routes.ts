@@ -361,10 +361,16 @@ export function registerUserSettingsRoutes(
    *     summary: Get the private hosts notification channels may contact (admin only)
    *     tags:
    *       - Users
+   *     responses:
+   *       200:
+   *         description: The result.
    *   patch:
    *     summary: Replace that allowlist (admin only)
    *     tags:
    *       - Users
+   *     responses:
+   *       200:
+   *         description: Done.
    */
   registerPrivateEndpointAllowlist(
     "/notification-private-endpoints",

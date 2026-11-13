@@ -63,6 +63,7 @@
 - Server answers no longer name the web framework the server runs on
 - A broken file upload is answered as a bad request instead of a server error
 - Plugin pages can only be shown inside Termix itself, not framed by other sites
+- The API docs list the path parameters and answers of every route
 - Plugins that run commands with sudo send the sudo password on stdin, so it never shows up in the host's process list
 - A login that still has to set up a second factor can only open the setup screen, not manage plugins
 - Rotating the JWT secret from the API now really replaces it and signs everyone out
