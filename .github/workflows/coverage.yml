@@ -1,0 +1,69 @@
+name: Coverage
+
+# Line coverage across the unit tests and the authorization matrix, which
+# runs every route against a real server. Weekly and by hand; the number goes
+# in the job summary.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 6 * * 1"
+
+permissions: {}
+
+jobs:
+  coverage:
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 60
+    permissions:
+      contents: read
+
+    env:
+      NODE_OPTIONS: "--max-old-space-size=6144"
+      TERMIX_PLUGIN_PROFILE: full
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Install dependencies
+        run: npm run ci:install
+
+      - name: Build plugin SDK
+        run: npm run build:sdk
+
+      - name: Unit test coverage
+        run: npx vitest run --coverage --coverage.reportOnFailure=true --coverage.reporter=json --coverage.reportsDirectory=coverage/unit
+
+      # Bundled plugin downloads show in the plugin store, so they are kept.
+      - name: Cache bundled plugins
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: node_modules/.cache/termix-bundled-plugins
+          key: bundled-plugins-full-${{ hashFiles('docker/bundled-plugins.json') }}
+          enableCrossOsArchive: true
+
+      - name: Build backend with source maps
+        run: |
+          npm run build:backend
+          npx tsc -p tsconfig.node.json --sourceMap
+
+      - name: Authorization matrix with coverage
+        run: NODE_V8_COVERAGE="$PWD/coverage/v8" npm run test:authz
+
+      - name: Map matrix coverage to the source
+        run: >-
+          npx c8 report --temp-directory coverage/v8 --reporter json
+          --report-dir coverage/authz --include "src/**"
+          --include "packages/plugin-sdk/src/**" --exclude-after-remap
+          --exclude "**/tests/**"
+
+      - name: Summary
+        run: node scripts/coverage-merged.mjs coverage/unit/coverage-final.json coverage/authz/coverage-final.json >> "$GITHUB_STEP_SUMMARY"
