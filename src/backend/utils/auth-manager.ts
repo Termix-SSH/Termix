@@ -132,6 +132,34 @@ import {
   sendRateLimited,
 } from "./rate-limit.js";
 import { getClientIp } from "./request-origin.js";
+import { isCookieOriginAllowed } from "./ws-auth.js";
+
+const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+/**
+ * The browser sends the login cookie from sibling subdomains and other ports
+ * of the same host too, so a change made with the cookie must come from a
+ * page on this server. A Bearer token sent along still counts.
+ */
+export function requestToken(req: Request): {
+  token?: string;
+  refused: boolean;
+} {
+  const authHeader = req.headers["authorization"];
+  const bearer = authHeader?.startsWith("Bearer ")
+    ? authHeader.split(" ")[1]
+    : undefined;
+  const cookie = req.cookies?.jwt as string | undefined;
+  if (
+    cookie &&
+    UNSAFE_METHODS.has(req.method) &&
+    !req.headers["x-electron-app"] &&
+    !isCookieOriginAllowed(req)
+  ) {
+    return bearer ? { token: bearer, refused: false } : { refused: true };
+  }
+  return { token: cookie || bearer, refused: false };
+}
 
 let pluginAllowsImpersonation: (pluginId: string) => boolean = () => false;
 
@@ -901,13 +929,9 @@ class AuthManager {
   createAuthMiddleware() {
     return async (req: Request, res: Response, next: NextFunction) => {
       const authReq = req as AuthenticatedRequest;
-      let token = authReq.cookies?.jwt;
-
-      if (!token) {
-        const authHeader = authReq.headers["authorization"];
-        if (authHeader?.startsWith("Bearer ")) {
-          token = authHeader.split(" ")[1];
-        }
+      const { token, refused } = requestToken(authReq);
+      if (refused) {
+        return res.status(403).json({ error: "Not allowed from this origin" });
       }
 
       if (!token) {
@@ -1133,13 +1157,9 @@ class AuthManager {
 
   createAdminMiddleware() {
     return async (req: Request, res: Response, next: NextFunction) => {
-      let token = req.cookies?.jwt;
-
-      if (!token) {
-        const authHeader = req.headers["authorization"];
-        if (authHeader?.startsWith("Bearer ")) {
-          token = authHeader.split(" ")[1];
-        }
+      const { token, refused } = requestToken(req);
+      if (refused) {
+        return res.status(403).json({ error: "Not allowed from this origin" });
       }
 
       if (!token) {

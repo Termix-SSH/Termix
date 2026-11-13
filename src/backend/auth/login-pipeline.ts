@@ -55,10 +55,15 @@ const PENDING_TTL_MS = 10 * 60 * 1000;
 const PENDING_LOGIN_COOKIE = "termix_pending_login";
 
 const pendingLogins = new Map<string, PendingLogin>();
+// Tokens that already finished a login, kept until they expire on their own.
+const usedPending = new Map<string, number>();
 
 function prunePending(now = Date.now()): void {
   for (const [key, pending] of pendingLogins) {
     if (now - pending.createdAt > PENDING_TTL_MS) pendingLogins.delete(key);
+  }
+  for (const [key, usedAt] of usedPending) {
+    if (now - usedAt > PENDING_TTL_MS) usedPending.delete(key);
   }
 }
 
@@ -69,6 +74,7 @@ function pendingKey(token: string): string {
 /** Test helper. */
 export function resetPendingLoginsForTests(): void {
   pendingLogins.clear();
+  usedPending.clear();
 }
 
 export interface SecondFactorState {
@@ -472,12 +478,14 @@ export async function readPendingLogin(
   const decoded = await AuthManager.getInstance().verifyJWTToken(token);
   if (!decoded || !decoded.pendingTOTP) return null;
   prunePending();
+  if (usedPending.has(pendingKey(token))) return null;
   const pending = pendingLogins.get(pendingKey(token)) ?? null;
   return { userId: decoded.userId, token, pending };
 }
 
 function consumePendingLogin(token: string): void {
   pendingLogins.delete(pendingKey(token));
+  usedPending.set(pendingKey(token), Date.now());
 }
 
 /**

@@ -44,6 +44,26 @@ export function isCorsOriginAllowed(
   return origin === getRequestOrigin(req);
 }
 
+/**
+ * Origins that may send cookies and read the answer. Any other origin a server
+ * lets in without an allowlist only gets CORS for requests without cookies,
+ * so a page on a sibling subdomain can't read what the login cookie unlocks.
+ */
+export function isCorsCredentialedOrigin(
+  req: Request,
+  origin: string | undefined,
+): boolean {
+  if (isDesktopAppOrigin(origin)) return true;
+  if (getAllowedOrigins().includes(origin as string)) return true;
+  if (
+    process.env.ELECTRON_EMBEDDED !== "true" &&
+    origin === LEGACY_DESKTOP_ORIGIN
+  ) {
+    return true;
+  }
+  return origin === getRequestOrigin(req);
+}
+
 export function createCorsMiddleware(
   methods: string[] = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   extraHeaders: string[] = [],
@@ -64,14 +84,18 @@ export function createCorsMiddleware(
   ];
 
   return (req: Request, res: Response, next: NextFunction) => {
-    const handler = cors({
-      origin: (origin, callback) => {
-        if (isCorsOriginAllowed(req, origin)) return callback(null, true);
+    const origin = req.headers.origin;
+    const handler = cors((_req, callback) => {
+      if (!isCorsOriginAllowed(req, origin)) {
         callback(new Error("Not allowed by CORS"));
-      },
-      credentials: true,
-      methods,
-      allowedHeaders,
+        return;
+      }
+      callback(null, {
+        origin: true,
+        credentials: isCorsCredentialedOrigin(req, origin),
+        methods,
+        allowedHeaders,
+      });
     });
     // A refused origin is a 403, not a server error.
     handler(req, res, (error?: unknown) => {
