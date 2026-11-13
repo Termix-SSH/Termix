@@ -63,8 +63,9 @@ function stableKey(args: unknown[]): string {
 
 /** Which way a component fills its place, by kind and slot. */
 /** A toolbar slot takes a button, a tabs slot a whole page, anything else a block. */
-function slotFit(slotId: string): FrameFit {
-  if (/toolbar/i.test(slotId)) return "inline";
+/** Buttons and badges in a row size to themselves, panels take the width. */
+export function slotFit(slotId: string): FrameFit {
+  if (/toolbar|actions$|badges$|\.inline$/i.test(slotId)) return "inline";
   if (/tabs?$/i.test(slotId)) return "fill";
   return "content";
 }

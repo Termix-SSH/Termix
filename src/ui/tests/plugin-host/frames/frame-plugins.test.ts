@@ -9,7 +9,7 @@ vi.mock("@/main-axios", async (importOriginal) => ({
   },
 }));
 
-import { startFramedPlugin } from "@/plugin-host/frames/frame-plugins";
+import { slotFit, startFramedPlugin } from "@/plugin-host/frames/frame-plugins";
 import { resetFrameConnections } from "@/plugin-host/frames/frame-connection";
 import { getFrameValue } from "@/plugin-host/frames/frame-values";
 import {
@@ -242,5 +242,21 @@ describe("startFramedPlugin", () => {
     expect(getPanel("undeclared")).toBeUndefined();
     expect(error).toHaveBeenCalled();
     plugin.dispose();
+  });
+});
+
+describe("slot frame sizes", () => {
+  it("sizes buttons and badges in a row to themselves", () => {
+    for (const slot of [
+      "credentials.rowActions",
+      "credentials.badges",
+      "hosts.selectionActions",
+      "terminal.toolbar",
+      "tab.inline",
+    ]) {
+      expect(slotFit(slot), slot).toBe("inline");
+    }
+    expect(slotFit("credentials.panel")).toBe("content");
+    expect(slotFit("admin.userTabs")).toBe("fill");
   });
 });
