@@ -7,6 +7,8 @@
  * definitions), currentActor() and the disposables bag. ssh2 clients,
  * sockets and the database stay in core and are reached through handles.
  */
+// First, before anything a plugin could load: Electron ignores --import.
+import "./harden.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 import os from "node:os";
 import { EventEmitter } from "node:events";

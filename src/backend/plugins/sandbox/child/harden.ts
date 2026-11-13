@@ -1,7 +1,8 @@
 /**
  * Preloaded with --import into every plugin process, before any
- * plugin code. The permission model does not cover these, so they are taken
- * away here:
+ * plugin code, and imported again first thing by the runtime, because an
+ * Electron utility process ignores --import. The permission model does not
+ * cover these, so they are taken away here:
  *   node:sqlite opens files without asking the permission model;
  *   process._debugProcess can make another Node process open its inspector;
  *   inspector, wasi and trace_events.
@@ -41,45 +42,55 @@ function isBare(specifier: string): boolean {
   return !/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(specifier);
 }
 
-module.registerHooks({
-  resolve(specifier, context, next) {
-    if (BLOCKED.has(specifier)) throw refuse(specifier);
-    try {
-      return next(specifier, context);
-    } catch (error) {
-      if (
-        isBare(specifier) &&
-        (error as { code?: string }).code === "ERR_MODULE_NOT_FOUND"
-      ) {
-        return next(specifier, { ...context, parentURL: anchor });
+// Runs once, however many times the module is loaded.
+const HARDENED = Symbol.for("termix.sandbox.hardened");
+const marks = globalThis as Record<symbol, unknown>;
+if (!marks[HARDENED]) {
+  marks[HARDENED] = true;
+  harden();
+}
+
+function harden(): void {
+  module.registerHooks({
+    resolve(specifier, context, next) {
+      if (BLOCKED.has(specifier)) throw refuse(specifier);
+      try {
+        return next(specifier, context);
+      } catch (error) {
+        if (
+          isBare(specifier) &&
+          (error as { code?: string }).code === "ERR_MODULE_NOT_FOUND"
+        ) {
+          return next(specifier, { ...context, parentURL: anchor });
+        }
+        throw error;
       }
-      throw error;
-    }
-  },
-});
+    },
+  });
 
-const original = process.getBuiltinModule.bind(process);
-Object.defineProperty(process, "getBuiltinModule", {
-  value: (id: string) => {
-    if (BLOCKED.has(id)) throw refuse(id);
-    return original(id);
-  },
-  writable: false,
-  configurable: false,
-});
-
-for (const name of [
-  "_debugProcess",
-  "_debugEnd",
-  "dlopen",
-  "binding",
-  "_linkedBinding",
-]) {
-  Object.defineProperty(process, name, {
-    value: () => {
-      throw refuse(`process.${name}`);
+  const original = process.getBuiltinModule.bind(process);
+  Object.defineProperty(process, "getBuiltinModule", {
+    value: (id: string) => {
+      if (BLOCKED.has(id)) throw refuse(id);
+      return original(id);
     },
     writable: false,
     configurable: false,
   });
+
+  for (const name of [
+    "_debugProcess",
+    "_debugEnd",
+    "dlopen",
+    "binding",
+    "_linkedBinding",
+  ]) {
+    Object.defineProperty(process, name, {
+      value: () => {
+        throw refuse(`process.${name}`);
+      },
+      writable: false,
+      configurable: false,
+    });
+  }
 }

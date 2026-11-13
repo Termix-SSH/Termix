@@ -269,7 +269,7 @@ connections and credentials stay in core. In Docker each plugin also runs as its
 Workers, WASI, `node:sqlite`, the inspector and `process.binding` are never available. Core restarts a
 process that crashes, stops answering, goes past its memory limit (256 MiB unless `sandbox.memoryMb`) or
 uses more than 80% of a CPU core for a minute. Too many crashes and the plugin is marked failed.
-Windows and macOS desktop builds get the Node permission model only, with no per plugin user.
+The desktop app runs each plugin in its own process with an empty environment and the same checked `ctx`, but Electron doesn't apply Node's permission flags there, so files, child processes, workers and the memory limit aren't fenced on the desktop.
 
 A plugin that registers nothing core calls on its own starts on its first request or socket and stops
 after 10 idle minutes. Anything in the `sandbox` block below, a `provides` entry, a provider hook, a

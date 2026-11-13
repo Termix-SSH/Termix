@@ -276,10 +276,15 @@ class PluginProcess {
       heapMb: manifest.sandbox?.memoryMb ?? this.config.memoryMb,
       nodeMajor: Number(process.versions.node.split(".")[0]),
     });
+    // Electron's utility process ignores Node flags, so on the desktop the
+    // process, its empty env and the checked ctx are the fence.
+    if (getSpawner().mode === "electron") {
+      flags.unenforced.push("files", "child processes", "memory");
+    }
     if (flags.unenforced.length > 0) {
       this.log(
         "info",
-        `this Node can't fence ${flags.unenforced.join(", ")}; it is open to the plugin`,
+        `can't fence ${flags.unenforced.join(", ")} here; the plugin has them`,
       );
     }
     const child = await getSpawner().spawn({
