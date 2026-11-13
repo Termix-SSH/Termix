@@ -52,6 +52,7 @@
 
 ### Fixed
 
+- SOCKS4 and SOCKS5 proxy chains set up in the host editor now connect. The proxy type was passed on in a form the proxy client refused
 - Hosts shared with you without a login now sync to the desktop and mobile apps, and connecting asks you to add a login instead of saying the host is not on the sync server
 - Desktop app: when both the owner and someone a host is shared with are signed in, the shared copy now syncs too
 - API key requests are much faster: the slow key check no longer runs on every request
