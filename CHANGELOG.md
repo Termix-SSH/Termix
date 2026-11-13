@@ -25,6 +25,7 @@
 - Termix checks a root signed revocation list on start and once a day. A revoked plugin, plugin version or signing key is turned off and every admin gets an alert. Servers without internet keep the last list they had
 - Admins get an alert when a plugin update is signed by a different key than the version before
 - Desktop app: an update also has to carry a signature from the Termix release key before it installs
+- The server answers `/.well-known/security.txt` with where to report a security problem in Termix
 
 ### Changed
 

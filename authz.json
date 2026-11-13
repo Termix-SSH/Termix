@@ -4,6 +4,9 @@
     "GET /.well-known/acme-challenge/:token": {
       "access": "public"
     },
+    "GET /.well-known/security.txt": {
+      "access": "public"
+    },
     "GET /audit-logs": {
       "access": "admin"
     },

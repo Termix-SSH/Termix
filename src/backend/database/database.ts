@@ -82,6 +82,7 @@ import {
 } from "../plugins/user-data.js";
 import { configureDirectHttps, getTlsConfig } from "../tls/tls-service.js";
 import { acmeChallengeHandler } from "../tls/acme-challenges.js";
+import { securityTxtHandler } from "../http/security-txt.js";
 import { httpsPolicyMiddleware } from "../tls/https-policy.js";
 import {
   pluginFrameCsp,
@@ -282,6 +283,20 @@ app.get("/health", (req, res) => {
  *         description: No challenge is published for this token.
  */
 app.get("/.well-known/acme-challenge/:token", acmeChallengeHandler);
+
+/**
+ * @openapi
+ * /.well-known/security.txt:
+ *   get:
+ *     summary: Get the security contact file
+ *     description: Public. RFC 9116 security.txt that says where to report a security problem in Termix.
+ *     tags:
+ *       - General
+ *     responses:
+ *       200:
+ *         description: The security.txt file, as text/plain.
+ */
+app.get("/.well-known/security.txt", securityTxtHandler);
 
 /**
  * @openapi
