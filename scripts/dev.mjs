@@ -44,6 +44,7 @@ import {
   serviceEnv,
   serviceRunArgs,
 } from "./lib/dev-docker.mjs";
+import { coreVersionOf } from "./authz/lib/server.mjs";
 
 const require = createRequire(import.meta.url);
 const {
@@ -732,8 +733,12 @@ async function main() {
     fs.mkdirSync(full, { recursive: true });
     log(`data folder ${full}`);
   }
+  // A dev-X.Y.Z branch still carries the last release in package.json, which
+  // would refuse plugins that need the coming release.
+  const version = process.env.VERSION ?? coreVersionOf(root);
   backendEnv = {
     ...serviceEnv(options, false),
+    ...(version ? { VERSION: version } : {}),
     // The desktop app runs against its own embedded backend, which is what
     // turns on the local profile, sync and the desktop-only routes.
     ...(options.target === "electron" ? { ELECTRON_EMBEDDED: "true" } : {}),
