@@ -45,6 +45,8 @@ export default defineConfig({
         "**/*.config.*",
         "**/*.test.{ts,tsx}",
         "src/backend/test-helpers/**",
+        "src/backend/tests/**",
+        "src/ui/tests/**",
         "src/ui/locales/**",
       ],
     },

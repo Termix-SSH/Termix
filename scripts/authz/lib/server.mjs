@@ -81,6 +81,10 @@ export async function startServer({
       TERMIX_ROUTE_INVENTORY_FILE: inventoryFile,
       TERMIX_AUTHZ_NO_RATE_LIMITS: "1",
       ...(version ? { VERSION: version } : {}),
+      // Set when measuring coverage across the unit tests and this run.
+      ...(process.env.NODE_V8_COVERAGE
+        ? { NODE_V8_COVERAGE: process.env.NODE_V8_COVERAGE }
+        : {}),
       ...env,
     },
     stdio: ["ignore", out, out, "ipc"],
