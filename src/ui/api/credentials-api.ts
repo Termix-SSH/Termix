@@ -101,19 +101,6 @@ export async function getCredentialFolders(): Promise<Record<string, unknown>> {
   }
 }
 
-export async function getSSHHostWithCredentials(
-  hostId: number,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await sshHostApi.get(
-      `/db/host/${hostId}/with-credentials`,
-    );
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "fetch SSH host with credentials");
-  }
-}
-
 export async function getHostPassword(
   hostId: number,
   field: "password" | "sudoPassword" | "key" | "keyPassword" = "password",
@@ -125,56 +112,6 @@ export async function getHostPassword(
     return response.data?.value || null;
   } catch {
     return null;
-  }
-}
-
-export async function applyCredentialToHost(
-  hostId: number,
-  credentialId: number,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await sshHostApi.post(
-      `/db/host/${hostId}/apply-credential`,
-      { credentialId },
-    );
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "apply credential to host");
-  }
-}
-
-export async function removeCredentialFromHost(
-  hostId: number,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await sshHostApi.delete(`/db/host/${hostId}/credential`);
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "remove credential from host");
-  }
-}
-
-export async function migrateHostToCredential(
-  hostId: number,
-  credentialName: string,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await sshHostApi.post(
-      `/db/host/${hostId}/migrate-to-credential`,
-      { credentialName },
-    );
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "migrate host to credential");
-  }
-}
-
-export async function getFoldersWithStats(): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.get("/host/db/folders/with-stats");
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "fetch folders with statistics");
   }
 }
 

@@ -26,18 +26,21 @@ function fakeApi(prefix: string) {
   };
 }
 
-vi.mock("@/main-axios", async (importOriginal) => {
-  const real = await importOriginal<Record<string, unknown>>();
+// Built without the real module: main-axios re-exports the api files, so
+// loading it here would bind them to the real HTTP clients first.
+vi.mock("@/main-axios", () => {
   const host = fakeApi("/host");
   const root = fakeApi("");
   return {
-    ...real,
     hostApi: host,
     sshHostApi: host,
     authApi: root,
     rbacApi: root,
     getRemoteCoreApi: () => root,
     createRemoteOriginApiInstance: (path: string) => fakeApi(path),
+    isElectron: () => false,
+    markUserAuthenticated: () => {},
+    TRUST_TOKEN_KEY: "termixTrustToken",
     handleApiError: (error: unknown) => {
       throw error;
     },
