@@ -25,6 +25,7 @@ import {
   hasCapability,
   warmPluginGrants,
 } from "./permissions.js";
+import { randomBytes } from "node:crypto";
 import { getActor, getActorSessionId } from "./actor.js";
 import type { DisposableBag } from "./disposables.js";
 import { redactHostSecrets } from "./ctx-hosts.js";
@@ -100,6 +101,13 @@ function actingUser(resolvedFor?: string): string {
     "ctx.ssh needs an acting user: call it inside a request or ctx.asUser",
   );
 }
+
+/**
+ * A host core handed out carries this opaque ref, so a copy that crossed a
+ * process boundary (a sandboxed plugin) still maps back to its stored login.
+ */
+export const HOST_REF_FIELD = "hostRef";
+const MAX_HOST_REFS = 10_000;
 
 function describeHost(host: number | PluginSshHost): string {
   return typeof host === "number" ? `host ${host}` : `host ${host.id}`;
@@ -177,16 +185,31 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
     { host: SshConnectHost; userId: string }
   >();
 
+  // The same mapping by a random string, which survives being copied into
+  // and out of a plugin process. Only good for the user it was resolved for.
+  const refs = new Map<string, { host: SshConnectHost; userId: string }>();
+
   const remember = (key: object, host: SshConnectHost, userId: string) => {
     const entry = { host, userId };
     resolvedHosts.set(key, entry);
     const token = Object.freeze({});
     tokens.set(token, entry);
+    const ref = randomBytes(16).toString("base64url");
+    refs.set(ref, entry);
+    while (refs.size > MAX_HOST_REFS) {
+      refs.delete(refs.keys().next().value as string);
+    }
     if (Object.isExtensible(key)) {
       Object.defineProperty(key, tag, {
         value: token,
         enumerable: true,
         configurable: true,
+      });
+      Object.defineProperty(key, HOST_REF_FIELD, {
+        value: ref,
+        enumerable: true,
+        configurable: true,
+        writable: true,
       });
     }
   };
@@ -195,9 +218,13 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
     const known = resolvedHosts.get(host);
     if (known) return known;
     const token = (host as Record<symbol, unknown>)[tag];
-    return token && typeof token === "object"
-      ? tokens.get(token as object)
-      : undefined;
+    if (token && typeof token === "object") return tokens.get(token as object);
+    const ref = (host as Record<string, unknown>)[HOST_REF_FIELD];
+    if (typeof ref !== "string") return undefined;
+    const entry = refs.get(ref);
+    if (!entry) return undefined;
+    const actor = getActor();
+    return !actor || actor === entry.userId ? entry : undefined;
   };
 
   const handOut = (host: SshConnectHost, userId: string): PluginSshHost => {
