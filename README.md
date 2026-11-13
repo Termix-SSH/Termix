@@ -13,6 +13,7 @@
   <a href="https://discord.gg/jVQGdvHDrf"><img alt="Discord" src="https://img.shields.io/discord/1347374268253470720?color=F39044&labelColor=1a1a1a" /></a>
   <a href="https://donate.termix.site/"><img alt="Donate" src="https://img.shields.io/badge/Donate-Support%20Termix-F39044?style=flat&labelColor=1a1a1a" /></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/Termix-SSH/Termix"><img alt="OpenSSF Scorecard" src="https://img.shields.io/ossf-scorecard/github.com/Termix-SSH/Termix?label=OpenSSF%20Scorecard&style=flat&color=F39044&labelColor=1a1a1a" /></a>
+  <a href="https://www.bestpractices.dev/projects/16663"><img alt="OpenSSF Best Practices" src="https://img.shields.io/cii/level/16663?label=OpenSSF%20Best%20Practices&style=flat&color=F39044&labelColor=1a1a1a" /></a>
 </p>
 
 <p>
