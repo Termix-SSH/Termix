@@ -62,7 +62,13 @@ export function iconToWire(value: unknown): WireIcon | undefined {
   if (!value) return undefined;
   if (isReactElement(value)) {
     const name = lucideName((value as { type?: unknown }).type);
-    return name ? { $icon: name } : undefined;
+    if (!name) return undefined;
+    const size = (value as { props?: { size?: unknown } }).props?.size;
+    return Number.isInteger(size) &&
+      (size as number) > 0 &&
+      (size as number) <= 256
+      ? { $icon: name, element: true, size: size as number }
+      : { $icon: name, element: true };
   }
   const name = lucideName(value);
   return name ? { $icon: name } : undefined;

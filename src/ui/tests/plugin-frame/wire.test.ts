@@ -1,7 +1,9 @@
-import { forwardRef, createElement } from "react";
+import { forwardRef, createElement, isValidElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { Play } from "lucide-react";
 import { decode, encode, iconToWire, lucideName } from "@/plugin-frame/wire";
+import { decodeIcon, decodeIconValue } from "@/plugin-frame/frame-icons";
+import { isWireIcon } from "@/plugin-frame/protocol";
 
 const exportFn = vi.fn((fn: unknown) => ({ $fn: `f${String(fn).length}` }));
 
@@ -24,7 +26,15 @@ describe("wire encoding", () => {
   it("sends Lucide icons by name and drops other React elements", () => {
     expect(lucideName(Play)).toBe("Play");
     expect(iconToWire(Play)).toEqual({ $icon: "Play" });
-    expect(iconToWire(createElement(Play))).toEqual({ $icon: "Play" });
+    expect(iconToWire(createElement(Play))).toEqual({
+      $icon: "Play",
+      element: true,
+    });
+    expect(iconToWire(createElement(Play, { size: 14 }))).toEqual({
+      $icon: "Play",
+      element: true,
+      size: 14,
+    });
     const Custom = forwardRef(function Custom() {
       return null;
     });
@@ -33,7 +43,26 @@ describe("wire encoding", () => {
       { icon: createElement(Play), body: createElement("div") },
       { exportFn },
     );
-    expect(out).toEqual({ icon: { $icon: "Play" } });
+    expect(out).toEqual({ icon: { $icon: "Play", element: true } });
+  });
+
+  it("gives an icon sent as an element back as an element", () => {
+    const element = decodeIconValue(
+      iconToWire(createElement(Play, { size: 14 })),
+    );
+    expect(isValidElement(element)).toBe(true);
+    expect((element as { type: unknown }).type).toBe(Play);
+    expect((element as { props: { size?: number } }).props.size).toBe(14);
+    expect(decodeIconValue(iconToWire(Play))).toBe(Play);
+    expect(decodeIcon({ $icon: "Play", element: true })).toBe(Play);
+  });
+
+  it("refuses an icon marker with bad extra fields", () => {
+    expect(isWireIcon({ $icon: "Play", element: "yes" })).toBe(false);
+    expect(isWireIcon({ $icon: "Play", element: true, size: 9999 })).toBe(
+      false,
+    );
+    expect(isWireIcon({ $icon: "Play", element: true, size: 14 })).toBe(true);
   });
 
   it("drops DOM nodes and cycles instead of throwing", () => {

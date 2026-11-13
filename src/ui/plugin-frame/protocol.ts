@@ -17,9 +17,14 @@ export interface WireFn {
   $fn: string;
 }
 
-/** A Lucide icon, by its component name. */
+/**
+ * A Lucide icon, by its component name. `element` marks one sent as an
+ * element (<Play size={14} />), which comes back as an element.
+ */
 export interface WireIcon {
   $icon: string;
+  element?: true;
+  size?: number;
 }
 
 /** A plugin component the shell shows in a frame of its own. */
@@ -108,7 +113,13 @@ export function isWireIcon(value: unknown): value is WireIcon {
     !!value &&
     typeof value === "object" &&
     typeof (value as WireIcon).$icon === "string" &&
-    /^[A-Z][A-Za-z0-9]{0,63}$/.test((value as WireIcon).$icon)
+    /^[A-Z][A-Za-z0-9]{0,63}$/.test((value as WireIcon).$icon) &&
+    ((value as WireIcon).element === undefined ||
+      (value as WireIcon).element === true) &&
+    ((value as WireIcon).size === undefined ||
+      (Number.isInteger((value as WireIcon).size) &&
+        (value as WireIcon).size! > 0 &&
+        (value as WireIcon).size! <= 256))
   );
 }
 

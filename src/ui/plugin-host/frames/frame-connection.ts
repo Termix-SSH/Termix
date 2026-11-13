@@ -20,7 +20,7 @@ import {
   type WireComponent,
 } from "@/plugin-frame/protocol";
 import { FramePort } from "@/plugin-frame/rpc";
-import { decodeIcon } from "@/plugin-frame/frame-icons";
+import { decodeIconValue } from "@/plugin-frame/frame-icons";
 import { getPluginStoreState, knownPluginIds } from "../plugin-store";
 import { shell, shellHost } from "../shell-bridge";
 import { getTabType } from "@/shell/tab-registry";
@@ -190,7 +190,7 @@ function createPort(connection: FrameConnection, target: Window): FramePort {
     onCall: (method, args) => handleCall(connection, method, args),
     onEvent: (name, data) => handleEvent(connection, name, data),
     fnPrefix: "s",
-    icon: (ref) => decodeIcon(ref),
+    icon: (ref) => decodeIconValue(ref),
     component: (ref: WireComponent) => ref,
   });
 }
