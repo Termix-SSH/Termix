@@ -27,6 +27,7 @@ describe("buildChildFlags", () => {
     expect(flags.execArgv.some((a) => a.startsWith("--allow-fs-write"))).toBe(
       false,
     );
+    expect(flags.execArgv.some((a) => a.includes("plugin-data"))).toBe(false);
     for (const flag of [
       "--allow-net",
       "--allow-child-process",
@@ -59,6 +60,14 @@ describe("buildChildFlags", () => {
       ]),
     );
     expect(flags.firewall).toBe("allow-all");
+  });
+
+  it("lets files:own read back what it writes", () => {
+    const flags = buildChildFlags({ ...base, granted: ["files:own"] });
+    const reads = flags.execArgv.filter((a) =>
+      a.startsWith("--allow-fs-read="),
+    );
+    expect(reads.some((a) => /plugin-data[\\/]x$/.test(a))).toBe(true);
   });
 
   it("leaves --allow-net out on Node 24, which has no network fence", () => {

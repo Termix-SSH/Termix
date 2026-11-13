@@ -71,7 +71,11 @@ export function buildChildFlags(input: ChildFlagInput): ChildFlags {
   }
 
   const execArgv = ["--permission"];
-  for (const grant of withRealPaths(input.readPaths)) {
+  // Writing its own folder is no use without reading it back.
+  const reads = writeDataDir
+    ? [...input.readPaths, input.dataDir]
+    : input.readPaths;
+  for (const grant of withRealPaths(reads)) {
     execArgv.push(`--allow-fs-read=${grant}`);
   }
   if (writeDataDir) execArgv.push(`--allow-fs-write=${input.dataDir}`);
