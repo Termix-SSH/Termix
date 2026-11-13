@@ -48,9 +48,12 @@ let connectServer: net.Server;
 let connectPort = 0;
 const seen: string[] = [];
 const reply = { status: "200 Connection established" };
+const open = new Set<net.Socket>();
 
 beforeAll(async () => {
   connectServer = net.createServer((socket) => {
+    open.add(socket);
+    socket.on("close", () => open.delete(socket));
     socket.once("data", (chunk) => {
       seen.push(chunk.toString());
       socket.write(`HTTP/1.1 ${reply.status}\r\n\r\n`);
@@ -59,7 +62,10 @@ beforeAll(async () => {
   await new Promise<void>((r) => connectServer.listen(0, "127.0.0.1", r));
   connectPort = (connectServer.address() as AddressInfo).port;
 });
-afterAll(() => new Promise((r) => connectServer.close(r)));
+afterAll(async () => {
+  for (const socket of open) socket.destroy();
+  await new Promise((r) => connectServer.close(r));
+});
 beforeEach(() => {
   socks.single.length = 0;
   socks.chains.length = 0;
