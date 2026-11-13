@@ -22,6 +22,7 @@ import {
   type Transport,
   type Wire,
 } from "../rpc.js";
+import { createChildSocket } from "./socket.js";
 
 interface Store {
   token?: string;
@@ -811,9 +812,6 @@ endpoint.handle("http.dispatch", ([metaArg, portArg, bodyArg]) => {
 
 // ---- WebSockets ----
 
-const OPEN = 1;
-const CLOSED = 3;
-
 endpoint.handle("ws.open", ([routePath, metaArg, portArg]) => {
   const handler = wsRoutes.get(String(routePath));
   if (!handler) throw new Error(`No socket route ${routePath}`);
@@ -826,47 +824,7 @@ endpoint.handle("ws.open", ([routePath, metaArg, portArg]) => {
   };
   const port = portArg as StreamPort;
   const store = als.getStore();
-  const socket = new EventEmitter() as EventEmitter & Record<string, unknown>;
-  socket.OPEN = OPEN;
-  socket.CLOSED = CLOSED;
-  socket.readyState = OPEN;
-  socket.bufferedAmount = 0;
-  socket.send = (data: unknown, options?: unknown, cb?: unknown) => {
-    if (socket.readyState !== OPEN) return;
-    const binary = typeof data !== "string";
-    port.write({
-      d: binary ? Buffer.from(data as Uint8Array) : data,
-      b: binary,
-    });
-    const done = typeof options === "function" ? options : cb;
-    if (typeof done === "function") (done as AnyFn)();
-  };
-  socket.close = (code?: number, reason?: string) => {
-    if (socket.readyState !== OPEN) return;
-    socket.readyState = 2;
-    port.endMeta = { code, reason };
-    port.end();
-  };
-  socket.terminate = () => (socket.close as AnyFn)(1006);
-  socket.ping = () => {};
-  socket.pause = () => port.pause();
-  socket.resume = () => port.resume();
-  port.on("data", (chunk: { d: Buffer | string; b: boolean }) => {
-    const data = typeof chunk.d === "string" ? Buffer.from(chunk.d) : chunk.d;
-    als.run(store ?? {}, () => socket.emit("message", data, chunk.b));
-  });
-  port.on(
-    "remote-end",
-    (end: { code?: number; reason?: string } | undefined) => {
-      socket.readyState = CLOSED;
-      als.run(store ?? {}, () =>
-        socket.emit("close", end?.code ?? 1005, Buffer.from(end?.reason ?? "")),
-      );
-    },
-  );
-  port.on("error", (error) =>
-    als.run(store ?? {}, () => socket.emit("error", error)),
-  );
+  const socket = createChildSocket(port, (fn) => als.run(store ?? {}, fn));
   return handler({
     userId: meta.userId,
     socket,
