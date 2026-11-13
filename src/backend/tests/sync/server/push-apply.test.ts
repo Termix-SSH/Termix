@@ -209,7 +209,7 @@ describe("applyPush", () => {
     expect((results[1] as { reason: string }).reason).toBe("not_synced");
   });
 
-  it("deletes with a tombstone, and a repeat of the op in the same batch sees the new revision", async () => {
+  it("deletes with a tombstone and answers a repeat of the op as a duplicate", async () => {
     state.records.set("hosts:a", {
       revision: 2,
       seq: 1,
@@ -221,7 +221,11 @@ describe("applyPush", () => {
       { entityType: "hosts", syncId: "a", baseRevision: 2, op: "delete" },
       { entityType: "hosts", syncId: "a", baseRevision: 2, op: "delete" },
     ]);
-    expect(results[0]).toMatchObject({ status: "conflict" });
+    expect(results[0]).toMatchObject({ status: "ok", revision: 3 });
+    expect(results[1]).toMatchObject({
+      status: "rejected",
+      reason: "duplicate",
+    });
     expect(state.records.get("hosts:a")).toMatchObject({
       revision: 3,
       deleted: true,
