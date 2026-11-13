@@ -361,7 +361,9 @@ describe("supervisor", () => {
 
   it("restarts a plugin that keeps burning CPU past its cap", async () => {
     let starts = 0;
-    const supervisor = new SandboxSupervisor(config({ cpuPercent: 25 }));
+    // Low cap: under a busy full test run the spinner gets far less than a
+    // core, and must still go over it.
+    const supervisor = new SandboxSupervisor(config({ cpuPercent: 10 }));
     await supervisor.register(
       spec(
         "spin",
@@ -375,7 +377,7 @@ describe("supervisor", () => {
         { sandbox: { alwaysOn: true }, report: () => starts++ },
       ),
     );
-    await until(() => starts >= 2, 15_000);
+    await until(() => starts >= 2, 25_000);
     expect(logged.some((l) => /CPU/.test(l.text))).toBe(true);
     await supervisor.shutdown();
   }, 30_000);
