@@ -77,35 +77,28 @@ function verifyApp(app, architecture, runtimeCheck) {
 
   if (!runtimeCheck) return;
 
-  const executable = path.join(app, "Contents/MacOS/Termix");
+  // The app has the runAsNode fuse off, so it can not run scripts. sharp is
+  // N-API, so the runner's own node loads the packaged copy for its arch.
   const smoke = [
     "const sharp = require(process.argv[1]);",
     "sharp({create:{width:1,height:1,channels:4,background:'#000'}})",
     ".png().toBuffer().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });",
   ].join("");
 
-  for (const arch of architectures[architecture]) {
-    const modules = unpackedModulesDir(app, arch, architecture);
-    const sharpPath = path.join(modules, "sharp");
-    const result = spawnSync(
-      "arch",
-      [
-        arch === "x64" ? "-x86_64" : "-arm64",
-        executable,
-        "-e",
-        smoke,
-        sharpPath,
-      ],
-      {
-        encoding: "utf8",
-        env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
-      },
+  const arch = process.arch;
+  if (!architectures[architecture].includes(arch)) return;
+  const sharpPath = path.join(
+    unpackedModulesDir(app, arch, architecture),
+    "sharp",
+  );
+  const result = spawnSync(process.execPath, ["-e", smoke, sharpPath], {
+    encoding: "utf8",
+    timeout: 120_000,
+  });
+  if (result.status !== 0) {
+    throw new Error(
+      `${path.basename(app)} failed the ${arch} sharp runtime smoke test:\n${result.error || result.stderr || result.stdout}`,
     );
-    if (result.status !== 0) {
-      throw new Error(
-        `${path.basename(app)} failed the ${arch} sharp runtime smoke test:\n${result.stderr || result.stdout}`,
-      );
-    }
   }
 }
 
