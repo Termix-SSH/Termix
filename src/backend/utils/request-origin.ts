@@ -61,7 +61,10 @@ export function normalizeBasePath(value: unknown): string {
   basePath = basePath.split("?")[0].split("#")[0].trim();
   if (!basePath || basePath === "/") return "";
   if (!basePath.startsWith("/")) basePath = `/${basePath}`;
-  return basePath.replace(/\/+$/, "");
+  // A loop, since /\/+$/ takes quadratic time on a long header
+  let end = basePath.length;
+  while (end > 0 && basePath[end - 1] === "/") end--;
+  return basePath.slice(0, end);
 }
 
 /** Real client IP after Express has applied its configured proxy trust policy. */
