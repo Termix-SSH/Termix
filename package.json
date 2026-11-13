@@ -147,6 +147,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
     "eslint-plugin-unused-imports": "^4.4.1",
+    "fast-check": "^4.10.2",
     "globals": "^17.13.0",
     "husky": "^9.1.7",
     "i18next": "^26.4.2",

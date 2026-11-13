@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import fc from "fast-check";
 import type { LookupAddress } from "dns";
 import {
   isPrivateAddress,
+  PRIVATE_IPV4_RANGES,
   pinnedLookup,
   resolveTarget,
   TargetRefusedError,
@@ -122,5 +124,61 @@ describe("plugin SDK net-guard", () => {
     expect((await run("good.test", true)).address).toEqual([
       { address: "198.51.100.7", family: 4 },
     ]);
+  });
+});
+
+function v4(n: number): string {
+  return [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join(".");
+}
+
+function v4ToNumber(address: string): number {
+  return address.split(".").reduce((acc, part) => acc * 256 + Number(part), 0);
+}
+
+function hexMapped(n: number): string {
+  const hi = (n >>> 16).toString(16);
+  const lo = (n & 0xffff).toString(16);
+  return `::ffff:${hi}:${lo}`;
+}
+
+describe("plugin SDK net-guard properties", () => {
+  const anyV4 = fc.integer({ min: 0, max: 0xffffffff });
+  const anyV6 = fc.ipV6();
+
+  it("agrees with core on any address", () => {
+    fc.assert(
+      fc.property(fc.oneof(anyV4.map(v4), anyV6, fc.string()), (address) => {
+        expect(isPrivateAddress(address)).toBe(isBlockedAddress(address));
+      }),
+      { numRuns: 3000 },
+    );
+  });
+
+  it("blocks every address in a private range, in every spelling", () => {
+    const inRange = fc
+      .constantFrom(...PRIVATE_IPV4_RANGES)
+      .chain(([network, prefix]) => {
+        const base = v4ToNumber(network);
+        const size = 2 ** (32 - prefix);
+        return fc.integer({ min: 0, max: size - 1 }).map((i) => base + i);
+      });
+    fc.assert(
+      fc.property(inRange, (n) => {
+        expect(isPrivateAddress(v4(n))).toBe(true);
+        expect(isPrivateAddress(`::ffff:${v4(n)}`)).toBe(true);
+        expect(isPrivateAddress(hexMapped(n))).toBe(true);
+        expect(isPrivateAddress(`[::ffff:${v4(n)}]`)).toBe(true);
+      }),
+      { numRuns: 3000 },
+    );
+  });
+
+  it("gives the same answer for an IPv4 address and its mapped form", () => {
+    fc.assert(
+      fc.property(anyV4, (n) => {
+        expect(isPrivateAddress(hexMapped(n))).toBe(isPrivateAddress(v4(n)));
+      }),
+      { numRuns: 3000 },
+    );
   });
 });
