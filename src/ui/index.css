@@ -590,3 +590,8 @@ html.fs-xl {
 .h-dvh {
   height: calc(100dvh - var(--termix-titlebar-height, 0px));
 }
+
+/* Plugin frames let a drag that started in the shell pass over them. */
+body.termix-frames-inert iframe[data-plugin-frame] {
+  pointer-events: none;
+}

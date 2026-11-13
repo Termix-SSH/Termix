@@ -76,6 +76,7 @@ export function termixPluginHost({
   sdkUiEntry,
   sdkFrontendEntry,
   metaCsp,
+  htmlEntry = "index.html",
 }) {
   let command = "build";
   let shared = [];
@@ -99,7 +100,9 @@ export function termixPluginHost({
       command = env.command;
       shared = sharedModules();
       if (command !== "build") return;
-      const input = { index: path.join(repoRoot, "index.html") };
+      const input = {
+        [path.basename(htmlEntry, ".html")]: path.join(repoRoot, htmlEntry),
+      };
       for (const specifier of shared) {
         input[`shared-${shimName(specifier)}`] = VIRTUAL_PREFIX + specifier;
       }

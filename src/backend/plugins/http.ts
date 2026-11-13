@@ -347,7 +347,10 @@ export function createPluginRouter({
     })();
   });
 
-  const authenticate = AuthManager.getInstance().createAuthMiddleware();
+  // This plugin's sandboxed frames call in with their own short token.
+  const authenticate = AuthManager.getInstance().createAuthMiddleware({
+    framePluginId: pluginId,
+  });
 
   outer.use((req: Request, res: Response, next: NextFunction) => {
     if (isPublicRequest(req, publicPaths, inner)) {

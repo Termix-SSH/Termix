@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 2.0.0 | Plugin API 2.0.0
+SDK 2.1.0 | Plugin API 2.1.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -313,7 +313,8 @@ layout or theme, or `network:sockets` keeps it running.
 4. Replace `db.transaction()` with `ctx.db.batch()`.
 5. Move direct `node:fs`, `net`, `http`, `child_process` use to `ctx`, or declare the capability that
    allows it. `termix-plugin validate` warns about each import that would be refused.
-6. Run your tests with `createMockCtx({ sandbox: true })`, which applies the same rules.
+6. Run your tests with `createMockCtx({ sandbox: true })`, which applies the same rules, and check the
+   frontend with `checkFrameApp` (see Frames).
 7. Drop capabilities you no longer use, bump the version and add a CHANGELOG entry.
 
 An API 1 plugin keeps working only when it is official and an admin turns on "Run without isolation" for
@@ -771,6 +772,54 @@ Hooks from `@termix-ssh/plugin-sdk/frontend`: `useTranslation`, `usePermission`,
 Shared from Termix and never bundled: `react`, `react-dom`, `i18next`, `react-i18next`, `sonner` and the
 SDK's `frontend` and `ui`. Anything else, like `lucide-react`, is bundled. A host your code gets only carries
 your own host settings, under `host.pluginSettings[<id>]`.
+
+### Frames (API 2)
+
+A plugin API 2 frontend never runs in the app's page. Termix 26.11.2 and newer load it into sandboxed
+frames (`sandbox="allow-scripts"`, an opaque origin, no cookies), served from your own
+`/plugin-assets/<id>/_frame/`. Your code stays the same: `activate(app)`, the hooks and the UI kit work as
+before, with the same look and theme.
+
+- One hidden background frame runs `activate` and keeps what has no view of its own: actions, palette
+  groups and entries, keybinding runs, rail badges, host dots, companion defaults and `shell.overlay`
+  components. Every view (tab, panel, card, companion, widget, settings component, host editor section,
+  slot component) is its own frame, which runs `activate` too. `app.frame.role` is `"background"` or
+  `"view"`; skip polling and timers in views.
+- Module state is per frame. Code that opens a dialog from anywhere (a palette run, a keybinding) belongs
+  in the background frame, next to its `shell.overlay` component.
+- What you register reaches the shell as data. Icons must come from `lucide-react` (the shell draws them
+  by name). Functions become calls into your frame, so a sync callback the shell reads while drawing
+  (`when`, `label`, `items`, `validate`, `visible`) answers its safe default first, then your real
+  answer once the frame replied. Keep them cheap and pure.
+- A companion's `getHandle()` returns a handle whose methods return promises. `sendInput` and `paste`
+  need `terminal.sendToActive` or `terminal.sendToSession` in your manifest `uses`.
+- `app.api`, `app.fetch` and `app.wsUrl` reach only your own routes, with a short token the shell renews.
+  The SDK hooks and the UI kit read core through the shell, which allows a fixed list: the user, their
+  permissions, hosts (with only your settings), credentials without secrets, your own settings, operations
+  and activity. Saved passwords are not available to a frame.
+- `invokeAction` runs your own actions and the ids in your manifest `uses`. Opening links, downloads,
+  the clipboard, toasts and confirms go through the shell. `localStorage` works and is kept per plugin.
+- Not available in a frame: host badges with a `component` (use `useDot`), host status indicators, host
+  editor toolbar items, `useShell`, and other plugins' components from `usePluginComponent`,
+  `useExtensions` or `useSlotContributions`. Layouts, themes and login screens are the shell itself: only
+  an official plugin with `ui:layout`, `ui:theme` or `auth:provide` runs in the page.
+- A popover or dropdown can't leave its frame. Keep menus in tabs and panels, not in small slots.
+
+Check that your activate works in a frame with `checkFrameApp` from `@termix-ssh/plugin-sdk/testing`:
+
+```ts
+import { checkFrameApp } from "@termix-ssh/plugin-sdk/testing";
+import manifest from "../../manifest.json";
+import * as plugin from "../../src/frontend";
+
+it("runs in a frame", async () => {
+  const { problems } = await checkFrameApp(plugin, { manifest });
+  expect(problems).toEqual([]);
+});
+```
+
+It returns a `FrameCheckResult` with each registration as the shell would get it and the `problems`
+found. `app.frame` is a `FrameInfo`.
 
 Slots you can fill include `terminal.toolbar`, `terminal.toolbarStatus`, `terminal.sidePanel`,
 `terminal.overlay`, `dashboard.counters`, `dashboard.hostMetrics`, `admin.userTabs`, `hosts.importMenu`,

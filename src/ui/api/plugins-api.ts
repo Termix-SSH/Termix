@@ -256,6 +256,8 @@ export interface PluginSummary {
   locales?: string[];
   /** Cache key for the theme CSS files; null without themes. */
   themeVersion?: string | null;
+  /** "frame": the UI runs in sandboxed frames. "page": inside the shell. */
+  frontendIsolation?: "frame" | "page";
   /** The app is drawn with this plugin by default; it cannot be uninstalled. */
   defaultLook?: boolean;
 

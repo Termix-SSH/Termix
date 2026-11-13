@@ -84,10 +84,17 @@ import { configureDirectHttps, getTlsConfig } from "../tls/tls-service.js";
 import { acmeChallengeHandler } from "../tls/acme-challenges.js";
 import { httpsPolicyMiddleware } from "../tls/https-policy.js";
 import {
+  pluginFrameCsp,
   readImportMapHash,
   securityHeadersMiddleware,
   setAppShellHeaders,
 } from "../http/security-headers.js";
+import {
+  findFrameRuntimeDir,
+  frameAncestors,
+  frameImportMapHash,
+} from "../http/frame-runtime.js";
+import { getRequestBaseUrl } from "../utils/request-origin.js";
 import { normalizeCookiesMiddleware } from "../auth/session-cookie.js";
 import { finalErrorHandler } from "../http/error-handler.js";
 import { registerEncryptionRoutes } from "./routes/encryption-routes.js";
@@ -1582,7 +1589,16 @@ app.use("/operations", operationsRoutes);
 app.use("/plugins", pluginRoutes);
 app.use(
   "/plugin-assets",
-  createPluginAssetsRouter((id) => getPluginRuntime().loader.get(id)),
+  createPluginAssetsRouter((id) => getPluginRuntime().loader.get(id), {
+    frameDir: findFrameRuntimeDir,
+    frameCsp: (req, pluginId) =>
+      pluginFrameCsp({
+        baseUrl: getRequestBaseUrl(req),
+        pluginId,
+        hash: frameImportMapHash(),
+        ancestors: frameAncestors(),
+      }),
+  }),
 );
 mountPluginApi(app);
 mountPluginLegacyPaths(app, () =>

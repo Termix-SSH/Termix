@@ -109,6 +109,7 @@ describe("describePluginFrontend", () => {
       assetVersion: null,
       locales: [],
       themeVersion: null,
+      frontendIsolation: "page",
     });
   });
 });

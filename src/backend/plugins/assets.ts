@@ -18,9 +18,13 @@ import {
   type PluginManifest,
 } from "@termix-ssh/plugin-sdk/manifest";
 import type { LoadedPlugin } from "./loader.js";
+import {
+  frontendIsolation,
+  type FrontendIsolation,
+} from "./frontend-isolation.js";
 
 type AssetPlugin = Pick<LoadedPlugin, "id" | "dir" | "manifest"> &
-  Partial<Pick<LoadedPlugin, "state">>;
+  Partial<Pick<LoadedPlugin, "state" | "source" | "signedTier">>;
 
 export interface PluginFrontendInfo {
   frontend: boolean;
@@ -31,6 +35,8 @@ export interface PluginFrontendInfo {
   locales: string[];
   /** Changes whenever a theme's CSS does, for its ?v= link. */
   themeVersion: string | null;
+  /** "frame": the UI runs in sandboxed frames. "page": inside the shell. */
+  frontendIsolation: FrontendIsolation;
 }
 
 /** Where a theme's CSS is served: /plugin-assets/<id>/_themes/<theme>.css. */
@@ -90,8 +96,10 @@ export function describePluginFrontend(
     assetVersion: null,
     locales: [],
     themeVersion: null,
+    frontendIsolation: "page",
   };
   if (!plugin) return none;
+  none.frontendIsolation = frontendIsolation(plugin);
 
   const themes = [...themeFiles(plugin).values()].filter(fileExists);
   const themeVersion =
@@ -137,6 +145,7 @@ export function describePluginFrontend(
     assetVersion,
     locales: locales.sort(),
     themeVersion,
+    frontendIsolation: none.frontendIsolation,
   };
 }
 
@@ -244,10 +253,49 @@ const CONTENT_TYPES: Record<string, string> = {
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".map": "application/json; charset=utf-8",
+  ".html": "text/html; charset=utf-8",
+  ".woff2": "font/woff2",
+  ".woff": "font/woff",
+  ".ttf": "font/ttf",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
 };
+
+/** Where every plugin's frame page is served: /plugin-assets/<id>/_frame/. */
+export const FRAME_ASSET_PREFIX = "_frame/";
+
+const FRAME_FILE = /^[A-Za-z0-9._/-]+\.(html|js|css|woff2|woff|ttf|svg|png)$/;
+
+/**
+ * Maps a path under _frame/ to a file of the built frame runtime, or null.
+ * The runtime is core's own build, the same for every plugin.
+ */
+export function resolveFrameAsset(
+  frameDir: string,
+  requestPath: string,
+): string | null {
+  const rest = requestPath.slice(FRAME_ASSET_PREFIX.length) || "frame.html";
+  if (!FRAME_FILE.test(rest) || rest.split("/").includes("..")) return null;
+  // The fonts are the UI build's own, beside the frame folder.
+  const root = rest.startsWith("fonts/")
+    ? path.join(path.dirname(frameDir), "fonts")
+    : frameDir;
+  const name = rest.startsWith("fonts/") ? rest.slice("fonts/".length) : rest;
+  const file = path.resolve(root, name);
+  if (!isInside(root, file) || !fileExists(file)) return null;
+  return file;
+}
+
+export interface PluginAssetsOptions {
+  /** Where the built frame runtime (dist/frame) is, when there is one. */
+  frameDir?: () => string | null;
+  /** The CSP for a plugin's frame page, built from the request. */
+  frameCsp?: (req: Request, pluginId: string) => string;
+}
 
 export function createPluginAssetsRouter(
   getPlugin: (id: string) => AssetPlugin | undefined,
+  options: PluginAssetsOptions = {},
 ): express.Router {
   const router = express.Router();
 
@@ -294,8 +342,19 @@ export function createPluginAssetsRouter(
       // A disabled or failed plugin serves nothing, so its bundle cannot be
       // loaded around the shell's own enabled check.
       const running = !!plugin && (!plugin.state || plugin.state === "active");
+      const framePath = params[1].startsWith(FRAME_ASSET_PREFIX);
+      const frameDir =
+        framePath && plugin && running && frontendIsolation(plugin) === "frame"
+          ? (options.frameDir?.() ?? null)
+          : null;
       const file =
-        plugin && running ? resolvePluginAsset(plugin, params[1]) : null;
+        !plugin || !running
+          ? null
+          : framePath
+            ? frameDir
+              ? resolveFrameAsset(frameDir, params[1])
+              : null
+            : resolvePluginAsset(plugin, params[1]);
 
       // Loaded as a module from Electron's file:// page and the Vite dev
       // server, so any origin may read it. No credentials are involved.
@@ -308,11 +367,21 @@ export function createPluginAssetsRouter(
         return;
       }
 
+      const page = framePath && path.extname(file) === ".html";
+      if (page && options.frameCsp) {
+        res.setHeader(
+          "Content-Security-Policy",
+          options.frameCsp(req, pluginId),
+        );
+      }
+      const hashed =
+        (framePath &&
+          !page &&
+          params[1].startsWith(`${FRAME_ASSET_PREFIX}assets/`)) ||
+        (typeof req.query.v === "string" && !!req.query.v);
       res.setHeader(
         "Cache-Control",
-        typeof req.query.v === "string" && req.query.v
-          ? "public, max-age=31536000, immutable"
-          : "no-cache",
+        hashed ? "public, max-age=31536000, immutable" : "no-cache",
       );
       res.type(CONTENT_TYPES[path.extname(file)] ?? "application/octet-stream");
       // Installed plugins unpack under .unpacked/, which send would refuse as a

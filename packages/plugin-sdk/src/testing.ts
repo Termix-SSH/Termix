@@ -2826,11 +2826,23 @@ export type FrontendPluginModule = {
   deactivate?: () => void | Promise<void>;
 };
 
+/** What checkFrameApp found. */
+export interface FrameCheckResult {
+  /** Each registration as the shell would get it: plain data only. */
+  registrations: { kind: string; data: unknown }[];
+  /** Things a frame can't carry. Empty when the plugin is fine. */
+  problems: string[];
+}
+
 interface PluginTestHost {
   renderPlugin: (
     plugin: FrontendPluginModule,
     options: RenderWithAppOptions,
   ) => Promise<RenderedPluginApp>;
+  checkFramePlugin: (
+    plugin: FrontendPluginModule,
+    options: { manifest: Record<string, unknown> },
+  ) => Promise<FrameCheckResult>;
 }
 
 const TEST_HOST = "@termix-ssh/plugin-host/testing";
@@ -2843,6 +2855,20 @@ export async function renderWithApp(
   // test runner resolves it through its alias.
   const host = (await import(/* @vite-ignore */ TEST_HOST)) as PluginTestHost;
   return host.renderPlugin(plugin, options);
+}
+
+/**
+ * Runs activate the way a plugin API 2 frontend runs in Termix: in a
+ * sandboxed frame that reports each registration to the shell as data.
+ * `problems` lists what would not reach the shell, like an icon that is not
+ * from lucide-react or a registration frames can't do.
+ */
+export async function checkFrameApp(
+  plugin: FrontendPluginModule,
+  options: { manifest: Record<string, unknown> },
+): Promise<FrameCheckResult> {
+  const host = (await import(/* @vite-ignore */ TEST_HOST)) as PluginTestHost;
+  return host.checkFramePlugin(plugin, options);
 }
 
 function assertOwnRegistryKey(pluginId: string, key: string): void {

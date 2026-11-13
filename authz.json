@@ -531,6 +531,17 @@
         "id": "=ssh-terminal"
       }
     },
+    "POST /plugins/:id/frame-token": {
+      "access": "user",
+      "params": {
+        "id": "=snippets"
+      },
+      "allowed": "any",
+      "expect": {
+        "key-ops-read": "refuse",
+        "key-ops-run": "refuse"
+      }
+    },
     "POST /plugins/:id/install": {
       "access": "admin",
       "destructive": true,

@@ -1190,7 +1190,23 @@ export interface TermixAppInfo {
  * disposer, and anything not disposed by hand is disposed when the plugin is
  * disabled.
  */
+/**
+ * Where this copy of a plugin API 2 frontend runs. Every frame of the plugin
+ * runs activate: one hidden background frame that keeps actions, palette
+ * groups, keybindings, badges and overlays, and one frame per view shown.
+ * Skip background work (polling, timers) when role is "view".
+ */
+export interface FrameInfo {
+  role: "background" | "view";
+  available: true;
+}
+
 export interface TermixApp extends TermixAppInfo {
+  /**
+   * Set when the frontend runs in a sandboxed frame (plugin API 2, Termix
+   * 26.11.2 and newer). Undefined when it runs in the page.
+   */
+  readonly frame?: FrameInfo;
   /**
    * True on anonymous guest pages (a shared-session link). Only plugins with
    * contributes.guest run there, and they should register just what a guest

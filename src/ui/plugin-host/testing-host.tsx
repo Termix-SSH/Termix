@@ -21,6 +21,8 @@ import type {
   ShellCall,
 } from "@termix-ssh/plugin-sdk/testing";
 import i18n from "@/i18n/i18n";
+import { createFrameApp } from "@/plugin-frame/frame-app";
+import { encode } from "@/plugin-frame/wire";
 import type { PluginSummary } from "@/api/plugins-api";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SurfaceScope } from "@/components/surface/surface-scope";
@@ -104,6 +106,61 @@ function wrap(element: ReactElement): HTMLElement {
       <SurfaceScope className="h-full">{element}</SurfaceScope>
     </ThemeProvider>,
   ).container;
+}
+
+/**
+ * Runs activate the way a sandboxed frame does and reports what the shell
+ * would get, so a plugin's own tests catch what a frame can't carry.
+ */
+export async function checkFramePlugin(
+  plugin: {
+    activate: (app: never) => unknown;
+    deactivate?: () => unknown;
+  },
+  options: { manifest: Record<string, unknown> },
+): Promise<{
+  registrations: { kind: string; data: unknown }[];
+  problems: string[];
+}> {
+  const manifest = options.manifest as unknown as PluginManifest;
+  const registrations: { kind: string; data: unknown }[] = [];
+  const problems: string[] = [];
+  const notInCheck = () => {
+    throw new Error("Not available while checking frame registrations");
+  };
+  const handle = createFrameApp({
+    pluginId: manifest.id,
+    role: "background",
+    manifest,
+    register: (_rid, kind, data) => {
+      try {
+        const wired = encode(data, { exportFn: () => ({ $fn: "fn" }) });
+        structuredClone(wired);
+        registrations.push({ kind, data: wired });
+      } catch (error) {
+        problems.push(
+          `${kind}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    },
+    unregister: () => {},
+    call: async () => undefined,
+    api: new Proxy({}, { get: notInCheck }) as never,
+    fetch: notInCheck as never,
+    wsUrl: notInCheck as never,
+    warn: (message) => problems.push(message),
+  });
+  try {
+    await plugin.activate(handle.app as never);
+  } catch (error) {
+    problems.push(error instanceof Error ? error.message : String(error));
+  }
+  try {
+    await plugin.deactivate?.();
+  } finally {
+    handle.dispose();
+  }
+  return { registrations, problems };
 }
 
 function missing(kind: string, id: string | number): never {

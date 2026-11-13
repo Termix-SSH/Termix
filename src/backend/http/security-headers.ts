@@ -69,6 +69,49 @@ export function desktopMetaCsp(hash: ScriptHash | null): string {
   return joinPolicy(appDirectives(hash, DESKTOP_LOCAL));
 }
 
+/** Where a plugin frame may load from and talk to. */
+export interface PluginFrameCspInput {
+  /** Server root as the browser sees it, like https://host/base. */
+  baseUrl: string;
+  pluginId: string;
+  /** Hash of the frame page's inline import map. */
+  hash: ScriptHash | null;
+  /** Pages allowed to embed the frame besides the server itself. */
+  ancestors?: string[];
+}
+
+/**
+ * CSP for the page a sandboxed plugin view runs in. Code, styles and fonts
+ * come only from that plugin's own asset folder, and requests go only to its
+ * own routes and sockets.
+ */
+export function pluginFrameCsp(input: PluginFrameCspInput): string {
+  const base = input.baseUrl.replace(/\/+$/, "");
+  const id = encodeURIComponent(input.pluginId);
+  const assets = `${base}/plugin-assets/${id}/`;
+  const api = `${base}/plugin-api/${id}/`;
+  const ws = `${base.replace(/^http/, "ws")}/plugin-ws/${id}/`;
+  const origin = new URL(base).origin;
+  return joinPolicy([
+    ["default-src", ["'none'"]],
+    [
+      "script-src",
+      [assets, "'wasm-unsafe-eval'", ...(input.hash ? [input.hash] : [])],
+    ],
+    ["style-src", [assets, "'unsafe-inline'"]],
+    ["font-src", [assets, "data:"]],
+    ["img-src", [assets, "data:", "blob:", "http:", "https:"]],
+    ["media-src", ["data:", "blob:", "http:", "https:"]],
+    ["connect-src", [assets, api, ws]],
+    ["worker-src", ["blob:"]],
+    ["frame-src", ["http:", "https:"]],
+    ["object-src", ["'none'"]],
+    ["base-uri", ["'none'"]],
+    ["form-action", ["'none'"]],
+    ["frame-ancestors", [origin, ...(input.ancestors ?? [])]],
+  ]);
+}
+
 /** CSP for core JSON routes: nothing may load or frame them. */
 export const API_CSP = "default-src 'none'; frame-ancestors 'none'";
 
@@ -107,12 +150,13 @@ export function importMapHashFromHtml(html: string): ScriptHash | null {
 }
 
 /** Reads the import map hash of the frontend build in dir, if there is one. */
-export function readImportMapHash(dir: string | undefined): ScriptHash | null {
+export function readImportMapHash(
+  dir: string | undefined,
+  file = "index.html",
+): ScriptHash | null {
   if (!dir) return null;
   try {
-    return importMapHashFromHtml(
-      fs.readFileSync(path.join(dir, "index.html"), "utf8"),
-    );
+    return importMapHashFromHtml(fs.readFileSync(path.join(dir, file), "utf8"));
   } catch {
     return null;
   }

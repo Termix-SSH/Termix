@@ -265,6 +265,69 @@ export async function listPreLoginPlugins(): Promise<
  *       200:
  *         description: List of plugins.
  */
+/**
+ * @openapi
+ * /plugins/{id}/frame-token:
+ *   post:
+ *     summary: Get a short token for a plugin's sandboxed frames
+ *     description: >
+ *       The shell asks for one on behalf of a plugin whose UI runs in sandboxed
+ *       frames. The token opens only that plugin's own /plugin-api and
+ *       /plugin-ws routes, ends with the session and lasts a few minutes.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: The token and how many seconds it lasts.
+ *       401:
+ *         description: Not signed in with a session.
+ *       404:
+ *         description: No such running plugin with framed views.
+ */
+router.post(
+  "/:id/frame-token",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const authReq = req as AuthenticatedRequest & { apiKeyId?: string };
+    const pluginId = String(req.params.id);
+    // Frames belong to a signed-in page, never to an API key.
+    if (!authReq.sessionId || authReq.apiKeyId) {
+      res.status(401).json({ error: "A login session is required" });
+      return;
+    }
+    const plugin = getPluginRuntime().loader.get(pluginId);
+    if (
+      !plugin ||
+      plugin.state !== "active" ||
+      describePluginFrontend(plugin).frontendIsolation !== "frame"
+    ) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    try {
+      const { token, expiresIn } = await authManager.issuePluginFrameToken(
+        authReq.userId as string,
+        authReq.sessionId,
+        pluginId,
+      );
+      res.setHeader("Cache-Control", "no-store");
+      res.json({ token, expiresIn });
+    } catch (error) {
+      databaseLogger.error("Failed to issue a plugin frame token", error, {
+        operation: "plugin_frame_token",
+        pluginId,
+      });
+      res.status(500).json({ error: "Could not issue a token" });
+    }
+  },
+);
+
 router.get("/", authenticateJWT, async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthenticatedRequest).userId as string;

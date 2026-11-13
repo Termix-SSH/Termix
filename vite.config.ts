@@ -24,6 +24,26 @@ const apiProxy = Object.fromEntries(
       ws: true,
       rewrite: (requestPath: string) =>
         requestPath.replace(new RegExp(`^/__termix_api/${port}`), ""),
+      // A plugin frame's CSP names the address the browser used, which the
+      // backend can't see behind this proxy.
+      configure: (proxy: {
+        on: (
+          event: "proxyReq",
+          handler: (
+            proxyReq: { setHeader: (name: string, value: string) => void },
+            req: { url?: string; headers: Record<string, unknown> },
+          ) => void,
+        ) => void;
+      }) => {
+        proxy.on("proxyReq", (proxyReq, req) => {
+          if (!req.url?.includes("/plugin-assets/")) return;
+          const host = req.headers.host;
+          if (typeof host === "string") {
+            proxyReq.setHeader("X-Forwarded-Host", host);
+          }
+          proxyReq.setHeader("X-Forwarded-Prefix", `/__termix_api/${port}`);
+        });
+      },
     },
   ]),
 );

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.1.0
+
+Plugin API 2.1.0. A plugin API 2 frontend now runs in sandboxed frames. See "Frames" in PLUGIN-GUIDE.md.
+
+### Added
+
+- `app.frame` says whether the frontend runs in a frame and which one: the background frame or a view
+- `checkFrameApp` in `/testing` runs activate the way a frame does and lists what the shell would not get
+
 ## 2.0.0
 
 Plugin API 2.0.0. Every plugin backend now runs in its own process. See "The plugin process" and "Moving from API 1" in PLUGIN-GUIDE.md.

@@ -46,8 +46,14 @@ interface JWTPayload {
   userId: string;
   sessionId?: string;
   pendingTOTP?: boolean;
-  /** Set on a short-lived socket ticket, which only a socket upgrade takes. */
-  purpose?: "ws";
+  /**
+   * Set on a short-lived token with one use: "ws" is a socket ticket, which
+   * only a socket upgrade takes, and "plugin-frame" works only on the routes
+   * and sockets of the plugin named in pluginId.
+   */
+  purpose?: "ws" | "plugin-frame";
+  /** The plugin a "plugin-frame" token is for. */
+  pluginId?: string;
   /**
    * A plugin minted the session. Read from the session row on verify, never
    * from the token, so a refreshed token stays marked.
@@ -78,6 +84,8 @@ interface AuthenticatedRequest extends Request {
   dataKey?: Buffer;
   actingAdminUserId?: string;
   sessionRestriction?: string | null;
+  /** Authenticated with a plugin frame token. */
+  frameToken?: boolean;
 }
 
 interface RequestWithHeaders extends Request {
@@ -115,6 +123,9 @@ const ADMIN_TARGET_USER_HEADER = "x-admin-target-user";
 // Everything else (TOTP, sessions, ...) rejects the header, and so does every
 // plugin route unless its manifest sets contributes.http.adminImpersonation.
 const IMPERSONATION_PATH_ALLOWLIST = [/^\/host\/db\//, /^\/credentials(\/|$)/];
+
+/** How long a plugin frame token lives. Frames ask for a new one before. */
+export const PLUGIN_FRAME_TOKEN_SECONDS = 300;
 
 const PLUGIN_API_PATH = /^\/plugin-api\/([a-z][a-z0-9-]*)(\/|$)/;
 
@@ -485,6 +496,27 @@ class AuthManager {
   }
 
   /**
+   * A short token for one plugin's sandboxed frames. It opens that plugin's
+   * own routes and sockets and nothing else, and dies with the session.
+   */
+  async issuePluginFrameToken(
+    userId: string,
+    sessionId: string,
+    pluginId: string,
+  ): Promise<{ token: string; expiresIn: number }> {
+    const payload: JWTPayload = {
+      userId,
+      sessionId,
+      purpose: "plugin-frame",
+      pluginId,
+    };
+    const token = jwt.sign(payload, await this.systemCrypto.getJWTSecret(), {
+      expiresIn: PLUGIN_FRAME_TOKEN_SECONDS,
+    } as jwt.SignOptions);
+    return { token, expiresIn: PLUGIN_FRAME_TOKEN_SECONDS };
+  }
+
+  /**
    * A one minute socket ticket for an API key. The key has no login session,
    * so a two minute session a plugin could have minted carries the ticket. It
    * can open plugin sockets and call nothing else.
@@ -536,7 +568,7 @@ class AuthManager {
 
   async verifyJWTToken(
     token: string,
-    options: { allowSocketTicket?: boolean } = {},
+    options: { allowSocketTicket?: boolean; framePluginId?: string } = {},
   ): Promise<JWTPayload | null> {
     try {
       const jwtSecret = await this.systemCrypto.getJWTSecret();
@@ -544,8 +576,16 @@ class AuthManager {
       const payload = jwt.verify(token, jwtSecret) as JWTPayload;
       if (
         payload.purpose !== undefined &&
-        !(payload.purpose === "ws" && options.allowSocketTicket)
+        !(payload.purpose === "ws" && options.allowSocketTicket) &&
+        !(
+          payload.purpose === "plugin-frame" &&
+          !!options.framePluginId &&
+          payload.pluginId === options.framePluginId
+        )
       ) {
+        return null;
+      }
+      if (payload.purpose === "plugin-frame" && !payload.sessionId) {
         return null;
       }
 
@@ -926,7 +966,11 @@ class AuthManager {
     }
   }
 
-  createAuthMiddleware() {
+  /**
+   * framePluginId: the plugin whose routes this guards, so that plugin's
+   * frame tokens are taken. Every other route refuses them.
+   */
+  createAuthMiddleware(options: { framePluginId?: string } = {}) {
     return async (req: Request, res: Response, next: NextFunction) => {
       const authReq = req as AuthenticatedRequest;
       const { token, refused } = requestToken(authReq);
@@ -942,7 +986,9 @@ class AuthManager {
         return this.handleApiKeyAuth(authReq, res, next, token);
       }
 
-      const payload = await this.verifyJWTToken(token);
+      const payload = await this.verifyJWTToken(token, {
+        framePluginId: options.framePluginId,
+      });
 
       if (!payload) {
         return clearAuthCookie(req, res, "jwt", this.getClearCookieOptions(req))
@@ -1033,8 +1079,13 @@ class AuthManager {
       authReq.sessionId = payload.sessionId;
       authReq.pendingTOTP = payload.pendingTOTP;
       authReq.sessionRestriction = payload.restriction ?? null;
+      authReq.frameToken = payload.purpose === "plugin-frame";
 
       if (authReq.headers[ADMIN_TARGET_USER_HEADER]) {
+        // A frame acts only as the user who opened it.
+        if (authReq.frameToken) {
+          return res.status(403).json({ error: "Not allowed" });
+        }
         const handled = await this.applyAdminImpersonation(
           authReq,
           res,

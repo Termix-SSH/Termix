@@ -1,0 +1,42 @@
+// Where a plugin's browser code runs. API 2 plugins run in sandboxed frames
+// with an opaque origin; API 1 plugins still load into the page until they
+// move to API 2. Layouts, themes and login screens are the shell itself, so an
+// official API 2 plugin that provides them keeps running in the page.
+
+import {
+  isLegacyPluginApi,
+  type PluginManifest,
+} from "@termix-ssh/plugin-sdk/manifest";
+import { isOfficialPlugin } from "./isolation.js";
+
+export type FrontendIsolation = "frame" | "page";
+
+/** Capabilities whose UI is part of the shell rather than inside it. */
+export const SHELL_PART_CAPABILITIES = [
+  "ui:layout",
+  "ui:theme",
+  "auth:provide",
+];
+
+export function frontendIsolation(plugin: {
+  manifest: Pick<PluginManifest, "engine" | "capabilities">;
+  source?: string;
+  signedTier?: string;
+}): FrontendIsolation {
+  if (isLegacyPluginApi(String(plugin.manifest.engine?.api ?? ""))) {
+    return "page";
+  }
+  const shellPart = (plugin.manifest.capabilities ?? []).some((capability) =>
+    SHELL_PART_CAPABILITIES.includes(capability),
+  );
+  if (
+    shellPart &&
+    isOfficialPlugin({
+      source: plugin.source ?? "",
+      signedTier: plugin.signedTier,
+    })
+  ) {
+    return "page";
+  }
+  return "frame";
+}

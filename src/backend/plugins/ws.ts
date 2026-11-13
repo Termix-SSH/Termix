@@ -122,6 +122,7 @@ interface SocketCaller {
  */
 async function verifyToken(
   request: IncomingMessage,
+  framePluginId?: string,
 ): Promise<SocketCaller | null> {
   const token = extractWebSocketToken(request);
   if (!token) return null;
@@ -129,6 +130,7 @@ async function verifyToken(
     const { AuthManager } = await import("../utils/auth-manager.js");
     const payload = await AuthManager.getInstance().verifyJWTToken(token, {
       allowSocketTicket: true,
+      framePluginId,
     });
     if (!payload?.userId || !payload.sessionId) return null;
     const path = (request.url ?? "").split("?")[0];
@@ -203,7 +205,11 @@ async function handlePluginUpgrade(
 
   // A public socket that came with a login is still tied to it, so it ends
   // with that login. Only optionalAuth hands the user to the handler.
-  const caller = await verifyToken(request);
+  // A plugin's own frames may open its sockets, never core's.
+  const caller = await verifyToken(
+    request,
+    route.core ? undefined : route.pluginId,
+  );
   if (!route.options.public && !caller) {
     reject(socket, 401, "Unauthorized");
     return true;

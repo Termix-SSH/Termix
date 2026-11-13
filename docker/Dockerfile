@@ -111,7 +111,10 @@ ARG OPKSSH_VERSION=v0.19.2
 ARG OPKSSH_SHA256_AMD64=e799b780d5477e8d986a2e6784773ebb2451d860dd842d23e271baf88aee2da3
 ARG OPKSSH_SHA256_ARM64=4f31e47addec3b0beebef7d5d99d11e2d459b9a8e5298077879b2df34d13aedf
 
+# TERMIX_FRAME_DIR: the page plugin views run in, served by Node from the UI
+# build nginx also serves, so it is not copied twice.
 ENV DATA_DIR=/app/data \
+    TERMIX_FRAME_DIR=/app/html/frame \
     OPKSSH_BUNDLED_DIR=/app/opkssh-bundled \
     OPKSSH_VERSION=$OPKSSH_VERSION \
     OPKSSH_SHA256_AMD64=$OPKSSH_SHA256_AMD64 \

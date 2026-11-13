@@ -8,6 +8,7 @@ import { SafeModeNotice } from "@/shell/SafeModeNotice";
 import { TabPortals } from "@/shell/stage/TabPortals";
 import { LayoutHost } from "@/shell/layout/LayoutHost";
 import { ShellControllerProvider } from "@/shell/controller/ShellControllerProvider";
+import { FrameStateSync } from "@/plugin-host/frames/FrameStateSync";
 
 /**
  * The signed-in app: the shell's state, the chosen layout, every tab's
@@ -23,6 +24,7 @@ export function ShellRoot({
   return (
     <ServerStatusProvider isAuthenticated={!!username}>
       <ShellControllerProvider username={username} onLogout={onLogout}>
+        <FrameStateSync />
         <LayoutHost />
         <TabPortals />
         <ComponentSlot slotId="shell.overlay" />

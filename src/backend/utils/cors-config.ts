@@ -26,11 +26,26 @@ export function isDesktopAppOrigin(origin: string | undefined): boolean {
   return DEV_ORIGINS.includes(origin) || origin === DESKTOP_APP_ORIGIN;
 }
 
+/**
+ * Plugin frames run sandboxed, so their requests carry Origin: null. They
+ * reach only plugin routes and assets, with a frame token and no cookies.
+ */
+const FRAME_PATHS = ["/plugin-api/", "/plugin-assets/"];
+
+export function isPluginFrameRequest(
+  req: Request,
+  origin: string | undefined,
+): boolean {
+  const path = req.path || req.url || "";
+  return origin === "null" && FRAME_PATHS.some((p) => path.startsWith(p));
+}
+
 export function isCorsOriginAllowed(
   req: Request,
   origin: string | undefined,
 ): boolean {
   if (isDesktopAppOrigin(origin)) return true;
+  if (isPluginFrameRequest(req, origin)) return true;
 
   const configured = getAllowedOrigins();
   if (process.env.ELECTRON_EMBEDDED === "true") {
@@ -53,6 +68,7 @@ export function isCorsCredentialedOrigin(
   req: Request,
   origin: string | undefined,
 ): boolean {
+  if (origin === "null") return false;
   if (isDesktopAppOrigin(origin)) return true;
   if (getAllowedOrigins().includes(origin as string)) return true;
   if (

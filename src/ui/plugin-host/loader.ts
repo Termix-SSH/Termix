@@ -23,6 +23,8 @@ import {
 } from "@/look/look-store";
 import { BUILTIN_THEMES, setPluginThemes } from "@/look/theme-registry";
 import { setPluginLayouts } from "@/look/layout-registry";
+import { startFramedPlugin } from "./frames/frame-plugins";
+import { dropFrameToken } from "./frames/frame-token";
 
 /**
  * Loads plugin frontends into the running shell.
@@ -249,6 +251,10 @@ async function activate(summary: PluginSummary): Promise<void> {
 
   let cssLink: HTMLLinkElement | null = null;
   let handle: PluginAppHandle | null = null;
+  if (summary.frontendIsolation === "frame") {
+    await activateFramed(summary);
+    return;
+  }
   try {
     const module = await loader.importFrontend(summary);
     if (typeof module?.activate !== "function") {
@@ -282,6 +288,37 @@ async function activate(summary: PluginSummary): Promise<void> {
     // called: it never finished starting.
     handle?.dispose();
     cssLink?.remove();
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[plugins] ${summary.id} failed to start`, error);
+    failedVersions.set(summary.id, summary.assetVersion ?? null);
+    setFrontendState(summary.id, "failed", message);
+  }
+}
+
+/**
+ * A plugin whose UI runs in sandboxed frames: nothing is imported into the
+ * page. Its background frame runs activate and reports what it registered.
+ */
+async function activateFramed(summary: PluginSummary): Promise<void> {
+  try {
+    if (guestMode) {
+      throw new Error("plugin views in frames need a signed-in user");
+    }
+    const framed = await withTimeout(
+      startFramedPlugin(summary),
+      ACTIVATE_TIMEOUT_MS + 5_000,
+      `activate() did not finish within ${ACTIVATE_TIMEOUT_MS / 1000}s`,
+    );
+    active.set(summary.id, {
+      id: summary.id,
+      assetVersion: summary.assetVersion ?? null,
+      handle: { app: framed.handle.app, dispose: framed.dispose },
+      module: { activate: () => {} },
+      cssLink: null,
+    });
+    failedVersions.delete(summary.id);
+    setFrontendState(summary.id, "active");
+  } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[plugins] ${summary.id} failed to start`, error);
     failedVersions.set(summary.id, summary.assetVersion ?? null);
@@ -643,6 +680,7 @@ export function stopPluginRuntime(): Promise<void> {
   }
   return enqueue(async () => {
     for (const id of [...active.keys()].reverse()) await deactivate(id);
+    dropFrameToken();
   });
 }
 

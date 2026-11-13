@@ -294,13 +294,21 @@ async function restartBackend(reason) {
 }
 
 async function startVite() {
-  const { createServer } = await import("vite");
+  const { build, createServer } = await import("vite");
   vite = await createServer({
     root,
     configFile: path.join(root, "vite.config.ts"),
   });
   await vite.listen();
   vite.printUrls();
+  // Plugins with sandboxed views load this page from the backend, so it is
+  // built (and rebuilt on change) into dist/frame rather than served by Vite.
+  void build({
+    root,
+    configFile: path.join(root, "vite.frame.config.ts"),
+    logLevel: "warn",
+    build: { watch: {} },
+  }).catch((error) => warn(`frame page build failed: ${error.message}`));
 }
 
 // The packaged app forks the backend from Electron's main process, and they

@@ -1,0 +1,25 @@
+@import "../index.css";
+
+html,
+body {
+  margin: 0;
+}
+
+/* Cards, rows and overlays show through to the shell behind them. */
+html[data-frame-fit="content"],
+html[data-frame-fit="content"] body,
+html[data-frame-bg="none"],
+html[data-frame-bg="none"] body {
+  background: transparent;
+}
+
+html[data-frame-fit="fill"],
+html[data-frame-fit="fill"] body,
+html[data-frame-fit="fill"] #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+html[data-frame-fit="content"] body {
+  overflow: hidden;
+}

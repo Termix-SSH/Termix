@@ -35,6 +35,9 @@ const state = vi.hoisted(() => ({
   managers: new Set<string>(["admin-1"]),
   // Plugins the loader reports as running.
   active: new Set<string>(),
+  // Running plugins on plugin API 2, whose UI runs in frames.
+  framed: new Set<string>(),
+  frameTokens: [] as Array<[string, string, string]>,
 }));
 
 vi.mock("../../../upgrade/boot-migrations.js", () => ({
@@ -71,8 +74,18 @@ vi.mock("../../../utils/auth-manager.js", () => ({
           next: () => void,
         ) => {
           req.userId = req.headers["x-test-user-id"] ?? "admin-1";
+          req.sessionId = req.headers["x-test-session-id"];
+          req.apiKeyId = req.headers["x-test-api-key-id"];
           next();
         },
+      issuePluginFrameToken: async (
+        userId: string,
+        sessionId: string,
+        pluginId: string,
+      ) => {
+        state.frameTokens.push([userId, sessionId, pluginId]);
+        return { token: `frame:${pluginId}`, expiresIn: 300 };
+      },
     }),
   },
 }));
@@ -113,7 +126,15 @@ vi.mock("../../../plugins/index.js", () => ({
               id,
               state: "active",
               dir: "/nonexistent/plugin",
-              manifest: { id, locales: "locales" },
+              manifest: {
+                id,
+                locales: "locales",
+                engine: {
+                  termix: ">=26.11.2-0",
+                  api: state.framed.has(id) ? "^2.0.0" : "^1.15.0",
+                },
+                capabilities: [],
+              },
             }
           : undefined,
     },
@@ -250,6 +271,8 @@ describe("plugins route", () => {
     state.grants = [];
     state.managers = new Set(["admin-1"]);
     state.active = new Set();
+    state.framed = new Set();
+    state.frameTokens = [];
 
     const app = express();
     app.use(express.json());
@@ -264,6 +287,57 @@ describe("plugins route", () => {
   afterEach(async () => {
     await new Promise<void>((resolve) => server?.close(() => resolve()));
     server = null;
+  });
+
+  describe("POST /plugins/:id/frame-token", () => {
+    const mint = (id: string, headers: Record<string, string>) =>
+      fetch(`${baseUrl}/plugins/${id}/frame-token`, {
+        method: "POST",
+        headers,
+      });
+
+    it("gives a signed-in page a token for a running framed plugin", async () => {
+      state.active.add("framed");
+      state.framed.add("framed");
+      const res = await mint("framed", {
+        "x-test-user-id": "user-1",
+        "x-test-session-id": "s-1",
+      });
+      expect(res.status).toBe(200);
+      expect(res.headers.get("cache-control")).toBe("no-store");
+      expect(await res.json()).toEqual({
+        token: "frame:framed",
+        expiresIn: 300,
+      });
+      expect(state.frameTokens).toEqual([["user-1", "s-1", "framed"]]);
+    });
+
+    it("refuses an API key and a call without a session", async () => {
+      state.active.add("framed");
+      state.framed.add("framed");
+      const key = await mint("framed", {
+        "x-test-user-id": "user-1",
+        "x-test-session-id": "s-1",
+        "x-test-api-key-id": "key-1",
+      });
+      expect(key.status).toBe(401);
+      const none = await mint("framed", { "x-test-user-id": "user-1" });
+      expect(none.status).toBe(401);
+      expect(state.frameTokens).toEqual([]);
+    });
+
+    it("has no token for a plugin that is stopped, missing or in the page", async () => {
+      state.framed.add("stopped");
+      state.active.add("legacy");
+      for (const id of ["stopped", "legacy", "nobody"]) {
+        const res = await mint(id, {
+          "x-test-user-id": "user-1",
+          "x-test-session-id": "s-1",
+        });
+        expect(res.status, id).toBe(404);
+      }
+      expect(state.frameTokens).toEqual([]);
+    });
   });
 
   describe("GET /plugins/public", () => {
@@ -429,6 +503,7 @@ describe("plugins route", () => {
             "dependencies",
             "enabled",
             "frontend",
+            "frontendIsolation",
             "id",
             "locales",
             "name",
@@ -682,6 +757,7 @@ describe("plugins route", () => {
         assetVersion: null,
         locales: [],
         themeVersion: null,
+        frontendIsolation: "page",
       });
     });
 

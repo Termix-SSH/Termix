@@ -257,6 +257,131 @@ describe("AuthManager token handling", () => {
   });
 });
 
+describe("plugin frame tokens", () => {
+  const middlewareCall = async (
+    middleware: ReturnType<typeof authManager.createAuthMiddleware>,
+    token: string,
+    headers: Record<string, string> = {},
+  ) => {
+    const res = {
+      statusCode: 200,
+      status(code: number) {
+        res.statusCode = code;
+        return res;
+      },
+      json() {
+        return res;
+      },
+      clearCookie() {
+        return res;
+      },
+    };
+    const next = vi.fn();
+    const req = {
+      cookies: {},
+      headers: { authorization: `Bearer ${token}`, ...headers },
+      method: "GET",
+      originalUrl: "/plugin-api/docker/x",
+      url: "/plugin-api/docker/x",
+    } as Record<string, unknown>;
+    await middleware(req as never, res as never, next);
+    return { res, next, req };
+  };
+
+  it("issues a five minute token bound to one plugin and the session", async () => {
+    const { token, expiresIn } = await authManager.issuePluginFrameToken(
+      "user-1",
+      "s1",
+      "docker",
+    );
+    const payload = jwt.decode(token) as Record<string, number | string>;
+    expect(payload).toMatchObject({
+      userId: "user-1",
+      sessionId: "s1",
+      purpose: "plugin-frame",
+      pluginId: "docker",
+    });
+    expect(Number(payload.exp) - Number(payload.iat)).toBe(300);
+    expect(expiresIn).toBe(300);
+  });
+
+  it("is refused by core routes, sockets in general and other plugins", async () => {
+    const { token } = await authManager.issuePluginFrameToken(
+      "user-1",
+      "s1",
+      "docker",
+    );
+    expect(await authManager.verifyJWTToken(token)).toBeNull();
+    expect(
+      await authManager.verifyJWTToken(token, { allowSocketTicket: true }),
+    ).toBeNull();
+    expect(
+      await authManager.verifyJWTToken(token, { framePluginId: "snippets" }),
+    ).toBeNull();
+    expect(
+      await authManager.verifyJWTToken(token, { framePluginId: "docker" }),
+    ).toMatchObject({ userId: "user-1", pluginId: "docker" });
+
+    const core = await middlewareCall(
+      authManager.createAuthMiddleware(),
+      token,
+    );
+    expect(core.res.statusCode).toBe(401);
+    expect(core.next).not.toHaveBeenCalled();
+
+    const other = await middlewareCall(
+      authManager.createAuthMiddleware({ framePluginId: "snippets" }),
+      token,
+    );
+    expect(other.res.statusCode).toBe(401);
+
+    const own = await middlewareCall(
+      authManager.createAuthMiddleware({ framePluginId: "docker" }),
+      token,
+    );
+    expect(own.next).toHaveBeenCalled();
+    expect(own.req.userId).toBe("user-1");
+    expect(own.req.frameToken).toBe(true);
+  });
+
+  it("dies with its session", async () => {
+    const { token } = await authManager.issuePluginFrameToken(
+      "user-1",
+      "expired",
+      "docker",
+    );
+    expect(
+      await authManager.verifyJWTToken(token, { framePluginId: "docker" }),
+    ).toBeNull();
+  });
+
+  it("refuses a frame token signed without a session", async () => {
+    const token = jwt.sign(
+      { userId: "user-1", purpose: "plugin-frame", pluginId: "docker" },
+      jwtSecret,
+      { expiresIn: 300 },
+    );
+    expect(
+      await authManager.verifyJWTToken(token, { framePluginId: "docker" }),
+    ).toBeNull();
+  });
+
+  it("never lets a frame act as another user", async () => {
+    const { token } = await authManager.issuePluginFrameToken(
+      "user-1",
+      "s1",
+      "docker",
+    );
+    const call = await middlewareCall(
+      authManager.createAuthMiddleware({ framePluginId: "docker" }),
+      token,
+      { "x-admin-target-user": "user-2" },
+    );
+    expect(call.res.statusCode).toBe(403);
+    expect(call.next).not.toHaveBeenCalled();
+  });
+});
+
 describe("login policy on sessions", () => {
   const sign = (sessionId: string) =>
     jwt.sign({ userId: "user-1", sessionId }, jwtSecret, { expiresIn: "1h" });

@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { Request } from "express";
 import {
   createCorsMiddleware,
+  isCorsCredentialedOrigin,
   isCorsOriginAllowed,
   isDesktopAppOrigin,
+  isPluginFrameRequest,
 } from "../../utils/cors-config.js";
 
 function request(headers: Record<string, string> = {}): Request {
@@ -16,6 +18,44 @@ function request(headers: Record<string, string> = {}): Request {
 afterEach(() => {
   delete process.env.CORS_ALLOWED_ORIGINS;
   delete process.env.ELECTRON_EMBEDDED;
+});
+
+describe("plugin frames (Origin: null)", () => {
+  const at = (path: string, headers: Record<string, string> = {}) =>
+    ({ headers, protocol: "http", path, url: path }) as unknown as Request;
+
+  it("lets a frame reach plugin routes and assets, without cookies", () => {
+    for (const path of ["/plugin-api/docker/x", "/plugin-assets/docker/a.js"]) {
+      const req = at(path, { host: "termix.example" });
+      expect(isPluginFrameRequest(req, "null"), path).toBe(true);
+      expect(isCorsOriginAllowed(req, "null"), path).toBe(true);
+      expect(isCorsCredentialedOrigin(req, "null"), path).toBe(false);
+    }
+  });
+
+  it("keeps an opaque origin away from core routes", () => {
+    process.env.CORS_ALLOWED_ORIGINS = "https://portal.example";
+    const req = at("/users/me", { host: "termix.example" });
+    expect(isPluginFrameRequest(req, "null")).toBe(false);
+    expect(isCorsOriginAllowed(req, "null")).toBe(false);
+    expect(isCorsCredentialedOrigin(req, "null")).toBe(false);
+  });
+
+  it("lets frames reach the desktop app's embedded backend", () => {
+    process.env.ELECTRON_EMBEDDED = "true";
+    expect(
+      isCorsOriginAllowed(
+        at("/plugin-api/docker/x", { host: "127.0.0.1:30001" }),
+        "null",
+      ),
+    ).toBe(true);
+    expect(
+      isCorsOriginAllowed(
+        at("/host/db/host", { host: "127.0.0.1:30001" }),
+        "null",
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("isCorsOriginAllowed", () => {
