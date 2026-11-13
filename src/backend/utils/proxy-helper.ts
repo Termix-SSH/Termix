@@ -29,6 +29,11 @@ async function resolveChecked(host: string): Promise<string> {
   return answers[0].address;
 }
 
+/** The socks client takes 4 or 5; the host editor stores "socks4" or "socks5". */
+function socksVersion(type: ProxyNode["type"] | undefined): 4 | 5 {
+  return type === 4 || type === "socks4" ? 4 : 5;
+}
+
 export interface SOCKS5Config {
   useSocks5?: boolean;
   socks5Host?: string;
@@ -216,7 +221,7 @@ async function createPureSocksChainConnection(
       proxies: proxyChain.map((p) => ({
         host: p.host,
         port: p.port,
-        type: p.type as 4 | 5,
+        type: socksVersion(p.type),
         userId: p.username,
         password: p.password,
         timeout: 10000,
@@ -270,7 +275,7 @@ async function createHopByHopConnection(
           proxy: {
             host: node.host,
             port: node.port,
-            type: node.type as 4 | 5,
+            type: socksVersion(node.type),
             userId: node.username,
             password: node.password,
           },
@@ -361,7 +366,7 @@ export async function testProxyConnectivity(options: {
           proxy: {
             host: proxy.host,
             port: proxy.port,
-            type: (proxy.type as 4 | 5) || 5,
+            type: socksVersion(proxy.type),
             userId: proxy.username,
             password: proxy.password,
           },

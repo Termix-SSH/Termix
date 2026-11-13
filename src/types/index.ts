@@ -146,10 +146,8 @@ export interface ProxyNode {
   host: string;
   port: number;
   /**
-   * The host editor writes "socks4"/"socks5"/"http", while proxy-helper.ts
-   * tests for "http" and casts everything else to 4|5 before handing it to the
-   * socks client. The two spellings have never agreed; typed as the union of
-   * what is actually stored rather than pretending one side is right.
+   * The host editor writes "socks4"/"socks5"/"http"; older rows may hold 4 or 5.
+   * proxy-helper.ts turns them into the numbers the socks client takes.
    */
   type: 4 | 5 | "http" | "socks4" | "socks5";
   username?: string;
