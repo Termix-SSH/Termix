@@ -1127,6 +1127,32 @@ describe("plugins route", () => {
       expect((await patch({ channel: "nightly" })).status).toBe(400);
     });
 
+    it("passes the run without isolation switch on and refuses a non boolean", async () => {
+      manageMock.setPluginOptions.mockResolvedValue({
+        autoUpdate: false,
+        pinnedVersion: null,
+        channel: "stable",
+        runUnisolated: true,
+      });
+      const patch = (body: unknown) =>
+        fetch(`${baseUrl}/plugins/docker/options`, {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json",
+            "x-test-user-id": "admin-1",
+          },
+          body: JSON.stringify(body),
+        });
+      const res = await patch({ runUnisolated: true });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ runUnisolated: true });
+      expect(manageMock.setPluginOptions).toHaveBeenLastCalledWith(
+        "docker",
+        expect.objectContaining({ runUnisolated: true }),
+      );
+      expect((await patch({ runUnisolated: "yes" })).status).toBe(400);
+    });
+
     it("rejects a bad id or version before touching anything", async () => {
       expect((await post("/plugins/..%2Fx/install")).status).toBe(400);
       expect(

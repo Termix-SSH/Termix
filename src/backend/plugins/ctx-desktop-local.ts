@@ -15,6 +15,7 @@ import type { DisposableBag } from "./disposables.js";
 import * as localFs from "./desktop-local/local-fs.js";
 import { remoteJson, requestHeaders } from "../sync/client/http.js";
 import { spawnLocalPty } from "./desktop-local/local-pty.js";
+import { answeredSync } from "./api1-sync.js";
 
 type AuditFn = (
   action: string,
@@ -64,8 +65,9 @@ export function createPluginDesktopLocal(deps: Deps): PluginDesktopLocal {
   };
 
   return {
-    available: () =>
-      isEmbedded() && manifest.capabilities.includes("desktop:local"),
+    available: answeredSync<PluginDesktopLocal["available"]>(
+      () => isEmbedded() && manifest.capabilities.includes("desktop:local"),
+    ),
 
     pluginFetch: async (origin, subPath, init) => {
       await guard("desktop_local_fetch", "called its own routes");

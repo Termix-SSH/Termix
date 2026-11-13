@@ -134,6 +134,9 @@ function PluginsTabBody() {
   );
 
   const installed = manager.plugins.filter((p) => p.installed);
+  const unisolated = installed.filter(
+    (p) => p.isolation === "unisolated" && p.enabled,
+  );
   const available = manager.plugins.filter((p) => p.inRegistry);
   const updates = installed.filter((p) => p.updateAvailable);
   const running = installed.filter((p) => p.status === "running").length;
@@ -201,6 +204,14 @@ function PluginsTabBody() {
         <div className="flex min-h-0 flex-1 flex-col">
           {manager.managedByServer && (
             <Notice>{t("plugins.manager.managedByServer")}</Notice>
+          )}
+          {unisolated.length > 0 && (
+            <Notice>
+              {t("plugins.manager.isolation.notice", {
+                count: unisolated.length,
+                names: unisolated.map((plugin) => plugin.name).join(" | "),
+              })}
+            </Notice>
           )}
           {manager.registryError && (
             <Notice>

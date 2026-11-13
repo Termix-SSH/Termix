@@ -15,6 +15,10 @@
 - Limits on how often logins, second factor checks, password resets, sign ups, API key creation, exports and imports can be tried, per address and per account. Too many bad API keys from one address are refused for a while
 - Rotate the encryption key from the API (`POST /encryption/rotate-key`) or with `ENCRYPTION_KEY_PREVIOUS`, and the database key with `DATABASE_KEY_PREVIOUS`. Everything moves to the new key at start
 - The example Docker compose drops every capability it doesn't need, sets no-new-privileges and shows a read-only, non-root setup. The image runs on a read-only root filesystem
+- Every plugin made for plugin API 2 runs in its own process. It can only read its own files, opens no network connections or programs unless it was granted that, and reaches Termix only through checked calls. Secrets, the database, SSH connections and saved logins stay in the server
+- In the Docker image each plugin also runs as its own Linux user, so it can't read the database, keys or other plugins' data. With `NET_ADMIN`, plugins that may not open connections are also blocked by a firewall rule
+- Plugins that only serve pages start on their first use and stop after 10 idle minutes (`TERMIX_PLUGIN_IDLE_MINUTES`). A plugin process that crashes, hangs, uses too much memory (`TERMIX_PLUGIN_MEMORY_MB`) or CPU (`TERMIX_PLUGIN_CPU_LIMIT`) is restarted, and marked failed if it keeps crashing
+- Run without isolation: an official plugin made for an older Termix runs inside the server only when an admin turns this on in its page. The plugins page warns about each one. Plugins that were on before the upgrade keep running with it on. Community plugins made for an older Termix no longer run
 
 ### Changed
 
@@ -25,6 +29,8 @@
 - Desktop app: the app page is served from its own `app://termix` address instead of from files on disk. Saved view settings move over on the first start. A server older than 26.11.2 that sets `CORS_ALLOWED_ORIGINS` needs `app://termix` added
 - Desktop app: updates install on Windows, macOS, AppImage and deb only after the release's signed `SHA256SUMS` checks out. Releases without it are offered as a download link
 - Desktop app: the local server runs as an Electron utility process, and the app binary can no longer be started as a plain Node or with Node debug flags
+- The Docker image runs on Node 26
+- A plugin can no longer turn on the server's debugger
 
 ### Fixed
 

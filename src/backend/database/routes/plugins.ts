@@ -13,7 +13,11 @@ import {
   createCurrentPluginRepository,
 } from "../repositories/factory.js";
 import { getPluginRuntime } from "../../plugins/index.js";
-import { resolvePluginDesktopMode } from "@termix-ssh/plugin-sdk/manifest";
+import {
+  isLegacyPluginApi,
+  resolvePluginDesktopMode,
+} from "@termix-ssh/plugin-sdk/manifest";
+import { isOfficialPlugin } from "../../plugins/isolation.js";
 import { describePluginFrontend } from "../../plugins/assets.js";
 import { isDefaultLookPlugin } from "../../plugins/bundled-index.js";
 import { mayRunInSafeMode } from "../../plugins/safe-mode.js";
@@ -387,8 +391,21 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
 
         if (!canManage) return summary;
 
+        const legacyApi = isLegacyPluginApi(engine.api ?? "");
+        const official = loaded
+          ? isOfficialPlugin(loaded)
+          : record.tier === "bundled";
         return {
           ...summary,
+          // process: its own process. unisolated: an API 1 plugin an admin
+          // let run inside the server. legacy: API 1 and not running.
+          isolation: !legacyApi
+            ? "process"
+            : record.runUnisolated && official
+              ? "unisolated"
+              : "legacy",
+          runUnisolated: Boolean(record.runUnisolated),
+          canRunUnisolated: legacyApi && official,
           tier: record.tier,
           source: record.source,
           registryId: record.registryId ?? null,
@@ -2426,8 +2443,8 @@ router.delete(
  * @openapi
  * /plugins/{id}/options:
  *   patch:
- *     summary: Change a plugin's update choices
- *     description: autoUpdate lets the background check apply new releases that ask for nothing new. pinned holds the plugin at its installed version, which also stops auto-update. channel picks whether betas are offered; going back to stable keeps an installed beta until a stable release passes it.
+ *     summary: Change a plugin's update and isolation choices
+ *     description: autoUpdate lets the background check apply new releases that ask for nothing new. pinned holds the plugin at its installed version, which also stops auto-update. channel picks whether betas are offered; going back to stable keeps an installed beta until a stable release passes it. runUnisolated lets an official plugin made for plugin API 1 run inside the server process, where it can reach everything the server can; it is refused for community plugins and for API 2 plugins, which always run in their own process.
  *     tags:
  *       - Plugins
  *     parameters:
@@ -2450,6 +2467,8 @@ router.delete(
  *               channel:
  *                 type: string
  *                 enum: [stable, beta]
+ *               runUnisolated:
+ *                 type: boolean
  *     responses:
  *       200:
  *         description: The saved choices.
@@ -2459,6 +2478,8 @@ router.delete(
  *         description: The caller lacks admin.plugins.manage.
  *       404:
  *         description: No such plugin.
+ *       409:
+ *         description: The plugin can't run without isolation.
  */
 router.patch(
   "/:id/options",
@@ -2466,7 +2487,7 @@ router.patch(
   requireManagePlugins,
   async (req: Request, res: Response) => {
     const pluginId = String(req.params.id);
-    const { autoUpdate, pinned } = req.body ?? {};
+    const { autoUpdate, pinned, runUnisolated } = req.body ?? {};
     const channel =
       req.body?.channel === undefined
         ? undefined
@@ -2474,11 +2495,12 @@ router.patch(
     if (
       (autoUpdate !== undefined && typeof autoUpdate !== "boolean") ||
       (pinned !== undefined && typeof pinned !== "boolean") ||
+      (runUnisolated !== undefined && typeof runUnisolated !== "boolean") ||
       channel === null
     ) {
       res.status(400).json({
         error:
-          "autoUpdate and pinned must be booleans and channel stable or beta",
+          "autoUpdate, pinned and runUnisolated must be booleans and channel stable or beta",
       });
       return;
     }
@@ -2488,7 +2510,15 @@ router.patch(
         autoUpdate,
         pinned,
         channel,
+        runUnisolated,
       });
+      if (runUnisolated !== undefined) {
+        await auditPluginAction(
+          req,
+          runUnisolated ? "plugin_unisolated_on" : "plugin_unisolated_off",
+          pluginId,
+        );
+      }
       await auditPluginAction(req, "update_plugin_options", pluginId, result);
       res.json({ id: pluginId, ...result });
     } catch (error) {

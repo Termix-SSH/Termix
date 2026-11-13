@@ -163,6 +163,7 @@
           "network:outbound",
           "network:serve",
           "network:broadcast",
+          "network:sockets",
           "users:read",
           "events:core",
           "notify:send",
@@ -1314,6 +1315,52 @@
       "type": "string",
       "minLength": 1,
       "description": "Built backend entry, relative to the plugin root. Defaults to dist/backend.js."
+    },
+    "sandbox": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "How the backend process runs (API 2). Requests to the plugin's routes and sockets always start it.",
+      "properties": {
+        "alwaysOn": {
+          "type": "boolean",
+          "description": "Never stop the process when idle."
+        },
+        "memoryMb": {
+          "type": "integer",
+          "minimum": 64,
+          "maximum": 4096,
+          "description": "Heap limit in MiB. 256 when left out."
+        },
+        "schedules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "every"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+              },
+              "every": {
+                "type": "integer",
+                "minimum": 1000,
+                "description": "Interval in milliseconds."
+              }
+            }
+          }
+        },
+        "events": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "registry": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        }
+      }
     },
     "frontend": {
       "type": "string",

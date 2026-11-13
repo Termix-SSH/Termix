@@ -1,0 +1,1 @@
+ALTER TABLE "plugins" ADD COLUMN "run_unisolated" boolean DEFAULT false NOT NULL;

@@ -173,3 +173,38 @@ describe("termix-plugin validate mobile entry", () => {
     expect(await problems(mobile(true))).not.toContain("dist/mobile.js");
   });
 });
+
+describe("sandbox warnings", () => {
+  it("flags Node modules a plugin process can't use without a capability", async () => {
+    const { sandboxWarnings } =
+      await import("../packages/plugin-sdk/cli/commands/validate.mjs");
+    const capabilities = await import("@termix-ssh/plugin-sdk/capabilities");
+    const { isLegacyPluginApi } =
+      await import("@termix-ssh/plugin-sdk/manifest");
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tmx-validate-sandbox-"));
+    fs.mkdirSync(path.join(dir, "src", "backend"), { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, "src", "backend", "index.ts"),
+      [
+        'import net from "node:net";',
+        'import { spawn } from "child_process";',
+        'import { Worker } from "node:worker_threads";',
+        'import path from "node:path";',
+      ].join("\n"),
+    );
+    const sdk = { ...capabilities, isLegacyPluginApi };
+    const warnings = sandboxWarnings(
+      dir,
+      { engine: { api: "^2.0.0" }, capabilities: ["process:spawn"] },
+      sdk,
+    );
+    expect(warnings).toEqual([
+      "src/backend/index.ts imports net, which needs the network:sockets capability in a plugin process",
+      "src/backend/index.ts imports worker_threads, which no plugin process can use",
+    ]);
+    expect(
+      sandboxWarnings(dir, { engine: { api: "^1.15" }, capabilities: [] }, sdk),
+    ).toEqual([]);
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+});

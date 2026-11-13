@@ -135,12 +135,33 @@ export function isPluginInstalled(pluginId: string): boolean {
   return isInstalled(pluginId);
 }
 
+/**
+ * Starts a plugin whose process is stopped (it starts on first use). True
+ * when it is now running. Injected by the sandbox supervisor.
+ */
+type WakeHook = (pluginId: string) => Promise<boolean>;
+
+let wakeHook: WakeHook = async () => false;
+
+export function setPluginWakeHook(hook: WakeHook): void {
+  wakeHook = hook;
+}
+
+export async function wakePlugin(pluginId: string): Promise<boolean> {
+  try {
+    return await wakeHook(pluginId);
+  } catch {
+    return false;
+  }
+}
+
 /** Test seam, so one test's stub does not leak into the next. */
 export function resetPluginHttp(): void {
   routers.clear();
   publicRoutes.clear();
   isPluginEnabled = () => true;
   isInstalled = () => false;
+  wakeHook = async () => false;
 }
 
 function normalizePublicPath(path: string): string {

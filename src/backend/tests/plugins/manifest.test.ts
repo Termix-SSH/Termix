@@ -93,11 +93,11 @@ describe("manifest v2 validation", () => {
 
   it("refuses a manifest targeting another SDK api version", () => {
     const { manifest, errors } = parseManifest(
-      base({ engine: { termix: ">=2.9.0", api: "2" } }),
+      base({ engine: { termix: ">=2.9.0", api: "3" } }),
     );
 
     expect(manifest).toBeUndefined();
-    expect(errors.join()).toMatch(/needs plugin API 2/);
+    expect(errors.join()).toMatch(/needs plugin API 3/);
   });
 
   it("accepts an api range this build satisfies", () => {
@@ -1202,5 +1202,55 @@ describe("manifest runtime", () => {
     expect(
       validateManifest(base({ runtime: "desktop", desktop: "mirror" })).join(),
     ).toMatch(/local/);
+  });
+});
+
+describe("sandbox block (plugin API 2)", () => {
+  it("accepts schedules, events, registry keys and limits", () => {
+    expect(
+      validateManifest(
+        base({
+          sandbox: {
+            alwaysOn: false,
+            memoryMb: 384,
+            schedules: [{ id: "poll", every: 60_000 }],
+            events: ["host.deleted"],
+            registry: ["sample-plugin.variables"],
+          },
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it.each([
+    [{ memoryMb: 16 }, /memoryMb/],
+    [{ schedules: [{ id: "Bad Id", every: 60_000 }] }, /id must be/],
+    [{ schedules: [{ id: "a", every: 10 }] }, /at least 1000/],
+    [
+      {
+        schedules: [
+          { id: "a", every: 1000 },
+          { id: "a", every: 2000 },
+        ],
+      },
+      /duplicates/,
+    ],
+    [{ events: ["Not A Topic!"] }, /array of names/],
+    [{ registry: ["x.y", "x.y"] }, /duplicates/],
+    [{ listeners: true }, /listeners/],
+  ])("refuses %j", (sandbox, message) => {
+    expect(validateManifest(base({ sandbox })).join()).toMatch(message);
+  });
+
+  it("knows which engine ranges only fit API 1", async () => {
+    const { isLegacyPluginApi, isApiCompatible } =
+      await import("@termix-ssh/plugin-sdk/manifest");
+    expect(isLegacyPluginApi("^1.15")).toBe(true);
+    expect(isLegacyPluginApi("1")).toBe(true);
+    expect(isLegacyPluginApi("^2.0.0")).toBe(false);
+    expect(isLegacyPluginApi(">=1")).toBe(false);
+    expect(isApiCompatible("^1.15")).toBe(true);
+    expect(isApiCompatible("^2.0.0")).toBe(true);
+    expect(isApiCompatible("3")).toBe(false);
   });
 });

@@ -237,7 +237,7 @@ describe("findRelease", () => {
       {
         id: "docker",
         versions: [
-          version({ version: "2.0.0", api: "2" }),
+          version({ version: "2.0.0", api: "3" }),
           version({ version: "1.1.0" }),
           version(),
         ],
@@ -247,7 +247,8 @@ describe("findRelease", () => {
 
   it("picks the newest release this build can run", () => {
     expect(isApiCompatible("1")).toBe(true);
-    expect(isApiCompatible("2")).toBe(false);
+    expect(isApiCompatible("2")).toBe(true);
+    expect(isApiCompatible("3")).toBe(false);
     expect(findRelease(index, "docker")?.release.version).toBe("1.1.0");
   });
 
@@ -629,7 +630,7 @@ describe("downloadRelease", () => {
 
   it("refuses a release built for another plugin API", async () => {
     await expect(
-      downloadRelease("docker", version({ api: "2" })),
+      downloadRelease("docker", version({ api: "3" })),
     ).rejects.toThrow(/plugin API/);
     expect(fetchMock).not.toHaveBeenCalled();
   });

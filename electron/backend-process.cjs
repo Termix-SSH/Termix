@@ -53,6 +53,7 @@ function wrapUtilityProcess(proc) {
     stdout: proc.stdout,
     stderr: proc.stderr,
     send: (message) => proc.postMessage(message),
+    postMessage: (message, transfer) => proc.postMessage(message, transfer),
     kill: () => proc.kill(),
     on: (event, listener) => {
       proc.on(event, listener);

@@ -2,14 +2,13 @@
  * Discovers plugins, resolves their dependency order, and owns their
  * lifecycle.
  *
- * One tier. Every plugin, bundled or installed, is imported into the server
- * process and handed a ctx built by ctx.ts. There is no worker boundary and
- * no allowlist, because the worker tier had no users and the allowlist was a
- * hardcoded set of twelve ids that every real plugin was already on.
+ * An API 2 plugin runs in its own process (sandbox/supervisor.ts): it can
+ * read only its own folder, opens no sockets or child processes unless a
+ * capability grants it, and reaches core only through ctx calls core checks.
  *
- * What that means honestly: a plugin has the same reach as core. The
- * capability gate on ctx makes privileged calls declared and auditable, not
- * impossible.
+ * An API 1 plugin was built to run inside the server process, where it has
+ * the same reach as core. It runs only when it is official and an admin
+ * turned on "Run without isolation" for it. Community API 1 plugins never run.
  */
 
 import crypto from "node:crypto";
@@ -23,6 +22,13 @@ import {
   parseManifest,
   validateThemeCss,
 } from "./manifest.js";
+import {
+  isOfficialPlugin,
+  LEGACY_COMMUNITY_ERROR,
+  LEGACY_SWITCH_ERROR,
+  needsUnisolated,
+} from "./isolation.js";
+import { getPluginRunner } from "./sandbox/runner.js";
 import { getLocalVersion } from "../utils/app-version.js";
 import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import {
@@ -87,7 +93,18 @@ export interface LoadedPlugin {
   signedBy?: string;
   /** Which set of keys that key belongs to. */
   signedTier?: KeyTier;
+  /** An admin let this API 1 plugin run inside the server process. */
+  runUnisolated?: boolean;
+  /** Set while the plugin runs in its own process. */
+  sandboxed?: boolean;
 }
+
+export {
+  isOfficialPlugin,
+  needsUnisolated,
+  LEGACY_COMMUNITY_ERROR,
+  LEGACY_SWITCH_ERROR,
+} from "./isolation.js";
 
 /**
  * A plugin folder that did not load. Kept so the layout repair view can say
@@ -674,10 +691,30 @@ export class PluginLoader {
       return;
     }
 
+    const legacy = needsUnisolated(plugin);
+    if (legacy && !isOfficialPlugin(plugin)) {
+      plugin.state = "blocked";
+      plugin.lastError = LEGACY_COMMUNITY_ERROR;
+      return;
+    }
+    if (legacy && !plugin.runUnisolated) {
+      plugin.state = "blocked";
+      plugin.lastError = LEGACY_SWITCH_ERROR;
+      return;
+    }
+
     plugin.state = "activating";
     plugin.lastError = null;
 
     const entryPath = getPluginBackendEntry(plugin.dir, plugin.manifest);
+    if (!legacy) {
+      await this.activateSandboxed(plugin, entryPath);
+      return;
+    }
+    pluginLogger.warn(
+      `Plugin ${plugin.id} runs without isolation: it can reach everything the server can`,
+      { operation: "plugin_activate" },
+    );
     // Node caches ESM by URL, so a plugin replaced without a restart would
     // otherwise keep running the old code.
     const entry = `${pathToFileUrlString(entryPath)}?v=${encodeURIComponent(
@@ -788,6 +825,86 @@ export class PluginLoader {
     }
   }
 
+  /**
+   * Hands an API 2 plugin to the supervisor. Core keeps a handle whose
+   * deactivate stops the process; each run of the process gets its own ctx.
+   */
+  private async activateSandboxed(
+    plugin: LoadedPlugin,
+    entryPath: string,
+  ): Promise<void> {
+    const runner = await getPluginRunner();
+    try {
+      const resolution = resolveRequirements(plugin.manifest);
+      if (!resolution.satisfied) {
+        throw new Error(`Plugin ${plugin.id} ${resolution.errors.join("; ")}`);
+      }
+      const { migratePlugin } = await import("./data.js");
+      const applied = await migratePlugin(plugin.id, plugin.dir, {
+        bundled:
+          plugin.source === "bundled" || plugin.signedTier === "official",
+      });
+      if (
+        applied.length > 0 ||
+        plugin.manifest.contributes?.settings?.admin?.length
+      ) {
+        const { runPluginDataMoves } =
+          await import("../upgrade/plugin-data-moves.js");
+        await runPluginDataMoves();
+      }
+
+      const noop = () => undefined;
+      plugin.handle = createPluginHandle(plugin.id, {
+        activate: noop,
+        deactivate: () => runner.unregister(plugin.id),
+      });
+      plugin.sandboxed = true;
+      await runner.register({
+        manifest: plugin.manifest,
+        dir: plugin.dir,
+        entryPath,
+        makeContext: () => {
+          const handle = createPluginHandle(plugin.id, { activate: noop });
+          const ctx = createPluginContext(plugin.manifest, handle);
+          return { ctx: ctx as unknown as Record<string, unknown>, handle };
+        },
+        disposeHandle: (handle) =>
+          disposePluginHandle(handle, plugin.id, { runDeactivate: false }),
+        onFailed: (message) => void this.failPlugin(plugin.id, message),
+      });
+
+      plugin.state = "active";
+      plugin.errorTimestamps = [];
+      if (!this.activationOrder.includes(plugin.id)) {
+        this.activationOrder.push(plugin.id);
+      }
+      pluginLogger.success(`Activated plugin ${plugin.id} in its own process`, {
+        operation: "plugin_activate",
+      });
+    } catch (error) {
+      plugin.lastError = error instanceof Error ? error.message : String(error);
+      plugin.state = "failed";
+      plugin.sandboxed = false;
+      await runner.unregister(plugin.id).catch(() => {});
+      plugin.handle = null;
+      throw error instanceof Error ? error : new Error(plugin.lastError);
+    }
+  }
+
+  /** Marks a plugin failed from outside a call (its process kept crashing). */
+  async failPlugin(pluginId: string, message: string): Promise<void> {
+    const plugin = this.plugins.get(pluginId);
+    if (!plugin) return;
+    pluginLogger.error(`Plugin ${pluginId} stopped`, new Error(message), {
+      operation: "plugin_runtime",
+    });
+    await this.deactivate(pluginId);
+    plugin.state = "failed";
+    plugin.lastError = message;
+    plugin.errorTimestamps = [];
+    this.options.onFailed?.(plugin);
+  }
+
   /** Activates a set of plugins in dependency order. */
   async activateAll(pluginIds: string[]): Promise<{
     activated: string[];
@@ -851,6 +968,7 @@ export class PluginLoader {
     plugin.state = "stopping";
     const handle = plugin.handle;
     plugin.handle = null;
+    plugin.sandboxed = false;
 
     // Disposal never throws, so a plugin whose deactivate() misbehaves still
     // ends up stopped rather than stuck in "stopping" forever.

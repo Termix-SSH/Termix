@@ -17,6 +17,8 @@ services:
       - FOWNER
       - SETUID
       - SETGID
+      # Optional: firewall rules that keep plugins without network access offline.
+      # - NET_ADMIN
     security_opt:
       - no-new-privileges:true
     tmpfs:
@@ -24,6 +26,7 @@ services:
     # Stricter: run as a fixed user on a read-only root filesystem. The data
     # volume must already belong to that user (chown -R 1000:1000 once). Use
     # these lines and drop cap_add above.
+    # Plugins then share core's user instead of getting their own.
     # user: "1000:1000"
     # read_only: true
     environment:

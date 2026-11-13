@@ -54,6 +54,14 @@ export async function validate({ cwd }) {
   for (const warning of uiWarnings(cwd)) {
     console.warn(`  ui    ${warning}`);
   }
+  const capabilities = await loadSdkModule("capabilities");
+  const manifestModule = await loadSdkModule("manifest");
+  for (const warning of sandboxWarnings(cwd, raw, {
+    ...capabilities,
+    isLegacyPluginApi: manifestModule.isLegacyPluginApi,
+  })) {
+    console.warn(`  sandbox  ${warning}`);
+  }
 
   if (problems.length > 0) {
     for (const problem of problems) console.error(`  ${problem}`);
@@ -118,6 +126,46 @@ export function validateLookCapabilities(cwd, raw) {
     }
   }
   return problems;
+}
+
+const NODE_IMPORT =
+  /(?:from\s+|import\s*\(\s*|require\s*\(\s*)["'`](?:node:)?([a-z_/]+)["'`]/g;
+
+/**
+ * A plugin's backend runs in its own process (plugin API 2), where a Node
+ * module its capabilities don't unlock throws ERR_ACCESS_DENIED. Flags those
+ * imports before the plugin is ever run.
+ */
+export function sandboxWarnings(cwd, raw, sdk) {
+  const warnings = [];
+  const api = String(raw?.engine?.api ?? "");
+  if (!api || sdk.isLegacyPluginApi?.(api)) return warnings;
+  const capabilities = Array.isArray(raw?.capabilities) ? raw.capabilities : [];
+  const granted = sdk.modulesGrantedBy(capabilities);
+  const gated = new Set(sdk.SANDBOX_GATED_MODULES);
+  const blocked = new Set(sdk.SANDBOX_BLOCKED_MODULES);
+  const needs = (name) =>
+    Object.entries(sdk.CAPABILITY_PROCESS_GRANTS)
+      .filter(([, grant]) => grant.modules.includes(name))
+      .map(([capability]) => capability)
+      .join(" or ");
+  for (const file of walkSources(path.join(cwd, "src", "backend"))) {
+    const rel = path.relative(cwd, file).replaceAll("\\", "/");
+    const text = fs.readFileSync(file, "utf8");
+    for (const match of text.matchAll(NODE_IMPORT)) {
+      const name = match[1];
+      if (blocked.has(name)) {
+        warnings.push(
+          `${rel} imports ${name}, which no plugin process can use`,
+        );
+      } else if (gated.has(name) && !granted.has(name)) {
+        warnings.push(
+          `${rel} imports ${name}, which needs the ${needs(name)} capability in a plugin process`,
+        );
+      }
+    }
+  }
+  return [...new Set(warnings)];
 }
 
 /** Env vars core sets for everyone, so a plugin need not list them. */

@@ -21,6 +21,7 @@ import {
   pluginDocsUrl,
   pluginFeatures,
   SUPPORTED_PLUGIN_API_VERSION,
+  LEGACY_PLUGIN_API_VERSION,
   youtubeVideoId,
 } from "@termix-ssh/plugin-sdk/manifest";
 import { getLocalVersion } from "../utils/app-version.js";
@@ -254,10 +255,18 @@ export function parseRegistryIndex(raw: unknown): RegistryIndex {
   };
 }
 
-/** Whether this build can run a release built against `api`. */
+/**
+ * Whether this build can run a release built against `api`. API 1 releases
+ * still count: an official one runs with the admin's "Run without isolation"
+ * switch, and the loader blocks a community one with a reason.
+ */
 export function isApiCompatible(api: string): boolean {
   const major = semver.coerce(api)?.major;
-  return major !== undefined && String(major) === SUPPORTED_PLUGIN_API_VERSION;
+  return (
+    major !== undefined &&
+    (String(major) === SUPPORTED_PLUGIN_API_VERSION ||
+      String(major) === String(semver.major(LEGACY_PLUGIN_API_VERSION)))
+  );
 }
 
 /**

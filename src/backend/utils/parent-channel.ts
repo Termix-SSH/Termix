@@ -4,10 +4,16 @@
  * runner forks it with an IPC channel (process.send). Docker has neither.
  */
 
+interface ParentEvent {
+  data: unknown;
+  /** MessagePorts sent along with the message (Electron). */
+  ports?: unknown[];
+}
+
 interface ParentPort {
   postMessage(message: unknown): void;
-  on(event: "message", listener: (event: { data: unknown }) => void): unknown;
-  off?(event: "message", listener: (event: { data: unknown }) => void): unknown;
+  on(event: "message", listener: (event: ParentEvent) => void): unknown;
+  off?(event: "message", listener: (event: ParentEvent) => void): unknown;
 }
 
 type Target = {
@@ -41,15 +47,16 @@ export function sendToParent(message: unknown): boolean {
 }
 
 export function onParentMessage(
-  listener: (message: unknown) => void,
+  listener: (message: unknown, ports?: unknown[]) => void,
 ): () => void {
   const port = target.parentPort;
   if (port) {
-    const wrapped = (event: { data: unknown }) => listener(event?.data);
+    const wrapped = (event: ParentEvent) => listener(event?.data, event?.ports);
     port.on("message", wrapped);
     return () => port.off?.("message", wrapped);
   }
   const current = target;
-  current.on("message", listener);
-  return () => current.off("message", listener);
+  const plain = (message: unknown) => listener(message);
+  current.on("message", plain);
+  return () => current.off("message", plain);
 }

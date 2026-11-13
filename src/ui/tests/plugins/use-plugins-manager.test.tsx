@@ -27,13 +27,20 @@ const api = vi.hoisted(() => ({
     missing: [],
   })),
   setPluginState: vi.fn(async () => ({ state: "active" })),
+  setPluginOptions: vi.fn(async () => ({
+    autoUpdate: false,
+    pinnedVersion: null,
+    channel: "stable",
+    runUnisolated: true,
+  })),
 }));
+const confirmAnswer = vi.hoisted(() => ({ value: true }));
 vi.mock("@/api/plugins-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/api/plugins-api")>()),
   ...api,
 }));
 vi.mock("@/components/surface/surface-scope", () => ({
-  useConfirm: () => vi.fn(async () => true),
+  useConfirm: () => vi.fn(async () => confirmAnswer.value),
 }));
 const i18n = vi.hoisted(() => {
   const strings: Record<string, string> = {
@@ -106,4 +113,34 @@ it("names plugins in the UI language, falling back to the manifest", async () =>
     { name: "示例", description: "一个示例插件" },
     { name: "Browse Only", description: "Not installed" },
   ]);
+});
+
+it("asks before letting an older plugin run without isolation", async () => {
+  const { result } = renderHook(() => usePluginsManager());
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  const plugin = result.current.plugins[0];
+
+  confirmAnswer.value = false;
+  await act(async () => {
+    await result.current.setRunUnisolated(plugin, true);
+  });
+  expect(api.setPluginOptions).not.toHaveBeenCalled();
+
+  confirmAnswer.value = true;
+  await act(async () => {
+    await result.current.setRunUnisolated(plugin, true);
+  });
+  expect(api.setPluginOptions).toHaveBeenCalledExactlyOnceWith(
+    "sample-plugin",
+    { runUnisolated: true },
+  );
+
+  // Turning it off needs no question.
+  confirmAnswer.value = false;
+  await act(async () => {
+    await result.current.setRunUnisolated(plugin, false);
+  });
+  expect(api.setPluginOptions).toHaveBeenLastCalledWith("sample-plugin", {
+    runUnisolated: false,
+  });
 });

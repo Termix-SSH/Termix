@@ -13,6 +13,7 @@ import {
 } from "@termix-ssh/plugin-sdk/changelog";
 import type {
   PluginChannel,
+  PluginIsolation,
   PluginSummary,
   PluginUploadPreview,
   RegistryPluginEntry,
@@ -79,6 +80,10 @@ export interface PluginEntry {
   unsupported: boolean;
   /** The Termix range the newest release needs, when this build is too old. */
   needsTermix: string | null;
+  /** How it runs, when installed. See PluginSummary.isolation. */
+  isolation: PluginIsolation | null;
+  runUnisolated: boolean;
+  canRunUnisolated: boolean;
 }
 
 export type PluginSource =
@@ -188,6 +193,9 @@ export function mergePlugins(
       ],
       unsupported: false,
       needsTermix: null,
+      isolation: summary.isolation ?? null,
+      runUnisolated: summary.runUnisolated ?? false,
+      canRunUnisolated: summary.canRunUnisolated ?? false,
     });
   }
 
@@ -239,6 +247,9 @@ export function mergePlugins(
         entry.latestVersion === null
           ? (entry.versions.find((v) => v.needsTermix)?.needsTermix ?? null)
           : null,
+      isolation: null,
+      runUnisolated: false,
+      canRunUnisolated: false,
     });
   }
 
@@ -284,6 +295,9 @@ export function uploadEntry(preview: PluginUploadPreview): PluginEntry {
     kinds: [],
     unsupported: false,
     needsTermix: null,
+    isolation: null,
+    runUnisolated: false,
+    canRunUnisolated: false,
   };
 }
 

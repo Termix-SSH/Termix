@@ -540,6 +540,7 @@ export function usePluginsManager() {
         autoUpdate?: boolean;
         pinned?: boolean;
         channel?: PluginChannel;
+        runUnisolated?: boolean;
       },
     ) =>
       run(plugin.id, async () => {
@@ -550,6 +551,28 @@ export function usePluginsManager() {
         }
       }),
     [run, failToast],
+  );
+
+  /**
+   * Lets an older official plugin run inside the server. Turning it on asks
+   * first, because the plugin can then reach everything the server can.
+   */
+  const setRunUnisolated = useCallback(
+    async (plugin: PluginEntry, on: boolean) => {
+      if (on) {
+        const ok = await confirm({
+          title: t("plugins.manager.isolation.confirmTitle", {
+            name: plugin.name,
+          }),
+          description: t("plugins.manager.isolation.confirmBody"),
+          confirmLabel: t("plugins.manager.isolation.confirmAction"),
+          destructive: true,
+        });
+        if (!ok) return;
+      }
+      await setOptions(plugin, { runUnisolated: on });
+    },
+    [confirm, t, setOptions],
   );
 
   /** Moves a plugin to betas and installs the newest one. */
@@ -652,6 +675,7 @@ export function usePluginsManager() {
     uninstall,
     removeData,
     setOptions,
+    setRunUnisolated,
     tryBeta,
     leaveBeta,
     setAllChannels,

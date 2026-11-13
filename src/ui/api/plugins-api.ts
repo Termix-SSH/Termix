@@ -273,6 +273,15 @@ export interface PluginSummary {
   autoUpdate?: boolean;
   pinnedVersion?: string | null;
   channel?: PluginChannel;
+  /**
+   * process: runs in its own process. unisolated: an older plugin an admin
+   * lets run inside the server. legacy: an older plugin that is not running.
+   * Admins only.
+   */
+  isolation?: PluginIsolation;
+  runUnisolated?: boolean;
+  /** Official and made for an older Termix, so the switch applies. */
+  canRunUnisolated?: boolean;
   description?: string;
   author?: string;
   repository?: string;
@@ -302,6 +311,8 @@ function announcePluginsChanged(): void {
 }
 
 export type PluginChannel = "stable" | "beta";
+
+export type PluginIsolation = "process" | "unisolated" | "legacy";
 
 export interface RegistryPluginVersion {
   version: string;
@@ -570,11 +581,17 @@ export async function retryPlugin(pluginId: string): Promise<void> {
 
 export async function setPluginOptions(
   pluginId: string,
-  options: { autoUpdate?: boolean; pinned?: boolean; channel?: PluginChannel },
+  options: {
+    autoUpdate?: boolean;
+    pinned?: boolean;
+    channel?: PluginChannel;
+    runUnisolated?: boolean;
+  },
 ): Promise<{
   autoUpdate: boolean;
   pinnedVersion: string | null;
   channel: PluginChannel;
+  runUnisolated: boolean;
 }> {
   const response = await rbacApi.patch(
     `${pluginPath(pluginId)}/options`,

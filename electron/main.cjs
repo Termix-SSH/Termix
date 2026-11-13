@@ -3,6 +3,7 @@ const {
   BrowserWindow,
   WebContentsView,
   utilityProcess,
+  MessageChannelMain,
   shell,
   ipcMain,
   dialog,
@@ -38,6 +39,7 @@ const {
   sigstoreBundleVerifier,
 } = require("./update-verify.cjs");
 const { migrateFileStorage } = require("./storage-migrate.cjs");
+const { createPluginSandboxHost } = require("./plugin-sandbox.cjs");
 const linkedServer = require("./linked-server.cjs");
 const desktopSettings = require("./desktop-settings.cjs");
 const autoUpdates = require("./auto-updater.cjs");
@@ -661,6 +663,8 @@ async function handleBackendRequest(msg) {
 }
 
 let backendProcess = null;
+// Starts the embedded backend's plugin processes (see plugin-sandbox.cjs).
+let pluginSandbox = null;
 let backendStartFailed = false;
 // Why the embedded backend died, once it has. Null while it is healthy
 // or still starting. The renderer polls this to tell "still booting"
@@ -1155,8 +1159,19 @@ function startBackendServer() {
         },
         stdio: "pipe",
         serviceName: "Termix backend",
+        // A plugin process must not be able to open the backend's inspector.
+        execArgv: ["--disable-sigusr1"],
       }),
     );
+
+    pluginSandbox?.stopAll();
+    pluginSandbox = createPluginSandboxHost({
+      utilityProcess,
+      MessageChannelMain,
+      backendDir: path.dirname(entryPath),
+      dataRoot: dataDir,
+      log: logToFile,
+    });
 
     const spawned = backendProcess;
     spawned.once("spawn", () => {
@@ -1201,6 +1216,7 @@ function startBackendServer() {
     });
 
     backendProcess.on("message", (msg) => {
+      if (pluginSandbox?.handle(msg, spawned)) return;
       if (!resolved && msg?.type === "backend-ready") {
         resolved = true;
         clearTimeout(readyTimeout);
@@ -1212,6 +1228,7 @@ function startBackendServer() {
 
     backendProcess.on("exit", (code, signal) => {
       logToFile(`Backend process exited with code ${code}, signal ${signal}`);
+      pluginSandbox?.stopAll();
       if (!resolved && code !== 0) {
         backendStartFailed = true;
       }

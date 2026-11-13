@@ -35,7 +35,7 @@ import {
 import { runAsActor } from "./actor.js";
 import { sessionAccessRefusal } from "../auth/session-access.js";
 import { bindSocket } from "../auth/socket-sessions.js";
-import { isPluginInstalled } from "./http.js";
+import { isPluginInstalled, wakePlugin } from "./http.js";
 import { normalizeCookieHeader } from "../auth/session-cookie.js";
 import { embeddedHostRefused } from "../utils/embedded-host.js";
 
@@ -166,7 +166,11 @@ async function handlePluginUpgrade(
   const parsed = parsePluginWsUrl(request.url);
   if (!parsed) return false;
 
-  const route = routes.get(key(parsed.pluginId, parsed.path));
+  let route = routes.get(key(parsed.pluginId, parsed.path));
+  // A plugin whose process is stopped starts on its first socket.
+  if (!route && (await wakePlugin(parsed.pluginId))) {
+    route = routes.get(key(parsed.pluginId, parsed.path));
+  }
   if (!route) {
     // Claimed by the prefix but nothing is listening: answering here is more
     // honest than leaving the socket hanging. A disabled plugin has no routes

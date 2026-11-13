@@ -197,6 +197,8 @@ function notifyBrowser(data) {
 function startBackend() {
   const child = fork(BACKEND_ENTRY, [], {
     cwd: root,
+    // A plugin process must not be able to open core's inspector.
+    execArgv: ["--disable-sigusr1"],
     env: { ...process.env, ...backendEnv, TERMIX_DEV_RELOAD: "true" },
     stdio: ["ignore", "inherit", "inherit", "ipc"],
   });

@@ -70,6 +70,7 @@ export interface PluginLogger {
 export interface PluginEvents {
   /** Topics are namespaced to plugin.<id>.* unless the plugin holds events:core. */
   emit: (topic: string, payload: unknown) => void;
+  /** The topic must be listed in the manifest's sandbox.events. */
   on: (topic: string, listener: (payload: unknown) => void) => () => void;
 }
 
@@ -110,8 +111,20 @@ export interface PluginFiles {
 export interface PluginDatabase {
   /** Registers a definition and returns its queryable table object. */
   define: <T = unknown>(definition: PluginTableDefinition) => Promise<T>;
-  /** Drizzle handle, scoped to this plugin's tables. */
+  /**
+   * Drizzle handle, scoped to this plugin's tables. In the plugin's own
+   * process each statement goes to core, which runs it only on this plugin's
+   * tables (and refs, read only). db.transaction() is not available there:
+   * use batch() for writes that must land together.
+   */
   client: <T = unknown>() => Promise<T>;
+  /**
+   * Runs write queries in one transaction: all of them or none. Each item is
+   * a Drizzle query built on db.client() and not awaited (it needs toSQL()).
+   */
+  batch: (
+    queries: { toSQL(): { sql: string; params: unknown[] } }[],
+  ) => Promise<void>;
   /**
    * Core tables a plugin may join against: users, hosts, roles, userRoles.
    * Needs db:core-refs. Treat them as read-only.
@@ -729,9 +742,14 @@ export interface PluginSyncHost {
  * `consume`.
  */
 export interface PluginRegistry {
+  /** The key must be listed in the manifest's sandbox.registry. */
   provide: <T>(key: string, value: T) => void;
-  consume: <T>(key: string) => T | undefined;
-  revoke: (key: string, value?: unknown) => boolean;
+  /**
+   * The value another plugin provided. It lives in that plugin's process, so
+   * every function on it returns a Promise.
+   */
+  consume: <T>(key: string) => Promise<T | undefined>;
+  revoke: (key: string, value?: unknown) => Promise<boolean>;
 }
 
 export interface PluginServices {
@@ -753,9 +771,9 @@ export interface PluginServices {
   get: <T extends object>(
     service: string,
     options?: { userId?: string; provider?: string },
-  ) => T;
+  ) => Promise<T>;
   /** Names of the providers running now ("" for an unnamed one). */
-  providers: (service: string) => string[];
+  providers: (service: string) => Promise<string[]>;
 }
 
 export interface PluginSecrets {
@@ -784,7 +802,7 @@ export interface PluginSecrets {
     key: string,
     resolve: (userId: string) => Promise<string | null> | string | null,
   ) => void;
-  withdraw: (key: string) => boolean;
+  withdraw: (key: string) => Promise<boolean>;
   getShared: (
     pluginId: string,
     key: string,
@@ -1471,7 +1489,7 @@ export interface PluginHosts {
     hostIds?: number[];
   }) => Promise<PluginHostProbeTarget[]>;
   /** Whether a session is open to the host right now. Needs hosts:read. */
-  sessionActive: (hostId: number) => boolean;
+  sessionActive: (hostId: number) => Promise<boolean>;
   /**
    * Imports Termix JSON host rows for the acting user, the same way POST
    * /host/bulk-import does: up to 100 rows, jump hosts remapped by exportId,
@@ -1995,7 +2013,7 @@ export interface PluginSsh {
   ) => Promise<PluginSshConnection<Client>>;
 
   /** The pool key withConnection would use, for clearing it. */
-  poolKey: (pool: string, host: PluginSshHost) => string;
+  poolKey: (pool: string, host: PluginSshHost) => Promise<string>;
 
   /**
    * Closes this plugin's pooled connections to a host, for when its details
@@ -2082,7 +2100,7 @@ export interface PluginSsh {
       prompts: PluginKeyboardInteractivePrompt[];
     },
     host: PluginSshHost,
-  ) => PluginKeyboardInteractiveDecision;
+  ) => Promise<PluginKeyboardInteractiveDecision>;
 
   /** Stored password for password prompts, empty for the rest. */
   autoResponses: (
@@ -2091,10 +2109,10 @@ export interface PluginSsh {
   ) => string[];
 
   /** Whether an auth type carries a secret (drives "auth_required" flows). */
-  requiresSecret: (authType: string) => boolean;
+  requiresSecret: (authType: string) => Promise<boolean>;
 
   /** Whether an auth type can connect unattended, for polling. */
-  supportsBackground: (authType: string) => boolean;
+  supportsBackground: (authType: string) => Promise<boolean>;
 }
 
 /** What ctx.ssh.prepare built, plus the provider hooks bound to it. */
@@ -2511,7 +2529,7 @@ export interface PluginAuth {
   /** Login rules: idle timeout, session length, remember me, second factors. */
   policy: PluginAuthPolicyApi;
   /** Second factors from every running plugin. Needs no capability. */
-  listSecondFactors: () => { id: string; pluginId: string }[];
+  listSecondFactors: () => Promise<{ id: string; pluginId: string }[]>;
 }
 
 /** What a plugin may learn about a user. Needs users:read. */
@@ -2561,7 +2579,7 @@ export interface PluginDesktop {
     request: PluginExternalClientRequest,
   ) => Promise<{ success: boolean; error?: string }>;
   /** Whether the server runs embedded in the desktop app, so the calls above can work. */
-  available: () => boolean;
+  available: () => Promise<boolean>;
   /**
    * The user's own machine. Only works on the desktop app's embedded backend
    * and needs desktop:local; every call is audited once per plugin start.
@@ -2618,7 +2636,7 @@ export interface PluginLocalResponse {
 
 export interface PluginDesktopLocal {
   /** Whether local access is possible: embedded backend and capability granted. */
-  available: () => boolean;
+  available: () => Promise<boolean>;
   /**
    * Calls this plugin's own HTTP routes on the embedded backend ("local") or
    * on the server the desktop is linked to ("remote"), as the acting user.
@@ -3139,6 +3157,11 @@ export interface PluginSchedule {
     intervalMs: number,
     fn: () => void | Promise<void>,
     options?: {
+      /**
+       * One of the ids in the manifest's sandbox.schedules. Needed in the
+       * plugin's own process, where an undeclared job is refused.
+       */
+      id?: string;
       /** Delays the first run by up to this much, so many timers spread out. */
       jitterMs?: number;
       /** Also run once straight away. */

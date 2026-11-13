@@ -561,6 +561,13 @@
       "when": 1794025748495,
       "tag": "0079_glamorous_salo",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1794526286265,
+      "tag": "0080_strong_blockbuster",
+      "breakpoints": true
     }
   ]
 }

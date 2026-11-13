@@ -1444,7 +1444,7 @@ router.get(
       await applyPersonalHostValues(pluginSettingsByHost, userId).catch(
         () => {},
       );
-      attachHostPluginSettings(sanitized, pluginSettingsByHost);
+      await attachHostPluginSettings(sanitized, pluginSettingsByHost);
 
       res.json(sanitized);
     } catch (err) {

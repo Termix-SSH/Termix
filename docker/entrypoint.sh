@@ -4,7 +4,7 @@ set -e
 PUID=${PUID:-1000}
 PGID=${PGID:-1000}
 
-if [ "$(id -u)" = "0" ]; then
+if [ "$(id -u)" = "0" ] && [ "$TERMIX_PLUGIN_LAUNCHER" != "1" ]; then
     if [ "$PUID" = "0" ]; then
         echo "Running as root (PUID=0, PGID=$PGID)"
         chown -R root:root /app/data /app/uploads /tmp/nginx 2>/dev/null || true
@@ -19,9 +19,18 @@ if [ "$(id -u)" = "0" ]; then
         if [ -w /app/html ]; then chown -R node:node /app/html 2>/dev/null || true; fi
 
         echo "User node is now UID: $PUID, GID: $PGID"
-
-        exec gosu node:node "$0" "$@"
     fi
+
+    # The root launcher runs the rest of this script, and so core, as the
+    # node user, and starts each plugin as its own user.
+    if [ "$PUID" = "0" ]; then
+        export TERMIX_LAUNCHER_UID=0 TERMIX_LAUNCHER_GID=0
+    else
+        TERMIX_LAUNCHER_UID=$(id -u node)
+        TERMIX_LAUNCHER_GID=$(id -g node)
+        export TERMIX_LAUNCHER_UID TERMIX_LAUNCHER_GID
+    fi
+    exec node --disable-sigusr1 dist/backend/backend/plugins/sandbox/launcher/main.js "$0" "$@"
 fi
 
 DATA_DIR=${DATA_DIR:-/app/data}
@@ -95,7 +104,22 @@ if [ "$ENABLE_SSL" = "true" ] && [ "$PORT" = "$SSL_PORT" ]; then
 fi
 
 mkdir -p /app/data /app/uploads
-chmod 755 /app/data /app/uploads 2>/dev/null || true
+chmod 755 /app/uploads 2>/dev/null || true
+if [ "$TERMIX_PLUGIN_LAUNCHER" = "1" ]; then
+    # Plugins run as their own users: they may pass through the data folder
+    # and read plugin code, never the database, keys or settings.
+    chmod 711 /app/data 2>/dev/null || true
+    for entry in /app/data/* /app/data/.[!.]*; do
+        [ -e "$entry" ] || continue
+        case "$(basename "$entry")" in
+            plugins|plugin-data) ;;
+            *) chmod -R go-rwx "$entry" 2>/dev/null || true ;;
+        esac
+    done
+    [ -d /app/data/plugins ] && chmod -R a+rX /app/data/plugins 2>/dev/null || true
+else
+    chmod 755 /app/data 2>/dev/null || true
+fi
 
 if [ -w /app/data ]; then
     echo "Data directory is writable"
@@ -229,4 +253,4 @@ else
     echo "Warning: package.json not found"
 fi
 
-exec node dist/backend/backend/starter.js
+exec node --disable-sigusr1 dist/backend/backend/starter.js

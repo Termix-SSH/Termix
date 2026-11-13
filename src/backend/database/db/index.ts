@@ -512,6 +512,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         auto_update INTEGER NOT NULL DEFAULT 0,
         pinned_version TEXT,
         channel TEXT NOT NULL DEFAULT 'stable',
+        run_unisolated INTEGER NOT NULL DEFAULT 0,
         manifest_json TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_plugins_registry_id ON plugins (registry_id);
@@ -1706,6 +1707,11 @@ const migrateSchema = () => {
   addColumnIfNotExists("plugins", "last_error", "TEXT");
   addColumnIfNotExists("plugins", "pinned_version", "TEXT");
   addColumnIfNotExists("plugins", "channel", "TEXT NOT NULL DEFAULT 'stable'");
+  addColumnIfNotExists(
+    "plugins",
+    "run_unisolated",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
   addColumnIfNotExists(
     "plugin_permission_grants",
     "source",

@@ -176,16 +176,17 @@ function visibleHostPluginSettings(
 export type PluginHostPayloadLegacy = (
   values: Record<string, unknown>,
   host: Record<string, unknown>,
-) => Record<string, unknown> | null;
+) => Record<string, unknown> | null | Promise<Record<string, unknown> | null>;
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
-function applyLegacyFields(
+// A plugin in its own process answers asynchronously, so this awaits.
+async function applyLegacyFields(
   host: Record<string, unknown>,
   values: HostPluginSettings,
-): void {
+): Promise<void> {
   for (const manifest of hostSettingsPlugins()) {
     const own = values[manifest.id];
     if (!own) continue;
@@ -194,7 +195,9 @@ function applyLegacyFields(
     );
     if (!legacy) continue;
     try {
-      for (const [key, value] of Object.entries(legacy(own, host) ?? {})) {
+      for (const [key, value] of Object.entries(
+        (await legacy(own, host)) ?? {},
+      )) {
         const current = host[key];
         if (current === undefined || current === null) {
           host[key] = value;
@@ -211,17 +214,17 @@ function applyLegacyFields(
 }
 
 /** Attaches the map to already-transformed host objects, in place. */
-export function attachHostPluginSettings(
+export async function attachHostPluginSettings(
   hosts: Record<string, unknown>[],
   settings: Map<number, HostPluginSettings>,
-): void {
+): Promise<void> {
   if (settings.size === 0) return;
   for (const host of hosts) {
     const hostId = Number(host.id);
     const values = settings.get(hostId);
     if (!values) continue;
     host.pluginSettings = visibleHostPluginSettings(values, host);
-    applyLegacyFields(host, host.pluginSettings as HostPluginSettings);
+    await applyLegacyFields(host, host.pluginSettings as HostPluginSettings);
   }
 }
 
@@ -248,7 +251,7 @@ export async function withHostPluginSettings(
     ...host,
     pluginSettings: visibleHostPluginSettings(values, host),
   };
-  applyLegacyFields(result, result.pluginSettings as HostPluginSettings);
+  await applyLegacyFields(result, result.pluginSettings as HostPluginSettings);
   return result;
 }
 
@@ -350,7 +353,7 @@ export function checkHostPluginSettingsInput(
  */
 export type PluginHostImportNormalizer = (
   raw: Record<string, unknown>,
-) => Record<string, unknown> | null;
+) => Record<string, unknown> | null | Promise<Record<string, unknown> | null>;
 
 /**
  * Runs every enabled plugin's registered import normalizer over one imported
@@ -394,7 +397,7 @@ export async function applyPluginHostImportSettings(
       const normalizer = consume<PluginHostImportNormalizer>(
         `${manifest.id}.hostImportNormalizer`,
       );
-      const values = normalizer?.(raw);
+      const values = await normalizer?.(raw);
       if (values)
         await writeHostPluginSettings(manifest, hostId, values, actorId);
     } catch (error) {

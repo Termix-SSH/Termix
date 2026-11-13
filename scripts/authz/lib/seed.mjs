@@ -123,6 +123,21 @@ export async function seedFirstBoot(base, log) {
   const { token } = await login(base, "authz-admin");
   const admin = { id: "admin", token };
   const plugins = await must(base, { path: "/plugins", identity: admin });
+  // Official plugins still on plugin API 1 run only with the admin switch.
+  for (const plugin of plugins.filter(
+    (p) => p.canRunUnisolated && !p.runUnisolated,
+  )) {
+    const res = await call(base, {
+      method: "PATCH",
+      path: `/plugins/${plugin.id}/options`,
+      identity: admin,
+      body: { runUnisolated: true },
+    });
+    if (res.status !== 200)
+      log?.(
+        `could not let ${plugin.id} run unisolated: ${res.status} ${res.text}`,
+      );
+  }
   for (const plugin of plugins.filter((p) => !p.enabled)) {
     const res = await call(base, {
       method: "PATCH",

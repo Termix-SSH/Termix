@@ -52,6 +52,10 @@ function start() {
     },
     utilityProcess: { fork: () => child },
     wrapUtilityProcess: (proc: unknown) => proc,
+    pluginSandbox: null,
+    createPluginSandboxHost: () => ({ handle: () => false, stopAll: vi.fn() }),
+    MessageChannelMain: class {},
+    path: { dirname: (p: string) => p.slice(0, p.lastIndexOf("/")) || "/" },
     app: {
       isPackaged: true,
       getVersion: () => "2.9.0",

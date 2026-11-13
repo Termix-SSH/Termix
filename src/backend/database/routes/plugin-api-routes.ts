@@ -16,7 +16,11 @@
 
 import express, { type Request, type Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
-import { getPluginRouter, isPluginInstalled } from "../../plugins/http.js";
+import {
+  getPluginRouter,
+  isPluginInstalled,
+  wakePlugin,
+} from "../../plugins/http.js";
 import { getRequestBasePath } from "../../utils/request-origin.js";
 import type { PluginLegacyRedirect } from "@termix-ssh/plugin-sdk/manifest";
 
@@ -59,12 +63,16 @@ router.use("/:pluginId", (req: Request, res: Response, next) => {
   const pluginId = String(req.params.pluginId);
   const pluginRouter = getPluginRouter(pluginId);
 
-  if (!pluginRouter) {
-    notServing(res, pluginId);
+  if (pluginRouter) {
+    pluginRouter(req, res, next);
     return;
   }
-
-  pluginRouter(req, res, next);
+  // A plugin whose process is stopped starts on its first request.
+  void wakePlugin(pluginId).then((woke) => {
+    const started = woke ? getPluginRouter(pluginId) : undefined;
+    if (started) started(req, res, next);
+    else notServing(res, pluginId);
+  });
 });
 
 /** 503 for an installed plugin that is off, 404 for an unknown id. */
@@ -127,13 +135,17 @@ export function mountPluginLegacyPaths(
         return;
       }
       if (!plugin.legacyPaths.some((path) => under(req.path, path))) continue;
+      req.url = req.url.slice(plugin.id.length + 1) || "/";
       const pluginRouter = getPluginRouter(plugin.id);
-      if (!pluginRouter) {
-        notServing(res, plugin.id);
+      if (pluginRouter) {
+        pluginRouter(req, res, next);
         return;
       }
-      req.url = req.url.slice(plugin.id.length + 1) || "/";
-      pluginRouter(req, res, next);
+      void wakePlugin(plugin.id).then((woke) => {
+        const started = woke ? getPluginRouter(plugin.id) : undefined;
+        if (started) started(req, res, next);
+        else notServing(res, plugin.id);
+      });
       return;
     }
     next();

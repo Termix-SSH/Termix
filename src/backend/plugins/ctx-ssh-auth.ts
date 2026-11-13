@@ -55,6 +55,7 @@ import type {
   SshConnectProfile,
   SshConnectPurpose,
 } from "../hosts/connect/types.js";
+import { answeredSync } from "./api1-sync.js";
 
 type AuditFn = (
   action: string,
@@ -466,7 +467,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
       return { client: client as never, jumpClient: null, host, dispose };
     },
 
-    poolKey,
+    poolKey: answeredSync<PluginSsh["poolKey"]>(poolKey),
 
     dropPooled: (pool, hostId) => {
       const keys = [...poolKeys.entries()]
@@ -646,26 +647,37 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
       }
     },
 
-    classifyKeyboardInteractive: (round, host) => {
-      ensureCoreSshAuthProviders();
-      return classifyKeyboardInteractive(round, host as SshConnectHost);
-    },
+    classifyKeyboardInteractive: answeredSync<
+      PluginSsh["classifyKeyboardInteractive"]
+    >(
+      (
+        round: Parameters<typeof classifyKeyboardInteractive>[0],
+        host: unknown,
+      ) => {
+        ensureCoreSshAuthProviders();
+        return classifyKeyboardInteractive(round, host as SshConnectHost);
+      },
+    ),
 
     autoResponses: (prompts, password) =>
       prompts.map((p) =>
         /password/i.test(p.prompt) && password ? password : "",
       ),
 
-    requiresSecret: (authType) => {
-      ensureCoreSshAuthProviders();
-      return !!getSshAuthProvider(authType)?.requiresSecret;
-    },
+    requiresSecret: answeredSync<PluginSsh["requiresSecret"]>(
+      (authType: string) => {
+        ensureCoreSshAuthProviders();
+        return !!getSshAuthProvider(authType)?.requiresSecret;
+      },
+    ),
 
-    supportsBackground: (authType) => {
-      ensureCoreSshAuthProviders();
-      const provider = getSshAuthProvider(authType);
-      return !!provider && provider.supportsBackground !== false;
-    },
+    supportsBackground: answeredSync<PluginSsh["supportsBackground"]>(
+      (authType: string) => {
+        ensureCoreSshAuthProviders();
+        const provider = getSshAuthProvider(authType);
+        return !!provider && provider.supportsBackground !== false;
+      },
+    ),
   };
 }
 
@@ -1099,10 +1111,11 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
       },
     },
 
-    listSecondFactors: () =>
+    listSecondFactors: answeredSync<PluginAuth["listSecondFactors"]>(() =>
       listSecondFactors().map((factor) => ({
         id: factor.id,
         pluginId: factor.pluginId,
       })),
+    ),
   };
 }

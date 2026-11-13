@@ -1,5 +1,5 @@
 // Starts the built backend on a throwaway data dir and a free port.
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import net from "node:net";
 import os from "node:os";
@@ -26,6 +26,24 @@ export function createWorkspace() {
   };
 }
 
+/**
+ * The version core will ship as. A dev-X.Y.Z branch still carries the last
+ * release in package.json, so a plugin that needs the coming release would be
+ * skipped; the branch name says which release it is.
+ */
+export function coreVersionOf(coreDir, run = spawnSync) {
+  if (process.env.TERMIX_AUTHZ_CORE_VERSION) {
+    return process.env.TERMIX_AUTHZ_CORE_VERSION;
+  }
+  const branch = run("git", ["-C", coreDir, "branch", "--show-current"], {
+    encoding: "utf8",
+  });
+  const match = /^dev-(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$/.exec(
+    String(branch?.stdout ?? "").trim(),
+  );
+  return match ? match[1] : undefined;
+}
+
 /** Starts core on workDir/data. Call again on the same workDir to restart. */
 export async function startServer({
   coreDir,
@@ -43,6 +61,7 @@ export async function startServer({
   const inventoryFile = path.join(workDir, "inventory.json");
   fs.rmSync(inventoryFile, { force: true });
   const port = await freePort();
+  const version = coreVersionOf(coreDir);
   const logFile = path.join(workDir, "server.log");
   const out = fs.openSync(logFile, "a");
 
@@ -61,6 +80,7 @@ export async function startServer({
       TERMIX_BUNDLED_PLUGINS_DIR: pluginsDir,
       TERMIX_ROUTE_INVENTORY_FILE: inventoryFile,
       TERMIX_AUTHZ_NO_RATE_LIMITS: "1",
+      ...(version ? { VERSION: version } : {}),
       ...env,
     },
     stdio: ["ignore", out, out, "ipc"],

@@ -75,6 +75,7 @@ import { createPluginPlugins } from "./ctx-plugins.js";
 import { createPluginUsers } from "./ctx-users.js";
 import { createPluginCredentials } from "./ctx-credentials.js";
 import { isElectronIpcAvailable } from "../utils/electron-ipc-bridge.js";
+import { answeredSync } from "./api1-sync.js";
 
 export type { PluginModule };
 
@@ -537,6 +538,19 @@ export function createPluginContext(
       define: (definition) => dbDefine(definition) as never,
       client: () => dbClient() as never,
       refs: () => dbRefs() as never,
+      // Every statement or none. The plugin's own process sends these to core,
+      // which checks each one (sandbox/bridge.ts).
+      batch: async (queries) => {
+        await assertCapability(pluginId, "db:own", manifest.capabilities);
+        const { runPluginSqlBatch } = await import("./sandbox/db-exec.js");
+        await runPluginSqlBatch(
+          resolveDatabaseDialect(),
+          queries.map((query) => {
+            const { sql, params } = query.toSQL();
+            return { sql, params, method: "run" };
+          }),
+        );
+      },
       // Gated but not audited: it follows every write, and client() was
       // already audited when the plugin first asked for it.
       persist: async (options) => {
@@ -580,10 +594,12 @@ export function createPluginContext(
         );
       },
       consume: (key) => registry.consume(key),
-      revoke: (key, value) => {
-        assertOwnRegistryKey(pluginId, key);
-        return registry.revoke(key, value);
-      },
+      revoke: answeredSync<PluginContext["registry"]["revoke"]>(
+        (key: string, value?: unknown) => {
+          assertOwnRegistryKey(pluginId, key);
+          return registry.revoke(key, value);
+        },
+      ),
     },
 
     services: {
@@ -648,7 +664,9 @@ export function createPluginContext(
         );
       },
 
-      providers: (service) => serviceRegistry.listProviderNames(service),
+      providers: answeredSync<PluginContext["services"]["providers"]>(
+        (service: string) => serviceRegistry.listProviderNames(service),
+      ),
     },
 
     secrets: {
@@ -742,15 +760,17 @@ export function createPluginContext(
         );
       },
 
-      withdraw: (key) => {
-        const registration = handle.offeredSecrets.find(
-          (entry) => entry.key === key,
-        );
-        handle.offeredSecrets = handle.offeredSecrets.filter(
-          (entry) => entry !== registration,
-        );
-        return secretRegistry.withdrawSecret(pluginId, key, registration);
-      },
+      withdraw: answeredSync<PluginContext["secrets"]["withdraw"]>(
+        (key: string) => {
+          const registration = handle.offeredSecrets.find(
+            (entry) => entry.key === key,
+          );
+          handle.offeredSecrets = handle.offeredSecrets.filter(
+            (entry) => entry !== registration,
+          );
+          return secretRegistry.withdrawSecret(pluginId, key, registration);
+        },
+      ),
 
       getShared: (providerPluginId, key, options) =>
         secretRegistry.readSharedSecret(manifest, providerPluginId, key, {
@@ -999,7 +1019,9 @@ export function createPluginContext(
     desktop: {
       openIsolatedWindow: (request) => desktopOpenIsolatedWindow(request),
       launchExternalClient: (request) => desktopLaunchExternalClient(request),
-      available: () => isElectronIpcAvailable(),
+      available: answeredSync<PluginContext["desktop"]["available"]>(() =>
+        isElectronIpcAvailable(),
+      ),
       local: createPluginDesktopLocal({
         manifest,
         bag: handle.bag,

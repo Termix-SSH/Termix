@@ -51,6 +51,7 @@ export const CAPABILITY_CATALOG: readonly CapabilityInfo[] = [
   entry("sync:provide", "high"),
   entry("ssh:transport", "high"),
   entry("device:serial", "high"),
+  entry("network:sockets", "high"),
   entry("notify:hub", "high"),
   entry("operations:invoke", "high"),
   entry("operations:approve", "high"),
@@ -117,4 +118,77 @@ export const CAPABILITY_RISK_ORDER: readonly CapabilityRisk[] = [
   "high",
   "medium",
   "low",
+];
+
+/**
+ * What a capability lets a plugin's own process do (API 2). Every plugin
+ * backend runs in its own Node process under the permission model; by default
+ * it can read only its own folder and the runtime, write nothing, and open no
+ * sockets, child processes, workers or native addons. Everything else goes
+ * through ctx, which core checks.
+ *
+ * This is the one table. Core builds the process flags from it, the CLI's
+ * validate warns from it, and the plugin guide prints it.
+ */
+export interface CapabilityProcessGrant {
+  /** Node flags added to the plugin process. */
+  flags: readonly string[];
+  /** Write access to the plugin's own data folder. */
+  writeDataDir?: boolean;
+  /** Linux firewall rule for the plugin's user, when the admin allows it. */
+  firewall?: "allow-all";
+  /** Node modules a plugin may then use directly. */
+  modules: readonly string[];
+}
+
+export const CAPABILITY_PROCESS_GRANTS: Readonly<
+  Record<string, CapabilityProcessGrant>
+> = {
+  "network:sockets": {
+    flags: ["--allow-net"],
+    firewall: "allow-all",
+    modules: ["net", "tls", "http", "https", "http2", "dgram", "dns"],
+  },
+  "process:spawn": {
+    flags: ["--allow-child-process"],
+    modules: ["child_process"],
+  },
+  "device:serial": {
+    flags: ["--allow-addons"],
+    modules: [],
+  },
+  "files:own": {
+    flags: [],
+    writeDataDir: true,
+    modules: ["fs", "fs/promises"],
+  },
+};
+
+/** Node modules no capability unlocks: workers do not keep the fence. */
+export const SANDBOX_BLOCKED_MODULES: readonly string[] = [
+  "worker_threads",
+  "wasi",
+  "inspector",
+  "inspector/promises",
+  "sqlite",
+  "trace_events",
+  "cluster",
+];
+
+/** The Node modules a set of capabilities lets a plugin use directly. */
+export function modulesGrantedBy(capabilities: readonly string[]): Set<string> {
+  const out = new Set<string>();
+  for (const capability of capabilities) {
+    for (const name of CAPABILITY_PROCESS_GRANTS[capability]?.modules ?? []) {
+      out.add(name);
+    }
+  }
+  return out;
+}
+
+/** Node modules that need a grant from the table above. */
+export const SANDBOX_GATED_MODULES: readonly string[] = [
+  ...new Set(
+    Object.values(CAPABILITY_PROCESS_GRANTS).flatMap((grant) => grant.modules),
+  ),
 ];

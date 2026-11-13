@@ -22,6 +22,7 @@ export interface PluginCreateInput {
   autoUpdate?: boolean;
   pinnedVersion?: string | null;
   channel?: string;
+  runUnisolated?: boolean;
   manifestJson: string;
 }
 
@@ -36,6 +37,7 @@ export interface PluginUpdateInput {
   autoUpdate?: boolean;
   pinnedVersion?: string | null;
   channel?: string;
+  runUnisolated?: boolean;
   manifestJson?: string;
 }
 
@@ -74,6 +76,7 @@ export class PluginRepository {
       autoUpdate: input.autoUpdate ?? false,
       pinnedVersion: input.pinnedVersion ?? null,
       channel: input.channel ?? "stable",
+      runUnisolated: input.runUnisolated ?? false,
       manifestJson: input.manifestJson,
       installedAt: now,
       updatedAt: now,
@@ -112,6 +115,7 @@ export class PluginRepository {
             ? existing.pinnedVersion
             : input.pinnedVersion,
         channel: input.channel ?? existing.channel,
+        runUnisolated: input.runUnisolated ?? existing.runUnisolated,
         manifestJson: input.manifestJson ?? existing.manifestJson,
         updatedAt: now,
       },

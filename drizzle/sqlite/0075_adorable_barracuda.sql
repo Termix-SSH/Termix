@@ -1,0 +1,1 @@
+ALTER TABLE `plugins` ADD `run_unisolated` integer DEFAULT false NOT NULL;

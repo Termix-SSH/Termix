@@ -74,6 +74,7 @@ import type {
   SyncEntityRegistration,
 } from "./backend.js";
 import type { PluginDatabase } from "./backend.js";
+import { sandboxContext } from "./testing/sandbox.js";
 import type {
   PluginExternalClientRequest,
   PluginProtocolTarget,
@@ -758,6 +759,7 @@ export function createFakeContext(
           },
           client: () => options.db!.client(),
           refs: () => options.db!.refs(),
+          batch: (queries) => options.db!.batch(queries),
           persist: () => options.db!.persist(),
           dialect: options.db.dialect,
         }
@@ -774,6 +776,11 @@ export function createFakeContext(
             );
           },
           refs: async () => {
+            throw new Error(
+              "createFakeContext has no database: pass createTestDb().database as db",
+            );
+          },
+          batch: async () => {
             throw new Error(
               "createFakeContext has no database: pass createTestDb().database as db",
             );
@@ -799,8 +806,8 @@ export function createFakeContext(
         assertOwnRegistryKey(pluginId, key);
         registryProviders.set(key, value);
       },
-      consume: (key) => registryProviders.get(key) as never,
-      revoke: (key, value) => {
+      consume: async (key) => registryProviders.get(key) as never,
+      revoke: async (key, value) => {
         assertOwnRegistryKey(pluginId, key);
         if (!registryProviders.has(key)) return false;
         if (value !== undefined && registryProviders.get(key) !== value) {
@@ -820,7 +827,7 @@ export function createFakeContext(
       get: (service, getOptions) =>
         (services.get(serviceKey(service, getOptions?.provider)) ??
           {}) as never,
-      providers: (service) =>
+      providers: async (service) =>
         [...services.keys()].flatMap((key) =>
           key === service
             ? [""]
@@ -846,7 +853,7 @@ export function createFakeContext(
           ? Buffer.from(sealed.slice(7), "base64").toString("utf8")
           : null,
       offer: () => {},
-      withdraw: () => false,
+      withdraw: async () => false,
       getShared: async () => null,
     },
 
@@ -1087,7 +1094,7 @@ export function createFakeContext(
         (options.probeTargets ?? []).filter(
           (target) => !filter?.hostIds || filter.hostIds.includes(target.id),
         ),
-      sessionActive: (hostId) =>
+      sessionActive: async (hostId) =>
         options.activeSessions?.includes(hostId) ?? false,
       activity: {
         provide: (provider) => {
@@ -1226,7 +1233,7 @@ export function createFakeContext(
       dropPooled: (pool, hostId) => {
         droppedPools.push({ pool, hostId });
       },
-      poolKey: (pool, host) =>
+      poolKey: async (pool, host) =>
         `${pool}:${host.userId}:${host.ip}:${host.port}:${host.username}`,
       resolveHost: async (hostId, resolveOptions) =>
         (options.sshHosts ?? []).find((host) =>
@@ -1246,7 +1253,7 @@ export function createFakeContext(
       cancelInteraction: async (interaction, request) => {
         interactions.push({ action: "cancel", interaction, request });
       },
-      classifyKeyboardInteractive: ({ prompts }, host) => ({
+      classifyKeyboardInteractive: async ({ prompts }, host) => ({
         kind: "auto",
         responses: prompts.map((p) =>
           /password/i.test(p.prompt) && typeof host.password === "string"
@@ -1258,11 +1265,11 @@ export function createFakeContext(
         prompts.map((p) =>
           /password/i.test(p.prompt) && password ? password : "",
         ),
-      requiresSecret: (authType) =>
+      requiresSecret: async (authType) =>
         ["password", "key", "credential", "agent"].includes(authType),
       // Matches core: the built-in types, plus any registered provider that
       // does not opt out. An unknown type cannot connect unattended.
-      supportsBackground: (authType) => {
+      supportsBackground: async (authType) => {
         if (["password", "key", "credential", "agent"].includes(authType)) {
           return true;
         }
@@ -1402,7 +1409,7 @@ export function createFakeContext(
           };
         },
       },
-      listSecondFactors: () => [
+      listSecondFactors: async () => [
         ...auth.secondFactors.map((factor) => ({
           id: factor.id,
           pluginId,
@@ -1424,7 +1431,7 @@ export function createFakeContext(
         externalClientLaunches.push(request);
         return { success: true };
       },
-      available: () => options.desktopAvailable ?? false,
+      available: async () => options.desktopAvailable ?? false,
       local: options.desktopLocal ?? unavailableDesktopLocal(),
     },
 
@@ -1799,6 +1806,12 @@ export interface MockContextOptions {
   secondFactors?: FakeContextOptions["secondFactors"];
   /** See FakeContextOptions. */
   locales?: Record<string, string>;
+  /**
+   * Apply the rules of a plugin's own process (plugin API 2): plain data
+   * only across ctx, declared schedules, events and registry keys, no
+   * db.transaction(), string route paths. See testing/sandbox.ts.
+   */
+  sandbox?: boolean;
 }
 
 export interface MockPluginContext extends FakePluginContext {
@@ -1962,6 +1975,10 @@ export function createMockCtx(
       refs: async () => {
         require("db:core-refs");
         return guardedDb.refs();
+      },
+      batch: async (queries) => {
+        require("db:own");
+        return guardedDb.batch(queries);
       },
       persist: async (persistOptions) => {
         require("db:own");
@@ -2494,7 +2511,13 @@ export function createMockCtx(
     },
   };
 
-  return { ...base, ctx: gatedCtx, checked };
+  return {
+    ...base,
+    ctx: options.sandbox
+      ? sandboxContext(gatedCtx, options.manifest ?? {})
+      : gatedCtx,
+    checked,
+  };
 }
 
 /** A sqlite handle as createTestDb exposes it. Structural, like better-sqlite3's. */
@@ -2630,6 +2653,20 @@ export async function createTestDb(
       builder.buildTable(pluginId, definition) as never,
     client: async () => handle as never,
     refs: async () => refs as never,
+    // All or nothing, like core.
+    batch: async (queries) => {
+      sqlite.exec("BEGIN");
+      try {
+        for (const query of queries) {
+          const { sql, params } = query.toSQL();
+          sqlite.prepare(sql).run(...params);
+        }
+        sqlite.exec("COMMIT");
+      } catch (error) {
+        sqlite.exec("ROLLBACK");
+        throw error;
+      }
+    },
     persist: async () => {
       persisted += 1;
     },
@@ -2815,3 +2852,8 @@ function assertOwnRegistryKey(pluginId: string, key: string): void {
     );
   }
 }
+export {
+  sandboxContext,
+  SandboxRuleError,
+  assertCrossable,
+} from "./testing/sandbox.js";

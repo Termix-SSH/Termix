@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.0.0
+
+Plugin API 2.0.0. Every plugin backend now runs in its own process. See "The plugin process" and "Moving from API 1" in PLUGIN-GUIDE.md.
+
+### Added
+
+- Manifest `sandbox` block: `schedules`, `events`, `registry`, `memoryMb` and `alwaysOn`
+- `ctx.db.batch()` runs writes in one transaction
+- `ctx.schedule.every` takes an `id`
+- Capability `network:sockets` for plugins that open their own listeners and connections
+- `CAPABILITY_PROCESS_GRANTS`, `modulesGrantedBy`, `SANDBOX_GATED_MODULES` and `SANDBOX_BLOCKED_MODULES` in `/capabilities`
+- `isLegacyPluginApi` and `LEGACY_PLUGIN_API_VERSION` in `/manifest`
+- `createMockCtx({ sandbox: true })` applies the rules of a plugin process in tests, with `sandboxContext`, `SandboxRuleError` and `assertCrossable`
+- `termix-plugin validate` warns about Node modules a plugin process can't use
+
+### Changed
+
+- `services.get`, `services.providers`, `registry.consume`, `registry.revoke`, `secrets.withdraw`, `hosts.sessionActive`, `ssh.poolKey`, `ssh.classifyKeyboardInteractive`, `ssh.requiresSecret`, `ssh.supportsBackground`, `auth.listSecondFactors`, `desktop.available` and `desktop.local.available` return Promises
+- `ctx.events.on` and `ctx.registry.provide` need the topic or key listed in the manifest `sandbox` block
+- The fake ctx answers those reads with Promises too
+
 ## 1.1.6
 
 Plugin API 1.17.0.

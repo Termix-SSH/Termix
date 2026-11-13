@@ -236,20 +236,20 @@ describe("loadHostPluginSettings", () => {
 });
 
 describe("attachHostPluginSettings", () => {
-  it("attaches values to the matching host", () => {
+  it("attaches values to the matching host", async () => {
     const hosts = [{ id: 1 }, { id: 2 }] as Record<string, unknown>[];
     const settings = new Map([[1, { docker: { enableDocker: true } }]]);
 
-    attachHostPluginSettings(hosts, settings);
+    await attachHostPluginSettings(hosts, settings);
 
     expect(hosts[0].pluginSettings).toEqual({ docker: { enableDocker: true } });
     expect(hosts[1].pluginSettings).toBeUndefined();
   });
 
-  it("leaves hosts alone when there is nothing to attach", () => {
+  it("leaves hosts alone when there is nothing to attach", async () => {
     const hosts = [{ id: 1 }] as Record<string, unknown>[];
 
-    attachHostPluginSettings(hosts, new Map());
+    await attachHostPluginSettings(hosts, new Map());
 
     expect(hosts[0]).toEqual({ id: 1 });
   });
@@ -378,7 +378,7 @@ describe("share levels, legacy fields and generic writes", () => {
     ],
   });
 
-  it("hides a field above a recipient's share level", () => {
+  it("hides a field above a recipient's share level", async () => {
     loaded.push({ id: "remote-desktop", manifest: DESKTOP, state: "active" });
     const values = new Map([
       [
@@ -391,7 +391,7 @@ describe("share levels, legacy fields and generic writes", () => {
     const connect = { id: 1, isShared: true, permissionLevel: "connect" };
     const edit = { id: 1, isShared: true, permissionLevel: "edit" };
     const owner = { id: 1 };
-    attachHostPluginSettings([connect, edit, owner], values);
+    await attachHostPluginSettings([connect, edit, owner], values);
 
     expect(connect).toMatchObject({
       pluginSettings: { "remote-desktop": { enableRdp: true } },
@@ -408,7 +408,7 @@ describe("share levels, legacy fields and generic writes", () => {
     });
   });
 
-  it("adds a plugin's legacy payload fields without overwriting core's", () => {
+  it("adds a plugin's legacy payload fields without overwriting core's", async () => {
     loaded.push({ id: "docker", manifest: DOCKER, state: "active" });
     registryProviders.set(
       "docker.hostPayloadLegacy",
@@ -418,7 +418,7 @@ describe("share levels, legacy fields and generic writes", () => {
       }),
     );
     const host: Record<string, unknown> = { id: 2, name: "web" };
-    attachHostPluginSettings(
+    await attachHostPluginSettings(
       [host],
       new Map([[2, { docker: { enableDocker: true } }]]),
     );
@@ -426,7 +426,23 @@ describe("share levels, legacy fields and generic writes", () => {
     expect(host.name).toBe("web");
   });
 
-  it("adds a plugin's keys to an object core already sends, never over core's", () => {
+  it("awaits a legacy hook from a plugin running in its own process", async () => {
+    loaded.push({ id: "docker", manifest: DOCKER, state: "active" });
+    registryProviders.set(
+      "docker.hostPayloadLegacy",
+      async (own: Record<string, unknown>) => ({
+        enableDocker: own.enableDocker,
+      }),
+    );
+    const host: Record<string, unknown> = { id: 2 };
+    await attachHostPluginSettings(
+      [host],
+      new Map([[2, { docker: { enableDocker: true } }]]),
+    );
+    expect(host.enableDocker).toBe(true);
+  });
+
+  it("adds a plugin's keys to an object core already sends, never over core's", async () => {
     loaded.push({ id: "docker", manifest: DOCKER, state: "active" });
     registryProviders.set("docker.hostPayloadLegacy", () => ({
       terminalConfig: { theme: "nord", startupSnippetId: 99 },
@@ -435,7 +451,7 @@ describe("share levels, legacy fields and generic writes", () => {
       id: 2,
       terminalConfig: { startupSnippetId: 1 },
     };
-    attachHostPluginSettings(
+    await attachHostPluginSettings(
       [host],
       new Map([[2, { docker: { enableDocker: true } }]]),
     );
@@ -489,7 +505,7 @@ describe("share levels, legacy fields and generic writes", () => {
 });
 
 describe("checkHostPluginSettingsInput", () => {
-  it("passes declared keys through to the plugin that owns them", () => {
+  it("passes declared keys through to the plugin that owns them", async () => {
     loaded.push({ id: "docker", manifest: DOCKER, state: "active" });
     const result = checkHostPluginSettingsInput({
       docker: { enableDocker: true, socketPath: "/run/docker.sock" },
@@ -504,7 +520,7 @@ describe("checkHostPluginSettingsInput", () => {
     ]);
   });
 
-  it("refuses a key the plugin does not declare and a value it rejects", () => {
+  it("refuses a key the plugin does not declare and a value it rejects", async () => {
     loaded.push({ id: "docker", manifest: DOCKER, state: "active" });
     const { errors } = checkHostPluginSettingsInput({
       docker: { dockerConfig: {}, enableDocker: "sure" },
@@ -514,7 +530,7 @@ describe("checkHostPluginSettingsInput", () => {
     expect(errors[1]).toContain("docker.enableDocker");
   });
 
-  it("skips a plugin that is not running", () => {
+  it("skips a plugin that is not running", async () => {
     loaded.push({ id: "docker", manifest: DOCKER, state: "disabled" });
     const result = checkHostPluginSettingsInput({
       docker: { enableDocker: true },

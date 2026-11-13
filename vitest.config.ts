@@ -55,6 +55,10 @@ export default defineConfig({
           name: "backend",
           environment: "node",
           include: ["src/backend/**/*.test.ts"],
+          setupFiles: [
+            "./vitest.setup.ts",
+            "./src/backend/tests/fixtures/in-process-runner.ts",
+          ],
           // The repository tests can be pointed at a real Postgres or MySQL
           // (TEST_DIALECT). Connecting, migrating and clearing tables between
           // tests costs seconds there, against microseconds for in-memory

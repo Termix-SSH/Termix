@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.1.6 | Plugin API 1.17.0
+SDK 2.0.0 | Plugin API 2.0.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -250,6 +250,75 @@ Keep `deactivate()` quick. When the server shuts down, core gives each plugin 2 
 
 Bundled as ESM for Node 22+ into `dist/backend.js`. Backend imports of your own files use `.js`.
 
+### The plugin process (API 2)
+
+Your backend runs in its own Node process, never inside the Termix server. It can read only its own
+folder and the runtime, writes nothing, and opens no sockets, child processes, workers or native addons
+unless a capability grants it. Everything else goes through `ctx`: each call is a message to core, which
+checks your capabilities and the acting user, then answers. Secrets, the database connection, SSH
+connections and credentials stay in core. In Docker each plugin also runs as its own Linux user.
+
+| Capability        | What your process may then do                                              |
+| ----------------- | -------------------------------------------------------------------------- |
+| none              | Read your plugin folder, call `ctx`                                        |
+| `files:own`       | Write your own data folder (`ctx.files.dataDir()`) with `node:fs`          |
+| `network:sockets` | Open listeners and connections (`node:net`, `http`, `tls`, `dgram`, `dns`) |
+| `process:spawn`   | Start child processes. Prefer `ctx.process`, which core runs and audits    |
+| `device:serial`   | Load native addons (serialport)                                            |
+
+Workers, WASI, `node:sqlite`, the inspector and `process.binding` are never available. Core restarts a
+process that crashes, stops answering, goes past its memory limit (256 MiB unless `sandbox.memoryMb`) or
+uses more than 80% of a CPU core for a minute. Too many crashes and the plugin is marked failed.
+Windows and macOS desktop builds get the Node permission model only, with no per plugin user.
+
+A plugin that registers nothing core calls on its own starts on its first request or socket and stops
+after 10 idle minutes. Anything in the `sandbox` block below, a `provides` entry, a provider hook, a
+layout or theme, or `network:sockets` keeps it running.
+
+```json
+"sandbox": {
+  "schedules": [{ "id": "poll", "every": 60000 }],
+  "events": ["host.deleted"],
+  "registry": ["my-plugin.variables"],
+  "memoryMb": 256,
+  "alwaysOn": false
+}
+```
+
+- `ctx.schedule.every(ms, fn, { id: "poll" })`: the id must be listed in `sandbox.schedules`.
+- `ctx.events.on(topic, fn)`: the topic must be listed in `sandbox.events`.
+- `ctx.registry.provide(key, value)`: the key must be listed in `sandbox.registry`.
+- Only plain data, functions, Buffers, Dates, Maps, Sets and Errors cross between your process and core.
+  A class instance (your own or a library's) does not.
+- Reads that used to be synchronous return Promises: `services.get`, `services.providers`,
+  `registry.consume`, `registry.revoke`, `secrets.withdraw`, `hosts.sessionActive`, `ssh.poolKey`,
+  `ssh.classifyKeyboardInteractive`, `ssh.requiresSecret`, `ssh.supportsBackground`,
+  `auth.listSecondFactors`, `desktop.available`, `desktop.local.available`. Every method on a service or
+  registry value from another plugin returns a Promise too.
+- `db.transaction()` is not available. Use `ctx.db.batch([q1, q2])` for writes that must land together.
+- Routes need string paths. Core strips `Cookie`, `Authorization`, `X-Api-Key` and
+  `Proxy-Authorization` before a request reaches you.
+- Your process gets no environment of core's. Variables you list in the manifest's `env` are passed
+  through, except core's own secrets and anything that changes how Node starts.
+- Not available in a plugin process yet: `ssh.prepare`, `ssh.openTransport`, `ssh.jumpChain`,
+  `hosts.locks.provide`, `hosts.status.provide`, `sync.provide` and `desktop.local`. Plugins that need
+  them stay on API 1 for now.
+
+### Moving from API 1
+
+1. Raise `engine.api` to `^2.0.0`, `engine.termix` to the first core that runs plugin processes, and the
+   SDK in `package.json` to `^2.0.0`.
+2. List your schedules (with an `id` on each `every`), event topics and registry keys in `sandbox`.
+3. Await the reads listed above, and every call on another plugin's service or registry value.
+4. Replace `db.transaction()` with `ctx.db.batch()`.
+5. Move direct `node:fs`, `net`, `http`, `child_process` use to `ctx`, or declare the capability that
+   allows it. `termix-plugin validate` warns about each import that would be refused.
+6. Run your tests with `createMockCtx({ sandbox: true })`, which applies the same rules.
+7. Drop capabilities you no longer use, bump the version and add a CHANGELOG entry.
+
+An API 1 plugin keeps working only when it is official and an admin turns on "Run without isolation" for
+it. Community API 1 plugins don't run.
+
 ### What ctx has
 
 | Member                 | Capability                       | What it does                                                    |
@@ -444,15 +513,15 @@ are called after a line is accepted and never delay the action that wrote it.
 ```ts
 ctx.events.on("host.deleted", ({ hostId }) => cleanUp(hostId)); // core topics need events:core
 ctx.events.emit("plugin.hello.greeted", { name }); // your own: plugin.<id>.<name>
-ctx.schedule.every(60_000, () => refresh(), { jitterMs: 5_000 });
+ctx.schedule.every(60_000, () => refresh(), { id: "refresh", jitterMs: 5_000 });
 ```
 
 - Alerts go through `ctx.notify.send` (`notify:send`). Never build your own notification system.
 - Offer a service: declare it in `provides` with a version and a permission, then
   `ctx.services.provide("hello.greetings", impl)`. The name starts with your id. Methods read the caller
   from `ctx.currentActor()`.
-- Use a service: declare it in `requires`, then `ctx.services.get<T>("snippets.access")`. It returns
-  nothing while no provider runs, so always handle that.
+- Use a service: declare it in `requires`, then `await ctx.services.get<T>("snippets.access")`. Every
+  method on it returns a Promise. Calls fail while no provider runs, so always handle that.
 
 ### Operations
 
@@ -963,6 +1032,7 @@ const mock = createMockCtx({
   db: db.database,
   router: () => (router = express.Router()),
   permissions: ["hello.use"], // leave out to allow everything
+  sandbox: true, // the rules of a plugin process: plain data, declared schedules and events
 });
 await activate(mock.ctx);
 mock.setActor("user-1");
@@ -1232,6 +1302,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `auth:policy`            | high     | Set login rules: idle timeout, session length, 2FA            |
 | `sync:provide`           | high     | Run sync: answer every /sync request                          |
 | `device:serial`          | high     | Open serial and USB ports on the server                       |
+| `network:sockets`        | high     | Open its own listeners and connections, outside Termix checks |
 | `desktop:local`          | high     | Use the user's own computer, desktop app only                 |
 | `hosts:export`           | high     | Export hosts with their saved logins                          |
 | `notify:hub`             | high     | Receive every alert (the alerts hub only)                     |

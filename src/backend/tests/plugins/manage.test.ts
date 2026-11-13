@@ -1274,3 +1274,59 @@ it("requires exact consent before enabling a mirrored plugin with capabilities",
     }),
   );
 });
+
+describe("run without isolation", () => {
+  const legacy = { engine: { termix: ">=2.9.0", api: "^1.15" } };
+
+  it("lets an admin run an official API 1 plugin inside the server, and stop it again", async () => {
+    createFixturePlugin({
+      id: "docker",
+      root: bundled,
+      manifestOverrides: legacy,
+    });
+    const loader = await boot();
+    expect(loader.get("docker")?.state).toBe("blocked");
+
+    const on = await manage.setPluginOptions("docker", { runUnisolated: true });
+    expect(on.runUnisolated).toBe(true);
+    expect(loader.get("docker")?.state).toBe("active");
+    expect(db.rows.get("docker")).toMatchObject({
+      runUnisolated: true,
+      state: "enabled",
+    });
+
+    const off = await manage.setPluginOptions("docker", {
+      runUnisolated: false,
+    });
+    expect(off.runUnisolated).toBe(false);
+    expect(loader.get("docker")?.state).toBe("blocked");
+    expect(db.rows.get("docker")?.state).toBe("blocked");
+  });
+
+  it("refuses the switch for a plugin that already runs in its own process", async () => {
+    createFixturePlugin({
+      id: "docker",
+      root: bundled,
+      manifestOverrides: { engine: { termix: ">=2.9.0", api: "^2.0.0" } },
+    });
+    await boot();
+    await expect(
+      manage.setPluginOptions("docker", { runUnisolated: true }),
+    ).rejects.toMatchObject({ code: "NOT_ALLOWED", status: 409 });
+  });
+
+  it("never gives the switch to a community plugin", async () => {
+    const userDir = path.join(data, "plugins");
+    fs.mkdirSync(userDir, { recursive: true });
+    createFixturePlugin({
+      id: "community-thing",
+      root: userDir,
+      manifestOverrides: legacy,
+    });
+    await boot();
+    await expect(
+      manage.setPluginOptions("community-thing", { runUnisolated: true }),
+    ).rejects.toMatchObject({ code: "NOT_ALLOWED" });
+    expect(db.rows.get("community-thing")?.runUnisolated).toBeFalsy();
+  });
+});

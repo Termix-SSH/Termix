@@ -1120,6 +1120,13 @@ export const plugins = sqliteTable(
     pinnedVersion: text("pinned_version"),
     /** stable | beta: which registry releases updates offer. */
     channel: text("channel").notNull().default("stable"),
+    /**
+     * An admin let this API 1 plugin run inside the server process. Only
+     * official plugins can have it; API 2 plugins ignore it.
+     */
+    runUnisolated: integer("run_unisolated", { mode: "boolean" })
+      .notNull()
+      .default(false),
     manifestJson: text("manifest_json").notNull(),
   },
   (table) => [index("idx_plugins_registry_id").on(table.registryId)],

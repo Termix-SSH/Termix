@@ -13,9 +13,11 @@ import { pluginLogger } from "../utils/logger.js";
 import {
   setPluginEnabledCheck,
   setPluginInstalledCheck,
+  setPluginWakeHook,
   unregisterPluginHttp,
 } from "./http.js";
 import { PluginLoader, type LoadedPlugin } from "./loader.js";
+import { needsUnisolated } from "./isolation.js";
 import type { PluginPermissionContribution } from "./manifest.js";
 import { invalidatePluginPermissionCache } from "./permissions.js";
 import { setSshAuthTypeOwnerSource } from "../hosts/connect/auth-provider-registry.js";
@@ -45,6 +47,13 @@ export function getPluginRuntime(): { loader: PluginLoader } {
       (pluginId) => loader?.get(pluginId)?.state === "active",
     );
     setPluginInstalledCheck((pluginId) => !!loader?.get(pluginId));
+    // A plugin process that starts on first use is started by the request.
+    setPluginWakeHook(async (pluginId) => {
+      const plugin = loader?.get(pluginId);
+      if (plugin?.state !== "active" || !plugin.sandboxed) return false;
+      const { getPluginRunner } = await import("./sandbox/runner.js");
+      return (await getPluginRunner()).wake(pluginId);
+    });
     // An admin acting for another user reaches only the plugins that opted in.
     setPluginImpersonationCheck((pluginId) => {
       const plugin = loader?.get(pluginId);
@@ -141,6 +150,7 @@ async function handlePluginFailed(plugin: LoadedPlugin): Promise<void> {
 async function seedPlugins(
   loaded: LoadedPlugin[],
   freshInstall: boolean,
+  created: Set<string> = new Set(),
 ): Promise<boolean> {
   const { createCurrentPluginRepository } =
     await import("../database/repositories/factory.js");
@@ -174,6 +184,7 @@ async function seedPlugins(
       state: initialPluginState(plugin.id, plugin.source, fresh),
       manifestJson,
     });
+    created.add(plugin.id);
 
     pluginLogger.info(`Registered ${plugin.source} plugin ${plugin.id}`, {
       operation: "plugin_seed",
@@ -241,14 +252,27 @@ export async function initializePlugins(
   const loaded = await pluginLoader.loadAll();
   if (loaded.length === 0) return [];
 
-  const fresh = await seedPlugins(loaded, options.freshInstall === true);
+  const created = new Set<string>();
+  const fresh = await seedPlugins(
+    loaded,
+    options.freshInstall === true,
+    created,
+  );
   if (!fresh) {
     const { installNewShippedPlugins, restoreMissingPlugins } =
       await import("./manage.js");
-    loaded.push(...(await restoreMissingPlugins()));
-    loaded.push(...(await installNewShippedPlugins()));
+    for (const plugin of [
+      ...(await restoreMissingPlugins()),
+      ...(await installNewShippedPlugins()),
+    ]) {
+      loaded.push(plugin);
+      created.add(plugin.id);
+    }
   }
   await syncCapabilityGrants(loaded);
+  const { seedUnisolatedSwitches } =
+    await import("../upgrade/unisolated-plugins.js");
+  await seedUnisolatedSwitches(loaded, created);
   if (loaded.some((plugin) => plugin.source === "bundled")) {
     const { offerPluginSetup } = await import("./onboarding.js");
     await offerPluginSetup(fresh);
@@ -561,7 +585,16 @@ export async function activatePlugin(pluginId: string): Promise<void> {
   const plugin = pluginLoader.get(pluginId);
   // Stays enabled and starts on the next boot without safe mode.
   if (!mayRunInSafeMode(pluginId, pluginLoader.list())) return;
-  if (plugin) await registerPluginPermissions(plugin);
+  if (plugin) {
+    await registerPluginPermissions(plugin);
+    // Only an API 1 plugin reads the switch.
+    if (needsUnisolated(plugin)) {
+      const { createCurrentPluginRepository } =
+        await import("../database/repositories/factory.js");
+      const record = await createCurrentPluginRepository().findById(pluginId);
+      plugin.runUnisolated = record?.runUnisolated ?? false;
+    }
+  }
 
   await pluginLoader.activate(pluginId);
 
