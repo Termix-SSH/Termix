@@ -1120,6 +1120,14 @@ expect(app.registered.tabs()).toContain("hello");
 Test every route, with and without the permission. Test that disable then enable works, and that the plugin
 works when an optional dependency is missing.
 
+## Security regression tests
+
+A fix for a security advisory comes with a test named after the advisory, like
+`tests/backend/GHSA-xxxx-xxxx-xxxx.test.ts`, that fails without the fix. Official releases run every such file
+before signing and refuse to publish when one fails, is missing from the run, or skips, focuses or marks a test
+(`.skip`, `.only`, `.todo`, `.skipIf`, `.runIf`, `.fails`). The same release gate runs osv-scanner, zizmor, the
+authorization table below and a check for new high or critical CodeQL alerts.
+
 ## Authorization table
 
 `authz.json` at the repo root says who may call each route and socket. The shared plugin CI boots the newest

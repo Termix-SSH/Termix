@@ -250,9 +250,63 @@ jobs:
           fi
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+  # The commit the release ships: the dev branch tip after the jobs above
+  # pushed to it (stable), or the translated beta snapshot.
+  gate-ref:
+    needs: [prep, translate, normalize, sync-main]
+    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && (needs.translate.result == 'success' || needs.translate.result == 'skipped') && (needs.normalize.result == 'success' || needs.normalize.result == 'skipped') && (needs.sync-main.result == 'success' || needs.sync-main.result == 'skipped') }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      contents: read
+    outputs:
+      sha: ${{ steps.ref.outputs.sha }}
+    steps:
+      - name: Commit to release
+        id: ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHANNEL: ${{ needs.prep.outputs.channel }}
+          MODE: ${{ needs.prep.outputs.mode }}
+          DEV_BRANCH: ${{ needs.prep.outputs.dev_branch }}
+          TRANSLATED: ${{ needs.translate.outputs.sha }}
+          SNAPSHOT: ${{ needs.prep.outputs.sha }}
+        run: |
+          sha=""
+          if [ "$CHANNEL" = "Stable" ] && [ "$MODE" != "Dry run" ]; then
+            sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/$DEV_BRANCH" -q .sha)
+          else
+            sha="${TRANSLATED:-$SNAPSHOT}"
+          fi
+          if [ -z "$sha" ]; then
+            sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/$DEV_BRANCH" -q .sha)
+          fi
+          echo "Release gate runs on $sha."
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+  # Refuses the release unless zizmor, osv-scanner, the GHSA regression tests,
+  # the authorization matrix and the CodeQL alert check pass on that commit.
+  security-gate:
+    needs: [prep, gate-ref]
+    if: ${{ always() && needs.gate-ref.result == 'success' }}
+    uses: Termix-SSH/Termix-Registry/.github/workflows/release-gate.yml@main
+    permissions:
+      contents: read
+      security-events: read
+    with:
+      repo: ${{ github.repository }}
+      sha: ${{ needs.gate-ref.outputs.sha }}
+      branch: ${{ needs.prep.outputs.dev_branch }}
+      kind: core
+      code-scanning: true
+      aliases: >-
+        prebuild-install:@mmomtchev/prebuild-install
+        string-width-cjs:string-width
+        strip-ansi-cjs:strip-ansi
+        wrap-ansi-cjs:wrap-ansi
+
   verify-beta:
-    needs: [prep, translate]
-    if: ${{ needs.prep.outputs.channel == 'Beta' && needs.prep.outputs.skip != 'true' }}
+    needs: [prep, translate, security-gate]
+    if: ${{ always() && needs.prep.outputs.channel == 'Beta' && needs.prep.outputs.skip != 'true' && needs.security-gate.result == 'success' && (needs.translate.result == 'success' || needs.translate.result == 'skipped') }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     permissions:
       contents: read
@@ -423,8 +477,8 @@ jobs:
           git push origin HEAD:"$DEV_BRANCH"
 
   merge-to-main:
-    needs: [prep, translate, normalize, sync-main]
-    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.channel == 'Stable' && (needs.translate.result == 'success' || needs.translate.result == 'skipped') && (needs.normalize.result == 'success' || needs.normalize.result == 'skipped') && (needs.sync-main.result == 'success' || needs.sync-main.result == 'skipped') }}
+    needs: [prep, translate, normalize, sync-main, gate-ref, security-gate]
+    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.channel == 'Stable' && needs.security-gate.result == 'success' && (needs.translate.result == 'success' || needs.translate.result == 'skipped') && (needs.normalize.result == 'success' || needs.normalize.result == 'skipped') && (needs.sync-main.result == 'success' || needs.sync-main.result == 'skipped') }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     permissions:
@@ -435,6 +489,7 @@ jobs:
       DEV_BRANCH: ${{ needs.prep.outputs.dev_branch }}
       MOBILE_VERSION: ${{ needs.prep.outputs.mobile_version }}
       MOBILE_TAG: ${{ needs.prep.outputs.mobile_tag }}
+      GATED_SHA: ${{ needs.gate-ref.outputs.sha }}
     outputs:
       main_sha: ${{ steps.merge.outputs.main_sha }}
       build_ref: ${{ steps.merge.outputs.build_ref }}
@@ -495,7 +550,8 @@ jobs:
               | grep -oE '[0-9]+$')
           fi
 
-          gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --admin
+          # Only the commit the release gate passed may reach main.
+          gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --admin --match-head-commit "$GATED_SHA"
 
           STATE=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json state -q .state)
           if [ "$STATE" != "MERGED" ]; then
@@ -510,8 +566,8 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   docker:
-    needs: [prep, translate, verify-beta, merge-to-main]
-    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && (needs.merge-to-main.result == 'success' || needs.verify-beta.result == 'success') }}
+    needs: [prep, translate, security-gate, verify-beta, merge-to-main]
+    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && needs.security-gate.result == 'success' && (needs.merge-to-main.result == 'success' || needs.verify-beta.result == 'success') }}
     uses: ./.github/workflows/docker.yml
     permissions:
       contents: read
@@ -530,8 +586,8 @@ jobs:
   # The release starts as a draft so nobody sees it before every file is up.
   # Its tag is only made when it is published.
   create-draft:
-    needs: [prep, translate, verify-beta, merge-to-main]
-    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && needs.prep.outputs.mode != 'Dry run' && (needs.merge-to-main.result == 'success' || needs.verify-beta.result == 'success') }}
+    needs: [prep, translate, security-gate, verify-beta, merge-to-main]
+    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && needs.prep.outputs.mode != 'Dry run' && needs.security-gate.result == 'success' && (needs.merge-to-main.result == 'success' || needs.verify-beta.result == 'success') }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     permissions:
@@ -865,6 +921,7 @@ jobs:
     needs:
       [
         prep,
+        security-gate,
         create-draft,
         docker,
         electron-release,
@@ -872,7 +929,7 @@ jobs:
         checksums,
         sign-sums,
       ]
-    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && needs.checksums.result == 'success' && needs.sign-sums.result == 'success' && needs.docker.result == 'success' && needs.electron-release.result == 'success' && needs.flatpak.result == 'success' && (needs.create-draft.result == 'success' || (needs.create-draft.result == 'skipped' && needs.prep.outputs.mode == 'Dry run')) }}
+    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && needs.security-gate.result == 'success' && needs.checksums.result == 'success' && needs.sign-sums.result == 'success' && needs.docker.result == 'success' && needs.electron-release.result == 'success' && needs.flatpak.result == 'success' && (needs.create-draft.result == 'success' || (needs.create-draft.result == 'skipped' && needs.prep.outputs.mode == 'Dry run')) }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: build
     permissions:
