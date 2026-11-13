@@ -257,6 +257,20 @@ function buildCtx(): Record<string, unknown> {
   if (has("auth.registerSshAuthProvider")) {
     setPath(ctx, "auth.registerSshAuthProvider", sshAuthProvider);
   }
+  if (has("auth.registerLoginMethod")) {
+    setPath(ctx, "auth.registerLoginMethod", loginMethod);
+  }
+  if (has("auth.completeRedirectLogin")) {
+    setPath(
+      ctx,
+      "auth.completeRedirectLogin",
+      async (methodId: string, _req: unknown, res: unknown) => {
+        await endpoint.call("ctx.auth.completeRedirectLogin", [methodId]);
+        // Core answered on the live response; end this request quietly.
+        (res as { termixHandOff?: () => void })?.termixHandOff?.();
+      },
+    );
+  }
 
   // Answered here: core would only be asked who it is already acting as.
   setPath(ctx, "currentActor", () => als.getStore()?.userId || undefined);
@@ -484,6 +498,89 @@ function sshAuthProvider(provider: Record<string, unknown>): Promise<void> {
   });
 }
 
+interface CookieCall {
+  name: string;
+  value?: string;
+  clear?: boolean;
+  options?: Record<string, unknown>;
+}
+
+/** Cookie options as plain data; Domain is left out (core never sets it). */
+function cookieOptions(options: unknown): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (!options || typeof options !== "object") return out;
+  for (const key of ["httpOnly", "secure", "sameSite", "path", "maxAge"]) {
+    const value = (options as Record<string, unknown>)[key];
+    if (value !== undefined) out[key] = value;
+  }
+  return out;
+}
+
+/**
+ * A login method's hook as core calls it: a plain request in, the answer
+ * plus any cookies it set out. Errors come back as data so the cookies set
+ * before them still apply.
+ */
+function loginHook(fn: AnyFn): AnyFn {
+  return async (plain: Record<string, unknown>, ...rest: unknown[]) => {
+    const cookies: CookieCall[] = [];
+    const request = {
+      ...plain,
+      res: {
+        cookie: (name: string, value: string, options?: unknown) => {
+          cookies.push({
+            name: String(name),
+            value: String(value),
+            options: cookieOptions(options),
+          });
+        },
+        clearCookie: (name: string, options?: unknown) => {
+          cookies.push({
+            name: String(name),
+            clear: true,
+            options: cookieOptions(options),
+          });
+        },
+      },
+    };
+    try {
+      const value = await fn(request, ...rest);
+      return { value, cookies };
+    } catch (error) {
+      const e = (error ?? {}) as Record<string, unknown>;
+      return {
+        error: {
+          message: error instanceof Error ? error.message : String(error),
+          status: e.status,
+          code: e.code,
+          returnTo: e.returnTo,
+          remainingTime: e.remainingTime,
+        },
+        cookies,
+      };
+    }
+  };
+}
+
+function loginMethod(method: Record<string, unknown>): Promise<void> {
+  const wrapped: Record<string, unknown> = { ...method };
+  for (const hook of ["start", "callback", "verify"]) {
+    if (typeof method[hook] === "function") {
+      wrapped[hook] = loginHook(method[hook] as AnyFn);
+    }
+  }
+  return (
+    endpoint.call("ctx.auth.registerLoginMethod", [wrapped]) as Promise<void>
+  ).catch((error: unknown) => {
+    endpoint.notify("log", [
+      "error",
+      `Login method ${String(method.id)} was not registered: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    ]);
+  });
+}
+
 /** What core reads from a request for an audit line: the address and agent. */
 function requestMeta(request: unknown): Record<string, unknown> | undefined {
   if (!request || typeof request !== "object") return undefined;
@@ -695,6 +792,13 @@ endpoint.handle("http.dispatch", ([metaArg, portArg, bodyArg]) => {
       resolve({ handled: true });
       return res;
     }) as never;
+    res.termixHandOff = () => {
+      if (res.finished) return;
+      port.end();
+      res.finished = true;
+      res.emit("finish");
+      resolve({ handled: true });
+    };
     port.on("drain", () => res.emit("drain"));
     port.on("close", () => res.emit("close"));
 

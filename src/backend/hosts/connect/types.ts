@@ -224,7 +224,7 @@ export interface SshAuthProvider {
     banner: string,
     host: SshConnectHost,
     env: SshAuthEnv,
-  ) => SshBannerDecision | undefined;
+  ) => SshBannerDecision | undefined | Promise<SshBannerDecision | undefined>;
 }
 
 export type SshBannerDecision =
@@ -282,9 +282,14 @@ export interface KeyboardInteractiveInterceptor {
       prompts: KeyboardInteractivePrompt[];
     },
     host: SshConnectHost,
-  ) => KeyboardInteractiveDecision | null;
+  ) =>
+    | KeyboardInteractiveDecision
+    | null
+    | Promise<KeyboardInteractiveDecision | null>;
   /** Answer password prompts silently instead of asking the user. */
-  autoAnswerPasswords?: (host: SshConnectHost) => boolean;
+  autoAnswerPasswords?: (host: SshConnectHost) => boolean | Promise<boolean>;
+  /** Lives in a plugin process: its answers are Promises. */
+  remote?: boolean;
 }
 
 /**

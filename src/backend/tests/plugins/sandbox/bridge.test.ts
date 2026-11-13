@@ -276,12 +276,12 @@ describe("what may cross", () => {
     });
   });
 
-  it("refuses login methods and keyboard-interactive handlers", () => {
-    expect(isRefusedPath("auth.registerLoginMethod")).toMatch(/live request/);
-    expect(isRefusedPath("auth.registerKeyboardInteractiveHandler")).toMatch(
-      /synchronously/,
-    );
+  it("bridges login methods and keyboard handlers, not cookie writes", () => {
+    expect(isRefusedPath("auth.registerLoginMethod")).toBeNull();
+    expect(isRefusedPath("auth.registerKeyboardInteractiveHandler")).toBeNull();
+    expect(isRefusedPath("auth.completeRedirectLogin")).toBeNull();
     expect(isRefusedPath("auth.registerSecondFactor")).toBeNull();
+    expect(isRefusedPath("http.setCookie")).toMatch(/live HTTP response/);
   });
 
   it("drops the headers that would let a plugin act as the user", () => {

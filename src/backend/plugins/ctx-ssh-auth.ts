@@ -38,7 +38,10 @@ import {
   registerKeyboardInteractiveInterceptor,
   registerSshAuthProvider,
 } from "../hosts/connect/auth-provider-registry.js";
-import { classifyKeyboardInteractive } from "../hosts/connect/keyboard-interactive.js";
+import {
+  classifyKeyboardInteractive,
+  classifyKeyboardInteractiveNow,
+} from "../hosts/connect/keyboard-interactive.js";
 import { ensureCoreSshAuthProviders } from "../hosts/connect/core-providers.js";
 import {
   getLoginMethod,
@@ -57,6 +60,11 @@ import type {
   SshConnectPurpose,
 } from "../hosts/connect/types.js";
 import { answeredSync } from "./api1-sync.js";
+
+/** Set by core's plugin process bridge on hooks that answer with Promises. */
+function isRemote(hooks: object): boolean {
+  return (hooks as { remote?: unknown }).remote === true;
+}
 
 type AuditFn = (
   action: string,
@@ -688,7 +696,17 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
         host: unknown,
       ) => {
         ensureCoreSshAuthProviders();
-        return classifyKeyboardInteractive(round, host as SshConnectHost);
+        const result = classifyKeyboardInteractive(
+          round,
+          host as SshConnectHost,
+        );
+        if (!(result instanceof Promise)) return result;
+        // API 1 callers read the answer without awaiting it: they get the
+        // answer without plugin processes, awaiting gives the full one.
+        return Object.assign(
+          result,
+          classifyKeyboardInteractiveNow(round, host as SshConnectHost),
+        );
       },
     ),
 
@@ -843,6 +861,7 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
           registerKeyboardInteractiveInterceptor({
             id: `${pluginId}:${provider.type}`,
             pluginId,
+            remote: isRemote(provider),
             detect: (round, host) =>
               host.authType === provider.type && grantedNow()
                 ? (detect(round, host as PluginSshHost) as never)
@@ -863,15 +882,25 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
         handler.id,
         "keyboardInteractive",
       );
-      // Synchronous hooks inside ssh2's callback, so they answer from the
-      // grant cache. Deactivate removes the handler.
+      // Asked inside ssh2's callback, so the grant check reads the cache.
+      // A handler in a plugin process answers with Promises. Deactivate
+      // removes the handler.
       warmPluginGrants(pluginId);
       const settingsFor = (host: SshConnectHost): Record<string, unknown> =>
         host.pluginSettings?.[pluginId] ?? {};
+      type Detected = ReturnType<typeof handler.detect>;
+      const named = (detected: Awaited<Detected>) => {
+        if (!detected) return null;
+        if (detected.kind === "browser") {
+          return { ...detected, id: handler.id, label: handler.label };
+        }
+        return detected;
+      };
       ensureCoreSshAuthProviders();
       const dispose = registerKeyboardInteractiveInterceptor({
         id: handler.id,
         pluginId,
+        remote: isRemote(handler),
         detect: (round, host) => {
           if (!grantedNow()) return null;
           const detected = handler.detect(
@@ -879,19 +908,23 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
             host as PluginSshHost,
             settingsFor(host),
           );
-          if (!detected) return null;
-          if (detected.kind === "browser") {
-            return { ...detected, id: handler.id, label: handler.label };
-          }
-          return detected;
+          return (
+            detected instanceof Promise
+              ? detected.then(named)
+              : named(detected as Awaited<Detected>)
+          ) as never;
         },
         autoAnswerPasswords: handler.autoAnswerPasswords
-          ? (host) =>
-              grantedNow() &&
-              handler.autoAnswerPasswords!(
+          ? (host) => {
+              if (!grantedNow()) return false;
+              const answer = handler.autoAnswerPasswords!(
                 host as PluginSshHost,
                 settingsFor(host),
-              ) === true
+              );
+              return answer instanceof Promise
+                ? answer.then((yes) => yes === true)
+                : answer === true;
+            }
           : undefined,
       });
       bag.add(dispose, `keyboard-interactive handler "${handler.id}"`);

@@ -20,12 +20,10 @@ const SETTABLE_FIELDS: Record<string, "string" | "number" | "boolean"> = {
   passphrase: "string",
   tryKeyboard: "boolean",
   readyTimeout: "number",
+  timeout: "number",
   keepaliveInterval: "number",
   keepaliveCountMax: "number",
 };
-
-/** Hooks core calls synchronously inside ssh2, which can't wait on a process. */
-const SYNC_ONLY_HOOKS = ["onBanner", "onKeyboardInteractive"] as const;
 
 const STATIC_FIELDS = [
   "type",
@@ -42,6 +40,113 @@ const STATIC_FIELDS = [
 
 const MAX_SOCKET_MESSAGE = 64 * 1024;
 const LOG_LEVELS = new Set(["info", "warning", "error"]);
+
+const MAX_BANNER = 16 * 1024;
+
+/** A keyboard-interactive round as plain strings. */
+export function plainRound(round: unknown) {
+  const value = (round ?? {}) as {
+    name?: unknown;
+    instructions?: unknown;
+    prompts?: unknown;
+  };
+  const prompts = Array.isArray(value.prompts) ? value.prompts : [];
+  return {
+    name: String(value.name ?? ""),
+    instructions: String(value.instructions ?? ""),
+    prompts: prompts.map((prompt) => ({
+      prompt: String((prompt as { prompt?: unknown })?.prompt ?? ""),
+      echo: (prompt as { echo?: unknown })?.echo === true,
+    })),
+  };
+}
+
+function shortText(value: unknown, max = 2000): string {
+  return typeof value === "string" ? value.slice(0, max) : "";
+}
+
+function plainDetails(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+  const out: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value).slice(0, 20)) {
+    if (typeof item === "string") out[key] = item.slice(0, 2000);
+    else if (typeof item === "number" || typeof item === "boolean") {
+      out[key] = item;
+    }
+  }
+  return out;
+}
+
+/** A banner decision from a plugin process, rebuilt field by field. */
+export function readBannerDecision(value: unknown) {
+  if (!value || typeof value !== "object") return undefined;
+  const decision = value as Record<string, unknown>;
+  const details = plainDetails(decision.details);
+  if (decision.action === "hold") {
+    const timeoutMs = Number(decision.timeoutMs);
+    return {
+      action: "hold" as const,
+      timeoutMs:
+        Number.isFinite(timeoutMs) && timeoutMs > 0
+          ? Math.min(timeoutMs, 30 * 60 * 1000)
+          : 60_000,
+      message: shortText(decision.message),
+      ...(details ? { details } : {}),
+    };
+  }
+  if (decision.action === "release") {
+    return { action: "release" as const, ...(details ? { details } : {}) };
+  }
+  return undefined;
+}
+
+/** A keyboard-interactive answer from a plugin process, rebuilt field by field. */
+export function readDetection(value: unknown) {
+  if (!value || typeof value !== "object") return null;
+  const detected = value as Record<string, unknown>;
+  const index = Number(detected.promptIndex);
+  switch (detected.kind) {
+    case "auto":
+      return Array.isArray(detected.responses)
+        ? {
+            kind: "auto" as const,
+            responses: detected.responses
+              .slice(0, 32)
+              .map((item) => shortText(item, 1024)),
+          }
+        : null;
+    case "browser":
+      return {
+        kind: "browser" as const,
+        ...(typeof detected.id === "string"
+          ? { id: shortText(detected.id, 100) }
+          : {}),
+        ...(typeof detected.label === "string"
+          ? { label: shortText(detected.label, 100) }
+          : {}),
+        url:
+          typeof detected.url === "string" ? detected.url.slice(0, 4096) : null,
+        code: shortText(detected.code, 200),
+        instructions: shortText(detected.instructions, 4000),
+      };
+    case "totp": // plugin-id-ok: the code prompt kind, not the plugin
+      return Number.isInteger(index) && index >= 0
+        ? { kind: "totp" as const, promptIndex: index } // plugin-id-ok: prompt kind
+        : null;
+    case "input":
+      return Number.isInteger(index) && index >= 0
+        ? {
+            kind: "input" as const,
+            promptIndex: index,
+            isPush: detected.isPush === true,
+          }
+        : null;
+    default:
+      return null;
+  }
+}
 
 export class SshAuthBridgeError extends Error {
   readonly code = "SANDBOX_UNSUPPORTED";
@@ -162,18 +267,12 @@ export function remoteSshAuthProvider(
   raw: Record<string, unknown>,
   deps: RemoteProviderDeps,
 ): PluginSshAuthProvider {
-  for (const hook of SYNC_ONLY_HOOKS) {
-    if (typeof raw[hook] === "function") {
-      throw new SshAuthBridgeError(
-        `${hook} is not available to auth providers in a plugin process yet`,
-      );
-    }
-  }
   const prepare = raw.prepare;
   if (typeof prepare !== "function") {
     throw new SshAuthBridgeError("An SSH auth provider needs prepare");
   }
-  const provider: Record<string, unknown> = {};
+  // Its hooks answer with Promises; core's sync classifier skips it.
+  const provider: Record<string, unknown> = { remote: true };
   for (const key of STATIC_FIELDS) {
     if (raw[key] !== undefined) provider[key] = raw[key];
   }
@@ -262,6 +361,26 @@ export function remoteSshAuthProvider(
       }
       return answer;
     };
+  }
+
+  if (typeof raw.onBanner === "function") {
+    const onBanner = raw.onBanner as AnyFn;
+    provider.onBanner = async (banner: unknown, host: unknown, env: CoreEnv) =>
+      readBannerDecision(
+        await onBanner(
+          String(banner).slice(0, MAX_BANNER),
+          await deps.visibleHost(host),
+          visibleEnv(env),
+        ),
+      );
+  }
+
+  if (typeof raw.onKeyboardInteractive === "function") {
+    const detect = raw.onKeyboardInteractive as AnyFn;
+    provider.onKeyboardInteractive = async (round: unknown, host: unknown) =>
+      readDetection(
+        await detect(plainRound(round), await deps.visibleHost(host)),
+      );
   }
 
   if (typeof raw.startInteraction === "function") {

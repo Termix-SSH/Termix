@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 2.2.1 | Plugin API 2.2.0
+SDK 2.2.2 | Plugin API 2.2.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -301,20 +301,28 @@ layout or theme, or `network:sockets` keeps it running.
 - Your process gets no environment of core's. Variables you list in the manifest's `env` are passed
   through, except core's own secrets and anything that changes how Node starts.
 - SSH auth providers work: `prepare` gets a copy of the config without secrets and may set only
-  `username`, `password`, `privateKey`, `passphrase`, `tryKeyboard`, `readyTimeout`, `keepaliveInterval`
-  and `keepaliveCountMax` (a `retry` patch and `connectOptions` too). `env.client` is a stand-in;
+  `username`, `password`, `privateKey`, `passphrase`, `tryKeyboard`, `readyTimeout`, `timeout`,
+  `keepaliveInterval` and `keepaliveCountMax` (a `retry` patch and `connectOptions` too). `env.client` is a stand-in;
   `applyCertificateAuth` knows it and Termix applies the certificate. `onAuthFailed` and
   `connectOptions` answer with a Promise. `startInteraction` gets a socket with only `send` and
-  `on("close")`. `onBanner` and `onKeyboardInteractive` are not available yet.
+  `on("close")`. `onBanner` and `onKeyboardInteractive` get the host without secrets and answer with a
+  Promise; one that takes over 5 seconds counts as no answer.
+- Login methods work. `start`, `callback` and `verify` get a plain copy of the request (`body`, `query`,
+  `headers` without core's cookies, `ip`; `ctx.http.baseUrl(request)` works on it) and `request.res`
+  with only `cookie` and `clearCookie`, for cookies named `tmxp_<your id with _>_...`. A thrown
+  `LoginMethodError` keeps its `status`, `code` and `returnTo`. `ctx.auth.completeRedirectLogin(id, req,
+res)` works from inside one of your own requests: Termix finishes the login on the live response.
+- Keyboard-interactive handlers work. `detect` and `autoAnswerPasswords` get the host without secrets and
+  answer with a Promise, with the same 5 second limit. Anything that reads `ctx.ssh.classifyKeyboardInteractive`
+  or a prepared `onBanner` must await it.
 - `ctx.process.run` works as before; core runs the program and `exited` resolves when it ends.
 - Cookies: requests reach you with only cookies named `tmxp_<your id with _>_...`, and a
   `Set-Cookie` you send is kept only for those names and without a `Domain`. Core's own login
   cookies never reach your process.
 - `files:own` lets your process read and write its data folder.
 - Not available in a plugin process yet: `ssh.prepare`, `ssh.openTransport`, `ssh.jumpChain`,
-  `hosts.locks.provide`, `hosts.status.provide`, `sync.provide`, `desktop.local`, login methods
-  (`registerLoginMethod`), keyboard-interactive handlers and `ctx.auth.completeRedirectLogin`. Plugins
-  that need them stay on API 1 for now.
+  `hosts.locks.provide`, `hosts.status.provide`, `sync.provide` and `desktop.local`. Plugins that need
+  them stay on API 1 for now.
 
 ### Moving from API 1
 

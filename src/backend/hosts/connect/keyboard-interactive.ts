@@ -9,6 +9,7 @@
 import { listKeyboardInteractiveInterceptors } from "./auth-provider-registry.js";
 import type {
   KeyboardInteractiveDecision,
+  KeyboardInteractiveInterceptor,
   KeyboardInteractivePrompt,
   SshConnectHost,
   SshPromptChannel,
@@ -62,21 +63,53 @@ function responsesWithAnswer(
   });
 }
 
-function shouldAutoAnswerPasswords(host: SshConnectHost): boolean {
-  return listKeyboardInteractiveInterceptors().some(
-    (interceptor) => interceptor.autoAnswerPasswords?.(host) === true,
-  );
+type MaybePromise<T> = T | Promise<T>;
+
+/** A handler in a plugin process gets this long to answer, then counts as no. */
+const REMOTE_ANSWER_MS = 5000;
+
+function isPromise<T>(value: MaybePromise<T>): value is Promise<T> {
+  return !!value && typeof (value as Promise<T>).then === "function";
 }
 
-export function classifyKeyboardInteractive(
+function bounded<T>(promise: Promise<T>, fallback: T): Promise<T> {
+  return new Promise<T>((resolve) => {
+    const timer = setTimeout(() => resolve(fallback), REMOTE_ANSWER_MS);
+    timer.unref?.();
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(fallback);
+      },
+    );
+  });
+}
+
+function shouldAutoAnswerPasswords(
+  host: SshConnectHost,
+  syncOnly: boolean,
+): MaybePromise<boolean> {
+  const pending: Promise<boolean>[] = [];
+  for (const interceptor of listKeyboardInteractiveInterceptors()) {
+    if (!interceptor.autoAnswerPasswords) continue;
+    if (syncOnly && interceptor.remote) continue;
+    const answer = interceptor.autoAnswerPasswords(host);
+    if (isPromise(answer)) pending.push(bounded(answer, false));
+    else if (answer === true) return true;
+  }
+  if (pending.length === 0) return false;
+  return Promise.all(pending).then((answers) => answers.includes(true));
+}
+
+function builtinDecision(
   round: KeyboardInteractiveRound,
   host: SshConnectHost,
-): KeyboardInteractiveDecision {
-  for (const interceptor of listKeyboardInteractiveInterceptors()) {
-    const decision = interceptor.detect(round, host);
-    if (decision) return decision;
-  }
-
+  syncOnly: boolean,
+): MaybePromise<KeyboardInteractiveDecision> {
   const { prompts } = round;
   const texts = prompts.map((p) => p.prompt);
   const isFortiToken = texts.some((p) => FORTI_TOKEN_PATTERN.test(p));
@@ -89,7 +122,18 @@ export function classifyKeyboardInteractive(
     if (totpIndex !== -1) return { kind: "totp", promptIndex: totpIndex };
   }
 
-  if (shouldAutoAnswerPasswords(host)) {
+  const auto = shouldAutoAnswerPasswords(host, syncOnly);
+  return isPromise(auto)
+    ? auto.then((yes) => passwordDecision(prompts, host, yes))
+    : passwordDecision(prompts, host, auto);
+}
+
+function passwordDecision(
+  prompts: KeyboardInteractivePrompt[],
+  host: SshConnectHost,
+  autoAnswer: boolean,
+): KeyboardInteractiveDecision {
+  if (autoAnswer) {
     return { kind: "auto", responses: autoResponses(prompts, host.password) };
   }
 
@@ -115,6 +159,62 @@ export function classifyKeyboardInteractive(
     promptIndex,
     isPush: PUSH_PROMPT_PATTERN.test(prompts[promptIndex].prompt),
   };
+}
+
+function classifyFrom(
+  interceptors: KeyboardInteractiveInterceptor[],
+  index: number,
+  round: KeyboardInteractiveRound,
+  host: SshConnectHost,
+  syncOnly: boolean,
+): MaybePromise<KeyboardInteractiveDecision> {
+  for (let i = index; i < interceptors.length; i++) {
+    const interceptor = interceptors[i];
+    if (syncOnly && interceptor.remote) continue;
+    const decision = interceptor.detect(round, host);
+    if (isPromise(decision)) {
+      return bounded(decision, null).then(
+        (found) =>
+          found ?? classifyFrom(interceptors, i + 1, round, host, syncOnly),
+      );
+    }
+    if (decision) return decision;
+  }
+  return builtinDecision(round, host, syncOnly);
+}
+
+/**
+ * What a round is. A Promise when a handler in a plugin process has to be
+ * asked; a plain value otherwise.
+ */
+export function classifyKeyboardInteractive(
+  round: KeyboardInteractiveRound,
+  host: SshConnectHost,
+): MaybePromise<KeyboardInteractiveDecision> {
+  return classifyFrom(
+    listKeyboardInteractiveInterceptors(),
+    0,
+    round,
+    host,
+    false,
+  );
+}
+
+/**
+ * The same, answered at once by leaving out handlers in plugin processes.
+ * For API 1 plugins that read the answer without awaiting it.
+ */
+export function classifyKeyboardInteractiveNow(
+  round: KeyboardInteractiveRound,
+  host: SshConnectHost,
+): KeyboardInteractiveDecision {
+  return classifyFrom(
+    listKeyboardInteractiveInterceptors(),
+    0,
+    round,
+    host,
+    true,
+  ) as KeyboardInteractiveDecision;
 }
 
 export type KeyboardInteractiveListener = (
@@ -149,12 +249,11 @@ export function createPromptKeyboardInteractiveHandler(
   let totpAsked = false;
 
   return (name, instructions, _lang, prompts, finish) => {
-    const decision = classifyKeyboardInteractive(
-      { name, instructions, prompts },
-      host,
-    );
-
     const ask = async (): Promise<string[]> => {
+      const decision = await classifyKeyboardInteractive(
+        { name, instructions, prompts },
+        host,
+      );
       switch (decision.kind) {
         case "auto":
           return decision.responses;

@@ -5,6 +5,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   pickSettableConfig,
+  readBannerDecision,
+  readDetection,
   readSandboxCertificate,
   remoteSshAuthProvider,
 } from "../../../plugins/sandbox/ssh-auth-bridge.js";
@@ -69,18 +71,78 @@ describe("settable config", () => {
 });
 
 describe("remote provider", () => {
-  it("refuses hooks core runs synchronously", () => {
-    for (const hook of ["onBanner", "onKeyboardInteractive"]) {
-      expect(() =>
-        remoteSshAuthProvider(
-          { type: "x", prepare: async () => ({}), [hook]: () => undefined },
-          deps(),
-        ),
-      ).toThrow(/not available/);
-    }
+  it("needs prepare", () => {
     expect(() => remoteSshAuthProvider({ type: "x" }, deps())).toThrow(
       /needs prepare/,
     );
+  });
+
+  it("asks banner and keyboard hooks with no secrets and rebuilds the answers", async () => {
+    const onBanner = vi.fn(async (_b: string, host: unknown) => {
+      expect((host as { password?: string }).password).toBeUndefined();
+      return {
+        action: "hold",
+        timeoutMs: 10 ** 12,
+        message: "wait",
+        details: { url: "https://x", nested: { no: 1 } },
+        extra: "dropped",
+      };
+    });
+    const onKeyboardInteractive = vi.fn(async () => ({
+      kind: "browser",
+      url: "https://login",
+      code: "abcd",
+      instructions: "go",
+      evil: true,
+    }));
+    const provider = remoteSshAuthProvider(
+      {
+        type: "x",
+        prepare: async () => ({}),
+        onBanner,
+        onKeyboardInteractive,
+      },
+      deps(),
+    ) as unknown as {
+      remote: boolean;
+      onBanner: (b: string, h: unknown, e: unknown) => Promise<unknown>;
+      onKeyboardInteractive: (r: unknown, h: unknown) => Promise<unknown>;
+    };
+    expect(provider.remote).toBe(true);
+    expect(
+      await provider.onBanner("hi", { password: "hunter2" }, { log: vi.fn() }),
+    ).toEqual({
+      action: "hold",
+      timeoutMs: 30 * 60 * 1000,
+      message: "wait",
+      details: { url: "https://x" },
+    });
+    expect(
+      await provider.onKeyboardInteractive(
+        { name: "n", instructions: "i", prompts: [{ prompt: "p" }], x: 1 },
+        { password: "hunter2" },
+      ),
+    ).toEqual({
+      kind: "browser",
+      url: "https://login",
+      code: "abcd",
+      instructions: "go",
+    });
+    expect(onKeyboardInteractive.mock.calls[0][0]).toEqual({
+      name: "n",
+      instructions: "i",
+      prompts: [{ prompt: "p", echo: false }],
+    });
+  });
+
+  it("drops banner and keyboard answers it does not know", () => {
+    expect(readBannerDecision({ action: "eat" })).toBeUndefined();
+    expect(readDetection({ kind: "totp", promptIndex: -1 })).toBeNull();
+    expect(readDetection({ kind: "other" })).toBeNull();
+    expect(readDetection({ kind: "auto", responses: ["a", 5] })).toEqual({
+      kind: "auto",
+      responses: ["a", ""],
+    });
   });
 
   it("sends no secrets and applies only allowed fields back", async () => {
@@ -197,7 +259,7 @@ describe("remote provider", () => {
           _e: unknown,
           ctx: { error: Error },
         ) => ({ status: "interaction-required", message: ctx.error.message }),
-        connectOptions: async () => ({ readyTimeout: 1, sock: {} }),
+        connectOptions: async () => ({ readyTimeout: 1, timeout: 2, sock: {} }),
       },
       deps(),
     );
@@ -214,7 +276,7 @@ describe("remote provider", () => {
     });
     await expect(
       (provider.connectOptions as AnyFn)({ id: 1 }, "terminal"),
-    ).resolves.toEqual({ readyTimeout: 1 });
+    ).resolves.toEqual({ readyTimeout: 1, timeout: 2 });
   });
 
   it("filters a retry patch like any other config change", async () => {

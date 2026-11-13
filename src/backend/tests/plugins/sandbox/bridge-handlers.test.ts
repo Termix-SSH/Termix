@@ -26,6 +26,7 @@ import { PluginBridge, sandboxLog } from "../../../plugins/sandbox/bridge.js";
 import type { Transport, Wire } from "../../../plugins/sandbox/rpc.js";
 import { SandboxTokenStore } from "../../../plugins/sandbox/tokens.js";
 
+type AnyFn = (...args: unknown[]) => unknown;
 type Reply = Wire & { v?: unknown; e?: { code?: string; message: string } };
 
 function harness() {
@@ -121,7 +122,15 @@ function harness() {
         exited: Promise.resolve({ code: 0, signal: null }),
       })),
     },
-    auth: { registerSshAuthProvider: vi.fn() },
+    auth: {
+      registerSshAuthProvider: vi.fn(),
+      registerLoginMethod: vi.fn(),
+      registerKeyboardInteractiveHandler: vi.fn(),
+      completeRedirectLogin: vi.fn(
+        async (_id: string, _req: unknown, res: { redirect: AnyFn }) =>
+          res.redirect("/done"),
+      ),
+    },
   };
   const bridge = new PluginBridge(transport, {
     manifest: { id: pluginId, capabilities: [], sandbox: {} } as never,
@@ -516,14 +525,19 @@ describe("child processes", () => {
 });
 
 describe("ssh auth providers", () => {
-  it("refuses hooks core reads synchronously", async () => {
+  it("takes the banner hook as an async call", async () => {
     const h = harness();
     expect(
       await h.send("ctx.auth.registerSshAuthProvider", [
         { type: "x", prepare: { $f: "cf1" }, onBanner: { $f: "cf2" } },
       ]),
-    ).toMatchObject({ t: "err", e: { code: "SANDBOX_UNSUPPORTED" } });
-    expect(h.ctx.auth.registerSshAuthProvider).not.toHaveBeenCalled();
+    ).toMatchObject({ t: "ok", v: true });
+    const provider = h.ctx.auth.registerSshAuthProvider.mock.calls[0][0] as {
+      remote: boolean;
+      onBanner: unknown;
+    };
+    expect(provider.remote).toBe(true);
+    expect(typeof provider.onBanner).toBe("function");
   });
 
   it("registers a wrapped provider with core", async () => {
@@ -572,5 +586,64 @@ describe("closing", () => {
       h.bridge.mintForCurrentActor(),
     );
     expect(t).toBeTruthy();
+  });
+});
+
+describe("login methods", () => {
+  it("registers a wrapped method and refuses a bad one", async () => {
+    const h = harness();
+    expect(
+      await h.send("ctx.auth.registerLoginMethod", [
+        { id: "m", labelKey: "k", kind: "form", verify: { $f: "cf1" } },
+      ]),
+    ).toMatchObject({ t: "ok", v: true });
+    const method = h.ctx.auth.registerLoginMethod.mock.calls[0][0] as {
+      id: string;
+      verify: unknown;
+    };
+    expect(method.id).toBe("m");
+    expect(typeof method.verify).toBe("function");
+    expect(
+      await h.send("ctx.auth.registerLoginMethod", [
+        { id: "m", labelKey: "k", kind: "magic" },
+      ]),
+    ).toMatchObject({ t: "err", e: { code: "SANDBOX_VALUE" } });
+  });
+
+  it("registers a keyboard-interactive handler marked remote", async () => {
+    const h = harness();
+    expect(
+      await h.send("ctx.auth.registerKeyboardInteractiveHandler", [
+        { id: "k", label: "K", detect: { $f: "cf1" } },
+      ]),
+    ).toMatchObject({ t: "ok", v: true });
+    const handler = h.ctx.auth.registerKeyboardInteractiveHandler.mock
+      .calls[0][0] as { remote: boolean };
+    expect(handler.remote).toBe(true);
+  });
+
+  it("finishes a redirect login only inside a live request of the plugin", async () => {
+    const h = harness();
+    expect(
+      await h.send("ctx.auth.completeRedirectLogin", ["m"], h.token()),
+    ).toMatchObject({ t: "err", e: { code: "SANDBOX_UNSUPPORTED" } });
+    expect(h.ctx.auth.completeRedirectLogin).not.toHaveBeenCalled();
+
+    const token = h.token();
+    const res = { headersSent: false, redirect: vi.fn() };
+    const live = { req: { url: "/callback" }, res, handedOff: false };
+    (
+      h.bridge as unknown as { liveRequests: Map<string, unknown> }
+    ).liveRequests.set(token, live);
+    expect(
+      await h.send("ctx.auth.completeRedirectLogin", ["m"], token),
+    ).toMatchObject({ t: "ok", v: true });
+    expect(h.ctx.auth.completeRedirectLogin).toHaveBeenCalledWith(
+      "m",
+      live.req,
+      res,
+    );
+    expect(res.redirect).toHaveBeenCalledWith("/done");
+    expect(live.handedOff).toBe(true);
   });
 });

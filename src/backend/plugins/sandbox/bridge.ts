@@ -37,6 +37,11 @@ import {
   remoteSshAuthProvider,
   SshAuthBridgeError,
 } from "./ssh-auth-bridge.js";
+import {
+  LoginBridgeError,
+  remoteKeyboardInteractiveHandler,
+  remoteLoginMethod,
+} from "./login-bridge.js";
 
 /** Grace after a call ends before its token stops working. */
 export const REQUEST_TOKEN_GRACE_MS = 30_000;
@@ -64,6 +69,9 @@ const SPECIAL_PATHS = new Set([
   "services.get",
   "audit.exportBatches",
   "auth.registerSshAuthProvider",
+  "auth.registerLoginMethod",
+  "auth.registerKeyboardInteractiveHandler",
+  "auth.completeRedirectLogin",
   "process.run",
   "currentActor",
   "disposables.add",
@@ -79,11 +87,6 @@ const REFUSED_PATHS: ReadonlyMap<string, string> = new Map([
   ["ssh.jumpChain", "returns live ssh clients"],
   ["hosts.locks.provide", "core reads host locks synchronously"],
   ["hosts.status.provide", "core reads host status synchronously"],
-  [
-    "auth.registerKeyboardInteractiveHandler",
-    "core reads keyboard-interactive handlers synchronously",
-  ],
-  ["auth.registerLoginMethod", "core passes login methods the live request"],
   // plugin-id-ok: ctx.sync is a core namespace, not the Sync plugin
   ["sync.provide", "the sync engine runs in process"], // plugin-id-ok: ctx.sync path
 ]);
@@ -122,7 +125,7 @@ export function ctxFunctionPaths(
 }
 
 /** Methods that write to the live HTTP response. */
-const LIVE_RESPONSE = /\.(setCookie|clearCookie|completeRedirectLogin)$/;
+const LIVE_RESPONSE = /\.(setCookie|clearCookie)$/;
 
 export function isRefusedPath(dotted: string): string | null {
   const direct = REFUSED_PATHS.get(dotted);
@@ -270,6 +273,11 @@ export class PluginBridge {
   private readonly provided = new Map<string, unknown>();
   private readonly serviceRefs = new Map<string, string>();
   private readonly wsHandlers = new Set<string>();
+  /** Requests in flight, by the token the child got for them. */
+  private readonly liveRequests = new Map<
+    string,
+    { req: Request; res: Response; handedOff: boolean }
+  >();
   private readonly declaredSchedules: Set<string>;
   private readonly declaredEvents: Set<string>;
   private readonly declaredRegistry: Set<string>;
@@ -476,6 +484,41 @@ export class PluginBridge {
     return entry.obj as T;
   }
 
+  private callCtx(dotted: string, ...args: unknown[]): unknown {
+    const fn = readPath(this.ctx, dotted);
+    if (typeof fn !== "function") {
+      throw new SandboxError(
+        `ctx.${dotted} is not available`,
+        "SANDBOX_UNSUPPORTED",
+        501,
+      );
+    }
+    const parent = dotted.split(".").slice(0, -1).join(".");
+    return (fn as AnyFn).apply(readPath(this.ctx, parent) as object, args);
+  }
+
+  private wrapRemote<T>(build: () => T): T {
+    try {
+      return build();
+    } catch (error) {
+      if (error instanceof LoginBridgeError) {
+        throw new SandboxError(error.message, error.code, 400);
+      }
+      throw error;
+    }
+  }
+
+  private loginDeps() {
+    const cookiePrefix = pluginCookiePrefix(this.pluginId);
+    return {
+      cookiePrefix,
+      headers: (req: Request) => this.requestHeaders(req, cookiePrefix),
+      baseUrl: (req: Request) => this.safeBaseUrl(req),
+      visibleHost: async (host: unknown) =>
+        (await this.mayReadCredentials()) ? host : scrubSecrets(host),
+    };
+  }
+
   private installSpecial(): void {
     const endpoint = this.endpoint;
     const ctx = this.ctx as unknown as SpecialCtx;
@@ -567,6 +610,51 @@ export class PluginBridge {
       (register as AnyFn).call(readPath(this.ctx, "auth") as object, provider);
       return true;
     });
+
+    // Login methods get a plain copy of the request; cookies come back as
+    // data and only the plugin's own are set.
+    endpoint.handle("ctx.auth.registerLoginMethod", async ([raw]) => {
+      const method = this.wrapRemote(() =>
+        remoteLoginMethod(plainObject(raw), this.loginDeps()),
+      );
+      this.callCtx("auth.registerLoginMethod", method);
+      return true;
+    });
+
+    endpoint.handle(
+      "ctx.auth.registerKeyboardInteractiveHandler",
+      async ([raw]) => {
+        const handler = this.wrapRemote(() =>
+          remoteKeyboardInteractiveHandler(plainObject(raw), this.loginDeps()),
+        );
+        this.callCtx("auth.registerKeyboardInteractiveHandler", handler);
+        return true;
+      },
+    );
+
+    // Only from inside one of the plugin's own requests: core finishes the
+    // login on that request's live response.
+    endpoint.handle(
+      "ctx.auth.completeRedirectLogin",
+      async ([methodId], token) => {
+        const live = token ? this.liveRequests.get(token) : undefined;
+        if (!live || live.res.headersSent) {
+          throw new SandboxError(
+            "completeRedirectLogin works only inside one of the plugin's own requests",
+            "SANDBOX_UNSUPPORTED",
+            400,
+          );
+        }
+        live.handedOff = true;
+        await this.callCtx(
+          "auth.completeRedirectLogin",
+          String(methodId),
+          live.req,
+          live.res,
+        );
+        return true;
+      },
+    );
 
     // Child processes run in core. The exit Promise can't cross, so the
     // child asks for it through waitExit and builds its own.
@@ -1115,6 +1203,9 @@ export class PluginBridge {
     this.touch();
     const endpoint = this.endpoint;
     const cookiePrefix = pluginCookiePrefix(this.pluginId);
+    const token = this.mintForCurrentActor();
+    const live = { req, res, handedOff: false };
+    this.liveRequests.set(token, live);
     const port = endpoint.openStream();
     let headSent = false;
     port.on(
@@ -1124,6 +1215,7 @@ export class PluginBridge {
           | Uint8Array
           | { h: { status: number; headers: Record<string, unknown> } },
       ) => {
+        if (live.handedOff) return;
         if (!(chunk instanceof Uint8Array) && "h" in chunk) {
           if (res.headersSent) return;
           res.status(validStatus(chunk.h.status));
@@ -1163,7 +1255,7 @@ export class PluginBridge {
     }
 
     try {
-      const outcome = (await endpoint.call("http.dispatch", [
+      const outcome = (await endpoint.callWithToken(token, "http.dispatch", [
         {
           method: req.method,
           url: req.url,
@@ -1183,13 +1275,19 @@ export class PluginBridge {
         return;
       }
       await ended;
+      // completeRedirectLogin already answered on the live response.
+      if (live.handedOff) return;
       if (!headSent && !res.headersSent) res.status(204);
       res.end();
     } catch (error) {
       port.destroy();
       bodyPort?.destroy();
-      if (res.headersSent) res.end();
-      else next(error);
+      if (res.headersSent) {
+        if (!res.writableEnded) res.end();
+      } else next(error);
+    } finally {
+      this.liveRequests.delete(token);
+      this.releaseLater(token);
     }
   }
 

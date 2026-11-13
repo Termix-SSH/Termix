@@ -11,7 +11,8 @@
  *   - the methods core can't serve to a plugin process throw
  *     SANDBOX_UNSUPPORTED;
  *   - db.client() has no transaction(): use ctx.db.batch();
- *   - routes need string paths.
+ *   - routes need string paths;
+ *   - a login method may only set cookies named tmxp_<id>_*.
  */
 import type { PluginContext } from "../backend.js";
 import type { PluginManifest } from "../manifest.js";
@@ -22,9 +23,6 @@ const REFUSED: Record<string, string> = {
   "ssh.jumpChain": "returns live ssh clients",
   "hosts.locks.provide": "core reads host locks synchronously",
   "hosts.status.provide": "core reads host status synchronously",
-  "auth.registerKeyboardInteractiveHandler":
-    "core reads keyboard-interactive handlers synchronously",
-  "auth.registerLoginMethod": "core passes login methods the live request",
   "sync.provide": "the sync engine runs in process",
 };
 const REFUSED_PREFIXES = ["desktop.local."];
@@ -185,6 +183,57 @@ function wrapRouter(router: unknown): unknown {
   });
 }
 
+/** Cookies a plugin process may set and read start with this. */
+export function cookiePrefix(pluginId: string): string {
+  return `tmxp_${pluginId.replace(/[^A-Za-z0-9]/g, "_")}_`;
+}
+
+type Hook = (...args: unknown[]) => unknown;
+
+/**
+ * A login method whose hooks refuse cookies outside the plugin's own names,
+ * the way core drops them for a plugin process.
+ */
+function ownCookiesOnly(
+  method: Record<string, unknown>,
+  prefix: string,
+): Record<string, unknown> {
+  const guard = (name: unknown) => {
+    if (typeof name !== "string" || !name.startsWith(prefix)) {
+      throw new SandboxRuleError(
+        `A plugin process may only set cookies named ${prefix}*, got "${String(name)}"`,
+        "SANDBOX_VALUE",
+      );
+    }
+  };
+  const out = { ...method };
+  for (const key of ["start", "callback", "verify"]) {
+    const hook = method[key];
+    if (typeof hook !== "function") continue;
+    out[key] = (request: Record<string, unknown>, ...rest: unknown[]) => {
+      const res = request?.res as Record<string, Hook> | undefined;
+      const wrapped = res
+        ? {
+            ...request,
+            res: {
+              ...res,
+              cookie: (name: unknown, ...more: unknown[]) => {
+                guard(name);
+                return res.cookie?.call(res, name, ...more);
+              },
+              clearCookie: (name: unknown, ...more: unknown[]) => {
+                guard(name);
+                return res.clearCookie?.call(res, name, ...more);
+              },
+            },
+          }
+        : request;
+      return (hook as Hook)(wrapped, ...rest);
+    };
+  }
+  return out;
+}
+
 /** The fake ctx with a plugin process's rules on top. */
 export function sandboxContext<T extends PluginContext>(
   ctx: T,
@@ -214,7 +263,7 @@ export function sandboxContext<T extends PluginContext>(
       }
     }
     const reason =
-      (/\.(setCookie|clearCookie|completeRedirectLogin)$/.test(dotted)
+      (/\.(setCookie|clearCookie)$/.test(dotted)
         ? "needs the live HTTP response"
         : undefined) ??
       REFUSED[dotted] ??
@@ -227,15 +276,11 @@ export function sandboxContext<T extends PluginContext>(
         "SANDBOX_UNSUPPORTED",
       );
     }
-    if (dotted === "auth.registerSshAuthProvider" && isPlain(args[0])) {
-      for (const hook of ["onBanner", "onKeyboardInteractive"]) {
-        if (typeof (args[0] as Record<string, unknown>)[hook] === "function") {
-          throw new SandboxRuleError(
-            `${hook} is not available to auth providers in a plugin process yet`,
-            "SANDBOX_UNSUPPORTED",
-          );
-        }
-      }
+    if (dotted === "auth.registerLoginMethod" && isPlain(args[0])) {
+      args[0] = ownCookiesOnly(
+        args[0] as Record<string, unknown>,
+        cookiePrefix(manifest.id ?? ""),
+      );
     }
     if (dotted === "schedule.every") {
       const id = (args[2] as { id?: string } | undefined)?.id;

@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   createMockCtx,
   createTestDb,
@@ -85,13 +85,19 @@ describe("createMockCtx sandbox mode", () => {
     expect(ctx.http.baseUrl(new Handle() as never)).toBe("https://termix.test");
   });
 
-  it("refuses auth hooks core reads synchronously", () => {
+  it("takes async auth hooks and login methods", () => {
     const { ctx } = createMockCtx({
       sandbox: true,
       capabilities: ["auth:provide"],
       manifest: {
         ...manifest,
-        contributes: { auth: { sshAuthTypes: ["x"] } },
+        contributes: {
+          auth: {
+            sshAuthTypes: ["x"],
+            loginMethods: ["m"],
+            keyboardInteractive: ["k"],
+          },
+        },
       },
     });
     expect(() =>
@@ -99,9 +105,62 @@ describe("createMockCtx sandbox mode", () => {
         type: "x",
         labelKey: "x",
         prepare: async () => ({ status: "ready" }),
-        onBanner: () => undefined,
+        onBanner: async () => undefined,
       }),
-    ).toThrow(/onBanner is not available/);
+    ).not.toThrow();
+    expect(() =>
+      ctx.auth.registerKeyboardInteractiveHandler({
+        id: "k",
+        label: "K",
+        detect: async () => null,
+      }),
+    ).not.toThrow();
+    expect(() =>
+      ctx.auth.registerLoginMethod({
+        id: "m",
+        labelKey: "m",
+        kind: "form",
+        verify: async () => ({ kind: "user", userId: "u" }),
+      }),
+    ).not.toThrow();
+  });
+
+  it("lets a login method set only its own cookies", async () => {
+    const { ctx, auth } = createMockCtx({
+      sandbox: true,
+      capabilities: ["auth:provide"],
+      manifest: {
+        ...manifest,
+        id: "sample-x",
+        contributes: { auth: { loginMethods: ["m"] } },
+      },
+    });
+    ctx.auth.registerLoginMethod({
+      id: "m",
+      labelKey: "m",
+      kind: "redirect",
+      start: async (request) => {
+        const res = request.res as {
+          cookie: (n: string, v: string, o: object) => void;
+        };
+        res.cookie(String(request.body.name), "v", {});
+        return { redirectUrl: "https://idp" };
+      },
+    });
+    const start = auth.loginMethods[0].start!;
+    const set = vi.fn();
+    const request = (name: string) => ({
+      body: { name },
+      query: {},
+      headers: {},
+      res: { cookie: set, clearCookie: vi.fn() },
+    });
+    await expect(start(request("tmxp_sample_x_s"), null)).resolves.toEqual({
+      redirectUrl: "https://idp",
+    });
+    expect(set).toHaveBeenCalledTimes(1);
+    await expect(start(request("jwt"), null)).rejects.toThrow(/tmxp_/);
+    expect(set).toHaveBeenCalledTimes(1);
   });
 
   it("refuses methods core can't serve to a plugin process", () => {

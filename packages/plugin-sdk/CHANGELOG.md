@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.2.2
+
+Plugin API 2.2.0. Needs Termix 26.11.2.
+
+### Changed
+
+- Login methods, keyboard-interactive handlers and `ctx.auth.completeRedirectLogin` work in a plugin process. A login method gets a plain copy of the request, and `request.res.cookie`/`clearCookie` only set cookies named `tmxp_<id>_*`
+- An SSH auth provider's `onBanner` and `onKeyboardInteractive`, a keyboard-interactive handler's `detect` and `autoAnswerPasswords`, and `onBanner` from `ctx.ssh.prepare` may return a Promise. Await them. An answer that takes over 5 seconds counts as none
+- An SSH auth provider in a plugin process may also set the socket `timeout`
+- `createMockCtx({ sandbox: true })` takes login methods, keyboard-interactive handlers, `completeRedirectLogin` and async banner hooks, and refuses a login method cookie outside `tmxp_<id>_*`
+
 ## 2.2.1
 
 Plugin API 2.2.0. Needs Termix 26.11.2.

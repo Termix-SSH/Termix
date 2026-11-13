@@ -1834,8 +1834,9 @@ export type PluginKeyboardInteractiveDetection =
  * browser sign-in). Handlers run before core's TOTP and push detection.
  *
  * `settings` is this plugin's host-scope settings for the host, with manifest
- * defaults filled in. Both hooks are synchronous; they run inside ssh2's
- * keyboard-interactive callback.
+ * defaults filled in. Both hooks run inside ssh2's keyboard-interactive
+ * callback. They may return Promises (a plugin process always does); one
+ * that takes over 5 seconds counts as no.
  */
 export interface PluginKeyboardInteractiveHandler {
   /** Listed in contributes.auth.keyboardInteractive. */
@@ -1850,12 +1851,15 @@ export interface PluginKeyboardInteractiveHandler {
     },
     host: PluginSshHost,
     settings: Record<string, unknown>,
-  ) => PluginKeyboardInteractiveDetection | null;
+  ) =>
+    | PluginKeyboardInteractiveDetection
+    | null
+    | Promise<PluginKeyboardInteractiveDetection | null>;
   /** Answer password prompts with the stored password instead of asking. */
   autoAnswerPasswords?: (
     host: PluginSshHost,
     settings: Record<string, unknown>,
-  ) => boolean;
+  ) => boolean | Promise<boolean>;
 }
 
 /** Answers keyboard-interactive prompts. Resolve null to give up. */
@@ -2121,8 +2125,16 @@ export interface PluginSshPrepared {
   outcome: PluginSshAuthOutcome;
   /** The auth type whose provider prepared it, null when none exists. */
   authType: string | null;
-  /** The provider's banner hook, bound to this host and connection. */
-  onBanner?: (banner: string) => PluginSshBannerDecision | undefined;
+  /**
+   * The provider's banner hook, bound to this host and connection. Await it:
+   * a provider in a plugin process answers with a Promise.
+   */
+  onBanner?: (
+    banner: string,
+  ) =>
+    | PluginSshBannerDecision
+    | undefined
+    | Promise<PluginSshBannerDecision | undefined>;
   /**
    * The provider's auth failure hook, bound to this host and connection.
    * Await it: a provider in a plugin process answers with a Promise.
@@ -2192,7 +2204,10 @@ export interface PluginSshAuthProvider {
     host: PluginSshHost,
     env: PluginSshAuthEnv,
   ) => Promise<PluginSshAuthOutcome>;
-  /** Claims keyboard-interactive rounds for hosts of this type. */
+  /**
+   * Claims keyboard-interactive rounds for hosts of this type. May return a
+   * Promise; one that takes over 5 seconds counts as null.
+   */
   onKeyboardInteractive?: (
     round: {
       name: string;
@@ -2200,7 +2215,10 @@ export interface PluginSshAuthProvider {
       prompts: PluginKeyboardInteractivePrompt[];
     },
     host: PluginSshHost,
-  ) => PluginKeyboardInteractiveDecision | null;
+  ) =>
+    | PluginKeyboardInteractiveDecision
+    | null
+    | Promise<PluginKeyboardInteractiveDecision | null>;
   /**
    * Decide on a retry before the socket closes. In a plugin process this
    * returns a Promise, so callers await it.
@@ -2229,7 +2247,10 @@ export interface PluginSshAuthProvider {
     banner: string,
     host: PluginSshHost,
     env: PluginSshAuthEnv,
-  ) => PluginSshBannerDecision | undefined;
+  ) =>
+    | PluginSshBannerDecision
+    | undefined
+    | Promise<PluginSshBannerDecision | undefined>;
   /** Starts the browser step behind an interaction-required outcome. */
   startInteraction?: (request: {
     userId: string;

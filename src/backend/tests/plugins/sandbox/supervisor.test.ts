@@ -132,6 +132,7 @@ function spec(
     sandbox?: Record<string, unknown>;
     report?: (value: unknown) => void;
     onFailed?: (message: string) => void;
+    ctx?: Record<string, unknown>;
   } = {},
 ) {
   return {
@@ -156,6 +157,7 @@ function spec(
           error: () => {},
           debug: () => {},
         },
+        ...extra.ctx,
       };
       return { ctx, handle };
     },
@@ -451,4 +453,121 @@ describe("plugin process env", () => {
       SNIPPET_EXECUTION_TIMEOUT_SECONDS: "60",
     });
   });
+});
+
+describe("auth hooks in a plugin process", () => {
+  it("runs a login method and a keyboard handler across the process", async () => {
+    const methods: Array<
+      Record<string, (...a: unknown[]) => Promise<unknown>>
+    > = [];
+    const handlers: Array<
+      Record<string, (...a: unknown[]) => Promise<unknown>>
+    > = [];
+    const fetched: unknown[] = [];
+    const supervisor = new SandboxSupervisor(config());
+    await supervisor.register(
+      spec(
+        "loginp",
+        plugin(
+          "loginp",
+          `
+export function activate(ctx) {
+  ctx.auth.registerLoginMethod({
+    id: "m", labelKey: "k", kind: "redirect",
+    start: async (request) => {
+      const token = await ctx.fetch("https://idp/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "grant_type=authorization_code&code=c",
+        tls: { ca: "PEM" },
+        allowPrivateHosts: ["idp"],
+      });
+      if ((await token.text()) !== "ok") throw new Error("fetch body lost");
+      request.res.cookie("tmxp_loginp_state", "s1", { httpOnly: true, domain: "evil.example" });
+      request.res.cookie("jwt", "forged", {});
+      return { redirectUrl: "https://idp/auth?b=" + ctx.http.baseUrl(request) + "&c=" + (request.headers.cookie ?? "") };
+    },
+    callback: async (request) => {
+      request.res.clearCookie("tmxp_loginp_state", {});
+      throw Object.assign(new Error("other browser"), { status: 400, returnTo: "https://t/" });
+    },
+  });
+  ctx.auth.registerKeyboardInteractiveHandler({
+    id: "k", label: "K",
+    detect: (round, host) => ({ kind: "browser", url: "https://k/" + (host.password ?? "none"), code: "1234", instructions: round.name }),
+  });
+}
+`,
+        ),
+        {
+          capabilities: ["auth:provide", "network:outbound"],
+          ctx: {
+            auth: {
+              registerLoginMethod: (m: never) => methods.push(m),
+              registerKeyboardInteractiveHandler: (h: never) =>
+                handlers.push(h),
+            },
+            http: { baseUrl: () => "https://termix.example" },
+            fetch: async (url: string, init: unknown) => {
+              fetched.push([url, init]);
+              return new Response("ok");
+            },
+          },
+        },
+      ),
+    );
+    await until(() => methods.length === 1 && handlers.length === 1);
+
+    const res = { cookie: vi.fn(), clearCookie: vi.fn(), headersSent: false };
+    const req = {
+      body: {},
+      query: {},
+      headers: { cookie: "jwt=secret; tmxp_loginp_state=old" },
+      ip: "10.0.0.9",
+      res,
+    };
+    const started = (await methods[0].start(req, null)) as {
+      redirectUrl: string;
+    };
+    expect(started.redirectUrl).toBe(
+      "https://idp/auth?b=https://termix.example&c=tmxp_loginp_state=old",
+    );
+    expect(fetched).toEqual([
+      [
+        "https://idp/token",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: "grant_type=authorization_code&code=c",
+          tls: { ca: "PEM" },
+          allowPrivateHosts: ["idp"],
+        },
+      ],
+    ]);
+    expect(res.cookie).toHaveBeenCalledTimes(1);
+    expect(res.cookie).toHaveBeenCalledWith("tmxp_loginp_state", "s1", {
+      httpOnly: true,
+    });
+
+    await expect(methods[0].callback(req)).rejects.toMatchObject({
+      message: "other browser",
+      status: 400,
+      returnTo: "https://t/",
+    });
+    expect(res.clearCookie).toHaveBeenCalledWith("tmxp_loginp_state", {});
+
+    expect(
+      await handlers[0].detect(
+        { name: "Bastion", instructions: "", prompts: [] },
+        { id: 1, password: "hunter2" },
+        {},
+      ),
+    ).toEqual({
+      kind: "browser",
+      url: "https://k/none",
+      code: "1234",
+      instructions: "Bastion",
+    });
+    await supervisor.shutdown();
+  }, 30_000);
 });
