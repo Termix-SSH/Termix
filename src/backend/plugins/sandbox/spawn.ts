@@ -5,9 +5,8 @@
  *             run as a fixed user without the launcher);
  *   launcher  Docker: the root launcher that started core starts the child as
  *             the plugin's own Linux user and relays its messages;
- *   electron  desktop: Electron main starts the app's pinned Node inside the
- *             OS sandbox helper and hands core a MessagePort that carries the
- *             child's stdio frames, because the app's fuses stop core from
+ *   electron  desktop: Electron main forks a utility process and hands core a
+ *             MessagePort to it, because the app's fuses stop core from
  *             running Node scripts itself.
  *
  * All three give the same Transport, so the bridge does not know which ran.
@@ -15,8 +14,6 @@
 import { fork } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { randomUUID } from "node:crypto";
-import v8 from "node:v8";
-import { decodeWire } from "./frames.js";
 import type { Readable } from "node:stream";
 import type { Transport, Wire } from "./rpc.js";
 import { processTransport } from "./rpc.js";
@@ -228,25 +225,11 @@ export function relaySpawner(mode: "launcher" | "electron"): Spawner {
       if (mode === "electron") {
         const port = child.port;
         if (!port) throw new Error("The desktop app sent no channel");
-        // Electron main only moves the bytes to and from the plugin's stdio.
         transport = {
-          send: (message) => {
-            try {
-              port.postMessage(v8.serialize(message));
-            } catch {
-              // the channel is already closed
-            }
-          },
+          send: (message) => port.postMessage(message),
           onMessage: (handler) => {
-            const listener = (event: { data: unknown }) => {
-              let message: Wire;
-              try {
-                message = decodeWire(event.data as Uint8Array);
-              } catch {
-                return;
-              }
-              handler(message);
-            };
+            const listener = (event: { data: unknown }) =>
+              handler(event.data as Wire);
             if (port.on) port.on("message", listener);
             else port.addEventListener?.("message", listener);
             port.start?.();

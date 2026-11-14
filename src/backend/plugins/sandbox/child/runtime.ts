@@ -7,7 +7,7 @@
  * definitions), currentActor() and the disposables bag. ssh2 clients,
  * sockets and the database stay in core and are reached through handles.
  */
-// First, before anything a plugin could load, as a backstop to --import.
+// First, before anything a plugin could load: Electron ignores --import.
 import "./harden.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 import os from "node:os";
@@ -20,8 +20,8 @@ import {
   processTransport,
   type StreamPort,
   type Transport,
+  type Wire,
 } from "../rpc.js";
-import { stdioTransport, STDIO_FLAG } from "../frames.js";
 import { createChildSocket } from "./socket.js";
 import { joinStream } from "../transport-bridge.js";
 import { createChildSyncHost } from "./sync-host.js";
@@ -88,20 +88,38 @@ process.on("unhandledRejection", (reason) => {
   console.error(`Unhandled rejection: ${message}`);
 });
 
-/**
- * The fork channel, or on the desktop frames over stdin and stdout. There
- * stdout belongs to the channel, so anything the plugin prints goes to
- * stderr (still the plugin's log).
- */
-function openTransport(): Transport {
-  if (!process.argv.includes(STDIO_FLAG)) return processTransport(process);
-  const stdout = process.stdout;
-  const write = stdout.write.bind(stdout);
-  stdout.write = process.stderr.write.bind(process.stderr) as typeof write;
-  return stdioTransport(process.stdin, { write }, () => process.exit(0));
+/** The fork channel, or a MessagePort Electron hands over first. */
+function openTransport(): Promise<Transport> {
+  const parentPort = (
+    process as unknown as {
+      parentPort?: {
+        once(
+          event: "message",
+          fn: (event: { data: unknown; ports: unknown[] }) => void,
+        ): void;
+      };
+    }
+  ).parentPort;
+  if (!parentPort) return Promise.resolve(processTransport(process));
+  return new Promise((resolve) => {
+    parentPort.once("message", (event) => {
+      const port = event.ports?.[0] as {
+        postMessage(m: unknown): void;
+        on(e: "message", fn: (event: { data: unknown }) => void): void;
+        start(): void;
+      };
+      resolve({
+        send: (message) => port.postMessage(message),
+        onMessage: (handler) => {
+          port.on("message", (e) => handler(e.data as Wire));
+          port.start();
+        },
+      });
+    });
+  });
 }
 
-const transport = openTransport();
+const transport = await openTransport();
 
 const endpoint = new Endpoint(transport, {
   side: "c",
