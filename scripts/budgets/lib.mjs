@@ -75,3 +75,21 @@ export function overBudget(result, budgets) {
   }
   return failures;
 }
+
+/** The newest dev-X.Y.Z branch name, or null. */
+export function newestDevBranch(heads) {
+  const versions = heads
+    .map((ref) => /refs\/heads\/dev-(\d+)\.(\d+)\.(\d+)$/.exec(ref))
+    .filter(Boolean)
+    .map((m) => ({
+      name: `dev-${m[1]}.${m[2]}.${m[3]}`,
+      parts: m.slice(1, 4).map(Number),
+    }))
+    .sort((a, b) => {
+      for (let i = 0; i < 3; i++) {
+        if (a.parts[i] !== b.parts[i]) return b.parts[i] - a.parts[i];
+      }
+      return 0;
+    });
+  return versions[0]?.name ?? null;
+}

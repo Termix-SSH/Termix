@@ -1,0 +1,7 @@
+{
+  "about": "Limits for the Budgets workflow, warm load after login with every plugin on. Set from the first CI numbers plus about 20 percent; lower them when a change makes things cheaper.",
+  "framesAfterLogin": 30,
+  "jsHeapMb": 260,
+  "backendRssMb": 3200,
+  "timeToDashboardMs": 8000
+}

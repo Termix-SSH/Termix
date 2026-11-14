@@ -95,11 +95,26 @@ async function main() {
   requests.length = 0;
   const started = Date.now();
   await page.keyboard.press("Enter");
-  await page
-    .locator('[data-slot="tab-stage"]')
-    .first()
-    .waitFor({ state: "attached", timeout: maxWaitMs });
-  const coldDashboardMs = Date.now() - started;
+  // A fresh server shows its setup first; skip it so the dashboard loads.
+  const skip = page.getByRole("button", { name: /^(Skip setup|Not now)$/ });
+  const stage = page.locator('[data-slot="tab-stage"]').first();
+  await Promise.race([
+    skip.first().waitFor({ timeout: maxWaitMs }),
+    stage.waitFor({ state: "attached", timeout: maxWaitMs }),
+  ]);
+  let coldDashboardMs = Date.now() - started;
+  let onboarding = false;
+  // The setup can show a moment after the shell itself.
+  for (let i = 0; i < 20 && !onboarding; i++) {
+    if (await skip.count()) {
+      onboarding = true;
+      await skip.first().click();
+    } else {
+      await sleep(250);
+    }
+  }
+  await stage.waitFor({ state: "attached", timeout: maxWaitMs });
+  if (onboarding) coldDashboardMs = Date.now() - started;
   const coldSettledMs = await waitForFrames(page, started);
   const cold = await frameCounts(page);
   const coldHeap = await jsHeapMb(page);
@@ -141,6 +156,7 @@ async function main() {
       : null,
     requestCount: requests.length,
     cold: {
+      onboarding,
       framesAfterLogin: cold.total,
       backgroundFrames: cold.background,
       jsHeapMb: coldHeap,
