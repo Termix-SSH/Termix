@@ -82,9 +82,17 @@ DASHBOARD_CARDS (value): DashboardCardConfig[]
 DEFAULT_FOLDER_COLOR (value): "#f59145"
 DEFAULT_FOLDER_ICON (value): "folder"
 DashboardCardId (type): DashboardCardId
+DataBar (type): DataBar
 DataColumn (type): DataColumn<T>
+DataLayout (type): DataLayout
+DataShape (type): DataShape
+DataSlot (value): (props: DataSlotProps) => Element
+DataStat (type): DataStat
 DataTable (value): ({ className, containerClassName, children, ...props }: ClassAttributes<HTMLTableElement> & TableHTMLAttributes<HTMLTableElement> & { containerClassName?: string; }) => Element
 DataTableRow (value): ({ active, className, onClick, ...props }: ClassAttributes<HTMLTableRowElement> & HTMLAttributes<HTMLTableRowElement> & { active?: boolean; }) => Element
+DataTone (type): DataTone
+DataValue (type): DataValue
+DataValues (value): ({ values, layout, className, onAction, }: { values: DataValue[]; layout?: DataLayout; className?: string; onAction?: (actionId: string) => void; }) => Element
 DataView (value): <T>({ items, view, density, getKey, renderCard, columns, size, minCardWidth, listColumns, onRowClick, isRowActive, empty, className, }: { items: T[]; view: PanelViewMode; density?: PanelDensity; getKey: (item: T) => string; renderCard: (item: T) => ReactNode; columns: GridColumns; size?: GridSize; minCardWidth?: number; listColumns: DataColumn<T>[]; onRowClick?: (item: T) => void; isRowActive?: (item: T) => boolean; empty: ReactNode; className?: string; }) => Element
 DefaultOverrides (type): DefaultOverrides
 DefaultsOnly (value): ({ settingKey, children, }: { settingKey: string; children: ReactNode; }) => Element
@@ -145,6 +153,7 @@ Host (type): Host
 HostActionDef (type): HostActionDef
 HostClickBehavior (type): HostClickBehavior
 HostData (type): HostData
+HostDataItems (value): ({ host, items, layout, className, }: { host: Host; items: HostBadgeDef[]; layout?: DataLayout; className?: string; }) => Element
 HostDefaultBadge (value): ({ settingKey }: { settingKey: string; }) => Element
 HostDefaultField (value): ({ settingKey, children, }: { settingKey: string; children: ReactNode; }) => Element
 HostDefaultsChange (type): HostDefaultsChange
@@ -189,7 +198,7 @@ Label (value): ({ className, ...props }: LabelProps & RefAttributes<HTMLLabelEle
 LineChart (value): ({ series, timestamps, domain, yFormatter, height, className, }: LineChartProps) => Element
 LineChartSeries (type): LineChartSeries
 LinkedAccountInfo (type): LinkedAccountInfo
-ListBadge (value): ({ tone, className, children, }: { tone?: "destructive" | "warning" | "muted" | "brand" | "success"; className?: string; children: ReactNode; }) => Element
+ListBadge (value): ({ tone, className, children, }: { tone?: "destructive" | "muted" | "warning" | "brand" | "success"; className?: string; children: ReactNode; }) => Element
 ListRow (value): ({ title, icon, badges, meta, stripe, tone, color, selected, active, dimmed, leading, trailing, actions, onClick, className, children, ...rest }: { title: ReactNode; icon?: ReactNode; badges?: ReactNode; meta?: ReactNode; stripe?: number; tone?: ListRowTone; color?: string; selected?: boolean; active?: boolean; dimmed?: boolean; leading?: ReactNode; trailing?: ReactNode; actions?: ReactNode; onClick?: () => void; className?: string; children?: ReactNode; } & Omit<HTMLAttributes<HTMLDivElement>, "title" | "children" | "onClick">) => Element
 ListRowAction (value): ({ label, tone, className, children, ...rest }: { label: string; tone?: "default" | "destructive" | "brand"; className?: string; children: ReactNode; } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & { ref?: Ref<HTMLButtonElement>; }) => Element
 ListRowFolder (value): ({ name, icon, count, open, onToggle, stripe, actions, dropActive, onDropItem, emptyText, className, children, }: { name: ReactNode; icon?: ReactNode; count?: number; open: boolean; onToggle: () => void; stripe?: number; actions?: ReactNode; dropActive?: boolean; onDropItem?: () => void; emptyText?: ReactNode; className?: string; children?: ReactNode; }) => Element
@@ -304,7 +313,7 @@ SplitLayoutMenu (value): ({ activeIsSplit, canAddPane, onSplit, onPreset, }: { a
 SplitOpenTarget (type): SplitOpenTarget
 SplitSummary (type): SplitSummary
 StatRow (value): ({ label, value, mono, className, }: { label: ReactNode; value: ReactNode; mono?: boolean; className?: string; }) => Element
-StatTile (value): ({ label, icon, value, unit, percent, hint, tone, actions, onClick, children, className, }: { label: ReactNode; icon?: ReactNode; value: ReactNode; unit?: ReactNode; percent?: number; hint?: ReactNode; tone?: "default" | "ok" | "warn" | "bad"; actions?: ReactNode; onClick?: () => void; children?: ReactNode; className?: string; }) => Element
+StatTile (value): ({ label, icon, value, unit, percent, hint, tone, actions, onClick, children, className, }: { label: ReactNode; icon?: ReactNode; value: ReactNode; unit?: ReactNode; percent?: number; hint?: ReactNode; tone?: "default" | "warn" | "bad" | "ok"; actions?: ReactNode; onClick?: () => void; children?: ReactNode; className?: string; }) => Element
 StatusBadge (value): ({ tone, state, className, children, }: { tone?: StatusTone; state?: string; className?: string; children?: ReactNode; }) => Element
 StatusDot (value): ({ tone, state, pulse, className, title, }: { tone?: StatusTone; state?: string; pulse?: boolean; className?: string; title?: string; }) => Element
 StatusTone (type): StatusTone
@@ -488,7 +497,7 @@ getSessionTimeout (value): () => Promise<{ timeoutHours: number; }>
 getSessionTimeoutMinutes (value): () => Promise<number>
 getSessions (value): () => Promise<{ sessions: { id: string; userId: string; username?: string; deviceType: string; deviceInfo: string; createdAt: string; expiresAt: string; lastActiveAt: string; isRevoked?: boolean; isCurrentSession?: boolean; }[]; }>
 getStatusCheckSettings (value): () => Promise<{ statusCheckInterval: number; }>
-getStatusClasses (value): (status: boolean | "online" | "offline" | "unknown", scheme: StatusColorScheme, variant: "dot" | "stripe" | "badge", loading?: boolean) => string
+getStatusClasses (value): (status: boolean | "online" | "offline" | "unknown", scheme: StatusColorScheme, variant: "badge" | "dot" | "stripe", loading?: boolean) => string
 getTabType (value): (id: string) => TabTypeDef
 getTlsStatus (value): () => Promise<TlsStatus>
 getUpdateChannel (value): () => Promise<UpdateChannelState>
@@ -546,6 +555,7 @@ operationsApi (value): AxiosInstance
 pageOf (value): <T>(items: T[], page: number, size: number) => { rows: T[]; page: number; pages: number; }
 paletteEntriesFor (value): (all: PaletteEntryDef[], scope: "global" | "host", host?: Host) => PaletteEntryDef[]
 parseCustomKeybindings (value): (raw?: string) => CustomKeybinding[]
+parseDataValue (value): (raw: unknown, shapes?: readonly DataShape[]) => DataValue[]
 parseServerTime (value): (ts: string) => Date
 pluginKey (value): { (pluginId: string, key: string): string; (pluginId: string, key: string): string; }
 pluginName (value): (t: Translator, plugin: { id: string; name: string; }) => string

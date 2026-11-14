@@ -42,6 +42,8 @@ import {
 } from "./frame-app";
 import { createFrameBridge } from "./frame-bridge";
 import { getFrameState, setFrameState } from "./frame-store";
+import { createFrameDataSource, receiveDataSlot } from "./frame-data-slots";
+import { setFrameDataSource } from "@/components/data-view/data-source";
 import { FrameHooks } from "./frame-hooks";
 import { withPluginScope } from "@/plugin-host/scope";
 import { FrameRoot, setFrameProps, type FrameFit } from "./frame-root";
@@ -140,6 +142,8 @@ async function boot() {
   });
 
   const call = (method: string, ...args: unknown[]) => port.call(method, args);
+  // Data slots this plugin owns get their values from the shell.
+  setFrameDataSource(createFrameDataSource(call));
 
   parent.postMessage(
     { ch: FRAME_CHANNEL, t: "hello", role: params.role, key: params.key },
@@ -420,6 +424,10 @@ async function boot() {
       const next = data as Partial<FrameState>;
       setFrameState(next);
       if (next.theme) applyTheme(next.theme);
+      return;
+    }
+    if (name === "dataSlot") {
+      receiveDataSlot(data);
       return;
     }
     if (name === "props" && data && typeof data === "object") {

@@ -1,4 +1,6 @@
 import { useEffect, type ComponentType } from "react";
+import { dataReporter } from "@/components/data-view/data-reporter";
+import type { DataShape } from "@/components/data-view/data-value";
 import type { Tab } from "@/types/ui-types";
 import type {
   Disposer,
@@ -160,6 +162,23 @@ export function createPluginApp(
     withPluginScope(pluginId, component);
 
   const key = (value: string) => pluginKey(pluginId, value);
+
+  // A host value hook gets the row's host, scoped like every host it sees.
+  const hostValue = (
+    useValue: ((host: never) => unknown) | undefined,
+    shapes: DataShape[],
+  ) =>
+    useValue
+      ? (scoped(
+          dataReporter(
+            (context) =>
+              (useValue as (host: unknown) => unknown)(
+                scopeHostFields(context, pluginId).host,
+              ),
+            shapes,
+          ),
+        ) as never)
+      : undefined;
 
   // Every host a plugin callback receives carries only this plugin's settings.
   const hostCallback = <F extends (...args: never[]) => unknown>(
@@ -406,6 +425,7 @@ export function createPluginApp(
           dot: badge.useDot
             ? (scoped(hostDotReporter(badge.useDot)) as never)
             : undefined,
+          value: hostValue(badge.useValue, ["badge", "dot", "text"]),
           order: badge.order,
         }),
       );
@@ -417,7 +437,10 @@ export function createPluginApp(
           id: indicator.id,
           pluginId,
           when: hostCallback(indicator.when) as never,
-          component: scoped(indicator.component) as never,
+          component: indicator.component
+            ? (scoped(indicator.component) as never)
+            : undefined,
+          value: hostValue(indicator.useValue, ["dot", "badge", "text"]),
           order: indicator.order,
         }),
       );
@@ -429,7 +452,10 @@ export function createPluginApp(
           id: item.id,
           pluginId,
           when: hostCallback(item.when) as never,
-          component: scoped(item.component) as never,
+          component: item.component
+            ? (scoped(item.component) as never)
+            : undefined,
+          value: hostValue(item.useValue, ["badge", "text"]),
           order: item.order,
         }),
       );
@@ -589,7 +615,7 @@ export function createPluginApp(
     },
 
     declareActionSlot(slot) {
-      return track(declareActionSlot(slot));
+      return track(declareActionSlot({ ...slot, pluginId }));
     },
 
     registerSlotContribution(slotId, contribution) {
@@ -602,6 +628,16 @@ export function createPluginApp(
             : undefined,
           component: contribution.component
             ? scoped(contribution.component)
+            : undefined,
+          value: contribution.useValue
+            ? (scoped(
+                dataReporter((context, rowKey) =>
+                  contribution.useValue!(
+                    scopeHostFields(context, pluginId),
+                    rowKey,
+                  ),
+                ),
+              ) as never)
             : undefined,
           when: contribution.when
             ? (context: Record<string, unknown>) =>

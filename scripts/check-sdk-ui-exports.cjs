@@ -19,6 +19,16 @@ const SDK_UI = path.join(ROOT, "src", "ui", "plugin-host", "sdk-ui.ts");
 const TSCONFIG = path.join(ROOT, "tsconfig.app.json");
 
 const ALLOWED = [
+  "DataSlot",
+  "HostDataItems",
+  "DataValues",
+  "DataLayout",
+  "parseDataValue",
+  "DataBar",
+  "DataShape",
+  "DataStat",
+  "DataTone",
+  "DataValue",
   "SeamlessTileContext",
   "ToolbarBand",
   "ToolbarSelect",

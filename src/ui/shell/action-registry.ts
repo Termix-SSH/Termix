@@ -22,6 +22,8 @@
  */
 
 import type { ComponentType } from "react";
+import type { DataReporter } from "@/components/data-view/data-reporter";
+import type { DataShape } from "@/components/data-view/data-value";
 
 /**
  * Args are unknown[] because the registry never inspects them: a slot owner
@@ -48,6 +50,12 @@ export interface ActionSlotDefinition {
    * its content (row items, badges), "content" full width, "fill" the box.
    */
   fit?: "inline" | "content" | "fill";
+  /** For "data": the shapes the owner draws. Others are dropped. */
+  shapes?: DataShape[];
+  /** For "data": one row per host, tab or credential. */
+  rows?: "host" | "tab" | "credential";
+  /** The plugin that declared it. Its frames may watch the slot's data. */
+  pluginId?: string;
 }
 
 export interface SlotContribution {
@@ -64,6 +72,8 @@ export interface SlotContribution {
    * e.g. a panel docked into the terminal.
    */
   component?: ComponentType<Record<string, unknown>>;
+  /** For kind "data": runs the plugin's value hook for one row. */
+  value?: DataReporter;
   /** Extra condition, evaluated against the slot owner's context. */
   when?: (context: Record<string, unknown>) => boolean;
   pluginId?: string;
@@ -117,6 +127,11 @@ export function listActions(): RegisteredAction[] {
 /** Whether a handler is registered, i.e. its plugin is running. */
 export function isActionRegistered(id: string): boolean {
   return actions.has(id);
+}
+
+/** The plugin that registered an action, if one did. */
+export function getActionOwner(id: string): string | undefined {
+  return actions.get(id)?.pluginId;
 }
 
 /** The permission gating an action, if it declared one. */

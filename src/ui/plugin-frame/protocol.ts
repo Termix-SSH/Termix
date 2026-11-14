@@ -185,6 +185,8 @@ export interface FrameState {
   hostActions: Record<string, unknown>[];
   desktop: { available: boolean; remoteServerUrl: string | null };
   isMobile: boolean;
+  /** Background frame only: rows its data hooks run for, valueKey -> rowKey -> context. */
+  dataRows?: Record<string, Record<string, Record<string, unknown>>>;
 }
 
 export interface FrameTheme {

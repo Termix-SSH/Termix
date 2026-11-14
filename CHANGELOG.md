@@ -36,6 +36,7 @@
 - The sign in event plugins get now says which sign in method and device were used
 - The server answers `/.well-known/security.txt` with where to report a security problem in Termix
 - Docker images are reproducible: building the same commit again gives the same image, byte for byte
+- Plugins can give small per host or per tab values, like usage bars, badges and status dots, that Termix draws itself. A dashboard with many hosts no longer needs a plugin frame for each row
 
 ### Changed
 

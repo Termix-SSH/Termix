@@ -820,8 +820,10 @@ your plugin's error boundary and Suspense.
 | `docs`, `tabs`, `confirm`, `listHosts`, `getHost`, `t`, `hasPermission`, `desktop` | Helpers                                                           |
 | `onSettingsChanged`, `onDispose`                                                   | Hooks                                                             |
 
-Badges, status indicators and toolbar items take `{ id, when(host), component, order? }`; lower `order`
-comes first. An onboarding step sits in a section (`start`, `setup`, `explore`, `security`) or at an exact
+Badges, status indicators and toolbar items take `{ id, when(host), useValue(host), order? }`; lower
+`order` comes first. `useValue` returns a data value (see Data slots below) that the layout draws: a badge,
+dot or text for badges and status indicators, a badge or text for toolbar items. A `component` still works
+for a plugin that runs in the page, but never in a frame. An onboarding step sits in a section (`start`, `setup`, `explore`, `security`) or at an exact
 `position` from 1 to 99. `replaces: ["preset"]` lists older step keys the step took over, so people who saw
 those are not shown it again.
 
@@ -864,8 +866,8 @@ before, with the same look and theme.
   and activity. Saved passwords are not available to a frame.
 - `invokeAction` runs your own actions and the ids in your manifest `uses`. Opening links, downloads,
   the clipboard, toasts and confirms go through the shell. `localStorage` works and is kept per plugin.
-- Not available in a frame: host badges with a `component` (use `useDot`), host status indicators, host
-  editor toolbar items, `useShell`, and other plugins' components from `usePluginComponent`,
+- Not available in a frame: host badges, status indicators and editor toolbar items with a `component`
+  (use `useDot` or `useValue`), `useShell`, and other plugins' components from `usePluginComponent`,
   `useExtensions` or `useSlotContributions`. Layouts, themes, login screens and native desktop views are
   the shell itself: only an official plugin with `ui:layout`, `ui:theme`, `auth:provide` or
   `desktop:window` runs in the page.
@@ -913,10 +915,82 @@ content, for row items and badges), `"content"` (full width) or `"fill"` (the wh
 shell guesses from the slot id. A `fallback` element the owner passes stays in the page and shows while
 your framed component draws nothing.
 
-Slots you can fill include `terminal.toolbar`, `terminal.toolbarStatus`, `terminal.sidePanel`,
-`terminal.overlay`, `dashboard.counters`, `dashboard.hostMetrics`, `admin.userTabs`, `hosts.importMenu`,
-`hosts.panel`, `credentials.badges`, `shell.overlay`, `shell.rightEdge` and `tab.menu`. See
+Slots you can fill include `terminal.toolbar`, `terminal.sidePanel`, `terminal.overlay`,
+`dashboard.counters`, `admin.userTabs`, `hosts.importMenu`, `hosts.panel`, `credentials.badges`,
+`shell.overlay`, `shell.rightEdge` and `tab.menu`, plus the data slots below. See
 https://docs.termix.site/develop/more-extension-points.
+
+### Data slots (API 2.6)
+
+Small things drawn once per host or per tab (usage bars on a dashboard row, a badge, a toolbar readout)
+are data, not components. A framed component costs one iframe per row, so 20 hosts would mean 20 frames.
+Give a data slot plain values instead and the shell draws them, the same way for every plugin:
+
+```ts
+app.registerSlotContribution("dashboard.hostRow", {
+  actionId: "my-plugin.row",
+  titleKey: "row.title",
+  kind: "data",
+  useValue: (context, rowKey) => {
+    const usage = useUsage(Number(rowKey), context.online === true);
+    if (!usage) return null;
+    return { shape: "bars", items: [{ label: t("cpu"), value: usage.cpu }] };
+  },
+});
+```
+
+`useValue` is a hook. It runs once per row on screen, with the owner's context (plain JSON; `host` is your
+own host record) and the row key, a host id or a tab id. In a framed plugin it runs in the background frame
+and only the values cross, so start polling only for rows you are called for and stop when the row goes.
+Return `null` to draw nothing, so the owner's fallback shows.
+
+| Shape   | Value                                                     | Drawn as                         |
+| ------- | --------------------------------------------------------- | -------------------------------- |
+| `bars`  | `items: [{ label, value: 0..1 or null, tone?, detail? }]` | Usage bars, warn at 70%, bad 90% |
+| `stat`  | `items: [{ label, value, unit?, tone?, tooltip? }]`       | A label with a number or word    |
+| `badge` | `label, tone?, tooltip?, actionId?`                       | A small bordered label           |
+| `dot`   | `tone, label`                                             | A status dot, label as tooltip   |
+| `text`  | `text, tone?, tooltip?, actionId?`                        | A short line                     |
+
+Tones are `default`, `good`, `warn`, `bad` and `muted`. Return an array to draw several in order. An
+`actionId` must be one of your own actions; it runs with the row's context on click. The shell checks every
+value: unknown shapes, bad tones and items without a label are dropped, bars clamp to 0..1 and text is cut
+short.
+
+Data slots in Termix: `dashboard.hostRow` (bars, stat, text; context `hostId`, `host`, `online`),
+`dashboard.hostRowBadge` (badge, replaces the row's status badge while you return one),
+`homepage.hostMetrics` (bars, stat, text; context `hostId`, `online`, `shownMetrics`) and
+`terminal.toolbarStatus` (bars, stat, text; row key is the tab id, context `hostId`, `isConnected`,
+`active`) and `credentials.badges` (badge, text; row key is the credential id, context `credentialId`).
+Row buttons, like `credentials.rowActions`, are `kind: "button"` with an `icon`: the owner runs your action
+with the row (`{ id, name }` for a credential), so they need no component either. `DATA_SLOTS` in `@termix-ssh/plugin-sdk/manifest` lists them.
+
+To own a data slot, declare it and draw it with `DataSlot` from the UI kit:
+
+```tsx
+app.declareActionSlot({
+  id: "my-plugin.row",
+  accepts: ["data"],
+  shapes: ["bars", "stat"],
+  rows: "host",
+});
+
+<DataSlot
+  slotId="my-plugin.row"
+  rowKey={host.id}
+  context={{ hostId: host.id, host, online }}
+  fallback={<OwnBadge />}
+/>;
+```
+
+`layout` is `"row"` (side by side, the default), `"stack"` (one per line, for cards) or `"inline"`
+(toolbars). `DataValues` draws values you already have. `HostDataItems` draws a host's badges, status
+indicators or editor toolbar items. `termix-plugin validate` warns when a component goes into a data slot
+or a per row slot, and when a host badge, status indicator or toolbar item gets a component.
+
+In tests, `renderSlot(slotId, props)` from `renderWithApp` draws data contributions too,
+`readDataValues(slotId, context, rowKey)` returns what your hooks gave per action id, and
+`renderHostItems("badge" | "status" | "toolbar", host)` draws your host values.
 
 ## Layouts and themes
 

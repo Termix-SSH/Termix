@@ -22,7 +22,11 @@ import type {
   PluginDisposables,
   PluginLogger,
 } from "./backend.js";
-import type { HostActionContribution, TermixApp } from "./frontend.js";
+import type {
+  DataValue,
+  HostActionContribution,
+  TermixApp,
+} from "./frontend.js";
 import type { PluginManifest } from "./manifest.js";
 import type { PluginTableDefinition } from "./db.js";
 import type {
@@ -2946,8 +2950,30 @@ export interface RenderedPluginApp {
   ) => HTMLElement;
   /** Renders the Settings > Security section a factor or method brought. */
   renderEnrollment: (id: string) => HTMLElement;
-  /** Renders a slot the way its owner would. */
+  /**
+   * Renders a slot the way its owner would: buttons, components and data
+   * values. For data, the row key is props.rowKey, props.hostId or
+   * props.tabId.
+   */
   renderSlot: (slotId: string, props?: Record<string, unknown>) => HTMLElement;
+  /**
+   * Runs this plugin's data hooks for one row of a slot. `values()` gives
+   * the checked values by action id, null where the hook returned nothing;
+   * wrap reads in waitFor when the hook loads data. Plugin API 2.6.
+   */
+  readDataValues: (
+    slotId: string,
+    context?: Record<string, unknown>,
+    rowKey?: string,
+  ) => {
+    element: HTMLElement;
+    values: () => Record<string, DataValue[] | null>;
+  };
+  /** Renders this plugin's host badges, status indicators or editor toolbar items for one host. */
+  renderHostItems: (
+    kind: "badge" | "status" | "toolbar",
+    host: Record<string, unknown>,
+  ) => HTMLElement;
   /** Runs deactivate and every disposer, as disabling the plugin does. */
   deactivate: () => Promise<void>;
 }

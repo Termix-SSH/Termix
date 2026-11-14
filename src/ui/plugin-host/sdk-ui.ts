@@ -172,6 +172,17 @@ export { useTabs, useTabsSafe } from "@/shell/TabContext";
 
 // Slots: a plugin can offer places for other plugins to fill.
 export { ActionSlot, ComponentSlot } from "@/shell/ActionSlot";
+// Data slots: plain values from plugins, drawn the same everywhere.
+export { DataSlot, HostDataItems } from "@/components/data-view/DataSlot";
+export { DataValues, type DataLayout } from "@/components/data-view/DataValues";
+export {
+  parseDataValue,
+  type DataBar,
+  type DataShape,
+  type DataStat,
+  type DataTone,
+  type DataValue,
+} from "@/components/data-view/data-value";
 // For layouts: where tabs show, and the confirm a tab close asks with.
 export { TabStage } from "@/shell/stage/TabStage";
 export { ShellConfirmCapture } from "@/shell/controller/ShellControllerProvider";

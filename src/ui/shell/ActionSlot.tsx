@@ -44,8 +44,10 @@ export function ActionSlot({
   when,
 }: ActionSlotProps) {
   const { t } = useTranslation();
+  // Components and data values are drawn by ComponentSlot and DataSlot.
   const contributions = useActionSlot(slotId, when).filter(
-    (contribution) => contribution.kind !== "component",
+    (contribution) =>
+      contribution.kind !== "component" && contribution.kind !== "data",
   );
 
   if (!enabled || contributions.length === 0) return null;

@@ -23,11 +23,25 @@ import {
   setPluginSummaries,
 } from "@/plugin-host/plugin-store";
 import { getPanel, resetPanels } from "@/shell/panel-registry";
-import { invokeAction } from "@/shell/action-registry";
+import {
+  invokeAction,
+  registerAction,
+  registerSlotContribution,
+} from "@/shell/action-registry";
 import { listHostActions } from "@/sidebar/host-contributions";
 import { listCompanionDefs } from "@/shell/companions";
 import { FramePort } from "@/plugin-frame/rpc";
 import { FRAME_CHANNEL, type FrameMessage } from "@/plugin-frame/protocol";
+import { act, render } from "@testing-library/react";
+import { DataSlot, HostDataItems } from "@/components/data-view/DataSlot";
+import { setPermissionsForTesting } from "@/hooks/use-permissions";
+import { dataRowsFor, resetDataRows } from "@/plugin-host/frames/data-rows";
+import { listHostStatusIndicators } from "@/sidebar/host-contributions";
+import {
+  DataWatchHost,
+  resetDataWatches,
+} from "@/plugin-host/frames/data-watches";
+import { dataReporter } from "@/components/data-view/data-reporter";
 
 const summary = {
   id: "gizmo",
@@ -42,7 +56,10 @@ const summary = {
 } as unknown as PluginSummary;
 
 /** Stands in for the plugin's background frame page. */
-function fakeFrame(onCall: (method: string, args: unknown[]) => unknown) {
+function fakeFrame(
+  onCall: (method: string, args: unknown[]) => unknown,
+  onEvent?: (name: string, data: unknown) => void,
+) {
   const iframe = document.querySelector<HTMLIFrameElement>(
     'iframe[data-plugin-frame="gizmo"]',
   )!;
@@ -57,6 +74,7 @@ function fakeFrame(onCall: (method: string, args: unknown[]) => unknown) {
   const port = new FramePort({
     post: (message) => queueMicrotask(() => toShell(message)),
     onCall,
+    onEvent,
     fnPrefix: "p",
   });
   vi.spyOn(win, "postMessage").mockImplementation((message: unknown) => {
@@ -247,6 +265,164 @@ describe("startFramedPlugin", () => {
     const plugin = await started;
     expect(getPanel("undeclared")).toBeUndefined();
     expect(error).toHaveBeenCalled();
+    plugin.dispose();
+  });
+});
+
+describe("data values from a frame", () => {
+  afterEach(() => resetDataRows());
+
+  it("tells the frame which rows are shown and draws the values it sends", async () => {
+    const states: Record<string, unknown>[] = [];
+    const started = startFramedPlugin(summary);
+    const { port } = fakeFrame(
+      () => undefined,
+      (name, data) => {
+        if (name === "state") states.push(data as Record<string, unknown>);
+      },
+    );
+    const valueKey = "data:dashboard.hostRow:gizmo.row";
+    port.emit("register", {
+      rid: "slotContribution#1",
+      kind: "slotContribution",
+      data: {
+        slotId: "dashboard.hostRow",
+        actionId: "gizmo.row",
+        titleKey: "row",
+        kind: "data",
+        valueKey,
+      },
+    });
+    port.emit("register", {
+      rid: "hostStatusIndicator#2",
+      kind: "hostStatusIndicator",
+      data: { id: "s", when: () => true, valueKey: "status:s:value" },
+    });
+    port.emit("ready");
+    const plugin = await started;
+    setPermissionsForTesting([]);
+
+    const host = {
+      id: 1,
+      name: "h",
+      ip: "1.2.3.4",
+      password: "hunter2",
+      pluginSettings: { gizmo: {}, other: { secret: "x" } },
+    };
+    const view = render(
+      <DataSlot
+        slotId="dashboard.hostRow"
+        rowKey={1}
+        context={{ hostId: 1, host, online: true }}
+      />,
+    );
+    await act(flush);
+    // The row crosses as plain data, the host only as its id.
+    expect(dataRowsFor("gizmo")).toEqual({
+      [valueKey]: { "1": { hostId: 1, online: true } },
+    });
+    expect(states.at(-1)).toEqual({
+      dataRows: { [valueKey]: { "1": { hostId: 1, online: true } } },
+    });
+    expect(JSON.stringify(states)).not.toContain("hunter2");
+
+    await act(async () => {
+      port.emit("value", {
+        key: valueKey,
+        value: { "1": { shape: "text", text: "busy" } },
+      });
+      await flush();
+    });
+    expect(view.container.textContent).toBe("busy");
+
+    const indicators = listHostStatusIndicators().filter(
+      (item) => item.pluginId === "gizmo",
+    );
+    const dots = render(
+      <HostDataItems host={host as never} items={indicators} />,
+    );
+    await act(async () => {
+      port.emit("value", {
+        key: "status:s:value",
+        value: { "1": { shape: "dot", tone: "bad", label: "down" } },
+      });
+      await flush();
+    });
+    expect(
+      dots.container
+        .querySelector("[data-data-dot='bad']")
+        ?.getAttribute("title"),
+    ).toBe("down");
+
+    view.unmount();
+    await act(flush);
+    expect(dataRowsFor("gizmo")).toEqual({});
+    plugin.dispose();
+  });
+});
+
+describe("data slots a frame owns", () => {
+  afterEach(() => resetDataWatches());
+
+  it("runs other plugins' hooks in the page and sends the frame their values", async () => {
+    const events: { name: string; data: unknown }[] = [];
+    const started = startFramedPlugin(summary);
+    const { port } = fakeFrame(
+      () => undefined,
+      (name, data) => events.push({ name, data }),
+    );
+    port.emit("register", {
+      rid: "actionSlot#1",
+      kind: "actionSlot",
+      data: { id: "gizmo.rows", accepts: ["data"], rows: "host" },
+    });
+    port.emit("ready");
+    const plugin = await started;
+    setPermissionsForTesting([]);
+    const opened = vi.fn();
+    const sneaky = vi.fn();
+    registerAction("metrics.open", opened, { pluginId: "metrics" });
+    registerAction("other.wipe", sneaky, { pluginId: "other" });
+    registerSlotContribution("gizmo.rows", {
+      actionId: "metrics.row",
+      titleKey: "row",
+      kind: "data",
+      pluginId: "metrics",
+      value: dataReporter((context) => [
+        { shape: "text", text: `seen ${String(context.hostId)}` },
+        { shape: "badge", label: "Open", actionId: "metrics.open" },
+      ]),
+    });
+    render(<DataWatchHost />);
+
+    await expect(
+      port.call("dataSlot.watch", [
+        "w1",
+        { slotId: "gizmo.rows", rowKey: "5", context: { hostId: 5 } },
+      ]),
+    ).resolves.toBe(true);
+    // Only slots this plugin declared.
+    await expect(
+      port.call("dataSlot.watch", [
+        "w2",
+        { slotId: "dashboard.hostRow", rowKey: "5", context: {} },
+      ]),
+    ).resolves.toBe(false);
+    await act(flush);
+    const sent = events.filter((event) => event.name === "dataSlot").at(-1)
+      ?.data as {
+      id: string;
+      values: { pluginId: string; parts: unknown[] }[];
+    };
+    expect(sent.id).toBe("w1");
+    expect(sent.values[0].pluginId).toBe("metrics");
+    expect(sent.values[0].parts[0]).toEqual({ shape: "text", text: "seen 5" });
+
+    await port.call("dataSlot.action", ["w1", "metrics.open"]);
+    await port.call("dataSlot.action", ["w1", "other.wipe"]);
+    expect(opened).toHaveBeenCalledWith({ hostId: 5 });
+    expect(sneaky).not.toHaveBeenCalled();
+
     plugin.dispose();
   });
 });

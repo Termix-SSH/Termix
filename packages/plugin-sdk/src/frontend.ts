@@ -674,11 +674,70 @@ export interface HostDot {
   label: string;
 }
 
+/** How a data value is colored. "default" uses the accent. */
+export type DataTone = "default" | "good" | "warn" | "bad" | "muted";
+
+/** The kinds of data value the shell can draw. */
+export type DataShape = "bars" | "stat" | "badge" | "dot" | "text";
+
+export interface DataBar {
+  label: string;
+  /** 0 to 1, or null when not known. Bars warn from 0.7 and turn bad from 0.9 unless a tone is given. */
+  value: number | null;
+  tone?: DataTone;
+  /** Short text after the percent, like "2/8 GiB". */
+  detail?: string;
+}
+
+export interface DataStat {
+  label: string;
+  value: string | number | null;
+  unit?: string;
+  tone?: DataTone;
+  tooltip?: string;
+}
+
+/**
+ * A small value the shell draws for a plugin: usage bars, numbers, a badge,
+ * a dot or a line of text. Plain JSON only. `actionId` must be one of the
+ * plugin's own actions; it runs with the row's context on click. Plugin API
+ * 2.6.
+ */
+export type DataValue =
+  | { shape: "bars"; items: DataBar[] }
+  | { shape: "stat"; items: DataStat[] }
+  | {
+      shape: "badge";
+      label: string;
+      tone?: DataTone;
+      tooltip?: string;
+      actionId?: string;
+    }
+  | { shape: "dot"; tone: DataTone; label: string }
+  | {
+      shape: "text";
+      text: string;
+      tone?: DataTone;
+      tooltip?: string;
+      actionId?: string;
+    };
+
+/** What a data hook returns: one value, several drawn in order, or null for nothing. */
+export type DataResult = DataValue | DataValue[] | null | undefined;
+
 export interface HostBadgeContribution {
   id: string;
   when: (host: PluginHostRecord) => boolean;
-  /** Drawn as is on the row. Leave out for a badge that is only a dot. */
+  /**
+   * Drawn as is on the row. In-page plugins only; prefer `useValue`, which
+   * also works from a frame.
+   */
   component?: ComponentType<{ host: PluginHostRecord }>;
+  /**
+   * A hook returning a badge, dot or text value for the host, or null. The
+   * shell draws it, so it costs no frame. Plugin API 2.6.
+   */
+  useValue?: (host: PluginHostRecord) => DataResult;
   /**
    * A hook that returns a problem or null. Every plugin's dots merge into one
    * dot on the row, with the worst tone and each label in its tooltip, so two
@@ -689,11 +748,25 @@ export interface HostBadgeContribution {
   order?: number;
 }
 
-/** The dot or stripe that shows a host's status on its row. */
-export type HostStatusIndicatorContribution = HostRowContribution;
+/**
+ * Something drawn for one host from plain values. `useValue` returns the
+ * value (Plugin API 2.6); `component` is for in-page plugins only and is
+ * refused in a frame.
+ */
+export interface HostDataContribution {
+  id: string;
+  when: (host: PluginHostRecord) => boolean;
+  useValue?: (host: PluginHostRecord) => DataResult;
+  component?: ComponentType<{ host: PluginHostRecord }>;
+  /** Lower comes first. Ties sort by id. */
+  order?: number;
+}
 
-/** A control in the host editor's toolbar. */
-export type HostEditorToolbarItemContribution = HostRowContribution;
+/** The dot that shows a host's status on its row: a dot, badge or text value. */
+export type HostStatusIndicatorContribution = HostDataContribution;
+
+/** A control in the host editor's toolbar: a badge or text value, clickable with `actionId`. */
+export type HostEditorToolbarItemContribution = HostDataContribution;
 
 export interface HostSectionProps {
   host: PluginHostRecord;
@@ -953,8 +1026,15 @@ export type ActionHandler = (...args: never[]) => unknown;
 
 export interface ActionSlotDefinition {
   id: string;
-  /** Contribution kinds the slot renders: "button", "component". */
+  /** Contribution kinds the slot renders: "button", "component", "data". */
   accepts: string[];
+  /** For "data": the shapes the owner draws. Others are dropped. */
+  shapes?: DataShape[];
+  /**
+   * For "data": what a row stands for, so contributors know their row key.
+   * Draw the slot with DataSlot from @termix-ssh/plugin-sdk/ui.
+   */
+  rows?: "host" | "tab" | "credential";
   /**
    * How a component from a framed plugin sizes itself in this slot: "inline"
    * as wide and tall as its content (row items, badges), "content" full
@@ -973,9 +1053,17 @@ export interface SlotContribution {
    */
   descriptionKey?: string;
   icon?: IconComponent;
-  kind?: "button" | "component" | string;
+  kind?: "button" | "component" | "data" | string;
   /** For kind "component". Receives the slot owner's props. */
   component?: ComponentType<Record<string, unknown>>;
+  /**
+   * For kind "data": a hook run once per row on screen with the owner's
+   * context and the row key (host id or tab id). Return plain values and the
+   * shell draws them; in a framed plugin it runs in the background frame, so
+   * a row costs no iframe. Context values are plain JSON; a `host` in it is
+   * the plugin's own host record, looked up by id. Plugin API 2.6.
+   */
+  useValue?: (context: Record<string, unknown>, rowKey: string) => DataResult;
   /** Extra condition on top of the action's permission. */
   when?: (context: Record<string, unknown>) => boolean;
   order?: number;

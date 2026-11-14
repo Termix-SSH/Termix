@@ -45,6 +45,13 @@ import {
   onSharedStateChange,
 } from "./frame-state";
 import { frameToken } from "./frame-token";
+import { dataRowsFor, onDataRowsChange } from "./data-rows";
+import {
+  addDataWatch,
+  removeDataWatch,
+  removeDataWatches,
+  runWatchAction,
+} from "./data-watches";
 import { readFrameStorage, writeFrameStorage } from "./frame-storage";
 import { setUiPreferenceFromFrame } from "./frame-ui-preferences";
 import { requestStepUp } from "@/auth/StepUpPrompt";
@@ -143,6 +150,9 @@ function listen() {
   window.addEventListener("message", onMessage);
 }
 
+let connectionCount = 0;
+const watchOwners = new WeakMap<FrameConnection, string>();
+
 /** Starts talking to a frame element once its page says hello. */
 export function connectFrame(
   iframe: HTMLIFrameElement,
@@ -153,6 +163,7 @@ export function connectFrame(
 ): FrameConnection {
   listen();
   let stopState: (() => void) | null = null;
+  const watchOwner = `${pluginId}:${++connectionCount}`;
   const connection: FrameConnection = {
     pluginId,
     role,
@@ -163,15 +174,29 @@ export function connectFrame(
     lastInteraction: 0,
     close: () => {
       connections.delete(connection);
+      removeDataWatches(watchOwner);
       stopState?.();
       connection.port?.close();
       connection.port = null;
     },
   };
   connections.add(connection);
-  stopState = onSharedStateChange((changed) => {
+  watchOwners.set(connection, watchOwner);
+  const stopShared = onSharedStateChange((changed) => {
     connection.port?.emit("state", frameChangeFor(pluginId, changed));
   });
+  // Data hooks run only in the background frame.
+  const stopRows =
+    role === "background"
+      ? onDataRowsChange((changedId) => {
+          if (changedId !== pluginId) return;
+          connection.port?.emit("state", { dataRows: dataRowsFor(pluginId) });
+        })
+      : () => {};
+  stopState = () => {
+    stopShared();
+    stopRows();
+  };
   return connection;
 }
 
@@ -348,6 +373,32 @@ async function handleCall(
       return;
     case "token":
       return frameToken(pluginId);
+    case "dataSlot.watch": {
+      const owner = watchOwners.get(connection);
+      if (!owner) return false;
+      const [id, watch] = args;
+      return addDataWatch(
+        owner,
+        pluginId,
+        id,
+        watch,
+        (hostId) =>
+          getSharedState().shellHosts.find(
+            (host) => String(host.id) === String(hostId),
+          ),
+        (values) => connection.port?.emit("dataSlot", { id, values }),
+      );
+    }
+    case "dataSlot.unwatch": {
+      const owner = watchOwners.get(connection);
+      if (owner) removeDataWatch(owner, args[0]);
+      return;
+    }
+    case "dataSlot.action": {
+      const owner = watchOwners.get(connection);
+      if (owner) runWatchAction(owner, args[0], args[1]);
+      return;
+    }
     case "http":
       return coreRequest(pluginId, args[0]);
     case "toast": {

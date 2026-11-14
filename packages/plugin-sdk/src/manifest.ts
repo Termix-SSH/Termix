@@ -45,6 +45,27 @@ export {
 export const PLUGIN_API_VERSION = "2.6.0";
 
 /**
+ * Data slots in core and the official plugins. A component in one of these
+ * gets a warning from validate: give `kind: "data"` and `useValue` instead.
+ * `rows` says what the row key is.
+ */
+export const DATA_SLOTS: Readonly<
+  Record<
+    string,
+    {
+      shapes: ("bars" | "stat" | "badge" | "dot" | "text")[];
+      rows: "host" | "tab" | "credential";
+    }
+  >
+> = {
+  "dashboard.hostRow": { shapes: ["bars", "stat", "text"], rows: "host" },
+  "dashboard.hostRowBadge": { shapes: ["badge"], rows: "host" },
+  "homepage.hostMetrics": { shapes: ["bars", "stat", "text"], rows: "host" },
+  "terminal.toolbarStatus": { shapes: ["bars", "stat", "text"], rows: "tab" },
+  "credentials.badges": { shapes: ["badge", "text"], rows: "credential" },
+};
+
+/**
  * The last API 1 release. Core still loads API 1 plugins, but only in process
  * and only when an admin turns on "Run without isolation" for an official one.
  */

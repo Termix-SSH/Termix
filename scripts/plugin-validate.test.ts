@@ -2,7 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { validate } from "../packages/plugin-sdk/cli/commands/validate.mjs";
+import {
+  dataSlotWarnings,
+  validate,
+} from "../packages/plugin-sdk/cli/commands/validate.mjs";
 
 const roots: string[] = [];
 afterEach(() => {
@@ -230,5 +233,73 @@ describe("sandbox warnings", () => {
       ),
     ).toEqual([expect.stringMatching(/"sandbox": { "workers": true }/)]);
     fs.rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe("data slot warnings", () => {
+  function frontend(source: string) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "termix-validate-"));
+    roots.push(root);
+    fs.mkdirSync(path.join(root, "src", "frontend"), { recursive: true });
+    fs.writeFileSync(path.join(root, "src", "frontend", "index.tsx"), source);
+    return root;
+  }
+  const known = { "dashboard.hostRow": { shapes: ["bars"], rows: "host" } };
+
+  it("warns on a component in a known data slot", () => {
+    const root = frontend(`app.registerSlotContribution("dashboard.hostRow", {
+  actionId: "x.row",
+  titleKey: "a",
+  kind: "component",
+  component: Row,
+});`);
+    const warnings = dataSlotWarnings(root, known);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("src/frontend/index.tsx:1");
+    expect(warnings[0]).toContain("dashboard.hostRow");
+  });
+
+  it("warns on a component in a slot the plugin declares as data or per row", () => {
+    const root =
+      frontend(`app.declareActionSlot({ id: "x.rows", accepts: ["component"], rows: "tab" });
+app.declareActionSlot({ id: "x.data", accepts: ["data"] });
+app.registerSlotContribution("x.rows", { actionId: "a", titleKey: "a", kind: "component", component: A });
+app.registerSlotContribution("x.data", { actionId: "b", titleKey: "b", kind: "component", component: B });`);
+    expect(dataSlotWarnings(root, {})).toHaveLength(2);
+  });
+
+  it("stays quiet for data contributions and other slots", () => {
+    const root = frontend(`app.registerSlotContribution("dashboard.hostRow", {
+  actionId: "x.row",
+  titleKey: "a",
+  kind: "data",
+  useValue: useRow,
+});
+app.registerSlotContribution("tab.menu", { actionId: "b", titleKey: "b", kind: "component", component: B });
+app.registerHostBadge({ id: "b", when: () => true, useValue: useBadge });`);
+    expect(dataSlotWarnings(root, known)).toEqual([]);
+  });
+
+  it("warns on host badges, status indicators and toolbar items with components", () => {
+    const root =
+      frontend(`app.registerHostBadge({ id: "a", when: () => true, component: A });
+app.registerHostStatusIndicator({ id: "b", when: () => true, component: B });
+app.registerHostEditorToolbarItem({ id: "c", when: () => true, component: C });`);
+    const warnings = dataSlotWarnings(root, {});
+    expect(warnings).toHaveLength(3);
+    expect(warnings[1]).toContain("registerHostStatusIndicator");
+  });
+
+  it("knows the core data slots from the manifest module", async () => {
+    const { DATA_SLOTS } = await import("../packages/plugin-sdk/src/manifest");
+    expect(Object.keys(DATA_SLOTS)).toEqual(
+      expect.arrayContaining([
+        "dashboard.hostRow",
+        "dashboard.hostRowBadge",
+        "homepage.hostMetrics",
+        "terminal.toolbarStatus",
+        "credentials.badges",
+      ]),
+    );
   });
 });

@@ -133,6 +133,39 @@ export function createFrameApp(host: FrameAppHost): {
     });
   };
 
+  // Status indicators and editor toolbar items: plain values only in a frame.
+  const hostValue = (
+    kind: string,
+    prefix: string,
+    item: {
+      id: string;
+      when: unknown;
+      order?: number;
+      component?: unknown;
+      useValue?: (host: never) => unknown;
+    },
+  ): Disposer => {
+    if (item.component || !item.useValue) {
+      throw new Error(
+        `${pluginId}: a framed plugin's ${kind} needs useValue, components can't run in a frame`,
+      );
+    }
+    const valueKey = `${prefix}:${item.id}:value`;
+    return add(
+      kind,
+      { id: item.id, when: item.when, order: item.order, valueKey },
+      {
+        hooks: [
+          {
+            key: valueKey,
+            use: item.useValue as HookSpec["use"],
+            perHost: true,
+          },
+        ],
+      },
+    );
+  };
+
   const declared = (list: unknown, id: string) =>
     Array.isArray(list) &&
     list.some(
@@ -270,12 +303,24 @@ export function createFrameApp(host: FrameAppHost): {
     registerHostBadge(badge) {
       if (badge.component) {
         throw new Error(
-          `${pluginId}: a framed plugin's host badge can only be a dot (useDot)`,
+          `${pluginId}: a framed plugin's host badge can only be a dot or a value (useDot, useValue)`,
         );
       }
-      const hooks: HookSpec[] = badge.useDot
-        ? [{ key: `badge:${badge.id}:dot`, use: badge.useDot, perHost: true }]
-        : [];
+      const hooks: HookSpec[] = [];
+      if (badge.useDot) {
+        hooks.push({
+          key: `badge:${badge.id}:dot`,
+          use: badge.useDot,
+          perHost: true,
+        });
+      }
+      if (badge.useValue) {
+        hooks.push({
+          key: `badge:${badge.id}:value`,
+          use: badge.useValue,
+          perHost: true,
+        });
+      }
       return add(
         "hostBadge",
         {
@@ -283,21 +328,18 @@ export function createFrameApp(host: FrameAppHost): {
           when: badge.when,
           order: badge.order,
           dotKey: badge.useDot ? `badge:${badge.id}:dot` : undefined,
+          valueKey: badge.useValue ? `badge:${badge.id}:value` : undefined,
         },
         { hooks },
       );
     },
 
-    registerHostStatusIndicator() {
-      throw new Error(
-        `${pluginId}: host status indicators are drawn in every host row and can't run in a frame`,
-      );
+    registerHostStatusIndicator(indicator) {
+      return hostValue("hostStatusIndicator", "status", indicator);
     },
 
-    registerHostEditorToolbarItem() {
-      throw new Error(
-        `${pluginId}: host editor toolbar items can't run in a frame yet`,
-      );
+    registerHostEditorToolbarItem(item) {
+      return hostValue("hostEditorToolbarItem", "toolbar", item);
     },
 
     registerHostSection(section) {
@@ -430,17 +472,30 @@ export function createFrameApp(host: FrameAppHost): {
 
     registerSlotContribution(slotId, contribution) {
       const keys: string[] = [];
-      const { component, icon: slotIcon, ...rest } = contribution;
+      const { component, useValue, icon: slotIcon, ...rest } = contribution;
       let componentRef: WireComponent | undefined;
       if (component) {
         const componentKey = `slot:${slotId}:${contribution.actionId}`;
         keys.push(componentKey);
         componentRef = scoped(component, componentKey);
       }
+      const valueKey = useValue
+        ? `data:${slotId}:${contribution.actionId}`
+        : undefined;
+      const hooks: HookSpec[] =
+        valueKey && useValue
+          ? [{ key: valueKey, use: useValue, perRow: true }]
+          : [];
       return add(
         "slotContribution",
-        { ...rest, slotId, icon: icon(slotIcon), component: componentRef },
-        { componentKeys: keys },
+        {
+          ...rest,
+          slotId,
+          icon: icon(slotIcon),
+          component: componentRef,
+          valueKey,
+        },
+        { componentKeys: keys, hooks },
       );
     },
 

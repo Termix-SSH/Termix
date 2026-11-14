@@ -29,6 +29,7 @@ import { onRemoteServerChange, remoteServerUrl } from "../desktop";
 import { setSharedState } from "./frame-state";
 import { broadcastToFrames } from "./frame-connection";
 import { setUiPreferenceSetter } from "./frame-ui-preferences";
+import { DataWatchHost } from "./data-watches";
 
 const themeCssCache = new Map<string, string>();
 
@@ -324,5 +325,6 @@ export function FrameStateSync() {
     };
   }, []);
 
-  return null;
+  // Data slots a framed plugin draws run their hooks here, in the page.
+  return <DataWatchHost />;
 }

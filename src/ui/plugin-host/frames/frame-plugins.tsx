@@ -8,7 +8,7 @@
  * functions for calls into the frame, and hooks for values the frame sends.
  */
 
-import type { ComponentType } from "react";
+import { useEffect, type ComponentType } from "react";
 import type { PluginSummary } from "@/api/plugins-api";
 import type { PluginManifest } from "@termix-ssh/plugin-sdk/frontend";
 import { isWireComponent, type WireComponent } from "@/plugin-frame/protocol";
@@ -18,8 +18,40 @@ import { SANDBOX, type FrameFit } from "./PluginFrameView";
 import { FramedView, SlotFramedView } from "./framed-view";
 import { clearFrameValues, setFrameValue, useFrameValue } from "./frame-values";
 import { toPluginHostRecord } from "../bridge";
+import { addDataRow } from "./data-rows";
 
 export { resolveSlotFit, slotFit, splitFallback } from "./slot-fit";
+
+/** A host value the frame sent, as a hook. */
+function hostTableValue(pluginId: string, key: string) {
+  return (host: { id: string | number }) => {
+    const table = useFrameValue(pluginId, key) as
+      Record<string, unknown> | undefined;
+    return (table?.[String(host.id)] as never) ?? null;
+  };
+}
+
+/**
+ * A data slot row, as a hook: tells the frame the row is on screen (so its
+ * hook runs for it) and reads the value the frame sent back.
+ */
+function rowTableValue(pluginId: string, key: string) {
+  return (context: Record<string, unknown>, rowKey: string) => {
+    let json = "";
+    try {
+      json = JSON.stringify(context);
+    } catch {
+      json = "";
+    }
+    useEffect(
+      () => addDataRow(pluginId, key, rowKey, json ? JSON.parse(json) : {}),
+      [rowKey, json],
+    );
+    const table = useFrameValue(pluginId, key) as
+      Record<string, unknown> | undefined;
+    return (table?.[rowKey] as never) ?? null;
+  };
+}
 
 const START_TIMEOUT_MS = 20_000;
 const MEMO_LIMIT = 500;
@@ -396,12 +428,25 @@ export function startFramedPlugin(
           order: data.order,
           when: m("when", false),
           useDot: data.dotKey
-            ? (host: { id: string | number }) => {
-                const table = useFrameValue(pluginId, String(data.dotKey)) as
-                  Record<string, unknown> | undefined;
-                return (table?.[String(host.id)] as never) ?? null;
-              }
+            ? hostTableValue(pluginId, String(data.dotKey))
             : undefined,
+          useValue: data.valueKey
+            ? hostTableValue(pluginId, String(data.valueKey))
+            : undefined,
+        });
+      case "hostStatusIndicator":
+        return app.registerHostStatusIndicator({
+          id: data.id,
+          order: data.order,
+          when: m("when", false),
+          useValue: hostTableValue(pluginId, String(data.valueKey)),
+        });
+      case "hostEditorToolbarItem":
+        return app.registerHostEditorToolbarItem({
+          id: data.id,
+          order: data.order,
+          when: m("when", false),
+          useValue: hostTableValue(pluginId, String(data.valueKey)),
         });
       case "hostSection":
         return app.registerHostSection({
@@ -459,13 +504,18 @@ export function startFramedPlugin(
       case "actionSlot":
         return app.declareActionSlot({ ...data });
       case "slotContribution": {
-        const { slotId, component, ...rest } = data;
+        const { slotId, component, valueKey, ...rest } = data;
         // Overlays draw inside the background frame, next to the code that
         // fills them.
         if (slotId === "shell.overlay") return () => {};
         return app.registerSlotContribution(slotId, {
           ...rest,
-          component: fit(component, { slot: String(slotId) }, plainProps),
+          component: component
+            ? fit(component, { slot: String(slotId) }, plainProps)
+            : undefined,
+          useValue: valueKey
+            ? rowTableValue(pluginId, String(valueKey))
+            : undefined,
           when: m("when", false),
         });
       }

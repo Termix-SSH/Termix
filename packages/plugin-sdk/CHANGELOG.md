@@ -9,6 +9,13 @@ Plugin API 2.6.0. Needs Termix 26.11.2.
 - `ctx.operations.runs.cancel({ runId })` and `ctx.operations.runs.undo({ runId, confirmed })` cancel or undo a run from inside one of the plugin's own requests, as the person on that request. Needs `operations:invoke`
 - `app.stepUp()` asks the person to prove a second factor in a prompt the shell owns and answers true or false; a plugin never sees the code. In a frame it works only right after the person used the frame
 - `createMockCtx` answers `ctx.operations.runs` and records `runCalls`
+- Data slots: `registerSlotContribution` takes `kind: "data"` with a `useValue(context, rowKey)` hook that returns plain values (`bars`, `stat`, `badge`, `dot`, `text`). The shell draws them, and in a frame the hook runs in the background frame, so a row costs no iframe
+- `useValue` on `registerHostBadge`, `registerHostStatusIndicator` and `registerHostEditorToolbarItem`, which now work from a frame. Their `component` is optional and in-page only
+- `declareActionSlot` takes `shapes` and `rows` for data slots
+- `DATA_SLOTS` in `/manifest` lists the data slots in Termix
+- `DataSlot`, `DataValues`, `HostDataItems` and `parseDataValue` in `/ui` for slot owners and layouts
+- `renderWithApp` results have `readDataValues` and `renderHostItems`, and `renderSlot` draws data values
+- `termix-plugin validate` warns about a component in a data slot or per row slot, and about host badges, status indicators and toolbar items with a component
 
 ## 2.5.0
 

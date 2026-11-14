@@ -34,7 +34,15 @@ import {
 } from "@/shell/tab-registry";
 import { getPanel, listPanels } from "@/shell/panel-registry";
 import { listRegisteredRailItems } from "@/sidebar/rail-items";
-import { hostActionsFor, listHostActions } from "@/sidebar/host-contributions";
+import {
+  hostActionsFor,
+  listHostActions,
+  listHostBadges,
+  listHostEditorToolbarItems,
+  listHostStatusIndicators,
+} from "@/sidebar/host-contributions";
+import { DataSlot, HostDataItems } from "@/components/data-view/DataSlot";
+import type { DataValue } from "@/components/data-view/data-value";
 import { listHostProtocols } from "@/sidebar/host-protocols";
 import {
   getHostEditorSection,
@@ -537,11 +545,54 @@ export async function renderPlugin(
     },
 
     renderSlot(slotId, props = {}) {
+      const rowKey = props.rowKey ?? props.hostId ?? props.tabId ?? "row";
       return wrap(
         <>
           <ActionSlot slotId={slotId} />
           <ComponentSlot slotId={slotId} props={props} />
+          <DataSlot slotId={slotId} rowKey={String(rowKey)} context={props} />
         </>,
+      );
+    },
+
+    readDataValues(slotId, context = {}, rowKey = "row") {
+      const values: Record<string, unknown> = {};
+      const reporters = getSlotContributions(slotId).filter(
+        (item) => item.pluginId === pluginId && item.value,
+      );
+      const element = wrap(
+        <>
+          {reporters.map((item) => {
+            const Reporter = item.value!;
+            return (
+              <Reporter
+                key={item.actionId}
+                context={context}
+                rowKey={String(rowKey)}
+                report={(value: DataValue[] | null) => {
+                  values[item.actionId] = value;
+                }}
+              />
+            );
+          })}
+        </>,
+      );
+      return {
+        element,
+        values: () => ({ ...values }) as Record<string, never>,
+      };
+    },
+
+    renderHostItems(kind, host) {
+      const all =
+        kind === "status"
+          ? listHostStatusIndicators()
+          : kind === "toolbar"
+            ? listHostEditorToolbarItems()
+            : listHostBadges();
+      const items = all.filter((item) => item.pluginId === pluginId);
+      return wrap(
+        <HostDataItems host={host as unknown as Host} items={items} />,
       );
     },
 

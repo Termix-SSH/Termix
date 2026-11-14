@@ -6,6 +6,7 @@
 
 import type { FrameState } from "@/plugin-frame/protocol";
 import { toPluginHostRecord } from "../bridge";
+import { dataRowsFor } from "./data-rows";
 
 export type SharedState = Omit<FrameState, "hosts"> & {
   /** The shell's hosts, with every plugin's settings. Cut per plugin. */
@@ -96,7 +97,11 @@ export function hostsFor(
 /** The full state for one plugin, for a frame that just started. */
 export function frameStateFor(pluginId: string): FrameState {
   const { shellHosts, ...rest } = shared;
-  return { ...rest, hosts: hostsFor(pluginId, shellHosts) };
+  return {
+    ...rest,
+    hosts: hostsFor(pluginId, shellHosts),
+    dataRows: dataRowsFor(pluginId),
+  };
 }
 
 /** A change, shaped for one plugin's frames. */
