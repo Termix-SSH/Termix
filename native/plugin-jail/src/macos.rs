@@ -28,6 +28,9 @@ const SYSTEM_READ: &[&str] = &[
     "/usr/share/icu",
     "/usr/share/zoneinfo",
     "/System/Library",
+    // dyld shared cache on macOS 13 and later, and before.
+    "/System/Volumes/Preboot/Cryptexes/OS",
+    "/private/var/db/dyld",
     "/Library/Preferences/Logging",
     "/private/var/db/timezone",
     "/private/etc/localtime",
@@ -101,6 +104,8 @@ pub fn profile(policy: &Policy, program: &Path) -> String {
         "(deny default)".to_string(),
         "(allow file-read-metadata)".to_string(),
         "(allow sysctl-read)".to_string(),
+        // V8 writes its own machine code.
+        "(allow dynamic-code-generation)".to_string(),
         "(allow signal (target self))".to_string(),
         "(allow process-info* (target self))".to_string(),
         "(allow mach-lookup (global-name \"com.apple.system.notification_center\"))".to_string(),
