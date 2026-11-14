@@ -110,7 +110,7 @@ jobs:
           policy="{\"name\":\"probe\",\"read\":[],\"write\":[],\"net\":false,\"childProcess\":false,\"addons\":false,\"memoryMb\":512}"
           for args in "/usr/bin/true" "$rt/node --version" "$rt/node -e 0"; do
             # shellcheck disable=SC2086
-            "$rt/termix-plugin-jail" "$policy" -- $args; echo "exit $? for $args"
+            code=0; "$rt/termix-plugin-jail" "$policy" -- $args || code=$?; echo "exit $code for $args"
           done
           sleep 5
           log show --last 3m --style compact --predicate "eventMessage CONTAINS \"deny(\"" | grep -v -e imagent -e Shortcut -e liveactivities | tail -40

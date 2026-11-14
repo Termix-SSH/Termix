@@ -102,6 +102,9 @@ pub fn profile(policy: &Policy, program: &Path) -> String {
     let mut rules = vec![
         "(version 1)".to_string(),
         "(deny default)".to_string(),
+        // Apple's baseline every process needs (dyld, its own descriptors,
+        // basic system services); files, network and processes stay closed.
+        "(import \"system.sb\")".to_string(),
         "(allow file-read-metadata)".to_string(),
         "(allow sysctl-read)".to_string(),
         // V8 writes its own machine code.

@@ -22,6 +22,14 @@ extern "C" fn stop_child(_: libc::c_int) {
     }
 }
 
+/// Writes to stderr from the fenced child. eprintln! would abort the
+/// process if the fence refused the write, hiding the reason.
+fn say(text: &str) {
+    unsafe {
+        libc::write(2, text.as_ptr().cast(), text.len());
+    }
+}
+
 fn cstring(text: &str) -> CString {
     CString::new(text).unwrap_or_else(|_| {
         eprintln!("termix-plugin-jail: argument with a NUL byte");
@@ -67,13 +75,16 @@ pub fn run(policy: &Policy, program: &str, rest: &[String]) -> i32 {
     }
     if pid == 0 {
         if let Err(e) = platform::enter(policy, prepared) {
-            eprintln!("termix-plugin-jail: {e}");
+            say(&format!("termix-plugin-jail: {e}\n"));
             unsafe { libc::_exit(EXIT_FENCE) };
         }
         unsafe {
             libc::execv(path.as_ptr(), argv_ptrs.as_ptr());
         }
-        eprintln!("termix-plugin-jail: could not start the runtime");
+        let error = std::io::Error::last_os_error();
+        say(&format!(
+            "termix-plugin-jail: could not start the runtime: {error}\n"
+        ));
         unsafe { libc::_exit(EXIT_FENCE) };
     }
 
