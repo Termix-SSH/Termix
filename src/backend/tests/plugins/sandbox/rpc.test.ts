@@ -211,3 +211,50 @@ describe("sandbox rpc", () => {
     }
   });
 });
+
+describe("process transport", () => {
+  it("drops a message for a process that is gone instead of throwing", async () => {
+    const { processTransport } =
+      await import("../../../plugins/sandbox/rpc.js");
+    const errors: unknown[] = [];
+    const onUncaught = (error: unknown) => errors.push(error);
+    process.on("uncaughtException", onUncaught);
+    try {
+      const closed = processTransport({
+        connected: false,
+        send: () => {
+          throw new Error("should not be called");
+        },
+        on: () => undefined,
+      });
+      expect(() => closed.send({ t: "ok", id: 1 } as never)).not.toThrow();
+      const throwing = processTransport({
+        connected: true,
+        send: () => {
+          throw Object.assign(new Error("channel closed"), {
+            code: "ERR_IPC_CHANNEL_CLOSED",
+          });
+        },
+        on: () => undefined,
+      });
+      expect(() => throwing.send({ t: "ok", id: 2 } as never)).not.toThrow();
+      let callback: ((error: Error | null) => void) | undefined;
+      const late = processTransport({
+        connected: true,
+        send: (_message, cb) => {
+          callback = cb;
+          return false;
+        },
+        on: () => undefined,
+      });
+      late.send({ t: "ok", id: 3 } as never);
+      // Node reports EPIPE to the callback when one is given.
+      expect(typeof callback).toBe("function");
+      callback?.(Object.assign(new Error("write EPIPE"), { code: "EPIPE" }));
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(errors).toEqual([]);
+    } finally {
+      process.off("uncaughtException", onUncaught);
+    }
+  });
+});

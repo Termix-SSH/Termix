@@ -647,12 +647,24 @@ export function fromWireError(wire: WireError): Error {
 
 /** A Transport over a forked child's (or the child's own) IPC channel. */
 export function processTransport(proc: {
-  send?: (message: unknown) => boolean;
+  send?: (
+    message: unknown,
+    callback?: (error: Error | null) => void,
+  ) => boolean;
+  connected?: boolean;
   on: (event: "message", listener: (message: unknown) => void) => unknown;
 }): Transport {
   return {
+    // A process that just exited (a crash, a reload) can't take more; the
+    // supervisor handles its exit, so a late message is dropped instead of
+    // surfacing as an EPIPE that would take the server down.
     send: (message) => {
-      proc.send?.(message);
+      if (proc.connected === false) return;
+      try {
+        proc.send?.(message, () => {});
+      } catch {
+        // the channel is already closed
+      }
     },
     onMessage: (handler) => {
       proc.on("message", (message) => handler(message as Wire));
