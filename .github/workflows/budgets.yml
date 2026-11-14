@@ -101,6 +101,7 @@ jobs:
           node scripts/budgets/measure.mjs
           --url http://localhost:8080
           --user budget --pass budget-pass-123
+          --container termix
           --out budget-result.json
 
       - name: Check budgets

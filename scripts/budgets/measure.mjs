@@ -8,6 +8,7 @@
 //     [--api http://localhost:30001] [--user test] [--pass test123]
 //     [--out result.json] [--settle 5000]
 
+import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { chromium } from "playwright";
 import { backendRssMb, countRequests, parseArgs } from "./lib.mjs";
@@ -21,6 +22,34 @@ const settleMs = Number(args.settle ?? 5000);
 const maxWaitMs = Number(args["max-wait"] ?? 90_000);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Resident memory of every process in a Docker container, in MB. Read from
+ * /proc so it works on any image and any Termix version.
+ */
+function containerRssMb(name) {
+  try {
+    const out = execFileSync(
+      "docker",
+      [
+        "exec",
+        name,
+        "sh",
+        "-c",
+        "cat /proc/[0-9]*/status 2>/dev/null | grep '^VmRSS:'",
+      ],
+      { encoding: "utf8" },
+    );
+    const kb = out
+      .split("\n")
+      .map((line) => Number(line.split(/\s+/)[1]))
+      .filter(Number.isFinite)
+      .reduce((sum, value) => sum + value, 0);
+    return Math.round(kb / 1024);
+  } catch {
+    return null;
+  }
+}
 
 async function frameCounts(page) {
   return page.evaluate(() => {
@@ -142,6 +171,10 @@ async function main() {
     processes = null;
   }
 
+  const container = args.container
+    ? containerRssMb(String(args.container))
+    : null;
+  const routeRss = backendRssMb(processes);
   const result = {
     url,
     at: new Date().toISOString(),
@@ -150,7 +183,9 @@ async function main() {
     jsHeapMb: heap,
     timeToDashboardMs,
     settledMs,
-    backendRssMb: backendRssMb(processes),
+    // The processes route when the server has it, else the container's sum.
+    backendRssMb: routeRss ?? container,
+    containerRssMb: container,
     pluginProcesses: processes
       ? (processes.plugins ?? []).filter((p) => p.state === "ready").length
       : null,
