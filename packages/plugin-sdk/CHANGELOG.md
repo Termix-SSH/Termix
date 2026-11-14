@@ -22,7 +22,7 @@ Plugin API 2.3.0. Needs Termix 26.11.2.
 - A sync entity's `shouldSync` may return a Promise. Termix waits for it, so one from a plugin process works
 - A plugin process gets `VERSION`, `TERMIX_DEPLOYMENT` (`desktop`, `docker` or `server`) and `TERMIX_SANDBOX_PLUGIN` (its id) from Termix, and `validate` no longer warns about reading them
 - `createMockCtx({ sandbox: true })` takes `ssh.prepare` with your own client and socket, a `sock` for `ssh.connect`, `ssh.openTransport`, `ssh.jumpChain` and `desktop.local`, and its `ssh.prepare` config names the host
-- `ctx.asUser` in a plugin process gives back exactly what its callback returned, so a live object such as an SSH connection works
+- `ctx.asUser` in a plugin process gives back exactly what its callback returned or threw, so a live object such as an SSH connection and your own error classes work
 - `PluginAuthPolicyProvider.allowRememberDevice` may return a Promise
 - `createMockCtx({ sandbox: true })` takes login methods, keyboard-interactive handlers, `completeRedirectLogin` and async banner hooks, and refuses a login method cookie outside `tmxp_<id>_*`
 

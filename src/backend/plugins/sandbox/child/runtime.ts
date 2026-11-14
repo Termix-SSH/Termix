@@ -446,13 +446,22 @@ function buildCtx(): Record<string, unknown> {
     // callback returns stays here, so a live object (an ssh client) does too.
     setPath(ctx, "asUser", async (userId: string, fn: AnyFn) => {
       let result: unknown;
+      let failed = false;
+      let failure: unknown;
       await endpoint.call("ctx.asUser", [
         userId,
         async () => {
-          result = await fn();
+          // Kept here too, so the plugin's own error class survives.
+          try {
+            result = await fn();
+          } catch (error) {
+            failed = true;
+            failure = error;
+          }
           return null;
         },
       ]);
+      if (failed) throw failure;
       return result;
     });
   }

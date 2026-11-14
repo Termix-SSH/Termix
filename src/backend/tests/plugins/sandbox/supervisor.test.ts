@@ -734,14 +734,18 @@ describe("methods that hand back a function", () => {
 });
 
 describe("asUser in a plugin process", () => {
-  it("keeps what the callback returns in the process", async () => {
+  it("keeps what the callback returns or throws in the process", async () => {
     let result: unknown = null;
     const seen: string[] = [];
     const body = `
       class Box { constructor() { this.n = 1; } get() { return this.n; } }
       export async function activate(ctx) {
         const box = await ctx.asUser("u1", async () => new Box());
-        await ctx.report({ same: box instanceof Box, n: box.get() });
+        class Oops extends Error {}
+        let kept = false;
+        try { await ctx.asUser("u1", async () => { throw new Oops("no"); }); }
+        catch (error) { kept = error instanceof Oops; }
+        await ctx.report({ same: box instanceof Box, n: box.get(), kept });
       }`;
     const supervisor = new SandboxSupervisor(config());
     await supervisor.register(
@@ -760,7 +764,7 @@ describe("asUser in a plugin process", () => {
     );
     await until(() => result !== null);
     await supervisor.shutdown();
-    expect(result).toEqual({ same: true, n: 1 });
-    expect(seen).toEqual(["u1"]);
+    expect(result).toEqual({ same: true, n: 1, kept: true });
+    expect(seen).toEqual(["u1", "u1"]);
   }, 30_000);
 });
