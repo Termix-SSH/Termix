@@ -163,6 +163,18 @@ describe("createMockCtx sandbox mode", () => {
     expect(set).toHaveBeenCalledTimes(1);
   });
 
+  it("lets asUser hand back a live object", async () => {
+    const { ctx } = createMockCtx({
+      sandbox: true,
+      capabilities: ["users:impersonate"],
+      manifest,
+    });
+    const handle = new Handle();
+    await expect(ctx.asUser("user-1", async () => handle)).resolves.toBe(
+      handle,
+    );
+  });
+
   it("refuses methods core can't serve to a plugin process", () => {
     const { ctx } = createMockCtx({ sandbox: true, manifest });
     expect(() =>

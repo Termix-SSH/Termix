@@ -117,6 +117,8 @@ function crossing(dotted: string, value: unknown): unknown {
 
 /** Results that are core objects in the fake (routers, clients) pass as they are. */
 const PASS_THROUGH = new Set([
+  // Its callback's result stays in the plugin process.
+  "asUser",
   "http.router",
   "rbac.require",
   "db.define",

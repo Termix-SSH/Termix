@@ -441,6 +441,21 @@ function buildCtx(): Record<string, unknown> {
     });
   }
 
+  if (has("asUser")) {
+    // Core checks the user and runs the callback under its token; what the
+    // callback returns stays here, so a live object (an ssh client) does too.
+    setPath(ctx, "asUser", async (userId: string, fn: AnyFn) => {
+      let result: unknown;
+      await endpoint.call("ctx.asUser", [
+        userId,
+        async () => {
+          result = await fn();
+          return null;
+        },
+      ]);
+      return result;
+    });
+  }
   if (has("ssh.transports.provide")) {
     setPath(
       ctx,

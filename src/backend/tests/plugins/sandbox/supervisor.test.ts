@@ -727,3 +727,35 @@ describe("methods that hand back a function", () => {
     expect(calls).toEqual(["open 4", "close 4"]);
   }, 30_000);
 });
+
+describe("asUser in a plugin process", () => {
+  it("keeps what the callback returns in the process", async () => {
+    let result: unknown = null;
+    const seen: string[] = [];
+    const body = `
+      class Box { constructor() { this.n = 1; } get() { return this.n; } }
+      export async function activate(ctx) {
+        const box = await ctx.asUser("u1", async () => new Box());
+        await ctx.report({ same: box instanceof Box, n: box.get() });
+      }`;
+    const supervisor = new SandboxSupervisor(config());
+    await supervisor.register(
+      spec("asuser", plugin("asuser", body), {
+        sandbox: { alwaysOn: true },
+        report: (value) => {
+          result = value;
+        },
+        ctx: {
+          asUser: async (userId: string, fn: () => unknown) => {
+            seen.push(userId);
+            return fn();
+          },
+        },
+      }),
+    );
+    await until(() => result !== null);
+    await supervisor.shutdown();
+    expect(result).toEqual({ same: true, n: 1 });
+    expect(seen).toEqual(["u1"]);
+  }, 30_000);
+});
