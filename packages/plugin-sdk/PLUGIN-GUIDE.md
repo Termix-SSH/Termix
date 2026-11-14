@@ -829,8 +829,9 @@ before, with the same look and theme.
   the clipboard, toasts and confirms go through the shell. `localStorage` works and is kept per plugin.
 - Not available in a frame: host badges with a `component` (use `useDot`), host status indicators, host
   editor toolbar items, `useShell`, and other plugins' components from `usePluginComponent`,
-  `useExtensions` or `useSlotContributions`. Layouts, themes and login screens are the shell itself: only
-  an official plugin with `ui:layout`, `ui:theme` or `auth:provide` runs in the page.
+  `useExtensions` or `useSlotContributions`. Layouts, themes, login screens and native desktop views are
+  the shell itself: only an official plugin with `ui:layout`, `ui:theme`, `auth:provide` or
+  `desktop:window` runs in the page.
 - A popover or dropdown can't leave its frame. Keep menus in tabs and panels, not in small slots.
 
 Check that your activate works in a frame with `checkFrameApp` from `@termix-ssh/plugin-sdk/testing`:

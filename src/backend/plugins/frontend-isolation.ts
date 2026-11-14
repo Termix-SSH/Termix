@@ -1,7 +1,8 @@
 // Where a plugin's browser code runs. API 2 plugins run in sandboxed frames
 // with an opaque origin; API 1 plugins still load into the page until they
-// move to API 2. Layouts, themes and login screens are the shell itself, so an
-// official API 2 plugin that provides them keeps running in the page.
+// move to API 2. Layouts, themes, login screens and native desktop views are
+// the shell itself, so an official API 2 plugin that provides them keeps
+// running in the page.
 
 import {
   isLegacyPluginApi,
@@ -16,6 +17,8 @@ export const SHELL_PART_CAPABILITIES = [
   "ui:layout",
   "ui:theme",
   "auth:provide",
+  // Native views sit over the desktop window, outside any frame.
+  "desktop:window",
 ];
 
 export function frontendIsolation(plugin: {

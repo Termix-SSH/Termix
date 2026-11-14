@@ -21,7 +21,12 @@ describe("frontendIsolation", () => {
   });
 
   it("keeps official shell parts in the page", () => {
-    for (const capability of ["ui:layout", "ui:theme", "auth:provide"]) {
+    for (const capability of [
+      "ui:layout",
+      "ui:theme",
+      "auth:provide",
+      "desktop:window",
+    ]) {
       expect(
         frontendIsolation({
           manifest: manifest("^2.0.0", [capability]),
@@ -50,7 +55,7 @@ describe("frontendIsolation", () => {
     ).toBe("frame");
     expect(
       frontendIsolation({
-        manifest: manifest("^2.0.0", ["ui:theme"]),
+        manifest: manifest("^2.0.0", ["ui:theme", "desktop:window"]),
         source: "user",
       }),
     ).toBe("frame");
