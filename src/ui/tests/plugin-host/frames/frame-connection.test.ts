@@ -168,6 +168,13 @@ describe("frame connection", () => {
     disposers.forEach((dispose) => dispose());
   });
 
+  it("treats closing a tab that is not open as done", async () => {
+    connectFrame(iframe, "docker", "background", undefined, {});
+    send({ ch: FRAME_CHANNEL, t: "hello", role: "background" });
+    expect(await call("tabs.closeTab", ["docker"])).toMatchObject({ ok: true });
+    expect(await call("tabs.closeTab", [42])).toMatchObject({ ok: false });
+  });
+
   it("refuses saved passwords, foreign links and clipboard reads out of the blue", async () => {
     connectFrame(iframe, "docker", "view", "tab:docker", {});
     send({ ch: FRAME_CHANNEL, t: "hello", role: "view", key: "tab:docker" });

@@ -393,7 +393,9 @@ async function handleCall(
       const [tabId] = args;
       if (typeof tabId !== "string") throw new Error("Bad tab");
       const record = findTab(tabId);
-      if (!record || !ownsTabType(pluginId, record.type)) {
+      // Closing a tab that is not open does nothing, as it does in the page.
+      if (!record) return;
+      if (!ownsTabType(pluginId, record.type)) {
         throw new Error("A plugin can only close its own tabs");
       }
       shell.closeTab(tabId);
