@@ -1038,9 +1038,11 @@ export interface ActionSlotDefinition {
   /**
    * How a component from a framed plugin sizes itself in this slot: "inline"
    * as wide and tall as its content (row items, badges), "content" full
-   * width, "fill" the whole box. Left out, the shell guesses from the id.
+   * width, "fill" the whole box, "overlay" the whole box, see-through and
+   * only clickable while the part draws something (prompts over a terminal).
+   * Left out, the shell guesses from the id.
    */
-  fit?: "inline" | "content" | "fill";
+  fit?: "inline" | "content" | "fill" | "overlay";
 }
 
 export interface SlotContribution {
@@ -1814,7 +1816,9 @@ export function useTheme(): { theme: "light" | "dark" } {
 
 /**
  * The live shell, for a layout. Null outside the signed-in app. Needs plugin
- * API 1.4.
+ * API 1.4. In a plugin frame (API 2.7) it is read only: tabs, splits, the
+ * user and mobile or not; tabs.setActive works right after the person used
+ * the frame.
  */
 export function useShell(): ShellController | null {
   return requireHost().useShell();
@@ -2036,7 +2040,9 @@ export function activityTarget(type: string): ActivityTargetInfo | undefined {
 
 /**
  * Every item any running plugin added to `pointId` with registerExtension.
- * Reactive: it re-renders as plugins enable and disable.
+ * Reactive: it re-renders as plugins enable and disable. In a frame (API
+ * 2.7), other plugins' components are placeholders Termix draws over, for a
+ * point under your plugin id or listed in manifest `uses`.
  */
 export function useExtensions<T extends ExtensionContribution>(
   pointId: string,
@@ -2054,7 +2060,9 @@ export function getExtension<T extends ExtensionContribution>(
 
 /**
  * The component another plugin registered under `id` with
- * app.registerComponent, or undefined while that plugin is off.
+ * app.registerComponent, or undefined while that plugin is off. In a frame
+ * (API 2.7) it is a placeholder Termix draws over; list the id in manifest
+ * `uses`.
  */
 export function usePluginComponent(
   id: string,

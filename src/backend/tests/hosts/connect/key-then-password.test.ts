@@ -1,11 +1,14 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { generateSshKeyPair } from "../../../../../packages/plugin-sdk/src/ssh-keys.js";
 import ssh2 from "ssh2";
 
-const { Client, Server, utils } = ssh2;
+const { Client, Server } = ssh2;
 
 // The order prepareKey sets when a host has both a key and a password.
 const AUTH_ORDER = ["publickey", "password", "keyboard-interactive"];
-const keys = utils.generateKeyPairSync("ed25519");
+// ssh2's own generator makes about 1 in 256 ed25519 keys nothing can read.
+const pair = generateSshKeyPair("ssh-ed25519");
+const keys = { private: pair.privateKey };
 
 let server: InstanceType<typeof Server> | null = null;
 afterEach(() => server?.close());

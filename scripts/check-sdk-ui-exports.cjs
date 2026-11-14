@@ -20,6 +20,11 @@ const TSCONFIG = path.join(ROOT, "tsconfig.app.json");
 
 const ALLOWED = [
   "DataSlot",
+  "ForeignSlot",
+  "ForeignInteractive",
+  "ForeignOccluder",
+  "useForeignOccluder",
+  "ForeignSlotProps",
   "HostDataItems",
   "DataValues",
   "DataLayout",

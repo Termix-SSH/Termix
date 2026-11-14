@@ -172,6 +172,13 @@ export { useTabs, useTabsSafe } from "@/shell/TabContext";
 
 // Slots: a plugin can offer places for other plugins to fill.
 export { ActionSlot, ComponentSlot } from "@/shell/ActionSlot";
+export {
+  ForeignSlot,
+  ForeignInteractive,
+  ForeignOccluder,
+  useForeignOccluder,
+  type ForeignSlotProps,
+} from "@/components/foreign/ForeignSlot";
 // Data slots: plain values from plugins, drawn the same everywhere.
 export { DataSlot, HostDataItems } from "@/components/data-view/DataSlot";
 export { DataValues, type DataLayout } from "@/components/data-view/DataValues";

@@ -26,10 +26,11 @@ import { iconToWire } from "@/plugin-frame/wire";
 import { usePluginStore } from "../plugin-store";
 import { useShellHosts, tabsApi } from "../shell-bridge";
 import { onRemoteServerChange, remoteServerUrl } from "../desktop";
-import { setSharedState } from "./frame-state";
+import { setSharedState, setTabActivator } from "./frame-state";
 import { broadcastToFrames } from "./frame-connection";
 import { setUiPreferenceSetter } from "./frame-ui-preferences";
 import { DataWatchHost } from "./data-watches";
+import { ForeignViewHost } from "./foreign-views";
 
 const themeCssCache = new Map<string, string>();
 
@@ -240,6 +241,29 @@ export function FrameStateSync() {
 
   const tabs = controller?.tabs.list;
   const tabsReady = controller?.tabs.ready ?? false;
+  const activeTabId = controller?.tabs.activeId ?? "";
+  const setActive = controller?.tabs.setActive;
+  useEffect(() => {
+    setTabActivator(setActive ?? null);
+    return () => setTabActivator(null);
+  }, [setActive]);
+  const splits = controller?.split.summaries;
+  useEffect(() => {
+    setSharedState({
+      activeTabId,
+      splits: (splits ?? []).map((split) => ({
+        id: split.id,
+        label: split.label,
+        full: split.full,
+        panes: split.panes.map((pane) => ({
+          id: pane.id,
+          index: pane.index,
+          tabId: pane.tabId,
+          label: pane.label,
+        })),
+      })),
+    });
+  }, [activeTabId, splits]);
   useEffect(() => {
     setSharedState({
       tabs: (tabs ?? []).map((tab) => ({
@@ -325,6 +349,12 @@ export function FrameStateSync() {
     };
   }, []);
 
-  // Data slots a framed plugin draws run their hooks here, in the page.
-  return <DataWatchHost />;
+  // Data slots a framed plugin draws run their hooks here, in the page, and
+  // other plugins' views a frame places are drawn here over it.
+  return (
+    <>
+      <DataWatchHost />
+      <ForeignViewHost />
+    </>
+  );
 }

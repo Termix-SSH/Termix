@@ -173,6 +173,20 @@ export interface FrameState {
   statusColorScheme: "accent" | "status";
   tabs: Record<string, unknown>[];
   tabsReady: boolean;
+  /** The tab on screen now. */
+  activeTabId?: string;
+  /** Splits and the tab in each pane, for read only shell views. */
+  splits?: Array<{
+    id: string;
+    label: string;
+    full: boolean;
+    panes: Array<{
+      id: string;
+      index: number;
+      tabId: string | null;
+      label: string | null;
+    }>;
+  }>;
   layout: Record<string, unknown> | null;
   uiPreferences: Record<string, unknown>;
   sshAuthTypes: { loaded: boolean; types: Record<string, unknown>[] };

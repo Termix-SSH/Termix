@@ -135,11 +135,14 @@ export function FrameRoot({
   component,
   children,
   onSize,
+  onDrawn,
 }: {
   fit: FrameFit;
   component?: ComponentType<Record<string, unknown>>;
   children?: ReactNode;
   onSize?: (size: { width: number; height: number }) => void;
+  /** For overlays: whether anything with a size is on screen. */
+  onDrawn?: (drawn: boolean) => void;
 }) {
   const themeId = useFrameState((state) => state.theme.themeId);
   const box = useRef<HTMLDivElement>(null);
@@ -162,6 +165,43 @@ export function FrameRoot({
     report();
     return () => observer.disconnect();
   }, [fit, onSize]);
+
+  useEffect(() => {
+    const element = box.current;
+    if (!element || !onDrawn) return;
+    let last: boolean | null = null;
+    const check = () => {
+      const drawn =
+        [...element.querySelectorAll("*")].some((node) => {
+          if (node.childElementCount > 0) return false;
+          const rect = node.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        }) ||
+        // Portals (a dialog the overlay opened) land on body.
+        [...document.body.children].some(
+          (child) =>
+            child.id !== "root" &&
+            !(child instanceof HTMLScriptElement) &&
+            child.childElementCount > 0,
+        );
+      if (drawn === last) return;
+      last = drawn;
+      onDrawn(drawn);
+    };
+    const observer = new MutationObserver(check);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+    });
+    const resize = new ResizeObserver(check);
+    resize.observe(element);
+    check();
+    return () => {
+      observer.disconnect();
+      resize.disconnect();
+    };
+  }, [onDrawn]);
 
   return (
     <ThemeProvider defaultTheme={themeId} storageKey="termix-frame-theme">

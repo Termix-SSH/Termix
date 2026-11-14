@@ -40,7 +40,21 @@ import {
   resetPluginStore,
   setPluginSummaries,
 } from "@/plugin-host/plugin-store";
-import { registerAction } from "@/shell/action-registry";
+import {
+  declareActionSlot,
+  registerAction,
+  registerSlotContribution,
+  resetActionRegistry,
+} from "@/shell/action-registry";
+import {
+  foreignStateFor,
+  resetForeignViews,
+} from "@/plugin-host/frames/foreign-views";
+import {
+  resetSharedState,
+  setSharedState,
+  setTabActivator,
+} from "@/plugin-host/frames/frame-state";
 import { FRAME_CHANNEL } from "@/plugin-frame/protocol";
 
 const summary = (id: string, uses: string[] = []): PluginSummary =>
@@ -202,6 +216,82 @@ describe("frame connection", () => {
     });
     expect(await call("clipboard.read")).toMatchObject({ ok: false });
     expect(await call("noSuchThing")).toMatchObject({ ok: false });
+  });
+});
+
+describe("other plugins' views", () => {
+  afterEach(() => {
+    resetForeignViews();
+    resetActionRegistry();
+  });
+
+  it("lists only what the frame may place, and drops it on reload", async () => {
+    declareActionSlot({
+      id: "docker.cards",
+      accepts: ["component", "button"],
+      pluginId: "docker",
+    });
+    connectFrame(iframe, "docker", "view", "tab:docker", {});
+    send({ ch: FRAME_CHANNEL, t: "hello", role: "view", key: "tab:docker" });
+    expect(
+      await call("foreign.list", ["l1", "slot", "docker.cards", {}]),
+    ).toMatchObject({ ok: true, value: true });
+    expect(
+      await call("foreign.list", ["l2", "slot", "snippets.cards", {}]),
+    ).toMatchObject({ ok: true, value: false });
+    expect(
+      await call("foreign.mount", [{ id: "v1", listId: "l2", itemKey: "x" }]),
+    ).toMatchObject({ ok: true, value: false });
+    const owners = Array.from({ length: 200 }, (_, i) => `docker:${i + 1}`);
+    const owner = owners.find((entry) => foreignStateFor(entry));
+    expect(foreignStateFor(owner!)?.lists.map((list) => list.id)).toEqual([
+      "docker.cards",
+    ]);
+    // The page reloaded: its lists and placeholders went with it.
+    send({ ch: FRAME_CHANNEL, t: "hello", role: "view", key: "tab:docker" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(foreignStateFor(owner!)).toBeUndefined();
+  });
+
+  it("refuses another plugin's button the frame never listed", async () => {
+    const run = vi.fn(() => "ran");
+    const drop = registerAction("snippets.paste", run);
+    declareActionSlot({
+      id: "docker.cards",
+      accepts: ["button"],
+      pluginId: "docker",
+    });
+    registerSlotContribution("docker.cards", {
+      actionId: "snippets.paste",
+      titleKey: "x",
+      kind: "button",
+      pluginId: "snippets",
+    });
+    connectFrame(iframe, "docker", "view", "tab:docker", {});
+    send({ ch: FRAME_CHANNEL, t: "hello", role: "view", key: "tab:docker" });
+    expect(await call("invokeAction", ["snippets.paste"])).toMatchObject({
+      ok: false,
+    });
+    expect(run).not.toHaveBeenCalled();
+    drop();
+  });
+
+  it("shows a listed tab only right after the person used the frame", async () => {
+    const activate = vi.fn();
+    setTabActivator(activate);
+    setSharedState({
+      tabs: [{ id: "t1", instanceId: "i1", type: "terminal" }],
+    });
+    connectFrame(iframe, "docker", "view", "tab:docker", {});
+    send({ ch: FRAME_CHANNEL, t: "hello", role: "view", key: "tab:docker" });
+    expect(await call("tabs.show", ["t1"])).toMatchObject({ ok: false });
+    send({ ch: FRAME_CHANNEL, t: "event", name: "pointer", data: null });
+    expect(await call("tabs.show", ["nope"])).toMatchObject({ ok: false });
+    expect(await call("tabs.show", ["t1"])).toMatchObject({ ok: true });
+    expect(activate).toHaveBeenCalledWith("t1");
+    setTabActivator(null);
+    setSharedState({ tabs: [] });
+    resetSharedState();
   });
 });
 

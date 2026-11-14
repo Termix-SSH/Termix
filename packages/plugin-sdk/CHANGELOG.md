@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.7.0
+
+Plugin API 2.7.0. Needs Termix 26.11.2.
+
+### Added
+
+- Inside a frame, `useSlotContributions`, `useExtensions`, `getExtension` and `usePluginComponent` now return other plugins' parts. Their components draw as placeholders and Termix draws the real view over each one, so `ComponentSlot`, `ActionSlot` and `PluginComponent` work in frames too
+- `ForeignSlot` in `/ui` draws such a part with your own class, style and `interactive` flag; `ForeignInteractive` turns clicks off for every part inside it (an edit mode)
+- `useForeignOccluder` and `ForeignOccluder` in `/ui` hide other plugins' parts under a menu or popover you draw yourself. Popover, DropdownMenu, Select, Sheet, Dialog, AlertDialog, Tooltip, InlineView and PanePrompt do it already
+- `declareActionSlot` takes `fit: "overlay"`: the part covers the box, is see-through and only takes clicks while it draws something
+- A frame may place the parts of a slot it declared, an extension point or component id under its own plugin id, or any id in its manifest `contributes.uses`
+- `useShell()` answers inside a frame with a read only view: tabs, the active tab, splits, the user and whether it is mobile. `tabs.setActive` works right after the person used the frame
+- `renderWithApp` takes `others` with other plugins' slot parts, extension items and components for a plugin that draws them
+
 ## 2.6.0
 
 Plugin API 2.6.0. Needs Termix 26.11.2.

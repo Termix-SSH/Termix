@@ -37,6 +37,7 @@
 - The server answers `/.well-known/security.txt` with where to report a security problem in Termix
 - Docker images are reproducible: building the same commit again gives the same image, byte for byte
 - Plugins can give small per host or per tab values, like usage bars, badges and status dots, that Termix draws itself. A dashboard with many hosts no longer needs a plugin frame for each row
+- A plugin screen in a frame can show other plugins' parts again, like Homepage widgets, Host Metrics manager cards, host page tiles and terminal side panels. Termix draws each part in its own frame over the spot, clipped to the screen, hidden under open menus, and they still scroll, resize, drag in edit modes and take Tab focus
 
 ### Changed
 

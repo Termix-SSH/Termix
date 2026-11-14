@@ -38,6 +38,7 @@ import {
   scopeCoreResponse,
 } from "./frame-policy";
 import {
+  activateTab,
   frameChangeFor,
   frameStateFor,
   getSharedState,
@@ -55,6 +56,18 @@ import {
 import { readFrameStorage, writeFrameStorage } from "./frame-storage";
 import { setUiPreferenceFromFrame } from "./frame-ui-preferences";
 import { requestStepUp } from "@/auth/StepUpPrompt";
+import { manifestUses } from "./foreign-policy";
+import {
+  addForeignList,
+  disposeForeignView,
+  dropForeignConsumer,
+  focusForeignView,
+  foreignAllowsAction,
+  mountForeignView,
+  placeForeignViews,
+  removeForeignList,
+  setForeignProps,
+} from "./foreign-views";
 
 export interface FrameEvents {
   /** A view's current props, sent with its boot data. */
@@ -81,12 +94,6 @@ let listening = false;
 
 function summaryOf(pluginId: string): PluginSummary | undefined {
   return getPluginStoreState().records.get(pluginId)?.summary;
-}
-
-function manifestUses(pluginId: string): string[] {
-  const uses = (summaryOf(pluginId)?.contributes as { uses?: unknown } | null)
-    ?.uses;
-  return Array.isArray(uses) ? uses.filter((u) => typeof u === "string") : [];
 }
 
 /** Actions a frame may run: its own, and the ones its manifest says it uses. */
@@ -136,6 +143,9 @@ function onMessage(event: MessageEvent) {
         return;
       }
       connection.port?.close();
+      // Placeholders of the old page are gone with it.
+      const owner = watchOwners.get(connection);
+      if (owner) dropForeignConsumer(owner);
       connection.port = createPort(connection, event.source as Window);
       return;
     }
@@ -175,6 +185,7 @@ export function connectFrame(
     close: () => {
       connections.delete(connection);
       removeDataWatches(watchOwner);
+      dropForeignConsumer(watchOwner);
       stopState?.();
       connection.port?.close();
       connection.port = null;
@@ -399,6 +410,37 @@ async function handleCall(
       if (owner) runWatchAction(owner, args[0], args[1]);
       return;
     }
+    case "foreign.list": {
+      const owner = watchOwners.get(connection);
+      if (!owner) return false;
+      const [listId, kind, id, context] = args;
+      return addForeignList(
+        {
+          owner,
+          pluginId,
+          iframe: connection.iframe,
+          emit: (name, data) => connection.port?.emit(name, data),
+        },
+        listId,
+        kind,
+        id,
+        context,
+      );
+    }
+    case "foreign.unlist": {
+      const owner = watchOwners.get(connection);
+      if (owner) removeForeignList(owner, args[0]);
+      return;
+    }
+    case "foreign.mount": {
+      const owner = watchOwners.get(connection);
+      return owner ? mountForeignView(owner, args[0]) : false;
+    }
+    case "foreign.focus": {
+      const owner = watchOwners.get(connection);
+      if (owner) focusForeignView(owner, args[0], args[1]);
+      return;
+    }
     case "http":
       return coreRequest(pluginId, args[0]);
     case "toast": {
@@ -493,6 +535,15 @@ async function handleCall(
       shell.closeTab(tabId);
       return;
     }
+    case "tabs.show": {
+      // Only right after the user picked something in the frame.
+      if (!recentlyUsed(connection)) throw new Error("Not allowed now");
+      const [tabId] = args;
+      if (typeof tabId !== "string" || !activateTab(tabId)) {
+        throw new Error("No such tab");
+      }
+      return;
+    }
     case "tabs.openRailView": {
       const [id] = args;
       if (typeof id !== "string") throw new Error("Bad view");
@@ -527,7 +578,11 @@ async function handleCall(
     }
     case "invokeAction": {
       const [id, ...rest] = args;
-      if (!mayInvokeAction(pluginId, String(id))) {
+      const owner = watchOwners.get(connection);
+      if (
+        !mayInvokeAction(pluginId, String(id)) &&
+        !(owner && foreignAllowsAction(owner, id))
+      ) {
         throw new Error(
           `${String(id)} is not one of this plugin's actions or in its manifest uses`,
         );
@@ -609,6 +664,18 @@ function handleEvent(connection: FrameConnection, name: string, data: unknown) {
     case "ready":
       connection.events.onReady?.();
       return;
+    case "foreign.place":
+    case "foreign.props":
+    case "foreign.dispose": {
+      const owner = watchOwners.get(connection);
+      if (!owner) return;
+      const entry = (data ?? {}) as { id?: unknown; props?: unknown };
+      if (name === "foreign.place") placeForeignViews(owner, data);
+      else if (name === "foreign.props") {
+        setForeignProps(owner, entry.id, entry.props);
+      } else disposeForeignView(owner, entry.id);
+      return;
+    }
     case "settingsChanged": {
       const detail = (data ?? {}) as { scope?: unknown; hostId?: unknown };
       if (!["admin", "user", "host"].includes(String(detail.scope))) return;

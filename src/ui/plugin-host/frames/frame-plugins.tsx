@@ -19,6 +19,9 @@ import { FramedView, SlotFramedView } from "./framed-view";
 import { clearFrameValues, setFrameValue, useFrameValue } from "./frame-values";
 import { toPluginHostRecord } from "../bridge";
 import { addDataRow } from "./data-rows";
+import { setFrameMeta } from "./frame-meta";
+
+import { extensionFit } from "./slot-fit";
 
 export { resolveSlotFit, slotFit, splitFallback } from "./slot-fit";
 
@@ -102,10 +105,6 @@ function stableKey(args: unknown[]): string {
   }
 }
 
-function extensionFit(name: string): FrameFit {
-  return /form|editor|settings/i.test(name) ? "content" : "fill";
-}
-
 const views = new Map<string, ComponentType<Record<string, unknown>>>();
 
 /**
@@ -150,6 +149,7 @@ function framed(
             );
           };
     view.displayName = `Framed(${pluginId}:${key})`;
+    setFrameMeta(view, { pluginId, frameKey: key, adapt });
     views.set(id, view);
   }
   return view;
@@ -277,6 +277,14 @@ export function startFramedPlugin(
     plainHost(args[1]),
   ];
   const hostFirst = (args: unknown[]) => [plainHost(args[0]), ...args.slice(1)];
+  // A slot owner's context may carry a host with every plugin's settings.
+  const scopedContext = (context: unknown) => {
+    if (!context || typeof context !== "object") return context;
+    const record = context as Record<string, unknown>;
+    return "host" in record
+      ? { ...record, host: plainHost(record.host) }
+      : record;
+  };
 
   const memo = (
     record: Registration,
@@ -516,7 +524,7 @@ export function startFramedPlugin(
           useValue: valueKey
             ? rowTableValue(pluginId, String(valueKey))
             : undefined,
-          when: m("when", false),
+          when: m("when", false, (args) => [scopedContext(args[0])]),
         });
       }
       case "onboardingStep":

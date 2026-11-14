@@ -45,6 +45,9 @@ import { getFrameState, setFrameState } from "./frame-store";
 import { createFrameDataSource, receiveDataSlot } from "./frame-data-slots";
 import { setFrameDataSource } from "@/components/data-view/data-source";
 import { FrameHooks } from "./frame-hooks";
+import { setForeignRuntime } from "@/components/foreign/foreign-runtime";
+import { createForeignRuntime, receiveForeignEvent } from "./foreign-client";
+import { focusEdge, watchEdges } from "./frame-edges";
 import { withPluginScope } from "@/plugin-host/scope";
 import { FrameRoot, setFrameProps, type FrameFit } from "./frame-root";
 
@@ -53,6 +56,10 @@ interface BootParams {
   key?: string;
   fit: FrameFit;
   transparent: boolean;
+  /** The shell placed this view over another plugin's frame. */
+  edge: boolean;
+  /** Report whether the view draws anything (overlays). */
+  drawn: boolean;
 }
 
 /**
@@ -96,6 +103,8 @@ function readParams(): BootParams {
     key: params.get("key") ?? undefined,
     fit,
     transparent: params.get("bg") === "none",
+    edge: params.get("edge") === "1",
+    drawn: params.get("drawn") === "1",
   };
 }
 
@@ -144,6 +153,12 @@ async function boot() {
   const call = (method: string, ...args: unknown[]) => port.call(method, args);
   // Data slots this plugin owns get their values from the shell.
   setFrameDataSource(createFrameDataSource(call));
+  // Other plugins' parts are placeholders the shell draws over.
+  const foreign = createForeignRuntime({
+    call,
+    emit: (name, data) => port.emit(name, data),
+  });
+  setForeignRuntime(foreign);
 
   parent.postMessage(
     { ch: FRAME_CHANNEL, t: "hello", role: params.role, key: params.key },
@@ -298,7 +313,7 @@ async function boot() {
         return api as never;
       },
       tabs,
-      devReads: init.devReads === true,
+      foreign,
     }),
   );
 
@@ -367,8 +382,12 @@ async function boot() {
         component: component as ComponentType<Record<string, unknown>>,
         onSize: (size: { width: number; height: number }) =>
           port.emit("size", size),
+        onDrawn: params.drawn
+          ? (drawn: boolean) => port.emit("drawn", { drawn })
+          : undefined,
       }),
     );
+    if (params.edge) watchEdges((name, data) => port.emit(name, data));
   }
   port.emit("ready");
 
@@ -428,6 +447,13 @@ async function boot() {
     }
     if (name === "dataSlot") {
       receiveDataSlot(data);
+      return;
+    }
+    if (receiveForeignEvent(name, data)) return;
+    if (name === "focusEdge") {
+      focusEdge(data === "last" ? "last" : "first", (dir) =>
+        port.emit("focusOut", { dir }),
+      );
       return;
     }
     if (name === "props" && data && typeof data === "object") {

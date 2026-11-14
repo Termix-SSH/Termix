@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import ssh2 from "ssh2";
+import { generateSshKeyPair } from "../../../../../packages/plugin-sdk/src/ssh-keys.js";
 import { FakeSshClient } from "./pipeline-test-helpers.js";
 
 vi.mock("ssh2", async (importOriginal) => {
@@ -93,11 +93,11 @@ import {
   provideConnectPolicy,
 } from "../../../hosts/connect-policy.js";
 
-const plainKey = ssh2.utils.generateKeyPairSync("ed25519").private;
-const encryptedKey = ssh2.utils.generateKeyPairSync("ed25519", {
+// ssh2's own generator makes about 1 in 256 ed25519 keys nothing can read.
+const plainKey = generateSshKeyPair("ssh-ed25519").privateKey;
+const encryptedKey = generateSshKeyPair("ssh-ed25519", {
   passphrase: "secret",
-  cipher: "aes256-cbc",
-}).private;
+}).privateKey;
 
 function host(overrides: Partial<SshConnectHost> = {}): SshConnectHost {
   return {

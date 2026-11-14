@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 2.6.0 | Plugin API 2.6.0
+SDK 2.7.0 | Plugin API 2.7.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -867,10 +867,12 @@ before, with the same look and theme.
 - `invokeAction` runs your own actions and the ids in your manifest `uses`. Opening links, downloads,
   the clipboard, toasts and confirms go through the shell. `localStorage` works and is kept per plugin.
 - Not available in a frame: host badges, status indicators and editor toolbar items with a `component`
-  (use `useDot` or `useValue`), `useShell`, and other plugins' components from `usePluginComponent`,
-  `useExtensions` or `useSlotContributions`. Layouts, themes, login screens and native desktop views are
-  the shell itself: only an official plugin with `ui:layout`, `ui:theme`, `auth:provide` or
-  `desktop:window` runs in the page.
+  (use `useDot` or `useValue`). Layouts, themes, login screens and native desktop views are the shell
+  itself: only an official plugin with `ui:layout`, `ui:theme`, `auth:provide` or `desktop:window` runs
+  in the page. Other plugins' parts work, see Other plugins' parts in a frame below.
+- `useShell()` in a frame is read only: `tabs.list`, `tabs.activeId`, `tabs.topLevel`, `split.summaries`,
+  `env.user`, `env.isMobile`. `tabs.setActive` works right after the person used your frame. Anything
+  that changes the shell for other plugins (docks, the palette, logout) does nothing there.
 - A popover or dropdown can't leave its frame. Keep menus in tabs and panels, not in small slots.
 
 Check that your activate works in a frame with `checkFrameApp` from `@termix-ssh/plugin-sdk/testing`:
@@ -914,6 +916,33 @@ declares: `declareActionSlot({ id, accepts, fit })` with `fit` `"inline"` (as wi
 content, for row items and badges), `"content"` (full width) or `"fill"` (the whole box). Without it the
 shell guesses from the slot id. A `fallback` element the owner passes stays in the page and shows while
 your framed component draws nothing.
+
+### Other plugins' parts in a frame (API 2.7)
+
+Your frame can show other plugins' parts: a slot you declared, an extension point or component id under
+your own plugin id (`homepage.widgets` for Homepage), or any id you list in manifest `contributes.uses`
+(`terminal.view`). Read them as always, with `useSlotContributions`, `ComponentSlot`, `useExtensions`,
+`getExtension`, `usePluginComponent` or `PluginComponent`. Each component you get is a placeholder: Termix
+draws the other plugin's own view in its own frame over that spot, clipped to your frame. You never get a
+handle on it and it never learns about you.
+
+- Props cross as data, functions by reference. A `host` you pass reaches the other plugin as its own copy
+  of that host.
+- Sizes follow the part: `fill` takes the box you give it, `content` takes your width and its own height,
+  `inline` its own width and height. Draw it with `ForeignSlot` from the UI kit to add a class, a style or
+  `interactive={false}`.
+- Inside `ForeignInteractive interactive={false}` the parts take no clicks, so an edit mode can drag and
+  resize the boxes around them. `TileGrid` does this while editing.
+- Parts hide under your menus and popovers. The UI kit's Popover, DropdownMenu, Select, Sheet, Dialog,
+  AlertDialog, Tooltip, InlineView and PanePrompt do it for you; for one you draw yourself, put
+  `useForeignOccluder()` on its element or wrap it in `ForeignOccluder`.
+- Tab moves through a part and on, keyboard shortcuts keep working, and a wheel move the part can't use
+  scrolls your page.
+- `declareActionSlot({ fit: "overlay" })` is for parts drawn over something, like prompts over a terminal:
+  they cover the box, are see-through and take clicks only while they draw something.
+- In tests, pass `others` to `renderWithApp` with the parts you expect: `{ slots: { "my.slot": [{ actionId,
+component }] }, extensions: { "my.widgets": [...] }, components: { "terminal.view": View } }`. They draw
+  in place, as they do in the page.
 
 Slots you can fill include `terminal.toolbar`, `terminal.sidePanel`, `terminal.overlay`,
 `dashboard.counters`, `admin.userTabs`, `hosts.importMenu`, `hosts.panel`, `credentials.badges`,

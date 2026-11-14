@@ -56,7 +56,11 @@ import {
   getSettingsComponent,
   listSettingsComponents,
 } from "@/settings/settings-components";
-import { getSlotContributions, listActions } from "@/shell/action-registry";
+import {
+  getSlotContributions,
+  listActions,
+  registerSlotContribution as addSlotContribution,
+} from "@/shell/action-registry";
 import { listPaletteGroups, loadPaletteGroup } from "@/shell/palette-registry";
 import {
   listKeybindingActions,
@@ -83,7 +87,12 @@ import {
 } from "./shell-bridge";
 import { PluginViewPlaceholder } from "./PluginViewPlaceholder";
 import { resolveLayoutTabTarget } from "@/shell/shell-layout";
-import { getExtension, listExtensions } from "./extension-registry";
+import {
+  getExtension,
+  listExtensions,
+  registerExtension as addExtension,
+} from "./extension-registry";
+import { registerPluginComponent } from "./component-registry";
 import { onboardingSteps } from "@/onboarding/onboarding-registry";
 import {
   renderFrameViews,
@@ -302,6 +311,32 @@ export async function renderPlugin(
   await plugin.activate(handle.app);
   setFrontendState(pluginId, "active");
   if (options.ready) notifyShellReady();
+
+  // Other plugins' parts the test supplies, drawn in place as in the page.
+  const others = options.others ?? {};
+  const dropOthers: Array<() => void> = [];
+  for (const [slotId, parts] of Object.entries(others.slots ?? {})) {
+    for (const part of parts) {
+      dropOthers.push(
+        addSlotContribution(slotId, {
+          titleKey: part.actionId,
+          kind: part.component ? "component" : "button",
+          pluginId: "other",
+          ...part,
+        } as never),
+      );
+    }
+  }
+  for (const [pointId, items] of Object.entries(others.extensions ?? {})) {
+    for (const item of items) {
+      dropOthers.push(
+        addExtension(pointId, { pluginId: "other", ...item } as never),
+      );
+    }
+  }
+  for (const [id, component] of Object.entries(others.components ?? {})) {
+    dropOthers.push(registerPluginComponent(id, component as never));
+  }
 
   const mine = <T extends { pluginId?: string }>(items: T[]) =>
     items.filter((item) => item.pluginId === pluginId);
@@ -600,6 +635,7 @@ export async function renderPlugin(
       try {
         await plugin.deactivate?.();
       } finally {
+        for (const drop of dropOthers) drop();
         handle.dispose();
         setFrontendState(pluginId, "inactive");
         setPluginApiForTesting(pluginId, null);

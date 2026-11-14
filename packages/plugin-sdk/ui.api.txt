@@ -13,11 +13,11 @@ AlertDescription (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttrib
 AlertDialog (value): ({ ...props }: AlertDialogProps) => Element
 AlertDialogAction (value): ({ className, ...props }: AlertDialogActionProps & RefAttributes<HTMLButtonElement>) => Element
 AlertDialogCancel (value): ({ className, ...props }: AlertDialogCancelProps & RefAttributes<HTMLButtonElement>) => Element
-AlertDialogContent (value): ({ className, ...props }: AlertDialogContentProps & RefAttributes<HTMLDivElement>) => Element
+AlertDialogContent (value): ({ className, ref, ...props }: AlertDialogContentProps & RefAttributes<HTMLDivElement>) => Element
 AlertDialogDescription (value): ({ className, ...props }: AlertDialogDescriptionProps & RefAttributes<HTMLParagraphElement>) => Element
 AlertDialogFooter (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
 AlertDialogHeader (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
-AlertDialogOverlay (value): ({ className, ...props }: AlertDialogOverlayProps & RefAttributes<HTMLDivElement>) => Element
+AlertDialogOverlay (value): ({ className, ref, ...props }: AlertDialogOverlayProps & RefAttributes<HTMLDivElement>) => Element
 AlertDialogPortal (value): ({ ...props }: AlertDialogPortalProps) => Element
 AlertDialogTitle (value): ({ className, ...props }: AlertDialogTitleProps & RefAttributes<HTMLHeadingElement>) => Element
 AlertDialogTrigger (value): ({ ...props }: AlertDialogTriggerProps & RefAttributes<HTMLButtonElement>) => Element
@@ -101,11 +101,11 @@ DesktopUpdateState (type): DesktopUpdateState
 DeviceLogin (type): DeviceLogin
 Dialog (value): ({ ...props }: DialogProps) => Element
 DialogClose (value): ({ ...props }: DialogCloseProps & RefAttributes<HTMLButtonElement>) => Element
-DialogContent (value): ({ className, children, showCloseButton, ...props }: DialogContentProps & RefAttributes<HTMLDivElement> & { showCloseButton?: boolean; }) => Element
+DialogContent (value): ({ className, children, showCloseButton, ref, ...props }: DialogContentProps & RefAttributes<HTMLDivElement> & { showCloseButton?: boolean; }) => Element
 DialogDescription (value): ({ className, ...props }: DialogDescriptionProps & RefAttributes<HTMLParagraphElement>) => Element
 DialogFooter (value): ({ className, showCloseButton, children, ...props }: ClassAttributes<HTMLDivElement> & HTMLAttributes<HTMLDivElement> & { showCloseButton?: boolean; }) => Element
 DialogHeader (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
-DialogOverlay (value): ({ className, ...props }: DialogOverlayProps & RefAttributes<HTMLDivElement>) => Element
+DialogOverlay (value): ({ className, ref, ...props }: DialogOverlayProps & RefAttributes<HTMLDivElement>) => Element
 DialogPortal (value): ({ ...props }: DialogPortalProps) => Element
 DialogTitle (value): ({ className, ...props }: DialogTitleProps & RefAttributes<HTMLHeadingElement>) => Element
 DialogTrigger (value): ({ ...props }: DialogTriggerProps & RefAttributes<HTMLButtonElement>) => Element
@@ -114,7 +114,7 @@ DocsLinkProps (type): DocsLinkProps
 DocsPage (type): "dashboard" | "users" | "sessions" | "roles" | "branding" | "database" | "manage" | "settings" | "plugins" | "install" | "cli" | "develop" | "home" | "updating" | "betas" | "envVars" | "https" | "reverseProxy" | "desktopSync" | "interface" | "hosts" | "portKnocking" | "hostDefaults" | "credentials" | "sharing" | "account" | "accountSecurity" | "accountData" | "apiKeys" | "commandPalette" | "interfaceSettings" | "appearance" | "keybindings" | "adminGeneral" | "adminDatabase" | "adminSsl" | "auditLog" | "importExport" | "pluginCatalog" | "communityRegistry" | "pluginRegistries" | "hostRegistry"
 DropdownMenu (value): ({ ...props }: DropdownMenuProps) => Element
 DropdownMenuCheckboxItem (value): ({ className, children, checked, inset, ...props }: DropdownMenuCheckboxItemProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }) => Element
-DropdownMenuContent (value): ({ className, align, sideOffset, ...props }: DropdownMenuContentProps & RefAttributes<HTMLDivElement>) => Element
+DropdownMenuContent (value): ({ className, align, sideOffset, ref, ...props }: DropdownMenuContentProps & RefAttributes<HTMLDivElement>) => Element
 DropdownMenuGroup (value): ({ ...props }: DropdownMenuGroupProps & RefAttributes<HTMLDivElement>) => Element
 DropdownMenuItem (value): ({ className, inset, variant, ...props }: DropdownMenuItemProps & RefAttributes<HTMLDivElement> & { inset?: boolean; variant?: "default" | "destructive"; }) => Element
 DropdownMenuLabel (value): ({ className, inset, ...props }: DropdownMenuLabelProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }) => Element
@@ -124,7 +124,7 @@ DropdownMenuRadioItem (value): ({ className, children, inset, ...props }: Dropdo
 DropdownMenuSeparator (value): ({ className, ...props }: DropdownMenuSeparatorProps & RefAttributes<HTMLDivElement>) => Element
 DropdownMenuShortcut (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLSpanElement>, HTMLSpanElement>) => Element
 DropdownMenuSub (value): ({ ...props }: DropdownMenuSubProps) => Element
-DropdownMenuSubContent (value): ({ className, sideOffset, alignOffset, ...props }: DropdownMenuSubContentProps & RefAttributes<HTMLDivElement>) => Element
+DropdownMenuSubContent (value): ({ className, sideOffset, alignOffset, ref, ...props }: DropdownMenuSubContentProps & RefAttributes<HTMLDivElement>) => Element
 DropdownMenuSubTrigger (value): ({ className, inset, children, ...props }: DropdownMenuSubTriggerProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }) => Element
 DropdownMenuTrigger (value): ({ ...props }: DropdownMenuTriggerProps & RefAttributes<HTMLButtonElement>) => Element
 EditingWidth (type): EditingWidth
@@ -138,6 +138,10 @@ FieldPair (value): ({ children }: { children: ReactNode; }) => Element
 FolderAccessRule (type): FolderAccessRule
 FolderIconEl (value): ({ icon, className, style, }: { icon?: string; className?: string; style?: CSSProperties; }) => Element
 FontSizeId (type): FontSizeId
+ForeignInteractive (value): ({ interactive, children, }: { interactive: boolean; children?: ReactNode; }) => Element
+ForeignOccluder (value): (props: HTMLAttributes<HTMLDivElement>) => Element
+ForeignSlot (value): ({ of, props, interactive, className, style, }: ForeignSlotProps) => Element
+ForeignSlotProps (type): ForeignSlotProps
 FormFooter (value): ({ onCancel, onSave, saveLabel, cancelLabel, saving, dirty, status, disabled, onDelete, deleteLabel, extra, saveType, form, }: { onCancel?: () => void; onSave?: () => void; saveLabel?: string; cancelLabel?: string; saving?: boolean; dirty?: boolean; status?: ReactNode; disabled?: boolean; onDelete?: () => void; deleteLabel?: string; extra?: ReactNode; saveType?: "button" | "submit"; form?: string; }) => Element
 FullScreenAppPhase (type): FullScreenAppPhase
 FullScreenAppWrapper (value): FC<FullScreenAppWrapperProps>
@@ -250,7 +254,7 @@ PluginSummary (type): PluginSummary
 PluginViewPlaceholder (value): ({ kind, viewId, compact, }: { kind: ViewKind; viewId: string; compact?: boolean; }) => Element
 Popover (value): ({ ...props }: PopoverProps) => Element
 PopoverAnchor (value): ({ ...props }: PopoverAnchorProps & RefAttributes<HTMLDivElement>) => Element
-PopoverContent (value): ({ className, align, sideOffset, ...props }: PopoverContentProps & RefAttributes<HTMLDivElement>) => Element
+PopoverContent (value): ({ className, align, sideOffset, ref, ...props }: PopoverContentProps & RefAttributes<HTMLDivElement>) => Element
 PopoverTrigger (value): ({ ...props }: PopoverTriggerProps & RefAttributes<HTMLButtonElement>) => Element
 ProxyNode (type): ProxyNode
 RadialGauge (value): ({ value, label, caption, size, strokeWidth, className, colorClassName, }: RadialGaugeProps) => Element
@@ -277,7 +281,7 @@ SectionCard (value): ({ title, icon, action, children, className, rowId, }: { ti
 Segmented (value): <T extends string>({ value, onChange, options, className, }: { value: T; onChange: (next: T) => void; options: readonly { value: NoInfer<T>; label: string; icon?: ReactNode; count?: number; title?: string; }[]; className?: string; }) => Element
 Select (value): ({ ...props }: SelectSharedProps & { value?: string; defaultValue?: string; onValueChange?(value: string): void; }) => Element
 Select2 (value): ({ className, children, value, defaultValue, onChange, disabled, placeholder, align, contentClassName, name, id, required, "aria-label": ariaLabel, ...props }: Select2Props) => Element
-SelectContent (value): ({ className, children, position, ...props }: SelectContentProps & RefAttributes<HTMLDivElement>) => Element
+SelectContent (value): ({ className, children, position, ref, ...props }: SelectContentProps & RefAttributes<HTMLDivElement>) => Element
 SelectField (value): <T extends string>({ label, value, onChange, options, hint, error, disabled, className, placeholder, }: { label: string; value: T; onChange: (value: T) => void; options: readonly { value: T; label: string; }[]; hint?: ReactNode; error?: string; disabled?: boolean; className?: string; placeholder?: string; }) => Element
 SelectGroup (value): ({ ...props }: SelectGroupProps & RefAttributes<HTMLDivElement>) => Element
 SelectItem (value): ({ className, children, ...props }: SelectItemProps & RefAttributes<HTMLDivElement>) => Element
@@ -294,7 +298,7 @@ SharePermissionLevel (type): SharePermissionLevel
 ShareTarget (type): ShareTarget
 Sheet (value): ({ ...props }: DialogProps) => Element
 SheetClose (value): ({ ...props }: DialogCloseProps & RefAttributes<HTMLButtonElement>) => Element
-SheetContent (value): ({ className, children, side, showCloseButton, ...props }: DialogContentProps & RefAttributes<HTMLDivElement> & { side?: "top" | "right" | "bottom" | "left"; showCloseButton?: boolean; }) => Element
+SheetContent (value): ({ className, children, side, showCloseButton, ref, ...props }: DialogContentProps & RefAttributes<HTMLDivElement> & { side?: "top" | "right" | "bottom" | "left"; showCloseButton?: boolean; }) => Element
 SheetDescription (value): ({ className, ...props }: DialogDescriptionProps & RefAttributes<HTMLParagraphElement>) => Element
 SheetFooter (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
 SheetHeader (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
@@ -354,7 +358,7 @@ ToolbarBand (value): ({ className, children, }: { className?: string; children: 
 ToolbarSelect (value): <T extends string>({ value, onChange, options, label, disabled, className, }: { value: T; onChange: (value: NoInfer<T>) => void; options: { value: NoInfer<T>; label: string; }[]; label: string; disabled?: boolean; className?: string; }) => Element
 ToolsTab (type): ToolsTab
 Tooltip (value): ({ ...props }: TooltipProps) => Element
-TooltipContent (value): ({ className, sideOffset, children, ...props }: TooltipContentProps & RefAttributes<HTMLDivElement>) => Element
+TooltipContent (value): ({ className, sideOffset, children, ref, ...props }: TooltipContentProps & RefAttributes<HTMLDivElement>) => Element
 TooltipProvider (value): ({ delayDuration, ...props }: TooltipProviderProps) => Element
 TooltipTrigger (value): ({ ...props }: TooltipTriggerProps & RefAttributes<HTMLButtonElement>) => Element
 UI_AREA_KEYS (value): UiAreaKey[]
@@ -669,6 +673,7 @@ useConnectionLog (value): () => ConnectionLogContextType
 useDesktopLinked (value): () => boolean
 useDesktopUpdate (value): () => DesktopUpdateState
 useEditorDefaultKeys (value): () => Map<string, EditorDefaultKey>
+useForeignOccluder (value): <T extends Element>(forwarded?: Ref<T>) => RefCallback<T>
 useHostActions (value): () => HostActionDef[]
 useHostBadges (value): () => HostBadgeDef[]
 useHostContextMenuItems (value): () => HostContextMenuItemDef[]

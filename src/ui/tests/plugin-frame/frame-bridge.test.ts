@@ -25,6 +25,9 @@ describe("extensions inside a frame", () => {
       call: vi.fn(async () => null),
       getApi: vi.fn() as never,
       tabs: {} as never,
+      foreign: {
+        getExtension: vi.fn(() => undefined),
+      } as never,
     });
     const drop = app.registerExtension("homepage.widgets", {
       id: "clock",

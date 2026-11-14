@@ -11,8 +11,14 @@ export function slotFit(slotId: string): FrameFit {
   if (/toolbar|actions$|badges?$|row$|\.inline$/i.test(slotId)) {
     return "inline";
   }
-  if (/tabs?$/i.test(slotId)) return "fill";
+  if (/(tabs?|display)$/i.test(slotId)) return "fill";
   return "content";
+}
+
+/** How an extension's part sizes: labels to themselves, forms with content, views fill. */
+export function extensionFit(name: string): FrameFit {
+  if (/^label$/i.test(name)) return "inline";
+  return /form|editor|settings/i.test(name) ? "content" : "fill";
 }
 
 /** The fit the slot's owner declared, else the guess from its id. */

@@ -169,4 +169,52 @@ describe("PluginFrameView", () => {
     expect(frame.style.width).toBe("40px");
     expect(frame.style.position).toBe("");
   });
+
+  it("keeps an overlay see-through and out of the way until it draws", () => {
+    const { container } = render(
+      <PluginFrameView
+        pluginId="docker"
+        frameKey="slot:terminal.overlay:x"
+        fit="overlay"
+        props={{}}
+      />,
+    );
+    const frame = container.querySelector("iframe")!;
+    expect(frame.src).toContain("bg=none");
+    expect(frame.src).toContain("drawn=1");
+    expect(frame.src).toContain("fit=fill");
+    expect(frame.style.visibility).toBe("hidden");
+    expect(frame.style.pointerEvents).toBe("none");
+    act(() => frames.options!.onEvent("drawn", { drawn: true }));
+    expect(frame.style.visibility).toBe("");
+    act(() => frames.options!.onEvent("drawn", { drawn: false }));
+    expect(frame.style.visibility).toBe("hidden");
+  });
+
+  it("passes events on and lets the shell move focus into a placed view", () => {
+    const seen: Array<[string, unknown]> = [];
+    let control: { focusEdge: (edge: "first" | "last") => void } | null = null;
+    const { container } = render(
+      <PluginFrameView
+        pluginId="docker"
+        frameKey="k"
+        fit="content"
+        edge
+        props={{}}
+        onFrameEvent={(name, data) => seen.push([name, data])}
+        controlRef={(next) => {
+          control = next;
+        }}
+      />,
+    );
+    expect(container.querySelector("iframe")!.src).toContain("edge=1");
+    act(() => frames.options!.onEvent("size", { width: 10, height: 20 }));
+    act(() => frames.options!.onEvent("focusOut", { dir: "next" }));
+    expect(seen).toEqual([
+      ["size", { width: 10, height: 20 }],
+      ["focusOut", { dir: "next" }],
+    ]);
+    control!.focusEdge("last");
+    expect(frames.emitted).toContainEqual(["focusEdge", "last"]);
+  });
 });

@@ -22,8 +22,10 @@ import type {
   PluginDisposables,
   PluginLogger,
 } from "./backend.js";
+import type { ComponentType } from "react";
 import type {
   DataValue,
+  ExtensionContribution,
   HostActionContribution,
   TermixApp,
 } from "./frontend.js";
@@ -2851,6 +2853,28 @@ export interface RenderWithAppOptions {
   api?: import("./frontend.js").PluginApiClient;
   /** What app.desktop.remoteServerUrl() answers. Read on every call. */
   remoteServerUrl?: () => string | null | Promise<string | null>;
+  /**
+   * Other plugins' parts, for a plugin that draws them (a slot it owns, an
+   * extension point it reads, a component id it uses). They draw in place,
+   * as ForeignSlot does in the page. Plugin API 2.7.
+   */
+  others?: {
+    slots?: Record<
+      string,
+      Array<{
+        actionId: string;
+        component?: ComponentType<Record<string, unknown>>;
+        titleKey?: string;
+        pluginId?: string;
+        order?: number;
+      }>
+    >;
+    extensions?: Record<
+      string,
+      Array<ExtensionContribution & { pluginId?: string }>
+    >;
+    components?: Record<string, ComponentType<Record<string, unknown>>>;
+  };
 }
 
 /** A call a plugin made on the shell, recorded instead of performed. */

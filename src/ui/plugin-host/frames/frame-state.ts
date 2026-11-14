@@ -117,6 +117,22 @@ export function frameChangeFor(
   return out;
 }
 
+let tabActivator: ((id: string) => void) | null = null;
+
+/** The shell's own "show this tab", for frames that list tabs. */
+export function setTabActivator(next: ((id: string) => void) | null): void {
+  tabActivator = next;
+}
+
+export function activateTab(id: string): boolean {
+  if (!tabActivator) return false;
+  if (!shared.tabs.some((tab) => tab.id === id || tab.instanceId === id)) {
+    return false;
+  }
+  tabActivator(id);
+  return true;
+}
+
 /** Test seam. */
 export function resetSharedState(): void {
   listeners.clear();

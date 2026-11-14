@@ -25,12 +25,21 @@ import {
   frameUrl,
   type FrameConnection,
 } from "./frame-connection";
+import { useStableProps } from "@/plugin-frame/stable-props";
 
 /**
  * fill: takes the box it is given. content: full width, as tall as the
  * view. inline: as wide and tall as the view, for a toolbar button.
+ * overlay: fills the box, see-through, and only takes clicks while the view
+ * draws something.
  */
-export type FrameFit = "fill" | "content" | "inline";
+export type FrameFit = "fill" | "content" | "inline" | "overlay";
+
+/** What the shell can do with a view it placed. */
+export interface FrameControl {
+  /** Focuses the view's first or last control. */
+  focusEdge: (edge: "first" | "last") => void;
+}
 
 export interface PluginFrameViewProps {
   pluginId: string;
@@ -43,59 +52,17 @@ export interface PluginFrameViewProps {
   fallback?: ReactNode;
   className?: string;
   style?: CSSProperties;
+  /**
+   * The view sits over another plugin's frame: Tab past its ends and wheel
+   * moves it can't use are reported instead of kept.
+   */
+  edge?: boolean;
+  /** Every event the view sends, after the frame's own handling. */
+  onFrameEvent?: (name: string, data: unknown) => void;
+  controlRef?: (control: FrameControl | null) => void;
 }
 
 export const SANDBOX = "allow-scripts";
-
-/**
- * Functions in props get a new identity every render. Each is passed to the
- * frame as one stable stand-in that calls whatever the latest props hold.
- */
-function useStableProps(props: Record<string, unknown>) {
-  const latest = useRef(props);
-  latest.current = props;
-  const cache = useRef(new Map<string, (...args: unknown[]) => unknown>());
-
-  return useMemo(() => {
-    const walk = (value: unknown, path: string, depth: number): unknown => {
-      if (typeof value === "function") {
-        let stable = cache.current.get(path);
-        if (!stable) {
-          stable = (...args: unknown[]) => {
-            let target: unknown = latest.current;
-            for (const part of path.split(".")) {
-              target = (target as Record<string, unknown> | undefined)?.[part];
-            }
-            return typeof target === "function"
-              ? (target as (...a: unknown[]) => unknown)(...args)
-              : undefined;
-          };
-          cache.current.set(path, stable);
-        }
-        return stable;
-      }
-      if (
-        depth < 2 &&
-        value &&
-        typeof value === "object" &&
-        !Array.isArray(value) &&
-        Object.getPrototypeOf(value) === Object.prototype
-      ) {
-        const out: Record<string, unknown> = {};
-        for (const [name, item] of Object.entries(value)) {
-          out[name] = walk(item, `${path}.${name}`, depth + 1);
-        }
-        return out;
-      }
-      return value;
-    };
-    const out: Record<string, unknown> = {};
-    for (const [name, value] of Object.entries(props)) {
-      out[name] = walk(value, name, 0);
-    }
-    return out;
-  }, [props]);
-}
 
 export function PluginFrameView({
   pluginId,
@@ -106,7 +73,15 @@ export function PluginFrameView({
   fallback,
   className,
   style,
+  edge,
+  onFrameEvent,
+  controlRef,
 }: PluginFrameViewProps) {
+  const overlay = fit === "overlay";
+  const seeThrough = transparent || overlay;
+  const [drawn, setDrawn] = useState(!overlay);
+  const eventRef = useRef(onFrameEvent);
+  eventRef.current = onFrameEvent;
   const iframe = useRef<HTMLIFrameElement>(null);
   const connection = useRef<FrameConnection | null>(null);
   const [size, setSize] = useState<{ width: number; height: number } | null>(
@@ -137,12 +112,14 @@ export function PluginFrameView({
       frameUrl(pluginId, {
         role: "view",
         key: frameKey,
-        fit: fit === "fill" ? "fill" : "content",
+        fit: fit === "fill" || fit === "overlay" ? "fill" : "content",
         inline: fit === "inline" ? "1" : undefined,
-        bg: transparent ? "none" : undefined,
+        bg: seeThrough ? "none" : undefined,
+        drawn: overlay ? "1" : undefined,
+        edge: edge ? "1" : undefined,
         v: version || undefined,
       }),
-    [pluginId, frameKey, fit, transparent, version],
+    [pluginId, frameKey, fit, seeThrough, overlay, edge, version],
   );
 
   useLayoutEffect(() => {
@@ -154,20 +131,40 @@ export function PluginFrameView({
       getProps: () => stableRef.current,
       onReady: () => setReady(true),
       onEvent: (name, data) => {
-        if (name !== "size" || !data || typeof data !== "object") return;
+        if (name === "drawn") {
+          setDrawn((data as { drawn?: unknown } | null)?.drawn === true);
+          eventRef.current?.(name, data);
+          return;
+        }
+        if (name !== "size") {
+          eventRef.current?.(name, data);
+          return;
+        }
+        if (!data || typeof data !== "object") return;
         const { width, height } = data as { width?: unknown; height?: unknown };
         if (typeof width !== "number" || typeof height !== "number") return;
-        setSize({
+        const next = {
           width: Math.max(0, Math.min(width, 10_000)),
           height: Math.max(0, Math.min(height, 20_000)),
-        });
+        };
+        setSize(next);
+        eventRef.current?.(name, next);
       },
     });
     connection.current = next;
+    controlRef?.({
+      focusEdge: (at) => {
+        element.focus();
+        next.port?.emit("focusEdge", at === "last" ? "last" : "first");
+      },
+    });
     return () => {
+      controlRef?.(null);
       next.close();
       connection.current = null;
     };
+    // controlRef is read once per frame.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pluginId, frameKey, src]);
 
   useEffect(() => {
@@ -196,7 +193,7 @@ export function PluginFrameView({
   }, [ready, stable]);
 
   const sizing: CSSProperties =
-    fit === "fill"
+    fit === "fill" || fit === "overlay"
       ? { width: "100%", height: "100%", flex: "1 1 auto", minHeight: 0 }
       : fit === "inline"
         ? {
@@ -212,7 +209,9 @@ export function PluginFrameView({
   const hidden: CSSProperties =
     empty && fallback !== undefined
       ? { position: "absolute", pointerEvents: "none" }
-      : {};
+      : overlay && !drawn
+        ? { pointerEvents: "none", visibility: "hidden" }
+        : {};
 
   const frame = (
     <iframe
