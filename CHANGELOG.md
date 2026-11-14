@@ -56,6 +56,7 @@
 
 ### Fixed
 
+- Tile grids (dashboards, Homepage, host pages) go back to columns when the window gets wide again, and show their tiles when a page opens on a narrow screen
 - A very long path prefix header no longer slows down the request it came with
 - Desktop sync: when the same change was sent twice in one sync, the change was saved but the desktop was told it conflicted. The repeat is now answered as a duplicate
 - SOCKS4 and SOCKS5 proxy chains set up in the host editor now connect. The proxy type was passed on in a form the proxy client refused

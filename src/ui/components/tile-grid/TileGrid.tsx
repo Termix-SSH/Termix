@@ -182,6 +182,8 @@ export function TileGrid({
     [slots, renderTile],
   );
 
+  // The stacked and grid layouts each have their own root, so watch the one
+  // on screen. A frame shown after it loaded resizes the window, not the root.
   useLayoutEffect(() => {
     const element = root.current;
     if (!element) return;
@@ -190,8 +192,12 @@ export function TileGrid({
     update();
     const observer = new ResizeObserver(update);
     observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
+    window.addEventListener("resize", update);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [stacked]);
 
   useLayoutEffect(() => {
     const element = root.current;
@@ -503,17 +509,23 @@ export function TileGrid({
         >
           {[...settled]
             .sort((a, b) => a.y - b.y || a.x - b.x)
-            .map((box) => (
-              <div
-                key={box.id}
-                className={cn(
-                  "w-full min-w-0",
-                  seamless && "border-b border-border",
-                )}
-              >
-                {content.get(box.id)}
-              </div>
-            ))}
+            .map((box) => {
+              // A tile with a set height keeps it, so a part that fills its
+              // box (a chart, another plugin's widget) still has one.
+              const h = slots.find((slot) => slot.id === box.id)?.h;
+              return (
+                <div
+                  key={box.id}
+                  className={cn(
+                    "flex w-full min-w-0 flex-col",
+                    seamless && "border-b border-border",
+                  )}
+                  style={h != null ? { height: h * scale } : undefined}
+                >
+                  {content.get(box.id)}
+                </div>
+              );
+            })}
         </div>
       </SeamlessTileContext.Provider>
     );
