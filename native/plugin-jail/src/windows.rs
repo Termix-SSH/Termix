@@ -15,9 +15,9 @@ use windows_sys::Win32::Foundation::{
 };
 use windows_sys::Win32::Security::Authorization::{
     ConvertStringSecurityDescriptorToSecurityDescriptorW, ConvertStringSidToSidW,
-    EXPLICIT_ACCESS_W, GRANT_ACCESS, GetNamedSecurityInfoW, NO_MULTIPLE_TRUSTEE, REVOKE_ACCESS,
-    SDDL_REVISION_1, SE_FILE_OBJECT, SetEntriesInAclW, SetNamedSecurityInfoW, TRUSTEE_IS_SID,
-    TRUSTEE_IS_WELL_KNOWN_GROUP, TRUSTEE_W,
+    EXPLICIT_ACCESS_W, GRANT_ACCESS, GetNamedSecurityInfoW, GetSecurityInfo, NO_MULTIPLE_TRUSTEE,
+    REVOKE_ACCESS, SDDL_REVISION_1, SE_FILE_OBJECT, SE_WINDOW_OBJECT, SetEntriesInAclW,
+    SetNamedSecurityInfoW, SetSecurityInfo, TRUSTEE_IS_SID, TRUSTEE_IS_WELL_KNOWN_GROUP, TRUSTEE_W,
 };
 use windows_sys::Win32::Security::Isolation::{
     CreateAppContainerProfile, DeriveAppContainerSidFromAppContainerName,
@@ -50,6 +50,7 @@ use windows_sys::Win32::System::JobObjects::{
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JobObjectAssociateCompletionPortInformation,
     JobObjectBasicUIRestrictions, JobObjectExtendedLimitInformation, SetInformationJobObject,
 };
+use windows_sys::Win32::System::StationsAndDesktops::{GetProcessWindowStation, GetThreadDesktop};
 use windows_sys::Win32::System::SystemServices::{
     JOB_OBJECT_MSG_ABNORMAL_EXIT_PROCESS, JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO,
     JOB_OBJECT_MSG_EXIT_PROCESS, JOB_OBJECT_MSG_PROCESS_MEMORY_LIMIT,
@@ -57,8 +58,8 @@ use windows_sys::Win32::System::SystemServices::{
 use windows_sys::Win32::System::Threading::{
     CREATE_NO_WINDOW, CREATE_SUSPENDED, CreateProcessAsUserW, CreateProcessW,
     DeleteProcThreadAttributeList, EXTENDED_STARTUPINFO_PRESENT, GetCurrentProcess,
-    GetExitCodeProcess, INFINITE, InitializeProcThreadAttributeList, LPPROC_THREAD_ATTRIBUTE_LIST,
-    OpenProcessToken, PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+    GetCurrentThreadId, GetExitCodeProcess, INFINITE, InitializeProcThreadAttributeList,
+    LPPROC_THREAD_ATTRIBUTE_LIST, OpenProcessToken, PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
     PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES, PROCESS_INFORMATION, ResumeThread,
     STARTF_USESTDHANDLES, STARTUPINFOEXW, TerminateProcess, UpdateProcThreadAttribute,
     WaitForSingleObject,
@@ -267,6 +268,75 @@ fn set_entry(path: &Path, sid: PSID, mask: u32, add: bool) -> Result<(), String>
     })();
     unsafe { LocalFree(descriptor) };
     result
+}
+
+/// An AppContainer process can't start (DLL init fails) when it can't use
+/// the window station and desktop it runs on. The interactive one (WinSta0)
+/// already lets every app package in; a service session's does not, so add
+/// the same entry there. A failure here is left to show at process start.
+fn open_window_objects(any_package: PSID) {
+    // WINSTA_ENUMDESKTOPS | WINSTA_READATTRIBUTES | WINSTA_ACCESSGLOBALATOMS
+    // | WINSTA_ENUMERATE | READ_CONTROL
+    let station_mask = 0x1 | 0x2 | 0x20 | 0x100 | 0x20000;
+    // DESKTOP_READOBJECTS | DESKTOP_ENUMERATE | READ_CONTROL
+    let desktop_mask = 0x1 | 0x40 | 0x20000;
+    let station = unsafe { GetProcessWindowStation() };
+    let desktop = unsafe { GetThreadDesktop(GetCurrentThreadId()) };
+    for (handle, mask) in [
+        (station as HANDLE, station_mask),
+        (desktop as HANDLE, desktop_mask),
+    ] {
+        if handle.is_null() {
+            continue;
+        }
+        let mut dacl: *mut ACL = null_mut();
+        let mut descriptor: PSECURITY_DESCRIPTOR = null_mut();
+        let rc = unsafe {
+            GetSecurityInfo(
+                handle,
+                SE_WINDOW_OBJECT,
+                DACL_SECURITY_INFORMATION,
+                null_mut(),
+                null_mut(),
+                &mut dacl,
+                null_mut(),
+                &mut descriptor,
+            )
+        };
+        if rc != 0 {
+            continue;
+        }
+        if !unsafe { has_grant(dacl, any_package, mask) } {
+            let entry = EXPLICIT_ACCESS_W {
+                grfAccessPermissions: mask,
+                grfAccessMode: GRANT_ACCESS,
+                grfInheritance: NO_INHERITANCE,
+                Trustee: TRUSTEE_W {
+                    pMultipleTrustee: null_mut(),
+                    MultipleTrusteeOperation: NO_MULTIPLE_TRUSTEE,
+                    TrusteeForm: TRUSTEE_IS_SID,
+                    TrusteeType: TRUSTEE_IS_WELL_KNOWN_GROUP,
+                    ptstrName: any_package as *mut u16,
+                },
+            };
+            let mut updated: *mut ACL = null_mut();
+            if unsafe { SetEntriesInAclW(1, &entry, dacl, &mut updated) } == 0 {
+                unsafe {
+                    SetSecurityInfo(
+                        handle,
+                        SE_WINDOW_OBJECT,
+                        DACL_SECURITY_INFORMATION,
+                        null_mut(),
+                        null_mut(),
+                        updated,
+                        null(),
+                    );
+                    LocalFree(updated as *mut c_void);
+                }
+            }
+        }
+        unsafe { LocalFree(descriptor) };
+    }
 }
 
 /// Standard Windows quoting, so the runtime sees the same argv.
@@ -551,6 +621,7 @@ fn start(policy: &Policy, program: &str, rest: &[String]) -> Result<i32, String>
             // stops low integrity plugins from reading the same folders.
             // These folders hold only app and plugin code.
             let any = any_package_sid()?;
+            open_window_objects(any.0);
             let read_mask = FILE_GENERIC_READ | FILE_GENERIC_EXECUTE;
             if let Some(dir) = Path::new(program).parent() {
                 grant(dir, any.0, read_mask)?;

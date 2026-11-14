@@ -255,8 +255,8 @@ pub fn enter(policy: &Policy, prepared: Prepared) -> Result<(), String> {
         libc::prctl(libc::PR_SET_DUMPABLE, 0);
     }
     set_limit(libc::RLIMIT_CORE, 0);
-    // A backstop under the memory watch; V8 reserves address space it never
-    // touches, so this counts only writable private memory.
+    // A backstop under the memory watch. V8 reserves its code range against
+    // this limit at start, so it can't be the cap itself.
     set_limit(libc::RLIMIT_DATA, policy.memory_bytes() * 4);
 
     match landlock(policy, &prepared)? {

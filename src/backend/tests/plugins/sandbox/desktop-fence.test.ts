@@ -21,15 +21,16 @@ vi.mock("../../../plugins/permissions.js", () => ({
   hasCapability: async (_id: string, capability: string, declared: string[]) =>
     declared.includes(capability),
 }));
+const logged = vi.hoisted(() => [] as string[]);
 vi.mock("../../../utils/logger.js", () => {
-  const quiet = () => {};
+  const keep = (text: string) => void logged.push(String(text));
   return {
     pluginLogger: {
-      info: quiet,
-      warn: quiet,
-      error: quiet,
-      debug: quiet,
-      success: quiet,
+      info: keep,
+      warn: keep,
+      error: keep,
+      debug: keep,
+      success: keep,
     },
   };
 });
@@ -322,11 +323,16 @@ describe.runIf(built)("desktop plugin fence (packaged runtime)", () => {
           await ctx.report(out);
         }`,
     );
-    await supervisor.register(
-      spec("fence-probe", files, (value) => {
-        result = value as Record<string, unknown>;
-      }),
-    );
+    // The plugin's own output says why it did not start.
+    await supervisor
+      .register(
+        spec("fence-probe", files, (value) => {
+          result = value as Record<string, unknown>;
+        }),
+      )
+      .catch((error: Error) => {
+        throw new Error([error.message, ...logged].join("\n"));
+      });
     await until(() => result !== null);
     await supervisor.shutdown();
     expect(result).toMatchObject({
@@ -397,10 +403,10 @@ describe.runIf(built)("desktop plugin fence (packaged runtime)", () => {
     // A Linux kernel without Landlock (before 5.13, or turned off) leaves
     // files to Node's rules; the helper says so and the docs list it.
     const noLandlock = /no Landlock/.test(run.stderr);
-    const probes = noLandlock
+    const checked = noLandlock
       ? ["spawn", "connect"]
       : ["readSecret", "writeOutside", "spawn", "connect"];
-    for (const probe of probes) {
+    for (const probe of checked) {
       expect(out[probe], probe).not.toBe("open");
     }
     if (!noLandlock) expect(fs.existsSync(outside)).toBe(false);
@@ -411,7 +417,7 @@ describe.runIf(built)("desktop plugin fence (packaged runtime)", () => {
       `const keep = []; setInterval(() => keep.push(Buffer.alloc(32 * 1024 * 1024, 1)), 10);`,
       { memoryMb: 256 },
     );
-    expect(run.code).toBe(86);
+    expect(run.code, run.stderr).toBe(86);
     expect(run.stderr).toMatch(/memory limit of 256 MB/);
   }, 60_000);
 
@@ -421,6 +427,7 @@ describe.runIf(built)("desktop plugin fence (packaged runtime)", () => {
         `console.log(JSON.stringify(await run()));`,
       { net: true },
     );
+    expect(run.code, run.stderr).toBe(0);
     const out = JSON.parse(run.stdout.trim().split("\n").pop()!);
     expect(out.socket).toBe("open");
   }, 60_000);

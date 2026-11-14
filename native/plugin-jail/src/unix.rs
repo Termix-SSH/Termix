@@ -29,6 +29,21 @@ fn cstring(text: &str) -> CString {
     })
 }
 
+/// The largest resident size any ended child reached.
+fn peak_bytes() -> u64 {
+    let mut usage: libc::rusage = unsafe { std::mem::zeroed() };
+    if unsafe { libc::getrusage(libc::RUSAGE_CHILDREN, &mut usage) } != 0 {
+        return 0;
+    }
+    let peak = usage.ru_maxrss.max(0) as u64;
+    // Linux reports kilobytes, macOS bytes.
+    if cfg!(target_os = "linux") {
+        peak * 1024
+    } else {
+        peak
+    }
+}
+
 pub fn run(policy: &Policy, program: &str, rest: &[String]) -> i32 {
     let path = cstring(program);
     let mut argv: Vec<CString> = vec![path.clone()];
@@ -76,6 +91,14 @@ pub fn run(policy: &Policy, program: &str, rest: &[String]) -> i32 {
         let mut status: libc::c_int = 0;
         let done = unsafe { libc::waitpid(pid, &mut status, libc::WNOHANG) };
         if done == pid {
+            let failed = !(libc::WIFEXITED(status) && libc::WEXITSTATUS(status) == 0);
+            if !over_cap && failed && peak_bytes() * 4 >= cap * 3 {
+                over_cap = true;
+                eprintln!(
+                    "termix-plugin-jail: memory limit of {} MB reached, stopping",
+                    policy.memory_mb
+                );
+            }
             if over_cap {
                 return EXIT_MEMORY;
             }
