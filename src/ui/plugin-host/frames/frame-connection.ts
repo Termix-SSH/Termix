@@ -47,6 +47,7 @@ import {
 import { frameToken } from "./frame-token";
 import { readFrameStorage, writeFrameStorage } from "./frame-storage";
 import { setUiPreferenceFromFrame } from "./frame-ui-preferences";
+import { requestStepUp } from "@/auth/StepUpPrompt";
 
 export interface FrameEvents {
   /** A view's current props, sent with its boot data. */
@@ -377,6 +378,11 @@ async function handleCall(
             : undefined,
         destructive: options.destructive !== false,
       });
+    }
+    case "stepUp": {
+      // Only right after the user did something in the frame.
+      if (!recentlyUsed(connection)) throw new Error("Not allowed now");
+      return requestStepUp();
     }
     case "openUrl": {
       const [url] = args;

@@ -566,6 +566,8 @@ export function createFrameApp(host: FrameAppHost): {
 
     confirm: (options) => host.call("confirm", options) as Promise<boolean>,
 
+    stepUp: () => host.call("stepUp") as Promise<boolean>,
+
     docs: (() => {
       const url = pluginDocsUrl(manifest?.docs);
       const page = (name?: string, anchor?: string) =>

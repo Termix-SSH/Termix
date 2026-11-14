@@ -26,6 +26,16 @@ vi.mock("../../operations/gate.js", () => ({
     }
   },
 }));
+const runAccess = vi.hoisted(() => ({
+  cancelRunAs: vi.fn(async (): Promise<boolean | null> => true),
+  undoRunAs: vi.fn(
+    async (): Promise<{ runId: string; status: string } | null> => ({
+      runId: "u",
+      status: "success",
+    }),
+  ),
+}));
+vi.mock("../../operations/run-access.js", () => runAccess);
 vi.mock("../../operations/catalog.js", () => ({
   buildCatalog: vi.fn(async () => ({ actions: [] })),
 }));
@@ -263,5 +273,84 @@ describe("approvals.decide", () => {
     await expect(
       decide(["operations:approve"])({ approvalId: "a1" }, { userId: "u1" }),
     ).rejects.toThrow("required");
+  });
+});
+
+describe("runs", () => {
+  type Call = (input: unknown, request?: unknown) => Promise<unknown>;
+  const runs = (capabilities: string[]) =>
+    build(capabilities).operations.runs as unknown as {
+      cancel: Call;
+      undo: Call;
+    };
+
+  beforeEach(() => {
+    runAccess.cancelRunAs.mockClear();
+    runAccess.undoRunAs.mockClear();
+  });
+
+  it("needs the capability", async () => {
+    await expect(
+      runs([]).cancel({ runId: "r1" }, { userId: "u1" }),
+    ).rejects.toThrow("refused");
+    await expect(
+      runs([]).undo({ runId: "r1" }, { userId: "u1" }),
+    ).rejects.toThrow("refused");
+  });
+
+  it("works only inside one of the plugin's own requests", async () => {
+    const { cancel, undo } = runs(["operations:invoke"]);
+    await expect(cancel({ runId: "r1" })).rejects.toThrow("own requests");
+    await expect(undo({ runId: "r1" })).rejects.toThrow("own requests");
+    expect(runAccess.cancelRunAs).not.toHaveBeenCalled();
+    expect(runAccess.undoRunAs).not.toHaveBeenCalled();
+  });
+
+  it("refuses a request made with an API key", async () => {
+    const { cancel, undo } = runs(["operations:invoke"]);
+    await expect(
+      cancel({ runId: "r1" }, { userId: "u1", apiKeyId: "k" }),
+    ).rejects.toThrow("API keys");
+    await expect(
+      undo({ runId: "r1" }, { userId: "u1", apiKeyScopes: ["full"] }),
+    ).rejects.toThrow("API keys");
+    expect(runAccess.cancelRunAs).not.toHaveBeenCalled();
+    expect(runAccess.undoRunAs).not.toHaveBeenCalled();
+  });
+
+  it("acts as the person on the request, never anyone the plugin names", async () => {
+    const { cancel, undo } = runs(["operations:invoke"]);
+    await expect(
+      cancel({ runId: "r1", userId: "admin" }, { userId: "u1" }),
+    ).resolves.toEqual({ cancelled: true });
+    expect(runAccess.cancelRunAs).toHaveBeenCalledWith("r1", "u1");
+    await undo(
+      { runId: "r1", confirmed: true, userId: "admin" },
+      { userId: "u1" },
+    );
+    expect(runAccess.undoRunAs).toHaveBeenCalledWith({
+      runId: "r1",
+      userId: "u1",
+      origin: { kind: "ui" },
+      confirmed: true,
+    });
+  });
+
+  it("answers not found for a run the person can't see", async () => {
+    const { cancel, undo } = runs(["operations:invoke"]);
+    runAccess.cancelRunAs.mockResolvedValueOnce(null);
+    runAccess.undoRunAs.mockResolvedValueOnce(null);
+    await expect(cancel({ runId: "r1" }, { userId: "u1" })).rejects.toThrow(
+      "Run not found",
+    );
+    await expect(undo({ runId: "r1" }, { userId: "u1" })).rejects.toThrow(
+      "Nothing to undo",
+    );
+  });
+
+  it("needs a run id", async () => {
+    await expect(
+      runs(["operations:invoke"]).cancel({}, { userId: "u1" }),
+    ).rejects.toThrow("runId");
   });
 });

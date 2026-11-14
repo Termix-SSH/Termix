@@ -96,6 +96,7 @@ import { pluginKey } from "@/lib/plugin-i18n";
 import { pluginDocsPage, pluginDocsUrl } from "@termix-ssh/plugin-sdk/docs";
 import { hasPermission } from "@/hooks/use-permissions";
 import i18n from "@/i18n/i18n";
+import { requestStepUp } from "@/auth/StepUpPrompt";
 
 const ONBOARDING_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
@@ -752,6 +753,8 @@ export function createPluginApp(
     },
 
     confirm: (options) => shell.confirm!(options),
+
+    stepUp: () => requestStepUp(),
 
     docs: createDocsApi(manifest),
 

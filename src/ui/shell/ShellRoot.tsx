@@ -9,6 +9,7 @@ import { TabPortals } from "@/shell/stage/TabPortals";
 import { LayoutHost } from "@/shell/layout/LayoutHost";
 import { ShellControllerProvider } from "@/shell/controller/ShellControllerProvider";
 import { FrameStateSync } from "@/plugin-host/frames/FrameStateSync";
+import { StepUpPromptHost } from "@/auth/StepUpPrompt";
 
 /**
  * The signed-in app: the shell's state, the chosen layout, every tab's
@@ -30,6 +31,7 @@ export function ShellRoot({
         <ComponentSlot slotId="shell.overlay" />
         <OnboardingHost />
         <SafeModeNotice />
+        <StepUpPromptHost />
         {isElectron() && <DesktopUpdateToasts />}
         {isElectron() && <DesktopTrayNotice />}
       </ShellControllerProvider>

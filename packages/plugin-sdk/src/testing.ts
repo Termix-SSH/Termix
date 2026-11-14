@@ -388,6 +388,13 @@ export interface FakePluginContext {
   operationHandlers: Map<string, PluginOperationHandler>;
   /** Every ctx.operations.emit call. */
   operationEvents: { eventId: string; payload: unknown; hostId?: number }[];
+  /** Every ctx.operations.runs.cancel and undo call, with the acting user. */
+  runCalls: Array<{
+    actor: string | undefined;
+    call: "cancel" | "undo";
+    runId: string;
+    confirmed?: boolean;
+  }>;
   /** Every ctx.operations.approvals.decide call, with the acting user. */
   approvalDecisions: Array<{
     actor: string | undefined;
@@ -611,6 +618,7 @@ export function createFakeContext(
   const operationHandlers: FakePluginContext["operationHandlers"] = new Map();
   const operationEvents: FakePluginContext["operationEvents"] = [];
   const approvalDecisions: FakePluginContext["approvalDecisions"] = [];
+  const runCalls: FakePluginContext["runCalls"] = [];
   const fetches: FakePluginContext["fetches"] = [];
   const processRuns: FakePluginContext["processRuns"] = [];
   const binaries: FakePluginContext["binaries"] = [];
@@ -1580,6 +1588,18 @@ export function createFakeContext(
         operationEvents.push({ eventId, payload, hostId: options?.hostId });
       },
       onEvent: () => () => {},
+      runs: {
+        cancel: async (input) => {
+          if (!actor) throw new Error("runs.cancel needs an acting user");
+          runCalls.push({ actor, call: "cancel", runId: input.runId });
+          return { cancelled: true };
+        },
+        undo: async (input) => {
+          if (!actor) throw new Error("runs.undo needs an acting user");
+          runCalls.push({ actor, call: "undo", ...input });
+          return { runId: null, status: "success" };
+        },
+      },
       approvals: {
         provide: () => () => {},
         decide: async (input) => {
@@ -1761,6 +1781,7 @@ export function createFakeContext(
     operationHandlers,
     operationEvents,
     approvalDecisions,
+    runCalls,
     fetches,
     processRuns,
     binaries,

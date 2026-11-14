@@ -1368,6 +1368,13 @@ export interface TermixApp extends TermixAppInfo {
    * over that surface instead.
    */
   confirm: (options: ConfirmRequest) => Promise<boolean>;
+  /**
+   * Asks the person to prove a second factor in a prompt the shell owns, so
+   * the plugin never sees the code. True once proved, false when they cancel.
+   * In a frame it only works right after the person did something in it.
+   * Termix 26.11.2 and plugin API 2.6; check it exists on older cores.
+   */
+  stepUp?: () => Promise<boolean>;
   /** The desktop app, when the frontend runs in it. */
   desktop: DesktopApi;
   /** This plugin's docs. Needs plugin API 1.2. */

@@ -915,6 +915,12 @@
     "empty": "No cards. Use Add below to place cards."
   },
   "auth": {
+    "stepUp": {
+      "title": "Verify it's you",
+      "description": "Prove your second factor to go on.",
+      "noFactor": "You have no second factor set up. Add one in Settings, then try again.",
+      "failed": "That did not work. Try again."
+    },
     "tagline": "Self-hosted, plugin-based server management.",
     "loginTitle": "Welcome back",
     "registerTitle": "Create Account",

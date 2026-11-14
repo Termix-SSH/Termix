@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 2.5.0 | Plugin API 2.5.0
+SDK 2.6.0 | Plugin API 2.6.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -642,6 +642,9 @@ ctx.operations.register("demo.restart", {
   decides one from a route of its own with `ctx.operations.approvals.decide({ approvalId, approve, comment })`. It only
   works inside one of your requests: the person on that request decides, with their own rights, and an API key
   request is refused. A frame can read approvals but never decide one itself.
+- Cancel and undo work the same way (needs `operations:invoke`): from a route of your own call
+  `ctx.operations.runs.cancel({ runId })` or `ctx.operations.runs.undo({ runId, confirmed })`. Only inside one of your
+  requests, as the person on it, never with an API key. A frame can't post to `/operations/runs/:id/cancel` or `/undo`.
 - To run another plugin's action, add `operations:invoke`, list it in `operations.invokes` and call
   `ctx.operations.invoke(id, { hostId, input, via: "automation" })`. It acts as the current user and rules still apply.
 - `risk` is your plugin's claim. Plugins run in-process, so this is not a sandbox. Actions from plugins not signed as
@@ -1013,6 +1016,8 @@ exports with props is `ui.api.txt` in the Termix repo
 - Flat: borders, not shadows. Use theme tokens like `border-border`, `bg-background`,
   `text-muted-foreground`, `text-destructive`. One accent, `text-accent-brand`. Don't add colors.
 - Small type: most text 11 to 13px.
+- To make someone prove a second factor (a connect policy that asks for a step up), call `app.stepUp()`. The shell
+  shows the factor screen and answers true or false; never draw factor screens or post to `/users/auth/step-up` yourself.
 - No new modal dialogs. Ask with `useConfirm()`, open views in place with `InlineView`, and use
   `PanePrompt` for small prompts.
 - Every tab or panel sits in `PanelShell` (inside `PanelFrame` when it is a tab). Lists use `PanelList` and

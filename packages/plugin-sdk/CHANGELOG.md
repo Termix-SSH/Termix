@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.6.0
+
+Plugin API 2.6.0. Needs Termix 26.11.2.
+
+### Added
+
+- `ctx.operations.runs.cancel({ runId })` and `ctx.operations.runs.undo({ runId, confirmed })` cancel or undo a run from inside one of the plugin's own requests, as the person on that request. Needs `operations:invoke`
+- `app.stepUp()` asks the person to prove a second factor in a prompt the shell owns and answers true or false; a plugin never sees the code. In a frame it works only right after the person used the frame
+- `createMockCtx` answers `ctx.operations.runs` and records `runCalls`
+
 ## 2.5.0
 
 Plugin API 2.5.0. Needs Termix 26.11.2.

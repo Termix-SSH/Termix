@@ -10,12 +10,16 @@ import { createCurrentOperationRepository } from "../repositories/factory.js";
 import type { OperationRunRecord } from "../repositories/operation-repository.js";
 import { buildCatalog } from "../../operations/catalog.js";
 import {
-  cancelOperationRun,
   decideOperationApproval,
   OperationError,
   runOperation,
 } from "../../operations/gate.js";
-import { getAction } from "../../operations/registry.js";
+import {
+  canSeeRun,
+  cancelRunAs,
+  undoRunAs,
+  VIEW_ALL_RUNS,
+} from "../../operations/run-access.js";
 import {
   flattenResourceRows,
   readAcrossHosts,
@@ -26,8 +30,7 @@ const router = express.Router();
 const authenticateJWT = AuthManager.getInstance().createAuthMiddleware();
 const permissions = PermissionManager.getInstance();
 
-/** Sees every run on the server, not only their own. */
-export const VIEW_ALL_RUNS = "admin.operations.view";
+export { VIEW_ALL_RUNS };
 
 type OperationsRequest = Request & {
   userId: string;
@@ -90,17 +93,6 @@ function publicRun(run: OperationRunRecord) {
     startedAt: run.startedAt,
     finishedAt: run.finishedAt,
   };
-}
-
-async function canSeeRun(
-  run: OperationRunRecord,
-  userId: string,
-): Promise<boolean> {
-  if (run.userId === userId) return true;
-  if (await permissions.hasPermission(userId, VIEW_ALL_RUNS)) return true;
-  if (run.hostId === null) return false;
-  const access = await permissions.canAccessHost(userId, run.hostId, "manage");
-  return access.hasAccess;
 }
 
 function hostIdsFrom(value: unknown): number[] | undefined {
@@ -322,14 +314,12 @@ router.get("/runs/:id", authenticateJWT, async (req, res) => {
 router.post("/runs/:id/cancel", authenticateJWT, async (req, res) => {
   const { userId } = req as OperationsRequest;
   try {
-    const run = await createCurrentOperationRepository().findRun(
-      String(req.params.id),
-    );
-    if (!run || !(await canSeeRun(run, userId))) {
+    const cancelled = await cancelRunAs(String(req.params.id), userId);
+    if (cancelled === null) {
       res.status(404).json({ error: "Run not found" });
       return;
     }
-    res.json({ cancelled: await cancelOperationRun(run) });
+    res.json({ cancelled });
   } catch (error) {
     sendError(res, error, "operations_cancel");
   }
@@ -358,31 +348,18 @@ router.post("/runs/:id/cancel", authenticateJWT, async (req, res) => {
 router.post("/runs/:id/undo", authenticateJWT, async (req, res) => {
   const authReq = req as OperationsRequest;
   try {
-    const run = await createCurrentOperationRepository().findRun(
-      String(req.params.id),
-    );
-    const undo = run ? getAction(run.actionId)?.action.undo : undefined;
-    if (
-      !run ||
-      !undo ||
-      !run.undoInput ||
-      !(await canSeeRun(run, authReq.userId))
-    ) {
+    const outcome = await undoRunAs({
+      runId: String(req.params.id),
+      userId: authReq.userId,
+      origin: originOf(authReq),
+      confirmed: req.body?.confirmed === true,
+      apiKeyScopes: authReq.apiKeyScopes,
+    });
+    if (!outcome) {
       res.status(404).json({ error: "Nothing to undo" });
       return;
     }
-    res.json(
-      await runOperation({
-        actionId: undo,
-        hostId: run.hostId ?? undefined,
-        input: parseJson(run.undoInput),
-        confirmed: req.body?.confirmed === true,
-        undoOf: run.id,
-        userId: authReq.userId,
-        origin: originOf(authReq),
-        apiKeyScopes: authReq.apiKeyScopes,
-      }),
-    );
+    res.json(outcome);
   } catch (error) {
     sendError(res, error, "operations_undo");
   }

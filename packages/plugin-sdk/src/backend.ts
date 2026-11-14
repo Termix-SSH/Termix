@@ -3514,6 +3514,20 @@ export interface PluginOperations {
     userId?: string;
     cooldownMs?: number;
   }) => () => void;
+  /**
+   * Cancel or undo a run. Needs operations:invoke and works only inside one
+   * of the plugin's own requests: the person on that request acts, with
+   * their own rights. Requests made with an API key are refused.
+   */
+  runs: {
+    /** Stops a running action, or withdraws one waiting for approval. */
+    cancel: (input: { runId: string }) => Promise<{ cancelled: boolean }>;
+    /** Runs the action's undo with the input the run recorded. */
+    undo: (input: {
+      runId: string;
+      confirmed?: boolean;
+    }) => Promise<PluginOperationOutcome>;
+  };
   /** Rules for what needs a person, and deciding. Needs operations:approve. */
   approvals: {
     /**

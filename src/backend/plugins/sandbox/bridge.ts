@@ -105,6 +105,8 @@ const SPECIAL_PATHS = new Set([
   "auth.registerKeyboardInteractiveHandler",
   "auth.completeRedirectLogin",
   "operations.approvals.decide",
+  "operations.runs.cancel",
+  "operations.runs.undo",
   "process.run",
   "currentActor",
   "disposables.add",
@@ -782,6 +784,25 @@ export class PluginBridge {
         );
       },
     );
+
+    // Same for cancel and undo: the person on that request acts.
+    for (const call of ["cancel", "undo"]) {
+      endpoint.handle(`ctx.operations.runs.${call}`, async ([input], token) => {
+        const live = token ? this.liveRequests.get(token) : undefined;
+        if (!live) {
+          throw new SandboxError(
+            `runs.${call} works only inside one of the plugin's own requests`,
+            "SANDBOX_UNSUPPORTED",
+            400,
+          );
+        }
+        return this.callCtx(
+          `operations.runs.${call}`,
+          plainObject(input),
+          live.req,
+        );
+      });
+    }
 
     // Child processes run in core. The exit Promise can't cross, so the
     // child asks for it through waitExit and builds its own.

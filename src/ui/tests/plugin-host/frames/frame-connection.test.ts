@@ -19,6 +19,11 @@ const mocks = vi.hoisted(() => ({
   })),
 }));
 
+const stepUp = vi.hoisted(() => ({
+  requestStepUp: vi.fn(async () => true),
+}));
+vi.mock("@/auth/StepUpPrompt", () => stepUp);
+
 vi.mock("@/main-axios", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/main-axios")>()),
   authApi: { request: mocks.request, post: mocks.post },
@@ -197,6 +202,20 @@ describe("frame connection", () => {
     });
     expect(await call("clipboard.read")).toMatchObject({ ok: false });
     expect(await call("noSuchThing")).toMatchObject({ ok: false });
+  });
+});
+
+describe("step up", () => {
+  it("asks the shell only right after the person used the frame", async () => {
+    connectFrame(iframe, "docker", "view", "tab:docker", {});
+    send({ ch: FRAME_CHANNEL, t: "hello", role: "view", key: "tab:docker" });
+    stepUp.requestStepUp.mockClear();
+    expect(await call("stepUp")).toMatchObject({ ok: false });
+    expect(stepUp.requestStepUp).not.toHaveBeenCalled();
+
+    send({ ch: FRAME_CHANNEL, t: "event", name: "pointer", data: null });
+    expect(await call("stepUp")).toMatchObject({ ok: true, value: true });
+    expect(stepUp.requestStepUp).toHaveBeenCalledTimes(1);
   });
 });
 
