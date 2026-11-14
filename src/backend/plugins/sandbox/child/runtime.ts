@@ -1376,7 +1376,11 @@ endpoint.handle("http.dispatch", ([metaArg, portArg, bodyArg]) => {
       resolve({ handled: true });
     };
     port.on("drain", () => res.emit("drain"));
-    port.on("close", () => res.emit("close"));
+    port.on("close", () => {
+      res.emit("close");
+      // The client went away, as a real request would say.
+      if (!req.destroyed) req.destroy();
+    });
 
     void Promise.resolve(
       handler(req as never, res as never, (error?: unknown) => {

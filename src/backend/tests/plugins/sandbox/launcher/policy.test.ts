@@ -123,6 +123,16 @@ describe("launcher spawn policy", () => {
       },
     ],
     [
+      "the addon switch only Electron gets",
+      {
+        env: {
+          NODE_ENV: "production",
+          TERMIX_SANDBOX_PLUGIN: "docker",
+          TERMIX_SANDBOX_ADDONS: "1",
+        },
+      },
+    ],
+    [
       "a core secret in the env",
       {
         env: {

@@ -310,7 +310,14 @@ class PluginProcess {
       pluginId: this.id,
       runtimePath: paths?.runtime ?? childRuntimePath(),
       execArgv: flags.execArgv,
-      env: pluginEnv(manifest),
+      env: {
+        ...pluginEnv(manifest),
+        // Only Electron needs telling; Node reports it through the permission model.
+        ...(getSpawner().mode === "electron" &&
+        flags.execArgv.includes("--allow-addons")
+          ? { TERMIX_SANDBOX_ADDONS: "1" }
+          : {}),
+      },
       dataDir: getPluginDataDir(this.id),
       firewall: flags.firewall,
     });

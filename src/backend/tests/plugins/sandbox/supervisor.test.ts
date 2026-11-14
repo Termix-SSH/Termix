@@ -889,6 +889,7 @@ describe("the sync provider in a plugin process", () => {
     const cookies: unknown[] = [];
     const listeners: string[] = [];
     let removed = 0;
+    const reports: unknown[] = [];
     const remoteError = Object.assign(new Error("server said no"), {
       kind: "signed_out",
       status: 401,
@@ -982,7 +983,8 @@ describe("the sync provider in a plugin process", () => {
           "/v2/events": [auth, async (req, res) => {
             res.setHeader("Content-Type", "text/event-stream");
             res.write("event: ready\\n\\n");
-            await host.feed.listen(req.userId, res);
+            const stop = await host.feed.listen(req.userId, res);
+            req.on("close", () => { stop(); ctx.report("req closed"); });
           }],
         };
         ctx.sync.provide({
@@ -999,6 +1001,9 @@ describe("the sync provider in a plugin process", () => {
     await supervisor.register(
       spec("syncp", plugin("syncp", body), {
         capabilities: ["sync:provide"],
+        report: (value) => {
+          reports.push(value);
+        },
         ctx: {
           sync: {
             host,
@@ -1072,10 +1077,41 @@ describe("the sync provider in a plugin process", () => {
       expect(text).toBe("event: ready\n\nevent: change\n\n");
       expect(listeners).toEqual(["u1"]);
       controller.abort();
-      await until(() => removed === 1, 5_000);
+      await until(() => removed === 1 && reports.includes("req closed"), 5_000);
     } finally {
       server.close();
       await supervisor.shutdown();
     }
+  }, 30_000);
+});
+
+describe("native addons", () => {
+  it("load only with device:serial", async () => {
+    const results: Record<string, string> = {};
+    const body = `
+      export async function activate(ctx) {
+        let out;
+        try { process.dlopen({ exports: {} }, "/no/such/addon.node"); out = "loaded"; }
+        catch (error) { out = /sandboxed/.test(error.message) ? "refused" : "tried"; }
+        await ctx.report(out);
+      }`;
+    const supervisor = new SandboxSupervisor(config());
+    for (const [id, capabilities] of [
+      ["addonyes", ["device:serial"]],
+      ["addonno", []],
+    ] as const) {
+      await supervisor.register(
+        spec(id, plugin(id, body), {
+          capabilities: [...capabilities],
+          sandbox: { alwaysOn: true },
+          report: (value) => {
+            results[id] = String(value);
+          },
+        }),
+      );
+    }
+    await until(() => Object.keys(results).length === 2);
+    await supervisor.shutdown();
+    expect(results).toEqual({ addonyes: "tried", addonno: "refused" });
   }, 30_000);
 });

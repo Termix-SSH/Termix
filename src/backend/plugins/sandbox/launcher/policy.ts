@@ -51,7 +51,8 @@ export function isPassableEnv(name: string): boolean {
     /^[A-Z][A-Z0-9_]{0,63}$/.test(name) &&
     !CORE_ONLY_ENV.has(name) &&
     !RUNTIME_ENV.test(name) &&
-    name !== "TERMIX_SANDBOX_PLUGIN"
+    name !== "TERMIX_SANDBOX_PLUGIN" &&
+    name !== "TERMIX_SANDBOX_ADDONS"
   );
 }
 

@@ -146,11 +146,19 @@ async function main() {
     await seedFirstBoot(server.base, log);
     await server.stop();
     // Plugins turned on after boot need a restart to be in the inventory.
+    // Plugins that start on first use are started now, so their sockets
+    // are listed too.
     server = await startServer({
       coreDir,
       pluginsDir,
       workDir: workspace.workDir,
       log,
+      env: {
+        TERMIX_PLUGIN_ALWAYS_ON: tables
+          .map((table) => table.pluginId)
+          .filter(Boolean)
+          .join(","),
+      },
     });
 
     const inventory = server.inventory();

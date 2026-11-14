@@ -1827,7 +1827,12 @@ export class PluginBridge {
       port.on("end", resolve);
       port.on("close", resolve);
     });
-    res.on("close", () => port.destroy());
+    // A client that leaves early is told to the plugin, so its request closes.
+    res.on("close", () =>
+      res.writableFinished
+        ? port.destroy()
+        : port.destroy(new Error("The client went away")),
+    );
 
     // A body core did not parse (multipart, rawBody routes) is streamed.
     let bodyPort: StreamPort | undefined;

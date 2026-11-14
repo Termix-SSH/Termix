@@ -21,6 +21,7 @@
 - The screens of every plugin made for plugin API 2 run in sandboxed frames with no access to your login, the rest of the page or other plugins. Each frame reaches only its own plugin, with a short key that ends with your session, and asks Termix for anything else through a fixed list of checks. They keep the same look, theme, shortcuts and language
 - Plugins that only serve pages start on their first use and stop after 10 idle minutes (`TERMIX_PLUGIN_IDLE_MINUTES`). A plugin process that crashes, hangs, uses too much memory (`TERMIX_PLUGIN_MEMORY_MB`) or CPU (`TERMIX_PLUGIN_CPU_LIMIT`) is restarted, and marked failed if it keeps crashing
 - No plugin runs inside the server any more. A plugin made for an older Termix (plugin API 1) stays off until it is updated, and the plugins page lists them
+- A plugin can ask to read the server's environment variables and files, for secrets a config file points at. Termix's own keys and data folder stay out of reach, and an admin has to allow it
 - Plugin signing keys now come from an offline Termix root key. Official and community plugins install only when a key the root vouched for signed them, and each signing key expires
 - Termix checks a root signed revocation list on start and once a day. A revoked plugin, plugin version or signing key is turned off and every admin gets an alert. Servers without internet keep the last list they had
 - Admins get an alert when a plugin update is signed by a different key than the version before

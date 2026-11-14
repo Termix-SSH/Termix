@@ -115,10 +115,18 @@ function harden(): void {
 
   guardWorkers(original);
 
+  // Native addons load only with device:serial (--allow-addons). Electron
+  // ignores the flags, so there core says so in the env instead.
+  const permission = (
+    process as { permission?: { has: (scope: string) => boolean } }
+  ).permission;
+  const addons = permission
+    ? permission.has("addon")
+    : process.env.TERMIX_SANDBOX_ADDONS === "1";
   for (const name of [
     "_debugProcess",
     "_debugEnd",
-    "dlopen",
+    ...(addons ? [] : ["dlopen"]),
     "binding",
     "_linkedBinding",
   ]) {
