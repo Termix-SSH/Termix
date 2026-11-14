@@ -16,6 +16,8 @@ const state = vi.hoisted(() => ({
   records: new Map<string, Rec>(),
   wire: new Map<string, unknown>(),
   stored: new Map<string, Record<string, unknown>>(),
+  // What the server ends up holding instead of the pushed row.
+  storedAs: new Map<string, Record<string, unknown>>(),
   denied: new Set<string>(),
   locked: false,
   failWrite: new Set<string>(),
@@ -55,7 +57,7 @@ vi.mock("../../../sync/store.js", () => ({
     const id = row.syncId as string;
     if (state.failWrite.has(id)) throw new Error("bad row");
     if (state.missOnce.delete(id)) resolvers.onMiss();
-    state.stored.set(id, row);
+    state.stored.set(id, state.storedAs.get(id) ?? row);
   },
   loadWireRow: async (_e: unknown, _u: string, id: string) =>
     state.stored.has(id)
@@ -102,6 +104,7 @@ beforeEach(() => {
   state.records = new Map();
   state.wire = new Map();
   state.stored = new Map();
+  state.storedAs = new Map();
   state.denied = new Set();
   state.locked = false;
   state.failWrite = new Set();
@@ -243,5 +246,71 @@ describe("applyPush", () => {
     expect(state.records.get("snippets:child")).toMatchObject({
       hash: "h-child",
     });
+  });
+});
+
+describe("applyPush with verified fields", () => {
+  const settings = (rdpPort: number) => ({
+    pluginSettings: { "remote-desktop": { rdpPort, enableRdp: true } },
+  });
+
+  beforeEach(() => {
+    state.records.set("hosts:h1", {
+      revision: 3,
+      seq: 1,
+      deleted: false,
+      hash: "old",
+    });
+    resetSyncRegistry();
+    registerEntity(
+      "core",
+      { type: "hosts", table: {}, order: 50 },
+      { verifyFields: ["pluginSettings"] },
+    );
+  });
+
+  it("answers with the server's row when a plugin setting did not take", async () => {
+    const held = { name: "web", ...settings(3389), syncId: "h1" };
+    state.storedAs.set("h1", held);
+    const [result] = await applyPush("u1", [
+      up("hosts", "h1", 3, { name: "web", ...settings(3390) }),
+    ]);
+    expect(result).toEqual({
+      syncId: "h1",
+      entityType: "hosts",
+      status: "conflict",
+      revision: 4,
+      deleted: false,
+      row: held,
+    });
+  });
+
+  it("is ok when the server holds the push and settings of its own", async () => {
+    state.storedAs.set("h1", {
+      name: "web",
+      syncId: "h1",
+      pluginSettings: {
+        "remote-desktop": { rdpPort: 3390, enableRdp: 1 },
+        "server-only": { mode: "x" },
+      },
+    });
+    const [result] = await applyPush("u1", [
+      up("hosts", "h1", 3, { name: "web", ...settings(3390) }),
+    ]);
+    expect(result).toMatchObject({ status: "ok", revision: 4 });
+  });
+
+  it("ignores settings of a plugin or field the server does not know", async () => {
+    state.storedAs.set("h1", { name: "web", ...settings(3390), syncId: "h1" });
+    const [result] = await applyPush("u1", [
+      up("hosts", "h1", 3, {
+        name: "web",
+        pluginSettings: {
+          "remote-desktop": { rdpPort: 3390, enableRdp: true, newField: 1 },
+          "desktop-only": { mode: "y" },
+        },
+      }),
+    ]);
+    expect(result).toMatchObject({ status: "ok" });
   });
 });

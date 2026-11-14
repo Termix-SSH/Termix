@@ -313,6 +313,51 @@ export function hashWire(
     .digest("hex");
 }
 
+/** 0/1 and true/false, or 22 and "22", are the same value across databases. */
+function sameScalar(stored: unknown, pushed: unknown): boolean {
+  const level = (value: unknown) =>
+    value === true ? 1 : value === false ? 0 : value;
+  return String(level(stored)) === String(level(pushed));
+}
+
+/**
+ * Whether `stored` holds everything `pushed` says. An empty value says
+ * nothing, and a key `stored` lacks is one the server does not know (a plugin
+ * it does not run), not one it refused.
+ */
+function holds(stored: unknown, pushed: unknown): boolean {
+  if (pushed === null || pushed === undefined || pushed === "") return true;
+  if (Array.isArray(pushed)) {
+    return JSON.stringify(stored) === JSON.stringify(pushed);
+  }
+  if (typeof pushed !== "object") return sameScalar(stored, pushed);
+  if (!stored || typeof stored !== "object" || Array.isArray(stored)) {
+    return false;
+  }
+  const object = stored as Record<string, unknown>;
+  return Object.entries(pushed).every(
+    ([key, value]) => !(key in object) || holds(object[key], value),
+  );
+}
+
+/**
+ * The entity's verified fields the server stored differently from the push,
+ * such as a plugin setting its version of the plugin refused. What only one
+ * side has (another plugin's settings, a newer field) is not a miss.
+ */
+export function unheldFields(
+  entity: RegisteredSyncEntity,
+  pushed: SyncRow,
+  stored: SyncRow,
+): string[] {
+  return (entity.verifyFields ?? []).filter(
+    (field) =>
+      field in pushed &&
+      field in stored &&
+      !holds(normalize(stored[field]), normalize(pushed[field])),
+  );
+}
+
 /** Parents before children when an entity references itself. */
 export function orderSelfReferences(
   entity: RegisteredSyncEntity,
