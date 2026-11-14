@@ -1302,7 +1302,7 @@ function validateEnv(env: unknown, errors: string[]): void {
     }
     rejectUnknown(
       entry,
-      ["name", "description", "default", "required", "secret"],
+      ["name", "description", "default", "required", "secret", "file"],
       where,
       errors,
     );
@@ -1327,7 +1327,7 @@ function validateEnv(env: unknown, errors: string[]): void {
     if ("default" in entry && typeof entry.default !== "string") {
       errors.push(`Field "${where}.default" must be a string`);
     }
-    for (const flag of ["required", "secret"] as const) {
+    for (const flag of ["required", "secret", "file"] as const) {
       if (flag in entry && typeof entry[flag] !== "boolean") {
         errors.push(`Field "${where}.${flag}" must be true or false`);
       }

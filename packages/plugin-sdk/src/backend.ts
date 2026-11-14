@@ -94,6 +94,15 @@ export interface PluginFiles {
    * subdirectories underneath it.
    */
   dataDir: () => Promise<string>;
+  /**
+   * Reads the file an admin named in one of the manifest's env variables
+   * marked `"file": true` (a config file mounted into the container). Null
+   * when the variable is not set. Never a file in Termix's data folder or one
+   * of its own key files; at most 5 MB. Needs no capability. Termix 26.11.2+.
+   */
+  readEnvFile: (
+    name: string,
+  ) => Promise<{ text: string; modifiedMs: number } | null>;
 }
 
 /**

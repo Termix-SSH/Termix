@@ -305,6 +305,10 @@ layout or theme, or `network:sockets` keeps it running.
 - Your process gets no environment of core's. Variables you list in the manifest's `env` are passed
   through, except core's own secrets and anything that changes how Node starts.
   `VERSION` (the Termix version) and `TERMIX_DEPLOYMENT` (`desktop`, `docker` or `server`) are always set.
+- You can only read your own folders. For a file an admin points you at (a config file mounted into the
+  container), list its variable in `env` with `"file": true` and read it with `ctx.files.readEnvFile(name)`,
+  which answers `{ text, modifiedMs }` or null when the variable is not set. Termix reads it for you, never
+  from its data folder or its own key files, up to 5 MB. Read it on a schedule to notice changes.
 - SSH auth providers work: `prepare` gets a copy of the config without secrets and may set only
   `username`, `password`, `privateKey`, `passphrase`, `tryKeyboard`, `readyTimeout`, `timeout`,
   `keepaliveInterval` and `keepaliveCountMax` (a `retry` patch and `connectOptions` too). `env.client` is a stand-in;

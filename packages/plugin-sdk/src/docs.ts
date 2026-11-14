@@ -44,6 +44,8 @@ export interface PluginEnvVar {
   required?: boolean;
   /** Holds a password or key. */
   secret?: boolean;
+  /** The value is the path of a file the plugin reads with ctx.files.readEnvFile. */
+  file?: boolean;
 }
 
 /** The usable env entries of a manifest. Bad ones are dropped. */

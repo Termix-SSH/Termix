@@ -361,6 +361,20 @@ export function createPluginContext(
     { action: "files_data_dir", once: true },
   );
 
+  // Audited once per variable: a plugin may read its file every few seconds.
+  const envFilesAudited = new Set<string>();
+  const filesReadEnvFile = async (name: string) => {
+    const { readPluginEnvFile } = await import("./env-files.js");
+    const result = await readPluginEnvFile(manifest, String(name));
+    if (!envFilesAudited.has(name)) {
+      envFilesAudited.add(name);
+      void auditCall("files_read_env_file", `read the file named in ${name}`, {
+        success: true,
+      });
+    }
+    return result;
+  };
+
   const dbDefine = guarded(
     manifest,
     "db:own",
@@ -580,6 +594,7 @@ export function createPluginContext(
 
     files: {
       dataDir: () => filesDataDir(),
+      readEnvFile: (name) => filesReadEnvFile(name),
     },
 
     registry: {

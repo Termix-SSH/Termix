@@ -120,6 +120,8 @@ export interface FakeContextOptions {
   settings?: Record<string, unknown>;
   /** Seed for the core settings ctx.settings.readCore can reach. */
   coreSettings?: Record<string, string>;
+  /** File contents ctx.files.readEnvFile answers, by env variable name. */
+  envFiles?: Record<string, string>;
   /** What ctx.files.dataDir() answers. Defaults to /tmp/<pluginId>. */
   dataDir?: string;
   /** What ctx.ssh.connect and withConnection hand back as the client. */
@@ -753,6 +755,18 @@ export function createFakeContext(
       // A fake path; a test that needs a real folder uses the OS temp dir
       // itself, not this double.
       dataDir: async () => options.dataDir ?? `/tmp/${pluginId}`,
+      readEnvFile: async (name) => {
+        const entry = (options.manifest?.env ?? []).find(
+          (item) => item?.name === name,
+        );
+        if (!entry || (entry as { file?: unknown }).file !== true) {
+          throw new Error(
+            `${name} is not an env variable this plugin lists with "file": true`,
+          );
+        }
+        const text = options.envFiles?.[name];
+        return text === undefined ? null : { text, modifiedMs: 0 };
+      },
     },
 
     db: options.db
@@ -1774,6 +1788,8 @@ export interface MockContextOptions {
   settings?: Record<string, unknown>;
   /** Seed for the core settings readCore can reach. */
   coreSettings?: Record<string, string>;
+  /** File contents ctx.files.readEnvFile answers, by env variable name. */
+  envFiles?: Record<string, string>;
   /** What ctx.files.dataDir() answers. */
   dataDir?: string;
   /** Acting user returned by currentActor and used by asUser. */
@@ -1941,6 +1957,7 @@ export function createMockCtx(
     actor: options.actor,
     settings: options.settings,
     coreSettings: options.coreSettings,
+    envFiles: options.envFiles,
     dataDir: options.dataDir,
     sshClient: options.sshClient,
     db: options.db,
@@ -2053,6 +2070,7 @@ export function createMockCtx(
         require("files:own");
         return ctx.files.dataDir();
       },
+      readEnvFile: (name) => ctx.files.readEnvFile(name),
     },
 
     events: {

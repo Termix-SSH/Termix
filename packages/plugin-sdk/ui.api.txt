@@ -612,7 +612,7 @@ setFolderDeviceAuth (value): (folder: string, protocol: string, credentialId: nu
 setHostAuthOverride (value): (hostId: number, protocol: string, credentialId: number, sharedCopySyncId?: string) => Promise<{ success: boolean; protocol: string; credentialId: number; }>
 setHostDeviceAuth (value): (hostId: number, protocol: string, credentialId: number) => Promise<void>
 setNotificationPrivateEndpoints (value): (hosts: string[]) => Promise<string[]>
-setPluginOptions (value): (pluginId: string, options: { autoUpdate?: boolean; pinned?: boolean; channel?: PluginChannel; runUnisolated?: boolean; }) => Promise<{ autoUpdate: boolean; pinnedVersion: string; channel: PluginChannel; runUnisolated: boolean; }>
+setPluginOptions (value): (pluginId: string, options: { autoUpdate?: boolean; pinned?: boolean; channel?: PluginChannel; }) => Promise<{ autoUpdate: boolean; pinnedVersion: string; channel: PluginChannel; }>
 setUpdateChannel (value): (channel: UpdateChannel) => Promise<UpdateChannelState>
 shareCredential (value): (credentialId: number, targets: ShareTarget[], permissionLevel: CredentialPermissionLevel, durationHours?: number) => Promise<{ success: boolean; expiresAt: string; }>
 shareFolder (value): (folder: string, shareData: { targets: ShareTarget[]; permissionLevel: SharePermissionLevel; durationHours?: number; }) => Promise<{ success: boolean; expiresAt: string; hostsShared: number; hostsTotal: number; hostResults: { hostId: number; shared: boolean; reason?: string; }[]; }>

@@ -65,6 +65,8 @@ const UNGATED: Record<string, string> = {
     "the plugin's own host settings, as a user's defaults",
   "settings.setHost": "the plugin's own host settings",
   "settings.getAll": "the plugin's own settings",
+  "files.readEnvFile":
+    "only a file the admin named in the plugin's own env, never core's files; audited once per variable",
   "settings.onChange": "the plugin's own settings",
   "settings.onValidate": "the plugin's own settings",
   "rbac.has": "answers for the actor only",
