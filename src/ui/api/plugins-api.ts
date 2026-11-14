@@ -603,6 +603,28 @@ export async function setAllPluginChannels(
   return response.data;
 }
 
+export interface PluginProcessReport {
+  core: { rssMb: number };
+  plugins: Array<{
+    pluginId: string;
+    state: string;
+    keepOnReason: string | null;
+    rssMb: number | null;
+  }>;
+  totalMb: number;
+  pluginsMb: number;
+  running: number;
+  limitMb: number;
+  limitSource: "container" | "system";
+  low: boolean;
+}
+
+/** Memory used by Termix and each plugin process. Admins only. */
+export async function getPluginProcesses(): Promise<PluginProcessReport> {
+  const response = await rbacApi.get("/plugins/processes");
+  return response.data;
+}
+
 export async function getPluginData(
   pluginId: string,
 ): Promise<PluginDataSummary> {

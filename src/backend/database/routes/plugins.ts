@@ -780,6 +780,43 @@ router.get(
 
 /**
  * @openapi
+ * /plugins/processes:
+ *   get:
+ *     summary: Memory used by Termix and each plugin process
+ *     description: Every plugin process with its state, why it stays up (null when it stops when idle) and its resident memory while it runs, plus Termix's own memory, the total, and the memory limit of the container or machine. low is true when the total is past 80% of the limit.
+ *     tags:
+ *       - Plugins
+ *     responses:
+ *       200:
+ *         description: The memory report.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       500:
+ *         description: The report could not be built.
+ */
+router.get(
+  "/processes",
+  authenticateJWT,
+  requireManagePlugins,
+  async (_req: Request, res: Response) => {
+    try {
+      const { currentMemoryReport } =
+        await import("../../plugins/sandbox/memory.js");
+      res.setHeader("Cache-Control", "no-store");
+      res.json(await currentMemoryReport());
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to read plugin memory",
+        "plugin_processes",
+      );
+    }
+  },
+);
+
+/**
+ * @openapi
  * /plugins/onboarding/apply:
  *   post:
  *     summary: Apply the onboarding plugin picker

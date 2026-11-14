@@ -655,6 +655,9 @@
     "POST /plugins/onboarding/apply": {
       "access": "admin"
     },
+    "GET /plugins/processes": {
+      "access": "admin"
+    },
     "GET /plugins/public": {
       "access": "public"
     },

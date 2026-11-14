@@ -1381,7 +1381,8 @@
         "version": "Version",
         "status": "Status",
         "category": "Category",
-        "downloads": "Downloads"
+        "downloads": "Downloads",
+        "memory": "Memory"
       },
       "risk": {
         "critical": "Critical",
@@ -1660,7 +1661,16 @@
       "unsupportedHint": "No release of this plugin runs on this version of Termix. Update Termix to install it.",
       "needsTermix": "Needs Termix {{range}}",
       "showUnsupported": "Show unsupported ({{count}})",
-      "showMore": "Show {{count}} more ({{total}} left)"
+      "showMore": "Show {{count}} more ({{total}} left)",
+      "memory": {
+        "summary": "Memory: {{total}} of {{limit}} | plugins {{plugins}} | {{running}} running",
+        "lowTitle": "This server is low on memory",
+        "lowBody": "Termix and its plugins use {{total}} of {{limit}}. Give the server more memory or turn off plugins you do not use.",
+        "idle": "Idle",
+        "idleHint": "Not running now. It starts when something needs it.",
+        "keptOn": "Stays running: {{reason}}",
+        "stopsWhenIdle": "Stops when idle"
+      }
     }
   },
   "settings": {

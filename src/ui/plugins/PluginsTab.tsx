@@ -54,6 +54,11 @@ import {
   UnverifiedBadge,
 } from "./plugin-bits";
 import { RegistriesSection } from "./RegistriesSection";
+import {
+  PluginMemoryCell,
+  PluginMemorySummary,
+  usePluginMemory,
+} from "./PluginMemory";
 import { PluginConsentPrompt } from "./PluginConsentPrompt";
 import { PluginDetail } from "./PluginDetail";
 import {
@@ -854,6 +859,7 @@ function InstalledSection({
     (p) => p.status !== "running" && p.status !== "server",
   );
   const pending = plugins.filter((p) => p.updateAvailable && !p.pinnedVersion);
+  const memory = usePluginMemory(!manager.managedByServer);
 
   const listColumns: DataColumn<PluginEntry>[] = [
     {
@@ -884,6 +890,19 @@ function InstalledSection({
       hideBelow: "lg",
       cell: (p) => <StatusCell plugin={p} />,
     },
+    ...(memory
+      ? [
+          {
+            key: "memory",
+            header: t("plugins.manager.table.memory"),
+            width: "90px",
+            hideBelow: "lg" as const,
+            cell: (p: PluginEntry) => (
+              <PluginMemoryCell report={memory} pluginId={p.id} />
+            ),
+          },
+        ]
+      : []),
     {
       key: "actions",
       header: "",
@@ -942,6 +961,8 @@ function InstalledSection({
               </Button>
             </div>
           </Toolbar>
+
+          <PluginMemorySummary report={memory} />
 
           {activeFacets(facets) > 0 && (
             <ActiveFilters
