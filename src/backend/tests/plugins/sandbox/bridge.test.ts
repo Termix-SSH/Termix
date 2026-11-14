@@ -19,6 +19,7 @@ import {
   ownSetCookies,
   PluginBridge,
   pluginCookiePrefix,
+  pluginUrl,
   scrubSecrets,
   safeHeaders,
   validCloseCode,
@@ -413,5 +414,37 @@ describe("declared registrations", () => {
       a: ["docker.x", { value: 2 }],
     } as never);
     expect(calls[1]).toEqual(["revoke", "docker.x", { value: 1 }]);
+  });
+});
+
+describe("plugin urls under a mounted router.use", () => {
+  it("gives the plugin the path its own mount needs", async () => {
+    const express = (await import("express")).default;
+    const app = express();
+    const router = express.Router();
+    router.use((req, _res, next) => {
+      const marked = req as typeof req & { termixPluginBase?: string };
+      marked.termixPluginBase ??= req.baseUrl;
+      next();
+    });
+    const seen: string[] = [];
+    router.get("/status", (req, res) => {
+      seen.push(pluginUrl(req));
+      res.end();
+    });
+    router.use("/p/:token", (req, res) => {
+      seen.push(pluginUrl(req));
+      res.end();
+    });
+    app.use("/plugin-api/web", router);
+    const server = app.listen(0, "127.0.0.1");
+    await new Promise((r) => server.once("listening", r));
+    const { port } = server.address() as { port: number };
+    const base = `http://127.0.0.1:${port}/plugin-api/web`;
+    await fetch(`${base}/status?x=1`);
+    await fetch(`${base}/p/abc/index.html?y=2`);
+    await fetch(`${base}/p/abc`);
+    server.close();
+    expect(seen).toEqual(["/status?x=1", "/p/abc/index.html?y=2", "/p/abc/"]);
   });
 });

@@ -190,6 +190,8 @@ describe("http routes", () => {
     });
     expect(await h.send("http.route", ["use"])).toMatchObject({ t: "ok" });
     expect(h.routes).toEqual([
+      // Core's own marker for where the plugin's router sits.
+      ["use", expect.any(Function)],
       ["get", "/items"],
       ["use", expect.any(Function)],
     ]);

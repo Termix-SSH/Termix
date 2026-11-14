@@ -613,6 +613,15 @@ export class PluginBridge {
       const opts = (options ?? {}) as { rawBody?: boolean };
       this.routerRaw = !!opts.rawBody;
       this.router = ctx.http.router(options);
+      // Remember where the plugin's router sits, so a request under a
+      // router.use("/path", ...) mount still reaches the plugin with that path.
+      this.router.use((req: Request, _res: Response, next: NextFunction) => {
+        const marked = req as Request & { termixPluginBase?: string };
+        if (marked.termixPluginBase === undefined) {
+          marked.termixPluginBase = req.baseUrl;
+        }
+        next();
+      });
       return true;
     });
     endpoint.handle("http.route", ([kind, routePath]) => {
@@ -1759,7 +1768,7 @@ export class PluginBridge {
       const outcome = (await endpoint.callWithToken(token, "http.dispatch", [
         {
           method: req.method,
-          url: req.url,
+          url: pluginUrl(req),
           originalUrl: req.originalUrl,
           headers: this.requestHeaders(req, cookiePrefix),
           body: parsed ? req.body : undefined,
@@ -1914,6 +1923,19 @@ const SFTP_METHODS = new Set([
   "readlink",
   "exists",
 ]);
+
+/**
+ * The request's path as the plugin's own router sees it. Under a mounted
+ * router.use("/p/:id", ...) Express has already cut the mount from req.url;
+ * the plugin's router needs it back to match the same mount.
+ */
+export function pluginUrl(req: Request): string {
+  const base = (req as Request & { termixPluginBase?: string })
+    .termixPluginBase;
+  if (base === undefined || req.baseUrl === base) return req.url;
+  if (!req.baseUrl.startsWith(base)) return req.url;
+  return req.baseUrl.slice(base.length) + req.url;
+}
 
 function validStatus(status: unknown): number {
   const n = Number(status);
