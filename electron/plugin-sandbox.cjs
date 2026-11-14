@@ -13,6 +13,14 @@ const { pathToFileURL } = require("url");
 
 const SANDBOX_MESSAGE = "tmx-sandbox";
 
+function realPath(file) {
+  try {
+    return fs.realpathSync(file);
+  } catch {
+    return file;
+  }
+}
+
 function createPluginSandboxHost(deps) {
   const {
     MessageChannelMain,
@@ -116,7 +124,9 @@ function createPluginSandboxHost(deps) {
       ...(platform === "win32"
         ? ["--preserve-symlinks", "--preserve-symlinks-main"]
         : []),
-      runtimeScript,
+      // Its real path: Node resolves the main script through every link on
+      // the way (macOS /var is one), and reading a link needs its own grant.
+      realPath(runtimeScript),
       frames.STDIO_FLAG,
     ];
     const args = [
