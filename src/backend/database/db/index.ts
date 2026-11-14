@@ -1,4 +1,5 @@
 import { repairSnippetsColumns } from "../../upgrade/snippets-schema-migration.js";
+import { repairSessionRecordingColumns } from "../../upgrade/session-recording-schema-migration.js";
 import { getErrorMessage } from "../../utils/error-message.js";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
@@ -1047,6 +1048,7 @@ const enforceUniqueUsernames = () => {
 
 const migrateSchema = () => {
   repairSnippetsColumns(sqlite);
+  repairSessionRecordingColumns(sqlite);
   addColumnIfNotExists("api_keys", "scopes", "TEXT");
   addColumnIfNotExists("user_preferences", "theme", "TEXT");
   addColumnIfNotExists("user_preferences", "font_size", "TEXT");
