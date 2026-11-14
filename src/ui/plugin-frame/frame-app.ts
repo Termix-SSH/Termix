@@ -8,6 +8,7 @@
  * sending their values.
  */
 
+import { noteLiveWork } from "./frame-liveness";
 import type { ComponentType } from "react";
 import type {
   Disposer,
@@ -594,6 +595,7 @@ export function createFrameApp(host: FrameAppHost): {
           skipped: string[];
         }>,
       onChange: (listener) => {
+        noteLiveWork("tabs.onChange");
         let last = getFrameState().tabs;
         return track(
           subscribeFrameState(() => {
@@ -643,6 +645,7 @@ export function createFrameApp(host: FrameAppHost): {
       },
       remoteServerUrl: async () => getFrameState().desktop.remoteServerUrl,
       onRemoteServerChange: (listener) => {
+        noteLiveWork("desktop.onRemoteServerChange");
         let last = getFrameState().desktop.remoteServerUrl;
         return track(
           subscribeFrameState(() => {
@@ -656,6 +659,7 @@ export function createFrameApp(host: FrameAppHost): {
     },
 
     onSettingsChanged: (listener) => {
+      noteLiveWork("onSettingsChanged");
       const handler = (event: Event) => {
         const detail = (event as CustomEvent).detail as {
           pluginId?: string;

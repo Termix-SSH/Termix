@@ -79,6 +79,8 @@ export interface FrameEvents {
   /** A view's current props, sent with its boot data. */
   getProps?: () => Record<string, unknown>;
   onEvent?: (name: string, data: unknown) => void;
+  /** An event still in wire form; true when it was handled. */
+  onRaw?: (name: string, data: unknown) => boolean;
   onReady?: () => void;
   onFailed?: (message: string) => void;
 }
@@ -234,6 +236,7 @@ function createPort(connection: FrameConnection, target: Window): FramePort {
     post: (message) => target.postMessage(message, "*"),
     onCall: (method, args) => handleCall(connection, method, args),
     onEvent: (name, data) => handleEvent(connection, name, data),
+    rawEvent: (name, data) => connection.events.onRaw?.(name, data) === true,
     fnPrefix: "s",
     icon: (ref) => decodeIconValue(ref),
     component: (ref: WireComponent) => ref,

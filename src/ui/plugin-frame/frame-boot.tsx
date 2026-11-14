@@ -8,6 +8,11 @@
  * plugin's background work going (background frame) or draws one view.
  */
 
+import {
+  liveWork,
+  startLiveTracking,
+  stopLiveTracking,
+} from "./frame-liveness";
 import "./frame.css";
 import { createElement, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
@@ -324,6 +329,7 @@ async function boot() {
     document.head.appendChild(link);
   }
 
+  if (params.role === "background") startLiveTracking();
   const module = (await import(
     /* @vite-ignore */ `${assetRoot}frontend.js${version}`
   )) as FrontendModule;
@@ -342,7 +348,11 @@ async function boot() {
     fetch: pluginFetch,
     wsUrl: wsUrl as never,
   });
-  await module.activate(handle.app);
+  try {
+    await module.activate(handle.app);
+  } finally {
+    stopLiveTracking();
+  }
 
   window.addEventListener("pagehide", () => {
     void Promise.resolve(module.deactivate?.()).finally(() => handle.dispose());
@@ -371,6 +381,7 @@ async function boot() {
       }),
     );
     watchOverlay((active) => port.emit("overlay", { active }));
+    port.emit("live", { reasons: liveWork() });
   } else {
     const component = params.key ? frameComponent(params.key) : undefined;
     if (!component) {

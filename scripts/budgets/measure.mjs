@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // Logs in to a running Termix and records what the page costs: frames after
 // login, JS heap, core requests, time to dashboard and the backend's memory.
+// The top level numbers are the warm load (a reload with caches full); the
+// first load after login is under "cold".
 //
 //   node scripts/budgets/measure.mjs --url http://localhost:5173
 //     [--api http://localhost:30001] [--user test] [--pass test123]
@@ -97,8 +99,23 @@ async function main() {
     .locator('[data-slot="tab-stage"]')
     .first()
     .waitFor({ state: "attached", timeout: maxWaitMs });
-  const timeToDashboardMs = Date.now() - started;
-  const settledMs = await waitForFrames(page, started);
+  const coldDashboardMs = Date.now() - started;
+  const coldSettledMs = await waitForFrames(page, started);
+  const cold = await frameCounts(page);
+  const coldHeap = await jsHeapMb(page);
+  const coldRequests = requests.length;
+
+  // Warm pass: the same browser loads the app again with its caches full,
+  // which is what every visit after the first looks like.
+  requests.length = 0;
+  const reloaded = Date.now();
+  await page.reload();
+  await page
+    .locator('[data-slot="tab-stage"]')
+    .first()
+    .waitFor({ state: "attached", timeout: maxWaitMs });
+  const timeToDashboardMs = Date.now() - reloaded;
+  const settledMs = await waitForFrames(page, reloaded);
   const frames = await frameCounts(page);
   const heap = await jsHeapMb(page);
 
@@ -123,6 +140,14 @@ async function main() {
       ? (processes.plugins ?? []).filter((p) => p.state === "ready").length
       : null,
     requestCount: requests.length,
+    cold: {
+      framesAfterLogin: cold.total,
+      backgroundFrames: cold.background,
+      jsHeapMb: coldHeap,
+      timeToDashboardMs: coldDashboardMs,
+      settledMs: coldSettledMs,
+      requestCount: coldRequests,
+    },
     topRequests: countRequests(requests).slice(0, 25),
   };
   await browser.close();

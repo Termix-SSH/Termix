@@ -26,6 +26,7 @@ import {
   type FrameConnection,
 } from "./frame-connection";
 import { useStableProps } from "@/plugin-frame/stable-props";
+import { acquireFramedPlugin } from "./frame-demand";
 
 /**
  * fill: takes the box it is given. content: full width, as tall as the
@@ -166,6 +167,9 @@ export function PluginFrameView({
     // controlRef is read once per frame.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pluginId, frameKey, src]);
+
+  // A view may call into its plugin's background code.
+  useEffect(() => acquireFramedPlugin(pluginId), [pluginId]);
 
   useEffect(() => {
     if (!import.meta.env.DEV || ready) return;
