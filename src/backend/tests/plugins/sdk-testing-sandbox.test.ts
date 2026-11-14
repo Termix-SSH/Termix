@@ -189,6 +189,10 @@ describe("createMockCtx sandbox mode", () => {
         prompt: { ask: async () => null },
       }),
     ).resolves.toMatchObject({ via: "direct" });
+    const { PassThrough } = await import("node:stream");
+    await expect(
+      ctx.ssh.connect(1, { sock: new PassThrough() } as never),
+    ).resolves.toBeDefined();
     await expect(
       ctx.ssh.openTransport(host as never, {} as never),
     ).rejects.toThrow(/config from ctx.ssh.prepare/);

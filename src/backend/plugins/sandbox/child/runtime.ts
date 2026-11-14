@@ -335,7 +335,10 @@ function buildCtx(): Record<string, unknown> {
 
   if (has("ssh.connect")) {
     setPath(ctx, "ssh.connect", async (host: unknown, options?: unknown) => {
-      const result = (await endpoint.call("ssh.connect", [host, options])) as {
+      const result = (await endpoint.call("ssh.connect", [
+        host,
+        connectOptions(options),
+      ])) as {
         client: { $ssh: string };
         host: unknown;
         dispose: AnyFn;
@@ -680,6 +683,24 @@ async function sshOpenTransport(
  * A byte stream over a port core holds the other end of. Destroying it tells
  * core to close its end too.
  */
+/**
+ * ssh.connect options with a sock that can cross: a stream from forwardOut
+ * goes back by id (core holds the channel), any other stream as a port.
+ */
+function connectOptions(options: unknown): unknown {
+  const opts = options as Record<string, unknown> | undefined;
+  const sock = opts?.sock as
+    (NodeJS.ReadWriteStream & { termixStreamId?: string }) | undefined;
+  if (!opts || !sock) return options;
+  const { sock: _sock, ...rest } = opts;
+  if (typeof sock.termixStreamId === "string") {
+    return { ...rest, sockStream: sock.termixStreamId };
+  }
+  const port = endpoint.openStream();
+  joinStream(sock as unknown as Duplex, port);
+  return { ...rest, sockPort: port };
+}
+
 function portStream(port: StreamPort): Duplex {
   const stream = new Duplex({
     read() {
@@ -706,6 +727,8 @@ function portStream(port: StreamPort): Duplex {
   });
   port.on("end", () => stream.push(null));
   port.on("error", (error: Error) => stream.destroy(error));
+  // Lets ssh.connect hand the same channel back to core as a sock.
+  Object.defineProperty(stream, "termixStreamId", { value: port.sid });
   return stream;
 }
 
@@ -1380,6 +1403,20 @@ function sshClient(id: string): EventEmitter {
       .catch((error) => cb(error));
     return true;
   };
+  client.forwardIn = (bindHost: string, bindPort: number, cb?: AnyFn) => {
+    endpoint
+      .call("ssh.forwardIn", [id, bindHost, bindPort])
+      .then((port) => cb?.(undefined, port))
+      .catch((error) => cb?.(error));
+    return true;
+  };
+  client.unforwardIn = (bindHost: string, bindPort: number, cb?: AnyFn) => {
+    endpoint
+      .call("ssh.unforwardIn", [id, bindHost, bindPort])
+      .then(() => cb?.(undefined))
+      .catch((error) => cb?.(error));
+    return true;
+  };
   client.end = () => {
     sshClients.delete(id);
     endpoint.notify("ssh.end", [id]);
@@ -1387,6 +1424,30 @@ function sshClient(id: string): EventEmitter {
   sshClients.set(id, client);
   return client;
 }
+
+// A connection to a remote forward: the plugin's "tcp connection" listener
+// accepts or rejects it, and an accepted one is a stream to core's channel.
+endpoint.handle("ssh.tcpConnection", ([id, info, tid]) => {
+  const client = sshClients.get(String(id));
+  if (!client || client.listenerCount("tcp connection") === 0) {
+    endpoint.notify("ssh.rejectTcp", [tid]);
+    return true;
+  }
+  let answered = false;
+  const accept = () => {
+    answered = true;
+    const port = endpoint.openStream();
+    endpoint.notify("ssh.acceptTcp", [tid, port]);
+    return portStream(port);
+  };
+  const reject = () => {
+    if (answered) return;
+    answered = true;
+    endpoint.notify("ssh.rejectTcp", [tid]);
+  };
+  client.emit("tcp connection", info, accept, reject);
+  return true;
+});
 
 endpoint.handle("ssh.closed", ([id]) => {
   const client = sshClients.get(String(id));

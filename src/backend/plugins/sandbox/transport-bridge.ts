@@ -193,27 +193,46 @@ export function joinSshStream(sock: Duplex, port: StreamPort): void {
 }
 
 /** Moves bytes both ways between a stream core holds and a port. */
-export function joinStream(stream: Duplex, port: StreamPort): void {
-  stream.on("data", (chunk: Buffer) => {
+export function joinStream(stream: Duplex, port: StreamPort): () => void {
+  const fromStream = (chunk: Buffer) => {
     if (!port.write(chunk)) {
       stream.pause();
       port.once("drain", () => stream.resume());
     }
-  });
-  port.on("data", (chunk: Buffer) => {
+  };
+  const fromPort = (chunk: Buffer) => {
     if (!stream.write(chunk)) {
       port.pause();
       stream.once("drain", () => port.resume());
     }
-  });
-  port.on("remote-end", () => stream.end());
-  port.on("error", () => stream.destroy());
-  port.on("close", () => stream.destroy());
-  stream.on("end", () => port.end());
-  stream.on("error", (error: Error) => port.destroy(error));
-  stream.on("close", () => {
+  };
+  const portEnded = () => stream.end();
+  const portFailed = () => stream.destroy();
+  const streamEnded = () => port.end();
+  const streamFailed = (error: Error) => port.destroy(error);
+  const streamClosed = () => {
     if (!port.writableEnded) port.end();
-  });
+  };
+  stream.on("data", fromStream);
+  port.on("data", fromPort);
+  port.on("remote-end", portEnded);
+  port.on("error", portFailed);
+  port.on("close", portFailed);
+  stream.on("end", streamEnded);
+  stream.on("error", streamFailed);
+  stream.on("close", streamClosed);
+  // Undoes the join, leaving both ends open.
+  return () => {
+    stream.off("data", fromStream);
+    port.off("data", fromPort);
+    port.off("remote-end", portEnded);
+    port.off("error", portFailed);
+    port.off("close", portFailed);
+    stream.off("end", streamEnded);
+    stream.off("error", streamFailed);
+    stream.off("close", streamClosed);
+    stream.pause();
+  };
 }
 
 /**

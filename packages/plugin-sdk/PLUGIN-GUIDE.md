@@ -335,8 +335,10 @@ res)` works from inside one of your own requests: Termix finishes the login on t
   reaches the host until it has sent its SSH greeting. A stream you bring yourself (`config.sock` set before
   the call) is kept for a direct connection. Certificates from `applyCertificateAuth` are applied to your
   own client.
-- `ctx.ssh.jumpChain` gives a client like `ctx.ssh.connect`'s, and every such client has `forwardOut`,
-  which hands back a stream.
+- `ctx.ssh.jumpChain` gives a client like `ctx.ssh.connect`'s. Every such client has `forwardOut` (a stream),
+  `forwardIn`, `unforwardIn` and the `tcp connection` event; `accept()` gives a stream at once, and a
+  connection you leave unanswered for 10 seconds is rejected. A `forwardOut` stream passed as `sock` to
+  `ctx.ssh.connect` goes back to core, so its bytes no longer pass through your process.
 - `ctx.desktop.local` works. `fs.openRead` and `pluginFetch` give streams, `fs.openDownload` takes one
   (`publish` waits until everything you wrote is on disk), and `pty.spawn` gives the same shell object.
 - Not available in a plugin process yet: `hosts.locks.provide`, `hosts.status.provide` and

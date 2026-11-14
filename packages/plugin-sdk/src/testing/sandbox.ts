@@ -353,6 +353,13 @@ export function sandboxContext<T extends PluginContext>(
     }
     // Answered inside the plugin process, so its arguments never cross.
     if (ANSWERED_IN_PROCESS.has(dotted)) return;
+    // A sock the plugin passes stays a stream: the process sends it as one.
+    if (dotted === "ssh.connect" && isPlain(args[1])) {
+      const { sock: _sock, ...rest } = args[1] as Record<string, unknown>;
+      assertCrossable(args[0], `ctx.${dotted} argument 1`);
+      assertCrossable(rest, `ctx.${dotted} argument 2`);
+      return;
+    }
     if (dotted === "ssh.prepare" || dotted === "ssh.openTransport") {
       checkOwnClientCall(dotted, args);
       return;

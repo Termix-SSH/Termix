@@ -57,6 +57,8 @@ export const REQUEST_TOKEN_GRACE_MS = 30_000;
 const SOCKET_TOKEN_MS = 60 * 60 * 1000;
 /** How long a prepared config's host key check stays usable. */
 const PREPARED_MS = 15 * 60 * 1000;
+/** A remote forward connection the plugin does not answer is rejected. */
+const TCP_ANSWER_MS = 10_000;
 /** A host key prompt the user never answers counts as refused. */
 const VERIFY_MS = 5 * 60 * 1000;
 
@@ -295,6 +297,13 @@ export class PluginBridge {
   private readonly sockets = new Map<string, import("ws").WebSocket>();
   /** Streams core opened for the plugin, closed with its process. */
   private readonly openStreams = new Map<string, Duplex>();
+  private readonly unjoins = new Map<string, () => void>();
+  /** Incoming remote forward connections waiting for the plugin's answer. */
+  private readonly pendingTcp = new Map<
+    string,
+    { accept: () => Duplex; reject: () => void; timer: NodeJS.Timeout }
+  >();
+  private readonly tcpWatched = new Set<string>();
   /** Requests in flight, by the token the child got for them. */
   private readonly liveRequests = new Map<
     string,
@@ -366,16 +375,58 @@ export class PluginBridge {
     this.endpoint.close(reason);
     this.tokens.revokePlugin(this.pluginId);
     this.refs.clear();
+    for (const pending of this.pendingTcp.values()) {
+      clearTimeout(pending.timer);
+      pending.reject();
+    }
+    this.pendingTcp.clear();
     for (const stream of this.openStreams.values()) stream.destroy();
     this.openStreams.clear();
     this.sockets.clear();
   }
 
   /** A stream core holds for the plugin, closed when the plugin says so. */
-  private track(stream: Duplex | NodeReadable, port: StreamPort): void {
+  private track(
+    stream: Duplex | NodeReadable,
+    port: StreamPort,
+    unjoin?: () => void,
+  ): void {
     const held = stream as Duplex;
     this.openStreams.set(port.sid, held);
-    held.once?.("close", () => this.openStreams.delete(port.sid));
+    if (unjoin) this.unjoins.set(port.sid, unjoin);
+    held.once?.("close", () => {
+      this.openStreams.delete(port.sid);
+      this.unjoins.delete(port.sid);
+    });
+  }
+
+  /**
+   * A channel core holds that the plugin now hands back as a sock: core
+   * stops moving its bytes to the plugin and uses it directly.
+   */
+  private takeStream(sid: unknown): Duplex {
+    const key = String(sid);
+    const stream = this.openStreams.get(key);
+    const unjoin = this.unjoins.get(key);
+    if (!stream || !unjoin) {
+      throw new SandboxError("That stream is gone", "SANDBOX_HANDLE", 410);
+    }
+    this.openStreams.delete(key);
+    this.unjoins.delete(key);
+    unjoin();
+    return stream;
+  }
+
+  /** ssh.connect options from the plugin, with a sock turned back into a stream. */
+  private connectOptions(options: unknown): Record<string, unknown> {
+    const { sockStream, sockPort, ...rest } = plainObject(options);
+    if (sockStream !== undefined) {
+      return { ...rest, sock: this.takeStream(sockStream) };
+    }
+    if (sockPort instanceof StreamPort) {
+      return { ...rest, sock: portAsSocket(sockPort) };
+    }
+    return rest;
   }
 
   /** A token for whoever core is acting as right now, for a call into the child. */
@@ -830,7 +881,10 @@ export class PluginBridge {
     // SSH: the ssh2 client stays in core. The child gets a handle and asks
     // for channels by name; data moves on credit based streams.
     endpoint.handle("ssh.connect", async ([host, options]) => {
-      const connection = await ctx.ssh.connect(host, options);
+      const connection = await ctx.ssh.connect(
+        host,
+        this.connectOptions(options),
+      );
       const id = this.addRef("client", connection.client);
       this.watchClient(id, connection.client);
       return {
@@ -955,8 +1009,7 @@ export class PluginBridge {
             (err: Error | undefined, stream: Duplex) => {
               if (err) return reject(err);
               const port = endpoint.openStream();
-              this.track(stream, port);
-              joinStream(stream, port);
+              this.track(stream, port, joinStream(stream, port));
               resolve(port);
             },
           );
@@ -989,6 +1042,48 @@ export class PluginBridge {
           return portAsSocket(port);
         },
       });
+    });
+
+    // Remote forwards: the host listens, and each connection it gets is
+    // offered to the plugin, which accepts or rejects it.
+    endpoint.handle("ssh.forwardIn", ([id, bindHost, bindPort]) => {
+      const client = this.ref<SshClientLike>(id, "client");
+      this.watchTcp(String(id), client);
+      return new Promise((resolve, reject) =>
+        client.forwardIn(
+          String(bindHost),
+          Number(bindPort) || 0,
+          (err: Error | undefined, port: number) =>
+            err ? reject(err) : resolve(port),
+        ),
+      );
+    });
+    endpoint.handle("ssh.unforwardIn", ([id, bindHost, bindPort]) => {
+      const client = this.ref<SshClientLike>(id, "client");
+      return new Promise((resolve, reject) =>
+        client.unforwardIn(
+          String(bindHost),
+          Number(bindPort) || 0,
+          (err: Error | undefined) => (err ? reject(err) : resolve(true)),
+        ),
+      );
+    });
+    endpoint.handle("ssh.acceptTcp", ([tid, port]) => {
+      const pending = this.pendingTcp.get(String(tid));
+      if (!pending || !(port instanceof StreamPort)) return false;
+      this.pendingTcp.delete(String(tid));
+      clearTimeout(pending.timer);
+      const channel = pending.accept();
+      this.track(channel, port, joinStream(channel, port));
+      return true;
+    });
+    endpoint.handle("ssh.rejectTcp", ([tid]) => {
+      const pending = this.pendingTcp.get(String(tid));
+      if (!pending) return false;
+      this.pendingTcp.delete(String(tid));
+      clearTimeout(pending.timer);
+      pending.reject();
+      return true;
     });
 
     // The plugin's end of a stream above went away.
@@ -1524,6 +1619,28 @@ export class PluginBridge {
     }
   }
 
+  private watchTcp(id: string, client: SshClientLike): void {
+    if (this.tcpWatched.has(id)) return;
+    this.tcpWatched.add(id);
+    client.on(
+      "tcp connection",
+      (info: unknown, accept: () => Duplex, reject: () => void) => {
+        if (this.closed || !this.refs.has(id)) {
+          reject();
+          return;
+        }
+        const tid = `tcp${this.nextRef++}`;
+        const timer = setTimeout(() => {
+          this.pendingTcp.delete(tid);
+          reject();
+        }, TCP_ANSWER_MS);
+        timer.unref?.();
+        this.pendingTcp.set(tid, { accept, reject, timer });
+        this.endpoint.notify("ssh.tcpConnection", [id, plainConfig(info), tid]);
+      },
+    );
+  }
+
   private watchClient(id: string, client: unknown): void {
     const emitter = client as { once?: (e: string, fn: AnyFn) => void };
     emitter.once?.("close", () => {
@@ -1698,6 +1815,12 @@ export class PluginBridge {
 
 type RefKind =
   "client" | "sftp" | "channel" | "iterator" | "service" | "prepared";
+
+interface SshClientLike {
+  forwardIn: (host: string, port: number, cb: AnyFn) => void;
+  unforwardIn: (host: string, port: number, cb: AnyFn) => void;
+  on: (event: string, fn: AnyFn) => void;
+}
 
 interface PreparedEntry {
   verify: AnyFn | null;

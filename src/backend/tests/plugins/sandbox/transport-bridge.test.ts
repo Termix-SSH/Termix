@@ -57,6 +57,13 @@ function setup(ctxExtra: Record<string, unknown> = {}) {
   const jumpClient = Object.assign(new PassThrough(), {
     end: vi.fn(),
     forwardOut: vi.fn(),
+    forwardIn: vi.fn(
+      (_h: string, _p: number, cb: (e: unknown, port: number) => void) =>
+        cb(undefined, 4000),
+    ),
+    unforwardIn: vi.fn((_h: string, _p: number, cb: (e: unknown) => void) =>
+      cb(undefined),
+    ),
   });
   const ctx = {
     pluginId: "term",
@@ -613,5 +620,93 @@ describe("ssh.transports.provide", () => {
     expect(Buffer.concat(got).toString()).toBe("SSH-2.0-core\r\n");
     await remove();
     expect(dispose).toHaveBeenCalled();
+  });
+});
+
+describe("remote forwards and handing a channel back", () => {
+  it("offers each incoming connection to the plugin and joins the accepted one", async () => {
+    const { child, jumpClient } = setup();
+    const offers: Array<[string, unknown, string]> = [];
+    child.handle("ssh.tcpConnection", ([id, info, tid]) => {
+      offers.push([String(id), info, String(tid)]);
+      return true;
+    });
+    const { client } = (await child.call("ssh.connect", [1, {}])) as {
+      client: { $ssh: string };
+    };
+    expect(
+      await child.call("ssh.forwardIn", [client.$ssh, "127.0.0.1", 0]),
+    ).toBe(4000);
+
+    const far = new PassThrough();
+    const near = new PassThrough();
+    const channel = Duplex.from({ readable: far, writable: near });
+    const accept = vi.fn(() => channel);
+    const reject = vi.fn();
+    jumpClient.emit("tcp connection", { destPort: 4000 }, accept, reject);
+    await until(() => offers.length === 1);
+    expect(offers[0][1]).toEqual({ destPort: 4000 });
+
+    const port = child.openStream();
+    child.notify("ssh.acceptTcp", [offers[0][2], port]);
+    const got: Buffer[] = [];
+    port.on("data", (c: Buffer) => got.push(c));
+    far.write("hello");
+    await until(() => got.length > 0);
+    expect(Buffer.concat(got).toString()).toBe("hello");
+    expect(reject).not.toHaveBeenCalled();
+
+    // A second one the plugin turns down.
+    const reject2 = vi.fn();
+    jumpClient.emit("tcp connection", { destPort: 4000 }, vi.fn(), reject2);
+    await until(() => offers.length === 2);
+    child.notify("ssh.rejectTcp", [offers[1][2]]);
+    await until(() => reject2.mock.calls.length === 1);
+
+    expect(
+      await child.call("ssh.unforwardIn", [client.$ssh, "127.0.0.1", 4000]),
+    ).toBe(true);
+  });
+
+  it("uses a forwardOut channel it holds as the sock of a new connection", async () => {
+    const { child, jumpClient, ctx } = setup();
+    const far = new PassThrough();
+    const near = new PassThrough();
+    const channel = Duplex.from({ readable: far, writable: near });
+    jumpClient.forwardOut.mockImplementation(
+      (_a: string, _b: number, _c: string, _d: number, cb: AnyFn) =>
+        cb(undefined, channel),
+    );
+    const { client } = (await child.call("ssh.connect", [1, {}])) as {
+      client: { $ssh: string };
+    };
+    const port = (await child.call("ssh.forwardOut", [
+      client.$ssh,
+      "127.0.0.1",
+      0,
+      "10.0.0.9",
+      22,
+    ])) as StreamPort;
+    const leaked: Buffer[] = [];
+    port.on("data", (c: Buffer) => leaked.push(c));
+
+    await child.call("ssh.connect", [
+      2,
+      { purpose: "tunnel", sockStream: port.sid },
+    ]);
+    const options = ctx.ssh.connect.mock.calls.at(-1)?.[1] as {
+      sock?: unknown;
+      purpose?: string;
+    };
+    expect(options.sock).toBe(channel);
+    expect(options.purpose).toBe("tunnel");
+    // Bytes from the host no longer go to the plugin.
+    far.write("SSH-2.0-x\r\n");
+    await wait(30);
+    expect(leaked).toHaveLength(0);
+    // The same channel can't be taken twice.
+    await expect(
+      child.call("ssh.connect", [2, { sockStream: port.sid }]),
+    ).rejects.toMatchObject({ code: "SANDBOX_HANDLE" });
   });
 });

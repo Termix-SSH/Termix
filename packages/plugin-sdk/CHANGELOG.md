@@ -7,7 +7,7 @@ Plugin API 2.3.0. Needs Termix 26.11.2.
 ### Added
 
 - `ctx.ssh.prepare`, `ctx.ssh.openTransport` and `ctx.ssh.jumpChain` work in a plugin process. Your own ssh2 client runs over a stream Termix opens, and Termix keeps the host key check
-- `forwardOut` on clients from `ctx.ssh.connect`, `withConnection` and `jumpChain` in a plugin process
+- `forwardOut`, `forwardIn`, `unforwardIn` and the `tcp connection` event on clients from `ctx.ssh.connect`, `withConnection` and `jumpChain` in a plugin process. A `forwardOut` channel or any other stream works as `sock` for `ctx.ssh.connect`
 - `ctx.desktop.local` works in a plugin process, with streams for `fs.openRead`, `fs.openDownload`, `pluginFetch` and `pty.spawn`
 - Manifest `sandbox.workers` lets a plugin process start worker threads. Each worker keeps the process's limits, and workers from code strings are refused
 - `validate` warns when `package.json` builds workers but the manifest has no `sandbox.workers`
@@ -21,7 +21,7 @@ Plugin API 2.3.0. Needs Termix 26.11.2.
 - An SSH auth provider in a plugin process may also set the socket `timeout`
 - A sync entity's `shouldSync` may return a Promise. Termix waits for it, so one from a plugin process works
 - A plugin process gets `VERSION` and `TERMIX_DEPLOYMENT` (`desktop`, `docker` or `server`) from Termix, and `validate` no longer warns about reading them
-- `createMockCtx({ sandbox: true })` takes `ssh.prepare` with your own client and socket, `ssh.openTransport`, `ssh.jumpChain` and `desktop.local`, and its `ssh.prepare` config names the host
+- `createMockCtx({ sandbox: true })` takes `ssh.prepare` with your own client and socket, a `sock` for `ssh.connect`, `ssh.openTransport`, `ssh.jumpChain` and `desktop.local`, and its `ssh.prepare` config names the host
 - `PluginAuthPolicyProvider.allowRememberDevice` may return a Promise
 - `createMockCtx({ sandbox: true })` takes login methods, keyboard-interactive handlers, `completeRedirectLogin` and async banner hooks, and refuses a login method cookie outside `tmxp_<id>_*`
 
