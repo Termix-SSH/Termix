@@ -20,7 +20,7 @@
 - Desktop app: plugin frames keep the frame rules the server sends
 - In the Docker image each plugin also runs as its own Linux user, so it can't read the database, keys or other plugins' data. With `NET_ADMIN`, plugins that may not open connections are also blocked by a firewall rule
 - The screens of every plugin made for plugin API 2 run in sandboxed frames with no access to your login, the rest of the page or other plugins. Each frame reaches only its own plugin, with a short key that ends with your session, and asks Termix for anything else through a fixed list of checks. They keep the same look, theme, shortcuts and language
-- Plugins that only serve pages start on their first use and stop after 10 idle minutes (`TERMIX_PLUGIN_IDLE_MINUTES`). A plugin process that crashes, hangs, uses too much memory (`TERMIX_PLUGIN_MEMORY_MB`) or CPU (`TERMIX_PLUGIN_CPU_LIMIT`) is restarted, and marked failed if it keeps crashing
+- A plugin process starts when something needs it and stops after 10 idle minutes (`TERMIX_PLUGIN_IDLE_MINUTES`). Its jobs, event listeners, operations and services stay with Termix and start it again when they are needed. Plugins on the sign-in and connect paths, and plugins with work to watch, keep running. A plugin process that crashes, hangs, uses too much memory (`TERMIX_PLUGIN_MEMORY_MB`) or CPU (`TERMIX_PLUGIN_CPU_LIMIT`) is restarted, and marked failed if it keeps crashing
 - No plugin runs inside the server any more. A plugin made for an older Termix (plugin API 1) stays off until it is updated, and the plugins page lists them
 - A plugin can ask to read the server's environment variables and files, for secrets a config file points at. Termix's own keys and data folder stay out of reach, and an admin has to allow it
 - Plugin signing keys now come from an offline Termix root key. Official and community plugins install only when a key the root vouched for signed them, and each signing key expires
@@ -38,6 +38,8 @@
 - The server answers `/.well-known/security.txt` with where to report a security problem in Termix
 - Docker images are reproducible: building the same commit again gives the same image, byte for byte
 - Plugins can give small per host or per tab values, like usage bars, badges and status dots, that Termix draws itself. A dashboard with many hosts no longer needs a plugin frame for each row
+- The plugins page shows how much memory Termix and each plugin process use, and admins get an alert when the server runs low on memory
+- Plugin screens load faster and use far less memory: a plugin's background code starts only when something needs it and stops again when idle, every plugin view shares one cached copy of the app's scripts, and repeated reads of your permissions and settings are shared
 - A plugin screen in a frame can show other plugins' parts again, like Homepage widgets, Host Metrics manager cards, host page tiles and terminal side panels. Termix draws each part in its own frame over the spot, clipped to the screen, hidden under open menus, and they still scroll, resize, drag in edit modes and take Tab focus
 
 ### Changed
@@ -56,6 +58,7 @@
 
 ### Fixed
 
+- Starting the server no longer hangs when downloading a missing plugin from the registry stalls
 - Tile grids (dashboards, Homepage, host pages) go back to columns when the window gets wide again, and show their tiles when a page opens on a narrow screen
 - A very long path prefix header no longer slows down the request it came with
 - Desktop sync: when the same change was sent twice in one sync, the change was saved but the desktop was told it conflicted. The repeat is now answered as a duplicate
