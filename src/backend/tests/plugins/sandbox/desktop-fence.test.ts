@@ -394,10 +394,16 @@ describe.runIf(built)("desktop plugin fence (packaged runtime)", () => {
     expect(run.code, run.stderr).toBe(0);
     const out = JSON.parse(run.stdout.trim().split("\n").pop()!);
     expect(out.permission).toBe("undefined");
-    for (const probe of ["readSecret", "writeOutside", "spawn", "connect"]) {
+    // A Linux kernel without Landlock (before 5.13, or turned off) leaves
+    // files to Node's rules; the helper says so and the docs list it.
+    const noLandlock = /no Landlock/.test(run.stderr);
+    const probes = noLandlock
+      ? ["spawn", "connect"]
+      : ["readSecret", "writeOutside", "spawn", "connect"];
+    for (const probe of probes) {
       expect(out[probe], probe).not.toBe("open");
     }
-    expect(fs.existsSync(outside)).toBe(false);
+    if (!noLandlock) expect(fs.existsSync(outside)).toBe(false);
   }, 60_000);
 
   it("stops a process that grows past its memory cap", async () => {

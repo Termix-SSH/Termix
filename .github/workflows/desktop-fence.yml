@@ -1,0 +1,99 @@
+name: Desktop plugin fence
+
+# Builds the desktop plugin runtime (pinned Node and the OS sandbox helper)
+# on each platform and checks a plugin process can't get past it. The release
+# build runs the same test on its packaged files (electron.yml).
+
+on:
+  push:
+    branches: [dev-*]
+    paths:
+      - "native/plugin-jail/**"
+      - "electron/plugin-*"
+      - "electron/runtime-hash.cjs"
+      - "scripts/build-plugin-runtime.cjs"
+      - "src/backend/plugins/sandbox/**"
+      - "src/backend/tests/plugins/sandbox/desktop-fence.test.ts"
+      - "src/backend/tests/plugins/sandbox/wire-codec.test.ts"
+      - ".github/workflows/desktop-fence.yml"
+  pull_request:
+    branches: [main, dev-*]
+    paths:
+      - "native/plugin-jail/**"
+      - "electron/plugin-*"
+      - "electron/runtime-hash.cjs"
+      - "scripts/build-plugin-runtime.cjs"
+      - "src/backend/plugins/sandbox/**"
+      - ".github/workflows/desktop-fence.yml"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  fence:
+    name: Fence (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows
+            os: blacksmith-4vcpu-windows-2025
+            platform: win32
+            arch: x64
+          - name: linux
+            os: blacksmith-2vcpu-ubuntu-2404
+            platform: linux
+            arch: x64
+          - name: macos
+            os: blacksmith-6vcpu-macos-latest
+            platform: darwin
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install libatomic
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libatomic1
+
+      - name: Install dependencies
+        shell: bash
+        run: npm run ci:install
+
+      - name: Helper unit tests
+        shell: bash
+        working-directory: native/plugin-jail
+        run: |
+          rustup toolchain install
+          cargo test --release --locked
+          cargo clippy --release --locked --all-targets -- -D warnings
+
+      - name: Build plugin runtime
+        shell: bash
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          ARCH: ${{ matrix.arch }}
+        run: node scripts/build-plugin-runtime.cjs --platform "$PLATFORM" --arch "$ARCH"
+
+      - name: Fence tests
+        shell: bash
+        env:
+          TERMIX_REQUIRE_PLUGIN_RUNTIME: "1"
+        run: >-
+          npx vitest run
+          src/backend/tests/plugins/sandbox/desktop-fence.test.ts
+          src/backend/tests/plugins/sandbox/wire-codec.test.ts
+          src/backend/tests/electron/plugin-runtime.test.ts
