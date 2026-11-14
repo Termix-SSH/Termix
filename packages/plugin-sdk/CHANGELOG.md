@@ -20,7 +20,7 @@ Plugin API 2.3.0. Needs Termix 26.11.2.
 - An SSH auth provider's `onBanner` and `onKeyboardInteractive`, a keyboard-interactive handler's `detect` and `autoAnswerPasswords`, and `onBanner` from `ctx.ssh.prepare` may return a Promise. Await them. An answer that takes over 5 seconds counts as none
 - An SSH auth provider in a plugin process may also set the socket `timeout`
 - A sync entity's `shouldSync` may return a Promise. Termix waits for it, so one from a plugin process works
-- A plugin process gets `VERSION` and `TERMIX_DEPLOYMENT` (`desktop`, `docker` or `server`) from Termix, and `validate` no longer warns about reading them
+- A plugin process gets `VERSION`, `TERMIX_DEPLOYMENT` (`desktop`, `docker` or `server`) and `TERMIX_SANDBOX_PLUGIN` (its id) from Termix, and `validate` no longer warns about reading them
 - `createMockCtx({ sandbox: true })` takes `ssh.prepare` with your own client and socket, a `sock` for `ssh.connect`, `ssh.openTransport`, `ssh.jumpChain` and `desktop.local`, and its `ssh.prepare` config names the host
 - `ctx.asUser` in a plugin process gives back exactly what its callback returned, so a live object such as an SSH connection works
 - `PluginAuthPolicyProvider.allowRememberDevice` may return a Promise
