@@ -6,12 +6,12 @@
  * Windows).
  *
  * Each frame is a 4 byte big endian length and then the message, encoded
- * with v8.serialize like Node's own "advanced" IPC. Electron main only splits
- * frames and never decodes them.
+ * by wire-codec.ts (not v8.serialize: core and plugin run different V8s).
+ * Electron main only splits frames and never decodes them.
  */
-import v8 from "node:v8";
 import type { Readable, Writable } from "node:stream";
 import type { Transport, Wire } from "./rpc.js";
+import { decodePayload, encodePayload } from "./wire-codec.js";
 
 /** Runtime argument that picks this channel. */
 export const STDIO_FLAG = "--tmx-stdio";
@@ -68,11 +68,11 @@ export class FrameReader {
 }
 
 export function encodeWire(message: Wire): Buffer {
-  return encodeFrame(v8.serialize(message));
+  return encodeFrame(encodePayload(message));
 }
 
 export function decodeWire(payload: Uint8Array): Wire {
-  return v8.deserialize(payload) as Wire;
+  return decodePayload(payload) as Wire;
 }
 
 /**

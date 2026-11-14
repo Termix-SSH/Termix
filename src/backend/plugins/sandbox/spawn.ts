@@ -15,8 +15,8 @@
 import { fork } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { randomUUID } from "node:crypto";
-import v8 from "node:v8";
 import { decodeWire } from "./frames.js";
+import { encodePayload } from "./wire-codec.js";
 import type { Readable } from "node:stream";
 import type { Transport, Wire } from "./rpc.js";
 import { processTransport } from "./rpc.js";
@@ -232,7 +232,7 @@ export function relaySpawner(mode: "launcher" | "electron"): Spawner {
         transport = {
           send: (message) => {
             try {
-              port.postMessage(v8.serialize(message));
+              port.postMessage(encodePayload(message));
             } catch {
               // the channel is already closed
             }

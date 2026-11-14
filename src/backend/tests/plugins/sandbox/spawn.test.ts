@@ -3,7 +3,10 @@
  * every message to and from it goes through the parent channel.
  */
 import { EventEmitter } from "node:events";
-import v8 from "node:v8";
+import {
+  decodePayload,
+  encodePayload,
+} from "../../../plugins/sandbox/wire-codec.js";
 import { afterEach, describe, expect, it } from "vitest";
 import { setParentTarget } from "../../../utils/parent-channel.js";
 import {
@@ -133,13 +136,13 @@ describe("relay spawner", () => {
     });
     const child = await pending;
     child.transport.send({ t: "rel", f: "x" });
-    expect(v8.deserialize(port.posted[0] as Buffer)).toEqual({
+    expect(decodePayload(port.posted[0] as Buffer)).toEqual({
       t: "rel",
       f: "x",
     });
     const wires: unknown[] = [];
     child.transport.onMessage((m) => wires.push(m));
-    port.emit("message", { data: v8.serialize({ t: "rel", f: "y" }) });
+    port.emit("message", { data: encodePayload({ t: "rel", f: "y" }) });
     port.emit("message", { data: new Uint8Array([9, 9, 9]) });
     expect(wires).toEqual([{ t: "rel", f: "y" }]);
   });
