@@ -31,13 +31,12 @@ async function waitForServer() {
   throw new Error("server did not answer /health");
 }
 
-async function call(method, path, { token, cookie, body } = {}) {
+async function call(method, path, { cookie, body } = {}) {
   const response = await fetch(`${base}${path}`, {
     method,
     headers: {
       "content-type": "application/json",
       origin: base,
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
       ...(cookie ? { cookie } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
@@ -66,20 +65,19 @@ async function main() {
   if (!login.response.ok) {
     throw new Error(`could not log in: ${login.response.status}`);
   }
+  // A browser session: the cookie, sent with this server as the origin.
   const cookie = (login.response.headers.getSetCookie?.() ?? [])
     .map((line) => line.split(";")[0])
     .join("; ");
-  const { data: tokenData } = await call("GET", "/users/me/token", { cookie });
-  const token = tokenData?.token;
-  if (!token) throw new Error("no session token after login");
+  if (!cookie) throw new Error("no session cookie after login");
 
-  const { data: picker } = await call("GET", "/plugins/onboarding", { token });
+  const { data: picker } = await call("GET", "/plugins/onboarding", { cookie });
   const ids = (picker?.plugins ?? []).map((plugin) => plugin.id);
   const choices = Object.fromEntries(
     ids.map((id) => [id, KEEP_OFF.has(id) ? "disabled" : "enabled"]),
   );
   const applied = await call("POST", "/plugins/onboarding/apply", {
-    token,
+    cookie,
     body: { choices },
   });
   if (!applied.response.ok) {
@@ -88,7 +86,7 @@ async function main() {
 
   const end = Date.now() + timeoutMs;
   for (;;) {
-    const { data } = await call("GET", "/plugins", { token });
+    const { data } = await call("GET", "/plugins", { cookie });
     const list = Array.isArray(data) ? data : (data?.plugins ?? []);
     const wanted = list.filter((p) => !KEEP_OFF.has(p.id) && p.enabled);
     const active = wanted.filter((p) => p.state === "active").length;
