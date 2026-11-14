@@ -75,16 +75,7 @@ export async function readPluginEnvFile(
       "ENOENT",
     );
   }
-  const dataDir = real(source.DATA_DIR || "./db/data");
-  if (inside(dataDir, target)) {
-    throw new EnvFileError(`${name} may not point inside the data folder`);
-  }
-  for (const key of CORE_FILE_ENV) {
-    const own = source[key];
-    if (own && real(own) === target) {
-      throw new EnvFileError(`${name} points at one of Termix's own files`);
-    }
-  }
+  assertNotCoreFile(target, source, name);
   const stat = await fs.promises.stat(target);
   if (!stat.isFile()) throw new EnvFileError(`${name} is not a file`);
   if (stat.size > MAX_ENV_FILE_BYTES) {
@@ -94,4 +85,65 @@ export async function readPluginEnvFile(
     text: await fs.promises.readFile(target, "utf8"),
     modifiedMs: Math.round(stat.mtimeMs),
   };
+}
+
+export const MAX_SECRET_BYTES = 64 * 1024;
+
+/**
+ * ctx.files.readSecret (config:secrets): a secret a config file points at,
+ * from the server's environment or a file such as a Docker secret. Never one
+ * of core's variables or files, or anything in the data folder.
+ */
+export async function readConfigSecret(
+  ref: unknown,
+  source: NodeJS.ProcessEnv = process.env,
+): Promise<string | null> {
+  const value = (ref ?? {}) as { env?: unknown; file?: unknown };
+  if (typeof value.env === "string") {
+    const name = value.env;
+    if (!isPassableEnv(name) || CORE_FILE_ENV.includes(name)) {
+      throw new EnvFileError(`${name} is one of Termix's own variables`);
+    }
+    const found = source[name];
+    if (typeof found !== "string") return null;
+    if (Buffer.byteLength(found) > MAX_SECRET_BYTES) {
+      throw new EnvFileError(`${name} is larger than 64 KiB`);
+    }
+    return found;
+  }
+  if (typeof value.file !== "string") {
+    throw new EnvFileError("A secret is { env: NAME } or { file: path }");
+  }
+  if (!path.isAbsolute(value.file)) {
+    throw new EnvFileError("A secret file must be an absolute path");
+  }
+  let target: string;
+  try {
+    target = await fs.promises.realpath(value.file);
+  } catch {
+    return null;
+  }
+  assertNotCoreFile(target, source, value.file);
+  const stat = await fs.promises.stat(target);
+  if (!stat.isFile()) throw new EnvFileError(`${value.file} is not a file`);
+  if (stat.size > MAX_SECRET_BYTES) {
+    throw new EnvFileError(`${value.file} is larger than 64 KiB`);
+  }
+  return fs.promises.readFile(target, "utf8");
+}
+
+function assertNotCoreFile(
+  target: string,
+  source: NodeJS.ProcessEnv,
+  label: string,
+): void {
+  if (inside(real(source.DATA_DIR || "./db/data"), target)) {
+    throw new EnvFileError(`${label} may not point inside the data folder`);
+  }
+  for (const key of CORE_FILE_ENV) {
+    const own = source[key];
+    if (own && real(own) === target) {
+      throw new EnvFileError(`${label} points at one of Termix's own files`);
+    }
+  }
 }

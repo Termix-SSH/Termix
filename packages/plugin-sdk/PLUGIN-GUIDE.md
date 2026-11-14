@@ -308,7 +308,9 @@ layout or theme, or `network:sockets` keeps it running.
 - You can only read your own folders. For a file an admin points you at (a config file mounted into the
   container), list its variable in `env` with `"file": true` and read it with `ctx.files.readEnvFile(name)`,
   which answers `{ text, modifiedMs }` or null when the variable is not set. Termix reads it for you, never
-  from its data folder or its own key files, up to 5 MB. Read it on a schedule to notice changes.
+  from its data folder or its own key files, up to 5 MB. Read it on a schedule to notice changes. Secrets
+  such a file points at (`{ env: NAME }`, `{ file: /run/secrets/x }`) come from `ctx.files.readSecret`, which
+  needs `config:secrets`.
 - SSH auth providers work: `prepare` gets a copy of the config without secrets and may set only
   `username`, `password`, `privateKey`, `passphrase`, `tryKeyboard`, `readyTimeout`, `timeout`,
   `keepaliveInterval` and `keepaliveCountMax` (a `retry` patch and `connectOptions` too). `env.client` is a stand-in;
@@ -1455,6 +1457,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `kv:own`                 | low      | Small key value state                                         |
 | `files:own`              | low      | Your own folder on disk                                       |
 | `secrets:own`            | low      | Your own encrypted secrets                                    |
+| `config:secrets`         | high     | Read env variables and files on the server, not Termix's keys |
 | `settings:read-core`     | low      | Read Termix server settings                                   |
 | `plugins:read`           | low      | See installed plugins                                         |
 | `ui:surface`             | low      | Add tabs, panels and settings                                 |

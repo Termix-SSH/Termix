@@ -32,7 +32,8 @@ const RUN_EVERY_MS = 30_000;
 
 /**
  * Plugin capabilities that make an install, grant or enable wait. The two
- * critical ones plus those that run programs, act as users or change sign in.
+ * critical ones plus those that run programs, act as users, change sign in
+ * or read the server's secrets.
  */
 export const HELD_CAPABILITIES = [
   "credentials:read",
@@ -42,6 +43,7 @@ export const HELD_CAPABILITIES = [
   "users:impersonate",
   "auth:provide",
   "auth:policy",
+  "config:secrets",
 ];
 
 export type HoldKind =

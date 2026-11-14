@@ -11,7 +11,8 @@ Plugin API 2.4.0. Needs Termix 26.11.2.
 - `ctx.sync.host.desktop.connectionOrigin()` reads the desktop wide default for where connections start
 - `ctx.files.readEnvFile(name)` reads the file an admin named in a manifest `env` variable marked `"file": true`, such as a mounted config file. A plugin process can't read it itself
 - Manifest `env` entries take `"file": true`
-- `createMockCtx({ envFiles })` answers `ctx.files.readEnvFile`
+- Capability `config:secrets` and `ctx.files.readSecret({ env } | { file })` read a secret a config file points at, such as a Docker secret. Never Termix's own variables, key files or data folder
+- `createMockCtx({ envFiles, configSecrets })` answers `ctx.files.readEnvFile` and `readSecret`
 
 ### Changed
 

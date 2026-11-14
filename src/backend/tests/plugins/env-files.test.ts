@@ -4,6 +4,8 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   MAX_ENV_FILE_BYTES,
+  MAX_SECRET_BYTES,
+  readConfigSecret,
   readPluginEnvFile,
 } from "../../plugins/env-files.js";
 
@@ -111,5 +113,52 @@ describe("ctx.files.readEnvFile", () => {
     const big = path.join(root, "big.yaml");
     fs.writeFileSync(big, Buffer.alloc(MAX_ENV_FILE_BYTES + 1));
     await expect(read(big)).rejects.toThrow(/5 MB/);
+  });
+});
+
+describe("ctx.files.readSecret", () => {
+  it("reads an env variable or a secret file", async () => {
+    const secret = path.join(root, "nas_password");
+    fs.writeFileSync(secret, "hunter2\n");
+    expect(
+      await readConfigSecret({ env: "NAS_PASSWORD" }, { NAS_PASSWORD: "p" }),
+    ).toBe("p");
+    expect(await readConfigSecret({ env: "NAS_PASSWORD" }, {})).toBeNull();
+    expect(
+      await readConfigSecret({ file: secret }, { DATA_DIR: dataDir }),
+    ).toBe("hunter2\n");
+    expect(
+      await readConfigSecret({ file: path.join(root, "gone") }, {}),
+    ).toBeNull();
+  });
+
+  it("never reads Termix's own variables, key files or data folder", async () => {
+    for (const env of [
+      "JWT_SECRET",
+      "ENCRYPTION_KEY",
+      "DATABASE_KEY",
+      "NODE_OPTIONS",
+      "JWT_SECRET_FILE",
+    ]) {
+      await expect(readConfigSecret({ env }, { [env]: "x" })).rejects.toThrow(
+        /own variables/,
+      );
+    }
+    await expect(
+      readConfigSecret({ file: keyFile }, { JWT_SECRET_FILE: keyFile }),
+    ).rejects.toThrow(/own files/);
+    await expect(
+      readConfigSecret(
+        { file: path.join(dataDir, "db.sqlite.encrypted") },
+        { DATA_DIR: dataDir },
+      ),
+    ).rejects.toThrow(/data folder/);
+    await expect(readConfigSecret({ file: "relative" }, {})).rejects.toThrow(
+      /absolute/,
+    );
+    await expect(readConfigSecret({}, {})).rejects.toThrow(/env: NAME/);
+    const big = path.join(root, "big_secret");
+    fs.writeFileSync(big, Buffer.alloc(MAX_SECRET_BYTES + 1));
+    await expect(readConfigSecret({ file: big }, {})).rejects.toThrow(/64 KiB/);
   });
 });

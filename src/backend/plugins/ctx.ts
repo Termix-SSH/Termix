@@ -375,6 +375,20 @@ export function createPluginContext(
     return result;
   };
 
+  const filesReadSecret = guarded(
+    manifest,
+    "config:secrets",
+    async (ref: { env: string } | { file: string }) => {
+      const { readConfigSecret } = await import("./env-files.js");
+      return readConfigSecret(ref);
+    },
+    {
+      action: "files_read_secret",
+      details: () => "read a secret named in a config file",
+      once: true,
+    },
+  );
+
   const dbDefine = guarded(
     manifest,
     "db:own",
@@ -595,6 +609,7 @@ export function createPluginContext(
     files: {
       dataDir: () => filesDataDir(),
       readEnvFile: (name) => filesReadEnvFile(name),
+      readSecret: (ref) => filesReadSecret(ref),
     },
 
     registry: {

@@ -103,6 +103,15 @@ export interface PluginFiles {
   readEnvFile: (
     name: string,
   ) => Promise<{ text: string; modifiedMs: number } | null>;
+  /**
+   * A secret a config file points at: an environment variable of the server
+   * or a file such as a Docker secret. Null when it is not there. Never one of
+   * Termix's own variables, key files or anything in its data folder; at most
+   * 64 KiB. Needs config:secrets. Termix 26.11.2+.
+   */
+  readSecret: (
+    ref: { env: string } | { file: string },
+  ) => Promise<string | null>;
 }
 
 /**

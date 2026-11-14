@@ -1305,6 +1305,10 @@
         "title": "Store its own secrets",
         "consequence": "Encrypted by Termix. The plugin never holds the key."
       },
+      "config:secrets": {
+        "title": "Read secrets the server holds",
+        "consequence": "Environment variables and files on the server, except Termix's own keys."
+      },
       "settings:read-core": {
         "title": "Read Termix settings",
         "consequence": "Server settings, not your hosts or credentials."

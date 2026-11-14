@@ -122,6 +122,8 @@ export interface FakeContextOptions {
   coreSettings?: Record<string, string>;
   /** File contents ctx.files.readEnvFile answers, by env variable name. */
   envFiles?: Record<string, string>;
+  /** What ctx.files.readSecret answers, keyed "env:NAME" or "file:/path". */
+  configSecrets?: Record<string, string>;
   /** What ctx.files.dataDir() answers. Defaults to /tmp/<pluginId>. */
   dataDir?: string;
   /** What ctx.ssh.connect and withConnection hand back as the client. */
@@ -766,6 +768,10 @@ export function createFakeContext(
         }
         const text = options.envFiles?.[name];
         return text === undefined ? null : { text, modifiedMs: 0 };
+      },
+      readSecret: async (ref) => {
+        const key = "env" in ref ? `env:${ref.env}` : `file:${ref.file}`;
+        return options.configSecrets?.[key] ?? null;
       },
     },
 
@@ -1790,6 +1796,8 @@ export interface MockContextOptions {
   coreSettings?: Record<string, string>;
   /** File contents ctx.files.readEnvFile answers, by env variable name. */
   envFiles?: Record<string, string>;
+  /** What ctx.files.readSecret answers, keyed "env:NAME" or "file:/path". */
+  configSecrets?: Record<string, string>;
   /** What ctx.files.dataDir() answers. */
   dataDir?: string;
   /** Acting user returned by currentActor and used by asUser. */
@@ -1958,6 +1966,7 @@ export function createMockCtx(
     settings: options.settings,
     coreSettings: options.coreSettings,
     envFiles: options.envFiles,
+    configSecrets: options.configSecrets,
     dataDir: options.dataDir,
     sshClient: options.sshClient,
     db: options.db,
@@ -2071,6 +2080,10 @@ export function createMockCtx(
         return ctx.files.dataDir();
       },
       readEnvFile: (name) => ctx.files.readEnvFile(name),
+      readSecret: async (ref) => {
+        require("config:secrets");
+        return ctx.files.readSecret(ref);
+      },
     },
 
     events: {
