@@ -35,18 +35,36 @@ export function clearSshTransports(): void {
   providers.clear();
 }
 
+/** A provider that takes longer than this to answer claims counts as no. */
+export const CLAIM_TIMEOUT_MS = 2000;
+
+async function claimedBy(
+  provider: PluginSshTransportProvider,
+  host: PluginSshTransportHost,
+): Promise<boolean> {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    const answer = await Promise.race([
+      Promise.resolve(provider.claims(host.id, host)),
+      new Promise<false>((resolve) => {
+        timer = setTimeout(() => resolve(false), CLAIM_TIMEOUT_MS);
+      }),
+    ]);
+    // Only a real true claims the host; a stray value never does.
+    return answer === true;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Opens a stream to the host if a provider claims it, else null. */
 export async function openProvidedTransport(
   host: PluginSshTransportHost,
 ): Promise<Duplex | null> {
   for (const { provider } of providers.values()) {
-    let claimed = false;
-    try {
-      claimed = provider.claims(host.id, host);
-    } catch {
-      claimed = false;
-    }
-    if (claimed) return provider.open(host);
+    if (await claimedBy(provider, host)) return provider.open(host);
   }
   return null;
 }

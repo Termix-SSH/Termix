@@ -586,3 +586,144 @@ export function activate(ctx) {
     await supervisor.shutdown();
   }, 30_000);
 });
+
+const WORKER_PROBES = `
+import fs from "node:fs";
+import { Worker, parentPort, workerData } from "node:worker_threads";
+const tryIt = async (fn) => {
+  try { await fn(); return "open"; }
+  catch (error) { return error.code ?? error.message; }
+};
+const out = { data: workerData };
+out.readSecret = await tryIt(() => fs.readFileSync(workerData.secret));
+out.childProcess = await tryIt(async () => (await import("node:child_process")).spawnSync(process.execPath, ["-v"]));
+out.sqlite = await tryIt(() => import("node:sqlite"));
+out.nestedEval = await tryIt(() => new Worker("1", { eval: true, execArgv: [] }));
+parentPort.postMessage(out);
+`;
+
+const WORKER_MAIN = `
+import { Worker } from "node:worker_threads";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+const here = path.dirname(fileURLToPath(import.meta.url));
+const tryIt = async (fn) => {
+  try { await fn(); return "open"; }
+  catch (error) { return error.code ?? error.message; }
+};
+const run = (make) => new Promise((resolve) => {
+  let worker;
+  try { worker = make(); } catch (error) { resolve(error.code ?? error.message); return; }
+  worker.once("message", (m) => { resolve(m); void worker.terminate(); });
+  worker.once("error", (e) => resolve("error: " + e.message));
+});
+export async function activate(ctx) {
+  const file = path.join(here, "probe-worker.mjs");
+  const out = {};
+  out.plain = await run(() => new Worker(file, { workerData: { secret: SECRET } }));
+  out.emptyArgv = await run(() => new Worker(file, { execArgv: [], workerData: { secret: SECRET } }));
+  out.viaPrototype = await run(() => new Worker.prototype.constructor(file, { execArgv: [], workerData: { secret: SECRET } }));
+  out.eval = await tryIt(() => new Worker("1", { eval: true }));
+  out.dataUrl = await tryIt(() => new Worker(new URL("data:text/javascript,1")));
+  await ctx.report(out);
+}
+`;
+
+describe("worker threads", () => {
+  it("keep the process's fence and load harden first", async () => {
+    let probes: Record<string, unknown> | null = null;
+    const files = plugin(
+      "workers",
+      WORKER_MAIN.replaceAll("SECRET", JSON.stringify(secretFile)),
+    );
+    fs.writeFileSync(path.join(files.dir, "probe-worker.mjs"), WORKER_PROBES);
+    const supervisor = new SandboxSupervisor(config());
+    await supervisor.register(
+      spec("workers", files, {
+        sandbox: { alwaysOn: true, workers: true },
+        report: (value) => {
+          probes = value as Record<string, unknown>;
+        },
+      }),
+    );
+    await until(() => probes !== null, 20_000);
+    await supervisor.shutdown();
+
+    const fenced = {
+      readSecret: "ERR_ACCESS_DENIED",
+      childProcess: "ERR_ACCESS_DENIED",
+      sqlite: "ERR_ACCESS_DENIED",
+      nestedEval: "ERR_ACCESS_DENIED",
+    };
+    expect(probes).toMatchObject({
+      plain: fenced,
+      emptyArgv: fenced,
+      viaPrototype: fenced,
+      eval: "ERR_ACCESS_DENIED",
+      dataUrl: "ERR_ACCESS_DENIED",
+    });
+    expect((probes!.plain as { data: unknown }).data).toEqual({
+      secret: secretFile,
+    });
+  }, 40_000);
+
+  it("can't start without sandbox.workers", async () => {
+    let probes: Record<string, unknown> | null = null;
+    const files = plugin(
+      "noworkers",
+      WORKER_MAIN.replaceAll("SECRET", JSON.stringify(secretFile)),
+    );
+    fs.writeFileSync(path.join(files.dir, "probe-worker.mjs"), WORKER_PROBES);
+    const supervisor = new SandboxSupervisor(config());
+    await supervisor.register(
+      spec("noworkers", files, {
+        sandbox: { alwaysOn: true },
+        report: (value) => {
+          probes = value as Record<string, unknown>;
+        },
+      }),
+    );
+    await until(() => probes !== null, 20_000);
+    await supervisor.shutdown();
+    expect(probes).toMatchObject({
+      plain: "ERR_ACCESS_DENIED",
+      emptyArgv: "ERR_ACCESS_DENIED",
+    });
+  }, 40_000);
+});
+
+describe("methods that hand back a function", () => {
+  it("give a plugin process a function it can call at once", async () => {
+    const calls: string[] = [];
+    let result: unknown = null;
+    const body = `
+      export async function activate(ctx) {
+        const stop = ctx.hosts.trackSession(4);
+        let out;
+        try { stop(); out = typeof stop; } catch (error) { out = error.message; }
+        await ctx.report(out);
+      }`;
+    const supervisor = new SandboxSupervisor(config());
+    await supervisor.register(
+      spec("tracker", plugin("tracker", body), {
+        sandbox: { alwaysOn: true },
+        report: (value) => {
+          result = value;
+        },
+        ctx: {
+          hosts: {
+            trackSession: (hostId: number) => {
+              calls.push(`open ${hostId}`);
+              return () => calls.push(`close ${hostId}`);
+            },
+          },
+        },
+      }),
+    );
+    await until(() => result !== null);
+    await until(() => calls.length === 2);
+    await supervisor.shutdown();
+    expect(result).toBe("function");
+    expect(calls).toEqual(["open 4", "close 4"]);
+  }, 30_000);
+});

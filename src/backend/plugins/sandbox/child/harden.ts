@@ -14,6 +14,42 @@ import module from "node:module";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+/**
+ * Worker options a plugin may pass. execArgv is left out on purpose: a
+ * worker given its own execArgv (even []) starts without the permission
+ * model, so every worker must inherit the process's flags.
+ */
+export const WORKER_OPTIONS = new Set([
+  "argv",
+  "env",
+  "workerData",
+  "stdin",
+  "stdout",
+  "stderr",
+  "transferList",
+  "resourceLimits",
+  "name",
+  "trackUnmanagedFds",
+]);
+
+/** A worker's entry as a file URL. Code strings and other schemes are refused. */
+export function workerEntryUrl(file: unknown): string {
+  if (file instanceof URL) {
+    if (file.protocol !== "file:") throw refuseWorker();
+    return file.href;
+  }
+  const text = String(file);
+  if (text.startsWith("file:")) return new URL(text).href;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(text) && !/^[a-z]:[\\/]/i.test(text)) {
+    throw refuseWorker();
+  }
+  return pathToFileURL(path.resolve(text)).href;
+}
+
+function refuseWorker(): Error {
+  return refuse("A worker that does not start from a file");
+}
+
 const BLOCKED = new Set(
   ["sqlite", "inspector", "inspector/promises", "wasi", "trace_events"].flatMap(
     (name) => [name, `node:${name}`],
@@ -78,6 +114,8 @@ function harden(): void {
     configurable: false,
   });
 
+  guardWorkers(original);
+
   for (const name of [
     "_debugProcess",
     "_debugEnd",
@@ -93,4 +131,54 @@ function harden(): void {
       configurable: false,
     });
   }
+}
+
+/**
+ * Every worker starts from a small module that loads this file first and
+ * then the plugin's entry, so the worker is hardened even where the Node
+ * flags are ignored (the desktop), and it keeps the process's permission
+ * flags because its execArgv is never set. A worker from a code string
+ * would skip this file, so it is refused.
+ */
+function guardWorkers(getBuiltin: (id: string) => unknown): void {
+  const threads = getBuiltin("node:worker_threads") as {
+    Worker: new (file: unknown, options?: object) => object;
+  };
+  const Original = threads.Worker;
+  const self = import.meta.url;
+  function Worker(this: unknown, file: unknown, options?: unknown) {
+    if (!new.target) {
+      throw new TypeError(
+        "Class constructor Worker cannot be invoked without 'new'",
+      );
+    }
+    const given = (options ?? {}) as Record<string, unknown>;
+    if (given.eval) throw refuseWorker();
+    const safe: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(given)) {
+      if (WORKER_OPTIONS.has(key)) safe[key] = value;
+    }
+    const boot =
+      `await import(${JSON.stringify(self)});` +
+      `await import(${JSON.stringify(workerEntryUrl(file))});`;
+    return Reflect.construct(
+      Original,
+      [new URL(`data:text/javascript,${encodeURIComponent(boot)}`), safe],
+      new.target === Worker ? Original : new.target,
+    );
+  }
+  Object.setPrototypeOf(Worker, Object.getPrototypeOf(Original));
+  Worker.prototype = Original.prototype;
+  // So instance.constructor leads back here, not to the real class.
+  Object.defineProperty(Original.prototype, "constructor", {
+    value: Worker,
+    writable: false,
+    configurable: false,
+  });
+  Object.defineProperty(threads, "Worker", {
+    value: Worker,
+    writable: false,
+    configurable: false,
+  });
+  module.syncBuiltinESMExports();
 }

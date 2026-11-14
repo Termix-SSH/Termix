@@ -29,7 +29,7 @@ import {
 import { hasCapability } from "../permissions.js";
 import { HOST_SECRET_FIELDS } from "../ctx-hosts.js";
 import { pluginLogger } from "../../utils/logger.js";
-import { Endpoint, type StreamPort, type Transport } from "./rpc.js";
+import { Endpoint, StreamPort, type Transport } from "./rpc.js";
 import { SandboxTokenStore, type ActorGrant } from "./tokens.js";
 import { checkPluginSql, type SqlDialect } from "./sql-guard.js";
 import { runPluginSql, runPluginSqlBatch } from "./db-exec.js";
@@ -37,6 +37,15 @@ import {
   remoteSshAuthProvider,
   SshAuthBridgeError,
 } from "./ssh-auth-bridge.js";
+import {
+  joinSshStream,
+  joinStream,
+  plainConfig,
+  portAsSocket,
+  refusalFromStandIn,
+  standInClient,
+  type StandInClient,
+} from "./transport-bridge.js";
 import {
   LoginBridgeError,
   remoteKeyboardInteractiveHandler,
@@ -46,6 +55,10 @@ import {
 /** Grace after a call ends before its token stops working. */
 export const REQUEST_TOKEN_GRACE_MS = 30_000;
 const SOCKET_TOKEN_MS = 60 * 60 * 1000;
+/** How long a prepared config's host key check stays usable. */
+const PREPARED_MS = 15 * 60 * 1000;
+/** A host key prompt the user never answers counts as refused. */
+const VERIFY_MS = 5 * 60 * 1000;
 
 type AnyFn = (...args: unknown[]) => unknown;
 type CtxObject = Record<string, unknown>;
@@ -65,6 +78,14 @@ const SPECIAL_PATHS = new Set([
   "db.refs",
   "ssh.connect",
   "ssh.withConnection",
+  "ssh.jumpChain",
+  "ssh.prepare",
+  "ssh.openTransport",
+  "ssh.transports.provide",
+  "desktop.local.pluginFetch",
+  "desktop.local.fs.openRead",
+  "desktop.local.fs.openDownload",
+  "desktop.local.pty.spawn",
   "fetch",
   "services.get",
   "audit.exportBatches",
@@ -82,21 +103,18 @@ const SPECIAL_PATHS = new Set([
  * object core can't bridge, or core calls the provider synchronously.
  */
 const REFUSED_PATHS: ReadonlyMap<string, string> = new Map([
-  ["ssh.prepare", "returns a live connect config"],
-  ["ssh.openTransport", "returns a live transport"],
-  ["ssh.jumpChain", "returns live ssh clients"],
   ["hosts.locks.provide", "core reads host locks synchronously"],
   ["hosts.status.provide", "core reads host status synchronously"],
   // plugin-id-ok: ctx.sync is a core namespace, not the Sync plugin
   ["sync.provide", "the sync engine runs in process"], // plugin-id-ok: ctx.sync path
 ]);
-const REFUSED_PREFIXES = ["desktop.local.", "sync.host."]; // plugin-id-ok: ctx.sync path
+const REFUSED_PREFIXES = ["sync.host."]; // plugin-id-ok: ctx.sync path
 
 /** Results under these paths have secret fields stripped. */
 const SECRET_SCRUB_PREFIXES = ["hosts.", "ssh.", "credentials.", "users."];
 
 /** Values on ctx copied to the child once at start. */
-const COPIED_VALUES = ["pluginId", "db.dialect"];
+const COPIED_VALUES = ["pluginId", "manifest", "db.dialect"];
 
 export function ctxFunctionPaths(
   ctx: object,
@@ -273,6 +291,10 @@ export class PluginBridge {
   private readonly provided = new Map<string, unknown>();
   private readonly serviceRefs = new Map<string, string>();
   private readonly wsHandlers = new Set<string>();
+  /** Open plugin sockets by their stream id, for ssh.prepare's host key prompt. */
+  private readonly sockets = new Map<string, import("ws").WebSocket>();
+  /** Streams core opened for the plugin, closed with its process. */
+  private readonly openStreams = new Map<string, Duplex>();
   /** Requests in flight, by the token the child got for them. */
   private readonly liveRequests = new Map<
     string,
@@ -344,6 +366,16 @@ export class PluginBridge {
     this.endpoint.close(reason);
     this.tokens.revokePlugin(this.pluginId);
     this.refs.clear();
+    for (const stream of this.openStreams.values()) stream.destroy();
+    this.openStreams.clear();
+    this.sockets.clear();
+  }
+
+  /** A stream core holds for the plugin, closed when the plugin says so. */
+  private track(stream: Duplex | NodeReadable, port: StreamPort): void {
+    const held = stream as Duplex;
+    this.openStreams.set(port.sid, held);
+    held.once?.("close", () => this.openStreams.delete(port.sid));
   }
 
   /** A token for whoever core is acting as right now, for a call into the child. */
@@ -910,6 +942,354 @@ export class PluginBridge {
       this.refs.delete(String(id));
       return true;
     });
+    endpoint.handle(
+      "ssh.forwardOut",
+      ([id, srcIP, srcPort, dstIP, dstPort]) => {
+        const client = this.ref<{ forwardOut: AnyFn }>(id, "client");
+        return new Promise((resolve, reject) => {
+          client.forwardOut(
+            String(srcIP),
+            Number(srcPort) || 0,
+            String(dstIP),
+            Number(dstPort),
+            (err: Error | undefined, stream: Duplex) => {
+              if (err) return reject(err);
+              const port = endpoint.openStream();
+              this.track(stream, port);
+              joinStream(stream, port);
+              resolve(port);
+            },
+          );
+        });
+      },
+    );
+
+    // A jump chain ends at a client core holds, reached like ssh.connect's.
+    // A plugin that carries host connections: core asks it about each host
+    // and gets the stream to the host back as a port.
+    endpoint.handle("ssh.transports.provide", ([raw]) => {
+      const provider = plainObject(raw);
+      const claims = provider.claims;
+      const open = provider.open;
+      if (typeof claims !== "function" || typeof open !== "function") {
+        throw new SandboxError(
+          "A transport provider needs claims and open",
+          "SANDBOX_VALUE",
+          400,
+        );
+      }
+      return this.callCtx("ssh.transports.provide", {
+        claims: async (hostId: number, host?: unknown) =>
+          (await (claims as AnyFn)(hostId, plainConfig(host))) === true,
+        open: async (host: unknown) => {
+          const port = await (open as AnyFn)(plainConfig(host));
+          if (!(port instanceof StreamPort)) {
+            throw new Error("The transport provider gave no stream");
+          }
+          return portAsSocket(port);
+        },
+      });
+    });
+
+    // The plugin's end of a stream above went away.
+    endpoint.handle("stream.close", ([sid]) => {
+      const stream = this.openStreams.get(String(sid));
+      this.openStreams.delete(String(sid));
+      stream?.destroy();
+      return true;
+    });
+
+    endpoint.handle("ssh.jumpChain", async ([jumpHosts, options]) => {
+      const opts = plainObject(options);
+      const chain = (await this.callCtx(
+        "ssh.jumpChain",
+        Array.isArray(jumpHosts) ? jumpHosts.map(plainObject) : [],
+        {
+          ...(opts.forHost !== undefined ? { forHost: opts.forHost } : {}),
+          ...promptOption(opts.prompt),
+        },
+      )) as { client: unknown; host: unknown; dispose: () => void };
+      const id = this.addRef("client", chain.client);
+      this.watchClient(id, chain.client);
+      return {
+        client: { $ssh: id },
+        host: (await this.mayReadCredentials())
+          ? chain.host
+          : scrubSecrets(chain.host),
+        dispose: () => {
+          this.refs.delete(id);
+          chain.dispose();
+        },
+      };
+    });
+
+    // The plugin runs its own ssh2 client. Core builds the config against a
+    // stand-in client and keeps the host key check; the plugin's client asks
+    // ssh.verifyHostKey for every key it is shown.
+    endpoint.handle("ssh.prepare", async ([host, options]) => {
+      const opts = plainObject(options);
+      const client = standInClient();
+      const socketId =
+        typeof opts.hostKeySocket === "string" ? opts.hostKeySocket : "";
+      const built = (await this.callCtx("ssh.prepare", host, {
+        purpose: opts.purpose,
+        ...(typeof opts.profile === "string" ? { profile: opts.profile } : {}),
+        ...(Number.isInteger(opts.serverHostId)
+          ? { serverHostId: opts.serverHostId }
+          : {}),
+        interactive: opts.interactive === true,
+        ...(typeof opts.log === "function" ? { log: opts.log } : {}),
+        client,
+        hostKeySocket: (socketId && this.sockets.get(socketId)) || null,
+      })) as {
+        config: Record<string, unknown>;
+        outcome: unknown;
+        authType: unknown;
+        onBanner?: AnyFn;
+        onAuthFailed?: AnyFn;
+      };
+      const { hostVerifier, ...rest } = built.config;
+      const id = this.addRef("prepared", {
+        verify:
+          typeof hostVerifier === "function" ? (hostVerifier as AnyFn) : null,
+        client,
+      } satisfies PreparedEntry);
+      setTimeout(() => this.refs.delete(id), PREPARED_MS).unref?.();
+      return {
+        prepared: id,
+        config: plainConfig(rest),
+        outcome: built.outcome,
+        authType: built.authType,
+        ...(built.onBanner ? { onBanner: built.onBanner } : {}),
+        ...(built.onAuthFailed ? { onAuthFailed: built.onAuthFailed } : {}),
+      };
+    });
+    endpoint.handle("ssh.verifyHostKey", async ([id, key]) => {
+      const entry = this.ref<PreparedEntry>(id, "prepared");
+      if (!entry.verify || !Buffer.isBuffer(key) || key.length > 64 * 1024) {
+        return { valid: false, message: "The host key could not be checked" };
+      }
+      const verify = entry.verify;
+      const valid = await new Promise<boolean>((resolve) => {
+        const timer = setTimeout(() => resolve(false), VERIFY_MS);
+        try {
+          verify(key, (ok: unknown) => {
+            clearTimeout(timer);
+            resolve(ok === true);
+          });
+        } catch {
+          clearTimeout(timer);
+          resolve(false);
+        }
+      });
+      if (valid) return { valid: true };
+      return { valid: false, ...refusalFromStandIn(entry.client) };
+    });
+
+    // The bytes to the host: core opens the socket (or the proxy, jump or
+    // provided route) and the plugin's client speaks SSH over the stream.
+    endpoint.handle("ssh.openTransport", async ([host, config, options]) => {
+      const cfg = plainObject(config);
+      const opts = plainObject(options);
+      if (typeof cfg.host !== "string" || !cfg.host) {
+        throw new SandboxError(
+          "ctx.ssh.openTransport needs the config from ctx.ssh.prepare",
+          "SANDBOX_VALUE",
+          400,
+        );
+      }
+      const target: Record<string, unknown> = {
+        host: cfg.host,
+        port: Number.isInteger(cfg.port) ? cfg.port : 22,
+      };
+      const opened = (await this.callCtx("ssh.openTransport", host, target, {
+        ...(opts.resolveDns === false ? { resolveDns: false } : {}),
+        ...(opts.portKnock === false ? { portKnock: false } : {}),
+        ...(typeof opts.log === "function" ? { log: opts.log } : {}),
+        ...promptOption(opts.prompt),
+      })) as { jumpClient: unknown; via: string };
+      let jumpClient: { $ssh: string } | null = null;
+      if (opened.jumpClient) {
+        const jumpId = this.addRef("client", opened.jumpClient);
+        this.watchClient(jumpId, opened.jumpClient);
+        jumpClient = { $ssh: jumpId };
+      }
+      let sock = target.sock as Duplex | undefined;
+      // The plugin brought its own stream for a direct connection.
+      if (!sock && opts.ownSock === true) {
+        return { via: opened.via, jumpClient, sock: null };
+      }
+      if (!sock) {
+        const net = await import("node:net");
+        sock = net.connect({
+          host: String(target.host),
+          port: Number(target.port) || 22,
+        });
+      }
+      const port = endpoint.openStream();
+      this.track(sock, port);
+      joinSshStream(sock, port);
+      return { via: opened.via, jumpClient, sock: port };
+    });
+
+    // Desktop local access. Plain calls use the generic handler; these hand
+    // out streams.
+    endpoint.handle(
+      "desktop.local.pluginFetch",
+      async ([origin, subPath, init, bodyPort]) => {
+        const opts = plainObject(init);
+        const body =
+          bodyPort instanceof StreamPort
+            ? bodyPort
+            : typeof opts.body === "string" || Buffer.isBuffer(opts.body)
+              ? opts.body
+              : undefined;
+        const response = (await this.callCtx(
+          "desktop.local.pluginFetch",
+          String(origin),
+          String(subPath),
+          {
+            ...(typeof opts.method === "string" ? { method: opts.method } : {}),
+            headers: stringRecord(opts.headers),
+            ...(body !== undefined ? { body } : {}),
+          },
+        )) as {
+          status: number;
+          ok: boolean;
+          headers: { forEach?: (fn: (v: string, k: string) => void) => void };
+          body: AsyncIterable<Uint8Array> | null;
+        };
+        const headers: Record<string, string> = {};
+        response.headers?.forEach?.((value, key) => {
+          headers[key] = value;
+        });
+        let out: StreamPort | null = null;
+        if (response.body) {
+          const port = endpoint.openStream();
+          out = port;
+          const source = response.body;
+          void (async () => {
+            for await (const chunk of source) {
+              if (!port.write(Buffer.from(chunk))) {
+                await new Promise((resolve) => port.once("drain", resolve));
+              }
+              if (port.destroyed) return;
+            }
+            port.end();
+          })().catch((error: Error) => port.destroy(error));
+        }
+        return {
+          status: response.status,
+          ok: response.ok,
+          headers,
+          body: out,
+        };
+      },
+    );
+    endpoint.handle("desktop.local.fs.openRead", async ([filePath]) => {
+      const opened = (await this.callCtx(
+        "desktop.local.fs.openRead",
+        String(filePath),
+      )) as { stream: NodeReadable; size: number };
+      const port = endpoint.openStream();
+      const source = opened.stream;
+      this.track(source, port);
+      pump(source, port);
+      source.on("end", () => port.end());
+      source.on("error", (error: Error) => port.destroy(error));
+      port.on("close", () => source.destroy?.());
+      return { stream: port, size: opened.size };
+    });
+    endpoint.handle(
+      "desktop.local.fs.openDownload",
+      async ([options, input]) => {
+        if (!(input instanceof StreamPort)) {
+          throw new SandboxError(
+            "A download needs its stream",
+            "SANDBOX_VALUE",
+          );
+        }
+        const download = (await this.callCtx(
+          "desktop.local.fs.openDownload",
+          plainObject(options),
+        )) as {
+          path: string;
+          stream: NodeWritable;
+          publish: (o?: unknown) => Promise<string>;
+          abort: () => Promise<void>;
+        };
+        const sink = download.stream;
+        const written = new Promise<void>((resolve, reject) => {
+          input.on("data", (chunk: Buffer) => {
+            if (!sink.write(chunk)) {
+              input.pause();
+              sink.once("drain", () => input.resume());
+            }
+          });
+          input.on("end", () => sink.end());
+          input.on("error", (error: Error) => {
+            sink.destroy?.(error);
+            reject(error);
+          });
+          sink.on("finish", () => resolve());
+          sink.on("error", (error: Error) => reject(error));
+        });
+        written.catch(() => {});
+        return {
+          path: download.path,
+          publish: async (publishOptions?: unknown) => {
+            await written;
+            const opts = plainObject(publishOptions);
+            return download.publish(
+              typeof opts.overwrite === "boolean"
+                ? { overwrite: opts.overwrite }
+                : undefined,
+            );
+          },
+          abort: async () => {
+            input.destroy();
+            await download.abort();
+          },
+        };
+      },
+    );
+    endpoint.handle("desktop.local.pty.spawn", async ([options]) => {
+      const pty = (await this.callCtx(
+        "desktop.local.pty.spawn",
+        plainObject(options),
+      )) as {
+        pid: number;
+        shell: string;
+        write: (data: string) => void;
+        resize: (cols: number, rows: number) => void;
+        kill: () => void;
+        onData: (fn: (data: string) => void) => () => void;
+        onExit: (fn: (code: number) => void) => () => void;
+      };
+      const port = endpoint.openStream();
+      const offData = pty.onData((data) => {
+        if (!port.destroyed) port.write({ d: data, b: false });
+      });
+      const offExit = pty.onExit((code) => {
+        port.endMeta = { code };
+        port.end();
+      });
+      port.on("data", (chunk: { d?: unknown }) => {
+        if (typeof chunk?.d === "string") pty.write(chunk.d);
+      });
+      port.on("close", () => {
+        offData();
+        offExit();
+      });
+      return {
+        pid: pty.pid,
+        shell: pty.shell,
+        stream: port,
+        resize: (cols: unknown, rows: unknown) =>
+          pty.resize(Number(cols), Number(rows)),
+        kill: () => pty.kill(),
+      };
+    });
 
     if (typeof ctx.fetch === "function") {
       endpoint.handle("ctx.fetch", async ([url, init]) => {
@@ -1030,6 +1410,7 @@ export class PluginBridge {
     });
     const ws = connection.socket;
     const port = this.endpoint.openStream();
+    this.sockets.set(port.sid, ws);
     ws.on("message", (data: Buffer, isBinary: boolean) => {
       this.tokens.touch(token, SOCKET_TOKEN_MS);
       this.touch();
@@ -1066,6 +1447,7 @@ export class PluginBridge {
       if (ws.readyState === ws.OPEN) ws.close(1011);
     });
     ws.on("close", (code: number, reason: Buffer) => {
+      this.sockets.delete(port.sid);
       port.endMeta = { code, reason: reason.toString() };
       port.end();
       this.tokens.revoke(token);
@@ -1314,7 +1696,29 @@ export class PluginBridge {
   }
 }
 
-type RefKind = "client" | "sftp" | "channel" | "iterator" | "service";
+type RefKind =
+  "client" | "sftp" | "channel" | "iterator" | "service" | "prepared";
+
+interface PreparedEntry {
+  verify: AnyFn | null;
+  client: StandInClient;
+}
+
+/** A jump host prompt from the plugin: only its ask function crosses back. */
+function promptOption(value: unknown): { prompt?: { ask: AnyFn } } {
+  const prompt = plainObject(value);
+  return typeof prompt.ask === "function"
+    ? { prompt: { ask: prompt.ask as AnyFn } }
+    : {};
+}
+
+function stringRecord(value: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, item] of Object.entries(plainObject(value))) {
+    if (typeof item === "string") out[key] = item;
+  }
+  return out;
+}
 
 interface SpecialCtx {
   http: {

@@ -81,6 +81,15 @@ describe("buildChildFlags", () => {
     expect(flags.unenforced).toEqual(["network"]);
   });
 
+  it("allows workers only when the manifest asks, with harden last", () => {
+    const off = buildChildFlags({ ...base, granted: ["process:spawn"] });
+    expect(off.execArgv).not.toContain("--allow-worker");
+    const on = buildChildFlags({ ...base, granted: [], workers: true });
+    expect(on.execArgv).toContain("--allow-worker");
+    expect(on.execArgv[0]).toBe("--permission");
+    expect(on.execArgv.at(-1)).toMatch(/^--import=file:.*harden.js$/);
+  });
+
   it("caps the heap at the plugin's memory limit", () => {
     const flags = buildChildFlags({ ...base, granted: [], heapMb: 512 });
     expect(flags.execArgv).toContain("--max-old-space-size=512");

@@ -61,6 +61,8 @@ const FIXED_FLAGS = new Set([
   "--allow-net",
   "--allow-child-process",
   "--allow-addons",
+  // Only with the worker guard in harden.js, which keeps workers on these flags.
+  "--allow-worker",
   "--expose-gc",
   "--disable-sigusr1",
 ]);

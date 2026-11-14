@@ -37,6 +37,44 @@ afterEach(() => {
 });
 
 describe("ssh transport providers", () => {
+  it("waits for an async claim and takes only true", async () => {
+    const stream = new PassThrough();
+    const truthy = vi.fn();
+    provideSshTransport("a", {
+      claims: (async () => "yes") as never,
+      open: truthy,
+    });
+    provideSshTransport("b", {
+      claims: async () => true,
+      open: async () => stream,
+    });
+    await expect(
+      openProvidedTransport({ id: 7, ip: "10.0.0.7", port: 22 } as never),
+    ).resolves.toBe(stream);
+    expect(truthy).not.toHaveBeenCalled();
+  });
+
+  it("counts a claim that never answers as no", async () => {
+    vi.useFakeTimers();
+    try {
+      const open = vi.fn();
+      provideSshTransport("slow", {
+        claims: () => new Promise<boolean>(() => {}),
+        open,
+      });
+      const result = openProvidedTransport({
+        id: 7,
+        ip: "10.0.0.7",
+        port: 22,
+      } as never);
+      await vi.advanceTimersByTimeAsync(2500);
+      await expect(result).resolves.toBeNull();
+      expect(open).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("tells providers the owner, sync id and origin of the host", async () => {
     const claims = vi.fn(() => false);
     provideSshTransport("a", { claims, open: vi.fn() });

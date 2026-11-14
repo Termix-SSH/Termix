@@ -20,6 +20,8 @@ export interface ChildFlagInput {
   /** The preload that closes what the permission model leaves open. */
   hardenPath: string;
   heapMb?: number;
+  /** The manifest's sandbox.workers: the plugin starts worker threads. */
+  workers?: boolean;
   /** Major version of the Node that runs the child. */
   nodeMajor: number;
 }
@@ -60,6 +62,9 @@ export function buildChildFlags(input: ChildFlagInput): ChildFlags {
     if (grant.writeDataDir) writeDataDir = true;
     if (grant.firewall === "allow-all") firewall = "allow-all";
   }
+
+  // harden.js makes every worker inherit these flags and load it first.
+  if (input.workers === true) flags.add("--allow-worker");
 
   const unenforced: string[] = [];
   const allowNet = flags.has("--allow-net");

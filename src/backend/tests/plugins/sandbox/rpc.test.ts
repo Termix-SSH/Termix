@@ -188,4 +188,26 @@ describe("sandbox rpc", () => {
     remote.resume();
     expect(meta).toEqual({ code: 3 });
   });
+
+  it("survives a stream the other side fails, even with nobody listening", async () => {
+    const { host, child } = pair();
+    const uncaught: unknown[] = [];
+    const onUncaught = (error: unknown) => uncaught.push(error);
+    process.on("uncaughtException", onUncaught);
+    try {
+      host.handle("open", () => {
+        const port = host.openStream();
+        setTimeout(() => port.destroy(new Error("far end failed")), 5);
+        return port;
+      });
+      const remote = (await child.call("open")) as StreamPort;
+      await new Promise((resolve) => remote.once("close", resolve));
+      // Both ends are gone; a late echo of the failure is dropped.
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(uncaught).toEqual([]);
+      expect(remote.destroyed).toBe(true);
+    } finally {
+      process.off("uncaughtException", onUncaught);
+    }
+  });
 });

@@ -292,6 +292,7 @@ class PluginProcess {
       dataDir: getPluginDataDir(this.id),
       hardenPath: paths?.harden ?? childHardenPath(),
       heapMb: manifest.sandbox?.memoryMb ?? this.config.memoryMb,
+      workers: manifest.sandbox?.workers === true,
       nodeMajor: Number(process.versions.node.split(".")[0]),
     });
     // Electron's utility process ignores Node flags, so on the desktop the

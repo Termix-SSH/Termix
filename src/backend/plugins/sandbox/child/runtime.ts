@@ -13,7 +13,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import os from "node:os";
 import { EventEmitter } from "node:events";
 import http from "node:http";
-import { PassThrough } from "node:stream";
+import { Duplex, PassThrough } from "node:stream";
 import type ExpressDefault from "express";
 import {
   Endpoint,
@@ -23,6 +23,7 @@ import {
   type Wire,
 } from "../rpc.js";
 import { createChildSocket } from "./socket.js";
+import { joinStream } from "../transport-bridge.js";
 
 interface Store {
   token?: string;
@@ -159,7 +160,7 @@ function setPath(
 
 /** Methods that hand back a function to stop or remove what they set up. */
 const RETURNS_DISPOSER =
-  /^(events\.on|settings\.onChange|settings\.onValidate|schedule\.(every|after)|.*\.provide|.*\.subscribe|operations\.register.*|hosts\.import\.registerImportNormalizer)$/;
+  /^(events\.on|settings\.onChange|settings\.onValidate|schedule\.(every|after)|.*\.provide|.*\.subscribe|.*\.serve|operations\.register.*|hosts\.import\.registerImportNormalizer|hosts\.trackSession)$/;
 
 function buildCtx(): Record<string, unknown> {
   const ctx: Record<string, unknown> = {};
@@ -436,7 +437,376 @@ function buildCtx(): Record<string, unknown> {
       }
     });
   }
+
+  if (has("ssh.transports.provide")) {
+    setPath(
+      ctx,
+      "ssh.transports.provide",
+      (provider: { claims: AnyFn; open: AnyFn }) =>
+        hybrid(
+          endpoint.call("ssh.transports.provide", [
+            {
+              claims: (hostId: unknown, host: unknown) =>
+                provider.claims(hostId, host),
+              // The plugin's stream to the host goes to core as a port.
+              open: async (host: unknown) => {
+                const stream = (await provider.open(host)) as Duplex;
+                const port = endpoint.openStream();
+                joinStream(stream, port);
+                return port;
+              },
+            },
+          ]),
+          "ssh.transports.provide",
+        ),
+    );
+  }
+  if (has("ssh.prepare")) setPath(ctx, "ssh.prepare", sshPrepare);
+  if (has("ssh.openTransport")) {
+    setPath(ctx, "ssh.openTransport", sshOpenTransport);
+  }
+  if (has("ssh.jumpChain")) {
+    setPath(
+      ctx,
+      "ssh.jumpChain",
+      async (jumpHosts: unknown, options?: Record<string, unknown>) => {
+        const { prompt, ...rest } = options ?? {};
+        const result = (await endpoint.call("ssh.jumpChain", [
+          jumpHosts,
+          { ...rest, ...promptArg(prompt) },
+        ])) as { client: { $ssh: string }; host: unknown; dispose: AnyFn };
+        return {
+          client: sshClient(result.client.$ssh),
+          jumpClient: null,
+          host: result.host,
+          dispose: () => void result.dispose(),
+        };
+      },
+    );
+  }
+  if (has("desktop.local.pluginFetch")) {
+    setPath(ctx, "desktop.local.pluginFetch", localPluginFetch);
+  }
+  if (has("desktop.local.fs.openRead")) {
+    setPath(ctx, "desktop.local.fs.openRead", async (filePath: unknown) => {
+      const result = (await endpoint.call("desktop.local.fs.openRead", [
+        filePath,
+      ])) as { stream: StreamPort; size: number };
+      return { stream: portStream(result.stream), size: result.size };
+    });
+  }
+  if (has("desktop.local.fs.openDownload")) {
+    setPath(ctx, "desktop.local.fs.openDownload", async (options: unknown) => {
+      const port = endpoint.openStream();
+      const result = (await endpoint.call("desktop.local.fs.openDownload", [
+        options,
+        port,
+      ])) as { path: string; publish: AnyFn; abort: AnyFn };
+      return {
+        path: result.path,
+        stream: port,
+        publish: (publishOptions?: unknown) => result.publish(publishOptions),
+        abort: () => result.abort(),
+      };
+    });
+  }
+  if (has("desktop.local.pty.spawn")) {
+    setPath(ctx, "desktop.local.pty.spawn", localPty);
+  }
   return ctx;
+}
+
+/** A jump host prompt: only the ask function goes to core. */
+function promptArg(prompt: unknown): { prompt?: { ask: AnyFn } } {
+  const ask = (prompt as { ask?: unknown } | null | undefined)?.ask;
+  return typeof ask === "function"
+    ? {
+        prompt: {
+          ask: (request: unknown) =>
+            (ask as AnyFn).call(prompt as object, request),
+        },
+      }
+    : {};
+}
+
+/** Options with only data in them: no clients, sockets or functions. */
+function dataOnly(options: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(options)) {
+    if (
+      value === null ||
+      ["string", "number", "boolean"].includes(typeof value)
+    ) {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
+const SSH2_REFUSAL = /Host denied \(verification failed\)/;
+
+/** Same as core's host key policy: ssh2's refusal error says why. */
+function explainRefusal(
+  client: { emit: (event: string | symbol, ...args: unknown[]) => boolean },
+  message: string,
+  code?: string,
+): void {
+  const emit = client.emit.bind(client);
+  client.emit = (event: string | symbol, ...args: unknown[]) => {
+    const error = args[0];
+    if (
+      event === "error" &&
+      error instanceof Error &&
+      SSH2_REFUSAL.test(error.message)
+    ) {
+      error.message = message;
+      if (code) (error as Error & { code?: string }).code = code;
+    }
+    return emit(event, ...args);
+  };
+}
+
+/**
+ * The config comes from core without its host verifier; the one put here
+ * asks core about each key. It returns nothing, so ssh2 waits for the
+ * callback (a returned Promise would count as accepted).
+ */
+async function sshPrepare(host: unknown, options?: Record<string, unknown>) {
+  const { client, hostKeySocket, log, ...rest } = options ?? {};
+  const socketId = (hostKeySocket as { termixSocketId?: unknown } | null)
+    ?.termixSocketId;
+  const result = (await endpoint.call("ssh.prepare", [
+    host,
+    {
+      ...dataOnly(rest),
+      ...(typeof log === "function" ? { log } : {}),
+      ...(typeof socketId === "string" ? { hostKeySocket: socketId } : {}),
+    },
+  ])) as {
+    prepared: string;
+    config: Record<string, unknown>;
+    outcome: unknown;
+    authType: unknown;
+    onBanner?: AnyFn;
+    onAuthFailed?: AnyFn;
+  };
+  const config = result.config;
+  const realClient = client as
+    | { emit: (event: string | symbol, ...args: unknown[]) => boolean }
+    | undefined;
+  config.hostVerifier = (key: Buffer, verify: (valid: boolean) => void) => {
+    endpoint.call("ssh.verifyHostKey", [result.prepared, key]).then(
+      (answer) => {
+        const reply = (answer ?? {}) as {
+          valid?: boolean;
+          message?: string;
+          code?: string;
+        };
+        if (reply.valid !== true && reply.message && realClient) {
+          explainRefusal(realClient, reply.message, reply.code);
+        }
+        verify(reply.valid === true);
+      },
+      () => verify(false),
+    );
+  };
+  const cert = config.termixCertificate as
+    | { privateKey: string; certificate: string; passphrase?: string }
+    | undefined;
+  delete config.termixCertificate;
+  if (cert && realClient) {
+    try {
+      const { applyCertificateAuth } =
+        await import("@termix-ssh/plugin-sdk/ssh-certs");
+      await applyCertificateAuth(
+        config as never,
+        realClient as never,
+        cert,
+        String(config.username ?? ""),
+      );
+    } catch (error) {
+      // Same as core: fall back to the key alone.
+      if (typeof log === "function") {
+        void (log as AnyFn)(
+          "warning",
+          `CA certificate setup failed, falling back to key only: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
+  }
+  return {
+    config,
+    outcome: result.outcome,
+    authType: result.authType,
+    onBanner: result.onBanner,
+    onAuthFailed: result.onAuthFailed,
+  };
+}
+
+/** Core opens the route to the host; the stream becomes config.sock. */
+async function sshOpenTransport(
+  host: unknown,
+  config: Record<string, unknown>,
+  options?: Record<string, unknown>,
+) {
+  const { log, prompt, ...rest } = options ?? {};
+  const result = (await endpoint.call("ssh.openTransport", [
+    host,
+    { host: config.host, port: config.port },
+    {
+      ...dataOnly(rest),
+      ...(typeof log === "function" ? { log } : {}),
+      ...promptArg(prompt),
+      ownSock: !!config.sock,
+    },
+  ])) as {
+    via: string;
+    jumpClient: { $ssh: string } | null;
+    sock: StreamPort | null;
+  };
+  if (result.sock) {
+    (config.sock as { destroy?: () => void } | undefined)?.destroy?.();
+    config.sock = portStream(result.sock);
+  }
+  return {
+    via: result.via,
+    jumpClient: result.jumpClient ? sshClient(result.jumpClient.$ssh) : null,
+  };
+}
+
+/**
+ * A byte stream over a port core holds the other end of. Destroying it tells
+ * core to close its end too.
+ */
+function portStream(port: StreamPort): Duplex {
+  const stream = new Duplex({
+    read() {
+      port.resume();
+    },
+    write(chunk: Buffer, _encoding, callback) {
+      if (port.write(Buffer.from(chunk))) callback();
+      else port.once("drain", () => callback());
+    },
+    final(callback) {
+      port.end();
+      callback();
+    },
+    destroy(error, callback) {
+      if (!port.destroyed) {
+        endpoint.notify("stream.close", [port.sid]);
+        port.destroy();
+      }
+      callback(error);
+    },
+  });
+  port.on("data", (chunk: Buffer) => {
+    if (!stream.push(chunk)) port.pause();
+  });
+  port.on("end", () => stream.push(null));
+  port.on("error", (error: Error) => stream.destroy(error));
+  return stream;
+}
+
+async function localPluginFetch(
+  origin: unknown,
+  subPath: unknown,
+  init?: Record<string, unknown>,
+) {
+  const { signal, body, ...rest } = (init ?? {}) as Record<string, unknown> & {
+    signal?: AbortSignal;
+  };
+  signal?.throwIfAborted();
+  let bodyPort: StreamPort | undefined;
+  const plainBody =
+    typeof body === "string" || Buffer.isBuffer(body) ? body : undefined;
+  if (body && plainBody === undefined) {
+    const port = endpoint.openStream();
+    bodyPort = port;
+    (body as NodeJS.ReadableStream).pipe(port);
+  }
+  const call = endpoint.call("desktop.local.pluginFetch", [
+    origin,
+    subPath,
+    { ...rest, ...(plainBody !== undefined ? { body: plainBody } : {}) },
+    bodyPort,
+  ]);
+  const r = (await (signal
+    ? Promise.race([
+        call,
+        new Promise<never>((_, reject) =>
+          signal.addEventListener("abort", () => reject(signal.reason), {
+            once: true,
+          }),
+        ),
+      ])
+    : call)) as {
+    status: number;
+    ok: boolean;
+    headers: Record<string, string>;
+    body: StreamPort | null;
+  };
+  const stream = r.body ? portStream(r.body) : null;
+  signal?.addEventListener("abort", () => stream?.destroy(), { once: true });
+  return {
+    status: r.status,
+    ok: r.ok,
+    headers: {
+      get: (name: string) => r.headers[String(name).toLowerCase()] ?? null,
+    },
+    body: stream as AsyncIterable<Uint8Array> | null,
+    text: async () => {
+      if (!stream) return "";
+      const parts: Buffer[] = [];
+      for await (const chunk of stream) parts.push(Buffer.from(chunk));
+      return Buffer.concat(parts).toString("utf8");
+    },
+  };
+}
+
+async function localPty(options?: unknown) {
+  const result = (await endpoint.call("desktop.local.pty.spawn", [
+    options ?? {},
+  ])) as {
+    pid: number;
+    shell: string;
+    stream: StreamPort;
+    resize: AnyFn;
+    kill: AnyFn;
+  };
+  const port = result.stream;
+  const dataHandlers = new Set<(data: string) => void>();
+  const exitHandlers = new Set<(code: number) => void>();
+  port.on("data", (chunk: { d?: unknown }) => {
+    const text = typeof chunk?.d === "string" ? chunk.d : "";
+    if (!text) return;
+    for (const handler of dataHandlers) handler(text);
+  });
+  port.on("remote-end", (meta: { code?: unknown } | undefined) => {
+    const code = Number(meta?.code ?? 0);
+    for (const handler of exitHandlers) handler(code);
+  });
+  port.on("error", () => {});
+  return {
+    pid: result.pid,
+    shell: result.shell,
+    write: (data: string) => {
+      if (typeof data === "string" && !port.destroyed) {
+        port.write({ d: data, b: false });
+      }
+    },
+    resize: (cols: number, rows: number) => void result.resize(cols, rows),
+    kill: () => void result.kill(),
+    onData: (handler: (data: string) => void) => {
+      dataHandlers.add(handler);
+      return () => void dataHandlers.delete(handler);
+    },
+    onExit: (handler: (code: number) => void) => {
+      exitHandlers.add(handler);
+      return () => void exitHandlers.delete(handler);
+    },
+  };
 }
 
 /** Config values prepare may hand back: plain values and the certificate. */
@@ -838,6 +1208,8 @@ endpoint.handle("ws.open", ([routePath, metaArg, portArg]) => {
   const port = portArg as StreamPort;
   const store = als.getStore();
   const socket = createChildSocket(port, (fn) => als.run(store ?? {}, fn));
+  // ctx.ssh.prepare's host key prompt names the socket by this.
+  Object.defineProperty(socket, "termixSocketId", { value: port.sid });
   return handler({
     userId: meta.userId,
     socket,
@@ -992,6 +1364,19 @@ function sshClient(id: string): EventEmitter {
       .then((value) =>
         cb(undefined, sftpProxy((value as { $sftp: string }).$sftp)),
       )
+      .catch((error) => cb(error));
+    return true;
+  };
+  client.forwardOut = (
+    srcIP: string,
+    srcPort: number,
+    dstIP: string,
+    dstPort: number,
+    cb: AnyFn,
+  ) => {
+    endpoint
+      .call("ssh.forwardOut", [id, srcIP, srcPort, dstIP, dstPort])
+      .then((value) => cb(undefined, portStream(value as StreamPort)))
       .catch((error) => cb(error));
     return true;
   };

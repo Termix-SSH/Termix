@@ -333,6 +333,8 @@ export class Endpoint {
     let port = this.streams.get(sid);
     if (!port) {
       port = new StreamPort(sid, (frame) => this.post(frame));
+      // A stream the other side fails must never take this process down.
+      port.on("error", () => {});
       this.streams.set(sid, port);
       const drop = () => this.streams.delete(sid);
       port.on("close", drop);
@@ -540,6 +542,9 @@ export class Endpoint {
         if (!["d", "e", "x", "c"].includes(message.op)) {
           throw new Error("bad stream op");
         }
+        // A failure for a stream already gone (its own echo) is dropped,
+        // or it would open a new port only to fail it.
+        if (message.op === "e" && !this.streams.has(message.s)) return;
         this.port(message.s).receive(message.op, message.d);
         return;
       case "call":

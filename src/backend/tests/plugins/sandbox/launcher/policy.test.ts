@@ -42,6 +42,16 @@ describe("launcher spawn policy", () => {
     expect(validateSpawn(request(), expected)).toEqual({ ok: true });
   });
 
+  // harden.js is always there and keeps every worker on the same flags.
+  it("accepts a worker grant next to the harden preload", () => {
+    expect(
+      validateSpawn(
+        request({ execArgv: [...request().execArgv, "--allow-worker"] }),
+        expected,
+      ),
+    ).toEqual({ ok: true });
+  });
+
   it("passes a variable the plugin's manifest lists", () => {
     expect(
       validateSpawn(
@@ -72,7 +82,15 @@ describe("launcher spawn policy", () => {
       "an inspector flag",
       { execArgv: [...request().execArgv, "--inspect=0.0.0.0:9229"] },
     ],
-    ["a worker grant", { execArgv: [...request().execArgv, "--allow-worker"] }],
+    [
+      "a worker grant without the harden preload",
+      {
+        execArgv: [
+          ...request().execArgv.filter((a) => !a.startsWith("--import=")),
+          "--allow-worker",
+        ],
+      },
+    ],
     [
       "another preload",
       { execArgv: [...request().execArgv, "--import=file:///tmp/evil.js"] },
