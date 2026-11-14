@@ -158,9 +158,14 @@ function guardWorkers(getBuiltin: (id: string) => unknown): void {
     for (const [key, value] of Object.entries(given)) {
       if (WORKER_OPTIONS.has(key)) safe[key] = value;
     }
+    const entry = workerEntryUrl(file);
+    // The real entry starts from a data: module, so put its path back where
+    // process.argv[1] has it for a plain worker; CLI parsers read it there.
+    const argv = Array.isArray(given.argv) ? given.argv : [];
+    safe.argv = [fileURLToPath(entry), ...argv];
     const boot =
       `await import(${JSON.stringify(self)});` +
-      `await import(${JSON.stringify(workerEntryUrl(file))});`;
+      `await import(${JSON.stringify(entry)});`;
     return Reflect.construct(
       Original,
       [new URL(`data:text/javascript,${encodeURIComponent(boot)}`), safe],

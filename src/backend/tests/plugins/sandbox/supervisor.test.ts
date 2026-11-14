@@ -594,7 +594,7 @@ const tryIt = async (fn) => {
   try { await fn(); return "open"; }
   catch (error) { return error.code ?? error.message; }
 };
-const out = { data: workerData };
+const out = { data: workerData, argv: process.argv.slice(1) };
 out.readSecret = await tryIt(() => fs.readFileSync(workerData.secret));
 out.childProcess = await tryIt(async () => (await import("node:child_process")).spawnSync(process.execPath, ["-v"]));
 out.sqlite = await tryIt(() => import("node:sqlite"));
@@ -620,7 +620,7 @@ const run = (make) => new Promise((resolve) => {
 export async function activate(ctx) {
   const file = path.join(here, "probe-worker.mjs");
   const out = {};
-  out.plain = await run(() => new Worker(file, { workerData: { secret: SECRET } }));
+  out.plain = await run(() => new Worker(file, { argv: ["--json"], workerData: { secret: SECRET } }));
   out.emptyArgv = await run(() => new Worker(file, { execArgv: [], workerData: { secret: SECRET } }));
   out.viaPrototype = await run(() => new Worker.prototype.constructor(file, { execArgv: [], workerData: { secret: SECRET } }));
   out.eval = await tryIt(() => new Worker("1", { eval: true }));
@@ -662,6 +662,11 @@ describe("worker threads", () => {
       eval: "ERR_ACCESS_DENIED",
       dataUrl: "ERR_ACCESS_DENIED",
     });
+    // A plain worker sees its own file at process.argv[1].
+    expect((probes!.plain as { argv: string[] }).argv).toEqual([
+      expect.stringMatching(/probe-worker.mjs$/),
+      "--json",
+    ]);
     expect((probes!.plain as { data: unknown }).data).toEqual({
       secret: secretFile,
     });
