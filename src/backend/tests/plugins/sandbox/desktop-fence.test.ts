@@ -93,7 +93,11 @@ let secretFile: string;
 
 beforeAll(async () => {
   if (!built) return;
-  work = fs.mkdtempSync(path.join(os.tmpdir(), "tmx-desktop-fence-"));
+  // The real path: macOS's temp folder sits behind the /var link, which an
+  // installed app's paths never do.
+  work = fs.realpathSync(
+    fs.mkdtempSync(path.join(os.tmpdir(), "tmx-desktop-fence-")),
+  );
   // The packaged layout: dist/backend/package.json, code in dist/backend/backend.
   backendDir = path.join(work, "dist-backend", "backend");
   const child = path.join(backendDir, "plugins", "sandbox", "child");
