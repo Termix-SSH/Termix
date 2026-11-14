@@ -37,6 +37,13 @@
     "!dist/icon.icns",
     "!public/icon.icns"
   ],
+  "extraResources": [
+    {
+      "from": ".plugin-runtime/${platform}-${arch}",
+      "to": "plugin-runtime",
+      "filter": ["**/*", "!.cache"]
+    }
+  ],
   "extraMetadata": {
     "main": "electron/main.cjs",
     "type": "commonjs"

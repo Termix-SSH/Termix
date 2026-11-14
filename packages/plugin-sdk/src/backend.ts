@@ -2802,6 +2802,14 @@ export interface PluginDesktopLocal {
     }>;
     reveal: (path: string) => Promise<void>;
     open: (path: string) => Promise<void>;
+    /**
+     * Opens a local file in the external editor the person picked in the
+     * desktop app's file dialog, or with its default app when none is set.
+     * With no editor set, a file the system would run (.exe, .bat, ...) is
+     * refused. The app starts the editor, so the plugin needs no process
+     * grant. Plugin API 2.8.
+     */
+    openInEditor: (path: string) => Promise<void>;
     openRead: (path: string) => Promise<{
       stream: NodeJS.ReadableStream;
       size: number;

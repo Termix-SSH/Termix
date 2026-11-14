@@ -1,8 +1,7 @@
 /**
  * Preloaded with --import into every plugin process, before any
- * plugin code, and imported again first thing by the runtime, because an
- * Electron utility process ignores --import. The permission model does not
- * cover these, so they are taken away here:
+ * plugin code, and imported again first thing by the runtime as a backstop.
+ * The permission model does not cover these, so they are taken away here:
  *   node:sqlite opens files without asking the permission model;
  *   process._debugProcess can make another Node process open its inspector;
  *   inspector, wasi and trace_events.
@@ -115,14 +114,11 @@ function harden(): void {
 
   guardWorkers(original);
 
-  // Native addons load only with device:serial (--allow-addons). Electron
-  // ignores the flags, so there core says so in the env instead.
+  // Native addons load only with device:serial (--allow-addons).
   const permission = (
     process as { permission?: { has: (scope: string) => boolean } }
   ).permission;
-  const addons = permission
-    ? permission.has("addon")
-    : process.env.TERMIX_SANDBOX_ADDONS === "1";
+  const addons = permission?.has("addon") === true;
   for (const name of [
     "_debugProcess",
     "_debugEnd",
@@ -142,8 +138,8 @@ function harden(): void {
 
 /**
  * Every worker starts from a small module that loads this file first and
- * then the plugin's entry, so the worker is hardened even where the Node
- * flags are ignored (the desktop), and it keeps the process's permission
+ * then the plugin's entry, so the worker is hardened before its code runs,
+ * and it keeps the process's permission
  * flags because its execArgv is never set. A worker from a code string
  * would skip this file, so it is refused.
  */

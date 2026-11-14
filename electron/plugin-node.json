@@ -1,0 +1,29 @@
+{
+  "version": "26.13.1",
+  "builds": {
+    "win32-x64": {
+      "file": "node-v26.13.1-win-x64.zip",
+      "sha256": "e2edda75bfb089654705cf65a13b58933bfd5f57148e8ebda916f58a2474f1f7"
+    },
+    "win32-arm64": {
+      "file": "node-v26.13.1-win-arm64.zip",
+      "sha256": "181ebe431b90787113a9e4fc80d38ce86d37888a353a0386de44d2872e48cb97"
+    },
+    "darwin-x64": {
+      "file": "node-v26.13.1-darwin-x64.tar.gz",
+      "sha256": "82bb96078a24ca50b9c9a38f2379e6be6d87171fcd400fc14c8934b3bce96e2f"
+    },
+    "darwin-arm64": {
+      "file": "node-v26.13.1-darwin-arm64.tar.gz",
+      "sha256": "aec2514ea1ceb2ba52455e9ec65986f6749a06dd759e5db2a72e6889668c9735"
+    },
+    "linux-x64": {
+      "file": "node-v26.13.1-linux-x64.tar.xz",
+      "sha256": "5c063e46bab0fbc1c17cc445d7ff129cbdcd0471be6ed83b6ab864f8143bc864"
+    },
+    "linux-arm64": {
+      "file": "node-v26.13.1-linux-arm64.tar.xz",
+      "sha256": "89e1853138db51e8b82d3e98ba9c0d3f2956a28e5e55ea1b7e12d25aae92d5dd"
+    }
+  }
+}

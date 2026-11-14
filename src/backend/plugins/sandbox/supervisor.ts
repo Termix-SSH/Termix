@@ -151,6 +151,21 @@ function runtimeReadPaths(pluginDir: string): string[] {
   ];
 }
 
+/**
+ * Major version of the Node that runs plugin processes. On the desktop that
+ * is the pinned Node the app ships, not Electron's, and Electron main says
+ * which in TERMIX_PLUGIN_NODE_MAJOR.
+ */
+export function childNodeMajor(
+  source: NodeJS.ProcessEnv = process.env,
+): number {
+  const pinned = Number(source.TERMIX_PLUGIN_NODE_MAJOR);
+  if (source.ELECTRON_EMBEDDED === "true" && Number.isInteger(pinned)) {
+    return pinned;
+  }
+  return Number(process.versions.node.split(".")[0]);
+}
+
 type Deployment = "desktop" | "docker" | "server"; // plugin-id-ok: not the plugin
 
 /** Where core runs. A plugin process can't look for itself. */
@@ -293,13 +308,8 @@ class PluginProcess {
       hardenPath: paths?.harden ?? childHardenPath(),
       heapMb: manifest.sandbox?.memoryMb ?? this.config.memoryMb,
       workers: manifest.sandbox?.workers === true,
-      nodeMajor: Number(process.versions.node.split(".")[0]),
+      nodeMajor: childNodeMajor(),
     });
-    // Electron's utility process ignores Node flags, so on the desktop the
-    // process, its empty env and the checked ctx are the fence.
-    if (getSpawner().mode === "electron") {
-      flags.unenforced.push("files", "child processes", "memory");
-    }
     if (flags.unenforced.length > 0) {
       this.log(
         "info",
@@ -310,14 +320,7 @@ class PluginProcess {
       pluginId: this.id,
       runtimePath: paths?.runtime ?? childRuntimePath(),
       execArgv: flags.execArgv,
-      env: {
-        ...pluginEnv(manifest),
-        // Only Electron needs telling; Node reports it through the permission model.
-        ...(getSpawner().mode === "electron" &&
-        flags.execArgv.includes("--allow-addons")
-          ? { TERMIX_SANDBOX_ADDONS: "1" }
-          : {}),
-      },
+      env: pluginEnv(manifest),
       dataDir: getPluginDataDir(this.id),
       firewall: flags.firewall,
     });

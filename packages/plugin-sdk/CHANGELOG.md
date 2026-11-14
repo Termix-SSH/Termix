@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.8.0
+
+Plugin API 2.8.0. Needs Termix 26.11.2.
+
+### Added
+
+- `ctx.desktop.local.fs.openInEditor(path)` opens a local file in the external editor the person picked in the desktop app, or with its default app. The app starts the editor, so the plugin needs no process grant
+
+### Changed
+
+- On the desktop app, plugin processes run on the app's pinned Node with the same flags as on a server, inside an OS sandbox. Desktop only code that used `fs` or `child_process` freely must move to `ctx.desktop.local`
+
 ## 2.7.1
 
 Plugin API 2.7.0. Needs Termix 26.11.2.

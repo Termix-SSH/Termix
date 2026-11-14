@@ -55,6 +55,8 @@ function start() {
     pluginSandbox: null,
     createPluginSandboxHost: () => ({ handle: () => false, stopAll: vi.fn() }),
     MessageChannelMain: class {},
+    checkRuntime: vi.fn(),
+    pluginNodePin: { version: "26.13.1" },
     path: { dirname: (p: string) => p.slice(0, p.lastIndexOf("/")) || "/" },
     app: {
       isPackaged: true,

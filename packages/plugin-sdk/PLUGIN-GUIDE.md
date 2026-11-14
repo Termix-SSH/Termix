@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 2.7.1 | Plugin API 2.7.0
+SDK 2.8.0 | Plugin API 2.8.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -272,7 +272,7 @@ loads the same guard first, `execArgv` is ignored, and a worker must start from 
 `data:` URLs are refused). Core restarts a
 process that crashes, stops answering, goes past its memory limit (256 MiB unless `sandbox.memoryMb`) or
 uses more than 80% of a CPU core for a minute. Too many crashes and the plugin is marked failed.
-The desktop app runs each plugin in its own process with an empty environment and the same checked `ctx`, but Electron doesn't apply Node's permission flags there, so files, child processes, workers and the memory limit aren't fenced on the desktop.
+The desktop app (Termix 26.11.2+) runs each plugin process on its own pinned Node, the same major as the server image, with the same flags, plus an OS sandbox under it: an AppContainer and a job object on Windows, a Seatbelt profile on macOS, Landlock and seccomp on Linux. So the fence is the same as on a server: no files outside your grants, no child processes or sockets without the capability, and a memory cap. Desktop only code can't use `fs` or `child_process` freely either; use `ctx.desktop.local` for the user's own files and programs. Builds with no pinned Node (32-bit Windows, 32-bit ARM Linux) don't run plugin backends at all.
 
 A plugin that registers nothing core calls on its own starts on its first request or socket and stops
 after 10 idle minutes. Anything in the `sandbox` block below, a `provides` entry, a provider hook, a
@@ -551,13 +551,13 @@ loads on a server, ignores server sync and may declare `desktop:local`. Any plug
 
 - `info()`: home folder, platform, user data folder, backend port and the linked server (url and token) or null
 - `fs`: `list`, `mkdir`, `createFile`, `rename`, `ensureDir`, `exists`, `walk`, `trash`, `reveal`, `open`,
-  `openRead` and `openDownload`. Downloads stay inside the folder the user picked, links in it are refused and
+  `openInEditor` (API 2.8: the editor the person picked in the app, started by the app), `openRead` and `openDownload`. Downloads stay inside the folder the user picked, links in it are refused and
   an existing file is never replaced by accident
 - `pty.spawn()`: a local shell, stopped when the plugin stops
 - `pluginFetch(origin, subPath, init)`: calls this plugin's own routes on the desktop's backend ("local") or the linked server ("remote") as the acting user. Bodies can be streams, so a plugin can move big files without the renderer
 
-On the desktop app `process.execPath` is the Electron app, which can't start as plain Node. Never spawn it
-to run a script; run that code in a `worker_threads` Worker (with its own `env` and `argv`) instead.
+In a plugin process `process.execPath` is the app's pinned Node on every platform. Starting it still needs
+`process:spawn`, or run the script through `ctx.process.run`, which core starts.
 
 Use `ctx.audit.subscribe`, `list` and `exportBatches` (`audit:read`) to read the audit trail. Subscribers
 are called after a line is stored and never delay the action that wrote it.

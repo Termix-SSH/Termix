@@ -41,6 +41,10 @@ const {
 } = require("./update-verify.cjs");
 const { migrateFileStorage } = require("./storage-migrate.cjs");
 const { createPluginSandboxHost } = require("./plugin-sandbox.cjs");
+const { checkRuntime } = require("./plugin-runtime.cjs");
+const { shouldRelax, relaxFrameHeaders } = require("./frame-headers.cjs");
+const { openInEditor } = require("./open-in-editor.cjs");
+const pluginNodePin = require("./plugin-node.json");
 const linkedServer = require("./linked-server.cjs");
 const desktopSettings = require("./desktop-settings.cjs");
 const autoUpdates = require("./auto-updater.cjs");
@@ -600,6 +604,15 @@ const BACKEND_REQUEST_HANDLERS = {
     const error = await shell.openPath(localPath(payload));
     return error ? { success: false, error } : { success: true };
   },
+  // The editor is only ever the one picked in a file dialog (set-setting).
+  "shell-open-editor": (payload) =>
+    openInEditor(localPath(payload), {
+      editorPath: () => {
+        const value = readSetting(EXTERNAL_EDITOR_SETTING);
+        return typeof value === "string" && value ? value : null;
+      },
+      openPath: (target) => shell.openPath(target),
+    }),
   "sync-proxy-config": (payload) => {
     if (payload !== null && typeof payload !== "object") {
       throw new Error("Bad link config");
@@ -1157,6 +1170,10 @@ function startBackendServer() {
           EMBEDDED_BACKEND_PORT: String(backendPort),
           ELECTRON_USER_DATA: app.getPath("userData"),
           VERSION: app.getVersion(),
+          // Plugin processes run on the app's pinned Node, not Electron's.
+          TERMIX_PLUGIN_NODE_MAJOR: String(
+            Number(pluginNodePin.version.split(".")[0]),
+          ),
         },
         stdio: "pipe",
         serviceName: "Termix backend",
@@ -1167,10 +1184,20 @@ function startBackendServer() {
 
     pluginSandbox?.stopAll();
     pluginSandbox = createPluginSandboxHost({
-      utilityProcess,
       MessageChannelMain,
       backendDir: path.dirname(entryPath),
       dataRoot: dataDir,
+      mas: process.mas === true,
+      getRuntime: () =>
+        checkRuntime({
+          isPackaged: app.isPackaged,
+          resourcesPath: process.resourcesPath,
+          appRoot,
+          appBundle:
+            process.platform === "darwin" && app.isPackaged
+              ? path.resolve(process.execPath, "..", "..", "..")
+              : null,
+        }),
       log: logToFile,
     });
 
@@ -1567,30 +1594,17 @@ function createWindow() {
       const headers = details.responseHeaders;
 
       if (headers) {
-        delete headers["x-frame-options"];
-        delete headers["X-Frame-Options"];
-
-        if (headers["content-security-policy"]) {
-          headers["content-security-policy"] = headers[
-            "content-security-policy"
-          ]
-            .map((value) => value.replace(/frame-ancestors[^;]*/gi, ""))
-            .filter((value) => value.trim().length > 0);
-
-          if (headers["content-security-policy"].length === 0) {
-            delete headers["content-security-policy"];
-          }
-        }
-        if (headers["Content-Security-Policy"]) {
-          headers["Content-Security-Policy"] = headers[
-            "Content-Security-Policy"
-          ]
-            .map((value) => value.replace(/frame-ancestors[^;]*/gi, ""))
-            .filter((value) => value.trim().length > 0);
-
-          if (headers["Content-Security-Policy"].length === 0) {
-            delete headers["Content-Security-Policy"];
-          }
+        if (
+          shouldRelax(details, {
+            dev: isDev,
+            serverOrigins: [
+              `http://127.0.0.1:${backendPort}`,
+              `http://localhost:${backendPort}`,
+              linkedServer.getLinkedServer()?.origin,
+            ].filter(Boolean),
+          })
+        ) {
+          relaxFrameHeaders(headers);
         }
 
         const setCookieHeaderName = getHeaderName(headers, "Set-Cookie");
