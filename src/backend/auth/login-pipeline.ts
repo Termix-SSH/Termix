@@ -572,7 +572,7 @@ export async function verifySecondFactorAndRespond(
   // A pending entry lost to a restart falls back to the current policy.
   const allowRemember = lookup.pending
     ? lookup.pending.allowRememberDevice !== false
-    : rememberDeviceAllowed();
+    : await rememberDeviceAllowed();
   const rememberMe =
     allowRemember &&
     (typeof req.body?.rememberMe === "boolean"

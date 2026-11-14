@@ -255,7 +255,7 @@ export function registerAuthRoutes(router: Router): void {
     try {
       res.json({
         methods: await listPublicLoginMethods(),
-        rememberDevice: rememberDeviceAllowed(),
+        rememberDevice: await rememberDeviceAllowed(),
       });
     } catch (error) {
       authLogger.error("Failed to list login methods", error);
