@@ -88,6 +88,10 @@ jobs:
           ARCH: ${{ matrix.arch }}
         run: node scripts/build-plugin-runtime.cjs --platform "$PLATFORM" --arch "$ARCH"
 
+      - name: Build the SDK
+        shell: bash
+        run: npm run build:sdk
+
       - name: Fence tests
         shell: bash
         env:
