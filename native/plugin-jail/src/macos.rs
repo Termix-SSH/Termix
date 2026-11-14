@@ -116,6 +116,9 @@ pub fn profile(policy: &Policy, program: &Path) -> String {
     ];
     if !read.is_empty() {
         rules.push(format!("(allow file-read* {})", subpaths(&read)));
+        // Loading code is its own operation: dyld maps libraries and addons
+        // from the same places the process may read.
+        rules.push(format!("(allow file-map-executable {})", subpaths(&read)));
     }
     if !write.is_empty() {
         rules.push(format!(

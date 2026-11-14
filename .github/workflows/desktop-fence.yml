@@ -109,6 +109,7 @@ jobs:
           rt=".plugin-runtime/darwin-$ARCH"
           policy="{\"name\":\"probe\",\"read\":[],\"write\":[],\"net\":false,\"childProcess\":false,\"addons\":false,\"memoryMb\":512}"
           "$rt/termix-plugin-jail" "$policy" -- "$rt/node" -e "console.log(1)" || true
-          log show --last 2m --style compact --predicate "sender == \"Sandbox\" OR eventMessage CONTAINS \"deny\"" | tail -60
+          sleep 5
+          log show --last 3m --style compact --predicate "eventMessage CONTAINS \"node(\" OR eventMessage CONTAINS \"termix-plugin-jail(\"" | tail -80
         env:
           ARCH: ${{ matrix.arch }}
