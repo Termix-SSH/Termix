@@ -106,7 +106,7 @@ function isPlain(value: unknown): value is Record<string, unknown> {
 
 const ANSWERED_IN_PROCESS = new Set(["http.baseUrl", "currentActor"]);
 
-const ASYNC_CHECKED = new Set(["ssh.prepare", "ssh.openTransport"]);
+const ASYNC_CHECKED = new Set(["ssh.prepare", "ssh.openTransport", "db.batch"]);
 
 /** What of a result crosses: core sends a process's exit Promise its own way. */
 function crossing(dotted: string, value: unknown): unknown {
@@ -355,6 +355,31 @@ export function sandboxContext<T extends PluginContext>(
     }
     // Answered inside the plugin process, so its arguments never cross.
     if (ANSWERED_IN_PROCESS.has(dotted)) return;
+    // The process turns each query into SQL before it crosses.
+    if (dotted === "db.batch") {
+      const list = args[0];
+      if (
+        !Array.isArray(list) ||
+        !list.every(
+          (query) =>
+            !!query &&
+            typeof (query as { toSQL?: unknown }).toSQL === "function",
+        )
+      ) {
+        throw new SandboxRuleError(
+          "ctx.db.batch takes Drizzle queries built on db.client(), not awaited",
+          "SANDBOX_VALUE",
+        );
+      }
+      return;
+    }
+    // The process keeps a fetch signal and stops waiting itself.
+    if (dotted === "fetch" && isPlain(args[1])) {
+      const { signal: _signal, ...rest } = args[1] as Record<string, unknown>;
+      assertCrossable(args[0], `ctx.${dotted} argument 1`);
+      assertCrossable(rest, `ctx.${dotted} argument 2`);
+      return;
+    }
     // A sock the plugin passes stays a stream: the process sends it as one.
     if (dotted === "ssh.connect" && isPlain(args[1])) {
       const { sock: _sock, ...rest } = args[1] as Record<string, unknown>;

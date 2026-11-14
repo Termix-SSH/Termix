@@ -163,6 +163,19 @@ describe("createMockCtx sandbox mode", () => {
     expect(set).toHaveBeenCalledTimes(1);
   });
 
+  it("lets fetch take an AbortSignal, as the plugin process does", async () => {
+    const { ctx } = createMockCtx({
+      sandbox: true,
+      capabilities: ["network:outbound"],
+      manifest,
+      fetch: async () => new Response("ok"),
+    });
+    const response = await ctx.fetch("https://example.com", {
+      signal: new AbortController().signal,
+    });
+    expect(await response.text()).toBe("ok");
+  });
+
   it("lets asUser hand back a live object", async () => {
     const { ctx } = createMockCtx({
       sandbox: true,
@@ -244,6 +257,19 @@ describe("createMockCtx sandbox mode", () => {
     expect(
       db.sqlite.prepare("SELECT count(*) AS n FROM p_sample_rows").get(),
     ).toEqual({ n: 2 });
+    // Drizzle queries are class instances; they turn into SQL first.
+    class Query {
+      toSQL() {
+        return {
+          sql: "INSERT INTO p_sample_rows (id) VALUES (?)",
+          params: [3],
+        };
+      }
+    }
+    await ctx.db.batch([new Query()] as never);
+    await expect(ctx.db.batch([{}] as never)).rejects.toThrow(
+      /Drizzle queries/,
+    );
     db.close();
     fs.rmSync(dir, { recursive: true, force: true });
   });

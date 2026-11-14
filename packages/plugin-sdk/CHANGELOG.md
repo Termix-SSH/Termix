@@ -28,6 +28,7 @@ Plugin API 2.3.0. Needs Termix 26.11.2.
 
 ### Fixed
 
+- `createMockCtx({ sandbox: true })` no longer refuses an `AbortSignal` in `ctx.fetch` or Drizzle queries in `ctx.db.batch`; a plugin process takes both
 - The test setup no longer fails a test now and then with "server closed before listening" when a test server first lands on a port fetch refuses
 
 ## 2.2.1
