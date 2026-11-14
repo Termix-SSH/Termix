@@ -690,6 +690,7 @@ function ForeignViewBox({
     <div
       ref={box}
       data-foreign-view={item.pluginId}
+      data-foreign-id={view.id}
       style={{ position: "absolute", visibility: "hidden", display: "flex" }}
     >
       {meta ? (

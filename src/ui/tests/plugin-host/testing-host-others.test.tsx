@@ -67,4 +67,26 @@ describe("renderWithApp others", () => {
     expect(element.textContent).toContain("terminal");
     await act(() => rendered.deactivate());
   });
+
+  it("renderSlot draws a component part once", async () => {
+    const rendered = await renderPlugin(
+      {
+        activate: (app: never) => {
+          const a = app as {
+            registerSlotContribution: (slot: string, part: object) => void;
+          };
+          a.registerSlotContribution("test.slot", {
+            actionId: "board.card",
+            titleKey: "x",
+            kind: "component",
+            component: Card,
+          });
+        },
+      },
+      { pluginId: "board" },
+    );
+    const element = rendered.renderSlot("test.slot");
+    expect(element.textContent).toBe("cron card");
+    await act(() => rendered.deactivate());
+  });
 });

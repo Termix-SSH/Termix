@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.7.1
+
+Plugin API 2.7.0. Needs Termix 26.11.2.
+
+### Fixed
+
+- `renderSlot` in `renderWithApp` draws a component part once, not twice, in a slot that is not a data slot
+
 ## 2.7.0
 
 Plugin API 2.7.0. Needs Termix 26.11.2.

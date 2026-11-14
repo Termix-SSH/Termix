@@ -413,6 +413,7 @@ function Placeholder({
     <div
       ref={element}
       data-foreign-slot={target.itemKey}
+      data-foreign-id={id}
       tabIndex={focusable ? 0 : -1}
       className={className}
       style={{ ...fitStyle(target.fit, size), ...style }}

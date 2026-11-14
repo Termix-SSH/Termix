@@ -57,6 +57,7 @@ import {
   listSettingsComponents,
 } from "@/settings/settings-components";
 import {
+  getActionSlot,
   getSlotContributions,
   listActions,
   registerSlotContribution as addSlotContribution,
@@ -581,11 +582,16 @@ export async function renderPlugin(
 
     renderSlot(slotId, props = {}) {
       const rowKey = props.rowKey ?? props.hostId ?? props.tabId ?? "row";
+      // A data slot also draws older component parts itself.
+      const dataSlot = getActionSlot(slotId)?.accepts.includes("data");
       return wrap(
         <>
           <ActionSlot slotId={slotId} />
-          <ComponentSlot slotId={slotId} props={props} />
-          <DataSlot slotId={slotId} rowKey={String(rowKey)} context={props} />
+          {dataSlot ? (
+            <DataSlot slotId={slotId} rowKey={String(rowKey)} context={props} />
+          ) : (
+            <ComponentSlot slotId={slotId} props={props} />
+          )}
         </>,
       );
     },
