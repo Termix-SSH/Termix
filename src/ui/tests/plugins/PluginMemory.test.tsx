@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import {
-  formatMb,
-  PluginMemoryCell,
-  PluginMemorySummary,
-} from "@/plugins/PluginMemory";
+import { PluginMemoryCell, PluginMemorySummary } from "@/plugins/PluginMemory";
+import { formatMb } from "@/plugins/plugin-memory";
 import type { PluginProcessReport } from "@/api/plugins-api";
 
 const report = (low: boolean): PluginProcessReport => ({

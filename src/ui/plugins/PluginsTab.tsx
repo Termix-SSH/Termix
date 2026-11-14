@@ -54,11 +54,8 @@ import {
   UnverifiedBadge,
 } from "./plugin-bits";
 import { RegistriesSection } from "./RegistriesSection";
-import {
-  PluginMemoryCell,
-  PluginMemorySummary,
-  usePluginMemory,
-} from "./PluginMemory";
+import { PluginMemoryCell, PluginMemorySummary } from "./PluginMemory";
+import { usePluginMemory } from "./plugin-memory";
 import { PluginConsentPrompt } from "./PluginConsentPrompt";
 import { PluginDetail } from "./PluginDetail";
 import {
