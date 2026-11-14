@@ -583,7 +583,9 @@ export async function renderPlugin(
     renderSlot(slotId, props = {}) {
       const rowKey = props.rowKey ?? props.hostId ?? props.tabId ?? "row";
       // A data slot also draws older component parts itself.
-      const dataSlot = getActionSlot(slotId)?.accepts.includes("data");
+      const dataSlot =
+        getActionSlot(slotId)?.accepts.includes("data") ||
+        getSlotContributions(slotId).some((item) => item.kind === "data");
       return wrap(
         <>
           <ActionSlot slotId={slotId} />
