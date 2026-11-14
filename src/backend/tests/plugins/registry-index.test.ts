@@ -58,6 +58,7 @@ import {
   downloadRelease,
   fetchIndexAt,
   fetchRegistryIndex,
+  setRegistryFetchTimeouts,
   fetchRegistryStats,
   findRelease,
   getRegistryPrivateHosts,
@@ -813,5 +814,51 @@ describe("parseRegistryIndex chain signatures", () => {
       entry({ signatures: [{ keyId: "unknown", sig: "c2ln" }] }),
     );
     expect(index.plugins).toEqual([]);
+  });
+});
+
+describe("registry fetches that stall", () => {
+  afterEach(() =>
+    setRegistryFetchTimeouts({ index: 30_000, artifact: 120_000 }),
+  );
+
+  /** Sends part of a body, then nothing, until the request is aborted. */
+  function stalled(_url: string, options: RequestInit): Promise<Response> {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('{"plugins":'));
+        options.signal?.addEventListener("abort", () =>
+          controller.error(options.signal?.reason),
+        );
+      },
+    });
+    return Promise.resolve(new Response(stream, { status: 200 }));
+  }
+
+  it("gives up on a body that never finishes instead of holding boot", async () => {
+    setRegistryFetchTimeouts({ index: 50 });
+    fetchMock.mockImplementation(stalled);
+    const started = Date.now();
+    await expect(
+      fetchIndexAt("https://registry.example/index.json"),
+    ).rejects.toThrow();
+    expect(Date.now() - started).toBeLessThan(5_000);
+    const options = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(options.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("gives up on a server that never answers", async () => {
+    setRegistryFetchTimeouts({ index: 50 });
+    fetchMock.mockImplementation(
+      (_url: string, options: RequestInit) =>
+        new Promise((_resolve, reject) =>
+          options.signal?.addEventListener("abort", () =>
+            reject(options.signal?.reason),
+          ),
+        ),
+    );
+    await expect(
+      fetchIndexAt("https://registry.example/index.json"),
+    ).rejects.toThrow();
   });
 });

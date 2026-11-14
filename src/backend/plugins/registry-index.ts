@@ -392,15 +392,33 @@ function fetchThroughProxy(
   return fetchWithProxy(url, options);
 }
 
+/**
+ * Whole-request limits, body included. Boot fetches missing plugins before
+ * any plugin starts, so a registry that stalls must not hold the server.
+ */
+const fetchTimeouts = { index: 30_000, artifact: 120_000 };
+
+/** Test seam. */
+export function setRegistryFetchTimeouts(
+  next: Partial<typeof fetchTimeouts>,
+): void {
+  Object.assign(fetchTimeouts, next);
+}
+
 /** Follows redirects by hand so each hop still gets the outbound checks. */
-async function fetchFollowing(url: string): Promise<Response> {
+async function fetchFollowing(
+  url: string,
+  timeoutMs = fetchTimeouts.index,
+): Promise<Response> {
   const privateHosts = getRegistryPrivateHosts();
+  const signal = AbortSignal.timeout(timeoutMs);
   let current = url;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const options: RequestInit = {
       method: "GET",
       redirect: "manual",
       headers: { "User-Agent": "Termix" },
+      signal,
     };
     const response = getProxyAgent(current)
       ? await fetchThroughProxy(current, options, privateHosts)
@@ -721,7 +739,7 @@ export async function downloadRelease(
 
   const limit =
     release.size > 0 ? release.size + 1024 * 1024 : MAX_ARTIFACT_BYTES;
-  const response = await fetchFollowing(release.url);
+  const response = await fetchFollowing(release.url, fetchTimeouts.artifact);
   const buffer = await readLimited(
     response,
     Math.min(limit, MAX_ARTIFACT_BYTES),
