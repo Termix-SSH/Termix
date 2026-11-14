@@ -23,8 +23,15 @@ export type ScriptShellMode = "plain" | "auto" | "root" | "root-only";
 
 const ERR = "SCRIPT_ERR:";
 
-/** The command line that runs a script sent on stdin. */
+/**
+ * The command line that runs a script sent on stdin. SSH hands it to the
+ * login shell, which may be fish or csh, so the POSIX part runs under sh.
+ */
 export function scriptShell(mode: ScriptShellMode): string {
+  return `sh -c ${shellQuote(posixShell(mode))}`;
+}
+
+function posixShell(mode: ScriptShellMode): string {
   switch (mode) {
     case "plain":
       return `${SCRIPT_PRELUDE}exec bash -s`;
