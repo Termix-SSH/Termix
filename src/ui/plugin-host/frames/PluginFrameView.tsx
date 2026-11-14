@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type ReactNode,
 } from "react";
 import { usePluginStore } from "../plugin-store";
 import { useInSeamlessTile } from "@/components/tile-grid/context";
@@ -38,6 +39,8 @@ export interface PluginFrameViewProps {
   /** Lets the page behind show through, for overlays. */
   transparent?: boolean;
   props: Record<string, unknown>;
+  /** Shown in the shell while the view draws nothing, for inline fit. */
+  fallback?: ReactNode;
   className?: string;
   style?: CSSProperties;
 }
@@ -100,6 +103,7 @@ export function PluginFrameView({
   fit,
   transparent,
   props,
+  fallback,
   className,
   style,
 }: PluginFrameViewProps) {
@@ -166,6 +170,14 @@ export function PluginFrameView({
     };
   }, [pluginId, frameKey, src]);
 
+  useEffect(() => {
+    if (!import.meta.env.DEV || ready) return;
+    const timer = setTimeout(() => {
+      console.warn(`[frame] ${pluginId}:${frameKey} never reported ready`);
+    }, 15_000);
+    return () => clearTimeout(timer);
+  }, [ready, pluginId, frameKey]);
+
   // Props go over once the frame is up, and again whenever they change.
   useEffect(() => {
     const port = connection.current?.port;
@@ -193,7 +205,16 @@ export function PluginFrameView({
           }
         : { width: "100%", height: size ? `${size.height}px` : 0 };
 
-  return (
+  // An empty inline view leaves the row alone: no width, no gap, and the
+  // owner's fallback in its place.
+  const empty =
+    fit === "inline" && (!size || size.width === 0 || size.height === 0);
+  const hidden: CSSProperties =
+    empty && fallback !== undefined
+      ? { position: "absolute", pointerEvents: "none" }
+      : {};
+
+  const frame = (
     <iframe
       ref={iframe}
       src={src}
@@ -209,8 +230,16 @@ export function PluginFrameView({
         background: "transparent",
         colorScheme: "normal",
         ...sizing,
+        ...hidden,
         ...style,
       }}
     />
+  );
+  if (fallback === undefined) return frame;
+  return (
+    <>
+      {empty && fallback}
+      {frame}
+    </>
   );
 }

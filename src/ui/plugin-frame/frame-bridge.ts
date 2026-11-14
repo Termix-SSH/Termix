@@ -30,10 +30,19 @@ export interface FrameBridgeHost {
   call: (method: string, ...args: unknown[]) => Promise<unknown>;
   getApi: PluginHostBridge["getApi"];
   tabs: TabsApi;
+  devReads?: boolean;
 }
 
 export function createFrameBridge(host: FrameBridgeHost): PluginHostBridge {
   const call = host.call;
+  const reported = new Set<string>();
+  const report = (kind: string, id: unknown) => {
+    if (!host.devReads || typeof id !== "string") return;
+    const key = `${kind}:${id}`;
+    if (reported.has(key)) return;
+    reported.add(key);
+    void call("devRead", kind, id).catch(() => {});
+  };
   const toast = (kind: string) => (message: string) =>
     void call("toast", kind, String(message)).catch(() => {});
 
@@ -90,12 +99,20 @@ export function createFrameBridge(host: FrameBridgeHost): PluginHostBridge {
 
     // Other plugins' components can't be drawn inside this frame. The
     // frame's own extensions can.
-    useSlotContributions: () => [],
-    usePluginComponent: () => undefined,
-    useExtensions: (pointId) =>
-      useOwnExtensions(pointId) as ReturnType<
+    useSlotContributions: (slotId) => {
+      report("slot", slotId);
+      return [];
+    },
+    usePluginComponent: (id) => {
+      report("component", id);
+      return undefined;
+    },
+    useExtensions: (pointId) => {
+      report("extension", pointId);
+      return useOwnExtensions(pointId) as ReturnType<
         PluginHostBridge["useExtensions"]
-      >,
+      >;
+    },
     getExtension: (pointId, id) =>
       getOwnExtension(pointId, id) as ReturnType<
         PluginHostBridge["getExtension"]

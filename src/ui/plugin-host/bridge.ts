@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { isElectron } from "@/lib/electron";
 import { readStatusColorScheme } from "@/hooks/use-status-color-scheme";
-import { enabledHostProtocols } from "@/sidebar/host-protocols";
+import {
+  enabledHostProtocols,
+  listHostProtocols,
+} from "@/sidebar/host-protocols";
 import { useHostActions } from "@/sidebar/host-contributions";
 import { tabTypeForActivity, useTabTypes } from "@/shell/tab-registry";
 import { useCompanionDefs } from "@/shell/companions";
@@ -217,6 +220,14 @@ export function toPluginHostRecord(
   const record = toHostRecord(host);
   const own = pluginId ? host.pluginSettings?.[pluginId] : undefined;
   record.pluginSettings = own && pluginId ? { [pluginId]: own } : {};
+  // A quick connect login is only for the plugin whose protocol it opens.
+  const login = record.quickConnectLogin as { protocol?: unknown } | undefined;
+  if (login) {
+    const owner = listHostProtocols().find(
+      (entry) => entry.id === login.protocol,
+    )?.pluginId;
+    if (!pluginId || owner !== pluginId) delete record.quickConnectLogin;
+  }
   return record;
 }
 

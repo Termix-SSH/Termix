@@ -367,6 +367,70 @@ describe("plugins route", () => {
     });
   });
 
+  describe("POST /plugins/frame-tokens", () => {
+    const mintMany = (body: unknown, headers: Record<string, string>) =>
+      fetch(`${baseUrl}/plugins/frame-tokens`, {
+        method: "POST",
+        headers: { "content-type": "application/json", ...headers },
+        body: JSON.stringify(body),
+      });
+    const page = { "x-test-user-id": "user-1", "x-test-session-id": "s-1" };
+
+    it("gives a token for each running framed plugin in one answer", async () => {
+      for (const id of ["one", "two"]) {
+        state.active.add(id);
+        state.framed.add(id);
+      }
+      state.active.add("legacy");
+      const res = await mintMany(
+        { ids: ["one", "two", "legacy", "nobody", "one"] },
+        page,
+      );
+      expect(res.status).toBe(200);
+      expect(res.headers.get("cache-control")).toBe("no-store");
+      expect(await res.json()).toEqual({
+        tokens: {
+          one: { token: "frame:one", expiresIn: 300 },
+          two: { token: "frame:two", expiresIn: 300 },
+        },
+      });
+      expect(state.frameTokens).toEqual([
+        ["user-1", "s-1", "one"],
+        ["user-1", "s-1", "two"],
+      ]);
+    });
+
+    it("refuses an API key and a call without a session", async () => {
+      state.active.add("one");
+      state.framed.add("one");
+      const key = await mintMany(
+        { ids: ["one"] },
+        { ...page, "x-test-api-key-id": "key-1" },
+      );
+      expect(key.status).toBe(401);
+      const none = await mintMany(
+        { ids: ["one"] },
+        { "x-test-user-id": "user-1" },
+      );
+      expect(none.status).toBe(401);
+      expect(state.frameTokens).toEqual([]);
+    });
+
+    it("refuses anything but a short list of plugin ids", async () => {
+      for (const body of [
+        {},
+        { ids: "one" },
+        { ids: ["../x"] },
+        { ids: [1] },
+        { ids: Array.from({ length: 201 }, (_, i) => `p${i}`) },
+      ]) {
+        const res = await mintMany(body, page);
+        expect(res.status, JSON.stringify(body).slice(0, 40)).toBe(400);
+      }
+      expect(state.frameTokens).toEqual([]);
+    });
+  });
+
   describe("GET /plugins/public", () => {
     it("lists only enabled plugins that opt into guest pages", async () => {
       state.plugins.set(

@@ -14,12 +14,20 @@ import type { PluginManifest } from "@termix-ssh/plugin-sdk/frontend";
 import { isWireComponent, type WireComponent } from "@/plugin-frame/protocol";
 import { createPluginApp, type PluginAppHandle } from "../app";
 import { connectFrame, frameUrl, mayCallHandle } from "./frame-connection";
-import { PluginFrameView, SANDBOX, type FrameFit } from "./PluginFrameView";
+import { SANDBOX, type FrameFit } from "./PluginFrameView";
+import { FramedView, SlotFramedView } from "./framed-view";
 import { clearFrameValues, setFrameValue, useFrameValue } from "./frame-values";
 import { toPluginHostRecord } from "../bridge";
 
+export { resolveSlotFit, slotFit, splitFallback } from "./slot-fit";
+
 const START_TIMEOUT_MS = 20_000;
 const MEMO_LIMIT = 500;
+/**
+ * Redraws per registration per second. A caller that builds new arguments
+ * every render (a fresh host object) would otherwise redraw forever.
+ */
+export const REFRESH_LIMIT = 20;
 
 export interface FramedPlugin {
   handle: PluginAppHandle;
@@ -34,6 +42,7 @@ interface Registration {
   dispose: () => void;
   memos: Map<string, (...args: unknown[]) => unknown>;
   refreshTimer: ReturnType<typeof setTimeout> | null;
+  refreshes: number[];
 }
 
 function container(): HTMLElement {
@@ -61,44 +70,53 @@ function stableKey(args: unknown[]): string {
   }
 }
 
-/** Which way a component fills its place, by kind and slot. */
-/** A toolbar slot takes a button, a tabs slot a whole page, anything else a block. */
-/** Buttons and badges in a row size to themselves, panels take the width. */
-export function slotFit(slotId: string): FrameFit {
-  if (/toolbar|actions$|badges$|\.inline$/i.test(slotId)) return "inline";
-  if (/tabs?$/i.test(slotId)) return "fill";
-  return "content";
-}
-
 function extensionFit(name: string): FrameFit {
   return /form|editor|settings/i.test(name) ? "content" : "fill";
 }
 
 const views = new Map<string, ComponentType<Record<string, unknown>>>();
 
-/** One component per plugin, key and fit, so re-registering never remounts. */
+/**
+ * One component per plugin, key and fit, so re-registering never remounts.
+ * A fit of `{ slot }` follows what that slot's owner declares.
+ */
 function framed(
   pluginId: string,
   ref: unknown,
-  fit: FrameFit,
+  fit: FrameFit | { slot: string },
   adapt?: (props: Record<string, unknown>) => Record<string, unknown>,
   variant = "",
 ): ComponentType<Record<string, unknown>> | undefined {
   if (!isWireComponent(ref)) return undefined;
   const key = (ref as WireComponent).$component;
-  const id = `${pluginId}\u0000${key}\u0000${fit}\u0000${variant}`;
+  const fitKey = typeof fit === "string" ? fit : `slot:${fit.slot}`;
+  const id = `${pluginId}\u0000${key}\u0000${fitKey}\u0000${variant}`;
   let view = views.get(id);
   if (!view) {
-    view = function FramedView(props: Record<string, unknown>) {
-      return (
-        <PluginFrameView
-          pluginId={pluginId}
-          frameKey={key}
-          fit={fit}
-          props={adapt ? adapt(props) : props}
-        />
-      );
-    };
+    view =
+      typeof fit === "string"
+        ? function Framed(props: Record<string, unknown>) {
+            return (
+              <FramedView
+                pluginId={pluginId}
+                frameKey={key}
+                how={fit}
+                adapt={adapt}
+                props={props}
+              />
+            );
+          }
+        : function Framed(props: Record<string, unknown>) {
+            return (
+              <SlotFramedView
+                pluginId={pluginId}
+                frameKey={key}
+                slotId={fit.slot}
+                adapt={adapt}
+                props={props}
+              />
+            );
+          };
     view.displayName = `Framed(${pluginId}:${key})`;
     views.set(id, view);
   }
@@ -267,6 +285,18 @@ export function startFramedPlugin(
 
   const scheduleRefresh = (record: Registration) => {
     if (record.refreshTimer) return;
+    const now = Date.now();
+    record.refreshes = record.refreshes.filter((time) => now - time < 1000);
+    if (record.refreshes.length >= REFRESH_LIMIT) {
+      if (import.meta.env.DEV && record.refreshes.length === REFRESH_LIMIT) {
+        console.warn(
+          `[frame] ${pluginId}: ${record.kind} keeps getting new arguments, redraws paused`,
+        );
+      }
+      record.refreshes.push(now);
+      return;
+    }
+    record.refreshes.push(now);
     record.refreshTimer = setTimeout(() => {
       record.refreshTimer = null;
       if (![...registrations.values()].includes(record)) return;
@@ -278,7 +308,7 @@ export function startFramedPlugin(
 
   const fit = (
     ref: unknown,
-    how: FrameFit,
+    how: Parameters<typeof framed>[2],
     adapt?: Parameters<typeof framed>[3],
     variant?: string,
   ) => framed(pluginId, ref, how, adapt, variant);
@@ -435,7 +465,7 @@ export function startFramedPlugin(
         if (slotId === "shell.overlay") return () => {};
         return app.registerSlotContribution(slotId, {
           ...rest,
-          component: fit(component, slotFit(String(slotId)), plainProps),
+          component: fit(component, { slot: String(slotId) }, plainProps),
           when: m("when", false),
         });
       }
@@ -484,6 +514,7 @@ export function startFramedPlugin(
       dispose: () => {},
       memos: new Map(),
       refreshTimer: null,
+      refreshes: [],
     };
     try {
       record.dispose = replay(record);

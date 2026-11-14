@@ -43,6 +43,11 @@ export interface ActionSlotDefinition {
   id: string;
   /** Contribution kinds this slot will render. */
   accepts: string[];
+  /**
+   * How a framed component sizes itself here: "inline" as wide and tall as
+   * its content (row items, badges), "content" full width, "fill" the box.
+   */
+  fit?: "inline" | "content" | "fill";
 }
 
 export interface SlotContribution {
@@ -214,6 +219,13 @@ export function getSlotContributions(slotId: string): SlotContribution[] {
   );
   snapshots.set(slotId, sorted);
   return sorted;
+}
+
+/** The declared slot, if its owner declared it. */
+export function getActionSlot(
+  slotId: string,
+): ActionSlotDefinition | undefined {
+  return slots.get(slotId);
 }
 
 export function subscribeToActionRegistry(listener: () => void): () => void {

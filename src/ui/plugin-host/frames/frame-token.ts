@@ -1,6 +1,7 @@
 /**
  * Short tokens a plugin's frames use on its own routes. One per plugin,
- * shared by all its frames, renewed before it runs out.
+ * shared by all its frames, renewed before it runs out. Plugins that ask in
+ * the same moment (every frame on a page load) share one request.
  */
 
 import { authApi } from "@/main-axios";
@@ -15,6 +16,43 @@ const pending = new Map<string, Promise<Token>>();
 
 /** Renew when less than this is left, so a frame never holds a dead one. */
 const RENEW_BEFORE_MS = 90_000;
+/** How long asks are gathered before one request goes out. */
+const GATHER_MS = 25;
+
+type Waiter = { resolve: (token: Token) => void; reject: (e: Error) => void };
+let queued = new Map<string, Waiter>();
+let timer: ReturnType<typeof setTimeout> | null = null;
+
+function toToken(data: unknown): Token {
+  const entry = data as { token?: unknown; expiresIn?: unknown } | undefined;
+  if (typeof entry?.token !== "string") throw new Error("No frame token");
+  const seconds = Number(entry.expiresIn) || 300;
+  return { value: entry.token, expiresAt: Date.now() + seconds * 1000 };
+}
+
+async function flush(): Promise<void> {
+  const batch = queued;
+  queued = new Map();
+  timer = null;
+  try {
+    const response = await authApi.post("/plugins/frame-tokens", {
+      ids: [...batch.keys()],
+    });
+    const found = ((response.data as { tokens?: unknown })?.tokens ??
+      {}) as Record<string, unknown>;
+    for (const [pluginId, waiter] of batch) {
+      try {
+        const token = toToken(found[pluginId]);
+        tokens.set(pluginId, token);
+        waiter.resolve(token);
+      } catch (error) {
+        waiter.reject(error as Error);
+      }
+    }
+  } catch (error) {
+    for (const waiter of batch.values()) waiter.reject(error as Error);
+  }
+}
 
 export function frameToken(pluginId: string): Promise<Token> {
   const current = tokens.get(pluginId);
@@ -23,22 +61,10 @@ export function frameToken(pluginId: string): Promise<Token> {
   }
   let request = pending.get(pluginId);
   if (!request) {
-    request = authApi
-      .post(`/plugins/${encodeURIComponent(pluginId)}/frame-token`)
-      .then((response) => {
-        const data = response.data as { token?: unknown; expiresIn?: unknown };
-        if (typeof data?.token !== "string") {
-          throw new Error("No frame token");
-        }
-        const seconds = Number(data.expiresIn) || 300;
-        const token = {
-          value: data.token,
-          expiresAt: Date.now() + seconds * 1000,
-        };
-        tokens.set(pluginId, token);
-        return token;
-      })
-      .finally(() => pending.delete(pluginId));
+    request = new Promise<Token>((resolve, reject) => {
+      queued.set(pluginId, { resolve, reject });
+      timer ??= setTimeout(() => void flush(), GATHER_MS);
+    }).finally(() => pending.delete(pluginId));
     pending.set(pluginId, request);
   }
   return request;

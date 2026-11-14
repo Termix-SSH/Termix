@@ -154,6 +154,11 @@ export interface FrameInit {
   guest: boolean;
   /** A view's first props, so it never draws without them. */
   props?: Record<string, unknown>;
+  /**
+   * Dev builds only: report reads of other plugins' parts, so the shell can
+   * log the ones a frame can't see.
+   */
+  devReads?: boolean;
 }
 
 /** Everything a frame's hooks read synchronously, pushed by the shell. */

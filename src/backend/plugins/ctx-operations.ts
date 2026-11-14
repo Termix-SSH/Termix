@@ -31,6 +31,7 @@ import {
   subscribeOperationEvents,
 } from "../operations/events.js";
 import {
+  decideOperationApproval,
   drainPlugin,
   OperationError,
   runOperation,
@@ -189,6 +190,49 @@ export function createPluginOperations({
         const remove = provideApprovalPolicy(pluginId, manifest, provider);
         bag.add(remove, "approval rules");
         return remove;
+      },
+
+      // Core hands in the plugin's live request; a plugin can't pass one.
+      decide: async (input, request?: unknown) => {
+        if (!declared.includes("operations:approve")) {
+          throw capabilityRefused(pluginId, "operations:approve");
+        }
+        const req = request as
+          | {
+              userId?: string;
+              apiKeyId?: string;
+              apiKeyScopes?: string[] | null;
+              actingAdminUserId?: string;
+            }
+          | undefined;
+        if (!req) {
+          throw new OperationError(
+            "UNAVAILABLE",
+            "ctx.operations.approvals.decide works only inside one of the plugin's own requests",
+          );
+        }
+        if (!req.userId) {
+          throw new OperationError("FORBIDDEN", "Authentication required");
+        }
+        // A key could be handed to a script, so a person decides from a session.
+        if (req.apiKeyId || req.apiKeyScopes) {
+          throw new OperationError("FORBIDDEN", "This API key may not approve");
+        }
+        const approvalId = String(input?.approvalId ?? "");
+        if (!approvalId || typeof input?.approve !== "boolean") {
+          throw new OperationError(
+            "INVALID_INPUT",
+            "approvalId and approve are required",
+          );
+        }
+        return decideOperationApproval({
+          approvalId,
+          approverId: req.userId,
+          approve: input.approve,
+          comment:
+            typeof input.comment === "string" ? input.comment : undefined,
+          impersonated: !!req.actingAdminUserId,
+        });
       },
     },
   };

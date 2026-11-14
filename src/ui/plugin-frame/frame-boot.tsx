@@ -294,6 +294,7 @@ async function boot() {
         return api as never;
       },
       tabs,
+      devReads: init.devReads === true,
     }),
   );
 

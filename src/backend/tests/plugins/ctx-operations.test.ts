@@ -4,6 +4,10 @@ import type { PluginManifest } from "../../plugins/manifest.js";
 const gate = vi.hoisted(() => ({
   runOperation: vi.fn(async () => ({ runId: "r", status: "success" })),
   drainPlugin: vi.fn(async () => {}),
+  decideOperationApproval: vi.fn(async () => ({
+    runId: "r",
+    status: "success",
+  })),
 }));
 
 vi.mock("../../utils/logger.js", () => ({
@@ -206,5 +210,58 @@ describe("approvals", () => {
     expect(() => operations.approvals.provide(() => null)).toThrow(
       "operations:approve",
     );
+  });
+});
+
+describe("approvals.decide", () => {
+  type Decide = (input: unknown, request?: unknown) => Promise<unknown>;
+  const decide = (capabilities: string[]) =>
+    build(capabilities).operations.approvals.decide as unknown as Decide;
+  const input = { approvalId: "a1", approve: true, comment: "ok" };
+
+  beforeEach(() => gate.decideOperationApproval.mockClear());
+
+  it("needs the capability", async () => {
+    await expect(decide([])(input, { userId: "u1" })).rejects.toThrow(
+      "operations:approve",
+    );
+  });
+
+  it("works only inside one of the plugin's own requests", async () => {
+    await expect(decide(["operations:approve"])(input)).rejects.toThrow(
+      "own requests",
+    );
+    expect(gate.decideOperationApproval).not.toHaveBeenCalled();
+  });
+
+  it("refuses a request made with an API key", async () => {
+    const run = decide(["operations:approve"]);
+    await expect(
+      run(input, { userId: "u1", apiKeyId: "k", apiKeyScopes: ["full"] }),
+    ).rejects.toThrow("API key");
+    await expect(
+      run(input, { userId: "u1", apiKeyScopes: ["operations:run"] }),
+    ).rejects.toThrow("API key");
+    expect(gate.decideOperationApproval).not.toHaveBeenCalled();
+  });
+
+  it("decides as the person on the request, never as anyone the plugin names", async () => {
+    await decide(["operations:approve"])(
+      { ...input, approverId: "admin" },
+      { userId: "u1", actingAdminUserId: "a9" },
+    );
+    expect(gate.decideOperationApproval).toHaveBeenCalledWith({
+      approvalId: "a1",
+      approverId: "u1",
+      approve: true,
+      comment: "ok",
+      impersonated: true,
+    });
+  });
+
+  it("needs an id and a yes or no", async () => {
+    await expect(
+      decide(["operations:approve"])({ approvalId: "a1" }, { userId: "u1" }),
+    ).rejects.toThrow("required");
   });
 });

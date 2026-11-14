@@ -333,6 +333,87 @@ router.post(
   },
 );
 
+const MAX_FRAME_TOKEN_IDS = 200;
+
+/**
+ * @openapi
+ * /plugins/frame-tokens:
+ *   post:
+ *     summary: Get short tokens for several plugins' sandboxed frames at once
+ *     description: >
+ *       The same as /plugins/{id}/frame-token for a list of plugins, so a page
+ *       load asks once instead of once per plugin. Plugins that are not running
+ *       with framed views are left out of the answer.
+ *     tags:
+ *       - Plugins
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [ids]
+ *             properties:
+ *               ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: A token and how many seconds it lasts, per plugin id.
+ *       400:
+ *         description: ids is not a list of plugin ids.
+ *       401:
+ *         description: Not signed in with a session.
+ */
+router.post(
+  "/frame-tokens",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const authReq = req as AuthenticatedRequest & { apiKeyId?: string };
+    // Frames belong to a signed-in page, never to an API key.
+    if (!authReq.sessionId || authReq.apiKeyId) {
+      res.status(401).json({ error: "A login session is required" });
+      return;
+    }
+    const ids = (req.body as { ids?: unknown } | undefined)?.ids;
+    if (
+      !Array.isArray(ids) ||
+      ids.length > MAX_FRAME_TOKEN_IDS ||
+      !ids.every((id) => typeof id === "string" && /^[a-z][a-z0-9-]*$/.test(id))
+    ) {
+      res.status(400).json({ error: "ids must be a list of plugin ids" });
+      return;
+    }
+    const { loader } = getPluginRuntime();
+    const tokens: Record<string, { token: string; expiresIn: number }> = {};
+    try {
+      for (const pluginId of new Set(ids as string[])) {
+        const plugin = loader.get(pluginId);
+        if (
+          !plugin ||
+          plugin.state !== "active" ||
+          describePluginFrontend(plugin).frontendIsolation !== "frame"
+        ) {
+          continue;
+        }
+        tokens[pluginId] = await authManager.issuePluginFrameToken(
+          authReq.userId as string,
+          authReq.sessionId,
+          pluginId,
+        );
+      }
+      res.setHeader("Cache-Control", "no-store");
+      res.json({ tokens });
+    } catch (error) {
+      databaseLogger.error("Failed to issue plugin frame tokens", error, {
+        operation: "plugin_frame_tokens",
+      });
+      res.status(500).json({ error: "Could not issue a token" });
+    }
+  },
+);
+
 router.get("/", authenticateJWT, async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthenticatedRequest).userId as string;

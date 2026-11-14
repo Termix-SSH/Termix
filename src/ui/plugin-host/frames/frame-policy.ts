@@ -4,8 +4,10 @@
  * only other way in: its own settings and the core reads the SDK hooks and
  * UI kit make. Everything else answers 403 and never reaches the server.
  *
- * Kept in step with the mobile app's bridge-policy.ts.
+ * The list lives in frame-core-rules.json, which the mobile app copies.
  */
+
+import RULE_FILE from "./frame-core-rules.json";
 
 type Method = "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -16,40 +18,19 @@ interface Rule {
 
 const esc = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-const READ: Method[] = ["GET", "HEAD"];
+export interface CoreRuleEntry {
+  methods: string[];
+  path: string;
+  why?: string;
+}
 
-const RULES: Rule[] = [
-  {
-    methods: ["GET", "PUT"],
-    path: (id) =>
-      new RegExp(`^/plugins/${esc(id)}/settings/(admin|user|host/\\d+)$`),
-  },
-  { methods: READ, path: () => /^\/users\/me$/ },
-  // Your own sessions and keys. Revoking other people's stays out of frames.
-  { methods: READ, path: () => /^\/users\/(sessions|api-keys\/mine)$/ },
-  { methods: ["DELETE"], path: () => /^\/users\/api-keys\/mine\/[\w-]+$/ },
-  { methods: ["POST"], path: () => /^\/users\/api-keys\/mine\/revoke-all$/ },
-  { methods: READ, path: () => /^\/users\/admin-holds(\/settings)?$/ },
-  { methods: READ, path: () => /^\/rbac\/permissions\/me$/ },
-  { methods: READ, path: () => /^\/user-preferences$/ },
-  { methods: READ, path: () => /^\/(health|version)$/ },
-  { methods: READ, path: () => /^\/dashboard\/(uptime|activity\/recent)$/ },
-  { methods: READ, path: () => /^\/host\/db\/host(\/\d+)?$/ },
-  { methods: READ, path: () => /^\/host\/(folders|policy)$/ },
-  { methods: READ, path: () => /^\/host\/status(\/\d+|\/settings)?$/ },
-  { methods: READ, path: () => /^\/credentials$/ },
-  // Actions go through the server's own gate. Deciding approvals stays out.
-  {
-    methods: READ,
-    path: () =>
-      /^\/operations\/(catalog|runs|events|timeline|signals|resources)(\/|$)/,
-  },
-  {
-    methods: ["POST"],
-    path: (id) => new RegExp(`^/operations/${esc(id)}\\.[a-z0-9.-]+/run$`),
-  },
-  { methods: ["POST"], path: () => /^\/dashboard\/activity\/log$/ },
-];
+/** The shared list, also read by the mobile app. */
+export const CORE_RULES: CoreRuleEntry[] = RULE_FILE.rules;
+
+const RULES: Rule[] = CORE_RULES.map((entry) => ({
+  methods: entry.methods as Method[],
+  path: (id) => new RegExp(entry.path.split("{id}").join(esc(id))),
+}));
 
 export type PolicyResult =
   { ok: true; path: string; query: string } | { ok: false; reason: string };
@@ -98,15 +79,46 @@ export function frameHeaders(
 
 const HOST_LIST = /^\/host\/db\/host(\/\d+)?$/;
 
+/** What a plugin may learn about installed plugins: no admin fields. */
+const PLUGIN_FIELDS = [
+  "id",
+  "name",
+  "version",
+  "enabled",
+  "state",
+  "icon",
+  "description",
+  "docs",
+  "contributes",
+  "dependencies",
+  "optionalDependencies",
+  "frontend",
+  "frontendIsolation",
+] as const;
+
+function scopePluginList(body: unknown): unknown {
+  if (!Array.isArray(body)) return [];
+  return body.map((entry) => {
+    const plugin = (entry ?? {}) as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+    for (const field of PLUGIN_FIELDS) {
+      if (plugin[field] !== undefined) out[field] = plugin[field];
+    }
+    return out;
+  });
+}
+
 /**
  * Host records leave the shell carrying only the asking plugin's settings,
- * the same as the SDK's host hooks give.
+ * the same as the SDK's host hooks give. The plugin list leaves without the
+ * admin fields.
  */
 export function scopeCoreResponse(
   pluginId: string,
   path: string,
   body: unknown,
 ): unknown {
+  if (path === "/plugins") return scopePluginList(body);
   if (!HOST_LIST.test(path)) return body;
   const scope = (host: unknown) => {
     if (!host || typeof host !== "object") return host;

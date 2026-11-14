@@ -77,6 +77,11 @@ import { PluginViewPlaceholder } from "./PluginViewPlaceholder";
 import { resolveLayoutTabTarget } from "@/shell/shell-layout";
 import { getExtension, listExtensions } from "./extension-registry";
 import { onboardingSteps } from "@/onboarding/onboarding-registry";
+import {
+  renderFrameViews,
+  type FrameViewsOptions,
+  type FrameViewsResult,
+} from "./testing-frame-views";
 import type { WorkspaceTabSnapshot } from "@/types/ui-types";
 
 function recordingShell(calls: ShellCall[]): TabShellCallbacks {
@@ -161,6 +166,38 @@ export async function checkFramePlugin(
     handle.dispose();
   }
   return { registrations, problems };
+}
+
+/**
+ * Renders every view the plugin registers with the mock shell and reports
+ * the core requests a plugin frame would be refused, on top of what
+ * checkFramePlugin finds.
+ */
+export async function checkFrameViews(
+  plugin: FrontendPluginModule,
+  options: FrameViewsOptions,
+): Promise<
+  FrameViewsResult & {
+    registrations: { kind: string; data: unknown }[];
+    problems: string[];
+  }
+> {
+  const check = await checkFramePlugin(plugin as never, {
+    manifest: options.manifest,
+  });
+  const points: Array<[string, string]> = [];
+  for (const { kind, data } of check.registrations) {
+    const record = data as Record<string, unknown>;
+    if (kind === "slotContribution" && typeof record.slotId === "string") {
+      points.push(["slot", record.slotId]);
+    } else if (kind === "extension" && typeof record.pointId === "string") {
+      points.push(["extension", record.pointId]);
+    } else if (kind === "component" && typeof record.id === "string") {
+      points.push(["component", record.id]);
+    }
+  }
+  const views = await renderFrameViews(plugin, renderPlugin, points, options);
+  return { ...check, ...views };
 }
 
 function missing(kind: string, id: string | number): never {

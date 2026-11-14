@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Box } from "lucide-react";
 import { checkFramePlugin } from "@/plugin-host/testing-host";
+import { listExtensions } from "@/plugin-host/extension-registry";
 
 const manifest = {
   id: "gizmo",
@@ -58,5 +59,22 @@ describe("checkFramePlugin", () => {
       expect.stringContaining("not a lucide-react icon"),
       expect.stringContaining("layouts"),
     ]);
+  });
+
+  it("leaves no extensions behind once it is done", async () => {
+    await checkFramePlugin(
+      {
+        activate: (app: never) => {
+          (
+            app as { registerExtension: (...args: unknown[]) => void }
+          ).registerExtension("gizmo.points", {
+            id: "one",
+            components: { view: () => null },
+          });
+        },
+      },
+      { manifest },
+    );
+    expect(listExtensions("gizmo.points")).toEqual([]);
   });
 });

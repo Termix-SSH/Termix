@@ -25,7 +25,9 @@ import { getPluginStoreState, knownPluginIds } from "../plugin-store";
 import { shell, shellHost } from "../shell-bridge";
 import { getTabType } from "@/shell/tab-registry";
 import { toggleCompanion } from "@/shell/companions";
-import { invokeAction } from "@/shell/action-registry";
+import { getSlotContributions, invokeAction } from "@/shell/action-registry";
+import { listExtensions } from "../extension-registry";
+import { getPluginComponent } from "../component-registry";
 import { runKeybindingAction } from "@/shell/keybinding-registry";
 import { patchOpenTab } from "@/api/open-tabs-api";
 import { getSSHHosts } from "@/api/ssh-host-management-api";
@@ -233,6 +235,11 @@ async function coreRequest(pluginId: string, request: unknown) {
   const method = String(input.method ?? "GET").toUpperCase();
   const check = checkCoreRequest(pluginId, method, String(input.path ?? ""));
   if (!check.ok) {
+    if (import.meta.env.DEV) {
+      console.warn(
+        `[frame-policy] refused ${pluginId}: ${(check as { reason: string }).reason}`,
+      );
+    }
     return {
       status: 403,
       headers: { "content-type": "application/json" },
@@ -276,6 +283,31 @@ async function coreRequest(pluginId: string, request: unknown) {
   };
 }
 
+/**
+ * Dev builds only: a frame read another plugin's slot, component or
+ * extension point, which it can't see. Logs it when someone filled it.
+ */
+export function logEmptyRead(pluginId: string, kind: unknown, id: unknown) {
+  if (typeof id !== "string") return;
+  let from: string[] = [];
+  if (kind === "slot") {
+    from = getSlotContributions(id)
+      .filter((entry) => entry.kind === "component")
+      .map((entry) => entry.pluginId ?? entry.actionId);
+  } else if (kind === "extension") {
+    from = listExtensions(id).map((entry) => entry.pluginId ?? entry.id);
+  } else if (kind === "component") {
+    from = getPluginComponent(id) ? [id.split(".")[0]] : [];
+  } else {
+    return;
+  }
+  from = [...new Set(from)].filter((owner) => owner !== pluginId);
+  if (from.length === 0) return;
+  console.warn(
+    `[frame-read] ${pluginId} read ${kind} ${id}, empty in its frame, filled by ${from.join(", ")}`,
+  );
+}
+
 /** The handle calls a companion may make, and what each needs. */
 const HANDLE_METHODS: Record<string, "terminal-input" | null> = {
   focus: null,
@@ -310,6 +342,9 @@ async function handleCall(
   switch (method) {
     case "init":
       return buildInit(connection);
+    case "devRead":
+      if (import.meta.env.DEV) logEmptyRead(pluginId, args[0], args[1]);
+      return;
     case "token":
       return frameToken(pluginId);
     case "http":
@@ -587,6 +622,7 @@ async function buildInit(connection: FrameConnection): Promise<FrameInit> {
     storage: readFrameStorage(pluginId),
     guest: false,
     props: connection.events.getProps?.(),
+    devReads: import.meta.env.DEV,
   };
 }
 

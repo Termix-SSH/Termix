@@ -107,6 +107,12 @@ function harness() {
       ),
     },
     services: { get: vi.fn(() => service) },
+    operations: {
+      approvals: {
+        provide: vi.fn(),
+        decide: vi.fn(async () => ({ runId: "r", status: "success" })),
+      },
+    },
     audit: { exportBatches: vi.fn(() => batches()) },
     log: {
       info: (m: string) => logs.push(`info ${m}`),
@@ -657,5 +663,31 @@ describe("login methods", () => {
     );
     expect(res.redirect).toHaveBeenCalledWith("/done");
     expect(live.handedOff).toBe(true);
+  });
+
+  it("decides an approval only inside a live request, as that request", async () => {
+    const h = harness();
+    const input = { approvalId: "a1", approve: false };
+    expect(
+      await h.send("ctx.operations.approvals.decide", [input], h.token()),
+    ).toMatchObject({ t: "err", e: { code: "SANDBOX_UNSUPPORTED" } });
+    expect(h.ctx.operations.approvals.decide).not.toHaveBeenCalled();
+
+    const token = h.token();
+    const live = {
+      req: { userId: "alice" },
+      res: { headersSent: false },
+      handedOff: false,
+    };
+    (
+      h.bridge as unknown as { liveRequests: Map<string, unknown> }
+    ).liveRequests.set(token, live);
+    expect(
+      await h.send("ctx.operations.approvals.decide", [input], token),
+    ).toMatchObject({ t: "ok", v: { status: "success" } });
+    expect(h.ctx.operations.approvals.decide).toHaveBeenCalledWith(
+      input,
+      live.req,
+    );
   });
 });

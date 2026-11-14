@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CORE_RULES,
   checkCoreRequest,
   frameHeaders,
   scopeCoreResponse,
@@ -95,6 +96,55 @@ describe("checkCoreRequest", () => {
 });
 
 describe("frameHeaders", () => {
+  it("reads waiting approvals but never decides one", () => {
+    expect(checkCoreRequest("ops", "GET", "/operations/approvals").ok).toBe(
+      true,
+    );
+    expect(
+      checkCoreRequest("ops", "POST", "/operations/approvals/abc").ok,
+    ).toBe(false);
+  });
+
+  it("allows the reads official plugins' views need", () => {
+    for (const path of [
+      "/users/auth/step-up/factors",
+      "/ssh-auth/providers",
+      "/plugins",
+    ]) {
+      expect([path, checkCoreRequest("x", "GET", path).ok]).toEqual([
+        path,
+        true,
+      ]);
+    }
+    expect(
+      checkCoreRequest("x", "POST", "/users/auth/step-up/totp/verify").ok,
+    ).toBe(false);
+    expect(checkCoreRequest("x", "POST", "/plugins/x/enable").ok).toBe(false);
+  });
+
+  it("builds every rule from the shared list", () => {
+    expect(CORE_RULES.length).toBeGreaterThan(10);
+    for (const rule of CORE_RULES) {
+      expect(() => new RegExp(rule.path.split("{id}").join("x"))).not.toThrow();
+      expect(rule.path.startsWith("^/")).toBe(true);
+      expect(rule.path.endsWith("$") || rule.path.endsWith("(/|$)")).toBe(true);
+      for (const method of rule.methods) {
+        expect(["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]).toContain(
+          method,
+        );
+      }
+    }
+  });
+
+  it("only fills in the asking plugin's id, escaped", () => {
+    expect(
+      checkCoreRequest("a.b", "POST", "/operations/a.b.restart/run").ok,
+    ).toBe(true);
+    expect(
+      checkCoreRequest("a.b", "POST", "/operations/aXb.restart/run").ok,
+    ).toBe(false);
+  });
+
   it("drops headers the shell owns", () => {
     expect(
       frameHeaders({
@@ -115,6 +165,34 @@ describe("frameHeaders", () => {
 });
 
 describe("scopeCoreResponse", () => {
+  it("cuts the plugin list down to what any plugin may see", () => {
+    const scoped = scopeCoreResponse("x", "/plugins", [
+      {
+        id: "alerts",
+        name: "Alerts",
+        version: "1.0.0",
+        enabled: true,
+        state: "active",
+        contributes: { settings: {} },
+        env: [{ name: "SMTP_PASSWORD" }],
+        lastError: "boom",
+        grantedCapabilities: ["network:outbound"],
+        signedBy: "official",
+      },
+    ]);
+    expect(scoped).toEqual([
+      {
+        id: "alerts",
+        name: "Alerts",
+        version: "1.0.0",
+        enabled: true,
+        state: "active",
+        contributes: { settings: {} },
+      },
+    ]);
+    expect(scopeCoreResponse("x", "/plugins", { not: "a list" })).toEqual([]);
+  });
+
   it("leaves only the asking plugin's settings on host records", () => {
     const hosts = [
       { id: 1, pluginSettings: { docker: { a: 1 }, vault: { secret: "s" } } },

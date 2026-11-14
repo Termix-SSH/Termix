@@ -1,0 +1,92 @@
+{
+  "about": "Core requests a plugin frame (web) or plugin web view (mobile) may make besides its own routes. {id} is the asking plugin's id. Core owns this file; Mobile keeps a copy in src/core/plugins (npm run sync:frame-policy).",
+  "rules": [
+    {
+      "methods": ["GET", "PUT"],
+      "path": "^/plugins/{id}/settings/(admin|user|host/\\d+)$",
+      "why": "The plugin's own settings"
+    },
+    {
+      "methods": ["GET", "HEAD"],
+      "path": "^/users/me$"
+    },
+    {
+      "methods": ["GET", "HEAD"],
+      "path": "^/users/(sessions|api-keys/mine)$",
+      "why": "Your own sessions and keys. Revoking other people's stays out."
+    },
+    {
+      "methods": ["DELETE"],
+      "path": "^/users/api-keys/mine/[\\w-]+$"
+    },
+    {
+      "methods": ["POST"],
+      "path": "^/users/api-keys/mine/revoke-all$"
+    },
+    {
+      "methods": ["GET", "HEAD"],
+      "path": "^/users/admin-holds(/settings)?$"
+    },
+    {
+      "methods": ["GET", "HEAD"],
+      "path": "^/users/auth/step-up/factors$",
+      "why": "Your own second factor ids, for a step up prompt"
+    },
+    {
+      "methods": ["GET", "HEAD"],
+      "path": "^/rbac/permissions/me$"
+    },
+    {
+      "methods": ["GET", "HEAD"],
+      "path": "^/user-preferences$"
+    },
+    {
+      "methods": ["GET", "HEAD"],
+      "path": "^/(health|version)$"
+    },
+    {
+      "methods": ["GET", "HEAD"],
+      "path": "^/plugins$",
+      "why": "Installed plugins, cut down to what any plugin may see"
+    },
+    {
+      "methods": ["GET", "HEAD"],
+      "path": "^/dashboard/(uptime|activity/recent)$"
+    },
+    {
+      "methods": ["GET", "HEAD"],
+      "path": "^/host/db/host(/\\d+)?$"
+    },
+    {
+      "methods": ["GET", "HEAD"],
+      "path": "^/host/(folders|policy)$"
+    },
+    {
+      "methods": ["GET", "HEAD"],
+      "path": "^/host/status(/\\d+|/settings)?$"
+    },
+    {
+      "methods": ["GET", "HEAD"],
+      "path": "^/credentials$"
+    },
+    {
+      "methods": ["GET", "HEAD"],
+      "path": "^/ssh-auth/providers$",
+      "why": "SSH auth types the server knows, no secrets"
+    },
+    {
+      "methods": ["GET", "HEAD"],
+      "path": "^/operations/(catalog|runs|events|timeline|signals|resources|approvals)(/|$)",
+      "why": "Actions go through the server's own gate. Waiting approvals can be read; deciding goes through the owning plugin's backend."
+    },
+    {
+      "methods": ["POST"],
+      "path": "^/operations/{id}\\.[a-z0-9.-]+/run$",
+      "why": "Only the plugin's own operations"
+    },
+    {
+      "methods": ["POST"],
+      "path": "^/dashboard/activity/log$"
+    }
+  ]
+}

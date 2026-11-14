@@ -104,6 +104,7 @@ const SPECIAL_PATHS = new Set([
   "auth.registerLoginMethod",
   "auth.registerKeyboardInteractiveHandler",
   "auth.completeRedirectLogin",
+  "operations.approvals.decide",
   "process.run",
   "currentActor",
   "disposables.add",
@@ -758,6 +759,27 @@ export class PluginBridge {
           live.res,
         );
         return true;
+      },
+    );
+
+    // Only from inside one of the plugin's own requests: the person on that
+    // request decides, never the plugin.
+    endpoint.handle(
+      "ctx.operations.approvals.decide",
+      async ([input], token) => {
+        const live = token ? this.liveRequests.get(token) : undefined;
+        if (!live) {
+          throw new SandboxError(
+            "approvals.decide works only inside one of the plugin's own requests",
+            "SANDBOX_UNSUPPORTED",
+            400,
+          );
+        }
+        return this.callCtx(
+          "operations.approvals.decide",
+          plainObject(input),
+          live.req,
+        );
       },
     );
 

@@ -4,7 +4,13 @@ import type { PluginSummary } from "@/api/plugins-api";
 vi.mock("@/main-axios", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/main-axios")>()),
   authApi: {
-    post: vi.fn(async () => ({ data: { token: "t", expiresIn: 300 } })),
+    post: vi.fn(async (_url: string, body?: { ids: string[] }) => ({
+      data: {
+        tokens: Object.fromEntries(
+          (body?.ids ?? []).map((id) => [id, { token: "t", expiresIn: 300 }]),
+        ),
+      },
+    })),
     request: vi.fn(),
   },
 }));

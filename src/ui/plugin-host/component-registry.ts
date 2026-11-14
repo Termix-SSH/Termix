@@ -45,6 +45,10 @@ function subscribe(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
+export function getPluginComponent(id: string): AnyComponent | undefined {
+  return components.get(id);
+}
+
 /** The component registered under an id, re-rendering when that changes. */
 export function usePluginComponent(id: string): AnyComponent | undefined {
   useSyncExternalStore(subscribe, () => version);

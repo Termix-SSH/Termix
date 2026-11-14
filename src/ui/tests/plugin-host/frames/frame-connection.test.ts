@@ -7,7 +7,16 @@ const mocks = vi.hoisted(() => ({
     data: new TextEncoder().encode("{}").buffer,
     headers: { "content-type": "application/json" },
   })),
-  post: vi.fn(async () => ({ data: { token: "frame-token", expiresIn: 300 } })),
+  post: vi.fn(async (_url: string, body?: { ids: string[] }) => ({
+    data: {
+      tokens: Object.fromEntries(
+        (body?.ids ?? []).map((id) => [
+          id,
+          { token: "frame-token", expiresIn: 300 },
+        ]),
+      ),
+    },
+  })),
 }));
 
 vi.mock("@/main-axios", async (importOriginal) => ({
@@ -116,7 +125,9 @@ describe("frame connection", () => {
 
     const token = await call("token");
     expect(token).toMatchObject({ ok: true, value: { value: "frame-token" } });
-    expect(mocks.post).toHaveBeenCalledWith("/plugins/docker/frame-token");
+    expect(mocks.post).toHaveBeenCalledWith("/plugins/frame-tokens", {
+      ids: ["docker"],
+    });
 
     const refused = await call("http", [
       { method: "POST", path: "/users/api-keys", headers: {}, body: null },

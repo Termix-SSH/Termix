@@ -10,7 +10,12 @@ vi.mock("@/api/plugins-api", async (importOriginal) => ({
   getPluginHostSettings,
 }));
 
-import { pluginHostBridge, toHostRecord } from "@/plugin-host/bridge";
+import {
+  pluginHostBridge,
+  toHostRecord,
+  toPluginHostRecord,
+} from "@/plugin-host/bridge";
+import { registerHostProtocol } from "@/sidebar/host-protocols";
 import { PLUGIN_SETTINGS_CHANGED_EVENT } from "@/api/plugins-api";
 
 afterEach(cleanup);
@@ -164,5 +169,38 @@ describe("useShell", () => {
   it("is null outside the signed-in shell", () => {
     const { result } = renderHook(() => pluginHostBridge.useShell());
     expect(result.current).toBeNull();
+  });
+});
+
+describe("toPluginHostRecord", () => {
+  it("hands a quick connect login only to the plugin whose protocol it opens", () => {
+    const remove = registerHostProtocol({
+      id: "rdp",
+      pluginId: "remote",
+      settingKey: "enableRdp",
+      defaultPort: 3389,
+      titleKey: "rdp",
+      icon: () => null,
+    });
+    const host = {
+      id: "quick-1",
+      name: "q",
+      ip: "10.0.0.2",
+      quickConnectLogin: { protocol: "rdp", username: "u", password: "p" },
+      pluginSettings: { remote: { enableRdp: true } },
+    } as never;
+    try {
+      expect(toPluginHostRecord(host, "remote").quickConnectLogin).toEqual({
+        protocol: "rdp",
+        username: "u",
+        password: "p",
+      });
+      expect(
+        toPluginHostRecord(host, "other").quickConnectLogin,
+      ).toBeUndefined();
+      expect(toPluginHostRecord(host, null).quickConnectLogin).toBeUndefined();
+    } finally {
+      remove();
+    }
   });
 });

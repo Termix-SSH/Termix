@@ -376,7 +376,9 @@ export function createFrameApp(host: FrameAppHost): {
       }
       // Kept in this frame too, so the plugin can read its own extensions
       // with their components (Homepage's own widgets).
-      const dropOwn = registerOwnExtension(pointId, { ...extension, pluginId });
+      const dropOwn = track(
+        registerOwnExtension(pointId, { ...extension, pluginId }),
+      );
       const drop = add(
         "extension",
         {

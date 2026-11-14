@@ -182,7 +182,7 @@ export const CORE_RATE_LIMITS: RateLimitRule[] = [
   {
     name: "plugin-frame-token",
     methods: ["POST"],
-    path: /^\/plugins\/[a-z][a-z0-9-]*\/frame-token$/,
+    path: /^\/plugins\/(frame-tokens|[a-z][a-z0-9-]*\/frame-token)$/,
     perIp: { max: 600, windowMs: MINUTE },
     perAccount: { max: 300, windowMs: MINUTE },
     account: sessionAccount,

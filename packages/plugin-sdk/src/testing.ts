@@ -388,6 +388,13 @@ export interface FakePluginContext {
   operationHandlers: Map<string, PluginOperationHandler>;
   /** Every ctx.operations.emit call. */
   operationEvents: { eventId: string; payload: unknown; hostId?: number }[];
+  /** Every ctx.operations.approvals.decide call, with the acting user. */
+  approvalDecisions: Array<{
+    actor: string | undefined;
+    approvalId: string;
+    approve: boolean;
+    comment?: string;
+  }>;
   /** Backing store behind ctx.secrets.get/set, keyed "<userId>:<key>". */
   secretStore: Map<string, string>;
   /** Every ctx.fetch call, in order. */
@@ -603,6 +610,7 @@ export function createFakeContext(
   const notifyHub: FakePluginContext["notifyHub"] = { current: null };
   const operationHandlers: FakePluginContext["operationHandlers"] = new Map();
   const operationEvents: FakePluginContext["operationEvents"] = [];
+  const approvalDecisions: FakePluginContext["approvalDecisions"] = [];
   const fetches: FakePluginContext["fetches"] = [];
   const processRuns: FakePluginContext["processRuns"] = [];
   const binaries: FakePluginContext["binaries"] = [];
@@ -1572,7 +1580,17 @@ export function createFakeContext(
         operationEvents.push({ eventId, payload, hostId: options?.hostId });
       },
       onEvent: () => () => {},
-      approvals: { provide: () => () => {} },
+      approvals: {
+        provide: () => () => {},
+        decide: async (input) => {
+          if (!actor) throw new Error("approvals.decide needs an acting user");
+          approvalDecisions.push({ actor, ...input });
+          return {
+            runId: null,
+            status: input.approve ? "success" : "rejected",
+          };
+        },
+      },
     },
 
     notify: {
@@ -1742,6 +1760,7 @@ export function createFakeContext(
     notifyHub,
     operationHandlers,
     operationEvents,
+    approvalDecisions,
     fetches,
     processRuns,
     binaries,
@@ -2925,6 +2944,29 @@ export interface FrameCheckResult {
   problems: string[];
 }
 
+/** Options for checkFrameViews. */
+export interface FrameViewsOptions {
+  manifest: Record<string, unknown>;
+  hosts?: Array<Record<string, unknown>>;
+  permissions?: string[];
+  isAdmin?: boolean;
+  locales?: Record<string, unknown>;
+  /** Answers the plugin's own routes and allowed core reads. Default `{}`. */
+  respond?: (method: string, path: string) => unknown;
+  /** How long each view gets to send its first requests. Default 50 ms. */
+  settleMs?: number;
+}
+
+/** What checkFrameViews found. */
+export interface FrameViewsResult extends FrameCheckResult {
+  /** Each view rendered, like "tab:main" or "slot:dashboard.hostRow:x.row". */
+  rendered: string[];
+  /** Core requests a plugin frame would be refused, like "GET /users/list". */
+  refused: string[];
+  /** Views that threw while rendering with the test data. */
+  errors: string[];
+}
+
 interface PluginTestHost {
   renderPlugin: (
     plugin: FrontendPluginModule,
@@ -2934,6 +2976,10 @@ interface PluginTestHost {
     plugin: FrontendPluginModule,
     options: { manifest: Record<string, unknown> },
   ) => Promise<FrameCheckResult>;
+  checkFrameViews: (
+    plugin: FrontendPluginModule,
+    options: FrameViewsOptions,
+  ) => Promise<FrameViewsResult>;
 }
 
 const TEST_HOST = "@termix-ssh/plugin-host/testing";
@@ -2960,6 +3006,19 @@ export async function checkFrameApp(
 ): Promise<FrameCheckResult> {
   const host = (await import(/* @vite-ignore */ TEST_HOST)) as PluginTestHost;
   return host.checkFramePlugin(plugin, options);
+}
+
+/**
+ * Renders every view the plugin registers with a mock shell, and sends every
+ * request those views make through the list the shell allows plugin frames.
+ * `refused` lists core requests that would fail in a frame.
+ */
+export async function checkFrameViews(
+  plugin: FrontendPluginModule,
+  options: FrameViewsOptions,
+): Promise<FrameViewsResult> {
+  const host = (await import(/* @vite-ignore */ TEST_HOST)) as PluginTestHost;
+  return host.checkFrameViews(plugin, options);
 }
 
 function assertOwnRegistryKey(pluginId: string, key: string): void {

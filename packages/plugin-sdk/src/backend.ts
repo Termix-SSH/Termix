@@ -3514,8 +3514,18 @@ export interface PluginOperations {
     userId?: string;
     cooldownMs?: number;
   }) => () => void;
-  /** Rules for what needs a person. Needs operations:approve. */
+  /** Rules for what needs a person, and deciding. Needs operations:approve. */
   approvals: {
+    /**
+     * Approves or rejects a waiting action. Works only inside one of the
+     * plugin's own requests: the person on that request decides, with their
+     * own rights. Requests made with an API key are refused.
+     */
+    decide: (input: {
+      approvalId: string;
+      approve: boolean;
+      comment?: string;
+    }) => Promise<PluginOperationOutcome>;
     provide: (
       provider: (
         input: PluginOperationApprovalInput,

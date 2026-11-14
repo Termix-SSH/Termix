@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.5.0
+
+Plugin API 2.5.0. Needs Termix 26.11.2.
+
+### Added
+
+- `ctx.operations.approvals.decide({ approvalId, approve, comment })` approves or rejects a waiting action from inside one of the plugin's own requests, as the person on that request. Needs `operations:approve`
+- `checkFrameViews` in `/testing` renders every view a plugin registers and lists the core requests a plugin frame would be refused
+- `declareActionSlot` takes `fit` (`inline`, `content` or `fill`): how a framed plugin's component sizes itself in the slot
+- `createMockCtx` answers `ctx.operations.approvals.decide`
+
 ## 2.4.0
 
 Plugin API 2.4.0. Needs Termix 26.11.2.

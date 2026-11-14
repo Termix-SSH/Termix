@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 2.4.0 | Plugin API 2.4.0
+SDK 2.5.0 | Plugin API 2.5.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -638,6 +638,10 @@ ctx.operations.register("demo.restart", {
 - Handlers have no request and no session. Take what you need from the input and `hostId`.
 - Keep your REST routes. Inside one, call `ctx.operations.run(id, { hostId, input })` so a button press goes through
   the same checks and lands in the same history.
+- A plugin that shows waiting approvals (needs `operations:approve`) reads them from `GET /operations/approvals` and
+  decides one from a route of its own with `ctx.operations.approvals.decide({ approvalId, approve, comment })`. It only
+  works inside one of your requests: the person on that request decides, with their own rights, and an API key
+  request is refused. A frame can read approvals but never decide one itself.
 - To run another plugin's action, add `operations:invoke`, list it in `operations.invokes` and call
   `ctx.operations.invoke(id, { hostId, input, via: "automation" })`. It acts as the current user and rules still apply.
 - `risk` is your plugin's claim. Plugins run in-process, so this is not a sandbox. Actions from plugins not signed as
@@ -879,6 +883,32 @@ it("runs in a frame", async () => {
 
 It returns a `FrameCheckResult` with each registration as the shell would get it and the `problems`
 found. `app.frame` is a `FrameInfo`.
+
+`checkFrameViews` goes further: it renders every view you register (tabs, panels, cards, companions,
+settings, host editor sections, slot components, extensions) with the mock shell, and runs every request
+they send through the same list the shell uses for frames. `refused` lists the core requests a frame would
+be refused, like `GET /users/list`:
+
+```ts
+import { checkFrameViews } from "@termix-ssh/plugin-sdk/testing";
+
+it("asks core only for what a frame may reach", async () => {
+  const { refused } = await checkFrameViews(plugin, {
+    manifest,
+    hosts: [host],
+  });
+  expect(refused).toEqual([]);
+});
+```
+
+Your own routes answer `{}` unless you pass `respond(method, path)`. `errors` lists views that threw while
+rendering with that data, which is not a frame problem by itself.
+
+A component you put in a slot owned by a plugin that runs in the page sizes itself the way the slot's owner
+declares: `declareActionSlot({ id, accepts, fit })` with `fit` `"inline"` (as wide and tall as the
+content, for row items and badges), `"content"` (full width) or `"fill"` (the whole box). Without it the
+shell guesses from the slot id. A `fallback` element the owner passes stays in the page and shows while
+your framed component draws nothing.
 
 Slots you can fill include `terminal.toolbar`, `terminal.toolbarStatus`, `terminal.sidePanel`,
 `terminal.overlay`, `dashboard.counters`, `dashboard.hostMetrics`, `admin.userTabs`, `hosts.importMenu`,

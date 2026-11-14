@@ -955,6 +955,12 @@ export interface ActionSlotDefinition {
   id: string;
   /** Contribution kinds the slot renders: "button", "component". */
   accepts: string[];
+  /**
+   * How a component from a framed plugin sizes itself in this slot: "inline"
+   * as wide and tall as its content (row items, badges), "content" full
+   * width, "fill" the whole box. Left out, the shell guesses from the id.
+   */
+  fit?: "inline" | "content" | "fill";
 }
 
 export interface SlotContribution {

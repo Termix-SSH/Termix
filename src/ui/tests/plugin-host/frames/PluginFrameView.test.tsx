@@ -149,4 +149,24 @@ describe("PluginFrameView", () => {
     unmount();
     expect(frames.closed).toBe(1);
   });
+
+  it("shows the owner's fallback while an inline view draws nothing", () => {
+    const { container, queryByText } = render(
+      <PluginFrameView
+        pluginId="docker"
+        frameKey="slot:x"
+        fit="inline"
+        fallback={<span>Offline</span>}
+        props={{}}
+      />,
+    );
+    expect(queryByText("Offline")).not.toBeNull();
+    act(() => frames.options!.onEvent("size", { width: 0, height: 0 }));
+    expect(queryByText("Offline")).not.toBeNull();
+    act(() => frames.options!.onEvent("size", { width: 40, height: 16 }));
+    expect(queryByText("Offline")).toBeNull();
+    const frame = container.querySelector("iframe")!;
+    expect(frame.style.width).toBe("40px");
+    expect(frame.style.position).toBe("");
+  });
 });
