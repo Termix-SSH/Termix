@@ -26,9 +26,12 @@ export interface LiveSessionInfo {
   rows: number;
 }
 
+// The terminal runs in its own process, so these come back as Promises.
 interface LiveSessionsV1 {
-  listForUser: (userId: string) => LiveSessionInfo[];
-  idleTimeoutMinutes: () => number;
+  listForUser: (
+    userId: string,
+  ) => LiveSessionInfo[] | Promise<LiveSessionInfo[]>;
+  idleTimeoutMinutes: () => number | Promise<number>;
 }
 
 function provider(): LiveSessionsV1 | undefined {
@@ -40,11 +43,13 @@ function provider(): LiveSessionsV1 | undefined {
 }
 
 export const liveTerminalSessions = {
-  listForUser(userId: string): LiveSessionInfo[] {
-    return provider()?.listForUser(userId) ?? [];
+  async listForUser(userId: string): Promise<LiveSessionInfo[]> {
+    const list = await provider()?.listForUser(userId);
+    return Array.isArray(list) ? list : [];
   },
   /** How long the terminal keeps a detached session, or null while it is off. */
-  idleTimeoutMinutes(): number | null {
-    return provider()?.idleTimeoutMinutes() ?? null;
+  async idleTimeoutMinutes(): Promise<number | null> {
+    const minutes = await provider()?.idleTimeoutMinutes();
+    return typeof minutes === "number" ? minutes : null;
   },
 };

@@ -12,8 +12,8 @@ const authenticateJWT = authManager.createAuthMiddleware();
 const DEFAULT_TAB_TTL_MINUTES = 30;
 
 // Tabs live as long as the terminal keeps a detached session.
-function getTabTtlMs(): number {
-  const minutes = liveTerminalSessions.idleTimeoutMinutes();
+async function getTabTtlMs(): Promise<number> {
+  const minutes = await liveTerminalSessions.idleTimeoutMinutes();
   return (minutes && minutes > 0 ? minutes : DEFAULT_TAB_TTL_MINUTES) * 60_000;
 }
 
@@ -31,7 +31,7 @@ function getTabTtlMs(): number {
 router.get("/", authenticateJWT, async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const cutoff = new Date(Date.now() - getTabTtlMs()).toISOString();
+    const cutoff = new Date(Date.now() - (await getTabTtlMs())).toISOString();
     const tabs = await createCurrentOpenTabRepository().listRecentForUser(
       userId,
       cutoff,
@@ -274,8 +274,8 @@ router.delete("/:id", authenticateJWT, async (req: Request, res: Response) => {
 router.get(
   "/session-timeout",
   authenticateJWT,
-  (_req: Request, res: Response) => {
-    res.json({ minutes: getTabTtlMs() / 60_000 });
+  async (_req: Request, res: Response) => {
+    res.json({ minutes: (await getTabTtlMs()) / 60_000 });
   },
 );
 
@@ -318,7 +318,7 @@ router.get(
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
-      const ownSessions = liveTerminalSessions.listForUser(userId);
+      const ownSessions = await liveTerminalSessions.listForUser(userId);
       const result = ownSessions.map((s) => ({
         sessionId: s.id,
         hostId: s.hostId,
