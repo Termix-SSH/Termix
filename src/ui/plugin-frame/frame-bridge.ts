@@ -17,6 +17,10 @@ import type {
   TabsApi,
 } from "@termix-ssh/plugin-sdk/frontend";
 import { pluginHostBridge } from "@/plugin-host/bridge";
+import {
+  getExtension as getOwnExtension,
+  useExtensions as useOwnExtensions,
+} from "@/plugin-host/extension-registry";
 import { usePluginScope } from "@/plugin-host/scope";
 import { decodeIcon } from "./frame-icons";
 import { getFrameState, useFrameState } from "./frame-store";
@@ -84,11 +88,18 @@ export function createFrameBridge(host: FrameBridgeHost): PluginHostBridge {
       >;
     },
 
-    // Other plugins' components can't be drawn inside this frame.
+    // Other plugins' components can't be drawn inside this frame. The
+    // frame's own extensions can.
     useSlotContributions: () => [],
     usePluginComponent: () => undefined,
-    useExtensions: () => [],
-    getExtension: () => undefined,
+    useExtensions: (pointId) =>
+      useOwnExtensions(pointId) as ReturnType<
+        PluginHostBridge["useExtensions"]
+      >,
+    getExtension: (pointId, id) =>
+      getOwnExtension(pointId, id) as ReturnType<
+        PluginHostBridge["getExtension"]
+      >,
 
     hostProtocols: (record) => {
       const protocols = (record as { protocols?: unknown }).protocols;

@@ -18,6 +18,7 @@ import { pluginDocsPage, pluginDocsUrl } from "@termix-ssh/plugin-sdk/docs";
 import i18n from "@/i18n/i18n";
 import { pluginKey } from "@/lib/plugin-i18n";
 import { withPluginScope } from "@/plugin-host/scope";
+import { registerExtension as registerOwnExtension } from "@/plugin-host/extension-registry";
 import { resolvePluginPermission } from "@/plugin-host/bridge";
 import { hasPermission } from "@/hooks/use-permissions";
 import { iconToWire } from "./wire";
@@ -373,7 +374,10 @@ export function createFrameApp(host: FrameAppHost): {
         keys.push(componentKey);
         wired[name] = scoped(component, componentKey);
       }
-      return add(
+      // Kept in this frame too, so the plugin can read its own extensions
+      // with their components (Homepage's own widgets).
+      const dropOwn = registerOwnExtension(pointId, { ...extension, pluginId });
+      const drop = add(
         "extension",
         {
           ...rest,
@@ -383,6 +387,10 @@ export function createFrameApp(host: FrameAppHost): {
         },
         { componentKeys: keys },
       );
+      return () => {
+        dropOwn();
+        drop();
+      };
     },
 
     listHosts: () =>
