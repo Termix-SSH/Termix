@@ -16,15 +16,9 @@ on:
       - "src/backend/tests/plugins/sandbox/desktop-fence.test.ts"
       - "src/backend/tests/plugins/sandbox/wire-codec.test.ts"
       - ".github/workflows/desktop-fence.yml"
+  # Every PR, since the jobs are required checks on dev branches.
   pull_request:
     branches: [main, dev-*]
-    paths:
-      - "native/plugin-jail/**"
-      - "electron/plugin-*"
-      - "electron/runtime-hash.cjs"
-      - "scripts/build-plugin-runtime.cjs"
-      - "src/backend/plugins/sandbox/**"
-      - ".github/workflows/desktop-fence.yml"
   workflow_dispatch:
 
 permissions: {}
