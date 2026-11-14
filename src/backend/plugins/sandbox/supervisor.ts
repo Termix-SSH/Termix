@@ -2,10 +2,11 @@
  * Runs every API 2 plugin backend in its own process.
  *
  * One process per plugin, never shared, so two plugins' secrets never sit in
- * one heap. A plugin that registers nothing core has to call on its own
- * (schedules, event listeners, registry keys, services, provider hooks) starts
- * on its first request or socket and stops after it has been idle. Everything
- * else starts when the plugin is turned on and stays up.
+ * one heap. Most plugins start on their first request, socket or anything
+ * core calls on its own (a job, an event, an operation, a service, a
+ * registry value, a settings hook; see durable.ts) and stop after they have
+ * been idle. The few that stay up (keepOnReason) put a provider in core's own
+ * request paths or run jobs more often than the idle time.
  *
  * Crash isolation: a process that exits, blows its memory cap, stops
  * answering the health check or burns CPU past its cap is killed, what it
@@ -26,6 +27,8 @@ import { PluginBridge } from "./bridge.js";
 import { getSpawner, type SpawnedChild } from "./spawn.js";
 import { SandboxTokenStore } from "./tokens.js";
 import { isPassableEnv } from "./launcher/policy.js";
+import { DurableRegistrations } from "./durable.js";
+import { readAwakeState, writeAwakeState } from "./awake-store.js";
 import type { SqlDialect } from "./sql-guard.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -41,23 +44,25 @@ const CRASH_WINDOW_MS = 10 * 60_000;
 const CRASH_LIMIT = 5;
 const LOG_LINES_PER_MINUTE = 200;
 
-/** Capabilities that put a provider into core's own request paths. */
-const ALWAYS_ON_CAPABILITIES = new Set([
+/**
+ * Capabilities that put a provider into core's own request paths (logins,
+ * connects, sync, host status and locks, the alert hub, approvals, TLS) or
+ * the page's look. Waking a process there would slow every login or connect,
+ * so these plugins stay up.
+ */
+const KEEP_ON_CAPABILITIES = new Set([
   "auth:provide",
   "auth:policy",
   "sync:provide",
   "ssh:transport",
   "hosts:status-provide",
-  "hosts:activity-provide",
   "hosts:lock",
   "hosts:connect-policy",
   "notify:hub",
-  "operations:provide",
   "operations:approve",
   "system:tls",
   "ui:layout",
   "ui:theme",
-  "network:sockets",
 ]);
 
 export type ProcessState =
@@ -96,31 +101,58 @@ export function readSandboxConfig(
   };
 }
 
-/**
- * Whether the plugin has to be up for core to work right: it registered
- * something core calls without a request to that plugin.
- */
-export function needsAlwaysOn(
-  manifest: PluginManifest,
-  idleMs: number,
-): boolean {
-  const sandbox = manifest.sandbox ?? {};
-  if (sandbox.alwaysOn) return true;
-  if (sandbox.events?.length || sandbox.registry?.length) return true;
-  if ((sandbox.schedules ?? []).length > 0) {
-    // A job that runs less often than the idle time could wake the process
-    // instead; until core can do that, any schedule keeps it on.
-    void idleMs;
-    return true;
-  }
-  if (manifest.provides?.length || manifest.providesSecret?.length) return true;
+/** Why the plugin can never stop when idle, or null. */
+export function staticKeepOnReason(manifest: PluginManifest): string | null {
+  if (manifest.sandbox?.alwaysOn) return "sandbox.alwaysOn";
+  if (manifest.providesSecret?.length) return "providesSecret";
   if (
     manifest.contributes?.layouts?.length ||
     manifest.contributes?.themes?.length
   ) {
-    return true;
+    return "look";
   }
-  return manifest.capabilities.some((c) => ALWAYS_ON_CAPABILITIES.has(c));
+  return manifest.capabilities.find((c) => KEEP_ON_CAPABILITIES.has(c)) ?? null;
+}
+
+/** A job that runs more often than the idle time, which would wake it anyway. */
+export function shortScheduleReason(
+  manifest: PluginManifest,
+  idleMs: number,
+): string | null {
+  const short = (manifest.sandbox?.schedules ?? []).find(
+    (schedule) => schedule.every < idleMs,
+  );
+  return short ? `schedule ${short.id}` : null;
+}
+
+/** Why the plugin stays up, or null when it may stop when idle. */
+export function keepOnReason(
+  manifest: PluginManifest,
+  idleMs: number,
+): string | null {
+  return staticKeepOnReason(manifest) ?? shortScheduleReason(manifest, idleMs);
+}
+
+/** It registers something core calls without a request to the plugin. */
+export function hasCoreCalls(manifest: PluginManifest): boolean {
+  const sandbox = manifest.sandbox ?? {};
+  return Boolean(
+    sandbox.schedules?.length ||
+    sandbox.events?.length ||
+    sandbox.registry?.length ||
+    manifest.provides?.length ||
+    manifest.capabilities.some((c) =>
+      ["operations:provide", "hosts:activity-provide"].includes(c),
+    ),
+  );
+}
+
+/** Whether the plugin has to be up for core to work right. */
+export function needsAlwaysOn(
+  manifest: PluginManifest,
+  idleMs: number,
+): boolean {
+  return keepOnReason(manifest, idleMs) !== null;
 }
 
 export interface SandboxedPluginSpec {
@@ -235,16 +267,99 @@ class PluginProcess {
   private logWindow = 0;
   private dropped = 0;
   readonly tokens = new SandboxTokenStore();
-  readonly alwaysOn: boolean;
+  /** Why it can never stop when idle, or null. */
+  private readonly staticReason: string | null;
+  /** A job shorter than the idle time, until the plugin manages that itself. */
+  private readonly scheduleReason: string | null;
+  /** The plugin calls ctx.schedule.keepAwake, so short jobs don't keep it up. */
+  private managed = false;
+  /** Reasons the plugin gave for staying up right now. */
+  private readonly awakeReasons = new Set<string>();
+  /** It had work when core last stopped, so it starts at boot. */
+  private savedAwake = false;
+  /** Registrations that outlive the process; only for plugins that may stop. */
+  readonly durable: DurableRegistrations | null;
+  private durableContext: {
+    ctx: Record<string, unknown>;
+    handle: PluginHandle;
+  } | null = null;
+  private lastRssMb: number | null = null;
+  private openSockets = 0;
 
   constructor(
     readonly spec: SandboxedPluginSpec,
     private readonly config: SandboxConfig,
     private readonly dialect: SqlDialect,
   ) {
-    this.alwaysOn =
-      config.alwaysOn.has(spec.manifest.id) ||
-      needsAlwaysOn(spec.manifest, config.idleMs);
+    this.staticReason = config.alwaysOn.has(spec.manifest.id)
+      ? "TERMIX_PLUGIN_ALWAYS_ON"
+      : staticKeepOnReason(spec.manifest);
+    this.scheduleReason = shortScheduleReason(spec.manifest, config.idleMs);
+    const saved = readAwakeState(spec.manifest.id);
+    this.managed = saved?.managed === true;
+    this.savedAwake = saved?.awake === true;
+    this.durable = this.staticReason
+      ? null
+      : new DurableRegistrations({
+          ctx: () => this.longLivedContext(),
+          wake: () => this.ensureRunning(),
+          running: () => this.state === "ready" || this.state === "starting",
+          idleMs: config.idleMs,
+          touch: () => this.touch(),
+          log: (line) => this.log("warn", line),
+        });
+  }
+
+  /** Why the process stays up right now, or null when it may stop. */
+  keepOnReason(): string | null {
+    if (this.staticReason) return this.staticReason;
+    if (this.scheduleReason && !this.managed) return this.scheduleReason;
+    if (this.awakeReasons.size > 0) {
+      return `keepAwake: ${[...this.awakeReasons].sort().join(", ")}`;
+    }
+    return null;
+  }
+
+  get alwaysOn(): boolean {
+    return this.keepOnReason() !== null;
+  }
+
+  /**
+   * Started when the plugin is turned on, not on its first use. A plugin
+   * with things core calls on its own starts once so they are registered,
+   * then stops when idle.
+   */
+  startsAtBoot(): boolean {
+    return this.alwaysOn || this.savedAwake || hasCoreCalls(this.spec.manifest);
+  }
+
+  /** The context durable registrations live in: one while the plugin is on. */
+  private longLivedContext(): Record<string, unknown> {
+    if (!this.durableContext) {
+      const made = this.spec.makeContext();
+      this.durableContext = { ctx: made.ctx, handle: made.handle };
+    }
+    return this.durableContext.ctx;
+  }
+
+  /** ctx.schedule.keepAwake from the plugin. */
+  setAwake(reason: string, awake: boolean): void {
+    this.managed = true;
+    if (reason) {
+      if (awake) this.awakeReasons.add(reason);
+      else this.awakeReasons.delete(reason);
+    }
+    this.savedAwake = this.awakeReasons.size > 0;
+    writeAwakeState(this.id, { managed: true, awake: this.savedAwake });
+  }
+
+  /** Turned off: stops it and undoes what outlived the process. */
+  async shutdown(): Promise<void> {
+    await this.stop();
+    this.durable?.dispose();
+    const kept = this.durableContext;
+    this.durableContext = null;
+    if (kept) await this.spec.disposeHandle(kept.handle);
   }
 
   get id(): string {
@@ -337,8 +452,11 @@ class PluginProcess {
       dialect: this.dialect,
       touch: () => this.touch(),
       log: (line) => this.log("warn", line),
+      durable: this.durable,
+      keepAwake: (reason, awake) => this.setAwake(reason, awake),
     });
     this.bridge = bridge;
+    this.durable?.beginRun();
 
     const entryUrl = pathToFileURL(this.spec.entryPath).href;
     await withTimeout(
@@ -350,6 +468,7 @@ class PluginProcess {
       ACTIVATE_TIMEOUT_MS,
       `Plugin ${this.id} did not activate within ${ACTIVATE_TIMEOUT_MS} ms`,
     );
+    this.durable?.endActivate();
     this.state = "ready";
     this.readyMs = Date.now() - this.startedAt;
     this.lastPong = Date.now();
@@ -384,8 +503,16 @@ class PluginProcess {
         bridge.endpoint.call("ping", []),
         timeout,
         "ping timed out",
-      )) as { cpu?: { user: number; system: number } };
+      )) as {
+        cpu?: { user: number; system: number };
+        rss?: number;
+        sockets?: number;
+      };
       this.lastPong = Date.now();
+      if (typeof pong?.rss === "number") {
+        this.lastRssMb = Math.round(pong.rss / 1024 / 1024);
+      }
+      this.openSockets = Number(pong?.sockets) || 0;
       this.checkCpu(pong?.cpu);
     } catch {
       // the timeout check above catches a process that never answers
@@ -420,7 +547,16 @@ class PluginProcess {
     if (Date.now() - this.lastActivity < this.config.idleMs) return;
     if (this.bridge && this.bridge.endpoint.pendingCount > 0) return;
     if (this.tokens.countFor(this.id, "socket") > 0) return;
+    // Its own sockets and listeners, a one-off job still waiting, or a call
+    // from core still running.
+    if (this.openSockets > 0) return;
+    if (this.bridge && this.bridge.pendingTimers > 0) return;
+    if (this.durable && this.durable.busy > 0) return;
     this.log("info", "idle, stopping it until it is needed");
+    if (this.managed) {
+      this.savedAwake = false;
+      writeAwakeState(this.id, { managed: true, awake: false });
+    }
     void this.stop();
   }
 
@@ -437,6 +573,7 @@ class PluginProcess {
     if (this.state === "stopped" || this.state === "failed") return;
     this.stopping = true;
     this.state = "stopping";
+    if (this.durable) this.durable.holding = true;
     const bridge = this.bridge;
     const child = this.child;
     try {
@@ -461,7 +598,9 @@ class PluginProcess {
       ]);
     }
     await this.cleanup("stopped");
+    if (this.durable) this.durable.holding = false;
     this.state = "stopped";
+    this.openSockets = 0;
   }
 
   private async cleanup(reason: string): Promise<void> {
@@ -551,6 +690,8 @@ class PluginProcess {
       pluginId: this.id,
       state: this.state,
       alwaysOn: this.alwaysOn,
+      keepOnReason: this.keepOnReason(),
+      rssMb: this.state === "ready" ? this.lastRssMb : null,
       pid: this.child?.pid,
       readyMs: this.readyMs || undefined,
       crashes: this.crashes.length,
@@ -562,6 +703,10 @@ export interface SandboxStatus {
   pluginId: string;
   state: ProcessState;
   alwaysOn: boolean;
+  /** Why it stays up, or null when it stops when idle. */
+  keepOnReason: string | null;
+  /** Resident memory at the last health check, while it runs. */
+  rssMb: number | null;
   pid?: number;
   readyMs?: number;
   crashes: number;
@@ -582,7 +727,7 @@ export class SandboxSupervisor {
     const proc = new PluginProcess(spec, this.config, this.dialect());
     this.processes.set(spec.manifest.id, proc);
     this.startSweep();
-    if (proc.alwaysOn) {
+    if (proc.startsAtBoot()) {
       const ok = await proc.ensureRunning();
       if (!ok) throw new Error(`Plugin ${spec.manifest.id} did not start`);
     } else {
@@ -594,7 +739,7 @@ export class SandboxSupervisor {
     const proc = this.processes.get(pluginId);
     if (!proc) return;
     this.processes.delete(pluginId);
-    await proc.stop();
+    await proc.shutdown();
   }
 
   has(pluginId: string): boolean {
@@ -617,7 +762,7 @@ export class SandboxSupervisor {
     this.sweepTimer = null;
     const all = [...this.processes.values()];
     this.processes.clear();
-    await Promise.all(all.map((proc) => proc.stop()));
+    await Promise.all(all.map((proc) => proc.shutdown()));
   }
 
   private startSweep(): void {

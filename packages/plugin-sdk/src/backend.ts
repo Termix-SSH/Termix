@@ -3331,6 +3331,15 @@ export interface PluginSchedule {
   ) => () => void;
   /** Runs `fn` once after `delayMs`. Returns a function that cancels it. */
   after: (delayMs: number, fn: () => void | Promise<void>) => () => void;
+  /**
+   * Plugin API 2.9: keeps this plugin's process running while any reason is
+   * set. A plugin that calls it (even with false) manages this itself: its
+   * jobs shorter than the idle time then run only while it is running, and
+   * core may stop it when idle. Call it with true while there is work
+   * (monitors to check, watches to run) and false when there is none. Older
+   * cores leave it out, so call it as `ctx.schedule.keepAwake?.(...)`.
+   */
+  keepAwake?: (reason: string, awake: boolean) => void;
 }
 
 /** The certificate core serves, read from its configured paths. */

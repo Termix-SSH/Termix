@@ -457,6 +457,8 @@ export interface FakePluginContext {
   droppedPools: Array<{ pool: string; hostId: number }>;
   /** Every ctx.schedule timer, stopped ones included. */
   scheduled: FakeScheduledJob[];
+  /** Reasons the plugin gave to ctx.schedule.keepAwake that are still set. */
+  awake: Set<string>;
   /** Runs every live ctx.schedule job once; "after" jobs are then done. */
   runScheduled: () => Promise<void>;
   /** Changes the acting user, as core's request middleware would. */
@@ -655,6 +657,7 @@ export function createFakeContext(
   );
   const droppedPools: FakePluginContext["droppedPools"] = [];
   const scheduled: FakeScheduledJob[] = [];
+  const awake = new Set<string>();
   const schedule = (
     kind: FakeScheduledJob["kind"],
     ms: number,
@@ -1203,6 +1206,10 @@ export function createFakeContext(
         return stop;
       },
       after: (delayMs, fn) => schedule("after", delayMs, fn),
+      keepAwake: (reason, on) => {
+        if (on) awake.add(reason);
+        else awake.delete(reason);
+      },
     },
 
     audit: {
@@ -1805,6 +1812,7 @@ export function createFakeContext(
     hostStatuses,
     droppedPools,
     scheduled,
+    awake,
     runScheduled: async () => {
       for (const job of scheduled.filter((candidate) => !candidate.stopped)) {
         if (job.kind === "after") job.stopped = true;

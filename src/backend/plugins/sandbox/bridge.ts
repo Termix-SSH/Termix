@@ -15,6 +15,7 @@
  *   - schedules, event topics and registry keys must be declared in the
  *     manifest's sandbox block.
  */
+import { DurableRegistrations } from "./durable.js";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import type { NextFunction, Request, Response, Router } from "express";
@@ -110,6 +111,7 @@ const SPECIAL_PATHS = new Set([
   "process.run",
   "currentActor",
   "disposables.add",
+  "schedule.keepAwake",
 ]);
 
 /** Not available to a sandboxed plugin. None today; kept for the next one. */
@@ -271,6 +273,13 @@ export interface BridgeOptions {
   /** Called when the plugin's process was asked to do work. */
   touch?: () => void;
   log?: (line: string) => void;
+  /**
+   * Registrations that outlive this process, for plugins that stop when
+   * idle. Without it they go through ctx and end with the process.
+   */
+  durable?: DurableRegistrations | null;
+  /** The plugin says it has (or no longer has) work that needs it running. */
+  keepAwake?: (reason: string, awake: boolean) => void;
 }
 
 /**
@@ -317,6 +326,10 @@ export class PluginBridge {
   private readonly declaredSchedules: Set<string>;
   private readonly declaredEvents: Set<string>;
   private readonly declaredRegistry: Set<string>;
+  private readonly durable: DurableRegistrations | null;
+  private readonly keepAwake: (reason: string, awake: boolean) => void;
+  /** schedule.after jobs still waiting; they would be lost with the process. */
+  pendingTimers = 0;
   private closed = false;
 
   constructor(transport: Transport, options: BridgeOptions) {
@@ -327,6 +340,8 @@ export class PluginBridge {
     this.dialect = options.dialect;
     this.log = options.log ?? (() => {});
     this.touch = options.touch ?? (() => {});
+    this.durable = options.durable ?? null;
+    this.keepAwake = options.keepAwake ?? (() => {});
     const sandbox = options.manifest.sandbox ?? {};
     this.declaredSchedules = new Set(
       (sandbox.schedules ?? []).map((s) => s.id),
@@ -502,6 +517,16 @@ export class PluginBridge {
       const scrub = SECRET_SCRUB_PREFIXES.some((p) => dotted.startsWith(p));
       this.endpoint.handle(`ctx.${dotted}`, async (args) => {
         this.checkDeclared(dotted, args);
+        if (this.durable && DurableRegistrations.handles(dotted)) {
+          return this.durable.register(dotted, args);
+        }
+        if (
+          this.durable &&
+          dotted === "registry.revoke" &&
+          (await this.durable.revoke(String(args[0])))
+        ) {
+          return true;
+        }
         const { fn, self } = lookup(this.ctx, dotted);
         let callArgs = args;
         if (dotted === "registry.provide") {
@@ -512,6 +537,9 @@ export class PluginBridge {
           callArgs = [key, this.provided.get(key)];
           this.provided.delete(key);
         }
+        if (dotted === "schedule.after" && typeof args[1] === "function") {
+          return this.scheduleAfter(fn, self, args);
+        }
         const result = await fn.apply(self, callArgs);
         if (scrub && !(await this.mayReadCredentials())) {
           return scrubSecrets(result);
@@ -519,6 +547,33 @@ export class PluginBridge {
         return result;
       });
     }
+  }
+
+  /** Counts a one-off job until it ran or was cancelled. */
+  private scheduleAfter(
+    fn: (...args: unknown[]) => unknown,
+    self: unknown,
+    args: unknown[],
+  ): () => void {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      this.pendingTimers--;
+    };
+    const job = args[1] as () => unknown;
+    this.pendingTimers++;
+    const cancel = fn.apply(self, [
+      args[0],
+      () => {
+        finish();
+        return job();
+      },
+    ]) as () => void;
+    return () => {
+      finish();
+      cancel();
+    };
   }
 
   /** Schedules, event topics and registry keys must be in the manifest. */
@@ -621,6 +676,11 @@ export class PluginBridge {
   private installSpecial(): void {
     const endpoint = this.endpoint;
     const ctx = this.ctx as unknown as SpecialCtx;
+
+    endpoint.handle("ctx.schedule.keepAwake", ([reason, awake]) => {
+      this.keepAwake(String(reason ?? "").slice(0, 100), awake === true);
+      return undefined;
+    });
 
     // HTTP. Routes are mirrored onto core's real router so public path checks
     // and the route inventory keep working, then forwarded.

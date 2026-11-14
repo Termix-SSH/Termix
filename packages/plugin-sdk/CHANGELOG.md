@@ -7,10 +7,13 @@ Plugin API 2.8.0. Needs Termix 26.11.2.
 ### Added
 
 - `ctx.desktop.local.fs.openInEditor(path)` opens a local file in the external editor the person picked in the desktop app, or with its default app. The app starts the editor, so the plugin needs no process grant
+- `ctx.schedule.keepAwake(reason, awake)` tells Termix the plugin has work that needs its process running. A plugin that calls it lets Termix stop the process when there is none, and its jobs shorter than the idle time then run only while it runs. Optional in the types, so call it as `ctx.schedule.keepAwake?.(...)`
+- `createMockCtx` records those reasons in `awake`
 
 ### Changed
 
 - On the desktop app, plugin processes run on the app's pinned Node with the same flags as on a server, inside an OS sandbox. Desktop only code that used `fs` or `child_process` freely must move to `ctx.desktop.local`
+- A plugin process now stops when idle unless it provides something on core's own request paths (logins, connects, sync, host status and locks, alerts, approvals, TLS, looks) or runs a job more often than the idle time. Operations, services, registry values, event listeners, settings hooks and jobs it registered stay with core and start the process again when called
 
 ## 2.7.1
 

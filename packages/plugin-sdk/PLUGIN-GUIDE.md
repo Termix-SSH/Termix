@@ -274,9 +274,21 @@ process that crashes, stops answering, goes past its memory limit (256 MiB unles
 uses more than 80% of a CPU core for a minute. Too many crashes and the plugin is marked failed.
 The desktop app (Termix 26.11.2+) runs each plugin process on its own pinned Node, the same major as the server image, with the same flags, plus an OS sandbox under it: an AppContainer and a job object on Windows, a Seatbelt profile on macOS, Landlock and seccomp on Linux. So the fence is the same as on a server: no files outside your grants, no child processes or sockets without the capability, and a memory cap. Desktop only code can't use `fs` or `child_process` freely either; use `ctx.desktop.local` for the user's own files and programs. Builds with no pinned Node (32-bit Windows, 32-bit ARM Linux) don't run plugin backends at all.
 
-A plugin that registers nothing core calls on its own starts on its first request or socket and stops
-after 10 idle minutes. Anything in the `sandbox` block below, a `provides` entry, a provider hook, a
-layout or theme, or `network:sockets` keeps it running.
+A plugin process stops after 10 idle minutes (`TERMIX_PLUGIN_IDLE_MINUTES`). A plugin with only routes
+and sockets starts on its first request. One that registers things core calls on its own (operations,
+services, registry values, event listeners, settings hooks, jobs) starts once at boot, and core keeps
+those registrations while the process is stopped: calling one starts it again, and a job runs on core's
+own timer. It keeps running while it has its own sockets or listeners open, a `schedule.after` job
+waiting, or a call from core in flight. These stay up all the time: `sandbox.alwaysOn`, a provider on
+core's request paths (`auth:provide`, `auth:policy`, `sync:provide`, `ssh:transport`,
+`hosts:status-provide`, `hosts:lock`, `hosts:connect-policy`, `notify:hub`, `operations:approve`,
+`system:tls`), a layout or theme, `providesSecret`, and a job shorter than the idle time.
+
+A plugin with short jobs that often have nothing to do (watches nobody set up) can manage this itself
+with `ctx.schedule.keepAwake?.(reason, awake)` (plugin API 2.8): call it with `true` while there is work
+and `false` when there is none. Once it calls it, its short jobs run only while the process runs, and
+core starts it at boot again if it had work when core last stopped. Call it with `false` in activate when
+there is nothing to do, so core knows you manage it.
 
 ```json
 "sandbox": {
@@ -289,7 +301,8 @@ layout or theme, or `network:sockets` keeps it running.
 }
 ```
 
-- `ctx.schedule.every(ms, fn, { id: "poll" })`: the id must be listed in `sandbox.schedules`.
+- `ctx.schedule.every(ms, fn, { id: "poll" })`: the id must be listed in `sandbox.schedules`. A woken
+  process does not start a second timer for the same id; `runNow` still runs once on each start.
 - `ctx.events.on(topic, fn)`: the topic must be listed in `sandbox.events`.
 - `ctx.registry.provide(key, value)`: the key must be listed in `sandbox.registry`.
 - Only plain data, functions, Buffers, Dates, Maps, Sets and Errors cross between your process and core.

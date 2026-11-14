@@ -44,6 +44,13 @@ import {
   createPluginHandle,
   disposePluginHandle,
 } from "../../../plugins/ctx.js";
+import { createPluginSchedule } from "../../../plugins/schedule.js";
+import { DisposableBag } from "../../../plugins/disposables.js";
+
+/** Core's own timers, as a plugin ctx has them. */
+function realSchedule() {
+  return createPluginSchedule(new DisposableBag("test"), () => {});
+}
 
 const repo = path.resolve(__dirname, "../../../../..");
 const buildDir = path.join(
@@ -291,19 +298,154 @@ describe("supervisor", () => {
     await supervisor.shutdown();
   }, 30_000);
 
-  it("keeps a plugin with schedules or listeners on", async () => {
+  it("keeps a plugin with a job shorter than the idle time on", async () => {
     const supervisor = new SandboxSupervisor(config({ idleMs: 200 }));
     await supervisor.register(
       spec("busy", plugin("busy", "export function activate() {}"), {
-        sandbox: { events: ["host.deleted"] },
+        sandbox: { schedules: [{ id: "tick", every: 50 }] },
       }),
     );
     expect(supervisor.status()[0]).toMatchObject({
       state: "ready",
       alwaysOn: true,
+      keepOnReason: "schedule tick",
     });
     await new Promise((r) => setTimeout(r, 600));
     expect(supervisor.status()[0].state).toBe("ready");
+    await supervisor.shutdown();
+  }, 30_000);
+
+  it("keeps a plugin with a request path provider on", async () => {
+    const supervisor = new SandboxSupervisor(config({ idleMs: 200 }));
+    await supervisor.register(
+      spec("gate", plugin("gate", "export function activate() {}"), {
+        capabilities: ["hosts:connect-policy"],
+      }),
+    );
+    expect(supervisor.status()[0].keepOnReason).toBe("hosts:connect-policy");
+    await supervisor.shutdown();
+  }, 30_000);
+
+  it("stops an idle plugin with listeners and wakes it for an event", async () => {
+    const listeners = new Map<string, (...args: unknown[]) => unknown>();
+    const reports: unknown[] = [];
+    const supervisor = new SandboxSupervisor(config({ idleMs: 200 }));
+    await supervisor.register(
+      spec(
+        "listener",
+        plugin(
+          "listener",
+          `export async function activate(ctx) {
+            await ctx.events.on("host.deleted", async (payload) => {
+              await ctx.report(payload);
+            });
+          }`,
+        ),
+        {
+          sandbox: { events: ["host.deleted"] },
+          report: (value) => reports.push(value),
+          ctx: {
+            events: {
+              on: (topic: string, fn: (...args: unknown[]) => unknown) => {
+                listeners.set(topic, fn);
+                return () => listeners.delete(topic);
+              },
+            },
+          },
+        },
+      ),
+    );
+    expect(supervisor.status()[0].keepOnReason).toBeNull();
+    await until(() => supervisor.status()[0].state === "stopped");
+    // Core still holds the listener while the process is stopped.
+    const onDeleted = listeners.get("host.deleted")!;
+    expect(onDeleted).toBeTypeOf("function");
+    await onDeleted({ hostId: 9 });
+    expect(reports).toEqual([{ hostId: 9 }]);
+    expect(supervisor.status()[0].state).toBe("ready");
+    await supervisor.shutdown();
+    expect(listeners.size).toBe(0);
+  }, 30_000);
+
+  it("wakes a stopped plugin for a job longer than the idle time", async () => {
+    const reports: unknown[] = [];
+    const supervisor = new SandboxSupervisor(config({ idleMs: 200 }));
+    await supervisor.register(
+      spec(
+        "daily",
+        plugin(
+          "daily",
+          `export async function activate(ctx) {
+            await ctx.schedule.every(1200, async () => {
+              await ctx.report("tick");
+            }, { id: "daily" });
+          }`,
+        ),
+        {
+          sandbox: { schedules: [{ id: "daily", every: 1200 }] },
+          report: (value) => reports.push(value),
+          ctx: { schedule: realSchedule() },
+        },
+      ),
+    );
+    await until(() => supervisor.status()[0].state === "stopped");
+    await until(() => reports.length > 0);
+    expect(reports[0]).toBe("tick");
+    await supervisor.shutdown();
+  }, 30_000);
+
+  it("keeps a plugin up while it says it has work, and lets it stop after", async () => {
+    const supervisor = new SandboxSupervisor(config({ idleMs: 200 }));
+    const body = (awake: boolean) => `export async function activate(ctx) {
+      await ctx.schedule.keepAwake("monitors", ${awake});
+    }`;
+    await supervisor.register(
+      spec("watcher", plugin("watcher", body(true)), {
+        sandbox: { schedules: [{ id: "tick", every: 50 }] },
+        ctx: { schedule: { keepAwake: () => {} } },
+      }),
+    );
+    await until(() => supervisor.status()[0].keepOnReason !== "schedule tick");
+    expect(supervisor.status()[0].keepOnReason).toBe("keepAwake: monitors");
+    await new Promise((r) => setTimeout(r, 600));
+    expect(supervisor.status()[0].state).toBe("ready");
+    await supervisor.shutdown();
+
+    // No work: its short job no longer keeps it up.
+    const quiet = new SandboxSupervisor(config({ idleMs: 200 }));
+    await quiet.register(
+      spec("watcher2", plugin("watcher2", body(false)), {
+        sandbox: { schedules: [{ id: "tick", every: 50 }] },
+        ctx: { schedule: { keepAwake: () => {} } },
+      }),
+    );
+    await until(() => quiet.status()[0].state === "stopped");
+    await quiet.shutdown();
+  }, 30_000);
+
+  it("does not stop a plugin with a one-off job still waiting", async () => {
+    const reports: unknown[] = [];
+    const supervisor = new SandboxSupervisor(config({ idleMs: 200 }));
+    await supervisor.register(
+      spec(
+        "later",
+        plugin(
+          "later",
+          `export async function activate(ctx) {
+            await ctx.schedule.after(900, async () => { await ctx.report("done"); });
+          }`,
+        ),
+        {
+          sandbox: { events: ["host.deleted"] },
+          report: (value) => reports.push(value),
+          ctx: { schedule: realSchedule(), events: { on: () => () => {} } },
+        },
+      ),
+    );
+    await new Promise((r) => setTimeout(r, 600));
+    expect(supervisor.status()[0].state).toBe("ready");
+    await until(() => reports.includes("done"));
+    await until(() => supervisor.status()[0].state === "stopped");
     await supervisor.shutdown();
   }, 30_000);
 

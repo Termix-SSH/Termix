@@ -1769,10 +1769,26 @@ endpoint.handle("deactivate", async () => {
   return true;
 });
 
+/**
+ * The plugin's own TCP and UDP sockets and listeners. Core talks to this
+ * process over stdio, so every one of these is the plugin's, and core does
+ * not stop a process that still has one open.
+ */
+function openSockets(): number {
+  try {
+    return process
+      .getActiveResourcesInfo()
+      .filter((name) => /^(TCP|UDP|TLS)/.test(name)).length;
+  } catch {
+    return 0;
+  }
+}
+
 endpoint.handle("ping", () => ({
   cpu: process.cpuUsage(),
   rss: process.memoryUsage().rss,
   pending: endpoint.pendingCount,
+  sockets: openSockets(),
 }));
 
 process.on("disconnect", () => process.exit(0));
