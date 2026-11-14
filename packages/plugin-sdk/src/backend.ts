@@ -311,8 +311,11 @@ export interface SyncEntityInfo {
   owner: string;
   order: number;
   readOnly: boolean;
-  /** Whether the row would show in a load even if it exists. */
-  covers?: (syncId: string) => boolean;
+  /**
+   * Whether the row would show in a load even if it exists. In a plugin
+   * process it returns a Promise.
+   */
+  covers?: (syncId: string) => boolean | Promise<boolean>;
 }
 
 /** A row ready for the wire, with its content hash. */
@@ -549,7 +552,11 @@ export interface PluginSyncHost {
       resolvers: unknown,
     ) => Promise<void>;
     deleteRow: (type: string, userId: string, syncId: string) => Promise<void>;
-    orderSelfReferences: (type: string, rows: SyncRow[]) => SyncRow[];
+    /** Returns a Promise in a plugin process. */
+    orderSelfReferences: (
+      type: string,
+      rows: SyncRow[],
+    ) => SyncRow[] | Promise<SyncRow[]>;
     counts: (userId: string) => Promise<Record<string, number>>;
     wipe: (userId: string) => Promise<void>;
     regenerateSyncIds: (userId: string) => Promise<void>;
@@ -616,7 +623,10 @@ export interface PluginSyncHost {
     }>;
     parsePushOps: (body: unknown) => Promise<SyncPushOp[] | null>;
     applyPush: (userId: string, ops: SyncPushOp[]) => Promise<SyncPushResult[]>;
-    /** Streams a change notice to the account's open event streams. */
+    /**
+     * Streams a change notice to the account's open event streams. In a
+     * plugin process it works only inside the request whose response it is.
+     */
     listen: (userId: string, res: unknown) => Promise<() => void>;
   };
 
@@ -662,7 +672,10 @@ export interface PluginSyncHost {
       status: number;
       body: AsyncIterable<Uint8Array> | null;
     }>;
-    normalizeServerUrl: (input: string) => string | null;
+    /** Returns a Promise in a plugin process. */
+    normalizeServerUrl: (
+      input: string,
+    ) => string | null | Promise<string | null>;
     isRemoteError: (error: unknown) => error is SyncRemoteError;
   };
 
@@ -683,7 +696,11 @@ export interface PluginSyncHost {
     verify: (
       token: string,
     ) => Promise<{ userId: string; sessionId?: string } | null>;
-    /** Sets the sign in cookie on a response, like a login does. A name sets another cookie. */
+    /**
+     * Sets the sign in cookie on a response, like a login does. A name sets
+     * another cookie; in a plugin process only names starting with
+     * tmxp_<id>_, and only inside the request whose response it is.
+     */
     setCookie: (
       req: unknown,
       res: unknown,
@@ -714,14 +731,21 @@ export interface PluginSyncHost {
     /** Sends a plugin archive; false when there is no such plugin to share. */
     sendPackage: (pluginId: string, res: unknown) => Promise<boolean>;
     mirror: (link: SyncLinkInfo) => Promise<void>;
-    lastRemote: () => SyncRemotePlugin[];
-    localNames: () => Map<string, string>;
+    /** Returns a Promise in a plugin process. */
+    lastRemote: () => SyncRemotePlugin[] | Promise<SyncRemotePlugin[]>;
+    /** Returns a Promise in a plugin process. */
+    localNames: () => Map<string, string> | Promise<Map<string, string>>;
   };
 
   desktop: {
     /** Tells the app's main process how to reach the linked origin. */
     applyProxy: (link: SyncLinkInfo | null) => Promise<void>;
     deviceName: () => string;
+    /**
+     * The desktop wide default for where connections start, from the app's
+     * settings. Termix 26.11.2+.
+     */
+    connectionOrigin?: () => Promise<"local" | "remote">;
   };
 
   alerts: {
@@ -1322,6 +1346,12 @@ export interface PluginHostLockProvider {
   note: (hostId: number) => string | null;
   /** False blocks adding hosts by hand (editor, import, other plugins). */
   allowManualCreate: () => boolean;
+  /**
+   * Every host this provider locks. Needed in a plugin process (API 2.4),
+   * where core keeps a copy of the locks the plugin reports and reads them
+   * again every second.
+   */
+  lockedHosts?: () => number[];
 }
 
 export interface PluginHostLocksApi {

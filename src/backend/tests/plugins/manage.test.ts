@@ -11,6 +11,7 @@ import path from "node:path";
 import * as tar from "tar";
 import { createFixturePlugin } from "./fixture-plugin.js";
 import type { LoadedPlugin } from "../../plugins/loader.js";
+import { LEGACY_OFFICIAL_ERROR } from "../../plugins/isolation.js";
 
 interface Row {
   id: string;
@@ -1280,58 +1281,25 @@ it("requires exact consent before enabling a mirrored plugin with capabilities",
   );
 });
 
-describe("run without isolation", () => {
+describe("plugins made for plugin API 1", () => {
   const legacy = { engine: { termix: ">=2.9.0", api: "^1.15" } };
 
-  it("lets an admin run an official API 1 plugin inside the server, and stop it again", async () => {
+  it("keeps an official API 1 plugin off, with no way to run it inside the server", async () => {
     createFixturePlugin({
       id: "docker",
       root: bundled,
       manifestOverrides: legacy,
     });
     const loader = await boot();
-    expect(loader.get("docker")?.state).toBe("blocked");
+    expect(loader.get("docker")).toMatchObject({
+      state: "blocked",
+      lastError: LEGACY_OFFICIAL_ERROR,
+    });
 
-    const on = await manage.setPluginOptions("docker", { runUnisolated: true });
-    expect(on.runUnisolated).toBe(true);
-    expect(loader.get("docker")?.state).toBe("active");
-    expect(db.rows.get("docker")).toMatchObject({
+    const options = await manage.setPluginOptions("docker", {
       runUnisolated: true,
-      state: "enabled",
-    });
-
-    const off = await manage.setPluginOptions("docker", {
-      runUnisolated: false,
-    });
-    expect(off.runUnisolated).toBe(false);
+    } as never);
+    expect(options).not.toHaveProperty("runUnisolated");
     expect(loader.get("docker")?.state).toBe("blocked");
-    expect(db.rows.get("docker")?.state).toBe("blocked");
-  });
-
-  it("refuses the switch for a plugin that already runs in its own process", async () => {
-    createFixturePlugin({
-      id: "docker",
-      root: bundled,
-      manifestOverrides: { engine: { termix: ">=2.9.0", api: "^2.0.0" } },
-    });
-    await boot();
-    await expect(
-      manage.setPluginOptions("docker", { runUnisolated: true }),
-    ).rejects.toMatchObject({ code: "NOT_ALLOWED", status: 409 });
-  });
-
-  it("never gives the switch to a community plugin", async () => {
-    const userDir = path.join(data, "plugins");
-    fs.mkdirSync(userDir, { recursive: true });
-    createFixturePlugin({
-      id: "community-thing",
-      root: userDir,
-      manifestOverrides: legacy,
-    });
-    await boot();
-    await expect(
-      manage.setPluginOptions("community-thing", { runUnisolated: true }),
-    ).rejects.toMatchObject({ code: "NOT_ALLOWED" });
-    expect(db.rows.get("community-thing")?.runUnisolated).toBeFalsy();
   });
 });

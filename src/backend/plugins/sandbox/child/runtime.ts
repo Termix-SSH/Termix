@@ -24,6 +24,7 @@ import {
 } from "../rpc.js";
 import { createChildSocket } from "./socket.js";
 import { joinStream } from "../transport-bridge.js";
+import { createChildSyncHost } from "./sync-host.js";
 
 interface Store {
   token?: string;
@@ -41,6 +42,7 @@ interface InitConfig {
   values: Record<string, unknown>;
   manifest: {
     id: string;
+    capabilities?: string[];
     sandbox?: {
       schedules?: { id: string }[];
       events?: string[];
@@ -62,6 +64,12 @@ const disposables: AnyFn[] = [];
 const wsRoutes = new Map<string, AnyFn>();
 const upgradeRoutes = new Map<string, AnyFn>();
 let router: import("express").Router | null = null;
+/** An Express app around the sync provider, so it gets res.json and friends. */
+const SYNC_PROVIDE = "sync.provide"; // plugin-id-ok: ctx.sync is a core namespace
+const SYNC_HOST = "sync.host"; // plugin-id-ok: ctx.sync is a core namespace
+let syncApp: import("express").Express | null = null;
+/** How often the plugin's host locks are read again and sent when changed. */
+const LOCK_REPORT_MS = 1000;
 let app: import("express").Express | null = null;
 const sshClients = new Map<string, EventEmitter>();
 let expressModule: typeof ExpressDefault | null = null;
@@ -161,6 +169,94 @@ function setPath(
 /** Methods that hand back a function to stop or remove what they set up. */
 const RETURNS_DISPOSER =
   /^(events\.on|settings\.onChange|settings\.onValidate|schedule\.(every|after)|.*\.provide|.*\.subscribe|.*\.serve|operations\.register.*|hosts\.import\.registerImportNormalizer|hosts\.trackSession)$/;
+
+/**
+ * Core reads host locks synchronously, so the plugin reports its locked hosts
+ * and core answers from the last report. The provider is read again every
+ * second and a changed report is sent.
+ */
+function provideHostLocks(provider: {
+  isLocked: AnyFn;
+  note: AnyFn;
+  allowManualCreate: AnyFn;
+  lockedHosts?: AnyFn;
+}): AnyFn {
+  if (typeof provider?.lockedHosts !== "function") {
+    throw new Error(
+      "ctx.hosts.locks.provide needs lockedHosts() in a plugin process",
+    );
+  }
+  const report = () => {
+    const ids = provider.lockedHosts!() as unknown;
+    const hosts: [number, string | null][] = [];
+    for (const id of Array.isArray(ids) ? ids : []) {
+      if (!Number.isInteger(id) || !provider.isLocked(id)) continue;
+      const note = provider.note(id);
+      hosts.push([id as number, typeof note === "string" ? note : null]);
+    }
+    return { hosts, allowManualCreate: provider.allowManualCreate() !== false };
+  };
+  let last = JSON.stringify(report());
+  const registered = endpoint
+    .call("hosts.locks.provide", [JSON.parse(last)])
+    .then(
+      (drop) => () => {
+        stop();
+        if (typeof drop === "function") return (drop as AnyFn)();
+      },
+      (error: unknown) => {
+        stop();
+        throw error;
+      },
+    );
+  const timer = setInterval(() => {
+    let next: string;
+    try {
+      next = JSON.stringify(report());
+    } catch (error) {
+      console.error(`Host lock report failed: ${(error as Error).message}`);
+      return;
+    }
+    if (next === last) return;
+    last = next;
+    endpoint
+      .call("hosts.locks.update", [JSON.parse(next)])
+      .catch((error: Error) =>
+        console.error(`Host lock report failed: ${error.message}`),
+      );
+  }, LOCK_REPORT_MS);
+  function stop() {
+    clearInterval(timer);
+  }
+  disposables.push(stop);
+  return hybrid(registered, "hosts.locks.provide");
+}
+
+/** The status provider's methods as plain functions, plus a batched read. */
+function statusProviderFor(provider: Record<string, AnyFn>) {
+  const method = (name: string) => {
+    if (typeof provider?.[name] !== "function") {
+      throw new Error(`A host status provider needs ${name}`);
+    }
+    return (...args: unknown[]) => provider[name].call(provider, ...args);
+  };
+  const get = method("get");
+  return {
+    start: method("start"),
+    stop: method("stop"),
+    statusesFor: method("statusesFor"),
+    refresh: method("refresh"),
+    check: method("check"),
+    reportLogin: method("reportLogin"),
+    registerPort: method("registerPort"),
+    getIntervalSeconds: method("getIntervalSeconds"),
+    setIntervalSeconds: method("setIntervalSeconds"),
+    getMany: (ids: unknown) =>
+      (Array.isArray(ids) ? ids : [])
+        .filter((id) => Number.isInteger(id))
+        .map((id) => [id, get(id) ?? null]),
+  };
+}
 
 function buildCtx(): Record<string, unknown> {
   const ctx: Record<string, unknown> = {};
@@ -463,6 +559,30 @@ function buildCtx(): Record<string, unknown> {
       ]);
       if (failed) throw failure;
       return result;
+    });
+  }
+  if (has("hosts.locks.provide")) {
+    setPath(ctx, "hosts.locks.provide", provideHostLocks);
+  }
+  if (has("hosts.status.provide")) {
+    setPath(ctx, "hosts.status.provide", (provider: Record<string, AnyFn>) =>
+      hybrid(
+        endpoint.call("hosts.status.provide", [statusProviderFor(provider)]),
+        "hosts.status.provide",
+      ),
+    );
+  }
+  if (has(SYNC_PROVIDE)) {
+    setPath(ctx, SYNC_PROVIDE, (provider: { handle: AnyFn }) => {
+      if (typeof provider?.handle !== "function") {
+        throw new Error("A sync provider needs handle(req, res, next)");
+      }
+      const express = expressModule!;
+      syncApp = express();
+      syncApp.disable("x-powered-by");
+      syncApp.set("trust proxy", false);
+      syncApp.use((req, res, next) => provider.handle(req, res, next));
+      return hybrid(endpoint.call(SYNC_PROVIDE, []), SYNC_PROVIDE);
     });
   }
   if (has("ssh.transports.provide")) {
@@ -1139,13 +1259,37 @@ interface RequestMeta {
   ip: string;
   userId: string;
   baseUrl: string;
+  /** "provider" for a request core forwards to the sync provider. */
+  target?: "app" | "provider";
+}
+
+/** The request's cookies, as cookie-parser would give them. */
+function parseCookies(header: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (typeof header !== "string") return out;
+  for (const part of header.split(";")) {
+    const at = part.indexOf("=");
+    if (at <= 0) continue;
+    const name = part.slice(0, at).trim();
+    let value = part.slice(at + 1).trim();
+    if (value.startsWith('"') && value.endsWith('"'))
+      value = value.slice(1, -1);
+    try {
+      value = decodeURIComponent(value);
+    } catch {
+      // keep it as sent
+    }
+    if (!(name in out)) out[name] = value;
+  }
+  return out;
 }
 
 endpoint.handle("http.dispatch", ([metaArg, portArg, bodyArg]) => {
   const meta = metaArg as RequestMeta;
   const port = portArg as StreamPort;
   const bodyPort = bodyArg as StreamPort | undefined;
-  if (!app) return { next: true };
+  const handler = meta.target === "provider" ? syncApp : app;
+  if (!handler) return { next: true };
   return new Promise((resolve, reject) => {
     const socket = new PassThrough() as PassThrough & {
       remoteAddress?: string;
@@ -1158,6 +1302,7 @@ endpoint.handle("http.dispatch", ([metaArg, portArg, bodyArg]) => {
     req.url = meta.url;
     req.headers = meta.headers;
     req.userId = meta.userId || undefined;
+    req.cookies = parseCookies(meta.headers?.cookie);
     req.termixBaseUrl = meta.baseUrl;
     if (bodyPort) {
       bodyPort.on("data", (chunk: Buffer) => {
@@ -1233,10 +1378,12 @@ endpoint.handle("http.dispatch", ([metaArg, portArg, bodyArg]) => {
     port.on("drain", () => res.emit("drain"));
     port.on("close", () => res.emit("close"));
 
-    app!(req as never, res as never, (error?: unknown) => {
-      if (error) reject(error);
-      else resolve({ next: true });
-    });
+    void Promise.resolve(
+      handler(req as never, res as never, (error?: unknown) => {
+        if (error) reject(error);
+        else resolve({ next: true });
+      }),
+    ).catch(reject);
   });
 });
 
@@ -1610,7 +1757,11 @@ endpoint.handle("activate", async () => {
       `Plugin ${config.pluginId} backend entry does not export an activate(ctx) function`,
     );
   }
-  await pluginModule.activate(buildCtx());
+  const ctx = buildCtx();
+  if (config.manifest.capabilities?.includes("sync:provide")) {
+    setPath(ctx, SYNC_HOST, await createChildSyncHost(endpoint, hybrid));
+  }
+  await pluginModule.activate(ctx);
   // Drop the garbage left from loading modules so it is not held for good.
   collect?.();
   setTimeout(() => collect?.(), 1000).unref();

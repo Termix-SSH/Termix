@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.4.0
+
+Plugin API 2.4.0. Needs Termix 26.11.2.
+
+### Added
+
+- `PluginHostLockProvider.lockedHosts()` lists every host a provider locks. A plugin process needs it to provide host locks
+- `ctx.hosts.status.provide`, `ctx.sync.provide` and `ctx.sync.host` work in a plugin process
+- `ctx.sync.host.desktop.connectionOrigin()` reads the desktop wide default for where connections start
+
+### Changed
+
+- In a plugin process, `ctx.sync.host.replica.orderSelfReferences`, an entity's `covers`, `http.normalizeServerUrl`, `plugins.lastRemote` and `plugins.localNames` return Promises
+- `createMockCtx({ sandbox: true })` takes host locks with `lockedHosts`, a host status provider and a sync provider
+
 ## 2.3.0
 
 Plugin API 2.3.0. Needs Termix 26.11.2.

@@ -26,6 +26,8 @@ describe("frontendIsolation", () => {
       "ui:theme",
       "auth:provide",
       "desktop:window",
+      "device:serial",
+      "sync:provide",
     ]) {
       expect(
         frontendIsolation({

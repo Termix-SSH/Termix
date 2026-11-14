@@ -768,3 +768,314 @@ describe("asUser in a plugin process", () => {
     expect(seen).toEqual(["u1", "u1"]);
   }, 30_000);
 });
+
+describe("host providers in a plugin process", () => {
+  it("keeps the plugin's host locks and follows changes", async () => {
+    const providers: Array<{
+      isLocked: (id: number) => boolean;
+      note: (id: number) => string | null;
+      allowManualCreate: () => boolean;
+    }> = [];
+    let result: unknown = null;
+    const body = `
+      export async function activate(ctx) {
+        const locked = new Set([3]);
+        ctx.hosts.locks.provide({
+          isLocked: (id) => locked.has(id),
+          note: (id) => (locked.has(id) ? "from hosts.yaml" : null),
+          allowManualCreate: () => locked.size < 2,
+          lockedHosts: () => [...locked],
+        });
+        setTimeout(() => locked.add(9), 200);
+        let refused = null;
+        try { ctx.hosts.locks.provide({ isLocked: () => true, note: () => null, allowManualCreate: () => true }); }
+        catch (error) { refused = error.message; }
+        await ctx.report({ refused });
+      }`;
+    const supervisor = new SandboxSupervisor(config());
+    await supervisor.register(
+      spec("locker", plugin("locker", body), {
+        capabilities: ["hosts:lock"],
+        report: (value) => {
+          result = value;
+        },
+        ctx: {
+          hosts: {
+            locks: {
+              provide: (provider: (typeof providers)[number]) => {
+                providers.push(provider);
+                return () => {};
+              },
+            },
+          },
+        },
+      }),
+    );
+    await until(() => result !== null && providers.length === 1);
+    expect(result).toEqual({
+      refused: expect.stringMatching(/needs lockedHosts/),
+    });
+    const [provider] = providers;
+    expect(provider.isLocked(3)).toBe(true);
+    expect(provider.note(3)).toBe("from hosts.yaml");
+    expect(provider.isLocked(9)).toBe(false);
+    expect(provider.allowManualCreate()).toBe(true);
+    await until(() => provider.isLocked(9), 5_000);
+    expect(provider.allowManualCreate()).toBe(false);
+    await supervisor.shutdown();
+  }, 30_000);
+
+  it("serves host status from a class instance across the process", async () => {
+    let adapter: Record<string, (...a: unknown[]) => unknown> | null = null;
+    const body = `
+      class Service {
+        constructor() { this.store = new Map([[1, { status: "online", lastChecked: "t1" }]]); this.ports = []; }
+        start() {} stop() {}
+        get(id) { return this.store.get(id) ?? null; }
+        async statusesFor(userId, ids) {
+          for (const resolve of this.ports) this.store.set(2, { status: "offline", lastChecked: String(await resolve(2)) });
+          return this.store;
+        }
+        async refresh() {} async check(id) { return this.get(id); }
+        reportLogin(id, outcome) { if (outcome.ok) this.store.set(id, { status: "online", lastChecked: "login" }); }
+        registerPort(type, resolve) { this.ports.push(resolve); return () => { this.ports = []; }; }
+        async getIntervalSeconds() { return 30; } async setIntervalSeconds() {}
+      }
+      export async function activate(ctx) { ctx.hosts.status.provide(new Service()); }`;
+    const supervisor = new SandboxSupervisor(config());
+    await supervisor.register(
+      spec("statusp", plugin("statusp", body), {
+        capabilities: ["hosts:status-provide"],
+        ctx: {
+          hosts: {
+            status: {
+              provide: (provider: typeof adapter) => {
+                adapter = provider;
+                return () => {};
+              },
+            },
+          },
+        },
+      }),
+    );
+    await until(() => adapter !== null);
+    const provider = adapter!;
+    expect(provider.get(1)).toBeNull();
+    await until(() => provider.get(1) !== null, 5_000);
+    expect(provider.get(1)).toEqual({ status: "online", lastChecked: "t1" });
+    provider.registerPort("ssh", async (id: number) => id * 11);
+    await new Promise((r) => setTimeout(r, 100));
+    const all = (await provider.statusesFor("u1", null)) as Map<
+      number,
+      unknown
+    >;
+    expect(all.get(2)).toEqual({ status: "offline", lastChecked: "22" });
+    expect(provider.get(2)).toEqual({ status: "offline", lastChecked: "22" });
+    provider.reportLogin(3, { ok: true });
+    await until(() => {
+      provider.get(3);
+      return provider.get(3) !== null;
+    }, 5_000);
+    expect(await provider.getIntervalSeconds()).toBe(30);
+    await supervisor.shutdown();
+  }, 30_000);
+});
+
+describe("the sync provider in a plugin process", () => {
+  it("answers /sync with core's sign in, cookies and change feed on the live request", async () => {
+    const express = (await import("express")).default;
+    let handle:
+      ((req: unknown, res: unknown, next: () => void) => void) | null = null;
+    const cookies: unknown[] = [];
+    const listeners: string[] = [];
+    let removed = 0;
+    const remoteError = Object.assign(new Error("server said no"), {
+      kind: "signed_out",
+      status: 401,
+    });
+    const host = {
+      embedded: false,
+      info: { version: () => "26.11.2", appName: async () => "Termix" },
+      entities: {
+        list: () => [
+          { type: "hosts", owner: "core", order: 1, readOnly: false },
+        ],
+        onChanged: () => () => {},
+      },
+      replica: {
+        resolvers: (userId: string) => ({ userId }),
+        loadRows: async (
+          type: string,
+          userId: string,
+          resolvers: { userId: string },
+        ) => ({
+          rows: new Map([[`${type}:${userId}:${resolvers.userId}`, {}]]),
+          failed: new Set(),
+        }),
+      },
+      feed: {
+        listen: async (userId: string, res: { write: (s: string) => void }) => {
+          listeners.push(userId);
+          res.write("event: change\n\n");
+          return () => {
+            removed++;
+          };
+        },
+      },
+      http: {
+        json: async () => {
+          throw remoteError;
+        },
+        isRemoteError: (error: unknown) => error === remoteError,
+      },
+      sessions: {
+        middleware:
+          () =>
+          (
+            req: Record<string, unknown>,
+            res: { status: (c: number) => { json: (b: unknown) => void } },
+            next: () => void,
+          ) => {
+            const auth = (req.headers as Record<string, string>).authorization;
+            if (auth === "Bearer good") {
+              req.userId = "u1";
+              req.sessionId = "s1";
+              next();
+            } else
+              res.status(401).json({ error: "Missing authentication token" });
+          },
+        setCookie: (
+          _req: unknown,
+          res: { cookie: (...a: unknown[]) => void },
+          value: string,
+          options: { name: string },
+        ) => {
+          cookies.push([options.name, value]);
+          res.cookie(options.name, value);
+        },
+      },
+      desktop: { deviceName: () => "desk" },
+    };
+    const body = `
+      export async function activate(ctx) {
+        const host = ctx.sync.host;
+        const auth = host.sessions.middleware();
+        const routes = {
+          "/v2/info": [auth, (req, res) => {
+            host.sessions.setCookie(req, res, "ring1", { name: "tmxp_syncp_ring" });
+            res.json({ user: req.userId, session: req.sessionId, version: host.info.version(), device: host.desktop.deviceName(),
+              embedded: host.embedded, types: host.entities.list().map((e) => e.type), cookies: req.cookies });
+          }],
+          "/v2/bad-cookie": [(req, res) => {
+            host.sessions.setCookie(req, res, "x", { name: "termix_other" });
+            setTimeout(() => res.json({ ok: true }), 50);
+          }],
+          "/v2/remote": [async (req, res) => {
+            try { await host.http.json({ serverUrl: "https://x" }, "/p"); res.json({}); }
+            catch (error) { res.json({ remote: host.http.isRemoteError(error), kind: error.kind, status: error.status }); }
+          }],
+          "/v2/rows": [async (req, res) => {
+            const r = host.replica.resolvers("u2");
+            const out = await host.replica.loadRows("t", "u2", r);
+            res.json({ rows: [...out.rows.keys()], key: host.replica.records.key("a", "b") });
+          }],
+          "/v2/events": [auth, async (req, res) => {
+            res.setHeader("Content-Type", "text/event-stream");
+            res.write("event: ready\\n\\n");
+            await host.feed.listen(req.userId, res);
+          }],
+        };
+        ctx.sync.provide({
+          handle: (req, res, next) => {
+            const chain = routes[req.url.split("?")[0]];
+            if (!chain) return next();
+            let i = 0;
+            const step = () => { const fn = chain[i++]; if (fn) return fn(req, res, step); };
+            step();
+          },
+        });
+      }`;
+    const supervisor = new SandboxSupervisor(config());
+    await supervisor.register(
+      spec("syncp", plugin("syncp", body), {
+        capabilities: ["sync:provide"],
+        ctx: {
+          sync: {
+            host,
+            provide: (provider: { handle: typeof handle }) => {
+              handle = provider.handle;
+              return () => {};
+            },
+          },
+        },
+      }),
+    );
+    await until(() => handle !== null);
+    const app = express();
+    app.use("/sync", (req, res, next) => handle!(req, res, next));
+    app.use((_req, res) => res.status(404).json({ error: "none" }));
+    const server = app.listen(0, "127.0.0.1");
+    await new Promise((r) => server.once("listening", r));
+    const base = `http://127.0.0.1:${(server.address() as { port: number }).port}/sync`;
+    try {
+      const refused = await fetch(`${base}/v2/info`);
+      expect(refused.status).toBe(401);
+      expect(await refused.json()).toEqual({
+        error: "Missing authentication token",
+      });
+
+      const ok = await fetch(`${base}/v2/info`, {
+        headers: {
+          authorization: "Bearer good",
+          cookie: "jwt=abc; termix_other=1; tmxp_syncp_ring=r0",
+        },
+      });
+      expect(ok.status).toBe(200);
+      expect(await ok.json()).toEqual({
+        user: "u1",
+        session: "s1",
+        version: "26.11.2",
+        device: "desk",
+        embedded: false,
+        types: ["hosts"],
+        cookies: { tmxp_syncp_ring: "r0", jwt: "abc" },
+      });
+      expect(cookies).toEqual([["tmxp_syncp_ring", "ring1"]]);
+      expect(ok.headers.get("set-cookie")).toContain("tmxp_syncp_ring=ring1");
+
+      const bad = await fetch(`${base}/v2/bad-cookie`);
+      expect(bad.status).toBe(200);
+      expect(cookies).toHaveLength(1);
+
+      expect(await (await fetch(`${base}/v2/remote`)).json()).toEqual({
+        remote: true,
+        kind: "signed_out",
+        status: 401,
+      });
+      expect(await (await fetch(`${base}/v2/rows`)).json()).toEqual({
+        rows: ["t:u2:u2"],
+        key: "a\u0000b",
+      });
+      expect((await fetch(`${base}/v2/missing`)).status).toBe(404);
+
+      const controller = new AbortController();
+      const events = await fetch(`${base}/v2/events`, {
+        headers: { authorization: "Bearer good" },
+        signal: controller.signal,
+      });
+      const reader = events.body!.getReader();
+      let text = "";
+      while (!text.includes("event: change")) {
+        const { value } = await reader.read();
+        text += new TextDecoder().decode(value);
+      }
+      expect(text).toBe("event: ready\n\nevent: change\n\n");
+      expect(listeners).toEqual(["u1"]);
+      controller.abort();
+      await until(() => removed === 1, 5_000);
+    } finally {
+      server.close();
+      await supervisor.shutdown();
+    }
+  }, 30_000);
+});

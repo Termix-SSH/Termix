@@ -1490,16 +1490,9 @@
       "pin": "Stay on this version",
       "pinHint": "Keeps {{version}} and skips every update until you turn this off.",
       "pinnedTo": "Pinned to {{version}}",
-      "isolation": {
-        "title": "Isolation",
-        "switch": "Run without isolation",
-        "switchHint": "This plugin was made for an older Termix and can't run in its own process. On, it runs inside the server and can reach everything the server can: the database, every saved password and key, and other plugins. Turn it off once an update arrives.",
-        "confirmTitle": "Run {{name}} without isolation?",
-        "confirmBody": "It will run inside the Termix server with the same reach as Termix itself. Only do this for a plugin you trust. An update that runs in its own process turns this off by itself.",
-        "confirmAction": "Run without isolation",
-        "runningWarning": "Runs inside the server without isolation. It can reach everything the server can.",
-        "notice_one": "1 plugin runs inside the server without isolation until it is updated: {{names}}",
-        "notice_other": "{{count}} plugins run inside the server without isolation until they are updated: {{names}}"
+      "legacy": {
+        "notice_one": "1 plugin was made for an older Termix and stays off until it is updated: {{names}}",
+        "notice_other": "{{count}} plugins were made for an older Termix and stay off until they are updated: {{names}}"
       },
       "version": "Version",
       "versionPickHint": "Install an older release instead of the newest. It stays on that version until you unpin it.",

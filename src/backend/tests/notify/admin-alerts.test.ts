@@ -48,7 +48,6 @@ describe("admin alerts", () => {
     ["install_plugin", "alice installed the plugin bob"],
     ["update_plugin", "alice updated the plugin bob"],
     ["enable_plugin", "alice turned on the plugin bob"],
-    ["plugin_unisolated_on", "alice let the plugin bob run without isolation"],
     ["create_api_key", "alice created the API key bob for a user"],
   ])("describes %s", async (action, text) => {
     expect(

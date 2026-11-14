@@ -7,8 +7,7 @@
  * capability grants it, and reaches core only through ctx calls core checks.
  *
  * An API 1 plugin was built to run inside the server process, where it has
- * the same reach as core. It runs only when it is official and an admin
- * turned on "Run without isolation" for it. Community API 1 plugins never run.
+ * the same reach as core. None runs any more; it waits for an update.
  */
 
 import crypto from "node:crypto";
@@ -24,9 +23,9 @@ import {
 } from "./manifest.js";
 import {
   isOfficialPlugin,
+  isLegacyPlugin,
   LEGACY_COMMUNITY_ERROR,
-  LEGACY_SWITCH_ERROR,
-  needsUnisolated,
+  LEGACY_OFFICIAL_ERROR,
 } from "./isolation.js";
 import { getPluginRunner } from "./sandbox/runner.js";
 import { getLocalVersion } from "../utils/app-version.js";
@@ -50,12 +49,9 @@ import {
   createPluginHandle,
   disposePluginHandle,
   type PluginHandle,
-  type PluginModule,
 } from "./ctx.js";
 import { resolveRequirements } from "./service-registry.js";
-import { resolveSecretRequirements } from "./secret-registry.js";
 import { recordConflict } from "./conflicts.js";
-import { installHostModuleFallback } from "./host-modules.js";
 import { tablePrefix } from "@termix-ssh/plugin-sdk/db";
 
 export type PluginState =
@@ -68,8 +64,6 @@ export type PluginState =
   | "failed";
 
 export type PluginSource = "bundled" | "user";
-
-const ACTIVATION_TIMEOUT_MS = 30_000;
 
 /** Defaults for the runtime error budget. Both are configurable. */
 const DEFAULT_ERROR_THRESHOLD = 5;
@@ -96,17 +90,15 @@ export interface LoadedPlugin {
   signedTier?: KeyTier;
   /** Root key that certified the signing key, for chain signatures. */
   signedRoot?: string;
-  /** An admin let this API 1 plugin run inside the server process. */
-  runUnisolated?: boolean;
   /** Set while the plugin runs in its own process. */
   sandboxed?: boolean;
 }
 
 export {
   isOfficialPlugin,
-  needsUnisolated,
+  isLegacyPlugin,
   LEGACY_COMMUNITY_ERROR,
-  LEGACY_SWITCH_ERROR,
+  LEGACY_OFFICIAL_ERROR,
 } from "./isolation.js";
 
 /**
@@ -713,15 +705,12 @@ export class PluginLoader {
       return;
     }
 
-    const legacy = needsUnisolated(plugin);
-    if (legacy && !isOfficialPlugin(plugin)) {
+    // Plugin API 1 ran inside the server. Nothing does any more.
+    if (isLegacyPlugin(plugin)) {
       plugin.state = "blocked";
-      plugin.lastError = LEGACY_COMMUNITY_ERROR;
-      return;
-    }
-    if (legacy && !plugin.runUnisolated) {
-      plugin.state = "blocked";
-      plugin.lastError = LEGACY_SWITCH_ERROR;
+      plugin.lastError = isOfficialPlugin(plugin)
+        ? LEGACY_OFFICIAL_ERROR
+        : LEGACY_COMMUNITY_ERROR;
       return;
     }
 
@@ -729,122 +718,7 @@ export class PluginLoader {
     plugin.lastError = null;
 
     const entryPath = getPluginBackendEntry(plugin.dir, plugin.manifest);
-    if (!legacy) {
-      await this.activateSandboxed(plugin, entryPath);
-      return;
-    }
-    pluginLogger.warn(
-      `Plugin ${plugin.id} runs without isolation: it can reach everything the server can`,
-      { operation: "plugin_activate" },
-    );
-    // Node caches ESM by URL, so a plugin replaced without a restart would
-    // otherwise keep running the old code.
-    const entry = `${pathToFileUrlString(entryPath)}?v=${encodeURIComponent(
-      `${plugin.manifest.version}-${fileStamp(entryPath)}`,
-    )}`;
-
-    try {
-      installHostModuleFallback();
-      const imported = (await import(entry)) as {
-        activate?: PluginModule["activate"];
-        deactivate?: PluginModule["deactivate"];
-        default?: PluginModule;
-      };
-
-      const activate = imported.activate ?? imported.default?.activate;
-      const deactivate = imported.deactivate ?? imported.default?.deactivate;
-
-      if (typeof activate !== "function") {
-        throw new Error(
-          `Plugin ${plugin.id} backend entry does not export an activate(ctx) function`,
-        );
-      }
-
-      // Structural only: is the service present at a satisfying version. A
-      // user's permission is checked per call instead, because activation is
-      // per-instance and permissions are per-user.
-      const resolution = resolveRequirements(plugin.manifest);
-      if (!resolution.satisfied) {
-        throw new Error(`Plugin ${plugin.id} ${resolution.errors.join("; ")}`);
-      }
-      for (const service of resolution.missingOptional) {
-        pluginLogger.info(
-          `Plugin ${plugin.id} optional service "${service}" is not available`,
-          { operation: "plugin_activate" },
-        );
-      }
-
-      // A borrowed secret resolves per call and returns null when absent, so a
-      // provider installed later starts working with no restart. Refusing to
-      // start here would turn a recoverable gap into an install ordering rule.
-      for (const reference of resolveSecretRequirements(plugin.manifest)
-        .unavailable) {
-        pluginLogger.info(
-          `Plugin ${plugin.id} shared secret "${reference}" is not currently offered; reads will resolve to null`,
-          { operation: "plugin_activate" },
-        );
-      }
-
-      // Before activate, not inside it: a plugin's first line may query its
-      // own tables, and a migration that fails should stop it starting rather
-      // than leave it half-running against a schema that is not there. A
-      // throw here lands in the catch below, which fails this plugin only.
-      const { migratePlugin } = await import("./data.js");
-      // A release signed by a trusted key is official whether it shipped in
-      // the image or was downloaded, so it may adopt its 2.8 tables too.
-      const applied = await migratePlugin(plugin.id, plugin.dir, {
-        bundled:
-          plugin.source === "bundled" || plugin.signedTier === "official",
-      });
-      // A new table, or a plugin that keeps its state in settings, may be
-      // where core data is waiting to move. Every move is idempotent.
-      if (
-        applied.length > 0 ||
-        plugin.manifest.contributes?.settings?.admin?.length
-      ) {
-        const { runPluginDataMoves } =
-          await import("../upgrade/plugin-data-moves.js");
-        await runPluginDataMoves();
-      }
-
-      const handle = createPluginHandle(plugin.id, { activate, deactivate });
-      const ctx = createPluginContext(plugin.manifest, handle);
-
-      // Attached before activate runs, not after: a plugin that registers a
-      // few things and then throws still has to be cleaned up, and the catch
-      // below can only do that if it can reach the handle.
-      plugin.handle = handle;
-
-      await withTimeout(
-        Promise.resolve(activate(ctx)),
-        ACTIVATION_TIMEOUT_MS,
-        `Plugin ${plugin.id} did not activate within ${ACTIVATION_TIMEOUT_MS}ms`,
-      );
-
-      plugin.state = "active";
-      plugin.errorTimestamps = [];
-      if (!this.activationOrder.includes(plugin.id)) {
-        this.activationOrder.push(plugin.id);
-      }
-
-      pluginLogger.success(`Activated plugin ${plugin.id}`, {
-        operation: "plugin_activate",
-      });
-    } catch (error) {
-      plugin.lastError = error instanceof Error ? error.message : String(error);
-      plugin.state = "failed";
-
-      // Activation may have registered things before it threw. Dispose them
-      // rather than leaving a half-started plugin holding resources, but do
-      // not call the plugin's own deactivate: it never finished starting.
-      if (plugin.handle) {
-        await disposePluginHandle(plugin.handle, plugin.id, {
-          runDeactivate: false,
-        });
-        plugin.handle = null;
-      }
-      throw error instanceof Error ? error : new Error(plugin.lastError);
-    }
+    await this.activateSandboxed(plugin, entryPath);
   }
 
   /**
@@ -1140,20 +1014,6 @@ export function assertBundledUpdate(
   if (bundledVersion && !semver.gt(version, bundledVersion)) {
     throw new SupersededUpdateError(id, version, bundledVersion);
   }
-}
-
-function fileStamp(filePath: string): string {
-  try {
-    const stat = fs.statSync(filePath);
-    return `${stat.size}-${Math.round(stat.mtimeMs)}`;
-  } catch {
-    return "0";
-  }
-}
-
-function pathToFileUrlString(filePath: string): string {
-  const resolved = path.resolve(filePath).replace(/\\/g, "/");
-  return `file://${resolved.startsWith("/") ? "" : "/"}${resolved}`;
 }
 
 /**

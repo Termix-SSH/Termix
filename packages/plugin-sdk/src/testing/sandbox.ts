@@ -10,6 +10,7 @@
  *     manifest's sandbox block, else SANDBOX_UNDECLARED;
  *   - the methods core can't serve to a plugin process throw
  *     SANDBOX_UNSUPPORTED;
+ *   - a host lock provider needs lockedHosts();
  *   - db.client() has no transaction(): use ctx.db.batch();
  *   - routes need string paths;
  *   - a login method may only set cookies named tmxp_<id>_*.
@@ -17,11 +18,7 @@
 import type { PluginContext } from "../backend.js";
 import type { PluginManifest } from "../manifest.js";
 
-const REFUSED: Record<string, string> = {
-  "hosts.locks.provide": "core reads host locks synchronously",
-  "hosts.status.provide": "core reads host status synchronously",
-  "sync.provide": "the sync engine runs in process",
-};
+const REFUSED: Record<string, string> = {};
 const REFUSED_PREFIXES: string[] = [];
 
 export class SandboxRuleError extends Error {
@@ -313,9 +310,6 @@ export function sandboxContext<T extends PluginContext>(
       }
     }
     const reason =
-      (/\.(setCookie|clearCookie)$/.test(dotted)
-        ? "needs the live HTTP response"
-        : undefined) ??
       REFUSED[dotted] ??
       (REFUSED_PREFIXES.some((p) => dotted.startsWith(p))
         ? "not available to plugin processes yet"
@@ -332,6 +326,18 @@ export function sandboxContext<T extends PluginContext>(
         cookiePrefix(manifest.id ?? ""),
       );
     }
+    if (dotted === "hosts.locks.provide") {
+      const provider = args[0] as { lockedHosts?: unknown } | undefined;
+      if (typeof provider?.lockedHosts !== "function") {
+        throw new SandboxRuleError(
+          "ctx.hosts.locks.provide needs lockedHosts() in a plugin process, so Termix can keep a copy of the locks",
+          "SANDBOX_VALUE",
+        );
+      }
+      return;
+    }
+    // The process hands core the provider's methods, not the object.
+    if (dotted === "hosts.status.provide") return;
     if (dotted === "schedule.every") {
       const id = (args[2] as { id?: string } | undefined)?.id;
       if (!id || !schedules.has(id)) {

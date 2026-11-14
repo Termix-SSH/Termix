@@ -7,8 +7,7 @@
  *   process._debugProcess can make another Node process open its inspector;
  *   inspector, wasi and trace_events.
  * Also lets a plugin unpacked outside the app find the packages core supplies
- * (express, drizzle-orm, ssh2, the SDK), the same fallback host-modules.ts
- * gives in process.
+ * (express, drizzle-orm, ssh2, the SDK).
  */
 import module from "node:module";
 import path from "node:path";

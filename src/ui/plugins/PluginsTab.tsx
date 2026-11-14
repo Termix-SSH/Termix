@@ -134,8 +134,8 @@ function PluginsTabBody() {
   );
 
   const installed = manager.plugins.filter((p) => p.installed);
-  const unisolated = installed.filter(
-    (p) => p.isolation === "unisolated" && p.enabled,
+  const outdated = installed.filter(
+    (p) => p.isolation === "legacy" && p.enabled,
   );
   const available = manager.plugins.filter((p) => p.inRegistry);
   const updates = installed.filter((p) => p.updateAvailable);
@@ -205,11 +205,11 @@ function PluginsTabBody() {
           {manager.managedByServer && (
             <Notice>{t("plugins.manager.managedByServer")}</Notice>
           )}
-          {unisolated.length > 0 && (
+          {outdated.length > 0 && (
             <Notice>
-              {t("plugins.manager.isolation.notice", {
-                count: unisolated.length,
-                names: unisolated.map((plugin) => plugin.name).join(" | "),
+              {t("plugins.manager.legacy.notice", {
+                count: outdated.length,
+                names: outdated.map((plugin) => plugin.name).join(" | "),
               })}
             </Notice>
           )}

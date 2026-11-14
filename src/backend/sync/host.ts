@@ -85,7 +85,7 @@ import {
 } from "./client/http.js";
 import { applyElectronProxyConfig } from "./client/electron-proxy.js";
 import { lastRemotePlugins, mirrorPlugins } from "./client/plugins.js";
-import { defaultDeviceName } from "./client/device.js";
+import { defaultDeviceName, desktopConnectionOrigin } from "./client/device.js";
 import { setAuthCookie, clearAuthCookie } from "../auth/session-cookie.js";
 
 function entityOf(type: string): RegisteredSyncEntity {
@@ -540,6 +540,7 @@ export function createSyncHost(): PluginSyncHost {
     desktop: {
       applyProxy: (link) => applyElectronProxyConfig(link as never),
       deviceName: defaultDeviceName,
+      connectionOrigin: () => desktopConnectionOrigin(),
     },
 
     alerts: {

@@ -264,17 +264,38 @@ describe("what may cross", () => {
     expect(allowed.v).toHaveProperty("password", "hunter2");
   });
 
-  it("refuses providers core reads synchronously", async () => {
+  it("takes host locks only as a report core keeps", async () => {
     const { send, userToken } = harness();
-    const reply = await send({
+    const raw = await send({
       t: "call",
       m: "ctx.hosts.locks.provide",
       k: userToken(),
     } as never);
-    expect(reply).toMatchObject({
+    expect(raw).toMatchObject({ t: "err", e: { code: "SANDBOX_UNKNOWN" } });
+    const bad = await send({
+      t: "call",
+      m: "hosts.locks.provide",
+      k: userToken(),
+      a: [{ hosts: "all" }],
+    } as never);
+    expect(bad).toMatchObject({
       t: "err",
-      e: { code: "SANDBOX_UNSUPPORTED", status: 501 },
+      e: { code: "SANDBOX_VALUE", status: 400 },
     });
+    const ok = await send({
+      t: "call",
+      m: "hosts.locks.provide",
+      k: userToken(),
+      a: [{ hosts: [[1, null]] }],
+    } as never);
+    expect(ok).toMatchObject({ t: "ok" });
+    const twice = await send({
+      t: "call",
+      m: "hosts.locks.provide",
+      k: userToken(),
+      a: [{ hosts: [] }],
+    } as never);
+    expect(twice).toMatchObject({ t: "err", e: { code: "SANDBOX_VALUE" } });
   });
 
   it("bridges login methods and keyboard handlers, not cookie writes", () => {

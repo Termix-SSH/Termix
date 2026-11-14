@@ -33,11 +33,6 @@ import {
 import { missingShippedPluginIds, newShippedPluginIds } from "./boot-state.js";
 import type { LoadedPlugin, PluginLoader } from "./loader.js";
 import {
-  isOfficialPlugin,
-  LEGACY_SWITCH_ERROR,
-  needsUnisolated,
-} from "./isolation.js";
-import {
   getBundledPluginsDir,
   getPluginDataDir,
   getPluginsDir,
@@ -1423,13 +1418,11 @@ export function setPluginOptions(
     autoUpdate?: boolean;
     pinned?: boolean;
     channel?: PluginChannel;
-    runUnisolated?: boolean;
   },
 ): Promise<{
   autoUpdate: boolean;
   pinnedVersion: string | null;
   channel: PluginChannel;
-  runUnisolated: boolean;
 }> {
   return serialized(async () => {
     const { createCurrentPluginRepository } = await repos();
@@ -1439,9 +1432,6 @@ export function setPluginOptions(
       throw new PluginManageError("Plugin not found", 404, "NOT_FOUND");
     }
     const live = getPluginRuntime().loader.get(pluginId);
-    if (options.runUnisolated !== undefined) {
-      await applyRunUnisolated(record, live, options.runUnisolated);
-    }
     const pinnedVersion =
       options.pinned === undefined
         ? record.pinnedVersion
@@ -1458,43 +1448,8 @@ export function setPluginOptions(
       autoUpdate: Boolean(updated?.autoUpdate),
       pinnedVersion: updated?.pinnedVersion ?? null,
       channel: channelOf(updated),
-      runUnisolated: Boolean(updated?.runUnisolated),
     };
   });
-}
-
-/**
- * The "Run without isolation" switch. Only an official plugin built for API 1
- * can have it: an API 2 plugin always runs in its own process, and a
- * community plugin never runs inside the server.
- */
-async function applyRunUnisolated(
-  record: { id: string; state: string; runUnisolated: boolean },
-  live: LoadedPlugin | undefined,
-  on: boolean,
-): Promise<void> {
-  if (!live || !needsUnisolated(live) || !isOfficialPlugin(live)) {
-    throw new PluginManageError(
-      "Only official plugins made for an older Termix can run without isolation",
-      409,
-      "NOT_ALLOWED",
-    );
-  }
-  if (record.runUnisolated === on && live.runUnisolated === on) return;
-  const { createCurrentPluginRepository } = await repos();
-  await createCurrentPluginRepository().update(record.id, {
-    runUnisolated: on,
-  });
-  live.runUnisolated = on;
-  const wanted = ["enabled", "blocked", "failed"].includes(record.state);
-  if (on && wanted && live.state !== "active") {
-    await startAndRecord(record.id);
-  } else if (!on && live.state === "active") {
-    await deactivatePlugin(record.id);
-    await recordState(record.id, "blocked", LEGACY_SWITCH_ERROR);
-    live.state = "blocked";
-    live.lastError = LEGACY_SWITCH_ERROR;
-  }
 }
 
 /**

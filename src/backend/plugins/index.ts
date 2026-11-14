@@ -17,7 +17,6 @@ import {
   unregisterPluginHttp,
 } from "./http.js";
 import { PluginLoader, type LoadedPlugin } from "./loader.js";
-import { needsUnisolated } from "./isolation.js";
 import type { PluginPermissionContribution } from "./manifest.js";
 import { invalidatePluginPermissionCache } from "./permissions.js";
 import { setSshAuthTypeOwnerSource } from "../hosts/connect/auth-provider-registry.js";
@@ -150,7 +149,6 @@ async function handlePluginFailed(plugin: LoadedPlugin): Promise<void> {
 async function seedPlugins(
   loaded: LoadedPlugin[],
   freshInstall: boolean,
-  created: Set<string> = new Set(),
 ): Promise<boolean> {
   const { createCurrentPluginRepository } =
     await import("../database/repositories/factory.js");
@@ -184,7 +182,6 @@ async function seedPlugins(
       state: initialPluginState(plugin.id, plugin.source, fresh),
       manifestJson,
     });
-    created.add(plugin.id);
 
     pluginLogger.info(`Registered ${plugin.source} plugin ${plugin.id}`, {
       operation: "plugin_seed",
@@ -255,12 +252,7 @@ export async function initializePlugins(
   const loaded = await pluginLoader.loadAll();
   if (loaded.length === 0) return [];
 
-  const created = new Set<string>();
-  const fresh = await seedPlugins(
-    loaded,
-    options.freshInstall === true,
-    created,
-  );
+  const fresh = await seedPlugins(loaded, options.freshInstall === true);
   if (!fresh) {
     const { installNewShippedPlugins, restoreMissingPlugins } =
       await import("./manage.js");
@@ -269,13 +261,9 @@ export async function initializePlugins(
       ...(await installNewShippedPlugins()),
     ]) {
       loaded.push(plugin);
-      created.add(plugin.id);
     }
   }
   await syncCapabilityGrants(loaded);
-  const { seedUnisolatedSwitches } =
-    await import("../upgrade/unisolated-plugins.js");
-  await seedUnisolatedSwitches(loaded, created);
   const { noteSignerChanges } = await import("./signers.js");
   await noteSignerChanges(loaded);
   if (loaded.some((plugin) => plugin.source === "bundled")) {
@@ -592,13 +580,6 @@ export async function activatePlugin(pluginId: string): Promise<void> {
   if (!mayRunInSafeMode(pluginId, pluginLoader.list())) return;
   if (plugin) {
     await registerPluginPermissions(plugin);
-    // Only an API 1 plugin reads the switch.
-    if (needsUnisolated(plugin)) {
-      const { createCurrentPluginRepository } =
-        await import("../database/repositories/factory.js");
-      const record = await createCurrentPluginRepository().findById(pluginId);
-      plugin.runUnisolated = record?.runUnisolated ?? false;
-    }
   }
 
   await pluginLoader.activate(pluginId);

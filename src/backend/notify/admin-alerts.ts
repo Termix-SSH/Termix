@@ -70,8 +70,6 @@ const DESCRIBE: Record<string, Describe> = {
   enable_plugin: (e) => `${e.username} turned on the plugin ${target(e)}`,
   grant_plugin_capability: (e) =>
     `${e.username} gave the plugin ${target(e)} the capability ${detail(e, "capability")}`,
-  plugin_unisolated_on: (e) =>
-    `${e.username} let the plugin ${target(e)} run without isolation`,
   add_plugin_registry: (e) =>
     `${e.username} added the plugin registry ${target(e)}`,
   enable_plugin_registry: (e) =>

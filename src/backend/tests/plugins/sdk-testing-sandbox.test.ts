@@ -188,11 +188,29 @@ describe("createMockCtx sandbox mode", () => {
     );
   });
 
-  it("refuses methods core can't serve to a plugin process", () => {
-    const { ctx } = createMockCtx({ sandbox: true, manifest });
+  it("needs lockedHosts for host locks in a plugin process", () => {
+    const { ctx } = createMockCtx({
+      sandbox: true,
+      manifest,
+      capabilities: ["hosts:lock"],
+    });
+    const provide = (ctx.hosts.locks as { provide: (p: unknown) => unknown })
+      .provide;
     expect(() =>
-      (ctx.hosts.locks as { provide: (p: unknown) => unknown }).provide({}),
-    ).toThrow(/SANDBOX|not available to sandboxed plugins/);
+      provide({
+        isLocked: () => true,
+        note: () => null,
+        allowManualCreate: () => true,
+      }),
+    ).toThrow(/lockedHosts/);
+    expect(() =>
+      provide({
+        isLocked: () => true,
+        note: () => null,
+        allowManualCreate: () => true,
+        lockedHosts: () => [1],
+      }),
+    ).not.toThrow();
   });
 
   it("keeps the plugin's own ssh2 client and socket out of what crosses", async () => {

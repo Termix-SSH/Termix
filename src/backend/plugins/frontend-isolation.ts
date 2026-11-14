@@ -19,6 +19,11 @@ export const SHELL_PART_CAPABILITIES = [
   "auth:provide",
   // Native views sit over the desktop window, outside any frame.
   "desktop:window",
+  // Web Serial needs the page's own origin, and a frame's is opaque.
+  "device:serial",
+  // Linking the desktop app and switching accounts use the app window's own
+  // calls. This plugin can issue sessions anyway.
+  "sync:provide",
 ];
 
 export function frontendIsolation(plugin: {

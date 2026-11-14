@@ -51,6 +51,12 @@ import {
   remoteKeyboardInteractiveHandler,
   remoteLoginMethod,
 } from "./login-bridge.js";
+import {
+  ProviderBridgeError,
+  remoteStatusProvider,
+  SnapshotLockProvider,
+} from "./provider-bridge.js";
+import { installSyncBridge } from "./sync-bridge.js";
 
 /** Grace after a call ends before its token stops working. */
 export const REQUEST_TOKEN_GRACE_MS = 30_000;
@@ -84,6 +90,9 @@ const SPECIAL_PATHS = new Set([
   "ssh.prepare",
   "ssh.openTransport",
   "ssh.transports.provide",
+  "hosts.locks.provide",
+  "hosts.status.provide",
+  "sync.provide", // plugin-id-ok: ctx.sync is a core namespace
   "desktop.local.pluginFetch",
   "desktop.local.fs.openRead",
   "desktop.local.fs.openDownload",
@@ -100,17 +109,9 @@ const SPECIAL_PATHS = new Set([
   "disposables.add",
 ]);
 
-/**
- * Not available to a sandboxed plugin yet. Each either hands out a live
- * object core can't bridge, or core calls the provider synchronously.
- */
-const REFUSED_PATHS: ReadonlyMap<string, string> = new Map([
-  ["hosts.locks.provide", "core reads host locks synchronously"],
-  ["hosts.status.provide", "core reads host status synchronously"],
-  // plugin-id-ok: ctx.sync is a core namespace, not the Sync plugin
-  ["sync.provide", "the sync engine runs in process"], // plugin-id-ok: ctx.sync path
-]);
-const REFUSED_PREFIXES = ["sync.host."]; // plugin-id-ok: ctx.sync path
+/** Not available to a sandboxed plugin. None today; kept for the next one. */
+const REFUSED_PATHS: ReadonlyMap<string, string> = new Map();
+const REFUSED_PREFIXES: string[] = [];
 
 /** Results under these paths have secret fields stripped. */
 const SECRET_SCRUB_PREFIXES = ["hosts.", "ssh.", "credentials.", "users."];
@@ -309,6 +310,7 @@ export class PluginBridge {
     string,
     { req: Request; res: Response; handedOff: boolean }
   >();
+  private lockProvider: SnapshotLockProvider | null = null;
   private readonly declaredSchedules: Set<string>;
   private readonly declaredEvents: Set<string>;
   private readonly declaredRegistry: Set<string>;
@@ -578,6 +580,17 @@ export class PluginBridge {
     }
     const parent = dotted.split(".").slice(0, -1).join(".");
     return (fn as AnyFn).apply(readPath(this.ctx, parent) as object, args);
+  }
+
+  private wrapProvider<T>(build: () => T): T {
+    try {
+      return build();
+    } catch (error) {
+      if (error instanceof ProviderBridgeError) {
+        throw new SandboxError(error.message, error.code, 400);
+      }
+      throw error;
+    }
   }
 
   private wrapRemote<T>(build: () => T): T {
@@ -1029,6 +1042,68 @@ export class PluginBridge {
     // A jump chain ends at a client core holds, reached like ssh.connect's.
     // A plugin that carries host connections: core asks it about each host
     // and gets the stream to the host back as a port.
+    // Host locks: the child reports the locked hosts, core keeps the report.
+    endpoint.handle("hosts.locks.provide", ([snapshot]) => {
+      if (this.lockProvider) {
+        throw new SandboxError(
+          "ctx.hosts.locks.provide was called twice",
+          "SANDBOX_VALUE",
+          400,
+        );
+      }
+      const provider = this.wrapProvider(
+        () => new SnapshotLockProvider(snapshot),
+      );
+      const remove = this.callCtx(
+        "hosts.locks.provide",
+        provider,
+      ) as () => void;
+      this.lockProvider = provider;
+      return () => {
+        if (this.lockProvider === provider) this.lockProvider = null;
+        remove();
+      };
+    });
+    endpoint.handle("hosts.locks.update", ([snapshot]) => {
+      if (!this.lockProvider) {
+        throw new SandboxError("No host locks provided", "SANDBOX_HANDLE", 410);
+      }
+      const provider = this.lockProvider;
+      this.wrapProvider(() => provider.update(snapshot));
+      return true;
+    });
+    endpoint.handle("hosts.status.provide", ([raw]) =>
+      this.callCtx(
+        "hosts.status.provide",
+        this.wrapProvider(() =>
+          remoteStatusProvider(plainObject(raw), (error) =>
+            this.log(
+              `[sandbox] ${this.pluginId} host status: ${error instanceof Error ? error.message : String(error)}`,
+            ),
+          ),
+        ),
+      ),
+    );
+    if (this.manifest.capabilities.includes("sync:provide")) {
+      installSyncBridge({
+        endpoint,
+        host: () =>
+          (
+            this.ctx as {
+              sync: {
+                host: import("@termix-ssh/plugin-sdk/backend").PluginSyncHost;
+              };
+            }
+          ).sync.host,
+        live: (token) => (token ? this.liveRequests.get(token) : undefined),
+        provide: (handle) =>
+          this.callCtx("sync.provide", { handle }) as () => void, // plugin-id-ok: ctx.sync is a core namespace
+        dispatch: (req, res, next) =>
+          void this.dispatchHttp(req, res, next, "provider"),
+        cookiePrefix: pluginCookiePrefix(this.pluginId),
+      });
+    }
+
     endpoint.handle("ssh.transports.provide", ([raw]) => {
       const provider = plainObject(raw);
       const claims = provider.claims;
@@ -1705,6 +1780,7 @@ export class PluginBridge {
     req: Request,
     res: Response,
     next: NextFunction,
+    target: "app" | "provider" = "app",
   ): Promise<void> {
     if (this.closed) {
       res.status(503).json({ error: "This feature is not available" });
@@ -1775,6 +1851,7 @@ export class PluginBridge {
           ip: req.ip,
           userId: (req as Request & { userId?: string }).userId ?? "",
           baseUrl: this.safeBaseUrl(req),
+          target,
         },
         port,
         bodyPort,
@@ -1806,7 +1883,16 @@ export class PluginBridge {
     cookiePrefix: string,
   ): Record<string, unknown> {
     const headers = safeHeaders(req.headers as Record<string, unknown>);
-    const own = ownCookieHeader(req.headers.cookie, cookiePrefix);
+    // The sync provider keeps signed in accounts for the account switcher,
+    // so it gets the session cookie too. It can issue sessions anyway.
+    const own = [
+      ownCookieHeader(req.headers.cookie, cookiePrefix),
+      this.manifest.capabilities.includes("sync:provide")
+        ? ownCookieHeader(req.headers.cookie, "jwt=")
+        : undefined,
+    ]
+      .filter(Boolean)
+      .join("; ");
     if (own) headers.cookie = own;
     return headers;
   }

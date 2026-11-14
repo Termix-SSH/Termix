@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 2.3.0 | Plugin API 2.3.0
+SDK 2.4.0 | Plugin API 2.4.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -341,8 +341,15 @@ res)` works from inside one of your own requests: Termix finishes the login on t
   `ctx.ssh.connect` goes back to core, so its bytes no longer pass through your process.
 - `ctx.desktop.local` works. `fs.openRead` and `pluginFetch` give streams, `fs.openDownload` takes one
   (`publish` waits until everything you wrote is on disk), and `pty.spawn` gives the same shell object.
-- Not available in a plugin process yet: `hosts.locks.provide`, `hosts.status.provide` and
-  `sync.provide`. Plugins that need them stay on API 1 for now.
+- `ctx.hosts.locks.provide` needs `lockedHosts()` (every host you lock). Core reads locks synchronously,
+  so it keeps a copy of what you report and reads your provider again every second.
+- `ctx.hosts.status.provide` works with a class instance. Core keeps the last status it saw for each host
+  for its synchronous reads and asks your `get` again in the background.
+- `ctx.sync.provide` and `ctx.sync.host` work. `host.sessions.setCookie`, `clearCookie`, `middleware()`,
+  `feed.listen` and `plugins.sendPackage` act on the live response, so call them only inside the request
+  they answer. `replica.orderSelfReferences`, `entities.list()[n].covers`, `http.normalizeServerUrl`,
+  `plugins.lastRemote` and `plugins.localNames` return Promises. A cookie other than the session one must
+  be named `tmxp_<id>_*`.
 
 ### Moving from API 1
 
@@ -471,7 +478,7 @@ router.post("/notes", async (req, res) => {
 - Transports: with `ssh:transport`, `ctx.ssh.transports.provide({ claims(hostId, host), open(host) })`, where `host` has `id`, `ip`, `port` and on Termix 26.10.6+ also `userId`, `syncId`, `connectionOrigin` and `localOnly`
   returns a stream the SSH client uses instead of a direct, proxy or jump host connection. Core also serves
   `/plugin-ws/core/ssh-relay?hostId=` for callers with connect access, so one Termix can relay to another.
-- Managed hosts: with `hosts:lock`, `ctx.hosts.locks.provide({ isLocked, note, allowManualCreate })` makes
+- Managed hosts: with `hosts:lock`, `ctx.hosts.locks.provide({ isLocked, note, allowManualCreate, lockedHosts })` makes
   the hosts you manage read only for the UI, the API and other plugins (pins and order still work), and
   `allowManualCreate: () => false` blocks adding hosts by hand. Your own `ctx.hosts` writes still go
   through. `ctx.hosts.setShares(hostId, grants)` replaces a host's whole grant list, and

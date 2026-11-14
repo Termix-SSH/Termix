@@ -246,15 +246,6 @@ export function PluginDetail({
         </div>
       )}
 
-      {plugin.installed && plugin.isolation === "unisolated" && (
-        <div className="flex items-start gap-2 bg-destructive/5 px-3 py-2.5">
-          <TriangleAlert className="mt-px size-3.5 shrink-0 text-destructive" />
-          <span className="text-[11px] leading-snug text-muted-foreground">
-            {t("plugins.manager.isolation.runningWarning")}
-          </span>
-        </div>
-      )}
-
       {plugin.status === "server" && (
         <div className="flex items-start gap-2 bg-muted/30 px-3 py-2.5">
           <Server className="mt-px size-3.5 shrink-0 text-muted-foreground" />
@@ -418,30 +409,6 @@ export function PluginDetail({
                       : t("plugins.manager.install")}
                   </Button>
                 </div>
-              </div>
-            </SectionCard>
-          )}
-
-          {plugin.installed && plugin.canRunUnisolated && (
-            <SectionCard
-              title={t("plugins.manager.isolation.title")}
-              icon={null}
-            >
-              <div className="flex items-center justify-between gap-3 py-3">
-                <div className="flex min-w-0 flex-col gap-0.5">
-                  <span className="flex items-center gap-1.5 text-xs font-medium">
-                    <TriangleAlert className="size-3 text-destructive" />
-                    {t("plugins.manager.isolation.switch")}
-                  </span>
-                  <span className="text-[11px] leading-snug text-muted-foreground">
-                    {t("plugins.manager.isolation.switchHint")}
-                  </span>
-                </div>
-                <FakeSwitch
-                  checked={plugin.runUnisolated}
-                  disabled={busy || locked}
-                  onChange={(v) => void manager.setRunUnisolated(plugin, v)}
-                />
               </div>
             </SectionCard>
           )}

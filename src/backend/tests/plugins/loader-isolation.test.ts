@@ -1,7 +1,6 @@
 /**
- * Which plugins run in their own process, which run inside the server and
- * which do not run at all (plugin API 2 and the "Run without isolation"
- * switch).
+ * Which plugins run in their own process and which do not run at all. Only
+ * plugin API 2 runs; nothing runs inside the server.
  */
 import fs from "node:fs";
 import os from "node:os";
@@ -9,7 +8,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   LEGACY_COMMUNITY_ERROR,
-  LEGACY_SWITCH_ERROR,
+  LEGACY_OFFICIAL_ERROR,
   PluginLoader,
 } from "../../plugins/loader.js";
 import {
@@ -126,7 +125,7 @@ describe("plugin isolation", () => {
     expect(unregistered).toEqual(["sample-plugin"]);
   });
 
-  it("blocks an official API 1 plugin until an admin turns the switch on", async () => {
+  it("never runs an official API 1 plugin, in process or in its own", async () => {
     const marker = path.join(root("termix-marker-"), "marker.txt");
     const { registered } = spyRunner();
     const loader = await load({
@@ -137,33 +136,28 @@ describe("plugin isolation", () => {
     await loader.activate("sample-plugin");
     expect(loader.get("sample-plugin")).toMatchObject({
       state: "blocked",
-      lastError: LEGACY_SWITCH_ERROR,
+      lastError: LEGACY_OFFICIAL_ERROR,
     });
     expect(fs.existsSync(marker)).toBe(false);
-
-    loader.get("sample-plugin")!.runUnisolated = true;
-    await loader.activate("sample-plugin");
-    expect(loader.get("sample-plugin")?.state).toBe("active");
-    expect(fs.readFileSync(marker, "utf8")).toBe("in-process\n");
     expect(registered).toEqual([]);
   });
 
-  it("never runs a community API 1 plugin, even with the switch on", async () => {
+  it("never runs a community API 1 plugin", async () => {
     const marker = path.join(root("termix-marker-"), "marker.txt");
-    spyRunner();
+    const { registered } = spyRunner();
     const loader = await load({
       api: "1",
       where: "user",
       backendSource: MARKER_BACKEND(marker),
     });
     const plugin = loader.get("sample-plugin")!;
-    plugin.runUnisolated = true;
     await loader.activate("sample-plugin");
     expect(plugin).toMatchObject({
       state: "blocked",
       lastError: LEGACY_COMMUNITY_ERROR,
     });
     expect(fs.existsSync(marker)).toBe(false);
+    expect(registered).toEqual([]);
   });
 
   it("marks a plugin failed when its process keeps crashing", async () => {

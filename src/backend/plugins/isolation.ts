@@ -14,7 +14,7 @@ export function isOfficialPlugin(plugin: {
 }
 
 /** Whether a plugin was built for API 1 and so can't run in its own process. */
-export function needsUnisolated(plugin: {
+export function isLegacyPlugin(plugin: {
   manifest: Pick<PluginManifest, "engine">;
 }): boolean {
   return isLegacyPluginApi(String(plugin.manifest.engine.api));
@@ -22,5 +22,5 @@ export function needsUnisolated(plugin: {
 
 export const LEGACY_COMMUNITY_ERROR =
   "This plugin was made for an older Termix and can't run in its own process. Ask its author for an update.";
-export const LEGACY_SWITCH_ERROR =
-  "This plugin was made for an older Termix and can't run in its own process. An admin can turn on Run without isolation for it.";
+export const LEGACY_OFFICIAL_ERROR =
+  "This plugin was made for an older Termix and can't run in its own process. Update it to run it again.";

@@ -238,8 +238,6 @@ describe("install, uninstall and data", () => {
     expect(toasts.info).toHaveBeenCalledWith(
       "plugins.manager.beta.leftWhileOnBeta",
     );
-    confirmAnswer.value = false;
-    await act(async () => result.current.setRunUnisolated(plugin, true));
     expect(api.setPluginOptions).toHaveBeenCalledTimes(2);
   });
 
