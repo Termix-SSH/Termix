@@ -103,13 +103,18 @@ jobs:
           src/backend/tests/electron/plugin-runtime.test.ts
 
       # What the macOS sandbox refused, when the fence tests fail there.
-      - name: Sandbox denials
+      - name: Sandbox diagnostics
         if: failure() && matrix.platform == 'darwin'
         run: |
-          rt=".plugin-runtime/darwin-$ARCH"
+          rt="$PWD/.plugin-runtime/darwin-$ARCH"
           policy="{\"name\":\"probe\",\"read\":[],\"write\":[],\"net\":false,\"childProcess\":false,\"addons\":false,\"memoryMb\":512}"
-          "$rt/termix-plugin-jail" "$policy" -- "$rt/node" -e "console.log(1)" || true
+          for args in "/usr/bin/true" "$rt/node --version" "$rt/node -e 0"; do
+            # shellcheck disable=SC2086
+            "$rt/termix-plugin-jail" "$policy" -- $args; echo "exit $? for $args"
+          done
           sleep 5
-          log show --last 3m --style compact --predicate "eventMessage CONTAINS \"node(\" OR eventMessage CONTAINS \"termix-plugin-jail(\"" | tail -80
+          log show --last 3m --style compact --predicate "eventMessage CONTAINS \"deny(\"" | grep -v -e imagent -e Shortcut -e liveactivities | tail -40
+          report=$(ls -t ~/Library/Logs/DiagnosticReports/node* 2>/dev/null | head -1)
+          [ -n "$report" ] && head -c 6000 "$report"
         env:
           ARCH: ${{ matrix.arch }}
