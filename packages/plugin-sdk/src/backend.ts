@@ -1963,7 +1963,15 @@ export interface PluginSshTransportHost {
 }
 
 export interface PluginSshTransportProvider {
-  claims: (hostId: number, host?: PluginSshTransportHost) => boolean;
+  /**
+   * Whether this provider carries the host. May answer with a Promise (it
+   * always does from a plugin process); only `true` claims the host, and an
+   * answer that takes over 2 seconds counts as no.
+   */
+  claims: (
+    hostId: number,
+    host?: PluginSshTransportHost,
+  ) => boolean | Promise<boolean>;
   open: (host: PluginSshTransportHost) => Promise<import("node:stream").Duplex>;
 }
 
@@ -2452,7 +2460,7 @@ export interface PluginAuthPolicyProvider {
     input: PluginAuthPolicyInput,
   ) => PluginAuthPolicyDecision | Promise<PluginAuthPolicyDecision>;
   /** Whether the login page should offer remember me. */
-  allowRememberDevice?: () => boolean;
+  allowRememberDevice?: () => boolean | Promise<boolean>;
 }
 
 export interface PluginAuthPolicyApi {

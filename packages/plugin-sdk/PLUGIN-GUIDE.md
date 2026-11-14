@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 2.2.2 | Plugin API 2.2.0
+SDK 2.3.0 | Plugin API 2.3.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -266,7 +266,10 @@ connections and credentials stay in core. In Docker each plugin also runs as its
 | `process:spawn`   | Start child processes. Prefer `ctx.process`, which core runs and audits    |
 | `device:serial`   | Load native addons (serialport)                                            |
 
-Workers, WASI, `node:sqlite`, the inspector and `process.binding` are never available. Core restarts a
+WASI, `node:sqlite`, the inspector and `process.binding` are never available. Worker threads need
+`"workers": true` in the `sandbox` block (plugin API 2.3): each worker keeps your process's limits and
+loads the same guard first, `execArgv` is ignored, and a worker must start from a file (`eval: true` and
+`data:` URLs are refused). Core restarts a
 process that crashes, stops answering, goes past its memory limit (256 MiB unless `sandbox.memoryMb`) or
 uses more than 80% of a CPU core for a minute. Too many crashes and the plugin is marked failed.
 The desktop app runs each plugin in its own process with an empty environment and the same checked `ctx`, but Electron doesn't apply Node's permission flags there, so files, child processes, workers and the memory limit aren't fenced on the desktop.
@@ -281,7 +284,8 @@ layout or theme, or `network:sockets` keeps it running.
   "events": ["host.deleted"],
   "registry": ["my-plugin.variables"],
   "memoryMb": 256,
-  "alwaysOn": false
+  "alwaysOn": false,
+  "workers": false
 }
 ```
 
@@ -323,9 +327,20 @@ res)` works from inside one of your own requests: Termix finishes the login on t
   `Set-Cookie` you send is kept only for those names and without a `Domain`. Core's own login
   cookies never reach your process.
 - `files:own` lets your process read and write its data folder.
-- Not available in a plugin process yet: `ssh.prepare`, `ssh.openTransport`, `ssh.jumpChain`,
-  `hosts.locks.provide`, `hosts.status.provide`, `sync.provide` and `desktop.local`. Plugins that need
-  them stay on API 1 for now.
+- `ctx.ssh.prepare` and `ctx.ssh.openTransport` work for an ssh2 client your process runs itself. Core
+  builds the config (with the password or key, so it needs `credentials:read`) and keeps the host key check:
+  the `hostVerifier` in the config asks core about each key, and a `hostKeySocket` you pass must be one of
+  your own sockets. `openTransport` always hands back `config.sock`, a stream core opened (direct, proxy,
+  jump hosts or a provided transport), so your process needs no `network:sockets` for it. Nothing you write
+  reaches the host until it has sent its SSH greeting. A stream you bring yourself (`config.sock` set before
+  the call) is kept for a direct connection. Certificates from `applyCertificateAuth` are applied to your
+  own client.
+- `ctx.ssh.jumpChain` gives a client like `ctx.ssh.connect`'s, and every such client has `forwardOut`,
+  which hands back a stream.
+- `ctx.desktop.local` works. `fs.openRead` and `pluginFetch` give streams, `fs.openDownload` takes one
+  (`publish` waits until everything you wrote is on disk), and `pty.spawn` gives the same shell object.
+- Not available in a plugin process yet: `hosts.locks.provide`, `hosts.status.provide` and
+  `sync.provide`. Plugins that need them stay on API 1 for now.
 
 ### Moving from API 1
 

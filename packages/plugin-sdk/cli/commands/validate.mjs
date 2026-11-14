@@ -131,6 +131,18 @@ export function validateLookCapabilities(cwd, raw) {
 const NODE_IMPORT =
   /(?:from\s+|import\s*\(\s*|require\s*\(\s*)["'`](?:node:)?([a-z_/]+)["'`]/g;
 
+function packageWorkers(cwd) {
+  try {
+    const pkg = JSON.parse(
+      fs.readFileSync(path.join(cwd, "package.json"), "utf8"),
+    );
+    const workers = pkg?.termix?.workers;
+    return !!workers && Object.keys(workers).length > 0;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * A plugin's backend runs in its own process (plugin API 2), where a Node
  * module its capabilities don't unlock throws ERR_ACCESS_DENIED. Flags those
@@ -144,6 +156,13 @@ export function sandboxWarnings(cwd, raw, sdk) {
   const granted = sdk.modulesGrantedBy(capabilities);
   const gated = new Set(sdk.SANDBOX_GATED_MODULES);
   const blocked = new Set(sdk.SANDBOX_BLOCKED_MODULES);
+  if (raw?.sandbox?.workers === true && sdk.SANDBOX_WORKER_MODULE) {
+    blocked.delete(sdk.SANDBOX_WORKER_MODULE);
+  } else if (packageWorkers(cwd)) {
+    warnings.push(
+      'package.json "termix.workers" builds worker entries, but a plugin process can only start them with "sandbox": { "workers": true } in the manifest',
+    );
+  }
   const needs = (name) =>
     Object.entries(sdk.CAPABILITY_PROCESS_GRANTS)
       .filter(([, grant]) => grant.modules.includes(name))

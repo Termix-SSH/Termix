@@ -170,6 +170,37 @@ describe("createMockCtx sandbox mode", () => {
     ).toThrow(/SANDBOX|not available to sandboxed plugins/);
   });
 
+  it("keeps the plugin's own ssh2 client and socket out of what crosses", async () => {
+    const { ctx } = createMockCtx({
+      sandbox: true,
+      capabilities: ["ssh:connect", "credentials:use", "credentials:read"],
+      manifest,
+    });
+    const host = { id: 1, ip: "10.0.0.1", port: 22, username: "me" };
+    const prepared = await ctx.ssh.prepare(host as never, {
+      purpose: "terminal",
+      client: new Handle() as never,
+      hostKeySocket: new Handle() as never,
+      log: () => {},
+    });
+    expect(prepared.config).toMatchObject({ host: "10.0.0.1" });
+    await expect(
+      ctx.ssh.openTransport(host as never, prepared.config, {
+        prompt: { ask: async () => null },
+      }),
+    ).resolves.toMatchObject({ via: "direct" });
+    await expect(
+      ctx.ssh.openTransport(host as never, {} as never),
+    ).rejects.toThrow(/config from ctx.ssh.prepare/);
+    await expect(
+      ctx.ssh.prepare(host as never, {
+        purpose: "terminal",
+        client: {} as never,
+        serverHostId: new Handle() as never,
+      }),
+    ).rejects.toThrow(/can't cross/);
+  });
+
   it("has no db.transaction() but a batch that is all or nothing", async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tmx-sdk-db-"));
     fs.mkdirSync(path.join(dir, "migrations", "sqlite"), { recursive: true });

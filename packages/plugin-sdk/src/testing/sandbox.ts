@@ -18,14 +18,11 @@ import type { PluginContext } from "../backend.js";
 import type { PluginManifest } from "../manifest.js";
 
 const REFUSED: Record<string, string> = {
-  "ssh.prepare": "returns a live connect config",
-  "ssh.openTransport": "returns a live transport",
-  "ssh.jumpChain": "returns live ssh clients",
   "hosts.locks.provide": "core reads host locks synchronously",
   "hosts.status.provide": "core reads host status synchronously",
   "sync.provide": "the sync engine runs in process",
 };
-const REFUSED_PREFIXES = ["desktop.local."];
+const REFUSED_PREFIXES: string[] = [];
 
 export class SandboxRuleError extends Error {
   constructor(
@@ -109,6 +106,8 @@ function isPlain(value: unknown): value is Record<string, unknown> {
 
 const ANSWERED_IN_PROCESS = new Set(["http.baseUrl", "currentActor"]);
 
+const ASYNC_CHECKED = new Set(["ssh.prepare", "ssh.openTransport"]);
+
 /** What of a result crosses: core sends a process's exit Promise its own way. */
 function crossing(dotted: string, value: unknown): unknown {
   return dotted === "process.run" && isPlain(value)
@@ -125,6 +124,13 @@ const PASS_THROUGH = new Set([
   "db.refs",
   "ssh.connect",
   "ssh.withConnection",
+  "ssh.jumpChain",
+  "ssh.prepare",
+  "ssh.openTransport",
+  "desktop.local.pluginFetch",
+  "desktop.local.fs.openRead",
+  "desktop.local.fs.openDownload",
+  "desktop.local.pty.spawn",
   "fetch",
   "services.get",
   "registry.consume",
@@ -234,6 +240,48 @@ function ownCookiesOnly(
   return out;
 }
 
+/**
+ * The plugin's own ssh2 client, its socket and a stream it brought stay in
+ * the plugin process; the rest of the options must cross.
+ */
+function checkOwnClientCall(dotted: string, args: unknown[]): void {
+  const [host, second, third] = args;
+  assertCrossable(host, `ctx.${dotted} argument 1`);
+  if (dotted === "ssh.prepare") {
+    const {
+      client: _client,
+      hostKeySocket: _socket,
+      ...rest
+    } = (isPlain(second) ? second : {}) as Record<string, unknown>;
+    assertCrossable(withoutFunctions(rest), `ctx.${dotted} options`);
+    return;
+  }
+  const config = (isPlain(second) ? second : {}) as Record<string, unknown>;
+  if (typeof config.host !== "string" || !config.host) {
+    throw new SandboxRuleError(
+      "ctx.ssh.openTransport needs the config from ctx.ssh.prepare",
+      "SANDBOX_VALUE",
+    );
+  }
+  assertCrossable(
+    withoutFunctions((isPlain(third) ? third : {}) as Record<string, unknown>),
+    `ctx.${dotted} options`,
+  );
+}
+
+function withoutFunctions(
+  value: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (typeof item === "function") continue;
+    out[key] = isPlain(item)
+      ? withoutFunctions(item as Record<string, unknown>)
+      : item;
+  }
+  return out;
+}
+
 /** The fake ctx with a plugin process's rules on top. */
 export function sandboxContext<T extends PluginContext>(
   ctx: T,
@@ -305,6 +353,10 @@ export function sandboxContext<T extends PluginContext>(
     }
     // Answered inside the plugin process, so its arguments never cross.
     if (ANSWERED_IN_PROCESS.has(dotted)) return;
+    if (dotted === "ssh.prepare" || dotted === "ssh.openTransport") {
+      checkOwnClientCall(dotted, args);
+      return;
+    }
     args.forEach((arg, index) => {
       if (typeof arg !== "function") {
         assertCrossable(arg, `ctx.${dotted} argument ${index + 1}`);
@@ -331,7 +383,13 @@ export function sandboxContext<T extends PluginContext>(
       const value = source[key];
       if (typeof value === "function") {
         out[key] = (...args: unknown[]) => {
-          check(dotted, args);
+          try {
+            check(dotted, args);
+          } catch (error) {
+            // These are async in a plugin process, so the refusal rejects.
+            if (ASYNC_CHECKED.has(dotted)) return Promise.reject(error);
+            throw error;
+          }
           const result = (value as (...a: unknown[]) => unknown).apply(
             source,
             args,

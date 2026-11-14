@@ -205,6 +205,30 @@ describe("sandbox warnings", () => {
     expect(
       sandboxWarnings(dir, { engine: { api: "^1.15" }, capabilities: [] }, sdk),
     ).toEqual([]);
+    // sandbox.workers unlocks worker_threads.
+    expect(
+      sandboxWarnings(
+        dir,
+        {
+          engine: { api: "^2.3.0" },
+          capabilities: ["process:spawn", "network:sockets"],
+          sandbox: { workers: true },
+        },
+        sdk,
+      ),
+    ).toEqual([]);
+    fs.writeFileSync(
+      path.join(dir, "package.json"),
+      JSON.stringify({ termix: { workers: { engine: "src/worker.ts" } } }),
+    );
+    fs.writeFileSync(path.join(dir, "src", "backend", "index.ts"), "");
+    expect(
+      sandboxWarnings(
+        dir,
+        { engine: { api: "^2.3.0" }, capabilities: [] },
+        sdk,
+      ),
+    ).toEqual([expect.stringMatching(/"sandbox": { "workers": true }/)]);
     fs.rmSync(dir, { recursive: true, force: true });
   });
 });

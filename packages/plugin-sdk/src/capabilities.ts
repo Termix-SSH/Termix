@@ -164,7 +164,10 @@ export const CAPABILITY_PROCESS_GRANTS: Readonly<
   },
 };
 
-/** Node modules no capability unlocks: workers do not keep the fence. */
+/**
+ * Node modules no capability unlocks. worker_threads is the exception: the
+ * manifest's sandbox.workers turns it on (SANDBOX_WORKER_MODULE).
+ */
 export const SANDBOX_BLOCKED_MODULES: readonly string[] = [
   "worker_threads",
   "wasi",
@@ -174,6 +177,9 @@ export const SANDBOX_BLOCKED_MODULES: readonly string[] = [
   "trace_events",
   "cluster",
 ];
+
+/** Unlocked by sandbox.workers instead of a capability. */
+export const SANDBOX_WORKER_MODULE = "worker_threads";
 
 /** The Node modules a set of capabilities lets a plugin use directly. */
 export function modulesGrantedBy(capabilities: readonly string[]): Set<string> {

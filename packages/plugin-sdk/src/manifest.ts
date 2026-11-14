@@ -42,7 +42,7 @@ export {
  * "^1.2" needs 1.2 or later). engine.termix is checked against the core
  * version by the server.
  */
-export const PLUGIN_API_VERSION = "2.2.0";
+export const PLUGIN_API_VERSION = "2.3.0";
 
 /**
  * The last API 1 release. Core still loads API 1 plugins, but only in process
@@ -781,6 +781,11 @@ export interface PluginSandbox {
   events?: string[];
   /** Registry keys this plugin fills with ctx.registry.provide. */
   registry?: string[];
+  /**
+   * The backend starts worker threads (plugin API 2.3). Each worker keeps
+   * the process's limits; workers from code strings (eval) are refused.
+   */
+  workers?: boolean;
 }
 
 export interface PluginSandboxSchedule {
@@ -1070,12 +1075,15 @@ function validateSandbox(sandbox: unknown, errors: string[]): void {
   }
   rejectUnknown(
     sandbox,
-    ["alwaysOn", "memoryMb", "schedules", "events", "registry"],
+    ["alwaysOn", "memoryMb", "schedules", "events", "registry", "workers"],
     '"sandbox"',
     errors,
   );
   if (sandbox.alwaysOn !== undefined && typeof sandbox.alwaysOn !== "boolean") {
     errors.push("sandbox.alwaysOn must be a boolean");
+  }
+  if (sandbox.workers !== undefined && typeof sandbox.workers !== "boolean") {
+    errors.push("sandbox.workers must be a boolean");
   }
   if (sandbox.memoryMb !== undefined) {
     const mb = sandbox.memoryMb;

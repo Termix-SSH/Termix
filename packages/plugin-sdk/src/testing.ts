@@ -1269,8 +1269,16 @@ export function createFakeContext(
             ? host.syncId === resolveOptions.syncId
             : host.id === hostId,
         ) ?? null,
-      prepare: async () => ({
-        config: {},
+      // Like core: the config names the host, so openTransport can use it.
+      prepare: async (host) => ({
+        config:
+          typeof host === "object" && host
+            ? {
+                host: host.ip,
+                port: host.port ?? 22,
+                username: host.username,
+              }
+            : { host: "127.0.0.1", port: 22 },
         outcome: { status: "ready" },
         authType: null,
       }),

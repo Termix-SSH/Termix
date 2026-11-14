@@ -1216,6 +1216,7 @@ describe("sandbox block (plugin API 2)", () => {
             schedules: [{ id: "poll", every: 60_000 }],
             events: ["host.deleted"],
             registry: ["sample-plugin.variables"],
+            workers: true,
           },
         }),
       ),
@@ -1223,6 +1224,7 @@ describe("sandbox block (plugin API 2)", () => {
   });
 
   it.each([
+    [{ workers: "yes" }, /workers must be a boolean/],
     [{ memoryMb: 16 }, /memoryMb/],
     [{ schedules: [{ id: "Bad Id", every: 60_000 }] }, /id must be/],
     [{ schedules: [{ id: "a", every: 10 }] }, /at least 1000/],

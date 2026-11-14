@@ -1359,6 +1359,10 @@
           "type": "array",
           "items": { "type": "string" },
           "uniqueItems": true
+        },
+        "workers": {
+          "type": "boolean",
+          "description": "The backend starts worker threads (plugin API 2.3). Workers keep the process's limits; workers from code strings are refused."
         }
       }
     },
