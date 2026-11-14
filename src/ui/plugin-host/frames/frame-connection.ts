@@ -46,6 +46,12 @@ import {
   onSharedStateChange,
 } from "./frame-state";
 import { frameToken } from "./frame-token";
+import {
+  cachedCoreRead,
+  copyCoreResponse,
+  isCacheableCoreRead,
+  type CachedCoreResponse,
+} from "./core-read-cache";
 import { dataRowsFor, onDataRowsChange } from "./data-rows";
 import {
   addDataWatch,
@@ -292,17 +298,28 @@ async function coreRequest(pluginId: string, request: unknown) {
     input.body instanceof ArrayBuffer && method !== "GET" && method !== "HEAD"
       ? input.body
       : undefined;
-  const response = await authApi.request({
-    method,
-    url: `${check.path}${check.query}`,
-    headers,
-    data: body,
-    responseType: "arraybuffer",
-    validateStatus: () => true,
-    transformRequest: [(data: unknown) => data],
-  });
-  let out = response.data as ArrayBuffer;
-  const type = String(response.headers["content-type"] ?? "");
+  const url = `${check.path}${check.query}`;
+  const load = async (): Promise<CachedCoreResponse> => {
+    const response = await authApi.request({
+      method,
+      url,
+      headers,
+      data: body,
+      responseType: "arraybuffer",
+      validateStatus: () => true,
+      transformRequest: [(data: unknown) => data],
+    });
+    return {
+      status: response.status,
+      type: String(response.headers["content-type"] ?? ""),
+      body: response.data as ArrayBuffer,
+    };
+  };
+  const response = isCacheableCoreRead(method, check.path)
+    ? copyCoreResponse(await cachedCoreRead(url, load))
+    : await load();
+  let out = response.body;
+  const type = response.type;
   if (type.includes("json") && out.byteLength > 0 && response.status < 300) {
     try {
       const parsed = JSON.parse(new TextDecoder().decode(out)) as unknown;

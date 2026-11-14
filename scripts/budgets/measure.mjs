@@ -1,0 +1,137 @@
+#!/usr/bin/env node
+// Logs in to a running Termix and records what the page costs: frames after
+// login, JS heap, core requests, time to dashboard and the backend's memory.
+//
+//   node scripts/budgets/measure.mjs --url http://localhost:5173
+//     [--api http://localhost:30001] [--user test] [--pass test123]
+//     [--out result.json] [--settle 5000]
+
+import { writeFileSync } from "node:fs";
+import { chromium } from "playwright";
+import { backendRssMb, countRequests, parseArgs } from "./lib.mjs";
+
+const args = parseArgs(process.argv.slice(2));
+const url = String(args.url ?? "http://localhost:5173/");
+const api = String(args.api ?? new URL(url).origin).replace(/\/+$/, "");
+const user = String(args.user ?? "test");
+const pass = String(args.pass ?? "test123");
+const settleMs = Number(args.settle ?? 5000);
+const maxWaitMs = Number(args["max-wait"] ?? 90_000);
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function frameCounts(page) {
+  return page.evaluate(() => {
+    const frames = [...document.querySelectorAll("iframe")];
+    return {
+      total: frames.length,
+      background: frames.filter((f) => f.dataset.frameRole === "background")
+        .length,
+    };
+  });
+}
+
+/** Waits until the frame count holds still for settleMs. */
+async function waitForFrames(page, started) {
+  let last = -1;
+  let since = Date.now();
+  while (Date.now() - started < maxWaitMs) {
+    const { total } = await frameCounts(page);
+    if (total !== last) {
+      last = total;
+      since = Date.now();
+    } else if (Date.now() - since >= settleMs) {
+      return since - started;
+    }
+    await sleep(250);
+  }
+  return Date.now() - started;
+}
+
+/** Heap of the page's renderer plus every frame that runs in its own process. */
+async function jsHeapMb(page) {
+  let used = 0;
+  const main = await page.context().newCDPSession(page);
+  used += (await main.send("Runtime.getHeapUsage")).usedSize;
+  await main.detach();
+  for (const frame of page.frames()) {
+    if (frame === page.mainFrame()) continue;
+    let session;
+    try {
+      session = await page.context().newCDPSession(frame);
+    } catch {
+      continue; // same process as the page, already counted
+    }
+    try {
+      used += (await session.send("Runtime.getHeapUsage")).usedSize;
+    } catch {
+      // frame went away
+    }
+    await session.detach().catch(() => {});
+  }
+  return Math.round(used / 1024 / 1024);
+}
+
+async function main() {
+  const browser = await chromium.launch({
+    args: ["--enable-precise-memory-info"],
+  });
+  const context = await browser.newContext({
+    viewport: { width: 1920, height: 1080 },
+  });
+  const page = await context.newPage();
+  const requests = [];
+  page.on("request", (request) => {
+    requests.push({ method: request.method(), url: request.url() });
+  });
+
+  await page.goto(url);
+  const field = page.locator("#login-user");
+  await field.first().waitFor({ timeout: 60_000 });
+  await field.first().fill(user);
+  await page.locator("#login-pass").fill(pass);
+  requests.length = 0;
+  const started = Date.now();
+  await page.keyboard.press("Enter");
+  await page
+    .locator('[data-slot="tab-stage"]')
+    .first()
+    .waitFor({ state: "attached", timeout: maxWaitMs });
+  const timeToDashboardMs = Date.now() - started;
+  const settledMs = await waitForFrames(page, started);
+  const frames = await frameCounts(page);
+  const heap = await jsHeapMb(page);
+
+  let processes = null;
+  try {
+    const response = await page.request.get(`${api}/plugins/processes`);
+    if (response.ok()) processes = await response.json();
+  } catch {
+    processes = null;
+  }
+
+  const result = {
+    url,
+    at: new Date().toISOString(),
+    framesAfterLogin: frames.total,
+    backgroundFrames: frames.background,
+    jsHeapMb: heap,
+    timeToDashboardMs,
+    settledMs,
+    backendRssMb: backendRssMb(processes),
+    pluginProcesses: processes
+      ? (processes.plugins ?? []).filter((p) => p.state === "ready").length
+      : null,
+    requestCount: requests.length,
+    topRequests: countRequests(requests).slice(0, 25),
+  };
+  await browser.close();
+  const text = JSON.stringify(result, null, 2);
+  if (args.out) writeFileSync(String(args.out), `${text}\n`);
+  console.log(text);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

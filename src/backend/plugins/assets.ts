@@ -289,6 +289,8 @@ export function resolveFrameAsset(
 export interface PluginAssetsOptions {
   /** Where the built frame runtime (dist/frame) is, when there is one. */
   frameDir?: () => string | null;
+  /** The frame page as served, with its runtime version. */
+  framePage?: () => { html: string; version: string } | null;
   /** The CSP for a plugin's frame page, built from the request. */
   frameCsp?: (req: Request, pluginId: string) => string;
 }
@@ -298,6 +300,63 @@ export function createPluginAssetsRouter(
   options: PluginAssetsOptions = {},
 ): express.Router {
   const router = express.Router();
+
+  /**
+   * @openapi
+   * /plugin-assets/_runtime/{version}/{path}:
+   *   get:
+   *     summary: Serve the shared plugin frame runtime
+   *     description: >
+   *       Core's own frame build (React, the UI kit, fonts), the same for every
+   *       plugin, so every frame reuses one cached copy. Only the current
+   *       version is served and it is cacheable for a year.
+   *     tags:
+   *       - Plugins
+   *     parameters:
+   *       - in: path
+   *         name: version
+   *         required: true
+   *         schema:
+   *           type: string
+   *       - in: path
+   *         name: path
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: The file.
+   *       404:
+   *         description: Old version, no frame build, or no such file.
+   */
+  router.get(
+    /^\/_runtime\/([a-f0-9]{16})\/(.+)$/,
+    (req: Request, res: Response) => {
+      const params = req.params as unknown as Record<string, string>;
+      const frameDir = options.frameDir?.() ?? null;
+      const current = options.framePage?.()?.version;
+      const rest = params[1];
+      const file =
+        frameDir && current === params[0] && !rest.endsWith(".html")
+          ? resolveFrameAsset(frameDir, `${FRAME_ASSET_PREFIX}${rest}`)
+          : null;
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.removeHeader("Access-Control-Allow-Credentials");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      if (!file) {
+        res.setHeader("Cache-Control", "no-store");
+        res.status(404).json({ error: "Not found" });
+        return;
+      }
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      res.type(CONTENT_TYPES[path.extname(file)] ?? "application/octet-stream");
+      res.sendFile(file, (error) => {
+        if (error && !res.headersSent) {
+          res.status(404).json({ error: "Not found" });
+        }
+      });
+    },
+  );
 
   /**
    * @openapi
@@ -384,6 +443,11 @@ export function createPluginAssetsRouter(
         hashed ? "public, max-age=31536000, immutable" : "no-cache",
       );
       res.type(CONTENT_TYPES[path.extname(file)] ?? "application/octet-stream");
+      const served = page ? options.framePage?.() : null;
+      if (served) {
+        res.send(served.html);
+        return;
+      }
       // Installed plugins unpack under .unpacked/, which send would refuse as a
       // dotfile path. resolvePluginAsset already kept the file in the plugin.
       res.sendFile(file, { dotfiles: "allow" }, (error) => {

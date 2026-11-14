@@ -303,6 +303,7 @@ describe("TileGrid", () => {
         slots={[{ id: "a", x: 0, y: 0, w: 6, h: 20 }]}
         renderTile={() => <div data-testid="part" />}
         tileLabel={(id) => id}
+        editMode={false}
         onChange={() => {}}
       />,
     );
