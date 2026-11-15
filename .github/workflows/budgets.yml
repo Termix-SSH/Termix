@@ -70,16 +70,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - name: Build image
-        run: |
-          docker buildx build \
-            --load \
-            --provenance=false \
-            --sbom=false \
-            --build-arg PLUGIN_PROFILE=none \
-            -t termix-budget \
-            -f docker/Dockerfile .
-
       # The plugins' dev branches need the coming release, so the server
       # reports that version, the way the dev runner does.
       - name: Coming version
@@ -94,12 +84,25 @@ jobs:
           esac
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Start Termix
+      # The image reads its version from package.json; only this runner's copy changes.
+      - name: Set the coming version
         env:
           VERSION: ${{ steps.version.outputs.version }}
+        run: npm pkg set version="$VERSION"
+
+      - name: Build image
+        run: |
+          docker buildx build \
+            --load \
+            --provenance=false \
+            --sbom=false \
+            --build-arg PLUGIN_PROFILE=none \
+            -t termix-budget \
+            -f docker/Dockerfile .
+
+      - name: Start Termix
         run: |
           docker run -d --name termix -p 8080:8080 \
-            -e VERSION="$VERSION" \
             -e TERMIX_PLUGIN_IDLE_MINUTES=2 \
             -v "$PWD/dist/plugins:/app/dist/plugins:ro" \
             termix-budget
