@@ -18,6 +18,12 @@ import {
   resolvePluginDesktopMode,
 } from "@termix-ssh/plugin-sdk/manifest";
 import { describePluginFrontend } from "../../plugins/assets.js";
+import { readViewGrant } from "../../plugins/web-view-grants.js";
+import {
+  CeremonyError,
+  finishCeremony,
+  startCeremony,
+} from "../../auth/webauthn-ceremonies.js";
 import { isDefaultLookPlugin } from "../../plugins/bundled-index.js";
 import { mayRunInSafeMode } from "../../plugins/safe-mode.js";
 import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
@@ -412,6 +418,209 @@ router.post(
       res.status(500).json({ error: "Could not issue a token" });
     }
   },
+);
+
+/**
+ * @openapi
+ * /plugins/{id}/web-views/{grant}:
+ *   get:
+ *     summary: Read a page a plugin let its frames show
+ *     description: >
+ *       The shell reads the address behind a grant the plugin's backend made
+ *       with ctx.desktop.grantView, to draw that page for one of the plugin's
+ *       frames. Only the person (and session) the grant was made for gets it,
+ *       never a frame token or an API key.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: grant
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: The page address.
+ *       401:
+ *         description: Not signed in with a session.
+ *       404:
+ *         description: No such grant for this plugin and person.
+ */
+router.get(
+  "/:id/web-views/:grant",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const authReq = req as AuthenticatedRequest & { apiKeyId?: string };
+    if (!authReq.sessionId || authReq.apiKeyId) {
+      res.status(401).json({ error: "A login session is required" });
+      return;
+    }
+    const entry = readViewGrant(
+      String(req.params.id),
+      req.params.grant,
+      authReq.userId as string,
+      authReq.sessionId,
+    );
+    if (!entry) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ url: entry.url });
+  },
+);
+
+/** A ceremony call from the shell for one of a plugin's frames. */
+async function runCeremonyStep(
+  req: Request,
+  res: Response,
+  step: "options" | "finish",
+): Promise<void> {
+  const authReq = req as AuthenticatedRequest & { apiKeyId?: string };
+  // The shell asks for a signed-in page, never a frame token or an API key.
+  if (!authReq.sessionId || authReq.apiKeyId) {
+    res.status(401).json({ error: "A login session is required" });
+    return;
+  }
+  const pluginId = String(req.params.id);
+  const ceremonyId = String(req.params.ceremonyId);
+  const userId = authReq.userId as string;
+  const origin = req.headers.origin;
+  if (typeof origin !== "string" || !/^[a-z][a-z0-9+.-]*:\/\//i.test(origin)) {
+    res.status(400).json({ error: "An origin is required" });
+    return;
+  }
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  try {
+    const result =
+      step === "options"
+        ? await startCeremony({
+            pluginId,
+            ceremonyId,
+            userId,
+            sessionId: authReq.sessionId,
+            origin,
+            extra: body.extra,
+          })
+        : await finishCeremony({
+            pluginId,
+            ceremonyId,
+            ticket: body.ticket,
+            userId,
+            sessionId: authReq.sessionId,
+            response: body.response,
+          });
+    if (step === "finish") {
+      await logAudit({
+        userId,
+        username: await getAuditUsername(userId),
+        action: "plugin_webauthn_ceremony",
+        resourceType: "plugin",
+        resourceId: pluginId,
+        resourceName: pluginId,
+        details: JSON.stringify({ ceremonyId }),
+        success: true,
+      }).catch(() => undefined);
+    }
+    res.setHeader("Cache-Control", "no-store");
+    res.json(result);
+  } catch (error) {
+    if (error instanceof CeremonyError) {
+      res.status(error.status).json({ error: error.message });
+      return;
+    }
+    const status = (error as { status?: unknown })?.status;
+    if (typeof status === "number" && status >= 400 && status < 500) {
+      res.status(status).json({
+        error: error instanceof Error ? error.message.slice(0, 300) : "Refused",
+      });
+      return;
+    }
+    databaseLogger.error("A plugin WebAuthn step failed", error, {
+      operation: "plugin_webauthn_ceremony",
+      pluginId,
+    });
+    res.status(500).json({ error: "The step failed" });
+  }
+}
+
+/**
+ * @openapi
+ * /plugins/{id}/passkey-steps/{ceremonyId}/options:
+ *   post:
+ *     summary: Start a plugin's WebAuthn step
+ *     description: >
+ *       The shell asks for the browser prompt options of a WebAuthn step
+ *       (adding a passkey, proving a key) one of the plugin's screens wants.
+ *       The plugin's backend makes them. Only for a signed-in session.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: ceremonyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: A one use ticket, the step type and publicKey options.
+ *       401:
+ *         description: Not signed in with a session.
+ *       404:
+ *         description: The plugin has no such step.
+ */
+router.post(
+  "/:id/passkey-steps/:ceremonyId/options",
+  authenticateJWT,
+  (req: Request, res: Response) => runCeremonyStep(req, res, "options"),
+);
+
+/**
+ * @openapi
+ * /plugins/{id}/passkey-steps/{ceremonyId}/finish:
+ *   post:
+ *     summary: Finish a plugin's WebAuthn step
+ *     description: >
+ *       The shell sends the browser's answer with the ticket from the options
+ *       call. The plugin's backend checks it and its answer goes back to the
+ *       plugin's screen.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: ceremonyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: What the plugin's check returned.
+ *       400:
+ *         description: Bad browser answer.
+ *       401:
+ *         description: Not signed in with a session.
+ *       410:
+ *         description: The ticket expired, was used or belongs to someone else.
+ */
+router.post(
+  "/:id/passkey-steps/:ceremonyId/finish",
+  authenticateJWT,
+  (req: Request, res: Response) => runCeremonyStep(req, res, "finish"),
 );
 
 router.get("/", authenticateJWT, async (req: Request, res: Response) => {

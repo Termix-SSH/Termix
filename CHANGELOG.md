@@ -41,6 +41,9 @@
 - The plugins page shows how much memory Termix and each plugin process use, and admins get an alert when the server runs low on memory
 - Plugin screens load faster and use far less memory: a plugin's background code starts only when something needs it and stops again when idle, every plugin view shares one cached copy of the app's scripts, and repeated reads of your permissions and settings are shared
 - A plugin screen in a frame can show other plugins' parts again, like Homepage widgets, Host Metrics manager cards, host page tiles and terminal side panels. Termix draws each part in its own frame over the spot, clipped to the screen, hidden under open menus, and they still scroll, resize, drag in edit modes and take Tab focus
+- Sign in methods and second factors from plugins are drawn by Termix itself, so no plugin code runs on the sign in screen. Passkeys and security keys use the browser prompt Termix runs, and the plugin's server checks every answer
+- Sign in, serial port and web endpoint plugins run their screens in sandboxed frames too. Termix asks the browser for a serial port or a passkey for them, and shows a web endpoint page only at the address the plugin's server picked
+- Theme files can only load images and fonts that ship with the theme
 
 ### Changed
 

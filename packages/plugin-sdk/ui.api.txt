@@ -222,7 +222,7 @@ ManagerSearch (value): ({ value, onChange, placeholder, count, extra, }: { value
 Meter (value): ({ percent, className, }: { percent: number; className?: string; }) => Element
 MetricCard (value): ({ title, icon, action, children, bodyClassName, scroll, scrollMax, }: { title: string; icon: ReactNode; action?: ReactNode; children: ReactNode; bodyClassName?: string; scroll?: boolean; scrollMax?: number; }) => Element
 MiniStat (value): ({ caption, value, valueClassName, className, }: { caption: ReactNode; value: ReactNode; valueClassName?: string; className?: string; }) => Element
-NativeView (value): ({ url, ignoreCert, hidden, fallback, className, style, }: NativeViewProps) => Element
+NativeView (value): (props: NativeViewProps) => Element
 NativeViewProps (type): NativeViewProps
 NoticePanel (value): ({ icon: Icon, title, children, action, tone, className, }: { icon?: LucideIcon; title: ReactNode; children?: ReactNode; action?: ReactNode; tone?: "default" | "destructive" | "warning"; className?: string; }) => Element
 NumberField (value): ({ label, value, onChange, placeholder, hint, error, min, max, disabled, className, }: { label: string; value: number; onChange: (value: number) => void; placeholder?: string; hint?: ReactNode; error?: string; min?: number; max?: number; disabled?: boolean; className?: string; }) => Element
@@ -541,7 +541,7 @@ linkedServerUrl (value): () => Promise<string>
 listHostActions (value): () => HostActionDef[]
 listHostProtocols (value): () => HostProtocolDef[]
 listHostSections (value): () => HostSectionDef[]
-listStepUpFactors (value): () => Promise<{ id: string; }[]>
+listStepUpFactors (value): () => Promise<SecondFactorRef[]>
 loadPaletteGroup (value): (group: PaletteGroupDef) => Promise<PaletteItemDef[]>
 logoutUser (value): () => Promise<{ success: boolean; message: string; }>
 makeHostSshSubTabs (value): (t: (key: string, options?: { defaultValue?: string; }) => string, protocols?: Record<string, boolean>, defaultsMode?: boolean) => HostTab[]

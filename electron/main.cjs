@@ -586,6 +586,8 @@ ipc.handle("embedded-view-close", (_event, id) => {
 // ctx.desktop.openIsolatedWindow is the one caller today.
 const BACKEND_REQUEST_HANDLERS = {
   "open-isolated-window": (payload) => isolatedWindows.open(payload),
+  // A plugin's backend lets its frames show one page (ctx.desktop.grantView).
+  "web-view-grant": (payload) => embeddedViews.addGrant(payload),
   // Plugins open OS clients themselves now (desktop:local), so none is wired here.
   "launch-external-client": (payload) => ({
     success: false,
@@ -751,60 +753,6 @@ function cleanupManagedTempFile(tempId) {
   tempFiles.delete(tempId);
 }
 
-// Origins the renderer has explicitly marked as allowed to present an invalid
-// certificate, for web endpoints whose ignoreCert is set. Session scoped and
-// never persisted.
-//
-// Deliberately NOT wired into isInvalidCertificateAllowedForUrl: that function
-// also governs this process's own outbound TLS via getTlsVerificationOptions,
-// and widening it would grant more privilege than the feature needs.
-//
-// Entries expire rather than living until the app restarts (days, on a
-// desktop app). Main has no host-database access, so it cannot verify a
-// renderer's claim that an origin really is a configured web endpoint -- an
-// unbounded allowance would make that an indefinite window rather than a
-// momentary one. The renderer re-registers before each load, which refreshes
-// the expiry, so a live endpoint keeps working while a stale entry lapses.
-const WEB_ENDPOINT_CERTIFICATE_ALLOWLIST_TTL_MS = 5 * 60 * 1000;
-const webEndpointCertificateAllowlist = new Map();
-
-function isWebEndpointCertificateAllowed(url) {
-  try {
-    const parsed = new URL(url);
-    // The allowance exists solely to suppress a TLS certificate error, so a
-    // non-https origin in the map is meaningless at best.
-    if (parsed.protocol !== "https:") return false;
-
-    const expiresAt = webEndpointCertificateAllowlist.get(parsed.origin);
-    if (expiresAt === undefined) return false;
-    if (Date.now() >= expiresAt) {
-      webEndpointCertificateAllowlist.delete(parsed.origin);
-      return false;
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-ipc.handle("allow-invalid-certificate-for-origin", (_event, origin) => {
-  try {
-    // Store the PARSED origin, never the caller's string, so a path or a
-    // wildcard cannot widen the allowance.
-    const parsed = new URL(String(origin));
-    if (parsed.protocol !== "https:") {
-      return { success: false };
-    }
-    webEndpointCertificateAllowlist.set(
-      parsed.origin,
-      Date.now() + WEB_ENDPOINT_CERTIFICATE_ALLOWLIST_TTL_MS,
-    );
-    return { success: true };
-  } catch {
-    return { success: false };
-  }
-});
-
 // Mutual TLS for the linked server: Chromium asks which certificate from the
 // OS store to present. Other origins keep Chromium's default (none).
 const chosenClientCerts = new Map();
@@ -849,18 +797,6 @@ app.on(
       embeddedViews.handleCertificateError(event, _webContents, url, callback)
     )
       return;
-    if (isWebEndpointCertificateAllowed(url)) {
-      event.preventDefault();
-      logToFile("Allowed invalid certificate for configured web endpoint", {
-        url,
-        error,
-        issuer: certificate?.issuerName,
-        subject: certificate?.subjectName,
-      });
-      callback(true);
-      return;
-    }
-
     if (isInvalidCertificateAllowedForUrl(url)) {
       event.preventDefault();
       logToFile("Allowed invalid certificate for configured server", {

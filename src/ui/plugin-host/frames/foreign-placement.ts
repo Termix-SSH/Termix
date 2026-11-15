@@ -82,6 +82,8 @@ export interface PlaceOutput {
   height: number;
   /** inset() for clip-path, relative to the view. */
   clipPath: string;
+  /** The part that may show, in the page, for views CSS can't clip. */
+  shownInPage: Rect;
 }
 
 export function placeView(input: PlaceInput): PlaceOutput {
@@ -123,5 +125,11 @@ export function placeView(input: PlaceInput): PlaceOutput {
       )} ${inset(rect.y + rect.height - (shown.y + shown.height))} ${inset(
         shown.x - rect.x,
       )})`;
-  return { hidden, ...out, clipPath };
+  const shownInPage: Rect = {
+    x: frame.x + shown.x,
+    y: frame.y + shown.y,
+    width: shown.width,
+    height: shown.height,
+  };
+  return { hidden, ...out, clipPath, shownInPage };
 }

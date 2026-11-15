@@ -61,6 +61,7 @@ import type {
   PluginLoginRequest,
   PluginVerifiedIdentity,
   PluginSecondFactor,
+  PluginWebAuthnCeremony,
   PluginSshAuthProvider,
   PluginSshConnectOptions,
   PluginSshHost,
@@ -278,6 +279,8 @@ export interface FakeAuthRegistrations {
   keyboardInteractiveHandlers: PluginKeyboardInteractiveHandler[];
   loginMethods: PluginLoginMethod[];
   secondFactors: PluginSecondFactor[];
+  /** Every ctx.auth.registerWebAuthnCeremony, in order. */
+  webAuthnCeremonies: PluginWebAuthnCeremony[];
   /** "<userId>:<factorId>" for every recorded enrolment. */
   enrollments: Set<string>;
   /** Secret schemes registered through ctx.credentials.registerSecretResolver. */
@@ -365,6 +368,8 @@ export interface FakePluginContext {
   hostShareSets: Array<{ hostId: number; grants: PluginHostShareGrant[] }>;
   /** Everything registered through ctx.auth. */
   auth: FakeAuthRegistrations;
+  /** Every ctx.desktop.grantView call, in order, with the grant it got. */
+  viewGrants: Array<{ url: string; ignoreCert?: boolean; grant: string }>;
   /** Every ctx.desktop.openIsolatedWindow call, in order. */
   desktopWindows: Array<{
     url: string;
@@ -616,6 +621,7 @@ export function createFakeContext(
   const hostShares: FakePluginContext["hostShares"] = [];
   const hostShareSets: FakePluginContext["hostShareSets"] = [];
   const desktopWindows: FakePluginContext["desktopWindows"] = [];
+  const viewGrants: FakePluginContext["viewGrants"] = [];
   const externalClientLaunches: FakePluginContext["externalClientLaunches"] =
     [];
   const credentialReads: FakePluginContext["credentialReads"] = [];
@@ -687,6 +693,7 @@ export function createFakeContext(
     keyboardInteractiveHandlers: [],
     loginMethods: [],
     secondFactors: [],
+    webAuthnCeremonies: [],
     enrollments: new Set(),
     secretResolvers: new Map(),
     completedLogins: [],
@@ -1378,6 +1385,9 @@ export function createFakeContext(
       registerSecondFactor: (factor) => {
         auth.secondFactors.push(factor);
       },
+      registerWebAuthnCeremony: (ceremony) => {
+        auth.webAuthnCeremonies.push(ceremony);
+      },
       recordEnrollment: async (userId, factorId) => {
         if (options.refuseEnrollment) {
           throw new LoginMethodError(options.refuseEnrollment, 409);
@@ -1515,6 +1525,11 @@ export function createFakeContext(
       launchExternalClient: async (request) => {
         externalClientLaunches.push(request);
         return { success: true };
+      },
+      grantView: async (request) => {
+        const grant = `grant-${viewGrants.length + 1}`;
+        viewGrants.push({ ...request, grant });
+        return { grant, expiresAt: Date.now() + 10 * 60 * 1000 };
       },
       available: async () => options.desktopAvailable ?? false,
       local: options.desktopLocal ?? unavailableDesktopLocal(),
@@ -1785,6 +1800,7 @@ export function createFakeContext(
     hostShareSets,
     auth,
     desktopWindows,
+    viewGrants,
     externalClientLaunches,
     credentialReads,
     createdSshKeys,
@@ -2402,6 +2418,10 @@ export function createMockCtx(
         require("auth:provide");
         ctx.auth.registerSecondFactor(factor);
       },
+      registerWebAuthnCeremony: (ceremony) => {
+        require("auth:provide");
+        ctx.auth.registerWebAuthnCeremony!(ceremony);
+      },
       recordEnrollment: async (userId, factorId) => {
         require("auth:provide");
         return ctx.auth.recordEnrollment(userId, factorId);
@@ -2504,6 +2524,10 @@ export function createMockCtx(
       launchExternalClient: async (request) => {
         require("desktop:window");
         return ctx.desktop.launchExternalClient(request);
+      },
+      grantView: async (request) => {
+        require("desktop:window");
+        return ctx.desktop.grantView!(request);
       },
       available: () => ctx.desktop.available(),
       local: gateDesktopLocal(ctx.desktop.local, () =>

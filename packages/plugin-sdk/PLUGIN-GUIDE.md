@@ -826,7 +826,7 @@ your plugin's error boundary and Suspense.
 | `registerSlotContribution`, `declareActionSlot`                                    | Fill or own a UI slot                                             |
 | `registerComponent`, `registerExtension`                                           | Offer a component by id, add to an extension point                |
 | `registerOnboardingStep`                                                           | A first run setup step (`section`, `position`, `replaces`)        |
-| `registerLoginMethod`, `registerSecondFactorUI`, `registerSshAuthEditor`           | Sign in UI                                                        |
+| `registerLoginMethod`, `registerSecondFactorUI`, `registerSshAuthEditor`           | Enrolment screens and SSH auth editors                            |
 | `registerLayout`                                                                   | A whole-app layout (`contributes.layouts`, API 1.4)               |
 | `api`                                                                              | Axios client for your `/plugin-api/<id>/` routes, auth included   |
 | `fetch(path)`, `wsUrl(path)`                                                       | Raw fetch for streams, socket URL and auth                        |
@@ -880,9 +880,13 @@ before, with the same look and theme.
 - `invokeAction` runs your own actions and the ids in your manifest `uses`. Opening links, downloads,
   the clipboard, toasts and confirms go through the shell. `localStorage` works and is kept per plugin.
 - Not available in a frame: host badges, status indicators and editor toolbar items with a `component`
-  (use `useDot` or `useValue`). Layouts, themes, login screens and native desktop views are the shell
-  itself: only an official plugin with `ui:layout`, `ui:theme`, `auth:provide` or `desktop:window` runs
-  in the page. Other plugins' parts work, see Other plugins' parts in a frame below.
+  (use `useDot` or `useValue`). Layouts, themes and Sync are the shell itself: only an official plugin
+  with `ui:layout`, `ui:theme` or `sync:provide` runs in the page. Other plugins' parts work, see Other
+  plugins' parts in a frame below.
+- What a frame can't reach, the shell does for it: sign in steps are drawn from what your backend describes
+  (see Auth and protocols), `app.auth.webauthn` runs passkey steps, `app.serial` opens a serial port in the
+  browser, and `NativeView` with a `grant` shows a web page. Each needs a click in your frame first where the
+  browser asks for one.
 - `useShell()` in a frame is read only: `tabs.list`, `tabs.activeId`, `tabs.topLevel`, `split.summaries`,
   `env.user`, `env.isMobile`. `tabs.setActive` works right after the person used your frame. Anything
   that changes the shell for other plugins (docks, the palette, logout) does nothing there.
@@ -1104,8 +1108,10 @@ export function activate(app: TermixApp) {
 A theme is CSS only. Declare it in `contributes.themes` (`id`, `label`, `mode` light or dark, `css` path,
 optional `swatch` colors for the picker) with the `ui:theme` capability. The id becomes a class on `<html>`,
 so the file may only hold rules whose selectors start with `.<id>`, `:root.<id>` or `html.<id>`, optionally
-inside `@media` or `@supports`. `@import`, `url()` to another host and other at-rules are refused by
-`termix-plugin validate` and by the server. Set the same tokens core's themes set (`--background`,
+inside `@media` or `@supports`. `@import`, other at-rules, and any `url()`, `image-set()` or `src()` that
+is not a `data:` image or font or a relative path inside the plugin (no root paths, no climbing out, CSS
+escapes included) are refused by `termix-plugin validate`, when the plugin loads and again when the file is
+served. So a theme can't load anything from elsewhere or send page values anywhere. Set the same tokens core's themes set (`--background`,
 `--foreground`, `--card`, `--border`, `--muted` and the rest).
 
 A plugin that only holds themes needs no code. Leave out `src/`: `termix-plugin build` writes an empty backend and
@@ -1125,9 +1131,15 @@ Build UI from `@termix-ssh/plugin-sdk/ui` so it matches Termix and follows the t
 exports with props is `ui.api.txt` in the Termix repo
 (https://github.com/Termix-SSH/Termix/blob/main/packages/plugin-sdk/ui.api.txt).
 
-- Web pages that break in an iframe: `NativeView` (props `url`, `ignoreCert`, `hidden`, `fallback`) shows the
-  page in a native view in the desktop app. It fills its element, hides while a dialog or menu is open and renders
-  `fallback` in a browser.
+- Web pages: your backend calls `ctx.desktop.grantView({ url, ignoreCert })` (needs `desktop:window`, inside a
+  person's request) and hands the frame the `grant`. `<NativeView grant={grant} />` then shows the page: a native
+  view in the desktop app, a credentialless sandboxed iframe in a browser. The frame never names the address, and
+  only a grant can trust a bad certificate (desktop only). It fills its element, hides while a dialog or menu is
+  open, and each grant works for ten minutes for the person who asked. `url` still works for a plugin in the page.
+- Serial ports in the browser: `app.serial.request({ baudRate, dataBits, stopBits, parity, filters }, { onData,
+onClose })` (needs `device:serial`, call it from a click in your frame) opens the browser's port picker and
+  resolves `{ write(bytes), close() }` for the port the person picked, or null when they picked none. Check
+  `app.serial?.available` first; Firefox, Safari and phones have no Web Serial.
 - Square: panels, cards and containers have no rounded corners. Small controls may stay rounded.
 - Flat: borders, not shadows. Use theme tokens like `border-border`, `bg-background`,
   `text-muted-foreground`, `text-destructive`. One accent, `text-accent-brand`. Don't add colors.
@@ -1248,6 +1260,35 @@ Login methods, second factors and SSH auth types need `auth:provide`, which is h
 closely. Declare ids in `contributes.auth` and register them with `ctx.auth.registerLoginMethod`,
 `registerSecondFactor` or `registerSshAuthProvider`. Connection protocols go in `contributes.protocols`
 and `app.registerHostProtocol`. Read https://docs.termix.site/develop/auth before starting one.
+
+No plugin code runs on the sign in screen (Termix 26.11.2, plugin API 2.8). Termix draws each method from
+what the backend registers:
+
+- `kind: "redirect"`: a button per enabled instance from `describe()`.
+- `kind: "form"` with `fields: [{ name, type: "text" | "password" | "code", labelKey, autocomplete? }]`: a
+  form per instance; the values go to `verify` by name.
+- `kind: "webauthn"` with `options(request, instanceId)` returning `{ publicKey, context }`: a passkey button.
+  Termix runs the browser prompt and sends `{ ...context, response }` to `verify`. `placement: "inline"` draws
+  it under the password form. A passkey method never counts as another way in when an admin turns password
+  login off.
+- An instance's `views` (`"password"`, `"external"`) picks which page of the sign in screen shows it.
+
+A second factor takes `prompt`: `{ kind: "code", field, labelKey }` (one field), `{ kind: "fields", fields }`, or
+`{ kind: "webauthn" }` (`challenge()` returns the request options, `verify` gets `{ response }`). The step up
+prompt uses the same.
+
+Your frame registers only the enrolment screen: `app.registerLoginMethod({ id, titleKey, enrollment })` and
+`app.registerSecondFactorUI({ id, titleKey, enrollment })`. A `component` there throws. Passkey steps on those
+screens (adding a key, a tap before removing one) are ceremonies: the backend registers
+`ctx.auth.registerWebAuthnCeremony({ id, type: "create" | "get", options, finish })`, and the frame calls
+`app.auth.webauthn(id, extra)` from a click. Termix asks your backend for the options under your plugin's id
+only, runs the prompt and sends the answer to `finish`; the frame gets only what `finish` returns, so return
+`{ ok, error }` rather than throwing. A closed prompt answers `{ ok: false, closed: true }`.
+
+A login policy plugin (`auth:policy`) can sign the person out with `app.session.signOut()` and start the app
+again with `app.session.reload()` (at most once every ten seconds), for idle time outs and once a required
+second factor is set up. To show other plugins' enrolment screens, list `auth.enrollment` in
+`contributes.uses` and render `AuthEnrollmentSections` from `/ui`.
 
 To tie an external identity to an account that already exists, `ctx.auth.identities` has `list(userId)`,
 `link(userId, { provider, subject, email })` and `unlink(userId, provider)` (Termix 26.11.1+). `link` refuses an

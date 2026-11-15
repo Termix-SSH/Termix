@@ -947,6 +947,14 @@
     "loginWithExternal": "Login with External Provider",
     "loginWithExternalDesc": "Login using your configured external identity provider",
     "loginWithProvider": "Login with {{name}}",
+    "pluginLogin": {
+      "signIn": "Sign in",
+      "verify": "Verify",
+      "code": "Code",
+      "useKey": "Use security key",
+      "keyPrompt": "Use your security key or passkey to continue.",
+      "keyFailed": "The security key step did not work. Try again."
+    },
     "resetPasswordButton": "Reset Password",
     "sendResetCode": "Send Reset Code",
     "resetCodeDesc": "Enter your username to receive a password reset code. The code will be logged in the docker container logs.",
@@ -1335,6 +1343,10 @@
         "title": "Add color themes",
         "consequence": "Only colors and styles. No code runs for a theme."
       }
+    },
+    "webView": {
+      "unavailable": "This page is no longer available. Open it again from its plugin.",
+      "isolationUnavailable": "This browser can't open the page safely here. Use a recent Chrome or Edge, or the desktop app."
     },
     "runtime": {
       "needsPlugin": "{{name}} is not available",

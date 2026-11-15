@@ -919,6 +919,18 @@ export async function startFramedPlugin(
           data.id,
           fit(data.component, "content", plainProps),
         );
+      case "loginEnrollment":
+        return app.registerLoginMethod({
+          id: data.id,
+          titleKey: data.titleKey,
+          enrollment: fit(data.enrollment, "content", plainProps),
+        } as never);
+      case "factorEnrollment":
+        return app.registerSecondFactorUI({
+          id: data.id,
+          titleKey: data.titleKey,
+          enrollment: fit(data.enrollment, "content", plainProps),
+        } as never);
       case "sshAuthEditor":
         return app.registerSshAuthEditor({
           ...data,

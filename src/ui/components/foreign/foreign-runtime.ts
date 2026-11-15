@@ -15,6 +15,8 @@ export interface ForeignTarget {
   listId: string;
   itemKey: string;
   fit: ForeignPartFit;
+  /** A page the plugin's backend granted (ctx.desktop.grantView), not a part. */
+  web?: string;
 }
 
 export interface PlaceholderProps {

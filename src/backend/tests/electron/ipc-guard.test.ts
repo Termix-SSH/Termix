@@ -165,9 +165,29 @@ describe("IPC argument checks", () => {
       IPC_ARGS["embedded-view-bounds"]("v1", { x: -5, y: "2", width: 1e9 }),
     ).toEqual(["v1", { x: 0, y: 2, width: 100000, height: 0 }]);
     expect(() => IPC_ARGS["embedded-view-close"]("a/b")).toThrow();
+    // Certificate trust never comes from the renderer.
     expect(
-      v.viewOpen({ id: "a", url: "https://x", ignoreCert: "yes" }).ignoreCert,
-    ).toBe(false);
+      v.viewOpen({ id: "a", url: "https://x", ignoreCert: true }),
+    ).not.toHaveProperty("ignoreCert");
+    const grant = "a".repeat(48);
+    expect(
+      v.viewOpen({
+        id: "a",
+        grant,
+        pluginId: "web-endpoint",
+        url: "https://evil.example/",
+      }),
+    ).toEqual({
+      id: "a",
+      grant,
+      pluginId: "web-endpoint",
+      bounds: {},
+      visible: true,
+    });
+    expect(() =>
+      v.viewOpen({ id: "a", grant: "short", pluginId: "x" }),
+    ).toThrow();
+    expect(() => v.viewOpen({ id: "a", grant })).toThrow();
   });
 });
 

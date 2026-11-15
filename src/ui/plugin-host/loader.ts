@@ -300,6 +300,9 @@ async function activate(summary: PluginSummary): Promise<void> {
  * page. Its background frame runs activate and reports what it registered.
  */
 async function activateFramed(summary: PluginSummary): Promise<void> {
+  // Frames need a session. Before sign-in the login screen draws auth
+  // plugins from what their backends describe, and only their strings load.
+  if (preLoginMode) return;
   try {
     if (guestMode) {
       throw new Error("plugin views in frames need a signed-in user");
@@ -539,7 +542,11 @@ export function syncPlugins(summaries?: PluginSummary[]): Promise<void> {
         return;
       }
     }
-    await reconcile(list);
+    try {
+      await reconcile(list);
+    } finally {
+      preLoginMode = false;
+    }
     markPluginsSettled();
   });
 }
@@ -607,6 +614,8 @@ export function fetchGuestViews(): Promise<string[]> {
   return guestViewsRequest;
 }
 
+let preLoginMode = false;
+
 async function fetchPreLoginPlugins(): Promise<PluginSummary[]> {
   const response = await fetch(getBackendUrl("/plugins/public-manifest"));
   if (!response.ok) return [];
@@ -636,6 +645,7 @@ export async function startPreLoginPlugins(
     // subset would unload everything else. Auth remounts during the
     // post-login fade, so this runs after sign-in every time.
     if (started) return;
+    preLoginMode = true;
     if (options.retryFailed) {
       for (const plugin of list) failedVersions.delete(plugin.id);
     }

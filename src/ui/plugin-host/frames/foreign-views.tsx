@@ -42,6 +42,7 @@ import {
   type FrameFit,
 } from "./PluginFrameView";
 import { frameMetaOf } from "./frame-meta";
+import { GrantedWebView, type WebPlace } from "./granted-web-view";
 import { resolveSlotFit } from "./slot-fit";
 import {
   componentItems,
@@ -84,6 +85,10 @@ interface ForeignView {
   drawn: boolean;
   el: HTMLDivElement | null;
   control: FrameControl | null;
+  /** A page the consumer's own backend granted, instead of a part. */
+  web?: string;
+  /** Where a web view may show, for native views CSS can't clip. */
+  place?: WebPlace;
 }
 
 interface Consumer {
@@ -195,6 +200,11 @@ export interface ForeignConsumerRef {
   emit: (name: string, data: unknown) => void;
 }
 
+/** Makes sure a frame has its layer state, for a web view with no lists. */
+export function ensureForeignConsumer(ref: ForeignConsumerRef): void {
+  getConsumer(ref.owner, ref.pluginId, ref.iframe, ref.emit);
+}
+
 /** A consumer asks for the parts of a slot, extension point or component. */
 export function addForeignList(
   ref: ForeignConsumerRef,
@@ -247,11 +257,48 @@ export function foreignAllowsAction(owner: string, actionId: unknown): boolean {
   return false;
 }
 
+const GRANT = /^[0-9a-f]{48}$/;
+
+/**
+ * A placeholder for a page the frame's own plugin granted. Core and the
+ * desktop app check the grant against the plugin id the shell knows for this
+ * frame, so a frame can only show pages its own backend picked.
+ */
+function mountWebView(consumer: Consumer, id: unknown, web: unknown): boolean {
+  if (!validId(id) || typeof web !== "string" || !GRANT.test(web)) {
+    return false;
+  }
+  const existing = consumer.views.get(id);
+  if (existing && existing.web !== web) return false;
+  if (!existing && consumer.views.size >= MAX_VIEWS) return false;
+  consumer.views.set(id, {
+    id,
+    listId: "",
+    itemKey: "",
+    props: {},
+    placement: existing?.placement ?? {
+      rect: EMPTY_RECT,
+      clip: null,
+      visible: false,
+    },
+    interactive: existing?.interactive ?? true,
+    z: existing?.z ?? 0,
+    covers: existing?.covers ?? [],
+    drawn: true,
+    el: existing?.el ?? null,
+    control: null,
+    web,
+  });
+  emitChange();
+  return true;
+}
+
 /** A placeholder appeared. */
 export function mountForeignView(owner: string, data: unknown): boolean {
   const consumer = consumers.get(owner);
   if (!consumer || !data || typeof data !== "object") return false;
-  const { id, listId, itemKey, props } = data as Record<string, unknown>;
+  const { id, listId, itemKey, props, web } = data as Record<string, unknown>;
+  if (web !== undefined) return mountWebView(consumer, id, web);
   if (!validId(id) || !validId(listId) || typeof itemKey !== "string") {
     return false;
   }
@@ -263,7 +310,9 @@ export function mountForeignView(owner: string, data: unknown): boolean {
   const existing = consumer.views.get(id);
   if (
     existing &&
-    (existing.listId !== listId || existing.itemKey !== itemKey)
+    (existing.web !== undefined ||
+      existing.listId !== listId ||
+      existing.itemKey !== itemKey)
   ) {
     return false;
   }
@@ -389,6 +438,7 @@ export function foreignStateFor(owner: string) {
       id: view.id,
       listId: view.listId,
       itemKey: view.itemKey,
+      web: view.web,
       el: view.el,
     })),
   };
@@ -485,7 +535,9 @@ function applyLayer(consumer: Consumer): void {
 function applyView(consumer: Consumer, view: ForeignView): void {
   const el = view.el;
   if (!el) return;
-  const fit = consumer.lists.get(view.listId)?.items.get(view.itemKey)?.fit;
+  const fit = view.web
+    ? "fill"
+    : consumer.lists.get(view.listId)?.items.get(view.itemKey)?.fit;
   const out = placeView({
     frame: consumer.frame,
     box: consumer.box,
@@ -505,6 +557,7 @@ function applyView(consumer: Consumer, view: ForeignView): void {
   el.style.pointerEvents =
     out.hidden || !view.interactive || consumer.dragging ? "none" : "auto";
   el.dataset.foreignHidden = out.hidden ? "1" : "";
+  if (view.web) view.place = { rect: out.shownInPage, hidden: out.hidden };
 }
 
 let loop = 0;
@@ -637,6 +690,49 @@ function container(): HTMLElement {
 }
 
 function ForeignViewBox({
+  consumer,
+  view,
+}: {
+  consumer: Consumer;
+  view: ForeignView;
+}) {
+  if (view.web) return <WebViewBox consumer={consumer} view={view} />;
+  return <PartViewBox consumer={consumer} view={view} />;
+}
+
+function WebViewBox({
+  consumer,
+  view,
+}: {
+  consumer: Consumer;
+  view: ForeignView;
+}) {
+  const box = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const node = box.current;
+    view.el = node;
+    applyView(consumer, view);
+    return () => {
+      if (view.el === node) view.el = null;
+    };
+  }, [consumer, view]);
+  return (
+    <div
+      ref={box}
+      data-foreign-view={consumer.pluginId}
+      data-foreign-id={view.id}
+      style={{ position: "absolute", visibility: "hidden", display: "flex" }}
+    >
+      <GrantedWebView
+        pluginId={consumer.pluginId}
+        grant={view.web!}
+        placement={() => view.place ?? null}
+      />
+    </div>
+  );
+}
+
+function PartViewBox({
   consumer,
   view,
 }: {

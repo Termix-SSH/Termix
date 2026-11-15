@@ -62,11 +62,30 @@ import {
 import { readFrameStorage, writeFrameStorage } from "./frame-storage";
 import { setUiPreferenceFromFrame } from "./frame-ui-preferences";
 import { requestStepUp } from "@/auth/StepUpPrompt";
+import { hasUserActivation } from "./user-activation";
+import {
+  mayControlSession,
+  reloadShell,
+  signOutShell,
+} from "../session-control";
+import {
+  readCeremonyExtra,
+  readCeremonyId,
+  runPluginCeremony,
+} from "./webauthn-bridge";
+import {
+  closeSerial,
+  closeSerialFor,
+  parseSerialOptions,
+  requestSerialPort,
+  writeSerial,
+} from "./serial-bridge";
 import { manifestUses } from "./foreign-policy";
 import {
   addForeignList,
   disposeForeignView,
   dropForeignConsumer,
+  ensureForeignConsumer,
   focusForeignView,
   foreignAllowsAction,
   mountForeignView,
@@ -153,7 +172,10 @@ function onMessage(event: MessageEvent) {
       connection.port?.close();
       // Placeholders of the old page are gone with it.
       const owner = watchOwners.get(connection);
-      if (owner) dropForeignConsumer(owner);
+      if (owner) {
+        dropForeignConsumer(owner);
+        closeSerialFor(owner);
+      }
       connection.port = createPort(connection, event.source as Window);
       return;
     }
@@ -194,6 +216,7 @@ export function connectFrame(
       connections.delete(connection);
       removeDataWatches(watchOwner);
       dropForeignConsumer(watchOwner);
+      closeSerialFor(watchOwner);
       stopState?.();
       connection.port?.close();
       connection.port = null;
@@ -243,8 +266,14 @@ function createPort(connection: FrameConnection, target: Window): FramePort {
   });
 }
 
+// The frame reports its own pointer and key events, so those alone could be
+// faked; the browser's user activation cannot.
 function recentlyUsed(connection: FrameConnection): boolean {
-  return Date.now() - connection.lastInteraction < 5_000;
+  return Date.now() - connection.lastInteraction < 5_000 && hasUserActivation();
+}
+
+function hasCapability(pluginId: string, capability: string): boolean {
+  return (summaryOf(pluginId)?.capabilities ?? []).includes(capability);
 }
 
 const MAX_TOASTS_PER_MINUTE = 20;
@@ -454,7 +483,14 @@ async function handleCall(
     }
     case "foreign.mount": {
       const owner = watchOwners.get(connection);
-      return owner ? mountForeignView(owner, args[0]) : false;
+      if (!owner) return false;
+      ensureForeignConsumer({
+        owner,
+        pluginId,
+        iframe: connection.iframe,
+        emit: (name, data) => connection.port?.emit(name, data),
+      });
+      return mountForeignView(owner, args[0]);
     }
     case "foreign.focus": {
       const owner = watchOwners.get(connection);
@@ -516,6 +552,60 @@ async function handleCall(
     }
     case "clipboard.write": {
       await navigator.clipboard.writeText(String(args[0] ?? ""));
+      return;
+    }
+    case "session.signOut":
+    case "session.reload": {
+      if (!mayControlSession(summaryOf(pluginId)?.capabilities ?? [])) {
+        throw new Error("This plugin may not end the session");
+      }
+      if (method === "session.signOut") await signOutShell();
+      else return reloadShell();
+      return;
+    }
+    case "passkey.run": {
+      const owner = watchOwners.get(connection);
+      if (!owner || !hasCapability(pluginId, "auth:provide")) {
+        throw new Error("This plugin may not run security key steps");
+      }
+      if (!recentlyUsed(connection)) throw new Error("Not allowed now");
+      const ceremonyId = readCeremonyId(args[0]);
+      if (!ceremonyId) throw new Error("Bad security key step");
+      // The plugin id is the frame's own, never one the frame sends.
+      return runPluginCeremony(
+        owner,
+        pluginId,
+        ceremonyId,
+        readCeremonyExtra(args[1]),
+      );
+    }
+    case "port.request": {
+      const owner = watchOwners.get(connection);
+      if (!owner || !hasCapability(pluginId, "device:serial")) {
+        throw new Error("This plugin may not use serial ports");
+      }
+      if (!recentlyUsed(connection)) throw new Error("Not allowed now");
+      const options = parseSerialOptions(args[0]);
+      if (!options) throw new Error("Bad serial port options");
+      const [, onData, onClose] = args;
+      if (typeof onData !== "function" || typeof onClose !== "function") {
+        throw new Error("Bad serial port callbacks");
+      }
+      return requestSerialPort(
+        owner,
+        options,
+        onData as (chunk: Uint8Array) => void,
+        onClose as () => void,
+      );
+    }
+    case "port.write": {
+      const owner = watchOwners.get(connection);
+      if (!owner) throw new Error("Unknown serial port");
+      return writeSerial(owner, args[0], args[1]);
+    }
+    case "port.close": {
+      const owner = watchOwners.get(connection);
+      if (owner) await closeSerial(owner, args[0]);
       return;
     }
     case "clipboard.read": {

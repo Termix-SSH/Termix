@@ -99,6 +99,23 @@ import { pluginDocsPage, pluginDocsUrl } from "@termix-ssh/plugin-sdk/docs";
 import { hasPermission } from "@/hooks/use-permissions";
 import i18n from "@/i18n/i18n";
 import { requestStepUp } from "@/auth/StepUpPrompt";
+import {
+  closeSerial,
+  parseSerialOptions,
+  requestSerialPort,
+  webSerialAvailable,
+  writeSerial,
+} from "./frames/serial-bridge";
+import {
+  readCeremonyExtra,
+  readCeremonyId,
+  runPluginCeremony,
+} from "./frames/webauthn-bridge";
+import {
+  mayControlSession,
+  reloadShell,
+  signOutShell,
+} from "./session-control";
 
 const ONBOARDING_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
@@ -714,7 +731,9 @@ export function createPluginApp(
           ...method,
           titleKey: key(method.titleKey),
           pluginId,
-          component: scoped(method.component) as never,
+          component: method.component
+            ? (scoped(method.component) as never)
+            : undefined,
           enrollment: method.enrollment
             ? (scoped(method.enrollment) as never)
             : undefined,
@@ -728,7 +747,9 @@ export function createPluginApp(
           ...factor,
           titleKey: key(factor.titleKey),
           pluginId,
-          component: scoped(factor.component) as never,
+          component: factor.component
+            ? (scoped(factor.component) as never)
+            : undefined,
           enrollment: factor.enrollment
             ? (scoped(factor.enrollment) as never)
             : undefined,
@@ -791,6 +812,62 @@ export function createPluginApp(
     confirm: (options) => shell.confirm!(options),
 
     stepUp: () => requestStepUp(),
+
+    session: {
+      signOut: async () => {
+        if (!mayControlSession(manifest?.capabilities ?? [])) {
+          throw new Error("This plugin may not end the session");
+        }
+        await signOutShell();
+      },
+      reload: async () => {
+        if (!mayControlSession(manifest?.capabilities ?? [])) {
+          throw new Error("This plugin may not end the session");
+        }
+        return reloadShell();
+      },
+    },
+
+    auth: {
+      webauthn: async (ceremonyId, extra) => {
+        if (!(manifest?.capabilities ?? []).includes("auth:provide")) {
+          throw new Error("This plugin may not run security key steps");
+        }
+        const id = readCeremonyId(ceremonyId);
+        if (!id) throw new Error("Bad security key step");
+        return runPluginCeremony(
+          `page:${pluginId}`,
+          pluginId,
+          id,
+          readCeremonyExtra(extra),
+        );
+      },
+    },
+
+    serial: {
+      get available() {
+        return webSerialAvailable();
+      },
+      async request(options, events) {
+        if (!(manifest?.capabilities ?? []).includes("device:serial")) {
+          throw new Error("This plugin may not use serial ports");
+        }
+        const parsed = parseSerialOptions(options);
+        if (!parsed) throw new Error("Bad serial port options");
+        const owner = `page:${pluginId}`;
+        const handle = await requestSerialPort(
+          owner,
+          parsed,
+          events.onData,
+          events.onClose,
+        );
+        if (!handle) return null;
+        return {
+          write: (data) => writeSerial(owner, handle, data),
+          close: () => closeSerial(owner, handle),
+        };
+      },
+    },
 
     docs: createDocsApi(manifest),
 

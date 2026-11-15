@@ -307,6 +307,24 @@ describe("step up", () => {
     expect(await call("stepUp")).toMatchObject({ ok: true, value: true });
     expect(stepUp.requestStepUp).toHaveBeenCalledTimes(1);
   });
+
+  it("does not trust a click the frame only claims", async () => {
+    Object.defineProperty(navigator, "userActivation", {
+      configurable: true,
+      get: () => ({ isActive: false }),
+    });
+    try {
+      connectFrame(iframe, "docker", "view", "tab:docker", {});
+      send({ ch: FRAME_CHANNEL, t: "hello", role: "view", key: "tab:docker" });
+      stepUp.requestStepUp.mockClear();
+      send({ ch: FRAME_CHANNEL, t: "event", name: "pointer", data: null });
+      expect(await call("stepUp")).toMatchObject({ ok: false });
+      expect(await call("clipboard.read")).toMatchObject({ ok: false });
+      expect(stepUp.requestStepUp).not.toHaveBeenCalled();
+    } finally {
+      delete (navigator as unknown as Record<string, unknown>).userActivation;
+    }
+  });
 });
 
 describe("frame permissions", () => {

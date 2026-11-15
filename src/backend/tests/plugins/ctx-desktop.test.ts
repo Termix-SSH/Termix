@@ -36,6 +36,11 @@ vi.mock("../../utils/electron-ipc-bridge.js", () => ({
 
 import { createPluginContext, createPluginHandle } from "../../plugins/ctx.js";
 import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
+import { runAsActor } from "../../plugins/actor.js";
+import {
+  readViewGrant,
+  resetViewGrants,
+} from "../../plugins/web-view-grants.js";
 import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 
 function manifestFor(pluginId: string, capabilities: string[]): PluginManifest {
@@ -64,6 +69,7 @@ beforeEach(() => {
   invalidatePluginPermissionCache();
   bridge.available = false;
   bridge.requestFromElectronMain.mockClear();
+  resetViewGrants();
 });
 
 describe("ctx.desktop.openIsolatedWindow", () => {
@@ -171,5 +177,80 @@ describe("ctx.desktop.launchExternalClient", () => {
       action: "plugin_desktop_launch_external_client",
       success: true,
     });
+  });
+});
+
+describe("ctx.desktop.grantView", () => {
+  it("refuses without desktop:window", async () => {
+    grants.set("demo", []);
+    const { ctx } = contextFor("demo", []);
+    await expect(
+      runAsActor("user-1", "request", () =>
+        ctx.desktop.grantView!({ url: "https://example.test" }),
+      ),
+    ).rejects.toThrow(/desktop:window/);
+  });
+
+  it("refuses outside a person's request", async () => {
+    grants.set("demo", ["desktop:window"]);
+    const { ctx } = contextFor("demo", ["desktop:window"]);
+    await expect(
+      ctx.desktop.grantView!({ url: "https://example.test" }),
+    ).rejects.toThrow(/person's request/);
+  });
+
+  it("refuses addresses that are not plain web pages", async () => {
+    grants.set("demo", ["desktop:window"]);
+    const { ctx } = contextFor("demo", ["desktop:window"]);
+    for (const url of [
+      "file:///etc/passwd",
+      "javascript:alert(1)",
+      "https://user:pass@example.test/",
+    ]) {
+      await expect(
+        runAsActor("user-1", "request", () => ctx.desktop.grantView!({ url })),
+      ).rejects.toThrow();
+    }
+  });
+
+  it("binds the grant to the plugin and person, and tells Electron main", async () => {
+    grants.set("demo", ["desktop:window"]);
+    bridge.available = true;
+    const { ctx } = contextFor("demo", ["desktop:window"]);
+    const { grant } = await runAsActor(
+      "user-1",
+      "request",
+      () =>
+        ctx.desktop.grantView!({
+          url: "https://pve.example.test:8006/",
+          ignoreCert: true,
+        }),
+      "session-1",
+    );
+    expect(readViewGrant("demo", grant, "user-1", "session-1")).toMatchObject({
+      url: "https://pve.example.test:8006/",
+      ignoreCert: true,
+    });
+    expect(readViewGrant("other", grant, "user-1", "session-1")).toBeNull();
+    expect(readViewGrant("demo", grant, "user-2", "session-1")).toBeNull();
+    expect(readViewGrant("demo", grant, "user-1", "session-2")).toBeNull();
+    expect(bridge.requestFromElectronMain).toHaveBeenCalledWith(
+      "web-view-grant",
+      expect.objectContaining({
+        grant,
+        pluginId: "demo",
+        url: "https://pve.example.test:8006/",
+        ignoreCert: true,
+      }),
+    );
+  });
+
+  it("never trusts a bad certificate on plain http", async () => {
+    grants.set("demo", ["desktop:window"]);
+    const { ctx } = contextFor("demo", ["desktop:window"]);
+    const { grant } = await runAsActor("user-1", "request", () =>
+      ctx.desktop.grantView!({ url: "http://lan.test/", ignoreCert: true }),
+    );
+    expect(readViewGrant("demo", grant, "user-1")?.ignoreCert).toBe(false);
   });
 });

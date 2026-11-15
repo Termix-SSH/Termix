@@ -284,13 +284,24 @@ function bounds(value) {
 function viewOpen(options) {
   if (!options || typeof options !== "object")
     refuse("options must be an object");
-  return {
+  const view = {
     id: viewId(options.id),
-    url: string(options.url, { min: 1, max: 8192, name: "url" }),
     bounds: bounds(options.bounds),
     visible: options.visible !== false,
-    ignoreCert: options.ignoreCert === true,
   };
+  // A page is a url (the shell's own) or a grant a plugin's backend made.
+  // Certificate trust only ever comes with a grant, from main's own copy.
+  if (options.grant !== undefined) {
+    view.grant = string(options.grant, { min: 48, max: 48, name: "grant" });
+    view.pluginId = string(options.pluginId, {
+      min: 1,
+      max: 64,
+      name: "pluginId",
+    });
+  } else {
+    view.url = string(options.url, { min: 1, max: 8192, name: "url" });
+  }
+  return view;
 }
 
 function clipboardText(value) {

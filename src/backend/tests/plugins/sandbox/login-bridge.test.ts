@@ -193,6 +193,58 @@ describe("remote login method", () => {
     expect(method.external).toBe(true);
   });
 
+  it("carries a passkey method's fields and checks its options", async () => {
+    const method = remoteLoginMethod(
+      {
+        id: "passkey",
+        labelKey: "k",
+        kind: "webauthn",
+        placement: "inline",
+        fields: [
+          { name: "user", type: "text", labelKey: "u" },
+          { name: "x", type: "file", labelKey: "u" },
+        ],
+        options: async () => ({
+          value: { publicKey: { challenge: "c" }, context: { id: 1 } },
+        }),
+        describe: async () => [
+          { id: "a", label: "A", enabled: true, views: ["external", "evil"] },
+        ],
+      },
+      deps(),
+    );
+    expect(method.kind).toBe("webauthn");
+    expect(method.placement).toBe("inline");
+    expect(method.fields).toEqual([
+      { name: "user", type: "text", labelKey: "u" },
+    ]);
+    expect(await method.describe!()).toEqual([
+      { id: "a", label: "A", enabled: true, views: ["external"] },
+    ]);
+    await expect(
+      method.options!(liveRequest().req as never, null),
+    ).resolves.toEqual({ publicKey: { challenge: "c" }, context: { id: 1 } });
+
+    const empty = remoteLoginMethod(
+      {
+        id: "passkey",
+        labelKey: "k",
+        kind: "webauthn",
+        options: async () => ({ value: { publicKey: {} } }),
+      },
+      deps(),
+    );
+    await expect(
+      empty.options!(liveRequest().req as never, null),
+    ).rejects.toThrow(/no options/);
+  });
+
+  it("refuses an unknown kind", () => {
+    expect(() =>
+      remoteLoginMethod({ id: "x", labelKey: "k", kind: "script" }, deps()),
+    ).toThrow(/kind/);
+  });
+
   it("refuses a redirect that is not http(s)", async () => {
     const method = remoteLoginMethod(
       {
@@ -257,7 +309,7 @@ describe("remote login method", () => {
     ).toThrow(/id and labelKey/);
     expect(() =>
       remoteLoginMethod({ id: "x", labelKey: "k", kind: "x" }, deps()),
-    ).toThrow(/redirect or form/);
+    ).toThrow(/redirect, form or webauthn/);
   });
 });
 

@@ -1097,7 +1097,7 @@ function loginHook(fn: AnyFn): AnyFn {
 
 function loginMethod(method: Record<string, unknown>): Promise<void> {
   const wrapped: Record<string, unknown> = { ...method };
-  for (const hook of ["start", "callback", "verify"]) {
+  for (const hook of ["start", "callback", "verify", "options"]) {
     if (typeof method[hook] === "function") {
       wrapped[hook] = loginHook(method[hook] as AnyFn);
     }

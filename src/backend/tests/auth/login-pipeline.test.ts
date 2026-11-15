@@ -905,6 +905,27 @@ describe("lockout guard", () => {
     }
   });
 
+  it("does not count a passkey method, which only helps people who registered one", async () => {
+    h.state.settings.set("allow_password_login", "false");
+    const dispose = registerLoginMethod({
+      id: "fixture-passkey",
+      pluginId: "fixture",
+      labelKey: "fixture",
+      kind: "webauthn",
+      describe: async () => [{ id: "passkey", label: "", enabled: true }],
+      options: async () => ({ publicKey: { challenge: "c" } }),
+      verify: async () => ({ kind: "user", userId: "u1" }),
+    });
+    try {
+      expect(await getPasswordLoginStatus()).toEqual({
+        allowed: true,
+        forced: true,
+      });
+    } finally {
+      dispose();
+    }
+  });
+
   it("counts trusted proxy login as another way in", async () => {
     h.state.settings.set("allow_password_login", "false");
     h.trustedProxy = true;

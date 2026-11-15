@@ -35,7 +35,8 @@ import {
   capabilityRefused,
   hasCapability,
 } from "./permissions.js";
-import { getActor, runAsActor } from "./actor.js";
+import { getActor, getActorSessionId, runAsActor } from "./actor.js";
+import { createViewGrant } from "./web-view-grants.js";
 import { DisposableBag } from "./disposables.js";
 import {
   createPluginRouter,
@@ -50,6 +51,7 @@ import {
   type PluginContext,
   type PluginModule,
   type PluginOpenIsolatedWindowRequest,
+  type PluginViewGrantRequest,
   type PluginExternalClientRequest,
 } from "@termix-ssh/plugin-sdk/backend";
 import type { PluginTableDefinition } from "@termix-ssh/plugin-sdk/db";
@@ -459,6 +461,44 @@ export function createPluginContext(
     {
       action: "desktop_open_isolated_window",
       details: () => "opened an isolated Electron window",
+    },
+  );
+
+  const desktopGrantView = guarded(
+    manifest,
+    "desktop:window",
+    async (request: PluginViewGrantRequest) => {
+      const userId = getActor();
+      if (!userId) {
+        throw new Error(
+          `Plugin ${pluginId} can only grant a view inside a person's request`,
+        );
+      }
+      const entry = createViewGrant({
+        pluginId,
+        userId,
+        sessionId: getActorSessionId(),
+        url: request?.url,
+        ignoreCert: request?.ignoreCert,
+      });
+      // The desktop app's main process keeps its own copy, so a native view
+      // opens from the grant alone and never from an address the page sends.
+      const { isElectronIpcAvailable, requestFromElectronMain } =
+        await import("../utils/electron-ipc-bridge.js");
+      if (isElectronIpcAvailable()) {
+        await requestFromElectronMain("web-view-grant", {
+          grant: entry.grant,
+          pluginId,
+          url: entry.url,
+          ignoreCert: entry.ignoreCert,
+          expiresAt: entry.expiresAt,
+        }).catch(() => undefined);
+      }
+      return { grant: entry.grant, expiresAt: entry.expiresAt };
+    },
+    {
+      action: "desktop_grant_view",
+      details: () => "let its frames show a page",
     },
   );
 
@@ -1049,6 +1089,7 @@ export function createPluginContext(
     desktop: {
       openIsolatedWindow: (request) => desktopOpenIsolatedWindow(request),
       launchExternalClient: (request) => desktopLaunchExternalClient(request),
+      grantView: (request) => desktopGrantView(request),
       available: answeredSync<PluginContext["desktop"]["available"]>(() =>
         isElectronIpcAvailable(),
       ),

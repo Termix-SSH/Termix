@@ -163,6 +163,32 @@ describe("createMockCtx sandbox mode", () => {
     expect(set).toHaveBeenCalledTimes(1);
   });
 
+  it("lets completeRedirectLogin keep the live request and response, as the plugin process does", async () => {
+    const { ctx } = createMockCtx({
+      sandbox: true,
+      manifest: {
+        id: "sample",
+        contributes: { auth: { loginMethods: ["m"] } },
+      },
+      capabilities: ["auth:provide"],
+    });
+    ctx.auth.registerLoginMethod({
+      id: "m",
+      labelKey: "m",
+      kind: "redirect",
+      callback: async () => ({ kind: "user", userId: "u1" }),
+    });
+    const json = vi.fn();
+    const res = { status: () => ({ json }) };
+    await ctx.auth.completeRedirectLogin("m", new Handle(), res);
+    expect(json).toHaveBeenCalledWith(
+      expect.objectContaining({ completed: "m" }),
+    );
+    await expect(async () =>
+      ctx.auth.completeRedirectLogin(new Handle() as never, {}, res),
+    ).rejects.toBeInstanceOf(SandboxRuleError);
+  });
+
   it("lets fetch take an AbortSignal, as the plugin process does", async () => {
     const { ctx } = createMockCtx({
       sandbox: true,

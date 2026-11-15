@@ -16,6 +16,7 @@ import {
   DEFAULT_FRONTEND_ENTRY,
   DEFAULT_LOCALES_DIR,
   type PluginManifest,
+  validateThemeCss,
 } from "@termix-ssh/plugin-sdk/manifest";
 import type { LoadedPlugin } from "./loader.js";
 import {
@@ -51,6 +52,25 @@ function themeFiles(plugin: AssetPlugin): Map<string, string> {
     if (isInside(plugin.dir, file)) files.set(theme.id, file);
   }
   return files;
+}
+
+// The loader checked each theme on load; a file can still change on disk
+// later, so it is checked again whenever it changes.
+const themeChecks = new Map<string, { stamp: string; ok: boolean }>();
+
+function themeFileAllowed(file: string, themeId: string): boolean {
+  try {
+    const stat = fs.statSync(file);
+    const stamp = `${themeId}:${stat.mtimeMs}:${stat.size}`;
+    const cached = themeChecks.get(file);
+    if (cached?.stamp === stamp) return cached.ok;
+    const ok =
+      validateThemeCss(fs.readFileSync(file, "utf8"), themeId).length === 0;
+    themeChecks.set(file, { stamp, ok });
+    return ok;
+  } catch {
+    return false;
+  }
 }
 
 function frontendEntry(
@@ -194,10 +214,11 @@ export function resolvePluginAsset(
   let root: string | null;
   let rest: string;
   if (clean.startsWith(THEME_ASSET_PREFIX)) {
-    // Only a declared theme file, which the loader checked on load.
+    // Only a declared theme file that still passes the theme check.
     const themeId = clean.slice(THEME_ASSET_PREFIX.length, -".css".length);
     const file = themeFiles(plugin).get(themeId);
     if (!file || !clean.endsWith(".css")) return null;
+    if (!themeFileAllowed(file, themeId)) return null;
     root = path.dirname(file);
     rest = path.basename(file);
   } else if (clean.startsWith("locales/")) {

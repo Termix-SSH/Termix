@@ -1,9 +1,23 @@
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SecondFactorUIProps } from "@termix-ssh/plugin-sdk/frontend";
 
 const api = vi.hoisted(() => ({
-  listStepUpFactors: vi.fn(async () => [{ id: "totp" }]),
+  listStepUpFactors: vi.fn(async () => [
+    { id: "totp" } as {
+      id: string;
+      pluginId?: string;
+      labelKey?: string;
+      prompt?: unknown;
+    },
+  ]),
   challengeStepUp: vi.fn(async () => null),
   verifyStepUp: vi.fn(async () => {}),
 }));
@@ -114,5 +128,34 @@ describe("requestStepUp", () => {
     });
     expect(await screen.findByText("auth.stepUp.noFactor")).toBeTruthy();
     act(() => screen.getByText("common.cancel").click());
+  });
+
+  it("draws a framed plugin's factor from its prompt", async () => {
+    dispose();
+    dispose = () => {};
+    api.listStepUpFactors.mockResolvedValueOnce([
+      {
+        id: "totp",
+        pluginId: "totp",
+        labelKey: "title",
+        prompt: { kind: "code", field: "totp_code" },
+      },
+    ]);
+    render(<StepUpPromptHost />);
+    let answer!: Promise<boolean>;
+    act(() => {
+      answer = requestStepUp();
+    });
+    const input = await waitFor(() => {
+      const found = document.querySelector("form input");
+      if (!found) throw new Error("no field yet");
+      return found;
+    });
+    fireEvent.change(input, { target: { value: "654321" } });
+    fireEvent.click(screen.getByText("auth.pluginLogin.verify"));
+    await expect(answer).resolves.toBe(true);
+    expect(api.verifyStepUp).toHaveBeenCalledWith("totp", {
+      totp_code: "654321",
+    });
   });
 });
