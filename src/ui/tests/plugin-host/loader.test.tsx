@@ -8,6 +8,13 @@ const lookApi = vi.hoisted(() => ({
   saveDefaultLook: vi.fn(),
 }));
 vi.mock("@/api/look-api", () => lookApi);
+const framedStarts = vi.hoisted(() => [] as string[]);
+vi.mock("@/plugin-host/frames/frame-plugins", () => ({
+  startFramedPlugin: vi.fn(async (entry: { id: string }) => {
+    framedStarts.push(entry.id);
+    return { handle: { app: {} }, dispose: () => {} };
+  }),
+}));
 import { Puzzle } from "lucide-react";
 import type {
   FrontendModule,
@@ -278,6 +285,26 @@ describe("plugin loader", () => {
     expect(isPluginFrontendActive("login")).toBe(false);
     await startPreLoginPlugins({ retryFailed: true });
     expect(isPluginFrontendActive("login")).toBe(true);
+  });
+
+  it("starts framed plugins on the first sync after a pre-login load", async () => {
+    framedStarts.length = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify([summary("login", { frontendIsolation: "frame" })]),
+        ),
+    );
+    await startPreLoginPlugins();
+    expect(framedStarts).toEqual([]);
+
+    plugins = [
+      summary("login", { frontendIsolation: "frame" }),
+      summary("framed", { frontendIsolation: "frame" }),
+    ];
+    await startPluginRuntime();
+    expect(framedStarts.sort()).toEqual(["framed", "login"]);
+    expect(isPluginFrontendActive("framed")).toBe(true);
   });
 
   it("ignores a pre-login load started after sign-in", async () => {

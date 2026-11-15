@@ -542,11 +542,9 @@ export function syncPlugins(summaries?: PluginSummary[]): Promise<void> {
         return;
       }
     }
-    try {
-      await reconcile(list);
-    } finally {
-      preLoginMode = false;
-    }
+    // A full sync means someone is signed in, so frames may start now.
+    preLoginMode = false;
+    await reconcile(list);
     markPluginsSettled();
   });
 }
