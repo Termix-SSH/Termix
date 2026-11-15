@@ -114,12 +114,22 @@ async function enableFixtures(base, admin) {
   // Settles the fresh install's plugin picker with everything on, so the
   // browser does not have to.
   const all = await must(base, { path: "/plugins", identity: admin });
-  await must(base, {
+  // Starting every plugin in one go takes minutes when they share core's
+  // user (fork mode), longer than the client's usual wait.
+  const applied = await fetch(`${base}/plugins/onboarding/apply`, {
     method: "POST",
-    path: "/plugins/onboarding/apply",
-    identity: admin,
-    body: { choices: Object.fromEntries(all.map((p) => [p.id, "enabled"])) },
+    headers: {
+      authorization: `Bearer ${admin.token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      choices: Object.fromEntries(all.map((p) => [p.id, "enabled"])),
+    }),
+    signal: AbortSignal.timeout(600_000),
   });
+  if (!applied.ok) {
+    throw new Error(`onboarding apply gave ${applied.status}`);
+  }
   for (const plugin of await must(base, {
     path: "/plugins",
     identity: admin,
