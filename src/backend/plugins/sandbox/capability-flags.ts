@@ -33,8 +33,11 @@ export interface ChildFlags {
   writeDataDir: boolean;
   /** The firewall rule kind for the plugin's user. */
   firewall: "deny" | "allow-all";
-  /** Grants the running Node can't express, for the log. */
-  unenforced: string[];
+  /**
+   * The running Node has no network permission and the plugin may not use
+   * sockets, so harden.js keeps it off the network instead.
+   */
+  jsNetworkFence: boolean;
 }
 
 /** Both spellings of a path: the model checks the path as asked for. */
@@ -66,14 +69,12 @@ export function buildChildFlags(input: ChildFlagInput): ChildFlags {
   // harden.js makes every worker inherit these flags and load it first.
   if (input.workers === true) flags.add("--allow-worker");
 
-  const unenforced: string[] = [];
   const allowNet = flags.has("--allow-net");
   // --allow-net arrived in Node 25. Older Node has no network scope at all,
-  // so the flag would only stop the process from starting.
-  if (input.nodeMajor < 25) {
-    flags.delete("--allow-net");
-    unenforced.push("network");
-  }
+  // so the flag would only stop the process from starting; harden.js
+  // refuses sockets itself there.
+  const jsNetworkFence = input.nodeMajor < 25 && !allowNet;
+  if (input.nodeMajor < 25) flags.delete("--allow-net");
 
   const execArgv = ["--permission"];
   // Writing its own folder is no use without reading it back.
@@ -95,5 +96,11 @@ export function buildChildFlags(input: ChildFlagInput): ChildFlags {
     "--disable-sigusr1",
     `--import=${pathToFileURL(input.hardenPath).href}`,
   );
-  return { execArgv, allowNet, writeDataDir, firewall, unenforced };
+  return {
+    execArgv,
+    allowNet,
+    writeDataDir,
+    firewall,
+    jsNetworkFence,
+  };
 }

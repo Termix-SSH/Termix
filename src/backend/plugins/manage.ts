@@ -1264,6 +1264,19 @@ async function updateUnlocked(
       "SAME_VERSION",
     );
   }
+  // Going back takes the admin naming the older version.
+  if (
+    !options.version &&
+    semver.valid(release.version) &&
+    semver.valid(live.manifest.version) &&
+    semver.lt(release.version, live.manifest.version)
+  ) {
+    throw new PluginManageError(
+      `${pluginId} ${release.version} is older than the installed ${live.manifest.version}`,
+      409,
+      "NOT_NEWER",
+    );
+  }
 
   const added = addedCapabilities(
     live.manifest.capabilities,

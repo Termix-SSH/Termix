@@ -276,6 +276,7 @@ function hasCapability(pluginId: string, capability: string): boolean {
   return (summaryOf(pluginId)?.capabilities ?? []).includes(capability);
 }
 
+const DOWNLOAD_AFTER_USE_MS = 120_000;
 const MAX_TOASTS_PER_MINUTE = 20;
 const toastTimes = new Map<string, number[]>();
 
@@ -300,7 +301,8 @@ function isHttpUrl(value: unknown): value is string {
   }
 }
 
-async function coreRequest(pluginId: string, request: unknown) {
+async function coreRequest(connection: FrameConnection, request: unknown) {
+  const { pluginId } = connection;
   const input = (request ?? {}) as {
     method?: unknown;
     path?: unknown;
@@ -308,7 +310,12 @@ async function coreRequest(pluginId: string, request: unknown) {
     body?: unknown;
   };
   const method = String(input.method ?? "GET").toUpperCase();
-  const check = checkCoreRequest(pluginId, method, String(input.path ?? ""));
+  const asked = checkCoreRequest(pluginId, method, String(input.path ?? ""));
+  // Some writes only follow a click or key in the frame.
+  const check: typeof asked =
+    asked.ok && asked.userAction && !recentlyUsed(connection)
+      ? { ok: false, reason: `${method} ${asked.path} with no user action` }
+      : asked;
   if (!check.ok) {
     if (import.meta.env.DEV) {
       console.warn(
@@ -498,7 +505,7 @@ async function handleCall(
       return;
     }
     case "http":
-      return coreRequest(pluginId, args[0]);
+      return coreRequest(connection, args[0]);
     case "toast": {
       const [kind, message] = args;
       if (!allowToast(pluginId) || typeof message !== "string") return;
@@ -534,12 +541,18 @@ async function handleCall(
       return requestStepUp();
     }
     case "openUrl": {
+      // Only right after the user did something in the frame.
+      if (!recentlyUsed(connection)) throw new Error("Not allowed now");
       const [url] = args;
       if (!isHttpUrl(url)) throw new Error("Only web links can be opened");
       window.open(url, "_blank", "noopener,noreferrer");
       return;
     }
     case "download": {
+      // An export can take a while, so the click may be a bit older.
+      if (Date.now() - connection.lastInteraction > DOWNLOAD_AFTER_USE_MS) {
+        throw new Error("Not allowed now");
+      }
       const [blob, name] = args;
       if (!(blob instanceof Blob)) throw new Error("Not a file");
       const href = URL.createObjectURL(blob);
@@ -551,6 +564,7 @@ async function handleCall(
       return;
     }
     case "clipboard.write": {
+      if (!recentlyUsed(connection)) throw new Error("Not allowed now");
       await navigator.clipboard.writeText(String(args[0] ?? ""));
       return;
     }

@@ -50,6 +50,7 @@ import {
 } from "./registration-cache";
 
 import { extensionFit } from "./slot-fit";
+import { hasUserActivation } from "./user-activation";
 
 export { resolveSlotFit, slotFit, splitFallback } from "./slot-fit";
 
@@ -142,6 +143,23 @@ const HIDDEN_STYLE =
   "position:fixed;left:0;top:0;width:0;height:0;border:0;opacity:0;pointer-events:none;";
 const OVERLAY_STYLE =
   "position:fixed;inset:0;width:100vw;height:100vh;border:0;opacity:1;pointer-events:auto;z-index:60;background:transparent;color-scheme:normal;";
+
+/**
+ * A background frame covers the whole shell while it shows a dialog, so it
+ * may only start doing that right after the user asked the plugin for
+ * something: one of these registrations, run with a real click or key.
+ */
+const ASKING_KINDS = new Set([
+  "action",
+  "hostAction",
+  "hostContextMenuItem",
+  "hostEditorToolbarItem",
+  "paletteEntry",
+  "keybindingAction",
+  "slotContribution",
+  "railItem",
+]);
+export const OVERLAY_ASK_MS = 10_000;
 
 function stableKey(args: unknown[]): string {
   try {
@@ -381,6 +399,8 @@ export async function startFramedPlugin(
   let needs = 0;
   let pending = 0;
   let overlay = false;
+  /** When the user last asked this plugin for something. */
+  let askedAt = 0;
   let lastUse = Date.now();
   let idleTimer: ReturnType<typeof setInterval> | null = null;
   const answers: Record<string, unknown> = {};
@@ -546,7 +566,17 @@ export async function startFramedPlugin(
                 persist();
               }
             } else if (name === "overlay") {
-              overlay = (data as { active?: unknown } | null)?.active === true;
+              const active =
+                (data as { active?: unknown } | null)?.active === true;
+              if (active && !overlay && Date.now() - askedAt > OVERLAY_ASK_MS) {
+                if (import.meta.env.DEV) {
+                  console.warn(
+                    `[frame-policy] refused ${pluginId}: an overlay nobody asked for`,
+                  );
+                }
+                return;
+              }
+              overlay = active;
               iframe.setAttribute(
                 "style",
                 overlay ? OVERLAY_STYLE : HIDDEN_STYLE,
@@ -609,6 +639,10 @@ export async function startFramedPlugin(
   ): Promise<unknown> => {
     pending++;
     lastUse = Date.now();
+    const kind = registrations.get(rid)?.kind;
+    if (kind && ASKING_KINDS.has(kind) && hasUserActivation()) {
+      askedAt = Date.now();
+    }
     try {
       await ensureFrame();
       const current = frame;

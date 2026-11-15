@@ -212,6 +212,21 @@ describe("pluginFrameCsp", () => {
     );
   });
 
+  it("loads no picture, media or page from another site", () => {
+    expect(csp).toContain(
+      "img-src https://termix.example/base/plugin-assets/docker/ https://termix.example/base/plugin-assets/_runtime/ data: blob:;",
+    );
+    expect(csp).toContain(
+      "media-src https://termix.example/base/plugin-assets/docker/ data: blob:;",
+    );
+    expect(csp).toContain(
+      "frame-src https://termix.example/base/plugin-assets/docker/ https://termix.example/base/plugin-api/docker/;",
+    );
+    for (const directive of csp.split(";")) {
+      expect(directive).not.toMatch(/(^|\s)(https?:|\*)(\s|$)/);
+    }
+  });
+
   it("can only be framed by the server and the desktop app", () => {
     expect(csp).toContain(
       "frame-ancestors https://termix.example app://termix",

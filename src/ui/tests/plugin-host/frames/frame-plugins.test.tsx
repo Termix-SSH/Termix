@@ -452,3 +452,57 @@ describe("slot frame sizes", () => {
     expect(slotFit("admin.userTabs")).toBe("fill");
   });
 });
+
+describe("background frame overlays", () => {
+  async function started() {
+    const startedPlugin = startFramedPlugin(summary);
+    const { iframe, port } = await fakeFrame(() => undefined);
+    port.emit("register", {
+      rid: "action#1",
+      kind: "action",
+      data: { id: "gizmo.open", handler: () => "opened" },
+    });
+    port.emit("ready");
+    const plugin = await startedPlugin;
+    return { iframe, port, plugin };
+  }
+  const covers = (iframe: HTMLIFrameElement) =>
+    (iframe.getAttribute("style") ?? "").includes("inset:0");
+
+  it("can't cover the shell when nobody asked the plugin for anything", async () => {
+    const { iframe, port, plugin } = await started();
+    port.emit("overlay", { active: true });
+    await flush();
+    expect(covers(iframe)).toBe(false);
+    plugin.dispose();
+  });
+
+  it("covers the shell for a dialog right after the user ran its action", async () => {
+    const { iframe, port, plugin } = await started();
+    await expect(invokeAction("gizmo.open")).resolves.toBe("opened");
+    port.emit("overlay", { active: true });
+    await flush();
+    expect(covers(iframe)).toBe(true);
+    port.emit("overlay", { active: false });
+    await flush();
+    expect(covers(iframe)).toBe(false);
+    plugin.dispose();
+  });
+
+  it("does not count a call made without a click or key", async () => {
+    const { iframe, port, plugin } = await started();
+    Object.defineProperty(navigator, "userActivation", {
+      value: { isActive: false },
+      configurable: true,
+    });
+    try {
+      await invokeAction("gizmo.open");
+      port.emit("overlay", { active: true });
+      await flush();
+      expect(covers(iframe)).toBe(false);
+    } finally {
+      delete (navigator as { userActivation?: unknown }).userActivation;
+      plugin.dispose();
+    }
+  });
+});

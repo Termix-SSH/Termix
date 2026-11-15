@@ -11,6 +11,7 @@
 import module from "node:module";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { maySignal, NO_NETWORK_ENV } from "./guards.js";
 
 /**
  * Worker options a plugin may pass. execArgv is left out on purpose: a
@@ -113,6 +114,8 @@ function harden(): void {
   });
 
   guardWorkers(original);
+  guardSignals(original);
+  if (process.env[NO_NETWORK_ENV] === "1") guardNetwork(original);
 
   // Native addons load only with device:serial (--allow-addons).
   const permission = (
@@ -134,6 +137,129 @@ function harden(): void {
       configurable: false,
     });
   }
+}
+
+/** Processes this plugin started itself. */
+const children = new Set<number>();
+
+function guardSignals(getBuiltin: (id: string) => unknown): void {
+  const { ChildProcess } = getBuiltin("node:child_process") as {
+    ChildProcess: { prototype: Record<string, unknown> };
+  };
+  const spawn = ChildProcess.prototype.spawn as (
+    this: { pid?: number },
+    ...args: unknown[]
+  ) => unknown;
+  Object.defineProperty(ChildProcess.prototype, "spawn", {
+    value: function (this: { pid?: number }, ...args: unknown[]) {
+      const result = spawn.apply(this, args);
+      if (typeof this.pid === "number") children.add(this.pid);
+      return result;
+    },
+    writable: false,
+    configurable: false,
+  });
+
+  // process.kill calls process._kill, so guarding it covers both.
+  const raw = process as unknown as {
+    _kill: (pid: number, signal: number) => number;
+  };
+  const kill = raw._kill.bind(process);
+  Object.defineProperty(process, "_kill", {
+    value: (pid: number, signal: number) => {
+      if (!maySignal(pid, process.pid, children)) {
+        throw refuse("Signals to a process the plugin did not start");
+      }
+      return kill(pid, signal);
+    },
+    writable: false,
+    configurable: false,
+  });
+
+  const os = getBuiltin("node:os") as {
+    setPriority: (pid: number, priority?: number) => void;
+  };
+  const setPriority = os.setPriority;
+  Object.defineProperty(os, "setPriority", {
+    value: (pid: number, priority?: number) => {
+      // One argument sets this process's own priority.
+      if (priority !== undefined && pid !== 0) {
+        if (!maySignal(pid, process.pid, children)) {
+          throw refuse("Changing the priority of another process");
+        }
+      }
+      return priority === undefined
+        ? setPriority(pid)
+        : setPriority(pid, priority);
+    },
+    writable: false,
+    configurable: false,
+  });
+  module.syncBuiltinESMExports();
+}
+
+function refuseNetwork(): Error {
+  return refuse("Network access without network:sockets");
+}
+
+function blockMethods(target: unknown, names: string[]): void {
+  if (!target) return;
+  for (const name of names) {
+    const owner = target as Record<string, unknown>;
+    if (typeof owner[name] !== "function") continue;
+    Object.defineProperty(owner, name, {
+      value: () => {
+        throw refuseNetwork();
+      },
+      writable: false,
+      configurable: false,
+    });
+  }
+}
+
+/**
+ * Node before 25 has no network permission, so a plugin without
+ * network:sockets is kept off the network here. Every TCP, TLS, HTTP and
+ * pipe client goes through net.Socket's connect, every server through
+ * listen, and the global fetch and WebSocket use the same sockets.
+ */
+function guardNetwork(getBuiltin: (id: string) => unknown): void {
+  const net = getBuiltin("node:net") as {
+    Socket: { prototype: unknown };
+    Server: { prototype: unknown };
+  };
+  blockMethods(net.Socket.prototype, ["connect"]);
+  blockMethods(net.Server.prototype, ["listen"]);
+  const dgram = getBuiltin("node:dgram") as { Socket: { prototype: unknown } };
+  blockMethods(dgram.Socket.prototype, ["bind", "send", "connect"]);
+  const dns = getBuiltin("node:dns") as Record<string, unknown> & {
+    promises: Record<string, unknown>;
+    Resolver: { prototype: unknown };
+  };
+  const lookups = Object.keys(dns).filter((name) =>
+    /^(lookup|resolve|reverse)/.test(name),
+  );
+  blockMethods(dns, lookups);
+  blockMethods(dns.Resolver.prototype, lookups);
+  const promises = dns.promises as Record<string, unknown> & {
+    Resolver: { prototype: unknown };
+  };
+  const promiseLookups = Object.keys(promises).filter((name) =>
+    /^(lookup|resolve|reverse)/.test(name),
+  );
+  blockMethods(promises, promiseLookups);
+  blockMethods(promises.Resolver.prototype, promiseLookups);
+  for (const name of ["fetch", "WebSocket", "EventSource"]) {
+    if (!(name in globalThis)) continue;
+    Object.defineProperty(globalThis, name, {
+      value: function blocked() {
+        throw refuseNetwork();
+      },
+      writable: false,
+      configurable: false,
+    });
+  }
+  module.syncBuiltinESMExports();
 }
 
 /**

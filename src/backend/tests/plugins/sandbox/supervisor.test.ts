@@ -201,13 +201,27 @@ export async function activate(ctx) {
   out.debugProcess = await tryIt(() => process._debugProcess(process.ppid));
   out.binding = await tryIt(() => process.binding("fs"));
   out.inspector = await tryIt(() => import("node:inspector"));
+  const net = await import("node:net");
   out.net = await tryIt(() => new Promise((resolve, reject) => {
-    import("node:net").then((net) => {
-      const server = net.createServer();
-      server.on("error", reject);
-      server.listen(0, "127.0.0.1", () => server.close(resolve));
-    }, reject);
+    const server = net.createServer();
+    server.on("error", reject);
+    server.listen(0, "127.0.0.1", () => server.close(resolve));
   }));
+  out.connect = await tryIt(() => new Promise((resolve, reject) => {
+    const socket = net.connect(9, "127.0.0.1");
+    socket.on("error", (error) => error.code === "ECONNREFUSED" ? resolve() : reject(error));
+    socket.on("connect", () => { socket.destroy(); resolve(); });
+  }));
+  out.fetch = await tryIt(() => fetch("http://127.0.0.1:9/").catch((error) => {
+    if (error.code === "ERR_ACCESS_DENIED") throw error;
+  }));
+  out.dns = await tryIt(async () => (await import("node:dns")).promises.lookup("localhost"));
+  out.signalParent = await tryIt(() => process.kill(process.ppid, 0));
+  out.signalGroup = await tryIt(() => process.kill(0, 0));
+  out.signalInternal = await tryIt(() => { const code = process._kill(process.ppid, 0); if (code) throw new Error("errno " + code); });
+  out.signalSelf = await tryIt(() => process.kill(process.pid, 0));
+  out.priorityParent = await tryIt(async () => { const os = await import("node:os"); os.setPriority(process.ppid, os.getPriority(process.ppid)); });
+  out.prioritySelf = await tryIt(async () => { const os = await import("node:os"); os.setPriority(os.getPriority()); });
   out.secretEnv = process.env.TERMIX_TEST_SECRET ?? null;
   out.dataDir = process.env.DATA_DIR ?? null;
   await ctx.report(out);
@@ -243,13 +257,59 @@ describe("plugin process fence", () => {
       debugProcess: "ERR_ACCESS_DENIED",
       binding: "ERR_ACCESS_DENIED",
       inspector: "ERR_ACCESS_DENIED",
+      // Node 25 and later fence sockets with the permission model; on 24
+      // harden.js refuses them.
+      net: "ERR_ACCESS_DENIED",
+      connect: "ERR_ACCESS_DENIED",
+      fetch: "ERR_ACCESS_DENIED",
+      dns: "ERR_ACCESS_DENIED",
+      // Without the launcher the plugin runs as core's user.
+      signalParent: "ERR_ACCESS_DENIED",
+      signalGroup: "ERR_ACCESS_DENIED",
+      signalInternal: "ERR_ACCESS_DENIED",
+      priorityParent: "ERR_ACCESS_DENIED",
+      signalSelf: "open",
+      prioritySelf: "open",
       secretEnv: null,
       dataDir: null,
     });
     expect(fs.existsSync(path.join(work, "escape.txt"))).toBe(false);
-    // Node 25 and later fence sockets; 24 has no network scope at all.
-    const major = Number(process.versions.node.split(".")[0]);
-    expect(probes!.net).toBe(major >= 25 ? "ERR_ACCESS_DENIED" : "open");
+  }, 30_000);
+
+  it("may still signal a process it started itself", async () => {
+    let probes: Record<string, unknown> | null = null;
+    const body = `
+      import { spawn } from "node:child_process";
+      const tryIt = async (fn) => {
+        try { await fn(); return "open"; }
+        catch (error) { return error.code ?? error.message; }
+      };
+      export async function activate(ctx) {
+        const child = spawn(process.execPath, ["-e", "setTimeout(() => {}, 20000)"]);
+        await new Promise((resolve) => child.once("spawn", resolve));
+        const out = {};
+        out.check = await tryIt(() => process.kill(child.pid, 0));
+        out.stop = await tryIt(() => process.kill(child.pid));
+        out.parent = await tryIt(() => process.kill(process.ppid, 0));
+        await ctx.report(out);
+      }`;
+    const supervisor = new SandboxSupervisor(config());
+    await supervisor.register(
+      spec("signals", plugin("signals", body), {
+        capabilities: ["process:spawn"],
+        sandbox: { alwaysOn: true },
+        report: (value) => {
+          probes = value as Record<string, unknown>;
+        },
+      }),
+    );
+    await until(() => probes !== null, 20_000);
+    await supervisor.shutdown();
+    expect(probes).toEqual({
+      check: "open",
+      stop: "open",
+      parent: "ERR_ACCESS_DENIED",
+    });
   }, 30_000);
 
   it("gets sockets only with network:sockets on a Node that can fence them", async () => {

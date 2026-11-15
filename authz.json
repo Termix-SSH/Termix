@@ -545,6 +545,21 @@
         "key-ops-run": "refuse"
       }
     },
+    "GET /plugins/:id/image": {
+      "access": "user",
+      "params": {
+        "id": "=homepage"
+      },
+      "query": {
+        "url": "http://127.0.0.1/a.png"
+      },
+      "allowed": "any",
+      "note": "Any signed in person may load a picture through a plugin with network:outbound; this address is on the server itself, so allowed callers get 403 too.",
+      "expect": {
+        "key-ops-read": "refuse",
+        "key-ops-run": "refuse"
+      }
+    },
     "POST /plugins/frame-tokens": {
       "access": "user",
       "body": {

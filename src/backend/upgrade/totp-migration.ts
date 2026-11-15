@@ -8,7 +8,7 @@
  *    the login fails closed instead of skipping it.
  * 2. Once the plugin's p_totp_enrollments table exists, each enabled user's
  *    secret and backup codes are decrypted with their data key and written
- *    there sealed with the installation key (what ctx.secrets.seal writes),
+ *    there sealed for the plugin (what ctx.secrets.seal writes),
  *    then the users columns are cleared.
  *
  * The columns stay in the database until 26.10.0, since core's drizzle
@@ -20,7 +20,7 @@ import { sql } from "drizzle-orm";
 import { databaseLogger } from "../utils/logger.js";
 import { DataCrypto } from "../utils/data-crypto.js";
 import { LazyFieldEncryption } from "../utils/lazy-field-encryption.js";
-import { encryptSystemSecret } from "../utils/system-secret-crypto.js";
+import { sealForPlugin } from "../plugins/plugin-seal.js";
 import {
   runStatement,
   selectRows,
@@ -150,7 +150,7 @@ export async function runTotpMigration(
           if (!secret) continue;
           const codes = readBackupCodes(user.totp_backup_codes, dek, user.id);
           await runStatement(
-            sql`INSERT INTO ${sql.identifier(ENROLLMENTS_TABLE)} (user_id, secret, backup_codes) VALUES (${user.id}, ${await encryptSystemSecret(secret)}, ${await encryptSystemSecret(JSON.stringify(codes))})`,
+            sql`INSERT INTO ${sql.identifier(ENROLLMENTS_TABLE)} (user_id, secret, backup_codes) VALUES (${user.id}, ${await sealForPlugin(PLUGIN_ID, secret)}, ${await sealForPlugin(PLUGIN_ID, JSON.stringify(codes))})`,
           );
           await runStatement(
             sql`UPDATE users SET totp_enabled = FALSE, totp_secret = NULL, totp_backup_codes = NULL WHERE id = ${user.id}`,

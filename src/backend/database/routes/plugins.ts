@@ -342,6 +342,87 @@ router.post(
   },
 );
 
+/**
+ * @openapi
+ * /plugins/{id}/image:
+ *   get:
+ *     summary: Load a picture from another site for a plugin view
+ *     description: >
+ *       Plugin views may only show pictures from the plugin's own assets, so
+ *       a picture from elsewhere comes through here. Only for a running
+ *       plugin with network:outbound or network:sockets granted. The answer is the picture
+ *       itself; anything that is not an image, over 5 MB, on this machine or
+ *       at a cloud metadata address is refused.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: url
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: The picture.
+ *       400:
+ *         description: Not an http or https address.
+ *       403:
+ *         description: The plugin may not load pictures, or the address is not allowed.
+ *       404:
+ *         description: No such running plugin.
+ *       413:
+ *         description: The picture is over 5 MB.
+ *       415:
+ *         description: The address is not a picture.
+ *       502:
+ *         description: The picture could not be loaded.
+ */
+router.get(
+  "/:id/image",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const pluginId = String(req.params.id);
+    const plugin = getPluginRuntime().loader.get(pluginId);
+    if (!plugin || plugin.state !== "active") {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    const { hasCapability } = await import("../../plugins/permissions.js");
+    const declared = plugin.manifest.capabilities;
+    // Either one already lets the plugin reach other sites.
+    if (
+      !(await hasCapability(pluginId, "network:outbound", declared)) &&
+      !(await hasCapability(pluginId, "network:sockets", declared))
+    ) {
+      res.status(403).json({ error: "This plugin may not load pictures" });
+      return;
+    }
+    const { fetchImage, ImageProxyError } =
+      await import("../../plugins/image-proxy.js");
+    try {
+      const { type, body } = await fetchImage(req.query.url);
+      res.setHeader("Content-Type", type);
+      res.setHeader("Cache-Control", "private, max-age=3600");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
+      res.send(body);
+    } catch (error) {
+      const status = error instanceof ImageProxyError ? error.status : 502;
+      res.status(status).json({
+        error:
+          error instanceof ImageProxyError
+            ? error.message
+            : "The picture could not be loaded",
+      });
+    }
+  },
+);
+
 const MAX_FRAME_TOKEN_IDS = 200;
 
 /**

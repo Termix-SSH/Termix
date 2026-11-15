@@ -455,6 +455,20 @@ describe("updates", () => {
     expect(registry.download).not.toHaveBeenCalled();
   });
 
+  it("never moves to an older version unless the admin names it", async () => {
+    createFixturePlugin({ id: "docker", root: bundled });
+    registry.index.plugins = [registryEntry("docker", [{ version: "0.9.0" }])];
+    await boot();
+
+    await expect(
+      manage.updatePlugin("docker", { userId: "admin" }),
+    ).rejects.toMatchObject({ code: "NOT_NEWER" });
+    expect(registry.download).not.toHaveBeenCalled();
+    const result = await manage.updateAllPlugins({ userId: "admin" });
+    expect(result.updated).toEqual([]);
+    expect(registry.download).not.toHaveBeenCalled();
+  });
+
   it("lists an update and skips it in update-all when pinned", async () => {
     createFixturePlugin({ id: "docker", root: bundled });
     registry.index.plugins = [

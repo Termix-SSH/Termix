@@ -107,11 +107,15 @@ export function pluginFrameCsp(input: PluginFrameCspInput): string {
     ],
     ["style-src", [assets, runtime, "'unsafe-inline'"]],
     ["font-src", [assets, runtime, "data:"]],
-    ["img-src", [assets, "data:", "blob:", "http:", "https:"]],
-    ["media-src", ["data:", "blob:", "http:", "https:"]],
+    // Nothing a frame shows may come from, or send data to, another site:
+    // pictures come through /plugins/<id>/image, other sites' pages through
+    // a view the shell draws (web-view-grants.ts). It may still frame pages
+    // its own routes serve.
+    ["img-src", [assets, runtime, "data:", "blob:"]],
+    ["media-src", [assets, "data:", "blob:"]],
     ["connect-src", [assets, api, ws]],
     ["worker-src", ["blob:"]],
-    ["frame-src", ["http:", "https:"]],
+    ["frame-src", [assets, api]],
     ["object-src", ["'none'"]],
     ["base-uri", ["'none'"]],
     ["form-action", ["'none'"]],

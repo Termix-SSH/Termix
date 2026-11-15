@@ -786,24 +786,18 @@ export function createPluginContext(
         { action: "secret_delete", details: () => "deleted a secret" },
       ),
 
+      // Sealed for this plugin only: another plugin can't open it, and it
+      // never passes as one of core's own sealed values.
       seal: async (value) => {
         await assertCapability(pluginId, "secrets:own", declared);
-        const { encryptSystemSecret } =
-          await import("../utils/system-secret-crypto.js");
-        return encryptSystemSecret(value);
+        const { sealForPlugin } = await import("./plugin-seal.js");
+        return sealForPlugin(pluginId, value);
       },
 
       unseal: async (sealed) => {
         await assertCapability(pluginId, "secrets:own", declared);
-        const { decryptSystemSecret, isSystemEncrypted } =
-          await import("../utils/system-secret-crypto.js");
-        // Only values seal() wrote: a plain string must not pass as sealed.
-        if (!sealed || !isSystemEncrypted(sealed)) return null;
-        try {
-          return await decryptSystemSecret(sealed);
-        } catch {
-          return null;
-        }
+        const { unsealForPlugin } = await import("./plugin-seal.js");
+        return unsealForPlugin(pluginId, sealed);
       },
 
       offer: (key, resolve) => {

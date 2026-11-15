@@ -891,6 +891,15 @@ before, with the same look and theme.
   `env.user`, `env.isMobile`. `tabs.setActive` works right after the person used your frame. Anything
   that changes the shell for other plugins (docks, the palette, logout) does nothing there.
 - A popover or dropdown can't leave its frame. Keep menus in tabs and panels, not in small slots.
+- Nothing in a frame loads from another site or sends data to one. Pictures, video and fonts come from your
+  own assets, `data:` or `blob:` URLs; a nested frame may only show your own assets and routes. For a
+  picture from elsewhere (an icon, a background), fetch `/plugins/<your id>/image?url=<address>` and show
+  the blob: it needs `network:outbound` or `network:sockets`, takes images up to 5 MB and never reaches the
+  server itself or cloud metadata. A page from another site goes in `NativeView` with a `grant` your
+  backend makes for an address it trusts (`ctx.desktop.grantView`, `desktop:window`).
+- A background frame shows dialogs over the whole app only right after the person ran one of your actions,
+  palette entries, keybindings or slot buttons. Opening a link, the clipboard and revoking API keys need a
+  click in your frame just before; a download one in the last two minutes.
 
 Check that your activate works in a frame with `checkFrameApp` from `@termix-ssh/plugin-sdk/testing`:
 

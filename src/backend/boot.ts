@@ -89,4 +89,15 @@ export async function runCoreBootMigrations(): Promise<void> {
       operation: "key_rotation_failed",
     });
   }
+
+  // Plugin sealed values move to each plugin's own key.
+  const { runPluginSealMigration } =
+    await import("./upgrade/plugin-seal-migration.js");
+  try {
+    await runPluginSealMigration();
+  } catch (error) {
+    systemLogger.error("Moving plugin sealed values failed", error, {
+      operation: "plugin_seal_migration_failed",
+    });
+  }
 }

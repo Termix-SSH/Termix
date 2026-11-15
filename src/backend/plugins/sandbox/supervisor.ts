@@ -23,6 +23,7 @@ import type { PluginHandle } from "../ctx.js";
 import { getPluginDataDir } from "../paths.js";
 import { hasCapability } from "../permissions.js";
 import { buildChildFlags, DEFAULT_HEAP_MB } from "./capability-flags.js";
+import { NO_NETWORK_ENV } from "./child/guards.js";
 import { PluginBridge } from "./bridge.js";
 import { getSpawner, type SpawnedChild } from "./spawn.js";
 import { SandboxTokenStore } from "./tokens.js";
@@ -431,17 +432,14 @@ class PluginProcess {
       workers: manifest.sandbox?.workers === true,
       nodeMajor: childNodeMajor(),
     });
-    if (flags.unenforced.length > 0) {
-      this.log(
-        "info",
-        `can't fence ${flags.unenforced.join(", ")} here; the plugin has them`,
-      );
-    }
     const child = await getSpawner().spawn({
       pluginId: this.id,
       runtimePath: paths?.runtime ?? childRuntimePath(),
       execArgv: flags.execArgv,
-      env: pluginEnv(manifest),
+      env: {
+        ...pluginEnv(manifest),
+        ...(flags.jsNetworkFence ? { [NO_NETWORK_ENV]: "1" } : {}),
+      },
       dataDir: getPluginDataDir(this.id),
       firewall: flags.firewall,
     });
