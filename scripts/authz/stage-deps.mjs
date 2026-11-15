@@ -3,9 +3,12 @@
 // its authorization matrix can run in plugin CI.
 //
 //   node scripts/authz/stage-deps.mjs <pluginDir> <outDir>
+//   node scripts/authz/stage-deps.mjs --seed <outDir>
 //
 // The seed also needs totp and login-security (pending, setup and expired
 // sessions), so those are built too unless they are the plugin itself.
+// --seed builds only those two, for core's own run: the pinned releases can
+// still be builds for an older plugin API that core no longer runs.
 //
 // Repos come from the official registry index. Only source is cloned: CI must
 // never download a .tmxplug, which would count as a download.
@@ -18,8 +21,9 @@ const INDEX =
   "https://raw.githubusercontent.com/Termix-SSH/Termix-Registry/main/official/index.json";
 
 const [pluginDir, outDir] = process.argv.slice(2);
+const seedOnly = pluginDir === "--seed";
 if (!pluginDir || !outDir) {
-  console.error("usage: stage-deps.mjs <pluginDir> <outDir>");
+  console.error("usage: stage-deps.mjs <pluginDir|--seed> <outDir>");
   process.exit(2);
 }
 
@@ -33,17 +37,19 @@ async function main() {
   fs.mkdirSync(outDir, { recursive: true });
   const index = await (await fetch(INDEX)).json();
   const byId = new Map(index.plugins.map((plugin) => [plugin.id, plugin]));
-  const own = JSON.parse(
-    fs.readFileSync(path.join(pluginDir, "manifest.json"), "utf8"),
-  );
+  const own = seedOnly
+    ? { id: null }
+    : JSON.parse(
+        fs.readFileSync(path.join(pluginDir, "manifest.json"), "utf8"),
+      );
   const done = new Set([own.id]);
-  const queue = [path.resolve(pluginDir)];
+  const queue = [seedOnly ? null : path.resolve(pluginDir)];
   let first = true;
   while (queue.length) {
     const dir = queue.shift();
-    const manifest = JSON.parse(
-      fs.readFileSync(path.join(dir, "manifest.json"), "utf8"),
-    );
+    const manifest = dir
+      ? JSON.parse(fs.readFileSync(path.join(dir, "manifest.json"), "utf8"))
+      : {};
     const wanted = [
       ...Object.keys(manifest.dependencies ?? {}),
       ...(first ? HARNESS : []),
