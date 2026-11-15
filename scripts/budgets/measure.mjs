@@ -127,7 +127,9 @@ async function main() {
   const started = Date.now();
   await page.keyboard.press("Enter");
   // A fresh server shows its setup first; skip it so the dashboard loads.
-  const skip = page.getByRole("button", { name: /^(Skip setup|Not now)$/ });
+  const skip = page.getByRole("button", {
+    name: /^(Skip setup|Not now|Done)$/,
+  });
   const stage = page.locator('[data-slot="tab-stage"]').first();
   await Promise.race([
     skip.first().waitFor({ timeout: maxWaitMs }),
@@ -136,10 +138,17 @@ async function main() {
   let coldDashboardMs = Date.now() - started;
   let onboarding = false;
   // The setup can show a moment after the shell itself.
-  for (let i = 0; i < 20 && !onboarding; i++) {
+  // A setup with several steps needs a press per step.
+  for (let i = 0; i < 40; i++) {
     if (await skip.count()) {
       onboarding = true;
-      await skip.first().click();
+      await skip
+        .first()
+        .click({ timeout: 5000 })
+        .catch(() => {});
+      await sleep(500);
+    } else if (onboarding || i >= 20) {
+      break;
     } else {
       await sleep(250);
     }
