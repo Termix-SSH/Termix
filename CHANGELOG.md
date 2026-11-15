@@ -121,6 +121,7 @@
 - Download names with unusual characters in a user export are kept safe
 - A settings import no longer brings in password reset codes or the audit forwarding token
 - Plugin tools on a shared host you have no login for now say a login is missing, not that the host was not found
+- Plugins that are still starting after a server restart now show up once they are running, instead of staying missing until you reload the page
 
 ## 26.11.1
 
