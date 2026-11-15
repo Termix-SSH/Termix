@@ -38,7 +38,7 @@ function coreCtx() {
   return { ctx, held, released };
 }
 
-function setup(idleMs = 1000) {
+function setup(idleMs = 1000, touch: () => void = () => {}) {
   const core = coreCtx();
   let running = true;
   const durable = new DurableRegistrations({
@@ -53,7 +53,7 @@ function setup(idleMs = 1000) {
     }),
     running: () => running,
     idleMs,
-    touch: () => {},
+    touch,
     log: () => {},
   });
   let onWake: () => Promise<void> = async () => {};
@@ -211,6 +211,31 @@ describe("durable registrations", () => {
     t.durable.endActivate();
     await expect(t.durable.revoke("p.value")).resolves.toBe(true);
     expect(t.held.has("registry.provide:p.value")).toBe(false);
+  });
+
+  it("does not count a job's own work as use", async () => {
+    const touch = vi.fn();
+    const t = setup(1000, touch);
+    t.durable.beginRun();
+    let release!: () => void;
+    const job = vi.fn(
+      () => new Promise<void>((resolve) => (release = resolve)),
+    );
+    await t.durable.register("schedule.every", [5000, job, { id: "watch" }]);
+    await t.durable.register("events.on", ["host.deleted", vi.fn()]);
+    t.durable.endActivate();
+    const tick = t.held.get("schedule.every:5000")![1] as AnyFn;
+    const running = tick();
+    await Promise.resolve();
+    expect(t.durable.onlyJobs).toBe(true);
+    release();
+    await running;
+    expect(touch).not.toHaveBeenCalled();
+    expect(t.durable.onlyJobs).toBe(false);
+
+    const onDeleted = t.held.get("events.on:host.deleted")![1] as AnyFn;
+    await onDeleted();
+    expect(touch).toHaveBeenCalled();
   });
 
   it("undoes everything when the plugin is turned off", async () => {

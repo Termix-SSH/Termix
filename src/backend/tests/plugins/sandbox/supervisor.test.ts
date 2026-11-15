@@ -394,6 +394,41 @@ describe("supervisor", () => {
     await supervisor.shutdown();
   }, 30_000);
 
+  it("lets a plugin with nothing to do stop even while its short job runs", async () => {
+    const reports: unknown[] = [];
+    const supervisor = new SandboxSupervisor(config({ idleMs: 300 }));
+    await supervisor.register(
+      spec(
+        "quiet",
+        plugin(
+          "quiet",
+          `export async function activate(ctx) {
+            await ctx.schedule.keepAwake("watches", false);
+            await ctx.schedule.every(170, async () => {
+              await ctx.report("tick");
+            }, { id: "tick" });
+          }`,
+        ),
+        {
+          // Out of step with the 100 ms health check that looks for idle.
+          sandbox: { schedules: [{ id: "tick", every: 170 }] },
+          report: (value) => reports.push(value),
+          ctx: {
+            schedule: { ...realSchedule(), keepAwake: () => {} },
+          },
+        },
+      ),
+    );
+    // It ran its job at least once while it was up.
+    await until(() => reports.length >= 1);
+    await until(() => supervisor.status()[0].state === "stopped");
+    const seen = reports.length;
+    await new Promise((r) => setTimeout(r, 400));
+    // Stopped, so the short job no longer runs.
+    expect(reports.length).toBe(seen);
+    await supervisor.shutdown();
+  }, 30_000);
+
   it("keeps a plugin up while it says it has work, and lets it stop after", async () => {
     const supervisor = new SandboxSupervisor(config({ idleMs: 200 }));
     const body = (awake: boolean) => `export async function activate(ctx) {

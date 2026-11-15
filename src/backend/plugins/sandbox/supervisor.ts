@@ -367,6 +367,8 @@ class PluginProcess {
   }
 
   touch(): void {
+    // Calls a scheduled job makes are not use of the plugin.
+    if (this.durable?.onlyJobs) return;
     this.lastActivity = Date.now();
   }
 

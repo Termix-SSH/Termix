@@ -122,6 +122,7 @@ export class DurableRegistrations {
   private readonly counts = new Map<string, number>();
   private run = 0;
   private inflight = 0;
+  private jobs = 0;
   /** While the process shuts down, its own disposals keep what core holds. */
   holding = false;
 
@@ -134,6 +135,11 @@ export class DurableRegistrations {
   /** Calls waiting for a stand-in to finish. */
   get busy(): number {
     return this.inflight;
+  }
+
+  /** Only scheduled jobs are running: what they do is not use. */
+  get onlyJobs(): boolean {
+    return this.jobs > 0 && this.inflight === this.jobs;
   }
 
   get size(): number {
@@ -278,8 +284,12 @@ export class DurableRegistrations {
   ): Promise<unknown> {
     const entry = this.entries.get(key);
     if (!entry) throw new Error("The plugin no longer provides this");
+    // A job's own work is not use: a plugin whose jobs find nothing to do
+    // must still be able to go idle.
+    const job = path === "schedule.every";
     this.inflight++;
-    this.host.touch();
+    if (job) this.jobs++;
+    else this.host.touch();
     try {
       const fresh = entry.run === this.run && this.host.running();
       if (!fresh) {
@@ -305,7 +315,8 @@ export class DurableRegistrations {
       return await (fn as AnyFn)(...callArgs);
     } finally {
       this.inflight--;
-      this.host.touch();
+      if (job) this.jobs--;
+      else this.host.touch();
     }
   }
 
