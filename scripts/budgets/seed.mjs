@@ -99,6 +99,14 @@ async function main() {
     if (Date.now() > end) throw new Error("plugins did not all start");
     await sleep(5000);
   }
+  // A server built without bundled plugins has no default look marked.
+  const look = await call("PUT", "/user-preferences/look/defaults", {
+    cookie,
+    body: { layout: "classic", theme: "dark" },
+  });
+  if (!look.response.ok) {
+    throw new Error(`could not set the default look: ${look.response.status}`);
+  }
   console.log(JSON.stringify({ user, plugins: ids.length }));
 }
 
