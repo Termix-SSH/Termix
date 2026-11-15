@@ -13,7 +13,7 @@ permissions: {}
 
 jobs:
   coverage:
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
       contents: read

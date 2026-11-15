@@ -18,7 +18,7 @@ concurrency:
 jobs:
   translate:
     if: ${{ startsWith(github.ref, 'refs/heads/dev-') }}
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     environment: build
     permissions:
       contents: read
