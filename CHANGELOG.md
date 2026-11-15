@@ -120,6 +120,7 @@
 - SSH key uploads on a host are limited to 1 MB
 - Download names with unusual characters in a user export are kept safe
 - A settings import no longer brings in password reset codes or the audit forwarding token
+- Plugin tools on a shared host you have no login for now say a login is missing, not that the host was not found
 
 ## 26.11.1
 
