@@ -66,15 +66,22 @@ const later = (minutes: number) =>
 
 let adapter: TestSqliteDatabase;
 
+// Through the repositories so the same SQL works on SQLite, Postgres and MySQL.
 async function setAdmins(ids: string[]) {
-  await adapter.exec(
-    `UPDATE users SET is_admin = CASE WHEN id IN (${ids.map((id) => `'${id}'`).join(",") || "''"}) THEN 1 ELSE 0 END;`,
-  );
+  const { UserRepository } =
+    await import("../../database/repositories/user-repository.js");
+  const users = new UserRepository(h.context!);
+  for (const id of ["alice", "bob", "carol"]) {
+    await users.update(id, { isAdmin: ids.includes(id) });
+  }
 }
 
 async function turnOn(minutes = 60) {
-  await adapter.exec(
-    `INSERT INTO settings (key, value) VALUES ('admin_hold_minutes', '${minutes}');`,
+  const { SettingsRepository } =
+    await import("../../database/repositories/settings-repository.js");
+  await new SettingsRepository(h.context!).set(
+    "admin_hold_minutes",
+    String(minutes),
   );
 }
 
