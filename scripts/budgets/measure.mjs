@@ -165,11 +165,19 @@ async function main() {
   await field.first().fill(user);
   await page.locator("#login-pass").fill(pass);
   requests.length = 0;
-  const started = Date.now();
+  let started = Date.now();
   await page.keyboard.press("Enter");
-  const setup = await finishSetup(page);
-  const coldDashboardMs = setup.stageAt - started;
+  let setup = await finishSetup(page);
   const onboarding = setup.pressed;
+  if (onboarding) {
+    // Plugins load on the first page load after the setup closes, so that
+    // load is the cold one.
+    requests.length = 0;
+    started = Date.now();
+    await page.reload();
+    setup = await finishSetup(page);
+  }
+  const coldDashboardMs = setup.stageAt - started;
   const coldSettledMs = await waitForFrames(page, started);
   const cold = await frameCounts(page);
   const coldHeap = await jsHeapMb(page);
