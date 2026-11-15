@@ -62,6 +62,16 @@ describe("buildChildFlags", () => {
     expect(flags.firewall).toBe("allow-all");
   });
 
+  it("lets a native addon plugin probe the libc on Linux", () => {
+    const has = (granted: string[], platform: NodeJS.Platform) =>
+      buildChildFlags({ ...base, granted, platform }).execArgv.some((a) =>
+        /^--allow-fs-read=.*[\\/]etc[\\/]alpine-release$/.test(a),
+      );
+    expect(has(["device:serial"], "linux")).toBe(true);
+    expect(has([], "linux")).toBe(false);
+    expect(has(["device:serial"], "win32")).toBe(false);
+  });
+
   it("lets files:own read back what it writes", () => {
     const flags = buildChildFlags({ ...base, granted: ["files:own"] });
     const reads = flags.execArgv.filter((a) =>
