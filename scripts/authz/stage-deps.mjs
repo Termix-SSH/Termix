@@ -7,7 +7,7 @@
 //
 // The seed also needs totp and login-security (pending, setup and expired
 // sessions), so those are built too unless they are the plugin itself.
-// --seed builds only those two, for core's own run: the pinned releases can
+// --seed builds those plus alerts and host-status, for core's own run: pinned releases can
 // still be builds for an older plugin API that core no longer runs.
 //
 // Repos come from the official registry index. Only source is cloned: CI must
@@ -29,6 +29,9 @@ if (!pluginDir || !outDir) {
 
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const HARNESS = ["totp", "login-security"];
+// Core's own run also needs an operation to run (alerts) and a host status
+// provider (host-status) for those routes.
+const CORE_SEED = [...HARNESS, "alerts", "host-status"];
 // npm.cmd needs a shell on Windows; git must not get one (paths with spaces).
 const run = (cmd, args, cwd) =>
   execFileSync(cmd, args, { cwd, stdio: "inherit", shell: cmd === "npm.cmd" });
@@ -52,7 +55,7 @@ async function main() {
       : {};
     const wanted = [
       ...Object.keys(manifest.dependencies ?? {}),
-      ...(first ? HARNESS : []),
+      ...(first ? (seedOnly ? CORE_SEED : HARNESS) : []),
     ];
     first = false;
     for (const id of wanted) {

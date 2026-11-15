@@ -98,7 +98,7 @@ jobs:
       - name: Build backend with every plugin
         run: npm run build:backend
 
-      # The seed needs totp and login-security running. Pinned releases can
+      # The seed needs totp, login-security, alerts and host-status running. Pinned releases can
       # still be builds for an older plugin API, so build them from source.
       - name: Build the seed plugins
         run: node scripts/authz/stage-deps.mjs --seed node_modules/.cache/authz-seed
