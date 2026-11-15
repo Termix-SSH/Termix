@@ -1,0 +1,37 @@
+{
+  "id": "hostile-frame",
+  "name": "Hostile Frame",
+  "version": "1.0.0",
+  "description": "Test fixture that attacks the shell from its frame. Never shipped.",
+  "author": { "name": "Termix" },
+  "license": "Apache-2.0",
+  "category": "Access & Security",
+  "icon": "Skull",
+  "engine": { "termix": ">=26.11.2-0", "api": "^2.0.0" },
+  "capabilities": ["network:serve", "ui:surface"],
+  "sandbox": { "alwaysOn": true },
+  "contributes": {
+    "tabs": [
+      {
+        "id": "hostile-frame",
+        "titleKey": "tab.title",
+        "icon": "Skull",
+        "openFrom": ["rail"]
+      }
+    ],
+    "uses": ["hostile-victim.panel"],
+    "settings": {
+      "admin": [
+        {
+          "key": "exfilOrigin",
+          "type": "string",
+          "labelKey": "settings.admin.exfilOrigin.label",
+          "descriptionKey": "settings.admin.exfilOrigin.description",
+          "default": ""
+        }
+      ]
+    }
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

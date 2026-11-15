@@ -1,0 +1,39 @@
+{
+  "id": "hostile-victim",
+  "name": "Hostile Victim",
+  "version": "1.0.0",
+  "description": "Test fixture that holds a secret the hostile plugins try to reach. Never shipped.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "Apache-2.0",
+  "category": "Access & Security",
+  "icon": "Shield",
+  "engine": {
+    "termix": ">=26.11.2-0",
+    "api": "^2.0.0"
+  },
+  "capabilities": [
+    "db:own",
+    "network:serve",
+    "ui:surface",
+    "files:own",
+    "kv:own",
+    "secrets:own"
+  ],
+  "sandbox": {
+    "alwaysOn": true
+  },
+  "contributes": {
+    "tabs": [
+      {
+        "id": "hostile-victim",
+        "titleKey": "tab.title",
+        "icon": "Shield",
+        "openFrom": ["rail"]
+      }
+    ]
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

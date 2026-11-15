@@ -15,6 +15,8 @@ on:
       - "src/backend/plugins/sandbox/**"
       - "src/backend/tests/plugins/sandbox/desktop-fence.test.ts"
       - "src/backend/tests/plugins/sandbox/wire-codec.test.ts"
+      - "scripts/hostile/plugins/hostile-backend/**"
+      - "scripts/hostile/lib/**"
       - ".github/workflows/desktop-fence.yml"
   # Every PR, since the jobs are required checks on dev branches.
   pull_request:

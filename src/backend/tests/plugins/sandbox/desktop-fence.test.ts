@@ -351,6 +351,126 @@ describe.runIf(built)("desktop plugin fence (packaged runtime)", () => {
     expect(fs.existsSync(outside)).toBe(false);
   }, 120_000);
 
+  // The hostile suite's attacks on the process itself (scripts/hostile),
+  // run in the packaged app's sandbox. Everything else it tries goes through
+  // ctx and core, the same code the server suite covers.
+  it("refuses the hostile suite's process attacks", async () => {
+    const supervisor = new SandboxSupervisor({
+      idleMs: 60_000,
+      cpuPercent: 95,
+      memoryMb: 256,
+      alwaysOn: new Set(),
+      healthIntervalMs: 500,
+      healthTimeoutMs: 5000,
+      cpuWindowMs: 2000,
+      backoffStartMs: 50,
+      paths: {
+        runtime: path.join(
+          backendDir,
+          "plugins",
+          "sandbox",
+          "child",
+          "runtime.js",
+        ),
+        harden: path.join(
+          backendDir,
+          "plugins",
+          "sandbox",
+          "child",
+          "harden.js",
+        ),
+        reads: [],
+      },
+    });
+    desktop();
+    const files = plugin("hostile-process", "");
+    const esbuild = await import("esbuild");
+    await esbuild.build({
+      entryPoints: [
+        path.join(
+          repo,
+          "scripts/hostile/plugins/hostile-backend/src/backend/process-attacks.mjs",
+        ),
+      ],
+      outfile: path.join(files.dir, "attacks.js"),
+      bundle: true,
+      platform: "node",
+      format: "esm",
+      target: "node24",
+      logLevel: "silent",
+    });
+    const victimDir = path.join(dataRoot, "plugin-data", "hostile-victim");
+    fs.mkdirSync(victimDir, { recursive: true });
+    fs.writeFileSync(path.join(victimDir, "secret.txt"), "victim secret");
+    const target = (await import("node:net")).createServer((socket) =>
+      socket.end(),
+    );
+    await new Promise<void>((resolve) =>
+      target.listen(0, "127.0.0.1", resolve),
+    );
+    const input = {
+      dataDir: dataRoot,
+      canaryFile: secretFile,
+      dataFiles: [secretFile],
+      victimDir,
+      coreRoot: path.dirname(backendDir),
+      listenPort: (target.address() as { port: number }).port,
+      envCanary: "hostile-env-canary",
+    };
+    fs.writeFileSync(
+      files.entry,
+      `import { processAttacks } from "./attacks.js";
+       export async function activate(ctx) {
+         const attacks = processAttacks(${JSON.stringify(
+           path.join(dataRoot, "plugin-data", "hostile-process"),
+         )});
+         const out = {};
+         for (const [id, run] of Object.entries(attacks)) {
+           out[id] = await run(${JSON.stringify(input)});
+         }
+         await ctx.report(out);
+       }`,
+    );
+    process.env.TERMIX_HOSTILE_CANARY = input.envCanary;
+    let result: Record<string, { worked: boolean; detail?: string }> | null =
+      null;
+    try {
+      await supervisor
+        .register(
+          spec(
+            "hostile-process",
+            files,
+            (value) => {
+              result = value as typeof result;
+            },
+            ["files:own"],
+          ),
+        )
+        .catch((error: Error) => {
+          throw new Error([error.message, ...logged].join("\n"));
+        });
+      await until(() => result !== null, 90_000);
+    } finally {
+      await supervisor.shutdown();
+      target.close();
+      delete process.env.TERMIX_HOSTILE_CANARY;
+    }
+    const { evaluate } =
+      await import("../../../../../scripts/hostile/lib/evaluate.mjs");
+    const { BACKEND } =
+      await import("../../../../../scripts/hostile/lib/expect.mjs");
+    const rows = evaluate(result!, BACKEND, {
+      channel: "stdio",
+      required: Object.keys(result!),
+    }) as Array<{ id: string; status: string; why: string; detail?: string }>;
+    const failed = rows.filter((row) => row.status === "fail");
+    expect(failed, JSON.stringify(failed, null, 2)).toEqual([]);
+    expect(rows.length).toBeGreaterThan(30);
+    expect(fs.readFileSync(path.join(victimDir, "secret.txt"), "utf8")).toBe(
+      "victim secret",
+    );
+  }, 180_000);
+
   /** Runs a probe script in the helper with Node's flags left off. */
   function jailOnly(
     script: string,

@@ -30,6 +30,8 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "test:authz": "node scripts/authz/run.mjs",
+    "test:hostile": "node scripts/hostile/run.mjs",
+    "hostile:ui": "vite build --outDir node_modules/hostile-ui --emptyOutDir && vite build -c vite.frame.config.ts --outDir node_modules/hostile-ui/frame --emptyOutDir",
     "dev": "node scripts/dev.mjs",
     "dev:electron": "node scripts/dev.mjs electron",
     "plugin-runtime": "node scripts/build-plugin-runtime.cjs",
