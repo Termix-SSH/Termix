@@ -54,13 +54,18 @@ const { checkRuntime } = require(
   path.join(repo, "electron", "plugin-runtime.cjs"),
 );
 
-const packaged = process.env.TERMIX_FENCE_RESOURCES;
+// Electron hands the app an absolute resources path; CI passes a relative one.
+const packaged = process.env.TERMIX_FENCE_RESOURCES
+  ? path.resolve(process.env.TERMIX_FENCE_RESOURCES)
+  : undefined;
 const runtimeInfo = checkRuntime(
   packaged
     ? {
         isPackaged: true,
         resourcesPath: packaged,
-        appBundle: process.env.TERMIX_FENCE_APP ?? null,
+        appBundle: process.env.TERMIX_FENCE_APP
+          ? path.resolve(process.env.TERMIX_FENCE_APP)
+          : null,
       }
     : { isPackaged: false, appRoot: repo },
 );
