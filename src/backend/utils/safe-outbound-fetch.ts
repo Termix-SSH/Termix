@@ -50,6 +50,9 @@ const blockedIpv4Ranges = [
 for (const [network, prefix] of blockedIpv4Ranges) {
   blockedAddresses.addSubnet(network, prefix, "ipv4");
   blockedAddresses.addSubnet(`::ffff:${network}`, prefix + 96, "ipv6");
+  // IPv4-compatible (::a.b.c.d) and NAT64 (64:ff9b::a.b.c.d) forms.
+  blockedAddresses.addSubnet(`::${network}`, prefix + 96, "ipv6");
+  blockedAddresses.addSubnet(`64:ff9b::${network}`, prefix + 96, "ipv6");
 }
 
 for (const [network, prefix] of [
@@ -58,6 +61,7 @@ for (const [network, prefix] of [
   ["fc00::", 7],
   ["fe80::", 10],
   ["ff00::", 8],
+  ["64:ff9b:1::", 48], // local-use NAT64
 ] as const) {
   blockedAddresses.addSubnet(network, prefix, "ipv6");
 }

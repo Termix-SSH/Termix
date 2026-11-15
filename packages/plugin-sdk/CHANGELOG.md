@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.8.1
+
+Plugin API 2.8.0. Needs Termix 26.11.2.
+
+### Fixed
+
+- `net-guard` also refuses private IPv4 addresses written in IPv4-compatible (`::10.0.0.1`) or NAT64 (`64:ff9b::10.0.0.1`) form
+
 ## 2.8.0
 
 Plugin API 2.8.0. Needs Termix 26.11.2.

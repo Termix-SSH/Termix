@@ -34,7 +34,10 @@ import {
   MAX_UPLOAD_BYTES,
   PluginManageError,
 } from "../../plugins/manage.js";
-import { parsePluginChannel } from "../../plugins/registry-index.js";
+import {
+  parsePluginChannel,
+  readInstalledProvenance,
+} from "../../plugins/registry-index.js";
 import { RegistryError } from "../../plugins/registries.js";
 import {
   pluginDocsUrl,
@@ -768,6 +771,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
           features,
           env,
           signedBy: loaded?.signedBy ?? null,
+          provenance: readInstalledProvenance(loaded?.artifact),
           managedByServer: linked && (await isManagedByLinkedServer(record.id)),
           capabilities,
           grantedCapabilities: grantsByPlugin.get(record.id) ?? [],
@@ -1019,6 +1023,73 @@ router.get(
         error,
         "Failed to read plugin memory",
         "plugin_processes",
+      );
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/update-check:
+ *   get:
+ *     summary: Plugins the next Termix release would turn off
+ *     description: Looks up the newest Termix release on this instance's channel and lists the installed plugins that would not load on it, so an admin can update them first. reason api means the plugin was made for plugin API 1, reason termix means its engine.termix range leaves that version out (needs says which range it asks for). version is null when no newer release is known.
+ *     tags:
+ *       - Plugins
+ *     responses:
+ *       200:
+ *         description: The newest version and the plugins it would turn off.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       500:
+ *         description: The check could not run.
+ */
+router.get(
+  "/update-check",
+  authenticateJWT,
+  requireManagePlugins,
+  async (_req: Request, res: Response) => {
+    try {
+      const { getLocalVersion } = await import("../../utils/app-version.js");
+      const { fetchLatestRelease, updateStatus } =
+        await import("../../utils/latest-release.js");
+      const { getCoreChannel } =
+        await import("../../updates/update-channel.js");
+      const { pluginsBlockedOn } =
+        await import("../../plugins/update-impact.js");
+      const local = getLocalVersion();
+      const latest = local
+        ? await fetchLatestRelease(await getCoreChannel(local))
+        : null;
+      if (
+        !local ||
+        !latest ||
+        updateStatus(local, latest.version) !== "requires_update"
+      ) {
+        return res.json({ version: null, blocked: [] });
+      }
+      const installed = [];
+      for (const record of await createCurrentPluginRepository().listAll()) {
+        try {
+          installed.push({
+            id: record.id,
+            enabled: record.state === "enabled",
+            manifest: JSON.parse(record.manifestJson),
+          });
+        } catch {
+          // A record without a readable manifest can't load anyway.
+        }
+      }
+      res.json({
+        version: latest.version,
+        blocked: pluginsBlockedOn(latest.version, installed),
+      });
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to check plugins against the next release",
+        "plugin_update_check",
       );
     }
   },

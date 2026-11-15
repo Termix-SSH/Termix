@@ -55,7 +55,7 @@ import {
 } from "./plugin-bits";
 import { RegistriesSection } from "./RegistriesSection";
 import { PluginMemoryCell, PluginMemorySummary } from "./PluginMemory";
-import { usePluginMemory } from "./plugin-memory";
+import { usePluginMemory, usePluginUpdateCheck } from "./plugin-memory";
 import { PluginConsentPrompt } from "./PluginConsentPrompt";
 import { PluginDetail } from "./PluginDetail";
 import {
@@ -136,8 +136,11 @@ function PluginsTabBody() {
   );
 
   const installed = manager.plugins.filter((p) => p.installed);
-  const outdated = installed.filter(
-    (p) => p.isolation === "legacy" && p.enabled,
+  const outdated = installed.filter((p) => p.isolation === "legacy");
+  const updateCheck = usePluginUpdateCheck(!manager.managedByServer);
+  // API 1 plugins already show above; this lists what the update adds.
+  const blockedByUpdate = (updateCheck?.blocked ?? []).filter(
+    (plugin) => plugin.reason === "termix",
   );
   const available = manager.plugins.filter((p) => p.inRegistry);
   const updates = installed.filter((p) => p.updateAvailable);
@@ -212,6 +215,26 @@ function PluginsTabBody() {
               {t("plugins.manager.legacy.notice", {
                 count: outdated.length,
                 names: outdated.map((plugin) => plugin.name).join(" | "),
+              })}{" "}
+              {t("plugins.manager.legacy.why")}{" "}
+              <DocsLink core="pluginApi2">
+                {t("plugins.manager.legacy.guide")}
+              </DocsLink>
+            </Notice>
+          )}
+          {updateCheck?.version && blockedByUpdate.length > 0 && (
+            <Notice>
+              {t("plugins.manager.updateCheck.notice", {
+                count: blockedByUpdate.length,
+                version: updateCheck.version,
+                names: blockedByUpdate
+                  .map((plugin) =>
+                    t("plugins.manager.updateCheck.needs", {
+                      name: plugin.name,
+                      range: plugin.needs,
+                    }),
+                  )
+                  .join(" | "),
               })}
             </Notice>
           )}

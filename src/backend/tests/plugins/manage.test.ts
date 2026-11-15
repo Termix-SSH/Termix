@@ -201,7 +201,11 @@ async function stageArtifact(
   fs.mkdirSync(staging, { recursive: true });
   const file = path.join(staging, `${id}-staged.tmxplug`);
   await tar.c({ gzip: true, file, cwd: path.join(build, id) }, ["."]);
-  return { file, signatureFile: `${file}.sig` };
+  return {
+    file,
+    signatureFile: `${file}.sig`,
+    provenanceFile: `${file}.provenance.json`,
+  };
 }
 
 async function boot() {
@@ -359,6 +363,33 @@ describe("installing from the registry", () => {
     expect(db.grants).toEqual([
       expect.objectContaining({ pluginId: "notes", capability: "kv:own" }),
     ]);
+  });
+
+  it("keeps the checked build provenance beside the plugin and drops it on uninstall", async () => {
+    registry.index.plugins = [registryEntry("notes", [{ version: "1.0.0" }])];
+    registry.download.mockImplementation(async () => {
+      const staged = await stageArtifact("notes", { capabilities: ["kv:own"] });
+      fs.writeFileSync(
+        staged.provenanceFile,
+        JSON.stringify({
+          status: "verified",
+          checkedAt: "x",
+          signer: null,
+          runUrl: null,
+          bundleUrl: "https://b",
+        }),
+      );
+      return staged;
+    });
+    await boot();
+    await manage.installPlugin("notes", {
+      userId: "admin",
+      capabilities: DEFAULT_CAPS,
+    });
+    const kept = path.join(data, "plugins", "notes.tmxplug.provenance.json");
+    expect(JSON.parse(fs.readFileSync(kept, "utf8")).status).toBe("verified");
+    await manage.uninstallPlugin("notes");
+    expect(fs.existsSync(kept)).toBe(false);
   });
 
   it("refuses a plugin that is not in the registry", async () => {

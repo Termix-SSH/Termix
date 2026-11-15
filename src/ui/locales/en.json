@@ -1514,8 +1514,21 @@
       "pinHint": "Keeps {{version}} and skips every update until you turn this off.",
       "pinnedTo": "Pinned to {{version}}",
       "legacy": {
-        "notice_one": "1 plugin was made for an older Termix and stays off until it is updated: {{names}}",
-        "notice_other": "{{count}} plugins were made for an older Termix and stay off until they are updated: {{names}}"
+        "notice_one": "1 plugin was made for an older Termix and stays off until it is updated: {{names}}.",
+        "notice_other": "{{count}} plugins were made for an older Termix and stay off until they are updated: {{names}}.",
+        "why": "They were made for plugin API 1, which ran inside the server. Termix now runs every plugin in its own process, so each needs a version made for plugin API 2. Update official ones here, and ask the author of a community plugin for one.",
+        "guide": "How plugins move to API 2"
+      },
+      "provenance": {
+        "verified": "Build checked",
+        "verifiedHint": "Its build provenance was signed by the Termix registry release workflow and matches this file. Opens the build.",
+        "unchecked": "Build not checked",
+        "uncheckedHint": "Its build provenance could not be checked when it was downloaded. Its registry signature was."
+      },
+      "updateCheck": {
+        "notice_one": "Termix {{version}} is out. 1 plugin will stay off on it until you update it: {{names}}.",
+        "notice_other": "Termix {{version}} is out. {{count}} plugins will stay off on it until you update them: {{names}}.",
+        "needs": "{{name}} (needs Termix {{range}})"
       },
       "version": "Version",
       "versionPickHint": "Install an older release instead of the newest. It stays on that version until you unpin it.",

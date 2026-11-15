@@ -697,6 +697,9 @@
     "GET /plugins/processes": {
       "access": "admin"
     },
+    "GET /plugins/update-check": {
+      "access": "admin"
+    },
     "GET /plugins/public": {
       "access": "public"
     },

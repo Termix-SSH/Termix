@@ -22,7 +22,19 @@ export function createWorkspace() {
   fs.mkdirSync(path.join(workDir, "data"));
   return {
     workDir,
-    cleanup: () => fs.rmSync(workDir, { recursive: true, force: true }),
+    cleanup: () => {
+      // A plugin process that is still exiting can hold a file on Windows.
+      try {
+        fs.rmSync(workDir, {
+          recursive: true,
+          force: true,
+          maxRetries: 10,
+          retryDelay: 300,
+        });
+      } catch (error) {
+        console.warn(`[authz] could not remove ${workDir}: ${error.message}`);
+      }
+    },
   };
 }
 

@@ -70,10 +70,12 @@ import {
   parseRegistryIndex,
   parseRegistryStats,
   resetRegistryCache,
+  setProvenanceCheckForTests,
   type RegistrySource,
   type RegistryVersion,
 } from "../../plugins/registry-index.js";
 import { setTrustRootsForTests } from "../../plugins/trust.js";
+import { ProvenanceUnavailableError } from "../../plugins/provenance.js";
 import {
   clearRevocationLists,
   setRevocationList,
@@ -721,6 +723,118 @@ describe("downloadRelease", () => {
     await expect(
       downloadRelease("docker", version({ ...signed, size: 10 })),
     ).rejects.toThrow(/larger than allowed/);
+  });
+
+  describe("build provenance", () => {
+    const bundleFor = (sha256: string) =>
+      JSON.stringify({
+        dsseEnvelope: {
+          payloadType: "application/vnd.in-toto+json",
+          payload: Buffer.from(
+            JSON.stringify({
+              _type: "https://in-toto.io/Statement/v1",
+              subject: [{ name: "p-1.0.0.tmxplug", digest: { sha256 } }],
+              predicate: {
+                runDetails: {
+                  metadata: {
+                    invocationId:
+                      "https://github.com/Termix-SSH/Termix-Registry/actions/runs/7",
+                  },
+                },
+              },
+            }),
+          ).toString("base64"),
+          signatures: [],
+        },
+      });
+    const provenance = {
+      url: "https://example.com/p-1.0.0.tmxplug.sigstore.json",
+    };
+    afterEach(() => setProvenanceCheckForTests(null));
+
+    it("keeps a checked bundle summary beside the download", async () => {
+      const signed = sign(artifact);
+      setProvenanceCheckForTests(async () => "signer");
+      fetchMock
+        .mockResolvedValueOnce(response(artifact))
+        .mockResolvedValueOnce(response(bundleFor(signed.sha256)));
+      const result = await downloadRelease(
+        "docker",
+        version({ ...signed, size: artifact.length, provenance }),
+      );
+      expect(
+        JSON.parse(fs.readFileSync(result.provenanceFile, "utf8")),
+      ).toMatchObject({
+        status: "verified",
+        signer: "signer",
+        runUrl: "https://github.com/Termix-SSH/Termix-Registry/actions/runs/7",
+        bundleUrl: provenance.url,
+      });
+    });
+
+    it("refuses a release whose bundle is for another file", async () => {
+      const signed = sign(artifact);
+      setProvenanceCheckForTests(async () => "signer");
+      fetchMock
+        .mockResolvedValueOnce(response(artifact))
+        .mockResolvedValueOnce(response(bundleFor("d".repeat(64))));
+      await expect(
+        downloadRelease(
+          "docker",
+          version({ ...signed, size: artifact.length, provenance }),
+        ),
+      ).rejects.toThrow(/another file/);
+    });
+
+    it("installs without it when Sigstore can't be reached", async () => {
+      const signed = sign(artifact);
+      setProvenanceCheckForTests(async () => {
+        throw new ProvenanceUnavailableError("offline");
+      });
+      fetchMock
+        .mockResolvedValueOnce(response(artifact))
+        .mockResolvedValueOnce(response(bundleFor(signed.sha256)));
+      const result = await downloadRelease(
+        "docker",
+        version({ ...signed, size: artifact.length, provenance }),
+      );
+      expect(
+        JSON.parse(fs.readFileSync(result.provenanceFile, "utf8")).status,
+      ).toBe("unchecked");
+    });
+
+    it("installs an older entry that lists no bundle", async () => {
+      const signed = sign(artifact);
+      fetchMock.mockResolvedValueOnce(response(artifact));
+      const result = await downloadRelease(
+        "docker",
+        version({ ...signed, size: artifact.length }),
+      );
+      expect(fs.existsSync(result.provenanceFile)).toBe(false);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("reads only an https bundle link from the index", () => {
+      const index = parseRegistryIndex({
+        registry: "official",
+        plugins: [
+          {
+            id: "docker",
+            name: "Docker",
+            versions: [
+              version({ provenance }),
+              version({
+                version: "1.1.0",
+                provenance: { url: "http://x/b.json" },
+              }),
+            ],
+          },
+        ],
+      });
+      const [newer, older] = index.plugins[0].versions;
+      expect(newer.provenance).toBeUndefined();
+      expect(older.provenance).toEqual(provenance);
+    });
   });
 });
 

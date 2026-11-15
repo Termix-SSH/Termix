@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 2.8.0 | Plugin API 2.8.0
+SDK 2.8.1 | Plugin API 2.8.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -383,8 +383,8 @@ res)` works from inside one of your own requests: Termix finishes the login on t
    frontend with `checkFrameApp` (see Frames).
 7. Drop capabilities you no longer use, bump the version and add a CHANGELOG entry.
 
-An API 1 plugin keeps working only when it is official and an admin turns on "Run without isolation" for
-it. Community API 1 plugins don't run.
+An API 1 plugin doesn't run at all. The plugins page names each one, and lists the plugins a newer Termix
+won't run before an admin updates.
 
 ### What ctx has
 
@@ -1496,8 +1496,9 @@ Releases are immutable. The workflow makes a draft, uploads the `.tmxplug`, then
 the tag and files can't change. A version that already has a release is refused, so a fix is a new version.
 Turn on immutable releases in the plugin repo settings.
 
-No secrets are needed. The workflow records GitHub build provenance for the `.tmxplug`, and the run summary
-shows the `sha256` for a registry submission. If a dev branch changes `.github/workflows`, add a
+No secrets are needed. The workflow records GitHub build provenance for the `.tmxplug` and uploads it next
+to the file as `.tmxplug.sigstore.json`, which Termix checks at download. The run summary shows the `sha256`
+for a registry submission. If a dev branch changes `.github/workflows`, add a
 `TERMIX_PAT` secret (a token with `repo` and `workflow` scopes). To also sign with your own key, set
 `TERMIX_PLUGIN_SIGNING_KEY`. Keep `.github/workflows/release.yml` as the template has it: the community
 registry checks provenance from it.
