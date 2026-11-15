@@ -80,9 +80,26 @@ jobs:
             -t termix-budget \
             -f docker/Dockerfile .
 
+      # The plugins' dev branches need the coming release, so the server
+      # reports that version, the way the dev runner does.
+      - name: Coming version
+        id: version
+        env:
+          REF: ${{ github.base_ref || github.ref_name }}
+        run: |
+          case "$REF" in
+            dev-*) version="${REF#dev-}" ;;
+            *) version="$(git ls-remote --heads https://github.com/Termix-SSH/Termix 'refs/heads/dev-*' \
+                 | sed 's#.*refs/heads/dev-##' | sort -V | tail -1)" ;;
+          esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - name: Start Termix
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           docker run -d --name termix -p 8080:8080 \
+            -e VERSION="$VERSION" \
             -e TERMIX_PLUGIN_IDLE_MINUTES=2 \
             -v "$PWD/dist/plugins:/app/dist/plugins:ro" \
             termix-budget
