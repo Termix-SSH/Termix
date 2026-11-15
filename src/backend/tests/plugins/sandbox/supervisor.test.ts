@@ -45,6 +45,7 @@ import {
   disposePluginHandle,
 } from "../../../plugins/ctx.js";
 import { createPluginSchedule } from "../../../plugins/schedule.js";
+import { createPluginRouter, getPluginRouter } from "../../../plugins/http.js";
 import { DisposableBag } from "../../../plugins/disposables.js";
 
 /** Core's own timers, as a plugin ctx has them. */
@@ -295,6 +296,38 @@ describe("supervisor", () => {
     expect(await supervisor.wake("lazy")).toBe(true);
     expect(supervisor.status()[0].state).toBe("ready");
     await until(() => supervisor.status()[0].state === "stopped", 5000);
+    await supervisor.shutdown();
+  }, 30_000);
+
+  it("unmounts routes once it starts stopping and starts again only after it stopped", async () => {
+    const supervisor = new SandboxSupervisor(config({ idleMs: 300 }));
+    const base = spec(
+      "slowstop",
+      plugin(
+        "slowstop",
+        `export function activate() {}
+export async function deactivate() {
+  await new Promise((resolve) => setTimeout(resolve, 800));
+}`,
+      ),
+    );
+    await supervisor.register({
+      ...base,
+      makeContext: () => {
+        const made = base.makeContext();
+        createPluginRouter({ manifest: base.manifest } as never);
+        return made;
+      },
+    });
+    expect(await supervisor.wake("slowstop")).toBe(true);
+    expect(getPluginRouter("slowstop")).toBeDefined();
+
+    await until(() => supervisor.status()[0].state === "stopping", 5000);
+    // A request now takes the wake path instead of the closing process.
+    expect(getPluginRouter("slowstop")).toBeUndefined();
+    expect(await supervisor.wake("slowstop")).toBe(true);
+    expect(supervisor.status()[0].state).toBe("ready");
+    expect(getPluginRouter("slowstop")).toBeDefined();
     await supervisor.shutdown();
   }, 30_000);
 

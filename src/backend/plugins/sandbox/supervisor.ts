@@ -29,6 +29,7 @@ import { SandboxTokenStore } from "./tokens.js";
 import { isPassableEnv } from "./launcher/policy.js";
 import { DurableRegistrations } from "./durable.js";
 import { readAwakeState, writeAwakeState } from "./awake-store.js";
+import { unregisterPluginHttp } from "../http.js";
 import type { SqlDialect } from "./sql-guard.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -254,6 +255,7 @@ class PluginProcess {
   startedAt = 0;
   readyMs = 0;
   private starting: Promise<boolean> | null = null;
+  private stopDone: Promise<void> | null = null;
   private crashes: number[] = [];
   private backoffMs = 0;
   private notBefore = 0;
@@ -378,6 +380,8 @@ class PluginProcess {
     if (this.state === "failed") return Promise.resolve(false);
     if (this.starting) return this.starting;
     this.starting = (async () => {
+      // A request that came in while it stopped starts it once it is down.
+      if (this.stopDone) await this.stopDone;
       const wait = this.notBefore - Date.now();
       if (wait > 0) await new Promise((r) => setTimeout(r, wait));
       try {
@@ -572,9 +576,19 @@ class PluginProcess {
       clearTimeout(this.restartTimer);
       this.restartTimer = null;
     }
+    if (this.stopDone) return this.stopDone;
     if (this.state === "stopped" || this.state === "failed") return;
+    this.stopDone = this.stopNow().finally(() => {
+      this.stopDone = null;
+    });
+    return this.stopDone;
+  }
+
+  private async stopNow(): Promise<void> {
     this.stopping = true;
     this.state = "stopping";
+    // New requests go through the wake path, which waits for this stop.
+    unregisterPluginHttp(this.id);
     if (this.durable) this.durable.holding = true;
     const bridge = this.bridge;
     const child = this.child;
