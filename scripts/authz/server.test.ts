@@ -1,10 +1,16 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { coreVersionOf } from "./lib/server.mjs";
 
 const git = (stdout: string) => () => ({ stdout }) as never;
 
+const baseRef = process.env.GITHUB_BASE_REF;
+beforeEach(() => {
+  delete process.env.GITHUB_BASE_REF;
+});
 afterEach(() => {
   delete process.env.TERMIX_AUTHZ_CORE_VERSION;
+  if (baseRef === undefined) delete process.env.GITHUB_BASE_REF;
+  else process.env.GITHUB_BASE_REF = baseRef;
 });
 
 describe("coreVersionOf", () => {
@@ -16,6 +22,12 @@ describe("coreVersionOf", () => {
   it("leaves package.json in charge on any other branch", () => {
     expect(coreVersionOf("core", git("main"))).toBeUndefined();
     expect(coreVersionOf("core", git(""))).toBeUndefined();
+  });
+
+  it("reads the PR's target branch when the checkout is detached", () => {
+    process.env.GITHUB_BASE_REF = "dev-26.11.2";
+    expect(coreVersionOf("core", git(""))).toBe("26.11.2");
+    expect(coreVersionOf("core", git("main"))).toBeUndefined();
   });
 
   it("takes an explicit version first", () => {
