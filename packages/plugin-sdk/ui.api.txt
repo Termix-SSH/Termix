@@ -279,7 +279,7 @@ SeamlessTileContext (value): Context<boolean>
 SecretField (value): ({ label, value, onChange, placeholder, hint, error, disabled, className, }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; hint?: ReactNode; error?: string; disabled?: boolean; className?: string; }) => Element
 SectionCard (value): ({ title, icon, action, children, className, rowId, }: { title: string; icon: ReactNode; action?: ReactNode; children: ReactNode; className?: string; rowId?: string; }) => Element
 Segmented (value): <T extends string>({ value, onChange, options, className, }: { value: T; onChange: (next: T) => void; options: readonly { value: NoInfer<T>; label: string; icon?: ReactNode; count?: number; title?: string; }[]; className?: string; }) => Element
-Select (value): ({ ...props }: SelectSharedProps & { value?: string; defaultValue?: string; onValueChange?(value: string): void; }) => Element
+Select (value): ({ ...props }: SelectSharedProps & { value?: string; defaultValue?: string; onValueChange?: (value: string) => void; }) => Element
 Select2 (value): ({ className, children, value, defaultValue, onChange, disabled, placeholder, align, contentClassName, name, id, required, "aria-label": ariaLabel, ...props }: Select2Props) => Element
 SelectContent (value): ({ className, children, position, ref, ...props }: SelectContentProps & RefAttributes<HTMLDivElement>) => Element
 SelectField (value): <T extends string>({ label, value, onChange, options, hint, error, disabled, className, placeholder, }: { label: string; value: T; onChange: (value: T) => void; options: readonly { value: T; label: string; }[]; hint?: ReactNode; error?: string; disabled?: boolean; className?: string; placeholder?: string; }) => Element
