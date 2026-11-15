@@ -12,6 +12,7 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { newestDevBranch } from "./lib/dev-branch.mjs";
 
 const INDEX =
   "https://raw.githubusercontent.com/Termix-SSH/Termix-Registry/main/official/index.json";
@@ -60,7 +61,25 @@ async function main() {
       }
       const target = path.resolve(outDir, id);
       console.log(`building dependency ${id} from ${repository}`);
-      run("git", ["clone", "--depth", "1", `${repository}.git`, target]);
+      // The newest dev branch is what ships next; main may still hold a
+      // release made for an older plugin API that no longer runs.
+      const branch = newestDevBranch(
+        execFileSync(
+          "git",
+          ["ls-remote", "--heads", `${repository}.git`, "dev-*"],
+          {
+            encoding: "utf8",
+          },
+        ),
+      );
+      run("git", [
+        "clone",
+        "--depth",
+        "1",
+        ...(branch ? ["--branch", branch] : []),
+        `${repository}.git`,
+        target,
+      ]);
       run(npm, ["ci", "--ignore-scripts", "--no-audit", "--no-fund"], target);
       const pkg = JSON.parse(
         fs.readFileSync(path.join(target, "package.json"), "utf8"),
