@@ -83,6 +83,7 @@ function openLegacyConfig(row: {
     dek,
     String(row.id),
     "config",
+    { anyRecord: true },
   );
   if (!plain) return null;
   try {

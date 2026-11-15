@@ -68,6 +68,7 @@ function readBackupCodes(
     dek,
     userId,
     "totpBackupCodes",
+    { anyRecord: true },
   );
   try {
     const codes = raw ? JSON.parse(raw) : [];
@@ -144,6 +145,7 @@ export async function runTotpMigration(
             dek,
             user.id,
             "totpSecret",
+            { anyRecord: true },
           );
           if (!secret) continue;
           const codes = readBackupCodes(user.totp_backup_codes, dek, user.id);

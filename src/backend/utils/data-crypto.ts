@@ -15,6 +15,26 @@ import {
   type UserEncryptionMigrationStore,
 } from "./user-encryption-migration-store.js";
 
+/**
+ * Splits a record into the fields that are sealed and the rest, so a new row
+ * can be inserted first and its secrets sealed with the id it gets.
+ */
+export function splitSecrets(
+  tableName: string,
+  record: Record<string, unknown>,
+): { plain: Record<string, unknown>; secrets: Record<string, unknown> } {
+  const plain: Record<string, unknown> = {};
+  const secrets: Record<string, unknown> = {};
+  for (const [fieldName, value] of Object.entries(record)) {
+    if (FieldCrypto.shouldEncryptField(tableName, fieldName) && value) {
+      secrets[fieldName] = value;
+    } else {
+      plain[fieldName] = value;
+    }
+  }
+  return { plain, secrets };
+}
+
 class DataCrypto {
   private static userKeys: UserKeyManager;
 
@@ -29,7 +49,16 @@ class DataCrypto {
     userDataKey: Buffer,
   ): T {
     const encryptedRecord: Record<string, unknown> = { ...record };
-    const recordId = String(record.id || "temp-" + Date.now());
+    const hasSecret = Object.entries(record).some(
+      ([fieldName, value]) =>
+        FieldCrypto.shouldEncryptField(tableName, fieldName) && value,
+    );
+    if (!hasSecret) return encryptedRecord as T;
+    // Secrets are bound to their row, so the real id has to be known.
+    if (record.id === undefined || record.id === null || record.id === "") {
+      throw new Error(`Cannot seal ${tableName} secrets without the row id`);
+    }
+    const recordId = String(record.id);
 
     for (const [fieldName, value] of Object.entries(record)) {
       if (FieldCrypto.shouldEncryptField(tableName, fieldName) && value) {

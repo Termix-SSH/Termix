@@ -75,6 +75,39 @@ describe("FieldCrypto.encryptField / decryptField", () => {
   });
 });
 
+describe("FieldCrypto record binding", () => {
+  it("refuses a value copied from another record", () => {
+    const sealed = FieldCrypto.encryptField(
+      "secret",
+      masterKey,
+      "41",
+      "password",
+    );
+    expect(() =>
+      FieldCrypto.decryptField(sealed, masterKey, "42", "password"),
+    ).toThrow(/different record/);
+  });
+
+  it("refuses a value sealed under a temporary id", () => {
+    const sealed = FieldCrypto.encryptField(
+      "secret",
+      masterKey,
+      "temp-1700000000000",
+      "password",
+    );
+    expect(() =>
+      FieldCrypto.decryptField(sealed, masterKey, "7", "password"),
+    ).toThrow(/different record/);
+  });
+
+  it("reports the id a value carries and opens it only for upgrade code", () => {
+    const sealed = FieldCrypto.encryptField("v", masterKey, "temp-9", "key");
+    expect(FieldCrypto.sealedRecordId(sealed)).toBe("temp-9");
+    expect(FieldCrypto.sealedRecordId("plain")).toBeNull();
+    expect(FieldCrypto.decryptSealedField(sealed, masterKey, "key")).toBe("v");
+  });
+});
+
 describe("FieldCrypto.shouldEncryptField", () => {
   it("identifies encrypted fields per table", () => {
     expect(FieldCrypto.shouldEncryptField("users", "passwordHash")).toBe(true);

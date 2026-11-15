@@ -55,6 +55,7 @@ export async function runTermixIdentityCaMigration(): Promise<number> {
         dek,
         String(row.id),
         "privateKey",
+        { anyRecord: true },
       );
       if (!plain) continue;
       await runStatement(

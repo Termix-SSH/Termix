@@ -48,6 +48,12 @@ export async function runCoreBootMigrations(): Promise<void> {
   DataCrypto.initialize();
   await AuthManager.getInstance().cleanupExpiredSessions();
 
+  // Before anything reads a sealed value: decrypt refuses one sealed for
+  // another record, and older rows still carry a temporary id.
+  const { runFieldResealMigration } =
+    await import("./upgrade/field-reseal-migration.js");
+  await runFieldResealMigration();
+
   // Before anything snapshots shared secrets, which would drop a protocol
   // snapshot whose login has not been copied yet.
   const { runProtocolAuthMigration } =
