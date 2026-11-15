@@ -104,6 +104,40 @@ async function jsHeapMb(page) {
   return Math.round(used / 1024 / 1024);
 }
 
+/**
+ * Waits for the dashboard. A fresh server shows setup steps first (a whole
+ * setup, then "a few new things" once plugins add steps); each gets its
+ * button pressed until none shows for a few seconds.
+ */
+async function finishSetup(page) {
+  const button = page.getByRole("button", {
+    name: /^(Skip setup|Not now|Done)$/,
+  });
+  const stage = page.locator('[data-slot="tab-stage"]');
+  const end = Date.now() + maxWaitMs;
+  let pressed = false;
+  let stageAt = 0;
+  let quietSince = Date.now();
+  while (Date.now() < end) {
+    if (await button.count()) {
+      pressed = true;
+      await button
+        .first()
+        .click({ timeout: 5000 })
+        .catch(() => {});
+      quietSince = Date.now();
+      await sleep(500);
+      continue;
+    }
+    if (await stage.count()) {
+      if (!stageAt) stageAt = Date.now();
+      if (Date.now() - quietSince > 3000) return { pressed, stageAt };
+    }
+    await sleep(250);
+  }
+  throw new Error("The dashboard did not load");
+}
+
 async function main() {
   const browser = await chromium.launch({
     args: ["--enable-precise-memory-info"],
@@ -126,35 +160,9 @@ async function main() {
   requests.length = 0;
   const started = Date.now();
   await page.keyboard.press("Enter");
-  // A fresh server shows its setup first; skip it so the dashboard loads.
-  const skip = page.getByRole("button", {
-    name: /^(Skip setup|Not now|Done)$/,
-  });
-  const stage = page.locator('[data-slot="tab-stage"]').first();
-  await Promise.race([
-    skip.first().waitFor({ timeout: maxWaitMs }),
-    stage.waitFor({ state: "attached", timeout: maxWaitMs }),
-  ]);
-  let coldDashboardMs = Date.now() - started;
-  let onboarding = false;
-  // The setup can show a moment after the shell itself.
-  // A setup with several steps needs a press per step.
-  for (let i = 0; i < 40; i++) {
-    if (await skip.count()) {
-      onboarding = true;
-      await skip
-        .first()
-        .click({ timeout: 5000 })
-        .catch(() => {});
-      await sleep(500);
-    } else if (onboarding || i >= 20) {
-      break;
-    } else {
-      await sleep(250);
-    }
-  }
-  await stage.waitFor({ state: "attached", timeout: maxWaitMs });
-  if (onboarding) coldDashboardMs = Date.now() - started;
+  const setup = await finishSetup(page);
+  const coldDashboardMs = setup.stageAt - started;
+  const onboarding = setup.pressed;
   const coldSettledMs = await waitForFrames(page, started);
   const cold = await frameCounts(page);
   const coldHeap = await jsHeapMb(page);
@@ -165,11 +173,8 @@ async function main() {
   requests.length = 0;
   const reloaded = Date.now();
   await page.reload();
-  await page
-    .locator('[data-slot="tab-stage"]')
-    .first()
-    .waitFor({ state: "attached", timeout: maxWaitMs });
-  const timeToDashboardMs = Date.now() - reloaded;
+  const warm = await finishSetup(page);
+  const timeToDashboardMs = warm.stageAt - reloaded;
   const settledMs = await waitForFrames(page, reloaded);
   const frames = await frameCounts(page);
   const heap = await jsHeapMb(page);
