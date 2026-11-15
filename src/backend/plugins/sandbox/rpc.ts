@@ -105,6 +105,8 @@ function chunkSize(chunk: StreamChunk): number {
   return 0;
 }
 
+type Listener = Parameters<Duplex["on"]>[1];
+
 /**
  * One side of a stream. Object mode so a chunk can carry a flag with it.
  * Writes stop when the other side has not granted credit, which is what
@@ -115,12 +117,33 @@ export class StreamPort extends Duplex {
   owed = 0;
   endMeta: unknown = undefined;
   private waiting: (() => void) | null = null;
+  private remoteEnded = false;
 
   constructor(
     readonly sid: string,
     private readonly sendFrame: (frame: Wire) => void,
   ) {
     super({ objectMode: true, highWaterMark: 16 });
+  }
+
+  // The end can arrive in the same batch as the reply that hands this port
+  // over, before its user adds a listener, so a late listener still gets it.
+  // once() passes its own wrapper here, which removes itself when called.
+  override on(event: string | symbol, listener: Listener) {
+    super.on(event, listener);
+    if (event === "remote-end" && this.remoteEnded) {
+      const meta = this.endMeta;
+      queueMicrotask(() => {
+        if (this.rawListeners("remote-end").includes(listener)) {
+          listener.call(this, meta);
+        }
+      });
+    }
+    return this;
+  }
+
+  override addListener(event: string | symbol, listener: Listener) {
+    return this.on(event, listener);
   }
 
   _write(
@@ -191,6 +214,7 @@ export class StreamPort extends Duplex {
     }
     if (op === "x") {
       this.endMeta = data;
+      this.remoteEnded = true;
       this.emit("remote-end", data);
       this.push(null);
       return;
