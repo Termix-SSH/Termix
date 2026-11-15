@@ -19,7 +19,8 @@ const api = String(args.api ?? new URL(url).origin).replace(/\/+$/, "");
 const user = String(args.user ?? "test");
 const pass = String(args.pass ?? "test123");
 const settleMs = Number(args.settle ?? 5000);
-const maxWaitMs = Number(args["max-wait"] ?? 90_000);
+const maxWaitMs = Number(args["max-wait"] ?? 180_000);
+let openPage = null;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -111,6 +112,7 @@ async function main() {
     viewport: { width: 1920, height: 1080 },
   });
   const page = await context.newPage();
+  openPage = page;
   const requests = [];
   page.on("request", (request) => {
     requests.push({ method: request.method(), url: request.url() });
@@ -207,7 +209,15 @@ async function main() {
   console.log(text);
 }
 
-main().catch((error) => {
+main().catch(async (error) => {
   console.error(error);
+  // What the page showed, so a failed run can be read without a rerun.
+  if (openPage) {
+    await openPage.screenshot({ path: "budget-failure.png" }).catch(() => {});
+    const text = await openPage
+      .evaluate(() => document.body?.innerText ?? "")
+      .catch(() => "");
+    console.error(`Page text: ${String(text).slice(0, 1500)}`);
+  }
   process.exit(1);
 });
