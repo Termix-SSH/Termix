@@ -255,7 +255,8 @@ describe("PluginsTab", () => {
     const grid = container.querySelector<HTMLElement>(
       "[style*='grid-template-columns']",
     );
-    expect(grid?.style.gridTemplateColumns).toContain("/ 5");
+    // jsdom 31 folds the calc, so "/ 5" reads as "20%"
+    expect(grid?.style.gridTemplateColumns).toMatch(/\/ 5|20%/);
   });
 
   it("fits auto columns to the tab width, not the window", async () => {
