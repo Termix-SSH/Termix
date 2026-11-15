@@ -24,7 +24,13 @@ export interface ChildFlagInput {
   workers?: boolean;
   /** Major version of the Node that runs the child. */
   nodeMajor: number;
+  /** Defaults to this process's platform. */
+  platform?: NodeJS.Platform;
 }
+
+// node-gyp-build checks this file to pick a musl or glibc build, and under
+// the permission model a refused read throws instead of saying "not there".
+const ADDON_PROBE_READS = ["/etc/alpine-release"];
 
 export interface ChildFlags {
   execArgv: string[];
@@ -80,7 +86,13 @@ export function buildChildFlags(input: ChildFlagInput): ChildFlags {
   // Writing its own folder is no use without reading it back.
   const reads = writeDataDir
     ? [...input.readPaths, input.dataDir]
-    : input.readPaths;
+    : [...input.readPaths];
+  if (
+    flags.has("--allow-addons") &&
+    (input.platform ?? process.platform) === "linux"
+  ) {
+    reads.push(...ADDON_PROBE_READS);
+  }
   for (const grant of withRealPaths(reads)) {
     execArgv.push(`--allow-fs-read=${grant}`);
   }
