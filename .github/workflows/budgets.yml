@@ -16,15 +16,9 @@ on:
       - "vite*.ts"
       - "scripts/budgets/**"
       - ".github/workflows/budgets.yml"
+  # Every pull request runs it, since it is a required check.
   pull_request:
     branches: ["dev-*"]
-    paths:
-      - "src/**"
-      - "packages/**"
-      - "docker/**"
-      - "vite*.ts"
-      - "scripts/budgets/**"
-      - ".github/workflows/budgets.yml"
 
 permissions: {}
 
