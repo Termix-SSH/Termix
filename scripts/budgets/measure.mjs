@@ -19,6 +19,7 @@ const api = String(args.api ?? new URL(url).origin).replace(/\/+$/, "");
 const user = String(args.user ?? "test");
 const pass = String(args.pass ?? "test123");
 const settleMs = Number(args.settle ?? 5000);
+const warmupMs = Number(args.warmup ?? 20_000);
 const maxWaitMs = Number(args["max-wait"] ?? 180_000);
 let openPage = null;
 
@@ -63,7 +64,10 @@ async function frameCounts(page) {
   });
 }
 
-/** Waits until the frame count holds still for settleMs. */
+/**
+ * Waits until the frame count holds still for settleMs. No frames at all
+ * only counts after a while, since plugins load after the setup closes.
+ */
 async function waitForFrames(page, started) {
   let last = -1;
   let since = Date.now();
@@ -72,7 +76,10 @@ async function waitForFrames(page, started) {
     if (total !== last) {
       last = total;
       since = Date.now();
-    } else if (Date.now() - since >= settleMs) {
+    } else if (
+      Date.now() - since >= settleMs &&
+      (total > 0 || Date.now() - started >= 30_000)
+    ) {
       return since - started;
     }
     await sleep(250);
@@ -167,6 +174,9 @@ async function main() {
   const cold = await frameCounts(page);
   const coldHeap = await jsHeapMb(page);
   const coldRequests = requests.length;
+
+  // Give the first load time to store what plugins registered.
+  await sleep(warmupMs);
 
   // Warm pass: the same browser loads the app again with its caches full,
   // which is what every visit after the first looks like.
