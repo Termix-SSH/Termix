@@ -104,12 +104,13 @@ jobs:
         run: |
           rt="$PWD/.plugin-runtime/darwin-$ARCH"
           policy="{\"name\":\"probe\",\"read\":[],\"write\":[],\"net\":false,\"childProcess\":false,\"addons\":false,\"memoryMb\":512}"
-          for args in "/usr/bin/true" "$rt/node --version" "$rt/node -e 0"; do
-            # shellcheck disable=SC2086
-            code=0; "$rt/termix-plugin-jail" "$policy" -- $args || code=$?; echo "exit $code for $args"
+          for spec in "/usr/bin/true" "$rt/node --version" "$rt/node -e 0"; do
+            read -ra args <<< "$spec"
+            code=0; "$rt/termix-plugin-jail" "$policy" -- "${args[@]}" || code=$?; echo "exit $code for $spec"
           done
           sleep 5
           log show --last 3m --style compact --predicate "eventMessage CONTAINS \"deny(\"" | grep -v -e imagent -e Shortcut -e liveactivities | tail -40
+          # shellcheck disable=SC2012
           report=$(ls -t ~/Library/Logs/DiagnosticReports/node* 2>/dev/null | head -1)
           [ -n "$report" ] && head -c 6000 "$report"
         env:
