@@ -159,6 +159,11 @@ async function main() {
     requests.push({ method: request.method(), url: request.url() });
   });
 
+  // The server at rest, before a browser wakes any plugin.
+  const idleRss = args.container
+    ? containerRssMb(String(args.container))
+    : null;
+
   await page.goto(url);
   const field = page.locator("#login-user");
   await field.first().waitFor({ timeout: 60_000 });
@@ -217,8 +222,10 @@ async function main() {
     jsHeapMb: heap,
     timeToDashboardMs,
     settledMs,
-    // The processes route when the server has it, else the container's sum.
-    backendRssMb: routeRss ?? container,
+    // At rest (all plugins that may stop have stopped), from the container.
+    backendRssMb: idleRss ?? routeRss ?? container,
+    // Right after login, when the page has woken the plugins it shows.
+    backendRssAfterLoginMb: routeRss ?? container,
     containerRssMb: container,
     pluginProcesses: processes
       ? (processes.plugins ?? []).filter((p) => p.state === "ready").length
