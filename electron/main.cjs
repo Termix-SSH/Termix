@@ -30,6 +30,11 @@ const net = require("net");
 const tls = require("tls");
 const zlib = require("zlib");
 const crypto = require("crypto");
+const { isLocalBackendUrl } = require("./local-backend.cjs");
+
+// Proves a request to the local backend comes from this app, not another
+// program on the machine. New every launch, never written to disk.
+const LAUNCH_SECRET = crypto.randomBytes(32).toString("hex");
 const { URL } = require("url");
 const appProtocol = require("./app-protocol.cjs");
 const { createIpcGuard } = require("./ipc-guard.cjs");
@@ -1102,6 +1107,7 @@ function startBackendServer() {
           DATA_DIR: dataDir,
           NODE_ENV: "production",
           ELECTRON_EMBEDDED: "true",
+          TERMIX_DESKTOP_LAUNCH_SECRET: LAUNCH_SECRET,
           PORT: String(backendPort),
           EMBEDDED_BACKEND_PORT: String(backendPort),
           ELECTRON_USER_DATA: app.getPath("userData"),
@@ -1487,6 +1493,10 @@ function createWindow() {
   mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
     (details, callback) => {
       details.requestHeaders["X-Electron-App"] = "true";
+      // Only the local backend gets the launch secret, never a linked server.
+      if (isLocalBackendUrl(details.url, backendPort)) {
+        details.requestHeaders["X-Termix-Launch"] = LAUNCH_SECRET;
+      }
 
       details.requestHeaders["User-Agent"] = customUserAgent;
 

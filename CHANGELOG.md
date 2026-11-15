@@ -57,6 +57,7 @@
 - Desktop app: the app page is served from its own `app://termix` address instead of from files on disk. Saved view settings move over on the first start. A server older than 26.11.2 that sets `CORS_ALLOWED_ORIGINS` needs `app://termix` added
 - Desktop app: updates install on Windows, macOS, AppImage and deb only after the release's signed `SHA256SUMS` checks out. Releases without it are offered as a download link
 - Desktop app: the local server runs as an Electron utility process, and the app binary can no longer be started as a plain Node or with Node debug flags
+- Desktop app: only the app itself can sign in to its local server. It sends a secret made fresh at every launch, so other programs and other users on the computer can't
 - The Docker image runs on Node 26
 - A plugin can no longer turn on the server's debugger
 - Plugins signed with the old single key keep loading until 2027-05-01. Termix moves installed plugins over to the new signatures on its own, without downloading them again

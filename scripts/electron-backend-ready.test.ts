@@ -37,6 +37,7 @@ function start() {
     pid: 123,
   });
   const handleBackendRequest = vi.fn();
+  const forked = vi.fn(() => child);
   const context = {
     reapOrphanedBackendProcess: vi.fn(),
     getBackendPaths: () => ({ entryPath: "/backend.js", backendCwd: "/app" }),
@@ -50,7 +51,7 @@ function start() {
       statSync: () => ({ isDirectory: () => true }),
       writeFileSync: vi.fn(),
     },
-    utilityProcess: { fork: () => child },
+    utilityProcess: { fork: forked },
     wrapUtilityProcess: (proc: unknown) => proc,
     pluginSandbox: null,
     createPluginSandboxHost: () => ({ handle: () => false, stopAll: vi.fn() }),
@@ -68,6 +69,7 @@ function start() {
     appRoot: "/app",
     BACKEND_STDERR_TAIL_LIMIT: 4096,
     backendPort: 30001,
+    LAUNCH_SECRET: "launch-secret",
     handleBackendRequest,
     setTimeout,
     clearTimeout,
@@ -78,12 +80,20 @@ function start() {
   ) as Promise<boolean>;
   const settled = vi.fn();
   void ready.then(settled);
-  return { child, ready, settled, handleBackendRequest };
+  return { child, ready, settled, handleBackendRequest, forked };
 }
 
 afterEach(() => vi.useRealTimers());
 
 describe("embedded backend readiness", () => {
+  it("hands the backend this launch's secret", () => {
+    const { forked } = start();
+    const options = (forked.mock.calls[0] as unknown[])[2] as {
+      env: Record<string, string>;
+    };
+    expect(options.env.TERMIX_DESKTOP_LAUNCH_SECRET).toBe("launch-secret");
+  });
+
   it("starts immediately on IPC readiness without any success log", async () => {
     vi.useFakeTimers();
     const { child, settled } = start();
