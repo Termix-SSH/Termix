@@ -256,6 +256,9 @@ describe("PluginFrameView", () => {
     act(() => frames.options!.onEvent("size", { width: 44, height: 15 }));
     expect(frame.style.width).toBe("44px");
     expect(frame.style.height).toBe("100%");
+    // See-through, and no inline border so the bar's dividers show.
+    expect(frame.src).toContain("bg=none");
+    expect(frame.style.borderWidth).toBe("");
   });
 
   it("keeps an overlay see-through and out of the way until it draws", () => {

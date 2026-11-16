@@ -136,7 +136,9 @@ export function PluginFrameView({
   controlRef,
 }: PluginFrameViewProps) {
   const overlay = fit === "overlay";
-  const seeThrough = transparent || overlay;
+  // Buttons and badges sit inside the owner's bar or row, so its color shows.
+  const seeThrough =
+    transparent || overlay || fit === "inline" || fit === "bar";
   const [drawn, setDrawn] = useState(!overlay);
   const eventRef = useRef(onFrameEvent);
   eventRef.current = onFrameEvent;
@@ -287,8 +289,9 @@ ${src}`;
       title={pluginId}
       data-plugin-frame={pluginId}
       className={className}
+      // No inline border: the base styles already zero it, and an owner's
+      // divider classes can then draw one.
       style={{
-        border: 0,
         display: "block",
         background: "transparent",
         colorScheme: "normal",
