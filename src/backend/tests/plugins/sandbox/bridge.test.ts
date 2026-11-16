@@ -199,6 +199,19 @@ describe("sandboxed plugin actor", () => {
     expect(tokens.resolve(token, "docker")?.userId).toBe("bob");
   });
 
+  it("sends no token when core calls the plugin as nobody", () => {
+    const { bridge, replies } = harness();
+    void bridge.endpoint.call("activate", []).catch(() => {});
+    void runAsActor("bob", "request", () =>
+      bridge.endpoint.call("ping", []).catch(() => {}),
+    );
+    const sent = replies.filter((m) => m.t === "call") as Array<
+      Wire & { m: string; k?: string }
+    >;
+    expect(sent.find((m) => m.m === "activate")?.k).toBeUndefined();
+    expect(sent.find((m) => m.m === "ping")?.k).toBeTruthy();
+  });
+
   it("keeps an API key's scopes on the token", () => {
     const { bridge, tokens } = harness();
     const token = runAsActor(

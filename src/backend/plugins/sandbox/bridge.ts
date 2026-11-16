@@ -352,7 +352,10 @@ export class PluginBridge {
     this.endpoint = new Endpoint(transport, {
       side: "h",
       strict: true,
-      outboundToken: () => this.mintForCurrentActor(),
+      // No actor means background work. A token for nobody would only expire
+      // and leave timers started in activate or a callback refused 30 s later.
+      outboundToken: () =>
+        getActor() ? this.mintForCurrentActor() : undefined,
       outboundActor: () => getActor(),
       inbound: (token, run) => this.runForToken(token, run),
       settled: (token) => this.releaseLater(token),
