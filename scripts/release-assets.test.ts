@@ -47,6 +47,7 @@ describe("release-assets", () => {
       expect(names).toContain("SHA256SUMS");
       expect(names).toContain("SHA256SUMS.sigstore.json");
       expect(names).toContain("SHA256SUMS.sig");
+      expect(names).toContain("SHA256SUMS.intoto.jsonl");
     }
   });
 
@@ -72,6 +73,11 @@ describe("release-assets", () => {
         digest: `sha256:${hex}`,
       },
       { name: "SHA256SUMS.sig", state: "uploaded", digest: `sha256:${hex}` },
+      {
+        name: "SHA256SUMS.intoto.jsonl",
+        state: "uploaded",
+        digest: `sha256:${hex}`,
+      },
     ]);
     expect(text).toBe(`${hex}  x.dmg\n`);
   });

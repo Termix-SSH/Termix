@@ -767,6 +767,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      attestations: write
     env:
       TAG: ${{ needs.prep.outputs.release_tag }}
       RELEASE_ID: ${{ needs.create-draft.outputs.release_id }}
@@ -839,6 +840,21 @@ jobs:
       - name: Sign the checksums
         if: ${{ steps.earlier.outputs.done != 'true' }}
         run: cosign sign-blob --yes --bundle sums/SHA256SUMS.sigstore.json sums/SHA256SUMS
+
+      # SLSA provenance for every file in SHA256SUMS. Uploads sort before the
+      # Sigstore bundle, which the rerun check above looks for.
+      - name: Attest build provenance
+        id: provenance
+        if: ${{ steps.earlier.outputs.done != 'true' }}
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-checksums: sums/SHA256SUMS
+
+      - name: Keep the provenance
+        if: ${{ steps.earlier.outputs.done != 'true' }}
+        env:
+          BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
+        run: cp "$BUNDLE" sums/SHA256SUMS.intoto.jsonl
 
       - name: Add to the draft release
         if: ${{ needs.prep.outputs.mode != 'Dry run' && steps.earlier.outputs.done != 'true' }}
