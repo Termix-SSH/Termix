@@ -72,7 +72,7 @@ jobs:
         run: |
           mkdir sdk-release
           NAME=$(npm pack --workspace @termix-ssh/plugin-sdk --pack-destination sdk-release --json | node -e "process.stdout.write(JSON.parse(require('fs').readFileSync(0, 'utf8'))[0].filename)")
-          echo "tarball=sdk-release/$NAME" >> "$GITHUB_OUTPUT"
+          echo "tarball=./sdk-release/$NAME" >> "$GITHUB_OUTPUT"
 
       - name: Publish
         env:
