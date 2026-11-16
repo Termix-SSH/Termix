@@ -149,6 +149,71 @@ describe("ssh relay", () => {
     expect(mocks.resolveHostById).not.toHaveBeenCalled();
   });
 
+  describe("while the host is still being looked up", () => {
+    // A host given by name waits on a DNS lookup before the relay connects.
+    let release: () => void = () => {};
+    beforeEach(() => {
+      const lookup = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      mocks.openSshTransport.mockImplementation(async () => {
+        await lookup;
+        return { jumpClient: null, via: "direct" };
+      });
+    });
+
+    function serverSide(): WebSocket {
+      const [socket] = [...wss.clients];
+      return socket as WebSocket;
+    }
+
+    it("keeps what the client sends, such as its SSH greeting", async () => {
+      const { socket } = await open("?hostId=5");
+      const arrived = new Promise((resolve) =>
+        serverSide().once("message", resolve),
+      );
+      const received = new Promise<string>((resolve) =>
+        socket.once("message", (data) => resolve(data.toString())),
+      );
+      socket.send(Buffer.from("SSH-2.0-test\r\n"));
+      await arrived;
+      release();
+      expect(await received).toBe("SSH-2.0-test\r\n");
+      socket.close();
+    });
+
+    it("closes the host connection when the client already left", async () => {
+      const hostClosed = new Promise<void>((resolve) =>
+        echo.once("connection", (host: net.Socket) =>
+          host.once("close", () => resolve()),
+        ),
+      );
+      const { socket, closed } = await open("?hostId=5");
+      socket.send("SSH-2.0-test\r\n");
+      socket.close();
+      await closed;
+      release();
+      await hostClosed;
+    });
+
+    it("survives a broken frame from the client", async () => {
+      const { socket, closed } = await open("?hostId=5");
+      const serverClosed = new Promise((resolve) =>
+        serverSide().once("close", resolve),
+      );
+      // An unmasked frame from a client is a protocol error on the server.
+      (socket as unknown as { _socket: net.Socket })._socket.write(
+        Buffer.from([0x82, 0x01, 0x00]),
+      );
+      expect((await closed).code).toBe(1002);
+      // The stream reports the error once the socket has closed, which can
+      // still be during the lookup.
+      await serverClosed;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      release();
+    });
+  });
+
   it("closes the socket when the host can't be reached", async () => {
     mocks.openSshTransport.mockRejectedValue(new Error("no route"));
     const { closed } = await open("?hostId=5");
