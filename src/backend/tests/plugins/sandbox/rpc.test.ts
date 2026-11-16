@@ -131,6 +131,34 @@ describe("sandbox rpc", () => {
     expect(seenByHost).toContain("minted-1");
   });
 
+  it("hands a handler an AbortSignal that aborts when core's does", async () => {
+    const { host, child } = pair();
+    let started!: () => void;
+    const running = new Promise<void>((resolve) => (started = resolve));
+    child.handle("run", ([context]) => {
+      const { signal } = context as { signal: AbortSignal };
+      expect(signal).toBeInstanceOf(AbortSignal);
+      expect(signal.aborted).toBe(false);
+      started();
+      return new Promise((resolve) =>
+        signal.addEventListener("abort", () =>
+          resolve((signal.reason as Error).message),
+        ),
+      );
+    });
+    const controller = new AbortController();
+    const result = host.call("run", [{ signal: controller.signal }]);
+    await running;
+    controller.abort(new Error("timed out"));
+    await expect(result).resolves.toBe("timed out");
+  });
+
+  it("sends a signal that already aborted as aborted", async () => {
+    const { host, child } = pair();
+    child.handle("check", ([signal]) => (signal as AbortSignal).aborted);
+    await expect(host.call("check", [AbortSignal.abort()])).resolves.toBe(true);
+  });
+
   it("keeps Buffers as Buffers across the line", async () => {
     const { host, child } = pair();
     host.handle("echo", ([b]) => b);
