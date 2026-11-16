@@ -44,6 +44,7 @@ import {
   createFrameApp,
   frameComponent,
   frameComponentKeys,
+  whenFrameComponent,
 } from "./frame-app";
 import { createFrameBridge } from "./frame-bridge";
 import { getFrameState, setFrameState } from "./frame-store";
@@ -98,11 +99,13 @@ function readParams(): BootParams {
   const params = new URLSearchParams(location.hash.slice(1));
   const role = params.get("role") === "background" ? "background" : "view";
   const fit: FrameFit =
-    params.get("inline") === "1"
-      ? "inline"
-      : params.get("fit") === "content"
-        ? "content"
-        : "fill";
+    params.get("bar") === "1"
+      ? "bar"
+      : params.get("inline") === "1"
+        ? "inline"
+        : params.get("fit") === "content"
+          ? "content"
+          : "fill";
   return {
     role,
     key: params.get("key") ?? undefined,
@@ -117,10 +120,10 @@ function applyTheme(theme: FrameTheme) {
   const root = document.documentElement;
   root.className = theme.className;
   root.setAttribute("style", theme.style);
-  let node = document.getElementById("termix-theme-css");
+  let node = document.getElementById("termix-frame-theme-css");
   if (!node) {
     node = document.createElement("style");
-    node.id = "termix-theme-css";
+    node.id = "termix-frame-theme-css";
     document.head.appendChild(node);
   }
   node.textContent = theme.css.join("\n");
@@ -139,7 +142,7 @@ async function boot() {
   const parent = window.parent;
   if (!parent || parent === window) return;
   document.documentElement.dataset.frameFit =
-    params.fit === "fill" ? "fill" : "content";
+    params.fit === "fill" || params.fit === "bar" ? params.fit : "content";
   if (params.transparent) document.documentElement.dataset.frameBg = "none";
 
   const realFetch = window.fetch.bind(window);
@@ -383,7 +386,9 @@ async function boot() {
     watchOverlay((active) => port.emit("overlay", { active }));
     port.emit("live", { reasons: liveWork() });
   } else {
-    const component = params.key ? frameComponent(params.key) : undefined;
+    const component = params.key
+      ? await whenFrameComponent(params.key)
+      : undefined;
     if (!component) {
       throw new Error(`${pluginId} has no view "${params.key ?? ""}"`);
     }
@@ -487,6 +492,7 @@ async function boot() {
 
 boot().catch((error) => {
   console.error("[plugin frame] failed to start", error);
+  delete document.documentElement.dataset.frameLoading;
   try {
     window.parent.postMessage(
       {

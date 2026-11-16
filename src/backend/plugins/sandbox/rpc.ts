@@ -88,6 +88,20 @@ function isAllowedInstance(value: object): boolean {
   );
 }
 
+/**
+ * An AbortSignal can't be copied, so it crosses as its state plus a function
+ * the other side calls once to hear about a later abort.
+ */
+function signalState(signal: AbortSignal): Record<string, unknown> {
+  if (signal.aborted) return { aborted: true, reason: signal.reason };
+  const watch = (listener: (reason: unknown) => Promise<unknown>) => {
+    const tell = () => void listener(signal.reason).catch(() => {});
+    if (signal.aborted) tell();
+    else signal.addEventListener("abort", tell, { once: true });
+  };
+  return { aborted: false, watch };
+}
+
 export class SandboxValueError extends Error {
   code = "SANDBOX_VALUE";
 }
@@ -396,6 +410,9 @@ export class Endpoint {
     if (value instanceof RegExp) return { $re: [value.source, value.flags] };
     if (value instanceof URL) return value.href;
     if (value instanceof Error) return { $e: toWireError(value) };
+    if (value instanceof AbortSignal) {
+      return { $abort: this.marshal(signalState(value), depth + 1) };
+    }
     if (value instanceof Map) {
       return {
         $map: [...value.entries()].map(([k, v]) => [
@@ -453,6 +470,9 @@ export class Endpoint {
     if (record.$e && typeof record.$e === "object") {
       return fromWireError(record.$e as WireError);
     }
+    if (record.$abort && typeof record.$abort === "object") {
+      return this.remoteSignal(record.$abort as Record<string, unknown>);
+    }
     if (Array.isArray(record.$re)) {
       try {
         return new RegExp(String(record.$re[0]), String(record.$re[1]));
@@ -491,6 +511,18 @@ export class Endpoint {
       out[key] = this.unmarshal(record[key], depth + 1);
     }
     return out;
+  }
+
+  /** A signal from the other side, aborted here when it aborts there. */
+  private remoteSignal(state: Record<string, unknown>): AbortSignal {
+    const controller = new AbortController();
+    const watch = this.unmarshal(state.watch);
+    if (state.aborted === true) {
+      controller.abort(this.unmarshal(state.reason));
+    } else if (typeof watch === "function") {
+      void watch((reason: unknown) => controller.abort(reason)).catch(() => {});
+    }
+    return controller.signal;
   }
 
   private remoteFn(f: string): (...args: unknown[]) => Promise<unknown> {

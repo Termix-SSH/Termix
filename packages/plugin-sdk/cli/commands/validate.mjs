@@ -357,6 +357,34 @@ const UI_RULES = [
 ];
 
 /**
+ * Where a sidebar toolbar stacks a full width PanelSearch over a labelled
+ * AddButton, the layout PanelToolbar puts on one row. -1 when there is none.
+ * An icon only add button, a search that does not fill or one inside a
+ * ToolbarBand is a toolbar row already and is left alone.
+ */
+export function stackedToolbarAt(text) {
+  if (/<PanelToolbar\b/.test(text)) return -1;
+  for (const match of text.matchAll(/<PanelSearch\b/g)) {
+    const end = text.indexOf("/>", match.index);
+    if (end < 0) continue;
+    if (!/\bfill\b/.test(text.slice(match.index, end))) continue;
+    // A ToolbarBand is one row already.
+    const before = text.slice(0, match.index);
+    if (
+      before.lastIndexOf("<ToolbarBand") > before.lastIndexOf("</ToolbarBand>")
+    )
+      continue;
+    const after = text.slice(end, end + 600);
+    const add = after.search(/<AddButton\b/);
+    if (add < 0) continue;
+    const close = after.indexOf("/>", add);
+    const element = after.slice(add, close < 0 ? undefined : close);
+    if (!/\bcompact\b/.test(element)) return match.index;
+  }
+  return -1;
+}
+
+/**
  * Drift from the shared UI kit in src/frontend: raw spinners, hand made back
  * buttons, native selects, stretched filters, filled headers and footers that
  * scroll away. Warnings only, since some cases are on purpose.
@@ -375,6 +403,13 @@ export function uiWarnings(cwd) {
         }
       }
     });
+    const text = lines.join("\n");
+    const stacked = stackedToolbarAt(text);
+    if (stacked >= 0) {
+      warnings.push(
+        `${rel}:${lineOf(text, stacked)} toolbar stacks search over a full width add button, use PanelToolbar`,
+      );
+    }
   }
   return warnings;
 }

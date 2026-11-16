@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 2.8.1 | Plugin API 2.8.0
+SDK 2.10.0 | Plugin API 2.9.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -388,40 +388,42 @@ won't run before an admin updates.
 
 ### What ctx has
 
-| Member                 | Capability                       | What it does                                                    |
-| ---------------------- | -------------------------------- | --------------------------------------------------------------- |
-| `pluginId`, `manifest` | none                             | Your id and manifest                                            |
-| `log`                  | none                             | Log lines tagged with your plugin                               |
-| `db`                   | `db:own`                         | Your own tables                                                 |
-| `kv`                   | `kv:own`                         | Small key value state                                           |
-| `files.dataDir()`      | `files:own`                      | A folder of your own                                            |
-| `settings`             | none                             | Your settings                                                   |
-| `secrets`              | `secrets:own`                    | Encrypted values per user, `seal`/`unseal` for your own tables  |
-| `http`, `ws`           | `network:serve`                  | Routes and sockets                                              |
-| `rbac`                 | none                             | Check the actor's permissions                                   |
-| `hosts`                | `hosts:read`, `hosts:write`      | List, read, create, update and share hosts as the actor         |
-| `ssh`                  | `ssh:connect`, `credentials:use` | Connect to hosts through Termix's SSH pipeline                  |
-| `credentials`          | varies                           | The actor's saved keys, and protocol logins                     |
-| `services`             | per service                      | Call other plugins and offer your own                           |
-| `events`               | `events:core` for core topics    | Emit and listen for events                                      |
-| `notify`               | `notify:send`                    | Send alerts to the Alerts inbox                                 |
-| `fetch`                | `network:outbound`               | Outbound HTTP with SSRF protection                              |
-| `process`              | `process:spawn`                  | Run programs on the server                                      |
-| `schedule`             | none                             | Timers that stop on disable and never overlap                   |
-| `audit.record`         | none                             | Write your own audit line                                       |
-| `sync`                 | none                             | Sync your tables to a linked desktop                            |
-| `auth`                 | `auth:provide`                   | Login methods, second factors, SSH auth types                   |
-| `auth.issueUserToken`  | `users:impersonate`              | A short-lived session for calling Termix's API as a user        |
-| `auth.policy`          | `auth:policy`                    | Login rules: idle timeout, session length, second factors       |
-| `sync.provide`         | `sync:provide`                   | Answers all /sync requests: server sync, linked desktops        |
-| `ssh.transports`       | `ssh:transport`                  | Carries a host's SSH connection over your own stream            |
-| `hosts.folders`        | `hosts:write`                    | Create a folder row with a color and icon, remove it when empty |
-| `users.getLocale`      | `users:read`                     | A user's UI language                                            |
-| `system`               | `system:tls`                     | The server's HTTPS certificate                                  |
-| `plugins.list()`       | `plugins:read`                   | Which plugins are installed                                     |
-| `asUser(userId, fn)`   | always audited                   | Run background work as a user                                   |
-| `currentActor()`       | none                             | The user the current call runs for                              |
-| `disposables.add(fn)`  | none                             | Extra cleanup on disable                                        |
+| Member                                                                     | Capability                       | What it does                                                    |
+| -------------------------------------------------------------------------- | -------------------------------- | --------------------------------------------------------------- |
+| `pluginId`, `manifest`                                                     | none                             | Your id and manifest                                            |
+| `log`                                                                      | none                             | Log lines tagged with your plugin                               |
+| `db`                                                                       | `db:own`                         | Your own tables                                                 |
+| `kv`                                                                       | `kv:own`                         | Small key value state                                           |
+| `files.dataDir()`                                                          | `files:own`                      | A folder of your own                                            |
+| `settings`                                                                 | none                             | Your settings                                                   |
+| `secrets`                                                                  | `secrets:own`                    | Encrypted values per user, `seal`/`unseal` for your own tables  |
+| `http`, `ws`                                                               | `network:serve`                  | Routes and sockets                                              |
+| `rbac`                                                                     | none                             | Check the actor's permissions                                   |
+| `hosts`                                                                    | `hosts:read`, `hosts:write`      | List, read, create, update and share hosts as the actor         |
+| `ssh`                                                                      | `ssh:connect`, `credentials:use` | Connect to hosts through Termix's SSH pipeline                  |
+| `credentials`                                                              | varies                           | The actor's saved keys, and protocol logins                     |
+| `services`                                                                 | per service                      | Call other plugins and offer your own                           |
+| `events`                                                                   | `events:core` for core topics    | Emit and listen for events                                      |
+| `notify`                                                                   | `notify:send`                    | Send alerts to the Alerts inbox                                 |
+| `fetch`                                                                    | `network:outbound`               | Outbound HTTP with SSRF protection                              |
+| `process`                                                                  | `process:spawn`                  | Run programs on the server                                      |
+| `schedule`                                                                 | none                             | Timers that stop on disable and never overlap                   |
+| `audit.record`                                                             | none                             | Write your own audit line                                       |
+| `sync`                                                                     | none                             | Sync your tables to a linked desktop                            |
+| `auth`                                                                     | `auth:provide`                   | Login methods, second factors, SSH auth types                   |
+| `auth.issueUserToken`                                                      | `users:impersonate`              | A short-lived session for calling Termix's API as a user        |
+| `auth.policy`                                                              | `auth:policy`                    | Login rules: idle timeout, session length, second factors       |
+| `sync.provide`                                                             | `sync:provide`                   | Answers all /sync requests: server sync, linked desktops        |
+| `ssh.transports`                                                           | `ssh:transport`                  | Carries a host's SSH connection over your own stream            |
+| `hosts.folders`                                                            | `hosts:write`                    | Create a folder row with a color and icon, remove it when empty |
+| `users.getLocale`                                                          | `users:read`                     | A user's UI language                                            |
+| `users.get`, `users.find*`, `users.listRoles`                              | `users:read`                     | Look up an account or list roles (API 2.9)                      |
+| `users.create`, `update`, `setDisabled`, `delete`, `syncRoles`, `setAdmin` | `users:write`                    | Manage accounts, for a provisioning plugin like SCIM (API 2.9)  |
+| `system`                                                                   | `system:tls`                     | The server's HTTPS certificate                                  |
+| `plugins.list()`                                                           | `plugins:read`                   | Which plugins are installed                                     |
+| `asUser(userId, fn)`                                                       | always audited                   | Run background work as a user                                   |
+| `currentActor()`                                                           | none                             | The user the current call runs for                              |
+| `disposables.add(fn)`                                                      | none                             | Extra cleanup on disable                                        |
 
 ### The actor
 
@@ -435,6 +437,15 @@ It needs `users:impersonate` and `engine.api` `^1.3`, lasts 300 seconds by defau
 audited as `plugin_user_token_issued`. The user's permissions apply, and it is refused on routes that change
 their password, second factors, API keys or linked logins. `ctx.users.getLocale(userId)` gives the user's
 UI language, like `zh_CN`, or null, for writing to them in it.
+
+A plugin that provisions accounts from somewhere else (SCIM, an HR system) uses the `ctx.users` account
+calls from API 2.9. `create` makes an account with no password and the user role, marked with the plugin
+as `managedBy`; its first SSO or LDAP sign in with the same verified email is linked to it, and sign in
+never renames it. `setDisabled` signs the account out everywhere, `syncRoles` only adds and removes the
+roles you list as managed, and the last admin can never be turned off, deleted or demoted. A refused call
+throws an error with `code` set to `not_found`, `username_taken`, `email_taken`, `last_admin` or
+`invalid`. Every change is audited as `plugin_user_*` under your plugin's name. Check
+`typeof ctx.users.create === "function"` before using them.
 
 ### Routes
 
@@ -483,7 +494,9 @@ router.post("/notes", async (req, res) => {
   `dist/openapi.json` and the docs site renders them.
 - `ctx.http.router({ public: ["/webhook/:token"], bodyLimit: "20mb", rawBody: false })`. Public routes
   have no actor: check their token yourself. Core allows 120 public requests a minute per address;
-  `publicRateLimit` raises that for a proxied page that loads its own assets.
+  `publicRateLimit` raises that for a proxied page that loads its own assets. `publicAuthorization: true`
+  passes the Authorization header to the public routes, for a protocol that sends its own bearer token (SCIM);
+  Termix API keys and session tokens are never passed.
 - `ctx.http.baseUrl(req)` is the public address, for callback URLs.
 - `ctx.ws.route("/live", (socket, conn) => ...)`. Long lived sockets should check
   `conn.isDataUnlocked()` per message. Core closes a socket (code 1008) within a few seconds of the login
@@ -1160,6 +1173,8 @@ onClose })` (needs `device:serial`, call it from a click in your frame) opens th
 - Every tab or panel sits in `PanelShell` (inside `PanelFrame` when it is a tab). Lists use `PanelList` and
   `ListRow`, add with `AddButton`, forms end with `FormFooter`, empty lists show `EmptyState`, loading shows
   `LoadingState`, and "not installed" or "no access" shows `NoticePanel`.
+- A sidebar panel's toolbar is `PanelToolbar`: search, your icon buttons (sort, filter, a `...` menu) and an
+  icon only add button on one row. Put anything that needs its own line, like a target picker, in `below`.
 - The tile look: page content sits edge to edge on the page background, with one line between sections and
   no gaps, padding or card fill around them. The body of a `PanelShell` has no padding. Stack sections with
   `TileStack` (or `TileColumn` when cards sit deeper), put numbers and small cards in a `TileWall` of

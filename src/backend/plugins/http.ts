@@ -306,7 +306,11 @@ export function createPluginRouter({
       `Plugin ${pluginId} serves ${declaredPublic.length} route(s) without authentication: ${declaredPublic.join(", ")}`,
       { operation: "plugin_http_public" },
     );
-    void writePublicRouteAudit(manifest, declaredPublic);
+    void writePublicRouteAudit(
+      manifest,
+      declaredPublic,
+      options?.publicAuthorization === true,
+    );
   }
 
   const outer = express.Router();
@@ -364,6 +368,8 @@ export function createPluginRouter({
       pluginLogger.info(`Unauthenticated request to ${pluginId}${req.path}`, {
         operation: "plugin_http_public_request",
       });
+      (req as Request & { termixPublicRoute?: boolean }).termixPublicRoute =
+        true;
       next();
       return;
     }
@@ -463,6 +469,7 @@ function clientErrorStatus(error: unknown): number | null {
 async function writePublicRouteAudit(
   manifest: PluginManifest,
   paths: string[],
+  authorization = false,
 ): Promise<void> {
   try {
     const { logAudit } = await import("../utils/audit-logger.js");
@@ -473,7 +480,9 @@ async function writePublicRouteAudit(
       resourceType: "plugin",
       resourceId: manifest.id,
       resourceName: manifest.name,
-      details: `unauthenticated routes: ${paths.join(", ")}`,
+      details: `unauthenticated routes: ${paths.join(", ")}${
+        authorization ? " (receive the Authorization header)" : ""
+      }`,
       success: true,
     });
   } catch {

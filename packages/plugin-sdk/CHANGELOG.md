@@ -1,5 +1,31 @@
 # Changelog
 
+## 2.10.0
+
+Plugin API 2.9.0. Needs Termix 26.11.2.
+
+### Added
+
+- `PanelToolbar` in `/ui`: a sidebar panel's search, icon buttons and icon only add button on one row
+- `declareActionSlot({ fit: "bar" })`: a framed button in the slot is as wide as its content and as tall as the bar, for buttons that fill a tab bar
+- `termix-plugin validate` warns when a panel stacks a full width `PanelSearch` over a labelled `AddButton`, and points to `PanelToolbar`
+
+## 2.9.0
+
+Plugin API 2.9.0. Needs Termix 26.11.2.
+
+### Added
+
+- `ctx.users` account calls for provisioning plugins: `get`, `findByUsername`, `findByEmail` and `listRoles` with `users:read`, and `create`, `update`, `setDisabled`, `delete`, `syncRoles` and `setAdmin` with `users:write`. Accounts a plugin makes have no password, and their first SSO or LDAP sign in with the same verified email is linked to them. Optional in the types, so check `typeof ctx.users.create === "function"` first
+- `ctx.http.router({ publicAuthorization: true })` passes the Authorization header to the declared public routes, for protocols with their own bearer token like SCIM. Termix API keys and session tokens are never passed
+- `createMockCtx` takes `accounts` and `roles` for `ctx.users`, and records changes in `accounts`
+
+- `/ui` calls for account management: `disableUser`, `enableUser`, `updateMyProfile`, `adminUpdateUserProfile`, `getAdminHostBypass`, `updateAdminHostBypass`, `getExternalSignupApproval`, `updateExternalSignupApproval`
+- `/ui` calls for invite links: `listUserInvites`, `createUserInvite`, `revokeUserInvite`, `checkUserInvite`, `acceptUserInvite`, `inviteLink`
+- `/ui` calls for the access review: `getAccessReview`, `downloadAccessReviewCsv`
+- `getUserList` takes a `status` filter, and `UserInfo` carries the display name, email, account state and last sign in
+- `AdminSection` includes `access`
+
 ## 2.8.1
 
 Plugin API 2.8.0. Needs Termix 26.11.2.

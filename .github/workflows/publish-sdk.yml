@@ -19,9 +19,10 @@ jobs:
     name: Publish @termix-ssh/plugin-sdk
     runs-on: ubuntu-latest
     permissions:
-      # The GitHub release, and npm trusted publishing with provenance.
+      # The GitHub release, npm trusted publishing and build provenance.
       contents: write
       id-token: write
+      attestations: write
 
     env:
       NODE_OPTIONS: "--max-old-space-size=4096"
@@ -64,22 +65,42 @@ jobs:
 
       - run: npm run test
 
+      # npm publishes this exact tarball and the release carries it with its
+      # provenance, so both are the same bytes.
+      - name: Pack
+        id: pack
+        run: |
+          mkdir sdk-release
+          NAME=$(npm pack --workspace @termix-ssh/plugin-sdk --pack-destination sdk-release --json | node -e "process.stdout.write(JSON.parse(require('fs').readFileSync(0, 'utf8'))[0].filename)")
+          echo "tarball=./sdk-release/$NAME" >> "$GITHUB_OUTPUT"
+
       - name: Publish
         env:
           MODE: ${{ inputs.mode }}
+          TARBALL: ${{ steps.pack.outputs.tarball }}
         run: |
           if [ "$MODE" = "Dry run" ]; then
-            npm publish --workspace @termix-ssh/plugin-sdk --provenance --access public --dry-run
+            npm publish "$TARBALL" --provenance --access public --dry-run
           else
-            npm publish --workspace @termix-ssh/plugin-sdk --provenance --access public
+            npm publish "$TARBALL" --provenance --access public
           fi
+
+      - name: Attest build provenance
+        id: provenance
+        if: ${{ inputs.mode == 'Publish' }}
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ${{ steps.pack.outputs.tarball }}
 
       - name: Tag and release
         if: ${{ inputs.mode == 'Publish' }}
         env:
           GH_TOKEN: ${{ github.token }}
+          TARBALL: ${{ steps.pack.outputs.tarball }}
+          BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
         run: |
           VERSION=$(node -p "require('./packages/plugin-sdk/package.json').version")
+          cp "$BUNDLE" "$TARBALL.intoto.jsonl"
           node -e "
             const fs = require('fs');
             const { changelogSection } = require('./packages/plugin-sdk/dist/changelog.js');
@@ -90,4 +111,5 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "Plugin SDK v$VERSION" \
             --notes-file sdk-notes.md \
-            --latest=false
+            --latest=false \
+            "$TARBALL" "$TARBALL.intoto.jsonl"

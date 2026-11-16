@@ -7,7 +7,7 @@
 - Desktop app: closing the window can quit Termix instead of keeping it in the tray
 - Desktop app: the first time closing the window keeps Termix in the tray, a notice says it is still running and how to quit
 - Admin setting to trust a host's first key without a prompt when nobody can confirm it. Each such key is audited
-- Every desktop file, tarball and Flatpak bundle on a release carries signed build provenance, and each release has a signed `SHA256SUMS` file. Check them with the new Verify your download page in the docs
+- Every desktop file, tarball and Flatpak bundle on a release carries signed build provenance, and each release has a signed `SHA256SUMS` file with build provenance in `SHA256SUMS.intoto.jsonl`. Check them with the new Verify your download page in the docs
 - Docker images are signed with cosign and carry build provenance and an SBOM attestation
 - A CycloneDX SBOM of the server's dependencies ships with each build: `/app/sbom.cdx.json` in the Docker image and `termix_sbom.cdx.json` on the release
 - The server sends the same security headers with or without the bundled nginx: a strict Content-Security-Policy, Referrer-Policy, Permissions-Policy, Cross-Origin-Opener-Policy and HSTS over HTTPS
@@ -46,6 +46,17 @@
 - Sign in methods and second factors from plugins are drawn by Termix itself, so no plugin code runs on the sign in screen. Passkeys and security keys use the browser prompt Termix runs, and the plugin's server checks every answer
 - Sign in, serial port and web endpoint plugins run their screens in sandboxed frames too. Termix asks the browser for a serial port or a passkey for them, and shows a web endpoint page only at the address the plugin's server picked
 - Theme files can only load images and fonts that ship with the theme
+- Admins can turn an account off and back on. A turned off account is signed out everywhere, can't sign in, its API keys stop working and plugins can't run background work as it
+- New SSO and LDAP accounts can wait for an admin to approve them before they can sign in. Admins get an alert when someone is waiting
+- Invite links: an admin makes a link with roles, an expiry and a number of uses, and it works even when sign up is off. A link that makes an admin waits out the admin cooling-off time
+- Display name and email on every account, set by the user or an admin, and the time of each user's last sign in
+- Plugins can make, change, turn off and delete accounts and keep their roles in step, for user provisioning from an identity provider. An account made this way is linked to its first SSO or LDAP sign in when the verified email matches, and sign in doesn't rename it
+- Access review: one list of every host, folder and credential share, with who has it, at what level, who gave it and when it ends, filtered by user, role or kind and exported as CSV (`GET /rbac/access-review`)
+- Admin setting to stop admins from opening every user's hosts. When it is off, admins see only what is shared with them. Turning it on waits out the admin cooling-off time
+- Ready made Viewer, Operator, Auditor and Helpdesk roles on new and upgraded servers. They are plain roles to edit or delete
+- New permission `admin.audit.view` for reading the audit log
+- Sidebar panels put search, their buttons and an icon add button on one row
+- The tile picker starts with every group folded when it has more than four, so it reads as a list of apps
 
 ### Changed
 
@@ -62,9 +73,17 @@
 - The Docker image runs on Node 26
 - A plugin can no longer turn on the server's debugger
 - Plugins signed with the old single key keep loading until 2027-05-01. Termix moves installed plugins over to the new signatures on its own, without downloading them again
+- The `admin.users.view`, `admin.users.manage` and `admin.sessions.manage` permissions now work: a role with them can list and manage normal users and their sessions without being an admin. Only admins can change an admin account or give admin
+- Someone who manages roles without being an admin can only give permissions they hold themselves
+- The admin role always has every permission and its list can't be edited
+- The admin role and the admin flag always match. A role map from SSO that names `admin` makes the user an admin
+- Deleting a user as a non-admin needs a successor other than yourself, so nobody takes over someone's hosts and credentials by accident
+- New accounts start with host rows that show the connect buttons, with edit and share behind the arrow, and a short add host form. Pick Advanced in Interface settings for the old look
 
 ### Fixed
 
+- Linux desktop app: the window follows the system display scale again, so it is no longer tiny on HiDPI screens. Set `TERMIX_FORCE_DEVICE_SCALE_FACTOR` to pick a scale by hand
+- After an update the browser no longer keeps an old copy of the plugin SDK, which broke layouts with a missing export error until site data was cleared
 - Outbound requests never reach a cloud metadata address, even for a host allowed as private
 - Updating a plugin never moves it back to an older version unless you pick that version
 - Saved passwords and keys of hosts and credentials only open for the host or credential they belong to. Existing ones move over at the first start, with a backup of the old values in the data folder
@@ -122,6 +141,9 @@
 - A settings import no longer brings in password reset codes or the audit forwarding token
 - Plugin tools on a shared host you have no login for now say a login is missing, not that the host was not found
 - Plugins that are still starting after a server restart now show up once they are running, instead of staying missing until you reload the page
+- Moving a deleted user's hosts to someone else also moves the folder shares they made
+- Folder and credential shares that ran out are removed, like host shares
+- A failed user delete no longer puts the database error in the reply
 
 ## 26.11.1
 

@@ -56,6 +56,7 @@ const autoUpdates = require("./auto-updater.cjs");
 const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
 const { quitApp, closeAction } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
+const { forcedScaleFactor } = require("./linux-scale.cjs");
 // Saved by the file manager after the user picks an editor in a file dialog.
 const EXTERNAL_EDITOR_SETTING = "fileManager.externalEditorPath";
 
@@ -505,10 +506,10 @@ if (process.platform === "linux") {
 
   app.commandLine.appendSwitch("--enable-features=VaapiVideoDecoder");
 
-  // Fix click-coordinate misalignment with fractional display scaling on KDE/Wayland.
-  // Chromium's hit-testing uses unscaled coords while the compositor scales visually,
-  // so forcing scale factor 1 keeps them in sync. See: https://github.com/brave/brave-browser/issues/50028
-  app.commandLine.appendSwitch("--force-device-scale-factor", "1");
+  const scaleFactor = forcedScaleFactor(process.env);
+  if (scaleFactor) {
+    app.commandLine.appendSwitch("--force-device-scale-factor", scaleFactor);
+  }
 
   const passwordStore = selectLinuxPasswordStore(app.commandLine, process.env);
   if (passwordStore) {

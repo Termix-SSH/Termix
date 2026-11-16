@@ -101,6 +101,15 @@ export interface UserInfo {
   is_dual_auth?: boolean;
   password_hash?: string;
   data_unlocked?: boolean;
+  display_name?: string | null;
+  disabled?: boolean;
+  /** Admin user list only, from here down. */
+  email?: string | null;
+  disabled_at?: string | null;
+  /** "admin" or "pending_approval". */
+  disabled_reason?: string | null;
+  last_login_at?: string | null;
+  registered_at?: string;
   /** On a desktop linked to a server, the account it is signed in to there. */
   linked?: LinkedAccountInfo | null;
 }
@@ -1274,6 +1283,34 @@ export {
   type AdminHoldSettings,
   type AdminHold,
 } from "@/api/user-management-api";
+
+export {
+  disableUser,
+  enableUser,
+  updateMyProfile,
+  adminUpdateUserProfile,
+  getAdminHostBypass,
+  updateAdminHostBypass,
+  getExternalSignupApproval,
+  updateExternalSignupApproval,
+  listUserInvites,
+  createUserInvite,
+  revokeUserInvite,
+  checkUserInvite,
+  acceptUserInvite,
+  inviteLink,
+  getAccessReview,
+  downloadAccessReviewCsv,
+  type UserStatusFilter,
+  type UserProfile,
+  type UserProfileUpdate,
+  type UserInvite,
+  type NewUserInvite,
+  type CreatedUserInvite,
+  type AccessKind,
+  type AccessReviewRow,
+  type AccessReviewFilter,
+} from "@/api/user-lifecycle-api";
 
 // ADMIN USER DATA MANAGEMENT
 // ============================================================================

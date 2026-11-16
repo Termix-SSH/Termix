@@ -8,10 +8,12 @@
       "access": "public"
     },
     "GET /audit-logs": {
-      "access": "admin"
+      "access": "user",
+      "permission": "admin.audit.view"
     },
     "GET /audit-logs/actions": {
-      "access": "admin"
+      "access": "user",
+      "permission": "admin.audit.view"
     },
     "GET /credential-sidebar/preferences": {
       "access": "user"
@@ -897,6 +899,10 @@
     "GET /rbac/permissions/me": {
       "access": "user"
     },
+    "GET /rbac/access-review": {
+      "access": "user",
+      "permission": "admin.users.view"
+    },
     "GET /rbac/roles": {
       "access": "user"
     },
@@ -975,19 +981,49 @@
       "access": "public"
     },
     "POST /users/admin-create": {
-      "access": "admin"
+      "access": "user",
+      "permission": "admin.users.manage"
     },
     "DELETE /users/admin/:userId/second-factors": {
-      "access": "admin",
+      "access": "user",
+      "permission": "admin.users.manage",
       "destructive": true,
       "params": {
         "userId": "user:other"
       }
     },
     "GET /users/admin/:userId/second-factors": {
-      "access": "admin",
+      "access": "user",
+      "permission": "admin.users.view",
       "params": {
         "userId": "user:other"
+      }
+    },
+    "POST /users/admin/:userId/disable": {
+      "access": "user",
+      "permission": "admin.users.manage",
+      "destructive": true,
+      "params": {
+        "userId": "user:other"
+      }
+    },
+    "POST /users/admin/:userId/enable": {
+      "access": "user",
+      "permission": "admin.users.manage",
+      "destructive": true,
+      "params": {
+        "userId": "user:other"
+      }
+    },
+    "PATCH /users/admin/:userId/profile": {
+      "access": "user",
+      "permission": "admin.users.manage",
+      "destructive": true,
+      "params": {
+        "userId": "user:other"
+      },
+      "body": {
+        "displayName": "Authz"
       }
     },
     "GET /users/admin/export/:userId": {
@@ -997,7 +1033,8 @@
       }
     },
     "POST /users/admin/reset-password": {
-      "access": "admin",
+      "access": "user",
+      "permission": "admin.users.manage",
       "destructive": true,
       "body": {
         "username": "authz-other",
@@ -1084,6 +1121,7 @@
     },
     "DELETE /users/delete-user": {
       "access": "user",
+      "permission": "admin.users.manage",
       "destructive": true
     },
     "GET /users/external-auto-provision": {
@@ -1097,6 +1135,67 @@
     },
     "PATCH /users/host-key-policy": {
       "access": "admin"
+    },
+    "GET /users/admin-host-bypass": {
+      "access": "user"
+    },
+    "PATCH /users/admin-host-bypass": {
+      "access": "admin",
+      "destructive": true,
+      "body": {
+        "enabled": true
+      }
+    },
+    "GET /users/external-signup-approval": {
+      "access": "user"
+    },
+    "PATCH /users/external-signup-approval": {
+      "access": "admin",
+      "destructive": true,
+      "body": {
+        "enabled": false
+      }
+    },
+    "GET /users/invites": {
+      "access": "user",
+      "permission": "admin.users.view"
+    },
+    "POST /users/invites": {
+      "access": "user",
+      "permission": "admin.users.manage",
+      "destructive": true
+    },
+    "DELETE /users/invites/:id": {
+      "access": "user",
+      "permission": "admin.users.manage",
+      "destructive": true,
+      "params": {
+        "id": "=authz-missing"
+      }
+    },
+    "GET /users/invites/redeem/:token": {
+      "access": "public",
+      "params": {
+        "token": "=tmi_authz-invalid"
+      }
+    },
+    "POST /users/invites/redeem/:token/accept": {
+      "access": "public",
+      "allowed": "any",
+      "note": "A bad token is refused for everyone; a good one makes an account",
+      "params": {
+        "token": "=tmi_authz-invalid"
+      },
+      "body": {
+        "username": "authz-invitee",
+        "password": "Authz-unused-123!"
+      }
+    },
+    "PATCH /users/me/profile": {
+      "access": "user",
+      "body": {
+        "displayName": "Authz"
+      }
     },
     "GET /users/https-settings": {
       "access": "admin"

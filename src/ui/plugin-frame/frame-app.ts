@@ -36,6 +36,23 @@ export function frameComponent(
   return components.get(key);
 }
 
+/**
+ * A plugin may register a view a moment after activate returns, for example
+ * once it has asked its backend whether the feature is on. Waits for it.
+ */
+export async function whenFrameComponent(
+  key: string,
+  timeoutMs = 8000,
+  stepMs = 50,
+): Promise<ComponentType<Record<string, unknown>> | undefined> {
+  const end = Date.now() + timeoutMs;
+  for (;;) {
+    const component = components.get(key);
+    if (component || Date.now() >= end) return component;
+    await new Promise((resolve) => setTimeout(resolve, stepMs));
+  }
+}
+
 /** Keys of the plugin's components that start with a prefix, in order. */
 export function frameComponentKeys(prefix: string): string[] {
   return [...components.keys()].filter((key) => key.startsWith(prefix));

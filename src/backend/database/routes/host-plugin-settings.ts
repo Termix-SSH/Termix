@@ -213,18 +213,24 @@ async function applyLegacyFields(
   }
 }
 
+const LEGACY_BATCH = 500;
+
 /** Attaches the map to already-transformed host objects, in place. */
 export async function attachHostPluginSettings(
   hosts: Record<string, unknown>[],
   settings: Map<number, HostPluginSettings>,
 ): Promise<void> {
   if (settings.size === 0) return;
-  for (const host of hosts) {
-    const hostId = Number(host.id);
-    const values = settings.get(hostId);
-    if (!values) continue;
+  const attach = async (host: Record<string, unknown>) => {
+    const values = settings.get(Number(host.id));
+    if (!values) return;
     host.pluginSettings = visibleHostPluginSettings(values, host);
     await applyLegacyFields(host, host.pluginSettings as HostPluginSettings);
+  };
+  // Each legacy field is a call into a plugin process. One host at a time
+  // made a 20,000 host list take 25 s, so hosts go in parallel batches.
+  for (let i = 0; i < hosts.length; i += LEGACY_BATCH) {
+    await Promise.all(hosts.slice(i, i + LEGACY_BATCH).map(attach));
   }
 }
 

@@ -29,9 +29,14 @@ const accessState = vi.hoisted(() => ({
   ownedHostIds: new Set<number>(),
   visibleGrants: [] as { hostId: number }[],
   ownedQueryCalls: 0,
+  bypassSetting: null as string | null,
 }));
 
 vi.mock("../../database/repositories/factory.js", () => ({
+  getCurrentSettingValue: () => accessState.bypassSetting,
+  createCurrentAccessReviewRepository: () => ({
+    deleteExpired: async () => 0,
+  }),
   createCurrentHostResolutionRepository: () => ({
     isHostOwnedByUser: async (_hostId: number, userId: string) =>
       userId === accessState.ownerId,
@@ -58,8 +63,11 @@ vi.mock("../../database/repositories/factory.js", () => ({
     userHasAnyRoleName: async () => false,
   }),
   createCurrentUserRepository: () => ({
-    findById: async (userId: string) =>
-      accessState.adminIds.has(userId) ? { id: userId, isAdmin: true } : null,
+    findById: async (userId: string) => ({
+      id: userId,
+      isAdmin: accessState.adminIds.has(userId),
+      disabledAt: null,
+    }),
   }),
 }));
 
@@ -225,6 +233,18 @@ describe("PermissionManager.canAccessHost level hierarchy", () => {
     expect(info).toMatchObject({ hasAccess: true, isAdminBypass: true });
   });
 
+  it("gives admins no bypass when admin host access is turned off", async () => {
+    accessState.adminIds = new Set(["adminUser"]);
+    accessState.bypassSetting = "false";
+    try {
+      const info = await manager.canAccessHost("adminUser", 42, "view");
+      expect(info.hasAccess).toBe(false);
+      expect(info.isAdminBypass).toBeUndefined();
+    } finally {
+      accessState.bypassSetting = null;
+    }
+  });
+
   it("does not grant a non-admin stranger admin bypass", async () => {
     const info = await manager.canAccessHost("stranger", 42, "manage");
     expect(info.hasAccess).toBe(false);
@@ -358,6 +378,18 @@ describe("PermissionManager.filterAccessibleHostIds", () => {
     );
 
     expect([...allowed].sort()).toEqual([1, 2, 3, 4]);
+  });
+
+  it("filters an admin's list like anyone else's when admin host access is off", async () => {
+    accessState.adminIds = new Set(["admin1"]);
+    accessState.ownedHostIds = new Set([2]);
+    accessState.bypassSetting = "false";
+    try {
+      const allowed = await manager.filterAccessibleHostIds("admin1", [1, 2]);
+      expect([...allowed]).toEqual([2]);
+    } finally {
+      accessState.bypassSetting = null;
+    }
   });
 
   it("resolves the whole fleet with a single owned-hosts query", async () => {

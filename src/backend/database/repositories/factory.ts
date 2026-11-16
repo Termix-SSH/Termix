@@ -5,6 +5,8 @@ import { primeSettingsCache, readCachedSetting } from "./settings-cache.js";
 import type { DatabaseContext } from "./database-context.js";
 import { AdminHoldRepository } from "./admin-hold-repository.js";
 import { ApiKeyRepository } from "./api-key-repository.js";
+import { UserInviteRepository } from "./user-invite-repository.js";
+import { AccessReviewRepository } from "./access-review-repository.js";
 import { AuditLogRepository } from "./audit-log-repository.js";
 import { CredentialRepository } from "./credential-repository.js";
 import { HostFolderRepository } from "./host-folder-repository.js";
@@ -126,6 +128,20 @@ export function createCurrentAdminHoldRepository(): AdminHoldRepository {
   return new AdminHoldRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("admin_hold_repository_write"),
+  );
+}
+
+export function createCurrentAccessReviewRepository(): AccessReviewRepository {
+  return new AccessReviewRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("access_review_repository_write"),
+  );
+}
+
+export function createCurrentUserInviteRepository(): UserInviteRepository {
+  return new UserInviteRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("user_invite_repository_write"),
   );
 }
 

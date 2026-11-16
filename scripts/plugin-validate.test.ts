@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import {
   dataSlotWarnings,
+  uiWarnings,
   validate,
 } from "../packages/plugin-sdk/cli/commands/validate.mjs";
 
@@ -233,6 +234,65 @@ describe("sandbox warnings", () => {
       ),
     ).toEqual([expect.stringMatching(/"sandbox": { "workers": true }/)]);
     fs.rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe("panel toolbar warning", () => {
+  function frontend(source: string) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "termix-validate-"));
+    roots.push(root);
+    fs.mkdirSync(path.join(root, "src", "frontend"), { recursive: true });
+    fs.writeFileSync(path.join(root, "src", "frontend", "Panel.tsx"), source);
+    return root;
+  }
+
+  it("warns on search stacked over a full width add button", () => {
+    const root = frontend(`export const P = () => (
+  <div className="flex flex-col">
+    <PanelSearch value={q} onChange={setQ} fill />
+    <AddButton label="New" onClick={add} className="flex-1" />
+  </div>
+);`);
+    const warnings = uiWarnings(root).filter((w) => w.includes("PanelToolbar"));
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("src/frontend/Panel.tsx:3");
+  });
+
+  it("stays quiet for toolbars that are one row already", () => {
+    const compact = frontend(`export const P = () => (
+  <div>
+    <PanelSearch value={q} onChange={setQ} fill />
+    <AddButton compact onClick={add} />
+  </div>
+);`);
+    const band = frontend(`export const P = () => (
+  <ToolbarBand>
+    <PanelSearch value={q} onChange={setQ} fill />
+    <AddButton label="New" onClick={add} />
+  </ToolbarBand>
+);`);
+    const tab = frontend(`export const P = () => (
+  <>
+    <PanelSearch value={q} onChange={setQ} />
+    <AddButton label="New" onClick={add} />
+  </>
+);`);
+    for (const root of [compact, band, tab])
+      expect(
+        uiWarnings(root).filter((w) => w.includes("PanelToolbar")),
+      ).toEqual([]);
+  });
+
+  it("stays quiet when the panel uses PanelToolbar", () => {
+    const root = frontend(`export const P = () => (
+  <PanelToolbar search={q} onSearchChange={setQ} onAdd={add}>
+    <AddButton onClick={add} />
+  </PanelToolbar>
+);
+const S = () => <PanelSearch value={q} onChange={setQ} />;`);
+    expect(uiWarnings(root).filter((w) => w.includes("PanelToolbar"))).toEqual(
+      [],
+    );
   });
 });
 

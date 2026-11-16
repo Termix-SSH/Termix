@@ -5,6 +5,18 @@ export interface FakeUser {
   username: string;
   passwordHash: string;
   isAdmin: boolean;
+  displayName?: string | null;
+  email?: string | null;
+  disabledAt?: string | null;
+  disabledReason?: string | null;
+  managedBy?: string | null;
+}
+
+/** A stable role id per role name, for the fake role repository. */
+const roleIds = new Map<string, number>();
+function roleIdFor(name: string): number {
+  if (!roleIds.has(name)) roleIds.set(name, roleIds.size + 1);
+  return roleIds.get(name)!;
 }
 
 /** In-memory stand-ins for the repositories the login pipeline touches. */
@@ -53,7 +65,26 @@ export function fakeFactory(state: AuthState) {
           state,
           [...state.users.values()].find((u) => u.username === username),
         ),
+      findByEmail: async (email: string) =>
+        withIdentities(
+          state,
+          [...state.users.values()].find((u) => u.email === email),
+        ),
       countAll: async () => state.users.size,
+      countAdmins: async () =>
+        [...state.users.values()].filter((u) => u.isAdmin && !u.disabledAt)
+          .length,
+      create: async (user: FakeUser) => {
+        if (
+          [...state.users.values()].some((u) => u.username === user.username)
+        ) {
+          throw Object.assign(new Error("UNIQUE constraint failed"), {
+            code: "SQLITE_CONSTRAINT_UNIQUE",
+          });
+        }
+        state.users.set(user.id, { ...user });
+        return withIdentities(state, state.users.get(user.id));
+      },
       listAll: async () =>
         [...state.users.values()].map((u) => withIdentities(state, u)),
       createFirstSsoUser: async (user: FakeUser) => {
@@ -182,11 +213,29 @@ export function fakeFactory(state: AuthState) {
         );
         state.roles.push({ userId: input.userId, roleName: input.addRoleName });
       },
+      listRoles: async () =>
+        [
+          ...new Set(["admin", "user", ...state.roles.map((r) => r.roleName)]),
+        ].map((name) => ({
+          id: roleIdFor(name),
+          name,
+          displayName: name,
+          isSystem: name === "admin" || name === "user",
+        })),
       listUserRoles: async (userId: string) =>
         state.roles
           .filter((role) => role.userId === userId)
-          .map((role, index) => ({ roleId: index, roleName: role.roleName })),
-      removeRoleFromUser: async () => true,
+          .map((role) => ({
+            roleId: roleIdFor(role.roleName),
+            roleName: role.roleName,
+          })),
+      removeRoleFromUser: async (userId: string, roleId: number) => {
+        state.roles = state.roles.filter(
+          (role) =>
+            !(role.userId === userId && roleIdFor(role.roleName) === roleId),
+        );
+        return true;
+      },
     }),
     createCurrentSettingsRepository: () => ({
       get: async (key: string) => state.settings.get(key) ?? null,
@@ -222,6 +271,7 @@ export function fakeAuthManager(state: AuthState) {
     authenticateUser: vi.fn(async () => true),
     authenticateExternalUser: vi.fn(async () => true),
     revokeSessionsByExternalSession: vi.fn(async () => 1),
+    revokeAllUserSessions: vi.fn(async () => 0),
     unlockWithSystemKey: vi.fn(async () => true),
     registerExternalUser: vi.fn(async () => {}),
     isTrustedDevice: vi.fn(async (userId: string, fingerprint: string) =>
