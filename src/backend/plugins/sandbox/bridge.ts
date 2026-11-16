@@ -58,6 +58,7 @@ import {
   SnapshotLockProvider,
 } from "./provider-bridge.js";
 import { installSyncBridge } from "./sync-bridge.js";
+import { agentRelay } from "./agent-relay.js";
 
 /** Grace after a call ends before its token stops working. */
 export const REQUEST_TOKEN_GRACE_MS = 30_000;
@@ -1344,7 +1345,8 @@ export class PluginBridge {
         onBanner?: AnyFn;
         onAuthFailed?: AnyFn;
       };
-      const { hostVerifier, ...rest } = built.config;
+      const { hostVerifier, agent, ...rest } = built.config;
+      const relay = agentRelay(agent);
       const id = this.addRef("prepared", {
         verify:
           typeof hostVerifier === "function" ? (hostVerifier as AnyFn) : null,
@@ -1354,6 +1356,7 @@ export class PluginBridge {
       return {
         prepared: id,
         config: plainConfig(rest),
+        ...(relay ? { agent: relay } : {}),
         outcome: built.outcome,
         authType: built.authType,
         ...(built.onBanner ? { onBanner: built.onBanner } : {}),

@@ -24,6 +24,7 @@ import {
 import { stdioTransport, STDIO_FLAG } from "../frames.js";
 import { createChildSocket } from "./socket.js";
 import { joinStream } from "../transport-bridge.js";
+import type { AgentRelay } from "../agent-relay.js";
 import { createChildSyncHost } from "./sync-host.js";
 
 interface Store {
@@ -714,12 +715,18 @@ async function sshPrepare(host: unknown, options?: Record<string, unknown>) {
   ])) as {
     prepared: string;
     config: Record<string, unknown>;
+    agent?: AgentRelay;
     outcome: unknown;
     authType: unknown;
     onBanner?: AnyFn;
     onAuthFailed?: AnyFn;
   };
   const config = result.config;
+  // The host's ssh agent stays in core; this one asks it for keys and signatures.
+  if (result.agent) {
+    const { relayedAgent } = await import("../agent-relay.js");
+    config.agent = relayedAgent(result.agent);
+  }
   const realClient = client as
     | { emit: (event: string | symbol, ...args: unknown[]) => boolean }
     | undefined;
