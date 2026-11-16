@@ -44,6 +44,7 @@ import {
   createFrameApp,
   frameComponent,
   frameComponentKeys,
+  whenFrameComponent,
 } from "./frame-app";
 import { createFrameBridge } from "./frame-bridge";
 import { getFrameState, setFrameState } from "./frame-store";
@@ -383,7 +384,9 @@ async function boot() {
     watchOverlay((active) => port.emit("overlay", { active }));
     port.emit("live", { reasons: liveWork() });
   } else {
-    const component = params.key ? frameComponent(params.key) : undefined;
+    const component = params.key
+      ? await whenFrameComponent(params.key)
+      : undefined;
     if (!component) {
       throw new Error(`${pluginId} has no view "${params.key ?? ""}"`);
     }

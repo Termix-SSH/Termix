@@ -85,3 +85,28 @@ describe("auth parts in a frame", () => {
     dispose();
   });
 });
+
+describe("a view registered after activate", () => {
+  it("is found once the plugin adds it", async () => {
+    const { whenFrameComponent } = await import("@/plugin-frame/frame-app");
+    const { app, dispose } = frameApp();
+    const waiting = whenFrameComponent("hostSection:late", 2000, 5);
+    setTimeout(() => {
+      app.registerHostEditorSection({
+        id: "late",
+        group: "top",
+        titleKey: "x",
+        component: Screen,
+      } as never);
+    }, 30);
+    expect(await waiting).toBeTypeOf("function");
+    dispose();
+  });
+
+  it("gives up after the wait when it never comes", async () => {
+    const { whenFrameComponent } = await import("@/plugin-frame/frame-app");
+    expect(
+      await whenFrameComponent("hostSection:never", 40, 5),
+    ).toBeUndefined();
+  });
+});
