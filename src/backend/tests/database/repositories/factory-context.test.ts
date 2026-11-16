@@ -131,9 +131,18 @@ it("saves SQLite audit rows lazily instead of forcing a save per row", async () 
     await import("../../../utils/database-save-trigger.js");
   const lazy = vi.spyOn(DatabaseSaveTrigger, "triggerSave").mockResolvedValue();
   const force = vi.spyOn(DatabaseSaveTrigger, "forceSave").mockResolvedValue();
+  // The chained insert runs in a synchronous transaction on SQLite.
+  const tx = {
+    select: () => tx,
+    from: () => tx,
+    where: () => tx,
+    get: () => undefined,
+    insert: () => tx,
+    values: () => tx,
+    run: () => ({ changes: 1, lastInsertRowid: 1 }),
+  };
   const query = {
-    insert: () => query,
-    values: async () => ({ changes: 1 }),
+    transaction: (fn: (t: typeof tx) => unknown) => fn(tx),
     select: () => query,
     from: async () => [{ count: 1 }],
   };

@@ -219,6 +219,10 @@
     "securityIntro": "Tambahkan passkey atau aplikasi autentikator ke akun Anda. Anda juga dapat melakukan ini nanti di Pengaturan, di bawah Keamanan.",
     "pluginsDocsLink": "Baca tentang masing-masing"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix masih berjalan",
+    "noticeBody": "Menutup jendela akan menjaga Termix tetap berjalan di baki sistem. Untuk keluar, buka menu ikon baki dan pilih Keluar. Anda dapat menonaktifkan ini di Pengaturan."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Otomatis",
     "modePrompt": "Tanya dulu",

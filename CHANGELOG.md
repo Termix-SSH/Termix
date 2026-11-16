@@ -1,5 +1,150 @@
 # Changelog
 
+## 26.11.2
+
+### Added
+
+- Desktop app: closing the window can quit Termix instead of keeping it in the tray
+- Desktop app: the first time closing the window keeps Termix in the tray, a notice says it is still running and how to quit
+- Admin setting to trust a host's first key without a prompt when nobody can confirm it. Each such key is audited
+- Every desktop file, tarball and Flatpak bundle on a release carries signed build provenance, and each release has a signed `SHA256SUMS` file with build provenance in `SHA256SUMS.intoto.jsonl`. Check them with the new Verify your download page in the docs
+- Docker images are signed with cosign and carry build provenance and an SBOM attestation
+- A CycloneDX SBOM of the server's dependencies ships with each build: `/app/sbom.cdx.json` in the Docker image and `termix_sbom.cdx.json` on the release
+- The server sends the same security headers with or without the bundled nginx: a strict Content-Security-Policy, Referrer-Policy, Permissions-Policy, Cross-Origin-Opener-Policy and HSTS over HTTPS
+- Desktop app: the app page carries a Content-Security-Policy
+- Limits on how often logins, second factor checks, password resets, sign ups, API key creation, exports and imports can be tried, per address and per account. Too many bad API keys from one address are refused for a while
+- Rotate the encryption key from the API (`POST /encryption/rotate-key`) or with `ENCRYPTION_KEY_PREVIOUS`, and the database key with `DATABASE_KEY_PREVIOUS`. Everything moves to the new key at start
+- The example Docker compose drops every capability it doesn't need, sets no-new-privileges and shows a read-only, non-root setup. The image runs on a read-only root filesystem
+- Every plugin made for plugin API 2 runs in its own process. It can only read its own files, opens no network connections or programs unless it was granted that, and reaches Termix only through checked calls. Secrets, the database, SSH connections and saved logins stay in the server
+- The desktop app fences each plugin the same way: it runs on its own copy of Node inside the system's sandbox (an AppContainer on Windows, a Seatbelt profile on macOS, Landlock and seccomp on Linux), so it can't read your files or the database, start programs or open connections it wasn't granted, and it is stopped when it goes over its memory limit. The 32-bit Windows and 32-bit ARM Linux builds have no such copy of Node, so they don't run plugin backends
+- Desktop app: plugin frames keep the frame rules the server sends
+- In the Docker image each plugin also runs as its own Linux user, so it can't read the database, keys or other plugins' data. With `NET_ADMIN`, plugins that may not open connections are also blocked by a firewall rule
+- The screens of every plugin made for plugin API 2 run in sandboxed frames with no access to your login, the rest of the page or other plugins. Each frame reaches only its own plugin, with a short key that ends with your session, and asks Termix for anything else through a fixed list of checks. They keep the same look, theme, shortcuts and language. A frame loads nothing from other sites: pictures come through Termix, and it can only cover the screen, open links, start downloads or revoke your API keys right after you used it
+- A plugin process starts when something needs it and stops after 10 idle minutes (`TERMIX_PLUGIN_IDLE_MINUTES`). Its jobs, event listeners, operations and services stay with Termix and start it again when they are needed. Plugins on the sign-in and connect paths, and plugins with work to watch, keep running. A plugin process that crashes, hangs, uses too much memory (`TERMIX_PLUGIN_MEMORY_MB`) or CPU (`TERMIX_PLUGIN_CPU_LIMIT`) is restarted, and marked failed if it keeps crashing
+- No plugin runs inside the server any more. A plugin made for an older Termix (plugin API 1) stays off until it is updated. The plugins page names each one, says why and links the guide for moving it
+- When a newer Termix is out, the plugins page names every installed plugin that won't run on it, so you can update those first
+- Plugins from the registry are checked against the build provenance their release workflow signed, and the plugin page shows which build made the installed copy
+- A plugin can ask to read the server's environment variables and files, for secrets a config file points at. Termix's own keys and data folder stay out of reach, and an admin has to allow it
+- Plugin signing keys now come from an offline Termix root key. Official and community plugins install only when a key the root vouched for signed them, and each signing key expires
+- Termix checks a root signed revocation list on start and once a day. A revoked plugin, plugin version or signing key is turned off and every admin gets an alert. Servers without internet keep the last list they had
+- Admins get an alert when a plugin update is signed by a different key than the version before
+- Desktop app: an update also has to carry a signature from the Termix release key before it installs
+- Each audit log entry carries a hash of the one before, so a changed or removed entry shows. Termix checks the chain every hour and alerts every admin when it breaks. Plugins can show the chain's state and its newest hash to keep somewhere else
+- Every admin gets an alert for a new admin, role changes, plugin installs, updates, turning a plugin on or giving it access, sign in setting changes, new API keys and a failed plugin revocation check
+- Role changes, plugin access grants and sign in switches are written to the audit log
+- Each user can list their own API keys with when they were last used, and revoke one or all of them. Admins can sign everyone out at once, and revoke every API key with it
+- New API key scope `read`: the key can only read. A new key gets it, and expires after 90 days, unless the creator asks for something else
+- Optional admin wait for servers with two or more admins: a new admin, turning off password login, turning off a sign in plugin or a plugin with dangerous access waits a set time, the other admins get an alert and can cancel it. Off by default. Turning it off or shortening it waits too. `TERMIX_ADMIN_HOLD_MINUTES` sets it from the server
+- `termix-recover` on the server (`docker exec termix termix-recover`) lists admins, removes a locked out admin's second factor and signs people out, without signing in
+- The sign in event plugins get now says which sign in method and device were used
+- The server answers `/.well-known/security.txt` with where to report a security problem in Termix
+- Docker images are reproducible: building the same commit again gives the same image, byte for byte
+- Plugins can give small per host or per tab values, like usage bars, badges and status dots, that Termix draws itself. A dashboard with many hosts no longer needs a plugin frame for each row
+- The plugins page shows how much memory Termix and each plugin process use, and admins get an alert when the server runs low on memory
+- Plugin screens load faster and use far less memory: a plugin's background code starts only when something needs it and stops again when idle, every plugin view shares one cached copy of the app's scripts, and repeated reads of your permissions and settings are shared
+- A plugin screen in a frame can show other plugins' parts again, like Homepage widgets, Host Metrics manager cards, host page tiles and terminal side panels. Termix draws each part in its own frame over the spot, clipped to the screen, hidden under open menus, and they still scroll, resize, drag in edit modes and take Tab focus
+- Sign in methods and second factors from plugins are drawn by Termix itself, so no plugin code runs on the sign in screen. Passkeys and security keys use the browser prompt Termix runs, and the plugin's server checks every answer
+- Sign in, serial port and web endpoint plugins run their screens in sandboxed frames too. Termix asks the browser for a serial port or a passkey for them, and shows a web endpoint page only at the address the plugin's server picked
+- Theme files can only load images and fonts that ship with the theme
+- Admins can turn an account off and back on. A turned off account is signed out everywhere, can't sign in, its API keys stop working and plugins can't run background work as it
+- New SSO and LDAP accounts can wait for an admin to approve them before they can sign in. Admins get an alert when someone is waiting
+- Invite links: an admin makes a link with roles, an expiry and a number of uses, and it works even when sign up is off. A link that makes an admin waits out the admin cooling-off time
+- Display name and email on every account, set by the user or an admin, and the time of each user's last sign in
+- Plugins can make, change, turn off and delete accounts and keep their roles in step, for user provisioning from an identity provider. An account made this way is linked to its first SSO or LDAP sign in when the verified email matches, and sign in doesn't rename it
+- Access review: one list of every host, folder and credential share, with who has it, at what level, who gave it and when it ends, filtered by user, role or kind and exported as CSV (`GET /rbac/access-review`)
+- Admin setting to stop admins from opening every user's hosts. When it is off, admins see only what is shared with them. Turning it on waits out the admin cooling-off time
+- Ready made Viewer, Operator, Auditor and Helpdesk roles on new and upgraded servers. They are plain roles to edit or delete
+- New permission `admin.audit.view` for reading the audit log
+- Sidebar panels put search, their buttons and an icon add button on one row
+- The tile picker starts with every group folded when it has more than four, so it reads as a list of apps
+
+### Changed
+
+- Each plugin seals its secrets with its own key, so one plugin can't open what another sealed. Values sealed before move to the new key on the first start
+- An API key made without picking scopes or an expiry is now read only and lasts 90 days. Ask for `full` and no expiry to get the old behavior. Existing keys keep what they had
+- GitHub releases stay drafts until every download is uploaded, and a published release never changes its files
+- Over HTTPS the login cookies use the `__Host-` prefix, so another site on a sibling domain can't set or replace them
+- The Docker health check uses Node instead of wget, which is no longer in the image. ping needs no extra capability
+- Server logs mask API keys, tokens, passwords and private keys, also inside error messages
+- Desktop app: the app page is served from its own `app://termix` address instead of from files on disk. Saved view settings move over on the first start. A server older than 26.11.2 that sets `CORS_ALLOWED_ORIGINS` needs `app://termix` added
+- Desktop app: updates install on Windows, macOS, AppImage and deb only after the release's signed `SHA256SUMS` checks out. Releases without it are offered as a download link
+- Desktop app: the local server runs as an Electron utility process, and the app binary can no longer be started as a plain Node or with Node debug flags
+- Desktop app: only the app itself can sign in to its local server. It sends a secret made fresh at every launch, so other programs and other users on the computer can't
+- The Docker image runs on Node 26
+- A plugin can no longer turn on the server's debugger
+- Plugins signed with the old single key keep loading until 2027-05-01. Termix moves installed plugins over to the new signatures on its own, without downloading them again
+- The `admin.users.view`, `admin.users.manage` and `admin.sessions.manage` permissions now work: a role with them can list and manage normal users and their sessions without being an admin. Only admins can change an admin account or give admin
+- Someone who manages roles without being an admin can only give permissions they hold themselves
+- The admin role always has every permission and its list can't be edited
+- The admin role and the admin flag always match. A role map from SSO that names `admin` makes the user an admin
+- Deleting a user as a non-admin needs a successor other than yourself, so nobody takes over someone's hosts and credentials by accident
+- New accounts start with host rows that show the connect buttons, with edit and share behind the arrow, and a short add host form. Pick Advanced in Interface settings for the old look
+
+### Fixed
+
+- Linux desktop app: the window follows the system display scale again, so it is no longer tiny on HiDPI screens. Set `TERMIX_FORCE_DEVICE_SCALE_FACTOR` to pick a scale by hand
+- After an update the browser no longer keeps an old copy of the plugin SDK, which broke layouts with a missing export error until site data was cleared
+- Outbound requests never reach a cloud metadata address, even for a host allowed as private
+- Updating a plugin never moves it back to an older version unless you pick that version
+- Saved passwords and keys of hosts and credentials only open for the host or credential they belong to. Existing ones move over at the first start, with a backup of the old values in the data folder
+- Outbound checks also refuse private IPv4 addresses written in IPv4-compatible or NAT64 IPv6 form
+- Starting the server no longer hangs when downloading a missing plugin from the registry stalls
+- Tile grids (dashboards, Homepage, host pages) go back to columns when the window gets wide again, and show their tiles when a page opens on a narrow screen
+- A very long path prefix header no longer slows down the request it came with
+- Desktop sync: when the same change was sent twice in one sync, the change was saved but the desktop was told it conflicted. The repeat is now answered as a duplicate
+- SOCKS4 and SOCKS5 proxy chains set up in the host editor now connect. The proxy type was passed on in a form the proxy client refused
+- Hosts shared with you without a login now sync to the desktop and mobile apps, and connecting asks you to add a login instead of saying the host is not on the sync server
+- Desktop app: when both the owner and someone a host is shared with are signed in, the shared copy now syncs too
+- API key requests are much faster: the slow key check no longer runs on every request
+- Desktop app: quitting waits for the local server to stop, so it no longer keeps its ports after the app closes
+- Desktop app: the local server and everything it started stop when the app closes or crashes
+- A plugin that hangs while stopping no longer keeps the server from shutting down
+- Stopping the server with Ctrl+C or docker stop waits for plugins to stop before it closes the database
+- Desktop app: the page can only change the desktop settings meant for it
+- Database exports always write inside their own temp folder, whatever the username
+- New usernames can't contain slashes or control characters
+- Proxy tests connect to the exact address they checked
+- A host whose key was never checked is no longer trusted when a plugin, schedule or the API connects with nobody to ask. Open a terminal to the host once, or turn on the new admin setting
+- A jump host's first key is asked about like any other host's
+- A credential shared for use only stays hidden. Quick Connect, copying a host's password, host export and desktop sync no longer hand out its secret
+- Hosts shared at connect or view level reach linked desktops without their login and connect through the server there
+- Quick Connect can log in with a saved credential, the server reads it when connecting
+- Copying a host's password or key and reading host status need the View hosts permission, like every other host read
+- Signing out, revoking a session, changing a password, an expired session or an idle timeout now also closes that login's open terminals and other live connections within seconds
+- API key connections end when the key is deleted or expires
+- Live connections follow the same sign in rules as the rest of Termix, including the second factor setup step
+- Desktop app: the local server answers only requests sent to its loopback address, and only the app itself can sign in to it
+- Desktop app: only the app page in the main window can call the desktop app, and every call's input is checked
+- Desktop app: pages opened from an embedded web view keep the same limits as the view
+- Desktop app: settings from the local server for the linked server are checked before use
+- A database save that fails is now reported to the action that asked for it, and a failed save never leaves a cut database file
+- Updated dependencies with known security fixes, including undici, multer and Electron
+- Desktop app: a server's login page only hands its session to the desktop app itself, never to another page shown inside it
+- Restoring a database backup only reads and writes files inside the data folder
+- Encrypted values with a cut short check tag are refused
+- The Docker image bundles opkssh 0.19.2 and no longer ships npm, which the server never uses
+- A failed sign in gives the same answer and takes the same time whether or not the username exists
+- A password reset request gives the same answer whether or not the username exists
+- The code step of a sign in with a second factor can only be finished once
+- Pages on other subdomains or ports of the same host can no longer act as the signed in user or read their data. Add origins that need this to CORS_ALLOWED_ORIGINS
+- Server answers no longer name the web framework the server runs on
+- A broken file upload is answered as a bad request instead of a server error
+- Plugin pages can only be shown inside Termix itself, not framed by other sites
+- The API docs list the path parameters and answers of every route
+- Plugins that run commands with sudo send the sudo password on stdin, so it never shows up in the host's process list
+- A login that still has to set up a second factor can only open the setup screen, not manage plugins
+- Rotating the JWT secret from the API now really replaces it and signs everyone out
+- Error answers from the server no longer include internal error text
+- Bad JSON and too large uploads get a 400 or 413 answer instead of a server error
+- SSH key uploads on a host are limited to 1 MB
+- Download names with unusual characters in a user export are kept safe
+- A settings import no longer brings in password reset codes or the audit forwarding token
+- Plugin tools on a shared host you have no login for now say a login is missing, not that the host was not found
+- Plugins that are still starting after a server restart now show up once they are running, instead of staying missing until you reload the page
+- Moving a deleted user's hosts to someone else also moves the folder shares they made
+- Folder and credential shares that ran out are removed, like host shares
+- A failed user delete no longer puts the database error in the reply
+
 ## 26.11.1
 
 ### Added

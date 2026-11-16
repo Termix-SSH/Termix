@@ -4,7 +4,6 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "get-desktop-settings",
   "get-previous-server-url",
   "save-desktop-settings",
-  "allow-invalid-certificate-for-origin",
 ]);
 
 function invokeAllowed(channel, ...args) {
@@ -79,6 +78,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
 
   clearSessionCookies: () => ipcRenderer.invoke("clear-session-cookies"),
+
+  // Translated text for the notice shown the first time closing the window
+  // leaves the app running in the tray.
+  setTrayNoticeText: (text) => ipcRenderer.send("set-tray-notice-text", text),
 
   externalBrowserLogin: (authUrl, callbackPort) =>
     ipcRenderer.invoke("external-browser-login", authUrl, callbackPort),

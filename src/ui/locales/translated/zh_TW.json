@@ -219,6 +219,10 @@
     "securityIntro": "為您的帳戶新增通行金鑰或驗證器應用程式。您也可以稍後在「設定」的「安全性」中執行此操作。",
     "pluginsDocsLink": "閱讀各外掛說明"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix 仍在執行",
+    "noticeBody": "關閉視窗後，Termix 仍會在系統匣中繼續執行。若要結束程式，請開啟系統匣圖示選單並選擇「結束」。您可以在設定中關閉此功能。"
+  },
   "desktopUpdates": {
     "modeAutomatic": "自動",
     "modePrompt": "先詢問",

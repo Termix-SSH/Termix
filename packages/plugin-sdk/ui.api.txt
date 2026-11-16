@@ -1,20 +1,26 @@
 ACCENT_PRESET_COLORS (value): { label: string; value: string; }[]
 APP_VERSION (value): string
+AccessKind (type): AccessKind
 AccessRecord (type): AccessRecord
+AccessReviewFilter (type): AccessReviewFilter
+AccessReviewRow (type): AccessReviewRow
 ActionSlot (value): ({ slotId, context, className, enabled, renderItem, hideLabels, when, }: ActionSlotProps) => Element
 ActiveSessionInfo (type): ActiveSessionInfo
 AddButton (value): ({ label, compact, className, ...rest }: { label?: string; compact?: boolean; className?: string; } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & { ref?: Ref<HTMLButtonElement>; }) => Element
+AdminHold (type): AdminHold
+AdminHoldSettings (type): AdminHoldSettings
+AdminHoldTicket (type): AdminHoldTicket
 AdminSection (type): AdminSection
 Alert (value): ({ className, variant, ...props }: ClassAttributes<HTMLDivElement> & HTMLAttributes<HTMLDivElement> & VariantProps<(props?: ConfigVariants<{ variant: { default: string; destructive: string; }; }> & ClassProp) => string>) => Element
 AlertDescription (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
 AlertDialog (value): ({ ...props }: AlertDialogProps) => Element
 AlertDialogAction (value): ({ className, ...props }: AlertDialogActionProps & RefAttributes<HTMLButtonElement>) => Element
 AlertDialogCancel (value): ({ className, ...props }: AlertDialogCancelProps & RefAttributes<HTMLButtonElement>) => Element
-AlertDialogContent (value): ({ className, ...props }: AlertDialogContentProps & RefAttributes<HTMLDivElement>) => Element
+AlertDialogContent (value): ({ className, ref, ...props }: AlertDialogContentProps & RefAttributes<HTMLDivElement>) => Element
 AlertDialogDescription (value): ({ className, ...props }: AlertDialogDescriptionProps & RefAttributes<HTMLParagraphElement>) => Element
 AlertDialogFooter (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
 AlertDialogHeader (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
-AlertDialogOverlay (value): ({ className, ...props }: AlertDialogOverlayProps & RefAttributes<HTMLDivElement>) => Element
+AlertDialogOverlay (value): ({ className, ref, ...props }: AlertDialogOverlayProps & RefAttributes<HTMLDivElement>) => Element
 AlertDialogPortal (value): ({ ...props }: AlertDialogPortalProps) => Element
 AlertDialogTitle (value): ({ className, ...props }: AlertDialogTitleProps & RefAttributes<HTMLHeadingElement>) => Element
 AlertDialogTrigger (value): ({ ...props }: AlertDialogTriggerProps & RefAttributes<HTMLButtonElement>) => Element
@@ -66,6 +72,7 @@ ConnectionStage (type): ConnectionStage
 ConnectionStatus (type): ConnectionStatus
 ConnectionUnavailable (type): ConnectionUnavailable
 CreatedApiKey (type): CreatedApiKey
+CreatedUserInvite (type): CreatedUserInvite
 Credential (type): Credential
 CredentialDensity (type): CredentialDensity
 CredentialPermissionLevel (type): CredentialPermissionLevel
@@ -79,9 +86,17 @@ DASHBOARD_CARDS (value): DashboardCardConfig[]
 DEFAULT_FOLDER_COLOR (value): "#f59145"
 DEFAULT_FOLDER_ICON (value): "folder"
 DashboardCardId (type): DashboardCardId
+DataBar (type): DataBar
 DataColumn (type): DataColumn<T>
+DataLayout (type): DataLayout
+DataShape (type): DataShape
+DataSlot (value): (props: DataSlotProps) => Element
+DataStat (type): DataStat
 DataTable (value): ({ className, containerClassName, children, ...props }: ClassAttributes<HTMLTableElement> & TableHTMLAttributes<HTMLTableElement> & { containerClassName?: string; }) => Element
 DataTableRow (value): ({ active, className, onClick, ...props }: ClassAttributes<HTMLTableRowElement> & HTMLAttributes<HTMLTableRowElement> & { active?: boolean; }) => Element
+DataTone (type): DataTone
+DataValue (type): DataValue
+DataValues (value): ({ values, layout, className, onAction, }: { values: DataValue[]; layout?: DataLayout; className?: string; onAction?: (actionId: string) => void; }) => Element
 DataView (value): <T>({ items, view, density, getKey, renderCard, columns, size, minCardWidth, listColumns, onRowClick, isRowActive, empty, className, }: { items: T[]; view: PanelViewMode; density?: PanelDensity; getKey: (item: T) => string; renderCard: (item: T) => ReactNode; columns: GridColumns; size?: GridSize; minCardWidth?: number; listColumns: DataColumn<T>[]; onRowClick?: (item: T) => void; isRowActive?: (item: T) => boolean; empty: ReactNode; className?: string; }) => Element
 DefaultOverrides (type): DefaultOverrides
 DefaultsOnly (value): ({ settingKey, children, }: { settingKey: string; children: ReactNode; }) => Element
@@ -90,20 +105,20 @@ DesktopUpdateState (type): DesktopUpdateState
 DeviceLogin (type): DeviceLogin
 Dialog (value): ({ ...props }: DialogProps) => Element
 DialogClose (value): ({ ...props }: DialogCloseProps & RefAttributes<HTMLButtonElement>) => Element
-DialogContent (value): ({ className, children, showCloseButton, ...props }: DialogContentProps & RefAttributes<HTMLDivElement> & { showCloseButton?: boolean; }) => Element
+DialogContent (value): ({ className, children, showCloseButton, ref, ...props }: DialogContentProps & RefAttributes<HTMLDivElement> & { showCloseButton?: boolean; }) => Element
 DialogDescription (value): ({ className, ...props }: DialogDescriptionProps & RefAttributes<HTMLParagraphElement>) => Element
 DialogFooter (value): ({ className, showCloseButton, children, ...props }: ClassAttributes<HTMLDivElement> & HTMLAttributes<HTMLDivElement> & { showCloseButton?: boolean; }) => Element
 DialogHeader (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
-DialogOverlay (value): ({ className, ...props }: DialogOverlayProps & RefAttributes<HTMLDivElement>) => Element
+DialogOverlay (value): ({ className, ref, ...props }: DialogOverlayProps & RefAttributes<HTMLDivElement>) => Element
 DialogPortal (value): ({ ...props }: DialogPortalProps) => Element
 DialogTitle (value): ({ className, ...props }: DialogTitleProps & RefAttributes<HTMLHeadingElement>) => Element
 DialogTrigger (value): ({ ...props }: DialogTriggerProps & RefAttributes<HTMLButtonElement>) => Element
 DocsLink (value): ({ core, page, anchor, href, variant, children, className, }: DocsLinkProps) => Element
 DocsLinkProps (type): DocsLinkProps
-DocsPage (type): "dashboard" | "users" | "sessions" | "roles" | "branding" | "database" | "manage" | "settings" | "plugins" | "install" | "cli" | "develop" | "home" | "updating" | "betas" | "envVars" | "https" | "reverseProxy" | "desktopSync" | "interface" | "hosts" | "portKnocking" | "hostDefaults" | "credentials" | "sharing" | "account" | "accountSecurity" | "accountData" | "apiKeys" | "commandPalette" | "interfaceSettings" | "appearance" | "keybindings" | "adminGeneral" | "adminDatabase" | "adminSsl" | "auditLog" | "importExport" | "pluginCatalog" | "communityRegistry" | "pluginRegistries" | "hostRegistry"
+DocsPage (type): "dashboard" | "users" | "sessions" | "roles" | "branding" | "database" | "manage" | "settings" | "plugins" | "install" | "cli" | "develop" | "home" | "updating" | "betas" | "envVars" | "https" | "reverseProxy" | "desktopSync" | "interface" | "hosts" | "portKnocking" | "hostDefaults" | "credentials" | "sharing" | "account" | "accountSecurity" | "accountData" | "apiKeys" | "commandPalette" | "interfaceSettings" | "appearance" | "keybindings" | "adminGeneral" | "adminDatabase" | "adminSsl" | "auditLog" | "importExport" | "pluginCatalog" | "communityRegistry" | "pluginApi2" | "pluginRegistries" | "hostRegistry"
 DropdownMenu (value): ({ ...props }: DropdownMenuProps) => Element
 DropdownMenuCheckboxItem (value): ({ className, children, checked, inset, ...props }: DropdownMenuCheckboxItemProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }) => Element
-DropdownMenuContent (value): ({ className, align, sideOffset, ...props }: DropdownMenuContentProps & RefAttributes<HTMLDivElement>) => Element
+DropdownMenuContent (value): ({ className, align, sideOffset, ref, ...props }: DropdownMenuContentProps & RefAttributes<HTMLDivElement>) => Element
 DropdownMenuGroup (value): ({ ...props }: DropdownMenuGroupProps & RefAttributes<HTMLDivElement>) => Element
 DropdownMenuItem (value): ({ className, inset, variant, ...props }: DropdownMenuItemProps & RefAttributes<HTMLDivElement> & { inset?: boolean; variant?: "default" | "destructive"; }) => Element
 DropdownMenuLabel (value): ({ className, inset, ...props }: DropdownMenuLabelProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }) => Element
@@ -113,7 +128,7 @@ DropdownMenuRadioItem (value): ({ className, children, inset, ...props }: Dropdo
 DropdownMenuSeparator (value): ({ className, ...props }: DropdownMenuSeparatorProps & RefAttributes<HTMLDivElement>) => Element
 DropdownMenuShortcut (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLSpanElement>, HTMLSpanElement>) => Element
 DropdownMenuSub (value): ({ ...props }: DropdownMenuSubProps) => Element
-DropdownMenuSubContent (value): ({ className, sideOffset, alignOffset, ...props }: DropdownMenuSubContentProps & RefAttributes<HTMLDivElement>) => Element
+DropdownMenuSubContent (value): ({ className, sideOffset, alignOffset, ref, ...props }: DropdownMenuSubContentProps & RefAttributes<HTMLDivElement>) => Element
 DropdownMenuSubTrigger (value): ({ className, inset, children, ...props }: DropdownMenuSubTriggerProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }) => Element
 DropdownMenuTrigger (value): ({ ...props }: DropdownMenuTriggerProps & RefAttributes<HTMLButtonElement>) => Element
 EditingWidth (type): EditingWidth
@@ -127,6 +142,10 @@ FieldPair (value): ({ children }: { children: ReactNode; }) => Element
 FolderAccessRule (type): FolderAccessRule
 FolderIconEl (value): ({ icon, className, style, }: { icon?: string; className?: string; style?: CSSProperties; }) => Element
 FontSizeId (type): FontSizeId
+ForeignInteractive (value): ({ interactive, children, }: { interactive: boolean; children?: ReactNode; }) => Element
+ForeignOccluder (value): (props: HTMLAttributes<HTMLDivElement>) => Element
+ForeignSlot (value): ({ of, props, interactive, className, style, }: ForeignSlotProps) => Element
+ForeignSlotProps (type): ForeignSlotProps
 FormFooter (value): ({ onCancel, onSave, saveLabel, cancelLabel, saving, dirty, status, disabled, onDelete, deleteLabel, extra, saveType, form, }: { onCancel?: () => void; onSave?: () => void; saveLabel?: string; cancelLabel?: string; saving?: boolean; dirty?: boolean; status?: ReactNode; disabled?: boolean; onDelete?: () => void; deleteLabel?: string; extra?: ReactNode; saveType?: "button" | "submit"; form?: string; }) => Element
 FullScreenAppPhase (type): FullScreenAppPhase
 FullScreenAppWrapper (value): FC<FullScreenAppWrapperProps>
@@ -142,6 +161,7 @@ Host (type): Host
 HostActionDef (type): HostActionDef
 HostClickBehavior (type): HostClickBehavior
 HostData (type): HostData
+HostDataItems (value): ({ host, items, layout, className, }: { host: Host; items: HostBadgeDef[]; layout?: DataLayout; className?: string; }) => Element
 HostDefaultBadge (value): ({ settingKey }: { settingKey: string; }) => Element
 HostDefaultField (value): ({ settingKey, children, }: { settingKey: string; children: ReactNode; }) => Element
 HostDefaultsChange (type): HostDefaultsChange
@@ -186,7 +206,7 @@ Label (value): ({ className, ...props }: LabelProps & RefAttributes<HTMLLabelEle
 LineChart (value): ({ series, timestamps, domain, yFormatter, height, className, }: LineChartProps) => Element
 LineChartSeries (type): LineChartSeries
 LinkedAccountInfo (type): LinkedAccountInfo
-ListBadge (value): ({ tone, className, children, }: { tone?: "destructive" | "warning" | "muted" | "brand" | "success"; className?: string; children: ReactNode; }) => Element
+ListBadge (value): ({ tone, className, children, }: { tone?: "destructive" | "muted" | "warning" | "brand" | "success"; className?: string; children: ReactNode; }) => Element
 ListRow (value): ({ title, icon, badges, meta, stripe, tone, color, selected, active, dimmed, leading, trailing, actions, onClick, className, children, ...rest }: { title: ReactNode; icon?: ReactNode; badges?: ReactNode; meta?: ReactNode; stripe?: number; tone?: ListRowTone; color?: string; selected?: boolean; active?: boolean; dimmed?: boolean; leading?: ReactNode; trailing?: ReactNode; actions?: ReactNode; onClick?: () => void; className?: string; children?: ReactNode; } & Omit<HTMLAttributes<HTMLDivElement>, "title" | "children" | "onClick">) => Element
 ListRowAction (value): ({ label, tone, className, children, ...rest }: { label: string; tone?: "default" | "destructive" | "brand"; className?: string; children: ReactNode; } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & { ref?: Ref<HTMLButtonElement>; }) => Element
 ListRowFolder (value): ({ name, icon, count, open, onToggle, stripe, actions, dropActive, onDropItem, emptyText, className, children, }: { name: ReactNode; icon?: ReactNode; count?: number; open: boolean; onToggle: () => void; stripe?: number; actions?: ReactNode; dropActive?: boolean; onDropItem?: () => void; emptyText?: ReactNode; className?: string; children?: ReactNode; }) => Element
@@ -206,8 +226,9 @@ ManagerSearch (value): ({ value, onChange, placeholder, count, extra, }: { value
 Meter (value): ({ percent, className, }: { percent: number; className?: string; }) => Element
 MetricCard (value): ({ title, icon, action, children, bodyClassName, scroll, scrollMax, }: { title: string; icon: ReactNode; action?: ReactNode; children: ReactNode; bodyClassName?: string; scroll?: boolean; scrollMax?: number; }) => Element
 MiniStat (value): ({ caption, value, valueClassName, className, }: { caption: ReactNode; value: ReactNode; valueClassName?: string; className?: string; }) => Element
-NativeView (value): ({ url, ignoreCert, hidden, fallback, className, style, }: NativeViewProps) => Element
+NativeView (value): (props: NativeViewProps) => Element
 NativeViewProps (type): NativeViewProps
+NewUserInvite (type): NewUserInvite
 NoticePanel (value): ({ icon: Icon, title, children, action, tone, className, }: { icon?: LucideIcon; title: ReactNode; children?: ReactNode; action?: ReactNode; tone?: "default" | "destructive" | "warning"; className?: string; }) => Element
 NumberField (value): ({ label, value, onChange, placeholder, hint, error, min, max, disabled, className, }: { label: string; value: number; onChange: (value: number) => void; placeholder?: string; hint?: ReactNode; error?: string; min?: number; max?: number; disabled?: boolean; className?: string; }) => Element
 OPEN_PLUGINS_EVENT (value): "termix:open-plugins"
@@ -225,6 +246,7 @@ PanelFrame (value): ({ className, children, }: { className?: string; children: R
 PanelList (value): ({ empty, className, children, }: { empty?: ReactNode; className?: string; children?: ReactNode; }) => Element
 PanelSearch (value): ({ value, onChange, placeholder, fill, autoFocus, disabled, title, onEnter, inputRef, className, }: { value: string; onChange: (next: string) => void; placeholder?: string; fill?: boolean; autoFocus?: boolean; disabled?: boolean; title?: string; onEnter?: () => void; inputRef?: Ref<HTMLInputElement>; className?: string; }) => Element
 PanelShell (value): ({ chrome, icon, title, status, leading, actions, toolbar, tabs, footer, scroll, docs, className, children, }: { chrome?: boolean; icon?: ReactNode; title?: ReactNode; status?: ReactNode; leading?: ReactNode; actions?: ReactNode; toolbar?: ReactNode; tabs?: ReactNode; footer?: ReactNode; scroll?: boolean; docs?: string; className?: string; children: ReactNode; }) => Element
+PanelToolbar (value): ({ search, onSearchChange, searchPlaceholder, onAdd, addLabel, children, below, className, }: { search: string; onSearchChange: (next: string) => void; searchPlaceholder?: string; onAdd?: () => void; addLabel?: string; children?: ReactNode; below?: ReactNode; className?: string; }) => Element
 PanelViewMode (type): PanelViewMode
 PassphraseDialog (value): ({ isOpen, onSubmit, onCancel, hostInfo, backgroundColor, }: PassphraseDialogProps) => Element
 PasswordInput (value): ForwardRefExoticComponent<PasswordInputProps & RefAttributes<HTMLInputElement>>
@@ -238,7 +260,7 @@ PluginSummary (type): PluginSummary
 PluginViewPlaceholder (value): ({ kind, viewId, compact, }: { kind: ViewKind; viewId: string; compact?: boolean; }) => Element
 Popover (value): ({ ...props }: PopoverProps) => Element
 PopoverAnchor (value): ({ ...props }: PopoverAnchorProps & RefAttributes<HTMLDivElement>) => Element
-PopoverContent (value): ({ className, align, sideOffset, ...props }: PopoverContentProps & RefAttributes<HTMLDivElement>) => Element
+PopoverContent (value): ({ className, align, sideOffset, ref, ...props }: PopoverContentProps & RefAttributes<HTMLDivElement>) => Element
 PopoverTrigger (value): ({ ...props }: PopoverTriggerProps & RefAttributes<HTMLButtonElement>) => Element
 ProxyNode (type): ProxyNode
 RadialGauge (value): ({ value, label, caption, size, strokeWidth, className, colorClassName, }: RadialGaugeProps) => Element
@@ -263,9 +285,9 @@ SeamlessTileContext (value): Context<boolean>
 SecretField (value): ({ label, value, onChange, placeholder, hint, error, disabled, className, }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; hint?: ReactNode; error?: string; disabled?: boolean; className?: string; }) => Element
 SectionCard (value): ({ title, icon, action, children, className, rowId, }: { title: string; icon: ReactNode; action?: ReactNode; children: ReactNode; className?: string; rowId?: string; }) => Element
 Segmented (value): <T extends string>({ value, onChange, options, className, }: { value: T; onChange: (next: T) => void; options: readonly { value: NoInfer<T>; label: string; icon?: ReactNode; count?: number; title?: string; }[]; className?: string; }) => Element
-Select (value): ({ ...props }: SelectSharedProps & { value?: string; defaultValue?: string; onValueChange?(value: string): void; }) => Element
+Select (value): ({ ...props }: SelectSharedProps & { value?: string; defaultValue?: string; onValueChange?: (value: string) => void; }) => Element
 Select2 (value): ({ className, children, value, defaultValue, onChange, disabled, placeholder, align, contentClassName, name, id, required, "aria-label": ariaLabel, ...props }: Select2Props) => Element
-SelectContent (value): ({ className, children, position, ...props }: SelectContentProps & RefAttributes<HTMLDivElement>) => Element
+SelectContent (value): ({ className, children, position, ref, ...props }: SelectContentProps & RefAttributes<HTMLDivElement>) => Element
 SelectField (value): <T extends string>({ label, value, onChange, options, hint, error, disabled, className, placeholder, }: { label: string; value: T; onChange: (value: T) => void; options: readonly { value: T; label: string; }[]; hint?: ReactNode; error?: string; disabled?: boolean; className?: string; placeholder?: string; }) => Element
 SelectGroup (value): ({ ...props }: SelectGroupProps & RefAttributes<HTMLDivElement>) => Element
 SelectItem (value): ({ className, children, ...props }: SelectItemProps & RefAttributes<HTMLDivElement>) => Element
@@ -282,7 +304,7 @@ SharePermissionLevel (type): SharePermissionLevel
 ShareTarget (type): ShareTarget
 Sheet (value): ({ ...props }: DialogProps) => Element
 SheetClose (value): ({ ...props }: DialogCloseProps & RefAttributes<HTMLButtonElement>) => Element
-SheetContent (value): ({ className, children, side, showCloseButton, ...props }: DialogContentProps & RefAttributes<HTMLDivElement> & { side?: "top" | "right" | "bottom" | "left"; showCloseButton?: boolean; }) => Element
+SheetContent (value): ({ className, children, side, showCloseButton, ref, ...props }: DialogContentProps & RefAttributes<HTMLDivElement> & { side?: "top" | "right" | "bottom" | "left"; showCloseButton?: boolean; }) => Element
 SheetDescription (value): ({ className, ...props }: DialogDescriptionProps & RefAttributes<HTMLParagraphElement>) => Element
 SheetFooter (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
 SheetHeader (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
@@ -301,7 +323,7 @@ SplitLayoutMenu (value): ({ activeIsSplit, canAddPane, onSplit, onPreset, }: { a
 SplitOpenTarget (type): SplitOpenTarget
 SplitSummary (type): SplitSummary
 StatRow (value): ({ label, value, mono, className, }: { label: ReactNode; value: ReactNode; mono?: boolean; className?: string; }) => Element
-StatTile (value): ({ label, icon, value, unit, percent, hint, tone, actions, onClick, children, className, }: { label: ReactNode; icon?: ReactNode; value: ReactNode; unit?: ReactNode; percent?: number; hint?: ReactNode; tone?: "default" | "ok" | "warn" | "bad"; actions?: ReactNode; onClick?: () => void; children?: ReactNode; className?: string; }) => Element
+StatTile (value): ({ label, icon, value, unit, percent, hint, tone, actions, onClick, children, className, }: { label: ReactNode; icon?: ReactNode; value: ReactNode; unit?: ReactNode; percent?: number; hint?: ReactNode; tone?: "default" | "warn" | "bad" | "ok"; actions?: ReactNode; onClick?: () => void; children?: ReactNode; className?: string; }) => Element
 StatusBadge (value): ({ tone, state, className, children, }: { tone?: StatusTone; state?: string; className?: string; children?: ReactNode; }) => Element
 StatusDot (value): ({ tone, state, pulse, className, title, }: { tone?: StatusTone; state?: string; pulse?: boolean; className?: string; title?: string; }) => Element
 StatusTone (type): StatusTone
@@ -342,7 +364,7 @@ ToolbarBand (value): ({ className, children, }: { className?: string; children: 
 ToolbarSelect (value): <T extends string>({ value, onChange, options, label, disabled, className, }: { value: T; onChange: (value: NoInfer<T>) => void; options: { value: NoInfer<T>; label: string; }[]; label: string; disabled?: boolean; className?: string; }) => Element
 ToolsTab (type): ToolsTab
 Tooltip (value): ({ ...props }: TooltipProps) => Element
-TooltipContent (value): ({ className, sideOffset, children, ...props }: TooltipContentProps & RefAttributes<HTMLDivElement>) => Element
+TooltipContent (value): ({ className, sideOffset, children, ref, ...props }: TooltipContentProps & RefAttributes<HTMLDivElement>) => Element
 TooltipProvider (value): ({ delayDuration, ...props }: TooltipProviderProps) => Element
 TooltipTrigger (value): ({ ...props }: TooltipTriggerProps & RefAttributes<HTMLButtonElement>) => Element
 UI_AREA_KEYS (value): UiAreaKey[]
@@ -353,14 +375,19 @@ UiPreset (type): UiPreset
 UpdateChannelState (type): UpdateChannelState
 UptimeInfo (type): UptimeInfo
 UsagePair (value): ({ label, percent, detail, }: { label?: string; percent: number; detail?: string; }) => Element
+UserInvite (type): UserInvite
 UserPreferences (type): UserPreferences
+UserProfile (type): UserProfile
+UserProfileUpdate (type): UserProfileUpdate
 UserRole (type): UserRole
 UserSecondFactorSummary (type): UserSecondFactorSummary
+UserStatusFilter (type): UserStatusFilter
 VersionBadge (value): ({ status, releaseUrl, className, }: VersionBadgeProps) => Element
 VersionInfo (type): VersionInfo
 ViewToggle (value): ({ view, onView, density, onDensity, columns, onColumns, }: { view: PanelViewMode; onView: (next: PanelViewMode) => void; density?: PanelDensity; onDensity?: (next: PanelDensity) => void; columns?: GridSize; onColumns?: (next: GridSize) => void; }) => Element
 WebSocketConnectionTarget (type): WebSocketConnectionTarget
 WidgetTitle (value): ({ title, icon, fallback }: WidgetTitleProps) => Element
+acceptUserInvite (value): (token: string, username: string, password: string) => Promise<{ userId: string; }>
 actionOrder (value): (action: HostActionDef) => number
 activityTarget (value): (type: string) => ActivityTarget
 adminCreateUser (value): (username: string, password: string) => Promise<Record<string, unknown>>
@@ -375,6 +402,7 @@ adminGetUserHosts (value): (targetUserId: string) => Promise<Host[]>
 adminResetUserPassword (value): (userId: string, newPassword: string, confirmDataWipe?: boolean) => Promise<{ message: string; dataWiped?: boolean; }>
 adminUpdateUserCredential (value): (targetUserId: string, credentialId: number, credentialData: Record<string, unknown>) => Promise<Record<string, unknown>>
 adminUpdateUserHost (value): (targetUserId: string, hostId: number, hostData: HostData) => Promise<Host>
+adminUpdateUserProfile (value): (userId: string, update: UserProfileUpdate) => Promise<UserProfile>
 appendTile (value): (slots: TileSlot[], tile: { id: string; w?: number; h?: number; }) => TileSlot[]
 applyAccentColor (value): (colorValue: string) => void
 applyFontSize (value): (id: FontSizeId) => void
@@ -386,9 +414,11 @@ buildOriginWsUrl (value): ({ origin, localPort, localPath, remotePath, includeJw
 bulkUpdateSSHHosts (value): (hostIds: number[], updates: Record<string, unknown>) => Promise<{ updated: number; failed: number; errors: string[]; }>
 canConfigureUpdates (value): (state: DesktopUpdateState) => state is DesktopUpdateState
 canJoinSplit (value): (tab: Tab) => boolean
+cancelAdminHold (value): (holdId: string) => Promise<{ cancelled: boolean; }>
 challengeStepUp (value): (factorId: string) => Promise<unknown>
 changeAppLanguage (value): (language: string) => Promise<string>
 changePassword (value): (oldPassword: string, newPassword: string) => Promise<any>
+checkUserInvite (value): (token: string) => Promise<{ valid: boolean; state: string; }>
 clearLocalAdaptivePreferences (value): () => void
 cn (value): (...inputs: ClassValue[]) => string
 copyToClipboard (value): (text: string) => Promise<boolean>
@@ -398,6 +428,7 @@ createFrontendLogger (value): (serviceName: string, serviceIcon?: string, servic
 createQuickConnectHost (value): (input: QuickConnectInput) => Host
 createRole (value): (roleData: { name: string; displayName: string; description?: string; }) => Promise<{ role: Role; }>
 createSSHHost (value): (hostData: HostData) => Promise<Host>
+createUserInvite (value): (input: NewUserInvite) => Promise<CreatedUserInvite>
 defaultConnectAction (value): (all: HostActionDef[], host: Host) => HostActionDef
 defaultCredentialRowFields (value): () => CredentialRowFields
 defaultCredentialSidebarPreferences (value): () => CredentialSidebarPreferences
@@ -413,16 +444,23 @@ deleteRole (value): (roleId: number) => Promise<{ success: boolean; }>
 deleteSSHHost (value): (hostId: number) => Promise<Record<string, unknown>>
 deleteUser (value): (username: string, successorUserId?: string) => Promise<Record<string, unknown>>
 desktopUpdates (value): () => DesktopUpdatesBridge
-docsUrl (value): (page?: "dashboard" | "users" | "sessions" | "roles" | "branding" | "database" | "manage" | "settings" | "plugins" | "install" | "cli" | "develop" | "home" | "updating" | "betas" | "envVars" | "https" | "reverseProxy" | "desktopSync" | "interface" | "hosts" | "portKnocking" | "hostDefaults" | "credentials" | "sharing" | "account" | "accountSecurity" | "accountData" | "apiKeys" | "commandPalette" | "interfaceSettings" | "appearance" | "keybindings" | "adminGeneral" | "adminDatabase" | "adminSsl" | "auditLog" | "importExport" | "pluginCatalog" | "communityRegistry" | "pluginRegistries" | "hostRegistry") => string
+disableUser (value): (userId: string) => Promise<{ disabled: boolean; }>
+docsUrl (value): (page?: "dashboard" | "users" | "sessions" | "roles" | "branding" | "database" | "manage" | "settings" | "plugins" | "install" | "cli" | "develop" | "home" | "updating" | "betas" | "envVars" | "https" | "reverseProxy" | "desktopSync" | "interface" | "hosts" | "portKnocking" | "hostDefaults" | "credentials" | "sharing" | "account" | "accountSecurity" | "accountData" | "apiKeys" | "commandPalette" | "interfaceSettings" | "appearance" | "keybindings" | "adminGeneral" | "adminDatabase" | "adminSsl" | "auditLog" | "importExport" | "pluginCatalog" | "communityRegistry" | "pluginApi2" | "pluginRegistries" | "hostRegistry") => string
+downloadAccessReviewCsv (value): (filter?: AccessReviewFilter) => Promise<Blob>
 duplicateCredential (value): (credentialId: number, data: Record<string, unknown>) => Promise<Record<string, unknown>>
+enableUser (value): (userId: string) => Promise<{ disabled: boolean; }>
 enabledHostProtocols (value): (host: { pluginSettings?: Record<string, Record<string, unknown>>; }, list?: HostProtocolDef[]) => HostProtocolDef[]
 endSplitDrag (value): (commit: boolean) => void
 filterPaletteItems (value): (items: PaletteItemDef[], query: string, showWhenEmpty?: boolean) => PaletteItemDef[]
 findCoreHostDefault (value): (key: string) => CoreHostDefault
 findMatchingKeybinding (value): (e: KeyboardEvent, bindings: CustomKeybinding[]) => CustomKeybinding
 flowTiles (value): (tiles: { id: string; w: number; h?: number; }[], rowHeight?: number) => TileSlot[]
+getAccessReview (value): (filter?: AccessReviewFilter) => Promise<{ shares: AccessReviewRow[]; total: number; }>
 getActiveSessions (value): () => Promise<ActiveSessionInfo[]>
 getAdaptiveResourceBudget (value): (kind: AdaptiveTaskKind) => AdaptiveResourceBudget
+getAdminHoldSettings (value): () => Promise<AdminHoldSettings>
+getAdminHolds (value): () => Promise<{ holds: AdminHold[]; }>
+getAdminHostBypass (value): () => Promise<{ enabled: boolean; }>
 getApiKeys (value): () => Promise<{ apiKeys: ApiKey[]; }>
 getAuditLogActions (value): () => Promise<{ actions: string[]; }>
 getAuditLogs (value): (filters?: AuditLogFilters) => Promise<AuditLogResponse>
@@ -442,6 +480,7 @@ getDeveloperMode (value): () => Promise<DeveloperModeState>
 getDeviceId (value): () => string
 getErrorMessage (value): (error: unknown, fallback?: string) => string
 getExternalAutoProvision (value): () => Promise<{ enabled: boolean; }>
+getExternalSignupApproval (value): () => Promise<{ enabled: boolean; }>
 getFolderAccess (value): (folder: string) => Promise<{ rules: FolderAccessRule[]; }>
 getFolderAuthOverride (value): (folder: string, protocol: string, sharedCopySyncId?: string) => Promise<{ folder: string; protocol: string; credentialId: number; }>
 getFolderDefaultsId (value): (name: string) => Promise<number>
@@ -451,6 +490,7 @@ getHostAuthOverride (value): (hostId: number, protocol: string, sharedCopySyncId
 getHostDefaultsLevel (value): (target: HostDefaultsTarget) => Promise<HostDefaultsLevelData>
 getHostDeviceAuth (value): (hostId: number, protocol: string) => Promise<DeviceLogin>
 getHostEditorSection (value): (id: string) => HostEditorSectionDef
+getHostKeyPolicy (value): () => Promise<{ trustOnFirstUse: boolean; }>
 getHostPassword (value): (hostId: number, field?: "key" | "password" | "sudoPassword" | "keyPassword") => Promise<string>
 getHostPolicy (value): () => Promise<HostPolicy>
 getHostSidebarPreferences (value): () => Promise<HostSidebarPreferences>
@@ -458,6 +498,7 @@ getHostTags (value): () => Promise<string[]>
 getHttpsSettings (value): () => Promise<HttpsSettings>
 getLiveHostStatus (value): (hostId: number) => StatusValue
 getLogLevel (value): () => Promise<{ level: string; }>
+getMyApiKeys (value): () => Promise<{ apiKeys: ApiKey[]; }>
 getNotificationPrivateEndpoints (value): () => Promise<string[]>
 getPanel (value): (id: string) => PanelDef
 getPasswordLoginAllowed (value): () => Promise<{ allowed: boolean; forced?: boolean; }>
@@ -480,7 +521,7 @@ getSessionTimeout (value): () => Promise<{ timeoutHours: number; }>
 getSessionTimeoutMinutes (value): () => Promise<number>
 getSessions (value): () => Promise<{ sessions: { id: string; userId: string; username?: string; deviceType: string; deviceInfo: string; createdAt: string; expiresAt: string; lastActiveAt: string; isRevoked?: boolean; isCurrentSession?: boolean; }[]; }>
 getStatusCheckSettings (value): () => Promise<{ statusCheckInterval: number; }>
-getStatusClasses (value): (status: boolean | "online" | "offline" | "unknown", scheme: StatusColorScheme, variant: "dot" | "stripe" | "badge", loading?: boolean) => string
+getStatusClasses (value): (status: boolean | "online" | "offline" | "unknown", scheme: StatusColorScheme, variant: "badge" | "dot" | "stripe", loading?: boolean) => string
 getTabType (value): (id: string) => TabTypeDef
 getTlsStatus (value): () => Promise<TlsStatus>
 getUpdateChannel (value): () => Promise<UpdateChannelState>
@@ -504,6 +545,8 @@ hostStatusIndicatorsFor (value): (all: HostBadgeDef[], host: Host) => HostBadgeD
 hydrateLocalSharedHostAuth (value): <T>(host: T) => Promise<T>
 invalidateHostsAndStatusCaches (value): () => void
 invalidateServerStatusCache (value): () => void
+inviteLink (value): (token: string) => string
+isAdminHoldTicket (value): (value: unknown) => value is AdminHoldTicket
 isCoreRailView (value): (id: string) => boolean
 isElectron (value): () => boolean
 isFieldShown (value): (field: PluginSettingsField, values: Record<string, unknown>) => boolean
@@ -519,7 +562,8 @@ linkedServerUrl (value): () => Promise<string>
 listHostActions (value): () => HostActionDef[]
 listHostProtocols (value): () => HostProtocolDef[]
 listHostSections (value): () => HostSectionDef[]
-listStepUpFactors (value): () => Promise<{ id: string; }[]>
+listStepUpFactors (value): () => Promise<SecondFactorRef[]>
+listUserInvites (value): () => Promise<UserInvite[]>
 loadPaletteGroup (value): (group: PaletteGroupDef) => Promise<PaletteItemDef[]>
 logoutUser (value): () => Promise<{ success: boolean; message: string; }>
 makeHostSshSubTabs (value): (t: (key: string, options?: { defaultValue?: string; }) => string, protocols?: Record<string, boolean>, defaultsMode?: boolean) => HostTab[]
@@ -535,8 +579,9 @@ notifySyncChanged (value): () => void
 openInSplit (value): (target: SplitOpenTarget, open: () => void) => void
 operationsApi (value): AxiosInstance
 pageOf (value): <T>(items: T[], page: number, size: number) => { rows: T[]; page: number; pages: number; }
-paletteEntriesFor (value): (all: PaletteEntryDef[], scope: "global" | "host", host?: Host) => PaletteEntryDef[]
+paletteEntriesFor (value): (all: PaletteEntryDef[], scope: "host" | "global", host?: Host) => PaletteEntryDef[]
 parseCustomKeybindings (value): (raw?: string) => CustomKeybinding[]
+parseDataValue (value): (raw: unknown, shapes?: readonly DataShape[]) => DataValue[]
 parseServerTime (value): (ts: string) => Date
 pluginKey (value): { (pluginId: string, key: string): string; (pluginId: string, key: string): string; }
 pluginName (value): (t: Translator, plugin: { id: string; name: string; }) => string
@@ -573,11 +618,15 @@ resolveConnectionOrigin (value): (host: OriginResolvableHost, options?: { defaul
 resolveHostDefaults (value): (where: { hostId?: number; folder?: string; parentHostId?: number; }, adminTargetUserId?: string) => Promise<Record<string, ResolvedHostDefault>>
 resolveHostTabType (value): (host: Host, preferredType?: TabType) => TabType
 resolveRemoteHostId (value): (syncId: string) => Promise<number>
+revokeAllMyApiKeys (value): () => Promise<{ count: number; }>
 revokeAllUserSessions (value): (userId: string) => Promise<{ success: boolean; message: string; }>
 revokeCredentialAccess (value): (credentialId: number, accessId: number) => Promise<void>
+revokeEveryoneSessions (value): (options?: { apiKeys?: boolean; }) => Promise<{ sessions: number; apiKeys: number; }>
 revokeFolderAccess (value): (ruleId: number, options?: { fromHosts?: boolean; }) => Promise<void>
 revokeHostAccess (value): (hostId: number, accessId: number, syncId?: string) => Promise<{ success: boolean; }>
+revokeMyApiKey (value): (keyId: string) => Promise<{ success: boolean; }>
 revokeSession (value): (sessionId: string) => Promise<{ success: boolean; message: string; }>
+revokeUserInvite (value): (id: string) => Promise<void>
 rightDockableIds (value): () => string[]
 roleLabel (value): <T extends string | null | undefined>(t: Translator, displayName: T) => string | T
 runAdaptiveBackgroundTask (value): (kind: AdaptiveTaskKind, action: string, task: () => Promise<unknown>, options?: AdaptiveTaskOptions) => boolean
@@ -592,6 +641,7 @@ saveHostDefaultsLevel (value): (target: HostDefaultsTarget, change: HostDefaults
 saveHostSidebarPreferences (value): (preferences: HostSidebarPreferences) => Promise<void>
 saveHostTags (value): (tags: string[]) => Promise<string[]>
 saveUserPreferences (value): (prefs: Partial<UserPreferences>) => Promise<void>
+setAdminHoldMinutes (value): (minutes: number) => Promise<AdminHoldTicket | { held: false; minutes: number; }>
 setAllPluginChannels (value): (channel: PluginChannel) => Promise<{ changed: string[]; }>
 setDeveloperMode (value): (enabled: boolean) => Promise<void>
 setFolderAuthOverride (value): (folder: string, protocol: string, credentialId: number, sharedCopySyncId?: string) => Promise<{ success: boolean; folder: string; protocol: string; credentialId: number; }>
@@ -612,13 +662,17 @@ tabIcon (value): (type: TabType) => Element
 tabJumpHotkeyKeys (value): () => string[]
 takePendingManageRequest (value): () => ManageRequest
 unlinkExternalFromPasswordAccount (value): (userId: string) => Promise<{ success: boolean; message: string; }>
+updateAdminHostBypass (value): (enabled: boolean) => Promise<Record<string, unknown>>
 updateCredential (value): (credentialId: number, credentialData: Record<string, unknown>) => Promise<Record<string, unknown>>
 updateCredentialStorage (value): (enabled: boolean) => Promise<{ enabled: boolean; }>
 updateExternalAutoProvision (value): (enabled: boolean) => Promise<Record<string, unknown>>
+updateExternalSignupApproval (value): (enabled: boolean) => Promise<{ enabled: boolean; }>
 updateFolderMetadata (value): (name: string, color?: string, icon?: string, credentialId?: number, localOnly?: boolean) => Promise<void>
 updateHostAccess (value): (hostId: number, accessId: number, update: { permissionLevel?: SharePermissionLevel; durationHours?: number; }, syncId?: string) => Promise<{ success: boolean; expiresAt: string; }>
+updateHostKeyPolicy (value): (trustOnFirstUse: boolean) => Promise<{ trustOnFirstUse: boolean; }>
 updateHttpsSettings (value): (forceHttps: boolean) => Promise<HttpsSettings>
 updateLogLevel (value): (level: string) => Promise<void>
+updateMyProfile (value): (update: UserProfileUpdate) => Promise<UserProfile>
 updatePasswordLoginAllowed (value): (allowed: boolean) => Promise<{ allowed: boolean; }>
 updatePasswordResetAllowed (value): (allowed: boolean) => Promise<{ allowed: boolean; }>
 updatePluginAdminSettings (value): (pluginId: string, values: PluginSettingsValues) => Promise<PluginSettingsValues>
@@ -645,6 +699,7 @@ useConnectionLog (value): () => ConnectionLogContextType
 useDesktopLinked (value): () => boolean
 useDesktopUpdate (value): () => DesktopUpdateState
 useEditorDefaultKeys (value): () => Map<string, EditorDefaultKey>
+useForeignOccluder (value): <T extends Element>(forwarded?: Ref<T>) => RefCallback<T>
 useHostActions (value): () => HostActionDef[]
 useHostBadges (value): () => HostBadgeDef[]
 useHostContextMenuItems (value): () => HostContextMenuItemDef[]

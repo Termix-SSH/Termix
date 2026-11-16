@@ -182,7 +182,7 @@ export interface SshAuthProvider {
   connectOptions?: (
     host: SshConnectHost,
     purpose: SshConnectPurpose,
-  ) => Partial<MutableConnectConfig>;
+  ) => Partial<MutableConnectConfig> | Promise<Partial<MutableConnectConfig>>;
   /** The interaction name this provider's outcomes use, e.g. "browser-signin". */
   interaction?: string;
   /**
@@ -202,15 +202,16 @@ export interface SshAuthProvider {
     env: SshAuthEnv,
   ) => Promise<SshAuthOutcome>;
   /**
-   * Called when the server rejected auth. Synchronous on purpose: transports
-   * decide on a retry before the socket's close event arrives. Cache cleanup
-   * inside runs in the background.
+   * Called when the server rejected auth. In process providers answer
+   * synchronously so transports can decide on a retry before the socket's
+   * close event; a provider in a plugin process answers with a Promise.
+   * Cache cleanup inside runs in the background.
    */
   onAuthFailed?: (
     host: SshConnectHost,
     env: SshAuthEnv,
     context: SshAuthFailureContext,
-  ) => SshAuthOutcome | undefined;
+  ) => SshAuthOutcome | undefined | Promise<SshAuthOutcome | undefined>;
   /**
    * Claims an ssh2 "banner" event during the handshake, for a provider whose
    * server holds the connection open pending an out-of-band step (Tailscale
@@ -223,7 +224,7 @@ export interface SshAuthProvider {
     banner: string,
     host: SshConnectHost,
     env: SshAuthEnv,
-  ) => SshBannerDecision | undefined;
+  ) => SshBannerDecision | undefined | Promise<SshBannerDecision | undefined>;
 }
 
 export type SshBannerDecision =
@@ -281,9 +282,14 @@ export interface KeyboardInteractiveInterceptor {
       prompts: KeyboardInteractivePrompt[];
     },
     host: SshConnectHost,
-  ) => KeyboardInteractiveDecision | null;
+  ) =>
+    | KeyboardInteractiveDecision
+    | null
+    | Promise<KeyboardInteractiveDecision | null>;
   /** Answer password prompts silently instead of asking the user. */
-  autoAnswerPasswords?: (host: SshConnectHost) => boolean;
+  autoAnswerPasswords?: (host: SshConnectHost) => boolean | Promise<boolean>;
+  /** Lives in a plugin process: its answers are Promises. */
+  remote?: boolean;
 }
 
 /**

@@ -219,6 +219,10 @@
     "securityIntro": "계정에 패스키 또는 인증기 앱을 추가하세요. 나중에 설정의 보안에서 이 작업을 수행할 수도 있습니다.",
     "pluginsDocsLink": "각 항목에 대해 읽기"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix가 여전히 실행 중입니다",
+    "noticeBody": "창을 닫으면 Termix가 트레이에서 계속 실행됩니다. 완전히 종료하려면 트레이 아이콘 메뉴에서 '종료'를 선택하세요. 이 설정은 설정에서 끌 수 있습니다."
+  },
   "desktopUpdates": {
     "modeAutomatic": "자동",
     "modePrompt": "먼저 묻기",

@@ -1,9 +1,25 @@
+import {
+  isAcceptableUsername,
+  USERNAME_RULE_ERROR,
+} from "../../utils/username.js";
 import { isExternalAccount } from "../../auth/external-account.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
-import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import {
+  getAuditUsername,
+  logAudit,
+  getRequestMeta,
+} from "../../utils/audit-logger.js";
+import { holdIfNeeded, registerHoldKind } from "../../auth/admin-holds.js";
+import { afterAdminStatusChange } from "../../auth/admin-status.js";
+import {
+  actorHas,
+  canManageAccount,
+  canViewUsers,
+  USERS_MANAGE,
+} from "../../auth/user-admin-access.js";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -19,9 +35,12 @@ import {
 } from "../../auth/second-factor-admin.js";
 import {
   isUsernameTaken,
+  matchesUserStatus,
   type UserRecord,
   type UserRepository,
+  type UserStatusFilter,
 } from "../repositories/user-repository.js";
+import { attachmentHeader } from "../../http/content-disposition.js";
 
 function isNonEmptyString(val: unknown): val is string {
   return typeof val === "string" && val.trim().length > 0;
@@ -36,6 +55,71 @@ async function getUserByPreferredIdentifier(
     ? userRepository.findById(userId)
     : userRepository.findByUsername(username!);
 }
+
+/** Makes a user an admin, now or once a held change's wait is over. */
+export async function promoteToAdmin(
+  actorId: string,
+  targetUserId: string,
+  meta: { ipAddress?: string; userAgent?: string } = {},
+  afterWait = false,
+): Promise<void> {
+  const userRepository = createCurrentUserRepository();
+  const targetUser = await userRepository.findById(targetUserId);
+  if (!targetUser) throw new Error("User not found");
+  if (targetUser.isAdmin) return;
+
+  await userRepository.update(targetUser.id, { isAdmin: true });
+
+  try {
+    await createCurrentRoleRepository().switchUserRoleName({
+      userId: targetUser.id,
+      addRoleName: "admin",
+      removeRoleName: "user",
+      grantedBy: actorId,
+    });
+  } catch (roleError) {
+    authLogger.error("Failed to sync admin role on make-admin", roleError, {
+      operation: "make_admin_role_sync",
+      userId: targetUser.id,
+    });
+  }
+
+  await afterAdminStatusChange(targetUser.id, true);
+
+  try {
+    await DatabaseSaveTrigger.forceSave("make_admin_explicit_save");
+  } catch (saveError) {
+    authLogger.error("Failed to persist admin promotion to disk", saveError, {
+      operation: "make_admin_save_failed",
+      userId: targetUser.id,
+      username: targetUser.username,
+    });
+  }
+
+  authLogger.info("Admin privileges granted", {
+    operation: "admin_grant",
+    adminId: actorId,
+    targetUserId: targetUser.id,
+    targetUsername: targetUser.username,
+  });
+
+  await logAudit({
+    userId: actorId,
+    username: await getAuditUsername(actorId),
+    action: "make_admin",
+    resourceType: "user",
+    resourceId: targetUser.id,
+    resourceName: targetUser.username,
+    ...(afterWait ? { details: JSON.stringify({ afterWait: true }) } : {}),
+    ...meta,
+    success: true,
+  });
+}
+
+registerHoldKind("make_admin", {
+  apply: (payload, requesterId) =>
+    promoteToAdmin(requesterId, String(payload.userId), {}, true),
+});
 
 export function registerUserAdminRoutes(
   router: Router,
@@ -58,7 +142,14 @@ export function registerUserAdminRoutes(
    *         required: false
    *         schema:
    *           type: string
-   *         description: Case-insensitive username substring filter.
+   *         description: Case-insensitive username or display name filter.
+   *       - in: query
+   *         name: status
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [active, disabled, pending]
+   *         description: Only accounts in this state. Needs admin.users.view.
    *       - in: query
    *         name: limit
    *         required: false
@@ -83,13 +174,18 @@ export function registerUserAdminRoutes(
   router.get("/list", authenticateJWT, async (req, res) => {
     try {
       const userRepository = createCurrentUserRepository();
-      const requester = await userRepository.findById(
-        (req as AuthenticatedRequest).userId,
-      );
+      const canView = await canViewUsers((req as AuthenticatedRequest).userId);
 
       const query = req.query ?? {};
       const search =
         typeof query.search === "string" ? query.search : undefined;
+      const status =
+        canView &&
+        (query.status === "active" ||
+          query.status === "disabled" ||
+          query.status === "pending")
+          ? (query.status as UserStatusFilter)
+          : undefined;
       const rawLimit = Number(query.limit);
       // Paging is opt-in: the share pickers fetch the whole list and filter it
       // client-side, so a request without ?limit keeps the original behaviour.
@@ -102,19 +198,28 @@ export function registerUserAdminRoutes(
       let pageUsers: UserRecord[];
       let total: number;
       if (paginated) {
-        const page = await userRepository.listPage({ search, limit, offset });
+        const page = await userRepository.listPage({
+          search,
+          status,
+          limit,
+          offset,
+        });
         pageUsers = page.users;
         total = page.total;
       } else {
         const all = await userRepository.listAll();
         const term = search?.trim().toLowerCase();
-        pageUsers = term
-          ? all.filter((u) => u.username?.toLowerCase().includes(term))
-          : all;
+        pageUsers = all.filter(
+          (u) =>
+            matchesUserStatus(u, status) &&
+            (!term ||
+              u.username?.toLowerCase().includes(term) ||
+              u.displayName?.toLowerCase().includes(term)),
+        );
         total = pageUsers.length;
       }
 
-      const secondFactorUsers = requester?.isAdmin
+      const secondFactorUsers = canView
         ? await createCurrentUserAuthRepository().listUserIdsWithSecondFactors()
         : new Set<string>();
 
@@ -127,10 +232,17 @@ export function registerUserAdminRoutes(
           password_hash: u.passwordHash ? "set" : null,
           // Management-only details stay admin-eyes-only; regular users hit
           // this route to pick sharing targets.
-          ...(requester?.isAdmin
+          display_name: u.displayName ?? null,
+          disabled: !!u.disabledAt,
+          ...(canView
             ? {
                 data_unlocked: DataCrypto.canUserAccessData(u.id),
                 second_factor_enabled: secondFactorUsers.has(u.id),
+                email: u.email ?? null,
+                disabled_at: u.disabledAt ?? null,
+                disabled_reason: u.disabledReason ?? null,
+                last_login_at: u.lastLoginAt ?? null,
+                registered_at: u.registeredAt,
               }
             : {}),
         })),
@@ -210,55 +322,18 @@ export function registerUserAdminRoutes(
         return res.status(400).json({ error: "User is already an admin" });
       }
 
-      await userRepository.update(targetUser.id, { isAdmin: true });
-
-      try {
-        await createCurrentRoleRepository().switchUserRoleName({
-          userId: targetUser.id,
-          addRoleName: "admin",
-          removeRoleName: "user",
-          grantedBy: userId,
-        });
-      } catch (roleError) {
-        authLogger.error("Failed to sync admin role on make-admin", roleError, {
-          operation: "make_admin_role_sync",
-          userId: targetUser.id,
-        });
+      if (
+        await holdIfNeeded(req, res, {
+          kind: "make_admin",
+          payload: { userId: targetUser.id },
+          summary: `make ${targetUser.username} an admin`,
+          requesterId: userId,
+        })
+      ) {
+        return;
       }
 
-      try {
-        await DatabaseSaveTrigger.forceSave("make_admin_explicit_save");
-      } catch (saveError) {
-        authLogger.error(
-          "Failed to persist admin promotion to disk",
-          saveError,
-          {
-            operation: "make_admin_save_failed",
-            userId: targetUser.id,
-            username: targetUser.username,
-          },
-        );
-      }
-
-      authLogger.info("Admin privileges granted", {
-        operation: "admin_grant",
-        adminId: userId,
-        targetUserId: targetUser.id,
-        targetUsername: targetUser.username,
-      });
-
-      const { ipAddress, userAgent } = getRequestMeta(req);
-      await logAudit({
-        userId,
-        username: adminUser.username ?? userId,
-        action: "make_admin",
-        resourceType: "user",
-        resourceId: targetUser.id,
-        resourceName: targetUser.username,
-        ipAddress,
-        userAgent,
-        success: true,
-      });
+      await promoteToAdmin(userId, targetUser.id, getRequestMeta(req));
 
       res.json({ message: `User ${targetUser.username} is now an admin` });
     } catch (err) {
@@ -363,6 +438,8 @@ export function registerUserAdminRoutes(
         );
       }
 
+      await afterAdminStatusChange(targetUser.id, false);
+
       try {
         await DatabaseSaveTrigger.forceSave("remove_admin_explicit_save");
       } catch (saveError) {
@@ -440,7 +517,7 @@ export function registerUserAdminRoutes(
 
     try {
       adminUser = await userRepository.findById(adminId);
-      if (!adminUser?.isAdmin) {
+      if (!adminUser || !(await actorHas(adminId, USERS_MANAGE))) {
         return res.status(403).json({ error: "Not authorized" });
       }
     } catch (err) {
@@ -454,6 +531,9 @@ export function registerUserAdminRoutes(
       return res
         .status(400)
         .json({ error: "Username and password are required" });
+    }
+    if (!isAcceptableUsername(username)) {
+      return res.status(400).json({ error: USERNAME_RULE_ERROR });
     }
 
     try {
@@ -613,7 +693,7 @@ export function registerUserAdminRoutes(
     try {
       const userRepository = createCurrentUserRepository();
       const adminUser = await userRepository.findById(adminId);
-      if (!adminUser?.isAdmin) {
+      if (!adminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
 
@@ -624,6 +704,9 @@ export function registerUserAdminRoutes(
       );
       if (!targetUser) {
         return res.status(404).json({ error: "User not found" });
+      }
+      if (!(await canManageAccount(adminId, targetUser))) {
+        return res.status(403).json({ error: "Admin access required" });
       }
       if (targetUser.isExternal && !targetUser.passwordHash) {
         return res.status(400).json({
@@ -703,7 +786,7 @@ export function registerUserAdminRoutes(
       try {
         const userRepository = createCurrentUserRepository();
         const adminUser = await userRepository.findById(adminId);
-        if (!adminUser?.isAdmin) {
+        if (!adminUser || !(await canViewUsers(adminId))) {
           return res.status(403).json({ error: "Admin access required" });
         }
         const targetUser = await userRepository.findById(
@@ -750,7 +833,7 @@ export function registerUserAdminRoutes(
       try {
         const userRepository = createCurrentUserRepository();
         const adminUser = await userRepository.findById(adminId);
-        if (!adminUser?.isAdmin) {
+        if (!adminUser) {
           return res.status(403).json({ error: "Admin access required" });
         }
         const targetUser = await userRepository.findById(
@@ -758,6 +841,9 @@ export function registerUserAdminRoutes(
         );
         if (!targetUser) {
           return res.status(404).json({ error: "User not found" });
+        }
+        if (!(await canManageAccount(adminId, targetUser))) {
+          return res.status(403).json({ error: "Admin access required" });
         }
 
         const removed = await resetUserSecondFactors(targetUser.id);
@@ -867,7 +953,7 @@ export function registerUserAdminRoutes(
       res.setHeader("Content-Type", "application/json");
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="termix-user-${targetUser.username}-export.json"`,
+        attachmentHeader(`termix-user-${targetUser.username}-export.json`),
       );
       res.json(exportData);
     } catch (err) {

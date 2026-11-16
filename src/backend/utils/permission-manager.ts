@@ -1,11 +1,13 @@
 import type { Request, Response, NextFunction } from "express";
 import {
+  createCurrentAccessReviewRepository,
   createCurrentRbacAccessRepository,
   createCurrentRoleRepository,
   createCurrentUserRepository,
   createCurrentHostResolutionRepository,
 } from "../database/repositories/factory.js";
 import { databaseLogger } from "./logger.js";
+import { adminHostBypassEnabled } from "../auth/user-access-settings.js";
 
 interface AuthenticatedRequest extends Request {
   userId?: string;
@@ -89,6 +91,7 @@ class PermissionManager {
   private async cleanupExpiredAccess(): Promise<void> {
     try {
       await createCurrentRbacAccessRepository().deleteExpiredHostAccess();
+      await createCurrentAccessReviewRepository().deleteExpired();
     } catch (error) {
       databaseLogger.error("Failed to cleanup expired host access", error, {
         operation: "host_access_cleanup_failed",
@@ -116,11 +119,17 @@ class PermissionManager {
     }
 
     try {
-      const userRoleRecords =
-        await createCurrentRoleRepository().listUserRolePermissions(userId);
+      const [user, userRoleRecords] = await Promise.all([
+        createCurrentUserRepository().findById(userId),
+        createCurrentRoleRepository().listUserRolePermissions(userId),
+      ]);
 
       const allPermissions = new Set<string>();
       for (const record of userRoleRecords) {
+        // A disabled account holds nothing, and the admin role only counts
+        // while the admin flag is set.
+        if (!user || user.disabledAt) break;
+        if (record.roleName === "admin" && !user.isAdmin) continue;
         // A role can legitimately have no permissions column yet, and
         // JSON.parse(null) returns null rather than throwing, which used to
         // blow up the loop and leave the user with no permissions at all.
@@ -232,7 +241,7 @@ class PermissionManager {
           action === "delete" ||
           LEVEL_RANK[grantedLevel] < LEVEL_RANK[action]
         ) {
-          if (await this.isAdmin(userId)) {
+          if (await this.hasAdminBypass(userId)) {
             return this.adminBypassAccess();
           }
           return {
@@ -266,7 +275,7 @@ class PermissionManager {
         };
       }
 
-      if (await this.isAdmin(userId)) {
+      if (await this.hasAdminBypass(userId)) {
         return this.adminBypassAccess();
       }
 
@@ -311,7 +320,7 @@ class PermissionManager {
     if (hostIds.length === 0) return new Set();
 
     try {
-      if (await this.isAdmin(userId)) {
+      if (await this.hasAdminBypass(userId)) {
         return new Set(hostIds);
       }
 
@@ -351,18 +360,17 @@ class PermissionManager {
     };
   }
 
+  /** Admins reach every host unless an admin turned that off. */
+  async hasAdminBypass(userId: string): Promise<boolean> {
+    if (!adminHostBypassEnabled()) return false;
+    return this.isAdmin(userId);
+  }
+
   async isAdmin(userId: string): Promise<boolean> {
     try {
+      // The flag is the one source of truth; the admin role follows it.
       const user = await createCurrentUserRepository().findById(userId);
-
-      if (user?.isAdmin) {
-        return true;
-      }
-
-      return createCurrentRoleRepository().userHasAnyRoleName(userId, [
-        "admin",
-        "super_admin",
-      ]);
+      return !!user?.isAdmin && !user.disabledAt;
     } catch (error) {
       databaseLogger.error("Failed to check admin status", error, {
         operation: "is_admin",

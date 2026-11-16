@@ -12,6 +12,7 @@ import type {
 import type { HostResolutionHostRecord } from "../database/repositories/host-resolution-repository.js";
 import { DataCrypto } from "./data-crypto.js";
 import { FieldCrypto } from "./field-crypto.js";
+import { sharedHostSecretRecordId } from "./sealed-record-ids.js";
 import { databaseLogger } from "./logger.js";
 import { findUsableCredential } from "../hosts/usable-credential.js";
 import { listProtocolLogins } from "../hosts/protocol-auth/protocol-auth.js";
@@ -35,13 +36,11 @@ interface ProtocolSnapshot {
   data: SharedSecretData;
 }
 
-function snapshotRecordId(
+const snapshotRecordId = (
   hostAccessId: number,
   targetUserId: string,
   protocol: ShareProtocol,
-): string {
-  return `shared-${hostAccessId}-${targetUserId}-${protocol}`;
-}
+): string => sharedHostSecretRecordId(hostAccessId, targetUserId, protocol);
 
 // SSH follows its own switch. A plugin protocol's switch is that plugin's
 // host setting, and the editor removes a protocol's login when it is

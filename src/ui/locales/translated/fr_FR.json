@@ -219,6 +219,10 @@
     "securityIntro": "Ajoutez une clé de sécurité ou une application d'authentification à votre compte. Vous pouvez également le faire plus tard dans Paramètres, sous Sécurité.",
     "pluginsDocsLink": "En savoir plus sur chacun"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix est toujours en cours d'exécution",
+    "noticeBody": "Fermer la fenêtre maintient Termix actif dans la zone de notification. Pour quitter, ouvrez le menu de l'icône de la zone de notification et sélectionnez Quitter. Vous pouvez désactiver cette option dans les Paramètres."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automatique",
     "modePrompt": "Demander d'abord",

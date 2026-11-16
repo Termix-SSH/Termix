@@ -219,6 +219,10 @@
     "securityIntro": "Dodaj klucz dostępu lub aplikację uwierzytelniającą do swojego konta. Możesz to również zrobić później w Ustawieniach, w sekcji Bezpieczeństwo.",
     "pluginsDocsLink": "Przeczytaj o każdej z nich"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix nadal działa",
+    "noticeBody": "Zamknięcie okna pozostawia Termix działający w zasobniku. Aby zakończyć działanie, otwórz menu ikony w zasobniku i wybierz opcję Zakończ. Możesz wyłączyć tę funkcję w ustawieniach."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automatycznie",
     "modePrompt": "Pytaj najpierw",

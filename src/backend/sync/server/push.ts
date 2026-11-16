@@ -8,7 +8,7 @@
  */
 
 import type { SyncRow } from "@termix-ssh/plugin-sdk/backend";
-import { getEntity } from "../../plugins/sync-registry.js";
+import { getEntity, rowSyncs } from "../../plugins/sync-registry.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { syncLogger } from "../../utils/logger.js";
 import {
@@ -137,12 +137,16 @@ export async function applyPush(
     missed = true;
   });
   const results = new Map<string, PushResult>();
+  // Only the first op for a row is applied; repeats in the batch are duplicates.
+  const firstOp = new Map<string, PushOp>();
   // Rows written before something they point at, for a second pass.
   const retry: PushOp[] = [];
 
   for (const op of orderOps(ops)) {
     const key = recordKey(op.entityType, op.syncId);
     const base = { syncId: op.syncId, entityType: op.entityType };
+    if (firstOp.has(key)) continue;
+    firstOp.set(key, op);
     const entity = getEntity(op.entityType);
     if (!entity) {
       results.set(key, { ...base, status: "rejected", reason: "unknown_type" });
@@ -215,7 +219,7 @@ export async function applyPush(
       }
 
       const row = { ...(op.row as SyncRow), syncId: op.syncId };
-      if (entity.shouldSync && entity.shouldSync(row) === false) {
+      if (!(await rowSyncs(entity, row))) {
         results.set(key, { ...base, status: "rejected", reason: "not_synced" });
         continue;
       }
@@ -284,13 +288,16 @@ export async function applyPush(
     notifyListeners(userId);
     markChanged();
   }
-  return ops.map(
-    (op) =>
-      results.get(recordKey(op.entityType, op.syncId)) ?? {
+  return ops.map((op) => {
+    const key = recordKey(op.entityType, op.syncId);
+    const result = firstOp.get(key) === op ? results.get(key) : undefined;
+    return (
+      result ?? {
         syncId: op.syncId,
         entityType: op.entityType,
         status: "rejected",
         reason: "duplicate",
-      },
-  );
+      }
+    );
+  });
 }

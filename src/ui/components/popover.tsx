@@ -2,6 +2,7 @@ import * as React from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 
 import { cn } from "@/lib/utils";
+import { useForeignOccluder } from "@/components/foreign/ForeignSlot";
 
 function Popover({
   ...props
@@ -19,11 +20,13 @@ function PopoverContent({
   className,
   align = "center",
   sideOffset = 4,
+  ref,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Content
+        ref={useForeignOccluder(ref)}
         data-slot="popover-content"
         align={align}
         sideOffset={sideOffset}

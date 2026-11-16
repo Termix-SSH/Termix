@@ -219,6 +219,10 @@
     "securityIntro": "Přidejte do svého účtu passkey nebo aplikaci pro ověřování. Toto můžete provést také později v Nastavení pod Bezpečnost.",
     "pluginsDocsLink": "Přečtěte si o každém z nich"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix stále běží",
+    "noticeBody": "Zavřením okna zůstane Termix spuštěný v liště. Pro ukončení otevřete nabídku ikony v liště a vyberte Ukončit. Toto chování můžete vypnout v Nastavení."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automaticky",
     "modePrompt": "Nejprve se zeptat",

@@ -1,4 +1,5 @@
 import { repairSnippetsColumns } from "../../upgrade/snippets-schema-migration.js";
+import { repairSessionRecordingColumns } from "../../upgrade/session-recording-schema-migration.js";
 import { getErrorMessage } from "../../utils/error-message.js";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
@@ -14,6 +15,7 @@ import {
   migrateLegacySharedHostAuthOverrides,
 } from "../../utils/shared-host-auth-override-migration.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
+import { saveSnapshot, writeFileAtomic } from "./snapshot-save.js";
 import { migrateAuditRetention } from "../../utils/audit-retention-migration.js";
 import { createPerformanceIndexes } from "./performance-indexes.js";
 import {
@@ -25,6 +27,8 @@ import { SYSTEM_ROLE_DEFAULTS } from "../../utils/permission-catalog.js";
 import { connectRemoteDatabase } from "./connect.js";
 import { runRemoteMigrations } from "./migrate.js";
 import { assertNotPre29Database } from "./upgrade-guard.js";
+import { isEmbeddedBackend } from "../../utils/embedded-host.js";
+import { syncIdIndexStatements } from "./sync-id-index.js";
 import {
   LEGACY_USERNAME_PLACEHOLDER_UPDATES,
   legacySudoMoves,
@@ -242,7 +246,13 @@ async function initializeCompleteDatabase(): Promise<void> {
         username TEXT NOT NULL,
         password_hash TEXT NOT NULL,
         is_admin INTEGER NOT NULL DEFAULT 0,
-        registered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        registered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        display_name TEXT,
+        email TEXT,
+        disabled_at TEXT,
+        disabled_reason TEXT,
+        last_login_at TEXT,
+        managed_by TEXT
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -424,8 +434,26 @@ async function initializeCompleteDatabase(): Promise<void> {
         success INTEGER NOT NULL,
         error_message TEXT,
         timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        prev_hash TEXT,
+        hash TEXT,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
     );
+
+    CREATE TABLE IF NOT EXISTS admin_holds (
+        id TEXT PRIMARY KEY,
+        kind TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        requested_by TEXT REFERENCES users (id) ON DELETE SET NULL,
+        requested_by_name TEXT NOT NULL,
+        requested_at TEXT NOT NULL,
+        runs_at TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        decided_by TEXT,
+        decided_at TEXT,
+        error TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_admin_holds_status_runs ON admin_holds (status, runs_at);
 
     CREATE TABLE IF NOT EXISTS credential_access (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -511,6 +539,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         auto_update INTEGER NOT NULL DEFAULT 0,
         pinned_version TEXT,
         channel TEXT NOT NULL DEFAULT 'stable',
+        run_unisolated INTEGER NOT NULL DEFAULT 0,
         manifest_json TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_plugins_registry_id ON plugins (registry_id);
@@ -675,6 +704,22 @@ async function initializeCompleteDatabase(): Promise<void> {
         is_active INTEGER NOT NULL DEFAULT 1,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS user_invites (
+        id TEXT PRIMARY KEY,
+        token_hash TEXT NOT NULL,
+        note TEXT,
+        role_ids TEXT,
+        make_admin INTEGER NOT NULL DEFAULT 0,
+        max_uses INTEGER NOT NULL DEFAULT 1,
+        uses INTEGER NOT NULL DEFAULT 0,
+        created_by TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        expires_at TEXT NOT NULL,
+        revoked_at TEXT,
+        FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE SET NULL
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_user_invites_token_hash ON user_invites (token_hash);
 
     CREATE TABLE IF NOT EXISTS user_open_tabs (
         id TEXT PRIMARY KEY,
@@ -1025,6 +1070,7 @@ const enforceUniqueUsernames = () => {
 
 const migrateSchema = () => {
   repairSnippetsColumns(sqlite);
+  repairSessionRecordingColumns(sqlite);
   addColumnIfNotExists("api_keys", "scopes", "TEXT");
   addColumnIfNotExists("user_preferences", "theme", "TEXT");
   addColumnIfNotExists("user_preferences", "font_size", "TEXT");
@@ -1098,6 +1144,22 @@ const migrateSchema = () => {
     }
   }
   enforceUniqueUsernames();
+  addColumnIfNotExists("users", "display_name", "TEXT");
+  addColumnIfNotExists("users", "email", "TEXT");
+  addColumnIfNotExists("users", "disabled_at", "TEXT");
+  addColumnIfNotExists("users", "disabled_reason", "TEXT");
+  addColumnIfNotExists("users", "last_login_at", "TEXT");
+  addColumnIfNotExists("users", "managed_by", "TEXT");
+  try {
+    sqlite.exec(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users (email)",
+    );
+  } catch (error) {
+    databaseLogger.warn("Failed to index users.email", {
+      operation: "schema_migration",
+      error: getErrorMessage(error),
+    });
+  }
   addColumnIfNotExists("sessions", "external_session_ref", "TEXT");
   addColumnIfNotExists("sessions", "restriction", "TEXT");
   addColumnIfNotExists("sessions", "idle_timeout", "INTEGER");
@@ -1706,6 +1768,13 @@ const migrateSchema = () => {
   addColumnIfNotExists("plugins", "pinned_version", "TEXT");
   addColumnIfNotExists("plugins", "channel", "TEXT NOT NULL DEFAULT 'stable'");
   addColumnIfNotExists(
+    "plugins",
+    "run_unisolated",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  addColumnIfNotExists("audit_logs", "prev_hash", "TEXT");
+  addColumnIfNotExists("audit_logs", "hash", "TEXT");
+  addColumnIfNotExists(
     "plugin_permission_grants",
     "source",
     "TEXT NOT NULL DEFAULT 'admin'",
@@ -1727,9 +1796,12 @@ const migrateSchema = () => {
           { operation: "sync_id_backfill", table },
         );
       }
-      sqlite.exec(
-        `CREATE UNIQUE INDEX IF NOT EXISTS idx_${table}_sync_id ON ${table}(sync_id)`,
-      );
+      for (const statement of syncIdIndexStatements(
+        table,
+        isEmbeddedBackend(),
+      )) {
+        sqlite.exec(statement);
+      }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       databaseLogger.warn(
@@ -1879,40 +1951,26 @@ function vacuumIfFreelistBloated(): void {
 }
 
 async function saveMemoryDatabaseToFile(): Promise<void> {
-  if (!memoryDatabase) return;
+  const database = memoryDatabase;
+  if (!database) return;
 
-  try {
-    // Before the copy, so a write during the slow part below stays dirty.
-    DatabaseSaveTrigger.markClean();
-    const buffer = memoryDatabase.serialize();
-
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-
-    try {
-      memoryDatabase
-        .prepare("SELECT COUNT(*) as count FROM sessions")
-        .get() as { count: number };
-    } catch {
-      // expected - sessions table may not exist yet
-    }
-
-    if (enableFileEncryption) {
-      await DatabaseFileEncryption.encryptDatabaseFromBuffer(
-        buffer,
-        encryptedDbPath,
-      );
-    } else {
-      await fs.promises.writeFile(dbPath, buffer);
-    }
-  } catch (error) {
-    DatabaseSaveTrigger.markDirty();
-    databaseLogger.error("Failed to save in-memory database", error, {
-      operation: "memory_db_save_failed",
-      enableFileEncryption,
-    });
-  }
+  await saveSnapshot({
+    serialize: () => database.serialize(),
+    encrypted: enableFileEncryption,
+    write: async (buffer) => {
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      if (enableFileEncryption) {
+        await DatabaseFileEncryption.encryptDatabaseFromBuffer(
+          buffer,
+          encryptedDbPath,
+        );
+      } else {
+        await writeFileAtomic(dbPath, buffer);
+      }
+    },
+  });
 }
 
 async function handlePostInitFileEncryption() {
@@ -1921,7 +1979,9 @@ async function handlePostInitFileEncryption() {
       DatabaseSaveTrigger.initialize(saveMemoryDatabaseToFile);
 
       if (enableFileEncryption) {
-        await saveMemoryDatabaseToFile();
+        await saveMemoryDatabaseToFile().catch(() => {
+          // Logged by the save; the periodic save below tries again.
+        });
       }
 
       setInterval(() => {
@@ -2140,21 +2200,12 @@ async function initializeRemoteDatabase(
 
 export { initializeDatabase };
 
-async function cleanupDatabase() {
-  if (memoryDatabase) {
-    try {
-      await saveMemoryDatabaseToFile();
-    } catch (error) {
-      databaseLogger.error(
-        "Failed to save in-memory database before shutdown",
-        error,
-        {
-          operation: "shutdown_save_failed",
-        },
-      );
-    }
-  }
-
+/**
+ * Closes SQLite and clears temp files. Run by the backend's shutdown after its
+ * final save, never on a signal of its own: a second handler used to exit
+ * while plugins were still stopping.
+ */
+export function closeDatabase(): void {
   try {
     if (sqlite) {
       sqlite.close();
@@ -2197,22 +2248,6 @@ process.on("exit", () => {
       // expected - database may already be closed
     }
   }
-});
-
-process.on("SIGINT", async () => {
-  databaseLogger.info("Received SIGINT, cleaning up...", {
-    operation: "shutdown",
-  });
-  await cleanupDatabase();
-  process.exit(0);
-});
-
-process.on("SIGTERM", async () => {
-  databaseLogger.info("Received SIGTERM, cleaning up...", {
-    operation: "shutdown",
-  });
-  await cleanupDatabase();
-  process.exit(0);
 });
 
 let db: PortableDatabase;

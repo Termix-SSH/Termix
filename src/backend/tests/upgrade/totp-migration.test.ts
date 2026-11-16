@@ -21,8 +21,10 @@ vi.mock("../../database/db/index.js", () => ({ getDb: () => h.db }));
 vi.mock("../../utils/data-crypto.js", () => ({
   DataCrypto: { getUserDataKey: (userId: string) => h.deks.get(userId) },
 }));
-vi.mock("../../utils/system-secret-crypto.js", () => ({
-  encryptSystemSecret: async (value: string) => `sysenc:${value}`,
+vi.mock("../../plugins/plugin-seal.js", () => ({
+  PLUGIN_SEAL_PREFIX: "psenc:v1:",
+  sealForPlugin: async (pluginId: string, value: string) =>
+    `psenc:v1:${pluginId}:${value}`,
 }));
 vi.mock("../../utils/logger.js", () => {
   const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
@@ -118,9 +120,9 @@ describe("runTotpMigration", () => {
     const alice = sqlite
       .prepare("SELECT * FROM p_totp_enrollments WHERE user_id = 'alice'")
       .get() as Record<string, string>;
-    expect(alice.secret).toBe("sysenc:JBSWY3DPEHPK3PXP");
+    expect(alice.secret).toBe("psenc:v1:totp:JBSWY3DPEHPK3PXP");
     expect(alice.backup_codes).toBe(
-      `sysenc:${JSON.stringify(["AAAA1111", "BBBB2222"])}`,
+      `psenc:v1:totp:${JSON.stringify(["AAAA1111", "BBBB2222"])}`,
     );
     expect(alice.pending_secret).toBeNull();
     expect(

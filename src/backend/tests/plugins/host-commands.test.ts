@@ -97,9 +97,9 @@ describe("isValidPackageName", () => {
 });
 
 describe("buildSudoCommand", () => {
-  it("single-quotes the password and wraps the marker echo around the command", () => {
-    const cmd = buildSudoCommand("uptime", "p'w");
-    expect(cmd).toContain("sudo -S -p ''");
+  it("reads the password from stdin and wraps the marker echo around the command", () => {
+    const cmd = buildSudoCommand("uptime");
+    expect(cmd).toContain("sudo -k -S -p");
     expect(cmd).toContain("__TX_SUDO_OK__");
     expect(cmd).toContain("uptime");
   });
@@ -147,7 +147,7 @@ const GBK_PATH_ERROR = Buffer.from(
 describe("execCommand", () => {
   it("leaves the command out of the timeout error", async () => {
     const client = { exec: () => {} } as never;
-    const command = buildSudoCommand("apt update", "hunter2");
+    const command = buildSudoCommand("apt update");
     await expect(execCommand(client, command, 5)).rejects.toThrow(
       /^Command timeout after 5ms$/,
     );

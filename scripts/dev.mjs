@@ -44,6 +44,7 @@ import {
   serviceEnv,
   serviceRunArgs,
 } from "./lib/dev-docker.mjs";
+import { coreVersionOf } from "./authz/lib/server.mjs";
 
 const require = createRequire(import.meta.url);
 const {
@@ -197,6 +198,8 @@ function notifyBrowser(data) {
 function startBackend() {
   const child = fork(BACKEND_ENTRY, [], {
     cwd: root,
+    // A plugin process must not be able to open core's inspector.
+    execArgv: ["--disable-sigusr1"],
     env: { ...process.env, ...backendEnv, TERMIX_DEV_RELOAD: "true" },
     stdio: ["ignore", "inherit", "inherit", "ipc"],
   });
@@ -292,13 +295,21 @@ async function restartBackend(reason) {
 }
 
 async function startVite() {
-  const { createServer } = await import("vite");
+  const { build, createServer } = await import("vite");
   vite = await createServer({
     root,
     configFile: path.join(root, "vite.config.ts"),
   });
   await vite.listen();
   vite.printUrls();
+  // Plugins with sandboxed views load this page from the backend, so it is
+  // built (and rebuilt on change) into dist/frame rather than served by Vite.
+  void build({
+    root,
+    configFile: path.join(root, "vite.frame.config.ts"),
+    logLevel: "warn",
+    build: { watch: {} },
+  }).catch((error) => warn(`frame page build failed: ${error.message}`));
 }
 
 // The packaged app forks the backend from Electron's main process, and they
@@ -722,8 +733,12 @@ async function main() {
     fs.mkdirSync(full, { recursive: true });
     log(`data folder ${full}`);
   }
+  // A dev-X.Y.Z branch still carries the last release in package.json, which
+  // would refuse plugins that need the coming release.
+  const version = process.env.VERSION ?? coreVersionOf(root);
   backendEnv = {
     ...serviceEnv(options, false),
+    ...(version ? { VERSION: version } : {}),
     // The desktop app runs against its own embedded backend, which is what
     // turns on the local profile, sync and the desktop-only routes.
     ...(options.target === "electron" ? { ELECTRON_EMBEDDED: "true" } : {}),

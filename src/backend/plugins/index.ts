@@ -13,6 +13,7 @@ import { pluginLogger } from "../utils/logger.js";
 import {
   setPluginEnabledCheck,
   setPluginInstalledCheck,
+  setPluginWakeHook,
   unregisterPluginHttp,
 } from "./http.js";
 import { PluginLoader, type LoadedPlugin } from "./loader.js";
@@ -45,6 +46,13 @@ export function getPluginRuntime(): { loader: PluginLoader } {
       (pluginId) => loader?.get(pluginId)?.state === "active",
     );
     setPluginInstalledCheck((pluginId) => !!loader?.get(pluginId));
+    // A plugin process that starts on first use is started by the request.
+    setPluginWakeHook(async (pluginId) => {
+      const plugin = loader?.get(pluginId);
+      if (plugin?.state !== "active" || !plugin.sandboxed) return false;
+      const { getPluginRunner } = await import("./sandbox/runner.js");
+      return (await getPluginRunner()).wake(pluginId);
+    });
     // An admin acting for another user reaches only the plugins that opted in.
     setPluginImpersonationCheck((pluginId) => {
       const plugin = loader?.get(pluginId);
@@ -238,6 +246,9 @@ export async function initializePlugins(
   const { applyStoredPluginChoices } = await import("./manage.js");
   await applyStoredPluginChoices(pluginLoader);
 
+  const { loadStoredRevocations } = await import("./revocations.js");
+  await loadStoredRevocations();
+
   const loaded = await pluginLoader.loadAll();
   if (loaded.length === 0) return [];
 
@@ -245,10 +256,16 @@ export async function initializePlugins(
   if (!fresh) {
     const { installNewShippedPlugins, restoreMissingPlugins } =
       await import("./manage.js");
-    loaded.push(...(await restoreMissingPlugins()));
-    loaded.push(...(await installNewShippedPlugins()));
+    for (const plugin of [
+      ...(await restoreMissingPlugins()),
+      ...(await installNewShippedPlugins()),
+    ]) {
+      loaded.push(plugin);
+    }
   }
   await syncCapabilityGrants(loaded);
+  const { noteSignerChanges } = await import("./signers.js");
+  await noteSignerChanges(loaded);
   if (loaded.some((plugin) => plugin.source === "bundled")) {
     const { offerPluginSetup } = await import("./onboarding.js");
     await offerPluginSetup(fresh);
@@ -561,7 +578,9 @@ export async function activatePlugin(pluginId: string): Promise<void> {
   const plugin = pluginLoader.get(pluginId);
   // Stays enabled and starts on the next boot without safe mode.
   if (!mayRunInSafeMode(pluginId, pluginLoader.list())) return;
-  if (plugin) await registerPluginPermissions(plugin);
+  if (plugin) {
+    await registerPluginPermissions(plugin);
+  }
 
   await pluginLoader.activate(pluginId);
 
@@ -627,6 +646,8 @@ export async function registerLoadedPlugins(
 ): Promise<void> {
   await seedPlugins(loaded, false);
   await syncCapabilityGrants(loaded);
+  const { noteSignerChanges } = await import("./signers.js");
+  await noteSignerChanges(loaded);
 }
 
 /** Stops a plugin and forgets it, before a new version is installed. */

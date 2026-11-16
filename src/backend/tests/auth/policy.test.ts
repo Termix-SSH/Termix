@@ -33,7 +33,7 @@ describe("auth policy", () => {
       idleTimeoutSeconds: null,
       secondFactor: null,
     });
-    expect(rememberDeviceAllowed()).toBe(true);
+    expect(await rememberDeviceAllowed()).toBe(true);
   });
 
   it("takes the strictest answer from every provider", async () => {
@@ -59,7 +59,7 @@ describe("auth policy", () => {
       idleTimeoutSeconds: 300,
       secondFactor: "always",
     });
-    expect(rememberDeviceAllowed()).toBe(false);
+    expect(await rememberDeviceAllowed()).toBe(false);
   });
 
   it("ignores zero and negative limits", async () => {
@@ -88,13 +88,22 @@ describe("auth policy", () => {
     });
   });
 
-  it("hides remember me when the hint throws", () => {
+  it("hides remember me when the hint throws", async () => {
     provideAuthPolicy("a", {
       evaluate: () => ({}),
       allowRememberDevice: () => {
         throw new Error("boom");
       },
     });
-    expect(rememberDeviceAllowed()).toBe(false);
+    expect(await rememberDeviceAllowed()).toBe(false);
+  });
+
+  it("waits for a provider that answers through a promise", async () => {
+    provideAuthPolicy("a", {
+      evaluate: () => ({}),
+      allowRememberDevice: (() =>
+        Promise.resolve(false)) as unknown as () => boolean,
+    });
+    expect(await rememberDeviceAllowed()).toBe(false);
   });
 });

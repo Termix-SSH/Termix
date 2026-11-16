@@ -1,0 +1,15 @@
+{
+  "id": "hostile-crash",
+  "name": "Hostile Crash",
+  "version": "1.0.0",
+  "description": "Test fixture whose process dies every time it starts. Never shipped.",
+  "author": { "name": "Termix" },
+  "license": "Apache-2.0",
+  "category": "Access & Security",
+  "icon": "Bomb",
+  "engine": { "termix": ">=26.11.2-0", "api": "^2.0.0" },
+  "capabilities": [],
+  "sandbox": { "alwaysOn": true },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

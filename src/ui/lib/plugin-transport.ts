@@ -28,6 +28,29 @@ import {
   type WebSocketConnectionTarget,
 } from "@/lib/connection-origin";
 
+/**
+ * Inside a sandboxed plugin frame there is no login cookie: the frame reaches
+ * its own plugin with a short token instead. The frame runtime sets this.
+ */
+export interface FrameTransport {
+  api: (pluginId: string) => AxiosInstance;
+  fetch: (
+    pluginId: string,
+    path: string,
+    init?: RequestInit,
+  ) => Promise<Response>;
+  wsUrl: (
+    pluginId: string,
+    path: string,
+  ) => Promise<WebSocketConnectionTarget | null>;
+}
+
+let frameTransport: FrameTransport | null = null;
+
+export function setFrameTransport(transport: FrameTransport | null): void {
+  frameTransport = transport;
+}
+
 /** The backend port. Everything plugin-facing rides the main server. */
 const BACKEND_PORT = 30001;
 
@@ -44,6 +67,7 @@ function pluginApiPath(pluginId: string, path = ""): string {
  * reporting all behave identically.
  */
 export function createPluginApi(pluginId: string): AxiosInstance {
+  if (frameTransport) return frameTransport.api(pluginId);
   const prefix = pluginApiPath(pluginId);
 
   // A thin proxy rather than a new axios instance: the shared one resolves its
@@ -117,6 +141,7 @@ export function pluginFetch(
   path: string,
   init: RequestInit = {},
 ): Promise<Response> {
+  if (frameTransport) return frameTransport.fetch(pluginId, path, init);
   const base = (authApi.defaults.baseURL ?? "").replace(/\/+$/, "");
   const headers = new Headers(init.headers);
   const deviceId = getDeviceId();
@@ -145,7 +170,7 @@ export function pluginApiFor(
   origin: ConnectionOrigin | undefined,
   local: AxiosInstance,
 ): AxiosInstance {
-  if (origin !== "remote" || !isElectron()) return local;
+  if (frameTransport || origin !== "remote" || !isElectron()) return local;
   let client = remotePluginApis.get(pluginId);
   if (!client) {
     client = createRemoteOriginApiInstance(pluginApiPath(pluginId));
@@ -187,6 +212,7 @@ export async function pluginWsUrl(
   path: string,
   options: { origin?: ConnectionOrigin } = {},
 ): Promise<WebSocketConnectionTarget | null> {
+  if (frameTransport) return frameTransport.wsUrl(pluginId, path);
   const suffix = path.startsWith("/") ? path : `/${path}`;
   const route = `/plugin-ws/${pluginId}${suffix}`;
 

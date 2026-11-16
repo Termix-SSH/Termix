@@ -12,13 +12,15 @@
   <img src="https://img.shields.io/github/v/release/Termix-SSH/Termix?style=flat&label=Release&color=F39044&labelColor=1a1a1a&v=1" />
   <a href="https://discord.gg/jVQGdvHDrf"><img alt="Discord" src="https://img.shields.io/discord/1347374268253470720?color=F39044&labelColor=1a1a1a" /></a>
   <a href="https://donate.termix.site/"><img alt="Donate" src="https://img.shields.io/badge/Donate-Support%20Termix-F39044?style=flat&labelColor=1a1a1a" /></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/Termix-SSH/Termix"><img alt="OpenSSF Scorecard" src="https://img.shields.io/ossf-scorecard/github.com/Termix-SSH/Termix?label=OpenSSF%20Scorecard&style=flat&color=F39044&labelColor=1a1a1a" /></a>
+  <a href="https://www.bestpractices.dev/projects/16663"><img alt="OpenSSF Best Practices" src="https://img.shields.io/cii/level/16663?label=OpenSSF%20Best%20Practices&style=flat&color=F39044&labelColor=1a1a1a" /></a>
 </p>
 
 <p>
   <a href="https://donate.termix.site/"><img alt="Donations this month" src="https://img.shields.io/badge/dynamic/json?style=for-the-badge&label=Donations%20this%20month&query=%24.fiatTotal&prefix=%24&url=https%3A%2F%2Ftermix.site%2Fdonation-snapshot.json&color=F39044&labelColor=1a1a1a" /></a>
 </p>
 
-<a href="https://www.youtube.com/watch?v=vhtkP-UqV5U"><img src="./.github/readme/overview.jpg" width="720" alt="Watch the Termix overview on YouTube" /></a>
+<a href="https://www.youtube.com/watch?v=r27vg9DCraI"><img src="./.github/readme/overview.jpg" width="720" alt="Watch the Termix overview on YouTube" /></a>
 
 </div>
 
@@ -82,7 +84,7 @@ Plugins add everything else. Admins can install, update or remove plugins from t
 | [Workspaces](https://github.com/Termix-SSH/Plugin-Workspaces)               | Save your open tabs and split layouts and reopen them in one click.                                                                        |
 
 <details>
-<summary>All other official plugins (54)</summary>
+<summary>All other official plugins (55)</summary>
 
 These ship in the `-full` image tags (like `latest-full`) and the full desktop builds. On any other install, add them from the Plugins tab.
 
@@ -121,6 +123,7 @@ These ship in the `-full` image tags (like `latest-full`) and the full desktop b
 | [Proxmox](https://github.com/Termix-SSH/Plugin-Proxmox)                     | Import Proxmox VE guests as hosts, keep them in sync and watch node stats.                                                               |
 | [Reverse Proxy](https://github.com/Termix-SSH/Plugin-Reverse-Proxy)         | Reverse proxy for TCP, UDP, HTTP and HTTPS with free certificates and Termix login, managed per host.                                    |
 | [Samba Shares](https://github.com/Termix-SSH/Plugin-Samba)                  | Create and manage Samba (SMB) file shares, users and permissions on your hosts from one tab.                                             |
+| [SCIM Provisioning](https://github.com/Termix-SSH/Plugin-SCIM)              | Create, update and remove Termix accounts and roles from your identity provider with SCIM.                                               |
 | [Secret Sources](https://github.com/Termix-SSH/Plugin-Secret-Sources)       | Pull host passwords and keys from 1Password, Bitwarden, Infisical or HashiCorp Vault when you connect instead of storing them in Termix. |
 | [Security Center](https://github.com/Termix-SSH/Plugin-Security-Center)     | Audit SSH keys, rotate them and scan hosts for known vulnerabilities over SSH.                                                           |
 | [Services](https://github.com/Termix-SSH/Plugin-Service-Manager)            | Manage services, timers and logs on your hosts over SSH.                                                                                 |

@@ -105,62 +105,31 @@ describe("AuditLogRepository", () => {
     });
   });
 
-  it("deletes logs by user id and only runs write hook for deleted rows", async () => {
-    let writeCount = 0;
-    const repo = await createRepository(() => {
-      writeCount += 1;
-    });
-
-    await repo.create({
-      userId: "user-1",
-      username: "alice",
-      action: "login",
-      resourceType: "auth",
-      success: true,
-    });
-    await repo.create({
-      userId: "user-2",
-      username: "bob",
-      action: "login",
-      resourceType: "auth",
-      success: true,
-    });
-
-    expect(await repo.deleteByUserId("missing")).toBe(0);
-    expect(writeCount).toBe(2);
-
-    expect(await repo.deleteByUserId("user-1")).toBe(1);
-    expect(writeCount).toBe(3);
-    expect(
-      (
-        await repo.listPage({
-          filters: {},
-          limit: 10,
-          offset: 0,
-        })
-      ).logs.map((log) => log.userId),
-    ).toEqual(["user-2"]);
-  });
-
   it("clears only background routine plugin entries", async () => {
     let writeCount = 0;
     const repo = await createRepository(() => {
       writeCount += 1;
     });
+    // Old rows from before the chain, written straight to the table.
     const entry = (userId: string | null, action: string) =>
-      repo.create({
-        userId,
-        username: "plugin:host-metrics",
-        action,
-        resourceType: "plugin",
-        success: true,
-      });
+      adapter!.exec(
+        `INSERT INTO audit_logs (user_id, username, action, resource_type, success)
+         VALUES (${userId ? `'${userId}'` : "NULL"}, 'plugin:host-metrics', '${action}', 'plugin', 1);`,
+      );
 
     await entry(null, "plugin_db_client");
     await entry(null, "plugin_kv_get");
     await entry(null, "plugin_kv_set");
     await entry("user-1", "plugin_db_client");
     await entry(null, "plugin_as_user");
+    // A chained row is never removed from the middle, even if it matches.
+    await repo.create({
+      userId: null,
+      username: "plugin:host-metrics",
+      action: "plugin_kv_get",
+      resourceType: "plugin",
+      success: true,
+    });
     writeCount = 0;
 
     expect(await repo.deleteRoutinePluginNoise()).toBe(2);
@@ -170,6 +139,7 @@ describe("AuditLogRepository", () => {
     ).logs.map((log) => `${log.userId}:${log.action}`);
     expect(left.sort()).toEqual([
       "null:plugin_as_user",
+      "null:plugin_kv_get",
       "null:plugin_kv_set",
       "user-1:plugin_db_client",
     ]);
@@ -321,7 +291,7 @@ describe("AuditLogRepository", () => {
 
       await write(repo, 9);
       // Clears the table, so the cached count is now far too high.
-      await repo.deleteByUserId("user-1");
+      await adapter!.exec("DELETE FROM audit_logs;");
       await write(repo, 9);
 
       // Had the count kept counting up from 9, this second batch would have

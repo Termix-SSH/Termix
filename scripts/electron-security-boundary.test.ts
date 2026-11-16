@@ -71,11 +71,11 @@ it("rejects setting keys that coerce to the protected editor key", async () => {
   let handler: (event: unknown, key: unknown, value: unknown) => unknown;
   runInNewContext(
     main.slice(
-      main.indexOf('ipcMain.handle("set-setting"'),
-      main.indexOf('ipcMain.handle("clear-session-cookies"'),
+      main.indexOf('ipc.handle("set-setting"'),
+      main.indexOf('ipc.handle("clear-session-cookies"'),
     ),
     {
-      ipcMain: {
+      ipc: {
         handle: (_: string, callback: typeof handler) => {
           handler = callback;
         },
@@ -88,11 +88,13 @@ it("rejects setting keys that coerce to the protected editor key", async () => {
       console,
     },
   );
+  // The IPC guard checks the key before the handler ever runs.
+  const { createRequire } = await import("node:module");
+  const { IPC_ARGS } = createRequire(import.meta.url)(
+    "../electron/ipc-args.cjs",
+  );
   for (const key of [["fileManager.externalEditorPath"], null, {}, 42]) {
-    expect(handler!({}, key, "/unapproved/editor")).toEqual({
-      success: false,
-      error: "Invalid setting key",
-    });
+    expect(() => IPC_ARGS["set-setting"](key, "/unapproved/editor")).toThrow();
   }
   expect(writeFileSync).not.toHaveBeenCalled();
   expect(

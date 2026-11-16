@@ -4,7 +4,9 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
+import cors from "cors";
 import { termixPluginHost } from "./scripts/vite-plugin-termix-plugins.mjs";
+import { desktopMetaCsp } from "./src/backend/http/security-headers";
 
 const sslCertPath = path.join(process.cwd(), "ssl/termix.crt");
 const sslKeyPath = path.join(process.cwd(), "ssl/termix.key");
@@ -23,6 +25,26 @@ const apiProxy = Object.fromEntries(
       ws: true,
       rewrite: (requestPath: string) =>
         requestPath.replace(new RegExp(`^/__termix_api/${port}`), ""),
+      // A plugin frame's CSP names the address the browser used, which the
+      // backend can't see behind this proxy.
+      configure: (proxy: {
+        on: (
+          event: "proxyReq",
+          handler: (
+            proxyReq: { setHeader: (name: string, value: string) => void },
+            req: { url?: string; headers: Record<string, unknown> },
+          ) => void,
+        ) => void;
+      }) => {
+        proxy.on("proxyReq", (proxyReq, req) => {
+          if (!req.url?.includes("/plugin-assets/")) return;
+          const host = req.headers.host;
+          if (typeof host === "string") {
+            proxyReq.setHeader("X-Forwarded-Host", host);
+          }
+          proxyReq.setHeader("X-Forwarded-Prefix", `/__termix_api/${port}`);
+        });
+      },
     },
   ]),
 );
@@ -81,12 +103,45 @@ const sdkFrontendEntry = path.resolve(
 );
 const sdkUiEntry = path.resolve(__dirname, "./src/ui/plugin-host/sdk-ui.ts");
 
+/**
+ * Vite's own CORS runs before any plugin and refuses the "null" origin of a
+ * sandboxed plugin frame, so it is off and this does the same job: local
+ * origins as Vite allows them, plus a frame calling its own plugin through the
+ * proxy (the backend checks the frame token there).
+ */
+function devCors() {
+  const FRAME_ROUTE = /^\/__termix_api\/\d+\/plugin-api\/[a-z][a-z0-9-]*\//;
+  // Vite's default for server.cors.
+  const LOCAL_ORIGIN =
+    /^https?:\/\/(?:(?:[^:]+\.)?localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/;
+  const local = cors({ origin: LOCAL_ORIGIN });
+  const frame = cors({ origin: "null", maxAge: 600 });
+  return {
+    name: "termix-dev-cors",
+    configureServer(server: {
+      middlewares: { use: (handler: cors.CorsRequestHandler) => void };
+    }) {
+      server.middlewares.use((req, res, next) => {
+        const isFrame =
+          req.headers.origin === "null" && FRAME_ROUTE.test(req.url ?? "");
+        (isFrame ? frame : local)(req, res, next);
+      });
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [
+    devCors(),
     react(),
     tailwindcss(),
     svgr(),
-    termixPluginHost({ repoRoot: __dirname, sdkFrontendEntry, sdkUiEntry }),
+    termixPluginHost({
+      repoRoot: __dirname,
+      sdkFrontendEntry,
+      sdkUiEntry,
+      metaCsp: desktopMetaCsp,
+    }),
   ],
   define: {
     "import.meta.env.VITE_APP_VERSION": JSON.stringify(
@@ -112,6 +167,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
   },
   server: {
+    cors: false,
     https: useHTTPS
       ? {
           cert: fs.readFileSync(sslCertPath),

@@ -8,6 +8,13 @@ const lookApi = vi.hoisted(() => ({
   saveDefaultLook: vi.fn(),
 }));
 vi.mock("@/api/look-api", () => lookApi);
+const framedStarts = vi.hoisted(() => [] as string[]);
+vi.mock("@/plugin-host/frames/frame-plugins", () => ({
+  startFramedPlugin: vi.fn(async (entry: { id: string }) => {
+    framedStarts.push(entry.id);
+    return { handle: { app: {} }, dispose: () => {} };
+  }),
+}));
 import { Puzzle } from "lucide-react";
 import type {
   FrontendModule,
@@ -237,6 +244,47 @@ describe("plugin loader", () => {
     expect(railIds()).not.toContain("headless-panel");
   });
 
+  it("waits for a plugin the server is still starting, then loads it", async () => {
+    vi.useFakeTimers();
+    try {
+      const imported: string[] = [];
+      modules.slow = railPlugin("slow");
+      modules.after = railPlugin("after");
+      configurePluginLoader({
+        fetchPlugins: async () => plugins,
+        importFrontend: async (entry) => {
+          imported.push(entry.id);
+          return modules[entry.id];
+        },
+        loadLocale: async () => null,
+        injectCss: () => null,
+      });
+      plugins = [
+        summary("slow", { state: "activating" }),
+        summary("after", {
+          state: "active",
+          dependencies: { slow: "^1.0.0" },
+        }),
+      ];
+      await syncPlugins();
+      // The server answers 404 for its assets until it is running.
+      expect(imported).toEqual([]);
+      expect(getPluginRecord("slow")?.frontend).toBe("loading");
+      expect(getPluginRecord("after")?.frontend).toBe("loading");
+
+      plugins = [
+        summary("slow"),
+        summary("after", { dependencies: { slow: "^1.0.0" } }),
+      ];
+      await vi.advanceTimersByTimeAsync(5_000);
+      await syncPlugins();
+      expect(imported).toEqual(["slow", "after"]);
+      expect(railIds()).toContain("slow-panel");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("skips plugins safe mode keeps off", async () => {
     modules.paused = railPlugin("paused");
     plugins = [summary("paused", { state: "safe-mode" })];
@@ -278,6 +326,26 @@ describe("plugin loader", () => {
     expect(isPluginFrontendActive("login")).toBe(false);
     await startPreLoginPlugins({ retryFailed: true });
     expect(isPluginFrontendActive("login")).toBe(true);
+  });
+
+  it("starts framed plugins on the first sync after a pre-login load", async () => {
+    framedStarts.length = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify([summary("login", { frontendIsolation: "frame" })]),
+        ),
+    );
+    await startPreLoginPlugins();
+    expect(framedStarts).toEqual([]);
+
+    plugins = [
+      summary("login", { frontendIsolation: "frame" }),
+      summary("framed", { frontendIsolation: "frame" }),
+    ];
+    await startPluginRuntime();
+    expect(framedStarts.sort()).toEqual(["framed", "login"]);
+    expect(isPluginFrontendActive("framed")).toBe(true);
   });
 
   it("ignores a pre-login load started after sign-in", async () => {

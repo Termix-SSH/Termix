@@ -219,6 +219,10 @@
     "securityIntro": "Додајте лозинку или аутентификатор апликацију свом налогу. Можете то учинити и касније у Подешавањима, под Безбедност.",
     "pluginsDocsLink": "Прочитајте о сваком од њих"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix i dalje radi",
+    "noticeBody": "Zatvaranje prozora ostavlja Termix da radi u sistemu tray. Da izađete, otvorite meni ikone u tray-u i izaberite Izađi. Ovo možete isključiti u Podešavanjima."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Аутоматски",
     "modePrompt": "Питај прво",

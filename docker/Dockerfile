@@ -1,10 +1,16 @@
 # Stage 1: Install dependencies
+# Base images are pinned by digest, Dependabot refreshes them. With
+# SOURCE_DATE_EPOCH set (the commit time), apt reads the Debian snapshot from
+# that moment, so a rebuild of the same commit gets the same packages.
 # The builders only produce JS, so they run on the build machine's own arch
 # once instead of under QEMU per target. Rolldown hangs under arm64 emulation.
-FROM --platform=$BUILDPLATFORM node:24-slim AS deps
+FROM --platform=$BUILDPLATFORM node:26-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS deps
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+ARG SOURCE_DATE_EPOCH
+RUN if [ -n "$SOURCE_DATE_EPOCH" ]; then cp /etc/apt/sources.list.d/debian.sources /tmp/debian.sources && snap=$(date -u -d "@$SOURCE_DATE_EPOCH" +%Y%m%dT%H%M%SZ) && sed -i -e "s|http://deb.debian.org/debian-security|http://snapshot.debian.org/archive/debian-security/$snap|" -e "s|http://deb.debian.org/debian|http://snapshot.debian.org/archive/debian/$snap|" /etc/apt/sources.list.d/debian.sources; fi && \
+    apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Retries=5 update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/* && \
+    if [ -f /tmp/debian.sources ]; then mv /tmp/debian.sources /etc/apt/sources.list.d/debian.sources; fi
 
 COPY package*.json ./
 COPY packages/plugin-sdk/package.json ./packages/plugin-sdk/package.json
@@ -36,6 +42,9 @@ COPY . .
 
 RUN npm run build:backend:core
 
+# CycloneDX SBOM of the runtime dependencies, shipped in the image.
+RUN npm run sbom
+
 # Stage 3b: Stage the bundled plugins for one profile (minimal, standard or
 # full, see docker/bundled-plugins.json). Only this stage and the final one
 # differ between profiles, so the other stages are built once.
@@ -50,14 +59,14 @@ RUN --mount=type=cache,target=/app/node_modules/.cache/termix-bundled-plugins \
     node scripts/build-plugins.cjs --profile "$PLUGIN_PROFILE"
 
 # Stage 4: Download OPKSSH binary for the target platform so the image works offline
-FROM node:24-slim AS opkssh-downloader
+FROM node:26-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS opkssh-downloader
 ARG TARGETARCH
-ARG OPKSSH_VERSION=v0.16.0
-ARG OPKSSH_SHA256_AMD64=c018c3e7baf98612b923e742dd87be38650bf61e3b755fb2bc90de177568b1bf
-ARG OPKSSH_SHA256_ARM64=9dd10c2b6ce99cde18e52c054877ca014134b291fd82afe71741c68db4f83d44
+ARG OPKSSH_VERSION=v0.19.2
+ARG OPKSSH_SHA256_AMD64=e799b780d5477e8d986a2e6784773ebb2451d860dd842d23e271baf88aee2da3
+ARG OPKSSH_SHA256_ARM64=4f31e47addec3b0beebef7d5d99d11e2d459b9a8e5298077879b2df34d13aedf
 WORKDIR /opkssh
 
-RUN apt-get update && apt-get install -y curl ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 RUN case "$TARGETARCH" in \
       amd64) OPKSSH_ARCH=amd64; OPKSSH_SHA256="$OPKSSH_SHA256_AMD64" ;; \
@@ -71,10 +80,13 @@ RUN case "$TARGETARCH" in \
     echo -n "$OPKSSH_VERSION" > version.txt
 
 # Stage 5: Production dependencies only
-FROM node:24-slim AS production-deps
+FROM node:26-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS production-deps
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+ARG SOURCE_DATE_EPOCH
+RUN if [ -n "$SOURCE_DATE_EPOCH" ]; then cp /etc/apt/sources.list.d/debian.sources /tmp/debian.sources && snap=$(date -u -d "@$SOURCE_DATE_EPOCH" +%Y%m%dT%H%M%SZ) && sed -i -e "s|http://deb.debian.org/debian-security|http://snapshot.debian.org/archive/debian-security/$snap|" -e "s|http://deb.debian.org/debian|http://snapshot.debian.org/archive/debian/$snap|" /etc/apt/sources.list.d/debian.sources; fi && \
+    apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Retries=5 update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/* && \
+    if [ -f /tmp/debian.sources ]; then mv /tmp/debian.sources /etc/apt/sources.list.d/debian.sources; fi
 
 COPY package*.json ./
 # The plugin SDK is a workspace package core imports at runtime, so npm ci
@@ -85,28 +97,33 @@ COPY vendor ./vendor
 
 COPY scripts/patch-ssh2-agent.cjs ./scripts/
 
-# ssh2's native crypto crashes Node 24 when a cipher is freed, so ssh2 uses
+# ssh2's native crypto crashes Node 24 and later when a cipher is freed, so ssh2 uses
 # OpenSSL instead (chacha20-poly1305 is then left out).
 RUN npm ci --omit=dev --ignore-scripts && \
     node scripts/patch-ssh2-agent.cjs && \
     rm -rf node_modules/better-sqlite3/prebuilds && \
     npm run build-release --prefix node_modules/better-sqlite3 && \
     test -f node_modules/better-sqlite3/build/Release/better_sqlite3.node && \
+    rm -rf node_modules/better-sqlite3/build/Release/obj.target node_modules/better-sqlite3/build/Release/.deps && \
     npm rebuild bcryptjs && \
     rm -rf node_modules/ssh2/lib/protocol/crypto/build && \
     npm cache clean --force
 
 # Stage 6: Final optimized image
-FROM node:24-slim
+# The runtime never calls npm, so the copy the base image ships is removed.
+FROM node:26-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc
 WORKDIR /app
 
 # The release the opkssh-downloader stage baked in, so the plugin trusts that
 # binary when the build picks a version other than its pinned one.
-ARG OPKSSH_VERSION=v0.16.0
-ARG OPKSSH_SHA256_AMD64=c018c3e7baf98612b923e742dd87be38650bf61e3b755fb2bc90de177568b1bf
-ARG OPKSSH_SHA256_ARM64=9dd10c2b6ce99cde18e52c054877ca014134b291fd82afe71741c68db4f83d44
+ARG OPKSSH_VERSION=v0.19.2
+ARG OPKSSH_SHA256_AMD64=e799b780d5477e8d986a2e6784773ebb2451d860dd842d23e271baf88aee2da3
+ARG OPKSSH_SHA256_ARM64=4f31e47addec3b0beebef7d5d99d11e2d459b9a8e5298077879b2df34d13aedf
 
+# TERMIX_FRAME_DIR: the page plugin views run in, served by Node from the UI
+# build nginx also serves, so it is not copied twice.
 ENV DATA_DIR=/app/data \
+    TERMIX_FRAME_DIR=/app/html/frame \
     OPKSSH_BUNDLED_DIR=/app/opkssh-bundled \
     OPKSSH_VERSION=$OPKSSH_VERSION \
     OPKSSH_SHA256_AMD64=$OPKSSH_SHA256_AMD64 \
@@ -114,12 +131,26 @@ ENV DATA_DIR=/app/data \
     PORT=8080 \
     NODE_ENV=production
 
-RUN apt-get update && apt-get install -y nginx gettext-base openssl ca-certificates gosu wget iputils-ping && \
+# nftables: plugin firewall rules when the admin adds NET_ADMIN.
+ARG SOURCE_DATE_EPOCH
+RUN if [ -n "$SOURCE_DATE_EPOCH" ]; then cp /etc/apt/sources.list.d/debian.sources /tmp/debian.sources && snap=$(date -u -d "@$SOURCE_DATE_EPOCH" +%Y%m%dT%H%M%SZ) && sed -i -e "s|http://deb.debian.org/debian-security|http://snapshot.debian.org/archive/debian-security/$snap|" -e "s|http://deb.debian.org/debian|http://snapshot.debian.org/archive/debian/$snap|" /etc/apt/sources.list.d/debian.sources; fi && \
+    apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Retries=5 update && apt-get install -y --no-install-recommends nginx gettext-base openssl ca-certificates gosu iputils-ping nftables && \
     update-ca-certificates && \
     rm -rf /var/lib/apt/lists/* && \
+    if [ -f /tmp/debian.sources ]; then mv /tmp/debian.sources /etc/apt/sources.list.d/debian.sources; fi && \
+    # Logs and caches that hold build times, left out so rebuilds match.
+    rm -rf /var/log/apt /var/log/dpkg.log /var/log/alternatives.log /var/cache/ldconfig/aux-cache \
+      /var/cache/debconf/*-old /var/lib/dpkg/*-old && \
+    # Plain copy drops ping's file capability, so it uses unprivileged ICMP
+    # sockets (net.ipv4.ping_group_range) and works with every capability
+    # dropped and no-new-privileges set.
+    cp /usr/bin/ping /usr/bin/ping.plain && chmod 755 /usr/bin/ping.plain && \
+    mv /usr/bin/ping.plain /usr/bin/ping && \
     mkdir -p /app/data /app/uploads /app/nginx /tmp/nginx && \
     chown -R node:node /app /tmp/nginx && \
-    chmod 755 /app/data /app/uploads /app/nginx /tmp/nginx
+    chmod 755 /app/data /app/uploads /app/nginx /tmp/nginx && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+      /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
 
 COPY docker/nginx.conf /app/nginx/nginx.conf.template
 COPY docker/nginx-https.conf /app/nginx/nginx-https.conf.template
@@ -138,6 +169,7 @@ COPY --chown=node:node --from=backend-builder /app/packages/plugin-sdk/dist ./pa
 # matches, so an offline install never downloads one.
 COPY --chown=node:node --from=opkssh-downloader /opkssh /app/opkssh-bundled
 COPY --chown=node:node package.json ./
+COPY --chown=node:node --from=backend-builder /app/sbom.cdx.json ./sbom.cdx.json
 # Schema for Postgres and MySQL. Unused by the default SQLite deployment, which
 # builds its tables at startup instead.
 COPY --chown=node:node drizzle ./drizzle
@@ -146,10 +178,12 @@ VOLUME ["/app/data"]
 
 EXPOSE ${PORT}
 
+# Node is already in the image, so no curl or wget is needed.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD wget -q -O /dev/null http://localhost:30001/health || exit 1
+    CMD ["node", "-e", "fetch('http://127.0.0.1:30001/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
 
 COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY docker/termix-recover.sh /usr/local/bin/termix-recover
+RUN chmod +x /entrypoint.sh /usr/local/bin/termix-recover
 
 CMD ["/entrypoint.sh"]

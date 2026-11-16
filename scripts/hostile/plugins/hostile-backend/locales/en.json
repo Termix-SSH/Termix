@@ -1,0 +1,20 @@
+{
+  "plugin": {
+    "name": "Hostile Backend",
+    "description": "Test fixture that attacks the plugin sandbox from its process. Never shipped."
+  },
+  "settings": {
+    "admin": {
+      "allowedHost": {
+        "label": "Allowed private host",
+        "description": "The one private address the fixture may reach."
+      }
+    }
+  },
+  "permissions": {
+    "probe": {
+      "title": "Probe",
+      "description": "Only admins hold it."
+    }
+  }
+}

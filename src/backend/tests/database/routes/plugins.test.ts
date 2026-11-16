@@ -8,6 +8,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PluginManageError } from "../../../plugins/manage.js";
 import { RegistryError } from "../../../plugins/registries.js";
+import { createViewGrant } from "../../../plugins/web-view-grants.js";
+import { registerWebAuthnCeremony } from "../../../auth/registry.js";
 import express from "express";
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
@@ -35,6 +37,9 @@ const state = vi.hoisted(() => ({
   managers: new Set<string>(["admin-1"]),
   // Plugins the loader reports as running.
   active: new Set<string>(),
+  // Running plugins on plugin API 2, whose UI runs in frames.
+  framed: new Set<string>(),
+  frameTokens: [] as Array<[string, string, string]>,
 }));
 
 vi.mock("../../../upgrade/boot-migrations.js", () => ({
@@ -71,8 +76,18 @@ vi.mock("../../../utils/auth-manager.js", () => ({
           next: () => void,
         ) => {
           req.userId = req.headers["x-test-user-id"] ?? "admin-1";
+          req.sessionId = req.headers["x-test-session-id"];
+          req.apiKeyId = req.headers["x-test-api-key-id"];
           next();
         },
+      issuePluginFrameToken: async (
+        userId: string,
+        sessionId: string,
+        pluginId: string,
+      ) => {
+        state.frameTokens.push([userId, sessionId, pluginId]);
+        return { token: `frame:${pluginId}`, expiresIn: 300 };
+      },
     }),
   },
 }));
@@ -113,7 +128,15 @@ vi.mock("../../../plugins/index.js", () => ({
               id,
               state: "active",
               dir: "/nonexistent/plugin",
-              manifest: { id, locales: "locales" },
+              manifest: {
+                id,
+                locales: "locales",
+                engine: {
+                  termix: ">=26.11.2-0",
+                  api: state.framed.has(id) ? "^2.0.0" : "^1.15.0",
+                },
+                capabilities: [],
+              },
             }
           : undefined,
     },
@@ -186,6 +209,31 @@ const manageMock = vi.hoisted(() => ({
 }));
 const auditMock = vi.hoisted(() => ({ logAudit: vi.fn(async () => {}) }));
 
+// The admin wait is off unless a test turns it on.
+const holdMock = vi.hoisted(() => ({
+  active: false,
+  calls: [] as Array<{ kind: string; payload: unknown }>,
+}));
+vi.mock("../../../auth/admin-holds.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../auth/admin-holds.js")>()),
+  getHoldSettings: async () => ({
+    minutes: holdMock.active ? 60 : 0,
+    forcedByEnv: false,
+    adminCount: 2,
+    active: holdMock.active,
+  }),
+  holdIfNeeded: async (
+    _req: unknown,
+    res: { status: (code: number) => { json: (body: unknown) => void } },
+    input: { kind: string; payload: unknown },
+  ) => {
+    if (!holdMock.active) return false;
+    holdMock.calls.push({ kind: input.kind, payload: input.payload });
+    res.status(202).json({ held: true, holdId: "h1" });
+    return true;
+  },
+}));
+
 vi.mock("../../../plugins/manage.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../plugins/manage.js")>()),
   ...manageMock,
@@ -246,10 +294,14 @@ describe("plugins route", () => {
   let baseUrl = "";
 
   beforeEach(async () => {
+    holdMock.active = false;
+    holdMock.calls = [];
     state.plugins = new Map();
     state.grants = [];
     state.managers = new Set(["admin-1"]);
     state.active = new Set();
+    state.framed = new Set();
+    state.frameTokens = [];
 
     const app = express();
     app.use(express.json());
@@ -264,6 +316,274 @@ describe("plugins route", () => {
   afterEach(async () => {
     await new Promise<void>((resolve) => server?.close(() => resolve()));
     server = null;
+  });
+
+  describe("POST /plugins/:id/frame-token", () => {
+    const mint = (id: string, headers: Record<string, string>) =>
+      fetch(`${baseUrl}/plugins/${id}/frame-token`, {
+        method: "POST",
+        headers,
+      });
+
+    it("gives a signed-in page a token for a running framed plugin", async () => {
+      state.active.add("framed");
+      state.framed.add("framed");
+      const res = await mint("framed", {
+        "x-test-user-id": "user-1",
+        "x-test-session-id": "s-1",
+      });
+      expect(res.status).toBe(200);
+      expect(res.headers.get("cache-control")).toBe("no-store");
+      expect(await res.json()).toEqual({
+        token: "frame:framed",
+        expiresIn: 300,
+      });
+      expect(state.frameTokens).toEqual([["user-1", "s-1", "framed"]]);
+    });
+
+    it("refuses an API key and a call without a session", async () => {
+      state.active.add("framed");
+      state.framed.add("framed");
+      const key = await mint("framed", {
+        "x-test-user-id": "user-1",
+        "x-test-session-id": "s-1",
+        "x-test-api-key-id": "key-1",
+      });
+      expect(key.status).toBe(401);
+      const none = await mint("framed", { "x-test-user-id": "user-1" });
+      expect(none.status).toBe(401);
+      expect(state.frameTokens).toEqual([]);
+    });
+
+    it("has no token for a plugin that is stopped, missing or in the page", async () => {
+      state.framed.add("stopped");
+      state.active.add("legacy");
+      for (const id of ["stopped", "legacy", "nobody"]) {
+        const res = await mint(id, {
+          "x-test-user-id": "user-1",
+          "x-test-session-id": "s-1",
+        });
+        expect(res.status, id).toBe(404);
+      }
+      expect(state.frameTokens).toEqual([]);
+    });
+  });
+
+  describe("POST /plugins/:id/passkey-steps/:ceremonyId/*", () => {
+    const step = (
+      id: string,
+      which: "options" | "finish",
+      body: unknown,
+      headers: Record<string, string>,
+    ) =>
+      fetch(`${baseUrl}/plugins/${id}/passkey-steps/add-key/${which}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", ...headers },
+        body: JSON.stringify(body),
+      });
+    const page = {
+      "x-test-user-id": "user-1",
+      "x-test-session-id": "s-1",
+      origin: "https://termix.test",
+    };
+    let dispose: () => void = () => {};
+    const finish = vi.fn(async () => ({ added: true }));
+
+    beforeEach(() => {
+      finish.mockClear();
+      dispose = registerWebAuthnCeremony({
+        id: "add-key",
+        type: "create",
+        pluginId: "webauthn",
+        options: async () => ({ publicKey: { challenge: "abc" } }),
+        finish,
+      });
+    });
+    afterEach(() => dispose());
+
+    it("runs a plugin's own step for a signed-in page", async () => {
+      const start = await step("webauthn", "options", {}, page);
+      expect(start.status).toBe(200);
+      const { ticket, type, publicKey } = (await start.json()) as {
+        ticket: string;
+        type: string;
+        publicKey: unknown;
+      };
+      expect(type).toBe("create");
+      expect(publicKey).toEqual({ challenge: "abc" });
+      const done = await step(
+        "webauthn",
+        "finish",
+        { ticket, response: { id: "c", response: {} } },
+        page,
+      );
+      expect(done.status).toBe(200);
+      expect(await done.json()).toEqual({ added: true });
+    });
+
+    it("never runs another plugin's step", async () => {
+      expect((await step("snoop", "options", {}, page)).status).toBe(404);
+    });
+
+    it("refuses API keys, calls without a session and calls without an origin", async () => {
+      expect(
+        (
+          await step(
+            "webauthn",
+            "options",
+            {},
+            {
+              ...page,
+              "x-test-api-key-id": "key-1",
+            },
+          )
+        ).status,
+      ).toBe(401);
+      expect(
+        (await step("webauthn", "options", {}, { "x-test-user-id": "user-1" }))
+          .status,
+      ).toBe(401);
+      const { origin: _origin, ...noOrigin } = page;
+      expect((await step("webauthn", "options", {}, noOrigin)).status).toBe(
+        400,
+      );
+      expect(finish).not.toHaveBeenCalled();
+    });
+
+    it("refuses a ticket from someone else's session", async () => {
+      const start = await step("webauthn", "options", {}, page);
+      const { ticket } = (await start.json()) as { ticket: string };
+      const done = await step(
+        "webauthn",
+        "finish",
+        { ticket, response: { id: "c", response: {} } },
+        { ...page, "x-test-user-id": "user-2", "x-test-session-id": "s-2" },
+      );
+      expect(done.status).toBe(410);
+      expect(finish).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("GET /plugins/:id/web-views/:grant", () => {
+    const read = (id: string, grant: string, headers: Record<string, string>) =>
+      fetch(`${baseUrl}/plugins/${id}/web-views/${grant}`, { headers });
+    const page = { "x-test-user-id": "user-1", "x-test-session-id": "s-1" };
+
+    it("tells the person who asked for the page where it is", async () => {
+      const { grant } = createViewGrant({
+        pluginId: "web-endpoint",
+        userId: "user-1",
+        sessionId: "s-1",
+        url: "https://pve.example.test:8006/",
+      });
+      const res = await read("web-endpoint", grant, page);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("cache-control")).toBe("no-store");
+      expect(await res.json()).toEqual({
+        url: "https://pve.example.test:8006/",
+      });
+    });
+
+    it("hides it from other plugins, people, sessions and API keys", async () => {
+      const { grant } = createViewGrant({
+        pluginId: "web-endpoint",
+        userId: "user-1",
+        sessionId: "s-1",
+        url: "https://pve.example.test:8006/",
+      });
+      expect((await read("snoop", grant, page)).status).toBe(404);
+      expect(
+        (
+          await read("web-endpoint", grant, {
+            "x-test-user-id": "user-2",
+            "x-test-session-id": "s-2",
+          })
+        ).status,
+      ).toBe(404);
+      expect(
+        (
+          await read("web-endpoint", grant, {
+            "x-test-user-id": "user-1",
+            "x-test-session-id": "s-9",
+          })
+        ).status,
+      ).toBe(404);
+      expect(
+        (
+          await read("web-endpoint", grant, {
+            ...page,
+            "x-test-api-key-id": "key-1",
+          })
+        ).status,
+      ).toBe(401);
+      expect((await read("web-endpoint", "f".repeat(48), page)).status).toBe(
+        404,
+      );
+    });
+  });
+
+  describe("POST /plugins/frame-tokens", () => {
+    const mintMany = (body: unknown, headers: Record<string, string>) =>
+      fetch(`${baseUrl}/plugins/frame-tokens`, {
+        method: "POST",
+        headers: { "content-type": "application/json", ...headers },
+        body: JSON.stringify(body),
+      });
+    const page = { "x-test-user-id": "user-1", "x-test-session-id": "s-1" };
+
+    it("gives a token for each running framed plugin in one answer", async () => {
+      for (const id of ["one", "two"]) {
+        state.active.add(id);
+        state.framed.add(id);
+      }
+      state.active.add("legacy");
+      const res = await mintMany(
+        { ids: ["one", "two", "legacy", "nobody", "one"] },
+        page,
+      );
+      expect(res.status).toBe(200);
+      expect(res.headers.get("cache-control")).toBe("no-store");
+      expect(await res.json()).toEqual({
+        tokens: {
+          one: { token: "frame:one", expiresIn: 300 },
+          two: { token: "frame:two", expiresIn: 300 },
+        },
+      });
+      expect(state.frameTokens).toEqual([
+        ["user-1", "s-1", "one"],
+        ["user-1", "s-1", "two"],
+      ]);
+    });
+
+    it("refuses an API key and a call without a session", async () => {
+      state.active.add("one");
+      state.framed.add("one");
+      const key = await mintMany(
+        { ids: ["one"] },
+        { ...page, "x-test-api-key-id": "key-1" },
+      );
+      expect(key.status).toBe(401);
+      const none = await mintMany(
+        { ids: ["one"] },
+        { "x-test-user-id": "user-1" },
+      );
+      expect(none.status).toBe(401);
+      expect(state.frameTokens).toEqual([]);
+    });
+
+    it("refuses anything but a short list of plugin ids", async () => {
+      for (const body of [
+        {},
+        { ids: "one" },
+        { ids: ["../x"] },
+        { ids: [1] },
+        { ids: Array.from({ length: 201 }, (_, i) => `p${i}`) },
+      ]) {
+        const res = await mintMany(body, page);
+        expect(res.status, JSON.stringify(body).slice(0, 40)).toBe(400);
+      }
+      expect(state.frameTokens).toEqual([]);
+    });
   });
 
   describe("GET /plugins/public", () => {
@@ -429,6 +749,7 @@ describe("plugins route", () => {
             "dependencies",
             "enabled",
             "frontend",
+            "frontendIsolation",
             "id",
             "locales",
             "name",
@@ -559,6 +880,13 @@ describe("plugins route", () => {
         grantedBy: "admin-1",
       },
     ]);
+    expect(auditMock.logAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "grant_plugin_capability",
+        resourceId: "sample-plugin",
+        details: JSON.stringify({ capability: "hosts:read" }),
+      }),
+    );
   });
 
   it("rejects granting a capability the manifest does not declare", async () => {
@@ -621,6 +949,12 @@ describe("plugins route", () => {
       granted: false,
     });
     expect(state.grants).toEqual([]);
+    expect(auditMock.logAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "revoke_plugin_capability",
+        resourceId: "sample-plugin",
+      }),
+    );
   });
 
   it("404s revoking a capability that was not granted", async () => {
@@ -682,6 +1016,7 @@ describe("plugins route", () => {
         assetVersion: null,
         locales: [],
         themeVersion: null,
+        frontendIsolation: "page",
       });
     });
 
@@ -723,6 +1058,92 @@ describe("plugins route", () => {
 
       expect(res.status).toBe(403);
       expect(state.plugins.get("sample-plugin")?.state).toBe("enabled");
+    });
+
+    describe("with the admin wait on", () => {
+      const dangerous = () =>
+        makePlugin({
+          state: "disabled",
+          manifestJson: JSON.stringify({
+            name: "Runner",
+            capabilities: ["process:spawn", "kv:own"],
+          }),
+        });
+
+      const patchState = (enabled: boolean) =>
+        fetch(`${baseUrl}/plugins/sample-plugin/state`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ enabled }),
+        });
+
+      it("holds turning on a plugin with dangerous access", async () => {
+        holdMock.active = true;
+        state.plugins.set("sample-plugin", dangerous());
+        const res = await patchState(true);
+        expect(res.status).toBe(202);
+        expect(holdMock.calls).toEqual([
+          { kind: "plugin_enable", payload: { pluginId: "sample-plugin" } },
+        ]);
+        expect(manageMock.setPluginState).not.toHaveBeenCalled();
+      });
+
+      it("lets a plain plugin through", async () => {
+        holdMock.active = true;
+        state.plugins.set("sample-plugin", makePlugin({ state: "disabled" }));
+        manageMock.setPluginState.mockResolvedValueOnce({
+          enable: ["sample-plugin"],
+          disable: [],
+        });
+        expect((await patchState(true)).status).toBe(200);
+        expect(holdMock.calls).toEqual([]);
+      });
+
+      it("holds turning off a sign-in plugin", async () => {
+        holdMock.active = true;
+        state.plugins.set(
+          "sample-plugin",
+          makePlugin({
+            manifestJson: JSON.stringify({ capabilities: ["auth:provide"] }),
+          }),
+        );
+        expect((await patchState(false)).status).toBe(202);
+        expect(holdMock.calls[0]?.kind).toBe("plugin_disable");
+      });
+
+      it("holds granting a dangerous capability", async () => {
+        holdMock.active = true;
+        state.plugins.set("sample-plugin", dangerous());
+        const res = await fetch(`${baseUrl}/plugins/sample-plugin/grants`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ capability: "process:spawn" }),
+        });
+        expect(res.status).toBe(202);
+        expect(holdMock.calls[0]).toEqual({
+          kind: "plugin_grant",
+          payload: {
+            pluginId: "sample-plugin",
+            capabilities: ["process:spawn"],
+          },
+        });
+        expect(state.grants).toEqual([]);
+      });
+
+      it("asks to turn a sign-in plugin off before removing it", async () => {
+        holdMock.active = true;
+        state.plugins.set(
+          "sample-plugin",
+          makePlugin({
+            manifestJson: JSON.stringify({ capabilities: ["auth:policy"] }),
+          }),
+        );
+        const res = await fetch(`${baseUrl}/plugins/sample-plugin`, {
+          method: "DELETE",
+        });
+        expect(res.status).toBe(409);
+        expect((await res.json()).code).toBe("TURN_OFF_FIRST");
+      });
     });
 
     it("403s a non-admin granting a capability", async () => {

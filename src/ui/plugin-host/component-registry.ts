@@ -4,6 +4,7 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
+import { getForeignRuntime } from "@/components/foreign/foreign-runtime";
 
 /**
  * Components a plugin offers other code by id, through app.registerComponent.
@@ -45,10 +46,21 @@ function subscribe(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
+export function getPluginComponent(id: string): AnyComponent | undefined {
+  return components.get(id);
+}
+
 /** The component registered under an id, re-rendering when that changes. */
 export function usePluginComponent(id: string): AnyComponent | undefined {
   useSyncExternalStore(subscribe, () => version);
   return components.get(id);
+}
+
+/** A single plugin page: its own component, else the app's placeholder. */
+function useOwnOrForeignComponent(id: string): AnyComponent | undefined {
+  const own = usePluginComponent(id);
+  const foreign = getForeignRuntime()!.useComponent(id);
+  return own ?? foreign;
 }
 
 /**
@@ -64,7 +76,14 @@ export function PluginComponent({
   fallback?: ReactNode;
   [prop: string]: unknown;
 }): ReactNode {
-  const Component = usePluginComponent(id);
+  // Inside a plugin frame another plugin's component is a placeholder.
+  const runtime = getForeignRuntime();
+  const useSource = runtime
+    ? runtime.withOwn
+      ? useOwnOrForeignComponent
+      : runtime.useComponent
+    : usePluginComponent;
+  const Component = useSource(id);
   if (!Component) return fallback as ReactNode;
   return createElement(Component, props);
 }

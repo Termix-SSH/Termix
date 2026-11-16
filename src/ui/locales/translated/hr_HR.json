@@ -219,6 +219,10 @@
     "securityIntro": "Dodajte ključ za prijavu ili aplikaciju za provjeru autentičnosti svom računu. To možete učiniti i kasnije u Postavkama, pod Sigurnošću.",
     "pluginsDocsLink": "Pročitajte o svakom od njih"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix i dalje radi",
+    "noticeBody": "Zatvaranje prozora ostavlja Termix pokrenutim u traci sustava. Da ga zatvorite, otvorite izbornik ikone u traci sustava i odaberite Quit. Ovo možete isključiti u postavkama."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automatski",
     "modePrompt": "Pitaj prvo",

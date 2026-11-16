@@ -1,0 +1,7 @@
+{
+  "about": "Limits for the Budgets workflow with every plugin on. Frames, heap and time are the warm load after login; backend memory is the server at rest before the browser logs in. Set from the 2026-11-15 run (22 frames, 130 to 220 MB heap, 2 s, 2295 MB) plus headroom for runner noise; lower them when a change makes things cheaper.",
+  "framesAfterLogin": 26,
+  "jsHeapMb": 280,
+  "backendRssMb": 2800,
+  "timeToDashboardMs": 4000
+}

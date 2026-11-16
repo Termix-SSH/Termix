@@ -2,33 +2,61 @@ const {
   app,
   BrowserWindow,
   WebContentsView,
+  utilityProcess,
+  MessageChannelMain,
   shell,
   ipcMain,
   dialog,
   Menu,
   session,
+  protocol,
   safeStorage,
   Tray,
   clipboard,
   nativeImage,
+  Notification,
 } = require("electron");
 const path = require("path");
 const { getUnpackedAppRoot } = require("./backend-paths.cjs");
 const { classifyBackendFailure } = require("./backend-failure.cjs");
+const {
+  killProcessTree,
+  wrapUtilityProcess,
+  stopBackendProcess,
+} = require("./backend-process.cjs");
 const fs = require("fs");
 const http = require("http");
 const net = require("net");
 const tls = require("tls");
 const zlib = require("zlib");
 const crypto = require("crypto");
-const { URL, pathToFileURL } = require("url");
-const { fork } = require("child_process");
+const { isLocalBackendUrl } = require("./local-backend.cjs");
+
+// Proves a request to the local backend comes from this app, not another
+// program on the machine. New every launch, never written to disk.
+const LAUNCH_SECRET = crypto.randomBytes(32).toString("hex");
+const { URL } = require("url");
+const appProtocol = require("./app-protocol.cjs");
+const { createIpcGuard } = require("./ipc-guard.cjs");
+const { IPC_ARGS } = require("./ipc-args.cjs");
+const {
+  REVOCATIONS_URL,
+  createReleaseVerifier,
+  sigstoreBundleVerifier,
+} = require("./update-verify.cjs");
+const { migrateFileStorage } = require("./storage-migrate.cjs");
+const { createPluginSandboxHost } = require("./plugin-sandbox.cjs");
+const { checkRuntime } = require("./plugin-runtime.cjs");
+const { shouldRelax, relaxFrameHeaders } = require("./frame-headers.cjs");
+const { openInEditor } = require("./open-in-editor.cjs");
+const pluginNodePin = require("./plugin-node.json");
 const linkedServer = require("./linked-server.cjs");
 const desktopSettings = require("./desktop-settings.cjs");
 const autoUpdates = require("./auto-updater.cjs");
 const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
-const { quitApp } = require("./app-quit.cjs");
+const { quitApp, closeAction } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
+const { forcedScaleFactor } = require("./linux-scale.cjs");
 // Saved by the file manager after the user picks an editor in a file dialog.
 const EXTERNAL_EDITOR_SETTING = "fileManager.externalEditorPath";
 
@@ -309,7 +337,12 @@ function rememberElectronAuthCookieFromHeader(url, header) {
   const origin = getCookieOrigin(url);
   if (!origin) return;
 
-  const cookie = parseSetCookieHeader(header);
+  const parsed = parseSetCookieHeader(header);
+  // Over HTTPS the server names it __Host-jwt; it reads either name.
+  const cookie =
+    parsed && parsed.name === "__Host-jwt"
+      ? { ...parsed, name: "jwt" }
+      : parsed;
   if (!cookie || cookie.name !== "jwt") return;
 
   const key = getElectronAuthCookieKey(cookie.name, origin);
@@ -473,10 +506,10 @@ if (process.platform === "linux") {
 
   app.commandLine.appendSwitch("--enable-features=VaapiVideoDecoder");
 
-  // Fix click-coordinate misalignment with fractional display scaling on KDE/Wayland.
-  // Chromium's hit-testing uses unscaled coords while the compositor scales visually,
-  // so forcing scale factor 1 keeps them in sync. See: https://github.com/brave/brave-browser/issues/50028
-  app.commandLine.appendSwitch("--force-device-scale-factor", "1");
+  const scaleFactor = forcedScaleFactor(process.env);
+  if (scaleFactor) {
+    app.commandLine.appendSwitch("--force-device-scale-factor", scaleFactor);
+  }
 
   const passwordStore = selectLinuxPasswordStore(app.commandLine, process.env);
   if (passwordStore) {
@@ -500,7 +533,13 @@ if (isInsecureModeEnabled()) {
 }
 app.commandLine.appendSwitch("--enable-features=NetworkService");
 
+// Before ready: the UI is served from app://termix, not file://.
+appProtocol.registerAppScheme(protocol);
+
 let mainWindow = null;
+// Hidden windows open and close while saved settings move over, which must
+// not count as the user closing the app.
+let movingStorage = false;
 const { createIsolatedWindows } = require("./isolated-window.cjs");
 const { createEmbeddedViews } = require("./embedded-view.cjs");
 const isolatedWindows = createIsolatedWindows({
@@ -515,23 +554,37 @@ const embeddedViews = createEmbeddedViews({
   getMainWindow: () => mainWindow,
 });
 
-// Only the app's own page may place native views, never a frame inside it.
-function fromMainFrame(event) {
-  return !!mainWindow && event.senderFrame === mainWindow.webContents.mainFrame;
+// Only the app's own page, in the main window's top frame, may call main.
+const DEV_APP_ORIGIN = "http://localhost:5173";
+function isOwnPageUrl(url) {
+  if (isDev) {
+    try {
+      return new URL(url).origin === DEV_APP_ORIGIN;
+    } catch {
+      return false;
+    }
+  }
+  return appProtocol.isAppUrl(url);
 }
+const ipc = createIpcGuard({
+  ipcMain,
+  getMainWindow: () => mainWindow,
+  isAppUrl: isOwnPageUrl,
+  args: IPC_ARGS,
+  log: logToFile,
+});
 
-ipcMain.handle("embedded-view-open", (event, options) => {
-  if (!fromMainFrame(event)) throw new Error("Not allowed");
-  return embeddedViews.open(options);
+ipc.handle("embedded-view-open", (_event, options) =>
+  embeddedViews.open(options),
+);
+ipc.handle("embedded-view-bounds", (_event, id, bounds) => {
+  embeddedViews.setBounds(id, bounds);
 });
-ipcMain.handle("embedded-view-bounds", (event, id, bounds) => {
-  if (fromMainFrame(event)) embeddedViews.setBounds(String(id), bounds);
+ipc.handle("embedded-view-visible", (_event, id, visible) => {
+  embeddedViews.setVisible(id, visible);
 });
-ipcMain.handle("embedded-view-visible", (event, id, visible) => {
-  if (fromMainFrame(event)) embeddedViews.setVisible(String(id), visible);
-});
-ipcMain.handle("embedded-view-close", (event, id) => {
-  if (fromMainFrame(event)) embeddedViews.destroy(String(id));
+ipc.handle("embedded-view-close", (_event, id) => {
+  embeddedViews.destroy(id);
 });
 
 // Requests from the embedded backend over the fork IPC channel (the other
@@ -539,6 +592,8 @@ ipcMain.handle("embedded-view-close", (event, id) => {
 // ctx.desktop.openIsolatedWindow is the one caller today.
 const BACKEND_REQUEST_HANDLERS = {
   "open-isolated-window": (payload) => isolatedWindows.open(payload),
+  // A plugin's backend lets its frames show one page (ctx.desktop.grantView).
+  "web-view-grant": (payload) => embeddedViews.addGrant(payload),
   // Plugins open OS clients themselves now (desktop:local), so none is wired here.
   "launch-external-client": (payload) => ({
     success: false,
@@ -546,22 +601,50 @@ const BACKEND_REQUEST_HANDLERS = {
   }),
   // Generic shell actions for a plugin's desktop:local file work.
   "shell-trash-item": async (payload) => {
-    await shell.trashItem(String(payload?.path ?? ""));
+    await shell.trashItem(localPath(payload));
     return { success: true };
   },
   "shell-show-item": (payload) => {
-    shell.showItemInFolder(String(payload?.path ?? ""));
+    shell.showItemInFolder(localPath(payload));
     return { success: true };
   },
   "shell-open-path": async (payload) => {
-    const error = await shell.openPath(String(payload?.path ?? ""));
+    const error = await shell.openPath(localPath(payload));
     return error ? { success: false, error } : { success: true };
   },
+  // The editor is only ever the one picked in a file dialog (set-setting).
+  "shell-open-editor": (payload) =>
+    openInEditor(localPath(payload), {
+      editorPath: () => {
+        const value = readSetting(EXTERNAL_EDITOR_SETTING);
+        return typeof value === "string" && value ? value : null;
+      },
+      openPath: (target) => shell.openPath(target),
+    }),
   "sync-proxy-config": (payload) => {
+    if (payload !== null && typeof payload !== "object") {
+      throw new Error("Bad link config");
+    }
     linkedServer.setLinkedServer(payload);
     return { success: true };
   },
 };
+
+// A plain absolute path on this machine, never a URL or a relative path.
+function localPath(payload) {
+  const value = payload?.path;
+  if (
+    typeof value !== "string" ||
+    !value ||
+    value.length > 4096 ||
+    value.includes("\0") ||
+    !path.isAbsolute(value) ||
+    /^[a-z][a-z0-9+.-]+:\/\//i.test(value)
+  ) {
+    throw new Error("Bad path");
+  }
+  return path.normalize(value);
+}
 
 function isDevRunner() {
   return (
@@ -602,6 +685,8 @@ async function handleBackendRequest(msg) {
 }
 
 let backendProcess = null;
+// Starts the embedded backend's plugin processes (see plugin-sandbox.cjs).
+let pluginSandbox = null;
 let backendStartFailed = false;
 // Why the embedded backend died, once it has. Null while it is healthy
 // or still starting. The renderer polls this to tell "still booting"
@@ -674,60 +759,6 @@ function cleanupManagedTempFile(tempId) {
   tempFiles.delete(tempId);
 }
 
-// Origins the renderer has explicitly marked as allowed to present an invalid
-// certificate, for web endpoints whose ignoreCert is set. Session scoped and
-// never persisted.
-//
-// Deliberately NOT wired into isInvalidCertificateAllowedForUrl: that function
-// also governs this process's own outbound TLS via getTlsVerificationOptions,
-// and widening it would grant more privilege than the feature needs.
-//
-// Entries expire rather than living until the app restarts (days, on a
-// desktop app). Main has no host-database access, so it cannot verify a
-// renderer's claim that an origin really is a configured web endpoint -- an
-// unbounded allowance would make that an indefinite window rather than a
-// momentary one. The renderer re-registers before each load, which refreshes
-// the expiry, so a live endpoint keeps working while a stale entry lapses.
-const WEB_ENDPOINT_CERTIFICATE_ALLOWLIST_TTL_MS = 5 * 60 * 1000;
-const webEndpointCertificateAllowlist = new Map();
-
-function isWebEndpointCertificateAllowed(url) {
-  try {
-    const parsed = new URL(url);
-    // The allowance exists solely to suppress a TLS certificate error, so a
-    // non-https origin in the map is meaningless at best.
-    if (parsed.protocol !== "https:") return false;
-
-    const expiresAt = webEndpointCertificateAllowlist.get(parsed.origin);
-    if (expiresAt === undefined) return false;
-    if (Date.now() >= expiresAt) {
-      webEndpointCertificateAllowlist.delete(parsed.origin);
-      return false;
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-ipcMain.handle("allow-invalid-certificate-for-origin", (_event, origin) => {
-  try {
-    // Store the PARSED origin, never the caller's string, so a path or a
-    // wildcard cannot widen the allowance.
-    const parsed = new URL(String(origin));
-    if (parsed.protocol !== "https:") {
-      return { success: false };
-    }
-    webEndpointCertificateAllowlist.set(
-      parsed.origin,
-      Date.now() + WEB_ENDPOINT_CERTIFICATE_ALLOWLIST_TTL_MS,
-    );
-    return { success: true };
-  } catch {
-    return { success: false };
-  }
-});
-
 // Mutual TLS for the linked server: Chromium asks which certificate from the
 // OS store to present. Other origins keep Chromium's default (none).
 const chosenClientCerts = new Map();
@@ -772,18 +803,6 @@ app.on(
       embeddedViews.handleCertificateError(event, _webContents, url, callback)
     )
       return;
-    if (isWebEndpointCertificateAllowed(url)) {
-      event.preventDefault();
-      logToFile("Allowed invalid certificate for configured web endpoint", {
-        url,
-        error,
-        issuer: certificate?.issuerName,
-        subject: certificate?.subjectName,
-      });
-      callback(true);
-      return;
-    }
-
     if (isInvalidCertificateAllowedForUrl(url)) {
       event.preventDefault();
       logToFile("Allowed invalid certificate for configured server", {
@@ -915,7 +934,10 @@ async function clearElectronJwtCookiesAtStartup() {
 
   for (const targetSession of targetSessions) {
     try {
-      const cookies = await targetSession.cookies.get({ name: "jwt" });
+      const cookies = [
+        ...(await targetSession.cookies.get({ name: "jwt" })),
+        ...(await targetSession.cookies.get({ name: "__Host-jwt" })),
+      ];
       await Promise.all(
         cookies.map((cookie) =>
           targetSession.cookies.remove(
@@ -944,7 +966,7 @@ function getBackendPaths() {
       backendCwd: backendDir,
     };
   }
-  // fork() does not go through Electron's asar redirector, use the unpacked path.
+  // The backend process does not read from the asar, use the unpacked path.
   // On macOS multi-arch builds (mergeASARs: false), electron-builder names the ASAR
   // app-arm64.asar / app-x64.asar instead of app.asar, so match all variants.
   const unpackedRoot = getUnpackedAppRoot(appRoot);
@@ -1006,11 +1028,7 @@ function reapOrphanedBackendProcess() {
   logToFile(
     `Found orphaned backend process from a previous session (pid ${recordedPid}), terminating it before starting a new one`,
   );
-  try {
-    process.kill(recordedPid, "SIGKILL");
-  } catch {
-    // already gone
-  }
+  killProcessTree(recordedPid);
   try {
     fs.unlinkSync(pidFilePath);
   } catch {
@@ -1077,30 +1095,64 @@ function startBackendServer() {
     logToFile("  dataDir exists:", fs.existsSync(dataDir));
     logToFile("  backendCwd exists:", fs.existsSync(backendCwd));
 
-    backendProcess = fork(entryPath, [], {
-      cwd:
-        fs.existsSync(backendCwd) && fs.statSync(backendCwd).isDirectory()
-          ? backendCwd
-          : dataDir,
-      env: {
-        ...process.env,
-        DATA_DIR: dataDir,
-        NODE_ENV: "production",
-        ELECTRON_EMBEDDED: "true",
-        PORT: String(backendPort),
-        EMBEDDED_BACKEND_PORT: String(backendPort),
-        ELECTRON_USER_DATA: app.getPath("userData"),
-        VERSION: app.getVersion(),
-      },
-      stdio: ["pipe", "pipe", "pipe", "ipc"],
+    // A utility process runs Node without the runAsNode fuse, so that fuse
+    // stays off and the app binary can never be used as a plain node.
+    backendProcess = wrapUtilityProcess(
+      utilityProcess.fork(entryPath, [], {
+        cwd:
+          fs.existsSync(backendCwd) && fs.statSync(backendCwd).isDirectory()
+            ? backendCwd
+            : dataDir,
+        env: {
+          ...process.env,
+          DATA_DIR: dataDir,
+          NODE_ENV: "production",
+          ELECTRON_EMBEDDED: "true",
+          TERMIX_DESKTOP_LAUNCH_SECRET: LAUNCH_SECRET,
+          PORT: String(backendPort),
+          EMBEDDED_BACKEND_PORT: String(backendPort),
+          ELECTRON_USER_DATA: app.getPath("userData"),
+          VERSION: app.getVersion(),
+          // Plugin processes run on the app's pinned Node, not Electron's.
+          TERMIX_PLUGIN_NODE_MAJOR: String(
+            Number(pluginNodePin.version.split(".")[0]),
+          ),
+        },
+        stdio: "pipe",
+        serviceName: "Termix backend",
+        // A plugin process must not be able to open the backend's inspector.
+        execArgv: ["--disable-sigusr1"],
+      }),
+    );
+
+    pluginSandbox?.stopAll();
+    pluginSandbox = createPluginSandboxHost({
+      MessageChannelMain,
+      backendDir: path.dirname(entryPath),
+      dataRoot: dataDir,
+      mas: process.mas === true,
+      getRuntime: () =>
+        checkRuntime({
+          isPackaged: app.isPackaged,
+          resourcesPath: process.resourcesPath,
+          appRoot,
+          appBundle:
+            process.platform === "darwin" && app.isPackaged
+              ? path.resolve(process.execPath, "..", "..", "..")
+              : null,
+        }),
+      log: logToFile,
     });
 
-    logToFile("Backend process spawned, pid:", backendProcess.pid);
-    try {
-      fs.writeFileSync(getBackendPidFilePath(), String(backendProcess.pid));
-    } catch {
-      // Non-fatal: only means a future crash won't self-heal via reap.
-    }
+    const spawned = backendProcess;
+    spawned.once("spawn", () => {
+      logToFile("Backend process spawned, pid:", spawned.pid);
+      try {
+        fs.writeFileSync(getBackendPidFilePath(), String(spawned.pid));
+      } catch {
+        // Non-fatal: only means a future crash won't self-heal via reap.
+      }
+    });
 
     let resolved = false;
     const readyTimeout = setTimeout(() => {
@@ -1135,6 +1187,7 @@ function startBackendServer() {
     });
 
     backendProcess.on("message", (msg) => {
+      if (pluginSandbox?.handle(msg, spawned)) return;
       if (!resolved && msg?.type === "backend-ready") {
         resolved = true;
         clearTimeout(readyTimeout);
@@ -1146,6 +1199,7 @@ function startBackendServer() {
 
     backendProcess.on("exit", (code, signal) => {
       logToFile(`Backend process exited with code ${code}, signal ${signal}`);
+      pluginSandbox?.stopAll();
       if (!resolved && code !== 0) {
         backendStartFailed = true;
       }
@@ -1168,8 +1222,12 @@ function startBackendServer() {
       }
     });
 
+    // A utility process reports a fatal V8 error here, not an Error.
     backendProcess.on("error", (err) => {
-      logToFile("Failed to start backend process:", err.message);
+      logToFile(
+        "Failed to start backend process:",
+        err?.message || err?.type || String(err),
+      );
       backendFailure = { reason: "crashed", port: null };
       backendProcess = null;
       if (!resolved) {
@@ -1189,31 +1247,25 @@ function clearBackendPidFile() {
   }
 }
 
+let backendStopping = null;
+
+// Resolves once the backend and everything it started are gone.
 function stopBackendServer() {
-  if (!backendProcess) return;
+  if (backendStopping) return backendStopping;
+  const child = backendProcess;
+  if (!child) return Promise.resolve();
 
-  console.log("Stopping embedded backend server...");
+  logToFile("Stopping embedded backend server...");
   backendStopRequested = true;
-
-  try {
-    backendProcess.send({ type: "shutdown" });
-  } catch {
-    // IPC channel may already be closed
-  }
-
-  const forceKillTimeout = setTimeout(() => {
-    if (backendProcess) {
-      console.log("Force killing backend process...");
-      backendProcess.kill("SIGKILL");
-      backendProcess = null;
-    }
-  }, 5000);
-
-  backendProcess.on("exit", () => {
-    clearTimeout(forceKillTimeout);
-    backendProcess = null;
-    clearBackendPidFile();
-  });
+  backendStopping = stopBackendProcess(child, { log: logToFile }).then(
+    (how) => {
+      logToFile(`Embedded backend stopped (${how})`);
+      if (backendProcess === child) backendProcess = null;
+      clearBackendPidFile();
+      backendStopping = null;
+    },
+  );
+  return backendStopping;
 }
 
 // App Sandbox denies the singleton socket bind, which reads as a held lock and
@@ -1340,6 +1392,32 @@ function loadLinuxTrayIcon(nativeImage, publicRoot) {
   return null;
 }
 
+const CLIPBOARD_PERMISSIONS = new Set([
+  "clipboard-read",
+  "clipboard-write",
+  "clipboard-sanitized-write",
+]);
+
+/** A web link the user may open in their browser: http(s), no login in it. */
+function isExternalLinkUrl(value) {
+  try {
+    const url = new URL(value);
+    return (
+      (url.protocol === "http:" || url.protocol === "https:") &&
+      !url.username &&
+      !url.password
+    );
+  } catch {
+    return false;
+  }
+}
+
+// Any web contents not set up by this file gets no webviews and no windows.
+app.on("web-contents-created", (_event, contents) => {
+  contents.on("will-attach-webview", (event) => event.preventDefault());
+  contents.setWindowOpenHandler(() => ({ action: "deny" }));
+});
+
 function createWindow() {
   const appVersion = app.getVersion();
   const electronVersion = process.versions.electron;
@@ -1391,18 +1469,12 @@ function createWindow() {
     show: true,
   });
 
-  mainWindow.webContents.session.setPermissionRequestHandler(
-    (webContents, permission, callback) => {
-      if (
-        permission === "clipboard-read" ||
-        permission === "clipboard-write" ||
-        permission === "clipboard-sanitized-write"
-      ) {
-        callback(true);
-        return;
-      }
-      callback(false);
-    },
+  const ses = mainWindow.webContents.session;
+  ses.setPermissionRequestHandler((_contents, permission, callback) => {
+    callback(CLIPBOARD_PERMISSIONS.has(permission));
+  });
+  ses.setPermissionCheckHandler((_contents, permission) =>
+    CLIPBOARD_PERMISSIONS.has(permission),
   );
 
   if (process.platform !== "darwin") {
@@ -1422,6 +1494,10 @@ function createWindow() {
   mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
     (details, callback) => {
       details.requestHeaders["X-Electron-App"] = "true";
+      // Only the local backend gets the launch secret, never a linked server.
+      if (isLocalBackendUrl(details.url, backendPort)) {
+        details.requestHeaders["X-Termix-Launch"] = LAUNCH_SECRET;
+      }
 
       details.requestHeaders["User-Agent"] = customUserAgent;
 
@@ -1455,8 +1531,7 @@ function createWindow() {
     mainWindow.loadURL("http://localhost:5173");
     mainWindow.webContents.openDevTools();
   } else {
-    const indexPath = path.join(appRoot, "dist", "index.html");
-    mainWindow.loadFile(indexPath).catch((err) => {
+    mainWindow.loadURL(appProtocol.APP_INDEX_URL).catch((err) => {
       console.error("Failed to load file:", err);
     });
   }
@@ -1466,30 +1541,17 @@ function createWindow() {
       const headers = details.responseHeaders;
 
       if (headers) {
-        delete headers["x-frame-options"];
-        delete headers["X-Frame-Options"];
-
-        if (headers["content-security-policy"]) {
-          headers["content-security-policy"] = headers[
-            "content-security-policy"
-          ]
-            .map((value) => value.replace(/frame-ancestors[^;]*/gi, ""))
-            .filter((value) => value.trim().length > 0);
-
-          if (headers["content-security-policy"].length === 0) {
-            delete headers["content-security-policy"];
-          }
-        }
-        if (headers["Content-Security-Policy"]) {
-          headers["Content-Security-Policy"] = headers[
-            "Content-Security-Policy"
-          ]
-            .map((value) => value.replace(/frame-ancestors[^;]*/gi, ""))
-            .filter((value) => value.trim().length > 0);
-
-          if (headers["Content-Security-Policy"].length === 0) {
-            delete headers["Content-Security-Policy"];
-          }
+        if (
+          shouldRelax(details, {
+            dev: isDev,
+            serverOrigins: [
+              `http://127.0.0.1:${backendPort}`,
+              `http://localhost:${backendPort}`,
+              linkedServer.getLinkedServer()?.origin,
+            ].filter(Boolean),
+          })
+        ) {
+          relaxFrameHeaders(headers);
         }
 
         const setCookieHeaderName = getHeaderName(headers, "Set-Cookie");
@@ -1563,19 +1625,20 @@ function createWindow() {
   });
 
   mainWindow.on("close", (event) => {
-    if (!isQuitting && tray && !tray.isDestroyed()) {
-      // Stock GNOME has no tray to bring a hidden window back from, and its
-      // dock Quit only closes windows, so closing quits there.
-      if (
-        process.platform === "linux" &&
-        /gnome/i.test(process.env.XDG_CURRENT_DESKTOP || "")
-      ) {
-        isQuitting = true;
-        app.quit();
-        return;
-      }
+    const action = closeAction({
+      isQuitting,
+      hasTray: !!tray && !tray.isDestroyed(),
+      platform: process.platform,
+      env: process.env,
+      closeToTray: desktopSettings.getDesktopSettings().closeToTray,
+    });
+    if (action === "quit") {
+      isQuitting = true;
+      app.quit();
+    } else if (action === "hide") {
       event.preventDefault();
       mainWindow.hide();
+      showTrayNoticeOnce();
     }
   });
 
@@ -1600,27 +1663,23 @@ function createWindow() {
     mainWindow = null;
   });
 
+  // Links open in the system browser; the app never opens a window of its
+  // own for them.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    try {
-      const parsed = new URL(url);
-      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-        shell.openExternal(url);
-      }
-    } catch {
-      // invalid URL, ignore
-    }
+    if (isExternalLinkUrl(url)) void shell.openExternal(url);
     return { action: "deny" };
   });
 
-  mainWindow.webContents.on("will-navigate", (event, url) => {
-    const allowedUrl = isDev
-      ? url.startsWith("http://localhost:5173/")
-      : url === pathToFileURL(path.join(appRoot, "dist", "index.html")).href;
-    if (!allowedUrl) event.preventDefault();
-  });
+  for (const name of ["will-navigate", "will-redirect"]) {
+    // Frames inside the page (a linked server's login) move on their own.
+    mainWindow.webContents.on(name, (event, url, _inPlace, isMainFrame) => {
+      if ((event.isMainFrame ?? isMainFrame) === false) return;
+      if (!isOwnPageUrl(url)) event.preventDefault();
+    });
+  }
 }
 
-ipcMain.handle("get-app-version", () => {
+ipc.handle("get-app-version", () => {
   return app.getVersion();
 });
 
@@ -1633,7 +1692,7 @@ function windowFor(event) {
   return null;
 }
 
-ipcMain.handle("get-platform", () => {
+ipc.handle("get-platform", () => {
   return process.platform;
 });
 
@@ -1644,13 +1703,13 @@ function titleBarVisible(win) {
   return !!win && win === mainWindow && !win.isFullScreen();
 }
 
-ipcMain.handle("get-title-bar-visible", (event) => {
+ipc.handle("get-title-bar-visible", (event) => {
   return titleBarVisible(windowFor(event));
 });
 
 // The renderer sends the colors of the active theme so the window controls
 // the system draws (Windows and Linux) match the app.
-ipcMain.handle("set-title-bar-overlay", (event, colors) => {
+ipc.handle("set-title-bar-overlay", (event, colors) => {
   const win = windowFor(event);
   if (!win || process.platform === "darwin") return;
   const options = {};
@@ -1668,7 +1727,7 @@ ipcMain.handle("set-title-bar-overlay", (event, colors) => {
   }
 });
 
-ipcMain.handle("get-embedded-server-status", () => {
+ipc.handle("get-embedded-server-status", () => {
   return {
     running:
       backendProcess !== null && !backendProcess.killed && !backendStartFailed,
@@ -1681,104 +1740,122 @@ ipcMain.handle("get-embedded-server-status", () => {
 });
 
 // External login through the system browser (RFC 8252)
-ipcMain.handle(
-  "external-browser-login",
-  async (_event, authUrl, callbackPort) => {
-    if (!isExternalLoginUrl(authUrl)) {
-      return { success: false, error: "Invalid authentication URL" };
-    }
-    if (!isCallbackPort(callbackPort)) {
-      return { success: false, error: "Invalid callback port" };
-    }
-    const http = require("http");
+ipc.handle("external-browser-login", async (_event, authUrl, callbackPort) => {
+  if (!isExternalLoginUrl(authUrl)) {
+    return { success: false, error: "Invalid authentication URL" };
+  }
+  if (!isCallbackPort(callbackPort)) {
+    return { success: false, error: "Invalid callback port" };
+  }
+  const http = require("http");
 
-    return new Promise((resolve) => {
-      let timeout;
-      let settled = false;
-      const server = http.createServer((req, res) => {
-        const url = new URL(req.url || "/", `http://localhost:${callbackPort}`);
-        if (url.pathname === "/oidc-callback") {
-          const success = url.searchParams.get("success");
-          const error = url.searchParams.get("error");
-          const token = url.searchParams.get("token");
-          const secondFactor = url.searchParams.get("second_factor") === "1";
+  return new Promise((resolve) => {
+    let timeout;
+    let settled = false;
+    const server = http.createServer((req, res) => {
+      const url = new URL(req.url || "/", `http://localhost:${callbackPort}`);
+      if (url.pathname === "/oidc-callback") {
+        const success = url.searchParams.get("success");
+        const error = url.searchParams.get("error");
+        const token = url.searchParams.get("token");
+        const secondFactor = url.searchParams.get("second_factor") === "1";
 
-          res.writeHead(200, { "Content-Type": "text/html" });
-          res.end(
-            `<html><body><h2>${success === "true" || secondFactor ? "Authentication successful!" : "Authentication failed."}</h2><p>You can close this tab and return to Termix.</p><script>window.close()</script></body></html>`,
-          );
+        res.writeHead(200, { "Content-Type": "text/html" });
+        res.end(
+          `<html><body><h2>${success === "true" || secondFactor ? "Authentication successful!" : "Authentication failed."}</h2><p>You can close this tab and return to Termix.</p><script>window.close()</script></body></html>`,
+        );
 
-          if (secondFactor) {
-            finish({
-              success: false,
-              secondFactor: true,
-              tempToken: url.searchParams.get("temp_token"),
-              factors: url.searchParams.get("second_factors"),
-            });
-          } else if (success === "true") {
-            finish({ success: true, token });
-          } else {
-            finish({
-              success: false,
-              error: error || "Authentication failed",
-            });
-          }
-          return;
+        if (secondFactor) {
+          finish({
+            success: false,
+            secondFactor: true,
+            tempToken: url.searchParams.get("temp_token"),
+            factors: url.searchParams.get("second_factors"),
+          });
+        } else if (success === "true") {
+          finish({ success: true, token });
+        } else {
+          finish({
+            success: false,
+            error: error || "Authentication failed",
+          });
         }
+        return;
+      }
 
-        res.writeHead(404, { "Content-Type": "text/plain" });
-        res.end("Not found");
-      });
-
-      const finish = (result) => {
-        if (settled) return;
-        settled = true;
-        if (timeout) clearTimeout(timeout);
-        try {
-          server.close();
-        } catch {
-          // Server may not have started yet.
-        }
-        resolve(result);
-      };
-
-      const fail = (error) => {
-        finish({
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      };
-
-      server.once("error", fail);
-
-      server.listen(callbackPort, "localhost", async () => {
-        try {
-          await shell.openExternal(authUrl);
-        } catch (error) {
-          fail(error);
-        }
-      });
-
-      // Timeout after 5 minutes
-      timeout = setTimeout(
-        () => {
-          fail(new Error("External login timed out"));
-        },
-        5 * 60 * 1000,
-      );
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("Not found");
     });
-  },
-);
+
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
+      try {
+        server.close();
+      } catch {
+        // Server may not have started yet.
+      }
+      resolve(result);
+    };
+
+    const fail = (error) => {
+      finish({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    };
+
+    server.once("error", fail);
+
+    server.listen(callbackPort, "localhost", async () => {
+      try {
+        await shell.openExternal(authUrl);
+      } catch (error) {
+        fail(error);
+      }
+    });
+
+    // Timeout after 5 minutes
+    timeout = setTimeout(
+      () => {
+        fail(new Error("External login timed out"));
+      },
+      5 * 60 * 1000,
+    );
+  });
+});
 
 // Desktop-only settings, such as whether hosts connect from this device or
 // through the linked server by default.
-ipcMain.handle("get-desktop-settings", () => {
+ipc.handle("get-desktop-settings", () => {
   return desktopSettings.getDesktopSettings();
 });
 
-ipcMain.handle("save-desktop-settings", (_event, settings) => {
-  return desktopSettings.saveDesktopSettings(settings);
+ipc.handle("save-desktop-settings", (_event, settings) => {
+  return desktopSettings.saveDesktopSettings(
+    desktopSettings.rendererSettings(settings),
+  );
 });
+
+// Text for the first close to tray notice, in the user's language. The main
+// process has no translations of its own.
+let trayNoticeText = null;
+
+ipc.on("set-tray-notice-text", (_event, text) => {
+  trayNoticeText = text;
+});
+
+function showTrayNoticeOnce() {
+  if (!trayNoticeText || !Notification.isSupported()) return;
+  if (desktopSettings.getDesktopSettings().trayNoticeShown) return;
+  try {
+    new Notification({ ...trayNoticeText, silent: true }).show();
+    desktopSettings.saveDesktopSettings({ trayNoticeShown: true });
+  } catch (error) {
+    logToFile("Failed to show the tray notice:", error.message);
+  }
+}
 
 let appUpdater = null;
 
@@ -1823,25 +1900,54 @@ function startAppUpdater() {
     beforeInstall: () => {
       isQuitting = true;
     },
+    verifier: createReleaseVerifier({
+      fetchAsset: async (tag, name) => {
+        const { net } = require("electron");
+        const response = await net.fetch(
+          `${autoUpdates.DOWNLOAD_BASE}${encodeURIComponent(tag)}/${encodeURIComponent(name)}`,
+        );
+        if (response.status === 404) return null;
+        if (!response.ok) {
+          throw new Error(`${name} returned ${response.status}`);
+        }
+        return Buffer.from(await response.arrayBuffer());
+      },
+      verifyBundle: sigstoreBundleVerifier({
+        cachePath: path.join(app.getPath("userData"), "sigstore-tuf"),
+      }),
+      fetchRevocations: async () => {
+        const { net } = require("electron");
+        const response = await net.fetch(REVOCATIONS_URL);
+        if (!response.ok) {
+          throw new Error(`revocation list returned ${response.status}`);
+        }
+        const text = await response.text();
+        if (text.length > 1024 * 1024)
+          throw new Error("revocation list too big");
+        return JSON.parse(text);
+      },
+      fs,
+      log: logToFile,
+    }),
+    removeFile: (file) => {
+      if (typeof file === "string" && file) fs.rmSync(file, { force: true });
+    },
   });
   appUpdater.start();
 }
 
-ipcMain.handle(
-  "desktop-update-get-state",
-  () => appUpdater?.getState() ?? null,
-);
-ipcMain.handle("desktop-update-check", () => appUpdater?.check() ?? null);
-ipcMain.handle("desktop-update-download", () => appUpdater?.download() ?? null);
-ipcMain.handle("desktop-update-install", () => appUpdater?.install() ?? false);
-ipcMain.handle(
+ipc.handle("desktop-update-get-state", () => appUpdater?.getState() ?? null);
+ipc.handle("desktop-update-check", () => appUpdater?.check() ?? null);
+ipc.handle("desktop-update-download", () => appUpdater?.download() ?? null);
+ipc.handle("desktop-update-install", () => appUpdater?.install() ?? false);
+ipc.handle(
   "desktop-update-set-mode",
   (_event, mode) => appUpdater?.setMode(mode) ?? null,
 );
 
 // The server an older version of the app was pointed at, offered again when
 // linking so upgraded installs do not have to look it up.
-ipcMain.handle("get-previous-server-url", () => {
+ipc.handle("get-previous-server-url", () => {
   return { serverUrl: desktopSettings.getPreviousServerUrl() };
 });
 
@@ -1852,7 +1958,7 @@ function readSetting(key) {
   return settings[key] !== undefined ? settings[key] : null;
 }
 
-ipcMain.handle("get-setting", (event, key) => {
+ipc.handle("get-setting", (event, key) => {
   try {
     return readSetting(key);
   } catch (error) {
@@ -1861,10 +1967,7 @@ ipcMain.handle("get-setting", (event, key) => {
   }
 });
 
-ipcMain.handle("set-setting", (event, key, value) => {
-  if (typeof key !== "string") {
-    return { success: false, error: "Invalid setting key" };
-  }
+ipc.handle("set-setting", (_event, key, value) => {
   if (
     key === EXTERNAL_EDITOR_SETTING &&
     value &&
@@ -1895,7 +1998,7 @@ ipcMain.handle("set-setting", (event, key, value) => {
   }
 });
 
-ipcMain.handle("clear-session-cookies", async () => {
+ipc.handle("clear-session-cookies", async () => {
   try {
     clearPersistedElectronAuthCookies();
     const ses = mainWindow?.webContents?.session;
@@ -1910,24 +2013,24 @@ ipcMain.handle("clear-session-cookies", async () => {
   }
 });
 
-ipcMain.handle("clipboard-write-text", (_event, text) => {
-  clipboard.writeText(typeof text === "string" ? text : String(text ?? ""));
+ipc.handle("clipboard-write-text", (_event, text) => {
+  clipboard.writeText(text);
   return true;
 });
 
-ipcMain.handle("clipboard-read-text", () => clipboard.readText());
+ipc.handle("clipboard-read-text", () => clipboard.readText());
 
-ipcMain.handle("show-save-dialog", async (_event, options) => {
-  return dialog.showSaveDialog(mainWindow, options || {});
+ipc.handle("show-save-dialog", async (_event, options) => {
+  return dialog.showSaveDialog(mainWindow, options);
 });
 
-ipcMain.handle("show-open-dialog", async (_event, options) => {
-  const result = await dialog.showOpenDialog(mainWindow, options || {});
+ipc.handle("show-open-dialog", async (_event, options) => {
+  const result = await dialog.showOpenDialog(mainWindow, options);
   for (const filePath of result.filePaths) dialogChosenPaths.add(filePath);
   return result;
 });
 
-ipcMain.handle("create-temp-file", async (_event, fileData) => {
+ipc.handle("create-temp-file", async (_event, fileData) => {
   try {
     const result = createManagedTempFile(
       fileData?.fileName,
@@ -1940,7 +2043,7 @@ ipcMain.handle("create-temp-file", async (_event, fileData) => {
   }
 });
 
-ipcMain.handle("create-temp-folder", async (_event, folderData) => {
+ipc.handle("create-temp-folder", async (_event, folderData) => {
   try {
     const tempId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const tempDir = fs.mkdtempSync(path.join(getTempRoot(), `${tempId}-`));
@@ -1972,7 +2075,7 @@ ipcMain.handle("create-temp-folder", async (_event, folderData) => {
   }
 });
 
-ipcMain.handle("start-drag-to-desktop", (event, dragData) => {
+ipc.handle("start-drag-to-desktop", (event, dragData) => {
   try {
     const temp = tempFiles.get(dragData?.tempId);
     if (!temp) return { success: false, error: "Temporary file not found" };
@@ -1988,7 +2091,7 @@ ipcMain.handle("start-drag-to-desktop", (event, dragData) => {
 });
 
 // Must run synchronously inside the renderer's dragstart, files must exist.
-ipcMain.on("start-drag-files", (event, tempIds) => {
+ipc.on("start-drag-files", (event, tempIds) => {
   try {
     const files = (Array.isArray(tempIds) ? tempIds : [])
       .map((id) => tempFiles.get(id)?.path)
@@ -2004,7 +2107,7 @@ ipcMain.on("start-drag-files", (event, tempIds) => {
   }
 });
 
-ipcMain.handle("cleanup-temp-file", (_event, tempId) => {
+ipc.handle("cleanup-temp-file", (_event, tempId) => {
   try {
     cleanupManagedTempFile(tempId);
     return { success: true };
@@ -2130,6 +2233,37 @@ app.whenReady().then(async () => {
     }
   }
 
+  if (!isDev) {
+    appProtocol.serveApp(
+      session.fromPartition(termixSessionPartition),
+      path.join(appRoot, "dist"),
+    );
+    movingStorage = true;
+    try {
+      await migrateFileStorage({
+        BrowserWindow,
+        partition: termixSessionPartition,
+        markerPath: path.join(app.getPath("userData"), "app-origin.json"),
+        // Where Chromium keeps localStorage of the persist:termix partition.
+        storageDir: path.join(
+          app.getPath("userData"),
+          "Partitions",
+          "termix",
+          "Local Storage",
+          "leveldb",
+        ),
+        appBlankUrl: appProtocol.APP_BLANK_URL,
+        fs,
+        path,
+        log: logToFile,
+      });
+    } catch (error) {
+      logToFile("Could not move saved settings:", error?.message || error);
+    } finally {
+      movingStorage = false;
+    }
+  }
+
   createTray();
   createWindow();
   startAppUpdater();
@@ -2138,7 +2272,12 @@ app.whenReady().then(async () => {
 });
 
 app.on("window-all-closed", () => {
-  if (!tray || tray.isDestroyed()) {
+  if (movingStorage) return;
+  if (
+    !tray ||
+    tray.isDestroyed() ||
+    desktopSettings.getDesktopSettings().closeToTray === false
+  ) {
     app.quit();
   }
 });
@@ -2156,12 +2295,21 @@ app.on("before-quit", () => {
   isQuitting = true;
 });
 
-app.on("will-quit", () => {
-  console.log("App will quit...");
+let backendStoppedForQuit = false;
+
+// The app waits for the backend to exit before it goes, or the backend and
+// its plugins keep their ports after the window is gone.
+app.on("will-quit", (event) => {
   for (const tempId of tempFiles.keys()) {
     cleanupManagedTempFile(tempId);
   }
-  stopBackendServer();
+  if (backendStoppedForQuit || !backendProcess) return;
+  event.preventDefault();
+  if (backendStopping) return;
+  void stopBackendServer().finally(() => {
+    backendStoppedForQuit = true;
+    app.quit();
+  });
 });
 
 process.on("uncaughtException", (error) => {

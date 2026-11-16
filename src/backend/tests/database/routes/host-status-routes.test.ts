@@ -54,7 +54,11 @@ async function start(isAdmin = true) {
   };
   const requireAdmin: RequestHandler = (_req, res, next) =>
     isAdmin ? next() : void res.status(403).json({ error: "Admin only" });
-  registerHostStatusRoutes(router, { authenticateJWT, requireAdmin });
+  registerHostStatusRoutes(router, {
+    authenticateJWT,
+    requireViewPermission: (_req, _res, next) => next(),
+    requireAdmin,
+  });
   const app = express();
   app.use(express.json());
   app.use("/host", router);

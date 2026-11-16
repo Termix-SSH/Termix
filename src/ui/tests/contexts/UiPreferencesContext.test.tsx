@@ -52,12 +52,10 @@ describe("useAreaPreferences", () => {
       wrapper,
     });
 
-    await waitFor(() =>
-      expect(result.current.trayTrigger).toBe(
-        PRESETS.simple.hostList.trayTrigger,
-      ),
+    await waitFor(() => expect(result.current.showResourceBars).toBe(false));
+    expect(result.current.trayTrigger).toBe(
+      PRESETS.simple.hostList.trayTrigger,
     );
-    expect(result.current.showResourceBars).toBe(false);
   });
 
   it("layers overrides over the preset", async () => {

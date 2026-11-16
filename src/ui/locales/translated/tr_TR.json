@@ -219,6 +219,10 @@
     "securityIntro": "Hesabınıza bir geçit anahtarı veya doğrulayıcı uygulama ekleyin. Bunu daha sonra Ayarlar'da Güvenlik altında da yapabilirsiniz.",
     "pluginsDocsLink": "Her biri hakkında bilgi edinin"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix hala çalışıyor",
+    "noticeBody": "Pencereyi kapatmak, Termix'in tepside çalışmaya devam etmesini sağlar. Çıkmak için tepsideki simge menüsünü açın ve Çıkış'ı seçin. Bu özelliği Ayarlar'dan kapatabilirsiniz."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Otomatik",
     "modePrompt": "Önce sor",

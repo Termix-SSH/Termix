@@ -15,7 +15,10 @@ const starter = readFileSync(
 );
 const announceReady = starter.slice(
   starter.indexOf('systemLogger.success("Termix backend started successfully"'),
-  starter.indexOf("const gracefulShutdown"),
+  starter.lastIndexOf(
+    "if (process.env.TERMIX_DEV_RELOAD",
+    starter.indexOf("const { listenForDevReloads }"),
+  ),
 );
 
 const main = readFileSync(
@@ -34,6 +37,7 @@ function start() {
     pid: 123,
   });
   const handleBackendRequest = vi.fn();
+  const forked = vi.fn(() => child);
   const context = {
     reapOrphanedBackendProcess: vi.fn(),
     getBackendPaths: () => ({ entryPath: "/backend.js", backendCwd: "/app" }),
@@ -47,7 +51,14 @@ function start() {
       statSync: () => ({ isDirectory: () => true }),
       writeFileSync: vi.fn(),
     },
-    fork: () => child,
+    utilityProcess: { fork: forked },
+    wrapUtilityProcess: (proc: unknown) => proc,
+    pluginSandbox: null,
+    createPluginSandboxHost: () => ({ handle: () => false, stopAll: vi.fn() }),
+    MessageChannelMain: class {},
+    checkRuntime: vi.fn(),
+    pluginNodePin: { version: "26.13.1" },
+    path: { dirname: (p: string) => p.slice(0, p.lastIndexOf("/")) || "/" },
     app: {
       isPackaged: true,
       getVersion: () => "2.9.0",
@@ -58,6 +69,7 @@ function start() {
     appRoot: "/app",
     BACKEND_STDERR_TAIL_LIMIT: 4096,
     backendPort: 30001,
+    LAUNCH_SECRET: "launch-secret",
     handleBackendRequest,
     setTimeout,
     clearTimeout,
@@ -68,12 +80,20 @@ function start() {
   ) as Promise<boolean>;
   const settled = vi.fn();
   void ready.then(settled);
-  return { child, ready, settled, handleBackendRequest };
+  return { child, ready, settled, handleBackendRequest, forked };
 }
 
 afterEach(() => vi.useRealTimers());
 
 describe("embedded backend readiness", () => {
+  it("hands the backend this launch's secret", () => {
+    const { forked } = start();
+    const options = (forked.mock.calls[0] as unknown[])[2] as {
+      env: Record<string, string>;
+    };
+    expect(options.env.TERMIX_DESKTOP_LAUNCH_SECRET).toBe("launch-secret");
+  });
+
   it("starts immediately on IPC readiness without any success log", async () => {
     vi.useFakeTimers();
     const { child, settled } = start();
@@ -131,7 +151,8 @@ describe("backend readiness announcement", () => {
         setGlobalLogLevel(level);
         runInNewContext(announceReady, {
           systemLogger,
-          process: { env: { ELECTRON_EMBEDDED: "true" }, send },
+          process: { env: { ELECTRON_EMBEDDED: "true" } },
+          sendToParent: send,
           initStartTime: Date.now(),
         });
         expect(log).not.toHaveBeenCalled();
@@ -148,6 +169,7 @@ describe("backend readiness announcement", () => {
       runInNewContext(announceReady, {
         systemLogger: { success: vi.fn() },
         process: { env: {} },
+        sendToParent: () => false,
         initStartTime: Date.now(),
       }),
     ).not.toThrow();

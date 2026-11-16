@@ -219,6 +219,10 @@
     "securityIntro": "Adicione uma passkey ou uma aplicação de autenticação à sua conta. Também pode fazer isto mais tarde em Definições, sob Segurança.",
     "pluginsDocsLink": "Leia sobre cada um"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix está ainda em execução",
+    "noticeBody": "Fechar a janela mantém o Termix em execução na bandeja. Para sair, abra o menu do ícone da bandeja e selecione Sair. Pode desativar esta opção nas Definições."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automático",
     "modePrompt": "Perguntar primeiro",

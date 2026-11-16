@@ -590,3 +590,83 @@ html.fs-xl {
 .h-dvh {
   height: calc(100dvh - var(--termix-titlebar-height, 0px));
 }
+
+/* Plugin frames let a drag that started in the shell pass over them. */
+body.termix-frames-inert iframe[data-plugin-frame] {
+  pointer-events: none;
+}
+
+/*
+ * Sidebar panels built before PanelToolbar stack search over a full width
+ * "New" button. Lay them out like PanelToolbar: search, the panel's buttons
+ * and an icon only add button on one row. Anything else in the toolbar, like
+ * a target picker, keeps its own line.
+ */
+[data-surface="panel"]
+  div.flex-col.border-b:not([data-panel-toolbar]):has(> .relative > input):has(
+    > [data-add-button],
+    > div [data-add-button]
+  ) {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+}
+[data-surface="panel"]
+  div.flex-col.border-b:not([data-panel-toolbar]):has(> .relative > input):has(
+    > [data-add-button],
+    > div [data-add-button]
+  )
+  > .relative {
+  flex: 1 1 0;
+}
+[data-surface="panel"]
+  div.flex-col.border-b:not([data-panel-toolbar]):has(> .relative > input):has(
+    > [data-add-button],
+    > div [data-add-button]
+  )
+  > :not(.relative) {
+  flex: none;
+}
+[data-surface="panel"]
+  div.flex-col.border-b:not([data-panel-toolbar]):has(> .relative > input):has(
+    > [data-add-button],
+    > div [data-add-button]
+  )
+  > :has([data-add-button])
+  ~ :not([data-add-button]) {
+  flex-basis: 100%;
+}
+[data-surface="panel"]
+  div.flex-col.border-b:not([data-panel-toolbar]):has(> .relative > input):has(
+    > [data-add-button],
+    > div [data-add-button]
+  )
+  > [data-add-button],
+[data-surface="panel"]
+  div.flex-col.border-b:not([data-panel-toolbar]):has(> .relative > input):has(
+    > [data-add-button],
+    > div [data-add-button]
+  )
+  > div
+  > [data-add-button] {
+  flex: none !important;
+  width: 2rem;
+  padding: 0;
+}
+[data-surface="panel"]
+  div.flex-col.border-b:not([data-panel-toolbar]):has(> .relative > input):has(
+    > [data-add-button],
+    > div [data-add-button]
+  )
+  > [data-add-button]
+  > span,
+[data-surface="panel"]
+  div.flex-col.border-b:not([data-panel-toolbar]):has(> .relative > input):has(
+    > [data-add-button],
+    > div [data-add-button]
+  )
+  > div
+  > [data-add-button]
+  > span {
+  display: none;
+}

@@ -15,7 +15,7 @@ afterEach(() => {
 });
 
 describe("resolveConnectionOrigin", () => {
-  // Support#1240: these can now originate from the desktop, but only when a
+  // These can now originate from the desktop, but only when a
   // host opts in. Left on Default they stay remote, so an upgrade never moves
   // an existing host onto a local guacd the user has not set up.
   it("resolves to remote with defaultRemote when the host has no override", async () => {

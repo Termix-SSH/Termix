@@ -12,8 +12,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const grants = new Map<string, string[]>();
 const auditEntries: Array<Record<string, unknown>> = [];
 const kvStore = new Map<string, string>();
+const disabledUsers = new Set<string>();
 
 vi.mock("../../database/repositories/factory.js", () => ({
+  createCurrentUserRepository: () => ({
+    findById: async (id: string) => ({
+      id,
+      disabledAt: disabledUsers.has(id) ? "2026-11-16T00:00:00.000Z" : null,
+    }),
+  }),
   createCurrentPluginPermissionGrantRepository: () => ({
     listByPlugin: async (pluginId: string) =>
       (grants.get(pluginId) ?? []).map((capability) => ({
@@ -185,6 +192,18 @@ describe("ctx.asUser", () => {
     await expect(ctx.asUser("", async () => {})).rejects.toThrow(
       /without a user id/,
     );
+  });
+
+  it("refuses to act as a turned off account", async () => {
+    const ctx = context(["users:impersonate"]);
+    disabledUsers.add("gone-user");
+    try {
+      await expect(ctx.asUser("gone-user", async () => {})).rejects.toThrow(
+        /turned off or gone/,
+      );
+    } finally {
+      disabledUsers.delete("gone-user");
+    }
   });
 
   it("refuses without users:impersonate", async () => {

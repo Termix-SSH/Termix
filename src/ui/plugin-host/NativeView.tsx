@@ -1,4 +1,7 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
+import { getForeignRuntime } from "@/components/foreign/foreign-runtime";
+import { usePluginScope } from "./scope";
+import { GrantedWebView } from "./frames/granted-web-view";
 
 interface Bounds {
   x: number;
@@ -7,11 +10,12 @@ interface Bounds {
   height: number;
 }
 
-interface EmbeddedViewApi {
+export interface EmbeddedViewApi {
   open: (options: {
     id: string;
-    url: string;
-    ignoreCert?: boolean;
+    url?: string;
+    grant?: string;
+    pluginId?: string;
     bounds: Bounds;
     visible: boolean;
   }) => Promise<unknown>;
@@ -20,7 +24,7 @@ interface EmbeddedViewApi {
   close: (id: string) => Promise<unknown>;
 }
 
-function embeddedViewApi(): EmbeddedViewApi | null {
+export function embeddedViewApi(): EmbeddedViewApi | null {
   if (typeof window === "undefined") return null;
   const api = (
     window as unknown as { electronAPI?: { embeddedView?: unknown } }
@@ -38,16 +42,20 @@ const OVERLAY = [
 
 // A native view is drawn above the page, so anything the page opens over it
 // has to hide it first.
-function overlayOpen(host: HTMLElement): boolean {
+export function overlayOpen(host: HTMLElement): boolean {
   return Array.from(document.querySelectorAll(OVERLAY)).some(
     (node) => !host.contains(node),
   );
 }
 
 export interface NativeViewProps {
-  url: string;
-  /** Accept an invalid TLS certificate from this URL's origin. */
-  ignoreCert?: boolean;
+  /** A page for a plugin in the shell page. Framed plugins pass `grant`. */
+  url?: string;
+  /**
+   * A page the plugin's backend granted with ctx.desktop.grantView. The shell
+   * draws it: a native view on the desktop, a sandboxed iframe in a browser.
+   */
+  grant?: string;
   /** Hide the view, for example while the tab is not shown. */
   hidden?: boolean;
   /** Shown where the desktop app's native view is not available. */
@@ -60,11 +68,40 @@ export interface NativeViewProps {
  * A page shown in a native view (desktop app only), for sites that do not
  * work in a sandboxed iframe. It fills this element, hides itself when the
  * element is not visible or a dialog or menu is open, and is closed on
- * unmount. In a browser it renders `fallback`.
+ * unmount. With `url` in a browser it renders `fallback`; with `grant` the
+ * shell draws the page in a browser too.
  */
-export function NativeView({
-  url,
-  ignoreCert,
+export function NativeView(props: NativeViewProps) {
+  const pluginId = usePluginScope();
+  const { grant, hidden, className, style } = props;
+  if (grant) {
+    const runtime = getForeignRuntime();
+    const hide: CSSProperties | undefined = hidden
+      ? { ...style, display: "none" }
+      : style;
+    if (runtime) {
+      const Placeholder = runtime.Placeholder;
+      return (
+        <Placeholder
+          target={{ listId: "", itemKey: "", fit: "fill", web: grant }}
+          props={{}}
+          className={className}
+          style={hide}
+        />
+      );
+    }
+    if (!pluginId) return <>{props.fallback ?? null}</>;
+    return (
+      <div className={className} style={hide}>
+        <GrantedWebView pluginId={pluginId} grant={grant} hidden={hidden} />
+      </div>
+    );
+  }
+  return <UrlView {...props} />;
+}
+
+function UrlView({
+  url = "",
   hidden,
   fallback,
   className,
@@ -105,7 +142,7 @@ export function NativeView({
         opened = true;
         lastBounds = JSON.stringify(bounds);
         lastVisible = visible;
-        void view.open({ id, url, ignoreCert, bounds, visible });
+        void view.open({ id, url, bounds, visible });
         return;
       }
       const key = JSON.stringify(bounds);
@@ -147,7 +184,7 @@ export function NativeView({
       if (frame) cancelAnimationFrame(frame);
       void view.close(id);
     };
-  }, [url, ignoreCert]);
+  }, [url]);
 
   useEffect(() => {
     sync.current();

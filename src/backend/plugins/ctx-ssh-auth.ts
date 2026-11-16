@@ -25,6 +25,7 @@ import {
   hasCapability,
   warmPluginGrants,
 } from "./permissions.js";
+import { randomBytes } from "node:crypto";
 import { getActor, getActorSessionId } from "./actor.js";
 import type { DisposableBag } from "./disposables.js";
 import { redactHostSecrets } from "./ctx-hosts.js";
@@ -37,14 +38,22 @@ import {
   registerKeyboardInteractiveInterceptor,
   registerSshAuthProvider,
 } from "../hosts/connect/auth-provider-registry.js";
-import { classifyKeyboardInteractive } from "../hosts/connect/keyboard-interactive.js";
+import {
+  classifyKeyboardInteractive,
+  classifyKeyboardInteractiveNow,
+} from "../hosts/connect/keyboard-interactive.js";
 import { ensureCoreSshAuthProviders } from "../hosts/connect/core-providers.js";
 import {
   getLoginMethod,
   listSecondFactors,
   registerLoginMethod,
   registerSecondFactor,
+  registerWebAuthnCeremony,
 } from "../auth/registry.js";
+import {
+  checkLoginFields,
+  checkSecondFactorPrompt,
+} from "../auth/login-descriptors.js";
 import { provideAuthPolicy } from "../auth/policy.js";
 import { provideSshTransport } from "../hosts/connect/transport-providers.js";
 import type { VerifiedIdentity } from "../auth/types.js";
@@ -55,6 +64,12 @@ import type {
   SshConnectProfile,
   SshConnectPurpose,
 } from "../hosts/connect/types.js";
+import { answeredSync } from "./api1-sync.js";
+
+/** Set by core's plugin process bridge on hooks that answer with Promises. */
+function isRemote(hooks: object): boolean {
+  return (hooks as { remote?: unknown }).remote === true;
+}
 
 type AuditFn = (
   action: string,
@@ -99,6 +114,13 @@ function actingUser(resolvedFor?: string): string {
     "ctx.ssh needs an acting user: call it inside a request or ctx.asUser",
   );
 }
+
+/**
+ * A host core handed out carries this opaque ref, so a copy that crossed a
+ * process boundary (a sandboxed plugin) still maps back to its stored login.
+ */
+export const HOST_REF_FIELD = "hostRef";
+const MAX_HOST_REFS = 10_000;
 
 function describeHost(host: number | PluginSshHost): string {
   return typeof host === "number" ? `host ${host}` : `host ${host.id}`;
@@ -176,16 +198,31 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
     { host: SshConnectHost; userId: string }
   >();
 
+  // The same mapping by a random string, which survives being copied into
+  // and out of a plugin process. Only good for the user it was resolved for.
+  const refs = new Map<string, { host: SshConnectHost; userId: string }>();
+
   const remember = (key: object, host: SshConnectHost, userId: string) => {
     const entry = { host, userId };
     resolvedHosts.set(key, entry);
     const token = Object.freeze({});
     tokens.set(token, entry);
+    const ref = randomBytes(16).toString("base64url");
+    refs.set(ref, entry);
+    while (refs.size > MAX_HOST_REFS) {
+      refs.delete(refs.keys().next().value as string);
+    }
     if (Object.isExtensible(key)) {
       Object.defineProperty(key, tag, {
         value: token,
         enumerable: true,
         configurable: true,
+      });
+      Object.defineProperty(key, HOST_REF_FIELD, {
+        value: ref,
+        enumerable: true,
+        configurable: true,
+        writable: true,
       });
     }
   };
@@ -194,9 +231,13 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
     const known = resolvedHosts.get(host);
     if (known) return known;
     const token = (host as Record<symbol, unknown>)[tag];
-    return token && typeof token === "object"
-      ? tokens.get(token as object)
-      : undefined;
+    if (token && typeof token === "object") return tokens.get(token as object);
+    const ref = (host as Record<string, unknown>)[HOST_REF_FIELD];
+    if (typeof ref !== "string") return undefined;
+    const entry = refs.get(ref);
+    if (!entry) return undefined;
+    const actor = getActor();
+    return !actor || actor === entry.userId ? entry : undefined;
   };
 
   const handOut = (host: SshConnectHost, userId: string): PluginSshHost => {
@@ -466,7 +507,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
       return { client: client as never, jumpClient: null, host, dispose };
     },
 
-    poolKey,
+    poolKey: answeredSync<PluginSsh["poolKey"]>(poolKey),
 
     dropPooled: (pool, hostId) => {
       const keys = [...poolKeys.entries()]
@@ -486,9 +527,15 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
       const userId = actingUser();
       const { resolveHostById, resolveHostBySyncId } =
         await import("../hosts/host-resolver.js");
+      // Not in the SDK types yet; plugins pass it through a cast.
+      const allowMissingLogin =
+        (options as { allowMissingLogin?: unknown } | undefined)
+          ?.allowMissingLogin === true;
       const resolved = options?.syncId
-        ? await resolveHostBySyncId(options.syncId, userId)
-        : await resolveHostById(hostId, userId);
+        ? await resolveHostBySyncId(options.syncId, userId, {
+            allowMissingLogin,
+          })
+        : await resolveHostById(hostId, userId, { allowMissingLogin });
       await audit("ssh_resolve_host", describeHost(hostId), {
         success: !!resolved,
         errorMessage: resolved ? undefined : "Host not found",
@@ -646,26 +693,47 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
       }
     },
 
-    classifyKeyboardInteractive: (round, host) => {
-      ensureCoreSshAuthProviders();
-      return classifyKeyboardInteractive(round, host as SshConnectHost);
-    },
+    classifyKeyboardInteractive: answeredSync<
+      PluginSsh["classifyKeyboardInteractive"]
+    >(
+      (
+        round: Parameters<typeof classifyKeyboardInteractive>[0],
+        host: unknown,
+      ) => {
+        ensureCoreSshAuthProviders();
+        const result = classifyKeyboardInteractive(
+          round,
+          host as SshConnectHost,
+        );
+        if (!(result instanceof Promise)) return result;
+        // API 1 callers read the answer without awaiting it: they get the
+        // answer without plugin processes, awaiting gives the full one.
+        return Object.assign(
+          result,
+          classifyKeyboardInteractiveNow(round, host as SshConnectHost),
+        );
+      },
+    ),
 
     autoResponses: (prompts, password) =>
       prompts.map((p) =>
         /password/i.test(p.prompt) && password ? password : "",
       ),
 
-    requiresSecret: (authType) => {
-      ensureCoreSshAuthProviders();
-      return !!getSshAuthProvider(authType)?.requiresSecret;
-    },
+    requiresSecret: answeredSync<PluginSsh["requiresSecret"]>(
+      (authType: string) => {
+        ensureCoreSshAuthProviders();
+        return !!getSshAuthProvider(authType)?.requiresSecret;
+      },
+    ),
 
-    supportsBackground: (authType) => {
-      ensureCoreSshAuthProviders();
-      const provider = getSshAuthProvider(authType);
-      return !!provider && provider.supportsBackground !== false;
-    },
+    supportsBackground: answeredSync<PluginSsh["supportsBackground"]>(
+      (authType: string) => {
+        ensureCoreSshAuthProviders();
+        const provider = getSshAuthProvider(authType);
+        return !!provider && provider.supportsBackground !== false;
+      },
+    ),
   };
 }
 
@@ -798,6 +866,7 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
           registerKeyboardInteractiveInterceptor({
             id: `${pluginId}:${provider.type}`,
             pluginId,
+            remote: isRemote(provider),
             detect: (round, host) =>
               host.authType === provider.type && grantedNow()
                 ? (detect(round, host as PluginSshHost) as never)
@@ -818,15 +887,25 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
         handler.id,
         "keyboardInteractive",
       );
-      // Synchronous hooks inside ssh2's callback, so they answer from the
-      // grant cache. Deactivate removes the handler.
+      // Asked inside ssh2's callback, so the grant check reads the cache.
+      // A handler in a plugin process answers with Promises. Deactivate
+      // removes the handler.
       warmPluginGrants(pluginId);
       const settingsFor = (host: SshConnectHost): Record<string, unknown> =>
         host.pluginSettings?.[pluginId] ?? {};
+      type Detected = ReturnType<typeof handler.detect>;
+      const named = (detected: Awaited<Detected>) => {
+        if (!detected) return null;
+        if (detected.kind === "browser") {
+          return { ...detected, id: handler.id, label: handler.label };
+        }
+        return detected;
+      };
       ensureCoreSshAuthProviders();
       const dispose = registerKeyboardInteractiveInterceptor({
         id: handler.id,
         pluginId,
+        remote: isRemote(handler),
         detect: (round, host) => {
           if (!grantedNow()) return null;
           const detected = handler.detect(
@@ -834,19 +913,23 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
             host as PluginSshHost,
             settingsFor(host),
           );
-          if (!detected) return null;
-          if (detected.kind === "browser") {
-            return { ...detected, id: handler.id, label: handler.label };
-          }
-          return detected;
+          return (
+            detected instanceof Promise
+              ? detected.then(named)
+              : named(detected as Awaited<Detected>)
+          ) as never;
         },
         autoAnswerPasswords: handler.autoAnswerPasswords
-          ? (host) =>
-              grantedNow() &&
-              handler.autoAnswerPasswords!(
+          ? (host) => {
+              if (!grantedNow()) return false;
+              const answer = handler.autoAnswerPasswords!(
                 host as PluginSshHost,
                 settingsFor(host),
-              ) === true
+              );
+              return answer instanceof Promise
+                ? answer.then((yes) => yes === true)
+                : answer === true;
+            }
           : undefined,
       });
       bag.add(dispose, `keyboard-interactive handler "${handler.id}"`);
@@ -855,10 +938,22 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
 
     registerLoginMethod: (method) => {
       requireDeclared(contributes.loginMethods, method.id, "loginMethods");
+      if (method.kind === "webauthn" && (!method.options || !method.verify)) {
+        throw new Error(
+          `Plugin ${pluginId} login method "${method.id}" needs options and verify`,
+        );
+      }
       {
         const dispose = registerLoginMethod({
           ...method,
           pluginId,
+          fields: checkLoginFields(method.fields),
+          options: method.options
+            ? async (...args) => {
+                await granted();
+                return method.options!(...args);
+              }
+            : undefined,
           start: method.start
             ? async (...args) => {
                 await granted();
@@ -892,6 +987,7 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
         const dispose = registerSecondFactor({
           ...factor,
           pluginId,
+          prompt: checkSecondFactorPrompt(factor.prompt),
           verify: async (userId, body) => {
             await granted();
             return factor.verify(userId, body);
@@ -900,6 +996,38 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
         bag.add(dispose, `second factor "${factor.id}"`);
       }
       record("auth_register_factor", factor.id);
+    },
+
+    registerWebAuthnCeremony: (ceremony) => {
+      if (!declared.includes("auth:provide")) {
+        throw capabilityRefused(pluginId, "auth:provide");
+      }
+      if (
+        typeof ceremony?.id !== "string" ||
+        !/^[a-z][a-z0-9-]{0,63}$/.test(ceremony.id) ||
+        (ceremony.type !== "create" && ceremony.type !== "get") ||
+        typeof ceremony.options !== "function" ||
+        typeof ceremony.finish !== "function"
+      ) {
+        throw new Error(
+          `Plugin ${pluginId} WebAuthn ceremony needs an id, a type and both steps`,
+        );
+      }
+      const dispose = registerWebAuthnCeremony({
+        id: ceremony.id,
+        type: ceremony.type,
+        pluginId,
+        options: async (input) => {
+          await granted();
+          return ceremony.options(input);
+        },
+        finish: async (input) => {
+          await granted();
+          return ceremony.finish(input);
+        },
+      });
+      bag.add(dispose, `WebAuthn ceremony "${ceremony.id}"`);
+      record("auth_register_ceremony", ceremony.id);
     },
 
     recordEnrollment: async (userId, factorId) => {
@@ -1099,10 +1227,11 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
       },
     },
 
-    listSecondFactors: () =>
+    listSecondFactors: answeredSync<PluginAuth["listSecondFactors"]>(() =>
       listSecondFactors().map((factor) => ({
         id: factor.id,
         pluginId: factor.pluginId,
       })),
+    ),
   };
 }

@@ -3,6 +3,10 @@ name: Release
 # Stable: run by hand from a dev-X.Y.Z branch. Beta: run by hand from a dev
 # branch, or let the Tuesday and Friday schedule snapshot the newest dev
 # branch when it moved since the last beta.
+#
+# The release stays a draft until every build has uploaded its files. Then
+# publish checks them against scripts/release-assets.cjs and publishes once.
+# A published release never changes, so a late fix gets a new patch version.
 
 on:
   schedule:
@@ -18,18 +22,17 @@ on:
           - Stable
           - Beta
       mode:
-        description: "Release mode (Overwrite release is stable only)"
+        description: "Release mode"
         required: true
         default: Everything
         type: choice
         options:
           - Everything
-          - Overwrite release
           - Dry run
           - Skip submit
 
-permissions:
-  contents: write
+# Writes go through the Termix CI App, so the job token mostly only reads.
+permissions: {}
 
 concurrency:
   group: release
@@ -38,6 +41,9 @@ concurrency:
 jobs:
   prep:
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
+    permissions:
+      contents: read
     outputs:
       channel: ${{ steps.mode.outputs.channel }}
       mode: ${{ steps.mode.outputs.mode }}
@@ -50,37 +56,40 @@ jobs:
       sha: ${{ steps.beta.outputs.sha }}
       prev_ref: ${{ steps.beta.outputs.prev_ref }}
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix,Mobile
+          permission-contents: read
+
       - name: Resolve channel and mode
         id: mode
+        env:
+          CHANNEL: ${{ inputs.channel || 'Beta' }}
+          MODE: ${{ inputs.mode || 'Everything' }}
         run: |
-          CHANNEL="${{ inputs.channel || 'Beta' }}"
-          MODE="${{ inputs.mode || 'Everything' }}"
           echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"
-          if [ "$CHANNEL" = "Beta" ] && [ "$MODE" = "Overwrite release" ]; then
-            echo "Overwrite release is for stable releases only."
-            exit 1
-          fi
 
-      - name: Guard branch (release modes)
-        if: ${{ github.event_name == 'workflow_dispatch' && steps.mode.outputs.mode != 'Overwrite release' && !startsWith(github.ref, 'refs/heads/dev-') }}
+      # A published release never changes, so a late fix gets a new patch version.
+      - name: Guard branch
+        if: ${{ github.event_name == 'workflow_dispatch' && !startsWith(github.ref, 'refs/heads/dev-') }}
         run: |
-          echo "This mode must be run from a dev branch (got ${{ github.ref }})."
-          exit 1
-
-      - name: Guard branch (overwrite mode)
-        if: ${{ steps.mode.outputs.mode == 'Overwrite release' && github.ref != 'refs/heads/main' }}
-        run: |
-          echo "Overwrite release must be run from main (got ${{ github.ref }})."
+          echo "Releases must be run from a dev branch (got $GITHUB_REF)."
           exit 1
 
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
 
@@ -89,17 +98,15 @@ jobs:
         if: ${{ steps.mode.outputs.channel == 'Stable' }}
         env:
           GH_TOKEN: ${{ github.token }}
+          MODE: ${{ steps.mode.outputs.mode }}
         run: |
-          if [ "${{ steps.mode.outputs.mode }}" = "Overwrite release" ]; then
-            DEV_BRANCH=""
-            VERSION=$(node -p "require('./package.json').version")
-          else
-            DEV_BRANCH="${GITHUB_REF#refs/heads/}"
-            VERSION=$(node scripts/parse-dev-branch.cjs "$DEV_BRANCH")
-          fi
-          echo "dev_branch=$DEV_BRANCH" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "release_tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          DEV_BRANCH="${GITHUB_REF#refs/heads/}"
+          VERSION=$(node scripts/parse-dev-branch.cjs "$DEV_BRANCH")
+          {
+            echo "dev_branch=$DEV_BRANCH"
+            echo "version=$VERSION"
+            echo "release_tag=v$VERSION"
+          } >> "$GITHUB_OUTPUT"
 
           MOBILE_RAW=$(gh release view -R Termix-SSH/Mobile --json tagName -q .tagName)
           MOBILE_VERSION=$(echo "$MOBILE_RAW" | sed -E 's/^release-//; s/-tag$//; s/^v//')
@@ -107,25 +114,31 @@ jobs:
             echo "Failed to resolve the latest Termix-SSH/Mobile release version."
             exit 1
           fi
-          echo "mobile_version=$MOBILE_VERSION" >> "$GITHUB_OUTPUT"
-          echo "mobile_tag=$MOBILE_RAW" >> "$GITHUB_OUTPUT"
+          {
+            echo "mobile_version=$MOBILE_VERSION"
+            echo "mobile_tag=$MOBILE_RAW"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Check CHANGELOG.md has notes for this version
         if: ${{ steps.mode.outputs.channel == 'Stable' }}
+        env:
+          VERSION: ${{ steps.info.outputs.version }}
+          MOBILE_VERSION: ${{ steps.info.outputs.mobile_version }}
+          MOBILE_TAG: ${{ steps.info.outputs.mobile_tag }}
         run: |
           node scripts/generate-release-body.cjs \
-            --version "${{ steps.info.outputs.version }}" \
-            --mobile-version "${{ steps.info.outputs.mobile_version }}" \
-            --mobile-tag "${{ steps.info.outputs.mobile_tag }}" > /dev/null
+            --version "$VERSION" \
+            --mobile-version "$MOBILE_VERSION" \
+            --mobile-tag "$MOBILE_TAG" > /dev/null
 
       - name: Resolve beta version
         id: beta
         if: ${{ steps.mode.outputs.channel == 'Beta' }}
         env:
-          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            REFS=$(gh api "repos/${{ github.repository }}/branches" --paginate -q '.[].name')
+          if [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
+            REFS=$(gh api "repos/$GITHUB_REPOSITORY/branches" --paginate -q '.[].name')
             if ! DEV_BRANCH=$(printf '%s\n' "$REFS" | node scripts/latest-dev-branch.cjs 2>/dev/null); then
               echo "No dev-X.Y.Z branch is open, so no beta today."
               echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -136,30 +149,32 @@ jobs:
           fi
 
           BASE=$(node scripts/parse-dev-branch.cjs "$DEV_BRANCH")
-          SHA=$(gh api "repos/${{ github.repository }}/branches/$DEV_BRANCH" -q .commit.sha)
-          TAGS=$(gh api "repos/${{ github.repository }}/git/matching-refs/tags/v$BASE-beta." -q '.[].ref' | sed 's#^refs/tags/##')
+          SHA=$(gh api "repos/$GITHUB_REPOSITORY/branches/$DEV_BRANCH" -q .commit.sha)
+          TAGS=$(gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/v$BASE-beta." -q '.[].ref' | sed 's#^refs/tags/##')
           LATEST=$(printf '%s\n' "$TAGS" | node scripts/beta-version.cjs "$BASE" --latest)
           VERSION=$(printf '%s\n' "$TAGS" | node scripts/beta-version.cjs "$BASE")
 
           if [ -n "$LATEST" ]; then
-            LATEST_SHA=$(gh api "repos/${{ github.repository }}/commits/$LATEST" -q .sha)
-            if [ "$LATEST_SHA" = "$SHA" ] && [ "${{ github.event_name }}" = "schedule" ]; then
+            LATEST_SHA=$(gh api "repos/$GITHUB_REPOSITORY/commits/$LATEST" -q .sha)
+            if [ "$LATEST_SHA" = "$SHA" ] && [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
               echo "$DEV_BRANCH has not moved since $LATEST, so no beta today."
               echo "skip=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             PREV="$LATEST"
           else
-            PREV=$(gh release view --repo ${{ github.repository }} --json tagName -q .tagName 2>/dev/null || true)
+            PREV=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName 2>/dev/null || true)
           fi
 
           echo "Beta $VERSION from $DEV_BRANCH @ $SHA, changes since ${PREV:-nothing}"
-          echo "skip=false" >> "$GITHUB_OUTPUT"
-          echo "dev_branch=$DEV_BRANCH" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "release_tag=v$VERSION" >> "$GITHUB_OUTPUT"
-          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
-          echo "prev_ref=$PREV" >> "$GITHUB_OUTPUT"
+          {
+            echo "skip=false"
+            echo "dev_branch=$DEV_BRANCH"
+            echo "version=$VERSION"
+            echo "release_tag=v$VERSION"
+            echo "sha=$SHA"
+            echo "prev_ref=$PREV"
+          } >> "$GITHUB_OUTPUT"
 
   # Translates new or changed strings with the Termix LLM server and pins the
   # bundled plugins to their newest registry releases, then commits both to the
@@ -167,20 +182,39 @@ jobs:
   # it warns and the release goes on with what is there.
   translate:
     needs: [prep]
-    if: ${{ needs.prep.outputs.skip != 'true' && needs.prep.outputs.mode != 'Overwrite release' }}
+    if: ${{ needs.prep.outputs.skip != 'true' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.prep.outputs.version }}
+      MODE: ${{ needs.prep.outputs.mode }}
+      DEV_BRANCH: ${{ needs.prep.outputs.dev_branch }}
     outputs:
       sha: ${{ steps.commit.outputs.sha }}
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+
       - name: Checkout dev branch
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.prep.outputs.sha || needs.prep.outputs.dev_branch }}
           fetch-depth: 1
-          token: ${{ secrets.TERMIX_PAT }}
+          token: ${{ steps.app.outputs.token }}
+          # The commit step pushes with it.
+          persist-credentials: true
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
 
@@ -197,7 +231,7 @@ jobs:
 
       # Newest stable plugin release whose engine.termix allows this version.
       - name: Pin bundled plugins
-        run: node scripts/pin-bundled-plugins.cjs --all --core-version "${{ needs.prep.outputs.version }}"
+        run: node scripts/pin-bundled-plugins.cjs --all --core-version "$VERSION"
 
       - name: Commit translations and plugin pins
         id: commit
@@ -205,41 +239,99 @@ jobs:
           git add src/ui/locales docker/bundled-plugins.json
           if git diff --cached --quiet; then
             echo "No translation changes."
-          elif [ "${{ needs.prep.outputs.mode }}" = "Dry run" ]; then
+          elif [ "$MODE" = "Dry run" ]; then
             echo "DRY RUN: would commit these translation and pin changes:"
             git --no-pager diff --cached --stat
           else
             git config user.name "LukeGus"
             git config user.email "bugattiguy527@gmail.com"
             git commit -m "chore: update translations and plugin pins"
-            git push origin HEAD:"${{ needs.prep.outputs.dev_branch }}"
+            git push origin HEAD:"$DEV_BRANCH"
           fi
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-  verify-beta:
-    needs: [prep, translate]
-    if: ${{ needs.prep.outputs.channel == 'Beta' && needs.prep.outputs.skip != 'true' }}
+  # The commit the release ships: the dev branch tip after the jobs above
+  # pushed to it (stable), or the translated beta snapshot.
+  gate-ref:
+    needs: [prep, translate, normalize, sync-main]
+    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && (needs.translate.result == 'success' || needs.translate.result == 'skipped') && (needs.normalize.result == 'success' || needs.normalize.result == 'skipped') && (needs.sync-main.result == 'success' || needs.sync-main.result == 'skipped') }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      contents: read
+    outputs:
+      sha: ${{ steps.ref.outputs.sha }}
+    steps:
+      - name: Commit to release
+        id: ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHANNEL: ${{ needs.prep.outputs.channel }}
+          MODE: ${{ needs.prep.outputs.mode }}
+          DEV_BRANCH: ${{ needs.prep.outputs.dev_branch }}
+          TRANSLATED: ${{ needs.translate.outputs.sha }}
+          SNAPSHOT: ${{ needs.prep.outputs.sha }}
+        run: |
+          sha=""
+          if [ "$CHANNEL" = "Stable" ] && [ "$MODE" != "Dry run" ]; then
+            sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/$DEV_BRANCH" -q .sha)
+          else
+            sha="${TRANSLATED:-$SNAPSHOT}"
+          fi
+          if [ -z "$sha" ]; then
+            sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/$DEV_BRANCH" -q .sha)
+          fi
+          echo "Release gate runs on $sha."
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+  # Refuses the release unless zizmor, osv-scanner, the GHSA regression tests,
+  # the authorization matrix and the CodeQL alert check pass on that commit.
+  security-gate:
+    needs: [prep, gate-ref]
+    if: ${{ always() && needs.gate-ref.result == 'success' }}
+    uses: Termix-SSH/Termix-Registry/.github/workflows/release-gate.yml@main
+    permissions:
+      contents: read
+      security-events: read
+      checks: read
+    with:
+      repo: ${{ github.repository }}
+      sha: ${{ needs.gate-ref.outputs.sha }}
+      branch: ${{ needs.prep.outputs.dev_branch }}
+      kind: core
+      code-scanning: true
+      aliases: >-
+        prebuild-install:@mmomtchev/prebuild-install
+        string-width-cjs:string-width
+        strip-ansi-cjs:strip-ansi
+        wrap-ansi-cjs:wrap-ansi
+
+  verify-beta:
+    needs: [prep, translate, security-gate]
+    if: ${{ always() && needs.prep.outputs.channel == 'Beta' && needs.prep.outputs.skip != 'true' && needs.security-gate.result == 'success' && (needs.translate.result == 'success' || needs.translate.result == 'skipped') }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      contents: read
     steps:
       - name: Checkout beta commit
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.translate.outputs.sha || needs.prep.outputs.sha }}
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm run ci:install
 
       # Bundled plugins are counted as downloads in the plugin store, so a
       # build only fetches them when the pins change.
       - name: Cache bundled plugins
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.cache/termix-bundled-plugins
           key: bundled-plugins-${{ hashFiles('docker/bundled-plugins.json') }}
@@ -262,24 +354,44 @@ jobs:
 
   normalize:
     needs: [prep, translate]
-    if: ${{ needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Overwrite release' }}
+    if: ${{ needs.prep.outputs.channel == 'Stable' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.prep.outputs.version }}
+      MODE: ${{ needs.prep.outputs.mode }}
+      DEV_BRANCH: ${{ needs.prep.outputs.dev_branch }}
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+          permission-workflows: write
+
       - name: Checkout dev branch
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.prep.outputs.dev_branch }}
           fetch-depth: 0
-          token: ${{ secrets.TERMIX_PAT }}
+          token: ${{ steps.app.outputs.token }}
+          # Pushes back to the dev branch.
+          persist-credentials: true
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm run ci:install
 
       # Manifest validation in lint loads the built SDK.
       - name: Build SDK
@@ -295,7 +407,7 @@ jobs:
         run: npm run test
 
       - name: Sync version
-        run: node scripts/sync-version.cjs --version "${{ needs.prep.outputs.version }}"
+        run: node scripts/sync-version.cjs --version "$VERSION"
 
       - name: Commit changes to dev branch
         run: |
@@ -307,27 +419,45 @@ jobs:
             exit 0
           fi
 
-          if [ "${{ needs.prep.outputs.mode }}" = "Dry run" ]; then
-            echo "DRY RUN: would commit and push the following changes to ${{ needs.prep.outputs.dev_branch }}:"
+          if [ "$MODE" = "Dry run" ]; then
+            echo "DRY RUN: would commit and push the following changes to $DEV_BRANCH:"
             git --no-pager diff --stat
             exit 0
           fi
 
           git add -A
-          git commit -m "chore: lint, format, and bump version to ${{ needs.prep.outputs.version }}"
-          git push origin HEAD:"${{ needs.prep.outputs.dev_branch }}"
+          git commit -m "chore: lint, format, and bump version to $VERSION"
+          git push origin HEAD:"$DEV_BRANCH"
 
   sync-main:
     needs: [prep, normalize]
-    if: ${{ needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' && needs.prep.outputs.mode != 'Overwrite release' }}
+    if: ${{ needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
+    permissions:
+      contents: read
+    env:
+      DEV_BRANCH: ${{ needs.prep.outputs.dev_branch }}
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+          permission-workflows: write
+
       - name: Checkout dev branch
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.prep.outputs.dev_branch }}
           fetch-depth: 0
-          token: ${{ secrets.TERMIX_PAT }}
+          token: ${{ steps.app.outputs.token }}
+          # Pushes back to the dev branch.
+          persist-credentials: true
 
       - name: Merge main into dev branch
         run: |
@@ -345,23 +475,46 @@ jobs:
             done
             git commit --no-edit
           fi
-          git push origin HEAD:"${{ needs.prep.outputs.dev_branch }}"
+          git push origin HEAD:"$DEV_BRANCH"
 
   merge-to-main:
-    needs: [prep, translate, normalize, sync-main]
-    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.channel == 'Stable' && (needs.translate.result == 'success' || needs.translate.result == 'skipped') && (needs.normalize.result == 'success' || needs.normalize.result == 'skipped') && (needs.sync-main.result == 'success' || needs.sync-main.result == 'skipped') }}
+    needs: [prep, translate, normalize, sync-main, gate-ref, security-gate]
+    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.channel == 'Stable' && needs.security-gate.result == 'success' && (needs.translate.result == 'success' || needs.translate.result == 'skipped') && (needs.normalize.result == 'success' || needs.normalize.result == 'skipped') && (needs.sync-main.result == 'success' || needs.sync-main.result == 'skipped') }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.prep.outputs.version }}
+      MODE: ${{ needs.prep.outputs.mode }}
+      DEV_BRANCH: ${{ needs.prep.outputs.dev_branch }}
+      MOBILE_VERSION: ${{ needs.prep.outputs.mobile_version }}
+      MOBILE_TAG: ${{ needs.prep.outputs.mobile_tag }}
+      GATED_SHA: ${{ needs.gate-ref.outputs.sha }}
     outputs:
       main_sha: ${{ steps.merge.outputs.main_sha }}
       build_ref: ${{ steps.merge.outputs.build_ref }}
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+          permission-pull-requests: write
+          permission-workflows: write
+
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
 
@@ -369,216 +522,608 @@ jobs:
         id: body
         run: |
           node scripts/generate-release-body.cjs \
-            --version "${{ needs.prep.outputs.version }}" \
-            --mobile-version "${{ needs.prep.outputs.mobile_version }}" \
-            --mobile-tag "${{ needs.prep.outputs.mobile_tag }}" > PR_BODY.md
+            --version "$VERSION" \
+            --mobile-version "$MOBILE_VERSION" \
+            --mobile-tag "$MOBILE_TAG" > PR_BODY.md
 
       - name: Open and squash-merge PR to main
         id: merge
         env:
-          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
-          DEV_BRANCH="${{ needs.prep.outputs.dev_branch }}"
-          TITLE="v${{ needs.prep.outputs.version }}"
+          TITLE="v$VERSION"
 
-          if [ "${{ needs.prep.outputs.mode }}" = "Overwrite release" ]; then
-            echo "OVERWRITE: no merge; building from main as-is."
-            echo "build_ref=main" >> "$GITHUB_OUTPUT"
-            echo "main_sha=$(gh api repos/${{ github.repository }}/commits/main -q .sha)" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if [ "${{ needs.prep.outputs.mode }}" = "Dry run" ]; then
+          if [ "$MODE" = "Dry run" ]; then
             echo "DRY RUN: would open and squash-merge a PR from $DEV_BRANCH into main."
             echo "DRY RUN: downstream jobs will build from $DEV_BRANCH instead of main."
-            echo "build_ref=$DEV_BRANCH" >> "$GITHUB_OUTPUT"
-            echo "main_sha=" >> "$GITHUB_OUTPUT"
+            {
+              echo "build_ref=$DEV_BRANCH"
+              echo "main_sha="
+            } >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          PR_NUMBER=$(gh pr list --repo ${{ github.repository }} --head "$DEV_BRANCH" --base main --state open --json number -q '.[0].number' || true)
+          PR_NUMBER=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$DEV_BRANCH" --base main --state open --json number -q '.[0].number' || true)
           if [ -z "$PR_NUMBER" ]; then
-            PR_NUMBER=$(gh pr create --repo ${{ github.repository }} \
+            PR_NUMBER=$(gh pr create --repo "$GITHUB_REPOSITORY" \
               --base main --head "$DEV_BRANCH" \
               --title "$TITLE" --body-file PR_BODY.md \
               | grep -oE '[0-9]+$')
           fi
 
-          gh pr merge "$PR_NUMBER" --repo ${{ github.repository }} --squash --admin
+          # Only the commit the release gate passed may reach main.
+          gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --admin --match-head-commit "$GATED_SHA"
 
-          STATE=$(gh pr view "$PR_NUMBER" --repo ${{ github.repository }} --json state -q .state)
+          STATE=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json state -q .state)
           if [ "$STATE" != "MERGED" ]; then
             echo "PR #$PR_NUMBER did not merge (state: $STATE)."
             exit 1
           fi
 
-          MAIN_SHA=$(gh api repos/${{ github.repository }}/commits/main -q .sha)
-          echo "main_sha=$MAIN_SHA" >> "$GITHUB_OUTPUT"
-          echo "build_ref=$MAIN_SHA" >> "$GITHUB_OUTPUT"
+          MAIN_SHA=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" -q .sha)
+          {
+            echo "main_sha=$MAIN_SHA"
+            echo "build_ref=$MAIN_SHA"
+          } >> "$GITHUB_OUTPUT"
 
   docker:
-    needs: [prep, translate, verify-beta, merge-to-main]
-    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && (needs.merge-to-main.result == 'success' || needs.verify-beta.result == 'success') }}
+    needs: [prep, translate, security-gate, verify-beta, merge-to-main]
+    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && needs.security-gate.result == 'success' && (needs.merge-to-main.result == 'success' || needs.verify-beta.result == 'success') }}
     uses: ./.github/workflows/docker.yml
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     with:
       version: ${{ needs.prep.outputs.version }}
       build_type: ${{ needs.prep.outputs.channel == 'Beta' && 'Beta' || 'Production' }}
       dry_run: ${{ needs.prep.outputs.mode == 'Dry run' }}
       source_ref: ${{ needs.merge-to-main.outputs.build_ref || needs.translate.outputs.sha || needs.prep.outputs.sha }}
-    secrets: inherit
+    secrets:
+      GHCR_LUKEGUS_TOKEN: ${{ secrets.GHCR_LUKEGUS_TOKEN }}
+      DOCKERHUB_BUGATTIGUY527_TOKEN: ${{ secrets.DOCKERHUB_BUGATTIGUY527_TOKEN }}
+      DOCKERHUB_TERMIXSSH_TOKEN: ${{ secrets.DOCKERHUB_TERMIXSSH_TOKEN }}
 
-  create-release:
-    needs: [prep, merge-to-main, docker]
-    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.docker.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
+  # The release starts as a draft so nobody sees it before every file is up.
+  # Its tag is only made when it is published.
+  create-draft:
+    needs: [prep, translate, security-gate, verify-beta, merge-to-main]
+    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && needs.prep.outputs.mode != 'Dry run' && needs.security-gate.result == 'success' && (needs.merge-to-main.result == 'success' || needs.verify-beta.result == 'success') }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
     permissions:
-      contents: write
+      contents: read
+    env:
+      VERSION: ${{ needs.prep.outputs.version }}
+      TAG: ${{ needs.prep.outputs.release_tag }}
+      CHANNEL: ${{ needs.prep.outputs.channel }}
+      DEV_BRANCH: ${{ needs.prep.outputs.dev_branch }}
+      MOBILE_VERSION: ${{ needs.prep.outputs.mobile_version }}
+      MOBILE_TAG: ${{ needs.prep.outputs.mobile_tag }}
+      PREV_REF: ${{ needs.prep.outputs.prev_ref }}
+      TARGET_SHA: ${{ needs.merge-to-main.outputs.main_sha || needs.translate.outputs.sha || needs.prep.outputs.sha }}
+    outputs:
+      release_id: ${{ steps.draft.outputs.id }}
     steps:
-      - name: Checkout main
-        uses: actions/checkout@v7
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
-          ref: main
-          fetch-depth: 1
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+
+      - name: Checkout release commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
 
-      - name: Clear existing release artifacts (overwrite mode)
-        if: ${{ needs.prep.outputs.mode == 'Overwrite release' }}
-        env:
-          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
+      - name: Generate release notes
         run: |
-          TAG="${{ needs.prep.outputs.release_tag }}"
-          if ! gh release view "$TAG" --repo ${{ github.repository }} >/dev/null 2>&1; then
-            echo "Overwrite release: no existing release $TAG to overwrite."
+          if [ "$CHANNEL" = "Beta" ]; then
+            node scripts/generate-beta-body.cjs \
+              --version "$VERSION" \
+              --branch "$DEV_BRANCH" \
+              --sha "$TARGET_SHA" \
+              --prev "$PREV_REF" > RELEASE_BODY.md
+          else
+            node scripts/generate-release-body.cjs \
+              --version "$VERSION" \
+              --mobile-version "$MOBILE_VERSION" \
+              --mobile-tag "$MOBILE_TAG" > RELEASE_BODY.md
+          fi
+          node scripts/release-assets.cjs notes add RELEASE_BODY.md
+
+      - name: Create the draft release
+        id: draft
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          if [ "$CHANNEL" = "Beta" ]; then
+            TITLE="Termix v${VERSION%-beta.*} Beta ${VERSION##*-beta.}"
+            PRERELEASE=true
+          else
+            TITLE="Termix v$VERSION"
+            PRERELEASE=false
+          fi
+
+          OUT=$(node scripts/release-assets.cjs state --tag "$TAG")
+          STATE=$(printf '%s\n' "$OUT" | sed -n 's/^state=//p')
+          ID=$(printf '%s\n' "$OUT" | sed -n 's/^id=//p')
+          ASSETS=$(printf '%s\n' "$OUT" | sed -n 's/^assets=//p')
+
+          case "$STATE" in
+            published)
+              echo "$TAG is already published and can't change. Cut a new patch version."
+              exit 1
+              ;;
+            draft)
+              if [ "$ASSETS" != "0" ]; then
+                echo "A $TAG draft from an earlier run already has files. Rerun that run's failed jobs, or delete the draft and run again."
+                exit 1
+              fi
+              gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$ID" \
+                -f name="$TITLE" -F body=@RELEASE_BODY.md \
+                -f tag_name="$TAG" -f target_commitish="$TARGET_SHA" \
+                -F prerelease="$PRERELEASE" > /dev/null
+              ;;
+            none)
+              FLAGS=(--draft --title "$TITLE" --notes-file RELEASE_BODY.md --target "$TARGET_SHA")
+              if [ "$PRERELEASE" = "true" ]; then FLAGS+=(--prerelease); fi
+              gh release create "$TAG" --repo "$GITHUB_REPOSITORY" "${FLAGS[@]}" > /dev/null
+              # A new draft can take a few seconds to show up in the list.
+              for _ in 1 2 3 4 5 6 7 8 9 10; do
+                ID=$(node scripts/release-assets.cjs state --tag "$TAG" | sed -n 's/^id=//p')
+                if [ -n "$ID" ]; then break; fi
+                sleep 3
+              done
+              ;;
+            *)
+              echo "Could not read the state of $TAG."
+              exit 1
+              ;;
+          esac
+
+          if [ -z "$ID" ]; then
+            echo "No draft id for $TAG."
             exit 1
           fi
-          echo "Clearing existing assets from $TAG..."
-          gh release view "$TAG" --repo ${{ github.repository }} --json assets -q '.assets[].name' | while read -r ASSET; do
-            [ -n "$ASSET" ] && gh release delete-asset "$TAG" "$ASSET" --repo ${{ github.repository }} --yes || true
-          done
-
-      - name: Generate release body
-        if: ${{ needs.prep.outputs.mode != 'Overwrite release' }}
-        run: |
-          node scripts/generate-release-body.cjs \
-            --version "${{ needs.prep.outputs.version }}" \
-            --mobile-version "${{ needs.prep.outputs.mobile_version }}" \
-            --mobile-tag "${{ needs.prep.outputs.mobile_tag }}" > RELEASE_BODY.md
-
-      - name: Create or update GitHub release
-        if: ${{ needs.prep.outputs.mode != 'Overwrite release' }}
-        env:
-          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
-        run: |
-          TAG="${{ needs.prep.outputs.release_tag }}"
-          TITLE="Termix v${{ needs.prep.outputs.version }}"
-          if gh release view "$TAG" --repo ${{ github.repository }} >/dev/null 2>&1; then
-            gh release edit "$TAG" --repo ${{ github.repository }} --title "$TITLE" --notes-file RELEASE_BODY.md
-          else
-            gh release create "$TAG" --repo ${{ github.repository }} --title "$TITLE" --notes-file RELEASE_BODY.md --target "${{ needs.merge-to-main.outputs.main_sha }}"
-          fi
-
-  create-beta-release:
-    needs: [prep, translate, docker]
-    if: ${{ always() && needs.prep.outputs.channel == 'Beta' && needs.docker.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
-    runs-on: blacksmith-2vcpu-ubuntu-2404
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout beta commit
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ needs.translate.outputs.sha || needs.prep.outputs.sha }}
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: ".nvmrc"
-
-      - name: Generate beta release body
-        run: |
-          node scripts/generate-beta-body.cjs \
-            --version "${{ needs.prep.outputs.version }}" \
-            --branch "${{ needs.prep.outputs.dev_branch }}" \
-            --sha "${{ needs.translate.outputs.sha || needs.prep.outputs.sha }}" \
-            --prev "${{ needs.prep.outputs.prev_ref }}" > BETA_BODY.md
-
-      - name: Create beta release
-        env:
-          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
-        run: |
-          VERSION="${{ needs.prep.outputs.version }}"
-          TITLE="Termix v${VERSION%-beta.*} Beta ${VERSION##*-beta.}"
-          TAG="${{ needs.prep.outputs.release_tag }}"
-          if gh release view "$TAG" --repo ${{ github.repository }} >/dev/null 2>&1; then
-            gh release edit "$TAG" --repo ${{ github.repository }} \
-              --title "$TITLE" --notes-file BETA_BODY.md --prerelease
-          else
-            gh release create "$TAG" --repo ${{ github.repository }} \
-              --title "$TITLE" --notes-file BETA_BODY.md \
-              --prerelease --target "${{ needs.translate.outputs.sha || needs.prep.outputs.sha }}"
-          fi
+          echo "Draft $TAG is release $ID."
+          echo "id=$ID" >> "$GITHUB_OUTPUT"
 
   electron-release:
-    needs:
-      [
-        prep,
-        translate,
-        merge-to-main,
-        docker,
-        create-release,
-        create-beta-release,
-      ]
-    if: ${{ always() && needs.prep.outputs.skip != 'true' && needs.docker.result == 'success' && needs.create-release.result != 'failure' && needs.create-beta-release.result != 'failure' }}
+    needs: [prep, translate, verify-beta, merge-to-main, create-draft]
+    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && (needs.merge-to-main.result == 'success' || needs.verify-beta.result == 'success') && (needs.create-draft.result == 'success' || (needs.create-draft.result == 'skipped' && needs.prep.outputs.mode == 'Dry run')) }}
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     uses: ./.github/workflows/electron.yml
     with:
       build_type: all
       artifact_destination: ${{ needs.prep.outputs.mode == 'Dry run' && 'file' || 'release' }}
       release_tag: ${{ needs.prep.outputs.release_tag }}
+      release_id: ${{ needs.create-draft.outputs.release_id }}
       version_override: ${{ needs.prep.outputs.channel == 'Beta' && needs.prep.outputs.version || '' }}
       source_ref: ${{ needs.merge-to-main.outputs.build_ref || needs.translate.outputs.sha || needs.prep.outputs.sha }}
-    secrets: inherit
+    secrets:
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+      APPLE_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
+      APPLE_KEY_CONTENT: ${{ secrets.APPLE_KEY_CONTENT }}
+      APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+      DEVELOPER_ID_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_BASE64 }}
+      DEVELOPER_ID_INSTALLER_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_INSTALLER_CERTIFICATE_BASE64 }}
+      DEVELOPER_ID_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+      MAC_BUILD_CERTIFICATE_BASE64: ${{ secrets.MAC_BUILD_CERTIFICATE_BASE64 }}
+      MAC_INSTALLER_CERTIFICATE_BASE64: ${{ secrets.MAC_INSTALLER_CERTIFICATE_BASE64 }}
+      MAC_KEYCHAIN_PASSWORD: ${{ secrets.MAC_KEYCHAIN_PASSWORD }}
+      MAC_P12_PASSWORD: ${{ secrets.MAC_P12_PASSWORD }}
 
+  # Builds from this run's tarballs and adds the bundles to the draft. The live
+  # Flatpak repo only moves after the release is published.
   flatpak:
-    needs: [prep, electron-release]
-    if: ${{ always() && needs.electron-release.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
+    needs: [prep, translate, merge-to-main, create-draft, electron-release]
+    if: ${{ always() && needs.electron-release.result == 'success' }}
     permissions:
       contents: write
       pages: write
       id-token: write
+      attestations: write
     uses: ./.github/workflows/flatpak.yml
     with:
       release_tag: ${{ needs.prep.outputs.release_tag }}
-      publish: ${{ needs.prep.outputs.channel == 'Stable' }}
-    secrets: inherit
+      release_id: ${{ needs.create-draft.outputs.release_id }}
+      source_ref: ${{ needs.merge-to-main.outputs.build_ref || needs.translate.outputs.sha || needs.prep.outputs.sha }}
+      from_run: true
+      upload: ${{ needs.prep.outputs.mode != 'Dry run' }}
+      pages: ${{ needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' }}
+      publish: false
+    secrets:
+      FLATPAK_GPG_KEY: ${{ secrets.FLATPAK_GPG_KEY }}
+
+  # SHA256SUMS over every file, signed keyless with cosign. It goes up last so
+  # it covers the whole draft. Real runs read each file's sha256 from GitHub, so
+  # nothing is downloaded and the download counts stay true.
+  checksums:
+    needs: [prep, create-draft, docker, electron-release, flatpak]
+    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && needs.docker.result == 'success' && needs.electron-release.result == 'success' && needs.flatpak.result == 'success' && (needs.create-draft.result == 'success' || (needs.create-draft.result == 'skipped' && needs.prep.outputs.mode == 'Dry run')) }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    env:
+      TAG: ${{ needs.prep.outputs.release_tag }}
+      RELEASE_ID: ${{ needs.create-draft.outputs.release_id }}
+      MODE: ${{ needs.prep.outputs.mode }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+
+      - name: Download desktop files (dry run)
+        if: ${{ needs.prep.outputs.mode == 'Dry run' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: termix_*
+          path: artifacts
+
+      - name: Download Flatpak bundles (dry run)
+        if: ${{ needs.prep.outputs.mode == 'Dry run' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: flatpak-bundles
+          path: artifacts/flatpak-bundles
+
+      - name: App token
+        id: app
+        if: ${{ needs.prep.outputs.mode != 'Dry run' }}
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+
+      # A rerun after the bundle is up must not sign again.
+      - name: Look for an earlier run
+        id: earlier
+        if: ${{ needs.prep.outputs.mode != 'Dry run' }}
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          NAMES=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets" -q '.[].name')
+          if printf '%s\n' "$NAMES" | grep -qx 'SHA256SUMS.sigstore.json'; then
+            echo "The draft already has its signed checksums."
+            echo "done=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write the checksums
+        if: ${{ steps.earlier.outputs.done != 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          mkdir sums
+          if [ "$MODE" = "Dry run" ]; then
+            node scripts/release-assets.cjs sums --dir artifacts --out sums/SHA256SUMS
+          else
+            node scripts/release-assets.cjs sums --tag "$TAG" --out sums/SHA256SUMS
+          fi
+
+      - name: Sign the checksums
+        if: ${{ steps.earlier.outputs.done != 'true' }}
+        run: cosign sign-blob --yes --bundle sums/SHA256SUMS.sigstore.json sums/SHA256SUMS
+
+      # SLSA provenance for every file in SHA256SUMS. Uploads sort before the
+      # Sigstore bundle, which the rerun check above looks for.
+      - name: Attest build provenance
+        id: provenance
+        if: ${{ steps.earlier.outputs.done != 'true' }}
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-checksums: sums/SHA256SUMS
+
+      - name: Keep the provenance
+        if: ${{ steps.earlier.outputs.done != 'true' }}
+        env:
+          BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
+        run: cp "$BUNDLE" sums/SHA256SUMS.intoto.jsonl
+
+      - name: Add to the draft release
+        if: ${{ needs.prep.outputs.mode != 'Dry run' && steps.earlier.outputs.done != 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: node scripts/release-assets.cjs upload --tag "$TAG" --dir sums
+
+      # A rerun signed nothing new, so it takes the sums from the draft.
+      - name: Get the checksums from the draft
+        if: ${{ needs.prep.outputs.mode != 'Dry run' && steps.earlier.outputs.done == 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          ID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets" -q '.[] | select(.name == "SHA256SUMS") | .id')
+          [ -n "$ID" ] || { echo "The draft has no SHA256SUMS."; exit 1; }
+          mkdir -p sums
+          gh api -H "Accept: application/octet-stream" "repos/$GITHUB_REPOSITORY/releases/assets/$ID" > sums/SHA256SUMS
+
+      # sign-sums signs these with the release key.
+      - name: Keep the checksums
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-checksums
+          path: sums
+          retention-days: 7
+          overwrite: true
+
+  # Signs SHA256SUMS with the release key the offline Termix root certified,
+  # which the desktop updater checks next to the Sigstore bundle. The key
+  # lives in the release environment, so a real release waits for approval.
+  # Nothing else runs here: publish uploads the signature to the draft.
+  sign-sums:
+    needs: [prep, checksums]
+    if: ${{ always() && needs.checksums.result == 'success' }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: ${{ needs.prep.outputs.mode != 'Dry run' && 'release' || '' }}
+    permissions:
+      contents: read
+    env:
+      MODE: ${{ needs.prep.outputs.mode }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Download checksums
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-checksums
+          path: sums
+
+      - name: Sign
+        env:
+          TERMIX_RELEASE_SIGNING_KEY: ${{ secrets.TERMIX_RELEASE_SIGNING_KEY }}
+        run: |
+          mkdir -p signed
+          if [ "$MODE" = "Dry run" ]; then
+            node scripts/sign-sums.cjs --sums sums/SHA256SUMS --out signed/SHA256SUMS.sig --dry-run
+          else
+            node scripts/sign-sums.cjs --sums sums/SHA256SUMS --out signed/SHA256SUMS.sig
+          fi
+
+      - name: Keep the signature
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-chain-signature
+          path: signed
+          retention-days: 7
+          overwrite: true
+
+  # Needs every build. Checks the draft holds exactly the expected files, then
+  # publishes it. A failed build leaves the draft a draft.
+  publish:
+    needs:
+      [
+        prep,
+        security-gate,
+        create-draft,
+        docker,
+        electron-release,
+        flatpak,
+        checksums,
+        sign-sums,
+      ]
+    if: ${{ always() && needs.prep.result == 'success' && needs.prep.outputs.skip != 'true' && needs.security-gate.result == 'success' && needs.checksums.result == 'success' && needs.sign-sums.result == 'success' && needs.docker.result == 'success' && needs.electron-release.result == 'success' && needs.flatpak.result == 'success' && (needs.create-draft.result == 'success' || (needs.create-draft.result == 'skipped' && needs.prep.outputs.mode == 'Dry run')) }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
+    permissions:
+      contents: read
+    env:
+      TAG: ${{ needs.prep.outputs.release_tag }}
+      CHANNEL: ${{ needs.prep.outputs.channel == 'Beta' && 'beta' || 'stable' }}
+      RELEASE_ID: ${{ needs.create-draft.outputs.release_id }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Download desktop files (dry run)
+        if: ${{ needs.prep.outputs.mode == 'Dry run' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: termix_*
+          path: artifacts
+
+      - name: Download Flatpak bundles (dry run)
+        if: ${{ needs.prep.outputs.mode == 'Dry run' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: flatpak-bundles
+          path: artifacts/flatpak-bundles
+
+      - name: Download checksums (dry run)
+        if: ${{ needs.prep.outputs.mode == 'Dry run' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-checksums
+          path: artifacts/checksums
+
+      - name: Download the release key signature (dry run)
+        if: ${{ needs.prep.outputs.mode == 'Dry run' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-chain-signature
+          path: artifacts/checksums
+
+      - name: Check the files (dry run)
+        if: ${{ needs.prep.outputs.mode == 'Dry run' }}
+        run: |
+          node scripts/release-assets.cjs check --channel "$CHANNEL" --dir artifacts
+          echo "DRY RUN: would publish $TAG with these files."
+
+      - name: App token
+        id: app
+        if: ${{ needs.prep.outputs.mode != 'Dry run' }}
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+
+      - name: Download the release key signature
+        if: ${{ needs.prep.outputs.mode != 'Dry run' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-chain-signature
+          path: signed
+
+      # Skips a file the draft already has with the same sha256, so a rerun
+      # is safe.
+      - name: Add the release key signature to the draft
+        if: ${{ needs.prep.outputs.mode != 'Dry run' }}
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: node scripts/release-assets.cjs upload --tag "$TAG" --dir signed
+
+      - name: Check the draft has every file
+        if: ${{ needs.prep.outputs.mode != 'Dry run' }}
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: node scripts/release-assets.cjs check --channel "$CHANNEL" --tag "$TAG"
+
+      - name: Publish
+        if: ${{ needs.prep.outputs.mode != 'Dry run' }}
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" -q .body > RELEASE_BODY.md
+          node scripts/release-assets.cjs notes strip RELEASE_BODY.md
+          LATEST=false
+          if [ "$CHANNEL" = "stable" ]; then LATEST=true; fi
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" \
+            -f tag_name="$TAG" -F draft=false -f make_latest="$LATEST" \
+            -F body=@RELEASE_BODY.md > /dev/null
+
+          STATE=$(node scripts/release-assets.cjs state --tag "$TAG" | sed -n 's/^state=//p')
+          if [ "$STATE" != "published" ]; then
+            echo "$TAG did not publish (state: $STATE)."
+            exit 1
+          fi
+          echo "Published $TAG."
+
+  flatpak-deploy:
+    needs: [prep, publish]
+    if: ${{ always() && needs.publish.result == 'success' && needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: https://flatpak.termix.site
+    steps:
+      - name: Deploy the Flatpak repo
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
 
   electron-submit:
-    needs: [prep, merge-to-main, electron-release]
-    if: ${{ always() && needs.electron-release.result == 'success' && needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' && needs.prep.outputs.mode != 'Skip submit' }}
+    needs: [prep, merge-to-main, publish]
+    if: ${{ always() && needs.publish.result == 'success' && needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' && needs.prep.outputs.mode != 'Skip submit' }}
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     uses: ./.github/workflows/electron.yml
     with:
       build_type: all
       artifact_destination: submit
       source_ref: ${{ needs.merge-to-main.outputs.build_ref }}
-    secrets: inherit
+    secrets:
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+      APPLE_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
+      APPLE_KEY_CONTENT: ${{ secrets.APPLE_KEY_CONTENT }}
+      APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+      DEVELOPER_ID_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_BASE64 }}
+      DEVELOPER_ID_INSTALLER_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_INSTALLER_CERTIFICATE_BASE64 }}
+      DEVELOPER_ID_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+      MAC_BUILD_CERTIFICATE_BASE64: ${{ secrets.MAC_BUILD_CERTIFICATE_BASE64 }}
+      MAC_INSTALLER_CERTIFICATE_BASE64: ${{ secrets.MAC_INSTALLER_CERTIFICATE_BASE64 }}
+      MAC_KEYCHAIN_PASSWORD: ${{ secrets.MAC_KEYCHAIN_PASSWORD }}
+      MAC_P12_PASSWORD: ${{ secrets.MAC_P12_PASSWORD }}
 
   cask-commit-back:
-    needs: [prep, electron-release]
-    if: ${{ always() && needs.electron-release.result == 'success' && needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' }}
+    needs: [prep, electron-release, publish]
+    if: ${{ always() && needs.publish.result == 'success' && needs.prep.outputs.channel == 'Stable' && needs.prep.outputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
     permissions:
-      contents: write
+      contents: read
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+
       - name: Checkout main
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
           fetch-depth: 1
-          token: ${{ secrets.TERMIX_PAT }}
+          token: ${{ steps.app.outputs.token }}
+          # Pushes the cask bump to main.
+          persist-credentials: true
 
       - name: Bump and commit Homebrew cask
         env:
@@ -609,19 +1154,31 @@ jobs:
           git push origin HEAD:main
 
   prune-betas:
-    needs: [prep, create-release]
-    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.create-release.result == 'success' && needs.prep.outputs.mode != 'Overwrite release' }}
+    needs: [prep, publish]
+    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.publish.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
+    permissions: {}
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
+
       - name: Delete this version's beta releases (tags stay)
         env:
-          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          PREFIX: v${{ needs.prep.outputs.version }}-beta.
         run: |
-          PREFIX="v${{ needs.prep.outputs.version }}-beta."
-          gh release list --repo ${{ github.repository }} --limit 200 --json tagName -q '.[].tagName' \
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 200 --json tagName -q '.[].tagName' \
             | grep -F "$PREFIX" | while read -r TAG; do
               echo "Deleting release $TAG"
-              gh release delete "$TAG" --repo ${{ github.repository }} --yes || true
+              gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes || true
             done
 
   # The docs site reads the env catalog, API spec and download list from the
@@ -629,13 +1186,27 @@ jobs:
   # Docs written for this release live on dev-X.Y.Z in the Docs repo. Squash
   # merge it into main once the release is out. No branch means nothing to do.
   docs-merge:
-    needs: [prep, electron-release]
-    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.electron-release.result == 'success' && needs.prep.outputs.mode != 'Dry run' && needs.prep.outputs.mode != 'Overwrite release' }}
+    needs: [prep, publish]
+    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.publish.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
+    permissions: {}
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Docs
+          permission-contents: write
+          permission-pull-requests: write
+          permission-workflows: write
+
       - name: Merge the docs dev branch into main
         env:
-          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
           REPO: Termix-SSH/Docs
           VERSION: ${{ needs.prep.outputs.version }}
         run: |
@@ -667,29 +1238,46 @@ jobs:
           fi
 
   docs-refresh:
-    needs: [prep, electron-release, docs-merge]
-    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.electron-release.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
+    needs: [prep, publish, docs-merge]
+    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && needs.publish.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
+    permissions: {}
     steps:
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Docs
+          permission-contents: write
+
       - name: Tell the docs site
         env:
-          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
         run: gh api repos/Termix-SSH/Docs/dispatches -f event_type=core-released
 
   cleanup:
-    needs: [prep, merge-to-main, electron-release, cask-commit-back]
-    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && (needs.prep.outputs.mode == 'Everything' || needs.prep.outputs.mode == 'Skip submit') && needs.merge-to-main.result == 'success' }}
+    needs: [prep, merge-to-main, publish, cask-commit-back]
+    if: ${{ always() && needs.prep.outputs.channel == 'Stable' && (needs.prep.outputs.mode == 'Everything' || needs.prep.outputs.mode == 'Skip submit') && needs.merge-to-main.result == 'success' && needs.publish.result == 'success' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
+    permissions: {}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
-          fetch-depth: 1
-          persist-credentials: false
+          client-id: ${{ vars.CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: Termix-SSH
+          repositories: Termix
+          permission-contents: write
 
       - name: Delete dev branch in Termix
         env:
-          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
-        run: |
-          git push https://x-access-token:${{ secrets.TERMIX_PAT }}@github.com/${{ github.repository }}.git \
-            --delete "${{ needs.prep.outputs.dev_branch }}" || true
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          DEV_BRANCH: ${{ needs.prep.outputs.dev_branch }}
+        run: gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$DEV_BRANCH" || true

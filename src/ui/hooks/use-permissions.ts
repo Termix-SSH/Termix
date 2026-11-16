@@ -64,6 +64,14 @@ export async function loadPermissionChecker(): Promise<
   return (permission) => matchesPermission(permissions, isAdmin, permission);
 }
 
+/** The current grants, read once and shared. */
+export function loadMyPermissions(): Promise<{
+  permissions: string[];
+  isAdmin: boolean;
+}> {
+  return load();
+}
+
 /**
  * Warms the permissions cache before the shell mounts, so permission-gated
  * rail items are already known on first paint instead of popping in once

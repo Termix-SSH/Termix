@@ -13,9 +13,10 @@ import { LEGACY_SEEN, sanitizeSeen } from "./onboarding.js";
  * seeded from the preset when it changes; reads keep going to the existing
  * store. See applyPresetSideEffects on the frontend.
  *
- * "balanced" is exactly today's behavior. Every value in PRESETS.balanced is
- * transcribed from the defaults that were already in the code, so existing
- * users who land on it see no change at all.
+ * "balanced" is the default. Host rows show their connect bar with edit and
+ * share one click away, and the add host form starts short. Those two live in
+ * stores that are only seeded when a preset is picked, so existing users keep
+ * what they had until they pick one.
  */
 
 /** 2: the docker and host metrics areas moved to their plugins. */
@@ -185,14 +186,13 @@ export const PRESETS: Record<Exclude<UiPreset, "custom">, UiAreaPreferences> = {
       showTags: true,
       showResourceBars: true,
       showStatusStripes: true,
-      trayTrigger: "always",
+      trayTrigger: "actionsOnly",
       rowActions: "full",
     },
     credentialList: { density: "comfortable", showTags: true },
     rail: { hiddenTabs: [] },
     dashboard: { enabledCards: BALANCED_DASHBOARD_CARDS },
-    // 3 is defaultLayoutFromWidgets's own default, i.e. today's behavior.
-    hostEditor: { mode: "full" },
+    hostEditor: { mode: "simple" },
   },
   advanced: {
     chrome: {

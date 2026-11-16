@@ -2,6 +2,7 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { authLogger } from "../../utils/logger.js";
+import { setAuthCookie } from "../../auth/session-cookie.js";
 
 interface UserDataAccessRoutesDeps {
   authenticateJWT: RequestHandler;
@@ -61,7 +62,9 @@ export function registerUserDataAccessRoutes(
             : null;
 
         if (refreshedSession) {
-          res.cookie(
+          setAuthCookie(
+            req,
+            res,
             "jwt",
             refreshedSession.token,
             authManager.getSecureCookieOptions(req, refreshedSession.maxAge),

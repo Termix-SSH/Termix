@@ -60,6 +60,7 @@ function decryptLegacyDEK(encrypted: LegacyEncryptedDEK, kek: Buffer): Buffer {
     "aes-256-gcm",
     kek,
     Buffer.from(encrypted.iv, "hex"),
+    { authTagLength: 16 },
   );
   decipher.setAuthTag(Buffer.from(encrypted.tag, "hex"));
   return Buffer.concat([

@@ -1,4 +1,6 @@
 import { getErrorMessage } from "../../utils/error-message.js";
+import { createCurrentAccessReviewRepository } from "../repositories/factory.js";
+import { attachmentHeader } from "../../http/content-disposition.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, { type Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
@@ -105,6 +107,36 @@ export function clampToGrantorExpiry(
   return new Date(expiresAt) < new Date(grantorExpiresAt)
     ? expiresAt
     : grantorExpiresAt;
+}
+
+/**
+ * Whether the caller may hand out these permissions through a role. Admins may
+ * grant anything; anyone else only what they already hold, so managing roles
+ * never lifts someone above their own rights.
+ */
+async function canGrantPermissions(
+  actorId: string,
+  permissions: string[],
+): Promise<boolean> {
+  if (await permissionManager.isAdmin(actorId)) return true;
+  for (const permission of permissions) {
+    if (!(await permissionManager.hasPermission(actorId, permission))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function parseRolePermissions(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string")
+      : [];
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -726,6 +758,9 @@ router.post(
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: The result.
  */
 router.get(
   "/folder/access",
@@ -1214,6 +1249,30 @@ router.get(
   },
 );
 
+/** One audit line per role change, so admins hear about them. */
+async function auditRoleChange(
+  req: AuthenticatedRequest,
+  action: string,
+  roleId: number,
+  roleName: string,
+  details: Record<string, unknown> = {},
+): Promise<void> {
+  const userId = req.userId!;
+  const { ipAddress, userAgent } = getRequestMeta(req);
+  await logAudit({
+    userId,
+    username: await getAuditUsername(userId),
+    action,
+    resourceType: "role",
+    resourceId: String(roleId),
+    resourceName: roleName,
+    details: JSON.stringify(details),
+    ipAddress,
+    userAgent,
+    success: true,
+  }).catch(() => undefined);
+}
+
 /**
  * @openapi
  * /rbac/roles:
@@ -1281,6 +1340,7 @@ router.post(
         isSystem: false,
         permissions: null,
       });
+      await auditRoleChange(req, "create_role", newRoleId, name);
 
       res.status(201).json({
         success: true,
@@ -1390,6 +1450,26 @@ router.put(
         return res.status(404).json({ error: "Role not found" });
       }
 
+      if (permissions !== undefined && existingRole.name === "admin") {
+        return res.status(400).json({
+          error: "The admin role always has every permission",
+          code: "ADMIN_ROLE_FIXED",
+        });
+      }
+
+      if (permissions !== undefined) {
+        const held = new Set(parseRolePermissions(existingRole.permissions));
+        const added = (permissions as string[]).filter(
+          (perm) => !held.has(perm),
+        );
+        if (!(await canGrantPermissions(req.userId!, added))) {
+          return res.status(403).json({
+            error: "You can only grant permissions you have yourself",
+            code: "PERMISSION_NOT_HELD",
+          });
+        }
+      }
+
       const updates: {
         displayName?: string;
         description?: string | null;
@@ -1419,6 +1499,10 @@ router.put(
           permissionManager.invalidateUserPermissionCache(memberId);
         }
       }
+      await auditRoleChange(req, "update_role", roleId, existingRole.name, {
+        ...(permissions !== undefined ? { permissions } : {}),
+        ...(displayName ? { displayName } : {}),
+      });
 
       res.json({
         success: true,
@@ -1554,6 +1638,9 @@ router.delete(
         permissionManager.invalidateUserPermissionCache(userId);
       }
       await pruneGrantsBy(deletedUserIds);
+      await auditRoleChange(req, "delete_role", roleId, role.name, {
+        members: deletedUserIds.length,
+      });
 
       res.json({
         success: true,
@@ -1690,6 +1777,18 @@ router.post(
         });
       }
 
+      if (
+        !(await canGrantPermissions(
+          currentUserId,
+          parseRolePermissions(role.permissions),
+        ))
+      ) {
+        return res.status(403).json({
+          error: "You can only grant permissions you have yourself",
+          code: "PERMISSION_NOT_HELD",
+        });
+      }
+
       const existing = await createCurrentRoleRepository().findUserRole(
         targetUserId,
         roleId,
@@ -1731,6 +1830,9 @@ router.post(
       }
 
       permissionManager.invalidateUserPermissionCache(targetUserId);
+      await auditRoleChange(req, "assign_role", roleId, role.name, {
+        targetUserId,
+      });
       databaseLogger.info("Role assigned to user", {
         operation: "rbac_role_assign",
         adminId: currentUserId,
@@ -1847,6 +1949,9 @@ router.delete(
 
       permissionManager.invalidateUserPermissionCache(targetUserId);
       await pruneGrantsBy([targetUserId]);
+      await auditRoleChange(req, "remove_role", roleId, role.name, {
+        targetUserId,
+      });
       databaseLogger.info("Role removed from user", {
         operation: "rbac_role_remove",
         adminId: req.userId!,
@@ -1902,7 +2007,10 @@ router.get(
 
     if (
       targetUserId !== currentUserId &&
-      !(await permissionManager.isAdmin(currentUserId))
+      !(await permissionManager.hasPermission(
+        currentUserId,
+        "admin.users.view",
+      ))
     ) {
       return res.status(403).json({ error: "Access denied" });
     }
@@ -1956,10 +2064,19 @@ async function canManageCredentialSharing(
  * @openapi
  * /rbac/credential/{id}/share:
  *   post:
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
  *     summary: Share a credential with users or roles
  *     description: Recipients get a copy of the secrets re-encrypted under their own key. "use" lets them attach it to hosts and connect; "manage" also lets them edit and re-share. Owner or a "manage" recipient only.
  *     tags:
  *       - RBAC
+ *     responses:
+ *       200:
+ *         description: Done.
  */
 router.post(
   "/credential/:id/share",
@@ -2088,9 +2205,18 @@ router.post(
  * @openapi
  * /rbac/credential/{id}/access:
  *   get:
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
  *     summary: List who a credential is shared with
  *     tags:
  *       - RBAC
+ *     responses:
+ *       200:
+ *         description: The result.
  */
 router.get(
   "/credential/:id/access",
@@ -2129,9 +2255,23 @@ router.get(
  * @openapi
  * /rbac/credential/{id}/access/{accessId}:
  *   delete:
+ *     parameters:
+ *       - in: path
+ *         name: accessId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
  *     summary: Revoke a credential share (recipients' copies are removed with it)
  *     tags:
  *       - RBAC
+ *     responses:
+ *       200:
+ *         description: Done.
  */
 router.delete(
   "/credential/:id/access/:accessId",
@@ -2172,9 +2312,23 @@ router.delete(
  * @openapi
  * /rbac/host-access/{hostId}/auth/{protocol}:
  *   put:
+ *     parameters:
+ *       - in: path
+ *         name: protocol
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: hostId
+ *         required: true
+ *         schema:
+ *           type: integer
  *     summary: Set personal authentication for a shared host protocol
  *     description: Selects one of the authenticated recipient's own credentials, or clears the selection with null. The protocol is "ssh" or one a plugin declares.
  *     tags: [RBAC]
+ *     responses:
+ *       200:
+ *         description: Done.
  */
 router.put(
   "/host-access/:hostId/auth/:protocol",
@@ -2228,8 +2382,22 @@ router.put(
  * @openapi
  * /rbac/host-access/{hostId}/auth/{protocol}:
  *   get:
+ *     parameters:
+ *       - in: path
+ *         name: protocol
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: hostId
+ *         required: true
+ *         schema:
+ *           type: integer
  *     summary: Get the current recipient's shared-host protocol authentication override
  *     tags: [RBAC]
+ *     responses:
+ *       200:
+ *         description: The result.
  */
 router.get(
   "/host-access/:hostId/auth/:protocol",
@@ -2415,6 +2583,144 @@ router.put(
     } catch (error) {
       databaseLogger.error("Failed to set folder login", error);
       res.status(500).json({ error: "Failed to update credential" });
+    }
+  },
+);
+
+/** One CSV cell, quoted, with formula starts made harmless for spreadsheets. */
+function csvCell(value: unknown): string {
+  let text = value === null || value === undefined ? "" : String(value);
+  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+/**
+ * @openapi
+ * /rbac/access-review:
+ *   get:
+ *     summary: List every share
+ *     description: Every host, folder and credential share on the server, with who has it, at what level, who gave it and when it ends. Needs admin.users.view.
+ *     tags:
+ *       - RBAC
+ *     parameters:
+ *       - in: query
+ *         name: kind
+ *         schema:
+ *           type: string
+ *           enum: [host, folder, credential]
+ *       - in: query
+ *         name: userId
+ *         schema:
+ *           type: string
+ *         description: Shares this user has or owns.
+ *       - in: query
+ *         name: roleId
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           maximum: 500
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: format
+ *         schema:
+ *           type: string
+ *           enum: [json, csv]
+ *     responses:
+ *       200:
+ *         description: Shares, newest first, or a CSV file of all of them.
+ *       403:
+ *         description: Not authorized.
+ *       500:
+ *         description: Failed to list shares.
+ */
+router.get(
+  "/access-review",
+  authenticateJWT,
+  permissionManager.requirePermission("admin.users.view"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const query = req.query ?? {};
+      const kind =
+        query.kind === "host" ||
+        query.kind === "folder" ||
+        query.kind === "credential"
+          ? query.kind
+          : undefined;
+      const userId =
+        typeof query.userId === "string" && query.userId
+          ? query.userId
+          : undefined;
+      const rawRole = Number(query.roleId);
+      const roleId = Number.isInteger(rawRole) ? rawRole : undefined;
+
+      const rows = await createCurrentAccessReviewRepository().list({
+        kind,
+        userId,
+        roleId,
+      });
+
+      if (query.format === "csv") {
+        const header = [
+          "kind",
+          "target",
+          "owner",
+          "user",
+          "role",
+          "level",
+          "granted_by",
+          "created_at",
+          "expires_at",
+          "last_used_at",
+        ];
+        const lines = rows.map((row) =>
+          [
+            row.kind,
+            row.targetName,
+            row.ownerUsername,
+            row.granteeUsername,
+            row.granteeRoleName,
+            row.permissionLevel,
+            row.grantedByUsername,
+            row.createdAt,
+            row.expiresAt,
+            row.lastAccessedAt,
+          ]
+            .map(csvCell)
+            .join(","),
+        );
+        res.setHeader("Content-Type", "text/csv; charset=utf-8");
+        res.setHeader(
+          "Content-Disposition",
+          attachmentHeader("termix-access-review.csv"),
+        );
+        return res.send([header.join(","), ...lines].join("\r\n"));
+      }
+
+      const rawLimit = Number(query.limit);
+      const limit =
+        Number.isFinite(rawLimit) && rawLimit > 0
+          ? Math.min(Math.floor(rawLimit), 500)
+          : 100;
+      const rawOffset = Number(query.offset);
+      const offset =
+        Number.isFinite(rawOffset) && rawOffset > 0 ? Math.floor(rawOffset) : 0;
+      res.json({
+        shares: rows.slice(offset, offset + limit),
+        total: rows.length,
+        limit,
+        offset,
+      });
+    } catch (error) {
+      databaseLogger.error("Failed to list shares for review", error, {
+        operation: "access_review",
+      });
+      res.status(500).json({ error: "Failed to list shares" });
     }
   },
 );

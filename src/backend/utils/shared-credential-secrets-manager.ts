@@ -1,5 +1,6 @@
 import { DataCrypto } from "./data-crypto.js";
 import { FieldCrypto } from "./field-crypto.js";
+import { sharedCredentialSecretRecordId } from "./sealed-record-ids.js";
 import { databaseLogger } from "./logger.js";
 import {
   createCurrentCredentialAccessRepository,
@@ -15,9 +16,7 @@ import type { HostResolutionCredentialRecord } from "../database/repositories/ho
  * a share is created, when someone joins a role that holds one, on login as a
  * backstop, and rebuilt whenever the owner edits the credential.
  */
-function recordId(accessId: number, targetUserId: string): string {
-  return `shared-credential-${accessId}-${targetUserId}`;
-}
+const recordId = sharedCredentialSecretRecordId;
 
 export interface SharedCredentialData {
   username?: string;

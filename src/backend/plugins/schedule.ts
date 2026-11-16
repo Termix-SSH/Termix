@@ -77,5 +77,8 @@ export function createPluginSchedule(
       drop = bag.add(cancel, "scheduled job");
       return cancel;
     },
+
+    // Only the plugin process supervisor acts on this; in process it is a no-op.
+    keepAwake: () => {},
   };
 }

@@ -1,4 +1,16 @@
-import { and, asc, eq, getTableColumns, inArray, like, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  getTableColumns,
+  inArray,
+  isNotNull,
+  isNull,
+  like,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import { pluginSettings, users } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import {
@@ -45,6 +57,41 @@ export function isUsernameTaken(error: unknown): boolean {
   return false;
 }
 
+export type UserStatusFilter = "active" | "disabled" | "pending";
+
+const PENDING_REASON = "pending_approval";
+
+function statusCondition(status: UserStatusFilter | undefined) {
+  if (status === "active") return isNull(users.disabledAt);
+  if (status === "pending") {
+    return and(
+      isNotNull(users.disabledAt),
+      eq(users.disabledReason, PENDING_REASON),
+    );
+  }
+  if (status === "disabled") {
+    return and(
+      isNotNull(users.disabledAt),
+      or(
+        isNull(users.disabledReason),
+        ne(users.disabledReason, PENDING_REASON),
+      ),
+    );
+  }
+  return undefined;
+}
+
+/** Whether a user matches a status filter, for lists filtered in memory. */
+export function matchesUserStatus(
+  user: { disabledAt: string | null; disabledReason: string | null },
+  status: UserStatusFilter | undefined,
+): boolean {
+  if (!status) return true;
+  if (status === "active") return !user.disabledAt;
+  const pending = user.disabledReason === PENDING_REASON;
+  return !!user.disabledAt && (status === "pending" ? pending : !pending);
+}
+
 export class UserRepository {
   constructor(
     private readonly context: DatabaseContext,
@@ -64,13 +111,21 @@ export class UserRepository {
    */
   async listPage(input: {
     search?: string;
+    status?: UserStatusFilter;
     limit: number;
     offset: number;
   }): Promise<{ users: UserRecord[]; total: number }> {
     const term = input.search?.trim();
-    const where = term
-      ? like(sql`lower(${users.username})`, `%${term.toLowerCase()}%`)
-      : undefined;
+    const where = and(
+      term
+        ? or(
+            like(sql`lower(${users.username})`, `%${term.toLowerCase()}%`),
+            like(sql`lower(${users.displayName})`, `%${term.toLowerCase()}%`),
+            like(sql`lower(${users.email})`, `%${term.toLowerCase()}%`),
+          )
+        : undefined,
+      statusCondition(input.status),
+    );
 
     const [rows, totalResult] = await Promise.all([
       this.context.drizzle
@@ -96,6 +151,16 @@ export class UserRepository {
       .select(userColumns)
       .from(users)
       .where(eq(users.id, id))
+      .limit(1);
+
+    return rows[0] ?? null;
+  }
+
+  async findByEmail(email: string): Promise<UserRecord | null> {
+    const rows = await this.context.drizzle
+      .select(userColumns)
+      .from(users)
+      .where(eq(users.email, email.trim().toLowerCase()))
       .limit(1);
 
     return rows[0] ?? null;
@@ -245,7 +310,7 @@ export class UserRepository {
     const rows = await this.context.drizzle
       .select({ id: users.id })
       .from(users)
-      .where(eq(users.isAdmin, true));
+      .where(and(eq(users.isAdmin, true), isNull(users.disabledAt)));
 
     return rows.length;
   }

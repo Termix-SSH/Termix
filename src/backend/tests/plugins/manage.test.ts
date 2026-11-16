@@ -11,6 +11,7 @@ import path from "node:path";
 import * as tar from "tar";
 import { createFixturePlugin } from "./fixture-plugin.js";
 import type { LoadedPlugin } from "../../plugins/loader.js";
+import { LEGACY_OFFICIAL_ERROR } from "../../plugins/isolation.js";
 
 interface Row {
   id: string;
@@ -200,7 +201,11 @@ async function stageArtifact(
   fs.mkdirSync(staging, { recursive: true });
   const file = path.join(staging, `${id}-staged.tmxplug`);
   await tar.c({ gzip: true, file, cwd: path.join(build, id) }, ["."]);
-  return { file, signatureFile: `${file}.sig` };
+  return {
+    file,
+    signatureFile: `${file}.sig`,
+    provenanceFile: `${file}.provenance.json`,
+  };
 }
 
 async function boot() {
@@ -360,6 +365,33 @@ describe("installing from the registry", () => {
     ]);
   });
 
+  it("keeps the checked build provenance beside the plugin and drops it on uninstall", async () => {
+    registry.index.plugins = [registryEntry("notes", [{ version: "1.0.0" }])];
+    registry.download.mockImplementation(async () => {
+      const staged = await stageArtifact("notes", { capabilities: ["kv:own"] });
+      fs.writeFileSync(
+        staged.provenanceFile,
+        JSON.stringify({
+          status: "verified",
+          checkedAt: "x",
+          signer: null,
+          runUrl: null,
+          bundleUrl: "https://b",
+        }),
+      );
+      return staged;
+    });
+    await boot();
+    await manage.installPlugin("notes", {
+      userId: "admin",
+      capabilities: DEFAULT_CAPS,
+    });
+    const kept = path.join(data, "plugins", "notes.tmxplug.provenance.json");
+    expect(JSON.parse(fs.readFileSync(kept, "utf8")).status).toBe("verified");
+    await manage.uninstallPlugin("notes");
+    expect(fs.existsSync(kept)).toBe(false);
+  });
+
   it("refuses a plugin that is not in the registry", async () => {
     await boot();
     await expect(
@@ -420,6 +452,20 @@ describe("updates", () => {
       code: "CAPABILITIES_ADDED",
       details: { capabilities: ["notify:send"] },
     });
+    expect(registry.download).not.toHaveBeenCalled();
+  });
+
+  it("never moves to an older version unless the admin names it", async () => {
+    createFixturePlugin({ id: "docker", root: bundled });
+    registry.index.plugins = [registryEntry("docker", [{ version: "0.9.0" }])];
+    await boot();
+
+    await expect(
+      manage.updatePlugin("docker", { userId: "admin" }),
+    ).rejects.toMatchObject({ code: "NOT_NEWER" });
+    expect(registry.download).not.toHaveBeenCalled();
+    const result = await manage.updateAllPlugins({ userId: "admin" });
+    expect(result.updated).toEqual([]);
     expect(registry.download).not.toHaveBeenCalled();
   });
 
@@ -1086,8 +1132,12 @@ describe("more registries", () => {
       capabilities: DEFAULT_CAPS,
     });
     expect(result.state).toBe("active");
-    const keys = registry.download.mock.calls[0][2] as Array<{ id: string }>;
-    expect(keys.map((key) => key.id)).toEqual(["be5b24ea07b36624"]);
+    const source = registry.download.mock.calls[0][2] as {
+      tier: string;
+      keys: Array<{ id: string }>;
+    };
+    expect(source.tier).toBe("community");
+    expect(source.keys.map((key) => key.id)).toEqual(["be5b24ea07b36624"]);
     expect(db.rows.get("neat")).toMatchObject({
       registryId: "community",
       tier: "community",
@@ -1120,9 +1170,10 @@ describe("more registries", () => {
     );
     const result = await manage.updatePlugin("neat", { userId: "admin" });
     expect(result.version).toBe("1.1.0");
-    const [, release, keys] = registry.download.mock.calls[0];
+    const [, release, source] = registry.download.mock.calls[0];
     expect(release.url).toContain("neat-1.1.0");
-    expect(keys.map((key: { id: string }) => key.id)).toEqual([
+    expect(source.tier).toBe("community");
+    expect(source.keys.map((key: { id: string }) => key.id)).toEqual([
       "be5b24ea07b36624",
     ]);
     expect(db.rows.get("neat")).toMatchObject({ registryId: "community" });
@@ -1273,4 +1324,27 @@ it("requires exact consent before enabling a mirrored plugin with capabilities",
       grantedBy: "admin",
     }),
   );
+});
+
+describe("plugins made for plugin API 1", () => {
+  const legacy = { engine: { termix: ">=2.9.0", api: "^1.15" } };
+
+  it("keeps an official API 1 plugin off, with no way to run it inside the server", async () => {
+    createFixturePlugin({
+      id: "docker",
+      root: bundled,
+      manifestOverrides: legacy,
+    });
+    const loader = await boot();
+    expect(loader.get("docker")).toMatchObject({
+      state: "blocked",
+      lastError: LEGACY_OFFICIAL_ERROR,
+    });
+
+    const options = await manage.setPluginOptions("docker", {
+      runUnisolated: true,
+    } as never);
+    expect(options).not.toHaveProperty("runUnisolated");
+    expect(loader.get("docker")?.state).toBe("blocked");
+  });
 });

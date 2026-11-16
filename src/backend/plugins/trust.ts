@@ -1,4 +1,14 @@
 import crypto from "node:crypto";
+import {
+  LEGACY_TRUST_UNTIL,
+  ROOT_KEYS,
+  parseEnvelope,
+  verifyEnvelope,
+  type ChainTier,
+  type RootKey,
+  type SignatureEnvelope,
+} from "./trust-chain.js";
+import { revokedKeyIds } from "./revocation-state.js";
 
 export interface TrustedPluginKey {
   /** First 16 hex chars of the sha256 of the raw public key. */
@@ -10,15 +20,10 @@ export interface TrustedPluginKey {
 }
 
 /**
- * The registry signing keys this build trusts. Compile-time on purpose: a
- * key read from a registry index would let whoever serves the index sign
- * anything.
- *
- * Rotation: add the new key here and ship a release, start signing with it,
- * then remove the old key one release cycle later so installs that update
- * late still verify plugins signed before the switch.
- *
- * Add a key with `termix-plugin keygen` (see the Termix-Registry README).
+ * The official key from before the root chain (trust-chain.ts). New
+ * downloads need a root certified key; this one only keeps already
+ * installed plugins loading until LEGACY_TRUST_UNTIL, so installs have time
+ * to pick up chain signatures. Remove it after that date.
  */
 export const TRUSTED_PLUGIN_KEYS: readonly TrustedPluginKey[] = [
   {
@@ -29,8 +34,9 @@ export const TRUSTED_PLUGIN_KEYS: readonly TrustedPluginKey[] = [
 ];
 
 /**
- * Signs community plugins after a person reviewed them. Its own tier on
- * purpose: it can never replace a bundled plugin or count as official.
+ * The community key from before the root chain, kept the same way as the
+ * official one. Community plugins are their own tier on purpose: they can
+ * never replace a bundled plugin or count as official.
  */
 export const COMMUNITY_PLUGIN_KEYS: readonly TrustedPluginKey[] = [
   {
@@ -129,27 +135,130 @@ export function verifyPluginArtifact(
   return { ok: false, reason: "signature does not match a trusted key" };
 }
 
+let roots: Readonly<Record<ChainTier, readonly RootKey[]>> = ROOT_KEYS;
+
+/** Test seam: the root keys the chain checks use. */
+export function setTrustRootsForTests(
+  value: Readonly<Record<ChainTier, readonly RootKey[]>> | null,
+): void {
+  roots = value ?? ROOT_KEYS;
+}
+
+export function trustRoots(): Readonly<Record<ChainTier, readonly RootKey[]>> {
+  return roots;
+}
+
 /**
- * Checks a file against every key this build trusts, official first, and
- * says which tier signed it.
+ * "download" is a file about to be installed: its certificate must be in
+ * date and pre-chain keys are refused. "installed" is a file already on
+ * disk: it passed the date check when it came in, and pre-chain keys still
+ * count until LEGACY_TRUST_UNTIL.
+ */
+export type TrustMode = "download" | "installed";
+
+export interface TrustOptions {
+  mode?: TrustMode;
+  now?: number;
+}
+
+export type TrustResult =
+  | { ok: true; keyId: string; tier: KeyTier; rootId?: string }
+  | { ok: false; reason: string };
+
+/** Whether the pre-chain key of a tier may still vouch for a file. */
+export function legacyAllowed(
+  tier: ChainTier,
+  options: TrustOptions = {},
+): boolean {
+  if (roots[tier].length === 0) return true;
+  if ((options.mode ?? "installed") === "download") return false;
+  return (options.now ?? Date.now()) < LEGACY_TRUST_UNTIL;
+}
+
+function digestMatches(buffer: Buffer, sha256: string): Buffer | null {
+  const digest = crypto.createHash("sha256").update(buffer).digest();
+  const expected = Buffer.from(sha256.trim().toLowerCase(), "hex");
+  return expected.length === digest.length &&
+    crypto.timingSafeEqual(expected, digest)
+    ? digest
+    : null;
+}
+
+/** Checks a chain envelope over a file for one tier. */
+export function verifyChainSignature(
+  buffer: Buffer,
+  sha256: string,
+  envelope: SignatureEnvelope,
+  tier: ChainTier,
+  options: TrustOptions = {},
+): TrustResult {
+  const digest = digestMatches(buffer, sha256);
+  if (!digest) return { ok: false, reason: "sha256 does not match the file" };
+  const result = verifyEnvelope(digest, envelope, {
+    tier,
+    role: "plugins",
+    checkDates: (options.mode ?? "installed") === "download",
+    now: options.now,
+    revokedKeys: revokedKeyIds(tier),
+    roots,
+  });
+  if (result.ok === false) return result;
+  return { ok: true, keyId: result.keyId, tier, rootId: result.rootId };
+}
+
+/**
+ * Checks a .sig (chain envelope or plain legacy signature) against every
+ * key this build trusts, official first, and says which tier signed it.
  */
 export function verifyAnyTrusted(
   buffer: Buffer,
   sha256: string,
   signature: string,
-): { ok: true; keyId: string; tier: KeyTier } | { ok: false; reason: string } {
+  options: TrustOptions = {},
+): TrustResult {
+  const envelope = parseEnvelope(signature);
+  if (envelope) {
+    const tier = envelope.cert?.signed?.tier;
+    if (tier !== "official" && tier !== "community") {
+      return { ok: false, reason: "signature names no known tier" };
+    }
+    return verifyChainSignature(buffer, sha256, envelope, tier, options);
+  }
+
   const tiers: Array<[KeyTier, readonly TrustedPluginKey[]]> = [
-    ["official", TRUSTED_PLUGIN_KEYS],
-    ["community", COMMUNITY_PLUGIN_KEYS],
+    ["official", legacyAllowed("official", options) ? TRUSTED_PLUGIN_KEYS : []],
+    [
+      "community",
+      legacyAllowed("community", options) ? COMMUNITY_PLUGIN_KEYS : [],
+    ],
     ["custom", customKeys],
   ];
   let reason = "signature does not match a trusted key";
-  for (const [tier, keys] of tiers) {
+  for (const [tier, all] of tiers) {
+    const revoked = revokedKeyIds(
+      tier === "official" ? "official" : "community",
+    );
+    const keys = all.filter((key) => !revoked.has(key.id));
     if (keys.length === 0) continue;
     const result = verifyPluginArtifact(buffer, sha256, signature, keys);
     if (result.ok === true) return { ok: true, keyId: result.keyId, tier };
     reason = result.reason;
     if (reason !== "signature does not match a trusted key") break;
+  }
+  if (reason === "signature does not match a trusted key") {
+    // Say why a pre-chain signature stopped counting instead of "no match".
+    const legacy = verifyPluginArtifact(buffer, sha256, signature, [
+      ...TRUSTED_PLUGIN_KEYS,
+      ...COMMUNITY_PLUGIN_KEYS,
+    ]);
+    if (legacy.ok === true) {
+      return {
+        ok: false,
+        reason: revokedKeyIds("community").has(legacy.keyId)
+          ? "signed by a revoked key"
+          : "signed by a key from before the Termix root, which no longer counts",
+      };
+    }
   }
   return { ok: false, reason };
 }

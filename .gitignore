@@ -38,6 +38,11 @@ Thumbs.db
 /nul
 .env
 electron/build-info.cjs
+
+# Desktop plugin runtime, made by npm run plugin-runtime
+/.plugin-runtime/
+electron/plugin-runtime.lock.json
+native/plugin-jail/target/
 /.mcp.json
 /CLAUDE.md
 /old_db/
@@ -45,3 +50,4 @@ electron/build-info.cjs
 /scripts/auto-fix-blocklist.json
 /scripts/auto-fix-state.json
 /scripts/auto-fix-report-*.json
+/sbom.cdx.json

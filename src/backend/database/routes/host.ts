@@ -9,7 +9,10 @@ import { getErrorMessage } from "../../utils/error-message.js";
 import { isQuickConnectAuthType } from "../../hosts/connect/auth-provider-registry.js";
 import { ensureCoreSshAuthProviders } from "../../hosts/connect/core-providers.js";
 import { applyFolderAccessRules } from "../../utils/folder-access-inheritance.js";
-import { findUsableCredential } from "../../hosts/usable-credential.js";
+import {
+  canRevealCredential,
+  findUsableCredential,
+} from "../../hosts/usable-credential.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, { type Request, type Response } from "express";
 import multer from "multer";
@@ -107,7 +110,11 @@ import {
 const router = express.Router();
 router.use(rejectSharedCopyWrites("host", /^\/db\/host\/(\d+)$/));
 
-const upload = multer({ storage: multer.memoryStorage() });
+// Only SSH key files go through here.
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 1024 * 1024, files: 1 },
+});
 
 /** A host body with a password or key, while saving those is turned off. */
 function hostWriteHasSecret(hostData: Record<string, unknown>): boolean {
@@ -145,8 +152,15 @@ function notifyStatsHostUpdated(
 const authManager = AuthManager.getInstance();
 const permissionManager = PermissionManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
-registerDeviceAuthRoutes(router, authenticateJWT);
 const requireDataAccess = authManager.createDataAccessMiddleware();
+// Built once so every host route checks the same guard.
+const hostGuards = {
+  view: permissionManager.requirePermission("hosts.view"),
+  create: permissionManager.requirePermission("hosts.create"),
+  edit: permissionManager.requirePermission("hosts.edit"),
+  delete: permissionManager.requirePermission("hosts.delete"),
+};
+registerDeviceAuthRoutes(router, authenticateJWT, hostGuards.view);
 
 registerHostTagRoutes(
   router,
@@ -156,6 +170,7 @@ registerHostTagRoutes(
 
 registerHostStatusRoutes(router, {
   authenticateJWT,
+  requireViewPermission: hostGuards.view,
   requireAdmin: authManager.createAdminMiddleware(),
 });
 
@@ -178,7 +193,7 @@ registerHostStatusRoutes(router, {
 router.post(
   ["/db/host", "/enroll"],
   authenticateJWT,
-  permissionManager.requirePermission("hosts.create"),
+  hostGuards.create,
   requireDataAccess,
   requireManualCreate,
   requireHostEnrollmentAccessForPath,
@@ -683,6 +698,30 @@ router.post(
           return res.status(404).json({ error: "Credential not found" });
         }
 
+        // A use grant lets the server connect with it, never shows it.
+        if (!(await canRevealCredential(Number(credentialId), userId))) {
+          return res.status(200).json({
+            id: -Date.now(),
+            userId,
+            name: `${overrideCredentialUsername ? username : cred.username}@${ip}:${port}`,
+            ip,
+            port: Number(port),
+            username: overrideCredentialUsername ? username : cred.username,
+            folder: "",
+            tags: [],
+            pin: false,
+            authType: "credential",
+            credentialId: Number(credentialId),
+            overrideCredentialUsername: !!overrideCredentialUsername,
+            jumpHosts: [],
+            statusCheckEnabled: true,
+            statusCheckInterval: null,
+            notes: "",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+        }
+
         resolvedPassword = pickResolvedPassword(password, cred.password) as
           string | undefined;
         resolvedKey = cred.privateKey as string | undefined;
@@ -763,7 +802,7 @@ router.post(
 router.put(
   "/db/host/:id",
   authenticateJWT,
-  permissionManager.requirePermission("hosts.edit"),
+  hostGuards.edit,
   requireDataAccess,
   requireUnlockedHost,
   upload.single("key"),
@@ -1285,7 +1324,7 @@ router.get("/policy", authenticateJWT, (_req: Request, res: Response) => {
 router.get(
   "/db/host",
   authenticateJWT,
-  permissionManager.requirePermission("hosts.view"),
+  hostGuards.view,
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -1405,7 +1444,7 @@ router.get(
       await applyPersonalHostValues(pluginSettingsByHost, userId).catch(
         () => {},
       );
-      attachHostPluginSettings(sanitized, pluginSettingsByHost);
+      await attachHostPluginSettings(sanitized, pluginSettingsByHost);
 
       res.json(sanitized);
     } catch (err) {
@@ -1445,7 +1484,7 @@ router.get(
 router.get(
   "/db/host/:id",
   authenticateJWT,
-  permissionManager.requirePermission("hosts.view"),
+  hostGuards.view,
   requireDataAccess,
   async (req: Request, res: Response) => {
     const hostId = Array.isArray(req.params.id)
@@ -1573,7 +1612,7 @@ router.get(
 router.get(
   "/db/host/:id/local-connection-auth",
   authenticateJWT,
-  permissionManager.requirePermission("hosts.view"),
+  hostGuards.view,
   requireDataAccess,
   async (req: Request, res: Response) => {
     const hostId = Number(req.params.id);
@@ -1591,6 +1630,15 @@ router.get(
       );
       if (!access.hasAccess || !access.isShared) {
         return res.status(404).json({ error: "Shared host not found" });
+      }
+      // Connect and view recipients connect through the server only.
+      if (
+        access.permissionLevel !== "edit" &&
+        access.permissionLevel !== "manage"
+      ) {
+        return res.status(403).json({
+          error: "This host is shared for connecting through the server only",
+        });
       }
 
       const repository = createCurrentHostResolutionRepository();
@@ -1670,6 +1718,7 @@ router.get(
 router.get(
   "/db/host/:id/password",
   authenticateJWT,
+  hostGuards.view,
   requireDataAccess,
   async (req: Request, res: Response) => {
     const hostId = Number(req.params.id);
@@ -1715,7 +1764,12 @@ router.get(
         return res.json({ value: login.password });
       }
 
-      const resolved = (await resolveHostCredentials(host, userId)) || host;
+      const revealable =
+        !host.credentialId ||
+        (await canRevealCredential(Number(host.credentialId), userId));
+      const resolved = revealable
+        ? (await resolveHostCredentials(host, userId)) || host
+        : host;
       const value = resolved[field];
 
       if (!value) {
@@ -1761,7 +1815,7 @@ router.get(
 router.delete(
   "/db/host/:id",
   authenticateJWT,
-  permissionManager.requirePermission("hosts.delete"),
+  hostGuards.delete,
   requireDataAccess,
   requireUnlockedHost,
   async (req: Request, res: Response) => {
@@ -1832,9 +1886,9 @@ router.delete(
 
 registerHostFolderRoutes(router, {
   authenticateJWT,
-  requireViewPermission: permissionManager.requirePermission("hosts.view"),
-  requireEditPermission: permissionManager.requirePermission("hosts.edit"),
-  requireDeletePermission: permissionManager.requirePermission("hosts.delete"),
+  requireViewPermission: hostGuards.view,
+  requireEditPermission: hostGuards.edit,
+  requireDeletePermission: hostGuards.delete,
   requireCredentialEditPermission:
     permissionManager.requirePermission("credentials.edit"),
   requireDataAccess,
@@ -1843,19 +1897,19 @@ registerHostFolderRoutes(router, {
 registerHostBulkRoutes(
   router,
   authenticateJWT,
-  permissionManager.requirePermission("hosts.edit"),
+  hostGuards.edit,
   requireDataAccess,
 );
 
 registerHostNetworkRoutes(router, {
   authenticateJWT,
-  requireViewPermission: permissionManager.requirePermission("hosts.view"),
+  requireViewPermission: hostGuards.view,
   requireDataAccess,
 });
 
 registerHostDefaultsRoutes(router, {
   authenticateJWT,
-  requireEditPermission: permissionManager.requirePermission("hosts.edit"),
+  requireEditPermission: hostGuards.edit,
   requireDataAccess,
   requireAdminSettings: permissionManager.requirePermission(
     "admin.settings.manage",

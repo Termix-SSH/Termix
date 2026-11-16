@@ -91,7 +91,25 @@ export async function resolveConnectHost(
 ): Promise<SshConnectHost> {
   if (typeof target !== "number") return target;
   const host = await resolveHostById(target, userId);
-  if (!host) throw new SshHostNotFoundError(target);
+  if (!host) {
+    // A shared host with no login for this user also resolves to null.
+    const { PermissionManager } =
+      await import("../../utils/permission-manager.js");
+    const access = await PermissionManager.getInstance().canAccessHost(
+      userId,
+      target,
+      "connect",
+    );
+    if (access.hasAccess) {
+      throw new SshConnectError({
+        status: "error",
+        code: "missing-secret",
+        message:
+          "You have no login for this host. Add your own login to it first.",
+      });
+    }
+    throw new SshHostNotFoundError(target);
+  }
   return host as unknown as SshConnectHost;
 }
 
@@ -172,12 +190,14 @@ export async function connectHost(
       );
       if (authFailed && provider?.onAuthFailed) {
         try {
-          provider.onAuthFailed(host, env, {
-            error,
-            retries: 0,
-            canRetry: false,
-            methodNotAvailable: false,
-          });
+          void Promise.resolve(
+            provider.onAuthFailed(host, env, {
+              error,
+              retries: 0,
+              canRetry: false,
+              methodNotAvailable: false,
+            }),
+          ).catch(() => undefined);
         } catch {
           // cleanup hooks never mask the connect error
         }

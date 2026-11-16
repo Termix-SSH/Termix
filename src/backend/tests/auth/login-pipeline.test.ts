@@ -196,6 +196,26 @@ describe("password login through the pipeline", () => {
     ]);
   });
 
+  it("tells listeners which device and method signed in", async () => {
+    const { emitInternalEvent } =
+      await import("../../hosts/internal-events.js");
+    vi.mocked(emitInternalEvent).mockClear();
+    addUser();
+    await passwordLogin({ username: "alice", password: PASSWORD });
+    expect(emitInternalEvent).toHaveBeenCalledWith(
+      "user_login",
+      "u1",
+      undefined,
+      expect.objectContaining({
+        username: "alice",
+        ipAddress: "10.0.0.1",
+        methodId: "password",
+        deviceType: "web",
+        deviceInfo: expect.any(String),
+      }),
+    );
+  });
+
   it("remembers the session for 30 days and follows session_timeout_hours otherwise", async () => {
     addUser();
     const remembered = await passwordLogin({
@@ -699,6 +719,134 @@ describe("external identities", () => {
     expect(h.state.users.get("u9")!.isAdmin).toBe(false);
   });
 
+  it("follows a role map that names admin through the admin flag", async () => {
+    addUser({ id: "u9", username: "Alice", passwordHash: "", isAdmin: false });
+    h.state.identities.push({
+      id: 1,
+      userId: "u9",
+      providerId: "3",
+      subject: "sub-1",
+      email: null,
+    });
+    await runLogin(
+      fakeRequest() as never,
+      { ...external, roleSync: { desired: ["admin"], managed: ["admin"] } },
+      { methodId: "oidc", rememberMe: false },
+    );
+    expect(h.state.users.get("u9")!.isAdmin).toBe(true);
+  });
+
+  it("makes a new SSO account wait for approval when that is on", async () => {
+    addUser({ id: "first", username: "first", passwordHash: "hash" });
+    h.state.settings.set("external_auto_provision", "true");
+    h.state.settings.set("external_signup_approval", "true");
+    await expect(
+      runLogin(fakeRequest() as never, external, {
+        methodId: "oidc",
+        rememberMe: false,
+      }),
+    ).rejects.toMatchObject({ code: "account_pending" });
+    const created = [...h.state.users.values()].find((u) => u.id !== "first");
+    expect(created).toMatchObject({ disabledReason: "pending_approval" });
+  });
+
+  it("links a first sign in to an account a provisioning plugin made", async () => {
+    addUser({ id: "first", username: "first", passwordHash: "hash" });
+    addUser({
+      id: "m1",
+      username: "alice@example.com",
+      passwordHash: "",
+      email: "a@example.com",
+      managedBy: "scim",
+    });
+    const result = await runLogin(fakeRequest() as never, external, {
+      methodId: "oidc",
+      rememberMe: false,
+    });
+    expect(result.kind).toBe("session");
+    expect(h.state.users.size).toBe(2);
+    expect(h.state.identities).toEqual([
+      expect.objectContaining({
+        userId: "m1",
+        providerId: "3",
+        subject: "sub-1",
+      }),
+    ]);
+    // The plugin owns the username, so sign in does not rename it.
+    expect(h.state.users.get("m1")!.username).toBe("alice@example.com");
+    expect(h.state.audits).toContainEqual(
+      expect.objectContaining({
+        action: "link_external_identity",
+        resourceId: "m1",
+      }),
+    );
+  });
+
+  it("never claims an account with a password, a linked sign in or no manager", async () => {
+    addUser({ id: "first", username: "first", passwordHash: "hash" });
+    addUser({
+      id: "local",
+      username: "alice",
+      passwordHash: "hash",
+      email: "a@example.com",
+      managedBy: "scim",
+    });
+    await expect(
+      runLogin(fakeRequest() as never, external, {
+        methodId: "oidc",
+        rememberMe: false,
+      }),
+    ).rejects.toMatchObject({ code: "registration_disabled" });
+
+    Object.assign(h.state.users.get("local")!, {
+      passwordHash: "",
+      managedBy: null,
+    });
+    await expect(
+      runLogin(fakeRequest() as never, external, {
+        methodId: "oidc",
+        rememberMe: false,
+      }),
+    ).rejects.toMatchObject({ code: "registration_disabled" });
+
+    Object.assign(h.state.users.get("local")!, { managedBy: "scim" });
+    h.state.identities.push({
+      id: 1,
+      userId: "local",
+      providerId: "ldap:1",
+      subject: "alice",
+      email: null,
+    });
+    await expect(
+      runLogin(fakeRequest() as never, external, {
+        methodId: "oidc",
+        rememberMe: false,
+      }),
+    ).rejects.toMatchObject({ code: "registration_disabled" });
+    expect(h.state.identities).toHaveLength(1);
+  });
+
+  it("refuses a turned off account", async () => {
+    addUser({ id: "u9", username: "Alice", passwordHash: "" });
+    Object.assign(h.state.users.get("u9")!, {
+      disabledAt: "2026-11-16T00:00:00.000Z",
+      disabledReason: "admin",
+    });
+    h.state.identities.push({
+      id: 1,
+      userId: "u9",
+      providerId: "3",
+      subject: "sub-1",
+      email: null,
+    });
+    await expect(
+      runLogin(fakeRequest() as never, external, {
+        methodId: "oidc",
+        rememberMe: false,
+      }),
+    ).rejects.toMatchObject({ code: "account_disabled" });
+  });
+
   it("skips enrolled second factors for SSO users when the setting is off", async () => {
     addUser({
       id: "u9",
@@ -880,6 +1028,27 @@ describe("lockout guard", () => {
           }) as never,
         ),
       ).rejects.toMatchObject({ status: 403 });
+    } finally {
+      dispose();
+    }
+  });
+
+  it("does not count a passkey method, which only helps people who registered one", async () => {
+    h.state.settings.set("allow_password_login", "false");
+    const dispose = registerLoginMethod({
+      id: "fixture-passkey",
+      pluginId: "fixture",
+      labelKey: "fixture",
+      kind: "webauthn",
+      describe: async () => [{ id: "passkey", label: "", enabled: true }],
+      options: async () => ({ publicKey: { challenge: "c" } }),
+      verify: async () => ({ kind: "user", userId: "u1" }),
+    });
+    try {
+      expect(await getPasswordLoginStatus()).toEqual({
+        allowed: true,
+        forced: true,
+      });
     } finally {
       dispose();
     }

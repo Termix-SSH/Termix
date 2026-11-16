@@ -33,7 +33,11 @@ import {
   isCookieOriginAllowed,
 } from "../utils/ws-auth.js";
 import { runAsActor } from "./actor.js";
-import { isPluginInstalled } from "./http.js";
+import { sessionAccessRefusal } from "../auth/session-access.js";
+import { bindSocket } from "../auth/socket-sessions.js";
+import { isPluginInstalled, wakePlugin } from "./http.js";
+import { normalizeCookieHeader } from "../auth/session-cookie.js";
+import { embeddedHostRefused } from "../utils/embedded-host.js";
 
 const PLUGIN_WS_PREFIX = "/plugin-ws/";
 
@@ -103,24 +107,39 @@ export function parsePluginWsUrl(
   return { pluginId, path };
 }
 
+interface SocketCaller {
+  userId: string;
+  sessionId: string;
+  apiKeyId?: string;
+}
+
 /**
- * Resolves the user behind an upgrade, or null.
+ * Resolves the session behind an upgrade, or null.
  *
- * A half-authenticated session is not a user: a token still awaiting TOTP is
- * refused here exactly as createAuthMiddleware refuses it for HTTP, so a
- * socket cannot be the way around the second factor.
+ * The same rules as HTTP: a token still awaiting TOTP, a session that must
+ * set up a second factor first, or a plugin minted session on a route it may
+ * not use gets nothing, so a socket is never the way around them.
  */
-async function verifyToken(request: IncomingMessage): Promise<string | null> {
+async function verifyToken(
+  request: IncomingMessage,
+  framePluginId?: string,
+): Promise<SocketCaller | null> {
   const token = extractWebSocketToken(request);
   if (!token) return null;
   try {
     const { AuthManager } = await import("../utils/auth-manager.js");
     const payload = await AuthManager.getInstance().verifyJWTToken(token, {
       allowSocketTicket: true,
+      framePluginId,
     });
-    // A session that still has to set up a second factor gets no sockets either.
-    if (!payload || payload.pendingTOTP || payload.restriction) return null;
-    return payload.userId ?? null;
+    if (!payload?.userId || !payload.sessionId) return null;
+    const path = (request.url ?? "").split("?")[0];
+    if (sessionAccessRefusal(payload, path)) return null;
+    return {
+      userId: payload.userId,
+      sessionId: payload.sessionId,
+      apiKeyId: payload.apiKeyId,
+    };
   } catch {
     return null;
   }
@@ -149,7 +168,11 @@ async function handlePluginUpgrade(
   const parsed = parsePluginWsUrl(request.url);
   if (!parsed) return false;
 
-  const route = routes.get(key(parsed.pluginId, parsed.path));
+  let route = routes.get(key(parsed.pluginId, parsed.path));
+  // A plugin whose process is stopped starts on its first socket.
+  if (!route && (await wakePlugin(parsed.pluginId))) {
+    route = routes.get(key(parsed.pluginId, parsed.path));
+  }
   if (!route) {
     // Claimed by the prefix but nothing is listening: answering here is more
     // honest than leaving the socket hanging. A disabled plugin has no routes
@@ -180,17 +203,21 @@ async function handlePluginUpgrade(
     delete request.headers.cookie;
   }
 
-  let userId = "";
-  if (!route.options.public) {
-    const resolved = await verifyToken(request);
-    if (!resolved) {
-      reject(socket, 401, "Unauthorized");
-      return true;
-    }
-    userId = resolved;
-  } else if (route.options.optionalAuth) {
-    userId = (await verifyToken(request)) ?? "";
+  // A public socket that came with a login is still tied to it, so it ends
+  // with that login. Only optionalAuth hands the user to the handler.
+  // A plugin's own frames may open its sockets, never core's.
+  const caller = await verifyToken(
+    request,
+    route.core ? undefined : route.pluginId,
+  );
+  if (!route.options.public && !caller) {
+    reject(socket, 401, "Unauthorized");
+    return true;
   }
+  const userId =
+    !route.options.public || route.options.optionalAuth
+      ? (caller?.userId ?? "")
+      : "";
 
   // A guest on a public socket has no actor at all, the same as a public
   // HTTP route, so nothing downstream mistakes a placeholder for a user.
@@ -203,6 +230,15 @@ async function handlePluginUpgrade(
     if (tracked) {
       tracked.add(socket);
       socket.once("close", () => tracked.delete(socket));
+    }
+    if (caller) {
+      const bound = bindSocket({
+        ...caller,
+        close: () => socket.destroy(),
+        bytesRead: () =>
+          (socket as Duplex & { bytesRead?: number }).bytesRead ?? 0,
+      });
+      socket.once("close", () => bound.unbind());
     }
     asCaller(() => rawHandler(request, socket, head, userId));
     return true;
@@ -226,6 +262,18 @@ async function handlePluginUpgrade(
   };
 
   server.handleUpgrade(request, socket, head, (ws: WebSocket) => {
+    if (caller) {
+      const bound = bindSocket({
+        ...caller,
+        close: () => {
+          ws.close(1008, "Session ended");
+          // A peer that never answers the close still loses the socket.
+          setTimeout(() => ws.terminate(), 2_000).unref?.();
+        },
+      });
+      ws.on("message", () => bound.markActive());
+      ws.once("close", () => bound.unbind());
+    }
     const handler = route.handler;
     if (!handler) {
       ws.close(1011, "No handler");
@@ -252,12 +300,36 @@ async function handlePluginUpgrade(
   return true;
 }
 
+/** Every socket route served right now, core's own included. */
+export function listWsRoutes(): {
+  pluginId: string;
+  path: string;
+  public?: boolean;
+  optionalAuth?: boolean;
+}[] {
+  return [...routes.values()].map((route) => ({
+    pluginId: route.pluginId,
+    path: route.path,
+    public: route.options.public,
+    optionalAuth: route.options.optionalAuth,
+  }));
+}
+
 /** Wires the upgrade handler onto a server. Idempotent per server. */
 export function attachPluginWebSockets(server: HttpServer): void {
   if (attachedServers.has(server)) return;
   attachedServers.add(server);
 
   server.on("upgrade", (request, socket, head) => {
+    if (embeddedHostRefused(request as IncomingMessage)) {
+      reject(socket as Duplex, 403, "Forbidden");
+      return;
+    }
+    const cookie = (request as IncomingMessage).headers.cookie;
+    if (cookie) {
+      (request as IncomingMessage).headers.cookie =
+        normalizeCookieHeader(cookie);
+    }
     void handlePluginUpgrade(
       request as IncomingMessage,
       socket as Duplex,

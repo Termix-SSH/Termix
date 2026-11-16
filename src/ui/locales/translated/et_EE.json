@@ -219,6 +219,10 @@
     "securityIntro": "Lisa oma kontole passkey või autentimise rakendus. Saad seda teha ka hiljem Seadistustes, jaotises Turvalisus.",
     "pluginsDocsLink": "Loe igaühe kohta"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix töötab endiselt",
+    "noticeBody": "Akna sulgemisel jätkab Termix töötamist teatealal. Väljumiseks avage teateala ikooni menüü ja valige Välju. Selle saate seadistustes välja lülitada."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automaatne",
     "modePrompt": "Küsi esmalt",

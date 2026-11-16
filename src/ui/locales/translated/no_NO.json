@@ -219,6 +219,10 @@
     "securityIntro": "Legg til en passnøkkel eller en autentikator-app til kontoen din. Du kan også gjøre dette senere i Innstillinger, under Sikkerhet.",
     "pluginsDocsLink": "Les om hver enkelt"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix kjører fortsatt",
+    "noticeBody": "Å lukke vinduet holder Termix i gang i systemstatuslinjen. For å avslutte, åpne menyen i systemstatuslinjen og velg Avslutt. Du kan slå dette av i Innstillinger."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automatisk",
     "modePrompt": "Spør først",

@@ -23,6 +23,8 @@ import {
 } from "@/look/look-store";
 import { BUILTIN_THEMES, setPluginThemes } from "@/look/theme-registry";
 import { setPluginLayouts } from "@/look/layout-registry";
+import { startFramedPlugin } from "./frames/frame-plugins";
+import { dropFrameToken } from "./frames/frame-token";
 
 /**
  * Loads plugin frontends into the running shell.
@@ -249,6 +251,10 @@ async function activate(summary: PluginSummary): Promise<void> {
 
   let cssLink: HTMLLinkElement | null = null;
   let handle: PluginAppHandle | null = null;
+  if (summary.frontendIsolation === "frame") {
+    await activateFramed(summary);
+    return;
+  }
   try {
     const module = await loader.importFrontend(summary);
     if (typeof module?.activate !== "function") {
@@ -282,6 +288,40 @@ async function activate(summary: PluginSummary): Promise<void> {
     // called: it never finished starting.
     handle?.dispose();
     cssLink?.remove();
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[plugins] ${summary.id} failed to start`, error);
+    failedVersions.set(summary.id, summary.assetVersion ?? null);
+    setFrontendState(summary.id, "failed", message);
+  }
+}
+
+/**
+ * A plugin whose UI runs in sandboxed frames: nothing is imported into the
+ * page. Its background frame runs activate and reports what it registered.
+ */
+async function activateFramed(summary: PluginSummary): Promise<void> {
+  // Frames need a session. Before sign-in the login screen draws auth
+  // plugins from what their backends describe, and only their strings load.
+  if (preLoginMode) return;
+  try {
+    if (guestMode) {
+      throw new Error("plugin views in frames need a signed-in user");
+    }
+    const framed = await withTimeout(
+      startFramedPlugin(summary),
+      ACTIVATE_TIMEOUT_MS + 5_000,
+      `activate() did not finish within ${ACTIVATE_TIMEOUT_MS / 1000}s`,
+    );
+    active.set(summary.id, {
+      id: summary.id,
+      assetVersion: summary.assetVersion ?? null,
+      handle: { app: framed.handle.app, dispose: framed.dispose },
+      module: { activate: () => {} },
+      cssLink: null,
+    });
+    failedVersions.delete(summary.id);
+    setFrontendState(summary.id, "active");
+  } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[plugins] ${summary.id} failed to start`, error);
     failedVersions.set(summary.id, summary.assetVersion ?? null);
@@ -427,10 +467,36 @@ async function reconcile(summaries: PluginSummary[]): Promise<void> {
     if (!wanted.has(id)) failedVersions.delete(id);
   }
 
-  await activateConcurrently(order);
+  // The server serves no assets of a plugin it is still starting, so wait for
+  // it, and for anything that depends on it, and look again shortly.
+  const waiting = new Set<string>();
+  for (const summary of order) {
+    const deps = Object.keys(summary.dependencies ?? {});
+    if (isStarting(summary) || deps.some((id) => waiting.has(id))) {
+      waiting.add(summary.id);
+      if (!active.has(summary.id)) setFrontendState(summary.id, "loading");
+    }
+  }
+  await activateConcurrently(order.filter((s) => !waiting.has(s.id)));
+  scheduleStartingRetry(waiting.size > 0);
   // After activation, so a plugin that registered its own host editor
   // section is not given a second, generated one.
   syncHostFeatureTabs(summaries);
+}
+
+function isStarting(summary: PluginSummary): boolean {
+  return summary.state === "loaded" || summary.state === "activating";
+}
+
+const STARTING_RETRY_MS = 3_000;
+let startingRetry: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleStartingRetry(needed: boolean): void {
+  if (!needed || startingRetry || guestMode) return;
+  startingRetry = setTimeout(() => {
+    startingRetry = null;
+    void syncPlugins();
+  }, STARTING_RETRY_MS);
 }
 
 /**
@@ -502,6 +568,8 @@ export function syncPlugins(summaries?: PluginSummary[]): Promise<void> {
         return;
       }
     }
+    // A full sync means someone is signed in, so frames may start now.
+    preLoginMode = false;
     await reconcile(list);
     markPluginsSettled();
   });
@@ -570,6 +638,8 @@ export function fetchGuestViews(): Promise<string[]> {
   return guestViewsRequest;
 }
 
+let preLoginMode = false;
+
 async function fetchPreLoginPlugins(): Promise<PluginSummary[]> {
   const response = await fetch(getBackendUrl("/plugins/public-manifest"));
   if (!response.ok) return [];
@@ -599,6 +669,7 @@ export async function startPreLoginPlugins(
     // subset would unload everything else. Auth remounts during the
     // post-login fade, so this runs after sign-in every time.
     if (started) return;
+    preLoginMode = true;
     if (options.retryFailed) {
       for (const plugin of list) failedVersions.delete(plugin.id);
     }
@@ -636,6 +707,8 @@ export function startPluginRuntime(
 /** Deactivates every plugin, on logout. */
 export function stopPluginRuntime(): Promise<void> {
   gateLayouts = false;
+  if (startingRetry) clearTimeout(startingRetry);
+  startingRetry = null;
   if (started && typeof window !== "undefined") {
     started = false;
     window.removeEventListener(PLUGINS_CHANGED_EVENT, onPluginsChanged);
@@ -643,6 +716,7 @@ export function stopPluginRuntime(): Promise<void> {
   }
   return enqueue(async () => {
     for (const id of [...active.keys()].reverse()) await deactivate(id);
+    dropFrameToken();
   });
 }
 

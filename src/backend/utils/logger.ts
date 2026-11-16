@@ -1,4 +1,5 @@
 import chalk, { type ChalkInstance } from "chalk";
+import { inspect } from "util";
 
 export type LogLevel = "debug" | "info" | "warn" | "error" | "success";
 
@@ -57,6 +58,89 @@ const SENSITIVE_FIELDS = [
   "cookie",
 ];
 
+// Any key containing one of these is masked, whatever its case.
+const SENSITIVE_PARTS = [
+  "password",
+  "passphrase",
+  "secret",
+  "token",
+  "privatekey",
+  "apikey",
+  "authorization",
+  "cookie",
+  "jwt",
+];
+
+function isSensitiveKey(key: string): boolean {
+  if (SENSITIVE_FIELDS.includes(key)) return true;
+  const lower = key.toLowerCase();
+  return SENSITIVE_PARTS.some((part) => lower.includes(part));
+}
+
+/** Secrets that can turn up inside free text: messages, errors, URLs. */
+const SECRET_PATTERNS: [RegExp, string][] = [
+  [
+    /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(-----END [A-Z ]*PRIVATE KEY-----|$)/g,
+    "[PRIVATE KEY]",
+  ],
+  [/\btmx_[A-Za-z0-9]{16,}/g, "tmx_[MASKED]"],
+  [/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [MASKED]"],
+  [/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "[JWT]"],
+  [/\bsysenc:v\d+:[^\s"',]+/g, "sysenc:[MASKED]"],
+  [/(:\/\/[^/\s:@]+:)[^@\s/]+@/g, "$1[MASKED]@"],
+  [
+    /([?&;\s](?:token|jwt|temp_token|access_token|refresh_token|id_token|password|secret|api_key|apikey|code)=)[^&\s;]+/gi,
+    "$1[MASKED]",
+  ],
+];
+
+/** Masks secrets found in a piece of text. */
+export function redactText(text: string): string {
+  let out = text;
+  for (const [pattern, replacement] of SECRET_PATTERNS) {
+    out = out.replace(pattern, replacement);
+  }
+  return out;
+}
+
+function redactValue(value: unknown, depth = 0): unknown {
+  if (typeof value === "string") return redactText(value);
+  if (!value || typeof value !== "object" || depth > 4) return value;
+  if (value instanceof Error) return value;
+  if (Array.isArray(value)) {
+    return value.map((item) => redactValue(item, depth + 1));
+  }
+  const out: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value)) {
+    out[key] =
+      isSensitiveKey(key) && item !== undefined && item !== null
+        ? typeof item === "boolean"
+          ? item
+            ? "[PRESENT]"
+            : "[ABSENT]"
+          : "[MASKED]"
+        : redactValue(item, depth + 1);
+  }
+  return out;
+}
+
+/** An error printed with its message and stack masked. */
+export function redactError(error: unknown): string {
+  if (error instanceof Error) {
+    const text = error.stack || `${error.name}: ${error.message}`;
+    const cause =
+      error.cause !== undefined
+        ? `\nCaused by: ${redactError(error.cause)}`
+        : "";
+    return redactText(text) + cause;
+  }
+  return redactText(
+    typeof error === "string"
+      ? error
+      : inspect(redactValue(error), { depth: 4 }),
+  );
+}
+
 const TRUNCATE_FIELDS = ["data", "content", "body", "response", "request"];
 
 export class Logger {
@@ -88,22 +172,7 @@ export class Logger {
   }
 
   private sanitizeContext(context: LogContext): LogContext {
-    const sanitized = { ...context };
-
-    for (const field of SENSITIVE_FIELDS) {
-      if (sanitized[field] !== undefined) {
-        if (
-          typeof sanitized[field] === "string" &&
-          sanitized[field].length > 0
-        ) {
-          sanitized[field] = "[MASKED]";
-        } else if (typeof sanitized[field] === "boolean") {
-          sanitized[field] = sanitized[field] ? "[PRESENT]" : "[ABSENT]";
-        } else {
-          sanitized[field] = "[MASKED]";
-        }
-      }
-    }
+    const sanitized = redactValue(context) as LogContext;
 
     for (const field of TRUNCATE_FIELDS) {
       if (
@@ -166,7 +235,7 @@ export class Logger {
       }
     }
 
-    return `${timestamp} ${levelTag} ${serviceTag} ${message}${contextStr}`;
+    return `${timestamp} ${levelTag} ${serviceTag} ${redactText(message)}${contextStr}`;
   }
 
   private getLevelColor(level: LogLevel): ChalkInstance {
@@ -231,7 +300,7 @@ export class Logger {
     if (!this.shouldLog("error", message)) return;
     console.error(this.formatMessage("error", message, context));
     if (error) {
-      console.error(error);
+      console.error(redactError(error));
     }
   }
 

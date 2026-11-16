@@ -27,13 +27,19 @@ const api = vi.hoisted(() => ({
     missing: [],
   })),
   setPluginState: vi.fn(async () => ({ state: "active" })),
+  setPluginOptions: vi.fn(async () => ({
+    autoUpdate: false,
+    pinnedVersion: null,
+    channel: "stable",
+  })),
 }));
+const confirmAnswer = vi.hoisted(() => ({ value: true }));
 vi.mock("@/api/plugins-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/api/plugins-api")>()),
   ...api,
 }));
 vi.mock("@/components/surface/surface-scope", () => ({
-  useConfirm: () => vi.fn(async () => true),
+  useConfirm: () => vi.fn(async () => confirmAnswer.value),
 }));
 const i18n = vi.hoisted(() => {
   const strings: Record<string, string> = {
@@ -46,7 +52,12 @@ const i18n = vi.hoisted(() => {
   };
 });
 vi.mock("react-i18next", () => ({ useTranslation: () => i18n }));
-vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+const toasts = vi.hoisted(() => ({
+  error: vi.fn(),
+  success: vi.fn(),
+  info: vi.fn(),
+}));
+vi.mock("sonner", () => ({ toast: toasts }));
 
 import { usePluginsManager } from "@/plugins/use-plugins-manager";
 
@@ -106,4 +117,23 @@ it("names plugins in the UI language, falling back to the manifest", async () =>
     { name: "示例", description: "一个示例插件" },
     { name: "Browse Only", description: "Not installed" },
   ]);
+});
+
+it("says when turning a plugin on waits for the other admins", async () => {
+  api.setPluginState.mockResolvedValueOnce({
+    held: true,
+    holdId: "h1",
+    runsAt: "2026-11-13T01:00:00.000Z",
+    minutes: 60,
+  } as never);
+  const { result } = renderHook(() => usePluginsManager());
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  await act(async () => {
+    await result.current.toggle(result.current.plugins[0]);
+  });
+  await act(async () => {
+    await result.current.confirmConsent();
+  });
+  expect(toasts.info).toHaveBeenCalledWith("plugins.manager.toast.held");
+  expect(toasts.error).not.toHaveBeenCalled();
 });

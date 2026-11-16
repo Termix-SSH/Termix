@@ -112,11 +112,16 @@ export async function evaluateAuthPolicy(
   return policy;
 }
 
-/** Whether the login page should offer remember me. */
-export function rememberDeviceAllowed(): boolean {
+/**
+ * Whether the login page should offer remember me. Awaited, since a provider
+ * in a plugin process answers through a promise.
+ */
+export async function rememberDeviceAllowed(): Promise<boolean> {
   for (const entry of providers.values()) {
     try {
-      if (entry.provider.allowRememberDevice?.() === false) return false;
+      if ((await entry.provider.allowRememberDevice?.()) === false) {
+        return false;
+      }
     } catch {
       return false;
     }

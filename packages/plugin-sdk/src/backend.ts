@@ -70,6 +70,7 @@ export interface PluginLogger {
 export interface PluginEvents {
   /** Topics are namespaced to plugin.<id>.* unless the plugin holds events:core. */
   emit: (topic: string, payload: unknown) => void;
+  /** The topic must be listed in the manifest's sandbox.events. */
   on: (topic: string, listener: (payload: unknown) => void) => () => void;
 }
 
@@ -93,6 +94,24 @@ export interface PluginFiles {
    * subdirectories underneath it.
    */
   dataDir: () => Promise<string>;
+  /**
+   * Reads the file an admin named in one of the manifest's env variables
+   * marked `"file": true` (a config file mounted into the container). Null
+   * when the variable is not set. Never a file in Termix's data folder or one
+   * of its own key files; at most 5 MB. Needs no capability. Termix 26.11.2+.
+   */
+  readEnvFile: (
+    name: string,
+  ) => Promise<{ text: string; modifiedMs: number } | null>;
+  /**
+   * A secret a config file points at: an environment variable of the server
+   * or a file such as a Docker secret. Null when it is not there. Never one of
+   * Termix's own variables, key files or anything in its data folder; at most
+   * 64 KiB. Needs config:secrets. Termix 26.11.2+.
+   */
+  readSecret: (
+    ref: { env: string } | { file: string },
+  ) => Promise<string | null>;
 }
 
 /**
@@ -110,8 +129,20 @@ export interface PluginFiles {
 export interface PluginDatabase {
   /** Registers a definition and returns its queryable table object. */
   define: <T = unknown>(definition: PluginTableDefinition) => Promise<T>;
-  /** Drizzle handle, scoped to this plugin's tables. */
+  /**
+   * Drizzle handle, scoped to this plugin's tables. In the plugin's own
+   * process each statement goes to core, which runs it only on this plugin's
+   * tables (and refs, read only). db.transaction() is not available there:
+   * use batch() for writes that must land together.
+   */
   client: <T = unknown>() => Promise<T>;
+  /**
+   * Runs write queries in one transaction: all of them or none. Each item is
+   * a Drizzle query built on db.client() and not awaited (it needs toSQL()).
+   */
+  batch: (
+    queries: { toSQL(): { sql: string; params: unknown[] } }[],
+  ) => Promise<void>;
   /**
    * Core tables a plugin may join against: users, hosts, roles, userRoles.
    * Needs db:core-refs. Treat them as read-only.
@@ -240,7 +271,7 @@ export interface SyncEntityRegistration {
    * Rows this returns false for are left out of sync in both directions, for
    * state that belongs to one install (a per-device "last session").
    */
-  shouldSync?: (row: SyncRow) => boolean;
+  shouldSync?: (row: SyncRow) => boolean | Promise<boolean>;
   /** RBAC permissions a pushed change needs on the server. */
   permissions?: SyncEntityPermissions;
   /**
@@ -298,8 +329,11 @@ export interface SyncEntityInfo {
   owner: string;
   order: number;
   readOnly: boolean;
-  /** Whether the row would show in a load even if it exists. */
-  covers?: (syncId: string) => boolean;
+  /**
+   * Whether the row would show in a load even if it exists. In a plugin
+   * process it returns a Promise.
+   */
+  covers?: (syncId: string) => boolean | Promise<boolean>;
 }
 
 /** A row ready for the wire, with its content hash. */
@@ -536,7 +570,11 @@ export interface PluginSyncHost {
       resolvers: unknown,
     ) => Promise<void>;
     deleteRow: (type: string, userId: string, syncId: string) => Promise<void>;
-    orderSelfReferences: (type: string, rows: SyncRow[]) => SyncRow[];
+    /** Returns a Promise in a plugin process. */
+    orderSelfReferences: (
+      type: string,
+      rows: SyncRow[],
+    ) => SyncRow[] | Promise<SyncRow[]>;
     counts: (userId: string) => Promise<Record<string, number>>;
     wipe: (userId: string) => Promise<void>;
     regenerateSyncIds: (userId: string) => Promise<void>;
@@ -603,7 +641,10 @@ export interface PluginSyncHost {
     }>;
     parsePushOps: (body: unknown) => Promise<SyncPushOp[] | null>;
     applyPush: (userId: string, ops: SyncPushOp[]) => Promise<SyncPushResult[]>;
-    /** Streams a change notice to the account's open event streams. */
+    /**
+     * Streams a change notice to the account's open event streams. In a
+     * plugin process it works only inside the request whose response it is.
+     */
     listen: (userId: string, res: unknown) => Promise<() => void>;
   };
 
@@ -649,7 +690,10 @@ export interface PluginSyncHost {
       status: number;
       body: AsyncIterable<Uint8Array> | null;
     }>;
-    normalizeServerUrl: (input: string) => string | null;
+    /** Returns a Promise in a plugin process. */
+    normalizeServerUrl: (
+      input: string,
+    ) => string | null | Promise<string | null>;
     isRemoteError: (error: unknown) => error is SyncRemoteError;
   };
 
@@ -670,7 +714,11 @@ export interface PluginSyncHost {
     verify: (
       token: string,
     ) => Promise<{ userId: string; sessionId?: string } | null>;
-    /** Sets the sign in cookie on a response, like a login does. A name sets another cookie. */
+    /**
+     * Sets the sign in cookie on a response, like a login does. A name sets
+     * another cookie; in a plugin process only names starting with
+     * tmxp_<id>_, and only inside the request whose response it is.
+     */
     setCookie: (
       req: unknown,
       res: unknown,
@@ -701,14 +749,21 @@ export interface PluginSyncHost {
     /** Sends a plugin archive; false when there is no such plugin to share. */
     sendPackage: (pluginId: string, res: unknown) => Promise<boolean>;
     mirror: (link: SyncLinkInfo) => Promise<void>;
-    lastRemote: () => SyncRemotePlugin[];
-    localNames: () => Map<string, string>;
+    /** Returns a Promise in a plugin process. */
+    lastRemote: () => SyncRemotePlugin[] | Promise<SyncRemotePlugin[]>;
+    /** Returns a Promise in a plugin process. */
+    localNames: () => Map<string, string> | Promise<Map<string, string>>;
   };
 
   desktop: {
     /** Tells the app's main process how to reach the linked origin. */
     applyProxy: (link: SyncLinkInfo | null) => Promise<void>;
     deviceName: () => string;
+    /**
+     * The desktop wide default for where connections start, from the app's
+     * settings. Termix 26.11.2+.
+     */
+    connectionOrigin?: () => Promise<"local" | "remote">;
   };
 
   alerts: {
@@ -729,9 +784,14 @@ export interface PluginSyncHost {
  * `consume`.
  */
 export interface PluginRegistry {
+  /** The key must be listed in the manifest's sandbox.registry. */
   provide: <T>(key: string, value: T) => void;
-  consume: <T>(key: string) => T | undefined;
-  revoke: (key: string, value?: unknown) => boolean;
+  /**
+   * The value another plugin provided. It lives in that plugin's process, so
+   * every function on it returns a Promise.
+   */
+  consume: <T>(key: string) => Promise<T | undefined>;
+  revoke: (key: string, value?: unknown) => Promise<boolean>;
 }
 
 export interface PluginServices {
@@ -753,9 +813,9 @@ export interface PluginServices {
   get: <T extends object>(
     service: string,
     options?: { userId?: string; provider?: string },
-  ) => T;
+  ) => Promise<T>;
   /** Names of the providers running now ("" for an unnamed one). */
-  providers: (service: string) => string[];
+  providers: (service: string) => Promise<string[]>;
 }
 
 export interface PluginSecrets {
@@ -784,7 +844,7 @@ export interface PluginSecrets {
     key: string,
     resolve: (userId: string) => Promise<string | null> | string | null,
   ) => void;
-  withdraw: (key: string) => boolean;
+  withdraw: (key: string) => Promise<boolean>;
   getShared: (
     pluginId: string,
     key: string,
@@ -849,6 +909,13 @@ export interface PluginRouterOptions {
    * TERMIX_PLUGIN_PUBLIC_RATE_LIMIT wins over it.
    */
   publicRateLimit?: number;
+  /**
+   * Passes the Authorization header to the declared public routes, for a
+   * protocol that sends its own bearer token, like SCIM. Termix API keys and
+   * session tokens are still never passed, and authenticated routes never get
+   * the header. Termix 26.11.2 and plugin API 2.9.
+   */
+  publicAuthorization?: boolean;
 }
 
 /**
@@ -1304,6 +1371,12 @@ export interface PluginHostLockProvider {
   note: (hostId: number) => string | null;
   /** False blocks adding hosts by hand (editor, import, other plugins). */
   allowManualCreate: () => boolean;
+  /**
+   * Every host this provider locks. Needed in a plugin process (API 2.4),
+   * where core keeps a copy of the locks the plugin reports and reads them
+   * again every second.
+   */
+  lockedHosts?: () => number[];
 }
 
 export interface PluginHostLocksApi {
@@ -1471,7 +1544,7 @@ export interface PluginHosts {
     hostIds?: number[];
   }) => Promise<PluginHostProbeTarget[]>;
   /** Whether a session is open to the host right now. Needs hosts:read. */
-  sessionActive: (hostId: number) => boolean;
+  sessionActive: (hostId: number) => Promise<boolean>;
   /**
    * Imports Termix JSON host rows for the acting user, the same way POST
    * /host/bulk-import does: up to 100 rows, jump hosts remapped by exportId,
@@ -1816,8 +1889,9 @@ export type PluginKeyboardInteractiveDetection =
  * browser sign-in). Handlers run before core's TOTP and push detection.
  *
  * `settings` is this plugin's host-scope settings for the host, with manifest
- * defaults filled in. Both hooks are synchronous; they run inside ssh2's
- * keyboard-interactive callback.
+ * defaults filled in. Both hooks run inside ssh2's keyboard-interactive
+ * callback. They may return Promises (a plugin process always does); one
+ * that takes over 5 seconds counts as no.
  */
 export interface PluginKeyboardInteractiveHandler {
   /** Listed in contributes.auth.keyboardInteractive. */
@@ -1832,12 +1906,15 @@ export interface PluginKeyboardInteractiveHandler {
     },
     host: PluginSshHost,
     settings: Record<string, unknown>,
-  ) => PluginKeyboardInteractiveDetection | null;
+  ) =>
+    | PluginKeyboardInteractiveDetection
+    | null
+    | Promise<PluginKeyboardInteractiveDetection | null>;
   /** Answer password prompts with the stored password instead of asking. */
   autoAnswerPasswords?: (
     host: PluginSshHost,
     settings: Record<string, unknown>,
-  ) => boolean;
+  ) => boolean | Promise<boolean>;
 }
 
 /** Answers keyboard-interactive prompts. Resolve null to give up. */
@@ -1912,6 +1989,15 @@ export interface PluginNetwork {
     port: number,
     options?: { timeoutMs?: number },
   ) => Promise<boolean>;
+  /**
+   * Looks up a host name on the Termix server and returns the first address,
+   * or null when it has none. A plugin process can't look names up itself
+   * without network:sockets. Pass family 4 or 6 to ask for one kind.
+   */
+  lookup: (
+    host: string,
+    options?: { family?: 4 | 6 },
+  ) => Promise<string | null>;
 }
 
 /**
@@ -1932,7 +2018,15 @@ export interface PluginSshTransportHost {
 }
 
 export interface PluginSshTransportProvider {
-  claims: (hostId: number, host?: PluginSshTransportHost) => boolean;
+  /**
+   * Whether this provider carries the host. May answer with a Promise (it
+   * always does from a plugin process); only `true` claims the host, and an
+   * answer that takes over 2 seconds counts as no.
+   */
+  claims: (
+    hostId: number,
+    host?: PluginSshTransportHost,
+  ) => boolean | Promise<boolean>;
   open: (host: PluginSshTransportHost) => Promise<import("node:stream").Duplex>;
 }
 
@@ -1995,7 +2089,7 @@ export interface PluginSsh {
   ) => Promise<PluginSshConnection<Client>>;
 
   /** The pool key withConnection would use, for clearing it. */
-  poolKey: (pool: string, host: PluginSshHost) => string;
+  poolKey: (pool: string, host: PluginSshHost) => Promise<string>;
 
   /**
    * Closes this plugin's pooled connections to a host, for when its details
@@ -2082,7 +2176,7 @@ export interface PluginSsh {
       prompts: PluginKeyboardInteractivePrompt[];
     },
     host: PluginSshHost,
-  ) => PluginKeyboardInteractiveDecision;
+  ) => Promise<PluginKeyboardInteractiveDecision>;
 
   /** Stored password for password prompts, empty for the rest. */
   autoResponses: (
@@ -2091,10 +2185,10 @@ export interface PluginSsh {
   ) => string[];
 
   /** Whether an auth type carries a secret (drives "auth_required" flows). */
-  requiresSecret: (authType: string) => boolean;
+  requiresSecret: (authType: string) => Promise<boolean>;
 
   /** Whether an auth type can connect unattended, for polling. */
-  supportsBackground: (authType: string) => boolean;
+  supportsBackground: (authType: string) => Promise<boolean>;
 }
 
 /** What ctx.ssh.prepare built, plus the provider hooks bound to it. */
@@ -2103,15 +2197,29 @@ export interface PluginSshPrepared {
   outcome: PluginSshAuthOutcome;
   /** The auth type whose provider prepared it, null when none exists. */
   authType: string | null;
-  /** The provider's banner hook, bound to this host and connection. */
-  onBanner?: (banner: string) => PluginSshBannerDecision | undefined;
-  /** The provider's auth failure hook, bound to this host and connection. */
+  /**
+   * The provider's banner hook, bound to this host and connection. Await it:
+   * a provider in a plugin process answers with a Promise.
+   */
+  onBanner?: (
+    banner: string,
+  ) =>
+    | PluginSshBannerDecision
+    | undefined
+    | Promise<PluginSshBannerDecision | undefined>;
+  /**
+   * The provider's auth failure hook, bound to this host and connection.
+   * Await it: a provider in a plugin process answers with a Promise.
+   */
   onAuthFailed?: (context: {
     error: Error;
     retries: number;
     canRetry: boolean;
     methodNotAvailable: boolean;
-  }) => PluginSshAuthOutcome | undefined;
+  }) =>
+    | PluginSshAuthOutcome
+    | undefined
+    | Promise<PluginSshAuthOutcome | undefined>;
 }
 
 /** Thrown by ctx.ssh.startInteraction when no provider can start it. */
@@ -2157,17 +2265,21 @@ export interface PluginSshAuthProvider {
   quickConnect?: boolean;
   /** Interaction name its outcomes use, for startInteraction routing. */
   interaction?: string;
+  /** In a plugin process this returns a Promise; core waits for it. */
   connectOptions?: (
     host: PluginSshHost,
     purpose: string,
-  ) => Record<string, unknown>;
+  ) => Record<string, unknown> | Promise<Record<string, unknown>>;
   /** Fills the ssh2 config for this host. Never connects. */
   prepare: (
     config: Record<string, unknown>,
     host: PluginSshHost,
     env: PluginSshAuthEnv,
   ) => Promise<PluginSshAuthOutcome>;
-  /** Claims keyboard-interactive rounds for hosts of this type. */
+  /**
+   * Claims keyboard-interactive rounds for hosts of this type. May return a
+   * Promise; one that takes over 5 seconds counts as null.
+   */
   onKeyboardInteractive?: (
     round: {
       name: string;
@@ -2175,8 +2287,14 @@ export interface PluginSshAuthProvider {
       prompts: PluginKeyboardInteractivePrompt[];
     },
     host: PluginSshHost,
-  ) => PluginKeyboardInteractiveDecision | null;
-  /** Synchronous: decide on a retry before the socket closes. */
+  ) =>
+    | PluginKeyboardInteractiveDecision
+    | null
+    | Promise<PluginKeyboardInteractiveDecision | null>;
+  /**
+   * Decide on a retry before the socket closes. In a plugin process this
+   * returns a Promise, so callers await it.
+   */
   onAuthFailed?: (
     host: PluginSshHost,
     env: PluginSshAuthEnv,
@@ -2186,7 +2304,10 @@ export interface PluginSshAuthProvider {
       canRetry: boolean;
       methodNotAvailable: boolean;
     },
-  ) => PluginSshAuthOutcome | undefined;
+  ) =>
+    | PluginSshAuthOutcome
+    | undefined
+    | Promise<PluginSshAuthOutcome | undefined>;
   /**
    * Claims an ssh2 "banner" event during the handshake, for a server that
    * holds the connection open pending an out-of-band step (Tailscale SSH
@@ -2198,7 +2319,10 @@ export interface PluginSshAuthProvider {
     banner: string,
     host: PluginSshHost,
     env: PluginSshAuthEnv,
-  ) => PluginSshBannerDecision | undefined;
+  ) =>
+    | PluginSshBannerDecision
+    | undefined
+    | Promise<PluginSshBannerDecision | undefined>;
   /** Starts the browser step behind an interaction-required outcome. */
   startInteraction?: (request: {
     userId: string;
@@ -2302,13 +2426,89 @@ export interface PluginLoginInstance {
    * instance that asks wins.
    */
   autoStart?: boolean;
+  /**
+   * Which page of the login screen shows it: "password" (the main one) or
+   * "external" (the other sign in methods). Both when unset.
+   */
+  views?: Array<"password" | "external">;
+}
+
+/** One field the login screen draws for a form method or a second factor. */
+export interface PluginLoginField {
+  /** The key the value goes under in the body sent to verify. */
+  name: string;
+  type: "text" | "password" | "code";
+  /** A key in this plugin's locales. */
+  labelKey: string;
+  /** The browser's autofill hint: "username", "current-password", "one-time-code". */
+  autocomplete?: string;
+}
+
+/**
+ * What the shell needs to run a WebAuthn step in the browser. `publicKey` is
+ * PublicKeyCredentialRequestOptionsJSON (or CreationOptionsJSON for a
+ * create ceremony), base64url fields as @simplewebauthn/server makes them.
+ */
+export interface PluginWebAuthnOptions {
+  publicKey: Record<string, unknown>;
+  /** Comes back unchanged beside the browser's answer, e.g. a challenge id. */
+  context?: Record<string, unknown>;
+}
+
+/**
+ * How the second factor step asks for the answer. The shell draws it and
+ * sends the answer to the factor's verify, so no plugin code runs on the
+ * login screen.
+ */
+export type PluginSecondFactorPrompt =
+  /** One code field. Its value goes under `field` ("code" by default). */
+  | { kind: "code"; field?: string; labelKey?: string; length?: number }
+  | { kind: "fields"; fields: PluginLoginField[] }
+  /**
+   * A security key. `challenge()` returns PluginWebAuthnOptions (or the
+   * request options JSON alone); verify gets `{ ...context, response }`.
+   */
+  | { kind: "webauthn" };
+
+/**
+ * A WebAuthn step a plugin's own screens run after login, such as adding a
+ * passkey or proving a key before removing one. Frames can't reach
+ * navigator.credentials, so the shell runs it: the frame names the ceremony,
+ * this plugin's backend makes the options and checks the answer, and the
+ * frame only gets what `finish` returns.
+ */
+export interface PluginWebAuthnCeremony {
+  /** Unique within this plugin. */
+  id: string;
+  type: "create" | "get";
+  options: (input: {
+    userId: string;
+    /** The page's origin, for the relying party id. */
+    origin: string;
+    /** Plain values the frame passed, such as a key name. */
+    extra: Record<string, unknown>;
+  }) => Promise<PluginWebAuthnOptions>;
+  /** Checks the browser's answer. What it returns goes back to the frame. */
+  finish: (input: {
+    userId: string;
+    origin: string;
+    extra: Record<string, unknown>;
+    context: Record<string, unknown>;
+    /** RegistrationResponseJSON or AuthenticationResponseJSON. */
+    response: Record<string, unknown>;
+  }) => Promise<Record<string, unknown> | void>;
 }
 
 export interface PluginLoginMethod {
   id: string;
   labelKey: string;
   icon?: string;
-  kind: "redirect" | "form";
+  /**
+   * "webauthn" (Termix 26.11.2, plugin API 2.8) is a passkey button the
+   * shell runs: it gets `options`, asks the browser, and sends
+   * `{ ...context, response }` to `verify`.
+   */
+  kind: "redirect" | "form" | "webauthn";
   /**
    * True for a method that authenticates against something other than a
    * password or key this server holds: SSO, an external directory, a
@@ -2326,7 +2526,19 @@ export interface PluginLoginMethod {
   ) => Promise<{ redirectUrl: string }>;
   /** Redirect methods: the provider's callback. */
   callback?: (request: PluginLoginRequest) => Promise<PluginVerifiedIdentity>;
-  /** Form methods: check what the user typed. */
+  /**
+   * Form methods: the fields the login screen draws for each instance
+   * (Termix 26.11.2, plugin API 2.8). The values go to `verify` by name.
+   */
+  fields?: PluginLoginField[];
+  /** Also drawn under the password form, for a method used instead of a password. */
+  placement?: "inline";
+  /** WebAuthn methods: the options for the browser's passkey prompt. */
+  options?: (
+    request: PluginLoginRequest,
+    instanceId: string | null,
+  ) => Promise<PluginWebAuthnOptions>;
+  /** Form and WebAuthn methods: check what the user gave. */
   verify?: (
     request: PluginLoginRequest,
     instanceId: string | null,
@@ -2339,6 +2551,11 @@ export interface PluginSecondFactor {
   isEnrolled: (userId: string) => Promise<boolean>;
   /** Anything the client needs before the user answers. */
   challenge?: (userId: string) => Promise<unknown>;
+  /**
+   * How the login screen asks (Termix 26.11.2, plugin API 2.8). A factor
+   * without one can only be answered by a client that knows it.
+   */
+  prompt?: PluginSecondFactorPrompt;
   /**
    * True when the answer is right. Return an object to refuse with a specific
    * message, for example when the factor had to be reset.
@@ -2391,7 +2608,7 @@ export interface PluginAuthPolicyProvider {
     input: PluginAuthPolicyInput,
   ) => PluginAuthPolicyDecision | Promise<PluginAuthPolicyDecision>;
   /** Whether the login page should offer remember me. */
-  allowRememberDevice?: () => boolean;
+  allowRememberDevice?: () => boolean | Promise<boolean>;
 }
 
 export interface PluginAuthPolicyApi {
@@ -2427,6 +2644,12 @@ export interface PluginAuth {
   ) => void;
   registerLoginMethod: (method: PluginLoginMethod) => void;
   registerSecondFactor: (factor: PluginSecondFactor) => void;
+  /**
+   * A WebAuthn step this plugin's frames can ask the shell to run with
+   * `app.auth.webauthn(id, extra)`. Needs auth:provide. Termix 26.11.2 and
+   * plugin API 2.8; optional in the types.
+   */
+  registerWebAuthnCeremony?: (ceremony: PluginWebAuthnCeremony) => void;
   /**
    * Marks a user as enrolled in one of this plugin's factors. Core keeps the
    * row even when the plugin is gone, so it can refuse the login instead of
@@ -2511,12 +2734,102 @@ export interface PluginAuth {
   /** Login rules: idle timeout, session length, remember me, second factors. */
   policy: PluginAuthPolicyApi;
   /** Second factors from every running plugin. Needs no capability. */
-  listSecondFactors: () => { id: string; pluginId: string }[];
+  listSecondFactors: () => Promise<{ id: string; pluginId: string }[]>;
 }
 
-/** What a plugin may learn about a user. Needs users:read. */
-export interface PluginUsers {
-  /** The user's UI language, like "zh_CN", or null when they never chose one. */
+/** An account as ctx.users shows it. Never a password hash or second factors. */
+export interface PluginManagedUser {
+  id: string;
+  username: string;
+  displayName: string | null;
+  email: string | null;
+  isAdmin: boolean;
+  /** Turned off, or waiting for an admin to approve it. */
+  disabled: boolean;
+  /** Why it is off: "admin", "pending_approval" or what a plugin passed. */
+  disabledReason: string | null;
+  /** The plugin that made the account, or null. */
+  managedBy: string | null;
+}
+
+export interface PluginRoleSummary {
+  name: string;
+  displayName: string;
+  isSystem: boolean;
+}
+
+/**
+ * Account calls, for a plugin that provisions users (SCIM, HR sync). A
+ * failed call throws an error whose `code` is "not_found", "username_taken",
+ * "email_taken", "last_admin" or "invalid". Every change is audited under the
+ * plugin's name.
+ */
+export interface PluginUserAccounts {
+  /** Needs users:read. */
+  get: (userId: string) => Promise<PluginManagedUser | null>;
+  /** Needs users:read. */
+  findByUsername: (username: string) => Promise<PluginManagedUser | null>;
+  /** Needs users:read. */
+  findByEmail: (email: string) => Promise<PluginManagedUser | null>;
+  /** Every role, for a role picker. Needs users:read. */
+  listRoles: () => Promise<PluginRoleSummary[]>;
+  /**
+   * Makes an account with no password and the user role, managed by this
+   * plugin. Its first SSO or LDAP sign in with the same verified email is
+   * linked to it. Needs users:write.
+   */
+  create: (input: {
+    username: string;
+    displayName?: string | null;
+    email?: string | null;
+  }) => Promise<PluginManagedUser>;
+  /** Changes the username, display name or email. Needs users:write. */
+  update: (
+    userId: string,
+    input: {
+      username?: string;
+      displayName?: string | null;
+      email?: string | null;
+    },
+  ) => Promise<PluginManagedUser>;
+  /**
+   * Turns an account off (signed out everywhere, no sign in) or back on.
+   * `reason` is kept on the account. Never turns off the last admin. Needs
+   * users:write.
+   */
+  setDisabled: (
+    userId: string,
+    disabled: boolean,
+    reason?: string,
+  ) => Promise<void>;
+  /**
+   * Deletes an account. Its hosts and credentials go to `successorUserId`,
+   * or are deleted with it when none is given. Never the last admin. Needs
+   * users:write.
+   */
+  delete: (
+    userId: string,
+    options?: { successorUserId?: string },
+  ) => Promise<void>;
+  /**
+   * Gives the `desired` roles and takes away `managed` roles not in it.
+   * Other roles and the system roles are never touched. Needs users:write.
+   */
+  syncRoles: (
+    userId: string,
+    roles: { desired: string[]; managed: string[] },
+  ) => Promise<void>;
+  /** Makes an account an admin or takes it away. Needs users:write. */
+  setAdmin: (userId: string, isAdmin: boolean) => Promise<void>;
+}
+
+/**
+ * What a plugin may learn about a user, and with users:write, account calls.
+ * The account calls need Termix 26.11.2 and plugin API 2.9; optional in the
+ * types, so check `typeof ctx.users.create === "function"` first.
+ */
+export interface PluginUsers extends Partial<PluginUserAccounts> {
+  /** The user's UI language, like "zh_CN", or null when they never chose one. Needs users:read. */
   getLocale: (userId: string) => Promise<string | null>;
 }
 
@@ -2536,6 +2849,17 @@ export interface PluginOpenIsolatedWindowRequest {
  * Electron only: rejects when the server is not running embedded in the
  * desktop app. Needs desktop:window.
  */
+/** A page for ctx.desktop.grantView. */
+export interface PluginViewGrantRequest {
+  /** http(s) only, with no login in it. */
+  url: string;
+  /**
+   * Accept an invalid TLS certificate from this https address's own origin.
+   * Only the desktop app's native view honors it.
+   */
+  ignoreCert?: boolean;
+}
+
 /**
  * A host to open in the operating system's own client for a protocol. The
  * desktop app supports "rdp" (mstsc on Windows) today; any other protocol is
@@ -2560,8 +2884,21 @@ export interface PluginDesktop {
   launchExternalClient: (
     request: PluginExternalClientRequest,
   ) => Promise<{ success: boolean; error?: string }>;
+  /**
+   * Lets this plugin's frames show one page in a view the shell draws: a
+   * native view in the desktop app, a credentialless sandboxed iframe in a
+   * browser. Pass the grant to `NativeView` from @termix-ssh/plugin-sdk/ui.
+   * The frame only holds the grant, so it can't change the address or the
+   * certificate rule. Call it inside a person's request; the grant works for
+   * that person and session only and lasts ten minutes. Needs
+   * desktop:window. Termix 26.11.2 and plugin API 2.8; optional in the types,
+   * so call it as `ctx.desktop.grantView?.(...)`.
+   */
+  grantView?: (
+    request: PluginViewGrantRequest,
+  ) => Promise<{ grant: string; expiresAt: number }>;
   /** Whether the server runs embedded in the desktop app, so the calls above can work. */
-  available: () => boolean;
+  available: () => Promise<boolean>;
   /**
    * The user's own machine. Only works on the desktop app's embedded backend
    * and needs desktop:local; every call is audited once per plugin start.
@@ -2618,7 +2955,7 @@ export interface PluginLocalResponse {
 
 export interface PluginDesktopLocal {
   /** Whether local access is possible: embedded backend and capability granted. */
-  available: () => boolean;
+  available: () => Promise<boolean>;
   /**
    * Calls this plugin's own HTTP routes on the embedded backend ("local") or
    * on the server the desktop is linked to ("remote"), as the acting user.
@@ -2685,6 +3022,14 @@ export interface PluginDesktopLocal {
     }>;
     reveal: (path: string) => Promise<void>;
     open: (path: string) => Promise<void>;
+    /**
+     * Opens a local file in the external editor the person picked in the
+     * desktop app's file dialog, or with its default app when none is set.
+     * With no editor set, a file the system would run (.exe, .bat, ...) is
+     * refused. The app starts the editor, so the plugin needs no process
+     * grant. Plugin API 2.8.
+     */
+    openInEditor: (path: string) => Promise<void>;
     openRead: (path: string) => Promise<{
       stream: NodeJS.ReadableStream;
       size: number;
@@ -2890,6 +3235,54 @@ export interface PluginAudit {
     filters?: PluginAuditFilters,
     batchSize?: number,
   ) => AsyncGenerator<PluginAuditEntry[]>;
+  /**
+   * The audit log's hash chain: every stored line carries the hash of the one
+   * before. Core checks it every hour and alerts admins when it breaks.
+   * Needs audit:read.
+   */
+  chain: PluginAuditChain;
+}
+
+/** The newest line of the chain: keep it somewhere else to compare later. */
+export interface PluginAuditChainHead {
+  id: number;
+  hash: string;
+  timestamp?: string;
+}
+
+export interface PluginAuditChainResult {
+  ok: boolean;
+  /** Chained lines checked. */
+  checked: number;
+  /** Lines written before the chain existed. */
+  unchained: number;
+  head: PluginAuditChainHead | null;
+  /** First line id where the chain stops holding. */
+  brokenAt?: number;
+  problem?: "row_changed" | "row_missing" | "hash_removed" | "head_mismatch";
+  /** ISO date-time. */
+  checkedAt: string;
+}
+
+export interface PluginAuditSavedHeadResult {
+  /** The saved line is still there with the same hash. */
+  found: boolean;
+  /** And the chain from it to now holds. */
+  ok: boolean;
+  /** The saved line was pruned since, so it can't be compared any more. */
+  pruned: boolean;
+  chain: PluginAuditChainResult;
+}
+
+export interface PluginAuditChain {
+  /** The last hourly check, or null before the first one ran. */
+  status: () => Promise<PluginAuditChainResult | null>;
+  /** Checks the whole chain now. */
+  verify: () => Promise<PluginAuditChainResult>;
+  /** Compares a head saved earlier with what the server holds now. */
+  checkHead: (
+    head: PluginAuditChainHead,
+  ) => Promise<PluginAuditSavedHeadResult>;
 }
 
 export interface PluginAuditFilters {
@@ -2919,6 +3312,12 @@ export interface PluginAuditEntry {
   userAgent: string | null;
   success: boolean;
   errorMessage: string | null;
+  /**
+   * This line's chain hash and the one before it. Set on stored lines and on
+   * subscribed lines that were stored; null on lines from before the chain.
+   */
+  hash?: string | null;
+  prevHash?: string | null;
 }
 
 /** A notification channel a user set up. Its config never leaves the hub. */
@@ -3139,6 +3538,11 @@ export interface PluginSchedule {
     intervalMs: number,
     fn: () => void | Promise<void>,
     options?: {
+      /**
+       * One of the ids in the manifest's sandbox.schedules. Needed in the
+       * plugin's own process, where an undeclared job is refused.
+       */
+      id?: string;
       /** Delays the first run by up to this much, so many timers spread out. */
       jitterMs?: number;
       /** Also run once straight away. */
@@ -3147,6 +3551,15 @@ export interface PluginSchedule {
   ) => () => void;
   /** Runs `fn` once after `delayMs`. Returns a function that cancels it. */
   after: (delayMs: number, fn: () => void | Promise<void>) => () => void;
+  /**
+   * Plugin API 2.9: keeps this plugin's process running while any reason is
+   * set. A plugin that calls it (even with false) manages this itself: its
+   * jobs shorter than the idle time then run only while it is running, and
+   * core may stop it when idle. Call it with true while there is work
+   * (monitors to check, watches to run) and false when there is none. Older
+   * cores leave it out, so call it as `ctx.schedule.keepAwake?.(...)`.
+   */
+  keepAwake?: (reason: string, awake: boolean) => void;
 }
 
 /** The certificate core serves, read from its configured paths. */
@@ -3338,8 +3751,32 @@ export interface PluginOperations {
     userId?: string;
     cooldownMs?: number;
   }) => () => void;
-  /** Rules for what needs a person. Needs operations:approve. */
+  /**
+   * Cancel or undo a run. Needs operations:invoke and works only inside one
+   * of the plugin's own requests: the person on that request acts, with
+   * their own rights. Requests made with an API key are refused.
+   */
+  runs: {
+    /** Stops a running action, or withdraws one waiting for approval. */
+    cancel: (input: { runId: string }) => Promise<{ cancelled: boolean }>;
+    /** Runs the action's undo with the input the run recorded. */
+    undo: (input: {
+      runId: string;
+      confirmed?: boolean;
+    }) => Promise<PluginOperationOutcome>;
+  };
+  /** Rules for what needs a person, and deciding. Needs operations:approve. */
   approvals: {
+    /**
+     * Approves or rejects a waiting action. Works only inside one of the
+     * plugin's own requests: the person on that request decides, with their
+     * own rights. Requests made with an API key are refused.
+     */
+    decide: (input: {
+      approvalId: string;
+      approve: boolean;
+      comment?: string;
+    }) => Promise<PluginOperationOutcome>;
     provide: (
       provider: (
         input: PluginOperationApprovalInput,
