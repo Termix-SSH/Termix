@@ -123,6 +123,7 @@ import {
   writeProtocolAuth,
 } from "../hosts/protocol-auth/protocol-auth.js";
 import { parseUserAgent } from "../utils/user-agent-parser.js";
+import { staticCacheControl } from "../utils/static-cache.js";
 import type { GitHubRelease, AuthenticatedRequest } from "../../types/index.js";
 import { DatabaseSaveTrigger } from "./db/index.js";
 import Database from "better-sqlite3";
@@ -1658,21 +1659,8 @@ if (frontendDist) {
           .relative(frontendDist, filePath)
           .replaceAll(path.sep, "/");
 
-        if (relativePath.startsWith("assets/")) {
-          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-          return;
-        }
-
-        if (
-          relativePath === "index.html" ||
-          relativePath === "sw.js" ||
-          relativePath === "manifest.json"
-        ) {
-          res.setHeader(
-            "Cache-Control",
-            "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
-          );
-        }
+        const cacheControl = staticCacheControl(relativePath);
+        if (cacheControl) res.setHeader("Cache-Control", cacheControl);
       },
     }),
   );
