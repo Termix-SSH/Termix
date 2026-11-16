@@ -1,6 +1,9 @@
 ACCENT_PRESET_COLORS (value): { label: string; value: string; }[]
 APP_VERSION (value): string
+AccessKind (type): AccessKind
 AccessRecord (type): AccessRecord
+AccessReviewFilter (type): AccessReviewFilter
+AccessReviewRow (type): AccessReviewRow
 ActionSlot (value): ({ slotId, context, className, enabled, renderItem, hideLabels, when, }: ActionSlotProps) => Element
 ActiveSessionInfo (type): ActiveSessionInfo
 AddButton (value): ({ label, compact, className, ...rest }: { label?: string; compact?: boolean; className?: string; } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & { ref?: Ref<HTMLButtonElement>; }) => Element
@@ -69,6 +72,7 @@ ConnectionStage (type): ConnectionStage
 ConnectionStatus (type): ConnectionStatus
 ConnectionUnavailable (type): ConnectionUnavailable
 CreatedApiKey (type): CreatedApiKey
+CreatedUserInvite (type): CreatedUserInvite
 Credential (type): Credential
 CredentialDensity (type): CredentialDensity
 CredentialPermissionLevel (type): CredentialPermissionLevel
@@ -224,6 +228,7 @@ MetricCard (value): ({ title, icon, action, children, bodyClassName, scroll, scr
 MiniStat (value): ({ caption, value, valueClassName, className, }: { caption: ReactNode; value: ReactNode; valueClassName?: string; className?: string; }) => Element
 NativeView (value): (props: NativeViewProps) => Element
 NativeViewProps (type): NativeViewProps
+NewUserInvite (type): NewUserInvite
 NoticePanel (value): ({ icon: Icon, title, children, action, tone, className, }: { icon?: LucideIcon; title: ReactNode; children?: ReactNode; action?: ReactNode; tone?: "default" | "destructive" | "warning"; className?: string; }) => Element
 NumberField (value): ({ label, value, onChange, placeholder, hint, error, min, max, disabled, className, }: { label: string; value: number; onChange: (value: number) => void; placeholder?: string; hint?: ReactNode; error?: string; min?: number; max?: number; disabled?: boolean; className?: string; }) => Element
 OPEN_PLUGINS_EVENT (value): "termix:open-plugins"
@@ -279,7 +284,7 @@ SeamlessTileContext (value): Context<boolean>
 SecretField (value): ({ label, value, onChange, placeholder, hint, error, disabled, className, }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; hint?: ReactNode; error?: string; disabled?: boolean; className?: string; }) => Element
 SectionCard (value): ({ title, icon, action, children, className, rowId, }: { title: string; icon: ReactNode; action?: ReactNode; children: ReactNode; className?: string; rowId?: string; }) => Element
 Segmented (value): <T extends string>({ value, onChange, options, className, }: { value: T; onChange: (next: T) => void; options: readonly { value: NoInfer<T>; label: string; icon?: ReactNode; count?: number; title?: string; }[]; className?: string; }) => Element
-Select (value): ({ ...props }: SelectSharedProps & { value?: string; defaultValue?: string; onValueChange?: (value: string) => void; }) => Element
+Select (value): ({ ...props }: SelectSharedProps & { value?: string; defaultValue?: string; onValueChange?(value: string): void; }) => Element
 Select2 (value): ({ className, children, value, defaultValue, onChange, disabled, placeholder, align, contentClassName, name, id, required, "aria-label": ariaLabel, ...props }: Select2Props) => Element
 SelectContent (value): ({ className, children, position, ref, ...props }: SelectContentProps & RefAttributes<HTMLDivElement>) => Element
 SelectField (value): <T extends string>({ label, value, onChange, options, hint, error, disabled, className, placeholder, }: { label: string; value: T; onChange: (value: T) => void; options: readonly { value: T; label: string; }[]; hint?: ReactNode; error?: string; disabled?: boolean; className?: string; placeholder?: string; }) => Element
@@ -369,14 +374,19 @@ UiPreset (type): UiPreset
 UpdateChannelState (type): UpdateChannelState
 UptimeInfo (type): UptimeInfo
 UsagePair (value): ({ label, percent, detail, }: { label?: string; percent: number; detail?: string; }) => Element
+UserInvite (type): UserInvite
 UserPreferences (type): UserPreferences
+UserProfile (type): UserProfile
+UserProfileUpdate (type): UserProfileUpdate
 UserRole (type): UserRole
 UserSecondFactorSummary (type): UserSecondFactorSummary
+UserStatusFilter (type): UserStatusFilter
 VersionBadge (value): ({ status, releaseUrl, className, }: VersionBadgeProps) => Element
 VersionInfo (type): VersionInfo
 ViewToggle (value): ({ view, onView, density, onDensity, columns, onColumns, }: { view: PanelViewMode; onView: (next: PanelViewMode) => void; density?: PanelDensity; onDensity?: (next: PanelDensity) => void; columns?: GridSize; onColumns?: (next: GridSize) => void; }) => Element
 WebSocketConnectionTarget (type): WebSocketConnectionTarget
 WidgetTitle (value): ({ title, icon, fallback }: WidgetTitleProps) => Element
+acceptUserInvite (value): (token: string, username: string, password: string) => Promise<{ userId: string; }>
 actionOrder (value): (action: HostActionDef) => number
 activityTarget (value): (type: string) => ActivityTarget
 adminCreateUser (value): (username: string, password: string) => Promise<Record<string, unknown>>
@@ -391,6 +401,7 @@ adminGetUserHosts (value): (targetUserId: string) => Promise<Host[]>
 adminResetUserPassword (value): (userId: string, newPassword: string, confirmDataWipe?: boolean) => Promise<{ message: string; dataWiped?: boolean; }>
 adminUpdateUserCredential (value): (targetUserId: string, credentialId: number, credentialData: Record<string, unknown>) => Promise<Record<string, unknown>>
 adminUpdateUserHost (value): (targetUserId: string, hostId: number, hostData: HostData) => Promise<Host>
+adminUpdateUserProfile (value): (userId: string, update: UserProfileUpdate) => Promise<UserProfile>
 appendTile (value): (slots: TileSlot[], tile: { id: string; w?: number; h?: number; }) => TileSlot[]
 applyAccentColor (value): (colorValue: string) => void
 applyFontSize (value): (id: FontSizeId) => void
@@ -406,6 +417,7 @@ cancelAdminHold (value): (holdId: string) => Promise<{ cancelled: boolean; }>
 challengeStepUp (value): (factorId: string) => Promise<unknown>
 changeAppLanguage (value): (language: string) => Promise<string>
 changePassword (value): (oldPassword: string, newPassword: string) => Promise<any>
+checkUserInvite (value): (token: string) => Promise<{ valid: boolean; state: string; }>
 clearLocalAdaptivePreferences (value): () => void
 cn (value): (...inputs: ClassValue[]) => string
 copyToClipboard (value): (text: string) => Promise<boolean>
@@ -415,6 +427,7 @@ createFrontendLogger (value): (serviceName: string, serviceIcon?: string, servic
 createQuickConnectHost (value): (input: QuickConnectInput) => Host
 createRole (value): (roleData: { name: string; displayName: string; description?: string; }) => Promise<{ role: Role; }>
 createSSHHost (value): (hostData: HostData) => Promise<Host>
+createUserInvite (value): (input: NewUserInvite) => Promise<CreatedUserInvite>
 defaultConnectAction (value): (all: HostActionDef[], host: Host) => HostActionDef
 defaultCredentialRowFields (value): () => CredentialRowFields
 defaultCredentialSidebarPreferences (value): () => CredentialSidebarPreferences
@@ -430,18 +443,23 @@ deleteRole (value): (roleId: number) => Promise<{ success: boolean; }>
 deleteSSHHost (value): (hostId: number) => Promise<Record<string, unknown>>
 deleteUser (value): (username: string, successorUserId?: string) => Promise<Record<string, unknown>>
 desktopUpdates (value): () => DesktopUpdatesBridge
+disableUser (value): (userId: string) => Promise<{ disabled: boolean; }>
 docsUrl (value): (page?: "dashboard" | "users" | "sessions" | "roles" | "branding" | "database" | "manage" | "settings" | "plugins" | "install" | "cli" | "develop" | "home" | "updating" | "betas" | "envVars" | "https" | "reverseProxy" | "desktopSync" | "interface" | "hosts" | "portKnocking" | "hostDefaults" | "credentials" | "sharing" | "account" | "accountSecurity" | "accountData" | "apiKeys" | "commandPalette" | "interfaceSettings" | "appearance" | "keybindings" | "adminGeneral" | "adminDatabase" | "adminSsl" | "auditLog" | "importExport" | "pluginCatalog" | "communityRegistry" | "pluginApi2" | "pluginRegistries" | "hostRegistry") => string
+downloadAccessReviewCsv (value): (filter?: AccessReviewFilter) => Promise<Blob>
 duplicateCredential (value): (credentialId: number, data: Record<string, unknown>) => Promise<Record<string, unknown>>
+enableUser (value): (userId: string) => Promise<{ disabled: boolean; }>
 enabledHostProtocols (value): (host: { pluginSettings?: Record<string, Record<string, unknown>>; }, list?: HostProtocolDef[]) => HostProtocolDef[]
 endSplitDrag (value): (commit: boolean) => void
 filterPaletteItems (value): (items: PaletteItemDef[], query: string, showWhenEmpty?: boolean) => PaletteItemDef[]
 findCoreHostDefault (value): (key: string) => CoreHostDefault
 findMatchingKeybinding (value): (e: KeyboardEvent, bindings: CustomKeybinding[]) => CustomKeybinding
 flowTiles (value): (tiles: { id: string; w: number; h?: number; }[], rowHeight?: number) => TileSlot[]
+getAccessReview (value): (filter?: AccessReviewFilter) => Promise<{ shares: AccessReviewRow[]; total: number; }>
 getActiveSessions (value): () => Promise<ActiveSessionInfo[]>
 getAdaptiveResourceBudget (value): (kind: AdaptiveTaskKind) => AdaptiveResourceBudget
 getAdminHoldSettings (value): () => Promise<AdminHoldSettings>
 getAdminHolds (value): () => Promise<{ holds: AdminHold[]; }>
+getAdminHostBypass (value): () => Promise<{ enabled: boolean; }>
 getApiKeys (value): () => Promise<{ apiKeys: ApiKey[]; }>
 getAuditLogActions (value): () => Promise<{ actions: string[]; }>
 getAuditLogs (value): (filters?: AuditLogFilters) => Promise<AuditLogResponse>
@@ -461,6 +479,7 @@ getDeveloperMode (value): () => Promise<DeveloperModeState>
 getDeviceId (value): () => string
 getErrorMessage (value): (error: unknown, fallback?: string) => string
 getExternalAutoProvision (value): () => Promise<{ enabled: boolean; }>
+getExternalSignupApproval (value): () => Promise<{ enabled: boolean; }>
 getFolderAccess (value): (folder: string) => Promise<{ rules: FolderAccessRule[]; }>
 getFolderAuthOverride (value): (folder: string, protocol: string, sharedCopySyncId?: string) => Promise<{ folder: string; protocol: string; credentialId: number; }>
 getFolderDefaultsId (value): (name: string) => Promise<number>
@@ -525,6 +544,7 @@ hostStatusIndicatorsFor (value): (all: HostBadgeDef[], host: Host) => HostBadgeD
 hydrateLocalSharedHostAuth (value): <T>(host: T) => Promise<T>
 invalidateHostsAndStatusCaches (value): () => void
 invalidateServerStatusCache (value): () => void
+inviteLink (value): (token: string) => string
 isAdminHoldTicket (value): (value: unknown) => value is AdminHoldTicket
 isCoreRailView (value): (id: string) => boolean
 isElectron (value): () => boolean
@@ -542,6 +562,7 @@ listHostActions (value): () => HostActionDef[]
 listHostProtocols (value): () => HostProtocolDef[]
 listHostSections (value): () => HostSectionDef[]
 listStepUpFactors (value): () => Promise<SecondFactorRef[]>
+listUserInvites (value): () => Promise<UserInvite[]>
 loadPaletteGroup (value): (group: PaletteGroupDef) => Promise<PaletteItemDef[]>
 logoutUser (value): () => Promise<{ success: boolean; message: string; }>
 makeHostSshSubTabs (value): (t: (key: string, options?: { defaultValue?: string; }) => string, protocols?: Record<string, boolean>, defaultsMode?: boolean) => HostTab[]
@@ -557,7 +578,7 @@ notifySyncChanged (value): () => void
 openInSplit (value): (target: SplitOpenTarget, open: () => void) => void
 operationsApi (value): AxiosInstance
 pageOf (value): <T>(items: T[], page: number, size: number) => { rows: T[]; page: number; pages: number; }
-paletteEntriesFor (value): (all: PaletteEntryDef[], scope: "global" | "host", host?: Host) => PaletteEntryDef[]
+paletteEntriesFor (value): (all: PaletteEntryDef[], scope: "host" | "global", host?: Host) => PaletteEntryDef[]
 parseCustomKeybindings (value): (raw?: string) => CustomKeybinding[]
 parseDataValue (value): (raw: unknown, shapes?: readonly DataShape[]) => DataValue[]
 parseServerTime (value): (ts: string) => Date
@@ -604,6 +625,7 @@ revokeFolderAccess (value): (ruleId: number, options?: { fromHosts?: boolean; })
 revokeHostAccess (value): (hostId: number, accessId: number, syncId?: string) => Promise<{ success: boolean; }>
 revokeMyApiKey (value): (keyId: string) => Promise<{ success: boolean; }>
 revokeSession (value): (sessionId: string) => Promise<{ success: boolean; message: string; }>
+revokeUserInvite (value): (id: string) => Promise<void>
 rightDockableIds (value): () => string[]
 roleLabel (value): <T extends string | null | undefined>(t: Translator, displayName: T) => string | T
 runAdaptiveBackgroundTask (value): (kind: AdaptiveTaskKind, action: string, task: () => Promise<unknown>, options?: AdaptiveTaskOptions) => boolean
@@ -639,14 +661,17 @@ tabIcon (value): (type: TabType) => Element
 tabJumpHotkeyKeys (value): () => string[]
 takePendingManageRequest (value): () => ManageRequest
 unlinkExternalFromPasswordAccount (value): (userId: string) => Promise<{ success: boolean; message: string; }>
+updateAdminHostBypass (value): (enabled: boolean) => Promise<Record<string, unknown>>
 updateCredential (value): (credentialId: number, credentialData: Record<string, unknown>) => Promise<Record<string, unknown>>
 updateCredentialStorage (value): (enabled: boolean) => Promise<{ enabled: boolean; }>
 updateExternalAutoProvision (value): (enabled: boolean) => Promise<Record<string, unknown>>
+updateExternalSignupApproval (value): (enabled: boolean) => Promise<{ enabled: boolean; }>
 updateFolderMetadata (value): (name: string, color?: string, icon?: string, credentialId?: number, localOnly?: boolean) => Promise<void>
 updateHostAccess (value): (hostId: number, accessId: number, update: { permissionLevel?: SharePermissionLevel; durationHours?: number; }, syncId?: string) => Promise<{ success: boolean; expiresAt: string; }>
 updateHostKeyPolicy (value): (trustOnFirstUse: boolean) => Promise<{ trustOnFirstUse: boolean; }>
 updateHttpsSettings (value): (forceHttps: boolean) => Promise<HttpsSettings>
 updateLogLevel (value): (level: string) => Promise<void>
+updateMyProfile (value): (update: UserProfileUpdate) => Promise<UserProfile>
 updatePasswordLoginAllowed (value): (allowed: boolean) => Promise<{ allowed: boolean; }>
 updatePasswordResetAllowed (value): (allowed: boolean) => Promise<{ allowed: boolean; }>
 updatePluginAdminSettings (value): (pluginId: string, values: PluginSettingsValues) => Promise<PluginSettingsValues>

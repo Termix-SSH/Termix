@@ -1143,6 +1143,15 @@ export function createPluginContext(
       if (!declared.includes("users:impersonate")) {
         throw capabilityRefused(pluginId, "users:impersonate");
       }
+      // Nothing runs as an account that is turned off or gone.
+      const { createCurrentUserRepository } =
+        await import("../database/repositories/factory.js");
+      const actor = await createCurrentUserRepository().findById(userId);
+      if (!actor || actor.disabledAt) {
+        throw new Error(
+          `Plugin ${pluginId} can't run work as ${userId}: the account is turned off or gone`,
+        );
+      }
       await writeAudit(
         manifest,
         {

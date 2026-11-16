@@ -10,11 +10,17 @@
  *   - a mapped role set, when the provider reports one, keeps roles in step
  */
 
+import {
+  DISABLED_REASON_PENDING,
+  externalSignupApprovalRequired,
+} from "./user-access-settings.js";
 import { nanoid } from "nanoid";
 import { authLogger } from "../utils/logger.js";
+import { logAudit } from "../utils/audit-logger.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { DatabaseSaveTrigger } from "../utils/database-save-trigger.js";
 import { PermissionManager } from "../utils/permission-manager.js";
+import { afterAdminStatusChange } from "./admin-status.js";
 import {
   createCurrentRoleRepository,
   createCurrentSettingsRepository,
@@ -55,15 +61,9 @@ async function isExternalProvisioningAllowed(): Promise<boolean> {
   return allow.trim().toLowerCase() === "true";
 }
 
-/**
- * Whether a newly provisioned user must wait for an admin. There is no
- * approval queue yet, so nobody does; a plugin or a later release can change
- * that here without touching any login method.
- */
-async function isApprovalRequired(
-  _identity: ExternalIdentity,
-): Promise<boolean> {
-  return false;
+/** Whether a new external account has to wait for an admin first. */
+function isApprovalRequired(): boolean {
+  return externalSignupApprovalRequired();
 }
 
 function isAllowed(identity: ExternalIdentity): boolean {
@@ -78,6 +78,20 @@ function isAllowed(identity: ExternalIdentity): boolean {
         email,
       ))
   );
+}
+
+const SYSTEM_ROLE_NAMES = new Set(["admin", "user"]);
+
+/**
+ * Whether the provider says this user is an admin. An explicit admin claim
+ * wins; otherwise a role map that manages "admin" decides.
+ */
+function adminFromIdentity(identity: ExternalIdentity): boolean | undefined {
+  if (identity.isAdmin !== undefined) return identity.isAdmin;
+  if (identity.roleSync?.managed.includes("admin")) {
+    return identity.roleSync.desired.includes("admin");
+  }
+  return undefined;
 }
 
 async function syncAdmin(
@@ -97,6 +111,7 @@ async function syncAdmin(
   } catch {
     // Roles follow on the next sign-in; the admin flag itself is saved.
   }
+  await afterAdminStatusChange(user.id, isAdmin);
   authLogger.info("Admin status synced from the identity provider", {
     operation: "external_admin_sync",
     userId: user.id,
@@ -113,8 +128,13 @@ async function applyRoleSync(
   userId: string,
   roleSync: { desired: string[]; managed: string[] },
 ): Promise<void> {
-  const desired = new Set(roleSync.desired);
-  const managed = new Set(roleSync.managed);
+  // System roles follow the admin flag, never the map directly.
+  const desired = new Set(
+    roleSync.desired.filter((name) => !SYSTEM_ROLE_NAMES.has(name)),
+  );
+  const managed = new Set(
+    roleSync.managed.filter((name) => !SYSTEM_ROLE_NAMES.has(name)),
+  );
   const roleRepository = createCurrentRoleRepository();
   const currentRoles = await roleRepository.listUserRoles(userId);
   const currentNames = new Set(currentRoles.map((role) => role.roleName));
@@ -151,6 +171,29 @@ async function applyRoleSync(
     });
     PermissionManager.getInstance().invalidateUserPermissionCache(userId);
   }
+}
+
+/** Turns a new account off until an admin approves it, and says so. */
+async function markPendingApproval(
+  user: UserRecord,
+  provider: string,
+): Promise<UserRecord> {
+  const updated =
+    (await createCurrentUserRepository().update(user.id, {
+      disabledAt: new Date().toISOString(),
+      disabledReason: DISABLED_REASON_PENDING,
+    })) ?? user;
+  await logAudit({
+    userId: user.id,
+    username: user.username,
+    action: "user_pending_approval",
+    resourceType: "user",
+    resourceId: user.id,
+    resourceName: user.username,
+    details: JSON.stringify({ provider }),
+    success: true,
+  });
+  return updated;
 }
 
 async function findLinkedUser(
@@ -192,7 +235,7 @@ async function createUser(
     id,
     username: await freeUsername(identity.name || identity.subject, null),
     passwordHash: "",
-    isAdmin: !!identity.isAdmin,
+    isAdmin: !!adminFromIdentity(identity),
   });
 
   try {
@@ -280,15 +323,11 @@ export async function findOrProvisionExternalUser(
           "registration_disabled",
         );
       }
-      if (await isApprovalRequired(identity)) {
-        throw new LoginMethodError(
-          "Your account is waiting for an admin to approve it",
-          403,
-          "approval_required",
-        );
-      }
     }
     user = await createUser(identity, deviceType);
+    if (!isFirstUser && isApprovalRequired()) {
+      user = await markPendingApproval(user, identity.provider);
+    }
   } else {
     if (!isAllowed(identity)) {
       authLogger.warn("External user not in the allowed list", {
@@ -314,8 +353,9 @@ export async function findOrProvisionExternalUser(
       }
     }
 
-    if (identity.isAdmin !== undefined) {
-      user = await syncAdmin(user, identity.isAdmin);
+    const wantsAdmin = adminFromIdentity(identity);
+    if (wantsAdmin !== undefined) {
+      user = await syncAdmin(user, wantsAdmin);
     }
   }
 

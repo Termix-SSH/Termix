@@ -31,8 +31,17 @@ export const users = pgTable(
     registeredAt: text("registered_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
+    displayName: text("display_name"),
+    email: varchar("email", { length: 255 }),
+    // Set while the account is turned off or waiting for approval.
+    disabledAt: text("disabled_at"),
+    disabledReason: text("disabled_reason"),
+    lastLoginAt: text("last_login_at"),
   },
-  (table) => [uniqueIndex("idx_users_username").on(table.username)],
+  (table) => [
+    uniqueIndex("idx_users_username").on(table.username),
+    uniqueIndex("idx_users_email").on(table.email),
+  ],
 );
 
 export const settings = pgTable("settings", {
@@ -706,6 +715,30 @@ export const apiKeys = pgTable(
     scopes: text("scopes"),
   },
   (table) => [index("idx_api_keys_user_id").on(table.userId)],
+);
+
+// A link an admin hands out so someone can make an account.
+export const userInvites = pgTable(
+  "user_invites",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    tokenHash: varchar("token_hash", { length: 255 }).notNull(),
+    note: text("note"),
+    // JSON list of role ids given on sign up.
+    roleIds: text("role_ids"),
+    makeAdmin: boolean("make_admin").notNull().default(false),
+    maxUses: integer("max_uses").notNull().default(1),
+    uses: integer("uses").notNull().default(0),
+    createdBy: varchar("created_by", { length: 255 }).references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    expiresAt: text("expires_at").notNull(),
+    revokedAt: text("revoked_at"),
+  },
+  (table) => [uniqueIndex("idx_user_invites_token_hash").on(table.tokenHash)],
 );
 
 export const operationRuns = pgTable(

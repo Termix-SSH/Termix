@@ -575,6 +575,13 @@
       "when": 1794585754186,
       "tag": "0081_powerful_black_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1794847880032,
+      "tag": "0082_shocking_mattie_franklin",
+      "breakpoints": true
     }
   ]
 }

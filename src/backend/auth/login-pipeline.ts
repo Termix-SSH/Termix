@@ -9,6 +9,7 @@
  * second factors, the same cookie and the same audit line.
  */
 
+import { DISABLED_REASON_PENDING } from "./user-access-settings.js";
 import crypto from "crypto";
 import type { PluginSecondFactorPrompt } from "@termix-ssh/plugin-sdk/backend";
 import type { Request, Response } from "express";
@@ -209,6 +210,26 @@ export function assertMethodAllowedFor(
   );
 }
 
+/** Refuses an account that is turned off or still waiting for approval. */
+export function assertAccountEnabled(user: {
+  disabledAt?: string | null;
+  disabledReason?: string | null;
+}): void {
+  if (!user.disabledAt) return;
+  if (user.disabledReason === DISABLED_REASON_PENDING) {
+    throw new LoginMethodError(
+      "Your account is waiting for an admin to approve it",
+      403,
+      "account_pending",
+    );
+  }
+  throw new LoginMethodError(
+    "This account is turned off. Ask an admin to turn it back on.",
+    403,
+    "account_disabled",
+  );
+}
+
 async function resolveUser(
   identity: VerifiedIdentity,
   deviceType: DeviceType,
@@ -296,6 +317,7 @@ export async function runLogin(
 ): Promise<LoginResult> {
   const deviceType = parseUserAgent(req).type;
   const user = await resolveUser(identity, deviceType);
+  assertAccountEnabled(user);
   assertMethodAllowedFor(user, identity, context.methodId);
 
   await unlockUser(user, identity, deviceType);
@@ -512,6 +534,11 @@ export async function verifySecondFactorAndRespond(
 
   const user = await createCurrentUserRepository().findById(lookup.userId);
   if (!user) return res.status(404).json({ error: "User not found" });
+  try {
+    assertAccountEnabled(user);
+  } catch (error) {
+    return sendLoginError(res, error);
+  }
 
   const lockStatus = loginRateLimiter.isTOTPLocked(user.id);
   if (lockStatus.locked) {

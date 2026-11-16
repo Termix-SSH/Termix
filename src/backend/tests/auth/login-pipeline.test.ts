@@ -719,6 +719,58 @@ describe("external identities", () => {
     expect(h.state.users.get("u9")!.isAdmin).toBe(false);
   });
 
+  it("follows a role map that names admin through the admin flag", async () => {
+    addUser({ id: "u9", username: "Alice", passwordHash: "", isAdmin: false });
+    h.state.identities.push({
+      id: 1,
+      userId: "u9",
+      providerId: "3",
+      subject: "sub-1",
+      email: null,
+    });
+    await runLogin(
+      fakeRequest() as never,
+      { ...external, roleSync: { desired: ["admin"], managed: ["admin"] } },
+      { methodId: "oidc", rememberMe: false },
+    );
+    expect(h.state.users.get("u9")!.isAdmin).toBe(true);
+  });
+
+  it("makes a new SSO account wait for approval when that is on", async () => {
+    addUser({ id: "first", username: "first", passwordHash: "hash" });
+    h.state.settings.set("external_auto_provision", "true");
+    h.state.settings.set("external_signup_approval", "true");
+    await expect(
+      runLogin(fakeRequest() as never, external, {
+        methodId: "oidc",
+        rememberMe: false,
+      }),
+    ).rejects.toMatchObject({ code: "account_pending" });
+    const created = [...h.state.users.values()].find((u) => u.id !== "first");
+    expect(created).toMatchObject({ disabledReason: "pending_approval" });
+  });
+
+  it("refuses a turned off account", async () => {
+    addUser({ id: "u9", username: "Alice", passwordHash: "" });
+    Object.assign(h.state.users.get("u9")!, {
+      disabledAt: "2026-11-16T00:00:00.000Z",
+      disabledReason: "admin",
+    });
+    h.state.identities.push({
+      id: 1,
+      userId: "u9",
+      providerId: "3",
+      subject: "sub-1",
+      email: null,
+    });
+    await expect(
+      runLogin(fakeRequest() as never, external, {
+        methodId: "oidc",
+        rememberMe: false,
+      }),
+    ).rejects.toMatchObject({ code: "account_disabled" });
+  });
+
   it("skips enrolled second factors for SSO users when the setting is off", async () => {
     addUser({
       id: "u9",

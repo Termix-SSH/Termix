@@ -83,6 +83,13 @@ const DESCRIBE: Record<string, Describe> = {
   create_api_key: (e) =>
     `${e.username} created the API key ${target(e)} for ${detail(e, "targetUsername") ?? "a user"}`,
   revoke_everyone_sessions: (e) => `${e.username} signed everyone out`,
+  user_pending_approval: (e) =>
+    `${target(e)} signed in for the first time and is waiting for approval`,
+  disable_user: (e) => `${e.username} turned off the account ${target(e)}`,
+  create_user_invite: (e) =>
+    detail(e, "makeAdmin") === true
+      ? `${e.username} made an invite link that creates an admin`
+      : null,
   admin_hold_failed: (e) =>
     `A waiting admin change could not be applied: ${detail(e, "summary")}`,
   revocation_check_failed: () =>

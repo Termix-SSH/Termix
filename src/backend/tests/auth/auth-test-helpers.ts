@@ -222,6 +222,7 @@ export function fakeAuthManager(state: AuthState) {
     authenticateUser: vi.fn(async () => true),
     authenticateExternalUser: vi.fn(async () => true),
     revokeSessionsByExternalSession: vi.fn(async () => 1),
+    revokeAllUserSessions: vi.fn(async () => 0),
     unlockWithSystemKey: vi.fn(async () => true),
     registerExternalUser: vi.fn(async () => {}),
     isTrustedDevice: vi.fn(async (userId: string, fingerprint: string) =>

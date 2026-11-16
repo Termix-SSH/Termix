@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.9.0
+
+Plugin API 2.8.0. Needs Termix 26.11.2.
+
+### Added
+
+- `/ui` calls for account management: `disableUser`, `enableUser`, `updateMyProfile`, `adminUpdateUserProfile`, `getAdminHostBypass`, `updateAdminHostBypass`, `getExternalSignupApproval`, `updateExternalSignupApproval`
+- `/ui` calls for invite links: `listUserInvites`, `createUserInvite`, `revokeUserInvite`, `checkUserInvite`, `acceptUserInvite`, `inviteLink`
+- `/ui` calls for the access review: `getAccessReview`, `downloadAccessReviewCsv`
+- `getUserList` takes a `status` filter, and `UserInfo` carries the display name, email, account state and last sign in
+- `AdminSection` includes `access`
+
 ## 2.8.1
 
 Plugin API 2.8.0. Needs Termix 26.11.2.

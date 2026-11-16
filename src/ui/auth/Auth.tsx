@@ -37,6 +37,8 @@ import {
   getCurrentToken,
   requestDesktopAutoSession,
   requestTrustedProxyLogin,
+  acceptUserInvite,
+  checkUserInvite,
 } from "@/main-axios";
 import {
   getEmbeddedServerFailure,
@@ -333,6 +335,9 @@ export function Auth({ onLogin }: AuthProps) {
   }
 
   const [registrationAllowed, setRegistrationAllowed] = useState(true);
+  const [inviteToken, setInviteToken] = useState<string | null>(() =>
+    new URLSearchParams(window.location.search).get("invite"),
+  );
   const [passwordLoginAllowed, setPasswordLoginAllowed] = useState(true);
   const [passwordResetAllowed, setPasswordResetAllowed] = useState(true);
   const [authMethods, setAuthMethods] = useState<PublicLoginMethod[]>([]);
@@ -599,6 +604,20 @@ export function Auth({ onLogin }: AuthProps) {
   }, [authMethodsLoaded, passwordLoginAllowed, externalMethods.length, view]);
 
   useEffect(() => {
+    if (!inviteToken) return;
+    setView("register");
+    checkUserInvite(inviteToken)
+      .then((result) => {
+        if (result.valid) return;
+        toast.error(t("auth.inviteInvalid"));
+        setInviteToken(null);
+      })
+      .catch(() => {});
+    // Only on the first render: the token comes from the link.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const success = urlParams.get("success");
     const error = urlParams.get("error");
@@ -615,6 +634,10 @@ export function Auth({ onLogin }: AuthProps) {
         toast.error(t("messages.registrationDisabled"));
       else if (error === "user_not_allowed")
         toast.error(t("messages.userNotAllowed"));
+      else if (error === "account_disabled")
+        toast.error(t("auth.accountDisabled"));
+      else if (error === "account_pending")
+        toast.error(t("auth.accountPending"));
       else if (error === "second_factor_unavailable")
         toast.error(t("auth.secondFactorUnavailable"));
       else toast.error(`${t("errors.externalAuthFailed")}: ${error}`);
@@ -761,6 +784,14 @@ export function Auth({ onLogin }: AuthProps) {
       toast.error(t("auth.externalLoginRequired"));
       return;
     }
+    if (error?.response?.data?.code === "account_disabled") {
+      toast.error(t("auth.accountDisabled"));
+      return;
+    }
+    if (error?.response?.data?.code === "account_pending") {
+      toast.error(t("auth.accountPending"));
+      return;
+    }
     toast.error(
       error?.response?.data?.error || error?.message || t(fallbackKey),
     );
@@ -852,7 +883,17 @@ export function Auth({ onLogin }: AuthProps) {
     }
     setLoading(true);
     try {
-      await registerUser(username.trim(), password);
+      if (inviteToken) {
+        await acceptUserInvite(inviteToken, username.trim(), password);
+        setInviteToken(null);
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname,
+        );
+      } else {
+        await registerUser(username.trim(), password);
+      }
       const res = await loginUser(username.trim(), password, rememberMe);
       await finishLogin(res, "auth_component", {
         fallbackUsername: username.trim(),
@@ -1309,7 +1350,9 @@ export function Auth({ onLogin }: AuthProps) {
     {
       id: "register",
       label: t("common.register"),
-      show: (passwordLoginAllowed || firstUser) && registrationAllowed,
+      show:
+        !!inviteToken ||
+        ((passwordLoginAllowed || firstUser) && registrationAllowed),
     },
     {
       id: "external",
@@ -1718,6 +1761,11 @@ export function Auth({ onLogin }: AuthProps) {
                     onSubmit={handleRegister}
                     className="flex flex-col gap-4"
                   >
+                    {inviteToken && (
+                      <p className="text-sm text-muted-foreground">
+                        {t("auth.inviteIntro")}
+                      </p>
+                    )}
                     <Field label={t("common.username")} htmlFor="reg-user">
                       <div className="relative">
                         <User className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />

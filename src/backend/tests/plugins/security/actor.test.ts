@@ -20,6 +20,9 @@ vi.mock("../../../utils/audit-logger.js", () => ({
   },
 }));
 vi.mock("../../../database/repositories/factory.js", () => ({
+  createCurrentUserRepository: () => ({
+    findById: async (id: string) => ({ id, disabledAt: null }),
+  }),
   createCurrentPluginPermissionGrantRepository: () => ({
     listByPlugin: async () =>
       ["hosts:read", "ssh:connect", "credentials:use"].map((capability) => ({

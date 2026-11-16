@@ -915,6 +915,10 @@
     "empty": "No cards. Use Add below to place cards."
   },
   "auth": {
+    "inviteIntro": "You were invited to this server. Pick a username and password to make your account.",
+    "inviteInvalid": "This invite link has expired or was already used. Ask an admin for a new one.",
+    "accountDisabled": "This account is turned off. Ask an admin to turn it back on.",
+    "accountPending": "Your account is waiting for an admin to approve it.",
     "stepUp": {
       "title": "Verify it's you",
       "description": "Prove your second factor to go on.",
@@ -1766,7 +1770,11 @@
   "rbac": {
     "roles": {
       "admin": "Admin",
-      "user": "User"
+      "user": "User",
+      "viewer": "Viewer",
+      "operator": "Operator",
+      "auditor": "Auditor",
+      "helpdesk": "Helpdesk"
     }
   },
   "tileGrid": {

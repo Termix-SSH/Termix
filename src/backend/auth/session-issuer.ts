@@ -15,6 +15,7 @@ import { emitInternalEvent } from "../hosts/internal-events.js";
 import {
   createCurrentSettingsRepository,
   createCurrentUserAuthRepository,
+  createCurrentUserRepository,
 } from "../database/repositories/factory.js";
 import type { UserRecord } from "../database/repositories/user-repository.js";
 import type { ExternalSessionRef } from "./types.js";
@@ -103,6 +104,18 @@ export async function issueSession(
     restriction: options.restriction ?? null,
     idleTimeoutSeconds: options.idleTimeoutSeconds ?? null,
   });
+
+  try {
+    await createCurrentUserRepository().update(user.id, {
+      lastLoginAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    authLogger.warn("Failed to record the last login time", {
+      operation: "last_login_update",
+      userId: user.id,
+      error,
+    });
+  }
 
   if (options.rateLimitUsername) {
     const clientIp = req.ip || req.socket?.remoteAddress || "unknown";

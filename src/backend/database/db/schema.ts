@@ -19,8 +19,17 @@ export const users = sqliteTable(
     registeredAt: text("registered_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
+    displayName: text("display_name"),
+    email: text("email"),
+    // Set while the account is turned off or waiting for approval.
+    disabledAt: text("disabled_at"),
+    disabledReason: text("disabled_reason"),
+    lastLoginAt: text("last_login_at"),
   },
-  (table) => [uniqueIndex("idx_users_username").on(table.username)],
+  (table) => [
+    uniqueIndex("idx_users_username").on(table.username),
+    uniqueIndex("idx_users_email").on(table.email),
+  ],
 );
 
 export const settings = sqliteTable("settings", {
@@ -696,6 +705,30 @@ export const apiKeys = sqliteTable(
     scopes: text("scopes"),
   },
   (table) => [index("idx_api_keys_user_id").on(table.userId)],
+);
+
+// A link an admin hands out so someone can make an account.
+export const userInvites = sqliteTable(
+  "user_invites",
+  {
+    id: text("id").primaryKey(),
+    tokenHash: text("token_hash").notNull(),
+    note: text("note"),
+    // JSON list of role ids given on sign up.
+    roleIds: text("role_ids"),
+    makeAdmin: integer("make_admin", { mode: "boolean" }).notNull().default(false),
+    maxUses: integer("max_uses").notNull().default(1),
+    uses: integer("uses").notNull().default(0),
+    createdBy: text("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    expiresAt: text("expires_at").notNull(),
+    revokedAt: text("revoked_at"),
+  },
+  (table) => [uniqueIndex("idx_user_invites_token_hash").on(table.tokenHash)],
 );
 
 export const operationRuns = sqliteTable(
