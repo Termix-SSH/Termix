@@ -1,5 +1,4 @@
 import { and, eq, gte, inArray, isNull, or, type SQL } from "drizzle-orm";
-import { alias } from "drizzle-orm/sqlite-core";
 import {
   credentialAccess,
   roles,
@@ -66,7 +65,11 @@ export class CredentialAccessRepository {
   async listForCredential(
     credentialId: number,
   ): Promise<CredentialAccessListItem[]> {
-    const granter = alias(users, "granter");
+    // A subquery, since an SQLite alias renders without its table on Postgres.
+    const granter = this.context.drizzle
+      .select({ id: users.id, username: users.username })
+      .from(users)
+      .as("granter");
     const rows = await this.context.drizzle
       .select({
         access: credentialAccess,

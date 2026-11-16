@@ -1,5 +1,5 @@
 import { and, eq, isNotNull, lte, or, type SQL } from "drizzle-orm";
-import { alias, type SQLiteColumn } from "drizzle-orm/sqlite-core";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import {
   credentialAccess,
   folderAccess,
@@ -41,10 +41,6 @@ export interface AccessReviewFilter {
   roleId?: number;
 }
 
-const owner = alias(users, "review_owner");
-const grantee = alias(users, "review_grantee");
-const granter = alias(users, "review_granter");
-
 /** Reads every share across hosts, folders and credentials for admins. */
 export class AccessReviewRepository {
   constructor(
@@ -66,6 +62,23 @@ export class AccessReviewRepository {
     return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
+  // Subqueries, not alias(): an SQLite alias renders without its table on
+  // Postgres and MySQL.
+  private userNames(name: string) {
+    return this.context.drizzle
+      .select({ id: users.id, username: users.username })
+      .from(users)
+      .as(name);
+  }
+
+  private people() {
+    return {
+      owner: this.userNames("review_owner"),
+      grantee: this.userNames("review_grantee"),
+      granter: this.userNames("review_granter"),
+    };
+  }
+
   private granteeWhere(
     userColumn: SQLiteColumn,
     roleColumn: SQLiteColumn,
@@ -80,6 +93,7 @@ export class AccessReviewRepository {
   private async listHostShares(
     filter: AccessReviewFilter,
   ): Promise<AccessReviewRow[]> {
+    const { owner, grantee, granter } = this.people();
     const where = filter.userId
       ? and(
           or(
@@ -140,6 +154,7 @@ export class AccessReviewRepository {
   private async listFolderShares(
     filter: AccessReviewFilter,
   ): Promise<AccessReviewRow[]> {
+    const { owner, grantee, granter } = this.people();
     const where = filter.userId
       ? and(
           or(
@@ -196,6 +211,7 @@ export class AccessReviewRepository {
   private async listCredentialShares(
     filter: AccessReviewFilter,
   ): Promise<AccessReviewRow[]> {
+    const { owner, grantee, granter } = this.people();
     const where = filter.userId
       ? and(
           or(
