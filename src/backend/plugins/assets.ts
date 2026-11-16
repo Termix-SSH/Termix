@@ -297,14 +297,22 @@ export function resolveFrameAsset(
 ): string | null {
   const rest = requestPath.slice(FRAME_ASSET_PREFIX.length) || "frame.html";
   if (!FRAME_FILE.test(rest) || rest.split("/").includes("..")) return null;
-  // The fonts are the UI build's own, beside the frame folder.
-  const root = rest.startsWith("fonts/")
-    ? path.join(path.dirname(frameDir), "fonts")
-    : frameDir;
-  const name = rest.startsWith("fonts/") ? rest.slice("fonts/".length) : rest;
-  const file = path.resolve(root, name);
-  if (!isInside(root, file) || !fileExists(file)) return null;
-  return file;
+  if (!rest.startsWith("fonts/")) {
+    const file = path.resolve(frameDir, rest);
+    return isInside(frameDir, file) && fileExists(file) ? file : null;
+  }
+  // The fonts are the UI build's own, beside the frame folder. A dev runner
+  // has no UI build, so it serves them from the source's public folder.
+  const name = rest.slice("fonts/".length);
+  const dist = path.dirname(frameDir);
+  for (const root of [
+    path.join(dist, "fonts"),
+    path.join(dist, "..", "public", "fonts"),
+  ]) {
+    const file = path.resolve(root, name);
+    if (isInside(root, file) && fileExists(file)) return file;
+  }
+  return null;
 }
 
 export interface PluginAssetsOptions {
