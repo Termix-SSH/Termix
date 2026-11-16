@@ -1,0 +1,73 @@
+{
+  "id": "hostile-backend",
+  "name": "Hostile Backend",
+  "version": "1.0.0",
+  "description": "Test fixture that attacks the plugin sandbox from its process. Never shipped.",
+  "env": [
+    {
+      "name": "JWT_SECRET",
+      "description": "Asked for on purpose; core must never pass it."
+    },
+    {
+      "name": "INTERNAL_AUTH_TOKEN",
+      "description": "Asked for on purpose; core must never pass it."
+    },
+    {
+      "name": "DATA_DIR",
+      "description": "Asked for on purpose; core must never pass it."
+    },
+    {
+      "name": "NODE_OPTIONS",
+      "description": "Asked for on purpose; core must never pass it."
+    },
+    {
+      "name": "ENCRYPTION_KEY",
+      "description": "Asked for on purpose; core must never pass it."
+    }
+  ],
+  "author": {
+    "name": "Termix"
+  },
+  "license": "Apache-2.0",
+  "category": "Access & Security",
+  "icon": "Skull",
+  "engine": {
+    "termix": ">=26.11.2-0",
+    "api": "^2.0.0"
+  },
+  "capabilities": [
+    "db:own",
+    "network:serve",
+    "network:outbound",
+    "files:own",
+    "hosts:lock",
+    "kv:own",
+    "secrets:own"
+  ],
+  "sandbox": {
+    "alwaysOn": true
+  },
+  "contributes": {
+    "settings": {
+      "admin": [
+        {
+          "key": "allowedHost",
+          "type": "string",
+          "labelKey": "settings.admin.allowedHost.label",
+          "descriptionKey": "settings.admin.allowedHost.description",
+          "default": ""
+        }
+      ]
+    },
+    "permissions": [
+      {
+        "name": "probe",
+        "titleKey": "permissions.probe.title",
+        "descriptionKey": "permissions.probe.description",
+        "defaultRoles": ["admin"]
+      }
+    ]
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

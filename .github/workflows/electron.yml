@@ -213,6 +213,17 @@ jobs:
           }
           echo "version=$VERSION" >> $env:GITHUB_OUTPUT
 
+      # Pinned Node and the OS sandbox helper that run plugin backends. ia32
+      # has no Node 26 build, so that build ships none and refuses them.
+      - name: Build plugin runtime
+        working-directory: native/plugin-jail
+        run: |
+          rustup toolchain install
+          rustup target add x86_64-pc-windows-msvc aarch64-pc-windows-msvc
+          Set-Location ../..
+          node scripts/build-plugin-runtime.cjs --platform win32 --arch x64,ia32,arm64
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
       - name: Build Windows (All Architectures)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -236,6 +247,28 @@ jobs:
           npm run build
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           npx electron-builder --win --x64 --ia32 --arm64 --publish never @sign
+
+      # The real fence on the files that ship: a probe plugin can't read the
+      # database, write outside its folder, start a process, connect out or
+      # grow past its memory cap, with and without Node's flags.
+      - name: Check the plugin fence on the packaged runtime
+        env:
+          TERMIX_REQUIRE_PLUGIN_RUNTIME: "1"
+          TERMIX_FENCE_RESOURCES: release/win-unpacked/resources
+        run: npx vitest run src/backend/tests/plugins/sandbox/desktop-fence.test.ts
+
+      # electron-builder signs every .exe in extra resources; check the plugin
+      # runtime got it too, since the app refuses a changed one.
+      - name: Check plugin runtime signatures
+        if: env.SIGN_WINDOWS == 'true'
+        run: |
+          $files = Get-ChildItem release/win-unpacked/resources/plugin-runtime, release/win-arm64-unpacked/resources/plugin-runtime -Filter *.exe -ErrorAction SilentlyContinue
+          if (-not $files) { Write-Error "no plugin runtime in the build"; exit 1 }
+          foreach ($file in $files) {
+            $status = (Get-AuthenticodeSignature $file.FullName).Status
+            Write-Output "$($file.FullName): $status"
+            if ($status -ne 'Valid') { exit 1 }
+          }
 
       # The updater only installs the x64 NSIS build; 32-bit and ARM installs get a link.
       # The combined multi-arch installer is never uploaded.
@@ -403,7 +436,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libfuse2
+          sudo apt-get install -y libfuse2 libatomic1 libatomic1-arm64-cross
 
       - name: Install dependencies
         run: |
@@ -424,11 +457,24 @@ jobs:
         if: inputs.version_override != ''
         run: node scripts/sync-version.cjs --version "$VERSION_OVERRIDE"
 
+      # Pinned Node, libatomic and the OS sandbox helper (static musl) that run
+      # plugin backends. armv7l has no Node 26 build and refuses them.
+      - name: Build plugin runtime
+        run: |
+          (cd native/plugin-jail && rustup toolchain install && rustup target add x86_64-unknown-linux-musl aarch64-unknown-linux-musl)
+          node scripts/build-plugin-runtime.cjs --platform linux --arch x64,arm64,armv7l
+
       - name: Build Linux x64
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEBUG: electron-builder
         run: npm run build && npx electron-builder --linux --x64 --publish never
+
+      - name: Check the plugin fence on the packaged runtime
+        env:
+          TERMIX_REQUIRE_PLUGIN_RUNTIME: "1"
+          TERMIX_FENCE_RESOURCES: release/linux-unpacked/resources
+        run: npx vitest run src/backend/tests/plugins/sandbox/desktop-fence.test.ts
 
       - name: Build Linux arm64 and armv7l
         env:
@@ -659,6 +705,13 @@ jobs:
 
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
+      # Pinned Node and the OS sandbox helper that run plugin backends.
+      # electron-builder signs both with the app (hardened runtime, notarized).
+      - name: Build plugin runtime
+        run: |
+          (cd native/plugin-jail && rustup toolchain install && rustup target add x86_64-apple-darwin aarch64-apple-darwin)
+          node scripts/build-plugin-runtime.cjs --platform darwin --arch x64,arm64
+
       # Betas never go to the App Store, so they skip the MAS package.
       - name: Build macOS App Store Package
         id: mas_build
@@ -734,6 +787,29 @@ jobs:
             npm run build
           fi
           npx electron-builder --mac dmg zip --universal --x64 --arm64 --publish never
+
+      - name: Check the plugin fence on the packaged runtime
+        env:
+          TERMIX_REQUIRE_PLUGIN_RUNTIME: "1"
+        run: |
+          app=$(ls -d release/mac-arm64/Termix.app 2>/dev/null || ls -d release/mac/Termix.app)
+          export TERMIX_FENCE_RESOURCES="$app/Contents/Resources"
+          export TERMIX_FENCE_APP="$app"
+          npx vitest run src/backend/tests/plugins/sandbox/desktop-fence.test.ts
+
+      # The app refuses a plugin runtime not signed by its own team.
+      - name: Check plugin runtime signatures
+        if: steps.check_dev_id_certs.outputs.has_dev_id_certs == 'true'
+        run: |
+          for app in release/mac*/Termix.app; do
+            team=$(codesign -dv --verbose=2 "$app" 2>&1 | sed -n 's/^TeamIdentifier=//p')
+            for file in "$app"/Contents/Resources/plugin-runtime/*; do
+              codesign --verify --strict "$file"
+              got=$(codesign -dv --verbose=2 "$file" 2>&1 | sed -n 's/^TeamIdentifier=//p')
+              echo "$file: $got"
+              [ "$got" = "$team" ] || exit 1
+            done
+          done
 
       # The updater picks the x64 or arm64 zip, so the universal one is left out.
       - name: Fix macOS update files

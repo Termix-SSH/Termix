@@ -915,6 +915,16 @@
     "empty": "No cards. Use Add below to place cards."
   },
   "auth": {
+    "inviteIntro": "You were invited to this server. Pick a username and password to make your account.",
+    "inviteInvalid": "This invite link has expired or was already used. Ask an admin for a new one.",
+    "accountDisabled": "This account is turned off. Ask an admin to turn it back on.",
+    "accountPending": "Your account is waiting for an admin to approve it.",
+    "stepUp": {
+      "title": "Verify it's you",
+      "description": "Prove your second factor to go on.",
+      "noFactor": "You have no second factor set up. Add one in Settings, then try again.",
+      "failed": "That did not work. Try again."
+    },
     "tagline": "Self-hosted, plugin-based server management.",
     "loginTitle": "Welcome back",
     "registerTitle": "Create Account",
@@ -941,6 +951,14 @@
     "loginWithExternal": "Login with External Provider",
     "loginWithExternalDesc": "Login using your configured external identity provider",
     "loginWithProvider": "Login with {{name}}",
+    "pluginLogin": {
+      "signIn": "Sign in",
+      "verify": "Verify",
+      "code": "Code",
+      "useKey": "Use security key",
+      "keyPrompt": "Use your security key or passkey to continue.",
+      "keyFailed": "The security key step did not work. Try again."
+    },
     "resetPasswordButton": "Reset Password",
     "sendResetCode": "Send Reset Code",
     "resetCodeDesc": "Enter your username to receive a password reset code. The code will be logged in the docker container logs.",
@@ -1330,6 +1348,10 @@
         "consequence": "Only colors and styles. No code runs for a theme."
       }
     },
+    "webView": {
+      "unavailable": "This page is no longer available. Open it again from its plugin.",
+      "isolationUnavailable": "This browser can't open the page safely here. Use a recent Chrome or Edge, or the desktop app."
+    },
     "runtime": {
       "needsPlugin": "{{name}} is not available",
       "needsUnknownPlugin": "This plugin is not available",
@@ -1375,7 +1397,8 @@
         "version": "Version",
         "status": "Status",
         "category": "Category",
-        "downloads": "Downloads"
+        "downloads": "Downloads",
+        "memory": "Memory"
       },
       "risk": {
         "critical": "Critical",
@@ -1495,8 +1518,21 @@
       "pinHint": "Keeps {{version}} and skips every update until you turn this off.",
       "pinnedTo": "Pinned to {{version}}",
       "legacy": {
-        "notice_one": "1 plugin was made for an older Termix and stays off until it is updated: {{names}}",
-        "notice_other": "{{count}} plugins were made for an older Termix and stay off until they are updated: {{names}}"
+        "notice_one": "1 plugin was made for an older Termix and stays off until it is updated: {{names}}.",
+        "notice_other": "{{count}} plugins were made for an older Termix and stay off until they are updated: {{names}}.",
+        "why": "They were made for plugin API 1, which ran inside the server. Termix now runs every plugin in its own process, so each needs a version made for plugin API 2. Update official ones here, and ask the author of a community plugin for one.",
+        "guide": "How plugins move to API 2"
+      },
+      "provenance": {
+        "verified": "Build checked",
+        "verifiedHint": "Its build provenance was signed by the Termix registry release workflow and matches this file. Opens the build.",
+        "unchecked": "Build not checked",
+        "uncheckedHint": "Its build provenance could not be checked when it was downloaded. Its registry signature was."
+      },
+      "updateCheck": {
+        "notice_one": "Termix {{version}} is out. 1 plugin will stay off on it until you update it: {{names}}.",
+        "notice_other": "Termix {{version}} is out. {{count}} plugins will stay off on it until you update them: {{names}}.",
+        "needs": "{{name}} (needs Termix {{range}})"
       },
       "version": "Version",
       "versionPickHint": "Install an older release instead of the newest. It stays on that version until you unpin it.",
@@ -1654,7 +1690,16 @@
       "unsupportedHint": "No release of this plugin runs on this version of Termix. Update Termix to install it.",
       "needsTermix": "Needs Termix {{range}}",
       "showUnsupported": "Show unsupported ({{count}})",
-      "showMore": "Show {{count}} more ({{total}} left)"
+      "showMore": "Show {{count}} more ({{total}} left)",
+      "memory": {
+        "summary": "Memory: {{total}} of {{limit}} | plugins {{plugins}} | {{running}} running",
+        "lowTitle": "This server is low on memory",
+        "lowBody": "Termix and its plugins use {{total}} of {{limit}}. Give the server more memory or turn off plugins you do not use.",
+        "idle": "Idle",
+        "idleHint": "Not running now. It starts when something needs it.",
+        "keptOn": "Stays running: {{reason}}",
+        "stopsWhenIdle": "Stops when idle"
+      }
     }
   },
   "settings": {
@@ -1725,7 +1770,11 @@
   "rbac": {
     "roles": {
       "admin": "Admin",
-      "user": "User"
+      "user": "User",
+      "viewer": "Viewer",
+      "operator": "Operator",
+      "auditor": "Auditor",
+      "helpdesk": "Helpdesk"
     }
   },
   "tileGrid": {

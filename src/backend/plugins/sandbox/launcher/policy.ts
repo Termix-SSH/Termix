@@ -5,6 +5,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { NO_NETWORK_ENV } from "../child/guards.js";
 
 /** Plugin users live in their own range, one per plugin id. */
 export const UID_FIRST = 61000;
@@ -52,7 +53,8 @@ export function isPassableEnv(name: string): boolean {
     !CORE_ONLY_ENV.has(name) &&
     !RUNTIME_ENV.test(name) &&
     name !== "TERMIX_SANDBOX_PLUGIN" &&
-    name !== "TERMIX_SANDBOX_ADDONS"
+    name !== "TERMIX_SANDBOX_ADDONS" &&
+    name !== NO_NETWORK_ENV
   );
 }
 
@@ -145,6 +147,57 @@ export function validateSpawn(
     return { ok: false, reason: "bad firewall rule" };
   }
   return { ok: true };
+}
+
+/** What the desktop's OS sandbox helper (termix-plugin-jail) enforces. */
+export interface JailPolicy {
+  name: string;
+  read: string[];
+  write: string[];
+  net: boolean;
+  childProcess: boolean;
+  addons: boolean;
+  memoryMb: number;
+}
+
+/** Room above the V8 heap for code, buffers and the runtime itself. */
+export const JAIL_MEMORY_MIN_MB = 512;
+
+/**
+ * The OS fence for a spawn request validateSpawn accepted: the same reads,
+ * writes and grants as the Node flags, so the two layers agree.
+ */
+export function buildJailPolicy(
+  request: Record<string, unknown>,
+  extraReads: readonly string[] = [],
+): JailPolicy {
+  const argv = (request.execArgv as unknown[]).map(String);
+  const dataDir = path.resolve(String(request.dataDir));
+  const reads = new Set<string>();
+  let writes = false;
+  let heapMb = 0;
+  for (const arg of argv) {
+    if (arg.startsWith("--allow-fs-read=")) {
+      reads.add(path.resolve(arg.slice("--allow-fs-read=".length)));
+    } else if (arg.startsWith("--allow-fs-write=")) {
+      writes = true;
+    }
+    const heap = /^--max-old-space-size=(\d+)$/.exec(arg);
+    if (heap) heapMb = Number(heap[1]);
+  }
+  for (const extra of extraReads) reads.add(path.resolve(extra));
+  // The data folder is the process's working folder either way.
+  if (writes) reads.delete(dataDir);
+  else reads.add(dataDir);
+  return {
+    name: String(request.pluginId),
+    read: [...reads],
+    write: writes ? [dataDir] : [],
+    net: argv.includes("--allow-net"),
+    childProcess: argv.includes("--allow-child-process"),
+    addons: argv.includes("--allow-addons"),
+    memoryMb: Math.min(8192, Math.max(JAIL_MEMORY_MIN_MB, heapMb * 2 + 256)),
+  };
 }
 
 /**

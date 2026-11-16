@@ -76,6 +76,8 @@ export function createInProcessRunner(): PluginRunner {
         pluginId,
         state: "ready" as const,
         alwaysOn: true,
+        keepOnReason: "in process",
+        rssMb: null,
         crashes: 0,
       }));
     },

@@ -10,6 +10,8 @@ export type UserListOptions = {
   /** Page size. Omit to fetch every user (what the share pickers want). */
   limit?: number;
   offset?: number;
+  /** Only accounts in this state. Needs admin.users.view. */
+  status?: "active" | "disabled" | "pending";
 };
 
 export async function getUserList(
@@ -22,6 +24,7 @@ export async function getUserList(
         ...(options.search ? { search: options.search } : {}),
         ...(options.limit ? { limit: options.limit } : {}),
         ...(options.offset ? { offset: options.offset } : {}),
+        ...(options.status ? { status: options.status } : {}),
       },
     });
     return response.data;

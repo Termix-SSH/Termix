@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { frameRuntimeCandidates } from "../../http/frame-runtime.js";
+import {
+  frameRuntimeCandidates,
+  rewriteFramePage,
+} from "../../http/frame-runtime.js";
+import { importMapHashFromHtml } from "../../http/security-headers.js";
 
 const root = path.resolve(import.meta.dirname, "../../../..");
 
@@ -28,5 +32,33 @@ describe("frame runtime folder", () => {
         "dist/fonts/**/*",
       ]),
     );
+  });
+});
+
+describe("frame page rewrite", () => {
+  const raw = [
+    '<script type="importmap">{"imports":{"react":"./shared/react.js"}}</script>',
+    '<script type="module" crossorigin src="./assets/frame-x.js"></script>',
+    '<link rel="modulepreload" crossorigin href="./assets/helper.js">',
+    "<p>./not-a-url</p>",
+  ].join("\n");
+  const html = rewriteFramePage(raw, "0123456789abcdef");
+
+  it("points scripts, styles and the import map at the shared runtime", () => {
+    expect(html).toContain(
+      '"react":"../../_runtime/0123456789abcdef/shared/react.js"',
+    );
+    expect(html).toContain(
+      'src="../../_runtime/0123456789abcdef/assets/frame-x.js"',
+    );
+    expect(html).toContain(
+      'href="../../_runtime/0123456789abcdef/assets/helper.js"',
+    );
+    expect(html).toContain("<p>./not-a-url</p>");
+    expect(html).not.toContain('"./');
+  });
+
+  it("changes the import map hash the CSP carries", () => {
+    expect(importMapHashFromHtml(html)).not.toBe(importMapHashFromHtml(raw));
   });
 });

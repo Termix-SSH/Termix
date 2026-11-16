@@ -1,10 +1,13 @@
 // The built page plugin views run in (dist/frame), served to every framed
-// plugin under /plugin-assets/<id>/_frame/.
+// plugin under /plugin-assets/<id>/_frame/. Its scripts, styles and fonts are
+// the same for every plugin, so the page points them at one versioned path,
+// /plugin-assets/_runtime/<version>/, which the browser caches once.
 
+import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { readImportMapHash, type ScriptHash } from "./security-headers.js";
+import { importMapHashFromHtml, type ScriptHash } from "./security-headers.js";
 import { DESKTOP_APP_ORIGIN } from "../utils/cors-config.js";
 
 /** The built page, served as /plugin-assets/<id>/_frame/. */
@@ -41,10 +44,32 @@ export function findFrameRuntimeDir(): string | null {
   return frameDir;
 }
 
-let hash: { value: ScriptHash; stamp: number } | null = null;
+/** Where the shared runtime files are served, under /plugin-assets/. */
+export const FRAME_RUNTIME_PREFIX = "_runtime/";
 
-/** Read again only when the frame page was rebuilt. */
-export function frameImportMapHash(): ScriptHash | null {
+export interface FramePage {
+  html: string;
+  /** Changes with every frame build, so runtime files can be cached for good. */
+  version: string;
+  hash: ScriptHash | null;
+}
+
+/**
+ * Points the page's relative URLs (scripts, styles, import map) at the
+ * runtime path. Relative, since the page sits at
+ * <prefix>/plugin-assets/<id>/_frame/ and a proxy may add the prefix.
+ */
+export function rewriteFramePage(html: string, version: string): string {
+  return html.replace(
+    /(["'])\.\//g,
+    `$1../../${FRAME_RUNTIME_PREFIX}${version}/`,
+  );
+}
+
+let page: { value: FramePage; stamp: number } | null = null;
+
+/** The page as served. Read again only when the frame was rebuilt. */
+export function framePage(): FramePage | null {
   const dir = findFrameRuntimeDir();
   if (!dir) return null;
   let stamp = 0;
@@ -53,11 +78,29 @@ export function frameImportMapHash(): ScriptHash | null {
   } catch {
     return null;
   }
-  if (hash?.stamp !== stamp) {
-    const value = readImportMapHash(dir, FRAME_PAGE);
-    hash = value ? { value, stamp } : null;
+  if (page?.stamp !== stamp) {
+    try {
+      const raw = fs.readFileSync(path.join(dir, FRAME_PAGE), "utf8");
+      const version = crypto
+        .createHash("sha256")
+        .update(raw, "utf8")
+        .digest("hex")
+        .slice(0, 16);
+      const html = rewriteFramePage(raw, version);
+      page = {
+        value: { html, version, hash: importMapHashFromHtml(html) },
+        stamp,
+      };
+    } catch {
+      page = null;
+    }
   }
-  return hash?.value ?? null;
+  return page?.value ?? null;
+}
+
+/** Hash of the served page's import map, for its CSP. */
+export function frameImportMapHash(): ScriptHash | null {
+  return framePage()?.hash ?? null;
 }
 
 /**
@@ -74,5 +117,5 @@ export function frameAncestors(): string[] {
 /** Test seam. */
 export function resetFrameRuntime(): void {
   frameDir = null;
-  hash = null;
+  page = null;
 }

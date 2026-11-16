@@ -4,9 +4,9 @@
  *
  * Core encrypted termix_identity_ca.private_key with the owner's data key.
  * The plugin adopts that table as p_termix_identity_ca and reads the key with
- * ctx.secrets.unseal, which only opens installation-key encryption. Each row
- * still under a data key is decrypted and written back with
- * encryptSystemSecret, what ctx.secrets.seal writes.
+ * ctx.secrets.unseal, which only opens what was sealed for that plugin. Each
+ * row still under a data key is decrypted and written back sealed for it
+ * (plugins/plugin-seal.ts), what ctx.secrets.seal writes.
  *
  * Does nothing until the plugin's table exists. A row whose owner's data key
  * cannot be opened is skipped and tried again next time. Idempotent.
@@ -16,16 +16,15 @@ import { sql } from "drizzle-orm";
 import { databaseLogger } from "../utils/logger.js";
 import { DataCrypto } from "../utils/data-crypto.js";
 import { LazyFieldEncryption } from "../utils/lazy-field-encryption.js";
-import {
-  encryptSystemSecret,
-  isSystemEncrypted,
-} from "../utils/system-secret-crypto.js";
+import { isSystemEncrypted } from "../utils/system-secret-crypto.js";
+import { PLUGIN_SEAL_PREFIX, sealForPlugin } from "../plugins/plugin-seal.js";
 import {
   runStatement,
   selectRows,
 } from "../utils/crypto-migration/raw-rows.js";
 
 const CA_TABLE = "p_termix_identity_ca";
+const IDENTITY_ID = "termix-identity";
 
 interface CaRow {
   id: number;
@@ -46,7 +45,13 @@ export async function runTermixIdentityCaMigration(): Promise<number> {
 
   let resealed = 0;
   for (const row of rows) {
-    if (!row.private_key || isSystemEncrypted(row.private_key)) continue;
+    if (
+      !row.private_key ||
+      isSystemEncrypted(row.private_key) ||
+      row.private_key.startsWith(PLUGIN_SEAL_PREFIX)
+    ) {
+      continue;
+    }
     try {
       const dek = DataCrypto.getUserDataKey(row.user_id);
       if (!dek) continue;
@@ -55,10 +60,11 @@ export async function runTermixIdentityCaMigration(): Promise<number> {
         dek,
         String(row.id),
         "privateKey",
+        { anyRecord: true },
       );
       if (!plain) continue;
       await runStatement(
-        sql`UPDATE ${sql.identifier(CA_TABLE)} SET private_key = ${await encryptSystemSecret(plain)} WHERE id = ${row.id}`,
+        sql`UPDATE ${sql.identifier(CA_TABLE)} SET private_key = ${await sealForPlugin(IDENTITY_ID, plain)} WHERE id = ${row.id}`,
       );
       resealed++;
     } catch (error) {

@@ -7,7 +7,7 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { sshCredentials, sshCredentialUsage } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
-import { DataCrypto } from "../../utils/data-crypto.js";
+import { DataCrypto, splitSecrets } from "../../utils/data-crypto.js";
 import { rowsAffected } from "./mutation-result.js";
 import {
   deleteReturning,
@@ -42,27 +42,53 @@ export class CredentialRepository {
   ): Promise<CredentialRecord> {
     assertSecretsAllowed("ssh_credentials", credential);
     const userDataKey = DataCrypto.validateUserAccess(userId);
-    const tempId = credential.id ?? Date.now();
-    const dataWithTempId = {
+    const record = {
       syncId: randomUUID(),
       ...credential,
-      id: tempId,
-    };
-    const encryptedCredential = this.encryptCredentialRecordForWrite(
-      dataWithTempId,
-      userId,
-      userDataKey,
-    );
-
-    if (!credential.id) {
-      delete (encryptedCredential as Partial<NewCredentialRecord>).id;
+    } as Record<string, unknown>;
+    let rows: CredentialRecord[];
+    if (record.id) {
+      rows = await insertReturning(
+        this.context,
+        sshCredentials,
+        this.encryptCredentialRecordForWrite(
+          record,
+          userId,
+          userDataKey,
+        ) as NewCredentialRecord,
+      );
+    } else {
+      // Secrets are sealed with the row id, so they go in once it has one.
+      const { plain, secrets } = splitSecrets("ssh_credentials", record);
+      const [inserted] = await insertReturning(
+        this.context,
+        sshCredentials,
+        plain as NewCredentialRecord,
+      );
+      rows = [inserted];
+      if (Object.keys(secrets).length) {
+        try {
+          const sealed = this.encryptCredentialRecordForWrite(
+            { ...secrets, id: inserted.id },
+            userId,
+            userDataKey,
+          ) as Record<string, unknown>;
+          delete sealed.id;
+          const updated = await updateReturning(
+            this.context,
+            sshCredentials,
+            sealed as CredentialUpdate,
+            eq(sshCredentials.id, inserted.id),
+          );
+          rows = [updated[0] ?? inserted];
+        } catch (error) {
+          await this.context.drizzle
+            .delete(sshCredentials)
+            .where(eq(sshCredentials.id, inserted.id));
+          throw error;
+        }
+      }
     }
-
-    const rows = await insertReturning(
-      this.context,
-      sshCredentials,
-      encryptedCredential as NewCredentialRecord,
-    );
 
     await this.afterWrite();
     return DataCrypto.decryptRecord(
@@ -203,10 +229,11 @@ export class CredentialRepository {
     }
     const userDataKey = DataCrypto.validateUserAccess(userId);
     const encryptedUpdate = this.encryptCredentialRecordForWrite(
-      update,
+      { ...update, id: credentialId },
       userId,
       userDataKey,
-    );
+    ) as Record<string, unknown>;
+    delete encryptedUpdate.id;
 
     const rows = await updateReturning(
       this.context,

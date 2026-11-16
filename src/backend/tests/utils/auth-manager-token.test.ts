@@ -43,7 +43,7 @@ vi.mock("../../database/repositories/factory.js", () => ({
     revoke: mocks.revoke,
     touch: async () => true,
   }),
-  createCurrentUserRepository: () => ({}),
+  createCurrentUserRepository: () => ({ findById: async () => null }),
   createCurrentApiKeyRepository: () => ({}),
   createCurrentTrustedDeviceRepository: () => ({}),
   getCurrentSettingValue: () => null,

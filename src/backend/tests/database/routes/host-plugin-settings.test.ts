@@ -442,6 +442,28 @@ describe("share levels, legacy fields and generic writes", () => {
     expect(host.enableDocker).toBe(true);
   });
 
+  it("asks a plugin for many hosts' legacy fields at once, not one by one", async () => {
+    loaded.push({ id: "docker", manifest: DOCKER, state: "active" });
+    let open = 0;
+    let most = 0;
+    registryProviders.set("docker.hostPayloadLegacy", async () => {
+      open++;
+      most = Math.max(most, open);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      open--;
+      return { enableDocker: true };
+    });
+    const hosts = Array.from({ length: 20 }, (_, i) => ({ id: i + 1 }));
+    await attachHostPluginSettings(
+      hosts,
+      new Map(hosts.map((h) => [h.id, { docker: { enableDocker: true } }])),
+    );
+    expect(most).toBe(20);
+    expect(
+      hosts.every((h) => (h as Record<string, unknown>).enableDocker),
+    ).toBe(true);
+  });
+
   it("adds a plugin's keys to an object core already sends, never over core's", async () => {
     loaded.push({ id: "docker", manifest: DOCKER, state: "active" });
     registryProviders.set("docker.hostPayloadLegacy", () => ({

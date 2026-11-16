@@ -225,7 +225,8 @@ export type AdminSection =
   | "database"
   | "api-keys"
   | "audit-log"
-  | "ssl";
+  | "ssl"
+  | "access";
 export type ThemeId = string;
 export type LegacyThemeId =
   | "dark"

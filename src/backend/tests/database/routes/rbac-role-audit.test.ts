@@ -12,6 +12,17 @@ import {
 } from "vitest";
 
 const audit = vi.hoisted(() => ({ logAudit: vi.fn(async () => {}) }));
+const caller = vi.hoisted(() => ({
+  admin: true,
+  held: [] as string[],
+  role: {
+    id: 7,
+    name: "ops",
+    displayName: "Ops",
+    isSystem: false,
+    permissions: null as string | null,
+  },
+}));
 
 vi.mock("../../../utils/audit-logger.js", () => ({
   logAudit: audit.logAudit,
@@ -44,18 +55,18 @@ vi.mock("../../../utils/permission-manager.js", () => ({
       requireAdmin: () => (_req: unknown, _res: unknown, next: () => void) =>
         next(),
       invalidateUserPermissionCache: vi.fn(),
-      isAdmin: async () => true,
+      isAdmin: async () => caller.admin,
+      hasPermission: async (_userId: string, permission: string) =>
+        caller.admin || caller.held.includes(permission),
     }),
   },
 }));
-
-const role = { id: 7, name: "ops", displayName: "Ops", isSystem: false };
 
 vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentRoleRepository: () => ({
     findRoleByName: async () => null,
     createRole: async () => 7,
-    findRoleById: async () => role,
+    findRoleById: async () => caller.role,
     updateRole: async () => undefined,
     listRoleUserIds: async () => ["u2"],
     deleteRole: async () => ({ deletedUserIds: ["u2"] }),
@@ -72,6 +83,28 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   }),
   createCurrentCredentialAccessRepository: () => ({
     listCredentialIdsGrantedBy: async () => [],
+  }),
+  createCurrentAccessReviewRepository: () => ({
+    list: async () => [
+      {
+        kind: "host",
+        accessId: 1,
+        targetId: "1",
+        targetName: "=HYPERLINK(1)",
+        ownerId: "o",
+        ownerUsername: "owner",
+        granteeUserId: "u2",
+        granteeUsername: 'bob "b"',
+        granteeRoleId: null,
+        granteeRoleName: null,
+        permissionLevel: "view",
+        grantedBy: "o",
+        grantedByUsername: "owner",
+        createdAt: "2026-11-01T00:00:00.000Z",
+        expiresAt: null,
+        lastAccessedAt: null,
+      },
+    ],
   }),
   createCurrentSharedHostSecretsRepository: () => ({
     deleteForRoleMember: async () => undefined,
@@ -109,7 +142,18 @@ beforeAll(async () => {
 
 afterAll(() => new Promise((resolve) => server.close(resolve)));
 
-beforeEach(() => audit.logAudit.mockClear());
+beforeEach(() => {
+  audit.logAudit.mockClear();
+  caller.admin = true;
+  caller.held = [];
+  caller.role = {
+    id: 7,
+    name: "ops",
+    displayName: "Ops",
+    isSystem: false,
+    permissions: null,
+  };
+});
 
 async function call(method: string, path: string, body?: unknown) {
   return fetch(`${baseUrl}/rbac${path}`, {
@@ -168,5 +212,53 @@ describe("role changes are audited", () => {
     });
     expect((await call("DELETE", "/users/u2/roles/7")).status).toBe(200);
     expect(lastAudit()).toMatchObject({ action: "remove_role" });
+  });
+});
+
+describe("role permission limits", () => {
+  it("keeps the admin role's permissions fixed", async () => {
+    caller.role = { ...caller.role, name: "admin", isSystem: true };
+    const res = await call("PUT", "/roles/7", { permissions: ["hosts.view"] });
+    expect(res.status).toBe(400);
+    expect((await res.json()).code).toBe("ADMIN_ROLE_FIXED");
+  });
+
+  it("lets a non-admin role manager grant only what they hold", async () => {
+    caller.admin = false;
+    caller.held = ["admin.roles.manage", "hosts.view"];
+    expect(
+      (await call("PUT", "/roles/7", { permissions: ["hosts.view"] })).status,
+    ).toBe(200);
+    const res = await call("PUT", "/roles/7", { permissions: ["*"] });
+    expect(res.status).toBe(403);
+    expect((await res.json()).code).toBe("PERMISSION_NOT_HELD");
+  });
+
+  it("keeps a non-admin from handing out a role above their rights", async () => {
+    caller.admin = false;
+    caller.held = ["admin.roles.manage"];
+    caller.role = { ...caller.role, permissions: '["admin.plugins.manage"]' };
+    const res = await call("POST", "/users/u2/roles", { roleId: 7 });
+    expect(res.status).toBe(403);
+  });
+});
+
+describe("access review", () => {
+  it("lists shares as JSON with paging", async () => {
+    const res = await call("GET", "/access-review?limit=10");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.total).toBe(1);
+    expect(body.shares[0].granteeUsername).toBe('bob "b"');
+  });
+
+  it("exports CSV with formulas made harmless", async () => {
+    const res = await call("GET", "/access-review?format=csv");
+    expect(res.headers.get("content-type")).toContain("text/csv");
+    const text = await res.text();
+    const [header, row] = text.split("\r\n");
+    expect(header.startsWith("kind,target,owner")).toBe(true);
+    expect(row).toContain(`"'=HYPERLINK(1)"`);
+    expect(row).toContain(`"bob ""b"""`);
   });
 });

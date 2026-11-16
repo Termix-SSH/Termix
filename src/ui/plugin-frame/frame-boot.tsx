@@ -8,6 +8,11 @@
  * plugin's background work going (background frame) or draws one view.
  */
 
+import {
+  liveWork,
+  startLiveTracking,
+  stopLiveTracking,
+} from "./frame-liveness";
 import "./frame.css";
 import { createElement, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
@@ -39,10 +44,16 @@ import {
   createFrameApp,
   frameComponent,
   frameComponentKeys,
+  whenFrameComponent,
 } from "./frame-app";
 import { createFrameBridge } from "./frame-bridge";
 import { getFrameState, setFrameState } from "./frame-store";
+import { createFrameDataSource, receiveDataSlot } from "./frame-data-slots";
+import { setFrameDataSource } from "@/components/data-view/data-source";
 import { FrameHooks } from "./frame-hooks";
+import { setForeignRuntime } from "@/components/foreign/foreign-runtime";
+import { createForeignRuntime, receiveForeignEvent } from "./foreign-client";
+import { focusEdge, watchEdges } from "./frame-edges";
 import { withPluginScope } from "@/plugin-host/scope";
 import { FrameRoot, setFrameProps, type FrameFit } from "./frame-root";
 
@@ -51,6 +62,10 @@ interface BootParams {
   key?: string;
   fit: FrameFit;
   transparent: boolean;
+  /** The shell placed this view over another plugin's frame. */
+  edge: boolean;
+  /** Report whether the view draws anything (overlays). */
+  drawn: boolean;
 }
 
 /**
@@ -84,16 +99,20 @@ function readParams(): BootParams {
   const params = new URLSearchParams(location.hash.slice(1));
   const role = params.get("role") === "background" ? "background" : "view";
   const fit: FrameFit =
-    params.get("inline") === "1"
-      ? "inline"
-      : params.get("fit") === "content"
-        ? "content"
-        : "fill";
+    params.get("bar") === "1"
+      ? "bar"
+      : params.get("inline") === "1"
+        ? "inline"
+        : params.get("fit") === "content"
+          ? "content"
+          : "fill";
   return {
     role,
     key: params.get("key") ?? undefined,
     fit,
     transparent: params.get("bg") === "none",
+    edge: params.get("edge") === "1",
+    drawn: params.get("drawn") === "1",
   };
 }
 
@@ -101,10 +120,10 @@ function applyTheme(theme: FrameTheme) {
   const root = document.documentElement;
   root.className = theme.className;
   root.setAttribute("style", theme.style);
-  let node = document.getElementById("termix-theme-css");
+  let node = document.getElementById("termix-frame-theme-css");
   if (!node) {
     node = document.createElement("style");
-    node.id = "termix-theme-css";
+    node.id = "termix-frame-theme-css";
     document.head.appendChild(node);
   }
   node.textContent = theme.css.join("\n");
@@ -123,7 +142,7 @@ async function boot() {
   const parent = window.parent;
   if (!parent || parent === window) return;
   document.documentElement.dataset.frameFit =
-    params.fit === "fill" ? "fill" : "content";
+    params.fit === "fill" || params.fit === "bar" ? params.fit : "content";
   if (params.transparent) document.documentElement.dataset.frameBg = "none";
 
   const realFetch = window.fetch.bind(window);
@@ -140,6 +159,14 @@ async function boot() {
   });
 
   const call = (method: string, ...args: unknown[]) => port.call(method, args);
+  // Data slots this plugin owns get their values from the shell.
+  setFrameDataSource(createFrameDataSource(call));
+  // Other plugins' parts are placeholders the shell draws over.
+  const foreign = createForeignRuntime({
+    call,
+    emit: (name, data) => port.emit(name, data),
+  });
+  setForeignRuntime(foreign);
 
   parent.postMessage(
     { ch: FRAME_CHANNEL, t: "hello", role: params.role, key: params.key },
@@ -294,7 +321,7 @@ async function boot() {
         return api as never;
       },
       tabs,
-      devReads: init.devReads === true,
+      foreign,
     }),
   );
 
@@ -305,6 +332,7 @@ async function boot() {
     document.head.appendChild(link);
   }
 
+  if (params.role === "background") startLiveTracking();
   const module = (await import(
     /* @vite-ignore */ `${assetRoot}frontend.js${version}`
   )) as FrontendModule;
@@ -323,7 +351,11 @@ async function boot() {
     fetch: pluginFetch,
     wsUrl: wsUrl as never,
   });
-  await module.activate(handle.app);
+  try {
+    await module.activate(handle.app);
+  } finally {
+    stopLiveTracking();
+  }
 
   window.addEventListener("pagehide", () => {
     void Promise.resolve(module.deactivate?.()).finally(() => handle.dispose());
@@ -352,8 +384,11 @@ async function boot() {
       }),
     );
     watchOverlay((active) => port.emit("overlay", { active }));
+    port.emit("live", { reasons: liveWork() });
   } else {
-    const component = params.key ? frameComponent(params.key) : undefined;
+    const component = params.key
+      ? await whenFrameComponent(params.key)
+      : undefined;
     if (!component) {
       throw new Error(`${pluginId} has no view "${params.key ?? ""}"`);
     }
@@ -363,8 +398,12 @@ async function boot() {
         component: component as ComponentType<Record<string, unknown>>,
         onSize: (size: { width: number; height: number }) =>
           port.emit("size", size),
+        onDrawn: params.drawn
+          ? (drawn: boolean) => port.emit("drawn", { drawn })
+          : undefined,
       }),
     );
+    if (params.edge) watchEdges((name, data) => port.emit(name, data));
   }
   port.emit("ready");
 
@@ -422,6 +461,17 @@ async function boot() {
       if (next.theme) applyTheme(next.theme);
       return;
     }
+    if (name === "dataSlot") {
+      receiveDataSlot(data);
+      return;
+    }
+    if (receiveForeignEvent(name, data)) return;
+    if (name === "focusEdge") {
+      focusEdge(data === "last" ? "last" : "first", (dir) =>
+        port.emit("focusOut", { dir }),
+      );
+      return;
+    }
     if (name === "props" && data && typeof data === "object") {
       setFrameProps(data as Record<string, unknown>);
       return;
@@ -442,6 +492,7 @@ async function boot() {
 
 boot().catch((error) => {
   console.error("[plugin frame] failed to start", error);
+  delete document.documentElement.dataset.frameLoading;
   try {
     window.parent.postMessage(
       {

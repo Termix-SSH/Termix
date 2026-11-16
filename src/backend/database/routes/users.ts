@@ -41,6 +41,7 @@ import { shownIdentity } from "../../sync/shown-identity.js";
 import { registerUserExternalAccountRoutes } from "./user-external-account-routes.js";
 import { registerUserPasswordResetRoutes } from "./user-password-reset-routes.js";
 import { registerUserAdminRoutes } from "./user-admin-routes.js";
+import { registerUserLifecycleRoutes } from "./user-lifecycle-routes.js";
 import { registerUserDeleteAccountRoutes } from "./user-delete-account-routes.js";
 import { registerUserDataAccessRoutes } from "./user-data-access-routes.js";
 import { listExternalLoginMethods, registerAuthRoutes } from "./auth-routes.js";
@@ -91,6 +92,11 @@ import {
 } from "../../auth/session-issuer.js";
 import { EXTERNAL_AUTO_PROVISION_KEY } from "../../auth/provisioning.js";
 import { evaluateAuthPolicy } from "../../auth/policy.js";
+import {
+  actorHas,
+  canManageAccount,
+  USERS_MANAGE,
+} from "../../auth/user-admin-access.js";
 import { setAuthCookie, clearAuthCookie } from "../../auth/session-cookie.js";
 
 const authManager = AuthManager.getInstance();
@@ -669,6 +675,8 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
         user.id,
       ),
       linked: shown.linked,
+      display_name: user.displayName ?? null,
+      email: user.email ?? null,
       // "second-factor-setup" while the login policy wants a factor set up.
       restriction: (req as AuthenticatedRequest).sessionRestriction ?? null,
     });
@@ -762,11 +770,12 @@ router.get("/setup-required", async (req, res) => {
  */
 router.post("/internal/auto-session", async (req, res) => {
   try {
-    if (desktopAutoSessionRefusal(req)) {
-      authLogger.warn(
-        "Rejected non-loopback attempt to access auto-session endpoint",
-        { source: req.ip },
-      );
+    const refusal = desktopAutoSessionRefusal(req);
+    if (refusal) {
+      authLogger.warn("Refused a desktop auto-session request", {
+        source: req.ip,
+        reason: refusal,
+      });
       return res.status(403).json({ error: "Forbidden" });
     }
 
@@ -1544,6 +1553,7 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
 });
 
 registerUserAdminRoutes(router, authenticateJWT);
+registerUserLifecycleRoutes(router, authenticateJWT);
 
 /**
  * @openapi
@@ -1585,7 +1595,7 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
   try {
     const userRepository = createCurrentUserRepository();
     const adminUser = await userRepository.findById(userId);
-    if (!adminUser?.isAdmin) {
+    if (!adminUser || !(await actorHas(userId, USERS_MANAGE))) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
@@ -1596,6 +1606,9 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
     const targetUser = await userRepository.findByUsername(username);
     if (!targetUser) {
       return res.status(404).json({ error: "User not found" });
+    }
+    if (!(await canManageAccount(userId, targetUser))) {
+      return res.status(403).json({ error: "Not authorized" });
     }
 
     if (targetUser.isAdmin) {
@@ -1611,6 +1624,18 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
     // Inherit rather than drop: the deleting admin takes over the hosts and
     // credentials unless another successor is named; "none" discards them.
     const { successorUserId: requestedSuccessor } = req.body ?? {};
+    // Someone with a delegated role must not inherit, and so decrypt, the
+    // account's hosts and credentials.
+    const actorIsAdmin = adminUser.isAdmin;
+    if (!actorIsAdmin && requestedSuccessor === undefined) {
+      return res.status(400).json({
+        error: "Choose who gets this user's hosts and credentials",
+        code: "SUCCESSOR_REQUIRED",
+      });
+    }
+    if (!actorIsAdmin && requestedSuccessor === userId) {
+      return res.status(400).json({ error: "Invalid successor user" });
+    }
     let successorUserId: string | undefined = userId;
     if (requestedSuccessor === "none") {
       successorUserId = undefined;
@@ -1655,7 +1680,7 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
             "Cannot delete user: User has associated data that cannot be removed",
         });
       } else {
-        res.status(500).json({ error: `Database error: ${err.code}` });
+        res.status(500).json({ error: "Failed to delete account" });
       }
     } else {
       res.status(500).json({ error: "Failed to delete account" });

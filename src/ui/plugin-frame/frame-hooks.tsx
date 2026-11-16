@@ -1,8 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 /**
- * Runs a plugin's small hooks (rail badge and status, host dots, companion
- * defaults) inside the background frame and sends their values to the
- * shell, which draws them. The hooks run under the plugin's scope like any
+ * Runs a plugin's small hooks (rail badge and status, host dots and values,
+ * data slot values, companion defaults) inside the background frame and
+ * sends their values to the shell, which draws them. The hooks run under the plugin's scope like any
  * of its components.
  */
 
@@ -14,6 +14,11 @@ export interface HookSpec {
   use: (...args: never[]) => unknown;
   /** Called once per host with that host, as useDot is. */
   perHost?: boolean;
+  /**
+   * Called once per row the shell shows right now (state.dataRows[key]),
+   * with the owner's context and the row key, as data slot hooks are.
+   */
+  perRow?: boolean;
 }
 
 const specs = new Map<string, HookSpec>();
@@ -128,13 +133,65 @@ function PerHostHooks({ spec, send }: { spec: HookSpec; send: Send }) {
   );
 }
 
+const RowHook = memo(function RowHook({
+  spec,
+  rowKey,
+  context,
+  report,
+}: {
+  spec: HookSpec;
+  rowKey: string;
+  context: Record<string, unknown>;
+  report: (rowKey: string, value: unknown) => void;
+}) {
+  const value = (
+    spec.use as (context: Record<string, unknown>, rowKey: string) => unknown
+  )(context, rowKey);
+  const json = safeJson(value);
+  useEffect(() => {
+    report(rowKey, json === undefined ? null : JSON.parse(json));
+  }, [rowKey, json, report]);
+  useEffect(() => () => report(rowKey, undefined), [rowKey, report]);
+  return null;
+});
+
+const NO_ROWS: Record<string, Record<string, unknown>> = {};
+
+function PerRowHooks({ spec, send }: { spec: HookSpec; send: Send }) {
+  const rows = useFrameState((state) => state.dataRows?.[spec.key] ?? NO_ROWS);
+  const hosts = useFrameState((state) => state.hosts);
+  const table = useMemo(() => makeTable(spec.key, send), [spec.key, send]);
+  // A host in the context crossed as its id; hand back this plugin's record.
+  const contexts = useMemo(() => {
+    const byId = new Map(hosts.map((host) => [String(host.id), host]));
+    return Object.entries(rows).map(([rowKey, context]) => {
+      const hostId = context.hostId;
+      const host = hostId !== undefined ? byId.get(String(hostId)) : undefined;
+      return [rowKey, host ? { ...context, host } : context] as const;
+    });
+  }, [rows, hosts]);
+  return (
+    <>
+      {contexts.map(([rowKey, context]) => (
+        <RowHook
+          key={rowKey}
+          spec={spec}
+          rowKey={rowKey}
+          context={context}
+          report={table}
+        />
+      ))}
+    </>
+  );
+}
+
 const tables = new Map<string, Record<string, unknown>>();
 
 function makeTable(key: string, send: Send) {
-  return (hostId: string, value: unknown) => {
+  return (rowKey: string, value: unknown) => {
     const current = { ...(tables.get(key) ?? {}) };
-    if (value === undefined || value === null) delete current[hostId];
-    else current[hostId] = value;
+    if (value === undefined || value === null) delete current[rowKey];
+    else current[rowKey] = value;
     tables.set(key, current);
     send(key, current);
   };
@@ -147,7 +204,9 @@ export function FrameHooks({ send }: { send: Send }) {
   return (
     <>
       {list.map((spec) =>
-        spec.perHost ? (
+        spec.perRow ? (
+          <PerRowHooks key={spec.key} spec={spec} send={sender} />
+        ) : spec.perHost ? (
           <PerHostHooks key={spec.key} spec={spec} send={sender} />
         ) : (
           <PlainHook key={spec.key} spec={spec} send={sender} />

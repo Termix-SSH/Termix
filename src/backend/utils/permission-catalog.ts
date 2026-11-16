@@ -51,6 +51,7 @@ export const PERMISSION_CATALOG: PermissionCatalogEntry[] = [
     permissions: [
       "admin.users.view",
       "admin.users.manage",
+      "admin.audit.view",
       "admin.roles.manage",
       "admin.settings.manage",
       "admin.sessions.manage",
@@ -176,3 +177,38 @@ export const SYSTEM_ROLE_DEFAULTS = {
     permissions: ["hosts.*", "credentials.*"],
   },
 } as const;
+
+// Ready made roles created once on a fresh or upgraded server. They are plain
+// roles: admins can edit or delete them and a deleted one stays gone.
+export const STARTER_ROLES: Record<
+  string,
+  { description: string; permissions: string[] }
+> = {
+  viewer: {
+    description: "Can see hosts and credentials, but not change them",
+    permissions: ["hosts.view", "credentials.view"],
+  },
+  operator: {
+    description: "Can add and change hosts and use credentials",
+    permissions: ["hosts.*", "credentials.view"],
+  },
+  auditor: {
+    description: "Can read the audit log, users and operations",
+    permissions: [
+      "admin.audit.view",
+      "admin.users.view",
+      "admin.operations.view",
+    ],
+  },
+  helpdesk: {
+    description: "Can manage normal users and their sessions",
+    permissions: [
+      "admin.users.view",
+      "admin.users.manage",
+      "admin.sessions.manage",
+    ],
+  },
+};
+
+/** Marks a starter role as created in rbac_applied_defaults. */
+export const STARTER_ROLE_MARKER = "core:starter-role";

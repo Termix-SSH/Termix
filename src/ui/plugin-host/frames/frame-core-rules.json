@@ -7,6 +7,11 @@
       "why": "The plugin's own settings"
     },
     {
+      "methods": ["GET"],
+      "path": "^/plugins/{id}/image$",
+      "why": "Pictures from other sites, which a frame can't load itself"
+    },
+    {
       "methods": ["GET", "HEAD"],
       "path": "^/users/me$"
     },
@@ -17,11 +22,15 @@
     },
     {
       "methods": ["DELETE"],
-      "path": "^/users/api-keys/mine/[\\w-]+$"
+      "path": "^/users/api-keys/mine/[\\w-]+$",
+      "userAction": true,
+      "why": "Revoking keys only right after the user clicked in the frame"
     },
     {
       "methods": ["POST"],
-      "path": "^/users/api-keys/mine/revoke-all$"
+      "path": "^/users/api-keys/mine/revoke-all$",
+      "userAction": true,
+      "why": "Revoking keys only right after the user clicked in the frame"
     },
     {
       "methods": ["GET", "HEAD"],

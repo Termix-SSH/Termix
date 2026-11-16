@@ -82,6 +82,7 @@ export async function runSecretSourcesTokenMigration(): Promise<SecretSourcesTok
             dek,
             row.id,
             "token",
+            { anyRecord: true },
           );
           if (!plaintext) continue;
           await pluginSettings.set(

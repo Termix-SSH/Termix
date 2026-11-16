@@ -13,7 +13,7 @@ permissions: {}
 
 jobs:
   coverage:
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
       contents: read
@@ -55,8 +55,13 @@ jobs:
           npm run build:backend
           npx tsc -p tsconfig.node.json --sourceMap
 
+      # The seed needs totp, login-security, alerts and host-status running. Pinned releases can
+      # still be builds for an older plugin API, so build them from source.
+      - name: Build the seed plugins
+        run: node scripts/authz/stage-deps.mjs --seed node_modules/.cache/authz-seed
+
       - name: Authorization matrix with coverage
-        run: NODE_V8_COVERAGE="$PWD/coverage/v8" npm run test:authz
+        run: NODE_V8_COVERAGE="$PWD/coverage/v8" npm run test:authz -- --with-pinned --local-plugins node_modules/.cache/authz-seed
 
       - name: Map matrix coverage to the source
         run: >-
@@ -65,5 +70,7 @@ jobs:
           --include "packages/plugin-sdk/src/**" --exclude-after-remap
           --exclude "**/tests/**"
 
+      # shell: bash turns on pipefail, so a result under the minimum fails the job.
       - name: Summary
-        run: node scripts/coverage-merged.mjs coverage/unit/coverage-final.json coverage/authz/coverage-final.json | tee -a "$GITHUB_STEP_SUMMARY"
+        shell: bash
+        run: node scripts/coverage-merged.mjs coverage/unit/coverage-final.json coverage/authz/coverage-final.json --min 80 | tee -a "$GITHUB_STEP_SUMMARY"

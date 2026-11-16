@@ -15,6 +15,7 @@
  *   - schedules, event topics and registry keys must be declared in the
  *     manifest's sandbox block.
  */
+import { DurableRegistrations } from "./durable.js";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import type { NextFunction, Request, Response, Router } from "express";
@@ -57,6 +58,7 @@ import {
   SnapshotLockProvider,
 } from "./provider-bridge.js";
 import { installSyncBridge } from "./sync-bridge.js";
+import { agentRelay } from "./agent-relay.js";
 
 /** Grace after a call ends before its token stops working. */
 export const REQUEST_TOKEN_GRACE_MS = 30_000;
@@ -105,9 +107,12 @@ const SPECIAL_PATHS = new Set([
   "auth.registerKeyboardInteractiveHandler",
   "auth.completeRedirectLogin",
   "operations.approvals.decide",
+  "operations.runs.cancel",
+  "operations.runs.undo",
   "process.run",
   "currentActor",
   "disposables.add",
+  "schedule.keepAwake",
 ]);
 
 /** Not available to a sandboxed plugin. None today; kept for the next one. */
@@ -190,6 +195,12 @@ const STRIPPED_HEADERS = new Set([
   "proxy-authorization",
 ]);
 
+/** A Bearer value that is a Termix API key or session token. */
+export function isTermixCredential(header: string): boolean {
+  const token = header.replace(/^\s*Bearer\s+/i, "").trim();
+  return /^tmx_/i.test(token) || /^eyJ[\w-]*\.[\w-]+\.[\w-]*$/.test(token);
+}
+
 export function safeHeaders(
   headers: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -269,6 +280,13 @@ export interface BridgeOptions {
   /** Called when the plugin's process was asked to do work. */
   touch?: () => void;
   log?: (line: string) => void;
+  /**
+   * Registrations that outlive this process, for plugins that stop when
+   * idle. Without it they go through ctx and end with the process.
+   */
+  durable?: DurableRegistrations | null;
+  /** The plugin says it has (or no longer has) work that needs it running. */
+  keepAwake?: (reason: string, awake: boolean) => void;
 }
 
 /**
@@ -286,6 +304,7 @@ export class PluginBridge {
   private readonly touch: () => void;
   private router: Router | null = null;
   private routerRaw = false;
+  private routerPublicAuthorization = false;
   private readonly ownTables = new Set<string>();
   /** Core's table objects, so a { $table } from the child finds the real one. */
   private readonly tablesByName = new Map<string, unknown>();
@@ -315,6 +334,10 @@ export class PluginBridge {
   private readonly declaredSchedules: Set<string>;
   private readonly declaredEvents: Set<string>;
   private readonly declaredRegistry: Set<string>;
+  private readonly durable: DurableRegistrations | null;
+  private readonly keepAwake: (reason: string, awake: boolean) => void;
+  /** schedule.after jobs still waiting; they would be lost with the process. */
+  pendingTimers = 0;
   private closed = false;
 
   constructor(transport: Transport, options: BridgeOptions) {
@@ -325,6 +348,8 @@ export class PluginBridge {
     this.dialect = options.dialect;
     this.log = options.log ?? (() => {});
     this.touch = options.touch ?? (() => {});
+    this.durable = options.durable ?? null;
+    this.keepAwake = options.keepAwake ?? (() => {});
     const sandbox = options.manifest.sandbox ?? {};
     this.declaredSchedules = new Set(
       (sandbox.schedules ?? []).map((s) => s.id),
@@ -335,7 +360,10 @@ export class PluginBridge {
     this.endpoint = new Endpoint(transport, {
       side: "h",
       strict: true,
-      outboundToken: () => this.mintForCurrentActor(),
+      // No actor means background work. A token for nobody would only expire
+      // and leave timers started in activate or a callback refused 30 s later.
+      outboundToken: () =>
+        getActor() ? this.mintForCurrentActor() : undefined,
       outboundActor: () => getActor(),
       inbound: (token, run) => this.runForToken(token, run),
       settled: (token) => this.releaseLater(token),
@@ -500,6 +528,16 @@ export class PluginBridge {
       const scrub = SECRET_SCRUB_PREFIXES.some((p) => dotted.startsWith(p));
       this.endpoint.handle(`ctx.${dotted}`, async (args) => {
         this.checkDeclared(dotted, args);
+        if (this.durable && DurableRegistrations.handles(dotted)) {
+          return this.durable.register(dotted, args);
+        }
+        if (
+          this.durable &&
+          dotted === "registry.revoke" &&
+          (await this.durable.revoke(String(args[0])))
+        ) {
+          return true;
+        }
         const { fn, self } = lookup(this.ctx, dotted);
         let callArgs = args;
         if (dotted === "registry.provide") {
@@ -510,6 +548,9 @@ export class PluginBridge {
           callArgs = [key, this.provided.get(key)];
           this.provided.delete(key);
         }
+        if (dotted === "schedule.after" && typeof args[1] === "function") {
+          return this.scheduleAfter(fn, self, args);
+        }
         const result = await fn.apply(self, callArgs);
         if (scrub && !(await this.mayReadCredentials())) {
           return scrubSecrets(result);
@@ -517,6 +558,33 @@ export class PluginBridge {
         return result;
       });
     }
+  }
+
+  /** Counts a one-off job until it ran or was cancelled. */
+  private scheduleAfter(
+    fn: (...args: unknown[]) => unknown,
+    self: unknown,
+    args: unknown[],
+  ): () => void {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      this.pendingTimers--;
+    };
+    const job = args[1] as () => unknown;
+    this.pendingTimers++;
+    const cancel = fn.apply(self, [
+      args[0],
+      () => {
+        finish();
+        return job();
+      },
+    ]) as () => void;
+    return () => {
+      finish();
+      cancel();
+    };
   }
 
   /** Schedules, event topics and registry keys must be in the manifest. */
@@ -620,12 +688,21 @@ export class PluginBridge {
     const endpoint = this.endpoint;
     const ctx = this.ctx as unknown as SpecialCtx;
 
+    endpoint.handle("ctx.schedule.keepAwake", ([reason, awake]) => {
+      this.keepAwake(String(reason ?? "").slice(0, 100), awake === true);
+      return undefined;
+    });
+
     // HTTP. Routes are mirrored onto core's real router so public path checks
     // and the route inventory keep working, then forwarded.
     endpoint.handle("http.router", ([options]) => {
       if (this.router) throw new Error("ctx.http.router() was called twice");
-      const opts = (options ?? {}) as { rawBody?: boolean };
+      const opts = (options ?? {}) as {
+        rawBody?: boolean;
+        publicAuthorization?: boolean;
+      };
       this.routerRaw = !!opts.rawBody;
+      this.routerPublicAuthorization = opts.publicAuthorization === true;
       this.router = ctx.http.router(options);
       // Remember where the plugin's router sits, so a request under a
       // router.use("/path", ...) mount still reaches the plugin with that path.
@@ -782,6 +859,25 @@ export class PluginBridge {
         );
       },
     );
+
+    // Same for cancel and undo: the person on that request acts.
+    for (const call of ["cancel", "undo"]) {
+      endpoint.handle(`ctx.operations.runs.${call}`, async ([input], token) => {
+        const live = token ? this.liveRequests.get(token) : undefined;
+        if (!live) {
+          throw new SandboxError(
+            `runs.${call} works only inside one of the plugin's own requests`,
+            "SANDBOX_UNSUPPORTED",
+            400,
+          );
+        }
+        return this.callCtx(
+          `operations.runs.${call}`,
+          plainObject(input),
+          live.req,
+        );
+      });
+    }
 
     // Child processes run in core. The exit Promise can't cross, so the
     // child asks for it through waitExit and builds its own.
@@ -1249,7 +1345,8 @@ export class PluginBridge {
         onBanner?: AnyFn;
         onAuthFailed?: AnyFn;
       };
-      const { hostVerifier, ...rest } = built.config;
+      const { hostVerifier, agent, ...rest } = built.config;
+      const relay = agentRelay(agent);
       const id = this.addRef("prepared", {
         verify:
           typeof hostVerifier === "function" ? (hostVerifier as AnyFn) : null,
@@ -1259,6 +1356,7 @@ export class PluginBridge {
       return {
         prepared: id,
         config: plainConfig(rest),
+        ...(relay ? { agent: relay } : {}),
         outcome: built.outcome,
         authType: built.authType,
         ...(built.onBanner ? { onBanner: built.onBanner } : {}),
@@ -1910,6 +2008,17 @@ export class PluginBridge {
     cookiePrefix: string,
   ): Record<string, unknown> {
     const headers = safeHeaders(req.headers as Record<string, unknown>);
+    // A protocol with its own bearer token (SCIM) gets it on public routes
+    // only, and never a Termix session or API key.
+    const authorization = req.headers.authorization;
+    if (
+      this.routerPublicAuthorization &&
+      (req as Request & { termixPublicRoute?: boolean }).termixPublicRoute &&
+      typeof authorization === "string" &&
+      !isTermixCredential(authorization)
+    ) {
+      headers.authorization = authorization;
+    }
     // The sync provider keeps signed in accounts for the account switcher,
     // so it gets the session cookie too. It can issue sessions anyway.
     const own = [

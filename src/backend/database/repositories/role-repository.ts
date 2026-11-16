@@ -29,6 +29,7 @@ export type RoleMemberRecord = {
 };
 
 export type UserRolePermissionRecord = {
+  roleName: string;
   permissions: string | null;
 };
 
@@ -251,7 +252,7 @@ export class RoleRepository {
     userId: string,
   ): Promise<UserRolePermissionRecord[]> {
     return this.context.drizzle
-      .select({ permissions: roles.permissions })
+      .select({ roleName: roles.name, permissions: roles.permissions })
       .from(userRoles)
       .innerJoin(roles, eq(userRoles.roleId, roles.id))
       .where(eq(userRoles.userId, userId));

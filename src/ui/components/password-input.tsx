@@ -21,6 +21,9 @@ export const PasswordInput = React.forwardRef<
         ref={ref}
         type={showPassword ? "text" : "password"}
         className={cn("h-8 pr-8", className)}
+        // These hold secrets for other systems, so the browser must not fill
+        // in the saved Termix login.
+        autoComplete="new-password"
         {...props}
       />
       <button

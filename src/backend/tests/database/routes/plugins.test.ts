@@ -8,6 +8,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PluginManageError } from "../../../plugins/manage.js";
 import { RegistryError } from "../../../plugins/registries.js";
+import { createViewGrant } from "../../../plugins/web-view-grants.js";
+import { registerWebAuthnCeremony } from "../../../auth/registry.js";
 import express from "express";
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
@@ -364,6 +366,159 @@ describe("plugins route", () => {
         expect(res.status, id).toBe(404);
       }
       expect(state.frameTokens).toEqual([]);
+    });
+  });
+
+  describe("POST /plugins/:id/passkey-steps/:ceremonyId/*", () => {
+    const step = (
+      id: string,
+      which: "options" | "finish",
+      body: unknown,
+      headers: Record<string, string>,
+    ) =>
+      fetch(`${baseUrl}/plugins/${id}/passkey-steps/add-key/${which}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", ...headers },
+        body: JSON.stringify(body),
+      });
+    const page = {
+      "x-test-user-id": "user-1",
+      "x-test-session-id": "s-1",
+      origin: "https://termix.test",
+    };
+    let dispose: () => void = () => {};
+    const finish = vi.fn(async () => ({ added: true }));
+
+    beforeEach(() => {
+      finish.mockClear();
+      dispose = registerWebAuthnCeremony({
+        id: "add-key",
+        type: "create",
+        pluginId: "webauthn",
+        options: async () => ({ publicKey: { challenge: "abc" } }),
+        finish,
+      });
+    });
+    afterEach(() => dispose());
+
+    it("runs a plugin's own step for a signed-in page", async () => {
+      const start = await step("webauthn", "options", {}, page);
+      expect(start.status).toBe(200);
+      const { ticket, type, publicKey } = (await start.json()) as {
+        ticket: string;
+        type: string;
+        publicKey: unknown;
+      };
+      expect(type).toBe("create");
+      expect(publicKey).toEqual({ challenge: "abc" });
+      const done = await step(
+        "webauthn",
+        "finish",
+        { ticket, response: { id: "c", response: {} } },
+        page,
+      );
+      expect(done.status).toBe(200);
+      expect(await done.json()).toEqual({ added: true });
+    });
+
+    it("never runs another plugin's step", async () => {
+      expect((await step("snoop", "options", {}, page)).status).toBe(404);
+    });
+
+    it("refuses API keys, calls without a session and calls without an origin", async () => {
+      expect(
+        (
+          await step(
+            "webauthn",
+            "options",
+            {},
+            {
+              ...page,
+              "x-test-api-key-id": "key-1",
+            },
+          )
+        ).status,
+      ).toBe(401);
+      expect(
+        (await step("webauthn", "options", {}, { "x-test-user-id": "user-1" }))
+          .status,
+      ).toBe(401);
+      const { origin: _origin, ...noOrigin } = page;
+      expect((await step("webauthn", "options", {}, noOrigin)).status).toBe(
+        400,
+      );
+      expect(finish).not.toHaveBeenCalled();
+    });
+
+    it("refuses a ticket from someone else's session", async () => {
+      const start = await step("webauthn", "options", {}, page);
+      const { ticket } = (await start.json()) as { ticket: string };
+      const done = await step(
+        "webauthn",
+        "finish",
+        { ticket, response: { id: "c", response: {} } },
+        { ...page, "x-test-user-id": "user-2", "x-test-session-id": "s-2" },
+      );
+      expect(done.status).toBe(410);
+      expect(finish).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("GET /plugins/:id/web-views/:grant", () => {
+    const read = (id: string, grant: string, headers: Record<string, string>) =>
+      fetch(`${baseUrl}/plugins/${id}/web-views/${grant}`, { headers });
+    const page = { "x-test-user-id": "user-1", "x-test-session-id": "s-1" };
+
+    it("tells the person who asked for the page where it is", async () => {
+      const { grant } = createViewGrant({
+        pluginId: "web-endpoint",
+        userId: "user-1",
+        sessionId: "s-1",
+        url: "https://pve.example.test:8006/",
+      });
+      const res = await read("web-endpoint", grant, page);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("cache-control")).toBe("no-store");
+      expect(await res.json()).toEqual({
+        url: "https://pve.example.test:8006/",
+      });
+    });
+
+    it("hides it from other plugins, people, sessions and API keys", async () => {
+      const { grant } = createViewGrant({
+        pluginId: "web-endpoint",
+        userId: "user-1",
+        sessionId: "s-1",
+        url: "https://pve.example.test:8006/",
+      });
+      expect((await read("snoop", grant, page)).status).toBe(404);
+      expect(
+        (
+          await read("web-endpoint", grant, {
+            "x-test-user-id": "user-2",
+            "x-test-session-id": "s-2",
+          })
+        ).status,
+      ).toBe(404);
+      expect(
+        (
+          await read("web-endpoint", grant, {
+            "x-test-user-id": "user-1",
+            "x-test-session-id": "s-9",
+          })
+        ).status,
+      ).toBe(404);
+      expect(
+        (
+          await read("web-endpoint", grant, {
+            ...page,
+            "x-test-api-key-id": "key-1",
+          })
+        ).status,
+      ).toBe(401);
+      expect((await read("web-endpoint", "f".repeat(48), page)).status).toBe(
+        404,
+      );
     });
   });
 

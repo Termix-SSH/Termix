@@ -58,6 +58,93 @@ describe("validateThemeCss", () => {
     ]);
   });
 
+  it("refuses root paths, which reach the plugin's or core's own routes", () => {
+    const errors = validateThemeCss(
+      `.paper input[value^="a"] { background: url(/plugin-api/paper/x?a); }
+       .paper .y { background: url("/users/info"); }
+       .paper .z { background: url(\\\\evil.example/a.png); }`,
+      "paper",
+    );
+    expect(errors).toHaveLength(3);
+    expect(errors.every((e) => e.includes("points outside"))).toBe(true);
+  });
+
+  it("refuses paths that climb out of the plugin", () => {
+    const errors = validateThemeCss(
+      ".paper { background: url(../../../plugin-api/paper/x); }",
+      "paper",
+    );
+    expect(errors).toEqual([
+      "url(../../../plugin-api/paper/x) points outside the plugin",
+    ]);
+    expect(
+      validateThemeCss(".paper { background: url(img/../logo.svg); }", "paper"),
+    ).toEqual([]);
+  });
+
+  it("sees through CSS escapes", () => {
+    const has = (css: string, text: string) =>
+      validateThemeCss(css, "paper").some((e) => e.includes(text));
+    expect(
+      has(
+        ".paper { background: url(\\2f\\2f evil.example/a.png); }",
+        "points outside",
+      ),
+    ).toBe(true);
+    expect(
+      has(
+        ".paper { background: u\\72l(https://evil.example/a.png); }",
+        "points outside",
+      ),
+    ).toBe(true);
+    expect(
+      has(
+        '.paper { background: url("ht\\74ps://evil.example/a"); }',
+        "points outside",
+      ),
+    ).toBe(true);
+    expect(has(".paper { width: expr\\65ssion(1); }", "expression()")).toBe(
+      true,
+    );
+  });
+
+  it("refuses image-set and src() strings that load from elsewhere", () => {
+    const has = (css: string) =>
+      validateThemeCss(css, "paper").some((e) => e.includes("points outside"));
+    expect(
+      has('.paper { background: image-set("https://evil.example/a.png" 1x); }'),
+    ).toBe(true);
+    expect(
+      has(
+        '.paper { background: -webkit-image-set("//evil.example/a.png" 1x); }',
+      ),
+    ).toBe(true);
+    expect(has('.paper { background: src("https://evil.example/a"); }')).toBe(
+      true,
+    );
+    expect(
+      validateThemeCss(
+        '.paper { background: image-set("logo.png" 1x, url(logo@2x.png) 2x); }',
+        "paper",
+      ),
+    ).toEqual([]);
+  });
+
+  it("allows only image and font data urls", () => {
+    expect(
+      validateThemeCss(
+        ".paper { background: url(data:text/html,<b>x</b>); }",
+        "paper",
+      ),
+    ).toEqual(["url(data:text/html,<b>x</b>) is not an image or font"]);
+    expect(
+      validateThemeCss(
+        '.paper { background: url("data:image/svg+xml;utf8,<svg/>"); }',
+        "paper",
+      ),
+    ).toEqual([]);
+  });
+
   it("does not trip on braces inside strings", () => {
     expect(
       validateThemeCss('.paper .x::after { content: "{ }"; }', "paper"),

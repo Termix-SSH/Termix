@@ -172,6 +172,24 @@ export { useTabs, useTabsSafe } from "@/shell/TabContext";
 
 // Slots: a plugin can offer places for other plugins to fill.
 export { ActionSlot, ComponentSlot } from "@/shell/ActionSlot";
+export {
+  ForeignSlot,
+  ForeignInteractive,
+  ForeignOccluder,
+  useForeignOccluder,
+  type ForeignSlotProps,
+} from "@/components/foreign/ForeignSlot";
+// Data slots: plain values from plugins, drawn the same everywhere.
+export { DataSlot, HostDataItems } from "@/components/data-view/DataSlot";
+export { DataValues, type DataLayout } from "@/components/data-view/DataValues";
+export {
+  parseDataValue,
+  type DataBar,
+  type DataShape,
+  type DataStat,
+  type DataTone,
+  type DataValue,
+} from "@/components/data-view/data-value";
 // For layouts: where tabs show, and the confirm a tab close asks with.
 export { TabStage } from "@/shell/stage/TabStage";
 export { ShellConfirmCapture } from "@/shell/controller/ShellControllerProvider";
@@ -321,6 +339,7 @@ export {
   PanelFrame,
   PanelSearch,
   PanelShell,
+  PanelToolbar,
   RefreshButton,
   Segmented,
   TOOLBAR_FIT,
@@ -720,6 +739,31 @@ export {
   getStatusCheckSettings,
   getUserInfo,
   getUserList,
+  disableUser,
+  enableUser,
+  updateMyProfile,
+  adminUpdateUserProfile,
+  getAdminHostBypass,
+  updateAdminHostBypass,
+  getExternalSignupApproval,
+  updateExternalSignupApproval,
+  listUserInvites,
+  createUserInvite,
+  revokeUserInvite,
+  checkUserInvite,
+  acceptUserInvite,
+  inviteLink,
+  getAccessReview,
+  downloadAccessReviewCsv,
+  type UserStatusFilter,
+  type UserProfile,
+  type UserProfileUpdate,
+  type UserInvite,
+  type NewUserInvite,
+  type CreatedUserInvite,
+  type AccessKind,
+  type AccessReviewRow,
+  type AccessReviewFilter,
   getUserRoles,
   type LinkedAccountInfo,
   linkExternalToPasswordAccount,

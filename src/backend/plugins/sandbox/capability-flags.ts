@@ -24,7 +24,13 @@ export interface ChildFlagInput {
   workers?: boolean;
   /** Major version of the Node that runs the child. */
   nodeMajor: number;
+  /** Defaults to this process's platform. */
+  platform?: NodeJS.Platform;
 }
+
+// node-gyp-build checks this file to pick a musl or glibc build, and under
+// the permission model a refused read throws instead of saying "not there".
+const ADDON_PROBE_READS = ["/etc/alpine-release"];
 
 export interface ChildFlags {
   execArgv: string[];
@@ -33,8 +39,11 @@ export interface ChildFlags {
   writeDataDir: boolean;
   /** The firewall rule kind for the plugin's user. */
   firewall: "deny" | "allow-all";
-  /** Grants the running Node can't express, for the log. */
-  unenforced: string[];
+  /**
+   * The running Node has no network permission and the plugin may not use
+   * sockets, so harden.js keeps it off the network instead.
+   */
+  jsNetworkFence: boolean;
 }
 
 /** Both spellings of a path: the model checks the path as asked for. */
@@ -66,20 +75,24 @@ export function buildChildFlags(input: ChildFlagInput): ChildFlags {
   // harden.js makes every worker inherit these flags and load it first.
   if (input.workers === true) flags.add("--allow-worker");
 
-  const unenforced: string[] = [];
   const allowNet = flags.has("--allow-net");
   // --allow-net arrived in Node 25. Older Node has no network scope at all,
-  // so the flag would only stop the process from starting.
-  if (input.nodeMajor < 25) {
-    flags.delete("--allow-net");
-    unenforced.push("network");
-  }
+  // so the flag would only stop the process from starting; harden.js
+  // refuses sockets itself there.
+  const jsNetworkFence = input.nodeMajor < 25 && !allowNet;
+  if (input.nodeMajor < 25) flags.delete("--allow-net");
 
   const execArgv = ["--permission"];
   // Writing its own folder is no use without reading it back.
   const reads = writeDataDir
     ? [...input.readPaths, input.dataDir]
-    : input.readPaths;
+    : [...input.readPaths];
+  if (
+    flags.has("--allow-addons") &&
+    (input.platform ?? process.platform) === "linux"
+  ) {
+    reads.push(...ADDON_PROBE_READS);
+  }
   for (const grant of withRealPaths(reads)) {
     execArgv.push(`--allow-fs-read=${grant}`);
   }
@@ -95,5 +108,11 @@ export function buildChildFlags(input: ChildFlagInput): ChildFlags {
     "--disable-sigusr1",
     `--import=${pathToFileURL(input.hardenPath).href}`,
   );
-  return { execArgv, allowNet, writeDataDir, firewall, unenforced };
+  return {
+    execArgv,
+    allowNet,
+    writeDataDir,
+    firewall,
+    jsNetworkFence,
+  };
 }

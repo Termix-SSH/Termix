@@ -52,6 +52,7 @@ import {
   neededTermix,
   officialSource,
   parsePluginChannel,
+  PROVENANCE_SUFFIX,
   type PluginChannel,
   type RegistryIndex,
   type RegistryPlugin,
@@ -475,6 +476,7 @@ async function removeArtifactFiles(
   for (const file of candidates) {
     await fs.promises.rm(file, { force: true });
     await fs.promises.rm(`${file}.sig`, { force: true });
+    await fs.promises.rm(`${file}${PROVENANCE_SUFFIX}`, { force: true });
   }
 }
 
@@ -564,7 +566,11 @@ async function swapIn(
     ? null
     : "release" in source
       ? await downloadRelease(pluginId, source.release, source.source)
-      : { file: source.upload, signatureFile: `${source.upload}.sig` };
+      : {
+          file: source.upload,
+          signatureFile: `${source.upload}.sig`,
+          provenanceFile: `${source.upload}${PROVENANCE_SUFFIX}`,
+        };
 
   const finalFile = path.join(getPluginsDir(), `${pluginId}.tmxplug`);
   const backupDir = path.join(getDownloadsDir(), `${pluginId}.previous`);
@@ -584,6 +590,12 @@ async function swapIn(
         path.join(backupDir, "plugin.tmxplug.sig"),
       );
     }
+    if (fs.existsSync(`${previousArtifact}${PROVENANCE_SUFFIX}`)) {
+      await fs.promises.copyFile(
+        `${previousArtifact}${PROVENANCE_SUFFIX}`,
+        path.join(backupDir, `plugin.tmxplug${PROVENANCE_SUFFIX}`),
+      );
+    }
   }
 
   try {
@@ -594,6 +606,12 @@ async function swapIn(
       await moveWithRetry(staged.file, finalFile);
       if (fs.existsSync(staged.signatureFile)) {
         await moveWithRetry(staged.signatureFile, `${finalFile}.sig`);
+      }
+      if (fs.existsSync(staged.provenanceFile)) {
+        await moveWithRetry(
+          staged.provenanceFile,
+          `${finalFile}${PROVENANCE_SUFFIX}`,
+        );
       }
       plugin = await loader.loadArtifact(finalFile, loader.bundledIds());
     } else {
@@ -610,6 +628,7 @@ async function swapIn(
     if (staged) {
       await fs.promises.rm(staged.file, { force: true });
       await fs.promises.rm(staged.signatureFile, { force: true });
+      await fs.promises.rm(staged.provenanceFile, { force: true });
     }
   }
 }
@@ -627,6 +646,12 @@ async function restorePrevious(
       await fs.promises.copyFile(backup, previousArtifact);
       if (fs.existsSync(`${backup}.sig`)) {
         await fs.promises.copyFile(`${backup}.sig`, `${previousArtifact}.sig`);
+      }
+      if (fs.existsSync(`${backup}${PROVENANCE_SUFFIX}`)) {
+        await fs.promises.copyFile(
+          `${backup}${PROVENANCE_SUFFIX}`,
+          `${previousArtifact}${PROVENANCE_SUFFIX}`,
+        );
       }
       await loader.loadArtifact(previousArtifact, loader.bundledIds());
     } else if (
@@ -1237,6 +1262,19 @@ async function updateUnlocked(
       `${pluginId} ${release.version} is already installed`,
       409,
       "SAME_VERSION",
+    );
+  }
+  // Going back takes the admin naming the older version.
+  if (
+    !options.version &&
+    semver.valid(release.version) &&
+    semver.valid(live.manifest.version) &&
+    semver.lt(release.version, live.manifest.version)
+  ) {
+    throw new PluginManageError(
+      `${pluginId} ${release.version} is older than the installed ${live.manifest.version}`,
+      409,
+      "NOT_NEWER",
     );
   }
 

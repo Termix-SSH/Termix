@@ -87,7 +87,7 @@ function text(value: unknown): string {
 export function openLegacySecret(
   value: unknown,
   dek: Buffer,
-  recordId: string,
+  _recordId: string,
   fieldNames: string[],
 ): string | null {
   const raw = typeof value === "string" ? value : "";
@@ -95,7 +95,8 @@ export function openLegacySecret(
   if (!FieldCrypto.isEncrypted(raw)) return raw;
   for (const fieldName of fieldNames) {
     try {
-      return FieldCrypto.decryptField(raw, dek, recordId, fieldName);
+      // 2.8 rows were often sealed under a temporary id.
+      return FieldCrypto.decryptSealedField(raw, dek, fieldName);
     } catch {
       // Try the next name.
     }

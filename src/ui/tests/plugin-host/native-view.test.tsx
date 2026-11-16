@@ -51,18 +51,17 @@ describe("NativeView", () => {
 
   it("opens a native view over its element and closes it on unmount", async () => {
     useDesktop();
-    const { unmount } = render(
-      <NativeView url="https://x.example/" ignoreCert />,
-    );
+    const { unmount } = render(<NativeView url="https://x.example/" />);
     await flush();
     expect(api.open).toHaveBeenCalledWith(
       expect.objectContaining({
         url: "https://x.example/",
-        ignoreCert: true,
         bounds: { x: 5, y: 6, width: 400, height: 300 },
         visible: true,
       }),
     );
+    // Only a grant from the plugin's backend can carry a certificate rule.
+    expect(api.open.mock.calls[0][0]).not.toHaveProperty("ignoreCert");
     const id = api.open.mock.calls[0][0].id;
     unmount();
     expect(api.close).toHaveBeenCalledWith(id);
