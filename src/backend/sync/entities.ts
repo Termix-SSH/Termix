@@ -211,6 +211,9 @@ export function registerCoreSyncEntities(): void {
       },
     },
     {
+      // A server whose plugin rejects a setting (another version, a field the
+      // user may not write) skips it without failing the write.
+      verifyFields: ["pluginSettings"],
       canReference: async (userId, _ownerId, id) => {
         const { PermissionManager } =
           await import("../utils/permission-manager.js");
