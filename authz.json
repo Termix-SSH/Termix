@@ -1122,7 +1122,10 @@
     "DELETE /users/delete-user": {
       "access": "user",
       "permission": "admin.users.manage",
-      "destructive": true
+      "destructive": true,
+      "body": {
+        "username": "authz-other"
+      }
     },
     "GET /users/external-auto-provision": {
       "access": "public"
