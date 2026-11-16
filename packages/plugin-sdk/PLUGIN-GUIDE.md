@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 2.9.0 | Plugin API 2.9.0
+SDK 2.10.0 | Plugin API 2.9.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -1173,6 +1173,8 @@ onClose })` (needs `device:serial`, call it from a click in your frame) opens th
 - Every tab or panel sits in `PanelShell` (inside `PanelFrame` when it is a tab). Lists use `PanelList` and
   `ListRow`, add with `AddButton`, forms end with `FormFooter`, empty lists show `EmptyState`, loading shows
   `LoadingState`, and "not installed" or "no access" shows `NoticePanel`.
+- A sidebar panel's toolbar is `PanelToolbar`: search, your icon buttons (sort, filter, a `...` menu) and an
+  icon only add button on one row. Put anything that needs its own line, like a target picker, in `below`.
 - The tile look: page content sits edge to edge on the page background, with one line between sections and
   no gaps, padding or card fill around them. The body of a `PanelShell` has no padding. Stack sections with
   `TileStack` (or `TileColumn` when cards sit deeper), put numbers and small cards in a `TileWall` of

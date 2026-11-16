@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.10.0
+
+Plugin API 2.9.0. Needs Termix 26.11.2.
+
+### Added
+
+- `PanelToolbar` in `/ui`: a sidebar panel's search, icon buttons and icon only add button on one row
+- `termix-plugin validate` warns when a panel builds its toolbar from `PanelSearch` and `AddButton` instead of `PanelToolbar`
+
 ## 2.9.0
 
 Plugin API 2.9.0. Needs Termix 26.11.2.

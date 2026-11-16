@@ -375,6 +375,17 @@ export function uiWarnings(cwd) {
         }
       }
     });
+    const text = lines.join("\n");
+    const search = text.search(/<PanelSearch\b/);
+    if (
+      search >= 0 &&
+      /<AddButton\b/.test(text) &&
+      !/<PanelToolbar\b/.test(text)
+    ) {
+      warnings.push(
+        `${rel}:${lineOf(text, search)} toolbar built from PanelSearch and AddButton, use PanelToolbar`,
+      );
+    }
   }
   return warnings;
 }

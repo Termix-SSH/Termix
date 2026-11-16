@@ -158,19 +158,19 @@ describe("resolveArea", () => {
 });
 
 describe("PRESETS.balanced", () => {
-  // Balanced is the compatibility contract: it must equal the behavior that
-  // shipped before presets existed, or every existing user sees a changed UI.
-  it("matches the pre-preset defaults", () => {
+  it("shows the connect bar and starts the add host form short", () => {
     expect(PRESETS.balanced.hostList).toEqual({
       density: "comfortable",
       showTags: true,
       showResourceBars: true,
       showStatusStripes: true,
-      trayTrigger: "always",
+      trayTrigger: "actionsOnly",
       rowActions: "full",
     });
     expect(PRESETS.balanced.rail.hiddenTabs).toEqual([]);
-    expect(PRESETS.balanced.hostEditor.mode).toBe("full");
+    expect(PRESETS.balanced.hostEditor.mode).toBe("simple");
+    expect(PRESETS.advanced.hostList.trayTrigger).toBe("always");
+    expect(PRESETS.advanced.hostEditor.mode).toBe("full");
   });
 
   it("keeps core's basics in Simple and hides plugin rail items that do not opt in", () => {

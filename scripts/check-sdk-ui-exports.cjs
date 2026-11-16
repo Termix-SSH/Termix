@@ -294,6 +294,7 @@ const ALLOWED = [
   "PanelDensity",
   "PanelList",
   "PanelSearch",
+  "PanelToolbar",
   "PanelShell",
   "PanelViewMode",
   "PassphraseDialog",

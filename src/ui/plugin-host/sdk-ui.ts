@@ -339,6 +339,7 @@ export {
   PanelFrame,
   PanelSearch,
   PanelShell,
+  PanelToolbar,
   RefreshButton,
   Segmented,
   TOOLBAR_FIT,

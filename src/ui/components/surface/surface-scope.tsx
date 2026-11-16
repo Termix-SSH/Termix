@@ -150,6 +150,7 @@ export function SurfaceScope({
   return (
     <ScopeContext.Provider value={value}>
       <div
+        data-surface={kind}
         className={cn(
           "relative flex min-h-0 min-w-0 flex-1 flex-col",
           className,

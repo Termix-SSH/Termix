@@ -55,6 +55,8 @@
 - Admin setting to stop admins from opening every user's hosts. When it is off, admins see only what is shared with them. Turning it on waits out the admin cooling-off time
 - Ready made Viewer, Operator, Auditor and Helpdesk roles on new and upgraded servers. They are plain roles to edit or delete
 - New permission `admin.audit.view` for reading the audit log
+- Sidebar panels put search, their buttons and an icon add button on one row
+- The tile picker starts with every group folded when it has more than four, so it reads as a list of apps
 
 ### Changed
 
@@ -76,6 +78,7 @@
 - The admin role always has every permission and its list can't be edited
 - The admin role and the admin flag always match. A role map from SSO that names `admin` makes the user an admin
 - Deleting a user as a non-admin needs a successor other than yourself, so nobody takes over someone's hosts and credentials by accident
+- New accounts start with host rows that show the connect buttons, with edit and share behind the arrow, and a short add host form. Pick Advanced in Interface settings for the old look
 
 ### Fixed
 

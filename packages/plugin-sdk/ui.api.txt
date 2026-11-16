@@ -246,6 +246,7 @@ PanelFrame (value): ({ className, children, }: { className?: string; children: R
 PanelList (value): ({ empty, className, children, }: { empty?: ReactNode; className?: string; children?: ReactNode; }) => Element
 PanelSearch (value): ({ value, onChange, placeholder, fill, autoFocus, disabled, title, onEnter, inputRef, className, }: { value: string; onChange: (next: string) => void; placeholder?: string; fill?: boolean; autoFocus?: boolean; disabled?: boolean; title?: string; onEnter?: () => void; inputRef?: Ref<HTMLInputElement>; className?: string; }) => Element
 PanelShell (value): ({ chrome, icon, title, status, leading, actions, toolbar, tabs, footer, scroll, docs, className, children, }: { chrome?: boolean; icon?: ReactNode; title?: ReactNode; status?: ReactNode; leading?: ReactNode; actions?: ReactNode; toolbar?: ReactNode; tabs?: ReactNode; footer?: ReactNode; scroll?: boolean; docs?: string; className?: string; children: ReactNode; }) => Element
+PanelToolbar (value): ({ search, onSearchChange, searchPlaceholder, onAdd, addLabel, children, below, className, }: { search: string; onSearchChange: (next: string) => void; searchPlaceholder?: string; onAdd?: () => void; addLabel?: string; children?: ReactNode; below?: ReactNode; className?: string; }) => Element
 PanelViewMode (type): PanelViewMode
 PassphraseDialog (value): ({ isOpen, onSubmit, onCancel, hostInfo, backgroundColor, }: PassphraseDialogProps) => Element
 PasswordInput (value): ForwardRefExoticComponent<PasswordInputProps & RefAttributes<HTMLInputElement>>
