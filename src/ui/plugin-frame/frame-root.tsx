@@ -23,7 +23,7 @@ import {
 import { SeamlessTileContext } from "@/components/tile-grid/context";
 import { useFrameState } from "./frame-store";
 
-export type FrameFit = "fill" | "content" | "inline";
+export type FrameFit = "fill" | "content" | "inline" | "bar";
 
 let props: Record<string, unknown> = {};
 const listeners = new Set<() => void>();
@@ -122,7 +122,7 @@ function View({
         kind={place.surfaceKind ?? "panel"}
         onClose={close}
         onEditingChange={setEditing}
-        className={fit === "fill" ? "h-full" : undefined}
+        className={fit === "fill" || fit === "bar" ? "h-full" : undefined}
       >
         <Component {...shown} />
       </SurfaceScope>
@@ -213,7 +213,9 @@ export function FrameRoot({
             ? "flex h-full w-full min-h-0 flex-col"
             : fit === "inline"
               ? "inline-flex flex-col"
-              : "inline-flex w-full flex-col"
+              : fit === "bar"
+                ? "inline-flex h-full flex-col"
+                : "inline-flex w-full flex-col"
         }
       >
         {component ? (

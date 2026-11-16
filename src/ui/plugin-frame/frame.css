@@ -15,7 +15,10 @@ html[data-frame-bg="none"] body {
 
 html[data-frame-fit="fill"],
 html[data-frame-fit="fill"] body,
-html[data-frame-fit="fill"] #root {
+html[data-frame-fit="fill"] #root,
+html[data-frame-fit="bar"],
+html[data-frame-fit="bar"] body,
+html[data-frame-fit="bar"] #root {
   height: 100%;
   overflow: hidden;
 }

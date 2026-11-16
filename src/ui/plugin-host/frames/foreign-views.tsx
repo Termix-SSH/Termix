@@ -548,9 +548,11 @@ function applyView(consumer: Consumer, view: ForeignView): void {
   });
   el.style.left = `${out.left}px`;
   el.style.top = `${out.top}px`;
-  el.style.width = fit === "inline" ? "" : `${out.width}px`;
+  el.style.width = fit === "inline" || fit === "bar" ? "" : `${out.width}px`;
   el.style.height =
-    fit === "fill" || fit === "overlay" ? `${out.height}px` : "";
+    fit === "fill" || fit === "overlay" || fit === "bar"
+      ? `${out.height}px`
+      : "";
   el.style.clipPath = out.clipPath;
   el.style.visibility = out.hidden ? "hidden" : "visible";
   el.style.zIndex = String(view.z);

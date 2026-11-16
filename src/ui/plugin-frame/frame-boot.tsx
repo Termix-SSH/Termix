@@ -99,11 +99,13 @@ function readParams(): BootParams {
   const params = new URLSearchParams(location.hash.slice(1));
   const role = params.get("role") === "background" ? "background" : "view";
   const fit: FrameFit =
-    params.get("inline") === "1"
-      ? "inline"
-      : params.get("fit") === "content"
-        ? "content"
-        : "fill";
+    params.get("bar") === "1"
+      ? "bar"
+      : params.get("inline") === "1"
+        ? "inline"
+        : params.get("fit") === "content"
+          ? "content"
+          : "fill";
   return {
     role,
     key: params.get("key") ?? undefined,
@@ -140,7 +142,7 @@ async function boot() {
   const parent = window.parent;
   if (!parent || parent === window) return;
   document.documentElement.dataset.frameFit =
-    params.fit === "fill" ? "fill" : "content";
+    params.fit === "fill" || params.fit === "bar" ? params.fit : "content";
   if (params.transparent) document.documentElement.dataset.frameBg = "none";
 
   const realFetch = window.fetch.bind(window);

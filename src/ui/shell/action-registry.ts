@@ -47,10 +47,11 @@ export interface ActionSlotDefinition {
   accepts: string[];
   /**
    * How a framed component sizes itself here: "inline" as wide and tall as
-   * its content (row items, badges), "content" full width, "fill" the box,
+   * its content (row items, badges), "bar" as wide as its content and as
+   * tall as the bar it sits in (tab bar buttons), "content" full width, "fill" the box,
    * "overlay" the box, see-through and only clickable while it draws.
    */
-  fit?: "inline" | "content" | "fill" | "overlay";
+  fit?: "inline" | "bar" | "content" | "fill" | "overlay";
   /** For "data": the shapes the owner draws. Others are dropped. */
   shapes?: DataShape[];
   /** For "data": one row per host, tab or credential. */

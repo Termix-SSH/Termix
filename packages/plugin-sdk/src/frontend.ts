@@ -1037,12 +1037,13 @@ export interface ActionSlotDefinition {
   rows?: "host" | "tab" | "credential";
   /**
    * How a component from a framed plugin sizes itself in this slot: "inline"
-   * as wide and tall as its content (row items, badges), "content" full
+   * as wide and tall as its content (row items, badges), "bar" as wide as its content and as
+   * tall as the bar it sits in (tab bar buttons), "content" full
    * width, "fill" the whole box, "overlay" the whole box, see-through and
    * only clickable while the part draws something (prompts over a terminal).
    * Left out, the shell guesses from the id.
    */
-  fit?: "inline" | "content" | "fill" | "overlay";
+  fit?: "inline" | "bar" | "content" | "fill" | "overlay";
 }
 
 export interface SlotContribution {

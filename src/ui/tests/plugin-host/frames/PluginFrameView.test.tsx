@@ -241,6 +241,23 @@ describe("PluginFrameView", () => {
     expect(frame.style.position).toBe("");
   });
 
+  it("sizes a bar view to its width and the bar's full height", () => {
+    const { container } = render(
+      <PluginFrameView
+        pluginId="docker"
+        frameKey="slot:tabbar.actions:x"
+        fit="bar"
+        props={{}}
+      />,
+    );
+    const frame = container.querySelector("iframe")!;
+    expect(frame.src).toContain("bar=1");
+    expect(frame.src).not.toContain("inline=1");
+    act(() => frames.options!.onEvent("size", { width: 44, height: 15 }));
+    expect(frame.style.width).toBe("44px");
+    expect(frame.style.height).toBe("100%");
+  });
+
   it("keeps an overlay see-through and out of the way until it draws", () => {
     const { container } = render(
       <PluginFrameView

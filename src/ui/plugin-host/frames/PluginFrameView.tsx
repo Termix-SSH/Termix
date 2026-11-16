@@ -31,10 +31,11 @@ import { acquireFramedPlugin } from "./frame-demand";
 /**
  * fill: takes the box it is given. content: full width, as tall as the
  * view. inline: as wide and tall as the view, for a toolbar button.
- * overlay: fills the box, see-through, and only takes clicks while the view
+ * bar: as wide as the view and as tall as the bar it sits in, for a button
+ * that fills a tab bar. overlay: fills the box, see-through, and only takes clicks while the view
  * draws something.
  */
-export type FrameFit = "fill" | "content" | "inline" | "overlay";
+export type FrameFit = "fill" | "content" | "inline" | "bar" | "overlay";
 
 /** What the shell can do with a view it placed. */
 export interface FrameControl {
@@ -171,6 +172,7 @@ export function PluginFrameView({
         key: frameKey,
         fit: fit === "fill" || fit === "overlay" ? "fill" : "content",
         inline: fit === "inline" ? "1" : undefined,
+        bar: fit === "bar" ? "1" : undefined,
         bg: seeThrough ? "none" : undefined,
         drawn: overlay ? "1" : undefined,
         edge: edge ? "1" : undefined,
@@ -259,12 +261,15 @@ ${src}`;
             width: size ? `${size.width}px` : 0,
             height: size ? `${size.height}px` : 0,
           }
-        : { width: "100%", height: size ? `${size.height}px` : 0 };
+        : fit === "bar"
+          ? { width: size ? `${size.width}px` : 0, height: "100%" }
+          : { width: "100%", height: size ? `${size.height}px` : 0 };
 
   // An empty inline view leaves the row alone: no width, no gap, and the
   // owner's fallback in its place.
   const empty =
-    fit === "inline" && (!size || size.width === 0 || size.height === 0);
+    (fit === "inline" && (!size || size.width === 0 || size.height === 0)) ||
+    (fit === "bar" && (!size || size.width === 0));
   const hidden: CSSProperties =
     empty && fallback !== undefined
       ? { position: "absolute", pointerEvents: "none" }
