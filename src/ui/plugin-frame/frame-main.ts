@@ -2,5 +2,8 @@
 // or plugin module runs, and the bundler evaluates shared chunks before an
 // entry's own code, so everything else loads after them.
 import "./install-shims";
+import { markFrameLoading } from "./frame-paint";
+
+markFrameLoading(location.hash);
 
 void import("./frame-boot");

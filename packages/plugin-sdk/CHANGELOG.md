@@ -1,5 +1,105 @@
 # Changelog
 
+## 2.10.0
+
+Plugin API 2.9.0. Needs Termix 26.11.2.
+
+### Added
+
+- `PanelToolbar` in `/ui`: a sidebar panel's search, icon buttons and icon only add button on one row
+- `declareActionSlot({ fit: "bar" })`: a framed button in the slot is as wide as its content and as tall as the bar, for buttons that fill a tab bar
+- `termix-plugin validate` warns when a panel stacks a full width `PanelSearch` over a labelled `AddButton`, and points to `PanelToolbar`
+
+## 2.9.0
+
+Plugin API 2.9.0. Needs Termix 26.11.2.
+
+### Added
+
+- `ctx.users` account calls for provisioning plugins: `get`, `findByUsername`, `findByEmail` and `listRoles` with `users:read`, and `create`, `update`, `setDisabled`, `delete`, `syncRoles` and `setAdmin` with `users:write`. Accounts a plugin makes have no password, and their first SSO or LDAP sign in with the same verified email is linked to them. Optional in the types, so check `typeof ctx.users.create === "function"` first
+- `ctx.http.router({ publicAuthorization: true })` passes the Authorization header to the declared public routes, for protocols with their own bearer token like SCIM. Termix API keys and session tokens are never passed
+- `createMockCtx` takes `accounts` and `roles` for `ctx.users`, and records changes in `accounts`
+
+- `/ui` calls for account management: `disableUser`, `enableUser`, `updateMyProfile`, `adminUpdateUserProfile`, `getAdminHostBypass`, `updateAdminHostBypass`, `getExternalSignupApproval`, `updateExternalSignupApproval`
+- `/ui` calls for invite links: `listUserInvites`, `createUserInvite`, `revokeUserInvite`, `checkUserInvite`, `acceptUserInvite`, `inviteLink`
+- `/ui` calls for the access review: `getAccessReview`, `downloadAccessReviewCsv`
+- `getUserList` takes a `status` filter, and `UserInfo` carries the display name, email, account state and last sign in
+- `AdminSection` includes `access`
+
+## 2.8.1
+
+Plugin API 2.8.0. Needs Termix 26.11.2.
+
+### Fixed
+
+- `net-guard` also refuses private IPv4 addresses written in IPv4-compatible (`::10.0.0.1`) or NAT64 (`64:ff9b::10.0.0.1`) form
+
+## 2.8.0
+
+Plugin API 2.8.0. Needs Termix 26.11.2.
+
+### Added
+
+- `ctx.desktop.local.fs.openInEditor(path)` opens a local file in the external editor the person picked in the desktop app, or with its default app. The app starts the editor, so the plugin needs no process grant
+- `ctx.schedule.keepAwake(reason, awake)` tells Termix the plugin has work that needs its process running. A plugin that calls it lets Termix stop the process when there is none, and its jobs shorter than the idle time then run only while it runs. Optional in the types, so call it as `ctx.schedule.keepAwake?.(...)`
+- `createMockCtx` records those reasons in `awake`
+- `ctx.desktop.grantView({ url, ignoreCert })` lets the plugin's frames show one page: `NativeView` from `/ui` takes the `grant` and Termix draws a native view on the desktop or a credentialless sandboxed iframe in a browser. Needs `desktop:window`. `createMockCtx` records them in `viewGrants`
+- `app.serial`: Web Serial through Termix for a plugin with `device:serial`. The browser's picker opens from a click and the plugin gets only the port the person picked
+- Login methods can describe themselves for the sign in screen: `fields` for form methods, `kind: "webauthn"` with `options` for passkeys, `placement` and per instance `views`. Second factors take a `prompt` (`code`, `fields` or `webauthn`)
+- `ctx.auth.registerWebAuthnCeremony` and `app.auth.webauthn(id, extra)` run WebAuthn steps from a plugin's own screens, such as adding a passkey. Termix runs the browser prompt and the plugin's server checks the answer. `createMockCtx` records them in `auth.webAuthnCeremonies`
+- `app.session.signOut()` and `app.session.reload()` for login policy plugins (`auth:policy`)
+
+### Changed
+
+- On the desktop app, plugin processes run on the app's pinned Node with the same flags as on a server, inside an OS sandbox. Desktop only code that used `fs` or `child_process` freely must move to `ctx.desktop.local`
+- `registerLoginMethod` and `registerSecondFactorUI` in a frame take only `enrollment`; the sign in steps are drawn from what the backend describes. `component` is optional and only works for plugins in the page
+- `NativeView` no longer takes `ignoreCert`. Only a grant from the plugin's server can trust a bad certificate
+- `termix-plugin validate` refuses theme CSS that loads anything from outside the plugin, through `url()`, `image-set()`, `src()`, root paths or CSS escapes
+- A plugin process now stops when idle unless it provides something on core's own request paths (logins, connects, sync, host status and locks, alerts, approvals, TLS, looks) or runs a job more often than the idle time. Operations, services, registry values, event listeners, settings hooks and jobs it registered stay with core and start the process again when called
+
+### Fixed
+
+- The sandbox mock of `createMockCtx` lets `ctx.auth.completeRedirectLogin` keep the live request, and hands login hooks a plain copy of the request, as a plugin process does
+
+## 2.7.1
+
+Plugin API 2.7.0. Needs Termix 26.11.2.
+
+### Fixed
+
+- `renderSlot` in `renderWithApp` draws a component part once, not twice, in a slot that is not a data slot
+
+## 2.7.0
+
+Plugin API 2.7.0. Needs Termix 26.11.2.
+
+### Added
+
+- Inside a frame, `useSlotContributions`, `useExtensions`, `getExtension` and `usePluginComponent` now return other plugins' parts. Their components draw as placeholders and Termix draws the real view over each one, so `ComponentSlot`, `ActionSlot` and `PluginComponent` work in frames too
+- `ForeignSlot` in `/ui` draws such a part with your own class, style and `interactive` flag; `ForeignInteractive` turns clicks off for every part inside it (an edit mode)
+- `useForeignOccluder` and `ForeignOccluder` in `/ui` hide other plugins' parts under a menu or popover you draw yourself. Popover, DropdownMenu, Select, Sheet, Dialog, AlertDialog, Tooltip, InlineView and PanePrompt do it already
+- `declareActionSlot` takes `fit: "overlay"`: the part covers the box, is see-through and only takes clicks while it draws something
+- A frame may place the parts of a slot it declared, an extension point or component id under its own plugin id, or any id in its manifest `contributes.uses`
+- `useShell()` answers inside a frame with a read only view: tabs, the active tab, splits, the user and whether it is mobile. `tabs.setActive` works right after the person used the frame
+- `renderWithApp` takes `others` with other plugins' slot parts, extension items and components for a plugin that draws them
+
+## 2.6.0
+
+Plugin API 2.6.0. Needs Termix 26.11.2.
+
+### Added
+
+- `ctx.operations.runs.cancel({ runId })` and `ctx.operations.runs.undo({ runId, confirmed })` cancel or undo a run from inside one of the plugin's own requests, as the person on that request. Needs `operations:invoke`
+- `app.stepUp()` asks the person to prove a second factor in a prompt the shell owns and answers true or false; a plugin never sees the code. In a frame it works only right after the person used the frame
+- `createMockCtx` answers `ctx.operations.runs` and records `runCalls`
+- Data slots: `registerSlotContribution` takes `kind: "data"` with a `useValue(context, rowKey)` hook that returns plain values (`bars`, `stat`, `badge`, `dot`, `text`). The shell draws them, and in a frame the hook runs in the background frame, so a row costs no iframe
+- `useValue` on `registerHostBadge`, `registerHostStatusIndicator` and `registerHostEditorToolbarItem`, which now work from a frame. Their `component` is optional and in-page only
+- `declareActionSlot` takes `shapes` and `rows` for data slots
+- `DATA_SLOTS` in `/manifest` lists the data slots in Termix
+- `DataSlot`, `DataValues`, `HostDataItems` and `parseDataValue` in `/ui` for slot owners and layouts
+- `renderWithApp` results have `readDataValues` and `renderHostItems`, and `renderSlot` draws data values
+- `termix-plugin validate` warns about a component in a data slot or per row slot, and about host badges, status indicators and toolbar items with a component
+
 ## 2.5.0
 
 Plugin API 2.5.0. Needs Termix 26.11.2.

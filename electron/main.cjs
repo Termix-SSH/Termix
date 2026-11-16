@@ -30,6 +30,11 @@ const net = require("net");
 const tls = require("tls");
 const zlib = require("zlib");
 const crypto = require("crypto");
+const { isLocalBackendUrl } = require("./local-backend.cjs");
+
+// Proves a request to the local backend comes from this app, not another
+// program on the machine. New every launch, never written to disk.
+const LAUNCH_SECRET = crypto.randomBytes(32).toString("hex");
 const { URL } = require("url");
 const appProtocol = require("./app-protocol.cjs");
 const { createIpcGuard } = require("./ipc-guard.cjs");
@@ -41,12 +46,17 @@ const {
 } = require("./update-verify.cjs");
 const { migrateFileStorage } = require("./storage-migrate.cjs");
 const { createPluginSandboxHost } = require("./plugin-sandbox.cjs");
+const { checkRuntime } = require("./plugin-runtime.cjs");
+const { shouldRelax, relaxFrameHeaders } = require("./frame-headers.cjs");
+const { openInEditor } = require("./open-in-editor.cjs");
+const pluginNodePin = require("./plugin-node.json");
 const linkedServer = require("./linked-server.cjs");
 const desktopSettings = require("./desktop-settings.cjs");
 const autoUpdates = require("./auto-updater.cjs");
 const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
 const { quitApp, closeAction } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
+const { forcedScaleFactor } = require("./linux-scale.cjs");
 // Saved by the file manager after the user picks an editor in a file dialog.
 const EXTERNAL_EDITOR_SETTING = "fileManager.externalEditorPath";
 
@@ -496,10 +506,10 @@ if (process.platform === "linux") {
 
   app.commandLine.appendSwitch("--enable-features=VaapiVideoDecoder");
 
-  // Fix click-coordinate misalignment with fractional display scaling on KDE/Wayland.
-  // Chromium's hit-testing uses unscaled coords while the compositor scales visually,
-  // so forcing scale factor 1 keeps them in sync. See: https://github.com/brave/brave-browser/issues/50028
-  app.commandLine.appendSwitch("--force-device-scale-factor", "1");
+  const scaleFactor = forcedScaleFactor(process.env);
+  if (scaleFactor) {
+    app.commandLine.appendSwitch("--force-device-scale-factor", scaleFactor);
+  }
 
   const passwordStore = selectLinuxPasswordStore(app.commandLine, process.env);
   if (passwordStore) {
@@ -582,6 +592,8 @@ ipc.handle("embedded-view-close", (_event, id) => {
 // ctx.desktop.openIsolatedWindow is the one caller today.
 const BACKEND_REQUEST_HANDLERS = {
   "open-isolated-window": (payload) => isolatedWindows.open(payload),
+  // A plugin's backend lets its frames show one page (ctx.desktop.grantView).
+  "web-view-grant": (payload) => embeddedViews.addGrant(payload),
   // Plugins open OS clients themselves now (desktop:local), so none is wired here.
   "launch-external-client": (payload) => ({
     success: false,
@@ -600,6 +612,15 @@ const BACKEND_REQUEST_HANDLERS = {
     const error = await shell.openPath(localPath(payload));
     return error ? { success: false, error } : { success: true };
   },
+  // The editor is only ever the one picked in a file dialog (set-setting).
+  "shell-open-editor": (payload) =>
+    openInEditor(localPath(payload), {
+      editorPath: () => {
+        const value = readSetting(EXTERNAL_EDITOR_SETTING);
+        return typeof value === "string" && value ? value : null;
+      },
+      openPath: (target) => shell.openPath(target),
+    }),
   "sync-proxy-config": (payload) => {
     if (payload !== null && typeof payload !== "object") {
       throw new Error("Bad link config");
@@ -738,60 +759,6 @@ function cleanupManagedTempFile(tempId) {
   tempFiles.delete(tempId);
 }
 
-// Origins the renderer has explicitly marked as allowed to present an invalid
-// certificate, for web endpoints whose ignoreCert is set. Session scoped and
-// never persisted.
-//
-// Deliberately NOT wired into isInvalidCertificateAllowedForUrl: that function
-// also governs this process's own outbound TLS via getTlsVerificationOptions,
-// and widening it would grant more privilege than the feature needs.
-//
-// Entries expire rather than living until the app restarts (days, on a
-// desktop app). Main has no host-database access, so it cannot verify a
-// renderer's claim that an origin really is a configured web endpoint -- an
-// unbounded allowance would make that an indefinite window rather than a
-// momentary one. The renderer re-registers before each load, which refreshes
-// the expiry, so a live endpoint keeps working while a stale entry lapses.
-const WEB_ENDPOINT_CERTIFICATE_ALLOWLIST_TTL_MS = 5 * 60 * 1000;
-const webEndpointCertificateAllowlist = new Map();
-
-function isWebEndpointCertificateAllowed(url) {
-  try {
-    const parsed = new URL(url);
-    // The allowance exists solely to suppress a TLS certificate error, so a
-    // non-https origin in the map is meaningless at best.
-    if (parsed.protocol !== "https:") return false;
-
-    const expiresAt = webEndpointCertificateAllowlist.get(parsed.origin);
-    if (expiresAt === undefined) return false;
-    if (Date.now() >= expiresAt) {
-      webEndpointCertificateAllowlist.delete(parsed.origin);
-      return false;
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-ipc.handle("allow-invalid-certificate-for-origin", (_event, origin) => {
-  try {
-    // Store the PARSED origin, never the caller's string, so a path or a
-    // wildcard cannot widen the allowance.
-    const parsed = new URL(String(origin));
-    if (parsed.protocol !== "https:") {
-      return { success: false };
-    }
-    webEndpointCertificateAllowlist.set(
-      parsed.origin,
-      Date.now() + WEB_ENDPOINT_CERTIFICATE_ALLOWLIST_TTL_MS,
-    );
-    return { success: true };
-  } catch {
-    return { success: false };
-  }
-});
-
 // Mutual TLS for the linked server: Chromium asks which certificate from the
 // OS store to present. Other origins keep Chromium's default (none).
 const chosenClientCerts = new Map();
@@ -836,18 +803,6 @@ app.on(
       embeddedViews.handleCertificateError(event, _webContents, url, callback)
     )
       return;
-    if (isWebEndpointCertificateAllowed(url)) {
-      event.preventDefault();
-      logToFile("Allowed invalid certificate for configured web endpoint", {
-        url,
-        error,
-        issuer: certificate?.issuerName,
-        subject: certificate?.subjectName,
-      });
-      callback(true);
-      return;
-    }
-
     if (isInvalidCertificateAllowedForUrl(url)) {
       event.preventDefault();
       logToFile("Allowed invalid certificate for configured server", {
@@ -1153,10 +1108,15 @@ function startBackendServer() {
           DATA_DIR: dataDir,
           NODE_ENV: "production",
           ELECTRON_EMBEDDED: "true",
+          TERMIX_DESKTOP_LAUNCH_SECRET: LAUNCH_SECRET,
           PORT: String(backendPort),
           EMBEDDED_BACKEND_PORT: String(backendPort),
           ELECTRON_USER_DATA: app.getPath("userData"),
           VERSION: app.getVersion(),
+          // Plugin processes run on the app's pinned Node, not Electron's.
+          TERMIX_PLUGIN_NODE_MAJOR: String(
+            Number(pluginNodePin.version.split(".")[0]),
+          ),
         },
         stdio: "pipe",
         serviceName: "Termix backend",
@@ -1167,10 +1127,20 @@ function startBackendServer() {
 
     pluginSandbox?.stopAll();
     pluginSandbox = createPluginSandboxHost({
-      utilityProcess,
       MessageChannelMain,
       backendDir: path.dirname(entryPath),
       dataRoot: dataDir,
+      mas: process.mas === true,
+      getRuntime: () =>
+        checkRuntime({
+          isPackaged: app.isPackaged,
+          resourcesPath: process.resourcesPath,
+          appRoot,
+          appBundle:
+            process.platform === "darwin" && app.isPackaged
+              ? path.resolve(process.execPath, "..", "..", "..")
+              : null,
+        }),
       log: logToFile,
     });
 
@@ -1524,6 +1494,10 @@ function createWindow() {
   mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
     (details, callback) => {
       details.requestHeaders["X-Electron-App"] = "true";
+      // Only the local backend gets the launch secret, never a linked server.
+      if (isLocalBackendUrl(details.url, backendPort)) {
+        details.requestHeaders["X-Termix-Launch"] = LAUNCH_SECRET;
+      }
 
       details.requestHeaders["User-Agent"] = customUserAgent;
 
@@ -1567,30 +1541,17 @@ function createWindow() {
       const headers = details.responseHeaders;
 
       if (headers) {
-        delete headers["x-frame-options"];
-        delete headers["X-Frame-Options"];
-
-        if (headers["content-security-policy"]) {
-          headers["content-security-policy"] = headers[
-            "content-security-policy"
-          ]
-            .map((value) => value.replace(/frame-ancestors[^;]*/gi, ""))
-            .filter((value) => value.trim().length > 0);
-
-          if (headers["content-security-policy"].length === 0) {
-            delete headers["content-security-policy"];
-          }
-        }
-        if (headers["Content-Security-Policy"]) {
-          headers["Content-Security-Policy"] = headers[
-            "Content-Security-Policy"
-          ]
-            .map((value) => value.replace(/frame-ancestors[^;]*/gi, ""))
-            .filter((value) => value.trim().length > 0);
-
-          if (headers["Content-Security-Policy"].length === 0) {
-            delete headers["Content-Security-Policy"];
-          }
+        if (
+          shouldRelax(details, {
+            dev: isDev,
+            serverOrigins: [
+              `http://127.0.0.1:${backendPort}`,
+              `http://localhost:${backendPort}`,
+              linkedServer.getLinkedServer()?.origin,
+            ].filter(Boolean),
+          })
+        ) {
+          relaxFrameHeaders(headers);
         }
 
         const setCookieHeaderName = getHeaderName(headers, "Set-Cookie");
@@ -2278,28 +2239,28 @@ app.whenReady().then(async () => {
       path.join(appRoot, "dist"),
     );
     movingStorage = true;
-    // Every file:// page shares one storage origin, so any empty page on
-    // disk reads what the old builds saved.
-    const fileBlankPath = path.join(
-      app.getPath("userData"),
-      "storage-blank.html",
-    );
     try {
-      fs.writeFileSync(fileBlankPath, "<!doctype html><title></title>");
       await migrateFileStorage({
         BrowserWindow,
         partition: termixSessionPartition,
         markerPath: path.join(app.getPath("userData"), "app-origin.json"),
-        fileBlankPath,
+        // Where Chromium keeps localStorage of the persist:termix partition.
+        storageDir: path.join(
+          app.getPath("userData"),
+          "Partitions",
+          "termix",
+          "Local Storage",
+          "leveldb",
+        ),
         appBlankUrl: appProtocol.APP_BLANK_URL,
         fs,
+        path,
         log: logToFile,
       });
     } catch (error) {
       logToFile("Could not move saved settings:", error?.message || error);
     } finally {
       movingStorage = false;
-      fs.rmSync(fileBlankPath, { force: true });
     }
   }
 

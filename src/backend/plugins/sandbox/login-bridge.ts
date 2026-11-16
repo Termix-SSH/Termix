@@ -12,6 +12,10 @@ import {
   type PluginVerifiedIdentity,
 } from "@termix-ssh/plugin-sdk/backend";
 import { plainRound, readDetection } from "./ssh-auth-bridge.js";
+import {
+  checkLoginFields,
+  checkWebAuthnOptions,
+} from "../../auth/login-descriptors.js";
 
 type AnyFn = (...args: unknown[]) => unknown;
 
@@ -274,8 +278,14 @@ export function remoteLoginMethod(
   if (typeof raw.id !== "string" || typeof raw.labelKey !== "string") {
     throw new LoginBridgeError("A login method needs id and labelKey");
   }
-  if (raw.kind !== "redirect" && raw.kind !== "form") {
-    throw new LoginBridgeError("A login method's kind is redirect or form");
+  if (
+    raw.kind !== "redirect" &&
+    raw.kind !== "form" &&
+    raw.kind !== "webauthn"
+  ) {
+    throw new LoginBridgeError(
+      "A login method's kind is redirect, form or webauthn",
+    );
   }
 
   const run = async (fn: AnyFn, req: Request, ...rest: unknown[]) => {
@@ -297,7 +307,10 @@ export function remoteLoginMethod(
     kind: raw.kind,
     ...(typeof raw.icon === "string" ? { icon: raw.icon } : {}),
     ...(typeof raw.external === "boolean" ? { external: raw.external } : {}),
+    ...(raw.placement === "inline" ? { placement: "inline" as const } : {}),
   };
+  const fields = checkLoginFields(raw.fields);
+  if (fields) method.fields = fields;
 
   if (typeof raw.describe === "function") {
     const describe = raw.describe as AnyFn;
@@ -312,6 +325,14 @@ export function remoteLoginMethod(
           ? { type: item.type.slice(0, 50) }
           : {}),
         ...(item.autoStart === true ? { autoStart: true } : {}),
+        ...(Array.isArray(item.views)
+          ? {
+              views: item.views.filter(
+                (view): view is "password" | "external" =>
+                  view === "password" || view === "external",
+              ),
+            }
+          : {}),
       }));
     };
   }
@@ -332,6 +353,21 @@ export function remoteLoginMethod(
         throw new LoginBridgeError("A redirect login gave no http(s) URL");
       }
       return { redirectUrl };
+    };
+  }
+
+  if (typeof raw.options === "function") {
+    const options = raw.options as AnyFn;
+    method.options = async (request, instanceId) => {
+      const value = checkWebAuthnOptions(
+        await run(
+          options,
+          request as unknown as Request,
+          instanceArg(instanceId),
+        ),
+      );
+      if (!value) throw new LoginBridgeError("A passkey login gave no options");
+      return value;
     };
   }
 

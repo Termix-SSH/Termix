@@ -1,0 +1,137 @@
+name: Budgets
+
+# Runs the Docker image with every official plugin built from its newest dev
+# branch, logs in with Chromium and fails when frames after login, JS heap,
+# backend memory or time to the dashboard go over scripts/budgets/budgets.json.
+# Plugins are built from source: CI never downloads a .tmxplug.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["dev-*"]
+    paths:
+      - "src/**"
+      - "packages/**"
+      - "docker/**"
+      - "vite*.ts"
+      - "scripts/budgets/**"
+      - ".github/workflows/budgets.yml"
+  # Every pull request runs it, since it is a required check.
+  pull_request:
+    branches: ["dev-*"]
+
+permissions: {}
+
+concurrency:
+  group: budgets-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  budgets:
+    name: Budgets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+
+    env:
+      NODE_OPTIONS: "--max-old-space-size=4096"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm run ci:install
+
+      - name: Build plugin SDK
+        run: npm run build:sdk
+
+      - name: Clone every plugin
+        run: node scripts/budgets/stage-plugins.mjs "$RUNNER_TEMP/plugins" --jobs 6
+
+      - name: Build every plugin
+        run: node scripts/build-plugins.cjs --profile none --local "$RUNNER_TEMP/plugins"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # The plugins' dev branches need the coming release, so the server
+      # reports that version, the way the dev runner does.
+      - name: Coming version
+        id: version
+        env:
+          REF: ${{ github.base_ref || github.ref_name }}
+        run: |
+          case "$REF" in
+            dev-*) version="${REF#dev-}" ;;
+            *) version="$(git ls-remote --heads https://github.com/Termix-SSH/Termix 'refs/heads/dev-*' \
+                 | sed 's#.*refs/heads/dev-##' | sort -V | tail -1)" ;;
+          esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # The image reads its version from package.json; only this runner's copy changes.
+      - name: Set the coming version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: npm pkg set version="$VERSION"
+
+      - name: Build image
+        run: |
+          docker buildx build \
+            --load \
+            --provenance=false \
+            --sbom=false \
+            --build-arg PLUGIN_PROFILE=none \
+            -t termix-budget \
+            -f docker/Dockerfile .
+
+      - name: Start Termix
+        run: |
+          docker run -d --name termix -p 8080:8080 \
+            -e TERMIX_PLUGIN_IDLE_MINUTES=2 \
+            -v "$PWD/dist/plugins:/app/dist/plugins:ro" \
+            termix-budget
+
+      - name: Make a user and turn every plugin on
+        run: node scripts/budgets/seed.mjs --url http://localhost:8080
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Let idle plugins stop
+        run: sleep 240
+
+      - name: Measure
+        run: >
+          node scripts/budgets/measure.mjs
+          --url http://localhost:8080
+          --user budget --pass budget-pass-123
+          --container termix
+          --out budget-result.json
+
+      - name: Check budgets
+        run: node scripts/budgets/check.mjs budget-result.json
+
+      - name: Server log
+        if: failure()
+        run: docker logs termix 2>&1 | tail -300
+
+      - name: Keep the numbers
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: budget-result
+          path: |
+            budget-result.json
+            budget-failure.png
+          if-no-files-found: ignore
+          retention-days: 14

@@ -3,6 +3,10 @@
  * every message to and from it goes through the parent channel.
  */
 import { EventEmitter } from "node:events";
+import {
+  decodePayload,
+  encodePayload,
+} from "../../../plugins/sandbox/wire-codec.js";
 import { afterEach, describe, expect, it } from "vitest";
 import { setParentTarget } from "../../../utils/parent-channel.js";
 import {
@@ -102,6 +106,45 @@ describe("relay spawner", () => {
       message: "flag --inspect is not allowed",
     });
     await expect(pending).rejects.toThrow(/--inspect/);
+  });
+
+  it("on the desktop, speaks encoded frames over the port main hands over", async () => {
+    const sent: Record<string, unknown>[] = [];
+    const emitter = new EventEmitter();
+    setParentTarget({
+      parentPort: {
+        postMessage: (m: unknown) => sent.push(m as Record<string, unknown>),
+        on: (event, listener) => emitter.on(event, listener),
+        off: (event, listener) => emitter.off(event, listener),
+      },
+      on: () => undefined,
+      off: () => undefined,
+    });
+    const port = Object.assign(new EventEmitter(), {
+      posted: [] as unknown[],
+      postMessage(data: unknown) {
+        this.posted.push(data);
+      },
+      start() {},
+      close() {},
+    });
+    const pending = relaySpawner("electron").spawn(request);
+    await new Promise((r) => setImmediate(r));
+    emitter.emit("message", {
+      data: { type: SANDBOX_MESSAGE, op: "spawned", id: sent[0].id, pid: 5 },
+      ports: [port],
+    });
+    const child = await pending;
+    child.transport.send({ t: "rel", f: "x" });
+    expect(decodePayload(port.posted[0] as Buffer)).toEqual({
+      t: "rel",
+      f: "x",
+    });
+    const wires: unknown[] = [];
+    child.transport.onMessage((m) => wires.push(m));
+    port.emit("message", { data: encodePayload({ t: "rel", f: "y" }) });
+    port.emit("message", { data: new Uint8Array([9, 9, 9]) });
+    expect(wires).toEqual([{ t: "rel", f: "y" }]);
   });
 
   it("ignores replies for other ids and other message types", async () => {

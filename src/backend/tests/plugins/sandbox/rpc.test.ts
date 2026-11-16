@@ -131,6 +131,34 @@ describe("sandbox rpc", () => {
     expect(seenByHost).toContain("minted-1");
   });
 
+  it("hands a handler an AbortSignal that aborts when core's does", async () => {
+    const { host, child } = pair();
+    let started!: () => void;
+    const running = new Promise<void>((resolve) => (started = resolve));
+    child.handle("run", ([context]) => {
+      const { signal } = context as { signal: AbortSignal };
+      expect(signal).toBeInstanceOf(AbortSignal);
+      expect(signal.aborted).toBe(false);
+      started();
+      return new Promise((resolve) =>
+        signal.addEventListener("abort", () =>
+          resolve((signal.reason as Error).message),
+        ),
+      );
+    });
+    const controller = new AbortController();
+    const result = host.call("run", [{ signal: controller.signal }]);
+    await running;
+    controller.abort(new Error("timed out"));
+    await expect(result).resolves.toBe("timed out");
+  });
+
+  it("sends a signal that already aborted as aborted", async () => {
+    const { host, child } = pair();
+    child.handle("check", ([signal]) => (signal as AbortSignal).aborted);
+    await expect(host.call("check", [AbortSignal.abort()])).resolves.toBe(true);
+  });
+
   it("keeps Buffers as Buffers across the line", async () => {
     const { host, child } = pair();
     host.handle("echo", ([b]) => b);
@@ -187,6 +215,30 @@ describe("sandbox rpc", () => {
     );
     remote.resume();
     expect(meta).toEqual({ code: 3 });
+  });
+
+  it("hands the end to a listener added after it arrived", async () => {
+    // A command that exits at once: its end can land before the caller has
+    // wired up its listeners, which left Tmux Monitor's requests hanging.
+    const { host, child } = pair();
+    host.handle("run", () => {
+      const port = host.openStream();
+      port.endMeta = { code: 0 };
+      port.end();
+      return port;
+    });
+    const remote = (await child.call("run")) as StreamPort;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const meta = await Promise.race([
+      new Promise((resolve) => remote.on("remote-end", resolve)),
+      new Promise((resolve) => setTimeout(() => resolve("never"), 200)),
+    ]);
+    expect(meta).toEqual({ code: 0 });
+    const once = await Promise.race([
+      new Promise((resolve) => remote.once("remote-end", resolve)),
+      new Promise((resolve) => setTimeout(() => resolve("never"), 200)),
+    ]);
+    expect(once).toEqual({ code: 0 });
   });
 
   it("survives a stream the other side fails, even with nobody listening", async () => {

@@ -710,6 +710,11 @@ describe("plugin profiles", () => {
     expect(ids("full")).toEqual(["look", "term", "extra", "untiered"]);
   });
 
+  it("ships nothing for an image that gets its plugins mounted", () => {
+    expect(ids("none")).toEqual([]);
+    expect(resolveProfile(["node", "x", "--profile", "none"], {})).toBe("none");
+  });
+
   it("rejects an unknown tier", () => {
     const { problems } = parseBundledPlugins({ plugins: [entry("x", "huge")] });
     expect(problems[0]).toMatch(/tier must be one of/);

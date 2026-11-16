@@ -6,19 +6,46 @@ import {
   type AuthResponse,
 } from "@/main-axios";
 
+/** A field the login screen draws for a plugin's method or factor. */
+export interface LoginField {
+  name: string;
+  type: "text" | "password" | "code";
+  labelKey: string;
+  autocomplete?: string;
+}
+
+export type SecondFactorPrompt =
+  | { kind: "code"; field?: string; labelKey?: string; length?: number }
+  | { kind: "fields"; fields: LoginField[] }
+  | { kind: "webauthn" };
+
 export interface PublicLoginMethod {
   id: string;
   pluginId: string;
-  kind: "redirect" | "form";
+  kind: "redirect" | "form" | "webauthn";
   labelKey: string;
   icon?: string;
-  instances: Array<{ id: string; label: string; autoStart?: boolean }>;
+  fields?: LoginField[];
+  placement?: "inline";
+  instances: Array<{
+    id: string;
+    label: string;
+    autoStart?: boolean;
+    views?: Array<"password" | "external">;
+  }>;
 }
 
 export interface SecondFactorRef {
   id: string;
   pluginId: string;
   labelKey: string;
+  prompt?: SecondFactorPrompt;
+}
+
+/** Options for the browser's WebAuthn prompt, from a plugin's backend. */
+export interface WebAuthnStart {
+  publicKey: Record<string, unknown>;
+  context?: Record<string, unknown>;
 }
 
 export type LoginResponse = AuthResponse & {
@@ -44,6 +71,66 @@ export async function getLoginMethods(): Promise<PublicLoginMethod[]> {
   } catch {
     return [];
   }
+}
+
+/** Every second factor with how to ask for it. Public. */
+export async function getPublicSecondFactors(): Promise<SecondFactorRef[]> {
+  try {
+    const response = await authApi.get("/users/auth/methods");
+    return Array.isArray(response.data?.secondFactors)
+      ? response.data.secondFactors
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+/** A passkey method's options for the browser prompt. Public. */
+export async function getWebAuthnLoginOptions(
+  methodId: string,
+  instanceId?: string,
+  username?: string,
+): Promise<WebAuthnStart> {
+  try {
+    const response = await authApi.post(
+      `/users/auth/${encodeURIComponent(methodId)}/options`,
+      { instanceId, ...(username ? { username } : {}) },
+    );
+    return response.data as WebAuthnStart;
+  } catch (error) {
+    throw handleApiError(error, "start passkey login");
+  }
+}
+
+/** Starts a WebAuthn step one of a plugin's screens asked for. */
+export async function startPluginCeremony(
+  pluginId: string,
+  ceremonyId: string,
+  extra: Record<string, unknown>,
+): Promise<{
+  ticket: string;
+  type: "create" | "get";
+  publicKey: Record<string, unknown>;
+}> {
+  const response = await authApi.post(
+    `/plugins/${encodeURIComponent(pluginId)}/passkey-steps/${encodeURIComponent(ceremonyId)}/options`,
+    { extra },
+  );
+  return response.data;
+}
+
+/** Finishes it; the answer is whatever the plugin's backend returned. */
+export async function finishPluginCeremony(
+  pluginId: string,
+  ceremonyId: string,
+  ticket: string,
+  response: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const result = await authApi.post(
+    `/plugins/${encodeURIComponent(pluginId)}/passkey-steps/${encodeURIComponent(ceremonyId)}/finish`,
+    { ticket, response },
+  );
+  return (result.data ?? {}) as Record<string, unknown>;
 }
 
 /** False when the login policy turned remember me off. Public. */
@@ -128,7 +215,7 @@ export async function challengeSecondFactor(
 }
 
 /** The second factors the signed in user can prove. */
-export async function listStepUpFactors(): Promise<{ id: string }[]> {
+export async function listStepUpFactors(): Promise<SecondFactorRef[]> {
   try {
     const response = await authApi.get("/users/auth/step-up/factors");
     return response.data?.factors ?? [];

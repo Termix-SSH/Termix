@@ -18,6 +18,12 @@ import {
   resolvePluginDesktopMode,
 } from "@termix-ssh/plugin-sdk/manifest";
 import { describePluginFrontend } from "../../plugins/assets.js";
+import { readViewGrant } from "../../plugins/web-view-grants.js";
+import {
+  CeremonyError,
+  finishCeremony,
+  startCeremony,
+} from "../../auth/webauthn-ceremonies.js";
 import { isDefaultLookPlugin } from "../../plugins/bundled-index.js";
 import { mayRunInSafeMode } from "../../plugins/safe-mode.js";
 import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
@@ -28,7 +34,10 @@ import {
   MAX_UPLOAD_BYTES,
   PluginManageError,
 } from "../../plugins/manage.js";
-import { parsePluginChannel } from "../../plugins/registry-index.js";
+import {
+  parsePluginChannel,
+  readInstalledProvenance,
+} from "../../plugins/registry-index.js";
 import { RegistryError } from "../../plugins/registries.js";
 import {
   pluginDocsUrl,
@@ -333,6 +342,87 @@ router.post(
   },
 );
 
+/**
+ * @openapi
+ * /plugins/{id}/image:
+ *   get:
+ *     summary: Load a picture from another site for a plugin view
+ *     description: >
+ *       Plugin views may only show pictures from the plugin's own assets, so
+ *       a picture from elsewhere comes through here. Only for a running
+ *       plugin with network:outbound or network:sockets granted. The answer is the picture
+ *       itself; anything that is not an image, over 5 MB, on this machine or
+ *       at a cloud metadata address is refused.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: url
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: The picture.
+ *       400:
+ *         description: Not an http or https address.
+ *       403:
+ *         description: The plugin may not load pictures, or the address is not allowed.
+ *       404:
+ *         description: No such running plugin.
+ *       413:
+ *         description: The picture is over 5 MB.
+ *       415:
+ *         description: The address is not a picture.
+ *       502:
+ *         description: The picture could not be loaded.
+ */
+router.get(
+  "/:id/image",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const pluginId = String(req.params.id);
+    const plugin = getPluginRuntime().loader.get(pluginId);
+    if (!plugin || plugin.state !== "active") {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    const { hasCapability } = await import("../../plugins/permissions.js");
+    const declared = plugin.manifest.capabilities;
+    // Either one already lets the plugin reach other sites.
+    if (
+      !(await hasCapability(pluginId, "network:outbound", declared)) &&
+      !(await hasCapability(pluginId, "network:sockets", declared))
+    ) {
+      res.status(403).json({ error: "This plugin may not load pictures" });
+      return;
+    }
+    const { fetchImage, ImageProxyError } =
+      await import("../../plugins/image-proxy.js");
+    try {
+      const { type, body } = await fetchImage(req.query.url);
+      res.setHeader("Content-Type", type);
+      res.setHeader("Cache-Control", "private, max-age=3600");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
+      res.send(body);
+    } catch (error) {
+      const status = error instanceof ImageProxyError ? error.status : 502;
+      res.status(status).json({
+        error:
+          error instanceof ImageProxyError
+            ? error.message
+            : "The picture could not be loaded",
+      });
+    }
+  },
+);
+
 const MAX_FRAME_TOKEN_IDS = 200;
 
 /**
@@ -412,6 +502,209 @@ router.post(
       res.status(500).json({ error: "Could not issue a token" });
     }
   },
+);
+
+/**
+ * @openapi
+ * /plugins/{id}/web-views/{grant}:
+ *   get:
+ *     summary: Read a page a plugin let its frames show
+ *     description: >
+ *       The shell reads the address behind a grant the plugin's backend made
+ *       with ctx.desktop.grantView, to draw that page for one of the plugin's
+ *       frames. Only the person (and session) the grant was made for gets it,
+ *       never a frame token or an API key.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: grant
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: The page address.
+ *       401:
+ *         description: Not signed in with a session.
+ *       404:
+ *         description: No such grant for this plugin and person.
+ */
+router.get(
+  "/:id/web-views/:grant",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const authReq = req as AuthenticatedRequest & { apiKeyId?: string };
+    if (!authReq.sessionId || authReq.apiKeyId) {
+      res.status(401).json({ error: "A login session is required" });
+      return;
+    }
+    const entry = readViewGrant(
+      String(req.params.id),
+      req.params.grant,
+      authReq.userId as string,
+      authReq.sessionId,
+    );
+    if (!entry) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ url: entry.url });
+  },
+);
+
+/** A ceremony call from the shell for one of a plugin's frames. */
+async function runCeremonyStep(
+  req: Request,
+  res: Response,
+  step: "options" | "finish",
+): Promise<void> {
+  const authReq = req as AuthenticatedRequest & { apiKeyId?: string };
+  // The shell asks for a signed-in page, never a frame token or an API key.
+  if (!authReq.sessionId || authReq.apiKeyId) {
+    res.status(401).json({ error: "A login session is required" });
+    return;
+  }
+  const pluginId = String(req.params.id);
+  const ceremonyId = String(req.params.ceremonyId);
+  const userId = authReq.userId as string;
+  const origin = req.headers.origin;
+  if (typeof origin !== "string" || !/^[a-z][a-z0-9+.-]*:\/\//i.test(origin)) {
+    res.status(400).json({ error: "An origin is required" });
+    return;
+  }
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  try {
+    const result =
+      step === "options"
+        ? await startCeremony({
+            pluginId,
+            ceremonyId,
+            userId,
+            sessionId: authReq.sessionId,
+            origin,
+            extra: body.extra,
+          })
+        : await finishCeremony({
+            pluginId,
+            ceremonyId,
+            ticket: body.ticket,
+            userId,
+            sessionId: authReq.sessionId,
+            response: body.response,
+          });
+    if (step === "finish") {
+      await logAudit({
+        userId,
+        username: await getAuditUsername(userId),
+        action: "plugin_webauthn_ceremony",
+        resourceType: "plugin",
+        resourceId: pluginId,
+        resourceName: pluginId,
+        details: JSON.stringify({ ceremonyId }),
+        success: true,
+      }).catch(() => undefined);
+    }
+    res.setHeader("Cache-Control", "no-store");
+    res.json(result);
+  } catch (error) {
+    if (error instanceof CeremonyError) {
+      res.status(error.status).json({ error: error.message });
+      return;
+    }
+    const status = (error as { status?: unknown })?.status;
+    if (typeof status === "number" && status >= 400 && status < 500) {
+      res.status(status).json({
+        error: error instanceof Error ? error.message.slice(0, 300) : "Refused",
+      });
+      return;
+    }
+    databaseLogger.error("A plugin WebAuthn step failed", error, {
+      operation: "plugin_webauthn_ceremony",
+      pluginId,
+    });
+    res.status(500).json({ error: "The step failed" });
+  }
+}
+
+/**
+ * @openapi
+ * /plugins/{id}/passkey-steps/{ceremonyId}/options:
+ *   post:
+ *     summary: Start a plugin's WebAuthn step
+ *     description: >
+ *       The shell asks for the browser prompt options of a WebAuthn step
+ *       (adding a passkey, proving a key) one of the plugin's screens wants.
+ *       The plugin's backend makes them. Only for a signed-in session.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: ceremonyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: A one use ticket, the step type and publicKey options.
+ *       401:
+ *         description: Not signed in with a session.
+ *       404:
+ *         description: The plugin has no such step.
+ */
+router.post(
+  "/:id/passkey-steps/:ceremonyId/options",
+  authenticateJWT,
+  (req: Request, res: Response) => runCeremonyStep(req, res, "options"),
+);
+
+/**
+ * @openapi
+ * /plugins/{id}/passkey-steps/{ceremonyId}/finish:
+ *   post:
+ *     summary: Finish a plugin's WebAuthn step
+ *     description: >
+ *       The shell sends the browser's answer with the ticket from the options
+ *       call. The plugin's backend checks it and its answer goes back to the
+ *       plugin's screen.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: ceremonyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: What the plugin's check returned.
+ *       400:
+ *         description: Bad browser answer.
+ *       401:
+ *         description: Not signed in with a session.
+ *       410:
+ *         description: The ticket expired, was used or belongs to someone else.
+ */
+router.post(
+  "/:id/passkey-steps/:ceremonyId/finish",
+  authenticateJWT,
+  (req: Request, res: Response) => runCeremonyStep(req, res, "finish"),
 );
 
 router.get("/", authenticateJWT, async (req: Request, res: Response) => {
@@ -559,6 +852,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
           features,
           env,
           signedBy: loaded?.signedBy ?? null,
+          provenance: readInstalledProvenance(loaded?.artifact),
           managedByServer: linked && (await isManagedByLinkedServer(record.id)),
           capabilities,
           grantedCapabilities: grantsByPlugin.get(record.id) ?? [],
@@ -773,6 +1067,110 @@ router.get(
         error,
         "Failed to list plugins for onboarding",
         "plugin_onboarding_list",
+      );
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/processes:
+ *   get:
+ *     summary: Memory used by Termix and each plugin process
+ *     description: Every plugin process with its state, why it stays up (null when it stops when idle) and its resident memory while it runs, plus Termix's own memory, the total, and the memory limit of the container or machine. low is true when the total is past 80% of the limit.
+ *     tags:
+ *       - Plugins
+ *     responses:
+ *       200:
+ *         description: The memory report.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       500:
+ *         description: The report could not be built.
+ */
+router.get(
+  "/processes",
+  authenticateJWT,
+  requireManagePlugins,
+  async (_req: Request, res: Response) => {
+    try {
+      const { currentMemoryReport } =
+        await import("../../plugins/sandbox/memory.js");
+      res.setHeader("Cache-Control", "no-store");
+      res.json(await currentMemoryReport());
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to read plugin memory",
+        "plugin_processes",
+      );
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/update-check:
+ *   get:
+ *     summary: Plugins the next Termix release would turn off
+ *     description: Looks up the newest Termix release on this instance's channel and lists the installed plugins that would not load on it, so an admin can update them first. reason api means the plugin was made for plugin API 1, reason termix means its engine.termix range leaves that version out (needs says which range it asks for). version is null when no newer release is known.
+ *     tags:
+ *       - Plugins
+ *     responses:
+ *       200:
+ *         description: The newest version and the plugins it would turn off.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       500:
+ *         description: The check could not run.
+ */
+router.get(
+  "/update-check",
+  authenticateJWT,
+  requireManagePlugins,
+  async (_req: Request, res: Response) => {
+    try {
+      const { getLocalVersion } = await import("../../utils/app-version.js");
+      const { fetchLatestRelease, updateStatus } =
+        await import("../../utils/latest-release.js");
+      const { getCoreChannel } =
+        await import("../../updates/update-channel.js");
+      const { pluginsBlockedOn } =
+        await import("../../plugins/update-impact.js");
+      const local = getLocalVersion();
+      const latest = local
+        ? await fetchLatestRelease(await getCoreChannel(local))
+        : null;
+      if (
+        !local ||
+        !latest ||
+        updateStatus(local, latest.version) !== "requires_update"
+      ) {
+        return res.json({ version: null, blocked: [] });
+      }
+      const installed = [];
+      for (const record of await createCurrentPluginRepository().listAll()) {
+        try {
+          installed.push({
+            id: record.id,
+            enabled: record.state === "enabled",
+            manifest: JSON.parse(record.manifestJson),
+          });
+        } catch {
+          // A record without a readable manifest can't load anyway.
+        }
+      }
+      res.json({
+        version: latest.version,
+        blocked: pluginsBlockedOn(latest.version, installed),
+      });
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to check plugins against the next release",
+        "plugin_update_check",
       );
     }
   },

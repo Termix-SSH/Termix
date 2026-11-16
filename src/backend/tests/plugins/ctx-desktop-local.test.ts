@@ -225,6 +225,23 @@ describe("ctx.desktop.local", () => {
     ).toHaveLength(2);
   });
 
+  it("asks Electron main to start the chosen editor, audited like open", async () => {
+    grants.set("demo", ["desktop:local"]);
+    const ctx = contextFor("demo", ["desktop:local"]);
+    const target = path.join(dir, "notes.txt");
+    fs.writeFileSync(target, "x");
+    await ctx.desktop.local.fs.openInEditor(target);
+    expect(bridge.requestFromElectronMain).toHaveBeenCalledWith(
+      "shell-open-editor",
+      { path: target },
+    );
+    expect(
+      auditEntries.filter(
+        (entry) => entry.action === "plugin_desktop_local_open",
+      ),
+    ).toHaveLength(1);
+  });
+
   it("only calls the plugin's own routes", async () => {
     grants.set("demo", ["desktop:local"]);
     const ctx = contextFor("demo", ["desktop:local"]);

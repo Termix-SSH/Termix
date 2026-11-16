@@ -8,7 +8,7 @@ permissions: {}
 
 jobs:
   lint-and-build:
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
 
@@ -64,7 +64,7 @@ jobs:
   # as every kind of caller. See scripts/authz/run.mjs and authz.json.
   authz-matrix:
     name: Authorization matrix
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: read
@@ -98,12 +98,17 @@ jobs:
       - name: Build backend with every plugin
         run: npm run build:backend
 
+      # The seed needs totp, login-security, alerts and host-status running. Pinned releases can
+      # still be builds for an older plugin API, so build them from source.
+      - name: Build the seed plugins
+        run: node scripts/authz/stage-deps.mjs --seed node_modules/.cache/authz-seed
+
       - name: Authorization matrix
-        run: npm run test:authz
+        run: npm run test:authz -- --with-pinned --local-plugins node_modules/.cache/authz-seed
 
   database-dialects:
     name: Postgres and MySQL
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
 
@@ -177,7 +182,7 @@ jobs:
   # vulnerabilities that already have a fix.
   supply-chain:
     name: Supply chain
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -203,7 +208,7 @@ jobs:
   # Fails on high severity zizmor findings in this repo's workflows.
   workflow-lint:
     name: Workflow lint
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:

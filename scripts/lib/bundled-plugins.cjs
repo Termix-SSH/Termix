@@ -37,6 +37,8 @@ const ENV_NAME = /^[A-Z][A-Z0-9_]*$/;
 const ONBOARDING_KEYS = new Set(["recommended", "consent", "enabledByEnv"]);
 const SHA256 = /^[0-9a-f]{64}$/;
 const PROFILES = ["minimal", "standard", "full"];
+/** Stages no plugin, for an image that gets its plugins mounted (CI budgets). */
+const EMPTY_PROFILE = "none";
 const DEFAULT_PROFILE = "standard";
 
 function parseOnboarding(value, id, problems) {
@@ -308,7 +310,7 @@ function resolveProfile(argv = process.argv, env = process.env) {
   const value =
     (flag !== -1 ? argv[flag + 1] : env.TERMIX_PLUGIN_PROFILE) ||
     DEFAULT_PROFILE;
-  if (!PROFILES.includes(value)) {
+  if (!PROFILES.includes(value) && value !== EMPTY_PROFILE) {
     throw new Error(
       `unknown plugin profile "${value}", use ${PROFILES.join(", ")}`,
     );
@@ -318,6 +320,7 @@ function resolveProfile(argv = process.argv, env = process.env) {
 
 /** The plugins a profile ships: its own tier and every smaller one. */
 function pluginsForProfile(plugins, profile) {
+  if (profile === EMPTY_PROFILE) return [];
   const rank = PROFILES.indexOf(profile);
   return plugins.filter((plugin) => PROFILES.indexOf(plugin.tier) <= rank);
 }

@@ -8,10 +8,12 @@
       "access": "public"
     },
     "GET /audit-logs": {
-      "access": "admin"
+      "access": "user",
+      "permission": "admin.audit.view"
     },
     "GET /audit-logs/actions": {
-      "access": "admin"
+      "access": "user",
+      "permission": "admin.audit.view"
     },
     "GET /credential-sidebar/preferences": {
       "access": "user"
@@ -545,12 +547,66 @@
         "key-ops-run": "refuse"
       }
     },
+    "GET /plugins/:id/image": {
+      "access": "user",
+      "params": {
+        "id": "=homepage"
+      },
+      "query": {
+        "url": "http://127.0.0.1/a.png"
+      },
+      "allowed": "any",
+      "note": "Any signed in person may load a picture through a plugin with network:outbound; this address is on the server itself, so allowed callers get 403 too.",
+      "expect": {
+        "key-ops-read": "refuse",
+        "key-ops-run": "refuse"
+      }
+    },
     "POST /plugins/frame-tokens": {
       "access": "user",
       "body": {
         "ids": ["snippets"]
       },
       "allowed": "any",
+      "expect": {
+        "key-ops-read": "refuse",
+        "key-ops-run": "refuse"
+      }
+    },
+    "POST /plugins/:id/passkey-steps/:ceremonyId/options": {
+      "access": "user",
+      "params": {
+        "id": "=webauthn",
+        "ceremonyId": "=register"
+      },
+      "allowed": "any",
+      "note": "Called by the shell for a plugin's own screen. Answers depend on the plugin being on and the browser step.",
+      "expect": {
+        "key-ops-read": "refuse",
+        "key-ops-run": "refuse"
+      }
+    },
+    "POST /plugins/:id/passkey-steps/:ceremonyId/finish": {
+      "access": "user",
+      "params": {
+        "id": "=webauthn",
+        "ceremonyId": "=register"
+      },
+      "allowed": "any",
+      "note": "Called by the shell for a plugin's own screen. Answers depend on the plugin being on and the browser step.",
+      "expect": {
+        "key-ops-read": "refuse",
+        "key-ops-run": "refuse"
+      }
+    },
+    "GET /plugins/:id/web-views/:grant": {
+      "access": "user",
+      "params": {
+        "id": "=web-endpoint",
+        "grant": "=000000000000000000000000000000000000000000000000"
+      },
+      "allowed": "any",
+      "note": "A grant is made by the plugin's backend for one person and session; the matrix has none, so allowed callers get 404.",
       "expect": {
         "key-ops-read": "refuse",
         "key-ops-run": "refuse"
@@ -653,6 +709,12 @@
       "access": "admin"
     },
     "POST /plugins/onboarding/apply": {
+      "access": "admin"
+    },
+    "GET /plugins/processes": {
+      "access": "admin"
+    },
+    "GET /plugins/update-check": {
       "access": "admin"
     },
     "GET /plugins/public": {
@@ -837,6 +899,10 @@
     "GET /rbac/permissions/me": {
       "access": "user"
     },
+    "GET /rbac/access-review": {
+      "access": "user",
+      "permission": "admin.users.view"
+    },
     "GET /rbac/roles": {
       "access": "user"
     },
@@ -915,19 +981,49 @@
       "access": "public"
     },
     "POST /users/admin-create": {
-      "access": "admin"
+      "access": "user",
+      "permission": "admin.users.manage"
     },
     "DELETE /users/admin/:userId/second-factors": {
-      "access": "admin",
+      "access": "user",
+      "permission": "admin.users.manage",
       "destructive": true,
       "params": {
         "userId": "user:other"
       }
     },
     "GET /users/admin/:userId/second-factors": {
-      "access": "admin",
+      "access": "user",
+      "permission": "admin.users.view",
       "params": {
         "userId": "user:other"
+      }
+    },
+    "POST /users/admin/:userId/disable": {
+      "access": "user",
+      "permission": "admin.users.manage",
+      "destructive": true,
+      "params": {
+        "userId": "user:other"
+      }
+    },
+    "POST /users/admin/:userId/enable": {
+      "access": "user",
+      "permission": "admin.users.manage",
+      "destructive": true,
+      "params": {
+        "userId": "user:other"
+      }
+    },
+    "PATCH /users/admin/:userId/profile": {
+      "access": "user",
+      "permission": "admin.users.manage",
+      "destructive": true,
+      "params": {
+        "userId": "user:other"
+      },
+      "body": {
+        "displayName": "Authz"
       }
     },
     "GET /users/admin/export/:userId": {
@@ -937,7 +1033,8 @@
       }
     },
     "POST /users/admin/reset-password": {
-      "access": "admin",
+      "access": "user",
+      "permission": "admin.users.manage",
       "destructive": true,
       "body": {
         "username": "authz-other",
@@ -964,6 +1061,9 @@
       "access": "public"
     },
     "POST /users/auth/:methodId/verify": {
+      "access": "public"
+    },
+    "POST /users/auth/:methodId/options": {
       "access": "public"
     },
     "GET /users/auth/methods": {
@@ -1021,6 +1121,7 @@
     },
     "DELETE /users/delete-user": {
       "access": "user",
+      "permission": "admin.users.manage",
       "destructive": true
     },
     "GET /users/external-auto-provision": {
@@ -1034,6 +1135,67 @@
     },
     "PATCH /users/host-key-policy": {
       "access": "admin"
+    },
+    "GET /users/admin-host-bypass": {
+      "access": "user"
+    },
+    "PATCH /users/admin-host-bypass": {
+      "access": "admin",
+      "destructive": true,
+      "body": {
+        "enabled": true
+      }
+    },
+    "GET /users/external-signup-approval": {
+      "access": "user"
+    },
+    "PATCH /users/external-signup-approval": {
+      "access": "admin",
+      "destructive": true,
+      "body": {
+        "enabled": false
+      }
+    },
+    "GET /users/invites": {
+      "access": "user",
+      "permission": "admin.users.view"
+    },
+    "POST /users/invites": {
+      "access": "user",
+      "permission": "admin.users.manage",
+      "destructive": true
+    },
+    "DELETE /users/invites/:id": {
+      "access": "user",
+      "permission": "admin.users.manage",
+      "destructive": true,
+      "params": {
+        "id": "=authz-missing"
+      }
+    },
+    "GET /users/invites/redeem/:token": {
+      "access": "public",
+      "params": {
+        "token": "=tmi_authz-invalid"
+      }
+    },
+    "POST /users/invites/redeem/:token/accept": {
+      "access": "public",
+      "allowed": "any",
+      "note": "A bad token is refused for everyone; a good one makes an account",
+      "params": {
+        "token": "=tmi_authz-invalid"
+      },
+      "body": {
+        "username": "authz-invitee",
+        "password": "Authz-unused-123!"
+      }
+    },
+    "PATCH /users/me/profile": {
+      "access": "user",
+      "body": {
+        "displayName": "Authz"
+      }
     },
     "GET /users/https-settings": {
       "access": "admin"

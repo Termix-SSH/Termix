@@ -233,6 +233,14 @@ export function createPluginDesktopLocal(deps: Deps): PluginDesktopLocal {
         );
         if (!result?.success) throw new Error(result?.error ?? "Failed");
       },
+      openInEditor: async (path) => {
+        await guard("desktop_local_open", "opened a local path", true);
+        const result = await mainRequest(
+          "shell-open-editor",
+          localFs.normalizeLocalPath(path),
+        );
+        if (!result?.success) throw new Error(result?.error ?? "Failed");
+      },
       openRead: async (path) => {
         await guard("desktop_local_fs", "used the local file system");
         return localFs.openRead(path);

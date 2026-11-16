@@ -66,6 +66,16 @@ vi.mock("../../utils/system-secret-crypto.js", () => ({
   isSystemEncrypted: (value: string) => value.startsWith("sysenc:"),
 }));
 
+const systemKey = vi.hoisted(() => Buffer.alloc(32, 7));
+vi.mock("../../utils/system-crypto.js", () => ({
+  SystemCrypto: {
+    getInstance: () => ({
+      getEncryptionKey: async () => systemKey,
+      getPreviousKeys: async () => [],
+    }),
+  },
+}));
+
 vi.mock("../../utils/audit-logger.js", () => ({
   logAudit: async (entry: Record<string, unknown>) => {
     auditEntries.push(entry);
@@ -77,11 +87,11 @@ import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
 import { runAsActor } from "../../plugins/actor.js";
 import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 
-function contextFor(capabilities: string[]) {
-  grants.set("demo", capabilities);
+function contextFor(capabilities: string[], id = "demo") {
+  grants.set(id, capabilities);
   const manifest = {
-    id: "demo",
-    name: "demo",
+    id,
+    name: id,
     version: "1.0.0",
     description: "",
     author: { name: "test" },
@@ -90,7 +100,7 @@ function contextFor(capabilities: string[]) {
     engine: { termix: ">=2.9.0", api: "1" },
     capabilities,
   } as PluginManifest;
-  const handle = createPluginHandle("demo", { activate: () => {} });
+  const handle = createPluginHandle(id, { activate: () => {} });
   return createPluginContext(manifest, handle);
 }
 
@@ -167,10 +177,26 @@ describe("ctx.secrets store", () => {
 
     const ctx = contextFor(["secrets:own"]);
     const sealed = await ctx.secrets.seal("totp-secret");
-    expect(sealed).toBe("sysenc:totp-secret");
+    expect(sealed).toMatch(/^psenc:v1:demo:/);
+    expect(sealed).not.toContain("totp-secret");
     expect(await ctx.secrets.unseal(sealed)).toBe("totp-secret");
     // A plain string was never sealed and must not read back as one.
     expect(await ctx.secrets.unseal("totp-secret")).toBeNull();
     expect(JSON.stringify(auditEntries)).not.toContain("totp-secret");
+  });
+
+  it("never opens what another plugin sealed, or core's own sealed values", async () => {
+    const owner = contextFor(["secrets:own"], "victim");
+    const thief = contextFor(["secrets:own"], "thief");
+    const sealed = await owner.secrets.seal("the-victims-secret");
+    expect(await thief.secrets.unseal(sealed)).toBeNull();
+    // Claiming the value in the text changes nothing: the key and the
+    // bound id still say victim.
+    expect(
+      await thief.secrets.unseal(sealed.replace(":victim:", ":thief:")),
+    ).toBeNull();
+    expect(await owner.secrets.unseal(sealed)).toBe("the-victims-secret");
+    // Core seals installation secrets with sysenc:, which a plugin can't open.
+    expect(await thief.secrets.unseal("sysenc:core-oidc-secret")).toBeNull();
   });
 });

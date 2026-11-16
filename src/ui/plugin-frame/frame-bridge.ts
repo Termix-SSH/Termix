@@ -23,6 +23,8 @@ import {
 } from "@/plugin-host/extension-registry";
 import { usePluginScope } from "@/plugin-host/scope";
 import { decodeIcon } from "./frame-icons";
+import type { ForeignRuntime } from "@/components/foreign/foreign-runtime";
+import { useFrameShell } from "./frame-shell";
 import { getFrameState, useFrameState } from "./frame-store";
 
 export interface FrameBridgeHost {
@@ -30,19 +32,12 @@ export interface FrameBridgeHost {
   call: (method: string, ...args: unknown[]) => Promise<unknown>;
   getApi: PluginHostBridge["getApi"];
   tabs: TabsApi;
-  devReads?: boolean;
+  foreign: ForeignRuntime;
 }
 
 export function createFrameBridge(host: FrameBridgeHost): PluginHostBridge {
   const call = host.call;
-  const reported = new Set<string>();
-  const report = (kind: string, id: unknown) => {
-    if (!host.devReads || typeof id !== "string") return;
-    const key = `${kind}:${id}`;
-    if (reported.has(key)) return;
-    reported.add(key);
-    void call("devRead", kind, id).catch(() => {});
-  };
+  const showTab = (id: string) => void call("tabs.show", id).catch(() => {});
   const toast = (kind: string) => (message: string) =>
     void call("toast", kind, String(message)).catch(() => {});
 
@@ -74,7 +69,7 @@ export function createFrameBridge(host: FrameBridgeHost): PluginHostBridge {
       return { theme: mode };
     },
 
-    useShell: () => null,
+    useShell: () => useFrameShell(host.tabs, showTab),
 
     toast: {
       success: toast("success"),
@@ -97,24 +92,24 @@ export function createFrameBridge(host: FrameBridgeHost): PluginHostBridge {
       >;
     },
 
-    // Other plugins' components can't be drawn inside this frame. The
-    // frame's own extensions can.
-    useSlotContributions: (slotId) => {
-      report("slot", slotId);
-      return [];
-    },
-    usePluginComponent: (id) => {
-      report("component", id);
-      return undefined;
-    },
+    // Other plugins' parts come from the shell as placeholders it draws
+    // over. The frame's own extensions draw here as they are.
+    useSlotContributions: (slotId, context) =>
+      host.foreign.useSlot(slotId, context) as ReturnType<
+        PluginHostBridge["useSlotContributions"]
+      >,
+    usePluginComponent: (id) => host.foreign.useComponent(id),
     useExtensions: (pointId) => {
-      report("extension", pointId);
-      return useOwnExtensions(pointId) as ReturnType<
-        PluginHostBridge["useExtensions"]
-      >;
+      const own = useOwnExtensions(pointId);
+      const foreign = host.foreign.useExtensions(pointId);
+      return useMemo(
+        () => [...own, ...foreign],
+        [own, foreign],
+      ) as unknown as ReturnType<PluginHostBridge["useExtensions"]>;
     },
     getExtension: (pointId, id) =>
-      getOwnExtension(pointId, id) as ReturnType<
+      (getOwnExtension(pointId, id) ??
+        host.foreign.getExtension(pointId, id)) as ReturnType<
         PluginHostBridge["getExtension"]
       >,
 

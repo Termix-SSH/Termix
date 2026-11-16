@@ -14,6 +14,7 @@ type Method = "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE";
 interface Rule {
   methods: Method[];
   path: (pluginId: string) => RegExp;
+  userAction: boolean;
 }
 
 const esc = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -22,6 +23,8 @@ export interface CoreRuleEntry {
   methods: string[];
   path: string;
   why?: string;
+  /** Only right after the user clicked or typed in the frame. */
+  userAction?: boolean;
 }
 
 /** The shared list, also read by the mobile app. */
@@ -30,10 +33,12 @@ export const CORE_RULES: CoreRuleEntry[] = RULE_FILE.rules;
 const RULES: Rule[] = CORE_RULES.map((entry) => ({
   methods: entry.methods as Method[],
   path: (id) => new RegExp(entry.path.split("{id}").join(esc(id))),
+  userAction: entry.userAction === true,
 }));
 
 export type PolicyResult =
-  { ok: true; path: string; query: string } | { ok: false; reason: string };
+  | { ok: true; path: string; query: string; userAction: boolean }
+  | { ok: false; reason: string };
 
 /** Checks a core request a frame asked for. `target` is path plus query. */
 export function checkCoreRequest(
@@ -54,11 +59,16 @@ export function checkCoreRequest(
     return { ok: false, reason: "path" };
   }
   const verb = String(method).toUpperCase() as Method;
-  const allowed = RULES.some(
+  const matches = RULES.filter(
     (rule) => rule.methods.includes(verb) && rule.path(pluginId).test(path),
   );
-  return allowed
-    ? { ok: true, path, query }
+  return matches.length > 0
+    ? {
+        ok: true,
+        path,
+        query,
+        userAction: matches.every((rule) => rule.userAction),
+      }
     : { ok: false, reason: `${verb} ${path}` };
 }
 

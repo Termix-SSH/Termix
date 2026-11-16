@@ -1,3 +1,8 @@
+import {
+  actorHas,
+  canManageAccount,
+  SESSIONS_MANAGE,
+} from "../../auth/user-admin-access.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -110,7 +115,7 @@ export function registerUserSessionRoutes(
 
       let sessionList;
 
-      if (userRecord.isAdmin) {
+      if (await actorHas(userId, SESSIONS_MANAGE)) {
         sessionList = await authManager.getAllSessions();
         const sessionUsers = await userRepository.listByIds(
           sessionList.map((session) => session.userId),
@@ -209,10 +214,16 @@ export function registerUserSessionRoutes(
         return res.status(404).json({ error: "Session not found" });
       }
 
-      if (!userRecord.isAdmin && session.userId !== userId) {
-        return res
-          .status(403)
-          .json({ error: "Not authorized to revoke this session" });
+      if (session.userId !== userId) {
+        const owner = await userRepository.findById(session.userId);
+        if (
+          !owner ||
+          !(await canManageAccount(userId, owner, SESSIONS_MANAGE))
+        ) {
+          return res
+            .status(403)
+            .json({ error: "Not authorized to revoke this session" });
+        }
       }
 
       const success = await authManager.revokeSession(sessionId);
@@ -289,12 +300,17 @@ export function registerUserSessionRoutes(
       }
 
       let revokeUserId = userId;
-      if (targetUserId && userRecord.isAdmin) {
-        revokeUserId = targetUserId;
-      } else if (targetUserId && targetUserId !== userId) {
-        return res.status(403).json({
-          error: "Not authorized to revoke sessions for other users",
-        });
+      if (targetUserId && targetUserId !== userId) {
+        const target = await userRepository.findById(String(targetUserId));
+        if (
+          !target ||
+          !(await canManageAccount(userId, target, SESSIONS_MANAGE))
+        ) {
+          return res.status(403).json({
+            error: "Not authorized to revoke sessions for other users",
+          });
+        }
+        revokeUserId = target.id;
       }
 
       let currentSessionId: string | undefined;

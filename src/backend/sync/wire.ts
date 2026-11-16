@@ -184,6 +184,19 @@ export async function deserializeReferences(
 }
 
 /**
+ * The id a synced value must be sealed for. Rows that came in through sync
+ * before 26.11.2 were sealed for their sync id, which still only opens on the
+ * row that carries it.
+ */
+function boundId(row: SyncRow, value: string): string {
+  const sealedFor = FieldCrypto.sealedRecordId(value);
+  if (row.syncId && sealedFor === `sync-${String(row.syncId)}`) {
+    return sealedFor;
+  }
+  return String(row.id);
+}
+
+/**
  * Decrypts the entity's secret fields. Throws when one cannot be decrypted:
  * sending an empty value instead would wipe the secret on the other side.
  */
@@ -198,7 +211,12 @@ export function decryptFields(
     const value = out[field];
     if (typeof value !== "string" || !FieldCrypto.isEncrypted(value)) continue;
     if (!key) throw new Error("No data key to decrypt synced fields");
-    out[field] = FieldCrypto.decryptField(value, key, String(row.id), field);
+    out[field] = FieldCrypto.decryptField(
+      value,
+      key,
+      boundId(row, value),
+      field,
+    );
   }
   return out;
 }

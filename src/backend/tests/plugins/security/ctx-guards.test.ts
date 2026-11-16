@@ -77,6 +77,8 @@ const UNGATED: Record<string, string> = {
   "disposables.add": "the plugin's own cleanup",
   "schedule.every": "the plugin's own timers",
   "schedule.after": "the plugin's own timers",
+  "schedule.keepAwake":
+    "keeps the plugin's own process running, grants nothing",
   "audit.record": "writes under the runtime's actor, never a plugin value",
   asUser:
     "audited as plugin_as_user (identical successful repeats coalesced for 10 minutes)",

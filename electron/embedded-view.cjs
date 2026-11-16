@@ -16,9 +16,54 @@ function cleanBounds(bounds) {
  * non-persistent session, with the same limits as an isolated window: no
  * permissions, no downloads, http(s) and ws(s) only. The renderer owns the
  * placement and sends the bounds of the element the view should cover.
+ *
+ * A plugin's page comes as a grant its backend made (ctx.desktop.grantView):
+ * the backend sends the address and certificate rule here, the renderer only
+ * names the grant. A plain url from the renderer never trusts a bad
+ * certificate.
  */
+const MAX_GRANTS = 500;
+
 function createEmbeddedViews({ WebContentsView, session, getMainWindow }) {
   const views = new Map();
+  const grants = new Map();
+
+  function addGrant(payload = {}) {
+    const grant = String(payload.grant || "");
+    const pluginId = String(payload.pluginId || "");
+    const expiresAt = Number(payload.expiresAt);
+    if (!/^[0-9a-f]{48}$/.test(grant) || !pluginId) {
+      throw new Error("Bad view grant");
+    }
+    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      throw new Error("Bad view grant");
+    }
+    const url = isolatedUrl(payload.url);
+    const now = Date.now();
+    for (const [id, entry] of grants) {
+      if (entry.expiresAt <= now) grants.delete(id);
+    }
+    while (grants.size >= MAX_GRANTS) {
+      grants.delete(grants.keys().next().value);
+    }
+    grants.set(grant, {
+      pluginId,
+      url: url.href,
+      ignoreCert: payload.ignoreCert === true && url.protocol === "https:",
+      expiresAt,
+    });
+    return { success: true };
+  }
+
+  function grantFor(grant, pluginId) {
+    const entry = grants.get(String(grant || ""));
+    if (!entry) return null;
+    if (entry.expiresAt <= Date.now()) {
+      grants.delete(String(grant));
+      return null;
+    }
+    return entry.pluginId === String(pluginId || "") ? entry : null;
+  }
   // Popups opened from a view, so a certificate error there is judged by
   // the view's rules.
   const popupContents = new WeakMap();
@@ -55,13 +100,18 @@ function createEmbeddedViews({ WebContentsView, session, getMainWindow }) {
     if (!main) throw new Error("No window to attach a view to");
     const id = String(options.id || "");
     if (!id) throw new Error("A view needs an id");
-    const url = isolatedUrl(options.url);
+    let target = { url: options.url, ignoreCert: false };
+    if (options.grant !== undefined) {
+      const granted = grantFor(options.grant, options.pluginId);
+      // The renderer falls back to a sandboxed iframe from its server.
+      if (!granted) return { success: false, error: "Unknown view grant" };
+      target = granted;
+    }
+    const url = isolatedUrl(target.url);
+    const ignoreCert = target.ignoreCert === true;
     const existing = views.get(id);
     if (existing) {
-      if (
-        existing.url === url.href &&
-        existing.ignoreCert === !!options.ignoreCert
-      ) {
+      if (existing.url === url.href && existing.ignoreCert === ignoreCert) {
         setBounds(id, options.bounds);
         setVisible(id, options.visible !== false);
         return { success: true };
@@ -103,7 +153,7 @@ function createEmbeddedViews({ WebContentsView, session, getMainWindow }) {
       session: isolated,
       url: url.href,
       origin: url.origin,
-      ignoreCert: !!options.ignoreCert,
+      ignoreCert,
       popups: new Set(),
     };
     const canNavigate = (target) => {
@@ -177,6 +227,7 @@ function createEmbeddedViews({ WebContentsView, session, getMainWindow }) {
   }
 
   return {
+    addGrant,
     open,
     setBounds,
     setVisible,

@@ -15,6 +15,7 @@ describe("resolveSlotFit", () => {
   it("guesses row items and badges as inline", () => {
     expect(slotFit("dashboard.hostRow")).toBe("inline");
     expect(slotFit("dashboard.hostRowBadge")).toBe("inline");
+    expect(slotFit("session.remoteDisplay")).toBe("fill");
   });
 
   it("lets the slot's owner decide over the guess", () => {

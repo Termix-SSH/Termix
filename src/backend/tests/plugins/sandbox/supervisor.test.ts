@@ -44,6 +44,14 @@ import {
   createPluginHandle,
   disposePluginHandle,
 } from "../../../plugins/ctx.js";
+import { createPluginSchedule } from "../../../plugins/schedule.js";
+import { createPluginRouter, getPluginRouter } from "../../../plugins/http.js";
+import { DisposableBag } from "../../../plugins/disposables.js";
+
+/** Core's own timers, as a plugin ctx has them. */
+function realSchedule() {
+  return createPluginSchedule(new DisposableBag("test"), () => {});
+}
 
 const repo = path.resolve(__dirname, "../../../../..");
 const buildDir = path.join(
@@ -193,13 +201,27 @@ export async function activate(ctx) {
   out.debugProcess = await tryIt(() => process._debugProcess(process.ppid));
   out.binding = await tryIt(() => process.binding("fs"));
   out.inspector = await tryIt(() => import("node:inspector"));
+  const net = await import("node:net");
   out.net = await tryIt(() => new Promise((resolve, reject) => {
-    import("node:net").then((net) => {
-      const server = net.createServer();
-      server.on("error", reject);
-      server.listen(0, "127.0.0.1", () => server.close(resolve));
-    }, reject);
+    const server = net.createServer();
+    server.on("error", reject);
+    server.listen(0, "127.0.0.1", () => server.close(resolve));
   }));
+  out.connect = await tryIt(() => new Promise((resolve, reject) => {
+    const socket = net.connect(9, "127.0.0.1");
+    socket.on("error", (error) => error.code === "ECONNREFUSED" ? resolve() : reject(error));
+    socket.on("connect", () => { socket.destroy(); resolve(); });
+  }));
+  out.fetch = await tryIt(() => fetch("http://127.0.0.1:9/").catch((error) => {
+    if (error.code === "ERR_ACCESS_DENIED") throw error;
+  }));
+  out.dns = await tryIt(async () => (await import("node:dns")).promises.lookup("localhost"));
+  out.signalParent = await tryIt(() => process.kill(process.ppid, 0));
+  out.signalGroup = await tryIt(() => process.kill(0, 0));
+  out.signalInternal = await tryIt(() => { const code = process._kill(process.ppid, 0); if (code) throw new Error("errno " + code); });
+  out.signalSelf = await tryIt(() => process.kill(process.pid, 0));
+  out.priorityParent = await tryIt(async () => { const os = await import("node:os"); os.setPriority(process.ppid, os.getPriority(process.ppid)); });
+  out.prioritySelf = await tryIt(async () => { const os = await import("node:os"); os.setPriority(os.getPriority()); });
   out.secretEnv = process.env.TERMIX_TEST_SECRET ?? null;
   out.dataDir = process.env.DATA_DIR ?? null;
   await ctx.report(out);
@@ -235,13 +257,59 @@ describe("plugin process fence", () => {
       debugProcess: "ERR_ACCESS_DENIED",
       binding: "ERR_ACCESS_DENIED",
       inspector: "ERR_ACCESS_DENIED",
+      // Node 25 and later fence sockets with the permission model; on 24
+      // harden.js refuses them.
+      net: "ERR_ACCESS_DENIED",
+      connect: "ERR_ACCESS_DENIED",
+      fetch: "ERR_ACCESS_DENIED",
+      dns: "ERR_ACCESS_DENIED",
+      // Without the launcher the plugin runs as core's user.
+      signalParent: "ERR_ACCESS_DENIED",
+      signalGroup: "ERR_ACCESS_DENIED",
+      signalInternal: "ERR_ACCESS_DENIED",
+      priorityParent: "ERR_ACCESS_DENIED",
+      signalSelf: "open",
+      prioritySelf: "open",
       secretEnv: null,
       dataDir: null,
     });
     expect(fs.existsSync(path.join(work, "escape.txt"))).toBe(false);
-    // Node 25 and later fence sockets; 24 has no network scope at all.
-    const major = Number(process.versions.node.split(".")[0]);
-    expect(probes!.net).toBe(major >= 25 ? "ERR_ACCESS_DENIED" : "open");
+  }, 30_000);
+
+  it("may still signal a process it started itself", async () => {
+    let probes: Record<string, unknown> | null = null;
+    const body = `
+      import { spawn } from "node:child_process";
+      const tryIt = async (fn) => {
+        try { await fn(); return "open"; }
+        catch (error) { return error.code ?? error.message; }
+      };
+      export async function activate(ctx) {
+        const child = spawn(process.execPath, ["-e", "setTimeout(() => {}, 20000)"]);
+        await new Promise((resolve) => child.once("spawn", resolve));
+        const out = {};
+        out.check = await tryIt(() => process.kill(child.pid, 0));
+        out.stop = await tryIt(() => process.kill(child.pid));
+        out.parent = await tryIt(() => process.kill(process.ppid, 0));
+        await ctx.report(out);
+      }`;
+    const supervisor = new SandboxSupervisor(config());
+    await supervisor.register(
+      spec("signals", plugin("signals", body), {
+        capabilities: ["process:spawn"],
+        sandbox: { alwaysOn: true },
+        report: (value) => {
+          probes = value as Record<string, unknown>;
+        },
+      }),
+    );
+    await until(() => probes !== null, 20_000);
+    await supervisor.shutdown();
+    expect(probes).toEqual({
+      check: "open",
+      stop: "open",
+      parent: "ERR_ACCESS_DENIED",
+    });
   }, 30_000);
 
   it("gets sockets only with network:sockets on a Node that can fence them", async () => {
@@ -291,19 +359,221 @@ describe("supervisor", () => {
     await supervisor.shutdown();
   }, 30_000);
 
-  it("keeps a plugin with schedules or listeners on", async () => {
+  it("unmounts routes once it starts stopping and starts again only after it stopped", async () => {
+    const supervisor = new SandboxSupervisor(config({ idleMs: 300 }));
+    const base = spec(
+      "slowstop",
+      plugin(
+        "slowstop",
+        `export function activate() {}
+export async function deactivate() {
+  await new Promise((resolve) => setTimeout(resolve, 800));
+}`,
+      ),
+    );
+    await supervisor.register({
+      ...base,
+      makeContext: () => {
+        const made = base.makeContext();
+        createPluginRouter({ manifest: base.manifest } as never);
+        return made;
+      },
+    });
+    expect(await supervisor.wake("slowstop")).toBe(true);
+    expect(getPluginRouter("slowstop")).toBeDefined();
+
+    await until(() => supervisor.status()[0].state === "stopping", 5000);
+    // A request now takes the wake path instead of the closing process.
+    expect(getPluginRouter("slowstop")).toBeUndefined();
+    expect(await supervisor.wake("slowstop")).toBe(true);
+    expect(supervisor.status()[0].state).toBe("ready");
+    expect(getPluginRouter("slowstop")).toBeDefined();
+    await supervisor.shutdown();
+  }, 30_000);
+
+  it("keeps a plugin with a job shorter than the idle time on", async () => {
     const supervisor = new SandboxSupervisor(config({ idleMs: 200 }));
     await supervisor.register(
       spec("busy", plugin("busy", "export function activate() {}"), {
-        sandbox: { events: ["host.deleted"] },
+        sandbox: { schedules: [{ id: "tick", every: 50 }] },
       }),
     );
     expect(supervisor.status()[0]).toMatchObject({
       state: "ready",
       alwaysOn: true,
+      keepOnReason: "schedule tick",
     });
     await new Promise((r) => setTimeout(r, 600));
     expect(supervisor.status()[0].state).toBe("ready");
+    await supervisor.shutdown();
+  }, 30_000);
+
+  it("keeps a plugin with a request path provider on", async () => {
+    const supervisor = new SandboxSupervisor(config({ idleMs: 200 }));
+    await supervisor.register(
+      spec("gate", plugin("gate", "export function activate() {}"), {
+        capabilities: ["hosts:connect-policy"],
+      }),
+    );
+    expect(supervisor.status()[0].keepOnReason).toBe("hosts:connect-policy");
+    await supervisor.shutdown();
+  }, 30_000);
+
+  it("stops an idle plugin with listeners and wakes it for an event", async () => {
+    const listeners = new Map<string, (...args: unknown[]) => unknown>();
+    const reports: unknown[] = [];
+    const supervisor = new SandboxSupervisor(config({ idleMs: 200 }));
+    await supervisor.register(
+      spec(
+        "listener",
+        plugin(
+          "listener",
+          `export async function activate(ctx) {
+            await ctx.events.on("host.deleted", async (payload) => {
+              await ctx.report(payload);
+            });
+          }`,
+        ),
+        {
+          sandbox: { events: ["host.deleted"] },
+          report: (value) => reports.push(value),
+          ctx: {
+            events: {
+              on: (topic: string, fn: (...args: unknown[]) => unknown) => {
+                listeners.set(topic, fn);
+                return () => listeners.delete(topic);
+              },
+            },
+          },
+        },
+      ),
+    );
+    expect(supervisor.status()[0].keepOnReason).toBeNull();
+    await until(() => supervisor.status()[0].state === "stopped");
+    // Core still holds the listener while the process is stopped.
+    const onDeleted = listeners.get("host.deleted")!;
+    expect(onDeleted).toBeTypeOf("function");
+    await onDeleted({ hostId: 9 });
+    expect(reports).toEqual([{ hostId: 9 }]);
+    expect(supervisor.status()[0].state).toBe("ready");
+    await supervisor.shutdown();
+    expect(listeners.size).toBe(0);
+  }, 30_000);
+
+  it("wakes a stopped plugin for a job longer than the idle time", async () => {
+    const reports: unknown[] = [];
+    const supervisor = new SandboxSupervisor(config({ idleMs: 200 }));
+    await supervisor.register(
+      spec(
+        "daily",
+        plugin(
+          "daily",
+          `export async function activate(ctx) {
+            await ctx.schedule.every(1200, async () => {
+              await ctx.report("tick");
+            }, { id: "daily" });
+          }`,
+        ),
+        {
+          sandbox: { schedules: [{ id: "daily", every: 1200 }] },
+          report: (value) => reports.push(value),
+          ctx: { schedule: realSchedule() },
+        },
+      ),
+    );
+    await until(() => supervisor.status()[0].state === "stopped");
+    await until(() => reports.length > 0);
+    expect(reports[0]).toBe("tick");
+    await supervisor.shutdown();
+  }, 30_000);
+
+  it("lets a plugin with nothing to do stop even while its short job runs", async () => {
+    const reports: unknown[] = [];
+    const supervisor = new SandboxSupervisor(config({ idleMs: 300 }));
+    await supervisor.register(
+      spec(
+        "quiet",
+        plugin(
+          "quiet",
+          `export async function activate(ctx) {
+            await ctx.schedule.keepAwake("watches", false);
+            await ctx.schedule.every(170, async () => {
+              await ctx.report("tick");
+            }, { id: "tick" });
+          }`,
+        ),
+        {
+          // Out of step with the 100 ms health check that looks for idle.
+          sandbox: { schedules: [{ id: "tick", every: 170 }] },
+          report: (value) => reports.push(value),
+          ctx: {
+            schedule: { ...realSchedule(), keepAwake: () => {} },
+          },
+        },
+      ),
+    );
+    // It ran its job at least once while it was up.
+    await until(() => reports.length >= 1);
+    await until(() => supervisor.status()[0].state === "stopped");
+    const seen = reports.length;
+    await new Promise((r) => setTimeout(r, 400));
+    // Stopped, so the short job no longer runs.
+    expect(reports.length).toBe(seen);
+    await supervisor.shutdown();
+  }, 30_000);
+
+  it("keeps a plugin up while it says it has work, and lets it stop after", async () => {
+    const supervisor = new SandboxSupervisor(config({ idleMs: 200 }));
+    const body = (awake: boolean) => `export async function activate(ctx) {
+      await ctx.schedule.keepAwake("monitors", ${awake});
+    }`;
+    await supervisor.register(
+      spec("watcher", plugin("watcher", body(true)), {
+        sandbox: { schedules: [{ id: "tick", every: 50 }] },
+        ctx: { schedule: { keepAwake: () => {} } },
+      }),
+    );
+    await until(() => supervisor.status()[0].keepOnReason !== "schedule tick");
+    expect(supervisor.status()[0].keepOnReason).toBe("keepAwake: monitors");
+    await new Promise((r) => setTimeout(r, 600));
+    expect(supervisor.status()[0].state).toBe("ready");
+    await supervisor.shutdown();
+
+    // No work: its short job no longer keeps it up.
+    const quiet = new SandboxSupervisor(config({ idleMs: 200 }));
+    await quiet.register(
+      spec("watcher2", plugin("watcher2", body(false)), {
+        sandbox: { schedules: [{ id: "tick", every: 50 }] },
+        ctx: { schedule: { keepAwake: () => {} } },
+      }),
+    );
+    await until(() => quiet.status()[0].state === "stopped");
+    await quiet.shutdown();
+  }, 30_000);
+
+  it("does not stop a plugin with a one-off job still waiting", async () => {
+    const reports: unknown[] = [];
+    const supervisor = new SandboxSupervisor(config({ idleMs: 200 }));
+    await supervisor.register(
+      spec(
+        "later",
+        plugin(
+          "later",
+          `export async function activate(ctx) {
+            await ctx.schedule.after(900, async () => { await ctx.report("done"); });
+          }`,
+        ),
+        {
+          sandbox: { events: ["host.deleted"] },
+          report: (value) => reports.push(value),
+          ctx: { schedule: realSchedule(), events: { on: () => () => {} } },
+        },
+      ),
+    );
+    await new Promise((r) => setTimeout(r, 600));
+    expect(supervisor.status()[0].state).toBe("ready");
+    await until(() => reports.includes("done"));
+    await until(() => supervisor.status()[0].state === "stopped");
     await supervisor.shutdown();
   }, 30_000);
 

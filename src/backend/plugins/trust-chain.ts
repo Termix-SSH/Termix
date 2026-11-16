@@ -34,9 +34,9 @@ export const ROOT_KEYS: Readonly<Record<ChainTier, readonly RootKey[]>> = {
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE6F2K/vrxL3/nimnv5I3MqvNeGMwZFPmMGQatJnblCG",
     },
     {
-      id: "SHA256:CtQKKIHB6UaIt2pSOAXwAPpkczI1Bqbual66doeqeoc",
+      id: "SHA256:S+HvYPCSflLUwrHvR7fnQpoJxZo/wruJkRlc2wvjvkg",
       publicKey:
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEpzjNZkl3hv0mG3hOBRBM+rPbrr79HWGl9kDmXpg6EL",
+        "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIEPARwyfoc335yJuGOGjuJ85bBFstJt6e1tx3tf1MQSSAAAAGnNzaDp0ZXJtaXgtb2ZmaWNpYWwtcm9vdC1i",
     },
   ],
   community: [
@@ -46,9 +46,9 @@ export const ROOT_KEYS: Readonly<Record<ChainTier, readonly RootKey[]>> = {
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEN01pGv3zY8R1chnTk5Gge9kPvjann7GXVm18bNtabN",
     },
     {
-      id: "SHA256:XVcMEf9p+KYrPeK96DWNM1MBibXS+1IMc9eSlzcq8bw",
+      id: "SHA256:2RxCdFuBj1JFUgRRRSokfbTjzqFbihUr9JRQOB1SJK0",
       publicKey:
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINAQxlDKahICr/G8COELwYnlojOqzgPP/+Bh0zBTYglu",
+        "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIAMtRM/96pjl6XHUZEX7GDX6Ax75H39K/2q32xboGWpbAAAAG3NzaDp0ZXJtaXgtY29tbXVuaXR5LXJvb3QtYg==",
     },
   ],
 };

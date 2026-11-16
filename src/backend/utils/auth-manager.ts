@@ -1,4 +1,5 @@
 import { getErrorMessage } from "./error-message.js";
+import { adminHostBypassEnabled } from "../auth/user-access-settings.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { UserKeyManager } from "./user-keys.js";
@@ -190,6 +191,14 @@ export function allowsAdminImpersonation(path: string): boolean {
   return !!plugin && pluginAllowsImpersonation(plugin[1]);
 }
 
+/** Thrown when something tries to sign in an account that is turned off. */
+export class AccountDisabledError extends Error {
+  readonly code = "ACCOUNT_DISABLED";
+  constructor() {
+    super("This account is turned off");
+  }
+}
+
 class AuthManager {
   private static instance: AuthManager;
   private systemCrypto: SystemCrypto;
@@ -243,6 +252,7 @@ class AuthManager {
 
   private async ensureUserDEK(userId: string): Promise<boolean> {
     if (this.userKeys.tryGetUserDEK(userId)) {
+      await this.resealOnUnlock();
       await this.performLazyEncryptionMigration(userId);
       return true;
     }
@@ -289,6 +299,19 @@ class AuthManager {
     _deviceType?: DeviceType,
   ): Promise<boolean> {
     return this.ensureUserDEK(userId);
+  }
+
+  /** A key that only opened now may still have rows on a temporary id. */
+  private async resealOnUnlock(): Promise<void> {
+    try {
+      const { runFieldResealMigration } =
+        await import("../upgrade/field-reseal-migration.js");
+      await runFieldResealMigration();
+    } catch (error) {
+      databaseLogger.error("Moving saved secrets failed", error, {
+        operation: "field_reseal_failed",
+      });
+    }
   }
 
   private async performLazyEncryptionMigration(userId: string): Promise<void> {
@@ -387,6 +410,12 @@ class AuthManager {
       idleTimeoutSeconds?: number | null;
     } = {},
   ): Promise<string> {
+    // Last line of defense: no login path may issue a token for an account
+    // that is turned off.
+    const owner = await createCurrentUserRepository().findById(userId);
+    if (owner?.disabledAt) {
+      throw new AccountDisabledError();
+    }
     const jwtSecret = await this.systemCrypto.getJWTSecret();
 
     const timeoutValue = await createCurrentSettingsRepository().get(
@@ -924,14 +953,19 @@ class AuthManager {
         return;
       }
 
-      if (requireAdmin) {
-        const user = await createCurrentUserRepository().findById(
-          matchedKey.userId,
-        );
-        if (!user?.isAdmin) {
-          res.status(403).json({ error: "Admin access required" });
-          return;
-        }
+      const keyOwner = await createCurrentUserRepository().findById(
+        matchedKey.userId,
+      );
+      if (!keyOwner || keyOwner.disabledAt) {
+        res.status(403).json({
+          error: "This account is turned off",
+          code: "ACCOUNT_DISABLED",
+        });
+        return;
+      }
+      if (requireAdmin && !keyOwner.isAdmin) {
+        res.status(403).json({ error: "Admin access required" });
+        return;
       }
 
       apiKeyRepository
@@ -1128,6 +1162,14 @@ class AuthManager {
       res.status(403).json({
         error: "Admin access required",
         code: "IMPERSONATION_DENIED",
+      });
+      return true;
+    }
+
+    if (!adminHostBypassEnabled()) {
+      res.status(403).json({
+        error: "Admins can't open other users' data on this server",
+        code: "ADMIN_REACH_OFF",
       });
       return true;
     }

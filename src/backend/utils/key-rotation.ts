@@ -1,8 +1,9 @@
 /**
  * Moves data to the current keys after a rotation.
  *
- * ENCRYPTION_KEY wraps every user's data key and seals installation secrets
- * (core settings and anything plugins store through ctx.secrets.seal). When
+ * ENCRYPTION_KEY wraps every user's data key, seals installation secrets
+ * (core settings) and is where each plugin's ctx.secrets.seal key comes
+ * from (plugin-seal.ts). When
  * ENCRYPTION_KEY_PREVIOUS is set, reads fall back to the old key and this
  * pass rewrites everything with the new one. Once it reports nothing left on
  * an old key, ENCRYPTION_KEY_PREVIOUS can be removed.
@@ -15,14 +16,16 @@ import { sql, type SQL } from "drizzle-orm";
 import { SystemCrypto } from "./system-crypto.js";
 import { UserKeyManager } from "./user-keys.js";
 import { resealSystemSecret } from "./system-secret-crypto.js";
+import { PLUGIN_SEALED, resealPluginValue } from "../plugins/plugin-seal.js";
 import { databaseLogger } from "./logger.js";
 import {
   resolveDatabaseDialect,
   type DatabaseDialect,
 } from "../database/db/dialect.js";
 
-const SEALED = /sysenc:v1:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]*/g;
-const MARKER = "%sysenc:v1:%";
+export const SEALED =
+  /sysenc:v1:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]*/g;
+const MARKERS = ["%sysenc:v1:%", "%psenc:v1:%"];
 
 export interface RotationResult {
   rewrappedKeys: number;
@@ -30,13 +33,13 @@ export interface RotationResult {
   failedValues: number;
 }
 
-interface RawDb {
+export interface RawDb {
   all?: (query: SQL) => Promise<Array<Record<string, unknown>>>;
   run?: (query: SQL) => Promise<unknown>;
   execute?: (query: SQL) => Promise<unknown>;
 }
 
-async function rawDb(): Promise<RawDb> {
+export async function rawDb(): Promise<RawDb> {
   const { getDb } = await import("../database/db/index.js");
   return getDb() as unknown as RawDb;
 }
@@ -53,7 +56,7 @@ function rowsOf(result: unknown): Array<Record<string, unknown>> {
   >;
 }
 
-async function query(
+export async function query(
   db: RawDb,
   dialect: DatabaseDialect,
   statement: SQL,
@@ -62,7 +65,7 @@ async function query(
   return rowsOf(await db.execute!(statement));
 }
 
-async function exec(
+export async function exec(
   db: RawDb,
   dialect: DatabaseDialect,
   statement: SQL,
@@ -72,7 +75,7 @@ async function exec(
 }
 
 /** Text columns of every table, where a sealed value could be stored. */
-async function textColumns(
+export async function textColumns(
   db: RawDb,
   dialect: DatabaseDialect,
 ): Promise<Array<{ table: string; column: string }>> {
@@ -119,9 +122,22 @@ export async function resealText(
   let changed = 0;
   let failed = 0;
   let out = text;
-  for (const match of new Set(text.match(SEALED) ?? [])) {
+  const found = [
+    ...(text.match(SEALED) ?? []).map((match) => ({
+      match,
+      reseal: resealSystemSecret,
+    })),
+    ...(text.match(PLUGIN_SEALED) ?? []).map((match) => ({
+      match,
+      reseal: resealPluginValue,
+    })),
+  ];
+  const seen = new Set<string>();
+  for (const { match, reseal } of found) {
+    if (seen.has(match)) continue;
+    seen.add(match);
     try {
-      const next = await resealSystemSecret(match);
+      const next = await reseal(match);
       if (next) {
         out = out.split(match).join(next);
         changed++;
@@ -147,7 +163,7 @@ async function resealAllSystemSecrets(): Promise<{
     const rows = await query(
       db,
       dialect,
-      sql`SELECT DISTINCT ${c} AS v FROM ${t} WHERE ${c} LIKE ${MARKER}`,
+      sql`SELECT DISTINCT ${c} AS v FROM ${t} WHERE ${c} LIKE ${MARKERS[0]} OR ${c} LIKE ${MARKERS[1]}`,
     );
     for (const row of rows) {
       const value = row.v;

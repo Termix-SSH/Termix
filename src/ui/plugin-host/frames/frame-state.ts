@@ -6,6 +6,7 @@
 
 import type { FrameState } from "@/plugin-frame/protocol";
 import { toPluginHostRecord } from "../bridge";
+import { dataRowsFor } from "./data-rows";
 
 export type SharedState = Omit<FrameState, "hosts"> & {
   /** The shell's hosts, with every plugin's settings. Cut per plugin. */
@@ -96,7 +97,11 @@ export function hostsFor(
 /** The full state for one plugin, for a frame that just started. */
 export function frameStateFor(pluginId: string): FrameState {
   const { shellHosts, ...rest } = shared;
-  return { ...rest, hosts: hostsFor(pluginId, shellHosts) };
+  return {
+    ...rest,
+    hosts: hostsFor(pluginId, shellHosts),
+    dataRows: dataRowsFor(pluginId),
+  };
 }
 
 /** A change, shaped for one plugin's frames. */
@@ -110,6 +115,22 @@ export function frameChangeFor(
     out.hosts = hostsFor(pluginId, shellHosts ?? shared.shellHosts);
   }
   return out;
+}
+
+let tabActivator: ((id: string) => void) | null = null;
+
+/** The shell's own "show this tab", for frames that list tabs. */
+export function setTabActivator(next: ((id: string) => void) | null): void {
+  tabActivator = next;
+}
+
+export function activateTab(id: string): boolean {
+  if (!tabActivator) return false;
+  if (!shared.tabs.some((tab) => tab.id === id || tab.instanceId === id)) {
+    return false;
+  }
+  tabActivator(id);
+  return true;
 }
 
 /** Test seam. */

@@ -23,6 +23,23 @@ class FakeView {
 }
 
 const bounds = { x: 10.4, y: 20.6, width: 300, height: 200 };
+const GRANT_A = "a".repeat(48);
+const GRANT_B = "b".repeat(48);
+
+function grant(
+  id: string,
+  url: string,
+  extra: Record<string, unknown> = {},
+): void {
+  manager.addGrant({
+    grant: id,
+    pluginId: "web-endpoint",
+    url,
+    ignoreCert: true,
+    expiresAt: Date.now() + 60_000,
+    ...extra,
+  });
+}
 let contentView: {
   addChildView: ReturnType<typeof vi.fn>;
   removeChildView: ReturnType<typeof vi.fn>;
@@ -75,11 +92,12 @@ describe("embedded views", () => {
   });
 
   it("gives popups the view's locked down settings and rules", () => {
+    grant(GRANT_A, "https://pve.example:8006/");
     manager.open({
       id: "p",
-      url: "https://pve.example:8006/",
+      grant: GRANT_A,
+      pluginId: "web-endpoint",
       bounds,
-      ignoreCert: true,
     });
     const [view] = views;
     const openHandler = view.webContents.setWindowOpenHandler.mock.calls[0][0];
@@ -167,13 +185,15 @@ describe("embedded views", () => {
   });
 
   it("accepts an invalid certificate only for its own origin and only when asked", () => {
+    grant(GRANT_A, "https://x.example/");
+    manager.open({ id: "a", grant: GRANT_A, pluginId: "web-endpoint", bounds });
+    // A url from the renderer never trusts a bad certificate.
     manager.open({
-      id: "a",
-      url: "https://x.example/",
+      id: "b",
+      url: "https://z.example/",
       ignoreCert: true,
       bounds,
     });
-    manager.open({ id: "b", url: "https://z.example/", bounds });
     const check = (index: number, url: string) => {
       const event = { preventDefault: vi.fn() };
       const callback = vi.fn();
@@ -200,6 +220,69 @@ describe("embedded views", () => {
     expect(
       manager.handleCertificateError({}, {}, "https://x.example/", vi.fn()),
     ).toBe(false);
+  });
+
+  it("opens a grant only for the plugin it was made for", () => {
+    grant(GRANT_A, "https://x.example/");
+    expect(
+      manager.open({ id: "a", grant: GRANT_A, pluginId: "other", bounds }),
+    ).toEqual({ success: false, error: "Unknown view grant" });
+    expect(
+      manager.open({
+        id: "a",
+        grant: GRANT_B,
+        pluginId: "web-endpoint",
+        bounds,
+      }),
+    ).toEqual({ success: false, error: "Unknown view grant" });
+    expect(views).toHaveLength(0);
+    expect(
+      manager.open({
+        id: "a",
+        grant: GRANT_A,
+        pluginId: "web-endpoint",
+        bounds,
+      }),
+    ).toEqual({ success: true });
+    expect(views[0].webContents.loadURL).toHaveBeenCalledWith(
+      "https://x.example/",
+    );
+  });
+
+  it("drops expired grants and refuses bad ones", () => {
+    grant(GRANT_A, "https://x.example/", { expiresAt: Date.now() + 5 });
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(Date.now() + 1000);
+      expect(
+        manager.open({
+          id: "a",
+          grant: GRANT_A,
+          pluginId: "web-endpoint",
+          bounds,
+        }).success,
+      ).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(() => grant("short", "https://x.example/")).toThrow();
+    expect(() => grant(GRANT_B, "file:///etc/passwd")).toThrow();
+    expect(() =>
+      grant(GRANT_B, "https://x.example/", { expiresAt: Date.now() - 1 }),
+    ).toThrow();
+  });
+
+  it("never trusts a bad certificate on a plain http grant", () => {
+    grant(GRANT_A, "http://x.example/");
+    manager.open({ id: "a", grant: GRANT_A, pluginId: "web-endpoint", bounds });
+    const callback = vi.fn();
+    manager.handleCertificateError(
+      { preventDefault: vi.fn() },
+      views[0].webContents,
+      "https://x.example/",
+      callback,
+    );
+    expect(callback).toHaveBeenCalledWith(false);
   });
 
   it("closes everything", () => {

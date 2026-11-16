@@ -1,0 +1,9 @@
+{
+  "name": "@termix-plugin/hostile-frame",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "devDependencies": {
+    "@termix-ssh/plugin-sdk": "^2.8.0"
+  }
+}
