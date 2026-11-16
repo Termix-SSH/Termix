@@ -1,6 +1,25 @@
 import path from "path";
 import { defineConfig } from "vitest/config";
 
+const SDK_SOURCE_PARTS = [
+  "backend",
+  "capabilities",
+  "changelog",
+  "db",
+  "ddl",
+  "desktop",
+  "docs",
+  "host-commands",
+  "manifest",
+  "net-guard",
+  "openapi",
+  "operations",
+  "settings",
+  "ssh-certs",
+  "ssh-keys",
+  "table-builder",
+];
+
 export default defineConfig({
   resolve: {
     alias: [
@@ -14,6 +33,21 @@ export default defineConfig({
       {
         find: "@termix-ssh/plugin-sdk/ui",
         replacement: path.resolve(__dirname, "./src/ui/plugin-host/sdk-ui.ts"),
+      },
+      // The rest of the SDK runs from source too, so coverage counts it. The
+      // package itself points at dist, which coverage leaves out.
+      {
+        find: "@termix-ssh/plugin-sdk/host-scripts",
+        replacement: path.resolve(
+          __dirname,
+          "./packages/plugin-sdk/src/host-scripts/index.ts",
+        ),
+      },
+      {
+        find: new RegExp(
+          "^@termix-ssh/plugin-sdk/(" + SDK_SOURCE_PARTS.join("|") + ")$",
+        ),
+        replacement: path.resolve(__dirname, "./packages/plugin-sdk/src/$1.ts"),
       },
       {
         find: "@termix-ssh/plugin-host/testing",

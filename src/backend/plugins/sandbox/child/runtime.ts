@@ -7,7 +7,7 @@
  * definitions), currentActor() and the disposables bag. ssh2 clients,
  * sockets and the database stay in core and are reached through handles.
  */
-// First, before anything a plugin could load: Electron ignores --import.
+// First, before anything a plugin could load, as a backstop to --import.
 import "./harden.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 import os from "node:os";
@@ -20,10 +20,11 @@ import {
   processTransport,
   type StreamPort,
   type Transport,
-  type Wire,
 } from "../rpc.js";
+import { stdioTransport, STDIO_FLAG } from "../frames.js";
 import { createChildSocket } from "./socket.js";
 import { joinStream } from "../transport-bridge.js";
+import type { AgentRelay } from "../agent-relay.js";
 import { createChildSyncHost } from "./sync-host.js";
 
 interface Store {
@@ -88,38 +89,20 @@ process.on("unhandledRejection", (reason) => {
   console.error(`Unhandled rejection: ${message}`);
 });
 
-/** The fork channel, or a MessagePort Electron hands over first. */
-function openTransport(): Promise<Transport> {
-  const parentPort = (
-    process as unknown as {
-      parentPort?: {
-        once(
-          event: "message",
-          fn: (event: { data: unknown; ports: unknown[] }) => void,
-        ): void;
-      };
-    }
-  ).parentPort;
-  if (!parentPort) return Promise.resolve(processTransport(process));
-  return new Promise((resolve) => {
-    parentPort.once("message", (event) => {
-      const port = event.ports?.[0] as {
-        postMessage(m: unknown): void;
-        on(e: "message", fn: (event: { data: unknown }) => void): void;
-        start(): void;
-      };
-      resolve({
-        send: (message) => port.postMessage(message),
-        onMessage: (handler) => {
-          port.on("message", (e) => handler(e.data as Wire));
-          port.start();
-        },
-      });
-    });
-  });
+/**
+ * The fork channel, or on the desktop frames over stdin and stdout. There
+ * stdout belongs to the channel, so anything the plugin prints goes to
+ * stderr (still the plugin's log).
+ */
+function openTransport(): Transport {
+  if (!process.argv.includes(STDIO_FLAG)) return processTransport(process);
+  const stdout = process.stdout;
+  const write = stdout.write.bind(stdout);
+  stdout.write = process.stderr.write.bind(process.stderr) as typeof write;
+  return stdioTransport(process.stdin, { write }, () => process.exit(0));
 }
 
-const transport = await openTransport();
+const transport = openTransport();
 
 const endpoint = new Endpoint(transport, {
   side: "c",
@@ -732,12 +715,18 @@ async function sshPrepare(host: unknown, options?: Record<string, unknown>) {
   ])) as {
     prepared: string;
     config: Record<string, unknown>;
+    agent?: AgentRelay;
     outcome: unknown;
     authType: unknown;
     onBanner?: AnyFn;
     onAuthFailed?: AnyFn;
   };
   const config = result.config;
+  // The host's ssh agent stays in core; this one asks it for keys and signatures.
+  if (result.agent) {
+    const { relayedAgent } = await import("../agent-relay.js");
+    config.agent = relayedAgent(result.agent);
+  }
   const realClient = client as
     | { emit: (event: string | symbol, ...args: unknown[]) => boolean }
     | undefined;
@@ -1115,7 +1104,7 @@ function loginHook(fn: AnyFn): AnyFn {
 
 function loginMethod(method: Record<string, unknown>): Promise<void> {
   const wrapped: Record<string, unknown> = { ...method };
-  for (const hook of ["start", "callback", "verify"]) {
+  for (const hook of ["start", "callback", "verify", "options"]) {
     if (typeof method[hook] === "function") {
       wrapped[hook] = loginHook(method[hook] as AnyFn);
     }
@@ -1787,10 +1776,26 @@ endpoint.handle("deactivate", async () => {
   return true;
 });
 
+/**
+ * The plugin's own TCP and UDP sockets and listeners. Core talks to this
+ * process over stdio, so every one of these is the plugin's, and core does
+ * not stop a process that still has one open.
+ */
+function openSockets(): number {
+  try {
+    return process
+      .getActiveResourcesInfo()
+      .filter((name) => /^(TCP|UDP|TLS)/.test(name)).length;
+  } catch {
+    return 0;
+  }
+}
+
 endpoint.handle("ping", () => ({
   cpu: process.cpuUsage(),
   rss: process.memoryUsage().rss,
   pending: endpoint.pendingCount,
+  sockets: openSockets(),
 }));
 
 process.on("disconnect", () => process.exit(0));

@@ -6,6 +6,7 @@ import {
   type SlotContribution,
 } from "@/shell/action-registry";
 import { usePermissions } from "@/hooks/use-permissions";
+import { getForeignRuntime } from "@/components/foreign/foreign-runtime";
 
 /**
  * The contributions in a slot that the current user may actually see.
@@ -16,6 +17,39 @@ import { usePermissions } from "@/hooks/use-permissions";
  * behaves elsewhere in the app.
  */
 export function useActionSlot(
+  slotId: string,
+  context?: Record<string, unknown>,
+): SlotContribution[] {
+  // Inside a plugin frame the shell filters and sends the list. The runtime
+  // is set once before anything renders, so the source never switches.
+  const runtime = getForeignRuntime();
+  const useSource = runtime
+    ? runtime.withOwn
+      ? useOwnAndForeignSlot
+      : runtime.useSlot
+    : usePageSlot;
+  return useSource(slotId, context);
+}
+
+/** A single plugin page (the mobile web view): its own parts and the app's. */
+function useOwnAndForeignSlot(
+  slotId: string,
+  context?: Record<string, unknown>,
+): SlotContribution[] {
+  const own = usePageSlot(slotId, context);
+  const foreign = getForeignRuntime()!.useSlot(slotId, context);
+  return useMemo(
+    () =>
+      [...own, ...foreign].sort(
+        (a, b) =>
+          (a.order ?? 0) - (b.order ?? 0) ||
+          a.actionId.localeCompare(b.actionId),
+      ),
+    [own, foreign],
+  );
+}
+
+function usePageSlot(
   slotId: string,
   context?: Record<string, unknown>,
 ): SlotContribution[] {

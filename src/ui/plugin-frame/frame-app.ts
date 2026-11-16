@@ -8,6 +8,7 @@
  * sending their values.
  */
 
+import { noteLiveWork } from "./frame-liveness";
 import type { ComponentType } from "react";
 import type {
   Disposer,
@@ -35,6 +36,23 @@ export function frameComponent(
   return components.get(key);
 }
 
+/**
+ * A plugin may register a view a moment after activate returns, for example
+ * once it has asked its backend whether the feature is on. Waits for it.
+ */
+export async function whenFrameComponent(
+  key: string,
+  timeoutMs = 8000,
+  stepMs = 50,
+): Promise<ComponentType<Record<string, unknown>> | undefined> {
+  const end = Date.now() + timeoutMs;
+  for (;;) {
+    const component = components.get(key);
+    if (component || Date.now() >= end) return component;
+    await new Promise((resolve) => setTimeout(resolve, stepMs));
+  }
+}
+
 /** Keys of the plugin's components that start with a prefix, in order. */
 export function frameComponentKeys(prefix: string): string[] {
   return [...components.keys()].filter((key) => key.startsWith(prefix));
@@ -59,6 +77,8 @@ export interface FrameAppHost {
 /** Things that are the shell itself and never run in a frame. */
 const SHELL_PARTS =
   "only official plugins running in the page can provide this";
+const SHELL_DRAWS =
+  "the shell draws these from the backend's fields and prompts, so pass only enrollment";
 
 export function createFrameApp(host: FrameAppHost): {
   app: TermixApp;
@@ -131,6 +151,39 @@ export function createFrameApp(host: FrameAppHost): {
         host.unregister(rid);
       }
     });
+  };
+
+  // Status indicators and editor toolbar items: plain values only in a frame.
+  const hostValue = (
+    kind: string,
+    prefix: string,
+    item: {
+      id: string;
+      when: unknown;
+      order?: number;
+      component?: unknown;
+      useValue?: (host: never) => unknown;
+    },
+  ): Disposer => {
+    if (item.component || !item.useValue) {
+      throw new Error(
+        `${pluginId}: a framed plugin's ${kind} needs useValue, components can't run in a frame`,
+      );
+    }
+    const valueKey = `${prefix}:${item.id}:value`;
+    return add(
+      kind,
+      { id: item.id, when: item.when, order: item.order, valueKey },
+      {
+        hooks: [
+          {
+            key: valueKey,
+            use: item.useValue as HookSpec["use"],
+            perHost: true,
+          },
+        ],
+      },
+    );
   };
 
   const declared = (list: unknown, id: string) =>
@@ -270,12 +323,24 @@ export function createFrameApp(host: FrameAppHost): {
     registerHostBadge(badge) {
       if (badge.component) {
         throw new Error(
-          `${pluginId}: a framed plugin's host badge can only be a dot (useDot)`,
+          `${pluginId}: a framed plugin's host badge can only be a dot or a value (useDot, useValue)`,
         );
       }
-      const hooks: HookSpec[] = badge.useDot
-        ? [{ key: `badge:${badge.id}:dot`, use: badge.useDot, perHost: true }]
-        : [];
+      const hooks: HookSpec[] = [];
+      if (badge.useDot) {
+        hooks.push({
+          key: `badge:${badge.id}:dot`,
+          use: badge.useDot,
+          perHost: true,
+        });
+      }
+      if (badge.useValue) {
+        hooks.push({
+          key: `badge:${badge.id}:value`,
+          use: badge.useValue,
+          perHost: true,
+        });
+      }
       return add(
         "hostBadge",
         {
@@ -283,21 +348,18 @@ export function createFrameApp(host: FrameAppHost): {
           when: badge.when,
           order: badge.order,
           dotKey: badge.useDot ? `badge:${badge.id}:dot` : undefined,
+          valueKey: badge.useValue ? `badge:${badge.id}:value` : undefined,
         },
         { hooks },
       );
     },
 
-    registerHostStatusIndicator() {
-      throw new Error(
-        `${pluginId}: host status indicators are drawn in every host row and can't run in a frame`,
-      );
+    registerHostStatusIndicator(indicator) {
+      return hostValue("hostStatusIndicator", "status", indicator);
     },
 
-    registerHostEditorToolbarItem() {
-      throw new Error(
-        `${pluginId}: host editor toolbar items can't run in a frame yet`,
-      );
+    registerHostEditorToolbarItem(item) {
+      return hostValue("hostEditorToolbarItem", "toolbar", item);
     },
 
     registerHostSection(section) {
@@ -430,17 +492,30 @@ export function createFrameApp(host: FrameAppHost): {
 
     registerSlotContribution(slotId, contribution) {
       const keys: string[] = [];
-      const { component, icon: slotIcon, ...rest } = contribution;
+      const { component, useValue, icon: slotIcon, ...rest } = contribution;
       let componentRef: WireComponent | undefined;
       if (component) {
         const componentKey = `slot:${slotId}:${contribution.actionId}`;
         keys.push(componentKey);
         componentRef = scoped(component, componentKey);
       }
+      const valueKey = useValue
+        ? `data:${slotId}:${contribution.actionId}`
+        : undefined;
+      const hooks: HookSpec[] =
+        valueKey && useValue
+          ? [{ key: valueKey, use: useValue, perRow: true }]
+          : [];
       return add(
         "slotContribution",
-        { ...rest, slotId, icon: icon(slotIcon), component: componentRef },
-        { componentKeys: keys },
+        {
+          ...rest,
+          slotId,
+          icon: icon(slotIcon),
+          component: componentRef,
+          valueKey,
+        },
+        { componentKeys: keys, hooks },
       );
     },
 
@@ -485,12 +560,40 @@ export function createFrameApp(host: FrameAppHost): {
       );
     },
 
-    registerLoginMethod() {
-      throw new Error(`${pluginId}: login methods: ${SHELL_PARTS}`);
+    // The login screen and second factor step are drawn by the shell from
+    // what the backend describes; a frame only brings the enrolment screen.
+    registerLoginMethod(method) {
+      if (method.component) {
+        throw new Error(`${pluginId}: login method screens: ${SHELL_DRAWS}`);
+      }
+      if (!method.enrollment) return () => {};
+      const componentKey = `loginEnrollment:${method.id}`;
+      return add(
+        "loginEnrollment",
+        {
+          id: method.id,
+          titleKey: method.titleKey,
+          enrollment: scoped(method.enrollment, componentKey),
+        },
+        { componentKeys: [componentKey] },
+      );
     },
 
-    registerSecondFactorUI() {
-      throw new Error(`${pluginId}: second factors: ${SHELL_PARTS}`);
+    registerSecondFactorUI(factor) {
+      if (factor.component) {
+        throw new Error(`${pluginId}: second factor screens: ${SHELL_DRAWS}`);
+      }
+      if (!factor.enrollment) return () => {};
+      const componentKey = `factorEnrollment:${factor.id}`;
+      return add(
+        "factorEnrollment",
+        {
+          id: factor.id,
+          titleKey: factor.titleKey,
+          enrollment: scoped(factor.enrollment, componentKey),
+        },
+        { componentKeys: [componentKey] },
+      );
     },
 
     registerLayout() {
@@ -539,6 +642,7 @@ export function createFrameApp(host: FrameAppHost): {
           skipped: string[];
         }>,
       onChange: (listener) => {
+        noteLiveWork("tabs.onChange");
         let last = getFrameState().tabs;
         return track(
           subscribeFrameState(() => {
@@ -566,6 +670,40 @@ export function createFrameApp(host: FrameAppHost): {
 
     confirm: (options) => host.call("confirm", options) as Promise<boolean>,
 
+    stepUp: () => host.call("stepUp") as Promise<boolean>,
+
+    session: {
+      signOut: () => host.call("session.signOut") as Promise<void>,
+      reload: () => host.call("session.reload") as Promise<boolean>,
+    },
+
+    auth: {
+      webauthn: (ceremonyId, extra) =>
+        host.call("passkey.run", ceremonyId, extra ?? {}) as Promise<
+          Record<string, unknown>
+        >,
+    },
+
+    serial: {
+      get available() {
+        return getFrameState().webSerial === true;
+      },
+      async request(options, events) {
+        const handle = (await host.call(
+          "port.request",
+          options,
+          (chunk: Uint8Array) => events.onData(chunk),
+          () => events.onClose(),
+        )) as string | null;
+        if (!handle) return null;
+        return {
+          write: (data) =>
+            host.call("port.write", handle, data) as Promise<void>,
+          close: () => host.call("port.close", handle) as Promise<void>,
+        };
+      },
+    },
+
     docs: (() => {
       const url = pluginDocsUrl(manifest?.docs);
       const page = (name?: string, anchor?: string) =>
@@ -586,6 +724,7 @@ export function createFrameApp(host: FrameAppHost): {
       },
       remoteServerUrl: async () => getFrameState().desktop.remoteServerUrl,
       onRemoteServerChange: (listener) => {
+        noteLiveWork("desktop.onRemoteServerChange");
         let last = getFrameState().desktop.remoteServerUrl;
         return track(
           subscribeFrameState(() => {
@@ -599,6 +738,7 @@ export function createFrameApp(host: FrameAppHost): {
     },
 
     onSettingsChanged: (listener) => {
+      noteLiveWork("onSettingsChanged");
       const handler = (event: Event) => {
         const detail = (event as CustomEvent).detail as {
           pluginId?: string;

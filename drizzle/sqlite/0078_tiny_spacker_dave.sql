@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `managed_by` text;

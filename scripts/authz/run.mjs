@@ -9,6 +9,7 @@
 // Options: --plugins <dir> staged plugins (default dist/plugins),
 // --local-plugins <dir> stages every built plugin repo in <dir> for this run,
 // --local-plugin <repo> stages one built plugin repo (both repeat),
+// --with-pinned keeps the dist/plugins builds beside the local ones,
 // --only <text,...> entries whose key contains the text, --keep keeps the
 // temp data dir, --report <file> writes the failures as JSON, --seed-only
 // stops after seeding.
@@ -66,7 +67,7 @@ function pluginTables() {
  * Copies built plugin repos (each with dist/) into the run's own folder, so a
  * run never fights a dev build over dist/plugins.
  */
-function stageLocal(parents, repos, workDir) {
+function stageLocal(parents, repos, workDir, pinnedDir) {
   const lib = createRequire(import.meta.url)("../lib/bundled-plugins.cjs");
   // Inside the core checkout: plugins import the SDK from core's node_modules.
   const target = path.join(
@@ -87,8 +88,23 @@ function stageLocal(parents, repos, workDir) {
   }
   for (const [id, repo] of builds)
     lib.copyLocalBuild(repo, path.join(target, id));
+  const ids = [...builds.keys()];
+  // Keeps the staged release builds next to the local ones.
+  if (pinnedDir) {
+    for (const entry of fs.readdirSync(pinnedDir, { withFileTypes: true })) {
+      if (!entry.isDirectory() || builds.has(entry.name)) continue;
+      fs.cpSync(
+        path.join(pinnedDir, entry.name),
+        path.join(target, entry.name),
+        {
+          recursive: true,
+        },
+      );
+      ids.push(entry.name);
+    }
+  }
   const pinned = lib.loadBundledPlugins(coreDir);
-  const index = lib.buildBundledIndex(pinned, [...builds.keys()], "full");
+  const index = lib.buildBundledIndex(pinned, ids, "full");
   fs.writeFileSync(
     path.join(target, "bundled-index.json"),
     `${JSON.stringify(index, null, 2)}
@@ -130,6 +146,7 @@ async function main() {
         values("--local-plugins"),
         values("--local-plugin"),
         workspace.workDir,
+        flag("--with-pinned") ? path.join(coreDir, "dist/plugins") : null,
       )
     : path.resolve(value("--plugins") ?? path.join(coreDir, "dist/plugins"));
   const ssh = await startFakeSsh({ username: "authz", password: PASSWORD });

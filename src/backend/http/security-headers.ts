@@ -82,13 +82,15 @@ export interface PluginFrameCspInput {
 
 /**
  * CSP for the page a sandboxed plugin view runs in. Code, styles and fonts
- * come only from that plugin's own asset folder, and requests go only to its
- * own routes and sockets.
+ * come only from that plugin's own asset folder and core's shared frame
+ * runtime, and requests go only to its own routes and sockets.
  */
 export function pluginFrameCsp(input: PluginFrameCspInput): string {
   const base = input.baseUrl.replace(/\/+$/, "");
   const id = encodeURIComponent(input.pluginId);
   const assets = `${base}/plugin-assets/${id}/`;
+  // Core's shared frame runtime, the same build for every plugin.
+  const runtime = `${base}/plugin-assets/_runtime/`;
   const api = `${base}/plugin-api/${id}/`;
   const ws = `${base.replace(/^http/, "ws")}/plugin-ws/${id}/`;
   const origin = new URL(base).origin;
@@ -96,15 +98,24 @@ export function pluginFrameCsp(input: PluginFrameCspInput): string {
     ["default-src", ["'none'"]],
     [
       "script-src",
-      [assets, "'wasm-unsafe-eval'", ...(input.hash ? [input.hash] : [])],
+      [
+        assets,
+        runtime,
+        "'wasm-unsafe-eval'",
+        ...(input.hash ? [input.hash] : []),
+      ],
     ],
-    ["style-src", [assets, "'unsafe-inline'"]],
-    ["font-src", [assets, "data:"]],
-    ["img-src", [assets, "data:", "blob:", "http:", "https:"]],
-    ["media-src", ["data:", "blob:", "http:", "https:"]],
+    ["style-src", [assets, runtime, "'unsafe-inline'"]],
+    ["font-src", [assets, runtime, "data:"]],
+    // Nothing a frame shows may come from, or send data to, another site:
+    // pictures come through /plugins/<id>/image, other sites' pages through
+    // a view the shell draws (web-view-grants.ts). It may still frame pages
+    // its own routes serve.
+    ["img-src", [assets, runtime, "data:", "blob:"]],
+    ["media-src", [assets, "data:", "blob:"]],
     ["connect-src", [assets, api, ws]],
     ["worker-src", ["blob:"]],
-    ["frame-src", ["http:", "https:"]],
+    ["frame-src", [assets, api]],
     ["object-src", ["'none'"]],
     ["base-uri", ["'none'"]],
     ["form-action", ["'none'"]],

@@ -122,7 +122,7 @@ export const CORE_RATE_LIMITS: RateLimitRule[] = [
   {
     name: "login",
     methods: ["POST"],
-    path: /^\/users\/(login|proxy-login|[^/]+\/login|auth\/[^/]+\/(verify|callback))$/,
+    path: /^\/users\/(login|proxy-login|[^/]+\/login|auth\/[^/]+\/(verify|callback|options))$/,
     perIp: { max: 30, windowMs: MINUTE },
     perAccount: { max: 10, windowMs: MINUTE },
     account: usernameAccount,
@@ -147,6 +147,12 @@ export const CORE_RATE_LIMITS: RateLimitRule[] = [
     methods: ["POST"],
     path: /^\/users\/create$/,
     perIp: { max: 10, windowMs: 60 * MINUTE },
+  },
+  {
+    name: "invite",
+    methods: ["GET", "POST"],
+    path: /^\/users\/invites\/redeem\/[^/]+(\/accept)?$/,
+    perIp: { max: 20, windowMs: 15 * MINUTE },
   },
   {
     name: "password-reset",
@@ -185,6 +191,15 @@ export const CORE_RATE_LIMITS: RateLimitRule[] = [
     path: /^\/plugins\/(frame-tokens|[a-z][a-z0-9-]*\/frame-token)$/,
     perIp: { max: 600, windowMs: MINUTE },
     perAccount: { max: 300, windowMs: MINUTE },
+    account: sessionAccount,
+  },
+  {
+    // WebAuthn steps a plugin's screens ask the shell to run.
+    name: "plugin-webauthn",
+    methods: ["POST"],
+    path: /^\/plugins\/[a-z][a-z0-9-]*\/passkey-steps\/[a-z][a-z0-9-]*\/(options|finish)$/,
+    perIp: { max: 60, windowMs: MINUTE },
+    perAccount: { max: 30, windowMs: MINUTE },
     account: sessionAccount,
   },
   {

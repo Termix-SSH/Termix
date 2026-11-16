@@ -674,11 +674,70 @@ export interface HostDot {
   label: string;
 }
 
+/** How a data value is colored. "default" uses the accent. */
+export type DataTone = "default" | "good" | "warn" | "bad" | "muted";
+
+/** The kinds of data value the shell can draw. */
+export type DataShape = "bars" | "stat" | "badge" | "dot" | "text";
+
+export interface DataBar {
+  label: string;
+  /** 0 to 1, or null when not known. Bars warn from 0.7 and turn bad from 0.9 unless a tone is given. */
+  value: number | null;
+  tone?: DataTone;
+  /** Short text after the percent, like "2/8 GiB". */
+  detail?: string;
+}
+
+export interface DataStat {
+  label: string;
+  value: string | number | null;
+  unit?: string;
+  tone?: DataTone;
+  tooltip?: string;
+}
+
+/**
+ * A small value the shell draws for a plugin: usage bars, numbers, a badge,
+ * a dot or a line of text. Plain JSON only. `actionId` must be one of the
+ * plugin's own actions; it runs with the row's context on click. Plugin API
+ * 2.6.
+ */
+export type DataValue =
+  | { shape: "bars"; items: DataBar[] }
+  | { shape: "stat"; items: DataStat[] }
+  | {
+      shape: "badge";
+      label: string;
+      tone?: DataTone;
+      tooltip?: string;
+      actionId?: string;
+    }
+  | { shape: "dot"; tone: DataTone; label: string }
+  | {
+      shape: "text";
+      text: string;
+      tone?: DataTone;
+      tooltip?: string;
+      actionId?: string;
+    };
+
+/** What a data hook returns: one value, several drawn in order, or null for nothing. */
+export type DataResult = DataValue | DataValue[] | null | undefined;
+
 export interface HostBadgeContribution {
   id: string;
   when: (host: PluginHostRecord) => boolean;
-  /** Drawn as is on the row. Leave out for a badge that is only a dot. */
+  /**
+   * Drawn as is on the row. In-page plugins only; prefer `useValue`, which
+   * also works from a frame.
+   */
   component?: ComponentType<{ host: PluginHostRecord }>;
+  /**
+   * A hook returning a badge, dot or text value for the host, or null. The
+   * shell draws it, so it costs no frame. Plugin API 2.6.
+   */
+  useValue?: (host: PluginHostRecord) => DataResult;
   /**
    * A hook that returns a problem or null. Every plugin's dots merge into one
    * dot on the row, with the worst tone and each label in its tooltip, so two
@@ -689,11 +748,25 @@ export interface HostBadgeContribution {
   order?: number;
 }
 
-/** The dot or stripe that shows a host's status on its row. */
-export type HostStatusIndicatorContribution = HostRowContribution;
+/**
+ * Something drawn for one host from plain values. `useValue` returns the
+ * value (Plugin API 2.6); `component` is for in-page plugins only and is
+ * refused in a frame.
+ */
+export interface HostDataContribution {
+  id: string;
+  when: (host: PluginHostRecord) => boolean;
+  useValue?: (host: PluginHostRecord) => DataResult;
+  component?: ComponentType<{ host: PluginHostRecord }>;
+  /** Lower comes first. Ties sort by id. */
+  order?: number;
+}
 
-/** A control in the host editor's toolbar. */
-export type HostEditorToolbarItemContribution = HostRowContribution;
+/** The dot that shows a host's status on its row: a dot, badge or text value. */
+export type HostStatusIndicatorContribution = HostDataContribution;
+
+/** A control in the host editor's toolbar: a badge or text value, clickable with `actionId`. */
+export type HostEditorToolbarItemContribution = HostDataContribution;
 
 export interface HostSectionProps {
   host: PluginHostRecord;
@@ -953,14 +1026,24 @@ export type ActionHandler = (...args: never[]) => unknown;
 
 export interface ActionSlotDefinition {
   id: string;
-  /** Contribution kinds the slot renders: "button", "component". */
+  /** Contribution kinds the slot renders: "button", "component", "data". */
   accepts: string[];
+  /** For "data": the shapes the owner draws. Others are dropped. */
+  shapes?: DataShape[];
+  /**
+   * For "data": what a row stands for, so contributors know their row key.
+   * Draw the slot with DataSlot from @termix-ssh/plugin-sdk/ui.
+   */
+  rows?: "host" | "tab" | "credential";
   /**
    * How a component from a framed plugin sizes itself in this slot: "inline"
-   * as wide and tall as its content (row items, badges), "content" full
-   * width, "fill" the whole box. Left out, the shell guesses from the id.
+   * as wide and tall as its content (row items, badges), "bar" as wide as its content and as
+   * tall as the bar it sits in (tab bar buttons), "content" full
+   * width, "fill" the whole box, "overlay" the whole box, see-through and
+   * only clickable while the part draws something (prompts over a terminal).
+   * Left out, the shell guesses from the id.
    */
-  fit?: "inline" | "content" | "fill";
+  fit?: "inline" | "bar" | "content" | "fill" | "overlay";
 }
 
 export interface SlotContribution {
@@ -973,9 +1056,17 @@ export interface SlotContribution {
    */
   descriptionKey?: string;
   icon?: IconComponent;
-  kind?: "button" | "component" | string;
+  kind?: "button" | "component" | "data" | string;
   /** For kind "component". Receives the slot owner's props. */
   component?: ComponentType<Record<string, unknown>>;
+  /**
+   * For kind "data": a hook run once per row on screen with the owner's
+   * context and the row key (host id or tab id). Return plain values and the
+   * shell draws them; in a framed plugin it runs in the background frame, so
+   * a row costs no iframe. Context values are plain JSON; a `host` in it is
+   * the plugin's own host record, looked up by id. Plugin API 2.6.
+   */
+  useValue?: (context: Record<string, unknown>, rowKey: string) => DataResult;
   /** Extra condition on top of the action's permission. */
   when?: (context: Record<string, unknown>) => boolean;
   order?: number;
@@ -1098,7 +1189,12 @@ export interface LoginMethodContribution {
   id: string;
   titleKey: string;
   icon?: IconComponent;
-  component: ComponentType<LoginMethodUIProps>;
+  /**
+   * Only for a plugin whose UI runs in the page. Since Termix 26.11.2 the
+   * login screen draws a method from what its backend describes (fields,
+   * kind "webauthn"), so a plugin in a frame passes only `enrollment`.
+   */
+  component?: ComponentType<LoginMethodUIProps>;
   /**
    * "inline" also draws the method under the password form, for a local
    * method people use instead of a password (a passkey). Otherwise it only
@@ -1131,10 +1227,40 @@ export interface SecondFactorContribution {
   /** Matches the id the backend registered with ctx.auth.registerSecondFactor. */
   id: string;
   titleKey: string;
-  /** The challenge shown after the first login step. */
-  component: ComponentType<SecondFactorUIProps>;
+  /**
+   * The challenge shown after the first login step, only for a plugin whose
+   * UI runs in the page. Otherwise the backend factor's `prompt` says what
+   * the shell draws, and a plugin in a frame passes only `enrollment`.
+   */
+  component?: ComponentType<SecondFactorUIProps>;
   /** Enrolment, shown in Settings > Security. */
   enrollment?: ComponentType<Record<string, unknown>>;
+}
+
+/** How to open the serial port the person picks. */
+export interface SerialRequestOptions {
+  baudRate: number;
+  dataBits?: 7 | 8;
+  stopBits?: 1 | 2;
+  parity?: "none" | "even" | "odd";
+  /** Limits the picker to these USB devices. */
+  filters?: Array<{ usbVendorId?: number; usbProductId?: number }>;
+}
+
+/** An open serial port. Bytes only; nothing else about the port is shared. */
+export interface SerialPortHandle {
+  write: (data: Uint8Array) => Promise<void>;
+  close: () => Promise<void>;
+}
+
+export interface SerialApi {
+  /** False when the browser has no Web Serial (Firefox, Safari, mobile). */
+  readonly available: boolean;
+  /** Null when the person closed the picker without picking a port. */
+  request: (
+    options: SerialRequestOptions,
+    events: { onData: (chunk: Uint8Array) => void; onClose: () => void },
+  ) => Promise<SerialPortHandle | null>;
 }
 
 /** The subset of axios a plugin uses, rooted at /plugin-api/<id>/. */
@@ -1368,6 +1494,44 @@ export interface TermixApp extends TermixAppInfo {
    * over that surface instead.
    */
   confirm: (options: ConfirmRequest) => Promise<boolean>;
+  /**
+   * Asks the person to prove a second factor in a prompt the shell owns, so
+   * the plugin never sees the code. True once proved, false when they cancel.
+   * In a frame it only works right after the person did something in it.
+   * Termix 26.11.2 and plugin API 2.6; check it exists on older cores.
+   */
+  stepUp?: () => Promise<boolean>;
+  /**
+   * Web Serial through the shell, for a plugin with device:serial. The
+   * browser shows its own port picker and the plugin gets only the port the
+   * person picked. Call `request` from a click. Termix 26.11.2 and plugin
+   * API 2.8; check it exists on older cores.
+   */
+  serial?: SerialApi;
+  /**
+   * WebAuthn steps for a plugin with auth:provide, such as adding a passkey.
+   * The shell runs the browser prompt with options from the step this
+   * plugin's backend registered (ctx.auth.registerWebAuthnCeremony) and
+   * resolves what that step's `finish` returned. Call it from a click.
+   * Termix 26.11.2 and plugin API 2.8.
+   */
+  auth?: {
+    webauthn: (
+      ceremonyId: string,
+      extra?: Record<string, string | number | boolean>,
+    ) => Promise<Record<string, unknown>>;
+  };
+  /**
+   * For a login policy plugin (auth:policy): sign the person out, or start
+   * the app again once their session changed (a required second factor was
+   * set up). A frame can't do either to the window itself. reload answers
+   * false when it ran less than ten seconds ago. Termix 26.11.2 and plugin
+   * API 2.8.
+   */
+  session?: {
+    signOut: () => Promise<void>;
+    reload: () => Promise<boolean>;
+  };
   /** The desktop app, when the frontend runs in it. */
   desktop: DesktopApi;
   /** This plugin's docs. Needs plugin API 1.2. */
@@ -1719,7 +1883,9 @@ export function useTheme(): { theme: "light" | "dark" } {
 
 /**
  * The live shell, for a layout. Null outside the signed-in app. Needs plugin
- * API 1.4.
+ * API 1.4. In a plugin frame (API 2.7) it is read only: tabs, splits, the
+ * user and mobile or not; tabs.setActive works right after the person used
+ * the frame.
  */
 export function useShell(): ShellController | null {
   return requireHost().useShell();
@@ -1941,7 +2107,9 @@ export function activityTarget(type: string): ActivityTargetInfo | undefined {
 
 /**
  * Every item any running plugin added to `pointId` with registerExtension.
- * Reactive: it re-renders as plugins enable and disable.
+ * Reactive: it re-renders as plugins enable and disable. In a frame (API
+ * 2.7), other plugins' components are placeholders Termix draws over, for a
+ * point under your plugin id or listed in manifest `uses`.
  */
 export function useExtensions<T extends ExtensionContribution>(
   pointId: string,
@@ -1959,7 +2127,9 @@ export function getExtension<T extends ExtensionContribution>(
 
 /**
  * The component another plugin registered under `id` with
- * app.registerComponent, or undefined while that plugin is off.
+ * app.registerComponent, or undefined while that plugin is off. In a frame
+ * (API 2.7) it is a placeholder Termix draws over; list the id in manifest
+ * `uses`.
  */
 export function usePluginComponent(
   id: string,

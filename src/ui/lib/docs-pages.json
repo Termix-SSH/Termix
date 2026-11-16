@@ -39,6 +39,7 @@
   "cli": "cli",
   "develop": "develop",
   "communityRegistry": "develop/community-registry",
+  "pluginApi2": "develop/backend#moving-from-api-1",
   "pluginRegistries": "guide/plugins#registries",
   "hostRegistry": "develop/registries"
 }

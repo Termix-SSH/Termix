@@ -7,9 +7,16 @@
  * views behave as they do in the web app. Shell calls go to the embedder.
  */
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+} from "react";
 import { createRoot, type Root } from "react-dom/client";
-import type { PluginManifest } from "@termix-ssh/plugin-sdk/frontend";
+import { type PluginManifest } from "@termix-ssh/plugin-sdk/frontend";
 import i18n from "@/i18n/i18n";
 import type { PluginSummary } from "@/api/plugins-api";
 import { ThemeProvider, useTheme } from "@/components/theme-provider";
@@ -24,6 +31,21 @@ import { hostToSSHHost } from "@/lib/host-to-ssh-host";
 import type { Host, Tab } from "@/types/ui-types";
 import { createPluginApp } from "./app";
 import { installPluginHostBridge } from "./bridge";
+import { listExtensions } from "./extension-registry";
+import { getPluginComponent } from "./component-registry";
+import { getSlotContributions } from "@/shell/action-registry";
+import { setForeignRuntime } from "@/components/foreign/foreign-runtime";
+import {
+  createForeignRuntime,
+  receiveForeignEvent,
+} from "@/plugin-frame/foreign-client";
+import {
+  componentItems,
+  extensionItems,
+  slotItems,
+  type BuiltList,
+} from "./frames/foreign-items";
+import { resolveSlotFit } from "./frames/slot-fit";
 import { setFrontendState, setPluginSummaries } from "./plugin-store";
 import {
   notifyShellReady,
@@ -63,6 +85,21 @@ export interface FrameView {
   data?: Record<string, unknown>;
 }
 
+/**
+ * Other plugins' parts, which the embedder draws over this page. Calls are
+ * the same ones a framed plugin makes to the shell.
+ */
+export interface FrameForeign {
+  call: (method: string, args: unknown[]) => Promise<unknown>;
+  emit: (name: string, data: unknown) => void;
+}
+
+/** View ids the embedder uses to list and draw another plugin's parts. */
+export const PROBE_VIEW = "__probe";
+export const PART_VIEW = "__part";
+
+export type PartKind = "slot" | "extension" | "component";
+
 export interface PluginFrameOptions {
   root: HTMLElement;
   summary: PluginSummary;
@@ -80,6 +117,9 @@ export interface PluginFrameOptions {
     translated?: Record<string, unknown>;
   };
   guest?: boolean;
+  foreign?: FrameForeign;
+  /** The size a part view needs, so the embedder can size its box. */
+  onPartSize?: (size: { width: number; height: number }) => void;
 }
 
 export interface PluginFrame {
@@ -90,6 +130,85 @@ export interface PluginFrame {
   /** Reloads the host list, then remounts the view. */
   reload: () => Promise<void>;
   dispose: () => Promise<void>;
+  /** An event from the embedder for other plugins' parts. */
+  foreignEvent: (name: string, data: unknown) => boolean;
+  /** This plugin's own parts in a slot, extension point or component id. */
+  describeParts: (
+    kind: PartKind,
+    id: string,
+  ) => Pick<BuiltList, "items" | "strings">;
+}
+
+/** This plugin's own parts, as plain data with markers for components. */
+export function ownParts(
+  pluginId: string,
+  kind: PartKind,
+  id: string,
+): BuiltList {
+  if (kind === "slot") {
+    return slotItems(
+      getSlotContributions(id).filter((entry) => entry.pluginId === pluginId),
+      resolveSlotFit(id),
+    );
+  }
+  if (kind === "extension") {
+    return extensionItems(
+      listExtensions(id).filter((entry) => entry.pluginId === pluginId),
+    );
+  }
+  return componentItems(
+    id,
+    id.startsWith(`${pluginId}.`) ? getPluginComponent(id) : undefined,
+  );
+}
+
+function PartView({
+  pluginId,
+  data,
+  onSize,
+}: {
+  pluginId: string;
+  data: Record<string, unknown> | undefined;
+  onSize?: (size: { width: number; height: number }) => void;
+}) {
+  const box = useRef<HTMLDivElement>(null);
+  const kind = data?.kind as PartKind;
+  const id = String(data?.id ?? "");
+  const itemKey = String(data?.itemKey ?? "");
+  const Component = useMemo(
+    () =>
+      ownParts(pluginId, kind, id).entries.get(itemKey)?.component as
+        ComponentType<Record<string, unknown>> | undefined,
+    [pluginId, kind, id, itemKey],
+  );
+  useLayoutEffect(() => {
+    const element = box.current;
+    if (!element || !onSize) return;
+    let last = "";
+    const report = () => {
+      const size = {
+        width: Math.ceil(element.scrollWidth),
+        height: Math.ceil(element.scrollHeight),
+      };
+      const next = `${size.width}x${size.height}`;
+      if (next === last) return;
+      last = next;
+      onSize(size);
+    };
+    const observer = new ResizeObserver(report);
+    observer.observe(element);
+    report();
+    return () => observer.disconnect();
+  }, [onSize]);
+  const props =
+    data?.props && typeof data.props === "object"
+      ? (data.props as Record<string, unknown>)
+      : {};
+  return (
+    <div ref={box} className="flex min-h-0 w-full flex-col">
+      {Component ? <Component {...props} /> : null}
+    </div>
+  );
 }
 
 const THEME_KEY = "termix-frame-theme";
@@ -120,10 +239,14 @@ function FrameBody({
   view,
   shell,
   version,
+  pluginId,
+  onPartSize,
 }: {
   view: FrameView;
   shell: TabRenderProps["shell"];
   version: number;
+  pluginId: string;
+  onPartSize?: (size: { width: number; height: number }) => void;
 }) {
   const [, setTick] = useState(0);
   // Re-render once hosts arrive, so a host view finds its host.
@@ -133,6 +256,18 @@ function FrameBody({
     return () => window.removeEventListener("termix:frame-hosts", onChange);
   }, []);
 
+  // A probe only runs activate, so the embedder can list the parts.
+  if (view.view === PROBE_VIEW) return null;
+  if (view.view === PART_VIEW) {
+    return (
+      <PartView
+        key={version}
+        pluginId={pluginId}
+        data={view.data}
+        onSize={onPartSize}
+      />
+    );
+  }
   const tab = getTabType(view.view);
   const host = view.hostId ? shellHost(view.hostId) : undefined;
   if (tab) {
@@ -190,6 +325,15 @@ export async function startPluginFrame(
 
   installPluginHostBridge();
   resetShellBridge();
+  const embedderForeign = options.foreign;
+  const foreign = embedderForeign
+    ? createForeignRuntime({
+        call: (method, ...args) => embedderForeign.call(method, args),
+        emit: (name, data) => embedderForeign.emit(name, data),
+        withOwn: true,
+      })
+    : null;
+  setForeignRuntime(foreign);
 
   const hostId = (host: Host | null | undefined) =>
     host ? String(host.id) : null;
@@ -274,7 +418,13 @@ export async function startPluginFrame(
       <ThemeProvider defaultTheme={theme.id} storageKey={THEME_KEY}>
         <ThemeSync />
         <SurfaceScope className="h-full">
-          <FrameBody view={view} shell={shell} version={version} />
+          <FrameBody
+            view={view}
+            shell={shell}
+            version={version}
+            pluginId={pluginId}
+            onPartSize={options.onPartSize}
+          />
         </SurfaceScope>
         <Toaster position="top-center" closeButton duration={4000} />
       </ThemeProvider>,
@@ -317,8 +467,14 @@ export async function startPluginFrame(
       version += 1;
       render();
     },
+    foreignEvent: (name, data) => receiveForeignEvent(name, data),
+    describeParts: (kind, id) => {
+      const built = ownParts(pluginId, kind, id);
+      return { items: built.items, strings: built.strings };
+    },
     dispose: async () => {
       window.removeEventListener("termix:hosts-changed", onHostsChanged);
+      setForeignRuntime(null);
       root.unmount();
       try {
         await options.module.deactivate?.();

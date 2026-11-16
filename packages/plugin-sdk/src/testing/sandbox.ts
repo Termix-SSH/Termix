@@ -217,9 +217,20 @@ function ownCookiesOnly(
     if (typeof hook !== "function") continue;
     out[key] = (request: Record<string, unknown>, ...rest: unknown[]) => {
       const res = request?.res as Record<string, Hook> | undefined;
+      // A plugin process gets a plain copy of the request, never express's
+      // object, whose query and other fields are getters.
+      const plain: Record<string, unknown> = {
+        body: request?.body ?? {},
+        query: request?.query ?? {},
+        headers: request?.headers ?? {},
+        ip: request?.ip,
+        ...(request?.termixBaseUrl !== undefined
+          ? { termixBaseUrl: request.termixBaseUrl }
+          : {}),
+      };
       const wrapped = res
         ? {
-            ...request,
+            ...plain,
             res: {
               ...res,
               cookie: (name: unknown, ...more: unknown[]) => {
@@ -232,7 +243,7 @@ function ownCookiesOnly(
               },
             },
           }
-        : request;
+        : plain;
       return (hook as Hook)(wrapped, ...rest);
     };
   }
@@ -338,6 +349,11 @@ export function sandboxContext<T extends PluginContext>(
     }
     // The process hands core the provider's methods, not the object.
     if (dotted === "hosts.status.provide") return;
+    // Only the method id crosses; core answers on the live request itself.
+    if (dotted === "auth.completeRedirectLogin") {
+      assertCrossable(args[0], "ctx.auth.completeRedirectLogin argument 1");
+      return;
+    }
     if (dotted === "schedule.every") {
       const id = (args[2] as { id?: string } | undefined)?.id;
       if (!id || !schedules.has(id)) {

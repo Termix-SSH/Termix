@@ -19,6 +19,11 @@ vi.mock("../../database/db/index.js", () => ({ getDb: () => h.db }));
 vi.mock("../../utils/data-crypto.js", () => ({
   DataCrypto: { getUserDataKey: (userId: string) => h.deks.get(userId) },
 }));
+vi.mock("../../plugins/plugin-seal.js", () => ({
+  PLUGIN_SEAL_PREFIX: "psenc:v1:",
+  sealForPlugin: async (pluginId: string, value: string) =>
+    `psenc:v1:${pluginId}:${value}`,
+}));
 vi.mock("../../utils/system-secret-crypto.js", () => ({
   isSystemEncrypted: (value: string) => value.startsWith("sysenc:v1:"),
   encryptSystemSecret: async (value: string) => `sysenc:v1:${value}`,
@@ -84,12 +89,12 @@ describe("runTermixIdentityCaMigration", () => {
     expect(await runTermixIdentityCaMigration()).toBe(0);
   });
 
-  it("reseals a data-key CA with the installation key", async () => {
+  it("reseals a data-key CA for the plugin", async () => {
     setup({ pluginTable: true });
     addCa(1, "alice");
 
     expect(await runTermixIdentityCaMigration()).toBe(1);
-    expect(keyOf(1)).toBe(`sysenc:v1:${PEM}`);
+    expect(keyOf(1)).toBe(`psenc:v1:termix-identity:${PEM}`);
   });
 
   it("changes nothing on a second run", async () => {

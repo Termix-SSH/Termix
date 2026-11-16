@@ -58,6 +58,7 @@ import {
   downloadRelease,
   fetchIndexAt,
   fetchRegistryIndex,
+  setRegistryFetchTimeouts,
   fetchRegistryStats,
   findRelease,
   getRegistryPrivateHosts,
@@ -69,10 +70,12 @@ import {
   parseRegistryIndex,
   parseRegistryStats,
   resetRegistryCache,
+  setProvenanceCheckForTests,
   type RegistrySource,
   type RegistryVersion,
 } from "../../plugins/registry-index.js";
 import { setTrustRootsForTests } from "../../plugins/trust.js";
+import { ProvenanceUnavailableError } from "../../plugins/provenance.js";
 import {
   clearRevocationLists,
   setRevocationList,
@@ -721,6 +724,118 @@ describe("downloadRelease", () => {
       downloadRelease("docker", version({ ...signed, size: 10 })),
     ).rejects.toThrow(/larger than allowed/);
   });
+
+  describe("build provenance", () => {
+    const bundleFor = (sha256: string) =>
+      JSON.stringify({
+        dsseEnvelope: {
+          payloadType: "application/vnd.in-toto+json",
+          payload: Buffer.from(
+            JSON.stringify({
+              _type: "https://in-toto.io/Statement/v1",
+              subject: [{ name: "p-1.0.0.tmxplug", digest: { sha256 } }],
+              predicate: {
+                runDetails: {
+                  metadata: {
+                    invocationId:
+                      "https://github.com/Termix-SSH/Termix-Registry/actions/runs/7",
+                  },
+                },
+              },
+            }),
+          ).toString("base64"),
+          signatures: [],
+        },
+      });
+    const provenance = {
+      url: "https://example.com/p-1.0.0.tmxplug.sigstore.json",
+    };
+    afterEach(() => setProvenanceCheckForTests(null));
+
+    it("keeps a checked bundle summary beside the download", async () => {
+      const signed = sign(artifact);
+      setProvenanceCheckForTests(async () => "signer");
+      fetchMock
+        .mockResolvedValueOnce(response(artifact))
+        .mockResolvedValueOnce(response(bundleFor(signed.sha256)));
+      const result = await downloadRelease(
+        "docker",
+        version({ ...signed, size: artifact.length, provenance }),
+      );
+      expect(
+        JSON.parse(fs.readFileSync(result.provenanceFile, "utf8")),
+      ).toMatchObject({
+        status: "verified",
+        signer: "signer",
+        runUrl: "https://github.com/Termix-SSH/Termix-Registry/actions/runs/7",
+        bundleUrl: provenance.url,
+      });
+    });
+
+    it("refuses a release whose bundle is for another file", async () => {
+      const signed = sign(artifact);
+      setProvenanceCheckForTests(async () => "signer");
+      fetchMock
+        .mockResolvedValueOnce(response(artifact))
+        .mockResolvedValueOnce(response(bundleFor("d".repeat(64))));
+      await expect(
+        downloadRelease(
+          "docker",
+          version({ ...signed, size: artifact.length, provenance }),
+        ),
+      ).rejects.toThrow(/another file/);
+    });
+
+    it("installs without it when Sigstore can't be reached", async () => {
+      const signed = sign(artifact);
+      setProvenanceCheckForTests(async () => {
+        throw new ProvenanceUnavailableError("offline");
+      });
+      fetchMock
+        .mockResolvedValueOnce(response(artifact))
+        .mockResolvedValueOnce(response(bundleFor(signed.sha256)));
+      const result = await downloadRelease(
+        "docker",
+        version({ ...signed, size: artifact.length, provenance }),
+      );
+      expect(
+        JSON.parse(fs.readFileSync(result.provenanceFile, "utf8")).status,
+      ).toBe("unchecked");
+    });
+
+    it("installs an older entry that lists no bundle", async () => {
+      const signed = sign(artifact);
+      fetchMock.mockResolvedValueOnce(response(artifact));
+      const result = await downloadRelease(
+        "docker",
+        version({ ...signed, size: artifact.length }),
+      );
+      expect(fs.existsSync(result.provenanceFile)).toBe(false);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("reads only an https bundle link from the index", () => {
+      const index = parseRegistryIndex({
+        registry: "official",
+        plugins: [
+          {
+            id: "docker",
+            name: "Docker",
+            versions: [
+              version({ provenance }),
+              version({
+                version: "1.1.0",
+                provenance: { url: "http://x/b.json" },
+              }),
+            ],
+          },
+        ],
+      });
+      const [newer, older] = index.plugins[0].versions;
+      expect(newer.provenance).toBeUndefined();
+      expect(older.provenance).toEqual(provenance);
+    });
+  });
 });
 
 describe("registry stats", () => {
@@ -813,5 +928,51 @@ describe("parseRegistryIndex chain signatures", () => {
       entry({ signatures: [{ keyId: "unknown", sig: "c2ln" }] }),
     );
     expect(index.plugins).toEqual([]);
+  });
+});
+
+describe("registry fetches that stall", () => {
+  afterEach(() =>
+    setRegistryFetchTimeouts({ index: 30_000, artifact: 120_000 }),
+  );
+
+  /** Sends part of a body, then nothing, until the request is aborted. */
+  function stalled(_url: string, options: RequestInit): Promise<Response> {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('{"plugins":'));
+        options.signal?.addEventListener("abort", () =>
+          controller.error(options.signal?.reason),
+        );
+      },
+    });
+    return Promise.resolve(new Response(stream, { status: 200 }));
+  }
+
+  it("gives up on a body that never finishes instead of holding boot", async () => {
+    setRegistryFetchTimeouts({ index: 50 });
+    fetchMock.mockImplementation(stalled);
+    const started = Date.now();
+    await expect(
+      fetchIndexAt("https://registry.example/index.json"),
+    ).rejects.toThrow();
+    expect(Date.now() - started).toBeLessThan(5_000);
+    const options = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(options.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("gives up on a server that never answers", async () => {
+    setRegistryFetchTimeouts({ index: 50 });
+    fetchMock.mockImplementation(
+      (_url: string, options: RequestInit) =>
+        new Promise((_resolve, reject) =>
+          options.signal?.addEventListener("abort", () =>
+            reject(options.signal?.reason),
+          ),
+        ),
+    );
+    await expect(
+      fetchIndexAt("https://registry.example/index.json"),
+    ).rejects.toThrow();
   });
 });

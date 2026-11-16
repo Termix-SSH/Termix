@@ -13,6 +13,13 @@ import {
   getRequestMeta,
 } from "../../utils/audit-logger.js";
 import { holdIfNeeded, registerHoldKind } from "../../auth/admin-holds.js";
+import { afterAdminStatusChange } from "../../auth/admin-status.js";
+import {
+  actorHas,
+  canManageAccount,
+  canViewUsers,
+  USERS_MANAGE,
+} from "../../auth/user-admin-access.js";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -28,8 +35,10 @@ import {
 } from "../../auth/second-factor-admin.js";
 import {
   isUsernameTaken,
+  matchesUserStatus,
   type UserRecord,
   type UserRepository,
+  type UserStatusFilter,
 } from "../repositories/user-repository.js";
 import { attachmentHeader } from "../../http/content-disposition.js";
 
@@ -74,6 +83,8 @@ export async function promoteToAdmin(
       userId: targetUser.id,
     });
   }
+
+  await afterAdminStatusChange(targetUser.id, true);
 
   try {
     await DatabaseSaveTrigger.forceSave("make_admin_explicit_save");
@@ -131,7 +142,14 @@ export function registerUserAdminRoutes(
    *         required: false
    *         schema:
    *           type: string
-   *         description: Case-insensitive username substring filter.
+   *         description: Case-insensitive username or display name filter.
+   *       - in: query
+   *         name: status
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [active, disabled, pending]
+   *         description: Only accounts in this state. Needs admin.users.view.
    *       - in: query
    *         name: limit
    *         required: false
@@ -156,13 +174,18 @@ export function registerUserAdminRoutes(
   router.get("/list", authenticateJWT, async (req, res) => {
     try {
       const userRepository = createCurrentUserRepository();
-      const requester = await userRepository.findById(
-        (req as AuthenticatedRequest).userId,
-      );
+      const canView = await canViewUsers((req as AuthenticatedRequest).userId);
 
       const query = req.query ?? {};
       const search =
         typeof query.search === "string" ? query.search : undefined;
+      const status =
+        canView &&
+        (query.status === "active" ||
+          query.status === "disabled" ||
+          query.status === "pending")
+          ? (query.status as UserStatusFilter)
+          : undefined;
       const rawLimit = Number(query.limit);
       // Paging is opt-in: the share pickers fetch the whole list and filter it
       // client-side, so a request without ?limit keeps the original behaviour.
@@ -175,19 +198,28 @@ export function registerUserAdminRoutes(
       let pageUsers: UserRecord[];
       let total: number;
       if (paginated) {
-        const page = await userRepository.listPage({ search, limit, offset });
+        const page = await userRepository.listPage({
+          search,
+          status,
+          limit,
+          offset,
+        });
         pageUsers = page.users;
         total = page.total;
       } else {
         const all = await userRepository.listAll();
         const term = search?.trim().toLowerCase();
-        pageUsers = term
-          ? all.filter((u) => u.username?.toLowerCase().includes(term))
-          : all;
+        pageUsers = all.filter(
+          (u) =>
+            matchesUserStatus(u, status) &&
+            (!term ||
+              u.username?.toLowerCase().includes(term) ||
+              u.displayName?.toLowerCase().includes(term)),
+        );
         total = pageUsers.length;
       }
 
-      const secondFactorUsers = requester?.isAdmin
+      const secondFactorUsers = canView
         ? await createCurrentUserAuthRepository().listUserIdsWithSecondFactors()
         : new Set<string>();
 
@@ -200,10 +232,17 @@ export function registerUserAdminRoutes(
           password_hash: u.passwordHash ? "set" : null,
           // Management-only details stay admin-eyes-only; regular users hit
           // this route to pick sharing targets.
-          ...(requester?.isAdmin
+          display_name: u.displayName ?? null,
+          disabled: !!u.disabledAt,
+          ...(canView
             ? {
                 data_unlocked: DataCrypto.canUserAccessData(u.id),
                 second_factor_enabled: secondFactorUsers.has(u.id),
+                email: u.email ?? null,
+                disabled_at: u.disabledAt ?? null,
+                disabled_reason: u.disabledReason ?? null,
+                last_login_at: u.lastLoginAt ?? null,
+                registered_at: u.registeredAt,
               }
             : {}),
         })),
@@ -399,6 +438,8 @@ export function registerUserAdminRoutes(
         );
       }
 
+      await afterAdminStatusChange(targetUser.id, false);
+
       try {
         await DatabaseSaveTrigger.forceSave("remove_admin_explicit_save");
       } catch (saveError) {
@@ -476,7 +517,7 @@ export function registerUserAdminRoutes(
 
     try {
       adminUser = await userRepository.findById(adminId);
-      if (!adminUser?.isAdmin) {
+      if (!adminUser || !(await actorHas(adminId, USERS_MANAGE))) {
         return res.status(403).json({ error: "Not authorized" });
       }
     } catch (err) {
@@ -652,7 +693,7 @@ export function registerUserAdminRoutes(
     try {
       const userRepository = createCurrentUserRepository();
       const adminUser = await userRepository.findById(adminId);
-      if (!adminUser?.isAdmin) {
+      if (!adminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
 
@@ -663,6 +704,9 @@ export function registerUserAdminRoutes(
       );
       if (!targetUser) {
         return res.status(404).json({ error: "User not found" });
+      }
+      if (!(await canManageAccount(adminId, targetUser))) {
+        return res.status(403).json({ error: "Admin access required" });
       }
       if (targetUser.isExternal && !targetUser.passwordHash) {
         return res.status(400).json({
@@ -742,7 +786,7 @@ export function registerUserAdminRoutes(
       try {
         const userRepository = createCurrentUserRepository();
         const adminUser = await userRepository.findById(adminId);
-        if (!adminUser?.isAdmin) {
+        if (!adminUser || !(await canViewUsers(adminId))) {
           return res.status(403).json({ error: "Admin access required" });
         }
         const targetUser = await userRepository.findById(
@@ -789,7 +833,7 @@ export function registerUserAdminRoutes(
       try {
         const userRepository = createCurrentUserRepository();
         const adminUser = await userRepository.findById(adminId);
-        if (!adminUser?.isAdmin) {
+        if (!adminUser) {
           return res.status(403).json({ error: "Admin access required" });
         }
         const targetUser = await userRepository.findById(
@@ -797,6 +841,9 @@ export function registerUserAdminRoutes(
         );
         if (!targetUser) {
           return res.status(404).json({ error: "User not found" });
+        }
+        if (!(await canManageAccount(adminId, targetUser))) {
+          return res.status(403).json({ error: "Admin access required" });
         }
 
         const removed = await resetUserSecondFactors(targetUser.id);

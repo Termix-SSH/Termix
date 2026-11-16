@@ -315,3 +315,28 @@ describe("action registry", () => {
     warn.mockRestore();
   });
 });
+
+describe("ActionSlot and other kinds", () => {
+  afterEach(() => resetActionRegistry());
+
+  it("draws no button for a data or component contribution", () => {
+    registerSlotContribution("x.row", {
+      actionId: "p.value",
+      titleKey: "value.label",
+      kind: "data",
+    });
+    registerSlotContribution("x.row", {
+      actionId: "p.view",
+      titleKey: "view.label",
+      kind: "component",
+      component: () => null,
+    });
+    registerSlotContribution("x.row", {
+      actionId: "p.button",
+      titleKey: "button.label",
+    });
+    render(<ActionSlot slotId="x.row" />);
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(screen.getByRole("button")).toHaveAttribute("title", "button.label");
+  });
+});

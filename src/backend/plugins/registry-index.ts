@@ -43,6 +43,14 @@ import {
 import type { KeyCertificate, SignatureEnvelope } from "./trust-chain.js";
 import { readArtifactManifest, sameCapabilities } from "./artifact-manifest.js";
 import { getPluginsDir } from "./paths.js";
+import {
+  checkProvenance,
+  MAX_BUNDLE_BYTES,
+  ProvenanceUnavailableError,
+  sigstoreSignatureCheck,
+  type BundleSignatureCheck,
+  type ProvenanceRecord,
+} from "./provenance.js";
 
 export const OFFICIAL_REGISTRY_ID = "official";
 export const OFFICIAL_REGISTRY_URL =
@@ -89,6 +97,8 @@ export interface RegistryVersion {
   publishedAt?: string;
   /** Listed under the plugin's prereleases: a beta. */
   prerelease?: boolean;
+  /** The release's Sigstore build provenance bundle, when it has one. */
+  provenance?: { url: string };
 }
 
 export type PluginChannel = "stable" | "beta";
@@ -216,6 +226,17 @@ function parseVersion(
   } catch {
     return null;
   }
+  const provenanceUrl = asString(
+    (entry.provenance as Record<string, unknown> | undefined)?.url,
+  );
+  let provenance: { url: string } | undefined;
+  try {
+    if (provenanceUrl && new URL(provenanceUrl).protocol === "https:") {
+      provenance = { url: provenanceUrl };
+    }
+  } catch {
+    // An unreadable link counts as none.
+  }
   return {
     version,
     api: asString(entry.api) ?? "",
@@ -233,6 +254,7 @@ function parseVersion(
     releaseNotesUrl: asString(entry.releaseNotesUrl),
     notes: asString(entry.notes)?.slice(0, MAX_NOTES_LENGTH),
     publishedAt: asString(entry.publishedAt),
+    ...(provenance ? { provenance } : {}),
   };
 }
 
@@ -392,15 +414,33 @@ function fetchThroughProxy(
   return fetchWithProxy(url, options);
 }
 
+/**
+ * Whole-request limits, body included. Boot fetches missing plugins before
+ * any plugin starts, so a registry that stalls must not hold the server.
+ */
+const fetchTimeouts = { index: 30_000, artifact: 120_000 };
+
+/** Test seam. */
+export function setRegistryFetchTimeouts(
+  next: Partial<typeof fetchTimeouts>,
+): void {
+  Object.assign(fetchTimeouts, next);
+}
+
 /** Follows redirects by hand so each hop still gets the outbound checks. */
-async function fetchFollowing(url: string): Promise<Response> {
+async function fetchFollowing(
+  url: string,
+  timeoutMs = fetchTimeouts.index,
+): Promise<Response> {
   const privateHosts = getRegistryPrivateHosts();
+  const signal = AbortSignal.timeout(timeoutMs);
   let current = url;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const options: RequestInit = {
       method: "GET",
       redirect: "manual",
       headers: { "User-Agent": "Termix" },
+      signal,
     };
     const response = getProxyAgent(current)
       ? await fetchThroughProxy(current, options, privateHosts)
@@ -709,7 +749,7 @@ export async function downloadRelease(
   pluginId: string,
   release: RegistryVersion,
   source: Pick<RegistrySource, "tier" | "keys"> = officialSource(),
-): Promise<{ file: string; signatureFile: string }> {
+): Promise<{ file: string; signatureFile: string; provenanceFile: string }> {
   if (!canRunRelease(release)) {
     const termix = neededTermix(release);
     throw new Error(
@@ -721,7 +761,7 @@ export async function downloadRelease(
 
   const limit =
     release.size > 0 ? release.size + 1024 * 1024 : MAX_ARTIFACT_BYTES;
-  const response = await fetchFollowing(release.url);
+  const response = await fetchFollowing(release.url, fetchTimeouts.artifact);
   const buffer = await readLimited(
     response,
     Math.min(limit, MAX_ARTIFACT_BYTES),
@@ -739,9 +779,108 @@ export async function downloadRelease(
     staging,
     `${pluginId}-${release.version}-${crypto.randomBytes(4).toString("hex")}.tmxplug`,
   );
+  const provenance = await releaseProvenance(pluginId, release, source, buffer);
   await fs.promises.writeFile(base, buffer);
   await fs.promises.writeFile(`${base}.sig`, verified.sig);
-  return { file: base, signatureFile: `${base}.sig` };
+  const provenanceFile = `${base}${PROVENANCE_SUFFIX}`;
+  if (provenance) {
+    await fs.promises.writeFile(provenanceFile, JSON.stringify(provenance));
+  }
+  return { file: base, signatureFile: `${base}.sig`, provenanceFile };
+}
+
+/** The file kept beside a plugin with its checked build provenance. */
+export const PROVENANCE_SUFFIX = ".provenance.json";
+
+let provenanceCheck: BundleSignatureCheck | null = null;
+
+/** Tests swap the Sigstore check. */
+export function setProvenanceCheckForTests(
+  check: BundleSignatureCheck | null,
+): void {
+  provenanceCheck = check;
+}
+
+/**
+ * Checks a release's build provenance when the index lists one. A bundle that
+ * doesn't match stops the install; Sigstore being out of reach doesn't, since
+ * the file already passed its signature check.
+ */
+async function releaseProvenance(
+  pluginId: string,
+  release: RegistryVersion,
+  source: Pick<RegistrySource, "tier" | "keys">,
+  buffer: Buffer,
+): Promise<ProvenanceRecord | null> {
+  if (!release.provenance || source.tier === "custom") return null;
+  const bundleUrl = release.provenance.url;
+  const where = `${pluginId} ${release.version}`;
+  let text: string;
+  try {
+    const response = await fetchFollowing(bundleUrl, fetchTimeouts.artifact);
+    text = (await readLimited(response, MAX_BUNDLE_BYTES)).toString("utf8");
+  } catch (error) {
+    pluginLogger.warn(`${where}: build provenance not fetched`, {
+      operation: "plugin_provenance",
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return unchecked(bundleUrl);
+  }
+  const check =
+    provenanceCheck ??
+    sigstoreSignatureCheck(path.join(getPluginsDir(), ".sigstore"));
+  try {
+    return await checkProvenance(text, {
+      sha256: release.sha256,
+      fileName: path.basename(new URL(release.url).pathname),
+      tier: source.tier,
+      bundleUrl,
+      checkSignature: check,
+    });
+  } catch (error) {
+    if (error instanceof ProvenanceUnavailableError) {
+      pluginLogger.warn(`${where}: build provenance not checked`, {
+        operation: "plugin_provenance",
+        error: error.message,
+      });
+      return unchecked(bundleUrl);
+    }
+    throw new Error(
+      `${where}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+function unchecked(bundleUrl: string): ProvenanceRecord {
+  return {
+    status: "unchecked",
+    checkedAt: new Date().toISOString(),
+    signer: null,
+    runUrl: null,
+    bundleUrl,
+  };
+}
+
+/** The provenance kept beside an installed plugin file, or null. */
+export function readInstalledProvenance(
+  artifact: string | undefined,
+): ProvenanceRecord | null {
+  if (!artifact) return null;
+  try {
+    const raw = JSON.parse(
+      fs.readFileSync(`${artifact}${PROVENANCE_SUFFIX}`, "utf8"),
+    ) as Partial<ProvenanceRecord>;
+    if (raw.status !== "verified" && raw.status !== "unchecked") return null;
+    return {
+      status: raw.status,
+      checkedAt: String(raw.checkedAt ?? ""),
+      signer: typeof raw.signer === "string" ? raw.signer : null,
+      runUrl: typeof raw.runUrl === "string" ? raw.runUrl : null,
+      bundleUrl: String(raw.bundleUrl ?? ""),
+    };
+  } catch {
+    return null;
+  }
 }
 
 /** A dot folder inside the plugins dir, which the loader's scan skips. */

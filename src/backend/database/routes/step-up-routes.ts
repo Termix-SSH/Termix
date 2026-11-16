@@ -38,13 +38,20 @@ export function registerStepUpRoutes(
    *       - Auth
    *     responses:
    *       200:
-   *         description: "{ factors } with an id for each factor."
+   *         description: "{ factors } with the id, label and prompt of each factor."
    */
   router.get("/auth/step-up/factors", authenticateJWT, async (req, res) => {
     try {
       const { userId } = req as AuthenticatedRequest;
       const { required } = await evaluateSecondFactors(userId);
-      res.json({ factors: required.map((factor) => ({ id: factor.id })) });
+      res.json({
+        factors: required.map((factor) => ({
+          id: factor.id,
+          pluginId: factor.pluginId,
+          labelKey: factor.labelKey,
+          ...(factor.prompt ? { prompt: factor.prompt } : {}),
+        })),
+      });
     } catch (error) {
       fail(res, error);
     }

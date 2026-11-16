@@ -1,4 +1,6 @@
 import { useEffect, type ComponentType } from "react";
+import { dataReporter } from "@/components/data-view/data-reporter";
+import type { DataShape } from "@/components/data-view/data-value";
 import type { Tab } from "@/types/ui-types";
 import type {
   Disposer,
@@ -96,6 +98,24 @@ import { pluginKey } from "@/lib/plugin-i18n";
 import { pluginDocsPage, pluginDocsUrl } from "@termix-ssh/plugin-sdk/docs";
 import { hasPermission } from "@/hooks/use-permissions";
 import i18n from "@/i18n/i18n";
+import { requestStepUp } from "@/auth/StepUpPrompt";
+import {
+  closeSerial,
+  parseSerialOptions,
+  requestSerialPort,
+  webSerialAvailable,
+  writeSerial,
+} from "./frames/serial-bridge";
+import {
+  readCeremonyExtra,
+  readCeremonyId,
+  runPluginCeremony,
+} from "./frames/webauthn-bridge";
+import {
+  mayControlSession,
+  reloadShell,
+  signOutShell,
+} from "./session-control";
 
 const ONBOARDING_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
@@ -159,6 +179,23 @@ export function createPluginApp(
     withPluginScope(pluginId, component);
 
   const key = (value: string) => pluginKey(pluginId, value);
+
+  // A host value hook gets the row's host, scoped like every host it sees.
+  const hostValue = (
+    useValue: ((host: never) => unknown) | undefined,
+    shapes: DataShape[],
+  ) =>
+    useValue
+      ? (scoped(
+          dataReporter(
+            (context) =>
+              (useValue as (host: unknown) => unknown)(
+                scopeHostFields(context, pluginId).host,
+              ),
+            shapes,
+          ),
+        ) as never)
+      : undefined;
 
   // Every host a plugin callback receives carries only this plugin's settings.
   const hostCallback = <F extends (...args: never[]) => unknown>(
@@ -405,6 +442,7 @@ export function createPluginApp(
           dot: badge.useDot
             ? (scoped(hostDotReporter(badge.useDot)) as never)
             : undefined,
+          value: hostValue(badge.useValue, ["badge", "dot", "text"]),
           order: badge.order,
         }),
       );
@@ -416,7 +454,10 @@ export function createPluginApp(
           id: indicator.id,
           pluginId,
           when: hostCallback(indicator.when) as never,
-          component: scoped(indicator.component) as never,
+          component: indicator.component
+            ? (scoped(indicator.component) as never)
+            : undefined,
+          value: hostValue(indicator.useValue, ["dot", "badge", "text"]),
           order: indicator.order,
         }),
       );
@@ -428,7 +469,10 @@ export function createPluginApp(
           id: item.id,
           pluginId,
           when: hostCallback(item.when) as never,
-          component: scoped(item.component) as never,
+          component: item.component
+            ? (scoped(item.component) as never)
+            : undefined,
+          value: hostValue(item.useValue, ["badge", "text"]),
           order: item.order,
         }),
       );
@@ -588,7 +632,7 @@ export function createPluginApp(
     },
 
     declareActionSlot(slot) {
-      return track(declareActionSlot(slot));
+      return track(declareActionSlot({ ...slot, pluginId }));
     },
 
     registerSlotContribution(slotId, contribution) {
@@ -601,6 +645,16 @@ export function createPluginApp(
             : undefined,
           component: contribution.component
             ? scoped(contribution.component)
+            : undefined,
+          value: contribution.useValue
+            ? (scoped(
+                dataReporter((context, rowKey) =>
+                  contribution.useValue!(
+                    scopeHostFields(context, pluginId),
+                    rowKey,
+                  ),
+                ),
+              ) as never)
             : undefined,
           when: contribution.when
             ? (context: Record<string, unknown>) =>
@@ -677,7 +731,9 @@ export function createPluginApp(
           ...method,
           titleKey: key(method.titleKey),
           pluginId,
-          component: scoped(method.component) as never,
+          component: method.component
+            ? (scoped(method.component) as never)
+            : undefined,
           enrollment: method.enrollment
             ? (scoped(method.enrollment) as never)
             : undefined,
@@ -691,7 +747,9 @@ export function createPluginApp(
           ...factor,
           titleKey: key(factor.titleKey),
           pluginId,
-          component: scoped(factor.component) as never,
+          component: factor.component
+            ? (scoped(factor.component) as never)
+            : undefined,
           enrollment: factor.enrollment
             ? (scoped(factor.enrollment) as never)
             : undefined,
@@ -752,6 +810,64 @@ export function createPluginApp(
     },
 
     confirm: (options) => shell.confirm!(options),
+
+    stepUp: () => requestStepUp(),
+
+    session: {
+      signOut: async () => {
+        if (!mayControlSession(manifest?.capabilities ?? [])) {
+          throw new Error("This plugin may not end the session");
+        }
+        await signOutShell();
+      },
+      reload: async () => {
+        if (!mayControlSession(manifest?.capabilities ?? [])) {
+          throw new Error("This plugin may not end the session");
+        }
+        return reloadShell();
+      },
+    },
+
+    auth: {
+      webauthn: async (ceremonyId, extra) => {
+        if (!(manifest?.capabilities ?? []).includes("auth:provide")) {
+          throw new Error("This plugin may not run security key steps");
+        }
+        const id = readCeremonyId(ceremonyId);
+        if (!id) throw new Error("Bad security key step");
+        return runPluginCeremony(
+          `page:${pluginId}`,
+          pluginId,
+          id,
+          readCeremonyExtra(extra),
+        );
+      },
+    },
+
+    serial: {
+      get available() {
+        return webSerialAvailable();
+      },
+      async request(options, events) {
+        if (!(manifest?.capabilities ?? []).includes("device:serial")) {
+          throw new Error("This plugin may not use serial ports");
+        }
+        const parsed = parseSerialOptions(options);
+        if (!parsed) throw new Error("Bad serial port options");
+        const owner = `page:${pluginId}`;
+        const handle = await requestSerialPort(
+          owner,
+          parsed,
+          events.onData,
+          events.onClose,
+        );
+        if (!handle) return null;
+        return {
+          write: (data) => writeSerial(owner, handle, data),
+          close: () => closeSerial(owner, handle),
+        };
+      },
+    },
 
     docs: createDocsApi(manifest),
 

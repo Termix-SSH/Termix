@@ -52,7 +52,8 @@ export type HoldKind =
   | "plugin_enable"
   | "plugin_disable"
   | "plugin_grant"
-  | "hold_minutes";
+  | "hold_minutes"
+  | "admin_host_bypass_on";
 
 export interface HoldApplier {
   apply: (

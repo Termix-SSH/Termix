@@ -14,6 +14,7 @@ import {
 import type {
   PluginChannel,
   PluginIsolation,
+  PluginProvenance,
   PluginSummary,
   PluginUploadPreview,
   RegistryPluginEntry,
@@ -82,6 +83,8 @@ export interface PluginEntry {
   needsTermix: string | null;
   /** How it runs, when installed. See PluginSummary.isolation. */
   isolation: PluginIsolation | null;
+  /** Build provenance checked when it was downloaded. */
+  provenance: PluginProvenance | null;
 }
 
 export type PluginSource =
@@ -192,6 +195,7 @@ export function mergePlugins(
       unsupported: false,
       needsTermix: null,
       isolation: summary.isolation ?? null,
+      provenance: summary.provenance ?? null,
     });
   }
 
@@ -244,6 +248,7 @@ export function mergePlugins(
           ? (entry.versions.find((v) => v.needsTermix)?.needsTermix ?? null)
           : null,
       isolation: null,
+      provenance: null,
     });
   }
 
@@ -290,6 +295,7 @@ export function uploadEntry(preview: PluginUploadPreview): PluginEntry {
     unsupported: false,
     needsTermix: null,
     isolation: null,
+    provenance: null,
   };
 }
 

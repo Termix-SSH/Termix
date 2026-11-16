@@ -62,6 +62,16 @@ describe("buildChildFlags", () => {
     expect(flags.firewall).toBe("allow-all");
   });
 
+  it("lets a native addon plugin probe the libc on Linux", () => {
+    const has = (granted: string[], platform: NodeJS.Platform) =>
+      buildChildFlags({ ...base, granted, platform }).execArgv.some((a) =>
+        /^--allow-fs-read=.*[\\/]etc[\\/]alpine-release$/.test(a),
+      );
+    expect(has(["device:serial"], "linux")).toBe(true);
+    expect(has([], "linux")).toBe(false);
+    expect(has(["device:serial"], "win32")).toBe(false);
+  });
+
   it("lets files:own read back what it writes", () => {
     const flags = buildChildFlags({ ...base, granted: ["files:own"] });
     const reads = flags.execArgv.filter((a) =>
@@ -78,7 +88,17 @@ describe("buildChildFlags", () => {
     });
     expect(flags.execArgv).not.toContain("--allow-net");
     expect(flags.allowNet).toBe(true);
-    expect(flags.unenforced).toEqual(["network"]);
+    expect(flags.jsNetworkFence).toBe(false);
+  });
+
+  it("fences the network in harden.js on Node 24 without network:sockets", () => {
+    expect(
+      buildChildFlags({ ...base, nodeMajor: 24, granted: [] }),
+    ).toMatchObject({ allowNet: false, jsNetworkFence: true });
+    // Node 25 and later fence it with the permission model instead.
+    expect(
+      buildChildFlags({ ...base, nodeMajor: 26, granted: [] }).jsNetworkFence,
+    ).toBe(false);
   });
 
   it("allows workers only when the manifest asks, with harden last", () => {

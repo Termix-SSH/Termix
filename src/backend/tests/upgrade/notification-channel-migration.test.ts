@@ -21,6 +21,11 @@ vi.mock("../../database/db/index.js", () => ({ getDb: () => h.db }));
 vi.mock("../../utils/data-crypto.js", () => ({
   DataCrypto: { getUserDataKey: (userId: string) => h.deks.get(userId) },
 }));
+vi.mock("../../plugins/plugin-seal.js", () => ({
+  PLUGIN_SEAL_PREFIX: "psenc:v1:",
+  sealForPlugin: async (pluginId: string, value: string) =>
+    `psenc:v1:${pluginId}:${value}`,
+}));
 vi.mock("../../utils/system-secret-crypto.js", () => ({
   encryptSystemSecret: async (value: string) => `sysenc:v1:${value}`,
   isSystemEncrypted: (value: string) => value.startsWith("sysenc:v1:"),
@@ -113,7 +118,7 @@ const targetRows = () =>
   }>;
 
 const sealed = (config: Record<string, unknown>) =>
-  `sysenc:v1:${JSON.stringify(config)}`;
+  `psenc:v1:alerts:${JSON.stringify(config)}`;
 
 describe("runNotificationChannelMigration", () => {
   beforeEach(() => setup({ target: true }));
@@ -185,7 +190,7 @@ describe("runNotificationChannelMigration", () => {
       sealed: 0,
     });
     const raw = targetRows()[0].config;
-    expect(raw.startsWith("sysenc:")).toBe(false);
+    expect(raw.startsWith("psenc:")).toBe(false);
     expect(FieldCrypto.isEncrypted(raw)).toBe(true);
 
     h.deks.set("carol", dek);
@@ -205,7 +210,7 @@ describe("runNotificationChannelMigration", () => {
     await runNotificationChannelMigration();
 
     const raw = targetRows()[0].config;
-    expect(raw.startsWith("sysenc:")).toBe(false);
+    expect(raw.startsWith("psenc:")).toBe(false);
     expect(FieldCrypto.isEncrypted(raw)).toBe(true);
   });
 

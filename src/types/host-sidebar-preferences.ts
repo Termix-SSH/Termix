@@ -163,7 +163,8 @@ export function defaultHostSidebarPreferences(): HostSidebarPreferences {
     display: {
       density: "comfortable",
       showTags: true,
-      trayTrigger: "always",
+      // The connect bar always shows; the chevron opens edit and share.
+      trayTrigger: "actionsOnly",
       statusColorScheme: "accent",
       openOnDoubleClick: false,
       showFolderPaths: true,

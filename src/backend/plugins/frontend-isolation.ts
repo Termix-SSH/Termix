@@ -1,8 +1,8 @@
 // Where a plugin's browser code runs. API 2 plugins run in sandboxed frames
 // with an opaque origin; API 1 plugins still load into the page until they
-// move to API 2. Layouts, themes, login screens and native desktop views are
-// the shell itself, so an official API 2 plugin that provides them keeps
-// running in the page.
+// move to API 2. Only what is the shell itself stays in the page for an
+// official plugin. Login steps, security keys, native views and serial ports
+// go through shell bridges instead (see ARCHITECTURE.md, S29).
 
 import {
   isLegacyPluginApi,
@@ -14,15 +14,12 @@ export type FrontendIsolation = "frame" | "page";
 
 /** Capabilities whose UI is part of the shell rather than inside it. */
 export const SHELL_PART_CAPABILITIES = [
+  // A layout draws the shell.
   "ui:layout",
+  // Theme CSS styles the page; it is checked to load nothing from elsewhere.
   "ui:theme",
-  "auth:provide",
-  // Native views sit over the desktop window, outside any frame.
-  "desktop:window",
-  // Web Serial needs the page's own origin, and a frame's is opaque.
-  "device:serial",
-  // Linking the desktop app and switching accounts use the app window's own
-  // calls. This plugin can issue sessions anyway.
+  // Switching accounts and linking the desktop app set the window's own
+  // session. This plugin can issue sessions on its backend anyway.
   "sync:provide",
 ];
 

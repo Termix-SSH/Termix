@@ -76,7 +76,10 @@ describe("RoleRepository", () => {
       isSystem: false,
     });
     expect(await repo.listUserRolePermissions("user-1")).toEqual([
-      { permissions: JSON.stringify(["hosts.read", "hosts.*"]) },
+      {
+        roleName: "ops",
+        permissions: JSON.stringify(["hosts.read", "hosts.*"]),
+      },
     ]);
     expect(await repo.userHasAnyRoleName("user-1", ["admin", "ops"])).toBe(
       true,

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { act, render } from "@testing-library/react";
+import { Suspense } from "react";
 
 type Options = {
   getProps: () => Record<string, unknown>;
@@ -11,6 +12,7 @@ const frames = vi.hoisted(() => ({
   options: null as Options | null,
   emitted: [] as Array<[string, unknown]>,
   closed: 0,
+  connects: 0,
 }));
 
 vi.mock("@/plugin-host/frames/frame-connection", () => ({
@@ -29,6 +31,7 @@ vi.mock("@/plugin-host/frames/frame-connection", () => ({
     options: Options,
   ) => {
     frames.options = options;
+    frames.connects++;
     return {
       port: {
         emit: (name: string, data: unknown) =>
@@ -53,9 +56,76 @@ beforeEach(() => {
   frames.options = null;
   frames.emitted = [];
   frames.closed = 0;
+  frames.connects = 0;
 });
 
+let pending: Promise<void> | null = null;
+function MaySuspend() {
+  if (pending) throw pending;
+  return null;
+}
+
 describe("PluginFrameView", () => {
+  it("keeps a ready frame's connection when Suspense hides and shows it again", async () => {
+    const view = (hostId: number) => (
+      <Suspense fallback={<p>loading</p>}>
+        <PluginFrameView
+          pluginId="docker"
+          frameKey="main"
+          fit="fill"
+          props={{ hostId }}
+        />
+        <MaySuspend />
+      </Suspense>
+    );
+    const { rerender } = render(view(1));
+    act(() => frames.options!.onReady());
+    expect(frames.emitted).toHaveLength(1);
+
+    let resume: () => void = () => {};
+    pending = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    rerender(view(1));
+    pending = null;
+    await act(async () => resume());
+    rerender(view(2));
+
+    expect(frames.connects).toBe(1);
+    expect(frames.closed).toBe(0);
+    // Still ready, so the new props go over without a second hello.
+    expect(frames.emitted).toHaveLength(2);
+  });
+
+  it("closes a kept connection once a hidden frame leaves the page", async () => {
+    vi.useFakeTimers();
+    try {
+      const view = () => (
+        <Suspense fallback={<p>loading</p>}>
+          <PluginFrameView
+            pluginId="docker"
+            frameKey="main"
+            fit="fill"
+            props={{}}
+          />
+          <MaySuspend />
+        </Suspense>
+      );
+      const { rerender, unmount } = render(view());
+      pending = new Promise<void>(() => {});
+      rerender(view());
+      await act(async () => {});
+      expect(frames.closed).toBe(0);
+      unmount();
+      pending = null;
+      vi.advanceTimersByTime(1500);
+      expect(frames.closed).toBe(1);
+    } finally {
+      pending = null;
+      vi.useRealTimers();
+    }
+  });
+
   it("loads a script only sandboxed frame from the plugin's own folder", () => {
     const { container } = render(
       <PluginFrameView
@@ -136,7 +206,7 @@ describe("PluginFrameView", () => {
     expect(iframe.style.width).toBe("10000px");
   });
 
-  it("closes the connection when it goes away", () => {
+  it("closes the connection when it goes away", async () => {
     const { unmount } = render(
       <PluginFrameView
         pluginId="docker"
@@ -147,6 +217,7 @@ describe("PluginFrameView", () => {
       />,
     );
     unmount();
+    await Promise.resolve();
     expect(frames.closed).toBe(1);
   });
 
@@ -168,5 +239,73 @@ describe("PluginFrameView", () => {
     const frame = container.querySelector("iframe")!;
     expect(frame.style.width).toBe("40px");
     expect(frame.style.position).toBe("");
+  });
+
+  it("sizes a bar view to its width and the bar's full height", () => {
+    const { container } = render(
+      <PluginFrameView
+        pluginId="docker"
+        frameKey="slot:tabbar.actions:x"
+        fit="bar"
+        props={{}}
+      />,
+    );
+    const frame = container.querySelector("iframe")!;
+    expect(frame.src).toContain("bar=1");
+    expect(frame.src).not.toContain("inline=1");
+    act(() => frames.options!.onEvent("size", { width: 44, height: 15 }));
+    expect(frame.style.width).toBe("44px");
+    expect(frame.style.height).toBe("100%");
+    // See-through, and no inline border so the bar's dividers show.
+    expect(frame.src).toContain("bg=none");
+    expect(frame.style.borderWidth).toBe("");
+  });
+
+  it("keeps an overlay see-through and out of the way until it draws", () => {
+    const { container } = render(
+      <PluginFrameView
+        pluginId="docker"
+        frameKey="slot:terminal.overlay:x"
+        fit="overlay"
+        props={{}}
+      />,
+    );
+    const frame = container.querySelector("iframe")!;
+    expect(frame.src).toContain("bg=none");
+    expect(frame.src).toContain("drawn=1");
+    expect(frame.src).toContain("fit=fill");
+    expect(frame.style.visibility).toBe("hidden");
+    expect(frame.style.pointerEvents).toBe("none");
+    act(() => frames.options!.onEvent("drawn", { drawn: true }));
+    expect(frame.style.visibility).toBe("");
+    act(() => frames.options!.onEvent("drawn", { drawn: false }));
+    expect(frame.style.visibility).toBe("hidden");
+  });
+
+  it("passes events on and lets the shell move focus into a placed view", () => {
+    const seen: Array<[string, unknown]> = [];
+    let control: { focusEdge: (edge: "first" | "last") => void } | null = null;
+    const { container } = render(
+      <PluginFrameView
+        pluginId="docker"
+        frameKey="k"
+        fit="content"
+        edge
+        props={{}}
+        onFrameEvent={(name, data) => seen.push([name, data])}
+        controlRef={(next) => {
+          control = next;
+        }}
+      />,
+    );
+    expect(container.querySelector("iframe")!.src).toContain("edge=1");
+    act(() => frames.options!.onEvent("size", { width: 10, height: 20 }));
+    act(() => frames.options!.onEvent("focusOut", { dir: "next" }));
+    expect(seen).toEqual([
+      ["size", { width: 10, height: 20 }],
+      ["focusOut", { dir: "next" }],
+    ]);
+    control!.focusEdge("last");
+    expect(frames.emitted).toContainEqual(["focusEdge", "last"]);
   });
 });
