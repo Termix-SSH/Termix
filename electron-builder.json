@@ -99,7 +99,7 @@
       }
     ],
     "icon": "public/icons",
-    "category": "Development",
+    "category": "Development;Network;System;TerminalEmulator",
     "executableName": "termix",
     "maintainer": "Termix <mail@termix.site>",
     "desktop": {
