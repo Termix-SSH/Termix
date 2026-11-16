@@ -4,11 +4,15 @@ import { coreVersionOf } from "./lib/server.mjs";
 const git = (stdout: string) => () => ({ stdout }) as never;
 
 const baseRef = process.env.GITHUB_BASE_REF;
+const forced = process.env.TERMIX_AUTHZ_CORE_VERSION;
 beforeEach(() => {
   delete process.env.GITHUB_BASE_REF;
+  // The lab sets this for the whole run.
+  delete process.env.TERMIX_AUTHZ_CORE_VERSION;
 });
 afterEach(() => {
-  delete process.env.TERMIX_AUTHZ_CORE_VERSION;
+  if (forced === undefined) delete process.env.TERMIX_AUTHZ_CORE_VERSION;
+  else process.env.TERMIX_AUTHZ_CORE_VERSION = forced;
   if (baseRef === undefined) delete process.env.GITHUB_BASE_REF;
   else process.env.GITHUB_BASE_REF = baseRef;
 });
