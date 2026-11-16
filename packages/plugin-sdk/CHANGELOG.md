@@ -10,6 +10,10 @@ Plugin API 2.9.0. Needs Termix 26.11.2.
 - `declareActionSlot({ fit: "bar" })`: a framed button in the slot is as wide as its content and as tall as the bar, for buttons that fill a tab bar
 - `termix-plugin validate` warns when a panel stacks a full width `PanelSearch` over a labelled `AddButton`, and points to `PanelToolbar`
 
+### Fixed
+
+- `scriptShell` runs its command under `sh -c`, so host scripts work when the login shell is fish or csh
+
 ## 2.9.0
 
 Plugin API 2.9.0. Needs Termix 26.11.2.

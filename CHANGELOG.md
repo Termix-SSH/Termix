@@ -57,6 +57,7 @@
 - New permission `admin.audit.view` for reading the audit log
 - Sidebar panels put search, their buttons and an icon add button on one row
 - The tile picker starts with every group folded when it has more than four, so it reads as a list of apps
+- Linux desktop entries list Termix as a terminal emulator, so terminal launchers can find it
 
 ### Changed
 
@@ -146,6 +147,11 @@
 - Moving a deleted user's hosts to someone else also moves the folder shares they made
 - Folder and credential shares that ran out are removed, like host shares
 - A failed user delete no longer puts the database error in the reply
+- Desktop app linked to a server: a change the server only partly saved comes back to the desktop instead of both sides looking synced
+- Sync no longer fails on every pass on servers upgraded from before 2.8 straight to 2.9 or later
+- Desktop app with connections starting on the server: hosts given by name connect again instead of failing with Bad packet length
+- Host scripts run on hosts whose login shell is fish or csh
+- Linux desktop app: Ctrl+W closes the active tab instead of the window
 
 ## 26.11.1
 
