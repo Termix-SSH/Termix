@@ -37,6 +37,8 @@ export const users = mysqlTable(
     disabledAt: text("disabled_at"),
     disabledReason: text("disabled_reason"),
     lastLoginAt: text("last_login_at"),
+    // Plugin that created the account, like a SCIM provisioner.
+    managedBy: text("managed_by"),
   },
   (table) => [
     uniqueIndex("idx_users_username").on(table.username),

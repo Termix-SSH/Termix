@@ -15,6 +15,11 @@ import {
 } from "../repositories/user-repository.js";
 import { authLogger } from "../../utils/logger.js";
 import {
+  AccountError,
+  disableAccount,
+  enableAccount,
+} from "../../auth/account-lifecycle.js";
+import {
   auditSettingChange,
   getAuditUsername,
   getRequestMeta,
@@ -48,10 +53,10 @@ import {
   externalSignupApprovalRequired,
 } from "../../auth/user-access-settings.js";
 import { promoteToAdmin } from "./user-admin-routes.js";
+import { readProfileInput } from "../../auth/profile-input.js";
 
-const DISPLAY_NAME_MAX = 64;
-const EMAIL_MAX = 254;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export { readProfileInput };
+
 const INVITE_MAX_USES = 100;
 const INVITE_MAX_HOURS = 24 * 30;
 const INVITE_DEFAULT_HOURS = 72;
@@ -74,45 +79,6 @@ function hashInviteToken(token: string): string {
 function param(req: Request, name: string): string {
   const value = req.params[name];
   return String(Array.isArray(value) ? value[0] : value);
-}
-
-type ProfileInput =
-  | { ok: true; update: { displayName?: string | null; email?: string | null } }
-  | { ok: false; error: string };
-
-/** Checks a display name and email from a request body. */
-export function readProfileInput(body: unknown): ProfileInput {
-  const input = (body ?? {}) as Record<string, unknown>;
-  const update: { displayName?: string | null; email?: string | null } = {};
-
-  if (input.displayName !== undefined) {
-    if (input.displayName !== null && typeof input.displayName !== "string") {
-      return { ok: false, error: "Display name must be text" };
-    }
-    const name =
-      typeof input.displayName === "string" ? input.displayName.trim() : "";
-    if (name.length > DISPLAY_NAME_MAX) {
-      return { ok: false, error: "Display name is too long" };
-    }
-    update.displayName = name || null;
-  }
-
-  if (input.email !== undefined) {
-    if (input.email !== null && typeof input.email !== "string") {
-      return { ok: false, error: "Email must be text" };
-    }
-    const email =
-      typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
-    if (email && (email.length > EMAIL_MAX || !EMAIL_PATTERN.test(email))) {
-      return { ok: false, error: "Email is not valid" };
-    }
-    update.email = email || null;
-  }
-
-  if (update.displayName === undefined && update.email === undefined) {
-    return { ok: false, error: "Nothing to change" };
-  }
-  return { ok: true, update };
 }
 
 async function saveProfile(
@@ -416,22 +382,16 @@ export function registerUserLifecycleRoutes(
           .status(400)
           .json({ error: "You can't turn off your own account" });
       }
-      if (target.disabledAt) {
-        return res.json({ disabled: true });
+      try {
+        if (!(await disableAccount(target, DISABLED_REASON_ADMIN))) {
+          return res.json({ disabled: true });
+        }
+      } catch (error) {
+        if (error instanceof AccountError && error.code === "last_admin") {
+          return res.status(400).json({ error: error.message });
+        }
+        throw error;
       }
-      if (target.isAdmin && (await users.countAdmins()) <= 1) {
-        return res
-          .status(400)
-          .json({ error: "You can't turn off the last admin" });
-      }
-
-      await users.update(target.id, {
-        disabledAt: new Date().toISOString(),
-        disabledReason: DISABLED_REASON_ADMIN,
-      });
-      PermissionManager.getInstance().invalidateUserPermissionCache(target.id);
-      await AuthManager.getInstance().revokeAllUserSessions(target.id);
-      await DatabaseSaveTrigger.forceSave("disable_user").catch(() => {});
 
       const { ipAddress, userAgent } = getRequestMeta(req);
       await logAudit({
@@ -486,12 +446,8 @@ export function registerUserLifecycleRoutes(
       if (!(await canManageAccount(actorId, target))) {
         return res.status(403).json({ error: "Not authorized" });
       }
-      if (!target.disabledAt) return res.json({ disabled: false });
-
       const wasPending = target.disabledReason === DISABLED_REASON_PENDING;
-      await users.update(target.id, { disabledAt: null, disabledReason: null });
-      PermissionManager.getInstance().invalidateUserPermissionCache(target.id);
-      await DatabaseSaveTrigger.forceSave("enable_user").catch(() => {});
+      if (!(await enableAccount(target))) return res.json({ disabled: false });
 
       const { ipAddress, userAgent } = getRequestMeta(req);
       await logAudit({

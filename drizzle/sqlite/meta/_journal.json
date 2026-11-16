@@ -547,6 +547,13 @@
       "when": 1794847879393,
       "tag": "0077_right_vanisher",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "6",
+      "when": 1794850608350,
+      "tag": "0078_tiny_spacker_dave",
+      "breakpoints": true
     }
   ]
 }

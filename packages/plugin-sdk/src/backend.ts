@@ -909,6 +909,13 @@ export interface PluginRouterOptions {
    * TERMIX_PLUGIN_PUBLIC_RATE_LIMIT wins over it.
    */
   publicRateLimit?: number;
+  /**
+   * Passes the Authorization header to the declared public routes, for a
+   * protocol that sends its own bearer token, like SCIM. Termix API keys and
+   * session tokens are still never passed, and authenticated routes never get
+   * the header. Termix 26.11.2 and plugin API 2.9.
+   */
+  publicAuthorization?: boolean;
 }
 
 /**
@@ -2730,9 +2737,99 @@ export interface PluginAuth {
   listSecondFactors: () => Promise<{ id: string; pluginId: string }[]>;
 }
 
-/** What a plugin may learn about a user. Needs users:read. */
-export interface PluginUsers {
-  /** The user's UI language, like "zh_CN", or null when they never chose one. */
+/** An account as ctx.users shows it. Never a password hash or second factors. */
+export interface PluginManagedUser {
+  id: string;
+  username: string;
+  displayName: string | null;
+  email: string | null;
+  isAdmin: boolean;
+  /** Turned off, or waiting for an admin to approve it. */
+  disabled: boolean;
+  /** Why it is off: "admin", "pending_approval" or what a plugin passed. */
+  disabledReason: string | null;
+  /** The plugin that made the account, or null. */
+  managedBy: string | null;
+}
+
+export interface PluginRoleSummary {
+  name: string;
+  displayName: string;
+  isSystem: boolean;
+}
+
+/**
+ * Account calls, for a plugin that provisions users (SCIM, HR sync). A
+ * failed call throws an error whose `code` is "not_found", "username_taken",
+ * "email_taken", "last_admin" or "invalid". Every change is audited under the
+ * plugin's name.
+ */
+export interface PluginUserAccounts {
+  /** Needs users:read. */
+  get: (userId: string) => Promise<PluginManagedUser | null>;
+  /** Needs users:read. */
+  findByUsername: (username: string) => Promise<PluginManagedUser | null>;
+  /** Needs users:read. */
+  findByEmail: (email: string) => Promise<PluginManagedUser | null>;
+  /** Every role, for a role picker. Needs users:read. */
+  listRoles: () => Promise<PluginRoleSummary[]>;
+  /**
+   * Makes an account with no password and the user role, managed by this
+   * plugin. Its first SSO or LDAP sign in with the same verified email is
+   * linked to it. Needs users:write.
+   */
+  create: (input: {
+    username: string;
+    displayName?: string | null;
+    email?: string | null;
+  }) => Promise<PluginManagedUser>;
+  /** Changes the username, display name or email. Needs users:write. */
+  update: (
+    userId: string,
+    input: {
+      username?: string;
+      displayName?: string | null;
+      email?: string | null;
+    },
+  ) => Promise<PluginManagedUser>;
+  /**
+   * Turns an account off (signed out everywhere, no sign in) or back on.
+   * `reason` is kept on the account. Never turns off the last admin. Needs
+   * users:write.
+   */
+  setDisabled: (
+    userId: string,
+    disabled: boolean,
+    reason?: string,
+  ) => Promise<void>;
+  /**
+   * Deletes an account. Its hosts and credentials go to `successorUserId`,
+   * or are deleted with it when none is given. Never the last admin. Needs
+   * users:write.
+   */
+  delete: (
+    userId: string,
+    options?: { successorUserId?: string },
+  ) => Promise<void>;
+  /**
+   * Gives the `desired` roles and takes away `managed` roles not in it.
+   * Other roles and the system roles are never touched. Needs users:write.
+   */
+  syncRoles: (
+    userId: string,
+    roles: { desired: string[]; managed: string[] },
+  ) => Promise<void>;
+  /** Makes an account an admin or takes it away. Needs users:write. */
+  setAdmin: (userId: string, isAdmin: boolean) => Promise<void>;
+}
+
+/**
+ * What a plugin may learn about a user, and with users:write, account calls.
+ * The account calls need Termix 26.11.2 and plugin API 2.9; optional in the
+ * types, so check `typeof ctx.users.create === "function"` first.
+ */
+export interface PluginUsers extends Partial<PluginUserAccounts> {
+  /** The user's UI language, like "zh_CN", or null when they never chose one. Needs users:read. */
   getLocale: (userId: string) => Promise<string | null>;
 }
 

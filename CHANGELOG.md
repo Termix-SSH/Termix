@@ -50,6 +50,7 @@
 - New SSO and LDAP accounts can wait for an admin to approve them before they can sign in. Admins get an alert when someone is waiting
 - Invite links: an admin makes a link with roles, an expiry and a number of uses, and it works even when sign up is off. A link that makes an admin waits out the admin cooling-off time
 - Display name and email on every account, set by the user or an admin, and the time of each user's last sign in
+- Plugins can make, change, turn off and delete accounts and keep their roles in step, for user provisioning from an identity provider. An account made this way is linked to its first SSO or LDAP sign in when the verified email matches, and sign in doesn't rename it
 - Access review: one list of every host, folder and credential share, with who has it, at what level, who gave it and when it ends, filtered by user, role or kind and exported as CSV (`GET /rbac/access-review`)
 - Admin setting to stop admins from opening every user's hosts. When it is off, admins see only what is shared with them. Turning it on waits out the admin cooling-off time
 - Ready made Viewer, Operator, Auditor and Helpdesk roles on new and upgraded servers. They are plain roles to edit or delete

@@ -251,7 +251,8 @@ async function initializeCompleteDatabase(): Promise<void> {
         email TEXT,
         disabled_at TEXT,
         disabled_reason TEXT,
-        last_login_at TEXT
+        last_login_at TEXT,
+        managed_by TEXT
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -1148,6 +1149,7 @@ const migrateSchema = () => {
   addColumnIfNotExists("users", "disabled_at", "TEXT");
   addColumnIfNotExists("users", "disabled_reason", "TEXT");
   addColumnIfNotExists("users", "last_login_at", "TEXT");
+  addColumnIfNotExists("users", "managed_by", "TEXT");
   try {
     sqlite.exec(
       "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users (email)",

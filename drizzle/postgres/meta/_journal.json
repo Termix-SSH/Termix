@@ -582,6 +582,13 @@
       "when": 1794847880032,
       "tag": "0082_shocking_mattie_franklin",
       "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1794850609004,
+      "tag": "0083_closed_amphibian",
+      "breakpoints": true
     }
   ]
 }

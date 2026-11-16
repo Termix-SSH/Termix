@@ -47,6 +47,9 @@ async function isSignInPlugin(pluginId: string): Promise<boolean> {
 const DESCRIBE: Record<string, Describe> = {
   make_admin: (e) => `${e.username} made ${target(e)} an admin`,
   remove_admin: (e) => `${e.username} removed admin from ${target(e)}`,
+  plugin_make_admin: (e) => `${e.username} made ${target(e)} an admin`,
+  plugin_remove_admin: (e) => `${e.username} removed admin from ${target(e)}`,
+  plugin_user_delete: (e) => `${e.username} deleted the account ${target(e)}`,
   admin_reset_password: (e) =>
     `${e.username} reset the password of ${target(e)}`,
   admin_reset_second_factors: (e) =>

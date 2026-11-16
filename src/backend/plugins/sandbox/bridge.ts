@@ -194,6 +194,12 @@ const STRIPPED_HEADERS = new Set([
   "proxy-authorization",
 ]);
 
+/** A Bearer value that is a Termix API key or session token. */
+export function isTermixCredential(header: string): boolean {
+  const token = header.replace(/^\s*Bearer\s+/i, "").trim();
+  return /^tmx_/i.test(token) || /^eyJ[\w-]*\.[\w-]+\.[\w-]*$/.test(token);
+}
+
 export function safeHeaders(
   headers: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -297,6 +303,7 @@ export class PluginBridge {
   private readonly touch: () => void;
   private router: Router | null = null;
   private routerRaw = false;
+  private routerPublicAuthorization = false;
   private readonly ownTables = new Set<string>();
   /** Core's table objects, so a { $table } from the child finds the real one. */
   private readonly tablesByName = new Map<string, unknown>();
@@ -689,8 +696,12 @@ export class PluginBridge {
     // and the route inventory keep working, then forwarded.
     endpoint.handle("http.router", ([options]) => {
       if (this.router) throw new Error("ctx.http.router() was called twice");
-      const opts = (options ?? {}) as { rawBody?: boolean };
+      const opts = (options ?? {}) as {
+        rawBody?: boolean;
+        publicAuthorization?: boolean;
+      };
       this.routerRaw = !!opts.rawBody;
+      this.routerPublicAuthorization = opts.publicAuthorization === true;
       this.router = ctx.http.router(options);
       // Remember where the plugin's router sits, so a request under a
       // router.use("/path", ...) mount still reaches the plugin with that path.
@@ -1994,6 +2005,17 @@ export class PluginBridge {
     cookiePrefix: string,
   ): Record<string, unknown> {
     const headers = safeHeaders(req.headers as Record<string, unknown>);
+    // A protocol with its own bearer token (SCIM) gets it on public routes
+    // only, and never a Termix session or API key.
+    const authorization = req.headers.authorization;
+    if (
+      this.routerPublicAuthorization &&
+      (req as Request & { termixPublicRoute?: boolean }).termixPublicRoute &&
+      typeof authorization === "string" &&
+      !isTermixCredential(authorization)
+    ) {
+      headers.authorization = authorization;
+    }
     // The sync provider keeps signed in accounts for the account switcher,
     // so it gets the session cookie too. It can issue sessions anyway.
     const own = [

@@ -22,6 +22,7 @@ import {
   pluginUrl,
   scrubSecrets,
   safeHeaders,
+  isTermixCredential,
   validCloseCode,
 } from "../../../plugins/sandbox/bridge.js";
 import type { Transport, Wire } from "../../../plugins/sandbox/rpc.js";
@@ -329,6 +330,17 @@ describe("what may cross", () => {
         "content-type": "application/json",
       }),
     ).toEqual({ "content-type": "application/json" });
+  });
+
+  it("never treats a Termix API key or session token as a plugin's own bearer token", () => {
+    expect(isTermixCredential("Bearer tmx_abc123")).toBe(true);
+    expect(
+      isTermixCredential(
+        "bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJ1MSJ9.c2ln",
+      ),
+    ).toBe(true);
+    expect(isTermixCredential("Bearer scim_Zm9vYmFy")).toBe(false);
+    expect(isTermixCredential("Basic dXNlcjpwYXNz")).toBe(false);
   });
 
   it("lets a plugin read and set only its own cookies", () => {

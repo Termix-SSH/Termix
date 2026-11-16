@@ -94,7 +94,7 @@ function adminFromIdentity(identity: ExternalIdentity): boolean | undefined {
   return undefined;
 }
 
-async function syncAdmin(
+export async function syncAdmin(
   user: UserRecord,
   isAdmin: boolean,
 ): Promise<UserRecord> {
@@ -124,7 +124,7 @@ async function syncAdmin(
  * Adds and removes the roles a provider's group map manages. Roles assigned
  * by hand, and roles outside the map, are never touched.
  */
-async function applyRoleSync(
+export async function applyRoleSync(
   userId: string,
   roleSync: { desired: string[]; managed: string[] },
 ): Promise<void> {
@@ -205,6 +205,87 @@ async function findLinkedUser(
   );
   if (!linked) return null;
   return createCurrentUserRepository().findById(linked.userId);
+}
+
+/**
+ * The first external sign in of someone a provisioning plugin made an account
+ * for: the account is matched on the provider's verified email and the sign
+ * in is linked to it. Only accounts a plugin made, with no password and no
+ * linked sign in yet, are matched, so no existing account can be taken over.
+ */
+async function claimManagedAccount(
+  identity: ExternalIdentity,
+): Promise<UserRecord | null> {
+  const email = identity.email?.trim().toLowerCase();
+  if (!email) return null;
+  const user = await createCurrentUserRepository().findByEmail(email);
+  if (!user?.managedBy || (user.passwordHash ?? "").trim() !== "") return null;
+  const auth = createCurrentUserAuthRepository();
+  if ((await auth.listIdentitiesForUser(user.id)).length > 0) return null;
+
+  await auth.linkIdentity({
+    userId: user.id,
+    providerId: identity.provider,
+    subject: identity.subject,
+    email,
+  });
+  await logAudit({
+    userId: user.id,
+    username: user.username,
+    action: "link_external_identity",
+    resourceType: "user",
+    resourceId: user.id,
+    resourceName: user.username,
+    details: JSON.stringify({
+      provider: identity.provider,
+      managedBy: user.managedBy,
+      matchedOn: "email",
+    }),
+    success: true,
+  });
+  authLogger.info("Linked a first sign in to a provisioned account", {
+    operation: "external_managed_account_claimed",
+    userId: user.id,
+    provider: identity.provider,
+  });
+  return user;
+}
+
+/**
+ * Makes an account for a provisioning plugin, with no password and no
+ * session: the user role, a data key and the plugin as its manager. The
+ * username and email must be free.
+ */
+export async function provisionManagedAccount(input: {
+  managedBy: string;
+  username: string;
+  displayName?: string | null;
+  email?: string | null;
+}): Promise<UserRecord> {
+  const users = createCurrentUserRepository();
+  const id = nanoid();
+  const user = await users.create({
+    id,
+    username: input.username,
+    passwordHash: "",
+    isAdmin: false,
+    displayName: input.displayName ?? null,
+    email: input.email ?? null,
+    managedBy: input.managedBy,
+  });
+  try {
+    await createCurrentRoleRepository().assignRoleNameToUser({
+      userId: id,
+      roleName: "user",
+      grantedBy: id,
+    });
+    await AuthManager.getInstance().registerExternalUser(id);
+  } catch (error) {
+    await users.delete(id);
+    throw error;
+  }
+  await DatabaseSaveTrigger.forceSave("managed_user_create").catch(() => {});
+  return user;
 }
 
 /**
@@ -300,7 +381,8 @@ export async function findOrProvisionExternalUser(
   identity: ExternalIdentity,
   deviceType: string,
 ): Promise<UserRecord> {
-  let user = await findLinkedUser(identity);
+  let user =
+    (await findLinkedUser(identity)) ?? (await claimManagedAccount(identity));
 
   if (!user) {
     const isFirstUser = (await createCurrentUserRepository().countAll()) === 0;
@@ -339,8 +421,14 @@ export async function findOrProvisionExternalUser(
     }
 
     // A user who also has a password picked their own username; leave it.
+    // A provisioning plugin owns the username of an account it made.
     const isDualAuth = !!user.passwordHash && user.passwordHash.trim() !== "";
-    if (!isDualAuth && identity.name && user.username !== identity.name) {
+    if (
+      !isDualAuth &&
+      !user.managedBy &&
+      identity.name &&
+      user.username !== identity.name
+    ) {
       // Taken by someone else: keep the name the account already has.
       const holder = await createCurrentUserRepository().findByUsername(
         identity.name,

@@ -582,6 +582,13 @@
       "when": 1794847880590,
       "tag": "0082_minor_jackpot",
       "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "5",
+      "when": 1794850609619,
+      "tag": "0083_loose_norman_osborn",
+      "breakpoints": true
     }
   ]
 }
