@@ -22,6 +22,7 @@ import {
 } from "@/components/surface/surface-scope";
 import { SeamlessTileContext } from "@/components/tile-grid/context";
 import { useFrameState } from "./frame-store";
+import { markFrameShown } from "./frame-paint";
 
 export type FrameFit = "fill" | "content" | "inline" | "bar";
 
@@ -146,6 +147,8 @@ export function FrameRoot({
 }) {
   const themeId = useFrameState((state) => state.theme.themeId);
   const box = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => markFrameShown(), []);
 
   useLayoutEffect(() => {
     document.documentElement.dataset.frameFit = fit;

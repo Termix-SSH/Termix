@@ -120,10 +120,10 @@ function applyTheme(theme: FrameTheme) {
   const root = document.documentElement;
   root.className = theme.className;
   root.setAttribute("style", theme.style);
-  let node = document.getElementById("termix-theme-css");
+  let node = document.getElementById("termix-frame-theme-css");
   if (!node) {
     node = document.createElement("style");
-    node.id = "termix-theme-css";
+    node.id = "termix-frame-theme-css";
     document.head.appendChild(node);
   }
   node.textContent = theme.css.join("\n");
@@ -492,6 +492,7 @@ async function boot() {
 
 boot().catch((error) => {
   console.error("[plugin frame] failed to start", error);
+  delete document.documentElement.dataset.frameLoading;
   try {
     window.parent.postMessage(
       {
