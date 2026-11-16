@@ -62,14 +62,139 @@ function matchingBrace(css: string, open: number): number {
   return -1;
 }
 
-function checkUrls(css: string, errors: string[]): void {
-  const urls = css.matchAll(/url\(\s*(['"]?)([^'")]*)\1\s*\)/gi);
-  for (const match of urls) {
-    const target = match[2].trim();
-    if (target.startsWith("data:")) continue;
-    if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith("//")) {
-      errors.push(`url(${target}) points outside the plugin`);
+// Where a theme file is served, to resolve its relative urls the way the
+// browser does. Only paths under the plugin's own assets are allowed.
+const THEME_BASE = "https://theme.invalid/plugin-assets/p/_themes/t.css";
+const PLUGIN_ROOT = "/plugin-assets/p/";
+const LOADING_FUNCTIONS = new Set(["image-set", "-webkit-image-set", "src"]);
+const DATA_TYPES = /^data:(image\/|font\/|application\/(x-)?font-)/i;
+
+function checkTarget(raw: string, errors: string[]): void {
+  const target = raw.trim();
+  if (/^data:/i.test(target)) {
+    if (!DATA_TYPES.test(target)) {
+      errors.push(`url(${target}) is not an image or font`);
     }
+    return;
+  }
+  let url: URL;
+  try {
+    url = new URL(target, THEME_BASE);
+  } catch {
+    errors.push(`url(${target}) is not a valid address`);
+    return;
+  }
+  if (
+    url.origin !== new URL(THEME_BASE).origin ||
+    !url.pathname.startsWith(PLUGIN_ROOT)
+  ) {
+    errors.push(`url(${target}) points outside the plugin`);
+  }
+}
+
+function isHex(ch: string | undefined): boolean {
+  return !!ch && /[0-9a-f]/i.test(ch);
+}
+
+/** Reads one escape after a backslash at `i`; returns the char and next index. */
+function readEscape(css: string, i: number): [string, number] {
+  let j = i + 1;
+  if (isHex(css[j])) {
+    let hex = "";
+    while (hex.length < 6 && isHex(css[j])) hex += css[j++];
+    if (/[ \t\n\r\f]/.test(css[j] ?? "")) j += 1;
+    const code = parseInt(hex, 16);
+    const valid =
+      code > 0 && code <= 0x10ffff && (code < 0xd800 || code > 0xdfff);
+    return [valid ? String.fromCodePoint(code) : "�", j];
+  }
+  return [css[j] ?? "", j + 1];
+}
+
+function isNameChar(ch: string): boolean {
+  return /[\w-]/.test(ch) || ch.charCodeAt(0) > 0x7f;
+}
+
+/**
+ * Finds every address the CSS can load, with escapes decoded the way the
+ * browser decodes them: url() tokens, url("...") and strings inside
+ * image-set() or src(). Also catches escaped names like expr\65ssion.
+ */
+function checkUrls(css: string, errors: string[]): void {
+  const stack: string[] = [];
+  let i = 0;
+  while (i < css.length) {
+    const ch = css[i];
+    if (ch === '"' || ch === "'") {
+      let value = "";
+      let j = i + 1;
+      while (j < css.length && css[j] !== ch) {
+        if (css[j] === "\\") {
+          const [decoded, next] = readEscape(css, j);
+          value += decoded;
+          j = next;
+        } else value += css[j++];
+      }
+      const inside = stack[stack.length - 1];
+      if (inside === "url" || (inside && LOADING_FUNCTIONS.has(inside))) {
+        checkTarget(value, errors);
+      }
+      i = j + 1;
+      continue;
+    }
+    if (isNameChar(ch) || ch === "\\") {
+      let name = "";
+      let j = i;
+      while (j < css.length && (isNameChar(css[j]) || css[j] === "\\")) {
+        if (css[j] === "\\") {
+          const [decoded, next] = readEscape(css, j);
+          name += decoded;
+          j = next;
+        } else name += css[j++];
+      }
+      const lower = name.toLowerCase();
+      if (
+        lower === "expression" ||
+        lower === "-moz-binding" ||
+        lower === "behavior"
+      ) {
+        errors.push(
+          lower === "expression"
+            ? "expression() is not allowed in a theme"
+            : "Script bindings are not allowed in a theme",
+        );
+      }
+      if (lower.includes("javascript")) {
+        errors.push("javascript: is not allowed in a theme");
+      }
+      if (css[j] === "(") {
+        if (lower === "url") {
+          let k = j + 1;
+          while (/\s/.test(css[k] ?? "")) k += 1;
+          if (css[k] !== '"' && css[k] !== "'") {
+            let value = "";
+            while (k < css.length && css[k] !== ")") {
+              if (css[k] === "\\") {
+                const [decoded, next] = readEscape(css, k);
+                value += decoded;
+                k = next;
+              } else value += css[k++];
+            }
+            checkTarget(value, errors);
+            i = k + 1;
+            continue;
+          }
+        }
+        stack.push(lower);
+        i = j + 1;
+        continue;
+      }
+      i = j;
+      continue;
+    }
+    if (ch === "(") stack.push("");
+    else if (ch === ")") stack.pop();
+    i += 1;
   }
 }
 

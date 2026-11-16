@@ -61,6 +61,10 @@ import {
 } from "@/lib/frontend-logger";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import { getDeviceId } from "@/lib/device-id";
+import {
+  clearCoreReadCache,
+  noteCoreRequest,
+} from "@/plugin-host/frames/core-read-cache";
 
 export type ServerStatus = {
   status: "online" | "offline";
@@ -246,6 +250,7 @@ let latestAuthSuccessAt = 0;
 let authInvalidationHandled = false;
 
 export function markUserAuthenticated(): void {
+  if (!userWasAuthenticated) clearCoreReadCache();
   userWasAuthenticated = true;
   authInvalidationHandled = false;
   latestAuthSuccessAt =
@@ -253,6 +258,7 @@ export function markUserAuthenticated(): void {
 }
 
 function clearClientAuthState(): void {
+  clearCoreReadCache();
   clearTermixSessionStorage();
   try {
     localStorage.removeItem("jwt");
@@ -318,6 +324,7 @@ function createApiInstance(
   });
 
   instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+    noteCoreRequest(config.method);
     const startTime = performance.now();
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -408,6 +415,7 @@ function createApiInstance(
 
   instance.interceptors.response.use(
     (response: AxiosResponse) => {
+      noteCoreRequest(response.config.method);
       const endTime = performance.now();
       const responseConfig = response.config as AxiosRequestConfigExtended;
       const startTime = responseConfig.startTime;
@@ -449,6 +457,7 @@ function createApiInstance(
       return response;
     },
     (error: AxiosErrorExtended) => {
+      noteCoreRequest(error.config?.method);
       const endTime = performance.now();
       const startTime = error.config?.startTime;
       const requestId = error.config?.requestId;

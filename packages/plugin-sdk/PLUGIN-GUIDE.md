@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 2.8.0 | Plugin API 2.8.0
+SDK 2.8.1 | Plugin API 2.8.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -274,9 +274,21 @@ process that crashes, stops answering, goes past its memory limit (256 MiB unles
 uses more than 80% of a CPU core for a minute. Too many crashes and the plugin is marked failed.
 The desktop app (Termix 26.11.2+) runs each plugin process on its own pinned Node, the same major as the server image, with the same flags, plus an OS sandbox under it: an AppContainer and a job object on Windows, a Seatbelt profile on macOS, Landlock and seccomp on Linux. So the fence is the same as on a server: no files outside your grants, no child processes or sockets without the capability, and a memory cap. Desktop only code can't use `fs` or `child_process` freely either; use `ctx.desktop.local` for the user's own files and programs. Builds with no pinned Node (32-bit Windows, 32-bit ARM Linux) don't run plugin backends at all.
 
-A plugin that registers nothing core calls on its own starts on its first request or socket and stops
-after 10 idle minutes. Anything in the `sandbox` block below, a `provides` entry, a provider hook, a
-layout or theme, or `network:sockets` keeps it running.
+A plugin process stops after 10 idle minutes (`TERMIX_PLUGIN_IDLE_MINUTES`). A plugin with only routes
+and sockets starts on its first request. One that registers things core calls on its own (operations,
+services, registry values, event listeners, settings hooks, jobs) starts once at boot, and core keeps
+those registrations while the process is stopped: calling one starts it again, and a job runs on core's
+own timer. It keeps running while it has its own sockets or listeners open, a `schedule.after` job
+waiting, or a call from core in flight. These stay up all the time: `sandbox.alwaysOn`, a provider on
+core's request paths (`auth:provide`, `auth:policy`, `sync:provide`, `ssh:transport`,
+`hosts:status-provide`, `hosts:lock`, `hosts:connect-policy`, `notify:hub`, `operations:approve`,
+`system:tls`), a layout or theme, `providesSecret`, and a job shorter than the idle time.
+
+A plugin with short jobs that often have nothing to do (watches nobody set up) can manage this itself
+with `ctx.schedule.keepAwake?.(reason, awake)` (plugin API 2.8): call it with `true` while there is work
+and `false` when there is none. Once it calls it, its short jobs run only while the process runs, and
+core starts it at boot again if it had work when core last stopped. Call it with `false` in activate when
+there is nothing to do, so core knows you manage it.
 
 ```json
 "sandbox": {
@@ -289,7 +301,8 @@ layout or theme, or `network:sockets` keeps it running.
 }
 ```
 
-- `ctx.schedule.every(ms, fn, { id: "poll" })`: the id must be listed in `sandbox.schedules`.
+- `ctx.schedule.every(ms, fn, { id: "poll" })`: the id must be listed in `sandbox.schedules`. A woken
+  process does not start a second timer for the same id; `runNow` still runs once on each start.
 - `ctx.events.on(topic, fn)`: the topic must be listed in `sandbox.events`.
 - `ctx.registry.provide(key, value)`: the key must be listed in `sandbox.registry`.
 - Only plain data, functions, Buffers, Dates, Maps, Sets and Errors cross between your process and core.
@@ -370,8 +383,8 @@ res)` works from inside one of your own requests: Termix finishes the login on t
    frontend with `checkFrameApp` (see Frames).
 7. Drop capabilities you no longer use, bump the version and add a CHANGELOG entry.
 
-An API 1 plugin keeps working only when it is official and an admin turns on "Run without isolation" for
-it. Community API 1 plugins don't run.
+An API 1 plugin doesn't run at all. The plugins page names each one, and lists the plugins a newer Termix
+won't run before an admin updates.
 
 ### What ctx has
 
@@ -813,7 +826,7 @@ your plugin's error boundary and Suspense.
 | `registerSlotContribution`, `declareActionSlot`                                    | Fill or own a UI slot                                             |
 | `registerComponent`, `registerExtension`                                           | Offer a component by id, add to an extension point                |
 | `registerOnboardingStep`                                                           | A first run setup step (`section`, `position`, `replaces`)        |
-| `registerLoginMethod`, `registerSecondFactorUI`, `registerSshAuthEditor`           | Sign in UI                                                        |
+| `registerLoginMethod`, `registerSecondFactorUI`, `registerSshAuthEditor`           | Enrolment screens and SSH auth editors                            |
 | `registerLayout`                                                                   | A whole-app layout (`contributes.layouts`, API 1.4)               |
 | `api`                                                                              | Axios client for your `/plugin-api/<id>/` routes, auth included   |
 | `fetch(path)`, `wsUrl(path)`                                                       | Raw fetch for streams, socket URL and auth                        |
@@ -867,13 +880,26 @@ before, with the same look and theme.
 - `invokeAction` runs your own actions and the ids in your manifest `uses`. Opening links, downloads,
   the clipboard, toasts and confirms go through the shell. `localStorage` works and is kept per plugin.
 - Not available in a frame: host badges, status indicators and editor toolbar items with a `component`
-  (use `useDot` or `useValue`). Layouts, themes, login screens and native desktop views are the shell
-  itself: only an official plugin with `ui:layout`, `ui:theme`, `auth:provide` or `desktop:window` runs
-  in the page. Other plugins' parts work, see Other plugins' parts in a frame below.
+  (use `useDot` or `useValue`). Layouts, themes and Sync are the shell itself: only an official plugin
+  with `ui:layout`, `ui:theme` or `sync:provide` runs in the page. Other plugins' parts work, see Other
+  plugins' parts in a frame below.
+- What a frame can't reach, the shell does for it: sign in steps are drawn from what your backend describes
+  (see Auth and protocols), `app.auth.webauthn` runs passkey steps, `app.serial` opens a serial port in the
+  browser, and `NativeView` with a `grant` shows a web page. Each needs a click in your frame first where the
+  browser asks for one.
 - `useShell()` in a frame is read only: `tabs.list`, `tabs.activeId`, `tabs.topLevel`, `split.summaries`,
   `env.user`, `env.isMobile`. `tabs.setActive` works right after the person used your frame. Anything
   that changes the shell for other plugins (docks, the palette, logout) does nothing there.
 - A popover or dropdown can't leave its frame. Keep menus in tabs and panels, not in small slots.
+- Nothing in a frame loads from another site or sends data to one. Pictures, video and fonts come from your
+  own assets, `data:` or `blob:` URLs; a nested frame may only show your own assets and routes. For a
+  picture from elsewhere (an icon, a background), fetch `/plugins/<your id>/image?url=<address>` and show
+  the blob: it needs `network:outbound` or `network:sockets`, takes images up to 5 MB and never reaches the
+  server itself or cloud metadata. A page from another site goes in `NativeView` with a `grant` your
+  backend makes for an address it trusts (`ctx.desktop.grantView`, `desktop:window`).
+- A background frame shows dialogs over the whole app only right after the person ran one of your actions,
+  palette entries, keybindings or slot buttons. Opening a link, the clipboard and revoking API keys need a
+  click in your frame just before; a download one in the last two minutes.
 
 Check that your activate works in a frame with `checkFrameApp` from `@termix-ssh/plugin-sdk/testing`:
 
@@ -1091,8 +1117,10 @@ export function activate(app: TermixApp) {
 A theme is CSS only. Declare it in `contributes.themes` (`id`, `label`, `mode` light or dark, `css` path,
 optional `swatch` colors for the picker) with the `ui:theme` capability. The id becomes a class on `<html>`,
 so the file may only hold rules whose selectors start with `.<id>`, `:root.<id>` or `html.<id>`, optionally
-inside `@media` or `@supports`. `@import`, `url()` to another host and other at-rules are refused by
-`termix-plugin validate` and by the server. Set the same tokens core's themes set (`--background`,
+inside `@media` or `@supports`. `@import`, other at-rules, and any `url()`, `image-set()` or `src()` that
+is not a `data:` image or font or a relative path inside the plugin (no root paths, no climbing out, CSS
+escapes included) are refused by `termix-plugin validate`, when the plugin loads and again when the file is
+served. So a theme can't load anything from elsewhere or send page values anywhere. Set the same tokens core's themes set (`--background`,
 `--foreground`, `--card`, `--border`, `--muted` and the rest).
 
 A plugin that only holds themes needs no code. Leave out `src/`: `termix-plugin build` writes an empty backend and
@@ -1112,9 +1140,15 @@ Build UI from `@termix-ssh/plugin-sdk/ui` so it matches Termix and follows the t
 exports with props is `ui.api.txt` in the Termix repo
 (https://github.com/Termix-SSH/Termix/blob/main/packages/plugin-sdk/ui.api.txt).
 
-- Web pages that break in an iframe: `NativeView` (props `url`, `ignoreCert`, `hidden`, `fallback`) shows the
-  page in a native view in the desktop app. It fills its element, hides while a dialog or menu is open and renders
-  `fallback` in a browser.
+- Web pages: your backend calls `ctx.desktop.grantView({ url, ignoreCert })` (needs `desktop:window`, inside a
+  person's request) and hands the frame the `grant`. `<NativeView grant={grant} />` then shows the page: a native
+  view in the desktop app, a credentialless sandboxed iframe in a browser. The frame never names the address, and
+  only a grant can trust a bad certificate (desktop only). It fills its element, hides while a dialog or menu is
+  open, and each grant works for ten minutes for the person who asked. `url` still works for a plugin in the page.
+- Serial ports in the browser: `app.serial.request({ baudRate, dataBits, stopBits, parity, filters }, { onData,
+onClose })` (needs `device:serial`, call it from a click in your frame) opens the browser's port picker and
+  resolves `{ write(bytes), close() }` for the port the person picked, or null when they picked none. Check
+  `app.serial?.available` first; Firefox, Safari and phones have no Web Serial.
 - Square: panels, cards and containers have no rounded corners. Small controls may stay rounded.
 - Flat: borders, not shadows. Use theme tokens like `border-border`, `bg-background`,
   `text-muted-foreground`, `text-destructive`. One accent, `text-accent-brand`. Don't add colors.
@@ -1235,6 +1269,35 @@ Login methods, second factors and SSH auth types need `auth:provide`, which is h
 closely. Declare ids in `contributes.auth` and register them with `ctx.auth.registerLoginMethod`,
 `registerSecondFactor` or `registerSshAuthProvider`. Connection protocols go in `contributes.protocols`
 and `app.registerHostProtocol`. Read https://docs.termix.site/develop/auth before starting one.
+
+No plugin code runs on the sign in screen (Termix 26.11.2, plugin API 2.8). Termix draws each method from
+what the backend registers:
+
+- `kind: "redirect"`: a button per enabled instance from `describe()`.
+- `kind: "form"` with `fields: [{ name, type: "text" | "password" | "code", labelKey, autocomplete? }]`: a
+  form per instance; the values go to `verify` by name.
+- `kind: "webauthn"` with `options(request, instanceId)` returning `{ publicKey, context }`: a passkey button.
+  Termix runs the browser prompt and sends `{ ...context, response }` to `verify`. `placement: "inline"` draws
+  it under the password form. A passkey method never counts as another way in when an admin turns password
+  login off.
+- An instance's `views` (`"password"`, `"external"`) picks which page of the sign in screen shows it.
+
+A second factor takes `prompt`: `{ kind: "code", field, labelKey }` (one field), `{ kind: "fields", fields }`, or
+`{ kind: "webauthn" }` (`challenge()` returns the request options, `verify` gets `{ response }`). The step up
+prompt uses the same.
+
+Your frame registers only the enrolment screen: `app.registerLoginMethod({ id, titleKey, enrollment })` and
+`app.registerSecondFactorUI({ id, titleKey, enrollment })`. A `component` there throws. Passkey steps on those
+screens (adding a key, a tap before removing one) are ceremonies: the backend registers
+`ctx.auth.registerWebAuthnCeremony({ id, type: "create" | "get", options, finish })`, and the frame calls
+`app.auth.webauthn(id, extra)` from a click. Termix asks your backend for the options under your plugin's id
+only, runs the prompt and sends the answer to `finish`; the frame gets only what `finish` returns, so return
+`{ ok, error }` rather than throwing. A closed prompt answers `{ ok: false, closed: true }`.
+
+A login policy plugin (`auth:policy`) can sign the person out with `app.session.signOut()` and start the app
+again with `app.session.reload()` (at most once every ten seconds), for idle time outs and once a required
+second factor is set up. To show other plugins' enrolment screens, list `auth.enrollment` in
+`contributes.uses` and render `AuthEnrollmentSections` from `/ui`.
 
 To tie an external identity to an account that already exists, `ctx.auth.identities` has `list(userId)`,
 `link(userId, { provider, subject, email })` and `unlink(userId, provider)` (Termix 26.11.1+). `link` refuses an
@@ -1442,8 +1505,9 @@ Releases are immutable. The workflow makes a draft, uploads the `.tmxplug`, then
 the tag and files can't change. A version that already has a release is refused, so a fix is a new version.
 Turn on immutable releases in the plugin repo settings.
 
-No secrets are needed. The workflow records GitHub build provenance for the `.tmxplug`, and the run summary
-shows the `sha256` for a registry submission. If a dev branch changes `.github/workflows`, add a
+No secrets are needed. The workflow records GitHub build provenance for the `.tmxplug` and uploads it next
+to the file as `.tmxplug.sigstore.json`, which Termix checks at download. The run summary shows the `sha256`
+for a registry submission. If a dev branch changes `.github/workflows`, add a
 `TERMIX_PAT` secret (a token with `repo` and `workflow` scopes). To also sign with your own key, set
 `TERMIX_PLUGIN_SIGNING_KEY`. Keep `.github/workflows/release.yml` as the template has it: the community
 registry checks provenance from it.

@@ -17,6 +17,7 @@ vi.mock("@/main-axios", async (importOriginal) => ({
 
 import { slotFit, startFramedPlugin } from "@/plugin-host/frames/frame-plugins";
 import { resetFrameConnections } from "@/plugin-host/frames/frame-connection";
+import { resetRegistrationCache } from "@/plugin-host/frames/registration-cache";
 import { getFrameValue } from "@/plugin-host/frames/frame-values";
 import {
   resetPluginStore,
@@ -55,14 +56,24 @@ const summary = {
   contributes: { panels: [{ id: "gizmo" }], tabs: [] },
 } as unknown as PluginSummary;
 
+/** The background frame element, once the cache lookup is done. */
+async function frameElement(): Promise<HTMLIFrameElement> {
+  for (let i = 0; i < 50; i++) {
+    const found = document.querySelector<HTMLIFrameElement>(
+      'iframe[data-plugin-frame="gizmo"]',
+    );
+    if (found) return found;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+  throw new Error("no background frame");
+}
+
 /** Stands in for the plugin's background frame page. */
-function fakeFrame(
+async function fakeFrame(
   onCall: (method: string, args: unknown[]) => unknown,
   onEvent?: (name: string, data: unknown) => void,
 ) {
-  const iframe = document.querySelector<HTMLIFrameElement>(
-    'iframe[data-plugin-frame="gizmo"]',
-  )!;
+  const iframe = await frameElement();
   const win = iframe.contentWindow!;
   const toShell = (message: FrameMessage) =>
     window.dispatchEvent(
@@ -97,6 +108,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  resetRegistrationCache();
   resetFrameConnections();
   document.getElementById("termix-plugin-frames")?.remove();
   vi.restoreAllMocks();
@@ -105,13 +117,11 @@ afterEach(() => {
 describe("startFramedPlugin", () => {
   it("loads a sandboxed background frame from the plugin's asset folder", async () => {
     const started = startFramedPlugin(summary);
-    const iframe = document.querySelector<HTMLIFrameElement>(
-      'iframe[data-plugin-frame="gizmo"]',
-    )!;
+    const iframe = await frameElement();
     expect(iframe.getAttribute("sandbox")).toBe("allow-scripts");
     expect(iframe.src).toContain("/plugin-assets/gizmo/_frame/frame.html#");
     expect(iframe.src).toContain("role=background");
-    const { port } = fakeFrame(() => undefined);
+    const { port } = await fakeFrame(() => undefined);
     port.emit("ready");
     const plugin = await started;
     plugin.dispose();
@@ -122,7 +132,7 @@ describe("startFramedPlugin", () => {
 
   it("replays what the frame registered and removes it again", async () => {
     const started = startFramedPlugin(summary);
-    const { port } = fakeFrame(() => undefined);
+    const { port } = await fakeFrame(() => undefined);
     let whenCalls = 0;
     port.emit("register", {
       rid: "panel#1",
@@ -190,7 +200,7 @@ describe("startFramedPlugin", () => {
   it("hands a companion's when a plain tab and only the plugin's own host settings", async () => {
     const seen: unknown[][] = [];
     const started = startFramedPlugin(summary);
-    const { port } = fakeFrame(() => undefined);
+    const { port } = await fakeFrame(() => undefined);
     port.emit("register", {
       rid: "companion#1",
       kind: "companion",
@@ -244,7 +254,7 @@ describe("startFramedPlugin", () => {
 
   it("fails when the frame reports a broken activate", async () => {
     const started = startFramedPlugin(summary);
-    const { port } = fakeFrame(() => undefined);
+    const { port } = await fakeFrame(() => undefined);
     port.emit("failed", "activate threw");
     await expect(started).rejects.toThrow("activate threw");
     expect(document.querySelector('iframe[data-plugin-frame="gizmo"]')).toBe(
@@ -255,7 +265,7 @@ describe("startFramedPlugin", () => {
   it("refuses a registration the manifest does not declare", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const started = startFramedPlugin(summary);
-    const { port } = fakeFrame(() => undefined);
+    const { port } = await fakeFrame(() => undefined);
     port.emit("register", {
       rid: "panel#9",
       kind: "panel",
@@ -275,7 +285,7 @@ describe("data values from a frame", () => {
   it("tells the frame which rows are shown and draws the values it sends", async () => {
     const states: Record<string, unknown>[] = [];
     const started = startFramedPlugin(summary);
-    const { port } = fakeFrame(
+    const { port } = await fakeFrame(
       () => undefined,
       (name, data) => {
         if (name === "state") states.push(data as Record<string, unknown>);
@@ -367,7 +377,7 @@ describe("data slots a frame owns", () => {
   it("runs other plugins' hooks in the page and sends the frame their values", async () => {
     const events: { name: string; data: unknown }[] = [];
     const started = startFramedPlugin(summary);
-    const { port } = fakeFrame(
+    const { port } = await fakeFrame(
       () => undefined,
       (name, data) => events.push({ name, data }),
     );
@@ -440,5 +450,59 @@ describe("slot frame sizes", () => {
     }
     expect(slotFit("credentials.panel")).toBe("content");
     expect(slotFit("admin.userTabs")).toBe("fill");
+  });
+});
+
+describe("background frame overlays", () => {
+  async function started() {
+    const startedPlugin = startFramedPlugin(summary);
+    const { iframe, port } = await fakeFrame(() => undefined);
+    port.emit("register", {
+      rid: "action#1",
+      kind: "action",
+      data: { id: "gizmo.open", handler: () => "opened" },
+    });
+    port.emit("ready");
+    const plugin = await startedPlugin;
+    return { iframe, port, plugin };
+  }
+  const covers = (iframe: HTMLIFrameElement) =>
+    (iframe.getAttribute("style") ?? "").includes("inset:0");
+
+  it("can't cover the shell when nobody asked the plugin for anything", async () => {
+    const { iframe, port, plugin } = await started();
+    port.emit("overlay", { active: true });
+    await flush();
+    expect(covers(iframe)).toBe(false);
+    plugin.dispose();
+  });
+
+  it("covers the shell for a dialog right after the user ran its action", async () => {
+    const { iframe, port, plugin } = await started();
+    await expect(invokeAction("gizmo.open")).resolves.toBe("opened");
+    port.emit("overlay", { active: true });
+    await flush();
+    expect(covers(iframe)).toBe(true);
+    port.emit("overlay", { active: false });
+    await flush();
+    expect(covers(iframe)).toBe(false);
+    plugin.dispose();
+  });
+
+  it("does not count a call made without a click or key", async () => {
+    const { iframe, port, plugin } = await started();
+    Object.defineProperty(navigator, "userActivation", {
+      value: { isActive: false },
+      configurable: true,
+    });
+    try {
+      await invokeAction("gizmo.open");
+      port.emit("overlay", { active: true });
+      await flush();
+      expect(covers(iframe)).toBe(false);
+    } finally {
+      delete (navigator as { userActivation?: unknown }).userActivation;
+      plugin.dispose();
+    }
   });
 });

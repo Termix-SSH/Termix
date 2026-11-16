@@ -45,6 +45,7 @@ import {
 import {
   challengeSecondFactor,
   getLoginMethods,
+  getPublicSecondFactors,
   getRememberDeviceAllowed,
   startLoginRedirect,
   submitLoginMethod,
@@ -54,6 +55,12 @@ import {
   type SecondFactorRef,
 } from "@/api/auth-methods-api";
 import { useLoginMethods, useSecondFactors } from "@/plugin-host/auth-registry";
+import {
+  canDrawSecondFactor,
+  PluginLoginMethodView,
+  PluginSecondFactorView,
+} from "./PluginLoginParts";
+import { pluginKey } from "@/lib/plugin-i18n";
 import { startPreLoginPlugins } from "@/plugin-host/loader";
 import { Checkbox } from "@/components/checkbox";
 import { LoadingState } from "@/components/loading-state";
@@ -271,15 +278,41 @@ export function Auth({ onLogin }: AuthProps) {
   };
   const loginMethodUIs = useLoginMethods();
   const secondFactorUIs = useSecondFactors();
-  // A server that did not list its factors gets every factor with a UI here.
-  const shownFactors: SecondFactorRef[] =
+  // How to draw each factor, for a step that only got ids (a redirect login).
+  const [publicFactors, setPublicFactors] = useState<SecondFactorRef[]>([]);
+  const withPrompt = (factor: SecondFactorRef): SecondFactorRef => {
+    const known = publicFactors.find((entry) => entry.id === factor.id);
+    return {
+      ...known,
+      ...factor,
+      pluginId: factor.pluginId || known?.pluginId || "",
+      labelKey: factor.labelKey || known?.labelKey || "",
+      prompt: factor.prompt ?? known?.prompt,
+    };
+  };
+  // A server that did not list its factors gets every factor it can draw.
+  const shownFactors: SecondFactorRef[] = (
     secondFactors.length > 0
       ? secondFactors
-      : secondFactorUIs.map((ui) => ({
-          id: ui.id,
-          pluginId: ui.pluginId ?? "",
-          labelKey: ui.titleKey,
-        }));
+      : [
+          ...publicFactors.filter((factor) => canDrawSecondFactor(factor)),
+          ...secondFactorUIs
+            .filter(
+              (ui) => !publicFactors.some((factor) => factor.id === ui.id),
+            )
+            .map((ui) => ({
+              id: ui.id,
+              pluginId: ui.pluginId ?? "",
+              labelKey: ui.titleKey,
+            })),
+        ]
+  ).map(withPrompt);
+  const factorLabel = (factor: SecondFactorRef) =>
+    factor.labelKey
+      ? t(pluginKey(factor.pluginId, factor.labelKey), {
+          defaultValue: factor.id,
+        })
+      : factor.id;
   const currentFactorId = activeFactorId || shownFactors[0]?.id || "";
 
   const [resetStep, setResetStep] = useState<ResetStep>("email");
@@ -304,9 +337,14 @@ export function Auth({ onLogin }: AuthProps) {
   const [passwordResetAllowed, setPasswordResetAllowed] = useState(true);
   const [authMethods, setAuthMethods] = useState<PublicLoginMethod[]>([]);
   const [authMethodsLoaded, setAuthMethodsLoaded] = useState(false);
-  const inlineMethodIds = new Set(
-    loginMethodUIs.filter((ui) => ui.placement === "inline").map((ui) => ui.id),
-  );
+  const inlineMethodIds = new Set([
+    ...loginMethodUIs
+      .filter((ui) => ui.placement === "inline")
+      .map((ui) => ui.id),
+    ...authMethods
+      .filter((method) => method.placement === "inline")
+      .map((method) => method.id),
+  ]);
   const inlineMethods = authMethods.filter((method) =>
     inlineMethodIds.has(method.id),
   );
@@ -416,6 +454,9 @@ export function Auth({ onLogin }: AuthProps) {
         setRememberAllowed(allowed);
         if (!allowed) setRememberMe(false);
       })
+      .catch(() => {});
+    getPublicSecondFactors()
+      .then((factors) => setPublicFactors(factors))
       .catch(() => {});
     getLoginMethods()
       .then((methods) => setAuthMethods(methods))
@@ -1060,24 +1101,24 @@ export function Auth({ onLogin }: AuthProps) {
           showLoginError(err, "errors.loginFailed"),
         ),
     };
-    if (ui) {
+    if (ui?.component) {
       const Component = ui.component;
       return <Component key={method.id} {...props} />;
     }
-    // A redirect method needs no UI of its own: one button per instance.
-    if (method.kind === "redirect") {
-      return method.instances.map((instance) => (
-        <Button
-          key={`${method.id}:${instance.id}`}
-          onClick={() => void startRedirect(method.id, instance.id)}
-          disabled={loading}
-          className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold"
-        >
-          {t("auth.loginWithProvider", { name: instance.label })}
-        </Button>
-      ));
-    }
-    return null;
+    // Drawn from what the server describes; no plugin code runs here.
+    return (
+      <PluginLoginMethodView
+        key={method.id}
+        method={method}
+        view={props.view}
+        disabled={loading}
+        username={username}
+        submit={props.submit}
+        startRedirect={(instanceId) =>
+          void startRedirect(method.id, instanceId)
+        }
+      />
+    );
   }
 
   useEffect(() => {
@@ -1314,7 +1355,9 @@ export function Auth({ onLogin }: AuthProps) {
                           onClick={() => setActiveFactorId(factor.id)}
                           className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${currentFactorId === factor.id ? "bg-accent-brand text-background" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
                         >
-                          {ui ? t(ui.titleKey) : factor.id}
+                          {ui && !factor.labelKey
+                            ? t(ui.titleKey)
+                            : factorLabel(factor)}
                         </button>
                       );
                     })}
@@ -1324,7 +1367,31 @@ export function Auth({ onLogin }: AuthProps) {
                   const ui = secondFactorUIs.find(
                     (candidate) => candidate.id === currentFactorId,
                   );
-                  if (!ui) {
+                  const current = shownFactors.find(
+                    (factor) => factor.id === currentFactorId,
+                  );
+                  if (
+                    !ui?.component &&
+                    current &&
+                    canDrawSecondFactor(current)
+                  ) {
+                    return (
+                      <PluginSecondFactorView
+                        key={currentFactorId}
+                        factor={current}
+                        disabled={loading}
+                        verify={verifyActiveFactor}
+                        challenge={() =>
+                          challengeSecondFactor(
+                            currentFactorId,
+                            pendingToken || undefined,
+                          )
+                        }
+                        cancel={() => switchView("login")}
+                      />
+                    );
+                  }
+                  if (!ui?.component) {
                     return (
                       <div className="space-y-2" aria-live="polite">
                         <p className="text-xs text-muted-foreground">

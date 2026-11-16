@@ -545,12 +545,66 @@
         "key-ops-run": "refuse"
       }
     },
+    "GET /plugins/:id/image": {
+      "access": "user",
+      "params": {
+        "id": "=homepage"
+      },
+      "query": {
+        "url": "http://127.0.0.1/a.png"
+      },
+      "allowed": "any",
+      "note": "Any signed in person may load a picture through a plugin with network:outbound; this address is on the server itself, so allowed callers get 403 too.",
+      "expect": {
+        "key-ops-read": "refuse",
+        "key-ops-run": "refuse"
+      }
+    },
     "POST /plugins/frame-tokens": {
       "access": "user",
       "body": {
         "ids": ["snippets"]
       },
       "allowed": "any",
+      "expect": {
+        "key-ops-read": "refuse",
+        "key-ops-run": "refuse"
+      }
+    },
+    "POST /plugins/:id/passkey-steps/:ceremonyId/options": {
+      "access": "user",
+      "params": {
+        "id": "=webauthn",
+        "ceremonyId": "=register"
+      },
+      "allowed": "any",
+      "note": "Called by the shell for a plugin's own screen. Answers depend on the plugin being on and the browser step.",
+      "expect": {
+        "key-ops-read": "refuse",
+        "key-ops-run": "refuse"
+      }
+    },
+    "POST /plugins/:id/passkey-steps/:ceremonyId/finish": {
+      "access": "user",
+      "params": {
+        "id": "=webauthn",
+        "ceremonyId": "=register"
+      },
+      "allowed": "any",
+      "note": "Called by the shell for a plugin's own screen. Answers depend on the plugin being on and the browser step.",
+      "expect": {
+        "key-ops-read": "refuse",
+        "key-ops-run": "refuse"
+      }
+    },
+    "GET /plugins/:id/web-views/:grant": {
+      "access": "user",
+      "params": {
+        "id": "=web-endpoint",
+        "grant": "=000000000000000000000000000000000000000000000000"
+      },
+      "allowed": "any",
+      "note": "A grant is made by the plugin's backend for one person and session; the matrix has none, so allowed callers get 404.",
       "expect": {
         "key-ops-read": "refuse",
         "key-ops-run": "refuse"
@@ -653,6 +707,12 @@
       "access": "admin"
     },
     "POST /plugins/onboarding/apply": {
+      "access": "admin"
+    },
+    "GET /plugins/processes": {
+      "access": "admin"
+    },
+    "GET /plugins/update-check": {
       "access": "admin"
     },
     "GET /plugins/public": {
@@ -964,6 +1024,9 @@
       "access": "public"
     },
     "POST /users/auth/:methodId/verify": {
+      "access": "public"
+    },
+    "POST /users/auth/:methodId/options": {
       "access": "public"
     },
     "GET /users/auth/methods": {

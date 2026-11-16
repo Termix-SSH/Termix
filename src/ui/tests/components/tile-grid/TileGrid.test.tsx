@@ -100,11 +100,12 @@ function mount(layout = three, editMode = true) {
 
 const tile = (id: string) =>
   document.querySelector<HTMLElement>(`[data-tg-tile="${id}"]`)!;
+// jsdom 31 drops a zero y, so "translate(4px, 0px)" reads "translate(4px)".
 const position = (element: HTMLElement) => {
-  const match = /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/.exec(
+  const match = /translate\((-?[\d.]+)px(?:, (-?[\d.]+)px)?\)/.exec(
     element.style.transform,
   )!;
-  return { x: Number(match[1]), y: Number(match[2]) };
+  return { x: Number(match[1]), y: Number(match[2] ?? 0) };
 };
 const pointer = (
   target: Element | Window,
@@ -303,6 +304,7 @@ describe("TileGrid", () => {
         slots={[{ id: "a", x: 0, y: 0, w: 6, h: 20 }]}
         renderTile={() => <div data-testid="part" />}
         tileLabel={(id) => id}
+        editMode={false}
         onChange={() => {}}
       />,
     );

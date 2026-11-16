@@ -31,6 +31,7 @@ import { broadcastToFrames } from "./frame-connection";
 import { setUiPreferenceSetter } from "./frame-ui-preferences";
 import { DataWatchHost } from "./data-watches";
 import { ForeignViewHost } from "./foreign-views";
+import { webSerialAvailable } from "./serial-bridge";
 
 const themeCssCache = new Map<string, string>();
 
@@ -279,7 +280,7 @@ export function FrameStateSync() {
   }, [tabs, tabsReady]);
 
   useEffect(() => {
-    setSharedState({ isMobile });
+    setSharedState({ isMobile, webSerial: webSerialAvailable() });
   }, [isMobile]);
 
   useEffect(() => {

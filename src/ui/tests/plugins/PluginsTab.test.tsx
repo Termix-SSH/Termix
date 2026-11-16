@@ -46,6 +46,15 @@ function listed(
   };
 }
 
+const updateCheck = vi.hoisted(() => ({
+  current: { version: null as string | null, blocked: [] as unknown[] },
+}));
+vi.mock("@/api/plugins-api", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  getPluginProcesses: () => Promise.reject(new Error("no access")),
+  getPluginUpdateCheck: () => Promise.resolve(updateCheck.current),
+}));
+
 vi.mock("@/plugins/use-plugins-manager", () => ({
   usePluginsManager: () => ({
     plugins: [plugin, ...extra],
@@ -79,6 +88,7 @@ async function renderTab() {
 }
 
 beforeEach(() => {
+  updateCheck.current = { version: null, blocked: [] };
   localStorage.clear();
   linked = false;
   extra = [];
@@ -87,6 +97,48 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("PluginsTab", () => {
+  it("names API 1 plugins, says why and links the guide", async () => {
+    extra = [
+      {
+        ...plugin,
+        id: "old",
+        name: "Old Plugin",
+        enabled: false,
+        isolation: "legacy",
+      } as typeof plugin,
+    ];
+    await renderTab();
+    expect(
+      screen.getByText(/stays off until it is updated: Old Plugin/),
+    ).toBeTruthy();
+    expect(screen.getByText(/made for plugin API 1/)).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "How plugins move to API 2" }),
+    ).toHaveProperty("href", docsUrl("pluginApi2"));
+  });
+
+  it("lists plugins the next Termix release would turn off", async () => {
+    updateCheck.current = {
+      version: "26.12.0",
+      blocked: [
+        {
+          id: "demo",
+          name: "Demo Plugin",
+          version: "1.0.0",
+          enabled: true,
+          reason: "termix",
+          needs: "<26.12.0",
+        },
+      ],
+    };
+    await renderTab();
+    expect(
+      await screen.findByText(
+        "Termix 26.12.0 is out. 1 plugin will stay off on it until you update it: Demo Plugin (needs Termix <26.12.0).",
+      ),
+    ).toBeTruthy();
+  });
+
   it("points to the Registries tab and links the submit guide", async () => {
     await renderTab();
     fireEvent.click(screen.getByText(en.plugins.manager.tabs.browse));
@@ -203,7 +255,8 @@ describe("PluginsTab", () => {
     const grid = container.querySelector<HTMLElement>(
       "[style*='grid-template-columns']",
     );
-    expect(grid?.style.gridTemplateColumns).toContain("/ 5");
+    // jsdom 31 folds the calc, so "/ 5" reads as "20%"
+    expect(grid?.style.gridTemplateColumns).toMatch(/\/ 5|20%/);
   });
 
   it("fits auto columns to the tab width, not the window", async () => {

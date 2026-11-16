@@ -2419,13 +2419,89 @@ export interface PluginLoginInstance {
    * instance that asks wins.
    */
   autoStart?: boolean;
+  /**
+   * Which page of the login screen shows it: "password" (the main one) or
+   * "external" (the other sign in methods). Both when unset.
+   */
+  views?: Array<"password" | "external">;
+}
+
+/** One field the login screen draws for a form method or a second factor. */
+export interface PluginLoginField {
+  /** The key the value goes under in the body sent to verify. */
+  name: string;
+  type: "text" | "password" | "code";
+  /** A key in this plugin's locales. */
+  labelKey: string;
+  /** The browser's autofill hint: "username", "current-password", "one-time-code". */
+  autocomplete?: string;
+}
+
+/**
+ * What the shell needs to run a WebAuthn step in the browser. `publicKey` is
+ * PublicKeyCredentialRequestOptionsJSON (or CreationOptionsJSON for a
+ * create ceremony), base64url fields as @simplewebauthn/server makes them.
+ */
+export interface PluginWebAuthnOptions {
+  publicKey: Record<string, unknown>;
+  /** Comes back unchanged beside the browser's answer, e.g. a challenge id. */
+  context?: Record<string, unknown>;
+}
+
+/**
+ * How the second factor step asks for the answer. The shell draws it and
+ * sends the answer to the factor's verify, so no plugin code runs on the
+ * login screen.
+ */
+export type PluginSecondFactorPrompt =
+  /** One code field. Its value goes under `field` ("code" by default). */
+  | { kind: "code"; field?: string; labelKey?: string; length?: number }
+  | { kind: "fields"; fields: PluginLoginField[] }
+  /**
+   * A security key. `challenge()` returns PluginWebAuthnOptions (or the
+   * request options JSON alone); verify gets `{ ...context, response }`.
+   */
+  | { kind: "webauthn" };
+
+/**
+ * A WebAuthn step a plugin's own screens run after login, such as adding a
+ * passkey or proving a key before removing one. Frames can't reach
+ * navigator.credentials, so the shell runs it: the frame names the ceremony,
+ * this plugin's backend makes the options and checks the answer, and the
+ * frame only gets what `finish` returns.
+ */
+export interface PluginWebAuthnCeremony {
+  /** Unique within this plugin. */
+  id: string;
+  type: "create" | "get";
+  options: (input: {
+    userId: string;
+    /** The page's origin, for the relying party id. */
+    origin: string;
+    /** Plain values the frame passed, such as a key name. */
+    extra: Record<string, unknown>;
+  }) => Promise<PluginWebAuthnOptions>;
+  /** Checks the browser's answer. What it returns goes back to the frame. */
+  finish: (input: {
+    userId: string;
+    origin: string;
+    extra: Record<string, unknown>;
+    context: Record<string, unknown>;
+    /** RegistrationResponseJSON or AuthenticationResponseJSON. */
+    response: Record<string, unknown>;
+  }) => Promise<Record<string, unknown> | void>;
 }
 
 export interface PluginLoginMethod {
   id: string;
   labelKey: string;
   icon?: string;
-  kind: "redirect" | "form";
+  /**
+   * "webauthn" (Termix 26.11.2, plugin API 2.8) is a passkey button the
+   * shell runs: it gets `options`, asks the browser, and sends
+   * `{ ...context, response }` to `verify`.
+   */
+  kind: "redirect" | "form" | "webauthn";
   /**
    * True for a method that authenticates against something other than a
    * password or key this server holds: SSO, an external directory, a
@@ -2443,7 +2519,19 @@ export interface PluginLoginMethod {
   ) => Promise<{ redirectUrl: string }>;
   /** Redirect methods: the provider's callback. */
   callback?: (request: PluginLoginRequest) => Promise<PluginVerifiedIdentity>;
-  /** Form methods: check what the user typed. */
+  /**
+   * Form methods: the fields the login screen draws for each instance
+   * (Termix 26.11.2, plugin API 2.8). The values go to `verify` by name.
+   */
+  fields?: PluginLoginField[];
+  /** Also drawn under the password form, for a method used instead of a password. */
+  placement?: "inline";
+  /** WebAuthn methods: the options for the browser's passkey prompt. */
+  options?: (
+    request: PluginLoginRequest,
+    instanceId: string | null,
+  ) => Promise<PluginWebAuthnOptions>;
+  /** Form and WebAuthn methods: check what the user gave. */
   verify?: (
     request: PluginLoginRequest,
     instanceId: string | null,
@@ -2456,6 +2544,11 @@ export interface PluginSecondFactor {
   isEnrolled: (userId: string) => Promise<boolean>;
   /** Anything the client needs before the user answers. */
   challenge?: (userId: string) => Promise<unknown>;
+  /**
+   * How the login screen asks (Termix 26.11.2, plugin API 2.8). A factor
+   * without one can only be answered by a client that knows it.
+   */
+  prompt?: PluginSecondFactorPrompt;
   /**
    * True when the answer is right. Return an object to refuse with a specific
    * message, for example when the factor had to be reset.
@@ -2544,6 +2637,12 @@ export interface PluginAuth {
   ) => void;
   registerLoginMethod: (method: PluginLoginMethod) => void;
   registerSecondFactor: (factor: PluginSecondFactor) => void;
+  /**
+   * A WebAuthn step this plugin's frames can ask the shell to run with
+   * `app.auth.webauthn(id, extra)`. Needs auth:provide. Termix 26.11.2 and
+   * plugin API 2.8; optional in the types.
+   */
+  registerWebAuthnCeremony?: (ceremony: PluginWebAuthnCeremony) => void;
   /**
    * Marks a user as enrolled in one of this plugin's factors. Core keeps the
    * row even when the plugin is gone, so it can refuse the login instead of
@@ -2653,6 +2752,17 @@ export interface PluginOpenIsolatedWindowRequest {
  * Electron only: rejects when the server is not running embedded in the
  * desktop app. Needs desktop:window.
  */
+/** A page for ctx.desktop.grantView. */
+export interface PluginViewGrantRequest {
+  /** http(s) only, with no login in it. */
+  url: string;
+  /**
+   * Accept an invalid TLS certificate from this https address's own origin.
+   * Only the desktop app's native view honors it.
+   */
+  ignoreCert?: boolean;
+}
+
 /**
  * A host to open in the operating system's own client for a protocol. The
  * desktop app supports "rdp" (mstsc on Windows) today; any other protocol is
@@ -2677,6 +2787,19 @@ export interface PluginDesktop {
   launchExternalClient: (
     request: PluginExternalClientRequest,
   ) => Promise<{ success: boolean; error?: string }>;
+  /**
+   * Lets this plugin's frames show one page in a view the shell draws: a
+   * native view in the desktop app, a credentialless sandboxed iframe in a
+   * browser. Pass the grant to `NativeView` from @termix-ssh/plugin-sdk/ui.
+   * The frame only holds the grant, so it can't change the address or the
+   * certificate rule. Call it inside a person's request; the grant works for
+   * that person and session only and lasts ten minutes. Needs
+   * desktop:window. Termix 26.11.2 and plugin API 2.8; optional in the types,
+   * so call it as `ctx.desktop.grantView?.(...)`.
+   */
+  grantView?: (
+    request: PluginViewGrantRequest,
+  ) => Promise<{ grant: string; expiresAt: number }>;
   /** Whether the server runs embedded in the desktop app, so the calls above can work. */
   available: () => Promise<boolean>;
   /**
@@ -3331,6 +3454,15 @@ export interface PluginSchedule {
   ) => () => void;
   /** Runs `fn` once after `delayMs`. Returns a function that cancels it. */
   after: (delayMs: number, fn: () => void | Promise<void>) => () => void;
+  /**
+   * Plugin API 2.9: keeps this plugin's process running while any reason is
+   * set. A plugin that calls it (even with false) manages this itself: its
+   * jobs shorter than the idle time then run only while it is running, and
+   * core may stop it when idle. Call it with true while there is work
+   * (monitors to check, watches to run) and false when there is none. Older
+   * cores leave it out, so call it as `ctx.schedule.keepAwake?.(...)`.
+   */
+  keepAwake?: (reason: string, awake: boolean) => void;
 }
 
 /** The certificate core serves, read from its configured paths. */

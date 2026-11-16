@@ -5,6 +5,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { NO_NETWORK_ENV } from "../child/guards.js";
 
 /** Plugin users live in their own range, one per plugin id. */
 export const UID_FIRST = 61000;
@@ -52,7 +53,8 @@ export function isPassableEnv(name: string): boolean {
     !CORE_ONLY_ENV.has(name) &&
     !RUNTIME_ENV.test(name) &&
     name !== "TERMIX_SANDBOX_PLUGIN" &&
-    name !== "TERMIX_SANDBOX_ADDONS"
+    name !== "TERMIX_SANDBOX_ADDONS" &&
+    name !== NO_NETWORK_ENV
   );
 }
 

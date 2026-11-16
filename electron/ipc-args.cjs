@@ -10,9 +10,6 @@ const IPC_ARGS = {
   "embedded-view-bounds": (id, bounds) => [v.viewId(id), v.bounds(bounds)],
   "embedded-view-visible": (id, visible) => [v.viewId(id), visible === true],
   "embedded-view-close": (id) => [v.viewId(id)],
-  "allow-invalid-certificate-for-origin": (origin) => [
-    v.string(origin, { min: 1, max: 2048, name: "origin" }),
-  ],
   "set-title-bar-overlay": (colors) => [v.titleBarColors(colors)],
   // The handler answers a bad URL or port itself, so only types are checked.
   "external-browser-login": (authUrl, callbackPort) => [

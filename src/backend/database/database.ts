@@ -94,6 +94,7 @@ import {
   findFrameRuntimeDir,
   frameAncestors,
   frameImportMapHash,
+  framePage,
 } from "../http/frame-runtime.js";
 import { getRequestBaseUrl } from "../utils/request-origin.js";
 import { normalizeCookiesMiddleware } from "../auth/session-cookie.js";
@@ -1607,6 +1608,7 @@ app.use(
   "/plugin-assets",
   createPluginAssetsRouter((id) => getPluginRuntime().loader.get(id), {
     frameDir: findFrameRuntimeDir,
+    framePage,
     frameCsp: (req, pluginId) =>
       pluginFrameCsp({
         baseUrl: getRequestBaseUrl(req),

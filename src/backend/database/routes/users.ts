@@ -762,11 +762,12 @@ router.get("/setup-required", async (req, res) => {
  */
 router.post("/internal/auto-session", async (req, res) => {
   try {
-    if (desktopAutoSessionRefusal(req)) {
-      authLogger.warn(
-        "Rejected non-loopback attempt to access auto-session endpoint",
-        { source: req.ip },
-      );
+    const refusal = desktopAutoSessionRefusal(req);
+    if (refusal) {
+      authLogger.warn("Refused a desktop auto-session request", {
+        source: req.ip,
+        reason: refusal,
+      });
       return res.status(403).json({ error: "Forbidden" });
     }
 

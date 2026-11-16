@@ -16,6 +16,7 @@ import {
   DEFAULT_FRONTEND_ENTRY,
   DEFAULT_LOCALES_DIR,
   type PluginManifest,
+  validateThemeCss,
 } from "@termix-ssh/plugin-sdk/manifest";
 import type { LoadedPlugin } from "./loader.js";
 import {
@@ -51,6 +52,25 @@ function themeFiles(plugin: AssetPlugin): Map<string, string> {
     if (isInside(plugin.dir, file)) files.set(theme.id, file);
   }
   return files;
+}
+
+// The loader checked each theme on load; a file can still change on disk
+// later, so it is checked again whenever it changes.
+const themeChecks = new Map<string, { stamp: string; ok: boolean }>();
+
+function themeFileAllowed(file: string, themeId: string): boolean {
+  try {
+    const stat = fs.statSync(file);
+    const stamp = `${themeId}:${stat.mtimeMs}:${stat.size}`;
+    const cached = themeChecks.get(file);
+    if (cached?.stamp === stamp) return cached.ok;
+    const ok =
+      validateThemeCss(fs.readFileSync(file, "utf8"), themeId).length === 0;
+    themeChecks.set(file, { stamp, ok });
+    return ok;
+  } catch {
+    return false;
+  }
 }
 
 function frontendEntry(
@@ -194,10 +214,11 @@ export function resolvePluginAsset(
   let root: string | null;
   let rest: string;
   if (clean.startsWith(THEME_ASSET_PREFIX)) {
-    // Only a declared theme file, which the loader checked on load.
+    // Only a declared theme file that still passes the theme check.
     const themeId = clean.slice(THEME_ASSET_PREFIX.length, -".css".length);
     const file = themeFiles(plugin).get(themeId);
     if (!file || !clean.endsWith(".css")) return null;
+    if (!themeFileAllowed(file, themeId)) return null;
     root = path.dirname(file);
     rest = path.basename(file);
   } else if (clean.startsWith("locales/")) {
@@ -276,19 +297,29 @@ export function resolveFrameAsset(
 ): string | null {
   const rest = requestPath.slice(FRAME_ASSET_PREFIX.length) || "frame.html";
   if (!FRAME_FILE.test(rest) || rest.split("/").includes("..")) return null;
-  // The fonts are the UI build's own, beside the frame folder.
-  const root = rest.startsWith("fonts/")
-    ? path.join(path.dirname(frameDir), "fonts")
-    : frameDir;
-  const name = rest.startsWith("fonts/") ? rest.slice("fonts/".length) : rest;
-  const file = path.resolve(root, name);
-  if (!isInside(root, file) || !fileExists(file)) return null;
-  return file;
+  if (!rest.startsWith("fonts/")) {
+    const file = path.resolve(frameDir, rest);
+    return isInside(frameDir, file) && fileExists(file) ? file : null;
+  }
+  // The fonts are the UI build's own, beside the frame folder. A dev runner
+  // has no UI build, so it serves them from the source's public folder.
+  const name = rest.slice("fonts/".length);
+  const dist = path.dirname(frameDir);
+  for (const root of [
+    path.join(dist, "fonts"),
+    path.join(dist, "..", "public", "fonts"),
+  ]) {
+    const file = path.resolve(root, name);
+    if (isInside(root, file) && fileExists(file)) return file;
+  }
+  return null;
 }
 
 export interface PluginAssetsOptions {
   /** Where the built frame runtime (dist/frame) is, when there is one. */
   frameDir?: () => string | null;
+  /** The frame page as served, with its runtime version. */
+  framePage?: () => { html: string; version: string } | null;
   /** The CSP for a plugin's frame page, built from the request. */
   frameCsp?: (req: Request, pluginId: string) => string;
 }
@@ -298,6 +329,63 @@ export function createPluginAssetsRouter(
   options: PluginAssetsOptions = {},
 ): express.Router {
   const router = express.Router();
+
+  /**
+   * @openapi
+   * /plugin-assets/_runtime/{version}/{path}:
+   *   get:
+   *     summary: Serve the shared plugin frame runtime
+   *     description: >
+   *       Core's own frame build (React, the UI kit, fonts), the same for every
+   *       plugin, so every frame reuses one cached copy. Only the current
+   *       version is served and it is cacheable for a year.
+   *     tags:
+   *       - Plugins
+   *     parameters:
+   *       - in: path
+   *         name: version
+   *         required: true
+   *         schema:
+   *           type: string
+   *       - in: path
+   *         name: path
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: The file.
+   *       404:
+   *         description: Old version, no frame build, or no such file.
+   */
+  router.get(
+    /^\/_runtime\/([a-f0-9]{16})\/(.+)$/,
+    (req: Request, res: Response) => {
+      const params = req.params as unknown as Record<string, string>;
+      const frameDir = options.frameDir?.() ?? null;
+      const current = options.framePage?.()?.version;
+      const rest = params[1];
+      const file =
+        frameDir && current === params[0] && !rest.endsWith(".html")
+          ? resolveFrameAsset(frameDir, `${FRAME_ASSET_PREFIX}${rest}`)
+          : null;
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.removeHeader("Access-Control-Allow-Credentials");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      if (!file) {
+        res.setHeader("Cache-Control", "no-store");
+        res.status(404).json({ error: "Not found" });
+        return;
+      }
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      res.type(CONTENT_TYPES[path.extname(file)] ?? "application/octet-stream");
+      res.sendFile(file, (error) => {
+        if (error && !res.headersSent) {
+          res.status(404).json({ error: "Not found" });
+        }
+      });
+    },
+  );
 
   /**
    * @openapi
@@ -384,6 +472,11 @@ export function createPluginAssetsRouter(
         hashed ? "public, max-age=31536000, immutable" : "no-cache",
       );
       res.type(CONTENT_TYPES[path.extname(file)] ?? "application/octet-stream");
+      const served = page ? options.framePage?.() : null;
+      if (served) {
+        res.send(served.html);
+        return;
+      }
       // Installed plugins unpack under .unpacked/, which send would refuse as a
       // dotfile path. resolvePluginAsset already kept the file in the plugin.
       res.sendFile(file, { dotfiles: "allow" }, (error) => {

@@ -47,6 +47,10 @@ vi.mock("../../../utils/data-crypto.js", () => ({
     decryptRecord: (_table: string, record: unknown) => record,
     decryptRecords: (_table: string, records: unknown) => records,
   },
+  splitSecrets: (_table: string, record: Record<string, unknown>) => ({
+    plain: record,
+    secrets: {},
+  }),
 }));
 vi.mock("../../../utils/auth-manager.js", () => ({
   AuthManager: {

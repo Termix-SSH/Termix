@@ -4,7 +4,6 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "get-desktop-settings",
   "get-previous-server-url",
   "save-desktop-settings",
-  "allow-invalid-certificate-for-origin",
 ]);
 
 function invokeAllowed(channel, ...args) {

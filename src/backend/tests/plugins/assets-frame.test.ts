@@ -61,6 +61,10 @@ beforeAll(async () => {
       (id) => plugins[id as keyof typeof plugins] as never,
       {
         frameDir: () => frameDir,
+        framePage: () => ({
+          html: '<!doctype html><script src="../../_runtime/0123456789abcdef/assets/frame-abc.js"></script>',
+          version: "0123456789abcdef",
+        }),
         frameCsp: (_req, pluginId) =>
           pluginFrameCsp({
             baseUrl: "https://termix.example",
@@ -95,6 +99,38 @@ describe("frame pages under /plugin-assets/<id>/_frame/", () => {
     expect(csp).toContain("frame-ancestors https://termix.example");
     expect(csp).not.toContain("plugin-assets/legacy");
     expect(res.headers.get("cache-control")).toBe("no-cache");
+    expect(await res.text()).toContain("../../_runtime/0123456789abcdef/");
+  });
+
+  it("serves the shared runtime once for every plugin, cached for good", async () => {
+    for (const file of ["assets/frame-abc.js", "shared/react.js"]) {
+      const res = await fetch(
+        `${baseUrl}/plugin-assets/_runtime/0123456789abcdef/${file}`,
+      );
+      expect(res.status, file).toBe(200);
+      expect(res.headers.get("cache-control"), file).toBe(
+        "public, max-age=31536000, immutable",
+      );
+      expect(res.headers.get("access-control-allow-origin")).toBe("*");
+    }
+    const font = await fetch(
+      `${baseUrl}/plugin-assets/_runtime/0123456789abcdef/fonts/Mono-Regular.ttf`,
+    );
+    expect(await font.text()).toBe("font");
+  });
+
+  it("serves no other runtime version, no page and nothing outside it", async () => {
+    for (const target of [
+      "_runtime/fedcba9876543210/assets/frame-abc.js",
+      "_runtime/0123456789abcdef/frame.html",
+      "_runtime/0123456789abcdef/../../index.html",
+      "_runtime/0123456789abcdef/%2e%2e/secret.js",
+      "_runtime/0123456789abcdef/fonts/../../secret.js",
+      "_runtime/nothex/assets/frame-abc.js",
+    ]) {
+      const res = await fetch(`${baseUrl}/plugin-assets/${target}`);
+      expect(res.status, target).toBe(404);
+    }
   });
 
   it("serves the runtime's files and caches hashed ones", async () => {
@@ -145,6 +181,30 @@ describe("frame pages under /plugin-assets/<id>/_frame/", () => {
   });
 });
 
+describe("frame fonts", () => {
+  it("come from the UI build, or from public/ when a dev runner has none", () => {
+    const base = fs.mkdtempSync(path.join(os.tmpdir(), "termix-fonts-"));
+    try {
+      const dir = path.join(base, "dist", "frame");
+      fs.mkdirSync(dir, { recursive: true });
+      expect(resolveFrameAsset(dir, "_frame/fonts/a.ttf")).toBeNull();
+
+      const source = path.join(base, "public", "fonts", "a.ttf");
+      write(source, "source");
+      expect(resolveFrameAsset(dir, "_frame/fonts/a.ttf")).toBe(source);
+
+      const built = path.join(base, "dist", "fonts", "a.ttf");
+      write(built, "built");
+      expect(resolveFrameAsset(dir, "_frame/fonts/a.ttf")).toBe(built);
+
+      write(path.join(base, "public", "secret.ttf"), "no");
+      expect(resolveFrameAsset(dir, "_frame/fonts/../secret.ttf")).toBeNull();
+    } finally {
+      fs.rmSync(base, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("pluginFrameCsp", () => {
   const csp = pluginFrameCsp({
     baseUrl: "https://termix.example/base/",
@@ -153,14 +213,19 @@ describe("pluginFrameCsp", () => {
     ancestors: ["app://termix"],
   });
 
-  it("loads code and styles only from the plugin's own folder", () => {
+  it("loads code and styles only from the plugin's own folder and core's runtime", () => {
     expect(csp).toContain("default-src 'none'");
     expect(csp).toContain(
-      "script-src https://termix.example/base/plugin-assets/docker/ 'wasm-unsafe-eval' 'sha256-abc'",
+      "script-src https://termix.example/base/plugin-assets/docker/ https://termix.example/base/plugin-assets/_runtime/ 'wasm-unsafe-eval' 'sha256-abc'",
     );
     expect(csp).toContain(
-      "style-src https://termix.example/base/plugin-assets/docker/ 'unsafe-inline'",
+      "style-src https://termix.example/base/plugin-assets/docker/ https://termix.example/base/plugin-assets/_runtime/ 'unsafe-inline'",
     );
+    expect(csp).toContain(
+      "font-src https://termix.example/base/plugin-assets/docker/ https://termix.example/base/plugin-assets/_runtime/ data:",
+    );
+    // Never another plugin's folder.
+    expect(csp).not.toMatch(/plugin-assets\/(?!docker\/|_runtime\/)/);
     expect(csp).not.toMatch(/script-src[^;]*'self'/);
     expect(csp).not.toMatch(/script-src[^;]*'unsafe-inline'/);
   });
@@ -169,6 +234,21 @@ describe("pluginFrameCsp", () => {
     expect(csp).toContain(
       "connect-src https://termix.example/base/plugin-assets/docker/ https://termix.example/base/plugin-api/docker/ wss://termix.example/base/plugin-ws/docker/",
     );
+  });
+
+  it("loads no picture, media or page from another site", () => {
+    expect(csp).toContain(
+      "img-src https://termix.example/base/plugin-assets/docker/ https://termix.example/base/plugin-assets/_runtime/ data: blob:;",
+    );
+    expect(csp).toContain(
+      "media-src https://termix.example/base/plugin-assets/docker/ data: blob:;",
+    );
+    expect(csp).toContain(
+      "frame-src https://termix.example/base/plugin-assets/docker/ https://termix.example/base/plugin-api/docker/;",
+    );
+    for (const directive of csp.split(";")) {
+      expect(directive).not.toMatch(/(^|\s)(https?:|\*)(\s|$)/);
+    }
   });
 
   it("can only be framed by the server and the desktop app", () => {

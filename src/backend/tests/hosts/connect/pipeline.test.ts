@@ -26,6 +26,13 @@ const mocks = vi.hoisted(() => ({
   createSocks5Connection: vi.fn(),
   resolveHostById: vi.fn(),
   findUsableCredential: vi.fn(),
+  canAccessHost: vi.fn(),
+}));
+
+vi.mock("../../../utils/permission-manager.js", () => ({
+  PermissionManager: {
+    getInstance: () => ({ canAccessHost: mocks.canAccessHost }),
+  },
 }));
 
 vi.mock("../../../hosts/usable-credential.js", () => ({
@@ -576,9 +583,22 @@ describe("connectHost", () => {
 
   it("fails for an unknown or forbidden host", async () => {
     mocks.resolveHostById.mockResolvedValueOnce(null);
+    mocks.canAccessHost.mockResolvedValueOnce({ hasAccess: false });
     await expect(
       connectHost(9, { userId: "user-1", purpose: "fleet" }),
     ).rejects.toThrow("Host not found or access denied");
+  });
+
+  it("says a login is missing on a shared host the user may connect to", async () => {
+    mocks.resolveHostById.mockResolvedValueOnce(null);
+    mocks.canAccessHost.mockResolvedValueOnce({ hasAccess: true });
+    const error = await connectHost(9, {
+      userId: "user-1",
+      purpose: "tmux",
+    }).catch((e) => e);
+    expect(error).toBeInstanceOf(SshConnectError);
+    expect(error.code).toBe("missing-secret");
+    expect(mocks.canAccessHost).toHaveBeenCalledWith("user-1", 9, "connect");
   });
 
   it("throws the auth outcome instead of connecting", async () => {

@@ -264,6 +264,11 @@ export function fakeResponse() {
     cookies: [] as Array<{ name: string; value: string; options: unknown }>,
     cleared: [] as string[],
     redirectedTo: null as string | null,
+    headers: {} as Record<string, string>,
+    setHeader(name: string, value: string) {
+      res.headers[name.toLowerCase()] = value;
+      return res;
+    },
     status(code: number) {
       res.statusCode = code;
       return res;

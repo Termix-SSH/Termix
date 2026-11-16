@@ -29,6 +29,7 @@ import { RoleRepository } from "./role-repository.js";
 import { SessionRepository } from "./session-repository.js";
 import { CredentialAccessRepository } from "./credential-access-repository.js";
 import { SharedCredentialSecretsRepository } from "./shared-credential-secrets-repository.js";
+import { FieldResealRepository } from "./field-reseal-repository.js";
 import { FolderAccessRepository } from "./folder-access-repository.js";
 import { SettingsRepository } from "./settings-repository.js";
 import { HostProtocolAuthRepository } from "./host-protocol-auth-repository.js";
@@ -298,6 +299,16 @@ export function createCurrentSessionRepository(): SessionRepository {
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("session_repository_write"),
     // Activity timestamps are informational; the periodic flush persists them.
+    needsExplicitPersist(resolveDatabaseDialect())
+      ? () => DatabaseSaveTrigger.markDirty()
+      : undefined,
+  );
+}
+
+/** Writes are many and small, so they only mark the database dirty. */
+export function createCurrentFieldResealRepository(): FieldResealRepository {
+  return new FieldResealRepository(
+    createCurrentRepositoryContext(),
     needsExplicitPersist(resolveDatabaseDialect())
       ? () => DatabaseSaveTrigger.markDirty()
       : undefined,

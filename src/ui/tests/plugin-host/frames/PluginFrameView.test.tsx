@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { act, render } from "@testing-library/react";
+import { Suspense } from "react";
 
 type Options = {
   getProps: () => Record<string, unknown>;
@@ -11,6 +12,7 @@ const frames = vi.hoisted(() => ({
   options: null as Options | null,
   emitted: [] as Array<[string, unknown]>,
   closed: 0,
+  connects: 0,
 }));
 
 vi.mock("@/plugin-host/frames/frame-connection", () => ({
@@ -29,6 +31,7 @@ vi.mock("@/plugin-host/frames/frame-connection", () => ({
     options: Options,
   ) => {
     frames.options = options;
+    frames.connects++;
     return {
       port: {
         emit: (name: string, data: unknown) =>
@@ -53,9 +56,76 @@ beforeEach(() => {
   frames.options = null;
   frames.emitted = [];
   frames.closed = 0;
+  frames.connects = 0;
 });
 
+let pending: Promise<void> | null = null;
+function MaySuspend() {
+  if (pending) throw pending;
+  return null;
+}
+
 describe("PluginFrameView", () => {
+  it("keeps a ready frame's connection when Suspense hides and shows it again", async () => {
+    const view = (hostId: number) => (
+      <Suspense fallback={<p>loading</p>}>
+        <PluginFrameView
+          pluginId="docker"
+          frameKey="main"
+          fit="fill"
+          props={{ hostId }}
+        />
+        <MaySuspend />
+      </Suspense>
+    );
+    const { rerender } = render(view(1));
+    act(() => frames.options!.onReady());
+    expect(frames.emitted).toHaveLength(1);
+
+    let resume: () => void = () => {};
+    pending = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    rerender(view(1));
+    pending = null;
+    await act(async () => resume());
+    rerender(view(2));
+
+    expect(frames.connects).toBe(1);
+    expect(frames.closed).toBe(0);
+    // Still ready, so the new props go over without a second hello.
+    expect(frames.emitted).toHaveLength(2);
+  });
+
+  it("closes a kept connection once a hidden frame leaves the page", async () => {
+    vi.useFakeTimers();
+    try {
+      const view = () => (
+        <Suspense fallback={<p>loading</p>}>
+          <PluginFrameView
+            pluginId="docker"
+            frameKey="main"
+            fit="fill"
+            props={{}}
+          />
+          <MaySuspend />
+        </Suspense>
+      );
+      const { rerender, unmount } = render(view());
+      pending = new Promise<void>(() => {});
+      rerender(view());
+      await act(async () => {});
+      expect(frames.closed).toBe(0);
+      unmount();
+      pending = null;
+      vi.advanceTimersByTime(1500);
+      expect(frames.closed).toBe(1);
+    } finally {
+      pending = null;
+      vi.useRealTimers();
+    }
+  });
+
   it("loads a script only sandboxed frame from the plugin's own folder", () => {
     const { container } = render(
       <PluginFrameView
@@ -136,7 +206,7 @@ describe("PluginFrameView", () => {
     expect(iframe.style.width).toBe("10000px");
   });
 
-  it("closes the connection when it goes away", () => {
+  it("closes the connection when it goes away", async () => {
     const { unmount } = render(
       <PluginFrameView
         pluginId="docker"
@@ -147,6 +217,7 @@ describe("PluginFrameView", () => {
       />,
     );
     unmount();
+    await Promise.resolve();
     expect(frames.closed).toBe(1);
   });
 

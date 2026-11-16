@@ -198,6 +198,8 @@ export interface FrameState {
   companions: Record<string, unknown>[];
   hostActions: Record<string, unknown>[];
   desktop: { available: boolean; remoteServerUrl: string | null };
+  /** The shell's browser has Web Serial. */
+  webSerial?: boolean;
   isMobile: boolean;
   /** Background frame only: rows its data hooks run for, valueKey -> rowKey -> context. */
   dataRows?: Record<string, Record<string, Record<string, unknown>>>;

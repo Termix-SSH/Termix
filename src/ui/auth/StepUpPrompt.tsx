@@ -13,7 +13,13 @@ import {
   challengeStepUp,
   listStepUpFactors,
   verifyStepUp,
+  type SecondFactorRef,
 } from "@/api/auth-methods-api";
+import { pluginKey } from "@/lib/plugin-i18n";
+import {
+  canDrawSecondFactor,
+  PluginSecondFactorView,
+} from "./PluginLoginParts";
 import { useSecondFactors } from "@/plugin-host/auth-registry";
 import { PanePrompt } from "@/components/surface/surface-scope";
 import { PROMPT_BUTTON } from "@/components/surface/prompt-styles";
@@ -22,8 +28,9 @@ import { LoadingState } from "@/components/loading-state";
 
 /**
  * The shell asks for a second factor itself, so a plugin (framed or not)
- * only learns whether the person proved it. The factor screens come from the
- * plugins that provide them and run in the page.
+ * only learns whether the person proved it. Each factor is drawn from the
+ * prompt its plugin's backend describes (or a screen of a plugin in the
+ * page).
  */
 
 type Pending = { resolve: (ok: boolean) => void };
@@ -77,14 +84,14 @@ function StepUpCard() {
   const { t } = useTranslation();
   const titleId = useId();
   const uis = useSecondFactors();
-  const [ids, setIds] = useState<string[] | null>(null);
+  const [listed, setListed] = useState<SecondFactorRef[] | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     listStepUpFactors()
-      .then((factors) => setIds(factors.map((factor) => factor.id)))
-      .catch(() => setIds([]));
+      .then((factors) => setListed(factors))
+      .catch(() => setListed([]));
   }, []);
 
   useEffect(() => {
@@ -99,8 +106,24 @@ function StepUpCard() {
   }, []);
 
   const factors = useMemo(
-    () => uis.filter((ui) => ids?.includes(ui.id)),
-    [uis, ids],
+    () =>
+      (listed ?? []).flatMap((factor) => {
+        const ui = uis.find((entry) => entry.id === factor.id);
+        if (ui?.component) {
+          return [{ ...factor, ui, label: t(ui.titleKey) }];
+        }
+        if (!canDrawSecondFactor(factor)) return [];
+        return [
+          {
+            ...factor,
+            ui: undefined,
+            label: t(pluginKey(factor.pluginId, factor.labelKey), {
+              defaultValue: factor.id,
+            }),
+          },
+        ];
+      }),
+    [uis, listed, t],
   );
   const factor = factors.find((ui) => ui.id === picked) ?? factors[0];
 
@@ -118,7 +141,7 @@ function StepUpCard() {
   }
 
   let body;
-  if (ids === null) {
+  if (listed === null) {
     body = <LoadingState />;
   } else if (!factor) {
     body = (
@@ -127,7 +150,7 @@ function StepUpCard() {
       </p>
     );
   } else {
-    const Challenge = factor.component;
+    const Challenge = factor.ui?.component;
     body = (
       <div className="flex flex-col gap-3">
         {factors.length > 1 && (
@@ -136,19 +159,30 @@ function StepUpCard() {
             onChange={setPicked}
             options={factors.map((entry) => ({
               value: entry.id,
-              label: t(entry.titleKey),
+              label: entry.label,
             }))}
           />
         )}
-        <Challenge
-          key={factor.id}
-          factorId={factor.id}
-          rememberMe={false}
-          disabled={busy}
-          verify={verify}
-          challenge={() => challengeStepUp(factor.id)}
-          cancel={() => settle(false)}
-        />
+        {Challenge ? (
+          <Challenge
+            key={factor.id}
+            factorId={factor.id}
+            rememberMe={false}
+            disabled={busy}
+            verify={verify}
+            challenge={() => challengeStepUp(factor.id)}
+            cancel={() => settle(false)}
+          />
+        ) : (
+          <PluginSecondFactorView
+            key={factor.id}
+            factor={factor}
+            disabled={busy}
+            verify={verify}
+            challenge={() => challengeStepUp(factor.id)}
+            cancel={() => settle(false)}
+          />
+        )}
       </div>
     );
   }

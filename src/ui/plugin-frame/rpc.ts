@@ -28,6 +28,12 @@ export interface FramePortOptions {
   post: (message: FrameMessage) => void;
   onCall: CallHandler;
   onEvent?: EventHandler;
+  /**
+   * Sees an event before it is decoded. Returning true means it was handled
+   * and onEvent is skipped. The shell keeps registrations in wire form so it
+   * can cache them.
+   */
+  rawEvent?: (name: string, data: unknown) => boolean;
   /** Prefix for exported function ids, so the two sides never clash. */
   fnPrefix: string;
   /** How wire icons and components turn into values on this side. */
@@ -131,6 +137,7 @@ export class FramePort {
       return true;
     }
     if (data.t === "event") {
+      if (this.options.rawEvent?.(data.name, data.data)) return true;
       this.options.onEvent?.(data.name, this.decode(data.data));
       return true;
     }

@@ -10,6 +10,7 @@
  */
 
 import crypto from "crypto";
+import type { PluginSecondFactorPrompt } from "@termix-ssh/plugin-sdk/backend";
 import type { Request, Response } from "express";
 import { AuthManager } from "../utils/auth-manager.js";
 import { loginRateLimiter } from "../utils/login-rate-limiter.js";
@@ -275,7 +276,12 @@ export type LoginResult =
   | {
       kind: "second-factor";
       tempToken: string;
-      factors: Array<{ id: string; pluginId: string; labelKey: string }>;
+      factors: Array<{
+        id: string;
+        pluginId: string;
+        labelKey: string;
+        prompt?: PluginSecondFactorPrompt;
+      }>;
       rememberMe: boolean;
     };
 
@@ -395,6 +401,7 @@ export async function runLogin(
         id: factor.id,
         pluginId: factor.pluginId,
         labelKey: factor.labelKey,
+        ...(factor.prompt ? { prompt: factor.prompt } : {}),
       })),
     };
   }

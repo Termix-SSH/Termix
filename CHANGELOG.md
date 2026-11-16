@@ -19,9 +19,11 @@
 - The desktop app fences each plugin the same way: it runs on its own copy of Node inside the system's sandbox (an AppContainer on Windows, a Seatbelt profile on macOS, Landlock and seccomp on Linux), so it can't read your files or the database, start programs or open connections it wasn't granted, and it is stopped when it goes over its memory limit. The 32-bit Windows and 32-bit ARM Linux builds have no such copy of Node, so they don't run plugin backends
 - Desktop app: plugin frames keep the frame rules the server sends
 - In the Docker image each plugin also runs as its own Linux user, so it can't read the database, keys or other plugins' data. With `NET_ADMIN`, plugins that may not open connections are also blocked by a firewall rule
-- The screens of every plugin made for plugin API 2 run in sandboxed frames with no access to your login, the rest of the page or other plugins. Each frame reaches only its own plugin, with a short key that ends with your session, and asks Termix for anything else through a fixed list of checks. They keep the same look, theme, shortcuts and language
-- Plugins that only serve pages start on their first use and stop after 10 idle minutes (`TERMIX_PLUGIN_IDLE_MINUTES`). A plugin process that crashes, hangs, uses too much memory (`TERMIX_PLUGIN_MEMORY_MB`) or CPU (`TERMIX_PLUGIN_CPU_LIMIT`) is restarted, and marked failed if it keeps crashing
-- No plugin runs inside the server any more. A plugin made for an older Termix (plugin API 1) stays off until it is updated, and the plugins page lists them
+- The screens of every plugin made for plugin API 2 run in sandboxed frames with no access to your login, the rest of the page or other plugins. Each frame reaches only its own plugin, with a short key that ends with your session, and asks Termix for anything else through a fixed list of checks. They keep the same look, theme, shortcuts and language. A frame loads nothing from other sites: pictures come through Termix, and it can only cover the screen, open links, start downloads or revoke your API keys right after you used it
+- A plugin process starts when something needs it and stops after 10 idle minutes (`TERMIX_PLUGIN_IDLE_MINUTES`). Its jobs, event listeners, operations and services stay with Termix and start it again when they are needed. Plugins on the sign-in and connect paths, and plugins with work to watch, keep running. A plugin process that crashes, hangs, uses too much memory (`TERMIX_PLUGIN_MEMORY_MB`) or CPU (`TERMIX_PLUGIN_CPU_LIMIT`) is restarted, and marked failed if it keeps crashing
+- No plugin runs inside the server any more. A plugin made for an older Termix (plugin API 1) stays off until it is updated. The plugins page names each one, says why and links the guide for moving it
+- When a newer Termix is out, the plugins page names every installed plugin that won't run on it, so you can update those first
+- Plugins from the registry are checked against the build provenance their release workflow signed, and the plugin page shows which build made the installed copy
 - A plugin can ask to read the server's environment variables and files, for secrets a config file points at. Termix's own keys and data folder stay out of reach, and an admin has to allow it
 - Plugin signing keys now come from an offline Termix root key. Official and community plugins install only when a key the root vouched for signed them, and each signing key expires
 - Termix checks a root signed revocation list on start and once a day. A revoked plugin, plugin version or signing key is turned off and every admin gets an alert. Servers without internet keep the last list they had
@@ -38,10 +40,16 @@
 - The server answers `/.well-known/security.txt` with where to report a security problem in Termix
 - Docker images are reproducible: building the same commit again gives the same image, byte for byte
 - Plugins can give small per host or per tab values, like usage bars, badges and status dots, that Termix draws itself. A dashboard with many hosts no longer needs a plugin frame for each row
+- The plugins page shows how much memory Termix and each plugin process use, and admins get an alert when the server runs low on memory
+- Plugin screens load faster and use far less memory: a plugin's background code starts only when something needs it and stops again when idle, every plugin view shares one cached copy of the app's scripts, and repeated reads of your permissions and settings are shared
 - A plugin screen in a frame can show other plugins' parts again, like Homepage widgets, Host Metrics manager cards, host page tiles and terminal side panels. Termix draws each part in its own frame over the spot, clipped to the screen, hidden under open menus, and they still scroll, resize, drag in edit modes and take Tab focus
+- Sign in methods and second factors from plugins are drawn by Termix itself, so no plugin code runs on the sign in screen. Passkeys and security keys use the browser prompt Termix runs, and the plugin's server checks every answer
+- Sign in, serial port and web endpoint plugins run their screens in sandboxed frames too. Termix asks the browser for a serial port or a passkey for them, and shows a web endpoint page only at the address the plugin's server picked
+- Theme files can only load images and fonts that ship with the theme
 
 ### Changed
 
+- Each plugin seals its secrets with its own key, so one plugin can't open what another sealed. Values sealed before move to the new key on the first start
 - An API key made without picking scopes or an expiry is now read only and lasts 90 days. Ask for `full` and no expiry to get the old behavior. Existing keys keep what they had
 - GitHub releases stay drafts until every download is uploaded, and a published release never changes its files
 - Over HTTPS the login cookies use the `__Host-` prefix, so another site on a sibling domain can't set or replace them
@@ -50,12 +58,18 @@
 - Desktop app: the app page is served from its own `app://termix` address instead of from files on disk. Saved view settings move over on the first start. A server older than 26.11.2 that sets `CORS_ALLOWED_ORIGINS` needs `app://termix` added
 - Desktop app: updates install on Windows, macOS, AppImage and deb only after the release's signed `SHA256SUMS` checks out. Releases without it are offered as a download link
 - Desktop app: the local server runs as an Electron utility process, and the app binary can no longer be started as a plain Node or with Node debug flags
+- Desktop app: only the app itself can sign in to its local server. It sends a secret made fresh at every launch, so other programs and other users on the computer can't
 - The Docker image runs on Node 26
 - A plugin can no longer turn on the server's debugger
 - Plugins signed with the old single key keep loading until 2027-05-01. Termix moves installed plugins over to the new signatures on its own, without downloading them again
 
 ### Fixed
 
+- Outbound requests never reach a cloud metadata address, even for a host allowed as private
+- Updating a plugin never moves it back to an older version unless you pick that version
+- Saved passwords and keys of hosts and credentials only open for the host or credential they belong to. Existing ones move over at the first start, with a backup of the old values in the data folder
+- Outbound checks also refuse private IPv4 addresses written in IPv4-compatible or NAT64 IPv6 form
+- Starting the server no longer hangs when downloading a missing plugin from the registry stalls
 - Tile grids (dashboards, Homepage, host pages) go back to columns when the window gets wide again, and show their tiles when a page opens on a narrow screen
 - A very long path prefix header no longer slows down the request it came with
 - Desktop sync: when the same change was sent twice in one sync, the change was saved but the desktop was told it conflicted. The repeat is now answered as a duplicate
@@ -106,6 +120,8 @@
 - SSH key uploads on a host are limited to 1 MB
 - Download names with unusual characters in a user export are kept safe
 - A settings import no longer brings in password reset codes or the audit forwarding token
+- Plugin tools on a shared host you have no login for now say a login is missing, not that the host was not found
+- Plugins that are still starting after a server restart now show up once they are running, instead of staying missing until you reload the page
 
 ## 26.11.1
 

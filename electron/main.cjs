@@ -30,6 +30,11 @@ const net = require("net");
 const tls = require("tls");
 const zlib = require("zlib");
 const crypto = require("crypto");
+const { isLocalBackendUrl } = require("./local-backend.cjs");
+
+// Proves a request to the local backend comes from this app, not another
+// program on the machine. New every launch, never written to disk.
+const LAUNCH_SECRET = crypto.randomBytes(32).toString("hex");
 const { URL } = require("url");
 const appProtocol = require("./app-protocol.cjs");
 const { createIpcGuard } = require("./ipc-guard.cjs");
@@ -586,6 +591,8 @@ ipc.handle("embedded-view-close", (_event, id) => {
 // ctx.desktop.openIsolatedWindow is the one caller today.
 const BACKEND_REQUEST_HANDLERS = {
   "open-isolated-window": (payload) => isolatedWindows.open(payload),
+  // A plugin's backend lets its frames show one page (ctx.desktop.grantView).
+  "web-view-grant": (payload) => embeddedViews.addGrant(payload),
   // Plugins open OS clients themselves now (desktop:local), so none is wired here.
   "launch-external-client": (payload) => ({
     success: false,
@@ -751,60 +758,6 @@ function cleanupManagedTempFile(tempId) {
   tempFiles.delete(tempId);
 }
 
-// Origins the renderer has explicitly marked as allowed to present an invalid
-// certificate, for web endpoints whose ignoreCert is set. Session scoped and
-// never persisted.
-//
-// Deliberately NOT wired into isInvalidCertificateAllowedForUrl: that function
-// also governs this process's own outbound TLS via getTlsVerificationOptions,
-// and widening it would grant more privilege than the feature needs.
-//
-// Entries expire rather than living until the app restarts (days, on a
-// desktop app). Main has no host-database access, so it cannot verify a
-// renderer's claim that an origin really is a configured web endpoint -- an
-// unbounded allowance would make that an indefinite window rather than a
-// momentary one. The renderer re-registers before each load, which refreshes
-// the expiry, so a live endpoint keeps working while a stale entry lapses.
-const WEB_ENDPOINT_CERTIFICATE_ALLOWLIST_TTL_MS = 5 * 60 * 1000;
-const webEndpointCertificateAllowlist = new Map();
-
-function isWebEndpointCertificateAllowed(url) {
-  try {
-    const parsed = new URL(url);
-    // The allowance exists solely to suppress a TLS certificate error, so a
-    // non-https origin in the map is meaningless at best.
-    if (parsed.protocol !== "https:") return false;
-
-    const expiresAt = webEndpointCertificateAllowlist.get(parsed.origin);
-    if (expiresAt === undefined) return false;
-    if (Date.now() >= expiresAt) {
-      webEndpointCertificateAllowlist.delete(parsed.origin);
-      return false;
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-ipc.handle("allow-invalid-certificate-for-origin", (_event, origin) => {
-  try {
-    // Store the PARSED origin, never the caller's string, so a path or a
-    // wildcard cannot widen the allowance.
-    const parsed = new URL(String(origin));
-    if (parsed.protocol !== "https:") {
-      return { success: false };
-    }
-    webEndpointCertificateAllowlist.set(
-      parsed.origin,
-      Date.now() + WEB_ENDPOINT_CERTIFICATE_ALLOWLIST_TTL_MS,
-    );
-    return { success: true };
-  } catch {
-    return { success: false };
-  }
-});
-
 // Mutual TLS for the linked server: Chromium asks which certificate from the
 // OS store to present. Other origins keep Chromium's default (none).
 const chosenClientCerts = new Map();
@@ -849,18 +802,6 @@ app.on(
       embeddedViews.handleCertificateError(event, _webContents, url, callback)
     )
       return;
-    if (isWebEndpointCertificateAllowed(url)) {
-      event.preventDefault();
-      logToFile("Allowed invalid certificate for configured web endpoint", {
-        url,
-        error,
-        issuer: certificate?.issuerName,
-        subject: certificate?.subjectName,
-      });
-      callback(true);
-      return;
-    }
-
     if (isInvalidCertificateAllowedForUrl(url)) {
       event.preventDefault();
       logToFile("Allowed invalid certificate for configured server", {
@@ -1166,6 +1107,7 @@ function startBackendServer() {
           DATA_DIR: dataDir,
           NODE_ENV: "production",
           ELECTRON_EMBEDDED: "true",
+          TERMIX_DESKTOP_LAUNCH_SECRET: LAUNCH_SECRET,
           PORT: String(backendPort),
           EMBEDDED_BACKEND_PORT: String(backendPort),
           ELECTRON_USER_DATA: app.getPath("userData"),
@@ -1551,6 +1493,10 @@ function createWindow() {
   mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
     (details, callback) => {
       details.requestHeaders["X-Electron-App"] = "true";
+      // Only the local backend gets the launch secret, never a linked server.
+      if (isLocalBackendUrl(details.url, backendPort)) {
+        details.requestHeaders["X-Termix-Launch"] = LAUNCH_SECRET;
+      }
 
       details.requestHeaders["User-Agent"] = customUserAgent;
 
@@ -2292,28 +2238,28 @@ app.whenReady().then(async () => {
       path.join(appRoot, "dist"),
     );
     movingStorage = true;
-    // Every file:// page shares one storage origin, so any empty page on
-    // disk reads what the old builds saved.
-    const fileBlankPath = path.join(
-      app.getPath("userData"),
-      "storage-blank.html",
-    );
     try {
-      fs.writeFileSync(fileBlankPath, "<!doctype html><title></title>");
       await migrateFileStorage({
         BrowserWindow,
         partition: termixSessionPartition,
         markerPath: path.join(app.getPath("userData"), "app-origin.json"),
-        fileBlankPath,
+        // Where Chromium keeps localStorage of the persist:termix partition.
+        storageDir: path.join(
+          app.getPath("userData"),
+          "Partitions",
+          "termix",
+          "Local Storage",
+          "leveldb",
+        ),
         appBlankUrl: appProtocol.APP_BLANK_URL,
         fs,
+        path,
         log: logToFile,
       });
     } catch (error) {
       logToFile("Could not move saved settings:", error?.message || error);
     } finally {
       movingStorage = false;
-      fs.rmSync(fileBlankPath, { force: true });
     }
   }
 

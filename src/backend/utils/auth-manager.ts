@@ -243,6 +243,7 @@ class AuthManager {
 
   private async ensureUserDEK(userId: string): Promise<boolean> {
     if (this.userKeys.tryGetUserDEK(userId)) {
+      await this.resealOnUnlock();
       await this.performLazyEncryptionMigration(userId);
       return true;
     }
@@ -289,6 +290,19 @@ class AuthManager {
     _deviceType?: DeviceType,
   ): Promise<boolean> {
     return this.ensureUserDEK(userId);
+  }
+
+  /** A key that only opened now may still have rows on a temporary id. */
+  private async resealOnUnlock(): Promise<void> {
+    try {
+      const { runFieldResealMigration } =
+        await import("../upgrade/field-reseal-migration.js");
+      await runFieldResealMigration();
+    } catch (error) {
+      databaseLogger.error("Moving saved secrets failed", error, {
+        operation: "field_reseal_failed",
+      });
+    }
   }
 
   private async performLazyEncryptionMigration(userId: string): Promise<void> {

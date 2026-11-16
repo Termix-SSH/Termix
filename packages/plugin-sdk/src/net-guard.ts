@@ -32,11 +32,15 @@ export const PRIVATE_IPV6_RANGES: ReadonlyArray<readonly [string, number]> = [
   ["fc00::", 7],
   ["fe80::", 10],
   ["ff00::", 8],
+  ["64:ff9b:1::", 48],
 ];
 
 for (const [network, prefix] of PRIVATE_IPV4_RANGES) {
   blocked.addSubnet(network, prefix, "ipv4");
   blocked.addSubnet(`::ffff:${network}`, prefix + 96, "ipv6");
+  // IPv4-compatible (::a.b.c.d) and NAT64 (64:ff9b::a.b.c.d) forms.
+  blocked.addSubnet(`::${network}`, prefix + 96, "ipv6");
+  blocked.addSubnet(`64:ff9b::${network}`, prefix + 96, "ipv6");
 }
 for (const [network, prefix] of PRIVATE_IPV6_RANGES) {
   blocked.addSubnet(network, prefix, "ipv6");

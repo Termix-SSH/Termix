@@ -26,6 +26,7 @@ import {
   type FrameConnection,
 } from "./frame-connection";
 import { useStableProps } from "@/plugin-frame/stable-props";
+import { acquireFramedPlugin } from "./frame-demand";
 
 /**
  * fill: takes the box it is given. content: full width, as tall as the
@@ -63,6 +64,62 @@ export interface PluginFrameViewProps {
 }
 
 export const SANDBOX = "allow-scripts";
+
+interface Parked {
+  sig: string;
+  connection: FrameConnection;
+  timer: ReturnType<typeof setInterval>;
+}
+
+// Suspense and strict mode run a view's layout effects again on the same,
+// still loaded frame, which never says hello twice. The connection waits
+// here until the effect comes back or the frame leaves the page.
+const parked = new WeakMap<HTMLIFrameElement, Parked>();
+
+function takeParked(element: HTMLIFrameElement): Parked | undefined {
+  const kept = parked.get(element);
+  if (!kept) return undefined;
+  parked.delete(element);
+  clearInterval(kept.timer);
+  return kept;
+}
+
+function keepAlive(
+  element: HTMLIFrameElement,
+  sig: string,
+  next: FrameConnection,
+  controlRef: PluginFrameViewProps["controlRef"],
+  current: { current: FrameConnection | null },
+): () => void {
+  controlRef?.({
+    focusEdge: (at) => {
+      element.focus();
+      next.port?.emit("focusEdge", at === "last" ? "last" : "first");
+    },
+  });
+  return () => {
+    controlRef?.(null);
+    current.current = null;
+    if (!element.isConnected) {
+      next.close();
+      return;
+    }
+    const sweep = () => {
+      if (element.isConnected || parked.get(element)?.connection !== next) {
+        return;
+      }
+      takeParked(element);
+      next.close();
+    };
+    parked.set(element, {
+      sig,
+      connection: next,
+      timer: setInterval(sweep, 1000),
+    });
+    // An unmount has removed the frame by the time this runs.
+    queueMicrotask(sweep);
+  };
+}
 
 export function PluginFrameView({
   pluginId,
@@ -125,6 +182,15 @@ export function PluginFrameView({
   useLayoutEffect(() => {
     const element = iframe.current;
     if (!element) return;
+    const sig = `${pluginId}
+${frameKey}
+${src}`;
+    const kept = takeParked(element);
+    if (kept?.sig === sig) {
+      connection.current = kept.connection;
+      return keepAlive(element, sig, kept.connection, controlRef, connection);
+    }
+    kept?.connection.close();
     setReady(false);
     lastSent.current = null;
     const next = connectFrame(element, pluginId, "view", frameKey, {
@@ -152,20 +218,13 @@ export function PluginFrameView({
       },
     });
     connection.current = next;
-    controlRef?.({
-      focusEdge: (at) => {
-        element.focus();
-        next.port?.emit("focusEdge", at === "last" ? "last" : "first");
-      },
-    });
-    return () => {
-      controlRef?.(null);
-      next.close();
-      connection.current = null;
-    };
+    return keepAlive(element, sig, next, controlRef, connection);
     // controlRef is read once per frame.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pluginId, frameKey, src]);
+
+  // A view may call into its plugin's background code.
+  useEffect(() => acquireFramedPlugin(pluginId), [pluginId]);
 
   useEffect(() => {
     if (!import.meta.env.DEV || ready) return;

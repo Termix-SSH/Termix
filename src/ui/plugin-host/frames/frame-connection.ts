@@ -46,6 +46,12 @@ import {
   onSharedStateChange,
 } from "./frame-state";
 import { frameToken } from "./frame-token";
+import {
+  cachedCoreRead,
+  copyCoreResponse,
+  isCacheableCoreRead,
+  type CachedCoreResponse,
+} from "./core-read-cache";
 import { dataRowsFor, onDataRowsChange } from "./data-rows";
 import {
   addDataWatch,
@@ -56,11 +62,30 @@ import {
 import { readFrameStorage, writeFrameStorage } from "./frame-storage";
 import { setUiPreferenceFromFrame } from "./frame-ui-preferences";
 import { requestStepUp } from "@/auth/StepUpPrompt";
+import { hasUserActivation } from "./user-activation";
+import {
+  mayControlSession,
+  reloadShell,
+  signOutShell,
+} from "../session-control";
+import {
+  readCeremonyExtra,
+  readCeremonyId,
+  runPluginCeremony,
+} from "./webauthn-bridge";
+import {
+  closeSerial,
+  closeSerialFor,
+  parseSerialOptions,
+  requestSerialPort,
+  writeSerial,
+} from "./serial-bridge";
 import { manifestUses } from "./foreign-policy";
 import {
   addForeignList,
   disposeForeignView,
   dropForeignConsumer,
+  ensureForeignConsumer,
   focusForeignView,
   foreignAllowsAction,
   mountForeignView,
@@ -73,6 +98,8 @@ export interface FrameEvents {
   /** A view's current props, sent with its boot data. */
   getProps?: () => Record<string, unknown>;
   onEvent?: (name: string, data: unknown) => void;
+  /** An event still in wire form; true when it was handled. */
+  onRaw?: (name: string, data: unknown) => boolean;
   onReady?: () => void;
   onFailed?: (message: string) => void;
 }
@@ -145,7 +172,10 @@ function onMessage(event: MessageEvent) {
       connection.port?.close();
       // Placeholders of the old page are gone with it.
       const owner = watchOwners.get(connection);
-      if (owner) dropForeignConsumer(owner);
+      if (owner) {
+        dropForeignConsumer(owner);
+        closeSerialFor(owner);
+      }
       connection.port = createPort(connection, event.source as Window);
       return;
     }
@@ -186,6 +216,7 @@ export function connectFrame(
       connections.delete(connection);
       removeDataWatches(watchOwner);
       dropForeignConsumer(watchOwner);
+      closeSerialFor(watchOwner);
       stopState?.();
       connection.port?.close();
       connection.port = null;
@@ -228,16 +259,24 @@ function createPort(connection: FrameConnection, target: Window): FramePort {
     post: (message) => target.postMessage(message, "*"),
     onCall: (method, args) => handleCall(connection, method, args),
     onEvent: (name, data) => handleEvent(connection, name, data),
+    rawEvent: (name, data) => connection.events.onRaw?.(name, data) === true,
     fnPrefix: "s",
     icon: (ref) => decodeIconValue(ref),
     component: (ref: WireComponent) => ref,
   });
 }
 
+// The frame reports its own pointer and key events, so those alone could be
+// faked; the browser's user activation cannot.
 function recentlyUsed(connection: FrameConnection): boolean {
-  return Date.now() - connection.lastInteraction < 5_000;
+  return Date.now() - connection.lastInteraction < 5_000 && hasUserActivation();
 }
 
+function hasCapability(pluginId: string, capability: string): boolean {
+  return (summaryOf(pluginId)?.capabilities ?? []).includes(capability);
+}
+
+const DOWNLOAD_AFTER_USE_MS = 120_000;
 const MAX_TOASTS_PER_MINUTE = 20;
 const toastTimes = new Map<string, number[]>();
 
@@ -262,7 +301,8 @@ function isHttpUrl(value: unknown): value is string {
   }
 }
 
-async function coreRequest(pluginId: string, request: unknown) {
+async function coreRequest(connection: FrameConnection, request: unknown) {
+  const { pluginId } = connection;
   const input = (request ?? {}) as {
     method?: unknown;
     path?: unknown;
@@ -270,7 +310,12 @@ async function coreRequest(pluginId: string, request: unknown) {
     body?: unknown;
   };
   const method = String(input.method ?? "GET").toUpperCase();
-  const check = checkCoreRequest(pluginId, method, String(input.path ?? ""));
+  const asked = checkCoreRequest(pluginId, method, String(input.path ?? ""));
+  // Some writes only follow a click or key in the frame.
+  const check: typeof asked =
+    asked.ok && asked.userAction && !recentlyUsed(connection)
+      ? { ok: false, reason: `${method} ${asked.path} with no user action` }
+      : asked;
   if (!check.ok) {
     if (import.meta.env.DEV) {
       console.warn(
@@ -292,17 +337,28 @@ async function coreRequest(pluginId: string, request: unknown) {
     input.body instanceof ArrayBuffer && method !== "GET" && method !== "HEAD"
       ? input.body
       : undefined;
-  const response = await authApi.request({
-    method,
-    url: `${check.path}${check.query}`,
-    headers,
-    data: body,
-    responseType: "arraybuffer",
-    validateStatus: () => true,
-    transformRequest: [(data: unknown) => data],
-  });
-  let out = response.data as ArrayBuffer;
-  const type = String(response.headers["content-type"] ?? "");
+  const url = `${check.path}${check.query}`;
+  const load = async (): Promise<CachedCoreResponse> => {
+    const response = await authApi.request({
+      method,
+      url,
+      headers,
+      data: body,
+      responseType: "arraybuffer",
+      validateStatus: () => true,
+      transformRequest: [(data: unknown) => data],
+    });
+    return {
+      status: response.status,
+      type: String(response.headers["content-type"] ?? ""),
+      body: response.data as ArrayBuffer,
+    };
+  };
+  const response = isCacheableCoreRead(method, check.path)
+    ? copyCoreResponse(await cachedCoreRead(url, load))
+    : await load();
+  let out = response.body;
+  const type = response.type;
   if (type.includes("json") && out.byteLength > 0 && response.status < 300) {
     try {
       const parsed = JSON.parse(new TextDecoder().decode(out)) as unknown;
@@ -434,7 +490,14 @@ async function handleCall(
     }
     case "foreign.mount": {
       const owner = watchOwners.get(connection);
-      return owner ? mountForeignView(owner, args[0]) : false;
+      if (!owner) return false;
+      ensureForeignConsumer({
+        owner,
+        pluginId,
+        iframe: connection.iframe,
+        emit: (name, data) => connection.port?.emit(name, data),
+      });
+      return mountForeignView(owner, args[0]);
     }
     case "foreign.focus": {
       const owner = watchOwners.get(connection);
@@ -442,7 +505,7 @@ async function handleCall(
       return;
     }
     case "http":
-      return coreRequest(pluginId, args[0]);
+      return coreRequest(connection, args[0]);
     case "toast": {
       const [kind, message] = args;
       if (!allowToast(pluginId) || typeof message !== "string") return;
@@ -478,12 +541,18 @@ async function handleCall(
       return requestStepUp();
     }
     case "openUrl": {
+      // Only right after the user did something in the frame.
+      if (!recentlyUsed(connection)) throw new Error("Not allowed now");
       const [url] = args;
       if (!isHttpUrl(url)) throw new Error("Only web links can be opened");
       window.open(url, "_blank", "noopener,noreferrer");
       return;
     }
     case "download": {
+      // An export can take a while, so the click may be a bit older.
+      if (Date.now() - connection.lastInteraction > DOWNLOAD_AFTER_USE_MS) {
+        throw new Error("Not allowed now");
+      }
       const [blob, name] = args;
       if (!(blob instanceof Blob)) throw new Error("Not a file");
       const href = URL.createObjectURL(blob);
@@ -495,7 +564,62 @@ async function handleCall(
       return;
     }
     case "clipboard.write": {
+      if (!recentlyUsed(connection)) throw new Error("Not allowed now");
       await navigator.clipboard.writeText(String(args[0] ?? ""));
+      return;
+    }
+    case "session.signOut":
+    case "session.reload": {
+      if (!mayControlSession(summaryOf(pluginId)?.capabilities ?? [])) {
+        throw new Error("This plugin may not end the session");
+      }
+      if (method === "session.signOut") await signOutShell();
+      else return reloadShell();
+      return;
+    }
+    case "passkey.run": {
+      const owner = watchOwners.get(connection);
+      if (!owner || !hasCapability(pluginId, "auth:provide")) {
+        throw new Error("This plugin may not run security key steps");
+      }
+      if (!recentlyUsed(connection)) throw new Error("Not allowed now");
+      const ceremonyId = readCeremonyId(args[0]);
+      if (!ceremonyId) throw new Error("Bad security key step");
+      // The plugin id is the frame's own, never one the frame sends.
+      return runPluginCeremony(
+        owner,
+        pluginId,
+        ceremonyId,
+        readCeremonyExtra(args[1]),
+      );
+    }
+    case "port.request": {
+      const owner = watchOwners.get(connection);
+      if (!owner || !hasCapability(pluginId, "device:serial")) {
+        throw new Error("This plugin may not use serial ports");
+      }
+      if (!recentlyUsed(connection)) throw new Error("Not allowed now");
+      const options = parseSerialOptions(args[0]);
+      if (!options) throw new Error("Bad serial port options");
+      const [, onData, onClose] = args;
+      if (typeof onData !== "function" || typeof onClose !== "function") {
+        throw new Error("Bad serial port callbacks");
+      }
+      return requestSerialPort(
+        owner,
+        options,
+        onData as (chunk: Uint8Array) => void,
+        onClose as () => void,
+      );
+    }
+    case "port.write": {
+      const owner = watchOwners.get(connection);
+      if (!owner) throw new Error("Unknown serial port");
+      return writeSerial(owner, args[0], args[1]);
+    }
+    case "port.close": {
+      const owner = watchOwners.get(connection);
+      if (owner) await closeSerial(owner, args[0]);
       return;
     }
     case "clipboard.read": {

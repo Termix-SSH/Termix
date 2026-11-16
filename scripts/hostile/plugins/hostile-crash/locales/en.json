@@ -1,0 +1,6 @@
+{
+  "plugin": {
+    "name": "Hostile Crash",
+    "description": "Test fixture whose process dies every time it starts. Never shipped."
+  }
+}

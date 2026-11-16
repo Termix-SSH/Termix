@@ -355,7 +355,7 @@ function Placeholder({
     () => `v${nextView++}`,
     // A new part is a new placeholder.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [target.listId, target.itemKey],
+    [target.listId, target.itemKey, target.web],
   );
   const stable = useStableProps(props);
   const stableRef = useRef(stable);
@@ -375,12 +375,17 @@ function Placeholder({
       wheel: (dx, dy) => scrollTarget(node).scrollBy(dx, dy),
     });
     lastSent.current = propsSignature(stableRef.current);
-    void call("foreign.mount", {
-      id,
-      listId: target.listId,
-      itemKey: target.itemKey,
-      props: stableRef.current,
-    })
+    void call(
+      "foreign.mount",
+      target.web
+        ? { id, web: target.web }
+        : {
+            id,
+            listId: target.listId,
+            itemKey: target.itemKey,
+            props: stableRef.current,
+          },
+    )
       .then((ok) => {
         if (!alive || ok !== true) return;
         placer?.add(id, node, liveRef.current);
@@ -394,7 +399,7 @@ function Placeholder({
       emit?.("foreign.dispose", { id });
       setMounted(false);
     };
-  }, [id, target.listId, target.itemKey]);
+  }, [id, target.listId, target.itemKey, target.web]);
 
   useEffect(() => {
     if (!mounted) return;

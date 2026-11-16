@@ -21,14 +21,7 @@ describe("frontendIsolation", () => {
   });
 
   it("keeps official shell parts in the page", () => {
-    for (const capability of [
-      "ui:layout",
-      "ui:theme",
-      "auth:provide",
-      "desktop:window",
-      "device:serial",
-      "sync:provide",
-    ]) {
+    for (const capability of ["ui:layout", "ui:theme", "sync:provide"]) {
       expect(
         frontendIsolation({
           manifest: manifest("^2.0.0", [capability]),
@@ -45,6 +38,29 @@ describe("frontendIsolation", () => {
         capability,
       ).toBe("page");
     }
+  });
+
+  it("frames official auth, native view and serial plugins, which go through shell bridges", () => {
+    for (const capability of [
+      "auth:provide",
+      "desktop:window",
+      "device:serial",
+    ]) {
+      expect(
+        frontendIsolation({
+          manifest: manifest("^2.0.0", [capability]),
+          source: "bundled",
+        }),
+        capability,
+      ).toBe("frame");
+    }
+    // A plugin that is also a shell part stays with the page.
+    expect(
+      frontendIsolation({
+        manifest: manifest("^2.0.0", ["auth:provide", "sync:provide"]),
+        source: "bundled",
+      }),
+    ).toBe("page");
   });
 
   it("frames a shell part that is not officially signed", () => {

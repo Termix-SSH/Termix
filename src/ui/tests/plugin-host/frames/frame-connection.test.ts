@@ -295,6 +295,60 @@ describe("other plugins' views", () => {
   });
 });
 
+describe("things that need the person's click", () => {
+  const open = vi.fn();
+  beforeEach(() => {
+    open.mockReset();
+    vi.spyOn(window, "open").mockImplementation(open);
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    // Node's own URL.createObjectURL only takes Node's Blob.
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:x");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+  });
+
+  it("opens no window, starts no download and revokes no key out of the blue", async () => {
+    connectFrame(iframe, "docker", "view", "tab:docker", {});
+    send({ ch: FRAME_CHANNEL, t: "hello", role: "view", key: "tab:docker" });
+    expect(await call("openUrl", ["https://example.com/"])).toMatchObject({
+      ok: false,
+    });
+    expect(open).not.toHaveBeenCalled();
+    expect(
+      await call("download", [new Blob(["x"]), "update.exe"]),
+    ).toMatchObject({ ok: false });
+    expect(await call("clipboard.write", ["curl x | sh"])).toMatchObject({
+      ok: false,
+    });
+    const revoke = await call("http", [
+      { method: "POST", path: "/users/api-keys/mine/revoke-all" },
+    ]);
+    expect(revoke).toMatchObject({ ok: true, value: { status: 403 } });
+    const removeOne = await call("http", [
+      { method: "DELETE", path: "/users/api-keys/mine/abc" },
+    ]);
+    expect(removeOne).toMatchObject({ ok: true, value: { status: 403 } });
+    expect(mocks.request).not.toHaveBeenCalled();
+  });
+
+  it("does them right after the person used the frame", async () => {
+    connectFrame(iframe, "docker", "view", "tab:docker", {});
+    send({ ch: FRAME_CHANNEL, t: "hello", role: "view", key: "tab:docker" });
+    send({ ch: FRAME_CHANNEL, t: "event", name: "pointer", data: null });
+    expect(await call("openUrl", ["https://example.com/"])).toMatchObject({
+      ok: true,
+    });
+    expect(open).toHaveBeenCalledTimes(1);
+    const download = await call("download", [new Blob(["x"]), "export.json"]);
+    expect(download.error).toBeUndefined();
+    expect(download).toMatchObject({ ok: true });
+    const revoke = await call("http", [
+      { method: "POST", path: "/users/api-keys/mine/revoke-all" },
+    ]);
+    expect(revoke).toMatchObject({ ok: true, value: { status: 200 } });
+    expect(mocks.request).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("step up", () => {
   it("asks the shell only right after the person used the frame", async () => {
     connectFrame(iframe, "docker", "view", "tab:docker", {});
@@ -306,6 +360,24 @@ describe("step up", () => {
     send({ ch: FRAME_CHANNEL, t: "event", name: "pointer", data: null });
     expect(await call("stepUp")).toMatchObject({ ok: true, value: true });
     expect(stepUp.requestStepUp).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not trust a click the frame only claims", async () => {
+    Object.defineProperty(navigator, "userActivation", {
+      configurable: true,
+      get: () => ({ isActive: false }),
+    });
+    try {
+      connectFrame(iframe, "docker", "view", "tab:docker", {});
+      send({ ch: FRAME_CHANNEL, t: "hello", role: "view", key: "tab:docker" });
+      stepUp.requestStepUp.mockClear();
+      send({ ch: FRAME_CHANNEL, t: "event", name: "pointer", data: null });
+      expect(await call("stepUp")).toMatchObject({ ok: false });
+      expect(await call("clipboard.read")).toMatchObject({ ok: false });
+      expect(stepUp.requestStepUp).not.toHaveBeenCalled();
+    } finally {
+      delete (navigator as unknown as Record<string, unknown>).userActivation;
+    }
   });
 });
 

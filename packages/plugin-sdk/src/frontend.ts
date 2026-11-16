@@ -1188,7 +1188,12 @@ export interface LoginMethodContribution {
   id: string;
   titleKey: string;
   icon?: IconComponent;
-  component: ComponentType<LoginMethodUIProps>;
+  /**
+   * Only for a plugin whose UI runs in the page. Since Termix 26.11.2 the
+   * login screen draws a method from what its backend describes (fields,
+   * kind "webauthn"), so a plugin in a frame passes only `enrollment`.
+   */
+  component?: ComponentType<LoginMethodUIProps>;
   /**
    * "inline" also draws the method under the password form, for a local
    * method people use instead of a password (a passkey). Otherwise it only
@@ -1221,10 +1226,40 @@ export interface SecondFactorContribution {
   /** Matches the id the backend registered with ctx.auth.registerSecondFactor. */
   id: string;
   titleKey: string;
-  /** The challenge shown after the first login step. */
-  component: ComponentType<SecondFactorUIProps>;
+  /**
+   * The challenge shown after the first login step, only for a plugin whose
+   * UI runs in the page. Otherwise the backend factor's `prompt` says what
+   * the shell draws, and a plugin in a frame passes only `enrollment`.
+   */
+  component?: ComponentType<SecondFactorUIProps>;
   /** Enrolment, shown in Settings > Security. */
   enrollment?: ComponentType<Record<string, unknown>>;
+}
+
+/** How to open the serial port the person picks. */
+export interface SerialRequestOptions {
+  baudRate: number;
+  dataBits?: 7 | 8;
+  stopBits?: 1 | 2;
+  parity?: "none" | "even" | "odd";
+  /** Limits the picker to these USB devices. */
+  filters?: Array<{ usbVendorId?: number; usbProductId?: number }>;
+}
+
+/** An open serial port. Bytes only; nothing else about the port is shared. */
+export interface SerialPortHandle {
+  write: (data: Uint8Array) => Promise<void>;
+  close: () => Promise<void>;
+}
+
+export interface SerialApi {
+  /** False when the browser has no Web Serial (Firefox, Safari, mobile). */
+  readonly available: boolean;
+  /** Null when the person closed the picker without picking a port. */
+  request: (
+    options: SerialRequestOptions,
+    events: { onData: (chunk: Uint8Array) => void; onClose: () => void },
+  ) => Promise<SerialPortHandle | null>;
 }
 
 /** The subset of axios a plugin uses, rooted at /plugin-api/<id>/. */
@@ -1465,6 +1500,37 @@ export interface TermixApp extends TermixAppInfo {
    * Termix 26.11.2 and plugin API 2.6; check it exists on older cores.
    */
   stepUp?: () => Promise<boolean>;
+  /**
+   * Web Serial through the shell, for a plugin with device:serial. The
+   * browser shows its own port picker and the plugin gets only the port the
+   * person picked. Call `request` from a click. Termix 26.11.2 and plugin
+   * API 2.8; check it exists on older cores.
+   */
+  serial?: SerialApi;
+  /**
+   * WebAuthn steps for a plugin with auth:provide, such as adding a passkey.
+   * The shell runs the browser prompt with options from the step this
+   * plugin's backend registered (ctx.auth.registerWebAuthnCeremony) and
+   * resolves what that step's `finish` returned. Call it from a click.
+   * Termix 26.11.2 and plugin API 2.8.
+   */
+  auth?: {
+    webauthn: (
+      ceremonyId: string,
+      extra?: Record<string, string | number | boolean>,
+    ) => Promise<Record<string, unknown>>;
+  };
+  /**
+   * For a login policy plugin (auth:policy): sign the person out, or start
+   * the app again once their session changed (a required second factor was
+   * set up). A frame can't do either to the window itself. reload answers
+   * false when it ran less than ten seconds ago. Termix 26.11.2 and plugin
+   * API 2.8.
+   */
+  session?: {
+    signOut: () => Promise<void>;
+    reload: () => Promise<boolean>;
+  };
   /** The desktop app, when the frontend runs in it. */
   desktop: DesktopApi;
   /** This plugin's docs. Needs plugin API 1.2. */

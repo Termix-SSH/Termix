@@ -292,6 +292,7 @@ jobs:
     permissions:
       contents: read
       security-events: read
+      checks: read
     with:
       repo: ${{ github.repository }}
       sha: ${{ needs.gate-ref.outputs.sha }}

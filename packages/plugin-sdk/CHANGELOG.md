@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.8.1
+
+Plugin API 2.8.0. Needs Termix 26.11.2.
+
+### Fixed
+
+- `net-guard` also refuses private IPv4 addresses written in IPv4-compatible (`::10.0.0.1`) or NAT64 (`64:ff9b::10.0.0.1`) form
+
 ## 2.8.0
 
 Plugin API 2.8.0. Needs Termix 26.11.2.
@@ -7,10 +15,25 @@ Plugin API 2.8.0. Needs Termix 26.11.2.
 ### Added
 
 - `ctx.desktop.local.fs.openInEditor(path)` opens a local file in the external editor the person picked in the desktop app, or with its default app. The app starts the editor, so the plugin needs no process grant
+- `ctx.schedule.keepAwake(reason, awake)` tells Termix the plugin has work that needs its process running. A plugin that calls it lets Termix stop the process when there is none, and its jobs shorter than the idle time then run only while it runs. Optional in the types, so call it as `ctx.schedule.keepAwake?.(...)`
+- `createMockCtx` records those reasons in `awake`
+- `ctx.desktop.grantView({ url, ignoreCert })` lets the plugin's frames show one page: `NativeView` from `/ui` takes the `grant` and Termix draws a native view on the desktop or a credentialless sandboxed iframe in a browser. Needs `desktop:window`. `createMockCtx` records them in `viewGrants`
+- `app.serial`: Web Serial through Termix for a plugin with `device:serial`. The browser's picker opens from a click and the plugin gets only the port the person picked
+- Login methods can describe themselves for the sign in screen: `fields` for form methods, `kind: "webauthn"` with `options` for passkeys, `placement` and per instance `views`. Second factors take a `prompt` (`code`, `fields` or `webauthn`)
+- `ctx.auth.registerWebAuthnCeremony` and `app.auth.webauthn(id, extra)` run WebAuthn steps from a plugin's own screens, such as adding a passkey. Termix runs the browser prompt and the plugin's server checks the answer. `createMockCtx` records them in `auth.webAuthnCeremonies`
+- `app.session.signOut()` and `app.session.reload()` for login policy plugins (`auth:policy`)
 
 ### Changed
 
 - On the desktop app, plugin processes run on the app's pinned Node with the same flags as on a server, inside an OS sandbox. Desktop only code that used `fs` or `child_process` freely must move to `ctx.desktop.local`
+- `registerLoginMethod` and `registerSecondFactorUI` in a frame take only `enrollment`; the sign in steps are drawn from what the backend describes. `component` is optional and only works for plugins in the page
+- `NativeView` no longer takes `ignoreCert`. Only a grant from the plugin's server can trust a bad certificate
+- `termix-plugin validate` refuses theme CSS that loads anything from outside the plugin, through `url()`, `image-set()`, `src()`, root paths or CSS escapes
+- A plugin process now stops when idle unless it provides something on core's own request paths (logins, connects, sync, host status and locks, alerts, approvals, TLS, looks) or runs a job more often than the idle time. Operations, services, registry values, event listeners, settings hooks and jobs it registered stay with core and start the process again when called
+
+### Fixed
+
+- The sandbox mock of `createMockCtx` lets `ctx.auth.completeRedirectLogin` keep the live request, and hands login hooks a plain copy of the request, as a plugin process does
 
 ## 2.7.1
 

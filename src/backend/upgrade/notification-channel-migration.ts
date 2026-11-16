@@ -6,8 +6,8 @@
  * same id, because automations' notify steps and links name it, then empties
  * the old config column so no webhook token or ntfy key stays behind.
  *
- * The plugin reads configs sealed with the installation key, so it can send
- * an alert with no user signed in. A config is resealed as soon as its
+ * The plugin reads configs sealed for it (plugins/plugin-seal.ts), so it can
+ * send an alert with no user signed in. A config is resealed as soon as its
  * owner's data key opens: at boot for most users, at their next password
  * login for a 2.8 key only the password unwraps. Until then the channel shows
  * as needing to be saved again.
@@ -20,16 +20,15 @@ import { databaseLogger } from "../utils/logger.js";
 import { resolveDatabaseDialect } from "../database/db/dialect.js";
 import { DataCrypto } from "../utils/data-crypto.js";
 import { LazyFieldEncryption } from "../utils/lazy-field-encryption.js";
-import {
-  encryptSystemSecret,
-  isSystemEncrypted,
-} from "../utils/system-secret-crypto.js";
+import { isSystemEncrypted } from "../utils/system-secret-crypto.js";
+import { PLUGIN_SEAL_PREFIX, sealForPlugin } from "../plugins/plugin-seal.js";
 import {
   runStatement,
   selectRows,
 } from "../utils/crypto-migration/raw-rows.js";
 
 const TARGET = "p_alerts_channels";
+const ALERTS_ID = "alerts";
 const SOURCE = "notification_channels";
 
 interface LegacyChannel {
@@ -83,6 +82,7 @@ function openLegacyConfig(row: {
     dek,
     String(row.id),
     "config",
+    { anyRecord: true },
   );
   if (!plain) return null;
   try {
@@ -137,7 +137,13 @@ async function sealConfigs(
       : sql`SELECT id, user_id, config FROM ${sql.identifier(TARGET)}`,
   );
   for (const row of rows) {
-    if (!row.config || isSystemEncrypted(row.config)) continue;
+    if (
+      !row.config ||
+      isSystemEncrypted(row.config) ||
+      row.config.startsWith(PLUGIN_SEAL_PREFIX)
+    ) {
+      continue;
+    }
     try {
       const plain = openLegacyConfig({
         id: Number(row.id),
@@ -146,7 +152,7 @@ async function sealConfigs(
       });
       if (!plain) continue;
       await runStatement(
-        sql`UPDATE ${sql.identifier(TARGET)} SET config = ${await encryptSystemSecret(plain)} WHERE id = ${row.id}`,
+        sql`UPDATE ${sql.identifier(TARGET)} SET config = ${await sealForPlugin(ALERTS_ID, plain)} WHERE id = ${row.id}`,
       );
       result.sealed++;
     } catch (error) {
