@@ -18,18 +18,21 @@ const state = vi.hoisted(() => ({
   auditCalls: [] as Record<string, unknown>[],
   secondFactors: [] as { userId: string; pluginId: string; factorId: string }[],
   trustedDevicesCleared: [] as string[],
+  rolePermissions: new Map<string, string[]>(),
 }));
 
 vi.mock("../../../database/db/index.js", () => ({ db: {} }));
 
-vi.mock("../../../utils/logger.js", () => ({
-  authLogger: {
+vi.mock("../../../utils/logger.js", () => {
+  const log = {
     error: vi.fn(),
     warn: vi.fn(),
     info: vi.fn(),
     success: vi.fn(),
-  },
-}));
+    debug: vi.fn(),
+  };
+  return { authLogger: log, databaseLogger: log };
+});
 
 vi.mock("../../../utils/database-save-trigger.js", () => ({
   DatabaseSaveTrigger: { forceSave: vi.fn(async () => {}) },
@@ -89,6 +92,12 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentRoleRepository: () => ({
     switchUserRoleName: async () => {},
     assignRoleNameToUser: async () => {},
+    listUserRolePermissions: async (userId: string) => [
+      {
+        roleName: "custom",
+        permissions: JSON.stringify(state.rolePermissions.get(userId) ?? []),
+      },
+    ],
   }),
   createCurrentUserAuthRepository: () => ({
     listSecondFactors: async (userId: string) =>
@@ -253,6 +262,61 @@ beforeEach(() => {
   state.unlockedUsers = new Set(["admin1", "target1"]);
   state.updates = [];
   state.auditCalls = [];
+  state.rolePermissions = new Map();
+});
+
+async function asHelpdesk(): Promise<void> {
+  const { PermissionManager } =
+    await import("../../../utils/permission-manager.js");
+  state.users.set("help1", {
+    id: "help1",
+    username: "help",
+    isAdmin: false,
+    isOidc: false,
+    passwordHash: "hash",
+  });
+  state.rolePermissions.set("help1", [
+    "admin.users.view",
+    "admin.users.manage",
+  ]);
+  PermissionManager.getInstance().invalidateUserPermissionCache("help1");
+  state.currentUserId = "help1";
+}
+
+describe("delegated user management", () => {
+  it("shows account details to someone with admin.users.view", async () => {
+    await asHelpdesk();
+    const res = await invoke("get", "/list");
+    expect(res.statusCode).toBe(200);
+    const users = res.jsonBody?.users as Record<string, unknown>[];
+    expect(users.find((u) => u.userId === "target1")).toHaveProperty(
+      "data_unlocked",
+    );
+  });
+
+  it("refuses to reset an admin's password for a non-admin", async () => {
+    await asHelpdesk();
+    const res = await invoke("post", "/admin/reset-password", {
+      body: { userId: "admin1", newPassword: "Another-pass-123!" },
+    });
+    expect(res.statusCode).toBe(403);
+  });
+
+  it("lets a non-admin reset a normal user's second factors", async () => {
+    await asHelpdesk();
+    const res = await invoke("delete", "/admin/:userId/second-factors", {
+      params: { userId: "target1" },
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("still refuses make-admin to a non-admin", async () => {
+    await asHelpdesk();
+    const res = await invoke("post", "/make-admin", {
+      body: { userId: "target1" },
+    });
+    expect(res.statusCode).toBe(403);
+  });
 });
 
 describe("GET /list", () => {

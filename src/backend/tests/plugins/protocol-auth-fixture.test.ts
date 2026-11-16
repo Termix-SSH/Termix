@@ -75,6 +75,7 @@ import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
 import { runAsActor } from "../../plugins/actor.js";
 import { sanitizeHostForRecipient } from "../../database/routes/host-normalizers.js";
 import { FieldCrypto } from "../../utils/field-crypto.js";
+import { protocolAuthRecordId } from "../../database/repositories/host-protocol-auth-repository.js";
 
 const HOST_ID = 10;
 const GRANT_ID = 1;
@@ -193,7 +194,7 @@ describe("a plugin protocol core does not know", () => {
       FieldCrypto.decryptField(
         row.password as string,
         state.keys.get("owner")!,
-        "",
+        protocolAuthRecordId(HOST_ID, "spice"),
         "password",
       ),
     ).toBe("spice-pass");
@@ -201,7 +202,7 @@ describe("a plugin protocol core does not know", () => {
       FieldCrypto.decryptField(
         row.password as string,
         state.keys.get("recipient")!,
-        "",
+        protocolAuthRecordId(HOST_ID, "spice"),
         "password",
       ),
     ).toThrow();

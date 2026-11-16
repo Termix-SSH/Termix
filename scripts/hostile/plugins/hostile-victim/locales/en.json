@@ -1,0 +1,7 @@
+{
+  "plugin": {
+    "name": "Hostile Victim",
+    "description": "Test fixture that holds a secret the hostile plugins try to reach. Never shipped."
+  },
+  "tab": { "title": "Hostile Victim" }
+}

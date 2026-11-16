@@ -3,6 +3,7 @@ import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 
 import { cn } from "@/lib/utils";
 import { CheckIcon, ChevronRightIcon } from "lucide-react";
+import { useForeignOccluder } from "@/components/foreign/ForeignSlot";
 
 function DropdownMenu({
   ...props
@@ -33,11 +34,13 @@ function DropdownMenuContent({
   className,
   align = "start",
   sideOffset = 4,
+  ref,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
+        ref={useForeignOccluder(ref)}
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         align={align}
@@ -240,10 +243,12 @@ function DropdownMenuSubContent({
   className,
   sideOffset = 4,
   alignOffset = -4,
+  ref,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
   return (
     <DropdownMenuPrimitive.SubContent
+      ref={useForeignOccluder(ref)}
       data-slot="dropdown-menu-sub-content"
       sideOffset={sideOffset}
       alignOffset={alignOffset}

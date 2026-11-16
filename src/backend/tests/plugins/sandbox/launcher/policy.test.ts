@@ -9,6 +9,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   allocateUid,
+  buildJailPolicy,
+  JAIL_MEMORY_MIN_MB,
   UID_FIRST,
   validateSpawn,
 } from "../../../../plugins/sandbox/launcher/policy.js";
@@ -193,5 +195,47 @@ describe("launcher spawn policy", () => {
       expect(fs.statSync(file).mode & 0o777).toBe(0o600);
     }
     fs.rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe("desktop OS fence policy", () => {
+  const dataDir = path.join(dataRoot, "plugin-data", "uptime");
+  const pluginDir = path.resolve("/app/dist/plugins/uptime");
+
+  it("mirrors the Node flags: reads, writes, grants and memory", () => {
+    const jail = buildJailPolicy({
+      pluginId: "uptime",
+      dataDir,
+      execArgv: [
+        "--permission",
+        `--allow-fs-read=${pluginDir}`,
+        `--allow-fs-read=${dataDir}`,
+        `--allow-fs-write=${dataDir}`,
+        "--allow-net",
+        "--allow-child-process",
+        "--max-old-space-size=512",
+      ],
+    });
+    expect(jail).toEqual({
+      name: "uptime",
+      read: [pluginDir],
+      write: [dataDir],
+      net: true,
+      childProcess: true,
+      addons: false,
+      memoryMb: 512 * 2 + 256,
+    });
+  });
+
+  it("keeps the data folder read only and everything off without grants", () => {
+    const jail = buildJailPolicy({
+      pluginId: "uptime",
+      dataDir,
+      execArgv: ["--permission", "--max-old-space-size=64"],
+    });
+    expect(jail.write).toEqual([]);
+    expect(jail.read).toEqual([dataDir]);
+    expect(jail.net || jail.childProcess || jail.addons).toBe(false);
+    expect(jail.memoryMb).toBe(JAIL_MEMORY_MIN_MB);
   });
 });

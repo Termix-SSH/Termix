@@ -29,6 +29,7 @@ import {
 import { SeamlessTileContext } from "./context";
 import { gridLines } from "./layout";
 import { scrollParent } from "./edge";
+import { ForeignInteractive } from "@/components/foreign/ForeignSlot";
 
 type Edge = "left" | "right" | "bottom" | "corner";
 interface Proposal {
@@ -181,6 +182,8 @@ export function TileGrid({
     [slots, renderTile],
   );
 
+  // The stacked and grid layouts each have their own root, so watch the one
+  // on screen. A frame shown after it loaded resizes the window, not the root.
   useLayoutEffect(() => {
     const element = root.current;
     if (!element) return;
@@ -189,8 +192,12 @@ export function TileGrid({
     update();
     const observer = new ResizeObserver(update);
     observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
+    window.addEventListener("resize", update);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [stacked]);
 
   useLayoutEffect(() => {
     const element = root.current;
@@ -502,17 +509,23 @@ export function TileGrid({
         >
           {[...settled]
             .sort((a, b) => a.y - b.y || a.x - b.x)
-            .map((box) => (
-              <div
-                key={box.id}
-                className={cn(
-                  "w-full min-w-0",
-                  seamless && "border-b border-border",
-                )}
-              >
-                {content.get(box.id)}
-              </div>
-            ))}
+            .map((box) => {
+              // A tile with a set height keeps it, so a part that fills its
+              // box (a chart, another plugin's widget) still has one.
+              const h = slots.find((slot) => slot.id === box.id)?.h;
+              return (
+                <div
+                  key={box.id}
+                  className={cn(
+                    "flex w-full min-w-0 flex-col",
+                    seamless && "border-b border-border",
+                  )}
+                  style={h != null ? { height: h * scale } : undefined}
+                >
+                  {content.get(box.id)}
+                </div>
+              );
+            })}
         </div>
       </SeamlessTileContext.Provider>
     );
@@ -547,90 +560,97 @@ export function TileGrid({
 
   return (
     <SeamlessTileContext.Provider value={seamless}>
-      <div ref={root} className={className}>
-        <div
-          ref={gridEl}
-          className="tg-grid"
-          data-edit-mode={editing}
-          data-animate={editing}
-          style={{ height }}
-        >
-          <style>{styles}</style>
-          {lines.map((line) => (
-            <div
-              key={`${line.x},${line.y},${line.w},${line.h}`}
-              data-tg-line
-              aria-hidden="true"
-              // A real border, so it is as thin as every other line at any
-              // display scaling; a 1 px fill rounds up to two screen px.
-              className={cn(
-                "pointer-events-none absolute z-[25] border-border",
-                line.w === 1 ? "border-l" : "border-t",
-              )}
-              style={{
-                left: line.x,
-                top: line.y,
-                width: line.w === 1 ? 0 : line.w,
-                height: line.h === 1 ? 0 : line.h,
-              }}
-            />
-          ))}
-          {activeBox && (
-            <div
-              data-tg-drop-preview={activeBox.id}
-              aria-hidden="true"
-              style={{
-                transform: `translate(${leftOf(activeBox)}px, ${snap(activeBox.y * scale)}px)`,
-                width: widthOf(activeBox),
-                height: activeBox.h * scale,
-              }}
-            />
-          )}
-          {slots.map((slot) => {
-            const box = boxById.get(slot.id)!;
-            const frame = active?.id === slot.id ? active.frame : null;
-            const tileHeight = frame
-              ? frame.height
-              : seamless
-                ? snap((box.y + box.h) * scale) - snap(box.y * scale)
-                : slot.h != null
-                  ? slot.h * scale
-                  : undefined;
-            return (
-              <Tile
-                key={slot.id}
-                id={slot.id}
-                box={box}
-                label={tileLabel(slot.id)}
-                editMode={editing}
-                active={active?.id === slot.id ? active.kind : undefined}
-                left={frame ? frame.left : leftOf(box)}
-                top={frame ? frame.top : snap(box.y * scale)}
-                width={frame ? frame.width : widthOf(box)}
-                height={tileHeight}
-                measure={slot.h == null}
-                scale={scale}
-                seamless={seamless}
-                minColumns={minColumns}
-                minHeight={minHeight}
-                onHeight={reportHeight}
-                onPointerDown={(event, edge) => begin(event, slot.id, edge)}
-                onMoveKey={(event) => moveByKey(event, slot.id)}
-                onResizeKey={(event, axis) => resizeByKey(event, slot.id, axis)}
-                onSettings={onSettings ? () => onSettings(slot.id) : undefined}
-                onRemove={() => remove(slot.id)}
-              >
-                {content.get(slot.id)}
-              </Tile>
-            );
-          })}
-        </div>
-        {editing && slots.length === 0 && (
-          <div className="flex items-center justify-center border border-dashed border-border py-10 text-xs text-muted-foreground">
-            {empty ?? t("tileGrid.empty")}
+      {/* While editing, other plugins' views let the drag through. */}
+      <ForeignInteractive interactive={!editing}>
+        <div ref={root} className={className}>
+          <div
+            ref={gridEl}
+            className="tg-grid"
+            data-edit-mode={editing}
+            data-animate={editing}
+            style={{ height }}
+          >
+            <style>{styles}</style>
+            {lines.map((line) => (
+              <div
+                key={`${line.x},${line.y},${line.w},${line.h}`}
+                data-tg-line
+                aria-hidden="true"
+                // A real border, so it is as thin as every other line at any
+                // display scaling; a 1 px fill rounds up to two screen px.
+                className={cn(
+                  "pointer-events-none absolute z-[25] border-border",
+                  line.w === 1 ? "border-l" : "border-t",
+                )}
+                style={{
+                  left: line.x,
+                  top: line.y,
+                  width: line.w === 1 ? 0 : line.w,
+                  height: line.h === 1 ? 0 : line.h,
+                }}
+              />
+            ))}
+            {activeBox && (
+              <div
+                data-tg-drop-preview={activeBox.id}
+                aria-hidden="true"
+                style={{
+                  transform: `translate(${leftOf(activeBox)}px, ${snap(activeBox.y * scale)}px)`,
+                  width: widthOf(activeBox),
+                  height: activeBox.h * scale,
+                }}
+              />
+            )}
+            {slots.map((slot) => {
+              const box = boxById.get(slot.id)!;
+              const frame = active?.id === slot.id ? active.frame : null;
+              const tileHeight = frame
+                ? frame.height
+                : seamless
+                  ? snap((box.y + box.h) * scale) - snap(box.y * scale)
+                  : slot.h != null
+                    ? slot.h * scale
+                    : undefined;
+              return (
+                <Tile
+                  key={slot.id}
+                  id={slot.id}
+                  box={box}
+                  label={tileLabel(slot.id)}
+                  editMode={editing}
+                  active={active?.id === slot.id ? active.kind : undefined}
+                  left={frame ? frame.left : leftOf(box)}
+                  top={frame ? frame.top : snap(box.y * scale)}
+                  width={frame ? frame.width : widthOf(box)}
+                  height={tileHeight}
+                  measure={slot.h == null}
+                  scale={scale}
+                  seamless={seamless}
+                  minColumns={minColumns}
+                  minHeight={minHeight}
+                  onHeight={reportHeight}
+                  onPointerDown={(event, edge) => begin(event, slot.id, edge)}
+                  onMoveKey={(event) => moveByKey(event, slot.id)}
+                  onResizeKey={(event, axis) =>
+                    resizeByKey(event, slot.id, axis)
+                  }
+                  onSettings={
+                    onSettings ? () => onSettings(slot.id) : undefined
+                  }
+                  onRemove={() => remove(slot.id)}
+                >
+                  {content.get(slot.id)}
+                </Tile>
+              );
+            })}
           </div>
-        )}
-      </div>
+          {editing && slots.length === 0 && (
+            <div className="flex items-center justify-center border border-dashed border-border py-10 text-xs text-muted-foreground">
+              {empty ?? t("tileGrid.empty")}
+            </div>
+          )}
+        </div>
+      </ForeignInteractive>
     </SeamlessTileContext.Provider>
   );
 }

@@ -22,8 +22,9 @@ import {
 } from "@/components/surface/surface-scope";
 import { SeamlessTileContext } from "@/components/tile-grid/context";
 import { useFrameState } from "./frame-store";
+import { markFrameShown } from "./frame-paint";
 
-export type FrameFit = "fill" | "content" | "inline";
+export type FrameFit = "fill" | "content" | "inline" | "bar";
 
 let props: Record<string, unknown> = {};
 const listeners = new Set<() => void>();
@@ -122,7 +123,7 @@ function View({
         kind={place.surfaceKind ?? "panel"}
         onClose={close}
         onEditingChange={setEditing}
-        className={fit === "fill" ? "h-full" : undefined}
+        className={fit === "fill" || fit === "bar" ? "h-full" : undefined}
       >
         <Component {...shown} />
       </SurfaceScope>
@@ -135,14 +136,19 @@ export function FrameRoot({
   component,
   children,
   onSize,
+  onDrawn,
 }: {
   fit: FrameFit;
   component?: ComponentType<Record<string, unknown>>;
   children?: ReactNode;
   onSize?: (size: { width: number; height: number }) => void;
+  /** For overlays: whether anything with a size is on screen. */
+  onDrawn?: (drawn: boolean) => void;
 }) {
   const themeId = useFrameState((state) => state.theme.themeId);
   const box = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => markFrameShown(), []);
 
   useLayoutEffect(() => {
     document.documentElement.dataset.frameFit = fit;
@@ -163,6 +169,43 @@ export function FrameRoot({
     return () => observer.disconnect();
   }, [fit, onSize]);
 
+  useEffect(() => {
+    const element = box.current;
+    if (!element || !onDrawn) return;
+    let last: boolean | null = null;
+    const check = () => {
+      const drawn =
+        [...element.querySelectorAll("*")].some((node) => {
+          if (node.childElementCount > 0) return false;
+          const rect = node.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        }) ||
+        // Portals (a dialog the overlay opened) land on body.
+        [...document.body.children].some(
+          (child) =>
+            child.id !== "root" &&
+            !(child instanceof HTMLScriptElement) &&
+            child.childElementCount > 0,
+        );
+      if (drawn === last) return;
+      last = drawn;
+      onDrawn(drawn);
+    };
+    const observer = new MutationObserver(check);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+    });
+    const resize = new ResizeObserver(check);
+    resize.observe(element);
+    check();
+    return () => {
+      observer.disconnect();
+      resize.disconnect();
+    };
+  }, [onDrawn]);
+
   return (
     <ThemeProvider defaultTheme={themeId} storageKey="termix-frame-theme">
       <ThemeSync />
@@ -173,7 +216,9 @@ export function FrameRoot({
             ? "flex h-full w-full min-h-0 flex-col"
             : fit === "inline"
               ? "inline-flex flex-col"
-              : "inline-flex w-full flex-col"
+              : fit === "bar"
+                ? "inline-flex h-full flex-col"
+                : "inline-flex w-full flex-col"
         }
       >
         {component ? (

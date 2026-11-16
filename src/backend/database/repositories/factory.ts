@@ -5,6 +5,8 @@ import { primeSettingsCache, readCachedSetting } from "./settings-cache.js";
 import type { DatabaseContext } from "./database-context.js";
 import { AdminHoldRepository } from "./admin-hold-repository.js";
 import { ApiKeyRepository } from "./api-key-repository.js";
+import { UserInviteRepository } from "./user-invite-repository.js";
+import { AccessReviewRepository } from "./access-review-repository.js";
 import { AuditLogRepository } from "./audit-log-repository.js";
 import { CredentialRepository } from "./credential-repository.js";
 import { HostFolderRepository } from "./host-folder-repository.js";
@@ -29,6 +31,7 @@ import { RoleRepository } from "./role-repository.js";
 import { SessionRepository } from "./session-repository.js";
 import { CredentialAccessRepository } from "./credential-access-repository.js";
 import { SharedCredentialSecretsRepository } from "./shared-credential-secrets-repository.js";
+import { FieldResealRepository } from "./field-reseal-repository.js";
 import { FolderAccessRepository } from "./folder-access-repository.js";
 import { SettingsRepository } from "./settings-repository.js";
 import { HostProtocolAuthRepository } from "./host-protocol-auth-repository.js";
@@ -125,6 +128,20 @@ export function createCurrentAdminHoldRepository(): AdminHoldRepository {
   return new AdminHoldRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("admin_hold_repository_write"),
+  );
+}
+
+export function createCurrentAccessReviewRepository(): AccessReviewRepository {
+  return new AccessReviewRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("access_review_repository_write"),
+  );
+}
+
+export function createCurrentUserInviteRepository(): UserInviteRepository {
+  return new UserInviteRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("user_invite_repository_write"),
   );
 }
 
@@ -298,6 +315,16 @@ export function createCurrentSessionRepository(): SessionRepository {
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("session_repository_write"),
     // Activity timestamps are informational; the periodic flush persists them.
+    needsExplicitPersist(resolveDatabaseDialect())
+      ? () => DatabaseSaveTrigger.markDirty()
+      : undefined,
+  );
+}
+
+/** Writes are many and small, so they only mark the database dirty. */
+export function createCurrentFieldResealRepository(): FieldResealRepository {
+  return new FieldResealRepository(
+    createCurrentRepositoryContext(),
     needsExplicitPersist(resolveDatabaseDialect())
       ? () => DatabaseSaveTrigger.markDirty()
       : undefined,

@@ -20,6 +20,7 @@
     "package-manager": { "tier": "full" },
     "privileged-access": { "tier": "full" },
     "process-manager": { "tier": "full" },
+    "scim": { "tier": "full" },
     "security-center": { "tier": "full" },
     "storage-health": { "tier": "full" },
     "ups-manager": { "tier": "full" },

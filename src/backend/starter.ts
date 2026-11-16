@@ -315,6 +315,8 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     try {
       const { startAdminAlerts } = await import("./notify/admin-alerts.js");
       startAdminAlerts();
+      const { startMemoryWatch } = await import("./plugins/sandbox/memory.js");
+      startMemoryWatch();
       const { startAuditChainChecks } = await import("./utils/audit-chain.js");
       startAuditChainChecks();
       const { startAdminHolds } = await import("./auth/admin-holds.js");

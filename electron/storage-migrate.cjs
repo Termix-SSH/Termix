@@ -1,9 +1,12 @@
 // Builds before 26.11.2 loaded the UI from file://, so what the page saved
 // in localStorage sits under that origin. This copies it to app://termix
-// once, before the main window opens. Nothing here runs page code or opens
-// an IPC channel: main reads and writes the storage itself.
+// once, before the main window opens. The old values are read from the
+// storage files on disk, since no page may open file:// storage with the
+// file protocol fuse off. Nothing here runs page code or opens an IPC channel.
 
-const READ_SCRIPT = `JSON.stringify(Object.keys(localStorage).map((k) => [k, localStorage.getItem(k)]))`;
+const { readOriginStorage } = require("./local-storage-read.cjs");
+
+const FILE_ORIGIN = "file://";
 
 function writeScript(entries) {
   return `(() => {
@@ -19,13 +22,7 @@ function writeScript(entries) {
   })()`;
 }
 
-function parseEntries(raw) {
-  let list;
-  try {
-    list = JSON.parse(raw);
-  } catch {
-    return [];
-  }
+function cleanEntries(list) {
   if (!Array.isArray(list)) return [];
   return list.filter(
     (entry) =>
@@ -66,21 +63,19 @@ async function migrateFileStorage({
   BrowserWindow,
   partition,
   markerPath,
-  fileBlankPath,
+  storageDir,
   appBlankUrl,
   fs,
+  path,
+  readStorage = readOriginStorage,
   log = () => {},
 }) {
   if (fs.existsSync(markerPath)) return null;
   let copied = 0;
   try {
-    const raw = await withHiddenWindow(
-      BrowserWindow,
-      partition,
-      (win) => win.loadFile(fileBlankPath),
-      READ_SCRIPT,
+    const entries = cleanEntries(
+      readStorage({ dir: storageDir, origin: FILE_ORIGIN, fs, path, log }),
     );
-    const entries = parseEntries(raw);
     if (entries.length) {
       copied = await withHiddenWindow(
         BrowserWindow,
@@ -106,4 +101,4 @@ async function migrateFileStorage({
   return copied;
 }
 
-module.exports = { migrateFileStorage, parseEntries, writeScript };
+module.exports = { migrateFileStorage, cleanEntries, writeScript };

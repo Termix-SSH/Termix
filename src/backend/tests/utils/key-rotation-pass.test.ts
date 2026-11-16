@@ -126,6 +126,27 @@ describe("runKeyRotation", () => {
     expect(kept.value).toBe(lost);
   });
 
+  it("reseals plugin sealed values too", async () => {
+    const { sealForPlugin, unsealForPlugin } =
+      await import("../../plugins/plugin-seal.js");
+    useKeys(1);
+    const sealed = await sealForPlugin("demo", "plugin-token");
+    useKeys(2, [1]);
+    sqlite
+      .prepare("insert into p_demo_things values (?, ?, ?)")
+      .run(1, JSON.stringify({ token: sealed }), 5);
+
+    const result = await runKeyRotation();
+    expect(result?.resealedValues).toBe(1);
+    useKeys(2);
+    const row = sqlite.prepare("select blob_json from p_demo_things").get() as {
+      blob_json: string;
+    };
+    const token = JSON.parse(row.blob_json).token as string;
+    expect(token).not.toBe(sealed);
+    expect(await unsealForPlugin("demo", token)).toBe("plugin-token");
+  });
+
   it("only saves the file again for a database key rotation", async () => {
     useKeys(1);
     process.env.DATABASE_KEY = hex(3);

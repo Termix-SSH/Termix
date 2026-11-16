@@ -377,21 +377,42 @@ export async function writeWireRow(
       adopted = true;
     }
   }
-  const encrypted = encryptFields(
-    entity,
-    writable,
-    DataCrypto.getUserDataKey(userId),
-    target ? String(target.id) : `sync-${syncId}`,
-  );
-  if (adopted) encrypted.syncId = syncId;
-  if (columns.has("updatedAt")) encrypted.updatedAt = new Date().toISOString();
-
+  const dataKey = DataCrypto.getUserDataKey(userId);
   if (target) {
+    const encrypted = encryptFields(
+      entity,
+      writable,
+      dataKey,
+      String(target.id),
+    );
+    if (adopted) encrypted.syncId = syncId;
+    if (columns.has("updatedAt")) {
+      encrypted.updatedAt = new Date().toISOString();
+    }
     await db().update(table).set(encrypted).where(where);
   } else {
-    const insert: SyncRow = { ...encrypted, [entity.userColumn]: userId };
+    // Secrets are sealed with the row id, so they go in once it has one.
+    const secrets: SyncRow = {};
+    const insert: SyncRow = { ...writable, [entity.userColumn]: userId };
+    for (const field of entity.encryptedFields) {
+      if (insert[field] === undefined || insert[field] === null) continue;
+      secrets[field] = insert[field];
+      insert[field] = "";
+    }
+    if (columns.has("updatedAt")) insert.updatedAt = new Date().toISOString();
     if (!entity.singleton) insert.syncId = syncId;
     await db().insert(table).values(insert);
+    if (Object.keys(secrets).length) {
+      const created = await findStoredRow(entity, userId, syncId);
+      if (!created) throw new Error("Synced row went missing after insert");
+      const sealed = encryptFields(
+        entity,
+        secrets,
+        dataKey,
+        String(created.id),
+      );
+      await db().update(table).set(sealed).where(eq(table.id, created.id));
+    }
   }
 
   const written = await findStoredRow(entity, userId, syncId);

@@ -1,0 +1,117 @@
+name: Desktop plugin fence
+
+# Builds the desktop plugin runtime (pinned Node and the OS sandbox helper)
+# on each platform and checks a plugin process can't get past it. The release
+# build runs the same test on its packaged files (electron.yml).
+
+on:
+  push:
+    branches: [dev-*]
+    paths:
+      - "native/plugin-jail/**"
+      - "electron/plugin-*"
+      - "electron/runtime-hash.cjs"
+      - "scripts/build-plugin-runtime.cjs"
+      - "src/backend/plugins/sandbox/**"
+      - "src/backend/tests/plugins/sandbox/desktop-fence.test.ts"
+      - "src/backend/tests/plugins/sandbox/wire-codec.test.ts"
+      - "scripts/hostile/plugins/hostile-backend/**"
+      - "scripts/hostile/lib/**"
+      - ".github/workflows/desktop-fence.yml"
+  # Every PR, since the jobs are required checks on dev branches.
+  pull_request:
+    branches: [main, dev-*]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  fence:
+    name: Fence (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows
+            os: windows-2025
+            platform: win32
+            arch: x64
+          - name: linux
+            os: ubuntu-24.04
+            platform: linux
+            arch: x64
+          - name: macos
+            os: macos-latest
+            platform: darwin
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install libatomic
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libatomic1
+
+      - name: Install dependencies
+        shell: bash
+        run: npm run ci:install
+
+      - name: Helper unit tests
+        shell: bash
+        working-directory: native/plugin-jail
+        run: |
+          rustup toolchain install
+          cargo test --release --locked
+          cargo clippy --release --locked --all-targets -- -D warnings
+
+      - name: Build plugin runtime
+        shell: bash
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          ARCH: ${{ matrix.arch }}
+        run: node scripts/build-plugin-runtime.cjs --platform "$PLATFORM" --arch "$ARCH"
+
+      - name: Build the SDK
+        shell: bash
+        run: npm run build:sdk
+
+      - name: Fence tests
+        shell: bash
+        env:
+          TERMIX_REQUIRE_PLUGIN_RUNTIME: "1"
+        run: >-
+          npx vitest run
+          src/backend/tests/plugins/sandbox/desktop-fence.test.ts
+          src/backend/tests/plugins/sandbox/wire-codec.test.ts
+          src/backend/tests/electron/plugin-runtime.test.ts
+
+      # What the macOS sandbox refused, when the fence tests fail there.
+      - name: Sandbox diagnostics
+        if: failure() && matrix.platform == 'darwin'
+        run: |
+          rt="$PWD/.plugin-runtime/darwin-$ARCH"
+          policy="{\"name\":\"probe\",\"read\":[],\"write\":[],\"net\":false,\"childProcess\":false,\"addons\":false,\"memoryMb\":512}"
+          for spec in "/usr/bin/true" "$rt/node --version" "$rt/node -e 0"; do
+            read -ra args <<< "$spec"
+            code=0; "$rt/termix-plugin-jail" "$policy" -- "${args[@]}" || code=$?; echo "exit $code for $spec"
+          done
+          sleep 5
+          log show --last 3m --style compact --predicate "eventMessage CONTAINS \"deny(\"" | grep -v -e imagent -e Shortcut -e liveactivities | tail -40
+          # shellcheck disable=SC2012
+          report=$(ls -t ~/Library/Logs/DiagnosticReports/node* 2>/dev/null | head -1)
+          [ -n "$report" ] && head -c 6000 "$report"
+        env:
+          ARCH: ${{ matrix.arch }}

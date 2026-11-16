@@ -384,6 +384,7 @@ export function AddButton({
   const text = label ?? t("common.new");
   return (
     <Button
+      data-add-button=""
       variant="outline"
       size={compact ? "icon" : "default"}
       title={text}

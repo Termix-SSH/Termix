@@ -10,8 +10,12 @@ const SECRET_SETTING_PREFIXES = [
 ];
 
 // Server state an export or import must never carry: the audit chain's own
-// records and the admin wait switch.
-const PROTECTED_SETTING_PREFIXES = ["audit_chain_", "admin_hold_"];
+// records, the admin wait switch and the field reseal marker.
+const PROTECTED_SETTING_PREFIXES = [
+  "audit_chain_",
+  "admin_hold_",
+  "field_reseal_",
+];
 
 /** Whether an imported settings row may be written. */
 export function isImportableSetting(key: string): boolean {

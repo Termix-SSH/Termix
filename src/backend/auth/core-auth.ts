@@ -81,7 +81,14 @@ async function hasOtherEnabledLoginMethod(): Promise<boolean> {
   if (isTrustedProxyAuthEnabled()) return true;
   ensureCoreLoginProviders();
   for (const method of listLoginMethods()) {
-    if (method.id === "password" || !method.describe) continue;
+    // A passkey only helps someone who already registered one.
+    if (
+      method.id === "password" ||
+      method.kind === "webauthn" ||
+      !method.describe
+    ) {
+      continue;
+    }
     try {
       const instances = await method.describe();
       if (instances.some((instance) => instance.enabled)) return true;

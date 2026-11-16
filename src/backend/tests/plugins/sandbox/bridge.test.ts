@@ -22,6 +22,7 @@ import {
   pluginUrl,
   scrubSecrets,
   safeHeaders,
+  isTermixCredential,
   validCloseCode,
 } from "../../../plugins/sandbox/bridge.js";
 import type { Transport, Wire } from "../../../plugins/sandbox/rpc.js";
@@ -199,6 +200,19 @@ describe("sandboxed plugin actor", () => {
     expect(tokens.resolve(token, "docker")?.userId).toBe("bob");
   });
 
+  it("sends no token when core calls the plugin as nobody", () => {
+    const { bridge, replies } = harness();
+    void bridge.endpoint.call("activate", []).catch(() => {});
+    void runAsActor("bob", "request", () =>
+      bridge.endpoint.call("ping", []).catch(() => {}),
+    );
+    const sent = replies.filter((m) => m.t === "call") as Array<
+      Wire & { m: string; k?: string }
+    >;
+    expect(sent.find((m) => m.m === "activate")?.k).toBeUndefined();
+    expect(sent.find((m) => m.m === "ping")?.k).toBeTruthy();
+  });
+
   it("keeps an API key's scopes on the token", () => {
     const { bridge, tokens } = harness();
     const token = runAsActor(
@@ -316,6 +330,17 @@ describe("what may cross", () => {
         "content-type": "application/json",
       }),
     ).toEqual({ "content-type": "application/json" });
+  });
+
+  it("never treats a Termix API key or session token as a plugin's own bearer token", () => {
+    expect(isTermixCredential("Bearer tmx_abc123")).toBe(true);
+    expect(
+      isTermixCredential(
+        "bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJ1MSJ9.c2ln",
+      ),
+    ).toBe(true);
+    expect(isTermixCredential("Bearer scim_Zm9vYmFy")).toBe(false);
+    expect(isTermixCredential("Basic dXNlcjpwYXNz")).toBe(false);
   });
 
   it("lets a plugin read and set only its own cookies", () => {

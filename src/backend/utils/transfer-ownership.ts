@@ -1,6 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   credentialAccess,
+  folderAccess,
   hostAccess,
   hosts,
   sshCredentials,
@@ -108,6 +109,23 @@ export async function transferOwnership(
         .update(credentialAccess)
         .set({ grantedBy: toUserId })
         .where(eq(credentialAccess.grantedBy, fromUserId)),
+      // The successor now owns these folders, so a share to them is moot.
+      tx
+        .delete(folderAccess)
+        .where(
+          and(
+            eq(folderAccess.ownerUserId, fromUserId),
+            eq(folderAccess.userId, toUserId),
+          ),
+        ),
+      tx
+        .update(folderAccess)
+        .set({ ownerUserId: toUserId })
+        .where(eq(folderAccess.ownerUserId, fromUserId)),
+      tx
+        .update(folderAccess)
+        .set({ grantedBy: toUserId })
+        .where(eq(folderAccess.grantedBy, fromUserId)),
     ];
     if (sync) {
       for (const write of writes) write.run();

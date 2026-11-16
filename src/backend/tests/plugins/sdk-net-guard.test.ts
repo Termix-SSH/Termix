@@ -47,6 +47,11 @@ const SAMPLES = [
   "fe80::1",
   "::ffff:127.0.0.1",
   "::ffff:10.0.0.1",
+  "::127.0.0.1",
+  "64:ff9b::127.0.0.1",
+  "64:ff9b::a00:1",
+  "64:ff9b:1::1",
+  "64:ff9b::808:808",
   "8.8.8.8",
   "93.184.216.34",
   "2606:4700::1111",
@@ -60,6 +65,13 @@ describe("plugin SDK net-guard", () => {
         isBlockedAddress(address),
       );
     }
+  });
+
+  it("refuses private IPv4 in IPv4-compatible and NAT64 form", () => {
+    expect(isPrivateAddress("::127.0.0.1")).toBe(true);
+    expect(isPrivateAddress("64:ff9b::169.254.169.254")).toBe(true);
+    expect(isPrivateAddress("64:ff9b:1::5")).toBe(true);
+    expect(isPrivateAddress("64:ff9b::8.8.8.8")).toBe(false);
   });
 
   it("refuses private literals unless allowed", async () => {
@@ -168,6 +180,8 @@ describe("plugin SDK net-guard properties", () => {
         expect(isPrivateAddress(`::ffff:${v4(n)}`)).toBe(true);
         expect(isPrivateAddress(hexMapped(n))).toBe(true);
         expect(isPrivateAddress(`[::ffff:${v4(n)}]`)).toBe(true);
+        expect(isPrivateAddress(`::${v4(n)}`)).toBe(true);
+        expect(isPrivateAddress(`64:ff9b::${v4(n)}`)).toBe(true);
       }),
       { numRuns: 3000 },
     );

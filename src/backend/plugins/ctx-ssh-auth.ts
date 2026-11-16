@@ -48,7 +48,12 @@ import {
   listSecondFactors,
   registerLoginMethod,
   registerSecondFactor,
+  registerWebAuthnCeremony,
 } from "../auth/registry.js";
+import {
+  checkLoginFields,
+  checkSecondFactorPrompt,
+} from "../auth/login-descriptors.js";
 import { provideAuthPolicy } from "../auth/policy.js";
 import { provideSshTransport } from "../hosts/connect/transport-providers.js";
 import type { VerifiedIdentity } from "../auth/types.js";
@@ -933,10 +938,22 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
 
     registerLoginMethod: (method) => {
       requireDeclared(contributes.loginMethods, method.id, "loginMethods");
+      if (method.kind === "webauthn" && (!method.options || !method.verify)) {
+        throw new Error(
+          `Plugin ${pluginId} login method "${method.id}" needs options and verify`,
+        );
+      }
       {
         const dispose = registerLoginMethod({
           ...method,
           pluginId,
+          fields: checkLoginFields(method.fields),
+          options: method.options
+            ? async (...args) => {
+                await granted();
+                return method.options!(...args);
+              }
+            : undefined,
           start: method.start
             ? async (...args) => {
                 await granted();
@@ -970,6 +987,7 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
         const dispose = registerSecondFactor({
           ...factor,
           pluginId,
+          prompt: checkSecondFactorPrompt(factor.prompt),
           verify: async (userId, body) => {
             await granted();
             return factor.verify(userId, body);
@@ -978,6 +996,38 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
         bag.add(dispose, `second factor "${factor.id}"`);
       }
       record("auth_register_factor", factor.id);
+    },
+
+    registerWebAuthnCeremony: (ceremony) => {
+      if (!declared.includes("auth:provide")) {
+        throw capabilityRefused(pluginId, "auth:provide");
+      }
+      if (
+        typeof ceremony?.id !== "string" ||
+        !/^[a-z][a-z0-9-]{0,63}$/.test(ceremony.id) ||
+        (ceremony.type !== "create" && ceremony.type !== "get") ||
+        typeof ceremony.options !== "function" ||
+        typeof ceremony.finish !== "function"
+      ) {
+        throw new Error(
+          `Plugin ${pluginId} WebAuthn ceremony needs an id, a type and both steps`,
+        );
+      }
+      const dispose = registerWebAuthnCeremony({
+        id: ceremony.id,
+        type: ceremony.type,
+        pluginId,
+        options: async (input) => {
+          await granted();
+          return ceremony.options(input);
+        },
+        finish: async (input) => {
+          await granted();
+          return ceremony.finish(input);
+        },
+      });
+      bag.add(dispose, `WebAuthn ceremony "${ceremony.id}"`);
+      record("auth_register_ceremony", ceremony.id);
     },
 
     recordEnrollment: async (userId, factorId) => {

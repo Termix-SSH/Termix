@@ -173,6 +173,20 @@ export interface FrameState {
   statusColorScheme: "accent" | "status";
   tabs: Record<string, unknown>[];
   tabsReady: boolean;
+  /** The tab on screen now. */
+  activeTabId?: string;
+  /** Splits and the tab in each pane, for read only shell views. */
+  splits?: Array<{
+    id: string;
+    label: string;
+    full: boolean;
+    panes: Array<{
+      id: string;
+      index: number;
+      tabId: string | null;
+      label: string | null;
+    }>;
+  }>;
   layout: Record<string, unknown> | null;
   uiPreferences: Record<string, unknown>;
   sshAuthTypes: { loaded: boolean; types: Record<string, unknown>[] };
@@ -184,7 +198,11 @@ export interface FrameState {
   companions: Record<string, unknown>[];
   hostActions: Record<string, unknown>[];
   desktop: { available: boolean; remoteServerUrl: string | null };
+  /** The shell's browser has Web Serial. */
+  webSerial?: boolean;
   isMobile: boolean;
+  /** Background frame only: rows its data hooks run for, valueKey -> rowKey -> context. */
+  dataRows?: Record<string, Record<string, Record<string, unknown>>>;
 }
 
 export interface FrameTheme {

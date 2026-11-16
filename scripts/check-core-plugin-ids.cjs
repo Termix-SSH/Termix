@@ -23,7 +23,8 @@
  * src/backend/hosts/connect/ classifies. It is not the login plugin.
  *
  * A few ids are also plain core words: the host "notes" column, the data
- * "backups" folder and the node "dns" module. On their own they are not
+ * "backups" folder, the node "dns" module and "webauthn", the web standard
+ * a passkey login method's kind is named after. On their own they are not
  * counted, but their routes and dotted ids ("notes.list") still are.
  */
 
@@ -31,7 +32,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const SSH_TERMS = new Set(["totp"]);
-const CORE_WORDS = new Set(["notes", "backups", "dns"]);
+const CORE_WORDS = new Set(["notes", "backups", "dns", "webauthn"]);
 
 const OFFICIAL_IDS = [
   "acme-ssl",

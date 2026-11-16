@@ -2,6 +2,16 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { useActionSlot } from "@/hooks/use-action-slot";
 import { invokeAction, type SlotContribution } from "@/shell/action-registry";
+import { getForeignRuntime } from "@/components/foreign/foreign-runtime";
+import { ForeignSlot } from "@/components/foreign/ForeignSlot";
+
+/** Runs a slot button: in a plugin frame through the shell. */
+function runAction(actionId: string, args: unknown[]): Promise<unknown> {
+  const runtime = getForeignRuntime();
+  return runtime
+    ? runtime.invoke(actionId, args)
+    : invokeAction(actionId, ...args);
+}
 
 interface ActionSlotProps {
   slotId: string;
@@ -44,8 +54,10 @@ export function ActionSlot({
   when,
 }: ActionSlotProps) {
   const { t } = useTranslation();
+  // Components and data values are drawn by ComponentSlot and DataSlot.
   const contributions = useActionSlot(slotId, when).filter(
-    (contribution) => contribution.kind !== "component",
+    (contribution) =>
+      contribution.kind !== "component" && contribution.kind !== "data",
   );
 
   if (!enabled || contributions.length === 0) return null;
@@ -54,9 +66,8 @@ export function ActionSlot({
     <>
       {contributions.map((contribution) => {
         const invoke = () => {
-          invokeAction(contribution.actionId, ...(context?.() ?? [])).catch(
-            (error) =>
-              console.error(`[actions] ${contribution.actionId} failed`, error),
+          runAction(contribution.actionId, context?.() ?? []).catch((error) =>
+            console.error(`[actions] ${contribution.actionId} failed`, error),
           );
         };
 
@@ -110,10 +121,13 @@ export function ComponentSlot({
   if (contributions.length === 0) return null;
   return (
     <>
-      {contributions.map((contribution) => {
-        const Contributed = contribution.component!;
-        return <Contributed key={contribution.actionId} {...(props ?? {})} />;
-      })}
+      {contributions.map((contribution) => (
+        <ForeignSlot
+          key={contribution.actionId}
+          of={contribution.component}
+          props={props}
+        />
+      ))}
     </>
   );
 }

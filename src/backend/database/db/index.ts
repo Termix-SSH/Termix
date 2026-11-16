@@ -247,7 +247,13 @@ async function initializeCompleteDatabase(): Promise<void> {
         username TEXT NOT NULL,
         password_hash TEXT NOT NULL,
         is_admin INTEGER NOT NULL DEFAULT 0,
-        registered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        registered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        display_name TEXT,
+        email TEXT,
+        disabled_at TEXT,
+        disabled_reason TEXT,
+        last_login_at TEXT,
+        managed_by TEXT
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -700,6 +706,22 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS user_invites (
+        id TEXT PRIMARY KEY,
+        token_hash TEXT NOT NULL,
+        note TEXT,
+        role_ids TEXT,
+        make_admin INTEGER NOT NULL DEFAULT 0,
+        max_uses INTEGER NOT NULL DEFAULT 1,
+        uses INTEGER NOT NULL DEFAULT 0,
+        created_by TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        expires_at TEXT NOT NULL,
+        revoked_at TEXT,
+        FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE SET NULL
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_user_invites_token_hash ON user_invites (token_hash);
+
     CREATE TABLE IF NOT EXISTS user_open_tabs (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
@@ -1124,6 +1146,22 @@ const migrateSchema = () => {
     }
   }
   enforceUniqueUsernames();
+  addColumnIfNotExists("users", "display_name", "TEXT");
+  addColumnIfNotExists("users", "email", "TEXT");
+  addColumnIfNotExists("users", "disabled_at", "TEXT");
+  addColumnIfNotExists("users", "disabled_reason", "TEXT");
+  addColumnIfNotExists("users", "last_login_at", "TEXT");
+  addColumnIfNotExists("users", "managed_by", "TEXT");
+  try {
+    sqlite.exec(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users (email)",
+    );
+  } catch (error) {
+    databaseLogger.warn("Failed to index users.email", {
+      operation: "schema_migration",
+      error: getErrorMessage(error),
+    });
+  }
   addColumnIfNotExists("sessions", "external_session_ref", "TEXT");
   addColumnIfNotExists("sessions", "restriction", "TEXT");
   addColumnIfNotExists("sessions", "idle_timeout", "INTEGER");

@@ -9,6 +9,7 @@ import {
   Facts,
   PanelSearch,
   PanelShell,
+  PanelToolbar,
   Segmented,
   ToolbarBand,
   ViewToggle,
@@ -36,6 +37,38 @@ describe("PanelSearch", () => {
   it("hides the clear button while empty", () => {
     render(<PanelSearch value="" onChange={() => {}} />);
     expect(screen.queryByLabelText("panel.clearSearch")).toBeNull();
+  });
+});
+
+describe("PanelToolbar", () => {
+  it("puts search, the panel's buttons and an icon add button on one row", () => {
+    const onAdd = vi.fn();
+    render(
+      <PanelToolbar
+        search=""
+        onSearchChange={() => {}}
+        onAdd={onAdd}
+        addLabel="New snippet"
+        below={<span>target</span>}
+      >
+        <button type="button">sort</button>
+      </PanelToolbar>,
+    );
+    const add = screen.getByLabelText("New snippet");
+    expect(add.textContent).toBe("");
+    const row = screen
+      .getByRole("textbox")
+      .closest(".relative")!.parentElement!;
+    expect(row.contains(screen.getByText("sort"))).toBe(true);
+    expect(row.contains(add)).toBe(true);
+    expect(row.contains(screen.getByText("target"))).toBe(false);
+    fireEvent.click(add);
+    expect(onAdd).toHaveBeenCalledOnce();
+  });
+
+  it("leaves out the add button without onAdd", () => {
+    render(<PanelToolbar search="" onSearchChange={() => {}} />);
+    expect(screen.queryByLabelText("common.new")).toBeNull();
   });
 });
 
