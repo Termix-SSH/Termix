@@ -82,6 +82,7 @@
 
 ### Fixed
 
+- Linux desktop app: the window follows the system display scale again, so it is no longer tiny on HiDPI screens. Set `TERMIX_FORCE_DEVICE_SCALE_FACTOR` to pick a scale by hand
 - After an update the browser no longer keeps an old copy of the plugin SDK, which broke layouts with a missing export error until site data was cleared
 - Outbound requests never reach a cloud metadata address, even for a host allowed as private
 - Updating a plugin never moves it back to an older version unless you pick that version
