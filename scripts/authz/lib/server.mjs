@@ -50,9 +50,10 @@ export function coreVersionOf(coreDir, run = spawnSync) {
   const branch = run("git", ["-C", coreDir, "branch", "--show-current"], {
     encoding: "utf8",
   });
-  const match = /^dev-(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$/.exec(
-    String(branch?.stdout ?? "").trim(),
-  );
+  // A PR checkout in CI is detached, so the branch it targets says instead.
+  const name =
+    String(branch?.stdout ?? "").trim() || process.env.GITHUB_BASE_REF || "";
+  const match = /^dev-(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$/.exec(name);
   return match ? match[1] : undefined;
 }
 

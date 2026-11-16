@@ -211,9 +211,11 @@ describe("main.cjs", () => {
     }
   });
 
-  it("writes the page that reads old storage itself, so packaging can't drop it", () => {
-    expect(main).toMatch(/fs\.writeFileSync\(fileBlankPath/);
-    expect(main).not.toMatch(/__dirname, "storage-blank\.html"/);
+  it("reads old storage from disk, never through a file:// page", () => {
+    expect(main).not.toContain("storage-blank.html");
+    expect(main).toContain("storageDir: path.join(");
+    const migrate = fs.readFileSync("electron/storage-migrate.cjs", "utf8");
+    expect(migrate).not.toContain(".loadFile(");
   });
 
   it("serves the page from app://, never file://", () => {

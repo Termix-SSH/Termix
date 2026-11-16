@@ -181,6 +181,30 @@ describe("frame pages under /plugin-assets/<id>/_frame/", () => {
   });
 });
 
+describe("frame fonts", () => {
+  it("come from the UI build, or from public/ when a dev runner has none", () => {
+    const base = fs.mkdtempSync(path.join(os.tmpdir(), "termix-fonts-"));
+    try {
+      const dir = path.join(base, "dist", "frame");
+      fs.mkdirSync(dir, { recursive: true });
+      expect(resolveFrameAsset(dir, "_frame/fonts/a.ttf")).toBeNull();
+
+      const source = path.join(base, "public", "fonts", "a.ttf");
+      write(source, "source");
+      expect(resolveFrameAsset(dir, "_frame/fonts/a.ttf")).toBe(source);
+
+      const built = path.join(base, "dist", "fonts", "a.ttf");
+      write(built, "built");
+      expect(resolveFrameAsset(dir, "_frame/fonts/a.ttf")).toBe(built);
+
+      write(path.join(base, "public", "secret.ttf"), "no");
+      expect(resolveFrameAsset(dir, "_frame/fonts/../secret.ttf")).toBeNull();
+    } finally {
+      fs.rmSync(base, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("pluginFrameCsp", () => {
   const csp = pluginFrameCsp({
     baseUrl: "https://termix.example/base/",

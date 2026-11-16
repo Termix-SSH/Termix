@@ -2238,28 +2238,28 @@ app.whenReady().then(async () => {
       path.join(appRoot, "dist"),
     );
     movingStorage = true;
-    // Every file:// page shares one storage origin, so any empty page on
-    // disk reads what the old builds saved.
-    const fileBlankPath = path.join(
-      app.getPath("userData"),
-      "storage-blank.html",
-    );
     try {
-      fs.writeFileSync(fileBlankPath, "<!doctype html><title></title>");
       await migrateFileStorage({
         BrowserWindow,
         partition: termixSessionPartition,
         markerPath: path.join(app.getPath("userData"), "app-origin.json"),
-        fileBlankPath,
+        // Where Chromium keeps localStorage of the persist:termix partition.
+        storageDir: path.join(
+          app.getPath("userData"),
+          "Partitions",
+          "termix",
+          "Local Storage",
+          "leveldb",
+        ),
         appBlankUrl: appProtocol.APP_BLANK_URL,
         fs,
+        path,
         log: logToFile,
       });
     } catch (error) {
       logToFile("Could not move saved settings:", error?.message || error);
     } finally {
       movingStorage = false;
-      fs.rmSync(fileBlankPath, { force: true });
     }
   }
 

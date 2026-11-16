@@ -33,15 +33,15 @@ jobs:
       matrix:
         include:
           - name: windows
-            os: blacksmith-4vcpu-windows-2025
+            os: windows-2025
             platform: win32
             arch: x64
           - name: linux
-            os: blacksmith-2vcpu-ubuntu-2404
+            os: ubuntu-24.04
             platform: linux
             arch: x64
           - name: macos
-            os: blacksmith-6vcpu-macos-latest
+            os: macos-latest
             platform: darwin
             arch: arm64
     runs-on: ${{ matrix.os }}
