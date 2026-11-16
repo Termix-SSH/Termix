@@ -7,7 +7,7 @@ Plugin API 2.9.0. Needs Termix 26.11.2.
 ### Added
 
 - `PanelToolbar` in `/ui`: a sidebar panel's search, icon buttons and icon only add button on one row
-- `termix-plugin validate` warns when a panel builds its toolbar from `PanelSearch` and `AddButton` instead of `PanelToolbar`
+- `termix-plugin validate` warns when a panel stacks a full width `PanelSearch` over a labelled `AddButton`, and points to `PanelToolbar`
 
 ## 2.9.0
 
