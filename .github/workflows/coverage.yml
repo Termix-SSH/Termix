@@ -70,5 +70,7 @@ jobs:
           --include "packages/plugin-sdk/src/**" --exclude-after-remap
           --exclude "**/tests/**"
 
+      # shell: bash turns on pipefail, so a result under the minimum fails the job.
       - name: Summary
-        run: node scripts/coverage-merged.mjs coverage/unit/coverage-final.json coverage/authz/coverage-final.json | tee -a "$GITHUB_STEP_SUMMARY"
+        shell: bash
+        run: node scripts/coverage-merged.mjs coverage/unit/coverage-final.json coverage/authz/coverage-final.json --min 80 | tee -a "$GITHUB_STEP_SUMMARY"
