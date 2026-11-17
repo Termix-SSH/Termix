@@ -1734,10 +1734,7 @@ endpoint.handle("init", async ([cfg]) => {
   config = cfg as InitConfig;
   expressModule = (await import("express")).default;
   // Narrow imports: the package root costs over 100 MB of parse garbage.
-  const { is } = await import("drizzle-orm/entity");
-  const { Table, getTableName } = await import("drizzle-orm/table");
-  tableName = (value) =>
-    is(value, Table) ? getTableName(value as never) : undefined;
+  tableName = (await import("./table-name.js")).drizzleTableName;
   pluginModule = (await import(config.entryUrl)) as typeof pluginModule;
   const def = (pluginModule as { default?: typeof pluginModule }).default;
   if (!pluginModule.activate && def) pluginModule = def;

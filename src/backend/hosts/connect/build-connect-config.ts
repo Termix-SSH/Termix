@@ -10,7 +10,7 @@ import { SSHHostKeyVerifier } from "../host-key-verifier.js";
 import { resolveSshKeepalive } from "../ssh-keepalive.js";
 import {
   SshAuthProviderMissingError,
-  requireSshAuthProvider,
+  awaitSshAuthProvider,
 } from "./auth-provider-registry.js";
 import { ensureCoreSshAuthProviders } from "./core-providers.js";
 import { ConnectPolicyError, assertConnectAllowed } from "../connect-policy.js";
@@ -260,7 +260,7 @@ export async function buildConnectConfig(
 
   let provider: SshAuthProvider;
   try {
-    provider = requireSshAuthProvider(authType);
+    provider = await awaitSshAuthProvider(authType);
   } catch (error) {
     if (error instanceof SshAuthProviderMissingError) {
       return {

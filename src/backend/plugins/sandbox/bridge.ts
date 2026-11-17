@@ -2156,7 +2156,14 @@ export function pluginUrl(req: Request): string {
     .termixPluginBase;
   if (base === undefined || req.baseUrl === base) return req.url;
   if (!req.baseUrl.startsWith(base)) return req.url;
-  return req.baseUrl.slice(base.length) + req.url;
+  // Under a mount Express turns "/p/abc?x" into url "/?x"; keep the path the
+  // browser asked for, without a slash it never sent.
+  const sentPath = (req.originalUrl ?? "").split("?")[0];
+  const url =
+    (req.url === "/" || req.url.startsWith("/?")) && !sentPath.endsWith("/")
+      ? req.url.slice(1)
+      : req.url;
+  return req.baseUrl.slice(base.length) + url;
 }
 
 function validStatus(status: unknown): number {

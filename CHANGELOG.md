@@ -86,6 +86,8 @@
 ### Fixed
 
 - Submenus inside a menu open again instead of being cut off by the menu around them
+- Right after the server starts, a host no longer says it needs a plugin that is installed and still starting. Its login waits for that plugin instead
+- Windows: saving the database tries again when the file is briefly locked, so a quick restart no longer leaves every plugin off
 - Opening a host tool no longer logs an error when no plugin keeps recent activity
 - Postgres and MySQL: the list of who a credential is shared with loads again
 - Linux desktop app: the window follows the system display scale again, so it is no longer tiny on HiDPI screens. Set `TERMIX_FORCE_DEVICE_SCALE_FACTOR` to pick a scale by hand

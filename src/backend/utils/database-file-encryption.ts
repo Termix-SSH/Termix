@@ -3,6 +3,7 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { databaseLogger } from "./logger.js";
+import { renameWithRetry } from "./rename-retry.js";
 import { SystemCrypto } from "./system-crypto.js";
 
 interface EncryptedFileMetadata {
@@ -79,7 +80,7 @@ class DatabaseFileEncryption {
       ]);
 
       await fs.promises.writeFile(tmpPath, finalBuffer);
-      await fs.promises.rename(tmpPath, targetPath);
+      await renameWithRetry(tmpPath, targetPath);
 
       try {
         if (fs.existsSync(metadataPath)) {

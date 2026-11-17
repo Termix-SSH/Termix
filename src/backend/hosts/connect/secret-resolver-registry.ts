@@ -8,6 +8,8 @@
  * provide it, the same shape as SshAuthProviderMissingError.
  */
 
+import { waitForPluginStartup } from "./plugin-startup.js";
+
 export interface SecretResolverOwner {
   pluginId: string;
   pluginName: string;
@@ -95,6 +97,17 @@ export function requireSecretResolver(
     throw new SecretResolverMissingError(scheme, findSchemeOwner(scheme));
   }
   return resolver;
+}
+
+/** Like requireSecretResolver, after waiting for an owner still starting. */
+export async function awaitSecretResolver(
+  scheme: string,
+): Promise<SecretResolverRegistration> {
+  if (!resolvers.has(scheme)) {
+    const owner = findSchemeOwner(scheme);
+    if (owner) await waitForPluginStartup(owner.pluginId);
+  }
+  return requireSecretResolver(scheme);
 }
 
 /** Test seam. */

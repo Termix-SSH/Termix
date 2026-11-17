@@ -490,7 +490,15 @@ describe("plugin urls under a mounted router.use", () => {
     await fetch(`${base}/status?x=1`);
     await fetch(`${base}/p/abc/index.html?y=2`);
     await fetch(`${base}/p/abc`);
+    await fetch(`${base}/p/abc?code=1`);
+    await fetch(`${base}/p/abc/?code=2`);
     server.close();
-    expect(seen).toEqual(["/status?x=1", "/p/abc/index.html?y=2", "/p/abc/"]);
+    expect(seen).toEqual([
+      "/status?x=1",
+      "/p/abc/index.html?y=2",
+      "/p/abc",
+      "/p/abc?code=1",
+      "/p/abc/?code=2",
+    ]);
   });
 });

@@ -1,4 +1,4 @@
-import { requireSecretResolver } from "./connect/secret-resolver-registry.js";
+import { awaitSecretResolver } from "./connect/secret-resolver-registry.js";
 
 /**
  * Expands "<scheme>://..." references ("op://vault/item/field" for 1Password
@@ -51,7 +51,7 @@ async function defaultResolver(
   reference: string,
 ): Promise<string> {
   const scheme = referenceScheme(reference);
-  const resolver = requireSecretResolver(scheme);
+  const resolver = await awaitSecretResolver(scheme);
   return resolver.resolve(userId, reference);
 }
 
