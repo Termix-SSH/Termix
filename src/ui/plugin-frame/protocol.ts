@@ -25,6 +25,8 @@ export interface WireIcon {
   $icon: string;
   element?: true;
   size?: number;
+  /** The icon's shapes, so the other side needs no copy of Lucide. */
+  node?: unknown;
 }
 
 /** A plugin component the shell shows in a frame of its own. */

@@ -24,6 +24,7 @@ vi.mock("@/hooks/use-permissions", async (importOriginal) => ({
 import {
   COLD_LINGER_MS,
   FRAME_IDLE_MS,
+  MAX_IDLE_FRAMES,
   MAX_STARTING_FRAMES,
   resetFrameSlots,
   startFramedPlugin,
@@ -453,6 +454,37 @@ describe("booting many plugins at once", () => {
     expect(booting()).toBeLessThanOrEqual(MAX_STARTING_FRAMES);
   });
 
+  it("stops the least recently used idle frames past the cap", async () => {
+    const ids = Array.from({ length: MAX_IDLE_FRAMES + 2 }, (_, i) => `c${i}`);
+    setPluginSummaries(ids.map(named));
+    const running = (id: string) =>
+      !!document.querySelector(`iframe[data-plugin-frame="${id}"]`);
+    const plugins = [];
+    const releases: (() => void)[] = [];
+    for (const id of ids.slice(0, -1)) {
+      const started = startFramedPlugin(named(id));
+      await bootNamed(id);
+      plugins.push(await started);
+      releases.push(acquireFramedPlugin(id));
+    }
+    // Past the first linger, so only the cap can stop them.
+    await sleep(COLD_LINGER_MS + 300);
+    for (const release of releases) {
+      release();
+      await sleep(5);
+    }
+    expect(ids.slice(0, -1).every(running)).toBe(true);
+
+    const last = ids[ids.length - 1];
+    plugins.push(await startFramedPlugin(named(last)));
+    const hold = acquireFramedPlugin(last);
+    await bootNamed(last);
+    await sleep(10);
+    expect(ids.filter(running)).toEqual(ids.slice(1));
+    hold();
+    for (const plugin of plugins) plugin.dispose();
+  }, 15_000);
+
   it("stops a frame booted only for registrations soon after", async () => {
     const started = startFramedPlugin(summary);
     await bootFrame({});
@@ -463,7 +495,53 @@ describe("booting many plugins at once", () => {
     expect(getPanel("gizmo")).toBeDefined();
     plugin.dispose();
   }, 10_000);
+
+  it("keeps a new frame up while it still calls the shell", async () => {
+    const started = startFramedPlugin(summary);
+    const port = await bootFrame({});
+    const plugin = await started;
+    const busy = setInterval(
+      () => void port.call("toast", ["info", "still working"]).catch(() => {}),
+      300,
+    );
+    await sleep(1_500 + COLD_LINGER_MS + 200);
+    expect(frames()).toHaveLength(1);
+    clearInterval(busy);
+    plugin.dispose();
+  }, 10_000);
 });
+
+/** A bare background frame for plugin `id` that registers nothing. */
+async function bootNamed(id: string): Promise<FramePort> {
+  let iframe: HTMLIFrameElement | null = null;
+  for (let i = 0; i < 200 && !iframe; i++) {
+    iframe = document.querySelector<HTMLIFrameElement>(
+      `iframe[data-plugin-frame="${id}"]`,
+    );
+    if (!iframe) await sleep(5);
+  }
+  if (!iframe) throw new Error(`no frame for ${id}`);
+  const win = iframe.contentWindow!;
+  const toShell = (message: FrameMessage) =>
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        data: structuredClone(message),
+        source: win,
+      }),
+    );
+  const port = new FramePort({
+    post: (message) => queueMicrotask(() => toShell(message)),
+    onCall: () => undefined,
+    fnPrefix: "p",
+  });
+  vi.spyOn(win, "postMessage").mockImplementation((message: unknown) => {
+    queueMicrotask(() => port.receive(structuredClone(message)));
+  });
+  toShell({ ch: FRAME_CHANNEL, t: "hello", role: "background" });
+  port.emit("live", { reasons: [] });
+  port.emit("ready");
+  return port;
+}
 
 async function userKey(): Promise<string> {
   // u1 with no grants, hashed the same way the shell does.

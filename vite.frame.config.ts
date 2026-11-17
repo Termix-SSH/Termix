@@ -55,6 +55,11 @@ export default defineConfig({
     alias: {
       "@termix-ssh/plugin-sdk/frontend": sdkFrontendEntry,
       "@termix-ssh/plugin-sdk/ui": sdkUiEntry,
+      // Each frame loads only the icons it draws, not all of Lucide.
+      "@/lib/plugin-icon": path.resolve(
+        __dirname,
+        "./src/ui/plugin-frame/frame-plugin-icon.tsx",
+      ),
       "@/types": path.resolve(__dirname, "./src/types"),
       "@": path.resolve(__dirname, "./src/ui"),
     },

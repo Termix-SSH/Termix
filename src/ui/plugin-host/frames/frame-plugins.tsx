@@ -25,7 +25,7 @@ import {
   type WireComponent,
 } from "@/plugin-frame/protocol";
 import { decode } from "@/plugin-frame/wire";
-import { decodeIconValue } from "@/plugin-frame/frame-icons";
+import { decodeHostIconValue } from "./host-icons";
 import { getUserInfo } from "@/main-axios";
 import { loadMyPermissions } from "@/hooks/use-permissions";
 import { createPluginApp, type PluginAppHandle } from "../app";
@@ -91,9 +91,16 @@ function rowTableValue(pluginId: string, key: string, useNeed: UseNeed) {
 
 const START_TIMEOUT_MS = 20_000;
 const MEMO_LIMIT = 500;
-/** A background frame with no live value stops after this long unused. */
-export const FRAME_IDLE_MS = 3 * 60_000;
-const IDLE_CHECK_MS = 30_000;
+/**
+ * A background frame with no live work, nothing on screen needing it and no
+ * calls of its own stops after this long unused. Its answers stay cached.
+ */
+export const FRAME_IDLE_MS = 15_000;
+const IDLE_CHECK_MS = 5_000;
+/** A frame that called the shell this recently is still working. */
+export const FRAME_BUSY_MS = 3_000;
+/** Idle background frames kept at once; the least recently used stop first. */
+export const MAX_IDLE_FRAMES = 4;
 /** Registrations a fresh frame did not report again by then are dropped. */
 const STALE_GRACE_MS = 1_500;
 /**
@@ -397,6 +404,27 @@ interface SlotTicket {
 let startingFrames = 0;
 const slotQueue: SlotTicket[] = [];
 
+interface RunningFrame {
+  lastUse: () => number;
+  /** Up, with nothing that needs it running. */
+  idle: () => boolean;
+  stop: () => void;
+}
+const runningFrames = new Map<string, RunningFrame>();
+
+/** Stops the least recently used idle frames past MAX_IDLE_FRAMES. */
+function trimIdleFrames(): void {
+  const idle = [...runningFrames.values()]
+    .filter((entry) => entry.idle())
+    .sort((a, b) => a.lastUse() - b.lastUse());
+  for (const entry of idle.slice(
+    0,
+    Math.max(0, idle.length - MAX_IDLE_FRAMES),
+  )) {
+    entry.stop();
+  }
+}
+
 function nextSlot(): void {
   for (;;) {
     // Frames something on screen needs get a lane of their own on top.
@@ -447,6 +475,7 @@ function takeFrameSlot(ticket: Omit<SlotTicket, "go">): {
 export function resetFrameSlots(): void {
   startingFrames = 0;
   slotQueue.length = 0;
+  runningFrames.clear();
 }
 
 /**
@@ -482,6 +511,8 @@ export async function startFramedPlugin(
   /** When the user last asked this plugin for something. */
   let askedAt = 0;
   let lastUse = Date.now();
+  /** When the frame last called the shell (an API call, a toast, ...). */
+  let lastFrameCall = 0;
   let idleTimer: ReturnType<typeof setInterval> | null = null;
   const answers: Record<string, unknown> = {};
   const values: Record<string, unknown> = {};
@@ -557,6 +588,13 @@ export async function startFramedPlugin(
   };
 
   const isLive = () => live.length > 0;
+  const isIdle = () =>
+    !!frame?.ready &&
+    !isLive() &&
+    needs === 0 &&
+    pending === 0 &&
+    !overlay &&
+    Date.now() - lastFrameCall >= FRAME_BUSY_MS;
 
   const teardown = (current: LiveFrame) => {
     current.connection?.close();
@@ -567,6 +605,9 @@ export async function startFramedPlugin(
     releaseHeld();
     const current = frame;
     if (!current) return;
+    if (runningFrames.get(pluginId)?.stop === stopIdle) {
+      runningFrames.delete(pluginId);
+    }
     frame = null;
     overlay = false;
     teardown(current);
@@ -574,11 +615,18 @@ export async function startFramedPlugin(
     idleTimer = null;
   };
 
-  const checkIdle = () => {
-    if (!frame?.ready || isLive() || !userKey) return;
-    if (needs > 0 || pending > 0 || overlay) return;
-    if (Date.now() - lastUse < FRAME_IDLE_MS) return;
+  /** Stops the frame with its answers saved, so the next ask is instant. */
+  const stopIdle = () => {
+    if (!isIdle()) return;
+    if (import.meta.env.DEV) console.debug(`[frame] stop ${pluginId}: idle`);
+    writeNow();
     stopFrame();
+  };
+
+  const checkIdle = () => {
+    if (!userKey || !isIdle()) return;
+    if (Date.now() - lastUse < FRAME_IDLE_MS) return;
+    stopIdle();
   };
 
   let promoteSlot: (() => void) | null = null;
@@ -594,13 +642,19 @@ export async function startFramedPlugin(
   };
 
   /** Starts the background frame if it is not running. */
-  const ensureFrame = (urgent = true, hold = false): Promise<void> => {
+  const ensureFrame = (
+    reason: string,
+    urgent = true,
+    hold = false,
+  ): Promise<void> => {
     if (disposed) return Promise.reject(new Error("Plugin stopped"));
     if (frame?.ready) return Promise.resolve();
     if (starting) {
       if (urgent) promoteSlot?.();
       return starting;
     }
+    if (import.meta.env.DEV)
+      console.debug(`[frame] boot ${pluginId}: ${reason}`);
     const slot = takeFrameSlot({ urgent });
     promoteSlot = slot.promote;
     starting = slot.ready.then((release) => {
@@ -658,6 +712,12 @@ export async function startFramedPlugin(
         lastUse = Date.now();
         resolve();
         if (!idleTimer) idleTimer = setInterval(checkIdle, IDLE_CHECK_MS);
+        runningFrames.set(pluginId, {
+          lastUse: () => lastUse,
+          idle: () => !!userKey && isIdle(),
+          stop: stopIdle,
+        });
+        trimIdleFrames();
         // Cached registrations the new frame no longer makes go away.
         setTimeout(() => {
           if (frame !== current || disposed) return;
@@ -676,6 +736,9 @@ export async function startFramedPlugin(
         {
           onReady: () => finish(),
           onFailed: (message) => finish(new Error(message)),
+          onCall: () => {
+            lastFrameCall = Date.now();
+          },
           onRaw: (name, data) => {
             if (name !== "register") return false;
             register(data, current);
@@ -750,7 +813,7 @@ export async function startFramedPlugin(
   const acquire = (): (() => void) => {
     needs++;
     lastUse = Date.now();
-    void ensureFrame().catch(() => {});
+    void ensureFrame("a mounted part needs its values").catch(() => {});
     let released = false;
     return () => {
       if (released) return;
@@ -780,7 +843,7 @@ export async function startFramedPlugin(
       askedAt = Date.now();
     }
     try {
-      await ensureFrame();
+      await ensureFrame(`call ${kind ?? rid} ${path}`);
       const current = frame;
       const ref = current?.raw.has(rid)
         ? atPath(current.raw.get(rid), JSON.parse(path) as string[])
@@ -801,7 +864,7 @@ export async function startFramedPlugin(
         (ref) =>
         (...args: unknown[]) =>
           callFn(rid, ref.$fn, args),
-      icon: (ref) => decodeIconValue(ref),
+      icon: (ref) => decodeHostIconValue(ref),
       component: (ref: WireComponent) => ref,
     }) as Record<string, unknown>;
 
@@ -1183,7 +1246,7 @@ export async function startFramedPlugin(
     const detail = (event as CustomEvent).detail as { pluginId?: string };
     if (detail?.pluginId !== pluginId || frame || disposed) return;
     lastUse = Date.now();
-    void ensureFrame().catch(() => {});
+    void ensureFrame("settings changed").catch(() => {});
   };
 
   const dispose = () => {
@@ -1239,10 +1302,15 @@ export async function startFramedPlugin(
       return;
     }
     if (pending > 0) return releaseHeld();
+    // Still finishing work it started in activate (polling, saving, ...).
+    if (Date.now() - lastFrameCall < FRAME_BUSY_MS) {
+      releaseHeld();
+      return;
+    }
     writeNow();
     stopFrame();
   };
-  const ready = ensureFrame(!cold, cold).then(
+  const ready = ensureFrame(cold ? "cold" : "live", !cold, cold).then(
     () => {
       if (cold) setTimeout(settleCold, COLD_LINGER_MS);
     },

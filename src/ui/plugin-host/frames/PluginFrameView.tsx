@@ -30,6 +30,8 @@ import { LoadingState } from "@/components/loading-state";
 
 /** A full size view still loading after this long shows a spinner. */
 export const LOADING_DELAY_MS = 300;
+/** Longest the spinner stays up after the frame started. */
+const SHOWN_GRACE_MS = 2_000;
 
 /**
  * fill: takes the box it is given. content: full width, as tall as the
@@ -151,6 +153,8 @@ export function PluginFrameView({
     null,
   );
   const [ready, setReady] = useState(false);
+  // First paint, which comes a little after ready.
+  const [shown, setShown] = useState(false);
   // Layout context a plugin component reads, which can't cross by itself.
   const seamless = useInSeamlessTile();
   const surfaceKind = useSurfaceKind();
@@ -170,6 +174,7 @@ export function PluginFrameView({
   const record = usePluginStore().records.get(pluginId);
   const version = record?.summary.assetVersion ?? "";
 
+  const loads = fit === "fill" && !seeThrough && !className && !style;
   const src = useMemo(
     () =>
       frameUrl(pluginId, {
@@ -181,9 +186,10 @@ export function PluginFrameView({
         bg: seeThrough ? "none" : undefined,
         drawn: overlay ? "1" : undefined,
         edge: edge ? "1" : undefined,
+        spin: loads ? "host" : undefined,
         v: version || undefined,
       }),
-    [pluginId, frameKey, fit, seeThrough, overlay, edge, version],
+    [pluginId, frameKey, fit, seeThrough, overlay, edge, loads, version],
   );
 
   useLayoutEffect(() => {
@@ -199,11 +205,16 @@ ${src}`;
     }
     kept?.connection.close();
     setReady(false);
+    setShown(false);
     lastSent.current = null;
     const next = connectFrame(element, pluginId, "view", frameKey, {
       getProps: () => stableRef.current,
       onReady: () => setReady(true),
       onEvent: (name, data) => {
+        if (name === "shown") {
+          setShown(true);
+          return;
+        }
         if (name === "drawn") {
           setDrawn((data as { drawn?: unknown } | null)?.drawn === true);
           eventRef.current?.(name, data);
@@ -232,16 +243,24 @@ ${src}`;
 
   // No background frame here: a call into the plugin's code starts it.
 
-  const loads = fit === "fill" && !seeThrough && !className && !style;
+  // Covers the frame until it painted, so there is one spinner, not a
+  // blank gap and then the frame's own.
+  const waiting = !ready || !shown;
+  useEffect(() => {
+    if (!ready || shown) return;
+    // A frame that never says so still gets uncovered.
+    const timer = setTimeout(() => setShown(true), SHOWN_GRACE_MS);
+    return () => clearTimeout(timer);
+  }, [ready, shown]);
   const [slow, setSlow] = useState(false);
   useEffect(() => {
-    if (!loads || ready) {
+    if (!loads || !waiting) {
       setSlow(false);
       return;
     }
     const timer = setTimeout(() => setSlow(true), LOADING_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [loads, ready]);
+  }, [loads, waiting]);
 
   useEffect(() => {
     if (!import.meta.env.DEV || ready) return;
@@ -321,7 +340,7 @@ ${src}`;
         data-frame-loading={ready ? undefined : ""}
       >
         {frame}
-        {slow && !ready && (
+        {slow && waiting && (
           <LoadingState className="absolute inset-0 bg-background" />
         )}
       </div>

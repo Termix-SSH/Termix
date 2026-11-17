@@ -4,6 +4,7 @@ import { Play } from "lucide-react";
 import { decode, encode, iconToWire, lucideName } from "@/plugin-frame/wire";
 import { decodeIcon, decodeIconValue } from "@/plugin-frame/frame-icons";
 import { isWireIcon } from "@/plugin-frame/protocol";
+import { withIconBoundary } from "@/plugin-host/scope";
 
 const exportFn = vi.fn((fn: unknown) => ({ $fn: `f${String(fn).length}` }));
 
@@ -23,14 +24,24 @@ describe("wire encoding", () => {
     });
   });
 
-  it("sends Lucide icons by name and drops other React elements", () => {
+  it("sends a plugin icon wrapped in core's boundary by its Lucide name", () => {
+    const wrapped = withIconBoundary("demo", Play);
+    expect(lucideName(wrapped)).toBe("Play");
+    expect(iconToWire(wrapped)).toEqual(iconToWire(Play));
+  });
+
+  it("sends Lucide icons by name with their shapes and drops other React elements", () => {
     expect(lucideName(Play)).toBe("Play");
-    expect(iconToWire(Play)).toEqual({ $icon: "Play" });
-    expect(iconToWire(createElement(Play))).toEqual({
+    const wire = iconToWire(Play);
+    expect(wire).toMatchObject({ $icon: "Play" });
+    expect(wire?.node).toEqual([
+      ["path", expect.objectContaining({ d: expect.any(String) })],
+    ]);
+    expect(iconToWire(createElement(Play))).toMatchObject({
       $icon: "Play",
       element: true,
     });
-    expect(iconToWire(createElement(Play, { size: 14 }))).toEqual({
+    expect(iconToWire(createElement(Play, { size: 14 }))).toMatchObject({
       $icon: "Play",
       element: true,
       size: 14,
@@ -43,18 +54,40 @@ describe("wire encoding", () => {
       { icon: createElement(Play), body: createElement("div") },
       { exportFn },
     );
-    expect(out).toEqual({ icon: { $icon: "Play", element: true } });
+    expect(out).toEqual({ icon: iconToWire(createElement(Play)) });
   });
 
   it("gives an icon sent as an element back as an element", () => {
+    const byName = (name: string) => (name === "Play" ? Play : undefined);
     const element = decodeIconValue(
       iconToWire(createElement(Play, { size: 14 })),
+      byName,
     );
     expect(isValidElement(element)).toBe(true);
     expect((element as { type: unknown }).type).toBe(Play);
     expect((element as { props: { size?: number } }).props.size).toBe(14);
-    expect(decodeIconValue(iconToWire(Play))).toBe(Play);
-    expect(decodeIcon({ $icon: "Play", element: true })).toBe(Play);
+    expect(decodeIconValue(iconToWire(Play), byName)).toBe(Play);
+    expect(decodeIcon({ $icon: "Play", element: true }, byName)).toBe(Play);
+  });
+
+  it("draws an icon from its shapes where Lucide is not loaded", () => {
+    const icon = decodeIcon(iconToWire(Play));
+    expect(icon).not.toBe(Play);
+    expect(lucideName(icon)).toBe("Play");
+    expect(iconToWire(icon)).toEqual(iconToWire(Play));
+  });
+
+  it("drops shapes that are not plain geometry", () => {
+    const icon = decodeIcon({
+      $icon: "Evil",
+      node: [["script", { d: "x" }]],
+    });
+    expect(lucideName(icon)).toBe("Puzzle");
+    const safe = decodeIcon({
+      $icon: "Shape",
+      node: [["path", { d: "M0 0", onload: "alert(1)", href: "x" }]],
+    });
+    expect(iconToWire(safe)?.node).toEqual([["path", { d: "M0 0" }]]);
   });
 
   it("refuses an icon marker with bad extra fields", () => {

@@ -53,7 +53,7 @@ function Bar({ item, layout }: { item: DataBar; layout: DataLayout }) {
   if (layout === "inline") {
     return (
       <div className="flex items-center gap-1.5 px-1.5" data-data-bar>
-        <span className="w-12 shrink-0 truncate text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <span className="shrink-0 whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           {item.label}
         </span>
         <div className="h-1.5 w-12 shrink-0 overflow-hidden bg-muted">

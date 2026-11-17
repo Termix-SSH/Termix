@@ -20,7 +20,7 @@ import {
   type WireComponent,
 } from "@/plugin-frame/protocol";
 import { FramePort } from "@/plugin-frame/rpc";
-import { decodeIconValue } from "@/plugin-frame/frame-icons";
+import { decodeHostIconValue } from "./host-icons";
 import { getPluginStoreState, knownPluginIds } from "../plugin-store";
 import { shell, shellHost } from "../shell-bridge";
 import { getTabType } from "@/shell/tab-registry";
@@ -107,6 +107,8 @@ export interface FrameEvents {
   onRaw?: (name: string, data: unknown) => boolean;
   onReady?: () => void;
   onFailed?: (message: string) => void;
+  /** The frame called the shell. */
+  onCall?: () => void;
 }
 
 export interface FrameConnection {
@@ -262,11 +264,14 @@ export function broadcastToFrames(
 function createPort(connection: FrameConnection, target: Window): FramePort {
   return new FramePort({
     post: (message) => target.postMessage(message, "*"),
-    onCall: (method, args) => handleCall(connection, method, args),
+    onCall: (method, args) => {
+      connection.events.onCall?.();
+      return handleCall(connection, method, args);
+    },
     onEvent: (name, data) => handleEvent(connection, name, data),
     rawEvent: (name, data) => connection.events.onRaw?.(name, data) === true,
     fnPrefix: "s",
-    icon: (ref) => decodeIconValue(ref),
+    icon: (ref) => decodeHostIconValue(ref),
     component: (ref: WireComponent) => ref,
   });
 }

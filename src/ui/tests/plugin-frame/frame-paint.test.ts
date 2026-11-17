@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { markFrameLoading, markFrameShown } from "@/plugin-frame/frame-paint";
+import {
+  markFrameLoading,
+  markFrameShown,
+  whenFrameShown,
+} from "@/plugin-frame/frame-paint";
 
 function root() {
   return document.createElement("html");
@@ -17,6 +21,7 @@ describe("frame paint", () => {
       "#role=view&fit=content&inline=1",
       "#role=view&fit=content&bar=1",
       "#role=view&fit=fill&bg=none&drawn=1",
+      "#role=view&key=main&fit=fill&spin=host",
     ]) {
       const other = root();
       markFrameLoading(hash, other);
@@ -30,5 +35,10 @@ describe("frame paint", () => {
     markFrameShown(element);
     expect(element.dataset.frameLoading).toBeUndefined();
     expect(element.dataset.frameShown).toBe("1");
+  });
+
+  it("says when the view first rendered", async () => {
+    markFrameShown(root());
+    await expect(whenFrameShown()).resolves.toBeUndefined();
   });
 });

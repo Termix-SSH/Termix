@@ -323,9 +323,45 @@ describe("PluginFrameView", () => {
     expect(spinner()).toBeNull();
     act(() => vi.advanceTimersByTime(400));
     expect(spinner()).not.toBeNull();
+    // Started is not painted yet: one spinner stays until it is.
     act(() => frames.options!.onReady());
+    expect(spinner()).not.toBeNull();
+    act(() => frames.options!.onEvent!("shown", null));
     expect(spinner()).toBeNull();
     vi.useRealTimers();
+  });
+
+  it("uncovers a started view that never says it painted", () => {
+    vi.useFakeTimers();
+    const { container } = render(
+      <PluginFrameView
+        pluginId="docker"
+        frameKey="main"
+        fit="fill"
+        props={{}}
+      />,
+    );
+    const spinner = () => container.querySelector("[data-slot=loading-state]");
+    act(() => vi.advanceTimersByTime(400));
+    act(() => frames.options!.onReady());
+    expect(spinner()).not.toBeNull();
+    act(() => vi.advanceTimersByTime(2_100));
+    expect(spinner()).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it("tells a full size view the shell draws its spinner", () => {
+    const { container } = render(
+      <PluginFrameView
+        pluginId="docker"
+        frameKey="main"
+        fit="fill"
+        props={{}}
+      />,
+    );
+    expect(container.querySelector("iframe")!.getAttribute("src")).toContain(
+      "spin=host",
+    );
   });
 
   it("shows no spinner for a see-through or inline view", () => {

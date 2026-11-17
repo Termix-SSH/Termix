@@ -57,6 +57,7 @@ import { createForeignRuntime, receiveForeignEvent } from "./foreign-client";
 import { focusEdge, watchEdges } from "./frame-edges";
 import { withPluginScope } from "@/plugin-host/scope";
 import { FrameRoot, setFrameProps, type FrameFit } from "./frame-root";
+import { whenFrameShown } from "./frame-paint";
 
 /** Time for overlay effects to run before the frame reports its live work. */
 const OVERLAY_SETTLE_MS = 50;
@@ -422,6 +423,10 @@ async function boot() {
       }),
     );
     if (params.edge) watchEdges((name, data) => port.emit(name, data));
+    // Painted, not just started: the shell keeps its spinner until then.
+    void whenFrameShown().then(() =>
+      requestAnimationFrame(() => port.emit("shown")),
+    );
   }
   port.emit("ready");
 

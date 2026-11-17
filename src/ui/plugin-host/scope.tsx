@@ -12,6 +12,7 @@ import { scopeHostFields } from "./host-scope";
 import { useTranslation } from "react-i18next";
 import { pluginName } from "@/lib/plugin-i18n";
 import { getPluginRecord } from "./plugin-store";
+import { WRAPPED_ICON } from "@/plugin-frame/wire";
 
 const PluginScopeContext = createContext<string | null>(null);
 
@@ -170,6 +171,8 @@ export function withIconBoundary<P extends object>(
     );
   }
   SafeIcon.displayName = `PluginIcon(${pluginId})`;
+  // Frames get icons by name, so keep the real one reachable.
+  (SafeIcon as unknown as Record<string, unknown>)[WRAPPED_ICON] = Icon;
   return SafeIcon;
 }
 
