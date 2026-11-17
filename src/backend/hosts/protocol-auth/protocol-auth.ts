@@ -593,7 +593,7 @@ export async function resolveOwnerProtocolLogin(
 
   return {
     authType,
-    username,
+    username: username ? await openReference(ownerId, username) : "",
     password: password ? await openReference(ownerId, password) : "",
     fields: withDeclaredFields(declared, secretFields, login?.fields),
   };

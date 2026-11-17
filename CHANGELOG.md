@@ -4,6 +4,7 @@
 
 ### Added
 
+- Secret references like `bw://web-1/username` also work in a host's or credential's username, and in the username of other protocol logins
 - Desktop app: closing the window can quit Termix instead of keeping it in the tray
 - Desktop app: the first time closing the window keeps Termix in the tray, a notice says it is still running and how to quit
 - Admin setting to trust a host's first key without a prompt when nobody can confirm it. Each such key is audited

@@ -2,7 +2,7 @@ import { awaitSecretResolver } from "./connect/secret-resolver-registry.js";
 
 /**
  * Expands "<scheme>://..." references ("op://vault/item/field" for 1Password
- * Connect, and so on) in a resolved host's secret fields into the actual
+ * Connect, and so on) in a resolved host's login fields into the actual
  * secrets, resolved by whichever plugin registered that scheme through
  * ctx.credentials.registerSecretResolver.
  *
@@ -14,7 +14,9 @@ import { awaitSecretResolver } from "./connect/secret-resolver-registry.js";
  * cached briefly in memory; a rotated secret shows up within CACHE_TTL_MS.
  */
 
-const SECRET_FIELDS = [
+const REFERENCE_FIELDS = [
+  "username",
+  "socks5Username",
   "password",
   "key",
   "keyPassword",
@@ -73,13 +75,13 @@ export async function resolveSecretReference(
   return value;
 }
 
-/** Replaces every reference in the host's secret fields, in place. */
+/** Replaces every reference in the host's login fields, in place. */
 export async function resolveExternalSecretRefs(
   host: Record<string, unknown>,
   userId: string,
   deps?: Parameters<typeof resolveSecretReference>[2],
 ): Promise<void> {
-  for (const field of SECRET_FIELDS) {
+  for (const field of REFERENCE_FIELDS) {
     const value = host[field];
     if (!isSecretReference(value)) continue;
     host[field] = await resolveSecretReference(userId, value, deps);
