@@ -162,7 +162,14 @@ export function PluginFrameView({
   const placed = useMemo(
     () => ({
       ...props,
-      __place: { seamless, surfaceKind },
+      __place: {
+        // A tile in the frame that placed this view counts too.
+        seamless:
+          seamless ||
+          (props.__place as { seamless?: unknown } | undefined)?.seamless ===
+            true,
+        surfaceKind,
+      },
       __surfaceClose: surfaceClose ?? undefined,
     }),
     [props, seamless, surfaceKind, surfaceClose],
@@ -174,7 +181,10 @@ export function PluginFrameView({
   const record = usePluginStore().records.get(pluginId);
   const version = record?.summary.assetVersion ?? "";
 
-  const loads = fit === "fill" && !seeThrough && !className && !style;
+  // A see-through fill view (a rail panel on the sidebar color) still
+  // shows the spinner, just without a background of its own.
+  const loads =
+    fit === "fill" && (!seeThrough || !!transparent) && !className && !style;
   const src = useMemo(
     () =>
       frameUrl(pluginId, {
@@ -187,9 +197,21 @@ export function PluginFrameView({
         drawn: overlay ? "1" : undefined,
         edge: edge ? "1" : undefined,
         spin: loads ? "host" : undefined,
+        // A see-through view lies on the sidebar, which its fields match.
+        on: transparent ? "sidebar" : undefined,
         v: version || undefined,
       }),
-    [pluginId, frameKey, fit, seeThrough, overlay, edge, loads, version],
+    [
+      pluginId,
+      frameKey,
+      fit,
+      seeThrough,
+      overlay,
+      edge,
+      loads,
+      transparent,
+      version,
+    ],
   );
 
   useLayoutEffect(() => {
@@ -341,7 +363,13 @@ ${src}`;
       >
         {frame}
         {slow && waiting && (
-          <LoadingState className="absolute inset-0 bg-background" />
+          <LoadingState
+            className={
+              transparent
+                ? "absolute inset-0"
+                : "absolute inset-0 bg-background"
+            }
+          />
         )}
       </div>
     );

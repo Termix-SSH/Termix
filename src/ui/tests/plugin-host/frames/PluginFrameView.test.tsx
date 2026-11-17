@@ -350,6 +350,60 @@ describe("PluginFrameView", () => {
     vi.useRealTimers();
   });
 
+  it("keeps a tile's seamless flag from the frame that placed the view", () => {
+    render(
+      <PluginFrameView
+        pluginId="docker"
+        frameKey="tile"
+        fit="fill"
+        props={{ __place: { seamless: true }, title: "x" }}
+      />,
+    );
+    const sent = frames.options!.getProps() as {
+      __place: { seamless: boolean };
+      title: string;
+    };
+    expect(sent.__place.seamless).toBe(true);
+    expect(sent.title).toBe("x");
+  });
+
+  it("lets the page placing a part say how it sits", async () => {
+    const { FramedView } = await import("@/plugin-host/frames/framed-view");
+    const { container } = render(
+      <FramedView
+        pluginId="docker"
+        frameKey="component:x"
+        how="content"
+        props={{ frameFit: "inline", label: "x" }}
+      />,
+    );
+    const src = container.querySelector("iframe")!.getAttribute("src")!;
+    expect(src).toContain("inline=1");
+    expect(frames.options!.getProps()).not.toHaveProperty("frameFit");
+  });
+
+  it("keeps the spinner for a see-through panel, without a background", () => {
+    vi.useFakeTimers();
+    const { container } = render(
+      <PluginFrameView
+        pluginId="docker"
+        frameKey="panel"
+        fit="fill"
+        transparent
+        props={{}}
+      />,
+    );
+    const src = container.querySelector("iframe")!.getAttribute("src")!;
+    expect(src).toContain("bg=none");
+    expect(src).toContain("spin=host");
+    // Its fields take the sidebar's field color.
+    expect(src).toContain("on=sidebar");
+    act(() => vi.advanceTimersByTime(400));
+    const spinner = container.querySelector("[data-slot=loading-state]")!;
+    expect(spinner.className).not.toContain("bg-background");
+    vi.useRealTimers();
+  });
+
   it("tells a full size view the shell draws its spinner", () => {
     const { container } = render(
       <PluginFrameView

@@ -670,3 +670,17 @@ body.termix-frames-inert iframe[data-plugin-frame] {
   > span {
   display: none;
 }
+
+/* Form fields sit one step darker than the surface under them: on the page
+   background a shade darker, on the sidebar (or a frame drawn on it) the
+   page background. Fields read it with bg-(--field). */
+@layer base {
+  :root,
+  .bg-background {
+    --field: color-mix(in oklch, var(--background) 80%, black);
+  }
+  .bg-sidebar,
+  html[data-frame-on="sidebar"] {
+    --field: var(--background);
+  }
+}

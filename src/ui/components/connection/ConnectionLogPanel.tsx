@@ -108,7 +108,7 @@ export function ConnectionLogPanel({
   return (
     <div
       className={cn(
-        "relative z-10 flex shrink-0 flex-col bg-surface-dim/60",
+        "relative z-10 flex shrink-0 flex-col bg-background",
         "border-t border-border",
         expanded ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT,
         "transition-[height] duration-200",

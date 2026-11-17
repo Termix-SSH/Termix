@@ -61,6 +61,7 @@
 
 ### Changed
 
+- Text boxes, dropdowns and checkboxes are a shade darker than what they sit on, so they stand out on pages and panels alike
 - Server wide status tiles keep their answer for a minute like host tiles, instead of asking the plugin on every refresh
 - Each plugin seals its secrets with its own key, so one plugin can't open what another sealed. Values sealed before move to the new key on the first start
 - An API key made without picking scopes or an expiry is now read only and lasts 90 days. Ask for `full` and no expiry to get the old behavior. Existing keys keep what they had
