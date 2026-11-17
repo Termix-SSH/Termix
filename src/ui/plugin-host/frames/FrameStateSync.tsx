@@ -28,6 +28,14 @@ import { useShellHosts, tabsApi } from "../shell-bridge";
 import { onRemoteServerChange, remoteServerUrl } from "../desktop";
 import { setSharedState, setTabActivator } from "./frame-state";
 import { broadcastToFrames } from "./frame-connection";
+
+/** Another plugin's title as the shell shows it; frames lack its strings. */
+function titleText(key: string): string | undefined {
+  const text = i18n.t(key);
+  return typeof text === "string" && text !== key
+    ? text.slice(0, 300)
+    : undefined;
+}
 import { setUiPreferenceSetter } from "./frame-ui-preferences";
 import { DataWatchHost } from "./data-watches";
 import { ForeignViewHost } from "./foreign-views";
@@ -224,6 +232,7 @@ export function FrameStateSync() {
       companions: companions.map((def) => ({
         id: def.id,
         titleKey: def.titleKey ?? def.id,
+        title: titleText(def.titleKey ?? def.id),
         tabTypes: def.tabTypes ?? [],
         icon: iconToWire(def.icon),
       })),
@@ -231,6 +240,7 @@ export function FrameStateSync() {
         id: action.id,
         pluginId: action.pluginId,
         titleKey: action.titleKey,
+        title: titleText(action.titleKey),
         kind: action.kind,
         tabType: action.tabType,
         priority: action.priority,

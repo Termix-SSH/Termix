@@ -89,6 +89,7 @@ describe("memory report", () => {
     expect(report.running).toBe(2);
     expect(report.plugins.map((p) => p.pluginId)).toEqual(["c", "a", "b"]);
     expect(report.low).toBe(false);
+    expect(report.plugins.every((p) => p.busy === null)).toBe(true);
 
     const tight = buildMemoryReport([status("a", 150)], 200 * MB, {
       mb: 400,

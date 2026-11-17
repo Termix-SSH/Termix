@@ -16,6 +16,7 @@ import {
 import "./frame.css";
 import { createElement, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
 import axios, { type AxiosInstance } from "axios";
 import {
   __setPluginHost,
@@ -56,6 +57,9 @@ import { createForeignRuntime, receiveForeignEvent } from "./foreign-client";
 import { focusEdge, watchEdges } from "./frame-edges";
 import { withPluginScope } from "@/plugin-host/scope";
 import { FrameRoot, setFrameProps, type FrameFit } from "./frame-root";
+
+/** Time for overlay effects to run before the frame reports its live work. */
+const OVERLAY_SETTLE_MS = 50;
 
 interface BootParams {
   role: FrameRole;
@@ -370,19 +374,33 @@ async function boot() {
       createElement(frameComponent(key)!, { key }),
     );
   if (params.role === "background") {
-    root.render(
+    const Hooks = withPluginScope(pluginId, FrameHooks);
+    const draw = (withHooks: boolean) =>
       createElement(FrameRoot, {
         fit: "fill",
         children: [
-          createElement(withPluginScope(pluginId, FrameHooks), {
-            key: "hooks",
-            send: (key: string, value: unknown) =>
-              port.emit("value", { key, value }),
-          }),
+          ...(withHooks
+            ? [
+                createElement(Hooks, {
+                  key: "hooks",
+                  send: (key: string, value: unknown) =>
+                    port.emit("value", { key, value }),
+                }),
+              ]
+            : []),
           ...overlays(),
         ],
-      }),
-    );
+      });
+    if (overlays().length > 0) {
+      // An overlay that opens timers or sockets on mount keeps working on
+      // its own, so the frame must keep running. One that only shows what
+      // the plugin's code opens does not.
+      startLiveTracking();
+      flushSync(() => root.render(draw(false)));
+      await new Promise((resolve) => setTimeout(resolve, OVERLAY_SETTLE_MS));
+      stopLiveTracking();
+    }
+    root.render(draw(true));
     watchOverlay((active) => port.emit("overlay", { active }));
     port.emit("live", { reasons: liveWork() });
   } else {

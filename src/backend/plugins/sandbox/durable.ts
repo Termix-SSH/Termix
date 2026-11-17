@@ -55,7 +55,7 @@ export interface DurableHost {
   running: () => boolean;
   /** Repeating jobs at least this far apart wake the process. */
   idleMs: number;
-  touch: () => void;
+  touch: (reason: string) => void;
   log: (line: string) => void;
 }
 
@@ -289,7 +289,7 @@ export class DurableRegistrations {
     const job = path === "schedule.every";
     this.inflight++;
     if (job) this.jobs++;
-    else this.host.touch();
+    else this.host.touch(path);
     try {
       const fresh = entry.run === this.run && this.host.running();
       if (!fresh) {
@@ -316,7 +316,7 @@ export class DurableRegistrations {
     } finally {
       this.inflight--;
       if (job) this.jobs--;
-      else this.host.touch();
+      else this.host.touch(path);
     }
   }
 

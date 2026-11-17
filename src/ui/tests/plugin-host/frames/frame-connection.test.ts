@@ -405,3 +405,57 @@ describe("frame permissions", () => {
     expect(mayCallHandle("snippets", "__proto__")).toBe(false);
   });
 });
+
+describe("host actions for a frame", () => {
+  it("says which apply to a host and runs one only after a click", async () => {
+    const { registerHostAction, resetHostContributions } =
+      await import("@/sidebar/host-contributions");
+    const { setShellCallbacks, setShellHosts, resetShellBridge } =
+      await import("@/plugin-host/shell-bridge");
+    const openTab = vi.fn();
+    setShellCallbacks({ openTab } as never);
+    setShellHosts([{ id: 7, name: "box" } as never]);
+    registerHostAction({
+      id: "files.open",
+      pluginId: "files",
+      titleKey: "f",
+      icon: (() => null) as never,
+      kind: "open",
+      tabType: "files",
+      when: () => true,
+    });
+    registerHostAction({
+      id: "box.open",
+      pluginId: "box",
+      titleKey: "b",
+      icon: (() => null) as never,
+      kind: "open",
+      tabType: "box",
+      when: () => false,
+    });
+    connectFrame(iframe, "docker", "view", "tab:docker", {});
+    send({ ch: FRAME_CHANNEL, t: "hello", role: "view", key: "tab:docker" });
+
+    expect(await call("hostActions.when", ["7"])).toMatchObject({
+      ok: true,
+      value: [["files", "files.open"]],
+    });
+    expect(await call("hostActions.when", ["99"])).toMatchObject({
+      ok: true,
+      value: [],
+    });
+
+    const run = ["files", "files.open", "7"];
+    expect(await call("hostActions.run", run)).toMatchObject({ ok: false });
+    send({ ch: FRAME_CHANNEL, t: "event", name: "pointer", data: null });
+    expect(
+      await call("hostActions.run", ["box", "box.open", "7"]),
+    ).toMatchObject({ ok: false });
+    expect(await call("hostActions.run", run)).toMatchObject({ ok: true });
+    expect(openTab).toHaveBeenCalledTimes(1);
+    expect(openTab.mock.calls[0][1]).toBe("files");
+
+    resetHostContributions();
+    resetShellBridge();
+  });
+});

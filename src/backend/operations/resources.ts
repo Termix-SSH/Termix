@@ -194,6 +194,48 @@ export async function readAcrossHosts<T>(
   return reads;
 }
 
+const SERVER = "server";
+
+/** After a change to a server wide resource, its signals read again. */
+export function dropServerSignals(): void {
+  for (const key of cache.keys()) {
+    if (key.endsWith(`|${SERVER}`)) cache.delete(key);
+  }
+}
+
+/**
+ * A server wide signal, cached like host reads so a polling page does not
+ * run the plugin's read on every request. Waits only on the first read.
+ */
+export async function readServerSignal(options: {
+  userId: string;
+  actionId: string;
+  freshMs?: number;
+  origin: ActorOrigin;
+}): Promise<unknown> {
+  const key = `${options.userId}|${options.actionId}|${SERVER}`;
+  const run = () =>
+    coalesce(key, async () => {
+      const { runOperation } = await import("./gate.js");
+      const outcome = await runOperation({
+        actionId: options.actionId,
+        internal: true,
+        userId: options.userId,
+        origin: options.origin,
+      }).catch(() => null);
+      remember(key, { value: outcome?.data, fetchedAt: Date.now() });
+    });
+  const cached = cache.get(key);
+  if (!cached) {
+    await run();
+    return cache.get(key)?.value;
+  }
+  if (Date.now() - cached.fetchedAt >= (options.freshMs ?? RESOURCE_FRESH_MS)) {
+    void run();
+  }
+  return cached.value;
+}
+
 export interface ResourceRow {
   hostId: number;
   key: string;

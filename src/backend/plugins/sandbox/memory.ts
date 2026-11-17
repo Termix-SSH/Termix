@@ -52,6 +52,8 @@ export interface PluginMemoryReport {
     pluginId: string;
     state: SandboxStatus["state"];
     keepOnReason: string | null;
+    /** What keeps it up for now when it may stop, or null. */
+    busy: string | null;
     rssMb: number | null;
   }>;
   /** Termix plus every running plugin process. */
@@ -74,6 +76,7 @@ export function buildMemoryReport(
       pluginId: status.pluginId,
       state: status.state,
       keepOnReason: status.keepOnReason,
+      busy: status.busy ?? null,
       rssMb: status.rssMb,
     }))
     .sort((a, b) => (b.rssMb ?? 0) - (a.rssMb ?? 0));

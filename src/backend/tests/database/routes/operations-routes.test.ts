@@ -68,6 +68,7 @@ vi.mock("../../../operations/catalog.js", () => ({
 vi.mock("../../../operations/resources.js", () => ({
   flattenResourceRows: vi.fn(),
   readAcrossHosts: vi.fn(async () => []),
+  readServerSignal: vi.fn(async () => undefined),
 }));
 vi.mock("../../../operations/gate.js", () => {
   class OperationError extends Error {

@@ -42,3 +42,80 @@ describe("extensions inside a frame", () => {
     dispose();
   });
 });
+
+describe("host actions inside a frame", () => {
+  it("asks the shell which actions apply and runs them through it", async () => {
+    const { renderHook, waitFor } = await import("@testing-library/react");
+    const { setFrameState, resetFrameState } =
+      await import("@/plugin-frame/frame-store");
+    resetFrameState();
+    setFrameState({
+      hostActions: [
+        {
+          id: "files.open",
+          pluginId: "files",
+          titleKey: "files:nav.files",
+          title: "Files",
+          kind: "open",
+        },
+        { id: "box.open", pluginId: "box", titleKey: "b", kind: "open" },
+      ],
+    });
+    const call = vi.fn(async (method: string) =>
+      method === "hostActions.when" ? [["files", "files.open"]] : null,
+    );
+    const bridge = createFrameBridge({
+      pluginId: "terminal",
+      call,
+      getApi: vi.fn() as never,
+      tabs: {} as never,
+      foreign: {} as never,
+    });
+    const host = { id: "7" };
+    const { result } = renderHook(() => bridge.useHostActions());
+    const visible = () =>
+      result.current
+        .filter((action) => action.when(host as never))
+        .map((action) => action.id);
+    expect(visible()).toEqual([]);
+    const i18n = (await import("@/i18n/i18n")).default;
+    expect(i18n.t("files:nav.files")).toBe("Files");
+    await waitFor(() => expect(visible()).toEqual(["files.open"]));
+    expect(
+      call.mock.calls.filter(([method]) => method === "hostActions.when"),
+    ).toHaveLength(1);
+
+    result.current[0].run!(host as never, {} as never);
+    expect(call).toHaveBeenCalledWith(
+      "hostActions.run",
+      "files",
+      "files.open",
+      "7",
+    );
+    resetFrameState();
+  });
+});
+
+describe("live work", () => {
+  it("does not count a settings listener", async () => {
+    const { liveWork, resetLiveTracking, startLiveTracking } =
+      await import("@/plugin-frame/frame-liveness");
+    resetLiveTracking();
+    startLiveTracking();
+    const { app, dispose } = createFrameApp({
+      pluginId: "gizmo",
+      role: "background",
+      manifest: { id: "gizmo", name: "Gizmo", contributes: {} } as never,
+      register: vi.fn(),
+      unregister: vi.fn(),
+      call: vi.fn(async () => null),
+      api: {} as never,
+      fetch: vi.fn() as never,
+      wsUrl: vi.fn() as never,
+    });
+    app.onSettingsChanged(() => {});
+    expect(liveWork()).toEqual([]);
+    dispose();
+    resetLiveTracking();
+  });
+});

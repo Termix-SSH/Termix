@@ -39,6 +39,7 @@ import {
 import { getPanel, resetPanels } from "@/shell/panel-registry";
 import { invokeAction } from "@/shell/action-registry";
 import { listHostActions } from "@/sidebar/host-contributions";
+import { getCompanionDef, resetCompanions } from "@/shell/companions";
 import { FramePort } from "@/plugin-frame/rpc";
 import { FRAME_CHANNEL, type FrameMessage } from "@/plugin-frame/protocol";
 
@@ -78,6 +79,7 @@ async function bootFrame(options: {
   live?: string[];
   calls?: string[];
   when?: () => boolean;
+  extra?: { rid: string; kind: string; data: Record<string, unknown> }[];
 }) {
   const iframe = await frameElement();
   const win = iframe.contentWindow!;
@@ -126,6 +128,7 @@ async function bootFrame(options: {
       },
     },
   });
+  for (const entry of options.extra ?? []) port.emit("register", entry);
   port.emit("value", { key: "rail:gizmo:badge", value: 7 });
   port.emit("live", { reasons: options.live ?? [] });
   port.emit("ready");
@@ -137,6 +140,7 @@ const host = { id: 1, name: "h", ip: "1.2.3.4", pluginSettings: {} };
 beforeEach(() => {
   resetPluginStore();
   resetPanels();
+  resetCompanions();
   setPluginSummaries([summary]);
 });
 
@@ -274,6 +278,149 @@ describe("lazy background frames", () => {
     vi.setSystemTime(now + FRAME_IDLE_MS * 2);
     vi.advanceTimersByTime(31_000);
     expect(frames()).toHaveLength(1);
+    plugin.dispose();
+  });
+
+  it("reuses a host answer when only the host's live numbers changed", async () => {
+    await firstRun();
+    const plugin = await startFramedPlugin(summary);
+    const action = listHostActions().find((e) => e.id === "gizmo.open")!;
+    const live = { ...host, cpu: 91, ram: 40, lastAccess: "now" };
+    expect(action.when(live as never)).toBe(true);
+    await sleep(20);
+    expect(frames()).toHaveLength(0);
+    plugin.dispose();
+  });
+
+  it("reuses a companion answer for a new tab of the same type", async () => {
+    const calls: string[] = [];
+    const companion = {
+      rid: "companion#9",
+      kind: "companion",
+      data: {
+        id: "side",
+        titleKey: "side",
+        tabTypes: ["terminal"],
+        component: { $component: "companion:side" },
+        when: () => {
+          calls.push("companion");
+          return true;
+        },
+      },
+    };
+    const started = startFramedPlugin(summary);
+    await bootFrame({ extra: [companion] });
+    const first = await started;
+    const when = () => getCompanionDef("gizmo.side")!.when!;
+    when()(
+      { id: "tab-1", type: "terminal", label: "a" } as never,
+      host as never,
+    );
+    await sleep(1_700);
+    first.dispose();
+    expect(calls).toEqual(["companion"]);
+
+    const plugin = await startFramedPlugin(summary);
+    expect(frames()).toHaveLength(0);
+    const answer = when()(
+      { id: "tab-2", type: "terminal", label: "b" } as never,
+      host as never,
+    );
+    expect(answer).toBe(true);
+    await sleep(20);
+    expect(frames()).toHaveLength(0);
+    plugin.dispose();
+  });
+
+  it("starts no frame for companion defaults it already knows", async () => {
+    const { render } = await import("@testing-library/react");
+    const companion = {
+      rid: "companion#9",
+      kind: "companion",
+      data: {
+        id: "side",
+        titleKey: "side",
+        tabTypes: ["terminal"],
+        component: { $component: "companion:side" },
+        defaultsKey: "companion:side:defaults",
+      },
+    };
+    const started = startFramedPlugin(summary);
+    const port = await bootFrame({ extra: [companion] });
+    port.emit("value", {
+      key: "companion:side:defaults",
+      value: { side: "right" },
+    });
+    const first = await started;
+    await sleep(1_700);
+    first.dispose();
+
+    const plugin = await startFramedPlugin(summary);
+    const Defaults = getCompanionDef("gizmo.side")!.Defaults!;
+    const seen: unknown[] = [];
+    const { unmount } = render(
+      <Defaults onValue={(value) => seen.push(value)} />,
+    );
+    await sleep(20);
+    expect(seen.at(-1)).toMatchObject({ side: "right" });
+    await sleep(20);
+    expect(frames()).toHaveLength(0);
+    unmount();
+    plugin.dispose();
+  });
+
+  it("keeps an embedded tab's answer apart", async () => {
+    const companion = {
+      rid: "companion#9",
+      kind: "companion",
+      data: {
+        id: "side",
+        titleKey: "side",
+        tabTypes: ["terminal"],
+        component: { $component: "companion:side" },
+        when: () => true,
+      },
+    };
+    const started = startFramedPlugin(summary);
+    await bootFrame({ extra: [companion] });
+    const first = await started;
+    getCompanionDef("gizmo.side")!.when!(
+      { id: "tab-1", type: "terminal" } as never,
+      host as never,
+    );
+    await sleep(1_700);
+    first.dispose();
+
+    const plugin = await startFramedPlugin(summary);
+    const answer = getCompanionDef("gizmo.side")!.when!(
+      { id: "embed-1", type: "terminal" } as never,
+      host as never,
+    );
+    expect(answer).toBe(false);
+    plugin.dispose();
+  });
+
+  it("does not keep a plugin running for an overlay part alone", async () => {
+    const overlay = {
+      rid: "slot#8",
+      kind: "slotContribution",
+      data: {
+        slotId: "shell.overlay",
+        actionId: "gizmo.dialog",
+        kind: "component",
+        component: { $component: "slot:shell.overlay:gizmo.dialog" },
+      },
+    };
+    const started = startFramedPlugin(summary);
+    await bootFrame({ extra: [overlay] });
+    const first = await started;
+    await sleep(1_700);
+    first.dispose();
+    const cached = (await readCachedPlugin(await userKey(), "gizmo", "v1"))!;
+    expect(cached.live).toEqual([]);
+
+    const plugin = await startFramedPlugin(summary);
+    expect(frames()).toHaveLength(0);
     plugin.dispose();
   });
 });

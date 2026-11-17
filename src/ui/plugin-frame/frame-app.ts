@@ -737,8 +737,8 @@ export function createFrameApp(host: FrameAppHost): {
       },
     },
 
+    // Not live work: the shell starts this frame when its settings change.
     onSettingsChanged: (listener) => {
-      noteLiveWork("onSettingsChanged");
       const handler = (event: Event) => {
         const detail = (event as CustomEvent).detail as {
           pluginId?: string;

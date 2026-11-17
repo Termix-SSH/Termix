@@ -26,7 +26,10 @@ import {
   type FrameConnection,
 } from "./frame-connection";
 import { useStableProps } from "@/plugin-frame/stable-props";
-import { acquireFramedPlugin } from "./frame-demand";
+import { LoadingState } from "@/components/loading-state";
+
+/** A full size view still loading after this long shows a spinner. */
+export const LOADING_DELAY_MS = 300;
 
 /**
  * fill: takes the box it is given. content: full width, as tall as the
@@ -227,8 +230,18 @@ ${src}`;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pluginId, frameKey, src]);
 
-  // A view may call into its plugin's background code.
-  useEffect(() => acquireFramedPlugin(pluginId), [pluginId]);
+  // No background frame here: a call into the plugin's code starts it.
+
+  const loads = fit === "fill" && !seeThrough && !className && !style;
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!loads || ready) {
+      setSlow(false);
+      return;
+    }
+    const timer = setTimeout(() => setSlow(true), LOADING_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [loads, ready]);
 
   useEffect(() => {
     if (!import.meta.env.DEV || ready) return;
@@ -301,6 +314,19 @@ ${src}`;
       }}
     />
   );
+  if (loads) {
+    return (
+      <div
+        className="relative flex h-full min-h-0 w-full flex-1 flex-col"
+        data-frame-loading={ready ? undefined : ""}
+      >
+        {frame}
+        {slow && !ready && (
+          <LoadingState className="absolute inset-0 bg-background" />
+        )}
+      </div>
+    );
+  }
   if (fallback === undefined) return frame;
   return (
     <>

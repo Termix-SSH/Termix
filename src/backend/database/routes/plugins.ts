@@ -1077,7 +1077,7 @@ router.get(
  * /plugins/processes:
  *   get:
  *     summary: Memory used by Termix and each plugin process
- *     description: Every plugin process with its state, why it stays up (null when it stops when idle) and its resident memory while it runs, plus Termix's own memory, the total, and the memory limit of the container or machine. low is true when the total is past 80% of the limit.
+ *     description: Every plugin process with its state, why it stays up (null when it stops when idle), what keeps an idle capable one up for now (busy) and its resident memory while it runs, plus Termix's own memory, the total, and the memory limit of the container or machine. low is true when the total is past 80% of the limit.
  *     tags:
  *       - Plugins
  *     responses:

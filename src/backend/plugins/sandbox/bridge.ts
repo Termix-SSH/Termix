@@ -278,7 +278,7 @@ export interface BridgeOptions {
   tokens: SandboxTokenStore;
   dialect: SqlDialect;
   /** Called when the plugin's process was asked to do work. */
-  touch?: () => void;
+  touch?: (reason: string) => void;
   log?: (line: string) => void;
   /**
    * Registrations that outlive this process, for plugins that stop when
@@ -301,7 +301,7 @@ export class PluginBridge {
   private readonly tokens: SandboxTokenStore;
   private readonly dialect: SqlDialect;
   private readonly log: (line: string) => void;
-  private readonly touch: () => void;
+  private readonly touch: (reason: string) => void;
   private router: Router | null = null;
   private routerRaw = false;
   private routerPublicAuthorization = false;
@@ -482,7 +482,7 @@ export class PluginBridge {
    * expired or foreign token is refused, never treated as background work.
    */
   runForToken<T>(token: string | undefined, run: () => T): T {
-    this.touch();
+    this.touch(token === undefined ? "own ctx call" : "ctx call for a user");
     if (token === undefined) return run();
     const grant = this.tokens.resolve(token, this.pluginId);
     if (!grant) {
@@ -1712,7 +1712,7 @@ export class PluginBridge {
     this.sockets.set(port.sid, ws);
     ws.on("message", (data: Buffer, isBinary: boolean) => {
       this.tokens.touch(token, SOCKET_TOKEN_MS);
-      this.touch();
+      this.touch("socket");
       if (!port.write({ d: isBinary ? data : data.toString(), b: isBinary })) {
         ws.pause();
         port.once("drain", () => ws.resume());
@@ -1906,7 +1906,7 @@ export class PluginBridge {
       res.status(503).json({ error: "This feature is not available" });
       return;
     }
-    this.touch();
+    this.touch("request");
     const endpoint = this.endpoint;
     const cookiePrefix = pluginCookiePrefix(this.pluginId);
     const token = this.mintForCurrentActor();

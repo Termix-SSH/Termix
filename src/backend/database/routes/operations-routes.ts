@@ -23,6 +23,7 @@ import {
 import {
   flattenResourceRows,
   readAcrossHosts,
+  readServerSignal,
 } from "../../operations/resources.js";
 import type { ActorOrigin } from "../../plugins/actor.js";
 
@@ -579,16 +580,16 @@ router.get("/signals", authenticateJWT, async (req, res) => {
     for (const signal of catalog.signals) {
       if (wanted && !wanted.has(signal.id)) continue;
       if (signal.scope === "server") {
-        const outcome = await runOperation({
+        const result = await readServerSignal({
           actionId: signal.read,
-          internal: true,
           userId: authReq.userId,
+          freshMs: signal.refreshSec ? signal.refreshSec * 1000 : undefined,
           origin: originOf(authReq),
-        }).catch(() => null);
+        });
         signals.push({
           id: signal.id,
           hosts: [],
-          result: outcome?.data as SignalResult | undefined,
+          result: result as SignalResult | undefined,
         });
         continue;
       }

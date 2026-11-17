@@ -253,6 +253,8 @@ class PluginProcess {
   bridge: PluginBridge | null = null;
   handle: PluginHandle | null = null;
   lastActivity = Date.now();
+  /** What last counted as use, for the processes list. */
+  lastUse = "start";
   startedAt = 0;
   readyMs = 0;
   private starting: Promise<boolean> | null = null;
@@ -308,7 +310,7 @@ class PluginProcess {
           wake: () => this.ensureRunning(),
           running: () => this.state === "ready" || this.state === "starting",
           idleMs: config.idleMs,
-          touch: () => this.touch(),
+          touch: (reason) => this.touch(reason),
           log: (line) => this.log("warn", line),
         });
   }
@@ -369,10 +371,11 @@ class PluginProcess {
     return this.spec.manifest.id;
   }
 
-  touch(): void {
+  touch(reason = "start"): void {
     // Calls a scheduled job makes are not use of the plugin.
     if (this.durable?.onlyJobs) return;
     this.lastActivity = Date.now();
+    this.lastUse = reason;
   }
 
   /** Starts the process if it is not running. True when it is ready. */
@@ -454,7 +457,7 @@ class PluginProcess {
       ctx,
       tokens: this.tokens,
       dialect: this.dialect,
-      touch: () => this.touch(),
+      touch: (reason) => this.touch(reason),
       log: (line) => this.log("warn", line),
       durable: this.durable,
       keepAwake: (reason, awake) => this.setAwake(reason, awake),
@@ -546,16 +549,26 @@ class PluginProcess {
     }
   }
 
-  private checkIdle(): void {
-    if (this.alwaysOn || this.state !== "ready") return;
-    if (Date.now() - this.lastActivity < this.config.idleMs) return;
-    if (this.bridge && this.bridge.endpoint.pendingCount > 0) return;
-    if (this.tokens.countFor(this.id, "socket") > 0) return;
+  /** What keeps a plugin that may stop up right now, or null when idle. */
+  busyReason(): string | null {
+    if (this.alwaysOn || this.state !== "ready") return null;
+    const since = Date.now() - this.lastActivity;
+    if (since < this.config.idleMs) {
+      return `used ${Math.round(since / 1000)}s ago (${this.lastUse})`;
+    }
+    if (this.bridge && this.bridge.endpoint.pendingCount > 0) return "calls";
+    if (this.tokens.countFor(this.id, "socket") > 0) return "client sockets";
     // Its own sockets and listeners, a one-off job still waiting, or a call
     // from core still running.
-    if (this.openSockets > 0) return;
-    if (this.bridge && this.bridge.pendingTimers > 0) return;
-    if (this.durable && this.durable.busy > 0) return;
+    if (this.openSockets > 0) return "own sockets";
+    if (this.bridge && this.bridge.pendingTimers > 0) return "timers";
+    if (this.durable && this.durable.busy > 0) return "core calls";
+    return null;
+  }
+
+  private checkIdle(): void {
+    if (this.alwaysOn || this.state !== "ready") return;
+    if (this.busyReason() !== null) return;
     this.log("info", "idle, stopping it until it is needed");
     if (this.managed) {
       this.savedAwake = false;
@@ -705,6 +718,7 @@ class PluginProcess {
       state: this.state,
       alwaysOn: this.alwaysOn,
       keepOnReason: this.keepOnReason(),
+      busy: this.busyReason(),
       rssMb: this.state === "ready" ? this.lastRssMb : null,
       pid: this.child?.pid,
       readyMs: this.readyMs || undefined,
@@ -719,6 +733,8 @@ export interface SandboxStatus {
   alwaysOn: boolean;
   /** Why it stays up, or null when it stops when idle. */
   keepOnReason: string | null;
+  /** What keeps it up for now when it may stop, or null. */
+  busy?: string | null;
   /** Resident memory at the last health check, while it runs. */
   rssMb: number | null;
   pid?: number;

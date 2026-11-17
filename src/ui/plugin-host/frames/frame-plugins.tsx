@@ -161,11 +161,19 @@ const ASKING_KINDS = new Set([
 ]);
 export const OVERLAY_ASK_MS = 10_000;
 
+/** Host fields that change all the time and would make every answer new. */
+const LIVE_HOST_FIELDS = new Set(["cpu", "ram", "lastAccess"]);
+
 function stableKey(args: unknown[]): string {
   try {
-    return JSON.stringify(args, (_key, value) =>
-      typeof value === "function" ? undefined : value,
-    );
+    return JSON.stringify(args, function (this: unknown, key, value) {
+      if (typeof value === "function") return undefined;
+      const holder = this as Record<string, unknown>;
+      if (LIVE_HOST_FIELDS.has(key) && "id" in holder && "ip" in holder) {
+        return undefined;
+      }
+      return value;
+    });
   } catch {
     return String(Math.random());
   }
@@ -430,6 +438,19 @@ export async function startFramedPlugin(
     plainTab(args[0]),
     plainHost(args[1]),
   ];
+  // Every tab has a new id, so answers are kept per tab type and host.
+  const tabKey = (args: unknown[]) => {
+    const tab = args[0] as Record<string, unknown> | null | undefined;
+    return [
+      tab && typeof tab === "object"
+        ? {
+            type: tab.type,
+            embedded: String(tab.id ?? "").startsWith("embed-"),
+          }
+        : tab,
+      ...args.slice(1),
+    ];
+  };
   const hostFirst = (args: unknown[]) => [plainHost(args[0]), ...args.slice(1)];
   // A slot owner's context may carry a host with every plugin's settings.
   const scopedContext = (context: unknown) => {
@@ -588,7 +609,6 @@ export async function startFramedPlugin(
               const next = Array.isArray(reasons)
                 ? reasons.filter((r): r is string => typeof r === "string")
                 : [];
-              if (hasOverlayPart()) next.push("overlay");
               live = [...new Set(next)].sort();
               persist();
             }
@@ -629,6 +649,10 @@ export async function startFramedPlugin(
   };
   const useNeed: UseNeed = () => {
     useEffect(() => acquire(), []);
+  };
+  /** Holds the frame only while the value is not known yet. */
+  const useNeedUntil = (known: boolean) => {
+    useEffect(() => (known ? undefined : acquire()), [known]);
   };
 
   /** Calls a function the frame registered, starting the frame first. */
@@ -675,6 +699,7 @@ export async function startFramedPlugin(
     fn: unknown,
     fallback: unknown,
     mapArgs: (args: unknown[]) => unknown[] = (args) => args,
+    keyOf: (args: unknown[]) => unknown[] = (args) => args,
   ): ((...args: unknown[]) => unknown) | undefined => {
     if (typeof fn !== "function") return undefined;
     const existing = record.memos.get(field);
@@ -708,7 +733,7 @@ export async function startFramedPlugin(
     };
     const sync = (...raw: unknown[]) => {
       const args = mapArgs(raw);
-      const key = stableKey(args);
+      const key = stableKey(keyOf(args));
       const stored = `${record.rid}\u0000${field}\u0000${key}`;
       if (stale.has(key) && frame?.ready) {
         stale.delete(key);
@@ -764,7 +789,8 @@ export async function startFramedPlugin(
       field: string,
       fallback: unknown,
       mapArgs?: (args: unknown[]) => unknown[],
-    ) => memo(record, field, data[field], fallback, mapArgs);
+      keyOf?: (args: unknown[]) => unknown[],
+    ) => memo(record, field, data[field], fallback, mapArgs, keyOf);
     switch (record.kind) {
       case "railItem":
         return app.registerRailItem({
@@ -808,14 +834,17 @@ export async function startFramedPlugin(
           {
             ...data,
             component: undefined,
-            when: m("when", false, tabAndHost),
+            when: m("when", false, tabAndHost, tabKey),
             useDefaults: data.defaultsKey
               ? () => {
-                  useNeed();
-                  return (
-                    (useFrameValue(pluginId, String(data.defaultsKey)) as
-                      Record<string, unknown> | undefined) ?? {}
-                  );
+                  const value = useFrameValue(
+                    pluginId,
+                    String(data.defaultsKey),
+                  ) as Record<string, unknown> | undefined;
+                  // Defaults change only with settings, which start the
+                  // frame anyway, so a known value needs no frame.
+                  useNeedUntil(value !== undefined);
+                  return value ?? {};
                 }
               : undefined,
           },
@@ -977,13 +1006,6 @@ export async function startFramedPlugin(
         return () => {};
     }
   };
-
-  const hasOverlayPart = () =>
-    [...registrations.values()].some(
-      (record) =>
-        record.kind === "slotContribution" &&
-        record.data.slotId === "shell.overlay",
-    );
 
   /** A registration from the live frame (source) or from the cache. */
   const register = (payload: unknown, source: LiveFrame | null) => {

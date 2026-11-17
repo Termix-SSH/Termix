@@ -40,7 +40,7 @@
 - The server answers `/.well-known/security.txt` with where to report a security problem in Termix
 - Docker images are reproducible: building the same commit again gives the same image, byte for byte
 - Plugins can give small per host or per tab values, like usage bars, badges and status dots, that Termix draws itself. A dashboard with many hosts no longer needs a plugin frame for each row
-- The plugins page shows how much memory Termix and each plugin process use, and admins get an alert when the server runs low on memory
+- The plugins page shows how much memory Termix and each plugin process use and what keeps a plugin running, and admins get an alert when the server runs low on memory
 - Plugin screens load faster and use far less memory: a plugin's background code starts only when something needs it and stops again when idle, every plugin view shares one cached copy of the app's scripts, and repeated reads of your permissions and settings are shared
 - A plugin screen in a frame can show other plugins' parts again, like Homepage widgets, Host Metrics manager cards, host page tiles and terminal side panels. Termix draws each part in its own frame over the spot, clipped to the screen, hidden under open menus, and they still scroll, resize, drag in edit modes and take Tab focus
 - Sign in methods and second factors from plugins are drawn by Termix itself, so no plugin code runs on the sign in screen. Passkeys and security keys use the browser prompt Termix runs, and the plugin's server checks every answer
@@ -61,6 +61,7 @@
 
 ### Changed
 
+- Server wide status tiles keep their answer for a minute like host tiles, instead of asking the plugin on every refresh
 - Each plugin seals its secrets with its own key, so one plugin can't open what another sealed. Values sealed before move to the new key on the first start
 - An API key made without picking scopes or an expiry is now read only and lasts 90 days. Ask for `full` and no expiry to get the old behavior. Existing keys keep what they had
 - GitHub releases stay drafts until every download is uploaded, and a published release never changes its files

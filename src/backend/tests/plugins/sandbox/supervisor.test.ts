@@ -355,7 +355,9 @@ describe("supervisor", () => {
     });
     expect(await supervisor.wake("lazy")).toBe(true);
     expect(supervisor.status()[0].state).toBe("ready");
+    expect(supervisor.status()[0].busy).toMatch(/^used \d+s ago \(.+\)$/);
     await until(() => supervisor.status()[0].state === "stopped", 5000);
+    expect(supervisor.status()[0].busy).toBeNull();
     await supervisor.shutdown();
   }, 30_000);
 

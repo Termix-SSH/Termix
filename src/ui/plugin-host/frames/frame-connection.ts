@@ -25,6 +25,11 @@ import { getPluginStoreState, knownPluginIds } from "../plugin-store";
 import { shell, shellHost } from "../shell-bridge";
 import { getTabType } from "@/shell/tab-registry";
 import { toggleCompanion } from "@/shell/companions";
+import {
+  hostActionsFor,
+  listHostActions,
+  runHostAction,
+} from "@/sidebar/host-contributions";
 import { getSlotContributions, invokeAction } from "@/shell/action-registry";
 import { listExtensions } from "../extension-registry";
 import { getPluginComponent } from "../component-registry";
@@ -689,6 +694,27 @@ async function handleCall(
         throw new Error("A plugin can only change its own tabs");
       }
       await patchOpenTab(String(instanceId), plainOptions(updates));
+      return;
+    }
+    case "hostActions.when": {
+      const host = shellHost(String(args[0]));
+      if (!host) return [];
+      return hostActionsFor(listHostActions(), host).map((action) => [
+        action.pluginId ?? "",
+        action.id,
+      ]);
+    }
+    case "hostActions.run": {
+      // Only right after the user clicked the button in the frame.
+      if (!recentlyUsed(connection)) throw new Error("Not allowed now");
+      const [owner, id, hostId] = args;
+      const host = shellHost(String(hostId));
+      if (!host) throw new Error("No such host");
+      const action = hostActionsFor(listHostActions(), host).find(
+        (entry) => (entry.pluginId ?? "") === owner && entry.id === id,
+      );
+      if (!action) throw new Error("No such action for this host");
+      runHostAction(action, host, shell);
       return;
     }
     case "companion.toggle": {

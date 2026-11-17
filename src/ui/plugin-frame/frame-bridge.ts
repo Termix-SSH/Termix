@@ -6,7 +6,7 @@
  * call to it.
  */
 
-import { useMemo } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import type {
   ActivityTargetInfo,
   CompanionInfo,
@@ -23,6 +23,18 @@ import {
 } from "@/plugin-host/extension-registry";
 import { usePluginScope } from "@/plugin-host/scope";
 import { decodeIcon } from "./frame-icons";
+import { addStrings } from "./foreign-client";
+
+/** Puts the titles the shell translated under their keys in this frame. */
+function addTitles(entries: Record<string, unknown>[]): void {
+  const strings: Record<string, string> = {};
+  for (const entry of entries) {
+    if (typeof entry.titleKey === "string" && typeof entry.title === "string") {
+      strings[entry.titleKey] = entry.title;
+    }
+  }
+  addStrings(strings);
+}
 import type { ForeignRuntime } from "@/components/foreign/foreign-runtime";
 import { useFrameShell } from "./frame-shell";
 import { getFrameState, useFrameState } from "./frame-store";
@@ -33,6 +45,36 @@ export interface FrameBridgeHost {
   getApi: PluginHostBridge["getApi"];
   tabs: TabsApi;
   foreign: ForeignRuntime;
+}
+
+/**
+ * Which host actions the shell said apply to each host, per list the shell
+ * sent. A new list (a plugin's when changed) asks again.
+ */
+const hostActionAnswers = new WeakMap<
+  object,
+  Map<string, Set<string> | null>
+>();
+const answerListeners = new Set<() => void>();
+let answerVersion = 0;
+
+function visibleHostActions(list: object): Map<string, Set<string> | null> {
+  let map = hostActionAnswers.get(list);
+  if (!map) {
+    map = new Map();
+    hostActionAnswers.set(list, map);
+  }
+  return map;
+}
+
+function subscribeAnswers(listener: () => void): () => void {
+  answerListeners.add(listener);
+  return () => answerListeners.delete(listener);
+}
+
+function answered(): void {
+  answerVersion++;
+  for (const listener of answerListeners) listener();
 }
 
 export function createFrameBridge(host: FrameBridgeHost): PluginHostBridge {
@@ -130,21 +172,60 @@ export function createFrameBridge(host: FrameBridgeHost): PluginHostBridge {
 
     useHostActions() {
       const actions = useFrameState((state) => state.hostActions);
-      return useMemo(
-        () =>
-          actions.map((action) => ({
+      const version = useSyncExternalStore(
+        subscribeAnswers,
+        () => answerVersion,
+      );
+      return useMemo(() => {
+        void version;
+        addTitles(actions);
+        const visible = visibleHostActions(actions);
+        const ask = (hostId: string) => {
+          if (visible.has(hostId)) return;
+          visible.set(hostId, null);
+          call("hostActions.when", hostId).then(
+            (pairs) => {
+              visible.set(
+                hostId,
+                new Set(
+                  (Array.isArray(pairs) ? pairs : []).map((pair) =>
+                    JSON.stringify(pair),
+                  ),
+                ),
+              );
+              answered();
+            },
+            () => visible.delete(hostId),
+          );
+        };
+        return actions.map((action) => {
+          const id = JSON.stringify([action.pluginId ?? "", action.id]);
+          return {
             ...action,
             icon: decodeIcon(action.icon),
-          })) as unknown as HostActionContribution[],
-        [actions],
-      );
+            when: (record: { id?: unknown } | null | undefined) => {
+              if (record?.id === undefined || record.id === null) return false;
+              const hostId = String(record.id);
+              ask(hostId);
+              return visible.get(hostId)?.has(id) ?? false;
+            },
+            run: (record: { id?: unknown } | null | undefined) =>
+              void call(
+                "hostActions.run",
+                action.pluginId ?? "",
+                action.id,
+                String(record?.id),
+              ).catch(() => {}),
+          };
+        }) as unknown as HostActionContribution[];
+      }, [actions, version]);
     },
 
     useCompanions(tabType) {
       const companions = useFrameState((state) => state.companions);
       return useMemo(
         () =>
-          companions
+          (addTitles(companions), companions)
             .filter((entry) => {
               const types = entry.tabTypes as string[] | undefined;
               return !types?.length || types.includes(tabType);

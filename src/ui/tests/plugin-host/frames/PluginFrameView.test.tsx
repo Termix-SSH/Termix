@@ -308,4 +308,46 @@ describe("PluginFrameView", () => {
     control!.focusEdge("last");
     expect(frames.emitted).toContainEqual(["focusEdge", "last"]);
   });
+
+  it("shows a spinner while a slow full size view loads", () => {
+    vi.useFakeTimers();
+    const { container } = render(
+      <PluginFrameView
+        pluginId="docker"
+        frameKey="main"
+        fit="fill"
+        props={{}}
+      />,
+    );
+    const spinner = () => container.querySelector("[data-slot=loading-state]");
+    expect(spinner()).toBeNull();
+    act(() => vi.advanceTimersByTime(400));
+    expect(spinner()).not.toBeNull();
+    act(() => frames.options!.onReady());
+    expect(spinner()).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it("shows no spinner for a see-through or inline view", () => {
+    vi.useFakeTimers();
+    const { container } = render(
+      <>
+        <PluginFrameView
+          pluginId="docker"
+          frameKey="a"
+          fit="inline"
+          props={{}}
+        />
+        <PluginFrameView
+          pluginId="docker"
+          frameKey="b"
+          fit="overlay"
+          props={{}}
+        />
+      </>,
+    );
+    act(() => vi.advanceTimersByTime(400));
+    expect(container.querySelector("[data-slot=loading-state]")).toBeNull();
+    vi.useRealTimers();
+  });
 });

@@ -168,7 +168,7 @@ function decodeItems(list: ListState): unknown[] {
 }
 
 /** The other plugins' strings this frame needs, under their own keys. */
-function addStrings(strings: unknown) {
+export function addStrings(strings: unknown) {
   if (!strings || typeof strings !== "object") return;
   const language = i18n.language || "en";
   const separator = (i18n.options?.nsSeparator as string | false) ?? ":";
