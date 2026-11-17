@@ -218,8 +218,9 @@ function blockMethods(target: unknown, names: string[]): void {
 }
 
 /**
- * Node before 25 has no network permission, so a plugin without
- * network:sockets is kept off the network here. Every TCP, TLS, HTTP and
+ * Keeps a plugin without network:sockets off the network with an error it can
+ * catch. Node before 25 has no network permission, and on later Node a denied
+ * listen throws uncaught and kills the process. Every TCP, TLS, HTTP and
  * pipe client goes through net.Socket's connect, every server through
  * listen, and the global fetch and WebSocket use the same sockets.
  */

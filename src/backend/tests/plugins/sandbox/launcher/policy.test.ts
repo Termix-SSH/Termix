@@ -69,6 +69,22 @@ describe("launcher spawn policy", () => {
     ).toEqual({ ok: true });
   });
 
+  it("lets core turn the network fence on, and only on", () => {
+    const withFence = (value: string) =>
+      validateSpawn(
+        request({
+          env: {
+            NODE_ENV: "production",
+            TERMIX_SANDBOX_PLUGIN: "docker",
+            TERMIX_SANDBOX_NO_NETWORK: value,
+          },
+        }),
+        expected,
+      );
+    expect(withFence("1")).toEqual({ ok: true });
+    expect(withFence("0").ok).toBe(false);
+  });
+
   it.each([
     [
       "no permission model",

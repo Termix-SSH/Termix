@@ -257,8 +257,8 @@ describe("plugin process fence", () => {
       debugProcess: "ERR_ACCESS_DENIED",
       binding: "ERR_ACCESS_DENIED",
       inspector: "ERR_ACCESS_DENIED",
-      // Node 25 and later fence sockets with the permission model; on 24
-      // harden.js refuses them.
+      // harden.js refuses sockets on every Node; 25 and later also have the
+      // permission model behind it.
       net: "ERR_ACCESS_DENIED",
       connect: "ERR_ACCESS_DENIED",
       fetch: "ERR_ACCESS_DENIED",

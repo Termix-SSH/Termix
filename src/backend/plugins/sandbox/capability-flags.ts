@@ -39,10 +39,7 @@ export interface ChildFlags {
   writeDataDir: boolean;
   /** The firewall rule kind for the plugin's user. */
   firewall: "deny" | "allow-all";
-  /**
-   * The running Node has no network permission and the plugin may not use
-   * sockets, so harden.js keeps it off the network instead.
-   */
+  /** The plugin may not use sockets, so harden.js refuses them too. */
   jsNetworkFence: boolean;
 }
 
@@ -77,9 +74,10 @@ export function buildChildFlags(input: ChildFlagInput): ChildFlags {
 
   const allowNet = flags.has("--allow-net");
   // --allow-net arrived in Node 25. Older Node has no network scope at all,
-  // so the flag would only stop the process from starting; harden.js
-  // refuses sockets itself there.
-  const jsNetworkFence = input.nodeMajor < 25 && !allowNet;
+  // so the flag would only stop the process from starting. harden.js refuses
+  // sockets on every version: on Node 26 a denied listen throws uncaught and
+  // kills the process instead of reaching the plugin.
+  const jsNetworkFence = !allowNet;
   if (input.nodeMajor < 25) flags.delete("--allow-net");
 
   const execArgv = ["--permission"];

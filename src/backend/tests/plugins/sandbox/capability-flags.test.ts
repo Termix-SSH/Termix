@@ -91,13 +91,18 @@ describe("buildChildFlags", () => {
     expect(flags.jsNetworkFence).toBe(false);
   });
 
-  it("fences the network in harden.js on Node 24 without network:sockets", () => {
+  it("fences the network in harden.js on every Node without network:sockets", () => {
     expect(
       buildChildFlags({ ...base, nodeMajor: 24, granted: [] }),
     ).toMatchObject({ allowNet: false, jsNetworkFence: true });
-    // Node 25 and later fence it with the permission model instead.
+    // Node 26 also has the permission model, but a denied listen there
+    // throws uncaught and kills the process.
     expect(
-      buildChildFlags({ ...base, nodeMajor: 26, granted: [] }).jsNetworkFence,
+      buildChildFlags({ ...base, nodeMajor: 26, granted: [] }),
+    ).toMatchObject({ allowNet: false, jsNetworkFence: true });
+    expect(
+      buildChildFlags({ ...base, nodeMajor: 26, granted: ["network:sockets"] })
+        .jsNetworkFence,
     ).toBe(false);
   });
 

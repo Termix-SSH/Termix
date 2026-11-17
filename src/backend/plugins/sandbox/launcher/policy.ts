@@ -98,6 +98,8 @@ export function validateSpawn(
       return { ok: false, reason: `env ${key} is not a short string` };
     }
     if (key === "NODE_ENV" || key === "TERMIX_SANDBOX_PLUGIN") continue;
+    // Set by core, never a manifest. It only takes the network away.
+    if (key === NO_NETWORK_ENV && value === "1") continue;
     if (!isPassableEnv(key)) {
       return { ok: false, reason: `env ${key} is not allowed` };
     }
