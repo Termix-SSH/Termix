@@ -9,8 +9,6 @@ name: Release
 # A published release never changes, so a late fix gets a new patch version.
 
 on:
-  schedule:
-    - cron: "0 15 * * 2,5"
   workflow_dispatch:
     inputs:
       channel:
