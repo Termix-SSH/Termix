@@ -572,6 +572,12 @@ export interface HostEditorSectionProps {
    * shown in that mode.
    */
   mode?: "host" | "defaults";
+  /**
+   * False in the simple host editor. Show only the settings most hosts
+   * change then, and the rest once it is true. Undefined on cores before
+   * 26.11.2, which have no simple editor: treat that as true.
+   */
+  advanced?: boolean;
 }
 
 export interface HostEditorSectionContribution {
@@ -594,6 +600,12 @@ export interface HostEditorSectionContribution {
    * defaults editor and never for a host.
    */
   defaults?: boolean | "only";
+  /**
+   * Also shown in the simple host editor, for settings most hosts change.
+   * Off by default, so the section waits for Advanced. The component gets
+   * `advanced: false` there and can hold back its rarer fields.
+   */
+  simple?: boolean;
   component: ComponentType<HostEditorSectionProps>;
 }
 

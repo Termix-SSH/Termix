@@ -7,6 +7,7 @@ Plugin API 2.9.0. Needs Termix 26.11.2.
 ### Added
 
 - `PanelToolbar` in `/ui`: a sidebar panel's search, icon buttons and icon only add button on one row
+- `registerHostEditorSection({ simple: true })` shows a section in the simple host editor, and sections get an `advanced` prop so they can keep rarer fields for advanced
 - `declareActionSlot({ fit: "bar" })`: a framed button in the slot is as wide as its content and as tall as the bar, for buttons that fill a tab bar
 - `termix-plugin validate` warns when a panel stacks a full width `PanelSearch` over a labelled `AddButton`, and points to `PanelToolbar`
 

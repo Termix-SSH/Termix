@@ -186,7 +186,7 @@ HostRowFields (type): HostRowFields
 HostSectionDef (type): HostSectionDef
 HostSidebarFilterState (type): HostSidebarFilterState
 HostSidebarPreferences (type): HostSidebarPreferences
-HostTabEmbed (value): ({ host, type, label, data, isVisible, shell, }: { host: Host; type: string; label?: string; data?: Record<string, unknown>; isVisible?: boolean; shell: TabShellCallbacks; }) => Element
+HostTabEmbed (value): (props: HostTabEmbedProps) => Element
 HostTrayTrigger (type): HostTrayTrigger
 HttpsSettings (type): HttpsSettings
 IconPicker (value): ({ value, color, onChange, }: { value: string; color?: string; onChange: (icon: string) => void; }) => Element

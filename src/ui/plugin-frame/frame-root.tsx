@@ -21,10 +21,30 @@ import {
   type SurfaceKind,
 } from "@/components/surface/surface-scope";
 import { SeamlessTileContext } from "@/components/tile-grid/context";
+import { TILE_CARD_LINES } from "@/components/tile-grid/TileColumn";
 import { useFrameState } from "./frame-store";
 import { markFrameShown } from "./frame-paint";
 
 export type FrameFit = "fill" | "content" | "inline" | "bar";
+
+/** Room below the content while a menu is open, so it can open downward. */
+export const OPEN_MENU_ROOM = 320;
+
+/**
+ * A frame sized to its content clips anything past its edge, so while a menu
+ * or popover is open the frame also covers it, with room for it to open down.
+ */
+export function withOpenMenus(height: number): number {
+  const open = document.querySelectorAll<HTMLElement>(
+    "[data-radix-popper-content-wrapper]",
+  );
+  if (open.length === 0) return height;
+  let bottom = height + OPEN_MENU_ROOM;
+  for (const menu of open) {
+    bottom = Math.max(bottom, menu.getBoundingClientRect().bottom + 8);
+  }
+  return Math.ceil(bottom);
+}
 
 let props: Record<string, unknown> = {};
 const listeners = new Set<() => void>();
@@ -125,7 +145,14 @@ function View({
         onEditingChange={setEditing}
         className={fit === "fill" || fit === "bar" ? "h-full" : undefined}
       >
-        <Component {...shown} />
+        {place.seamless && fit === "content" ? (
+          // The column around the frame can't draw lines inside it.
+          <div className={`flex min-w-0 flex-col ${TILE_CARD_LINES}`}>
+            <Component {...shown} />
+          </div>
+        ) : (
+          <Component {...shown} />
+        )}
       </SurfaceScope>
     </SeamlessTileContext.Provider>
   );
@@ -160,7 +187,8 @@ export function FrameRoot({
       // which cut off a part's bottom border.
       const rect = element.getBoundingClientRect();
       const width = Math.ceil(Math.max(rect.width, element.scrollWidth));
-      const height = Math.ceil(Math.max(rect.height, element.scrollHeight));
+      let height = Math.ceil(Math.max(rect.height, element.scrollHeight));
+      if (fit === "content") height = withOpenMenus(height);
       const next = `${width}x${height}`;
       if (next === last) return;
       last = next;
@@ -168,8 +196,21 @@ export function FrameRoot({
     };
     const observer = new ResizeObserver(report);
     observer.observe(element);
+    // Menus open in portals on body, outside the box.
+    const menus = new MutationObserver(report);
+    if (fit === "content") {
+      menus.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["style", "data-state"],
+      });
+    }
     report();
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      menus.disconnect();
+    };
   }, [fit, onSize]);
 
   useEffect(() => {

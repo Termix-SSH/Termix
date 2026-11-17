@@ -9,9 +9,12 @@
 import { PluginIcon } from "@/lib/plugin-icon";
 import { pluginKey } from "@/lib/plugin-i18n";
 import {
+  getHostEditorSection,
   hostEditorSectionList,
   registerHostEditorSection,
+  subscribeHostEditorSections,
   unregisterHostEditorSection,
+  type HostEditorSectionDef,
 } from "@/sidebar/HostManagerTabs";
 import type { PluginSettingsField, PluginSummary } from "@/api/plugins-api";
 import {
@@ -41,12 +44,49 @@ function hasDefaultableFields(host: {
   );
 }
 
+function registeredOwnSections(): HostEditorSectionDef[] {
+  return hostEditorSectionList().filter(
+    (section) => section.pluginId && !section.id.startsWith(TAB_PREFIX),
+  );
+}
+
+function ownKey(own: HostEditorSectionDef[]): string {
+  return JSON.stringify(
+    own.map((s) => [s.id, s.pluginId, s.group, s.order, s.defaults]),
+  );
+}
+
+let lastPlugins: PluginSummary[] | null = null;
+let lastOwnKey = "";
+const tabKeys = new Map<string, string>();
+let unwatch: (() => void) | null = null;
+
+// Framed plugins register their sections after the plugin list is synced,
+// so look again when a plugin's own sections change.
+function watchOwnSections(): void {
+  if (unwatch) return;
+  unwatch = subscribeHostEditorSections(() => {
+    if (!lastPlugins || ownKey(registeredOwnSections()) === lastOwnKey) return;
+    syncHostFeatureTabs(lastPlugins);
+  });
+}
+
+/** Stops following section changes. For tests. */
+export function resetHostFeatureTabs(): void {
+  unwatch?.();
+  unwatch = null;
+  lastPlugins = null;
+  lastOwnKey = "";
+  tabKeys.clear();
+}
+
 /** Adds, updates and removes generated tabs to match the plugin list. */
 export function syncHostFeatureTabs(plugins: PluginSummary[]): string[] {
   const existing = hostEditorSectionList();
-  const own = existing.filter(
-    (section) => section.pluginId && !section.id.startsWith(TAB_PREFIX),
-  );
+  const own = registeredOwnSections();
+  lastPlugins = plugins;
+  lastOwnKey = ownKey(own);
+  watchOwnSections();
   const ownSections = new Set(own.map((section) => section.pluginId));
   // The defaults tab sits where the plugin's own section does on a host.
   const ownPlacement = new Map<
@@ -83,6 +123,7 @@ export function syncHostFeatureTabs(plugins: PluginSummary[]): string[] {
   );
   for (const section of existing) {
     if (section.id.startsWith(TAB_PREFIX) && !wanted.has(section.id)) {
+      tabKeys.delete(section.id);
       unregisterHostEditorSection(section.id);
     }
   }
@@ -91,8 +132,19 @@ export function syncHostFeatureTabs(plugins: PluginSummary[]): string[] {
     const host = plugin.contributes!.settings!.host!;
     const icon = plugin.icon;
     const placement = ownPlacement.get(plugin.id);
+    const id = hostFeatureTabId(plugin.id);
+    // Registering again remounts the tab, so skip one that has not changed.
+    const key = JSON.stringify([
+      plugin.name,
+      icon,
+      host,
+      placement,
+      ownSections.has(plugin.id),
+    ]);
+    if (tabKeys.get(id) === key && getHostEditorSection(id)) continue;
+    tabKeys.set(id, key);
     registerHostEditorSection({
-      id: hostFeatureTabId(plugin.id),
+      id,
       pluginId: plugin.id,
       group: placement?.group ?? host.editorGroup ?? "top",
       order: placement?.order ?? host.editorOrder ?? 100,

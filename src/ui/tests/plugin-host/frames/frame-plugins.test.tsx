@@ -31,6 +31,10 @@ import {
 } from "@/shell/action-registry";
 import { listHostActions } from "@/sidebar/host-contributions";
 import { listCompanionDefs } from "@/shell/companions";
+import {
+  getHostEditorSection,
+  resetHostEditorSections,
+} from "@/sidebar/HostManagerTabs";
 import { FramePort } from "@/plugin-frame/rpc";
 import { FRAME_CHANNEL, type FrameMessage } from "@/plugin-frame/protocol";
 import { act, render } from "@testing-library/react";
@@ -195,6 +199,38 @@ describe("startFramedPlugin", () => {
       false,
     );
     expect(getFrameValue("gizmo", "rail:gizmo:badge")).toBeUndefined();
+  });
+
+  it("hides a host editor section until the frame says it is visible", async () => {
+    resetHostEditorSections();
+    const started = startFramedPlugin(summary);
+    const { port } = await fakeFrame(() => undefined);
+    port.emit("register", {
+      rid: "hostEditorSection#1",
+      kind: "hostEditorSection",
+      data: {
+        id: "gizmo",
+        group: "top",
+        labelKey: "gizmo",
+        component: { $component: "hostSection:gizmo" },
+        visible: (protocols: Record<string, boolean>) =>
+          !!protocols.enableGizmo,
+      },
+    });
+    port.emit("ready");
+    const plugin = await started;
+
+    const on = { enableSsh: true, enableGizmo: true };
+    const off = { enableSsh: true, enableGizmo: false };
+    expect(getHostEditorSection("gizmo")?.visible?.(on)).toBe(false);
+    expect(getHostEditorSection("gizmo")?.visible?.(off)).toBe(false);
+    await flush();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(getHostEditorSection("gizmo")?.visible?.(on)).toBe(true);
+    expect(getHostEditorSection("gizmo")?.visible?.(off)).toBe(false);
+
+    plugin.dispose();
+    resetHostEditorSections();
   });
 
   it("hands a companion's when a plain tab and only the plugin's own host settings", async () => {

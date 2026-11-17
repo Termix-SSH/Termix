@@ -1237,6 +1237,10 @@ checks saves. You don't build settings UI.
 - Read: `ctx.settings.get(key)`, `getUser(userId, key)`, `getHost(hostId, key)`. Write: `set`, `setHost`.
   React: `ctx.settings.onChange`. Check: `ctx.settings.onValidate("admin", values => ({ key: "message" }))`.
 - Frontend: `useSettings("user")` gives values and `save`.
+- The host editor has a simple and an advanced view. Generated host sections and your own sections show only in
+  advanced. Register a section with `simple: true` when most hosts change it (a protocol's login, the terminal
+  look), and read the `advanced` prop to hold back its rarer fields until advanced is on (SDK 2.10.0, core
+  26.11.2+).
 
 Prefer settings to environment variables. Use an env var only for something needed before Termix starts.
 

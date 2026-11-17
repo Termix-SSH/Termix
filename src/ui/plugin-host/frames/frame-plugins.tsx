@@ -1053,7 +1053,9 @@ export async function startFramedPlugin(
       case "hostEditorSection":
         return app.registerHostEditorSection({
           ...data,
-          visible: m("visible", true),
+          // Hidden until the frame answers, so a section for a protocol that
+          // is off never flashes in.
+          visible: m("visible", false),
           component: fit(
             data.component,
             "content",

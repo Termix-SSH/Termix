@@ -371,6 +371,7 @@ export function createPluginApp(
           order: section.order,
           visible: section.visible,
           defaults: section.defaults,
+          simple: section.simple === true,
           component: scoped(
             section.component as unknown as ComponentType<HostEditorSectionRenderProps>,
           ),
