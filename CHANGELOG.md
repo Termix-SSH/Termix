@@ -85,6 +85,7 @@
 ### Fixed
 
 - Submenus inside a menu open again instead of being cut off by the menu around them
+- Opening a host tool no longer logs an error when no plugin keeps recent activity
 - Postgres and MySQL: the list of who a credential is shared with loads again
 - Linux desktop app: the window follows the system display scale again, so it is no longer tiny on HiDPI screens. Set `TERMIX_FORCE_DEVICE_SCALE_FACTOR` to pick a scale by hand
 - After an update the browser no longer keeps an old copy of the plugin SDK, which broke layouts with a missing export error until site data was cleared

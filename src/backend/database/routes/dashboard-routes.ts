@@ -132,7 +132,7 @@ router.get(
  *                 type: string
  *     responses:
  *       200:
- *         description: Activity logged successfully or rate-limited.
+ *         description: Activity logged, rate-limited, or skipped because no plugin keeps recent activity.
  *       400:
  *         description: Invalid request body.
  *       401:
@@ -181,9 +181,7 @@ router.post(
         });
       }
       if (result.status === "unavailable") {
-        return res
-          .status(404)
-          .json({ error: "Recent activity is not available" });
+        return res.json({ message: "Recent activity is off, nothing logged" });
       }
       if (result.status === "denied") {
         return res
