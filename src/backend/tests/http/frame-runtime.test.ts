@@ -62,3 +62,32 @@ describe("frame page rewrite", () => {
     expect(importMapHashFromHtml(html)).not.toBe(importMapHashFromHtml(raw));
   });
 });
+
+describe("frame runtime version", () => {
+  it("changes when only a shared entry changes, so no stale copy is used", async () => {
+    const os = await import("node:os");
+    const { vi } = await import("vitest");
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "frame-runtime-"));
+    fs.mkdirSync(path.join(dir, "shared"));
+    fs.writeFileSync(path.join(dir, "frame.html"), "<html></html>");
+    const entry = path.join(dir, "shared", "termix-ssh-plugin-sdk-ui.js");
+    fs.writeFileSync(entry, 'export * from "../assets/ui-A.js";');
+    const before = process.env.TERMIX_FRAME_DIR;
+    process.env.TERMIX_FRAME_DIR = dir;
+    try {
+      vi.resetModules();
+      const first = (await import("../../http/frame-runtime.js")).framePage();
+      fs.writeFileSync(entry, 'export * from "../assets/ui-B.js";');
+      // A rebuild writes frame.html again, unchanged.
+      const later = new Date(Date.now() + 5_000);
+      fs.utimesSync(path.join(dir, "frame.html"), later, later);
+      const second = (await import("../../http/frame-runtime.js")).framePage();
+      expect(first?.version).toBeTruthy();
+      expect(second?.version).not.toBe(first?.version);
+    } finally {
+      if (before === undefined) delete process.env.TERMIX_FRAME_DIR;
+      else process.env.TERMIX_FRAME_DIR = before;
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

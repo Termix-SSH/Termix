@@ -68,6 +68,19 @@ export function rewriteFramePage(html: string, version: string): string {
 
 let page: { value: FramePage; stamp: number } | null = null;
 
+/** The runtime files whose names carry no content hash, sorted. */
+function sharedEntries(dir: string): string[] {
+  try {
+    return fs
+      .readdirSync(path.join(dir, "shared"))
+      .filter((name) => name.endsWith(".js"))
+      .sort()
+      .map((name) => path.join("shared", name));
+  } catch {
+    return [];
+  }
+}
+
 /** The page as served. Read again only when the frame was rebuilt. */
 export function framePage(): FramePage | null {
   const dir = findFrameRuntimeDir();
@@ -81,11 +94,13 @@ export function framePage(): FramePage | null {
   if (page?.stamp !== stamp) {
     try {
       const raw = fs.readFileSync(path.join(dir, FRAME_PAGE), "utf8");
-      const version = crypto
-        .createHash("sha256")
-        .update(raw, "utf8")
-        .digest("hex")
-        .slice(0, 16);
+      const digest = crypto.createHash("sha256").update(raw, "utf8");
+      // The import map's shared entries keep their names between builds but
+      // point at new chunks, so they count too or a cached copy goes stale.
+      for (const name of sharedEntries(dir)) {
+        digest.update(name).update(fs.readFileSync(path.join(dir, name)));
+      }
+      const version = digest.digest("hex").slice(0, 16);
       const html = rewriteFramePage(raw, version);
       page = {
         value: { html, version, hash: importMapHashFromHtml(html) },
