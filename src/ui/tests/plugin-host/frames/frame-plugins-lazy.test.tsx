@@ -22,7 +22,10 @@ vi.mock("@/hooks/use-permissions", async (importOriginal) => ({
 }));
 
 import {
+  COLD_LINGER_MS,
   FRAME_IDLE_MS,
+  MAX_STARTING_FRAMES,
+  resetFrameSlots,
   startFramedPlugin,
 } from "@/plugin-host/frames/frame-plugins";
 import { resetFrameConnections } from "@/plugin-host/frames/frame-connection";
@@ -146,6 +149,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  resetFrameSlots();
   resetRegistrationCache();
   resetFrameConnections();
   document.getElementById("termix-plugin-frames")?.remove();
@@ -423,6 +427,42 @@ describe("lazy background frames", () => {
     expect(frames()).toHaveLength(0);
     plugin.dispose();
   });
+});
+
+describe("booting many plugins at once", () => {
+  const named = (id: string) =>
+    ({ ...summary, id, name: id }) as unknown as PluginSummary;
+  const booting = () =>
+    document.querySelectorAll("iframe[data-frame-role=background]").length;
+
+  it("boots only a few background frames at a time", async () => {
+    const ids = ["b1", "b2", "b3", "b4", "b5"];
+    setPluginSummaries(ids.map(named));
+    const started = ids.map((id) => startFramedPlugin(named(id)));
+    await sleep(50);
+    expect(booting()).toBe(MAX_STARTING_FRAMES);
+    // Disposing a plugin mid boot frees its slot for the next one.
+    for (const pending of started) {
+      pending.then((plugin) => plugin.dispose()).catch(() => {});
+    }
+    const first = document.querySelector<HTMLIFrameElement>(
+      'iframe[data-plugin-frame="b1"]',
+    )!;
+    first.remove();
+    await sleep(10);
+    expect(booting()).toBeLessThanOrEqual(MAX_STARTING_FRAMES);
+  });
+
+  it("stops a frame booted only for registrations soon after", async () => {
+    const started = startFramedPlugin(summary);
+    await bootFrame({});
+    const plugin = await started;
+    expect(frames()).toHaveLength(1);
+    await sleep(1_500 + COLD_LINGER_MS + 200);
+    expect(frames()).toHaveLength(0);
+    expect(getPanel("gizmo")).toBeDefined();
+    plugin.dispose();
+  }, 10_000);
 });
 
 async function userKey(): Promise<string> {

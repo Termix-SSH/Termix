@@ -105,6 +105,11 @@ export const REFRESH_LIMIT = 20;
 export interface FramedPlugin {
   handle: PluginAppHandle;
   dispose: () => void;
+  /**
+   * Settles once a frame started at boot reported. The app does not wait
+   * for it; a rejection means the plugin could not start.
+   */
+  ready: Promise<void>;
 }
 
 type AsyncFn = (...args: unknown[]) => Promise<unknown>;
@@ -377,6 +382,73 @@ function manifestFor(summary: PluginSummary): PluginManifest {
   };
 }
 
+/** Background frames that may boot at once; the rest wait their turn. */
+export const MAX_STARTING_FRAMES = 3;
+/** A frame booted only to learn what its plugin registers stops this soon. */
+export const COLD_LINGER_MS = 1_000;
+/** Longest a cold frame keeps its slot while it still answers calls. */
+const COLD_ANSWER_MS = 5_000;
+
+interface SlotTicket {
+  urgent: boolean;
+  go: () => void;
+}
+
+let startingFrames = 0;
+const slotQueue: SlotTicket[] = [];
+
+function nextSlot(): void {
+  for (;;) {
+    // Frames something on screen needs get a lane of their own on top.
+    const index = slotQueue.findIndex((ticket) => ticket.urgent);
+    const urgent = index >= 0;
+    const limit = urgent ? MAX_STARTING_FRAMES * 2 : MAX_STARTING_FRAMES;
+    if (slotQueue.length === 0 || startingFrames >= limit) return;
+    const [ticket] = slotQueue.splice(urgent ? index : 0, 1);
+    startingFrames++;
+    ticket.go();
+  }
+}
+
+/**
+ * Waits for a boot slot. Frames something on screen needs go before frames
+ * that only report registrations. Call the result once the frame is up.
+ */
+function takeFrameSlot(ticket: Omit<SlotTicket, "go">): {
+  ready: Promise<() => void>;
+  promote: () => void;
+} {
+  let entry: SlotTicket | null = null;
+  const ready = new Promise<() => void>((resolve) => {
+    entry = {
+      ...ticket,
+      go: () => {
+        let released = false;
+        resolve(() => {
+          if (released) return;
+          released = true;
+          startingFrames--;
+          nextSlot();
+        });
+      },
+    };
+    slotQueue.push(entry);
+    nextSlot();
+  });
+  return {
+    ready,
+    promote: () => {
+      if (entry) entry.urgent = true;
+    },
+  };
+}
+
+/** Test seam. */
+export function resetFrameSlots(): void {
+  startingFrames = 0;
+  slotQueue.length = 0;
+}
+
 /**
  * Starts a framed plugin. Resolves once its registrations are in place:
  * from the cache right away, else once the background frame finished
@@ -492,6 +564,7 @@ export async function startFramedPlugin(
   };
 
   const stopFrame = () => {
+    releaseHeld();
     const current = frame;
     if (!current) return;
     frame = null;
@@ -508,12 +581,51 @@ export async function startFramedPlugin(
     stopFrame();
   };
 
+  let promoteSlot: (() => void) | null = null;
+  /** Ends a boot still under way, which frees its slot. */
+  let abortBoot: ((error?: Error) => void) | null = null;
+
+  /** A cold boot's slot, kept until it stops so few cold frames live at once. */
+  let heldSlot: (() => void) | null = null;
+  const releaseHeld = () => {
+    const release = heldSlot;
+    heldSlot = null;
+    release?.();
+  };
+
   /** Starts the background frame if it is not running. */
-  const ensureFrame = (): Promise<void> => {
+  const ensureFrame = (urgent = true, hold = false): Promise<void> => {
     if (disposed) return Promise.reject(new Error("Plugin stopped"));
     if (frame?.ready) return Promise.resolve();
-    if (starting) return starting;
-    starting = new Promise<void>((resolve, reject) => {
+    if (starting) {
+      if (urgent) promoteSlot?.();
+      return starting;
+    }
+    const slot = takeFrameSlot({ urgent });
+    promoteSlot = slot.promote;
+    starting = slot.ready.then((release) => {
+      promoteSlot = null;
+      if (disposed) {
+        release();
+        starting = null;
+        throw new Error("Plugin stopped");
+      }
+      return bootFrame().then(
+        () => {
+          if (hold) heldSlot = release;
+          else release();
+        },
+        (error: unknown) => {
+          release();
+          throw error;
+        },
+      );
+    });
+    return starting;
+  };
+
+  const bootFrame = (): Promise<void> =>
+    new Promise<void>((resolve, reject) => {
       const iframe = document.createElement("iframe");
       iframe.setAttribute("sandbox", SANDBOX);
       iframe.setAttribute("referrerpolicy", "no-referrer");
@@ -533,6 +645,7 @@ export async function startFramedPlugin(
       const finish = (error?: Error) => {
         if (settled) return;
         settled = true;
+        abortBoot = null;
         clearTimeout(timer);
         starting = null;
         if (error) {
@@ -554,6 +667,7 @@ export async function startFramedPlugin(
           persist();
         }, STALE_GRACE_MS);
       };
+      abortBoot = finish;
       current.connection = connectFrame(
         iframe,
         pluginId,
@@ -631,8 +745,6 @@ export async function startFramedPlugin(
       });
       container().appendChild(iframe);
     });
-    return starting;
-  };
 
   /** Something needs the frame's live values while it is mounted. */
   const acquire = (): (() => void) => {
@@ -1080,6 +1192,7 @@ export async function startFramedPlugin(
     if (persistTimer) clearTimeout(persistTimer);
     window.removeEventListener("termix:plugin-settings-changed", onSettings);
     setFrameDemand(pluginId, null);
+    abortBoot?.(new Error("Plugin stopped"));
     stopFrame();
     for (const record of registrations.values()) {
       if (record.refreshTimer) clearTimeout(record.refreshTimer);
@@ -1097,7 +1210,8 @@ export async function startFramedPlugin(
   window.addEventListener("termix:plugin-settings-changed", onSettings);
   setFrameDemand(pluginId, acquire);
 
-  if (cached && cached.live.length === 0) {
+  // What it registered last time shows at once, frame or not.
+  if (cached) {
     Object.assign(answers, cached.answers);
     Object.assign(values, cached.values);
     for (const [key, value] of Object.entries(values)) {
@@ -1106,14 +1220,37 @@ export async function startFramedPlugin(
     for (const entry of cached.registrations) {
       register({ rid: entry.rid, kind: entry.kind, data: entry.raw }, null);
     }
-    return { handle, dispose };
+    if (cached.live.length === 0) {
+      return { handle, dispose, ready: Promise.resolve() };
+    }
   }
 
-  try {
-    await ensureFrame();
-  } catch (error) {
-    dispose();
-    throw error;
-  }
-  return { handle, dispose };
+  // Never cached (cold) or keeps working on its own (live): the frame boots
+  // in the background and its parts appear as it reports them.
+  const cold = !cached;
+  const bootedAt = Date.now();
+  // Booted only to learn the registrations: stop once they are stored and
+  // the calls asked meanwhile are answered, unless something needs it.
+  const settleCold = () => {
+    if (disposed || !frame?.ready) return releaseHeld();
+    if (isLive() || overlay || needs > 0) return releaseHeld();
+    if (pending > 0 && Date.now() - bootedAt < COLD_ANSWER_MS) {
+      setTimeout(settleCold, 250);
+      return;
+    }
+    if (pending > 0) return releaseHeld();
+    writeNow();
+    stopFrame();
+  };
+  const ready = ensureFrame(!cold, cold).then(
+    () => {
+      if (cold) setTimeout(settleCold, COLD_LINGER_MS);
+    },
+    (error: unknown) => {
+      dispose();
+      throw error;
+    },
+  );
+  ready.catch(() => {});
+  return { handle, dispose, ready };
 }

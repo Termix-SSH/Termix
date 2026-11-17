@@ -9,10 +9,15 @@ const lookApi = vi.hoisted(() => ({
 }));
 vi.mock("@/api/look-api", () => lookApi);
 const framedStarts = vi.hoisted(() => [] as string[]);
+const framedReady = vi.hoisted(() => new Map<string, Promise<void>>());
 vi.mock("@/plugin-host/frames/frame-plugins", () => ({
   startFramedPlugin: vi.fn(async (entry: { id: string }) => {
     framedStarts.push(entry.id);
-    return { handle: { app: {} }, dispose: () => {} };
+    return {
+      handle: { app: {} },
+      dispose: () => {},
+      ready: framedReady.get(entry.id) ?? Promise.resolve(),
+    };
   }),
 }));
 import { Puzzle } from "lucide-react";
@@ -346,6 +351,25 @@ describe("plugin loader", () => {
     await startPluginRuntime();
     expect(framedStarts.sort()).toEqual(["framed", "login"]);
     expect(isPluginFrontendActive("framed")).toBe(true);
+  });
+
+  it("does not wait for a framed plugin's frame and marks a failed one", async () => {
+    let fail: (error: Error) => void = () => {};
+    framedReady.set(
+      "slow",
+      new Promise<void>((_resolve, reject) => {
+        fail = reject;
+      }),
+    );
+    plugins = [summary("slow", { frontendIsolation: "frame" })];
+    await startPluginRuntime();
+    expect(isPluginFrontendActive("slow")).toBe(true);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    fail(new Error("activate threw"));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(isPluginFrontendActive("slow")).toBe(false);
+    expect(getPluginRecord("slow")?.frontend).toBe("failed");
+    framedReady.clear();
   });
 
   it("ignores a pre-login load started after sign-in", async () => {

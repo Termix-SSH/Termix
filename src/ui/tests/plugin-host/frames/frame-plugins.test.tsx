@@ -255,8 +255,10 @@ describe("startFramedPlugin", () => {
   it("fails when the frame reports a broken activate", async () => {
     const started = startFramedPlugin(summary);
     const { port } = await fakeFrame(() => undefined);
+    // The app does not wait for the frame: the failure shows on ready.
+    const plugin = await started;
     port.emit("failed", "activate threw");
-    await expect(started).rejects.toThrow("activate threw");
+    await expect(plugin.ready).rejects.toThrow("activate threw");
     expect(document.querySelector('iframe[data-plugin-frame="gizmo"]')).toBe(
       null,
     );

@@ -232,6 +232,11 @@ async function deactivate(pluginId: string): Promise<void> {
 }
 
 const ACTIVATE_TIMEOUT_MS = 15_000;
+/**
+ * A framed plugin may wait for a boot slot first; its frame has its own
+ * start limit once it gets one.
+ */
+const FRAMED_ACTIVATE_TIMEOUT_MS = 3 * 60_000;
 
 function withTimeout<T>(
   promise: Promise<T>,
@@ -309,8 +314,8 @@ async function activateFramed(summary: PluginSummary): Promise<void> {
     }
     const framed = await withTimeout(
       startFramedPlugin(summary),
-      ACTIVATE_TIMEOUT_MS + 5_000,
-      `activate() did not finish within ${ACTIVATE_TIMEOUT_MS / 1000}s`,
+      FRAMED_ACTIVATE_TIMEOUT_MS,
+      `activate() did not finish within ${FRAMED_ACTIVATE_TIMEOUT_MS / 1000}s`,
     );
     active.set(summary.id, {
       id: summary.id,
@@ -321,6 +326,15 @@ async function activateFramed(summary: PluginSummary): Promise<void> {
     });
     failedVersions.delete(summary.id);
     setFrontendState(summary.id, "active");
+    // A frame still booting does not hold the app; if it fails, say so.
+    framed.ready.catch((error: unknown) => {
+      if (active.get(summary.id)?.handle.dispose !== framed.dispose) return;
+      active.delete(summary.id);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[plugins] ${summary.id} failed to start`, error);
+      failedVersions.set(summary.id, summary.assetVersion ?? null);
+      setFrontendState(summary.id, "failed", message);
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[plugins] ${summary.id} failed to start`, error);
