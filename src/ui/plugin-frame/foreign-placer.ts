@@ -16,6 +16,8 @@ interface Entry {
   element: HTMLElement;
   interactive: boolean;
   last: string;
+  /** Leaves the top and left px open for the tile grid's line under it. */
+  inset: boolean;
 }
 
 export interface PlaceBatch {
@@ -34,6 +36,8 @@ export interface PlaceBatch {
 
 /** How long to keep measuring after a change, for transitions. */
 const SETTLE_MS = 600;
+/** Least time between measures that only a DOM change asked for. */
+const SOFT_MS = 150;
 
 const round = (n: number) => Math.round(n * 100) / 100;
 
@@ -134,8 +138,13 @@ export class ForeignPlacer {
     private readonly now: () => number = () => performance.now(),
   ) {}
 
-  add(id: string, element: HTMLElement, interactive: boolean): void {
-    this.entries.set(id, { element, interactive, last: "" });
+  add(
+    id: string,
+    element: HTMLElement,
+    interactive: boolean,
+    inset = false,
+  ): void {
+    this.entries.set(id, { element, interactive, last: "", inset });
     this.listen();
     this.resize?.observe(element);
     this.intersection?.observe(element);
@@ -172,6 +181,23 @@ export class ForeignPlacer {
     this.kick();
   }
 
+  private softTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * The page changed somewhere: one measure soon, without a burst. Live
+   * content changes all the time, and measuring every frame for it is slow
+   * in Firefox.
+   */
+  softKick = (): void => {
+    if (this.frame || this.softTimer) return;
+    this.softTimer = setTimeout(() => {
+      this.softTimer = null;
+      if (!this.frame && typeof requestAnimationFrame !== "undefined") {
+        this.frame = requestAnimationFrame(this.flush);
+      }
+    }, SOFT_MS);
+  };
+
   /** Something may have moved: measure on the next frame, and a little after. */
   kick = (): void => {
     this.settleUntil = this.now() + SETTLE_MS;
@@ -195,7 +221,17 @@ export class ForeignPlacer {
       .filter(({ rect }) => rect.width > 0 && rect.height > 0);
     for (const [id, entry] of this.entries) {
       const { element } = entry;
-      const rect = rectOf(element);
+      const measured = rectOf(element);
+      // A seamless tile grid draws its lines in this page, under the shell's
+      // view, so the view keeps off the px the line sits on.
+      const rect = entry.inset
+        ? {
+            x: measured.x + 1,
+            y: measured.y + 1,
+            width: Math.max(0, measured.width - 1),
+            height: Math.max(0, measured.height - 1),
+          }
+        : measured;
       let clip: PlacedRect | null = null;
       for (const parent of scrollParents(element)) {
         const box = rectOf(parent);
@@ -269,7 +305,7 @@ export class ForeignPlacer {
     }
     if (typeof MutationObserver !== "undefined") {
       // Layout moves without a resize: a drag, a sibling growing, a class.
-      this.mutation = new MutationObserver(this.kick);
+      this.mutation = new MutationObserver(this.softKick);
       this.mutation.observe(document.body, {
         subtree: true,
         childList: true,
@@ -293,6 +329,8 @@ export class ForeignPlacer {
     this.resize = null;
     this.intersection = null;
     this.mutation = null;
+    if (this.softTimer) clearTimeout(this.softTimer);
+    this.softTimer = null;
     window.removeEventListener("scroll", this.kick, true);
     window.removeEventListener("resize", this.kick);
     document.removeEventListener("transitionrun", this.kick, true);

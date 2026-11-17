@@ -96,6 +96,55 @@ describe("host actions inside a frame", () => {
   });
 });
 
+describe("host actions answered late", () => {
+  it("asks again while the shell waits on plugins, and gives run only to actions with one", async () => {
+    const { renderHook, waitFor } = await import("@testing-library/react");
+    const { setFrameState, resetFrameState } =
+      await import("@/plugin-frame/frame-store");
+    resetFrameState();
+    setFrameState({
+      hostActions: [
+        {
+          id: "files.open",
+          pluginId: "files",
+          titleKey: "f",
+          kind: "open",
+          tabType: "files",
+          hasRun: false,
+        },
+      ],
+    });
+    let answers = 0;
+    const call = vi.fn(async (method: string) => {
+      if (method !== "hostActions.when") return null;
+      answers += 1;
+      // The first answer comes before the other plugin answered the shell.
+      return answers === 1
+        ? { pairs: [], pending: true }
+        : { pairs: [["files", "files.open"]], pending: false };
+    });
+    const bridge = createFrameBridge({
+      pluginId: "operations-center",
+      call,
+      getApi: vi.fn() as never,
+      tabs: {} as never,
+      foreign: {} as never,
+    });
+    const host = { id: "3" };
+    const { result } = renderHook(() => bridge.useHostActions());
+    const visible = () =>
+      result.current
+        .filter((action) => action.when(host as never))
+        .map((action) => action.id);
+    expect(visible()).toEqual([]);
+    await waitFor(() => expect(visible()).toEqual(["files.open"]), {
+      timeout: 2_000,
+    });
+    expect(result.current[0].run).toBeUndefined();
+    resetFrameState();
+  });
+});
+
 describe("live work", () => {
   it("does not count a settings listener", async () => {
     const { liveWork, resetLiveTracking, startLiveTracking } =

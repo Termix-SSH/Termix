@@ -79,7 +79,11 @@ function iconNode(component: unknown): unknown[] | undefined {
       props?: { icon?: { node?: unknown } };
     } | null;
     const node = element?.props?.icon?.node;
-    return Array.isArray(node) ? node : undefined;
+    // A copy: lucide shares one array per icon, and encode drops an object it
+    // already saw, so a second use of the same icon would lose its shapes.
+    return Array.isArray(node)
+      ? (JSON.parse(JSON.stringify(node)) as unknown[])
+      : undefined;
   } catch {
     return undefined;
   }
@@ -154,12 +158,10 @@ export function encode(value: unknown, options: EncodeOptions): unknown {
     const object = input as object;
     if (isReactElement(object)) return iconToWire(object);
     if (isComponentObject(object)) return iconToWire(object);
+    // Only a loop back to an object still being walked is cut: the same
+    // object in two places (a shared list, an icon's shapes) goes both times.
     if (depth > MAX_DEPTH || seen.has(object)) return undefined;
     if (passesThrough(object)) return object;
-    seen.add(object);
-    if (Array.isArray(object)) {
-      return object.map((item) => walk(item, depth + 1));
-    }
     if (typeof Node !== "undefined" && object instanceof Node) return undefined;
     if (typeof Window !== "undefined" && object instanceof Window) {
       return undefined;
@@ -167,12 +169,20 @@ export function encode(value: unknown, options: EncodeOptions): unknown {
     if (!isPlainObject(object) && object instanceof Error) {
       return { name: object.name, message: object.message };
     }
-    const out: Record<string, unknown> = {};
-    for (const [key, item] of Object.entries(object)) {
-      const encoded = walk(item, depth + 1);
-      if (encoded !== undefined) out[key] = encoded;
+    seen.add(object);
+    try {
+      if (Array.isArray(object)) {
+        return object.map((item) => walk(item, depth + 1));
+      }
+      const out: Record<string, unknown> = {};
+      for (const [key, item] of Object.entries(object)) {
+        const encoded = walk(item, depth + 1);
+        if (encoded !== undefined) out[key] = encoded;
+      }
+      return out;
+    } finally {
+      seen.delete(object);
     }
-    return out;
   };
   return walk(value, 0);
 }

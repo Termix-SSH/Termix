@@ -118,13 +118,23 @@ export function placeView(input: PlaceInput): PlaceOutput {
     isEmpty(shown) ||
     occluded;
   const inset = (n: number) => `${Math.max(0, Math.round(n * 100) / 100)}px`;
+  // No clip when nothing is cut off: a clip-path makes Firefox paint the
+  // whole frame through a mask.
+  const whole =
+    !isEmpty(shown) &&
+    shown.x <= rect.x &&
+    shown.y <= rect.y &&
+    shown.x + shown.width >= rect.x + rect.width &&
+    shown.y + shown.height >= rect.y + rect.height;
   const clipPath = isEmpty(shown)
     ? "inset(100%)"
-    : `inset(${inset(shown.y - rect.y)} ${inset(
-        rect.x + rect.width - (shown.x + shown.width),
-      )} ${inset(rect.y + rect.height - (shown.y + shown.height))} ${inset(
-        shown.x - rect.x,
-      )})`;
+    : whole
+      ? ""
+      : `inset(${inset(shown.y - rect.y)} ${inset(
+          rect.x + rect.width - (shown.x + shown.width),
+        )} ${inset(rect.y + rect.height - (shown.y + shown.height))} ${inset(
+          shown.x - rect.x,
+        )})`;
   const shownInPage: Rect = {
     x: frame.x + shown.x,
     y: frame.y + shown.y,

@@ -46,6 +46,25 @@ afterEach(() => {
 });
 
 describe("who may place other plugins' views", () => {
+  it("lets a plugin embed a tab only when a host action opens it", async () => {
+    const { registerHostAction } = await import("@/sidebar/host-contributions");
+    const remove = registerHostAction({
+      id: "files",
+      pluginId: "file-manager",
+      titleKey: "files",
+      kind: "open",
+      tabType: "file_manager",
+      when: () => true,
+    } as never);
+    expect(mayPlaceForeign("operations-center", "tab", "file_manager")).toBe(
+      true,
+    );
+    expect(mayPlaceForeign("operations-center", "tab", "admin_settings")).toBe(
+      false,
+    );
+    remove();
+  });
+
   it("lets a plugin place the parts of a slot it declared", () => {
     expect(
       mayPlaceForeign("host-metrics", "slot", "host-metrics.managers"),

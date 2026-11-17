@@ -149,6 +149,10 @@ async function boot() {
   document.documentElement.dataset.frameFit =
     params.fit === "fill" || params.fit === "bar" ? params.fit : "content";
   if (params.transparent) document.documentElement.dataset.frameBg = "none";
+  // Drawn on the sidebar: fields take the sidebar's field color.
+  if (new URLSearchParams(location.hash.slice(1)).get("on") === "sidebar") {
+    document.documentElement.dataset.frameOn = "sidebar";
+  }
 
   const realFetch = window.fetch.bind(window);
   const port = new FramePort({
@@ -317,18 +321,19 @@ async function boot() {
     onReady: () => () => {},
   };
 
-  __setPluginHost(
-    createFrameBridge({
-      pluginId,
-      call,
-      getApi: (id) => {
-        ownOnly(id);
-        return api as never;
-      },
-      tabs,
-      foreign,
-    }),
-  );
+  const bridge = createFrameBridge({
+    pluginId,
+    call,
+    getApi: (id) => {
+      ownOnly(id);
+      return api as never;
+    },
+    tabs,
+    foreign,
+  });
+  __setPluginHost(bridge);
+  // The UI kit's host action hook reads the shell's list, not this frame's.
+  foreign.useHostActions = () => bridge.useHostActions();
 
   if (init.css) {
     const link = document.createElement("link");

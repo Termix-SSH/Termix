@@ -243,6 +243,7 @@ export function FrameStateSync() {
         title: titleText(action.titleKey),
         kind: action.kind,
         tabType: action.tabType,
+        hasRun: typeof action.run === "function",
         priority: action.priority,
         order: action.order,
         icon: iconToWire(action.icon),

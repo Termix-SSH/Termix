@@ -144,6 +144,24 @@ export function extensionItems(
   return out;
 }
 
+/** Another plugin's tab for one host, drawn by the shell. */
+export function tabItems(
+  pluginId: string,
+  component: ComponentType<Record<string, unknown>> | undefined,
+): BuiltList {
+  const out: BuiltList = {
+    items: [],
+    entries: new Map(),
+    actions: new Set(),
+    strings: {},
+  };
+  if (component) {
+    out.entries.set("tab", { pluginId, component, fit: "fill" });
+    out.items.push({ key: "tab", fit: "fill", component: marker("tab") });
+  }
+  return out;
+}
+
 export function componentItems(
   id: string,
   component: ComponentType<Record<string, unknown>> | undefined,

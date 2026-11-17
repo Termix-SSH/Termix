@@ -29,7 +29,7 @@ describe("foreign view placement", () => {
       top: 30,
       width: 200,
       height: 100,
-      clipPath: "inset(0px 0px 0px 0px)",
+      clipPath: "",
     });
   });
 

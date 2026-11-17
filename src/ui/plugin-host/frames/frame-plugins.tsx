@@ -26,6 +26,7 @@ import {
 } from "@/plugin-frame/protocol";
 import { decode } from "@/plugin-frame/wire";
 import { decodeHostIconValue } from "./host-icons";
+import { answerAsked, answerDone } from "./answer-pending";
 import { getUserInfo } from "@/main-axios";
 import { loadMyPermissions } from "@/hooks/use-permissions";
 import { createPluginApp, type PluginAppHandle } from "../app";
@@ -91,6 +92,8 @@ function rowTableValue(pluginId: string, key: string, useNeed: UseNeed) {
 
 const START_TIMEOUT_MS = 20_000;
 const MEMO_LIMIT = 500;
+/** How long a failed answer counts as the fallback before it is asked again. */
+const ANSWER_RETRY_MS = 5_000;
 /**
  * A background frame with no live work, nothing on screen needing it and no
  * calls of its own stops after this long unused. Its answers stay cached.
@@ -295,6 +298,7 @@ function framed(
                 pluginId={pluginId}
                 frameKey={key}
                 how={fit}
+                transparent={variant === "panel"}
                 adapt={adapt}
                 props={props}
               />
@@ -881,25 +885,37 @@ export async function startFramedPlugin(
     if (existing) return existing;
     const cache = new Map<string, unknown>();
     const inflight = new Set<string>();
+    /** Keys whose answer failed, and when, so they are asked again. */
+    const failedAt = new Map<string, number>();
     // Answers taken from the stored cache, not asked of a live frame yet.
     const stale = new Set<string>();
     const ask = (key: string, args: unknown[], stored: string) => {
       if (inflight.has(key)) return;
       inflight.add(key);
+      answerAsked();
       (fn as AsyncFn)(...args)
         .then(
           (value) => {
             cache.set(key, value);
+            failedAt.delete(key);
             if (isPlainValue(value)) answers[stored] = value;
             else delete answers[stored];
             persist();
           },
           () => {
-            if (!cache.has(key)) cache.set(key, fallback);
+            // A frame that stopped or timed out mid answer is asked again
+            // later, not taken as a no for good.
+            if (!cache.has(key)) {
+              cache.set(key, fallback);
+              failedAt.set(key, Date.now());
+              // Redraw once the wait is over, so the next read asks again.
+              setTimeout(() => scheduleRefresh(record), ANSWER_RETRY_MS + 100);
+            }
           },
         )
         .finally(() => {
           inflight.delete(key);
+          answerDone();
           while (cache.size > MEMO_LIMIT) {
             cache.delete(cache.keys().next().value as string);
           }
@@ -912,6 +928,11 @@ export async function startFramedPlugin(
       const stored = `${record.rid}\u0000${field}\u0000${key}`;
       if (stale.has(key) && frame?.ready) {
         stale.delete(key);
+        ask(key, args, stored);
+      }
+      const failed = failedAt.get(key);
+      if (failed !== undefined && Date.now() - failed > ANSWER_RETRY_MS) {
+        failedAt.delete(key);
         ask(key, args, stored);
       }
       if (cache.has(key)) return cache.get(key);
@@ -987,7 +1008,7 @@ export async function startFramedPlugin(
       case "panel":
         return app.registerPanel(
           data.id,
-          fit(data.component, "fill", plainProps),
+          fit(data.component, "fill", plainProps, "panel"),
           { keepMounted: data.keepMounted },
         );
       case "tab":

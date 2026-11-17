@@ -77,6 +77,29 @@ describe("wire encoding", () => {
     expect(iconToWire(icon)).toEqual(iconToWire(Play));
   });
 
+  it("sends an object shared by two fields both times, and still cuts loops", () => {
+    const shared = { name: "web" };
+    const loop: Record<string, unknown> = { id: 1 };
+    loop.self = loop;
+    const out = encode({ a: shared, b: [shared], loop }, { exportFn }) as {
+      a: unknown;
+      b: unknown[];
+      loop: Record<string, unknown>;
+    };
+    expect(out.a).toEqual({ name: "web" });
+    expect(out.b).toEqual([{ name: "web" }]);
+    expect(out.loop).toEqual({ id: 1 });
+  });
+
+  it("keeps the shapes of an icon used twice in one message", () => {
+    const out = encode(
+      { a: { icon: iconToWire(Play) }, b: [{ icon: iconToWire(Play) }] },
+      { exportFn },
+    ) as { a: { icon: { node?: unknown } }; b: { icon: { node?: unknown } }[] };
+    expect(Array.isArray(out.a.icon.node)).toBe(true);
+    expect(Array.isArray(out.b[0].icon.node)).toBe(true);
+  });
+
   it("drops shapes that are not plain geometry", () => {
     const icon = decodeIcon({
       $icon: "Evil",

@@ -21,6 +21,7 @@ import {
 } from "@/plugin-frame/protocol";
 import { FramePort } from "@/plugin-frame/rpc";
 import { decodeHostIconValue } from "./host-icons";
+import { answersPending } from "./answer-pending";
 import { getPluginStoreState, knownPluginIds } from "../plugin-store";
 import { shell, shellHost } from "../shell-bridge";
 import { getTabType } from "@/shell/tab-registry";
@@ -703,11 +704,13 @@ async function handleCall(
     }
     case "hostActions.when": {
       const host = shellHost(String(args[0]));
-      if (!host) return [];
-      return hostActionsFor(listHostActions(), host).map((action) => [
+      if (!host) return { pairs: [], pending: false };
+      const pairs = hostActionsFor(listHostActions(), host).map((action) => [
         action.pluginId ?? "",
         action.id,
       ]);
+      // Uncached answers count as no until their plugin replies.
+      return { pairs, pending: answersPending() };
     }
     case "hostActions.run": {
       // Only right after the user clicked the button in the frame.

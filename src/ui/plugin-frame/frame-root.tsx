@@ -156,8 +156,11 @@ export function FrameRoot({
     if (!element || !onSize) return;
     let last = "";
     const report = () => {
-      const width = Math.ceil(element.scrollWidth);
-      const height = Math.ceil(element.scrollHeight);
+      // The box's real size: scroll sizes round down a fraction of a px,
+      // which cut off a part's bottom border.
+      const rect = element.getBoundingClientRect();
+      const width = Math.ceil(Math.max(rect.width, element.scrollWidth));
+      const height = Math.ceil(Math.max(rect.height, element.scrollHeight));
       const next = `${width}x${height}`;
       if (next === last) return;
       last = next;
@@ -215,10 +218,10 @@ export function FrameRoot({
           fit === "fill"
             ? "flex h-full w-full min-h-0 flex-col"
             : fit === "inline"
-              ? "inline-flex flex-col"
+              ? "inline-flex flex-col align-top"
               : fit === "bar"
-                ? "inline-flex h-full flex-col"
-                : "inline-flex w-full flex-col"
+                ? "inline-flex h-full flex-col align-top"
+                : "inline-flex w-full flex-col align-top"
         }
       >
         {component ? (

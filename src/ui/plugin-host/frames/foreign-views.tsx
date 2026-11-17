@@ -18,11 +18,16 @@ import {
   useMemo,
   useRef,
   useSyncExternalStore,
+  type ComponentType,
 } from "react";
 import { createPortal } from "react-dom";
 import { useActionSlot } from "@/hooks/use-action-slot";
 import { useExtensions } from "../extension-registry";
 import { usePluginComponent } from "../component-registry";
+import { shell, shellHost } from "../shell-bridge";
+import { HostTabEmbed } from "@/shell/HostTabEmbed";
+import { getTabType } from "@/shell/tab-registry";
+import { hostActionsFor, listHostActions } from "@/sidebar/host-contributions";
 
 import { getSharedState, hostsFor } from "./frame-state";
 import { frameRowContext } from "./data-rows";
@@ -46,6 +51,7 @@ import { GrantedWebView, type WebPlace } from "./granted-web-view";
 import { resolveSlotFit } from "./slot-fit";
 import {
   componentItems,
+  tabItems,
   extensionItems,
   slotItems,
   type BuiltList,
@@ -189,6 +195,8 @@ function getConsumer(
       dirty: true,
     };
     consumers.set(owner, consumer);
+    watchForMoves();
+    frameSizes?.observe(iframe);
   }
   return consumer;
 }
@@ -414,7 +422,11 @@ export function focusForeignView(owner: string, id: unknown, edge: unknown) {
 
 /** A consumer frame closed or reloaded. */
 export function dropForeignConsumer(owner: string): void {
-  if (consumers.delete(owner)) emitChange();
+  const consumer = consumers.get(owner);
+  if (!consumer) return;
+  frameSizes?.unobserve(consumer.iframe);
+  consumers.delete(owner);
+  emitChange();
 }
 
 /** Test seam. */
@@ -563,6 +575,31 @@ function applyView(consumer: Consumer, view: ForeignView): void {
 }
 
 let loop = 0;
+/**
+ * Measuring a frame forces layout, which is cheap in Chromium but costly in
+ * Firefox, where frames share the page's thread. So it runs every frame only
+ * for a moment after something changed, then checks a few times a second.
+ */
+const SETTLE_MS = 500;
+const POLL_MS = 400;
+let settleUntil = 0;
+let slowTimer: ReturnType<typeof setTimeout> | null = null;
+let watching = false;
+let frameSizes: ResizeObserver | null = null;
+
+function watchForMoves(): void {
+  if (watching || typeof window === "undefined") return;
+  watching = true;
+  const kick = () => startLoop();
+  window.addEventListener("resize", kick);
+  window.addEventListener("scroll", kick, true);
+  window.addEventListener("transitionrun", kick, true);
+  window.addEventListener("transitionend", kick, true);
+  window.addEventListener("pointerup", kick, true);
+  window.addEventListener("keyup", kick, true);
+  frameSizes =
+    typeof ResizeObserver === "undefined" ? null : new ResizeObserver(kick);
+}
 
 function tick() {
   loop = 0;
@@ -578,10 +615,24 @@ function tick() {
       for (const view of consumer.views.values()) applyView(consumer, view);
     }
   }
-  if (any) startLoop();
+  if (!any) return;
+  if (performance.now() < settleUntil) {
+    loop = requestAnimationFrame(tick);
+  } else if (!slowTimer) {
+    slowTimer = setTimeout(() => {
+      slowTimer = null;
+      if (!loop) loop = requestAnimationFrame(tick);
+    }, POLL_MS);
+  }
 }
 
 function startLoop() {
+  settleUntil = performance.now() + SETTLE_MS;
+  watchForMoves();
+  if (slowTimer) {
+    clearTimeout(slowTimer);
+    slowTimer = null;
+  }
   if (loop || typeof requestAnimationFrame === "undefined") return;
   loop = requestAnimationFrame(tick);
 }
@@ -676,6 +727,57 @@ const ComponentRunner = memo(function ComponentRunner({
   useEffect(() => {
     sendItems(consumer, list, componentItems(list.id, component));
   }, [consumer, list, component]);
+  return null;
+});
+
+const embeddedTabs = new Map<string, ComponentType<Record<string, unknown>>>();
+
+/**
+ * A host's tab drawn in the shell for a frame that embeds it (a host page),
+ * only while one of the host's actions opens that tab type.
+ */
+function embeddedTab(
+  type: string,
+  hostId: unknown,
+): ComponentType<Record<string, unknown>> {
+  const key = `${type}\u0000${String(hostId)}`;
+  let component = embeddedTabs.get(key);
+  if (!component) {
+    const Embedded = ({ isVisible }: Record<string, unknown>) => {
+      const host = shellHost(hostId as string | number | undefined);
+      if (!host) return null;
+      const allowed = hostActionsFor(listHostActions(), host).some(
+        (action) => action.tabType === type,
+      );
+      if (!allowed) return null;
+      return (
+        <HostTabEmbed
+          host={host}
+          type={type}
+          isVisible={isVisible !== false}
+          shell={shell}
+        />
+      );
+    };
+    Embedded.displayName = `EmbeddedTab(${type})`;
+    component = Embedded;
+    embeddedTabs.set(key, component);
+  }
+  return component;
+}
+
+const TabRunner = memo(function TabRunner({
+  consumer,
+  list,
+}: {
+  consumer: Consumer;
+  list: ForeignList;
+}) {
+  const hostId = list.context.hostId;
+  useEffect(() => {
+    const owner = getTabType(list.id)?.pluginId ?? "";
+    sendItems(consumer, list, tabItems(owner, embeddedTab(list.id, hostId)));
+  }, [consumer, list, hostId]);
   return null;
 });
 
@@ -866,6 +968,9 @@ export function ForeignViewHost() {
             return (
               <ExtensionRunner key={key} consumer={consumer} list={entry} />
             );
+          }
+          if (entry.kind === "tab") {
+            return <TabRunner key={key} consumer={consumer} list={entry} />;
           }
           return <ComponentRunner key={key} consumer={consumer} list={entry} />;
         }),

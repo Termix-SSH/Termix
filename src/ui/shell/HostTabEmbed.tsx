@@ -3,27 +3,57 @@ import type { Host, Tab } from "@/types/ui-types";
 import type { TabShellCallbacks } from "@/shell/tab-registry";
 import { renderTabContent } from "@/shell/tabUtils";
 import { withShellHost } from "@/plugin-host/shell-bridge";
+import { getForeignRuntime } from "@/components/foreign/foreign-runtime";
+import { LoadingState } from "@/components/loading-state";
 
-/**
- * Draws a registered tab type inside another view, such as a host page, with
- * the same props the tab stage gives it. The embed has its own instance id, so
- * it never collides with the same tool opened as a normal tab.
- */
-export function HostTabEmbed({
-  host,
-  type,
-  label,
-  data,
-  isVisible = true,
-  shell,
-}: {
+interface HostTabEmbedProps {
   host: Host;
   type: string;
   label?: string;
   data?: Record<string, unknown>;
   isVisible?: boolean;
   shell: TabShellCallbacks;
-}) {
+}
+
+/**
+ * In a plugin frame another plugin's tab can't render here, so the shell
+ * draws it over this spot in a frame of its own.
+ */
+function FramedHostTabEmbed({
+  host,
+  type,
+  isVisible = true,
+}: HostTabEmbedProps) {
+  const Part = getForeignRuntime()!.useTab!(type, host.id);
+  return (
+    <div className="h-full min-h-0 flex flex-col">
+      {Part ? <Part isVisible={isVisible} /> : <LoadingState />}
+    </div>
+  );
+}
+
+/**
+ * Draws a registered tab type inside another view, such as a host page, with
+ * the same props the tab stage gives it. The embed has its own instance id, so
+ * it never collides with the same tool opened as a normal tab.
+ */
+export function HostTabEmbed(props: HostTabEmbedProps) {
+  // The runtime is set before anything renders and never changes.
+  const runtime = getForeignRuntime();
+  if (runtime?.useTab && !runtime.withOwn) {
+    return <FramedHostTabEmbed {...props} />;
+  }
+  return <PageHostTabEmbed {...props} />;
+}
+
+function PageHostTabEmbed({
+  host,
+  type,
+  label,
+  data,
+  isVisible = true,
+  shell,
+}: HostTabEmbedProps) {
   const tab = useMemo<Tab>(
     () => ({
       id: `embed-${type}-${host.id}`,

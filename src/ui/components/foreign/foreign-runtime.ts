@@ -50,6 +50,13 @@ export interface ForeignRuntime {
   Placeholder: ComponentType<PlaceholderProps>;
   /** Keeps foreign views hidden under this element while it is mounted. */
   addOccluder: (element: Element) => () => void;
+  /** Another plugin's tab for a host, drawn by the shell over a placeholder. */
+  useTab?: (
+    type: string,
+    hostId: string | number,
+  ) => ComponentType<Record<string, unknown>> | undefined;
+  /** Every plugin's host actions, from the shell. */
+  useHostActions?: () => unknown[];
 }
 
 let runtime: ForeignRuntime | null = null;

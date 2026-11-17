@@ -16,7 +16,11 @@ function useSlotFit(slotId: string): FrameFit {
   );
 }
 
+const PLACED_FITS = new Set<FrameFit>(["inline", "content", "fill"]);
+
 export interface FramedViewProps {
+  /** The page behind shows through, like a rail panel on the sidebar. */
+  transparent?: boolean;
   pluginId: string;
   frameKey: string;
   adapt?: (props: Record<string, unknown>) => Record<string, unknown>;
@@ -29,13 +33,21 @@ export function FramedView({
   frameKey,
   adapt,
   props,
+  transparent,
 }: FramedViewProps & { how: FrameFit }) {
-  const { fallback, rest } = splitFallback(props);
+  const { fallback, rest: withFit } = splitFallback(props);
+  // The page placing the part may say how it sits, like a small button in a
+  // label row ("inline"), since the part's registration can't know.
+  const { frameFit, ...rest } = withFit;
+  const fit = PLACED_FITS.has(frameFit as FrameFit)
+    ? (frameFit as FrameFit)
+    : how;
   return (
     <PluginFrameView
       pluginId={pluginId}
       frameKey={frameKey}
-      fit={how}
+      fit={fit}
+      transparent={transparent}
       fallback={fallback}
       props={adapt ? adapt(rest) : rest}
     />

@@ -47,25 +47,11 @@ export interface FrameBridgeHost {
   foreign: ForeignRuntime;
 }
 
-/**
- * Which host actions the shell said apply to each host, per list the shell
- * sent. A new list (a plugin's when changed) asks again.
- */
-const hostActionAnswers = new WeakMap<
-  object,
-  Map<string, Set<string> | null>
->();
 const answerListeners = new Set<() => void>();
 let answerVersion = 0;
-
-function visibleHostActions(list: object): Map<string, Set<string> | null> {
-  let map = hostActionAnswers.get(list);
-  if (!map) {
-    map = new Map();
-    hostActionAnswers.set(list, map);
-  }
-  return map;
-}
+/** How soon to ask again while the shell still waits on other plugins. */
+const HOST_ACTION_RECHECK_MS = 700;
+const HOST_ACTION_TRIES = 60;
 
 function subscribeAnswers(listener: () => void): () => void {
   answerListeners.add(listener);
@@ -82,6 +68,48 @@ export function createFrameBridge(host: FrameBridgeHost): PluginHostBridge {
   const showTab = (id: string) => void call("tabs.show", id).catch(() => {});
   const toast = (kind: string) => (message: string) =>
     void call("toast", kind, String(message)).catch(() => {});
+
+  // Which host actions apply, per host id, as the shell last said.
+  const hostVisible = new Map<string, Set<string> | null>();
+  const hostAsking = new Set<string>();
+  let seenActions: unknown = null;
+  /**
+   * The shell answers at once with what it knows and says when other
+   * plugins still have to answer; then this asks again until they have.
+   */
+  const fetchVisible = (hostId: string, tries: number) => {
+    if (hostAsking.has(hostId)) return;
+    hostAsking.add(hostId);
+    call("hostActions.when", hostId).then(
+      (answer) => {
+        hostAsking.delete(hostId);
+        const reply = answer as { pairs?: unknown; pending?: unknown } | null;
+        const pairs = Array.isArray(answer) ? answer : reply?.pairs;
+        const next = new Set(
+          (Array.isArray(pairs) ? pairs : []).map((pair) =>
+            JSON.stringify(pair),
+          ),
+        );
+        const before = hostVisible.get(hostId);
+        const same =
+          !!before &&
+          before.size === next.size &&
+          [...next].every((id) => before.has(id));
+        hostVisible.set(hostId, next);
+        if (!same) answered();
+        if (reply?.pending === true && tries < HOST_ACTION_TRIES) {
+          setTimeout(
+            () => fetchVisible(hostId, tries + 1),
+            HOST_ACTION_RECHECK_MS,
+          );
+        }
+      },
+      () => {
+        hostAsking.delete(hostId);
+        if (!hostVisible.get(hostId)) hostVisible.delete(hostId);
+      },
+    );
+  };
 
   return {
     ...pluginHostBridge,
@@ -179,43 +207,43 @@ export function createFrameBridge(host: FrameBridgeHost): PluginHostBridge {
       return useMemo(() => {
         void version;
         addTitles(actions);
-        const visible = visibleHostActions(actions);
+        // A new list (a plugin reloaded) asks again, keeping the last answer
+        // meanwhile so the page does not flash empty.
+        if (seenActions !== actions) {
+          seenActions = actions;
+          for (const hostId of hostVisible.keys()) fetchVisible(hostId, 0);
+        }
         const ask = (hostId: string) => {
-          if (visible.has(hostId)) return;
-          visible.set(hostId, null);
-          call("hostActions.when", hostId).then(
-            (pairs) => {
-              visible.set(
-                hostId,
-                new Set(
-                  (Array.isArray(pairs) ? pairs : []).map((pair) =>
-                    JSON.stringify(pair),
-                  ),
-                ),
-              );
-              answered();
-            },
-            () => visible.delete(hostId),
-          );
+          if (hostVisible.has(hostId)) return;
+          hostVisible.set(hostId, null);
+          fetchVisible(hostId, 0);
         };
         return actions.map((action) => {
           const id = JSON.stringify([action.pluginId ?? "", action.id]);
+          const { hasRun, ...rest } = action as typeof action & {
+            hasRun?: boolean;
+          };
           return {
-            ...action,
+            ...rest,
             icon: decodeIcon(action.icon),
             when: (record: { id?: unknown } | null | undefined) => {
               if (record?.id === undefined || record.id === null) return false;
               const hostId = String(record.id);
               ask(hostId);
-              return visible.get(hostId)?.has(id) ?? false;
+              return hostVisible.get(hostId)?.has(id) ?? false;
             },
-            run: (record: { id?: unknown } | null | undefined) =>
-              void call(
-                "hostActions.run",
-                action.pluginId ?? "",
-                action.id,
-                String(record?.id),
-              ).catch(() => {}),
+            // Only actions with their own run get one, so a plugin can tell
+            // a session it embeds (tab type only) from one it must launch.
+            run:
+              hasRun === false
+                ? undefined
+                : (record: { id?: unknown } | null | undefined) =>
+                    void call(
+                      "hostActions.run",
+                      action.pluginId ?? "",
+                      action.id,
+                      String(record?.id),
+                    ).catch(() => {}),
           };
         }) as unknown as HostActionContribution[];
       }, [actions, version]);

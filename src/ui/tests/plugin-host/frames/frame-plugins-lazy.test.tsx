@@ -496,6 +496,29 @@ describe("booting many plugins at once", () => {
     plugin.dispose();
   }, 10_000);
 
+  it("asks again for an answer that failed instead of keeping a no", async () => {
+    let fail = true;
+    const started = startFramedPlugin(summary);
+    await bootFrame({
+      when: () => {
+        if (fail) throw new Error("frame went away");
+        return true;
+      },
+    });
+    const plugin = await started;
+    const action = listHostActions().find((e) => e.id === "gizmo.open")!;
+    expect(action.when(host as never)).toBe(false);
+    await sleep(50);
+    expect(action.when(host as never)).toBe(false);
+    fail = false;
+    const now = Date.now();
+    vi.spyOn(Date, "now").mockReturnValue(now + 6_000);
+    action.when(host as never);
+    await sleep(50);
+    expect(action.when(host as never)).toBe(true);
+    plugin.dispose();
+  }, 10_000);
+
   it("keeps a new frame up while it still calls the shell", async () => {
     const started = startFramedPlugin(summary);
     const port = await bootFrame({});

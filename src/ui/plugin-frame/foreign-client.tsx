@@ -34,10 +34,11 @@ import { decodeIcon, decodeIconValue } from "./frame-icons";
 import { ForeignPlacer, scrollTarget, type PlaceBatch } from "./foreign-placer";
 import { propsSignature, useStableProps } from "./stable-props";
 import { tabbables } from "./frame-edges";
+import { useInSeamlessTile } from "@/components/tile-grid/context";
 
 type Call = (method: string, ...args: unknown[]) => Promise<unknown>;
 type Emit = (name: string, data?: unknown) => void;
-type Kind = "slot" | "extension" | "component";
+type Kind = "slot" | "extension" | "component" | "tab";
 type AnyComponent = ComponentType<Record<string, unknown>>;
 
 interface ListState {
@@ -357,7 +358,16 @@ function Placeholder({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [target.listId, target.itemKey, target.web],
   );
-  const stable = useStableProps(props);
+  // A tile around the placeholder draws the border, so the part drops its
+  // own. The shell can't see this frame's tiles, so it goes with the props.
+  const seamless = useInSeamlessTile();
+  const seamlessRef = useRef(seamless);
+  seamlessRef.current = seamless;
+  const placedProps = useMemo(
+    () => (seamless ? { ...props, __place: { seamless: true } } : props),
+    [props, seamless],
+  );
+  const stable = useStableProps(placedProps);
   const stableRef = useRef(stable);
   stableRef.current = stable;
   const lastSent = useRef<string | null>(null);
@@ -388,7 +398,7 @@ function Placeholder({
     )
       .then((ok) => {
         if (!alive || ok !== true) return;
-        placer?.add(id, node, liveRef.current);
+        placer?.add(id, node, liveRef.current, seamlessRef.current);
         setMounted(true);
       })
       .catch(() => {});
@@ -487,6 +497,9 @@ export function createForeignRuntime(options: {
     getExtension,
     useComponent: (id) =>
       (useList("component", id)[0] as AnyComponent | undefined) ?? undefined,
+    useTab: (type, hostId) =>
+      (useList("tab", type, { hostId })[0] as AnyComponent | undefined) ??
+      undefined,
     invoke: (actionId, args) => options.call("invokeAction", actionId, ...args),
     Placeholder,
     addOccluder: (element) => placer?.addOccluder(element) ?? (() => {}),

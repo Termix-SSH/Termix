@@ -3,6 +3,7 @@ import type { Host } from "@/types/ui-types";
 import { byOrderThenId, createRegistry } from "@/lib/registry";
 import type { TabShellCallbacks } from "@/shell/tab-registry";
 import type { DataReporter } from "@/components/data-view/data-reporter";
+import { getForeignRuntime } from "@/components/foreign/foreign-runtime";
 
 type Icon = ComponentType<{ className?: string; size?: number | string }>;
 
@@ -87,7 +88,15 @@ const editorToolbarItems =
 const menuItems = createRegistry<HostContextMenuItemDef>(byOrderThenId);
 
 export const registerHostAction = actions.register;
-export const useHostActions = actions.useList;
+/**
+ * Every host action. In a plugin frame the shell has the list, so it comes
+ * from there; the runtime is set before anything renders and never changes.
+ */
+export function useHostActions(): HostActionDef[] {
+  const fromShell = getForeignRuntime()?.useHostActions;
+  if (fromShell) return fromShell() as HostActionDef[];
+  return actions.useList();
+}
 
 /** Plugin actions sort by order; connect actions default to the end. */
 export function actionOrder(action: HostActionDef): number {

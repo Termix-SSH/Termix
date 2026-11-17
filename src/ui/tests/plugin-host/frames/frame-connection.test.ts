@@ -438,11 +438,11 @@ describe("host actions for a frame", () => {
 
     expect(await call("hostActions.when", ["7"])).toMatchObject({
       ok: true,
-      value: [["files", "files.open"]],
+      value: { pairs: [["files", "files.open"]], pending: false },
     });
     expect(await call("hostActions.when", ["99"])).toMatchObject({
       ok: true,
-      value: [],
+      value: { pairs: [], pending: false },
     });
 
     const run = ["files", "files.open", "7"];

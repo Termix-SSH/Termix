@@ -6,12 +6,18 @@
  */
 
 import { getActionSlot } from "@/shell/action-registry";
+import { listHostActions } from "@/sidebar/host-contributions";
 import { getPluginStoreState } from "../plugin-store";
 
-export type ForeignKind = "slot" | "extension" | "component";
+export type ForeignKind = "slot" | "extension" | "component" | "tab";
 
 export function isForeignKind(value: unknown): value is ForeignKind {
-  return value === "slot" || value === "extension" || value === "component";
+  return (
+    value === "slot" ||
+    value === "extension" ||
+    value === "component" ||
+    value === "tab"
+  );
 }
 
 /** The ids a plugin's manifest says it uses. */
@@ -30,5 +36,9 @@ export function mayPlaceForeign(
   if (id.length === 0 || id.length > 200) return false;
   if (manifestUses(consumerId).includes(id)) return true;
   if (kind === "slot") return getActionSlot(id)?.pluginId === consumerId;
+  // A tool a host action opens, the same tab a click on it would open.
+  if (kind === "tab") {
+    return listHostActions().some((action) => action.tabType === id);
+  }
   return id.startsWith(`${consumerId}.`);
 }
