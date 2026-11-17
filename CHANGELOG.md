@@ -85,6 +85,7 @@
 
 ### Fixed
 
+- Desktop app: a plugin copied from the linked server, like Remote Desktop, no longer fails to start with "Cannot find module 'ws'"
 - Submenus inside a menu open again instead of being cut off by the menu around them
 - Right after the server starts, a host no longer says it needs a plugin that is installed and still starting. Its login waits for that plugin instead
 - Windows: saving the database tries again when the file is briefly locked, so a quick restart no longer leaves every plugin off

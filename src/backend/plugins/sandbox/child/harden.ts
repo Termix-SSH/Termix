@@ -11,7 +11,7 @@
 import module from "node:module";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { maySignal, NO_NETWORK_ENV } from "./guards.js";
+import { maySignal, NO_NETWORK_ENV, resolveFromApp } from "./guards.js";
 
 /**
  * Worker options a plugin may pass. execArgv is left out on purpose: a
@@ -70,12 +70,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const anchor = pathToFileURL(
   path.resolve(here, "../../../../../../package.json"),
 ).href;
-
-function isBare(specifier: string): boolean {
-  if (specifier.startsWith(".") || specifier.startsWith("/")) return false;
-  if (specifier.startsWith("#")) return false;
-  return !/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(specifier);
-}
+const fromApp = module.createRequire(anchor);
 
 // Runs once, however many times the module is loaded.
 const HARDENED = Symbol.for("termix.sandbox.hardened");
@@ -92,13 +87,9 @@ function harden(): void {
       try {
         return next(specifier, context);
       } catch (error) {
-        if (
-          isBare(specifier) &&
-          (error as { code?: string }).code === "ERR_MODULE_NOT_FOUND"
-        ) {
-          return next(specifier, { ...context, parentURL: anchor });
-        }
-        throw error;
+        return resolveFromApp(specifier, context, error, next, anchor, (id) =>
+          fromApp.resolve(id),
+        );
       }
     },
   });
