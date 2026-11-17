@@ -154,6 +154,7 @@
 - Desktop app with connections starting on the server: hosts given by name connect again instead of failing with Bad packet length
 - Host scripts run on hosts whose login shell is fish or csh
 - Linux desktop app: Ctrl+W closes the active tab instead of the window
+- Desktop app and Chrome on macOS: a button's tooltip shows wherever the pointer rests on it, not only beside its icon
 
 ## 26.11.1
 

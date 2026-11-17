@@ -301,6 +301,19 @@
   }
 }
 
+/* Chromium clears a title tooltip whenever the element under the pointer
+   changes, even when the text stays the same, and on macOS (the desktop app
+   and Chrome) that hides it and starts its delay again. Over an icon button
+   every small movement crosses between the button, the icon and the icon's
+   strokes, so the tooltip mostly showed only on the button's padding. The
+   pointer goes through icons to their button, as Button already does. */
+@layer base {
+  button svg,
+  [role="button"] svg {
+    pointer-events: none;
+  }
+}
+
 /* Font size scale applied to html element */
 html.fs-xs {
   font-size: 12px;
