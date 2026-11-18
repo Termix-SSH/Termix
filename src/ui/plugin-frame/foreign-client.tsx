@@ -70,6 +70,7 @@ let nextView = 1;
 
 interface ViewHandlers {
   size: (size: { width: number; height: number }) => void;
+  shown: () => void;
   focusOut: (dir: "next" | "prev") => void;
   wheel: (dx: number, dy: number) => void;
 }
@@ -372,6 +373,8 @@ function Placeholder({
   stableRef.current = stable;
   const lastSent = useRef<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  // The part painted, so a page can wait for its parts before showing.
+  const [shown, setShown] = useState(false);
   const liveRef = useRef(live);
   liveRef.current = live;
 
@@ -381,6 +384,7 @@ function Placeholder({
     let alive = true;
     views.set(id, {
       size: (next) => setSize(next),
+      shown: () => setShown(true),
       focusOut: (dir) => focusPast(node, dir),
       wheel: (dx, dy) => scrollTarget(node).scrollBy(dx, dy),
     });
@@ -408,6 +412,7 @@ function Placeholder({
       placer?.remove(id);
       emit?.("foreign.dispose", { id });
       setMounted(false);
+      setShown(false);
     };
   }, [id, target.listId, target.itemKey, target.web]);
 
@@ -429,6 +434,7 @@ function Placeholder({
       ref={element}
       data-foreign-slot={target.itemKey}
       data-foreign-id={id}
+      data-foreign-shown={shown ? "" : undefined}
       tabIndex={focusable ? 0 : -1}
       className={className}
       style={{ ...fitStyle(target.fit, size), ...style }}
@@ -530,6 +536,8 @@ export function receiveForeignEvent(name: string, data: unknown): boolean {
     if (typeof size?.width === "number" && typeof size.height === "number") {
       view.size({ width: size.width, height: size.height });
     }
+  } else if (name === "foreign.shown") {
+    view.shown();
   } else if (name === "foreign.focusOut") {
     view.focusOut(entry.dir === "prev" ? "prev" : "next");
   } else if (name === "foreign.wheel") {

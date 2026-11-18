@@ -94,6 +94,7 @@
 
 ### Fixed
 
+- Settings opens faster: the plugin list loads once and is reused instead of being fetched again by every part of the page
 - The companion bar beside a tab scrolls when it has more buttons than fit, instead of covering what is below it
 - Desktop app: a plugin copied from the linked server, like Remote Desktop, no longer fails to start with "Cannot find module 'ws'"
 - Submenus inside a menu open again instead of being cut off by the menu around them

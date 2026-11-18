@@ -723,16 +723,13 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
     // One query for every plugin rather than one per plugin.
     const grantsByPlugin = new Map<string, string[]>();
     if (canManage) {
-      const grantRepository = createCurrentPluginPermissionGrantRepository();
-      await Promise.all(
-        records.map(async (record) => {
-          const grants = await grantRepository.listByPlugin(record.id);
-          grantsByPlugin.set(
-            record.id,
-            grants.map((grant) => grant.capability),
-          );
-        }),
-      );
+      const grants =
+        await createCurrentPluginPermissionGrantRepository().listAll();
+      for (const grant of grants) {
+        const list = grantsByPlugin.get(grant.pluginId) ?? [];
+        list.push(grant.capability);
+        grantsByPlugin.set(grant.pluginId, list);
+      }
     }
 
     const plugins = await Promise.all(

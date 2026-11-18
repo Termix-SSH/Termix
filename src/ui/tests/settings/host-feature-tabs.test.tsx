@@ -3,6 +3,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resetInstalledPluginsCache } from "@/hooks/use-installed-plugins";
 import {
   cleanup,
   fireEvent,
@@ -64,6 +65,7 @@ function plugin(overrides: Partial<PluginSummary> = {}): PluginSummary {
 }
 
 beforeEach(() => {
+  resetInstalledPluginsCache();
   resetHostFeatureTabs();
   resetHostEditorSections();
 });

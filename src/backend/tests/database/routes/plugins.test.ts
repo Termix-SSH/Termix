@@ -33,6 +33,7 @@ const state = vi.hoisted(() => ({
     grantedBy: string | null;
     source?: string;
   }[],
+  grantListCalls: 0,
   // Which users have admin.plugins.manage, keyed by userId.
   managers: new Set<string>(["admin-1"]),
   // Plugins the loader reports as running.
@@ -163,6 +164,13 @@ vi.mock("../../../database/repositories/factory.js", () => ({
       state.grants
         .filter((g) => g.pluginId === pluginId)
         .map((g) => ({ capability: g.capability })),
+    listAll: async () => {
+      state.grantListCalls++;
+      return state.grants.map((g) => ({
+        pluginId: g.pluginId,
+        capability: g.capability,
+      }));
+    },
     findGrant: async (pluginId: string, capability: string) =>
       state.grants.find(
         (g) => g.pluginId === pluginId && g.capability === capability,
@@ -298,6 +306,7 @@ describe("plugins route", () => {
     holdMock.calls = [];
     state.plugins = new Map();
     state.grants = [];
+    state.grantListCalls = 0;
     state.managers = new Set(["admin-1"]);
     state.active = new Set();
     state.framed = new Set();
@@ -785,6 +794,25 @@ describe("plugins route", () => {
         grantedCapabilities: ["hosts:read"],
       }),
     ]);
+  });
+
+  it("reads every plugin's grants in one query", async () => {
+    state.plugins.set("sample-plugin", makePlugin());
+    state.plugins.set("other", makePlugin({ id: "other" }));
+    state.grants.push(
+      { pluginId: "sample-plugin", capability: "hosts:read", grantedBy: null },
+      { pluginId: "other", capability: "kv:own", grantedBy: null },
+    );
+
+    const body = (await (await fetch(`${baseUrl}/plugins`)).json()) as Array<{
+      id: string;
+      grantedCapabilities: string[];
+    }>;
+
+    expect(state.grantListCalls).toBe(1);
+    expect(
+      Object.fromEntries(body.map((p) => [p.id, p.grantedCapabilities])),
+    ).toEqual({ "sample-plugin": ["hosts:read"], other: ["kv:own"] });
   });
 
   it("marks server-only plugins on a linked desktop", async () => {
