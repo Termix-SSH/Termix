@@ -11,13 +11,12 @@ describe("makeTreeReadable", () => {
     "opens code unpacked under core's private umask to the plugin's user",
     async () => {
       const root = fs.mkdtempSync(path.join(os.tmpdir(), "readable-"));
-      const old = process.umask(0o077);
-      try {
-        fs.mkdirSync(path.join(root, "plugin", "dist"), { recursive: true });
-        fs.writeFileSync(path.join(root, "plugin", "dist", "backend.js"), "x");
-      } finally {
-        process.umask(old);
-      }
+      // What tar leaves under umask 077 (workers can't set the umask).
+      fs.mkdirSync(path.join(root, "plugin", "dist"), { recursive: true });
+      fs.writeFileSync(path.join(root, "plugin", "dist", "backend.js"), "x");
+      fs.chmodSync(path.join(root, "plugin", "dist", "backend.js"), 0o600);
+      fs.chmodSync(path.join(root, "plugin", "dist"), 0o700);
+      fs.chmodSync(path.join(root, "plugin"), 0o700);
       const mode = (p: string) => fs.statSync(p).mode & 0o777;
       expect(mode(path.join(root, "plugin"))).toBe(0o700);
 
