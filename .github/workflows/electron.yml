@@ -213,15 +213,14 @@ jobs:
           }
           echo "version=$VERSION" >> $env:GITHUB_OUTPUT
 
-      # Pinned Node and the OS sandbox helper that run plugin backends. ia32
-      # has no Node 26 build, so that build ships none and refuses them.
+      # Pinned Node and the OS sandbox helper that run plugin backends.
       - name: Build plugin runtime
         working-directory: native/plugin-jail
         run: |
           rustup toolchain install
           rustup target add x86_64-pc-windows-msvc aarch64-pc-windows-msvc
           Set-Location ../..
-          node scripts/build-plugin-runtime.cjs --platform win32 --arch x64,ia32,arm64
+          node scripts/build-plugin-runtime.cjs --platform win32 --arch x64,arm64
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
       - name: Build Windows (All Architectures)
@@ -246,7 +245,7 @@ jobs:
           }
           npm run build
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          npx electron-builder --win --x64 --ia32 --arm64 --publish never @sign
+          npx electron-builder --win --x64 --arm64 --publish never @sign
 
       # The real fence on the files that ship: a probe plugin can't read the
       # database, write outside its folder, start a process, connect out or
@@ -273,7 +272,7 @@ jobs:
       # The updater only installs the x64 NSIS build; 32-bit and ARM installs get a link.
       # The combined multi-arch installer is never uploaded.
       - name: Fix Windows update files
-        run: node scripts/fix-update-info.cjs --drop ia32 --drop arm64 --drop termix_windows_nsis.exe release/latest.yml release/beta.yml
+        run: node scripts/fix-update-info.cjs --drop arm64 --drop termix_windows_nsis.exe release/latest.yml release/beta.yml
 
       - name: Upload Windows x64 NSIS Installer
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -281,14 +280,6 @@ jobs:
         with:
           name: termix_windows_x64_nsis
           path: release/termix_windows_x64_nsis.exe
-          retention-days: 30
-
-      - name: Upload Windows ia32 NSIS Installer
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: hashFiles('release/termix_windows_ia32_nsis.exe') != '' && inputs.artifact_destination != 'none'
-        with:
-          name: termix_windows_ia32_nsis
-          path: release/termix_windows_ia32_nsis.exe
           retention-days: 30
 
       - name: Upload Windows arm64 NSIS Installer
@@ -307,14 +298,6 @@ jobs:
           path: release/termix_windows_x64_msi.msi
           retention-days: 30
 
-      - name: Upload Windows ia32 MSI Installer
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: hashFiles('release/termix_windows_ia32_msi.msi') != '' && inputs.artifact_destination != 'none'
-        with:
-          name: termix_windows_ia32_msi
-          path: release/termix_windows_ia32_msi.msi
-          retention-days: 30
-
       - name: Upload Windows arm64 MSI Installer
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_windows_arm64_msi.msi') != '' && inputs.artifact_destination != 'none'
@@ -327,11 +310,6 @@ jobs:
         if: hashFiles('release/win-unpacked/*') != ''
         run: |
           Compress-Archive -Path "release\win-unpacked\*" -DestinationPath "termix_windows_x64_portable.zip"
-
-      - name: Create Windows ia32 Portable zip
-        if: hashFiles('release/win-ia32-unpacked/*') != ''
-        run: |
-          Compress-Archive -Path "release\win-ia32-unpacked\*" -DestinationPath "termix_windows_ia32_portable.zip"
 
       - name: Create Windows arm64 Portable zip
         if: hashFiles('release/win-arm64-unpacked/*') != ''
@@ -355,14 +333,6 @@ jobs:
         with:
           name: termix_windows_x64_portable
           path: termix_windows_x64_portable.zip
-          retention-days: 30
-
-      - name: Upload Windows ia32 Portable
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: hashFiles('termix_windows_ia32_portable.zip') != '' && inputs.artifact_destination != 'none'
-        with:
-          name: termix_windows_ia32_portable
-          path: termix_windows_ia32_portable.zip
           retention-days: 30
 
       - name: Upload Windows arm64 Portable
