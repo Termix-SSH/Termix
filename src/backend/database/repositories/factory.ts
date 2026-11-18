@@ -15,6 +15,7 @@ import { HostResolutionRepository } from "./host-resolution-repository.js";
 import { HostSidebarPreferenceRepository } from "./host-sidebar-preference-repository.js";
 import { CredentialSidebarPreferenceRepository } from "./credential-sidebar-preference-repository.js";
 import { UiPreferenceRepository } from "./ui-preference-repository.js";
+import { FrameRegistrationRepository } from "./frame-registration-repository.js";
 import { OpenTabRepository } from "./open-tab-repository.js";
 import { OperationRepository } from "./operation-repository.js";
 import { PluginRepository } from "./plugin-repository.js";
@@ -221,6 +222,13 @@ export function createCurrentUiPreferenceRepository(): UiPreferenceRepository {
   return new UiPreferenceRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("ui_preference_repository_write"),
+  );
+}
+
+export function createCurrentFrameRegistrationRepository(): FrameRegistrationRepository {
+  return new FrameRegistrationRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryLazyWriteHook("frame_registration_repository_write"),
   );
 }
 

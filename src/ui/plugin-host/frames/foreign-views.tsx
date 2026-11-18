@@ -47,6 +47,11 @@ import {
   type FrameFit,
 } from "./PluginFrameView";
 import { frameMetaOf } from "./frame-meta";
+import {
+  foreignAnchorOf,
+  shellScrollBoxOf,
+  subscribeForeignAnchors,
+} from "./foreign-anchors";
 import { GrantedWebView, type WebPlace } from "./granted-web-view";
 import { resolveSlotFit } from "./slot-fit";
 import {
@@ -106,6 +111,8 @@ interface Consumer {
   views: Map<string, ForeignView>;
   dragging: boolean;
   layer: HTMLDivElement | null;
+  /** The layer sits next to the iframe and moves with it (foreign-anchors). */
+  anchored: boolean;
   frame: Rect;
   box: Rect;
   shown: boolean;
@@ -129,6 +136,9 @@ function subscribe(listener: () => void) {
     listeners.delete(listener);
   };
 }
+
+// A layer's anchor coming or going redraws where the layers sit.
+subscribeForeignAnchors(emitChange);
 
 function validId(value: unknown): value is string {
   return (
@@ -187,6 +197,8 @@ function getConsumer(
       views: new Map(),
       dragging: false,
       layer: null,
+      // Fixed for the consumer's life, so its layer never has to move.
+      anchored: !!foreignAnchorOf(iframe),
       frame: EMPTY_RECT,
       box: EMPTY_RECT,
       shown: false,
@@ -532,6 +544,13 @@ function applyLayer(consumer: Consumer): void {
   const layer = consumer.layer;
   if (!layer) return;
   const { box } = consumer;
+  if (consumer.anchored) {
+    // Sized by its anchor and clipped by the boxes around the frame itself.
+    layer.style.display = consumer.shown ? "block" : "none";
+    layer.style.pointerEvents = "none";
+    layer.dataset.dragging = consumer.dragging ? "1" : "";
+    return;
+  }
   layer.style.left = `${box.x}px`;
   layer.style.top = `${box.y}px`;
   layer.style.width = `${box.width}px`;
@@ -550,14 +569,25 @@ function applyView(consumer: Consumer, view: ForeignView): void {
   const fit = view.web
     ? "fill"
     : consumer.lists.get(view.listId)?.items.get(view.itemKey)?.fit;
-  const out = placeView({
+  const input = {
     frame: consumer.frame,
     box: consumer.box,
     frameShown: consumer.shown,
     placement: view.placement,
     occluders: view.covers,
     drawn: view.drawn,
-  });
+  };
+  // An anchored layer is the frame's own box, so frame coords are layer
+  // coords and the browser clips it with the frame.
+  const local: Rect = {
+    x: 0,
+    y: 0,
+    width: consumer.frame.width,
+    height: consumer.frame.height,
+  };
+  const out = placeView(
+    consumer.anchored ? { ...input, frame: local, box: local } : input,
+  );
   el.style.left = `${out.left}px`;
   el.style.top = `${out.top}px`;
   el.style.width = fit === "inline" || fit === "bar" ? "" : `${out.width}px`;
@@ -571,7 +601,11 @@ function applyView(consumer: Consumer, view: ForeignView): void {
   el.style.pointerEvents =
     out.hidden || !view.interactive || consumer.dragging ? "none" : "auto";
   el.dataset.foreignHidden = out.hidden ? "1" : "";
-  if (view.web) view.place = { rect: out.shownInPage, hidden: out.hidden };
+  if (view.web) {
+    // A native view needs where it shows in the page, whatever the layer.
+    const page = consumer.anchored ? placeView(input) : out;
+    view.place = { rect: page.shownInPage, hidden: page.hidden };
+  }
 }
 
 let loop = 0;
@@ -825,7 +859,12 @@ function WebViewBox({
       ref={box}
       data-foreign-view={consumer.pluginId}
       data-foreign-id={view.id}
-      style={{ position: "absolute", visibility: "hidden", display: "flex" }}
+      style={{
+        position: "absolute",
+        visibility: "hidden",
+        display: "flex",
+        overflow: "hidden",
+      }}
     >
       <GrantedWebView
         pluginId={consumer.pluginId}
@@ -878,6 +917,12 @@ function PartViewBox({
       const { dx, dy } = (data ?? {}) as { dx?: unknown; dy?: unknown };
       if (typeof dx !== "number" || typeof dy !== "number") return;
       const clamp = (n: number) => Math.max(-5000, Math.min(5000, n));
+      // The shell scrolls this page, so the shell takes the wheel too.
+      const scroller = shellScrollBoxOf(consumer.iframe);
+      if (scroller) {
+        scroller.scrollBy({ left: clamp(dx), top: clamp(dy) });
+        return;
+      }
       consumer.emit("foreign.wheel", {
         id: view.id,
         dx: clamp(dx),
@@ -891,7 +936,12 @@ function PartViewBox({
       ref={box}
       data-foreign-view={item.pluginId}
       data-foreign-id={view.id}
-      style={{ position: "absolute", visibility: "hidden", display: "flex" }}
+      style={{
+        position: "absolute",
+        visibility: "hidden",
+        display: "flex",
+        overflow: "hidden",
+      }}
     >
       {meta ? (
         <PluginFrameView
@@ -932,7 +982,17 @@ function Layer({ consumer }: { consumer: Consumer }) {
     <div
       ref={ref}
       data-foreign-layer={consumer.pluginId}
-      style={{ position: "fixed", overflow: "hidden", display: "none" }}
+      style={
+        consumer.anchored
+          ? {
+              position: "absolute",
+              inset: 0,
+              overflow: "hidden",
+              display: "none",
+              zIndex: 1,
+            }
+          : { position: "fixed", overflow: "hidden", display: "none" }
+      }
     >
       {[...consumer.views.values()].map((view) => (
         <ForeignViewBox
@@ -975,15 +1035,27 @@ export function ForeignViewHost() {
           return <ComponentRunner key={key} consumer={consumer} list={entry} />;
         }),
       )}
-      {list.some((consumer) => consumer.views.size > 0) &&
+      {list.some((consumer) => consumer.views.size > 0 && !consumer.anchored) &&
         createPortal(
           list
-            .filter((consumer) => consumer.views.size > 0)
+            .filter((consumer) => consumer.views.size > 0 && !consumer.anchored)
             .map((consumer) => (
               <Layer key={consumer.owner} consumer={consumer} />
             )),
           container(),
         )}
+      {list
+        .filter((consumer) => consumer.views.size > 0 && consumer.anchored)
+        .map((consumer) => {
+          const anchor = foreignAnchorOf(consumer.iframe);
+          return anchor
+            ? createPortal(
+                <Layer key={consumer.owner} consumer={consumer} />,
+                anchor,
+                consumer.owner,
+              )
+            : null;
+        })}
     </>
   );
 }

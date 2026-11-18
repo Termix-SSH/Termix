@@ -255,6 +255,7 @@ export function FrameRoot({
       <ThemeSync />
       <div
         ref={box}
+        data-frame-box=""
         className={
           fit === "fill"
             ? "flex h-full w-full min-h-0 flex-col"

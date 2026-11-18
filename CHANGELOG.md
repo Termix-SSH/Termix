@@ -4,6 +4,9 @@
 
 ### Added
 
+- What plugins add to the app is kept on the server too, so a new browser, device or cleared cache opens almost as fast as usual instead of starting every plugin first
+- The first time plugins have to start one by one, one screen says so with how far along it is, instead of a page that keeps changing
+- Plugin pages can let Termix scroll them, so parts from other plugins on the page move with it instead of trailing behind
 - Secret references like `bw://web-1/username` also work in a host's or credential's username, and in the username of other protocol logins
 - Desktop app: closing the window can quit Termix instead of keeping it in the tray
 - Desktop app: the first time closing the window keeps Termix in the tray, a notice says it is still running and how to quit
@@ -62,6 +65,11 @@
 
 ### Changed
 
+- The host list works out what each plugin offers for a host once per change instead of on every redraw, which saves a lot of CPU with many plugins
+- Firefox no longer logs a clipboard warning for every plugin view
+- Parts a plugin page shows from other plugins open at the size they had last time instead of growing from nothing
+- Each plugin view downloads its icons as one file instead of dozens
+- Status signals for many hosts load much faster: hosts are checked once per request and signals are read side by side
 - Text boxes, dropdowns and checkboxes are a shade darker than what they sit on, so they stand out on pages and panels alike
 - Server wide status tiles keep their answer for a minute like host tiles, instead of asking the plugin on every refresh
 - Each plugin seals its secrets with its own key, so one plugin can't open what another sealed. Values sealed before move to the new key on the first start
@@ -86,6 +94,7 @@
 
 ### Fixed
 
+- The companion bar beside a tab scrolls when it has more buttons than fit, instead of covering what is below it
 - Desktop app: a plugin copied from the linked server, like Remote Desktop, no longer fails to start with "Cannot find module 'ws'"
 - Submenus inside a menu open again instead of being cut off by the menu around them
 - Right after the server starts, a host no longer says it needs a plugin that is installed and still starting. Its login waits for that plugin instead

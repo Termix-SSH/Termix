@@ -562,6 +562,31 @@
         "key-ops-run": "refuse"
       }
     },
+    "GET /plugins/frame-registrations": {
+      "access": "user",
+      "query": {
+        "client": "web"
+      },
+      "allowed": "any",
+      "note": "Each person reads only their own copy; API keys are refused since frames belong to a signed in page.",
+      "expect": {
+        "key-ops-read": "refuse",
+        "key-ops-run": "refuse"
+      }
+    },
+    "PUT /plugins/frame-registrations": {
+      "access": "user",
+      "body": {
+        "client": "web",
+        "entries": {}
+      },
+      "allowed": "any",
+      "note": "Each person writes only their own copy; API keys are refused since frames belong to a signed in page.",
+      "expect": {
+        "key-ops-read": "refuse",
+        "key-ops-run": "refuse"
+      }
+    },
     "POST /plugins/frame-tokens": {
       "access": "user",
       "body": {

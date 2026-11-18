@@ -5,6 +5,7 @@ import { OnboardingHost } from "@/onboarding/OnboardingHost";
 import { DesktopUpdateToasts } from "@/shell/DesktopUpdateToasts";
 import { DesktopTrayNotice } from "@/shell/DesktopTrayNotice";
 import { SafeModeNotice } from "@/shell/SafeModeNotice";
+import { ColdBootStage } from "@/shell/ColdBootStage";
 import { TabPortals } from "@/shell/stage/TabPortals";
 import { LayoutHost } from "@/shell/layout/LayoutHost";
 import { ShellControllerProvider } from "@/shell/controller/ShellControllerProvider";
@@ -30,6 +31,7 @@ export function ShellRoot({
         <TabPortals />
         <ComponentSlot slotId="shell.overlay" />
         <OnboardingHost />
+        <ColdBootStage />
         <SafeModeNotice />
         <StepUpPromptHost />
         {isElectron() && <DesktopUpdateToasts />}

@@ -15,6 +15,9 @@ import {
   type ReactNode,
 } from "react";
 import { usePluginStore } from "../plugin-store";
+import { setForeignAnchor } from "./foreign-anchors";
+import { FRAME_ALLOW } from "./frame-allow";
+import { lastSize, rememberSize, sizeKey } from "./frame-sizes";
 import { useInSeamlessTile } from "@/components/tile-grid/context";
 import {
   useSurfaceClose,
@@ -32,6 +35,8 @@ import { LoadingState } from "@/components/loading-state";
 export const LOADING_DELAY_MS = 300;
 /** Longest the spinner stays up after the frame started. */
 const SHOWN_GRACE_MS = 2_000;
+
+type Size = { width: number; height: number };
 
 /**
  * fill: takes the box it is given. content: full width, as tall as the
@@ -149,10 +154,16 @@ export function PluginFrameView({
   eventRef.current = onFrameEvent;
   const iframe = useRef<HTMLIFrameElement>(null);
   const connection = useRef<FrameConnection | null>(null);
-  const [size, setSize] = useState<{ width: number; height: number } | null>(
-    null,
-  );
+  const remembered = sizeKey(pluginId, frameKey, props);
+  const rememberedRef = useRef(remembered);
+  rememberedRef.current = remembered;
+  const [size, setSize] = useState<Size | null>(() => lastSize(remembered));
   const [ready, setReady] = useState(false);
+  // The view asked the shell to scroll it (useShellScroll).
+  const [shellScroll, setShellScroll] = useState(false);
+  const [viewport, setViewport] = useState(0);
+  const wrap = useRef<HTMLDivElement>(null);
+  const anchor = useRef<HTMLDivElement>(null);
   // First paint, which comes a little after ready.
   const [shown, setShown] = useState(false);
   // Layout context a plugin component reads, which can't cross by itself.
@@ -185,6 +196,8 @@ export function PluginFrameView({
   // shows the spinner, just without a background of its own.
   const loads =
     fit === "fill" && (!seeThrough || !!transparent) && !className && !style;
+  const loadsRef = useRef(loads);
+  loadsRef.current = loads;
   const src = useMemo(
     () =>
       frameUrl(pluginId, {
@@ -228,6 +241,7 @@ ${src}`;
     kept?.connection.close();
     setReady(false);
     setShown(false);
+    setShellScroll(false);
     lastSent.current = null;
     const next = connectFrame(element, pluginId, "view", frameKey, {
       getProps: () => stableRef.current,
@@ -235,6 +249,13 @@ ${src}`;
       onEvent: (name, data) => {
         if (name === "shown") {
           setShown(true);
+          return;
+        }
+        if (name === "shellScroll") {
+          // Only a full size tab view has a box of its own to scroll.
+          if (loadsRef.current) {
+            setShellScroll((data as { on?: unknown } | null)?.on === true);
+          }
           return;
         }
         if (name === "drawn") {
@@ -254,6 +275,7 @@ ${src}`;
           height: Math.max(0, Math.min(height, 20_000)),
         };
         setSize(next);
+        rememberSize(rememberedRef.current, next);
         eventRef.current?.(name, next);
       },
     });
@@ -262,6 +284,43 @@ ${src}`;
     // controlRef is read once per frame.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pluginId, frameKey, src]);
+
+  // The layer for other plugins' parts sits next to the frame from the
+  // start, so it never moves when the view starts or stops shell scrolling.
+  useLayoutEffect(() => {
+    const element = iframe.current;
+    const box = anchor.current;
+    if (!element || !box) return;
+    setForeignAnchor(element, box);
+    return () => setForeignAnchor(element, null);
+  }, [loads]);
+
+  // The view lays out at least as tall as the box it scrolls in.
+  useEffect(() => {
+    const box = wrap.current;
+    if (!shellScroll || !box) return;
+    const report = () => {
+      const height = box.clientHeight;
+      setViewport(height);
+      connection.current?.port?.emit("viewport", { height });
+    };
+    report();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(report);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [shellScroll, ready]);
+
+  // A view placed in another plugin's page tells it the size it had last
+  // time right away, so the page lays out once instead of as it loads.
+  useLayoutEffect(() => {
+    const known = lastSize(rememberedRef.current);
+    if (known && fit !== "fill" && fit !== "overlay") {
+      eventRef.current?.("size", known);
+    }
+    // Once per view.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pluginId, frameKey]);
 
   // No background frame here: a call into the plugin's code starts it.
 
@@ -309,8 +368,10 @@ ${src}`;
     port.emit("props", stable);
   }, [ready, stable]);
 
-  const sizing: CSSProperties =
-    fit === "fill" || fit === "overlay"
+  const scrolledHeight = Math.max(size?.height ?? 0, viewport);
+  const sizing: CSSProperties = shellScroll
+    ? { width: "100%", height: `${scrolledHeight}px`, flex: "none" }
+    : fit === "fill" || fit === "overlay"
       ? { width: "100%", height: "100%", flex: "1 1 auto", minHeight: 0 }
       : fit === "inline"
         ? {
@@ -339,7 +400,7 @@ ${src}`;
       src={src}
       sandbox={SANDBOX}
       referrerPolicy="no-referrer"
-      allow="clipboard-write"
+      allow={FRAME_ALLOW}
       title={pluginId}
       data-plugin-frame={pluginId}
       className={className}
@@ -358,10 +419,29 @@ ${src}`;
   if (loads) {
     return (
       <div
+        ref={wrap}
         className="relative flex h-full min-h-0 w-full flex-1 flex-col"
+        style={
+          shellScroll
+            ? { display: "block", overflowX: "hidden", overflowY: "auto" }
+            : undefined
+        }
         data-frame-loading={ready ? undefined : ""}
+        data-shell-scroll={shellScroll ? "" : undefined}
       >
         {frame}
+        <div
+          ref={anchor}
+          data-foreign-anchor=""
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: "100%",
+            height: shellScroll ? `${scrolledHeight}px` : "100%",
+            pointerEvents: "none",
+          }}
+        />
         {slow && waiting && (
           <LoadingState
             className={

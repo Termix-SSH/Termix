@@ -38,6 +38,7 @@ function addTitles(entries: Record<string, unknown>[]): void {
 import type { ForeignRuntime } from "@/components/foreign/foreign-runtime";
 import { useFrameShell } from "./frame-shell";
 import { getFrameState, useFrameState } from "./frame-store";
+import { useFrameShellScroll } from "./shell-scroll";
 
 export interface FrameBridgeHost {
   pluginId: string;
@@ -140,6 +141,8 @@ export function createFrameBridge(host: FrameBridgeHost): PluginHostBridge {
     },
 
     useShell: () => useFrameShell(host.tabs, showTab),
+
+    useShellScroll: useFrameShellScroll,
 
     toast: {
       success: toast("success"),

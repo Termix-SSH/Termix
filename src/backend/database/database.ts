@@ -37,6 +37,7 @@ import {
 import { attachPluginWebSockets } from "../plugins/ws.js";
 import { registerSshRelay } from "../hosts/ssh-relay.js";
 import pluginRoutes from "./routes/plugins.js";
+import frameRegistrationRoutes from "./routes/frame-registrations.js";
 import { createPluginAssetsRouter } from "../plugins/assets.js";
 import { getPluginRuntime } from "../plugins/index.js";
 import { pluginEvents, TOPICS } from "../plugins/events.js";
@@ -1604,6 +1605,7 @@ registerAuditLogRoutes(app, authenticateJWT);
 app.use("/sync", syncForwarder);
 app.use("/dashboard", dashboardRoutes);
 app.use("/operations", operationsRoutes);
+app.use("/plugins/frame-registrations", frameRegistrationRoutes);
 app.use("/plugins", pluginRoutes);
 app.use(
   "/plugin-assets",

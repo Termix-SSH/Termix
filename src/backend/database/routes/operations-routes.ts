@@ -22,6 +22,8 @@ import {
 } from "../../operations/run-access.js";
 import {
   flattenResourceRows,
+  createReadScope,
+  mapLimited,
   readAcrossHosts,
   readServerSignal,
 } from "../../operations/resources.js";
@@ -576,34 +578,38 @@ router.get("/signals", authenticateJWT, async (req, res) => {
         ? new Set(req.query.ids.split(","))
         : null;
     const hostIds = hostIdsFrom(req.query.hostIds);
-    const signals = [];
-    for (const signal of catalog.signals) {
-      if (wanted && !wanted.has(signal.id)) continue;
+    const scope = createReadScope();
+    const origin = originOf(authReq);
+    const wantedSignals = catalog.signals.filter(
+      (signal) => !wanted || wanted.has(signal.id),
+    );
+    const signals = await mapLimited(wantedSignals, 8, async (signal) => {
+      const freshMs = signal.refreshSec ? signal.refreshSec * 1000 : undefined;
       if (signal.scope === "server") {
         const result = await readServerSignal({
           actionId: signal.read,
           userId: authReq.userId,
-          freshMs: signal.refreshSec ? signal.refreshSec * 1000 : undefined,
-          origin: originOf(authReq),
+          freshMs,
+          origin,
         });
-        signals.push({
+        return {
           id: signal.id,
           hosts: [],
           result: result as SignalResult | undefined,
-        });
-        continue;
+        };
       }
-      signals.push({
+      return {
         id: signal.id,
         hosts: await readAcrossHosts<SignalResult>({
           userId: authReq.userId,
           actionId: signal.read,
           hostIds,
-          freshMs: signal.refreshSec ? signal.refreshSec * 1000 : undefined,
-          origin: originOf(authReq),
+          freshMs,
+          origin,
+          scope,
         }),
-      });
-    }
+      };
+    });
     res.json({ signals });
   } catch (error) {
     sendError(res, error, "operations_signals");

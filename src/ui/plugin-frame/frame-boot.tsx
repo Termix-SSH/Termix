@@ -57,6 +57,7 @@ import { createForeignRuntime, receiveForeignEvent } from "./foreign-client";
 import { focusEdge, watchEdges } from "./frame-edges";
 import { withPluginScope } from "@/plugin-host/scope";
 import { FrameRoot, setFrameProps, type FrameFit } from "./frame-root";
+import { setShellScrollEmitter, setShellViewport } from "./shell-scroll";
 import { whenFrameShown } from "./frame-paint";
 
 /** Time for overlay effects to run before the frame reports its live work. */
@@ -427,6 +428,9 @@ async function boot() {
           : undefined,
       }),
     );
+    if (params.fit === "fill") {
+      setShellScrollEmitter((on) => port.emit("shellScroll", { on }));
+    }
     if (params.edge) watchEdges((name, data) => port.emit(name, data));
     // Painted, not just started: the shell keeps its spinner until then.
     void whenFrameShown().then(() =>
@@ -502,6 +506,10 @@ async function boot() {
     }
     if (name === "props" && data && typeof data === "object") {
       setFrameProps(data as Record<string, unknown>);
+      return;
+    }
+    if (name === "viewport") {
+      setShellViewport(data);
       return;
     }
     if (name === "settingsChanged" && data && typeof data === "object") {

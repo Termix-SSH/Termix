@@ -970,6 +970,10 @@ handle on it and it never learns about you.
 - Sizes follow the part: `fill` takes the box you give it, `content` takes your width and its own height,
   `inline` its own width and height. Draw it with `ForeignSlot` from the UI kit to add a class, a style or
   `interactive={false}`.
+- A tab whose page scrolls with parts on it should call `useShellScroll(true)` (API 2.9): Termix then
+  scrolls the tab and your page lays out at its full height, so the parts move with it instead of trailing
+  behind. Drop your own scroll box meanwhile, and turn it off while something needs a fixed height (a full
+  size session, a drag). `position: fixed` and `sticky` then sit against the whole page, not the tab.
 - Inside `ForeignInteractive interactive={false}` the parts take no clicks, so an edit mode can drag and
   resize the boxes around them. `TileGrid` does this while editing.
 - Parts hide under your menus and popovers. The UI kit's Popover, DropdownMenu, Select, Sheet, Dialog,

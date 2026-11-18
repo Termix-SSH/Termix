@@ -51,8 +51,12 @@ vi.mock("@/plugin-host/plugin-store", () => ({
 
 const { PluginFrameView, SANDBOX } =
   await import("@/plugin-host/frames/PluginFrameView");
+const { resetFrameSizes } = await import("@/plugin-host/frames/frame-sizes");
+const { foreignAnchorOf, shellScrollBoxOf } =
+  await import("@/plugin-host/frames/foreign-anchors");
 
 beforeEach(() => {
+  resetFrameSizes();
   frames.options = null;
   frames.emitted = [];
   frames.closed = 0;
@@ -307,6 +311,80 @@ describe("PluginFrameView", () => {
     ]);
     control!.focusEdge("last");
     expect(frames.emitted).toContainEqual(["focusEdge", "last"]);
+  });
+
+  it("scrolls a full size view in the shell when it asks", () => {
+    const { container } = render(
+      <PluginFrameView
+        pluginId="docker"
+        frameKey="main"
+        fit="fill"
+        props={{}}
+      />,
+    );
+    const iframe = container.querySelector("iframe")!;
+    const box = iframe.parentElement!;
+    const anchor = box.querySelector<HTMLElement>("[data-foreign-anchor]")!;
+    expect(foreignAnchorOf(iframe)).toBe(anchor);
+    expect(box.dataset.shellScroll).toBeUndefined();
+
+    act(() => frames.options!.onReady());
+    act(() => frames.options!.onEvent("shellScroll", { on: true }));
+    act(() => frames.options!.onEvent("size", { width: 800, height: 2400 }));
+    expect(box.dataset.shellScroll).toBe("");
+    expect(box.style.overflowY).toBe("auto");
+    expect(iframe.style.height).toBe("2400px");
+    expect(anchor.style.height).toBe("2400px");
+    expect(shellScrollBoxOf(iframe)).toBe(box);
+    expect(frames.emitted.some(([name]) => name === "viewport")).toBe(true);
+
+    act(() => frames.options!.onEvent("shellScroll", { on: false }));
+    expect(box.dataset.shellScroll).toBeUndefined();
+    expect(iframe.style.height).toBe("100%");
+    // Same anchor the whole time, so parts on it never reload.
+    expect(foreignAnchorOf(iframe)).toBe(anchor);
+  });
+
+  it("opens a placed view at the size it had last time, per host", () => {
+    const sizes: unknown[] = [];
+    const view = (hostId: number) => (
+      <PluginFrameView
+        pluginId="docker"
+        frameKey="card"
+        fit="content"
+        props={{ hostId }}
+        onFrameEvent={(name, data) => {
+          if (name === "size") sizes.push(data);
+        }}
+      />
+    );
+    const first = render(view(1));
+    act(() => frames.options!.onEvent("size", { width: 300, height: 180 }));
+    first.unmount();
+    sizes.length = 0;
+
+    const again = render(view(1));
+    expect(again.container.querySelector("iframe")!.style.height).toBe("180px");
+    expect(sizes).toEqual([{ width: 300, height: 180 }]);
+    again.unmount();
+
+    const other = render(view(2));
+    expect(other.container.querySelector("iframe")!.style.height).toBe("0px");
+  });
+
+  it("ignores a scroll ask from a view with no box of its own", () => {
+    const { container } = render(
+      <PluginFrameView
+        pluginId="docker"
+        frameKey="k"
+        fit="content"
+        props={{}}
+      />,
+    );
+    const iframe = container.querySelector("iframe")!;
+    act(() => frames.options!.onEvent("shellScroll", { on: true }));
+    expect(container.querySelector("[data-shell-scroll]")).toBeNull();
+    expect(foreignAnchorOf(iframe)).toBeNull();
   });
 
   it("shows a spinner while a slow full size view loads", () => {

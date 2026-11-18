@@ -40,6 +40,7 @@ import {
   resetExtensions,
 } from "@/plugin-host/extension-registry";
 import { setSharedState } from "@/plugin-host/frames/frame-state";
+import { setForeignAnchor } from "@/plugin-host/frames/foreign-anchors";
 
 const summary = (id: string, uses: string[] = []): PluginSummary =>
   ({
@@ -176,6 +177,64 @@ async function mountCard(props: Record<string, unknown> = { label: "hi" }) {
   await flush();
 }
 
+describe("layers next to their frame", () => {
+  let box: HTMLDivElement;
+  let anchor: HTMLDivElement;
+
+  beforeEach(() => {
+    box = document.createElement("div");
+    anchor = document.createElement("div");
+    iframe.remove();
+    box.append(iframe, anchor);
+    document.body.appendChild(box);
+    setForeignAnchor(iframe, anchor);
+    // The shell sizes a shell scrolled frame to its whole page.
+    frameRect = { ...frameRect, height: 2000 };
+  });
+
+  afterEach(() => {
+    setForeignAnchor(iframe, null);
+    box.remove();
+  });
+
+  function place(y: number) {
+    placeForeignViews("c1", {
+      views: [
+        {
+          id: "v1",
+          rect: { x: 20, y, width: 200, height: 100 },
+          clip: null,
+          visible: true,
+          interactive: true,
+          z: 0,
+        },
+      ],
+    });
+    runForeignPlacement();
+  }
+
+  it("draws in the anchor, in the frame's own coords", async () => {
+    await mountCard();
+    place(900);
+    const [view] = layerViews();
+    expect(anchor.contains(view)).toBe(true);
+    expect(view.style.left).toBe("20px");
+    expect(view.style.top).toBe("900px");
+    // Below the frame's old viewport, but the frame is that tall now.
+    expect(view.style.visibility).toBe("visible");
+    expect(view.parentElement!.style.position).toBe("absolute");
+  });
+
+  it("stays put when the page scrolls, with nothing to measure", async () => {
+    await mountCard();
+    place(300);
+    const [view] = layerViews();
+    frameRect = { ...frameRect, top: -400 };
+    runForeignPlacement();
+    expect(view.style.top).toBe("300px");
+  });
+});
+
 describe("foreign views in the shell", () => {
   it("sends a slot's parts as plain data with markers for components", async () => {
     render(<ForeignViewHost />);
@@ -248,6 +307,8 @@ describe("foreign views in the shell", () => {
     expect(view.style.top).toBe("30px");
     expect(view.style.width).toBe("200px");
     expect(view.style.visibility).toBe("visible");
+    // A part never paints over the parts next to it.
+    expect(view.style.overflow).toBe("hidden");
     const layer = view.parentElement!;
     expect(layer.style.left).toBe("100px");
     expect(layer.style.top).toBe("50px");

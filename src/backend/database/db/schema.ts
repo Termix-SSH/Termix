@@ -923,6 +923,33 @@ export const uiPreferences = sqliteTable("ui_preferences", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+/**
+ * What a framed plugin registers, per user, client kind and plugin, so a new
+ * browser or device skips booting every plugin's frame. No answers or values.
+ */
+export const frameRegistrations = sqliteTable(
+  "frame_registrations",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    client: text("client").notNull(),
+    pluginId: text("plugin_id").notNull(),
+    data: text("data").notNull(),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_frame_registrations_user_client_plugin").on(
+      table.userId,
+      table.client,
+      table.pluginId,
+    ),
+  ],
+);
+
 // --- sync begin ---
 /**
  * One row per synced record a user owns, on both ends of a sync link.

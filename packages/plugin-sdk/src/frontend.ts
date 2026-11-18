@@ -1642,6 +1642,8 @@ export interface PluginHostBridge {
   useCurrentUser: () => CurrentUser | null;
   useTheme: () => { theme: "light" | "dark" };
   useShell: () => ShellController | null;
+  /** Hosts without it leave scrolling to the view. */
+  useShellScroll?: (on: boolean) => void;
   toast: ToastApi;
   getApi: (pluginId: string) => PluginApiClient;
   getApiFor: (pluginId: string, origin: unknown) => PluginApiClient;
@@ -1901,6 +1903,18 @@ export function useTheme(): { theme: "light" | "dark" } {
  */
 export function useShell(): ShellController | null {
   return requireHost().useShell();
+}
+
+/**
+ * Lets Termix scroll this tab instead of the view's own scroll box, while
+ * `on` is true. The view then lays out at its full height, and parts from
+ * other plugins on it move with the page instead of trailing behind it.
+ * Turn it off while something needs a fixed height (a full size session, a
+ * drag). Only tab views in a frame use it; elsewhere it does nothing. Needs
+ * plugin API 2.9.
+ */
+export function useShellScroll(on: boolean): void {
+  requireHost().useShellScroll?.(on);
 }
 
 export function useToast(): ToastApi {

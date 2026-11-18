@@ -37,6 +37,7 @@ import {
   type FrameConnection,
 } from "./frame-connection";
 import { SANDBOX, type FrameFit } from "./PluginFrameView";
+import { FRAME_ALLOW } from "./frame-allow";
 import { FramedView, SlotFramedView } from "./framed-view";
 import { clearFrameValues, setFrameValue, useFrameValue } from "./frame-values";
 import { toPluginHostRecord } from "../bridge";
@@ -49,6 +50,7 @@ import {
   trimAnswers,
   writeCachedPlugin,
 } from "./registration-cache";
+import { trackColdBoot } from "./cold-boot";
 
 import { extensionFit } from "./slot-fit";
 import { hasUserActivation } from "./user-activation";
@@ -687,7 +689,7 @@ export async function startFramedPlugin(
       const iframe = document.createElement("iframe");
       iframe.setAttribute("sandbox", SANDBOX);
       iframe.setAttribute("referrerpolicy", "no-referrer");
-      iframe.setAttribute("allow", "clipboard-write");
+      if (FRAME_ALLOW) iframe.setAttribute("allow", FRAME_ALLOW);
       iframe.setAttribute("title", pluginId);
       iframe.setAttribute("aria-hidden", "true");
       iframe.dataset.pluginFrame = pluginId;
@@ -922,9 +924,23 @@ export async function startFramedPlugin(
           scheduleRefresh(record);
         });
     };
-    const sync = (...raw: unknown[]) => {
+    // A host row asks every plugin's `when` on each render, so the key is
+    // worked out once per host object instead of every time.
+    const keys = new WeakMap<object, { key: string; args: unknown[] }>();
+    const keyFor = (raw: unknown[]) => {
+      const one =
+        raw.length === 1 && raw[0] !== null && typeof raw[0] === "object"
+          ? (raw[0] as object)
+          : null;
+      const hit = one ? keys.get(one) : undefined;
+      if (hit) return hit;
       const args = mapArgs(raw);
-      const key = stableKey(keyOf(args));
+      const made = { key: stableKey(keyOf(args)), args };
+      if (one) keys.set(one, made);
+      return made;
+    };
+    const sync = (...raw: unknown[]) => {
+      const { key, args } = keyFor(raw);
       const stored = `${record.rid}\u0000${field}\u0000${key}`;
       if (stale.has(key) && frame?.ready) {
         stale.delete(key);
@@ -1343,5 +1359,6 @@ export async function startFramedPlugin(
     },
   );
   ready.catch(() => {});
+  if (cold) trackColdBoot(ready);
   return { handle, dispose, ready };
 }

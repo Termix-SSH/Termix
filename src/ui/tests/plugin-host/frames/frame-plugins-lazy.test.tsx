@@ -297,6 +297,26 @@ describe("lazy background frames", () => {
     plugin.dispose();
   });
 
+  it("works out a host's answer key once per host object", async () => {
+    await firstRun();
+    const plugin = await startFramedPlugin(summary);
+    const action = listHostActions().find((e) => e.id === "gizmo.open")!;
+    let reads = 0;
+    const counted = { ...host };
+    Object.defineProperty(counted, "ip", {
+      enumerable: true,
+      get: () => {
+        reads++;
+        return (host as { ip?: unknown }).ip;
+      },
+    });
+    expect(action.when(counted as never)).toBe(true);
+    const once = reads;
+    for (let i = 0; i < 50; i++) action.when(counted as never);
+    expect(reads).toBe(once);
+    plugin.dispose();
+  });
+
   it("reuses a companion answer for a new tab of the same type", async () => {
     const calls: string[] = [];
     const companion = {

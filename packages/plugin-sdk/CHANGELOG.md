@@ -6,6 +6,7 @@ Plugin API 2.9.0. Needs Termix 26.11.2.
 
 ### Added
 
+- `useShellScroll(on)` in `/frontend`: Termix scrolls a framed tab instead of the page's own scroll box, so parts from other plugins on it move with the page
 - `PanelToolbar` in `/ui`: a sidebar panel's search, icon buttons and icon only add button on one row
 - `registerHostEditorSection({ simple: true })` shows a section in the simple host editor, and sections get an `advanced` prop so they can keep rarer fields for advanced
 - `declareActionSlot({ fit: "bar" })`: a framed button in the slot is as wide as its content and as tall as the bar, for buttons that fill a tab bar

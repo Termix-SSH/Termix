@@ -1700,6 +1700,12 @@
         "keptOn": "Stays running: {{reason}}",
         "stopsWhenIdle": "Stops when idle"
       }
+    },
+    "firstLoad": {
+      "title": "Getting plugins ready",
+      "progress": "{{done}} of {{total}}",
+      "hint": "This only happens the first time. Next time Termix opens right away.",
+      "skip": "Continue"
     }
   },
   "settings": {

@@ -26,3 +26,16 @@ html[data-frame-fit="bar"] #root {
 html[data-frame-fit="content"] body {
   overflow: hidden;
 }
+
+/* The shell scrolls the tab: the page takes its full height, at least the
+   height of the box the shell shows it in. */
+html[data-shell-scroll],
+html[data-shell-scroll] body,
+html[data-shell-scroll] #root {
+  height: auto;
+  overflow: visible;
+}
+
+html[data-shell-scroll] [data-frame-box] {
+  min-height: var(--shell-viewport-height, 0px);
+}

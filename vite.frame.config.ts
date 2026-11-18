@@ -71,5 +71,18 @@ export default defineConfig({
     emptyOutDir: true,
     sourcemap: false,
     chunkSizeWarningLimit: 4000,
+    rollupOptions: {
+      output: {
+        // Icons the runtime imports itself would each be a file, since the
+        // icon loader can also ask for them. One file saves a frame dozens of
+        // fetches; icons only a plugin asks for stay one file each.
+        manualChunks(id, { getModuleInfo }) {
+          if (!id.includes("lucide-react/dist/esm/icons/")) return undefined;
+          return (getModuleInfo(id)?.importers.length ?? 0) > 0
+            ? "frame-icons"
+            : undefined;
+        },
+      },
+    },
   },
 });

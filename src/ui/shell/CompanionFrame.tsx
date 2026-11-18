@@ -325,7 +325,7 @@ function CompanionLayout({
         })}
       </div>
       {showEdge.length > 0 && !isMobile && (
-        <div className="flex flex-col flex-shrink-0 w-6 items-center gap-1 pt-1 border-l border-border bg-background">
+        <div className="flex min-h-0 flex-col flex-shrink-0 w-6 items-center gap-1 overflow-y-auto overflow-x-hidden scrollbar-none py-1 border-l border-border bg-background">
           {showEdge.map((def) => {
             const Icon = def.icon ?? PanelRight;
             const open = active?.id === def.id;
@@ -342,7 +342,7 @@ function CompanionLayout({
                   })
                 }
                 className={cn(
-                  "p-1 text-muted-foreground hover:text-foreground",
+                  "shrink-0 p-1 text-muted-foreground hover:text-foreground",
                   open && "text-foreground bg-accent",
                 )}
               >

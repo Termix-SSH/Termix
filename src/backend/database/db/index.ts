@@ -241,6 +241,18 @@ async function initializeCompleteDatabase(): Promise<void> {
         .get(name),
   );
 
+  // A dev build of 26.11.2 made this cache table keyed by user alone. It
+  // only holds what the next page load sends again, so it is rebuilt.
+  const frameColumns = sqlite
+    .prepare("PRAGMA table_info(frame_registrations)")
+    .all() as Array<{ name: string }>;
+  if (
+    frameColumns.length > 0 &&
+    !frameColumns.some((column) => column.name === "plugin_id")
+  ) {
+    sqlite.exec("DROP TABLE frame_registrations");
+  }
+
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
@@ -767,6 +779,19 @@ async function initializeCompleteDatabase(): Promise<void> {
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS frame_registrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        client TEXT NOT NULL,
+        plugin_id TEXT NOT NULL,
+        data TEXT NOT NULL,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_frame_registrations_user_client_plugin
+        ON frame_registrations (user_id, client, plugin_id);
 
 `);
 

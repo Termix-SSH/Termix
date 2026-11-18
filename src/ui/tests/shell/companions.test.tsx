@@ -87,6 +87,24 @@ describe("companions", () => {
     act(() => toggleCompanion(tab(), "a"));
     expect(getCompanionState("t1").openId).toBeNull();
   });
+
+  it("scrolls the edge bar instead of growing past the tab", () => {
+    for (let i = 0; i < 30; i++) {
+      registerCompanionDef({
+        id: `c${i}`,
+        titleKey: `c${i}.title`,
+        component: () => null,
+      });
+    }
+    render(
+      <CompanionFrame tab={tab()} isVisible>
+        <div>content</div>
+      </CompanionFrame>,
+    );
+    const bar = screen.getByTitle("c0.title").parentElement!;
+    expect(bar.className).toContain("min-h-0");
+    expect(bar.className).toContain("overflow-y-auto");
+  });
 });
 
 describe("companion layout", () => {
