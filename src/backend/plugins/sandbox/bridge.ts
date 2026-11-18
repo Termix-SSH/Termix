@@ -62,6 +62,8 @@ import { agentRelay } from "./agent-relay.js";
 
 /** Grace after a call ends before its token stops working. */
 export const REQUEST_TOKEN_GRACE_MS = 30_000;
+/** Shortest gap between pings a plugin may ask of the browser. */
+const PING_GAP_MS = 1_000;
 const SOCKET_TOKEN_MS = 60 * 60 * 1000;
 /** How long a prepared config's host key check stays usable. */
 const PREPARED_MS = 15 * 60 * 1000;
@@ -293,6 +295,25 @@ export interface BridgeOptions {
  * One per running plugin process. Created by the supervisor for each start,
  * thrown away when the process exits.
  */
+/**
+ * A control message from the plugin's side of a socket instead of data. A
+ * ping checks the browser is still there, at most once a second; the pong
+ * goes back to the plugin. True when the chunk was one.
+ */
+export function socketControl(
+  chunk: { c?: unknown },
+  ws: { ping: () => void },
+  state: { lastPing: number },
+  now = Date.now(),
+): boolean {
+  if (chunk.c === undefined) return false;
+  if (chunk.c === "ping" && now - state.lastPing >= PING_GAP_MS) {
+    state.lastPing = now;
+    ws.ping();
+  }
+  return true;
+}
+
 export class PluginBridge {
   readonly pluginId: string;
   readonly endpoint: Endpoint;
@@ -1718,19 +1739,25 @@ export class PluginBridge {
         port.once("drain", () => ws.resume());
       }
     });
-    port.on("data", (chunk: { d: Uint8Array | string; b: boolean }) => {
-      if (ws.readyState !== ws.OPEN) return;
-      ws.send(chunk.d, { binary: chunk.b });
-      if (ws.bufferedAmount > 1024 * 1024) {
-        port.pause();
-        const check = setInterval(() => {
-          if (ws.bufferedAmount < 256 * 1024 || ws.readyState !== ws.OPEN) {
-            clearInterval(check);
-            port.resume();
-          }
-        }, 10);
-      }
-    });
+    const control = { lastPing: 0 };
+    ws.on("pong", () => port.write({ c: "pong" }));
+    port.on(
+      "data",
+      (chunk: { d: Uint8Array | string; b: boolean; c?: unknown }) => {
+        if (ws.readyState !== ws.OPEN) return;
+        if (socketControl(chunk, ws, control)) return;
+        ws.send(chunk.d, { binary: chunk.b });
+        if (ws.bufferedAmount > 1024 * 1024) {
+          port.pause();
+          const check = setInterval(() => {
+            if (ws.bufferedAmount < 256 * 1024 || ws.readyState !== ws.OPEN) {
+              clearInterval(check);
+              port.resume();
+            }
+          }, 10);
+        }
+      },
+    );
     port.on(
       "remote-end",
       (meta: { code?: number; reason?: string } | undefined) => {

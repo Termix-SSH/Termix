@@ -17,6 +17,28 @@ const tick = () => new Promise((resolve) => setImmediate(resolve));
 const asPort = (port: unknown) => port as StreamPort;
 
 describe("plugin process socket", () => {
+  it("asks core to ping and hears the browser's pong", () => {
+    const port = fakePort();
+    const socket = createChildSocket(asPort(port), (fn) => fn());
+    const pongs: number[] = [];
+    const messages: unknown[] = [];
+    socket.on("pong", () => pongs.push(1));
+    socket.on("message", (data: unknown) => messages.push(data));
+    (socket.ping as () => void)();
+    expect(port.written).toEqual([{ c: "ping" }]);
+    port.emit("data", { c: "pong" });
+    expect(pongs).toHaveLength(1);
+    expect(messages).toEqual([]);
+  });
+
+  it("does not ping once closed", () => {
+    const port = fakePort();
+    const socket = createChildSocket(asPort(port), (fn) => fn());
+    (socket.close as () => void)();
+    (socket.ping as () => void)();
+    expect(port.written).toEqual([]);
+  });
+
   it("holds messages until the handler listens", async () => {
     const port = fakePort();
     const socket = createChildSocket(asPort(port), (fn) => fn());

@@ -42,7 +42,10 @@ export function createChildSocket(
     port.end();
   };
   socket.terminate = () => (socket.close as AnyFn)(1006);
-  socket.ping = () => {};
+  // Core holds the real socket: it pings the browser and passes the pong back.
+  socket.ping = () => {
+    if (socket.readyState === OPEN) port.write({ c: "ping" });
+  };
   socket.pause = () => port.pause();
   socket.resume = () => port.resume();
 
@@ -81,7 +84,11 @@ export function createChildSocket(
     if (event === "close" && heldClose !== null) flush();
   });
 
-  port.on("data", (chunk: { d: Buffer | string; b: boolean }) => {
+  port.on("data", (chunk: { d: Buffer | string; b: boolean; c?: string }) => {
+    if (chunk.c === "pong") {
+      inStore(() => socket.emit("pong"));
+      return;
+    }
     const data = typeof chunk.d === "string" ? Buffer.from(chunk.d) : chunk.d;
     if (socket.listenerCount("message") > 0 && !held.length) {
       deliver(data, chunk.b);

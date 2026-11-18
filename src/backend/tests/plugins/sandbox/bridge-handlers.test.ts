@@ -22,7 +22,11 @@ vi.mock("../../../plugins/sandbox/db-exec.js", () => ({
 
 import { EventEmitter } from "events";
 import { runAsActor } from "../../../plugins/actor.js";
-import { PluginBridge, sandboxLog } from "../../../plugins/sandbox/bridge.js";
+import {
+  PluginBridge,
+  sandboxLog,
+  socketControl,
+} from "../../../plugins/sandbox/bridge.js";
 import type { Transport, Wire } from "../../../plugins/sandbox/rpc.js";
 import { SandboxTokenStore } from "../../../plugins/sandbox/tokens.js";
 
@@ -246,6 +250,26 @@ describe("sockets", () => {
       expect.any(Function),
       {},
     );
+  });
+});
+
+describe("socket control", () => {
+  it("pings the browser for a plugin, at most once a second", () => {
+    const ws = { ping: vi.fn() };
+    const state = { lastPing: 0 };
+    expect(socketControl({ c: "ping" }, ws, state, 10_000)).toBe(true);
+    expect(socketControl({ c: "ping" }, ws, state, 10_500)).toBe(true);
+    expect(ws.ping).toHaveBeenCalledTimes(1);
+    socketControl({ c: "ping" }, ws, state, 11_000);
+    expect(ws.ping).toHaveBeenCalledTimes(2);
+  });
+
+  it("drops unknown control messages and leaves data alone", () => {
+    const ws = { ping: vi.fn() };
+    const state = { lastPing: 0 };
+    expect(socketControl({ c: "close-all" }, ws, state)).toBe(true);
+    expect(socketControl({}, ws, state)).toBe(false);
+    expect(ws.ping).not.toHaveBeenCalled();
   });
 });
 
