@@ -272,7 +272,7 @@ loads the same guard first, `execArgv` is ignored, and a worker must start from 
 `data:` URLs are refused). Core restarts a
 process that crashes, stops answering, goes past its memory limit (256 MiB unless `sandbox.memoryMb`) or
 uses more than 80% of a CPU core for a minute. Too many crashes and the plugin is marked failed.
-The desktop app (Termix 26.11.2+) runs each plugin process on its own pinned Node, the same major as the server image, with the same flags, plus an OS sandbox under it: an AppContainer and a job object on Windows, a Seatbelt profile on macOS, Landlock and seccomp on Linux. So the fence is the same as on a server: no files outside your grants, no child processes or sockets without the capability, and a memory cap. Desktop only code can't use `fs` or `child_process` freely either; use `ctx.desktop.local` for the user's own files and programs. Builds with no pinned Node (32-bit Windows, 32-bit ARM Linux) don't run plugin backends at all.
+The desktop app (Termix 26.11.2+) runs each plugin process on its own pinned Node, the same major as the server image, with the same flags, plus an OS sandbox under it: an AppContainer and a job object on Windows, a Seatbelt profile on macOS, Landlock and seccomp on Linux. So the fence is the same as on a server: no files outside your grants, no child processes or sockets without the capability, and a memory cap. Desktop only code can't use `fs` or `child_process` freely either; use `ctx.desktop.local` for the user's own files and programs.
 
 A plugin process stops after 10 idle minutes (`TERMIX_PLUGIN_IDLE_MINUTES`). A plugin with only routes
 and sockets starts on its first request. One that registers things core calls on its own (operations,

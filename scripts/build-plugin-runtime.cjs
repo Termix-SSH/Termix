@@ -7,7 +7,7 @@
 //
 //   node scripts/build-plugin-runtime.cjs [--platform win32] [--arch x64,arm64]
 //
-// An arch with no pinned Node (Windows ia32) gets an empty
+// An arch with no pinned Node gets an empty
 // folder, and that build refuses plugin backends.
 
 const crypto = require("crypto");
