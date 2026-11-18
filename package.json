@@ -77,7 +77,7 @@
     "electron-updater": "^6.8.11",
     "express": "^5.3.0",
     "jsonwebtoken": "^9.0.3",
-    "motion": "^13.1.1",
+    "motion": "^14.14.0",
     "multer": "^2.5.0",
     "mysql2": "^3.24.6",
     "nanoid": "^6.0.2",
