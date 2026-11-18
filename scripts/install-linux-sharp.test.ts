@@ -12,7 +12,7 @@ const lock = JSON.parse(
 const sharpManifest = lock.packages["node_modules/sharp"];
 
 describe("Linux sharp packaging", () => {
-  // The build runs on x64 but ships arm64 and armv7l too, so npm ci alone
+  // The build runs on x64 but ships arm64 too, so npm ci alone
   // only installs the x64 binaries and the arm AppImages cannot load sharp.
   it("pins the sharp and libvips binaries of every shipped Linux architecture", () => {
     const packages = linuxSharpPackages({
@@ -29,17 +29,15 @@ describe("Linux sharp packaging", () => {
 
     expect([...packages].sort()).toEqual([
       "@img/sharp-libvips-linux-arm64@2.0.1",
-      "@img/sharp-libvips-linux-arm@2.0.2",
       "@img/sharp-libvips-linux-x64@2.0.0",
       "@img/sharp-linux-arm64@1.0.1",
-      "@img/sharp-linux-arm@1.0.2",
       "@img/sharp-linux-x64@1.0.0",
     ]);
   });
 
   it("only names packages the installed sharp really declares", () => {
     const packages = linuxSharpPackages(sharpManifest);
-    expect(packages).toHaveLength(6);
+    expect(packages).toHaveLength(4);
     for (const spec of packages) {
       expect(spec).toMatch(/^@img\/sharp-[a-z0-9-]+@\d+\.\d+\.\d+$/);
     }

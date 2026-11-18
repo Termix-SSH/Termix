@@ -13,10 +13,10 @@ function findPackage(start) {
   throw new Error("Could not locate the installed sharp package manifest");
 }
 
-// The build runs on x64 but ships arm64 and armv7l too, so npm ci alone
+// The build runs on x64 but ships arm64 too, so npm ci alone
 // only installs the x64 binaries.
 function linuxSharpPackages(sharpPackage) {
-  return ["x64", "arm64", "arm"].flatMap((arch) =>
+  return ["x64", "arm64"].flatMap((arch) =>
     [`@img/sharp-linux-${arch}`, `@img/sharp-libvips-linux-${arch}`].map(
       (name) => {
         const version = sharpPackage.optionalDependencies?.[name];

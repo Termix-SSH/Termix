@@ -21,7 +21,7 @@
 - Rotate the encryption key from the API (`POST /encryption/rotate-key`) or with `ENCRYPTION_KEY_PREVIOUS`, and the database key with `DATABASE_KEY_PREVIOUS`. Everything moves to the new key at start
 - The example Docker compose drops every capability it doesn't need, sets no-new-privileges and shows a read-only, non-root setup. The image runs on a read-only root filesystem
 - Every plugin made for plugin API 2 runs in its own process. It can only read its own files, opens no network connections or programs unless it was granted that, and reaches Termix only through checked calls. Secrets, the database, SSH connections and saved logins stay in the server
-- The desktop app fences each plugin the same way: it runs on its own copy of Node inside the system's sandbox (an AppContainer on Windows, a Seatbelt profile on macOS, Landlock and seccomp on Linux), so it can't read your files or the database, start programs or open connections it wasn't granted, and it is stopped when it goes over its memory limit. The 32-bit Windows and 32-bit ARM Linux builds have no such copy of Node, so they don't run plugin backends
+- The desktop app fences each plugin the same way: it runs on its own copy of Node inside the system's sandbox (an AppContainer on Windows, a Seatbelt profile on macOS, Landlock and seccomp on Linux), so it can't read your files or the database, start programs or open connections it wasn't granted, and it is stopped when it goes over its memory limit. The 32-bit Windows build has no such copy of Node, so it doesn't run plugin backends
 - Desktop app: plugin frames keep the frame rules the server sends
 - In the Docker image each plugin also runs as its own Linux user, so it can't read the database, keys or other plugins' data. With `NET_ADMIN`, plugins that may not open connections are also blocked by a firewall rule
 - The screens of every plugin made for plugin API 2 run in sandboxed frames with no access to your login, the rest of the page or other plugins. Each frame reaches only its own plugin, with a short key that ends with your session, and asks Termix for anything else through a fixed list of checks. They keep the same look, theme, shortcuts and language. A frame loads nothing from other sites: pictures come through Termix, and it can only cover the screen, open links, start downloads or revoke your API keys right after you used it
@@ -172,6 +172,10 @@
 - Hovering a theme in Appearance or setup no longer flashes the page white while its colors load
 - Linux desktop app: Ctrl+W closes the active tab instead of the window
 - Desktop app and Chrome on macOS: a button's tooltip shows wherever the pointer rests on it, not only beside its icon
+
+### Removed
+
+- Desktop app: the 32-bit ARM Linux (armv7l) builds, since Electron no longer makes them
 
 ## 26.11.1
 

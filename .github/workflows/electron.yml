@@ -458,11 +458,11 @@ jobs:
         run: node scripts/sync-version.cjs --version "$VERSION_OVERRIDE"
 
       # Pinned Node, libatomic and the OS sandbox helper (static musl) that run
-      # plugin backends. armv7l has no Node 26 build and refuses them.
+      # plugin backends.
       - name: Build plugin runtime
         run: |
           (cd native/plugin-jail && rustup toolchain install && rustup target add x86_64-unknown-linux-musl aarch64-unknown-linux-musl)
-          node scripts/build-plugin-runtime.cjs --platform linux --arch x64,arm64,armv7l
+          node scripts/build-plugin-runtime.cjs --platform linux --arch x64,arm64
 
       - name: Build Linux x64
         env:
@@ -476,10 +476,10 @@ jobs:
           TERMIX_FENCE_RESOURCES: release/linux-unpacked/resources
         run: npx vitest run src/backend/tests/plugins/sandbox/desktop-fence.test.ts
 
-      - name: Build Linux arm64 and armv7l
+      - name: Build Linux arm64
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --linux --arm64 --armv7l --publish never
+        run: npx electron-builder --linux --arm64 --publish never
 
       - name: Rename Linux artifacts for consistency
         run: |
@@ -539,14 +539,6 @@ jobs:
           path: release/termix_linux_arm64_appimage.AppImage
           retention-days: 30
 
-      - name: Upload Linux armv7l AppImage
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: hashFiles('release/termix_linux_armv7l_appimage.AppImage') != '' && inputs.artifact_destination != 'none'
-        with:
-          name: termix_linux_armv7l_appimage
-          path: release/termix_linux_armv7l_appimage.AppImage
-          retention-days: 30
-
       - name: Upload Linux x64 DEB
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_linux_x64_deb.deb') != '' && inputs.artifact_destination != 'none'
@@ -563,14 +555,6 @@ jobs:
           path: release/termix_linux_arm64_deb.deb
           retention-days: 30
 
-      - name: Upload Linux armv7l DEB
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: hashFiles('release/termix_linux_armv7l_deb.deb') != '' && inputs.artifact_destination != 'none'
-        with:
-          name: termix_linux_armv7l_deb
-          path: release/termix_linux_armv7l_deb.deb
-          retention-days: 30
-
       - name: Upload Linux x64 tar.gz
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_linux_x64_portable.tar.gz') != '' && inputs.artifact_destination != 'none'
@@ -585,14 +569,6 @@ jobs:
         with:
           name: termix_linux_arm64_portable
           path: release/termix_linux_arm64_portable.tar.gz
-          retention-days: 30
-
-      - name: Upload Linux armv7l tar.gz
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: hashFiles('release/termix_linux_armv7l_portable.tar.gz') != '' && inputs.artifact_destination != 'none'
-        with:
-          name: termix_linux_armv7l_portable
-          path: release/termix_linux_armv7l_portable.tar.gz
           retention-days: 30
 
       # Every official plugin, for installs without internet. No update files.
