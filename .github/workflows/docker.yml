@@ -52,7 +52,8 @@ permissions: {}
 
 jobs:
   # One image per plugin profile (docker/bundled-plugins.json). standard keeps
-  # the plain tags; minimal and full add a suffix.
+  # the plain tags; minimal and full add a suffix. Dev builds only make full,
+  # with every plugin, under the plain dev tags.
   build:
     runs-on: blacksmith-8vcpu-ubuntu-2404
     environment: build
@@ -64,7 +65,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile: [standard, minimal, full]
+        profile: ${{ fromJSON(inputs.build_type == 'Development' && '["full"]' || '["standard","minimal","full"]') }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -109,7 +110,7 @@ jobs:
           ALL_TAGS=()
 
           SUFFIX=""
-          if [ "$PROFILE" != "standard" ]; then
+          if [ "$PROFILE" != "standard" ] && [ "$BUILD_TYPE" != "Development" ]; then
             SUFFIX="-$PROFILE"
           fi
 
@@ -118,7 +119,7 @@ jobs:
           elif [ "$BUILD_TYPE" = "Beta" ]; then
             TAGS+=("beta$SUFFIX" "$VERSION$SUFFIX")
           else
-            TAGS+=("dev-$VERSION$SUFFIX")
+            TAGS+=("dev-$VERSION$SUFFIX" "dev-latest$SUFFIX")
           fi
 
           for tag in "${TAGS[@]}"; do
