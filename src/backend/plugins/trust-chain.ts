@@ -246,14 +246,17 @@ export function verifySshSignature(
 ): Checked<{ keyId: string }> {
   try {
     const text = String(armored).trim();
-    const match =
-      /^-----BEGIN SSH SIGNATURE-----\s+([A-Za-z0-9+/=\s]+?)\s+-----END SSH SIGNATURE-----$/.exec(
-        text,
-      );
-    if (!match) return { ok: false, reason: "not an SSH signature" };
-    const reader = new Reader(
-      Buffer.from(match[1].replace(/\s+/g, ""), "base64"),
-    );
+    // Markers checked by hand: a regex with whitespace on both sides of the
+    // body backtracks badly on long runs of spaces.
+    const begin = "-----BEGIN SSH SIGNATURE-----";
+    const end = "-----END SSH SIGNATURE-----";
+    const body =
+      text.startsWith(begin) && text.endsWith(end)
+        ? text.slice(begin.length, text.length - end.length)
+        : "";
+    if (!/^\s[A-Za-z0-9+/=\s]*\s$/.test(body) || !body.trim())
+      return { ok: false, reason: "not an SSH signature" };
+    const reader = new Reader(Buffer.from(body.replace(/\s+/g, ""), "base64"));
     if (reader.bytes(6).toString("latin1") !== "SSHSIG") {
       return { ok: false, reason: "not an SSH signature" };
     }

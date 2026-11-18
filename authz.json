@@ -485,13 +485,14 @@
     "WS /plugin-ws/core/ssh-relay": {
       "access": "user",
       "resource": {
-        "kind": "own",
+        "kind": "host",
+        "min": "connect",
         "fixture": "host"
       },
       "query": {
         "hostId": "{{host}}"
       },
-      "note": "Remote site relay; resolves hosts the caller owns"
+      "note": "Remote site relay; resolves hosts the caller can connect to, like the terminal"
     },
     "GET /plugins": {
       "access": "user",

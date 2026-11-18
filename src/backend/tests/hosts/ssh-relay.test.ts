@@ -97,7 +97,9 @@ describe("ssh relay", () => {
     );
     socket.send(Buffer.from("SSH-2.0-test\r\n"));
     expect(await received).toBe("SSH-2.0-test\r\n");
-    expect(mocks.resolveHostById).toHaveBeenCalledWith(5, "user-1");
+    expect(mocks.resolveHostById).toHaveBeenCalledWith(5, "user-1", {
+      allowMissingLogin: true,
+    });
     socket.close();
   });
 
@@ -132,7 +134,9 @@ describe("ssh relay", () => {
     );
     socket.send("ping");
     expect(await received).toBe("ping");
-    expect(mocks.resolveHostBySyncId).toHaveBeenCalledWith("abc", "user-1");
+    expect(mocks.resolveHostBySyncId).toHaveBeenCalledWith("abc", "user-1", {
+      allowMissingLogin: true,
+    });
     expect(mocks.resolveHostById).not.toHaveBeenCalled();
     socket.close();
   });
