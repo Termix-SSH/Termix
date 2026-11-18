@@ -95,6 +95,7 @@
 
 ### Fixed
 
+- A desktop relaying through the server can reach a shared host even when the share has no login of its own
 - Settings opens faster: the plugin list loads once and is reused instead of being fetched again by every part of the page
 - The companion bar beside a tab scrolls when it has more buttons than fit, instead of covering what is below it
 - Desktop app: a plugin copied from the linked server, like Remote Desktop, no longer fails to start with "Cannot find module 'ws'"

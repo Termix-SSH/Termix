@@ -57,9 +57,12 @@ async function handleRelay(
     return;
   }
 
+  // The relay only carries bytes and the client logs in itself, so a share
+  // with no login of its own still gets through.
+  const options = { allowMissingLogin: true };
   const host = syncId
-    ? await resolveHostBySyncId(syncId, userId)
-    : await resolveHostById(hostId, userId);
+    ? await resolveHostBySyncId(syncId, userId, options)
+    : await resolveHostById(hostId, userId, options);
   if (!host) {
     close(ws, 1008, "Host not found or access denied");
     return;
