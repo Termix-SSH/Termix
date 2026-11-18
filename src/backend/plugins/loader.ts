@@ -52,6 +52,7 @@ import {
 } from "./ctx.js";
 import { resolveRequirements } from "./service-registry.js";
 import { recordConflict } from "./conflicts.js";
+import { makeTreeReadable } from "./readable-tree.js";
 import { tablePrefix } from "@termix-ssh/plugin-sdk/db";
 
 export type PluginState =
@@ -508,6 +509,11 @@ export class PluginLoader {
           "type" in entry &&
           (entry.type === "File" || entry.type === "Directory"),
       });
+      // The plugin's own user must be able to read its code.
+      if (process.platform !== "win32") {
+        await fs.promises.chmod(unpackedRoot, 0o755);
+      }
+      await makeTreeReadable(staging);
 
       const raw = JSON.parse(
         await fs.promises.readFile(getPluginManifestPath(staging), "utf8"),
