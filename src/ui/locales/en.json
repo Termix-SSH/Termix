@@ -1461,6 +1461,8 @@
         "updated": "{{name}} updated to {{version}}",
         "updatedMany_one": "{{count}} plugin updated",
         "updatedMany_other": "{{count}} plugins updated",
+        "needsReview_one": "1 plugin asks for new permissions. Review it to update.",
+        "needsReview_other": "{{count}} plugins ask for new permissions. Review each one to update.",
         "uninstalled": "{{name}} uninstalled",
         "dataDeleted": "Data for {{name}} deleted",
         "failedToStart": "{{name}} could not start. Open it to see why.",
@@ -1704,9 +1706,11 @@
     "firstLoad": {
       "title": "Getting plugins ready",
       "progress": "{{done}} of {{total}}",
-      "hint": "This only happens the first time. Next time Termix opens right away.",
+      "hint": "Plugins are starting for the first time. After this, Termix opens right away.",
       "skip": "Continue"
-    }
+    },
+    "framesBlocked": "Plugins can't load their files. A login proxy in front of Termix is likely blocking them.",
+    "framesBlockedHelp": "How to fix"
   },
   "settings": {
     "secretSet": "Set",

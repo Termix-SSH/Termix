@@ -32,6 +32,7 @@ import { DurableRegistrations } from "./durable.js";
 import { readAwakeState, writeAwakeState } from "./awake-store.js";
 import { unregisterPluginHttp } from "../http.js";
 import type { SqlDialect } from "./sql-guard.js";
+import { explainStartError } from "./unreadable.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -257,6 +258,8 @@ class PluginProcess {
   lastUse = "start";
   startedAt = 0;
   readyMs = 0;
+  /** Why the last start failed, for the plugin page. */
+  startError: string | null = null;
   private starting: Promise<boolean> | null = null;
   private stopDone: Promise<void> | null = null;
   private crashes: number[] = [];
@@ -390,10 +393,13 @@ class PluginProcess {
       if (wait > 0) await new Promise((r) => setTimeout(r, wait));
       try {
         await this.start();
+        this.startError = null;
         return true;
       } catch (error) {
-        this.log("error", `did not start: ${(error as Error).message}`);
-        await this.onExit(null, null, (error as Error).message);
+        const why = explainStartError(this.id, (error as Error).message);
+        this.startError = why;
+        this.log("error", `did not start: ${why}`);
+        await this.onExit(null, null, why);
         return false;
       } finally {
         this.starting = null;
@@ -759,7 +765,13 @@ export class SandboxSupervisor {
     this.startSweep();
     if (proc.startsAtBoot()) {
       const ok = await proc.ensureRunning();
-      if (!ok) throw new Error(`Plugin ${spec.manifest.id} did not start`);
+      if (!ok) {
+        throw new Error(
+          proc.startError
+            ? `Plugin ${spec.manifest.id} did not start: ${proc.startError}`
+            : `Plugin ${spec.manifest.id} did not start`,
+        );
+      }
     } else {
       proc.log("info", "starts on its first request");
     }

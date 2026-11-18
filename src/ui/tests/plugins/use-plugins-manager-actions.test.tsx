@@ -31,7 +31,11 @@ const api = vi.hoisted(() => ({
   deletePluginData: vi.fn(async () => ({})),
   retryPlugin: vi.fn(async () => ({})),
   updatePlugin: vi.fn(async () => ({})),
-  updateAllPlugins: vi.fn(async () => ({ updated: [], failed: [] })),
+  updateAllPlugins: vi.fn(async () => ({
+    updated: [],
+    needsReview: [],
+    failed: [],
+  })),
 }));
 const confirmAnswer = vi.hoisted(() => ({ value: true }));
 vi.mock("@/api/plugins-api", async (importOriginal) => ({
@@ -245,6 +249,7 @@ describe("install, uninstall and data", () => {
     const { result } = await ready();
     api.updateAllPlugins.mockResolvedValueOnce({
       updated: ["a", "b"],
+      needsReview: [],
       failed: [{ id: "sample-plugin", error: "boom" }],
     });
     await act(async () => result.current.updateAll());
@@ -256,5 +261,78 @@ describe("install, uninstall and data", () => {
     await act(async () => result.current.updateAll());
     await act(async () => result.current.setAllChannels("beta"));
     expect(api.setAllPluginChannels).toHaveBeenCalledWith("beta");
+  });
+
+  it("opens a review for each plugin update all skipped", async () => {
+    const blocked = (id: string) => ({
+      ...installedPlugin,
+      id,
+      enabled: false,
+      state: "blocked",
+    });
+    const offer = (id: string) => ({
+      id,
+      name: id,
+      description: "",
+      author: "",
+      category: "",
+      features: [],
+      contributes: [],
+      versions: [
+        { version: "2.0.0", capabilities: ["kv:own", "operations:provide"] },
+      ],
+      latestVersion: "2.0.0",
+      latestBeta: null,
+      channel: "stable",
+      installed: true,
+      installedVersion: "1.0.0",
+      updateAvailable: true,
+      addedCapabilities: ["operations:provide"],
+      pinnedVersion: null,
+      autoUpdate: false,
+      bundled: false,
+      downloads: null,
+    });
+    api.getPlugins.mockResolvedValue([blocked("one"), blocked("two")]);
+    api.getPluginRegistry.mockResolvedValue({
+      plugins: [offer("one"), offer("two")],
+      managedByServer: false,
+      registry: { error: null, lastCheckedAt: "now" },
+      registries: [],
+    });
+    const { result } = await ready();
+    api.updateAllPlugins.mockResolvedValueOnce({
+      updated: [],
+      needsReview: [
+        { id: "one", capabilities: ["operations:provide"] },
+        { id: "two", capabilities: ["operations:provide"] },
+      ],
+      failed: [],
+    });
+    await act(async () => result.current.updateAll());
+    expect(toasts.info).toHaveBeenCalledWith(
+      "plugins.manager.toast.needsReview",
+    );
+    await waitFor(() =>
+      expect(result.current.consent).toMatchObject({
+        mode: "update",
+        plugin: { id: "one" },
+        capabilities: ["operations:provide"],
+      }),
+    );
+
+    await act(async () => result.current.confirmConsent());
+    expect(api.updatePlugin).toHaveBeenCalledWith(
+      "one",
+      expect.objectContaining({ acceptCapabilities: true }),
+    );
+    await waitFor(() =>
+      expect(result.current.consent).toMatchObject({ plugin: { id: "two" } }),
+    );
+
+    act(() => result.current.cancelConsent());
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(result.current.consent).toBeNull();
+    expect(api.updatePlugin).toHaveBeenCalledTimes(1);
   });
 });

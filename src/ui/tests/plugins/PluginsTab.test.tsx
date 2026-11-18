@@ -97,6 +97,25 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("PluginsTab", () => {
+  it("offers the update on a blocked plugin", async () => {
+    extra = [
+      {
+        ...plugin,
+        id: "old",
+        name: "Old Plugin",
+        enabled: false,
+        status: "blocked",
+        updateAvailable: true,
+        latestVersion: "2.0.0",
+        addedCapabilities: ["operations:provide"] as never[],
+      },
+    ];
+    await renderTab();
+    expect(
+      screen.getAllByRole("button", { name: /Review update/ }).length,
+    ).toBeGreaterThan(0);
+  });
+
   it("names API 1 plugins, says why and links the guide", async () => {
     extra = [
       {

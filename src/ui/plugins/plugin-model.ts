@@ -131,6 +131,10 @@ export function pluginStatus(summary: PluginSummary): PluginStatus {
   return "running";
 }
 
+function wantsUpdate(summary: PluginSummary): boolean {
+  return summary.state === "blocked" || summary.state === "failed";
+}
+
 export function mergePlugins(
   installed: PluginSummary[],
   registry: RegistryPluginEntry[] | null,
@@ -162,9 +166,10 @@ export function mergePlugins(
       channel: summary.channel ?? entry?.channel ?? "stable",
       isBeta: isPrerelease(summary.version),
       // The server keeps its own copy up to date, and a plugin that is off
-      // should not ask for attention.
+      // should not ask for attention. Blocked and failed ones are not off:
+      // an update is often the way to get them running again.
       updateAvailable:
-        summary.runsOnServer || !summary.enabled
+        summary.runsOnServer || (!summary.enabled && !wantsUpdate(summary))
           ? false
           : (entry?.updateAvailable ?? false),
       addedCapabilities: entry?.addedCapabilities ?? [],

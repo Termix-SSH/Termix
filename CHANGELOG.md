@@ -5,6 +5,11 @@
 ### Fixed
 
 - Desktop app: parts of plugins that only show in the desktop app, like a local terminal, show again
+- Plugins that are blocked or stopped after an upgrade show their update again, and Update all no longer greys out when only those are left
+- Update all opens a review for each plugin whose update asks for new permissions, instead of skipping it without a word
+- When a login proxy in front of Termix blocks plugin files, Termix says so and links to the fix, instead of showing "Getting plugins ready" on every load
+- A plugin that can't read its own files says which folder and how to fix it, instead of "did not start"
+- The plugin loading screen no longer says it only shows the first time
 
 ## 26.11.2
 

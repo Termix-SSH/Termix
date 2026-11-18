@@ -304,7 +304,7 @@ function PluginsTabBody() {
 
       <PluginConsentPrompt
         request={manager.consent}
-        onCancel={() => manager.setConsent(null)}
+        onCancel={manager.cancelConsent}
         onConfirm={() => void manager.confirmConsent()}
       />
     </>
@@ -1177,7 +1177,7 @@ function InstalledCard({
           </span>
         )}
         <div className="flex-1" />
-        {plugin.updateAvailable && !plugin.pinnedVersion && !failed && (
+        {plugin.updateAvailable && !plugin.pinnedVersion && (
           <Button
             variant="outline"
             size="xs"
@@ -1293,7 +1293,7 @@ function InstalledRowActions({
 
   return (
     <div className="flex items-center justify-end gap-1" onClick={stop}>
-      {plugin.updateAvailable && !plugin.pinnedVersion && !failed && (
+      {plugin.updateAvailable && !plugin.pinnedVersion && (
         <Button
           variant="ghost"
           size="icon-xs"

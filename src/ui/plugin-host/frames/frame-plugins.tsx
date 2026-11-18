@@ -51,6 +51,7 @@ import {
   writeCachedPlugin,
 } from "./registration-cache";
 import { trackColdBoot } from "./cold-boot";
+import { frameBlockedReason } from "./frames-blocked";
 
 import { extensionFit } from "./slot-fit";
 import { hasUserActivation } from "./user-activation";
@@ -832,15 +833,16 @@ export async function startFramedPlugin(
         },
       );
       frame = current;
-      const timer = setTimeout(
-        () =>
+      const timer = setTimeout(() => {
+        void frameBlockedReason(pluginId).then((reason) =>
           finish(
             new Error(
-              `activate() did not finish within ${START_TIMEOUT_MS / 1000}s`,
+              reason ??
+                `activate() did not finish within ${START_TIMEOUT_MS / 1000}s`,
             ),
           ),
-        START_TIMEOUT_MS,
-      );
+        );
+      }, START_TIMEOUT_MS);
       iframe.src = frameUrl(pluginId, {
         role: "background",
         v: summary.assetVersion ?? undefined,

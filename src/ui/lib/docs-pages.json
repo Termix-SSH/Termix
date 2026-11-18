@@ -7,6 +7,7 @@
   "https": "configure/https",
   "database": "configure/database",
   "reverseProxy": "configure/reverse-proxy",
+  "loginProxies": "configure/reverse-proxy#login-proxies",
   "desktopSync": "configure/desktop-sync",
   "interface": "guide/interface",
   "dashboard": "guide/dashboard",
