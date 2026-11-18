@@ -88,18 +88,24 @@ function isAllowedInstance(value: object): boolean {
   );
 }
 
+/** What a signal aborts with when its own reason can't cross. */
+function abortError(): Error {
+  return new DOMException("This operation was aborted", "AbortError");
+}
+
 /**
- * An AbortSignal can't be copied, so it crosses as its state plus a function
- * the other side calls once to hear about a later abort.
+ * An AbortSignal can't be copied, so a live one crosses as a function the
+ * other side calls once to hear about a later abort.
  */
-function signalState(signal: AbortSignal): Record<string, unknown> {
-  if (signal.aborted) return { aborted: true, reason: signal.reason };
-  const watch = (listener: (reason: unknown) => Promise<unknown>) => {
-    const tell = () => void listener(signal.reason).catch(() => {});
+function watchSignal(signal: AbortSignal) {
+  return (listener: (reason: unknown) => Promise<unknown>) => {
+    const tell = () =>
+      void listener(signal.reason)
+        .catch(() => listener(abortError()))
+        .catch(() => {});
     if (signal.aborted) tell();
     else signal.addEventListener("abort", tell, { once: true });
   };
-  return { aborted: false, watch };
 }
 
 export class SandboxValueError extends Error {
@@ -411,7 +417,7 @@ export class Endpoint {
     if (value instanceof URL) return value.href;
     if (value instanceof Error) return { $e: toWireError(value) };
     if (value instanceof AbortSignal) {
-      return { $abort: this.marshal(signalState(value), depth + 1) };
+      return { $abort: this.marshalSignal(value, depth + 1) };
     }
     if (value instanceof Map) {
       return {
@@ -471,7 +477,10 @@ export class Endpoint {
       return fromWireError(record.$e as WireError);
     }
     if (record.$abort && typeof record.$abort === "object") {
-      return this.remoteSignal(record.$abort as Record<string, unknown>);
+      return this.remoteSignal(
+        record.$abort as Record<string, unknown>,
+        depth + 1,
+      );
     }
     if (Array.isArray(record.$re)) {
       try {
@@ -513,12 +522,30 @@ export class Endpoint {
     return out;
   }
 
+  /** A signal as data; a reason that can't cross becomes an AbortError. */
+  private marshalSignal(signal: AbortSignal, depth: number): unknown {
+    if (!signal.aborted) {
+      return this.marshal(
+        { aborted: false, watch: watchSignal(signal) },
+        depth,
+      );
+    }
+    try {
+      return this.marshal({ aborted: true, reason: signal.reason }, depth);
+    } catch {
+      return this.marshal({ aborted: true, reason: abortError() }, depth);
+    }
+  }
+
   /** A signal from the other side, aborted here when it aborts there. */
-  private remoteSignal(state: Record<string, unknown>): AbortSignal {
+  private remoteSignal(
+    state: Record<string, unknown>,
+    depth: number,
+  ): AbortSignal {
     const controller = new AbortController();
-    const watch = this.unmarshal(state.watch);
+    const watch = this.unmarshal(state.watch, depth + 1);
     if (state.aborted === true) {
-      controller.abort(this.unmarshal(state.reason));
+      controller.abort(this.unmarshal(state.reason, depth + 1));
     } else if (typeof watch === "function") {
       void watch((reason: unknown) => controller.abort(reason)).catch(() => {});
     }
