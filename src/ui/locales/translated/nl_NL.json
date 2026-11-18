@@ -915,6 +915,16 @@
     "empty": "Geen kaarten. Gebruik hieronder Toevoegen om kaarten te plaatsen."
   },
   "auth": {
+    "inviteIntro": "Je bent uitgenodigd voor deze server. Kies een gebruikersnaam en wachtwoord om je account aan te maken.",
+    "inviteInvalid": "Deze uitnodigingslink is verlopen of al gebruikt. Vraag een administrator om een nieuwe link.",
+    "accountDisabled": "Dit account is uitgeschakeld. Vraag een administrator om het weer in te schakelen.",
+    "accountPending": "Je account wacht op goedkeuring door een administrator.",
+    "stepUp": {
+      "title": "Verifieer dat jij het bent",
+      "description": "Bevestig je tweede factor om door te gaan.",
+      "noFactor": "Je hebt geen tweede factor ingesteld. Voeg er een toe in Instellingen en probeer het opnieuw.",
+      "failed": "Dat is niet gelukt. Probeer het opnieuw."
+    },
     "tagline": "Zelfgehost serverbeheer op basis van plugins.",
     "loginTitle": "Welkom terug",
     "registerTitle": "Account aanmaken",
@@ -941,6 +951,14 @@
     "loginWithExternal": "Inloggen met externe provider",
     "loginWithExternalDesc": "Log in met je geconfigureerde externe identiteitsprovider",
     "loginWithProvider": "Inloggen met {{name}}",
+    "pluginLogin": {
+      "signIn": "Inloggen",
+      "verify": "Verifiëren",
+      "code": "Code",
+      "useKey": "Veiligheidssleutel gebruiken",
+      "keyPrompt": "Gebruik je veiligheidssleutel of passkey om door te gaan.",
+      "keyFailed": "De stap met de veiligheidssleutel is niet gelukt. Probeer het opnieuw."
+    },
     "resetPasswordButton": "Wachtwoord resetten",
     "sendResetCode": "Resetcode versturen",
     "resetCodeDesc": "Voer je gebruikersnaam in om een wachtwoordresetcode te ontvangen. De code wordt gelogd in de Docker-containerlogs.",
@@ -1205,6 +1223,10 @@
         "title": "Bereik het internet",
         "consequence": "Het kan verzoeken sturen naar externe diensten."
       },
+      "network:sockets": {
+        "title": "Eigen netwerkverbindingen openen",
+        "consequence": "Het kan luisteren op poorten en rechtstreeks verbinding maken met elk adres, zonder dat Termix elke verbinding controleert."
+      },
       "network:serve": {
         "title": "Accepteer verbindingen",
         "consequence": "Het opent een poort op de Termix-server."
@@ -1247,7 +1269,7 @@
       },
       "network:probe": {
         "title": "Controleren of poorten reageren",
-        "consequence": "Kan een eenvoudige verbinding openen naar elk adres vanaf de server, om te zien of het bereikbaar is."
+        "consequence": "Kan een onversleutelde verbinding openen naar elk adres vanaf de server om te controleren of het bereikbaar is, en hostnamen opzoeken."
       },
       "hosts:status-provide": {
         "title": "Hoststatus verstrekken",
@@ -1301,6 +1323,10 @@
         "title": "Eigen geheimen opslaan",
         "consequence": "Versleuteld door Termix. De plugin heeft nooit toegang tot de sleutel."
       },
+      "config:secrets": {
+        "title": "Geheimen lezen die de server bewaart",
+        "consequence": "Omgevingsvariabelen en bestanden op de server, behalve de eigen sleutels van Termix."
+      },
       "settings:read-core": {
         "title": "Termix-instellingen lezen",
         "consequence": "Serverinstellingen, niet je hosts of referenties."
@@ -1321,6 +1347,10 @@
         "title": "Kleurthema's toevoegen",
         "consequence": "Alleen kleuren en stijlen. Er wordt geen code uitgevoerd voor een thema."
       }
+    },
+    "webView": {
+      "unavailable": "Deze pagina is niet langer beschikbaar. Open hem opnieuw vanuit de plugin.",
+      "isolationUnavailable": "Deze browser kan de pagina hier niet veilig openen. Gebruik een recente versie van Chrome of Edge, of de desktop-app."
     },
     "runtime": {
       "needsPlugin": "{{name}} is niet beschikbaar",
@@ -1367,7 +1397,8 @@
         "version": "Versie",
         "status": "Status",
         "category": "Categorie",
-        "downloads": "Downloads"
+        "downloads": "Downloads",
+        "memory": "Geheugen"
       },
       "risk": {
         "critical": "Kritiek",
@@ -1432,7 +1463,8 @@
         "updatedMany_other": "{{count}} plugins bijgewerkt",
         "uninstalled": "{{name}} verwijderd",
         "dataDeleted": "Gegevens voor {{name}} verwijderd",
-        "failedToStart": "{{name}} kon niet starten. Open het om te zien waarom."
+        "failedToStart": "{{name}} kon niet starten. Open het om te zien waarom.",
+        "held": "{{name}} wacht {{minutes}} minuten voordat de wijziging wordt toegepast, zodat andere administrators het kunnen zien"
       },
       "errors": {
         "generic": "Er is iets misgegaan",
@@ -1485,6 +1517,23 @@
       "pin": "Op deze versie blijven",
       "pinHint": "Houdt {{version}} vast en slaat alle updates over tot je dit uitschakelt.",
       "pinnedTo": "Vastgezet op {{version}}",
+      "legacy": {
+        "notice_one": "1 plugin is gemaakt voor een oudere versie van Termix en blijft uitgeschakeld tot deze wordt bijgewerkt: {{names}}.",
+        "notice_other": "{{count}} plugins zijn gemaakt voor een oudere versie van Termix en blijven uitgeschakeld tot ze worden bijgewerkt: {{names}}.",
+        "why": "Ze zijn gemaakt voor plugin API 1, die binnen de server draaide. Termix draait nu elke plugin in een eigen proces, dus elke plugin heeft een versie nodig die is gemaakt voor plugin API 2. Werk officiële plugins hier bij en vraag de auteur van een community-plugin om een bijgewerkte versie.",
+        "guide": "Hoe plugins migreren naar API 2"
+      },
+      "provenance": {
+        "verified": "Build geverifieerd",
+        "verifiedHint": "De build-provenance is ondertekend door de release-workflow van het Termix-register en komt overeen met dit bestand. Opent de build.",
+        "unchecked": "Build niet geverifieerd",
+        "uncheckedHint": "De build-provenance kon niet worden geverifieerd bij het downloaden. De registerondertekening wel."
+      },
+      "updateCheck": {
+        "notice_one": "Termix {{version}} is beschikbaar. 1 plugin blijft uitgeschakeld tot je deze bijwerkt: {{names}}.",
+        "notice_other": "Termix {{version}} is beschikbaar. {{count}} plugins blijven uitgeschakeld tot je ze bijwerkt: {{names}}.",
+        "needs": "{{name}} (vereist Termix {{range}})"
+      },
       "version": "Versie",
       "versionPickHint": "Installeer een oudere release in plaats van de nieuwste. Het blijft op die versie tot je het vastzetten opheft.",
       "versionPickHintInstalled": "Schakel over naar een andere release. Als je een kiest die niet de nieuwste is, wordt deze vastgezet.",
@@ -1641,7 +1690,22 @@
       "unsupportedHint": "Er is geen release van deze plugin die op deze versie van Termix werkt. Werk Termix bij om deze te installeren.",
       "needsTermix": "Vereist Termix {{range}}",
       "showUnsupported": "Ongestuurde weergeven ({{count}})",
-      "showMore": "{{count}} meer weergeven ({{total}} over)"
+      "showMore": "{{count}} meer weergeven ({{total}} over)",
+      "memory": {
+        "summary": "Geheugen: {{total}} van {{limit}} | plugins {{plugins}} | {{running}} actief",
+        "lowTitle": "Deze server heeft weinig geheugen",
+        "lowBody": "Termix en de plugins gebruiken {{total}} van {{limit}}. Geef de server meer geheugen of schakel plugins uit die je niet gebruikt.",
+        "idle": "Inactief",
+        "idleHint": "Niet nu actief. Start wanneer er iets naar vraagt.",
+        "keptOn": "Blijft actief: {{reason}}",
+        "stopsWhenIdle": "Stopt bij inactiviteit"
+      }
+    },
+    "firstLoad": {
+      "title": "Plugins voorbereiden",
+      "progress": "{{done}} van {{total}}",
+      "hint": "Dit gebeurt alleen de eerste keer. De volgende keer opent Termix direct.",
+      "skip": "Doorgaan"
     }
   },
   "settings": {
@@ -1712,7 +1776,11 @@
   "rbac": {
     "roles": {
       "admin": "Beheerder",
-      "user": "Gebruiker"
+      "user": "Gebruiker",
+      "viewer": "Kijker",
+      "operator": "Operator",
+      "auditor": "Auditor",
+      "helpdesk": "Helpdesk"
     }
   },
   "tileGrid": {

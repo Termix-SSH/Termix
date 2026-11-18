@@ -915,6 +915,16 @@
     "empty": "Kart yok. Kart eklemek için aşağıdaki Ekle'yi kullanın."
   },
   "auth": {
+    "inviteIntro": "Bu sunucuya davet edildiniz. Hesabınızı oluşturmak için bir kullanıcı adı ve şifre seçin.",
+    "inviteInvalid": "Bu davet bağlantısı süresi dolmuş veya zaten kullanılmış. Yeni bir tane için yöneticiden isteyin.",
+    "accountDisabled": "Bu hesap devre dışı bırakılmış. Tekrar aktif hale getirmesi için yöneticiden isteyin.",
+    "accountPending": "Hesabınızın yönetici tarafından onaylanması bekleniyor.",
+    "stepUp": {
+      "title": "Kimliğinizi doğrulayın",
+      "description": "Devam etmek için ikinci güvenlik adımınızı doğrulayın.",
+      "noFactor": "İkinci güvenlik adımınız ayarlanmamış. Ayarlar'dan ekleyin ve tekrar deneyin.",
+      "failed": "Bu işlem başarısız oldu. Tekrar deneyin."
+    },
     "tagline": "Kendi kendine barındırılan, eklenti tabanlı sunucu yönetimi.",
     "loginTitle": "Tekrar hoş geldiniz",
     "registerTitle": "Hesap Oluştur",
@@ -941,6 +951,14 @@
     "loginWithExternal": "Harici Sağlayıcı ile Giriş Yap",
     "loginWithExternalDesc": "Yapılandırılmış harici kimlik sağlayıcınızı kullanarak giriş yapın",
     "loginWithProvider": "{{name}} ile Giriş Yap",
+    "pluginLogin": {
+      "signIn": "Oturum aç",
+      "verify": "Doğrula",
+      "code": "Kod",
+      "useKey": "Güvenlik anahtarı kullan",
+      "keyPrompt": "Devam etmek için güvenlik anahtarınızı veya geçit anahtarınızı kullanın.",
+      "keyFailed": "Güvenlik anahtarı adımı başarısız oldu. Tekrar deneyin."
+    },
     "resetPasswordButton": "Şifreyi Sıfırla",
     "sendResetCode": "Sıfırlama Kodu Gönder",
     "resetCodeDesc": "Şifre sıfırlama kodu almak için kullanıcı adınızı girin. Kod, Docker kapsayıcı günlüklerinde kaydedilecektir.",
@@ -1205,6 +1223,10 @@
         "title": "İnternete erişebilir",
         "consequence": "Dış hizmetlere istekler gönderebilir."
       },
+      "network:sockets": {
+        "title": "Kendi ağ bağlantılarını açabilir",
+        "consequence": "Termix'in her bağlantıyı kontrol etmesine gerek kalmadan, doğrudan bağlantı noktalarını dinleyebilir ve herhangi bir adrese bağlanabilir."
+      },
       "network:serve": {
         "title": "Bağlantıları kabul edebilir",
         "consequence": "Termix sunucusunda bir bağlantı noktası açar."
@@ -1247,7 +1269,7 @@
       },
       "network:probe": {
         "title": "Portların yanıt verip vermediğini kontrol et",
-        "consequence": "Sunucudan herhangi bir adrese düz bağlantı açabilir, erişilebilir olup olmadığını görebilir."
+        "consequence": "Sunucudan herhangi bir adrese düz bağlantı açabilir, erişilebilir olup olmadığını kontrol edebilir ve ana bilgisayar adlarını sorgulayabilir."
       },
       "hosts:status-provide": {
         "title": "Ana bilgisayar durumunu sağla",
@@ -1301,6 +1323,10 @@
         "title": "Kendi gizli bilgilerini sakla",
         "consequence": "Termix tarafından şifrelenir. Eklenti asla anahtarı tutmaz."
       },
+      "config:secrets": {
+        "title": "Sunucunun tuttuğu gizli bilgileri okuyabilir",
+        "consequence": "Termix'in kendi anahtarları hariç, sunucudaki ortam değişkenleri ve dosyalar."
+      },
       "settings:read-core": {
         "title": "Termix ayarlarını oku",
         "consequence": "Sunucu ayarları, ana bilgisayarlarınız veya kimlik bilgileriniz değil."
@@ -1321,6 +1347,10 @@
         "title": "Renk temaları ekle",
         "consequence": "Sadece renkler ve stiller. Bir tema için hiçbir kod çalışmaz."
       }
+    },
+    "webView": {
+      "unavailable": "Bu sayfa artık mevcut değil. Eklentisinden tekrar açın.",
+      "isolationUnavailable": "Bu tarayıcı sayfayı burada güvenli bir şekilde açamıyor. Güncel bir Chrome veya Edge kullanın veya masaüstü uygulamasını kullanın."
     },
     "runtime": {
       "needsPlugin": "{{name}} kullanılamıyor",
@@ -1367,7 +1397,8 @@
         "version": "Sürüm",
         "status": "Durum",
         "category": "Kategori",
-        "downloads": "İndirmeler"
+        "downloads": "İndirmeler",
+        "memory": "Bellek"
       },
       "risk": {
         "critical": "Kritik",
@@ -1432,7 +1463,8 @@
         "updatedMany_other": "{{count}} eklenti güncellendi",
         "uninstalled": "{{name}} kaldırıldı",
         "dataDeleted": "{{name}} için veriler silindi",
-        "failedToStart": "{{name}} başlatılamadı. Nedenini görmek için açın."
+        "failedToStart": "{{name}} başlatılamadı. Nedenini görmek için açın.",
+        "held": "{{name}}, diğer yöneticilerin değişikliği görmesi için uygulanmadan önce {{minutes}} dakika bekliyor"
       },
       "errors": {
         "generic": "Bir şeyler yanlış gitti",
@@ -1485,6 +1517,23 @@
       "pin": "Bu sürümde kal",
       "pinHint": "{{version}} sürümünü korur ve bunu kapatana kadar tüm güncellemeleri atlar.",
       "pinnedTo": "{{version}} sürümüne sabitlendi",
+      "legacy": {
+        "notice_one": "1 eklenti eski bir Termix sürümü için yapıldı ve güncellenene kadar kapalı kalacak: {{names}}.",
+        "notice_other": "{{count}} eklenti eski bir Termix sürümü için yapıldı ve güncellenene kadar kapalı kalacak: {{names}}.",
+        "why": "Bu eklentiler, sunucu içinde çalışan eklenti API 1 için yapıldı. Termix artık her eklentiyi kendi işleminde çalıştırıyor, bu yüzden her birinin eklenti API 2 için yapılmış bir sürümüne ihtiyacı var. Resmi olanları buradan güncelleyin ve topluluk eklentileri için yazarından bir sürüm isteyin.",
+        "guide": "Eklentiler nasıl API 2'ye geçer"
+      },
+      "provenance": {
+        "verified": "Derleme doğrulandı",
+        "verifiedHint": "Derleme kaynağı Termix kayıt defteri yayınlama iş akışı tarafından imzalandı ve bu dosya ile eşleşiyor. Derlemeyi açar.",
+        "unchecked": "Derleme doğrulanmadı",
+        "uncheckedHint": "İndirildiğinde derleme kaynağı doğrulanamadı. Kayıt defteri imzası doğrulandı."
+      },
+      "updateCheck": {
+        "notice_one": "Termix {{version}} yayınlandı. 1 eklenti güncellenene kadar kapalı kalacak: {{names}}.",
+        "notice_other": "Termix {{version}} yayınlandı. {{count}} eklenti güncellenene kadar kapalı kalacak: {{names}}.",
+        "needs": "{{name}} (Termix {{range}} gerektirir)"
+      },
       "version": "Sürüm",
       "versionPickHint": "En yeni sürüm yerine daha eski bir sürümü yükle. Sabitlemeyi kaldırana kadar bu sürümde kalır.",
       "versionPickHintInstalled": "Başka bir sürüme geç. En yeni olmayan bir sürüm seçmek onu sabitler.",
@@ -1641,7 +1690,22 @@
       "unsupportedHint": "Bu eklentinin bu Termix sürümünde çalışan bir sürümü yok. Yüklemek için Termix'i güncelleyin.",
       "needsTermix": "Termix {{range}} gerekiyor",
       "showUnsupported": "Desteklenmeyenleri göster ({{count}})",
-      "showMore": "{{count}} tane daha göster ({{total}} kaldı)"
+      "showMore": "{{count}} tane daha göster ({{total}} kaldı)",
+      "memory": {
+        "summary": "Bellek: {{limit}}'den {{total}} | eklentiler {{plugins}} | {{running}} çalışıyor",
+        "lowTitle": "Bu sunucuda bellek yetersiz",
+        "lowBody": "Termix ve eklentileri {{limit}}'den {{total}} kullanıyor. Sunucuya daha fazla bellek verin veya kullanmadığınız eklentileri kapatın.",
+        "idle": "Boşta",
+        "idleHint": "Şu anda çalışmıyor. Bir şey ona ihtiyaç duyduğunda başlar.",
+        "keptOn": "Çalışmaya devam ediyor: {{reason}}",
+        "stopsWhenIdle": "Boşta kaldığında durur"
+      }
+    },
+    "firstLoad": {
+      "title": "Eklentiler hazırlanıyor",
+      "progress": "{{total}}'den {{done}}",
+      "hint": "Bu sadece ilk seferde olur. Bir sonraki sefer Termix hemen açılır.",
+      "skip": "Devam et"
     }
   },
   "settings": {
@@ -1712,7 +1776,11 @@
   "rbac": {
     "roles": {
       "admin": "Yönetici",
-      "user": "Kullanıcı"
+      "user": "Kullanıcı",
+      "viewer": "İzleyici",
+      "operator": "Operatör",
+      "auditor": "Denetçi",
+      "helpdesk": "Müşteri Destek"
     }
   },
   "tileGrid": {

@@ -941,6 +941,16 @@
     "empty": "Žádné karty. Použijte tlačítko Přidat níže pro umístění karet."
   },
   "auth": {
+    "inviteIntro": "Byli jste pozván na tento server. Zvolte uživatelské jméno a heslo pro vytvoření účtu.",
+    "inviteInvalid": "Tento odkaz pozvánky vypršel nebo byl již použit. Požádejte administrátora o nový.",
+    "accountDisabled": "Tento účet je vypnutý. Požádejte administrátora, aby ho znovu zapnul.",
+    "accountPending": "Váš účet čeká na schválení administrátorem.",
+    "stepUp": {
+      "title": "Ověřte svou identitu",
+      "description": "Pro pokračování ověřte druhý faktor.",
+      "noFactor": "Nemáte nastavený žádný druhý faktor. Přidejte ho v Nastavení a zkuste to znovu.",
+      "failed": "To nefungovalo. Zkuste to znovu."
+    },
     "tagline": "Správa serverů s pluginy, kterou hostujete sami.",
     "loginTitle": "Vítejte zpět",
     "registerTitle": "Vytvořit účet",
@@ -967,6 +977,14 @@
     "loginWithExternal": "Přihlášení pomocí externího poskytovatele",
     "loginWithExternalDesc": "Přihlaste se pomocí nakonfigurovaného externího poskytovatele identity",
     "loginWithProvider": "Přihlášení pomocí {{name}}",
+    "pluginLogin": {
+      "signIn": "Přihlásit se",
+      "verify": "Ověřit",
+      "code": "Kód",
+      "useKey": "Použít bezpečnostní klíč",
+      "keyPrompt": "Pro pokračování použijte svůj bezpečnostní klíč nebo passkey.",
+      "keyFailed": "Krok s bezpečnostním klíčem nefungoval. Zkuste to znovu."
+    },
     "resetPasswordButton": "Obnovit heslo",
     "sendResetCode": "Odeslat kód pro obnovu",
     "resetCodeDesc": "Zadejte své uživatelské jméno pro přijetí kódu pro obnovu hesla. Kód bude zobrazen v logech Docker kontejneru.",
@@ -1239,6 +1257,10 @@
         "title": "Přístup k internetu",
         "consequence": "Může odesílat požadavy na externí služby."
       },
+      "network:sockets": {
+        "title": "Otevírat vlastní síťová připojení",
+        "consequence": "Může naslouchat na portech a připojovat se přímo k libovolné adrese, aniž by Termix kontroloval každé připojení."
+      },
       "network:serve": {
         "title": "Přijímat připojení",
         "consequence": "Otevírá port na serveru Termix."
@@ -1281,7 +1303,7 @@
       },
       "network:probe": {
         "title": "Zkontrolovat, zda porty odpovídají",
-        "consequence": "Může otevřít obyčejné připojení k libovolné adrese ze serveru, aby zjistil, zda je dosažitelná."
+        "consequence": "Může otevřít obyčejné připojení k libovolné adrese ze serveru, aby zjistil, zda je dosažitelná, a vyhledávat názvy hostitelů."
       },
       "hosts:status-provide": {
         "title": "Poskytovat stav hostitele",
@@ -1335,6 +1357,10 @@
         "title": "Ukládat vlastní tajné informace",
         "consequence": "Šifrováno aplikací Termix. Plugin nikdy neobsahuje klíč."
       },
+      "config:secrets": {
+        "title": "Číst tajné informace, které server uchovává",
+        "consequence": "Proměnné prostředí a soubory na serveru, kromě vlastních klíčů Termixu."
+      },
       "settings:read-core": {
         "title": "Číst nastavení Termix",
         "consequence": "Nastavení serveru, nikoliv vaše hostitelé nebo přihlašovací údaje."
@@ -1355,6 +1381,10 @@
         "title": "Přidat barevná témata",
         "consequence": "Pouze barvy a styly. Pro téma se žádný kód nespouští."
       }
+    },
+    "webView": {
+      "unavailable": "Tato stránka již není dostupná. Otevřete ji znovu z jejího pluginu.",
+      "isolationUnavailable": "Tento prohlížeč nemůže stránku bezpečně otevřít zde. Použijte novější Chrome nebo Edge, nebo desktopovou aplikaci."
     },
     "runtime": {
       "needsPlugin": "{{name}} není k dispozici",
@@ -1401,7 +1431,8 @@
         "version": "Verze",
         "status": "Stav",
         "category": "Kategorie",
-        "downloads": "Stahování"
+        "downloads": "Stahování",
+        "memory": "Paměť"
       },
       "risk": {
         "critical": "Kritické",
@@ -1490,7 +1521,8 @@
         "updatedMany_other": "{{count}} pluginů aktualizováno",
         "uninstalled": "{{name}} odinstalováno",
         "dataDeleted": "Data pro {{name}} smazána",
-        "failedToStart": "{{name}} se nepodařilo spustit. Otevřete jej pro zobrazení důvodu."
+        "failedToStart": "{{name}} se nepodařilo spustit. Otevřete jej pro zobrazení důvodu.",
+        "held": "{{name}} čeká {{minutes}} minut, než se změna projeví, aby ji mohli vidět i ostatní administrátoři"
       },
       "errors": {
         "generic": "Něco se pokazilo",
@@ -1551,6 +1583,27 @@
       "pin": "Zůstat na této verzi",
       "pinHint": "Udrží verzi {{version}} a přeskočí všechny aktualizace, dokud tuto možnost nevypnete.",
       "pinnedTo": "Připnuto k verzi {{version}}",
+      "legacy": {
+        "notice_one": "1 plugin byl vytvořen pro starší verzi Termixu a zůstane vypnutý, dokud nebude aktualizován: {{names}}.",
+        "notice_few": "{{count}} pluginů bylo vytvořeno pro starší verzi Termixu a zůstanou vypnuté, dokud nebudou aktualizovány: {{names}}.",
+        "notice_many": "{{count}} pluginů bylo vytvořeno pro starší verzi Termixu a zůstanou vypnuté, dokud nebudou aktualizovány: {{names}}.",
+        "notice_other": "{{count}} pluginů bylo vytvořeno pro starší verzi Termixu a zůstanou vypnuté, dokud nebudou aktualizovány: {{names}}.",
+        "why": "Byly vytvořeny pro plugin API 1, které běželo uvnitř serveru. Termix nyní spouští každý plugin ve vlastním procesu, takže každý potřebuje verzi pro plugin API 2. Oficiální aktualizujte zde a u komunitních pluginů požádejte autora o novou verzi.",
+        "guide": "Jak migrovat pluginy na API 2"
+      },
+      "provenance": {
+        "verified": "Build ověřen",
+        "verifiedHint": "Původ buildu byl podepsán workflowm pro vydání registru Termixu a odpovídá tomuto souboru. Otevře build.",
+        "unchecked": "Build neověřen",
+        "uncheckedHint": "Původ buildu nebyl možné ověřit při stahování. Jeho podpis v registru byl."
+      },
+      "updateCheck": {
+        "notice_one": "Termix {{version}} je k dispozici. 1 plugin zůstane na něm vypnutý, dokud ho neaktualizujete: {{names}}.",
+        "notice_few": "Termix {{version}} je k dispozici. {{count}} pluginů zůstane na něm vypnutých, dokud je neaktualizujete: {{names}}.",
+        "notice_many": "Termix {{version}} je k dispozici. {{count}} pluginů zůstane na něm vypnutých, dokud je neaktualizujete: {{names}}.",
+        "notice_other": "Termix {{version}} je k dispozici. {{count}} pluginů zůstane na něm vypnutých, dokud je neaktualizujete: {{names}}.",
+        "needs": "{{name}} (vyžaduje Termix {{range}})"
+      },
       "version": "Verze",
       "versionPickHint": "Nainstalujte starší vydání místo nejnovějšího. Zůstane na této verzi, dokud ji neodpnete.",
       "versionPickHintInstalled": "Přepněte na jiné vydání. Výběr verze, která není nejnovější, ji připne.",
@@ -1717,7 +1770,22 @@
       "unsupportedHint": "Žádná verze tohoto pluginu neběží na této verzi Termix. Aktualizujte Termix pro jeho instalaci.",
       "needsTermix": "Vyžaduje Termix {{range}}",
       "showUnsupported": "Zobrazit nepodporované ({{count}})",
-      "showMore": "Zobrazit {{count}} dalších (zbývá {{total}})"
+      "showMore": "Zobrazit {{count}} dalších (zbývá {{total}})",
+      "memory": {
+        "summary": "Paměť: {{total}} z {{limit}} | pluginy {{plugins}} | {{running}} běžících",
+        "lowTitle": "Tento server má málo paměti",
+        "lowBody": "Termix a jeho pluginy používají {{total}} z {{limit}}. Dejte serveru více paměti nebo vypněte pluginy, které nepoužíváte.",
+        "idle": "Nečinný",
+        "idleHint": "Nyní neběží. Spustí se, když ho něco potřebuje.",
+        "keptOn": "Zůstává běžet: {{reason}}",
+        "stopsWhenIdle": "Zastaví se při nečinnosti"
+      }
+    },
+    "firstLoad": {
+      "title": "Připravování pluginů",
+      "progress": "{{done}} z {{total}}",
+      "hint": "Stane se to pouze poprvé. Příště se Termix otevře okamžitě.",
+      "skip": "Pokračovat"
     }
   },
   "settings": {
@@ -1802,7 +1870,11 @@
   "rbac": {
     "roles": {
       "admin": "Administrátor",
-      "user": "Uživatel"
+      "user": "Uživatel",
+      "viewer": "Sledující",
+      "operator": "Operátor",
+      "auditor": "Auditátor",
+      "helpdesk": "Podpora"
     }
   },
   "tileGrid": {

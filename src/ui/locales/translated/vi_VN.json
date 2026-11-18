@@ -902,6 +902,16 @@
     "empty": "Không có thẻ nào. Sử dụng Thêm bên dưới để đặt thẻ."
   },
   "auth": {
+    "inviteIntro": "Bạn được mời tham gia máy chủ này. Chọn tên người dùng và mật khẩu để tạo tài khoản.",
+    "inviteInvalid": "Liên kết mời này đã hết hạn hoặc đã được sử dụng. Hãy yêu cầu quản trị viên cấp liên kết mới.",
+    "accountDisabled": "Tài khoản này đã bị vô hiệu hóa. Hãy yêu cầu quản trị viên kích hoạt lại.",
+    "accountPending": "Tài khoản của bạn đang chờ quản trị viên phê duyệt.",
+    "stepUp": {
+      "title": "Xác minh danh tính",
+      "description": "Xác thực yếu tố thứ hai để tiếp tục.",
+      "noFactor": "Bạn chưa thiết lập yếu tố xác thực thứ hai. Hãy thêm trong Cài đặt rồi thử lại.",
+      "failed": "Thao tác không thành công. Hãy thử lại."
+    },
     "tagline": "Quản lý máy chủ tự lưu trữ, dựa trên plugin.",
     "loginTitle": "Chào mừng trở lại",
     "registerTitle": "Tạo Tài khoản",
@@ -928,6 +938,14 @@
     "loginWithExternal": "Đăng nhập bằng nhà cung cấp bên ngoài",
     "loginWithExternalDesc": "Đăng nhập bằng nhà cung cấp danh tính bên ngoài đã cấu hình",
     "loginWithProvider": "Đăng nhập bằng {{name}}",
+    "pluginLogin": {
+      "signIn": "Đăng nhập",
+      "verify": "Xác minh",
+      "code": "Mã",
+      "useKey": "Sử dụng khóa bảo mật",
+      "keyPrompt": "Sử dụng khóa bảo mật hoặc passkey để tiếp tục.",
+      "keyFailed": "Bước xác thực bằng khóa bảo mật không thành công. Hãy thử lại."
+    },
     "resetPasswordButton": "Đặt lại mật khẩu",
     "sendResetCode": "Gửi mã đặt lại",
     "resetCodeDesc": "Nhập tên người dùng để nhận mã đặt lại mật khẩu. Mã sẽ được ghi trong nhật ký của container Docker.",
@@ -1188,6 +1206,10 @@
         "title": "Truy cập internet",
         "consequence": "Nó có thể gửi yêu cầu đến các dịch vụ bên ngoài."
       },
+      "network:sockets": {
+        "title": "Tạo kết nối mạng riêng",
+        "consequence": "Có thể lắng nghe trên các cổng và kết nối trực tiếp đến bất kỳ địa chỉ nào, mà không cần Termix kiểm tra từng kết nối."
+      },
       "network:serve": {
         "title": "Chấp nhận kết nối",
         "consequence": "Nó mở một cổng trên máy chủ Termix."
@@ -1230,7 +1252,7 @@
       },
       "network:probe": {
         "title": "Kiểm tra xem các cổng có phản hồi không",
-        "consequence": "Có thể mở kết nối thông thường đến bất kỳ địa chỉ nào từ máy chủ, để xem nó có thể truy cập được hay không."
+        "consequence": "Có thể mở kết nối không mã hóa đến bất kỳ địa chỉ nào từ máy chủ để kiểm tra khả năng truy cập và tra cứu tên máy chủ."
       },
       "hosts:status-provide": {
         "title": "Cung cấp trạng thái máy chủ",
@@ -1284,6 +1306,10 @@
         "title": "Lưu trữ bí mật riêng",
         "consequence": "Được Termix mã hóa. Plugin không bao giờ nắm giữ khóa."
       },
+      "config:secrets": {
+        "title": "Đọc các bí mật do máy chủ lưu trữ",
+        "consequence": "Các biến môi trường và tệp trên máy chủ, ngoại trừ các khóa riêng của Termix."
+      },
       "settings:read-core": {
         "title": "Đọc cài đặt Termix",
         "consequence": "Cài đặt máy chủ, không phải máy chủ hoặc thông tin đăng nhập của bạn."
@@ -1304,6 +1330,10 @@
         "title": "Thêm giao diện màu sắc",
         "consequence": "Chỉ bao gồm màu sắc và kiểu dáng. Không có mã nào được thực thi cho một giao diện màu sắc."
       }
+    },
+    "webView": {
+      "unavailable": "Trang này không còn khả dụng. Hãy mở lại từ plugin tương ứng.",
+      "isolationUnavailable": "Trình duyệt này không thể mở trang một cách an toàn tại đây. Hãy sử dụng Chrome hoặc Edge phiên bản mới, hoặc ứng dụng desktop."
     },
     "runtime": {
       "needsPlugin": "{{name}} không khả dụng",
@@ -1350,7 +1380,8 @@
         "version": "Phiên bản",
         "status": "Trạng thái",
         "category": "Danh mục",
-        "downloads": "Lượt tải"
+        "downloads": "Lượt tải",
+        "memory": "Bộ nhớ"
       },
       "risk": {
         "critical": "Quan trọng",
@@ -1403,7 +1434,8 @@
         "updatedMany_other": "{{count}} plugin đã được cập nhật",
         "uninstalled": "{{name}} đã được gỡ cài đặt",
         "dataDeleted": "Dữ liệu của {{name}} đã được xóa",
-        "failedToStart": "{{name}} không thể khởi động. Mở nó để xem lý do."
+        "failedToStart": "{{name}} không thể khởi động. Mở nó để xem lý do.",
+        "held": "{{name}} chờ {{minutes}} phút trước khi thay đổi có hiệu lực, để các quản trị viên khác có thể xem"
       },
       "errors": {
         "generic": "Đã xảy ra lỗi",
@@ -1452,6 +1484,21 @@
       "pin": "Giữ nguyên phiên bản này",
       "pinHint": "Giữ lại {{version}} và bỏ qua mọi bản cập nhật cho đến khi bạn tắt tính năng này.",
       "pinnedTo": "Đã ghim vào {{version}}",
+      "legacy": {
+        "notice_other": "{{count}} plugin được tạo cho phiên bản Termix cũ và sẽ tắt cho đến khi được cập nhật: {{names}}.",
+        "why": "Chúng được tạo cho Plugin API 1, chạy bên trong máy chủ. Termix hiện chạy mỗi plugin trong tiến trình riêng, vì vậy mỗi plugin cần phiên bản tương thích với Plugin API 2. Cập nhật các plugin chính thức tại đây và yêu cầu tác giả của plugin cộng đồng cung cấp phiên bản mới.",
+        "guide": "Cách di chuyển plugin sang API 2"
+      },
+      "provenance": {
+        "verified": "Đã kiểm tra bản dựng",
+        "verifiedHint": "Nguồn gốc bản dựng đã được ký bởi quy trình phát hành của registry Termix và khớp với tệp này. Mở bản dựng.",
+        "unchecked": "Chưa kiểm tra bản dựng",
+        "uncheckedHint": "Không thể kiểm tra nguồn gốc bản dựng khi tải xuống. Chữ ký registry đã được kiểm tra."
+      },
+      "updateCheck": {
+        "notice_other": "Termix {{version}} đã ra mắt. {{count}} plugin sẽ tắt trên phiên bản này cho đến khi bạn cập nhật: {{names}}.",
+        "needs": "{{name}} (cần Termix {{range}})"
+      },
       "version": "Phiên bản",
       "versionPickHint": "Cài đặt một bản phát hành cũ thay vì bản mới nhất. Nó sẽ giữ nguyên phiên bản đó cho đến khi bạn bỏ ghim.",
       "versionPickHintInstalled": "Chuyển sang một bản phát hành khác. Chọn một phiên bản không phải là mới nhất sẽ tự động ghim nó.",
@@ -1603,7 +1650,22 @@
       "unsupportedHint": "Không có bản phát hành nào của plugin này chạy trên phiên bản Termix hiện tại. Hãy cập nhật Termix để cài đặt nó.",
       "needsTermix": "Yêu cầu Termix {{range}}",
       "showUnsupported": "Hiển thị không hỗ trợ ({{count}})",
-      "showMore": "Hiển thị thêm {{count}} (còn {{total}})"
+      "showMore": "Hiển thị thêm {{count}} (còn {{total}})",
+      "memory": {
+        "summary": "Bộ nhớ: {{total}} trên {{limit}} | plugin {{plugins}} | {{running}} đang chạy",
+        "lowTitle": "Máy chủ này đang thiếu bộ nhớ",
+        "lowBody": "Termix và các plugin sử dụng {{total}} trên {{limit}}. Hãy cấp thêm bộ nhớ cho máy chủ hoặc tắt các plugin không sử dụng.",
+        "idle": "Chờ rảnh",
+        "idleHint": "Không chạy hiện tại. Sẽ khởi động khi có yêu cầu.",
+        "keptOn": "Luôn chạy: {{reason}}",
+        "stopsWhenIdle": "Dừng khi chờ rảnh"
+      }
+    },
+    "firstLoad": {
+      "title": "Đang chuẩn bị plugin",
+      "progress": "{{done}} trên {{total}}",
+      "hint": "Điều này chỉ xảy ra lần đầu. Lần sau Termix sẽ mở ngay lập tức.",
+      "skip": "Tiếp tục"
     }
   },
   "settings": {
@@ -1667,7 +1729,11 @@
   "rbac": {
     "roles": {
       "admin": "Quản trị viên",
-      "user": "Người dùng"
+      "user": "Người dùng",
+      "viewer": "Người xem",
+      "operator": "Người vận hành",
+      "auditor": "Kiểm toán viên",
+      "helpdesk": "Hỗ trợ kỹ thuật"
     }
   },
   "tileGrid": {

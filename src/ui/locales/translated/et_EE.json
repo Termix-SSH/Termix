@@ -915,6 +915,16 @@
     "empty": "Kaarte pole. Kasutage allolevat Lisa, et kaarte lisada."
   },
   "auth": {
+    "inviteIntro": "Sind kutsuti sellele serverile. Vali kasutajanimi ja parool, et luua oma konto.",
+    "inviteInvalid": "See kutselink on aegunud või on juba kasutatud. Palu haldajalt uus link.",
+    "accountDisabled": "See konto on keelatud. Palu haldajal see uuesti lubada.",
+    "accountPending": "Sinu konto ootab haldaja heakskiitu.",
+    "stepUp": {
+      "title": "Kinnita, et sa oled sina",
+      "description": "Kinnita oma teine autentimistegur, et jätkata.",
+      "noFactor": "Sul ei ole teist autentimistegurit seadistatud. Lisa see Seadistustes ja proovi uuesti.",
+      "failed": "See ei õnnestunud. Proovi uuesti."
+    },
     "tagline": "Enne hostitud, pistikprogrammipõhine serverihaldus.",
     "loginTitle": "Tere tulemast tagasi",
     "registerTitle": "Loo konto",
@@ -941,6 +951,14 @@
     "loginWithExternal": "Logi sisse välise pakkujaga",
     "loginWithExternalDesc": "Logi sisse oma konfigureeritud välise identiteedipakkujaga",
     "loginWithProvider": "Logi sisse {{name}}-ga",
+    "pluginLogin": {
+      "signIn": "Logi sisse",
+      "verify": "Kinnita",
+      "code": "Kood",
+      "useKey": "Kasuta turvavõtit",
+      "keyPrompt": "Kasuta turvavõtit või Passkeyt, et jätkata.",
+      "keyFailed": "Turvavõtme samm ei õnnestunud. Proovi uuesti."
+    },
     "resetPasswordButton": "Lähtesta parool",
     "sendResetCode": "Saada lähtestuskood",
     "resetCodeDesc": "Sisestage oma kasutajanimi, et saada parooli lähtestamise kood. Kood logitakse Docker-i konteineri logidesse.",
@@ -1205,6 +1223,10 @@
         "title": "Pääs internetisse",
         "consequence": "See saab saata päringuid väljastpoolt olevatele teenustele."
       },
+      "network:sockets": {
+        "title": "Ava oma võrguühendused",
+        "consequence": "See saab kuulata porti ja ühenduda mis tahes aadressiga otse, ilma et Termix kontrolliks iga ühendust."
+      },
       "network:serve": {
         "title": "Ühenduste vastuvõtmine",
         "consequence": "See avab poordi Termixi serveris."
@@ -1247,7 +1269,7 @@
       },
       "network:probe": {
         "title": "Kontrolli, kas pordid vastavad",
-        "consequence": "Võib avada serverist tavalise ühenduse suvalise aadressiga, et näha, kas see on saadaval."
+        "consequence": "Võib avada serverist mis tahes aadressile lihtsa ühenduse, et kontrollida selle saavutatavust ja otsida hostinimesi."
       },
       "hosts:status-provide": {
         "title": "Paku peremeasarvuti olekut",
@@ -1301,6 +1323,10 @@
         "title": "Salvesta oma saladused",
         "consequence": "Krüpteeritud Termixi poolt. Pistikprogramm ei hoia võtit kunagi."
       },
+      "config:secrets": {
+        "title": "Loe serveri hoiustatud saladusi",
+        "consequence": "Keskkonnamuutujad ja failid serveril, välja arvatud Termixi enda võtmed."
+      },
       "settings:read-core": {
         "title": "Loe Termixi seadeid",
         "consequence": "Serveri seaded, mitte sinu hostid ega sisselogimisandmed."
@@ -1321,6 +1347,10 @@
         "title": "Lisa värviteemad",
         "consequence": "Ainult värvid ja stiilid. Teema jaoks ei käivitata koodi."
       }
+    },
+    "webView": {
+      "unavailable": "See leht pole enam saadaval. Ava see uuesti selle pluginast.",
+      "isolationUnavailable": "See brauser ei saa seda lehte siin turvaliselt avada. Kasuta uut Chrome'i või Edge'i või lauaarvuti rakendust."
     },
     "runtime": {
       "needsPlugin": "{{name}} ei ole saadaval",
@@ -1367,7 +1397,8 @@
         "version": "Versioon",
         "status": "Olek",
         "category": "Kategooria",
-        "downloads": "Allalaadimised"
+        "downloads": "Allalaadimised",
+        "memory": "Mälu"
       },
       "risk": {
         "critical": "Kriitiline",
@@ -1432,7 +1463,8 @@
         "updatedMany_other": "{{count}} pistikprogrammi uuendatud",
         "uninstalled": "{{name}} eemaldatud",
         "dataDeleted": "{{name}} andmed kustutatud",
-        "failedToStart": "{{name}} ei suutnud käivituda. Ava see, et näha põhjust."
+        "failedToStart": "{{name}} ei suutnud käivituda. Ava see, et näha põhjust.",
+        "held": "{{name}} ootab {{minutes}} minutit enne muudatuse rakendumist, et teised haldajad saaksid seda näha"
       },
       "errors": {
         "generic": "Midagi läks valesti",
@@ -1485,6 +1517,23 @@
       "pin": "Jää sellele versioonile",
       "pinHint": "Hoiab versiooni {{version}} ja jätab uuendused vahele, kuni lülitate selle välja.",
       "pinnedTo": "Fikseeritud versioonile {{version}}",
+      "legacy": {
+        "notice_one": "1 plugin on loodud vanema Termixi jaoks ja jääb välja, kuni see on uuendatud: {{names}}.",
+        "notice_other": "{{count}} pluginat on loodud vanema Termixi jaoks ja jäävad välja, kuni need on uuendatud: {{names}}.",
+        "why": "Need on loodud plugin API 1 jaoks, mis töötas serveri sees. Termix käitab nüüd iga pluginat oma protsessis, seega vajab igaüks versiooni, mis on loodud plugin API 2 jaoks. Uuenda ametlikke pluginasid siin ja küsi kogukonna pluginate autorilt uus versioon.",
+        "guide": "Kuidas pluginad liiguvad API 2-le"
+      },
+      "provenance": {
+        "verified": "Ehitus kontrollitud",
+        "verifiedHint": "Selle ehituse päritolu on alla kirjutatud Termixi registriväljalaske töövooga ja see vastab sellele failile. Avab ehituse.",
+        "unchecked": "Ehitust ei kontrollitud",
+        "uncheckedHint": "Selle ehituse päritolu ei õnnestunud allalaadimisel kontrollida. Selle registrisignatuur oli kontrollitud."
+      },
+      "updateCheck": {
+        "notice_one": "Termix {{version}} on välja antud. 1 plugin jääb sellel välja, kuni sa selle uuendad: {{names}}.",
+        "notice_other": "Termix {{version}} on välja antud. {{count}} pluginat jäävad sellel välja, kuni sa need uuendad: {{names}}.",
+        "needs": "{{name}} (vajab Termix {{range}})"
+      },
       "version": "Versioon",
       "versionPickHint": "Paigalda vanem versioon uusima asemel. See jääb sellele versioonile, kuni fikseerimine eemaldatakse.",
       "versionPickHintInstalled": "Lülita teisele versioonile. Kui valite mitte uusima versiooni, fikseeritakse see.",
@@ -1641,7 +1690,22 @@
       "unsupportedHint": "Sellel Termixi versioonil ei tööta selle plugina ühtegi väljaannet. Uuenda Termixit, et see installida.",
       "needsTermix": "Nõuab Termixit {{range}}",
       "showUnsupported": "Kuva mittetoetatud ({{count}})",
-      "showMore": "Kuva {{count}} rohkem (jäänud {{total}})"
+      "showMore": "Kuva {{count}} rohkem (jäänud {{total}})",
+      "memory": {
+        "summary": "Mälu: {{total}} / {{limit}} | pluginad {{plugins}} | {{running}} töötab",
+        "lowTitle": "Sellel serveril on vähe mälu",
+        "lowBody": "Termix ja selle pluginad kasutavad {{total}} / {{limit}}. Anna serverile rohkem mälu või lülita välja pluginad, mida sa ei kasuta.",
+        "idle": "Ootel",
+        "idleHint": "Praegu ei tööta. See käivitub, kui midagi seda vajab.",
+        "keptOn": "Jätkab tööd: {{reason}}",
+        "stopsWhenIdle": "Peatub ootel olekus"
+      }
+    },
+    "firstLoad": {
+      "title": "Pluginade ettevalmistamine",
+      "progress": "{{done}} / {{total}}",
+      "hint": "See juhtub ainult esimest korda. Järgmine kord avaneb Termix kohe.",
+      "skip": "Jätka"
     }
   },
   "settings": {
@@ -1712,7 +1776,11 @@
   "rbac": {
     "roles": {
       "admin": "Administraator",
-      "user": "Kasutaja"
+      "user": "Kasutaja",
+      "viewer": "Vaataja",
+      "operator": "Operaator",
+      "auditor": "Auditor",
+      "helpdesk": "Tugi"
     }
   },
   "tileGrid": {

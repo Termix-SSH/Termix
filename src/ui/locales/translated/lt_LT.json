@@ -941,6 +941,16 @@
     "empty": "Nėra kortelių. Naudokite „Pridėti“ žemiau, kad įdėtumėte korteles."
   },
   "auth": {
+    "inviteIntro": "Jūs buvote pakviesti į šį serverį. Pasirinkite vartotojo vardą ir slaptažodį, kad sukurtumėte paskyrą.",
+    "inviteInvalid": "Šis pakvietimo nuorodos galiojimo laikas pasibaigė arba ji jau buvo panaudota. Paprašykite administratoriaus išsiųsti naują.",
+    "accountDisabled": "Ši paskyra išjungta. Paprašykite administratoriaus ją vėl įjungti.",
+    "accountPending": "Jūsų paskyra laukia administratoriaus patvirtinimo.",
+    "stepUp": {
+      "title": "Patvirtinkite, kad tai esate jūs",
+      "description": "Pateikite antrąjį patvirtinimo veiksnį, kad tęstumėte.",
+      "noFactor": "Jūs nesate nustatę antrojo patvirtinimo veiksnio. Pridėkite vieną „Nustatymuose“ ir bandykite dar kartą.",
+      "failed": "Tai nepavyko. Bandykite dar kartą."
+    },
     "tagline": "Savimi talpinama, papildiniais paremta serverių valdymo sistema.",
     "loginTitle": "Sveiki sugrįžę",
     "registerTitle": "Sukurti paskyrą",
@@ -967,6 +977,14 @@
     "loginWithExternal": "Prisijungti naudojant išorinį tiekėją",
     "loginWithExternalDesc": "Prisijunkite naudodami sukonfigūruotą išorinį tapatybės tiekėją",
     "loginWithProvider": "Prisijungti su {{name}}",
+    "pluginLogin": {
+      "signIn": "Prisijungti",
+      "verify": "Patvirtinti",
+      "code": "Kodas",
+      "useKey": "Naudoti saugos raktą",
+      "keyPrompt": "Naudokite savo saugos raktą arba prisijungimo raktą, kad tęstumėte.",
+      "keyFailed": "Saugos rakto žingsnis nepavyko. Bandykite dar kartą."
+    },
     "resetPasswordButton": "Atkurti slaptažodį",
     "sendResetCode": "Siųsti atkūrimo kodą",
     "resetCodeDesc": "Įveskite savo vartotojo vardą, kad gautumėte slaptažodžio atkūrimo kodą. Kodas bus įrašytas į Docker konteinerio žurnalus.",
@@ -1239,6 +1257,10 @@
         "title": "Prieiga prie interneto",
         "consequence": "Jis gali siųsti užklausas išorinėms paslaugoms."
       },
+      "network:sockets": {
+        "title": "Atidaryti savo tinklo ryšius",
+        "consequence": "Jis gali klausytis prievadų ir tiesiogiai jungtis prie bet kurios adreso, nereikalaujant, kad Termix tikrintų kiekvieną ryšį."
+      },
       "network:serve": {
         "title": "Priimti ryšius",
         "consequence": "Jis atidaro prievadą Termix serveryje."
@@ -1281,7 +1303,7 @@
       },
       "network:probe": {
         "title": "Patikrinti, ar portai atsako",
-        "consequence": "Gali atidaryti paprastą ryšį su bet kokia adrese nuo serverio, kad pamatytų, ar jis pasiekiamas."
+        "consequence": "Gali atidaryti paprastą ryšį su bet kuriuo adresu iš serverio, kad patikrintų, ar jis pasiekiamas, ir ieškoti serverio vardų."
       },
       "hosts:status-provide": {
         "title": "Teikti serverio būseną",
@@ -1335,6 +1357,10 @@
         "title": "Saugoti savo slaptažodžius",
         "consequence": "Šifruojama Termix. Priedas niekada neturi rakto."
       },
+      "config:secrets": {
+        "title": "Skaityti serverio saugomas paslaptis",
+        "consequence": "Aplinkos kintamieji ir failai serveryje, išskyrus Termix pačių raktus."
+      },
       "settings:read-core": {
         "title": "Skaityti Termix nustatymus",
         "consequence": "Serverio nustatymai, ne jūsų serveriai ar prisijungimo duomenys."
@@ -1355,6 +1381,10 @@
         "title": "Pridėti spalvų temas",
         "consequence": "Tik spalvos ir stiliai. Temoms joks kodas nevykdomas."
       }
+    },
+    "webView": {
+      "unavailable": "Šis puslapis nebepasiekiamas. Atidarykite jį iš naujo iš jo papildinio.",
+      "isolationUnavailable": "Šis naršyklė negali saugiai atidaryti puslapio čia. Naudokite naujausią „Chrome“ arba „Edge“ versiją arba darbalaukio programą."
     },
     "runtime": {
       "needsPlugin": "{{name}} nėra prieinamas",
@@ -1401,7 +1431,8 @@
         "version": "Versija",
         "status": "Būsena",
         "category": "Kategorija",
-        "downloads": "Atsisiuntimai"
+        "downloads": "Atsisiuntimai",
+        "memory": "Atmintis"
       },
       "risk": {
         "critical": "Kritinė",
@@ -1490,7 +1521,8 @@
         "updatedMany_other": "Atnaujinta {{count}} priedų",
         "uninstalled": "„{{name}}“ pašalinta",
         "dataDeleted": "„{{name}}“ duomenys ištrinti",
-        "failedToStart": "Nepavyko paleisti „{{name}}“. Atidarykite jį, kad sužinotumėte priežastį."
+        "failedToStart": "Nepavyko paleisti „{{name}}“. Atidarykite jį, kad sužinotumėte priežastį.",
+        "held": "{{name}} laukia {{minutes}} min., kol pakeitimai įsigalios, kad kiti administratoriai galėtų tai pamatyti"
       },
       "errors": {
         "generic": "Kažkas nutiko ne taip",
@@ -1551,6 +1583,27 @@
       "pin": "Palaikyti šią versiją",
       "pinHint": "Laikosi {{version}} ir ignoruoja visus naujinimus, kol tai išjungsite.",
       "pinnedTo": "Pritvirtinta prie {{version}}",
+      "legacy": {
+        "notice_one": "1 papildinys sukurtas senesnei Termix versijai ir lieka išjungtas, kol bus atnaujintas: {{names}}.",
+        "notice_few": "{{count}} papildiniai sukurti senesnei Termix versijai ir lieka išjungti, kol bus atnaujinti: {{names}}.",
+        "notice_many": "{{count}} papildinių sukurti senesnei Termix versijai ir lieka išjungti, kol bus atnaujinti: {{names}}.",
+        "notice_other": "{{count}} papildinių sukurti senesnei Termix versijai ir lieka išjungti, kol bus atnaujinti: {{names}}.",
+        "why": "Jie sukurti papildinių API 1, kuri veikė serveryje. Dabar Termix vykdo kiekvieną papildinį atskiru procesu, todėl kiekvienam reikia versijos, skirtos papildinių API 2. Atnaujinkite oficialius čia, o bendruomenės papildiniui paprašykite autoriaus.",
+        "guide": "Kaip papildiniai pereina prie API 2"
+      },
+      "provenance": {
+        "verified": "Sukompiliuota patikrinta",
+        "verifiedHint": "Jos sukompiliavimo kilmė pasirašyta Termix registro išleidimo darbo srautu ir atitinka šį failą. Atidaro sukompiliavimą.",
+        "unchecked": "Sukompiliuota nepatikrinta",
+        "uncheckedHint": "Jos sukompiliavimo kilmės nebuvo galima patikrinti atsisiunčiant. Jos registro parašas buvo patikrintas."
+      },
+      "updateCheck": {
+        "notice_one": "Termix {{version}} jau išleista. 1 papildinys liks išjungtas, kol jį atnaujinsite: {{names}}.",
+        "notice_few": "Termix {{version}} jau išleista. {{count}} papildiniai liks išjungti, kol juos atnaujinsite: {{names}}.",
+        "notice_many": "Termix {{version}} jau išleista. {{count}} papildinių liks išjungti, kol juos atnaujinsite: {{names}}.",
+        "notice_other": "Termix {{version}} jau išleista. {{count}} papildinių liks išjungti, kol juos atnaujinsite: {{names}}.",
+        "needs": "{{name}} (reikia Termix {{range}})"
+      },
       "version": "Versija",
       "versionPickHint": "Įdiekite senesnę versiją vietoj naujausios. Ji išliks šioje versijoje, kol ją atjungsite.",
       "versionPickHintInstalled": "Perjunkite į kitą versiją. Pasirinkus ne naujausią, ji bus pritraukta.",
@@ -1717,7 +1770,22 @@
       "unsupportedHint": "Šio priedo nėra išleista šiai Termix versijai. Atnaujinkite Termix, kad galėtumėte jį įdiegti.",
       "needsTermix": "Reikia Termix {{range}}",
       "showUnsupported": "Rodyti nepalaikomus ({{count}})",
-      "showMore": "Rodyti dar {{count}} (liko {{total}})"
+      "showMore": "Rodyti dar {{count}} (liko {{total}})",
+      "memory": {
+        "summary": "Atmintis: {{total}} iš {{limit}} | papildiniai {{plugins}} | {{running}} veikia",
+        "lowTitle": "Šiame serveryje trūksta atminties",
+        "lowBody": "Termix ir jo papildiniai naudoja {{total}} iš {{limit}}. Pridėkite daugiau atminties serveriui arba išjunkite papildinius, kurių nenaudojate.",
+        "idle": "Nenaudojamas",
+        "idleHint": "Dabar neveikia. Jis paleidžiamas, kai kažkas jo reikia.",
+        "keptOn": "Lieka veikiantis: {{reason}}",
+        "stopsWhenIdle": "Stabdomas, kai nenaudojamas"
+      }
+    },
+    "firstLoad": {
+      "title": "Ruošiami papildiniai",
+      "progress": "{{done}} iš {{total}}",
+      "hint": "Tai įvyksta tik pirmą kartą. Kitą kartą Termix atsivers iškart.",
+      "skip": "Tęsti"
     }
   },
   "settings": {
@@ -1802,7 +1870,11 @@
   "rbac": {
     "roles": {
       "admin": "Administratorius",
-      "user": "Vartotojas"
+      "user": "Vartotojas",
+      "viewer": "Žiūrovas",
+      "operator": "Operatorius",
+      "auditor": "Auditorius",
+      "helpdesk": "Pagalbos tarnyba"
     }
   },
   "tileGrid": {

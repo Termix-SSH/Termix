@@ -941,6 +941,16 @@
     "empty": "Brak kart. Użyj opcji Dodaj poniżej, aby umieścić karty."
   },
   "auth": {
+    "inviteIntro": "Zostałeś zaproszony na ten serwer. Wybierz nazwę użytkownika i hasło, aby utworzyć konto.",
+    "inviteInvalid": "To zaproszenie wygasło lub zostało już użyte. Poproś administratora o nowe.",
+    "accountDisabled": "To konto jest wyłączone. Poproś administratora o jego ponowne włączenie.",
+    "accountPending": "Twoje konto oczekuje na zatwierdzenie przez administratora.",
+    "stepUp": {
+      "title": "Zweryfikuj tożsamość",
+      "description": "Potwierdź drugi czynnik uwierzytelniający, aby kontynuować.",
+      "noFactor": "Nie masz skonfigurowanego drugiego czynnika uwierzytelniającego. Dodaj go w Ustawieniach, a następnie spróbuj ponownie.",
+      "failed": "To nie zadziałało. Spróbuj ponownie."
+    },
     "tagline": "Zarządzanie serwerami hostowane lokalnie, oparte na wtyczkach.",
     "loginTitle": "Witaj ponownie",
     "registerTitle": "Utwórz konto",
@@ -967,6 +977,14 @@
     "loginWithExternal": "Zaloguj się za pomocą dostawcy zewnętrznego",
     "loginWithExternalDesc": "Zaloguj się, używając skonfigurowanego zewnętrznego dostawcy tożsamości",
     "loginWithProvider": "Zaloguj się przez {{name}}",
+    "pluginLogin": {
+      "signIn": "Zaloguj się",
+      "verify": "Zweryfikuj",
+      "code": "Kod",
+      "useKey": "Użyj klucza bezpieczeństwa",
+      "keyPrompt": "Użyj klucza bezpieczeństwa lub passkey, aby kontynuować.",
+      "keyFailed": "Krok z kluczem bezpieczeństwa nie powiódł się. Spróbuj ponownie."
+    },
     "resetPasswordButton": "Resetuj hasło",
     "sendResetCode": "Wyślij kod resetowania",
     "resetCodeDesc": "Wprowadź nazwę użytkownika, aby otrzymać kod resetowania hasła. Kod zostanie wyświetlony w logach kontenera Docker.",
@@ -1239,6 +1257,10 @@
         "title": "Dostęp do internetu",
         "consequence": "Może wysyłać żądania do zewnętrznych usług."
       },
+      "network:sockets": {
+        "title": "Otwieranie własnych połączeń sieciowych",
+        "consequence": "Może nasłuchiwać na portach i łączyć się bezpośrednio z dowolnym adresem, bez sprawdzania każdego połączenia przez Termix."
+      },
       "network:serve": {
         "title": "Akceptowanie połączeń",
         "consequence": "Otwiera port na serwerze Termix."
@@ -1281,7 +1303,7 @@
       },
       "network:probe": {
         "title": "Sprawdź, czy porty odpowiadają",
-        "consequence": "Może otwierać zwykłe połączenie z dowolnym adresem z serwera, aby sprawdzić, czy jest on osiągalny."
+        "consequence": "Może otwierać zwykłe połączenia z dowolnym adresem z serwera, aby sprawdzić, czy jest osiągalny, oraz wyszukiwać nazwy hostów."
       },
       "hosts:status-provide": {
         "title": "Dostarczaj status hosta",
@@ -1335,6 +1357,10 @@
         "title": "Przechowywanie własnych haseł",
         "consequence": "Szyfrowane przez Termix. Wtyczka nigdy nie posiada klucza."
       },
+      "config:secrets": {
+        "title": "Czytanie haseł przechowywanych na serwerze",
+        "consequence": "Zmienne środowiskowe i pliki na serwerze, z wyjątkiem własnych kluczy Termix."
+      },
       "settings:read-core": {
         "title": "Odczytywanie ustawień Termix",
         "consequence": "Ustawienia serwera, a nie Twoich hostów ani danych logowania."
@@ -1355,6 +1381,10 @@
         "title": "Dodaj motywy kolorystyczne",
         "consequence": "Tylko kolory i style. Żaden kod nie jest uruchamiany dla motywu."
       }
+    },
+    "webView": {
+      "unavailable": "Ta strona nie jest już dostępna. Otwórz ją ponownie z jej wtyczki.",
+      "isolationUnavailable": "Ta przeglądarka nie może bezpiecznie otworzyć strony tutaj. Użyj najnowszej wersji Chrome lub Edge lub aplikacji desktopowej."
     },
     "runtime": {
       "needsPlugin": "{{name}} nie jest dostępny",
@@ -1401,7 +1431,8 @@
         "version": "Wersja",
         "status": "Status",
         "category": "Kategoria",
-        "downloads": "Pobrania"
+        "downloads": "Pobrania",
+        "memory": "Pamięć"
       },
       "risk": {
         "critical": "Krytyczne",
@@ -1490,7 +1521,8 @@
         "updatedMany_other": "{{count}} wtyczki zaktualizowane",
         "uninstalled": "{{name}} odinstalowane",
         "dataDeleted": "Dane dla {{name}} usunięte",
-        "failedToStart": "Nie udało się uruchomić {{name}}. Otwórz, aby zobaczyć przyczynę."
+        "failedToStart": "Nie udało się uruchomić {{name}}. Otwórz, aby zobaczyć przyczynę.",
+        "held": "{{name}} czeka {{minutes}} minut, zanim zmiana zostanie zastosowana, aby inni administratorzy mogli ją zobaczyć"
       },
       "errors": {
         "generic": "Coś poszło nie tak",
@@ -1551,6 +1583,27 @@
       "pin": "Zablokuj tę wersję",
       "pinHint": "Zostaje przy wersji {{version}} i pomija wszystkie aktualizacje, dopóki nie wyłączysz tej opcji.",
       "pinnedTo": "Zablokowano do wersji {{version}}",
+      "legacy": {
+        "notice_one": "1 wtyczka została stworzona dla starszej wersji Termix i pozostanie wyłączona do czasu jej aktualizacji: {{names}}.",
+        "notice_few": "{{count}} wtyczki zostały stworzone dla starszej wersji Termix i pozostaną wyłączone do czasu ich aktualizacji: {{names}}.",
+        "notice_many": "{{count}} wtyczek zostało stworzonych dla starszej wersji Termix i pozostaną wyłączone do czasu ich aktualizacji: {{names}}.",
+        "notice_other": "{{count}} wtyczek zostało stworzonych dla starszej wersji Termix i pozostaną wyłączone do czasu ich aktualizacji: {{names}}.",
+        "why": "Zostały stworzone dla interfejsu API wtyczek 1, który działał wewnątrz serwera. Termix teraz uruchamia każdą wtyczkę w osobnym procesie, więc każda potrzebuje wersji stworzonej dla interfejsu API wtyczek 2. Zaktualizuj oficjalne wtyczki tutaj i poproś autora wtyczki społecznościowej o nową wersję.",
+        "guide": "Jak wtyczki przechodzą na interfejs API 2"
+      },
+      "provenance": {
+        "verified": "Budowanie zweryfikowane",
+        "verifiedHint": "Pochodzenie budowania zostało podpisane przez workflow wydawania rejestru Termix i zgadza się z tym plikiem. Otwiera budowanie.",
+        "unchecked": "Budowanie niezweryfikowane",
+        "uncheckedHint": "Pochodzenie budowania nie mogło zostać zweryfikowane podczas pobierania. Jego podpis rejestru został."
+      },
+      "updateCheck": {
+        "notice_one": "Termix {{version}} jest już dostępny. 1 wtyczka pozostanie wyłączona, dopóki jej nie zaktualizujesz: {{names}}.",
+        "notice_few": "Termix {{version}} jest już dostępny. {{count}} wtyczki pozostaną wyłączone, dopóki ich nie zaktualizujesz: {{names}}.",
+        "notice_many": "Termix {{version}} jest już dostępny. {{count}} wtyczek pozostanie wyłączonych, dopóki ich nie zaktualizujesz: {{names}}.",
+        "notice_other": "Termix {{version}} jest już dostępny. {{count}} wtyczek pozostanie wyłączonych, dopóki ich nie zaktualizujesz: {{names}}.",
+        "needs": "{{name}} (wymaga Termix {{range}})"
+      },
       "version": "Wersja",
       "versionPickHint": "Zainstaluj starszą wersję zamiast najnowszej. Zostanie przy tej wersji, dopóki nie odblokujesz jej.",
       "versionPickHintInstalled": "Przełącz na inną wersję. Wybór wersji innej niż najnowsza blokuje ją.",
@@ -1717,7 +1770,22 @@
       "unsupportedHint": "Żadna wersja tej wtyczki nie działa na tej wersji Termix. Zaktualizuj Termix, aby ją zainstalować.",
       "needsTermix": "Wymaga Termix {{range}}",
       "showUnsupported": "Pokaż nieobsługiwane ({{count}})",
-      "showMore": "Pokaż {{count}} więcej (pozostało {{total}})"
+      "showMore": "Pokaż {{count}} więcej (pozostało {{total}})",
+      "memory": {
+        "summary": "Pamięć: {{total}} z {{limit}} | wtyczki {{plugins}} | {{running}} uruchomionych",
+        "lowTitle": "Ten serwer ma mało pamięci",
+        "lowBody": "Termix i jego wtyczki używają {{total}} z {{limit}}. Dodaj więcej pamięci do serwera lub wyłącz wtyczki, których nie używasz.",
+        "idle": "Bezczynny",
+        "idleHint": "Nie działa teraz. Uruchamia się, gdy coś go potrzebuje.",
+        "keptOn": "Pozostaje uruchomiony: {{reason}}",
+        "stopsWhenIdle": "Zatrzymuje się, gdy jest bezczynny"
+      }
+    },
+    "firstLoad": {
+      "title": "Przygotowywanie wtyczek",
+      "progress": "{{done}} z {{total}}",
+      "hint": "Dzieje się to tylko za pierwszym razem. Następnym razem Termix otworzy się od razu.",
+      "skip": "Kontynuuj"
     }
   },
   "settings": {
@@ -1802,7 +1870,11 @@
   "rbac": {
     "roles": {
       "admin": "Administrator",
-      "user": "Użytkownik"
+      "user": "Użytkownik",
+      "viewer": "Obserwator",
+      "operator": "Operator",
+      "auditor": "Revisor",
+      "helpdesk": "Wsparcie techniczne"
     }
   },
   "tileGrid": {

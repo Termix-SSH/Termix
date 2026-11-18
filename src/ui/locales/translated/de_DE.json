@@ -915,6 +915,16 @@
     "empty": "Keine Karten. Verwenden Sie unten Hinzufügen, um Karten zu platzieren."
   },
   "auth": {
+    "inviteIntro": "Du wurdest zu diesem Server eingeladen. Wähle einen Benutzernamen und ein Passwort, um dein Konto anzulegen.",
+    "inviteInvalid": "Dieser Einladungslink ist abgelaufen oder wurde bereits verwendet. Bitte einen Administrator um einen neuen Link.",
+    "accountDisabled": "Dieses Konto ist deaktiviert. Bitte einen Administrator, es wieder zu aktivieren.",
+    "accountPending": "Dein Konto wartet auf die Freigabe durch einen Administrator.",
+    "stepUp": {
+      "title": "Bestätige deine Identität",
+      "description": "Bestätige deinen zweiten Faktor, um fortzufahren.",
+      "noFactor": "Du hast keinen zweiten Faktor eingerichtet. Füge einen in den Einstellungen hinzu und versuche es erneut.",
+      "failed": "Das hat nicht funktioniert. Versuche es erneut."
+    },
     "tagline": "Selbst gehostetes, plugin-basiertes Server-Management.",
     "loginTitle": "Willkommen zurück",
     "registerTitle": "Konto erstellen",
@@ -941,6 +951,14 @@
     "loginWithExternal": "Mit externem Anbieter anmelden",
     "loginWithExternalDesc": "Mit Ihrem konfigurierten externen Identitätsanbieter anmelden",
     "loginWithProvider": "Mit {{name}} anmelden",
+    "pluginLogin": {
+      "signIn": "Anmelden",
+      "verify": "Bestätigen",
+      "code": "Code",
+      "useKey": "Sicherheitsschlüssel verwenden",
+      "keyPrompt": "Verwende deinen Sicherheitsschlüssel oder Passkey, um fortzufahren.",
+      "keyFailed": "Der Schritt mit dem Sicherheitsschlüssel ist fehlgeschlagen. Versuche es erneut."
+    },
     "resetPasswordButton": "Passwort zurücksetzen",
     "sendResetCode": "Reset-Code senden",
     "resetCodeDesc": "Geben Sie Ihren Benutzernamen ein, um einen Passwort-Reset-Code zu erhalten. Der Code wird in den Docker-Container-Logs protokolliert.",
@@ -1205,6 +1223,10 @@
         "title": "Auf das Internet zugreifen",
         "consequence": "Es kann Anfragen an externe Dienste senden."
       },
+      "network:sockets": {
+        "title": "Eigene Netzwerkverbindungen öffnen",
+        "consequence": "Es kann auf Ports lauschen und sich direkt mit jeder Adresse verbinden, ohne dass Termix jede Verbindung überprüft."
+      },
       "network:serve": {
         "title": "Verbindungen akzeptieren",
         "consequence": "Es öffnet einen Port auf dem Termix-Server."
@@ -1247,7 +1269,7 @@
       },
       "network:probe": {
         "title": "Prüfen, ob Ports antworten",
-        "consequence": "Kann eine unverschlüsselte Verbindung zu jeder Adresse vom Server aus öffnen, um zu sehen, ob sie erreichbar ist."
+        "consequence": "Kann vom Server aus eine unverschlüsselte Verbindung zu jeder Adresse öffnen, um zu prüfen, ob sie erreichbar ist, und Hostnamen auflösen."
       },
       "hosts:status-provide": {
         "title": "Hoststatus bereitstellen",
@@ -1301,6 +1323,10 @@
         "title": "Eigene Geheimnisse speichern",
         "consequence": "Verschlüsselt von Termix. Das Plugin hat nie Zugriff auf den Schlüssel."
       },
+      "config:secrets": {
+        "title": "Geheimnisse lesen, die der Server verwaltet",
+        "consequence": "Umgebungsvariablen und Dateien auf dem Server, außer den eigenen Schlüsseln von Termix."
+      },
       "settings:read-core": {
         "title": "Termix-Einstellungen lesen",
         "consequence": "Servereinstellungen, nicht Ihre Hosts oder Anmeldeinformationen."
@@ -1321,6 +1347,10 @@
         "title": "Farbschemata hinzufügen",
         "consequence": "Nur Farben und Stile. Für ein Farbschema wird kein Code ausgeführt."
       }
+    },
+    "webView": {
+      "unavailable": "Diese Seite ist nicht mehr verfügbar. Öffne sie erneut über das Plugin.",
+      "isolationUnavailable": "Dieser Browser kann die Seite hier nicht sicher öffnen. Verwende einen aktuellen Chrome oder Edge oder die Desktop-App."
     },
     "runtime": {
       "needsPlugin": "{{name}} ist nicht verfügbar",
@@ -1367,7 +1397,8 @@
         "version": "Version",
         "status": "Status",
         "category": "Kategorie",
-        "downloads": "Downloads"
+        "downloads": "Downloads",
+        "memory": "Speicher"
       },
       "risk": {
         "critical": "Kritisch",
@@ -1432,7 +1463,8 @@
         "updatedMany_other": "{{count}} Plugins aktualisiert",
         "uninstalled": "{{name}} deinstalliert",
         "dataDeleted": "Daten für {{name}} gelöscht",
-        "failedToStart": "{{name}} konnte nicht gestartet werden. Öffne es, um den Grund zu sehen."
+        "failedToStart": "{{name}} konnte nicht gestartet werden. Öffne es, um den Grund zu sehen.",
+        "held": "{{name}} wartet {{minutes}} Minuten, bis die Änderung wirksam wird, damit andere Administratoren sie sehen können"
       },
       "errors": {
         "generic": "Etwas ist schiefgelaufen",
@@ -1485,6 +1517,23 @@
       "pin": "Auf dieser Version bleiben",
       "pinHint": "Behält {{version}} und überspringt alle Updates, bis Sie dies deaktivieren.",
       "pinnedTo": "Auf {{version}} fixiert",
+      "legacy": {
+        "notice_one": "1 Plugin wurde für eine ältere Termix-Version erstellt und bleibt deaktiviert, bis es aktualisiert wird: {{names}}.",
+        "notice_other": "{{count}} Plugins wurden für eine ältere Termix-Version erstellt und bleiben deaktiviert, bis sie aktualisiert werden: {{names}}.",
+        "why": "Sie wurden für die Plugin-API 1 erstellt, die innerhalb des Servers lief. Termix führt jedes Plugin nun in einem eigenen Prozess aus, daher benötigt jedes eine Version für die Plugin-API 2. Aktualisiere offizielle Plugins hier und wende dich an den Autor eines Community-Plugins für eine neue Version.",
+        "guide": "Wie Plugins auf API 2 migrieren"
+      },
+      "provenance": {
+        "verified": "Build überprüft",
+        "verifiedHint": "Die Build-Herkunft wurde vom Termix-Registry-Release-Workflow signiert und stimmt mit dieser Datei überein. Öffnet den Build.",
+        "unchecked": "Build nicht überprüft",
+        "uncheckedHint": "Die Build-Herkunft konnte beim Download nicht überprüft werden. Die Registry-Signatur wurde jedoch überprüft."
+      },
+      "updateCheck": {
+        "notice_one": "Termix {{version}} ist verfügbar. 1 Plugin bleibt darauf deaktiviert, bis du es aktualisierst: {{names}}.",
+        "notice_other": "Termix {{version}} ist verfügbar. {{count}} Plugins bleiben darauf deaktiviert, bis du sie aktualisierst: {{names}}.",
+        "needs": "{{name}} (benötigt Termix {{range}})"
+      },
       "version": "Version",
       "versionPickHint": "Installieren Sie eine ältere Version statt der neuesten. Sie bleibt auf dieser Version, bis Sie die Fixierung aufheben.",
       "versionPickHintInstalled": "Wechseln Sie zu einer anderen Version. Die Auswahl einer Version, die nicht die neueste ist, fixiert sie.",
@@ -1641,7 +1690,22 @@
       "unsupportedHint": "Keine Version dieses Plugins läuft mit dieser Version von Termix. Aktualisieren Sie Termix, um es zu installieren.",
       "needsTermix": "Benötigt Termix {{range}}",
       "showUnsupported": "Nicht unterstützte anzeigen ({{count}})",
-      "showMore": "{{count}} weitere anzeigen ({{total}} übrig)"
+      "showMore": "{{count}} weitere anzeigen ({{total}} übrig)",
+      "memory": {
+        "summary": "Speicher: {{total}} von {{limit}} | Plugins {{plugins}} | {{running}} aktiv",
+        "lowTitle": "Dieser Server hat wenig Speicher",
+        "lowBody": "Termix und seine Plugins verwenden {{total}} von {{limit}}. Gib dem Server mehr Speicher oder deaktiviere Plugins, die du nicht verwendest.",
+        "idle": "Inaktiv",
+        "idleHint": "Derzeit nicht aktiv. Es startet, wenn etwas es benötigt.",
+        "keptOn": "Bleibt aktiv: {{reason}}",
+        "stopsWhenIdle": "Stoppt bei Inaktivität"
+      }
+    },
+    "firstLoad": {
+      "title": "Plugins werden vorbereitet",
+      "progress": "{{done}} von {{total}}",
+      "hint": "Dies geschieht nur beim ersten Mal. Beim nächsten Mal öffnet sich Termix sofort.",
+      "skip": "Fortfahren"
     }
   },
   "settings": {
@@ -1712,7 +1776,11 @@
   "rbac": {
     "roles": {
       "admin": "Administrator",
-      "user": "Benutzer"
+      "user": "Benutzer",
+      "viewer": "Betrachter",
+      "operator": "Operator",
+      "auditor": "Prüfer",
+      "helpdesk": "Helpdesk"
     }
   },
   "tileGrid": {

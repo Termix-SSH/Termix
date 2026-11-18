@@ -915,6 +915,16 @@
     "empty": "Nincsenek kártyák. Használja az alábbi Hozzáadás gombot a kártyák elhelyezéséhez."
   },
   "auth": {
+    "inviteIntro": "Meghívtak erre a szerverre. Válassz felhasználónevet és jelszót a fiókod létrehozásához.",
+    "inviteInvalid": "Ez a meghívólink lejárt, vagy már használták. Kérj egy újat egy rendszergazdától.",
+    "accountDisabled": "Ez a fiók letiltva. Kérj egy rendszergazdát, hogy engedélyezze újra.",
+    "accountPending": "A fiókodra vár egy rendszergazda jóváhagyása.",
+    "stepUp": {
+      "title": "Azonosítás",
+      "description": "Erősítsd meg a második hitelesítési tényezőt a folytatáshoz.",
+      "noFactor": "Nincs beállítva második hitelesítési tényező. Adj hozzá egyet a Beállításokban, majd próbáld újra.",
+      "failed": "Ez nem működött. Próbáld újra."
+    },
     "tagline": "Önhostolt, bővítményalapú kiszolgálókezelés.",
     "loginTitle": "Üdvözöljük újra",
     "registerTitle": "Fiók létrehozása",
@@ -941,6 +951,14 @@
     "loginWithExternal": "Bejelentkezés külső szolgáltatóval",
     "loginWithExternalDesc": "Bejelentkezés a konfigurált külső identitásszolgáltatóval",
     "loginWithProvider": "Bejelentkezés {{name}}-vel",
+    "pluginLogin": {
+      "signIn": "Bejelentkezés",
+      "verify": "Ellenőrzés",
+      "code": "Kód",
+      "useKey": "Biztonsági kulcs használata",
+      "keyPrompt": "Használd a biztonsági kulcsodat vagy passkey-t a folytatáshoz.",
+      "keyFailed": "A biztonsági kulcs lépése nem sikerült. Próbáld újra."
+    },
     "resetPasswordButton": "Jelszó visszaállítása",
     "sendResetCode": "Visszaállítási kód küldése",
     "resetCodeDesc": "Adja meg a felhasználónevét a jelszó-visszaállítási kód megkapásához. A kód a Docker-konténer naplóiban jelenik meg.",
@@ -1205,6 +1223,10 @@
         "title": "Hozzáférés az internethez",
         "consequence": "Küldhet kéréseket külső szolgáltatásokhoz."
       },
+      "network:sockets": {
+        "title": "Saját hálózati kapcsolatok megnyitása",
+        "consequence": "Portokon hallgathat, és közvetlenül bármilyen címhez csatlakozhat, anélkül, hogy a Termix ellenőrizné minden kapcsolatot."
+      },
       "network:serve": {
         "title": "Csatlakozások fogadása",
         "consequence": "Megnyit egy portot a Termix szerveren."
@@ -1247,7 +1269,7 @@
       },
       "network:probe": {
         "title": "Portok válaszának ellenőrzése",
-        "consequence": "Nyithat egy sima kapcsolatot bármely címre a szerverről, hogy ellenőrizze, elérhető-e."
+        "consequence": "Nyithat egy sima kapcsolatot bármilyen címhez a szerverről, hogy lássa, elérhető-e, és felkeresheti a hosztneveket."
       },
       "hosts:status-provide": {
         "title": "Hoszt állapotának biztosítása",
@@ -1301,6 +1323,10 @@
         "title": "Saját titkok tárolása",
         "consequence": "A Termix titkosítja. A bővítmény sosem tárolja a kulcsot."
       },
+      "config:secrets": {
+        "title": "A szerver által tárolt titkok olvasása",
+        "consequence": "Környezeti változók és fájlok a szerveren, kivéve a Termix saját kulcsait."
+      },
       "settings:read-core": {
         "title": "Termix-beállítások olvasása",
         "consequence": "Szerverbeállítások, nem a gazdagépeid vagy hitelesítő adataid."
@@ -1321,6 +1347,10 @@
         "title": "Színtémák hozzáadása",
         "consequence": "Csak színek és stílusok. Egy téma nem futtat kódot."
       }
+    },
+    "webView": {
+      "unavailable": "Ez az oldal már nem elérhető. Nyisd meg újra a bővítményéből.",
+      "isolationUnavailable": "Ez a böngésző nem tudja biztonságosan megnyitni az oldalt itt. Használj egy friss Chrome-ot vagy Edge-et, vagy az asztali alkalmazást."
     },
     "runtime": {
       "needsPlugin": "A(z) {{name}} nem elérhető",
@@ -1367,7 +1397,8 @@
         "version": "Verzió",
         "status": "Állapot",
         "category": "Kategória",
-        "downloads": "Letöltések"
+        "downloads": "Letöltések",
+        "memory": "Memória"
       },
       "risk": {
         "critical": "Kritikus",
@@ -1432,7 +1463,8 @@
         "updatedMany_other": "{{count}} bővítmény frissítve",
         "uninstalled": "{{name}} eltávolítva",
         "dataDeleted": "{{name}} adatai törölve",
-        "failedToStart": "{{name}} nem sikerült elindítani. Nyissa meg, hogy lássa az okát."
+        "failedToStart": "{{name}} nem sikerült elindítani. Nyissa meg, hogy lássa az okát.",
+        "held": "{{name}} {{minutes}} percet vár, mielőtt a változás érvénybe lép, hogy a többi rendszergazda is láthassa"
       },
       "errors": {
         "generic": "Valami hiba történt",
@@ -1485,6 +1517,23 @@
       "pin": "Maradjon ezen a verzió",
       "pinHint": "A {{version}} verziót tartja meg, és kihagyja az összes frissítést, amíg ki nem kapcsolja ezt.",
       "pinnedTo": "Rögzítve a {{version}} verzióra",
+      "legacy": {
+        "notice_one": "1 bővítmény egy régebbi Termixhez készült, és addig ki van kapcsolva, amíg nem frissítik: {{names}}.",
+        "notice_other": "{{count}} bővítmény egy régebbi Termixhez készült, és addig ki vannak kapcsolva, amíg nem frissítik őket: {{names}}.",
+        "why": "A bővítmény API 1-hez készültek, amely a szerveren belül futott. A Termix most minden bővítményt saját folyamatban futtat, így mindegyiknek szüksége van egy bővítmény API 2-hez készült verzióra. Frissítsd a hivatalosakat itt, és kérdezd meg a közösségi bővítmény szerzőjét egy új verzióról.",
+        "guide": "Hogyan lépnek át a bővítmények az API 2-re"
+      },
+      "provenance": {
+        "verified": "Építés ellenőrizve",
+        "verifiedHint": "Az építés eredetét a Termix regisztrációs kiadási munkafolyamat aláírta, és egyezik ezzel a fájllal. Megnyitja az építést.",
+        "unchecked": "Építés nem ellenőrizve",
+        "uncheckedHint": "Az építés eredetét nem lehetett ellenőrizni letöltéskor. A regisztrációs aláírása volt."
+      },
+      "updateCheck": {
+        "notice_one": "Termix {{version}} elérhető. 1 bővítmény addig ki lesz kapcsolva, amíg nem frissíted: {{names}}.",
+        "notice_other": "Termix {{version}} elérhető. {{count}} bővítmény addig ki lesz kapcsolva, amíg nem frissíted őket: {{names}}.",
+        "needs": "{{name}} (Termix {{range}} szükséges)"
+      },
       "version": "Verzió",
       "versionPickHint": "Régebbi kiadás telepítése a legújabb helyett. Addig ezen a verzió marad, amíg fel nem oldja a rögzítést.",
       "versionPickHintInstalled": "Váltás másik kiadásra. Ha nem a legújabbat választja, az rögzíti azt.",
@@ -1641,7 +1690,22 @@
       "unsupportedHint": "Nincs olyan kiadása ennek a bővítménynek, amely ezen a Termix verzión futna. Frissítse a Termixet a telepítéshez.",
       "needsTermix": "Termix {{range}} szükséges",
       "showUnsupported": "Nem támogatottak megjelenítése ({{count}})",
-      "showMore": "Még {{count}} megjelenítése ({{total}} hátralévő)"
+      "showMore": "Még {{count}} megjelenítése ({{total}} hátralévő)",
+      "memory": {
+        "summary": "Memória: {{total}} / {{limit}} | bővítmények {{plugins}} | {{running}} fut",
+        "lowTitle": "Ennek a szervernek alacsony a memóriája",
+        "lowBody": "A Termix és a bővítményei {{total}} / {{limit}} memóriát használnak. Adj több memóriát a szervernek, vagy kapcsold ki a nem használt bővítményeket.",
+        "idle": "Tétlen",
+        "idleHint": "Jelenleg nem fut. Indul, amikor valami szükség van rá.",
+        "keptOn": "Folyamatosan fut: {{reason}}",
+        "stopsWhenIdle": "Megáll, ha tétlen"
+      }
+    },
+    "firstLoad": {
+      "title": "Bővítmények előkészítése",
+      "progress": "{{done}} / {{total}}",
+      "hint": "Ez csak az első alkalommal történik meg. Legközelebb a Termix azonnal megnyílik.",
+      "skip": "Folytatás"
     }
   },
   "settings": {
@@ -1712,7 +1776,11 @@
   "rbac": {
     "roles": {
       "admin": "Adminisztrátor",
-      "user": "Felhasználó"
+      "user": "Felhasználó",
+      "viewer": "Megtekintő",
+      "operator": "Operátor",
+      "auditor": "Ellenőr",
+      "helpdesk": "Ügyfélszolgálat"
     }
   },
   "tileGrid": {

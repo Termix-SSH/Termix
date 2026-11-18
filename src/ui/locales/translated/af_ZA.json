@@ -915,6 +915,16 @@
     "empty": "Geen kaarte nie. Gebruik Voeg by hieronder om kaarte te plaas."
   },
   "auth": {
+    "inviteIntro": "U is na hierdie bediener uitgenooi. Kies 'n gebruikersnaam en wagwoord om u rekening te skep.",
+    "inviteInvalid": "Hierdie uitnodigingskoppel het verval of is reeds gebruik. Vra 'n bestuurder vir 'n nuwe een.",
+    "accountDisabled": "Hierdie rekening is afgeskakel. Vra 'n bestuurder om dit weer aan te skakel.",
+    "accountPending": "U rekening wag vir 'n bestuurder om dit te goedgeef.",
+    "stepUp": {
+      "title": "Verifieer dat dit u is",
+      "description": "Bewys u tweede faktor om voort te gaan.",
+      "noFactor": "U het geen tweede faktor ingestel nie. Voeg een by in Instellings, en probeer weer.",
+      "failed": "Dit het nie gewerk nie. Probeer weer."
+    },
     "tagline": "Self-gehoste, plug-in-gebaseerde bedienerbestuur.",
     "loginTitle": "Welkom terug",
     "registerTitle": "Skep Rekening",
@@ -941,6 +951,14 @@
     "loginWithExternal": "Meld aan met Eksterne Verskaffer",
     "loginWithExternalDesc": "Meld aan met jou gekonfigureerde eksterne identiteitsverskaffer",
     "loginWithProvider": "Meld aan met {{name}}",
+    "pluginLogin": {
+      "signIn": "Teken aan",
+      "verify": "Verifieer",
+      "code": "Kode",
+      "useKey": "Gebruik sekuriteitsleutel",
+      "keyPrompt": "Gebruik u sekuriteitsleutel of passleutel om voort te gaan.",
+      "keyFailed": "Die sekuriteitsleutelstap het nie gewerk nie. Probeer weer."
+    },
     "resetPasswordButton": "Stel Wagwoord Her",
     "sendResetCode": "Stuur Herstelkode",
     "resetCodeDesc": "Voer jou gebruikersnaam in om 'n wagwoordherstelkode te ontvang. Die kode sal in die Docker-houer se logboeke verskyn.",
@@ -1205,6 +1223,10 @@
         "title": "Bereik die internet",
         "consequence": "Dit kan versoeke na buitedienste stuur."
       },
+      "network:sockets": {
+        "title": "Maak sy eie netwerkverbindinge oop",
+        "consequence": "Dit kan op poorte luister en direk met enige adres verbind, sonder dat Termix elke verbinding toets."
+      },
       "network:serve": {
         "title": "Aanvaar verbindinge",
         "consequence": "Dit maak 'n poort op die Termix-bedieners oop."
@@ -1247,7 +1269,7 @@
       },
       "network:probe": {
         "title": "Kyk of poorte antwoord",
-        "consequence": "Kan 'n plat verbinding na enige adres vanaf die bediener oopmaak, om te sien of dit bereikbaar is."
+        "consequence": "Kan 'n eenvoudige verbinding na enige adres vanaf die bediener oopmaak om te sien of dit bereikbaar is, en gasheername opsoek."
       },
       "hosts:status-provide": {
         "title": "Verskaf gasheerstatus",
@@ -1301,6 +1323,10 @@
         "title": "Bewaar sy eie geheime",
         "consequence": "Versleutel deur Termix. Die plugin hou nooit die sleutel nie."
       },
+      "config:secrets": {
+        "title": "Lees geheime wat die bediener hou",
+        "consequence": "Omgewingsveranderlikes en lêers op die bediener, behalwe Termix se eie sleutels."
+      },
       "settings:read-core": {
         "title": "Lees Termix-instellings",
         "consequence": "Bedienerinstellings, nie jou gasheer of inlogbesonderhede nie."
@@ -1321,6 +1347,10 @@
         "title": "Voeg kleurtemas by",
         "consequence": "Slegs kleure en styl. Geen kode word vir 'n tema uitgevoer nie."
       }
+    },
+    "webView": {
+      "unavailable": "Hierdie bladsy is nie meer beskikbaar nie. Maak dit weer oop vanaf sy invoegprogram.",
+      "isolationUnavailable": "Hierdie blaaier kan die bladsy nie veilig hier oopmaak nie. Gebruik 'n onlangse Chrome of Edge, of die lessenaarprogram."
     },
     "runtime": {
       "needsPlugin": "{{name}} is nie beskikbaar nie",
@@ -1367,7 +1397,8 @@
         "version": "Weergawe",
         "status": "Status",
         "category": "Kategorie",
-        "downloads": "Aflaai"
+        "downloads": "Aflaai",
+        "memory": "Geheue"
       },
       "risk": {
         "critical": "Krities",
@@ -1432,7 +1463,8 @@
         "updatedMany_other": "{{count}} plugins opgedateer",
         "uninstalled": "{{name}} deïnstalleer",
         "dataDeleted": "Data vir {{name}} verwyder",
-        "failedToStart": "{{name}} kon nie begin nie. Maak dit oop om te sien waarom."
+        "failedToStart": "{{name}} kon nie begin nie. Maak dit oop om te sien waarom.",
+        "held": "{{name}} wag {{minutes}} minute voordat die verandering toegepas word, sodat die ander bestuurders dit kan sien"
       },
       "errors": {
         "generic": "Iets het verkeerd geloop",
@@ -1485,6 +1517,23 @@
       "pin": "Bly by hierdie weergawe",
       "pinHint": "Hou {{version}} en slaan elke opdatering oor tot jy dit afskakel.",
       "pinnedTo": "Vasgepen aan {{version}}",
+      "legacy": {
+        "notice_one": "1 invoegprogram is vir 'n ouer Termix gemaak en bly af tot dit opgedateer is: {{names}}.",
+        "notice_other": "{{count}} invoegprogramme is vir 'n ouer Termix gemaak en bly af tot hulle opgedateer is: {{names}}.",
+        "why": "Hulle is vir invoegprogram-API 1 gemaak, wat binne die bediener geloop het. Termix loop nou elke invoegprogram in sy eie proses, so elkeen het 'n weergawe nodig wat vir invoegprogram-API 2 gemaak is. Dateer amptelike eenes hier op, en vra die outeur van 'n gemeenskapsinvoegprogram vir een.",
+        "guide": "Hoe invoegprogramme na API 2 beweeg"
+      },
+      "provenance": {
+        "verified": "Bou gecontroleer",
+        "verifiedHint": "Sy bouherkoms is geteken deur die Termix-registrasievrystellingswerkstroom en stem ooreen met hierdie lêer. Maak die bou oop.",
+        "unchecked": "Bou nie gecontroleer nie",
+        "uncheckedHint": "Sy bouherkoms kon nie gecontroleer word toe dit afgelaai is nie. Sy registrasietekening is wel."
+      },
+      "updateCheck": {
+        "notice_one": "Termix {{version}} is beskikbaar. 1 invoegprogram sal daarop af bly tot u dit opdateer: {{names}}.",
+        "notice_other": "Termix {{version}} is beskikbaar. {{count}} invoegprogramme sal daarop af bly tot u hulle opdateer: {{names}}.",
+        "needs": "{{name}} (benodig Termix {{range}})"
+      },
       "version": "Weergawe",
       "versionPickHint": "Installeer 'n ouer vrystelling in plaas van die nuutste. Dit bly by daardie weergawe tot jy dit ontpen.",
       "versionPickHintInstalled": "Skakel oor na 'n ander vrystelling. As jy een kies wat nie die nuutste is nie, word dit vasgepen.",
@@ -1641,7 +1690,22 @@
       "unsupportedHint": "Geen vrylasing van hierdie invoegprogram loop op hierdie weergawe van Termix nie. Werk Termix op om dit te installeer.",
       "needsTermix": "Benodig Termix {{range}}",
       "showUnsupported": "Wys nie-ondersteunde ({{count}})",
-      "showMore": "Wys {{count}} meer ({{total}} oor)"
+      "showMore": "Wys {{count}} meer ({{total}} oor)",
+      "memory": {
+        "summary": "Geheue: {{total}} van {{limit}} | invoegprogramme {{plugins}} | {{running}} loop",
+        "lowTitle": "Hierdie bediener het min geheue",
+        "lowBody": "Termix en sy invoegprogramme gebruik {{total}} van {{limit}}. Gee die bediener meer geheue of skakel invoegprogramme af wat u nie gebruik nie.",
+        "idle": "Rus",
+        "idleHint": "Loop nie nou nie. Dit begin wanneer iets dit nodig het.",
+        "keptOn": "Bly loop: {{reason}}",
+        "stopsWhenIdle": "Stop wanneer rus"
+      }
+    },
+    "firstLoad": {
+      "title": "Maak invoegprogramme gereed",
+      "progress": "{{done}} van {{total}}",
+      "hint": "Dit gebeur slegs die eerste keer. Die volgende keer open Termix dadelik.",
+      "skip": "Gaan voort"
     }
   },
   "settings": {
@@ -1712,7 +1776,11 @@
   "rbac": {
     "roles": {
       "admin": "Admin",
-      "user": "Gebruiker"
+      "user": "Gebruiker",
+      "viewer": "Besigtiger",
+      "operator": "Operator",
+      "auditor": "Oudit",
+      "helpdesk": "Helpburo"
     }
   },
   "tileGrid": {

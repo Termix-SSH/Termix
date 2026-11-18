@@ -902,6 +902,16 @@
     "empty": "Tidak ada kartu. Gunakan Tambah di bawah untuk menempatkan kartu."
   },
   "auth": {
+    "inviteIntro": "Anda diundang ke server ini. Pilih nama pengguna dan kata sandi untuk membuat akun Anda.",
+    "inviteInvalid": "Tautan undangan ini telah kedaluwarsa atau sudah digunakan. Mintalah yang baru kepada admin.",
+    "accountDisabled": "Akun ini dinonaktifkan. Mintalah admin untuk mengaktifkannya kembali.",
+    "accountPending": "Akun Anda sedang menunggu persetujuan dari admin.",
+    "stepUp": {
+      "title": "Verifikasi identitas Anda",
+      "description": "Buktikan faktor kedua Anda untuk melanjutkan.",
+      "noFactor": "Anda belum mengatur faktor kedua. Tambahkan satu di Pengaturan, lalu coba lagi.",
+      "failed": "Itu tidak berhasil. Coba lagi."
+    },
     "tagline": "Pengelolaan server berbasis plugin yang di-host sendiri.",
     "loginTitle": "Selamat datang kembali",
     "registerTitle": "Buat Akun",
@@ -928,6 +938,14 @@
     "loginWithExternal": "Masuk dengan Penyedia Eksternal",
     "loginWithExternalDesc": "Masuk menggunakan penyedia identitas eksternal yang telah dikonfigurasi",
     "loginWithProvider": "Masuk dengan {{name}}",
+    "pluginLogin": {
+      "signIn": "Masuk",
+      "verify": "Verifikasi",
+      "code": "Kode",
+      "useKey": "Gunakan kunci keamanan",
+      "keyPrompt": "Gunakan kunci keamanan atau passkey Anda untuk melanjutkan.",
+      "keyFailed": "Langkah kunci keamanan tidak berhasil. Coba lagi."
+    },
     "resetPasswordButton": "Atur Ulang Kata Sandi",
     "sendResetCode": "Kirim Kode Atur Ulang",
     "resetCodeDesc": "Masukkan nama pengguna Anda untuk menerima kode atur ulang kata sandi. Kode akan dicatat dalam log kontainer Docker.",
@@ -1188,6 +1206,10 @@
         "title": "Menjangkau internet",
         "consequence": "Plugin ini dapat mengirim permintaan ke layanan eksternal."
       },
+      "network:sockets": {
+        "title": "Membuka koneksi jaringan sendiri",
+        "consequence": "Plugin ini dapat mendengarkan port dan terhubung ke alamat apa pun secara langsung, tanpa Termix memeriksa setiap koneksi."
+      },
       "network:serve": {
         "title": "Menerima koneksi",
         "consequence": "Plugin ini membuka port di server Termix."
@@ -1230,7 +1252,7 @@
       },
       "network:probe": {
         "title": "Periksa respons port",
-        "consequence": "Dapat membuka koneksi biasa ke alamat apa pun dari server, untuk melihat apakah alamat tersebut dapat dijangkau."
+        "consequence": "Dapat membuka koneksi biasa ke alamat apa pun dari server, untuk melihat apakah dapat dijangkau, dan mencari nama host."
       },
       "hosts:status-provide": {
         "title": "Sediakan status host",
@@ -1284,6 +1306,10 @@
         "title": "Menyimpan rahasia miliknya sendiri",
         "consequence": "Dienkripsi oleh Termix. Plugin tidak pernah memegang kuncinya."
       },
+      "config:secrets": {
+        "title": "Membaca rahasia yang disimpan server",
+        "consequence": "Variabel lingkungan dan file di server, kecuali kunci milik Termix sendiri."
+      },
       "settings:read-core": {
         "title": "Membaca pengaturan Termix",
         "consequence": "Pengaturan server, bukan host atau kredensial Anda."
@@ -1304,6 +1330,10 @@
         "title": "Tambahkan tema warna",
         "consequence": "Hanya warna dan gaya. Tidak ada kode yang dijalankan untuk tema."
       }
+    },
+    "webView": {
+      "unavailable": "Halaman ini tidak lagi tersedia. Buka lagi dari plugin-nya.",
+      "isolationUnavailable": "Peramban ini tidak dapat membuka halaman dengan aman di sini. Gunakan Chrome atau Edge terbaru, atau aplikasi desktop."
     },
     "runtime": {
       "needsPlugin": "{{name}} tidak tersedia",
@@ -1350,7 +1380,8 @@
         "version": "Versi",
         "status": "Status",
         "category": "Kategori",
-        "downloads": "Unduhan"
+        "downloads": "Unduhan",
+        "memory": "Memori"
       },
       "risk": {
         "critical": "Kritis",
@@ -1403,7 +1434,8 @@
         "updatedMany_other": "{{count}} plugin diperbarui",
         "uninstalled": "{{name}} dihapus instalasinya",
         "dataDeleted": "Data untuk {{name}} dihapus",
-        "failedToStart": "{{name}} tidak dapat dimulai. Buka untuk melihat alasannya."
+        "failedToStart": "{{name}} tidak dapat dimulai. Buka untuk melihat alasannya.",
+        "held": "{{name}} menunggu {{minutes}} menit sebelum perubahan diterapkan, agar admin lain dapat melihatnya"
       },
       "errors": {
         "generic": "Terjadi kesalahan",
@@ -1452,6 +1484,21 @@
       "pin": "Tetap pada versi ini",
       "pinHint": "Menjaga {{version}} dan melewatkan semua pembaruan hingga Anda menonaktifkannya.",
       "pinnedTo": "Dipatok ke {{version}}",
+      "legacy": {
+        "notice_other": "{{count}} plugin dibuat untuk Termix versi lama dan tetap nonaktif hingga diperbarui: {{names}}.",
+        "why": "Plugin ini dibuat untuk API plugin 1, yang berjalan di dalam server. Termix sekarang menjalankan setiap plugin dalam prosesnya sendiri, sehingga masing-masing memerlukan versi yang dibuat untuk API plugin 2. Perbarui plugin resmi di sini, dan minta penulis plugin komunitas untuk versi yang sesuai.",
+        "guide": "Cara plugin berpindah ke API 2"
+      },
+      "provenance": {
+        "verified": "Build diverifikasi",
+        "verifiedHint": "Asal build-nya ditandatangani oleh alur kerja rilis registri Termix dan cocok dengan file ini. Membuka build.",
+        "unchecked": "Build tidak diverifikasi",
+        "uncheckedHint": "Asal build-nya tidak dapat diverifikasi saat diunduh. Tanda tangan registri-nya sudah diverifikasi."
+      },
+      "updateCheck": {
+        "notice_other": "Termix {{version}} sudah tersedia. {{count}} plugin akan tetap nonaktif di dalamnya hingga Anda memperbaruinya: {{names}}.",
+        "needs": "{{name}} (memerlukan Termix {{range}})"
+      },
       "version": "Versi",
       "versionPickHint": "Pasang rilis lama alih-alih yang terbaru. Ia akan tetap pada versi tersebut hingga Anda melepas patokannya.",
       "versionPickHintInstalled": "Beralih ke rilis lain. Memilih versi yang bukan yang terbaru akan menguncinya.",
@@ -1603,7 +1650,22 @@
       "unsupportedHint": "Tidak ada rilis plugin ini yang berjalan di versi Termix ini. Perbarui Termix untuk menginstalnya.",
       "needsTermix": "Membutuhkan Termix {{range}}",
       "showUnsupported": "Tampilkan yang tidak didukung ({{count}})",
-      "showMore": "Tampilkan {{count}} lagi ({{total}} tersisa)"
+      "showMore": "Tampilkan {{count}} lagi ({{total}} tersisa)",
+      "memory": {
+        "summary": "Memori: {{total}} dari {{limit}} | plugin {{plugins}} | {{running}} berjalan",
+        "lowTitle": "Server ini kekurangan memori",
+        "lowBody": "Termix dan plugin-nya menggunakan {{total}} dari {{limit}}. Berikan lebih banyak memori ke server atau matikan plugin yang tidak Anda gunakan.",
+        "idle": "Idle",
+        "idleHint": "Tidak berjalan saat ini. Dimulai ketika sesuatu membutuhkannya.",
+        "keptOn": "Tetap berjalan: {{reason}}",
+        "stopsWhenIdle": "Berhenti saat idle"
+      }
+    },
+    "firstLoad": {
+      "title": "Menyiapkan plugin",
+      "progress": "{{done}} dari {{total}}",
+      "hint": "Ini hanya terjadi pertama kali. Lain kali Termix akan terbuka langsung.",
+      "skip": "Lanjutkan"
     }
   },
   "settings": {
@@ -1667,7 +1729,11 @@
   "rbac": {
     "roles": {
       "admin": "Admin",
-      "user": "Pengguna"
+      "user": "Pengguna",
+      "viewer": "Penonton",
+      "operator": "Operator",
+      "auditor": "Auditor",
+      "helpdesk": "Helpdesk"
     }
   },
   "tileGrid": {

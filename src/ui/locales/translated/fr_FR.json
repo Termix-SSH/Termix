@@ -928,6 +928,16 @@
     "empty": "Aucune carte. Utilisez Ajouter ci-dessous pour placer des cartes."
   },
   "auth": {
+    "inviteIntro": "Vous avez été invité sur ce serveur. Choisissez un nom d'utilisateur et un mot de passe pour créer votre compte.",
+    "inviteInvalid": "Ce lien d'invitation a expiré ou a déjà été utilisé. Demandez un nouveau lien à un administrateur.",
+    "accountDisabled": "Ce compte est désactivé. Demandez à un administrateur de le réactiver.",
+    "accountPending": "Votre compte est en attente d'approbation par un administrateur.",
+    "stepUp": {
+      "title": "Vérifiez votre identité",
+      "description": "Fournissez votre deuxième facteur d'authentification pour continuer.",
+      "noFactor": "Aucun deuxième facteur n'est configuré. Ajoutez-en un dans les Paramètres, puis réessayez.",
+      "failed": "Cela n'a pas fonctionné. Réessayez."
+    },
     "tagline": "Gestion de serveurs auto-hébergée et basée sur des plugins.",
     "loginTitle": "Bon retour",
     "registerTitle": "Créer un compte",
@@ -954,6 +964,14 @@
     "loginWithExternal": "Se connecter avec un fournisseur externe",
     "loginWithExternalDesc": "Connectez-vous à l'aide de votre fournisseur d'identité externe configuré",
     "loginWithProvider": "Se connecter avec {{name}}",
+    "pluginLogin": {
+      "signIn": "Se connecter",
+      "verify": "Vérifier",
+      "code": "Code",
+      "useKey": "Utiliser une clé de sécurité",
+      "keyPrompt": "Utilisez votre clé de sécurité ou votre passkey pour continuer.",
+      "keyFailed": "L'étape de la clé de sécurité a échoué. Réessayez."
+    },
     "resetPasswordButton": "Réinitialiser le mot de passe",
     "sendResetCode": "Envoyer le code de réinitialisation",
     "resetCodeDesc": "Entrez votre nom d'utilisateur pour recevoir un code de réinitialisation de mot de passe. Le code sera affiché dans les journaux du conteneur Docker.",
@@ -1222,6 +1240,10 @@
         "title": "Accéder à Internet",
         "consequence": "Il peut envoyer des requêtes à des services externes."
       },
+      "network:sockets": {
+        "title": "Ouvrir ses propres connexions réseau",
+        "consequence": "Il peut écouter sur des ports et se connecter directement à n'importe quelle adresse, sans que Termix ne vérifie chaque connexion."
+      },
       "network:serve": {
         "title": "Accepter les connexions",
         "consequence": "Il ouvre un port sur le serveur Termix."
@@ -1264,7 +1286,7 @@
       },
       "network:probe": {
         "title": "Vérifier si les ports répondent",
-        "consequence": "Peut ouvrir une connexion simple vers n'importe quelle adresse depuis le serveur, pour vérifier si elle est accessible."
+        "consequence": "Peut ouvrir une connexion non chiffrée vers n'importe quelle adresse depuis le serveur, pour vérifier si elle est accessible, et résoudre les noms d'hôtes."
       },
       "hosts:status-provide": {
         "title": "Fournir l'état des hôtes",
@@ -1318,6 +1340,10 @@
         "title": "Stocker ses propres secrets",
         "consequence": "Chiffré par Termix. Le plugin ne détient jamais la clé."
       },
+      "config:secrets": {
+        "title": "Lire les secrets détenus par le serveur",
+        "consequence": "Variables d'environnement et fichiers sur le serveur, à l'exception des clés propres à Termix."
+      },
       "settings:read-core": {
         "title": "Lire les paramètres de Termix",
         "consequence": "Paramètres du serveur, pas vos hôtes ou identifiants."
@@ -1338,6 +1364,10 @@
         "title": "Ajouter des thèmes de couleurs",
         "consequence": "Uniquement des couleurs et des styles. Aucun code n'est exécuté pour un thème."
       }
+    },
+    "webView": {
+      "unavailable": "Cette page n'est plus disponible. Ouvrez-la à nouveau depuis son plugin.",
+      "isolationUnavailable": "Ce navigateur ne peut pas ouvrir la page en toute sécurité ici. Utilisez une version récente de Chrome ou Edge, ou l'application de bureau."
     },
     "runtime": {
       "needsPlugin": "{{name}} n'est pas disponible",
@@ -1384,7 +1414,8 @@
         "version": "Version",
         "status": "État",
         "category": "Catégorie",
-        "downloads": "Téléchargements"
+        "downloads": "Téléchargements",
+        "memory": "Mémoire"
       },
       "risk": {
         "critical": "Critique",
@@ -1461,7 +1492,8 @@
         "updatedMany_other": "{{count}} plugins mis à jour",
         "uninstalled": "{{name}} désinstallé",
         "dataDeleted": "Données de {{name}} supprimées",
-        "failedToStart": "Impossible de démarrer {{name}}. Ouvrez-le pour voir pourquoi."
+        "failedToStart": "Impossible de démarrer {{name}}. Ouvrez-le pour voir pourquoi.",
+        "held": "{{name}} attend {{minutes}} minutes avant que la modification ne soit appliquée, afin que les autres administrateurs puissent la voir"
       },
       "errors": {
         "generic": "Une erreur est survenue",
@@ -1518,6 +1550,25 @@
       "pin": "Conserver cette version",
       "pinHint": "Conserve {{version}} et ignore toutes les mises à jour jusqu'à ce que vous désactiviez cette option.",
       "pinnedTo": "Fixé à {{version}}",
+      "legacy": {
+        "notice_one": "1 plugin a été conçu pour une ancienne version de Termix et reste désactivé jusqu'à sa mise à jour : {{names}}.",
+        "notice_many": "{{count}} plugins ont été conçus pour une ancienne version de Termix et restent désactivés jusqu'à leur mise à jour : {{names}}.",
+        "notice_other": "{{count}} plugins ont été conçus pour une ancienne version de Termix et restent désactivés jusqu'à leur mise à jour : {{names}}.",
+        "why": "Ils ont été conçus pour l'API de plugins version 1, qui s'exécutait à l'intérieur du serveur. Termix exécute désormais chaque plugin dans son propre processus, de sorte que chacun nécessite une version conçue pour l'API de plugins version 2. Mettez à jour les plugins officiels ici, et demandez à l'auteur d'un plugin communautaire de fournir une version mise à jour.",
+        "guide": "Comment les plugins migrent vers l'API 2"
+      },
+      "provenance": {
+        "verified": "Build vérifié",
+        "verifiedHint": "L'origine de son build a été signée par le workflow de publication du registre Termix et correspond à ce fichier. Ouvre le build.",
+        "unchecked": "Build non vérifié",
+        "uncheckedHint": "L'origine de son build n'a pas pu être vérifiée lors du téléchargement. Sa signature de registre l'a été."
+      },
+      "updateCheck": {
+        "notice_one": "Termix {{version}} est disponible. 1 plugin restera désactivé dessus jusqu'à ce que vous le mettiez à jour : {{names}}.",
+        "notice_many": "Termix {{version}} est disponible. {{count}} plugins resteront désactivés dessus jusqu'à ce que vous les mettiez à jour : {{names}}.",
+        "notice_other": "Termix {{version}} est disponible. {{count}} plugins resteront désactivés dessus jusqu'à ce que vous les mettiez à jour : {{names}}.",
+        "needs": "{{name}} (nécessite Termix {{range}})"
+      },
       "version": "Version",
       "versionPickHint": "Installez une version antérieure au lieu de la plus récente. Elle reste sur cette version jusqu'à ce que vous la défixiez.",
       "versionPickHintInstalled": "Passez à une autre version. Choisir une version qui n'est pas la plus récente la fixe.",
@@ -1679,7 +1730,22 @@
       "unsupportedHint": "Aucune version de ce plugin n'est compatible avec cette version de Termix. Mettez à jour Termix pour l'installer.",
       "needsTermix": "Nécessite Termix {{range}}",
       "showUnsupported": "Afficher les non pris en charge ({{count}})",
-      "showMore": "Afficher {{count}} de plus ({{total}} restants)"
+      "showMore": "Afficher {{count}} de plus ({{total}} restants)",
+      "memory": {
+        "summary": "Mémoire : {{total}} sur {{limit}} | plugins {{plugins}} | {{running}} en cours d'exécution",
+        "lowTitle": "Ce serveur manque de mémoire",
+        "lowBody": "Termix et ses plugins utilisent {{total}} sur {{limit}}. Allouez plus de mémoire au serveur ou désactivez les plugins que vous n'utilisez pas.",
+        "idle": "Inactif",
+        "idleHint": "Ne s'exécute pas actuellement. Il démarre lorsque quelque chose en a besoin.",
+        "keptOn": "Reste en cours d'exécution : {{reason}}",
+        "stopsWhenIdle": "S'arrête lorsqu'il est inactif"
+      }
+    },
+    "firstLoad": {
+      "title": "Préparation des plugins",
+      "progress": "{{done}} sur {{total}}",
+      "hint": "Cela ne se produit qu'une seule fois. La prochaine fois, Termix s'ouvrira immédiatement.",
+      "skip": "Continuer"
     }
   },
   "settings": {
@@ -1757,7 +1823,11 @@
   "rbac": {
     "roles": {
       "admin": "Administrateur",
-      "user": "Utilisateur"
+      "user": "Utilisateur",
+      "viewer": "Lecteur",
+      "operator": "Opérateur",
+      "auditor": "Auditeur",
+      "helpdesk": "Support technique"
     }
   },
   "tileGrid": {

@@ -915,6 +915,16 @@
     "empty": "Kortteja ei ole. Lisää kortteja alla olevalla Lisää-painikkeella."
   },
   "auth": {
+    "inviteIntro": "Sinut on kutsuttu tähän palvelimeen. Valitse käyttäjätunnus ja salasana luodaksesi tilisi.",
+    "inviteInvalid": "Tämä kutsulinkki on vanhentunut tai sitä on jo käytetty. Pyydä ylläpitäjältä uusi linkki.",
+    "accountDisabled": "Tämä tili on poistettu käytöstä. Pyydä ylläpitäjää ottamaan se takaisin käyttöön.",
+    "accountPending": "Tiliäsi odottaa ylläpitäjän hyväksyntää.",
+    "stepUp": {
+      "title": "Vahvista henkilöllisyytesi",
+      "description": "Vahvista toinen todennustapa jatkaaksesi.",
+      "noFactor": "Sinulla ei ole toista todennustapaa määritettynä. Lisää se Asetuksista ja yritä uudelleen.",
+      "failed": "Tämä ei onnistunut. Yritä uudelleen."
+    },
     "tagline": "Itse isännöity, liitännäispohjainen palvelinohjaus.",
     "loginTitle": "Tervetuloa takaisin",
     "registerTitle": "Luo tili",
@@ -941,6 +951,14 @@
     "loginWithExternal": "Kirjaudu ulkoisen palveluntarjoajan kautta",
     "loginWithExternalDesc": "Kirjaudu sisään käyttämällä määrittämääsi ulkoista identiteettipalvelua",
     "loginWithProvider": "Kirjaudu sisään palvelulla {{name}}",
+    "pluginLogin": {
+      "signIn": "Kirjaudu sisään",
+      "verify": "Vahvista",
+      "code": "Koodi",
+      "useKey": "Käytä turvavälineavainta",
+      "keyPrompt": "Käytä turvavälineavainta tai passkeytä jatkaaksesi.",
+      "keyFailed": "Turvavälineavain-vaihe epäonnistui. Yritä uudelleen."
+    },
     "resetPasswordButton": "Nollaa salasana",
     "sendResetCode": "Lähetä nollauskoodi",
     "resetCodeDesc": "Syötä käyttäjänimesi saadaksesi salasanannollauskoodin. Koodi kirjataan Docker-kontin lokiin.",
@@ -1205,6 +1223,10 @@
         "title": "Päästä internetiin",
         "consequence": "Se voi lähettää pyyntöjä ulkopuolisille palveluille."
       },
+      "network:sockets": {
+        "title": "Avaa omia verkkoyhteyksiä",
+        "consequence": "Se voi kuunnella portteja ja muodostaa suoria yhteyksiä mihin tahansa osoitteeseen ilman, että Termix tarkistaa jokaista yhteyttä."
+      },
       "network:serve": {
         "title": "Hyväksyä yhteyksiä",
         "consequence": "Se avaa portin Termix-palvelimella."
@@ -1247,7 +1269,7 @@
       },
       "network:probe": {
         "title": "Tarkista, vastaavatko portit",
-        "consequence": "Voi avata pelkän yhteyden mihin tahansa osoitteeseen palvelimelta, nähdäkseen, onko se tavoitettavissa."
+        "consequence": "Voi muodostaa suoran yhteyden mihin tahansa osoitteeseen palvelimelta saadakseen tietää, onko se tavoitettavissa, sekä tarkistaa isäntien nimet."
       },
       "hosts:status-provide": {
         "title": "Tarjoa isännän tila",
@@ -1301,6 +1323,10 @@
         "title": "Tallentaa omat salasanansa",
         "consequence": "Termix salaa ne. Lisäosa ei koskaan pidä avainta hallussaan."
       },
+      "config:secrets": {
+        "title": "Lue palvelimen salaisuuksia",
+        "consequence": "Ympäristömuuttujat ja palvelimen tiedostot, lukuun ottamatta Termixin omia avaimia."
+      },
       "settings:read-core": {
         "title": "Lukea Termixin asetukset",
         "consequence": "Palvelimen asetukset, ei isäntiäsi tai kirjautumistietoja."
@@ -1321,6 +1347,10 @@
         "title": "Lisää väriteemoja",
         "consequence": "Vain värejä ja tyylejä. Teema ei suorita koodia."
       }
+    },
+    "webView": {
+      "unavailable": "Tätä sivua ei ole enää saatavilla. Avaa se uudelleen sen lisäosasta.",
+      "isolationUnavailable": "Tämä selain ei voi avata sivua turvallisesti täällä. Käytä uutta Chromea tai Edgetä tai työpöytäsovellusta."
     },
     "runtime": {
       "needsPlugin": "{{name}} ei ole saatavilla",
@@ -1367,7 +1397,8 @@
         "version": "Versio",
         "status": "Tila",
         "category": "Kategoria",
-        "downloads": "Lataukset"
+        "downloads": "Lataukset",
+        "memory": "Muisti"
       },
       "risk": {
         "critical": "Kriittinen",
@@ -1432,7 +1463,8 @@
         "updatedMany_other": "{{count}} lisäosaa päivitetty",
         "uninstalled": "{{name}} poistettu",
         "dataDeleted": "{{name}} -lisäosan tiedot poistettu",
-        "failedToStart": "{{name}}:ää ei voitu käynnistää. Avaa se nähdäksesi syyn."
+        "failedToStart": "{{name}}:ää ei voitu käynnistää. Avaa se nähdäksesi syyn.",
+        "held": "{{name}} odottaa {{minutes}} minuuttia ennen muutoksen voimaantuloa, jotta muut ylläpitäjät näkevät sen"
       },
       "errors": {
         "generic": "Jokin meni pieleen",
@@ -1485,6 +1517,23 @@
       "pin": "Pidä tämä versio",
       "pinHint": "Pysyy versiossa {{version}} ja ohittaa kaikki päivitykset, kunnes kytket tämän pois päältä.",
       "pinnedTo": "Kiinnitetty versioon {{version}}",
+      "legacy": {
+        "notice_one": "1 lisäosa on vanhemman Termixin versiolle ja pysyy pois päältä, kunnes se päivitetään: {{names}}.",
+        "notice_other": "{{count}} lisäosaa on vanhemman Termixin versiolle ja pysyvät pois päältä, kunnes ne päivitetään: {{names}}.",
+        "why": "Ne on tehty lisäosien API 1:lle, joka toimi palvelimen sisällä. Termix ajaa nyt jokaisen lisäosan omassa prosessissaan, joten jokaiselle tarvitaan versio, joka on tehty lisäosien API 2:lle. Päivitä viralliset täältä ja pyydä yhteisön lisäosan tekijältä uusi versio.",
+        "guide": "Miten lisäosat siirtyvät API 2:een"
+      },
+      "provenance": {
+        "verified": "Rakennus tarkistettu",
+        "verifiedHint": "Sen rakennuksen alkuperä on allekirjoitettu Termixin rekisterin julkaisuprosessilla ja se vastaa tätä tiedostoa. Avaa rakennus.",
+        "unchecked": "Rakennusta ei tarkistettu",
+        "uncheckedHint": "Sen rakennuksen alkuperää ei voitu tarkistaa latauksen yhteydessä. Sen rekisterin allekirjoitus oli tarkistettu."
+      },
+      "updateCheck": {
+        "notice_one": "Termix {{version}} on julkaistu. 1 lisäosa pysyy pois päältä, kunnes päivität sen: {{names}}.",
+        "notice_other": "Termix {{version}} on julkaistu. {{count}} lisäosaa pysyy pois päältä, kunnes päivität ne: {{names}}.",
+        "needs": "{{name}} (vaatii Termix {{range}})"
+      },
       "version": "Versio",
       "versionPickHint": "Asenna vanhempi julkaisu uusimman sijaan. Se pysyy kyseisessä versiossa, kunnes irrotat kiinnityksen.",
       "versionPickHintInstalled": "Vaihda toiseen julkaisuun. Uusimman ulkopuolisen version valitseminen kiinnittää sen.",
@@ -1641,7 +1690,22 @@
       "unsupportedHint": "Tämän lisäosan mikään julkaisu ei toimi tässä Termix-versiossa. Päivitä Termix asentamaan se.",
       "needsTermix": "Vaatii Termix {{range}}",
       "showUnsupported": "Näytä tukevat ({{count}})",
-      "showMore": "Näytä {{count}} lisää ({{total}} jäljellä)"
+      "showMore": "Näytä {{count}} lisää ({{total}} jäljellä)",
+      "memory": {
+        "summary": "Muisti: {{total}} / {{limit}} | lisäosat {{plugins}} | {{running}} käynnissä",
+        "lowTitle": "Tällä palvelimella on vähän muistia",
+        "lowBody": "Termix ja sen lisäosat käyttävät {{total}} / {{limit}}. Lisää palvelimelle muistia tai ota pois päältä käyttämättömiä lisäosia.",
+        "idle": "Toimeton",
+        "idleHint": "Ei nyt käynnissä. Se käynnistyy, kun jotain tarvitsee sitä.",
+        "keptOn": "Pysyy käynnissä: {{reason}}",
+        "stopsWhenIdle": "Lopettaa toimettomuuden yhteydessä"
+      }
+    },
+    "firstLoad": {
+      "title": "Lisäosien valmistelu",
+      "progress": "{{done}} / {{total}}",
+      "hint": "Tämä tapahtuu vain ensimmäisen kerran. Seuraavalla kerralla Termix avautuu heti.",
+      "skip": "Jatka"
     }
   },
   "settings": {
@@ -1712,7 +1776,11 @@
   "rbac": {
     "roles": {
       "admin": "Ylläpitäjä",
-      "user": "Käyttäjä"
+      "user": "Käyttäjä",
+      "viewer": "Katselija",
+      "operator": "Käyttäjä",
+      "auditor": "Tarkastaja",
+      "helpdesk": "Tukipalvelu"
     }
   },
   "tileGrid": {

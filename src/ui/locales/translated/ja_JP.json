@@ -902,6 +902,16 @@
     "empty": "カードがありません。下の「追加」を使用してカードを配置してください。"
   },
   "auth": {
+    "inviteIntro": "このサーバーへの招待を受けました。ユーザー名とパスワードを設定してアカウントを作成してください。",
+    "inviteInvalid": "この招待リンクは期限切れか、すでに使用されています。管理者に新しいリンクを依頼してください。",
+    "accountDisabled": "このアカウントは無効化されています。管理者に有効化を依頼してください。",
+    "accountPending": "あなたのアカウントは、管理者による承認を待っています。",
+    "stepUp": {
+      "title": "本人確認",
+      "description": "続行するには、2段階認証の証明を行ってください。",
+      "noFactor": "2段階認証が設定されていません。設定で追加してから、もう一度お試しください。",
+      "failed": "操作が失敗しました。もう一度お試しください。"
+    },
     "tagline": "セルフホスト型、プラグインベースのサーバー管理。",
     "loginTitle": "おかえりなさい",
     "registerTitle": "アカウントを作成",
@@ -928,6 +938,14 @@
     "loginWithExternal": "外部プロバイダーでログイン",
     "loginWithExternalDesc": "設定済みの外部アイデンティティプロバイダーを使用してログインします",
     "loginWithProvider": "{{name}} でログイン",
+    "pluginLogin": {
+      "signIn": "サインイン",
+      "verify": "確認",
+      "code": "コード",
+      "useKey": "セキュリティキーを使用",
+      "keyPrompt": "続行するには、セキュリティキーまたはパスキーを使用してください。",
+      "keyFailed": "セキュリティキーの確認に失敗しました。もう一度お試しください。"
+    },
     "resetPasswordButton": "パスワードをリセット",
     "sendResetCode": "リセットコードを送信",
     "resetCodeDesc": "パスワードリセットコードを受け取るにはユーザー名を入力してください。コードは Docker コンテナのログに記録されます。",
@@ -1188,6 +1206,10 @@
         "title": "インターネットへのアクセス",
         "consequence": "外部サービスへのリクエストを送信できます。"
       },
+      "network:sockets": {
+        "title": "独自のネットワーク接続を開く",
+        "consequence": "Termixが各接続を確認することなく、ポートをリッスンし、任意のアドレスに直接接続できます。"
+      },
       "network:serve": {
         "title": "接続の受け入れ",
         "consequence": "Termix サーバーでポートを開きます。"
@@ -1230,7 +1252,7 @@
       },
       "network:probe": {
         "title": "ポートの応答を確認",
-        "consequence": "サーバーから任意のアドレスへ平文接続を開き、到達可能かどうかを確認できます。"
+        "consequence": "サーバーから任意のアドレスへのプレーン接続を開き、到達可能かどうかを確認し、ホスト名を検索できます。"
       },
       "hosts:status-provide": {
         "title": "ホストのステータスを提供",
@@ -1284,6 +1306,10 @@
         "title": "独自のシークレットを保存",
         "consequence": "Termix によって暗号化されます。プラグインは鍵を保持しません。"
       },
+      "config:secrets": {
+        "title": "サーバーが保持するシークレットを読み取る",
+        "consequence": "Termix自身のキーを除く、サーバー上の環境変数とファイル。"
+      },
       "settings:read-core": {
         "title": "Termix の設定を読み取る",
         "consequence": "サーバーの設定です。ホストや認証情報は含まれません。"
@@ -1304,6 +1330,10 @@
         "title": "カラーテーマを追加",
         "consequence": "色とスタイルのみです。テーマにはコードは実行されません。"
       }
+    },
+    "webView": {
+      "unavailable": "このページは利用できなくなりました。プラグインから再度開いてください。",
+      "isolationUnavailable": "このブラウザでは、このページを安全に開くことができません。最新のChromeまたはEdge、またはデスクトップアプリを使用してください。"
     },
     "runtime": {
       "needsPlugin": "{{name}} は利用できません",
@@ -1350,7 +1380,8 @@
         "version": "バージョン",
         "status": "ステータス",
         "category": "カテゴリ",
-        "downloads": "ダウンロード数"
+        "downloads": "ダウンロード数",
+        "memory": "メモリ"
       },
       "risk": {
         "critical": "重大",
@@ -1403,7 +1434,8 @@
         "updatedMany_other": "{{count}} 個のプラグインが更新されました",
         "uninstalled": "{{name}} がアンインストールされました",
         "dataDeleted": "{{name}} のデータが削除されました",
-        "failedToStart": "{{name}} が起動できませんでした。理由を確認するには開いてください。"
+        "failedToStart": "{{name}} が起動できませんでした。理由を確認するには開いてください。",
+        "held": "{{name}}は、他の管理者が変更を確認できるように、適用まで{{minutes}}分待機します"
       },
       "errors": {
         "generic": "エラーが発生しました",
@@ -1452,6 +1484,21 @@
       "pin": "このバージョンを固定する",
       "pinHint": "{{version}} を維持し、この設定をオフにするまですべての更新をスキップします。",
       "pinnedTo": "{{version}} に固定",
+      "legacy": {
+        "notice_other": "{{count}}個のプラグインは古いTermix向けに作成されており、更新されるまで無効のままです: {{names}}。",
+        "why": "これらは、サーバー内で実行されるプラグインAPI 1向けに作成されました。Termixは現在、各プラグインを独自のプロセスで実行するため、プラグインAPI 2向けのバージョンが必要です。公式プラグインはここで更新し、コミュニティプラグインについては作者に新しいバージョンを依頼してください。",
+        "guide": "プラグインをAPI 2に移行する方法"
+      },
+      "provenance": {
+        "verified": "ビルド検証済み",
+        "verifiedHint": "そのビルドの出所は、Termixレジストリのリリースワークフローによって署名され、このファイルと一致しています。ビルドを開きます。",
+        "unchecked": "ビルド未検証",
+        "uncheckedHint": "ダウンロード時にそのビルドの出所を検証できませんでした。レジストリの署名は検証済みです。"
+      },
+      "updateCheck": {
+        "notice_other": "Termix {{version}}がリリースされました。{{count}}個のプラグインは、更新されるまで無効のままです: {{names}}。",
+        "needs": "{{name}}（Termix {{range}}が必要）"
+      },
       "version": "バージョン",
       "versionPickHint": "最新ではなく、以前のリリースをインストールします。固定を解除するまで、そのバージョンが維持されます。",
       "versionPickHintInstalled": "別のリリースに切り替えます。最新以外のバージョンを選択すると、それが固定されます。",
@@ -1603,7 +1650,22 @@
       "unsupportedHint": "このプラグインのリリースは、このバージョンの Termix では実行されません。インストールするには Termix をアップデートしてください。",
       "needsTermix": "Termix {{range}} が必要です",
       "showUnsupported": "サポートされていないものを表示 ({{count}})",
-      "showMore": "さらに {{count}} 件を表示 (残り {{total}} 件)"
+      "showMore": "さらに {{count}} 件を表示 (残り {{total}} 件)",
+      "memory": {
+        "summary": "メモリ: {{total}} / {{limit}} | プラグイン {{plugins}} | {{running}} 実行中",
+        "lowTitle": "このサーバーのメモリが不足しています",
+        "lowBody": "Termixとそのプラグインは、{{limit}}のうち{{total}}を使用しています。サーバーにメモリを追加するか、使用していないプラグインを無効にしてください。",
+        "idle": "アイドル",
+        "idleHint": "現在実行されていません。必要なものが発生すると起動します。",
+        "keptOn": "実行を維持: {{reason}}",
+        "stopsWhenIdle": "アイドル時に停止"
+      }
+    },
+    "firstLoad": {
+      "title": "プラグインの準備中",
+      "progress": "{{done}} / {{total}}",
+      "hint": "これは初回のみ発生します。次回以降はTermixはすぐに開きます。",
+      "skip": "続行"
     }
   },
   "settings": {
@@ -1667,7 +1729,11 @@
   "rbac": {
     "roles": {
       "admin": "管理者",
-      "user": "ユーザー"
+      "user": "ユーザー",
+      "viewer": "閲覧者",
+      "operator": "オペレーター",
+      "auditor": "監査者",
+      "helpdesk": "ヘルプデスク"
     }
   },
   "tileGrid": {

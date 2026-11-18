@@ -902,6 +902,16 @@
     "empty": "沒有卡片。使用下方的「新增」來放置卡片。"
   },
   "auth": {
+    "inviteIntro": "您已受邀加入此伺服器。請選擇使用者名稱與密碼以建立您的帳戶。",
+    "inviteInvalid": "此邀請連結已過期或已被使用。請向管理員索取新的連結。",
+    "accountDisabled": "此帳戶已停用。請向管理員請求重新啟用。",
+    "accountPending": "您的帳戶正在等待管理員核准。",
+    "stepUp": {
+      "title": "驗證您的身分",
+      "description": "請驗證第二因素以繼續。",
+      "noFactor": "您尚未設定第二因素。請前往「設定」新增一個，然後再試一次。",
+      "failed": "驗證失敗。請再試一次。"
+    },
     "tagline": "自架式、基於外掛的伺服器管理。",
     "loginTitle": "歡迎回來",
     "registerTitle": "建立帳號",
@@ -928,6 +938,14 @@
     "loginWithExternal": "使用外部提供者登入",
     "loginWithExternalDesc": "使用您設定的外部身分提供者登入",
     "loginWithProvider": "使用 {{name}} 登入",
+    "pluginLogin": {
+      "signIn": "登入",
+      "verify": "驗證",
+      "code": "驗證碼",
+      "useKey": "使用安全金鑰",
+      "keyPrompt": "請使用您的安全金鑰或通行金鑰以繼續。",
+      "keyFailed": "安全金鑰驗證失敗。請再試一次。"
+    },
     "resetPasswordButton": "重設密碼",
     "sendResetCode": "發送重設代碼",
     "resetCodeDesc": "輸入您的使用者名稱以接收密碼重設代碼。該代碼將記錄在 Docker 容器的日誌中。",
@@ -1188,6 +1206,10 @@
         "title": "存取網際網路",
         "consequence": "它可以向外部服務傳送請求。"
       },
+      "network:sockets": {
+        "title": "開啟專屬網路連線",
+        "consequence": "它可以直接監聽埠號並連線至任何位址，無需 Termix 檢查每個連線。"
+      },
       "network:serve": {
         "title": "接受連線",
         "consequence": "它會在 Termix 伺服器上開啟一個連接埠。"
@@ -1230,7 +1252,7 @@
       },
       "network:probe": {
         "title": "檢查埠號是否有回應",
-        "consequence": "可從伺服器開啟至任何位址的純文字連線，以確認其是否可達。"
+        "consequence": "可以從伺服器開啟至任何位址的普通連線，以檢查其是否可達，並查詢主機名稱。"
       },
       "hosts:status-provide": {
         "title": "提供主機狀態",
@@ -1284,6 +1306,10 @@
         "title": "儲存專屬機密",
         "consequence": "由 Termix 加密。外掛本身不會持有金鑰。"
       },
+      "config:secrets": {
+        "title": "讀取伺服器儲存的機密資訊",
+        "consequence": "伺服器上的環境變數與檔案，但不包含 Termix 自身的金鑰。"
+      },
       "settings:read-core": {
         "title": "讀取 Termix 設定",
         "consequence": "僅限伺服器設定，不包含您的主機或憑證。"
@@ -1304,6 +1330,10 @@
         "title": "新增色彩主題",
         "consequence": "僅限色彩與樣式。主題不會執行任何程式碼。"
       }
+    },
+    "webView": {
+      "unavailable": "此頁面已不再提供。請從其外掛程式重新開啟。",
+      "isolationUnavailable": "此瀏覽器無法在此安全地開啟頁面。請使用最新版的 Chrome 或 Edge，或桌面版應用程式。"
     },
     "runtime": {
       "needsPlugin": "{{name}} 不可用",
@@ -1350,7 +1380,8 @@
         "version": "版本",
         "status": "狀態",
         "category": "類別",
-        "downloads": "下載次數"
+        "downloads": "下載次數",
+        "memory": "記憶體"
       },
       "risk": {
         "critical": "嚴重",
@@ -1403,7 +1434,8 @@
         "updatedMany_other": "已更新 {{count}} 個外掛",
         "uninstalled": "已解除安裝 {{name}}",
         "dataDeleted": "已刪除 {{name}} 的資料",
-        "failedToStart": "{{name}} 無法啟動。請開啟它以查看原因。"
+        "failedToStart": "{{name}} 無法啟動。請開啟它以查看原因。",
+        "held": "{{name}} 將等待 {{minutes}} 分鐘後才套用變更，以便其他管理員能夠看到"
       },
       "errors": {
         "generic": "發生錯誤",
@@ -1452,6 +1484,21 @@
       "pin": "固定此版本",
       "pinHint": "保留 {{version}} 版本，並跳過所有更新，直到您關閉此設定為止。",
       "pinnedTo": "已固定至 {{version}}",
+      "legacy": {
+        "notice_other": "{{count}} 個外掛程式是為舊版 Termix 開發的，在更新前將保持停用狀態：{{names}}。",
+        "why": "這些外掛程式是為外掛 API 1 開發的，該版本在伺服器內部執行。Termix 現在讓每個外掛程式在獨立的程序中執行，因此每個外掛都需要一個為外掛 API 2 開發的版本。請在此更新官方外掛，並向社群外掛的作者索取新版本。",
+        "guide": "外掛程式如何遷移至 API 2"
+      },
+      "provenance": {
+        "verified": "建置已驗證",
+        "verifiedHint": "其建置來源已由 Termix 註冊中心的發布工作流程簽署，並與此檔案相符。點擊可開啟建置記錄。",
+        "unchecked": "建置未驗證",
+        "uncheckedHint": "下載時無法驗證其建置來源。但其註冊中心簽章已驗證。"
+      },
+      "updateCheck": {
+        "notice_other": "Termix {{version}} 已發布。在更新前，{{count}} 個外掛程式將在此版本中保持停用狀態：{{names}}。",
+        "needs": "{{name}}（需要 Termix {{range}}）"
+      },
       "version": "版本",
       "versionPickHint": "安裝較舊版本而非最新版本。除非您解除固定，否則將維持該版本。",
       "versionPickHintInstalled": "切換至其他版本。選擇非最新版本時，將自動固定該版本。",
@@ -1603,7 +1650,22 @@
       "unsupportedHint": "此外掛尚無版本可在此版本的 Termix 上執行。請更新 Termix 以安裝它。",
       "needsTermix": "需要 Termix {{range}}",
       "showUnsupported": "顯示不支援的項目 ({{count}})",
-      "showMore": "顯示更多 {{count}} 項（剩餘 {{total}} 項）"
+      "showMore": "顯示更多 {{count}} 項（剩餘 {{total}} 項）",
+      "memory": {
+        "summary": "記憶體：{{total}} / {{limit}} | 外掛程式 {{plugins}} | {{running}} 個正在執行",
+        "lowTitle": "此伺服器記憶體不足",
+        "lowBody": "Termix 及其外掛程式使用了 {{total}} / {{limit}} 的記憶體。請為伺服器增加記憶體，或停用您不使用的外掛程式。",
+        "idle": "閒置",
+        "idleHint": "目前未執行。當有需求時才會啟動。",
+        "keptOn": "持續執行：{{reason}}",
+        "stopsWhenIdle": "閒置時停止"
+      }
+    },
+    "firstLoad": {
+      "title": "正在準備外掛程式",
+      "progress": "{{done}} / {{total}}",
+      "hint": "此操作僅在首次時執行。下次 Termix 將立即開啟。",
+      "skip": "繼續"
     }
   },
   "settings": {
@@ -1667,7 +1729,11 @@
   "rbac": {
     "roles": {
       "admin": "管理員",
-      "user": "使用者"
+      "user": "使用者",
+      "viewer": "檢視者",
+      "operator": "操作員",
+      "auditor": "稽核員",
+      "helpdesk": "技術支援"
     }
   },
   "tileGrid": {

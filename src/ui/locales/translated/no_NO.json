@@ -915,6 +915,16 @@
     "empty": "Ingen kort. Bruk Legg til nedenfor for å plassere kort."
   },
   "auth": {
+    "inviteIntro": "Du har blitt invitert til denne serveren. Velg et brukernavn og et passord for å opprette kontoen din.",
+    "inviteInvalid": "Denne invitasjonslenken har utløpt eller er allerede brukt. Be en administrator om en ny.",
+    "accountDisabled": "Denne kontoen er deaktivert. Be en administrator om å aktivere den igjen.",
+    "accountPending": "Kontoen din venter på godkjenning fra en administrator.",
+    "stepUp": {
+      "title": "Bekreft at det er deg",
+      "description": "Bekreft den andre faktoren for å fortsette.",
+      "noFactor": "Du har ingen andre faktor oppsatt. Legg til en i Innstillinger, og prøv igjen.",
+      "failed": "Det fungerte ikke. Prøv igjen."
+    },
     "tagline": "Selvhostet, plugin-basert serveradministrasjon.",
     "loginTitle": "Velkommen tilbake",
     "registerTitle": "Opprett konto",
@@ -941,6 +951,14 @@
     "loginWithExternal": "Logg inn med ekstern leverandør",
     "loginWithExternalDesc": "Logg inn ved hjelp av den konfigurerte eksterne identitetsleverandøren",
     "loginWithProvider": "Logg inn med {{name}}",
+    "pluginLogin": {
+      "signIn": "Logg inn",
+      "verify": "Bekreft",
+      "code": "Kode",
+      "useKey": "Bruk sikkerhetsnøkkel",
+      "keyPrompt": "Bruk sikkerhetsnøkkelen eller passnøkkelen din for å fortsette.",
+      "keyFailed": "Trinnet med sikkerhetsnøkkelen fungerte ikke. Prøv igjen."
+    },
     "resetPasswordButton": "Tilbakestill passord",
     "sendResetCode": "Send tilbakestillingskode",
     "resetCodeDesc": "Skriv inn brukernavnet ditt for å motta en kode for tilbakestilling av passord. Koden vil bli logget i Docker-beholderens logger.",
@@ -1205,6 +1223,10 @@
         "title": "Nå internett",
         "consequence": "Den kan sende forespørsler til eksterne tjenester."
       },
+      "network:sockets": {
+        "title": "Åpne egne nettverksforbindelser",
+        "consequence": "Den kan lytte på porter og koble til enhver adresse direkte, uten at Termix sjekker hver enkelt forbindelse."
+      },
       "network:serve": {
         "title": "Godta tilkoblinger",
         "consequence": "Den åpner en port på Termix-serveren."
@@ -1247,7 +1269,7 @@
       },
       "network:probe": {
         "title": "Sjekk om porter svarer",
-        "consequence": "Kan åpne en vanlig tilkobling til enhver adresse fra serveren, for å se om den er tilgjengelig."
+        "consequence": "Kan åpne en vanlig forbindelse til enhver adresse fra serveren for å se om den er tilgjengelig, og slå opp vertsnavn."
       },
       "hosts:status-provide": {
         "title": "Gi vertstatus",
@@ -1301,6 +1323,10 @@
         "title": "Lagre sine egne hemmeligheter",
         "consequence": "Kryptert av Termix. Pluginet har aldri nøkkelen."
       },
+      "config:secrets": {
+        "title": "Les hemmeligheter som serveren lagrer",
+        "consequence": "Miljøvariabler og filer på serveren, unntatt Termix sine egne nøkler."
+      },
       "settings:read-core": {
         "title": "Les Termix-innstillinger",
         "consequence": "Serverinnstillinger, ikke dine vertsmaskiner eller legitimasjon."
@@ -1321,6 +1347,10 @@
         "title": "Legg til fargetemaer",
         "consequence": "Kun farger og stiler. Ingen kode kjøres for et tema."
       }
+    },
+    "webView": {
+      "unavailable": "Denne siden er ikke lenger tilgjengelig. Åpne den igjen fra tillegget.",
+      "isolationUnavailable": "Denne nettleseren kan ikke åpne siden trygt her. Bruk en ny versjon av Chrome eller Edge, eller skrivebordsappen."
     },
     "runtime": {
       "needsPlugin": "{{name}} er ikke tilgjengelig",
@@ -1367,7 +1397,8 @@
         "version": "Versjon",
         "status": "Status",
         "category": "Kategori",
-        "downloads": "Nedlastinger"
+        "downloads": "Nedlastinger",
+        "memory": "Minne"
       },
       "risk": {
         "critical": "Kritisk",
@@ -1432,7 +1463,8 @@
         "updatedMany_other": "{{count}} plugins oppdatert",
         "uninstalled": "{{name}} avinstallert",
         "dataDeleted": "Data for {{name}} slettet",
-        "failedToStart": "{{name}} kunne ikke starte. Åpne den for å se hvorfor."
+        "failedToStart": "{{name}} kunne ikke starte. Åpne den for å se hvorfor.",
+        "held": "{{name}} venter {{minutes}} minutter før endringen treffer, slik at andre administratorer kan se den"
       },
       "errors": {
         "generic": "Noe gikk galt",
@@ -1485,6 +1517,23 @@
       "pin": "Behold denne versjonen",
       "pinHint": "Holder {{version}} og hopper over alle oppdateringer til du slår dette av.",
       "pinnedTo": "Festet til {{version}}",
+      "legacy": {
+        "notice_one": "1 tilleg er laget for en eldre versjon av Termix og holdes avskrudd til det blir oppdatert: {{names}}.",
+        "notice_other": "{{count}} tillegg er laget for en eldre versjon av Termix og holdes avskrudd til de blir oppdatert: {{names}}.",
+        "why": "De er laget for tilleggs-API 1, som kjørte inne i serveren. Termix kjører nå hvert tilleg i sin egen prosess, så hvert tilleg trenger en versjon laget for tilleggs-API 2. Oppdater offisielle tillegg her, og be forfatteren av et fellesskapstilleg om en ny versjon.",
+        "guide": "Slik migrerer tillegg til API 2"
+      },
+      "provenance": {
+        "verified": "Bygging verifisert",
+        "verifiedHint": "Byggprovenansen er signert av Termix-registrets utgivelsesworkflow og samsvarer med denne filen. Åpner byggingen.",
+        "unchecked": "Bygging ikke verifisert",
+        "uncheckedHint": "Byggprovenansen kunne ikke verifiseres ved nedlasting. Registrets signatur ble det."
+      },
+      "updateCheck": {
+        "notice_one": "Termix {{version}} er ute. 1 tilleg vil holdes avskrudd til du oppdaterer det: {{names}}.",
+        "notice_other": "Termix {{version}} er ute. {{count}} tillegg vil holdes avskrudd til du oppdaterer dem: {{names}}.",
+        "needs": "{{name}} (krever Termix {{range}})"
+      },
       "version": "Versjon",
       "versionPickHint": "Installer en eldre utgivelse i stedet for den nyeste. Den holder seg på denne versjonen til du løsner den.",
       "versionPickHintInstalled": "Bytt til en annen utgivelse. Velger du en som ikke er den nyeste, blir den festet.",
@@ -1641,7 +1690,22 @@
       "unsupportedHint": "Ingen utgave av dette programtillegget kjører på denne versjonen av Termix. Oppdater Termix for å installere det.",
       "needsTermix": "Krever Termix {{range}}",
       "showUnsupported": "Vis ikke støttet ({{count}})",
-      "showMore": "Vis {{count}} til ({{total}} igjen)"
+      "showMore": "Vis {{count}} til ({{total}} igjen)",
+      "memory": {
+        "summary": "Minne: {{total}} av {{limit}} | tillegg {{plugins}} | {{running}} kjører",
+        "lowTitle": "Serveren har lite minne",
+        "lowBody": "Termix og tilleggene bruker {{total}} av {{limit}}. Gi serveren mer minne eller skru av tilleg du ikke bruker.",
+        "idle": "Inaktiv",
+        "idleHint": "Kjører ikke nå. Starter når noe trenger den.",
+        "keptOn": "Holder seg kjørende: {{reason}}",
+        "stopsWhenIdle": "Stoppes når inaktiv"
+      }
+    },
+    "firstLoad": {
+      "title": "Forbereder tilleg",
+      "progress": "{{done}} av {{total}}",
+      "hint": "Dette skjer bare første gang. Neste gang åpner Termix med en gang.",
+      "skip": "Fortsett"
     }
   },
   "settings": {
@@ -1712,7 +1776,11 @@
   "rbac": {
     "roles": {
       "admin": "Administrator",
-      "user": "Bruker"
+      "user": "Bruker",
+      "viewer": "Seer",
+      "operator": "Operatør",
+      "auditor": "Revisor",
+      "helpdesk": "Helpdesk"
     }
   },
   "tileGrid": {

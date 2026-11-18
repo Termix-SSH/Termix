@@ -941,6 +941,16 @@
     "empty": "Ni kartic. Uporabite gumb Dodaj spodaj za dodajanje kartic."
   },
   "auth": {
+    "inviteIntro": "Povabljeni ste na ta strežnik. Izberite uporabniško ime in geslo za ustvaritev računa.",
+    "inviteInvalid": "Ta povezava za vabilo je potekla ali pa je bila že uporabljena. Za novo vprašajte upravitelja.",
+    "accountDisabled": "Ta račun je onemogočen. Za ponovno omogočitev vprašajte upravitelja.",
+    "accountPending": "Vaš račun čaka na odobritev s strani upravitelja.",
+    "stepUp": {
+      "title": "Preverite, da ste res vi",
+      "description": "Za nadaljevanje potrdite svoj drugi dejavnik.",
+      "noFactor": "Nimate nastavljenega drugega dejavnika. Dodajte ga v Nastavitvah in poskusite znova.",
+      "failed": "To ni delovalo. Poskusite znova."
+    },
     "tagline": "Upravljanje strežnikov, ki temelji na vtičnikih in ga gostite sami.",
     "loginTitle": "Dobrodošli nazaj",
     "registerTitle": "Ustvari račun",
@@ -967,6 +977,14 @@
     "loginWithExternal": "Prijava z zunanjim ponudnikom",
     "loginWithExternalDesc": "Prijavite se z uporabo konfiguriranega zunanjega ponudnika identitete",
     "loginWithProvider": "Prijava z {{name}}",
+    "pluginLogin": {
+      "signIn": "Prijava",
+      "verify": "Preveri",
+      "code": "Koda",
+      "useKey": "Uporabi varnostni ključ",
+      "keyPrompt": "Za nadaljevanje uporabite svoj varnostni ključ ali potrdilo.",
+      "keyFailed": "Korak z varnostnim ključem ni deloval. Poskusite znova."
+    },
     "resetPasswordButton": "Ponastavi geslo",
     "sendResetCode": "Pošlji kodo za ponastavitev",
     "resetCodeDesc": "Vnesite uporabniško ime za prejemanje kode za ponastavitev gesla. Koda bo zapisana v dnevnike Docker kontejnerja.",
@@ -1239,6 +1257,10 @@
         "title": "Dostop do interneta",
         "consequence": "Lahko pošilja zahteve zunanjim storitvam."
       },
+      "network:sockets": {
+        "title": "Odpiranje lastnih omrežnih povezav",
+        "consequence": "Lahko posluša na vratih in se neposredno poveže na kateri koli naslov, ne da bi Termix preverjal vsako povezavo."
+      },
       "network:serve": {
         "title": "Sprejemanje povezav",
         "consequence": "Odpre vrat na Termix strežniku."
@@ -1281,7 +1303,7 @@
       },
       "network:probe": {
         "title": "Preveri, ali pristanišča odgovarjajo",
-        "consequence": "Lahko odpre navadno povezavo na kateri koli naslov s strežnika, da preveri, ali je dosegljiv."
+        "consequence": "Lahko odpre navadno povezavo na kateri koli naslov s strežnika, da preveri, ali je dosegljiv, in poišče imena gostiteljev."
       },
       "hosts:status-provide": {
         "title": "Zagotovi stanje gostitelja",
@@ -1335,6 +1357,10 @@
         "title": "Shranjevanje lastnih skrivnosti",
         "consequence": "Šifrirano s strani Termix. Vtičnik nikoli ne hrani ključa."
       },
+      "config:secrets": {
+        "title": "Branje skrivnosti, ki jih hrani strežnik",
+        "consequence": "Okoljske spremenljivke in datoteke na strežniku, razen lastnih ključev Termixa."
+      },
       "settings:read-core": {
         "title": "Branje nastavitev Termix",
         "consequence": "Nastavitve strežnika, ne vaših gostiteljev ali poverilnic."
@@ -1355,6 +1381,10 @@
         "title": "Dodajanje barvnih tem",
         "consequence": "Samo barve in slogi. Za temo se ne izvaja nobena koda."
       }
+    },
+    "webView": {
+      "unavailable": "Ta stran ni več na voljo. Ponovno jo odprite iz vtičnika.",
+      "isolationUnavailable": "Ta brskalnik te strani ne more varno odpreti tukaj. Uporabite najnovejši Chrome ali Edge ali namizno aplikacijo."
     },
     "runtime": {
       "needsPlugin": "{{name}} ni na voljo",
@@ -1401,7 +1431,8 @@
         "version": "Različica",
         "status": "Stanje",
         "category": "Kategorija",
-        "downloads": "Prenosi"
+        "downloads": "Prenosi",
+        "memory": "Pomnilnik"
       },
       "risk": {
         "critical": "Kritično",
@@ -1490,7 +1521,8 @@
         "updatedMany_other": "{{count}} vtičnikov posodobljenih",
         "uninstalled": "{{name}} odstranjen",
         "dataDeleted": "Podatki za {{name}} izbrisani",
-        "failedToStart": "{{name}} se ni mogel zagnati. Odprite ga, da vidite razlog."
+        "failedToStart": "{{name}} se ni mogel zagnati. Odprite ga, da vidite razlog.",
+        "held": "{{name}} čaka {{minutes}} minut, preden sprememba stopi v veljavo, da jo lahko vidijo tudi drugi upravitelji"
       },
       "errors": {
         "generic": "Nekaj je šlo narobe",
@@ -1551,6 +1583,27 @@
       "pin": "Ohrani to različico",
       "pinHint": "Ohrani različico {{version}} in preskoči vse posodobitve, dokler tega ne izklopite.",
       "pinnedTo": "Pripeto na različico {{version}}",
+      "legacy": {
+        "notice_one": "1 vtičnik je bil izdelan za starejšo različico Termixa in bo ostal izklopljen, dokler ga ne posodobite: {{names}}.",
+        "notice_two": "2 vtičnika sta bila izdelana za starejšo različico Termixa in bosta ostala izklopljena, dokler ju ne posodobite: {{names}}.",
+        "notice_few": "{{count}} vtičniki so bili izdelani za starejšo različico Termixa in bodo ostali izklopljeni, dokler jih ne posodobite: {{names}}.",
+        "notice_other": "{{count}} vtičnikov je bilo izdelanih za starejšo različico Termixa in bodo ostali izklopljeni, dokler jih ne posodobite: {{names}}.",
+        "why": "Izdelani so bili za vmesnik vtičnikov 1, ki je deloval znotraj strežnika. Termix zdaj vsak vtičnik izvaja v svojem procesu, zato potrebujejo različico za vmesnik vtičnikov 2. Uradne posodobite tukaj, avtorja vtičnika skupnosti pa vprašajte za posodobitev.",
+        "guide": "Kako vtičniki prehajajo na vmesnik 2"
+      },
+      "provenance": {
+        "verified": "Gradnja preverjena",
+        "verifiedHint": "Potek gradnje je bil podpisan s strani delovnega postopka izdaje registra Termixa in se ujema s to datoteko. Odpre gradnjo.",
+        "unchecked": "Gradnja ni preverjena",
+        "uncheckedHint": "Poteka gradnje ni bilo mogoče preveriti ob prenosu. Podpis registra je bil preverjen."
+      },
+      "updateCheck": {
+        "notice_one": "Termix {{version}} je na voljo. 1 vtičnik bo ostal izklopljen, dokler ga ne posodobite: {{names}}.",
+        "notice_two": "Termix {{version}} je na voljo. 2 vtičnika bosta ostala izklopljena, dokler ju ne posodobite: {{names}}.",
+        "notice_few": "Termix {{version}} je na voljo. {{count}} vtičniki bodo ostali izklopljeni, dokler jih ne posodobite: {{names}}.",
+        "notice_other": "Termix {{version}} je na voljo. {{count}} vtičnikov bo ostalo izklopljenih, dokler jih ne posodobite: {{names}}.",
+        "needs": "{{name}} (zahteva Termix {{range}})"
+      },
       "version": "Različica",
       "versionPickHint": "Namestite starejšo različico namesto najnovejše. Ostane na tej različici, dokler je ne odpnete.",
       "versionPickHintInstalled": "Preklopite na drugo različico. Izbor katere koli, ki ni najnovejša, jo pripne.",
@@ -1717,7 +1770,22 @@
       "unsupportedHint": "Na tej različici Termix ne deluje nobena izdaja tega vtičnika. Posodobite Termix, da ga namestite.",
       "needsTermix": "Zahteva Termix {{range}}",
       "showUnsupported": "Prikaži nepodprte ({{count}})",
-      "showMore": "Prikaži še {{count}} (preostalo: {{total}})"
+      "showMore": "Prikaži še {{count}} (preostalo: {{total}})",
+      "memory": {
+        "summary": "Pomnilnik: {{total}} od {{limit}} | vtičniki {{plugins}} | {{running}} deluje",
+        "lowTitle": "Na tem strežniku je malo pomnilnika",
+        "lowBody": "Termix in njegovi vtičniki uporabljajo {{total}} od {{limit}}. Dajte strežniku več pomnilnika ali izklopite vtičnike, ki jih ne uporabljate.",
+        "idle": "Neaktivno",
+        "idleHint": "Trenutno ne deluje. Zažene se, ko ga nekaj potrebuje.",
+        "keptOn": "Nadalje deluje: {{reason}}",
+        "stopsWhenIdle": "Ustavi se pri neaktivnosti"
+      }
+    },
+    "firstLoad": {
+      "title": "Pripravljanje vtičnikov",
+      "progress": "{{done}} od {{total}}",
+      "hint": "To se zgodi le prvič. Naslednjič se Termix odpre takoj.",
+      "skip": "Nadaljuj"
     }
   },
   "settings": {
@@ -1802,7 +1870,11 @@
   "rbac": {
     "roles": {
       "admin": "Upravitelj",
-      "user": "Uporabnik"
+      "user": "Uporabnik",
+      "viewer": "Gledalec",
+      "operator": "Operater",
+      "auditor": "Revizor",
+      "helpdesk": "Podpora"
     }
   },
   "tileGrid": {

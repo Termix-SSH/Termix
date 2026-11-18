@@ -902,6 +902,16 @@
     "empty": "카드가 없습니다. 아래 추가를 사용하여 카드를 배치하세요."
   },
   "auth": {
+    "inviteIntro": "이 서버에 초대되었습니다. 사용자 이름과 비밀번호를 선택하여 계정을 만드세요.",
+    "inviteInvalid": "이 초대 링크는 만료되었거나 이미 사용되었습니다. 관리자에게 새 링크를 요청하세요.",
+    "accountDisabled": "이 계정은 비활성화되었습니다. 관리자에게 다시 활성화해 달라고 요청하세요.",
+    "accountPending": "계정 승인을 위해 관리자의 확인을 기다리고 있습니다.",
+    "stepUp": {
+      "title": "본인 확인",
+      "description": "계속하려면 2차 인증 요소를 증명하세요.",
+      "noFactor": "설정된 2차 인증 요소가 없습니다. 설정에서 추가한 후 다시 시도하세요.",
+      "failed": "작동하지 않았습니다. 다시 시도하세요."
+    },
     "tagline": "셀프 호스팅, 플러그인 기반 서버 관리.",
     "loginTitle": "다시 오신 것을 환영합니다",
     "registerTitle": "계정 만들기",
@@ -928,6 +938,14 @@
     "loginWithExternal": "외부 제공업체로 로그인",
     "loginWithExternalDesc": "구성된 외부 인증 제공업체를 사용하여 로그인합니다",
     "loginWithProvider": "{{name}}(으)로 로그인",
+    "pluginLogin": {
+      "signIn": "로그인",
+      "verify": "확인",
+      "code": "코드",
+      "useKey": "보안 키 사용",
+      "keyPrompt": "계속하려면 보안 키 또는 패스키를 사용하세요.",
+      "keyFailed": "보안 키 단계가 작동하지 않았습니다. 다시 시도하세요."
+    },
     "resetPasswordButton": "비밀번호 재설정",
     "sendResetCode": "재설정 코드 보내기",
     "resetCodeDesc": "비밀번호 재설정 코드를 받으려면 사용자 이름을 입력하세요. 코드는 Docker 컨테이너 로그에 기록됩니다.",
@@ -1188,6 +1206,10 @@
         "title": "인터넷 접근",
         "consequence": "외부 서비스로 요청을 보낼 수 있습니다."
       },
+      "network:sockets": {
+        "title": "자체 네트워크 연결 열기",
+        "consequence": "Termix가 각 연결을 확인하지 않고도 포트에서 수신하고 모든 주소에 직접 연결할 수 있습니다."
+      },
       "network:serve": {
         "title": "연결 허용",
         "consequence": "Termix 서버에서 포트를 엽니다."
@@ -1230,7 +1252,7 @@
       },
       "network:probe": {
         "title": "포트 응답 확인",
-        "consequence": "서버에서 모든 주소에 대한 일반 연결을 열어 도달 가능한지 확인할 수 있습니다."
+        "consequence": "서버에서 모든 주소에 일반 연결을 열어 도달 가능한지 확인하고 호스트 이름을 조회할 수 있습니다."
       },
       "hosts:status-provide": {
         "title": "호스트 상태 제공",
@@ -1284,6 +1306,10 @@
         "title": "자체 암호 저장소 사용",
         "consequence": "Termix에서 암호화합니다. 플러그인은 키를 보유하지 않습니다."
       },
+      "config:secrets": {
+        "title": "서버가 보유한 비밀 읽기",
+        "consequence": "Termix 자체 키를 제외한 서버의 환경 변수 및 파일."
+      },
       "settings:read-core": {
         "title": "Termix 설정 읽기",
         "consequence": "서버 설정입니다. 호스트나 자격 증명은 포함되지 않습니다."
@@ -1304,6 +1330,10 @@
         "title": "색상 테마 추가",
         "consequence": "색상과 스타일만 변경합니다. 테마에는 실행되는 코드가 없습니다."
       }
+    },
+    "webView": {
+      "unavailable": "이 페이지는 더 이상 사용할 수 없습니다. 플러그인에서 다시 열어보세요.",
+      "isolationUnavailable": "이 브라우저에서는 이 페이지를 안전하게 열 수 없습니다. 최신 Chrome 또는 Edge 또는 데스크톱 앱을 사용하세요."
     },
     "runtime": {
       "needsPlugin": "{{name}}을(를) 사용할 수 없습니다",
@@ -1350,7 +1380,8 @@
         "version": "버전",
         "status": "상태",
         "category": "카테고리",
-        "downloads": "다운로드"
+        "downloads": "다운로드",
+        "memory": "메모리"
       },
       "risk": {
         "critical": "치명적",
@@ -1403,7 +1434,8 @@
         "updatedMany_other": "{{count}}개 플러그인 업데이트됨",
         "uninstalled": "{{name}} 제거됨",
         "dataDeleted": "{{name}}의 데이터 삭제됨",
-        "failedToStart": "{{name}}을(를) 시작하지 못했습니다. 이유를 보려면 열어보세요."
+        "failedToStart": "{{name}}을(를) 시작하지 못했습니다. 이유를 보려면 열어보세요.",
+        "held": "다른 관리자가 변경 사항을 볼 수 있도록 {{name}}은(는) 변경 사항이 적용되기 전까지 {{minutes}}분간 대기합니다."
       },
       "errors": {
         "generic": "문제가 발생했습니다",
@@ -1452,6 +1484,21 @@
       "pin": "현재 버전 유지",
       "pinHint": "{{version}} 버전을 유지하며, 이 설정을 해제할 때까지 모든 업데이트를 건너뜁니다.",
       "pinnedTo": "{{version}} 버전 고정",
+      "legacy": {
+        "notice_other": "{{count}}개의 플러그인이 이전 버전 Termix용으로 제작되어 업데이트될 때까지 비활성화됩니다: {{names}}.",
+        "why": "이들은 서버 내부에서 실행되던 플러그인 API 1용으로 제작되었습니다. Termix는 이제 각 플러그인을 자체 프로세스에서 실행하므로, 각 플러그인은 플러그인 API 2용 버전이 필요합니다. 공식 플러그인은 여기서 업데이트하고, 커뮤니티 플러그인은 작성자에게 버전을 요청하세요.",
+        "guide": "플러그인이 API 2로 이동하는 방법"
+      },
+      "provenance": {
+        "verified": "빌드 확인됨",
+        "verifiedHint": "빌드 출처가 Termix 레지스트리 릴리스 워크플로우에 의해 서명되었으며 이 파일과 일치합니다. 빌드를 엽니다.",
+        "unchecked": "빌드 미확인",
+        "uncheckedHint": "다운로드 시 빌드 출처를 확인할 수 없었습니다. 레지스트리 서명은 확인되었습니다."
+      },
+      "updateCheck": {
+        "notice_other": "Termix {{version}}이(가) 출시되었습니다. 업데이트할 때까지 {{count}}개의 플러그인이 비활성화됩니다: {{names}}.",
+        "needs": "{{name}} (Termix {{range}} 필요)"
+      },
       "version": "버전",
       "versionPickHint": "최신 버전 대신 이전 릴리스를 설치합니다. 고정 해제할 때까지 해당 버전이 유지됩니다.",
       "versionPickHintInstalled": "다른 릴리스로 전환합니다. 최신 버전이 아닌 버전을 선택하면 자동으로 고정됩니다.",
@@ -1603,7 +1650,22 @@
       "unsupportedHint": "이 플러그인의 릴리스는 현재 Termix 버전에서 실행되지 않습니다. 설치하려면 Termix를 업데이트하세요.",
       "needsTermix": "Termix {{range}} 필요",
       "showUnsupported": "지원되지 않는 항목 표시 ({{count}})",
-      "showMore": "더 보기 {{count}}개 (남은 {{total}}개)"
+      "showMore": "더 보기 {{count}}개 (남은 {{total}}개)",
+      "memory": {
+        "summary": "메모리: {{limit}} 중 {{total}} | 플러그인 {{plugins}} | 실행 중 {{running}}",
+        "lowTitle": "서버 메모리가 부족합니다",
+        "lowBody": "Termix 및 플러그인이 {{limit}} 중 {{total}}을(를) 사용합니다. 서버에 더 많은 메모리를 제공하거나 사용하지 않는 플러그인을 끄세요.",
+        "idle": "대기 중",
+        "idleHint": "현재 실행 중이 아닙니다. 필요할 때 시작됩니다.",
+        "keptOn": "실행 유지: {{reason}}",
+        "stopsWhenIdle": "대기 시 중지"
+      }
+    },
+    "firstLoad": {
+      "title": "플러그인 준비 중",
+      "progress": "{{total}} 중 {{done}}",
+      "hint": "이것은 처음 한 번만 발생합니다. 다음에는 Termix가 즉시 열립니다.",
+      "skip": "계속"
     }
   },
   "settings": {
@@ -1667,7 +1729,11 @@
   "rbac": {
     "roles": {
       "admin": "관리자",
-      "user": "사용자"
+      "user": "사용자",
+      "viewer": "뷰어",
+      "operator": "운영자",
+      "auditor": "감사원",
+      "helpdesk": "헬프데스크"
     }
   },
   "tileGrid": {
