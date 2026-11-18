@@ -19,6 +19,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { allocateUid, isPluginId, validateSpawn } from "./policy.js";
+import { adoptDataDir, readAdopted, writeAdopted } from "./adopt.js";
 
 const SANDBOX_MESSAGE = "tmx-sandbox";
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -26,6 +27,7 @@ const runtime = path.resolve(here, "../child/runtime.js");
 const harden = path.resolve(here, "../child/harden.js");
 const dataRoot = process.env.DATA_DIR ?? "/app/data";
 const uidFile = path.join(dataRoot, ".plugin-uids.json");
+const adoptedFile = path.join(dataRoot, ".plugin-data-owners.json");
 
 const [script, ...scriptArgs] = process.argv.slice(2);
 const coreUid = Number(process.env.TERMIX_LAUNCHER_UID ?? "1000");
@@ -121,6 +123,20 @@ function startPlugin(
   fs.mkdirSync(dataDir, { recursive: true });
   fs.chownSync(dataDir, uid, coreGid);
   fs.chmodSync(dataDir, 0o2770);
+  // What core saved there before plugins had their own users stays core's
+  // until handed over, and the plugin can't write it. Done once per user.
+  const adopted = readAdopted(adoptedFile);
+  if (adopted[pluginId] !== uid) {
+    try {
+      const changed = adoptDataDir(dataDir, uid, coreGid);
+      if (changed > 0) log(`gave ${pluginId} ${changed} existing file(s)`);
+      writeAdopted(adoptedFile, { ...adopted, [pluginId]: uid });
+    } catch (error) {
+      log(
+        `could not hand over ${pluginId}'s files: ${(error as Error).message}`,
+      );
+    }
+  }
   firewall(uid, request.firewall === "allow-all" ? "allow-all" : "deny");
 
   // Files the plugin makes stay readable by core's group and nobody else.
