@@ -52,18 +52,25 @@ export function ThemeProvider({
 
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove(...themes.map((entry) => entry.id));
-    if (appliedClass) root.classList.remove(appliedClass);
-
     const applied =
       activeTheme === SYSTEM_THEME
         ? window.matchMedia("(prefers-color-scheme: dark)").matches
           ? "dark"
           : "light"
         : activeTheme;
-    root.classList.add(applied);
-    appliedClass = applied;
-    applyThemeCss(applied, getTheme(applied));
+    const swap = () => {
+      root.classList.remove(...themes.map((entry) => entry.id));
+      if (appliedClass) root.classList.remove(appliedClass);
+      root.classList.add(applied);
+      appliedClass = applied;
+    };
+    // On first paint there is nothing to keep showing while the sheet loads.
+    if (!appliedClass) {
+      swap();
+      applyThemeCss(applied, getTheme(applied));
+    } else {
+      applyThemeCss(applied, getTheme(applied), swap);
+    }
   }, [activeTheme, themes]);
 
   const value = {

@@ -169,6 +169,7 @@
 - Sync no longer fails on every pass on servers upgraded from before 2.8 straight to 2.9 or later
 - Desktop app with connections starting on the server: hosts given by name connect again instead of failing with Bad packet length
 - Host scripts run on hosts whose login shell is fish or csh
+- Hovering a theme in Appearance or setup no longer flashes the page white while its colors load
 - Linux desktop app: Ctrl+W closes the active tab instead of the window
 - Desktop app and Chrome on macOS: a button's tooltip shows wherever the pointer rests on it, not only beside its icon
 
