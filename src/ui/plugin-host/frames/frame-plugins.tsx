@@ -16,7 +16,7 @@
  * subscriptions started in activate) always run.
  */
 
-import { useEffect, type ComponentType } from "react";
+import { useEffect, useMemo, type ComponentType } from "react";
 import type { PluginSummary } from "@/api/plugins-api";
 import type { PluginManifest } from "@termix-ssh/plugin-sdk/frontend";
 import {
@@ -52,6 +52,7 @@ import {
 } from "./registration-cache";
 import { trackColdBoot } from "./cold-boot";
 import { frameBlockedReason } from "./frames-blocked";
+import { setTabHandleOwner } from "./tab-handle-owners";
 
 import { extensionFit } from "./slot-fit";
 import { hasUserActivation } from "./user-activation";
@@ -329,6 +330,7 @@ function framed(
     view =
       typeof fit === "string"
         ? function Framed(props: Record<string, unknown>) {
+            const sent = useFrameHandle(pluginId, props);
             return (
               <FramedView
                 pluginId={pluginId}
@@ -336,18 +338,19 @@ function framed(
                 how={fit}
                 transparent={variant === "panel"}
                 adapt={adapt}
-                props={props}
+                props={sent}
               />
             );
           }
         : function Framed(props: Record<string, unknown>) {
+            const sent = useFrameHandle(pluginId, props);
             return (
               <SlotFramedView
                 pluginId={pluginId}
                 frameKey={key}
                 slotId={fit.slot}
                 adapt={adapt}
-                props={props}
+                props={sent}
               />
             );
           };
@@ -356,6 +359,48 @@ function framed(
     views.set(id, view);
   }
   return view;
+}
+
+function assignHandle(ref: unknown, value: unknown): void {
+  if (typeof ref === "function") (ref as (value: unknown) => void)(value);
+  else if (ref && typeof ref === "object" && "current" in ref) {
+    (ref as { current: unknown }).current = value;
+  }
+}
+
+/**
+ * A ref can't reach a frame, so a view that hands back a handle (a session
+ * tab) gets __setHandle instead. What it sends is the frame's handle, with
+ * async methods, and goes away with the view.
+ */
+export function useFrameHandle(
+  pluginId: string,
+  props: Record<string, unknown>,
+): Record<string, unknown> {
+  const handleRef = props.handleRef;
+  const setHandle = useMemo(
+    () =>
+      handleRef
+        ? (value: unknown) => {
+            const handle = value && typeof value === "object" ? value : null;
+            if (handle) setTabHandleOwner(handle, pluginId);
+            assignHandle(handleRef, handle);
+          }
+        : undefined,
+    [handleRef, pluginId],
+  );
+  useEffect(
+    () => () => {
+      if (handleRef) assignHandle(handleRef, null);
+    },
+    [handleRef],
+  );
+  return useMemo(() => {
+    if (!setHandle) return props;
+    const { handleRef: _ref, ...rest } = props;
+    void _ref;
+    return { ...rest, __setHandle: setHandle };
+  }, [props, setHandle]);
 }
 
 /** Things a frame can't be handed: refs, DOM nodes, React children. */

@@ -135,6 +135,8 @@ function passesThrough(value: object): boolean {
 export interface EncodeOptions {
   /** Makes a function callable from the other side. */
   exportFn: (fn: (...args: never[]) => unknown) => WireFn;
+  /** Sends another object in place of this one, or undefined to keep it. */
+  replace?: (value: object) => object | undefined;
 }
 
 /**
@@ -155,7 +157,9 @@ export function encode(value: unknown, options: EncodeOptions): unknown {
     if (kind === "function") {
       return options.exportFn(input as (...args: never[]) => unknown);
     }
-    const object = input as object;
+    let object = input as object;
+    const swapped = options.replace?.(object);
+    if (swapped !== undefined) object = swapped;
     if (isReactElement(object)) return iconToWire(object);
     if (isComponentObject(object)) return iconToWire(object);
     // Only a loop back to an object still being walked is cut: the same

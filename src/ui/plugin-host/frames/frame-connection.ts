@@ -87,6 +87,7 @@ import {
   writeSerial,
 } from "./serial-bridge";
 import { manifestUses } from "./foreign-policy";
+import { tabHandleOwner } from "./tab-handle-owners";
 import {
   addForeignList,
   disposeForeignView,
@@ -274,6 +275,7 @@ function createPort(connection: FrameConnection, target: Window): FramePort {
     fnPrefix: "s",
     icon: (ref) => decodeHostIconValue(ref),
     component: (ref: WireComponent) => ref,
+    replace: (value) => handleForFrame(value, connection.pluginId),
   });
 }
 
@@ -424,6 +426,26 @@ const HANDLE_METHODS: Record<string, "terminal-input" | null> = {
   sendInput: "terminal-input",
   paste: "terminal-input",
 };
+
+/**
+ * What another plugin's frame sees of a framed tab's handle: the calls a
+ * companion may make, plus what sharing the session needs.
+ */
+export function handleForFrame(
+  value: object,
+  pluginId: string,
+): object | undefined {
+  const owner = tabHandleOwner(value);
+  if (!owner || owner === pluginId) return undefined;
+  const allowed: Record<string, unknown> = {};
+  for (const [name, fn] of Object.entries(value)) {
+    if (typeof fn !== "function") continue;
+    if (name === "getShareTarget" || mayCallHandle(pluginId, name)) {
+      allowed[name] = fn;
+    }
+  }
+  return allowed;
+}
 
 export function mayCallHandle(pluginId: string, method: unknown): boolean {
   if (typeof method !== "string" || !Object.hasOwn(HANDLE_METHODS, method)) {

@@ -180,15 +180,16 @@ export type Tab = {
   split?: SplitState;
   /** Hides this session from the top-level tab bar while it belongs to a split tab. */
   parentSplitTabId?: string;
+  /** A tab drawn in a frame answers every call through a promise. */
   terminalRef?: import("react").RefObject<{
     disconnect?: () => void;
-    isConnected?: () => boolean;
+    isConnected?: () => boolean | Promise<boolean>;
     sendInput?: (data: string) => void;
     subscribeOutput?: (listener: (data: string) => void) => () => void;
     paste?: (text: string) => void;
     reconnect?: () => void;
     /** Start a manual reconnect only when disconnected and idle; return whether it started. */
-    reconnectIfDisconnected?: () => boolean;
+    reconnectIfDisconnected?: () => boolean | Promise<boolean>;
     fit?: () => void;
     notifyResize?: () => void;
     refresh?: () => void;

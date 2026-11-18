@@ -39,6 +39,8 @@ export interface FramePortOptions {
   /** How wire icons and components turn into values on this side. */
   icon?: (ref: WireIcon) => unknown;
   component?: (ref: WireComponent) => unknown;
+  /** Swaps an outgoing object for another before it is encoded. */
+  replace?: (value: object) => object | undefined;
 }
 
 export class FramePort {
@@ -55,7 +57,10 @@ export class FramePort {
   constructor(private readonly options: FramePortOptions) {}
 
   encode(value: unknown): unknown {
-    return encode(value, { exportFn: (fn) => this.exportFn(fn) });
+    return encode(value, {
+      exportFn: (fn) => this.exportFn(fn),
+      replace: this.options.replace,
+    });
   }
 
   decode(value: unknown): unknown {

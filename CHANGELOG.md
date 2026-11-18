@@ -12,6 +12,7 @@
 - The plugin loading screen no longer says it only shows the first time
 - Plugins can write to files they saved before 26.11.2 again, like Session Recording's recordings
 - The first plugin installed from the store on a new install starts without a restart
+- A terminal's tab shows its Share button and Share menu entry again, and Refresh connection, Reconnect all and focus in split screen work on it again
 
 ## 26.11.2
 

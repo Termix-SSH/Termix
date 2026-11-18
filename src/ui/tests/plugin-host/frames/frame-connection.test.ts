@@ -31,11 +31,13 @@ vi.mock("@/main-axios", async (importOriginal) => ({
 
 import {
   connectFrame,
+  handleForFrame,
   mayCallHandle,
   mayInvokeAction,
   resetFrameConnections,
 } from "@/plugin-host/frames/frame-connection";
 import { dropFrameToken } from "@/plugin-host/frames/frame-token";
+import { setTabHandleOwner } from "@/plugin-host/frames/tab-handle-owners";
 import {
   resetPluginStore,
   setPluginSummaries,
@@ -403,6 +405,32 @@ describe("frame permissions", () => {
     expect(mayCallHandle("snippets", "sendInput")).toBe(true);
     expect(mayCallHandle("snippets", "confirmClose")).toBe(false);
     expect(mayCallHandle("snippets", "__proto__")).toBe(false);
+  });
+
+  it("gives another plugin only the allowed calls of a framed tab's handle", () => {
+    const handle = {
+      focus: vi.fn(),
+      reconnect: vi.fn(),
+      disconnect: vi.fn(),
+      sendInput: vi.fn(),
+      confirmClose: vi.fn(),
+      getShareTarget: vi.fn(),
+      label: "not a call",
+    };
+    expect(handleForFrame(handle, "docker")).toBeUndefined();
+    setTabHandleOwner(handle, "ssh-terminal");
+    expect(handleForFrame(handle, "ssh-terminal")).toBeUndefined();
+    expect(Object.keys(handleForFrame(handle, "docker")!).sort()).toEqual([
+      "focus",
+      "getShareTarget",
+      "reconnect",
+    ]);
+    expect(Object.keys(handleForFrame(handle, "snippets")!).sort()).toEqual([
+      "focus",
+      "getShareTarget",
+      "reconnect",
+      "sendInput",
+    ]);
   });
 });
 
