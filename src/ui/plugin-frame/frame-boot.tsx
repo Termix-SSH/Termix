@@ -58,6 +58,7 @@ import { focusEdge, watchEdges } from "./frame-edges";
 import { withPluginScope } from "@/plugin-host/scope";
 import { FrameRoot, setFrameProps, type FrameFit } from "./frame-root";
 import { setShellScrollEmitter, setShellViewport } from "./shell-scroll";
+import { setFrameCoverEmitter } from "./frame-cover";
 import { whenFrameShown } from "./frame-paint";
 
 /** Time for overlay effects to run before the frame reports its live work. */
@@ -430,6 +431,8 @@ async function boot() {
     );
     if (params.fit === "fill") {
       setShellScrollEmitter((on) => port.emit("shellScroll", { on }));
+    } else {
+      setFrameCoverEmitter((width) => port.emit("cover", { width }));
     }
     if (params.edge) watchEdges((name, data) => port.emit(name, data));
     // Painted, not just started: the shell keeps its spinner until then.

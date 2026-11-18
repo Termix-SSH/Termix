@@ -39,3 +39,12 @@ html[data-shell-scroll] #root {
 html[data-shell-scroll] [data-frame-box] {
   min-height: var(--shell-viewport-height, 0px);
 }
+
+/* An inline view is open: the shell grew the frame over its surface. */
+html[data-frame-cover],
+html[data-frame-cover] body,
+html[data-frame-cover] #root,
+html[data-frame-cover] [data-frame-box] {
+  height: 100%;
+  overflow: hidden;
+}

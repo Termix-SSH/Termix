@@ -51,6 +51,7 @@ vi.mock("@/plugin-host/plugin-store", () => ({
 
 const { PluginFrameView, SANDBOX } =
   await import("@/plugin-host/frames/PluginFrameView");
+const { SurfaceScope } = await import("@/components/surface/surface-scope");
 const { resetFrameSizes } = await import("@/plugin-host/frames/frame-sizes");
 const { foreignAnchorOf, shellScrollBoxOf } =
   await import("@/plugin-host/frames/foreign-anchors");
@@ -387,6 +388,47 @@ describe("PluginFrameView", () => {
 
     const other = render(view(2));
     expect(other.container.querySelector("iframe")!.style.height).toBe("0px");
+  });
+
+  it("grows a content view over its surface while an inline view is open", () => {
+    const { container } = render(
+      <SurfaceScope kind="tab">
+        <PluginFrameView
+          pluginId="docker"
+          frameKey="k"
+          fit="content"
+          props={{}}
+        />
+      </SurfaceScope>,
+    );
+    const iframe = container.querySelector("iframe")!;
+    const overlay = container.querySelector(
+      "[data-surface] > div.absolute",
+    ) as HTMLElement;
+    act(() => frames.options!.onEvent("size", { width: 300, height: 120 }));
+    expect(overlay.className).toContain("hidden");
+
+    act(() => frames.options!.onEvent("cover", { width: true }));
+    expect(overlay.className).not.toContain("hidden");
+    expect(iframe.style.position).toBe("fixed");
+    // The surface's size does not count as the view's own.
+    act(() => frames.options!.onEvent("size", { width: 900, height: 800 }));
+    expect((iframe.previousElementSibling as HTMLElement).style.height).toBe(
+      "120px",
+    );
+
+    act(() => frames.options!.onEvent("cover", { width: false }));
+    expect(overlay.className).toContain("hidden");
+    expect(iframe.style.position).toBe("");
+    expect(iframe.style.height).toBe("120px");
+  });
+
+  it("ignores a cover ask from a full size view", () => {
+    const { container } = render(
+      <PluginFrameView pluginId="docker" frameKey="k" fit="fill" props={{}} />,
+    );
+    act(() => frames.options!.onEvent("cover", { width: true }));
+    expect(container.querySelector("iframe")!.style.position).toBe("");
   });
 
   it("ignores a scroll ask from a view with no box of its own", () => {

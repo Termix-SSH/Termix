@@ -24,6 +24,7 @@ import { SeamlessTileContext } from "@/components/tile-grid/context";
 import { TILE_CARD_LINES } from "@/components/tile-grid/TileColumn";
 import { useFrameState } from "./frame-store";
 import { markFrameShown } from "./frame-paint";
+import { reportFrameCover } from "./frame-cover";
 
 export type FrameFit = "fill" | "content" | "inline" | "bar";
 
@@ -142,7 +143,10 @@ function View({
       <SurfaceScope
         kind={place.surfaceKind ?? "panel"}
         onClose={close}
-        onEditingChange={setEditing}
+        onEditingChange={(editing) => {
+          setEditing?.(editing);
+          if (fit === "content" || fit === "inline") reportFrameCover(editing);
+        }}
         className={fit === "fill" || fit === "bar" ? "h-full" : undefined}
       >
         {place.seamless && fit === "content" ? (

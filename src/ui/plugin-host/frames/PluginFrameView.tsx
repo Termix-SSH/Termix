@@ -7,6 +7,7 @@
 
 import {
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -21,7 +22,9 @@ import { lastSize, rememberSize, sizeKey } from "./frame-sizes";
 import { useInSeamlessTile } from "@/components/tile-grid/context";
 import {
   useSurfaceClose,
+  useSurfaceCover,
   useSurfaceKind,
+  type EditingWidth,
 } from "@/components/surface/surface-scope";
 import {
   connectFrame,
@@ -162,6 +165,12 @@ export function PluginFrameView({
   // The view asked the shell to scroll it (useShellScroll).
   const [shellScroll, setShellScroll] = useState(false);
   const [viewport, setViewport] = useState(0);
+  // An inline view is open in a content sized view: it covers the surface.
+  const [cover, setCover] = useState<EditingWidth>(false);
+  const [coverRect, setCoverRect] = useState<DOMRect | null>(null);
+  const coverRef = useRef(false);
+  const surfaceCover = useSurfaceCover();
+  const coverId = useId();
   const wrap = useRef<HTMLDivElement>(null);
   const anchor = useRef<HTMLDivElement>(null);
   // First paint, which comes a little after ready.
@@ -196,6 +205,8 @@ export function PluginFrameView({
   // shows the spinner, just without a background of its own.
   const loads =
     fit === "fill" && (!seeThrough || !!transparent) && !className && !style;
+  const fitRef = useRef(fit);
+  fitRef.current = fit;
   const loadsRef = useRef(loads);
   loadsRef.current = loads;
   const src = useMemo(
@@ -242,6 +253,8 @@ ${src}`;
     setReady(false);
     setShown(false);
     setShellScroll(false);
+    setCover(false);
+    coverRef.current = false;
     lastSent.current = null;
     const next = connectFrame(element, pluginId, "view", frameKey, {
       getProps: () => stableRef.current,
@@ -258,6 +271,15 @@ ${src}`;
           }
           return;
         }
+        if (name === "cover") {
+          if (fitRef.current === "content" || fitRef.current === "inline") {
+            const width = (data as { width?: unknown } | null)?.width;
+            const next = width === "wide" ? "wide" : width === true;
+            coverRef.current = !!next;
+            setCover(next);
+          }
+          return;
+        }
         if (name === "drawn") {
           setDrawn((data as { drawn?: unknown } | null)?.drawn === true);
           eventRef.current?.(name, data);
@@ -267,6 +289,8 @@ ${src}`;
           eventRef.current?.(name, data);
           return;
         }
+        // A covering view reports the surface's size, not its own.
+        if (coverRef.current) return;
         if (!data || typeof data !== "object") return;
         const { width, height } = data as { width?: unknown; height?: unknown };
         if (typeof width !== "number" || typeof height !== "number") return;
@@ -294,6 +318,38 @@ ${src}`;
     setForeignAnchor(element, box);
     return () => setForeignAnchor(element, null);
   }, [loads]);
+
+  useLayoutEffect(() => {
+    if (!cover || !surfaceCover) return;
+    surfaceCover.openView(coverId, cover);
+    return () => surfaceCover.closeView(coverId);
+  }, [cover, surfaceCover, coverId]);
+
+  // Follows the surface's box while covering it, or the window outside one.
+  const coverTarget = surfaceCover?.overlay ?? null;
+  useLayoutEffect(() => {
+    if (!cover) {
+      setCoverRect(null);
+      return;
+    }
+    const measure = () =>
+      setCoverRect(
+        coverTarget
+          ? coverTarget.getBoundingClientRect()
+          : new DOMRect(0, 0, window.innerWidth, window.innerHeight),
+      );
+    measure();
+    window.addEventListener("resize", measure);
+    const observer =
+      coverTarget && typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(measure)
+        : null;
+    if (coverTarget) observer?.observe(coverTarget);
+    return () => {
+      window.removeEventListener("resize", measure);
+      observer?.disconnect();
+    };
+  }, [cover, coverTarget]);
 
   // The view lays out at least as tall as the box it scrolls in.
   useEffect(() => {
@@ -416,6 +472,18 @@ ${src}`;
         ...sizing,
         ...hidden,
         ...style,
+        ...(coverRect
+          ? {
+              position: "fixed",
+              left: `${coverRect.left}px`,
+              top: `${coverRect.top}px`,
+              width: `${coverRect.width}px`,
+              height: `${coverRect.height}px`,
+              zIndex: 41,
+              visibility: "visible",
+              pointerEvents: "auto",
+            }
+          : {}),
       }}
     />
   );
@@ -457,10 +525,14 @@ ${src}`;
       </div>
     );
   }
-  if (fallback === undefined) return frame;
+  // One shape always, so covering never remounts the frame. The spacer keeps
+  // the page from jumping while the frame is lifted out of it.
   return (
     <>
       {empty && fallback}
+      {coverRect && size && fit === "content" && (
+        <div aria-hidden style={{ height: `${size.height}px` }} />
+      )}
       {frame}
     </>
   );
