@@ -60,6 +60,7 @@ import { FrameRoot, setFrameProps, type FrameFit } from "./frame-root";
 import { setShellScrollEmitter, setShellViewport } from "./shell-scroll";
 import { setFrameCoverEmitter } from "./frame-cover";
 import { whenFrameShown } from "./frame-paint";
+import { markFrameDesktop } from "./frame-desktop";
 
 /** Time for overlay effects to run before the frame reports its live work. */
 const OVERLAY_SETTLE_MS = 50;
@@ -264,6 +265,7 @@ async function boot() {
   });
 
   setFrameState(init.state as FrameState);
+  markFrameDesktop((init.state as FrameState).desktop?.available);
   if (init.props) setFrameProps(init.props);
   applyTheme(init.state.theme);
 
@@ -493,6 +495,7 @@ async function boot() {
     if (name === "state" && data && typeof data === "object") {
       const next = data as Partial<FrameState>;
       setFrameState(next);
+      markFrameDesktop(next.desktop?.available);
       if (next.theme) applyTheme(next.theme);
       return;
     }

@@ -1,5 +1,11 @@
 # Changelog
 
+## 26.11.3
+
+### Fixed
+
+- Desktop app: parts of plugins that only show in the desktop app, like a local terminal, show again
+
 ## 26.11.2
 
 ### Added
