@@ -42,7 +42,11 @@ beforeEach(async () => {
   vi.clearAllMocks();
   registerSshRelay();
 
-  echo = net.createServer((socket) => socket.pipe(socket));
+  echo = net.createServer((socket) => {
+    // The relay may reset a host connection it is done with.
+    socket.on("error", () => {});
+    socket.pipe(socket);
+  });
   await new Promise<void>((resolve) => echo.listen(0, "127.0.0.1", resolve));
   echoPort = (echo.address() as AddressInfo).port;
 
