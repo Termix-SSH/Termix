@@ -89,6 +89,24 @@ describe("verifySshSignature", () => {
     expect(sshFingerprint(OPENSSH.key.publicKey)).toBe(OPENSSH.key.id);
   });
 
+  it("refuses a long run of spaces quickly", () => {
+    const armored = `-----BEGIN SSH SIGNATURE-----${" ".repeat(50_000)}x-----END SSH SIGNATURE-----`;
+    const started = Date.now();
+    const result = verifySshSignature(armored, Buffer.from("m"), [OPENSSH.key]);
+    expect(result).toEqual({ ok: false, reason: "not an SSH signature" });
+    expect(Date.now() - started).toBeLessThan(500);
+  });
+
+  it("refuses markers with nothing between them", () => {
+    expect(
+      verifySshSignature(
+        "-----BEGIN SSH SIGNATURE-----\n\n-----END SSH SIGNATURE-----",
+        Buffer.from("m"),
+        [OPENSSH.key],
+      ).ok,
+    ).toBe(false);
+  });
+
   it("refuses the ssh-keygen signature over other bytes", () => {
     expect(
       verifySshSignature(OPENSSH.sig, Buffer.from(`${OPENSSH.message} `), [
