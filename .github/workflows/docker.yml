@@ -39,6 +39,11 @@ on:
         required: false
         type: string
         default: ""
+      floating:
+        description: "Also move latest or beta. Release leaves it off and moves them after publishing"
+        required: false
+        type: boolean
+        default: true
     # The values come from the build environment.
     secrets:
       GHCR_LUKEGUS_TOKEN:
@@ -105,6 +110,7 @@ jobs:
           VERSION: ${{ inputs.version }}
           BUILD_TYPE: ${{ inputs.build_type }}
           PROFILE: ${{ matrix.profile }}
+          FLOATING: ${{ inputs.floating }}
         run: |
           TAGS=()
           ALL_TAGS=()
@@ -115,9 +121,11 @@ jobs:
           fi
 
           if [ "$BUILD_TYPE" = "Production" ]; then
-            TAGS+=("$VERSION$SUFFIX" "latest$SUFFIX")
+            TAGS+=("$VERSION$SUFFIX")
+            [ "$FLOATING" != "false" ] && TAGS+=("latest$SUFFIX")
           elif [ "$BUILD_TYPE" = "Beta" ]; then
-            TAGS+=("beta$SUFFIX" "$VERSION$SUFFIX")
+            TAGS+=("$VERSION$SUFFIX")
+            [ "$FLOATING" != "false" ] && TAGS+=("beta$SUFFIX")
           else
             TAGS+=("dev-$VERSION$SUFFIX" "dev-latest$SUFFIX")
           fi

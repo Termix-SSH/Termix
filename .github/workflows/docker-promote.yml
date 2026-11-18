@@ -1,0 +1,84 @@
+name: Promote Docker Image
+
+# Points latest (or beta) at an image the release already pushed under its
+# version tag. Release runs this only after the GitHub release is published,
+# so a release that fails or is cancelled never moves latest.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Version whose images to promote (e.g., 26.11.2)"
+        required: true
+        type: string
+      build_type:
+        description: "Production moves latest, Beta moves beta"
+        required: true
+        type: string
+    secrets:
+      GHCR_LUKEGUS_TOKEN:
+        required: false
+      DOCKERHUB_BUGATTIGUY527_TOKEN:
+        required: false
+      DOCKERHUB_TERMIXSSH_TOKEN:
+        required: false
+
+permissions: {}
+
+jobs:
+  promote:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment: build
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [standard, minimal, full]
+    env:
+      VERSION: ${{ inputs.version }}
+      BUILD_TYPE: ${{ inputs.build_type }}
+      PROFILE: ${{ matrix.profile }}
+    steps:
+      - name: Login to GHCR
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: lukegus
+          password: ${{ secrets.GHCR_LUKEGUS_TOKEN }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          username: bugattiguy527
+          password: ${{ secrets.DOCKERHUB_BUGATTIGUY527_TOKEN }}
+
+      - name: Move the floating tag
+        run: |
+          SUFFIX=""
+          [ "$PROFILE" != "standard" ] && SUFFIX="-$PROFILE"
+          FLOAT=latest
+          [ "$BUILD_TYPE" = "Beta" ] && FLOAT=beta
+          for repo in ghcr.io/lukegus/termix ghcr.io/termix-ssh/termix docker.io/bugattiguy527/termix; do
+            docker buildx imagetools create --tag "$repo:$FLOAT$SUFFIX" "$repo:$VERSION$SUFFIX"
+          done
+          echo "FLOAT=$FLOAT$SUFFIX" >> "$GITHUB_ENV"
+
+      - name: Login to Docker Hub as termixssh
+        id: termix_hub
+        env:
+          TOKEN: ${{ secrets.DOCKERHUB_TERMIXSSH_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "DOCKERHUB_TERMIXSSH_TOKEN is not set, skipping docker.io/termixssh"
+            exit 0
+          fi
+          echo "$TOKEN" | docker login docker.io --username termixssh --password-stdin
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Move the floating tag on docker.io/termixssh
+        if: ${{ steps.termix_hub.outputs.ready == 'true' }}
+        run: |
+          SUFFIX=""
+          [ "$PROFILE" != "standard" ] && SUFFIX="-$PROFILE"
+          docker buildx imagetools create --tag "docker.io/termixssh/termix:$FLOAT" "docker.io/termixssh/termix:$VERSION$SUFFIX"

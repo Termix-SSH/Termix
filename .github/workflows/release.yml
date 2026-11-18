@@ -577,6 +577,8 @@ jobs:
       build_type: ${{ needs.prep.outputs.channel == 'Beta' && 'Beta' || 'Production' }}
       dry_run: ${{ needs.prep.outputs.mode == 'Dry run' }}
       source_ref: ${{ needs.merge-to-main.outputs.build_ref || needs.translate.outputs.sha || needs.prep.outputs.sha }}
+      # latest and beta move in docker-promote, once the release is published.
+      floating: false
     secrets:
       GHCR_LUKEGUS_TOKEN: ${{ secrets.GHCR_LUKEGUS_TOKEN }}
       DOCKERHUB_BUGATTIGUY527_TOKEN: ${{ secrets.DOCKERHUB_BUGATTIGUY527_TOKEN }}
@@ -1050,6 +1052,20 @@ jobs:
             exit 1
           fi
           echo "Published $TAG."
+
+  docker-promote:
+    needs: [prep, publish]
+    if: ${{ always() && needs.publish.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
+    uses: ./.github/workflows/docker-promote.yml
+    permissions:
+      contents: read
+    with:
+      version: ${{ needs.prep.outputs.version }}
+      build_type: ${{ needs.prep.outputs.channel == 'Beta' && 'Beta' || 'Production' }}
+    secrets:
+      GHCR_LUKEGUS_TOKEN: ${{ secrets.GHCR_LUKEGUS_TOKEN }}
+      DOCKERHUB_BUGATTIGUY527_TOKEN: ${{ secrets.DOCKERHUB_BUGATTIGUY527_TOKEN }}
+      DOCKERHUB_TERMIXSSH_TOKEN: ${{ secrets.DOCKERHUB_TERMIXSSH_TOKEN }}
 
   flatpak-deploy:
     needs: [prep, publish]
