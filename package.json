@@ -156,7 +156,7 @@
     "fast-check": "^4.10.2",
     "globals": "^17.14.0",
     "husky": "^9.1.7",
-    "i18next": "^26.4.2",
+    "i18next": "^27.1.2",
     "i18next-browser-languagedetector": "^8.3.0",
     "js-yaml": "^5.5.0",
     "jsdom": "^31.0.1",
