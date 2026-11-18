@@ -133,7 +133,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "drizzle-kit": "^0.31.10",
-    "electron": "^43.4.1",
+    "electron": "^45.3.2",
     "electron-builder": "^26.15.3",
     "eslint": "^10.8.1",
     "eslint-plugin-react-hooks": "^7.1.1",
