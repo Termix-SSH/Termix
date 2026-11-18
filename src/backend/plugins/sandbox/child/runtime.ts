@@ -862,6 +862,13 @@ function portStream(port: StreamPort): Duplex {
   port.on("error", (error: Error) => stream.destroy(error));
   // Lets ssh.connect hand the same channel back to core as a sock.
   Object.defineProperty(stream, "termixStreamId", { value: port.sid });
+  // ssh2 calls this on its sock; core holds the real socket.
+  Object.defineProperty(stream, "setNoDelay", {
+    value: (on = true) => {
+      endpoint.notify("stream.noDelay", [port.sid, on]);
+      return stream;
+    },
+  });
   return stream;
 }
 

@@ -352,6 +352,33 @@ describe("ssh.openTransport", () => {
     await until(() => closed);
   });
 
+  it("passes the plugin's setNoDelay to core's socket", async () => {
+    const port = await server((socket) => socket.write("SSH-2.0-Fake\r\n"));
+    const calls: boolean[] = [];
+    const spy = vi
+      .spyOn(net.Socket.prototype, "setNoDelay")
+      .mockImplementation(function (this: net.Socket, on?: boolean) {
+        calls.push(on !== false);
+        return this;
+      });
+    try {
+      const { child } = setup();
+      const result = (await child.call("ssh.openTransport", [
+        1,
+        { host: "127.0.0.1", port },
+        {},
+      ])) as { sock: StreamPort };
+      await wait(50);
+      calls.length = 0;
+      child.notify("stream.noDelay", [result.sock.sid, false]);
+      await until(() => calls.length > 0);
+      expect(calls).toEqual([false]);
+      child.notify("stream.close", [result.sock.sid]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("goes through the jump route core picked and asks the plugin's prompt", async () => {
     const jumpSock = new PassThrough();
     const { child, ctx } = setup({ jumpSock });

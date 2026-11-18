@@ -1317,6 +1317,14 @@ export class PluginBridge {
       return true;
     });
 
+    // setNoDelay on the plugin's end reaches the real socket.
+    endpoint.handle("stream.noDelay", ([sid, on]) => {
+      const stream = this.openStreams.get(String(sid)) as
+        (Duplex & { setNoDelay?: (on: boolean) => void }) | undefined;
+      stream?.setNoDelay?.(on !== false);
+      return true;
+    });
+
     endpoint.handle("ssh.jumpChain", async ([jumpHosts, options]) => {
       const opts = plainObject(options);
       const chain = (await this.callCtx(
@@ -1441,10 +1449,16 @@ export class PluginBridge {
       }
       if (!sock) {
         const net = await import("node:net");
+        // Keys go out at once, like OpenSSH does for a terminal.
         sock = net.connect({
           host: String(target.host),
           port: Number(target.port) || 22,
+          noDelay: true,
         });
+      } else {
+        (sock as Duplex & { setNoDelay?: (on: boolean) => void }).setNoDelay?.(
+          true,
+        );
       }
       const port = endpoint.openStream();
       this.track(sock, port);
