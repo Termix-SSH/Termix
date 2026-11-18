@@ -315,6 +315,11 @@ describe("foreign views in the shell", () => {
     expect(layer.style.overflow).toBe("hidden");
   });
 
+  it("says an in-page part is shown once it mounts", async () => {
+    await mountCard();
+    expect(events).toContainEqual(["foreign.shown", { id: "v1" }]);
+  });
+
   it("keeps the same view while the placeholder moves", async () => {
     await mountCard();
     const [view] = layerViews();

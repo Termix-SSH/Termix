@@ -7,6 +7,7 @@
 - What plugins add to the app is kept on the server too, so a new browser, device or cleared cache opens almost as fast as usual instead of starting every plugin first
 - The first time plugins have to start one by one, one screen says so with how far along it is, instead of a page that keeps changing
 - Plugin pages can let Termix scroll them, so parts from other plugins on the page move with it instead of trailing behind
+- Plugin pages can tell when parts from other plugins on them have drawn, so they can show one loading screen instead of filling in piece by piece
 - Secret references like `bw://web-1/username` also work in a host's or credential's username, and in the username of other protocol logins
 - Desktop app: closing the window can quit Termix instead of keeping it in the tray
 - Desktop app: the first time closing the window keeps Termix in the tray, a notice says it is still running and how to quit

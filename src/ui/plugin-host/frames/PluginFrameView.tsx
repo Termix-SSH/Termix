@@ -333,6 +333,9 @@ ${src}`;
     const timer = setTimeout(() => setShown(true), SHOWN_GRACE_MS);
     return () => clearTimeout(timer);
   }, [ready, shown]);
+  useEffect(() => {
+    if (ready && shown) eventRef.current?.("shown", null);
+  }, [ready, shown]);
   const [slow, setSlow] = useState(false);
   useEffect(() => {
     if (!loads || !waiting) {

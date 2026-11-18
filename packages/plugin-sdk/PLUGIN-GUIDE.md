@@ -974,6 +974,9 @@ handle on it and it never learns about you.
   scrolls the tab and your page lays out at its full height, so the parts move with it instead of trailing
   behind. Drop your own scroll box meanwhile, and turn it off while something needs a fixed height (a full
   size session, a drag). `position: fixed` and `sticky` then sit against the whole page, not the tab.
+- A part's placeholder gets `data-foreign-shown` once it has drawn (Termix 26.11.2). A page that should
+  appear all at once can keep a spinner over itself (hide the page with `visibility: hidden`, so the parts
+  hide too) until every `[data-foreign-id]` in it has it, with a time limit.
 - Inside `ForeignInteractive interactive={false}` the parts take no clicks, so an edit mode can drag and
   resize the boxes around them. `TileGrid` does this while editing.
 - Parts hide under your menus and popovers. The UI kit's Popover, DropdownMenu, Select, Sheet, Dialog,

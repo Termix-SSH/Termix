@@ -834,6 +834,12 @@ function ForeignViewBox({
   consumer: Consumer;
   view: ForeignView;
 }) {
+  // A framed part says when it painted; anything else is ready once mounted.
+  const item = consumer.lists.get(view.listId)?.items.get(view.itemKey);
+  const readyOnMount = !!view.web || (!!item && !frameMetaOf(item.component));
+  useEffect(() => {
+    if (readyOnMount) consumer.emit("foreign.shown", { id: view.id });
+  }, [consumer, view.id, readyOnMount]);
   if (view.web) return <WebViewBox consumer={consumer} view={view} />;
   return <PartViewBox consumer={consumer} view={view} />;
 }
@@ -904,6 +910,8 @@ function PartViewBox({
   const onFrameEvent = (name: string, data: unknown) => {
     if (name === "size") {
       consumer.emit("foreign.size", { id: view.id, size: data });
+    } else if (name === "shown") {
+      consumer.emit("foreign.shown", { id: view.id });
     } else if (name === "drawn") {
       view.drawn = (data as { drawn?: unknown } | null)?.drawn === true;
       applyView(consumer, view);

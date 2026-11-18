@@ -313,6 +313,23 @@ describe("PluginFrameView", () => {
     expect(frames.emitted).toContainEqual(["focusEdge", "last"]);
   });
 
+  it("tells the owner once the view painted", () => {
+    const seen: string[] = [];
+    render(
+      <PluginFrameView
+        pluginId="docker"
+        frameKey="k"
+        fit="content"
+        props={{}}
+        onFrameEvent={(name) => seen.push(name)}
+      />,
+    );
+    act(() => frames.options!.onReady());
+    expect(seen).not.toContain("shown");
+    act(() => frames.options!.onEvent!("shown", null));
+    expect(seen).toEqual(["shown"]);
+  });
+
   it("scrolls a full size view in the shell when it asks", () => {
     const { container } = render(
       <PluginFrameView

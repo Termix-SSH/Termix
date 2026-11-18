@@ -159,6 +159,11 @@ describe("other plugins' parts inside a frame", () => {
       });
     });
     expect(placeholder.style.height).toBe("120px");
+    expect(placeholder.hasAttribute("data-foreign-shown")).toBe(false);
+    act(() => {
+      receiveForeignEvent("foreign.shown", { id: sent.id });
+    });
+    expect(placeholder.hasAttribute("data-foreign-shown")).toBe(true);
     // A new function each render is not a change.
     view.rerender(<Part label="one" onPick={() => 2} />);
     await settle();
