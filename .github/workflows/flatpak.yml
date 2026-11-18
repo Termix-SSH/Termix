@@ -88,9 +88,10 @@ jobs:
 
       - name: Install tools
         run: |
+          # Launchpad often answers 503 for a while, so retry each download.
           sudo add-apt-repository -y ppa:flatpak/stable
-          sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder imagemagick
+          sudo apt-get -o Acquire::Retries=10 update
+          sudo apt-get -o Acquire::Retries=10 install -y flatpak flatpak-builder imagemagick
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
       - name: Download tarball from this run
@@ -163,9 +164,10 @@ jobs:
 
       - name: Install tools
         run: |
+          # Launchpad often answers 503 for a while, so retry each download.
           sudo add-apt-repository -y ppa:flatpak/stable
-          sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder imagemagick
+          sudo apt-get -o Acquire::Retries=10 update
+          sudo apt-get -o Acquire::Retries=10 install -y flatpak flatpak-builder imagemagick
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
       - name: Download tarball from this run
