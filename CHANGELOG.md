@@ -20,6 +20,7 @@
 - Admin setting to trust a host's first key without a prompt when nobody can confirm it. Each such key is audited
 - Every desktop file, tarball and Flatpak bundle on a release carries signed build provenance, and each release has a signed `SHA256SUMS` file with build provenance in `SHA256SUMS.intoto.jsonl`. Check them with the new Verify your download page in the docs
 - Docker images are signed with cosign and carry build provenance and an SBOM attestation
+- Desktop app: Windows builds are code signed, thanks to Ember Swan
 - A CycloneDX SBOM of the server's dependencies ships with each build: `/app/sbom.cdx.json` in the Docker image and `termix_sbom.cdx.json` on the release
 - The server sends the same security headers with or without the bundled nginx: a strict Content-Security-Policy, Referrer-Policy, Permissions-Policy, Cross-Origin-Opener-Policy and HSTS over HTTPS
 - Desktop app: the app page carries a Content-Security-Policy
