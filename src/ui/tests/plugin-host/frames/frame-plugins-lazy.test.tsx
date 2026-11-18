@@ -297,6 +297,35 @@ describe("lazy background frames", () => {
     plugin.dispose();
   });
 
+  it("starts no frame when only a host's status or child hosts changed", async () => {
+    await firstRun();
+    const plugin = await startFramedPlugin(summary);
+    const action = listHostActions().find((e) => e.id === "gizmo.open")!;
+    const moved = {
+      ...host,
+      status: "offline",
+      online: false,
+      sortOrder: 4,
+      childHosts: [{ id: 2, ip: "5.6.7.8", status: "online" }],
+    };
+    expect(action.when(moved as never)).toBe(true);
+    await sleep(20);
+    expect(frames()).toHaveLength(0);
+    plugin.dispose();
+  });
+
+  it("shows a host's last answer while its changed fields are asked again", async () => {
+    await firstRun();
+    const plugin = await startFramedPlugin(summary);
+    const action = listHostActions().find((e) => e.id === "gizmo.open")!;
+    expect(action.when({ ...host, name: "renamed" } as never)).toBe(true);
+    await frameElement();
+    expect(frames()).toHaveLength(1);
+    // Another host with no answer yet still gets the plain fallback.
+    expect(action.when({ ...host, id: 9 } as never)).toBe(false);
+    plugin.dispose();
+  });
+
   it("works out a host's answer key once per host object", async () => {
     await firstRun();
     const plugin = await startFramedPlugin(summary);

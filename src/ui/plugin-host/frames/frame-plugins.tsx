@@ -178,8 +178,41 @@ const ASKING_KINDS = new Set([
 ]);
 export const OVERLAY_ASK_MS = 10_000;
 
-/** Host fields that change all the time and would make every answer new. */
-const LIVE_HOST_FIELDS = new Set(["cpu", "ram", "lastAccess"]);
+/**
+ * Host fields that change all the time and would make every answer new, which
+ * boots every plugin's frame again. Answers are not redone when these change.
+ */
+const LIVE_HOST_FIELDS = new Set([
+  "cpu",
+  "ram",
+  "lastAccess",
+  "status",
+  "online",
+  "childHosts",
+  "sortOrder",
+]);
+
+/**
+ * An answer key with each host cut down to its id, so a host whose fields
+ * changed finds its last answer. Null when the key holds no host.
+ */
+function hostSlot(key: string): string | null {
+  try {
+    const args = JSON.parse(key) as unknown;
+    if (!Array.isArray(args)) return null;
+    let found = false;
+    const slot = args.map((arg) => {
+      if (arg && typeof arg === "object" && "id" in arg && "ip" in arg) {
+        found = true;
+        return { host: String((arg as { id: unknown }).id) };
+      }
+      return arg;
+    });
+    return found ? JSON.stringify(slot) : null;
+  } catch {
+    return null;
+  }
+}
 
 function stableKey(args: unknown[]): string {
   try {
@@ -891,6 +924,14 @@ export async function startFramedPlugin(
     const failedAt = new Map<string, number>();
     // Answers taken from the stored cache, not asked of a live frame yet.
     const stale = new Set<string>();
+    // The last answer per host, shown while a changed host is asked again.
+    const prefix = `${record.rid}\u0000${field}\u0000`;
+    const lastForHost = new Map<string, unknown>();
+    for (const [stored, value] of Object.entries(answers)) {
+      if (!stored.startsWith(prefix)) continue;
+      const slot = hostSlot(stored.slice(prefix.length));
+      if (slot !== null) lastForHost.set(slot, value);
+    }
     const ask = (key: string, args: unknown[], stored: string) => {
       if (inflight.has(key)) return;
       inflight.add(key);
@@ -900,6 +941,8 @@ export async function startFramedPlugin(
           (value) => {
             cache.set(key, value);
             failedAt.delete(key);
+            const slot = hostSlot(key);
+            if (slot !== null) lastForHost.set(slot, value);
             if (isPlainValue(value)) answers[stored] = value;
             else delete answers[stored];
             persist();
@@ -959,7 +1002,10 @@ export async function startFramedPlugin(
         return answers[stored];
       }
       ask(key, args, stored);
-      return fallback;
+      const slot = hostSlot(key);
+      return slot !== null && lastForHost.has(slot)
+        ? lastForHost.get(slot)
+        : fallback;
     };
     record.memos.set(field, sync);
     return sync;
