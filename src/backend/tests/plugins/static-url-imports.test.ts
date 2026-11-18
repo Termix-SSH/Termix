@@ -32,6 +32,7 @@ async function bundle(entrySource: string, files: Record<string, string>) {
   fs.writeFileSync(path.join(dir, "entry.js"), entrySource);
   const outDir = path.join(dir, "dist");
   const result = await esbuild.build({
+    absWorkingDir: dir,
     entryPoints: [path.join(dir, "entry.js")],
     outfile: path.join(outDir, "frontend.js"),
     bundle: true,
@@ -40,7 +41,7 @@ async function bundle(entrySource: string, files: Record<string, string>) {
     logLevel: "silent",
     plugins: [staticUrlImports({ outDir })],
   });
-  return { outDir, result };
+  return { dir, outDir, result };
 }
 
 describe("staticUrlImports", () => {
@@ -55,6 +56,18 @@ describe("staticUrlImports", () => {
     expect(assets[0]).toMatch(/^worker-[0-9a-f]{8}\.js$/);
     const code = fs.readFileSync(path.join(outDir, "frontend.js"), "utf8");
     expect(code).toContain(`new URL("./assets/${assets[0]}", import.meta.url)`);
+  });
+
+  it("keeps the build folder out of the bundle", async () => {
+    const { dir, outDir } = await bundle(
+      `import url from "./worker.mjs?url"; export default url;`,
+      { "worker.mjs": "self.onmessage = () => {};" },
+    );
+
+    const code = fs.readFileSync(path.join(outDir, "frontend.js"), "utf8");
+    expect(code).not.toContain(dir);
+    expect(code).not.toContain(dir.split(path.sep).join("/"));
+    expect(code).toContain("static-url:worker.mjs");
   });
 
   it("refuses a file the asset route would not serve", async () => {

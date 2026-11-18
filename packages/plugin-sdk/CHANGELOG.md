@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.10.1
+
+Plugin API 2.9.0. Needs Termix 26.11.2.
+
+### Fixed
+
+- `termix-plugin build` no longer writes the build folder into the bundle for `?url` imports, so the same plugin builds to the same file in any folder
+
 ## 2.10.0
 
 Plugin API 2.9.0. Needs Termix 26.11.2.
