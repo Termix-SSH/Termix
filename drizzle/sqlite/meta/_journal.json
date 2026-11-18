@@ -526,6 +526,41 @@
       "when": 1794025747809,
       "tag": "0074_concerned_onslaught",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "6",
+      "when": 1794526285654,
+      "tag": "0075_adorable_barracuda",
+      "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "6",
+      "when": 1794585753588,
+      "tag": "0076_zippy_lockheed",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "6",
+      "when": 1794847879393,
+      "tag": "0077_right_vanisher",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "6",
+      "when": 1794850608350,
+      "tag": "0078_tiny_spacker_dave",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "6",
+      "when": 1794963336490,
+      "tag": "0079_complex_bloodscream",
+      "breakpoints": true
     }
   ]
 }

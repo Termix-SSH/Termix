@@ -109,6 +109,7 @@ describe("describePluginFrontend", () => {
       assetVersion: null,
       locales: [],
       themeVersion: null,
+      frontendIsolation: "page",
     });
   });
 });
@@ -212,6 +213,21 @@ describe("theme stylesheets", () => {
     expect(resolvePluginAsset(themed, "_themes/secret.css")).toBeNull();
     expect(resolvePluginAsset(themed, "themes/paper.css")).toBeNull();
     expect(resolvePluginAsset(themed, "_themes/paper.js")).toBeNull();
+  });
+
+  it("stops serving a theme file that changed into something not allowed", () => {
+    const file = path.join(themed.dir, "themes", "paper.css");
+    try {
+      fs.writeFileSync(
+        file,
+        '.paper input[value^="a"] { background: url(/plugin-api/inks/a); }',
+      );
+      expect(resolvePluginAsset(themed, "_themes/paper.css")).toBeNull();
+      fs.writeFileSync(file, ".paper { --background: #fff; }");
+      expect(resolvePluginAsset(themed, "_themes/paper.css")).toBe(file);
+    } finally {
+      fs.writeFileSync(file, ".paper{}");
+    }
   });
 
   it("versions theme files even without a frontend bundle", () => {

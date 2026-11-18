@@ -4,7 +4,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import ssh2 from "ssh2";
+import { generateSshKeyPair } from "../../../../packages/plugin-sdk/src/ssh-keys.js";
 
 const grants = new Map<string, string[]>();
 const auditEntries: Array<Record<string, unknown>> = [];
@@ -68,7 +68,8 @@ function contextFor(capabilities: string[]) {
 
 const asUser = <T>(fn: () => Promise<T>) => runAsActor("user-1", "request", fn);
 
-const pair = ssh2.utils.generateKeyPairSync("ed25519");
+// ssh2's own generator makes about 1 in 256 ed25519 keys nothing can read.
+const pair = generateSshKeyPair("ssh-ed25519");
 
 beforeEach(() => {
   grants.clear();
@@ -122,7 +123,7 @@ describe("ctx.credentials.publicKey", () => {
   it("derives it from the private key behind a reference", async () => {
     grants.set("demo", ["credentials:use"]);
     state.credential = { id: 1, authType: "key", key: "op://vault/key" };
-    state.resolve.mockResolvedValue({ key: pair.private });
+    state.resolve.mockResolvedValue({ key: pair.privateKey });
     const ctx = contextFor(["credentials:use"]);
     const result = await asUser(() => ctx.credentials.publicKey(1));
     expect(result).toMatch(/^ssh-ed25519 /);

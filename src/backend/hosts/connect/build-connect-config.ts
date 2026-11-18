@@ -1,11 +1,16 @@
 import type { Client } from "ssh2";
+import { explainHostKeyRefusal } from "../host-key-policy.js";
+import {
+  WITHHELD_LOGIN_MESSAGE,
+  sharedLoginWithheld,
+} from "../../sync/withheld-login.js";
 import type { WebSocket } from "ws";
 import { buildSSHAlgorithms } from "../../utils/ssh-algorithms.js";
 import { SSHHostKeyVerifier } from "../host-key-verifier.js";
 import { resolveSshKeepalive } from "../ssh-keepalive.js";
 import {
   SshAuthProviderMissingError,
-  requireSshAuthProvider,
+  awaitSshAuthProvider,
 } from "./auth-provider-registry.js";
 import { ensureCoreSshAuthProviders } from "./core-providers.js";
 import { ConnectPolicyError, assertConnectAllowed } from "../connect-policy.js";
@@ -185,6 +190,11 @@ export async function buildConnectConfig(
       options.userId,
       isJumpHost,
       preloaded,
+      {
+        onRefused: (code) => {
+          if (options.client) explainHostKeyRefusal(options.client, code);
+        },
+      },
     ),
     algorithms: buildSSHAlgorithms(sshOptions?.allowLegacyAlgorithms !== false),
   };
@@ -199,6 +209,20 @@ export async function buildConnectConfig(
     interactive: options.interactive ?? false,
     log: options.log ?? noopLog,
   };
+
+  if (await sharedLoginWithheld(host as unknown as Record<string, unknown>)) {
+    config.hostVerifier = () => false;
+    return {
+      config,
+      provider: null,
+      env,
+      outcome: {
+        status: "error",
+        code: "missing-secret",
+        message: WITHHELD_LOGIN_MESSAGE,
+      },
+    };
+  }
 
   try {
     await assertConnectAllowed({
@@ -236,7 +260,7 @@ export async function buildConnectConfig(
 
   let provider: SshAuthProvider;
   try {
-    provider = requireSshAuthProvider(authType);
+    provider = await awaitSshAuthProvider(authType);
   } catch (error) {
     if (error instanceof SshAuthProviderMissingError) {
       return {
@@ -254,7 +278,7 @@ export async function buildConnectConfig(
   }
 
   if (provider.connectOptions) {
-    Object.assign(config, provider.connectOptions(host, options.purpose));
+    Object.assign(config, await provider.connectOptions(host, options.purpose));
   }
   if (options.overrides) {
     Object.assign(config, options.overrides);

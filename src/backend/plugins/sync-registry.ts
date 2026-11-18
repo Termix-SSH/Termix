@@ -38,6 +38,12 @@ export interface CoreSyncEntityOptions {
   /** Keys kept off the content hash and out of writes. */
   hashIgnore?: readonly string[];
   /**
+   * Fields a server checks it stored as pushed. One it stored differently
+   * makes the push a conflict carrying the server's row, so the desktop does
+   * not keep a value the server refused while both sides read as in sync.
+   */
+  verifyFields?: readonly string[];
+  /**
    * Widens reference lookups past rows the user owns, e.g. a credential
    * shared with them is a valid target for their host's credentialId.
    */
@@ -149,6 +155,18 @@ export function registerEntity(
       notify();
     }
   };
+}
+
+/**
+ * Whether a stored row syncs. A plugin process answers shouldSync with a
+ * Promise, so always await this.
+ */
+export async function rowSyncs(
+  entity: Pick<SyncEntityRegistration, "shouldSync">,
+  row: Record<string, unknown>,
+): Promise<boolean> {
+  if (!entity.shouldSync) return true;
+  return (await entity.shouldSync(row as never)) !== false;
 }
 
 export function getEntity(type: string): RegisteredSyncEntity | undefined {

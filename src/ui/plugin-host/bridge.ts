@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { isElectron } from "@/lib/electron";
 import { readStatusColorScheme } from "@/hooks/use-status-color-scheme";
-import { enabledHostProtocols } from "@/sidebar/host-protocols";
+import {
+  enabledHostProtocols,
+  listHostProtocols,
+} from "@/sidebar/host-protocols";
 import { useHostActions } from "@/sidebar/host-contributions";
 import { tabTypeForActivity, useTabTypes } from "@/shell/tab-registry";
 import { useCompanionDefs } from "@/shell/companions";
@@ -55,6 +58,7 @@ import {
   getLiveHostStatus,
   useOptionalHostStatusEntry,
 } from "@/lib/ServerStatusContext";
+import { getForeignRuntime } from "@/components/foreign/foreign-runtime";
 
 /**
  * Core permission groups, mirroring RESERVED_PERMISSION_PREFIXES in the SDK
@@ -217,7 +221,46 @@ export function toPluginHostRecord(
   const record = toHostRecord(host);
   const own = pluginId ? host.pluginSettings?.[pluginId] : undefined;
   record.pluginSettings = own && pluginId ? { [pluginId]: own } : {};
+  // A quick connect login is only for the plugin whose protocol it opens.
+  const login = record.quickConnectLogin as { protocol?: unknown } | undefined;
+  if (login) {
+    const owner = listHostProtocols().find(
+      (entry) => entry.id === login.protocol,
+    )?.pluginId;
+    if (!pluginId || owner !== pluginId) delete record.quickConnectLogin;
+  }
   return record;
+}
+
+/**
+ * A single plugin page (the mobile web view) also shows other plugins'
+ * parts, which the embedder draws over it. The runtime is set before
+ * anything renders, so the source never switches.
+ */
+function usePageExtensions(pointId: string) {
+  const useSource = getForeignRuntime()?.withOwn
+    ? useOwnAndForeignExtensions
+    : useExtensions;
+  return useSource(pointId);
+}
+
+function useOwnAndForeignExtensions(pointId: string) {
+  const own = useExtensions(pointId);
+  const foreign = getForeignRuntime()!.useExtensions(pointId);
+  return useMemo(() => [...own, ...foreign], [own, foreign]);
+}
+
+function usePageComponent(id: string) {
+  const useSource = getForeignRuntime()?.withOwn
+    ? useOwnOrForeignComponent
+    : usePluginComponent;
+  return useSource(id);
+}
+
+function useOwnOrForeignComponent(id: string) {
+  const own = usePluginComponent(id);
+  const foreign = getForeignRuntime()!.useComponent(id);
+  return own ?? foreign;
 }
 
 export const pluginHostBridge: PluginHostBridge = {
@@ -412,7 +455,7 @@ export const pluginHostBridge: PluginHostBridge = {
     ).map((protocol) => protocol.id),
   ],
 
-  usePluginComponent: (id) => usePluginComponent(id),
+  usePluginComponent: (id) => usePageComponent(id),
 
   useHostStatus: (hostId) => {
     return useOptionalHostStatusEntry(hostId);
@@ -446,9 +489,12 @@ export const pluginHostBridge: PluginHostBridge = {
     return { icon: def.icon, tab: def.id, titleKey: def.titleKey };
   },
 
-  useExtensions: (pointId) => useExtensions(pointId) as ExtensionContribution[],
+  useExtensions: (pointId) =>
+    usePageExtensions(pointId) as ExtensionContribution[],
   getExtension: (pointId, id) =>
-    getExtension(pointId, id) as ExtensionContribution | undefined,
+    (getExtension(pointId, id) ??
+      getForeignRuntime()?.getExtension(pointId, id)) as
+      ExtensionContribution | undefined,
 
   usePluginUiPreferences: (pluginId) => {
     const ctx = useUiPreferencesContext();

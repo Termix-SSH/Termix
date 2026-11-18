@@ -4,30 +4,36 @@ on:
   pull_request:
     branches: [main, dev-*]
 
+permissions: {}
+
 jobs:
   lint-and-build:
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
 
     env:
       NODE_OPTIONS: "--max-old-space-size=4096"
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm run ci:install
 
       # Bundled plugins are counted as downloads in the plugin store, so a
       # build only fetches them when the pins change.
       - name: Cache bundled plugins
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.cache/termix-bundled-plugins
           key: bundled-plugins-${{ hashFiles('docker/bundled-plugins.json') }}
@@ -51,9 +57,60 @@ jobs:
       - name: Run unit tests
         run: npm run test
 
+      - name: SBOM
+        run: npm run sbom
+
+  # Boots the backend with every plugin and calls each core route and socket
+  # as every kind of caller. See scripts/authz/run.mjs and authz.json.
+  authz-matrix:
+    name: Authorization matrix
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    env:
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      TERMIX_PLUGIN_PROFILE: full
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm run ci:install
+
+      - name: Cache bundled plugins
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: node_modules/.cache/termix-bundled-plugins
+          key: bundled-plugins-full-${{ hashFiles('docker/bundled-plugins.json') }}
+          enableCrossOsArchive: true
+
+      - name: Build backend with every plugin
+        run: npm run build:backend
+
+      # The seed needs totp, login-security, alerts and host-status running. Pinned releases can
+      # still be builds for an older plugin API, so build them from source.
+      - name: Build the seed plugins
+        run: node scripts/authz/stage-deps.mjs --seed node_modules/.cache/authz-seed
+
+      - name: Authorization matrix
+        run: npm run test:authz -- --with-pinned --local-plugins node_modules/.cache/authz-seed
+
   database-dialects:
     name: Postgres and MySQL
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
 
     services:
       postgres:
@@ -87,16 +144,18 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm run ci:install
 
       - name: Build plugin SDK
         run: npm run build:sdk
@@ -118,3 +177,50 @@ jobs:
           TEST_DIALECT: mysql
           TEST_DATABASE_URL: mysql://termix:termix@127.0.0.1:3306/termix_test
         run: npx vitest run src/backend/tests/database/repositories --no-file-parallelism
+
+  # Lockfile lint (npm registry only, https, integrity) and known
+  # vulnerabilities that already have a fix.
+  supply-chain:
+    name: Supply chain
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Lockfile lint and osv-scanner
+        uses: Termix-SSH/Termix-Registry/.github/actions/supply-chain@main
+        with:
+          aliases: >-
+            prebuild-install:@mmomtchev/prebuild-install
+            string-width-cjs:string-width
+            strip-ansi-cjs:strip-ansi
+            wrap-ansi-cjs:wrap-ansi
+
+  # Fails on high severity zizmor findings in this repo's workflows.
+  workflow-lint:
+    name: Workflow lint
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: zizmor
+        uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
+        with:
+          version: 1.32.0
+          advanced-security: false
+          annotations: true
+          min-severity: high

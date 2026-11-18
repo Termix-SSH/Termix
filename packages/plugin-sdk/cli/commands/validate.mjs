@@ -54,6 +54,17 @@ export async function validate({ cwd }) {
   for (const warning of uiWarnings(cwd)) {
     console.warn(`  ui    ${warning}`);
   }
+  const capabilities = await loadSdkModule("capabilities");
+  const manifestModule = await loadSdkModule("manifest");
+  for (const warning of dataSlotWarnings(cwd, manifestModule.DATA_SLOTS)) {
+    console.warn(`  ui    ${warning}`);
+  }
+  for (const warning of sandboxWarnings(cwd, raw, {
+    ...capabilities,
+    isLegacyPluginApi: manifestModule.isLegacyPluginApi,
+  })) {
+    console.warn(`  sandbox  ${warning}`);
+  }
 
   if (problems.length > 0) {
     for (const problem of problems) console.error(`  ${problem}`);
@@ -120,6 +131,65 @@ export function validateLookCapabilities(cwd, raw) {
   return problems;
 }
 
+const NODE_IMPORT =
+  /(?:from\s+|import\s*\(\s*|require\s*\(\s*)["'`](?:node:)?([a-z_/]+)["'`]/g;
+
+function packageWorkers(cwd) {
+  try {
+    const pkg = JSON.parse(
+      fs.readFileSync(path.join(cwd, "package.json"), "utf8"),
+    );
+    const workers = pkg?.termix?.workers;
+    return !!workers && Object.keys(workers).length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A plugin's backend runs in its own process (plugin API 2), where a Node
+ * module its capabilities don't unlock throws ERR_ACCESS_DENIED. Flags those
+ * imports before the plugin is ever run.
+ */
+export function sandboxWarnings(cwd, raw, sdk) {
+  const warnings = [];
+  const api = String(raw?.engine?.api ?? "");
+  if (!api || sdk.isLegacyPluginApi?.(api)) return warnings;
+  const capabilities = Array.isArray(raw?.capabilities) ? raw.capabilities : [];
+  const granted = sdk.modulesGrantedBy(capabilities);
+  const gated = new Set(sdk.SANDBOX_GATED_MODULES);
+  const blocked = new Set(sdk.SANDBOX_BLOCKED_MODULES);
+  if (raw?.sandbox?.workers === true && sdk.SANDBOX_WORKER_MODULE) {
+    blocked.delete(sdk.SANDBOX_WORKER_MODULE);
+  } else if (packageWorkers(cwd)) {
+    warnings.push(
+      'package.json "termix.workers" builds worker entries, but a plugin process can only start them with "sandbox": { "workers": true } in the manifest',
+    );
+  }
+  const needs = (name) =>
+    Object.entries(sdk.CAPABILITY_PROCESS_GRANTS)
+      .filter(([, grant]) => grant.modules.includes(name))
+      .map(([capability]) => capability)
+      .join(" or ");
+  for (const file of walkSources(path.join(cwd, "src", "backend"))) {
+    const rel = path.relative(cwd, file).replaceAll("\\", "/");
+    const text = fs.readFileSync(file, "utf8");
+    for (const match of text.matchAll(NODE_IMPORT)) {
+      const name = match[1];
+      if (blocked.has(name)) {
+        warnings.push(
+          `${rel} imports ${name}, which no plugin process can use`,
+        );
+      } else if (gated.has(name) && !granted.has(name)) {
+        warnings.push(
+          `${rel} imports ${name}, which needs the ${needs(name)} capability in a plugin process`,
+        );
+      }
+    }
+  }
+  return [...new Set(warnings)];
+}
+
 /** Env vars core sets for everyone, so a plugin need not list them. */
 const CORE_ENV = new Set([
   "DATA_DIR",
@@ -136,6 +206,8 @@ const CORE_ENV = new Set([
   "LOCALAPPDATA",
   "USERPROFILE",
   "ELECTRON_EMBEDDED",
+  "TERMIX_DEPLOYMENT",
+  "TERMIX_SANDBOX_PLUGIN",
 ]);
 
 const ENV_READS = [
@@ -153,6 +225,72 @@ function walkSources(dir, out = []) {
     else if (/\.(ts|tsx|js|mjs|cjs)$/.test(entry.name)) out.push(full);
   }
   return out;
+}
+
+/** The text of a call's first argument object, from the "{" after start. */
+function objectAt(text, start) {
+  const open = text.indexOf("{", start);
+  if (open < 0) return "";
+  let depth = 0;
+  for (let i = open; i < text.length; i++) {
+    if (text[i] === "{") depth++;
+    else if (text[i] === "}" && --depth === 0) return text.slice(open, i + 1);
+  }
+  return text.slice(open);
+}
+
+function lineOf(text, index) {
+  return text.slice(0, index).split("\n").length;
+}
+
+/**
+ * Per row slots take plain values, not components: a framed component costs
+ * an iframe per row. Warns on a component sent to a data slot (core's list
+ * plus any this plugin declares with "data" or rows), and on host badges,
+ * status indicators or editor toolbar items given a component.
+ */
+export function dataSlotWarnings(cwd, knownSlots = {}) {
+  const warnings = [];
+  const files = walkSources(path.join(cwd, "src", "frontend")).filter((file) =>
+    /\.(ts|tsx)$/.test(file),
+  );
+  const texts = files.map((file) => [file, fs.readFileSync(file, "utf8")]);
+  const dataSlots = new Set(Object.keys(knownSlots));
+  for (const [, text] of texts) {
+    for (const match of text.matchAll(/declareActionSlot\s*\(/g)) {
+      const body = objectAt(text, match.index);
+      const id = /\bid\s*:\s*["'`]([^"'`]+)["'`]/.exec(body)?.[1];
+      if (!id) continue;
+      if (/["']data["']/.test(body) || /\brows\s*:/.test(body)) {
+        dataSlots.add(id);
+      }
+    }
+  }
+  for (const [file, text] of texts) {
+    const rel = path.relative(cwd, file).replace(/\\/g, "/");
+    for (const match of text.matchAll(
+      /registerSlotContribution\s*\(\s*["'`]([^"'`]+)["'`]/g,
+    )) {
+      if (!dataSlots.has(match[1])) continue;
+      const body = objectAt(text, match.index);
+      if (/\bkind\s*:\s*["']component["']/.test(body)) {
+        warnings.push(
+          `${rel}:${lineOf(text, match.index)} a component in data slot ${match[1]}, give kind "data" and useValue so it needs no frame per row`,
+        );
+      }
+    }
+    for (const match of text.matchAll(
+      /register(HostBadge|HostStatusIndicator|HostEditorToolbarItem)\s*\(/g,
+    )) {
+      const body = objectAt(text, match.index);
+      if (/\bcomponent\s*:/.test(body)) {
+        warnings.push(
+          `${rel}:${lineOf(text, match.index)} register${match[1]} with a component, use useValue (a component can't run in a frame)`,
+        );
+      }
+    }
+  }
+  return warnings;
 }
 
 /** Whether line i sits inside a still open Button within the lines before it. */
@@ -219,6 +357,34 @@ const UI_RULES = [
 ];
 
 /**
+ * Where a sidebar toolbar stacks a full width PanelSearch over a labelled
+ * AddButton, the layout PanelToolbar puts on one row. -1 when there is none.
+ * An icon only add button, a search that does not fill or one inside a
+ * ToolbarBand is a toolbar row already and is left alone.
+ */
+export function stackedToolbarAt(text) {
+  if (/<PanelToolbar\b/.test(text)) return -1;
+  for (const match of text.matchAll(/<PanelSearch\b/g)) {
+    const end = text.indexOf("/>", match.index);
+    if (end < 0) continue;
+    if (!/\bfill\b/.test(text.slice(match.index, end))) continue;
+    // A ToolbarBand is one row already.
+    const before = text.slice(0, match.index);
+    if (
+      before.lastIndexOf("<ToolbarBand") > before.lastIndexOf("</ToolbarBand>")
+    )
+      continue;
+    const after = text.slice(end, end + 600);
+    const add = after.search(/<AddButton\b/);
+    if (add < 0) continue;
+    const close = after.indexOf("/>", add);
+    const element = after.slice(add, close < 0 ? undefined : close);
+    if (!/\bcompact\b/.test(element)) return match.index;
+  }
+  return -1;
+}
+
+/**
  * Drift from the shared UI kit in src/frontend: raw spinners, hand made back
  * buttons, native selects, stretched filters, filled headers and footers that
  * scroll away. Warnings only, since some cases are on purpose.
@@ -237,6 +403,13 @@ export function uiWarnings(cwd) {
         }
       }
     });
+    const text = lines.join("\n");
+    const stacked = stackedToolbarAt(text);
+    if (stacked >= 0) {
+      warnings.push(
+        `${rel}:${lineOf(text, stacked)} toolbar stacks search over a full width add button, use PanelToolbar`,
+      );
+    }
   }
   return warnings;
 }

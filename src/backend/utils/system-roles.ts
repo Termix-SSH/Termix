@@ -1,8 +1,13 @@
 import {
+  createCurrentRbacPermissionRepository,
   createCurrentRoleRepository,
   createCurrentUserRepository,
 } from "../database/repositories/factory.js";
-import { SYSTEM_ROLE_DEFAULTS } from "./permission-catalog.js";
+import {
+  STARTER_ROLE_MARKER,
+  STARTER_ROLES,
+  SYSTEM_ROLE_DEFAULTS,
+} from "./permission-catalog.js";
 import { databaseLogger } from "./logger.js";
 
 /**
@@ -39,8 +44,11 @@ export async function ensureSystemRoles(): Promise<void> {
     }
   }
 
+  await ensureStarterRoles();
+
   const users = await createCurrentUserRepository().listAll();
   for (const user of users) {
+    await repairAdminRole(user.id, user.isAdmin);
     const roleIds = await roleRepository.listUserRoleIds(user.id);
     if (roleIds.length > 0) continue;
     const assigned = await roleRepository.assignRoleNameToUser({
@@ -54,5 +62,58 @@ export async function ensureSystemRoles(): Promise<void> {
         userId: user.id,
       });
     }
+  }
+}
+
+/**
+ * The admin flag decides; the admin role follows it. A role row that drifted
+ * (an old role map, a hand edit) is put back in line with the flag.
+ */
+async function repairAdminRole(
+  userId: string,
+  isAdmin: boolean,
+): Promise<void> {
+  const roleRepository = createCurrentRoleRepository();
+  const hasAdminRole = await roleRepository.userHasAnyRoleName(userId, [
+    "admin",
+  ]);
+  if (hasAdminRole === isAdmin) return;
+  await roleRepository.switchUserRoleName({
+    userId,
+    addRoleName: isAdmin ? "admin" : "user",
+    removeRoleName: isAdmin ? "user" : "admin",
+    grantedBy: userId,
+  });
+  databaseLogger.warn("Admin role did not match the admin flag, fixed", {
+    operation: "ensure_system_roles",
+    userId,
+    isAdmin,
+  });
+}
+
+/** Creates each starter role once. One an admin deleted is not made again. */
+async function ensureStarterRoles(): Promise<void> {
+  const roleRepository = createCurrentRoleRepository();
+  const appliedRepository = createCurrentRbacPermissionRepository();
+  const applied = new Set(
+    (await appliedRepository.listAppliedDefaults())
+      .filter((row) => row.permission === STARTER_ROLE_MARKER)
+      .map((row) => row.roleName),
+  );
+
+  for (const [name, starter] of Object.entries(STARTER_ROLES)) {
+    if (applied.has(name)) continue;
+    if (!(await roleRepository.findRoleByName(name))) {
+      await roleRepository.createRole({
+        name,
+        displayName: `rbac.roles.${name}`,
+        description: starter.description,
+        isSystem: false,
+        permissions: JSON.stringify(starter.permissions),
+      });
+    }
+    await appliedRepository.recordAppliedDefaults([
+      { roleName: name, permission: STARTER_ROLE_MARKER },
+    ]);
   }
 }

@@ -1,9 +1,15 @@
+import {
+  actorHas,
+  canManageAccount,
+  SESSIONS_MANAGE,
+} from "../../auth/user-admin-access.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { authLogger } from "../../utils/logger.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import {
+  createCurrentApiKeyRepository,
   createCurrentSessionRepository,
   createCurrentUserRepository,
 } from "../repositories/factory.js";
@@ -17,6 +23,68 @@ export function registerUserSessionRoutes(
   router: Router,
   { authenticateJWT, authManager }: UserSessionRoutesDeps,
 ): void {
+  /**
+   * @openapi
+   * /users/sessions/revoke-everyone:
+   *   post:
+   *     summary: Sign everyone out (admin only)
+   *     description: Ends every session on the server except the caller's own. With apiKeys true, every API key is revoked too.
+   *     tags:
+   *       - Users
+   *     requestBody:
+   *       required: false
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               apiKeys:
+   *                 type: boolean
+   *     responses:
+   *       200:
+   *         description: Sessions ended. Returns how many sessions and keys.
+   *       403:
+   *         description: Admin access required.
+   *       500:
+   *         description: Failed to end sessions.
+   */
+  router.post(
+    "/sessions/revoke-everyone",
+    authenticateJWT,
+    async (req, res) => {
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.userId;
+      try {
+        const userRecord = await createCurrentUserRepository().findById(userId);
+        if (!userRecord?.isAdmin) {
+          return res.status(403).json({ error: "Admin access required" });
+        }
+        const sessions = await createCurrentSessionRepository().revokeAll(
+          authReq.sessionId,
+        );
+        const apiKeys =
+          req.body?.apiKeys === true
+            ? await createCurrentApiKeyRepository().deleteAll()
+            : 0;
+        const { ipAddress, userAgent } = getRequestMeta(req);
+        await logAudit({
+          userId,
+          username: userRecord.username ?? userId,
+          action: "revoke_everyone_sessions",
+          resourceType: "session",
+          details: JSON.stringify({ sessions, apiKeys }),
+          ipAddress,
+          userAgent,
+          success: true,
+        });
+        res.json({ sessions, apiKeys });
+      } catch (err) {
+        authLogger.error("Failed to end every session", err);
+        res.status(500).json({ error: "Failed to end sessions" });
+      }
+    },
+  );
+
   /**
    * @openapi
    * /users/sessions:
@@ -47,7 +115,7 @@ export function registerUserSessionRoutes(
 
       let sessionList;
 
-      if (userRecord.isAdmin) {
+      if (await actorHas(userId, SESSIONS_MANAGE)) {
         sessionList = await authManager.getAllSessions();
         const sessionUsers = await userRepository.listByIds(
           sessionList.map((session) => session.userId),
@@ -146,10 +214,16 @@ export function registerUserSessionRoutes(
         return res.status(404).json({ error: "Session not found" });
       }
 
-      if (!userRecord.isAdmin && session.userId !== userId) {
-        return res
-          .status(403)
-          .json({ error: "Not authorized to revoke this session" });
+      if (session.userId !== userId) {
+        const owner = await userRepository.findById(session.userId);
+        if (
+          !owner ||
+          !(await canManageAccount(userId, owner, SESSIONS_MANAGE))
+        ) {
+          return res
+            .status(403)
+            .json({ error: "Not authorized to revoke this session" });
+        }
       }
 
       const success = await authManager.revokeSession(sessionId);
@@ -226,12 +300,17 @@ export function registerUserSessionRoutes(
       }
 
       let revokeUserId = userId;
-      if (targetUserId && userRecord.isAdmin) {
-        revokeUserId = targetUserId;
-      } else if (targetUserId && targetUserId !== userId) {
-        return res.status(403).json({
-          error: "Not authorized to revoke sessions for other users",
-        });
+      if (targetUserId && targetUserId !== userId) {
+        const target = await userRepository.findById(String(targetUserId));
+        if (
+          !target ||
+          !(await canManageAccount(userId, target, SESSIONS_MANAGE))
+        ) {
+          return res.status(403).json({
+            error: "Not authorized to revoke sessions for other users",
+          });
+        }
+        revokeUserId = target.id;
       }
 
       let currentSessionId: string | undefined;

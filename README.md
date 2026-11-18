@@ -84,7 +84,7 @@ Plugins add everything else. Admins can install, update or remove plugins from t
 | [Workspaces](https://github.com/Termix-SSH/Plugin-Workspaces)               | Save your open tabs and split layouts and reopen them in one click.                                                                        |
 
 <details>
-<summary>All other official plugins (54)</summary>
+<summary>All other official plugins (55)</summary>
 
 These ship in the `-full` image tags (like `latest-full`) and the full desktop builds. On any other install, add them from the Plugins tab.
 
@@ -123,6 +123,7 @@ These ship in the `-full` image tags (like `latest-full`) and the full desktop b
 | [Proxmox](https://github.com/Termix-SSH/Plugin-Proxmox)                     | Import Proxmox VE guests as hosts, keep them in sync and watch node stats.                                                               |
 | [Reverse Proxy](https://github.com/Termix-SSH/Plugin-Reverse-Proxy)         | Reverse proxy for TCP, UDP, HTTP and HTTPS with free certificates and Termix login, managed per host.                                    |
 | [Samba Shares](https://github.com/Termix-SSH/Plugin-Samba)                  | Create and manage Samba (SMB) file shares, users and permissions on your hosts from one tab.                                             |
+| [SCIM Provisioning](https://github.com/Termix-SSH/Plugin-SCIM)              | Create, update and remove Termix accounts and roles from your identity provider with SCIM.                                               |
 | [Secret Sources](https://github.com/Termix-SSH/Plugin-Secret-Sources)       | Pull host passwords and keys from 1Password, Bitwarden, Infisical or HashiCorp Vault when you connect instead of storing them in Termix. |
 | [Security Center](https://github.com/Termix-SSH/Plugin-Security-Center)     | Audit SSH keys, rotate them and scan hosts for known vulnerabilities over SSH.                                                           |
 | [Services](https://github.com/Termix-SSH/Plugin-Service-Manager)            | Manage services, timers and logs on your hosts over SSH.                                                                                 |

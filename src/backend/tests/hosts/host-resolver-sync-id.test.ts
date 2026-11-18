@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const findHostIdBySyncId = vi.fn();
+const findHostIdBySyncIdForUser = vi.fn();
 const canAccessHost = vi.fn();
 const findHostOwnerId = vi.fn();
 const findHostById = vi.fn();
@@ -8,6 +9,7 @@ const findHostById = vi.fn();
 vi.mock("../../database/repositories/factory.js", () => ({
   createCurrentHostResolutionRepository: () => ({
     findHostIdBySyncId,
+    findHostIdBySyncIdForUser,
     findHostOwnerId,
     findHostById,
   }),
@@ -30,8 +32,17 @@ vi.mock("../../utils/shared-host-auth-resolver.js", () => ({
  * and host key. `sync_id` is the same string on both sides.
  */
 describe("resolveHostBySyncId", () => {
+  let resolveHostBySyncId: typeof import("../../hosts/host-resolver.js").resolveHostBySyncId;
+
+  // A cold import of the resolver can take longer than one test's timeout
+  // when the whole suite runs.
+  beforeAll(async () => {
+    ({ resolveHostBySyncId } = await import("../../hosts/host-resolver.js"));
+  }, 30_000);
+
   beforeEach(() => {
     vi.clearAllMocks();
+    findHostIdBySyncIdForUser.mockResolvedValue(null);
     canAccessHost.mockResolvedValue({ hasAccess: true });
     findHostOwnerId.mockResolvedValue("user-1");
   });
@@ -44,9 +55,6 @@ describe("resolveHostBySyncId", () => {
       ip: "10.0.0.7",
       userId: "user-1",
     });
-
-    const { resolveHostBySyncId } =
-      await import("../../hosts/host-resolver.js");
     const host = await resolveHostBySyncId("sync-abc", "user-1");
 
     expect(findHostIdBySyncId).toHaveBeenCalledWith("sync-abc");
@@ -54,12 +62,24 @@ describe("resolveHostBySyncId", () => {
     expect(host?.ip).toBe("10.0.0.7");
   });
 
+  it("prefers the caller's own copy when two accounts hold one", async () => {
+    // A desktop with two linked accounts keeps a copy for each.
+    findHostIdBySyncIdForUser.mockResolvedValue(7);
+    findHostIdBySyncId.mockResolvedValue(41);
+    findHostById.mockResolvedValue({ id: 7, ip: "10.0.0.7", userId: "user-1" });
+    const host = await resolveHostBySyncId("sync-abc", "user-1");
+
+    expect(findHostIdBySyncIdForUser).toHaveBeenCalledWith(
+      "sync-abc",
+      "user-1",
+    );
+    expect(findHostById).toHaveBeenCalledWith(7, "user-1");
+    expect(host?.id).toBe(7);
+  });
+
   it("returns null for a sync id this server does not have", async () => {
     // Falling back to the numeric id here is what picked the wrong machine.
     findHostIdBySyncId.mockResolvedValue(null);
-
-    const { resolveHostBySyncId } =
-      await import("../../hosts/host-resolver.js");
 
     await expect(resolveHostBySyncId("sync-unknown", "user-1")).resolves.toBe(
       null,
@@ -73,12 +93,62 @@ describe("resolveHostBySyncId", () => {
     findHostIdBySyncId.mockResolvedValue(41);
     canAccessHost.mockResolvedValue({ hasAccess: false });
 
-    const { resolveHostBySyncId } =
-      await import("../../hosts/host-resolver.js");
-
     await expect(resolveHostBySyncId("sync-abc", "intruder")).resolves.toBe(
       null,
     );
     expect(findHostById).not.toHaveBeenCalled();
+  });
+});
+
+describe("shared host with no login for the recipient", () => {
+  let resolveHostBySyncId: typeof import("../../hosts/host-resolver.js").resolveHostBySyncId;
+  let resolveRecipientSharedHostAuthentication: ReturnType<typeof vi.fn>;
+
+  beforeAll(async () => {
+    ({ resolveHostBySyncId } = await import("../../hosts/host-resolver.js"));
+    ({ resolveRecipientSharedHostAuthentication } =
+      (await import("../../utils/shared-host-auth-resolver.js")) as unknown as {
+        resolveRecipientSharedHostAuthentication: ReturnType<typeof vi.fn>;
+      });
+  }, 30_000);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    findHostIdBySyncIdForUser.mockResolvedValue(null);
+    canAccessHost.mockResolvedValue({ hasAccess: true, isShared: true });
+    findHostOwnerId.mockResolvedValue("owner");
+    findHostIdBySyncId.mockResolvedValue(41);
+    findHostById.mockResolvedValue({
+      id: 41,
+      ip: "10.0.0.7",
+      userId: "owner",
+      authType: "password",
+      password: "owner-secret",
+    });
+    resolveRecipientSharedHostAuthentication.mockResolvedValue({
+      source: "required",
+    });
+  });
+
+  it("returns null by default", async () => {
+    await expect(resolveHostBySyncId("sync-abc", "user-1")).resolves.toBe(null);
+  });
+
+  it("returns the host without a login when asked", async () => {
+    const host = (await resolveHostBySyncId("sync-abc", "user-1", {
+      allowMissingLogin: true,
+    })) as unknown as Record<string, unknown>;
+
+    expect(host.ip).toBe("10.0.0.7");
+    expect(host.loginRequired).toBe(true);
+    expect(host.authType).toBe("none");
+    expect(host.password).toBeNull();
+  });
+
+  it("still refuses a host the caller may not reach", async () => {
+    canAccessHost.mockResolvedValue({ hasAccess: false });
+    await expect(
+      resolveHostBySyncId("sync-abc", "intruder", { allowMissingLogin: true }),
+    ).resolves.toBe(null);
   });
 });

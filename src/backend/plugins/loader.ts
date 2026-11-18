@@ -2,14 +2,12 @@
  * Discovers plugins, resolves their dependency order, and owns their
  * lifecycle.
  *
- * One tier. Every plugin, bundled or installed, is imported into the server
- * process and handed a ctx built by ctx.ts. There is no worker boundary and
- * no allowlist, because the worker tier had no users and the allowlist was a
- * hardcoded set of twelve ids that every real plugin was already on.
+ * An API 2 plugin runs in its own process (sandbox/supervisor.ts): it can
+ * read only its own folder, opens no sockets or child processes unless a
+ * capability grants it, and reaches core only through ctx calls core checks.
  *
- * What that means honestly: a plugin has the same reach as core. The
- * capability gate on ctx makes privileged calls declared and auditable, not
- * impossible.
+ * An API 1 plugin was built to run inside the server process, where it has
+ * the same reach as core. None runs any more; it waits for an update.
  */
 
 import crypto from "node:crypto";
@@ -23,6 +21,13 @@ import {
   parseManifest,
   validateThemeCss,
 } from "./manifest.js";
+import {
+  isOfficialPlugin,
+  isLegacyPlugin,
+  LEGACY_COMMUNITY_ERROR,
+  LEGACY_OFFICIAL_ERROR,
+} from "./isolation.js";
+import { getPluginRunner } from "./sandbox/runner.js";
 import { getLocalVersion } from "../utils/app-version.js";
 import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import {
@@ -38,17 +43,15 @@ import {
   type KeyTier,
 } from "./trust.js";
 import { moveWithRetry } from "./fs-retry.js";
+import { revocationReason } from "./revocation-state.js";
 import {
   createPluginContext,
   createPluginHandle,
   disposePluginHandle,
   type PluginHandle,
-  type PluginModule,
 } from "./ctx.js";
 import { resolveRequirements } from "./service-registry.js";
-import { resolveSecretRequirements } from "./secret-registry.js";
 import { recordConflict } from "./conflicts.js";
-import { installHostModuleFallback } from "./host-modules.js";
 import { tablePrefix } from "@termix-ssh/plugin-sdk/db";
 
 export type PluginState =
@@ -61,8 +64,6 @@ export type PluginState =
   | "failed";
 
 export type PluginSource = "bundled" | "user";
-
-const ACTIVATION_TIMEOUT_MS = 30_000;
 
 /** Defaults for the runtime error budget. Both are configurable. */
 const DEFAULT_ERROR_THRESHOLD = 5;
@@ -87,7 +88,18 @@ export interface LoadedPlugin {
   signedBy?: string;
   /** Which set of keys that key belongs to. */
   signedTier?: KeyTier;
+  /** Root key that certified the signing key, for chain signatures. */
+  signedRoot?: string;
+  /** Set while the plugin runs in its own process. */
+  sandboxed?: boolean;
 }
+
+export {
+  isOfficialPlugin,
+  isLegacyPlugin,
+  LEGACY_COMMUNITY_ERROR,
+  LEGACY_OFFICIAL_ERROR,
+} from "./isolation.js";
 
 /**
  * A plugin folder that did not load. Kept so the layout repair view can say
@@ -451,6 +463,7 @@ export class PluginLoader {
     const sigFile = `${file}.sig`;
     let signedBy: string | undefined;
     let signedTier: KeyTier | undefined;
+    let signedRoot: string | undefined;
 
     if (fs.existsSync(sigFile)) {
       const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
@@ -464,6 +477,7 @@ export class PluginLoader {
       }
       signedBy = result.keyId;
       signedTier = result.tier;
+      signedRoot = result.rootId;
     } else if (requireSignedPlugins()) {
       throw new Error(
         `TERMIX_REQUIRE_SIGNED_PLUGINS is on and ${path.basename(file)} has no .sig next to it`,
@@ -535,6 +549,7 @@ export class PluginLoader {
         plugin.artifact = file;
         plugin.signedBy = signedBy;
         plugin.signedTier = signedTier;
+        plugin.signedRoot = signedRoot;
         if (replaced) {
           pluginLogger.info(
             `Plugin ${id} updated from ${replaced.manifest.version} to ${plugin.manifest.version}`,
@@ -674,71 +689,57 @@ export class PluginLoader {
       return;
     }
 
+    const revoked = revocationReason({
+      id: plugin.id,
+      version: plugin.manifest.version,
+      signedTier: plugin.signedTier,
+      signedBy: plugin.signedBy,
+      signedRoot: plugin.signedRoot,
+    });
+    if (revoked) {
+      plugin.state = "blocked";
+      plugin.lastError = revoked;
+      pluginLogger.warn(`Plugin ${plugin.id} is blocked: ${revoked}`, {
+        operation: "plugin_activate",
+      });
+      return;
+    }
+
+    // Plugin API 1 ran inside the server. Nothing does any more.
+    if (isLegacyPlugin(plugin)) {
+      plugin.state = "blocked";
+      plugin.lastError = isOfficialPlugin(plugin)
+        ? LEGACY_OFFICIAL_ERROR
+        : LEGACY_COMMUNITY_ERROR;
+      return;
+    }
+
     plugin.state = "activating";
     plugin.lastError = null;
 
     const entryPath = getPluginBackendEntry(plugin.dir, plugin.manifest);
-    // Node caches ESM by URL, so a plugin replaced without a restart would
-    // otherwise keep running the old code.
-    const entry = `${pathToFileUrlString(entryPath)}?v=${encodeURIComponent(
-      `${plugin.manifest.version}-${fileStamp(entryPath)}`,
-    )}`;
+    await this.activateSandboxed(plugin, entryPath);
+  }
 
+  /**
+   * Hands an API 2 plugin to the supervisor. Core keeps a handle whose
+   * deactivate stops the process; each run of the process gets its own ctx.
+   */
+  private async activateSandboxed(
+    plugin: LoadedPlugin,
+    entryPath: string,
+  ): Promise<void> {
+    const runner = await getPluginRunner();
     try {
-      installHostModuleFallback();
-      const imported = (await import(entry)) as {
-        activate?: PluginModule["activate"];
-        deactivate?: PluginModule["deactivate"];
-        default?: PluginModule;
-      };
-
-      const activate = imported.activate ?? imported.default?.activate;
-      const deactivate = imported.deactivate ?? imported.default?.deactivate;
-
-      if (typeof activate !== "function") {
-        throw new Error(
-          `Plugin ${plugin.id} backend entry does not export an activate(ctx) function`,
-        );
-      }
-
-      // Structural only: is the service present at a satisfying version. A
-      // user's permission is checked per call instead, because activation is
-      // per-instance and permissions are per-user.
       const resolution = resolveRequirements(plugin.manifest);
       if (!resolution.satisfied) {
         throw new Error(`Plugin ${plugin.id} ${resolution.errors.join("; ")}`);
       }
-      for (const service of resolution.missingOptional) {
-        pluginLogger.info(
-          `Plugin ${plugin.id} optional service "${service}" is not available`,
-          { operation: "plugin_activate" },
-        );
-      }
-
-      // A borrowed secret resolves per call and returns null when absent, so a
-      // provider installed later starts working with no restart. Refusing to
-      // start here would turn a recoverable gap into an install ordering rule.
-      for (const reference of resolveSecretRequirements(plugin.manifest)
-        .unavailable) {
-        pluginLogger.info(
-          `Plugin ${plugin.id} shared secret "${reference}" is not currently offered; reads will resolve to null`,
-          { operation: "plugin_activate" },
-        );
-      }
-
-      // Before activate, not inside it: a plugin's first line may query its
-      // own tables, and a migration that fails should stop it starting rather
-      // than leave it half-running against a schema that is not there. A
-      // throw here lands in the catch below, which fails this plugin only.
       const { migratePlugin } = await import("./data.js");
-      // A release signed by a trusted key is official whether it shipped in
-      // the image or was downloaded, so it may adopt its 2.8 tables too.
       const applied = await migratePlugin(plugin.id, plugin.dir, {
         bundled:
           plugin.source === "bundled" || plugin.signedTier === "official",
       });
-      // A new table, or a plugin that keeps its state in settings, may be
-      // where core data is waiting to move. Every move is idempotent.
       if (
         applied.length > 0 ||
         plugin.manifest.contributes?.settings?.admin?.length
@@ -748,44 +749,56 @@ export class PluginLoader {
         await runPluginDataMoves();
       }
 
-      const handle = createPluginHandle(plugin.id, { activate, deactivate });
-      const ctx = createPluginContext(plugin.manifest, handle);
-
-      // Attached before activate runs, not after: a plugin that registers a
-      // few things and then throws still has to be cleaned up, and the catch
-      // below can only do that if it can reach the handle.
-      plugin.handle = handle;
-
-      await withTimeout(
-        Promise.resolve(activate(ctx)),
-        ACTIVATION_TIMEOUT_MS,
-        `Plugin ${plugin.id} did not activate within ${ACTIVATION_TIMEOUT_MS}ms`,
-      );
+      const noop = () => undefined;
+      plugin.handle = createPluginHandle(plugin.id, {
+        activate: noop,
+        deactivate: () => runner.unregister(plugin.id),
+      });
+      plugin.sandboxed = true;
+      await runner.register({
+        manifest: plugin.manifest,
+        dir: plugin.dir,
+        entryPath,
+        makeContext: () => {
+          const handle = createPluginHandle(plugin.id, { activate: noop });
+          const ctx = createPluginContext(plugin.manifest, handle);
+          return { ctx: ctx as unknown as Record<string, unknown>, handle };
+        },
+        disposeHandle: (handle) =>
+          disposePluginHandle(handle, plugin.id, { runDeactivate: false }),
+        onFailed: (message) => void this.failPlugin(plugin.id, message),
+      });
 
       plugin.state = "active";
       plugin.errorTimestamps = [];
       if (!this.activationOrder.includes(plugin.id)) {
         this.activationOrder.push(plugin.id);
       }
-
-      pluginLogger.success(`Activated plugin ${plugin.id}`, {
+      pluginLogger.success(`Activated plugin ${plugin.id} in its own process`, {
         operation: "plugin_activate",
       });
     } catch (error) {
       plugin.lastError = error instanceof Error ? error.message : String(error);
       plugin.state = "failed";
-
-      // Activation may have registered things before it threw. Dispose them
-      // rather than leaving a half-started plugin holding resources, but do
-      // not call the plugin's own deactivate: it never finished starting.
-      if (plugin.handle) {
-        await disposePluginHandle(plugin.handle, plugin.id, {
-          runDeactivate: false,
-        });
-        plugin.handle = null;
-      }
+      plugin.sandboxed = false;
+      await runner.unregister(plugin.id).catch(() => {});
+      plugin.handle = null;
       throw error instanceof Error ? error : new Error(plugin.lastError);
     }
+  }
+
+  /** Marks a plugin failed from outside a call (its process kept crashing). */
+  async failPlugin(pluginId: string, message: string): Promise<void> {
+    const plugin = this.plugins.get(pluginId);
+    if (!plugin) return;
+    pluginLogger.error(`Plugin ${pluginId} stopped`, new Error(message), {
+      operation: "plugin_runtime",
+    });
+    await this.deactivate(pluginId);
+    plugin.state = "failed";
+    plugin.lastError = message;
+    plugin.errorTimestamps = [];
+    this.options.onFailed?.(plugin);
   }
 
   /** Activates a set of plugins in dependency order. */
@@ -851,6 +864,7 @@ export class PluginLoader {
     plugin.state = "stopping";
     const handle = plugin.handle;
     plugin.handle = null;
+    plugin.sandboxed = false;
 
     // Disposal never throws, so a plugin whose deactivate() misbehaves still
     // ends up stopped rather than stuck in "stopping" forever.
@@ -913,10 +927,16 @@ export class PluginLoader {
   }
 
   /** Stops everything, reverse activation order. */
-  async shutdown(): Promise<void> {
+  /** perPluginMs keeps one stuck plugin from holding up the rest. */
+  async shutdown(options: { perPluginMs?: number } = {}): Promise<void> {
+    const perPluginMs = options.perPluginMs ?? SHUTDOWN_PER_PLUGIN_MS;
     for (const id of [...this.activationOrder].reverse()) {
       try {
-        await this.deactivate(id);
+        await withTimeout(
+          this.deactivate(id),
+          perPluginMs,
+          `Plugin ${id} did not stop within ${perPluginMs} ms`,
+        );
       } catch (error) {
         pluginLogger.error(
           `Failed to deactivate plugin ${id} during shutdown`,
@@ -934,6 +954,8 @@ export class PluginLoader {
     return plugin;
   }
 }
+
+const SHUTDOWN_PER_PLUGIN_MS = 2000;
 
 function withTimeout<T>(
   promise: Promise<T>,
@@ -992,20 +1014,6 @@ export function assertBundledUpdate(
   if (bundledVersion && !semver.gt(version, bundledVersion)) {
     throw new SupersededUpdateError(id, version, bundledVersion);
   }
-}
-
-function fileStamp(filePath: string): string {
-  try {
-    const stat = fs.statSync(filePath);
-    return `${stat.size}-${Math.round(stat.mtimeMs)}`;
-  } catch {
-    return "0";
-  }
-}
-
-function pathToFileUrlString(filePath: string): string {
-  const resolved = path.resolve(filePath).replace(/\\/g, "/");
-  return `file://${resolved.startsWith("/") ? "" : "/"}${resolved}`;
 }
 
 /**

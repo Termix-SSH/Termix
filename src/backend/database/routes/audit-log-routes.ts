@@ -1,15 +1,11 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
-import {
-  createCurrentAuditLogRepository,
-  createCurrentUserRepository,
-} from "../repositories/factory.js";
+import { createCurrentAuditLogRepository } from "../repositories/factory.js";
 import { apiLogger } from "../../utils/logger.js";
+import { actorHas, AUDIT_VIEW } from "../../auth/user-admin-access.js";
 
-async function isAdminUser(userId: string | undefined): Promise<boolean> {
-  if (!userId) return false;
-  const user = await createCurrentUserRepository().findById(userId);
-  return !!user?.isAdmin;
+function canReadAudit(userId: string | undefined): Promise<boolean> {
+  return actorHas(userId, AUDIT_VIEW);
 }
 
 export function registerAuditLogRoutes(
@@ -21,7 +17,7 @@ export function registerAuditLogRoutes(
    * /audit-logs:
    *   get:
    *     summary: List audit logs
-   *     description: Returns paginated, filterable audit log entries. Admin only.
+   *     description: Returns paginated, filterable audit log entries. Needs admin.audit.view.
    *     tags:
    *       - Audit
    *     parameters:
@@ -60,7 +56,7 @@ export function registerAuditLogRoutes(
   router.get("/audit-logs", authenticateJWT, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      if (!(await isAdminUser(authReq.userId))) {
+      if (!(await canReadAudit(authReq.userId))) {
         return res.status(403).json({ error: "Not authorized" });
       }
 
@@ -103,7 +99,7 @@ export function registerAuditLogRoutes(
    * /audit-logs/actions:
    *   get:
    *     summary: List distinct audit log action types
-   *     description: Returns all distinct action values in the audit log for filter dropdowns. Admin only.
+   *     description: Returns all distinct action values in the audit log for filter dropdowns. Needs admin.audit.view.
    *     tags:
    *       - Audit
    *     responses:
@@ -117,7 +113,7 @@ export function registerAuditLogRoutes(
   router.get("/audit-logs/actions", authenticateJWT, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      if (!(await isAdminUser(authReq.userId))) {
+      if (!(await canReadAudit(authReq.userId))) {
         return res.status(403).json({ error: "Not authorized" });
       }
 

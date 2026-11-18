@@ -31,8 +31,19 @@ export const users = pgTable(
     registeredAt: text("registered_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
+    displayName: text("display_name"),
+    email: varchar("email", { length: 255 }),
+    // Set while the account is turned off or waiting for approval.
+    disabledAt: text("disabled_at"),
+    disabledReason: text("disabled_reason"),
+    lastLoginAt: text("last_login_at"),
+    // Plugin that created the account, like a SCIM provisioner.
+    managedBy: text("managed_by"),
   },
-  (table) => [uniqueIndex("idx_users_username").on(table.username)],
+  (table) => [
+    uniqueIndex("idx_users_username").on(table.username),
+    uniqueIndex("idx_users_email").on(table.email),
+  ],
 );
 
 export const settings = pgTable("settings", {
@@ -648,6 +659,11 @@ export const auditLogs = pgTable(
     timestamp: varchar("timestamp", { length: 255 })
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
+
+    // Each row's hash covers the one before, so an edit or a removed row shows.
+    // Null on rows written before the chain existed.
+    prevHash: text("prev_hash"),
+    hash: text("hash"),
   },
   // This table only grows, and is always read newest-first with an optional
   // filter. Each composite leads with the filtered column so the same index
@@ -658,6 +674,29 @@ export const auditLogs = pgTable(
     index("idx_audit_logs_action_ts").on(table.action, table.timestamp),
     index("idx_audit_logs_resource_ts").on(table.resourceType, table.timestamp),
   ],
+);
+
+// Dangerous admin changes waiting out the cooling-off time.
+export const adminHolds = pgTable(
+  "admin_holds",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    kind: text("kind").notNull(),
+    // Ids and flags only, never secrets.
+    payload: text("payload").notNull(),
+    summary: text("summary").notNull(),
+    requestedBy: varchar("requested_by", { length: 255 }).references(() => users.id, {
+      onDelete: "set null",
+    }),
+    requestedByName: text("requested_by_name").notNull(),
+    requestedAt: text("requested_at").notNull(),
+    runsAt: varchar("runs_at", { length: 255 }).notNull(),
+    status: varchar("status", { length: 255 }).notNull().default("pending"),
+    decidedBy: text("decided_by"),
+    decidedAt: text("decided_at"),
+    error: text("error"),
+  },
+  (table) => [index("idx_admin_holds_status_runs").on(table.status, table.runsAt)],
 );
 
 export const apiKeys = pgTable(
@@ -678,6 +717,30 @@ export const apiKeys = pgTable(
     scopes: text("scopes"),
   },
   (table) => [index("idx_api_keys_user_id").on(table.userId)],
+);
+
+// A link an admin hands out so someone can make an account.
+export const userInvites = pgTable(
+  "user_invites",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    tokenHash: varchar("token_hash", { length: 255 }).notNull(),
+    note: text("note"),
+    // JSON list of role ids given on sign up.
+    roleIds: text("role_ids"),
+    makeAdmin: boolean("make_admin").notNull().default(false),
+    maxUses: integer("max_uses").notNull().default(1),
+    uses: integer("uses").notNull().default(0),
+    createdBy: varchar("created_by", { length: 255 }).references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    expiresAt: text("expires_at").notNull(),
+    revokedAt: text("revoked_at"),
+  },
+  (table) => [uniqueIndex("idx_user_invites_token_hash").on(table.tokenHash)],
 );
 
 export const operationRuns = pgTable(
@@ -865,6 +928,33 @@ export const uiPreferences = pgTable("ui_preferences", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
+
+/**
+ * What a framed plugin registers, per user, client kind and plugin, so a new
+ * browser or device skips booting every plugin's frame. No answers or values.
+ */
+export const frameRegistrations = pgTable(
+  "frame_registrations",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    client: varchar("client", { length: 255 }).notNull(),
+    pluginId: varchar("plugin_id", { length: 255 }).notNull(),
+    data: text("data").notNull(),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_frame_registrations_user_client_plugin").on(
+      table.userId,
+      table.client,
+      table.pluginId,
+    ),
+  ],
+);
 
 // --- sync begin ---
 /**
@@ -1124,6 +1214,13 @@ export const plugins = pgTable(
     pinnedVersion: text("pinned_version"),
     /** stable | beta: which registry releases updates offer. */
     channel: text("channel").notNull().default("stable"),
+    /**
+     * An admin let this API 1 plugin run inside the server process. Only
+     * official plugins can have it; API 2 plugins ignore it.
+     */
+    runUnisolated: boolean("run_unisolated")
+      .notNull()
+      .default(false),
     manifestJson: text("manifest_json").notNull(),
   },
   (table) => [index("idx_plugins_registry_id").on(table.registryId)],

@@ -8,6 +8,14 @@ interface EncryptedData {
   recordId: string;
 }
 
+/** A sealed value that belongs to a different record. */
+class FieldBindingError extends Error {
+  constructor(fieldName: string) {
+    super(`Encrypted ${fieldName} belongs to a different record`);
+    this.name = "FieldBindingError";
+  }
+}
+
 class FieldCrypto {
   private static readonly ALGORITHM = "aes-256-gcm";
   private static readonly KEY_LENGTH = 32;
@@ -90,10 +98,40 @@ class FieldCrypto {
     }
   }
 
+  /** The record id a sealed value was bound to, or null for anything else. */
+  static sealedRecordId(value: string): string | null {
+    if (!this.isEncrypted(value)) return null;
+    const parsed = JSON.parse(value) as Partial<EncryptedData>;
+    return typeof parsed.recordId === "string" && parsed.recordId
+      ? parsed.recordId
+      : null;
+  }
+
+  /**
+   * Opens a value sealed for `recordId`. A value sealed for another record is
+   * refused, so a secret copied between rows does not open in its new place.
+   */
   static decryptField(
     encryptedValue: string,
     masterKey: Buffer,
     recordId: string,
+    fieldName: string,
+  ): string {
+    if (!encryptedValue) return "";
+    const sealedFor = this.sealedRecordId(encryptedValue);
+    if (sealedFor !== null && sealedFor !== String(recordId)) {
+      throw new FieldBindingError(fieldName);
+    }
+    return this.decryptSealedField(encryptedValue, masterKey, fieldName);
+  }
+
+  /**
+   * Opens a value under whatever record id it carries. Only for one-off
+   * upgrade code that moves old values to their real record id.
+   */
+  static decryptSealedField(
+    encryptedValue: string,
+    masterKey: Buffer,
     fieldName: string,
   ): string {
     if (!encryptedValue) return "";
@@ -115,6 +153,7 @@ class FieldCrypto {
       this.ALGORITHM,
       fieldKey,
       Buffer.from(encrypted.iv, "hex"),
+      { authTagLength: 16 },
     ) as crypto.DecipherGCM;
     decipher.setAuthTag(Buffer.from(encrypted.tag, "hex"));
 
@@ -138,4 +177,4 @@ class FieldCrypto {
   }
 }
 
-export { FieldCrypto, type EncryptedData };
+export { FieldCrypto, FieldBindingError, type EncryptedData };

@@ -41,6 +41,26 @@ describe("installSafePorts", () => {
     expect(await response.text()).toBe("ok");
   });
 
+  it("hides the close of its own retry from the caller", async () => {
+    installSafePorts();
+    server = http.createServer();
+    vi.spyOn(server, "address").mockImplementationOnce(() => ({
+      address: "127.0.0.1",
+      family: "IPv4",
+      port: 6000,
+    }));
+    const onClose = vi.fn();
+    server.on("close", onClose);
+
+    await new Promise<void>((resolve) =>
+      server!.listen(0, "127.0.0.1", () => resolve()),
+    );
+
+    expect(onClose).not.toHaveBeenCalled();
+    await new Promise<void>((resolve) => server!.close(() => resolve()));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it("leaves a fixed port alone", async () => {
     installSafePorts();
     server = http.createServer();

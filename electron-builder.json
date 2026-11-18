@@ -12,6 +12,8 @@
   "asarUnpack": [
     "dist/backend/**/*",
     "dist/plugins/**/*",
+    "dist/frame/**/*",
+    "dist/fonts/**/*",
     "node_modules/**/*",
     "public/icons/**/*",
     "public/icon.*"
@@ -34,6 +36,13 @@
     "!dist/icon.ico",
     "!dist/icon.icns",
     "!public/icon.icns"
+  ],
+  "extraResources": [
+    {
+      "from": ".plugin-runtime/${platform}-${arch}",
+      "to": "plugin-runtime",
+      "filter": ["**/*", "!.cache"]
+    }
   ],
   "extraMetadata": {
     "main": "electron/main.cjs",
@@ -90,7 +99,7 @@
       }
     ],
     "icon": "public/icons",
-    "category": "Development",
+    "category": "Development;Network;System;TerminalEmulator",
     "executableName": "termix",
     "maintainer": "Termix <mail@termix.site>",
     "desktop": {
@@ -145,6 +154,17 @@
     "sign": true
   },
   "afterPack": "packaging/build/after-pack.cjs",
+  "electronFuses": {
+    "runAsNode": false,
+    "enableCookieEncryption": true,
+    "enableNodeOptionsEnvironmentVariable": false,
+    "enableNodeCliInspectArguments": false,
+    "enableEmbeddedAsarIntegrityValidation": true,
+    "onlyLoadAppFromAsar": true,
+    "loadBrowserProcessSpecificV8Snapshot": false,
+    "grantFileProtocolExtraPrivileges": false,
+    "resetAdHocDarwinSignature": true
+  },
   "afterSign": "packaging/build/notarize.cjs",
   "mas": {
     "provisioningProfile": "packaging/build/Termix_Mac_App_Store.provisionprofile",

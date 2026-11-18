@@ -8,9 +8,11 @@
 import type { NextFunction, Request, Response } from "express";
 import { createCurrentSettingsRepository } from "../database/repositories/factory.js";
 import { getTlsConfig } from "./tls-service.js";
+import { HSTS_VALUE, isSecureRequest } from "../http/security-headers.js";
+
+export { isSecureRequest };
 
 export const FORCE_HTTPS_KEY = "force_https";
-const HSTS = "max-age=31536000";
 // Certificate checks and health probes must still work over plain HTTP.
 const EXEMPT = [/^\/\.well-known\/acme-challenge\//, /^\/health$/];
 
@@ -38,12 +40,6 @@ export function resetHttpsPolicyForTests(): void {
   forceHttps = null;
 }
 
-export function isSecureRequest(req: Request): boolean {
-  if (req.secure) return true;
-  const forwarded = req.get("x-forwarded-proto");
-  return forwarded?.split(",")[0].trim().toLowerCase() === "https";
-}
-
 function httpsUrl(req: Request, port: number): string {
   const host = (req.get("host") || "localhost").replace(/:\d+$/, "");
   const suffix = port === 443 ? "" : `:${port}`;
@@ -59,7 +55,7 @@ export async function httpsPolicyMiddleware(
     const tls = getTlsConfig();
     if (!tls.enabled || !(await isForceHttpsEnabled())) return next();
     if (isSecureRequest(req)) {
-      res.setHeader("Strict-Transport-Security", HSTS);
+      res.setHeader("Strict-Transport-Security", HSTS_VALUE);
       return next();
     }
     if (EXEMPT.some((pattern) => pattern.test(req.path))) return next();

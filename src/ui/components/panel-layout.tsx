@@ -17,6 +17,7 @@ import { Separator } from "@/components/separator";
 import { DocsLink } from "@/components/docs-link";
 import { useInSeamlessTile } from "@/components/tile-grid/context";
 import { FooterClosed } from "@/components/tile-grid/edge";
+import { AddButton } from "@/components/list-kit";
 import {
   Select,
   SelectContent,
@@ -343,6 +344,56 @@ export function PanelFrame({
   );
 }
 
+/**
+ * A sidebar panel's toolbar on one row: search, the panel's own icon
+ * buttons, then an icon only add button. `below` holds anything that needs
+ * its own line, like a target picker.
+ */
+export function PanelToolbar({
+  search,
+  onSearchChange,
+  searchPlaceholder,
+  onAdd,
+  addLabel,
+  children,
+  below,
+  className,
+}: {
+  search: string;
+  onSearchChange: (next: string) => void;
+  searchPlaceholder?: string;
+  /** Shows the add button. */
+  onAdd?: () => void;
+  addLabel?: string;
+  /** Icon buttons and menus, between search and add. */
+  children?: React.ReactNode;
+  below?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      data-panel-toolbar=""
+      className={cn(
+        "flex shrink-0 flex-col gap-2 border-b border-border px-3 py-2",
+        TOOLBAR_FIT,
+        className,
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-1.5">
+        <PanelSearch
+          value={search}
+          onChange={onSearchChange}
+          placeholder={searchPlaceholder}
+          fill
+        />
+        {children}
+        {onAdd && <AddButton compact label={addLabel} onClick={onAdd} />}
+      </div>
+      {below}
+    </div>
+  );
+}
+
 export function PanelSearch({
   value,
   onChange,
@@ -407,7 +458,7 @@ export function PanelSearch({
             onEnter();
           }
         }}
-        className="h-8 w-full min-w-0 border border-border bg-popover pl-8 pr-7 text-xs outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+        className="h-8 w-full min-w-0 border border-border bg-(--field) pl-8 pr-7 text-xs outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
       />
       {value && (
         <button

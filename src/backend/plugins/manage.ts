@@ -52,6 +52,7 @@ import {
   neededTermix,
   officialSource,
   parsePluginChannel,
+  PROVENANCE_SUFFIX,
   type PluginChannel,
   type RegistryIndex,
   type RegistryPlugin,
@@ -475,7 +476,41 @@ async function removeArtifactFiles(
   for (const file of candidates) {
     await fs.promises.rm(file, { force: true });
     await fs.promises.rm(`${file}.sig`, { force: true });
+    await fs.promises.rm(`${file}${PROVENANCE_SUFFIX}`, { force: true });
   }
+}
+
+/**
+ * With the admin wait on, dangerous capabilities are not granted at install
+ * or update: they wait as one held change. Returns the ones held back.
+ */
+async function holdDangerousGrants(
+  plugin: LoadedPlugin,
+  missing: string[],
+  userId: string,
+): Promise<string[]> {
+  const { createHold, getHoldSettings, listHolds, needsHold } =
+    await import("../auth/admin-holds.js");
+  const held = needsHold(missing);
+  if (held.length === 0) return [];
+  const settings = await getHoldSettings();
+  if (!settings.active) return [];
+  const pending = (await listHolds()).some(
+    (hold) =>
+      hold.status === "pending" &&
+      hold.kind === "plugin_grant" &&
+      hold.summary.includes(`(${plugin.id})`),
+  );
+  if (!pending) {
+    await createHold({
+      kind: "plugin_grant",
+      payload: { pluginId: plugin.id, capabilities: held },
+      summary: `give the plugin ${plugin.manifest.name ?? plugin.id} (${plugin.id}) ${held.join(", ")}`,
+      requesterId: userId,
+      minutes: settings.minutes,
+    });
+  }
+  return held;
 }
 
 /** Grants every capability the manifest declares, after the admin agreed. */
@@ -489,8 +524,12 @@ async function grantDeclared(
   const granted = new Set(
     (await repository.listByPlugin(plugin.id)).map((g) => g.capability),
   );
-  for (const capability of plugin.manifest.capabilities) {
-    if (granted.has(capability)) continue;
+  const missing = plugin.manifest.capabilities.filter((c) => !granted.has(c));
+  const waiting = userId
+    ? await holdDangerousGrants(plugin, missing, userId)
+    : [];
+  for (const capability of missing) {
+    if (waiting.includes(capability)) continue;
     await repository.grant({
       pluginId: plugin.id,
       capability,
@@ -526,8 +565,12 @@ async function swapIn(
   const staged = useBundled
     ? null
     : "release" in source
-      ? await downloadRelease(pluginId, source.release, source.source.keys)
-      : { file: source.upload, signatureFile: `${source.upload}.sig` };
+      ? await downloadRelease(pluginId, source.release, source.source)
+      : {
+          file: source.upload,
+          signatureFile: `${source.upload}.sig`,
+          provenanceFile: `${source.upload}${PROVENANCE_SUFFIX}`,
+        };
 
   const finalFile = path.join(getPluginsDir(), `${pluginId}.tmxplug`);
   const backupDir = path.join(getDownloadsDir(), `${pluginId}.previous`);
@@ -547,6 +590,12 @@ async function swapIn(
         path.join(backupDir, "plugin.tmxplug.sig"),
       );
     }
+    if (fs.existsSync(`${previousArtifact}${PROVENANCE_SUFFIX}`)) {
+      await fs.promises.copyFile(
+        `${previousArtifact}${PROVENANCE_SUFFIX}`,
+        path.join(backupDir, `plugin.tmxplug${PROVENANCE_SUFFIX}`),
+      );
+    }
   }
 
   try {
@@ -557,6 +606,12 @@ async function swapIn(
       await moveWithRetry(staged.file, finalFile);
       if (fs.existsSync(staged.signatureFile)) {
         await moveWithRetry(staged.signatureFile, `${finalFile}.sig`);
+      }
+      if (fs.existsSync(staged.provenanceFile)) {
+        await moveWithRetry(
+          staged.provenanceFile,
+          `${finalFile}${PROVENANCE_SUFFIX}`,
+        );
       }
       plugin = await loader.loadArtifact(finalFile, loader.bundledIds());
     } else {
@@ -573,6 +628,7 @@ async function swapIn(
     if (staged) {
       await fs.promises.rm(staged.file, { force: true });
       await fs.promises.rm(staged.signatureFile, { force: true });
+      await fs.promises.rm(staged.provenanceFile, { force: true });
     }
   }
 }
@@ -590,6 +646,12 @@ async function restorePrevious(
       await fs.promises.copyFile(backup, previousArtifact);
       if (fs.existsSync(`${backup}.sig`)) {
         await fs.promises.copyFile(`${backup}.sig`, `${previousArtifact}.sig`);
+      }
+      if (fs.existsSync(`${backup}${PROVENANCE_SUFFIX}`)) {
+        await fs.promises.copyFile(
+          `${backup}${PROVENANCE_SUFFIX}`,
+          `${previousArtifact}${PROVENANCE_SUFFIX}`,
+        );
       }
       await loader.loadArtifact(previousArtifact, loader.bundledIds());
     } else if (
@@ -621,6 +683,11 @@ async function startAndRecord(pluginId: string): Promise<string> {
   try {
     await recordState(pluginId, "enabled", null);
     await activatePlugin(pluginId);
+    const plugin = getPluginRuntime().loader.get(pluginId);
+    if (plugin?.state === "blocked") {
+      await recordState(pluginId, "blocked", plugin.lastError);
+      return "blocked";
+    }
     return "active";
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -1197,6 +1264,19 @@ async function updateUnlocked(
       "SAME_VERSION",
     );
   }
+  // Going back takes the admin naming the older version.
+  if (
+    !options.version &&
+    semver.valid(release.version) &&
+    semver.valid(live.manifest.version) &&
+    semver.lt(release.version, live.manifest.version)
+  ) {
+    throw new PluginManageError(
+      `${pluginId} ${release.version} is older than the installed ${live.manifest.version}`,
+      409,
+      "NOT_NEWER",
+    );
+  }
 
   const added = addedCapabilities(
     live.manifest.capabilities,
@@ -1372,7 +1452,11 @@ export async function uninstallPluginUnlocked(
 
 export function setPluginOptions(
   pluginId: string,
-  options: { autoUpdate?: boolean; pinned?: boolean; channel?: PluginChannel },
+  options: {
+    autoUpdate?: boolean;
+    pinned?: boolean;
+    channel?: PluginChannel;
+  },
 ): Promise<{
   autoUpdate: boolean;
   pinnedVersion: string | null;
@@ -1629,7 +1713,9 @@ function checkUploadSignature(
   signature: string,
 ): { official: boolean } {
   const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
-  const result = verifyAnyTrusted(buffer, sha256, signature);
+  const result = verifyAnyTrusted(buffer, sha256, signature, {
+    mode: "download",
+  });
   if (result.ok === false) {
     throw new PluginManageError(
       `The signature does not match this file: ${result.reason}`,

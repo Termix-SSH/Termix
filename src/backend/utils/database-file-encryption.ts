@@ -3,6 +3,7 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { databaseLogger } from "./logger.js";
+import { renameWithRetry } from "./rename-retry.js";
 import { SystemCrypto } from "./system-crypto.js";
 
 interface EncryptedFileMetadata {
@@ -79,7 +80,7 @@ class DatabaseFileEncryption {
       ]);
 
       await fs.promises.writeFile(tmpPath, finalBuffer);
-      await fs.promises.rename(tmpPath, targetPath);
+      await renameWithRetry(tmpPath, targetPath);
 
       try {
         if (fs.existsSync(metadataPath)) {
@@ -285,7 +286,10 @@ class DatabaseFileEncryption {
       }
 
       let key: Buffer;
-      if (metadata.version === "v2") {
+      // After a rotation the file on disk may still be sealed with an older
+      // key; the next save writes it with the current one.
+      const isV2 = metadata.version === "v2";
+      if (isV2) {
         key = await this.systemCrypto.getDatabaseKey();
       } else if (metadata.version === "v1") {
         databaseLogger.warn(
@@ -306,19 +310,43 @@ class DatabaseFileEncryption {
         throw new Error(`Unsupported encryption version: ${metadata.version}`);
       }
 
-      const decipher = crypto.createDecipheriv(
-        metadata.algorithm,
-        key,
-        Buffer.from(metadata.iv, "hex"),
-      ) as crypto.DecipherGCM;
-      decipher.setAuthTag(Buffer.from(metadata.tag, "hex"));
+      if (metadata.algorithm !== this.ALGORITHM) {
+        throw new Error(`Unsupported algorithm: ${metadata.algorithm}`);
+      }
+      const open = (candidate: Buffer): Buffer => {
+        const decipher = crypto.createDecipheriv(
+          this.ALGORITHM,
+          candidate,
+          Buffer.from(metadata.iv, "hex"),
+          { authTagLength: 16 },
+        ) as crypto.DecipherGCM;
+        decipher.setAuthTag(Buffer.from(metadata.tag, "hex"));
+        return Buffer.concat([
+          decipher.update(encryptedData),
+          decipher.final(),
+        ]);
+      };
 
-      const decryptedBuffer = Buffer.concat([
-        decipher.update(encryptedData),
-        decipher.final(),
-      ]);
-
-      return decryptedBuffer;
+      try {
+        return open(key);
+      } catch (error) {
+        const fallbackKeys = isV2
+          ? await this.systemCrypto.getPreviousKeys("DATABASE_KEY")
+          : [];
+        for (const previous of fallbackKeys) {
+          try {
+            const opened = open(previous);
+            databaseLogger.warn(
+              "Database file opened with DATABASE_KEY_PREVIOUS; it is saved with the new key next",
+              { operation: "decrypt_previous_database_key" },
+            );
+            return opened;
+          } catch {
+            // try the next one
+          }
+        }
+        throw error;
+      }
     } catch (error) {
       const errorMessage = getErrorMessage(error);
       const isAuthError =
@@ -670,7 +698,7 @@ class DatabaseFileEncryption {
 
   static async restoreFromEncryptedBackup(
     backupPath: string,
-    targetPath: string,
+    targetPath?: string,
   ): Promise<string> {
     if (!this.isEncryptedDatabaseFile(backupPath)) {
       throw new Error("Invalid encrypted backup file");

@@ -6,20 +6,26 @@ import type {
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { databaseLogger } from "../../utils/logger.js";
-import { getErrorMessage } from "../../utils/error-message.js";
 import { createCurrentOperationRepository } from "../repositories/factory.js";
 import type { OperationRunRecord } from "../repositories/operation-repository.js";
 import { buildCatalog } from "../../operations/catalog.js";
 import {
-  cancelOperationRun,
   decideOperationApproval,
   OperationError,
   runOperation,
 } from "../../operations/gate.js";
-import { getAction } from "../../operations/registry.js";
+import {
+  canSeeRun,
+  cancelRunAs,
+  undoRunAs,
+  VIEW_ALL_RUNS,
+} from "../../operations/run-access.js";
 import {
   flattenResourceRows,
+  createReadScope,
+  mapLimited,
   readAcrossHosts,
+  readServerSignal,
 } from "../../operations/resources.js";
 import type { ActorOrigin } from "../../plugins/actor.js";
 
@@ -27,8 +33,7 @@ const router = express.Router();
 const authenticateJWT = AuthManager.getInstance().createAuthMiddleware();
 const permissions = PermissionManager.getInstance();
 
-/** Sees every run on the server, not only their own. */
-export const VIEW_ALL_RUNS = "admin.operations.view";
+export { VIEW_ALL_RUNS };
 
 type OperationsRequest = Request & {
   userId: string;
@@ -51,7 +56,7 @@ function sendError(res: Response, error: unknown, operation: string): void {
     return;
   }
   databaseLogger.error("Operations route failed", error, { operation });
-  res.status(500).json({ error: getErrorMessage(error, "Request failed") });
+  res.status(500).json({ error: "Request failed" });
 }
 
 function parseJson(text: string | null): unknown {
@@ -91,17 +96,6 @@ function publicRun(run: OperationRunRecord) {
     startedAt: run.startedAt,
     finishedAt: run.finishedAt,
   };
-}
-
-async function canSeeRun(
-  run: OperationRunRecord,
-  userId: string,
-): Promise<boolean> {
-  if (run.userId === userId) return true;
-  if (await permissions.hasPermission(userId, VIEW_ALL_RUNS)) return true;
-  if (run.hostId === null) return false;
-  const access = await permissions.canAccessHost(userId, run.hostId, "manage");
-  return access.hasAccess;
 }
 
 function hostIdsFrom(value: unknown): number[] | undefined {
@@ -323,14 +317,12 @@ router.get("/runs/:id", authenticateJWT, async (req, res) => {
 router.post("/runs/:id/cancel", authenticateJWT, async (req, res) => {
   const { userId } = req as OperationsRequest;
   try {
-    const run = await createCurrentOperationRepository().findRun(
-      String(req.params.id),
-    );
-    if (!run || !(await canSeeRun(run, userId))) {
+    const cancelled = await cancelRunAs(String(req.params.id), userId);
+    if (cancelled === null) {
       res.status(404).json({ error: "Run not found" });
       return;
     }
-    res.json({ cancelled: await cancelOperationRun(run) });
+    res.json({ cancelled });
   } catch (error) {
     sendError(res, error, "operations_cancel");
   }
@@ -359,31 +351,18 @@ router.post("/runs/:id/cancel", authenticateJWT, async (req, res) => {
 router.post("/runs/:id/undo", authenticateJWT, async (req, res) => {
   const authReq = req as OperationsRequest;
   try {
-    const run = await createCurrentOperationRepository().findRun(
-      String(req.params.id),
-    );
-    const undo = run ? getAction(run.actionId)?.action.undo : undefined;
-    if (
-      !run ||
-      !undo ||
-      !run.undoInput ||
-      !(await canSeeRun(run, authReq.userId))
-    ) {
+    const outcome = await undoRunAs({
+      runId: String(req.params.id),
+      userId: authReq.userId,
+      origin: originOf(authReq),
+      confirmed: req.body?.confirmed === true,
+      apiKeyScopes: authReq.apiKeyScopes,
+    });
+    if (!outcome) {
       res.status(404).json({ error: "Nothing to undo" });
       return;
     }
-    res.json(
-      await runOperation({
-        actionId: undo,
-        hostId: run.hostId ?? undefined,
-        input: parseJson(run.undoInput),
-        confirmed: req.body?.confirmed === true,
-        undoOf: run.id,
-        userId: authReq.userId,
-        origin: originOf(authReq),
-        apiKeyScopes: authReq.apiKeyScopes,
-      }),
-    );
+    res.json(outcome);
   } catch (error) {
     sendError(res, error, "operations_undo");
   }
@@ -599,34 +578,38 @@ router.get("/signals", authenticateJWT, async (req, res) => {
         ? new Set(req.query.ids.split(","))
         : null;
     const hostIds = hostIdsFrom(req.query.hostIds);
-    const signals = [];
-    for (const signal of catalog.signals) {
-      if (wanted && !wanted.has(signal.id)) continue;
+    const scope = createReadScope();
+    const origin = originOf(authReq);
+    const wantedSignals = catalog.signals.filter(
+      (signal) => !wanted || wanted.has(signal.id),
+    );
+    const signals = await mapLimited(wantedSignals, 8, async (signal) => {
+      const freshMs = signal.refreshSec ? signal.refreshSec * 1000 : undefined;
       if (signal.scope === "server") {
-        const outcome = await runOperation({
+        const result = await readServerSignal({
           actionId: signal.read,
-          internal: true,
           userId: authReq.userId,
-          origin: originOf(authReq),
-        }).catch(() => null);
-        signals.push({
+          freshMs,
+          origin,
+        });
+        return {
           id: signal.id,
           hosts: [],
-          result: outcome?.data as SignalResult | undefined,
-        });
-        continue;
+          result: result as SignalResult | undefined,
+        };
       }
-      signals.push({
+      return {
         id: signal.id,
         hosts: await readAcrossHosts<SignalResult>({
           userId: authReq.userId,
           actionId: signal.read,
           hostIds,
-          freshMs: signal.refreshSec ? signal.refreshSec * 1000 : undefined,
-          origin: originOf(authReq),
+          freshMs,
+          origin,
+          scope,
         }),
-      });
-    }
+      };
+    });
     res.json({ signals });
   } catch (error) {
     sendError(res, error, "operations_signals");

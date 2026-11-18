@@ -66,8 +66,15 @@ vi.mock("../../../operations/catalog.js", () => ({
   })),
 }));
 vi.mock("../../../operations/resources.js", () => ({
+  createReadScope: vi.fn(() => ({ shared: true })),
+  mapLimited: async (
+    items: unknown[],
+    _limit: number,
+    run: (item: unknown) => Promise<unknown>,
+  ) => Promise.all(items.map(run)),
   flattenResourceRows: vi.fn(),
   readAcrossHosts: vi.fn(async () => []),
+  readServerSignal: vi.fn(async () => undefined),
 }));
 vi.mock("../../../operations/gate.js", () => {
   class OperationError extends Error {
@@ -297,5 +304,34 @@ describe("GET /operations/signals", () => {
     expect(vi.mocked(readAcrossHosts)).toHaveBeenCalledWith(
       expect.objectContaining({ actionId: "demo.b", freshMs: undefined }),
     );
+  });
+
+  it("reads only the asked signals, sharing one lookup scope", async () => {
+    const { buildCatalog } = await import("../../../operations/catalog.js");
+    const { readAcrossHosts } =
+      await import("../../../operations/resources.js");
+    vi.mocked(readAcrossHosts).mockClear();
+    vi.mocked(buildCatalog).mockResolvedValueOnce({
+      actions: [],
+      events: [],
+      resources: [],
+      signals: [
+        { id: "a", read: "demo.a", scope: "host" },
+        { id: "b", read: "demo.b", scope: "host" },
+        { id: "c", read: "demo.c", scope: "host" },
+      ],
+    } as never);
+    const res = await request(app)
+      .get("/operations/signals?ids=a,c")
+      .expect(200);
+    expect(res.body.signals.map((s: { id: string }) => s.id)).toEqual([
+      "a",
+      "c",
+    ]);
+    const calls = vi.mocked(readAcrossHosts).mock.calls as unknown as Array<
+      [{ scope: unknown }]
+    >;
+    expect(calls).toHaveLength(2);
+    expect(calls[0][0].scope).toBe(calls[1][0].scope);
   });
 });

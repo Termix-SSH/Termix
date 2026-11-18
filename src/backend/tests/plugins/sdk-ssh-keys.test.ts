@@ -64,7 +64,11 @@ describe("generateSshKeyPair with a broken key from ssh2", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("makes another one until it reads back", () => {
-    const real = ssh2.utils.generateKeyPairSync("ed25519");
+    // ssh2 itself makes an unreadable key about 1 time in 256.
+    let real = ssh2.utils.generateKeyPairSync("ed25519");
+    while (publicKeyFromPrivate(real.private) === null) {
+      real = ssh2.utils.generateKeyPairSync("ed25519");
+    }
     const spy = vi
       .spyOn(ssh2.utils, "generateKeyPairSync")
       .mockReturnValueOnce({ private: "broken", public: real.public } as never)

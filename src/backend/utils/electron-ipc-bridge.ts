@@ -1,12 +1,12 @@
 /**
- * Request/response layer over the fork IPC channel between the embedded
- * backend and Electron's main process (electron/main.cjs forks this backend
- * with stdio: [..., "ipc"]). Main already sends a one-way "shutdown" message
+ * Request/response layer over the channel between the embedded backend and
+ * Electron's main process (a utility process parent port, or the dev
+ * runner's fork channel). Main already sends a one-way "shutdown" message
  * on this channel; this adds a matching request/response shape so the
  * backend can ask main to do something only main can do - open a real
  * BrowserWindow - and get a typed result back.
  *
- * Not available outside Electron: process.send is undefined for a plain
+ * Not available outside Electron: there is no parent channel for a plain
  * `node` or Docker start, and ELECTRON_EMBEDDED distinguishes the embedded
  * backend from a standalone one that happens to run under a process manager
  * that also sets stdio to "ipc".
@@ -14,6 +14,11 @@
 
 import crypto from "node:crypto";
 import { systemLogger } from "./logger.js";
+import {
+  hasParentChannel,
+  onParentMessage,
+  sendToParent,
+} from "./parent-channel.js";
 
 const REQUEST_TIMEOUT_MS = 15_000;
 
@@ -41,10 +46,7 @@ function isResponseMessage(msg: unknown): msg is ElectronIpcResponseMessage {
 }
 
 export function isElectronIpcAvailable(): boolean {
-  return (
-    process.env.ELECTRON_EMBEDDED === "true" &&
-    typeof process.send === "function"
-  );
+  return process.env.ELECTRON_EMBEDDED === "true" && hasParentChannel();
 }
 
 const pending = new Map<
@@ -57,7 +59,7 @@ let listening = false;
 function ensureListening(): void {
   if (listening) return;
   listening = true;
-  process.on("message", (msg: unknown) => {
+  onParentMessage((msg: unknown) => {
     if (!isResponseMessage(msg)) return;
     const waiter = pending.get(msg.id);
     if (!waiter) return;
@@ -70,8 +72,8 @@ function ensureListening(): void {
 /**
  * Sends a request to Electron's main process over the fork IPC channel and
  * waits for its response. Rejects if main never answers (main.cjs is where
- * a killed or hung renderer would surface, not here) or process.send is
- * unavailable.
+ * a killed or hung renderer would surface, not here) or there is no parent
+ * channel.
  */
 export async function requestFromElectronMain<T = unknown>(
   channel: string,
@@ -108,7 +110,7 @@ export async function requestFromElectronMain<T = unknown>(
     });
 
     try {
-      process.send?.(message);
+      sendToParent(message);
     } catch (error) {
       clearTimeout(timer);
       pending.delete(id);

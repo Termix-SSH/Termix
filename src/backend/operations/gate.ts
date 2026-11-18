@@ -29,7 +29,7 @@ import {
 } from "./approvals.js";
 import { withLimits } from "./limits.js";
 import { emitOperationEvent } from "./events.js";
-import { dropResourceCache } from "./resources.js";
+import { dropResourceCache, dropServerSignals } from "./resources.js";
 import { loadOperationHost, type OperationHost } from "./hosts.js";
 import { runAsActor, type ActorOrigin } from "../plugins/actor.js";
 import { hasCapability } from "../plugins/permissions.js";
@@ -446,8 +446,9 @@ async function execute(
   }
 
   if (action.risk !== "read" && !dryRun) {
-    if (request.hostId !== undefined && outcome.status === "success") {
-      dropResourceCache(request.hostId);
+    if (outcome.status === "success") {
+      if (request.hostId !== undefined) dropResourceCache(request.hostId);
+      else dropServerSignals();
     }
     auditRun(
       request,

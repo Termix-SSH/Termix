@@ -51,3 +51,22 @@ describe("useIsMobile", () => {
     expect(result.current).toBe(false);
   });
 });
+
+describe("useIsMobile in a plugin frame", () => {
+  it("follows the shell, not the frame's own width", async () => {
+    const { setForeignRuntime } =
+      await import("@/components/foreign/foreign-runtime");
+    const { setFrameState, resetFrameState } =
+      await import("@/plugin-frame/frame-store");
+    setViewport(400);
+    setForeignRuntime({} as never);
+    setFrameState({ isMobile: false });
+    const { result, rerender } = renderHook(() => useIsMobile());
+    expect(result.current).toBe(false);
+    setFrameState({ isMobile: true });
+    rerender();
+    expect(result.current).toBe(true);
+    setForeignRuntime(null);
+    resetFrameState();
+  });
+});

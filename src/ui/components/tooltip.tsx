@@ -4,6 +4,7 @@ import * as React from "react";
 import { Tooltip as TooltipPrimitive } from "radix-ui";
 
 import { cn } from "@/lib/utils";
+import { useForeignOccluder } from "@/components/foreign/ForeignSlot";
 
 function TooltipProvider({
   delayDuration = 0,
@@ -34,11 +35,13 @@ function TooltipContent({
   className,
   sideOffset = 0,
   children,
+  ref,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content
+        ref={useForeignOccluder(ref)}
         data-slot="tooltip-content"
         sideOffset={sideOffset}
         className={cn(

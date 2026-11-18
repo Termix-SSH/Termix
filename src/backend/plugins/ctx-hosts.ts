@@ -42,6 +42,7 @@ import {
   provideHostLocks,
 } from "../hosts/locks.js";
 import { provideConnectPolicy } from "../hosts/connect-policy.js";
+import { answeredSync } from "./api1-sync.js";
 
 type AuditFn = (
   action: string,
@@ -1016,10 +1017,12 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
       return loadProbeTargets(actor, ids);
     },
 
-    sessionActive: (hostId) => {
-      requireReadSync();
-      return hostSessionStatus.hasActiveSession(hostId);
-    },
+    sessionActive: answeredSync<PluginHosts["sessionActive"]>(
+      (hostId: number) => {
+        requireReadSync();
+        return hostSessionStatus.hasActiveSession(hostId);
+      },
+    ),
 
     locks: {
       provide: (provider) => {

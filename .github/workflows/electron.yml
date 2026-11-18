@@ -23,6 +23,10 @@ on:
           - file
           - release
           - submit
+      release_tag:
+        description: "Draft release to upload to (release only)"
+        required: false
+        default: ""
       source_ref:
         description: "Git ref/SHA to build (defaults to the workflow ref)"
         required: false
@@ -38,7 +42,12 @@ on:
         required: true
         type: string
       release_tag:
-        description: "Explicit release tag to upload assets to (defaults to latest release when empty)"
+        description: "Draft release tag to upload to (needed for release)"
+        required: false
+        type: string
+        default: ""
+      release_id:
+        description: "Id of that draft, which finds it even when its tag reads untagged"
         required: false
         type: string
         default: ""
@@ -56,23 +65,74 @@ on:
       macos_universal_dmg_sha256:
         description: "SHA256 of the universal macOS DMG (for Homebrew cask)"
         value: ${{ jobs.build-macos.outputs.dmg_sha256 }}
+    # The values come from the build and release environments.
+    secrets:
+      APPLE_ID:
+        required: false
+      APPLE_ID_PASSWORD:
+        required: false
+      APPLE_ISSUER_ID:
+        required: false
+      APPLE_KEY_CONTENT:
+        required: false
+      APPLE_KEY_ID:
+        required: false
+      APPLE_TEAM_ID:
+        required: false
+      AZURE_CLIENT_ID:
+        required: false
+      AZURE_SUBSCRIPTION_ID:
+        required: false
+      AZURE_TENANT_ID:
+        required: false
+      CHOCOLATEY_API_KEY:
+        required: false
+      DEVELOPER_ID_CERTIFICATE_BASE64:
+        required: false
+      DEVELOPER_ID_INSTALLER_CERTIFICATE_BASE64:
+        required: false
+      DEVELOPER_ID_P12_PASSWORD:
+        required: false
+      MAC_BUILD_CERTIFICATE_BASE64:
+        required: false
+      MAC_INSTALLER_CERTIFICATE_BASE64:
+        required: false
+      MAC_KEYCHAIN_PASSWORD:
+        required: false
+      MAC_P12_PASSWORD:
+        required: false
+
+permissions: {}
 
 jobs:
   build-windows:
     runs-on: blacksmith-4vcpu-windows-2025
     if: (inputs.build_type == 'all' || inputs.build_type == 'windows' || inputs.build_type == '') && inputs.artifact_destination != 'submit'
     permissions:
-      contents: write
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        shell: pwsh
+    # Stable and beta releases sign with the live profile from the release
+    # environment, whose reviewers approve the job and whose secrets and
+    # variables replace the organization's test ones. Dry runs and file builds
+    # stay unsigned.
+    environment: ${{ inputs.artifact_destination == 'release' && inputs.release_tag != '' && 'release' || '' }}
+    env:
+      SIGN_WINDOWS: ${{ inputs.artifact_destination == 'release' && inputs.release_tag != '' && 'true' || 'false' }}
+      VERSION_OVERRIDE: ${{ inputs.version_override }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
@@ -116,36 +176,99 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm ci
+          npm run ci:install
           node scripts/install-windows-sharp.cjs
 
       # Bundled plugins are counted as downloads in the plugin store, so a
       # build only fetches them when the pins change.
       - name: Cache bundled plugins
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.cache/termix-bundled-plugins
           key: bundled-plugins-${{ hashFiles('docker/bundled-plugins.json') }}
           enableCrossOsArchive: true
 
+      # electron-builder signs each file with Azure Artifact Signing as it makes
+      # it, so the update files and blockmaps match what ships. It signs in
+      # through the session this opens.
+      - name: Azure login
+        if: env.SIGN_WINDOWS == 'true'
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       # A beta build has to know it is a beta, or it reports the stable version.
       - name: Stamp beta version
         if: inputs.version_override != ''
-        run: node scripts/sync-version.cjs --version "${{ inputs.version_override }}"
+        run: node scripts/sync-version.cjs --version "$env:VERSION_OVERRIDE"
 
       - name: Get version
         id: package-version
         run: |
-          $VERSION = "${{ inputs.version_override }}"
+          $VERSION = $env:VERSION_OVERRIDE
           if ([string]::IsNullOrEmpty($VERSION)) {
             $VERSION = (Get-Content package.json | ConvertFrom-Json).version
           }
           echo "version=$VERSION" >> $env:GITHUB_OUTPUT
 
+      # Pinned Node and the OS sandbox helper that run plugin backends. ia32
+      # has no Node 26 build, so that build ships none and refuses them.
+      - name: Build plugin runtime
+        working-directory: native/plugin-jail
+        run: |
+          rustup toolchain install
+          rustup target add x86_64-pc-windows-msvc aarch64-pc-windows-msvc
+          Set-Location ../..
+          node scripts/build-plugin-runtime.cjs --platform win32 --arch x64,ia32,arm64
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
       - name: Build Windows (All Architectures)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run build && npx electron-builder --win --x64 --ia32 --arm64 --publish never
+          TRUSTED_SIGNING_ENDPOINT: ${{ vars.TRUSTED_SIGNING_ENDPOINT }}
+          TRUSTED_SIGNING_ACCOUNT: ${{ vars.TRUSTED_SIGNING_ACCOUNT }}
+          TRUSTED_SIGNING_PROFILE: ${{ vars.TRUSTED_SIGNING_PROFILE }}
+          TRUSTED_SIGNING_PUBLISHER: ${{ vars.TRUSTED_SIGNING_PUBLISHER }}
+        run: |
+          $sign = @()
+          if ($env:SIGN_WINDOWS -eq 'true') {
+            # Invoke-TrustedSigning wants a URL, the variable holds the host
+            $endpoint = $env:TRUSTED_SIGNING_ENDPOINT
+            if ($endpoint -notmatch '^https?://') { $endpoint = "https://$endpoint" }
+            $sign = @(
+              "-c.win.azureSignOptions.endpoint=$endpoint",
+              "-c.win.azureSignOptions.codeSigningAccountName=$env:TRUSTED_SIGNING_ACCOUNT",
+              "-c.win.azureSignOptions.certificateProfileName=$env:TRUSTED_SIGNING_PROFILE",
+              "-c.win.azureSignOptions.publisherName=$env:TRUSTED_SIGNING_PUBLISHER"
+            )
+          }
+          npm run build
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          npx electron-builder --win --x64 --ia32 --arm64 --publish never @sign
+
+      # The real fence on the files that ship: a probe plugin can't read the
+      # database, write outside its folder, start a process, connect out or
+      # grow past its memory cap, with and without Node's flags.
+      - name: Check the plugin fence on the packaged runtime
+        env:
+          TERMIX_REQUIRE_PLUGIN_RUNTIME: "1"
+          TERMIX_FENCE_RESOURCES: release/win-unpacked/resources
+        run: npx vitest run src/backend/tests/plugins/sandbox/desktop-fence.test.ts
+
+      # electron-builder signs every .exe in extra resources; check the plugin
+      # runtime got it too, since the app refuses a changed one.
+      - name: Check plugin runtime signatures
+        if: env.SIGN_WINDOWS == 'true'
+        run: |
+          $files = Get-ChildItem release/win-unpacked/resources/plugin-runtime, release/win-arm64-unpacked/resources/plugin-runtime -Filter *.exe -ErrorAction SilentlyContinue
+          if (-not $files) { Write-Error "no plugin runtime in the build"; exit 1 }
+          foreach ($file in $files) {
+            $status = (Get-AuthenticodeSignature $file.FullName).Status
+            Write-Output "$($file.FullName): $status"
+            if ($status -ne 'Valid') { exit 1 }
+          }
 
       # The updater only installs the x64 NSIS build; 32-bit and ARM installs get a link.
       # The combined multi-arch installer is never uploaded.
@@ -153,7 +276,7 @@ jobs:
         run: node scripts/fix-update-info.cjs --drop ia32 --drop arm64 --drop termix_windows_nsis.exe release/latest.yml release/beta.yml
 
       - name: Upload Windows x64 NSIS Installer
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_windows_x64_nsis.exe') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_windows_x64_nsis
@@ -161,7 +284,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Windows ia32 NSIS Installer
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_windows_ia32_nsis.exe') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_windows_ia32_nsis
@@ -169,7 +292,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Windows arm64 NSIS Installer
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_windows_arm64_nsis.exe') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_windows_arm64_nsis
@@ -177,7 +300,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Windows x64 MSI Installer
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_windows_x64_msi.msi') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_windows_x64_msi
@@ -185,7 +308,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Windows ia32 MSI Installer
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_windows_ia32_msi.msi') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_windows_ia32_msi
@@ -193,7 +316,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Windows arm64 MSI Installer
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_windows_arm64_msi.msi') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_windows_arm64_msi
@@ -216,7 +339,7 @@ jobs:
           Compress-Archive -Path "release\win-arm64-unpacked\*" -DestinationPath "termix_windows_arm64_portable.zip"
 
       - name: Upload Windows update files
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/*.yml') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_windows_update_meta
@@ -227,7 +350,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Windows x64 Portable
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('termix_windows_x64_portable.zip') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_windows_x64_portable
@@ -235,7 +358,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Windows ia32 Portable
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('termix_windows_ia32_portable.zip') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_windows_ia32_portable
@@ -243,7 +366,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Windows arm64 Portable
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('termix_windows_arm64_portable.zip') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_windows_arm64_portable
@@ -259,12 +382,29 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TERMIX_PLUGIN_PROFILE: full
+          TRUSTED_SIGNING_ENDPOINT: ${{ vars.TRUSTED_SIGNING_ENDPOINT }}
+          TRUSTED_SIGNING_ACCOUNT: ${{ vars.TRUSTED_SIGNING_ACCOUNT }}
+          TRUSTED_SIGNING_PROFILE: ${{ vars.TRUSTED_SIGNING_PROFILE }}
+          TRUSTED_SIGNING_PUBLISHER: ${{ vars.TRUSTED_SIGNING_PUBLISHER }}
         run: |
+          $sign = @()
+          if ($env:SIGN_WINDOWS -eq 'true') {
+            # Invoke-TrustedSigning wants a URL, the variable holds the host
+            $endpoint = $env:TRUSTED_SIGNING_ENDPOINT
+            if ($endpoint -notmatch '^https?://') { $endpoint = "https://$endpoint" }
+            $sign = @(
+              "-c.win.azureSignOptions.endpoint=$endpoint",
+              "-c.win.azureSignOptions.codeSigningAccountName=$env:TRUSTED_SIGNING_ACCOUNT",
+              "-c.win.azureSignOptions.certificateProfileName=$env:TRUSTED_SIGNING_PROFILE",
+              "-c.win.azureSignOptions.publisherName=$env:TRUSTED_SIGNING_PUBLISHER"
+            )
+          }
           npm run build:plugins
-          npx electron-builder --win nsis --x64 --publish never '-c.nsis.artifactName=termix_windows_x64_full_nsis.${ext}'
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          npx electron-builder --win nsis --x64 --publish never '-c.nsis.artifactName=termix_windows_x64_full_nsis.${ext}' @sign
 
       - name: Upload Windows x64 full installer
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_windows_x64_full_nsis.exe') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_windows_x64_full_nsis
@@ -275,17 +415,20 @@ jobs:
     runs-on: blacksmith-8vcpu-ubuntu-2404
     if: (inputs.build_type == 'all' || inputs.build_type == 'linux' || inputs.build_type == '') && inputs.artifact_destination != 'submit'
     permissions:
-      contents: write
+      contents: read
+    env:
+      VERSION_OVERRIDE: ${{ inputs.version_override }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
@@ -293,20 +436,17 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libfuse2
+          sudo apt-get install -y libfuse2 libatomic1 libatomic1-arm64-cross
 
       - name: Install dependencies
         run: |
-          npm ci
-          npm install --force @rollup/rollup-linux-x64-gnu
-          npm install --force @rollup/rollup-linux-arm64-gnu
-          npm install --force @rollup/rollup-linux-arm-gnueabihf
+          npm run ci:install
           node scripts/install-linux-sharp.cjs
 
       # Bundled plugins are counted as downloads in the plugin store, so a
       # build only fetches them when the pins change.
       - name: Cache bundled plugins
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.cache/termix-bundled-plugins
           key: bundled-plugins-${{ hashFiles('docker/bundled-plugins.json') }}
@@ -315,13 +455,26 @@ jobs:
       # A beta build has to know it is a beta, or it reports the stable version.
       - name: Stamp beta version
         if: inputs.version_override != ''
-        run: node scripts/sync-version.cjs --version "${{ inputs.version_override }}"
+        run: node scripts/sync-version.cjs --version "$VERSION_OVERRIDE"
+
+      # Pinned Node, libatomic and the OS sandbox helper (static musl) that run
+      # plugin backends. armv7l has no Node 26 build and refuses them.
+      - name: Build plugin runtime
+        run: |
+          (cd native/plugin-jail && rustup toolchain install && rustup target add x86_64-unknown-linux-musl aarch64-unknown-linux-musl)
+          node scripts/build-plugin-runtime.cjs --platform linux --arch x64,arm64,armv7l
 
       - name: Build Linux x64
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEBUG: electron-builder
         run: npm run build && npx electron-builder --linux --x64 --publish never
+
+      - name: Check the plugin fence on the packaged runtime
+        env:
+          TERMIX_REQUIRE_PLUGIN_RUNTIME: "1"
+          TERMIX_FENCE_RESOURCES: release/linux-unpacked/resources
+        run: npx vitest run src/backend/tests/plugins/sandbox/desktop-fence.test.ts
 
       - name: Build Linux arm64 and armv7l
         env:
@@ -347,8 +500,23 @@ jobs:
             --rename termix_linux_x86_64_appimage.AppImage=termix_linux_x64_appimage.AppImage \
             release/*-linux*.yml
 
+      # One CycloneDX SBOM per build, from the lockfile's runtime dependencies.
+      # It goes up with the installers.
+      - name: SBOM
+        run: |
+          npm run sbom
+          mv sbom.cdx.json release/termix_sbom.cdx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: inputs.artifact_destination != 'none'
+        with:
+          name: termix_sbom
+          path: release/termix_sbom.cdx.json
+          retention-days: 30
+
       - name: Upload Linux update files
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/*-linux*.yml') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_update_meta
@@ -356,7 +524,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Linux x64 AppImage
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_linux_x64_appimage.AppImage') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_x64_appimage
@@ -364,7 +532,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Linux arm64 AppImage
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_linux_arm64_appimage.AppImage') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_arm64_appimage
@@ -372,7 +540,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Linux armv7l AppImage
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_linux_armv7l_appimage.AppImage') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_armv7l_appimage
@@ -380,7 +548,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Linux x64 DEB
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_linux_x64_deb.deb') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_x64_deb
@@ -388,7 +556,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Linux arm64 DEB
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_linux_arm64_deb.deb') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_arm64_deb
@@ -396,7 +564,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Linux armv7l DEB
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_linux_armv7l_deb.deb') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_armv7l_deb
@@ -404,7 +572,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Linux x64 tar.gz
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_linux_x64_portable.tar.gz') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_x64_portable
@@ -412,7 +580,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Linux arm64 tar.gz
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_linux_arm64_portable.tar.gz') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_arm64_portable
@@ -420,7 +588,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Linux armv7l tar.gz
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_linux_armv7l_portable.tar.gz') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_armv7l_portable
@@ -435,12 +603,13 @@ jobs:
           TERMIX_PLUGIN_PROFILE: full
         run: |
           npm run build:plugins
+          # shellcheck disable=SC2016 # electron-builder fills in ${ext} and ${arch}
           npx electron-builder --linux AppImage deb --x64 --publish never \
             '-c.appImage.artifactName=termix_linux_x64_full_appimage.${ext}' \
             '-c.deb.artifactName=termix_linux_x64_full_deb.${ext}'
 
       - name: Upload Linux x64 full packages
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_linux_x64_full_appimage.AppImage') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_x64_full
@@ -453,36 +622,37 @@ jobs:
     runs-on: blacksmith-6vcpu-macos-latest
     environment: build
     if: (inputs.build_type == 'macos' || inputs.build_type == 'all') && inputs.artifact_destination != 'submit'
-    needs: []
     permissions:
+      # Uploads the Homebrew cask to the release.
       contents: write
+    env:
+      VERSION_OVERRIDE: ${{ inputs.version_override }}
     outputs:
       dmg_sha256: ${{ steps.dmg-checksum.outputs.sha256 }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
 
       - name: Install dependencies
         run: |
-          npm ci
-          npm install --force @rollup/rollup-darwin-arm64
-          npm install dmg-license
+          npm run ci:install
           node scripts/install-macos-sharp.cjs
 
       # Bundled plugins are counted as downloads in the plugin store, so a
       # build only fetches them when the pins change.
       - name: Cache bundled plugins
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.cache/termix-bundled-plugins
           key: bundled-plugins-${{ hashFiles('docker/bundled-plugins.json') }}
@@ -491,13 +661,16 @@ jobs:
       # A beta build has to know it is a beta, or it reports the stable version.
       - name: Stamp beta version
         if: inputs.version_override != ''
-        run: node scripts/sync-version.cjs --version "${{ inputs.version_override }}"
+        run: node scripts/sync-version.cjs --version "$VERSION_OVERRIDE"
 
       - name: Check for Code Signing Certificates
         id: check_certs
+        env:
+          MAC_BUILD_CERTIFICATE_BASE64: ${{ secrets.MAC_BUILD_CERTIFICATE_BASE64 }}
+          MAC_P12_PASSWORD: ${{ secrets.MAC_P12_PASSWORD }}
         run: |
-          if [ -n "${{ secrets.MAC_BUILD_CERTIFICATE_BASE64 }}" ] && [ -n "${{ secrets.MAC_P12_PASSWORD }}" ]; then
-            echo "has_certs=true" >> $GITHUB_OUTPUT
+          if [ -n "$MAC_BUILD_CERTIFICATE_BASE64" ] && [ -n "$MAC_P12_PASSWORD" ]; then
+            echo "has_certs=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Import Code Signing Certificates
@@ -512,25 +685,32 @@ jobs:
           INSTALLER_CERT_PATH=$RUNNER_TEMP/installer_certificate.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
-          echo -n "$MAC_BUILD_CERTIFICATE_BASE64" | base64 --decode -o $APP_CERT_PATH
+          echo -n "$MAC_BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$APP_CERT_PATH"
 
           if [ -n "$MAC_INSTALLER_CERTIFICATE_BASE64" ]; then
-            echo -n "$MAC_INSTALLER_CERTIFICATE_BASE64" | base64 --decode -o $INSTALLER_CERT_PATH
+            echo -n "$MAC_INSTALLER_CERTIFICATE_BASE64" | base64 --decode -o "$INSTALLER_CERT_PATH"
           fi
 
-          security create-keychain -p "$MAC_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$MAC_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security create-keychain -p "$MAC_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$MAC_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-          security import $APP_CERT_PATH -P "$MAC_P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security import "$APP_CERT_PATH" -P "$MAC_P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
 
           if [ -f "$INSTALLER_CERT_PATH" ]; then
-            security import $INSTALLER_CERT_PATH -P "$MAC_P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+            security import "$INSTALLER_CERT_PATH" -P "$MAC_P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
           fi
 
-          security list-keychain -d user -s $KEYCHAIN_PATH
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
 
-          security find-identity -v -p codesigning $KEYCHAIN_PATH
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+      # Pinned Node and the OS sandbox helper that run plugin backends.
+      # electron-builder signs both with the app (hardened runtime, notarized).
+      - name: Build plugin runtime
+        run: |
+          (cd native/plugin-jail && rustup toolchain install && rustup target add x86_64-apple-darwin aarch64-apple-darwin)
+          node scripts/build-plugin-runtime.cjs --platform darwin --arch x64,arm64
 
       # Betas never go to the App Store, so they skip the MAS package.
       - name: Build macOS App Store Package
@@ -541,20 +721,23 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_OPTIONS: --max-old-space-size=4096
         run: |
-          BUILD_VERSION="${{ github.run_number }}"
+          BUILD_VERSION="$GITHUB_RUN_NUMBER"
 
           npm run build && npx electron-builder --mac mas --universal --config.buildVersion="$BUILD_VERSION" --publish never
 
       - name: Clean up MAS keychain before DMG build
         if: steps.check_certs.outputs.has_certs == 'true'
         run: |
-          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
+          security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" || true
 
       - name: Check for Developer ID Certificates
         id: check_dev_id_certs
+        env:
+          DEVELOPER_ID_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_BASE64 }}
+          DEVELOPER_ID_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
         run: |
-          if [ -n "${{ secrets.DEVELOPER_ID_CERTIFICATE_BASE64 }}" ] && [ -n "${{ secrets.DEVELOPER_ID_P12_PASSWORD }}" ]; then
-            echo "has_dev_id_certs=true" >> $GITHUB_OUTPUT
+          if [ -n "$DEVELOPER_ID_CERTIFICATE_BASE64" ] && [ -n "$DEVELOPER_ID_P12_PASSWORD" ]; then
+            echo "has_dev_id_certs=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Import Developer ID Certificates
@@ -569,25 +752,25 @@ jobs:
           DEV_INSTALLER_CERT_PATH=$RUNNER_TEMP/dev_installer_certificate.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/dev-signing.keychain-db
 
-          echo -n "$DEVELOPER_ID_CERTIFICATE_BASE64" | base64 --decode -o $DEV_CERT_PATH
+          echo -n "$DEVELOPER_ID_CERTIFICATE_BASE64" | base64 --decode -o "$DEV_CERT_PATH"
 
           if [ -n "$DEVELOPER_ID_INSTALLER_CERTIFICATE_BASE64" ]; then
-            echo -n "$DEVELOPER_ID_INSTALLER_CERTIFICATE_BASE64" | base64 --decode -o $DEV_INSTALLER_CERT_PATH
+            echo -n "$DEVELOPER_ID_INSTALLER_CERTIFICATE_BASE64" | base64 --decode -o "$DEV_INSTALLER_CERT_PATH"
           fi
 
-          security create-keychain -p "$MAC_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$MAC_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security create-keychain -p "$MAC_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$MAC_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-          security import $DEV_CERT_PATH -P "$DEVELOPER_ID_P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security import "$DEV_CERT_PATH" -P "$DEVELOPER_ID_P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
 
           if [ -f "$DEV_INSTALLER_CERT_PATH" ]; then
-            security import $DEV_INSTALLER_CERT_PATH -P "$DEVELOPER_ID_P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+            security import "$DEV_INSTALLER_CERT_PATH" -P "$DEVELOPER_ID_P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
           fi
 
-          security list-keychain -d user -s $KEYCHAIN_PATH
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
 
-          security find-identity -v -p codesigning $KEYCHAIN_PATH
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
       - name: Build macOS DMG
         env:
@@ -598,18 +781,42 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           NODE_OPTIONS: --max-old-space-size=4096
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MAS_OUTCOME: ${{ steps.mas_build.outcome }}
         run: |
-          if [ "${{ steps.mas_build.outcome }}" != "success" ]; then
+          if [ "$MAS_OUTCOME" != "success" ]; then
             npm run build
           fi
           npx electron-builder --mac dmg zip --universal --x64 --arm64 --publish never
+
+      - name: Check the plugin fence on the packaged runtime
+        env:
+          TERMIX_REQUIRE_PLUGIN_RUNTIME: "1"
+        run: |
+          app=$(ls -d release/mac-arm64/Termix.app 2>/dev/null || ls -d release/mac/Termix.app)
+          export TERMIX_FENCE_RESOURCES="$app/Contents/Resources"
+          export TERMIX_FENCE_APP="$app"
+          npx vitest run src/backend/tests/plugins/sandbox/desktop-fence.test.ts
+
+      # The app refuses a plugin runtime not signed by its own team.
+      - name: Check plugin runtime signatures
+        if: steps.check_dev_id_certs.outputs.has_dev_id_certs == 'true'
+        run: |
+          for app in release/mac*/Termix.app; do
+            team=$(codesign -dv --verbose=2 "$app" 2>&1 | sed -n 's/^TeamIdentifier=//p')
+            for file in "$app"/Contents/Resources/plugin-runtime/*; do
+              codesign --verify --strict "$file"
+              got=$(codesign -dv --verbose=2 "$file" 2>&1 | sed -n 's/^TeamIdentifier=//p')
+              echo "$file: $got"
+              [ "$got" = "$team" ] || exit 1
+            done
+          done
 
       # The updater picks the x64 or arm64 zip, so the universal one is left out.
       - name: Fix macOS update files
         run: node scripts/fix-update-info.cjs --drop universal release/*-mac.yml
 
       - name: Upload macOS update files
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/*-mac.yml') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_macos_update_meta
@@ -638,7 +845,7 @@ jobs:
 
       - name: Upload macOS MAS PKG
         if: steps.mas_build.outcome == 'success' && steps.locate_mas_pkg.outputs.path != '' && (inputs.artifact_destination == 'file' || inputs.artifact_destination == 'release' || inputs.artifact_destination == 'submit')
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: termix_macos_universal_mas
           path: ${{ steps.locate_mas_pkg.outputs.path }}
@@ -646,7 +853,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload macOS Universal DMG
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_macos_universal_dmg.dmg') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_macos_universal_dmg
@@ -654,7 +861,7 @@ jobs:
           retention-days: 30
 
       - name: Upload macOS x64 DMG
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_macos_x64_dmg.dmg') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_macos_x64_dmg
@@ -662,7 +869,7 @@ jobs:
           retention-days: 30
 
       - name: Upload macOS arm64 DMG
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_macos_arm64_dmg.dmg') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_macos_arm64_dmg
@@ -672,23 +879,24 @@ jobs:
       - name: Get version for Homebrew
         id: homebrew-version
         run: |
-          VERSION="${{ inputs.version_override }}"
+          VERSION="$VERSION_OVERRIDE"
           if [ -z "$VERSION" ]; then
             VERSION=$(node -p "require('./package.json').version")
           fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Compute universal DMG checksum
         id: dmg-checksum
         if: hashFiles('release/termix_macos_universal_dmg.dmg') != ''
         run: |
           CHECKSUM=$(shasum -a 256 "release/termix_macos_universal_dmg.dmg" | awk '{print $1}')
-          echo "sha256=$CHECKSUM" >> $GITHUB_OUTPUT
+          echo "sha256=$CHECKSUM" >> "$GITHUB_OUTPUT"
 
       - name: Generate Homebrew Cask
         if: hashFiles('release/termix_macos_universal_dmg.dmg') != '' && inputs.version_override == '' && (inputs.artifact_destination == 'file' || inputs.artifact_destination == 'release')
+        env:
+          VERSION: ${{ steps.homebrew-version.outputs.version }}
         run: |
-          VERSION="${{ steps.homebrew-version.outputs.version }}"
           DMG_PATH="release/termix_macos_universal_dmg.dmg"
 
           CHECKSUM=$(shasum -a 256 "$DMG_PATH" | awk '{print $1}')
@@ -703,27 +911,12 @@ jobs:
           sed -i '' "s|download/[^/]*/termix_macos|download/v$VERSION/termix_macos|g" homebrew-generated/termix.rb
 
       - name: Upload Homebrew Cask as artifact
-        uses: actions/upload-artifact@v7
-        if: hashFiles('homebrew-generated/termix.rb') != '' && inputs.artifact_destination == 'file'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: hashFiles('homebrew-generated/termix.rb') != '' && (inputs.artifact_destination == 'file' || inputs.artifact_destination == 'release')
         with:
           name: termix_macos_homebrew_cask
           path: homebrew-generated/termix.rb
           retention-days: 30
-
-      - name: Upload Homebrew Cask to release
-        if: hashFiles('homebrew-generated/termix.rb') != '' && inputs.version_override == '' && inputs.artifact_destination == 'release'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION="${{ steps.homebrew-version.outputs.version }}"
-          RELEASE_TAG="v$VERSION"
-
-          gh release list --repo ${{ github.repository }} --limit 100 | grep -q "$RELEASE_TAG" || {
-            echo "Release $RELEASE_TAG not found"
-            exit 1
-          }
-
-          gh release upload "$RELEASE_TAG" homebrew-generated/termix.rb --repo ${{ github.repository }} --clobber
 
       # Every official plugin, for installs without internet. Signed like the
       # normal DMG, with no update files.
@@ -740,11 +933,12 @@ jobs:
           TERMIX_PLUGIN_PROFILE: full
         run: |
           npm run build:plugins
+          # shellcheck disable=SC2016 # electron-builder fills in ${ext} and ${arch}
           npx electron-builder --mac dmg --universal --publish never \
             '-c.dmg.artifactName=termix_macos_${arch}_full_dmg.${ext}'
 
       - name: Upload macOS universal full DMG
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: hashFiles('release/termix_macos_universal_full_dmg.dmg') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_macos_universal_full_dmg
@@ -754,8 +948,8 @@ jobs:
       - name: Clean up keychains
         if: always()
         run: |
-          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
-          security delete-keychain $RUNNER_TEMP/dev-signing.keychain-db || true
+          security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" || true
+          security delete-keychain "$RUNNER_TEMP/dev-signing.keychain-db" || true
 
   submit-to-chocolatey:
     runs-on: blacksmith-4vcpu-windows-2025
@@ -763,13 +957,17 @@ jobs:
     if: inputs.artifact_destination == 'submit' && (inputs.build_type == 'all' || inputs.build_type == 'windows' || inputs.build_type == '')
     permissions:
       contents: read
+    defaults:
+      run:
+        shell: pwsh
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Get version from package.json
         id: package-version
@@ -779,8 +977,10 @@ jobs:
 
       - name: Download and prepare MSI info from public release
         id: msi-info
+        env:
+          VERSION: ${{ steps.package-version.outputs.version }}
         run: |
-          $VERSION = "${{ steps.package-version.outputs.version }}"
+          $VERSION = $env:VERSION
           $MSI_NAME = "termix_windows_x64_msi.msi"
           $DOWNLOAD_URL = "https://github.com/Termix-SSH/Termix/releases/download/v$($VERSION)/$($MSI_NAME)"
 
@@ -800,10 +1000,14 @@ jobs:
           echo "checksum=$CHECKSUM" >> $env:GITHUB_OUTPUT
 
       - name: Prepare Chocolatey package
+        env:
+          VERSION: ${{ steps.package-version.outputs.version }}
+          CHECKSUM: ${{ steps.msi-info.outputs.checksum }}
+          MSI_NAME: ${{ steps.msi-info.outputs.msi_name }}
         run: |
-          $VERSION = "${{ steps.package-version.outputs.version }}"
-          $CHECKSUM = "${{ steps.msi-info.outputs.checksum }}"
-          $MSI_NAME = "${{ steps.msi-info.outputs.msi_name }}"
+          $VERSION = $env:VERSION
+          $CHECKSUM = $env:CHECKSUM
+          $MSI_NAME = $env:MSI_NAME
 
           $DOWNLOAD_URL = "https://github.com/Termix-SSH/Termix/releases/download/v$VERSION/$MSI_NAME"
 
@@ -836,17 +1040,22 @@ jobs:
 
       - name: Check for Chocolatey API Key
         id: check_choco_key
+        env:
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
         run: |
-          if ("${{ secrets.CHOCOLATEY_API_KEY }}" -ne "") {
+          if ($env:CHOCOLATEY_API_KEY -ne "") {
             echo "has_key=true" >> $env:GITHUB_OUTPUT
           }
 
       - name: Push to Chocolatey
         if: steps.check_choco_key.outputs.has_key == 'true'
+        env:
+          VERSION: ${{ steps.package-version.outputs.version }}
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
         run: |
-          $VERSION = "${{ steps.package-version.outputs.version }}"
+          $VERSION = $env:VERSION
           cd choco-build
-          choco apikey --key "${{ secrets.CHOCOLATEY_API_KEY }}" --source https://push.chocolatey.org/
+          choco apikey --key $env:CHOCOLATEY_API_KEY --source https://push.chocolatey.org/
 
           try {
             choco push "termix-ssh.$VERSION.nupkg" --source https://push.chocolatey.org/
@@ -858,7 +1067,7 @@ jobs:
           }
 
       - name: Upload Chocolatey package as artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: chocolatey-package
           path: choco-build/*.nupkg
@@ -867,27 +1076,28 @@ jobs:
   submit-to-homebrew:
     runs-on: blacksmith-6vcpu-macos-latest
     if: inputs.artifact_destination == 'submit' && (inputs.build_type == 'all' || inputs.build_type == 'macos')
-    needs: []
     permissions:
       contents: read
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Get version from package.json
         id: package-version
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Download and prepare DMG info from public release
         id: dmg-info
+        env:
+          VERSION: ${{ steps.package-version.outputs.version }}
         run: |
-          VERSION="${{ steps.package-version.outputs.version }}"
           DMG_NAME="termix_macos_universal_dmg.dmg"
           URL="https://github.com/Termix-SSH/Termix/releases/download/v$VERSION/$DMG_NAME"
 
@@ -907,18 +1117,17 @@ jobs:
 
           CHECKSUM=$(shasum -a 256 "$DOWNLOAD_PATH" | awk '{print $1}')
 
-          echo "dmg_name=$DMG_NAME" >> $GITHUB_OUTPUT
-          echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
+          echo "dmg_name=$DMG_NAME" >> "$GITHUB_OUTPUT"
+          echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
 
       - name: Verify macOS sharp packaging
         run: node scripts/verify-macos-sharp.cjs release_asset/termix_macos_universal_dmg.dmg
 
       - name: Prepare Homebrew submission files
+        env:
+          VERSION: ${{ steps.package-version.outputs.version }}
+          CHECKSUM: ${{ steps.dmg-info.outputs.checksum }}
         run: |
-          VERSION="${{ steps.package-version.outputs.version }}"
-          CHECKSUM="${{ steps.dmg-info.outputs.checksum }}"
-          DMG_NAME="${{ steps.dmg-info.outputs.dmg_name }}"
-
           mkdir -p homebrew-submission/Casks/t
 
           cp Casks/termix.rb homebrew-submission/Casks/t/termix.rb
@@ -931,7 +1140,7 @@ jobs:
           ruby -c homebrew-submission/Casks/t/termix.rb
 
       - name: Upload Homebrew submission as artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: homebrew-submission
           path: homebrew-submission/*
@@ -943,70 +1152,81 @@ jobs:
     needs: [build-windows, build-linux, build-macos]
     permissions:
       contents: write
+      id-token: write
+      attestations: write
 
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      RELEASE_ID: ${{ inputs.release_id }}
     steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v8
-        with:
-          path: artifacts
-
-      - name: Resolve release tag
-        id: get_release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          INPUT_TAG: ${{ inputs.release_tag }}
+      - name: Need a draft release tag
         run: |
-          if [ -n "$INPUT_TAG" ]; then
-            echo "RELEASE_TAG=$INPUT_TAG" >> $GITHUB_ENV
-          else
-            echo "RELEASE_TAG=$(gh release list --repo ${{ github.repository }} --limit 1 --json tagName -q '.[0].tagName')" >> $GITHUB_ENV
+          if [ -z "$RELEASE_TAG" ]; then
+            echo "release needs release_tag, the tag of a draft release."
+            exit 1
           fi
 
-      # Update files go up last: the desktop updater treats a release as ready
-      # once its update file is there, so every installer must already be up.
-      - name: Upload artifacts to latest release
-        run: |
-          find artifacts -type f ! -name '*.yml' -print0 | while IFS= read -r -d '' file; do
-            gh release upload "$RELEASE_TAG" "$file" --repo ${{ github.repository }} --clobber
-          done
-          find artifacts -type f -name '*.yml' -print0 | while IFS= read -r -d '' file; do
-            gh release upload "$RELEASE_TAG" "$file" --repo ${{ github.repository }} --clobber
-          done
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+
+      # Only this workflow's files, never other artifacts in the same run.
+      - name: Download desktop files
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: termix_*
+          path: artifacts
+
+      # Signed build provenance for every desktop file, the tarballs and the SBOM.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: artifacts/**
+
+      # Uploads only to a draft and never replaces a file, so a rerun skips
+      # what is already there. Update files go up last.
+      - name: Upload to the draft release
         env:
           GH_TOKEN: ${{ github.token }}
+        run: node scripts/release-assets.cjs upload --tag "$RELEASE_TAG" --dir artifacts
 
   submit-to-app-store:
     runs-on: blacksmith-6vcpu-macos-latest
     environment: build
     if: inputs.artifact_destination == 'submit' && (inputs.build_type == 'all' || inputs.build_type == 'macos')
-    needs: []
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
 
       - name: Install dependencies
         run: |
-          npm ci
-          npm install --force @rollup/rollup-darwin-arm64
-          npm install dmg-license
+          npm run ci:install
           node scripts/install-macos-sharp.cjs
 
       # Bundled plugins are counted as downloads in the plugin store, so a
       # build only fetches them when the pins change.
       - name: Cache bundled plugins
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.cache/termix-bundled-plugins
           key: bundled-plugins-${{ hashFiles('docker/bundled-plugins.json') }}
@@ -1014,9 +1234,12 @@ jobs:
 
       - name: Check for Code Signing Certificates
         id: check_certs
+        env:
+          MAC_BUILD_CERTIFICATE_BASE64: ${{ secrets.MAC_BUILD_CERTIFICATE_BASE64 }}
+          MAC_P12_PASSWORD: ${{ secrets.MAC_P12_PASSWORD }}
         run: |
-          if [ -n "${{ secrets.MAC_BUILD_CERTIFICATE_BASE64 }}" ] && [ -n "${{ secrets.MAC_P12_PASSWORD }}" ]; then
-            echo "has_certs=true" >> $GITHUB_OUTPUT
+          if [ -n "$MAC_BUILD_CERTIFICATE_BASE64" ] && [ -n "$MAC_P12_PASSWORD" ]; then
+            echo "has_certs=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Import Code Signing Certificates
@@ -1031,43 +1254,48 @@ jobs:
           INSTALLER_CERT_PATH=$RUNNER_TEMP/installer_certificate.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
-          echo -n "$MAC_BUILD_CERTIFICATE_BASE64" | base64 --decode -o $APP_CERT_PATH
+          echo -n "$MAC_BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$APP_CERT_PATH"
 
           if [ -n "$MAC_INSTALLER_CERTIFICATE_BASE64" ]; then
-            echo -n "$MAC_INSTALLER_CERTIFICATE_BASE64" | base64 --decode -o $INSTALLER_CERT_PATH
+            echo -n "$MAC_INSTALLER_CERTIFICATE_BASE64" | base64 --decode -o "$INSTALLER_CERT_PATH"
           fi
 
-          security create-keychain -p "$MAC_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$MAC_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security create-keychain -p "$MAC_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$MAC_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-          security import $APP_CERT_PATH -P "$MAC_P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security import "$APP_CERT_PATH" -P "$MAC_P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
 
           if [ -f "$INSTALLER_CERT_PATH" ]; then
-            security import $INSTALLER_CERT_PATH -P "$MAC_P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+            security import "$INSTALLER_CERT_PATH" -P "$MAC_P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
           fi
 
-          security list-keychain -d user -s $KEYCHAIN_PATH
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
 
-          security find-identity -v -p codesigning $KEYCHAIN_PATH
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
       - name: Check for App Store Connect API credentials
         id: check_asc_creds
+        env:
+          APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
+          APPLE_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
+          APPLE_KEY_CONTENT: ${{ secrets.APPLE_KEY_CONTENT }}
         run: |
-          if [ -n "${{ secrets.APPLE_KEY_ID }}" ] && [ -n "${{ secrets.APPLE_ISSUER_ID }}" ] && [ -n "${{ secrets.APPLE_KEY_CONTENT }}" ]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
+          if [ -n "$APPLE_KEY_ID" ] && [ -n "$APPLE_ISSUER_ID" ] && [ -n "$APPLE_KEY_CONTENT" ]; then
+            echo "has_credentials=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Setup Ruby for Fastlane
         if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1.338.0
         with:
           ruby-version: "3.3"
           bundler-cache: false
 
       - name: Install Fastlane
         if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
-        run: gem install fastlane -N
+        # Pinned. No Gemfile.lock since only this job uses Ruby.
+        run: gem install fastlane -v 2.241.2 -N # zizmor: ignore[adhoc-packages]
 
       - name: Write App Store Connect API key
         if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
@@ -1101,7 +1329,6 @@ jobs:
         id: build_number
         if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
         run: |
-          APP_VERSION=$(node -p "require('./package.json').version")
           OUT_FILE="$RUNNER_TEMP/latest_build_number.txt"
           LANE_DIR="$RUNNER_TEMP/asc_lane/fastlane"
           mkdir -p "$LANE_DIR"
@@ -1138,7 +1365,7 @@ jobs:
 
           if ! [[ "$LATEST" =~ ^[0-9]+$ ]]; then
             echo "Could not resolve latest build number from App Store Connect; falling back to run number."
-            LATEST="${{ github.run_number }}"
+            LATEST="$GITHUB_RUN_NUMBER"
           fi
           echo "build_version=$((LATEST + 1))" >> "$GITHUB_OUTPUT"
 
@@ -1148,8 +1375,8 @@ jobs:
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_OPTIONS: --max-old-space-size=4096
+          BUILD_VERSION: ${{ steps.build_number.outputs.build_version || github.run_number }}
         run: |
-          BUILD_VERSION="${{ steps.build_number.outputs.build_version || github.run_number }}"
           npm run build && npx electron-builder --mac mas --universal --config.buildVersion="$BUILD_VERSION" --publish never
 
       - name: Verify macOS sharp packaging
@@ -1219,6 +1446,8 @@ jobs:
 
       - name: Upload and submit to Mac App Store
         if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
+        env:
+          METADATA_PATH: ${{ steps.asc_notes.outputs.metadata_path }}
         run: |
           PKG_FILE=$(find release -name "termix_macos_universal_mas.pkg" -type f | head -n 1)
           if [ -z "$PKG_FILE" ]; then
@@ -1236,7 +1465,7 @@ jobs:
             --platform osx \
             --app_identifier "com.karmaa.termix" \
             --skip_metadata false \
-            --metadata_path "${{ steps.asc_notes.outputs.metadata_path }}" \
+            --metadata_path "$METADATA_PATH" \
             --skip_screenshots false \
             --screenshots_path packaging/appstore/screenshots \
             --overwrite_screenshots true \
@@ -1250,5 +1479,5 @@ jobs:
       - name: Clean up keychains
         if: always()
         run: |
-          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
+          security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" || true
           rm -rf /tmp/asc_keys

@@ -561,6 +561,41 @@
       "when": 1794025749101,
       "tag": "0079_large_skrulls",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "5",
+      "when": 1794526286784,
+      "tag": "0080_elite_darwin",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "5",
+      "when": 1794585754716,
+      "tag": "0081_little_dark_phoenix",
+      "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "5",
+      "when": 1794847880590,
+      "tag": "0082_minor_jackpot",
+      "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "5",
+      "when": 1794850609619,
+      "tag": "0083_loose_norman_osborn",
+      "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "5",
+      "when": 1794963338301,
+      "tag": "0084_misty_madame_masque",
+      "breakpoints": true
     }
   ]
 }

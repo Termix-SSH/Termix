@@ -42,7 +42,34 @@ export {
  * "^1.2" needs 1.2 or later). engine.termix is checked against the core
  * version by the server.
  */
-export const PLUGIN_API_VERSION = "1.17.0";
+export const PLUGIN_API_VERSION = "2.9.0";
+
+/**
+ * Data slots in core and the official plugins. A component in one of these
+ * gets a warning from validate: give `kind: "data"` and `useValue` instead.
+ * `rows` says what the row key is.
+ */
+export const DATA_SLOTS: Readonly<
+  Record<
+    string,
+    {
+      shapes: ("bars" | "stat" | "badge" | "dot" | "text")[];
+      rows: "host" | "tab" | "credential";
+    }
+  >
+> = {
+  "dashboard.hostRow": { shapes: ["bars", "stat", "text"], rows: "host" },
+  "dashboard.hostRowBadge": { shapes: ["badge"], rows: "host" },
+  "homepage.hostMetrics": { shapes: ["bars", "stat", "text"], rows: "host" },
+  "terminal.toolbarStatus": { shapes: ["bars", "stat", "text"], rows: "tab" },
+  "credentials.badges": { shapes: ["badge", "text"], rows: "credential" },
+};
+
+/**
+ * The last API 1 release. Core still loads API 1 plugins, but only in process
+ * and only when an admin turns on "Run without isolation" for an official one.
+ */
+export const LEGACY_PLUGIN_API_VERSION = "1.17.0";
 
 /** The API major, the default engine.api for a new plugin. */
 export const SUPPORTED_PLUGIN_API_VERSION = String(
@@ -51,9 +78,22 @@ export const SUPPORTED_PLUGIN_API_VERSION = String(
 
 /** Whether this build's plugin API satisfies a manifest's engine.api. */
 export function isApiCompatible(range: string): boolean {
+  if (semver.validRange(range) === null) return false;
   return (
-    semver.validRange(range) !== null &&
-    semver.satisfies(PLUGIN_API_VERSION, range)
+    semver.satisfies(PLUGIN_API_VERSION, range) ||
+    semver.satisfies(LEGACY_PLUGIN_API_VERSION, range)
+  );
+}
+
+/**
+ * True when engine.api only fits API 1. Such a plugin can't run in its own
+ * process, so core needs the admin switch to load it at all.
+ */
+export function isLegacyPluginApi(range: string): boolean {
+  if (semver.validRange(range) === null) return false;
+  return (
+    !semver.satisfies(PLUGIN_API_VERSION, range) &&
+    semver.satisfies(LEGACY_PLUGIN_API_VERSION, range)
   );
 }
 
@@ -718,6 +758,8 @@ export interface PluginManifest {
   contributes?: PluginContributions;
   /** Built backend entry, relative to the plugin root. */
   backend?: string;
+  /** How the backend process runs (API 2). */
+  sandbox?: PluginSandbox;
   /** Built frontend entry, relative to the plugin root. */
   frontend?: string;
   /** Locales directory, relative to the plugin root. */
@@ -739,6 +781,42 @@ export interface PluginManifest {
    */
   runtime?: PluginRuntime;
 }
+
+/**
+ * What core needs to know about a backend before running any of its code, so
+ * it can start the process only when something needs it. Requests to the
+ * plugin's routes and sockets always start it; these are the other things
+ * that can.
+ */
+export interface PluginSandbox {
+  /** Never stop the process when idle. Plugins with their own listeners. */
+  alwaysOn?: boolean;
+  /** Heap limit in MiB. 256 when left out. */
+  memoryMb?: number;
+  /**
+   * Repeating jobs. ctx.schedule.every must pass one of these ids. A job
+   * that runs more often than the idle time keeps the process on.
+   */
+  schedules?: PluginSandboxSchedule[];
+  /** Event topics this plugin listens to with ctx.events.on. */
+  events?: string[];
+  /** Registry keys this plugin fills with ctx.registry.provide. */
+  registry?: string[];
+  /**
+   * The backend starts worker threads (plugin API 2.3). Each worker keeps
+   * the process's limits; workers from code strings (eval) are refused.
+   */
+  workers?: boolean;
+}
+
+export interface PluginSandboxSchedule {
+  id: string;
+  /** Interval in milliseconds. */
+  every: number;
+}
+
+export const SANDBOX_MEMORY_MIN_MB = 64;
+export const SANDBOX_MEMORY_MAX_MB = 4096;
 
 export type PluginRuntime = "desktop";
 export const PLUGIN_RUNTIMES: readonly PluginRuntime[] = ["desktop"];
@@ -782,6 +860,7 @@ const ALLOWED_TOP_LEVEL = new Set([
   "requiresSecret",
   "contributes",
   "backend",
+  "sandbox",
   "frontend",
   "locales",
   "platforms",
@@ -983,6 +1062,7 @@ export function validateManifest(manifest: unknown): string[] {
   ) {
     errors.push(`A "desktop" runtime plugin must use desktop "local"`);
   }
+  validateSandbox(m.sandbox, errors);
   validateDependencyMap(m.dependencies, "dependencies", errors);
   validateDependencyMap(m.optionalDependencies, "optionalDependencies", errors);
   validateProvides(m.provides, errors);
@@ -1003,6 +1083,89 @@ export function validateManifest(manifest: unknown): string[] {
   }
 
   return errors;
+}
+
+const SANDBOX_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
+const SANDBOX_TOPIC = /^[a-z0-9][A-Za-z0-9._:-]{0,127}$/;
+
+function validateSandbox(sandbox: unknown, errors: string[]): void {
+  if (sandbox === undefined) return;
+  if (!isPlainObject(sandbox)) {
+    errors.push('Field "sandbox" must be an object');
+    return;
+  }
+  rejectUnknown(
+    sandbox,
+    ["alwaysOn", "memoryMb", "schedules", "events", "registry", "workers"],
+    '"sandbox"',
+    errors,
+  );
+  if (sandbox.alwaysOn !== undefined && typeof sandbox.alwaysOn !== "boolean") {
+    errors.push("sandbox.alwaysOn must be a boolean");
+  }
+  if (sandbox.workers !== undefined && typeof sandbox.workers !== "boolean") {
+    errors.push("sandbox.workers must be a boolean");
+  }
+  if (sandbox.memoryMb !== undefined) {
+    const mb = sandbox.memoryMb;
+    if (
+      typeof mb !== "number" ||
+      !Number.isInteger(mb) ||
+      mb < SANDBOX_MEMORY_MIN_MB ||
+      mb > SANDBOX_MEMORY_MAX_MB
+    ) {
+      errors.push(
+        `sandbox.memoryMb must be a whole number from ${SANDBOX_MEMORY_MIN_MB} to ${SANDBOX_MEMORY_MAX_MB}`,
+      );
+    }
+  }
+  if (sandbox.schedules !== undefined) {
+    if (!Array.isArray(sandbox.schedules)) {
+      errors.push("sandbox.schedules must be an array");
+    } else {
+      const seen = new Set<string>();
+      sandbox.schedules.forEach((raw, index) => {
+        const where = `sandbox.schedules[${index}]`;
+        if (!isPlainObject(raw)) {
+          errors.push(`${where} must be an object`);
+          return;
+        }
+        rejectUnknown(raw, ["id", "every"], where, errors);
+        if (typeof raw.id !== "string" || !SANDBOX_ID.test(raw.id)) {
+          errors.push(`${where}.id must be a short lowercase id`);
+        } else if (seen.has(raw.id)) {
+          errors.push(`${where}.id duplicates "${raw.id}"`);
+        } else {
+          seen.add(raw.id);
+        }
+        if (
+          typeof raw.every !== "number" ||
+          !Number.isInteger(raw.every) ||
+          raw.every < 1000
+        ) {
+          errors.push(
+            `${where}.every must be a whole number of ms, at least 1000`,
+          );
+        }
+      });
+    }
+  }
+  for (const key of ["events", "registry"] as const) {
+    const list = sandbox[key];
+    if (list === undefined) continue;
+    if (
+      !Array.isArray(list) ||
+      !list.every(
+        (item) => typeof item === "string" && SANDBOX_TOPIC.test(item),
+      )
+    ) {
+      errors.push(
+        `sandbox.${key} must be an array of names (letters, digits, . _ : -)`,
+      );
+    } else if (new Set(list).size !== list.length) {
+      errors.push(`sandbox.${key} has duplicates`);
+    }
+  }
 }
 
 function folderOf(file: string): string {
@@ -1160,7 +1323,7 @@ function validateEnv(env: unknown, errors: string[]): void {
     }
     rejectUnknown(
       entry,
-      ["name", "description", "default", "required", "secret"],
+      ["name", "description", "default", "required", "secret", "file"],
       where,
       errors,
     );
@@ -1185,7 +1348,7 @@ function validateEnv(env: unknown, errors: string[]): void {
     if ("default" in entry && typeof entry.default !== "string") {
       errors.push(`Field "${where}.default" must be a string`);
     }
-    for (const flag of ["required", "secret"] as const) {
+    for (const flag of ["required", "secret", "file"] as const) {
       if (flag in entry && typeof entry[flag] !== "boolean") {
         errors.push(`Field "${where}.${flag}" must be true or false`);
       }

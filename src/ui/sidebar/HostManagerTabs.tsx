@@ -34,6 +34,8 @@ export interface HostEditorSectionRenderProps {
   protocols: Record<string, boolean>;
   /** "defaults" in the host defaults editor. */
   mode?: "host" | "defaults";
+  /** False in the simple host editor. */
+  advanced?: boolean;
 }
 
 /**
@@ -54,6 +56,8 @@ export interface HostEditorSectionDef {
   visible?: (protocols: Record<string, boolean>) => boolean;
   /** Also offered in the host defaults editor; "only" for nowhere else. */
   defaults?: boolean | "only";
+  /** Also shown in the simple host editor. */
+  simple?: boolean;
   component: ComponentType<HostEditorSectionRenderProps>;
 }
 
@@ -64,6 +68,7 @@ export const unregisterHostEditorSection = sections.unregister;
 export const getHostEditorSection = sections.get;
 export const hostEditorSectionList = sections.list;
 export const useHostEditorSections = sections.useList;
+export const subscribeHostEditorSections = sections.subscribe;
 export const resetHostEditorSections = sections.reset;
 
 const CORE_SSH_GROUP = new Set<string>(["ssh"]);

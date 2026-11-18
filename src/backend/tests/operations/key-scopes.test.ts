@@ -49,6 +49,22 @@ describe("keyScopeAllows", () => {
     expect(keyScopeAllows(RUN, "GET", "/operationsx/catalog")).toBe(false);
   });
 
+  it("lets a read only key make GET and HEAD requests and nothing else", () => {
+    const ONLY_READ = ["read"];
+    expect(keyScopeAllows(ONLY_READ, "GET", "/host/db/host")).toBe(true);
+    expect(keyScopeAllows(ONLY_READ, "HEAD", "/credentials")).toBe(true);
+    for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
+      expect(keyScopeAllows(ONLY_READ, method, "/host/1")).toBe(false);
+    }
+    expect(keyScopeAllows(ONLY_READ, "POST", "/users/ws-ticket/api-key")).toBe(
+      false,
+    );
+    expect(
+      keyScopeAllows(ONLY_READ, "POST", "/operations/docker.list/run"),
+    ).toBe(false);
+    expect(keyScopeAllows(ONLY_READ, "POST", "/plugin-api/x/mcp")).toBe(false);
+  });
+
   it("grants nothing with an empty list", () => {
     expect(keyScopeAllows([], "GET", "/operations/catalog")).toBe(false);
   });

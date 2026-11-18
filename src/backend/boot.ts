@@ -48,6 +48,12 @@ export async function runCoreBootMigrations(): Promise<void> {
   DataCrypto.initialize();
   await AuthManager.getInstance().cleanupExpiredSessions();
 
+  // Before anything reads a sealed value: decrypt refuses one sealed for
+  // another record, and older rows still carry a temporary id.
+  const { runFieldResealMigration } =
+    await import("./upgrade/field-reseal-migration.js");
+  await runFieldResealMigration();
+
   // Before anything snapshots shared secrets, which would drop a protocol
   // snapshot whose login has not been copied yet.
   const { runProtocolAuthMigration } =
@@ -73,4 +79,25 @@ export async function runCoreBootMigrations(): Promise<void> {
   const { runAuditNoiseCleanup } =
     await import("./upgrade/audit-noise-cleanup.js");
   await runAuditNoiseCleanup();
+
+  // After a key rotation: move everything to the new keys.
+  const { runKeyRotation } = await import("./utils/key-rotation.js");
+  try {
+    await runKeyRotation();
+  } catch (error) {
+    systemLogger.error("Moving data to the new keys failed", error, {
+      operation: "key_rotation_failed",
+    });
+  }
+
+  // Plugin sealed values move to each plugin's own key.
+  const { runPluginSealMigration } =
+    await import("./upgrade/plugin-seal-migration.js");
+  try {
+    await runPluginSealMigration();
+  } catch (error) {
+    systemLogger.error("Moving plugin sealed values failed", error, {
+      operation: "plugin_seal_migration_failed",
+    });
+  }
 }

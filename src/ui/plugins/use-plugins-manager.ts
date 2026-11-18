@@ -25,6 +25,7 @@ import {
   type RegistryListing,
 } from "@/api/plugins-api";
 import { useConfirm } from "@/components/surface/surface-scope";
+import { isAdminHoldTicket } from "@/api/user-management-api";
 import { pluginDescription, pluginName } from "@/lib/plugin-i18n";
 import { mergePlugins, uploadEntry, type PluginEntry } from "./plugin-model";
 import type { ConsentRequest } from "./PluginConsentPrompt";
@@ -366,7 +367,14 @@ export function usePluginsManager() {
             version: request.version,
             capabilities: request.capabilities,
           });
-          if (result.state === "failed" || result.state === "blocked") {
+          if (isAdminHoldTicket(result)) {
+            toast.info(
+              t("plugins.manager.toast.held", {
+                name: request.plugin.name,
+                minutes: result.minutes,
+              }),
+            );
+          } else if (result.state === "failed" || result.state === "blocked") {
             toast.error(
               t("plugins.manager.toast.failedToStart", {
                 name: request.plugin.name,
@@ -454,7 +462,14 @@ export function usePluginsManager() {
       await run(plugin.id, async () => {
         try {
           const result = await setPluginState(plugin.id, enable);
-          if (result.state === "failed" || result.state === "blocked") {
+          if (isAdminHoldTicket(result)) {
+            toast.info(
+              t("plugins.manager.toast.held", {
+                name: plugin.name,
+                minutes: result.minutes,
+              }),
+            );
+          } else if (result.state === "failed" || result.state === "blocked") {
             toast.error(
               t("plugins.manager.toast.failedToStart", { name: plugin.name }),
             );

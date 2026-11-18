@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import {
+  desktopParentTarget,
   isEmbeddedAuthFrame,
   isInElectronWebView,
   isInMobileWebView,
@@ -36,6 +37,8 @@ import {
   getCurrentToken,
   requestDesktopAutoSession,
   requestTrustedProxyLogin,
+  acceptUserInvite,
+  checkUserInvite,
 } from "@/main-axios";
 import {
   getEmbeddedServerFailure,
@@ -44,6 +47,7 @@ import {
 import {
   challengeSecondFactor,
   getLoginMethods,
+  getPublicSecondFactors,
   getRememberDeviceAllowed,
   startLoginRedirect,
   submitLoginMethod,
@@ -53,6 +57,12 @@ import {
   type SecondFactorRef,
 } from "@/api/auth-methods-api";
 import { useLoginMethods, useSecondFactors } from "@/plugin-host/auth-registry";
+import {
+  canDrawSecondFactor,
+  PluginLoginMethodView,
+  PluginSecondFactorView,
+} from "./PluginLoginParts";
+import { pluginKey } from "@/lib/plugin-i18n";
 import { startPreLoginPlugins } from "@/plugin-host/loader";
 import { Checkbox } from "@/components/checkbox";
 import { LoadingState } from "@/components/loading-state";
@@ -270,15 +280,41 @@ export function Auth({ onLogin }: AuthProps) {
   };
   const loginMethodUIs = useLoginMethods();
   const secondFactorUIs = useSecondFactors();
-  // A server that did not list its factors gets every factor with a UI here.
-  const shownFactors: SecondFactorRef[] =
+  // How to draw each factor, for a step that only got ids (a redirect login).
+  const [publicFactors, setPublicFactors] = useState<SecondFactorRef[]>([]);
+  const withPrompt = (factor: SecondFactorRef): SecondFactorRef => {
+    const known = publicFactors.find((entry) => entry.id === factor.id);
+    return {
+      ...known,
+      ...factor,
+      pluginId: factor.pluginId || known?.pluginId || "",
+      labelKey: factor.labelKey || known?.labelKey || "",
+      prompt: factor.prompt ?? known?.prompt,
+    };
+  };
+  // A server that did not list its factors gets every factor it can draw.
+  const shownFactors: SecondFactorRef[] = (
     secondFactors.length > 0
       ? secondFactors
-      : secondFactorUIs.map((ui) => ({
-          id: ui.id,
-          pluginId: ui.pluginId ?? "",
-          labelKey: ui.titleKey,
-        }));
+      : [
+          ...publicFactors.filter((factor) => canDrawSecondFactor(factor)),
+          ...secondFactorUIs
+            .filter(
+              (ui) => !publicFactors.some((factor) => factor.id === ui.id),
+            )
+            .map((ui) => ({
+              id: ui.id,
+              pluginId: ui.pluginId ?? "",
+              labelKey: ui.titleKey,
+            })),
+        ]
+  ).map(withPrompt);
+  const factorLabel = (factor: SecondFactorRef) =>
+    factor.labelKey
+      ? t(pluginKey(factor.pluginId, factor.labelKey), {
+          defaultValue: factor.id,
+        })
+      : factor.id;
   const currentFactorId = activeFactorId || shownFactors[0]?.id || "";
 
   const [resetStep, setResetStep] = useState<ResetStep>("email");
@@ -299,13 +335,21 @@ export function Auth({ onLogin }: AuthProps) {
   }
 
   const [registrationAllowed, setRegistrationAllowed] = useState(true);
+  const [inviteToken, setInviteToken] = useState<string | null>(() =>
+    new URLSearchParams(window.location.search).get("invite"),
+  );
   const [passwordLoginAllowed, setPasswordLoginAllowed] = useState(true);
   const [passwordResetAllowed, setPasswordResetAllowed] = useState(true);
   const [authMethods, setAuthMethods] = useState<PublicLoginMethod[]>([]);
   const [authMethodsLoaded, setAuthMethodsLoaded] = useState(false);
-  const inlineMethodIds = new Set(
-    loginMethodUIs.filter((ui) => ui.placement === "inline").map((ui) => ui.id),
-  );
+  const inlineMethodIds = new Set([
+    ...loginMethodUIs
+      .filter((ui) => ui.placement === "inline")
+      .map((ui) => ui.id),
+    ...authMethods
+      .filter((method) => method.placement === "inline")
+      .map((method) => method.id),
+  ]);
   const inlineMethods = authMethods.filter((method) =>
     inlineMethodIds.has(method.id),
   );
@@ -415,6 +459,9 @@ export function Auth({ onLogin }: AuthProps) {
         setRememberAllowed(allowed);
         if (!allowed) setRememberMe(false);
       })
+      .catch(() => {});
+    getPublicSecondFactors()
+      .then((factors) => setPublicFactors(factors))
       .catch(() => {});
     getLoginMethods()
       .then((methods) => setAuthMethods(methods))
@@ -557,6 +604,20 @@ export function Auth({ onLogin }: AuthProps) {
   }, [authMethodsLoaded, passwordLoginAllowed, externalMethods.length, view]);
 
   useEffect(() => {
+    if (!inviteToken) return;
+    setView("register");
+    checkUserInvite(inviteToken)
+      .then((result) => {
+        if (result.valid) return;
+        toast.error(t("auth.inviteInvalid"));
+        setInviteToken(null);
+      })
+      .catch(() => {});
+    // Only on the first render: the token comes from the link.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const success = urlParams.get("success");
     const error = urlParams.get("error");
@@ -573,6 +634,10 @@ export function Auth({ onLogin }: AuthProps) {
         toast.error(t("messages.registrationDisabled"));
       else if (error === "user_not_allowed")
         toast.error(t("messages.userNotAllowed"));
+      else if (error === "account_disabled")
+        toast.error(t("auth.accountDisabled"));
+      else if (error === "account_pending")
+        toast.error(t("auth.accountPending"));
       else if (error === "second_factor_unavailable")
         toast.error(t("auth.secondFactorUnavailable"));
       else toast.error(`${t("errors.externalAuthFailed")}: ${error}`);
@@ -610,6 +675,8 @@ export function Auth({ onLogin }: AuthProps) {
         // Electron Remote Sync embeds the remote server in an iframe. The
         // OIDC callback authenticates by setting the remote origin's
         // HttpOnly cookie, so read the JWT back before notifying the parent.
+        const target = desktopParentTarget();
+        if (!target) return;
         const postToken = (token: string | null) => {
           window.parent.postMessage(
             {
@@ -619,7 +686,7 @@ export function Auth({ onLogin }: AuthProps) {
               token,
               timestamp: Date.now(),
             },
-            "*",
+            target,
           );
           setWebviewAuthSuccess(true);
           window.history.replaceState(
@@ -717,6 +784,14 @@ export function Auth({ onLogin }: AuthProps) {
       toast.error(t("auth.externalLoginRequired"));
       return;
     }
+    if (error?.response?.data?.code === "account_disabled") {
+      toast.error(t("auth.accountDisabled"));
+      return;
+    }
+    if (error?.response?.data?.code === "account_pending") {
+      toast.error(t("auth.accountPending"));
+      return;
+    }
     toast.error(
       error?.response?.data?.error || error?.message || t(fallbackKey),
     );
@@ -745,7 +820,8 @@ export function Auth({ onLogin }: AuthProps) {
       setWebviewAuthSuccess(true);
       return;
     }
-    if (isInElectronWebView()) {
+    const desktopTarget = isInElectronWebView() ? desktopParentTarget() : null;
+    if (desktopTarget) {
       // The iframe never sends X-Electron-App, so the JWT only lands in an
       // HttpOnly cookie on this origin. Read it back for the parent window.
       const token = res?.token ?? (await getCurrentToken());
@@ -757,7 +833,7 @@ export function Auth({ onLogin }: AuthProps) {
           token: token ?? null,
           timestamp: Date.now(),
         },
-        "*",
+        desktopTarget,
       );
       setWebviewAuthSuccess(true);
       return;
@@ -807,7 +883,17 @@ export function Auth({ onLogin }: AuthProps) {
     }
     setLoading(true);
     try {
-      await registerUser(username.trim(), password);
+      if (inviteToken) {
+        await acceptUserInvite(inviteToken, username.trim(), password);
+        setInviteToken(null);
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname,
+        );
+      } else {
+        await registerUser(username.trim(), password);
+      }
       const res = await loginUser(username.trim(), password, rememberMe);
       await finishLogin(res, "auth_component", {
         fallbackUsername: username.trim(),
@@ -955,7 +1041,10 @@ export function Auth({ onLogin }: AuthProps) {
       setLoading(true);
       try {
         const callbackPort = 17832 + Math.floor(Math.random() * 100);
-        if (isInElectronWebView()) {
+        const desktopTarget = isInElectronWebView()
+          ? desktopParentTarget()
+          : null;
+        if (desktopTarget) {
           const authUrl = await startLoginRedirect(methodId, {
             instanceId,
             rememberMe,
@@ -970,7 +1059,7 @@ export function Auth({ onLogin }: AuthProps) {
               callbackPort,
               providerId: -1,
             },
-            "*",
+            desktopTarget,
           );
           return;
         }
@@ -1053,24 +1142,24 @@ export function Auth({ onLogin }: AuthProps) {
           showLoginError(err, "errors.loginFailed"),
         ),
     };
-    if (ui) {
+    if (ui?.component) {
       const Component = ui.component;
       return <Component key={method.id} {...props} />;
     }
-    // A redirect method needs no UI of its own: one button per instance.
-    if (method.kind === "redirect") {
-      return method.instances.map((instance) => (
-        <Button
-          key={`${method.id}:${instance.id}`}
-          onClick={() => void startRedirect(method.id, instance.id)}
-          disabled={loading}
-          className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold"
-        >
-          {t("auth.loginWithProvider", { name: instance.label })}
-        </Button>
-      ));
-    }
-    return null;
+    // Drawn from what the server describes; no plugin code runs here.
+    return (
+      <PluginLoginMethodView
+        key={method.id}
+        method={method}
+        view={props.view}
+        disabled={loading}
+        username={username}
+        submit={props.submit}
+        startRedirect={(instanceId) =>
+          void startRedirect(method.id, instanceId)
+        }
+      />
+    );
   }
 
   useEffect(() => {
@@ -1261,7 +1350,9 @@ export function Auth({ onLogin }: AuthProps) {
     {
       id: "register",
       label: t("common.register"),
-      show: (passwordLoginAllowed || firstUser) && registrationAllowed,
+      show:
+        !!inviteToken ||
+        ((passwordLoginAllowed || firstUser) && registrationAllowed),
     },
     {
       id: "external",
@@ -1307,7 +1398,9 @@ export function Auth({ onLogin }: AuthProps) {
                           onClick={() => setActiveFactorId(factor.id)}
                           className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${currentFactorId === factor.id ? "bg-accent-brand text-background" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
                         >
-                          {ui ? t(ui.titleKey) : factor.id}
+                          {ui && !factor.labelKey
+                            ? t(ui.titleKey)
+                            : factorLabel(factor)}
                         </button>
                       );
                     })}
@@ -1317,7 +1410,31 @@ export function Auth({ onLogin }: AuthProps) {
                   const ui = secondFactorUIs.find(
                     (candidate) => candidate.id === currentFactorId,
                   );
-                  if (!ui) {
+                  const current = shownFactors.find(
+                    (factor) => factor.id === currentFactorId,
+                  );
+                  if (
+                    !ui?.component &&
+                    current &&
+                    canDrawSecondFactor(current)
+                  ) {
+                    return (
+                      <PluginSecondFactorView
+                        key={currentFactorId}
+                        factor={current}
+                        disabled={loading}
+                        verify={verifyActiveFactor}
+                        challenge={() =>
+                          challengeSecondFactor(
+                            currentFactorId,
+                            pendingToken || undefined,
+                          )
+                        }
+                        cancel={() => switchView("login")}
+                      />
+                    );
+                  }
+                  if (!ui?.component) {
                     return (
                       <div className="space-y-2" aria-live="polite">
                         <p className="text-xs text-muted-foreground">
@@ -1644,6 +1761,11 @@ export function Auth({ onLogin }: AuthProps) {
                     onSubmit={handleRegister}
                     className="flex flex-col gap-4"
                   >
+                    {inviteToken && (
+                      <p className="text-sm text-muted-foreground">
+                        {t("auth.inviteIntro")}
+                      </p>
+                    )}
                     <Field label={t("common.username")} htmlFor="reg-user">
                       <div className="relative">
                         <User className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />

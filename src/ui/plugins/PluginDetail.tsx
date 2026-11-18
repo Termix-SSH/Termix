@@ -28,7 +28,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/select";
-import { getPluginData, type PluginDataSummary } from "@/api/plugins-api";
+import {
+  getPluginData,
+  type PluginDataSummary,
+  type PluginProvenance,
+} from "@/api/plugins-api";
 import {
   BetaBadge,
   CapabilityRow,
@@ -126,6 +130,9 @@ export function PluginDetail({
               plugin.latestVersion && <span>v{plugin.latestVersion}</span>
             )}
             {plugin.category && <span>{plugin.category}</span>}
+            {plugin.installed && plugin.provenance && (
+              <ProvenanceFact provenance={plugin.provenance} />
+            )}
             {plugin.pinnedVersion && (
               <span>
                 {t("plugins.manager.pinnedTo", {
@@ -712,5 +719,29 @@ function Stat({
         <span className="text-[10px] text-muted-foreground">{hint}</span>
       )}
     </div>
+  );
+}
+
+/** Which workflow run built the installed file, as checked at download. */
+function ProvenanceFact({ provenance }: { provenance: PluginProvenance }) {
+  const { t } = useTranslation();
+  if (provenance.status !== "verified") {
+    return (
+      <span title={t("plugins.manager.provenance.uncheckedHint")}>
+        {t("plugins.manager.provenance.unchecked")}
+      </span>
+    );
+  }
+  const href = provenance.runUrl ?? provenance.bundleUrl;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={t("plugins.manager.provenance.verifiedHint")}
+      className="hover:text-foreground hover:underline"
+    >
+      {t("plugins.manager.provenance.verified")}
+    </a>
   );
 }

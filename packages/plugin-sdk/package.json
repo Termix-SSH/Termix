@@ -1,6 +1,6 @@
 {
   "name": "@termix-ssh/plugin-sdk",
-  "version": "1.1.4",
+  "version": "2.10.1",
   "description": "The contract between Termix core and a plugin: types, the capability catalog and the manifest schema.",
   "license": "Apache-2.0",
   "repository": {
@@ -93,6 +93,10 @@
       "types": "./dist/ssh-certs.d.ts",
       "default": "./dist/ssh-certs.js"
     },
+    "./net-guard": {
+      "types": "./dist/net-guard.d.ts",
+      "default": "./dist/net-guard.js"
+    },
     "./ssh-keys": {
       "types": "./dist/ssh-keys.d.ts",
       "default": "./dist/ssh-keys.js"
@@ -131,7 +135,7 @@
     "@tailwindcss/node": "^4.2.4",
     "@tailwindcss/oxide": "^4.2.4",
     "esbuild": "^0.28.1",
-    "semver": "^7.6.3",
+    "semver": "^7.8.6",
     "tailwindcss": "^4.2.4",
     "tar": "^7.5.22"
   },

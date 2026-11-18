@@ -13,6 +13,9 @@ export function staticUrlImports({ outDir }) {
   return {
     name: "static-url-imports",
     setup(build) {
+      // esbuild writes this path into the bundle, so keep it relative to the
+      // plugin or the file changes with the folder it was built in.
+      const root = build.initialOptions.absWorkingDir || process.cwd();
       build.onResolve({ filter: /\?url$/ }, async (args) => {
         const target = args.path.slice(0, -"?url".length);
         const resolved = await build.resolve(target, {
@@ -21,11 +24,15 @@ export function staticUrlImports({ outDir }) {
           importer: args.importer,
         });
         if (resolved.errors.length > 0) return { errors: resolved.errors };
-        return { path: resolved.path, namespace: "static-url" };
+        return {
+          path: path.relative(root, resolved.path).split(path.sep).join("/"),
+          namespace: "static-url",
+        };
       });
 
       build.onLoad({ filter: /.*/, namespace: "static-url" }, (args) => {
-        if (!/\.(m?js|cjs)$/.test(args.path)) {
+        const file = path.resolve(root, args.path);
+        if (!/\.(m?js|cjs)$/.test(file)) {
           return {
             errors: [
               {
@@ -34,13 +41,13 @@ export function staticUrlImports({ outDir }) {
             ],
           };
         }
-        const bytes = fs.readFileSync(args.path);
+        const bytes = fs.readFileSync(file);
         const hash = crypto
           .createHash("sha256")
           .update(bytes)
           .digest("hex")
           .slice(0, 8);
-        const base = path.basename(args.path).replace(/\.(m?js|cjs)$/, "");
+        const base = path.basename(file).replace(/\.(m?js|cjs)$/, "");
         const name = `${base}-${hash}.js`;
         fs.mkdirSync(path.join(outDir, "assets"), { recursive: true });
         fs.writeFileSync(path.join(outDir, "assets", name), bytes);

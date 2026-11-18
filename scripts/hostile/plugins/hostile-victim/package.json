@@ -1,0 +1,9 @@
+{
+  "name": "@termix-plugin/hostile-victim",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "devDependencies": {
+    "@termix-ssh/plugin-sdk": "^2.8.0"
+  }
+}

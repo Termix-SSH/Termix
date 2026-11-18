@@ -63,6 +63,9 @@ npm run format       # format the code with Prettier
 - There is one component tree for desktop and mobile. Use `src/ui/hooks/use-mobile.ts` for layout changes.
 - Core never names a plugin. If core needs something from a plugin, add a slot, action or component id that the plugin fills.
 - Tests live in `src/backend/tests/` and `src/ui/tests/`, mirroring the source tree. `npm run test` must pass.
+- New features and changed functions need tests. Every bug fix needs a test that fails without the fix. Routes and anything touching login, crypto or permissions need a test that goes through the route, and a new route needs its entry in `authz.json`.
+- Prettier and ESLint set the code style. `npm run format:check` and `npm run lint` run on every pull request and must pass.
+- Security problems go through a private report, not a pull request. See [SECURITY.md](https://github.com/Termix-SSH/.github/blob/main/SECURITY.md).
 - Every API route gets an OpenAPI JSDoc comment like the routes around it.
 - Use short commit messages that start with `feat:`, `fix:` or `chore:`, and link related issues.
 

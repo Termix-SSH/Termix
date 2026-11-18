@@ -10,6 +10,7 @@ import {
 
 interface HostStatusRoutesDeps {
   authenticateJWT: RequestHandler;
+  requireViewPermission: RequestHandler;
   requireAdmin: RequestHandler;
 }
 
@@ -34,7 +35,11 @@ function sessionExpired(res: Response): Response {
 
 export function registerHostStatusRoutes(
   router: Router,
-  { authenticateJWT, requireAdmin }: HostStatusRoutesDeps,
+  {
+    authenticateJWT,
+    requireViewPermission,
+    requireAdmin,
+  }: HostStatusRoutesDeps,
 ): void {
   const permissionManager = PermissionManager.getInstance();
 
@@ -62,6 +67,7 @@ export function registerHostStatusRoutes(
   router.get(
     "/status",
     authenticateJWT,
+    requireViewPermission,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       if (DataCrypto.getUserDataKey(userId) === null)
@@ -213,6 +219,7 @@ export function registerHostStatusRoutes(
   router.get(
     "/status/:id",
     authenticateJWT,
+    requireViewPermission,
     async (req: Request, res: Response) => {
       const id = Number(req.params.id);
       if (!Number.isInteger(id) || id <= 0) {

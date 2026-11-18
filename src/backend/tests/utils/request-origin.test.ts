@@ -216,3 +216,16 @@ describe("getRequestOrigin", () => {
     ).toBe("https://termix.test.de");
   });
 });
+
+describe("normalizeBasePath with long headers", () => {
+  it("trims trailing slashes like before", () => {
+    expect(normalizeBasePath("/termix///")).toBe("/termix");
+    expect(normalizeBasePath("termix/")).toBe("/termix");
+  });
+
+  it("stays fast on a long run of slashes", () => {
+    const start = performance.now();
+    normalizeBasePath(`/a${"/".repeat(200_000)}b`);
+    expect(performance.now() - start).toBeLessThan(500);
+  });
+});

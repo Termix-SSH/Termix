@@ -1,0 +1,11 @@
+# Workflow lint rules. Our own reusable workflows and actions stay on a
+# branch ref, everything else must be pinned to a full commit SHA.
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        "Termix-SSH/*": ref-pin
+        "*": hash-pin
+  # actionlint does not accept the $/ form yet.
+  self-repository:
+    disable: true

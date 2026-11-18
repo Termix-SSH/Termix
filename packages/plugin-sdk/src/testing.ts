@@ -14,6 +14,7 @@ import {
   PluginCapabilityError,
 } from "./backend.js";
 import type {
+  PluginAuditChainResult,
   PluginAuditEntry,
   PluginAuditFilters,
   PluginContext,
@@ -21,7 +22,13 @@ import type {
   PluginDisposables,
   PluginLogger,
 } from "./backend.js";
-import type { HostActionContribution, TermixApp } from "./frontend.js";
+import type { ComponentType } from "react";
+import type {
+  DataValue,
+  ExtensionContribution,
+  HostActionContribution,
+  TermixApp,
+} from "./frontend.js";
 import type { PluginManifest } from "./manifest.js";
 import type { PluginTableDefinition } from "./db.js";
 import type {
@@ -54,6 +61,7 @@ import type {
   PluginLoginRequest,
   PluginVerifiedIdentity,
   PluginSecondFactor,
+  PluginWebAuthnCeremony,
   PluginSshAuthProvider,
   PluginSshConnectOptions,
   PluginSshHost,
@@ -73,7 +81,12 @@ import type {
   PluginSyncHost,
   SyncEntityRegistration,
 } from "./backend.js";
-import type { PluginDatabase } from "./backend.js";
+import type {
+  PluginDatabase,
+  PluginManagedUser,
+  PluginRoleSummary,
+} from "./backend.js";
+import { sandboxContext } from "./testing/sandbox.js";
 import type {
   PluginExternalClientRequest,
   PluginProtocolTarget,
@@ -118,6 +131,10 @@ export interface FakeContextOptions {
   settings?: Record<string, unknown>;
   /** Seed for the core settings ctx.settings.readCore can reach. */
   coreSettings?: Record<string, string>;
+  /** File contents ctx.files.readEnvFile answers, by env variable name. */
+  envFiles?: Record<string, string>;
+  /** What ctx.files.readSecret answers, keyed "env:NAME" or "file:/path". */
+  configSecrets?: Record<string, string>;
   /** What ctx.files.dataDir() answers. Defaults to /tmp/<pluginId>. */
   dataDir?: string;
   /** What ctx.ssh.connect and withConnection hand back as the client. */
@@ -159,6 +176,8 @@ export interface FakeContextOptions {
   desktopLocal?: PluginDesktopLocal;
   /** The stored audit lines ctx.audit.list and exportBatches serve. */
   auditEntries?: PluginAuditEntry[];
+  /** What ctx.audit.chain.status and verify answer. Defaults to a good chain. */
+  auditChain?: PluginAuditChainResult;
   /** What ctx.hosts.status.get and check answer, by host id. */
   hostStatuses?: Record<number, PluginHostStatusEntry>;
   /** What ctx.hosts.probeTargets answers. */
@@ -167,6 +186,8 @@ export interface FakeContextOptions {
   activeSessions?: number[];
   /** What ctx.network.tcpProbe and ctx.ssh.probe answer. Defaults to false. */
   reachable?: (target: string | number, port?: number) => boolean;
+  /** What ctx.network.lookup answers. Defaults to null. */
+  resolve?: (host: string, family?: 4 | 6) => string | null;
   /** The acting user's channels, what ctx.notify.channels answers. */
   notificationChannels?: PluginNotificationChannel[];
   /**
@@ -209,6 +230,15 @@ export interface FakeContextOptions {
   loginAttemptLimit?: number;
   /** What ctx.users.getLocale answers, by user id. A missing user answers null. */
   locales?: Record<string, string>;
+  /** Accounts ctx.users starts with. Ids default to "user-1", "user-2", ... */
+  accounts?: Array<Partial<FakeAccount> & { username: string }>;
+  /** What ctx.users.listRoles answers. Defaults to admin and user. */
+  roles?: PluginRoleSummary[];
+}
+
+/** An account in the fake ctx.users, with the roles it holds. */
+export interface FakeAccount extends PluginManagedUser {
+  roles: string[];
 }
 
 export interface FakeProcessOptions {
@@ -262,6 +292,8 @@ export interface FakeAuthRegistrations {
   keyboardInteractiveHandlers: PluginKeyboardInteractiveHandler[];
   loginMethods: PluginLoginMethod[];
   secondFactors: PluginSecondFactor[];
+  /** Every ctx.auth.registerWebAuthnCeremony, in order. */
+  webAuthnCeremonies: PluginWebAuthnCeremony[];
   /** "<userId>:<factorId>" for every recorded enrolment. */
   enrollments: Set<string>;
   /** Secret schemes registered through ctx.credentials.registerSecretResolver. */
@@ -349,6 +381,10 @@ export interface FakePluginContext {
   hostShareSets: Array<{ hostId: number; grants: PluginHostShareGrant[] }>;
   /** Everything registered through ctx.auth. */
   auth: FakeAuthRegistrations;
+  /** Every ctx.desktop.grantView call, in order, with the grant it got. */
+  viewGrants: Array<{ url: string; ignoreCert?: boolean; grant: string }>;
+  /** The accounts ctx.users knows, by id, changed by its account calls. */
+  accounts: Map<string, FakeAccount>;
   /** Every ctx.desktop.openIsolatedWindow call, in order. */
   desktopWindows: Array<{
     url: string;
@@ -378,6 +414,20 @@ export interface FakePluginContext {
   operationHandlers: Map<string, PluginOperationHandler>;
   /** Every ctx.operations.emit call. */
   operationEvents: { eventId: string; payload: unknown; hostId?: number }[];
+  /** Every ctx.operations.runs.cancel and undo call, with the acting user. */
+  runCalls: Array<{
+    actor: string | undefined;
+    call: "cancel" | "undo";
+    runId: string;
+    confirmed?: boolean;
+  }>;
+  /** Every ctx.operations.approvals.decide call, with the acting user. */
+  approvalDecisions: Array<{
+    actor: string | undefined;
+    approvalId: string;
+    approve: boolean;
+    comment?: string;
+  }>;
   /** Backing store behind ctx.secrets.get/set, keyed "<userId>:<key>". */
   secretStore: Map<string, string>;
   /** Every ctx.fetch call, in order. */
@@ -427,6 +477,8 @@ export interface FakePluginContext {
   droppedPools: Array<{ pool: string; hostId: number }>;
   /** Every ctx.schedule timer, stopped ones included. */
   scheduled: FakeScheduledJob[];
+  /** Reasons the plugin gave to ctx.schedule.keepAwake that are still set. */
+  awake: Set<string>;
   /** Runs every live ctx.schedule job once; "after" jobs are then done. */
   runScheduled: () => Promise<void>;
   /** Changes the acting user, as core's request middleware would. */
@@ -584,6 +636,61 @@ export function createFakeContext(
   const hostShares: FakePluginContext["hostShares"] = [];
   const hostShareSets: FakePluginContext["hostShareSets"] = [];
   const desktopWindows: FakePluginContext["desktopWindows"] = [];
+  const viewGrants: FakePluginContext["viewGrants"] = [];
+  const accounts: FakePluginContext["accounts"] = new Map();
+  let nextAccount = 0;
+  const addAccount = (
+    input: Partial<FakeAccount> & { username: string },
+  ): FakeAccount => {
+    const account: FakeAccount = {
+      id: input.id ?? `user-${++nextAccount}`,
+      username: input.username,
+      displayName: input.displayName ?? null,
+      email: input.email ?? null,
+      isAdmin: input.isAdmin ?? false,
+      disabled: input.disabled ?? false,
+      disabledReason: input.disabledReason ?? null,
+      managedBy: input.managedBy ?? null,
+      roles: input.roles ?? [input.isAdmin ? "admin" : "user"],
+    };
+    accounts.set(account.id, account);
+    return account;
+  };
+  for (const account of options.accounts ?? []) addAccount(account);
+  const accountError = (message: string, code: string) =>
+    Object.assign(new Error(message), { code });
+  const accountView = (account: FakeAccount): PluginManagedUser => {
+    const { roles: _roles, ...rest } = account;
+    return { ...rest };
+  };
+  const findAccount = (match: (account: FakeAccount) => boolean) => {
+    const found = [...accounts.values()].find(match);
+    return found ? accountView(found) : null;
+  };
+  const mustAccount = (userId: string) => {
+    const account = accounts.get(userId);
+    if (!account) {
+      throw accountError(`User "${userId}" does not exist`, "not_found");
+    }
+    return account;
+  };
+  const liveAdmins = () =>
+    [...accounts.values()].filter((a) => a.isAdmin && !a.disabled).length;
+  const assertFreeAccount = (
+    selfId: string | null,
+    username?: string,
+    email?: string | null,
+  ) => {
+    for (const account of accounts.values()) {
+      if (account.id === selfId) continue;
+      if (username !== undefined && account.username === username) {
+        throw accountError("That username is taken", "username_taken");
+      }
+      if (email && account.email === email) {
+        throw accountError("That email is already in use", "email_taken");
+      }
+    }
+  };
   const externalClientLaunches: FakePluginContext["externalClientLaunches"] =
     [];
   const credentialReads: FakePluginContext["credentialReads"] = [];
@@ -593,6 +700,8 @@ export function createFakeContext(
   const notifyHub: FakePluginContext["notifyHub"] = { current: null };
   const operationHandlers: FakePluginContext["operationHandlers"] = new Map();
   const operationEvents: FakePluginContext["operationEvents"] = [];
+  const approvalDecisions: FakePluginContext["approvalDecisions"] = [];
+  const runCalls: FakePluginContext["runCalls"] = [];
   const fetches: FakePluginContext["fetches"] = [];
   const processRuns: FakePluginContext["processRuns"] = [];
   const binaries: FakePluginContext["binaries"] = [];
@@ -623,6 +732,7 @@ export function createFakeContext(
   );
   const droppedPools: FakePluginContext["droppedPools"] = [];
   const scheduled: FakeScheduledJob[] = [];
+  const awake = new Set<string>();
   const schedule = (
     kind: FakeScheduledJob["kind"],
     ms: number,
@@ -652,6 +762,7 @@ export function createFakeContext(
     keyboardInteractiveHandlers: [],
     loginMethods: [],
     secondFactors: [],
+    webAuthnCeremonies: [],
     enrollments: new Set(),
     secretResolvers: new Map(),
     completedLogins: [],
@@ -747,6 +858,22 @@ export function createFakeContext(
       // A fake path; a test that needs a real folder uses the OS temp dir
       // itself, not this double.
       dataDir: async () => options.dataDir ?? `/tmp/${pluginId}`,
+      readEnvFile: async (name) => {
+        const entry = (options.manifest?.env ?? []).find(
+          (item) => item?.name === name,
+        );
+        if (!entry || (entry as { file?: unknown }).file !== true) {
+          throw new Error(
+            `${name} is not an env variable this plugin lists with "file": true`,
+          );
+        }
+        const text = options.envFiles?.[name];
+        return text === undefined ? null : { text, modifiedMs: 0 };
+      },
+      readSecret: async (ref) => {
+        const key = "env" in ref ? `env:${ref.env}` : `file:${ref.file}`;
+        return options.configSecrets?.[key] ?? null;
+      },
     },
 
     db: options.db
@@ -758,6 +885,7 @@ export function createFakeContext(
           },
           client: () => options.db!.client(),
           refs: () => options.db!.refs(),
+          batch: (queries) => options.db!.batch(queries),
           persist: () => options.db!.persist(),
           dialect: options.db.dialect,
         }
@@ -774,6 +902,11 @@ export function createFakeContext(
             );
           },
           refs: async () => {
+            throw new Error(
+              "createFakeContext has no database: pass createTestDb().database as db",
+            );
+          },
+          batch: async () => {
             throw new Error(
               "createFakeContext has no database: pass createTestDb().database as db",
             );
@@ -799,8 +932,8 @@ export function createFakeContext(
         assertOwnRegistryKey(pluginId, key);
         registryProviders.set(key, value);
       },
-      consume: (key) => registryProviders.get(key) as never,
-      revoke: (key, value) => {
+      consume: async (key) => registryProviders.get(key) as never,
+      revoke: async (key, value) => {
         assertOwnRegistryKey(pluginId, key);
         if (!registryProviders.has(key)) return false;
         if (value !== undefined && registryProviders.get(key) !== value) {
@@ -820,7 +953,7 @@ export function createFakeContext(
       get: (service, getOptions) =>
         (services.get(serviceKey(service, getOptions?.provider)) ??
           {}) as never,
-      providers: (service) =>
+      providers: async (service) =>
         [...services.keys()].flatMap((key) =>
           key === service
             ? [""]
@@ -846,7 +979,7 @@ export function createFakeContext(
           ? Buffer.from(sealed.slice(7), "base64").toString("utf8")
           : null,
       offer: () => {},
-      withdraw: () => false,
+      withdraw: async () => false,
       getShared: async () => null,
     },
 
@@ -1087,7 +1220,7 @@ export function createFakeContext(
         (options.probeTargets ?? []).filter(
           (target) => !filter?.hostIds || filter.hostIds.includes(target.id),
         ),
-      sessionActive: (hostId) =>
+      sessionActive: async (hostId) =>
         options.activeSessions?.includes(hostId) ?? false,
       activity: {
         provide: (provider) => {
@@ -1149,6 +1282,10 @@ export function createFakeContext(
         return stop;
       },
       after: (delayMs, fn) => schedule("after", delayMs, fn),
+      keepAwake: (reason, on) => {
+        if (on) awake.add(reason);
+        else awake.delete(reason);
+      },
     },
 
     audit: {
@@ -1182,10 +1319,33 @@ export function createFakeContext(
       record: async (entry) => {
         audits.push({ ...entry });
       },
+      chain: {
+        status: async () => options.auditChain ?? null,
+        verify: async () =>
+          options.auditChain ?? {
+            ok: true,
+            checked: 0,
+            unchained: 0,
+            head: null,
+            checkedAt: new Date().toISOString(),
+          },
+        checkHead: async () => {
+          const chain = options.auditChain ?? {
+            ok: true,
+            checked: 0,
+            unchained: 0,
+            head: null,
+            checkedAt: new Date().toISOString(),
+          };
+          return { found: chain.ok, ok: chain.ok, pruned: false, chain };
+        },
+      },
     },
 
     network: {
       tcpProbe: async (host, port) => options.reachable?.(host, port) ?? false,
+      lookup: async (host, lookupOptions) =>
+        options.resolve?.(host, lookupOptions?.family) ?? null,
     },
 
     ssh: {
@@ -1226,7 +1386,7 @@ export function createFakeContext(
       dropPooled: (pool, hostId) => {
         droppedPools.push({ pool, hostId });
       },
-      poolKey: (pool, host) =>
+      poolKey: async (pool, host) =>
         `${pool}:${host.userId}:${host.ip}:${host.port}:${host.username}`,
       resolveHost: async (hostId, resolveOptions) =>
         (options.sshHosts ?? []).find((host) =>
@@ -1234,8 +1394,16 @@ export function createFakeContext(
             ? host.syncId === resolveOptions.syncId
             : host.id === hostId,
         ) ?? null,
-      prepare: async () => ({
-        config: {},
+      // Like core: the config names the host, so openTransport can use it.
+      prepare: async (host) => ({
+        config:
+          typeof host === "object" && host
+            ? {
+                host: host.ip,
+                port: host.port ?? 22,
+                username: host.username,
+              }
+            : { host: "127.0.0.1", port: 22 },
         outcome: { status: "ready" },
         authType: null,
       }),
@@ -1246,7 +1414,7 @@ export function createFakeContext(
       cancelInteraction: async (interaction, request) => {
         interactions.push({ action: "cancel", interaction, request });
       },
-      classifyKeyboardInteractive: ({ prompts }, host) => ({
+      classifyKeyboardInteractive: async ({ prompts }, host) => ({
         kind: "auto",
         responses: prompts.map((p) =>
           /password/i.test(p.prompt) && typeof host.password === "string"
@@ -1258,11 +1426,11 @@ export function createFakeContext(
         prompts.map((p) =>
           /password/i.test(p.prompt) && password ? password : "",
         ),
-      requiresSecret: (authType) =>
+      requiresSecret: async (authType) =>
         ["password", "key", "credential", "agent"].includes(authType),
       // Matches core: the built-in types, plus any registered provider that
       // does not opt out. An unknown type cannot connect unattended.
-      supportsBackground: (authType) => {
+      supportsBackground: async (authType) => {
         if (["password", "key", "credential", "agent"].includes(authType)) {
           return true;
         }
@@ -1285,6 +1453,9 @@ export function createFakeContext(
       },
       registerSecondFactor: (factor) => {
         auth.secondFactors.push(factor);
+      },
+      registerWebAuthnCeremony: (ceremony) => {
+        auth.webAuthnCeremonies.push(ceremony);
       },
       recordEnrollment: async (userId, factorId) => {
         if (options.refuseEnrollment) {
@@ -1402,7 +1573,7 @@ export function createFakeContext(
           };
         },
       },
-      listSecondFactors: () => [
+      listSecondFactors: async () => [
         ...auth.secondFactors.map((factor) => ({
           id: factor.id,
           pluginId,
@@ -1413,6 +1584,90 @@ export function createFakeContext(
 
     users: {
       getLocale: async (userId) => options.locales?.[userId] ?? null,
+      get: async (userId) => findAccount((a) => a.id === userId),
+      findByUsername: async (username) =>
+        findAccount((a) => a.username === username),
+      findByEmail: async (email) =>
+        findAccount((a) => a.email === email.trim().toLowerCase()),
+      listRoles: async () =>
+        options.roles ?? [
+          { name: "admin", displayName: "Admin", isSystem: true },
+          { name: "user", displayName: "User", isSystem: true },
+        ],
+      create: async (input) => {
+        const email = input.email?.trim().toLowerCase() || null;
+        assertFreeAccount(null, input.username, email);
+        return accountView(
+          addAccount({
+            username: input.username,
+            displayName: input.displayName ?? null,
+            email,
+            managedBy: pluginId,
+          }),
+        );
+      },
+      update: async (userId, input) => {
+        const account = mustAccount(userId);
+        const email =
+          input.email === undefined
+            ? undefined
+            : input.email?.trim().toLowerCase() || null;
+        assertFreeAccount(userId, input.username, email);
+        if (input.username !== undefined) account.username = input.username;
+        if (input.displayName !== undefined) {
+          account.displayName = input.displayName;
+        }
+        if (email !== undefined) account.email = email;
+        return accountView(account);
+      },
+      setDisabled: async (userId, disabled, reason) => {
+        const account = mustAccount(userId);
+        if (
+          disabled &&
+          !account.disabled &&
+          account.isAdmin &&
+          liveAdmins() <= 1
+        ) {
+          throw accountError("You can't turn off the last admin", "last_admin");
+        }
+        account.disabled = disabled;
+        account.disabledReason = disabled ? (reason ?? pluginId) : null;
+      },
+      delete: async (userId) => {
+        const account = mustAccount(userId);
+        if (account.isAdmin && !account.disabled && liveAdmins() <= 1) {
+          throw accountError("Cannot delete the last admin", "last_admin");
+        }
+        accounts.delete(userId);
+      },
+      syncRoles: async (userId, roles) => {
+        const account = mustAccount(userId);
+        const system = new Set(["admin", "user"]);
+        const desired = roles.desired.filter((name) => !system.has(name));
+        const managed = new Set(
+          roles.managed.filter((name) => !system.has(name)),
+        );
+        account.roles = [
+          ...account.roles.filter(
+            (name) => !managed.has(name) || desired.includes(name),
+          ),
+          ...desired.filter((name) => !account.roles.includes(name)),
+        ];
+      },
+      setAdmin: async (userId, isAdmin) => {
+        const account = mustAccount(userId);
+        if (account.isAdmin === isAdmin) return;
+        if (!isAdmin && !account.disabled && liveAdmins() <= 1) {
+          throw accountError("Cannot remove the last admin", "last_admin");
+        }
+        account.isAdmin = isAdmin;
+        account.roles = [
+          ...account.roles.filter(
+            (name) => name !== "admin" && name !== "user",
+          ),
+          isAdmin ? "admin" : "user",
+        ];
+      },
     },
 
     desktop: {
@@ -1424,7 +1679,12 @@ export function createFakeContext(
         externalClientLaunches.push(request);
         return { success: true };
       },
-      available: () => options.desktopAvailable ?? false,
+      grantView: async (request) => {
+        const grant = `grant-${viewGrants.length + 1}`;
+        viewGrants.push({ ...request, grant });
+        return { grant, expiresAt: Date.now() + 10 * 60 * 1000 };
+      },
+      available: async () => options.desktopAvailable ?? false,
       local: options.desktopLocal ?? unavailableDesktopLocal(),
     },
 
@@ -1509,7 +1769,29 @@ export function createFakeContext(
         operationEvents.push({ eventId, payload, hostId: options?.hostId });
       },
       onEvent: () => () => {},
-      approvals: { provide: () => () => {} },
+      runs: {
+        cancel: async (input) => {
+          if (!actor) throw new Error("runs.cancel needs an acting user");
+          runCalls.push({ actor, call: "cancel", runId: input.runId });
+          return { cancelled: true };
+        },
+        undo: async (input) => {
+          if (!actor) throw new Error("runs.undo needs an acting user");
+          runCalls.push({ actor, call: "undo", ...input });
+          return { runId: null, status: "success" };
+        },
+      },
+      approvals: {
+        provide: () => () => {},
+        decide: async (input) => {
+          if (!actor) throw new Error("approvals.decide needs an acting user");
+          approvalDecisions.push({ actor, ...input });
+          return {
+            runId: null,
+            status: input.approve ? "success" : "rejected",
+          };
+        },
+      },
     },
 
     notify: {
@@ -1671,6 +1953,8 @@ export function createFakeContext(
     hostShareSets,
     auth,
     desktopWindows,
+    viewGrants,
+    accounts,
     externalClientLaunches,
     credentialReads,
     createdSshKeys,
@@ -1679,6 +1963,8 @@ export function createFakeContext(
     notifyHub,
     operationHandlers,
     operationEvents,
+    approvalDecisions,
+    runCalls,
     fetches,
     processRuns,
     binaries,
@@ -1696,6 +1982,7 @@ export function createFakeContext(
     hostStatuses,
     droppedPools,
     scheduled,
+    awake,
     runScheduled: async () => {
       for (const job of scheduled.filter((candidate) => !candidate.stopped)) {
         if (job.kind === "after") job.stopped = true;
@@ -1731,6 +2018,10 @@ export interface MockContextOptions {
   settings?: Record<string, unknown>;
   /** Seed for the core settings readCore can reach. */
   coreSettings?: Record<string, string>;
+  /** File contents ctx.files.readEnvFile answers, by env variable name. */
+  envFiles?: Record<string, string>;
+  /** What ctx.files.readSecret answers, keyed "env:NAME" or "file:/path". */
+  configSecrets?: Record<string, string>;
   /** What ctx.files.dataDir() answers. */
   dataDir?: string;
   /** Acting user returned by currentActor and used by asUser. */
@@ -1764,6 +2055,8 @@ export interface MockContextOptions {
   desktopLocal?: PluginDesktopLocal;
   /** See FakeContextOptions. */
   auditEntries?: PluginAuditEntry[];
+  /** What ctx.audit.chain answers. */
+  auditChain?: PluginAuditChainResult;
   /** What ctx.hosts.status answers. See FakeContextOptions. */
   hostStatuses?: Record<number, PluginHostStatusEntry>;
   /** What ctx.hosts.probeTargets answers. */
@@ -1772,6 +2065,8 @@ export interface MockContextOptions {
   activeSessions?: number[];
   /** What ctx.network.tcpProbe and ctx.ssh.probe answer. */
   reachable?: (target: string | number, port?: number) => boolean;
+  /** What ctx.network.lookup answers. Defaults to null. */
+  resolve?: (host: string, family?: 4 | 6) => string | null;
   /** The acting user's channels, what ctx.notify.channels answers. */
   notificationChannels?: PluginNotificationChannel[];
   /**
@@ -1799,6 +2094,16 @@ export interface MockContextOptions {
   secondFactors?: FakeContextOptions["secondFactors"];
   /** See FakeContextOptions. */
   locales?: Record<string, string>;
+  /** See FakeContextOptions. */
+  accounts?: FakeContextOptions["accounts"];
+  /** See FakeContextOptions. */
+  roles?: FakeContextOptions["roles"];
+  /**
+   * Apply the rules of a plugin's own process (plugin API 2): plain data
+   * only across ctx, declared schedules, events and registry keys, no
+   * db.transaction(), string route paths. See testing/sandbox.ts.
+   */
+  sandbox?: boolean;
 }
 
 export interface MockPluginContext extends FakePluginContext {
@@ -1888,6 +2193,8 @@ export function createMockCtx(
     actor: options.actor,
     settings: options.settings,
     coreSettings: options.coreSettings,
+    envFiles: options.envFiles,
+    configSecrets: options.configSecrets,
     dataDir: options.dataDir,
     sshClient: options.sshClient,
     db: options.db,
@@ -1904,10 +2211,12 @@ export function createMockCtx(
     desktopAvailable: options.desktopAvailable,
     desktopLocal: options.desktopLocal,
     auditEntries: options.auditEntries,
+    auditChain: options.auditChain,
     hostStatuses: options.hostStatuses,
     probeTargets: options.probeTargets,
     activeSessions: options.activeSessions,
     reachable: options.reachable,
+    resolve: options.resolve,
     notificationChannels: options.notificationChannels,
     fetch: options.fetch,
     process: options.process,
@@ -1920,6 +2229,8 @@ export function createMockCtx(
     loginAttemptLimit: options.loginAttemptLimit,
     secondFactors: options.secondFactors,
     locales: options.locales,
+    accounts: options.accounts,
+    roles: options.roles,
     manifest: {
       capabilities: options.capabilities ?? [],
       ...options.manifest,
@@ -1963,6 +2274,10 @@ export function createMockCtx(
         require("db:core-refs");
         return guardedDb.refs();
       },
+      batch: async (queries) => {
+        require("db:own");
+        return guardedDb.batch(queries);
+      },
       persist: async (persistOptions) => {
         require("db:own");
         return guardedDb.persist(persistOptions);
@@ -1993,6 +2308,11 @@ export function createMockCtx(
       dataDir: async () => {
         require("files:own");
         return ctx.files.dataDir();
+      },
+      readEnvFile: (name) => ctx.files.readEnvFile(name),
+      readSecret: async (ref) => {
+        require("config:secrets");
+        return ctx.files.readSecret(ref);
       },
     },
 
@@ -2258,6 +2578,10 @@ export function createMockCtx(
         require("auth:provide");
         ctx.auth.registerSecondFactor(factor);
       },
+      registerWebAuthnCeremony: (ceremony) => {
+        require("auth:provide");
+        ctx.auth.registerWebAuthnCeremony!(ceremony);
+      },
       recordEnrollment: async (userId, factorId) => {
         require("auth:provide");
         return ctx.auth.recordEnrollment(userId, factorId);
@@ -2320,6 +2644,46 @@ export function createMockCtx(
         require("users:read");
         return ctx.users.getLocale(userId);
       },
+      get: async (userId) => {
+        require("users:read");
+        return ctx.users.get!(userId);
+      },
+      findByUsername: async (username) => {
+        require("users:read");
+        return ctx.users.findByUsername!(username);
+      },
+      findByEmail: async (email) => {
+        require("users:read");
+        return ctx.users.findByEmail!(email);
+      },
+      listRoles: async () => {
+        require("users:read");
+        return ctx.users.listRoles!();
+      },
+      create: async (input) => {
+        require("users:write");
+        return ctx.users.create!(input);
+      },
+      update: async (userId, input) => {
+        require("users:write");
+        return ctx.users.update!(userId, input);
+      },
+      setDisabled: async (userId, disabled, reason) => {
+        require("users:write");
+        return ctx.users.setDisabled!(userId, disabled, reason);
+      },
+      delete: async (userId, deleteOptions) => {
+        require("users:write");
+        return ctx.users.delete!(userId, deleteOptions);
+      },
+      syncRoles: async (userId, roles) => {
+        require("users:write");
+        return ctx.users.syncRoles!(userId, roles);
+      },
+      setAdmin: async (userId, isAdmin) => {
+        require("users:write");
+        return ctx.users.setAdmin!(userId, isAdmin);
+      },
     },
 
     audit: {
@@ -2336,6 +2700,20 @@ export function createMockCtx(
         require("audit:read");
         return ctx.audit.exportBatches(filters, batchSize);
       },
+      chain: {
+        status: async () => {
+          require("audit:read");
+          return ctx.audit.chain.status();
+        },
+        verify: async () => {
+          require("audit:read");
+          return ctx.audit.chain.verify();
+        },
+        checkHead: async (head) => {
+          require("audit:read");
+          return ctx.audit.chain.checkHead(head);
+        },
+      },
     },
 
     desktop: {
@@ -2346,6 +2724,10 @@ export function createMockCtx(
       launchExternalClient: async (request) => {
         require("desktop:window");
         return ctx.desktop.launchExternalClient(request);
+      },
+      grantView: async (request) => {
+        require("desktop:window");
+        return ctx.desktop.grantView!(request);
       },
       available: () => ctx.desktop.available(),
       local: gateDesktopLocal(ctx.desktop.local, () =>
@@ -2418,6 +2800,10 @@ export function createMockCtx(
       tcpProbe: async (host, port, probeOptions) => {
         require("network:probe");
         return ctx.network.tcpProbe(host, port, probeOptions);
+      },
+      lookup: async (host, lookupOptions) => {
+        require("network:probe");
+        return ctx.network.lookup(host, lookupOptions);
       },
     },
 
@@ -2494,7 +2880,13 @@ export function createMockCtx(
     },
   };
 
-  return { ...base, ctx: gatedCtx, checked };
+  return {
+    ...base,
+    ctx: options.sandbox
+      ? sandboxContext(gatedCtx, options.manifest ?? {})
+      : gatedCtx,
+    checked,
+  };
 }
 
 /** A sqlite handle as createTestDb exposes it. Structural, like better-sqlite3's. */
@@ -2630,6 +3022,20 @@ export async function createTestDb(
       builder.buildTable(pluginId, definition) as never,
     client: async () => handle as never,
     refs: async () => refs as never,
+    // All or nothing, like core.
+    batch: async (queries) => {
+      sqlite.exec("BEGIN");
+      try {
+        for (const query of queries) {
+          const { sql, params } = query.toSQL();
+          sqlite.prepare(sql).run(...params);
+        }
+        sqlite.exec("COMMIT");
+      } catch (error) {
+        sqlite.exec("ROLLBACK");
+        throw error;
+      }
+    },
     persist: async () => {
       persisted += 1;
     },
@@ -2679,6 +3085,28 @@ export interface RenderWithAppOptions {
   api?: import("./frontend.js").PluginApiClient;
   /** What app.desktop.remoteServerUrl() answers. Read on every call. */
   remoteServerUrl?: () => string | null | Promise<string | null>;
+  /**
+   * Other plugins' parts, for a plugin that draws them (a slot it owns, an
+   * extension point it reads, a component id it uses). They draw in place,
+   * as ForeignSlot does in the page. Plugin API 2.7.
+   */
+  others?: {
+    slots?: Record<
+      string,
+      Array<{
+        actionId: string;
+        component?: ComponentType<Record<string, unknown>>;
+        titleKey?: string;
+        pluginId?: string;
+        order?: number;
+      }>
+    >;
+    extensions?: Record<
+      string,
+      Array<ExtensionContribution & { pluginId?: string }>
+    >;
+    components?: Record<string, ComponentType<Record<string, unknown>>>;
+  };
 }
 
 /** A call a plugin made on the shell, recorded instead of performed. */
@@ -2778,8 +3206,30 @@ export interface RenderedPluginApp {
   ) => HTMLElement;
   /** Renders the Settings > Security section a factor or method brought. */
   renderEnrollment: (id: string) => HTMLElement;
-  /** Renders a slot the way its owner would. */
+  /**
+   * Renders a slot the way its owner would: buttons, components and data
+   * values. For data, the row key is props.rowKey, props.hostId or
+   * props.tabId.
+   */
   renderSlot: (slotId: string, props?: Record<string, unknown>) => HTMLElement;
+  /**
+   * Runs this plugin's data hooks for one row of a slot. `values()` gives
+   * the checked values by action id, null where the hook returned nothing;
+   * wrap reads in waitFor when the hook loads data. Plugin API 2.6.
+   */
+  readDataValues: (
+    slotId: string,
+    context?: Record<string, unknown>,
+    rowKey?: string,
+  ) => {
+    element: HTMLElement;
+    values: () => Record<string, DataValue[] | null>;
+  };
+  /** Renders this plugin's host badges, status indicators or editor toolbar items for one host. */
+  renderHostItems: (
+    kind: "badge" | "status" | "toolbar",
+    host: Record<string, unknown>,
+  ) => HTMLElement;
   /** Runs deactivate and every disposer, as disabling the plugin does. */
   deactivate: () => Promise<void>;
 }
@@ -2789,11 +3239,50 @@ export type FrontendPluginModule = {
   deactivate?: () => void | Promise<void>;
 };
 
+/** What checkFrameApp found. */
+export interface FrameCheckResult {
+  /** Each registration as the shell would get it: plain data only. */
+  registrations: { kind: string; data: unknown }[];
+  /** Things a frame can't carry. Empty when the plugin is fine. */
+  problems: string[];
+}
+
+/** Options for checkFrameViews. */
+export interface FrameViewsOptions {
+  manifest: Record<string, unknown>;
+  hosts?: Array<Record<string, unknown>>;
+  permissions?: string[];
+  isAdmin?: boolean;
+  locales?: Record<string, unknown>;
+  /** Answers the plugin's own routes and allowed core reads. Default `{}`. */
+  respond?: (method: string, path: string) => unknown;
+  /** How long each view gets to send its first requests. Default 50 ms. */
+  settleMs?: number;
+}
+
+/** What checkFrameViews found. */
+export interface FrameViewsResult extends FrameCheckResult {
+  /** Each view rendered, like "tab:main" or "slot:dashboard.hostRow:x.row". */
+  rendered: string[];
+  /** Core requests a plugin frame would be refused, like "GET /users/list". */
+  refused: string[];
+  /** Views that threw while rendering with the test data. */
+  errors: string[];
+}
+
 interface PluginTestHost {
   renderPlugin: (
     plugin: FrontendPluginModule,
     options: RenderWithAppOptions,
   ) => Promise<RenderedPluginApp>;
+  checkFramePlugin: (
+    plugin: FrontendPluginModule,
+    options: { manifest: Record<string, unknown> },
+  ) => Promise<FrameCheckResult>;
+  checkFrameViews: (
+    plugin: FrontendPluginModule,
+    options: FrameViewsOptions,
+  ) => Promise<FrameViewsResult>;
 }
 
 const TEST_HOST = "@termix-ssh/plugin-host/testing";
@@ -2808,6 +3297,33 @@ export async function renderWithApp(
   return host.renderPlugin(plugin, options);
 }
 
+/**
+ * Runs activate the way a plugin API 2 frontend runs in Termix: in a
+ * sandboxed frame that reports each registration to the shell as data.
+ * `problems` lists what would not reach the shell, like an icon that is not
+ * from lucide-react or a registration frames can't do.
+ */
+export async function checkFrameApp(
+  plugin: FrontendPluginModule,
+  options: { manifest: Record<string, unknown> },
+): Promise<FrameCheckResult> {
+  const host = (await import(/* @vite-ignore */ TEST_HOST)) as PluginTestHost;
+  return host.checkFramePlugin(plugin, options);
+}
+
+/**
+ * Renders every view the plugin registers with a mock shell, and sends every
+ * request those views make through the list the shell allows plugin frames.
+ * `refused` lists core requests that would fail in a frame.
+ */
+export async function checkFrameViews(
+  plugin: FrontendPluginModule,
+  options: FrameViewsOptions,
+): Promise<FrameViewsResult> {
+  const host = (await import(/* @vite-ignore */ TEST_HOST)) as PluginTestHost;
+  return host.checkFrameViews(plugin, options);
+}
+
 function assertOwnRegistryKey(pluginId: string, key: string): void {
   if (typeof key !== "string" || !key.startsWith(`${pluginId}.`)) {
     throw new Error(
@@ -2815,3 +3331,8 @@ function assertOwnRegistryKey(pluginId: string, key: string): void {
     );
   }
 }
+export {
+  sandboxContext,
+  SandboxRuleError,
+  assertCrossable,
+} from "./testing/sandbox.js";

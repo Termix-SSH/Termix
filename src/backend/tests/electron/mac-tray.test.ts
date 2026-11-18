@@ -62,6 +62,7 @@ function harness(platform = "darwin", saved?: string) {
     isDev: true,
     appRoot: root,
     tray: null,
+    movingStorage: false,
     mainWindow,
     app,
     require: () => ({

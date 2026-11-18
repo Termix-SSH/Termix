@@ -11,10 +11,19 @@ import { describe, expect, it, vi } from "vitest";
 
 const routers = vi.hoisted(() => new Map<string, express.Router>());
 const installed = vi.hoisted(() => new Set<string>());
+// Plugins whose process is stopped, with the router they mount once woken.
+const sleeping = vi.hoisted(() => new Map<string, express.Router>());
 
 vi.mock("../../../plugins/http.js", () => ({
   getPluginRouter: (id: string) => routers.get(id),
   isPluginInstalled: (id: string) => installed.has(id),
+  wakePlugin: async (id: string) => {
+    const router = sleeping.get(id);
+    if (!router) return false;
+    sleeping.delete(id);
+    routers.set(id, router);
+    return true;
+  },
 }));
 
 const { mountPluginLegacyPaths } =
@@ -70,6 +79,17 @@ describe("mountPluginLegacyPaths", () => {
     const app = appWith([{ id: "gone", legacyPaths: ["/gone/hook"] }]);
     const response = await request(app).post("/gone/hook/x");
     expect(response.status).toBe(404);
+  });
+
+  it("starts a stopped plugin process and serves the old URL", async () => {
+    const woken = express.Router();
+    woken.post("/hook/:id", (req, res) => res.json({ woke: req.params.id }));
+    installed.add("asleep");
+    sleeping.set("asleep", woken);
+    const app = appWith([{ id: "asleep", legacyPaths: ["/asleep/hook"] }]);
+    const response = await request(app).post("/asleep/hook/x");
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ woke: "x" });
   });
 
   it("answers 503 for an installed plugin that serves no router", async () => {

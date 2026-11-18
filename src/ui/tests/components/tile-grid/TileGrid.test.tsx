@@ -8,7 +8,13 @@ import {
   it,
   vi,
 } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { useState } from "react";
 import "@testing-library/jest-dom/vitest";
 import { TileGrid } from "../../../components/tile-grid/TileGrid";
@@ -94,11 +100,12 @@ function mount(layout = three, editMode = true) {
 
 const tile = (id: string) =>
   document.querySelector<HTMLElement>(`[data-tg-tile="${id}"]`)!;
+// jsdom 31 drops a zero y, so "translate(4px, 0px)" reads "translate(4px)".
 const position = (element: HTMLElement) => {
-  const match = /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/.exec(
+  const match = /translate\((-?[\d.]+)px(?:, (-?[\d.]+)px)?\)/.exec(
     element.style.transform,
   )!;
-  return { x: Number(match[1]), y: Number(match[2]) };
+  return { x: Number(match[1]), y: Number(match[2] ?? 0) };
 };
 const pointer = (
   target: Element | Window,
@@ -288,6 +295,33 @@ describe("TileGrid", () => {
     expect(document.querySelector("[data-tg-tile]")).toBeNull();
     expect(screen.getByTestId("body-disk")).toBeInTheDocument();
     expect(screen.queryAllByRole("separator")).toHaveLength(0);
+  });
+
+  it("keeps a set tile height when stacked", () => {
+    gridWidth = 500;
+    render(
+      <TileGrid
+        slots={[{ id: "a", x: 0, y: 0, w: 6, h: 20 }]}
+        renderTile={() => <div data-testid="part" />}
+        tileLabel={(id) => id}
+        editMode={false}
+        onChange={() => {}}
+      />,
+    );
+    const tile = screen.getByTestId("part").parentElement!;
+    expect(tile.style.height).not.toBe("");
+  });
+
+  it("goes back to the grid when it gets wide again after stacking", () => {
+    gridWidth = 500;
+    mount();
+    expect(document.querySelector("[data-tg-tile]")).toBeNull();
+    // The stacked root is a new element; a resize must still reach the grid.
+    gridWidth = 1212;
+    act(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+    expect(document.querySelector("[data-tg-tile]")).not.toBeNull();
   });
 
   it("shows no edit controls outside edit mode", () => {

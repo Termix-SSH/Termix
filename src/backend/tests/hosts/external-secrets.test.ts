@@ -22,7 +22,7 @@ describe("isSecretReference", () => {
 describe("external secret references", () => {
   beforeEach(() => clearExternalSecretCache());
 
-  it("replaces references in the host's secret fields and leaves plain secrets alone", async () => {
+  it("replaces references in the host's login fields and leaves plain values alone", async () => {
     const resolver = vi.fn(
       async (_userId: string, ref: string) => `resolved:${ref}`,
     );
@@ -30,14 +30,18 @@ describe("external secret references", () => {
       password: "op://Infra/box/password",
       key: "-----BEGIN OPENSSH PRIVATE KEY-----",
       sudoPassword: "op://Infra/box/sudo",
-      username: "op://not-a-secret-field",
+      username: "bw://srv-web01/username",
+      socks5Username: "proxy",
+      name: "op://not-a-login-field",
     };
     await resolveExternalSecretRefs(host, "alice", { resolver });
     expect(host.password).toBe("resolved:op://Infra/box/password");
     expect(host.sudoPassword).toBe("resolved:op://Infra/box/sudo");
+    expect(host.username).toBe("resolved:bw://srv-web01/username");
     expect(host.key).toBe("-----BEGIN OPENSSH PRIVATE KEY-----");
-    expect(host.username).toBe("op://not-a-secret-field");
-    expect(resolver).toHaveBeenCalledTimes(2);
+    expect(host.socks5Username).toBe("proxy");
+    expect(host.name).toBe("op://not-a-login-field");
+    expect(resolver).toHaveBeenCalledTimes(3);
   });
 
   it("caches a resolved reference per user for a minute", async () => {

@@ -13,12 +13,14 @@ import { pluginLogger } from "../utils/logger.js";
 import {
   setPluginEnabledCheck,
   setPluginInstalledCheck,
+  setPluginWakeHook,
   unregisterPluginHttp,
 } from "./http.js";
 import { PluginLoader, type LoadedPlugin } from "./loader.js";
 import type { PluginPermissionContribution } from "./manifest.js";
 import { invalidatePluginPermissionCache } from "./permissions.js";
 import { setSshAuthTypeOwnerSource } from "../hosts/connect/auth-provider-registry.js";
+import { setPluginStartupWaiter } from "../hosts/connect/plugin-startup.js";
 import { setHostProtocolSource } from "../hosts/protocol-auth/registry.js";
 import { setSecretResolverOwnerSource } from "../hosts/connect/secret-resolver-registry.js";
 import { recordConflict } from "./conflicts.js";
@@ -32,6 +34,22 @@ import { setPluginImpersonationCheck } from "../utils/auth-manager.js";
 import { setKeybindingActionSource } from "../database/routes/keybinding-validation.js";
 
 let loader: PluginLoader | null = null;
+/** Plugins the server starts on boot, known once startup picks them. */
+let startupCandidates: Set<string> | null = null;
+let startupDone = false;
+const STARTUP_WAIT_MS = 30_000;
+
+/** Whether a plugin is on its way up: activating, or due to start on boot. */
+function pluginStarting(pluginId: string): boolean {
+  const plugin = loader?.get(pluginId);
+  if (!plugin) return false;
+  if (plugin.state === "activating") return true;
+  return (
+    plugin.state === "loaded" &&
+    !startupDone &&
+    (startupCandidates === null || startupCandidates.has(pluginId))
+  );
+}
 
 export function getPluginRuntime(): { loader: PluginLoader } {
   if (!loader) {
@@ -45,6 +63,20 @@ export function getPluginRuntime(): { loader: PluginLoader } {
       (pluginId) => loader?.get(pluginId)?.state === "active",
     );
     setPluginInstalledCheck((pluginId) => !!loader?.get(pluginId));
+    // A host's login waits for the plugin that provides it to finish starting.
+    setPluginStartupWaiter(async (pluginId) => {
+      const deadline = Date.now() + STARTUP_WAIT_MS;
+      while (pluginStarting(pluginId) && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+    });
+    // A plugin process that starts on first use is started by the request.
+    setPluginWakeHook(async (pluginId) => {
+      const plugin = loader?.get(pluginId);
+      if (plugin?.state !== "active" || !plugin.sandboxed) return false;
+      const { getPluginRunner } = await import("./sandbox/runner.js");
+      return (await getPluginRunner()).wake(pluginId);
+    });
     // An admin acting for another user reaches only the plugins that opted in.
     setPluginImpersonationCheck((pluginId) => {
       const plugin = loader?.get(pluginId);
@@ -238,17 +270,29 @@ export async function initializePlugins(
   const { applyStoredPluginChoices } = await import("./manage.js");
   await applyStoredPluginChoices(pluginLoader);
 
+  const { loadStoredRevocations } = await import("./revocations.js");
+  await loadStoredRevocations();
+
   const loaded = await pluginLoader.loadAll();
-  if (loaded.length === 0) return [];
+  if (loaded.length === 0) {
+    startupDone = true;
+    return [];
+  }
 
   const fresh = await seedPlugins(loaded, options.freshInstall === true);
   if (!fresh) {
     const { installNewShippedPlugins, restoreMissingPlugins } =
       await import("./manage.js");
-    loaded.push(...(await restoreMissingPlugins()));
-    loaded.push(...(await installNewShippedPlugins()));
+    for (const plugin of [
+      ...(await restoreMissingPlugins()),
+      ...(await installNewShippedPlugins()),
+    ]) {
+      loaded.push(plugin);
+    }
   }
   await syncCapabilityGrants(loaded);
+  const { noteSignerChanges } = await import("./signers.js");
+  await noteSignerChanges(loaded);
   if (loaded.some((plugin) => plugin.source === "bundled")) {
     const { offerPluginSetup } = await import("./onboarding.js");
     await offerPluginSetup(fresh);
@@ -277,7 +321,13 @@ export async function initializePlugins(
     if (plugin) await registerPluginPermissions(plugin);
   }
 
-  const result = await pluginLoader.activateAll(candidates);
+  startupCandidates = new Set(candidates);
+  let result: Awaited<ReturnType<typeof pluginLoader.activateAll>>;
+  try {
+    result = await pluginLoader.activateAll(candidates);
+  } finally {
+    startupDone = true;
+  }
   await persistRuntimeState(loaded);
 
   if (result.blocked.size > 0 || result.failed.size > 0) {
@@ -561,7 +611,9 @@ export async function activatePlugin(pluginId: string): Promise<void> {
   const plugin = pluginLoader.get(pluginId);
   // Stays enabled and starts on the next boot without safe mode.
   if (!mayRunInSafeMode(pluginId, pluginLoader.list())) return;
-  if (plugin) await registerPluginPermissions(plugin);
+  if (plugin) {
+    await registerPluginPermissions(plugin);
+  }
 
   await pluginLoader.activate(pluginId);
 
@@ -627,6 +679,8 @@ export async function registerLoadedPlugins(
 ): Promise<void> {
   await seedPlugins(loaded, false);
   await syncCapabilityGrants(loaded);
+  const { noteSignerChanges } = await import("./signers.js");
+  await noteSignerChanges(loaded);
 }
 
 /** Stops a plugin and forgets it, before a new version is installed. */

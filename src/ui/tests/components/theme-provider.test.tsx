@@ -18,6 +18,12 @@ function mount() {
 }
 
 const classes = () => [...document.documentElement.classList];
+const loadSheets = () =>
+  act(() => {
+    for (const link of document.head.querySelectorAll("link")) {
+      link.dispatchEvent(new Event("load"));
+    }
+  });
 
 afterEach(() => {
   cleanup();
@@ -67,6 +73,9 @@ describe("ThemeProvider", () => {
       ]),
     );
     act(() => api!.setTheme("paper"));
+    // The old theme stays until the new stylesheet is in.
+    expect(classes()).toEqual(["dark"]);
+    loadSheets();
     expect(classes()).toEqual(["paper"]);
     expect(
       (document.getElementById("termix-theme-css") as HTMLLinkElement).href,
@@ -105,6 +114,29 @@ describe("ThemeProvider", () => {
       ]),
     );
     expect(api!.theme).toBe("nord");
+    loadSheets();
     expect(classes()).toEqual(["nord"]);
+  });
+
+  it("never shows a half loaded theme while hovering previews", () => {
+    mount();
+    const sheet = (id: string) => ({
+      id,
+      label: id,
+      mode: "dark" as const,
+      swatch: { background: "#000", panel: "#111", text: "#fff" },
+      pluginId: "classic-themes",
+      cssHref: `/plugin-assets/classic-themes/_themes/${id}.css?v=1`,
+    });
+    act(() => setPluginThemes([sheet("nord"), sheet("dracula")]));
+    act(() => api!.setThemePreview("nord"));
+    act(() => api!.setThemePreview("dracula"));
+    expect(classes()).toEqual(["dark"]);
+    act(() => api!.setThemePreview(null));
+    expect(classes()).toEqual(["dark"]);
+    // A late load from a preview that already ended changes nothing.
+    loadSheets();
+    expect(classes()).toEqual(["dark"]);
+    expect(document.head.querySelectorAll("link")).toHaveLength(0);
   });
 });

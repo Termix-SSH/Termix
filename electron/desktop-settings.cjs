@@ -36,7 +36,27 @@ const DEFAULTS = {
   defaultConnectionOrigin: "local",
   updateMode: "prompt",
   macTrayIcon: "monochrome",
+  closeToTray: true,
+  trayNoticeShown: false,
 };
+
+// The settings the app's page may change. The rest are set by the main
+// process itself, so a page can never write anything else to this file.
+const RENDERER_SETTINGS = {
+  defaultConnectionOrigin: (value) => value === "local" || value === "remote",
+  closeToTray: (value) => typeof value === "boolean",
+};
+
+function rendererSettings(settings) {
+  const picked = {};
+  if (!settings || typeof settings !== "object") return picked;
+  for (const [key, valid] of Object.entries(RENDERER_SETTINGS)) {
+    if (Object.hasOwn(settings, key) && valid(settings[key])) {
+      picked[key] = settings[key];
+    }
+  }
+  return picked;
+}
 
 function getDesktopSettings() {
   return { ...DEFAULTS, ...readJson(dataPath("desktop-settings.json"), {}) };
@@ -77,6 +97,7 @@ function removeOldSyncFiles() {
 }
 
 module.exports = {
+  rendererSettings,
   getDesktopSettings,
   saveDesktopSettings,
   getPreviousServerUrl,

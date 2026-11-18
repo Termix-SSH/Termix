@@ -49,6 +49,8 @@ const KIND_LABELS: Record<TileKind | "all", string> = {
  * editing. Search, filter by kind and fold groups, so long lists from many
  * plugins stay usable.
  */
+const FOLD_ABOVE_GROUPS = 4;
+
 export function TilePicker({
   entries,
   onAdd,
@@ -63,7 +65,11 @@ export function TilePicker({
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<TileKind | null>(null);
+  // Groups the user flipped from their default. With many groups they start
+  // folded, so the list reads as app names first.
   const [folded, setFolded] = useState<Set<string>>(() => new Set());
+  const foldByDefault =
+    new Set(entries.map((entry) => entry.group)).size > FOLD_ABOVE_GROUPS;
 
   const kinds = useMemo(
     () => KINDS.filter((k) => entries.some((entry) => entry.kind === k)),
@@ -159,7 +165,9 @@ export function TilePicker({
           </p>
         )}
         {groups.map(([group, list]) => {
-          const open = searching || !folded.has(group);
+          const open =
+            searching ||
+            (foldByDefault ? folded.has(group) : !folded.has(group));
           return (
             <div key={group} className="border-b border-border last:border-b-0">
               <button

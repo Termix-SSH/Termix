@@ -701,3 +701,53 @@ describe("drain", () => {
     vi.useRealTimers();
   });
 });
+
+describe("server wide signals", () => {
+  it("reads once per fresh window and again after a change", async () => {
+    const { readServerSignal, clearResourceCache } =
+      await import("../../operations/resources.js");
+    clearResourceCache();
+    const read = vi.fn(async () => ({ data: { status: "ok" } }));
+    registerAction(
+      "demo",
+      action({
+        id: "demo.status",
+        scope: "server",
+        risk: "read",
+        hostAccess: undefined,
+        inputs: [],
+      }),
+      { run: read },
+    );
+    const change = vi.fn(async () => ({ summary: "done", changed: true }));
+    registerAction(
+      "demo",
+      action({
+        id: "demo.reload",
+        scope: "server",
+        risk: "change",
+        hostAccess: undefined,
+        inputs: [],
+      }),
+      { run: change },
+    );
+    const options = {
+      actionId: "demo.status",
+      userId: USER,
+      origin: { kind: "ui" } as never,
+    };
+    expect(await readServerSignal(options)).toEqual({ status: "ok" });
+    expect(await readServerSignal(options)).toEqual({ status: "ok" });
+    expect(read).toHaveBeenCalledTimes(1);
+
+    await runOperation({
+      actionId: "demo.reload",
+      userId: USER,
+      origin: { kind: "ui" } as never,
+    });
+    expect(change).toHaveBeenCalledTimes(1);
+    await readServerSignal(options);
+    expect(read).toHaveBeenCalledTimes(2);
+    clearResourceCache();
+  });
+});

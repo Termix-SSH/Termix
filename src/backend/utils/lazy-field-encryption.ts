@@ -46,36 +46,33 @@ export class LazyFieldEncryption {
     }
   }
 
+  /**
+   * `anyRecord` opens a value under the record id it carries. Only upgrade
+   * code reading retired columns uses it; everything else must match.
+   */
   static safeGetFieldValue(
     fieldValue: string,
     userKEK: Buffer,
     recordId: string,
     fieldName: string,
+    options: { anyRecord?: boolean } = {},
   ): string {
     if (!fieldValue) return "";
+    const open = (name: string) =>
+      options.anyRecord
+        ? FieldCrypto.decryptSealedField(fieldValue, userKEK, name)
+        : FieldCrypto.decryptField(fieldValue, userKEK, recordId, name);
 
     if (this.isPlaintextField(fieldValue)) {
       return fieldValue;
     } else {
       try {
-        const decrypted = FieldCrypto.decryptField(
-          fieldValue,
-          userKEK,
-          recordId,
-          fieldName,
-        );
-        return decrypted;
+        return open(fieldName);
       } catch (error) {
         const legacyFieldName = this.LEGACY_FIELD_NAME_MAP[fieldName];
         if (legacyFieldName) {
           try {
-            const decrypted = FieldCrypto.decryptField(
-              fieldValue,
-              userKEK,
-              recordId,
-              legacyFieldName,
-            );
-            return decrypted;
+            return open(legacyFieldName);
           } catch {
             // expected - legacy decryption may fail, try other methods
           }

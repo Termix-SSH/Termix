@@ -67,7 +67,17 @@ function sourceFacade(file) {
   return lines.join("\n");
 }
 
-export function termixPluginHost({ repoRoot, sdkUiEntry, sdkFrontendEntry }) {
+/**
+ * metaCsp(hash) gives the CSP for a meta tag in the built index.html. The
+ * desktop loads that file from file://, where a header can't be set.
+ */
+export function termixPluginHost({
+  repoRoot,
+  sdkUiEntry,
+  sdkFrontendEntry,
+  metaCsp,
+  htmlEntry = "index.html",
+}) {
   let command = "build";
   let shared = [];
 
@@ -90,7 +100,9 @@ export function termixPluginHost({ repoRoot, sdkUiEntry, sdkFrontendEntry }) {
       command = env.command;
       shared = sharedModules();
       if (command !== "build") return;
-      const input = { index: path.join(repoRoot, "index.html") };
+      const input = {
+        [path.basename(htmlEntry, ".html")]: path.join(repoRoot, htmlEntry),
+      };
       for (const specifier of shared) {
         input[`shared-${shimName(specifier)}`] = VIRTUAL_PREFIX + specifier;
       }
@@ -159,7 +171,19 @@ export function termixPluginHost({ repoRoot, sdkUiEntry, sdkFrontendEntry }) {
                     ]),
                 ),
               });
+        const tags = [];
+        if (command === "build" && metaCsp) {
+          tags.push({
+            tag: "meta",
+            attrs: {
+              "http-equiv": "Content-Security-Policy",
+              content: metaCsp(importMapCspHash(text)),
+            },
+            injectTo: "head-prepend",
+          });
+        }
         return [
+          ...tags,
           {
             tag: "script",
             attrs: { type: "importmap" },

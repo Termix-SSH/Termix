@@ -7,7 +7,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { hostAccess, hosts, pluginSettings } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
-import { DataCrypto } from "../../utils/data-crypto.js";
+import { DataCrypto, splitSecrets } from "../../utils/data-crypto.js";
 import { rowsAffected } from "./mutation-result.js";
 import {
   deleteReturning,
@@ -44,31 +44,56 @@ export class HostRepository {
   ): Promise<HostRecord> {
     assertSecretsAllowed("ssh_data", host);
     const userDataKey = DataCrypto.validateUserAccess(userId);
-    const tempId = host.id ?? Date.now();
-    const dataWithTempId = {
-      syncId: randomUUID(),
-      ...host,
-      id: tempId,
-    };
-    const encryptedHost = DataCrypto.encryptRecord(
-      "ssh_data",
-      dataWithTempId,
-      userId,
-      userDataKey,
-    );
-
-    if (!host.id) {
-      delete (encryptedHost as Partial<NewHostRecord>).id;
+    const record = { syncId: randomUUID(), ...host } as Record<string, unknown>;
+    if (record.id) {
+      const rows = await insertReturning(
+        this.context,
+        hosts,
+        DataCrypto.encryptRecord(
+          "ssh_data",
+          record,
+          userId,
+          userDataKey,
+        ) as NewHostRecord,
+      );
+      await this.afterWrite();
+      return DataCrypto.decryptRecord("ssh_data", rows[0], userId, userDataKey);
     }
 
-    const rows = await insertReturning(
+    // Secrets are sealed with the row id, so they go in once the row has one.
+    const { plain, secrets } = splitSecrets("ssh_data", record);
+    const [inserted] = await insertReturning(
       this.context,
       hosts,
-      encryptedHost as NewHostRecord,
+      plain as NewHostRecord,
     );
+    let row = inserted;
+    if (Object.keys(secrets).length) {
+      try {
+        const sealed = DataCrypto.encryptRecord(
+          "ssh_data",
+          { ...secrets, id: inserted.id },
+          userId,
+          userDataKey,
+        );
+        delete (sealed as Record<string, unknown>).id;
+        const updated = await updateReturning(
+          this.context,
+          hosts,
+          sealed as HostUpdate,
+          eq(hosts.id, inserted.id),
+        );
+        row = updated[0] ?? inserted;
+      } catch (error) {
+        await this.context.drizzle
+          .delete(hosts)
+          .where(eq(hosts.id, inserted.id));
+        throw error;
+      }
+    }
 
     await this.afterWrite();
-    return DataCrypto.decryptRecord("ssh_data", rows[0], userId, userDataKey);
+    return DataCrypto.decryptRecord("ssh_data", row, userId, userDataKey);
   }
 
   async findById(id: number): Promise<HostRecord | null> {
@@ -219,10 +244,11 @@ export class HostRepository {
     }
     const encryptedUpdate = DataCrypto.encryptRecord(
       "ssh_data",
-      update,
+      { ...update, id: hostId },
       userId,
       userDataKey,
-    );
+    ) as Record<string, unknown>;
+    delete encryptedUpdate.id;
 
     const rows = await updateReturning(
       this.context,

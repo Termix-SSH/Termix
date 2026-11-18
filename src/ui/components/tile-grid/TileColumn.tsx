@@ -7,6 +7,10 @@ import { BottomEdge, EdgeOwned } from "./edge";
  * from several panels. Cards drop their box and the outermost ones draw a
  * line under themselves. Use TileStack when the sections are direct children.
  */
+/** The line under each card in a column, drawn by the column. */
+export const TILE_CARD_LINES =
+  "[&_[data-tile-card]]:border-x-0 [&_[data-tile-card]]:border-t-0 [&_[data-tile-card]]:border-b [&_[data-tile-card]]:border-border [&_[data-tile-card]_[data-tile-card]]:border-b-0";
+
 export function TileColumn({
   className,
   children,
@@ -18,7 +22,7 @@ export function TileColumn({
     <SeamlessTileContext.Provider value={true}>
       <BottomEdge
         className={className}
-        innerClassName="flex min-w-0 flex-col [&_[data-tile-card]]:border-x-0 [&_[data-tile-card]]:border-t-0 [&_[data-tile-card]]:border-b [&_[data-tile-card]]:border-border [&_[data-tile-card]_[data-tile-card]]:border-b-0"
+        innerClassName={`flex min-w-0 flex-col ${TILE_CARD_LINES}`}
       >
         <EdgeOwned>{children}</EdgeOwned>
       </BottomEdge>

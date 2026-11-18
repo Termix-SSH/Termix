@@ -54,6 +54,8 @@ import {
   UnverifiedBadge,
 } from "./plugin-bits";
 import { RegistriesSection } from "./RegistriesSection";
+import { PluginMemoryCell, PluginMemorySummary } from "./PluginMemory";
+import { usePluginMemory, usePluginUpdateCheck } from "./plugin-memory";
 import { PluginConsentPrompt } from "./PluginConsentPrompt";
 import { PluginDetail } from "./PluginDetail";
 import {
@@ -134,6 +136,12 @@ function PluginsTabBody() {
   );
 
   const installed = manager.plugins.filter((p) => p.installed);
+  const outdated = installed.filter((p) => p.isolation === "legacy");
+  const updateCheck = usePluginUpdateCheck(!manager.managedByServer);
+  // API 1 plugins already show above; this lists what the update adds.
+  const blockedByUpdate = (updateCheck?.blocked ?? []).filter(
+    (plugin) => plugin.reason === "termix",
+  );
   const available = manager.plugins.filter((p) => p.inRegistry);
   const updates = installed.filter((p) => p.updateAvailable);
   const running = installed.filter((p) => p.status === "running").length;
@@ -201,6 +209,34 @@ function PluginsTabBody() {
         <div className="flex min-h-0 flex-1 flex-col">
           {manager.managedByServer && (
             <Notice>{t("plugins.manager.managedByServer")}</Notice>
+          )}
+          {outdated.length > 0 && (
+            <Notice>
+              {t("plugins.manager.legacy.notice", {
+                count: outdated.length,
+                names: outdated.map((plugin) => plugin.name).join(" | "),
+              })}{" "}
+              {t("plugins.manager.legacy.why")}{" "}
+              <DocsLink core="pluginApi2">
+                {t("plugins.manager.legacy.guide")}
+              </DocsLink>
+            </Notice>
+          )}
+          {updateCheck?.version && blockedByUpdate.length > 0 && (
+            <Notice>
+              {t("plugins.manager.updateCheck.notice", {
+                count: blockedByUpdate.length,
+                version: updateCheck.version,
+                names: blockedByUpdate
+                  .map((plugin) =>
+                    t("plugins.manager.updateCheck.needs", {
+                      name: plugin.name,
+                      range: plugin.needs,
+                    }),
+                  )
+                  .join(" | "),
+              })}
+            </Notice>
           )}
           {manager.registryError && (
             <Notice>
@@ -843,6 +879,7 @@ function InstalledSection({
     (p) => p.status !== "running" && p.status !== "server",
   );
   const pending = plugins.filter((p) => p.updateAvailable && !p.pinnedVersion);
+  const memory = usePluginMemory(!manager.managedByServer);
 
   const listColumns: DataColumn<PluginEntry>[] = [
     {
@@ -873,6 +910,19 @@ function InstalledSection({
       hideBelow: "lg",
       cell: (p) => <StatusCell plugin={p} />,
     },
+    ...(memory
+      ? [
+          {
+            key: "memory",
+            header: t("plugins.manager.table.memory"),
+            width: "90px",
+            hideBelow: "lg" as const,
+            cell: (p: PluginEntry) => (
+              <PluginMemoryCell report={memory} pluginId={p.id} />
+            ),
+          },
+        ]
+      : []),
     {
       key: "actions",
       header: "",
@@ -931,6 +981,8 @@ function InstalledSection({
               </Button>
             </div>
           </Toolbar>
+
+          <PluginMemorySummary report={memory} />
 
           {activeFacets(facets) > 0 && (
             <ActiveFilters

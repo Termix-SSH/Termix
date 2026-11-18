@@ -1,8 +1,10 @@
 /**
- * Reachability for status providers: ctx.network.tcpProbe, ctx.ssh.probe and
- * ctx.hosts.probeTargets. Nothing here ever logs in to the probed host.
+ * Reachability for status providers: ctx.network.tcpProbe, ctx.network.lookup,
+ * ctx.ssh.probe and ctx.hosts.probeTargets. Nothing here ever logs in to the
+ * probed host.
  */
 
+import { lookup as dnsLookup } from "node:dns/promises";
 import type {
   PluginHostProbeTarget,
   PluginNetwork,
@@ -23,6 +25,7 @@ type AuditFn = (
 const MIN_TIMEOUT_MS = 500;
 const MAX_TIMEOUT_MS = 15_000;
 const DEFAULT_TIMEOUT_MS = 5000;
+const LOOKUP_TIMEOUT_MS = 5000;
 
 function clampTimeout(value?: number): number {
   const n = Number(value);
@@ -68,6 +71,7 @@ export function createPluginNetwork(deps: {
 }): PluginNetwork {
   const { manifest, audit } = deps;
   let audited = false;
+  let lookupAudited = false;
   return {
     tcpProbe: async (host, port, options) => {
       await assertCapability(
@@ -88,6 +92,41 @@ export function createPluginNetwork(deps: {
         });
       }
       return tcpPing(host.trim(), port, clampTimeout(options?.timeoutMs));
+    },
+    lookup: async (host, options) => {
+      await assertCapability(
+        manifest.id,
+        "network:probe",
+        manifest.capabilities,
+        "network_lookup",
+      );
+      const name = typeof host === "string" ? host.trim() : "";
+      if (!name || name.length > 253 || /[\s/]/.test(name)) {
+        throw new Error("A host name is required");
+      }
+      const family =
+        options?.family === 4 || options?.family === 6 ? options.family : 0;
+      if (!lookupAudited) {
+        lookupAudited = true;
+        await audit("network_lookup", "looked up host names", {
+          success: true,
+        });
+      }
+      let timer: NodeJS.Timeout | undefined;
+      const timeout = new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), LOOKUP_TIMEOUT_MS);
+      });
+      try {
+        return await Promise.race([
+          dnsLookup(name, { family }).then(
+            (found) => found.address,
+            () => null,
+          ),
+          timeout,
+        ]);
+      } finally {
+        clearTimeout(timer);
+      }
     },
   };
 }

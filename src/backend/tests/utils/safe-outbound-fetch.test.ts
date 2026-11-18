@@ -5,6 +5,7 @@ import type { LookupAddress, LookupOptions } from "dns";
 import {
   createDnsLookupHook,
   isBlockedAddress,
+  isMetadataAddress,
   outboundIdleTimeout,
   readResponseTextLimited,
   safeOutboundFetch,
@@ -128,6 +129,52 @@ const publicAddresses: LookupAddress[] = [
     family: 6,
   },
 ];
+
+describe("cloud metadata", () => {
+  it("knows the metadata addresses in every spelling", () => {
+    for (const address of [
+      "169.254.169.254",
+      "::ffff:169.254.169.254",
+      "64:ff9b::169.254.169.254",
+      "169.254.170.2",
+      "fd00:ec2::254",
+      "100.100.100.200",
+    ]) {
+      expect(isMetadataAddress(address)).toBe(true);
+    }
+    expect(isMetadataAddress("169.254.1.1")).toBe(false);
+    expect(isMetadataAddress("100.100.100.100")).toBe(false);
+    expect(isMetadataAddress("not an address")).toBe(false);
+  });
+
+  it("refuses a metadata result even for a host allowed as private", () => {
+    const { callback } = runHook(
+      [{ address: "169.254.169.254", family: 4 }],
+      null,
+      { all: true },
+      true,
+    );
+    expect(callback).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "Cloud metadata addresses are not allowed",
+      }),
+      "",
+      0,
+    );
+  });
+
+  it("refuses a metadata address or name a caller allowed as private", async () => {
+    for (const [url, allowed] of [
+      ["http://169.254.169.254/latest/meta-data/", "169.254.169.254"],
+      ["http://[fd00:ec2::254]/", "fd00:ec2::254"],
+      ["http://metadata.google.internal/", "metadata.google.internal"],
+    ]) {
+      await expect(safeOutboundFetch(url, {}, [allowed])).rejects.toThrow(
+        "Cloud metadata addresses are not allowed",
+      );
+    }
+  });
+});
 
 describe("createDnsLookupHook", () => {
   it("permits private results only for an explicitly authorized host", () => {

@@ -1,6 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
+const { dropCpuFeatures } = require("./drop-cpu-features.cjs");
 
 function findPackage(start) {
   let directory = path.dirname(start);
@@ -34,7 +35,15 @@ if (require.main === module) {
   const sharpPackage = findPackage(require.resolve("sharp"));
   execFileSync(
     "npm",
-    ["install", "--force", "--no-save", ...linuxSharpPackages(sharpPackage)],
+    [
+      "install",
+      "--force",
+      "--no-save",
+      "--ignore-scripts",
+      ...linuxSharpPackages(sharpPackage),
+    ],
     { stdio: "inherit" },
   );
+  // npm install brings back optional packages that ci:install removed.
+  dropCpuFeatures(path.join(__dirname, ".."));
 }

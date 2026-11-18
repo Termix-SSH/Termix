@@ -8,7 +8,7 @@
  */
 
 import type { SyncRow } from "@termix-ssh/plugin-sdk/backend";
-import { getEntity } from "../../plugins/sync-registry.js";
+import { getEntity, rowSyncs } from "../../plugins/sync-registry.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { syncLogger } from "../../utils/logger.js";
 import {
@@ -24,7 +24,7 @@ import {
   writeWireRow,
 } from "../store.js";
 import { allocateSeq, getRecord, putRecord, recordKey } from "../records.js";
-import { orderSelfReferences } from "../wire.js";
+import { orderSelfReferences, unheldFields } from "../wire.js";
 import { markChanged, notifyListeners, reconcileUser } from "./feed.js";
 
 export interface PushOp {
@@ -137,12 +137,16 @@ export async function applyPush(
     missed = true;
   });
   const results = new Map<string, PushResult>();
+  // Only the first op for a row is applied; repeats in the batch are duplicates.
+  const firstOp = new Map<string, PushOp>();
   // Rows written before something they point at, for a second pass.
   const retry: PushOp[] = [];
 
   for (const op of orderOps(ops)) {
     const key = recordKey(op.entityType, op.syncId);
     const base = { syncId: op.syncId, entityType: op.entityType };
+    if (firstOp.has(key)) continue;
+    firstOp.set(key, op);
     const entity = getEntity(op.entityType);
     if (!entity) {
       results.set(key, { ...base, status: "rejected", reason: "unknown_type" });
@@ -215,7 +219,7 @@ export async function applyPush(
       }
 
       const row = { ...(op.row as SyncRow), syncId: op.syncId };
-      if (entity.shouldSync && entity.shouldSync(row) === false) {
+      if (!(await rowSyncs(entity, row))) {
         results.set(key, { ...base, status: "rejected", reason: "not_synced" });
         continue;
       }
@@ -230,6 +234,28 @@ export async function applyPush(
         deleted: false,
       });
       if (written) wire.set(key, written.wire);
+      // Part of the push did not take. Answering ok would leave the desktop
+      // sure it is in sync while the server holds something else, for good:
+      // its next pull skips this revision. Send what the server has instead.
+      const unheld =
+        written && !missed ? unheldFields(entity, row, written.wire) : [];
+      if (written && unheld.length > 0) {
+        syncLogger.warn("A pushed sync change was not fully applied", {
+          operation: "sync_push",
+          userId,
+          entityType: op.entityType,
+          syncId: op.syncId,
+          fields: unheld,
+        });
+        results.set(key, {
+          ...base,
+          status: "conflict",
+          revision: currentRevision + 1,
+          deleted: false,
+          row: written.wire,
+        });
+        continue;
+      }
       results.set(key, {
         ...base,
         status: "ok",
@@ -284,13 +310,16 @@ export async function applyPush(
     notifyListeners(userId);
     markChanged();
   }
-  return ops.map(
-    (op) =>
-      results.get(recordKey(op.entityType, op.syncId)) ?? {
+  return ops.map((op) => {
+    const key = recordKey(op.entityType, op.syncId);
+    const result = firstOp.get(key) === op ? results.get(key) : undefined;
+    return (
+      result ?? {
         syncId: op.syncId,
         entityType: op.entityType,
         status: "rejected",
         reason: "duplicate",
-      },
-  );
+      }
+    );
+  });
 }

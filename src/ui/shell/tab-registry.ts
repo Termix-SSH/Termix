@@ -115,6 +115,8 @@ function isOwnedButAbsent(type: string): boolean {
 
 export function isPersistentTabType(type: string): boolean {
   if (CORE_PERSISTENT.has(type)) return true;
+  // The fixed dashboard tab is never saved, even while its layout is off.
+  if (CORE_HOSTLESS.has(type)) return false;
   const def = registry.get(type);
   if (def) return !!def.persistent;
   return isOwnedButAbsent(type);

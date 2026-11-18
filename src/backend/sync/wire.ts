@@ -184,6 +184,19 @@ export async function deserializeReferences(
 }
 
 /**
+ * The id a synced value must be sealed for. Rows that came in through sync
+ * before 26.11.2 were sealed for their sync id, which still only opens on the
+ * row that carries it.
+ */
+function boundId(row: SyncRow, value: string): string {
+  const sealedFor = FieldCrypto.sealedRecordId(value);
+  if (row.syncId && sealedFor === `sync-${String(row.syncId)}`) {
+    return sealedFor;
+  }
+  return String(row.id);
+}
+
+/**
  * Decrypts the entity's secret fields. Throws when one cannot be decrypted:
  * sending an empty value instead would wipe the secret on the other side.
  */
@@ -198,7 +211,12 @@ export function decryptFields(
     const value = out[field];
     if (typeof value !== "string" || !FieldCrypto.isEncrypted(value)) continue;
     if (!key) throw new Error("No data key to decrypt synced fields");
-    out[field] = FieldCrypto.decryptField(value, key, String(row.id), field);
+    out[field] = FieldCrypto.decryptField(
+      value,
+      key,
+      boundId(row, value),
+      field,
+    );
   }
   return out;
 }
@@ -311,6 +329,51 @@ export function hashWire(
     .createHmac("sha256", key)
     .update(JSON.stringify(stable(content)))
     .digest("hex");
+}
+
+/** 0/1 and true/false, or 22 and "22", are the same value across databases. */
+function sameScalar(stored: unknown, pushed: unknown): boolean {
+  const level = (value: unknown) =>
+    value === true ? 1 : value === false ? 0 : value;
+  return String(level(stored)) === String(level(pushed));
+}
+
+/**
+ * Whether `stored` holds everything `pushed` says. An empty value says
+ * nothing, and a key `stored` lacks is one the server does not know (a plugin
+ * it does not run), not one it refused.
+ */
+function holds(stored: unknown, pushed: unknown): boolean {
+  if (pushed === null || pushed === undefined || pushed === "") return true;
+  if (Array.isArray(pushed)) {
+    return JSON.stringify(stored) === JSON.stringify(pushed);
+  }
+  if (typeof pushed !== "object") return sameScalar(stored, pushed);
+  if (!stored || typeof stored !== "object" || Array.isArray(stored)) {
+    return false;
+  }
+  const object = stored as Record<string, unknown>;
+  return Object.entries(pushed).every(
+    ([key, value]) => !(key in object) || holds(object[key], value),
+  );
+}
+
+/**
+ * The entity's verified fields the server stored differently from the push,
+ * such as a plugin setting its version of the plugin refused. What only one
+ * side has (another plugin's settings, a newer field) is not a miss.
+ */
+export function unheldFields(
+  entity: RegisteredSyncEntity,
+  pushed: SyncRow,
+  stored: SyncRow,
+): string[] {
+  return (entity.verifyFields ?? []).filter(
+    (field) =>
+      field in pushed &&
+      field in stored &&
+      !holds(normalize(stored[field]), normalize(pushed[field])),
+  );
 }
 
 /** Parents before children when an entity references itself. */

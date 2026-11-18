@@ -1,0 +1,213 @@
+name: Hostile plugins
+
+# Runs plugins built to attack the sandbox (scripts/hostile) on the Docker
+# image, with every official plugin built from source next to them, and
+# fails when any attack works. Twice: the launcher giving each plugin its own
+# user with the firewall on, and the fixed user, read-only setup where
+# plugins share core's user. The packaged desktop runs the process attacks in
+# desktop-fence.test.ts (desktop-fence.yml, electron.yml).
+# Plugins are built from source: CI never downloads a .tmxplug.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["dev-*"]
+  # Every pull request, so the result can be a required check; the run is
+  # skipped when nothing the sandbox depends on changed.
+  pull_request:
+    branches: ["dev-*"]
+
+permissions: {}
+
+concurrency:
+  group: hostile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      run: ${{ steps.diff.outputs.run }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Sandbox files changed
+        id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ] || [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git diff --name-only "$BASE" "$HEAD" | grep -qE '^(src/backend/plugins/|src/backend/http/|src/ui/plugin-host/|src/ui/plugin-frame/|packages/plugin-sdk/|electron/|docker/|scripts/hostile/|\.github/workflows/hostile\.yml$)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  hostile:
+    name: Hostile plugins (${{ matrix.mode }})
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [launcher, fixed-user]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      MODE: ${{ matrix.mode }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm run ci:install
+
+      - name: Build plugin SDK
+        run: npm run build:sdk
+
+      - name: Clone every plugin
+        run: node scripts/budgets/stage-plugins.mjs "$RUNNER_TEMP/plugins" --jobs 6
+
+      - name: Build every plugin
+        run: node scripts/build-plugins.cjs --profile none --local "$RUNNER_TEMP/plugins"
+
+      - name: Stage them with the hostile fixtures
+        run: node scripts/hostile/run.mjs --stage dist/plugins --local-plugins "$RUNNER_TEMP/plugins"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # The plugins' dev branches need the coming release, so the server
+      # reports that version, the way the dev runner does.
+      - name: Coming version
+        id: version
+        env:
+          REF: ${{ github.base_ref || github.ref_name }}
+        run: |
+          case "$REF" in
+            dev-*) version="${REF#dev-}" ;;
+            *) version="$(git ls-remote --heads https://github.com/Termix-SSH/Termix 'refs/heads/dev-*' \
+                 | sed 's#.*refs/heads/dev-##' | sort -V | tail -1)" ;;
+          esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Set the coming version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: npm pkg set version="$VERSION"
+
+      - name: Build image
+        run: |
+          docker buildx build \
+            --load \
+            --provenance=false \
+            --sbom=false \
+            --build-arg PLUGIN_PROFILE=none \
+            -t termix-hostile \
+            -f docker/Dockerfile .
+
+      - name: Start Termix
+        run: |
+          canary="$(openssl rand -hex 12)"
+          echo "HOSTILE_ENV_CANARY=$canary" >> "$GITHUB_ENV"
+          common=(-d --name termix -p 8080:8080
+            -e TERMIX_HOSTILE_CANARY="$canary"
+            -e "TERMIX_PLUGIN_ALWAYS_ON=hostile-victim,hostile-backend,hostile-frame,hostile-crash"
+            -v "$PWD/dist/plugins:/app/dist/plugins:ro"
+            --security-opt no-new-privileges:true --tmpfs /tmp)
+          if [ "$MODE" = "launcher" ]; then
+            # The compose file's setup, with the optional firewall on.
+            docker run "${common[@]}" -v hostile-data:/app/data \
+              --cap-drop ALL --cap-add CHOWN --cap-add DAC_OVERRIDE --cap-add FOWNER \
+              --cap-add SETUID --cap-add SETGID --cap-add NET_ADMIN \
+              termix-hostile
+          else
+            docker run --rm -v hostile-data:/app/data --user root --entrypoint chown \
+              termix-hostile -R 1000:1000 /app/data
+            docker run "${common[@]}" -v hostile-data:/app/data \
+              --user 1000:1000 --read-only --cap-drop ALL \
+              termix-hostile
+          fi
+
+      - name: Wait for Termix
+        run: |
+          for _ in $(seq 1 120); do
+            if curl -fsS http://localhost:8080/health > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          docker logs termix 2>&1 | tail -100
+          exit 1
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run the attacks
+        run: >
+          node scripts/hostile/run.mjs
+          --url http://localhost:8080
+          --container termix
+          --core-port 30001
+          --report hostile-report.json
+          --screenshots .
+
+      - name: Server log
+        if: failure()
+        run: docker logs termix 2>&1 | tail -300
+
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: hostile-${{ matrix.mode }}
+          path: |
+            hostile-report.json
+            hostile-failure.png
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # One result to require: green when the attacks ran clean or were not needed.
+  result:
+    name: Hostile plugins
+    needs: [changes, hostile]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - name: Every attack refused
+        env:
+          RUN: ${{ needs.changes.outputs.run }}
+          CHANGES: ${{ needs.changes.result }}
+          RESULT: ${{ needs.hostile.result }}
+        run: |
+          if [ "$CHANGES" != "success" ]; then
+            echo "::error::Could not tell what changed"
+            exit 1
+          fi
+          if [ "$RUN" = "true" ] && [ "$RESULT" != "success" ]; then
+            echo "::error::An attack got through or the suite could not run"
+            exit 1
+          fi
+          echo "Hostile plugins: ok"

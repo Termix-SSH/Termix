@@ -300,6 +300,38 @@ describe("ctx.ssh", () => {
     expect(h.logins.map((login) => login.hostId)).toEqual([5, 5]);
   });
 
+  it("connects a host that came back from a plugin process as plain data", async () => {
+    h.granted = new Set(["ssh:connect", "credentials:use"]);
+    const ssh = createPluginSsh({
+      manifest: manifest(["ssh:connect", "credentials:use"]),
+      bag: new DisposableBag("fixture"),
+      audit: vi.fn(async () => {}),
+    });
+    const host = (await ssh.resolveHost(5))!;
+    // What a sandboxed plugin sends back: a structured clone, no symbols.
+    const copy = structuredClone(host) as typeof host;
+    expect(Object.getOwnPropertySymbols(copy)).toEqual([]);
+    expect(JSON.stringify(copy)).not.toContain("stored-secret");
+
+    await ssh.connect(copy);
+    expect(h.connects[0].target).toMatchObject({ password: "stored-secret" });
+  });
+
+  it("refuses a copied host ref for another acting user", async () => {
+    h.granted = new Set(["ssh:connect", "credentials:use"]);
+    const ssh = createPluginSsh({
+      manifest: manifest(["ssh:connect", "credentials:use"]),
+      bag: new DisposableBag("fixture"),
+      audit: vi.fn(async () => {}),
+    });
+    const host = (await ssh.resolveHost(5))!;
+    const copy = structuredClone(host) as typeof host;
+    h.actor = "someone-else";
+    await ssh.connect(copy);
+    expect(h.connects[0].target).not.toHaveProperty("password");
+    expect(h.connects[0].target).toMatchObject({ userId: "someone-else" });
+  });
+
   it("does not honor another plugin's resolved host", async () => {
     h.granted = new Set(["ssh:connect", "credentials:use"]);
     const deps = {

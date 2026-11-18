@@ -10,11 +10,17 @@
  *   - a mapped role set, when the provider reports one, keeps roles in step
  */
 
+import {
+  DISABLED_REASON_PENDING,
+  externalSignupApprovalRequired,
+} from "./user-access-settings.js";
 import { nanoid } from "nanoid";
 import { authLogger } from "../utils/logger.js";
+import { logAudit } from "../utils/audit-logger.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { DatabaseSaveTrigger } from "../utils/database-save-trigger.js";
 import { PermissionManager } from "../utils/permission-manager.js";
+import { afterAdminStatusChange } from "./admin-status.js";
 import {
   createCurrentRoleRepository,
   createCurrentSettingsRepository,
@@ -55,15 +61,9 @@ async function isExternalProvisioningAllowed(): Promise<boolean> {
   return allow.trim().toLowerCase() === "true";
 }
 
-/**
- * Whether a newly provisioned user must wait for an admin. There is no
- * approval queue yet, so nobody does; a plugin or a later release can change
- * that here without touching any login method.
- */
-async function isApprovalRequired(
-  _identity: ExternalIdentity,
-): Promise<boolean> {
-  return false;
+/** Whether a new external account has to wait for an admin first. */
+function isApprovalRequired(): boolean {
+  return externalSignupApprovalRequired();
 }
 
 function isAllowed(identity: ExternalIdentity): boolean {
@@ -80,7 +80,21 @@ function isAllowed(identity: ExternalIdentity): boolean {
   );
 }
 
-async function syncAdmin(
+const SYSTEM_ROLE_NAMES = new Set(["admin", "user"]);
+
+/**
+ * Whether the provider says this user is an admin. An explicit admin claim
+ * wins; otherwise a role map that manages "admin" decides.
+ */
+function adminFromIdentity(identity: ExternalIdentity): boolean | undefined {
+  if (identity.isAdmin !== undefined) return identity.isAdmin;
+  if (identity.roleSync?.managed.includes("admin")) {
+    return identity.roleSync.desired.includes("admin");
+  }
+  return undefined;
+}
+
+export async function syncAdmin(
   user: UserRecord,
   isAdmin: boolean,
 ): Promise<UserRecord> {
@@ -97,6 +111,7 @@ async function syncAdmin(
   } catch {
     // Roles follow on the next sign-in; the admin flag itself is saved.
   }
+  await afterAdminStatusChange(user.id, isAdmin);
   authLogger.info("Admin status synced from the identity provider", {
     operation: "external_admin_sync",
     userId: user.id,
@@ -109,12 +124,17 @@ async function syncAdmin(
  * Adds and removes the roles a provider's group map manages. Roles assigned
  * by hand, and roles outside the map, are never touched.
  */
-async function applyRoleSync(
+export async function applyRoleSync(
   userId: string,
   roleSync: { desired: string[]; managed: string[] },
 ): Promise<void> {
-  const desired = new Set(roleSync.desired);
-  const managed = new Set(roleSync.managed);
+  // System roles follow the admin flag, never the map directly.
+  const desired = new Set(
+    roleSync.desired.filter((name) => !SYSTEM_ROLE_NAMES.has(name)),
+  );
+  const managed = new Set(
+    roleSync.managed.filter((name) => !SYSTEM_ROLE_NAMES.has(name)),
+  );
   const roleRepository = createCurrentRoleRepository();
   const currentRoles = await roleRepository.listUserRoles(userId);
   const currentNames = new Set(currentRoles.map((role) => role.roleName));
@@ -153,6 +173,29 @@ async function applyRoleSync(
   }
 }
 
+/** Turns a new account off until an admin approves it, and says so. */
+async function markPendingApproval(
+  user: UserRecord,
+  provider: string,
+): Promise<UserRecord> {
+  const updated =
+    (await createCurrentUserRepository().update(user.id, {
+      disabledAt: new Date().toISOString(),
+      disabledReason: DISABLED_REASON_PENDING,
+    })) ?? user;
+  await logAudit({
+    userId: user.id,
+    username: user.username,
+    action: "user_pending_approval",
+    resourceType: "user",
+    resourceId: user.id,
+    resourceName: user.username,
+    details: JSON.stringify({ provider }),
+    success: true,
+  });
+  return updated;
+}
+
 async function findLinkedUser(
   identity: ExternalIdentity,
 ): Promise<UserRecord | null> {
@@ -162,6 +205,87 @@ async function findLinkedUser(
   );
   if (!linked) return null;
   return createCurrentUserRepository().findById(linked.userId);
+}
+
+/**
+ * The first external sign in of someone a provisioning plugin made an account
+ * for: the account is matched on the provider's verified email and the sign
+ * in is linked to it. Only accounts a plugin made, with no password and no
+ * linked sign in yet, are matched, so no existing account can be taken over.
+ */
+async function claimManagedAccount(
+  identity: ExternalIdentity,
+): Promise<UserRecord | null> {
+  const email = identity.email?.trim().toLowerCase();
+  if (!email) return null;
+  const user = await createCurrentUserRepository().findByEmail(email);
+  if (!user?.managedBy || (user.passwordHash ?? "").trim() !== "") return null;
+  const auth = createCurrentUserAuthRepository();
+  if ((await auth.listIdentitiesForUser(user.id)).length > 0) return null;
+
+  await auth.linkIdentity({
+    userId: user.id,
+    providerId: identity.provider,
+    subject: identity.subject,
+    email,
+  });
+  await logAudit({
+    userId: user.id,
+    username: user.username,
+    action: "link_external_identity",
+    resourceType: "user",
+    resourceId: user.id,
+    resourceName: user.username,
+    details: JSON.stringify({
+      provider: identity.provider,
+      managedBy: user.managedBy,
+      matchedOn: "email",
+    }),
+    success: true,
+  });
+  authLogger.info("Linked a first sign in to a provisioned account", {
+    operation: "external_managed_account_claimed",
+    userId: user.id,
+    provider: identity.provider,
+  });
+  return user;
+}
+
+/**
+ * Makes an account for a provisioning plugin, with no password and no
+ * session: the user role, a data key and the plugin as its manager. The
+ * username and email must be free.
+ */
+export async function provisionManagedAccount(input: {
+  managedBy: string;
+  username: string;
+  displayName?: string | null;
+  email?: string | null;
+}): Promise<UserRecord> {
+  const users = createCurrentUserRepository();
+  const id = nanoid();
+  const user = await users.create({
+    id,
+    username: input.username,
+    passwordHash: "",
+    isAdmin: false,
+    displayName: input.displayName ?? null,
+    email: input.email ?? null,
+    managedBy: input.managedBy,
+  });
+  try {
+    await createCurrentRoleRepository().assignRoleNameToUser({
+      userId: id,
+      roleName: "user",
+      grantedBy: id,
+    });
+    await AuthManager.getInstance().registerExternalUser(id);
+  } catch (error) {
+    await users.delete(id);
+    throw error;
+  }
+  await DatabaseSaveTrigger.forceSave("managed_user_create").catch(() => {});
+  return user;
 }
 
 /**
@@ -192,7 +316,7 @@ async function createUser(
     id,
     username: await freeUsername(identity.name || identity.subject, null),
     passwordHash: "",
-    isAdmin: !!identity.isAdmin,
+    isAdmin: !!adminFromIdentity(identity),
   });
 
   try {
@@ -257,7 +381,8 @@ export async function findOrProvisionExternalUser(
   identity: ExternalIdentity,
   deviceType: string,
 ): Promise<UserRecord> {
-  let user = await findLinkedUser(identity);
+  let user =
+    (await findLinkedUser(identity)) ?? (await claimManagedAccount(identity));
 
   if (!user) {
     const isFirstUser = (await createCurrentUserRepository().countAll()) === 0;
@@ -280,15 +405,11 @@ export async function findOrProvisionExternalUser(
           "registration_disabled",
         );
       }
-      if (await isApprovalRequired(identity)) {
-        throw new LoginMethodError(
-          "Your account is waiting for an admin to approve it",
-          403,
-          "approval_required",
-        );
-      }
     }
     user = await createUser(identity, deviceType);
+    if (!isFirstUser && isApprovalRequired()) {
+      user = await markPendingApproval(user, identity.provider);
+    }
   } else {
     if (!isAllowed(identity)) {
       authLogger.warn("External user not in the allowed list", {
@@ -300,8 +421,14 @@ export async function findOrProvisionExternalUser(
     }
 
     // A user who also has a password picked their own username; leave it.
+    // A provisioning plugin owns the username of an account it made.
     const isDualAuth = !!user.passwordHash && user.passwordHash.trim() !== "";
-    if (!isDualAuth && identity.name && user.username !== identity.name) {
+    if (
+      !isDualAuth &&
+      !user.managedBy &&
+      identity.name &&
+      user.username !== identity.name
+    ) {
       // Taken by someone else: keep the name the account already has.
       const holder = await createCurrentUserRepository().findByUsername(
         identity.name,
@@ -314,8 +441,9 @@ export async function findOrProvisionExternalUser(
       }
     }
 
-    if (identity.isAdmin !== undefined) {
-      user = await syncAdmin(user, identity.isAdmin);
+    const wantsAdmin = adminFromIdentity(identity);
+    if (wantsAdmin !== undefined) {
+      user = await syncAdmin(user, wantsAdmin);
     }
   }
 

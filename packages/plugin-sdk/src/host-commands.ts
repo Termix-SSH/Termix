@@ -45,11 +45,15 @@ export function decodeCommandOutput(buf: Buffer): string {
   return buf.toString("utf8");
 }
 
-/** Runs one non-interactive command over an existing ssh2 client. */
+/**
+ * Runs one non-interactive command over an existing ssh2 client. `stdin` is
+ * written to the command and then closed.
+ */
 export function execCommand(
   client: Client,
   command: string,
   timeoutMs = 30000,
+  stdin?: string,
 ): Promise<ExecResult> {
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -132,6 +136,8 @@ export function execCommand(
             }
           });
       }
+
+      if (stdin !== undefined) stream.end(stdin);
     });
   });
 }
@@ -418,8 +424,11 @@ export function shellSingleQuote(value: string): string {
 }
 
 /**
- * Build the elevated command string:
- *   echo '<pw>' | sudo -S -p '' sh -c 'echo __TX_SUDO_OK__; <command>'
+ * Build the elevated command. The password is never in it: the command reads
+ * one line from stdin with a shell builtin and pipes it to sudo, so send
+ * `sudoStdin(password)` as the command's stdin.
+ *
+ *   sh -c 'IFS= read -r P; printf ... "$P" | sudo -k -S -p "" sh -c "echo __TX_SUDO_OK__; <command>"'
  *
  * `-p ''` suppresses the prompt. stderr is NOT merged into stdout, so the
  * command's own output stays clean and sudo's auth errors stay on stderr. The
@@ -427,13 +436,21 @@ export function shellSingleQuote(value: string): string {
  * tell a genuine auth failure from command output that merely contains scary
  * words.
  */
-export function buildSudoCommand(
-  command: string,
-  sudoPassword: string,
-): string {
-  const pw = shellSingleQuote(sudoPassword);
+export function buildSudoCommand(command: string): string {
   const inner = shellSingleQuote(`echo ${SUDO_OK_MARKER}; ${command}`);
-  return `echo ${pw} | sudo -S -p '' sh -c ${inner}`;
+  const script = `IFS= read -r P; printf '%s\\n' "$P" | sudo -k -S -p '' sh -c ${inner}`;
+  return `sh -c ${shellSingleQuote(script)}`;
+}
+
+/** The stdin for a buildSudoCommand command. */
+export function sudoStdin(sudoPassword: string): string {
+  if (/[\r\n\0]/.test(sudoPassword)) {
+    throw new ElevationError(
+      "SUDO_FAILED",
+      "A sudo password can't contain a line break.",
+    );
+  }
+  return `${sudoPassword}\n`;
 }
 
 function includesAny(text: string, needles: string[]): boolean {
@@ -486,8 +503,12 @@ export async function execElevated(
     );
   }
 
-  const sudoCmd = buildSudoCommand(command, sudoPassword as string);
-  const result = await execCommand(client, sudoCmd, timeoutMs);
+  const result = await execCommand(
+    client,
+    buildSudoCommand(command),
+    timeoutMs,
+    sudoStdin(sudoPassword as string),
+  );
   const authenticated = result.stdout.includes(SUDO_OK_MARKER);
 
   if (!authenticated) {

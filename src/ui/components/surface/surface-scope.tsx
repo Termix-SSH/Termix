@@ -12,6 +12,8 @@ import {
 } from "react";
 import type React from "react";
 import { createPortal } from "react-dom";
+import { ForeignOccluder } from "@/components/foreign/ForeignSlot";
+import { getForeignRuntime } from "@/components/foreign/foreign-runtime";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { BackButton, PanelShell } from "@/components/panel-layout";
@@ -148,6 +150,7 @@ export function SurfaceScope({
   return (
     <ScopeContext.Provider value={value}>
       <div
+        data-surface={kind}
         className={cn(
           "relative flex min-h-0 min-w-0 flex-1 flex-col",
           className,
@@ -176,6 +179,25 @@ export function SurfaceScope({
 /** Which kind of surface this code renders in, or null outside any. */
 export function useSurfaceKind(): SurfaceKind | null {
   return useContext(ScopeContext)?.kind ?? null;
+}
+
+/**
+ * Opens a view on the surface without drawing into it, for a plugin frame
+ * that grows over the surface itself. Null outside any surface.
+ */
+export function useSurfaceCover(): {
+  overlay: HTMLElement | null;
+  openView: (id: string, width: EditingWidth) => void;
+  closeView: (id: string) => void;
+} | null {
+  const scope = useContext(ScopeContext);
+  const overlay = scope?.overlay ?? null;
+  const openView = scope?.openView;
+  const closeView = scope?.closeView;
+  return useMemo(
+    () => (openView && closeView ? { overlay, openView, closeView } : null),
+    [overlay, openView, closeView],
+  );
 }
 
 /** Closes the surface this code renders in, or null when it can't be closed. */
@@ -320,7 +342,7 @@ export function PanePrompt({
   if (!open) return null;
   const headingId = titleId ?? fallbackId;
   return (
-    <div
+    <ForeignOccluder
       className={cn(
         "motion-fade-enter absolute inset-0 flex items-center justify-center overflow-y-auto p-4",
         layer === "connection" ? "z-500 bg-canvas" : "z-50 bg-background/85",
@@ -377,7 +399,7 @@ export function PanePrompt({
         )}
         {!actions && <div className="h-4" />}
       </div>
-    </div>
+    </ForeignOccluder>
   );
 }
 
@@ -436,6 +458,14 @@ export function InlineView({
     return () => closeView(id);
   }, [open, id, width, openView, closeView]);
 
+  // The view covers the surface: other plugins' views under it hide.
+  const overlay = scope?.overlay;
+  useEffect(() => {
+    const runtime = getForeignRuntime();
+    if (!open || !overlay || !runtime) return;
+    return runtime.addOccluder(overlay);
+  }, [open, overlay]);
+
   const requestClose = useCallback(async () => {
     if (onBeforeClose && !(await onBeforeClose())) return;
     onOpenChange(false);
@@ -490,7 +520,9 @@ export function InlineView({
   if (scope?.overlay) return createPortal(view, scope.overlay);
   if (scope) return null;
   return createPortal(
-    <div className="fixed inset-0 z-50 bg-background">{view}</div>,
+    <ForeignOccluder className="fixed inset-0 z-50 bg-background">
+      {view}
+    </ForeignOccluder>,
     document.body,
   );
 }

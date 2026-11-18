@@ -1,0 +1,15 @@
+{
+  "plugin": {
+    "name": "Hostile Frame",
+    "description": "Test fixture that attacks the shell from its frame. Never shipped."
+  },
+  "tab": { "title": "Hostile Frame" },
+  "settings": {
+    "admin": {
+      "exfilOrigin": {
+        "label": "Outside origin",
+        "description": "Where the fixture tries to send data."
+      }
+    }
+  }
+}

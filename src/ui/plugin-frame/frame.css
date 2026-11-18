@@ -1,0 +1,50 @@
+@import "../index.css";
+
+html,
+body {
+  margin: 0;
+}
+
+/* Cards, rows and overlays show through to the shell behind them. */
+html[data-frame-fit="content"],
+html[data-frame-fit="content"] body,
+html[data-frame-bg="none"],
+html[data-frame-bg="none"] body {
+  background: transparent;
+}
+
+html[data-frame-fit="fill"],
+html[data-frame-fit="fill"] body,
+html[data-frame-fit="fill"] #root,
+html[data-frame-fit="bar"],
+html[data-frame-fit="bar"] body,
+html[data-frame-fit="bar"] #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+html[data-frame-fit="content"] body {
+  overflow: hidden;
+}
+
+/* The shell scrolls the tab: the page takes its full height, at least the
+   height of the box the shell shows it in. */
+html[data-shell-scroll],
+html[data-shell-scroll] body,
+html[data-shell-scroll] #root {
+  height: auto;
+  overflow: visible;
+}
+
+html[data-shell-scroll] [data-frame-box] {
+  min-height: var(--shell-viewport-height, 0px);
+}
+
+/* An inline view is open: the shell grew the frame over its surface. */
+html[data-frame-cover],
+html[data-frame-cover] body,
+html[data-frame-cover] #root,
+html[data-frame-cover] [data-frame-box] {
+  height: 100%;
+  overflow: hidden;
+}

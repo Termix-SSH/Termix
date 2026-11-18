@@ -6,9 +6,16 @@ vi.mock("../../database/repositories/factory.js", () => ({
   createCurrentAuditLogRepository: vi.fn(() => ({
     create: createMock,
   })),
+  createCurrentUserRepository: vi.fn(() => ({
+    findById: async () => ({ username: "root" }),
+  })),
 }));
 
-import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import {
+  auditSettingChange,
+  logAudit,
+  getRequestMeta,
+} from "../../utils/audit-logger.js";
 
 describe("logAudit", () => {
   beforeEach(() => {
@@ -208,5 +215,27 @@ describe("getRequestMeta", () => {
     };
     const meta = getRequestMeta(req as never);
     expect(meta.ipAddress).toBe("unknown");
+  });
+});
+
+describe("auditSettingChange", () => {
+  it("writes which switch changed, to what, and who did it", async () => {
+    createMock.mockClear();
+    const req = {
+      userId: "admin-1",
+      headers: { "user-agent": "UA" },
+      socket: { remoteAddress: "203.0.113.9" },
+    };
+    await auditSettingChange(req as never, "allow_password_login", false);
+    expect(createMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "admin-1",
+        username: "root",
+        action: "update_auth_setting",
+        resourceId: "allow_password_login",
+        details: JSON.stringify({ value: false }),
+        success: true,
+      }),
+    );
   });
 });

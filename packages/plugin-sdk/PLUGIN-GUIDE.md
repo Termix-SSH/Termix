@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 1.1.4 | Plugin API 1.17.0
+SDK 2.10.1 | Plugin API 2.9.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -39,7 +39,11 @@ Break one of these and the plugin fails to load, fails validation or gets reject
 4. Never call `process.exit` or touch signals.
 5. Never open your own SSH connection. Use `ctx.ssh` so jump hosts, proxies, host keys, every auth type and
    sharing work the way the user set them up.
-6. Outbound HTTP goes through `ctx.fetch` (needs `network:outbound`), not a raw `fetch` or axios.
+6. Outbound HTTP goes through `ctx.fetch` (needs `network:outbound`), not a raw `fetch` or axios. A socket you
+   open yourself (net, tls, dgram, http.request) to an address a user typed goes through `resolveTarget()` from
+   `@termix-ssh/plugin-sdk/net-guard` (Termix 26.11.2+), and you connect to the address it returns. Fill
+   `allowPrivateHosts` from an admin setting or a saved device address, never from the request or the URL itself.
+   Values in shell scripts go through `shellQuote()` or base64 on stdin, and secrets never go in argv.
 7. Ask for the fewest capabilities you can. A call that needs one you didn't list throws
    `PluginCapabilityError`.
 8. Never take a user id from a request body or a service caller. Use `ctx.currentActor()`.
@@ -62,6 +66,7 @@ Break one of these and the plugin fails to load, fails validation or gets reject
 
 ```
 manifest.json            what the plugin is, adds and may do
+authz.json               who may call each route and socket, checked in CI
 package.json             npm scripts and dependencies
 CHANGELOG.md             release notes, one section per version
 README.md                the repo front page
@@ -107,6 +112,7 @@ Before you call a change finished:
 - [ ] `npx termix-plugin migrations --check` passes (you ran `npm run migrations` after changing tables)
 - [ ] New strings are in `locales/en.json`, and `plugin.name` / `plugin.description` match the manifest
 - [ ] New routes have an `@openapi` block and a test, including without the permission
+- [ ] New routes and sockets have an entry in `authz.json` (CI fails without one)
 - [ ] New env vars are listed in `env` in the manifest
 - [ ] `docs/` and the "About this plugin" section of `AGENTS.md` still match what the plugin does
 - [ ] User facing changes are in `CHANGELOG.md` under the version they will ship in
@@ -240,44 +246,184 @@ export async function deactivate() {
 }
 ```
 
+Keep `deactivate()` quick. When the server shuts down, core gives each plugin 2 seconds to stop and then moves on, and programs started with `ctx.process.run` are ended either way.
+
 Bundled as ESM for Node 22+ into `dist/backend.js`. Backend imports of your own files use `.js`.
+
+### The plugin process (API 2)
+
+Your backend runs in its own Node process, never inside the Termix server. It can read only its own
+folder and the runtime, writes nothing, and opens no sockets, child processes, workers or native addons
+unless a capability grants it. Everything else goes through `ctx`: each call is a message to core, which
+checks your capabilities and the acting user, then answers. Secrets, the database connection, SSH
+connections and credentials stay in core. In Docker each plugin also runs as its own Linux user.
+
+| Capability        | What your process may then do                                              |
+| ----------------- | -------------------------------------------------------------------------- |
+| none              | Read your plugin folder, call `ctx`                                        |
+| `files:own`       | Write your own data folder (`ctx.files.dataDir()`) with `node:fs`          |
+| `network:sockets` | Open listeners and connections (`node:net`, `http`, `tls`, `dgram`, `dns`) |
+| `process:spawn`   | Start child processes. Prefer `ctx.process`, which core runs and audits    |
+| `device:serial`   | Load native addons (serialport)                                            |
+
+WASI, `node:sqlite`, the inspector and `process.binding` are never available. Worker threads need
+`"workers": true` in the `sandbox` block (plugin API 2.3): each worker keeps your process's limits and
+loads the same guard first, `execArgv` is ignored, and a worker must start from a file (`eval: true` and
+`data:` URLs are refused). Core restarts a
+process that crashes, stops answering, goes past its memory limit (256 MiB unless `sandbox.memoryMb`) or
+uses more than 80% of a CPU core for a minute. Too many crashes and the plugin is marked failed.
+The desktop app (Termix 26.11.2+) runs each plugin process on its own pinned Node, the same major as the server image, with the same flags, plus an OS sandbox under it: an AppContainer and a job object on Windows, a Seatbelt profile on macOS, Landlock and seccomp on Linux. So the fence is the same as on a server: no files outside your grants, no child processes or sockets without the capability, and a memory cap. Desktop only code can't use `fs` or `child_process` freely either; use `ctx.desktop.local` for the user's own files and programs. Builds with no pinned Node (32-bit Windows, 32-bit ARM Linux) don't run plugin backends at all.
+
+A plugin process stops after 10 idle minutes (`TERMIX_PLUGIN_IDLE_MINUTES`). A plugin with only routes
+and sockets starts on its first request. One that registers things core calls on its own (operations,
+services, registry values, event listeners, settings hooks, jobs) starts once at boot, and core keeps
+those registrations while the process is stopped: calling one starts it again, and a job runs on core's
+own timer. It keeps running while it has its own sockets or listeners open, a `schedule.after` job
+waiting, or a call from core in flight. These stay up all the time: `sandbox.alwaysOn`, a provider on
+core's request paths (`auth:provide`, `auth:policy`, `sync:provide`, `ssh:transport`,
+`hosts:status-provide`, `hosts:lock`, `hosts:connect-policy`, `notify:hub`, `operations:approve`,
+`system:tls`), a layout or theme, `providesSecret`, and a job shorter than the idle time.
+
+A plugin with short jobs that often have nothing to do (watches nobody set up) can manage this itself
+with `ctx.schedule.keepAwake?.(reason, awake)` (plugin API 2.8): call it with `true` while there is work
+and `false` when there is none. Once it calls it, its short jobs run only while the process runs, and
+core starts it at boot again if it had work when core last stopped. Call it with `false` in activate when
+there is nothing to do, so core knows you manage it.
+
+```json
+"sandbox": {
+  "schedules": [{ "id": "poll", "every": 60000 }],
+  "events": ["host.deleted"],
+  "registry": ["my-plugin.variables"],
+  "memoryMb": 256,
+  "alwaysOn": false,
+  "workers": false
+}
+```
+
+- `ctx.schedule.every(ms, fn, { id: "poll" })`: the id must be listed in `sandbox.schedules`. A woken
+  process does not start a second timer for the same id; `runNow` still runs once on each start.
+- `ctx.events.on(topic, fn)`: the topic must be listed in `sandbox.events`.
+- `ctx.registry.provide(key, value)`: the key must be listed in `sandbox.registry`.
+- Only plain data, functions, Buffers, Dates, Maps, Sets and Errors cross between your process and core.
+  A class instance (your own or a library's) does not.
+- Reads that used to be synchronous return Promises: `services.get`, `services.providers`,
+  `registry.consume`, `registry.revoke`, `secrets.withdraw`, `hosts.sessionActive`, `ssh.poolKey`,
+  `ssh.classifyKeyboardInteractive`, `ssh.requiresSecret`, `ssh.supportsBackground`,
+  `auth.listSecondFactors`, `desktop.available`, `desktop.local.available`. Every method on a service or
+  registry value from another plugin returns a Promise too.
+- `db.transaction()` is not available. Use `ctx.db.batch([q1, q2])` for writes that must land together.
+- Routes need string paths. Core strips `Cookie`, `Authorization`, `X-Api-Key` and
+  `Proxy-Authorization` before a request reaches you.
+- Your process gets no environment of core's. Variables you list in the manifest's `env` are passed
+  through, except core's own secrets and anything that changes how Node starts.
+  `VERSION` (the Termix version) and `TERMIX_DEPLOYMENT` (`desktop`, `docker` or `server`) are always set.
+- You can only read your own folders. For a file an admin points you at (a config file mounted into the
+  container), list its variable in `env` with `"file": true` and read it with `ctx.files.readEnvFile(name)`,
+  which answers `{ text, modifiedMs }` or null when the variable is not set. Termix reads it for you, never
+  from its data folder or its own key files, up to 5 MB. Read it on a schedule to notice changes. Secrets
+  such a file points at (`{ env: NAME }`, `{ file: /run/secrets/x }`) come from `ctx.files.readSecret`, which
+  needs `config:secrets`.
+- SSH auth providers work: `prepare` gets a copy of the config without secrets and may set only
+  `username`, `password`, `privateKey`, `passphrase`, `tryKeyboard`, `readyTimeout`, `timeout`,
+  `keepaliveInterval` and `keepaliveCountMax` (a `retry` patch and `connectOptions` too). `env.client` is a stand-in;
+  `applyCertificateAuth` knows it and Termix applies the certificate. `onAuthFailed` and
+  `connectOptions` answer with a Promise. `startInteraction` gets a socket with only `send` and
+  `on("close")`. `onBanner` and `onKeyboardInteractive` get the host without secrets and answer with a
+  Promise; one that takes over 5 seconds counts as no answer.
+- Login methods work. `start`, `callback` and `verify` get a plain copy of the request (`body`, `query`,
+  `headers` without core's cookies, `ip`; `ctx.http.baseUrl(request)` works on it) and `request.res`
+  with only `cookie` and `clearCookie`, for cookies named `tmxp_<your id with _>_...`. A thrown
+  `LoginMethodError` keeps its `status`, `code` and `returnTo`. `ctx.auth.completeRedirectLogin(id, req,
+res)` works from inside one of your own requests: Termix finishes the login on the live response.
+- Keyboard-interactive handlers work. `detect` and `autoAnswerPasswords` get the host without secrets and
+  answer with a Promise, with the same 5 second limit. Anything that reads `ctx.ssh.classifyKeyboardInteractive`
+  or a prepared `onBanner` must await it.
+- `ctx.process.run` works as before; core runs the program and `exited` resolves when it ends.
+- Looking up a host name with `node:dns` needs `network:sockets`. With `network:probe`, call
+  `ctx.network.lookup(name, { family: 4 })` instead: Termix looks it up and answers the first address or null.
+- Cookies: requests reach you with only cookies named `tmxp_<your id with _>_...`, and a
+  `Set-Cookie` you send is kept only for those names and without a `Domain`. Core's own login
+  cookies never reach your process.
+- `files:own` lets your process read and write its data folder.
+- `ctx.ssh.prepare` and `ctx.ssh.openTransport` work for an ssh2 client your process runs itself. Core
+  builds the config (with the password or key, so it needs `credentials:read`) and keeps the host key check:
+  the `hostVerifier` in the config asks core about each key, and a `hostKeySocket` you pass must be one of
+  your own sockets. `openTransport` always hands back `config.sock`, a stream core opened (direct, proxy,
+  jump hosts or a provided transport), so your process needs no `network:sockets` for it. Nothing you write
+  reaches the host until it has sent its SSH greeting. A stream you bring yourself (`config.sock` set before
+  the call) is kept for a direct connection. Certificates from `applyCertificateAuth` are applied to your
+  own client.
+- `ctx.ssh.jumpChain` gives a client like `ctx.ssh.connect`'s. Every such client has `forwardOut` (a stream),
+  `forwardIn`, `unforwardIn` and the `tcp connection` event; `accept()` gives a stream at once, and a
+  connection you leave unanswered for 10 seconds is rejected. A `forwardOut` stream passed as `sock` to
+  `ctx.ssh.connect` goes back to core, so its bytes no longer pass through your process.
+- `ctx.desktop.local` works. `fs.openRead` and `pluginFetch` give streams, `fs.openDownload` takes one
+  (`publish` waits until everything you wrote is on disk), and `pty.spawn` gives the same shell object.
+- `ctx.hosts.locks.provide` needs `lockedHosts()` (every host you lock). Core reads locks synchronously,
+  so it keeps a copy of what you report and reads your provider again every second.
+- `ctx.hosts.status.provide` works with a class instance. Core keeps the last status it saw for each host
+  for its synchronous reads and asks your `get` again in the background.
+- `ctx.sync.provide` and `ctx.sync.host` work. `host.sessions.setCookie`, `clearCookie`, `middleware()`,
+  `feed.listen` and `plugins.sendPackage` act on the live response, so call them only inside the request
+  they answer. `replica.orderSelfReferences`, `entities.list()[n].covers`, `http.normalizeServerUrl`,
+  `plugins.lastRemote` and `plugins.localNames` return Promises. A cookie other than the session one must
+  be named `tmxp_<id>_*`.
+
+### Moving from API 1
+
+1. Raise `engine.api` to `^2.0.0`, `engine.termix` to the first core that runs plugin processes, and the
+   SDK in `package.json` to `^2.0.0`.
+2. List your schedules (with an `id` on each `every`), event topics and registry keys in `sandbox`.
+3. Await the reads listed above, and every call on another plugin's service or registry value.
+4. Replace `db.transaction()` with `ctx.db.batch()`.
+5. Move direct `node:fs`, `net`, `http`, `child_process` use to `ctx`, or declare the capability that
+   allows it. `termix-plugin validate` warns about each import that would be refused.
+6. Run your tests with `createMockCtx({ sandbox: true })`, which applies the same rules, and check the
+   frontend with `checkFrameApp` (see Frames).
+7. Drop capabilities you no longer use, bump the version and add a CHANGELOG entry.
+
+An API 1 plugin doesn't run at all. The plugins page names each one, and lists the plugins a newer Termix
+won't run before an admin updates.
 
 ### What ctx has
 
-| Member                 | Capability                       | What it does                                                    |
-| ---------------------- | -------------------------------- | --------------------------------------------------------------- |
-| `pluginId`, `manifest` | none                             | Your id and manifest                                            |
-| `log`                  | none                             | Log lines tagged with your plugin                               |
-| `db`                   | `db:own`                         | Your own tables                                                 |
-| `kv`                   | `kv:own`                         | Small key value state                                           |
-| `files.dataDir()`      | `files:own`                      | A folder of your own                                            |
-| `settings`             | none                             | Your settings                                                   |
-| `secrets`              | `secrets:own`                    | Encrypted values per user, `seal`/`unseal` for your own tables  |
-| `http`, `ws`           | `network:serve`                  | Routes and sockets                                              |
-| `rbac`                 | none                             | Check the actor's permissions                                   |
-| `hosts`                | `hosts:read`, `hosts:write`      | List, read, create, update and share hosts as the actor         |
-| `ssh`                  | `ssh:connect`, `credentials:use` | Connect to hosts through Termix's SSH pipeline                  |
-| `credentials`          | varies                           | The actor's saved keys, and protocol logins                     |
-| `services`             | per service                      | Call other plugins and offer your own                           |
-| `events`               | `events:core` for core topics    | Emit and listen for events                                      |
-| `notify`               | `notify:send`                    | Send alerts to the Alerts inbox                                 |
-| `fetch`                | `network:outbound`               | Outbound HTTP with SSRF protection                              |
-| `process`              | `process:spawn`                  | Run programs on the server                                      |
-| `schedule`             | none                             | Timers that stop on disable and never overlap                   |
-| `audit.record`         | none                             | Write your own audit line                                       |
-| `sync`                 | none                             | Sync your tables to a linked desktop                            |
-| `auth`                 | `auth:provide`                   | Login methods, second factors, SSH auth types                   |
-| `auth.issueUserToken`  | `users:impersonate`              | A short-lived session for calling Termix's API as a user        |
-| `auth.policy`          | `auth:policy`                    | Login rules: idle timeout, session length, second factors       |
-| `sync.provide`         | `sync:provide`                   | Answers all /sync requests: server sync, linked desktops        |
-| `ssh.transports`       | `ssh:transport`                  | Carries a host's SSH connection over your own stream            |
-| `hosts.folders`        | `hosts:write`                    | Create a folder row with a color and icon, remove it when empty |
-| `users.getLocale`      | `users:read`                     | A user's UI language                                            |
-| `system`               | `system:tls`                     | The server's HTTPS certificate                                  |
-| `plugins.list()`       | `plugins:read`                   | Which plugins are installed                                     |
-| `asUser(userId, fn)`   | always audited                   | Run background work as a user                                   |
-| `currentActor()`       | none                             | The user the current call runs for                              |
-| `disposables.add(fn)`  | none                             | Extra cleanup on disable                                        |
+| Member                                                                     | Capability                       | What it does                                                    |
+| -------------------------------------------------------------------------- | -------------------------------- | --------------------------------------------------------------- |
+| `pluginId`, `manifest`                                                     | none                             | Your id and manifest                                            |
+| `log`                                                                      | none                             | Log lines tagged with your plugin                               |
+| `db`                                                                       | `db:own`                         | Your own tables                                                 |
+| `kv`                                                                       | `kv:own`                         | Small key value state                                           |
+| `files.dataDir()`                                                          | `files:own`                      | A folder of your own                                            |
+| `settings`                                                                 | none                             | Your settings                                                   |
+| `secrets`                                                                  | `secrets:own`                    | Encrypted values per user, `seal`/`unseal` for your own tables  |
+| `http`, `ws`                                                               | `network:serve`                  | Routes and sockets                                              |
+| `rbac`                                                                     | none                             | Check the actor's permissions                                   |
+| `hosts`                                                                    | `hosts:read`, `hosts:write`      | List, read, create, update and share hosts as the actor         |
+| `ssh`                                                                      | `ssh:connect`, `credentials:use` | Connect to hosts through Termix's SSH pipeline                  |
+| `credentials`                                                              | varies                           | The actor's saved keys, and protocol logins                     |
+| `services`                                                                 | per service                      | Call other plugins and offer your own                           |
+| `events`                                                                   | `events:core` for core topics    | Emit and listen for events                                      |
+| `notify`                                                                   | `notify:send`                    | Send alerts to the Alerts inbox                                 |
+| `fetch`                                                                    | `network:outbound`               | Outbound HTTP with SSRF protection                              |
+| `process`                                                                  | `process:spawn`                  | Run programs on the server                                      |
+| `schedule`                                                                 | none                             | Timers that stop on disable and never overlap                   |
+| `audit.record`                                                             | none                             | Write your own audit line                                       |
+| `sync`                                                                     | none                             | Sync your tables to a linked desktop                            |
+| `auth`                                                                     | `auth:provide`                   | Login methods, second factors, SSH auth types                   |
+| `auth.issueUserToken`                                                      | `users:impersonate`              | A short-lived session for calling Termix's API as a user        |
+| `auth.policy`                                                              | `auth:policy`                    | Login rules: idle timeout, session length, second factors       |
+| `sync.provide`                                                             | `sync:provide`                   | Answers all /sync requests: server sync, linked desktops        |
+| `ssh.transports`                                                           | `ssh:transport`                  | Carries a host's SSH connection over your own stream            |
+| `hosts.folders`                                                            | `hosts:write`                    | Create a folder row with a color and icon, remove it when empty |
+| `users.getLocale`                                                          | `users:read`                     | A user's UI language                                            |
+| `users.get`, `users.find*`, `users.listRoles`                              | `users:read`                     | Look up an account or list roles (API 2.9)                      |
+| `users.create`, `update`, `setDisabled`, `delete`, `syncRoles`, `setAdmin` | `users:write`                    | Manage accounts, for a provisioning plugin like SCIM (API 2.9)  |
+| `system`                                                                   | `system:tls`                     | The server's HTTPS certificate                                  |
+| `plugins.list()`                                                           | `plugins:read`                   | Which plugins are installed                                     |
+| `asUser(userId, fn)`                                                       | always audited                   | Run background work as a user                                   |
+| `currentActor()`                                                           | none                             | The user the current call runs for                              |
+| `disposables.add(fn)`                                                      | none                             | Extra cleanup on disable                                        |
 
 ### The actor
 
@@ -291,6 +437,15 @@ It needs `users:impersonate` and `engine.api` `^1.3`, lasts 300 seconds by defau
 audited as `plugin_user_token_issued`. The user's permissions apply, and it is refused on routes that change
 their password, second factors, API keys or linked logins. `ctx.users.getLocale(userId)` gives the user's
 UI language, like `zh_CN`, or null, for writing to them in it.
+
+A plugin that provisions accounts from somewhere else (SCIM, an HR system) uses the `ctx.users` account
+calls from API 2.9. `create` makes an account with no password and the user role, marked with the plugin
+as `managedBy`; its first SSO or LDAP sign in with the same verified email is linked to it, and sign in
+never renames it. `setDisabled` signs the account out everywhere, `syncRoles` only adds and removes the
+roles you list as managed, and the last admin can never be turned off, deleted or demoted. A refused call
+throws an error with `code` set to `not_found`, `username_taken`, `email_taken`, `last_admin` or
+`invalid`. Every change is audited as `plugin_user_*` under your plugin's name. Check
+`typeof ctx.users.create === "function"` before using them.
 
 ### Routes
 
@@ -339,17 +494,23 @@ router.post("/notes", async (req, res) => {
   `dist/openapi.json` and the docs site renders them.
 - `ctx.http.router({ public: ["/webhook/:token"], bodyLimit: "20mb", rawBody: false })`. Public routes
   have no actor: check their token yourself. Core allows 120 public requests a minute per address;
-  `publicRateLimit` raises that for a proxied page that loads its own assets.
+  `publicRateLimit` raises that for a proxied page that loads its own assets. `publicAuthorization: true`
+  passes the Authorization header to the public routes, for a protocol that sends its own bearer token (SCIM);
+  Termix API keys and session tokens are never passed.
 - `ctx.http.baseUrl(req)` is the public address, for callback URLs.
 - `ctx.ws.route("/live", (socket, conn) => ...)`. Long lived sockets should check
-  `conn.isDataUnlocked()` per message.
+  `conn.isDataUnlocked()` per message. Core closes a socket (code 1008) within a few seconds of the login
+  that opened it ending: sign out, revoke, password change, expiry or idle timeout. A public socket that came
+  with a login ends with it too. Keep your own detach and reattach logic for that close. Sockets follow the
+  same session rules as HTTP, so a session that must set up a second factor only reaches second factor
+  plugins.
 - `ctx.rbac.require("manage")` on a single route, `await ctx.rbac.has("manage")` in code. A full id like
   `hosts.edit` checks a core permission.
 - Host access: `ctx.hosts.checkAccess(hostId, "connect" | "view" | "edit" | "manage")`.
 - Transports: with `ssh:transport`, `ctx.ssh.transports.provide({ claims(hostId, host), open(host) })`, where `host` has `id`, `ip`, `port` and on Termix 26.10.6+ also `userId`, `syncId`, `connectionOrigin` and `localOnly`
   returns a stream the SSH client uses instead of a direct, proxy or jump host connection. Core also serves
   `/plugin-ws/core/ssh-relay?hostId=` for callers with connect access, so one Termix can relay to another.
-- Managed hosts: with `hosts:lock`, `ctx.hosts.locks.provide({ isLocked, note, allowManualCreate })` makes
+- Managed hosts: with `hosts:lock`, `ctx.hosts.locks.provide({ isLocked, note, allowManualCreate, lockedHosts })` makes
   the hosts you manage read only for the UI, the API and other plugins (pins and order still work), and
   `allowManualCreate: () => false` blocks adding hosts by hand. Your own `ctx.hosts` writes still go
   through. `ctx.hosts.setShares(hostId, grants)` replaces a host's whole grant list, and
@@ -368,6 +529,13 @@ router.post("/notes", async (req, res) => {
   all providers wins and a provider that throws denies. SSH prepare then gives an error outcome with code
   `access-denied` or `access-required`, and `ctx.credentials.resolveHostProtocol` throws an error with that
   `code` and a `toJSON()` body for a 403. Keep `check` fast, it also runs for background polling.
+
+Headers and cookies (Termix 26.11.2+): every answer from `/plugin-api/<id>/` and `/plugin-assets/<id>/` carries
+`X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy` and a default
+`Content-Security-Policy: object-src 'none'; base-uri 'none'; frame-ancestors 'self'`, so only Termix itself can
+frame a plugin page. A route that serves its own HTML page sets its own `Content-Security-Policy`, which replaces
+the default. Over HTTPS the session cookie is `__Host-jwt`; core
+rewrites the request so plugins still read it as `req.cookies.jwt` and in the `Cookie` header as `jwt`.
 
 ### Errors
 
@@ -395,6 +563,10 @@ sudo commands. `@termix-ssh/plugin-sdk/host-scripts` builds Docker, metrics, sys
 commands and parses their output; send a script on stdin to the command `scriptShell()` returns. Hosts from
 `ctx.hosts` never carry secrets. Pass the host or its id to `ctx.ssh`.
 
+A connection with no terminal to prompt on refuses a host whose key was never trusted, unless the admin
+turned on trust on first use. The error has code `HOST_KEY_UNVERIFIED` (or `HOST_KEY_CHANGED`) and tells the
+user to open a terminal to the host once. Show that message as it is.
+
 ### The desktop app
 
 Set `"runtime": "desktop"` in the manifest for a plugin that only makes sense on a desktop app. It never
@@ -405,28 +577,36 @@ loads on a server, ignores server sync and may declare `desktop:local`. Any plug
 
 - `info()`: home folder, platform, user data folder, backend port and the linked server (url and token) or null
 - `fs`: `list`, `mkdir`, `createFile`, `rename`, `ensureDir`, `exists`, `walk`, `trash`, `reveal`, `open`,
-  `openRead` and `openDownload`. Downloads stay inside the folder the user picked, links in it are refused and
+  `openInEditor` (API 2.8: the editor the person picked in the app, started by the app), `openRead` and `openDownload`. Downloads stay inside the folder the user picked, links in it are refused and
   an existing file is never replaced by accident
 - `pty.spawn()`: a local shell, stopped when the plugin stops
 - `pluginFetch(origin, subPath, init)`: calls this plugin's own routes on the desktop's backend ("local") or the linked server ("remote") as the acting user. Bodies can be streams, so a plugin can move big files without the renderer
 
+In a plugin process `process.execPath` is the app's pinned Node on every platform. Starting it still needs
+`process:spawn`, or run the script through `ctx.process.run`, which core starts.
+
 Use `ctx.audit.subscribe`, `list` and `exportBatches` (`audit:read`) to read the audit trail. Subscribers
-are called after a line is accepted and never delay the action that wrote it.
+are called after a line is stored and never delay the action that wrote it.
+
+Every stored line carries `hash` and `prevHash`: each hash covers the line before, so a changed or removed line
+breaks the chain. `ctx.audit.chain.status()` gives core's last hourly check, `verify()` runs one now and
+`checkHead({ id, hash })` compares a head someone saved earlier (Termix 26.11.2+, API 2.2). Core alerts admins
+itself when the chain breaks, so a plugin only shows it.
 
 ### Events, timers, alerts, services
 
 ```ts
 ctx.events.on("host.deleted", ({ hostId }) => cleanUp(hostId)); // core topics need events:core
 ctx.events.emit("plugin.hello.greeted", { name }); // your own: plugin.<id>.<name>
-ctx.schedule.every(60_000, () => refresh(), { jitterMs: 5_000 });
+ctx.schedule.every(60_000, () => refresh(), { id: "refresh", jitterMs: 5_000 });
 ```
 
 - Alerts go through `ctx.notify.send` (`notify:send`). Never build your own notification system.
 - Offer a service: declare it in `provides` with a version and a permission, then
   `ctx.services.provide("hello.greetings", impl)`. The name starts with your id. Methods read the caller
   from `ctx.currentActor()`.
-- Use a service: declare it in `requires`, then `ctx.services.get<T>("snippets.access")`. It returns
-  nothing while no provider runs, so always handle that.
+- Use a service: declare it in `requires`, then `await ctx.services.get<T>("snippets.access")`. Every
+  method on it returns a Promise. Calls fail while no provider runs, so always handle that.
 
 ### Operations
 
@@ -484,6 +664,13 @@ ctx.operations.register("demo.restart", {
 - Handlers have no request and no session. Take what you need from the input and `hostId`.
 - Keep your REST routes. Inside one, call `ctx.operations.run(id, { hostId, input })` so a button press goes through
   the same checks and lands in the same history.
+- A plugin that shows waiting approvals (needs `operations:approve`) reads them from `GET /operations/approvals` and
+  decides one from a route of its own with `ctx.operations.approvals.decide({ approvalId, approve, comment })`. It only
+  works inside one of your requests: the person on that request decides, with their own rights, and an API key
+  request is refused. A frame can read approvals but never decide one itself.
+- Cancel and undo work the same way (needs `operations:invoke`): from a route of your own call
+  `ctx.operations.runs.cancel({ runId })` or `ctx.operations.runs.undo({ runId, confirmed })`. Only inside one of your
+  requests, as the person on it, never with an API key. A frame can't post to `/operations/runs/:id/cancel` or `/undo`.
 - To run another plugin's action, add `operations:invoke`, list it in `operations.invokes` and call
   `ctx.operations.invoke(id, { hostId, input, via: "automation" })`. It acts as the current user and rules still apply.
 - `risk` is your plugin's claim. Plugins run in-process, so this is not a sandbox. Actions from plugins not signed as
@@ -652,15 +839,17 @@ your plugin's error boundary and Suspense.
 | `registerSlotContribution`, `declareActionSlot`                                    | Fill or own a UI slot                                             |
 | `registerComponent`, `registerExtension`                                           | Offer a component by id, add to an extension point                |
 | `registerOnboardingStep`                                                           | A first run setup step (`section`, `position`, `replaces`)        |
-| `registerLoginMethod`, `registerSecondFactorUI`, `registerSshAuthEditor`           | Sign in UI                                                        |
+| `registerLoginMethod`, `registerSecondFactorUI`, `registerSshAuthEditor`           | Enrolment screens and SSH auth editors                            |
 | `registerLayout`                                                                   | A whole-app layout (`contributes.layouts`, API 1.4)               |
 | `api`                                                                              | Axios client for your `/plugin-api/<id>/` routes, auth included   |
 | `fetch(path)`, `wsUrl(path)`                                                       | Raw fetch for streams, socket URL and auth                        |
 | `docs`, `tabs`, `confirm`, `listHosts`, `getHost`, `t`, `hasPermission`, `desktop` | Helpers                                                           |
 | `onSettingsChanged`, `onDispose`                                                   | Hooks                                                             |
 
-Badges, status indicators and toolbar items take `{ id, when(host), component, order? }`; lower `order`
-comes first. An onboarding step sits in a section (`start`, `setup`, `explore`, `security`) or at an exact
+Badges, status indicators and toolbar items take `{ id, when(host), useValue(host), order? }`; lower
+`order` comes first. `useValue` returns a data value (see Data slots below) that the layout draws: a badge,
+dot or text for badges and status indicators, a badge or text for toolbar items. A `component` still works
+for a plugin that runs in the page, but never in a frame. An onboarding step sits in a section (`start`, `setup`, `explore`, `security`) or at an exact
 `position` from 1 to 99. `replaces: ["preset"]` lists older step keys the step took over, so people who saw
 those are not shown it again.
 
@@ -677,10 +866,206 @@ Shared from Termix and never bundled: `react`, `react-dom`, `i18next`, `react-i1
 SDK's `frontend` and `ui`. Anything else, like `lucide-react`, is bundled. A host your code gets only carries
 your own host settings, under `host.pluginSettings[<id>]`.
 
-Slots you can fill include `terminal.toolbar`, `terminal.toolbarStatus`, `terminal.sidePanel`,
-`terminal.overlay`, `dashboard.counters`, `dashboard.hostMetrics`, `admin.userTabs`, `hosts.importMenu`,
-`hosts.panel`, `credentials.badges`, `shell.overlay`, `shell.rightEdge` and `tab.menu`. See
+### Frames (API 2)
+
+A plugin API 2 frontend never runs in the app's page. Termix 26.11.2 and newer load it into sandboxed
+frames (`sandbox="allow-scripts"`, an opaque origin, no cookies), served from your own
+`/plugin-assets/<id>/_frame/`. Your code stays the same: `activate(app)`, the hooks and the UI kit work as
+before, with the same look and theme.
+
+- One hidden background frame runs `activate` and keeps what has no view of its own: actions, palette
+  groups and entries, keybinding runs, rail badges, host dots, companion defaults and `shell.overlay`
+  components. Every view (tab, panel, card, companion, widget, settings component, host editor section,
+  slot component) is its own frame, which runs `activate` too. `app.frame.role` is `"background"` or
+  `"view"`; skip polling and timers in views.
+- Module state is per frame. Code that opens a dialog from anywhere (a palette run, a keybinding) belongs
+  in the background frame, next to its `shell.overlay` component.
+- What you register reaches the shell as data. Icons must come from `lucide-react` (the shell draws them
+  by name). Functions become calls into your frame, so a sync callback the shell reads while drawing
+  (`when`, `label`, `items`, `validate`, `visible`) answers its safe default first, then your real
+  answer once the frame replied. Keep them cheap and pure.
+- A companion's `getHandle()` returns a handle whose methods return promises. `sendInput` and `paste`
+  need `terminal.sendToActive` or `terminal.sendToSession` in your manifest `uses`.
+- `app.api`, `app.fetch` and `app.wsUrl` reach only your own routes, with a short token the shell renews.
+  The SDK hooks and the UI kit read core through the shell, which allows a fixed list: the user, their
+  permissions, hosts (with only your settings), credentials without secrets, your own settings, operations
+  and activity. Saved passwords are not available to a frame.
+- `invokeAction` runs your own actions and the ids in your manifest `uses`. Opening links, downloads,
+  the clipboard, toasts and confirms go through the shell. `localStorage` works and is kept per plugin.
+- Not available in a frame: host badges, status indicators and editor toolbar items with a `component`
+  (use `useDot` or `useValue`). Layouts, themes and Sync are the shell itself: only an official plugin
+  with `ui:layout`, `ui:theme` or `sync:provide` runs in the page. Other plugins' parts work, see Other
+  plugins' parts in a frame below.
+- What a frame can't reach, the shell does for it: sign in steps are drawn from what your backend describes
+  (see Auth and protocols), `app.auth.webauthn` runs passkey steps, `app.serial` opens a serial port in the
+  browser, and `NativeView` with a `grant` shows a web page. Each needs a click in your frame first where the
+  browser asks for one.
+- `useShell()` in a frame is read only: `tabs.list`, `tabs.activeId`, `tabs.topLevel`, `split.summaries`,
+  `env.user`, `env.isMobile`. `tabs.setActive` works right after the person used your frame. Anything
+  that changes the shell for other plugins (docks, the palette, logout) does nothing there.
+- A popover or dropdown can't leave its frame. Keep menus in tabs and panels, not in small slots.
+- Nothing in a frame loads from another site or sends data to one. Pictures, video and fonts come from your
+  own assets, `data:` or `blob:` URLs; a nested frame may only show your own assets and routes. For a
+  picture from elsewhere (an icon, a background), fetch `/plugins/<your id>/image?url=<address>` and show
+  the blob: it needs `network:outbound` or `network:sockets`, takes images up to 5 MB and never reaches the
+  server itself or cloud metadata. A page from another site goes in `NativeView` with a `grant` your
+  backend makes for an address it trusts (`ctx.desktop.grantView`, `desktop:window`).
+- A background frame shows dialogs over the whole app only right after the person ran one of your actions,
+  palette entries, keybindings or slot buttons. Opening a link, the clipboard and revoking API keys need a
+  click in your frame just before; a download one in the last two minutes.
+
+Check that your activate works in a frame with `checkFrameApp` from `@termix-ssh/plugin-sdk/testing`:
+
+```ts
+import { checkFrameApp } from "@termix-ssh/plugin-sdk/testing";
+import manifest from "../../manifest.json";
+import * as plugin from "../../src/frontend";
+
+it("runs in a frame", async () => {
+  const { problems } = await checkFrameApp(plugin, { manifest });
+  expect(problems).toEqual([]);
+});
+```
+
+It returns a `FrameCheckResult` with each registration as the shell would get it and the `problems`
+found. `app.frame` is a `FrameInfo`.
+
+`checkFrameViews` goes further: it renders every view you register (tabs, panels, cards, companions,
+settings, host editor sections, slot components, extensions) with the mock shell, and runs every request
+they send through the same list the shell uses for frames. `refused` lists the core requests a frame would
+be refused, like `GET /users/list`:
+
+```ts
+import { checkFrameViews } from "@termix-ssh/plugin-sdk/testing";
+
+it("asks core only for what a frame may reach", async () => {
+  const { refused } = await checkFrameViews(plugin, {
+    manifest,
+    hosts: [host],
+  });
+  expect(refused).toEqual([]);
+});
+```
+
+Your own routes answer `{}` unless you pass `respond(method, path)`. `errors` lists views that threw while
+rendering with that data, which is not a frame problem by itself.
+
+A component you put in a slot owned by a plugin that runs in the page sizes itself the way the slot's owner
+declares: `declareActionSlot({ id, accepts, fit })` with `fit` `"inline"` (as wide and tall as the
+content, for row items and badges), `"content"` (full width) or `"fill"` (the whole box). Without it the
+shell guesses from the slot id. A `fallback` element the owner passes stays in the page and shows while
+your framed component draws nothing.
+
+### Other plugins' parts in a frame (API 2.7)
+
+Your frame can show other plugins' parts: a slot you declared, an extension point or component id under
+your own plugin id (`homepage.widgets` for Homepage), or any id you list in manifest `contributes.uses`
+(`terminal.view`). Read them as always, with `useSlotContributions`, `ComponentSlot`, `useExtensions`,
+`getExtension`, `usePluginComponent` or `PluginComponent`. Each component you get is a placeholder: Termix
+draws the other plugin's own view in its own frame over that spot, clipped to your frame. You never get a
+handle on it and it never learns about you.
+
+- Props cross as data, functions by reference. A `host` you pass reaches the other plugin as its own copy
+  of that host.
+- Sizes follow the part: `fill` takes the box you give it, `content` takes your width and its own height,
+  `inline` its own width and height. Draw it with `ForeignSlot` from the UI kit to add a class, a style or
+  `interactive={false}`.
+- A tab whose page scrolls with parts on it should call `useShellScroll(true)` (API 2.9): Termix then
+  scrolls the tab and your page lays out at its full height, so the parts move with it instead of trailing
+  behind. Drop your own scroll box meanwhile, and turn it off while something needs a fixed height (a full
+  size session, a drag). `position: fixed` and `sticky` then sit against the whole page, not the tab.
+- A part's placeholder gets `data-foreign-shown` once it has drawn (Termix 26.11.2). A page that should
+  appear all at once can keep a spinner over itself (hide the page with `visibility: hidden`, so the parts
+  hide too) until every `[data-foreign-id]` in it has it, with a time limit.
+- Inside `ForeignInteractive interactive={false}` the parts take no clicks, so an edit mode can drag and
+  resize the boxes around them. `TileGrid` does this while editing.
+- Parts hide under your menus and popovers. The UI kit's Popover, DropdownMenu, Select, Sheet, Dialog,
+  AlertDialog, Tooltip, InlineView and PanePrompt do it for you; for one you draw yourself, put
+  `useForeignOccluder()` on its element or wrap it in `ForeignOccluder`.
+- Tab moves through a part and on, keyboard shortcuts keep working, and a wheel move the part can't use
+  scrolls your page.
+- `declareActionSlot({ fit: "overlay" })` is for parts drawn over something, like prompts over a terminal:
+  they cover the box, are see-through and take clicks only while they draw something.
+- In tests, pass `others` to `renderWithApp` with the parts you expect: `{ slots: { "my.slot": [{ actionId,
+component }] }, extensions: { "my.widgets": [...] }, components: { "terminal.view": View } }`. They draw
+  in place, as they do in the page.
+
+Slots you can fill include `terminal.toolbar`, `terminal.sidePanel`, `terminal.overlay`,
+`dashboard.counters`, `admin.userTabs`, `hosts.importMenu`, `hosts.panel`, `credentials.badges`,
+`shell.overlay`, `shell.rightEdge` and `tab.menu`, plus the data slots below. See
 https://docs.termix.site/develop/more-extension-points.
+
+### Data slots (API 2.6)
+
+Small things drawn once per host or per tab (usage bars on a dashboard row, a badge, a toolbar readout)
+are data, not components. A framed component costs one iframe per row, so 20 hosts would mean 20 frames.
+Give a data slot plain values instead and the shell draws them, the same way for every plugin:
+
+```ts
+app.registerSlotContribution("dashboard.hostRow", {
+  actionId: "my-plugin.row",
+  titleKey: "row.title",
+  kind: "data",
+  useValue: (context, rowKey) => {
+    const usage = useUsage(Number(rowKey), context.online === true);
+    if (!usage) return null;
+    return { shape: "bars", items: [{ label: t("cpu"), value: usage.cpu }] };
+  },
+});
+```
+
+`useValue` is a hook. It runs once per row on screen, with the owner's context (plain JSON; `host` is your
+own host record) and the row key, a host id or a tab id. In a framed plugin it runs in the background frame
+and only the values cross, so start polling only for rows you are called for and stop when the row goes.
+Return `null` to draw nothing, so the owner's fallback shows.
+
+| Shape   | Value                                                     | Drawn as                         |
+| ------- | --------------------------------------------------------- | -------------------------------- |
+| `bars`  | `items: [{ label, value: 0..1 or null, tone?, detail? }]` | Usage bars, warn at 70%, bad 90% |
+| `stat`  | `items: [{ label, value, unit?, tone?, tooltip? }]`       | A label with a number or word    |
+| `badge` | `label, tone?, tooltip?, actionId?`                       | A small bordered label           |
+| `dot`   | `tone, label`                                             | A status dot, label as tooltip   |
+| `text`  | `text, tone?, tooltip?, actionId?`                        | A short line                     |
+
+Tones are `default`, `good`, `warn`, `bad` and `muted`. Return an array to draw several in order. An
+`actionId` must be one of your own actions; it runs with the row's context on click. The shell checks every
+value: unknown shapes, bad tones and items without a label are dropped, bars clamp to 0..1 and text is cut
+short.
+
+Data slots in Termix: `dashboard.hostRow` (bars, stat, text; context `hostId`, `host`, `online`),
+`dashboard.hostRowBadge` (badge, replaces the row's status badge while you return one),
+`homepage.hostMetrics` (bars, stat, text; context `hostId`, `online`, `shownMetrics`) and
+`terminal.toolbarStatus` (bars, stat, text; row key is the tab id, context `hostId`, `isConnected`,
+`active`) and `credentials.badges` (badge, text; row key is the credential id, context `credentialId`).
+Row buttons, like `credentials.rowActions`, are `kind: "button"` with an `icon`: the owner runs your action
+with the row (`{ id, name }` for a credential), so they need no component either. `DATA_SLOTS` in `@termix-ssh/plugin-sdk/manifest` lists them.
+
+To own a data slot, declare it and draw it with `DataSlot` from the UI kit:
+
+```tsx
+app.declareActionSlot({
+  id: "my-plugin.row",
+  accepts: ["data"],
+  shapes: ["bars", "stat"],
+  rows: "host",
+});
+
+<DataSlot
+  slotId="my-plugin.row"
+  rowKey={host.id}
+  context={{ hostId: host.id, host, online }}
+  fallback={<OwnBadge />}
+/>;
+```
+
+`layout` is `"row"` (side by side, the default), `"stack"` (one per line, for cards) or `"inline"`
+(toolbars). `DataValues` draws values you already have. `HostDataItems` draws a host's badges, status
+indicators or editor toolbar items. `termix-plugin validate` warns when a component goes into a data slot
+or a per row slot, and when a host badge, status indicator or toolbar item gets a component.
+
+In tests, `renderSlot(slotId, props)` from `renderWithApp` draws data contributions too,
+`readDataValues(slotId, context, rowKey)` returns what your hooks gave per action id, and
+`renderHostItems("badge" | "status" | "toolbar", host)` draws your host values.
 
 ## Layouts and themes
 
@@ -752,8 +1137,10 @@ export function activate(app: TermixApp) {
 A theme is CSS only. Declare it in `contributes.themes` (`id`, `label`, `mode` light or dark, `css` path,
 optional `swatch` colors for the picker) with the `ui:theme` capability. The id becomes a class on `<html>`,
 so the file may only hold rules whose selectors start with `.<id>`, `:root.<id>` or `html.<id>`, optionally
-inside `@media` or `@supports`. `@import`, `url()` to another host and other at-rules are refused by
-`termix-plugin validate` and by the server. Set the same tokens core's themes set (`--background`,
+inside `@media` or `@supports`. `@import`, other at-rules, and any `url()`, `image-set()` or `src()` that
+is not a `data:` image or font or a relative path inside the plugin (no root paths, no climbing out, CSS
+escapes included) are refused by `termix-plugin validate`, when the plugin loads and again when the file is
+served. So a theme can't load anything from elsewhere or send page values anywhere. Set the same tokens core's themes set (`--background`,
 `--foreground`, `--card`, `--border`, `--muted` and the rest).
 
 A plugin that only holds themes needs no code. Leave out `src/`: `termix-plugin build` writes an empty backend and
@@ -773,18 +1160,28 @@ Build UI from `@termix-ssh/plugin-sdk/ui` so it matches Termix and follows the t
 exports with props is `ui.api.txt` in the Termix repo
 (https://github.com/Termix-SSH/Termix/blob/main/packages/plugin-sdk/ui.api.txt).
 
-- Web pages that break in an iframe: `NativeView` (props `url`, `ignoreCert`, `hidden`, `fallback`) shows the
-  page in a native view in the desktop app. It fills its element, hides while a dialog or menu is open and renders
-  `fallback` in a browser.
+- Web pages: your backend calls `ctx.desktop.grantView({ url, ignoreCert })` (needs `desktop:window`, inside a
+  person's request) and hands the frame the `grant`. `<NativeView grant={grant} />` then shows the page: a native
+  view in the desktop app, a credentialless sandboxed iframe in a browser. The frame never names the address, and
+  only a grant can trust a bad certificate (desktop only). It fills its element, hides while a dialog or menu is
+  open, and each grant works for ten minutes for the person who asked. `url` still works for a plugin in the page.
+- Serial ports in the browser: `app.serial.request({ baudRate, dataBits, stopBits, parity, filters }, { onData,
+onClose })` (needs `device:serial`, call it from a click in your frame) opens the browser's port picker and
+  resolves `{ write(bytes), close() }` for the port the person picked, or null when they picked none. Check
+  `app.serial?.available` first; Firefox, Safari and phones have no Web Serial.
 - Square: panels, cards and containers have no rounded corners. Small controls may stay rounded.
 - Flat: borders, not shadows. Use theme tokens like `border-border`, `bg-background`,
   `text-muted-foreground`, `text-destructive`. One accent, `text-accent-brand`. Don't add colors.
 - Small type: most text 11 to 13px.
+- To make someone prove a second factor (a connect policy that asks for a step up), call `app.stepUp()`. The shell
+  shows the factor screen and answers true or false; never draw factor screens or post to `/users/auth/step-up` yourself.
 - No new modal dialogs. Ask with `useConfirm()`, open views in place with `InlineView`, and use
   `PanePrompt` for small prompts.
 - Every tab or panel sits in `PanelShell` (inside `PanelFrame` when it is a tab). Lists use `PanelList` and
   `ListRow`, add with `AddButton`, forms end with `FormFooter`, empty lists show `EmptyState`, loading shows
   `LoadingState`, and "not installed" or "no access" shows `NoticePanel`.
+- A sidebar panel's toolbar is `PanelToolbar`: search, your icon buttons (sort, filter, a `...` menu) and an
+  icon only add button on one row. Put anything that needs its own line, like a target picker, in `below`.
 - The tile look: page content sits edge to edge on the page background, with one line between sections and
   no gaps, padding or card fill around them. The body of a `PanelShell` has no padding. Stack sections with
   `TileStack` (or `TileColumn` when cards sit deeper), put numbers and small cards in a `TileWall` of
@@ -847,6 +1244,10 @@ checks saves. You don't build settings UI.
 - Read: `ctx.settings.get(key)`, `getUser(userId, key)`, `getHost(hostId, key)`. Write: `set`, `setHost`.
   React: `ctx.settings.onChange`. Check: `ctx.settings.onValidate("admin", values => ({ key: "message" }))`.
 - Frontend: `useSettings("user")` gives values and `save`.
+- The host editor has a simple and an advanced view. Generated host sections and your own sections show only in
+  advanced. Register a section with `simple: true` when most hosts change it (a protocol's login, the terminal
+  look), and read the `advanced` prop to hold back its rarer fields until advanced is on (SDK 2.10.0, core
+  26.11.2+).
 
 Prefer settings to environment variables. Use an env var only for something needed before Termix starts.
 
@@ -895,6 +1296,35 @@ closely. Declare ids in `contributes.auth` and register them with `ctx.auth.regi
 `registerSecondFactor` or `registerSshAuthProvider`. Connection protocols go in `contributes.protocols`
 and `app.registerHostProtocol`. Read https://docs.termix.site/develop/auth before starting one.
 
+No plugin code runs on the sign in screen (Termix 26.11.2, plugin API 2.8). Termix draws each method from
+what the backend registers:
+
+- `kind: "redirect"`: a button per enabled instance from `describe()`.
+- `kind: "form"` with `fields: [{ name, type: "text" | "password" | "code", labelKey, autocomplete? }]`: a
+  form per instance; the values go to `verify` by name.
+- `kind: "webauthn"` with `options(request, instanceId)` returning `{ publicKey, context }`: a passkey button.
+  Termix runs the browser prompt and sends `{ ...context, response }` to `verify`. `placement: "inline"` draws
+  it under the password form. A passkey method never counts as another way in when an admin turns password
+  login off.
+- An instance's `views` (`"password"`, `"external"`) picks which page of the sign in screen shows it.
+
+A second factor takes `prompt`: `{ kind: "code", field, labelKey }` (one field), `{ kind: "fields", fields }`, or
+`{ kind: "webauthn" }` (`challenge()` returns the request options, `verify` gets `{ response }`). The step up
+prompt uses the same.
+
+Your frame registers only the enrolment screen: `app.registerLoginMethod({ id, titleKey, enrollment })` and
+`app.registerSecondFactorUI({ id, titleKey, enrollment })`. A `component` there throws. Passkey steps on those
+screens (adding a key, a tap before removing one) are ceremonies: the backend registers
+`ctx.auth.registerWebAuthnCeremony({ id, type: "create" | "get", options, finish })`, and the frame calls
+`app.auth.webauthn(id, extra)` from a click. Termix asks your backend for the options under your plugin's id
+only, runs the prompt and sends the answer to `finish`; the frame gets only what `finish` returns, so return
+`{ ok, error }` rather than throwing. A closed prompt answers `{ ok: false, closed: true }`.
+
+A login policy plugin (`auth:policy`) can sign the person out with `app.session.signOut()` and start the app
+again with `app.session.reload()` (at most once every ten seconds), for idle time outs and once a required
+second factor is set up. To show other plugins' enrolment screens, list `auth.enrollment` in
+`contributes.uses` and render `AuthEnrollmentSections` from `/ui`.
+
 To tie an external identity to an account that already exists, `ctx.auth.identities` has `list(userId)`,
 `link(userId, { provider, subject, email })` and `unlink(userId, provider)` (Termix 26.11.1+). `link` refuses an
 identity another account holds and `unlink` refuses to take away a user's last way to sign in. Both are audited.
@@ -905,6 +1335,15 @@ lists them too). `evaluate` returns `allowRememberDevice`, `maxSessionSeconds`, 
 `secondFactor` (`"always"` or `"new-device"`). The strictest answer from all plugins wins, and a throw
 refuses the login. A user who must have a second factor but has none gets a session that can only set one
 up, and `/users/me` reports `restriction: "second-factor-setup"`.
+
+Every login also fires `internal.event` with `event: "user_login"` and `details` holding `username`,
+`ipAddress`, `userAgent`, `methodId`, `deviceType` and `deviceInfo`, for things like new device notices.
+
+Some admin changes can wait (Termix 26.11.2+). With the admin wait on and two or more admins, making an admin,
+turning off password login, turning a sign in plugin off, or turning on or granting a plugin with dangerous
+access answers HTTP 202 with `{ held: true, holdId, runsAt }` instead of applying. Check answers with
+`isAdminHoldTicket` from `/ui` and say when it applies. `/ui` has `getAdminHoldSettings`,
+`setAdminHoldMinutes`, `getAdminHolds` and `cancelAdminHold` for a page that manages it.
 
 Sync is answered by one plugin. `sync:provide` is high risk: `ctx.sync.provide({ handle })` takes over every
 request under `/sync` (an Express style handler, 404 when nothing provides it), and `ctx.sync.host` hands
@@ -937,6 +1376,7 @@ const mock = createMockCtx({
   db: db.database,
   router: () => (router = express.Router()),
   permissions: ["hello.use"], // leave out to allow everything
+  sandbox: true, // the rules of a plugin process: plain data, declared schedules and events
 });
 await activate(mock.ctx);
 mock.setActor("user-1");
@@ -960,6 +1400,87 @@ expect(app.registered.tabs()).toContain("hello");
 
 Test every route, with and without the permission. Test that disable then enable works, and that the plugin
 works when an optional dependency is missing.
+
+## Security regression tests
+
+A fix for a security advisory comes with a test named after the advisory, like
+`tests/backend/GHSA-xxxx-xxxx-xxxx.test.ts`, that fails without the fix. Official releases run every such file
+before signing and refuse to publish when one fails, is missing from the run, or skips, focuses or marks a test
+(`.skip`, `.only`, `.todo`, `.skipIf`, `.runIf`, `.fails`). The same release gate runs osv-scanner, zizmor, the
+authorization table below and a check for new high or critical CodeQL alerts.
+
+## Authorization table
+
+`authz.json` at the repo root says who may call each route and socket. The shared plugin CI boots the newest
+core with your plugin, makes a set of callers and calls every entry as each of them:
+
+- no login, an expired login, a signed out login, a login still waiting for its second factor, a login that
+  must set up a second factor first, and a share link guest
+- a user with no permissions, another user, one user per host share level (connect, view, edit, manage),
+  the owner, an admin, and API keys scoped to operations
+
+A route your plugin serves with no entry fails the run, and so does an entry for a route that is gone. Write
+what the route should allow, not what it happens to do. Each entry is short and the rest is worked out:
+
+```json
+{
+  "seed": [
+    {
+      "as": "owner",
+      "method": "POST",
+      "path": "/plugin-api/hello/notes",
+      "body": { "title": "authz-own-note" },
+      "capture": { "hello.note": "note.id" }
+    }
+  ],
+  "routes": {
+    "GET /plugin-api/hello/notes": {
+      "access": "user",
+      "permission": "hello.use",
+      "filtered": true
+    },
+    "GET /plugin-api/hello/notes/:id": {
+      "access": "user",
+      "permission": "hello.use",
+      "resource": { "kind": "own", "fixture": "hello.note" },
+      "params": { "id": "hello.note" }
+    },
+    "POST /plugin-api/hello/hosts/:hostId/run": {
+      "access": "user",
+      "permission": "hello.use",
+      "resource": { "kind": "host", "min": "edit" },
+      "body": { "command": "uptime" },
+      "destructive": true
+    },
+    "WS /plugin-ws/hello/live": {
+      "access": "user",
+      "resource": { "kind": "host", "min": "connect" },
+      "send": [{ "type": "connect", "data": { "hostId": "{{host}}" } }],
+      "refuseReply": "Host not found"
+    }
+  }
+}
+```
+
+- `access`: `public`, `user` or `admin`. Any non public entry must refuse every bad login.
+- `permission`: what the route requires. One the plain user role lacks means only admins get in.
+- `resource`: whose thing the route touches. `host` and `folder` follow share levels (`min`), `credential` is
+  `use` or `manage`, anything else is the owner's alone. Another user must get 401, 403 or 404.
+- `seed` makes the owner's rows first; `capture` names them for `params` and `{{name}}` in bodies. Give the
+  owner's rows names starting with `authz-own-`: a `filtered` list may answer other users with 200, but never
+  with anything holding that marker.
+- A refused caller that gets 400 fails: the body never reached the check, so give the entry a `body`.
+- `destructive` writes are never called as an allowed caller. Writes are only checked for refusals unless
+  `callAllowed` is set.
+- `allowed: "any"` skips the allowed side when there is no test data (needs a real device, desktop only);
+  say why in `note`. Refusals are still checked.
+
+Every field is in `scripts/authz/authz.schema.json` in the core repo. Run it locally from a core checkout next
+to your plugin, after `npm run build:backend:core` there and `npm run build` here:
+
+```bash
+node ../Termix/scripts/authz/run.mjs --no-core --plugin . --local-plugin . --local-plugins ../Plugins
+```
 
 ## Running it on a server
 
@@ -1000,18 +1521,36 @@ Sections: `### Added`, `### Changed`, `### Fixed`, `### Removed`, `### Deprecate
 
 Run the Release workflow by hand from the dev branch on GitHub:
 
-| Choice    | What it does                                                                      |
-| --------- | --------------------------------------------------------------------------------- |
-| stable    | Tests, builds and publishes `X.Y.Z`, merges the branch into `main` and deletes it |
-| beta      | Publishes `X.Y.Z-beta.N`, N counts up on its own                                  |
-| overwrite | Releases the manifest version again from this commit                              |
-| dry-run   | Builds and packs, publishes nothing                                               |
+| Choice  | What it does                                                                      |
+| ------- | --------------------------------------------------------------------------------- |
+| stable  | Tests, builds and publishes `X.Y.Z`, merges the branch into `main` and deletes it |
+| beta    | Publishes `X.Y.Z-beta.N`, N counts up on its own                                  |
+| dry-run | Builds and packs, publishes nothing                                               |
 
-No secrets are needed. The workflow records GitHub build provenance for the `.tmxplug`, and the run summary
-shows the `sha256` for a registry submission. If a dev branch changes `.github/workflows`, add a
+Releases are immutable. The workflow makes a draft, uploads the `.tmxplug`, then publishes, and after that
+the tag and files can't change. A version that already has a release is refused, so a fix is a new version.
+Turn on immutable releases in the plugin repo settings.
+
+No secrets are needed. The workflow records GitHub build provenance for the `.tmxplug` and uploads it next
+to the file as `.tmxplug.sigstore.json`, which Termix checks at download. The run summary shows the `sha256`
+for a registry submission. If a dev branch changes `.github/workflows`, add a
 `TERMIX_PAT` secret (a token with `repo` and `workflow` scopes). To also sign with your own key, set
 `TERMIX_PLUGIN_SIGNING_KEY`. Keep `.github/workflows/release.yml` as the template has it: the community
 registry checks provenance from it.
+
+CI also lints your workflows with zizmor and fails on high severity findings, like an action not pinned to a
+full commit SHA or an `${{ }}` value inside a `run:` line (pass it through `env:` instead). Termix-SSH
+workflows may stay on `@main`. Add `.github/zizmor.yml` to change the rules.
+
+Before it installs anything, CI checks `package-lock.json`: every package must come from registry.npmjs.org over
+https with a sha512 integrity hash, and osv-scanner fails the run on a known vulnerability that already has a fixed
+version. Update the lockfile, or add an `overrides` entry in `package.json` when a dependency pins the old version.
+A vulnerability with no fix yet is only a warning. If one does not affect your plugin, ignore it in
+`osv-scanner.toml` next to the lockfile with a `reason` and an `ignoreUntil` date. CI and the release then run
+`npm ci --ignore-scripts`, so package install scripts don't run. Your own `postinstall` still runs. Only `better-sqlite3`, `node-pty` and
+`@serialport/bindings-cpp` get their install step back through `npm rebuild`. The template's
+`.github/dependabot.yml` keeps npm packages and actions current: it waits 3 days after a release, groups minor and
+patch updates into one weekly PR, and gives each major its own PR. Security updates come right away.
 
 ## Submitting to the community registry
 
@@ -1053,8 +1592,8 @@ Reviewers check that:
 - Secrets are only used for what the plugin is for.
 - The name and icon don't pretend to be an official plugin.
 
-Every version needs its own PR that adds it to the top of `versions`. Overwriting a reviewed release drops
-it from the registry until a new version is submitted. Admins see the plugin once they turn on the community
+Every version needs its own PR that adds it to the top of `versions`. Releases are immutable, so a fix
+is always a new version. Admins see the plugin once they turn on the community
 registry in Plugins, Registries.
 
 To run your own registry instead, see https://docs.termix.site/develop/registries.
@@ -1094,6 +1633,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `@termix-ssh/plugin-sdk/host-scripts`                                | Docker, metrics, systemd and journal command builders and parsers, scripts sent to `bash -s`   |
 | `@termix-ssh/plugin-sdk/ssh-certs`                                   | `applyCertificateAuth()` for certificate based SSH auth                                        |
 | `@termix-ssh/plugin-sdk/ssh-keys`                                    | `generateSshKeyPair()`, `detectSshKeyType()`, `publicKeyFromPrivate()`, `validateSshKeyPair()` |
+| `@termix-ssh/plugin-sdk/net-guard`                                   | `resolveTarget()`, `pinnedLookup()`, `isPrivateAddress()` for sockets you open yourself        |
 | `@termix-ssh/plugin-sdk/desktop`                                     | The desktop app bridge, typed. Check it exists before use                                      |
 | `@termix-ssh/plugin-sdk/openapi`                                     | `buildOpenApi()`                                                                               |
 | `@termix-ssh/plugin-sdk/changelog`                                   | Changelog parsing and checks                                                                   |
@@ -1115,6 +1655,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `auth:policy`            | high     | Set login rules: idle timeout, session length, 2FA            |
 | `sync:provide`           | high     | Run sync: answer every /sync request                          |
 | `device:serial`          | high     | Open serial and USB ports on the server                       |
+| `network:sockets`        | high     | Open its own listeners and connections, outside Termix checks |
 | `desktop:local`          | high     | Use the user's own computer, desktop app only                 |
 | `hosts:export`           | high     | Export hosts with their saved logins                          |
 | `notify:hub`             | high     | Receive every alert (the alerts hub only)                     |
@@ -1127,7 +1668,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `ssh:transport`          | high     | Carry SSH connections for hosts it claims over its own stream |
 | `hosts:lock`             | medium   | Make hosts it manages read only for everyone else             |
 | `hosts:connect-policy`   | high     | Allow, deny or ask for approval before sessions open          |
-| `network:probe`          | medium   | Check that a host answers on a TCP port                       |
+| `network:probe`          | medium   | Check that a host answers on a TCP port, look up a host name  |
 | `credentials:use`        | medium   | Connect with saved credentials without seeing them            |
 | `credentials:write`      | medium   | Save new credentials                                          |
 | `network:outbound`       | medium   | Outbound HTTP through `ctx.fetch`                             |
@@ -1144,6 +1685,7 @@ To run your own registry instead, see https://docs.termix.site/develop/registrie
 | `kv:own`                 | low      | Small key value state                                         |
 | `files:own`              | low      | Your own folder on disk                                       |
 | `secrets:own`            | low      | Your own encrypted secrets                                    |
+| `config:secrets`         | high     | Read env variables and files on the server, not Termix's keys |
 | `settings:read-core`     | low      | Read Termix server settings                                   |
 | `plugins:read`           | low      | See installed plugins                                         |
 | `ui:surface`             | low      | Add tabs, panels and settings                                 |

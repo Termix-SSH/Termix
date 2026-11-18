@@ -21,6 +21,7 @@ import {
   getEntity,
   listEntities,
   onEntitiesChanged,
+  rowSyncs,
   type RegisteredSyncEntity,
 } from "../plugins/sync-registry.js";
 import {
@@ -84,7 +85,8 @@ import {
 } from "./client/http.js";
 import { applyElectronProxyConfig } from "./client/electron-proxy.js";
 import { lastRemotePlugins, mirrorPlugins } from "./client/plugins.js";
-import { defaultDeviceName } from "./client/device.js";
+import { defaultDeviceName, desktopConnectionOrigin } from "./client/device.js";
+import { setAuthCookie, clearAuthCookie } from "../auth/session-cookie.js";
 
 function entityOf(type: string): RegisteredSyncEntity {
   const entity = getEntity(type);
@@ -116,7 +118,7 @@ async function wipeSyncedData(userId: string): Promise<void> {
       }
       if (!entity.table || entity.singleton) continue;
       for (const row of await listStoredRows(entity, userId)) {
-        if (entity.shouldSync && entity.shouldSync(row) === false) continue;
+        if (!(await rowSyncs(entity, row))) continue;
         if (typeof row.syncId !== "string") continue;
         await deleteStoredRow(entity, userId, row.syncId);
       }
@@ -172,9 +174,11 @@ async function counts(userId: string): Promise<Record<string, number>> {
         continue;
       }
       if (!entity.table) continue;
-      result[entity.type] = (await listStoredRows(entity, userId)).filter(
-        (row) => !entity.shouldSync || entity.shouldSync(row) !== false,
-      ).length;
+      let synced = 0;
+      for (const row of await listStoredRows(entity, userId)) {
+        if (await rowSyncs(entity, row)) synced += 1;
+      }
+      result[entity.type] = synced;
     } catch {
       result[entity.type] = 0;
     }
@@ -449,7 +453,9 @@ export function createSyncHost(): PluginSyncHost {
           : null;
       },
       setCookie: (req, res, value, options) => {
-        (res as Response).cookie(
+        setAuthCookie(
+          req as Request,
+          res as Response,
           options?.name ?? "jwt",
           value,
           authManager.getSecureCookieOptions(
@@ -459,7 +465,9 @@ export function createSyncHost(): PluginSyncHost {
         );
       },
       clearCookie: (req, res, name) => {
-        (res as Response).clearCookie(
+        clearAuthCookie(
+          req as Request,
+          res as Response,
           name ?? "jwt",
           authManager.getClearCookieOptions(req as Request),
         );
@@ -532,6 +540,7 @@ export function createSyncHost(): PluginSyncHost {
     desktop: {
       applyProxy: (link) => applyElectronProxyConfig(link as never),
       deviceName: defaultDeviceName,
+      connectionOrigin: () => desktopConnectionOrigin(),
     },
 
     alerts: {

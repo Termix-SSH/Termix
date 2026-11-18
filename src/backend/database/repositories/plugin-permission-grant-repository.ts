@@ -28,6 +28,10 @@ export class PluginPermissionGrantRepository {
       .where(eq(pluginPermissionGrants.pluginId, pluginId));
   }
 
+  async listAll(): Promise<PluginPermissionGrantRecord[]> {
+    return this.context.drizzle.select().from(pluginPermissionGrants);
+  }
+
   async findGrant(
     pluginId: string,
     capability: string,

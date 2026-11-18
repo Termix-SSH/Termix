@@ -21,6 +21,8 @@ import type {
   ShellCall,
 } from "@termix-ssh/plugin-sdk/testing";
 import i18n from "@/i18n/i18n";
+import { createFrameApp } from "@/plugin-frame/frame-app";
+import { encode } from "@/plugin-frame/wire";
 import type { PluginSummary } from "@/api/plugins-api";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SurfaceScope } from "@/components/surface/surface-scope";
@@ -32,7 +34,15 @@ import {
 } from "@/shell/tab-registry";
 import { getPanel, listPanels } from "@/shell/panel-registry";
 import { listRegisteredRailItems } from "@/sidebar/rail-items";
-import { hostActionsFor, listHostActions } from "@/sidebar/host-contributions";
+import {
+  hostActionsFor,
+  listHostActions,
+  listHostBadges,
+  listHostEditorToolbarItems,
+  listHostStatusIndicators,
+} from "@/sidebar/host-contributions";
+import { DataSlot, HostDataItems } from "@/components/data-view/DataSlot";
+import type { DataValue } from "@/components/data-view/data-value";
 import { listHostProtocols } from "@/sidebar/host-protocols";
 import {
   getHostEditorSection,
@@ -46,7 +56,12 @@ import {
   getSettingsComponent,
   listSettingsComponents,
 } from "@/settings/settings-components";
-import { getSlotContributions, listActions } from "@/shell/action-registry";
+import {
+  getActionSlot,
+  getSlotContributions,
+  listActions,
+  registerSlotContribution as addSlotContribution,
+} from "@/shell/action-registry";
 import { listPaletteGroups, loadPaletteGroup } from "@/shell/palette-registry";
 import {
   listKeybindingActions,
@@ -73,8 +88,18 @@ import {
 } from "./shell-bridge";
 import { PluginViewPlaceholder } from "./PluginViewPlaceholder";
 import { resolveLayoutTabTarget } from "@/shell/shell-layout";
-import { getExtension, listExtensions } from "./extension-registry";
+import {
+  getExtension,
+  listExtensions,
+  registerExtension as addExtension,
+} from "./extension-registry";
+import { registerPluginComponent } from "./component-registry";
 import { onboardingSteps } from "@/onboarding/onboarding-registry";
+import {
+  renderFrameViews,
+  type FrameViewsOptions,
+  type FrameViewsResult,
+} from "./testing-frame-views";
 import type { WorkspaceTabSnapshot } from "@/types/ui-types";
 
 function recordingShell(calls: ShellCall[]): TabShellCallbacks {
@@ -104,6 +129,93 @@ function wrap(element: ReactElement): HTMLElement {
       <SurfaceScope className="h-full">{element}</SurfaceScope>
     </ThemeProvider>,
   ).container;
+}
+
+/**
+ * Runs activate the way a sandboxed frame does and reports what the shell
+ * would get, so a plugin's own tests catch what a frame can't carry.
+ */
+export async function checkFramePlugin(
+  plugin: {
+    activate: (app: never) => unknown;
+    deactivate?: () => unknown;
+  },
+  options: { manifest: Record<string, unknown> },
+): Promise<{
+  registrations: { kind: string; data: unknown }[];
+  problems: string[];
+}> {
+  const manifest = options.manifest as unknown as PluginManifest;
+  const registrations: { kind: string; data: unknown }[] = [];
+  const problems: string[] = [];
+  const notInCheck = () => {
+    throw new Error("Not available while checking frame registrations");
+  };
+  const handle = createFrameApp({
+    pluginId: manifest.id,
+    role: "background",
+    manifest,
+    register: (_rid, kind, data) => {
+      try {
+        const wired = encode(data, { exportFn: () => ({ $fn: "fn" }) });
+        structuredClone(wired);
+        registrations.push({ kind, data: wired });
+      } catch (error) {
+        problems.push(
+          `${kind}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    },
+    unregister: () => {},
+    call: async () => undefined,
+    api: new Proxy({}, { get: notInCheck }) as never,
+    fetch: notInCheck as never,
+    wsUrl: notInCheck as never,
+    warn: (message) => problems.push(message),
+  });
+  try {
+    await plugin.activate(handle.app as never);
+  } catch (error) {
+    problems.push(error instanceof Error ? error.message : String(error));
+  }
+  try {
+    await plugin.deactivate?.();
+  } finally {
+    handle.dispose();
+  }
+  return { registrations, problems };
+}
+
+/**
+ * Renders every view the plugin registers with the mock shell and reports
+ * the core requests a plugin frame would be refused, on top of what
+ * checkFramePlugin finds.
+ */
+export async function checkFrameViews(
+  plugin: FrontendPluginModule,
+  options: FrameViewsOptions,
+): Promise<
+  FrameViewsResult & {
+    registrations: { kind: string; data: unknown }[];
+    problems: string[];
+  }
+> {
+  const check = await checkFramePlugin(plugin as never, {
+    manifest: options.manifest,
+  });
+  const points: Array<[string, string]> = [];
+  for (const { kind, data } of check.registrations) {
+    const record = data as Record<string, unknown>;
+    if (kind === "slotContribution" && typeof record.slotId === "string") {
+      points.push(["slot", record.slotId]);
+    } else if (kind === "extension" && typeof record.pointId === "string") {
+      points.push(["extension", record.pointId]);
+    } else if (kind === "component" && typeof record.id === "string") {
+      points.push(["component", record.id]);
+    }
+  }
+  const views = await renderFrameViews(plugin, renderPlugin, points, options);
+  return { ...check, ...views };
 }
 
 function missing(kind: string, id: string | number): never {
@@ -200,6 +312,32 @@ export async function renderPlugin(
   await plugin.activate(handle.app);
   setFrontendState(pluginId, "active");
   if (options.ready) notifyShellReady();
+
+  // Other plugins' parts the test supplies, drawn in place as in the page.
+  const others = options.others ?? {};
+  const dropOthers: Array<() => void> = [];
+  for (const [slotId, parts] of Object.entries(others.slots ?? {})) {
+    for (const part of parts) {
+      dropOthers.push(
+        addSlotContribution(slotId, {
+          titleKey: part.actionId,
+          kind: part.component ? "component" : "button",
+          pluginId: "other",
+          ...part,
+        } as never),
+      );
+    }
+  }
+  for (const [pointId, items] of Object.entries(others.extensions ?? {})) {
+    for (const item of items) {
+      dropOthers.push(
+        addExtension(pointId, { pluginId: "other", ...item } as never),
+      );
+    }
+  }
+  for (const [id, component] of Object.entries(others.components ?? {})) {
+    dropOthers.push(registerPluginComponent(id, component as never));
+  }
 
   const mine = <T extends { pluginId?: string }>(items: T[]) =>
     items.filter((item) => item.pluginId === pluginId);
@@ -443,11 +581,61 @@ export async function renderPlugin(
     },
 
     renderSlot(slotId, props = {}) {
+      const rowKey = props.rowKey ?? props.hostId ?? props.tabId ?? "row";
+      // A data slot also draws older component parts itself.
+      const dataSlot =
+        getActionSlot(slotId)?.accepts.includes("data") ||
+        getSlotContributions(slotId).some((item) => item.kind === "data");
       return wrap(
         <>
           <ActionSlot slotId={slotId} />
-          <ComponentSlot slotId={slotId} props={props} />
+          {dataSlot ? (
+            <DataSlot slotId={slotId} rowKey={String(rowKey)} context={props} />
+          ) : (
+            <ComponentSlot slotId={slotId} props={props} />
+          )}
         </>,
+      );
+    },
+
+    readDataValues(slotId, context = {}, rowKey = "row") {
+      const values: Record<string, unknown> = {};
+      const reporters = getSlotContributions(slotId).filter(
+        (item) => item.pluginId === pluginId && item.value,
+      );
+      const element = wrap(
+        <>
+          {reporters.map((item) => {
+            const Reporter = item.value!;
+            return (
+              <Reporter
+                key={item.actionId}
+                context={context}
+                rowKey={String(rowKey)}
+                report={(value: DataValue[] | null) => {
+                  values[item.actionId] = value;
+                }}
+              />
+            );
+          })}
+        </>,
+      );
+      return {
+        element,
+        values: () => ({ ...values }) as Record<string, never>,
+      };
+    },
+
+    renderHostItems(kind, host) {
+      const all =
+        kind === "status"
+          ? listHostStatusIndicators()
+          : kind === "toolbar"
+            ? listHostEditorToolbarItems()
+            : listHostBadges();
+      const items = all.filter((item) => item.pluginId === pluginId);
+      return wrap(
+        <HostDataItems host={host as unknown as Host} items={items} />,
       );
     },
 
@@ -455,6 +643,7 @@ export async function renderPlugin(
       try {
         await plugin.deactivate?.();
       } finally {
+        for (const drop of dropOthers) drop();
         handle.dispose();
         setFrontendState(pluginId, "inactive");
         setPluginApiForTesting(pluginId, null);

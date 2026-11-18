@@ -57,6 +57,23 @@ describe("script shells", () => {
     expect(scriptShell("root-only")).toContain("SCRIPT_ERR:");
   });
 
+  it("is one sh -c command, so a fish or csh login shell can run it", () => {
+    for (const mode of ["plain", "auto", "root", "root-only"] as const) {
+      expect(scriptShell(mode)).toMatch(/^sh -c '[^]*'$/);
+    }
+  });
+
+  it.runIf(process.platform !== "win32")(
+    "still reads the script from stdin through sh",
+    () => {
+      const out = execFileSync("sh", ["-c", scriptShell("plain")], {
+        input: 'echo "ran:$TZ"\n',
+        encoding: "utf8",
+      });
+      expect(out.trim()).toBe("ran:UTC");
+    },
+  );
+
   it("collects error lines, old and new markers", () => {
     expect(scriptError("x\nSCRIPT_ERR:one\nSERVICES_ERR:two\n")).toBe(
       "one\ntwo",

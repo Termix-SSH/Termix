@@ -50,7 +50,15 @@ function retryOnBlockedPort(server: net.Server, args: unknown[]): void {
   // The caller's callback is already a pending "listening" listener, so a
   // retry leaves it out and it fires once, on the good port.
   const retryArgs = args.filter((arg) => typeof arg !== "function");
+  let retrying = false;
   server.emit = ((event: string | symbol, ...rest: unknown[]) => {
+    // The retry's own close is not the caller's: supertest takes it as
+    // "closed before listening".
+    if (event === "close" && retrying) {
+      retrying = false;
+      server.listen(...(retryArgs as []));
+      return true;
+    }
     if (event === "listening") {
       const address = server.address();
       if (
@@ -58,7 +66,8 @@ function retryOnBlockedPort(server: net.Server, args: unknown[]): void {
         typeof address === "object" &&
         FETCH_BLOCKED_PORTS.has(address.port)
       ) {
-        server.close(() => server.listen(...(retryArgs as [])));
+        retrying = true;
+        server.close();
         return true;
       }
       server.emit = emit;

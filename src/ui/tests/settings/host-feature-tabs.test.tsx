@@ -3,6 +3,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resetInstalledPluginsCache } from "@/hooks/use-installed-plugins";
 import {
   cleanup,
   fireEvent,
@@ -13,6 +14,7 @@ import {
 import type { PluginSummary } from "@/api/plugins-api";
 import {
   hostFeatureTabId,
+  resetHostFeatureTabs,
   syncHostFeatureTabs,
 } from "@/settings/host-feature-tabs";
 import {
@@ -63,11 +65,14 @@ function plugin(overrides: Partial<PluginSummary> = {}): PluginSummary {
 }
 
 beforeEach(() => {
+  resetInstalledPluginsCache();
+  resetHostFeatureTabs();
   resetHostEditorSections();
 });
 
 afterEach(() => {
   cleanup();
+  resetHostFeatureTabs();
   resetHostEditorSections();
 });
 
@@ -225,6 +230,31 @@ describe("syncHostFeatureTabs", () => {
     syncHostFeatureTabs([plugin({ enabled: false })]);
 
     expect(getHostEditorSection(hostFeatureTabId("docker"))).toBeUndefined();
+  });
+
+  it("moves a tab to the defaults editor when the plugin's own section comes later", () => {
+    syncHostFeatureTabs([plugin()]);
+    expect(getHostEditorSection(hostFeatureTabId("docker"))?.defaults).toBe(
+      true,
+    );
+    registerHostEditorSection({
+      id: "docker-own",
+      pluginId: "docker",
+      group: "ssh",
+      order: 40,
+      labelKey: "k",
+      component: () => null,
+    });
+    const tab = getHostEditorSection(hostFeatureTabId("docker"));
+    expect(tab?.defaults).toBe("only");
+    expect(tab?.group).toBe("ssh");
+  });
+
+  it("keeps an unchanged tab instead of registering it again", () => {
+    syncHostFeatureTabs([plugin()]);
+    const first = getHostEditorSection(hostFeatureTabId("docker"));
+    syncHostFeatureTabs([plugin()]);
+    expect(getHostEditorSection(hostFeatureTabId("docker"))).toBe(first);
   });
 
   it("registers for a plugin declaring only an enable switch", () => {

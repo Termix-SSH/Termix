@@ -82,6 +82,56 @@ interface ReadOptions {
   freshMs?: number;
   input?: Record<string, unknown>;
   origin: ActorOrigin;
+  /** Lookups shared by every read in one request. */
+  scope?: ReadScope;
+}
+
+type HostAccess = Awaited<ReturnType<PermissionManager["canAccessHost"]>>;
+
+/**
+ * Host lookups for one request. A page reading many signals asks the same
+ * questions about the same hosts for each one, so they are made once.
+ */
+export interface ReadScope {
+  targets: Map<string, ReturnType<typeof loadProbeTargets>>;
+  access: Map<string, Promise<HostAccess>>;
+  hosts: Map<string, ReturnType<typeof loadOperationHost>>;
+}
+
+export function createReadScope(): ReadScope {
+  return { targets: new Map(), access: new Map(), hosts: new Map() };
+}
+
+/** Host lookups in flight at once, so a big fleet doesn't drain the pool. */
+const HOST_LOOKUPS_AT_ONCE = 16;
+
+/** Like Promise.all over items, with at most limit running at a time. */
+export async function mapLimited<I, O>(
+  items: readonly I[],
+  limit: number,
+  run: (item: I) => Promise<O>,
+): Promise<O[]> {
+  const out = new Array<O>(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const index = next++;
+      out[index] = await run(items[index]);
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, worker),
+  );
+  return out;
+}
+
+function memo<T>(map: Map<string, T>, key: string, load: () => T): T {
+  let value = map.get(key);
+  if (value === undefined) {
+    value = load();
+    map.set(key, value);
+  }
+  return value;
 }
 
 function refreshHost(
@@ -136,23 +186,26 @@ export async function readAcrossHosts<T>(
   if (!manifest) return [];
 
   const permissions = PermissionManager.getInstance();
-  const targets = await loadProbeTargets(options.userId, options.hostIds);
-  const reads: HostRead<T>[] = [];
+  const scope = options.scope ?? createReadScope();
+  const targets = await memo(
+    scope.targets,
+    options.hostIds?.join(",") ?? "*",
+    () => loadProbeTargets(options.userId, options.hostIds),
+  );
+  const level = action.hostAccess ?? "connect";
 
-  for (const target of targets) {
-    const hostId = target.id;
-    const access = await permissions.canAccessHost(
-      options.userId,
-      hostId,
-      action.hostAccess ?? "connect",
+  const readOne = async (hostId: number): Promise<HostRead<T> | null> => {
+    const access = await memo(scope.access, `${hostId}|${level}`, () =>
+      permissions.canAccessHost(options.userId, hostId, level),
     );
-    if (!access.hasAccess) {
-      reads.push({ hostId, state: "no-access" });
-      continue;
-    }
+    if (!access.hasAccess) return { hostId, state: "no-access" };
     if (action.when) {
-      const host = await loadOperationHost(hostId, manifest);
-      if (!host || !matchesWhen(action.when, host)) continue;
+      const host = await memo(
+        scope.hosts,
+        `${hostId}|${registration.pluginId}`,
+        () => loadOperationHost(hostId, manifest),
+      );
+      if (!host || !matchesWhen(action.when, host)) return null;
     }
 
     const key = cacheKey(options.userId, options.actionId, hostId);
@@ -162,36 +215,79 @@ export async function readAcrossHosts<T>(
       Date.now() - cached.fetchedAt < (options.freshMs ?? RESOURCE_FRESH_MS);
 
     if (isOffline(hostId)) {
-      reads.push({
+      return {
         hostId,
         state: "offline",
         value: cached?.value as T | undefined,
         fetchedAt: cached
           ? new Date(cached.fetchedAt).toISOString()
           : undefined,
-      });
-      continue;
+      };
     }
     if (!fresh || options.refresh) void refreshHost(options, hostId, key);
-    if (!cached) {
-      reads.push({ hostId, state: "loading" });
-    } else if (cached.error) {
-      reads.push({
+    if (!cached) return { hostId, state: "loading" };
+    if (cached.error) {
+      return {
         hostId,
         state: "error",
         error: cached.error,
         fetchedAt: new Date(cached.fetchedAt).toISOString(),
-      });
-    } else {
-      reads.push({
-        hostId,
-        state: "ok",
-        value: cached.value as T,
-        fetchedAt: new Date(cached.fetchedAt).toISOString(),
-      });
+      };
     }
+    return {
+      hostId,
+      state: "ok",
+      value: cached.value as T,
+      fetchedAt: new Date(cached.fetchedAt).toISOString(),
+    };
+  };
+
+  const reads = await mapLimited(targets, HOST_LOOKUPS_AT_ONCE, (target) =>
+    readOne(target.id),
+  );
+  return reads.filter((read): read is HostRead<T> => read !== null);
+}
+
+const SERVER = "server";
+
+/** After a change to a server wide resource, its signals read again. */
+export function dropServerSignals(): void {
+  for (const key of cache.keys()) {
+    if (key.endsWith(`|${SERVER}`)) cache.delete(key);
   }
-  return reads;
+}
+
+/**
+ * A server wide signal, cached like host reads so a polling page does not
+ * run the plugin's read on every request. Waits only on the first read.
+ */
+export async function readServerSignal(options: {
+  userId: string;
+  actionId: string;
+  freshMs?: number;
+  origin: ActorOrigin;
+}): Promise<unknown> {
+  const key = `${options.userId}|${options.actionId}|${SERVER}`;
+  const run = () =>
+    coalesce(key, async () => {
+      const { runOperation } = await import("./gate.js");
+      const outcome = await runOperation({
+        actionId: options.actionId,
+        internal: true,
+        userId: options.userId,
+        origin: options.origin,
+      }).catch(() => null);
+      remember(key, { value: outcome?.data, fetchedAt: Date.now() });
+    });
+  const cached = cache.get(key);
+  if (!cached) {
+    await run();
+    return cache.get(key)?.value;
+  }
+  if (Date.now() - cached.fetchedAt >= (options.freshMs ?? RESOURCE_FRESH_MS)) {
+    void run();
+  }
+  return cached.value;
 }
 
 export interface ResourceRow {

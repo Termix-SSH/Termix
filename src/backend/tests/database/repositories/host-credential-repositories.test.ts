@@ -4,6 +4,8 @@ import { TestSqliteDatabase } from "./test-support.js";
 import { CredentialRepository } from "../../../database/repositories/credential-repository.js";
 import { HostRepository } from "../../../database/repositories/host-repository.js";
 import { DataCrypto } from "../../../utils/data-crypto.js";
+import { FieldCrypto } from "../../../utils/field-crypto.js";
+import crypto from "crypto";
 
 describe("HostRepository and CredentialRepository", () => {
   let adapter: TestSqliteDatabase | null = null;
@@ -640,5 +642,75 @@ describe("HostRepository and CredentialRepository", () => {
     expect(await repo.hosts.deleteForUser("user-1", host.id)).toEqual({
       syncId: expect.any(String),
     });
+  });
+
+  it("seals host and credential secrets with the real row id", async () => {
+    const repo = await createRepositories();
+    const key = crypto.randomBytes(32);
+    vi.spyOn(DataCrypto, "validateUserAccess").mockReturnValue(key);
+    vi.spyOn(DataCrypto, "getUserDataKey").mockReturnValue(key);
+    const stored = async (table: string, id: number) =>
+      (
+        (await adapter!.query(
+          sql`SELECT password FROM ${sql.raw(table)} WHERE id = ${id}`,
+        )) as Array<{ password: string }>
+      )[0].password;
+
+    const a = await repo.hosts.createEncryptedForUser("user-1", {
+      userId: "user-1",
+      name: "a",
+      ip: "10.0.0.1",
+      port: 22,
+      username: "root",
+      authType: "password",
+      password: "secret-a",
+    });
+    const b = await repo.hosts.createEncryptedForUser("user-1", {
+      userId: "user-1",
+      name: "b",
+      ip: "10.0.0.2",
+      port: 22,
+      username: "root",
+      authType: "password",
+      password: "secret-b",
+    });
+    expect(a.password).toBe("secret-a");
+    expect(FieldCrypto.sealedRecordId(await stored("ssh_data", a.id))).toBe(
+      String(a.id),
+    );
+    await repo.hosts.updateEncryptedForUser("user-1", b.id, {
+      password: "secret-b2",
+    });
+    expect(FieldCrypto.sealedRecordId(await stored("ssh_data", b.id))).toBe(
+      String(b.id),
+    );
+
+    // A sealed value copied into another row does not open there.
+    await adapter!.run(
+      sql`UPDATE ssh_data SET password = ${await stored("ssh_data", a.id)} WHERE id = ${b.id}`,
+    );
+    const copied = await repo.hosts.findDecryptedByIdAs("user-1", b.id);
+    expect(copied?.password).toBe("");
+    expect(
+      (await repo.hosts.findDecryptedByIdAs("user-1", a.id))?.password,
+    ).toBe("secret-a");
+
+    const cred = await repo.credentials.createEncryptedForUser("user-1", {
+      userId: "user-1",
+      name: "c",
+      authType: "password",
+      username: "root",
+      password: "secret-c",
+    });
+    expect(cred.password).toBe("secret-c");
+    expect(
+      FieldCrypto.sealedRecordId(await stored("ssh_credentials", cred.id)),
+    ).toBe(String(cred.id));
+    await repo.credentials.updateEncryptedForUser("user-1", cred.id, {
+      password: "secret-c2",
+    });
+    expect(
+      FieldCrypto.sealedRecordId(await stored("ssh_credentials", cred.id)),
+    ).toBe(String(cred.id));
   });
 });

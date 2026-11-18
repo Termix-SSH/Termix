@@ -78,6 +78,7 @@ export async function runAiSettingsMigration(): Promise<AiSettingsMigrationResul
             dek,
             String(row.id),
             "apiKey",
+            { anyRecord: true },
           );
           if (!plaintext) continue;
           await pluginSettings.set(

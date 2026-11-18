@@ -101,6 +101,20 @@ describe("view ownership", () => {
     expect(placeholder.textContent).toContain("plugins.runtime.needsPlugin");
   });
 
+  it("never saves the dashboard tab while the plugin owning it is off", () => {
+    setPluginSummaries([
+      owner({
+        enabled: false,
+        contributes: {
+          tabs: [
+            { id: "dashboard", titleKey: "t", icon: "Box", openFrom: ["rail"] },
+          ],
+        },
+      }),
+    ]);
+    expect(isPersistentTabType("dashboard")).toBe(false);
+  });
+
   it("shows a not-installed placeholder for a tab nobody owns, without throwing", () => {
     setPluginSummaries([]);
     render(<>{renderTabContent({ ...savedTab, type: "gone" }, { shell })}</>);

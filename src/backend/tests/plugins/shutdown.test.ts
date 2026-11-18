@@ -155,4 +155,48 @@ describe("shutdownPlugins closes what plugins own", () => {
     expect(loader.get("beta")?.state).toBe("stopped");
     expect(fs.readFileSync(marker, "utf8")).toBe("beta stopped\n");
   });
+  // A deactivate that never returns used to hold the whole shutdown, and the
+  // backend kept its ports after the desktop app closed.
+  it("moves on when one plugin's deactivate never finishes", async () => {
+    const marker = path.join(tempRoot("termix-marker-"), "stopped.txt");
+    const bundled = tempRoot("termix-bundled-");
+    const user = tempRoot("termix-data-");
+
+    createFixturePlugin({
+      id: "stuck",
+      root: bundled,
+      backendSource: `
+        export async function activate() {}
+        export function deactivate() {
+          return new Promise(() => {});
+        }
+      `,
+    });
+    createFixturePlugin({
+      id: "first",
+      root: bundled,
+      backendSource: `
+        import fs from "node:fs";
+        export async function activate() {}
+        export async function deactivate() {
+          fs.appendFileSync(${JSON.stringify(marker)}, "first stopped\\n");
+        }
+      `,
+    });
+
+    process.env.TERMIX_BUNDLED_PLUGINS_DIR = bundled;
+    process.env.DATA_DIR = user;
+
+    const loader = new PluginLoader();
+    await loader.loadAll();
+    // Stopped in reverse, so stuck stops before first.
+    await loader.activate("first");
+    await loader.activate("stuck");
+
+    const started = Date.now();
+    await loader.shutdown({ perPluginMs: 200 });
+
+    expect(Date.now() - started).toBeLessThan(2000);
+    expect(fs.readFileSync(marker, "utf8")).toBe("first stopped\n");
+  });
 });

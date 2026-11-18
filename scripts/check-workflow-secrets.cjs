@@ -1,0 +1,112 @@
+#!/usr/bin/env node
+/**
+ * Release secrets live in the build and release environments, which only
+ * dev-* and main can deploy to. This keeps every workflow that way:
+ * - a job reading a secret other than GITHUB_TOKEN names an environment, or
+ *   passes it by name to one of this repo's reusable workflows (checked itself)
+ * - no job passes secrets: inherit
+ * - a workflow with environment jobs has no pull_request_target or
+ *   workflow_run trigger (those run with the base branch's rights)
+ * - nothing reads the retired TERMIX_PAT
+ * - npm installs run with scripts off (npm run ci:install rebuilds the few
+ *   native modules that need theirs)
+ */
+
+const fs = require("node:fs");
+const path = require("node:path");
+const YAML = require("yaml");
+
+const ROOT = path.resolve(__dirname, "..");
+const SECRET = /secrets\.([A-Za-z0-9_]+)/g;
+const RISKY_TRIGGERS = ["pull_request_target", "workflow_run"];
+const INSTALL = /\bnpm (ci|install|i)\b/;
+// Global npm itself, or an install with scripts off.
+const SAFE_INSTALL = /--ignore-scripts|npm install -g npm@/;
+
+function secretsIn(value) {
+  const found = new Set();
+  for (const match of JSON.stringify(value ?? null).matchAll(SECRET)) {
+    if (match[1] !== "GITHUB_TOKEN") found.add(match[1]);
+  }
+  return found;
+}
+
+function triggersOf(doc) {
+  const on = doc.on ?? doc[true];
+  if (typeof on === "string") return [on];
+  if (Array.isArray(on)) return on;
+  return Object.keys(on ?? {});
+}
+
+function checkWorkflow(name, text) {
+  const problems = [];
+  if (text.includes("TERMIX_PAT")) {
+    problems.push(`${name}: uses TERMIX_PAT, mint a Termix CI App token`);
+  }
+  const doc = YAML.parse(text);
+  const triggers = triggersOf(doc);
+  const top = secretsIn(doc.env);
+  if (top.size) {
+    problems.push(`${name}: workflow env reads ${[...top].join(", ")}`);
+  }
+  for (const [id, job] of Object.entries(doc.jobs ?? {})) {
+    const { secrets: passed, ...rest } = job;
+    const read = secretsIn(rest);
+    if (passed === "inherit") {
+      problems.push(
+        `${name} ${id}: secrets: inherit, pass each secret by name`,
+      );
+    }
+    // A call job can't have an environment. The called workflow's own jobs
+    // must, and this check covers them when the file is local.
+    const localCall = typeof job.uses === "string" && job.uses.startsWith("./");
+    if (passed && passed !== "inherit" && !localCall) {
+      for (const secret of secretsIn(passed)) read.add(secret);
+    }
+    if (read.size && !job.environment) {
+      problems.push(
+        `${name} ${id}: reads ${[...read].join(", ")} without an environment`,
+      );
+    }
+    for (const step of job.steps ?? []) {
+      for (const line of String(step.run ?? "").split("\n")) {
+        if (INSTALL.test(line) && !SAFE_INSTALL.test(line)) {
+          problems.push(
+            `${name} ${id}: install scripts on, use npm run ci:install or --ignore-scripts`,
+          );
+        }
+      }
+    }
+    if (job.environment) {
+      for (const trigger of RISKY_TRIGGERS) {
+        if (triggers.includes(trigger)) {
+          problems.push(
+            `${name} ${id}: environment job in a ${trigger} workflow`,
+          );
+        }
+      }
+    }
+  }
+  return problems;
+}
+
+function checkDir(dir) {
+  return fs
+    .readdirSync(dir)
+    .filter((file) => /\.ya?ml$/.test(file))
+    .sort()
+    .flatMap((file) =>
+      checkWorkflow(file, fs.readFileSync(path.join(dir, file), "utf8")),
+    );
+}
+
+module.exports = { checkWorkflow, checkDir };
+
+if (require.main === module) {
+  const problems = checkDir(
+    process.argv[2] ?? path.join(ROOT, ".github", "workflows"),
+  );
+  for (const problem of problems) console.error(problem);
+  if (problems.length) process.exit(1);
+  console.log("workflow secrets ok");
+}

@@ -50,6 +50,9 @@ const blockedIpv4Ranges = [
 for (const [network, prefix] of blockedIpv4Ranges) {
   blockedAddresses.addSubnet(network, prefix, "ipv4");
   blockedAddresses.addSubnet(`::ffff:${network}`, prefix + 96, "ipv6");
+  // IPv4-compatible (::a.b.c.d) and NAT64 (64:ff9b::a.b.c.d) forms.
+  blockedAddresses.addSubnet(`::${network}`, prefix + 96, "ipv6");
+  blockedAddresses.addSubnet(`64:ff9b::${network}`, prefix + 96, "ipv6");
 }
 
 for (const [network, prefix] of [
@@ -58,8 +61,64 @@ for (const [network, prefix] of [
   ["fc00::", 7],
   ["fe80::", 10],
   ["ff00::", 8],
+  ["64:ff9b:1::", 48], // local-use NAT64
 ] as const) {
   blockedAddresses.addSubnet(network, prefix, "ipv6");
+}
+
+// Cloud instance metadata. Refused even for a host an admin or plugin
+// allowed as private: nothing in Termix needs it, and it hands out the
+// machine's cloud credentials.
+const metadataAddresses = new BlockList();
+for (const address of [
+  "169.254.169.254", // AWS, Azure, Google, most others
+  "169.254.170.2", // AWS ECS task metadata
+  "169.254.170.23", // AWS EKS pod identity
+  "100.100.100.200", // Alibaba
+]) {
+  metadataAddresses.addAddress(address, "ipv4");
+  metadataAddresses.addAddress(`::ffff:${address}`, "ipv6");
+  metadataAddresses.addAddress(`::${address}`, "ipv6");
+  metadataAddresses.addAddress(`64:ff9b::${address}`, "ipv6");
+}
+for (const address of ["fd00:ec2::254", "fd00:ec2::23"]) {
+  metadataAddresses.addAddress(address, "ipv6");
+}
+
+const METADATA_NAMES = new Set([
+  "metadata",
+  "metadata.google.internal",
+  "instance-data",
+  "instance-data.ec2.internal",
+]);
+
+export function isMetadataAddress(address: string): boolean {
+  const family = isIP(address);
+  return (
+    family !== 0 &&
+    metadataAddresses.check(address, family === 4 ? "ipv4" : "ipv6")
+  );
+}
+
+const loopbackAddresses = new BlockList();
+for (const [network, prefix] of [
+  ["127.0.0.0", 8],
+  ["0.0.0.0", 8],
+] as const) {
+  loopbackAddresses.addSubnet(network, prefix, "ipv4");
+  loopbackAddresses.addSubnet(`::ffff:${network}`, prefix + 96, "ipv6");
+  loopbackAddresses.addSubnet(`::${network}`, prefix + 96, "ipv6");
+}
+loopbackAddresses.addAddress("::1", "ipv6");
+loopbackAddresses.addAddress("::", "ipv6");
+
+/** This machine itself: loopback and the unspecified address. */
+export function isLoopbackAddress(address: string): boolean {
+  const family = isIP(address);
+  return (
+    family !== 0 &&
+    loopbackAddresses.check(address, family === 4 ? "ipv4" : "ipv6")
+  );
 }
 
 export function isBlockedAddress(address: string): boolean {
@@ -77,6 +136,7 @@ export function isBlockedAddress(address: string): boolean {
 export function createDnsLookupHook(
   dnsLookup: DnsLookupFn = lookup,
   allowPrivate = false,
+  refuseAddress?: (address: string) => boolean,
 ) {
   return function lookupHook(
     host: string,
@@ -111,6 +171,21 @@ export function createDnsLookupHook(
         if (!addrs.length) {
           return callback(
             new Error("DNS resolution returned no addresses"),
+            "",
+            0,
+          );
+        }
+
+        if (
+          refuseAddress &&
+          addrs.some(({ address }) => refuseAddress(address))
+        ) {
+          return callback(new Error("This destination is not allowed"), "", 0);
+        }
+
+        if (addrs.some(({ address }) => isMetadataAddress(address))) {
+          return callback(
+            new Error("Cloud metadata addresses are not allowed"),
             "",
             0,
           );
@@ -202,6 +277,8 @@ export async function safeOutboundFetch(
   allowedPrivateHosts: readonly string[] = [],
   tls: OutboundTlsOptions = {},
   idleTimeoutMs?: number,
+  /** Addresses refused even for an allowed private host, checked at connect. */
+  refuseAddress?: (address: string) => boolean,
 ): Promise<Response> {
   const url = new URL(rawUrl);
   if (
@@ -216,15 +293,29 @@ export async function safeOutboundFetch(
   const allowPrivate = allowedPrivateHosts.some(
     (host) => host.trim().toLowerCase() === hostname.toLowerCase(),
   );
+  // A proxy resolves the name itself, so the names are refused here too.
+  if (
+    isMetadataAddress(hostname) ||
+    METADATA_NAMES.has(hostname.toLowerCase().replace(/\.$/, ""))
+  ) {
+    throw new Error("Cloud metadata addresses are not allowed");
+  }
   if (!allowPrivate && isIP(hostname) && isBlockedAddress(hostname)) {
     throw new Error("Private destinations are not allowed");
+  }
+  if (refuseAddress && isIP(hostname) && refuseAddress(hostname)) {
+    throw new Error("This destination is not allowed");
   }
 
   // An admin-allowlisted private host goes through the configured proxy,
   // when there is one, the same way core's own outbound calls do. A public
   // host never does: the proxy would resolve it, skipping the check above.
+  // A proxy resolves names itself, so a caller with its own refusals skips it.
   const proxy =
-    allowPrivate && !tls.ca && tls.rejectUnauthorized !== false
+    allowPrivate &&
+    !refuseAddress &&
+    !tls.ca &&
+    tls.rejectUnauthorized !== false
       ? getProxyAgent(url.toString())
       : undefined;
   if (proxy) {
@@ -242,7 +333,7 @@ export async function safeOutboundFetch(
     headersTimeout: idle,
     bodyTimeout: idle,
     connect: {
-      lookup: createDnsLookupHook(lookup, allowPrivate),
+      lookup: createDnsLookupHook(lookup, allowPrivate, refuseAddress),
       ...(tls.ca ? { ca: tls.ca } : {}),
       ...(tls.rejectUnauthorized === false
         ? { rejectUnauthorized: false }

@@ -21,6 +21,7 @@ import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import { assertCapability } from "./permissions.js";
 import { getPluginDataDir } from "./paths.js";
 import type { DisposableBag } from "./disposables.js";
+import { trackChildProcess } from "../utils/shutdown.js";
 
 type AuditFn = (
   action: string,
@@ -141,6 +142,8 @@ export function createPluginProcess(deps: Deps): PluginProcess {
         stdio: ["ignore", "pipe", "pipe"],
         shell: false,
       });
+      // Ended on shutdown even when the plugin's deactivate never finishes.
+      trackChildProcess(child);
 
       let running = true;
       const kill = (signal: "SIGTERM" | "SIGKILL" = "SIGTERM") => {

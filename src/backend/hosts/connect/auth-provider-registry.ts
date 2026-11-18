@@ -10,6 +10,7 @@ import type {
   KeyboardInteractiveInterceptor,
   SshAuthProvider,
 } from "./types.js";
+import { waitForPluginStartup } from "./plugin-startup.js";
 
 const providers = new Map<string, SshAuthProvider>();
 const interceptors = new Map<string, KeyboardInteractiveInterceptor>();
@@ -85,6 +86,17 @@ export function requireSshAuthProvider(type: string): SshAuthProvider {
     throw new SshAuthProviderMissingError(type, findSshAuthTypeOwner(type));
   }
   return provider;
+}
+
+/** Like requireSshAuthProvider, after waiting for an owner still starting. */
+export async function awaitSshAuthProvider(
+  type: string,
+): Promise<SshAuthProvider> {
+  if (!providers.has(type)) {
+    const owner = findSshAuthTypeOwner(type);
+    if (owner) await waitForPluginStartup(owner.pluginId);
+  }
+  return requireSshAuthProvider(type);
 }
 
 export function listSshAuthProviders(): SshAuthProvider[] {

@@ -256,6 +256,8 @@ export interface PluginSummary {
   locales?: string[];
   /** Cache key for the theme CSS files; null without themes. */
   themeVersion?: string | null;
+  /** "frame": the UI runs in sandboxed frames. "page": inside the shell. */
+  frontendIsolation?: "frame" | "page";
   /** The app is drawn with this plugin by default; it cannot be uninstalled. */
   defaultLook?: boolean;
 
@@ -273,6 +275,11 @@ export interface PluginSummary {
   autoUpdate?: boolean;
   pinnedVersion?: string | null;
   channel?: PluginChannel;
+  /**
+   * process: runs in its own process. legacy: made for an older Termix and
+   * not running until it is updated. Admins only.
+   */
+  isolation?: PluginIsolation;
   description?: string;
   author?: string;
   repository?: string;
@@ -285,6 +292,8 @@ export interface PluginSummary {
   /** Environment variables the plugin reads. Admins only. */
   env?: PluginEnvVar[];
   signedBy?: string | null;
+  /** Build provenance checked at download, for registry installs. Admins only. */
+  provenance?: PluginProvenance | null;
   /** A linked server decides whether it runs here. Admins only. */
   managedByServer?: boolean;
 }
@@ -302,6 +311,17 @@ function announcePluginsChanged(): void {
 }
 
 export type PluginChannel = "stable" | "beta";
+
+export type PluginIsolation = "process" | "legacy";
+
+export interface PluginProvenance {
+  /** verified: the Sigstore bundle checked out. unchecked: Sigstore was out of reach. */
+  status: "verified" | "unchecked";
+  checkedAt: string;
+  signer: string | null;
+  runUrl: string | null;
+  bundleUrl: string;
+}
 
 export interface RegistryPluginVersion {
   version: string;
@@ -570,7 +590,11 @@ export async function retryPlugin(pluginId: string): Promise<void> {
 
 export async function setPluginOptions(
   pluginId: string,
-  options: { autoUpdate?: boolean; pinned?: boolean; channel?: PluginChannel },
+  options: {
+    autoUpdate?: boolean;
+    pinned?: boolean;
+    channel?: PluginChannel;
+  },
 ): Promise<{
   autoUpdate: boolean;
   pinnedVersion: string | null;
@@ -587,6 +611,47 @@ export async function setAllPluginChannels(
   channel: PluginChannel,
 ): Promise<{ changed: string[] }> {
   const response = await rbacApi.post("/plugins/channel", { channel });
+  return response.data;
+}
+
+export interface PluginProcessReport {
+  core: { rssMb: number };
+  plugins: Array<{
+    pluginId: string;
+    state: string;
+    keepOnReason: string | null;
+    rssMb: number | null;
+  }>;
+  totalMb: number;
+  pluginsMb: number;
+  running: number;
+  limitMb: number;
+  limitSource: "container" | "system";
+  low: boolean;
+}
+
+/** Memory used by Termix and each plugin process. Admins only. */
+export async function getPluginProcesses(): Promise<PluginProcessReport> {
+  const response = await rbacApi.get("/plugins/processes");
+  return response.data;
+}
+
+export interface PluginUpdateCheck {
+  /** The newer Termix release, or null when there is none. */
+  version: string | null;
+  blocked: Array<{
+    id: string;
+    name: string;
+    version: string;
+    enabled: boolean;
+    reason: "api" | "termix";
+    needs: string | null;
+  }>;
+}
+
+/** Installed plugins the next Termix release would turn off. Admins only. */
+export async function getPluginUpdateCheck(): Promise<PluginUpdateCheck> {
+  const response = await rbacApi.get("/plugins/update-check");
   return response.data;
 }
 

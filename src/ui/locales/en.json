@@ -219,6 +219,10 @@
     "securityIntro": "Add a passkey or an authenticator app to your account. You can also do this later in Settings, under Security.",
     "pluginsDocsLink": "Read about each one"
   },
+  "desktopTray": {
+    "noticeTitle": "Termix is still running",
+    "noticeBody": "Closing the window keeps Termix running in the tray. To quit, open the tray icon menu and pick Quit. You can turn this off in Settings."
+  },
   "desktopUpdates": {
     "modeAutomatic": "Automatic",
     "modePrompt": "Ask first",
@@ -911,6 +915,16 @@
     "empty": "No cards. Use Add below to place cards."
   },
   "auth": {
+    "inviteIntro": "You were invited to this server. Pick a username and password to make your account.",
+    "inviteInvalid": "This invite link has expired or was already used. Ask an admin for a new one.",
+    "accountDisabled": "This account is turned off. Ask an admin to turn it back on.",
+    "accountPending": "Your account is waiting for an admin to approve it.",
+    "stepUp": {
+      "title": "Verify it's you",
+      "description": "Prove your second factor to go on.",
+      "noFactor": "You have no second factor set up. Add one in Settings, then try again.",
+      "failed": "That did not work. Try again."
+    },
     "tagline": "Self-hosted, plugin-based server management.",
     "loginTitle": "Welcome back",
     "registerTitle": "Create Account",
@@ -937,6 +951,14 @@
     "loginWithExternal": "Login with External Provider",
     "loginWithExternalDesc": "Login using your configured external identity provider",
     "loginWithProvider": "Login with {{name}}",
+    "pluginLogin": {
+      "signIn": "Sign in",
+      "verify": "Verify",
+      "code": "Code",
+      "useKey": "Use security key",
+      "keyPrompt": "Use your security key or passkey to continue.",
+      "keyFailed": "The security key step did not work. Try again."
+    },
     "resetPasswordButton": "Reset Password",
     "sendResetCode": "Send Reset Code",
     "resetCodeDesc": "Enter your username to receive a password reset code. The code will be logged in the docker container logs.",
@@ -1201,6 +1223,10 @@
         "title": "Reach the internet",
         "consequence": "It can send requests to outside services."
       },
+      "network:sockets": {
+        "title": "Open its own network connections",
+        "consequence": "It can listen on ports and connect to any address directly, without Termix checking each connection."
+      },
       "network:serve": {
         "title": "Accept connections",
         "consequence": "It opens a port on the Termix server."
@@ -1243,7 +1269,7 @@
       },
       "network:probe": {
         "title": "Check if ports answer",
-        "consequence": "Can open a plain connection to any address from the server, to see if it is reachable."
+        "consequence": "Can open a plain connection to any address from the server, to see if it is reachable, and look up host names."
       },
       "hosts:status-provide": {
         "title": "Provide host status",
@@ -1297,6 +1323,10 @@
         "title": "Store its own secrets",
         "consequence": "Encrypted by Termix. The plugin never holds the key."
       },
+      "config:secrets": {
+        "title": "Read secrets the server holds",
+        "consequence": "Environment variables and files on the server, except Termix's own keys."
+      },
       "settings:read-core": {
         "title": "Read Termix settings",
         "consequence": "Server settings, not your hosts or credentials."
@@ -1317,6 +1347,10 @@
         "title": "Add color themes",
         "consequence": "Only colors and styles. No code runs for a theme."
       }
+    },
+    "webView": {
+      "unavailable": "This page is no longer available. Open it again from its plugin.",
+      "isolationUnavailable": "This browser can't open the page safely here. Use a recent Chrome or Edge, or the desktop app."
     },
     "runtime": {
       "needsPlugin": "{{name}} is not available",
@@ -1363,7 +1397,8 @@
         "version": "Version",
         "status": "Status",
         "category": "Category",
-        "downloads": "Downloads"
+        "downloads": "Downloads",
+        "memory": "Memory"
       },
       "risk": {
         "critical": "Critical",
@@ -1428,7 +1463,8 @@
         "updatedMany_other": "{{count}} plugins updated",
         "uninstalled": "{{name}} uninstalled",
         "dataDeleted": "Data for {{name}} deleted",
-        "failedToStart": "{{name}} could not start. Open it to see why."
+        "failedToStart": "{{name}} could not start. Open it to see why.",
+        "held": "{{name}} waits {{minutes}} minutes before the change applies, so the other admins can see it"
       },
       "errors": {
         "generic": "Something went wrong",
@@ -1481,6 +1517,23 @@
       "pin": "Stay on this version",
       "pinHint": "Keeps {{version}} and skips every update until you turn this off.",
       "pinnedTo": "Pinned to {{version}}",
+      "legacy": {
+        "notice_one": "1 plugin was made for an older Termix and stays off until it is updated: {{names}}.",
+        "notice_other": "{{count}} plugins were made for an older Termix and stay off until they are updated: {{names}}.",
+        "why": "They were made for plugin API 1, which ran inside the server. Termix now runs every plugin in its own process, so each needs a version made for plugin API 2. Update official ones here, and ask the author of a community plugin for one.",
+        "guide": "How plugins move to API 2"
+      },
+      "provenance": {
+        "verified": "Build checked",
+        "verifiedHint": "Its build provenance was signed by the Termix registry release workflow and matches this file. Opens the build.",
+        "unchecked": "Build not checked",
+        "uncheckedHint": "Its build provenance could not be checked when it was downloaded. Its registry signature was."
+      },
+      "updateCheck": {
+        "notice_one": "Termix {{version}} is out. 1 plugin will stay off on it until you update it: {{names}}.",
+        "notice_other": "Termix {{version}} is out. {{count}} plugins will stay off on it until you update them: {{names}}.",
+        "needs": "{{name}} (needs Termix {{range}})"
+      },
       "version": "Version",
       "versionPickHint": "Install an older release instead of the newest. It stays on that version until you unpin it.",
       "versionPickHintInstalled": "Switch to another release. Picking one that is not the newest pins it.",
@@ -1637,7 +1690,22 @@
       "unsupportedHint": "No release of this plugin runs on this version of Termix. Update Termix to install it.",
       "needsTermix": "Needs Termix {{range}}",
       "showUnsupported": "Show unsupported ({{count}})",
-      "showMore": "Show {{count}} more ({{total}} left)"
+      "showMore": "Show {{count}} more ({{total}} left)",
+      "memory": {
+        "summary": "Memory: {{total}} of {{limit}} | plugins {{plugins}} | {{running}} running",
+        "lowTitle": "This server is low on memory",
+        "lowBody": "Termix and its plugins use {{total}} of {{limit}}. Give the server more memory or turn off plugins you do not use.",
+        "idle": "Idle",
+        "idleHint": "Not running now. It starts when something needs it.",
+        "keptOn": "Stays running: {{reason}}",
+        "stopsWhenIdle": "Stops when idle"
+      }
+    },
+    "firstLoad": {
+      "title": "Getting plugins ready",
+      "progress": "{{done}} of {{total}}",
+      "hint": "This only happens the first time. Next time Termix opens right away.",
+      "skip": "Continue"
     }
   },
   "settings": {
@@ -1708,7 +1776,11 @@
   "rbac": {
     "roles": {
       "admin": "Admin",
-      "user": "User"
+      "user": "User",
+      "viewer": "Viewer",
+      "operator": "Operator",
+      "auditor": "Auditor",
+      "helpdesk": "Helpdesk"
     }
   },
   "tileGrid": {
