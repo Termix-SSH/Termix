@@ -15,6 +15,7 @@
 - A terminal's tab shows its Share button and Share menu entry again, and Refresh connection, Reconnect all and focus in split screen work on it again
 - Shared session links open again, for people with or without an account
 - A plugin that stops right as Termix sends it a message can no longer crash the whole server
+- Desktop app: plugin updates no longer fail with "inclusion promise could not be verified", thanks to dean for finding the cause
 - Termix starts again when the data folder doesn't allow changing file owners, like some network shares, instead of restarting over and over. Plugins then run as Termix's own user
 - When most plugins go quiet at once because Termix itself was busy, they are no longer all restarted together
 
