@@ -31,7 +31,12 @@ import {
   listHostActions,
   runHostAction,
 } from "@/sidebar/host-contributions";
-import { getSlotContributions, invokeAction } from "@/shell/action-registry";
+import {
+  getActionOwner,
+  getSlotContributions,
+  invokeAction,
+  isActionPrivate,
+} from "@/shell/action-registry";
 import { listExtensions } from "../extension-registry";
 import { getPluginComponent } from "../component-registry";
 import { runKeybindingAction } from "@/shell/keybinding-registry";
@@ -136,6 +141,9 @@ function summaryOf(pluginId: string): PluginSummary | undefined {
 /** Actions a frame may run: its own, and the ones its manifest says it uses. */
 export function mayInvokeAction(pluginId: string, actionId: string): boolean {
   if (typeof actionId !== "string") return false;
+  if (isActionPrivate(actionId)) {
+    return getActionOwner(actionId) === pluginId;
+  }
   return (
     actionId.startsWith(`${pluginId}.`) ||
     manifestUses(pluginId).includes(actionId)
@@ -764,7 +772,11 @@ async function handleCall(
       const owner = watchOwners.get(connection);
       if (
         !mayInvokeAction(pluginId, String(id)) &&
-        !(owner && foreignAllowsAction(owner, id))
+        !(
+          owner &&
+          !isActionPrivate(String(id)) &&
+          foreignAllowsAction(owner, id)
+        )
       ) {
         throw new Error(
           `${String(id)} is not one of this plugin's actions or in its manifest uses`,
