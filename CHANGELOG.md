@@ -9,6 +9,7 @@
 - Update all opens a review for each plugin whose update asks for new permissions, instead of skipping it without a word
 - When a login proxy in front of Termix blocks plugin files, Termix says so and links to the fix, instead of showing "Getting plugins ready" on every load
 - A plugin that can't read its own files says which folder and how to fix it, instead of "did not start"
+- A blocked plugin says "Can't start" with the reason, instead of always "Waiting on another plugin" even when it only needs an update
 - The plugin loading screen no longer says it only shows the first time
 - Plugins can write to files they saved before 26.11.2 again, like Session Recording's recordings
 - The first plugin installed from the store on a new install starts without a restart

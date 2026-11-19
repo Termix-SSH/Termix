@@ -1375,7 +1375,7 @@
         "running": "Running",
         "disabled": "Disabled",
         "failed": "Stopped unexpectedly",
-        "blocked": "Waiting on another plugin",
+        "blocked": "Can't start",
         "server": "Runs on your server",
         "safeMode": "Off in safe mode"
       },
