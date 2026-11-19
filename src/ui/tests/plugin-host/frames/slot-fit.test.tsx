@@ -18,6 +18,11 @@ describe("resolveSlotFit", () => {
     expect(slotFit("session.remoteDisplay")).toBe("fill");
   });
 
+  it("sizes edge slots to the plugin so the page beside them keeps its width", () => {
+    expect(slotFit("shell.rightEdge")).toBe("bar");
+    expect(slotFit("shell.leftEdge")).toBe("bar");
+  });
+
   it("lets the slot's owner decide over the guess", () => {
     expect(resolveSlotFit("hosts.panel")).toBe("content");
     declareActionSlot({
