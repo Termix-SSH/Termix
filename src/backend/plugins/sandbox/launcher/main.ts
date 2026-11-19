@@ -111,29 +111,37 @@ function sendToPlugin(child: ChildProcess | undefined, message: unknown): void {
   child.send(message as never, () => {});
 }
 
-function startPlugin(
-  core: ChildProcess,
-  request: Record<string, unknown>,
-): void {
-  const id = String(request.id ?? "");
-  const verdict = validateSpawn(request, {
-    hardenUrl: pathToFileURL(harden).href,
-    dataRoot,
-  });
-  if (!verdict.ok) {
-    log(`refused a plugin start: ${verdict.reason}`);
-    reply(core, { op: "error", id, message: verdict.reason });
-    return;
-  }
-  const pluginId = String(request.pluginId);
-  const uid = allocateUid(uidFile, pluginId);
-  const dataDir = String(request.dataDir);
+let sharedUserWarned = false;
+
+/**
+ * Makes the plugin's data folder its own and picks the user it runs as. On
+ * storage that refuses chown (some network shares) the plugin runs as core's
+ * user instead, as it does when the launcher isn't root, and core says so.
+ */
+function prepareUser(
+  pluginId: string,
+  dataDir: string,
+): { uid: number; gid: number } {
   fs.mkdirSync(path.dirname(dataDir), { recursive: true, mode: 0o711 });
   fs.chmodSync(path.dirname(dataDir), 0o711);
-  // The plugin's user owns it; core's group keeps access (setgid) so core can
-  // still remove it on uninstall. Other plugins can't get in.
   fs.mkdirSync(dataDir, { recursive: true });
-  fs.chownSync(dataDir, uid, coreGid);
+  const uid = allocateUid(uidFile, pluginId);
+  try {
+    // The plugin's user owns it; core's group keeps access (setgid) so core
+    // can still remove it on uninstall. Other plugins can't get in.
+    fs.chownSync(dataDir, uid, coreGid);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== "EPERM" && code !== "EINVAL") throw error;
+    if (!sharedUserWarned) {
+      sharedUserWarned = true;
+      log(
+        `the data folder does not allow changing owners (${code}), so plugins run as Termix's own user and are less isolated from each other`,
+      );
+    }
+    fs.chmodSync(dataDir, 0o770);
+    return { uid: coreUid, gid: coreGid };
+  }
   fs.chmodSync(dataDir, 0o2770);
   // What core saved there before plugins had their own users stays core's
   // until handed over, and the plugin can't write it. Done once per user.
@@ -149,7 +157,39 @@ function startPlugin(
       );
     }
   }
-  firewall(uid, request.firewall === "allow-all" ? "allow-all" : "deny");
+  return { uid, gid: uid };
+}
+
+function startPlugin(
+  core: ChildProcess,
+  request: Record<string, unknown>,
+): void {
+  const id = String(request.id ?? "");
+  const verdict = validateSpawn(request, {
+    hardenUrl: pathToFileURL(harden).href,
+    dataRoot,
+  });
+  if (!verdict.ok) {
+    log(`refused a plugin start: ${verdict.reason}`);
+    reply(core, { op: "error", id, message: verdict.reason });
+    return;
+  }
+  const pluginId = String(request.pluginId);
+  const dataDir = String(request.dataDir);
+  let uid: number;
+  let gid: number;
+  try {
+    ({ uid, gid } = prepareUser(pluginId, dataDir));
+  } catch (error) {
+    // One plugin that can't start must never take the server down with it.
+    const message = (error as Error).message;
+    log(`could not start ${pluginId}: ${message}`);
+    reply(core, { op: "error", id, message });
+    return;
+  }
+  if (uid !== coreUid) {
+    firewall(uid, request.firewall === "allow-all" ? "allow-all" : "deny");
+  }
 
   // Files the plugin makes stay readable by core's group and nobody else.
   process.umask(0o007);
@@ -159,7 +199,7 @@ function startPlugin(
     // variables the plugin's manifest lists, never one of core's.
     env: request.env as Record<string, string>,
     uid,
-    gid: uid,
+    gid,
     cwd: dataDir,
     serialization: "advanced",
     stdio: ["ignore", "pipe", "pipe", "ipc"],
@@ -229,7 +269,12 @@ function main(): void {
           reply(core, { op: "error", id, message: "bad request" });
           return;
         }
-        startPlugin(core, message);
+        try {
+          startPlugin(core, message);
+        } catch (error) {
+          log(`could not start a plugin: ${(error as Error).message}`);
+          reply(core, { op: "error", id, message: "spawn failed" });
+        }
         return;
       case "msg":
         sendToPlugin(children.get(id), message.m);
