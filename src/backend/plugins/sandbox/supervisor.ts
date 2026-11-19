@@ -472,6 +472,8 @@ class PluginProcess {
 
   private async start(): Promise<void> {
     this.state = "starting";
+    // Before any await: a job firing mid start must not call the old process.
+    this.durable?.beginRun();
     this.stopping = false;
     this.startedAt = Date.now();
     const manifest = this.spec.manifest;
@@ -515,7 +517,6 @@ class PluginProcess {
       keepAwake: (reason, awake) => this.setAwake(reason, awake),
     });
     this.bridge = bridge;
-    this.durable?.beginRun();
 
     const entryUrl = pathToFileURL(this.spec.entryPath).href;
     await withTimeout(
