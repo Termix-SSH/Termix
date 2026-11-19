@@ -15,6 +15,7 @@ import { SystemCrypto } from "../utils/system-crypto.js";
 import { DatabaseSaveTrigger } from "../utils/database-save-trigger.js";
 import { syncLogger } from "../utils/logger.js";
 import { stripSecrets } from "../hosts/credential-storage.js";
+import { getRecord } from "./records.js";
 import {
   getEntity,
   rowSyncs,
@@ -127,25 +128,63 @@ function withoutRefusedSecrets(
   return row;
 }
 
-/** The user's row whose matchOn columns equal the inbound row's. */
-async function findMatchingRow(
+/** The user's rows whose `fields` equal the inbound row's. */
+async function findRowsMatching(
+  entity: RegisteredSyncEntity,
+  userId: string,
+  resolved: SyncRow,
+  fields: readonly string[],
+  limit?: number,
+): Promise<SyncRow[]> {
+  const table = tableOf(entity);
+  const conditions: SQL[] = [eq(ownerColumn(entity), userId)];
+  for (const field of fields) {
+    const value = resolved[field];
+    if (value === null || value === undefined || !table[field]) return [];
+    conditions.push(eq(table[field], value));
+  }
+  const query = db()
+    .select()
+    .from(table)
+    .where(and(...conditions));
+  return (await (limit ? query.limit(limit) : query)) as SyncRow[];
+}
+
+/**
+ * The row a write should take over instead of adding one: a matchOn match,
+ * or a row that never synced and has the same matchUnsynced fields. That
+ * second kind is data a device had before it linked, so the server's copy
+ * of the same thing replaces it rather than landing beside it.
+ */
+async function findAdoptableRow(
   entity: RegisteredSyncEntity,
   userId: string,
   resolved: SyncRow,
 ): Promise<SyncRow | null> {
-  const table = tableOf(entity);
-  const conditions: SQL[] = [eq(ownerColumn(entity), userId)];
-  for (const field of entity.matchOn ?? []) {
-    const value = resolved[field];
-    if (value === null || value === undefined || !table[field]) return null;
-    conditions.push(eq(table[field], value));
+  if (entity.singleton) return null;
+  if (entity.matchOn?.length) {
+    const [row] = await findRowsMatching(
+      entity,
+      userId,
+      resolved,
+      entity.matchOn,
+      1,
+    );
+    if (row) return row;
   }
-  const [row] = (await db()
-    .select()
-    .from(table)
-    .where(and(...conditions))
-    .limit(1)) as SyncRow[];
-  return row ?? null;
+  if (!entity.matchUnsynced?.length) return null;
+  const rows = await findRowsMatching(
+    entity,
+    userId,
+    resolved,
+    entity.matchUnsynced,
+  );
+  for (const row of rows) {
+    if (!(await rowSyncs(entity, row))) continue;
+    if (typeof row.syncId !== "string") return row;
+    if (!(await getRecord(userId, entity.type, row.syncId))) return row;
+  }
+  return null;
 }
 
 /** The local ids of the user's own rows, by sync id. Unknown ones are left out. */
@@ -369,8 +408,8 @@ export async function writeWireRow(
   let where = locate(entity, userId, syncId);
   let target = current;
   let adopted = false;
-  if (!target && entity.matchOn?.length && !entity.singleton) {
-    target = await findMatchingRow(entity, userId, resolved);
+  if (!target) {
+    target = await findAdoptableRow(entity, userId, resolved);
     if (target) {
       // Same row made on both sides: keep it and take the inbound syncId.
       where = eq(table.id, target.id);

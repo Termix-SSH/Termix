@@ -124,6 +124,7 @@ export function registerCoreSyncEntities(): void {
       },
     },
     {
+      matchUnsynced: ["name", "authType"],
       // A credential shared with the user can back their own host.
       canReference: async (userId, _ownerId, id) => {
         const { findUsableCredential } =
@@ -135,19 +136,23 @@ export function registerCoreSyncEntities(): void {
 
   // vaultProfiles (order 20) belongs to the vault plugin.
 
-  registerEntity(CORE_OWNER, {
-    type: "sshFolders",
-    table: sshFolders,
-    order: 30,
-    references: [CREDENTIAL_REFERENCE],
-    readOnlyFields: ["localOnly"],
-    shouldSync: (row) => !row.localOnly,
-    permissions: {
-      create: "hosts.create",
-      update: "hosts.edit",
-      delete: "hosts.delete",
+  registerEntity(
+    CORE_OWNER,
+    {
+      type: "sshFolders",
+      table: sshFolders,
+      order: 30,
+      references: [CREDENTIAL_REFERENCE],
+      readOnlyFields: ["localOnly"],
+      shouldSync: (row) => !row.localOnly,
+      permissions: {
+        create: "hosts.create",
+        update: "hosts.edit",
+        delete: "hosts.delete",
+      },
     },
-  });
+    { matchUnsynced: ["name"] },
+  );
 
   registerEntity(
     CORE_OWNER,
@@ -214,6 +219,7 @@ export function registerCoreSyncEntities(): void {
       // A server whose plugin rejects a setting (another version, a field the
       // user may not write) skips it without failing the write.
       verifyFields: ["pluginSettings"],
+      matchUnsynced: ["connectionType", "name", "ip", "port"],
       canReference: async (userId, _ownerId, id) => {
         const { PermissionManager } =
           await import("../utils/permission-manager.js");
