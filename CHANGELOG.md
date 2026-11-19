@@ -19,6 +19,9 @@
 - Desktop app: plugin updates no longer fail with "inclusion promise could not be verified", thanks to dean for finding the cause
 - Termix starts again when the data folder doesn't allow changing file owners, like some network shares, instead of restarting over and over. Plugins then run as Termix's own user
 - When most plugins go quiet at once because Termix itself was busy, they are no longer all restarted together
+- A plugin's scheduled job no longer fails with "The plugin process is not running" when it fires while the plugin is waking up
+- Desktop app on Windows: the notice that Termix is still running in the tray now shows in the portable app too, and shows again next time if Windows hid it
+- When plugins can't load in the browser, Termix says which ones and why, instead of their parts quietly disappearing
 
 ## 26.11.2
 
