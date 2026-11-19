@@ -123,9 +123,18 @@ function View({
     void Promise.resolve(setHandle.current?.(value ?? null)).catch(() => {});
   }, []);
   const { shown, place, close, setEditing } = useMemo(() => {
-    const { handleCall, __place, __surfaceClose, __setHandle, ...rest } =
-      current as Record<string, unknown> & { __place?: FramePlace };
+    const {
+      handleCall,
+      __place,
+      __surfaceClose,
+      __setHandle,
+      __params,
+      ...rest
+    } = current as Record<string, unknown> & { __place?: FramePlace };
     const props: Record<string, unknown> = { ...rest };
+    if (typeof __params === "string") {
+      props.params = new URLSearchParams(__params);
+    }
     if (typeof handleCall === "function") {
       const handle = handleProxy(handleCall as HandleCall);
       props.getHandle = () => handle;

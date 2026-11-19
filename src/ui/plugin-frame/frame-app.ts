@@ -72,6 +72,8 @@ export interface FrameAppHost {
   wsUrl: TermixApp["wsUrl"];
   /** Something the shell can't show, like an icon that isn't Lucide. */
   warn?: (message: string) => void;
+  /** On an anonymous page, like a shared session link. */
+  guest?: boolean;
 }
 
 /** Things that are the shell itself and never run in a frame. */
@@ -209,7 +211,7 @@ export function createFrameApp(host: FrameAppHost): {
   const app: TermixApp = {
     pluginId,
     manifest,
-    guest: false,
+    guest: host.guest === true,
 
     registerRailItem(item) {
       requireDeclared(["panels", "tabs"], item.id, "rail item");

@@ -53,6 +53,7 @@ import {
 import { trackColdBoot } from "./cold-boot";
 import { frameBlockedReason } from "./frames-blocked";
 import { setTabHandleOwner } from "./tab-handle-owners";
+import { isGuestRuntime } from "../guest-runtime";
 
 import { extensionFit } from "./slot-fit";
 import { hasUserActivation } from "./user-activation";
@@ -287,6 +288,8 @@ let userKeyPromise: Promise<string | null> | null = null;
  * grant change made anywhere starts from fresh answers.
  */
 function currentUserKey(): Promise<string | null> {
+  // A guest page has no user, and asking would send it to sign in.
+  if (isGuestRuntime()) return Promise.resolve(null);
   userKeyPromise ??= Promise.all([getUserInfo(), loadMyPermissions()])
     .then(([user, grants]) => {
       if (!user?.userId) return null;
@@ -408,6 +411,11 @@ function plainProps(props: Record<string, unknown>): Record<string, unknown> {
   const { handleRef, children, ...rest } = props;
   void handleRef;
   void children;
+  // A standalone view's query can't be cloned; the frame rebuilds it.
+  if (rest.params instanceof URLSearchParams) {
+    const { params, ...others } = rest;
+    return { ...others, __params: params.toString() };
+  }
   return rest;
 }
 

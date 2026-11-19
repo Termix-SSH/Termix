@@ -88,6 +88,7 @@ import {
 } from "./serial-bridge";
 import { manifestUses } from "./foreign-policy";
 import { tabHandleOwner } from "./tab-handle-owners";
+import { isGuestRuntime } from "../guest-runtime";
 import {
   addForeignList,
   disposeForeignView,
@@ -472,7 +473,7 @@ async function handleCall(
       if (import.meta.env.DEV) logEmptyRead(pluginId, args[0], args[1]);
       return;
     case "token":
-      return frameToken(pluginId);
+      return isGuestRuntime() ? null : frameToken(pluginId);
     case "dataSlot.watch": {
       const owner = watchOwners.get(connection);
       if (!owner) return false;
@@ -918,13 +919,14 @@ async function buildInit(connection: FrameConnection): Promise<FrameInit> {
       contributes: summary.contributes ?? undefined,
       capabilities: summary.capabilities ?? [],
     },
-    token: await frameToken(pluginId),
+    // A guest page has no session: its frames reach only public routes.
+    token: isGuestRuntime() ? null : await frameToken(pluginId),
     language: i18n.language || "en",
     locales: summary.locales ?? [],
     pluginIds: knownPluginIds(),
     state: frameStateFor(pluginId),
     storage: readFrameStorage(pluginId),
-    guest: false,
+    guest: isGuestRuntime(),
     props: connection.events.getProps?.(),
     devReads: import.meta.env.DEV,
   };

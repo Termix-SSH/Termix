@@ -189,13 +189,15 @@ async function boot() {
 
   // Token for the plugin's own routes, renewed a minute before it ends.
   let token = init.token;
-  let renewing: Promise<string> | null = null;
-  const currentToken = async () => {
+  let renewing: Promise<string | null> | null = null;
+  // A guest page has no token; its requests go without one.
+  const currentToken = async (): Promise<string | null> => {
+    if (!token) return null;
     if (token.expiresAt - Date.now() > 60_000) return token.value;
     renewing ??= (port.call("token") as Promise<FrameInit["token"]>)
       .then((next) => {
         token = next;
-        return next.value;
+        return next?.value ?? null;
       })
       .finally(() => {
         renewing = null;
@@ -235,7 +237,8 @@ async function boot() {
     headers: { "Content-Type": "application/json" },
   });
   api.interceptors.request.use(async (config) => {
-    config.headers.set("Authorization", `Bearer ${await currentToken()}`);
+    const value = await currentToken();
+    if (value) config.headers.set("Authorization", `Bearer ${value}`);
     return config;
   });
   const ownOnly = (id: string) => {
@@ -364,6 +367,7 @@ async function boot() {
     api: api as never,
     fetch: pluginFetch,
     wsUrl: wsUrl as never,
+    guest: init.guest,
   });
   try {
     await module.activate(handle.app);

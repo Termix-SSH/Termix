@@ -44,7 +44,10 @@ import { resetPluginThemes } from "@/look/theme-registry";
 import { resetPluginLayouts } from "@/look/layout-registry";
 import { preloadPermissions } from "@/hooks/use-permissions";
 import { getUserPreferences } from "@/api/open-tabs-api";
-import { standaloneViewFor } from "@/shell/tab-registry";
+import { standaloneViewFor, useTabTypes } from "@/shell/tab-registry";
+import { LoadingState } from "@/components/loading-state";
+import { ForeignViewHost } from "@/plugin-host/frames/foreign-views";
+import { DataWatchHost } from "@/plugin-host/frames/data-watches";
 import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
 import {
   resolveStartupOnboarding,
@@ -468,6 +471,9 @@ function App() {
   );
 }
 
+/** Longer than a frame gets to start, so a slow one still shows. */
+const GUEST_VIEW_WAIT_MS = 25_000;
+
 /**
  * An anonymous guest link (a shared session, a collab room). The view comes
  * from a guest plugin's standalone tab view, so the guest-capable plugins
@@ -475,22 +481,37 @@ function App() {
  */
 function GuestView({ view }: { view: string }) {
   const [ready, setReady] = useState(false);
+  const [gaveUp, setGaveUp] = useState(false);
+  // A plugin in a frame registers its view once its frame has started.
+  useTabTypes();
   useEffect(() => {
     startPluginRuntime({ guest: true })
       .catch(() => {})
       .finally(() => setReady(true));
+    const timer = setTimeout(() => setGaveUp(true), GUEST_VIEW_WAIT_MS);
+    return () => clearTimeout(timer);
   }, []);
-  if (!ready) return null;
-  const def = standaloneViewFor(view);
+  const def = ready ? standaloneViewFor(view) : undefined;
   if (!def?.standalone) {
-    return <PluginViewPlaceholder kind="tab" viewId={view} />;
+    return gaveUp ? (
+      <PluginViewPlaceholder kind="tab" viewId={view} />
+    ) : (
+      <LoadingState className="h-screen" />
+    );
   }
   const Standalone = def.standalone;
   return (
-    <Standalone
-      view={view}
-      params={new URLSearchParams(window.location.search)}
-    />
+    <>
+      <Standalone
+        view={view}
+        params={new URLSearchParams(window.location.search)}
+      />
+      {/* A guest view in a frame draws other plugins' parts, like a shared
+          terminal or desktop, through these. The signed-in shell mounts
+          them with FrameStateSync. */}
+      <ForeignViewHost />
+      <DataWatchHost />
+    </>
   );
 }
 

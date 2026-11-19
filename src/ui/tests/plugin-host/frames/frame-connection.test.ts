@@ -38,6 +38,7 @@ import {
 } from "@/plugin-host/frames/frame-connection";
 import { dropFrameToken } from "@/plugin-host/frames/frame-token";
 import { setTabHandleOwner } from "@/plugin-host/frames/tab-handle-owners";
+import { setGuestRuntime } from "@/plugin-host/guest-runtime";
 import {
   resetPluginStore,
   setPluginSummaries,
@@ -138,6 +139,26 @@ describe("frame connection", () => {
     send({ ch: FRAME_CHANNEL, t: "call", id: 2, method: "token", args: [] });
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(replies).toEqual([]);
+  });
+
+  it("gives a guest page's frames no token and says they are a guest", async () => {
+    setGuestRuntime(true);
+    try {
+      connectFrame(iframe, "docker", "view", "tab:docker", {});
+      send({ ch: FRAME_CHANNEL, t: "hello", role: "view", key: "tab:docker" });
+      const init = await call("init");
+      expect(init).toMatchObject({
+        ok: true,
+        value: { token: null, guest: true },
+      });
+      expect(await call("token")).toMatchObject({ ok: true, value: null });
+      expect(mocks.post).not.toHaveBeenCalledWith(
+        "/plugins/frame-tokens",
+        expect.anything(),
+      );
+    } finally {
+      setGuestRuntime(false);
+    }
   });
 
   it("hands out a token and refuses core requests off the list", async () => {

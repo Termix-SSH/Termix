@@ -37,6 +37,18 @@ describe("a framed view's handle", () => {
     expect(second).toHaveBeenLastCalledWith(null);
   });
 
+  it("rebuilds a standalone view's query the shell sent as text", () => {
+    const seen = vi.fn();
+    function View(props: Record<string, unknown>) {
+      const params = props.params as URLSearchParams | undefined;
+      seen(params?.get("token"), "__params" in props);
+      return null;
+    }
+    act(() => setFrameProps({ __params: "view=shared&token=abc" }));
+    render(<FrameRoot fit="fill" component={View} />);
+    expect(seen).toHaveBeenLastCalledWith("abc", false);
+  });
+
   it("hands no ref to a view the shell asked no handle from", () => {
     const seen = vi.fn();
     function View(props: Record<string, unknown>) {

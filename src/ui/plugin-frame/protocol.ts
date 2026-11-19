@@ -145,7 +145,8 @@ export interface FrameInit {
   assetVersion: string | null;
   css: boolean;
   manifest: Record<string, unknown>;
-  token: { value: string; expiresAt: number };
+  /** Null on a guest page, which has no session. */
+  token: { value: string; expiresAt: number } | null;
   language: string;
   /** Locale files the plugin ships, "en" plus xx_YY names. */
   locales: string[];

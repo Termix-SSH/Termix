@@ -603,7 +603,13 @@ describe("plugins route", () => {
           id: "guest-plugin",
           manifestJson: JSON.stringify({
             capabilities: ["hosts:read"],
-            contributes: { guest: true, guestViews: ["shared"] },
+            contributes: {
+              guest: true,
+              guestViews: ["shared"],
+              actionSlots: [{ id: "session.terminalView" }],
+              uses: ["session.remoteDisplay"],
+              settings: [{ key: "secret" }],
+            },
           }),
         }),
       );
@@ -624,11 +630,14 @@ describe("plugins route", () => {
       expect(body.map((plugin: { id: string }) => plugin.id)).toEqual([
         "guest-plugin",
       ]);
+      // Slots and uses let a guest view draw another plugin's part.
       expect(body[0].contributes).toEqual({
         guest: true,
         guestViews: ["shared"],
         tabs: [],
         panels: [],
+        actionSlots: [{ id: "session.terminalView" }],
+        uses: ["session.remoteDisplay"],
       });
       expect(body[0]).not.toHaveProperty("capabilities");
       expect(body[0]).not.toHaveProperty("lastError");

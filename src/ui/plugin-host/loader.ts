@@ -4,6 +4,7 @@ import type {
   PluginManifest,
 } from "@termix-ssh/plugin-sdk/frontend";
 import i18n, { setPluginLocaleResolver } from "@/i18n/i18n";
+import { setGuestRuntime } from "./guest-runtime";
 import { getPlugins, type PluginSummary } from "@/api/plugins-api";
 import { getBackendUrl } from "@/main-axios";
 import { createPluginApp, type PluginAppHandle } from "./app";
@@ -309,9 +310,6 @@ async function activateFramed(summary: PluginSummary): Promise<void> {
   // plugins from what their backends describe, and only their strings load.
   if (preLoginMode) return;
   try {
-    if (guestMode) {
-      throw new Error("plugin views in frames need a signed-in user");
-    }
     const framed = await withTimeout(
       startFramedPlugin(summary),
       FRAMED_ACTIVATE_TIMEOUT_MS,
@@ -704,6 +702,7 @@ export function startPluginRuntime(
   installLocaleResolver();
   if (options.guest) {
     guestMode = true;
+    setGuestRuntime(true);
     if (!deps) configurePluginLoader({ fetchPlugins: fetchGuestPlugins });
     return syncPlugins();
   }
@@ -743,6 +742,7 @@ export async function resetPluginLoader(): Promise<void> {
   await stopPluginRuntime();
   deps = null;
   guestMode = false;
+  setGuestRuntime(false);
   queue = Promise.resolve();
   failedVersions.clear();
 }
