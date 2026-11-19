@@ -424,6 +424,8 @@ const HANDLE_METHODS: Record<string, "terminal-input" | null> = {
   reconnect: null,
   reconnectIfDisconnected: null,
   isConnected: null,
+  // Docks a panel the caller registered, like the share panel.
+  openSidePanel: null,
   sendInput: "terminal-input",
   paste: "terminal-input",
 };

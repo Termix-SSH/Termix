@@ -436,6 +436,7 @@ describe("frame permissions", () => {
       sendInput: vi.fn(),
       confirmClose: vi.fn(),
       getShareTarget: vi.fn(),
+      openSidePanel: vi.fn(),
       label: "not a call",
     };
     expect(handleForFrame(handle, "docker")).toBeUndefined();
@@ -444,11 +445,13 @@ describe("frame permissions", () => {
     expect(Object.keys(handleForFrame(handle, "docker")!).sort()).toEqual([
       "focus",
       "getShareTarget",
+      "openSidePanel",
       "reconnect",
     ]);
     expect(Object.keys(handleForFrame(handle, "snippets")!).sort()).toEqual([
       "focus",
       "getShareTarget",
+      "openSidePanel",
       "reconnect",
       "sendInput",
     ]);
