@@ -32,6 +32,8 @@ import type {
 import { isTrustedProxyAuthEnabled } from "../../utils/trusted-proxy-auth.js";
 import { LoginMethodError, type VerifiedIdentity } from "../../auth/types.js";
 import { rememberDeviceAllowed } from "../../auth/policy.js";
+import { redeemAppHandoff } from "../../auth/app-handoff.js";
+import { AuthManager } from "../../utils/auth-manager.js";
 
 export interface PublicLoginMethod {
   id: string;
@@ -329,6 +331,42 @@ export function registerAuthRoutes(router: Router): void {
       authLogger.error("Failed to list login methods", error);
       res.status(500).json({ error: "Failed to list login methods" });
     }
+  });
+
+  /**
+   * @openapi
+   * /users/auth/app-handoff/redeem:
+   *   post:
+   *     summary: Finish a browser sign in for the mobile app
+   *     description: Public. Trades the one-time code a browser login gave the mobile app for the session. The verifier must hash (SHA-256, base64url) to the challenge the app sent with the login. Each code works once and only for two minutes.
+   *     tags:
+   *       - Auth
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               code:
+   *                 type: string
+   *               verifier:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: The session token.
+   *       400:
+   *         description: The code is wrong, used or expired.
+   */
+  router.post("/auth/app-handoff/redeem", async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    const token = redeemAppHandoff(req.body?.code, req.body?.verifier);
+    const valid =
+      token && (await AuthManager.getInstance().verifyJWTToken(token));
+    if (!token || !valid) {
+      return res.status(400).json({ error: "Invalid or expired code" });
+    }
+    res.json({ token });
   });
 
   /**

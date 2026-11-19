@@ -22,6 +22,8 @@
 - A plugin's scheduled job no longer fails with "The plugin process is not running" when it fires while the plugin is waking up
 - Desktop app on Windows: the notice that Termix is still running in the tray now shows in the portable app too, and shows again next time if Windows hid it
 - When plugins can't load in the browser, Termix says which ones and why, instead of their parts quietly disappearing
+- Signing in to the mobile app through the browser works with every login method again, not only a password and code. Newer apps get the session through a one-time code only the app can use
+- Single sign on started from the login page the mobile app opened goes straight back to the app
 
 ## 26.11.2
 

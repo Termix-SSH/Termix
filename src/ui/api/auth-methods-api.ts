@@ -165,6 +165,8 @@ export async function startLoginRedirect(
     instanceId?: string;
     rememberMe?: boolean;
     desktopCallbackPort?: number;
+    /** The mobile app's address, so the login goes straight back to it. */
+    appCallbackUrl?: string;
   },
 ): Promise<string> {
   try {
@@ -175,6 +177,7 @@ export async function startLoginRedirect(
           instance: params.instanceId,
           rememberMe: params.rememberMe,
           desktopCallbackPort: params.desktopCallbackPort,
+          appCallbackUrl: params.appCallbackUrl,
         },
       },
     );
