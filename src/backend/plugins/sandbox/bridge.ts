@@ -203,6 +203,28 @@ export function isTermixCredential(header: string): boolean {
   return /^tmx_/i.test(token) || /^eyJ[\w-]*\.[\w-]+\.[\w-]*$/.test(token);
 }
 
+/**
+ * Whether a request body goes to the plugin as a stream. The plugin router
+ * sets req.body to {} even when no parser read the body (multipart, raw), so
+ * a body still unread is streamed rather than sent as that empty object.
+ */
+export function streamsBody(
+  req: {
+    body?: unknown;
+    headers: Record<string, unknown>;
+    readable?: boolean;
+    readableEnded?: boolean;
+  },
+  rawRouter: boolean,
+): boolean {
+  if (!req.readable || req.readableEnded) return false;
+  if (rawRouter || req.body === undefined) return true;
+  return (
+    req.headers["transfer-encoding"] !== undefined ||
+    req.headers["content-length"] !== undefined
+  );
+}
+
 export function safeHeaders(
   headers: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -1997,8 +2019,8 @@ export class PluginBridge {
 
     // A body core did not parse (multipart, rawBody routes) is streamed.
     let bodyPort: StreamPort | undefined;
-    const parsed = req.body !== undefined && !this.routerRaw;
-    if (!parsed && req.readable && !req.readableEnded) {
+    const parsed = !streamsBody(req, this.routerRaw);
+    if (!parsed) {
       bodyPort = endpoint.openStream();
       const body = bodyPort;
       pump(req as unknown as NodeReadable, body);

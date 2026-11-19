@@ -25,6 +25,7 @@
 - A plugin part at the edge of the screen no longer takes the whole width, which hid the tabs and made every other plugin's parts disappear
 - Signing in to the mobile app through the browser works with every login method again, not only a password and code. Newer apps get the session through a one-time code only the app can use
 - Single sign on started from the login page the mobile app opened goes straight back to the app
+- Uploading files to a plugin works again, like drag and drop or the upload button in the file manager
 
 ## 26.11.2
 
