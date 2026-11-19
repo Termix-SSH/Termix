@@ -96,7 +96,19 @@ function firewall(uid: number, rule: "deny" | "allow-all"): void {
 const children = new Map<string, ChildProcess>();
 
 function reply(core: ChildProcess, message: Record<string, unknown>): void {
-  if (core.connected) core.send({ type: SANDBOX_MESSAGE, ...message });
+  if (!core.connected) return;
+  core.send({ type: SANDBOX_MESSAGE, ...message }, (error) => {
+    if (error) log(`could not reach core: ${error.message}`);
+  });
+}
+
+/**
+ * A plugin killed a moment ago can still get messages core sent before it
+ * heard. Writing to its closed channel must never take the launcher down.
+ */
+function sendToPlugin(child: ChildProcess | undefined, message: unknown): void {
+  if (!child?.connected) return;
+  child.send(message as never, () => {});
 }
 
 function startPlugin(
@@ -154,7 +166,8 @@ function startPlugin(
   });
   children.set(id, child);
   child.once("spawn", () => reply(core, { op: "spawned", id, pid: child.pid }));
-  child.once("error", (error) =>
+  // Every error, not just the first: a dead channel errors on each write.
+  child.on("error", (error) =>
     reply(core, { op: "error", id, message: error.message }),
   );
   child.on("message", (m) => reply(core, { op: "msg", id, m }));
@@ -219,7 +232,7 @@ function main(): void {
         startPlugin(core, message);
         return;
       case "msg":
-        children.get(id)?.send(message.m as never);
+        sendToPlugin(children.get(id), message.m);
         return;
       case "kill":
         children.get(id)?.kill("SIGKILL");
@@ -229,6 +242,7 @@ function main(): void {
   for (const signal of ["SIGTERM", "SIGINT", "SIGHUP"] as const) {
     process.on(signal, () => core.kill(signal));
   }
+  core.on("error", (error) => log(`core channel: ${error.message}`));
   core.once("exit", (code, signal) => {
     for (const child of children.values()) child.kill("SIGKILL");
     process.exit(code ?? (signal ? 128 + 15 : 1));

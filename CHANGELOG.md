@@ -14,6 +14,8 @@
 - The first plugin installed from the store on a new install starts without a restart
 - A terminal's tab shows its Share button and Share menu entry again, and Refresh connection, Reconnect all and focus in split screen work on it again
 - Shared session links open again, for people with or without an account
+- A plugin that stops right as Termix sends it a message can no longer crash the whole server
+- When most plugins go quiet at once because Termix itself was busy, they are no longer all restarted together
 
 ## 26.11.2
 
