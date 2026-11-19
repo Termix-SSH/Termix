@@ -77,6 +77,8 @@ vi.mock("@/api/open-tabs-api", () => ({
 }));
 vi.mock("@/shell/tab-registry", () => ({
   standaloneViewFor: mocks.standaloneViewFor,
+  useTabTypes: () => [],
+  tabTypeForActivity: () => null,
 }));
 vi.mock("@/plugin-host/PluginViewPlaceholder", () => ({
   PluginViewPlaceholder: ({ viewId }: { viewId: string }) => (
