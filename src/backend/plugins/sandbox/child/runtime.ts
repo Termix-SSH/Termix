@@ -27,6 +27,7 @@ import { createChildSocket } from "./socket.js";
 import { joinStream } from "../transport-bridge.js";
 import type { AgentRelay } from "../agent-relay.js";
 import { createChildSyncHost } from "./sync-host.js";
+import { streamRequestBody } from "./request-body.js";
 
 interface Store {
   token?: string;
@@ -1320,12 +1321,7 @@ endpoint.handle("http.dispatch", ([metaArg, portArg, bodyArg]) => {
     req.cookies = parseCookies(meta.headers?.cookie);
     req.termixBaseUrl = meta.baseUrl;
     if (bodyPort) {
-      bodyPort.on("data", (chunk: Buffer) => {
-        if (!req.push(chunk)) bodyPort.pause();
-      });
-      req._read = () => bodyPort.resume();
-      bodyPort.on("end", () => req.push(null));
-      bodyPort.on("error", (error) => req.destroy(error));
+      streamRequestBody(req, bodyPort);
     } else {
       req.body = meta.body;
       req.push(null);
