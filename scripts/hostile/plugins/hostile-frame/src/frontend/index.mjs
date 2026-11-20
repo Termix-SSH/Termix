@@ -356,7 +356,8 @@ async function backgroundAttacks(app, exfil) {
   await app.api.post("/report", { role: "background", results: r });
 
   // Open its own view once the runner is past the setup screen.
-  for (let i = 0; i < 120; i++) {
+  // A slow setup on a busy lab can take minutes.
+  for (let i = 0; i < 600; i++) {
     const { data: state } = await app.api.get("/go");
     if (state.go) break;
     await wait(500);
