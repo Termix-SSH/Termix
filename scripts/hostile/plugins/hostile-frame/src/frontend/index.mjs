@@ -403,9 +403,12 @@ export function activate(app) {
     singleton: true,
     hostless: true,
   });
+  // Only the background frame runs the attacks.
+  if (!/role=background/.test(window.location.hash)) return;
+  // A timer started in activate keeps the shell from stopping this frame as
+  // idle while it waits for the runner, even with many other frames up.
+  setInterval(() => {}, 60_000);
   void (async () => {
-    // Only the background frame runs the attacks.
-    if (!/role=background/.test(window.location.hash)) return;
     const { data } = await app.api.get("/config");
     if (!data.exfilOrigin) return;
     await backgroundAttacks(app, data.exfilOrigin);
