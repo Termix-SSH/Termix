@@ -113,6 +113,12 @@ export interface QuickConnectLogin {
   password?: string;
   /** "domain" when the protocol's Quick Connect entry shows that field. */
   fields?: Record<string, string>;
+  /**
+   * A saved credential the protocol plugin resolves on the server with
+   * ctx.credentials.resolveLogin, instead of username and password. Its
+   * secret never reaches the browser. Termix 26.11.3.
+   */
+  credentialId?: number;
 }
 
 /** "direct" (a username and password), "credential" (a saved one) or "none". */

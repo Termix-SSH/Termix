@@ -6,6 +6,7 @@ Plugin API 2.9.0. Needs Termix 26.11.2.
 
 ### Added
 
+- `ctx.credentials.resolveLogin(credentialId)`: a saved credential's username and password, for a login the plugin makes itself, like a Quick Connect session. Only the user's own or shared credentials. Needs `credentials:read`. `QuickConnectLogin.credentialId` carries one from the browser without its secret. Termix 26.11.3
 - `useConfirm` takes a `checkbox` (`label`, `checked`, `onChange`, and text used while it is ticked), like Delete permanently. Termix 26.11.3 draws it, older versions ignore it
 - Data badges and text can carry an `icon`, a `color` and, for badges, a `variant` (`outline`, `filled` or `icon`). Termix 26.11.3 draws them, older versions ignore them
 - Login methods can offer `logoutRedirect(session)`: where to send the browser when a user signs out of a session the method made, like the identity provider's sign out page. Termix 26.11.3 uses it, older versions ignore it

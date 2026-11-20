@@ -3165,6 +3165,16 @@ export interface PluginCredentials {
     protocol: PluginHostProtocol,
   ) => Promise<PluginProtocolTarget | null>;
   /**
+   * A saved credential's username and password, for a login the plugin
+   * makes itself (a Quick Connect session with no saved host). Only the
+   * acting user's own credentials or ones shared with them; null otherwise.
+   * Never send the result to a browser. Needs credentials:read. Audited.
+   * Termix 26.11.3.
+   */
+  resolveLogin: (
+    credentialId: number,
+  ) => Promise<{ username: string; password: string } | null>;
+  /**
    * Registers this plugin as the resolver for "<scheme>://..." references in
    * a host's secret fields (secret-sources registers "op" for
    * "op://vault/item/field"). Needs auth:provide, like registerSshAuthProvider.

@@ -340,6 +340,37 @@ export function createPluginCredentials({
       }
     },
 
+    resolveLogin: async (credentialId) => {
+      const details = `login of credential ${credentialId}`;
+      try {
+        await assertCapability(pluginId, "credentials:read", declared);
+        const userId = actingUser();
+        if (!Number.isInteger(credentialId) || credentialId <= 0) {
+          throw new Error("A credential id is required");
+        }
+        // Same rule as a saved host's login: the user's own credential, or
+        // one shared with them.
+        const { findUsableCredential } =
+          await import("../hosts/usable-credential.js");
+        const credential = (await findUsableCredential(
+          credentialId,
+          userId,
+        )) as unknown as Record<string, unknown> | null;
+        await audit("credentials_read", details, { success: !!credential });
+        if (!credential) return null;
+        return {
+          username: str(credential.username),
+          password: str(credential.password),
+        };
+      } catch (error) {
+        await audit("credentials_read", details, {
+          success: false,
+          errorMessage: errorText(error),
+        });
+        throw error;
+      }
+    },
+
     resolveKeyRefs: async (key, passphrase) => {
       const details = "resolved key references";
       try {

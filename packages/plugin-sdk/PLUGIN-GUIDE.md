@@ -1304,7 +1304,9 @@ buttons exactly as the UI does.
 Login methods, second factors and SSH auth types need `auth:provide`, which is high risk and reviewed
 closely. Declare ids in `contributes.auth` and register them with `ctx.auth.registerLoginMethod`,
 `registerSecondFactor` or `registerSshAuthProvider`. Connection protocols go in `contributes.protocols`
-and `app.registerHostProtocol`. Read https://docs.termix.site/develop/auth before starting one.
+and `app.registerHostProtocol`. Read https://docs.termix.site/develop/auth before starting one. A saved host's
+login comes from `ctx.credentials.resolveHostProtocol`; a Quick Connect login can carry `credentialId`, which your
+backend turns into a username and password with `ctx.credentials.resolveLogin` (Termix 26.11.3, `credentials:read`).
 
 No plugin code runs on the sign in screen (Termix 26.11.2, plugin API 2.8). Termix draws each method from
 what the backend registers:

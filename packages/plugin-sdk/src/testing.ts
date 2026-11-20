@@ -166,6 +166,8 @@ export interface FakeContextOptions {
    * "<hostId>:<protocol>". A missing key answers null.
    */
   protocolTargets?: Record<string, PluginProtocolTarget>;
+  /** What ctx.credentials.resolveLogin answers, by credential id. */
+  credentialLogins?: Record<number, { username: string; password: string }>;
   /** What ctx.credentials.listSshKeys answers. */
   sshKeyCredentials?: PluginSshKeyCredential[];
   /** What ctx.credentials.list answers. */
@@ -1713,6 +1715,8 @@ export function createFakeContext(
         credentialReads.push({ hostId, protocol });
         return options.protocolTargets?.[`${hostId}:${protocol}`] ?? null;
       },
+      resolveLogin: async (credentialId) =>
+        options.credentialLogins?.[credentialId] ?? null,
       publicKey: async (credentialId) =>
         (options.sshKeyCredentials ?? []).find((k) => k.id === credentialId)
           ?.publicKey ?? null,
@@ -2757,6 +2761,10 @@ export function createMockCtx(
           );
         }
         return ctx.credentials.resolveHostProtocol(hostId, protocol);
+      },
+      resolveLogin: async (credentialId) => {
+        require("credentials:read");
+        return ctx.credentials.resolveLogin(credentialId);
       },
       publicKey: async (credentialId) => {
         require("credentials:use");
