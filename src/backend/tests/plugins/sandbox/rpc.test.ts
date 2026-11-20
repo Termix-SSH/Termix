@@ -11,7 +11,10 @@ import {
   type Wire,
 } from "../../../plugins/sandbox/rpc.js";
 
-function pair(tokens: { host?: () => string | undefined } = {}) {
+function pair(
+  tokens: { host?: () => string | undefined } = {},
+  strict = false,
+) {
   const hostHandlers: Array<(m: Wire) => void> = [];
   const childHandlers: Array<(m: Wire) => void> = [];
   const sent: Wire[] = [];
@@ -34,6 +37,7 @@ function pair(tokens: { host?: () => string | undefined } = {}) {
   const seenByHost: Array<string | undefined> = [];
   const host = new Endpoint(hostTransport, {
     side: "h",
+    strict,
     outboundToken: tokens.host ?? (() => undefined),
     inbound: (token, run) => {
       seenByHost.push(token);
@@ -157,6 +161,39 @@ describe("sandbox rpc", () => {
     const { host, child } = pair();
     child.handle("check", ([signal]) => (signal as AbortSignal).aborted);
     await expect(host.call("check", [AbortSignal.abort()])).resolves.toBe(true);
+  });
+
+  it("still aborts when the reason is a class core can't send", async () => {
+    class Stop {}
+    const { host, child } = pair({}, true);
+    let started!: () => void;
+    const running = new Promise<void>((resolve) => (started = resolve));
+    child.handle("run", ([signal]) => {
+      started();
+      return new Promise((resolve) =>
+        (signal as AbortSignal).addEventListener("abort", () =>
+          resolve(((signal as AbortSignal).reason as Error).name),
+        ),
+      );
+    });
+    const controller = new AbortController();
+    const result = host.call("run", [controller.signal]);
+    await running;
+    controller.abort(new Stop());
+    await expect(result).resolves.toBe("AbortError");
+
+    child.handle("check", ([signal]) => (signal as AbortSignal).aborted);
+    await expect(
+      host.call("check", [AbortSignal.abort(new Stop())]),
+    ).resolves.toBe(true);
+  });
+
+  it("counts nested signals toward the depth limit", () => {
+    const { host } = pair();
+    let value: unknown = null;
+    for (let i = 0; i < 40; i++)
+      value = { $abort: { aborted: true, reason: value } };
+    expect(() => host.unmarshal(value)).toThrow(/too deep/);
   });
 
   it("keeps Buffers as Buffers across the line", async () => {
