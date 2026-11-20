@@ -13,17 +13,20 @@ export function getAltDigitShortcut(
   return match && event.key === match[1] ? Number(match[1]) : null;
 }
 
-export function dispatchCtrlW(target: EventTarget | null) {
-  if (!target) return false;
-
-  const event = new KeyboardEvent("keydown", {
-    key: "w",
-    code: "KeyW",
-    ctrlKey: true,
-    bubbles: true,
-    cancelable: true,
-  });
-  return !target.dispatchEvent(event);
+/** Ctrl+W alone, which closes the tab in the desktop app on Windows and Linux. */
+export function isCloseTabKey(
+  event: Pick<
+    KeyboardEvent,
+    "key" | "ctrlKey" | "altKey" | "shiftKey" | "metaKey"
+  >,
+) {
+  return (
+    event.ctrlKey &&
+    !event.altKey &&
+    !event.shiftKey &&
+    !event.metaKey &&
+    event.key.toLowerCase() === "w"
+  );
 }
 
 /** Match two consecutive Shift presses, never a typing or IME sequence. */

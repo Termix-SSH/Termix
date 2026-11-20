@@ -79,12 +79,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getSetting: (key) => ipcRenderer.invoke("get-setting", key),
   setSetting: (key, value) => ipcRenderer.invoke("set-setting", key, value),
 
-  onCloseActiveTab: (callback) => {
-    const listener = () => callback();
-    ipcRenderer.on("close-active-tab", listener);
-    return () => ipcRenderer.removeListener("close-active-tab", listener);
-  },
-
   clearSessionCookies: () => ipcRenderer.invoke("clear-session-cookies"),
 
   // Translated text for the notice shown the first time closing the window

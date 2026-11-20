@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  dispatchCtrlW,
   createCommandPaletteShortcutMatcher,
   getAltDigitShortcut,
+  isCloseTabKey,
   isShiftKey,
 } from "../../lib/app-keyboard-shortcuts";
 
@@ -26,19 +26,19 @@ describe("app keyboard shortcuts", () => {
     expect(getAltDigitShortcut({ key: "|", code: "Digit7" })).toBeNull();
   });
 
-  it("lets the focused control consume Electron Ctrl+W", () => {
-    const target = document.createElement("input");
-    const listener = vi.fn((event: KeyboardEvent) => event.preventDefault());
-    target.addEventListener("keydown", listener);
-
-    expect(dispatchCtrlW(target)).toBe(true);
-    expect(listener).toHaveBeenCalledWith(
-      expect.objectContaining({ key: "w", code: "KeyW", ctrlKey: true }),
-    );
-  });
-
-  it("falls back to closing the active tab when Ctrl+W is not consumed", () => {
-    expect(dispatchCtrlW(document.createElement("div"))).toBe(false);
+  it("knows Ctrl+W alone as the close tab key", () => {
+    const ctrlW = {
+      key: "w",
+      ctrlKey: true,
+      altKey: false,
+      shiftKey: false,
+      metaKey: false,
+    };
+    expect(isCloseTabKey(ctrlW)).toBe(true);
+    expect(isCloseTabKey({ ...ctrlW, key: "W" })).toBe(true);
+    expect(isCloseTabKey({ ...ctrlW, shiftKey: true })).toBe(false);
+    expect(isCloseTabKey({ ...ctrlW, altKey: true })).toBe(false);
+    expect(isCloseTabKey({ ...ctrlW, key: "q" })).toBe(false);
   });
 });
 

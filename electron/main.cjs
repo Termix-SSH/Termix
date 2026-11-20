@@ -54,7 +54,7 @@ const pluginNodePin = require("./plugin-node.json");
 const linkedServer = require("./linked-server.cjs");
 const desktopSettings = require("./desktop-settings.cjs");
 const autoUpdates = require("./auto-updater.cjs");
-const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
+const { windowsLinuxMenuTemplate } = require("./keyboard-shortcuts.cjs");
 const { quitApp, closeAction, showTrayNotice } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
 const { forcedScaleFactor } = require("./linux-scale.cjs");
@@ -1513,13 +1513,6 @@ function createWindow() {
   const customUserAgent = `Termix-Desktop/${appVersion} (${platform}; Electron/${electronVersion})`;
   mainWindow.webContents.setUserAgent(customUserAgent);
 
-  mainWindow.webContents.on("before-input-event", (event, input) => {
-    if (!isCloseActiveTabInput(input)) return;
-
-    event.preventDefault();
-    mainWindow.webContents.send("close-active-tab");
-  });
-
   mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
     (details, callback) => {
       details.requestHeaders["X-Electron-App"] = "true";
@@ -2255,6 +2248,8 @@ function createMenu() {
     ];
     const menu = Menu.buildFromTemplate(template);
     Menu.setApplicationMenu(menu);
+  } else {
+    Menu.setApplicationMenu(Menu.buildFromTemplate(windowsLinuxMenuTemplate()));
   }
 }
 

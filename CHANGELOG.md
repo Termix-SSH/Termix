@@ -48,6 +48,7 @@
 - A plugin's host row button keeps working after the plugin sat idle for a moment, like after you close one of its tabs, instead of doing nothing until a reload
 - Desktop app: a linked app with an old Sync plugin from before plugin API 2 updates it on its own, so it can sync again instead of saying sync is off on the server
 - Quick Connect asks to trust a host's key only the first time, not on every connect, and warns if the key changes
+- Desktop app on Windows and Linux: Ctrl+W reaches the terminal again, like for search in nano or deleting a word, and still closes other tabs
 
 ## 26.11.2
 

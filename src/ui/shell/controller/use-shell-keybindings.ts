@@ -2,10 +2,11 @@
 import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import type { TabHandle } from "@termix-ssh/plugin-sdk/frontend";
 import {
-  dispatchCtrlW,
   createCommandPaletteShortcutMatcher,
+  isCloseTabKey,
   isShiftKey,
 } from "@/lib/app-keyboard-shortcuts";
+import { isElectron } from "@/lib/electron";
 import { getUserPreferences } from "@/main-axios";
 import { parseCustomKeybindings } from "@/api/open-tabs-api";
 import {
@@ -25,7 +26,7 @@ import {
 } from "@/shell/keybinding-registry";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
 import { getPaneNavDirection } from "@/lib/pane-nav-hotkey";
-import { getTabJumpDigit } from "@/lib/tab-jump-hotkey";
+import { getTabJumpDigit, isMacPlatform } from "@/lib/tab-jump-hotkey";
 import type { TabsState } from "./use-tabs";
 import type { SplitActions } from "./use-split";
 import type { ShellPalette, ShellRegions } from "./types";
@@ -149,11 +150,18 @@ export function useShellKeybindings({
     };
   }, []);
 
+  // Desktop app on Windows and Linux: Ctrl+W closes the tab unless what has
+  // focus used it, like a terminal for nano or deleting a word. A plugin view
+  // sends up the keys it left alone, so they land here too.
   useEffect(() => {
-    return window.electronAPI?.onCloseActiveTab?.(() => {
-      if (dispatchCtrlW(document.activeElement)) return;
+    if (!isElectron() || isMacPlatform()) return;
+    const handle = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || !isCloseTabKey(event)) return;
+      event.preventDefault();
       closeActiveTabRef.current();
-    });
+    };
+    window.addEventListener("keydown", handle);
+    return () => window.removeEventListener("keydown", handle);
   }, []);
 
   const [commandPaletteShortcutEnabled, setCommandPaletteShortcutEnabled] =
