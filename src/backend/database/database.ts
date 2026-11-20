@@ -97,7 +97,11 @@ import {
   frameImportMapHash,
   framePage,
 } from "../http/frame-runtime.js";
-import { getRequestBaseUrl } from "../utils/request-origin.js";
+import {
+  getRequestBaseUrl,
+  getRequestBaseUrlWithForceHTTPS,
+} from "../utils/request-origin.js";
+import { openApiEnabled, servedSpec } from "../openapi-served.js";
 import { normalizeCookiesMiddleware } from "../auth/session-cookie.js";
 import { finalErrorHandler } from "../http/error-handler.js";
 import { registerEncryptionRoutes } from "./routes/encryption-routes.js";
@@ -301,6 +305,47 @@ app.get("/.well-known/acme-challenge/:token", acmeChallengeHandler);
  *         description: The security.txt file, as text/plain.
  */
 app.get("/.well-known/security.txt", securityTxtHandler);
+
+/**
+ * @openapi
+ * /version/openapi.json:
+ *   get:
+ *     summary: This server's API spec
+ *     description: The OpenAPI spec of core and every plugin that is on, at the versions this server runs, with servers set to this server's address. Only when the SERVE_OPENAPI environment variable is "true". Needs a signed in user or an API key.
+ *     tags:
+ *       - General
+ *     responses:
+ *       200:
+ *         description: The merged OpenAPI document.
+ *       404:
+ *         description: Serving the spec is turned off.
+ */
+app.get("/version/openapi.json", authenticateJWT, (req, res) => {
+  if (!openApiEnabled()) {
+    return res.status(404).json({ error: "Not found" });
+  }
+  try {
+    const plugins = getPluginRuntime()
+      .loader.list()
+      .map((plugin) => ({
+        id: plugin.id,
+        dir: plugin.dir,
+        state: plugin.state,
+      }));
+    res.json(
+      servedSpec(
+        plugins,
+        getRequestBaseUrlWithForceHTTPS(req),
+        getLocalVersion() ?? "0.0.0",
+      ),
+    );
+  } catch (error) {
+    databaseLogger.error("Failed to build the API spec", error, {
+      operation: "openapi_served",
+    });
+    res.status(500).json({ error: "Failed to build the API spec" });
+  }
+});
 
 /**
  * @openapi

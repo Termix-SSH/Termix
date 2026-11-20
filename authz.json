@@ -1379,6 +1379,11 @@
     "GET /version": {
       "access": "user"
     },
+    "GET /version/openapi.json": {
+      "access": "user",
+      "allowed": "any",
+      "note": "404 unless SERVE_OPENAPI is true"
+    },
     "GET /version/channel": {
       "access": "user",
       "destructive": true
