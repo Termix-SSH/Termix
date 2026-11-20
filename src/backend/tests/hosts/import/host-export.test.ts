@@ -83,6 +83,22 @@ beforeEach(() => {
 
 describe("exportAllHosts", () => {
   it.each([
+    ["ssh", false, false],
+    ["ssh", false, true],
+    ["rdp", true, false],
+    ["rdp", true, true],
+  ])(
+    "preserves the SSH setting for %s hosts (enableSsh: %s, share mode: %s)",
+    async (connectionType, enableSsh, shareMode) => {
+      state.hosts = [{ ...sshHost, connectionType, enableSsh }];
+      const result = JSON.parse(
+        JSON.stringify(await exportAllHosts("u1", shareMode)),
+      );
+      expect(result.hosts[0]).toHaveProperty("enableSsh", enableSsh);
+    },
+  );
+
+  it.each([
     ["ssh", false],
     ["ssh", true],
     ["rdp", false],
