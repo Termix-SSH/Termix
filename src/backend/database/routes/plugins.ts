@@ -3384,6 +3384,84 @@ router.put(
 
 /**
  * @openapi
+ * /plugins/community-looks:
+ *   get:
+ *     summary: Read whether community layouts and themes may run in the page
+ *     tags:
+ *       - Plugins
+ *     responses:
+ *       200:
+ *         description: Whether the admin allowed it.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ */
+router.get(
+  "/community-looks",
+  authenticateJWT,
+  requireManagePlugins,
+  async (_req: Request, res: Response) => {
+    const { communityLooksAllowed } =
+      await import("../../plugins/community-looks.js");
+    res.json({ enabled: communityLooksAllowed() });
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/community-looks:
+ *   put:
+ *     summary: Let community layouts and themes run in the page
+ *     description: A layout draws the whole app, so in the page it can read and do anything the signed in user can. Only for plugins you trust. Takes effect when the page reloads.
+ *     tags:
+ *       - Plugins
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - enabled
+ *             properties:
+ *               enabled:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: The saved value.
+ *       400:
+ *         description: enabled is not a boolean.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ */
+router.put(
+  "/community-looks",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    const enabled = req.body?.enabled;
+    if (typeof enabled !== "boolean") {
+      res.status(400).json({ error: "enabled must be a boolean" });
+      return;
+    }
+    try {
+      const { setCommunityLooks } =
+        await import("../../plugins/community-looks.js");
+      await setCommunityLooks(enabled);
+      await auditPluginAction(req, "plugin_community_looks", "*", { enabled });
+      res.json({ enabled });
+    } catch (error) {
+      sendManageError(
+        res,
+        error,
+        "Failed to save the community looks setting",
+        "plugin_community_looks",
+      );
+    }
+  },
+);
+
+/**
+ * @openapi
  * /plugins/upload:
  *   post:
  *     summary: Upload a .tmxplug to install from a file

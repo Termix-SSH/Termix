@@ -81,6 +81,10 @@ const DESCRIBE: Record<string, Describe> = {
     detail(e, "enabled") === true
       ? `${e.username} turned on plugin developer mode`
       : null,
+  plugin_community_looks: (e) =>
+    detail(e, "enabled") === true
+      ? `${e.username} let community layouts and themes run outside the sandbox`
+      : null,
   update_auth_setting: (e) =>
     `${e.username} set ${target(e)} to ${detail(e, "value")}`,
   create_api_key: (e) =>

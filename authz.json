@@ -731,6 +731,13 @@
     "PUT /plugins/developer-mode": {
       "access": "admin"
     },
+    "GET /plugins/community-looks": {
+      "access": "admin"
+    },
+    "PUT /plugins/community-looks": {
+      "access": "admin",
+      "destructive": true
+    },
     "GET /plugins/onboarding": {
       "access": "admin"
     },

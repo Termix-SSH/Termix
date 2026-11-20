@@ -688,6 +688,17 @@ export async function getDeveloperMode(): Promise<DeveloperModeState> {
   return response.data;
 }
 
+/** Whether community layouts and themes may run outside the sandbox. */
+export async function getCommunityLooks(): Promise<boolean> {
+  const response = await rbacApi.get("/plugins/community-looks");
+  return response.data?.enabled === true;
+}
+
+export async function setCommunityLooks(enabled: boolean): Promise<boolean> {
+  const response = await rbacApi.put("/plugins/community-looks", { enabled });
+  return response.data?.enabled === true;
+}
+
 /** Fired after developer mode changes; detail is the new value. */
 export const DEVELOPER_MODE_CHANGED_EVENT = "termix:plugin-developer-mode";
 

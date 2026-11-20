@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Library, Trash2 } from "lucide-react";
+import { Library, Paintbrush, Trash2 } from "lucide-react";
+import { getCommunityLooks, setCommunityLooks } from "@/api/plugins-api";
 import { Input } from "@/components/input";
 import { FakeSwitch } from "@/components/section-card";
 import { PANEL } from "@/components/panel-layout";
@@ -51,6 +52,33 @@ export function RegistriesSection({ manager }: { manager: PluginsManager }) {
   const [state, setState] = useState<RegistriesState | null>(null);
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [looks, setLooks] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    void getCommunityLooks()
+      .then(setLooks)
+      .catch(() => setLooks(null));
+  }, []);
+
+  const toggleLooks = async (on: boolean) => {
+    if (on) {
+      const ok = await confirm({
+        title: t("plugins.manager.registries.looksConfirmTitle"),
+        description: t("plugins.manager.registries.looksConfirmBody"),
+        confirmLabel: t("plugins.manager.registries.looksConfirm"),
+      });
+      if (!ok) return;
+    }
+    setBusy("looks");
+    try {
+      setLooks(await setCommunityLooks(on));
+      toast.success(t("plugins.manager.registries.looksSaved"));
+    } catch (error) {
+      toast.error(errorOf(error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -206,6 +234,26 @@ export function RegistriesSection({ manager }: { manager: PluginsManager }) {
             </span>
             {state.community.enabled && errorLine("community")}
           </ListRow>
+
+          {looks !== null && (
+            <ListRow
+              stripe={0}
+              icon={<Paintbrush />}
+              tone={looks ? "warning" : "muted"}
+              title={t("plugins.manager.registries.looksName")}
+              trailing={
+                <FakeSwitch
+                  checked={looks}
+                  disabled={readOnly || busy === "looks"}
+                  onChange={(next) => void toggleLooks(next)}
+                />
+              }
+            >
+              <span className="text-[11px] leading-snug text-muted-foreground">
+                {t("plugins.manager.registries.looksHint")}
+              </span>
+            </ListRow>
+          )}
 
           {state.custom.map((entry, index) => (
             <ListRow

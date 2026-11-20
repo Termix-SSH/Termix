@@ -908,7 +908,9 @@ before, with the same look and theme.
   another plugin lists it in `uses`.
 - Not available in a frame: host badges, status indicators and editor toolbar items with a `component`
   (use `useDot` or `useValue`). Layouts, themes and Sync are the shell itself: only an official plugin
-  with `ui:layout`, `ui:theme` or `sync:provide` runs in the page. Other plugins' parts work, see Other
+  with `ui:layout`, `ui:theme` or `sync:provide` runs in the page. From Termix 26.11.3 an admin can let
+  community layouts and themes run in the page too (Plugins, Registries, Community layouts and themes); then
+  `registerLayout` works for a community plugin that asks only for looks. Other plugins' parts work, see Other
   plugins' parts in a frame below.
 - What a frame can't reach, the shell does for it: sign in steps are drawn from what your backend describes
   (see Auth and protocols), `app.auth.webauthn` runs passkey steps, `app.serial` opens a serial port in the

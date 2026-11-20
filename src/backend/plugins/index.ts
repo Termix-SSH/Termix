@@ -273,6 +273,9 @@ export async function initializePlugins(
   const { loadStoredRevocations } = await import("./revocations.js");
   await loadStoredRevocations();
 
+  const { loadCommunityLooks } = await import("./community-looks.js");
+  await loadCommunityLooks();
+
   const loaded = await pluginLoader.loadAll();
   if (loaded.length === 0) {
     startupDone = true;

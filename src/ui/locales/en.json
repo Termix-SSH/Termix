@@ -1614,7 +1614,13 @@
         "unreachable": "Could not read it: {{error}}",
         "filter": "Registry",
         "allRegistries": "All registries",
-        "browseHint": "Turn on community plugins or add your own registry in the Registries tab."
+        "browseHint": "Turn on community plugins or add your own registry in the Registries tab.",
+        "looksName": "Community layouts and themes",
+        "looksHint": "Lets layouts and themes that are not from Termix run outside the sandbox, like the official ones. A layout draws the whole app, so it can see and do anything you can. Only install ones you trust. Reload the page after changing this.",
+        "looksConfirmTitle": "Let community layouts run outside the sandbox?",
+        "looksConfirmBody": "A community layout or theme will run in the page with full access to Termix as whoever is signed in. This can be risky. Only turn this on if you trust the layouts and themes you install.",
+        "looksConfirm": "Turn on",
+        "looksSaved": "Saved. Reload the page to apply it."
       },
       "upToDate": "Everything is up to date.",
       "lastChecked": "Last checked {{time}}",

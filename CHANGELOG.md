@@ -4,6 +4,7 @@
 
 ### Added
 
+- Admins can let community layouts and themes run outside the sandbox again, behind a warning, in Plugins, Registries
 - Set SERVE_OPENAPI=true to serve this server's own API spec at /version/openapi.json: core and every plugin that is on, at the versions it runs, with the server's address filled in
 - Access plugins can end the connections already open to a host when its access ends, and can keep status checks from contacting it
 - Desktop app: termix:// links open the app. termix://host/<id> connects to a saved host after asking, and a shortcut with --host=<id> opens straight into it
