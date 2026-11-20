@@ -46,6 +46,14 @@ interface Deps {
 
 type HostRow = Record<string, unknown>;
 
+/** A plain tab id, or nothing. */
+function unlockTabOf(options: unknown): string | undefined {
+  const tab = (options as { unlockTab?: unknown } | undefined)?.unlockTab;
+  return typeof tab === "string" && /^[a-z0-9][a-z0-9._-]{0,63}$/i.test(tab)
+    ? tab
+    : undefined;
+}
+
 function str(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
@@ -390,7 +398,7 @@ export function createPluginCredentials({
       }
     },
 
-    registerSecretResolver: (scheme, resolve) => {
+    registerSecretResolver: (scheme, resolve, options) => {
       if (!declared.includes("auth:provide")) {
         throw capabilityRefused(pluginId, "auth:provide");
       }
@@ -418,6 +426,7 @@ export function createPluginCredentials({
             throw error;
           }
         },
+        { unlockTab: unlockTabOf(options) },
       );
       bag.add(dispose, `secret scheme "${scheme}"`);
     },

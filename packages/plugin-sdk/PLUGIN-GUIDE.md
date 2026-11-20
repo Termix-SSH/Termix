@@ -534,6 +534,10 @@ router.post("/notes", async (req, res) => {
   26.11.3) ends every connection core holds to it, for all users and plugins, and resolves to the count.
   `provide({ check, probes: true })` also asks you before status checks (profile `"probe"`): hosts you deny
   drop out of `ctx.hosts.probeTargets`.
+- Secret references that need the person to unlock something first (Termix 26.11.3): register with
+  `ctx.credentials.registerSecretResolver(scheme, resolve, { unlockTab })` and throw an error whose `code` is
+  `"unlock-required"`. A connect by the person whose reference it is then gets `access-required` with your tab and
+  `requestKind: "verify"`, so the terminal offers Verify. Anyone else gets a plain error.
 
 Headers and cookies (Termix 26.11.2+): every answer from `/plugin-api/<id>/` and `/plugin-assets/<id>/` carries
 `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy` and a default

@@ -347,3 +347,32 @@ describe("process transport", () => {
     }
   });
 });
+
+describe("wire errors", () => {
+  it("carry an access-required answer's tab to the plugin", async () => {
+    const { toWireError, fromWireError } =
+      await import("../../../plugins/sandbox/rpc.js");
+    const { ConnectPolicyError } =
+      await import("../../../hosts/connect-policy.js");
+    const error = fromWireError(
+      toWireError(
+        new ConnectPolicyError({
+          decision: "request",
+          reason: "Unlock first",
+          pluginId: "p",
+          requestTab: "unlock",
+          requestKind: "verify",
+        }),
+      ),
+    ) as Error & { code?: string; requestTab?: string; requestKind?: string };
+    expect(error).toMatchObject({
+      message: "Unlock first",
+      code: "access-required",
+      requestTab: "unlock",
+      requestKind: "verify",
+    });
+    expect(fromWireError(toWireError(new Error("x")))).not.toHaveProperty(
+      "requestTab",
+    );
+  });
+});

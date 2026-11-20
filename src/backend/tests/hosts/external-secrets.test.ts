@@ -79,3 +79,57 @@ describe("external secret references", () => {
     }
   });
 });
+
+const { registerSecretResolver } =
+  await import("../../hosts/connect/secret-resolver-registry.js");
+const { ConnectPolicyError } = await import("../../hosts/connect-policy.js");
+
+describe("a resolver that needs an unlock first", () => {
+  const locked = () =>
+    Object.assign(new Error("Unlock your vault first"), {
+      code: "unlock-required",
+    });
+
+  beforeEach(() => {
+    clearExternalSecretCache();
+    resetSecretResolverRegistryForTests();
+  });
+
+  it("answers access required with the plugin's unlock tab", async () => {
+    registerSecretResolver(
+      "bw",
+      { pluginId: "secret-sources", pluginName: "Secret Sources" },
+      async () => {
+        throw locked();
+      },
+      { unlockTab: "vault-unlock" },
+    );
+    const error = await resolveSecretReference(
+      "bob",
+      "bw://web/password",
+    ).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ConnectPolicyError);
+    expect((error as InstanceType<typeof ConnectPolicyError>).toJSON()).toEqual(
+      {
+        error: "Unlock your vault first",
+        code: "access-required",
+        requestTab: "vault-unlock",
+        requestKind: "verify",
+        pluginId: "secret-sources",
+      },
+    );
+  });
+
+  it("passes the error on when the resolver named no tab", async () => {
+    registerSecretResolver(
+      "bw",
+      { pluginId: "secret-sources", pluginName: "Secret Sources" },
+      async () => {
+        throw locked();
+      },
+    );
+    await expect(
+      resolveSecretReference("bob", "bw://web/password"),
+    ).rejects.not.toBeInstanceOf(ConnectPolicyError);
+  });
+});

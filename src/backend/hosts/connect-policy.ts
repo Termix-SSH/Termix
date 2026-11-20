@@ -35,6 +35,9 @@ export type ConnectPolicyResult =
 export class ConnectPolicyError extends Error {
   readonly status = 403;
   readonly code: "access-denied" | "access-required";
+  /** Copies of the result's tab, which travel to plugin processes. */
+  readonly requestTab?: string;
+  readonly requestKind?: string;
   constructor(
     readonly result: Exclude<ConnectPolicyResult, { decision: "allow" }>,
   ) {
@@ -42,6 +45,8 @@ export class ConnectPolicyError extends Error {
     this.name = "ConnectPolicyError";
     this.code =
       result.decision === "request" ? "access-required" : "access-denied";
+    if (result.requestTab) this.requestTab = result.requestTab;
+    if (result.requestKind) this.requestKind = result.requestKind;
   }
 
   /** The body routes send back, so a client can offer the request tab. */

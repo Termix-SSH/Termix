@@ -3203,10 +3203,18 @@ export interface PluginCredentials {
    * and its result is cached briefly by the connect pipeline. A scheme with no
    * registered resolver fails the connect with a message naming the plugin
    * that would provide it.
+   *
+   * `options.unlockTab` names a tab of this plugin where a person unlocks
+   * what the resolver reads, like their own vault. When `resolve` throws an
+   * error whose `code` is "unlock-required" for the person connecting, the
+   * connect stops with an access-required answer pointing at that tab, so
+   * clients offer a Verify button. Termix 26.11.3; older versions ignore it
+   * and show the error.
    */
   registerSecretResolver: (
     scheme: string,
     resolve: (userId: string, reference: string) => Promise<string>,
+    options?: { unlockTab?: string },
   ) => void;
   /**
    * The public key line of an SSH key credential the acting user can see

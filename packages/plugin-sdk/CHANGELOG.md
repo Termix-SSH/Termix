@@ -14,6 +14,7 @@ Plugin API 2.9.0. Needs Termix 26.11.2.
 - `useConfirm` takes a `checkbox` (`label`, `checked`, `onChange`, and text used while it is ticked), like Delete permanently. Termix 26.11.3 draws it, older versions ignore it
 - Data badges and text can carry an `icon`, a `color` and, for badges, a `variant` (`outline`, `filled` or `icon`). Termix 26.11.3 draws them, older versions ignore them
 - Login methods can offer `logoutRedirect(session)`: where to send the browser when a user signs out of a session the method made, like the identity provider's sign out page. Termix 26.11.3 uses it, older versions ignore it
+- `ctx.credentials.registerSecretResolver(scheme, resolve, { unlockTab })`: when `resolve` throws an error with code `unlock-required` for the person connecting, the connect answers access required with that tab, so clients offer Verify instead of failing. Termix 26.11.3
 - `registerAction(id, handler, { private: true })`: only your own plugin views may run the action, even when another plugin lists it in `uses`. Termix 26.11.3 enforces it, older versions ignore it
 
 ## 2.10.1

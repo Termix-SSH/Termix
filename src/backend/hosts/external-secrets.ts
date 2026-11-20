@@ -1,4 +1,5 @@
 import { awaitSecretResolver } from "./connect/secret-resolver-registry.js";
+import { ConnectPolicyError } from "./connect-policy.js";
 
 /**
  * Expands "<scheme>://..." references ("op://vault/item/field" for 1Password
@@ -54,7 +55,24 @@ async function defaultResolver(
 ): Promise<string> {
   const scheme = referenceScheme(reference);
   const resolver = await awaitSecretResolver(scheme);
-  return resolver.resolve(userId, reference);
+  try {
+    return await resolver.resolve(userId, reference);
+  } catch (error) {
+    // The resolver needs the person to unlock something in its tab first.
+    if (
+      resolver.unlockTab &&
+      (error as { code?: unknown } | null)?.code === "unlock-required"
+    ) {
+      throw new ConnectPolicyError({
+        decision: "request",
+        reason: (error as Error).message,
+        pluginId: resolver.pluginId,
+        requestTab: resolver.unlockTab,
+        requestKind: "verify",
+      });
+    }
+    throw error;
+  }
 }
 
 export async function resolveSecretReference(

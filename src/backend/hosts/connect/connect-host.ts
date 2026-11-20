@@ -16,6 +16,7 @@ import {
 } from "../open-connections.js";
 import { withConnection } from "../ssh-connection-pool.js";
 import { resolveHostById } from "../host-resolver.js";
+import { ConnectPolicyError } from "../connect-policy.js";
 import { buildConnectConfig } from "./build-connect-config.js";
 import {
   createAutoKeyboardInteractiveHandler,
@@ -95,7 +96,25 @@ export async function resolveConnectHost(
   userId: string,
 ): Promise<SshConnectHost> {
   if (typeof target !== "number") return target;
-  const host = await resolveHostById(target, userId);
+  let host: Awaited<ReturnType<typeof resolveHostById>>;
+  try {
+    host = await resolveHostById(target, userId);
+  } catch (error) {
+    if (error instanceof ConnectPolicyError) {
+      throw new SshConnectError({
+        status: "error",
+        code: error.code,
+        message: error.message,
+        ...(error.result.requestTab
+          ? { requestTab: error.result.requestTab }
+          : {}),
+        ...(error.result.requestKind
+          ? { requestKind: error.result.requestKind }
+          : {}),
+      });
+    }
+    throw error;
+  }
   if (!host) {
     // A shared host with no login for this user also resolves to null.
     const { PermissionManager } =

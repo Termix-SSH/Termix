@@ -32,6 +32,9 @@ export interface WireError {
   name?: string;
   code?: string;
   status?: number;
+  /** An access-required answer's tab and kind. */
+  requestTab?: string;
+  requestKind?: string;
 }
 
 export interface Transport {
@@ -699,6 +702,8 @@ export function toWireError(error: unknown): WireError {
       status?: unknown;
       statusCode?: unknown;
       resource?: unknown;
+      requestTab?: unknown;
+      requestKind?: unknown;
     };
     const status = extra.status ?? extra.statusCode;
     // A permission denial names what it refused, which is what a plugin
@@ -712,6 +717,12 @@ export function toWireError(error: unknown): WireError {
       name: error.name,
       code: typeof extra.code === "string" ? extra.code : undefined,
       status: typeof status === "number" ? status : undefined,
+      ...(typeof extra.requestTab === "string"
+        ? { requestTab: extra.requestTab }
+        : {}),
+      ...(typeof extra.requestKind === "string"
+        ? { requestKind: extra.requestKind }
+        : {}),
     };
   }
   return { message: String(error) };
@@ -721,10 +732,16 @@ export function fromWireError(wire: WireError): Error {
   const error = new Error(wire.message) as Error & {
     code?: string;
     status?: number;
+    requestTab?: string;
+    requestKind?: string;
   };
   if (wire.name) error.name = wire.name;
   if (wire.code) error.code = wire.code;
   if (wire.status) error.status = wire.status;
+  if (typeof wire.requestTab === "string") error.requestTab = wire.requestTab;
+  if (typeof wire.requestKind === "string") {
+    error.requestKind = wire.requestKind;
+  }
   return error;
 }
 
