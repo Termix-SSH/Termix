@@ -420,6 +420,27 @@ describe("frame permissions", () => {
     expect(mayInvokeAction("docker", "terminal.sendToActive")).toBe(false);
   });
 
+  it("keeps a private action to the plugin that registered it", () => {
+    setPluginSummaries([
+      summary("docker", ["terminal.resolveTheme"]),
+      summary("snippets", ["ssh-terminal.sessions.publish"]),
+    ]);
+    const drop = registerAction("ssh-terminal.sessions.publish", () => true, {
+      pluginId: "ssh-terminal",
+      private: true,
+    });
+    expect(
+      mayInvokeAction("ssh-terminal", "ssh-terminal.sessions.publish"),
+    ).toBe(true);
+    expect(mayInvokeAction("snippets", "ssh-terminal.sessions.publish")).toBe(
+      false,
+    );
+    drop();
+    expect(mayInvokeAction("snippets", "ssh-terminal.sessions.publish")).toBe(
+      true,
+    );
+  });
+
   it("lets a companion type into a terminal only when it says so", () => {
     expect(mayCallHandle("docker", "focus")).toBe(true);
     expect(mayCallHandle("docker", "sendInput")).toBe(false);

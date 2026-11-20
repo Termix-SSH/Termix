@@ -1435,7 +1435,15 @@ export interface TermixApp extends TermixAppInfo {
   registerAction: (
     id: string,
     handler: ActionHandler,
-    options?: { permission?: string },
+    options?: {
+      permission?: string;
+      /**
+       * Only this plugin's own frames may run it, even when another plugin
+       * lists it in manifest uses. For actions the plugin's frames use to
+       * reach each other.
+       */
+      private?: boolean;
+    },
   ) => Disposer;
   declareActionSlot: (slot: ActionSlotDefinition) => Disposer;
   registerSlotContribution: (

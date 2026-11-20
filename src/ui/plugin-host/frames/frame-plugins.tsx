@@ -1267,6 +1267,7 @@ export async function startFramedPlugin(
       case "action":
         return app.registerAction(data.id, data.handler, {
           permission: data.permission,
+          private: data.private === true,
         });
       case "actionSlot":
         return app.declareActionSlot({ ...data });
