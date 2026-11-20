@@ -836,7 +836,12 @@
     "editorUpdate": "Update Host",
     "editorAdd": "Add Host",
     "speedSearch": "Search hosts. Arrow keys to select, Enter to connect, Esc to close",
-    "speedSearchList": "Host list. Type or press / to search."
+    "speedSearchList": "Host list. Type or press / to search.",
+    "openFromLink": {
+      "title": "Open {{name}}?",
+      "description": "A link asked Termix to connect to this host.",
+      "confirm": "Connect"
+    }
   },
   "splitScreen": {
     "title": "Split screen",

@@ -1,4 +1,5 @@
 import { useEffect, type ComponentType } from "react";
+import { onDeepLink, startDeepLinks } from "@/lib/deep-links";
 import { dataReporter } from "@/components/data-view/data-reporter";
 import type { DataShape } from "@/components/data-view/data-value";
 import type { Tab } from "@/types/ui-types";
@@ -814,6 +815,13 @@ export function createPluginApp(
     confirm: (options) => shell.confirm!(options),
 
     stepUp: () => requestStepUp(),
+
+    deepLinks: {
+      onOpen: (listener) => {
+        startDeepLinks();
+        return track(onDeepLink(listener));
+      },
+    },
 
     session: {
       signOut: async () => {

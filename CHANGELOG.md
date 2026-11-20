@@ -4,6 +4,7 @@
 
 ### Added
 
+- Desktop app: termix:// links open the app. termix://host/<id> connects to a saved host after asking, and a shortcut with --host=<id> opens straight into it
 - Quick Connect can use a saved credential, resolved on the server so its password never reaches the browser
 - Confirm prompts can have a checkbox, like Delete permanently in the file manager
 - Host row badges from plugins can show an icon and their own color

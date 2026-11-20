@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useHostLinks } from "./use-host-links";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { isElectron } from "@/lib/electron";
 import {
@@ -266,6 +267,12 @@ export function ShellControllerProvider({
   ]);
 
   useWorkspaceLayout(tabsState, regions);
+  useHostLinks({
+    hostsRef: hosts.listRef,
+    hostsLoaded: hosts.loaded,
+    connectHost: (host) => tabsState.connectHost(host),
+    confirmRef,
+  });
   useMouseHistoryGuard(tabsState.tabHistory);
   useShellKeybindings({
     tabsState,

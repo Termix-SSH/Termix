@@ -7,6 +7,7 @@
  */
 
 import { toast } from "sonner";
+import { onDeepLink } from "@/lib/deep-links";
 import { authApi, getBackendUrl } from "@/main-axios";
 import {
   PLUGIN_SETTINGS_CHANGED_EVENT,
@@ -193,6 +194,7 @@ function onMessage(event: MessageEvent) {
       if (owner) {
         dropForeignConsumer(owner);
         closeSerialFor(owner);
+        stopLinksFor(owner);
       }
       connection.port = createPort(connection, event.source as Window);
       return;
@@ -210,6 +212,13 @@ function listen() {
 
 let connectionCount = 0;
 const watchOwners = new WeakMap<FrameConnection, string>();
+// Deep link listeners a frame added, ended when the frame goes.
+const linkStops = new Map<string, Array<() => void>>();
+
+function stopLinksFor(owner: string): void {
+  for (const stop of linkStops.get(owner) ?? []) stop();
+  linkStops.delete(owner);
+}
 
 /** Starts talking to a frame element once its page says hello. */
 export function connectFrame(
@@ -235,6 +244,7 @@ export function connectFrame(
       removeDataWatches(watchOwner);
       dropForeignConsumer(watchOwner);
       closeSerialFor(watchOwner);
+      stopLinksFor(watchOwner);
       stopState?.();
       connection.port?.close();
       connection.port = null;
@@ -655,6 +665,25 @@ async function handleCall(
         onData as (chunk: Uint8Array) => void,
         onClose as () => void,
       );
+    }
+    case "deepLinks.listen": {
+      const owner = watchOwners.get(connection);
+      const [listener] = args;
+      if (!owner || typeof listener !== "function") {
+        throw new Error("Bad deep link listener");
+      }
+      const list = linkStops.get(owner) ?? [];
+      if (list.length >= 5) throw new Error("Too many deep link listeners");
+      list.push(
+        onDeepLink((link) => {
+          (listener as (link: unknown) => void)({
+            url: link.url,
+            source: link.source,
+          });
+        }),
+      );
+      linkStops.set(owner, list);
+      return;
     }
     case "port.write": {
       const owner = watchOwners.get(connection);

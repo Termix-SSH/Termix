@@ -582,6 +582,11 @@ loads on a server, ignores server sync and may declare `desktop:local`. Any plug
 - `pty.spawn()`: a local shell, stopped when the plugin stops
 - `pluginFetch(origin, subPath, init)`: calls this plugin's own routes on the desktop's backend ("local") or the linked server ("remote") as the acting user. Bodies can be streams, so a plugin can move big files without the renderer
 
+Links (Termix 26.11.3): the desktop app opens for `termix://` links. Core only acts on `termix://host/<id>`
+(after asking) and `--host=<id>` shortcuts. Every link also goes to `app.deepLinks?.onOpen((link) => ...)` in
+the frontend as `{ url, source }`, first with the ones that came before you listened. A web page can send any
+`termix://` link, so always ask before acting on one; `source: "command-line"` is a `--host` shortcut.
+
 In a plugin process `process.execPath` is the app's pinned Node on every platform. Starting it still needs
 `process:spawn`, or run the script through `ctx.process.run`, which core starts.
 

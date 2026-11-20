@@ -675,6 +675,13 @@ export function createFrameApp(host: FrameAppHost): {
 
     stepUp: () => host.call("stepUp") as Promise<boolean>,
 
+    deepLinks: {
+      onOpen: (listener) => {
+        void host.call("deepLinks.listen", listener).catch(() => {});
+        return () => {};
+      },
+    },
+
     session: {
       signOut: () => host.call("session.signOut") as Promise<void>,
       reload: () => host.call("session.reload") as Promise<boolean>,

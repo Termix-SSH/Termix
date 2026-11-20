@@ -230,6 +230,11 @@ export interface ShellApi {
   confirm?: (options: ConfirmRequest) => Promise<boolean>;
 }
 
+export interface DeepLinkEvent {
+  url: string;
+  source: "os-scheme" | "command-line";
+}
+
 export interface ConfirmRequest {
   title: string;
   description?: string;
@@ -1545,6 +1550,17 @@ export interface TermixApp extends TermixAppInfo {
    * Termix 26.11.2 and plugin API 2.6; check it exists on older cores.
    */
   stepUp?: () => Promise<boolean>;
+  /**
+   * termix:// links the desktop app was opened with, like
+   * termix://connect?host=web-1 from an asset manager. The listener first
+   * gets the links that came before it listened. Termix never acts on a link
+   * for you except termix://host/<id>, so ask before doing anything a web
+   * page could have sent. "command-line" means a --host shortcut on this
+   * computer. Desktop app only; Termix 26.11.3.
+   */
+  deepLinks?: {
+    onOpen: (listener: (link: DeepLinkEvent) => void) => () => void;
+  };
   /**
    * Web Serial through the shell, for a plugin with device:serial. The
    * browser shows its own port picker and the plugin gets only the port the
