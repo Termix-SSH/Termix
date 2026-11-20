@@ -30,6 +30,7 @@ import {
 import { hasCapability } from "../permissions.js";
 import { HOST_SECRET_FIELDS } from "../ctx-hosts.js";
 import { pluginLogger } from "../../utils/logger.js";
+import { cachedExtraCaCertificates } from "../../utils/extra-ca.js";
 import { Endpoint, StreamPort, type Transport } from "./rpc.js";
 import { SandboxTokenStore, type ActorGrant } from "./tokens.js";
 import { checkPluginSql, type SqlDialect } from "./sql-guard.js";
@@ -441,6 +442,7 @@ export class PluginBridge {
       values,
       manifest: this.manifest,
       dialect: this.dialect,
+      extraCaCertificates: cachedExtraCaCertificates(),
     };
   }
 

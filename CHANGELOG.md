@@ -27,6 +27,7 @@
 - Single sign on started from the login page the mobile app opened goes straight back to the app
 - Uploading files to a plugin works again, like drag and drop or the upload button in the file manager
 - Desktop app: the interface size and other settings no longer go back to old account values on launch when the app isn't linked to a server
+- Desktop app: `NODE_EXTRA_CA_CERTS` works again, so servers with a certificate from a private CA can be linked. Plugins now trust those certificates too
 
 ## 26.11.2
 
