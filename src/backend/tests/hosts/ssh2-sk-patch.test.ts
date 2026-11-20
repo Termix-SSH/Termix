@@ -73,7 +73,11 @@ it("sends flags and counter after the signature in publickey auth", async () => 
     }
   }
 
-  const hostKey = ssh2.utils.generateKeyPairSync("ed25519").private;
+  // ssh2 makes an ed25519 key it can't read back about once in 300 tries.
+  let hostKey = ssh2.utils.generateKeyPairSync("ed25519").private;
+  while (ssh2.utils.parseKey(hostKey) instanceof Error) {
+    hostKey = ssh2.utils.generateKeyPairSync("ed25519").private;
+  }
   const received = await new Promise<Buffer>((resolve) => {
     const server = new ssh2.Server({ hostKeys: [hostKey] }, (client: any) => {
       client.on("authentication", (ctx: any) => {
