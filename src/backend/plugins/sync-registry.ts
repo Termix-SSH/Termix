@@ -44,6 +44,12 @@ export interface CoreSyncEntityOptions {
    */
   verifyFields?: readonly string[];
   /**
+   * Fields that make an inbound row the same as a local one that never
+   * synced. Linking a device that already has data then takes the server's
+   * copy over the local one instead of keeping both.
+   */
+  matchUnsynced?: readonly string[];
+  /**
    * Widens reference lookups past rows the user owns, e.g. a credential
    * shared with them is a valid target for their host's credentialId.
    */
