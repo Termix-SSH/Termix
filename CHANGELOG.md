@@ -29,6 +29,8 @@
 - Desktop app: the interface size and other settings no longer go back to old account values on launch when the app isn't linked to a server
 - Desktop app: `NODE_EXTRA_CA_CERTS` works again, so servers with a certificate from a private CA can be linked. Plugins now trust those certificates too
 - Exported hosts keep whether SSH is on, so importing them no longer turns SSH on or off by the connection type
+- Desktop app: linking to an account that already has the same hosts, folders and credentials adopts them instead of making a second copy of each, thanks to ZacharyZcR
+- A plugin that cancels work with its own error type still cancels it, thanks to ZacharyZcR
 
 ## 26.11.2
 
