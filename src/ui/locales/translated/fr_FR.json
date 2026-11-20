@@ -848,7 +848,12 @@
     "editorUpdate": "Mettre à jour l'hôte",
     "editorAdd": "Ajouter un hôte",
     "speedSearch": "Rechercher des hôtes. Touches fléchées pour sélectionner, Entrée pour se connecter, Échap pour fermer",
-    "speedSearchList": "Liste des hôtes. Tapez ou appuyez sur / pour rechercher."
+    "speedSearchList": "Liste des hôtes. Tapez ou appuyez sur / pour rechercher.",
+    "openFromLink": {
+      "title": "Ouvrir {{name}} ?",
+      "description": "Un lien a demandé à Termix de se connecter à cet hôte.",
+      "confirm": "Se connecter"
+    }
   },
   "splitScreen": {
     "title": "Écran partagé",
@@ -1392,7 +1397,7 @@
         "running": "En cours d'exécution",
         "disabled": "Désactivé",
         "failed": "Arrêt inattendu",
-        "blocked": "En attente d'un autre plugin",
+        "blocked": "Impossible de démarrer",
         "server": "Exécute sur votre serveur",
         "safeMode": "Désactivé en mode sans échec"
       },
@@ -1490,6 +1495,9 @@
         "updatedMany_one": "{{count}} plugin mis à jour",
         "updatedMany_many": "{{count}} plugins mis à jour",
         "updatedMany_other": "{{count}} plugins mis à jour",
+        "needsReview_one": "1 plugin demande de nouvelles autorisations. Examinez-le pour le mettre à jour.",
+        "needsReview_many": "{{count}} plugins demandent de nouvelles autorisations. Examinez-les un par un pour les mettre à jour.",
+        "needsReview_other": "{{count}} plugins demandent de nouvelles autorisations. Examinez-les un par un pour les mettre à jour.",
         "uninstalled": "{{name}} désinstallé",
         "dataDeleted": "Données de {{name}} supprimées",
         "failedToStart": "Impossible de démarrer {{name}}. Ouvrez-le pour voir pourquoi.",
@@ -1643,7 +1651,13 @@
         "unreachable": "Impossible de le lire : {{error}}",
         "filter": "Registre",
         "allRegistries": "Tous les registres",
-        "browseHint": "Activez les plugins communautaires ou ajoutez votre propre registre dans l'onglet Registres."
+        "browseHint": "Activez les plugins communautaires ou ajoutez votre propre registre dans l'onglet Registres.",
+        "looksName": "Mises en page et thèmes communautaires",
+        "looksHint": "Permet aux mises en page et thèmes non officiels de s’exécuter en dehors du bac à sable, comme les versions officielles. Une mise en page dessine l’ensemble de l’application, elle peut donc voir et faire tout ce que vous pouvez. Installez uniquement celles que vous connaissez. Rechargez la page après avoir modifié ce paramètre.",
+        "looksConfirmTitle": "Autoriser les mises en page communautaires à s’exécuter en dehors du bac à sable ?",
+        "looksConfirmBody": "Une mise en page ou un thème communautaire s’exécutera dans la page avec un accès complet à Termix, avec les droits de l’utilisateur connecté. Cela peut présenter des risques. Activez cette option uniquement si vous faites confiance aux mises en page et thèmes que vous installez.",
+        "looksConfirm": "Activer",
+        "looksSaved": "Enregistré. Rechargez la page pour appliquer les modifications."
       },
       "upToDate": "Tout est à jour.",
       "lastChecked": "Dernière vérification {{time}}",
@@ -1744,9 +1758,15 @@
     "firstLoad": {
       "title": "Préparation des plugins",
       "progress": "{{done}} sur {{total}}",
-      "hint": "Cela ne se produit qu'une seule fois. La prochaine fois, Termix s'ouvrira immédiatement.",
+      "hint": "Les plugins démarrent pour la première fois. Par la suite, Termix s’ouvrira immédiatement.",
       "skip": "Continuer"
-    }
+    },
+    "framesBlocked": "Les plugins ne peuvent pas charger leurs fichiers. Un proxy d’authentification placé devant Termix les bloque probablement.",
+    "framesBlockedHelp": "Comment résoudre le problème",
+    "framesFailed_one": "{{names}} n’a pas pu être chargé, ses éléments sont donc masqués",
+    "framesFailed_many": "{{count}} plugins n’ont pas pu être chargés, leurs éléments sont donc masqués : {{names}}",
+    "framesFailed_other": "{{count}} plugins n’ont pas pu être chargés, leurs éléments sont donc masqués : {{names}}",
+    "framesFailedReload": "Recharger"
   },
   "settings": {
     "secretSet": "Défini",

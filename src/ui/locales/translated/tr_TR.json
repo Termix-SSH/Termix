@@ -836,7 +836,12 @@
     "editorUpdate": "Ana Bilgisayarı Güncelle",
     "editorAdd": "Ana Bilgisayar Ekle",
     "speedSearch": "Ana bilgisayarları ara. Seçmek için ok tuşları, bağlanmak için Enter, kapatmak için Esc",
-    "speedSearchList": "Ana bilgisayar listesi. Aramak için yazın veya / tuşuna basın."
+    "speedSearchList": "Ana bilgisayar listesi. Aramak için yazın veya / tuşuna basın.",
+    "openFromLink": {
+      "title": "{{name}} açsın mı?",
+      "description": "Bir bağlantı, Termix'in bu sunucuya bağlanmasını istedi.",
+      "confirm": "Bağlan"
+    }
   },
   "splitScreen": {
     "title": "Bölünmüş ekran",
@@ -1375,7 +1380,7 @@
         "running": "Çalışıyor",
         "disabled": "Devre dışı",
         "failed": "Beklenmedik şekilde durdu",
-        "blocked": "Başka bir eklentiyi bekliyor",
+        "blocked": "Başlatılamıyor",
         "server": "Sunucunuzda çalışır",
         "safeMode": "Güvenli modda kapalı"
       },
@@ -1461,6 +1466,8 @@
         "updated": "{{name}} {{version}} sürümüne güncellendi",
         "updatedMany_one": "{{count}} eklenti güncellendi",
         "updatedMany_other": "{{count}} eklenti güncellendi",
+        "needsReview_one": "1 eklenti yeni izinler istiyor. Güncellemek için gözden geçir.",
+        "needsReview_other": "{{count}} eklenti yeni izinler istiyor. Güncellemek için her birini gözden geçir.",
         "uninstalled": "{{name}} kaldırıldı",
         "dataDeleted": "{{name}} için veriler silindi",
         "failedToStart": "{{name}} başlatılamadı. Nedenini görmek için açın.",
@@ -1607,7 +1614,13 @@
         "unreachable": "Okunamadı: {{error}}",
         "filter": "Kayıt defteri",
         "allRegistries": "Tüm kayıt defterleri",
-        "browseHint": "Topluluk eklentilerini açın veya Kayıt Defterleri sekmesinden kendi kayıt defterinizi ekleyin."
+        "browseHint": "Topluluk eklentilerini açın veya Kayıt Defterleri sekmesinden kendi kayıt defterinizi ekleyin.",
+        "looksName": "Topluluk düzenleri ve temaları",
+        "looksHint": "Termix'ten olmayan düzen ve temaların, resmi olanlar gibi kum havuzunun dışında çalışmasına izin verir. Bir düzen tüm uygulamayı çizer, bu nedenle sizin görebileceğiniz ve yapabileceğiniz her şeyi görebilir ve yapabilir. Yalnızca güvendiğinizleri yükleyin. Bu ayarı değiştirdikten sonra sayfayı yeniden yükleyin.",
+        "looksConfirmTitle": "Topluluk düzenlerinin kum havuzunun dışında çalışmasına izin verilsin mi?",
+        "looksConfirmBody": "Bir topluluk düzeni veya teması, giriş yapan kullanıcı olarak Termix'e tam erişimle sayfada çalışacaktır. Bu riskli olabilir. Bu özelliği yalnızca yüklediğiniz düzen ve temalara güveniyorsanız açın.",
+        "looksConfirm": "Aç",
+        "looksSaved": "Kaydedildi. Uygulamak için sayfayı yeniden yükleyin."
       },
       "upToDate": "Her şey güncel.",
       "lastChecked": "Son kontrol {{time}}",
@@ -1704,9 +1717,14 @@
     "firstLoad": {
       "title": "Eklentiler hazırlanıyor",
       "progress": "{{total}}'den {{done}}",
-      "hint": "Bu sadece ilk seferde olur. Bir sonraki sefer Termix hemen açılır.",
+      "hint": "Eklentiler ilk kez başlatılıyor. Bundan sonra Termix hemen açılacak.",
       "skip": "Devam et"
-    }
+    },
+    "framesBlocked": "Eklentiler dosyalarını yükleyemiyor. Termix'in önündeki bir giriş vekil sunucusu (proxy) büyük olasılıkla bunları engelliyor.",
+    "framesBlockedHelp": "Nasıl düzeltilir",
+    "framesFailed_one": "{{names}} yüklenemediğinden bileşenleri gizlendi",
+    "framesFailed_other": "{{count}} eklenti yüklenemediğinden bileşenleri gizlendi: {{names}}",
+    "framesFailedReload": "Yenile"
   },
   "settings": {
     "secretSet": "Ayarlandı",

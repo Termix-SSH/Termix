@@ -848,7 +848,12 @@
     "editorUpdate": "Actualizează gazda",
     "editorAdd": "Adaugă gazdă",
     "speedSearch": "Caută gazde. Tastele săgeată pentru selectare, Enter pentru conectare, Esc pentru închidere",
-    "speedSearchList": "Lista de gazde. Tastează sau apasă / pentru căutare."
+    "speedSearchList": "Lista de gazde. Tastează sau apasă / pentru căutare.",
+    "openFromLink": {
+      "title": "Deschid {{name}}?",
+      "description": "Un link a cerut Termix să se conecteze la acest gazdă.",
+      "confirm": "Conectare"
+    }
   },
   "splitScreen": {
     "title": "Ecran divizat",
@@ -1392,7 +1397,7 @@
         "running": "În execuție",
         "disabled": "Dezactivat",
         "failed": "Oprit neașteptat",
-        "blocked": "Așteaptă un alt plugin",
+        "blocked": "Nu se poate porni",
         "server": "Rulează pe serverul tău",
         "safeMode": "Oprit în modul sigur"
       },
@@ -1490,6 +1495,9 @@
         "updatedMany_one": "{{count}} plugin actualizat",
         "updatedMany_few": "{{count}} plugin-uri actualizate",
         "updatedMany_other": "{{count}} plugin-uri actualizate",
+        "needsReview_one": "1 plugin solicită permisiuni noi. Revizuiește-l pentru a actualiza.",
+        "needsReview_few": "{{count}} plugin-uri solicită permisiuni noi. Revizuiește fiecare pentru a actualiza.",
+        "needsReview_other": "{{count}} plugin-uri solicită permisiuni noi. Revizuiește fiecare pentru a actualiza.",
         "uninstalled": "{{name}} dezinstalat",
         "dataDeleted": "Datele pentru {{name}} au fost șterse",
         "failedToStart": "{{name}} nu a putut porni. Deschide-l pentru a vedea de ce.",
@@ -1643,7 +1651,13 @@
         "unreachable": "Nu s-a putut citi: {{error}}",
         "filter": "Registrul",
         "allRegistries": "Toate registrele",
-        "browseHint": "Activează plugin-urile comunitare sau adaugă propriul registru în fila Registries."
+        "browseHint": "Activează plugin-urile comunitare sau adaugă propriul registru în fila Registries.",
+        "looksName": "Aspecte și teme comunitare",
+        "looksHint": "Permite aspectelor și temelor care nu sunt de la Termix să ruleze în afara sandbox-ului, ca cele oficiale. Un aspect desenează întreaga aplicație, așa că poate vedea și face orice poți face tu. Instalează doar cele în care ai încredere. Reîncarcă pagina după ce modifici această setare.",
+        "looksConfirmTitle": "Permiți aspectelor comunitare să ruleze în afara sandbox-ului?",
+        "looksConfirmBody": "Un aspect sau temă comunitară va rula în pagină cu acces complet la Termix ca persoana conectată. Acest lucru poate fi riscant. Activează această opțiune doar dacă ai încredere în aspectele și temele pe care le instalezi.",
+        "looksConfirm": "Activează",
+        "looksSaved": "Salvat. Reîncarcă pagina pentru a aplica modificările."
       },
       "upToDate": "Totul este la zi.",
       "lastChecked": "Ultima verificare {{time}}",
@@ -1744,9 +1758,15 @@
     "firstLoad": {
       "title": "Pregătirea pluginurilor",
       "progress": "{{done}} din {{total}}",
-      "hint": "Acest lucru se întâmplă doar prima dată. Data viitoare, Termix se va deschide imediat.",
+      "hint": "Plugin-urile se pornesc pentru prima dată. După aceasta, Termix se deschide imediat.",
       "skip": "Continuă"
-    }
+    },
+    "framesBlocked": "Plugin-urile nu își pot încărca fișierele. Un proxy de autentificare în fața Termix probabil le blochează.",
+    "framesBlockedHelp": "Cum se rezolvă",
+    "framesFailed_one": "{{names}} nu a putut fi încărcat, așa că componentele sale sunt ascunse",
+    "framesFailed_few": "{{count}} plugin-uri nu au putut fi încărcate, așa că componentele lor sunt ascunse: {{names}}",
+    "framesFailed_other": "{{count}} plugin-uri nu au putut fi încărcate, așa că componentele lor sunt ascunse: {{names}}",
+    "framesFailedReload": "Reîncarcă"
   },
   "settings": {
     "secretSet": "Setat",

@@ -860,7 +860,12 @@
     "editorUpdate": "Aktualizovať hostiteľa",
     "editorAdd": "Pridať hostiteľa",
     "speedSearch": "Hľadať hostiteľov. Šípky na výber, Enter na pripojenie, Esc na zatvorenie",
-    "speedSearchList": "Zoznam hostiteľov. Píšte alebo stlačte / na vyhľadávanie."
+    "speedSearchList": "Zoznam hostiteľov. Píšte alebo stlačte / na vyhľadávanie.",
+    "openFromLink": {
+      "title": "Otvoriť {{name}}?",
+      "description": "Odkaz požiadal Termix o pripojenie k tomuto hostiteľovi.",
+      "confirm": "Pripojiť"
+    }
   },
   "splitScreen": {
     "title": "Rozdelená obrazovka",
@@ -1409,7 +1414,7 @@
         "running": "Beží",
         "disabled": "Zakázané",
         "failed": "Neočakávane zastavené",
-        "blocked": "Čaká na iný plugin",
+        "blocked": "Nemožno spustiť",
         "server": "Beží na vašom serveri",
         "safeMode": "Vypnuté v režime bezpečnosti"
       },
@@ -1519,6 +1524,10 @@
         "updatedMany_few": "{{count}} pluginy aktualizované",
         "updatedMany_many": "{{count}} pluginov aktualizovaných",
         "updatedMany_other": "{{count}} plugin aktualizovaný",
+        "needsReview_one": "1 plugin vyžaduje nové oprávnenia. Skontrolujte ho pre aktualizáciu.",
+        "needsReview_few": "{{count}} pluginov vyžaduje nové oprávnenia. Skontrolujte každý z nich pre aktualizáciu.",
+        "needsReview_many": "{{count}} pluginov vyžaduje nové oprávnenia. Skontrolujte každý z nich pre aktualizáciu.",
+        "needsReview_other": "{{count}} pluginov vyžaduje nové oprávnenia. Skontrolujte každý z nich pre aktualizáciu.",
         "uninstalled": "{{name}} odinštalovaný",
         "dataDeleted": "Údaje pre {{name}} vymazané",
         "failedToStart": "{{name}} sa nepodarilo spustiť. Otvorte ho a zistite dôvod.",
@@ -1679,7 +1688,13 @@
         "unreachable": "Nepodarilo sa ho prečítať: {{error}}",
         "filter": "Registr",
         "allRegistries": "Všetky registry",
-        "browseHint": "Zapnite komunitné pluginy alebo pridajte vlastný registr v karte Registry."
+        "browseHint": "Zapnite komunitné pluginy alebo pridajte vlastný registr v karte Registry.",
+        "looksName": "Komunitné rozloženia a témy",
+        "looksHint": "Umožňuje rozloženiam a témam, ktoré nie sú od Termix, spúšťať sa mimo sandboxu, rovnako ako oficiálne. Rozloženie vykresľuje celú aplikáciu, takže môže vidieť a robiť všetko, čo viete vy. Inštalujte len tie, ktorým dôverujete. Po zmene túto možnosť obnovte stránku.",
+        "looksConfirmTitle": "Povoliť spúšťanie komunitných rozložením mimo sandboxu?",
+        "looksConfirmBody": "Komunitné rozloženie alebo téma bude spustená na stránke s plným prístupom k Termixu ako prihlásený používateľ. To môže byť rizikové. Túto možnosť zapnite len vtedy, ak dôverujete inštalovaným rozloženiam a témam.",
+        "looksConfirm": "Zapnúť",
+        "looksSaved": "Uložené. Obnovte stránku pre aplikovanie."
       },
       "upToDate": "Všetko je aktuálne.",
       "lastChecked": "Posledná kontrola {{time}}",
@@ -1784,9 +1799,16 @@
     "firstLoad": {
       "title": "Príprava pluginov",
       "progress": "{{done}} z {{total}}",
-      "hint": "To sa stane len prvýkrát. Ďalšíkrát sa Termix otvorí hneď.",
+      "hint": "Pluginy sa spúšťajú prvýkrát. Po tejto operácii sa Termix otvorí okamžite.",
       "skip": "Pokračovať"
-    }
+    },
+    "framesBlocked": "Pluginy nemôžu načítať svoje súbory. Pravdepodobne ich blokuje prihlasovací proxy pred Termixom.",
+    "framesBlockedHelp": "Ako opraviť",
+    "framesFailed_one": "{{names}} sa nepodarilo načítať, preto sú jeho časti skryté",
+    "framesFailed_few": "{{count}} pluginov sa nepodarilo načítať, preto sú ich časti skryté: {{names}}",
+    "framesFailed_many": "{{count}} pluginov sa nepodarilo načítať, preto sú ich časti skryté: {{names}}",
+    "framesFailed_other": "{{count}} pluginov sa nepodarilo načítať, preto sú ich časti skryté: {{names}}",
+    "framesFailedReload": "Obnoviť"
   },
   "settings": {
     "secretSet": "Nastavené",

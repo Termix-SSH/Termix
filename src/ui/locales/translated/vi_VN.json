@@ -824,7 +824,12 @@
     "editorUpdate": "Cập nhật máy chủ",
     "editorAdd": "Thêm máy chủ",
     "speedSearch": "Tìm kiếm máy chủ. Phím mũi tên để chọn, Enter để kết nối, Esc để đóng",
-    "speedSearchList": "Danh sách máy chủ. Nhập hoặc nhấn / để tìm kiếm."
+    "speedSearchList": "Danh sách máy chủ. Nhập hoặc nhấn / để tìm kiếm.",
+    "openFromLink": {
+      "title": "Mở {{name}}?",
+      "description": "Một liên kết yêu cầu Termix kết nối đến máy chủ này.",
+      "confirm": "Kết nối"
+    }
   },
   "splitScreen": {
     "title": "Chia màn hình",
@@ -1358,7 +1363,7 @@
         "running": "Đang chạy",
         "disabled": "Đã tắt",
         "failed": "Dừng bất ngờ",
-        "blocked": "Đang chờ plugin khác",
+        "blocked": "Không thể khởi động",
         "server": "Chạy trên máy chủ của bạn",
         "safeMode": "Tắt trong chế độ an toàn"
       },
@@ -1432,6 +1437,7 @@
         "installedNotRunning": "{{name}} đã được cài đặt nhưng không thể khởi động. Mở nó để xem lý do.",
         "updated": "{{name}} đã được cập nhật lên {{version}}",
         "updatedMany_other": "{{count}} plugin đã được cập nhật",
+        "needsReview_other": "{{count}} plugin yêu cầu quyền mới. Hãy xem xét để cập nhật.",
         "uninstalled": "{{name}} đã được gỡ cài đặt",
         "dataDeleted": "Dữ liệu của {{name}} đã được xóa",
         "failedToStart": "{{name}} không thể khởi động. Mở nó để xem lý do.",
@@ -1571,7 +1577,13 @@
         "unreachable": "Không thể đọc: {{error}}",
         "filter": "Registry",
         "allRegistries": "Tất cả registry",
-        "browseHint": "Bật plugin cộng đồng hoặc thêm registry của riêng bạn trong tab Registries."
+        "browseHint": "Bật plugin cộng đồng hoặc thêm registry của riêng bạn trong tab Registries.",
+        "looksName": "Bố cục và chủ đề từ cộng đồng",
+        "looksHint": "Cho phép các bố cục và chủ đề không phải của Termix chạy ngoài môi trường cách ly, giống như các bản chính thức. Bố cục vẽ toàn bộ ứng dụng, nên nó có thể xem và thực hiện mọi thứ bạn có thể. Chỉ cài đặt những thứ bạn tin tưởng. Tải lại trang sau khi thay đổi cài đặt này.",
+        "looksConfirmTitle": "Cho phép bố cục từ cộng đồng chạy ngoài môi trường cách ly?",
+        "looksConfirmBody": "Bố cục hoặc chủ đề từ cộng đồng sẽ chạy trên trang với quyền truy cập đầy đủ vào Termix dưới danh nghĩa người dùng đang đăng nhập. Điều này có thể gây rủi ro. Chỉ bật tính năng này nếu bạn tin tưởng các bố cục và chủ đề mình cài đặt.",
+        "looksConfirm": "Bật",
+        "looksSaved": "Đã lưu. Tải lại trang để áp dụng."
       },
       "upToDate": "Mọi thứ đều đã cập nhật.",
       "lastChecked": "Lần kiểm tra cuối cùng {{time}}",
@@ -1664,9 +1676,13 @@
     "firstLoad": {
       "title": "Đang chuẩn bị plugin",
       "progress": "{{done}} trên {{total}}",
-      "hint": "Điều này chỉ xảy ra lần đầu. Lần sau Termix sẽ mở ngay lập tức.",
+      "hint": "Các plugin đang khởi động lần đầu. Sau đó, Termix sẽ mở ngay lập tức.",
       "skip": "Tiếp tục"
-    }
+    },
+    "framesBlocked": "Plugin không thể tải tệp của chúng. Một proxy đăng nhập đặt trước Termix có thể đang chặn chúng.",
+    "framesBlockedHelp": "Cách khắc phục",
+    "framesFailed_other": "{{count}} plugin không thể tải, nên các phần của chúng bị ẩn: {{names}}",
+    "framesFailedReload": "Tải lại"
   },
   "settings": {
     "secretSet": "Đã đặt",

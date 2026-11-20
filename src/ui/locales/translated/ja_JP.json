@@ -824,7 +824,12 @@
     "editorUpdate": "ホストを更新",
     "editorAdd": "ホストを追加",
     "speedSearch": "ホストを検索。矢印キーで選択、Enter で接続、Esc で閉じる",
-    "speedSearchList": "ホスト一覧。入力するか / を押して検索"
+    "speedSearchList": "ホスト一覧。入力するか / を押して検索",
+    "openFromLink": {
+      "title": "「{{name}}」を開きますか？",
+      "description": "リンクから、このホストへの接続を Termix に要求しました。",
+      "confirm": "接続"
+    }
   },
   "splitScreen": {
     "title": "分割画面",
@@ -1358,7 +1363,7 @@
         "running": "実行中",
         "disabled": "無効",
         "failed": "予期せず停止",
-        "blocked": "他のプラグインを待機中",
+        "blocked": "起動できません",
         "server": "サーバー上で実行",
         "safeMode": "セーフモードで無効"
       },
@@ -1432,6 +1437,7 @@
         "installedNotRunning": "{{name}} がインストールされましたが、起動できませんでした。理由を確認するには開いてください。",
         "updated": "{{name}} が {{version}} に更新されました",
         "updatedMany_other": "{{count}} 個のプラグインが更新されました",
+        "needsReview_other": "{{count}}個のプラグインが新しい権限を要求しています。更新するには確認してください。",
         "uninstalled": "{{name}} がアンインストールされました",
         "dataDeleted": "{{name}} のデータが削除されました",
         "failedToStart": "{{name}} が起動できませんでした。理由を確認するには開いてください。",
@@ -1571,7 +1577,13 @@
         "unreachable": "読み取れませんでした: {{error}}",
         "filter": "レジストリ",
         "allRegistries": "すべてのレジストリ",
-        "browseHint": "コミュニティプラグインを有効にするか、レジストリタブで独自のレジストリを追加してください。"
+        "browseHint": "コミュニティプラグインを有効にするか、レジストリタブで独自のレジストリを追加してください。",
+        "looksName": "コミュニティのレイアウトとテーマ",
+        "looksHint": "Termix 公式以外のレイアウトやテーマを、公式と同じくサンドボックス外で実行できるようにします。レイアウトはアプリ全体を描画するため、ユーザーが行える操作をすべて実行・閲覧できます。信頼できるもののみインストールしてください。変更後はページを再読み込みしてください。",
+        "looksConfirmTitle": "コミュニティのレイアウトをサンドボックス外で実行しますか？",
+        "looksConfirmBody": "コミュニティのレイアウトやテーマは、ログイン中のユーザーとして Termix に完全なアクセス権を持ってページ内で実行されます。リスクを伴う可能性があります。インストールするレイアウトやテーマを信頼している場合のみ、この機能を有効にしてください。",
+        "looksConfirm": "有効にする",
+        "looksSaved": "保存しました。適用するにはページを再読み込みしてください。"
       },
       "upToDate": "すべて最新です。",
       "lastChecked": "最終確認: {{time}}",
@@ -1664,9 +1676,13 @@
     "firstLoad": {
       "title": "プラグインの準備中",
       "progress": "{{done}} / {{total}}",
-      "hint": "これは初回のみ発生します。次回以降はTermixはすぐに開きます。",
+      "hint": "プラグインが初めて起動しています。次回以降、Termix はすぐに起動します。",
       "skip": "続行"
-    }
+    },
+    "framesBlocked": "プラグインがファイルをロードできません。Termix の前にあるログインプロキシがブロックしている可能性があります。",
+    "framesBlockedHelp": "修正方法",
+    "framesFailed_other": "{{count}}個のプラグインがロードできなかったため、その要素は非表示になっています：{{names}}",
+    "framesFailedReload": "再読み込み"
   },
   "settings": {
     "secretSet": "設定済み",

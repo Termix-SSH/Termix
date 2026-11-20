@@ -824,7 +824,12 @@
     "editorUpdate": "호스트 업데이트",
     "editorAdd": "호스트 추가",
     "speedSearch": "호스트 검색. 화살표 키로 선택, Enter로 연결, Esc로 닫기",
-    "speedSearchList": "호스트 목록. 입력하거나 /를 눌러 검색하세요."
+    "speedSearchList": "호스트 목록. 입력하거나 /를 눌러 검색하세요.",
+    "openFromLink": {
+      "title": "“{{name}}”을(를) 열까요?",
+      "description": "링크가 Termix에 이 호스트에 연결하도록 요청했습니다.",
+      "confirm": "연결"
+    }
   },
   "splitScreen": {
     "title": "분할 화면",
@@ -1358,7 +1363,7 @@
         "running": "실행 중",
         "disabled": "비활성화됨",
         "failed": "예기치 않게 중지됨",
-        "blocked": "다른 플러그인 대기 중",
+        "blocked": "시작할 수 없음",
         "server": "서버에서 실행 중",
         "safeMode": "안전 모드에서 꺼짐"
       },
@@ -1432,6 +1437,7 @@
         "installedNotRunning": "{{name}}이(가) 설치되었지만 시작하지 못했습니다. 이유를 보려면 열어보세요.",
         "updated": "{{name}}이(가) {{version}}(으)로 업데이트됨",
         "updatedMany_other": "{{count}}개 플러그인 업데이트됨",
+        "needsReview_other": "새 권한을 요청하는 플러그인이 {{count}}개 있습니다. 업데이트하려면 각각 검토하세요.",
         "uninstalled": "{{name}} 제거됨",
         "dataDeleted": "{{name}}의 데이터 삭제됨",
         "failedToStart": "{{name}}을(를) 시작하지 못했습니다. 이유를 보려면 열어보세요.",
@@ -1571,7 +1577,13 @@
         "unreachable": "읽을 수 없습니다: {{error}}",
         "filter": "레지스트리",
         "allRegistries": "모든 레지스트리",
-        "browseHint": "커뮤니티 플러그인을 활성화하거나 레지스트리 탭에서 사용자 정의 레지스트리를 추가하세요."
+        "browseHint": "커뮤니티 플러그인을 활성화하거나 레지스트리 탭에서 사용자 정의 레지스트리를 추가하세요.",
+        "looksName": "커뮤니티 레이아웃 및 테마",
+        "looksHint": "Termix가 아닌 레이아웃과 테마가 공식 테마처럼 샌드박스 외부에서 실행되도록 합니다. 레이아웃은 전체 앱을 그리므로 사용자가 할 수 있는 모든 작업을 볼 수 있고 수행할 수 있습니다. 신뢰할 수 있는 것만 설치하세요. 이 설정을 변경한 후 페이지를 새로고침하세요.",
+        "looksConfirmTitle": "커뮤니티 레이아웃을 샌드박스 외부에서 실행하도록 허용할까요?",
+        "looksConfirmBody": "커뮤니티 레이아웃 또는 테마가 로그인한 사용자와 동일한 권한으로 Termix에 완전히 접근하여 페이지에서 실행됩니다. 이는 위험할 수 있습니다. 설치하는 레이아웃과 테마를 신뢰하는 경우에만 이 기능을 켜세요.",
+        "looksConfirm": "켜기",
+        "looksSaved": "저장되었습니다. 적용하려면 페이지를 새로고침하세요."
       },
       "upToDate": "모든 항목이 최신 상태입니다.",
       "lastChecked": "마지막 확인: {{time}}",
@@ -1664,9 +1676,13 @@
     "firstLoad": {
       "title": "플러그인 준비 중",
       "progress": "{{total}} 중 {{done}}",
-      "hint": "이것은 처음 한 번만 발생합니다. 다음에는 Termix가 즉시 열립니다.",
+      "hint": "플러그인이 처음 시작되고 있습니다. 이 작업이 완료되면 Termix가 바로 열립니다.",
       "skip": "계속"
-    }
+    },
+    "framesBlocked": "플러그인이 파일을 로드할 수 없습니다. Termix 앞에 있는 로그인 프록시가 이를 차단하고 있을 가능성이 높습니다.",
+    "framesBlockedHelp": "해결 방법",
+    "framesFailed_other": "{{count}}개의 플러그인을 로드할 수 없어 해당 요소가 숨겨졌습니다: {{names}}",
+    "framesFailedReload": "새로고침"
   },
   "settings": {
     "secretSet": "설정됨",

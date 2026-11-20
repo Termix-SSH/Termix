@@ -848,7 +848,12 @@
     "editorUpdate": "Actualitzar host",
     "editorAdd": "Afegir host",
     "speedSearch": "Cercar hosts. Fletxes per seleccionar, Retorn per connectar, Esc per tancar",
-    "speedSearchList": "Llista d'hosts. Escriviu o premeu / per cercar."
+    "speedSearchList": "Llista d'hosts. Escriviu o premeu / per cercar.",
+    "openFromLink": {
+      "title": "Obrir {{name}}?",
+      "description": "Un enllaç ha demanat a Termix que es connecti a aquest host.",
+      "confirm": "Connectar"
+    }
   },
   "splitScreen": {
     "title": "Pantalla dividida",
@@ -1392,7 +1397,7 @@
         "running": "En execució",
         "disabled": "Desactivat",
         "failed": "Aturat inesperadament",
-        "blocked": "Esperant un altre plugin",
+        "blocked": "No es pot iniciar",
         "server": "S'executa al teu servidor",
         "safeMode": "Desactivat en mode segur"
       },
@@ -1490,6 +1495,9 @@
         "updatedMany_one": "{{count}} complement actualitzat",
         "updatedMany_many": "{{count}} complements actualitzats",
         "updatedMany_other": "{{count}} complements actualitzats",
+        "needsReview_one": "1 complement demana nous permisos. Revisa'l per actualitzar-lo.",
+        "needsReview_many": "{{count}} complements demanen nous permisos. Revisa'ls un per un per actualitzar-los.",
+        "needsReview_other": "{{count}} complements demanen nous permisos. Revisa'ls un per un per actualitzar-los.",
         "uninstalled": "{{name}} desinstal·lat",
         "dataDeleted": "Dades de {{name}} eliminades",
         "failedToStart": "{{name}} no s'ha pogut iniciar. Obre'l per veure per què.",
@@ -1643,7 +1651,13 @@
         "unreachable": "No s'ha pogut llegir: {{error}}",
         "filter": "Registre",
         "allRegistries": "Tots els registres",
-        "browseHint": "Activa els connectors de la comunitat o afegeix el teu propi registre a la pestanya Registres."
+        "browseHint": "Activa els connectors de la comunitat o afegeix el teu propi registre a la pestanya Registres.",
+        "looksName": "Disseny i temes de la comunitat",
+        "looksHint": "Permet que els dissenys i temes que no són de Termix s'executin fora del sandbox, com els oficials. Un disseny dibuixa tota l'aplicació, per la qual cosa pot veure i fer tot el que puguis fer tu. Instal·la només els que confiïs. Recarrega la pàgina després de canviar això.",
+        "looksConfirmTitle": "Permetre que els dissenys de la comunitat s'executin fora del sandbox?",
+        "looksConfirmBody": "Un disseny o tema de la comunitat s'executarà a la pàgina amb accés complet a Termix com a l'usuari que ha iniciat sessió. Això pot ser arriscat. Activa-ho només si confiïs en els dissenys i temes que instal·lis.",
+        "looksConfirm": "Activar",
+        "looksSaved": "Desat. Recarrega la pàgina per aplicar-ho."
       },
       "upToDate": "Tot està actualitzat.",
       "lastChecked": "Última comprovació: {{time}}",
@@ -1744,9 +1758,15 @@
     "firstLoad": {
       "title": "Preparant els connectors",
       "progress": "{{done}} de {{total}}",
-      "hint": "Això només passa la primera vegada. La propera vegada Termix s'obrirà immediatament.",
+      "hint": "Els complements s'estan iniciant per primera vegada. Després d'això, Termix s'obrirà immediatament.",
       "skip": "Continua"
-    }
+    },
+    "framesBlocked": "Els complements no poden carregar els seus fitxers. És probable que un proxy d'inici de sessió davant de Termix els estigui bloquejant.",
+    "framesBlockedHelp": "Com solucionar-ho",
+    "framesFailed_one": "{{names}} no s'ha pogut carregar, per la qual cosa les seves parts estan ocultes",
+    "framesFailed_many": "{{count}} complements no s'han pogut carregar, per la qual cosa les seves parts estan ocultes: {{names}}",
+    "framesFailed_other": "{{count}} complements no s'han pogut carregar, per la qual cosa les seves parts estan ocultes: {{names}}",
+    "framesFailedReload": "Recarregar"
   },
   "settings": {
     "secretSet": "Establert",

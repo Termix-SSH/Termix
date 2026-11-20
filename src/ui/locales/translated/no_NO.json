@@ -836,7 +836,12 @@
     "editorUpdate": "Oppdater vert",
     "editorAdd": "Legg til vert",
     "speedSearch": "Søk etter vertene. Piltaster for å velge, Enter for å koble til, Esc for å lukke",
-    "speedSearchList": "Vertliste. Skriv eller trykk / for å søke."
+    "speedSearchList": "Vertliste. Skriv eller trykk / for å søke.",
+    "openFromLink": {
+      "title": "Åpne {{name}}?",
+      "description": "En lenke ba Termix koble til denne verten.",
+      "confirm": "Koble til"
+    }
   },
   "splitScreen": {
     "title": "Delt skjerm",
@@ -1375,7 +1380,7 @@
         "running": "Kjører",
         "disabled": "Deaktivert",
         "failed": "Stoppet uventet",
-        "blocked": "Venter på et annet plugin",
+        "blocked": "Kan ikke starte",
         "server": "Kjører på serveren din",
         "safeMode": "Av i sikker modus"
       },
@@ -1461,6 +1466,8 @@
         "updated": "{{name}} oppdatert til {{version}}",
         "updatedMany_one": "{{count}} plugin oppdatert",
         "updatedMany_other": "{{count}} plugins oppdatert",
+        "needsReview_one": "1 programtillegg ber om nye tillatelser. Se det gjennom for å oppdatere.",
+        "needsReview_other": "{{count}} programtillegg ber om nye tillatelser. Se hvert enkelt gjennom for å oppdatere.",
         "uninstalled": "{{name}} avinstallert",
         "dataDeleted": "Data for {{name}} slettet",
         "failedToStart": "{{name}} kunne ikke starte. Åpne den for å se hvorfor.",
@@ -1607,7 +1614,13 @@
         "unreachable": "Kunne ikke lese det: {{error}}",
         "filter": "Register",
         "allRegistries": "Alle registre",
-        "browseHint": "Aktiver fellesskapstillegg eller legg til ditt eget register i fanen Register."
+        "browseHint": "Aktiver fellesskapstillegg eller legg til ditt eget register i fanen Register.",
+        "looksName": "Samfunnsoppsett og temaer",
+        "looksHint": "Tillater at oppsett og temaer som ikke er fra Termix, kjører utenfor sandkassen, som de offisielle. Et oppsett tegner hele appen, så det kan se og gjøre alt du kan. Installer kun de du stoler på. Last inn siden på nytt etter å ha endret dette.",
+        "looksConfirmTitle": "Tillate at samfunnsoppsett kjører utenfor sandkassen?",
+        "looksConfirmBody": "Et samfunnsoppsett eller tema vil kjøre i siden med full tilgang til Termix som den som er logget inn. Dette kan være risikabelt. Slå dette kun på hvis du stoler på oppsettene og temaene du installerer.",
+        "looksConfirm": "Slå på",
+        "looksSaved": "Lagret. Last inn siden på nytt for å anvende endringen."
       },
       "upToDate": "Alt er oppdatert.",
       "lastChecked": "Sist sjekket {{time}}",
@@ -1704,9 +1717,14 @@
     "firstLoad": {
       "title": "Forbereder tilleg",
       "progress": "{{done}} av {{total}}",
-      "hint": "Dette skjer bare første gang. Neste gang åpner Termix med en gang.",
+      "hint": "Programtillegg starter for første gang. Etter dette åpnes Termix med en gang.",
       "skip": "Fortsett"
-    }
+    },
+    "framesBlocked": "Programtillegg kan ikke laste filene sine. En pålogging-proxy foran Termix blokkerer dem sannsynligvis.",
+    "framesBlockedHelp": "Slik fikser du det",
+    "framesFailed_one": "{{names}} kunne ikke lastes, så delene er skjult",
+    "framesFailed_other": "{{count}} programtillegg kunne ikke lastes, så delene er skjult: {{names}}",
+    "framesFailedReload": "Last inn på nytt"
   },
   "settings": {
     "secretSet": "Angitt",

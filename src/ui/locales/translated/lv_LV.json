@@ -848,7 +848,12 @@
     "editorUpdate": "Atjaunināt hostu",
     "editorAdd": "Pievienot hostu",
     "speedSearch": "Meklēt hostus. Bultiņu taustiņi izvēlei, Enter savienošanai, Esc aizvēršanai",
-    "speedSearchList": "Hostu saraksts. Rakstiet vai nospiediet /, lai meklētu."
+    "speedSearchList": "Hostu saraksts. Rakstiet vai nospiediet /, lai meklētu.",
+    "openFromLink": {
+      "title": "Atvērt {{name}}?",
+      "description": "Saite lūdza Termix izveidot savienojumu ar šo serveri.",
+      "confirm": "Savienoties"
+    }
   },
   "splitScreen": {
     "title": "Sadālīts ekrāns",
@@ -1392,7 +1397,7 @@
         "running": "Darbojas",
         "disabled": "Atspējots",
         "failed": "Gaidāms apstājās",
-        "blocked": "Gaida citu spraudni",
+        "blocked": "Nevar palaist",
         "server": "Darbojas jūsu serverī",
         "safeMode": "Izslēgts drošajā režīmā"
       },
@@ -1490,6 +1495,9 @@
         "updatedMany_zero": "0 spraudņi atjaunināti",
         "updatedMany_one": "{{count}} spraudnis atjaunināts",
         "updatedMany_other": "{{count}} spraudņi atjaunināti",
+        "needsReview_zero": "Papildinājumi prasa jaunas atļaujas. Pārskatiet tos, lai atjauninātu.",
+        "needsReview_one": "1 papildinājums prasa jaunas atļaujas. Pārskatiet to, lai atjauninātu.",
+        "needsReview_other": "{{count}} papildinājumi prasa jaunas atļaujas. Pārskatiet katru, lai atjauninātu.",
         "uninstalled": "{{name}} atinstalēts",
         "dataDeleted": "{{name}} dati dzēsti",
         "failedToStart": "{{name}} neizdevās palaist. Atveriet to, lai redzētu iemeslu.",
@@ -1643,7 +1651,13 @@
         "unreachable": "Neizdevās to izlasīt: {{error}}",
         "filter": "Reģistrs",
         "allRegistries": "Visi reģistri",
-        "browseHint": "Ieslēdziet kopienas spraudņus vai pievienojiet savu reģistru cilnē „Reģistri”."
+        "browseHint": "Ieslēdziet kopienas spraudņus vai pievienojiet savu reģistru cilnē „Reģistri”.",
+        "looksName": "Kopienas izkārtojumi un temas",
+        "looksHint": "Ļauj izkārtojumiem un temām, kas nav no Termix, darboties ārpus drošības vides, tāpat kā oficiālajiem. Izkārtojums zīmē visu lietotni, tāpēc tam ir piekļuve un iespējas, kas ir arī jums. Instalējiet tikai tos, kam uzticat. Pēc šīs izmaiņas pārlādējiet lapu.",
+        "looksConfirmTitle": "Ļaut kopienas izkārtojumiem darboties ārpus drošības vides?",
+        "looksConfirmBody": "Kopienas izkārtojums vai tēma darbosies lapā ar pilnu piekļuvi Termix kā pašlaik pieteikušajam lietotājam. Tas var būt riskanti. Ieslēdziet šo opciju tikai tad, ja uzticat instalētajiem izkārtojumiem un temām.",
+        "looksConfirm": "Ieslēgt",
+        "looksSaved": "Saglabāts. Pārlādējiet lapu, lai izmaiņas stāsp spēkā."
       },
       "upToDate": "Viss ir jaunākajā versijā.",
       "lastChecked": "Pēdējo reizi pārbaudīts {{time}}",
@@ -1744,9 +1758,15 @@
     "firstLoad": {
       "title": "Sagatavo spraudņus",
       "progress": "{{done}} no {{total}}",
-      "hint": "Tas notiek tikai pirmo reizi. Nākamreiz Termix atvērsies uzreiz.",
+      "hint": "Papildinājumi tiek palaisti pirmo reizi. Pēc šī procesa Termix atvērsies uzreiz.",
       "skip": "Turpināt"
-    }
+    },
+    "framesBlocked": "Papildinājumi nevar ielādēt savus failus. Iespējams, Termix priekšā esošs pieteikšanās starpniekserveris tos bloķē.",
+    "framesBlockedHelp": "Kā novērst",
+    "framesFailed_zero": "Papildinājumi nevarēja ielādēties, tāpēc to elementi ir paslēpti: {{names}}",
+    "framesFailed_one": "{{names}} nevarēja ielādēties, tāpēc tā elementi ir paslēpti",
+    "framesFailed_other": "{{count}} papildinājumi nevarēja ielādēties, tāpēc to elementi ir paslēpti: {{names}}",
+    "framesFailedReload": "Pārlādēt"
   },
   "settings": {
     "secretSet": "Iestatīts",

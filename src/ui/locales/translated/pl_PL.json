@@ -860,7 +860,12 @@
     "editorUpdate": "Aktualizuj hosta",
     "editorAdd": "Dodaj hosta",
     "speedSearch": "Szukaj hostów. Strzałki do wyboru, Enter do połączenia, Esc do zamknięcia",
-    "speedSearchList": "Lista hostów. Pisz lub naciśnij / aby szukać."
+    "speedSearchList": "Lista hostów. Pisz lub naciśnij / aby szukać.",
+    "openFromLink": {
+      "title": "Otworzyć {{name}}?",
+      "description": "Link poprosił Termix o połączenie z tym hostem.",
+      "confirm": "Połącz"
+    }
   },
   "splitScreen": {
     "title": "Podzielony ekran",
@@ -1409,7 +1414,7 @@
         "running": "Uruchomione",
         "disabled": "Wyłączone",
         "failed": "Zatrzymane nieoczekiwanie",
-        "blocked": "Oczekiwanie na inną wtyczkę",
+        "blocked": "Nie można uruchomić",
         "server": "Uruchamiane na Twoim serwerze",
         "safeMode": "Wyłączone w trybie awaryjnym"
       },
@@ -1519,6 +1524,10 @@
         "updatedMany_few": "{{count}} wtyczki zaktualizowane",
         "updatedMany_many": "{{count}} zaktualizowanych wtyczek",
         "updatedMany_other": "{{count}} wtyczki zaktualizowane",
+        "needsReview_one": "1 wtyczka prosi o nowe uprawnienia. Przeglądaj ją, aby zaktualizować.",
+        "needsReview_few": "{{count}} wtyczek prosi o nowe uprawnienia. Przeglądaj każdą z nich, aby zaktualizować.",
+        "needsReview_many": "{{count}} wtyczek prosi o nowe uprawnienia. Przeglądaj każdą z nich, aby zaktualizować.",
+        "needsReview_other": "{{count}} wtyczek prosi o nowe uprawnienia. Przeglądaj każdą z nich, aby zaktualizować.",
         "uninstalled": "{{name}} odinstalowane",
         "dataDeleted": "Dane dla {{name}} usunięte",
         "failedToStart": "Nie udało się uruchomić {{name}}. Otwórz, aby zobaczyć przyczynę.",
@@ -1679,7 +1688,13 @@
         "unreachable": "Nie udało się odczytać: {{error}}",
         "filter": "Rejestr",
         "allRegistries": "Wszystkie rejestry",
-        "browseHint": "Włącz wtyczki społecznościowe lub dodaj własny rejestr w zakładce Rejestry."
+        "browseHint": "Włącz wtyczki społecznościowe lub dodaj własny rejestr w zakładce Rejestry.",
+        "looksName": "Układy i motywy społeczności",
+        "looksHint": "Pozwala układom i motywom spoza Termix działać poza piaskownicą, tak jak oficjalne. Układ rysuje całą aplikację, więc może widzieć i robić wszystko, co Ty. Instaluj tylko te, którym ufasz. Odśwież stronę po zmianie tej opcji.",
+        "looksConfirmTitle": "Pozwolić układom społeczności działać poza piaskownicą?",
+        "looksConfirmBody": "Układ lub motyw społeczności będzie działał na stronie z pełnym dostępem do Termix jako zalogowany użytkownik. To może być ryzykowne. Włącz tę opcję tylko wtedy, gdy ufasz instalowanym układom i motywom.",
+        "looksConfirm": "Włącz",
+        "looksSaved": "Zapisano. Odśwież stronę, aby zastosować zmiany."
       },
       "upToDate": "Wszystko jest aktualne.",
       "lastChecked": "Ostatnio sprawdzono {{time}}",
@@ -1784,9 +1799,16 @@
     "firstLoad": {
       "title": "Przygotowywanie wtyczek",
       "progress": "{{done}} z {{total}}",
-      "hint": "Dzieje się to tylko za pierwszym razem. Następnym razem Termix otworzy się od razu.",
+      "hint": "Wtyczki uruchamiają się po raz pierwszy. Po tym Termix będzie otwierać się od razu.",
       "skip": "Kontynuuj"
-    }
+    },
+    "framesBlocked": "Wtyczki nie mogą załadować swoich plików. Prawdopodobnie proxy logowania przed Termixem je blokuje.",
+    "framesBlockedHelp": "Jak naprawić",
+    "framesFailed_one": "{{names}} nie mógł się załadować, więc jego elementy są ukryte",
+    "framesFailed_few": "{{count}} wtyczek nie mogło się załadować, więc ich elementy są ukryte: {{names}}",
+    "framesFailed_many": "{{count}} wtyczek nie mogło się załadować, więc ich elementy są ukryte: {{names}}",
+    "framesFailed_other": "{{count}} wtyczek nie mogło się załadować, więc ich elementy są ukryte: {{names}}",
+    "framesFailedReload": "Odśwież"
   },
   "settings": {
     "secretSet": "Ustawione",

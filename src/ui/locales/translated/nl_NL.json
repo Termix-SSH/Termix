@@ -836,7 +836,12 @@
     "editorUpdate": "Host bijwerken",
     "editorAdd": "Host toevoegen",
     "speedSearch": "Zoek hosts. Pijltjestoetsen om te selecteren, Enter om te verbinden, Esc om te sluiten",
-    "speedSearchList": "Hostlijst. Typ of druk op / om te zoeken."
+    "speedSearchList": "Hostlijst. Typ of druk op / om te zoeken.",
+    "openFromLink": {
+      "title": "Open {{name}}?",
+      "description": "Een link vroeg Termix om verbinding te maken met deze host.",
+      "confirm": "Verbinden"
+    }
   },
   "splitScreen": {
     "title": "Gesplitst scherm",
@@ -1375,7 +1380,7 @@
         "running": "Actief",
         "disabled": "Uitgeschakeld",
         "failed": "Onverwacht gestopt",
-        "blocked": "Wachten op een andere plugin",
+        "blocked": "Kan niet starten",
         "server": "Wordt uitgevoerd op je server",
         "safeMode": "Uitgeschakeld in veilige modus"
       },
@@ -1461,6 +1466,8 @@
         "updated": "{{name}} bijgewerkt naar {{version}}",
         "updatedMany_one": "{{count}} plugin bijgewerkt",
         "updatedMany_other": "{{count}} plugins bijgewerkt",
+        "needsReview_one": "1 plugin vraagt om nieuwe machtigingen. Beoordeel deze om te updaten.",
+        "needsReview_other": "{{count}} plugins vragen om nieuwe machtigingen. Beoordeel ze allemaal om te updaten.",
         "uninstalled": "{{name}} verwijderd",
         "dataDeleted": "Gegevens voor {{name}} verwijderd",
         "failedToStart": "{{name}} kon niet starten. Open het om te zien waarom.",
@@ -1607,7 +1614,13 @@
         "unreachable": "Kon het niet lezen: {{error}}",
         "filter": "Register",
         "allRegistries": "Alle registers",
-        "browseHint": "Schakel community-plugins in of voeg je eigen register toe op het tabblad Registers."
+        "browseHint": "Schakel community-plugins in of voeg je eigen register toe op het tabblad Registers.",
+        "looksName": "Community-indelingen en thema's",
+        "looksHint": "Laat indelingen en thema's die niet van Termix zijn, buiten de sandbox draaien, net als de officiële. Een indeling tekent de hele app, dus het kan alles zien en doen wat jij kunt. Installeer alleen die je vertrouwt. Herlaad de pagina na het wijzigen hiervan.",
+        "looksConfirmTitle": "Community-indelingen buiten de sandbox laten draaien?",
+        "looksConfirmBody": "Een community-indeling of thema zal in de pagina draaien met volledige toegang tot Termix als de ingelogde gebruiker. Dit kan riskant zijn. Zet dit alleen aan als je de geïnstalleerde indelingen en thema's vertrouwt.",
+        "looksConfirm": "Inschakelen",
+        "looksSaved": "Opgeslagen. Herlaad de pagina om dit toe te passen."
       },
       "upToDate": "Alles is bijgewerkt.",
       "lastChecked": "Laatst gecontroleerd {{time}}",
@@ -1704,9 +1717,14 @@
     "firstLoad": {
       "title": "Plugins voorbereiden",
       "progress": "{{done}} van {{total}}",
-      "hint": "Dit gebeurt alleen de eerste keer. De volgende keer opent Termix direct.",
+      "hint": "Plugins starten voor de eerste keer. Daarna opent Termix direct.",
       "skip": "Doorgaan"
-    }
+    },
+    "framesBlocked": "Plugins kunnen hun bestanden niet laden. Een login-proxy voor Termix blokkeert ze waarschijnlijk.",
+    "framesBlockedHelp": "Hoe op te lossen",
+    "framesFailed_one": "{{names}} kon niet worden geladen, dus zijn onderdelen zijn verborgen",
+    "framesFailed_other": "{{count}} plugins konden niet worden geladen, dus hun onderdelen zijn verborgen: {{names}}",
+    "framesFailedReload": "Herladen"
   },
   "settings": {
     "secretSet": "Ingesteld",

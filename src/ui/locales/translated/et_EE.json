@@ -836,7 +836,12 @@
     "editorUpdate": "Uuenda hosti",
     "editorAdd": "Lisa host",
     "speedSearch": "Otsi hoste. Nooleklahvid valimiseks, Enter ühendamiseks, Esc sulgemiseks",
-    "speedSearchList": "Hostide loend. Tüüpi või vajuta / otsimiseks."
+    "speedSearchList": "Hostide loend. Tüüpi või vajuta / otsimiseks.",
+    "openFromLink": {
+      "title": "Avada {{name}}?",
+      "description": "Ühenduslink palus Termixil sellele hostiga ühendust võtta.",
+      "confirm": "Ühendu"
+    }
   },
   "splitScreen": {
     "title": "Jagatud ekraan",
@@ -1375,7 +1380,7 @@
         "running": "Käimas",
         "disabled": "Keelatud",
         "failed": "Peatati ootamatult",
-        "blocked": "Ootab teist pistikprogrammi",
+        "blocked": "Ei saa käivitada",
         "server": "Töötab sinu serveris",
         "safeMode": "Turvarežiimis välja lülitatud"
       },
@@ -1461,6 +1466,8 @@
         "updated": "{{name}} uuendatud versioonile {{version}}",
         "updatedMany_one": "{{count}} pistikprogramm uuendatud",
         "updatedMany_other": "{{count}} pistikprogrammi uuendatud",
+        "needsReview_one": "1 pistmiku jaoks on vaja uusi õigusi. Uuendamiseks vaata seda läbi.",
+        "needsReview_other": "{{count}} pistmiku jaoks on vaja uusi õigusi. Uuendamiseks vaata igaühte läbi.",
         "uninstalled": "{{name}} eemaldatud",
         "dataDeleted": "{{name}} andmed kustutatud",
         "failedToStart": "{{name}} ei suutnud käivituda. Ava see, et näha põhjust.",
@@ -1607,7 +1614,13 @@
         "unreachable": "Selle lugemine ei õnnestunud: {{error}}",
         "filter": "Registri",
         "allRegistries": "Kõik registrid",
-        "browseHint": "Lülitage sisse kogukonna pluginad või lisage oma registri Registrid-kaardil."
+        "browseHint": "Lülitage sisse kogukonna pluginad või lisage oma registri Registrid-kaardil.",
+        "looksName": "Kogukonna paigutused ja teemad",
+        "looksHint": "Lubab Termixist mitte pärit paigutustel ja teemadel töötada väljaspool liivakasti, nagu ametlikud. Paigutus joonistab kogu rakenduse, seega näeb ja teeb kõike, mida sina saad. Paigalda ainult neid, kellele usaldad. Muudatuse rakendamiseks laadi leht uuesti.",
+        "looksConfirmTitle": "Lubada kogukonna paigutustel töötada väljaspool liivakasti?",
+        "looksConfirmBody": "Kogukonna paigutus või teema töötab lehel täieliku ligipääsuga Termixile sisseloginud kasutajana. See võib olla riskantne. Lülita see sisse ainult siis, kui usaldad paigaldatavaid paigutusi ja teemasid.",
+        "looksConfirm": "Lülita sisse",
+        "looksSaved": "Salvestatud. Rakendamiseks laadi leht uuesti."
       },
       "upToDate": "Kõik on ajakohane.",
       "lastChecked": "Viimati kontrollitud {{time}}",
@@ -1704,9 +1717,14 @@
     "firstLoad": {
       "title": "Pluginade ettevalmistamine",
       "progress": "{{done}} / {{total}}",
-      "hint": "See juhtub ainult esimest korda. Järgmine kord avaneb Termix kohe.",
+      "hint": "Pistikud käivituvad esimest korda. Pärast seda avaneb Termix kohe.",
       "skip": "Jätka"
-    }
+    },
+    "framesBlocked": "Pistikud ei saa oma faile laadida. Termixi ees olev sisselogimisproksi tõenäoliselt blokeerib neid.",
+    "framesBlockedHelp": "Kuidas parandada",
+    "framesFailed_one": "{{names}} ei saanud laadida, seega on selle osad peidetud",
+    "framesFailed_other": "{{count}} pistikut ei saanud laadida, seega on nende osad peidetud: {{names}}",
+    "framesFailedReload": "Laadi uuesti"
   },
   "settings": {
     "secretSet": "Määratud",

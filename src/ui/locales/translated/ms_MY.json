@@ -824,7 +824,12 @@
     "editorUpdate": "Kemas Kini Hos",
     "editorAdd": "Tambah Hos",
     "speedSearch": "Cari hos. Kek panah untuk memilih, Enter untuk menyambung, Esc untuk menutup",
-    "speedSearchList": "Senarai hos. Taip atau tekan / untuk mencari."
+    "speedSearchList": "Senarai hos. Taip atau tekan / untuk mencari.",
+    "openFromLink": {
+      "title": "Buka {{name}}?",
+      "description": "Pautan meminta Termix untuk menyambung ke hos ini.",
+      "confirm": "Sambung"
+    }
   },
   "splitScreen": {
     "title": "Skrin terbahagi",
@@ -1358,7 +1363,7 @@
         "running": "Berjalan",
         "disabled": "Dilumpuhkan",
         "failed": "Berhenti secara tidak dijangka",
-        "blocked": "Menunggu plugin lain",
+        "blocked": "Tidak dapat mula",
         "server": "Berjalan pada pelayan anda",
         "safeMode": "Mati dalam modus selamat"
       },
@@ -1432,6 +1437,7 @@
         "installedNotRunning": "{{name}} dipasang tetapi tidak dapat bermula. Buka untuk melihat sebabnya.",
         "updated": "{{name}} dikemas kini ke {{version}}",
         "updatedMany_other": "{{count}} plugin dikemas kini",
+        "needsReview_other": "{{count}} plugin meminta kebenaran baharu. Semak setiap satu untuk mengemas kini.",
         "uninstalled": "{{name}} dinyahpasang",
         "dataDeleted": "Data untuk {{name}} dipadam",
         "failedToStart": "{{name}} tidak dapat bermula. Buka untuk melihat sebabnya.",
@@ -1571,7 +1577,13 @@
         "unreachable": "Tidak dapat membacanya: {{error}}",
         "filter": "Daftar",
         "allRegistries": "Semua daftar",
-        "browseHint": "Hidupkan plugin komuniti atau tambah daftar anda sendiri dalam tab Daftar."
+        "browseHint": "Hidupkan plugin komuniti atau tambah daftar anda sendiri dalam tab Daftar.",
+        "looksName": "Susun atur dan tema komuniti",
+        "looksHint": "Membolehkan susun atur dan tema yang bukan dari Termix berjalan di luar kotak pasir, seperti rasmi. Susun atur melukis keseluruhan aplikasi, jadi ia boleh melihat dan melakukan apa sahaja yang boleh anda lakukan. Hanya pasang yang anda percayai. Muat semula halaman selepas mengubah ini.",
+        "looksConfirmTitle": "Benarkan susun atur komuniti berjalan di luar kotak pasir?",
+        "looksConfirmBody": "Susun atur atau tema komuniti akan berjalan di halaman dengan akses penuh ke Termix sebagai sesiapa sahaja yang log masuk. Ini boleh berisiko. Hanya hidupkan ini jika anda mempercayai susun atur dan tema yang anda pasang.",
+        "looksConfirm": "Hidupkan",
+        "looksSaved": "Disimpan. Muat semula halaman untuk menggunakannya."
       },
       "upToDate": "Semuanya terkini.",
       "lastChecked": "Pemeriksaan terakhir {{time}}",
@@ -1664,9 +1676,13 @@
     "firstLoad": {
       "title": "Menyiapkan plugin",
       "progress": "{{done}} daripada {{total}}",
-      "hint": "Ini hanya berlaku pada kali pertama. Lain kali Termix akan terbuka serta-merta.",
+      "hint": "Plugin sedang mula untuk kali pertama. Selepas ini, Termix akan terus dibuka.",
       "skip": "Teruskan"
-    }
+    },
+    "framesBlocked": "Plugin tidak dapat memuat failnya. Proksi log masuk di hadapan Termix kemungkinan besar menghalangnya.",
+    "framesBlockedHelp": "Cara membetulkan",
+    "framesFailed_other": "{{count}} plugin tidak dapat dimuat, jadi bahagiannya disembunyikan: {{names}}",
+    "framesFailedReload": "Muat semula"
   },
   "settings": {
     "secretSet": "Tetapkan",

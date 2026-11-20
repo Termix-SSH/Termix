@@ -848,7 +848,12 @@
     "editorUpdate": "Aggiorna Host",
     "editorAdd": "Aggiungi Host",
     "speedSearch": "Cerca host. Tasti freccia per selezionare, Invio per connettere, Esc per chiudere",
-    "speedSearchList": "Elenco host. Digita o premi / per cercare."
+    "speedSearchList": "Elenco host. Digita o premi / per cercare.",
+    "openFromLink": {
+      "title": "Aprire {{name}}?",
+      "description": "Un link ha richiesto a Termix di connettersi a questo host.",
+      "confirm": "Connetti"
+    }
   },
   "splitScreen": {
     "title": "Schermo diviso",
@@ -1392,7 +1397,7 @@
         "running": "In esecuzione",
         "disabled": "Disabilitato",
         "failed": "Arrestato inaspettatamente",
-        "blocked": "In attesa di un altro plugin",
+        "blocked": "Impossibile avviare",
         "server": "Eseguito sul tuo server",
         "safeMode": "Disattivato in modalità sicura"
       },
@@ -1490,6 +1495,9 @@
         "updatedMany_one": "{{count}} plugin aggiornato",
         "updatedMany_many": "{{count}} plugin aggiornati",
         "updatedMany_other": "{{count}} plugin aggiornati",
+        "needsReview_one": "1 plugin richiede nuove autorizzazioni. Rivedilo per aggiornarlo.",
+        "needsReview_many": "{{count}} plugin richiedono nuove autorizzazioni. Rivedili uno per uno per aggiornarli.",
+        "needsReview_other": "{{count}} plugin richiedono nuove autorizzazioni. Rivedili uno per uno per aggiornarli.",
         "uninstalled": "{{name}} disinstallato",
         "dataDeleted": "Dati di {{name}} eliminati",
         "failedToStart": "{{name}} non è riuscito ad avviarsi. Aprilo per vedere il motivo.",
@@ -1643,7 +1651,13 @@
         "unreachable": "Impossibile leggerlo: {{error}}",
         "filter": "Registro",
         "allRegistries": "Tutti i registri",
-        "browseHint": "Abilita i plugin della community o aggiungi il tuo registro nella scheda Registri."
+        "browseHint": "Abilita i plugin della community o aggiungi il tuo registro nella scheda Registri.",
+        "looksName": "Layout e temi della community",
+        "looksHint": "Consente ai layout e ai temi non ufficiali di Termix di funzionare al di fuori del sandbox, come quelli ufficiali. Un layout disegna l'intera app, quindi può vedere e fare tutto ciò che puoi fare tu. Installa solo quelli di cui ti fidi. Ricarica la pagina dopo aver modificato questa impostazione.",
+        "looksConfirmTitle": "Consentire ai layout della community di funzionare al di fuori del sandbox?",
+        "looksConfirmBody": "Un layout o tema della community verrà eseguito nella pagina con accesso completo a Termix come l'utente attualmente connesso. Questo può essere rischioso. Attiva questa opzione solo se ti fidi dei layout e dei temi che installi.",
+        "looksConfirm": "Attiva",
+        "looksSaved": "Salvato. Ricarica la pagina per applicare le modifiche."
       },
       "upToDate": "Tutto è aggiornato.",
       "lastChecked": "Ultimo controllo {{time}}",
@@ -1744,9 +1758,15 @@
     "firstLoad": {
       "title": "Preparazione dei plugin",
       "progress": "{{done}} di {{total}}",
-      "hint": "Questo avviene solo la prima volta. La prossima volta Termix si aprirà immediatamente.",
+      "hint": "I plugin si stanno avviando per la prima volta. Dopo questo, Termix si aprirà immediatamente.",
       "skip": "Continua"
-    }
+    },
+    "framesBlocked": "I plugin non possono caricare i loro file. Probabilmente un proxy di autenticazione davanti a Termix li sta bloccando.",
+    "framesBlockedHelp": "Come risolvere",
+    "framesFailed_one": "{{names}} non è riuscito a caricarsi, quindi le sue parti sono nascoste",
+    "framesFailed_many": "{{count}} plugin non sono riusciti a caricarsi, quindi le loro parti sono nascoste: {{names}}",
+    "framesFailed_other": "{{count}} plugin non sono riusciti a caricarsi, quindi le loro parti sono nascoste: {{names}}",
+    "framesFailedReload": "Ricarica"
   },
   "settings": {
     "secretSet": "Impostato",

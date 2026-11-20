@@ -860,7 +860,12 @@
     "editorUpdate": "Aktualizovat hostitele",
     "editorAdd": "Přidat hostitele",
     "speedSearch": "Hledat hostitele. Šipky pro výběr, Enter pro připojení, Esc pro uzavření",
-    "speedSearchList": "Seznam hostitelů. Píšte nebo stiskněte / pro hledání."
+    "speedSearchList": "Seznam hostitelů. Píšte nebo stiskněte / pro hledání.",
+    "openFromLink": {
+      "title": "Otevřít {{name}}?",
+      "description": "Odkaz požádal Termix o připojení k tomuto hostiteli.",
+      "confirm": "Připojit"
+    }
   },
   "splitScreen": {
     "title": "Rozdělená obrazovka",
@@ -1409,7 +1414,7 @@
         "running": "Spuštěno",
         "disabled": "Zakázáno",
         "failed": "Neočekávaně zastaveno",
-        "blocked": "Čeká na jiný plugin",
+        "blocked": "Nelze spustit",
         "server": "Běží na vašem serveru",
         "safeMode": "Vypnuto v režimu nouzového spuštění"
       },
@@ -1519,6 +1524,10 @@
         "updatedMany_few": "{{count}} pluginy aktualizovány",
         "updatedMany_many": "{{count}} pluginů aktualizováno",
         "updatedMany_other": "{{count}} pluginů aktualizováno",
+        "needsReview_one": "1 plugin požaduje nová oprávnění. Zkontrolujte jej pro aktualizaci.",
+        "needsReview_few": "{{count}} pluginů požaduje nová oprávnění. Zkontrolujte každý z nich pro aktualizaci.",
+        "needsReview_many": "{{count}} pluginů požaduje nová oprávnění. Zkontrolujte každý z nich pro aktualizaci.",
+        "needsReview_other": "{{count}} pluginů požaduje nová oprávnění. Zkontrolujte každý z nich pro aktualizaci.",
         "uninstalled": "{{name}} odinstalováno",
         "dataDeleted": "Data pro {{name}} smazána",
         "failedToStart": "{{name}} se nepodařilo spustit. Otevřete jej pro zobrazení důvodu.",
@@ -1679,7 +1688,13 @@
         "unreachable": "Nelze jej přečíst: {{error}}",
         "filter": "Registr",
         "allRegistries": "Všechny registry",
-        "browseHint": "Zapněte komunitní pluginy nebo přidejte vlastní registr na kartě Registry."
+        "browseHint": "Zapněte komunitní pluginy nebo přidejte vlastní registr na kartě Registry.",
+        "looksName": "Komunitní rozložení a motivy",
+        "looksHint": "Umožňuje rozložení a motivy, které nejsou od Termix, běžet mimo sandbox, jako oficiální. Rozložení vykresluje celou aplikaci, takže může vidět a dělat cokoliv, co můžete vy. Nainstalujte pouze ty, kterým důvěřujete. Po změně této nastavení obnovte stránku.",
+        "looksConfirmTitle": "Povolit běh komunitních rozložení mimo sandbox?",
+        "looksConfirmBody": "Komunitní rozložení nebo motiv bude běžet na stránce s plným přístupem k Termix jako přihlášený uživatel. To může být rizikové. Zapněte toto pouze pokud důvěřujete rozložení a motivům, které instalujete.",
+        "looksConfirm": "Zapnout",
+        "looksSaved": "Uloženo. Obnovte stránku pro aplikaci změn."
       },
       "upToDate": "Vše je aktuální.",
       "lastChecked": "Naposledy kontrolováno {{time}}",
@@ -1784,9 +1799,16 @@
     "firstLoad": {
       "title": "Připravování pluginů",
       "progress": "{{done}} z {{total}}",
-      "hint": "Stane se to pouze poprvé. Příště se Termix otevře okamžitě.",
+      "hint": "Pluginy se spouštějí poprvé. Po této akci se Termix otevře okamžitě.",
       "skip": "Pokračovat"
-    }
+    },
+    "framesBlocked": "Pluginy nemohou načíst své soubory. Pravděpodobně je blokuje login proxy před Termix.",
+    "framesBlockedHelp": "Jak opravit",
+    "framesFailed_one": "{{names}} se nepodařilo načíst, takže jeho části jsou skryty",
+    "framesFailed_few": "{{count}} pluginů se nepodařilo načíst, takže jejich části jsou skryty: {{names}}",
+    "framesFailed_many": "{{count}} pluginů se nepodařilo načíst, takže jejich části jsou skryty: {{names}}",
+    "framesFailed_other": "{{count}} pluginů se nepodařilo načíst, takže jejich části jsou skryty: {{names}}",
+    "framesFailedReload": "Obnovit"
   },
   "settings": {
     "secretSet": "Nastaveno",

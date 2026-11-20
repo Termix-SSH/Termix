@@ -860,7 +860,12 @@
     "editorUpdate": "Atnaujinti serverį",
     "editorAdd": "Pridėti serverį",
     "speedSearch": "Ieškoti serverių. Rodyklės klavišai pasirinkimui, Enter prisijungimui, Esc uždarymui",
-    "speedSearchList": "Serverių sąrašas. Rašykite arba paspauskite /, kad ieškotumėte."
+    "speedSearchList": "Serverių sąrašas. Rašykite arba paspauskite /, kad ieškotumėte.",
+    "openFromLink": {
+      "title": "Atidaryti „{{name}}“?",
+      "description": "Nuoroda paprašė „Termix“ prisijungti prie šio serverio.",
+      "confirm": "Prisijungti"
+    }
   },
   "splitScreen": {
     "title": "Padalintas ekranas",
@@ -1409,7 +1414,7 @@
         "running": "Veikia",
         "disabled": "Išjungta",
         "failed": "Nenumatomai sustabdyta",
-        "blocked": "Laukiama kito priedo",
+        "blocked": "Nepavyksta paleisti",
         "server": "Veikia jūsų serveryje",
         "safeMode": "Išjungta saugiu režimu"
       },
@@ -1519,6 +1524,10 @@
         "updatedMany_few": "Atnaujinti {{count}} priedai",
         "updatedMany_many": "Atnaujinta {{count}} priedų",
         "updatedMany_other": "Atnaujinta {{count}} priedų",
+        "needsReview_one": "1 priedas prašo naujų leidimų. Peržiūrėkite jį, kad atnaujintumėte.",
+        "needsReview_few": "{{count}} priedai prašo naujų leidimų. Peržiūrėkite kiekvieną, kad atnaujintumėte.",
+        "needsReview_many": "{{count}} priedų prašo naujų leidimų. Peržiūrėkite kiekvieną, kad atnaujintumėte.",
+        "needsReview_other": "{{count}} priedai prašo naujų leidimų. Peržiūrėkite kiekvieną, kad atnaujintumėte.",
         "uninstalled": "„{{name}}“ pašalinta",
         "dataDeleted": "„{{name}}“ duomenys ištrinti",
         "failedToStart": "Nepavyko paleisti „{{name}}“. Atidarykite jį, kad sužinotumėte priežastį.",
@@ -1679,7 +1688,13 @@
         "unreachable": "Nepavyko jo perskaityti: {{error}}",
         "filter": "Registras",
         "allRegistries": "Visi registrai",
-        "browseHint": "Įjunkite bendruomenės priedus arba pridėkite savo registrą skirtuke „Registrai“."
+        "browseHint": "Įjunkite bendruomenės priedus arba pridėkite savo registrą skirtuke „Registrai“.",
+        "looksName": "Bendruomenės išdėstymai ir temos",
+        "looksHint": "Leidžia išdėstymams ir temoms, kurios nėra iš „Termix“, veikti už smėlio dėžės ribų, kaip ir oficialiems. Išdėstymas piešia visą programą, todėl gali matyti ir daryti viską, ką galite ir jūs. Įdiekite tik tas, kurioms pasitikite. Pakeitus tai, perkraukite puslapį.",
+        "looksConfirmTitle": "Leisti bendruomenės išdėstymams veikti už smėlio dėžės ribų?",
+        "looksConfirmBody": "Bendruomenės išdėstymas arba tema veiks puslapyje su pilna prieiga prie „Termix“ kaip prisijungęs vartotojas. Tai gali būti rizikinga. Įjunkite tai tik tada, jei pasitikite įdiegtais išdėstymais ir temomis.",
+        "looksConfirm": "Įjungti",
+        "looksSaved": "Išsaugota. Perkraukite puslapį, kad pritaikytumėte."
       },
       "upToDate": "Viskas yra naujausia.",
       "lastChecked": "Paskutinį kartą patikrinta {{time}}",
@@ -1784,9 +1799,16 @@
     "firstLoad": {
       "title": "Ruošiami papildiniai",
       "progress": "{{done}} iš {{total}}",
-      "hint": "Tai įvyksta tik pirmą kartą. Kitą kartą Termix atsivers iškart.",
+      "hint": "Priedai paleidžiami pirmą kartą. Po to „Termix“ atsidarys iškart.",
       "skip": "Tęsti"
-    }
+    },
+    "framesBlocked": "Priedai negali įkelti savo failų. Tikėtina, kad prisijungimo tarpinis serveris prieš „Termix“ juos blokuoja.",
+    "framesBlockedHelp": "Kaip išspręsti",
+    "framesFailed_one": "Nepavyko įkelti „{{names}}“, todėl jo dalys paslėptos",
+    "framesFailed_few": "Nepavyko įkelti {{count}} priedų, todėl jų dalys paslėptos: {{names}}",
+    "framesFailed_many": "Nepavyko įkelti {{count}} priedų, todėl jų dalys paslėptos: {{names}}",
+    "framesFailed_other": "Nepavyko įkelti {{count}} priedų, todėl jų dalys paslėptos: {{names}}",
+    "framesFailedReload": "Perkrauti"
   },
   "settings": {
     "secretSet": "Nustatyta",

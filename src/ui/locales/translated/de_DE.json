@@ -836,7 +836,12 @@
     "editorUpdate": "Host aktualisieren",
     "editorAdd": "Host hinzufügen",
     "speedSearch": "Hosts durchsuchen. Pfeiltasten zum Auswählen, Enter zum Verbinden, Esc zum Schließen",
-    "speedSearchList": "Hostliste. Tippen Sie oder drücken Sie / zum Suchen."
+    "speedSearchList": "Hostliste. Tippen Sie oder drücken Sie / zum Suchen.",
+    "openFromLink": {
+      "title": "Möchten Sie {{name}} öffnen?",
+      "description": "Ein Link hat Termix aufgefordert, eine Verbindung zu diesem Host herzustellen.",
+      "confirm": "Verbinden"
+    }
   },
   "splitScreen": {
     "title": "Geteilter Bildschirm",
@@ -1375,7 +1380,7 @@
         "running": "Aktiv",
         "disabled": "Deaktiviert",
         "failed": "Unerwartet gestoppt",
-        "blocked": "Wartet auf ein anderes Plugin",
+        "blocked": "Start nicht möglich",
         "server": "Läuft auf deinem Server",
         "safeMode": "Im sicheren Modus deaktiviert"
       },
@@ -1461,6 +1466,8 @@
         "updated": "{{name}} auf {{version}} aktualisiert",
         "updatedMany_one": "{{count}} Plugin aktualisiert",
         "updatedMany_other": "{{count}} Plugins aktualisiert",
+        "needsReview_one": "1 Plugin fordert neue Berechtigungen an. Überprüfen Sie es, um es zu aktualisieren.",
+        "needsReview_other": "{{count}} Plugins fordern neue Berechtigungen an. Überprüfen Sie jedes einzelne, um es zu aktualisieren.",
         "uninstalled": "{{name}} deinstalliert",
         "dataDeleted": "Daten für {{name}} gelöscht",
         "failedToStart": "{{name}} konnte nicht gestartet werden. Öffne es, um den Grund zu sehen.",
@@ -1607,7 +1614,13 @@
         "unreachable": "Konnte nicht gelesen werden: {{error}}",
         "filter": "Repository",
         "allRegistries": "Alle Repositories",
-        "browseHint": "Aktiviere Community-Plugins oder füge dein eigenes Repository im Tab „Repositories“ hinzu."
+        "browseHint": "Aktiviere Community-Plugins oder füge dein eigenes Repository im Tab „Repositories“ hinzu.",
+        "looksName": "Community-Layouts und -Themen",
+        "looksHint": "Ermöglicht Layouts und Themen, die nicht von Termix stammen, außerhalb der Sandbox zu laufen, wie die offiziellen. Ein Layout zeichnet die gesamte App und kann daher alles sehen und tun, was Sie auch können. Installieren Sie nur solche, denen Sie vertrauen. Laden Sie die Seite nach einer Änderung neu.",
+        "looksConfirmTitle": "Community-Layouts außerhalb der Sandbox ausführen lassen?",
+        "looksConfirmBody": "Ein Community-Layout oder -Thema wird in der Seite mit vollem Zugriff auf Termix als angemeldeter Benutzer ausgeführt. Dies kann riskant sein. Aktivieren Sie dies nur, wenn Sie den Layouts und Themen, die Sie installieren, vertrauen.",
+        "looksConfirm": "Aktivieren",
+        "looksSaved": "Gespeichert. Laden Sie die Seite neu, um die Änderungen anzuwenden."
       },
       "upToDate": "Alles ist auf dem neuesten Stand.",
       "lastChecked": "Zuletzt geprüft {{time}}",
@@ -1704,9 +1717,14 @@
     "firstLoad": {
       "title": "Plugins werden vorbereitet",
       "progress": "{{done}} von {{total}}",
-      "hint": "Dies geschieht nur beim ersten Mal. Beim nächsten Mal öffnet sich Termix sofort.",
+      "hint": "Plugins werden zum ersten Mal gestartet. Danach öffnet sich Termix sofort.",
       "skip": "Fortfahren"
-    }
+    },
+    "framesBlocked": "Plugins können ihre Dateien nicht laden. Ein Login-Proxy vor Termix blockiert sie wahrscheinlich.",
+    "framesBlockedHelp": "So beheben Sie das Problem",
+    "framesFailed_one": "{{names}} konnte nicht geladen werden, daher sind seine Elemente ausgeblendet",
+    "framesFailed_other": "{{count}} Plugins konnten nicht geladen werden, daher sind ihre Elemente ausgeblendet: {{names}}",
+    "framesFailedReload": "Neu laden"
   },
   "settings": {
     "secretSet": "Gesetzt",

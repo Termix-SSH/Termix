@@ -860,7 +860,12 @@
     "editorUpdate": "Posodobi gostitelja",
     "editorAdd": "Dodaj gostitelja",
     "speedSearch": "Išči gostitelje. Puščice za izbiro, Enter za povezavo, Esc za zapiranje",
-    "speedSearchList": "Seznam gostiteljev. Vnesite besedilo ali pritisnite / za iskanje."
+    "speedSearchList": "Seznam gostiteljev. Vnesite besedilo ali pritisnite / za iskanje.",
+    "openFromLink": {
+      "title": "Odpreti {{name}}?",
+      "description": "Povezava je zahtevala, da se Termix poveže s tem gostiteljem.",
+      "confirm": "Poveži"
+    }
   },
   "splitScreen": {
     "title": "Razdeljen zaslon",
@@ -1409,7 +1414,7 @@
         "running": "Deluje",
         "disabled": "Onemogočen",
         "failed": "Nepričakovano ustavljen",
-        "blocked": "Čaka na drug vtičnik",
+        "blocked": "Ni mogoče zagnati",
         "server": "Zažene se na vašem strežniku",
         "safeMode": "Izklopljeno v varnem načinu"
       },
@@ -1519,6 +1524,10 @@
         "updatedMany_two": "{{count}} vtičnika posodobljena",
         "updatedMany_few": "{{count}} vtičniki posodobljeni",
         "updatedMany_other": "{{count}} vtičnikov posodobljenih",
+        "needsReview_one": "1 vtičnik zahteva nova dovoljenja. Preglejte ga za posodobitev.",
+        "needsReview_two": "{{count}} vtičnika zahtevata novi dovoljenja. Preglejte ju za posodobitev.",
+        "needsReview_few": "{{count}} vtičniki zahtevajo nova dovoljenja. Preglejte jih za posodobitev.",
+        "needsReview_other": "{{count}} vtičnikov zahteva nova dovoljenja. Preglejte jih za posodobitev.",
         "uninstalled": "{{name}} odstranjen",
         "dataDeleted": "Podatki za {{name}} izbrisani",
         "failedToStart": "{{name}} se ni mogel zagnati. Odprite ga, da vidite razlog.",
@@ -1679,7 +1688,13 @@
         "unreachable": "Registr ni bilo mogoče prebrati: {{error}}",
         "filter": "Registr",
         "allRegistries": "Vsi registri",
-        "browseHint": "Vklopite vtičnike skupnosti ali dodajte svoj registr na zavihku Registri."
+        "browseHint": "Vklopite vtičnike skupnosti ali dodajte svoj registr na zavihku Registri.",
+        "looksName": "Skupnostne razporeditve in teme",
+        "looksHint": "Omogoča, da razporeditve in teme, ki niso od Termixa, delujejo zunaj peskovnika, podobno kot uradne. Razporeditev nariše celotno aplikacijo, zato lahko vidi in naredi vse, kar lahko vi. Namestite le tiste, ki jim zaupate. Po spremembi ponovno naložite stran.",
+        "looksConfirmTitle": "Dovoliti skupnostnim razporeditvam delovanje zunaj peskovnika?",
+        "looksConfirmBody": "Skupnostna razporeditev ali tema bo delovala na strani z neposrednim dostopom do Termixa kot prijavljeni uporabnik. To lahko predstavlja tveganje. To možnost vklopite le, če zaupate razporeditvam in temam, ki jih namestite.",
+        "looksConfirm": "Vklopi",
+        "looksSaved": "Shranjeno. Ponovno naložite stran za uporabo sprememb."
       },
       "upToDate": "Vse je posodobljeno.",
       "lastChecked": "Zadnjič preverjeno {{time}}",
@@ -1784,9 +1799,16 @@
     "firstLoad": {
       "title": "Pripravljanje vtičnikov",
       "progress": "{{done}} od {{total}}",
-      "hint": "To se zgodi le prvič. Naslednjič se Termix odpre takoj.",
+      "hint": "Vtičniki se zaganjajo prvič. Po tem se bo Termix odprl takoj.",
       "skip": "Nadaljuj"
-    }
+    },
+    "framesBlocked": "Vtičniki ne morejo naložiti svojih datotek. Prijava preko proxyja pred Termixom jih verjetno blokira.",
+    "framesBlockedHelp": "Kako popraviti",
+    "framesFailed_one": "{{names}} ni bilo mogoče naložiti, zato so njegovi deli skriti",
+    "framesFailed_two": "{{count}} vtičnika ni bilo mogoče naložiti, zato sta njuna dela skrita: {{names}}",
+    "framesFailed_few": "{{count}} vtičnikov ni bilo mogoče naložiti, zato so njihovi deli skriti: {{names}}",
+    "framesFailed_other": "{{count}} vtičnikov ni bilo mogoče naložiti, zato so njihovi deli skriti: {{names}}",
+    "framesFailedReload": "Ponovno naloži"
   },
   "settings": {
     "secretSet": "Nastavljeno",

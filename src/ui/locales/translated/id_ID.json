@@ -824,7 +824,12 @@
     "editorUpdate": "Perbarui Host",
     "editorAdd": "Tambah Host",
     "speedSearch": "Cari host. Tombol panah untuk memilih, Enter untuk terhubung, Esc untuk menutup",
-    "speedSearchList": "Daftar host. Ketik atau tekan / untuk mencari."
+    "speedSearchList": "Daftar host. Ketik atau tekan / untuk mencari.",
+    "openFromLink": {
+      "title": "Buka {{name}}?",
+      "description": "Tautan meminta Termix untuk terhubung ke host ini.",
+      "confirm": "Hubungkan"
+    }
   },
   "splitScreen": {
     "title": "Layar terbagi",
@@ -1358,7 +1363,7 @@
         "running": "Berjalan",
         "disabled": "Dinonaktifkan",
         "failed": "Berhenti secara tak terduga",
-        "blocked": "Menunggu plugin lain",
+        "blocked": "Tidak dapat dimulai",
         "server": "Berjalan di server Anda",
         "safeMode": "Nonaktif di mode aman"
       },
@@ -1432,6 +1437,7 @@
         "installedNotRunning": "{{name}} terinstal tetapi tidak dapat dimulai. Buka untuk melihat alasannya.",
         "updated": "{{name}} diperbarui ke {{version}}",
         "updatedMany_other": "{{count}} plugin diperbarui",
+        "needsReview_other": "{{count}} plugin meminta izin baru. Tinjau untuk memperbarui.",
         "uninstalled": "{{name}} dihapus instalasinya",
         "dataDeleted": "Data untuk {{name}} dihapus",
         "failedToStart": "{{name}} tidak dapat dimulai. Buka untuk melihat alasannya.",
@@ -1571,7 +1577,13 @@
         "unreachable": "Tidak dapat membacanya: {{error}}",
         "filter": "Registri",
         "allRegistries": "Semua registri",
-        "browseHint": "Aktifkan plugin komunitas atau tambahkan registri Anda sendiri di tab Registri."
+        "browseHint": "Aktifkan plugin komunitas atau tambahkan registri Anda sendiri di tab Registri.",
+        "looksName": "Tata letak dan tema komunitas",
+        "looksHint": "Memungkinkan tata letak dan tema yang bukan dari Termix berjalan di luar sandbox, seperti yang resmi. Tata letak menggambar seluruh aplikasi, sehingga dapat melihat dan melakukan apa pun yang bisa Anda lakukan. Hanya instal yang Anda percaya. Muat ulang halaman setelah mengubah ini.",
+        "looksConfirmTitle": "Izinkan tata letak komunitas berjalan di luar sandbox?",
+        "looksConfirmBody": "Tata letak atau tema komunitas akan berjalan di halaman dengan akses penuh ke Termix sebagai pengguna yang masuk. Ini bisa berisiko. Hanya aktifkan jika Anda mempercayai tata letak dan tema yang Anda instal.",
+        "looksConfirm": "Aktifkan",
+        "looksSaved": "Tersimpan. Muat ulang halaman untuk menerapkannya."
       },
       "upToDate": "Semuanya sudah diperbarui.",
       "lastChecked": "Terakhir diperiksa {{time}}",
@@ -1664,9 +1676,13 @@
     "firstLoad": {
       "title": "Menyiapkan plugin",
       "progress": "{{done}} dari {{total}}",
-      "hint": "Ini hanya terjadi pertama kali. Lain kali Termix akan terbuka langsung.",
+      "hint": "Plugin sedang dimulai untuk pertama kalinya. Setelah ini, Termix akan terbuka langsung.",
       "skip": "Lanjutkan"
-    }
+    },
+    "framesBlocked": "Plugin tidak dapat memuat file mereka. Proxy login di depan Termix kemungkinan besar memblokirnya.",
+    "framesBlockedHelp": "Cara memperbaiki",
+    "framesFailed_other": "{{count}} plugin tidak dapat dimuat, sehingga bagiannya disembunyikan: {{names}}",
+    "framesFailedReload": "Muat ulang"
   },
   "settings": {
     "secretSet": "Disetel",

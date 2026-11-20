@@ -836,7 +836,12 @@
     "editorUpdate": "Päivitä isäntäkone",
     "editorAdd": "Lisää isäntäkone",
     "speedSearch": "Hae isäntäkoneita. Nuolinäppäimet valintaan, Enter yhteyteen, Esc sulkemiseen",
-    "speedSearchList": "Isäntäkoneiden lista. Kirjoita tai paina / hakuun."
+    "speedSearchList": "Isäntäkoneiden lista. Kirjoita tai paina / hakuun.",
+    "openFromLink": {
+      "title": "Avataanko {{name}}?",
+      "description": "Linkki pyysi Termixiä yhdistämään tähän isäntään.",
+      "confirm": "Yhdistä"
+    }
   },
   "splitScreen": {
     "title": "Jaettu näyttö",
@@ -1375,7 +1380,7 @@
         "running": "Käynnissä",
         "disabled": "Poistettu käytöstä",
         "failed": "Pysähtyi odottamatta",
-        "blocked": "Odottaa toista lisäosaa",
+        "blocked": "Ei voi käynnistää",
         "server": "Käynnistyy palvelimellasi",
         "safeMode": "Pois käytöstä turvatoiminnossa"
       },
@@ -1461,6 +1466,8 @@
         "updated": "{{name}} päivitetty versioon {{version}}",
         "updatedMany_one": "{{count}} lisäosa päivitetty",
         "updatedMany_other": "{{count}} lisäosaa päivitetty",
+        "needsReview_one": "1 lisäosa pyytää uusia käyttöoikeuksia. Tarkista se päivittääksesi.",
+        "needsReview_other": "{{count}} lisäosaa pyytää uusia käyttöoikeuksia. Tarkista jokainen päivittääksesi.",
         "uninstalled": "{{name}} poistettu",
         "dataDeleted": "{{name}} -lisäosan tiedot poistettu",
         "failedToStart": "{{name}}:ää ei voitu käynnistää. Avaa se nähdäksesi syyn.",
@@ -1607,7 +1614,13 @@
         "unreachable": "Sen lukeminen epäonnistui: {{error}}",
         "filter": "Rekisteri",
         "allRegistries": "Kaikki rekisterit",
-        "browseHint": "Ota yhteisön lisäosat käyttöön tai lisää oma rekisterisi Rekisterit-välilehdellä."
+        "browseHint": "Ota yhteisön lisäosat käyttöön tai lisää oma rekisterisi Rekisterit-välilehdellä.",
+        "looksName": "Yhteisön asettelut ja teemat",
+        "looksHint": "Mahdollistaa Termixin ulkopuolisten asettelujen ja teemojen toiminnan hiekkalaatikon ulkopuolella, kuten virallisten. Asettelu piirtää koko sovelluksen, joten se näkee ja voi tehdä kaiken, mitä sinäkin. Asenna vain luottamasi. Lataa sivu uudelleen tämän muutoksen jälkeen.",
+        "looksConfirmTitle": "Sallitaanko yhteisön asettelujen toiminta hiekkalaatikon ulkopuolella?",
+        "looksConfirmBody": "Yhteisön asettelu tai teema toimii sivulla täydellisellä pääsyoikeudella Termixiin kirjautuneena käyttäjänä. Tämä voi olla riskialtista. Ota tämä käyttöön vain, jos luotat asentamiisi asetteluihin ja teemoihin.",
+        "looksConfirm": "Ota käyttöön",
+        "looksSaved": "Tallennettu. Lataa sivu uudelleen voimaan saattamiseksi."
       },
       "upToDate": "Kaikki on ajan tasalla.",
       "lastChecked": "Viimeksi tarkistettu {{time}}",
@@ -1704,9 +1717,14 @@
     "firstLoad": {
       "title": "Lisäosien valmistelu",
       "progress": "{{done}} / {{total}}",
-      "hint": "Tämä tapahtuu vain ensimmäisen kerran. Seuraavalla kerralla Termix avautuu heti.",
+      "hint": "Lisäosat käynnistyvät ensimmäistä kertaa. Tämän jälkeen Termix avautuu välittömästi.",
       "skip": "Jatka"
-    }
+    },
+    "framesBlocked": "Lisäosat eivät voi ladata tiedostojaan. Termixin edessä oleva kirjautumisproxy estää todennäköisesti ne.",
+    "framesBlockedHelp": "Korjausohjeet",
+    "framesFailed_one": "{{names}} ei voinut ladata, joten sen osat on piilotettu",
+    "framesFailed_other": "{{count}} lisäosaa ei voinut ladata, joten niiden osat on piilotettu: {{names}}",
+    "framesFailedReload": "Lataa uudelleen"
   },
   "settings": {
     "secretSet": "Asetettu",

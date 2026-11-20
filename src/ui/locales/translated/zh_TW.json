@@ -824,7 +824,12 @@
     "editorUpdate": "更新主機",
     "editorAdd": "新增主機",
     "speedSearch": "搜尋主機。使用方向鍵選擇，Enter 連線，Esc 關閉",
-    "speedSearchList": "主機列表。輸入或按 / 以搜尋。"
+    "speedSearchList": "主機列表。輸入或按 / 以搜尋。",
+    "openFromLink": {
+      "title": "要開啟 {{name}} 嗎？",
+      "description": "某個連結要求 Termix 連線至此主機。",
+      "confirm": "連線"
+    }
   },
   "splitScreen": {
     "title": "分割畫面",
@@ -1358,7 +1363,7 @@
         "running": "執行中",
         "disabled": "已停用",
         "failed": "意外停止",
-        "blocked": "等待其他外掛",
+        "blocked": "無法啟動",
         "server": "在您的伺服器上執行",
         "safeMode": "安全模式下已停用"
       },
@@ -1432,6 +1437,7 @@
         "installedNotRunning": "已安裝 {{name}}，但無法啟動。請開啟它以查看原因。",
         "updated": "{{name}} 已更新至 {{version}}",
         "updatedMany_other": "已更新 {{count}} 個外掛",
+        "needsReview_other": "{{count}} 個外掛要求新的權限。請逐一檢視以完成更新。",
         "uninstalled": "已解除安裝 {{name}}",
         "dataDeleted": "已刪除 {{name}} 的資料",
         "failedToStart": "{{name}} 無法啟動。請開啟它以查看原因。",
@@ -1571,7 +1577,13 @@
         "unreachable": "無法讀取：{{error}}",
         "filter": "註冊表",
         "allRegistries": "所有註冊表",
-        "browseHint": "在「註冊表」分頁中啟用社群插件或新增您自己的註冊表。"
+        "browseHint": "在「註冊表」分頁中啟用社群插件或新增您自己的註冊表。",
+        "looksName": "社群版面配置與主題",
+        "looksHint": "允許非 Termix 官方提供的版面配置與主題在沙箱外執行，如同官方外掛一般。由於版面配置會繪製整個應用程式，因此擁有與您相同的存取權限。請僅安裝您信任的外掛。修改此設定後，請重新載入頁面。",
+        "looksConfirmTitle": "要允許社群版面配置在沙箱外執行嗎？",
+        "looksConfirmBody": "社群版面配置或主題將在頁面中以目前登入者的身分執行，並擁有對 Termix 的完整存取權限。這可能帶來風險。請僅在您信任所安裝的版面配置與主題時開啟此功能。",
+        "looksConfirm": "開啟",
+        "looksSaved": "已儲存。請重新載入頁面以套用變更。"
       },
       "upToDate": "所有項目皆為最新。",
       "lastChecked": "上次檢查時間：{{time}}",
@@ -1664,9 +1676,13 @@
     "firstLoad": {
       "title": "正在準備外掛程式",
       "progress": "{{done}} / {{total}}",
-      "hint": "此操作僅在首次時執行。下次 Termix 將立即開啟。",
+      "hint": "外掛正在首次啟動。完成後，Termix 將立即開啟。",
       "skip": "繼續"
-    }
+    },
+    "framesBlocked": "外掛無法載入其檔案。這可能是因為 Termix 前方的登入代理伺服器阻擋了它們。",
+    "framesBlockedHelp": "如何修復",
+    "framesFailed_other": "無法載入 {{count}} 個外掛，因此已隱藏其元件：{{names}}",
+    "framesFailedReload": "重新載入"
   },
   "settings": {
     "secretSet": "已設定",

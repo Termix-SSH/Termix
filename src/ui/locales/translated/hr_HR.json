@@ -848,7 +848,12 @@
     "editorUpdate": "Ažuriraj host",
     "editorAdd": "Dodaj host",
     "speedSearch": "Pretraži hostove. Strelice za odabir, Enter za povezivanje, Esc za zatvaranje",
-    "speedSearchList": "Popis hostova. Upišite ili pritisnite / za pretraživanje."
+    "speedSearchList": "Popis hostova. Upišite ili pritisnite / za pretraživanje.",
+    "openFromLink": {
+      "title": "Otvoriti {{name}}?",
+      "description": "Poveza je zatražila da se Termix poveže s ovim hostom.",
+      "confirm": "Poveži"
+    }
   },
   "splitScreen": {
     "title": "Podijeljeni zaslon",
@@ -1392,7 +1397,7 @@
         "running": "Pokrenuto",
         "disabled": "Onemogućeno",
         "failed": "Neočekivano zaustavljeno",
-        "blocked": "Čeka drugi dodatak",
+        "blocked": "Nije moguće pokrenuti",
         "server": "Radi na vašem poslužitelju",
         "safeMode": "Isključeno u sigurnom načinu rada"
       },
@@ -1490,6 +1495,9 @@
         "updatedMany_one": "{{count}} dodatak ažuriran",
         "updatedMany_few": "{{count}} dodatka ažurirana",
         "updatedMany_other": "{{count}} dodataka ažurirano",
+        "needsReview_one": "1 plugin traži nove dozvole. Pregledajte ga za ažuriranje.",
+        "needsReview_few": "{{count}} plugin-a traže nove dozvole. Pregledajte svaki za ažuriranje.",
+        "needsReview_other": "{{count}} plugin-a traži nove dozvole. Pregledajte svaki za ažuriranje.",
         "uninstalled": "{{name}} deinstaliran",
         "dataDeleted": "Podaci za {{name}} izbrisani",
         "failedToStart": "{{name}} se nije mogao pokrenuti. Otvorite ga da vidite zašto.",
@@ -1643,7 +1651,13 @@
         "unreachable": "Nije moguće pročitati: {{error}}",
         "filter": "Registar",
         "allRegistries": "Svi registri",
-        "browseHint": "Uključite zajedničke dodatke ili dodajte vlastiti registar na kartici Registri."
+        "browseHint": "Uključite zajedničke dodatke ili dodajte vlastiti registar na kartici Registri.",
+        "looksName": "Komunitarne rasporedi i teme",
+        "looksHint": "Omogućuje rasporedima i temama koji nisu od Termixa da rade izvan sigurnosnog okruženja, kao i službeni. Raspored crta cijelu aplikaciju, pa može vidjeti i raditi sve što vi možete. Instalirajte samo one kojima vjerujete. Osvježite stranicu nakon promjene ove postavke.",
+        "looksConfirmTitle": "Dozvoliti komunitarnim rasporedima da rade izvan sigurnosnog okruženja?",
+        "looksConfirmBody": "Komunitarni raspored ili tema pokrenut će se na stranici s punim pristupom Termix-u kao osoba koja je prijavljena. To može biti rizično. Uključite ovo samo ako vjerujete rasporedima i temama koje instalirate.",
+        "looksConfirm": "Uključi",
+        "looksSaved": "Spremljeno. Osvježite stranicu da se promjene primijene."
       },
       "upToDate": "Sve je ažurirano.",
       "lastChecked": "Zadnja provjera {{time}}",
@@ -1744,9 +1758,15 @@
     "firstLoad": {
       "title": "Priprema dodataka",
       "progress": "{{done}} od {{total}}",
-      "hint": "Ovo se događa samo prvi put. Sljedeći put Termix će se otvoriti odmah.",
+      "hint": "Plugini se pokreću prvi put. Nakon toga, Termix će se odmah otvoriti.",
       "skip": "Nastavi"
-    }
+    },
+    "framesBlocked": "Plugini ne mogu učitati svoje datoteke. Proxy za prijavu ispred Termixa vjerojatno ih blokira.",
+    "framesBlockedHelp": "Kako popraviti",
+    "framesFailed_one": "{{names}} se nije mogao učitati, pa su mu dijelovi skriveni",
+    "framesFailed_few": "{{count}} plugin-a se nije moglo učitati, pa su im dijelovi skriveni: {{names}}",
+    "framesFailed_other": "{{count}} plugin-a se nije moglo učitati, pa su im dijelovi skriveni: {{names}}",
+    "framesFailedReload": "Osvježi"
   },
   "settings": {
     "secretSet": "Postavljeno",

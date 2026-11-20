@@ -836,7 +836,12 @@
     "editorUpdate": "Hoszt frissítése",
     "editorAdd": "Hoszt hozzáadása",
     "speedSearch": "Hosztok keresése. Nyilak a kiválasztáshoz, Enter a kapcsolódáshoz, Esc a bezáráshoz",
-    "speedSearchList": "Hosztlista. Írj be valamit, vagy nyomj /-t a kereséshez."
+    "speedSearchList": "Hosztlista. Írj be valamit, vagy nyomj /-t a kereséshez.",
+    "openFromLink": {
+      "title": "Megnyitja a(z) {{name}}?",
+      "description": "Egy hivatkozás arra kérte a Termixet, hogy csatlakozzon ehhez a gazdagéphez.",
+      "confirm": "Csatlakozás"
+    }
   },
   "splitScreen": {
     "title": "Osztott képernyő",
@@ -1375,7 +1380,7 @@
         "running": "Fut",
         "disabled": "Letiltva",
         "failed": "Váratlanul leállt",
-        "blocked": "Várakozás egy másik bővítményre",
+        "blocked": "Nem indítható",
         "server": "A szerverén fut",
         "safeMode": "Kikapcsolva biztonságos módban"
       },
@@ -1461,6 +1466,8 @@
         "updated": "{{name}} frissítve a(z) {{version}} verzióra",
         "updatedMany_one": "{{count}} bővítmény frissítve",
         "updatedMany_other": "{{count}} bővítmény frissítve",
+        "needsReview_one": "1 bővítmény új engedélyeket kér. Vizsgálja meg, hogy frissíthesse.",
+        "needsReview_other": "{{count}} bővítmény kér új engedélyeket. Vizsgálja meg mindegyiket a frissítéshez.",
         "uninstalled": "{{name}} eltávolítva",
         "dataDeleted": "{{name}} adatai törölve",
         "failedToStart": "{{name}} nem sikerült elindítani. Nyissa meg, hogy lássa az okát.",
@@ -1607,7 +1614,13 @@
         "unreachable": "Nem sikerült olvasni: {{error}}",
         "filter": "Regisztrációs tároló",
         "allRegistries": "Összes regisztrációs tároló",
-        "browseHint": "Kapcsolja be a közösségi bővítményeket, vagy adja hozzá saját regisztrációs tárolóját a Regisztrációs tárolók fülön."
+        "browseHint": "Kapcsolja be a közösségi bővítményeket, vagy adja hozzá saját regisztrációs tárolóját a Regisztrációs tárolók fülön.",
+        "looksName": "Közösségi elrendezések és témák",
+        "looksHint": "Lehetővé teszi, hogy a nem Termix-származású elrendezések és témák a homokozó kívül fussanak, akárcsak a hivatalosak. Egy elrendezés az egész alkalmazást rajzolja, így láthat és tehet bármit, amit Ön. Csak olyanokat telepítsen, amelyeknek megbízik. Változtatás után töltse újra az oldalt.",
+        "looksConfirmTitle": "Megengedi, hogy a közösségi elrendezések a homokozó kívül fussanak?",
+        "looksConfirmBody": "Egy közösségi elrendezés vagy téma teljes hozzáféréssel fut az oldalon a Termixhez, a bejelentkezett felhasználó jogkörében. Ez kockázatos lehet. Csak akkor kapcsolja be, ha megbízik a telepített elrendezésekben és témákban.",
+        "looksConfirm": "Bekapcsolás",
+        "looksSaved": "Mentve. Töltse újra az oldalt az alkalmazáshoz."
       },
       "upToDate": "Minden naprakész.",
       "lastChecked": "Utolsó ellenőrzés: {{time}}",
@@ -1704,9 +1717,14 @@
     "firstLoad": {
       "title": "Bővítmények előkészítése",
       "progress": "{{done}} / {{total}}",
-      "hint": "Ez csak az első alkalommal történik meg. Legközelebb a Termix azonnal megnyílik.",
+      "hint": "A bővítmények most indulnak el először. Ezután a Termix azonnal megnyílik.",
       "skip": "Folytatás"
-    }
+    },
+    "framesBlocked": "A bővítmények nem tudják betölteni a fájlaikat. Valószínűleg egy Termix előtt lévő bejelentkezési proxy blokkolja őket.",
+    "framesBlockedHelp": "Hogyan javítható",
+    "framesFailed_one": "A(z) {{names}} nem tudott betöltődni, ezért elemei el vannak rejtve",
+    "framesFailed_other": "{{count}} bővítmény nem tudott betöltődni, ezért elemeik el vannak rejtve: {{names}}",
+    "framesFailedReload": "Újratöltés"
   },
   "settings": {
     "secretSet": "Beállítva",

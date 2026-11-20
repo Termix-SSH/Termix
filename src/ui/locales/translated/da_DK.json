@@ -836,7 +836,12 @@
     "editorUpdate": "Opdater vært",
     "editorAdd": "Tilføj vært",
     "speedSearch": "Søg i værter. Piltaster til valg, Enter til forbindelse, Esc til lukning",
-    "speedSearchList": "Værtliste. Skriv eller tryk / for at søge."
+    "speedSearchList": "Værtliste. Skriv eller tryk / for at søge.",
+    "openFromLink": {
+      "title": "Åbn {{name}}?",
+      "description": "Et link badede Termix om at oprette forbindelse til denne vært.",
+      "confirm": "Opret forbindelse"
+    }
   },
   "splitScreen": {
     "title": "Delt skærm",
@@ -1375,7 +1380,7 @@
         "running": "Kører",
         "disabled": "Deaktiveret",
         "failed": "Stoppet uventet",
-        "blocked": "Venter på et andet plugin",
+        "blocked": "Kan ikke starte",
         "server": "Kører på din server",
         "safeMode": "Deaktiveret i sikker tilstand"
       },
@@ -1461,6 +1466,8 @@
         "updated": "{{name}} opdateret til {{version}}",
         "updatedMany_one": "{{count}} plugin opdateret",
         "updatedMany_other": "{{count}} plugins opdateret",
+        "needsReview_one": "1 plugin beder om nye tilladelser. Gennemgå det for at opdatere.",
+        "needsReview_other": "{{count}} plugins beder om nye tilladelser. Gennemgå hvert enkelt for at opdatere.",
         "uninstalled": "{{name}} afinstalleret",
         "dataDeleted": "Data for {{name}} slettet",
         "failedToStart": "{{name}} kunne ikke starte. Åbn den for at se hvorfor.",
@@ -1607,7 +1614,13 @@
         "unreachable": "Kunne ikke læse det: {{error}}",
         "filter": "Registret",
         "allRegistries": "Alle registre",
-        "browseHint": "Aktiver fællesskabsplugins eller tilføj dit eget register i fanen Register."
+        "browseHint": "Aktiver fællesskabsplugins eller tilføj dit eget register i fanen Register.",
+        "looksName": "Community-layouts og -temaer",
+        "looksHint": "Lader layouts og temaer, der ikke er fra Termix, køre uden for sandkassen, ligesom de officielle. Et layout tegner hele appen, så det kan se og gøre alt, hvad du kan. Installer kun dem, du stoler på. Genindlæs siden efter at have ændret dette.",
+        "looksConfirmTitle": "Tillad community-layouts at køre uden for sandkassen?",
+        "looksConfirmBody": "Et community-layout eller -tema vil køre på siden med fuld adgang til Termix som den bruger, der er logget ind. Dette kan være risikabelt. Slå kun dette til, hvis du stoler på de layouts og temaer, du installerer.",
+        "looksConfirm": "Slå til",
+        "looksSaved": "Gemt. Genindlæs siden for at anvende det."
       },
       "upToDate": "Alt er opdateret.",
       "lastChecked": "Sidst tjekket {{time}}",
@@ -1704,9 +1717,14 @@
     "firstLoad": {
       "title": "Forbereder plugins",
       "progress": "{{done}} af {{total}}",
-      "hint": "Dette sker kun første gang. Næste gang åbner Termix med det samme.",
+      "hint": "Plugins starter for første gang. Efter dette åbner Termix med det samme.",
       "skip": "Fortsæt"
-    }
+    },
+    "framesBlocked": "Plugins kan ikke indlæse deres filer. En login-proxy foran Termix blokerer dem sandsynligvis.",
+    "framesBlockedHelp": "Sådan retter du det",
+    "framesFailed_one": "{{names}} kunne ikke indlæses, så dens dele er skjult",
+    "framesFailed_other": "{{count}} plugins kunne ikke indlæses, så deres dele er skjult: {{names}}",
+    "framesFailedReload": "Genindlæs"
   },
   "settings": {
     "secretSet": "Indstillet",
