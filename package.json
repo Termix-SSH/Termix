@@ -98,7 +98,7 @@
     "@codemirror/view": "^6.43.15",
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.0",
-    "@cyclonedx/cyclonedx-npm": "6.0.1",
+    "@cyclonedx/cyclonedx-npm": "7.0.1",
     "@deadendjs/swagger-jsdoc": "^8.1.2",
     "@electron/notarize": "^3.1.2",
     "@electron/rebuild": "^4.2.1",
