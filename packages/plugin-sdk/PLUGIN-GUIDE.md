@@ -1184,7 +1184,10 @@ exports with props is `ui.api.txt` in the Termix repo
   person's request) and hands the frame the `grant`. `<NativeView grant={grant} />` then shows the page: a native
   view in the desktop app, a credentialless sandboxed iframe in a browser. The frame never names the address, and
   only a grant can trust a bad certificate (desktop only). It fills its element, hides while a dialog or menu is
-  open, and each grant works for ten minutes for the person who asked. `url` still works for a plugin in the page.
+  open, and each grant works for ten minutes for the person who asked. In the desktop app a fresh grant for the same
+  person, plugin, origin and certificate rule keeps the page's login across reloads and reopened tabs. That login is
+  kept in memory only and ends when Termix quits or the person signs out, and pages on this computer (loopback) always
+  start signed out. `url` still works for a plugin in the page.
 - Serial ports in the browser: `app.serial.request({ baudRate, dataBits, stopBits, parity, filters }, { onData,
 onClose })` (needs `device:serial`, call it from a click in your frame) opens the browser's port picker and
   resolves `{ write(bytes), close() }` for the port the person picked, or null when they picked none. Check

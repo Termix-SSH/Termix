@@ -483,6 +483,7 @@ export function createPluginContext(
       });
       // The desktop app's main process keeps its own copy, so a native view
       // opens from the grant alone and never from an address the page sends.
+      // The user it is granted to picks which kept login the view shares.
       const { isElectronIpcAvailable, requestFromElectronMain } =
         await import("../utils/electron-ipc-bridge.js");
       if (isElectronIpcAvailable()) {
@@ -491,6 +492,7 @@ export function createPluginContext(
           pluginId,
           url: entry.url,
           ignoreCert: entry.ignoreCert,
+          userId,
           expiresAt: entry.expiresAt,
         }).catch(() => undefined);
       }

@@ -553,6 +553,7 @@ const embeddedViews = createEmbeddedViews({
   WebContentsView,
   session,
   getMainWindow: () => mainWindow,
+  log: logToFile,
 });
 
 // Only the app's own page, in the main window's top frame, may call main.
@@ -2046,6 +2047,13 @@ ipc.handle("set-setting", (_event, key, value) => {
 });
 
 ipc.handle("clear-session-cookies", async () => {
+  // First, so a failure in the cookie work below cannot skip it: logins kept
+  // in embedded views end with the Termix login.
+  try {
+    void embeddedViews.forgetSessions();
+  } catch (error) {
+    console.error("Failed to forget embedded view sessions:", error);
+  }
   try {
     clearPersistedElectronAuthCookies();
     const ses = mainWindow?.webContents?.session;

@@ -241,6 +241,7 @@ describe("ctx.desktop.grantView", () => {
         pluginId: "demo",
         url: "https://pve.example.test:8006/",
         ignoreCert: true,
+        userId: "user-1",
       }),
     );
   });

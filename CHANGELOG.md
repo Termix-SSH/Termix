@@ -12,6 +12,7 @@
 - Confirm prompts can have a checkbox, like Delete permanently in the file manager
 - Host row badges from plugins can show an icon and their own color
 - Signing out can also sign you out of your single sign on provider, when its login method asks for it
+- Desktop app: logins of web pages a plugin shows in the app are kept across reloads and reopened tabs until Termix quits or you sign out. Pages on this computer still start signed out
 
 ### Fixed
 
@@ -43,6 +44,7 @@
 - Exported hosts keep whether SSH is on, so importing them no longer turns SSH on or off by the connection type
 - Desktop app: linking to an account that already has the same hosts, folders and credentials adopts them instead of making a second copy of each, thanks to ZacharyZcR
 - A plugin that cancels work with its own error type still cancels it, thanks to ZacharyZcR
+- Uploads in the file manager finish again instead of hanging, and uploads to other plugins no longer fail as they finish
 - A plugin's host row button keeps working after the plugin sat idle for a moment, like after you close one of its tabs, instead of doing nothing until a reload
 
 ## 26.11.2
