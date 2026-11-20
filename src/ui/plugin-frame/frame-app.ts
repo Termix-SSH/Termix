@@ -485,6 +485,7 @@ export function createFrameApp(host: FrameAppHost): {
         id,
         handler,
         permission: options.permission,
+        private: options.private === true,
       });
     },
 

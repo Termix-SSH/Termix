@@ -892,6 +892,11 @@ before, with the same look and theme.
   and activity. Saved passwords are not available to a frame.
 - `invokeAction` runs your own actions and the ids in your manifest `uses`. Opening links, downloads,
   the clipboard, toasts and confirms go through the shell. `localStorage` works and is kept per plugin.
+- Every frame runs activate with its own copy of your module state, so a view can't read what another
+  view keeps in a module variable. To reach the background frame, give it an action registered with
+  `registerAction(id, handler, { private: true })` and call it from the view: functions in the arguments
+  arrive as references back to the view. A private action runs only for your own frames, even when
+  another plugin lists it in `uses`.
 - Not available in a frame: host badges, status indicators and editor toolbar items with a `component`
   (use `useDot` or `useValue`). Layouts, themes and Sync are the shell itself: only an official plugin
   with `ui:layout`, `ui:theme` or `sync:provide` runs in the page. Other plugins' parts work, see Other
