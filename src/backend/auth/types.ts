@@ -7,6 +7,8 @@ export interface ExternalSessionRef {
   providerId?: number | null;
   sub?: string | null;
   sid?: string | null;
+  /** The login method that made the session, for its logoutRedirect. */
+  methodId?: string | null;
 }
 
 /** Extra fields core's own methods may set. Plugins never see these. */

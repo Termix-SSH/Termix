@@ -2543,6 +2543,23 @@ export interface PluginLoginMethod {
     request: PluginLoginRequest,
     instanceId: string | null,
   ) => Promise<PluginVerifiedIdentity>;
+  /**
+   * Where to send the browser after a user signs out of a session this
+   * method made, such as the identity provider's own sign out page. Gets
+   * the `logoutClaims` the login carried and the server's address. Return
+   * null to stay in Termix. Only http and https addresses are used, and the
+   * desktop app ignores it (Termix 26.11.3, SDK 2.11).
+   */
+  logoutRedirect?: (session: PluginLogoutSession) => Promise<string | null>;
+}
+
+/** A session ending by sign out, for PluginLoginMethod.logoutRedirect. */
+export interface PluginLogoutSession {
+  providerId: number | null;
+  sub: string | null;
+  sid: string | null;
+  /** The address Termix is reached at, like https://termix.example.com. */
+  baseUrl: string;
 }
 
 export interface PluginSecondFactor {

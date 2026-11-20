@@ -565,7 +565,7 @@ listHostSections (value): () => HostSectionDef[]
 listStepUpFactors (value): () => Promise<SecondFactorRef[]>
 listUserInvites (value): () => Promise<UserInvite[]>
 loadPaletteGroup (value): (group: PaletteGroupDef) => Promise<PaletteItemDef[]>
-logoutUser (value): () => Promise<{ success: boolean; message: string; }>
+logoutUser (value): () => Promise<{ success: boolean; message: string; redirectUrl?: string; }>
 makeHostSshSubTabs (value): (t: (key: string, options?: { defaultValue?: string; }) => string, protocols?: Record<string, boolean>, defaultsMode?: boolean) => HostTab[]
 makeHostTabs (value): (t: (key: string, options?: { defaultValue?: string; }) => string, protocols?: Record<string, boolean>, defaultsMode?: boolean) => HostTab[]
 makeUserAdmin (value): (userId: string) => Promise<Record<string, unknown>>

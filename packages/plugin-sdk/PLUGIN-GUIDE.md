@@ -1312,6 +1312,9 @@ what the backend registers:
   it under the password form. A passkey method never counts as another way in when an admin turns password
   login off.
 - An instance's `views` (`"password"`, `"external"`) picks which page of the sign in screen shows it.
+- `logoutRedirect(session)` (Termix 26.11.3, SDK 2.11): when a user signs out of a session your method made,
+  return an http(s) address to send the browser to, like the identity provider's sign out page, or null. It gets
+  the login's `logoutClaims` and `baseUrl`. Termix waits at most 5 seconds and the desktop app ignores it.
 
 A second factor takes `prompt`: `{ kind: "code", field, labelKey }` (one field), `{ kind: "fields", fields }`, or
 `{ kind: "webauthn" }` (`challenge()` returns the request options, `verify` gets `{ response }`). The step up

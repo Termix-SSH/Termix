@@ -6,6 +6,7 @@ Plugin API 2.9.0. Needs Termix 26.11.2.
 
 ### Added
 
+- Login methods can offer `logoutRedirect(session)`: where to send the browser when a user signs out of a session the method made, like the identity provider's sign out page. Termix 26.11.3 uses it, older versions ignore it
 - `registerAction(id, handler, { private: true })`: only your own plugin views may run the action, even when another plugin lists it in `uses`. Termix 26.11.3 enforces it, older versions ignore it
 
 ## 2.10.1

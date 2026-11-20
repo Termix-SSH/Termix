@@ -1048,6 +1048,8 @@ export async function requestTrustedProxyLogin(): Promise<{
 export async function logoutUser(): Promise<{
   success: boolean;
   message: string;
+  /** Where the login method wants the browser to go next, if anywhere. */
+  redirectUrl?: string;
 }> {
   try {
     const response = await authApi.post("/users/logout");

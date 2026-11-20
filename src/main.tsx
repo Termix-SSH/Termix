@@ -24,7 +24,12 @@ import {
   markDesktopManualLogout,
   clearDesktopManualLogout,
 } from "@/auth/Auth";
-import { getUserInfo, getCurrentToken, appReadyPromise } from "@/main-axios";
+import {
+  getUserInfo,
+  getCurrentToken,
+  appReadyPromise,
+  logoutUser,
+} from "@/main-axios";
 import { applyAccentColor, applyFontSize, applyUiFont } from "@/lib/theme";
 import { installElectronWheelZoomGuard } from "@/lib/electron-wheel-zoom";
 import type { FontSizeId, UiFontId } from "@/types/ui-types";
@@ -339,6 +344,18 @@ function App() {
     // isn't subject to batching, so it correctly dedupes within one tick.
     if (loggingOutRef.current) return;
     loggingOutRef.current = true;
+    // Ends the session on the server too. A login method may send the
+    // browser on, such as to the identity provider's sign out page.
+    const serverLogout = options?.manual
+      ? logoutUser()
+          .then((result) => {
+            const target = result?.redirectUrl;
+            if (target && !isElectron() && /^https?:\/\//i.test(target)) {
+              window.location.assign(target);
+            }
+          })
+          .catch(() => {})
+      : Promise.resolve();
     // The next user may see different plugins, so nothing they registered
     // should survive into the next session.
     void stopPluginRuntime();
@@ -352,7 +369,9 @@ function App() {
       markDesktopManualLogout();
     }
     if (isElectron()) {
-      window.electronAPI?.clearSessionCookies?.().catch(() => {});
+      void serverLogout.finally(() => {
+        window.electronAPI?.clearSessionCookies?.().catch(() => {});
+      });
     } else {
       const isSecure = window.location.protocol === "https:";
       document.cookie = isSecure

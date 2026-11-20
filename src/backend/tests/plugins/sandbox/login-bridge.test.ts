@@ -303,6 +303,38 @@ describe("remote login method", () => {
     ]);
   });
 
+  it("passes the sign out session and keeps only an http(s) address", async () => {
+    const logoutRedirect = vi.fn(
+      async (session: { sub: string }) =>
+        `https://idp.example/logout?sub=${session.sub}`,
+    );
+    const method = remoteLoginMethod(
+      { id: "sso", labelKey: "k", kind: "redirect", logoutRedirect },
+      deps(),
+    );
+    const session = {
+      providerId: 3,
+      sub: "u1",
+      sid: null,
+      baseUrl: "https://termix.example",
+    };
+    expect(await method.logoutRedirect!(session)).toBe(
+      "https://idp.example/logout?sub=u1",
+    );
+    expect(logoutRedirect).toHaveBeenCalledWith(session);
+
+    const bad = remoteLoginMethod(
+      {
+        id: "sso",
+        labelKey: "k",
+        kind: "redirect",
+        logoutRedirect: async () => "javascript:alert(1)",
+      },
+      deps(),
+    );
+    expect(await bad.logoutRedirect!(session)).toBeNull();
+  });
+
   it("refuses a method without id or a known kind", () => {
     expect(() =>
       remoteLoginMethod({ labelKey: "k", kind: "form" }, deps()),

@@ -103,6 +103,7 @@ function serializeExternalSession(
     providerId: ref.providerId ?? null,
     sub: ref.sub ?? null,
     sid: ref.sid ?? null,
+    ...(ref.methodId ? { methodId: ref.methodId } : {}),
   });
 }
 

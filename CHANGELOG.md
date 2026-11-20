@@ -2,8 +2,13 @@
 
 ## 26.11.3
 
+### Added
+
+- Signing out can also sign you out of your single sign on provider, when its login method asks for it
+
 ### Fixed
 
+- Signing out from the menu ends the session on the server too, not only in the browser
 - Desktop app: parts of plugins that only show in the desktop app, like a local terminal, show again
 - Plugins that are blocked or stopped after an upgrade show their update again, and Update all no longer greys out when only those are left
 - Update all opens a review for each plugin whose update asks for new permissions, instead of skipping it without a word

@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   fetchGuestViews: vi.fn(),
   startPluginRuntime: vi.fn(async () => {}),
   standaloneViewFor: vi.fn(),
+  logoutUser: vi.fn(),
 }));
 
 vi.mock("react-dom/client", () => ({
@@ -59,6 +60,7 @@ vi.mock("@/main-axios", () => ({
   getUserInfo: mocks.getUserInfo,
   getCurrentToken: vi.fn(async () => null),
   appReadyPromise: Promise.resolve(),
+  logoutUser: mocks.logoutUser,
 }));
 vi.mock("@/plugin-host/loader", () => ({
   fetchGuestViews: mocks.fetchGuestViews,
@@ -88,13 +90,25 @@ vi.mock("@/plugin-host/PluginViewPlaceholder", () => ({
 vi.mock("@/onboarding/startup", () => ({
   resolveStartupOnboarding: async () => null,
 }));
-vi.mock("@/AppShell", () => ({ AppShell: () => <div>app shell</div> }));
+vi.mock("@/AppShell", () => ({
+  AppShell: ({
+    onLogout,
+  }: {
+    onLogout: (options?: { manual?: boolean }) => void;
+  }) => (
+    <div>
+      app shell
+      <button onClick={() => onLogout({ manual: true })}>sign out</button>
+    </div>
+  ),
+}));
 vi.mock("@/onboarding/OnboardingStage", () => ({
   OnboardingStage: () => null,
 }));
 
 const originalLocation = window.location;
 let replace: ReturnType<typeof vi.fn>;
+let assign: ReturnType<typeof vi.fn>;
 
 /** Loads the entry point fresh, the way a page load would. */
 async function openPage(url: string) {
@@ -118,6 +132,8 @@ beforeEach(() => {
     standalone: () => <div>standalone:{view}</div>,
   }));
   replace = vi.fn();
+  assign = vi.fn();
+  mocks.logoutUser.mockResolvedValue({ success: true, message: "" });
   Object.defineProperty(window, "location", {
     configurable: true,
     value: {
@@ -134,6 +150,7 @@ beforeEach(() => {
         return originalLocation.hash;
       },
       replace,
+      assign,
     },
   });
 });
@@ -184,5 +201,32 @@ describe("full-screen view links", () => {
     ).toBeTruthy();
     expect(mocks.getUserInfo).not.toHaveBeenCalled();
     expect(sessionStorage.getItem(KEY)).toBeNull();
+  });
+});
+
+describe("signing out", () => {
+  async function signedIn() {
+    await openPage("/");
+    fireEvent.click(await screen.findByText("sign in"));
+    fireEvent.click(await screen.findByText("sign out"));
+  }
+
+  it("ends the session on the server and follows the method's sign out page", async () => {
+    mocks.logoutUser.mockResolvedValue({
+      success: true,
+      message: "",
+      redirectUrl: "https://idp.example/logout",
+    });
+    await signedIn();
+    expect(mocks.logoutUser).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() =>
+      expect(assign).toHaveBeenCalledWith("https://idp.example/logout"),
+    );
+  });
+
+  it("stays in Termix with no sign out page", async () => {
+    await signedIn();
+    await vi.waitFor(() => expect(mocks.logoutUser).toHaveBeenCalled());
+    expect(assign).not.toHaveBeenCalled();
   });
 });

@@ -57,6 +57,7 @@ import {
 import { provideAuthPolicy } from "../auth/policy.js";
 import { provideSshTransport } from "../hosts/connect/transport-providers.js";
 import type { VerifiedIdentity } from "../auth/types.js";
+import { safeRedirect } from "../auth/logout-redirect.js";
 import type {
   MutableConnectConfig,
   SshAuthProvider,
@@ -737,6 +738,19 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
   };
 }
 
+/** Marks a login's session with the method that made it, for its sign out. */
+export function withMethod(
+  identity: VerifiedIdentity,
+  methodId: string,
+): VerifiedIdentity {
+  return identity.externalSession
+    ? {
+        ...identity,
+        externalSession: { ...identity.externalSession, methodId },
+      }
+    : identity;
+}
+
 /**
  * Turns what a plugin method returned into core's identity. Only the fields
  * the SDK documents are copied, so a plugin cannot set core-only extras, and
@@ -963,16 +977,25 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
           callback: method.callback
             ? async (...args) => {
                 await granted();
-                return toCoreIdentity(
-                  pluginId,
-                  await method.callback!(...args),
+                return withMethod(
+                  toCoreIdentity(pluginId, await method.callback!(...args)),
+                  method.id,
                 );
               }
             : undefined,
           verify: method.verify
             ? async (...args) => {
                 await granted();
-                return toCoreIdentity(pluginId, await method.verify!(...args));
+                return withMethod(
+                  toCoreIdentity(pluginId, await method.verify!(...args)),
+                  method.id,
+                );
+              }
+            : undefined,
+          logoutRedirect: method.logoutRedirect
+            ? async (session) => {
+                await granted();
+                return safeRedirect(await method.logoutRedirect!(session));
               }
             : undefined,
         });
