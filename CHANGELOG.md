@@ -28,6 +28,7 @@
 - Uploading files to a plugin works again, like drag and drop or the upload button in the file manager
 - Desktop app: the interface size and other settings no longer go back to old account values on launch when the app isn't linked to a server
 - Desktop app: `NODE_EXTRA_CA_CERTS` works again, so servers with a certificate from a private CA can be linked. Plugins now trust those certificates too
+- Exported hosts keep whether SSH is on, so importing them no longer turns SSH on or off by the connection type
 
 ## 26.11.2
 
