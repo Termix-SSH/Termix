@@ -43,6 +43,26 @@ const TOAST_COUNTER = `
   }).observe(document.documentElement, { childList: true, subtree: true });
 `;
 
+// Notes when hostile frames come and go, for a failure message.
+const FRAME_TIMELINE = `
+  window.__hostileFrames = [];
+  const start = Date.now();
+  const note = (what, node) => {
+    if (node.nodeType !== 1 || node.tagName !== "IFRAME") return;
+    if (node.dataset.pluginFrame !== "hostile-frame") return;
+    window.__hostileFrames.push(
+      Math.round((Date.now() - start) / 100) / 10 + "s " + what + " " +
+        (node.dataset.frameRole ?? "view"),
+    );
+  };
+  new MutationObserver((records) => {
+    for (const record of records) {
+      for (const node of record.addedNodes) note("added", node);
+      for (const node of record.removedNodes) note("removed", node);
+    }
+  }).observe(document.documentElement, { childList: true, subtree: true });
+`;
+
 async function finishSetup(page) {
   const button = page
     .getByRole("button", {
@@ -158,6 +178,7 @@ export async function runFrame(world, log) {
   context.on("page", () => popups++);
   const page = await context.newPage();
   await page.addInitScript(TOAST_COUNTER);
+  await page.addInitScript(FRAME_TIMELINE);
   page.on("download", () => downloads++);
   const trouble = [];
   page.on("console", (message) => {
@@ -267,7 +288,9 @@ export async function runFrame(world, log) {
                   `${f.dataset.pluginFrame}/${f.dataset.frameRole ?? "view"}`,
               )
               .join(", "),
-          )})`,
+          )}; hostile frames: ${(
+            await page.evaluate(() => window.__hostileFrames ?? [])
+          ).join(", ")}; ${trouble.slice(-10).join(" | ")})`,
         };
     results["page.foreign-overlay"] = overlay.error
       ? { worked: false, error: true, detail: overlay.error }
