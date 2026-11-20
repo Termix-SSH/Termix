@@ -924,19 +924,32 @@ export async function startFramedPlugin(
     useEffect(() => (known ? undefined : acquire()), [known]);
   };
 
-  /** Calls a function the frame registered, starting the frame first. */
-  const callFn = async (
-    rid: string,
-    path: string,
-    args: unknown[],
-  ): Promise<unknown> => {
+  /** Keeps the frame up while a call runs, and notes a user's ask. */
+  const holding = async <T,>(
+    kind: string | undefined,
+    work: () => Promise<T>,
+  ): Promise<T> => {
     pending++;
     lastUse = Date.now();
-    const kind = registrations.get(rid)?.kind;
     if (kind && ASKING_KINDS.has(kind) && hasUserActivation()) {
       askedAt = Date.now();
     }
     try {
+      return await work();
+    } finally {
+      pending--;
+      lastUse = Date.now();
+    }
+  };
+
+  /** Calls a function the frame registered, starting the frame first. */
+  const callFn = (
+    rid: string,
+    path: string,
+    args: unknown[],
+  ): Promise<unknown> => {
+    const kind = registrations.get(rid)?.kind;
+    return holding(kind, async () => {
       await ensureFrame(`call ${kind ?? rid} ${path}`);
       const current = frame;
       const ref = current?.raw.has(rid)
@@ -946,10 +959,7 @@ export async function startFramedPlugin(
         throw new Error("The plugin no longer has this function");
       }
       return await current.connection.port.importFn(ref)(...args);
-    } finally {
-      pending--;
-      lastUse = Date.now();
-    }
+    });
   };
 
   const decodeLazy = (rid: string, raw: unknown) =>
@@ -987,21 +997,86 @@ export async function startFramedPlugin(
       const slot = hostSlot(stored.slice(prefix.length));
       if (slot !== null) lastForHost.set(slot, value);
     }
-    const ask = (key: string, args: unknown[], stored: string) => {
+    const trimCache = () => {
+      while (cache.size > MEMO_LIMIT) {
+        cache.delete(cache.keys().next().value as string);
+      }
+    };
+    /** Keeps an answer the frame gave for `key`. */
+    const remember = (key: string, value: unknown) => {
+      const stored = prefix + key;
+      cache.set(key, value);
+      failedAt.delete(key);
+      const slot = hostSlot(key);
+      if (slot !== null) lastForHost.set(slot, value);
+      if (isPlainValue(value)) answers[stored] = value;
+      else delete answers[stored];
+      persist();
+    };
+    // Functions in an answer reach only the frame that answered. Once its
+    // port is gone, a call asks again and runs the function at the same path,
+    // refused if an id that was on that path changed.
+    const rebind = (value: unknown, key: string, args: unknown[]): unknown => {
+      const port = frame?.connection?.port ?? null;
+      const sameIds = (next: unknown, path: string[]) =>
+        path.every((_, depth) => {
+          const before = atPath(value, path.slice(0, depth));
+          if (before === null || typeof before !== "object") return true;
+          if (!("id" in before)) return true;
+          const after = atPath(next, path.slice(0, depth));
+          return (
+            after !== null &&
+            typeof after === "object" &&
+            (after as { id?: unknown }).id === (before as { id?: unknown }).id
+          );
+        });
+      const walk = (item: unknown, path: string[]): unknown => {
+        if (typeof item === "function") {
+          return (...callArgs: unknown[]) =>
+            holding(record.kind, async () => {
+              if (port && frame?.connection?.port === port) {
+                return await (item as AsyncFn)(...callArgs);
+              }
+              const next = rebind(await (fn as AsyncFn)(...args), key, args);
+              remember(key, next);
+              trimCache();
+              scheduleRefresh(record);
+              const target = atPath(next, path);
+              if (typeof target !== "function" || !sameIds(next, path)) {
+                throw new Error("The plugin no longer has this function");
+              }
+              return await (target as AsyncFn)(...callArgs);
+            });
+        }
+        if (item === null || typeof item !== "object") return item;
+        const proto = Object.getPrototypeOf(item);
+        if (
+          !Array.isArray(item) &&
+          proto !== Object.prototype &&
+          proto !== null
+        ) {
+          return item;
+        }
+        const out: Record<string, unknown> | unknown[] = Array.isArray(item)
+          ? []
+          : {};
+        let changed = false;
+        for (const [name, entry] of Object.entries(item)) {
+          const next = walk(entry, [...path, name]);
+          if (next !== entry) changed = true;
+          (out as Record<string, unknown>)[name] = next;
+        }
+        return changed ? out : item;
+      };
+      return walk(value, []);
+    };
+    const ask = (key: string, args: unknown[]) => {
       if (inflight.has(key)) return;
       inflight.add(key);
       answerAsked();
       (fn as AsyncFn)(...args)
         .then(
-          (value) => {
-            cache.set(key, value);
-            failedAt.delete(key);
-            const slot = hostSlot(key);
-            if (slot !== null) lastForHost.set(slot, value);
-            if (isPlainValue(value)) answers[stored] = value;
-            else delete answers[stored];
-            persist();
-          },
+          (answer) => remember(key, rebind(answer, key, args)),
           () => {
             // A frame that stopped or timed out mid answer is asked again
             // later, not taken as a no for good.
@@ -1016,9 +1091,7 @@ export async function startFramedPlugin(
         .finally(() => {
           inflight.delete(key);
           answerDone();
-          while (cache.size > MEMO_LIMIT) {
-            cache.delete(cache.keys().next().value as string);
-          }
+          trimCache();
           scheduleRefresh(record);
         });
     };
@@ -1039,24 +1112,24 @@ export async function startFramedPlugin(
     };
     const sync = (...raw: unknown[]) => {
       const { key, args } = keyFor(raw);
-      const stored = `${record.rid}\u0000${field}\u0000${key}`;
+      const stored = prefix + key;
       if (stale.has(key) && frame?.ready) {
         stale.delete(key);
-        ask(key, args, stored);
+        ask(key, args);
       }
       const failed = failedAt.get(key);
       if (failed !== undefined && Date.now() - failed > ANSWER_RETRY_MS) {
         failedAt.delete(key);
-        ask(key, args, stored);
+        ask(key, args);
       }
       if (cache.has(key)) return cache.get(key);
       if (stored in answers) {
         cache.set(key, answers[stored]);
-        if (frame?.ready) ask(key, args, stored);
+        if (frame?.ready) ask(key, args);
         else stale.add(key);
         return answers[stored];
       }
-      ask(key, args, stored);
+      ask(key, args);
       const slot = hostSlot(key);
       return slot !== null && lastForHost.has(slot)
         ? lastForHost.get(slot)
