@@ -47,10 +47,13 @@ import {
 import { createPluginSchedule } from "../../../plugins/schedule.js";
 import { createPluginRouter, getPluginRouter } from "../../../plugins/http.js";
 import { DisposableBag } from "../../../plugins/disposables.js";
+import { getSpawner, setSpawner } from "../../../plugins/sandbox/spawn.js";
 
 /** Core's own timers, as a plugin ctx has them. */
-function realSchedule() {
-  return createPluginSchedule(new DisposableBag("test"), () => {});
+function realSchedule(onError: (error: unknown) => void = () => {}) {
+  return createPluginSchedule(new DisposableBag("test"), (_message, error) =>
+    onError(error),
+  );
 }
 
 const repo = path.resolve(__dirname, "../../../../..");
@@ -487,6 +490,55 @@ export async function deactivate() {
     await until(() => reports.length > 0);
     expect(reports[0]).toBe("tick");
     await supervisor.shutdown();
+  }, 30_000);
+
+  it("runs every job that fires on the tick that wakes a stopped plugin", async () => {
+    const reports: unknown[] = [];
+    const errors: unknown[] = [];
+    // A slow restart leaves time for the second job to fire mid start.
+    const real = getSpawner();
+    let spawns = 0;
+    setSpawner({
+      mode: real.mode,
+      spawn: async (request) => {
+        if (spawns++ > 0) await new Promise((r) => setTimeout(r, 400));
+        return real.spawn(request);
+      },
+    });
+    const supervisor = new SandboxSupervisor(config({ idleMs: 200 }));
+    await supervisor.register(
+      spec(
+        "pair",
+        plugin(
+          "pair",
+          `export async function activate(ctx) {
+            await ctx.schedule.every(1200, async () => {
+              await ctx.report("a");
+            }, { id: "a" });
+            // Lands while the tick for "a" is still starting the process.
+            await new Promise((r) => setTimeout(r, 30));
+            await ctx.schedule.every(1200, async () => {
+              await ctx.report("b");
+            }, { id: "b" });
+          }`,
+        ),
+        {
+          sandbox: {
+            schedules: [
+              { id: "a", every: 1200 },
+              { id: "b", every: 1200 },
+            ],
+          },
+          report: (value) => reports.push(value),
+          ctx: { schedule: realSchedule((error) => errors.push(error)) },
+        },
+      ),
+    );
+    await until(() => supervisor.status()[0].state === "stopped");
+    await until(() => reports.includes("a") && reports.includes("b"));
+    expect(errors.map((error) => (error as Error).message)).toEqual([]);
+    await supervisor.shutdown();
+    setSpawner(real);
   }, 30_000);
 
   it("lets a plugin with nothing to do stop even while its short job runs", async () => {

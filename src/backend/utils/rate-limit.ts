@@ -149,6 +149,12 @@ export const CORE_RATE_LIMITS: RateLimitRule[] = [
     perIp: { max: 10, windowMs: 60 * MINUTE },
   },
   {
+    name: "app-handoff",
+    methods: ["POST"],
+    path: /^\/users\/auth\/app-handoff\/redeem$/,
+    perIp: { max: 20, windowMs: 15 * MINUTE },
+  },
+  {
     name: "invite",
     methods: ["GET", "POST"],
     path: /^\/users\/invites\/redeem\/[^/]+(\/accept)?$/,

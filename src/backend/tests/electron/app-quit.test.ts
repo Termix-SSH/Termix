@@ -4,7 +4,7 @@ import vm from "node:vm";
 import { createRequire } from "node:module";
 import { describe, expect, it, vi } from "vitest";
 
-const { closeAction } = createRequire(import.meta.url)(
+const { closeAction, showTrayNotice } = createRequire(import.meta.url)(
   "../../../../electron/app-quit.cjs",
 );
 
@@ -161,6 +161,91 @@ describe("closeAction", () => {
   it("lets the window close while quitting or without a tray", () => {
     expect(closeAction({ ...base, isQuitting: true })).toBe("close");
     expect(closeAction({ ...base, hasTray: false })).toBe("close");
+  });
+});
+
+describe("showTrayNotice", () => {
+  const text = { title: "Still running", body: "Quit from the tray" };
+  function fakeTray() {
+    return Object.assign(new EventEmitter(), {
+      isDestroyed: () => false,
+      displayBalloon: vi.fn(),
+    });
+  }
+  class FakeNotification extends EventEmitter {
+    static isSupported = () => true;
+    static made: FakeNotification[] = [];
+    constructor(readonly options: unknown) {
+      super();
+      FakeNotification.made.push(this);
+    }
+    show = vi.fn();
+  }
+
+  it("uses the tray balloon on Windows and counts it once it shows", () => {
+    const tray = fakeTray();
+    const onShown = vi.fn();
+    showTrayNotice({
+      platform: "win32",
+      tray,
+      Notification: FakeNotification,
+      text,
+      onShown,
+    });
+    expect(tray.displayBalloon).toHaveBeenCalledWith(
+      expect.objectContaining({ title: text.title, content: text.body }),
+    );
+    expect(onShown).not.toHaveBeenCalled();
+    tray.emit("balloon-show");
+    expect(onShown).toHaveBeenCalledOnce();
+  });
+
+  it("does not stack listeners when the balloon never showed", () => {
+    const tray = fakeTray();
+    const onShown = vi.fn();
+    const args = {
+      platform: "win32",
+      tray,
+      Notification: FakeNotification,
+      text,
+      onShown,
+    };
+    showTrayNotice(args);
+    showTrayNotice(args);
+    expect(tray.displayBalloon).toHaveBeenCalledTimes(2);
+    tray.emit("balloon-show");
+    expect(onShown).toHaveBeenCalledOnce();
+  });
+
+  it("uses a notification elsewhere and counts it only when it shows", () => {
+    FakeNotification.made = [];
+    const onShown = vi.fn();
+    showTrayNotice({
+      platform: "darwin",
+      tray: fakeTray(),
+      Notification: FakeNotification,
+      text,
+      onShown,
+    });
+    const [notice] = FakeNotification.made;
+    expect(notice.show).toHaveBeenCalledOnce();
+    expect(onShown).not.toHaveBeenCalled();
+    notice.emit("show");
+    expect(onShown).toHaveBeenCalledOnce();
+  });
+
+  it("waits for the text from the window", () => {
+    const tray = fakeTray();
+    expect(
+      showTrayNotice({
+        platform: "win32",
+        tray,
+        Notification: FakeNotification,
+        text: null,
+        onShown: vi.fn(),
+      }),
+    ).toBe(false);
+    expect(tray.displayBalloon).not.toHaveBeenCalled();
   });
 });
 

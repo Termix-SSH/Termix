@@ -19,6 +19,15 @@
 - Desktop app: plugin updates no longer fail with "inclusion promise could not be verified", thanks to dean for finding the cause
 - Termix starts again when the data folder doesn't allow changing file owners, like some network shares, instead of restarting over and over. Plugins then run as Termix's own user
 - When most plugins go quiet at once because Termix itself was busy, they are no longer all restarted together
+- A plugin's scheduled job no longer fails with "The plugin process is not running" when it fires while the plugin is waking up
+- Desktop app on Windows: the notice that Termix is still running in the tray now shows in the portable app too, and shows again next time if Windows hid it
+- When plugins can't load in the browser, Termix says which ones and why, instead of their parts quietly disappearing
+- A plugin part at the edge of the screen no longer takes the whole width, which hid the tabs and made every other plugin's parts disappear
+- Signing in to the mobile app through the browser works with every login method again, not only a password and code. Newer apps get the session through a one-time code only the app can use
+- Single sign on started from the login page the mobile app opened goes straight back to the app
+- Uploading files to a plugin works again, like drag and drop or the upload button in the file manager
+- Desktop app: the interface size and other settings no longer go back to old account values on launch when the app isn't linked to a server
+- Desktop app: `NODE_EXTRA_CA_CERTS` works again, so servers with a certificate from a private CA can be linked. Plugins now trust those certificates too
 
 ## 26.11.2
 

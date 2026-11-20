@@ -25,6 +25,7 @@ import {
 import { BUILTIN_THEMES, setPluginThemes } from "@/look/theme-registry";
 import { setPluginLayouts } from "@/look/layout-registry";
 import { startFramedPlugin } from "./frames/frame-plugins";
+import { reportFrameFailure } from "./frames/frame-failures";
 import { dropFrameToken } from "./frames/frame-token";
 
 /**
@@ -332,12 +333,14 @@ async function activateFramed(summary: PluginSummary): Promise<void> {
       console.error(`[plugins] ${summary.id} failed to start`, error);
       failedVersions.set(summary.id, summary.assetVersion ?? null);
       setFrontendState(summary.id, "failed", message);
+      reportFrameFailure(summary.name || summary.id, message);
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[plugins] ${summary.id} failed to start`, error);
     failedVersions.set(summary.id, summary.assetVersion ?? null);
     setFrontendState(summary.id, "failed", message);
+    reportFrameFailure(summary.name || summary.id, message);
   }
 }
 

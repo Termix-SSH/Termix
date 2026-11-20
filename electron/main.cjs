@@ -54,7 +54,7 @@ const linkedServer = require("./linked-server.cjs");
 const desktopSettings = require("./desktop-settings.cjs");
 const autoUpdates = require("./auto-updater.cjs");
 const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
-const { quitApp, closeAction } = require("./app-quit.cjs");
+const { quitApp, closeAction, showTrayNotice } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
 const { forcedScaleFactor } = require("./linux-scale.cjs");
 // Saved by the file manager after the user picks an editor in a file dialog.
@@ -1846,12 +1846,20 @@ ipc.on("set-tray-notice-text", (_event, text) => {
   trayNoticeText = text;
 });
 
+function markTrayNoticeShown() {
+  desktopSettings.saveDesktopSettings({ trayNoticeShown: true });
+}
+
 function showTrayNoticeOnce() {
-  if (!trayNoticeText || !Notification.isSupported()) return;
   if (desktopSettings.getDesktopSettings().trayNoticeShown) return;
   try {
-    new Notification({ ...trayNoticeText, silent: true }).show();
-    desktopSettings.saveDesktopSettings({ trayNoticeShown: true });
+    showTrayNotice({
+      platform: process.platform,
+      tray,
+      Notification,
+      text: trayNoticeText,
+      onShown: markTrayNoticeShown,
+    });
   } catch (error) {
     logToFile("Failed to show the tray notice:", error.message);
   }
