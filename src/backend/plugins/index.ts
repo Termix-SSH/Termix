@@ -333,6 +333,9 @@ export async function initializePlugins(
   }
   await persistRuntimeState(loaded);
 
+  const { updateStuckSyncProvider } = await import("./manage.js");
+  void updateStuckSyncProvider().catch(() => {});
+
   if (result.blocked.size > 0 || result.failed.size > 0) {
     pluginLogger.warn(
       `${result.blocked.size} plugin(s) blocked, ${result.failed.size} failed to activate`,

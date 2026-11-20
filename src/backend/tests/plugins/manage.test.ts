@@ -84,6 +84,12 @@ vi.mock("../../database/repositories/factory.js", () => ({
   }),
 }));
 
+const desktopLink = vi.hoisted(() => ({ linked: false }));
+
+vi.mock("../../sync/client/link-store.js", () => ({
+  getLink: async () => (desktopLink.linked ? { serverUrl: "https://s" } : null),
+}));
+
 vi.mock("../../plugins/data.js", () => ({
   migratePlugin: async () => [],
   removePluginData: async () => ({ tables: [], kvKeys: 0, migrations: 0 }),
@@ -233,6 +239,7 @@ beforeEach(() => {
   registry.index.plugins = [];
   registry.others = {};
   registry.download.mockReset();
+  desktopLink.linked = false;
 });
 
 afterEach(async () => {
@@ -241,6 +248,7 @@ afterEach(async () => {
   for (const plugin of loader.list()) loader.forget(plugin.id);
   delete process.env.TERMIX_BUNDLED_PLUGINS_DIR;
   delete process.env.DATA_DIR;
+  delete process.env.ELECTRON_EMBEDDED;
   while (roots.length) {
     fs.rmSync(roots.pop()!, { recursive: true, force: true });
   }
@@ -1346,5 +1354,86 @@ describe("plugins made for plugin API 1", () => {
     } as never);
     expect(options).not.toHaveProperty("runUnisolated");
     expect(loader.get("docker")?.state).toBe("blocked");
+  });
+
+  describe("the sync provider on a linked desktop", () => {
+    const syncCaps = ["sync:provide", "kv:own"];
+
+    function stuckSync() {
+      // A copy the desktop once took from its server, signed by the
+      // official key.
+      createFixturePlugin({
+        id: "sync",
+        root: path.join(data, "plugins"),
+        capabilities: syncCaps,
+        manifestOverrides: legacy,
+      });
+      db.rows.set("sync", {
+        id: "sync",
+        name: "Sync",
+        version: "1.0.0",
+        tier: "official",
+        source: "user",
+        state: "enabled",
+        lastError: null,
+        registryId: "official",
+        autoUpdate: false,
+        pinnedVersion: null,
+        manifestJson: "{}",
+      });
+      registry.index.plugins = [
+        registryEntry("sync", [
+          { version: "1.1.0", capabilities: [...syncCaps, "notify:send"] },
+        ]),
+      ];
+      registry.download.mockImplementation(() =>
+        stageArtifact("sync", {
+          version: "1.1.0",
+          capabilities: [...syncCaps, "notify:send"],
+        }),
+      );
+    }
+
+    it("updates an official API 1 sync provider from the registry", async () => {
+      process.env.ELECTRON_EMBEDDED = "true";
+      desktopLink.linked = true;
+      stuckSync();
+      const loader = await boot();
+      loader.get("sync")!.signedTier = "official";
+      expect(loader.get("sync")?.state).toBe("blocked");
+
+      expect(await manage.updateStuckSyncProvider()).toEqual(["sync"]);
+      expect(loader.get("sync")).toMatchObject({
+        state: "active",
+        manifest: { version: "1.1.0" },
+      });
+    });
+
+    it("leaves it alone when the desktop is not linked", async () => {
+      process.env.ELECTRON_EMBEDDED = "true";
+      stuckSync();
+      const loader = await boot();
+      loader.get("sync")!.signedTier = "official";
+
+      expect(await manage.updateStuckSyncProvider()).toEqual([]);
+      expect(registry.download).not.toHaveBeenCalled();
+    });
+
+    it("leaves other API 1 plugins to the sync", async () => {
+      process.env.ELECTRON_EMBEDDED = "true";
+      desktopLink.linked = true;
+      createFixturePlugin({
+        id: "docker",
+        root: bundled,
+        manifestOverrides: legacy,
+      });
+      registry.index.plugins = [
+        registryEntry("docker", [{ version: "1.1.0" }]),
+      ];
+      await boot();
+
+      expect(await manage.updateStuckSyncProvider()).toEqual([]);
+      expect(registry.download).not.toHaveBeenCalled();
+    });
   });
 });
