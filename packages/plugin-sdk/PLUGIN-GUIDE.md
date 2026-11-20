@@ -1185,7 +1185,8 @@ onClose })` (needs `device:serial`, call it from a click in your frame) opens th
 - To make someone prove a second factor (a connect policy that asks for a step up), call `app.stepUp()`. The shell
   shows the factor screen and answers true or false; never draw factor screens or post to `/users/auth/step-up` yourself.
 - No new modal dialogs. Ask with `useConfirm()`, open views in place with `InlineView`, and use
-  `PanePrompt` for small prompts.
+  `PanePrompt` for small prompts. A confirm can carry `checkbox: { label, checked?, onChange?, checkedDescription?,
+checkedConfirmLabel? }` (Termix 26.11.3): keep the last `onChange` value and use it once the answer is yes.
 - Every tab or panel sits in `PanelShell` (inside `PanelFrame` when it is a tab). Lists use `PanelList` and
   `ListRow`, add with `AddButton`, forms end with `FormFooter`, empty lists show `EmptyState`, loading shows
   `LoadingState`, and "not installed" or "no access" shows `NoticePanel`.

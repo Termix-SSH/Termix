@@ -4,6 +4,7 @@
 
 ### Added
 
+- Confirm prompts can have a checkbox, like Delete permanently in the file manager
 - Host row badges from plugins can show an icon and their own color
 - Signing out can also sign you out of your single sign on provider, when its login method asks for it
 
