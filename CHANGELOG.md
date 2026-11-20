@@ -12,6 +12,7 @@
 - Confirm prompts can have a checkbox, like Delete permanently in the file manager
 - Host row badges from plugins can show an icon and their own color
 - Signing out can also sign you out of your single sign on provider, when its login method asks for it
+- Desktop app: logins of web pages a plugin shows in the app are kept across reloads and reopened tabs until Termix quits or you sign out. Pages on this computer still start signed out
 
 ### Fixed
 

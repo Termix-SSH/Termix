@@ -1,4 +1,8 @@
-const { isolatedUrl } = require("./isolated-window.cjs");
+const { createHash, randomBytes, randomUUID } = require("node:crypto");
+const {
+  isolatedUrl,
+  KEPT_LOGIN_PARTITION_PREFIX,
+} = require("./isolated-window.cjs");
 
 function cleanBounds(bounds) {
   const value = (n) => Math.max(0, Math.round(Number(n) || 0));
@@ -10,6 +14,17 @@ function cleanBounds(bounds) {
   };
 }
 
+// This machine. Ports here change and get reused (desktop tunnels), so an
+// address on it is no lasting identity for a login. Hosts are as URL writes
+// them, so ::ffff:127.0.0.1 reads [::ffff:7f00:1].
+function isLoopbackHost(host) {
+  if (["[::1]", "[::]", "0.0.0.0"].includes(host)) return true;
+  if (/^127\.\d+\.\d+\.\d+$/.test(host)) return true;
+  if (/^\[::ffff:7f[0-9a-f]{2}:[0-9a-f]{1,4}\]$/.test(host)) return true;
+  const name = host.endsWith(".") ? host.slice(0, -1) : host;
+  return name === "localhost" || name.endsWith(".localhost");
+}
+
 /**
  * Native web views drawn inside the main window, for pages that do not work
  * in a sandboxed iframe. Each one is a WebContentsView in its own
@@ -18,15 +33,36 @@ function cleanBounds(bounds) {
  * placement and sends the bounds of the element the view should cover.
  *
  * A plugin's page comes as a grant its backend made (ctx.desktop.grantView):
- * the backend sends the address and certificate rule here, the renderer only
- * names the grant. A plain url from the renderer never trusts a bad
- * certificate.
+ * the backend sends the address, certificate rule and user here, the
+ * renderer only names the grant. A plain url from the renderer never trusts a
+ * bad certificate.
+ *
+ * A granted page keeps its login while the app runs: every view granted to
+ * the same user, plugin, origin and certificate rule shares one in-memory
+ * session, so a reload or a reopened tab is still signed in. Plain urls,
+ * grants without a user and pages on this machine get a session of their own
+ * that is cleared when the view closes. Signing out of Termix
+ * (forgetSessions) starts a new generation, so nothing opened after it
+ * reaches the sessions from before.
  */
 const MAX_GRANTS = 500;
 
-function createEmbeddedViews({ WebContentsView, session, getMainWindow }) {
+function createEmbeddedViews({
+  WebContentsView,
+  session,
+  getMainWindow,
+  log = () => {},
+}) {
   const views = new Map();
   const grants = new Map();
+  let generation = 1;
+  // Part of every kept login's name, so nothing else can work one out and
+  // open that session.
+  const secret = randomBytes(32).toString("hex");
+  // Shared sessions of this generation, cleared at the next sign-out even
+  // when no view uses them any more.
+  const sharedSessions = new Set();
+  const lockedDown = new WeakSet();
 
   function addGrant(payload = {}) {
     const grant = String(payload.grant || "");
@@ -50,6 +86,10 @@ function createEmbeddedViews({ WebContentsView, session, getMainWindow }) {
       pluginId,
       url: url.href,
       ignoreCert: payload.ignoreCert === true && url.protocol === "https:",
+      userId:
+        typeof payload.userId === "string" && payload.userId
+          ? payload.userId
+          : null,
       expiresAt,
     });
     return { success: true };
@@ -63,6 +103,37 @@ function createEmbeddedViews({ WebContentsView, session, getMainWindow }) {
       return null;
     }
     return entry.pluginId === String(pluginId || "") ? entry : null;
+  }
+
+  // The shared session a target's view uses, or null for one of its own.
+  function partitionFor(target, url) {
+    if (!target.userId || isLoopbackHost(url.hostname)) return null;
+    const scope = JSON.stringify([
+      "embedded-login",
+      secret,
+      generation,
+      target.userId,
+      target.pluginId,
+      url.origin,
+      target.ignoreCert === true,
+    ]);
+    const hash = createHash("sha256").update(scope).digest("hex");
+    return `${KEPT_LOGIN_PARTITION_PREFIX}${hash}`;
+  }
+
+  // The same limits as an isolated window, set once per session.
+  function lockDown(isolated) {
+    if (lockedDown.has(isolated)) return;
+    lockedDown.add(isolated);
+    isolated.setPermissionRequestHandler((_c, _p, callback) => callback(false));
+    isolated.setPermissionCheckHandler(() => false);
+    isolated.on("will-download", (event) => event.preventDefault());
+    isolated.webRequest.onBeforeRequest((details, callback) => {
+      const protocol = new URL(details.url).protocol;
+      callback({
+        cancel: !["http:", "https:", "ws:", "wss:"].includes(protocol),
+      });
+    });
   }
   // Popups opened from a view, so a certificate error there is judged by
   // the view's rules.
@@ -84,6 +155,8 @@ function createEmbeddedViews({ WebContentsView, session, getMainWindow }) {
       if (!popup.isDestroyed()) popup.destroy();
     }
     if (!entry.view.webContents.isDestroyed()) entry.view.webContents.close();
+    // A shared session outlives its views until sign-out.
+    if (entry.partition) return;
     void Promise.allSettled([
       entry.session.clearStorageData(),
       entry.session.clearCache(),
@@ -93,6 +166,35 @@ function createEmbeddedViews({ WebContentsView, session, getMainWindow }) {
 
   function destroyAll() {
     for (const id of [...views.keys()]) destroy(id);
+  }
+
+  /**
+   * Termix sign-out. At once: a new generation, so later opens get new
+   * sessions, no grants and no views. Then each clear of the old shared
+   * sessions runs on its own; one that fails is logged and its data stays
+   * out of reach until the app quits. One sign-out can call this twice, and a
+   * login made in between then has to sign in to its pages again.
+   */
+  function forgetSessions() {
+    generation += 1;
+    const retired = [...sharedSessions];
+    sharedSessions.clear();
+    grants.clear();
+    destroyAll();
+    return Promise.all(
+      retired.flatMap((isolated) =>
+        [
+          "clearStorageData",
+          "clearCache",
+          "clearAuthCache",
+          "closeAllConnections",
+        ].map((method) =>
+          new Promise((resolve) => resolve(isolated[method]())).catch((error) =>
+            log(`[embedded-view] ${method} failed: ${error}`),
+          ),
+        ),
+      ),
+    ).then(() => undefined);
   }
 
   function open(options = {}) {
@@ -109,9 +211,14 @@ function createEmbeddedViews({ WebContentsView, session, getMainWindow }) {
     }
     const url = isolatedUrl(target.url);
     const ignoreCert = target.ignoreCert === true;
+    const partition = partitionFor(target, url);
     const existing = views.get(id);
     if (existing) {
-      if (existing.url === url.href && existing.ignoreCert === ignoreCert) {
+      if (
+        existing.url === url.href &&
+        existing.ignoreCert === ignoreCert &&
+        existing.partition === partition
+      ) {
         setBounds(id, options.bounds);
         setVisible(id, options.visible !== false);
         return { success: true };
@@ -120,20 +227,13 @@ function createEmbeddedViews({ WebContentsView, session, getMainWindow }) {
     }
 
     const isolated = session.fromPartition(
-      `embedded-view-${id}-${Date.now()}`,
+      partition ?? `embedded-view-${randomUUID()}`,
       {
         cache: false,
       },
     );
-    isolated.setPermissionRequestHandler((_c, _p, callback) => callback(false));
-    isolated.setPermissionCheckHandler(() => false);
-    isolated.on("will-download", (event) => event.preventDefault());
-    isolated.webRequest.onBeforeRequest((details, callback) => {
-      const protocol = new URL(details.url).protocol;
-      callback({
-        cancel: !["http:", "https:", "ws:", "wss:"].includes(protocol),
-      });
-    });
+    lockDown(isolated);
+    if (partition) sharedSessions.add(isolated);
 
     const preferences = {
       session: isolated,
@@ -151,6 +251,7 @@ function createEmbeddedViews({ WebContentsView, session, getMainWindow }) {
     const entry = {
       view,
       session: isolated,
+      partition,
       url: url.href,
       origin: url.origin,
       ignoreCert,
@@ -233,6 +334,7 @@ function createEmbeddedViews({ WebContentsView, session, getMainWindow }) {
     setVisible,
     destroy,
     destroyAll,
+    forgetSessions,
     handleCertificateError,
   };
 }
