@@ -119,6 +119,11 @@ export interface QuickConnectLogin {
    * secret never reaches the browser. Termix 26.11.3.
    */
   credentialId?: number;
+  /**
+   * Start the session without the user's input, for a protocol plugin that
+   * supports it (Remote Desktop 1.4.3). Only ever turns input off.
+   */
+  viewOnly?: boolean;
 }
 
 /** "direct" (a username and password), "credential" (a saved one) or "none". */
