@@ -39,7 +39,12 @@ import {
 import { SANDBOX, type FrameFit } from "./PluginFrameView";
 import { FRAME_ALLOW } from "./frame-allow";
 import { FramedView, SlotFramedView } from "./framed-view";
-import { clearFrameValues, setFrameValue, useFrameValue } from "./frame-values";
+import {
+  clearFrameValues,
+  getFrameValue,
+  setFrameValue,
+  useFrameValue,
+} from "./frame-values";
 import { toPluginHostRecord } from "../bridge";
 import { addDataRow } from "./data-rows";
 import { setFrameMeta } from "./frame-meta";
@@ -111,6 +116,11 @@ export const FRAME_BUSY_MS = 3_000;
 export const MAX_IDLE_FRAMES = 4;
 /** Registrations a fresh frame did not report again by then are dropped. */
 const STALE_GRACE_MS = 1_500;
+/**
+ * A frame that just started often sends empty values before its own data
+ * loads. Values already on screen stay this long, then the newest is shown.
+ */
+export const VALUE_GRACE_MS = 1_500;
 /**
  * Redraws per registration per second. A caller that builds new arguments
  * every render (a fresh host object) would otherwise redraw forever.
@@ -789,6 +799,18 @@ export async function startFramedPlugin(
         raw: new Map(),
       };
       let settled = false;
+      let holdUntil = Number.POSITIVE_INFINITY;
+      const heldValues = new Map<string, unknown>();
+      const applyValue = (key: string, value: unknown) => {
+        heldValues.delete(key);
+        setFrameValue(pluginId, key, value);
+        if (isPlainValue(value)) {
+          values[key] = value;
+        } else {
+          delete values[key];
+        }
+        persist();
+      };
       const finish = (error?: Error) => {
         if (settled) return;
         settled = true;
@@ -796,12 +818,21 @@ export async function startFramedPlugin(
         clearTimeout(timer);
         starting = null;
         if (error) {
+          heldValues.clear();
           teardown(current);
           if (frame === current) frame = null;
           reject(error);
           return;
         }
         current.ready = true;
+        holdUntil = Date.now() + VALUE_GRACE_MS;
+        // Still applied after the frame stopped, unless a newer one runs.
+        setTimeout(() => {
+          if (disposed || (frame && frame !== current)) {
+            return heldValues.clear();
+          }
+          for (const [key, value] of [...heldValues]) applyValue(key, value);
+        }, VALUE_GRACE_MS);
         lastUse = Date.now();
         resolve();
         if (!idleTimer) idleTimer = setInterval(checkIdle, IDLE_CHECK_MS);
@@ -847,15 +878,15 @@ export async function startFramedPlugin(
               }
             } else if (name === "value") {
               const entry = data as { key?: unknown; value?: unknown } | null;
-              if (typeof entry?.key === "string") {
-                setFrameValue(pluginId, entry.key, entry.value);
-                if (isPlainValue(entry.value)) {
-                  values[entry.key] = entry.value;
-                } else {
-                  delete values[entry.key];
-                }
-                persist();
+              if (typeof entry?.key !== "string") return;
+              if (
+                Date.now() < holdUntil &&
+                getFrameValue(pluginId, entry.key) !== undefined
+              ) {
+                heldValues.set(entry.key, entry.value);
+                return;
               }
+              applyValue(entry.key, entry.value);
             } else if (name === "overlay") {
               const active =
                 (data as { active?: unknown } | null)?.active === true;

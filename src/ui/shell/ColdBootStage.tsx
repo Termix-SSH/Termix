@@ -7,6 +7,32 @@ import { getColdBoot, subscribeColdBoot } from "@/plugin-host/frames/cold-boot";
 /** Fewer cold plugins than this fill in quietly. */
 export const COLD_STAGE_MIN = 5;
 
+/** Plugin start progress under the app's loading screen. */
+export function BootProgress() {
+  const { t } = useTranslation();
+  const boot = useSyncExternalStore(subscribeColdBoot, getColdBoot);
+  if (boot.total < COLD_STAGE_MIN || boot.done >= boot.total) return null;
+  return (
+    <div className="flex flex-col items-center gap-2 text-center">
+      <p className="text-xs text-muted-foreground">
+        {t("plugins.firstLoad.title")}
+      </p>
+      <div className="h-1 w-56 max-w-full bg-muted">
+        <div
+          className="h-full bg-primary transition-[width] duration-300"
+          style={{ width: `${Math.round((boot.done / boot.total) * 100)}%` }}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {t("plugins.firstLoad.progress", {
+          done: boot.done,
+          total: boot.total,
+        })}
+      </p>
+    </div>
+  );
+}
+
 /**
  * The first run on a browser or device with nothing cached: plugins start
  * one after another to learn what they add. One plain screen says so, instead

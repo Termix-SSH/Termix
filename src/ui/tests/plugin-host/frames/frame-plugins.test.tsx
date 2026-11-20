@@ -15,7 +15,11 @@ vi.mock("@/main-axios", async (importOriginal) => ({
   },
 }));
 
-import { slotFit, startFramedPlugin } from "@/plugin-host/frames/frame-plugins";
+import {
+  slotFit,
+  startFramedPlugin,
+  VALUE_GRACE_MS,
+} from "@/plugin-host/frames/frame-plugins";
 import { resetFrameConnections } from "@/plugin-host/frames/frame-connection";
 import { resetRegistrationCache } from "@/plugin-host/frames/registration-cache";
 import { getFrameValue } from "@/plugin-host/frames/frame-values";
@@ -319,6 +323,28 @@ describe("startFramedPlugin", () => {
 
 describe("data values from a frame", () => {
   afterEach(() => resetDataRows());
+
+  it("keeps values on screen while a fresh frame loads its own data", async () => {
+    const started = startFramedPlugin(summary);
+    const { port } = await fakeFrame(() => undefined);
+    port.emit("value", { key: "row:held", value: "cached" });
+    await flush();
+    port.emit("ready");
+    const plugin = await started;
+    expect(getFrameValue("gizmo", "row:held")).toBe("cached");
+
+    port.emit("value", { key: "row:held", value: "empty" });
+    port.emit("value", { key: "row:held", value: "real" });
+    port.emit("value", { key: "row:new", value: "shown" });
+    await flush();
+    expect(getFrameValue("gizmo", "row:held")).toBe("cached");
+    expect(getFrameValue("gizmo", "row:new")).toBe("shown");
+
+    await new Promise((resolve) => setTimeout(resolve, VALUE_GRACE_MS + 50));
+    // Applied even though this cold frame stopped meanwhile.
+    expect(getFrameValue("gizmo", "row:held")).toBe("real");
+    plugin.dispose();
+  });
 
   it("tells the frame which rows are shown and draws the values it sends", async () => {
     const states: Record<string, unknown>[] = [];

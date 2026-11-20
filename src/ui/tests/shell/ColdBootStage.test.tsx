@@ -6,7 +6,7 @@ import {
   render,
   screen,
 } from "@testing-library/react";
-import { ColdBootStage } from "../../shell/ColdBootStage";
+import { BootProgress, ColdBootStage } from "../../shell/ColdBootStage";
 import {
   resetColdBoot,
   trackColdBoot,
@@ -55,6 +55,27 @@ describe("ColdBootStage", () => {
     act(() => void boots(6));
     render(<ColdBootStage />);
     fireEvent.click(screen.getByText("plugins.firstLoad.skip"));
+    expect(screen.queryByText("plugins.firstLoad.title")).toBeNull();
+  });
+});
+
+describe("BootProgress", () => {
+  it("shows only while many plugins start", async () => {
+    let done: Array<() => void> = [];
+    act(() => {
+      done = boots(6);
+    });
+    render(<BootProgress />);
+    expect(screen.getByText("plugins.firstLoad.title")).toBeTruthy();
+    await act(async () => {
+      for (const finish of done) finish();
+    });
+    expect(screen.queryByText("plugins.firstLoad.title")).toBeNull();
+  });
+
+  it("stays hidden for a few plugins", () => {
+    act(() => void boots(3));
+    render(<BootProgress />);
     expect(screen.queryByText("plugins.firstLoad.title")).toBeNull();
   });
 });

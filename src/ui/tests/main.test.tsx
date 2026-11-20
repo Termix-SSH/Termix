@@ -66,6 +66,7 @@ vi.mock("@/plugin-host/loader", () => ({
   fetchGuestViews: mocks.fetchGuestViews,
   startPluginRuntime: mocks.startPluginRuntime,
   stopPluginRuntime: vi.fn(async () => {}),
+  pluginsBooted: async () => {},
 }));
 vi.mock("@/plugin-host/plugin-store", () => ({
   settledPromise: async () => {},

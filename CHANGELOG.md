@@ -24,6 +24,7 @@
 - A plugin that can't read its own files says which folder and how to fix it, instead of "did not start"
 - A blocked plugin says "Can't start" with the reason, instead of always "Waiting on another plugin" even when it only needs an update
 - The plugin loading screen no longer says it only shows the first time
+- The loading screen stays up until plugins are ready, so buttons and rail items no longer pop in and host details no longer flash right after it
 - Plugins can write to files they saved before 26.11.2 again, like Session Recording's recordings
 - The first plugin installed from the store on a new install starts without a restart
 - A terminal's tab shows its Share button and Share menu entry again, and Refresh connection, Reconnect all and focus in split screen work on it again

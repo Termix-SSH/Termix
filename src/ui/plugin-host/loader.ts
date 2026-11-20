@@ -68,6 +68,8 @@ let started = false;
 let guestMode = false;
 /** Signed in with the full runtime: only the chosen layout's code loads. */
 let gateLayouts = false;
+/** Background frames still starting; boot waits on these. */
+const booting = new Set<Promise<void>>();
 
 function assetUrlWithVersion(
   pluginId: string,
@@ -325,7 +327,13 @@ async function activateFramed(summary: PluginSummary): Promise<void> {
     });
     failedVersions.delete(summary.id);
     setFrontendState(summary.id, "active");
-    // A frame still booting does not hold the app; if it fails, say so.
+    const boot = framed.ready.then(
+      () => {},
+      () => {},
+    );
+    booting.add(boot);
+    void boot.then(() => booting.delete(boot));
+    // A frame still booting does not hold activation; if it fails, say so.
     framed.ready.catch((error: unknown) => {
       if (active.get(summary.id)?.handle.dispose !== framed.dispose) return;
       active.delete(summary.id);
@@ -590,6 +598,22 @@ export function syncPlugins(summaries?: PluginSummary[]): Promise<void> {
   });
 }
 
+/**
+ * Resolves once every background frame has started and no plugin is still
+ * waiting for the server to start it, so the shell opens complete.
+ */
+export async function pluginsBooted(): Promise<void> {
+  for (;;) {
+    await queue;
+    if (booting.size > 0) {
+      await Promise.all([...booting]);
+      continue;
+    }
+    if (!startingRetry) return;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+}
+
 /** Tries a plugin's frontend again even though this bundle failed before. */
 export function retryPluginFrontend(pluginId: string): Promise<void> {
   failedVersions.delete(pluginId);
@@ -748,4 +772,5 @@ export async function resetPluginLoader(): Promise<void> {
   setGuestRuntime(false);
   queue = Promise.resolve();
   failedVersions.clear();
+  booting.clear();
 }

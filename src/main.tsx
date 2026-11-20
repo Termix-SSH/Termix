@@ -39,6 +39,7 @@ import { UiPreferencesProvider } from "@/contexts/UiPreferencesContext";
 import { BrandingProvider } from "@/contexts/BrandingContext";
 import {
   fetchGuestViews,
+  pluginsBooted,
   startPluginRuntime,
   stopPluginRuntime,
 } from "@/plugin-host/loader";
@@ -51,6 +52,7 @@ import { preloadPermissions } from "@/hooks/use-permissions";
 import { getUserPreferences } from "@/api/open-tabs-api";
 import { standaloneViewFor, useTabTypes } from "@/shell/tab-registry";
 import { LoadingState } from "@/components/loading-state";
+import { BootProgress } from "@/shell/ColdBootStage";
 import { ForeignViewHost } from "@/plugin-host/frames/foreign-views";
 import { DataWatchHost } from "@/plugin-host/frames/data-watches";
 import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
@@ -67,6 +69,31 @@ const OnboardingStage = lazy(() =>
     default: m.OnboardingStage,
   })),
 );
+
+/** Longest the loading screen waits for plugin frames to start. */
+const BOOT_WAIT_MS = 15_000;
+
+/**
+ * Everything the shell needs before it shows, so nothing moves or pops in
+ * right after the loading screen goes away.
+ */
+function loadApp(): Promise<unknown> {
+  const plugins = startPluginRuntime()
+    .catch(() => {})
+    .then(() => settledPromise())
+    .then(() =>
+      Promise.race([
+        pluginsBooted(),
+        new Promise((resolve) => setTimeout(resolve, BOOT_WAIT_MS)),
+      ]),
+    );
+  return Promise.all([
+    plugins,
+    preloadPermissions(),
+    getUserPreferences().catch(() => undefined),
+    loadLook(),
+  ]);
+}
 
 type Phase =
   | "verifying"
@@ -231,14 +258,7 @@ function App() {
         }
         if (resumeViewLink()) return;
         setPhase("loading-app");
-        await Promise.all([
-          startPluginRuntime()
-            .catch(() => {})
-            .then(() => settledPromise()),
-          preloadPermissions(),
-          getUserPreferences().catch(() => undefined),
-          loadLook(),
-        ]);
+        await loadApp();
         await enterApp();
       })
       .catch((err: unknown) => {
@@ -319,14 +339,7 @@ function App() {
     setAuthUsername(u);
     setPhase("loading-app");
     void (async () => {
-      await Promise.all([
-        startPluginRuntime()
-          .catch(() => {})
-          .then(() => settledPromise()),
-        preloadPermissions(),
-        getUserPreferences().catch(() => undefined),
-        loadLook(),
-      ]);
+      await loadApp();
       await enterApp();
     })();
   }
@@ -417,6 +430,7 @@ function App() {
         <div className="flex flex-col items-center gap-4">
           <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+          {phase === "loading-app" && <BootProgress />}
         </div>
       </div>
     );
