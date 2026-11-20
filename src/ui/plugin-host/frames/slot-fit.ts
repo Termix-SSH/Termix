@@ -12,6 +12,8 @@ export function slotFit(slotId: string): FrameFit {
     return "inline";
   }
   if (/(tabs?|display)$/i.test(slotId)) return "fill";
+  // Beside the page in a row: as wide as the plugin draws, never the row.
+  if (/(left|right)Edge$/i.test(slotId)) return "bar";
   return "content";
 }
 

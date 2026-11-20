@@ -20,6 +20,7 @@ import {
 import type { UserRecord } from "../database/repositories/user-repository.js";
 import type { ExternalSessionRef } from "./types.js";
 import { setAuthCookie } from "./session-cookie.js";
+import { appChallengeOf, createAppHandoff } from "./app-handoff.js";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -159,6 +160,8 @@ export async function issueSession(
     maxAge = Math.min(maxAge, options.maxAgeSeconds * 1000);
   }
 
+  const appChallenge = appChallengeOf(req);
+
   return {
     token,
     maxAge,
@@ -174,6 +177,9 @@ export async function issueSession(
       ),
       ...(options.restriction ? { restriction: options.restriction } : {}),
       ...(isNativeAppRequest(req) ? { token } : {}),
+      ...(appChallenge
+        ? { app_code: createAppHandoff(token, appChallenge) }
+        : {}),
     },
   };
 }

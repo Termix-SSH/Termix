@@ -67,6 +67,7 @@ async function exportRow(
   const base = {
     exportId: resolvedHost.id,
     connectionType,
+    enableSsh: resolvedHost.enableSsh,
     name: resolvedHost.name,
     ip: resolvedHost.ip,
     port: resolvedHost.port,

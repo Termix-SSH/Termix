@@ -497,3 +497,59 @@ describe("public route rate limit", () => {
     expect(http.overPublicRateLimit("demo", "ip", 60_001)).toBe(false);
   });
 });
+
+describe("bodies sent on to a plugin process", () => {
+  // The router gives every request req.body = {}, so the bridge must still
+  // stream a body no parser read instead of sending that empty object.
+  async function seen(init: RequestInit) {
+    const { streamsBody } = await import("../../plugins/sandbox/bridge.js");
+    const router = http.createPluginRouter({
+      manifest: manifest(),
+      reportError: () => {},
+    });
+    router.all("/up", (req, res) => {
+      const stream = streamsBody(req, false);
+      const body = req.body;
+      req.resume();
+      req.on("end", () => res.json({ stream, body }));
+      if (req.readableEnded) res.json({ stream, body });
+    });
+    const base = await startServer();
+    const response = await fetch(`${base}/plugin-api/sample-plugin/up`, {
+      ...init,
+      headers: { ...authed, ...(init.headers as Record<string, string>) },
+    });
+    return response.json();
+  }
+
+  it("streams a multipart upload", async () => {
+    const form = new FormData();
+    form.append("sessionId", "s1");
+    form.append("file", new Blob(["hello"]), "a.txt");
+    expect(await seen({ method: "POST", body: form })).toMatchObject({
+      stream: true,
+    });
+  });
+
+  it("streams a raw octet-stream chunk", async () => {
+    const result = await seen({
+      method: "POST",
+      headers: { "content-type": "application/octet-stream" },
+      body: new Uint8Array([1, 2, 3]),
+    });
+    expect(result).toMatchObject({ stream: true });
+  });
+
+  it("sends a parsed JSON body as data", async () => {
+    const result = await seen({
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ a: 1 }),
+    });
+    expect(result).toEqual({ stream: false, body: { a: 1 } });
+  });
+
+  it("sends {} when there is no body", async () => {
+    expect(await seen({ method: "GET" })).toEqual({ stream: false, body: {} });
+  });
+});

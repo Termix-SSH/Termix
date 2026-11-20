@@ -1710,7 +1710,10 @@
       "skip": "Continue"
     },
     "framesBlocked": "Plugins can't load their files. A login proxy in front of Termix is likely blocking them.",
-    "framesBlockedHelp": "How to fix"
+    "framesBlockedHelp": "How to fix",
+    "framesFailed_one": "{{names}} couldn't load, so its parts are hidden",
+    "framesFailed_other": "{{count}} plugins couldn't load, so their parts are hidden: {{names}}",
+    "framesFailedReload": "Reload"
   },
   "settings": {
     "secretSet": "Set",

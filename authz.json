@@ -1095,6 +1095,9 @@
     "GET /users/auth/methods": {
       "access": "public"
     },
+    "POST /users/auth/app-handoff/redeem": {
+      "access": "public"
+    },
     "POST /users/auth/second-factor/:factorId/challenge": {
       "access": "public"
     },

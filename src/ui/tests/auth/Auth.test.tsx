@@ -210,6 +210,25 @@ describe("Auth sign in for the mobile app", () => {
     expect(onLogin).not.toHaveBeenCalled();
   });
 
+  it("sends the app a one-time code when the login answer has one", async () => {
+    appReturn.pendingAppReturn.mockReturnValue("termix-mobile://oidc-callback");
+    mainAxios.requestTrustedProxyLogin.mockResolvedValue({
+      enabled: true,
+      success: true,
+      username: "alice",
+      app_code: "code-1",
+    });
+    const onLogin = vi.fn();
+
+    render(<Auth onLogin={onLogin} />);
+
+    await waitFor(() =>
+      expect(appReturn.handOffToApp).toHaveBeenCalledWith({ code: "code-1" }),
+    );
+    expect(mainAxios.getCurrentToken).not.toHaveBeenCalled();
+    expect(onLogin).not.toHaveBeenCalled();
+  });
+
   it("signs in normally when no app asked", async () => {
     appReturn.pendingAppReturn.mockReturnValue(null);
     mainAxios.requestTrustedProxyLogin.mockResolvedValue({
