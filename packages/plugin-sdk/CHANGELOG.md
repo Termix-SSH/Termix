@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.11.0
+
+Plugin API 2.9.0. Needs Termix 26.11.2.
+
+### Added
+
+- `registerAction(id, handler, { private: true })`: only your own plugin views may run the action, even when another plugin lists it in `uses`. Termix 26.11.3 enforces it, older versions ignore it
+
 ## 2.10.1
 
 Plugin API 2.9.0. Needs Termix 26.11.2.
