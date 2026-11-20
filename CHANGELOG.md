@@ -41,6 +41,7 @@
 - Exported hosts keep whether SSH is on, so importing them no longer turns SSH on or off by the connection type
 - Desktop app: linking to an account that already has the same hosts, folders and credentials adopts them instead of making a second copy of each, thanks to ZacharyZcR
 - A plugin that cancels work with its own error type still cancels it, thanks to ZacharyZcR
+- Uploads in the file manager finish again instead of hanging, and uploads to other plugins no longer fail as they finish
 
 ## 26.11.2
 
