@@ -26,6 +26,7 @@
 - Signing in to the mobile app through the browser works with every login method again, not only a password and code. Newer apps get the session through a one-time code only the app can use
 - Single sign on started from the login page the mobile app opened goes straight back to the app
 - Uploading files to a plugin works again, like drag and drop or the upload button in the file manager
+- Desktop app: the interface size and other settings no longer go back to old account values on launch when the app isn't linked to a server
 
 ## 26.11.2
 

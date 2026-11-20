@@ -13,6 +13,7 @@ import {
   type UserPreferences,
 } from "@/main-axios";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
+import { isElectron } from "@/lib/electron";
 import { changeAppLanguage, consumeLoginLanguage } from "@/i18n/i18n";
 import {
   MANAGE_REQUEST_EVENT,
@@ -109,6 +110,20 @@ function applyCloudPreferences(
     localStorage.setItem("hiddenRailTabs", prefs.hiddenRailTabs);
     window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
   }
+}
+
+/**
+ * A desktop app with no linked account has nowhere to sync to, so a saved
+ * "cloud" mode is stale there. It falls back to this device and is saved so.
+ */
+export async function resolveStorageMode(
+  prefs: UserPreferences,
+): Promise<UserPreferences> {
+  if (prefs.storageMode !== "cloud" || !isElectron()) return prefs;
+  const info = await getUserInfo().catch(() => null);
+  if (!info || info.linked) return prefs;
+  void saveUserPreferences({ storageMode: "local" }).catch(() => {});
+  return { ...prefs, storageMode: "local" };
 }
 
 /** Who is signed in and what the shell does around the tabs: prefs, health, logout. */
@@ -239,6 +254,7 @@ export function useShellLifecycle({
 
   useEffect(() => {
     getUserPreferences()
+      .then(resolveStorageMode)
       .then((prefs) => {
         const loginLanguage = consumeLoginLanguage();
         setUserPrefs(prefs);
