@@ -1024,18 +1024,22 @@ own host record) and the row key, a host id or a tab id. In a framed plugin it r
 and only the values cross, so start polling only for rows you are called for and stop when the row goes.
 Return `null` to draw nothing, so the owner's fallback shows.
 
-| Shape   | Value                                                     | Drawn as                         |
-| ------- | --------------------------------------------------------- | -------------------------------- |
-| `bars`  | `items: [{ label, value: 0..1 or null, tone?, detail? }]` | Usage bars, warn at 70%, bad 90% |
-| `stat`  | `items: [{ label, value, unit?, tone?, tooltip? }]`       | A label with a number or word    |
-| `badge` | `label, tone?, tooltip?, actionId?`                       | A small bordered label           |
-| `dot`   | `tone, label`                                             | A status dot, label as tooltip   |
-| `text`  | `text, tone?, tooltip?, actionId?`                        | A short line                     |
+| Shape   | Value                                                        | Drawn as                         |
+| ------- | ------------------------------------------------------------ | -------------------------------- |
+| `bars`  | `items: [{ label, value: 0..1 or null, tone?, detail? }]`    | Usage bars, warn at 70%, bad 90% |
+| `stat`  | `items: [{ label, value, unit?, tone?, tooltip? }]`          | A label with a number or word    |
+| `badge` | `label, tone?, tooltip?, actionId?, icon?, color?, variant?` | A small bordered label           |
+| `dot`   | `tone, label`                                                | A status dot, label as tooltip   |
+| `text`  | `text, tone?, tooltip?, actionId?, icon?, color?`            | A short line                     |
 
 Tones are `default`, `good`, `warn`, `bad` and `muted`. Return an array to draw several in order. An
 `actionId` must be one of your own actions; it runs with the row's context on click. The shell checks every
 value: unknown shapes, bad tones and items without a label are dropped, bars clamp to 0..1 and text is cut
 short.
+
+From Termix 26.11.3 a badge or text can carry `icon` (a Lucide name like `"KeyRound"`) and `color` (`#rgb` or
+`#rrggbb`, used instead of the tone and mixed with the theme so it stays readable). A badge's `variant` is
+`outline` (default), `filled` or `icon` (the icon alone, the label as its tooltip). Older versions ignore them.
 
 Data slots in Termix: `dashboard.hostRow` (bars, stat, text; context `hostId`, `host`, `online`),
 `dashboard.hostRowBadge` (badge, replaces the row's status badge while you return one),

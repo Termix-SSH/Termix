@@ -692,6 +692,12 @@ export type DataTone = "default" | "good" | "warn" | "bad" | "muted";
 /** The kinds of data value the shell can draw. */
 export type DataShape = "bars" | "stat" | "badge" | "dot" | "text";
 
+/**
+ * How a badge is drawn: "outline" (the default), "filled" in its color, or
+ * "icon" with only the icon and the label as its tooltip. Termix 26.11.3.
+ */
+export type DataBadgeVariant = "outline" | "filled" | "icon";
+
 export interface DataBar {
   label: string;
   /** 0 to 1, or null when not known. Bars warn from 0.7 and turn bad from 0.9 unless a tone is given. */
@@ -724,6 +730,14 @@ export type DataValue =
       tone?: DataTone;
       tooltip?: string;
       actionId?: string;
+      /** A Lucide icon name, like "KeyRound". Termix 26.11.3. */
+      icon?: string;
+      /**
+       * A color as #rgb or #rrggbb, used instead of the tone. The shell mixes
+       * it with the theme so it stays readable. Termix 26.11.3.
+       */
+      color?: string;
+      variant?: DataBadgeVariant;
     }
   | { shape: "dot"; tone: DataTone; label: string }
   | {
@@ -732,6 +746,10 @@ export type DataValue =
       tone?: DataTone;
       tooltip?: string;
       actionId?: string;
+      /** A Lucide icon name before the text. Termix 26.11.3. */
+      icon?: string;
+      /** A color as #rgb or #rrggbb, used instead of the tone. Termix 26.11.3. */
+      color?: string;
     };
 
 /** What a data hook returns: one value, several drawn in order, or null for nothing. */
