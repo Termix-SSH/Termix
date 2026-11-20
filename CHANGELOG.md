@@ -45,6 +45,7 @@
 - Desktop app: linking to an account that already has the same hosts, folders and credentials adopts them instead of making a second copy of each, thanks to ZacharyZcR
 - A plugin that cancels work with its own error type still cancels it, thanks to ZacharyZcR
 - Uploads in the file manager finish again instead of hanging, and uploads to other plugins no longer fail as they finish
+- A plugin's host row button keeps working after the plugin sat idle for a moment, like after you close one of its tabs, instead of doing nothing until a reload
 
 ## 26.11.2
 
