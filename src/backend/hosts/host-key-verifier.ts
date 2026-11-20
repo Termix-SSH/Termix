@@ -29,6 +29,35 @@ export interface HostVerifierOptions {
   onRefused?: (code: HostKeyRefusalCode, message: string) => void;
 }
 
+const QUICK_CONNECT_KEY_LIMIT = 1000;
+
+/** Quick Connect keys a user accepted while this server runs, oldest first. */
+const quickConnectKeys = new Map<
+  string,
+  { fingerprint: string; keyType: string }
+>();
+
+function quickConnectKeyId(userId: string, ip: string, port: number): string {
+  return `${userId}\u0000${ip.toLowerCase()}\u0000${port}`;
+}
+
+function rememberQuickConnectKey(
+  id: string,
+  fingerprint: string,
+  keyType: string,
+): void {
+  quickConnectKeys.delete(id);
+  quickConnectKeys.set(id, { fingerprint, keyType });
+  while (quickConnectKeys.size > QUICK_CONNECT_KEY_LIMIT) {
+    quickConnectKeys.delete(quickConnectKeys.keys().next().value as string);
+  }
+}
+
+/** Test hook: forgets every remembered Quick Connect key. */
+export function forgetQuickConnectKeys(): void {
+  quickConnectKeys.clear();
+}
+
 export class SSHHostKeyVerifier {
   /**
    * Pre-fetches the host record from the database so the verifier callback
@@ -83,18 +112,38 @@ export class SSHHostKeyVerifier {
           const keyType = this.getKeyType(hostkey);
           const algorithm = "sha256";
 
-          // An unsaved host (Quick Connect) has nowhere to keep the key, so the
-          // user checks it for this session when there is a socket to ask on.
+          // An unsaved host (Quick Connect) has no row to keep the key in. The
+          // user checks it once, and the server remembers it until it stops.
           if (!hostId && ws) {
-            const accepted = await this.promptUserForNewKey(
-              ws,
-              ip,
-              port,
-              undefined,
-              fingerprint,
-              keyType,
-              algorithm,
-            );
+            const seenKey = quickConnectKeyId(userId, ip, port);
+            const seen = quickConnectKeys.get(seenKey);
+            if (seen?.fingerprint === fingerprint) {
+              verify(true);
+              return;
+            }
+            const accepted = seen
+              ? await this.promptUserForChangedKey(
+                  ws,
+                  ip,
+                  port,
+                  undefined,
+                  fingerprint,
+                  seen.fingerprint,
+                  keyType,
+                  seen.keyType,
+                  algorithm,
+                )
+              : await this.promptUserForNewKey(
+                  ws,
+                  ip,
+                  port,
+                  undefined,
+                  fingerprint,
+                  keyType,
+                  algorithm,
+                );
+            if (accepted)
+              rememberQuickConnectKey(seenKey, fingerprint, keyType);
             sshLogger.info(
               accepted
                 ? "Quick connect host key accepted for this session"

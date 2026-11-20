@@ -1,7 +1,10 @@
 import { EventEmitter } from "node:events";
 import type { WebSocket } from "ws";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { SSHHostKeyVerifier } from "../../hosts/host-key-verifier.js";
+import {
+  forgetQuickConnectKeys,
+  SSHHostKeyVerifier,
+} from "../../hosts/host-key-verifier.js";
 
 const repo = vi.hoisted(() => ({
   updateHostKey: vi.fn(async () => {}),
@@ -36,27 +39,59 @@ function socketAnswering(action: "accept" | "reject") {
   return { socket: socket as unknown as WebSocket, sent };
 }
 
-async function verifyUnsaved(socket: WebSocket | null) {
+async function verifyUnsaved(
+  socket: WebSocket | null,
+  key = "quick-key",
+  userId = "user",
+) {
   const verifier = await SSHHostKeyVerifier.createHostVerifier(
     null,
     "10.0.0.5",
     22,
     socket,
-    "user",
+    userId,
   );
-  return new Promise<boolean>((resolve) =>
-    verifier(Buffer.from("quick-key"), resolve),
-  );
+  return new Promise<boolean>((resolve) => verifier(Buffer.from(key), resolve));
 }
 
 describe("quick connect host keys", () => {
+  beforeEach(() => forgetQuickConnectKeys());
+
   it("asks the user and uses their answer", async () => {
+    const no = socketAnswering("reject");
+    expect(await verifyUnsaved(no.socket)).toBe(false);
+
     const yes = socketAnswering("accept");
     expect(await verifyUnsaved(yes.socket)).toBe(true);
     expect(yes.sent[0]).toContain("host_key_verification_required");
+  });
+
+  it("does not ask again for a key the user accepted", async () => {
+    await verifyUnsaved(socketAnswering("accept").socket);
+
+    const again = socketAnswering("reject");
+    expect(await verifyUnsaved(again.socket)).toBe(true);
+    expect(again.sent).toEqual([]);
+  });
+
+  it("asks again for another user", async () => {
+    await verifyUnsaved(socketAnswering("accept").socket);
+
+    const other = socketAnswering("reject");
+    expect(await verifyUnsaved(other.socket, "quick-key", "other")).toBe(false);
+    expect(other.sent[0]).toContain('"scenario":"new"');
+  });
+
+  it("warns when the key changes and keeps the old one on a reject", async () => {
+    await verifyUnsaved(socketAnswering("accept").socket);
 
     const no = socketAnswering("reject");
-    expect(await verifyUnsaved(no.socket)).toBe(false);
+    expect(await verifyUnsaved(no.socket, "new-key")).toBe(false);
+    expect(no.sent[0]).toContain('"scenario":"changed"');
+
+    const same = socketAnswering("reject");
+    expect(await verifyUnsaved(same.socket)).toBe(true);
+    expect(same.sent).toEqual([]);
   });
 
   it("refuses when there is no socket to ask on", async () => {

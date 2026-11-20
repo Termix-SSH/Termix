@@ -47,6 +47,7 @@
 - Uploads in the file manager finish again instead of hanging, and uploads to other plugins no longer fail as they finish
 - A plugin's host row button keeps working after the plugin sat idle for a moment, like after you close one of its tabs, instead of doing nothing until a reload
 - Desktop app: a linked app with an old Sync plugin from before plugin API 2 updates it on its own, so it can sync again instead of saying sync is off on the server
+- Quick Connect asks to trust a host's key only the first time, not on every connect, and warns if the key changes
 
 ## 26.11.2
 
