@@ -151,7 +151,7 @@ describe("checkProvenance", () => {
 describe.runIf(Boolean(process.env.LIVE_PROVENANCE_BUNDLE))(
   "sigstoreSignatureCheck against a real bundle",
   () => {
-    it("accepts the real signer and refuses the Termix rule", async () => {
+    it("accepts the real signer for its tier and refuses the other", async () => {
       const fs = await import("node:fs");
       const os = await import("node:os");
       const path = await import("node:path");
@@ -165,13 +165,21 @@ describe.runIf(Boolean(process.env.LIVE_PROVENANCE_BUNDLE))(
         new RegExp(process.env.LIVE_PROVENANCE_SIGNER!),
       );
       expect(signer).toMatch(new RegExp(process.env.LIVE_PROVENANCE_SIGNER!));
+      const tier = PROVENANCE_SIGNERS.official.test(signer!)
+        ? "official"
+        : "community";
+      const other = tier === "official" ? "community" : "official";
+      const opts = {
+        ...base,
+        sha256: process.env.LIVE_PROVENANCE_SHA!,
+        fileName: process.env.LIVE_PROVENANCE_NAME!,
+        checkSignature: check,
+      };
+      const record = await checkProvenance(text, { ...opts, tier });
+      expect(record.status).toBe("verified");
+      expect(record.signer).toBe(signer);
       await expect(
-        checkProvenance(text, {
-          ...base,
-          sha256: process.env.LIVE_PROVENANCE_SHA!,
-          fileName: process.env.LIVE_PROVENANCE_NAME!,
-          checkSignature: check,
-        }),
+        checkProvenance(text, { ...opts, tier: other }),
       ).rejects.toBeInstanceOf(ProvenanceError);
     }, 60_000);
   },
