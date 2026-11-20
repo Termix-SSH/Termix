@@ -15,6 +15,13 @@ updates:
         update-types:
           - minor
           - patch
+    # These majors break the build and plugins follow core on them, so they
+    # are bumped by hand.
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      - dependency-name: i18next
+        update-types: ["version-update:semver-major"]
     open-pull-requests-limit: 10
     commit-message:
       prefix: chore
