@@ -39,6 +39,8 @@ export interface RegisteredAction {
   /** Role permission a user needs before this action is offered. */
   permission?: string;
   pluginId?: string;
+  /** Only frames of pluginId may invoke it. */
+  private?: boolean;
 }
 
 export interface ActionSlotDefinition {
@@ -108,7 +110,7 @@ function emit(): void {
 export function registerAction(
   id: string,
   handler: ActionHandler,
-  options: { permission?: string; pluginId?: string } = {},
+  options: { permission?: string; pluginId?: string; private?: boolean } = {},
 ): () => void {
   const action = { id, handler, ...options };
   actions.set(id, action);
@@ -134,6 +136,11 @@ export function isActionRegistered(id: string): boolean {
 /** The plugin that registered an action, if one did. */
 export function getActionOwner(id: string): string | undefined {
   return actions.get(id)?.pluginId;
+}
+
+/** Whether only the plugin that registered an action may invoke it. */
+export function isActionPrivate(id: string): boolean {
+  return actions.get(id)?.private === true;
 }
 
 /** The permission gating an action, if it declared one. */

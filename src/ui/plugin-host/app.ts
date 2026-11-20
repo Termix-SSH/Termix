@@ -628,6 +628,7 @@ export function createPluginApp(
             ? resolvePluginPermission(pluginId, options.permission)
             : undefined,
           pluginId,
+          private: options.private === true,
         }),
       );
     },
