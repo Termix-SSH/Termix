@@ -131,7 +131,7 @@ describe("granted web views in frames", () => {
     expect(page?.src).toContain("https://page.example.test/");
   });
 
-  it("refuses to draw the page in a browser without credentialless frames", async () => {
+  it("draws a plain sandboxed page from another host without credentialless frames", async () => {
     delete (HTMLIFrameElement.prototype as unknown as Record<string, unknown>)
       .credentialless;
     consumer();
@@ -140,8 +140,29 @@ describe("granted web views in frames", () => {
       mountForeignView("c1", { id: "w1", web: GRANT });
     });
     await flush();
-    expect(api.get).not.toHaveBeenCalled();
+    const page = document.querySelector<HTMLIFrameElement>(
+      "[data-granted-web-view] iframe",
+    );
+    expect(page?.getAttribute("sandbox")).toBe("allow-scripts allow-forms");
+    expect(page?.src).toContain("https://page.example.test/");
+  });
+
+  it("refuses a page on Termix's own host without credentialless frames", async () => {
+    delete (HTMLIFrameElement.prototype as unknown as Record<string, unknown>)
+      .credentialless;
+    api.get.mockResolvedValueOnce({
+      data: { url: `http://${window.location.hostname}:8080/` },
+    });
+    consumer();
+    render(<ForeignViewHost />);
+    act(() => {
+      mountForeignView("c1", { id: "w1", web: GRANT });
+    });
+    await flush();
     expect(document.querySelector("[data-granted-web-view] iframe")).toBeNull();
+    expect(
+      document.querySelector("[data-granted-web-view]")?.textContent,
+    ).toContain("open the page safely");
   });
 
   it("opens the native view from the grant and the frame's plugin id", async () => {
