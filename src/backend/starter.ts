@@ -14,6 +14,9 @@ import {
 import { getTrustedProxyAuthConfig } from "./utils/trusted-proxy-auth.js";
 import { createShutdown, exitWithParent } from "./utils/shutdown.js";
 import { onParentMessage, sendToParent } from "./utils/parent-channel.js";
+import { installConsoleCapture } from "./utils/log-buffer.js";
+
+installConsoleCapture();
 
 const embedded = process.env.ELECTRON_EMBEDDED === "true";
 // The desktop app kills the backend after 5 s, Docker after 10 s.

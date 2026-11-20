@@ -3681,6 +3681,29 @@ export interface PluginPlugins {
   list: () => Promise<PluginSummary[]>;
 }
 
+/** A section this plugin adds to the diagnostics report admins make. */
+export interface PluginDiagnosticsSection {
+  /** Heading in the report. Defaults to the plugin id. */
+  title?: string;
+  /**
+   * Plain JSON about the plugin's own state, like open sessions or the last
+   * sync. Called each time an admin builds a report, with 3 seconds to answer.
+   * Core masks secret looking keys and text and refuses more than 64 KB, but
+   * leave out secrets, host addresses and user data yourself.
+   */
+  collect: () => unknown;
+}
+
+/**
+ * The diagnostics report. Only admins read it. Needs no capability. A plugin
+ * that is asleep when the report is made is not asked. Termix 26.11.3; check
+ * that ctx.diagnostics exists on older versions.
+ */
+export interface PluginDiagnostics {
+  /** One section per plugin; a second call replaces the first. */
+  provide: (section: PluginDiagnosticsSection) => () => void;
+}
+
 /** What a handler gets besides its input. */
 export interface PluginOperationContext {
   hostId?: number;
@@ -3887,6 +3910,8 @@ export interface PluginContext {
   readonly system: PluginSystem;
   /** The installed plugins and whether each runs. Needs plugins:read. */
   readonly plugins: PluginPlugins;
+  /** A section in the diagnostics report. Termix 26.11.3. */
+  readonly diagnostics: PluginDiagnostics;
 
   /**
    * Runs `fn` with `userId` as the acting user, for background work that has

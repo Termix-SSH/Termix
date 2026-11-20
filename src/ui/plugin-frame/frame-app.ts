@@ -675,6 +675,10 @@ export function createFrameApp(host: FrameAppHost): {
 
     stepUp: () => host.call("stepUp") as Promise<boolean>,
 
+    openDiagnostics: (options) => {
+      void host.call("diagnostics.open", options ?? {}).catch(() => {});
+    },
+
     deepLinks: {
       onOpen: (listener) => {
         void host.call("deepLinks.listen", listener).catch(() => {});

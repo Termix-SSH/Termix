@@ -93,6 +93,7 @@ import type {
   PluginHostProbeTarget,
   PluginHostStatusEntry,
   PluginActivityProvider,
+  PluginDiagnosticsSection,
   PluginHostLockProvider,
   PluginConnectPolicyProvider,
   PluginAuthPolicyProvider,
@@ -343,6 +344,8 @@ export interface FakePluginContext {
   hostStatusProviders: PluginHostStatusProvider[];
   /** Every provider passed to ctx.hosts.activity.provide that is still registered. */
   activityProviders: PluginActivityProvider[];
+  /** Sections passed to ctx.diagnostics.provide that are still registered. */
+  diagnosticsSections: PluginDiagnosticsSection[];
   /** Every provider passed to ctx.hosts.locks.provide that is still registered. */
   hostLockProviders: PluginHostLockProvider[];
   /** Every provider passed to ctx.hosts.connectPolicy.provide that is still registered. */
@@ -619,6 +622,7 @@ export function createFakeContext(
   const emitted: Array<{ topic: string; payload: unknown }> = [];
   const hostStatusProviders: PluginHostStatusProvider[] = [];
   const activityProviders: PluginActivityProvider[] = [];
+  const diagnosticsSections: PluginDiagnosticsSection[] = [];
   const hostLockProviders: PluginHostLockProvider[] = [];
   const connectPolicyProviders: PluginConnectPolicyProvider[] = [];
   const disconnects: Array<{ hostId: number; reason?: string }> = [];
@@ -1855,6 +1859,16 @@ export function createFakeContext(
       },
     },
 
+    diagnostics: {
+      provide: (section) => {
+        diagnosticsSections.splice(0, diagnosticsSections.length, section);
+        return () => {
+          const at = diagnosticsSections.indexOf(section);
+          if (at >= 0) diagnosticsSections.splice(at, 1);
+        };
+      },
+    },
+
     plugins: {
       list: async () =>
         options.installedPlugins ?? [
@@ -1949,6 +1963,7 @@ export function createFakeContext(
     disposals,
     hostStatusProviders,
     activityProviders,
+    diagnosticsSections,
     hostLockProviders,
     connectPolicyProviders,
     disconnects,
@@ -2843,6 +2858,10 @@ export function createMockCtx(
         require("plugins:read");
         return ctx.plugins.list();
       },
+    },
+
+    diagnostics: {
+      provide: (section) => ctx.diagnostics.provide(section),
     },
 
     system: {

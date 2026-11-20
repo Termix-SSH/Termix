@@ -143,6 +143,7 @@ export const FRAME = {
   "shell.clipboard-read": refused("read the clipboard with no click"),
   "shell.clipboard-write": refused("write the clipboard with no click"),
   "shell.step-up": refused("ask for a step up with no click"),
+  "shell.diagnostics-open": refused("open the diagnostics page with no click"),
   "shell.sign-out": refused("sign the user out without auth:policy"),
   "shell.passkey": refused("run a passkey step without auth:provide"),
   "shell.serial": refused("open a serial port without device:serial"),

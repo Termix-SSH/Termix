@@ -4,6 +4,8 @@
 
 ### Added
 
+- Diagnostics report: one file with errors, logs, plugin states and connection checks to attach to a bug report. Names and addresses are hidden by default and secrets are always removed. Open it from a plugin's page, Ctrl+Alt+Shift+D, the login page, a slow loading screen, or any Termix address with ?diagnostics added
+- Admins can watch the server log live in the diagnostics page
 - Admins can let community layouts and themes run outside the sandbox again, behind a warning, in Plugins, Registries
 - Set SERVE_OPENAPI=true to serve this server's own API spec at /version/openapi.json: core and every plugin that is on, at the versions it runs, with the server's address filled in
 - Access plugins can end the connections already open to a host when its access ends, and can keep status checks from contacting it

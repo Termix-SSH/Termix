@@ -6,6 +6,10 @@
  * port; every call it makes is checked here before anything happens.
  */
 
+import { receiveFrameDiag } from "@/diagnostics/frame-diag";
+import { openDiagnostics } from "@/diagnostics/open-diagnostics";
+import { addNetwork } from "@/diagnostics/store";
+import { redactUrl } from "@/diagnostics/redact";
 import { toast } from "sonner";
 import { onDeepLink } from "@/lib/deep-links";
 import { authApi, getBackendUrl } from "@/main-axios";
@@ -349,6 +353,15 @@ async function coreRequest(connection: FrameConnection, request: unknown) {
       ? { ok: false, reason: `${method} ${asked.path} with no user action` }
       : asked;
   if (!check.ok) {
+    addNetwork({
+      via: "frame",
+      source: pluginId,
+      method,
+      url: redactUrl(String(input.path ?? "")),
+      status: 403,
+      ms: 0,
+      error: "Refused by the frame policy",
+    });
     if (import.meta.env.DEV) {
       console.warn(
         `[frame-policy] refused ${pluginId}: ${(check as { reason: string }).reason}`,
@@ -666,6 +679,23 @@ async function handleCall(
         onClose as () => void,
       );
     }
+    case "diagnostics.open": {
+      // Takes over the window, so only right after a click in the frame.
+      if (!recentlyUsed(connection)) {
+        throw new Error("Opening the report needs a click in the frame");
+      }
+      const asked = (args[0] ?? {}) as { pluginId?: unknown };
+      openDiagnostics({
+        pluginId:
+          asked.pluginId === null
+            ? undefined
+            : typeof asked.pluginId === "string" &&
+                /^[a-z0-9][a-z0-9-]{0,63}$/.test(asked.pluginId)
+              ? asked.pluginId
+              : pluginId,
+      });
+      return;
+    }
     case "deepLinks.listen": {
       const owner = watchOwners.get(connection);
       const [listener] = args;
@@ -887,6 +917,9 @@ function handleEvent(connection: FrameConnection, name: string, data: unknown) {
       return;
     case "ready":
       connection.events.onReady?.();
+      return;
+    case "diag":
+      receiveFrameDiag(connection.pluginId, data);
       return;
     case "foreign.place":
     case "foreign.props":

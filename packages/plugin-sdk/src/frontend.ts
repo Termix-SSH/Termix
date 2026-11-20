@@ -1567,6 +1567,15 @@ export interface TermixApp extends TermixAppInfo {
     onOpen: (listener: (link: DeepLinkEvent) => void) => () => void;
   };
   /**
+   * Opens the diagnostics report page, where the person can download a
+   * report to attach to a bug report. Defaults to this plugin, so its log
+   * lines and report section come first and the issue goes to its repo;
+   * `pluginId: null` makes a report about Termix as a whole. In a frame it
+   * only works right after the person clicked. Termix 26.11.3; check it
+   * exists on older cores.
+   */
+  openDiagnostics?: (options?: { pluginId?: string | null }) => void;
+  /**
    * Web Serial through the shell, for a plugin with device:serial. The
    * browser shows its own port picker and the plugin gets only the port the
    * person picked. Call `request` from a click. Termix 26.11.2 and plugin

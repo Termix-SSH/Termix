@@ -85,7 +85,7 @@ body:
     id: logs
     attributes:
       label: Logs
-      description: Errors from the browser console, `docker logs termix`, or the error Termix shows. This is shown as code, so no backticks needed.
+      description: Errors from the browser console, `docker logs termix`, or the error Termix shows. This is shown as code, so no backticks needed. Best of all, attach a diagnostics report below (on a plugin's page click Make a diagnostics report, press Ctrl+Alt+Shift+D, or open your Termix address with ?diagnostics at the end).
       render: text
     validations:
       required: false
@@ -93,7 +93,7 @@ body:
     id: context
     attributes:
       label: Anything else?
-      description: Links, config, or anything that might help.
+      description: Links, config, or anything that might help. Drag your diagnostics report file here.
     validations:
       required: false
   - type: checkboxes

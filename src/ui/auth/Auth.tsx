@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+import { ReportLink } from "@/diagnostics/ReportLink";
 import {
   desktopParentTarget,
   isEmbeddedAuthFrame,
@@ -1855,6 +1856,9 @@ export function Auth({ onLogin }: AuthProps) {
                   onChange={handleLanguageChange}
                   className="pt-1"
                 />
+                <div className="flex justify-center">
+                  <ReportLink label={t("diagnostics.troubleSigningIn")} />
+                </div>
               </div>
             )}
           </div>

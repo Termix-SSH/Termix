@@ -121,6 +121,15 @@
       "access": "admin",
       "destructive": true
     },
+    "GET /diagnostics/logs": {
+      "access": "admin"
+    },
+    "GET /diagnostics/request": {
+      "access": "public"
+    },
+    "GET /diagnostics/server": {
+      "access": "admin"
+    },
     "POST /encryption/initialize": {
       "access": "admin"
     },

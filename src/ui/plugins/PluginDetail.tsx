@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   BookOpen,
   Bug,
+  Stethoscope,
   Check,
   Database,
   Download,
@@ -53,6 +54,7 @@ import {
   type PluginEntry,
 } from "./plugin-model";
 import { openPluginSettings } from "./open-plugins";
+import { openDiagnostics } from "@/diagnostics/open-diagnostics";
 import { hasSettingsPage } from "@/settings/settings-fields-util";
 import { PluginReleaseNotes, PluginVideo } from "./PluginReleaseNotes";
 import type { PluginsManager } from "./use-plugins-manager";
@@ -512,6 +514,17 @@ export function PluginDetail({
               <span className="truncate">
                 {t("plugins.manager.openSettings")}
               </span>
+            </button>
+          )}
+
+          {plugin.installed && (
+            <button
+              type="button"
+              onClick={() => openDiagnostics({ pluginId: plugin.id })}
+              className={LINK_ROW}
+            >
+              <Stethoscope className="size-3.5 shrink-0" />
+              <span className="truncate">{t("diagnostics.makeReport")}</span>
             </button>
           )}
 

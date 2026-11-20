@@ -216,6 +216,13 @@ export const CORE_RATE_LIMITS: RateLimitRule[] = [
     perAccount: { max: 10, windowMs: 10 * MINUTE },
     account: sessionAccount,
   },
+  {
+    // Diagnostics reports read a lot and the request check needs no login.
+    name: "diagnostics",
+    methods: ["GET"],
+    path: /^\/diagnostics\/(request|server)$/,
+    perIp: { max: 30, windowMs: MINUTE },
+  },
 ];
 
 const API_KEY_FAILURE_LIMIT: RateLimit = { max: 20, windowMs: 10 * MINUTE };

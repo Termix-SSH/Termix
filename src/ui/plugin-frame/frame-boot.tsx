@@ -39,6 +39,7 @@ import {
   type FrameTheme,
 } from "./protocol";
 import { FramePort } from "./rpc";
+import { connectFrameCapture } from "@/diagnostics/capture";
 import { createFrameFetch, createFrameXhr } from "./net";
 import { connectShims, frameLocalStorage } from "./shims";
 import {
@@ -169,6 +170,8 @@ async function boot() {
     if (event.source !== parent) return;
     port.receive(event.data);
   });
+  // Console lines and errors go to the shell for diagnostics reports.
+  connectFrameCapture((batch) => port.emit("diag", batch));
 
   const call = (method: string, ...args: unknown[]) => port.call(method, args);
   // Data slots this plugin owns get their values from the shell.

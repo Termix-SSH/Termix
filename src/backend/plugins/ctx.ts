@@ -75,6 +75,7 @@ import { createPluginProcess } from "./ctx-process.js";
 import { createPluginSystem } from "./ctx-system.js";
 import { createPluginPlugins } from "./ctx-plugins.js";
 import { createPluginUsers } from "./ctx-users.js";
+import { provideDiagnosticsSection } from "../diagnostics/sections.js";
 import { createPluginCredentials } from "./ctx-credentials.js";
 import { isElectronIpcAvailable } from "../utils/electron-ipc-bridge.js";
 import { answeredSync } from "./api1-sync.js";
@@ -1081,6 +1082,17 @@ export function createPluginContext(
     system: createPluginSystem({ manifest, bag: handle.bag, audit: auditCall }),
     plugins: createPluginPlugins(manifest),
     users: createPluginUsers(manifest),
+
+    diagnostics: {
+      provide: (provider) => {
+        const remove = provideDiagnosticsSection(pluginId, provider);
+        const drop = handle.bag.add(remove, "diagnostics section");
+        return () => {
+          drop();
+          remove();
+        };
+      },
+    },
 
     desktop: {
       openIsolatedWindow: (request) => desktopOpenIsolatedWindow(request),

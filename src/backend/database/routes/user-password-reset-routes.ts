@@ -191,6 +191,7 @@ export function registerUserPasswordResetRoutes(
 
       authLogger.info(
         `Password reset code generated for user ${username}: ${resetCode} (expires at ${expiresAt.toLocaleString()})`,
+        { private: true },
       );
 
       res.json({ message: RESET_STARTED });

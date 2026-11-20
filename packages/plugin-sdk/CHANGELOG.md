@@ -6,6 +6,8 @@ Plugin API 2.9.0. Needs Termix 26.11.2.
 
 ### Added
 
+- `ctx.diagnostics.provide({ title, collect })` adds a section about the plugin's own state to the diagnostics report admins make. Core masks it and caps it at 64 KB. Termix 26.11.3
+- `app.openDiagnostics({ pluginId })` opens the diagnostics report page with this plugin first. In a frame it needs a click. Termix 26.11.3
 - `ctx.hosts.connectPolicy.disconnect(hostId, { reason })` ends every connection core holds open to a host, and `provide({ check, probes: true })` also gates status checks. Termix 26.11.3
 - `app.deepLinks.onOpen(listener)`: termix:// links the desktop app was opened with, replayed for a listener that starts late. Termix 26.11.3
 - `ctx.credentials.resolveLogin(credentialId)`: a saved credential's username and password, for a login the plugin makes itself, like a Quick Connect session. Only the user's own or shared credentials. Needs `credentials:read`. `QuickConnectLogin.credentialId` carries one from the browser without its secret, and `viewOnly` asks for a session without input. Termix 26.11.3

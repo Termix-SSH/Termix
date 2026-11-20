@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+import "@/diagnostics/install-page";
 import { prepareClientCacheVersion } from "@/lib/client-cache-version";
 import {
   TitleBar,
@@ -53,6 +54,9 @@ import { getUserPreferences } from "@/api/open-tabs-api";
 import { standaloneViewFor, useTabTypes } from "@/shell/tab-registry";
 import { LoadingState } from "@/components/loading-state";
 import { BootProgress } from "@/shell/ColdBootStage";
+import { DiagnosticsHost } from "@/diagnostics/DiagnosticsHost";
+import { ReportLink } from "@/diagnostics/ReportLink";
+import { diagnosticsRequested } from "@/diagnostics/open-diagnostics";
 import { ForeignViewHost } from "@/plugin-host/frames/foreign-views";
 import { DataWatchHost } from "@/plugin-host/frames/data-watches";
 import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
@@ -192,6 +196,7 @@ function FullscreenAppGate() {
         <div className="flex flex-col items-center gap-4">
           <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+          <ReportLink label={t("diagnostics.slowBoot")} afterMs={20_000} />
         </div>
       </div>
     );
@@ -431,6 +436,7 @@ function App() {
           <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
           {phase === "loading-app" && <BootProgress />}
+          <ReportLink label={t("diagnostics.slowBoot")} afterMs={20_000} />
         </div>
       </div>
     );
@@ -572,15 +578,32 @@ function RootApp() {
   const searchParams = new URLSearchParams(window.location.search);
   const view = searchParams.get("view");
 
+  // Only the report: nothing else starts, so a broken plugin cannot get in
+  // the way.
+  if (diagnosticsRequested()) {
+    return (
+      <>
+        <DiagnosticsHost />
+        <Toaster position="bottom-right" />
+      </>
+    );
+  }
+
   if (view !== null) {
     return (
       <Suspense fallback={null}>
         <ViewRouter view={view} />
+        <DiagnosticsHost />
       </Suspense>
     );
   }
 
-  return <App />;
+  return (
+    <>
+      <App />
+      <DiagnosticsHost />
+    </>
+  );
 }
 
 installElectronWheelZoomGuard();

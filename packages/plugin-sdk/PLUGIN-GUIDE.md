@@ -421,6 +421,7 @@ won't run before an admin updates.
 | `users.create`, `update`, `setDisabled`, `delete`, `syncRoles`, `setAdmin` | `users:write`                    | Manage accounts, for a provisioning plugin like SCIM (API 2.9)  |
 | `system`                                                                   | `system:tls`                     | The server's HTTPS certificate                                  |
 | `plugins.list()`                                                           | `plugins:read`                   | Which plugins are installed                                     |
+| `diagnostics.provide()`                                                    | none                             | Your section in the diagnostics report (Termix 26.11.3)         |
 | `asUser(userId, fn)`                                                       | always audited                   | Run background work as a user                                   |
 | `currentActor()`                                                           | none                             | The user the current call runs for                              |
 | `disposables.add(fn)`                                                      | none                             | Extra cleanup on disable                                        |
@@ -616,6 +617,26 @@ ctx.schedule.every(60_000, () => refresh(), { id: "refresh", jitterMs: 5_000 });
   from `ctx.currentActor()`.
 - Use a service: declare it in `requires`, then `await ctx.services.get<T>("snippets.access")`. Every
   method on it returns a Promise. Calls fail while no provider runs, so always handle that.
+
+### Diagnostics report
+
+Users make a diagnostics report to attach to a bug report. It already has your plugin's version, state,
+errors, its server log lines and the console output of its frames. Add your own state with a section:
+
+```ts
+if (typeof ctx.diagnostics?.provide === "function") {
+  ctx.diagnostics.provide({
+    title: "Sessions",
+    collect: () => ({ open: sessions.size, lastError }),
+  });
+}
+```
+
+- Only admins read it, and only while your plugin runs. A plugin that is asleep is not asked.
+- Return plain JSON under 64 KB within 3 seconds. Core masks secret looking keys and text, but leave out
+  secrets, host addresses and user data yourself.
+- `app.openDiagnostics()` opens the report page with your plugin first, for a "Report a problem" button. In
+  a frame it needs a click.
 
 ### Operations
 
