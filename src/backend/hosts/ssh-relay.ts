@@ -18,6 +18,7 @@ import { openSshTransport } from "./connect/transport.js";
 import type { MutableConnectConfig, SshConnectHost } from "./connect/types.js";
 import { sshLogger } from "../utils/logger.js";
 import { registerCoreWsRoute } from "../plugins/ws.js";
+import { trackConnection } from "./open-connections.js";
 
 const MAX_RELAYS_PER_USER = 100;
 const open = new Map<string, number>();
@@ -99,6 +100,8 @@ async function handleRelay(
     }
     stream.once("error", finish);
     stream.once("close", finish);
+    const untrack = trackConnection((host as { id?: unknown }).id, finish);
+    ws.once("close", untrack);
     pipe.once("error", finish);
     stream.pipe(pipe);
     pipe.pipe(stream);

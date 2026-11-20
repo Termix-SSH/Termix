@@ -4,6 +4,7 @@
 
 ### Added
 
+- Access plugins can end the connections already open to a host when its access ends, and can keep status checks from contacting it
 - Desktop app: termix:// links open the app. termix://host/<id> connects to a saved host after asking, and a shortcut with --host=<id> opens straight into it
 - Quick Connect can use a saved credential, resolved on the server so its password never reaches the browser
 - Confirm prompts can have a checkbox, like Delete permanently in the file manager

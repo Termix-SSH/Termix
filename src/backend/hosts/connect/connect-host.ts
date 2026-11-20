@@ -9,6 +9,11 @@
  */
 
 import { Client } from "ssh2";
+import {
+  connectionGeneration,
+  cutSince,
+  trackConnection,
+} from "../open-connections.js";
 import { withConnection } from "../ssh-connection-pool.js";
 import { resolveHostById } from "../host-resolver.js";
 import { buildConnectConfig } from "./build-connect-config.js";
@@ -119,6 +124,7 @@ export async function connectHost(
 ): Promise<SshConnection> {
   const host = await resolveConnectHost(target, options.userId);
   const client = options.client ?? new Client();
+  const generation = connectionGeneration(host.id);
 
   const { config, provider, outcome, env } = await buildConnectConfig(host, {
     userId: options.userId,
@@ -177,6 +183,18 @@ export async function connectHost(
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
+      // A connect policy ended this host's connections mid handshake.
+      if (cutSince(host.id, generation)) {
+        dispose();
+        reject(
+          Object.assign(new Error("Access to this host was ended"), {
+            code: "access-denied",
+          }),
+        );
+        return;
+      }
+      const untrack = trackConnection(host.id, dispose);
+      client.once("close", untrack);
       resolve();
     });
 

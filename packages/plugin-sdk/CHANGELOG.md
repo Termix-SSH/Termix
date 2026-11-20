@@ -6,6 +6,7 @@ Plugin API 2.9.0. Needs Termix 26.11.2.
 
 ### Added
 
+- `ctx.hosts.connectPolicy.disconnect(hostId, { reason })` ends every connection core holds open to a host, and `provide({ check, probes: true })` also gates status checks. Termix 26.11.3
 - `app.deepLinks.onOpen(listener)`: termix:// links the desktop app was opened with, replayed for a listener that starts late. Termix 26.11.3
 - `ctx.credentials.resolveLogin(credentialId)`: a saved credential's username and password, for a login the plugin makes itself, like a Quick Connect session. Only the user's own or shared credentials. Needs `credentials:read`. `QuickConnectLogin.credentialId` carries one from the browser without its secret. Termix 26.11.3
 - `useConfirm` takes a `checkbox` (`label`, `checked`, `onChange`, and text used while it is ticked), like Delete permanently. Termix 26.11.3 draws it, older versions ignore it

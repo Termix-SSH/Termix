@@ -529,6 +529,10 @@ router.post("/notes", async (req, res) => {
   all providers wins and a provider that throws denies. SSH prepare then gives an error outcome with code
   `access-denied` or `access-required`, and `ctx.credentials.resolveHostProtocol` throws an error with that
   `code` and a `toJSON()` body for a 403. Keep `check` fast, it also runs for background polling.
+  When your answer for a host changes, `ctx.hosts.connectPolicy.disconnect?.(hostId, { reason })` (Termix
+  26.11.3) ends every connection core holds to it, for all users and plugins, and resolves to the count.
+  `provide({ check, probes: true })` also asks you before status checks (profile `"probe"`): hosts you deny
+  drop out of `ctx.hosts.probeTargets`.
 
 Headers and cookies (Termix 26.11.2+): every answer from `/plugin-api/<id>/` and `/plugin-assets/<id>/` carries
 `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy` and a default

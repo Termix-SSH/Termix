@@ -347,6 +347,8 @@ export interface FakePluginContext {
   hostLockProviders: PluginHostLockProvider[];
   /** Every provider passed to ctx.hosts.connectPolicy.provide that is still registered. */
   connectPolicyProviders: PluginConnectPolicyProvider[];
+  /** Every ctx.hosts.connectPolicy.disconnect call, in order. */
+  disconnects: Array<{ hostId: number; reason?: string }>;
   /** Topics emitted through ctx.events.emit, in order. */
   emitted: Array<{ topic: string; payload: unknown }>;
   /** Backing store behind ctx.kv. */
@@ -619,6 +621,7 @@ export function createFakeContext(
   const activityProviders: PluginActivityProvider[] = [];
   const hostLockProviders: PluginHostLockProvider[] = [];
   const connectPolicyProviders: PluginConnectPolicyProvider[] = [];
+  const disconnects: Array<{ hostId: number; reason?: string }> = [];
   const kv = new Map<string, unknown>();
   const tables: PluginTableDefinition[] = [];
   const syncEntities: SyncEntityRegistration[] = [];
@@ -1253,6 +1256,10 @@ export function createFakeContext(
             const at = connectPolicyProviders.indexOf(provider);
             if (at >= 0) connectPolicyProviders.splice(at, 1);
           };
+        },
+        disconnect: async (hostId, options) => {
+          disconnects.push({ hostId, reason: options?.reason });
+          return 0;
         },
       },
       status: {
@@ -1944,6 +1951,7 @@ export function createFakeContext(
     activityProviders,
     hostLockProviders,
     connectPolicyProviders,
+    disconnects,
     emitted,
     kv,
     tables,
@@ -2481,6 +2489,10 @@ export function createMockCtx(
         provide: (provider) => {
           require("hosts:connect-policy");
           return ctx.hosts.connectPolicy.provide(provider);
+        },
+        disconnect: async (hostId, options) => {
+          require("hosts:connect-policy");
+          return ctx.hosts.connectPolicy.disconnect!(hostId, options);
         },
       },
       status: {

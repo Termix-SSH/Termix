@@ -1395,7 +1395,8 @@ export interface PluginConnectPolicyInput {
   purpose: string;
   /**
    * SSH profile: terminal, session, stream, forward, background or jump.
-   * "desktop" for remote desktop logins.
+   * "desktop" for remote desktop logins, "probe" for status checks (only for
+   * providers with probes: true).
    */
   profile: string;
   /** True when a person waits on this connect (a prompt channel is open). */
@@ -1432,11 +1433,29 @@ export interface PluginConnectPolicyProvider {
   check: (
     input: PluginConnectPolicyInput,
   ) => PluginConnectPolicyDecision | Promise<PluginConnectPolicyDecision>;
+  /**
+   * Also asked before status checks, with profile "probe": hosts it denies
+   * are left out of ctx.hosts.probeTargets, so nothing contacts them. Off by
+   * default so a policy that denies background work never hides status
+   * dots. Termix 26.11.3.
+   */
+  probes?: boolean;
 }
 
 export interface PluginConnectPolicyApi {
   /** Registers this plugin's policy. Needs hosts:connect-policy. Removed on deactivate. */
   provide: (provider: PluginConnectPolicyProvider) => () => void;
+  /**
+   * Ends every connection core holds open to the host, for every user and
+   * plugin: terminals, file transfers, tunnels and pooled background
+   * connections. Call it right after your answer for the host changes.
+   * One still connecting ends once it is ready. Resolves to how many ended.
+   * Needs hosts:connect-policy. Audited. Termix 26.11.3; check it exists.
+   */
+  disconnect?: (
+    hostId: number,
+    options?: { reason?: string },
+  ) => Promise<number>;
 }
 
 /**

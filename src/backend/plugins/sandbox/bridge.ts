@@ -16,6 +16,7 @@
  *     manifest's sandbox block.
  */
 import { DurableRegistrations } from "./durable.js";
+import { trackConnection } from "../../hosts/open-connections.js";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import type { NextFunction, Request, Response, Router } from "express";
@@ -1487,6 +1488,12 @@ export class PluginBridge {
       const port = endpoint.openStream();
       this.track(sock, port);
       joinSshStream(sock, port);
+      // A connect policy can end it: closing the socket ends the plugin's client.
+      const opening = sock;
+      const untrack = trackConnection(plainObject(host).id, () =>
+        opening.destroy(),
+      );
+      opening.once("close", untrack);
       return { via: opened.via, jumpClient, sock: port };
     });
 

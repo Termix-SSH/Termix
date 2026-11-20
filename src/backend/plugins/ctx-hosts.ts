@@ -41,7 +41,11 @@ import {
   assertManualCreateAllowed,
   provideHostLocks,
 } from "../hosts/locks.js";
-import { provideConnectPolicy } from "../hosts/connect-policy.js";
+import {
+  probeAllowedHostIds,
+  provideConnectPolicy,
+} from "../hosts/connect-policy.js";
+import { endHostConnections } from "../hosts/open-connections.js";
 import { answeredSync } from "./api1-sync.js";
 
 type AuditFn = (
@@ -1014,7 +1018,12 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
         throw new Error("ctx.hosts.probeTargets needs an acting user");
       }
       const ids = filter?.hostIds?.filter((id) => Number.isInteger(id));
-      return loadProbeTargets(actor, ids);
+      const targets = await loadProbeTargets(actor, ids);
+      const allowed = await probeAllowedHostIds(
+        actor,
+        targets.map((target) => Number(target.id)),
+      );
+      return targets.filter((target) => allowed.has(Number(target.id)));
     },
 
     sessionActive: answeredSync<PluginHosts["sessionActive"]>(
@@ -1061,6 +1070,25 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
           drop?.();
           remove();
         };
+      },
+      disconnect: async (hostId, options) => {
+        if (!declared.includes("hosts:connect-policy")) {
+          throw capabilityRefused(pluginId, "hosts:connect-policy");
+        }
+        if (!Number.isSafeInteger(hostId) || hostId <= 0) {
+          throw new Error("A host id is required");
+        }
+        const reason =
+          typeof options?.reason === "string"
+            ? options.reason.slice(0, 300)
+            : "";
+        const count = endHostConnections(hostId);
+        void audit(
+          "host_connect_policy_disconnect",
+          `${pluginId} ended ${count} connection${count === 1 ? "" : "s"} to host ${hostId}${reason ? `: ${reason}` : ""}`,
+          { success: true },
+        );
+        return count;
       },
     },
 

@@ -1014,3 +1014,38 @@ describe("ctx.hosts.folders", () => {
     expect(h.folderCalls[0]).toEqual(["remove", "user-1", "Site"]);
   });
 });
+
+describe("ctx.hosts.connectPolicy.disconnect", () => {
+  it("needs hosts:connect-policy", async () => {
+    const hosts = createPluginHosts({
+      manifest: manifest([]),
+      audit: vi.fn(async () => {}),
+    });
+    await expect(hosts.connectPolicy.disconnect!(4)).rejects.toBeInstanceOf(
+      PluginCapabilityError,
+    );
+  });
+
+  it("ends the host's open connections and audits the count", async () => {
+    const { trackConnection, resetOpenConnections } =
+      await import("../../hosts/open-connections.js");
+    resetOpenConnections();
+    const end = vi.fn();
+    trackConnection(4, end);
+    const audit = vi.fn(async () => {});
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:connect-policy"]),
+      audit,
+    });
+    expect(
+      await hosts.connectPolicy.disconnect!(4, { reason: "grant ended" }),
+    ).toBe(1);
+    expect(end).toHaveBeenCalled();
+    expect(audit).toHaveBeenCalledWith(
+      "host_connect_policy_disconnect",
+      expect.stringContaining("grant ended"),
+      { success: true },
+    );
+    await expect(hosts.connectPolicy.disconnect!(0)).rejects.toThrow();
+  });
+});
