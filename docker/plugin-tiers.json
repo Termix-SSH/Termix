@@ -29,6 +29,7 @@
     "uptime": { "tier": "full" },
     "user-manager": { "tier": "full" },
     "virtual-machines": { "tier": "full" },
+    "wall-display": { "tier": "standard" },
     "web-servers": { "tier": "full" },
     "wireguard": { "tier": "full" }
   }

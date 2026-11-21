@@ -84,6 +84,7 @@ Plugins add everything else. Admins can install, update or remove plugins from t
 | [TOTP](https://github.com/Termix-SSH/Plugin-TOTP)                           | Two-factor sign in with a code from an authenticator app, with backup codes.                                                               |
 | [Tunnels](https://github.com/Termix-SSH/Plugin-Tunnels)                     | SSH port forwarding that reconnects on its own, WireGuard gateways that publish private services, and client tunnels from the desktop app. |
 | [Usage Statistics](https://github.com/Termix-SSH/Plugin-Telemetry)          | Sends a small anonymous daily report so we can see how Termix is used.                                                                     |
+| [Wall Display](https://github.com/Termix-SSH/Plugin-Wall-Display)           | A full screen Termix layout for a TV or spare monitor that cycles through your status views.                                               |
 | [Workspaces](https://github.com/Termix-SSH/Plugin-Workspaces)               | Save your open tabs and split layouts and reopen them in one click.                                                                        |
 
 <details>
