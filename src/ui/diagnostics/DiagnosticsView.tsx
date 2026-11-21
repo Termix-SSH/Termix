@@ -38,6 +38,7 @@ import {
   setPluginSummaries,
   usePluginStore,
 } from "@/plugin-host/plugin-store";
+import { DIAGNOSTICS_MENU_CLASS } from "./open-diagnostics";
 import { isElectron } from "@/lib/electron";
 import {
   ADMIN_PARTS,
@@ -362,6 +363,7 @@ export function DiagnosticsView({
                 </span>
               </span>
               <ToolbarSelect
+                contentClassName={DIAGNOSTICS_MENU_CLASS}
                 value={options.focusPluginId ?? ALL_PLUGINS}
                 onChange={(value) =>
                   set({

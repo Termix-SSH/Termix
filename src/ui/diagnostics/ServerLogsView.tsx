@@ -8,6 +8,7 @@ import {
   ToolbarSelect,
 } from "@/components/panel-layout";
 import { LoadingState } from "@/components/loading-state";
+import { DIAGNOSTICS_MENU_CLASS } from "./open-diagnostics";
 import { cn } from "@/lib/utils";
 import { getServerLogs, type ServerLogLine } from "./diagnostics-api";
 
@@ -117,6 +118,7 @@ export function ServerLogsView() {
           placeholder={t("diagnostics.logsSearch")}
         />
         <ToolbarSelect
+          contentClassName={DIAGNOSTICS_MENU_CLASS}
           value={level}
           onChange={setLevel}
           label={t("diagnostics.logsLevel")}
@@ -127,6 +129,7 @@ export function ServerLogsView() {
           ]}
         />
         <ToolbarSelect
+          contentClassName={DIAGNOSTICS_MENU_CLASS}
           value={plugin}
           onChange={setPlugin}
           label={t("diagnostics.logsPlugin")}

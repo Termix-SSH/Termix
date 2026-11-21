@@ -12,6 +12,7 @@ import {
   PanelToolbar,
   Segmented,
   ToolbarBand,
+  ToolbarSelect,
   ViewToggle,
   gridSizeStyle,
 } from "@/components/panel-layout";
@@ -240,5 +241,27 @@ describe("ToolbarBand in a tile stack", () => {
     expect(screen.getByText("inside").parentElement!.className).toContain(
       "[&>[data-slot=toolbar-band]]:border-b-0",
     );
+  });
+});
+
+describe("ToolbarSelect", () => {
+  it("puts contentClassName on the open menu", () => {
+    render(
+      <ToolbarSelect<"a" | "b">
+        value="a"
+        onChange={() => {}}
+        label="pick"
+        contentClassName="z-[1001]"
+        options={[
+          { value: "a", label: "A" },
+          { value: "b", label: "B" },
+        ]}
+      />,
+    );
+    const trigger = screen.getByLabelText("pick");
+    fireEvent.keyDown(trigger, { key: "Enter" });
+    const menu = document.querySelector('[data-slot="select-content"]');
+    expect(menu?.className).toContain("z-[1001]");
+    expect(menu?.className).not.toContain("z-50");
   });
 });

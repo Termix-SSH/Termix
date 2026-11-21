@@ -48,6 +48,7 @@ export function ToolbarSelect<T extends string>({
   label,
   disabled,
   className,
+  contentClassName,
 }: {
   value: T;
   onChange: (value: NoInfer<T>) => void;
@@ -56,6 +57,8 @@ export function ToolbarSelect<T extends string>({
   label: string;
   disabled?: boolean;
   className?: string;
+  /** For menus opened over layers above z-50. */
+  contentClassName?: string;
 }) {
   return (
     <Select
@@ -69,7 +72,7 @@ export function ToolbarSelect<T extends string>({
       >
         <SelectValue />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className={contentClassName}>
         {options.map((option) => (
           <SelectItem key={option.value} value={option.value}>
             {option.label}

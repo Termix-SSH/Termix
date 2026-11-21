@@ -26,3 +26,6 @@ export function isDiagnosticsShortcut(event: KeyboardEvent): boolean {
 export function diagnosticsRequested(search = window.location.search): boolean {
   return new URLSearchParams(search).has("diagnostics");
 }
+
+/** The page is drawn at z-[1000], so its menus must open above it. */
+export const DIAGNOSTICS_MENU_CLASS = "z-[1001]";
