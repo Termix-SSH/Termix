@@ -404,7 +404,7 @@
       "source": "tmxplug",
       "url": "https://github.com/Termix-SSH/Plugin-Simple-Layout/releases/download/v1.1.0/simple-layout-1.1.0.tmxplug",
       "sha256": "f8acf300d73a9727dc316ac400367992a40be51dd084a5c550c1796b25deca2c",
-      "tier": "full"
+      "tier": "standard"
     },
     {
       "id": "snippets",

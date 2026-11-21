@@ -71,9 +71,11 @@ Plugins add everything else. Admins can install, update or remove plugins from t
 | [Host Status](https://github.com/Termix-SSH/Plugin-Host-Status)             | Shows if each host is online with a dot in the host list, checked by connecting to its port.                                               |
 | [Import and Export](https://github.com/Termix-SSH/Plugin-Import-Export)     | Import hosts from a JSON file or an SSH config file and export them to share or back up.                                                   |
 | [Operations Center](https://github.com/Termix-SSH/Plugin-Operations-Center) | Run, roll out, approve and track every plugin action across your hosts, with a page per host and tables across all of them.                |
+| [Original Layout](https://github.com/Termix-SSH/Plugin-Original-Layout)     | The Termix layout from before 2.3.0, with a floating sidebar of host folders and a floating tab bar.                                       |
 | [Passkeys](https://github.com/Termix-SSH/Plugin-WebAuthn)                   | Sign in with a passkey or security key instead of a password.                                                                              |
 | [Remote Desktop](https://github.com/Termix-SSH/Plugin-Remote-Desktop)       | RDP, VNC, Apple Remote Desktop, RustDesk and Telnet sessions in your browser, with clipboard, file transfer, sharing and recording.        |
 | [Serial](https://github.com/Termix-SSH/Plugin-Serial)                       | Open a serial console to a router, switch or other device plugged into your computer.                                                      |
+| [Simple Layout](https://github.com/Termix-SSH/Plugin-Simple-Layout)         | A simple Termix layout for small setups with a top bar, a Home screen and only the basics.                                                 |
 | [Single sign-on](https://github.com/Termix-SSH/Plugin-SSO)                  | Sign in with any OpenID Connect provider, GitHub or Google.                                                                                |
 | [Snippets](https://github.com/Termix-SSH/Plugin-Snippets)                   | Save the commands you run often and run them in a terminal or on many hosts in one click.                                                  |
 | [SSH Terminal](https://github.com/Termix-SSH/Plugin-SSH-Terminal)           | SSH terminal sessions with tabs, split screen, history, macros and a local terminal in the desktop app.                                    |
@@ -84,7 +86,7 @@ Plugins add everything else. Admins can install, update or remove plugins from t
 | [Workspaces](https://github.com/Termix-SSH/Plugin-Workspaces)               | Save your open tabs and split layouts and reopen them in one click.                                                                        |
 
 <details>
-<summary>All other official plugins (55)</summary>
+<summary>All other official plugins (53)</summary>
 
 These ship in the `-full` image tags (like `latest-full`) and the full desktop builds. On any other install, add them from the Plugins tab.
 
@@ -116,7 +118,6 @@ These ship in the `-full` image tags (like `latest-full`) and the full desktop b
 | [Notes](https://github.com/Termix-SSH/Plugin-Notes)                         | Write markdown notes for each host, folder or yourself, with commands you can copy or send to the terminal.                              |
 | [Object Storage](https://github.com/Termix-SSH/Plugin-Object-Storage)       | Browse and manage S3-compatible object storage buckets and files.                                                                        |
 | [OPKSSH](https://github.com/Termix-SSH/Plugin-OPKSSH)                       | Connect to hosts with short-lived OpenPubkey SSH certificates after signing in with your identity provider.                              |
-| [Original Layout](https://github.com/Termix-SSH/Plugin-Original-Layout)     | The Termix layout from before 2.3.0, with a floating sidebar of host folders and a floating tab bar.                                     |
 | [Out-of-band](https://github.com/Termix-SSH/Plugin-Out-Of-Band)             | Power, sensors, event logs and consoles for server BMCs over Redfish, IPMI and Intel AMT.                                                |
 | [Packages](https://github.com/Termix-SSH/Plugin-Package-Manager)            | See and install updates on your hosts, search, install and remove packages, and read the package history.                                |
 | [Privileged Access](https://github.com/Termix-SSH/Plugin-Privileged-Access) | Ask for approval before anyone connects to a privileged host, with access that ends on its own and a full audit trail.                   |
@@ -130,7 +131,6 @@ These ship in the `-full` image tags (like `latest-full`) and the full desktop b
 | [Services](https://github.com/Termix-SSH/Plugin-Service-Manager)            | Manage services, timers and logs on your hosts over SSH.                                                                                 |
 | [Session Recording](https://github.com/Termix-SSH/Plugin-Session-Recording) | Record terminal and remote desktop sessions, watch them live, and keep an audited, encrypted record of who did what.                     |
 | [Session Sharing](https://github.com/Termix-SSH/Plugin-Session-Sharing)     | Share live sessions by link or with another user, and present sessions to a group in meeting rooms.                                      |
-| [Simple Layout](https://github.com/Termix-SSH/Plugin-Simple-Layout)         | A simple Termix layout for small setups with a top bar, a Home screen and only the basics.                                               |
 | [SSH Certificate Signer](https://github.com/Termix-SSH/Plugin-Vault)        | Connect to hosts with short-lived SSH certificates signed by HashiCorp Vault or OpenBao.                                                 |
 | [Step CA](https://github.com/Termix-SSH/Plugin-Step-CA)                     | Connect to hosts with short-lived SSH certificates from a smallstep step-ca server.                                                      |
 | [Storage Health](https://github.com/Termix-SSH/Plugin-Storage-Health)       | Watch drive and array health over SSH: SMART, NVMe, ZFS, mdadm, btrfs and LVM, with history, alerts and self tests.                      |
