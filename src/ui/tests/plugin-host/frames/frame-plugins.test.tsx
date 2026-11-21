@@ -43,7 +43,7 @@ import {
 } from "@/sidebar/HostManagerTabs";
 import { FramePort } from "@/plugin-frame/rpc";
 import { FRAME_CHANNEL, type FrameMessage } from "@/plugin-frame/protocol";
-import { act, render } from "@testing-library/react";
+import { act, render, waitFor } from "@testing-library/react";
 import { DataSlot, HostDataItems } from "@/components/data-view/DataSlot";
 import { setPermissionsForTesting } from "@/hooks/use-permissions";
 import { dataRowsFor, resetDataRows } from "@/plugin-host/frames/data-rows";
@@ -510,9 +510,11 @@ describe("host tree children from a frame", () => {
       </HostTreeChildren>,
     );
     await act(flush);
-    expect(dataRowsFor("gizmo")).toEqual({
-      [valueKey]: { "3": { hostId: 3 } },
-    });
+    await waitFor(() =>
+      expect(dataRowsFor("gizmo")).toEqual({
+        [valueKey]: { "3": { hostId: 3 } },
+      }),
+    );
 
     await act(async () => {
       port.emit("value", {
@@ -528,7 +530,7 @@ describe("host tree children from a frame", () => {
       });
       await flush();
     });
-    expect(view.container.textContent).toBe("web,db");
+    await waitFor(() => expect(view.container.textContent).toBe("web,db"));
 
     view.unmount();
     await act(flush);

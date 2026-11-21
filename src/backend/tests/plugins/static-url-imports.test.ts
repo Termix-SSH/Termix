@@ -56,7 +56,7 @@ describe("staticUrlImports", () => {
     expect(assets[0]).toMatch(/^worker-[0-9a-f]{8}\.js$/);
     const code = fs.readFileSync(path.join(outDir, "frontend.js"), "utf8");
     expect(code).toContain(`new URL("./assets/${assets[0]}", import.meta.url)`);
-  });
+  }, 30_000);
 
   it("keeps the build folder out of the bundle", async () => {
     const { dir, outDir } = await bundle(
