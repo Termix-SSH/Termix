@@ -1117,6 +1117,11 @@ In tests, `renderSlot(slotId, props)` from `renderWithApp` draws data contributi
 A plugin can replace the whole app layout or add themes (API 1.4). Users pick both in Settings, Appearance;
 admins set the default for everyone.
 
+Setup has a Pick a layout step that shows each layout with a screenshot and a button for the manifest's
+`video`. The screenshot is `docs/layout-preview.png` on the default branch of the plugin's GitHub
+`repository` (Termix 26.11.3+). Make it 1600x1000 of the dashboard with a few hosts and tabs open, using
+demo data. Without it the step draws a plain placeholder.
+
 A layout is declared in `contributes.layouts` (`id`, `label`, optional `description` and `defaultTheme`) and
 needs the `ui:layout` capability, which admins see as high risk because a layout draws every screen. Register
 it in `activate`:

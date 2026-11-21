@@ -1048,6 +1048,7 @@ describe("plugins route", () => {
         dependencies: {},
         optionalDependencies: {},
         videoId: undefined,
+        repository: undefined,
         defaultLook: false,
         frontend: false,
         css: false,

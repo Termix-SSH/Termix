@@ -226,6 +226,7 @@
     "layoutDefault": "Default",
     "layoutInstall": "Install",
     "layoutTurnOn": "Turn on",
+    "layoutVideo": "Watch video",
     "layoutChangeLater": "You can change your layout any time in Settings, under Appearance. Ask an admin if you want more layouts installed.",
     "layoutChangeLaterAdmin": "You can change your layout any time in Settings, under Appearance. More layouts can be installed later from the Plugins tab."
   },

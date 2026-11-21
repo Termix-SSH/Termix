@@ -609,13 +609,22 @@ export function youtubeEmbedUrl(videoId: string | undefined): string | null {
     : null;
 }
 
-/** The video's 16:9 thumbnail, or null for anything that is not a video id. */
-export function youtubeThumbnailUrl(
-  videoId: string | undefined,
-): string | null {
+/** The video's page on YouTube, or null for anything that is not a video id. */
+export function youtubeWatchUrl(videoId: string | undefined): string | null {
   return videoId && YOUTUBE_ID.test(videoId)
-    ? `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`
+    ? `https://www.youtube.com/watch?v=${videoId}`
     : null;
+}
+
+/**
+ * A layout plugin's screenshot: docs/layout-preview.png on its GitHub repo's
+ * default branch. Null when the repo is not on GitHub.
+ */
+export function layoutPreviewUrl(repository?: string | null): string | null {
+  const repo = normalizeGitHubRepo(repository);
+  if (!repo) return null;
+  const path = repo.replace("https://github.com/", "");
+  return `https://raw.githubusercontent.com/${path}/HEAD/docs/layout-preview.png`;
 }
 
 /** A plugin that brings a layout and is not running here yet. */

@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Check, Download, Power } from "lucide-react";
+import { Check, Download, PlayCircle, Power } from "lucide-react";
 import type { OnboardingStepProps } from "@termix-ssh/plugin-sdk/frontend";
 import { Button } from "@/components/button";
 import { LoadingState } from "@/components/loading-state";
@@ -12,16 +12,26 @@ import { resolveLayoutId } from "@/look/resolve-look";
 import { usePluginStore } from "@/plugin-host/plugin-store";
 import { PluginConsentPrompt } from "@/plugins/PluginConsentPrompt";
 import { PluginIconBox } from "@/plugins/plugin-bits";
-import { isLayoutOffer, youtubeThumbnailUrl } from "@/plugins/plugin-model";
+import {
+  isLayoutOffer,
+  layoutPreviewUrl,
+  youtubeWatchUrl,
+} from "@/plugins/plugin-model";
 import { usePluginsManager } from "@/plugins/use-plugins-manager";
 import { ONBOARDING_ADMIN_PERMISSION } from "../onboarding-flow";
 
-/** The plugin's video thumbnail, or a plain drawing when there is none. */
-function LayoutPicture({ videoId, icon }: { videoId?: string; icon?: string }) {
-  const src = youtubeThumbnailUrl(videoId);
+/** The layout's screenshot from its repo, or a plain drawing without one. */
+function LayoutPicture({
+  repository,
+  icon,
+}: {
+  repository?: string;
+  icon?: string;
+}) {
+  const src = layoutPreviewUrl(repository);
   const [failed, setFailed] = useState(false);
   return (
-    <div className="relative aspect-video w-full overflow-hidden border-b border-border bg-muted/40">
+    <div className="relative aspect-[16/10] w-full overflow-hidden border-b border-border bg-muted/40">
       {src && !failed ? (
         <img
           src={src}
@@ -29,7 +39,7 @@ function LayoutPicture({ videoId, icon }: { videoId?: string; icon?: string }) {
           loading="lazy"
           referrerPolicy="no-referrer"
           onError={() => setFailed(true)}
-          className="size-full object-cover"
+          className="size-full object-cover object-left-top"
         />
       ) : (
         <div className="flex size-full">
@@ -44,6 +54,20 @@ function LayoutPicture({ videoId, icon }: { videoId?: string; icon?: string }) {
   );
 }
 
+function VideoLink({ videoId }: { videoId?: string }) {
+  const { t } = useTranslation();
+  const href = youtubeWatchUrl(videoId);
+  if (!href) return null;
+  return (
+    <Button size="xs" variant="outline" asChild>
+      <a href={href} target="_blank" rel="noopener noreferrer">
+        <PlayCircle />
+        {t("onboarding.layoutVideo")}
+      </a>
+    </Button>
+  );
+}
+
 function LayoutCard({
   title,
   description,
@@ -51,7 +75,7 @@ function LayoutCard({
   selected,
   tag,
   onClick,
-  action,
+  actions,
 }: {
   title: string;
   description?: string;
@@ -59,12 +83,12 @@ function LayoutCard({
   selected?: boolean;
   tag?: string;
   onClick?: () => void;
-  action?: ReactNode;
+  actions?: ReactNode;
 }) {
   const body = (
     <>
       {picture}
-      <div className="flex flex-1 flex-col gap-1 px-2.5 py-2">
+      <span className="flex flex-col gap-1 px-2.5 pt-2">
         <span className="flex items-center justify-between gap-2 text-xs text-foreground">
           <span className="truncate">{title}</span>
           {selected ? (
@@ -82,25 +106,33 @@ function LayoutCard({
             {description}
           </span>
         )}
-        {action && <div className="mt-auto pt-1">{action}</div>}
-      </div>
+      </span>
     </>
   );
-  const frame = `flex flex-col overflow-hidden border text-left transition-colors ${
-    selected
-      ? "border-accent-brand ring-1 ring-accent-brand"
-      : "border-border hover:border-foreground/40"
-  }`;
-  if (!onClick) return <div className={frame}>{body}</div>;
   return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onClick}
-      className={frame}
+    <div
+      className={`flex flex-col overflow-hidden border transition-colors ${
+        selected
+          ? "border-accent-brand ring-1 ring-accent-brand"
+          : "border-border hover:border-foreground/40"
+      }`}
     >
-      {body}
-    </button>
+      {onClick ? (
+        <button
+          type="button"
+          aria-pressed={selected}
+          onClick={onClick}
+          className="flex flex-col text-left"
+        >
+          {body}
+        </button>
+      ) : (
+        <div className="flex flex-col">{body}</div>
+      )}
+      <div className="mt-auto flex flex-wrap gap-1.5 px-2.5 pt-2 pb-2.5">
+        {actions}
+      </div>
+    </div>
   );
 }
 
@@ -141,30 +173,36 @@ function MoreLayouts() {
                 title={plugin.name}
                 description={plugin.description}
                 picture={
-                  <LayoutPicture videoId={plugin.videoId} icon={plugin.icon} />
+                  <LayoutPicture
+                    repository={plugin.repository}
+                    icon={plugin.icon}
+                  />
                 }
-                action={
-                  plugin.installed ? (
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      disabled={busy}
-                      onClick={() => void manager.toggle(plugin)}
-                    >
-                      <Power />
-                      {t("onboarding.layoutTurnOn")}
-                    </Button>
-                  ) : (
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      disabled={busy}
-                      onClick={() => manager.requestInstall(plugin)}
-                    >
-                      <Download />
-                      {t("onboarding.layoutInstall")}
-                    </Button>
-                  )
+                actions={
+                  <>
+                    {plugin.installed ? (
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => void manager.toggle(plugin)}
+                      >
+                        <Power />
+                        {t("onboarding.layoutTurnOn")}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => manager.requestInstall(plugin)}
+                      >
+                        <Download />
+                        {t("onboarding.layoutInstall")}
+                      </Button>
+                    )}
+                    <VideoLink videoId={plugin.videoId} />
+                  </>
                 }
               />
             );
@@ -238,11 +276,12 @@ export function LayoutStep(_props: OnboardingStepProps) {
                   }
                   picture={
                     <LayoutPicture
-                      videoId={summary?.videoId}
+                      repository={summary?.repository}
                       icon={summary?.icon}
                     />
                   }
                   onClick={response ? () => pick(layout.id) : undefined}
+                  actions={<VideoLink videoId={summary?.videoId} />}
                 />
               );
             })}

@@ -50,7 +50,13 @@ vi.mock("@/plugin-host/plugin-store", () => ({
     records: new Map([
       [
         "classic-pack",
-        { summary: { id: "classic-pack", videoId: "abcdefghijk" } },
+        {
+          summary: {
+            id: "classic-pack",
+            videoId: "abcdefghijk",
+            repository: "https://github.com/Example/Classic-Pack",
+          },
+        },
       ],
     ]),
   }),
@@ -84,7 +90,13 @@ vi.mock("@/plugins/use-plugins-manager", () => ({
     consent: null,
     busy: new Set<string>(),
     plugins: [
-      entry({ id: "grid-layout", name: "Grid", description: "Tiles" }),
+      entry({
+        id: "grid-layout",
+        name: "Grid",
+        description: "Tiles",
+        repository: "https://github.com/Example/Grid.git",
+        videoId: "zyxwvutsrqp",
+      }),
       entry({ id: "old-layout", name: "Old", installed: true }),
       entry({ id: "running", name: "Running", installed: true, enabled: true }),
       entry({ id: "docker", name: "Docker", kinds: ["tabs"] }),
@@ -129,13 +141,32 @@ describe("LayoutStep", () => {
     ).toBe("false");
   });
 
-  it("shows the plugin's video thumbnail as the picture", () => {
+  it("shows the screenshot from the layout's repo", () => {
     const { container } = render(<LayoutStep {...props} />);
-    const img = container.querySelector("img");
-    expect(img?.getAttribute("src")).toBe(
-      "https://i.ytimg.com/vi/abcdefghijk/mqdefault.jpg",
+    const imgs = container.querySelectorAll("img");
+    expect(imgs).toHaveLength(1);
+    expect(imgs[0].getAttribute("src")).toBe(
+      "https://raw.githubusercontent.com/Example/Classic-Pack/HEAD/docs/layout-preview.png",
     );
-    expect(img?.getAttribute("referrerpolicy")).toBe("no-referrer");
+    expect(imgs[0].getAttribute("referrerpolicy")).toBe("no-referrer");
+  });
+
+  it("draws a plain picture when the screenshot does not load", () => {
+    const { container } = render(<LayoutStep {...props} />);
+    fireEvent.error(container.querySelector("img")!);
+    expect(container.querySelector("img")).toBeNull();
+  });
+
+  it("links to the layout's video when it has one", () => {
+    render(<LayoutStep {...props} />);
+    const links = screen.getAllByRole("link", {
+      name: /onboarding.layoutVideo/,
+    });
+    expect(links).toHaveLength(1);
+    expect(links[0].getAttribute("href")).toBe(
+      "https://www.youtube.com/watch?v=abcdefghijk",
+    );
+    expect(links[0].getAttribute("target")).toBe("_blank");
   });
 
   it("switches layout on click", () => {
@@ -162,6 +193,16 @@ describe("LayoutStep", () => {
     expect(screen.getByText("onboarding.layoutMore")).toBeTruthy();
     expect(screen.getByText("onboarding.layoutChangeLaterAdmin")).toBeTruthy();
     expect(screen.getByText("Grid")).toBeTruthy();
+    expect(
+      screen
+        .getAllByRole("link", { name: /onboarding.layoutVideo/ })
+        .map((a) => a.getAttribute("href")),
+    ).toContain("https://www.youtube.com/watch?v=zyxwvutsrqp");
+    expect(
+      [...document.querySelectorAll("img")].map((i) => i.getAttribute("src")),
+    ).toContain(
+      "https://raw.githubusercontent.com/Example/Grid/HEAD/docs/layout-preview.png",
+    );
     expect(screen.queryByText("Docker")).toBeNull();
     expect(screen.queryByText("Running")).toBeNull();
     expect(screen.queryByText("Too new")).toBeNull();

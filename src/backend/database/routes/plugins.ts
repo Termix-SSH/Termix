@@ -830,6 +830,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
           optionalDependencies,
           docs,
           videoId,
+          repository,
           defaultLook: isDefaultLookPlugin(record.id),
           ...describePluginFrontend(loaded),
         };
@@ -850,7 +851,6 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
           channel: record.channel ?? "stable",
           description,
           author,
-          repository,
           features,
           env,
           signedBy: loaded?.signedBy ?? null,
