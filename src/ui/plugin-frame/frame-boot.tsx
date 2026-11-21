@@ -218,6 +218,10 @@ async function boot() {
     },
     readClipboard: async () =>
       String((await port.call("clipboard.read", [])) ?? ""),
+    readClipboardItems: async () => {
+      const items = await port.call("clipboard.readItems", []);
+      return Array.isArray(items) ? items : [];
+    },
   });
 
   const frameFetch = createFrameFetch({

@@ -327,6 +327,24 @@ function allowToast(pluginId: string): boolean {
   return true;
 }
 
+/**
+ * The pictures and plain text on the clipboard. Other kinds, like HTML, can
+ * hold more than the person copied and see, so they stay in the shell.
+ */
+async function readClipboardItems(): Promise<Record<string, Blob>[]> {
+  const items: Record<string, Blob>[] = [];
+  for (const item of await navigator.clipboard.read()) {
+    const data: Record<string, Blob> = {};
+    for (const type of item.types) {
+      if (type === "text/plain" || type.startsWith("image/")) {
+        data[type] = await item.getType(type);
+      }
+    }
+    if (Object.keys(data).length > 0) items.push(data);
+  }
+  return items;
+}
+
 function isHttpUrl(value: unknown): value is string {
   if (typeof value !== "string") return false;
   try {
@@ -729,6 +747,11 @@ async function handleCall(
       // Only right after the user did something in the frame.
       if (!recentlyUsed(connection)) throw new Error("Not allowed now");
       return navigator.clipboard.readText();
+    }
+    case "clipboard.readItems": {
+      // Only right after the user did something in the frame.
+      if (!recentlyUsed(connection)) throw new Error("Not allowed now");
+      return readClipboardItems();
     }
     case "tabs.openTab": {
       const [hostId, type, options] = args;
