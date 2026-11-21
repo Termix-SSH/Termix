@@ -6,7 +6,8 @@
  * port knocking included, so the other server never needs a route to it. The
  * SSH session itself stays between that server and the host.
  *
- * The caller needs connect access to the host, the same as for a session.
+ * The caller needs connect access to the host, the same as for a session,
+ * and connect policies must allow it.
  */
 
 import net from "node:net";
@@ -66,6 +67,27 @@ async function handleRelay(
     : await resolveHostById(hostId, userId, options);
   if (!host) {
     close(ws, 1008, "Host not found or access denied");
+    return;
+  }
+
+  const { assertConnectAllowed, ConnectPolicyError } =
+    await import("./connect-policy.js");
+  try {
+    await assertConnectAllowed({
+      userId,
+      hostId: Number((host as { id?: unknown }).id),
+      protocol: "ssh",
+      purpose: "relay",
+      profile: "stream",
+      interactive: false,
+      origin: "core",
+    });
+  } catch (error) {
+    if (error instanceof ConnectPolicyError) {
+      close(ws, 1008, "Connection not allowed");
+    } else {
+      close(ws, 1011, "Could not open the connection");
+    }
     return;
   }
 
