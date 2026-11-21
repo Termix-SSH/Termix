@@ -1,5 +1,11 @@
 # Changelog
 
+## 26.11.4
+
+### Fixed
+
+- Search boxes and other forms in plugin pages did nothing when you pressed Enter or the submit button
+
 ## 26.11.3
 
 ### Added
