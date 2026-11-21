@@ -390,7 +390,7 @@ describe("createUpdater", () => {
     expect(updater.install()).toBe(false);
   });
 
-  it("refuses a release whose signature fails", async () => {
+  it("refuses a release whose signature fails but links its page", async () => {
     const bad = Object.assign(new Error("bad"), { code: "signature" });
     const { auto, updater } = setup(
       "auto",
@@ -399,8 +399,17 @@ describe("createUpdater", () => {
         throw bad;
       }),
     );
-    expect((await updater.check()).status).toBe("error");
+    const state = await updater.check();
+    expect(state).toMatchObject({
+      kind: "manual",
+      status: "available",
+      error: "The update did not pass the signature check",
+    });
+    expect(state.releaseUrl).toMatch(
+      /^https:\/\/github\.com\/Termix-SSH\/Termix\/releases\/tag\/v/,
+    );
     expect(auto.checkForUpdates).not.toHaveBeenCalled();
+    expect((await updater.download()).status).toBe("available");
     expect(updater.install()).toBe(false);
   });
 

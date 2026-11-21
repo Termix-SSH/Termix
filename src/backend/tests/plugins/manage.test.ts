@@ -501,6 +501,28 @@ describe("updates", () => {
   });
 });
 
+describe("plugins stuck on API 1", () => {
+  it("get their update from the auto-update run even with auto-update off", async () => {
+    createFixturePlugin({
+      id: "docker",
+      root: bundled,
+      manifestOverrides: { engine: { termix: ">=2.9.0", api: "^1.13" } },
+    });
+    createFixturePlugin({ id: "cron", root: bundled });
+    registry.index.plugins = [
+      registryEntry("docker", [{ version: "1.1.0" }, { version: "1.0.0" }]),
+      registryEntry("cron", [{ version: "1.1.0" }, { version: "1.0.0" }]),
+    ];
+    await boot();
+
+    const result = await manage.updateAllPlugins({
+      userId: null,
+      onlyAutoUpdate: true,
+    });
+    expect(result.updated.map((entry) => entry.id)).toEqual(["docker"]);
+  });
+});
+
 describe("beta channel", () => {
   it("offers betas only to a plugin on the beta channel", async () => {
     createFixturePlugin({ id: "docker", root: bundled });

@@ -280,7 +280,9 @@ export function DiagnosticsView({
 
           <GroupHeading title={t("diagnostics.include")} />
           <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
-            {REPORT_PARTS.map((part) => {
+            {REPORT_PARTS.filter(
+              (part) => part !== "desktop" || isElectron(),
+            ).map((part) => {
               const locked = ADMIN_PARTS.has(part) && !isAdmin;
               return (
                 <label

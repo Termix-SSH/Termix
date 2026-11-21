@@ -54,6 +54,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("set-title-bar-overlay", colors),
   getEmbeddedServerStatus: () =>
     ipcRenderer.invoke("get-embedded-server-status"),
+  // Last lines of the app's own log, for the diagnostics report.
+  getDesktopLog: () => ipcRenderer.invoke("diagnostics-desktop-log"),
 
   // App Store builds are updated by the store.
   updates: process.mas

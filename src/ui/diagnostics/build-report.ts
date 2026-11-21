@@ -4,6 +4,8 @@
  * does not ask the server again.
  */
 import { APP_VERSION } from "@/lib/app-version";
+import { isElectron } from "@/lib/electron";
+import { desktopUpdates, type DesktopUpdateState } from "@/lib/desktop-updates";
 import { describeEnvironment } from "@/lib/issue-url";
 import {
   getRequestInfo,
@@ -14,6 +16,7 @@ import {
 } from "./diagnostics-api";
 import { domOutline } from "./dom-outline";
 import { Masker, noMask, type ReportMasker } from "./mask";
+import { redactText } from "./redact";
 import { describeFrontends, describePage } from "./page-info";
 import { runProbes, type ProbeResult } from "./probes";
 import { findProblems, type Finding } from "./rules";
@@ -31,6 +34,7 @@ export const REPORT_PARTS = [
   "network",
   "page",
   "dom",
+  "desktop",
 ] as const;
 
 export type ReportPart = (typeof REPORT_PARTS)[number];
@@ -88,6 +92,31 @@ export interface ReportData {
   frontends: Array<Record<string, unknown>>;
   dom: string;
   domWithText: string;
+  /** Desktop app only: the updater and the app's own log. */
+  desktop?: DesktopPart | null;
+}
+
+export interface DesktopPart {
+  updater: DesktopUpdateState | null;
+  log: string[];
+}
+
+type DesktopLogWindow = Window & {
+  electronAPI?: { getDesktopLog?: () => Promise<string[]> };
+};
+
+async function collectDesktop(): Promise<DesktopPart | null> {
+  if (!isElectron()) return null;
+  const bridge = (window as DesktopLogWindow).electronAPI;
+  const [updater, log] = await Promise.all([
+    desktopUpdates()
+      ?.getState()
+      .catch(() => null) ?? Promise.resolve(null),
+    typeof bridge?.getDesktopLog === "function"
+      ? bridge.getDesktopLog().catch(() => [] as string[])
+      : Promise.resolve([] as string[]),
+  ]);
+  return { updater, log: Array.isArray(log) ? log : [] };
 }
 
 function message(error: unknown): string {
@@ -101,7 +130,7 @@ export async function collectReport(
   context: ReportContext,
   focusPluginId?: string,
 ): Promise<ReportData> {
-  const [request, server, probes, page] = await Promise.all([
+  const [request, server, probes, page, desktop] = await Promise.all([
     getRequestInfo().then(
       (value) => ({ value, error: undefined }),
       (error: unknown) => ({ value: null, error: message(error) }),
@@ -114,6 +143,7 @@ export async function collectReport(
       : Promise.resolve({ value: null, error: undefined }),
     runProbes(focusPluginId).catch(() => [] as ProbeResult[]),
     describePage(),
+    collectDesktop().catch(() => null),
   ]);
   return {
     madeAt: new Date().toISOString(),
@@ -130,6 +160,7 @@ export async function collectReport(
     frontends: describeFrontends(),
     dom: domOutline(document.body),
     domWithText: domOutline(document.body, { text: true }),
+    desktop,
   };
 }
 
@@ -305,6 +336,9 @@ export function buildReport(
     }
   }
   if (on("page")) section("Page", json(data.page));
+  if (on("desktop") && data.desktop) {
+    section("Desktop app updates", json(data.desktop.updater));
+  }
   if (on("dom")) {
     section(
       "Page layout",
@@ -314,6 +348,12 @@ export function buildReport(
 
   // Long lists go last, so a cut never loses the parts above.
   const tail: { title: string; lines: string[] }[] = [];
+  if (on("desktop") && data.desktop?.log.length) {
+    tail.push({
+      title: "Desktop app log",
+      lines: data.desktop.log.map((line) => redactText(line)),
+    });
+  }
   if (on("console")) {
     tail.push({
       title: `Browser console (${capture.console.length}, dropped ${capture.dropped.console})`,

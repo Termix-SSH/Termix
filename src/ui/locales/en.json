@@ -1539,7 +1539,9 @@
         "notice_one": "1 plugin was made for an older Termix and stays off until it is updated: {{names}}.",
         "notice_other": "{{count}} plugins were made for an older Termix and stay off until they are updated: {{names}}.",
         "why": "They were made for plugin API 1, which ran inside the server. Termix now runs every plugin in its own process, so each needs a version made for plugin API 2. Update official ones here, and ask the author of a community plugin for one.",
-        "guide": "How plugins move to API 2"
+        "guide": "How plugins move to API 2",
+        "update_one": "Update it now",
+        "update_other": "Update all {{count}} now"
       },
       "provenance": {
         "verified": "Build checked",
@@ -1893,7 +1895,8 @@
       "console": "Browser console",
       "network": "Network",
       "page": "Browser and window",
-      "dom": "Page layout"
+      "dom": "Page layout",
+      "desktop": "Desktop app"
     },
     "partHints": {
       "server": "Version, database, SSL and which settings are set",
@@ -1906,7 +1909,8 @@
       "console": "Recent console lines from the page and plugins",
       "network": "Recent requests and their status",
       "page": "Browser, screen size and storage key names",
-      "dom": "The layout of the page, without text"
+      "dom": "The layout of the page, without text",
+      "desktop": "Update status and the app's own log"
     }
   }
 }

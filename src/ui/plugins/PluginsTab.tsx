@@ -137,6 +137,9 @@ function PluginsTabBody() {
 
   const installed = manager.plugins.filter((p) => p.installed);
   const outdated = installed.filter((p) => p.isolation === "legacy");
+  const outdatedFixable = outdated.filter(
+    (p) => p.updateAvailable && !p.pinnedVersion,
+  );
   const updateCheck = usePluginUpdateCheck(!manager.managedByServer);
   // API 1 plugins already show above; this lists what the update adds.
   const blockedByUpdate = (updateCheck?.blocked ?? []).filter(
@@ -220,6 +223,22 @@ function PluginsTabBody() {
               <DocsLink core="pluginApi2">
                 {t("plugins.manager.legacy.guide")}
               </DocsLink>
+              {outdatedFixable.length > 0 && !manager.managedByServer && (
+                <>
+                  {" "}
+                  <button
+                    type="button"
+                    className="font-medium text-foreground underline underline-offset-2"
+                    onClick={() =>
+                      manager.updateMany(outdatedFixable.map((p) => p.id))
+                    }
+                  >
+                    {t("plugins.manager.legacy.update", {
+                      count: outdatedFixable.length,
+                    })}
+                  </button>
+                </>
+              )}
             </Notice>
           )}
           {updateCheck?.version && blockedByUpdate.length > 0 && (

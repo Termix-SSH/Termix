@@ -664,6 +664,14 @@ export function usePluginsManager() {
     }
   }, [consent, busy, reviewQueue, plugins, requestUpdate]);
 
+  /** Updates these one at a time, asking for consent where a release needs it. */
+  const updateMany = useCallback((ids: string[]) => {
+    setReviewQueue((queue) => [
+      ...queue,
+      ...ids.filter((id) => !queue.includes(id)),
+    ]);
+  }, []);
+
   /** Closing a review also stops the rest of the queue. */
   const cancelConsent = useCallback(() => {
     setConsent(null);
@@ -699,6 +707,7 @@ export function usePluginsManager() {
     leaveBeta,
     setAllChannels,
     updateAll,
+    updateMany,
   };
 }
 

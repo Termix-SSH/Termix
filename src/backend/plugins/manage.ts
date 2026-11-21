@@ -1400,9 +1400,22 @@ export function updateAllPlugins(options: {
       failed: [],
     };
     const listing = await listRegistry({ force: true });
+    const { loader } = getPluginRuntime();
+    // An official plugin still on an API 1 build can't run at all, so it
+    // gets its update even with auto-update off.
+    const stuckOnApi1 = (id: string, tier: string) => {
+      const live = loader.get(id);
+      return tier === "official" && !!live && isLegacyPlugin(live);
+    };
     for (const entry of listing.plugins) {
       if (!entry.updateAvailable || entry.pinnedVersion) continue;
-      if (options.onlyAutoUpdate && !entry.autoUpdate) continue;
+      if (
+        options.onlyAutoUpdate &&
+        !entry.autoUpdate &&
+        !stuckOnApi1(entry.id, entry.tier)
+      ) {
+        continue;
+      }
       if (entry.addedCapabilities.length > 0) {
         result.needsReview.push({
           id: entry.id,
