@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ComponentType } from "react";
 import type { PluginSummary } from "@/api/plugins-api";
 
 vi.mock("@/main-axios", async (importOriginal) => ({
@@ -28,6 +29,7 @@ import {
   setPluginSummaries,
 } from "@/plugin-host/plugin-store";
 import { getPanel, resetPanels } from "@/shell/panel-registry";
+import { getRegisteredDashboardCard } from "@/dashboard/dashboard-cards-registry";
 import {
   invokeAction,
   registerAction,
@@ -136,6 +138,38 @@ describe("startFramedPlugin", () => {
     expect(document.querySelector('iframe[data-plugin-frame="gizmo"]')).toBe(
       null,
     );
+  });
+
+  it("draws a dashboard card see-through, so the layout's card color shows", async () => {
+    const started = startFramedPlugin({
+      ...summary,
+      contributes: {
+        ...summary.contributes,
+        dashboardCards: [{ id: "gizmo.card" }],
+      },
+    } as unknown as PluginSummary);
+    const { port } = await fakeFrame(() => undefined);
+    port.emit("register", {
+      rid: "dashboardCard#1",
+      kind: "dashboardCard",
+      data: {
+        id: "gizmo.card",
+        labelKey: "card",
+        component: { $component: "card:gizmo" },
+      },
+    });
+    port.emit("ready");
+    const plugin = await started;
+    const Card = getRegisteredDashboardCard("gizmo.card")!
+      .component as unknown as ComponentType;
+    const view = render(<Card />);
+    await act(flush);
+    const src = view.container.querySelector("iframe")!.getAttribute("src")!;
+    expect(src).toContain("bg=none");
+    // Its fields stay on the page colors, not the sidebar's.
+    expect(src).not.toContain("on=sidebar");
+    view.unmount();
+    plugin.dispose();
   });
 
   it("replays what the frame registered and removes it again", async () => {

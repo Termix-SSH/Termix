@@ -541,6 +541,22 @@ describe("PluginFrameView", () => {
     vi.useRealTimers();
   });
 
+  it("lets a see-through card keep the page's field color", () => {
+    const { container } = render(
+      <PluginFrameView
+        pluginId="docker"
+        frameKey="card"
+        fit="fill"
+        transparent
+        onSidebar={false}
+        props={{}}
+      />,
+    );
+    const src = container.querySelector("iframe")!.getAttribute("src")!;
+    expect(src).toContain("bg=none");
+    expect(src).not.toContain("on=sidebar");
+  });
+
   it("tells a full size view the shell draws its spinner", () => {
     const { container } = render(
       <PluginFrameView

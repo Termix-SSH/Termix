@@ -349,7 +349,10 @@ function framed(
                 pluginId={pluginId}
                 frameKey={key}
                 how={fit}
-                transparent={variant === "panel"}
+                // A rail panel lies on the sidebar; a dashboard card lets the
+                // layout's card color show.
+                transparent={variant === "panel" || variant === "card"}
+                onSidebar={variant === "panel"}
                 adapt={adapt}
                 props={sent}
               />
@@ -1346,7 +1349,7 @@ export async function startFramedPlugin(
       case "dashboardCard":
         return app.registerDashboardCard({
           ...data,
-          component: fit(data.component, "fill", plainProps),
+          component: fit(data.component, "fill", plainProps, "card"),
         });
       case "extension": {
         const { pointId, components, ...rest } = data as Record<
