@@ -39,6 +39,8 @@ function toPlainText(markdown) {
       text = text.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
       text = text.replace(/`([^`]+)`/g, "$1");
       text = text.replace(/\*\*([^*]+)\*\*/g, "$1");
+      // App Store Connect refuses anything that looks like a tag, such as <id>.
+      text = text.replace(/<([^<>]*)>/g, "$1").replace(/[<>]/g, "");
       if (/^#+\s/.test(text)) text = `${text.replace(/^#+\s*/, "")}:`;
       return text;
     })
