@@ -236,6 +236,12 @@ describe("pluginFrameCsp", () => {
     );
   });
 
+  it("can read back its own blob: and data: files, so <a download> links save", () => {
+    // The frame shim fetches a download link's href to hand the file to the
+    // shell; blocking it made File Manager downloads do nothing (#1941).
+    expect(csp).toMatch(/connect-src [^;]* blob: data:;/);
+  });
+
   it("loads no picture, media or page from another site", () => {
     expect(csp).toContain(
       "img-src https://termix.example/base/plugin-assets/docker/ https://termix.example/base/plugin-assets/_runtime/ data: blob:;",

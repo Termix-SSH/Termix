@@ -113,7 +113,9 @@ export function pluginFrameCsp(input: PluginFrameCspInput): string {
     // its own routes serve.
     ["img-src", [assets, runtime, "data:", "blob:"]],
     ["media-src", [assets, "data:", "blob:"]],
-    ["connect-src", [assets, api, ws]],
+    // blob: and data: URLs are the frame's own, in memory: the shim reads
+    // an <a download> link's file back with fetch() to hand it to the shell.
+    ["connect-src", [assets, api, ws, "blob:", "data:"]],
     ["worker-src", ["blob:"]],
     ["frame-src", [assets, api]],
     ["object-src", ["'none'"]],
