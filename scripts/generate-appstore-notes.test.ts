@@ -26,6 +26,12 @@ function changelog(body: string, version = "26.10.0") {
 }
 
 describe("toPlainText", () => {
+  it("drops angle brackets, which App Store Connect reads as markup", () => {
+    expect(toPlainText("- termix://host/<id> and --host=<id> or a -> b")).toBe(
+      "- termix://host/id and --host=id or a - b",
+    );
+  });
+
   it("strips markdown links down to their label", () => {
     expect(toPlainText("- See [the docs](https://example.com)")).toBe(
       "- See the docs",
