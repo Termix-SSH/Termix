@@ -84,3 +84,25 @@ it("leaves the wheel to the page when the tabs fit", () => {
   scroller.dispatchEvent(wheel);
   expect(wheel.defaultPrevented).toBe(false);
 });
+
+it("names its parts and marks the open tab, so a look can restyle them", () => {
+  const view = render(
+    <TabStrip
+      tabs={[
+        { id: "a", label: "A" },
+        { id: "b", label: "B" },
+      ]}
+      activeTab="b"
+      onTabChange={() => {}}
+    />,
+  );
+  expect(view.container.querySelector("[data-slot=tab-strip]")).not.toBeNull();
+  expect(
+    view.container.querySelector("[data-slot=tab-strip-list]"),
+  ).not.toBeNull();
+  const tabs = view.container.querySelectorAll("[data-slot=tab-strip-tab]");
+  expect([...tabs].map((tab) => tab.getAttribute("data-state"))).toEqual([
+    "inactive",
+    "active",
+  ]);
+});
