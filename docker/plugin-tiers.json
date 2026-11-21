@@ -16,6 +16,7 @@
       "tier": "standard",
       "onboarding": { "recommended": true, "consent": false }
     },
+    "host-layout": { "tier": "standard" },
     "original-layout": { "tier": "standard" },
     "out-of-band": { "tier": "full" },
     "package-manager": { "tier": "full" },
