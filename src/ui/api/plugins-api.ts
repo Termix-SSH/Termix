@@ -283,7 +283,7 @@ export interface PluginSummary {
   description?: string;
   author?: string;
   repository?: string;
-  /** A YouTube video id from the manifest. Admins only. */
+  /** A YouTube video id from the manifest. */
   videoId?: string;
   /** What the plugin does, from the manifest. Admins only. */
   features?: string[];

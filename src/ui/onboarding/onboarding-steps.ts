@@ -1,6 +1,8 @@
-import { MonitorDown, Puzzle, Shield } from "lucide-react";
+import { LayoutTemplate, MonitorDown, Puzzle, Shield } from "lucide-react";
 import { CORE_ONBOARDING_STEPS } from "@/types/onboarding";
 import { PluginsStep } from "./steps/PluginsStep";
+import { LayoutStep } from "./steps/LayoutStep";
+import { listLayouts } from "@/look/layout-registry";
 import { SecurityStep } from "./steps/SecurityStep";
 import { DesktopUpdatesStep } from "./steps/DesktopUpdatesStep";
 import { desktopUpdates } from "@/lib/desktop-updates";
@@ -26,6 +28,18 @@ export const CORE_STEPS: OnboardingStepDef[] = [
     // plugins change after that, so a rerun leaves it out.
     isRelevant: (ctx) => !ctx.pluginsManagedElsewhere && ctx.pluginSetupPending,
     forcePending: (ctx) => ctx.pluginSetupPending,
+  },
+  {
+    id: "layout",
+    version: CORE_ONBOARDING_STEPS.layout,
+    titleKey: "onboarding.layoutTitle",
+    icon: LayoutTemplate,
+    Component: LayoutStep,
+    audience: "all",
+    position: 20,
+    // Nothing to pick with one layout, unless an admin can add more.
+    isRelevant: (ctx) =>
+      listLayouts().length > 1 || (ctx.isAdmin && !ctx.pluginsManagedElsewhere),
   },
   {
     id: "desktop-updates",

@@ -16,6 +16,7 @@
 - Dashboard cards from plugins let the layout's card color show behind them
 - Signing out can also sign you out of your single sign on provider, when its login method asks for it
 - Desktop app: logins of web pages a plugin shows in the app are kept across reloads and reopened tabs until Termix quits or you sign out. Pages on this computer still start signed out
+- Setup has a Pick a layout step that shows every installed layout with a picture. Admins can also install layouts from the registry or turn on ones that are off
 
 ### Fixed
 

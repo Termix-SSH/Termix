@@ -829,6 +829,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
           dependencies,
           optionalDependencies,
           docs,
+          videoId,
           defaultLook: isDefaultLookPlugin(record.id),
           ...describePluginFrontend(loaded),
         };
@@ -850,7 +851,6 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
           description,
           author,
           repository,
-          videoId,
           features,
           env,
           signedBy: loaded?.signedBy ?? null,

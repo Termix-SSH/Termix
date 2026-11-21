@@ -217,7 +217,17 @@
     "pluginsLoadFailed": "The plugin list could not be loaded. You can choose plugins later from the Plugins tab.",
     "securityTitle": "Secure your account",
     "securityIntro": "Add a passkey or an authenticator app to your account. You can also do this later in Settings, under Security.",
-    "pluginsDocsLink": "Read about each one"
+    "pluginsDocsLink": "Read about each one",
+    "layoutTitle": "Pick a layout",
+    "layoutIntro": "The layout decides how the whole app is set out: the menus, the sidebar and the tabs. Click one to use it. It changes right away.",
+    "layoutInstalled": "Installed",
+    "layoutMore": "More layouts",
+    "layoutNoMore": "No other layouts are available right now.",
+    "layoutDefault": "Default",
+    "layoutInstall": "Install",
+    "layoutTurnOn": "Turn on",
+    "layoutChangeLater": "You can change your layout any time in Settings, under Appearance. Ask an admin if you want more layouts installed.",
+    "layoutChangeLaterAdmin": "You can change your layout any time in Settings, under Appearance. More layouts can be installed later from the Plugins tab."
   },
   "desktopTray": {
     "noticeTitle": "Termix is still running",

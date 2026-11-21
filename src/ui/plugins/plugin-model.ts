@@ -609,6 +609,24 @@ export function youtubeEmbedUrl(videoId: string | undefined): string | null {
     : null;
 }
 
+/** The video's 16:9 thumbnail, or null for anything that is not a video id. */
+export function youtubeThumbnailUrl(
+  videoId: string | undefined,
+): string | null {
+  return videoId && YOUTUBE_ID.test(videoId)
+    ? `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`
+    : null;
+}
+
+/** A plugin that brings a layout and is not running here yet. */
+export function isLayoutOffer(plugin: PluginEntry): boolean {
+  return (
+    plugin.kinds.includes("layouts") &&
+    !plugin.managedByServer &&
+    (plugin.installed ? !plugin.enabled : !plugin.unsupported)
+  );
+}
+
 /** True when SourceBadge draws something, so lists can skip the empty slot. */
 export function hasSourceBadge(source: string): boolean {
   return source === "community" || source === "custom";

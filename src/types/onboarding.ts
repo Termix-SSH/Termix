@@ -10,6 +10,7 @@
 
 export const CORE_ONBOARDING_STEPS = {
   plugins: 1,
+  layout: 1,
   "desktop-updates": 1,
   security: 1,
 } as const;
