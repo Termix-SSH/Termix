@@ -26,6 +26,7 @@
     "security-center": { "tier": "full" },
     "storage-health": { "tier": "full" },
     "ups-manager": { "tier": "full" },
+    "terminal-layout": { "tier": "standard" },
     "uptime": { "tier": "full" },
     "user-manager": { "tier": "full" },
     "virtual-machines": { "tier": "full" },
