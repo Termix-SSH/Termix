@@ -662,6 +662,10 @@ export {
 export { registerHostProtocol } from "@/sidebar/host-protocols";
 export { registerHostSection, resetHostSections } from "@/shell/host-sections";
 export {
+  registerHostTreeChildren,
+  resetHostTreeChildren,
+} from "@/shell/host-tree-children";
+export {
   RAIL_ITEMS,
   registerRailItem,
   resetRegisteredRailItems,

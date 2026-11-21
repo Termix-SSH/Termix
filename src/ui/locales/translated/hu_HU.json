@@ -217,7 +217,18 @@
     "pluginsLoadFailed": "A bővítménylista nem tölthető be. Később választhat bővítményeket a Bővítmények fülön.",
     "securityTitle": "Fiókja biztonsága",
     "securityIntro": "Adjon hozzá passkey-t vagy hitelesítő alkalmazást a fiókjához. Ezt később is megteheti a Beállítások > Biztonság menüpontban.",
-    "pluginsDocsLink": "Olvasson el többet mindegyikről"
+    "pluginsDocsLink": "Olvasson el többet mindegyikről",
+    "layoutTitle": "Válassz elrendezést",
+    "layoutIntro": "Az elrendezés határozza meg az alkalmazás teljes felépítését: a menüket, az oldalsávot és a lapokat. Kattints egyre a használatához. A változás azonnal érvénybe lép.",
+    "layoutInstalled": "Telepítve",
+    "layoutMore": "További elrendezések",
+    "layoutNoMore": "Jelenleg nincsenek más elrendezések elérhetők.",
+    "layoutDefault": "Alapértelmezett",
+    "layoutInstall": "Telepítés",
+    "layoutTurnOn": "Bekapcsolás",
+    "layoutVideo": "Videó megtekintése",
+    "layoutChangeLater": "Az elrendezést bármikor megváltoztathatod a Beállítások > Megjelenés menüpont alatt. Ha több elrendezést szeretnél telepíteni, kérdezd meg a rendszergazdát.",
+    "layoutChangeLaterAdmin": "Az elrendezést bármikor megváltoztathatod a Beállítások > Megjelenés menüpont alatt. További elrendezések később telepíthetők a Bővítmények lapon."
   },
   "desktopTray": {
     "noticeTitle": "A Termix továbbra is fut",
@@ -836,7 +847,12 @@
     "editorUpdate": "Hoszt frissítése",
     "editorAdd": "Hoszt hozzáadása",
     "speedSearch": "Hosztok keresése. Nyilak a kiválasztáshoz, Enter a kapcsolódáshoz, Esc a bezáráshoz",
-    "speedSearchList": "Hosztlista. Írj be valamit, vagy nyomj /-t a kereséshez."
+    "speedSearchList": "Hosztlista. Írj be valamit, vagy nyomj /-t a kereséshez.",
+    "openFromLink": {
+      "title": "Megnyitja a(z) {{name}}?",
+      "description": "Egy hivatkozás arra kérte a Termixet, hogy csatlakozzon ehhez a gazdagéphez.",
+      "confirm": "Csatlakozás"
+    }
   },
   "splitScreen": {
     "title": "Osztott képernyő",
@@ -1375,7 +1391,7 @@
         "running": "Fut",
         "disabled": "Letiltva",
         "failed": "Váratlanul leállt",
-        "blocked": "Várakozás egy másik bővítményre",
+        "blocked": "Nem indítható",
         "server": "A szerverén fut",
         "safeMode": "Kikapcsolva biztonságos módban"
       },
@@ -1461,6 +1477,8 @@
         "updated": "{{name}} frissítve a(z) {{version}} verzióra",
         "updatedMany_one": "{{count}} bővítmény frissítve",
         "updatedMany_other": "{{count}} bővítmény frissítve",
+        "needsReview_one": "1 bővítmény új engedélyeket kér. Vizsgálja meg, hogy frissíthesse.",
+        "needsReview_other": "{{count}} bővítmény kér új engedélyeket. Vizsgálja meg mindegyiket a frissítéshez.",
         "uninstalled": "{{name}} eltávolítva",
         "dataDeleted": "{{name}} adatai törölve",
         "failedToStart": "{{name}} nem sikerült elindítani. Nyissa meg, hogy lássa az okát.",
@@ -1607,7 +1625,13 @@
         "unreachable": "Nem sikerült olvasni: {{error}}",
         "filter": "Regisztrációs tároló",
         "allRegistries": "Összes regisztrációs tároló",
-        "browseHint": "Kapcsolja be a közösségi bővítményeket, vagy adja hozzá saját regisztrációs tárolóját a Regisztrációs tárolók fülön."
+        "browseHint": "Kapcsolja be a közösségi bővítményeket, vagy adja hozzá saját regisztrációs tárolóját a Regisztrációs tárolók fülön.",
+        "looksName": "Közösségi elrendezések és témák",
+        "looksHint": "Lehetővé teszi, hogy a nem Termix-származású elrendezések és témák a homokozó kívül fussanak, akárcsak a hivatalosak. Egy elrendezés az egész alkalmazást rajzolja, így láthat és tehet bármit, amit Ön. Csak olyanokat telepítsen, amelyeknek megbízik. Változtatás után töltse újra az oldalt.",
+        "looksConfirmTitle": "Megengedi, hogy a közösségi elrendezések a homokozó kívül fussanak?",
+        "looksConfirmBody": "Egy közösségi elrendezés vagy téma teljes hozzáféréssel fut az oldalon a Termixhez, a bejelentkezett felhasználó jogkörében. Ez kockázatos lehet. Csak akkor kapcsolja be, ha megbízik a telepített elrendezésekben és témákban.",
+        "looksConfirm": "Bekapcsolás",
+        "looksSaved": "Mentve. Töltse újra az oldalt az alkalmazáshoz."
       },
       "upToDate": "Minden naprakész.",
       "lastChecked": "Utolsó ellenőrzés: {{time}}",
@@ -1704,9 +1728,14 @@
     "firstLoad": {
       "title": "Bővítmények előkészítése",
       "progress": "{{done}} / {{total}}",
-      "hint": "Ez csak az első alkalommal történik meg. Legközelebb a Termix azonnal megnyílik.",
+      "hint": "A bővítmények most indulnak el először. Ezután a Termix azonnal megnyílik.",
       "skip": "Folytatás"
-    }
+    },
+    "framesBlocked": "A bővítmények nem tudják betölteni a fájlaikat. Valószínűleg egy Termix előtt lévő bejelentkezési proxy blokkolja őket.",
+    "framesBlockedHelp": "Hogyan javítható",
+    "framesFailed_one": "A(z) {{names}} nem tudott betöltődni, ezért elemei el vannak rejtve",
+    "framesFailed_other": "{{count}} bővítmény nem tudott betöltődni, ezért elemeik el vannak rejtve: {{names}}",
+    "framesFailedReload": "Újratöltés"
   },
   "settings": {
     "secretSet": "Beállítva",
@@ -1806,5 +1835,78 @@
     },
     "reset": "Visszaállítás",
     "done": "Kész"
+  },
+  "diagnostics": {
+    "title": "Diagnosztika",
+    "makeReport": "Diagnosztikai jelentés készítése",
+    "slowBoot": "Hosszasan tart? Készíts diagnosztikai jelentést",
+    "troubleSigningIn": "Bejelentkezési probléma? Készíts diagnosztikai jelentést",
+    "reportTab": "Jelentés",
+    "logsTab": "Szervernaplók",
+    "intro": "Ez egy fájlt készít, amely tartalmazza a Termix számára szükséges információkat a hiba megtalálásához: hibák, naplók, bővítményállapotok és a kérések szerverre jutásának módja. Töltsd le, és csatold egy GitHub-hibajelentéshez, vagy küldd el a Discordon.",
+    "notAdmin": "A szervernaplók és a szerverrészletek megtekintéséhez rendszergazdai jogosultság szükséges. Ha a probléma a szerveren van, kérdezd meg a rendszergazdát, hogy ő is készítsen jelentést.",
+    "signedOut": "Nem vagy bejelentkezve, ezért csak a böngésző részletei vannak benne.",
+    "whatHappened": "Mi történt",
+    "whatHappenedHint": "Opcionális. Mit csináltál, és mi ment rosszul?",
+    "include": "Belefoglalás",
+    "adminOnly": "Rendszergazda szükséges",
+    "privacy": "Adatvédelem",
+    "mask": "Név- és címek elrejtése",
+    "maskHint": "Az IP-címek, hosztnevek, felhasználónevek és e-mail címek host-1, user-1 stb. néven jelennek meg. A jelszavak, kulcsok és tokenek mindig eltávolításra kerülnek.",
+    "domText": "Oldalszöveg belefoglalása",
+    "domTextHint": "A képernyőn látható szöveget hozzáadja az oldal elrendezéséhez. Alapértelmezetten ki van kapcsolva, mert tartalmazhatja az adataidat.",
+    "warnOnly": "Csak figyelmeztetések és hibák a szervernaplóból",
+    "warnOnlyHint": "Kisebb fájlméretet eredményez.",
+    "focus": "Bővítmény",
+    "focusHint": "Ezt a bővítményt jeleníti meg elsőként, és a hibajelentést a tárhelyére irányítja.",
+    "allPlugins": "Minden bővítmény",
+    "findings": "A ellenőrzések által talált",
+    "preview": "Mi kerül elküldésre",
+    "previewCut": "(Az előnézet itt véget ér. A fájl tartalmazza az összes adatot.)",
+    "cut": "A fájl mérete meghaladta az 5 MB-ot, ezért a legrégebbi naplóbejegyzések levágásra kerültek.",
+    "footerHint": "Ellenőrizd az előnézetet, mielőtt elküldenéd.",
+    "copy": "Másolás",
+    "copied": "Jelentés másolva",
+    "copyFailed": "A jelentés nem másolható",
+    "download": "Letöltés",
+    "downloaded": "Jelentés letöltve",
+    "openIssue": "GitHub-hibajelentés megnyitása",
+    "logsSearch": "Naplók keresése",
+    "logsLevel": "Szint",
+    "logsAll": "Minden szint",
+    "logsWarn": "Figyelmeztetések és hibák",
+    "logsError": "Hibák",
+    "logsPlugin": "Bővítmény",
+    "logsCount": "{{count}} sor",
+    "logsFailed": "A naplók nem tölthetők be",
+    "logsPause": "Szüneteltetés",
+    "logsResume": "Folytatás",
+    "logsEmpty": "Még nincsenek naplóbejegyzések.",
+    "parts": {
+      "server": "Szerver",
+      "plugins": "Bővítmények",
+      "sections": "Bővítményrészletek",
+      "logs": "Szervernaplók",
+      "request": "Kapcsolat",
+      "probes": "Kapcsolatellenőrzések",
+      "errors": "Böngészőhibák",
+      "console": "Böngésző konzol",
+      "network": "Hálózat",
+      "page": "Böngésző és ablak",
+      "dom": "Oldal elrendezése"
+    },
+    "partHints": {
+      "server": "Verzió, adatbázis, SSL és a beállított konfigurációk",
+      "plugins": "Verziók és állapotok a szerveren és a böngészőben",
+      "sections": "A futó bővítmények által hozzáadott extra részletek",
+      "logs": "Szervernapló az indítástól kezdve és a legutóbbi sorok",
+      "request": "Fejlécnevek, amelyek a Termix előtt álló proxyt mutatják",
+      "probes": "Tesztek, amelyek ellenőrzik, hogy a Termix és a bővítményfájlok betöltődnek-e",
+      "errors": "Kezeletlen hibák és blokkolt betöltések",
+      "console": "Az oldal és a bővítmények legutóbbi konzolsorai",
+      "network": "Legutóbbi kérések és azok állapota",
+      "page": "Böngésző, képernyőméret és tárolási kulcsnevek",
+      "dom": "Az oldal elrendezése szöveg nélkül"
+    }
   }
 }

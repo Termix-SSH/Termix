@@ -131,6 +131,10 @@ export function pluginStatus(summary: PluginSummary): PluginStatus {
   return "running";
 }
 
+function wantsUpdate(summary: PluginSummary): boolean {
+  return summary.state === "blocked" || summary.state === "failed";
+}
+
 export function mergePlugins(
   installed: PluginSummary[],
   registry: RegistryPluginEntry[] | null,
@@ -162,9 +166,10 @@ export function mergePlugins(
       channel: summary.channel ?? entry?.channel ?? "stable",
       isBeta: isPrerelease(summary.version),
       // The server keeps its own copy up to date, and a plugin that is off
-      // should not ask for attention.
+      // should not ask for attention. Blocked and failed ones are not off:
+      // an update is often the way to get them running again.
       updateAvailable:
-        summary.runsOnServer || !summary.enabled
+        summary.runsOnServer || (!summary.enabled && !wantsUpdate(summary))
           ? false
           : (entry?.updateAvailable ?? false),
       addedCapabilities: entry?.addedCapabilities ?? [],
@@ -602,6 +607,33 @@ export function youtubeEmbedUrl(videoId: string | undefined): string | null {
   return videoId && YOUTUBE_ID.test(videoId)
     ? `https://www.youtube-nocookie.com/embed/${videoId}?rel=0`
     : null;
+}
+
+/** The video's page on YouTube, or null for anything that is not a video id. */
+export function youtubeWatchUrl(videoId: string | undefined): string | null {
+  return videoId && YOUTUBE_ID.test(videoId)
+    ? `https://www.youtube.com/watch?v=${videoId}`
+    : null;
+}
+
+/**
+ * A layout plugin's screenshot: docs/layout-preview.png on its GitHub repo's
+ * default branch. Null when the repo is not on GitHub.
+ */
+export function layoutPreviewUrl(repository?: string | null): string | null {
+  const repo = normalizeGitHubRepo(repository);
+  if (!repo) return null;
+  const path = repo.replace("https://github.com/", "");
+  return `https://raw.githubusercontent.com/${path}/HEAD/docs/layout-preview.png`;
+}
+
+/** A plugin that brings a layout and is not running here yet. */
+export function isLayoutOffer(plugin: PluginEntry): boolean {
+  return (
+    plugin.kinds.includes("layouts") &&
+    !plugin.managedByServer &&
+    (plugin.installed ? !plugin.enabled : !plugin.unsupported)
+  );
 }
 
 /** True when SourceBadge draws something, so lists can skip the empty slot. */

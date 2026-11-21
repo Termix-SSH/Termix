@@ -16,7 +16,7 @@
  * subscriptions started in activate) always run.
  */
 
-import { useEffect, type ComponentType } from "react";
+import { useEffect, useMemo, type ComponentType } from "react";
 import type { PluginSummary } from "@/api/plugins-api";
 import type { PluginManifest } from "@termix-ssh/plugin-sdk/frontend";
 import {
@@ -39,7 +39,12 @@ import {
 import { SANDBOX, type FrameFit } from "./PluginFrameView";
 import { FRAME_ALLOW } from "./frame-allow";
 import { FramedView, SlotFramedView } from "./framed-view";
-import { clearFrameValues, setFrameValue, useFrameValue } from "./frame-values";
+import {
+  clearFrameValues,
+  getFrameValue,
+  setFrameValue,
+  useFrameValue,
+} from "./frame-values";
 import { toPluginHostRecord } from "../bridge";
 import { addDataRow } from "./data-rows";
 import { setFrameMeta } from "./frame-meta";
@@ -51,6 +56,9 @@ import {
   writeCachedPlugin,
 } from "./registration-cache";
 import { trackColdBoot } from "./cold-boot";
+import { frameBlockedReason } from "./frames-blocked";
+import { setTabHandleOwner } from "./tab-handle-owners";
+import { isGuestRuntime } from "../guest-runtime";
 
 import { extensionFit } from "./slot-fit";
 import { hasUserActivation } from "./user-activation";
@@ -108,6 +116,11 @@ export const FRAME_BUSY_MS = 3_000;
 export const MAX_IDLE_FRAMES = 4;
 /** Registrations a fresh frame did not report again by then are dropped. */
 const STALE_GRACE_MS = 1_500;
+/**
+ * A frame that just started often sends empty values before its own data
+ * loads. Values already on screen stay this long, then the newest is shown.
+ */
+export const VALUE_GRACE_MS = 1_500;
 /**
  * Redraws per registration per second. A caller that builds new arguments
  * every render (a fresh host object) would otherwise redraw forever.
@@ -285,6 +298,8 @@ let userKeyPromise: Promise<string | null> | null = null;
  * grant change made anywhere starts from fresh answers.
  */
 function currentUserKey(): Promise<string | null> {
+  // A guest page has no user, and asking would send it to sign in.
+  if (isGuestRuntime()) return Promise.resolve(null);
   userKeyPromise ??= Promise.all([getUserInfo(), loadMyPermissions()])
     .then(([user, grants]) => {
       if (!user?.userId) return null;
@@ -328,25 +343,30 @@ function framed(
     view =
       typeof fit === "string"
         ? function Framed(props: Record<string, unknown>) {
+            const sent = useFrameHandle(pluginId, props);
             return (
               <FramedView
                 pluginId={pluginId}
                 frameKey={key}
                 how={fit}
-                transparent={variant === "panel"}
+                // A rail panel lies on the sidebar; a dashboard card lets the
+                // layout's card color show.
+                transparent={variant === "panel" || variant === "card"}
+                onSidebar={variant === "panel"}
                 adapt={adapt}
-                props={props}
+                props={sent}
               />
             );
           }
         : function Framed(props: Record<string, unknown>) {
+            const sent = useFrameHandle(pluginId, props);
             return (
               <SlotFramedView
                 pluginId={pluginId}
                 frameKey={key}
                 slotId={fit.slot}
                 adapt={adapt}
-                props={props}
+                props={sent}
               />
             );
           };
@@ -357,11 +377,58 @@ function framed(
   return view;
 }
 
+function assignHandle(ref: unknown, value: unknown): void {
+  if (typeof ref === "function") (ref as (value: unknown) => void)(value);
+  else if (ref && typeof ref === "object" && "current" in ref) {
+    (ref as { current: unknown }).current = value;
+  }
+}
+
+/**
+ * A ref can't reach a frame, so a view that hands back a handle (a session
+ * tab) gets __setHandle instead. What it sends is the frame's handle, with
+ * async methods, and goes away with the view.
+ */
+export function useFrameHandle(
+  pluginId: string,
+  props: Record<string, unknown>,
+): Record<string, unknown> {
+  const handleRef = props.handleRef;
+  const setHandle = useMemo(
+    () =>
+      handleRef
+        ? (value: unknown) => {
+            const handle = value && typeof value === "object" ? value : null;
+            if (handle) setTabHandleOwner(handle, pluginId);
+            assignHandle(handleRef, handle);
+          }
+        : undefined,
+    [handleRef, pluginId],
+  );
+  useEffect(
+    () => () => {
+      if (handleRef) assignHandle(handleRef, null);
+    },
+    [handleRef],
+  );
+  return useMemo(() => {
+    if (!setHandle) return props;
+    const { handleRef: _ref, ...rest } = props;
+    void _ref;
+    return { ...rest, __setHandle: setHandle };
+  }, [props, setHandle]);
+}
+
 /** Things a frame can't be handed: refs, DOM nodes, React children. */
 function plainProps(props: Record<string, unknown>): Record<string, unknown> {
   const { handleRef, children, ...rest } = props;
   void handleRef;
   void children;
+  // A standalone view's query can't be cloned; the frame rebuilds it.
+  if (rest.params instanceof URLSearchParams) {
+    const { params, ...others } = rest;
+    return { ...others, __params: params.toString() };
+  }
   return rest;
 }
 
@@ -735,6 +802,18 @@ export async function startFramedPlugin(
         raw: new Map(),
       };
       let settled = false;
+      let holdUntil = Number.POSITIVE_INFINITY;
+      const heldValues = new Map<string, unknown>();
+      const applyValue = (key: string, value: unknown) => {
+        heldValues.delete(key);
+        setFrameValue(pluginId, key, value);
+        if (isPlainValue(value)) {
+          values[key] = value;
+        } else {
+          delete values[key];
+        }
+        persist();
+      };
       const finish = (error?: Error) => {
         if (settled) return;
         settled = true;
@@ -742,12 +821,21 @@ export async function startFramedPlugin(
         clearTimeout(timer);
         starting = null;
         if (error) {
+          heldValues.clear();
           teardown(current);
           if (frame === current) frame = null;
           reject(error);
           return;
         }
         current.ready = true;
+        holdUntil = Date.now() + VALUE_GRACE_MS;
+        // Still applied after the frame stopped, unless a newer one runs.
+        setTimeout(() => {
+          if (disposed || (frame && frame !== current)) {
+            return heldValues.clear();
+          }
+          for (const [key, value] of [...heldValues]) applyValue(key, value);
+        }, VALUE_GRACE_MS);
         lastUse = Date.now();
         resolve();
         if (!idleTimer) idleTimer = setInterval(checkIdle, IDLE_CHECK_MS);
@@ -793,15 +881,15 @@ export async function startFramedPlugin(
               }
             } else if (name === "value") {
               const entry = data as { key?: unknown; value?: unknown } | null;
-              if (typeof entry?.key === "string") {
-                setFrameValue(pluginId, entry.key, entry.value);
-                if (isPlainValue(entry.value)) {
-                  values[entry.key] = entry.value;
-                } else {
-                  delete values[entry.key];
-                }
-                persist();
+              if (typeof entry?.key !== "string") return;
+              if (
+                Date.now() < holdUntil &&
+                getFrameValue(pluginId, entry.key) !== undefined
+              ) {
+                heldValues.set(entry.key, entry.value);
+                return;
               }
+              applyValue(entry.key, entry.value);
             } else if (name === "overlay") {
               const active =
                 (data as { active?: unknown } | null)?.active === true;
@@ -832,15 +920,16 @@ export async function startFramedPlugin(
         },
       );
       frame = current;
-      const timer = setTimeout(
-        () =>
+      const timer = setTimeout(() => {
+        void frameBlockedReason(pluginId).then((reason) =>
           finish(
             new Error(
-              `activate() did not finish within ${START_TIMEOUT_MS / 1000}s`,
+              reason ??
+                `activate() did not finish within ${START_TIMEOUT_MS / 1000}s`,
             ),
           ),
-        START_TIMEOUT_MS,
-      );
+        );
+      }, START_TIMEOUT_MS);
       iframe.src = frameUrl(pluginId, {
         role: "background",
         v: summary.assetVersion ?? undefined,
@@ -869,19 +958,32 @@ export async function startFramedPlugin(
     useEffect(() => (known ? undefined : acquire()), [known]);
   };
 
-  /** Calls a function the frame registered, starting the frame first. */
-  const callFn = async (
-    rid: string,
-    path: string,
-    args: unknown[],
-  ): Promise<unknown> => {
+  /** Keeps the frame up while a call runs, and notes a user's ask. */
+  const holding = async <T,>(
+    kind: string | undefined,
+    work: () => Promise<T>,
+  ): Promise<T> => {
     pending++;
     lastUse = Date.now();
-    const kind = registrations.get(rid)?.kind;
     if (kind && ASKING_KINDS.has(kind) && hasUserActivation()) {
       askedAt = Date.now();
     }
     try {
+      return await work();
+    } finally {
+      pending--;
+      lastUse = Date.now();
+    }
+  };
+
+  /** Calls a function the frame registered, starting the frame first. */
+  const callFn = (
+    rid: string,
+    path: string,
+    args: unknown[],
+  ): Promise<unknown> => {
+    const kind = registrations.get(rid)?.kind;
+    return holding(kind, async () => {
       await ensureFrame(`call ${kind ?? rid} ${path}`);
       const current = frame;
       const ref = current?.raw.has(rid)
@@ -891,10 +993,7 @@ export async function startFramedPlugin(
         throw new Error("The plugin no longer has this function");
       }
       return await current.connection.port.importFn(ref)(...args);
-    } finally {
-      pending--;
-      lastUse = Date.now();
-    }
+    });
   };
 
   const decodeLazy = (rid: string, raw: unknown) =>
@@ -932,21 +1031,86 @@ export async function startFramedPlugin(
       const slot = hostSlot(stored.slice(prefix.length));
       if (slot !== null) lastForHost.set(slot, value);
     }
-    const ask = (key: string, args: unknown[], stored: string) => {
+    const trimCache = () => {
+      while (cache.size > MEMO_LIMIT) {
+        cache.delete(cache.keys().next().value as string);
+      }
+    };
+    /** Keeps an answer the frame gave for `key`. */
+    const remember = (key: string, value: unknown) => {
+      const stored = prefix + key;
+      cache.set(key, value);
+      failedAt.delete(key);
+      const slot = hostSlot(key);
+      if (slot !== null) lastForHost.set(slot, value);
+      if (isPlainValue(value)) answers[stored] = value;
+      else delete answers[stored];
+      persist();
+    };
+    // Functions in an answer reach only the frame that answered. Once its
+    // port is gone, a call asks again and runs the function at the same path,
+    // refused if an id that was on that path changed.
+    const rebind = (value: unknown, key: string, args: unknown[]): unknown => {
+      const port = frame?.connection?.port ?? null;
+      const sameIds = (next: unknown, path: string[]) =>
+        path.every((_, depth) => {
+          const before = atPath(value, path.slice(0, depth));
+          if (before === null || typeof before !== "object") return true;
+          if (!("id" in before)) return true;
+          const after = atPath(next, path.slice(0, depth));
+          return (
+            after !== null &&
+            typeof after === "object" &&
+            (after as { id?: unknown }).id === (before as { id?: unknown }).id
+          );
+        });
+      const walk = (item: unknown, path: string[]): unknown => {
+        if (typeof item === "function") {
+          return (...callArgs: unknown[]) =>
+            holding(record.kind, async () => {
+              if (port && frame?.connection?.port === port) {
+                return await (item as AsyncFn)(...callArgs);
+              }
+              const next = rebind(await (fn as AsyncFn)(...args), key, args);
+              remember(key, next);
+              trimCache();
+              scheduleRefresh(record);
+              const target = atPath(next, path);
+              if (typeof target !== "function" || !sameIds(next, path)) {
+                throw new Error("The plugin no longer has this function");
+              }
+              return await (target as AsyncFn)(...callArgs);
+            });
+        }
+        if (item === null || typeof item !== "object") return item;
+        const proto = Object.getPrototypeOf(item);
+        if (
+          !Array.isArray(item) &&
+          proto !== Object.prototype &&
+          proto !== null
+        ) {
+          return item;
+        }
+        const out: Record<string, unknown> | unknown[] = Array.isArray(item)
+          ? []
+          : {};
+        let changed = false;
+        for (const [name, entry] of Object.entries(item)) {
+          const next = walk(entry, [...path, name]);
+          if (next !== entry) changed = true;
+          (out as Record<string, unknown>)[name] = next;
+        }
+        return changed ? out : item;
+      };
+      return walk(value, []);
+    };
+    const ask = (key: string, args: unknown[]) => {
       if (inflight.has(key)) return;
       inflight.add(key);
       answerAsked();
       (fn as AsyncFn)(...args)
         .then(
-          (value) => {
-            cache.set(key, value);
-            failedAt.delete(key);
-            const slot = hostSlot(key);
-            if (slot !== null) lastForHost.set(slot, value);
-            if (isPlainValue(value)) answers[stored] = value;
-            else delete answers[stored];
-            persist();
-          },
+          (answer) => remember(key, rebind(answer, key, args)),
           () => {
             // A frame that stopped or timed out mid answer is asked again
             // later, not taken as a no for good.
@@ -961,9 +1125,7 @@ export async function startFramedPlugin(
         .finally(() => {
           inflight.delete(key);
           answerDone();
-          while (cache.size > MEMO_LIMIT) {
-            cache.delete(cache.keys().next().value as string);
-          }
+          trimCache();
           scheduleRefresh(record);
         });
     };
@@ -984,24 +1146,24 @@ export async function startFramedPlugin(
     };
     const sync = (...raw: unknown[]) => {
       const { key, args } = keyFor(raw);
-      const stored = `${record.rid}\u0000${field}\u0000${key}`;
+      const stored = prefix + key;
       if (stale.has(key) && frame?.ready) {
         stale.delete(key);
-        ask(key, args, stored);
+        ask(key, args);
       }
       const failed = failedAt.get(key);
       if (failed !== undefined && Date.now() - failed > ANSWER_RETRY_MS) {
         failedAt.delete(key);
-        ask(key, args, stored);
+        ask(key, args);
       }
       if (cache.has(key)) return cache.get(key);
       if (stored in answers) {
         cache.set(key, answers[stored]);
-        if (frame?.ready) ask(key, args, stored);
+        if (frame?.ready) ask(key, args);
         else stale.add(key);
         return answers[stored];
       }
-      ask(key, args, stored);
+      ask(key, args);
       const slot = hostSlot(key);
       return slot !== null && lastForHost.has(slot)
         ? lastForHost.get(slot)
@@ -1146,6 +1308,17 @@ export async function startFramedPlugin(
             ? hostTableValue(pluginId, String(data.valueKey), useNeed)
             : undefined,
         });
+      case "hostTreeChildren": {
+        const useRow = rowTableValue(pluginId, String(data.valueKey), useNeed);
+        return app.registerHostTreeChildren({
+          id: data.id,
+          titleKey: data.titleKey,
+          order: data.order,
+          when: m("when", false),
+          useChildren: (host) =>
+            useRow({ hostId: host.id }, String(host.id)) as never,
+        });
+      }
       case "hostStatusIndicator":
         return app.registerHostStatusIndicator({
           id: data.id,
@@ -1187,7 +1360,7 @@ export async function startFramedPlugin(
       case "dashboardCard":
         return app.registerDashboardCard({
           ...data,
-          component: fit(data.component, "fill", plainProps),
+          component: fit(data.component, "fill", plainProps, "card"),
         });
       case "extension": {
         const { pointId, components, ...rest } = data as Record<
@@ -1212,6 +1385,7 @@ export async function startFramedPlugin(
       case "action":
         return app.registerAction(data.id, data.handler, {
           permission: data.permission,
+          private: data.private === true,
         });
       case "actionSlot":
         return app.declareActionSlot({ ...data });

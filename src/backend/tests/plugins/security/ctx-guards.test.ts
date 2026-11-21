@@ -46,6 +46,8 @@ const UNGATED: Record<string, string> = {
   "events.on": "namespace check: plugin.* only without events:core",
   "sync.registerEntity": "adds the plugin's own table to remote sync",
   "registry.provide": "the plugin's own registry key",
+  "diagnostics.provide":
+    "adds the plugin's own report section, which only admins read",
   "registry.consume": "reads what another plugin chose to publish",
   "registry.revoke": "removes the plugin's own registry key",
   "services.provide": "only services declared in manifest provides",

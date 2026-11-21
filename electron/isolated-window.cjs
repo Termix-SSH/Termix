@@ -1,5 +1,9 @@
 const { randomUUID } = require("node:crypto");
 
+// Kept logins of embedded views (embedded-view.cjs). Only they open these
+// sessions, so no caller can name one.
+const KEPT_LOGIN_PARTITION_PREFIX = "embedded-login-";
+
 function isolatedUrl(value) {
   const url = new URL(value);
   if (
@@ -33,6 +37,11 @@ function createIsolatedWindows({ BrowserWindow, session, getMainWindow }) {
       throw new Error("No window to attach an isolated window to");
     }
     const url = isolatedUrl(options.url);
+    if (
+      String(options.partition || "").startsWith(KEPT_LOGIN_PARTITION_PREFIX)
+    ) {
+      throw new Error("Isolated windows cannot use an embedded view's session");
+    }
     const isolated = session.fromPartition(
       options.partition || `isolated-window-${randomUUID()}`,
       { cache: false },
@@ -135,4 +144,8 @@ function createIsolatedWindows({ BrowserWindow, session, getMainWindow }) {
   }
   return { open, handleCertificateError };
 }
-module.exports = { createIsolatedWindows, isolatedUrl };
+module.exports = {
+  createIsolatedWindows,
+  isolatedUrl,
+  KEPT_LOGIN_PARTITION_PREFIX,
+};

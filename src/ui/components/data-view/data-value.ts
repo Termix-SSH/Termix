@@ -9,6 +9,11 @@ export type DataTone = "default" | "good" | "warn" | "bad" | "muted";
 
 export type DataShape = "bars" | "stat" | "badge" | "dot" | "text";
 
+/** outline: a border (the default). filled: solid color. icon: the icon alone. */
+export type DataBadgeVariant = "outline" | "filled" | "icon";
+
+const VARIANTS = new Set<DataBadgeVariant>(["outline", "filled", "icon"]);
+
 export const DATA_SHAPES: readonly DataShape[] = [
   "bars",
   "stat",
@@ -44,6 +49,11 @@ export type DataValue =
       tooltip?: string;
       /** One of the plugin's own actions, run on click. */
       actionId?: string;
+      /** A Lucide icon name, like "KeyRound". */
+      icon?: string;
+      /** A color as #rgb or #rrggbb. The shell mixes it for the theme. */
+      color?: string;
+      variant?: DataBadgeVariant;
     }
   | { shape: "dot"; tone: DataTone; label: string }
   | {
@@ -52,6 +62,8 @@ export type DataValue =
       tone?: DataTone;
       tooltip?: string;
       actionId?: string;
+      icon?: string;
+      color?: string;
     };
 
 /** What a data hook may return. */
@@ -118,6 +130,32 @@ function stat(raw: unknown): DataStat | null {
   });
 }
 
+function icon(value: unknown): string | undefined {
+  return typeof value === "string" && /^[A-Z][A-Za-z0-9]{0,47}$/.test(value)
+    ? value
+    : undefined;
+}
+
+/** A hex color as lowercase #rrggbb, or undefined. */
+export function hexColor(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const match = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value.trim());
+  if (!match) return undefined;
+  const hex = match[1]!.toLowerCase();
+  return hex.length === 3
+    ? `#${hex
+        .split("")
+        .map((c) => c + c)
+        .join("")}`
+    : `#${hex}`;
+}
+
+function variant(value: unknown): DataBadgeVariant | undefined {
+  return typeof value === "string" && VARIANTS.has(value as DataBadgeVariant)
+    ? (value as DataBadgeVariant)
+    : undefined;
+}
+
 function actionId(value: unknown): string | undefined {
   const id = text(value);
   return id && /^[a-z0-9][a-z0-9._:-]*$/i.test(id) ? id : undefined;
@@ -149,6 +187,9 @@ function part(raw: unknown): DataValue | null {
         tone: tone(value.tone),
         tooltip: text(value.tooltip, MAX_TOOLTIP),
         actionId: actionId(value.actionId),
+        icon: icon(value.icon),
+        color: hexColor(value.color),
+        variant: variant(value.variant),
       });
     }
     case "dot": {
@@ -169,6 +210,8 @@ function part(raw: unknown): DataValue | null {
         tone: tone(value.tone),
         tooltip: text(value.tooltip, MAX_TOOLTIP),
         actionId: actionId(value.actionId),
+        icon: icon(value.icon),
+        color: hexColor(value.color),
       });
     }
     default:

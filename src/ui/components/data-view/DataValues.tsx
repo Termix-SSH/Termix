@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { icons } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { DataBar, DataStat, DataTone, DataValue } from "./data-value";
 
@@ -32,6 +33,33 @@ const BADGE: Record<DataTone, string> = {
   bad: "border-destructive/40 text-destructive bg-destructive/10",
   muted: "border-border text-muted-foreground",
 };
+
+/** A plugin's color, mixed with the theme so it reads on light and dark. */
+function colorStyle(
+  color: string | undefined,
+  variant: "outline" | "filled" | "icon" | "text" = "outline",
+): CSSProperties | undefined {
+  if (!color) return undefined;
+  if (variant === "filled") {
+    return {
+      backgroundColor: `color-mix(in oklab, ${color} 85%, var(--foreground))`,
+      borderColor: "transparent",
+      color: "var(--background)",
+    };
+  }
+  const text = `color-mix(in oklab, ${color} 75%, var(--foreground))`;
+  if (variant === "text" || variant === "icon") return { color: text };
+  return {
+    color: text,
+    borderColor: `color-mix(in oklab, ${color} 45%, transparent)`,
+    backgroundColor: `color-mix(in oklab, ${color} 12%, transparent)`,
+  };
+}
+
+function ValueIcon({ name }: { name?: string }) {
+  const Icon = name ? icons[name as keyof typeof icons] : undefined;
+  return Icon ? <Icon className="size-3 shrink-0" aria-hidden /> : null;
+}
 
 /** Bars with no tone of their own warn from 70% and turn bad from 90%. */
 function barTone(item: DataBar): DataTone {
@@ -164,12 +192,14 @@ function Clickable({
   onAction,
   className,
   title,
+  style,
   children,
 }: {
   actionId?: string;
   onAction?: (actionId: string) => void;
   className: string;
   title?: string;
+  style?: CSSProperties;
   children: ReactNode;
 }) {
   if (actionId && onAction) {
@@ -178,6 +208,7 @@ function Clickable({
         type="button"
         className={cn(className, "cursor-pointer hover:opacity-80")}
         title={title}
+        style={style}
         onClick={(event) => {
           event.stopPropagation();
           onAction(actionId);
@@ -188,7 +219,7 @@ function Clickable({
     );
   }
   return (
-    <span className={className} title={title}>
+    <span className={className} title={title} style={style}>
       {children}
     </span>
   );
@@ -220,20 +251,35 @@ function Part({
           ))}
         </>
       );
-    case "badge":
+    case "badge": {
+      const variant = value.variant ?? "outline";
+      const iconOnly = variant === "icon" && !!value.icon;
       return (
         <Clickable
           actionId={value.actionId}
           onAction={onAction}
-          title={value.tooltip}
+          title={value.tooltip ?? (iconOnly ? value.label : undefined)}
+          style={colorStyle(value.color, iconOnly ? "icon" : variant)}
           className={cn(
-            "shrink-0 border px-1.5 py-0.5 text-[10px] font-semibold",
-            BADGE[value.tone ?? "default"],
+            "inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold",
+            iconOnly ? "px-0.5" : "border px-1.5 py-0.5",
+            !value.color &&
+              (iconOnly
+                ? TEXT[value.tone ?? "default"]
+                : BADGE[value.tone ?? "default"]),
           )}
         >
-          <span data-data-badge={value.tone ?? "default"}>{value.label}</span>
+          <ValueIcon name={value.icon} />
+          {iconOnly ? (
+            <span className="sr-only" data-data-badge={value.tone ?? "default"}>
+              {value.label}
+            </span>
+          ) : (
+            <span data-data-badge={value.tone ?? "default"}>{value.label}</span>
+          )}
         </Clickable>
       );
+    }
     case "dot":
       return (
         <span
@@ -252,9 +298,14 @@ function Part({
           actionId={value.actionId}
           onAction={onAction}
           title={value.tooltip}
-          className={cn("truncate text-[10px]", TEXT[value.tone ?? "muted"])}
+          style={colorStyle(value.color, "text")}
+          className={cn(
+            "inline-flex min-w-0 items-center gap-1 truncate text-[10px]",
+            !value.color && TEXT[value.tone ?? "muted"],
+          )}
         >
-          {value.text}
+          <ValueIcon name={value.icon} />
+          <span className="truncate">{value.text}</span>
         </Clickable>
       );
   }

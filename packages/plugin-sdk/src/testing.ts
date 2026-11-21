@@ -93,6 +93,7 @@ import type {
   PluginHostProbeTarget,
   PluginHostStatusEntry,
   PluginActivityProvider,
+  PluginDiagnosticsSection,
   PluginHostLockProvider,
   PluginConnectPolicyProvider,
   PluginAuthPolicyProvider,
@@ -166,6 +167,8 @@ export interface FakeContextOptions {
    * "<hostId>:<protocol>". A missing key answers null.
    */
   protocolTargets?: Record<string, PluginProtocolTarget>;
+  /** What ctx.credentials.resolveLogin answers, by credential id. */
+  credentialLogins?: Record<number, { username: string; password: string }>;
   /** What ctx.credentials.listSshKeys answers. */
   sshKeyCredentials?: PluginSshKeyCredential[];
   /** What ctx.credentials.list answers. */
@@ -341,10 +344,14 @@ export interface FakePluginContext {
   hostStatusProviders: PluginHostStatusProvider[];
   /** Every provider passed to ctx.hosts.activity.provide that is still registered. */
   activityProviders: PluginActivityProvider[];
+  /** Sections passed to ctx.diagnostics.provide that are still registered. */
+  diagnosticsSections: PluginDiagnosticsSection[];
   /** Every provider passed to ctx.hosts.locks.provide that is still registered. */
   hostLockProviders: PluginHostLockProvider[];
   /** Every provider passed to ctx.hosts.connectPolicy.provide that is still registered. */
   connectPolicyProviders: PluginConnectPolicyProvider[];
+  /** Every ctx.hosts.connectPolicy.disconnect call, in order. */
+  disconnects: Array<{ hostId: number; reason?: string }>;
   /** Topics emitted through ctx.events.emit, in order. */
   emitted: Array<{ topic: string; payload: unknown }>;
   /** Backing store behind ctx.kv. */
@@ -615,8 +622,10 @@ export function createFakeContext(
   const emitted: Array<{ topic: string; payload: unknown }> = [];
   const hostStatusProviders: PluginHostStatusProvider[] = [];
   const activityProviders: PluginActivityProvider[] = [];
+  const diagnosticsSections: PluginDiagnosticsSection[] = [];
   const hostLockProviders: PluginHostLockProvider[] = [];
   const connectPolicyProviders: PluginConnectPolicyProvider[] = [];
+  const disconnects: Array<{ hostId: number; reason?: string }> = [];
   const kv = new Map<string, unknown>();
   const tables: PluginTableDefinition[] = [];
   const syncEntities: SyncEntityRegistration[] = [];
@@ -1252,6 +1261,10 @@ export function createFakeContext(
             if (at >= 0) connectPolicyProviders.splice(at, 1);
           };
         },
+        disconnect: async (hostId, options) => {
+          disconnects.push({ hostId, reason: options?.reason });
+          return 0;
+        },
       },
       status: {
         provide: (provider) => {
@@ -1713,6 +1726,8 @@ export function createFakeContext(
         credentialReads.push({ hostId, protocol });
         return options.protocolTargets?.[`${hostId}:${protocol}`] ?? null;
       },
+      resolveLogin: async (credentialId) =>
+        options.credentialLogins?.[credentialId] ?? null,
       publicKey: async (credentialId) =>
         (options.sshKeyCredentials ?? []).find((k) => k.id === credentialId)
           ?.publicKey ?? null,
@@ -1844,6 +1859,16 @@ export function createFakeContext(
       },
     },
 
+    diagnostics: {
+      provide: (section) => {
+        diagnosticsSections.splice(0, diagnosticsSections.length, section);
+        return () => {
+          const at = diagnosticsSections.indexOf(section);
+          if (at >= 0) diagnosticsSections.splice(at, 1);
+        };
+      },
+    },
+
     plugins: {
       list: async () =>
         options.installedPlugins ?? [
@@ -1938,8 +1963,10 @@ export function createFakeContext(
     disposals,
     hostStatusProviders,
     activityProviders,
+    diagnosticsSections,
     hostLockProviders,
     connectPolicyProviders,
+    disconnects,
     emitted,
     kv,
     tables,
@@ -2478,6 +2505,10 @@ export function createMockCtx(
           require("hosts:connect-policy");
           return ctx.hosts.connectPolicy.provide(provider);
         },
+        disconnect: async (hostId, options) => {
+          require("hosts:connect-policy");
+          return ctx.hosts.connectPolicy.disconnect!(hostId, options);
+        },
       },
       status: {
         provide: (provider) => {
@@ -2758,6 +2789,10 @@ export function createMockCtx(
         }
         return ctx.credentials.resolveHostProtocol(hostId, protocol);
       },
+      resolveLogin: async (credentialId) => {
+        require("credentials:read");
+        return ctx.credentials.resolveLogin(credentialId);
+      },
       publicKey: async (credentialId) => {
         require("credentials:use");
         return ctx.credentials.publicKey(credentialId);
@@ -2823,6 +2858,10 @@ export function createMockCtx(
         require("plugins:read");
         return ctx.plugins.list();
       },
+    },
+
+    diagnostics: {
+      provide: (section) => ctx.diagnostics.provide(section),
     },
 
     system: {

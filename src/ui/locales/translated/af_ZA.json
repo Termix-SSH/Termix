@@ -217,7 +217,18 @@
     "pluginsLoadFailed": "Die pluginlys kon nie gelaai word nie. Jy kan plugins later kies vanaf die Plugins-oortjie.",
     "securityTitle": "Beveilig jou rekening",
     "securityIntro": "Voeg 'n passkey of 'n autentikator-toepassing by jou rekening. Jy kan dit ook later doen in Instellings, onder Beveiliging.",
-    "pluginsDocsLink": "Lees oor elkeen"
+    "pluginsDocsLink": "Lees oor elkeen",
+    "layoutTitle": "Kies 'n uitleg",
+    "layoutIntro": "Die uitleg bepaal hoe die hele app gerangskik is: die menuss, die sybalk en die oortjies. Klik een om dit te gebruik. Dit verander onmiddellik.",
+    "layoutInstalled": "Geïnstalleer",
+    "layoutMore": "Meer uitleg",
+    "layoutNoMore": "Daar is tans geen ander uitleg beskikbaar nie.",
+    "layoutDefault": "Verstek",
+    "layoutInstall": "Installeer",
+    "layoutTurnOn": "Skakel aan",
+    "layoutVideo": "Bekyk video",
+    "layoutChangeLater": "Jy kan jou uitleg enige tyd in Instellings, onder Voorkoms, verander. Vra 'n admin as jy meer uitleg wil hê geïnstalleer.",
+    "layoutChangeLaterAdmin": "Jy kan jou uitleg enige tyd in Instellings, onder Voorkoms, verander. Meer uitleg kan later vanaf die Plugins-oortjie geïnstalleer word."
   },
   "desktopTray": {
     "noticeTitle": "Termix loop nog",
@@ -836,7 +847,12 @@
     "editorUpdate": "Wysig Gasheer",
     "editorAdd": "Voeg Gasheer by",
     "speedSearch": "Soek gasheer. Pyltjies om te kies, Enter om te verbind, Esc om te sluit",
-    "speedSearchList": "Gasheerlys. Tik of druk / om te soek."
+    "speedSearchList": "Gasheerlys. Tik of druk / om te soek.",
+    "openFromLink": {
+      "title": "Open {{name}}?",
+      "description": "'n Skakel het Termix versoek om aan hierdie gasheer te koppel.",
+      "confirm": "Koppel"
+    }
   },
   "splitScreen": {
     "title": "Gesplete skerm",
@@ -1375,7 +1391,7 @@
         "running": "Aktief",
         "disabled": "Afgeskakel",
         "failed": "Onverwags gestop",
-        "blocked": "Wag op 'n ander plugin",
+        "blocked": "Kan nie begin nie",
         "server": "Loop op jou bediener",
         "safeMode": "Af in veilige modus"
       },
@@ -1461,6 +1477,8 @@
         "updated": "{{name}} opgedateer na {{version}}",
         "updatedMany_one": "{{count}} plugin opgedateer",
         "updatedMany_other": "{{count}} plugins opgedateer",
+        "needsReview_one": "1 plugin vra om nuwe toestemmings. Hersien dit om te herstel.",
+        "needsReview_other": "{{count}} plugins vra om nuwe toestemmings. Hersien elkeen om te herstel.",
         "uninstalled": "{{name}} deïnstalleer",
         "dataDeleted": "Data vir {{name}} verwyder",
         "failedToStart": "{{name}} kon nie begin nie. Maak dit oop om te sien waarom.",
@@ -1607,7 +1625,13 @@
         "unreachable": "Kon nie dit lees nie: {{error}}",
         "filter": "Register",
         "allRegistries": "Alle registers",
-        "browseHint": "Skakel gemeenskapsplugins aan of voeg jou eie register by in die Registers-oortjie."
+        "browseHint": "Skakel gemeenskapsplugins aan of voeg jou eie register by in die Registers-oortjie.",
+        "looksName": "Gemeenskapslêers en temas",
+        "looksHint": "Laat lêers en temas wat nie van Termix is nie, buite die sandboks loop, soos die amptelikes. 'n Lêer teken die hele app, so dit kan sien en doen wat jy kan. Installeer slegs dié wat jy vertrou. Herlaai die bladsy nadat jy dit verander het.",
+        "looksConfirmTitle": "Laat gemeenskapslêers buite die sandboks loop?",
+        "looksConfirmBody": "'n Gemeenskapslêer of tema sal in die bladsy loop met volle toegang tot Termix as diegene wat aangemeld is. Dit kan riskant wees. Skakel dit slegs aan as jy die lêers en temas vertrou wat jy installeer.",
+        "looksConfirm": "Skakel aan",
+        "looksSaved": "Opgeslaan. Herlaai die bladsy om dit toe te pas."
       },
       "upToDate": "Alles is op datum.",
       "lastChecked": "Laas gecheck {{time}}",
@@ -1704,9 +1728,14 @@
     "firstLoad": {
       "title": "Maak invoegprogramme gereed",
       "progress": "{{done}} van {{total}}",
-      "hint": "Dit gebeur slegs die eerste keer. Die volgende keer open Termix dadelik.",
+      "hint": "Plugins begin vir die eerste keer. Daarna open Termix dadelik.",
       "skip": "Gaan voort"
-    }
+    },
+    "framesBlocked": "Plugins kan nie hul lêers laai nie. 'n Aanmeldproxy voor Termix blokkeer hulle waarskynlik.",
+    "framesBlockedHelp": "Hoe om dit te regstel",
+    "framesFailed_one": "{{names}} kon nie laai nie, so sy dele is versteek",
+    "framesFailed_other": "{{count}} plugins kon nie laai nie, so hul dele is versteek: {{names}}",
+    "framesFailedReload": "Herlaai"
   },
   "settings": {
     "secretSet": "Stel",
@@ -1806,5 +1835,78 @@
     },
     "reset": "Stel terug",
     "done": "Klaar"
+  },
+  "diagnostics": {
+    "title": "Diagnostiek",
+    "makeReport": "Stel 'n diagnostiese verslag op",
+    "slowBoot": "Neem dit 'n rukkie? Stel 'n diagnostiese verslag op",
+    "troubleSigningIn": "Probleme om aan te meld? Stel 'n diagnostiese verslag op",
+    "reportTab": "Verslag",
+    "logsTab": "Bedienerlogboeke",
+    "intro": "Dit skep een lêer met wat Termix nodig het om 'n probleem te vind: foute, logboeke, plugin-staat en hoe versoek die bediener bereik. Laai dit af en heg dit aan 'n GitHub-kwessie of stuur dit in Discord.",
+    "notAdmin": "Bedienerlogboeke en bedienerbesonderhede benodig 'n admin. Vra jou admin om ook 'n verslag op te stel as die probleem op die bediener is.",
+    "signedOut": "Jy is nie aangemeld nie, dus word slegs die blaaier-deel ingesluit.",
+    "whatHappened": "Wat het gebeur",
+    "whatHappenedHint": "Opsioneel. Wat het jy gedoen en wat het verkeerd geloop?",
+    "include": "Sluit in",
+    "adminOnly": "Benodig 'n admin",
+    "privacy": "Privaatheid",
+    "mask": "Versteek name en adresse",
+    "maskHint": "IP's, gasheername, gebruikersname en e-posse word host-1, user-1, ens. Wagwoorde, sleutels en tokens word altyd verwyder.",
+    "domText": "Sluit bladsytekst in",
+    "domTextHint": "Voeg die teks op die skerm by die bladsy-uitleg. Af by verstek aangesien dit jou data kan wys.",
+    "warnOnly": "Slegs waarskuwings en foute van die bedienerlogboek",
+    "warnOnlyHint": "Maak die lêer kleiner.",
+    "focus": "Plugin",
+    "focusHint": "Wys hierdie plugin eerste en lê die kwessie op sy repo.",
+    "allPlugins": "Alle plugins",
+    "findings": "Vind deur die kontroles",
+    "preview": "Wat gestuur sal word",
+    "previewCut": "(Die voorskou stop hier. Die lêer het alles.)",
+    "cut": "Die lêer was meer as 5 MB, dus is die oudste logreëls afgesny.",
+    "footerHint": "Kontroleer die voorskou voordat jy dit stuur.",
+    "copy": "Kopieer",
+    "copied": "Verslag gekopieer",
+    "copyFailed": "Kon nie die verslag kopieer nie",
+    "download": "Laai af",
+    "downloaded": "Verslag afgelaai",
+    "openIssue": "Open GitHub-kwessie",
+    "logsSearch": "Soek logboeke",
+    "logsLevel": "Vlak",
+    "logsAll": "Alle vlakke",
+    "logsWarn": "Waarskuwings en foute",
+    "logsError": "Foute",
+    "logsPlugin": "Plugin",
+    "logsCount": "{{count}} reëls",
+    "logsFailed": "Kon nie logboeke laai nie",
+    "logsPause": "Pouseer",
+    "logsResume": "Hervat",
+    "logsEmpty": "Nog geen logreëls nie.",
+    "parts": {
+      "server": "Bediener",
+      "plugins": "Plugins",
+      "sections": "Plugin-besonderhede",
+      "logs": "Bedienerlogboeke",
+      "request": "Verbinding",
+      "probes": "Verbindingskontroles",
+      "errors": "Blaaierfoute",
+      "console": "Blaaierkonsole",
+      "network": "Netwerk",
+      "page": "Blaaier en venster",
+      "dom": "Bladsy-opmaak"
+    },
+    "partHints": {
+      "server": "Weergawe, databasis, SSL en watter instellings gestel is",
+      "plugins": "Weergawes en toestande op die bediener en in die blaaier",
+      "sections": "Bykomende besonderhede wat lopende plugins byvoeg",
+      "logs": "Bedienerlogboek sedert begin en onlangse reëls",
+      "request": "Kopname wat 'n proxy voor Termix wys",
+      "probes": "Toetse dat Termix en plugin-lêers laai",
+      "errors": "Ongevangene foute en geblokkeerde laai",
+      "console": "Onlangse konsolereëls van die bladsy en plugins",
+      "network": "Onlangse versoeke en hul status",
+      "page": "Blaaier, skermgrootte en stoor sleutelname",
+      "dom": "Die opmaak van die bladsy, sonder teks"
+    }
   }
 }

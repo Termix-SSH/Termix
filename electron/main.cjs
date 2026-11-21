@@ -49,12 +49,13 @@ const { createPluginSandboxHost } = require("./plugin-sandbox.cjs");
 const { checkRuntime } = require("./plugin-runtime.cjs");
 const { shouldRelax, relaxFrameHeaders } = require("./frame-headers.cjs");
 const { openInEditor } = require("./open-in-editor.cjs");
+const deepLink = require("./deep-link.cjs");
 const pluginNodePin = require("./plugin-node.json");
 const linkedServer = require("./linked-server.cjs");
 const desktopSettings = require("./desktop-settings.cjs");
 const autoUpdates = require("./auto-updater.cjs");
-const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
-const { quitApp, closeAction } = require("./app-quit.cjs");
+const { windowsLinuxMenuTemplate } = require("./keyboard-shortcuts.cjs");
+const { quitApp, closeAction, showTrayNotice } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
 const { forcedScaleFactor } = require("./linux-scale.cjs");
 // Saved by the file manager after the user picks an editor in a file dialog.
@@ -552,6 +553,7 @@ const embeddedViews = createEmbeddedViews({
   WebContentsView,
   session,
   getMainWindow: () => mainWindow,
+  log: logToFile,
 });
 
 // Only the app's own page, in the main window's top frame, may call main.
@@ -1270,6 +1272,16 @@ function stopBackendServer() {
 
 // App Sandbox denies the singleton socket bind, which reads as a held lock and
 // quits the app on every launch. macOS reactivates bundled apps anyway.
+const links = deepLink.createLinkQueue();
+for (const link of deepLink.linksFromArgv(process.argv)) links.push(link);
+// macOS hands a link over this event, also before ready on a cold start.
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  const link = deepLink.parseLink(url);
+  if (link) links.push({ url: link, source: "os-scheme" });
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.show();
+});
+
 const gotTheLock = process.mas || app.requestSingleInstanceLock();
 if (!gotTheLock) {
   console.log("Another instance is already running, quitting...");
@@ -1277,6 +1289,7 @@ if (!gotTheLock) {
   process.exit(0);
 } else {
   app.on("second-instance", (event, commandLine, workingDirectory) => {
+    for (const link of deepLink.linksFromArgv(commandLine)) links.push(link);
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
@@ -1418,6 +1431,22 @@ app.on("web-contents-created", (_event, contents) => {
   contents.setWindowOpenHandler(() => ({ action: "deny" }));
 });
 
+/** Makes termix:// links open this app. Installers register it too. */
+function registerLinkScheme() {
+  if (process.mas) return;
+  try {
+    if (process.defaultApp && process.argv.length >= 2) {
+      app.setAsDefaultProtocolClient(deepLink.SCHEME, process.execPath, [
+        path.resolve(process.argv[1]),
+      ]);
+    } else {
+      app.setAsDefaultProtocolClient(deepLink.SCHEME);
+    }
+  } catch (error) {
+    logToFile("Could not register termix:// links:", String(error));
+  }
+}
+
 function createWindow() {
   const appVersion = app.getVersion();
   const electronVersion = process.versions.electron;
@@ -1483,13 +1512,6 @@ function createWindow() {
 
   const customUserAgent = `Termix-Desktop/${appVersion} (${platform}; Electron/${electronVersion})`;
   mainWindow.webContents.setUserAgent(customUserAgent);
-
-  mainWindow.webContents.on("before-input-event", (event, input) => {
-    if (!isCloseActiveTabInput(input)) return;
-
-    event.preventDefault();
-    mainWindow.webContents.send("close-active-tab");
-  });
 
   mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
     (details, callback) => {
@@ -1660,6 +1682,7 @@ function createWindow() {
 
   mainWindow.on("closed", () => {
     embeddedViews.destroyAll();
+    links.detach();
     mainWindow = null;
   });
 
@@ -1694,6 +1717,16 @@ function windowFor(event) {
 
 ipc.handle("get-platform", () => {
   return process.platform;
+});
+
+// The renderer asks once it listens, and gets the links that came first.
+ipc.handle("deep-link:take", () => {
+  links.attach((link) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("deep-link", link);
+    }
+  });
+  return links.take();
 });
 
 // Whether the app-drawn title bar shows in the window that asks. Only the
@@ -1846,12 +1879,20 @@ ipc.on("set-tray-notice-text", (_event, text) => {
   trayNoticeText = text;
 });
 
+function markTrayNoticeShown() {
+  desktopSettings.saveDesktopSettings({ trayNoticeShown: true });
+}
+
 function showTrayNoticeOnce() {
-  if (!trayNoticeText || !Notification.isSupported()) return;
   if (desktopSettings.getDesktopSettings().trayNoticeShown) return;
   try {
-    new Notification({ ...trayNoticeText, silent: true }).show();
-    desktopSettings.saveDesktopSettings({ trayNoticeShown: true });
+    showTrayNotice({
+      platform: process.platform,
+      tray,
+      Notification,
+      text: trayNoticeText,
+      onShown: markTrayNoticeShown,
+    });
   } catch (error) {
     logToFile("Failed to show the tray notice:", error.message);
   }
@@ -1999,6 +2040,13 @@ ipc.handle("set-setting", (_event, key, value) => {
 });
 
 ipc.handle("clear-session-cookies", async () => {
+  // First, so a failure in the cookie work below cannot skip it: logins kept
+  // in embedded views end with the Termix login.
+  try {
+    void embeddedViews.forgetSessions();
+  } catch (error) {
+    console.error("Failed to forget embedded view sessions:", error);
+  }
   try {
     clearPersistedElectronAuthCookies();
     const ses = mainWindow?.webContents?.session;
@@ -2200,11 +2248,14 @@ function createMenu() {
     ];
     const menu = Menu.buildFromTemplate(template);
     Menu.setApplicationMenu(menu);
+  } else {
+    Menu.setApplicationMenu(Menu.buildFromTemplate(windowsLinuxMenuTemplate()));
   }
 }
 
 app.whenReady().then(async () => {
   logToFile("=== App ready ===");
+  registerLinkScheme();
   logToFile(
     "isDev:",
     isDev,

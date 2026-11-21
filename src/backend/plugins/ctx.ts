@@ -75,6 +75,7 @@ import { createPluginProcess } from "./ctx-process.js";
 import { createPluginSystem } from "./ctx-system.js";
 import { createPluginPlugins } from "./ctx-plugins.js";
 import { createPluginUsers } from "./ctx-users.js";
+import { provideDiagnosticsSection } from "../diagnostics/sections.js";
 import { createPluginCredentials } from "./ctx-credentials.js";
 import { isElectronIpcAvailable } from "../utils/electron-ipc-bridge.js";
 import { answeredSync } from "./api1-sync.js";
@@ -483,6 +484,7 @@ export function createPluginContext(
       });
       // The desktop app's main process keeps its own copy, so a native view
       // opens from the grant alone and never from an address the page sends.
+      // The user it is granted to picks which kept login the view shares.
       const { isElectronIpcAvailable, requestFromElectronMain } =
         await import("../utils/electron-ipc-bridge.js");
       if (isElectronIpcAvailable()) {
@@ -491,6 +493,7 @@ export function createPluginContext(
           pluginId,
           url: entry.url,
           ignoreCert: entry.ignoreCert,
+          userId,
           expiresAt: entry.expiresAt,
         }).catch(() => undefined);
       }
@@ -1079,6 +1082,17 @@ export function createPluginContext(
     system: createPluginSystem({ manifest, bag: handle.bag, audit: auditCall }),
     plugins: createPluginPlugins(manifest),
     users: createPluginUsers(manifest),
+
+    diagnostics: {
+      provide: (provider) => {
+        const remove = provideDiagnosticsSection(pluginId, provider);
+        const drop = handle.bag.add(remove, "diagnostics section");
+        return () => {
+          drop();
+          remove();
+        };
+      },
+    },
 
     desktop: {
       openIsolatedWindow: (request) => desktopOpenIsolatedWindow(request),

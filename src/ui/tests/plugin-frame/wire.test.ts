@@ -9,6 +9,19 @@ import { withIconBoundary } from "@/plugin-host/scope";
 const exportFn = vi.fn((fn: unknown) => ({ $fn: `f${String(fn).length}` }));
 
 describe("wire encoding", () => {
+  it("sends what replace gives in place of an object", () => {
+    const secret = { focus: () => 1, disconnect: () => 2 };
+    const out = encode(
+      { handle: secret, other: { a: 1 } },
+      {
+        exportFn: () => ({ $fn: "f" }),
+        replace: (value) =>
+          value === secret ? { focus: secret.focus } : undefined,
+      },
+    );
+    expect(out).toEqual({ handle: { focus: { $fn: "f" } }, other: { a: 1 } });
+  });
+
   it("sends functions by reference and plain data as it is", () => {
     const fn = () => 1;
     const out = encode(

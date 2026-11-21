@@ -61,6 +61,7 @@ import {
 } from "@/lib/frontend-logger";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import { getDeviceId } from "@/lib/device-id";
+import { APP_CHALLENGE_HEADER, pendingAppChallenge } from "@/lib/app-return";
 import {
   clearCoreReadCache,
   noteCoreRequest,
@@ -86,6 +87,8 @@ export interface AuthResponse {
   temp_token?: string;
   rememberMe?: boolean;
   token?: string;
+  /** One-time code for the mobile app, when it asked for this login. */
+  app_code?: string;
 }
 
 export interface UserInfo {
@@ -340,6 +343,12 @@ function createApiInstance(
     const configWithMetadata = config as AxiosRequestConfigExtended;
     configWithMetadata.startTime = startTime;
     configWithMetadata.requestId = requestId;
+
+    // A sign in the mobile app asked for: logins answer with a code for it.
+    const appChallenge = pendingAppChallenge();
+    if (appChallenge && serviceName === "AUTH") {
+      config.headers.set(APP_CHALLENGE_HEADER, appChallenge);
+    }
 
     const method = config.method?.toUpperCase() || "UNKNOWN";
     const url = config.url || "UNKNOWN";
@@ -1028,6 +1037,7 @@ export async function requestTrustedProxyLogin(): Promise<{
   userId?: string;
   is_admin?: boolean;
   token?: string;
+  app_code?: string;
 }> {
   const response = await authApi.post("/users/proxy-login");
   if (response.data.token) localStorage.setItem("jwt", response.data.token);
@@ -1038,6 +1048,8 @@ export async function requestTrustedProxyLogin(): Promise<{
 export async function logoutUser(): Promise<{
   success: boolean;
   message: string;
+  /** Where the login method wants the browser to go next, if anywhere. */
+  redirectUrl?: string;
 }> {
   try {
     const response = await authApi.post("/users/logout");

@@ -84,6 +84,20 @@ describe("isolated windows", () => {
     await manager.open({ url: "https://service.test", partition: "fixed" });
     expect(fromPartition.mock.calls[0][0]).toBe("fixed");
   });
+  it("refuses the partitions kept for embedded view logins", async () => {
+    await expect(
+      manager.open({
+        url: "https://service.test",
+        partition: "embedded-login-a",
+      }),
+    ).rejects.toThrow();
+    expect(fromPartition).not.toHaveBeenCalled();
+    await manager.open({
+      url: "https://service.test",
+      partition: "my-embedded-login-a",
+    });
+    expect(fromPartition.mock.calls[0][0]).toBe("my-embedded-login-a");
+  });
   it("rejects non-web destinations before creating a session", async () => {
     for (const url of [
       "file:///etc/passwd",

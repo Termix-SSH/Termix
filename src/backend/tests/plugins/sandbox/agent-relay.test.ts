@@ -23,11 +23,13 @@ import {
 } from "../../../plugins/sandbox/rpc.js";
 import { SandboxTokenStore } from "../../../plugins/sandbox/tokens.js";
 
+// ssh2 makes an ed25519 key it can't read back about once in 300 tries.
 function key(): ssh2.ParsedKey {
-  const pair = ssh2.utils.generateKeyPairSync("ed25519");
-  const parsed = ssh2.utils.parseKey(pair.private);
-  if (parsed instanceof Error) throw parsed;
-  return parsed;
+  for (;;) {
+    const pair = ssh2.utils.generateKeyPairSync("ed25519");
+    const parsed = ssh2.utils.parseKey(pair.private);
+    if (!(parsed instanceof Error)) return parsed;
+  }
 }
 
 class TestAgent extends ssh2.BaseAgent {

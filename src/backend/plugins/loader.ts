@@ -509,8 +509,10 @@ export class PluginLoader {
           "type" in entry &&
           (entry.type === "File" || entry.type === "Directory"),
       });
-      // The plugin's own user must be able to read its code.
+      // The plugin's own user must be able to read its code, and get to it:
+      // the plugins folder is made here on a first install, private.
       if (process.platform !== "win32") {
+        await fs.promises.chmod(path.dirname(unpackedRoot), 0o755);
         await fs.promises.chmod(unpackedRoot, 0o755);
       }
       await makeTreeReadable(staging);

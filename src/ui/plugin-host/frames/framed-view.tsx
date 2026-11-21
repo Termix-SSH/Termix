@@ -21,6 +21,8 @@ const PLACED_FITS = new Set<FrameFit>(["inline", "content", "fill"]);
 export interface FramedViewProps {
   /** The page behind shows through, like a rail panel on the sidebar. */
   transparent?: boolean;
+  /** Fields take the sidebar's color. Defaults to `transparent`. */
+  onSidebar?: boolean;
   pluginId: string;
   frameKey: string;
   adapt?: (props: Record<string, unknown>) => Record<string, unknown>;
@@ -34,6 +36,7 @@ export function FramedView({
   adapt,
   props,
   transparent,
+  onSidebar,
 }: FramedViewProps & { how: FrameFit }) {
   const { fallback, rest: withFit } = splitFallback(props);
   // The page placing the part may say how it sits, like a small button in a
@@ -48,6 +51,7 @@ export function FramedView({
       frameKey={frameKey}
       fit={fit}
       transparent={transparent}
+      onSidebar={onSidebar}
       fallback={fallback}
       props={adapt ? adapt(rest) : rest}
     />

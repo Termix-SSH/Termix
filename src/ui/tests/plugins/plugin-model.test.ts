@@ -150,6 +150,18 @@ describe("mergePlugins", () => {
     expect(row.updateAvailable).toBe(false);
   });
 
+  it.each(["blocked", "failed"])(
+    "still offers the update for a %s plugin",
+    (state) => {
+      const [row] = mergePlugins(
+        [summary({ enabled: false, state })],
+        [entry({ addedCapabilities: ["operations:provide"] })],
+      );
+      expect(row.updateAvailable).toBe(true);
+      expect(row.addedCapabilities).toEqual(["operations:provide"]);
+    },
+  );
+
   it("keeps installed plugins when the registry is unreachable", () => {
     const rows = mergePlugins([summary()], null);
     expect(rows).toHaveLength(1);

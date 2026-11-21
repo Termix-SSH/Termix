@@ -39,6 +39,22 @@ export interface ConfirmOptions {
   cancelLabel?: string;
   /** Red confirm button. Defaults to true, since most confirms delete. */
   destructive?: boolean;
+  /**
+   * A checkbox under the description, like "Delete permanently". onChange
+   * hears every change, so read its last value once the answer is yes.
+   * Termix 26.11.3; older versions draw no checkbox.
+   */
+  checkbox?: ConfirmCheckbox;
+}
+
+export interface ConfirmCheckbox {
+  label: string;
+  checked?: boolean;
+  onChange?: (checked: boolean) => void;
+  /** Used instead of the description while it is ticked. */
+  checkedDescription?: React.ReactNode;
+  /** Used instead of the confirm label while it is ticked. */
+  checkedConfirmLabel?: string;
 }
 
 interface PendingConfirm extends ConfirmOptions {
@@ -234,6 +250,9 @@ function ConfirmCard({
   const confirmRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
   const destructive = options.destructive ?? true;
+  const box = options.checkbox;
+  const [checked, setChecked] = useState(box?.checked === true);
+  const boxId = useId();
   const settleRef = useRef(onSettle);
   settleRef.current = onSettle;
 
@@ -265,7 +284,11 @@ function ConfirmCard({
       labelledBy={titleId}
       title={options.title}
       titleId={titleId}
-      description={options.description}
+      description={
+        checked && box?.checkedDescription !== undefined
+          ? box.checkedDescription
+          : options.description
+      }
       tone={destructive ? "destructive" : "default"}
       onCancel={() => onSettle(false)}
       actions={
@@ -285,7 +308,8 @@ function ConfirmCard({
               destructive ? PROMPT_DESTRUCTIVE_BUTTON : PROMPT_PRIMARY_BUTTON
             }
           >
-            {options.confirmLabel ??
+            {(checked && box?.checkedConfirmLabel) ||
+              options.confirmLabel ||
               (destructive ? t("common.delete") : t("common.confirm"))}
             <span aria-hidden className="ml-1.5 opacity-60">
               ↵
@@ -293,7 +317,26 @@ function ConfirmCard({
           </button>
         </>
       }
-    />
+    >
+      {box && (
+        <label
+          htmlFor={boxId}
+          className="flex cursor-pointer items-center gap-2 text-sm"
+        >
+          <input
+            id={boxId}
+            type="checkbox"
+            className="size-4"
+            checked={checked}
+            onChange={(e) => {
+              setChecked(e.target.checked);
+              box.onChange?.(e.target.checked);
+            }}
+          />
+          {box.label}
+        </label>
+      )}
+    </PanePrompt>
   );
 }
 

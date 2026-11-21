@@ -3,6 +3,7 @@ import { getErrorMessage } from "../utils/error-message.js";
 import { parseSshOptions } from "./ssh-options.js";
 import { findUsableCredential } from "./usable-credential.js";
 import { resolveExternalSecretRefs } from "./external-secrets.js";
+import { ConnectPolicyError } from "./connect-policy.js";
 import {
   createCurrentHostResolutionRepository,
   createCurrentUserRepository,
@@ -215,10 +216,22 @@ export async function resolveHostById(
   // "op://..." references become real secrets here, once, for everyone
   // downstream. They resolve in the context of whoever owns the secret
   // fields: the owner for their own host, the recipient for an override.
-  await resolveExternalSecretRefs(
-    host as Record<string, unknown>,
-    sharedAuthResolution === "recipient-override" ? userId : ownerId,
-  );
+  const secretsUserId =
+    sharedAuthResolution === "recipient-override" ? userId : ownerId;
+  try {
+    await resolveExternalSecretRefs(
+      host as Record<string, unknown>,
+      secretsUserId,
+    );
+  } catch (error) {
+    // Someone else's unlock prompt is no use to the person connecting.
+    if (error instanceof ConnectPolicyError && secretsUserId !== userId) {
+      throw new Error(
+        "This host's login comes from a vault its owner has to unlock first",
+      );
+    }
+    throw error;
+  }
 
   // Keyboard-interactive handlers run synchronously mid-handshake and can
   // only read their host settings from here.

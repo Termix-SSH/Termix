@@ -149,6 +149,18 @@ describe("signed plugins gate off", () => {
     ).toBe(true);
   });
 
+  it.skipIf(process.platform === "win32")(
+    "opens a private plugins folder so each plugin's user can reach its code",
+    async () => {
+      const { userDir } = setup();
+      // A first install makes the folder under core's private umask.
+      fs.chmodSync(userDir, 0o700);
+      await writeArtifact(userDir, "signed-one", "valid");
+      expect(await loadedIds()).toContain("signed-one");
+      expect(fs.statSync(userDir).mode & 0o777).toBe(0o755);
+    },
+  );
+
   it("still blocks an archive whose .sig does not verify", async () => {
     const { userDir } = setup();
     await writeArtifact(userDir, "forged-one", "wrong-key");

@@ -85,6 +85,7 @@ import {
   updateHoldMinutes,
 } from "../../auth/admin-holds.js";
 import { verifyPasswordLogin } from "../../auth/builtin-login-methods.js";
+import { logoutRedirectFor } from "../../auth/logout-redirect.js";
 import { respondWithLogin, sendLoginError } from "../../auth/login-pipeline.js";
 import {
   isNativeAppRequest,
@@ -597,7 +598,7 @@ router.post("/login", async (req, res) => {
  *       - Users
  *     responses:
  *       200:
- *         description: Logged out successfully.
+ *         description: Logged out successfully. redirectUrl is set when the login method wants the browser sent on, such as to the identity provider's sign out page.
  *       500:
  *         description: Logout failed.
  */
@@ -605,9 +606,11 @@ router.post("/logout", authenticateJWT, async (req, res) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.userId;
+    let redirectUrl: string | null = null;
 
     if (userId) {
       const sessionId = authReq.sessionId;
+      redirectUrl = await logoutRedirectFor(sessionId, req);
 
       await authManager.logoutUser(userId, sessionId);
       clearStepUp(userId);
@@ -623,7 +626,11 @@ router.post("/logout", authenticateJWT, async (req, res) => {
       res,
       "jwt",
       authManager.getClearCookieOptions(req),
-    ).json({ success: true, message: "Logged out successfully" });
+    ).json({
+      success: true,
+      message: "Logged out successfully",
+      ...(redirectUrl ? { redirectUrl } : {}),
+    });
   } catch (err) {
     authLogger.error("Logout failed", err);
     return res.status(500).json({ error: "Logout failed" });

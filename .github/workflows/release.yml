@@ -526,8 +526,10 @@ jobs:
 
       - name: Open and squash-merge PR to main
         id: merge
+        timeout-minutes: 180
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
+          REVIEWER: ${{ github.triggering_actor }}
         run: |
           TITLE="v$VERSION"
 
@@ -548,6 +550,25 @@ jobs:
               --title "$TITLE" --body-file PR_BODY.md \
               | grep -oE '[0-9]+$')
           fi
+
+          # Wait for a person to approve the gated commit before it reaches main.
+          gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --add-reviewer "$REVIEWER" || true
+          PR_URL="https://github.com/$GITHUB_REPOSITORY/pull/$PR_NUMBER"
+          echo "Waiting for approval: $PR_URL" | tee -a "$GITHUB_STEP_SUMMARY"
+          while :; do
+            STATES=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/reviews" \
+              --jq ".[] | select(.user.type != \"Bot\" and .commit_id == \"$GATED_SHA\") | \"\(.user.login) \(.state)\"" \
+              | awk '$2 != "COMMENTED" { last[$1] = $2 } END { for (u in last) print last[u] }')
+            if echo "$STATES" | grep -qx "CHANGES_REQUESTED"; then
+              echo "Changes were requested on $PR_URL."
+              exit 1
+            fi
+            if echo "$STATES" | grep -qx "APPROVED"; then
+              echo "Approved."
+              break
+            fi
+            sleep 30
+          done
 
           # Only the commit the release gate passed may reach main.
           gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --admin --match-head-commit "$GATED_SHA"
@@ -577,6 +598,8 @@ jobs:
       build_type: ${{ needs.prep.outputs.channel == 'Beta' && 'Beta' || 'Production' }}
       dry_run: ${{ needs.prep.outputs.mode == 'Dry run' }}
       source_ref: ${{ needs.merge-to-main.outputs.build_ref || needs.translate.outputs.sha || needs.prep.outputs.sha }}
+      # latest and beta move in docker-promote, once the release is published.
+      floating: false
     secrets:
       GHCR_LUKEGUS_TOKEN: ${{ secrets.GHCR_LUKEGUS_TOKEN }}
       DOCKERHUB_BUGATTIGUY527_TOKEN: ${{ secrets.DOCKERHUB_BUGATTIGUY527_TOKEN }}
@@ -1050,6 +1073,20 @@ jobs:
             exit 1
           fi
           echo "Published $TAG."
+
+  docker-promote:
+    needs: [prep, publish]
+    if: ${{ always() && needs.publish.result == 'success' && needs.prep.outputs.mode != 'Dry run' }}
+    uses: ./.github/workflows/docker-promote.yml
+    permissions:
+      contents: read
+    with:
+      version: ${{ needs.prep.outputs.version }}
+      build_type: ${{ needs.prep.outputs.channel == 'Beta' && 'Beta' || 'Production' }}
+    secrets:
+      GHCR_LUKEGUS_TOKEN: ${{ secrets.GHCR_LUKEGUS_TOKEN }}
+      DOCKERHUB_BUGATTIGUY527_TOKEN: ${{ secrets.DOCKERHUB_BUGATTIGUY527_TOKEN }}
+      DOCKERHUB_TERMIXSSH_TOKEN: ${{ secrets.DOCKERHUB_TERMIXSSH_TOKEN }}
 
   flatpak-deploy:
     needs: [prep, publish]

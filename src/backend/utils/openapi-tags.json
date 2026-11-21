@@ -20,6 +20,10 @@
   { "name": "Plugins", "description": "Installing and managing plugins" },
   { "name": "Sync", "description": "Desktop sync with a linked server" },
   { "name": "Database", "description": "Database export, import and health" },
+  {
+    "name": "Diagnostics",
+    "description": "Diagnostics reports and server logs"
+  },
   { "name": "General", "description": "Server info and settings" },
   { "name": "Open Tabs", "description": "Saved open tabs" },
   { "name": "User Preferences", "description": "Per-user preferences" },

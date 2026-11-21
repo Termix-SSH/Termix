@@ -70,13 +70,7 @@ const COMMON = [
 ];
 
 // Update files the desktop updater reads, named by channel.
-const UPDATE_FILES = [
-  ".yml",
-  "-linux.yml",
-  "-linux-arm64.yml",
-  "-linux-arm.yml",
-  "-mac.yml",
-];
+const UPDATE_FILES = [".yml", "-linux.yml", "-linux-arm64.yml", "-mac.yml"];
 
 // Betas never go to the App Store or Homebrew.
 const STABLE_ONLY = ["termix_macos_universal_mas.pkg", "termix.rb"];

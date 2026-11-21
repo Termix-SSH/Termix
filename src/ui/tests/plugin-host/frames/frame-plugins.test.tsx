@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ComponentType } from "react";
 import type { PluginSummary } from "@/api/plugins-api";
 
 vi.mock("@/main-axios", async (importOriginal) => ({
@@ -15,7 +16,11 @@ vi.mock("@/main-axios", async (importOriginal) => ({
   },
 }));
 
-import { slotFit, startFramedPlugin } from "@/plugin-host/frames/frame-plugins";
+import {
+  slotFit,
+  startFramedPlugin,
+  VALUE_GRACE_MS,
+} from "@/plugin-host/frames/frame-plugins";
 import { resetFrameConnections } from "@/plugin-host/frames/frame-connection";
 import { resetRegistrationCache } from "@/plugin-host/frames/registration-cache";
 import { getFrameValue } from "@/plugin-host/frames/frame-values";
@@ -24,6 +29,7 @@ import {
   setPluginSummaries,
 } from "@/plugin-host/plugin-store";
 import { getPanel, resetPanels } from "@/shell/panel-registry";
+import { getRegisteredDashboardCard } from "@/dashboard/dashboard-cards-registry";
 import {
   invokeAction,
   registerAction,
@@ -37,7 +43,7 @@ import {
 } from "@/sidebar/HostManagerTabs";
 import { FramePort } from "@/plugin-frame/rpc";
 import { FRAME_CHANNEL, type FrameMessage } from "@/plugin-frame/protocol";
-import { act, render } from "@testing-library/react";
+import { act, render, waitFor } from "@testing-library/react";
 import { DataSlot, HostDataItems } from "@/components/data-view/DataSlot";
 import { setPermissionsForTesting } from "@/hooks/use-permissions";
 import { dataRowsFor, resetDataRows } from "@/plugin-host/frames/data-rows";
@@ -47,6 +53,10 @@ import {
   resetDataWatches,
 } from "@/plugin-host/frames/data-watches";
 import { dataReporter } from "@/components/data-view/data-reporter";
+import {
+  HostTreeChildren,
+  resetHostTreeChildren,
+} from "@/shell/host-tree-children";
 
 const summary = {
   id: "gizmo",
@@ -132,6 +142,38 @@ describe("startFramedPlugin", () => {
     expect(document.querySelector('iframe[data-plugin-frame="gizmo"]')).toBe(
       null,
     );
+  });
+
+  it("draws a dashboard card see-through, so the layout's card color shows", async () => {
+    const started = startFramedPlugin({
+      ...summary,
+      contributes: {
+        ...summary.contributes,
+        dashboardCards: [{ id: "gizmo.card" }],
+      },
+    } as unknown as PluginSummary);
+    const { port } = await fakeFrame(() => undefined);
+    port.emit("register", {
+      rid: "dashboardCard#1",
+      kind: "dashboardCard",
+      data: {
+        id: "gizmo.card",
+        labelKey: "card",
+        component: { $component: "card:gizmo" },
+      },
+    });
+    port.emit("ready");
+    const plugin = await started;
+    const Card = getRegisteredDashboardCard("gizmo.card")!
+      .component as unknown as ComponentType;
+    const view = render(<Card />);
+    await act(flush);
+    const src = view.container.querySelector("iframe")!.getAttribute("src")!;
+    expect(src).toContain("bg=none");
+    // Its fields stay on the page colors, not the sidebar's.
+    expect(src).not.toContain("on=sidebar");
+    view.unmount();
+    plugin.dispose();
   });
 
   it("replays what the frame registered and removes it again", async () => {
@@ -320,6 +362,28 @@ describe("startFramedPlugin", () => {
 describe("data values from a frame", () => {
   afterEach(() => resetDataRows());
 
+  it("keeps values on screen while a fresh frame loads its own data", async () => {
+    const started = startFramedPlugin(summary);
+    const { port } = await fakeFrame(() => undefined);
+    port.emit("value", { key: "row:held", value: "cached" });
+    await flush();
+    port.emit("ready");
+    const plugin = await started;
+    expect(getFrameValue("gizmo", "row:held")).toBe("cached");
+
+    port.emit("value", { key: "row:held", value: "empty" });
+    port.emit("value", { key: "row:held", value: "real" });
+    port.emit("value", { key: "row:new", value: "shown" });
+    await flush();
+    expect(getFrameValue("gizmo", "row:held")).toBe("cached");
+    expect(getFrameValue("gizmo", "row:new")).toBe("shown");
+
+    await new Promise((resolve) => setTimeout(resolve, VALUE_GRACE_MS + 50));
+    // Applied even though this cold frame stopped meanwhile.
+    expect(getFrameValue("gizmo", "row:held")).toBe("real");
+    plugin.dispose();
+  });
+
   it("tells the frame which rows are shown and draws the values it sends", async () => {
     const states: Record<string, unknown>[] = [];
     const started = startFramedPlugin(summary);
@@ -401,6 +465,72 @@ describe("data values from a frame", () => {
         .querySelector("[data-data-dot='bad']")
         ?.getAttribute("title"),
     ).toBe("down");
+
+    view.unmount();
+    await act(flush);
+    expect(dataRowsFor("gizmo")).toEqual({});
+    plugin.dispose();
+  });
+});
+
+describe("host tree children from a frame", () => {
+  afterEach(() => {
+    resetDataRows();
+    resetHostTreeChildren();
+  });
+
+  it("asks only for a host that is shown and lists what the frame sends", async () => {
+    const started = startFramedPlugin(summary);
+    const { port } = await fakeFrame(() => undefined);
+    const valueKey = "tree:containers:children";
+    port.emit("register", {
+      rid: "hostTreeChildren#1",
+      kind: "hostTreeChildren",
+      data: { id: "containers", when: () => true, valueKey },
+    });
+    port.emit("ready");
+    const plugin = await started;
+    expect(dataRowsFor("gizmo")).toEqual({});
+
+    const host = {
+      id: 3,
+      name: "h",
+      ip: "1.2.3.4",
+      password: "hunter2",
+      pluginSettings: { gizmo: {} },
+    };
+    const view = render(
+      <HostTreeChildren host={host as never}>
+        {(groups) =>
+          groups
+            .flatMap((group) => group.result?.items ?? [])
+            .map((item) => item.label)
+            .join(",")
+        }
+      </HostTreeChildren>,
+    );
+    await act(flush);
+    await waitFor(() =>
+      expect(dataRowsFor("gizmo")).toEqual({
+        [valueKey]: { "3": { hostId: 3 } },
+      }),
+    );
+
+    await act(async () => {
+      port.emit("value", {
+        key: valueKey,
+        value: {
+          "3": {
+            items: [
+              { id: "a", label: "web", tabType: "gizmo" },
+              { id: "b", label: "db", tabType: "gizmo" },
+            ],
+          },
+        },
+      });
+      await flush();
+    });
+    await waitFor(() => expect(view.container.textContent).toBe("web,db"));
 
     view.unmount();
     await act(flush);

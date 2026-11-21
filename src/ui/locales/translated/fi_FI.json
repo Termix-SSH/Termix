@@ -217,7 +217,18 @@
     "pluginsLoadFailed": "Lisäosien listaa ei voitu ladata. Voit valita lisäosat myöhemmin Lisäosat-välilehdeltä.",
     "securityTitle": "Turvaa tilisi",
     "securityIntro": "Lisää passkey tai todennussovellus tilillesi. Voit tehdä tämän myös myöhemmin Asetukset-kohtaan, kohdassa Turvallisuus.",
-    "pluginsDocsLink": "Lue lisää jokaisesta"
+    "pluginsDocsLink": "Lue lisää jokaisesta",
+    "layoutTitle": "Valitse asettelu",
+    "layoutIntro": "Asettelu määrittää sovelluksen yleisen ulkoasun: valikot, sivupalkki ja välilehdet. Napsauta asettelua ottaaksesi sen käyttöön. Muutos tapahtuu välittömästi.",
+    "layoutInstalled": "Asennettu",
+    "layoutMore": "Lisää asetteluja",
+    "layoutNoMore": "Muuta asetteluja ei ole tällä hetkellä saatavilla.",
+    "layoutDefault": "Oletus",
+    "layoutInstall": "Asenna",
+    "layoutTurnOn": "Ota käyttöön",
+    "layoutVideo": "Katso video",
+    "layoutChangeLater": "Voit muuttaa asettelua milloin tahansa Asetukset-kohtaan Ulkonäkö. Pyydä ylläpitäjää asentamaan lisää asetteluja, jos haluat niitä.",
+    "layoutChangeLaterAdmin": "Voit muuttaa asettelua milloin tahansa Asetukset-kohtaan Ulkonäkö. Lisää asetteluja voidaan asentaa myöhemmin Lisäosat-välilehdeltä."
   },
   "desktopTray": {
     "noticeTitle": "Termix on edelleen käynnissä",
@@ -836,7 +847,12 @@
     "editorUpdate": "Päivitä isäntäkone",
     "editorAdd": "Lisää isäntäkone",
     "speedSearch": "Hae isäntäkoneita. Nuolinäppäimet valintaan, Enter yhteyteen, Esc sulkemiseen",
-    "speedSearchList": "Isäntäkoneiden lista. Kirjoita tai paina / hakuun."
+    "speedSearchList": "Isäntäkoneiden lista. Kirjoita tai paina / hakuun.",
+    "openFromLink": {
+      "title": "Avataanko {{name}}?",
+      "description": "Linkki pyysi Termixiä yhdistämään tähän isäntään.",
+      "confirm": "Yhdistä"
+    }
   },
   "splitScreen": {
     "title": "Jaettu näyttö",
@@ -1375,7 +1391,7 @@
         "running": "Käynnissä",
         "disabled": "Poistettu käytöstä",
         "failed": "Pysähtyi odottamatta",
-        "blocked": "Odottaa toista lisäosaa",
+        "blocked": "Ei voi käynnistää",
         "server": "Käynnistyy palvelimellasi",
         "safeMode": "Pois käytöstä turvatoiminnossa"
       },
@@ -1461,6 +1477,8 @@
         "updated": "{{name}} päivitetty versioon {{version}}",
         "updatedMany_one": "{{count}} lisäosa päivitetty",
         "updatedMany_other": "{{count}} lisäosaa päivitetty",
+        "needsReview_one": "1 lisäosa pyytää uusia käyttöoikeuksia. Tarkista se päivittääksesi.",
+        "needsReview_other": "{{count}} lisäosaa pyytää uusia käyttöoikeuksia. Tarkista jokainen päivittääksesi.",
         "uninstalled": "{{name}} poistettu",
         "dataDeleted": "{{name}} -lisäosan tiedot poistettu",
         "failedToStart": "{{name}}:ää ei voitu käynnistää. Avaa se nähdäksesi syyn.",
@@ -1607,7 +1625,13 @@
         "unreachable": "Sen lukeminen epäonnistui: {{error}}",
         "filter": "Rekisteri",
         "allRegistries": "Kaikki rekisterit",
-        "browseHint": "Ota yhteisön lisäosat käyttöön tai lisää oma rekisterisi Rekisterit-välilehdellä."
+        "browseHint": "Ota yhteisön lisäosat käyttöön tai lisää oma rekisterisi Rekisterit-välilehdellä.",
+        "looksName": "Yhteisön asettelut ja teemat",
+        "looksHint": "Mahdollistaa Termixin ulkopuolisten asettelujen ja teemojen toiminnan hiekkalaatikon ulkopuolella, kuten virallisten. Asettelu piirtää koko sovelluksen, joten se näkee ja voi tehdä kaiken, mitä sinäkin. Asenna vain luottamasi. Lataa sivu uudelleen tämän muutoksen jälkeen.",
+        "looksConfirmTitle": "Sallitaanko yhteisön asettelujen toiminta hiekkalaatikon ulkopuolella?",
+        "looksConfirmBody": "Yhteisön asettelu tai teema toimii sivulla täydellisellä pääsyoikeudella Termixiin kirjautuneena käyttäjänä. Tämä voi olla riskialtista. Ota tämä käyttöön vain, jos luotat asentamiisi asetteluihin ja teemoihin.",
+        "looksConfirm": "Ota käyttöön",
+        "looksSaved": "Tallennettu. Lataa sivu uudelleen voimaan saattamiseksi."
       },
       "upToDate": "Kaikki on ajan tasalla.",
       "lastChecked": "Viimeksi tarkistettu {{time}}",
@@ -1704,9 +1728,14 @@
     "firstLoad": {
       "title": "Lisäosien valmistelu",
       "progress": "{{done}} / {{total}}",
-      "hint": "Tämä tapahtuu vain ensimmäisen kerran. Seuraavalla kerralla Termix avautuu heti.",
+      "hint": "Lisäosat käynnistyvät ensimmäistä kertaa. Tämän jälkeen Termix avautuu välittömästi.",
       "skip": "Jatka"
-    }
+    },
+    "framesBlocked": "Lisäosat eivät voi ladata tiedostojaan. Termixin edessä oleva kirjautumisproxy estää todennäköisesti ne.",
+    "framesBlockedHelp": "Korjausohjeet",
+    "framesFailed_one": "{{names}} ei voinut ladata, joten sen osat on piilotettu",
+    "framesFailed_other": "{{count}} lisäosaa ei voinut ladata, joten niiden osat on piilotettu: {{names}}",
+    "framesFailedReload": "Lataa uudelleen"
   },
   "settings": {
     "secretSet": "Asetettu",
@@ -1806,5 +1835,78 @@
     },
     "reset": "Palauta",
     "done": "Valmis"
+  },
+  "diagnostics": {
+    "title": "Vianmääritys",
+    "makeReport": "Luo vianmääritysraportti",
+    "slowBoot": "Kestääkö kauan? Luo vianmääritysraportti",
+    "troubleSigningIn": "Ongelmia kirjautumisessa? Luo vianmääritysraportti",
+    "reportTab": "Raportti",
+    "logsTab": "Palvelimen lokit",
+    "intro": "Tämä luo yhden tiedoston, joka sisältää Termixin tarvitsemat tiedot ongelman löytämiseksi: virheet, lokit, lisäosien tilat ja pyyntöjen reitin palvelimelle. Lataa se ja liitä se GitHub-ongelmaraporttiin tai lähetä Discordissa.",
+    "notAdmin": "Palvelimen lokit ja palvelimen tiedot vaativat ylläpitäjän oikeudet. Pyydä ylläpitäjääsi luomaan raportti, jos ongelma on palvelimella.",
+    "signedOut": "Et ole kirjautunut sisään, joten mukaan otetaan vain selaimen osa.",
+    "whatHappened": "Mitä tapahtui",
+    "whatHappenedHint": "Valinnainen. Mitä teit ja mikä meni pieleen?",
+    "include": "Sisällytä",
+    "adminOnly": "Vaatii ylläpitäjän",
+    "privacy": "Yksityisyys",
+    "mask": "Piilota nimet ja osoitteet",
+    "maskHint": "IP-osoitteet, isäntien nimet, käyttäjänimet ja sähköpostiosoitteet muutetaan muotoon isäntä-1, käyttäjä-1 jne. Salasanat, avaimet ja tunnisteet poistetaan aina.",
+    "domText": "Sisällytä sivun teksti",
+    "domTextHint": "Lisää näytön tekstin sivun asettelun mukaan. Oletuksena pois päältä, koska se voi paljastaa tietojasi.",
+    "warnOnly": "Vain palvelimen lokin varoitukset ja virheet",
+    "warnOnlyHint": "Pienentää tiedoston kokoa.",
+    "focus": "Lisäosa",
+    "focusHint": "Näyttää tämän lisäosan ensimmäisenä ja luo ongelmaraportin sen arkistoon.",
+    "allPlugins": "Kaikki lisäosat",
+    "findings": "Tarkastusten löytämät",
+    "preview": "Mitä lähetetään",
+    "previewCut": "(Esikatselu päättyy tähän. Tiedosto sisältää kaiken.)",
+    "cut": "Tiedosto oli yli 5 Mt, joten vanhimmat lokirivit leikattiin pois.",
+    "footerHint": "Tarkista esikatselu ennen lähettämistä.",
+    "copy": "Kopioi",
+    "copied": "Raportti kopioitu",
+    "copyFailed": "Raporttia ei voitu kopioida",
+    "download": "Lataa",
+    "downloaded": "Raportti ladattu",
+    "openIssue": "Avaa GitHub-ongelmaraportti",
+    "logsSearch": "Hae lokeista",
+    "logsLevel": "Taso",
+    "logsAll": "Kaikki tasot",
+    "logsWarn": "Varoitukset ja virheet",
+    "logsError": "Virheet",
+    "logsPlugin": "Lisäosa",
+    "logsCount": "{{count}} riviä",
+    "logsFailed": "Lokien lataaminen epäonnistui",
+    "logsPause": "Keskeytä",
+    "logsResume": "Jatka",
+    "logsEmpty": "Lokirivejä ei vielä ole.",
+    "parts": {
+      "server": "Palvelin",
+      "plugins": "Lisäosat",
+      "sections": "Lisäosien tiedot",
+      "logs": "Palvelimen lokit",
+      "request": "Yhteys",
+      "probes": "Yhteydentestit",
+      "errors": "Selaimen virheet",
+      "console": "Selaimen konsoli",
+      "network": "Verkko",
+      "page": "Selain ja ikkuna",
+      "dom": "Sivun asettelu"
+    },
+    "partHints": {
+      "server": "Versio, tietokanta, SSL ja asetukset",
+      "plugins": "Versiot ja tilat palvelimella ja selaimessa",
+      "sections": "Lisäosat lisäävät lisätietoja",
+      "logs": "Palvelimen lokit käynnistyksestä alkaen ja viimeisimmät rivit",
+      "request": "Otsikkokentät, jotka osoittavat välityspalvelimen Termixin edessä",
+      "probes": "Testit, jotka varmistavat Termixin ja lisäosien latautumisen",
+      "errors": "Käsittämättömät virheet ja estetyt lataukset",
+      "console": "Viimeisimmät konsolirivit sivulta ja lisäosista",
+      "network": "Viimeisimmät pyynnöt ja niiden tilat",
+      "page": "Selain, näytön koko ja tallennusavaimet",
+      "dom": "Sivun asettelu ilman tekstiä"
+    }
   }
 }

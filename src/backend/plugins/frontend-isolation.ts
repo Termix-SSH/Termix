@@ -9,6 +9,7 @@ import {
   type PluginManifest,
 } from "@termix-ssh/plugin-sdk/manifest";
 import { isOfficialPlugin } from "./isolation.js";
+import { communityLooksAllowed } from "./community-looks.js";
 
 export type FrontendIsolation = "frame" | "page";
 
@@ -22,6 +23,9 @@ export const SHELL_PART_CAPABILITIES = [
   // session. This plugin can issue sessions on its backend anyway.
   "sync:provide",
 ];
+
+/** Looks an admin may let community plugins draw in the page. */
+const LOOK_CAPABILITIES = ["ui:layout", "ui:theme"];
 
 export function frontendIsolation(plugin: {
   manifest: Pick<PluginManifest, "engine" | "capabilities">;
@@ -40,6 +44,20 @@ export function frontendIsolation(plugin: {
       source: plugin.source ?? "",
       signedTier: plugin.signedTier,
     })
+  ) {
+    return "page";
+  }
+  // A community layout or theme, when an admin allowed them. Only plain
+  // looks: one that also asks for another shell part stays framed.
+  const capabilities = plugin.manifest.capabilities ?? [];
+  if (
+    communityLooksAllowed() &&
+    capabilities.some((capability) => LOOK_CAPABILITIES.includes(capability)) &&
+    !capabilities.some(
+      (capability) =>
+        SHELL_PART_CAPABILITIES.includes(capability) &&
+        !LOOK_CAPABILITIES.includes(capability),
+    )
   ) {
     return "page";
   }

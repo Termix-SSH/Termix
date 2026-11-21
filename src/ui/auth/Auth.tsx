@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+import { ReportLink } from "@/diagnostics/ReportLink";
 import {
   desktopParentTarget,
   isEmbeddedAuthFrame,
@@ -159,8 +160,12 @@ export function storeAuth(username: string) {
 }
 
 /** A browser login the mobile app asked for goes back to the app. */
-async function handOffLogin(token?: string | null): Promise<boolean> {
+async function handOffLogin(
+  token?: string | null,
+  appCode?: string | null,
+): Promise<boolean> {
   if (!pendingAppReturn() || isEmbeddedAuthFrame()) return false;
+  if (appCode) return handOffToApp({ code: appCode });
   const value = token || (await getCurrentToken());
   return handOffToApp(value ? { token: value } : { error: "no_token" });
 }
@@ -389,7 +394,7 @@ export function Auth({ onLogin }: AuthProps) {
     requestTrustedProxyLogin()
       .then(async (result) => {
         if (!result.enabled || !result.success) return;
-        if (await handOffLogin()) return;
+        if (await handOffLogin(result.token, result.app_code)) return;
         storeAuth(result.username || "");
         onLogin(
           result.username || "",
@@ -838,7 +843,7 @@ export function Auth({ onLogin }: AuthProps) {
       setWebviewAuthSuccess(true);
       return;
     }
-    if (await handOffLogin(res?.token)) return;
+    if (await handOffLogin(res?.token, res?.app_code)) return;
     const meRes = await getUserInfo();
     const name =
       meRes.username || res.username || options.fallbackUsername || "";
@@ -1107,9 +1112,11 @@ export function Auth({ onLogin }: AuthProps) {
             throw new Error(result.error || t("errors.failedExternalLogin"));
           }
         }
+        const appReturn = isEmbeddedAuthFrame() ? null : pendingAppReturn();
         const authUrl = await startLoginRedirect(methodId, {
           instanceId,
           rememberMe,
+          ...(appReturn ? { appCallbackUrl: appReturn } : {}),
         });
         if (!authUrl || authUrl === "undefined")
           throw new Error(t("errors.invalidAuthUrl"));
@@ -1849,6 +1856,9 @@ export function Auth({ onLogin }: AuthProps) {
                   onChange={handleLanguageChange}
                   className="pt-1"
                 />
+                <div className="flex justify-center">
+                  <ReportLink label={t("diagnostics.troubleSigningIn")} />
+                </div>
               </div>
             )}
           </div>

@@ -273,6 +273,9 @@ export async function initializePlugins(
   const { loadStoredRevocations } = await import("./revocations.js");
   await loadStoredRevocations();
 
+  const { loadCommunityLooks } = await import("./community-looks.js");
+  await loadCommunityLooks();
+
   const loaded = await pluginLoader.loadAll();
   if (loaded.length === 0) {
     startupDone = true;
@@ -329,6 +332,9 @@ export async function initializePlugins(
     startupDone = true;
   }
   await persistRuntimeState(loaded);
+
+  const { updateStuckSyncProvider } = await import("./manage.js");
+  void updateStuckSyncProvider().catch(() => {});
 
   if (result.blocked.size > 0 || result.failed.size > 0) {
     pluginLogger.warn(

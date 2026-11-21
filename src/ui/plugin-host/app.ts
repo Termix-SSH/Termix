@@ -1,4 +1,6 @@
 import { useEffect, type ComponentType } from "react";
+import { openDiagnostics } from "@/diagnostics/open-diagnostics";
+import { onDeepLink, startDeepLinks } from "@/lib/deep-links";
 import { dataReporter } from "@/components/data-view/data-reporter";
 import type { DataShape } from "@/components/data-view/data-value";
 import type { Tab } from "@/types/ui-types";
@@ -48,6 +50,10 @@ import {
   registerHostSection,
   type HostSectionRenderProps,
 } from "@/shell/host-sections";
+import {
+  hostTreeChildrenReporter,
+  registerHostTreeChildren,
+} from "@/shell/host-tree-children";
 import {
   registerDashboardCard,
   type DashboardCardRenderProps,
@@ -494,6 +500,25 @@ export function createPluginApp(
       );
     },
 
+    registerHostTreeChildren(provider) {
+      const useChildren = provider.useChildren as (host: unknown) => unknown;
+      return track(
+        registerHostTreeChildren({
+          id: provider.id,
+          pluginId,
+          titleKey: provider.titleKey ? key(provider.titleKey) : undefined,
+          order: provider.order,
+          when: hostCallback(provider.when) as never,
+          reporter: scoped(
+            hostTreeChildrenReporter(
+              (host) =>
+                useChildren(scopeHostFields({ host }, pluginId).host) as never,
+            ),
+          ) as never,
+        }),
+      );
+    },
+
     registerHostContextMenuItem(item) {
       return track(
         registerHostContextMenuItem({
@@ -628,6 +653,7 @@ export function createPluginApp(
             ? resolvePluginPermission(pluginId, options.permission)
             : undefined,
           pluginId,
+          private: options.private === true,
         }),
       );
     },
@@ -813,6 +839,21 @@ export function createPluginApp(
     confirm: (options) => shell.confirm!(options),
 
     stepUp: () => requestStepUp(),
+
+    openDiagnostics: (options) =>
+      openDiagnostics({
+        pluginId:
+          options && "pluginId" in options
+            ? (options.pluginId ?? undefined)
+            : pluginId,
+      }),
+
+    deepLinks: {
+      onOpen: (listener) => {
+        startDeepLinks();
+        return track(onDeepLink(listener));
+      },
+    },
 
     session: {
       signOut: async () => {

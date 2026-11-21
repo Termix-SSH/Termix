@@ -35,6 +35,9 @@ export type ConnectPolicyResult =
 export class ConnectPolicyError extends Error {
   readonly status = 403;
   readonly code: "access-denied" | "access-required";
+  /** Copies of the result's tab, which travel to plugin processes. */
+  readonly requestTab?: string;
+  readonly requestKind?: string;
   constructor(
     readonly result: Exclude<ConnectPolicyResult, { decision: "allow" }>,
   ) {
@@ -42,6 +45,8 @@ export class ConnectPolicyError extends Error {
     this.name = "ConnectPolicyError";
     this.code =
       result.decision === "request" ? "access-required" : "access-denied";
+    if (result.requestTab) this.requestTab = result.requestTab;
+    if (result.requestKind) this.requestKind = result.requestKind;
   }
 
   /** The body routes send back, so a client can offer the request tab. */
@@ -82,6 +87,45 @@ export function clearConnectPolicies(): void {
 
 export function hasConnectPolicies(): boolean {
   return providers.size > 0;
+}
+
+/**
+ * The hosts that status checks may contact: those every probe provider
+ * allows. A provider that throws denies, but only for providers that asked
+ * for probes, so a broken policy can't hide every host.
+ */
+export async function probeAllowedHostIds(
+  userId: string,
+  hostIds: number[],
+): Promise<Set<number>> {
+  const probing = [...providers.values()].filter(
+    (entry) => entry.provider.probes === true,
+  );
+  if (probing.length === 0) return new Set(hostIds);
+  const allowed = new Set<number>();
+  for (const hostId of hostIds) {
+    let ok = true;
+    for (const entry of probing) {
+      try {
+        const answer = await entry.provider.check({
+          userId,
+          hostId,
+          protocol: "ssh",
+          purpose: "status",
+          profile: "probe",
+          interactive: false,
+          origin: "core",
+          stepUpAt: stepUpAt(userId),
+        });
+        if (answer && answer.decision !== "allow") ok = false;
+      } catch {
+        ok = false;
+      }
+      if (!ok) break;
+    }
+    if (ok) allowed.add(hostId);
+  }
+  return allowed;
 }
 
 const RANK = { allow: 0, request: 1, deny: 2 } as const;

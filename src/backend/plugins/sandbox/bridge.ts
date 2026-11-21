@@ -16,6 +16,7 @@
  *     manifest's sandbox block.
  */
 import { DurableRegistrations } from "./durable.js";
+import { trackConnection } from "../../hosts/open-connections.js";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import type { NextFunction, Request, Response, Router } from "express";
@@ -30,6 +31,7 @@ import {
 import { hasCapability } from "../permissions.js";
 import { HOST_SECRET_FIELDS } from "../ctx-hosts.js";
 import { pluginLogger } from "../../utils/logger.js";
+import { cachedExtraCaCertificates } from "../../utils/extra-ca.js";
 import { Endpoint, StreamPort, type Transport } from "./rpc.js";
 import { SandboxTokenStore, type ActorGrant } from "./tokens.js";
 import { checkPluginSql, type SqlDialect } from "./sql-guard.js";
@@ -201,6 +203,28 @@ const STRIPPED_HEADERS = new Set([
 export function isTermixCredential(header: string): boolean {
   const token = header.replace(/^\s*Bearer\s+/i, "").trim();
   return /^tmx_/i.test(token) || /^eyJ[\w-]*\.[\w-]+\.[\w-]*$/.test(token);
+}
+
+/**
+ * Whether a request body goes to the plugin as a stream. The plugin router
+ * sets req.body to {} even when no parser read the body (multipart, raw), so
+ * a body still unread is streamed rather than sent as that empty object.
+ */
+export function streamsBody(
+  req: {
+    body?: unknown;
+    headers: Record<string, unknown>;
+    readable?: boolean;
+    readableEnded?: boolean;
+  },
+  rawRouter: boolean,
+): boolean {
+  if (!req.readable || req.readableEnded) return false;
+  if (rawRouter || req.body === undefined) return true;
+  return (
+    req.headers["transfer-encoding"] !== undefined ||
+    req.headers["content-length"] !== undefined
+  );
 }
 
 export function safeHeaders(
@@ -419,6 +443,7 @@ export class PluginBridge {
       values,
       manifest: this.manifest,
       dialect: this.dialect,
+      extraCaCertificates: cachedExtraCaCertificates(),
     };
   }
 
@@ -1463,6 +1488,12 @@ export class PluginBridge {
       const port = endpoint.openStream();
       this.track(sock, port);
       joinSshStream(sock, port);
+      // A connect policy can end it: closing the socket ends the plugin's client.
+      const opening = sock;
+      const untrack = trackConnection(plainObject(host).id, () =>
+        opening.destroy(),
+      );
+      opening.once("close", untrack);
       return { via: opened.via, jumpClient, sock: port };
     });
 
@@ -1997,8 +2028,8 @@ export class PluginBridge {
 
     // A body core did not parse (multipart, rawBody routes) is streamed.
     let bodyPort: StreamPort | undefined;
-    const parsed = req.body !== undefined && !this.routerRaw;
-    if (!parsed && req.readable && !req.readableEnded) {
+    const parsed = !streamsBody(req, this.routerRaw);
+    if (!parsed) {
       bodyPort = endpoint.openStream();
       const body = bodyPort;
       pump(req as unknown as NodeReadable, body);

@@ -15,7 +15,8 @@ export interface FrameNetOptions {
   pluginId: string;
   /** Server root as the frame reaches it, like https://host/base. */
   baseUrl: string;
-  token: () => Promise<string>;
+  /** Null on a guest page: the request then goes without one. */
+  token: () => Promise<string | null>;
   /** Sends a core request through the shell. */
   coreRequest: (request: {
     method: string;
@@ -101,7 +102,8 @@ export function createFrameFetch(options: FrameNetOptions): typeof fetch {
 
     if (route.kind === "own-api") {
       const headers = new Headers(request.headers);
-      headers.set("Authorization", `Bearer ${await options.token()}`);
+      const token = await options.token();
+      if (token) headers.set("Authorization", `Bearer ${token}`);
       return options.realFetch(route.url, {
         method: request.method,
         headers,

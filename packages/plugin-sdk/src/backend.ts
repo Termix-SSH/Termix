@@ -1395,7 +1395,8 @@ export interface PluginConnectPolicyInput {
   purpose: string;
   /**
    * SSH profile: terminal, session, stream, forward, background or jump.
-   * "desktop" for remote desktop logins.
+   * "desktop" for remote desktop logins, "probe" for status checks (only for
+   * providers with probes: true).
    */
   profile: string;
   /** True when a person waits on this connect (a prompt channel is open). */
@@ -1432,11 +1433,29 @@ export interface PluginConnectPolicyProvider {
   check: (
     input: PluginConnectPolicyInput,
   ) => PluginConnectPolicyDecision | Promise<PluginConnectPolicyDecision>;
+  /**
+   * Also asked before status checks, with profile "probe": hosts it denies
+   * are left out of ctx.hosts.probeTargets, so nothing contacts them. Off by
+   * default so a policy that denies background work never hides status
+   * dots. Termix 26.11.3.
+   */
+  probes?: boolean;
 }
 
 export interface PluginConnectPolicyApi {
   /** Registers this plugin's policy. Needs hosts:connect-policy. Removed on deactivate. */
   provide: (provider: PluginConnectPolicyProvider) => () => void;
+  /**
+   * Ends every connection core holds open to the host, for every user and
+   * plugin: terminals, file transfers, tunnels and pooled background
+   * connections. Call it right after your answer for the host changes.
+   * One still connecting ends once it is ready. Resolves to how many ended.
+   * Needs hosts:connect-policy. Audited. Termix 26.11.3; check it exists.
+   */
+  disconnect?: (
+    hostId: number,
+    options?: { reason?: string },
+  ) => Promise<number>;
 }
 
 /**
@@ -2543,6 +2562,23 @@ export interface PluginLoginMethod {
     request: PluginLoginRequest,
     instanceId: string | null,
   ) => Promise<PluginVerifiedIdentity>;
+  /**
+   * Where to send the browser after a user signs out of a session this
+   * method made, such as the identity provider's own sign out page. Gets
+   * the `logoutClaims` the login carried and the server's address. Return
+   * null to stay in Termix. Only http and https addresses are used, and the
+   * desktop app ignores it (Termix 26.11.3, SDK 2.11).
+   */
+  logoutRedirect?: (session: PluginLogoutSession) => Promise<string | null>;
+}
+
+/** A session ending by sign out, for PluginLoginMethod.logoutRedirect. */
+export interface PluginLogoutSession {
+  providerId: number | null;
+  sub: string | null;
+  sid: string | null;
+  /** The address Termix is reached at, like https://termix.example.com. */
+  baseUrl: string;
 }
 
 export interface PluginSecondFactor {
@@ -3148,6 +3184,16 @@ export interface PluginCredentials {
     protocol: PluginHostProtocol,
   ) => Promise<PluginProtocolTarget | null>;
   /**
+   * A saved credential's username and password, for a login the plugin
+   * makes itself (a Quick Connect session with no saved host). Only the
+   * acting user's own credentials or ones shared with them; null otherwise.
+   * Never send the result to a browser. Needs credentials:read. Audited.
+   * Termix 26.11.3.
+   */
+  resolveLogin: (
+    credentialId: number,
+  ) => Promise<{ username: string; password: string } | null>;
+  /**
    * Registers this plugin as the resolver for "<scheme>://..." references in
    * a host's secret fields (secret-sources registers "op" for
    * "op://vault/item/field"). Needs auth:provide, like registerSshAuthProvider.
@@ -3157,10 +3203,18 @@ export interface PluginCredentials {
    * and its result is cached briefly by the connect pipeline. A scheme with no
    * registered resolver fails the connect with a message naming the plugin
    * that would provide it.
+   *
+   * `options.unlockTab` names a tab of this plugin where a person unlocks
+   * what the resolver reads, like their own vault. When `resolve` throws an
+   * error whose `code` is "unlock-required" for the person connecting, the
+   * connect stops with an access-required answer pointing at that tab, so
+   * clients offer a Verify button. Termix 26.11.3; older versions ignore it
+   * and show the error.
    */
   registerSecretResolver: (
     scheme: string,
     resolve: (userId: string, reference: string) => Promise<string>,
+    options?: { unlockTab?: string },
   ) => void;
   /**
    * The public key line of an SSH key credential the acting user can see
@@ -3635,6 +3689,29 @@ export interface PluginPlugins {
   list: () => Promise<PluginSummary[]>;
 }
 
+/** A section this plugin adds to the diagnostics report admins make. */
+export interface PluginDiagnosticsSection {
+  /** Heading in the report. Defaults to the plugin id. */
+  title?: string;
+  /**
+   * Plain JSON about the plugin's own state, like open sessions or the last
+   * sync. Called each time an admin builds a report, with 3 seconds to answer.
+   * Core masks secret looking keys and text and refuses more than 64 KB, but
+   * leave out secrets, host addresses and user data yourself.
+   */
+  collect: () => unknown;
+}
+
+/**
+ * The diagnostics report. Only admins read it. Needs no capability. A plugin
+ * that is asleep when the report is made is not asked. Termix 26.11.3; check
+ * that ctx.diagnostics exists on older versions.
+ */
+export interface PluginDiagnostics {
+  /** One section per plugin; a second call replaces the first. */
+  provide: (section: PluginDiagnosticsSection) => () => void;
+}
+
 /** What a handler gets besides its input. */
 export interface PluginOperationContext {
   hostId?: number;
@@ -3841,6 +3918,8 @@ export interface PluginContext {
   readonly system: PluginSystem;
   /** The installed plugins and whether each runs. Needs plugins:read. */
   readonly plugins: PluginPlugins;
+  /** A section in the diagnostics report. Termix 26.11.3. */
+  readonly diagnostics: PluginDiagnostics;
 
   /**
    * Runs `fn` with `userId` as the acting user, for background work that has

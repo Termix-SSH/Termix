@@ -217,7 +217,18 @@
     "pluginsLoadFailed": "無法載入外掛清單。您可以稍後從「外掛」分頁選擇外掛。",
     "securityTitle": "保護您的帳戶",
     "securityIntro": "為您的帳戶新增通行金鑰或驗證器應用程式。您也可以稍後在「設定」的「安全性」中執行此操作。",
-    "pluginsDocsLink": "閱讀各外掛說明"
+    "pluginsDocsLink": "閱讀各外掛說明",
+    "layoutTitle": "選擇版面配置",
+    "layoutIntro": "版面配置決定整個應用程式的佈局：選單、側邊欄和分頁。點擊即可使用，變更會立即生效。",
+    "layoutInstalled": "已安裝",
+    "layoutMore": "更多版面配置",
+    "layoutNoMore": "目前沒有其他可用的版面配置。",
+    "layoutDefault": "預設",
+    "layoutInstall": "安裝",
+    "layoutTurnOn": "啟用",
+    "layoutVideo": "觀看影片",
+    "layoutChangeLater": "您可以隨時在「設定」的「外觀」中變更版面配置。如需安裝更多版面配置，請洽詢管理員。",
+    "layoutChangeLaterAdmin": "您可以隨時在「設定」的「外觀」中變更版面配置。之後可以從「外掛程式」分頁安裝更多版面配置。"
   },
   "desktopTray": {
     "noticeTitle": "Termix 仍在執行",
@@ -824,7 +835,12 @@
     "editorUpdate": "更新主機",
     "editorAdd": "新增主機",
     "speedSearch": "搜尋主機。使用方向鍵選擇，Enter 連線，Esc 關閉",
-    "speedSearchList": "主機列表。輸入或按 / 以搜尋。"
+    "speedSearchList": "主機列表。輸入或按 / 以搜尋。",
+    "openFromLink": {
+      "title": "要開啟 {{name}} 嗎？",
+      "description": "某個連結要求 Termix 連線至此主機。",
+      "confirm": "連線"
+    }
   },
   "splitScreen": {
     "title": "分割畫面",
@@ -1358,7 +1374,7 @@
         "running": "執行中",
         "disabled": "已停用",
         "failed": "意外停止",
-        "blocked": "等待其他外掛",
+        "blocked": "無法啟動",
         "server": "在您的伺服器上執行",
         "safeMode": "安全模式下已停用"
       },
@@ -1432,6 +1448,7 @@
         "installedNotRunning": "已安裝 {{name}}，但無法啟動。請開啟它以查看原因。",
         "updated": "{{name}} 已更新至 {{version}}",
         "updatedMany_other": "已更新 {{count}} 個外掛",
+        "needsReview_other": "{{count}} 個外掛要求新的權限。請逐一檢視以完成更新。",
         "uninstalled": "已解除安裝 {{name}}",
         "dataDeleted": "已刪除 {{name}} 的資料",
         "failedToStart": "{{name}} 無法啟動。請開啟它以查看原因。",
@@ -1571,7 +1588,13 @@
         "unreachable": "無法讀取：{{error}}",
         "filter": "註冊表",
         "allRegistries": "所有註冊表",
-        "browseHint": "在「註冊表」分頁中啟用社群插件或新增您自己的註冊表。"
+        "browseHint": "在「註冊表」分頁中啟用社群插件或新增您自己的註冊表。",
+        "looksName": "社群版面配置與主題",
+        "looksHint": "允許非 Termix 官方提供的版面配置與主題在沙箱外執行，如同官方外掛一般。由於版面配置會繪製整個應用程式，因此擁有與您相同的存取權限。請僅安裝您信任的外掛。修改此設定後，請重新載入頁面。",
+        "looksConfirmTitle": "要允許社群版面配置在沙箱外執行嗎？",
+        "looksConfirmBody": "社群版面配置或主題將在頁面中以目前登入者的身分執行，並擁有對 Termix 的完整存取權限。這可能帶來風險。請僅在您信任所安裝的版面配置與主題時開啟此功能。",
+        "looksConfirm": "開啟",
+        "looksSaved": "已儲存。請重新載入頁面以套用變更。"
       },
       "upToDate": "所有項目皆為最新。",
       "lastChecked": "上次檢查時間：{{time}}",
@@ -1664,9 +1687,13 @@
     "firstLoad": {
       "title": "正在準備外掛程式",
       "progress": "{{done}} / {{total}}",
-      "hint": "此操作僅在首次時執行。下次 Termix 將立即開啟。",
+      "hint": "外掛正在首次啟動。完成後，Termix 將立即開啟。",
       "skip": "繼續"
-    }
+    },
+    "framesBlocked": "外掛無法載入其檔案。這可能是因為 Termix 前方的登入代理伺服器阻擋了它們。",
+    "framesBlockedHelp": "如何修復",
+    "framesFailed_other": "無法載入 {{count}} 個外掛，因此已隱藏其元件：{{names}}",
+    "framesFailedReload": "重新載入"
   },
   "settings": {
     "secretSet": "已設定",
@@ -1759,5 +1786,78 @@
     },
     "reset": "重設",
     "done": "完成"
+  },
+  "diagnostics": {
+    "title": "診斷",
+    "makeReport": "建立診斷報告",
+    "slowBoot": "需要一段時間嗎？建立診斷報告",
+    "troubleSigningIn": "登入有問題嗎？建立診斷報告",
+    "reportTab": "報告",
+    "logsTab": "伺服器記錄",
+    "intro": "這會建立一個包含 Termix 找出問題所需資訊的檔案：錯誤、記錄、外掛程式狀態以及請求如何到達伺服器。下載後，將其附加到 GitHub 問題中，或在 Discord 中發送。",
+    "notAdmin": "伺服器記錄和伺服器詳細資料需要管理員權限。如果問題出在伺服器上，請要求您的管理員也建立一份報告。",
+    "signedOut": "您尚未登入，因此僅包含瀏覽器部分。",
+    "whatHappened": "發生了什麼事",
+    "whatHappenedHint": "選填。您做了什麼，哪裡出錯了？",
+    "include": "包含",
+    "adminOnly": "需要管理員權限",
+    "privacy": "隱私",
+    "mask": "隱藏名稱和位址",
+    "maskHint": "IP、主機名稱、使用者名稱和電子郵件將變更為 host-1、user-1 等。密碼、金鑰和權杖一律會移除。",
+    "domText": "包含頁面文字",
+    "domTextHint": "將螢幕上的文字新增到頁面佈局中。預設為關閉，因為可能會顯示您的資料。",
+    "warnOnly": "僅包含伺服器記錄中的警告和錯誤",
+    "warnOnlyHint": "使檔案更小。",
+    "focus": "外掛程式",
+    "focusHint": "優先顯示此外掛程式，並在其存放庫中提交問題。",
+    "allPlugins": "所有外掛程式",
+    "findings": "檢查發現",
+    "preview": "將要發送的内容",
+    "previewCut": "（預覽到此為止。檔案包含所有内容。）",
+    "cut": "檔案超過 5 MB，因此刪除了最舊的記錄行。",
+    "footerHint": "發送前請檢查預覽。",
+    "copy": "複製",
+    "copied": "報告已複製",
+    "copyFailed": "無法複製報告",
+    "download": "下載",
+    "downloaded": "報告已下載",
+    "openIssue": "開啟 GitHub 問題",
+    "logsSearch": "搜尋記錄",
+    "logsLevel": "層級",
+    "logsAll": "所有層級",
+    "logsWarn": "警告和錯誤",
+    "logsError": "錯誤",
+    "logsPlugin": "外掛程式",
+    "logsCount": "{{count}} 行",
+    "logsFailed": "無法載入記錄",
+    "logsPause": "暫停",
+    "logsResume": "恢復",
+    "logsEmpty": "尚無記錄行。",
+    "parts": {
+      "server": "伺服器",
+      "plugins": "外掛程式",
+      "sections": "外掛程式詳細資料",
+      "logs": "伺服器記錄",
+      "request": "連線",
+      "probes": "連線檢查",
+      "errors": "瀏覽器錯誤",
+      "console": "瀏覽器主控台",
+      "network": "網路",
+      "page": "瀏覽器與視窗",
+      "dom": "頁面版面配置"
+    },
+    "partHints": {
+      "server": "版本、資料庫、SSL 以及已設定的項目",
+      "plugins": "伺服器與瀏覽器中的版本與狀態",
+      "sections": "正在執行的外掛程式所新增的詳細資訊",
+      "logs": "自啟動以來的伺服器記錄與近期行數",
+      "request": "顯示 Termix 前方有反向代理的標頭名稱",
+      "probes": "測試 Termix 與外掛程式檔案是否載入成功",
+      "errors": "未捕獲的錯誤與被阻擋的載入",
+      "console": "來自頁面與外掛程式的近期主控台行數",
+      "network": "近期的請求及其狀態",
+      "page": "瀏覽器、螢幕尺寸與儲存金鑰名稱",
+      "dom": "頁面的版面配置，不含文字"
+    }
   }
 }

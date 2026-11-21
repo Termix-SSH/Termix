@@ -13,6 +13,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import os from "node:os";
 import { EventEmitter } from "node:events";
 import http from "node:http";
+import tls from "node:tls";
 import { Duplex, PassThrough } from "node:stream";
 import type ExpressDefault from "express";
 import {
@@ -26,6 +27,7 @@ import { createChildSocket } from "./socket.js";
 import { joinStream } from "../transport-bridge.js";
 import type { AgentRelay } from "../agent-relay.js";
 import { createChildSyncHost } from "./sync-host.js";
+import { streamRequestBody } from "./request-body.js";
 
 interface Store {
   token?: string;
@@ -51,6 +53,24 @@ interface InitConfig {
     };
   };
   dialect: Dialect;
+  /** Extra root certificates core reads from NODE_EXTRA_CA_CERTS. */
+  extraCaCertificates?: string[];
+}
+
+/** This process never sees NODE_EXTRA_CA_CERTS, so core hands the certificates over. */
+function trustExtraCertificates(certs: unknown): void {
+  if (!Array.isArray(certs) || certs.length === 0) return;
+  const api = tls as typeof tls & {
+    getCACertificates?: (type: "default") => string[];
+    setDefaultCACertificates?: (certs: string[]) => void;
+  };
+  if (!api.getCACertificates || !api.setDefaultCACertificates) return;
+  const extra = certs.filter(
+    (cert): cert is string => typeof cert === "string",
+  );
+  api.setDefaultCACertificates([
+    ...new Set([...api.getCACertificates("default"), ...extra]),
+  ]);
 }
 
 const als = new AsyncLocalStorage<Store>();
@@ -1301,12 +1321,7 @@ endpoint.handle("http.dispatch", ([metaArg, portArg, bodyArg]) => {
     req.cookies = parseCookies(meta.headers?.cookie);
     req.termixBaseUrl = meta.baseUrl;
     if (bodyPort) {
-      bodyPort.on("data", (chunk: Buffer) => {
-        if (!req.push(chunk)) bodyPort.pause();
-      });
-      req._read = () => bodyPort.resume();
-      bodyPort.on("end", () => req.push(null));
-      bodyPort.on("error", (error) => req.destroy(error));
+      streamRequestBody(req, bodyPort);
     } else {
       req.body = meta.body;
       req.push(null);
@@ -1739,6 +1754,11 @@ function withStats(value: unknown): unknown {
 
 endpoint.handle("init", async ([cfg]) => {
   config = cfg as InitConfig;
+  try {
+    trustExtraCertificates(config.extraCaCertificates);
+  } catch {
+    // A bad certificate only means the plugin trusts the usual roots.
+  }
   expressModule = (await import("express")).default;
   // Narrow imports: the package root costs over 100 MB of parse garbage.
   tableName = (await import("./table-name.js")).drizzleTableName;

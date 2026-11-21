@@ -371,6 +371,21 @@ export function remoteLoginMethod(
     };
   }
 
+  if (typeof raw.logoutRedirect === "function") {
+    const logoutRedirect = raw.logoutRedirect as AnyFn;
+    method.logoutRedirect = async (session) => {
+      const value: unknown = await logoutRedirect({
+        providerId: session.providerId,
+        sub: session.sub,
+        sid: session.sid,
+        baseUrl: session.baseUrl,
+      });
+      return typeof value === "string" && /^https?:\/\//i.test(value)
+        ? value.slice(0, 4000)
+        : null;
+    };
+  }
+
   if (typeof raw.callback === "function") {
     const callback = raw.callback as AnyFn;
     method.callback = async (request) =>

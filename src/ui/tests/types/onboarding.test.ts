@@ -40,7 +40,7 @@ describe("onboarding seen map", () => {
   it("legacy seen covers every core step at launch", () => {
     // Steps added later stay out so upgraded users still see them.
     // preset and appearance moved to a plugin but stay in LEGACY_SEEN.
-    const addedLater = ["desktop-updates"];
+    const addedLater = ["layout", "desktop-updates"];
     const movedOut = ["preset", "appearance"];
     expect(
       Object.keys(LEGACY_SEEN)

@@ -218,7 +218,12 @@ describe("a plugin's external identity", () => {
     expect(h.manager.generateJWTToken).toHaveBeenCalledWith(
       user.id,
       expect.objectContaining({
-        externalSession: { providerId: 3, sub: "sub-1", sid: "sid-1" },
+        externalSession: {
+          providerId: 3,
+          sub: "sub-1",
+          sid: "sid-1",
+          methodId: "corp-sso",
+        },
       }),
     );
   });

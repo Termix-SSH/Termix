@@ -14,6 +14,9 @@ import {
 import { getTrustedProxyAuthConfig } from "./utils/trusted-proxy-auth.js";
 import { createShutdown, exitWithParent } from "./utils/shutdown.js";
 import { onParentMessage, sendToParent } from "./utils/parent-channel.js";
+import { installConsoleCapture } from "./utils/log-buffer.js";
+
+installConsoleCapture();
 
 const embedded = process.env.ELECTRON_EMBEDDED === "true";
 // The desktop app kills the backend after 5 s, Docker after 10 s.
@@ -168,6 +171,19 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       }
     } catch {
       // expected - env file may not exist
+    }
+
+    // The desktop app's fuses stop Node reading NODE_EXTRA_CA_CERTS itself.
+    if (process.env.NODE_EXTRA_CA_CERTS) {
+      const { cachedExtraCaCertificates, trustExtraCertificates } =
+        await import("./utils/extra-ca.js");
+      const certs = cachedExtraCaCertificates();
+      if (certs.length === 0 || !trustExtraCertificates(certs)) {
+        systemLogger.warn(
+          "NODE_EXTRA_CA_CERTS is set but no certificates could be added from it",
+          { operation: "extra_ca_certs" },
+        );
+      }
     }
 
     systemLogger.info("Termix backend initialization started", {

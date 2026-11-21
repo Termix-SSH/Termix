@@ -217,7 +217,18 @@
     "pluginsLoadFailed": "Pluginlisten kunne ikke indlæses. Du kan vælge plugins senere fra Plugins-fanen.",
     "securityTitle": "Sikr din konto",
     "securityIntro": "Tilføj en passkey eller en autentifikator-app til din konto. Du kan også gøre dette senere i Indstillinger under Sikkerhed.",
-    "pluginsDocsLink": "Læs om hver enkelt"
+    "pluginsDocsLink": "Læs om hver enkelt",
+    "layoutTitle": "Vælg et layout",
+    "layoutIntro": "Layoutet bestemmer, hvordan hele appen er inddelt: menuerne, sidepanelet og fanerne. Klik på et for at bruge det. Det skifter med det samme.",
+    "layoutInstalled": "Installeret",
+    "layoutMore": "Flere layouts",
+    "layoutNoMore": "Der er ikke andre layouts tilgængelige lige nu.",
+    "layoutDefault": "Standard",
+    "layoutInstall": "Installer",
+    "layoutTurnOn": "Slå til",
+    "layoutVideo": "Se video",
+    "layoutChangeLater": "Du kan ændre dit layout når som helst under Udseende i Indstillinger. Spørg en administrator, hvis du vil have flere layouts installeret.",
+    "layoutChangeLaterAdmin": "Du kan ændre dit layout når som helst under Udseende i Indstillinger. Flere layouts kan installeres senere fra fanen Plugins."
   },
   "desktopTray": {
     "noticeTitle": "Termix kører stadig",
@@ -836,7 +847,12 @@
     "editorUpdate": "Opdater vært",
     "editorAdd": "Tilføj vært",
     "speedSearch": "Søg i værter. Piltaster til valg, Enter til forbindelse, Esc til lukning",
-    "speedSearchList": "Værtliste. Skriv eller tryk / for at søge."
+    "speedSearchList": "Værtliste. Skriv eller tryk / for at søge.",
+    "openFromLink": {
+      "title": "Åbn {{name}}?",
+      "description": "Et link badede Termix om at oprette forbindelse til denne vært.",
+      "confirm": "Opret forbindelse"
+    }
   },
   "splitScreen": {
     "title": "Delt skærm",
@@ -1375,7 +1391,7 @@
         "running": "Kører",
         "disabled": "Deaktiveret",
         "failed": "Stoppet uventet",
-        "blocked": "Venter på et andet plugin",
+        "blocked": "Kan ikke starte",
         "server": "Kører på din server",
         "safeMode": "Deaktiveret i sikker tilstand"
       },
@@ -1461,6 +1477,8 @@
         "updated": "{{name}} opdateret til {{version}}",
         "updatedMany_one": "{{count}} plugin opdateret",
         "updatedMany_other": "{{count}} plugins opdateret",
+        "needsReview_one": "1 plugin beder om nye tilladelser. Gennemgå det for at opdatere.",
+        "needsReview_other": "{{count}} plugins beder om nye tilladelser. Gennemgå hvert enkelt for at opdatere.",
         "uninstalled": "{{name}} afinstalleret",
         "dataDeleted": "Data for {{name}} slettet",
         "failedToStart": "{{name}} kunne ikke starte. Åbn den for at se hvorfor.",
@@ -1607,7 +1625,13 @@
         "unreachable": "Kunne ikke læse det: {{error}}",
         "filter": "Registret",
         "allRegistries": "Alle registre",
-        "browseHint": "Aktiver fællesskabsplugins eller tilføj dit eget register i fanen Register."
+        "browseHint": "Aktiver fællesskabsplugins eller tilføj dit eget register i fanen Register.",
+        "looksName": "Community-layouts og -temaer",
+        "looksHint": "Lader layouts og temaer, der ikke er fra Termix, køre uden for sandkassen, ligesom de officielle. Et layout tegner hele appen, så det kan se og gøre alt, hvad du kan. Installer kun dem, du stoler på. Genindlæs siden efter at have ændret dette.",
+        "looksConfirmTitle": "Tillad community-layouts at køre uden for sandkassen?",
+        "looksConfirmBody": "Et community-layout eller -tema vil køre på siden med fuld adgang til Termix som den bruger, der er logget ind. Dette kan være risikabelt. Slå kun dette til, hvis du stoler på de layouts og temaer, du installerer.",
+        "looksConfirm": "Slå til",
+        "looksSaved": "Gemt. Genindlæs siden for at anvende det."
       },
       "upToDate": "Alt er opdateret.",
       "lastChecked": "Sidst tjekket {{time}}",
@@ -1704,9 +1728,14 @@
     "firstLoad": {
       "title": "Forbereder plugins",
       "progress": "{{done}} af {{total}}",
-      "hint": "Dette sker kun første gang. Næste gang åbner Termix med det samme.",
+      "hint": "Plugins starter for første gang. Efter dette åbner Termix med det samme.",
       "skip": "Fortsæt"
-    }
+    },
+    "framesBlocked": "Plugins kan ikke indlæse deres filer. En login-proxy foran Termix blokerer dem sandsynligvis.",
+    "framesBlockedHelp": "Sådan retter du det",
+    "framesFailed_one": "{{names}} kunne ikke indlæses, så dens dele er skjult",
+    "framesFailed_other": "{{count}} plugins kunne ikke indlæses, så deres dele er skjult: {{names}}",
+    "framesFailedReload": "Genindlæs"
   },
   "settings": {
     "secretSet": "Indstillet",
@@ -1806,5 +1835,78 @@
     },
     "reset": "Nulstil",
     "done": "Færdig"
+  },
+  "diagnostics": {
+    "title": "Diagnostik",
+    "makeReport": "Opret en diagnostisk rapport",
+    "slowBoot": "Det tager lang tid? Opret en diagnostisk rapport",
+    "troubleSigningIn": "Problemer med at logge ind? Opret en diagnostisk rapport",
+    "reportTab": "Rapport",
+    "logsTab": "Serverlogs",
+    "intro": "Dette opretter én fil med det, Termix har brug for for at finde et problem: fejl, logs, plugin-tilstande og hvordan anmodninger når serveren. Download den og vedhæft den til en GitHub-issue eller send den i Discord.",
+    "notAdmin": "Serverlogs og serverdetaljer kræver en administrator. Bed din administrator om også at oprette en rapport, hvis problemet ligger på serveren.",
+    "signedOut": "Du er ikke logget ind, så kun browserdelen er inkluderet.",
+    "whatHappened": "Hvad skete der",
+    "whatHappenedHint": "Valgfrit. Hvad gjorde du, og hvad gik galt?",
+    "include": "Inkluder",
+    "adminOnly": "Kræver en administrator",
+    "privacy": "Privatliv",
+    "mask": "Skjul navne og adresser",
+    "maskHint": "IP-adresser, værtsnavne, brugernavne og e-mails bliver til host-1, user-1 osv. Adgangskoder, nøgler og tokens fjernes altid.",
+    "domText": "Inkluder sidetekst",
+    "domTextHint": "Tilføjer teksten på skærmen til side-layoutet. Slukket som standard, da det kan vise dine data.",
+    "warnOnly": "Kun advarsler og fejl fra serverloggen",
+    "warnOnlyHint": "Gør filen mindre.",
+    "focus": "Plugin",
+    "focusHint": "Viser dette plugin først og opretter issue i dets repo.",
+    "allPlugins": "Alle plugins",
+    "findings": "Fundet af tjekkerne",
+    "preview": "Hvad der vil blive sendt",
+    "previewCut": "(Forhåndsvisningen stopper her. Filen indeholder alt.)",
+    "cut": "Filen var over 5 MB, så de ældste loglinjer blev klippet.",
+    "footerHint": "Tjek forhåndsvisningen, før du sender den.",
+    "copy": "Kopiér",
+    "copied": "Rapport kopieret",
+    "copyFailed": "Kunne ikke kopiere rapporten",
+    "download": "Download",
+    "downloaded": "Rapport downloadet",
+    "openIssue": "Opret GitHub-issue",
+    "logsSearch": "Søg i logs",
+    "logsLevel": "Niveau",
+    "logsAll": "Alle niveauer",
+    "logsWarn": "Advarsler og fejl",
+    "logsError": "Fejl",
+    "logsPlugin": "Plugin",
+    "logsCount": "{{count}} linjer",
+    "logsFailed": "Kunne ikke indlæse logs",
+    "logsPause": "Pause",
+    "logsResume": "Genoptag",
+    "logsEmpty": "Ingen loglinjer endnu.",
+    "parts": {
+      "server": "Server",
+      "plugins": "Plugins",
+      "sections": "Plugin-detajler",
+      "logs": "Serverlogs",
+      "request": "Forbindelse",
+      "probes": "Forbindelseskontroller",
+      "errors": "Browserfejl",
+      "console": "Browserkonsol",
+      "network": "Netværk",
+      "page": "Browser og vindue",
+      "dom": "Sideopbygning"
+    },
+    "partHints": {
+      "server": "Version, database, SSL og hvilke indstillinger der er sat",
+      "plugins": "Versioner og tilstande på serveren og i browseren",
+      "sections": "Ekstra detaljer, som aktive plugins tilføjer",
+      "logs": "Serverlog siden start og seneste linjer",
+      "request": "Header-navne, der viser en proxy foran Termix",
+      "probes": "Tests, der bekræfter, at Termix og plugin-filer indlæses",
+      "errors": "Ufangne fejl og blokerede indlæsninger",
+      "console": "Seneste konsollinjer fra siden og plugins",
+      "network": "Seneste anmodninger og deres status",
+      "page": "Browser, skærmstørrelse og lagernøglenavne",
+      "dom": "Sidenes opbygning uden tekst"
+    }
   }
 }

@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.11.0
+
+Plugin API 2.9.0. Needs Termix 26.11.2.
+
+### Added
+
+- `ctx.diagnostics.provide({ title, collect })` adds a section about the plugin's own state to the diagnostics report admins make. Core masks it and caps it at 64 KB. Termix 26.11.3
+- `app.openDiagnostics({ pluginId })` opens the diagnostics report page with this plugin first. In a frame it needs a click. Termix 26.11.3
+- `ctx.hosts.connectPolicy.disconnect(hostId, { reason })` ends every connection core holds open to a host, and `provide({ check, probes: true })` also gates status checks. Termix 26.11.3
+- `app.deepLinks.onOpen(listener)`: termix:// links the desktop app was opened with, replayed for a listener that starts late. Termix 26.11.3
+- `ctx.credentials.resolveLogin(credentialId)`: a saved credential's username and password, for a login the plugin makes itself, like a Quick Connect session. Only the user's own or shared credentials. Needs `credentials:read`. `QuickConnectLogin.credentialId` carries one from the browser without its secret, and `viewOnly` asks for a session without input. Termix 26.11.3
+- `useConfirm` takes a `checkbox` (`label`, `checked`, `onChange`, and text used while it is ticked), like Delete permanently. Termix 26.11.3 draws it, older versions ignore it
+- Data badges and text can carry an `icon`, a `color` and, for badges, a `variant` (`outline`, `filled` or `icon`). Termix 26.11.3 draws them, older versions ignore them
+- Login methods can offer `logoutRedirect(session)`: where to send the browser when a user signs out of a session the method made, like the identity provider's sign out page. Termix 26.11.3 uses it, older versions ignore it
+- `ctx.credentials.registerSecretResolver(scheme, resolve, { unlockTab })`: when `resolve` throws an error with code `unlock-required` for the person connecting, the connect answers access required with that tab, so clients offer Verify instead of failing. Termix 26.11.3
+- `registerAction(id, handler, { private: true })`: only your own plugin views may run the action, even when another plugin lists it in `uses`. Termix 26.11.3 enforces it, older versions ignore it
+- `app.registerHostTreeChildren({ id, when, useChildren })` lists containers, guests and the like under a host in layouts that draw a host tree, and `HostTreeChildren` from the `ui` entry reads them. Works from a frame. Termix 26.11.3
+
 ## 2.10.1
 
 Plugin API 2.9.0. Needs Termix 26.11.2.

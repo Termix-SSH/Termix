@@ -19,6 +19,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { allocateUid, isPluginId, validateSpawn } from "./policy.js";
+import { adoptDataDir, readAdopted, writeAdopted } from "./adopt.js";
 
 const SANDBOX_MESSAGE = "tmx-sandbox";
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -26,6 +27,7 @@ const runtime = path.resolve(here, "../child/runtime.js");
 const harden = path.resolve(here, "../child/harden.js");
 const dataRoot = process.env.DATA_DIR ?? "/app/data";
 const uidFile = path.join(dataRoot, ".plugin-uids.json");
+const adoptedFile = path.join(dataRoot, ".plugin-data-owners.json");
 
 const [script, ...scriptArgs] = process.argv.slice(2);
 const coreUid = Number(process.env.TERMIX_LAUNCHER_UID ?? "1000");
@@ -94,7 +96,68 @@ function firewall(uid: number, rule: "deny" | "allow-all"): void {
 const children = new Map<string, ChildProcess>();
 
 function reply(core: ChildProcess, message: Record<string, unknown>): void {
-  if (core.connected) core.send({ type: SANDBOX_MESSAGE, ...message });
+  if (!core.connected) return;
+  core.send({ type: SANDBOX_MESSAGE, ...message }, (error) => {
+    if (error) log(`could not reach core: ${error.message}`);
+  });
+}
+
+/**
+ * A plugin killed a moment ago can still get messages core sent before it
+ * heard. Writing to its closed channel must never take the launcher down.
+ */
+function sendToPlugin(child: ChildProcess | undefined, message: unknown): void {
+  if (!child?.connected) return;
+  child.send(message as never, () => {});
+}
+
+let sharedUserWarned = false;
+
+/**
+ * Makes the plugin's data folder its own and picks the user it runs as. On
+ * storage that refuses chown (some network shares) the plugin runs as core's
+ * user instead, as it does when the launcher isn't root, and core says so.
+ */
+function prepareUser(
+  pluginId: string,
+  dataDir: string,
+): { uid: number; gid: number } {
+  fs.mkdirSync(path.dirname(dataDir), { recursive: true, mode: 0o711 });
+  fs.chmodSync(path.dirname(dataDir), 0o711);
+  fs.mkdirSync(dataDir, { recursive: true });
+  const uid = allocateUid(uidFile, pluginId);
+  try {
+    // The plugin's user owns it; core's group keeps access (setgid) so core
+    // can still remove it on uninstall. Other plugins can't get in.
+    fs.chownSync(dataDir, uid, coreGid);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== "EPERM" && code !== "EINVAL") throw error;
+    if (!sharedUserWarned) {
+      sharedUserWarned = true;
+      log(
+        `the data folder does not allow changing owners (${code}), so plugins run as Termix's own user and are less isolated from each other`,
+      );
+    }
+    fs.chmodSync(dataDir, 0o770);
+    return { uid: coreUid, gid: coreGid };
+  }
+  fs.chmodSync(dataDir, 0o2770);
+  // What core saved there before plugins had their own users stays core's
+  // until handed over, and the plugin can't write it. Done once per user.
+  const adopted = readAdopted(adoptedFile);
+  if (adopted[pluginId] !== uid) {
+    try {
+      const changed = adoptDataDir(dataDir, uid, coreGid);
+      if (changed > 0) log(`gave ${pluginId} ${changed} existing file(s)`);
+      writeAdopted(adoptedFile, { ...adopted, [pluginId]: uid });
+    } catch (error) {
+      log(
+        `could not hand over ${pluginId}'s files: ${(error as Error).message}`,
+      );
+    }
+  }
+  return { uid, gid: uid };
 }
 
 function startPlugin(
@@ -112,16 +175,21 @@ function startPlugin(
     return;
   }
   const pluginId = String(request.pluginId);
-  const uid = allocateUid(uidFile, pluginId);
   const dataDir = String(request.dataDir);
-  fs.mkdirSync(path.dirname(dataDir), { recursive: true, mode: 0o711 });
-  fs.chmodSync(path.dirname(dataDir), 0o711);
-  // The plugin's user owns it; core's group keeps access (setgid) so core can
-  // still remove it on uninstall. Other plugins can't get in.
-  fs.mkdirSync(dataDir, { recursive: true });
-  fs.chownSync(dataDir, uid, coreGid);
-  fs.chmodSync(dataDir, 0o2770);
-  firewall(uid, request.firewall === "allow-all" ? "allow-all" : "deny");
+  let uid: number;
+  let gid: number;
+  try {
+    ({ uid, gid } = prepareUser(pluginId, dataDir));
+  } catch (error) {
+    // One plugin that can't start must never take the server down with it.
+    const message = (error as Error).message;
+    log(`could not start ${pluginId}: ${message}`);
+    reply(core, { op: "error", id, message });
+    return;
+  }
+  if (uid !== coreUid) {
+    firewall(uid, request.firewall === "allow-all" ? "allow-all" : "deny");
+  }
 
   // Files the plugin makes stay readable by core's group and nobody else.
   process.umask(0o007);
@@ -131,14 +199,15 @@ function startPlugin(
     // variables the plugin's manifest lists, never one of core's.
     env: request.env as Record<string, string>,
     uid,
-    gid: uid,
+    gid,
     cwd: dataDir,
     serialization: "advanced",
     stdio: ["ignore", "pipe", "pipe", "ipc"],
   });
   children.set(id, child);
   child.once("spawn", () => reply(core, { op: "spawned", id, pid: child.pid }));
-  child.once("error", (error) =>
+  // Every error, not just the first: a dead channel errors on each write.
+  child.on("error", (error) =>
     reply(core, { op: "error", id, message: error.message }),
   );
   child.on("message", (m) => reply(core, { op: "msg", id, m }));
@@ -200,10 +269,15 @@ function main(): void {
           reply(core, { op: "error", id, message: "bad request" });
           return;
         }
-        startPlugin(core, message);
+        try {
+          startPlugin(core, message);
+        } catch (error) {
+          log(`could not start a plugin: ${(error as Error).message}`);
+          reply(core, { op: "error", id, message: "spawn failed" });
+        }
         return;
       case "msg":
-        children.get(id)?.send(message.m as never);
+        sendToPlugin(children.get(id), message.m);
         return;
       case "kill":
         children.get(id)?.kill("SIGKILL");
@@ -213,6 +287,7 @@ function main(): void {
   for (const signal of ["SIGTERM", "SIGINT", "SIGHUP"] as const) {
     process.on(signal, () => core.kill(signal));
   }
+  core.on("error", (error) => log(`core channel: ${error.message}`));
   core.once("exit", (code, signal) => {
     for (const child of children.values()) child.kill("SIGKILL");
     process.exit(code ?? (signal ? 128 + 15 : 1));

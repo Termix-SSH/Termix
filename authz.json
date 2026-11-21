@@ -121,6 +121,15 @@
       "access": "admin",
       "destructive": true
     },
+    "GET /diagnostics/logs": {
+      "access": "admin"
+    },
+    "GET /diagnostics/request": {
+      "access": "public"
+    },
+    "GET /diagnostics/server": {
+      "access": "admin"
+    },
     "POST /encryption/initialize": {
       "access": "admin"
     },
@@ -731,6 +740,13 @@
     "PUT /plugins/developer-mode": {
       "access": "admin"
     },
+    "GET /plugins/community-looks": {
+      "access": "admin"
+    },
+    "PUT /plugins/community-looks": {
+      "access": "admin",
+      "destructive": true
+    },
     "GET /plugins/onboarding": {
       "access": "admin"
     },
@@ -1095,6 +1111,9 @@
     "GET /users/auth/methods": {
       "access": "public"
     },
+    "POST /users/auth/app-handoff/redeem": {
+      "access": "public"
+    },
     "POST /users/auth/second-factor/:factorId/challenge": {
       "access": "public"
     },
@@ -1375,6 +1394,11 @@
     },
     "GET /version": {
       "access": "user"
+    },
+    "GET /version/openapi.json": {
+      "access": "user",
+      "allowed": "any",
+      "note": "404 unless SERVE_OPENAPI is true"
     },
     "GET /version/channel": {
       "access": "user",

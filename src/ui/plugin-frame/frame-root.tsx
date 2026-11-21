@@ -6,6 +6,7 @@
  */
 
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -115,15 +116,32 @@ function View({
   fit: FrameFit;
 }) {
   const current = useFrameProps();
+  // The shell's setter may arrive as a new stand-in with each props update,
+  // so the ref handed to the view stays the same and calls the latest one.
+  const setHandle = useRef<((value: unknown) => unknown) | null>(null);
+  const handleRef = useCallback((value: unknown) => {
+    void Promise.resolve(setHandle.current?.(value ?? null)).catch(() => {});
+  }, []);
   const { shown, place, close, setEditing } = useMemo(() => {
-    const { handleCall, __place, __surfaceClose, ...rest } = current as Record<
-      string,
-      unknown
-    > & { __place?: FramePlace };
+    const {
+      handleCall,
+      __place,
+      __surfaceClose,
+      __setHandle,
+      __params,
+      ...rest
+    } = current as Record<string, unknown> & { __place?: FramePlace };
     const props: Record<string, unknown> = { ...rest };
+    if (typeof __params === "string") {
+      props.params = new URLSearchParams(__params);
+    }
     if (typeof handleCall === "function") {
       const handle = handleProxy(handleCall as HandleCall);
       props.getHandle = () => handle;
+    }
+    if (typeof __setHandle === "function") {
+      setHandle.current = __setHandle as (value: unknown) => unknown;
+      props.handleRef = handleRef;
     }
     return {
       shown: props,
@@ -137,7 +155,7 @@ function View({
           ? (rest.setEditing as (editing: EditingWidth) => void)
           : undefined,
     };
-  }, [current]);
+  }, [current, handleRef]);
   return (
     <SeamlessTileContext.Provider value={!!place.seamless}>
       <SurfaceScope

@@ -72,6 +72,8 @@ export interface FrameAppHost {
   wsUrl: TermixApp["wsUrl"];
   /** Something the shell can't show, like an icon that isn't Lucide. */
   warn?: (message: string) => void;
+  /** On an anonymous page, like a shared session link. */
+  guest?: boolean;
 }
 
 /** Things that are the shell itself and never run in a frame. */
@@ -209,7 +211,7 @@ export function createFrameApp(host: FrameAppHost): {
   const app: TermixApp = {
     pluginId,
     manifest,
-    guest: false,
+    guest: host.guest === true,
 
     registerRailItem(item) {
       requireDeclared(["panels", "tabs"], item.id, "rail item");
@@ -354,6 +356,35 @@ export function createFrameApp(host: FrameAppHost): {
       );
     },
 
+    registerHostTreeChildren(provider) {
+      // Runs only for hosts a layout shows expanded, one row per host.
+      const valueKey = `tree:${provider.id}:children`;
+      const useChildren = provider.useChildren as (host: never) => unknown;
+      return add(
+        "hostTreeChildren",
+        {
+          id: provider.id,
+          titleKey: provider.titleKey,
+          when: provider.when,
+          order: provider.order,
+          valueKey,
+        },
+        {
+          hooks: [
+            {
+              key: valueKey,
+              // A hook is always called, so a host that loads late gets a bare one first.
+              use: ((context: { host?: never; hostId?: unknown }) =>
+                useChildren(
+                  context.host ?? ({ id: context.hostId } as never),
+                )) as HookSpec["use"],
+              perRow: true,
+            },
+          ],
+        },
+      );
+    },
+
     registerHostStatusIndicator(indicator) {
       return hostValue("hostStatusIndicator", "status", indicator);
     },
@@ -483,6 +514,7 @@ export function createFrameApp(host: FrameAppHost): {
         id,
         handler,
         permission: options.permission,
+        private: options.private === true,
       });
     },
 
@@ -671,6 +703,17 @@ export function createFrameApp(host: FrameAppHost): {
     confirm: (options) => host.call("confirm", options) as Promise<boolean>,
 
     stepUp: () => host.call("stepUp") as Promise<boolean>,
+
+    openDiagnostics: (options) => {
+      void host.call("diagnostics.open", options ?? {}).catch(() => {});
+    },
+
+    deepLinks: {
+      onOpen: (listener) => {
+        void host.call("deepLinks.listen", listener).catch(() => {});
+        return () => {};
+      },
+    },
 
     session: {
       signOut: () => host.call("session.signOut") as Promise<void>,

@@ -217,7 +217,18 @@
     "pluginsLoadFailed": "Die Plugin-Liste konnte nicht geladen werden. Sie können Plugins später im Tab „Plugins“ auswählen.",
     "securityTitle": "Sichern Sie Ihr Konto",
     "securityIntro": "Fügen Sie Ihrem Konto einen Passkey oder eine Authenticator-App hinzu. Sie können dies auch später in den Einstellungen unter „Sicherheit“ tun.",
-    "pluginsDocsLink": "Mehr über jedes Plugin erfahren"
+    "pluginsDocsLink": "Mehr über jedes Plugin erfahren",
+    "layoutTitle": "Wähle ein Layout",
+    "layoutIntro": "Das Layout bestimmt die Anordnung der gesamten App: Menüs, Seitenleiste und Tabs. Klicke auf eines, um es zu aktivieren. Die Änderung wird sofort übernommen.",
+    "layoutInstalled": "Installiert",
+    "layoutMore": "Weitere Layouts",
+    "layoutNoMore": "Derzeit sind keine weiteren Layouts verfügbar.",
+    "layoutDefault": "Standard",
+    "layoutInstall": "Installieren",
+    "layoutTurnOn": "Aktivieren",
+    "layoutVideo": "Video ansehen",
+    "layoutChangeLater": "Du kannst dein Layout jederzeit in den Einstellungen unter Erscheinungsbild ändern. Wende dich an einen Administrator, wenn du weitere Layouts installieren möchtest.",
+    "layoutChangeLaterAdmin": "Du kannst dein Layout jederzeit in den Einstellungen unter Erscheinungsbild ändern. Weitere Layouts können später über den Tab Plugins installiert werden."
   },
   "desktopTray": {
     "noticeTitle": "Termix läuft weiterhin",
@@ -836,7 +847,12 @@
     "editorUpdate": "Host aktualisieren",
     "editorAdd": "Host hinzufügen",
     "speedSearch": "Hosts durchsuchen. Pfeiltasten zum Auswählen, Enter zum Verbinden, Esc zum Schließen",
-    "speedSearchList": "Hostliste. Tippen Sie oder drücken Sie / zum Suchen."
+    "speedSearchList": "Hostliste. Tippen Sie oder drücken Sie / zum Suchen.",
+    "openFromLink": {
+      "title": "Möchten Sie {{name}} öffnen?",
+      "description": "Ein Link hat Termix aufgefordert, eine Verbindung zu diesem Host herzustellen.",
+      "confirm": "Verbinden"
+    }
   },
   "splitScreen": {
     "title": "Geteilter Bildschirm",
@@ -1375,7 +1391,7 @@
         "running": "Aktiv",
         "disabled": "Deaktiviert",
         "failed": "Unerwartet gestoppt",
-        "blocked": "Wartet auf ein anderes Plugin",
+        "blocked": "Start nicht möglich",
         "server": "Läuft auf deinem Server",
         "safeMode": "Im sicheren Modus deaktiviert"
       },
@@ -1461,6 +1477,8 @@
         "updated": "{{name}} auf {{version}} aktualisiert",
         "updatedMany_one": "{{count}} Plugin aktualisiert",
         "updatedMany_other": "{{count}} Plugins aktualisiert",
+        "needsReview_one": "1 Plugin fordert neue Berechtigungen an. Überprüfen Sie es, um es zu aktualisieren.",
+        "needsReview_other": "{{count}} Plugins fordern neue Berechtigungen an. Überprüfen Sie jedes einzelne, um es zu aktualisieren.",
         "uninstalled": "{{name}} deinstalliert",
         "dataDeleted": "Daten für {{name}} gelöscht",
         "failedToStart": "{{name}} konnte nicht gestartet werden. Öffne es, um den Grund zu sehen.",
@@ -1607,7 +1625,13 @@
         "unreachable": "Konnte nicht gelesen werden: {{error}}",
         "filter": "Repository",
         "allRegistries": "Alle Repositories",
-        "browseHint": "Aktiviere Community-Plugins oder füge dein eigenes Repository im Tab „Repositories“ hinzu."
+        "browseHint": "Aktiviere Community-Plugins oder füge dein eigenes Repository im Tab „Repositories“ hinzu.",
+        "looksName": "Community-Layouts und -Themen",
+        "looksHint": "Ermöglicht Layouts und Themen, die nicht von Termix stammen, außerhalb der Sandbox zu laufen, wie die offiziellen. Ein Layout zeichnet die gesamte App und kann daher alles sehen und tun, was Sie auch können. Installieren Sie nur solche, denen Sie vertrauen. Laden Sie die Seite nach einer Änderung neu.",
+        "looksConfirmTitle": "Community-Layouts außerhalb der Sandbox ausführen lassen?",
+        "looksConfirmBody": "Ein Community-Layout oder -Thema wird in der Seite mit vollem Zugriff auf Termix als angemeldeter Benutzer ausgeführt. Dies kann riskant sein. Aktivieren Sie dies nur, wenn Sie den Layouts und Themen, die Sie installieren, vertrauen.",
+        "looksConfirm": "Aktivieren",
+        "looksSaved": "Gespeichert. Laden Sie die Seite neu, um die Änderungen anzuwenden."
       },
       "upToDate": "Alles ist auf dem neuesten Stand.",
       "lastChecked": "Zuletzt geprüft {{time}}",
@@ -1704,9 +1728,14 @@
     "firstLoad": {
       "title": "Plugins werden vorbereitet",
       "progress": "{{done}} von {{total}}",
-      "hint": "Dies geschieht nur beim ersten Mal. Beim nächsten Mal öffnet sich Termix sofort.",
+      "hint": "Plugins werden zum ersten Mal gestartet. Danach öffnet sich Termix sofort.",
       "skip": "Fortfahren"
-    }
+    },
+    "framesBlocked": "Plugins können ihre Dateien nicht laden. Ein Login-Proxy vor Termix blockiert sie wahrscheinlich.",
+    "framesBlockedHelp": "So beheben Sie das Problem",
+    "framesFailed_one": "{{names}} konnte nicht geladen werden, daher sind seine Elemente ausgeblendet",
+    "framesFailed_other": "{{count}} Plugins konnten nicht geladen werden, daher sind ihre Elemente ausgeblendet: {{names}}",
+    "framesFailedReload": "Neu laden"
   },
   "settings": {
     "secretSet": "Gesetzt",
@@ -1806,5 +1835,78 @@
     },
     "reset": "Zurücksetzen",
     "done": "Fertig"
+  },
+  "diagnostics": {
+    "title": "Diagnose",
+    "makeReport": "Diagnosebericht erstellen",
+    "slowBoot": "Dauert es lange? Erstelle einen Diagnosebericht",
+    "troubleSigningIn": "Probleme beim Anmelden? Erstelle einen Diagnosebericht",
+    "reportTab": "Bericht",
+    "logsTab": "Server-Protokolle",
+    "intro": "Dadurch wird eine Datei erstellt, die Termix benötigt, um ein Problem zu finden: Fehler, Protokolle, Plugin-Status und wie Anfragen den Server erreichen. Lade sie herunter und hänge sie an ein GitHub-Issue an oder sende sie über Discord.",
+    "notAdmin": "Für Server-Protokolle und Serverdetails ist ein Administrator erforderlich. Bitte deinen Administrator, ebenfalls einen Bericht zu erstellen, falls das Problem auf dem Server liegt.",
+    "signedOut": "Du bist nicht angemeldet, daher ist nur der Browser-Teil enthalten.",
+    "whatHappened": "Was ist passiert",
+    "whatHappenedHint": "Optional. Was hast du getan und was ist schiefgelaufen?",
+    "include": "Enthalten",
+    "adminOnly": "Erfordert Administratorrechte",
+    "privacy": "Datenschutz",
+    "mask": "Namen und Adressen verbergen",
+    "maskHint": "IPs, Hostnamen, Benutzernamen und E-Mails werden zu host-1, user-1 usw. umgewandelt. Passwörter, Schlüssel und Tokens werden immer entfernt.",
+    "domText": "Seitentext einbeziehen",
+    "domTextHint": "Fügt den Text auf dem Bildschirm zum Seitenlayout hinzu. Standardmäßig deaktiviert, da dies deine Daten anzeigen kann.",
+    "warnOnly": "Nur Warnungen und Fehler aus dem Serverprotokoll",
+    "warnOnlyHint": "Macht die Datei kleiner.",
+    "focus": "Plugin",
+    "focusHint": "Zeigt dieses Plugin zuerst an und erstellt das Issue im entsprechenden Repository.",
+    "allPlugins": "Alle Plugins",
+    "findings": "Ergebnisse der Prüfungen",
+    "preview": "Was gesendet wird",
+    "previewCut": "(Die Vorschau endet hier. Die Datei enthält alles.)",
+    "cut": "Die Datei war größer als 5 MB, daher wurden die ältesten Protokolleinträge entfernt.",
+    "footerHint": "Überprüfe die Vorschau, bevor du sie sendest.",
+    "copy": "Kopieren",
+    "copied": "Bericht kopiert",
+    "copyFailed": "Bericht konnte nicht kopiert werden",
+    "download": "Herunterladen",
+    "downloaded": "Bericht heruntergeladen",
+    "openIssue": "GitHub-Issue erstellen",
+    "logsSearch": "Protokolle durchsuchen",
+    "logsLevel": "Stufe",
+    "logsAll": "Alle Stufen",
+    "logsWarn": "Warnungen und Fehler",
+    "logsError": "Fehler",
+    "logsPlugin": "Plugin",
+    "logsCount": "{{count}} Zeilen",
+    "logsFailed": "Protokolle konnten nicht geladen werden",
+    "logsPause": "Pause",
+    "logsResume": "Fortsetzen",
+    "logsEmpty": "Noch keine Protokolleinträge.",
+    "parts": {
+      "server": "Server",
+      "plugins": "Plugins",
+      "sections": "Plugin-Details",
+      "logs": "Server-Protokolle",
+      "request": "Verbindung",
+      "probes": "Verbindungsprüfungen",
+      "errors": "Browserfehler",
+      "console": "Browserkonsole",
+      "network": "Netzwerk",
+      "page": "Browser und Fenster",
+      "dom": "Seitenlayout"
+    },
+    "partHints": {
+      "server": "Version, Datenbank, SSL und welche Einstellungen gesetzt sind",
+      "plugins": "Versionen und Status auf dem Server und im Browser",
+      "sections": "Zusätzliche Details, die aktive Plugins hinzufügen",
+      "logs": "Serverprotokoll seit dem Start und aktuelle Zeilen",
+      "request": "Header-Namen, die einen Proxy vor Termix anzeigen",
+      "probes": "Tests, ob Termix- und Plugin-Dateien geladen werden",
+      "errors": "Nicht abgefangene Fehler und blockierte Ladevorgänge",
+      "console": "Aktuelle Konsoleneinträge von der Seite und den Plugins",
+      "network": "Aktuelle Anfragen und deren Status",
+      "page": "Browser, Bildschirmgröße und Speicher-Schlüsselnamen",
+      "dom": "Das Layout der Seite, ohne Text"
+    }
   }
 }

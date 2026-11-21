@@ -62,6 +62,8 @@ export interface PluginFrameViewProps {
   fit: FrameFit;
   /** Lets the page behind show through, for overlays. */
   transparent?: boolean;
+  /** Fields take the sidebar's color. Defaults to `transparent`. */
+  onSidebar?: boolean;
   props: Record<string, unknown>;
   /** Shown in the shell while the view draws nothing, for inline fit. */
   fallback?: ReactNode;
@@ -140,6 +142,7 @@ export function PluginFrameView({
   frameKey,
   fit,
   transparent,
+  onSidebar = transparent,
   props,
   fallback,
   className,
@@ -222,7 +225,7 @@ export function PluginFrameView({
         edge: edge ? "1" : undefined,
         spin: loads ? "host" : undefined,
         // A see-through view lies on the sidebar, which its fields match.
-        on: transparent ? "sidebar" : undefined,
+        on: onSidebar ? "sidebar" : undefined,
         v: version || undefined,
       }),
     [
@@ -233,7 +236,7 @@ export function PluginFrameView({
       overlay,
       edge,
       loads,
-      transparent,
+      onSidebar,
       version,
     ],
   );

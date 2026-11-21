@@ -6,7 +6,12 @@
  * port; every call it makes is checked here before anything happens.
  */
 
+import { receiveFrameDiag } from "@/diagnostics/frame-diag";
+import { openDiagnostics } from "@/diagnostics/open-diagnostics";
+import { addNetwork } from "@/diagnostics/store";
+import { redactUrl } from "@/diagnostics/redact";
 import { toast } from "sonner";
+import { onDeepLink } from "@/lib/deep-links";
 import { authApi, getBackendUrl } from "@/main-axios";
 import {
   PLUGIN_SETTINGS_CHANGED_EVENT,
@@ -31,7 +36,12 @@ import {
   listHostActions,
   runHostAction,
 } from "@/sidebar/host-contributions";
-import { getSlotContributions, invokeAction } from "@/shell/action-registry";
+import {
+  getActionOwner,
+  getSlotContributions,
+  invokeAction,
+  isActionPrivate,
+} from "@/shell/action-registry";
 import { listExtensions } from "../extension-registry";
 import { getPluginComponent } from "../component-registry";
 import { runKeybindingAction } from "@/shell/keybinding-registry";
@@ -87,6 +97,8 @@ import {
   writeSerial,
 } from "./serial-bridge";
 import { manifestUses } from "./foreign-policy";
+import { tabHandleOwner } from "./tab-handle-owners";
+import { isGuestRuntime } from "../guest-runtime";
 import {
   addForeignList,
   disposeForeignView,
@@ -134,6 +146,9 @@ function summaryOf(pluginId: string): PluginSummary | undefined {
 /** Actions a frame may run: its own, and the ones its manifest says it uses. */
 export function mayInvokeAction(pluginId: string, actionId: string): boolean {
   if (typeof actionId !== "string") return false;
+  if (isActionPrivate(actionId)) {
+    return getActionOwner(actionId) === pluginId;
+  }
   return (
     actionId.startsWith(`${pluginId}.`) ||
     manifestUses(pluginId).includes(actionId)
@@ -183,6 +198,7 @@ function onMessage(event: MessageEvent) {
       if (owner) {
         dropForeignConsumer(owner);
         closeSerialFor(owner);
+        stopLinksFor(owner);
       }
       connection.port = createPort(connection, event.source as Window);
       return;
@@ -200,6 +216,13 @@ function listen() {
 
 let connectionCount = 0;
 const watchOwners = new WeakMap<FrameConnection, string>();
+// Deep link listeners a frame added, ended when the frame goes.
+const linkStops = new Map<string, Array<() => void>>();
+
+function stopLinksFor(owner: string): void {
+  for (const stop of linkStops.get(owner) ?? []) stop();
+  linkStops.delete(owner);
+}
 
 /** Starts talking to a frame element once its page says hello. */
 export function connectFrame(
@@ -225,6 +248,7 @@ export function connectFrame(
       removeDataWatches(watchOwner);
       dropForeignConsumer(watchOwner);
       closeSerialFor(watchOwner);
+      stopLinksFor(watchOwner);
       stopState?.();
       connection.port?.close();
       connection.port = null;
@@ -274,6 +298,7 @@ function createPort(connection: FrameConnection, target: Window): FramePort {
     fnPrefix: "s",
     icon: (ref) => decodeHostIconValue(ref),
     component: (ref: WireComponent) => ref,
+    replace: (value) => handleForFrame(value, connection.pluginId),
   });
 }
 
@@ -328,6 +353,15 @@ async function coreRequest(connection: FrameConnection, request: unknown) {
       ? { ok: false, reason: `${method} ${asked.path} with no user action` }
       : asked;
   if (!check.ok) {
+    addNetwork({
+      via: "frame",
+      source: pluginId,
+      method,
+      url: redactUrl(String(input.path ?? "")),
+      status: 403,
+      ms: 0,
+      error: "Refused by the frame policy",
+    });
     if (import.meta.env.DEV) {
       console.warn(
         `[frame-policy] refused ${pluginId}: ${(check as { reason: string }).reason}`,
@@ -421,9 +455,31 @@ const HANDLE_METHODS: Record<string, "terminal-input" | null> = {
   reconnect: null,
   reconnectIfDisconnected: null,
   isConnected: null,
+  // Docks a panel the caller registered, like the share panel.
+  openSidePanel: null,
   sendInput: "terminal-input",
   paste: "terminal-input",
 };
+
+/**
+ * What another plugin's frame sees of a framed tab's handle: the calls a
+ * companion may make, plus what sharing the session needs.
+ */
+export function handleForFrame(
+  value: object,
+  pluginId: string,
+): object | undefined {
+  const owner = tabHandleOwner(value);
+  if (!owner || owner === pluginId) return undefined;
+  const allowed: Record<string, unknown> = {};
+  for (const [name, fn] of Object.entries(value)) {
+    if (typeof fn !== "function") continue;
+    if (name === "getShareTarget" || mayCallHandle(pluginId, name)) {
+      allowed[name] = fn;
+    }
+  }
+  return allowed;
+}
 
 export function mayCallHandle(pluginId: string, method: unknown): boolean {
   if (typeof method !== "string" || !Object.hasOwn(HANDLE_METHODS, method)) {
@@ -450,7 +506,7 @@ async function handleCall(
       if (import.meta.env.DEV) logEmptyRead(pluginId, args[0], args[1]);
       return;
     case "token":
-      return frameToken(pluginId);
+      return isGuestRuntime() ? null : frameToken(pluginId);
     case "dataSlot.watch": {
       const owner = watchOwners.get(connection);
       if (!owner) return false;
@@ -623,6 +679,42 @@ async function handleCall(
         onClose as () => void,
       );
     }
+    case "diagnostics.open": {
+      // Takes over the window, so only right after a click in the frame.
+      if (!recentlyUsed(connection)) {
+        throw new Error("Opening the report needs a click in the frame");
+      }
+      const asked = (args[0] ?? {}) as { pluginId?: unknown };
+      openDiagnostics({
+        pluginId:
+          asked.pluginId === null
+            ? undefined
+            : typeof asked.pluginId === "string" &&
+                /^[a-z0-9][a-z0-9-]{0,63}$/.test(asked.pluginId)
+              ? asked.pluginId
+              : pluginId,
+      });
+      return;
+    }
+    case "deepLinks.listen": {
+      const owner = watchOwners.get(connection);
+      const [listener] = args;
+      if (!owner || typeof listener !== "function") {
+        throw new Error("Bad deep link listener");
+      }
+      const list = linkStops.get(owner) ?? [];
+      if (list.length >= 5) throw new Error("Too many deep link listeners");
+      list.push(
+        onDeepLink((link) => {
+          (listener as (link: unknown) => void)({
+            url: link.url,
+            source: link.source,
+          });
+        }),
+      );
+      linkStops.set(owner, list);
+      return;
+    }
     case "port.write": {
       const owner = watchOwners.get(connection);
       if (!owner) throw new Error("Unknown serial port");
@@ -739,7 +831,11 @@ async function handleCall(
       const owner = watchOwners.get(connection);
       if (
         !mayInvokeAction(pluginId, String(id)) &&
-        !(owner && foreignAllowsAction(owner, id))
+        !(
+          owner &&
+          !isActionPrivate(String(id)) &&
+          foreignAllowsAction(owner, id)
+        )
       ) {
         throw new Error(
           `${String(id)} is not one of this plugin's actions or in its manifest uses`,
@@ -822,6 +918,9 @@ function handleEvent(connection: FrameConnection, name: string, data: unknown) {
     case "ready":
       connection.events.onReady?.();
       return;
+    case "diag":
+      receiveFrameDiag(connection.pluginId, data);
+      return;
     case "foreign.place":
     case "foreign.props":
     case "foreign.dispose": {
@@ -896,13 +995,14 @@ async function buildInit(connection: FrameConnection): Promise<FrameInit> {
       contributes: summary.contributes ?? undefined,
       capabilities: summary.capabilities ?? [],
     },
-    token: await frameToken(pluginId),
+    // A guest page has no session: its frames reach only public routes.
+    token: isGuestRuntime() ? null : await frameToken(pluginId),
     language: i18n.language || "en",
     locales: summary.locales ?? [],
     pluginIds: knownPluginIds(),
     state: frameStateFor(pluginId),
     storage: readFrameStorage(pluginId),
-    guest: false,
+    guest: isGuestRuntime(),
     props: connection.events.getProps?.(),
     devReads: import.meta.env.DEV,
   };

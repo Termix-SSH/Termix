@@ -6,7 +6,8 @@
  * port knocking included, so the other server never needs a route to it. The
  * SSH session itself stays between that server and the host.
  *
- * The caller needs connect access to the host, the same as for a session.
+ * The caller needs connect access to the host, the same as for a session,
+ * and connect policies must allow it.
  */
 
 import net from "node:net";
@@ -18,6 +19,7 @@ import { openSshTransport } from "./connect/transport.js";
 import type { MutableConnectConfig, SshConnectHost } from "./connect/types.js";
 import { sshLogger } from "../utils/logger.js";
 import { registerCoreWsRoute } from "../plugins/ws.js";
+import { trackConnection } from "./open-connections.js";
 
 const MAX_RELAYS_PER_USER = 100;
 const open = new Map<string, number>();
@@ -68,6 +70,27 @@ async function handleRelay(
     return;
   }
 
+  const { assertConnectAllowed, ConnectPolicyError } =
+    await import("./connect-policy.js");
+  try {
+    await assertConnectAllowed({
+      userId,
+      hostId: Number((host as { id?: unknown }).id),
+      protocol: "ssh",
+      purpose: "relay",
+      profile: "stream",
+      interactive: false,
+      origin: "core",
+    });
+  } catch (error) {
+    if (error instanceof ConnectPolicyError) {
+      close(ws, 1008, "Connection not allowed");
+    } else {
+      close(ws, 1011, "Could not open the connection");
+    }
+    return;
+  }
+
   open.set(userId, (open.get(userId) ?? 0) + 1);
   let stream: Duplex | null = null;
   let jumpEnd: (() => void) | null = null;
@@ -99,6 +122,8 @@ async function handleRelay(
     }
     stream.once("error", finish);
     stream.once("close", finish);
+    const untrack = trackConnection((host as { id?: unknown }).id, finish);
+    ws.once("close", untrack);
     pipe.once("error", finish);
     stream.pipe(pipe);
     pipe.pipe(stream);

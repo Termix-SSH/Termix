@@ -30,6 +30,7 @@ import {
   configurePluginLoader,
   isPluginFrontendActive,
   orderForActivation,
+  pluginsBooted,
   resetPluginLoader,
   startPluginRuntime,
   startPreLoginPlugins,
@@ -370,6 +371,49 @@ describe("plugin loader", () => {
     expect(isPluginFrontendActive("slow")).toBe(false);
     expect(getPluginRecord("slow")?.frontend).toBe("failed");
     framedReady.clear();
+  });
+
+  it("pluginsBooted waits for framed plugins still starting", async () => {
+    let finish: () => void = () => {};
+    framedReady.set(
+      "cold",
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    plugins = [summary("cold", { frontendIsolation: "frame" })];
+    await startPluginRuntime();
+    let booted = false;
+    void pluginsBooted().then(() => {
+      booted = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(booted).toBe(false);
+    finish();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(booted).toBe(true);
+    framedReady.clear();
+  });
+
+  it("pluginsBooted waits for a plugin the server is still starting", async () => {
+    vi.useFakeTimers();
+    try {
+      modules.late = railPlugin("late");
+      plugins = [summary("late", { state: "activating" })];
+      await startPluginRuntime();
+      let booted = false;
+      void pluginsBooted().then(() => {
+        booted = true;
+      });
+      await vi.advanceTimersByTimeAsync(200);
+      expect(booted).toBe(false);
+      plugins = [summary("late")];
+      await vi.advanceTimersByTimeAsync(3_200);
+      expect(booted).toBe(true);
+      expect(railIds()).toContain("late-panel");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("ignores a pre-login load started after sign-in", async () => {

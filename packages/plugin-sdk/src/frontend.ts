@@ -113,6 +113,17 @@ export interface QuickConnectLogin {
   password?: string;
   /** "domain" when the protocol's Quick Connect entry shows that field. */
   fields?: Record<string, string>;
+  /**
+   * A saved credential the protocol plugin resolves on the server with
+   * ctx.credentials.resolveLogin, instead of username and password. Its
+   * secret never reaches the browser. Termix 26.11.3.
+   */
+  credentialId?: number;
+  /**
+   * Start the session without the user's input, for a protocol plugin that
+   * supports it (Remote Desktop 1.4.3). Only ever turns input off.
+   */
+  viewOnly?: boolean;
 }
 
 /** "direct" (a username and password), "credential" (a saved one) or "none". */
@@ -222,6 +233,11 @@ export interface ShellApi {
    * useConfirm from @termix-ssh/plugin-sdk/ui, which asks over that surface.
    */
   confirm?: (options: ConfirmRequest) => Promise<boolean>;
+}
+
+export interface DeepLinkEvent {
+  url: string;
+  source: "os-scheme" | "command-line";
 }
 
 export interface ConfirmRequest {
@@ -692,6 +708,12 @@ export type DataTone = "default" | "good" | "warn" | "bad" | "muted";
 /** The kinds of data value the shell can draw. */
 export type DataShape = "bars" | "stat" | "badge" | "dot" | "text";
 
+/**
+ * How a badge is drawn: "outline" (the default), "filled" in its color, or
+ * "icon" with only the icon and the label as its tooltip. Termix 26.11.3.
+ */
+export type DataBadgeVariant = "outline" | "filled" | "icon";
+
 export interface DataBar {
   label: string;
   /** 0 to 1, or null when not known. Bars warn from 0.7 and turn bad from 0.9 unless a tone is given. */
@@ -724,6 +746,14 @@ export type DataValue =
       tone?: DataTone;
       tooltip?: string;
       actionId?: string;
+      /** A Lucide icon name, like "KeyRound". Termix 26.11.3. */
+      icon?: string;
+      /**
+       * A color as #rgb or #rrggbb, used instead of the tone. The shell mixes
+       * it with the theme so it stays readable. Termix 26.11.3.
+       */
+      color?: string;
+      variant?: DataBadgeVariant;
     }
   | { shape: "dot"; tone: DataTone; label: string }
   | {
@@ -732,6 +762,10 @@ export type DataValue =
       tone?: DataTone;
       tooltip?: string;
       actionId?: string;
+      /** A Lucide icon name before the text. Termix 26.11.3. */
+      icon?: string;
+      /** A color as #rgb or #rrggbb, used instead of the tone. Termix 26.11.3. */
+      color?: string;
     };
 
 /** What a data hook returns: one value, several drawn in order, or null for nothing. */
@@ -779,6 +813,42 @@ export type HostStatusIndicatorContribution = HostDataContribution;
 
 /** A control in the host editor's toolbar: a badge or text value, clickable with `actionId`. */
 export type HostEditorToolbarItemContribution = HostDataContribution;
+
+/** Something inside a host, like a container or a guest, listed under it in a host tree. */
+export interface HostTreeChild {
+  /** Unique within this plugin's list for the host. */
+  id: string;
+  label: string;
+  /** A short second line, like an image or an IP. */
+  detail?: string;
+  kind?: "container" | "vm" | "lxc" | "pod" | "other";
+  state?: "running" | "stopped" | "paused" | "unknown";
+  /** The tab a click opens on the parent host. */
+  tabType: string;
+  /** Passed as the tab's data, so the tab can show this item. Plain JSON only. */
+  data?: Record<string, unknown>;
+}
+
+export interface HostTreeChildrenResult {
+  items: HostTreeChild[];
+  loading?: boolean;
+  error?: string;
+}
+
+/**
+ * Lists what lives inside a host for layouts that draw a host tree. The hook
+ * only runs while a layout shows the host expanded, so it may load data.
+ * Works from a frame. Plugin API 2.9, core 26.11.3.
+ */
+export interface HostTreeChildrenContribution {
+  id: string;
+  /** A heading for the group when the tree shows one. */
+  titleKey?: string;
+  when: (host: PluginHostRecord) => boolean;
+  useChildren: (host: PluginHostRecord) => HostTreeChildrenResult | null;
+  /** Lower comes first. Ties sort by id. */
+  order?: number;
+}
 
 export interface HostSectionProps {
   host: PluginHostRecord;
@@ -1410,6 +1480,14 @@ export interface TermixApp extends TermixAppInfo {
    * app.registerHostSection?.(...) if your plugin allows older cores.
    */
   registerHostSection: (section: HostSectionContribution) => Disposer;
+  /**
+   * Lists containers, guests and the like under a host in host tree layouts.
+   * Core 26.11.3 and newer; call it as app.registerHostTreeChildren?.(...) if
+   * your plugin allows older cores.
+   */
+  registerHostTreeChildren: (
+    provider: HostTreeChildrenContribution,
+  ) => Disposer;
   registerPaletteEntry: (entry: PaletteEntryContribution) => Disposer;
   registerPaletteGroup: (group: PaletteGroupContribution) => Disposer;
   registerKeybindingAction: (action: KeybindingActionContribution) => Disposer;
@@ -1435,7 +1513,15 @@ export interface TermixApp extends TermixAppInfo {
   registerAction: (
     id: string,
     handler: ActionHandler,
-    options?: { permission?: string },
+    options?: {
+      permission?: string;
+      /**
+       * Only this plugin's own frames may run it, even when another plugin
+       * lists it in manifest uses. For actions the plugin's frames use to
+       * reach each other.
+       */
+      private?: boolean;
+    },
   ) => Disposer;
   declareActionSlot: (slot: ActionSlotDefinition) => Disposer;
   registerSlotContribution: (
@@ -1513,6 +1599,26 @@ export interface TermixApp extends TermixAppInfo {
    * Termix 26.11.2 and plugin API 2.6; check it exists on older cores.
    */
   stepUp?: () => Promise<boolean>;
+  /**
+   * termix:// links the desktop app was opened with, like
+   * termix://connect?host=web-1 from an asset manager. The listener first
+   * gets the links that came before it listened. Termix never acts on a link
+   * for you except termix://host/<id>, so ask before doing anything a web
+   * page could have sent. "command-line" means a --host shortcut on this
+   * computer. Desktop app only; Termix 26.11.3.
+   */
+  deepLinks?: {
+    onOpen: (listener: (link: DeepLinkEvent) => void) => () => void;
+  };
+  /**
+   * Opens the diagnostics report page, where the person can download a
+   * report to attach to a bug report. Defaults to this plugin, so its log
+   * lines and report section come first and the issue goes to its repo;
+   * `pluginId: null` makes a report about Termix as a whole. In a frame it
+   * only works right after the person clicked. Termix 26.11.3; check it
+   * exists on older cores.
+   */
+  openDiagnostics?: (options?: { pluginId?: string | null }) => void;
   /**
    * Web Serial through the shell, for a plugin with device:serial. The
    * browser shows its own port picker and the plugin gets only the port the

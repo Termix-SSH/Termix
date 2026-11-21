@@ -1,5 +1,62 @@
 # Changelog
 
+## 26.11.3
+
+### Added
+
+- Diagnostics report: one file with errors, logs, plugin states and connection checks to attach to a bug report. Names and addresses are hidden by default and secrets are always removed. Open it from a plugin's page, Ctrl+Alt+Shift+D, the login page, a slow loading screen, or any Termix address with ?diagnostics added
+- Admins can watch the server log live in the diagnostics page
+- Admins can let community layouts and themes run outside the sandbox again, behind a warning, in Plugins, Registries
+- Set SERVE_OPENAPI=true to serve this server's own API spec at /version/openapi.json: core and every plugin that is on, at the versions it runs, with the server's address filled in
+- Access plugins can end the connections already open to a host when its access ends, and can keep status checks from contacting it
+- Desktop app: termix:// links open the app. termix://host/<id> connects to a saved host after asking, and a shortcut with --host=<id> opens straight into it
+- Quick Connect can use a saved credential, resolved on the server so its password never reaches the browser
+- Confirm prompts can have a checkbox, like Delete permanently in the file manager
+- Host row badges from plugins can show an icon and their own color
+- Dashboard cards from plugins let the layout's card color show behind them
+- Signing out can also sign you out of your single sign on provider, when its login method asks for it
+- Desktop app: logins of web pages a plugin shows in the app are kept across reloads and reopened tabs until Termix quits or you sign out. Pages on this computer still start signed out
+- Setup has a Pick a layout step that shows every installed layout with a screenshot and a link to its video. Admins can also install layouts from the registry or turn on ones that are off
+- Layouts with a host tree can list what runs inside a host, like containers and guests, under it
+
+### Fixed
+
+- Signing out from the menu ends the session on the server too, not only in the browser
+- Embedded web pages from plugins, like Homepage iFrame widgets, show again in Safari and Firefox when the page is on another host
+- Desktop app: parts of plugins that only show in the desktop app, like a local terminal, show again
+- Plugins that are blocked or stopped after an upgrade show their update again, and Update all no longer greys out when only those are left
+- Update all opens a review for each plugin whose update asks for new permissions, instead of skipping it without a word
+- When a login proxy in front of Termix blocks plugin files, Termix says so and links to the fix, instead of showing "Getting plugins ready" on every load
+- A plugin that can't read its own files says which folder and how to fix it, instead of "did not start"
+- A blocked plugin says "Can't start" with the reason, instead of always "Waiting on another plugin" even when it only needs an update
+- The plugin loading screen no longer says it only shows the first time
+- The loading screen stays up until plugins are ready, so buttons and rail items no longer pop in and host details no longer flash right after it
+- Plugins can write to files they saved before 26.11.2 again, like Session Recording's recordings
+- The first plugin installed from the store on a new install starts without a restart
+- A terminal's tab shows its Share button and Share menu entry again, and Refresh connection, Reconnect all and focus in split screen work on it again
+- Shared session links open again, for people with or without an account
+- A plugin that stops right as Termix sends it a message can no longer crash the whole server
+- Desktop app: plugin updates no longer fail with "inclusion promise could not be verified", thanks to dean for finding the cause
+- Termix starts again when the data folder doesn't allow changing file owners, like some network shares, instead of restarting over and over. Plugins then run as Termix's own user
+- When most plugins go quiet at once because Termix itself was busy, they are no longer all restarted together
+- A plugin's scheduled job no longer fails with "The plugin process is not running" when it fires while the plugin is waking up
+- Desktop app on Windows: the notice that Termix is still running in the tray now shows in the portable app too, and shows again next time if Windows hid it
+- When plugins can't load in the browser, Termix says which ones and why, instead of their parts quietly disappearing
+- A plugin part at the edge of the screen no longer takes the whole width, which hid the tabs and made every other plugin's parts disappear
+- Signing in to the mobile app through the browser works with every login method again, not only a password and code. Newer apps get the session through a one-time code only the app can use
+- Single sign on started from the login page the mobile app opened goes straight back to the app
+- Uploading files to a plugin works again, like drag and drop or the upload button in the file manager
+- Desktop app: the interface size and other settings no longer go back to old account values on launch when the app isn't linked to a server
+- Desktop app: `NODE_EXTRA_CA_CERTS` works again, so servers with a certificate from a private CA can be linked. Plugins now trust those certificates too
+- Exported hosts keep whether SSH is on, so importing them no longer turns SSH on or off by the connection type
+- Desktop app: linking to an account that already has the same hosts, folders and credentials adopts them instead of making a second copy of each, thanks to ZacharyZcR
+- A plugin that cancels work with its own error type still cancels it, thanks to ZacharyZcR
+- Uploads in the file manager finish again instead of hanging, and uploads to other plugins no longer fail as they finish
+- A plugin's host row button keeps working after the plugin sat idle for a moment, like after you close one of its tabs, instead of doing nothing until a reload
+- Desktop app: a linked app with an old Sync plugin from before plugin API 2 updates it on its own, so it can sync again instead of saying sync is off on the server
+- Quick Connect asks to trust a host's key only the first time, not on every connect, and warns if the key changes
+- Desktop app on Windows and Linux: Ctrl+W reaches the terminal again, like for search in nano or deleting a word, and still closes other tabs
+
 ## 26.11.2
 
 ### Added
@@ -14,6 +71,7 @@
 - Admin setting to trust a host's first key without a prompt when nobody can confirm it. Each such key is audited
 - Every desktop file, tarball and Flatpak bundle on a release carries signed build provenance, and each release has a signed `SHA256SUMS` file with build provenance in `SHA256SUMS.intoto.jsonl`. Check them with the new Verify your download page in the docs
 - Docker images are signed with cosign and carry build provenance and an SBOM attestation
+- Desktop app: Windows builds are code signed, thanks to Ember Swan
 - A CycloneDX SBOM of the server's dependencies ships with each build: `/app/sbom.cdx.json` in the Docker image and `termix_sbom.cdx.json` on the release
 - The server sends the same security headers with or without the bundled nginx: a strict Content-Security-Policy, Referrer-Policy, Permissions-Policy, Cross-Origin-Opener-Policy and HSTS over HTTPS
 - Desktop app: the app page carries a Content-Security-Policy

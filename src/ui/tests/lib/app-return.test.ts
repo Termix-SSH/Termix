@@ -4,6 +4,7 @@ import {
   captureAppReturn,
   handOffToApp,
   isAppReturn,
+  pendingAppChallenge,
   pendingAppReturn,
 } from "@/lib/app-return";
 
@@ -89,5 +90,44 @@ describe("handOffToApp", () => {
       "termix-mobile://oidc-callback?token=t1",
     );
     expect(pendingAppReturn()).toBeNull();
+  });
+});
+
+describe("app challenge", () => {
+  const challenge = "a".repeat(43);
+
+  it("keeps the app's challenge with its return address", () => {
+    visit(
+      `/?return_to=termix-mobile%3A%2F%2Foidc-callback&app_challenge=${challenge}`,
+    );
+    captureAppReturn();
+    expect(pendingAppChallenge()).toBe(challenge);
+    expect(window.location.search).toBe("");
+  });
+
+  it("drops a malformed challenge", () => {
+    visit("/?return_to=termix-mobile%3A%2F%2Foidc-callback&app_challenge=x");
+    captureAppReturn();
+    expect(pendingAppChallenge()).toBeNull();
+  });
+
+  it("drops the challenge without a valid return address", () => {
+    visit(`/?return_to=https%3A%2F%2Fevil.example&app_challenge=${challenge}`);
+    captureAppReturn();
+    expect(pendingAppChallenge()).toBeNull();
+  });
+
+  it("clears the challenge after the hand-off", () => {
+    visit(
+      `/?return_to=termix-mobile%3A%2F%2Foidc-callback&app_challenge=${challenge}`,
+    );
+    captureAppReturn();
+    const replace = vi.fn();
+    vi.spyOn(window, "location", "get").mockReturnValue({
+      ...window.location,
+      replace,
+    } as Location);
+    handOffToApp({ code: "c" });
+    expect(pendingAppChallenge()).toBeNull();
   });
 });

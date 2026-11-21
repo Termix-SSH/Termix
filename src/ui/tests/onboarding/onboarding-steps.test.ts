@@ -1,10 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { CORE_STEPS } from "@/onboarding/onboarding-steps";
 import { computeFlow } from "@/onboarding/onboarding-flow";
 import type { OnboardingCtx } from "@/onboarding/onboarding-registry";
 import { CORE_ONBOARDING_STEPS } from "@/types/onboarding";
 import { UI_AREA_KEYS, PRESETS } from "@/types/ui-preferences";
 import en from "@/locales/en.json";
+import { resetPluginLayouts, setPluginLayouts } from "@/look/layout-registry";
 
 function lookup(key: string): unknown {
   return key
@@ -54,6 +55,7 @@ describe("CORE_STEPS", () => {
   it("opens on the plugin picker for an admin on a fresh install", () => {
     expect(ids(ctx({ isAdmin: true, pluginSetupPending: true }))).toEqual([
       "plugins",
+      "layout",
     ]);
   });
 
@@ -77,6 +79,43 @@ describe("CORE_STEPS", () => {
         }),
       ),
     ).not.toContain("plugins");
+  });
+
+  describe("layout step", () => {
+    afterEach(() => resetPluginLayouts());
+
+    const two = () =>
+      setPluginLayouts([
+        { id: "classic", label: "Classic", pluginId: "a" },
+        { id: "simple", label: "Simple", pluginId: "b" },
+      ]);
+
+    it("shows to everyone when there is more than one layout", () => {
+      two();
+      expect(ids(ctx())).toEqual(["layout"]);
+    });
+
+    it("skips a non-admin with only one layout", () => {
+      setPluginLayouts([{ id: "classic", label: "Classic", pluginId: "a" }]);
+      expect(ids(ctx())).not.toContain("layout");
+    });
+
+    it("shows to an admin with one layout, who can install more", () => {
+      expect(ids(ctx({ isAdmin: true }))).toContain("layout");
+    });
+
+    it("skips an admin on a linked desktop with one layout", () => {
+      expect(
+        ids(ctx({ isAdmin: true, pluginsManagedElsewhere: true })),
+      ).not.toContain("layout");
+    });
+
+    it("comes right after the plugin picker", () => {
+      two();
+      expect(
+        ids(ctx({ isAdmin: true, pluginSetupPending: true })).slice(0, 2),
+      ).toEqual(["plugins", "layout"]);
+    });
   });
 
   it("makes the plugin picker required", () => {
@@ -109,6 +148,10 @@ describe("onboarding translations", () => {
   it("has the copy the stage and the steps show", () => {
     for (const key of [
       "securityIntro",
+      "layoutTitle",
+      "layoutIntro",
+      "layoutChangeLater",
+      "layoutChangeLaterAdmin",
       "pluginsIntro",
       "pluginsRemoveNote",
       "pluginsChoice_enabled",

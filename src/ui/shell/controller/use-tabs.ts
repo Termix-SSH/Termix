@@ -840,8 +840,10 @@ export function useTabs({
     });
   }
 
-  function reconnectAllDisconnected() {
-    const { reconnected, failed } = reconnectDisconnectedTabs(tabsRef.current);
+  async function reconnectAllDisconnected() {
+    const { reconnected, failed } = await reconnectDisconnectedTabs(
+      tabsRef.current,
+    );
     if (reconnected || !failed)
       toast(
         t(
@@ -854,7 +856,7 @@ export function useTabs({
     if (failed)
       toast.error(t("nav.reconnectTerminalsFailed", { count: failed }));
   }
-  const reconnectAllRef = useRef<() => void>(() => {});
+  const reconnectAllRef = useRef<() => Promise<void> | void>(() => {});
   reconnectAllRef.current = reconnectAllDisconnected;
 
   function refreshTab(id: string) {
@@ -872,7 +874,11 @@ export function useTabs({
     if (guard && !(await guard())) return;
     if (!(await canCloseTab(id))) return;
     const confirmEnabled = localStorage.getItem("confirmTabClose") === "true";
-    if (tab && confirmEnabled && isActiveConnectionTab(tab)) {
+    const connected =
+      !!tab &&
+      isSessionTabType(tab.type) &&
+      (await tab.terminalRef?.current?.isConnected?.()) === true;
+    if (tab && confirmEnabled && connected) {
       const ask = confirmRef.current;
       const ok = ask
         ? await ask({

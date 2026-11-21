@@ -16,6 +16,8 @@
       "tier": "standard",
       "onboarding": { "recommended": true, "consent": false }
     },
+    "host-layout": { "tier": "standard" },
+    "original-layout": { "tier": "standard" },
     "out-of-band": { "tier": "full" },
     "package-manager": { "tier": "full" },
     "privileged-access": { "tier": "full" },
@@ -24,9 +26,11 @@
     "security-center": { "tier": "full" },
     "storage-health": { "tier": "full" },
     "ups-manager": { "tier": "full" },
+    "terminal-layout": { "tier": "standard" },
     "uptime": { "tier": "full" },
     "user-manager": { "tier": "full" },
     "virtual-machines": { "tier": "full" },
+    "wall-display": { "tier": "standard" },
     "web-servers": { "tier": "full" },
     "wireguard": { "tier": "full" }
   }

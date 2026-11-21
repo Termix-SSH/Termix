@@ -171,7 +171,7 @@ unsafe fn has_grant(acl: *const ACL, sid: PSID, mask: u32) -> bool {
     }
     for index in 0..info.AceCount {
         let mut ace: *mut c_void = null_mut();
-        if unsafe { GetAce(acl, index, &mut ace) } == 0 {
+        if unsafe { GetAce(acl, index, &mut ace) } == 0 || ace.is_null() {
             continue;
         }
         let header = unsafe { &*(ace as *const ACE_HEADER) };

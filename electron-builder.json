@@ -1,5 +1,11 @@
 {
   "appId": "com.karmaa.termix",
+  "protocols": [
+    {
+      "name": "Termix link",
+      "schemes": ["termix"]
+    }
+  ],
   "productName": "Termix",
   "publish": {
     "provider": "generic",

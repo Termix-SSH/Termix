@@ -217,7 +217,18 @@
     "pluginsLoadFailed": "The plugin list could not be loaded. You can choose plugins later from the Plugins tab.",
     "securityTitle": "Secure your account",
     "securityIntro": "Add a passkey or an authenticator app to your account. You can also do this later in Settings, under Security.",
-    "pluginsDocsLink": "Read about each one"
+    "pluginsDocsLink": "Read about each one",
+    "layoutTitle": "Pick a layout",
+    "layoutIntro": "The layout decides how the whole app is set out: the menus, the sidebar and the tabs. Click one to use it. It changes right away.",
+    "layoutInstalled": "Installed",
+    "layoutMore": "More layouts",
+    "layoutNoMore": "No other layouts are available right now.",
+    "layoutDefault": "Default",
+    "layoutInstall": "Install",
+    "layoutTurnOn": "Turn on",
+    "layoutVideo": "Watch video",
+    "layoutChangeLater": "You can change your layout any time in Settings, under Appearance. Ask an admin if you want more layouts installed.",
+    "layoutChangeLaterAdmin": "You can change your layout any time in Settings, under Appearance. More layouts can be installed later from the Plugins tab."
   },
   "desktopTray": {
     "noticeTitle": "Termix is still running",
@@ -836,7 +847,12 @@
     "editorUpdate": "Update Host",
     "editorAdd": "Add Host",
     "speedSearch": "Search hosts. Arrow keys to select, Enter to connect, Esc to close",
-    "speedSearchList": "Host list. Type or press / to search."
+    "speedSearchList": "Host list. Type or press / to search.",
+    "openFromLink": {
+      "title": "Open {{name}}?",
+      "description": "A link asked Termix to connect to this host.",
+      "confirm": "Connect"
+    }
   },
   "splitScreen": {
     "title": "Split screen",
@@ -1375,7 +1391,7 @@
         "running": "Running",
         "disabled": "Disabled",
         "failed": "Stopped unexpectedly",
-        "blocked": "Waiting on another plugin",
+        "blocked": "Can't start",
         "server": "Runs on your server",
         "safeMode": "Off in safe mode"
       },
@@ -1461,6 +1477,8 @@
         "updated": "{{name}} updated to {{version}}",
         "updatedMany_one": "{{count}} plugin updated",
         "updatedMany_other": "{{count}} plugins updated",
+        "needsReview_one": "1 plugin asks for new permissions. Review it to update.",
+        "needsReview_other": "{{count}} plugins ask for new permissions. Review each one to update.",
         "uninstalled": "{{name}} uninstalled",
         "dataDeleted": "Data for {{name}} deleted",
         "failedToStart": "{{name}} could not start. Open it to see why.",
@@ -1607,7 +1625,13 @@
         "unreachable": "Could not read it: {{error}}",
         "filter": "Registry",
         "allRegistries": "All registries",
-        "browseHint": "Turn on community plugins or add your own registry in the Registries tab."
+        "browseHint": "Turn on community plugins or add your own registry in the Registries tab.",
+        "looksName": "Community layouts and themes",
+        "looksHint": "Lets layouts and themes that are not from Termix run outside the sandbox, like the official ones. A layout draws the whole app, so it can see and do anything you can. Only install ones you trust. Reload the page after changing this.",
+        "looksConfirmTitle": "Let community layouts run outside the sandbox?",
+        "looksConfirmBody": "A community layout or theme will run in the page with full access to Termix as whoever is signed in. This can be risky. Only turn this on if you trust the layouts and themes you install.",
+        "looksConfirm": "Turn on",
+        "looksSaved": "Saved. Reload the page to apply it."
       },
       "upToDate": "Everything is up to date.",
       "lastChecked": "Last checked {{time}}",
@@ -1704,9 +1728,14 @@
     "firstLoad": {
       "title": "Getting plugins ready",
       "progress": "{{done}} of {{total}}",
-      "hint": "This only happens the first time. Next time Termix opens right away.",
+      "hint": "Plugins are starting for the first time. After this, Termix opens right away.",
       "skip": "Continue"
-    }
+    },
+    "framesBlocked": "Plugins can't load their files. A login proxy in front of Termix is likely blocking them.",
+    "framesBlockedHelp": "How to fix",
+    "framesFailed_one": "{{names}} couldn't load, so its parts are hidden",
+    "framesFailed_other": "{{count}} plugins couldn't load, so their parts are hidden: {{names}}",
+    "framesFailedReload": "Reload"
   },
   "settings": {
     "secretSet": "Set",
@@ -1806,5 +1835,78 @@
     },
     "reset": "Reset",
     "done": "Done"
+  },
+  "diagnostics": {
+    "title": "Diagnostics",
+    "makeReport": "Make a diagnostics report",
+    "slowBoot": "Taking a while? Make a diagnostics report",
+    "troubleSigningIn": "Trouble signing in? Make a diagnostics report",
+    "reportTab": "Report",
+    "logsTab": "Server logs",
+    "intro": "This makes one file with what Termix needs to find a problem: errors, logs, plugin states and how requests reach the server. Download it and attach it to a GitHub issue or send it in Discord.",
+    "notAdmin": "Server logs and server details need an admin. Ask your admin to make a report too if the problem is on the server.",
+    "signedOut": "You are not signed in, so only the browser part is included.",
+    "whatHappened": "What happened",
+    "whatHappenedHint": "Optional. What did you do and what went wrong?",
+    "include": "Include",
+    "adminOnly": "Needs an admin",
+    "privacy": "Privacy",
+    "mask": "Hide names and addresses",
+    "maskHint": "IPs, host names, usernames and emails become host-1, user-1 and so on. Passwords, keys and tokens are always removed.",
+    "domText": "Include page text",
+    "domTextHint": "Adds the text on screen to the page layout. Off by default since it can show your data.",
+    "warnOnly": "Only warnings and errors from the server log",
+    "warnOnlyHint": "Makes the file smaller.",
+    "focus": "Plugin",
+    "focusHint": "Shows this plugin first and files the issue on its repo.",
+    "allPlugins": "All plugins",
+    "findings": "Found by the checks",
+    "preview": "What will be sent",
+    "previewCut": "(The preview stops here. The file has everything.)",
+    "cut": "The file was over 5 MB, so the oldest log lines were cut.",
+    "footerHint": "Check the preview before you send it.",
+    "copy": "Copy",
+    "copied": "Report copied",
+    "copyFailed": "Could not copy the report",
+    "download": "Download",
+    "downloaded": "Report downloaded",
+    "openIssue": "Open GitHub issue",
+    "logsSearch": "Search logs",
+    "logsLevel": "Level",
+    "logsAll": "All levels",
+    "logsWarn": "Warnings and errors",
+    "logsError": "Errors",
+    "logsPlugin": "Plugin",
+    "logsCount": "{{count}} lines",
+    "logsFailed": "Could not load logs",
+    "logsPause": "Pause",
+    "logsResume": "Resume",
+    "logsEmpty": "No log lines yet.",
+    "parts": {
+      "server": "Server",
+      "plugins": "Plugins",
+      "sections": "Plugin details",
+      "logs": "Server logs",
+      "request": "Connection",
+      "probes": "Connection checks",
+      "errors": "Browser errors",
+      "console": "Browser console",
+      "network": "Network",
+      "page": "Browser and window",
+      "dom": "Page layout"
+    },
+    "partHints": {
+      "server": "Version, database, SSL and which settings are set",
+      "plugins": "Versions and states on the server and in the browser",
+      "sections": "Extra details running plugins add",
+      "logs": "Server log since start and recent lines",
+      "request": "Header names that show a proxy in front of Termix",
+      "probes": "Tests that Termix and plugin files load",
+      "errors": "Uncaught errors and blocked loads",
+      "console": "Recent console lines from the page and plugins",
+      "network": "Recent requests and their status",
+      "page": "Browser, screen size and storage key names",
+      "dom": "The layout of the page, without text"
+    }
   }
 }

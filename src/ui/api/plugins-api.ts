@@ -283,7 +283,7 @@ export interface PluginSummary {
   description?: string;
   author?: string;
   repository?: string;
-  /** A YouTube video id from the manifest. Admins only. */
+  /** A YouTube video id from the manifest. */
   videoId?: string;
   /** What the plugin does, from the manifest. Admins only. */
   features?: string[];
@@ -686,6 +686,17 @@ export interface DeveloperModeState {
 export async function getDeveloperMode(): Promise<DeveloperModeState> {
   const response = await rbacApi.get("/plugins/developer-mode");
   return response.data;
+}
+
+/** Whether community layouts and themes may run outside the sandbox. */
+export async function getCommunityLooks(): Promise<boolean> {
+  const response = await rbacApi.get("/plugins/community-looks");
+  return response.data?.enabled === true;
+}
+
+export async function setCommunityLooks(enabled: boolean): Promise<boolean> {
+  const response = await rbacApi.put("/plugins/community-looks", { enabled });
+  return response.data?.enabled === true;
 }
 
 /** Fired after developer mode changes; detail is the new value. */

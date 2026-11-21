@@ -115,7 +115,7 @@ DialogTitle (value): ({ className, ...props }: DialogTitleProps & RefAttributes<
 DialogTrigger (value): ({ ...props }: DialogTriggerProps & RefAttributes<HTMLButtonElement>) => Element
 DocsLink (value): ({ core, page, anchor, href, variant, children, className, }: DocsLinkProps) => Element
 DocsLinkProps (type): DocsLinkProps
-DocsPage (type): "dashboard" | "users" | "sessions" | "roles" | "branding" | "database" | "manage" | "settings" | "plugins" | "install" | "cli" | "develop" | "home" | "updating" | "betas" | "envVars" | "https" | "reverseProxy" | "desktopSync" | "interface" | "hosts" | "portKnocking" | "hostDefaults" | "credentials" | "sharing" | "account" | "accountSecurity" | "accountData" | "apiKeys" | "commandPalette" | "interfaceSettings" | "appearance" | "keybindings" | "adminGeneral" | "adminDatabase" | "adminSsl" | "auditLog" | "importExport" | "pluginCatalog" | "communityRegistry" | "pluginApi2" | "pluginRegistries" | "hostRegistry"
+DocsPage (type): "dashboard" | "users" | "sessions" | "roles" | "branding" | "database" | "manage" | "settings" | "plugins" | "install" | "cli" | "develop" | "home" | "updating" | "betas" | "envVars" | "https" | "reverseProxy" | "loginProxies" | "desktopSync" | "interface" | "hosts" | "portKnocking" | "hostDefaults" | "credentials" | "sharing" | "account" | "accountSecurity" | "accountData" | "apiKeys" | "commandPalette" | "interfaceSettings" | "appearance" | "keybindings" | "adminGeneral" | "adminDatabase" | "adminSsl" | "auditLog" | "importExport" | "pluginCatalog" | "communityRegistry" | "pluginApi2" | "pluginRegistries" | "hostRegistry" | "diagnostics"
 DropdownMenu (value): ({ ...props }: DropdownMenuProps) => Element
 DropdownMenuCheckboxItem (value): ({ className, children, checked, inset, ...props }: DropdownMenuCheckboxItemProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }) => Element
 DropdownMenuContent (value): ({ className, align, sideOffset, ref, ...props }: DropdownMenuContentProps & RefAttributes<HTMLDivElement>) => Element
@@ -188,6 +188,10 @@ HostSidebarFilterState (type): HostSidebarFilterState
 HostSidebarPreferences (type): HostSidebarPreferences
 HostTabEmbed (value): (props: HostTabEmbedProps) => Element
 HostTrayTrigger (type): HostTrayTrigger
+HostTreeChild (type): HostTreeChild
+HostTreeChildren (value): ({ host, children, }: { host: Host; children: (groups: HostTreeChildrenGroup[]) => ReactNode; }) => Element
+HostTreeChildrenGroup (type): HostTreeChildrenGroup
+HostTreeChildrenResult (type): HostTreeChildrenResult
 HttpsSettings (type): HttpsSettings
 IconPicker (value): ({ value, color, onChange, }: { value: string; color?: string; onChange: (icon: string) => void; }) => Element
 InfoGrid (value): ({ items, className, }: { items: InfoItem[]; className?: string; }) => Element
@@ -361,7 +365,7 @@ TileStack (value): ({ className, children, }: { className?: string; children: Re
 TileWall (value): ({ size, minWidth, gridClassName, className, children, }: { size?: GridSize; minWidth?: number; gridClassName?: string; className?: string; children: ReactNode; }) => Element
 TlsStatus (type): TlsStatus
 ToolbarBand (value): ({ className, children, }: { className?: string; children: ReactNode; }) => Element
-ToolbarSelect (value): <T extends string>({ value, onChange, options, label, disabled, className, }: { value: T; onChange: (value: NoInfer<T>) => void; options: { value: NoInfer<T>; label: string; }[]; label: string; disabled?: boolean; className?: string; }) => Element
+ToolbarSelect (value): <T extends string>({ value, onChange, options, label, disabled, className, contentClassName, }: { value: T; onChange: (value: NoInfer<T>) => void; options: { value: NoInfer<T>; label: string; }[]; label: string; disabled?: boolean; className?: string; contentClassName?: string; }) => Element
 ToolsTab (type): ToolsTab
 Tooltip (value): ({ ...props }: TooltipProps) => Element
 TooltipContent (value): ({ className, sideOffset, children, ref, ...props }: TooltipContentProps & RefAttributes<HTMLDivElement>) => Element
@@ -445,7 +449,7 @@ deleteSSHHost (value): (hostId: number) => Promise<Record<string, unknown>>
 deleteUser (value): (username: string, successorUserId?: string) => Promise<Record<string, unknown>>
 desktopUpdates (value): () => DesktopUpdatesBridge
 disableUser (value): (userId: string) => Promise<{ disabled: boolean; }>
-docsUrl (value): (page?: "dashboard" | "users" | "sessions" | "roles" | "branding" | "database" | "manage" | "settings" | "plugins" | "install" | "cli" | "develop" | "home" | "updating" | "betas" | "envVars" | "https" | "reverseProxy" | "desktopSync" | "interface" | "hosts" | "portKnocking" | "hostDefaults" | "credentials" | "sharing" | "account" | "accountSecurity" | "accountData" | "apiKeys" | "commandPalette" | "interfaceSettings" | "appearance" | "keybindings" | "adminGeneral" | "adminDatabase" | "adminSsl" | "auditLog" | "importExport" | "pluginCatalog" | "communityRegistry" | "pluginApi2" | "pluginRegistries" | "hostRegistry") => string
+docsUrl (value): (page?: "dashboard" | "users" | "sessions" | "roles" | "branding" | "database" | "manage" | "settings" | "plugins" | "install" | "cli" | "develop" | "home" | "updating" | "betas" | "envVars" | "https" | "reverseProxy" | "loginProxies" | "desktopSync" | "interface" | "hosts" | "portKnocking" | "hostDefaults" | "credentials" | "sharing" | "account" | "accountSecurity" | "accountData" | "apiKeys" | "commandPalette" | "interfaceSettings" | "appearance" | "keybindings" | "adminGeneral" | "adminDatabase" | "adminSsl" | "auditLog" | "importExport" | "pluginCatalog" | "communityRegistry" | "pluginApi2" | "pluginRegistries" | "hostRegistry" | "diagnostics") => string
 downloadAccessReviewCsv (value): (filter?: AccessReviewFilter) => Promise<Blob>
 duplicateCredential (value): (credentialId: number, data: Record<string, unknown>) => Promise<Record<string, unknown>>
 enableUser (value): (userId: string) => Promise<{ disabled: boolean; }>
@@ -542,6 +546,7 @@ hostMenuItemsFor (value): (all: HostContextMenuItemDef[], host: Host) => HostCon
 hostProtocolFlags (value): (host: { enableSsh?: boolean; pluginSettings?: Record<string, Record<string, unknown>>; }, list?: HostProtocolDef[]) => HostProtocols
 hostSectionsFor (value): (all: HostSectionDef[], host: Host) => HostSectionDef[]
 hostStatusIndicatorsFor (value): (all: HostBadgeDef[], host: Host) => HostBadgeDef[]
+hostTreeChildrenFor (value): (all: HostTreeChildrenDef[], host: Host) => HostTreeChildrenDef[]
 hydrateLocalSharedHostAuth (value): <T>(host: T) => Promise<T>
 invalidateHostsAndStatusCaches (value): () => void
 invalidateServerStatusCache (value): () => void
@@ -565,7 +570,7 @@ listHostSections (value): () => HostSectionDef[]
 listStepUpFactors (value): () => Promise<SecondFactorRef[]>
 listUserInvites (value): () => Promise<UserInvite[]>
 loadPaletteGroup (value): (group: PaletteGroupDef) => Promise<PaletteItemDef[]>
-logoutUser (value): () => Promise<{ success: boolean; message: string; }>
+logoutUser (value): () => Promise<{ success: boolean; message: string; redirectUrl?: string; }>
 makeHostSshSubTabs (value): (t: (key: string, options?: { defaultValue?: string; }) => string, protocols?: Record<string, boolean>, defaultsMode?: boolean) => HostTab[]
 makeHostTabs (value): (t: (key: string, options?: { defaultValue?: string; }) => string, protocols?: Record<string, boolean>, defaultsMode?: boolean) => HostTab[]
 makeUserAdmin (value): (userId: string) => Promise<Record<string, unknown>>
@@ -709,6 +714,7 @@ useHostProtocols (value): () => HostProtocolDef[]
 useHostSections (value): () => HostSectionDef[]
 useHostStatus (value): (hostId: number, statusCheckEnabled?: boolean) => StatusValue
 useHostStatusIndicators (value): () => HostBadgeDef[]
+useHostTreeChildrenProviders (value): () => HostTreeChildrenDef[]
 useInSeamlessTile (value): () => boolean
 useInstalledPlugins (value): () => PluginSummary[]
 useIsDefaultsEditor (value): () => boolean

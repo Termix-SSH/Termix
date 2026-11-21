@@ -62,6 +62,8 @@ export function usePluginsManager() {
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [consent, setConsent] = useState<ConsentRequest | null>(null);
+  // Plugins "Update all" skipped because they ask for something new.
+  const [reviewQueue, setReviewQueue] = useState<string[]>([]);
   const [developer, setDeveloper] = useState<DeveloperModeState>({
     enabled: false,
     signedOnly: false,
@@ -636,12 +638,37 @@ export function usePluginsManager() {
               }),
             );
           }
+          if (result.needsReview.length > 0) {
+            toast.info(
+              t("plugins.manager.toast.needsReview", {
+                count: result.needsReview.length,
+              }),
+            );
+            setReviewQueue(result.needsReview.map((entry) => entry.id));
+          }
         } catch (error) {
           failToast(error, "plugins.manager.errors.updateAll", "");
         }
       }),
     [run, t, failToast, nameOf],
   );
+
+  // Walks through the skipped plugins one review at a time.
+  useEffect(() => {
+    if (consent || busy.size > 0 || reviewQueue.length === 0) return;
+    const [next, ...rest] = reviewQueue;
+    setReviewQueue(rest);
+    const plugin = plugins.find((p) => p.id === next);
+    if (plugin?.updateAvailable && !plugin.pinnedVersion) {
+      void requestUpdate(plugin);
+    }
+  }, [consent, busy, reviewQueue, plugins, requestUpdate]);
+
+  /** Closing a review also stops the rest of the queue. */
+  const cancelConsent = useCallback(() => {
+    setConsent(null);
+    setReviewQueue([]);
+  }, []);
 
   return {
     plugins,
@@ -655,6 +682,7 @@ export function usePluginsManager() {
     busy,
     consent,
     setConsent,
+    cancelConsent,
     developerMode: developer.enabled,
     signedOnly: developer.signedOnly,
     requestUpload,

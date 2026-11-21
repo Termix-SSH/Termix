@@ -4,6 +4,7 @@ import type {
   PluginManifest,
 } from "@termix-ssh/plugin-sdk/frontend";
 import i18n, { setPluginLocaleResolver } from "@/i18n/i18n";
+import { setGuestRuntime } from "./guest-runtime";
 import { getPlugins, type PluginSummary } from "@/api/plugins-api";
 import { getBackendUrl } from "@/main-axios";
 import { createPluginApp, type PluginAppHandle } from "./app";
@@ -24,6 +25,7 @@ import {
 import { BUILTIN_THEMES, setPluginThemes } from "@/look/theme-registry";
 import { setPluginLayouts } from "@/look/layout-registry";
 import { startFramedPlugin } from "./frames/frame-plugins";
+import { reportFrameFailure } from "./frames/frame-failures";
 import { dropFrameToken } from "./frames/frame-token";
 
 /**
@@ -66,6 +68,8 @@ let started = false;
 let guestMode = false;
 /** Signed in with the full runtime: only the chosen layout's code loads. */
 let gateLayouts = false;
+/** Background frames still starting; boot waits on these. */
+const booting = new Set<Promise<void>>();
 
 function assetUrlWithVersion(
   pluginId: string,
@@ -309,9 +313,6 @@ async function activateFramed(summary: PluginSummary): Promise<void> {
   // plugins from what their backends describe, and only their strings load.
   if (preLoginMode) return;
   try {
-    if (guestMode) {
-      throw new Error("plugin views in frames need a signed-in user");
-    }
     const framed = await withTimeout(
       startFramedPlugin(summary),
       FRAMED_ACTIVATE_TIMEOUT_MS,
@@ -326,7 +327,13 @@ async function activateFramed(summary: PluginSummary): Promise<void> {
     });
     failedVersions.delete(summary.id);
     setFrontendState(summary.id, "active");
-    // A frame still booting does not hold the app; if it fails, say so.
+    const boot = framed.ready.then(
+      () => {},
+      () => {},
+    );
+    booting.add(boot);
+    void boot.then(() => booting.delete(boot));
+    // A frame still booting does not hold activation; if it fails, say so.
     framed.ready.catch((error: unknown) => {
       if (active.get(summary.id)?.handle.dispose !== framed.dispose) return;
       active.delete(summary.id);
@@ -334,12 +341,14 @@ async function activateFramed(summary: PluginSummary): Promise<void> {
       console.error(`[plugins] ${summary.id} failed to start`, error);
       failedVersions.set(summary.id, summary.assetVersion ?? null);
       setFrontendState(summary.id, "failed", message);
+      reportFrameFailure(summary.name || summary.id, message);
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[plugins] ${summary.id} failed to start`, error);
     failedVersions.set(summary.id, summary.assetVersion ?? null);
     setFrontendState(summary.id, "failed", message);
+    reportFrameFailure(summary.name || summary.id, message);
   }
 }
 
@@ -589,6 +598,22 @@ export function syncPlugins(summaries?: PluginSummary[]): Promise<void> {
   });
 }
 
+/**
+ * Resolves once every background frame has started and no plugin is still
+ * waiting for the server to start it, so the shell opens complete.
+ */
+export async function pluginsBooted(): Promise<void> {
+  for (;;) {
+    await queue;
+    if (booting.size > 0) {
+      await Promise.all([...booting]);
+      continue;
+    }
+    if (!startingRetry) return;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+}
+
 /** Tries a plugin's frontend again even though this bundle failed before. */
 export function retryPluginFrontend(pluginId: string): Promise<void> {
   failedVersions.delete(pluginId);
@@ -704,6 +729,7 @@ export function startPluginRuntime(
   installLocaleResolver();
   if (options.guest) {
     guestMode = true;
+    setGuestRuntime(true);
     if (!deps) configurePluginLoader({ fetchPlugins: fetchGuestPlugins });
     return syncPlugins();
   }
@@ -743,6 +769,8 @@ export async function resetPluginLoader(): Promise<void> {
   await stopPluginRuntime();
   deps = null;
   guestMode = false;
+  setGuestRuntime(false);
   queue = Promise.resolve();
   failedVersions.clear();
+  booting.clear();
 }

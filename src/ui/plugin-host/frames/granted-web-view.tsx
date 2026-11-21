@@ -4,7 +4,8 @@
  * the native view from the grant alone, address and certificate rule
  * included. In a browser, or when main does not know the grant (a remote
  * server), the shell reads the address from core and draws a credentialless
- * sandboxed iframe, the same isolation plugins used before.
+ * sandboxed iframe. Browsers without credentialless frames get a plain
+ * sandboxed iframe, unless the page is on Termix's own host.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -25,6 +26,19 @@ function isWebUrl(value: unknown): value is string {
   } catch {
     return false;
   }
+}
+
+function canIsolate(): boolean {
+  return (
+    typeof HTMLIFrameElement !== "undefined" &&
+    "credentialless" in HTMLIFrameElement.prototype
+  );
+}
+
+// Termix cookies are host only and SameSite=Lax, so without credentialless
+// frames (Safari, Firefox) only a page on Termix's own host would get them.
+function sharesCookieHost(value: string): boolean {
+  return new URL(value).hostname === window.location.hostname;
 }
 
 function measure(element: HTMLElement | null): WebPlace {
@@ -143,14 +157,6 @@ export function GrantedWebView({
 
   useEffect(() => {
     if (mode !== "iframe") return;
-    // Without credentialless the page would get Termix's cookies.
-    if (
-      typeof HTMLIFrameElement === "undefined" ||
-      !("credentialless" in HTMLIFrameElement.prototype)
-    ) {
-      setMode("unisolated");
-      return;
-    }
     let alive = true;
     setUrl(null);
     authApi
@@ -160,8 +166,9 @@ export function GrantedWebView({
       .then(({ data }) => {
         if (!alive) return;
         const next = (data as { url?: unknown } | null)?.url;
-        if (isWebUrl(next)) setUrl(next);
-        else setMode("failed");
+        if (!isWebUrl(next)) setMode("failed");
+        else if (!canIsolate() && sharesCookieHost(next)) setMode("unisolated");
+        else setUrl(next);
       })
       .catch(() => {
         if (alive) setMode("failed");
@@ -184,9 +191,11 @@ export function GrantedWebView({
           ref={(frame) => {
             if (!frame || frame.src) return;
             // Isolation is set before the first navigation, redirects included.
-            (
-              frame as HTMLIFrameElement & { credentialless: boolean }
-            ).credentialless = true;
+            if (canIsolate()) {
+              (
+                frame as HTMLIFrameElement & { credentialless: boolean }
+              ).credentialless = true;
+            }
             frame.src = url;
           }}
           sandbox="allow-scripts allow-forms"

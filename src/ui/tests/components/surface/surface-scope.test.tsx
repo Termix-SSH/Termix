@@ -54,6 +54,40 @@ describe("useConfirm", () => {
     expect(screen.queryByRole("alertdialog")).toBeNull();
   });
 
+  it("draws a checkbox that changes the text and reports its state", async () => {
+    const onResult = vi.fn();
+    const onChange = vi.fn();
+    render(
+      <SurfaceScope>
+        <Asker
+          options={{
+            title: "Delete 2 items?",
+            description: "They go to the trash.",
+            confirmLabel: "Move to trash",
+            checkbox: {
+              label: "Delete permanently",
+              checked: false,
+              onChange,
+              checkedDescription: "They can't be restored.",
+              checkedConfirmLabel: "Delete permanently now",
+            },
+          }}
+          onResult={onResult}
+        />
+      </SurfaceScope>,
+    );
+    fireEvent.click(screen.getByText("ask"));
+    expect(screen.getByText("They go to the trash.")).toBeTruthy();
+    fireEvent.click(screen.getByLabelText("Delete permanently"));
+    expect(onChange).toHaveBeenLastCalledWith(true);
+    expect(screen.getByText("They can't be restored.")).toBeTruthy();
+    expect(screen.getByText("Delete permanently now")).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByText("Delete permanently now"));
+    });
+    expect(onResult).toHaveBeenCalledWith(true);
+  });
+
   it("resolves false on Esc and on Cancel", async () => {
     const onResult = vi.fn();
     render(

@@ -103,4 +103,36 @@ describe("parseDataValue", () => {
       ),
     ).toEqual([{ shape: "badge", label: "a" }]);
   });
+
+  it("keeps a lucide icon name, a hex color and a known variant", () => {
+    expect(
+      parseDataValue([
+        {
+          shape: "badge",
+          label: "KEY",
+          icon: "KeyRound",
+          color: "#2C5",
+          variant: "filled",
+        },
+        {
+          shape: "badge",
+          label: "x",
+          icon: "<img>",
+          color: "red; background:url(x)",
+          variant: "huge",
+        },
+        { shape: "text", text: "pw", icon: "Lock", color: "#f59e0b" },
+      ]),
+    ).toEqual([
+      {
+        shape: "badge",
+        label: "KEY",
+        icon: "KeyRound",
+        color: "#22cc55",
+        variant: "filled",
+      },
+      { shape: "badge", label: "x" },
+      { shape: "text", text: "pw", icon: "Lock", color: "#f59e0b" },
+    ]);
+  });
 });

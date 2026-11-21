@@ -46,6 +46,14 @@ interface Deps {
 
 type HostRow = Record<string, unknown>;
 
+/** A plain tab id, or nothing. */
+function unlockTabOf(options: unknown): string | undefined {
+  const tab = (options as { unlockTab?: unknown } | undefined)?.unlockTab;
+  return typeof tab === "string" && /^[a-z0-9][a-z0-9._-]{0,63}$/i.test(tab)
+    ? tab
+    : undefined;
+}
+
 function str(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
@@ -340,6 +348,37 @@ export function createPluginCredentials({
       }
     },
 
+    resolveLogin: async (credentialId) => {
+      const details = `login of credential ${credentialId}`;
+      try {
+        await assertCapability(pluginId, "credentials:read", declared);
+        const userId = actingUser();
+        if (!Number.isInteger(credentialId) || credentialId <= 0) {
+          throw new Error("A credential id is required");
+        }
+        // Same rule as a saved host's login: the user's own credential, or
+        // one shared with them.
+        const { findUsableCredential } =
+          await import("../hosts/usable-credential.js");
+        const credential = (await findUsableCredential(
+          credentialId,
+          userId,
+        )) as unknown as Record<string, unknown> | null;
+        await audit("credentials_read", details, { success: !!credential });
+        if (!credential) return null;
+        return {
+          username: str(credential.username),
+          password: str(credential.password),
+        };
+      } catch (error) {
+        await audit("credentials_read", details, {
+          success: false,
+          errorMessage: errorText(error),
+        });
+        throw error;
+      }
+    },
+
     resolveKeyRefs: async (key, passphrase) => {
       const details = "resolved key references";
       try {
@@ -359,7 +398,7 @@ export function createPluginCredentials({
       }
     },
 
-    registerSecretResolver: (scheme, resolve) => {
+    registerSecretResolver: (scheme, resolve, options) => {
       if (!declared.includes("auth:provide")) {
         throw capabilityRefused(pluginId, "auth:provide");
       }
@@ -387,6 +426,7 @@ export function createPluginCredentials({
             throw error;
           }
         },
+        { unlockTab: unlockTabOf(options) },
       );
       bag.add(dispose, `secret scheme "${scheme}"`);
     },

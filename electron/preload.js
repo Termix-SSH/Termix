@@ -32,6 +32,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   getPlatform: () => ipcRenderer.invoke("get-platform"),
 
+  // termix:// links and --host shortcuts. The callback gets every new one,
+  // and the returned promise the ones that came before it listened.
+  onDeepLink: (callback) => {
+    const listener = (_event, link) => callback(link);
+    ipcRenderer.on("deep-link", listener);
+    return ipcRenderer.invoke("deep-link:take");
+  },
+
   // Whether the app-drawn title bar shows in this window, and when it changes
   // (full screen hides it).
   getTitleBarVisible: () => ipcRenderer.invoke("get-title-bar-visible"),
@@ -70,12 +78,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   getSetting: (key) => ipcRenderer.invoke("get-setting", key),
   setSetting: (key, value) => ipcRenderer.invoke("set-setting", key, value),
-
-  onCloseActiveTab: (callback) => {
-    const listener = () => callback();
-    ipcRenderer.on("close-active-tab", listener);
-    return () => ipcRenderer.removeListener("close-active-tab", listener);
-  },
 
   clearSessionCookies: () => ipcRenderer.invoke("clear-session-cookies"),
 

@@ -1,5 +1,11 @@
 import chalk, { type ChalkInstance } from "chalk";
 import { inspect } from "util";
+import {
+  recordLogLine,
+  setLogBufferMask,
+  withoutCapture,
+  type BufferedLevel,
+} from "./log-buffer.js";
 
 export type LogLevel = "debug" | "info" | "warn" | "error" | "success";
 
@@ -32,6 +38,8 @@ if (envLogLevel && envLogLevel in LOG_LEVEL_PRIORITY) {
 
 export interface LogContext {
   service?: string;
+  /** Printed to the console only, never kept for the UI or a report. */
+  private?: boolean;
   operation?: string;
   userId?: string;
   hostId?: number;
@@ -103,6 +111,8 @@ export function redactText(text: string): string {
   return out;
 }
 
+setLogBufferMask(redactText);
+
 function redactValue(value: unknown, depth = 0): unknown {
   if (typeof value === "string") return redactText(value);
   if (!value || typeof value !== "object" || depth > 4) return value;
@@ -120,6 +130,29 @@ function redactValue(value: unknown, depth = 0): unknown {
             : "[ABSENT]"
           : "[MASKED]"
         : redactValue(item, depth + 1);
+  }
+  return out;
+}
+
+/**
+ * Masks secret looking keys and text anywhere in a JSON-like value. Unlike the
+ * log masking it never hands back a deep value unchecked.
+ */
+export function redactData(value: unknown, depth = 0): unknown {
+  if (typeof value === "string") return redactText(value);
+  if (!value || typeof value !== "object") return value;
+  if (depth > 12) return "[too deep]";
+  if (Array.isArray(value)) {
+    return value.map((item) => redactData(item, depth + 1));
+  }
+  const out: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value)) {
+    out[key] =
+      isSensitiveKey(key) && item !== undefined && item !== null
+        ? typeof item === "boolean"
+          ? item
+          : "[MASKED]"
+        : redactData(item, depth + 1);
   }
   return out;
 }
@@ -281,32 +314,59 @@ export class Logger {
     return true;
   }
 
-  debug(message: string, context?: LogContext): void {
-    if (!this.shouldLog("debug", message)) return;
-    console.debug(this.formatMessage("debug", message, context));
-  }
-
-  info(message: string, context?: LogContext): void {
-    if (!this.shouldLog("info", message)) return;
-    console.log(this.formatMessage("info", message, context));
-  }
-
-  warn(message: string, context?: LogContext): void {
-    if (!this.shouldLog("warn", message)) return;
-    console.warn(this.formatMessage("warn", message, context));
-  }
-
-  error(message: string, error?: unknown, context?: LogContext): void {
-    if (!this.shouldLog("error", message)) return;
-    console.error(this.formatMessage("error", message, context));
-    if (error) {
-      console.error(redactError(error));
+  private emit(
+    level: LogLevel,
+    print: (line: string) => void,
+    message: string,
+    context?: LogContext,
+    error?: unknown,
+  ): void {
+    if (!this.shouldLog(level, message)) return;
+    const line = this.formatMessage(level, message, context);
+    const errorText = error ? redactError(error) : null;
+    withoutCapture(() => {
+      print(line);
+      if (errorText) console.error(errorText);
+    });
+    if (context?.private) return;
+    try {
+      recordLogLine({
+        level: level as BufferedLevel,
+        service: this.serviceName,
+        text: errorText
+          ? `${line}
+${errorText}`
+          : line,
+        pluginId:
+          typeof context?.pluginId === "string" ? context.pluginId : undefined,
+        operation:
+          typeof context?.operation === "string"
+            ? context.operation
+            : undefined,
+      });
+    } catch {
+      // Keeping a copy must never break logging.
     }
   }
 
+  debug(message: string, context?: LogContext): void {
+    this.emit("debug", console.debug, message, context);
+  }
+
+  info(message: string, context?: LogContext): void {
+    this.emit("info", console.log, message, context);
+  }
+
+  warn(message: string, context?: LogContext): void {
+    this.emit("warn", console.warn, message, context);
+  }
+
+  error(message: string, error?: unknown, context?: LogContext): void {
+    this.emit("error", console.error, message, context, error);
+  }
+
   success(message: string, context?: LogContext): void {
-    if (!this.shouldLog("success", message)) return;
-    console.log(this.formatMessage("success", message, context));
+    this.emit("success", console.log, message, context);
   }
 
   auth(message: string, context?: LogContext): void {

@@ -1,6 +1,6 @@
 # Termix plugin guide
 
-SDK 2.10.1 | Plugin API 2.9.0
+SDK 2.11.0 | Plugin API 2.9.0
 
 This guide is for anyone, person or AI coding tool, building a Termix plugin. It ships inside
 `@termix-ssh/plugin-sdk`, so the copy in your `node_modules` always matches the SDK you have installed.
@@ -421,6 +421,7 @@ won't run before an admin updates.
 | `users.create`, `update`, `setDisabled`, `delete`, `syncRoles`, `setAdmin` | `users:write`                    | Manage accounts, for a provisioning plugin like SCIM (API 2.9)  |
 | `system`                                                                   | `system:tls`                     | The server's HTTPS certificate                                  |
 | `plugins.list()`                                                           | `plugins:read`                   | Which plugins are installed                                     |
+| `diagnostics.provide()`                                                    | none                             | Your section in the diagnostics report (Termix 26.11.3)         |
 | `asUser(userId, fn)`                                                       | always audited                   | Run background work as a user                                   |
 | `currentActor()`                                                           | none                             | The user the current call runs for                              |
 | `disposables.add(fn)`                                                      | none                             | Extra cleanup on disable                                        |
@@ -529,6 +530,14 @@ router.post("/notes", async (req, res) => {
   all providers wins and a provider that throws denies. SSH prepare then gives an error outcome with code
   `access-denied` or `access-required`, and `ctx.credentials.resolveHostProtocol` throws an error with that
   `code` and a `toJSON()` body for a 403. Keep `check` fast, it also runs for background polling.
+  When your answer for a host changes, `ctx.hosts.connectPolicy.disconnect?.(hostId, { reason })` (Termix
+  26.11.3) ends every connection core holds to it, for all users and plugins, and resolves to the count.
+  `provide({ check, probes: true })` also asks you before status checks (profile `"probe"`): hosts you deny
+  drop out of `ctx.hosts.probeTargets`.
+- Secret references that need the person to unlock something first (Termix 26.11.3): register with
+  `ctx.credentials.registerSecretResolver(scheme, resolve, { unlockTab })` and throw an error whose `code` is
+  `"unlock-required"`. A connect by the person whose reference it is then gets `access-required` with your tab and
+  `requestKind: "verify"`, so the terminal offers Verify. Anyone else gets a plain error.
 
 Headers and cookies (Termix 26.11.2+): every answer from `/plugin-api/<id>/` and `/plugin-assets/<id>/` carries
 `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy` and a default
@@ -582,6 +591,11 @@ loads on a server, ignores server sync and may declare `desktop:local`. Any plug
 - `pty.spawn()`: a local shell, stopped when the plugin stops
 - `pluginFetch(origin, subPath, init)`: calls this plugin's own routes on the desktop's backend ("local") or the linked server ("remote") as the acting user. Bodies can be streams, so a plugin can move big files without the renderer
 
+Links (Termix 26.11.3): the desktop app opens for `termix://` links. Core only acts on `termix://host/<id>`
+(after asking) and `--host=<id>` shortcuts. Every link also goes to `app.deepLinks?.onOpen((link) => ...)` in
+the frontend as `{ url, source }`, first with the ones that came before you listened. A web page can send any
+`termix://` link, so always ask before acting on one; `source: "command-line"` is a `--host` shortcut.
+
 In a plugin process `process.execPath` is the app's pinned Node on every platform. Starting it still needs
 `process:spawn`, or run the script through `ctx.process.run`, which core starts.
 
@@ -607,6 +621,26 @@ ctx.schedule.every(60_000, () => refresh(), { id: "refresh", jitterMs: 5_000 });
   from `ctx.currentActor()`.
 - Use a service: declare it in `requires`, then `await ctx.services.get<T>("snippets.access")`. Every
   method on it returns a Promise. Calls fail while no provider runs, so always handle that.
+
+### Diagnostics report
+
+Users make a diagnostics report to attach to a bug report. It already has your plugin's version, state,
+errors, its server log lines and the console output of its frames. Add your own state with a section:
+
+```ts
+if (typeof ctx.diagnostics?.provide === "function") {
+  ctx.diagnostics.provide({
+    title: "Sessions",
+    collect: () => ({ open: sessions.size, lastError }),
+  });
+}
+```
+
+- Only admins read it, and only while your plugin runs. A plugin that is asleep is not asked.
+- Return plain JSON under 64 KB within 3 seconds. Core masks secret looking keys and text, but leave out
+  secrets, host addresses and user data yourself.
+- `app.openDiagnostics()` opens the report page with your plugin first, for a "Report a problem" button. In
+  a frame it needs a click.
 
 ### Operations
 
@@ -832,6 +866,7 @@ your plugin's error boundary and Suspense.
 | `registerHostBadge`, `registerHostContextMenuItem`                                 | Badges and menu items on host rows                                |
 | `registerHostStatusIndicator`                                                      | The status dot or stripe on a host row (a layout draws it)        |
 | `registerHostEditorToolbarItem`                                                    | A control in the host editor toolbar (a layout draws it)          |
+| `registerHostTreeChildren`                                                         | Containers or guests under a host in a host tree (a layout draws) |
 | `registerPaletteEntry`, `registerPaletteGroup`                                     | Command palette entries                                           |
 | `registerKeybindingAction`, `registerKeybindingDefault`                            | Bindable actions                                                  |
 | `registerSettingsComponent`                                                        | A component for a `custom` settings field                         |
@@ -892,9 +927,16 @@ before, with the same look and theme.
   and activity. Saved passwords are not available to a frame.
 - `invokeAction` runs your own actions and the ids in your manifest `uses`. Opening links, downloads,
   the clipboard, toasts and confirms go through the shell. `localStorage` works and is kept per plugin.
+- Every frame runs activate with its own copy of your module state, so a view can't read what another
+  view keeps in a module variable. To reach the background frame, give it an action registered with
+  `registerAction(id, handler, { private: true })` and call it from the view: functions in the arguments
+  arrive as references back to the view. A private action runs only for your own frames, even when
+  another plugin lists it in `uses`.
 - Not available in a frame: host badges, status indicators and editor toolbar items with a `component`
   (use `useDot` or `useValue`). Layouts, themes and Sync are the shell itself: only an official plugin
-  with `ui:layout`, `ui:theme` or `sync:provide` runs in the page. Other plugins' parts work, see Other
+  with `ui:layout`, `ui:theme` or `sync:provide` runs in the page. From Termix 26.11.3 an admin can let
+  community layouts and themes run in the page too (Plugins, Registries, Community layouts and themes); then
+  `registerLayout` works for a community plugin that asks only for looks. Other plugins' parts work, see Other
   plugins' parts in a frame below.
 - What a frame can't reach, the shell does for it: sign in steps are drawn from what your backend describes
   (see Auth and protocols), `app.auth.webauthn` runs passkey steps, `app.serial` opens a serial port in the
@@ -1019,18 +1061,22 @@ own host record) and the row key, a host id or a tab id. In a framed plugin it r
 and only the values cross, so start polling only for rows you are called for and stop when the row goes.
 Return `null` to draw nothing, so the owner's fallback shows.
 
-| Shape   | Value                                                     | Drawn as                         |
-| ------- | --------------------------------------------------------- | -------------------------------- |
-| `bars`  | `items: [{ label, value: 0..1 or null, tone?, detail? }]` | Usage bars, warn at 70%, bad 90% |
-| `stat`  | `items: [{ label, value, unit?, tone?, tooltip? }]`       | A label with a number or word    |
-| `badge` | `label, tone?, tooltip?, actionId?`                       | A small bordered label           |
-| `dot`   | `tone, label`                                             | A status dot, label as tooltip   |
-| `text`  | `text, tone?, tooltip?, actionId?`                        | A short line                     |
+| Shape   | Value                                                        | Drawn as                         |
+| ------- | ------------------------------------------------------------ | -------------------------------- |
+| `bars`  | `items: [{ label, value: 0..1 or null, tone?, detail? }]`    | Usage bars, warn at 70%, bad 90% |
+| `stat`  | `items: [{ label, value, unit?, tone?, tooltip? }]`          | A label with a number or word    |
+| `badge` | `label, tone?, tooltip?, actionId?, icon?, color?, variant?` | A small bordered label           |
+| `dot`   | `tone, label`                                                | A status dot, label as tooltip   |
+| `text`  | `text, tone?, tooltip?, actionId?, icon?, color?`            | A short line                     |
 
 Tones are `default`, `good`, `warn`, `bad` and `muted`. Return an array to draw several in order. An
 `actionId` must be one of your own actions; it runs with the row's context on click. The shell checks every
 value: unknown shapes, bad tones and items without a label are dropped, bars clamp to 0..1 and text is cut
 short.
+
+From Termix 26.11.3 a badge or text can carry `icon` (a Lucide name like `"KeyRound"`) and `color` (`#rgb` or
+`#rrggbb`, used instead of the tone and mixed with the theme so it stays readable). A badge's `variant` is
+`outline` (default), `filled` or `icon` (the icon alone, the label as its tooltip). Older versions ignore them.
 
 Data slots in Termix: `dashboard.hostRow` (bars, stat, text; context `hostId`, `host`, `online`),
 `dashboard.hostRowBadge` (badge, replaces the row's status badge while you return one),
@@ -1071,6 +1117,11 @@ In tests, `renderSlot(slotId, props)` from `renderWithApp` draws data contributi
 
 A plugin can replace the whole app layout or add themes (API 1.4). Users pick both in Settings, Appearance;
 admins set the default for everyone.
+
+Setup has a Pick a layout step that shows each layout with a screenshot and a button for the manifest's
+`video`. The screenshot is `docs/layout-preview.png` on the default branch of the plugin's GitHub
+`repository` (Termix 26.11.3+). Make it 1600x1000 of the dashboard with a few hosts and tabs open, using
+demo data. Without it the step draws a plain placeholder.
 
 A layout is declared in `contributes.layouts` (`id`, `label`, optional `description` and `defaultTheme`) and
 needs the `ui:layout` capability, which admins see as high risk because a layout draws every screen. Register
@@ -1154,6 +1205,37 @@ A plugin that only holds themes needs no code. Leave out `src/`: `termix-plugin 
 - Accent color, UI font, font size and density are not part of a theme. Core applies them on top.
 - Bundled Classic Themes (https://github.com/Termix-SSH/Plugin-Classic-Themes) is a full example.
 
+### Things inside a host
+
+Layouts with a host tree (like Host Layout) can list what runs inside a host, such as containers or guests,
+under it. Register a provider; its hook only runs while the tree shows that host expanded, so it may load data.
+Each item names the tab a click opens on the host, and `data` tells that tab what to show (Termix 26.11.3+):
+
+```tsx
+app.registerHostTreeChildren?.({
+  id: "containers",
+  titleKey: "tree.containers",
+  when: (host) => host.pluginSettings?.docker?.enabled === true,
+  useChildren: (host) => {
+    const { list, loading } = useContainers(host.id);
+    return {
+      loading,
+      items: list.map((c) => ({
+        id: c.id,
+        label: c.name,
+        kind: "container",
+        state: c.running ? "running" : "stopped",
+        tabType: "docker",
+        data: { focus: { container: c.id } },
+      })),
+    };
+  },
+});
+```
+
+A layout reads them with `<HostTreeChildren host={host}>{(groups) => ...}</HostTreeChildren>` from the `ui`
+entry. Items are plain data, so this works from a frame.
+
 ## Looking native
 
 Build UI from `@termix-ssh/plugin-sdk/ui` so it matches Termix and follows the theme. The full list of
@@ -1164,7 +1246,10 @@ exports with props is `ui.api.txt` in the Termix repo
   person's request) and hands the frame the `grant`. `<NativeView grant={grant} />` then shows the page: a native
   view in the desktop app, a credentialless sandboxed iframe in a browser. The frame never names the address, and
   only a grant can trust a bad certificate (desktop only). It fills its element, hides while a dialog or menu is
-  open, and each grant works for ten minutes for the person who asked. `url` still works for a plugin in the page.
+  open, and each grant works for ten minutes for the person who asked. In the desktop app a fresh grant for the same
+  person, plugin, origin and certificate rule keeps the page's login across reloads and reopened tabs. That login is
+  kept in memory only and ends when Termix quits or the person signs out, and pages on this computer (loopback) always
+  start signed out. `url` still works for a plugin in the page.
 - Serial ports in the browser: `app.serial.request({ baudRate, dataBits, stopBits, parity, filters }, { onData,
 onClose })` (needs `device:serial`, call it from a click in your frame) opens the browser's port picker and
   resolves `{ write(bytes), close() }` for the port the person picked, or null when they picked none. Check
@@ -1176,7 +1261,8 @@ onClose })` (needs `device:serial`, call it from a click in your frame) opens th
 - To make someone prove a second factor (a connect policy that asks for a step up), call `app.stepUp()`. The shell
   shows the factor screen and answers true or false; never draw factor screens or post to `/users/auth/step-up` yourself.
 - No new modal dialogs. Ask with `useConfirm()`, open views in place with `InlineView`, and use
-  `PanePrompt` for small prompts.
+  `PanePrompt` for small prompts. A confirm can carry `checkbox: { label, checked?, onChange?, checkedDescription?,
+checkedConfirmLabel? }` (Termix 26.11.3): keep the last `onChange` value and use it once the answer is yes.
 - Every tab or panel sits in `PanelShell` (inside `PanelFrame` when it is a tab). Lists use `PanelList` and
   `ListRow`, add with `AddButton`, forms end with `FormFooter`, empty lists show `EmptyState`, loading shows
   `LoadingState`, and "not installed" or "no access" shows `NoticePanel`.
@@ -1294,7 +1380,9 @@ buttons exactly as the UI does.
 Login methods, second factors and SSH auth types need `auth:provide`, which is high risk and reviewed
 closely. Declare ids in `contributes.auth` and register them with `ctx.auth.registerLoginMethod`,
 `registerSecondFactor` or `registerSshAuthProvider`. Connection protocols go in `contributes.protocols`
-and `app.registerHostProtocol`. Read https://docs.termix.site/develop/auth before starting one.
+and `app.registerHostProtocol`. Read https://docs.termix.site/develop/auth before starting one. A saved host's
+login comes from `ctx.credentials.resolveHostProtocol`; a Quick Connect login can carry `credentialId`, which your
+backend turns into a username and password with `ctx.credentials.resolveLogin` (Termix 26.11.3, `credentials:read`).
 
 No plugin code runs on the sign in screen (Termix 26.11.2, plugin API 2.8). Termix draws each method from
 what the backend registers:
@@ -1307,6 +1395,9 @@ what the backend registers:
   it under the password form. A passkey method never counts as another way in when an admin turns password
   login off.
 - An instance's `views` (`"password"`, `"external"`) picks which page of the sign in screen shows it.
+- `logoutRedirect(session)` (Termix 26.11.3, SDK 2.11): when a user signs out of a session your method made,
+  return an http(s) address to send the browser to, like the identity provider's sign out page, or null. It gets
+  the login's `logoutClaims` and `baseUrl`. Termix waits at most 5 seconds and the desktop app ignores it.
 
 A second factor takes `prompt`: `{ kind: "code", field, labelKey }` (one field), `{ kind: "fields", fields }`, or
 `{ kind: "webauthn" }` (`challenge()` returns the request options, `verify` gets `{ response }`). The step up

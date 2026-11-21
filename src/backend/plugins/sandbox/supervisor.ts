@@ -32,6 +32,7 @@ import { DurableRegistrations } from "./durable.js";
 import { readAwakeState, writeAwakeState } from "./awake-store.js";
 import { unregisterPluginHttp } from "../http.js";
 import type { SqlDialect } from "./sql-guard.js";
+import { explainStartError } from "./unreadable.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -39,6 +40,38 @@ export const ACTIVATE_TIMEOUT_MS = 30_000;
 const STOP_TIMEOUT_MS = 1500;
 const HEALTH_INTERVAL_MS = 10_000;
 const HEALTH_TIMEOUT_MS = 30_000;
+/** Below this many running plugins, each is judged on its own. */
+const FLEET_MIN = 3;
+/** A stall shared by most plugins waits this many timeouts before restarts. */
+const FLEET_STALL_LIMIT = 3;
+
+/**
+ * Whether a plugin that went quiet for `age` ms should wait rather than be
+ * restarted: most of the running ones went quiet with it, and not for long.
+ */
+export function waitOutFleetStall(
+  stale: number,
+  ready: number,
+  age: number,
+  timeout: number,
+): boolean {
+  return (
+    ready >= FLEET_MIN &&
+    stale * 2 >= ready &&
+    age <= timeout * FLEET_STALL_LIMIT
+  );
+}
+
+let lastFleetStallLog = 0;
+function noteFleetStall(stale: number, ready: number): void {
+  const now = Date.now();
+  if (now - lastFleetStallLog < 60_000) return;
+  lastFleetStallLog = now;
+  pluginLogger.warn(
+    `${stale} of ${ready} plugins stopped answering at once; waiting instead of restarting them, since core or its channel to them was busy`,
+    { operation: "plugin_sandbox" },
+  );
+}
 const CPU_WINDOW_MS = 60_000;
 const BACKOFF_START_MS = 1000;
 const BACKOFF_MAX_MS = 5 * 60_000;
@@ -257,6 +290,8 @@ class PluginProcess {
   lastUse = "start";
   startedAt = 0;
   readyMs = 0;
+  /** Why the last start failed, for the plugin page. */
+  startError: string | null = null;
   private starting: Promise<boolean> | null = null;
   private stopDone: Promise<void> | null = null;
   private crashes: number[] = [];
@@ -295,6 +330,11 @@ class PluginProcess {
     readonly spec: SandboxedPluginSpec,
     private readonly config: SandboxConfig,
     private readonly dialect: SqlDialect,
+    /** How many running plugins stopped answering, out of how many. */
+    private readonly fleet: (timeout: number) => {
+      stale: number;
+      ready: number;
+    } = () => ({ stale: 0, ready: 0 }),
   ) {
     this.staticReason = config.alwaysOn.has(spec.manifest.id)
       ? "TERMIX_PLUGIN_ALWAYS_ON"
@@ -378,6 +418,15 @@ class PluginProcess {
     this.lastUse = reason;
   }
 
+  /** Running, but has not answered a ping for longer than `timeout`. */
+  isStale(now: number, timeout: number): boolean {
+    return this.state === "ready" && now - this.lastPong > timeout;
+  }
+
+  get isReady(): boolean {
+    return this.state === "ready";
+  }
+
   /** Starts the process if it is not running. True when it is ready. */
   ensureRunning(): Promise<boolean> {
     if (this.state === "ready") return Promise.resolve(true);
@@ -390,10 +439,13 @@ class PluginProcess {
       if (wait > 0) await new Promise((r) => setTimeout(r, wait));
       try {
         await this.start();
+        this.startError = null;
         return true;
       } catch (error) {
-        this.log("error", `did not start: ${(error as Error).message}`);
-        await this.onExit(null, null, (error as Error).message);
+        const why = explainStartError(this.id, (error as Error).message);
+        this.startError = why;
+        this.log("error", `did not start: ${why}`);
+        await this.onExit(null, null, why);
         return false;
       } finally {
         this.starting = null;
@@ -420,6 +472,8 @@ class PluginProcess {
 
   private async start(): Promise<void> {
     this.state = "starting";
+    // Before any await: a job firing mid start must not call the old process.
+    this.durable?.beginRun();
     this.stopping = false;
     this.startedAt = Date.now();
     const manifest = this.spec.manifest;
@@ -463,7 +517,6 @@ class PluginProcess {
       keepAwake: (reason, awake) => this.setAwake(reason, awake),
     });
     this.bridge = bridge;
-    this.durable?.beginRun();
 
     const entryUrl = pathToFileURL(this.spec.entryPath).href;
     await withTimeout(
@@ -500,7 +553,16 @@ class PluginProcess {
     const bridge = this.bridge;
     if (!bridge || this.state !== "ready") return;
     const timeout = this.config.healthTimeoutMs ?? HEALTH_TIMEOUT_MS;
-    if (Date.now() - this.lastPong > timeout) {
+    const now = Date.now();
+    if (now - this.lastPong > timeout) {
+      // Most plugins going quiet together means core or the channel to
+      // them was busy, not that they all hung: killing them all would only
+      // pile restarts onto whatever is slow. A long stall still restarts.
+      const { stale, ready } = this.fleet(timeout);
+      if (waitOutFleetStall(stale, ready, now - this.lastPong, timeout)) {
+        noteFleetStall(stale, ready);
+        return;
+      }
       this.log("warn", "stopped answering, restarting it");
       this.kill();
       return;
@@ -751,15 +813,38 @@ export class SandboxSupervisor {
     private readonly dialect: () => SqlDialect = () => "sqlite",
   ) {}
 
+  private staleCount(timeout: number): { stale: number; ready: number } {
+    const now = Date.now();
+    let stale = 0;
+    let ready = 0;
+    for (const proc of this.processes.values()) {
+      if (!proc.isReady) continue;
+      ready++;
+      if (proc.isStale(now, timeout)) stale++;
+    }
+    return { stale, ready };
+  }
+
   /** Turns a plugin on. Starts it now when it has to be always up. */
   async register(spec: SandboxedPluginSpec): Promise<void> {
     await this.unregister(spec.manifest.id);
-    const proc = new PluginProcess(spec, this.config, this.dialect());
+    const proc = new PluginProcess(
+      spec,
+      this.config,
+      this.dialect(),
+      (timeout) => this.staleCount(timeout),
+    );
     this.processes.set(spec.manifest.id, proc);
     this.startSweep();
     if (proc.startsAtBoot()) {
       const ok = await proc.ensureRunning();
-      if (!ok) throw new Error(`Plugin ${spec.manifest.id} did not start`);
+      if (!ok) {
+        throw new Error(
+          proc.startError
+            ? `Plugin ${spec.manifest.id} did not start: ${proc.startError}`
+            : `Plugin ${spec.manifest.id} did not start`,
+        );
+      }
     } else {
       proc.log("info", "starts on its first request");
     }

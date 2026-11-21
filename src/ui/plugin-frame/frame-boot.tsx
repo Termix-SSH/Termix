@@ -39,6 +39,7 @@ import {
   type FrameTheme,
 } from "./protocol";
 import { FramePort } from "./rpc";
+import { connectFrameCapture } from "@/diagnostics/capture";
 import { createFrameFetch, createFrameXhr } from "./net";
 import { connectShims, frameLocalStorage } from "./shims";
 import {
@@ -60,6 +61,7 @@ import { FrameRoot, setFrameProps, type FrameFit } from "./frame-root";
 import { setShellScrollEmitter, setShellViewport } from "./shell-scroll";
 import { setFrameCoverEmitter } from "./frame-cover";
 import { whenFrameShown } from "./frame-paint";
+import { markFrameDesktop } from "./frame-desktop";
 
 /** Time for overlay effects to run before the frame reports its live work. */
 const OVERLAY_SETTLE_MS = 50;
@@ -168,6 +170,8 @@ async function boot() {
     if (event.source !== parent) return;
     port.receive(event.data);
   });
+  // Console lines and errors go to the shell for diagnostics reports.
+  connectFrameCapture((batch) => port.emit("diag", batch));
 
   const call = (method: string, ...args: unknown[]) => port.call(method, args);
   // Data slots this plugin owns get their values from the shell.
@@ -188,13 +192,15 @@ async function boot() {
 
   // Token for the plugin's own routes, renewed a minute before it ends.
   let token = init.token;
-  let renewing: Promise<string> | null = null;
-  const currentToken = async () => {
+  let renewing: Promise<string | null> | null = null;
+  // A guest page has no token; its requests go without one.
+  const currentToken = async (): Promise<string | null> => {
+    if (!token) return null;
     if (token.expiresAt - Date.now() > 60_000) return token.value;
     renewing ??= (port.call("token") as Promise<FrameInit["token"]>)
       .then((next) => {
         token = next;
-        return next.value;
+        return next?.value ?? null;
       })
       .finally(() => {
         renewing = null;
@@ -234,7 +240,8 @@ async function boot() {
     headers: { "Content-Type": "application/json" },
   });
   api.interceptors.request.use(async (config) => {
-    config.headers.set("Authorization", `Bearer ${await currentToken()}`);
+    const value = await currentToken();
+    if (value) config.headers.set("Authorization", `Bearer ${value}`);
     return config;
   });
   const ownOnly = (id: string) => {
@@ -264,6 +271,7 @@ async function boot() {
   });
 
   setFrameState(init.state as FrameState);
+  markFrameDesktop((init.state as FrameState).desktop?.available);
   if (init.props) setFrameProps(init.props);
   applyTheme(init.state.theme);
 
@@ -362,6 +370,7 @@ async function boot() {
     api: api as never,
     fetch: pluginFetch,
     wsUrl: wsUrl as never,
+    guest: init.guest,
   });
   try {
     await module.activate(handle.app);
@@ -493,6 +502,7 @@ async function boot() {
     if (name === "state" && data && typeof data === "object") {
       const next = data as Partial<FrameState>;
       setFrameState(next);
+      markFrameDesktop(next.desktop?.available);
       if (next.theme) applyTheme(next.theme);
       return;
     }

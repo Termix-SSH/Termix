@@ -95,4 +95,24 @@ describe("DataValues", () => {
       ).not.toBeNull();
     }
   });
+
+  it("draws a badge's icon and color, and an icon only badge with its label hidden", () => {
+    const { container } = render(
+      <DataValues
+        values={[
+          { shape: "badge", label: "KEY", icon: "KeyRound", color: "#22c55e" },
+          { shape: "badge", label: "Password", icon: "Lock", variant: "icon" },
+          { shape: "text", text: "agent", icon: "Bot", color: "#3b82f6" },
+        ]}
+      />,
+    );
+    const badges = container.querySelectorAll("[data-data-badge]");
+    const first = badges[0]!.parentElement!;
+    expect(first.querySelector("svg")).not.toBeNull();
+    expect(first.getAttribute("style")).toContain("#22c55e");
+    const iconOnly = badges[1]!;
+    expect(iconOnly.className).toContain("sr-only");
+    expect(iconOnly.parentElement!.getAttribute("title")).toBe("Password");
+    expect(container.textContent).toContain("agent");
+  });
 });

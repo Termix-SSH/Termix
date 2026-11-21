@@ -167,7 +167,7 @@ function AdminTools({
 
       <PluginConsentPrompt
         request={manager.consent}
-        onCancel={() => manager.setConsent(null)}
+        onCancel={manager.cancelConsent}
         onConfirm={() => void manager.confirmConsent()}
       />
     </>

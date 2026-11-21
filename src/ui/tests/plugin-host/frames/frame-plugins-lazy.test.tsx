@@ -23,6 +23,7 @@ vi.mock("@/hooks/use-permissions", async (importOriginal) => ({
 
 import {
   COLD_LINGER_MS,
+  FRAME_BUSY_MS,
   FRAME_IDLE_MS,
   MAX_IDLE_FRAMES,
   MAX_STARTING_FRAMES,
@@ -477,6 +478,228 @@ describe("lazy background frames", () => {
     expect(frames()).toHaveLength(0);
     plugin.dispose();
   });
+
+  it("runs a host action item again after the frame that listed it stopped", async () => {
+    const opened: unknown[] = [];
+    const picker = {
+      rid: "hostAction#4",
+      kind: "hostAction",
+      data: {
+        id: "gizmo.pick",
+        titleKey: "pick",
+        kind: "open",
+        when: () => true,
+        items: () => [
+          {
+            id: "one",
+            label: "One",
+            run: (target: { id: number }) => {
+              opened.push(target.id);
+              return "opened";
+            },
+          },
+        ],
+      },
+    };
+    const started = startFramedPlugin(summary);
+    await bootFrame({ extra: [picker] });
+    const plugin = await started;
+    const action = listHostActions().find((e) => e.id === "gizmo.pick")!;
+    action.items!(host as never);
+    await sleep(50);
+    const items = action.items!(host as never)!;
+    expect(items).toHaveLength(1);
+
+    // The frame stops with nothing holding it; the listed items stay.
+    await sleep(1_500 + COLD_LINGER_MS + 200);
+    expect(frames()).toHaveLength(0);
+
+    // A click boots a new frame and runs the item there.
+    const outcome = Promise.resolve(
+      items[0].run(host as never, {} as never),
+    ).then(String, (error: Error) => error.message);
+    expect(await Promise.race([outcome, sleep(20).then(() => "booting")])).toBe(
+      "booting",
+    );
+    await bootFrame({ extra: [picker] });
+    expect(await outcome).toBe("opened");
+    expect(opened).toEqual([1]);
+    plugin.dispose();
+  }, 10_000);
+
+  it("never runs another item when the list changed after the frame stopped", async () => {
+    const ran: string[] = [];
+    const pickerWith = (ids: string[]) => ({
+      rid: "hostAction#5",
+      kind: "hostAction",
+      data: {
+        id: "gizmo.pick2",
+        titleKey: "pick",
+        kind: "open",
+        when: () => true,
+        items: () =>
+          ids.map((id) => ({
+            id,
+            label: id,
+            run: () => {
+              ran.push(id);
+              return id;
+            },
+          })),
+      },
+    });
+    const started = startFramedPlugin(summary);
+    await bootFrame({ extra: [pickerWith(["one"])] });
+    const plugin = await started;
+    const action = listHostActions().find((e) => e.id === "gizmo.pick2")!;
+    action.items!(host as never);
+    await sleep(50);
+    const items = action.items!(host as never)!;
+    expect(items).toHaveLength(1);
+
+    await sleep(1_500 + COLD_LINGER_MS + 200);
+    expect(frames()).toHaveLength(0);
+
+    // The new frame lists another entry first: the click must not run it.
+    const outcome = Promise.resolve(
+      items[0].run(host as never, {} as never),
+    ).then(String, (error: Error) => error.message);
+    await sleep(20);
+    await bootFrame({ extra: [pickerWith(["two", "one"])] });
+    expect(await outcome).toBe("The plugin no longer has this function");
+    expect(ran).toEqual([]);
+    plugin.dispose();
+  }, 10_000);
+
+  /** A host action whose items' run waits until the test lets it finish. */
+  function slowPicker(ids: () => string[]) {
+    const runs: { id: string; finish: (value: string) => void }[] = [];
+    const picker = {
+      rid: "hostAction#6",
+      kind: "hostAction",
+      data: {
+        id: "gizmo.slow",
+        titleKey: "slow",
+        kind: "open",
+        when: () => true,
+        items: () =>
+          ids().map((id) => ({
+            id,
+            label: id,
+            run: () =>
+              new Promise<string>((finish) => runs.push({ id, finish })),
+          })),
+      },
+    };
+    return { picker, runs };
+  }
+
+  /** Lets the idle check see a frame untouched for longer than its limit. */
+  function passIdleTime(now: number) {
+    vi.setSystemTime(now + FRAME_IDLE_MS + FRAME_BUSY_MS + 1);
+    vi.advanceTimersByTime(31_000);
+  }
+
+  it("keeps a woken frame up while a retried item still runs", async () => {
+    const { picker, runs } = slowPicker(() => ["one"]);
+    const started = startFramedPlugin(summary);
+    await bootFrame({ extra: [picker] });
+    const plugin = await started;
+    const action = listHostActions().find((e) => e.id === "gizmo.slow")!;
+    action.items!(host as never);
+    await sleep(50);
+    const items = action.items!(host as never)!;
+    await sleep(1_500 + COLD_LINGER_MS + 200);
+    expect(frames()).toHaveLength(0);
+
+    const now = Date.now();
+    vi.useFakeTimers({ now, toFake: ["setInterval", "clearInterval", "Date"] });
+    const settled: string[] = [];
+    void Promise.resolve(items[0].run(host as never, {} as never)).then(
+      (value) => settled.push(String(value)),
+      (error: Error) => settled.push(error.message),
+    );
+    await sleep(20);
+    await bootFrame({ extra: [picker] });
+    for (let i = 0; i < 100 && runs.length === 0; i++) await sleep(5);
+    expect(runs).toHaveLength(1);
+
+    passIdleTime(now);
+    await sleep(20);
+    expect(frames()).toHaveLength(1);
+    expect(settled).toEqual([]);
+    runs[0].finish("done");
+    await sleep(20);
+    expect(settled).toEqual(["done"]);
+    expect(runs).toHaveLength(1);
+    plugin.dispose();
+  }, 10_000);
+
+  it("keeps a running frame up while an item it listed still runs", async () => {
+    const { picker, runs } = slowPicker(() => ["one"]);
+    const first = startFramedPlugin(summary);
+    await bootFrame({ extra: [picker] });
+    (await first).dispose();
+    await sleep(50);
+
+    const now = Date.now();
+    vi.useFakeTimers({ now, toFake: ["setInterval", "clearInterval", "Date"] });
+    const plugin = await startFramedPlugin(summary);
+    const release = acquireFramedPlugin("gizmo");
+    await bootFrame({ extra: [picker] });
+    await sleep(10);
+    const action = listHostActions().find((e) => e.id === "gizmo.slow")!;
+    action.items!(host as never);
+    await sleep(50);
+    const items = action.items!(host as never)!;
+    release();
+    const settled: string[] = [];
+    void Promise.resolve(items[0].run(host as never, {} as never)).then(
+      (value) => settled.push(String(value)),
+      (error: Error) => settled.push(error.message),
+    );
+    for (let i = 0; i < 100 && runs.length === 0; i++) await sleep(5);
+    expect(runs).toHaveLength(1);
+
+    passIdleTime(now);
+    await sleep(20);
+    expect(frames()).toHaveLength(1);
+    runs[0].finish("done");
+    await sleep(20);
+    expect(settled).toEqual(["done"]);
+    expect(runs).toHaveLength(1);
+    plugin.dispose();
+  }, 10_000);
+
+  it("shows the list a retry learned when the host changes", async () => {
+    let ids = ["one"];
+    const { picker, runs } = slowPicker(() => ids);
+    const started = startFramedPlugin(summary);
+    await bootFrame({ extra: [picker] });
+    const plugin = await started;
+    const action = listHostActions().find((e) => e.id === "gizmo.slow")!;
+    action.items!(host as never);
+    await sleep(50);
+    const items = action.items!(host as never)!;
+    await sleep(1_500 + COLD_LINGER_MS + 200);
+    expect(frames()).toHaveLength(0);
+
+    // The click learns the new list from the frame it wakes.
+    ids = ["one", "two"];
+    const clicked = Promise.resolve(items[0].run(host as never, {} as never));
+    await sleep(20);
+    await bootFrame({ extra: [picker] });
+    for (let i = 0; i < 100 && runs.length === 0; i++) await sleep(5);
+    expect(runs).toHaveLength(1);
+
+    // A host whose fields changed shows it while it is asked again.
+    const renamed = { ...host, name: "renamed" };
+    const shown = action.items!(renamed as never)!;
+    expect(shown.map((item) => item.id)).toEqual(["one", "two"]);
+    runs[0].finish("done");
+    expect(await clicked).toBe("done");
+    plugin.dispose();
+  }, 10_000);
 });
 
 describe("booting many plugins at once", () => {

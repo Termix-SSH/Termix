@@ -18,6 +18,8 @@ const api = vi.hoisted(() => ({
   addRegistry: vi.fn(),
   setRegistryEnabled: vi.fn(),
   removeRegistry: vi.fn(),
+  getCommunityLooks: vi.fn(async () => false),
+  setCommunityLooks: vi.fn(async (on: boolean) => on),
 }));
 
 vi.mock("@/api/plugins-api", () => api);
@@ -68,7 +70,7 @@ describe("RegistriesSection", () => {
   it("asks before turning community plugins on", async () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     await renderSection();
-    const toggle = await screen.findByRole("switch");
+    const toggle = (await screen.findAllByRole("switch"))[0];
 
     fireEvent.click(toggle);
     await waitFor(() => expect(confirm).toHaveBeenCalled());
@@ -89,7 +91,7 @@ describe("RegistriesSection", () => {
     const confirm = vi.spyOn(window, "confirm");
     api.getRegistries.mockResolvedValue(state(true));
     await renderSection();
-    fireEvent.click(await screen.findByRole("switch"));
+    fireEvent.click((await screen.findAllByRole("switch"))[0]);
     await waitFor(() =>
       expect(api.setRegistryEnabled).toHaveBeenCalledWith("community", false),
     );
@@ -130,6 +132,22 @@ describe("RegistriesSection", () => {
         "https://acme.example/index.json",
         "abcd1234abcd1234",
       ),
+    );
+  });
+
+  it("asks before letting community layouts run outside the sandbox", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    api.getRegistries.mockResolvedValue(state());
+    await renderSection();
+    await screen.findByText(en.plugins.manager.registries.looksName);
+    const looks = (await screen.findAllByRole("switch"))[1]!;
+    fireEvent.click(looks);
+    await waitFor(() => expect(confirm).toHaveBeenCalled());
+    expect(api.setCommunityLooks).not.toHaveBeenCalled();
+    confirm.mockReturnValue(true);
+    fireEvent.click(looks);
+    await waitFor(() =>
+      expect(api.setCommunityLooks).toHaveBeenCalledWith(true),
     );
   });
 });

@@ -17,6 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 import semver from "semver";
 import { pluginLogger } from "../utils/logger.js";
+import { isLegacyPlugin, isOfficialPlugin } from "./isolation.js";
 import {
   isDefaultLookPlugin,
   shippedCatalog,
@@ -1324,6 +1325,58 @@ async function updateUnlocked(
     { operation: "plugin_update" },
   );
   return { id: pluginId, version: release.version, state };
+}
+
+/**
+ * A linked desktop gets plugin updates through its sync provider. If that
+ * provider is an official API 1 copy, it never runs, so nothing would ever
+ * update it and the desktop can't sync. It comes from the official registry
+ * instead. An API 1 plugin had all of core's reach, so the capabilities of
+ * its API 2 version are granted as asked.
+ */
+export function updateStuckSyncProvider(): Promise<string[]> {
+  return serialized(async () => {
+    if (!(await isLinkedDesktop())) return [];
+    const { loader } = getPluginRuntime();
+    const stuck = loader
+      .list()
+      .filter(
+        (plugin) =>
+          plugin.manifest.capabilities.includes("sync:provide") &&
+          isLegacyPlugin(plugin) &&
+          isOfficialPlugin(plugin),
+      );
+    const updated: string[] = [];
+    for (const plugin of stuck) {
+      try {
+        let done: { id: string; version: string };
+        try {
+          done = await updateUnlocked(plugin.id, { userId: null });
+        } catch (error) {
+          if (
+            !(error instanceof PluginManageError) ||
+            error.code !== "CAPABILITIES_ADDED"
+          ) {
+            throw error;
+          }
+          done = await updateUnlocked(plugin.id, {
+            userId: null,
+            acceptCapabilities: true,
+            capabilities: error.details?.capabilities as string[],
+          });
+        }
+        updated.push(done.id);
+      } catch (error) {
+        pluginLogger.warn(
+          `Could not update ${plugin.id}, which this desktop needs to sync: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+          { operation: "plugin_update" },
+        );
+      }
+    }
+    return updated;
+  });
 }
 
 export interface UpdateAllResult {

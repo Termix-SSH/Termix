@@ -22,6 +22,8 @@ export type SecretResolveFn = (
 
 interface SecretResolverRegistration extends SecretResolverOwner {
   resolve: SecretResolveFn;
+  /** A tab of the owner where a person unlocks what the resolver reads. */
+  unlockTab?: string;
 }
 
 const resolvers = new Map<string, SecretResolverRegistration>();
@@ -67,6 +69,7 @@ export function registerSecretResolver(
   scheme: string,
   owner: SecretResolverOwner,
   resolve: SecretResolveFn,
+  options: { unlockTab?: string } = {},
 ): () => void {
   const existing = resolvers.get(scheme);
   if (existing && existing.pluginId !== owner.pluginId) {
@@ -74,7 +77,11 @@ export function registerSecretResolver(
       `Secret scheme "${scheme}" is already resolved by ${existing.pluginId}`,
     );
   }
-  const registration = { ...owner, resolve };
+  const registration: SecretResolverRegistration = {
+    ...owner,
+    resolve,
+    ...(options.unlockTab ? { unlockTab: options.unlockTab } : {}),
+  };
   resolvers.set(scheme, registration);
   return () => {
     if (resolvers.get(scheme) === registration) {

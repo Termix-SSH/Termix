@@ -31,11 +31,14 @@ vi.mock("@/main-axios", async (importOriginal) => ({
 
 import {
   connectFrame,
+  handleForFrame,
   mayCallHandle,
   mayInvokeAction,
   resetFrameConnections,
 } from "@/plugin-host/frames/frame-connection";
 import { dropFrameToken } from "@/plugin-host/frames/frame-token";
+import { setTabHandleOwner } from "@/plugin-host/frames/tab-handle-owners";
+import { setGuestRuntime } from "@/plugin-host/guest-runtime";
 import {
   resetPluginStore,
   setPluginSummaries,
@@ -136,6 +139,26 @@ describe("frame connection", () => {
     send({ ch: FRAME_CHANNEL, t: "call", id: 2, method: "token", args: [] });
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(replies).toEqual([]);
+  });
+
+  it("gives a guest page's frames no token and says they are a guest", async () => {
+    setGuestRuntime(true);
+    try {
+      connectFrame(iframe, "docker", "view", "tab:docker", {});
+      send({ ch: FRAME_CHANNEL, t: "hello", role: "view", key: "tab:docker" });
+      const init = await call("init");
+      expect(init).toMatchObject({
+        ok: true,
+        value: { token: null, guest: true },
+      });
+      expect(await call("token")).toMatchObject({ ok: true, value: null });
+      expect(mocks.post).not.toHaveBeenCalledWith(
+        "/plugins/frame-tokens",
+        expect.anything(),
+      );
+    } finally {
+      setGuestRuntime(false);
+    }
   });
 
   it("hands out a token and refuses core requests off the list", async () => {
@@ -397,12 +420,62 @@ describe("frame permissions", () => {
     expect(mayInvokeAction("docker", "terminal.sendToActive")).toBe(false);
   });
 
+  it("keeps a private action to the plugin that registered it", () => {
+    setPluginSummaries([
+      summary("docker", ["terminal.resolveTheme"]),
+      summary("snippets", ["ssh-terminal.sessions.publish"]),
+    ]);
+    const drop = registerAction("ssh-terminal.sessions.publish", () => true, {
+      pluginId: "ssh-terminal",
+      private: true,
+    });
+    expect(
+      mayInvokeAction("ssh-terminal", "ssh-terminal.sessions.publish"),
+    ).toBe(true);
+    expect(mayInvokeAction("snippets", "ssh-terminal.sessions.publish")).toBe(
+      false,
+    );
+    drop();
+    expect(mayInvokeAction("snippets", "ssh-terminal.sessions.publish")).toBe(
+      true,
+    );
+  });
+
   it("lets a companion type into a terminal only when it says so", () => {
     expect(mayCallHandle("docker", "focus")).toBe(true);
     expect(mayCallHandle("docker", "sendInput")).toBe(false);
     expect(mayCallHandle("snippets", "sendInput")).toBe(true);
     expect(mayCallHandle("snippets", "confirmClose")).toBe(false);
     expect(mayCallHandle("snippets", "__proto__")).toBe(false);
+  });
+
+  it("gives another plugin only the allowed calls of a framed tab's handle", () => {
+    const handle = {
+      focus: vi.fn(),
+      reconnect: vi.fn(),
+      disconnect: vi.fn(),
+      sendInput: vi.fn(),
+      confirmClose: vi.fn(),
+      getShareTarget: vi.fn(),
+      openSidePanel: vi.fn(),
+      label: "not a call",
+    };
+    expect(handleForFrame(handle, "docker")).toBeUndefined();
+    setTabHandleOwner(handle, "ssh-terminal");
+    expect(handleForFrame(handle, "ssh-terminal")).toBeUndefined();
+    expect(Object.keys(handleForFrame(handle, "docker")!).sort()).toEqual([
+      "focus",
+      "getShareTarget",
+      "openSidePanel",
+      "reconnect",
+    ]);
+    expect(Object.keys(handleForFrame(handle, "snippets")!).sort()).toEqual([
+      "focus",
+      "getShareTarget",
+      "openSidePanel",
+      "reconnect",
+      "sendInput",
+    ]);
   });
 });
 

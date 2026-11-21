@@ -4,9 +4,13 @@ import os from "node:os";
 import path from "node:path";
 import vm from "node:vm";
 import sharp from "sharp";
+import { createRequire } from "node:module";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const root = path.resolve(import.meta.dirname, "../../../..");
+const { windowsLinuxMenuTemplate } = createRequire(import.meta.url)(
+  path.join(root, "electron/keyboard-shortcuts.cjs"),
+) as { windowsLinuxMenuTemplate: () => MenuItem[] };
 const source = readFileSync(path.join(root, "electron/main.cjs"), "utf8");
 const temporary: string[] = [];
 afterEach(() =>
@@ -94,6 +98,7 @@ function harness(platform = "darwin", saved?: string) {
       setApplicationMenu: vi.fn(),
     },
     logToFile: vi.fn(),
+    windowsLinuxMenuTemplate,
     loadLinuxTrayIcon: vi.fn(() => "linux-icon"),
     BrowserWindow: { getAllWindows: () => [] },
     createWindow,
@@ -185,13 +190,17 @@ describe("macOS menu bar icon", () => {
   });
 
   it.each(["win32", "linux"])(
-    "does not hide or add macOS options on %s",
+    "does not hide the tray or add macOS options on %s",
     (platform) => {
       const h = harness(platform, "hidden");
       h.runtime.createTray();
       h.runtime.createMenu();
       expect(h.trays).toHaveLength(1);
-      expect(h.context.Menu.setApplicationMenu).not.toHaveBeenCalled();
+      const menu = h.context.Menu.setApplicationMenu.mock
+        .calls[0][0] as MenuItem[];
+      const items = menu.flatMap((entry) => entry.submenu ?? []);
+      expect(items.some((item) => item.label === "Menu Bar Icon")).toBe(false);
+      expect(items.some((item) => item.role === "close")).toBe(false);
     },
   );
 
