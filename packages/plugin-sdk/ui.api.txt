@@ -188,6 +188,10 @@ HostSidebarFilterState (type): HostSidebarFilterState
 HostSidebarPreferences (type): HostSidebarPreferences
 HostTabEmbed (value): (props: HostTabEmbedProps) => Element
 HostTrayTrigger (type): HostTrayTrigger
+HostTreeChild (type): HostTreeChild
+HostTreeChildren (value): ({ host, children, }: { host: Host; children: (groups: HostTreeChildrenGroup[]) => ReactNode; }) => Element
+HostTreeChildrenGroup (type): HostTreeChildrenGroup
+HostTreeChildrenResult (type): HostTreeChildrenResult
 HttpsSettings (type): HttpsSettings
 IconPicker (value): ({ value, color, onChange, }: { value: string; color?: string; onChange: (icon: string) => void; }) => Element
 InfoGrid (value): ({ items, className, }: { items: InfoItem[]; className?: string; }) => Element
@@ -361,7 +365,7 @@ TileStack (value): ({ className, children, }: { className?: string; children: Re
 TileWall (value): ({ size, minWidth, gridClassName, className, children, }: { size?: GridSize; minWidth?: number; gridClassName?: string; className?: string; children: ReactNode; }) => Element
 TlsStatus (type): TlsStatus
 ToolbarBand (value): ({ className, children, }: { className?: string; children: ReactNode; }) => Element
-ToolbarSelect (value): <T extends string>({ value, onChange, options, label, disabled, className, }: { value: T; onChange: (value: NoInfer<T>) => void; options: { value: NoInfer<T>; label: string; }[]; label: string; disabled?: boolean; className?: string; }) => Element
+ToolbarSelect (value): <T extends string>({ value, onChange, options, label, disabled, className, contentClassName, }: { value: T; onChange: (value: NoInfer<T>) => void; options: { value: NoInfer<T>; label: string; }[]; label: string; disabled?: boolean; className?: string; contentClassName?: string; }) => Element
 ToolsTab (type): ToolsTab
 Tooltip (value): ({ ...props }: TooltipProps) => Element
 TooltipContent (value): ({ className, sideOffset, children, ref, ...props }: TooltipContentProps & RefAttributes<HTMLDivElement>) => Element
@@ -542,6 +546,7 @@ hostMenuItemsFor (value): (all: HostContextMenuItemDef[], host: Host) => HostCon
 hostProtocolFlags (value): (host: { enableSsh?: boolean; pluginSettings?: Record<string, Record<string, unknown>>; }, list?: HostProtocolDef[]) => HostProtocols
 hostSectionsFor (value): (all: HostSectionDef[], host: Host) => HostSectionDef[]
 hostStatusIndicatorsFor (value): (all: HostBadgeDef[], host: Host) => HostBadgeDef[]
+hostTreeChildrenFor (value): (all: HostTreeChildrenDef[], host: Host) => HostTreeChildrenDef[]
 hydrateLocalSharedHostAuth (value): <T>(host: T) => Promise<T>
 invalidateHostsAndStatusCaches (value): () => void
 invalidateServerStatusCache (value): () => void
@@ -709,6 +714,7 @@ useHostProtocols (value): () => HostProtocolDef[]
 useHostSections (value): () => HostSectionDef[]
 useHostStatus (value): (hostId: number, statusCheckEnabled?: boolean) => StatusValue
 useHostStatusIndicators (value): () => HostBadgeDef[]
+useHostTreeChildrenProviders (value): () => HostTreeChildrenDef[]
 useInSeamlessTile (value): () => boolean
 useInstalledPlugins (value): () => PluginSummary[]
 useIsDefaultsEditor (value): () => boolean

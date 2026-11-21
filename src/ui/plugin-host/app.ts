@@ -51,6 +51,10 @@ import {
   type HostSectionRenderProps,
 } from "@/shell/host-sections";
 import {
+  hostTreeChildrenReporter,
+  registerHostTreeChildren,
+} from "@/shell/host-tree-children";
+import {
   registerDashboardCard,
   type DashboardCardRenderProps,
 } from "@/dashboard/dashboard-cards-registry";
@@ -492,6 +496,25 @@ export function createPluginApp(
           component: scoped(
             section.component as unknown as ComponentType<HostSectionRenderProps>,
           ),
+        }),
+      );
+    },
+
+    registerHostTreeChildren(provider) {
+      const useChildren = provider.useChildren as (host: unknown) => unknown;
+      return track(
+        registerHostTreeChildren({
+          id: provider.id,
+          pluginId,
+          titleKey: provider.titleKey ? key(provider.titleKey) : undefined,
+          order: provider.order,
+          when: hostCallback(provider.when) as never,
+          reporter: scoped(
+            hostTreeChildrenReporter(
+              (host) =>
+                useChildren(scopeHostFields({ host }, pluginId).host) as never,
+            ),
+          ) as never,
         }),
       );
     },

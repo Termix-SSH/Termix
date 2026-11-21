@@ -814,6 +814,42 @@ export type HostStatusIndicatorContribution = HostDataContribution;
 /** A control in the host editor's toolbar: a badge or text value, clickable with `actionId`. */
 export type HostEditorToolbarItemContribution = HostDataContribution;
 
+/** Something inside a host, like a container or a guest, listed under it in a host tree. */
+export interface HostTreeChild {
+  /** Unique within this plugin's list for the host. */
+  id: string;
+  label: string;
+  /** A short second line, like an image or an IP. */
+  detail?: string;
+  kind?: "container" | "vm" | "lxc" | "pod" | "other";
+  state?: "running" | "stopped" | "paused" | "unknown";
+  /** The tab a click opens on the parent host. */
+  tabType: string;
+  /** Passed as the tab's data, so the tab can show this item. Plain JSON only. */
+  data?: Record<string, unknown>;
+}
+
+export interface HostTreeChildrenResult {
+  items: HostTreeChild[];
+  loading?: boolean;
+  error?: string;
+}
+
+/**
+ * Lists what lives inside a host for layouts that draw a host tree. The hook
+ * only runs while a layout shows the host expanded, so it may load data.
+ * Works from a frame. Plugin API 2.9, core 26.11.3.
+ */
+export interface HostTreeChildrenContribution {
+  id: string;
+  /** A heading for the group when the tree shows one. */
+  titleKey?: string;
+  when: (host: PluginHostRecord) => boolean;
+  useChildren: (host: PluginHostRecord) => HostTreeChildrenResult | null;
+  /** Lower comes first. Ties sort by id. */
+  order?: number;
+}
+
 export interface HostSectionProps {
   host: PluginHostRecord;
   isVisible: boolean;
@@ -1444,6 +1480,14 @@ export interface TermixApp extends TermixAppInfo {
    * app.registerHostSection?.(...) if your plugin allows older cores.
    */
   registerHostSection: (section: HostSectionContribution) => Disposer;
+  /**
+   * Lists containers, guests and the like under a host in host tree layouts.
+   * Core 26.11.3 and newer; call it as app.registerHostTreeChildren?.(...) if
+   * your plugin allows older cores.
+   */
+  registerHostTreeChildren: (
+    provider: HostTreeChildrenContribution,
+  ) => Disposer;
   registerPaletteEntry: (entry: PaletteEntryContribution) => Disposer;
   registerPaletteGroup: (group: PaletteGroupContribution) => Disposer;
   registerKeybindingAction: (action: KeybindingActionContribution) => Disposer;

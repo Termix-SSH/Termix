@@ -53,6 +53,10 @@ import {
   resetDataWatches,
 } from "@/plugin-host/frames/data-watches";
 import { dataReporter } from "@/components/data-view/data-reporter";
+import {
+  HostTreeChildren,
+  resetHostTreeChildren,
+} from "@/shell/host-tree-children";
 
 const summary = {
   id: "gizmo",
@@ -461,6 +465,70 @@ describe("data values from a frame", () => {
         .querySelector("[data-data-dot='bad']")
         ?.getAttribute("title"),
     ).toBe("down");
+
+    view.unmount();
+    await act(flush);
+    expect(dataRowsFor("gizmo")).toEqual({});
+    plugin.dispose();
+  });
+});
+
+describe("host tree children from a frame", () => {
+  afterEach(() => {
+    resetDataRows();
+    resetHostTreeChildren();
+  });
+
+  it("asks only for a host that is shown and lists what the frame sends", async () => {
+    const started = startFramedPlugin(summary);
+    const { port } = await fakeFrame(() => undefined);
+    const valueKey = "tree:containers:children";
+    port.emit("register", {
+      rid: "hostTreeChildren#1",
+      kind: "hostTreeChildren",
+      data: { id: "containers", when: () => true, valueKey },
+    });
+    port.emit("ready");
+    const plugin = await started;
+    expect(dataRowsFor("gizmo")).toEqual({});
+
+    const host = {
+      id: 3,
+      name: "h",
+      ip: "1.2.3.4",
+      password: "hunter2",
+      pluginSettings: { gizmo: {} },
+    };
+    const view = render(
+      <HostTreeChildren host={host as never}>
+        {(groups) =>
+          groups
+            .flatMap((group) => group.result?.items ?? [])
+            .map((item) => item.label)
+            .join(",")
+        }
+      </HostTreeChildren>,
+    );
+    await act(flush);
+    expect(dataRowsFor("gizmo")).toEqual({
+      [valueKey]: { "3": { hostId: 3 } },
+    });
+
+    await act(async () => {
+      port.emit("value", {
+        key: valueKey,
+        value: {
+          "3": {
+            items: [
+              { id: "a", label: "web", tabType: "gizmo" },
+              { id: "b", label: "db", tabType: "gizmo" },
+            ],
+          },
+        },
+      });
+      await flush();
+    });
+    expect(view.container.textContent).toBe("web,db");
 
     view.unmount();
     await act(flush);

@@ -1308,6 +1308,17 @@ export async function startFramedPlugin(
             ? hostTableValue(pluginId, String(data.valueKey), useNeed)
             : undefined,
         });
+      case "hostTreeChildren": {
+        const useRow = rowTableValue(pluginId, String(data.valueKey), useNeed);
+        return app.registerHostTreeChildren({
+          id: data.id,
+          titleKey: data.titleKey,
+          order: data.order,
+          when: m("when", false),
+          useChildren: (host) =>
+            useRow({ hostId: host.id }, String(host.id)) as never,
+        });
+      }
       case "hostStatusIndicator":
         return app.registerHostStatusIndicator({
           id: data.id,

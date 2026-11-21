@@ -866,6 +866,7 @@ your plugin's error boundary and Suspense.
 | `registerHostBadge`, `registerHostContextMenuItem`                                 | Badges and menu items on host rows                                |
 | `registerHostStatusIndicator`                                                      | The status dot or stripe on a host row (a layout draws it)        |
 | `registerHostEditorToolbarItem`                                                    | A control in the host editor toolbar (a layout draws it)          |
+| `registerHostTreeChildren`                                                         | Containers or guests under a host in a host tree (a layout draws) |
 | `registerPaletteEntry`, `registerPaletteGroup`                                     | Command palette entries                                           |
 | `registerKeybindingAction`, `registerKeybindingDefault`                            | Bindable actions                                                  |
 | `registerSettingsComponent`                                                        | A component for a `custom` settings field                         |
@@ -1203,6 +1204,37 @@ A plugin that only holds themes needs no code. Leave out `src/`: `termix-plugin 
 - A theme someone saved that no longer exists shows as System. It comes back when the plugin does.
 - Accent color, UI font, font size and density are not part of a theme. Core applies them on top.
 - Bundled Classic Themes (https://github.com/Termix-SSH/Plugin-Classic-Themes) is a full example.
+
+### Things inside a host
+
+Layouts with a host tree (like Host Layout) can list what runs inside a host, such as containers or guests,
+under it. Register a provider; its hook only runs while the tree shows that host expanded, so it may load data.
+Each item names the tab a click opens on the host, and `data` tells that tab what to show (Termix 26.11.3+):
+
+```tsx
+app.registerHostTreeChildren?.({
+  id: "containers",
+  titleKey: "tree.containers",
+  when: (host) => host.pluginSettings?.docker?.enabled === true,
+  useChildren: (host) => {
+    const { list, loading } = useContainers(host.id);
+    return {
+      loading,
+      items: list.map((c) => ({
+        id: c.id,
+        label: c.name,
+        kind: "container",
+        state: c.running ? "running" : "stopped",
+        tabType: "docker",
+        data: { focus: { container: c.id } },
+      })),
+    };
+  },
+});
+```
+
+A layout reads them with `<HostTreeChildren host={host}>{(groups) => ...}</HostTreeChildren>` from the `ui`
+entry. Items are plain data, so this works from a frame.
 
 ## Looking native
 

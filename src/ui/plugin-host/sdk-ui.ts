@@ -937,6 +937,14 @@ export {
   useHostSections,
 } from "@/shell/host-sections";
 export { HostTabEmbed } from "@/shell/HostTabEmbed";
+export {
+  HostTreeChildren,
+  type HostTreeChild,
+  type HostTreeChildrenGroup,
+  type HostTreeChildrenResult,
+  hostTreeChildrenFor,
+  useHostTreeChildrenProviders,
+} from "@/shell/host-tree-children";
 import { createOperationsApi } from "@/lib/plugin-transport";
 /** Core's /operations routes, with the user's own session. */
 export const operationsApi = createOperationsApi();

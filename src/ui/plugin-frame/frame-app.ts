@@ -356,6 +356,35 @@ export function createFrameApp(host: FrameAppHost): {
       );
     },
 
+    registerHostTreeChildren(provider) {
+      // Runs only for hosts a layout shows expanded, one row per host.
+      const valueKey = `tree:${provider.id}:children`;
+      const useChildren = provider.useChildren as (host: never) => unknown;
+      return add(
+        "hostTreeChildren",
+        {
+          id: provider.id,
+          titleKey: provider.titleKey,
+          when: provider.when,
+          order: provider.order,
+          valueKey,
+        },
+        {
+          hooks: [
+            {
+              key: valueKey,
+              // A hook is always called, so a host that loads late gets a bare one first.
+              use: ((context: { host?: never; hostId?: unknown }) =>
+                useChildren(
+                  context.host ?? ({ id: context.hostId } as never),
+                )) as HookSpec["use"],
+              perRow: true,
+            },
+          ],
+        },
+      );
+    },
+
     registerHostStatusIndicator(indicator) {
       return hostValue("hostStatusIndicator", "status", indicator);
     },
