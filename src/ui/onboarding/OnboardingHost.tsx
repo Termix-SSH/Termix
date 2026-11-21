@@ -5,6 +5,10 @@ import { isElectron } from "@/lib/electron";
 import { isEmbeddedAuthFrame } from "@/lib/embedded-frame";
 import { settledPromise } from "@/plugin-host/plugin-store";
 import { subscribeToActionRegistry } from "@/shell/action-registry";
+import {
+  getOnboardingPlugins,
+  type OnboardingPluginList,
+} from "@/api/plugins-api";
 import { onboardingSteps, type OnboardingMode } from "./onboarding-registry";
 import {
   baselineSeen,
@@ -41,6 +45,11 @@ export function OnboardingHost({
   const modeRef = useRef(mode);
   modeRef.current = mode;
   const embedded = isEmbeddedAuthFrame();
+  const isAdmin = has(ONBOARDING_ADMIN_PERMISSION);
+  // Admins get the same plugin list the stage uses, or a step the stage
+  // drops (like layout on a linked desktop) reopens the stage forever.
+  const [plugins, setPlugins] = useState<OnboardingPluginList | null>(null);
+  const [pluginsLoaded, setPluginsLoaded] = useState(false);
 
   useEffect(() => {
     onOpenChange?.(mode !== null);
@@ -63,8 +72,25 @@ export function OnboardingHost({
     return () => window.removeEventListener(OPEN_ONBOARDING_EVENT, open);
   }, [embedded]);
 
+  useEffect(() => {
+    if (embedded || !loaded) return;
+    if (!isAdmin) {
+      setPluginsLoaded(true);
+      return;
+    }
+    let cancelled = false;
+    getOnboardingPlugins()
+      .then((list) => !cancelled && setPlugins(list))
+      .catch(() => {})
+      .finally(() => !cancelled && setPluginsLoaded(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [embedded, loaded, isAdmin]);
+
   const onboarding = prefs?.preferences.onboarding;
-  const ready = !embedded && settled && loaded && !!prefs?.loaded;
+  const ready =
+    !embedded && settled && loaded && !!prefs?.loaded && pluginsLoaded;
 
   // Carried over from the old onboarding: plugin steps that already exist
   // count as seen, without showing any of them.
@@ -83,14 +109,13 @@ export function OnboardingHost({
     const check = () => {
       if (modeRef.current !== null) return;
       if (document.visibilityState === "hidden") return;
-      const isAdmin = has(ONBOARDING_ADMIN_PERMISSION);
       const pending = computeFlow(currentStepDefs(has), onboarding.seen, {
         mode: "partial",
         isAdmin,
         isDesktop: isElectron(),
         has,
         pluginSetupPending: false,
-        pluginsManagedElsewhere: false,
+        pluginsManagedElsewhere: !!plugins?.managedByLinkedServer,
         canEnrollSecondFactor: canEnrollSecondFactor(),
       });
       if (pending.length > 0) setMode("partial");
@@ -109,7 +134,7 @@ export function OnboardingHost({
       offSlots();
       document.removeEventListener("visibilitychange", schedule);
     };
-  }, [ready, onboarding, has]);
+  }, [ready, onboarding, has, isAdmin, plugins]);
 
   if (!mode || embedded) return null;
 

@@ -13,6 +13,16 @@ vi.mock("@/lib/embedded-frame", () => ({
   isEmbeddedAuthFrame: () => frame.embedded,
 }));
 
+const pluginsApi = vi.hoisted(() => ({
+  getOnboardingPlugins: vi.fn(async () => ({
+    pending: false,
+    reason: null,
+    managedByLinkedServer: false,
+    plugins: [],
+  })),
+}));
+vi.mock("@/api/plugins-api", () => pluginsApi);
+
 vi.mock("@/plugin-host/plugin-store", () => ({
   settledPromise: () => Promise.resolve(),
 }));
@@ -120,6 +130,26 @@ describe("OnboardingHost", () => {
     renderHost(prefs({ baselinePending: true }));
     await waitFor(() => expect(seen["rd:guacd"]).toBe(1));
     await new Promise((r) => setTimeout(r, 900));
+    expect(screen.queryByText(/stage/)).toBeNull();
+  });
+
+  it("leaves an admin-only step closed when plugins are managed by a linked server", async () => {
+    setPermissionsForTesting(["admin.plugins.manage"]);
+    pluginsApi.getOnboardingPlugins.mockResolvedValueOnce({
+      pending: false,
+      reason: null,
+      managedByLinkedServer: true,
+      plugins: [],
+    });
+    onboardingSteps.register({
+      ...guacd,
+      id: "x:admin",
+      audience: "admin" as const,
+      isRelevant: (ctx) => !ctx.pluginsManagedElsewhere,
+    });
+    renderHost();
+    await new Promise((r) => setTimeout(r, 900));
+    expect(pluginsApi.getOnboardingPlugins).toHaveBeenCalled();
     expect(screen.queryByText(/stage/)).toBeNull();
   });
 
