@@ -32,6 +32,7 @@ vi.mock("@/lib/linked-server", () => ({
 
 import {
   getAllServerStatuses,
+  hostStatusChecksOff,
   refreshServerPolling,
   updateStatusCheckSettings,
 } from "@/api/host-status-api";
@@ -119,5 +120,37 @@ describe("status check routes", () => {
     expect(sshHostApiMock.put).toHaveBeenCalledWith("/status/settings", {
       statusCheckInterval: 45,
     });
+  });
+});
+
+describe("host status checks off", () => {
+  it("follows the server's header, unless a linked server sent statuses", async () => {
+    sshHostApiMock.get.mockImplementation(async (path: string) =>
+      path === "/status"
+        ? { data: {}, headers: { "x-termix-host-status": "off" } }
+        : { data: [{ id: 1, connectionOrigin: "local" }] },
+    );
+    resolveConnectionOriginMock.mockResolvedValue("local");
+    await getAllServerStatuses();
+    expect(hostStatusChecksOff()).toBe(true);
+
+    // A remote host's status comes from the linked server instead.
+    sshHostApiMock.get.mockImplementation(async (path: string) =>
+      path === "/status"
+        ? { data: {}, headers: { "x-termix-host-status": "off" } }
+        : {
+            data: [{ id: 2, connectionOrigin: "remote", syncId: "sync-2" }],
+          },
+    );
+    await getAllServerStatuses();
+    expect(hostStatusChecksOff()).toBe(false);
+
+    sshHostApiMock.get.mockImplementation(async (path: string) =>
+      path === "/status"
+        ? { data: { 1: { status: "online" } }, headers: {} }
+        : { data: [{ id: 1, connectionOrigin: "local" }] },
+    );
+    await getAllServerStatuses();
+    expect(hostStatusChecksOff()).toBe(false);
   });
 });

@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
 }));
 
 const service = vi.hoisted(() => ({
+  available: vi.fn(() => true),
   statusesFor: vi.fn(),
   get: vi.fn(),
   check: vi.fn(),
@@ -73,7 +74,11 @@ async function call(method: string, path: string, body?: unknown) {
     headers: body ? { "content-type": "application/json" } : {},
     body: body ? JSON.stringify(body) : undefined,
   });
-  return { status: response.status, body: await response.json() };
+  return {
+    status: response.status,
+    headers: response.headers,
+    body: await response.json(),
+  };
 }
 
 beforeEach(() => {
@@ -92,6 +97,7 @@ beforeEach(() => {
     (id: number) => state.statuses.get(id) ?? null,
   );
   service.check.mockResolvedValue(null);
+  service.available.mockReturnValue(true);
 });
 
 afterEach(async () => {
@@ -108,6 +114,20 @@ describe("GET /host/status", () => {
     expect(status).toBe(200);
     expect(Object.keys(body)).toEqual(["1", "2"]);
     expect(service.statusesFor).toHaveBeenCalledWith("user-1", null);
+  });
+
+  it("says when no plugin checks hosts, so clients stop showing Checking", async () => {
+    await start();
+    expect(
+      (await call("GET", "/host/status")).headers.get("x-termix-host-status"),
+    ).toBeNull();
+
+    service.available.mockReturnValue(false);
+    service.statusesFor.mockResolvedValue(new Map());
+    const { status, headers, body } = await call("GET", "/host/status");
+    expect(status).toBe(200);
+    expect(body).toEqual({});
+    expect(headers.get("x-termix-host-status")).toBe("off");
   });
 
   it("narrows to the requested hosts", async () => {

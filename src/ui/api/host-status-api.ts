@@ -61,6 +61,17 @@ function isTransientStatusError(error: unknown): boolean {
   );
 }
 
+let checksOff = false;
+
+/**
+ * Whether nothing checks hosts: the server said no plugin provides host
+ * status, and no linked server sent any either. Read after
+ * getAllServerStatuses.
+ */
+export function hostStatusChecksOff(): boolean {
+  return checksOff;
+}
+
 /** Throws when the statuses could not be read, so callers keep what they had. */
 export async function getAllServerStatuses(): Promise<
   Record<number, ServerStatus>
@@ -108,6 +119,7 @@ export async function getAllServerStatuses(): Promise<
           __silentRetry: !isFinalAttempt,
         } as AxiosRequestConfig & { __silentRetry?: boolean });
         localStatuses = response.data || {};
+        checksOff = response.headers?.["x-termix-host-status"] === "off";
         lastError = null;
         break;
       } catch (error) {
@@ -140,6 +152,7 @@ export async function getAllServerStatuses(): Promise<
           const localId = remoteHostsBySyncId.get(syncId);
           if (localId !== undefined) merged[localId] = status;
         }
+        checksOff = false;
         return merged;
       } catch {
         // The server is unreachable this tick; local statuses still stand.

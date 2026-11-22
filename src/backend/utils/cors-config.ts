@@ -111,6 +111,8 @@ export function createCorsMiddleware(
         credentials: isCorsCredentialedOrigin(req, origin),
         methods,
         allowedHeaders,
+        // The desktop app reads it from another origin (host status off).
+        exposedHeaders: ["X-Termix-Host-Status"],
       });
     });
     // A refused origin is a 403, not a server error.

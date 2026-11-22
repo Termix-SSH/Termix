@@ -15,6 +15,9 @@ interface HostStatusRoutesDeps {
 }
 
 /** "1,2,3" to a set of ids; undefined means the caller asked for all. */
+/** Set on GET /host/status when no plugin provides host status. */
+export const STATUS_OFF_HEADER = "X-Termix-Host-Status";
+
 export function parseStatusHostIds(value: unknown): Set<number> | null {
   if (value === undefined) return null;
   if (typeof value !== "string") return new Set();
@@ -74,6 +77,9 @@ export function registerHostStatusRoutes(
         return sessionExpired(res);
 
       const requested = parseStatusHostIds(req.query.hostIds);
+      // With no plugin checking hosts every one stays unknown, so say so
+      // rather than leave clients showing "Checking" for good.
+      if (!hostStatus.available()) res.setHeader(STATUS_OFF_HEADER, "off");
       const statuses = await hostStatus.statusesFor(userId, requested);
 
       // One batched permission check: this is polled every few seconds, and a

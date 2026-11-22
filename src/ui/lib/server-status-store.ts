@@ -14,6 +14,7 @@ type Listener = () => void;
 export class ServerStatusStore {
   private statuses = new Map<number, ServerStatusEntry>();
   private initialLoadComplete = false;
+  private checksOff = false;
   private readonly hostListeners = new Map<number, Set<Listener>>();
   private readonly allListeners = new Set<Listener>();
   private readonly metaListeners = new Set<Listener>();
@@ -31,8 +32,13 @@ export class ServerStatusStore {
     return this.initialLoadComplete;
   }
 
+  /** Nothing checks hosts (no host status plugin), so none will leave "unknown". */
+  getChecksOff(): boolean {
+    return this.checksOff;
+  }
+
   getMetaSnapshot(): string {
-    return this.initialLoadComplete ? "1" : "0";
+    return `${this.initialLoadComplete ? 1 : 0}${this.checksOff ? 1 : 0}`;
   }
 
   subscribeHost(hostId: number, listener: Listener): () => void {
@@ -71,6 +77,14 @@ export class ServerStatusStore {
     this.emitAll();
   }
 
+  setChecksOff(off: boolean): void {
+    if (this.checksOff === off) return;
+    this.checksOff = off;
+    for (const id of this.hostListeners.keys()) this.emitHost(id);
+    this.emitMeta();
+    this.emitAll();
+  }
+
   /**
    * Replace status map. Notifies only hosts whose status value changed,
    * plus allListeners when any change occurred.
@@ -96,6 +110,7 @@ export class ServerStatusStore {
   /** Forgets everything, on sign out. */
   clear(): void {
     this.applyStatuses(new Map());
+    this.setChecksOff(false);
     this.setInitialLoadComplete(false);
   }
 

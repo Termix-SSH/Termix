@@ -9,7 +9,7 @@ import React, {
   useSyncExternalStore,
   useState,
 } from "react";
-import { getAllServerStatuses } from "@/main-axios";
+import { getAllServerStatuses, hostStatusChecksOff } from "@/main-axios";
 import { invalidateServerStatusCache } from "./hosts-request-cache";
 import {
   ServerStatusStore,
@@ -21,6 +21,8 @@ import { runAdaptivePolling } from "./adaptive-polling";
 interface ServerStatusContextType {
   statuses: Map<number, ServerStatusEntry>;
   initialLoadComplete: boolean;
+  /** No host status plugin runs, so no host is ever checked. */
+  statusChecksOff: boolean;
   refreshStatuses: () => Promise<void>;
   /** "unknown" until the host has been checked. */
   getStatus: (hostId: number) => StatusValue;
@@ -87,6 +89,7 @@ export function ServerStatusProvider({
           });
         }
         store.applyStatuses(next);
+        store.setChecksOff(hostStatusChecksOff());
       } catch {
         // Keep the last known statuses rather than flipping every host.
       } finally {
@@ -147,6 +150,7 @@ export function ServerStatusProvider({
     () => ({
       statuses: store.getStatuses(),
       initialLoadComplete: store.getInitialLoadComplete(),
+      statusChecksOff: store.getChecksOff(),
       refreshStatuses,
       getStatus,
     }),
@@ -184,7 +188,8 @@ export function useServerStatus() {
 
 /**
  * Subscribe to a single host's status. Only re-renders when that host's
- * status changes. Null when status checks are off for the host.
+ * status changes. Null when status checks are off for the host, or for
+ * every host when nothing checks them.
  */
 export function useHostStatus(
   hostId: number,
@@ -193,21 +198,28 @@ export function useHostStatus(
   const store = useStatusStore();
   const status = useSyncExternalStore(
     (onChange) => store.subscribeHost(hostId, onChange),
-    () => store.getStatus(hostId),
-    () => store.getStatus(hostId),
+    () => (store.getChecksOff() ? null : store.getStatus(hostId)),
+    () => (store.getChecksOff() ? null : store.getStatus(hostId)),
   );
   return statusCheckEnabled ? status : null;
 }
 
 /** Meta flags without depending on the full status map. */
-export function useServerStatusMeta(): { initialLoadComplete: boolean } {
+export function useServerStatusMeta(): {
+  initialLoadComplete: boolean;
+  /** No host status plugin runs, so no host is ever checked. */
+  statusChecksOff: boolean;
+} {
   const store = useStatusStore();
   useSyncExternalStore(
     (onChange) => store.subscribeMeta(onChange),
     () => store.getMetaSnapshot(),
     () => store.getMetaSnapshot(),
   );
-  return { initialLoadComplete: store.getInitialLoadComplete() };
+  return {
+    initialLoadComplete: store.getInitialLoadComplete(),
+    statusChecksOff: store.getChecksOff(),
+  };
 }
 
 const noStatus = (): StatusValue => "unknown";
