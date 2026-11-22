@@ -16,6 +16,7 @@
 
 - Search boxes and other forms in plugin pages did nothing when you pressed Enter or the submit button
 - Desktop app linked to a server: the setup screen could flash open and closed over and over after an update
+- Desktop app linked to a server: plugins signed with the current Termix keys were switched off after each update and had to be turned on by hand
 
 ## 26.11.3
 

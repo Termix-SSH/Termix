@@ -41,6 +41,8 @@ const state = vi.hoisted(() => ({
   // Running plugins on plugin API 2, whose UI runs in frames.
   framed: new Set<string>(),
   frameTokens: [] as Array<[string, string, string]>,
+  // Plugins the loader holds with the trust fields a test gave them.
+  loaded: new Map<string, Record<string, unknown>>(),
 }));
 
 vi.mock("../../../upgrade/boot-migrations.js", () => ({
@@ -124,7 +126,8 @@ vi.mock("../../../plugins/index.js", () => ({
     loader: {
       list: () => [],
       get: (id: string) =>
-        state.active.has(id)
+        state.loaded.get(id) ??
+        (state.active.has(id)
           ? {
               id,
               state: "active",
@@ -139,7 +142,7 @@ vi.mock("../../../plugins/index.js", () => ({
                 capabilities: [],
               },
             }
-          : undefined,
+          : undefined),
     },
   }),
   activatePlugin: vi.fn(),
@@ -1707,6 +1710,7 @@ describe("plugins route", () => {
       });
 
       afterEach(() => {
+        state.loaded.clear();
         syncPluginsMock.isServerManaged.mockImplementation(() => true);
       });
 
@@ -1733,6 +1737,39 @@ describe("plugins route", () => {
           }),
         );
       });
+
+      it.each([
+        ["a root chain", { signedBy: "chain-key", signedRoot: "root" }, 409],
+        ["an unknown key", { signedBy: "unknown-key" }, 200],
+      ])(
+        "switching a user plugin %s signed answers as the trust check decides",
+        async (_signer, trust, status) => {
+          const actual = await vi.importActual<
+            typeof import("../../../sync/client/plugins.js")
+          >("../../../sync/client/plugins.js");
+          syncPluginsMock.isServerManaged.mockImplementation(
+            actual.isServerManaged,
+          );
+          state.loaded.set("sample-plugin", {
+            id: "sample-plugin",
+            source: "user",
+            manifest: { id: "sample-plugin", capabilities: ["kv:own"] },
+            ...trust,
+          });
+          manageMock.enablePluginWithConsent.mockClear();
+          manageMock.enablePluginWithConsent.mockResolvedValue({
+            enable: [],
+            disable: [],
+          });
+
+          const res = await switchOn("sample-plugin");
+
+          expect(res.status).toBe(status);
+          expect(manageMock.enablePluginWithConsent).toHaveBeenCalledTimes(
+            status === 200 ? 1 : 0,
+          );
+        },
+      );
 
       it("says per plugin whether the server decides it", async () => {
         state.plugins.set("other", makePlugin({ id: "other" }));
