@@ -28,6 +28,7 @@ import { joinStream } from "../transport-bridge.js";
 import type { AgentRelay } from "../agent-relay.js";
 import { createChildSyncHost } from "./sync-host.js";
 import { streamRequestBody } from "./request-body.js";
+import { sftpProxy } from "./sftp-proxy.js";
 
 interface Store {
   token?: string;
@@ -1571,7 +1572,10 @@ function sshClient(id: string): EventEmitter {
     endpoint
       .call("ssh.sftp", [id])
       .then((value) =>
-        cb(undefined, sftpProxy((value as { $sftp: string }).$sftp)),
+        cb(
+          undefined,
+          sftpProxy((value as { $sftp: string }).$sftp, endpoint, client),
+        ),
       )
       .catch((error) => cb(error));
     return true;
@@ -1669,85 +1673,6 @@ function sshChannel(value: {
       ? emit("close", exit.code, exit.signal)
       : emit(event, ...args)) as typeof out.emit;
   return stream;
-}
-
-const SFTP_METHODS = [
-  "stat",
-  "lstat",
-  "readFile",
-  "writeFile",
-  "rename",
-  "mkdir",
-  "unlink",
-  "readdir",
-  "rmdir",
-  "realpath",
-  "chmod",
-  "chown",
-  "utimes",
-  "symlink",
-  "readlink",
-  "exists",
-];
-
-function sftpProxy(id: string) {
-  const proxy: Record<string, AnyFn> = {};
-  for (const method of SFTP_METHODS) {
-    proxy[method] = (...args: unknown[]) => {
-      const cb = (
-        typeof args[args.length - 1] === "function" ? args.pop() : () => {}
-      ) as AnyFn;
-      endpoint
-        .call("sftp.call", [id, method, args])
-        .then((value) =>
-          method === "exists" ? cb(value) : cb(undefined, withStats(value)),
-        )
-        .catch((error) => cb(error));
-    };
-  }
-  proxy.createReadStream = (path: unknown) => {
-    const out = new PassThrough();
-    endpoint
-      .call("sftp.read", [id, String(path)])
-      .then((value) => {
-        const port = value as StreamPort;
-        port.pipe(out);
-        port.on("error", (error) => out.destroy(error));
-      })
-      .catch((error) => out.destroy(error));
-    return out;
-  };
-  proxy.createWriteStream = (path: unknown) => {
-    const port = endpoint.openStream();
-    const done = endpoint.call("sftp.write", [id, String(path), port]);
-    done.then(
-      () => port.emit("finish-remote"),
-      (error) => port.destroy(error),
-    );
-    return port;
-  };
-  proxy.end = () => endpoint.notify("sftp.end", [id]);
-  return proxy;
-}
-
-function withStats(value: unknown): unknown {
-  if (!value || typeof value !== "object" || Buffer.isBuffer(value))
-    return value;
-  if (Array.isArray(value)) return value.map(withStats);
-  const record = value as Record<string, unknown> & {
-    $stats?: { dir: boolean; file: boolean; link: boolean };
-  };
-  if (record.$stats) {
-    const { $stats: flags, ...rest } = record;
-    return {
-      ...rest,
-      isDirectory: () => flags.dir,
-      isFile: () => flags.file,
-      isSymbolicLink: () => flags.link,
-    };
-  }
-  if (record.attrs) return { ...record, attrs: withStats(record.attrs) };
-  return value;
 }
 
 // ---- Lifecycle ----
