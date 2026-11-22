@@ -559,13 +559,14 @@ class PluginProcess {
       // them was busy, not that they all hung: killing them all would only
       // pile restarts onto whatever is slow. A long stall still restarts.
       const { stale, ready } = this.fleet(timeout);
-      if (waitOutFleetStall(stale, ready, now - this.lastPong, timeout)) {
-        noteFleetStall(stale, ready);
+      if (!waitOutFleetStall(stale, ready, now - this.lastPong, timeout)) {
+        this.log("warn", "stopped answering, restarting it");
+        this.kill();
         return;
       }
-      this.log("warn", "stopped answering, restarting it");
-      this.kill();
-      return;
+      noteFleetStall(stale, ready);
+      // Ask again while waiting: a plugin that was only waiting on core
+      // answers once core is free, and is not restarted.
     }
     try {
       const pong = (await withTimeout(
