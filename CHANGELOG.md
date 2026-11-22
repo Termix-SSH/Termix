@@ -16,6 +16,7 @@
 
 - Search boxes and other forms in plugin pages did nothing when you pressed Enter or the submit button
 - Desktop app linked to a server: the setup screen could flash open and closed over and over after an update
+- Desktop app linked to a server: a plugin starting in the app, like after switching to the full build, no longer resets every host's own settings for that plugin on the server to the plugin's defaults
 
 ## 26.11.3
 

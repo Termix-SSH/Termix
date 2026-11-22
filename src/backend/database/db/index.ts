@@ -1915,6 +1915,16 @@ const migrateSchema = () => {
         linked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         last_sync_at TEXT
       );
+
+      CREATE TABLE IF NOT EXISTS sync_pending_host_settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        host_id INTEGER NOT NULL REFERENCES ssh_data(id) ON DELETE CASCADE,
+        plugin_id TEXT NOT NULL,
+        settings TEXT NOT NULL,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_sync_pending_host_settings_host_plugin
+        ON sync_pending_host_settings(host_id, plugin_id);
     `);
   } catch (createError) {
     databaseLogger.warn("Failed to create sync tables", {

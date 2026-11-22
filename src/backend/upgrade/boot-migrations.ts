@@ -37,9 +37,27 @@ export const runPluginDataMigrations = DatabaseSaveTrigger.batched(
         });
       }
     }
+    await applyPendingHostSettings();
     await applyHostDefaults();
   },
 );
+
+/**
+ * A linked desktop keeps what its server sends for plugins not running here;
+ * a plugin that has started since gets its values now.
+ */
+async function applyPendingHostSettings(): Promise<void> {
+  try {
+    const { applyPendingHostPluginSettings } =
+      await import("../sync/host-plugin-settings.js");
+    await applyPendingHostPluginSettings();
+  } catch (error) {
+    databaseLogger.warn("Could not apply kept host plugin settings", {
+      operation: "plugin_data_migration",
+      error: getErrorMessage(error),
+    });
+  }
+}
 
 /**
  * Classifies hosts nobody classified yet (from an older release, or for a

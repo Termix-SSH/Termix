@@ -31,7 +31,9 @@ import { singletonSyncId } from "./wire.js";
 import { parseDefaultOverrides } from "../../types/host-defaults.js";
 import {
   exportHostPluginSettings,
+  exportLinkedHostPluginSettings,
   importHostPluginSettings,
+  importLinkedHostPluginSettings,
 } from "./host-plugin-settings.js";
 import {
   exportProtocolLogins,
@@ -172,9 +174,11 @@ export function registerCoreSyncEntities(): void {
       serialize: async (row, resolveSyncId) => ({
         ...row,
         pluginSettings:
-          typeof row.id === "number"
-            ? await exportHostPluginSettings(row.id)
-            : {},
+          typeof row.id !== "number"
+            ? {}
+            : (await ownerIsLinked(row.userId))
+              ? await exportLinkedHostPluginSettings(row.id)
+              : await exportHostPluginSettings(row.id),
         protocolAuth:
           typeof row.id === "number"
             ? await exportProtocolLogins(
@@ -188,14 +192,17 @@ export function registerCoreSyncEntities(): void {
         if (id === null) return;
         // The server owns host defaults: it keeps what the host set itself
         // and resolves the rest. A desktop takes the server's values as sent.
-        const { getLink } = await import("./client/link-store.js");
-        const onServer = !(await getLink().catch(() => null));
-        await importHostPluginSettings(
-          id,
-          wire.pluginSettings,
-          onServer ? parseDefaultOverrides(wire.defaultOverrides) : null,
-          onServer ? String(userId) : undefined,
-        );
+        const onServer = !(await ownerIsLinked(userId));
+        if (onServer) {
+          await importHostPluginSettings(
+            id,
+            wire.pluginSettings,
+            parseDefaultOverrides(wire.defaultOverrides),
+            String(userId),
+          );
+        } else {
+          await importLinkedHostPluginSettings(id, wire.pluginSettings);
+        }
         await importProtocolLogins(id, userId, wire.protocolAuth, resolveId);
         await dropInvalidParent(userId, id);
         if (onServer) {
@@ -359,6 +366,15 @@ export async function mapKeybindingReferences(
   return changed
     ? { ...row, customKeybindings: JSON.stringify(bindings) }
     : row;
+}
+
+/**
+ * Whether a row's owner is linked to a server, which makes this side a
+ * desktop for that row. Every linked account syncs, not only the active one.
+ */
+async function ownerIsLinked(userId: unknown): Promise<boolean> {
+  const { isLinked } = await import("./client/link-store.js");
+  return isLinked(String(userId)).catch(() => false);
 }
 
 /** A synced parent link that would make a cycle here is dropped. */

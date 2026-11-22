@@ -156,6 +156,16 @@ export async function getLink(userId?: string): Promise<SyncLink | null> {
   return row ? fromRow(row) : null;
 }
 
+/** Whether a local user is linked to a server, without reading the link. */
+export async function isLinked(userId: string): Promise<boolean> {
+  const [row] = await db()
+    .select({ id: syncLink.id })
+    .from(syncLink)
+    .where(eq(syncLink.userId, userId))
+    .limit(1);
+  return Boolean(row);
+}
+
 export interface NewLink {
   userId: string;
   serverUrl: string;

@@ -371,6 +371,14 @@ describe("getAllSettings", () => {
   it("returns nothing for a scope the plugin declares no fields in", async () => {
     expect(await getAllSettings(ADMIN, "user", "user-1")).toEqual({});
   });
+
+  it("can leave out the fields nothing was stored for", async () => {
+    await setSetting(ADMIN, "admin", null, "baseUrl", "https://y");
+
+    expect(
+      await getAllSettings(ADMIN, "admin", null, { storedOnly: true }),
+    ).toEqual({ baseUrl: "https://y" });
+  });
 });
 
 describe("onSettingsChange", () => {

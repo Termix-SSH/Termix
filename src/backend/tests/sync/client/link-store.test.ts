@@ -21,7 +21,7 @@ vi.mock("../../../utils/system-crypto.js", () => ({
 
 const { TestSqliteDatabase } =
   await import("../../database/repositories/test-support.js");
-const { createLink, deleteLink, getLink, listLinks, updateLink } =
+const { createLink, deleteLink, getLink, isLinked, listLinks, updateLink } =
   await import("../../../sync/client/link-store.js");
 const { setActiveUserId } = await import("../../../sync/accounts.js");
 
@@ -139,6 +139,16 @@ describe("several links", () => {
     expect((await getLink())?.serverUrl).toBe("https://a");
     await setActiveUserId("second");
     expect((await getLink())?.serverUrl).toBe("https://b");
+  });
+
+  it("tells whether a given user is linked", async () => {
+    await createLink({
+      userId: "second",
+      serverUrl: "https://b",
+      sessionToken: "b",
+    });
+    expect(await isLinked("second")).toBe(true);
+    expect(await isLinked("local")).toBe(false);
   });
 
   it("changes and removes only the link it is asked about", async () => {
