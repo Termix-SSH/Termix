@@ -16,6 +16,7 @@
 
 - Search boxes and other forms in plugin pages did nothing when you pressed Enter or the submit button
 - Desktop app linked to a server: the setup screen could flash open and closed over and over after an update
+- Custom SSH ports showed as 22 on hosts from before 2.3 and on imported hosts, and saving the host, a plugin update or a new default SSH port could replace the real port. Startup now repairs the hosts it safely can, keeping the port they connect on; a port already replaced has to be entered again or restored from a backup. Reload open tabs, and update linked desktop apps before editing hosts on them
 
 ## 26.11.3
 

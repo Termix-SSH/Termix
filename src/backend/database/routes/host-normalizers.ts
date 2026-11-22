@@ -6,6 +6,7 @@ import {
 import { listHostProtocols } from "../../hosts/protocol-auth/registry.js";
 import { sanitizeProtocolAuthForRecipient } from "../../hosts/protocol-auth/summary.js";
 import { hostLock } from "../../hosts/locks.js";
+import { sshPortOf } from "../../hosts/defaults/core-columns.js";
 
 export function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -491,7 +492,7 @@ export function transformHostResponse(
     pin: !!host.pin,
     shareSshAuth: !!host.shareSshAuth,
     enableSsh: !!host.enableSsh,
-    sshPort: host.sshPort ?? host.port ?? 22,
+    sshPort: sshPortOf(host) ?? 22,
     jumpHosts: host.jumpHosts ? JSON.parse(host.jumpHosts as string) : [],
     // Moved into a plugin's host settings; its hostPayloadLegacy puts it
     // back for 2.8 clients.

@@ -37,7 +37,11 @@ import {
   type DefaultKeyInfo,
   type DefaultsCatalog,
 } from "./catalog.js";
-import { readCoreDefault, writeCoreDefault } from "./core-columns.js";
+import {
+  hasSshPortMismatch,
+  readCoreDefault,
+  writeCoreDefault,
+} from "./core-columns.js";
 import {
   loadDefaultsIndex,
   levelsForHost,
@@ -195,6 +199,14 @@ export function planHost(
       )
       .map((info) => info.key)
       .sort();
+    overridesChanged = true;
+  }
+
+  // Two ports on an SSH row: it dials `port`, which no default may replace.
+  // Only after classifying, so the host's other keys are compared as usual.
+  const ownCore = overrides[CORE_NAMESPACE];
+  if (ownCore && !ownCore.includes("sshPort") && hasSshPortMismatch(row)) {
+    overrides[CORE_NAMESPACE] = [...ownCore, "sshPort"].sort();
     overridesChanged = true;
   }
 

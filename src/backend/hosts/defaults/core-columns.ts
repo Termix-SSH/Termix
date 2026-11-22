@@ -32,6 +32,36 @@ function asBoolean(value: unknown): boolean {
   return value === true || value === 1 || value === "1" || value === "true";
 }
 
+/** The columns that say which port an SSH host dials. */
+type PortColumns = {
+  connectionType?: unknown;
+  port?: unknown;
+  sshPort?: unknown;
+};
+
+function isSshRow(row: PortColumns): boolean {
+  return (row.connectionType ?? "ssh") === "ssh";
+}
+
+/**
+ * The SSH port a row connects on. An SSH host dials `port`; `sshPort` can
+ * still hold the column's old default of 22, so it only counts for the other
+ * connection types.
+ */
+export function sshPortOf(row: PortColumns): unknown {
+  return isSshRow(row) ? (row.port ?? row.sshPort) : (row.sshPort ?? row.port);
+}
+
+/** An SSH row whose two port columns disagree. */
+export function hasSshPortMismatch(row: PortColumns): boolean {
+  return (
+    isSshRow(row) &&
+    row.sshPort !== null &&
+    row.sshPort !== undefined &&
+    Number(row.sshPort) !== Number(row.port)
+  );
+}
+
 /** The value a core key has on a row, normalized. */
 export function readCoreDefault(
   key: string,
@@ -48,7 +78,7 @@ export function readCoreDefault(
     case "username":
       return entry.normalize(row.username);
     case "sshPort":
-      return entry.normalize(row.sshPort ?? row.port);
+      return entry.normalize(sshPortOf(row));
     case "auth":
       return normalizeAuthDefault({
         authType: row.authType,
@@ -129,7 +159,7 @@ export function writeCoreDefault(
       return normalized === null ? {} : { username: normalized };
     case "sshPort": {
       const patch: Columns = { sshPort: normalized };
-      if ((row.connectionType ?? "ssh") === "ssh") patch.port = normalized;
+      if (isSshRow(row)) patch.port = normalized;
       return patch;
     }
     case "forceKeyboardInteractive":
