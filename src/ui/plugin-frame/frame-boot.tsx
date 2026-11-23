@@ -49,6 +49,7 @@ import {
   whenFrameComponent,
 } from "./frame-app";
 import { createFrameBridge } from "./frame-bridge";
+import { installFrameToasts } from "./frame-toasts";
 import { getFrameState, setFrameState } from "./frame-store";
 import { createFrameDataSource, receiveDataSlot } from "./frame-data-slots";
 import { setFrameDataSource } from "@/components/data-view/data-source";
@@ -146,6 +147,24 @@ function applyTheme(theme: FrameTheme) {
   ]);
 }
 
+/** What the frame installs before the shell answers init. */
+export function startFrameServices(
+  call: (method: string, ...args: unknown[]) => Promise<unknown>,
+  emit: (name: string, data: unknown) => void,
+) {
+  // The plugin's toasts are drawn by the shell; this frame has no Toaster.
+  installFrameToasts(call);
+  // Data slots this plugin owns get their values from the shell.
+  setFrameDataSource(createFrameDataSource(call));
+  // Other plugins' parts are placeholders the shell draws over.
+  const foreign = createForeignRuntime({
+    call,
+    emit,
+  });
+  setForeignRuntime(foreign);
+  return foreign;
+}
+
 async function boot() {
   const params = readParams();
   const parent = window.parent;
@@ -174,14 +193,9 @@ async function boot() {
   connectFrameCapture((batch) => port.emit("diag", batch));
 
   const call = (method: string, ...args: unknown[]) => port.call(method, args);
-  // Data slots this plugin owns get their values from the shell.
-  setFrameDataSource(createFrameDataSource(call));
-  // Other plugins' parts are placeholders the shell draws over.
-  const foreign = createForeignRuntime({
-    call,
-    emit: (name, data) => port.emit(name, data),
-  });
-  setForeignRuntime(foreign);
+  const foreign = startFrameServices(call, (name, data) =>
+    port.emit(name, data),
+  );
 
   parent.postMessage(
     { ch: FRAME_CHANNEL, t: "hello", role: params.role, key: params.key },

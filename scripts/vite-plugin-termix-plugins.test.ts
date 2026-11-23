@@ -36,3 +36,19 @@ describe("termixPluginHost meta CSP", () => {
     expect(tagsFor("serve").some((tag) => tag.tag === "meta")).toBe(false);
   });
 });
+
+describe("termixPluginHost sonner facade", () => {
+  it("re-exports the plugin toast so a bare call reaches the shell", () => {
+    const plugin = termixPluginHost({
+      repoRoot: process.cwd(),
+      sdkUiEntry: "ui.ts",
+      sdkFrontendEntry: "frontend.ts",
+      metaCsp: () => "",
+    }) as unknown as { load: (id: string) => string | null };
+    const source = plugin.load("\0termix-shared:sonner") ?? "";
+    expect(source).toContain('export * from "sonner"');
+    expect(source).toMatch(
+      /export \{ toast \} from ".*src\/ui\/plugin-frame\/sonner-toast\.ts"/,
+    );
+  });
+});

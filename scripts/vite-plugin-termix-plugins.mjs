@@ -41,6 +41,16 @@ function vendorFacade(repoRoot, specifier) {
   const vendor = SHARED_VENDORS.find((item) => item.specifier === specifier);
   if (vendor && !vendor.cjs) {
     const target = JSON.stringify(specifier);
+    if (specifier === "sonner") {
+      // Plugins get a toast whose bare call can be forwarded to the shell.
+      const own = JSON.stringify(
+        path
+          .join(repoRoot, "src/ui/plugin-frame/sonner-toast.ts")
+          .replaceAll("\\", "/"),
+      );
+      return `export * from ${target};
+export { toast } from ${own};`;
+    }
     return vendor.hasDefault
       ? `export * from ${target};
 export { default } from ${target};`
