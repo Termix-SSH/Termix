@@ -152,14 +152,17 @@ export function OnboardingStage({
     async (skipped: boolean) => {
       if (finishing.current) return;
       finishing.current = true;
-      prefs?.markOnboardingSeen(seenFor(flow), {
+      // Steps that joined the run and then stopped applying count too, so
+      // the host does not open the same run again.
+      const joined = allSteps.filter((s) => sticky.current.has(s.id));
+      prefs?.markOnboardingSeen(seenFor([...joined, ...flow]), {
         completed: true,
         skipped,
       });
       await prefs?.flushNow().catch(() => {});
       onDone();
     },
-    [prefs, flow, onDone],
+    [prefs, flow, allSteps, onDone],
   );
 
   // Nothing to show (a partial run whose step vanished).

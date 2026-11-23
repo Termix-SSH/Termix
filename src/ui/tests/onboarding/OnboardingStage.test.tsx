@@ -247,4 +247,46 @@ describe("OnboardingStage", () => {
     expect(screen.queryByText("factor body")).toBeNull();
     offStep();
   });
+
+  it("marks a step seen when it drops out and leaves nothing to show", async () => {
+    let relevant = true;
+    const base = {
+      pluginId: "x",
+      titleKey: "gone",
+      Component: () => <Plain label="gone" />,
+      audience: "all" as const,
+      position: 50,
+    };
+    const offStep = onboardingSteps.register({
+      ...base,
+      id: "x:gone",
+      version: 2,
+      isRelevant: () => relevant,
+    });
+    const onDone = renderStage("partial", {
+      ...defaultUiPreferences(),
+      onboarding: {
+        seen: { preset: 1, plugins: 1, appearance: 2, security: 1 },
+        completedAt: "2026-01-01T00:00:00.000Z",
+        skipped: false,
+        baselinePending: false,
+      },
+    });
+    await screen.findByText("gone body");
+    relevant = false;
+    // Any registry change makes the stage look at its steps again.
+    const offOther = onboardingSteps.register({
+      ...base,
+      id: "x:other",
+      version: 1,
+      isRelevant: () => false,
+    });
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    const body = api.saveUiPreferences.mock.calls.at(-1)?.[0] as {
+      onboarding: { seen: Record<string, number> };
+    };
+    expect(body.onboarding.seen["x:gone"]).toBe(2);
+    offOther();
+    offStep();
+  });
 });

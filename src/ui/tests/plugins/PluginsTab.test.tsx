@@ -55,6 +55,7 @@ vi.mock("@/api/plugins-api", async (importOriginal) => ({
   getPluginUpdateCheck: () => Promise.resolve(updateCheck.current),
 }));
 
+const manager = vi.hoisted(() => ({ updateMany: vi.fn() }));
 vi.mock("@/plugins/use-plugins-manager", () => ({
   usePluginsManager: () => ({
     plugins: [plugin, ...extra],
@@ -70,6 +71,7 @@ vi.mock("@/plugins/use-plugins-manager", () => ({
     developerMode: false,
     signedOnly: false,
     registries: [],
+    updateMany: manager.updateMany,
   }),
 }));
 
@@ -134,6 +136,30 @@ describe("PluginsTab", () => {
     expect(
       screen.getByRole("link", { name: "How plugins move to API 2" }),
     ).toHaveProperty("href", docsUrl("pluginApi2"));
+  });
+
+  it("updates the API 1 plugins that have an update from the notice", async () => {
+    extra = [
+      {
+        ...plugin,
+        id: "old",
+        name: "Old Plugin",
+        enabled: false,
+        isolation: "legacy",
+        updateAvailable: true,
+        latestVersion: "2.0.0",
+      } as typeof plugin,
+      {
+        ...plugin,
+        id: "stuck",
+        name: "Stuck Plugin",
+        enabled: false,
+        isolation: "legacy",
+      } as typeof plugin,
+    ];
+    await renderTab();
+    fireEvent.click(screen.getByRole("button", { name: "Update it now" }));
+    expect(manager.updateMany).toHaveBeenCalledWith(["old"]);
   });
 
   it("lists plugins the next Termix release would turn off", async () => {

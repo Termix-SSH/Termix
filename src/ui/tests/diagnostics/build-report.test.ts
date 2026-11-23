@@ -150,6 +150,40 @@ describe("buildReport", () => {
     expect(report.text.length).toBeLessThan(5.1 * 1024 * 1024);
   });
 
+  it("adds the desktop updater and app log with secrets removed", () => {
+    const report = buildReport(
+      data({
+        desktop: {
+          updater: {
+            kind: "auto",
+            mode: "prompt",
+            currentVersion: "26.11.2",
+            status: "error",
+            version: "26.11.3",
+            releaseUrl: null,
+            progress: null,
+            error: "The update did not pass the signature check",
+          },
+          log: [
+            "[t] [updater] signature check failed: inclusion promise could not be verified",
+            "[t] token=abcdef0123456789abcdef0123456789",
+          ],
+        },
+      }),
+      defaultReportOptions(),
+    );
+    expect(report.text).toContain("## Desktop app updates");
+    expect(report.text).toContain("did not pass the signature check");
+    expect(report.text).toContain("## Desktop app log");
+    expect(report.text).toContain("inclusion promise could not be verified");
+    expect(report.text).not.toContain("abcdef0123456789abcdef0123456789");
+  });
+
+  it("leaves the desktop part out of browser reports", () => {
+    const report = buildReport(data(), defaultReportOptions());
+    expect(report.text).not.toContain("## Desktop app");
+  });
+
   it("names the file after the time", () => {
     expect(reportFileName("2026-11-20T10:00:00.000Z")).toBe(
       "termix-report-2026-11-20T10-00-00.md",

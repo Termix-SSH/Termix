@@ -49,6 +49,7 @@ const { createPluginSandboxHost } = require("./plugin-sandbox.cjs");
 const { checkRuntime } = require("./plugin-runtime.cjs");
 const { shouldRelax, relaxFrameHeaders } = require("./frame-headers.cjs");
 const { openInEditor } = require("./open-in-editor.cjs");
+const { readLogTail } = require("./log-tail.cjs");
 const deepLink = require("./deep-link.cjs");
 const pluginNodePin = require("./plugin-node.json");
 const linkedServer = require("./linked-server.cjs");
@@ -1978,6 +1979,7 @@ function startAppUpdater() {
 }
 
 ipc.handle("desktop-update-get-state", () => appUpdater?.getState() ?? null);
+ipc.handle("diagnostics-desktop-log", () => readLogTail(fs, logFile));
 ipc.handle("desktop-update-check", () => appUpdater?.check() ?? null);
 ipc.handle("desktop-update-download", () => appUpdater?.download() ?? null);
 ipc.handle("desktop-update-install", () => appUpdater?.install() ?? false);

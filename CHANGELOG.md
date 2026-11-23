@@ -1,5 +1,22 @@
 # Changelog
 
+## 26.11.4
+
+### Added
+
+- Diagnostics report in the desktop app includes the update status and the app's own log
+- Plugins tab: plugins made for an older Termix can be updated right from the notice that lists them
+
+### Changed
+
+- Plugins made for an older Termix get their update on the next update check, even with auto update off
+- Desktop app: an update that fails its signature check links to its release page instead of only saying the check failed
+
+### Fixed
+
+- Search boxes and other forms in plugin pages did nothing when you pressed Enter or the submit button
+- Desktop app linked to a server: the setup screen could flash open and closed over and over after an update
+
 ## 26.11.3
 
 ### Added

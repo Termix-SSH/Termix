@@ -297,6 +297,15 @@ function createUpdater({
       if (error?.code === "unsigned") {
         // Older releases have no signature: offer the link, never install.
         update({ kind: "manual", status: "available" });
+      } else if (error?.code === "signature" || error?.code === "mismatch") {
+        // Never installed, but the user still gets a way to the release,
+        // built from our repo so a bad lookup can't point it elsewhere.
+        update({
+          kind: "manual",
+          status: "available",
+          releaseUrl: `https://github.com/${REPO}/releases/tag/${encodeURIComponent(release.tag)}`,
+          error: "The update did not pass the signature check",
+        });
       } else {
         update({
           status: "error",
