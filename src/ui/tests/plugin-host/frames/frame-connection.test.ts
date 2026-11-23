@@ -115,9 +115,24 @@ afterEach(() => {
   dropFrameToken();
   iframe.remove();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("frame connection", () => {
+  it.each([true, false])(
+    "reports desktop availability %s in the first handshake before shell sync",
+    async (desktop) => {
+      vi.stubGlobal("electronAPI", desktop ? { isElectron: true } : undefined);
+      connectFrame(iframe, "docker", "view", "tab:docker", {});
+      send({ ch: FRAME_CHANNEL, t: "hello", role: "view", key: "tab:docker" });
+
+      expect(await call("init")).toMatchObject({
+        ok: true,
+        value: { state: { desktop: { available: desktop } } },
+      });
+    },
+  );
+
   it("only answers the frame window it belongs to, after hello", async () => {
     connectFrame(iframe, "docker", "view", "tab:docker", {});
     const other = document.createElement("iframe");
