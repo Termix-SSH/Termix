@@ -1574,7 +1574,10 @@
         "notice_one": "1 spraudnis tika izveidots vecākai Termix versijai un paliek izslēgts, līdz tas tiek atjaunināts: {{names}}.",
         "notice_other": "{{count}} spraudņi tika izveidoti vecākai Termix versijai un paliek izslēgti, līdz tie tiek atjaunināti: {{names}}.",
         "why": "Tie tika izveidoti spraudņu API 1, kas darbojās servera iekšienē. Tagad Termix palaiž katru spraudni savā procesā, tāpēc katram ir nepieciešama versija, kas izveidota spraudņu API 2. Atjauniniet oficiālos šeit un lūdziet kopienas spraudņa autoram jaunu versiju.",
-        "guide": "Kā spraudņi pāriet uz API 2"
+        "guide": "Kā spraudņi pāriet uz API 2",
+        "update_zero": "Atjaunināt visus {{count}} tagad",
+        "update_one": "Atjaunināt to tagad",
+        "update_other": "Atjaunināt visus {{count}} tagad"
       },
       "provenance": {
         "verified": "Veidošana pārbaudīta",
@@ -1942,7 +1945,8 @@
       "console": "Pārlūkprogrammas konsole",
       "network": "Tīkls",
       "page": "Pārlūkprogramma un logs",
-      "dom": "Lapas izkārtojums"
+      "dom": "Lapas izkārtojums",
+      "desktop": "Darbvirsmas lietotne"
     },
     "partHints": {
       "server": "Versija, datubāze, SSL un iestatījumi, kas ir aktivizēti",
@@ -1955,7 +1959,8 @@
       "console": "Jaunākās konsoles rindas no lapas un spraudņiem",
       "network": "Jaunākie pieprasījumi un to statusi",
       "page": "Pārlūkprogramma, ekrāna izmērs un glabāšanas atslēgu nosaukumi",
-      "dom": "Lapas izkārtojums bez teksta"
+      "dom": "Lapas izkārtojums bez teksta",
+      "desktop": "Atjauninājumu statuss un pašas lietotnes žurnāls"
     }
   }
 }

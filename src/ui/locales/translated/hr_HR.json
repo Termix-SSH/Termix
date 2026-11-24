@@ -1574,7 +1574,10 @@
         "notice_few": "{{count}} dodatka su napravljena za stariju verziju Termixa i ostaju isključena dok se ne ažuriraju: {{names}}.",
         "notice_other": "{{count}} dodataka je napravljeno za stariju verziju Termixa i ostaju isključena dok se ne ažuriraju: {{names}}.",
         "why": "Napravljeni su za API dodatka verzije 1, koji je radio unutar poslužitelja. Termix sada pokreće svaki dodatak u vlastitom procesu, pa je svakom potrebna verzija napravljena za API dodatka verzije 2. Ažurirajte službene dodatke ovdje, a od autora zajedničkog dodatka zatražite novu verziju.",
-        "guide": "Kako se dodaci premještaju na API 2"
+        "guide": "Kako se dodaci premještaju na API 2",
+        "update_one": "Ažuriraj ga sada",
+        "update_few": "Ažuriraj svih {{count}} sada",
+        "update_other": "Ažuriraj svih {{count}} sada"
       },
       "provenance": {
         "verified": "Izgradnja provjerena",
@@ -1942,7 +1945,8 @@
       "console": "Konzola preglednika",
       "network": "Mreža",
       "page": "Preglednik i prozor",
-      "dom": "Raspored stranice"
+      "dom": "Raspored stranice",
+      "desktop": "Desktop aplikacija"
     },
     "partHints": {
       "server": "Verzija, baza podataka, SSL i postavljene postavke",
@@ -1955,7 +1959,8 @@
       "console": "Nedavne linije konzole sa stranice i pluginova",
       "network": "Nedavni zahtjevi i njihov status",
       "page": "Preglednik, veličina ekrana i nazivi ključeva pohrane",
-      "dom": "Raspored stranice, bez teksta"
+      "dom": "Raspored stranice, bez teksta",
+      "desktop": "Status ažuriranja i vlastiti zapisnik aplikacije"
     }
   }
 }

@@ -1539,7 +1539,9 @@
         "notice_one": "1 tilleg er laget for en eldre versjon av Termix og holdes avskrudd til det blir oppdatert: {{names}}.",
         "notice_other": "{{count}} tillegg er laget for en eldre versjon av Termix og holdes avskrudd til de blir oppdatert: {{names}}.",
         "why": "De er laget for tilleggs-API 1, som kjørte inne i serveren. Termix kjører nå hvert tilleg i sin egen prosess, så hvert tilleg trenger en versjon laget for tilleggs-API 2. Oppdater offisielle tillegg her, og be forfatteren av et fellesskapstilleg om en ny versjon.",
-        "guide": "Slik migrerer tillegg til API 2"
+        "guide": "Slik migrerer tillegg til API 2",
+        "update_one": "Oppdater den nå",
+        "update_other": "Oppdater alle {{count}} nå"
       },
       "provenance": {
         "verified": "Bygging verifisert",
@@ -1893,7 +1895,8 @@
       "console": "Nettleserkonsoll",
       "network": "Nettverk",
       "page": "Nettleser og vindu",
-      "dom": "Sideoppsett"
+      "dom": "Sideoppsett",
+      "desktop": "Skrivebordsapp"
     },
     "partHints": {
       "server": "Versjon, database, SSL og hvilke innstillinger som er satt",
@@ -1906,7 +1909,8 @@
       "console": "Nylige konsollinjer fra siden og plugins",
       "network": "Nylige forespørsler og deres status",
       "page": "Nettleser, skjermstørrelse og lagringsnøkkelnavn",
-      "dom": "Sides oppsett, uten tekst"
+      "dom": "Sides oppsett, uten tekst",
+      "desktop": "Oppdateringsstatus og appens egen logg"
     }
   }
 }

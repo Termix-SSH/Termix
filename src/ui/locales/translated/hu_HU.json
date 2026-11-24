@@ -1539,7 +1539,9 @@
         "notice_one": "1 bővítmény egy régebbi Termixhez készült, és addig ki van kapcsolva, amíg nem frissítik: {{names}}.",
         "notice_other": "{{count}} bővítmény egy régebbi Termixhez készült, és addig ki vannak kapcsolva, amíg nem frissítik őket: {{names}}.",
         "why": "A bővítmény API 1-hez készültek, amely a szerveren belül futott. A Termix most minden bővítményt saját folyamatban futtat, így mindegyiknek szüksége van egy bővítmény API 2-hez készült verzióra. Frissítsd a hivatalosakat itt, és kérdezd meg a közösségi bővítmény szerzőjét egy új verzióról.",
-        "guide": "Hogyan lépnek át a bővítmények az API 2-re"
+        "guide": "Hogyan lépnek át a bővítmények az API 2-re",
+        "update_one": "Frissítés most",
+        "update_other": "Összes {{count}} frissítése most"
       },
       "provenance": {
         "verified": "Építés ellenőrizve",
@@ -1893,7 +1895,8 @@
       "console": "Böngésző konzol",
       "network": "Hálózat",
       "page": "Böngésző és ablak",
-      "dom": "Oldal elrendezése"
+      "dom": "Oldal elrendezése",
+      "desktop": "Asztali alkalmazás"
     },
     "partHints": {
       "server": "Verzió, adatbázis, SSL és a beállított konfigurációk",
@@ -1906,7 +1909,8 @@
       "console": "Az oldal és a bővítmények legutóbbi konzolsorai",
       "network": "Legutóbbi kérések és azok állapota",
       "page": "Böngésző, képernyőméret és tárolási kulcsnevek",
-      "dom": "Az oldal elrendezése szöveg nélkül"
+      "dom": "Az oldal elrendezése szöveg nélkül",
+      "desktop": "Frissítési állapot és az alkalmazás saját naplója"
     }
   }
 }

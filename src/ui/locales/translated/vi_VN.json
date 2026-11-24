@@ -1504,7 +1504,8 @@
       "legacy": {
         "notice_other": "{{count}} plugin được tạo cho phiên bản Termix cũ và sẽ tắt cho đến khi được cập nhật: {{names}}.",
         "why": "Chúng được tạo cho Plugin API 1, chạy bên trong máy chủ. Termix hiện chạy mỗi plugin trong tiến trình riêng, vì vậy mỗi plugin cần phiên bản tương thích với Plugin API 2. Cập nhật các plugin chính thức tại đây và yêu cầu tác giả của plugin cộng đồng cung cấp phiên bản mới.",
-        "guide": "Cách di chuyển plugin sang API 2"
+        "guide": "Cách di chuyển plugin sang API 2",
+        "update_other": "Cập nhật tất cả {{count}} ngay"
       },
       "provenance": {
         "verified": "Đã kiểm tra bản dựng",
@@ -1844,7 +1845,8 @@
       "console": "Console trình duyệt",
       "network": "Mạng",
       "page": "Trình duyệt và cửa sổ",
-      "dom": "Bố cục trang"
+      "dom": "Bố cục trang",
+      "desktop": "Ứng dụng máy tính"
     },
     "partHints": {
       "server": "Phiên bản, cơ sở dữ liệu, SSL và các cài đặt đang được bật",
@@ -1857,7 +1859,8 @@
       "console": "Các dòng console gần đây từ trang và các plugin",
       "network": "Các yêu cầu gần đây và trạng thái của chúng",
       "page": "Trình duyệt, kích thước màn hình và tên khóa lưu trữ",
-      "dom": "Bố cục của trang, không bao gồm văn bản"
+      "dom": "Bố cục của trang, không bao gồm văn bản",
+      "desktop": "Trạng thái cập nhật và nhật ký của ứng dụng"
     }
   }
 }

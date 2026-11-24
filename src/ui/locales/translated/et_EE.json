@@ -1539,7 +1539,9 @@
         "notice_one": "1 plugin on loodud vanema Termixi jaoks ja jääb välja, kuni see on uuendatud: {{names}}.",
         "notice_other": "{{count}} pluginat on loodud vanema Termixi jaoks ja jäävad välja, kuni need on uuendatud: {{names}}.",
         "why": "Need on loodud plugin API 1 jaoks, mis töötas serveri sees. Termix käitab nüüd iga pluginat oma protsessis, seega vajab igaüks versiooni, mis on loodud plugin API 2 jaoks. Uuenda ametlikke pluginasid siin ja küsi kogukonna pluginate autorilt uus versioon.",
-        "guide": "Kuidas pluginad liiguvad API 2-le"
+        "guide": "Kuidas pluginad liiguvad API 2-le",
+        "update_one": "Uuenda see kohe",
+        "update_other": "Uuenda kõik {{count}} kohe"
       },
       "provenance": {
         "verified": "Ehitus kontrollitud",
@@ -1893,7 +1895,8 @@
       "console": "Brauseri konsool",
       "network": "Võrk",
       "page": "Brauser ja aken",
-      "dom": "Lehe paigutus"
+      "dom": "Lehe paigutus",
+      "desktop": "Töölauarakendus"
     },
     "partHints": {
       "server": "Versioon, andmebaas, SSL ja millised seaded on määratud",
@@ -1906,7 +1909,8 @@
       "console": "Viimased konsooli read lehelt ja lisandmoodulitest",
       "network": "Viimased päringud ja nende olek",
       "page": "Brauser, ekraani suurus ja salvestusvõtmete nimed",
-      "dom": "Lehe paigutus ilma tekstita"
+      "dom": "Lehe paigutus ilma tekstita",
+      "desktop": "Uuenduse olek ja rakenduse enda logi"
     }
   }
 }

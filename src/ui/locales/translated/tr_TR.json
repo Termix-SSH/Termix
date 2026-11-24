@@ -1539,7 +1539,9 @@
         "notice_one": "1 eklenti eski bir Termix sürümü için yapıldı ve güncellenene kadar kapalı kalacak: {{names}}.",
         "notice_other": "{{count}} eklenti eski bir Termix sürümü için yapıldı ve güncellenene kadar kapalı kalacak: {{names}}.",
         "why": "Bu eklentiler, sunucu içinde çalışan eklenti API 1 için yapıldı. Termix artık her eklentiyi kendi işleminde çalıştırıyor, bu yüzden her birinin eklenti API 2 için yapılmış bir sürümüne ihtiyacı var. Resmi olanları buradan güncelleyin ve topluluk eklentileri için yazarından bir sürüm isteyin.",
-        "guide": "Eklentiler nasıl API 2'ye geçer"
+        "guide": "Eklentiler nasıl API 2'ye geçer",
+        "update_one": "Şimdi güncelle",
+        "update_other": "Tüm {{count}} öğeyi şimdi güncelle"
       },
       "provenance": {
         "verified": "Derleme doğrulandı",
@@ -1893,7 +1895,8 @@
       "console": "Tarayıcı konsolu",
       "network": "Ağ",
       "page": "Tarayıcı ve pencere",
-      "dom": "Sayfa düzeni"
+      "dom": "Sayfa düzeni",
+      "desktop": "Masaüstü uygulaması"
     },
     "partHints": {
       "server": "Sürüm, veritabanı, SSL ve hangi ayarların yapılandırıldığı",
@@ -1906,7 +1909,8 @@
       "console": "Sayfa ve eklentilerden gelen son konsol satırları",
       "network": "Son istekler ve durumları",
       "page": "Tarayıcı, ekran boyutu ve depolama anahtar adları",
-      "dom": "Metin içermeyen sayfa düzeni"
+      "dom": "Metin içermeyen sayfa düzeni",
+      "desktop": "Güncelleme durumu ve uygulamanın kendi günlüğü"
     }
   }
 }

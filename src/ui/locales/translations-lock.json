@@ -1559,6 +1559,7 @@
   "diagnostics.logsWarn": "53a35dfe94d9",
   "diagnostics.logsError": "805e86a8cbf6",
   "diagnostics.logsPlugin": "8dc208f8ebe8",
+  "diagnostics.logsCount": "6c3acfec16c9",
   "diagnostics.logsFailed": "8776dc5dc16e",
   "diagnostics.logsPause": "781961bc81c2",
   "diagnostics.logsResume": "b3bd0b5a7049",
@@ -1574,6 +1575,7 @@
   "diagnostics.parts.network": "53ebc572b4a4",
   "diagnostics.parts.page": "f38d00f06f2f",
   "diagnostics.parts.dom": "a15e7515003c",
+  "diagnostics.parts.desktop": "f7a44c6b8856",
   "diagnostics.partHints.server": "8794778c2ce4",
   "diagnostics.partHints.plugins": "d33e5035ae6b",
   "diagnostics.partHints.sections": "9f3dba210fc4",
@@ -1584,5 +1586,6 @@
   "diagnostics.partHints.console": "84951442f8ef",
   "diagnostics.partHints.network": "da38c27dfcb3",
   "diagnostics.partHints.page": "3376068b1d26",
-  "diagnostics.partHints.dom": "a8e66914f811"
+  "diagnostics.partHints.dom": "a8e66914f811",
+  "diagnostics.partHints.desktop": "c79f7adc6813"
 }

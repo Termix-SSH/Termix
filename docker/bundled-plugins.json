@@ -236,8 +236,8 @@
     {
       "id": "log-search",
       "source": "tmxplug",
-      "url": "https://github.com/Termix-SSH/Plugin-Log-Search/releases/download/v1.2.0/log-search-1.2.0.tmxplug",
-      "sha256": "8938070db23d37243d6db10ef50a83dbf76dd29f358794cd06f93e520511337d",
+      "url": "https://github.com/Termix-SSH/Plugin-Log-Search/releases/download/v1.3.0/log-search-1.3.0.tmxplug",
+      "sha256": "523bf3c2544030eed8d02809da749d37663101c17ee3ca770d2e0f23a1ae8583",
       "tier": "full"
     },
     {

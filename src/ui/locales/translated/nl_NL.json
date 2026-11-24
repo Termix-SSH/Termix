@@ -1539,7 +1539,9 @@
         "notice_one": "1 plugin is gemaakt voor een oudere versie van Termix en blijft uitgeschakeld tot deze wordt bijgewerkt: {{names}}.",
         "notice_other": "{{count}} plugins zijn gemaakt voor een oudere versie van Termix en blijven uitgeschakeld tot ze worden bijgewerkt: {{names}}.",
         "why": "Ze zijn gemaakt voor plugin API 1, die binnen de server draaide. Termix draait nu elke plugin in een eigen proces, dus elke plugin heeft een versie nodig die is gemaakt voor plugin API 2. Werk officiële plugins hier bij en vraag de auteur van een community-plugin om een bijgewerkte versie.",
-        "guide": "Hoe plugins migreren naar API 2"
+        "guide": "Hoe plugins migreren naar API 2",
+        "update_one": "Nu bijwerken",
+        "update_other": "Alle {{count}} nu bijwerken"
       },
       "provenance": {
         "verified": "Build geverifieerd",
@@ -1893,7 +1895,8 @@
       "console": "Browserconsole",
       "network": "Netwerk",
       "page": "Browser en venster",
-      "dom": "Paginalayout"
+      "dom": "Paginalayout",
+      "desktop": "Bureaubladapp"
     },
     "partHints": {
       "server": "Versie, database, SSL en welke instellingen zijn ingesteld",
@@ -1906,7 +1909,8 @@
       "console": "Recente consoleregels van de pagina en plugins",
       "network": "Recente verzoeken en hun status",
       "page": "Browser, schermgrootte en opslag-sleutelnamen",
-      "dom": "De layout van de pagina, zonder tekst"
+      "dom": "De layout van de pagina, zonder tekst",
+      "desktop": "Updatestatus en het eigen logboek van de app"
     }
   }
 }

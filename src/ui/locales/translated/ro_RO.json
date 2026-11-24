@@ -1574,7 +1574,10 @@
         "notice_few": "{{count}} pluginuri au fost create pentru o versiune mai veche de Termix și rămân oprite până sunt actualizate: {{names}}.",
         "notice_other": "{{count}} pluginuri au fost create pentru o versiune mai veche de Termix și rămân oprite până sunt actualizate: {{names}}.",
         "why": "Au fost create pentru API-ul de pluginuri v1, care rula în interiorul serverului. Termix rulează acum fiecare plugin într-un proces separat, așa că fiecare are nevoie de o versiune creată pentru API-ul de pluginuri v2. Actualizează cele oficiale aici și cere autorului unui plugin comunitar o versiune compatibilă.",
-        "guide": "Cum se migrează pluginurile la API v2"
+        "guide": "Cum se migrează pluginurile la API v2",
+        "update_one": "Actualizează-l acum",
+        "update_few": "Actualizează toate cele {{count}} acum",
+        "update_other": "Actualizează toate cele {{count}} acum"
       },
       "provenance": {
         "verified": "Construcție verificată",
@@ -1942,7 +1945,8 @@
       "console": "Consolă browser",
       "network": "Rețea",
       "page": "Browser și fereastră",
-      "dom": "Aspect pagină"
+      "dom": "Aspect pagină",
+      "desktop": "Aplicație desktop"
     },
     "partHints": {
       "server": "Versiune, bază de date, SSL și care setări sunt configurate",
@@ -1955,7 +1959,8 @@
       "console": "Linii recente din consolă de la pagină și pluginuri",
       "network": "Solicitări recente și starea lor",
       "page": "Browser, dimensiunea ecranului și numele cheilor de stocare",
-      "dom": "Aspectul paginii, fără text"
+      "dom": "Aspectul paginii, fără text",
+      "desktop": "Starea actualizării și jurnalul propriu al aplicației"
     }
   }
 }

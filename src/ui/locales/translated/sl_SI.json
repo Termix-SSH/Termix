@@ -1609,7 +1609,11 @@
         "notice_few": "{{count}} vtičniki so bili izdelani za starejšo različico Termixa in bodo ostali izklopljeni, dokler jih ne posodobite: {{names}}.",
         "notice_other": "{{count}} vtičnikov je bilo izdelanih za starejšo različico Termixa in bodo ostali izklopljeni, dokler jih ne posodobite: {{names}}.",
         "why": "Izdelani so bili za vmesnik vtičnikov 1, ki je deloval znotraj strežnika. Termix zdaj vsak vtičnik izvaja v svojem procesu, zato potrebujejo različico za vmesnik vtičnikov 2. Uradne posodobite tukaj, avtorja vtičnika skupnosti pa vprašajte za posodobitev.",
-        "guide": "Kako vtičniki prehajajo na vmesnik 2"
+        "guide": "Kako vtičniki prehajajo na vmesnik 2",
+        "update_one": "Posodobi zdaj",
+        "update_two": "Posodobi zdaj obe",
+        "update_few": "Posodobi zdaj vse {{count}}",
+        "update_other": "Posodobi zdaj vse {{count}}"
       },
       "provenance": {
         "verified": "Gradnja preverjena",
@@ -1991,7 +1995,8 @@
       "console": "Konzola brskalnika",
       "network": "Omrežje",
       "page": "Brskalnik in okno",
-      "dom": "Postavitev strani"
+      "dom": "Postavitev strani",
+      "desktop": "Namizna aplikacija"
     },
     "partHints": {
       "server": "Različica, zbirka podatkov, SSL in katere nastavitve so nastavljene",
@@ -2004,7 +2009,8 @@
       "console": "Nedavne vrstice konzole s strani in vtičnikov",
       "network": "Nedavni zahtevki in njihov status",
       "page": "Brskalnik, velikost zaslona in imena ključev shrambe",
-      "dom": "Postavitev strani, brez besedila"
+      "dom": "Postavitev strani, brez besedila",
+      "desktop": "Stanje posodobitve in dnevnik aplikacije"
     }
   }
 }

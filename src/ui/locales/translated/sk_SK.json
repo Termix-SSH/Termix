@@ -1609,7 +1609,11 @@
         "notice_many": "{{count}} pluginov bolo vytvorených pre staršiu verziu Termixu a zostávajú vypnuté, kým nebudú aktualizované: {{names}}.",
         "notice_other": "{{count}} pluginov bolo vytvorených pre staršiu verziu Termixu a zostávajú vypnuté, kým nebudú aktualizované: {{names}}.",
         "why": "Boli vytvorené pre plugin API 1, ktoré bežalo vo vnútri servera. Termix teraz spúšťa každý plugin vo vlastnom procese, takže každý potrebuje verziu pre plugin API 2. Aktualizujte oficiálne pluginy tu a požiadajte autora komunitného pluginu o novú verziu.",
-        "guide": "Ako presunúť pluginy na API 2"
+        "guide": "Ako presunúť pluginy na API 2",
+        "update_one": "Aktualizovať teraz",
+        "update_few": "Aktualizovať všetkých {{count}} teraz",
+        "update_many": "Aktualizovať všetkých {{count}} teraz",
+        "update_other": "Aktualizovať všetkých {{count}} teraz"
       },
       "provenance": {
         "verified": "Build overený",
@@ -1991,7 +1995,8 @@
       "console": "Konzola prehliadača",
       "network": "Sieť",
       "page": "Prehliadač a okno",
-      "dom": "Rozloženie stránky"
+      "dom": "Rozloženie stránky",
+      "desktop": "Desktopová aplikácia"
     },
     "partHints": {
       "server": "Verzia, databáza, SSL a ktoré nastavenia sú aktivované",
@@ -2004,7 +2009,8 @@
       "console": "Posledné riadky konzoly zo stránky a pluginov",
       "network": "Posledné požiadavky a ich stav",
       "page": "Prehliadač, veľkosť obrazovky a názvy kľúčov úložiska",
-      "dom": "Rozloženie stránky bez textu"
+      "dom": "Rozloženie stránky bez textu",
+      "desktop": "Stav aktualizácie a vlastný denník aplikácie"
     }
   }
 }

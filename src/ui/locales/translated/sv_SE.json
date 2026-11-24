@@ -1539,7 +1539,9 @@
         "notice_one": "1 plugin är skapat för en äldre version av Termix och förblir inaktiverat tills det uppdateras: {{names}}.",
         "notice_other": "{{count}} plugins är skapade för en äldre version av Termix och förblir inaktiverade tills de uppdateras: {{names}}.",
         "why": "De är skapade för plugin-API 1, som kördes inuti servern. Termix kör nu varje plugin i sin egen process, så varje plugin behöver en version skapad för plugin-API 2. Uppdatera officiella plugins här, och be författaren till ett community-plugin om en ny version.",
-        "guide": "Hur plugins migrerar till API 2"
+        "guide": "Hur plugins migrerar till API 2",
+        "update_one": "Uppdatera den nu",
+        "update_other": "Uppdatera alla {{count}} nu"
       },
       "provenance": {
         "verified": "Bygg verifierat",
@@ -1877,6 +1879,7 @@
     "logsWarn": "Varningar och fel",
     "logsError": "Fel",
     "logsPlugin": "Plugin",
+    "logsCount": "{{count}} rader",
     "logsFailed": "Kunde inte ladda loggar",
     "logsPause": "Pausa",
     "logsResume": "Återuppta",
@@ -1892,7 +1895,8 @@
       "console": "Webbläsarkonsol",
       "network": "Nätverk",
       "page": "Webbläsare och fönster",
-      "dom": "Sidlayout"
+      "dom": "Sidlayout",
+      "desktop": "Skrivbordsapp"
     },
     "partHints": {
       "server": "Version, databas, SSL och vilka inställningar som är aktiverade",
@@ -1905,7 +1909,8 @@
       "console": "Senaste konsolraderna från sidan och plugins",
       "network": "Senaste förfrågningar och deras status",
       "page": "Webbläsare, skärmstorlek och lagringsnycklar",
-      "dom": "Sidans layout, utan text"
+      "dom": "Sidans layout, utan text",
+      "desktop": "Uppdateringsstatus och appens egen logg"
     }
   }
 }

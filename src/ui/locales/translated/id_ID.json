@@ -1504,7 +1504,8 @@
       "legacy": {
         "notice_other": "{{count}} plugin dibuat untuk Termix versi lama dan tetap nonaktif hingga diperbarui: {{names}}.",
         "why": "Plugin ini dibuat untuk API plugin 1, yang berjalan di dalam server. Termix sekarang menjalankan setiap plugin dalam prosesnya sendiri, sehingga masing-masing memerlukan versi yang dibuat untuk API plugin 2. Perbarui plugin resmi di sini, dan minta penulis plugin komunitas untuk versi yang sesuai.",
-        "guide": "Cara plugin berpindah ke API 2"
+        "guide": "Cara plugin berpindah ke API 2",
+        "update_other": "Perbarui semua {{count}} sekarang"
       },
       "provenance": {
         "verified": "Build diverifikasi",
@@ -1844,7 +1845,8 @@
       "console": "Konsol browser",
       "network": "Jaringan",
       "page": "Browser dan jendela",
-      "dom": "Tata letak halaman"
+      "dom": "Tata letak halaman",
+      "desktop": "Aplikasi desktop"
     },
     "partHints": {
       "server": "Versi, database, SSL, dan pengaturan yang aktif",
@@ -1857,7 +1859,8 @@
       "console": "Baris konsol terbaru dari halaman dan plugin",
       "network": "Permintaan terbaru dan statusnya",
       "page": "Browser, ukuran layar, dan nama kunci penyimpanan",
-      "dom": "Tata letak halaman, tanpa teks"
+      "dom": "Tata letak halaman, tanpa teks",
+      "desktop": "Status pembaruan dan log aplikasi itu sendiri"
     }
   }
 }

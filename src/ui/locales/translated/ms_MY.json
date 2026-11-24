@@ -1504,7 +1504,8 @@
       "legacy": {
         "notice_other": "{{count}} plugin dibuat untuk Termix yang lebih lama dan kekal dimatikan sehingga ia dikemas kini: {{names}}.",
         "why": "Mereka dibuat untuk API plugin 1, yang berjalan di dalam pelayan. Termix kini menjalankan setiap plugin dalam prosesnya sendiri, jadi setiap satu memerlukan versi yang dibuat untuk API plugin 2. Kemas kini yang rasmi di sini, dan minta pengarang plugin komuniti untuk satu.",
-        "guide": "Bagaimana plugin berpindah ke API 2"
+        "guide": "Bagaimana plugin berpindah ke API 2",
+        "update_other": "Kemas kini semua {{count}} sekarang"
       },
       "provenance": {
         "verified": "Binaan disahkan",
@@ -1844,7 +1845,8 @@
       "console": "Pelayar konsol",
       "network": "Rangkaian",
       "page": "Pelayar dan tetingkap",
-      "dom": "Susun atur halaman"
+      "dom": "Susun atur halaman",
+      "desktop": "Aplikasi desktop"
     },
     "partHints": {
       "server": "Versi, pangkalan data, SSL dan tetapan yang ditetapkan",
@@ -1857,7 +1859,8 @@
       "console": "Baris konsol terkini dari halaman dan plugin",
       "network": "Permintaan terkini dan statusnya",
       "page": "Pelayar, saiz skrin dan nama kunci storan",
-      "dom": "Susun atur halaman, tanpa teks"
+      "dom": "Susun atur halaman, tanpa teks",
+      "desktop": "Status kemas kini dan log aplikasi itu sendiri"
     }
   }
 }

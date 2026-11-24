@@ -1609,7 +1609,11 @@
         "notice_many": "{{count}} wtyczek zostało stworzonych dla starszej wersji Termix i pozostaną wyłączone do czasu ich aktualizacji: {{names}}.",
         "notice_other": "{{count}} wtyczek zostało stworzonych dla starszej wersji Termix i pozostaną wyłączone do czasu ich aktualizacji: {{names}}.",
         "why": "Zostały stworzone dla interfejsu API wtyczek 1, który działał wewnątrz serwera. Termix teraz uruchamia każdą wtyczkę w osobnym procesie, więc każda potrzebuje wersji stworzonej dla interfejsu API wtyczek 2. Zaktualizuj oficjalne wtyczki tutaj i poproś autora wtyczki społecznościowej o nową wersję.",
-        "guide": "Jak wtyczki przechodzą na interfejs API 2"
+        "guide": "Jak wtyczki przechodzą na interfejs API 2",
+        "update_one": "Aktualizuj teraz",
+        "update_few": "Aktualizuj wszystkie {{count}} teraz",
+        "update_many": "Aktualizuj wszystkie {{count}} teraz",
+        "update_other": "Aktualizuj wszystkie {{count}} teraz"
       },
       "provenance": {
         "verified": "Budowanie zweryfikowane",
@@ -1991,7 +1995,8 @@
       "console": "Konsola przeglądarki",
       "network": "Sieć",
       "page": "Przeglądarka i okno",
-      "dom": "Układ strony"
+      "dom": "Układ strony",
+      "desktop": "Aplikacja desktopowa"
     },
     "partHints": {
       "server": "Wersja, baza danych, SSL i ustawione opcje",
@@ -2004,7 +2009,8 @@
       "console": "Ostatnie wpisy konsoli ze strony i wtyczek",
       "network": "Ostatnie żądania i ich status",
       "page": "Przeglądarka, rozmiar ekranu i nazwy kluczy pamięci",
-      "dom": "Układ strony bez tekstu"
+      "dom": "Układ strony bez tekstu",
+      "desktop": "Status aktualizacji i własny dziennik aplikacji"
     }
   }
 }

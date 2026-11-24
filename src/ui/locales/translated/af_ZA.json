@@ -1539,7 +1539,9 @@
         "notice_one": "1 invoegprogram is vir 'n ouer Termix gemaak en bly af tot dit opgedateer is: {{names}}.",
         "notice_other": "{{count}} invoegprogramme is vir 'n ouer Termix gemaak en bly af tot hulle opgedateer is: {{names}}.",
         "why": "Hulle is vir invoegprogram-API 1 gemaak, wat binne die bediener geloop het. Termix loop nou elke invoegprogram in sy eie proses, so elkeen het 'n weergawe nodig wat vir invoegprogram-API 2 gemaak is. Dateer amptelike eenes hier op, en vra die outeur van 'n gemeenskapsinvoegprogram vir een.",
-        "guide": "Hoe invoegprogramme na API 2 beweeg"
+        "guide": "Hoe invoegprogramme na API 2 beweeg",
+        "update_one": "Wer dit nou op",
+        "update_other": "Wer almal {{count}} nou op"
       },
       "provenance": {
         "verified": "Bou gecontroleer",
@@ -1893,7 +1895,8 @@
       "console": "Blaaierkonsole",
       "network": "Netwerk",
       "page": "Blaaier en venster",
-      "dom": "Bladsy-opmaak"
+      "dom": "Bladsy-opmaak",
+      "desktop": "Burotoepassing"
     },
     "partHints": {
       "server": "Weergawe, databasis, SSL en watter instellings gestel is",
@@ -1906,7 +1909,8 @@
       "console": "Onlangse konsolereëls van die bladsy en plugins",
       "network": "Onlangse versoeke en hul status",
       "page": "Blaaier, skermgrootte en stoor sleutelname",
-      "dom": "Die opmaak van die bladsy, sonder teks"
+      "dom": "Die opmaak van die bladsy, sonder teks",
+      "desktop": "Opdateringsstatus en die toepassing se eie logboek"
     }
   }
 }

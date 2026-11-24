@@ -1942,7 +1942,8 @@
       "console": "Consola del navegador",
       "network": "Xarxa",
       "page": "Navegador i finestra",
-      "dom": "Disposició de la pàgina"
+      "dom": "Disposició de la pàgina",
+      "desktop": "Aplicació d'escriptori"
     },
     "partHints": {
       "server": "Versió, base de dades, SSL i quines configuracions estan establertes",
@@ -1955,7 +1956,8 @@
       "console": "Línies recents de la consola de la pàgina i dels connectors",
       "network": "Sol·licituds recents i el seu estat",
       "page": "Navegador, mida de la pantalla i noms de claus d'emmagatzematge",
-      "dom": "La disposició de la pàgina, sense text"
+      "dom": "La disposició de la pàgina, sense text",
+      "desktop": "Estat de l'actualització i el registre propi de l'aplicació"
     }
   }
 }

@@ -1574,7 +1574,10 @@
         "notice_many": "{{count}} plugins foram feitos para uma versão anterior do Termix e permanecem desativados até serem atualizados: {{names}}.",
         "notice_other": "{{count}} plugins foram feitos para uma versão anterior do Termix e permanecem desativados até serem atualizados: {{names}}.",
         "why": "Eles foram feitos para a API de plugin 1, que rodava dentro do servidor. O Termix agora roda cada plugin em seu próprio processo, então cada um precisa de uma versão feita para a API de plugin 2. Atualize os oficiais aqui e peça ao autor de um plugin da comunidade uma versão atualizada.",
-        "guide": "Como os plugins migram para a API 2"
+        "guide": "Como os plugins migram para a API 2",
+        "update_one": "Atualizar agora",
+        "update_many": "Atualizar todos os {{count}} agora",
+        "update_other": "Atualizar todos os {{count}} agora"
       },
       "provenance": {
         "verified": "Build verificado",
@@ -1942,7 +1945,8 @@
       "console": "Console do navegador",
       "network": "Rede",
       "page": "Navegador e janela",
-      "dom": "Layout da página"
+      "dom": "Layout da página",
+      "desktop": "Aplicativo de desktop"
     },
     "partHints": {
       "server": "Versão, banco de dados, SSL e quais configurações estão definidas",
@@ -1955,7 +1959,8 @@
       "console": "Linhas recentes do console da página e dos plugins",
       "network": "Solicitações recentes e seu status",
       "page": "Navegador, tamanho da tela e nomes de chaves de armazenamento",
-      "dom": "O layout da página, sem o texto"
+      "dom": "O layout da página, sem o texto",
+      "desktop": "Status da atualização e o log próprio do aplicativo"
     }
   }
 }

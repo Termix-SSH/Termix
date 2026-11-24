@@ -1539,7 +1539,9 @@
         "notice_one": "1 Plugin wurde für eine ältere Termix-Version erstellt und bleibt deaktiviert, bis es aktualisiert wird: {{names}}.",
         "notice_other": "{{count}} Plugins wurden für eine ältere Termix-Version erstellt und bleiben deaktiviert, bis sie aktualisiert werden: {{names}}.",
         "why": "Sie wurden für die Plugin-API 1 erstellt, die innerhalb des Servers lief. Termix führt jedes Plugin nun in einem eigenen Prozess aus, daher benötigt jedes eine Version für die Plugin-API 2. Aktualisiere offizielle Plugins hier und wende dich an den Autor eines Community-Plugins für eine neue Version.",
-        "guide": "Wie Plugins auf API 2 migrieren"
+        "guide": "Wie Plugins auf API 2 migrieren",
+        "update_one": "Jetzt aktualisieren",
+        "update_other": "Alle {{count}} jetzt aktualisieren"
       },
       "provenance": {
         "verified": "Build überprüft",
@@ -1893,7 +1895,8 @@
       "console": "Browserkonsole",
       "network": "Netzwerk",
       "page": "Browser und Fenster",
-      "dom": "Seitenlayout"
+      "dom": "Seitenlayout",
+      "desktop": "Desktop-App"
     },
     "partHints": {
       "server": "Version, Datenbank, SSL und welche Einstellungen gesetzt sind",
@@ -1906,7 +1909,8 @@
       "console": "Aktuelle Konsoleneinträge von der Seite und den Plugins",
       "network": "Aktuelle Anfragen und deren Status",
       "page": "Browser, Bildschirmgröße und Speicher-Schlüsselnamen",
-      "dom": "Das Layout der Seite, ohne Text"
+      "dom": "Das Layout der Seite, ohne Text",
+      "desktop": "Aktualisierungsstatus und das eigene Protokoll der App"
     }
   }
 }

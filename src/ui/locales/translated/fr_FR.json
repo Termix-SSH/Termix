@@ -1574,7 +1574,10 @@
         "notice_many": "{{count}} plugins ont été conçus pour une ancienne version de Termix et restent désactivés jusqu'à leur mise à jour : {{names}}.",
         "notice_other": "{{count}} plugins ont été conçus pour une ancienne version de Termix et restent désactivés jusqu'à leur mise à jour : {{names}}.",
         "why": "Ils ont été conçus pour l'API de plugins version 1, qui s'exécutait à l'intérieur du serveur. Termix exécute désormais chaque plugin dans son propre processus, de sorte que chacun nécessite une version conçue pour l'API de plugins version 2. Mettez à jour les plugins officiels ici, et demandez à l'auteur d'un plugin communautaire de fournir une version mise à jour.",
-        "guide": "Comment les plugins migrent vers l'API 2"
+        "guide": "Comment les plugins migrent vers l'API 2",
+        "update_one": "Mettre à jour maintenant",
+        "update_many": "Mettre à jour les {{count}} maintenant",
+        "update_other": "Mettre à jour les {{count}} maintenant"
       },
       "provenance": {
         "verified": "Build vérifié",
@@ -1942,7 +1945,8 @@
       "console": "Console du navigateur",
       "network": "Réseau",
       "page": "Navigateur et fenêtre",
-      "dom": "Mise en page"
+      "dom": "Mise en page",
+      "desktop": "Application de bureau"
     },
     "partHints": {
       "server": "Version, base de données, SSL et paramètres actifs",
@@ -1955,7 +1959,8 @@
       "console": "Lignes récentes de la console de la page et des plugins",
       "network": "Requêtes récentes et leur statut",
       "page": "Navigateur, taille de l'écran et noms des clés de stockage",
-      "dom": "Structure de la page, sans le texte"
+      "dom": "Structure de la page, sans le texte",
+      "desktop": "État de la mise à jour et le journal de l'application"
     }
   }
 }

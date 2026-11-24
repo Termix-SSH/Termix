@@ -1609,7 +1609,11 @@
         "notice_many": "{{count}} papildinių sukurti senesnei Termix versijai ir lieka išjungti, kol bus atnaujinti: {{names}}.",
         "notice_other": "{{count}} papildinių sukurti senesnei Termix versijai ir lieka išjungti, kol bus atnaujinti: {{names}}.",
         "why": "Jie sukurti papildinių API 1, kuri veikė serveryje. Dabar Termix vykdo kiekvieną papildinį atskiru procesu, todėl kiekvienam reikia versijos, skirtos papildinių API 2. Atnaujinkite oficialius čia, o bendruomenės papildiniui paprašykite autoriaus.",
-        "guide": "Kaip papildiniai pereina prie API 2"
+        "guide": "Kaip papildiniai pereina prie API 2",
+        "update_one": "Atnaujinti dabar",
+        "update_few": "Atnaujinti visus {{count}} dabar",
+        "update_many": "Atnaujinti visus {{count}} dabar",
+        "update_other": "Atnaujinti visus {{count}} dabar"
       },
       "provenance": {
         "verified": "Sukompiliuota patikrinta",
@@ -1991,7 +1995,8 @@
       "console": "Naršyklės konsolė",
       "network": "Tinklas",
       "page": "Naršyklė ir langas",
-      "dom": "Puslapio išdėstymas"
+      "dom": "Puslapio išdėstymas",
+      "desktop": "Darbalaukio programėlė"
     },
     "partHints": {
       "server": "Versija, duomenų bazė, SSL ir nustatyti nustatymai",
@@ -2004,7 +2009,8 @@
       "console": "Naujausios konsolės eilutės iš puslapio ir priedų",
       "network": "Naujausi užklausos ir jų būsena",
       "page": "Naršyklė, ekrano dydis ir saugojimo rakto pavadinimai",
-      "dom": "Puslapio išdėstymas, be teksto"
+      "dom": "Puslapio išdėstymas, be teksto",
+      "desktop": "Atnaujinimo būsena ir pačios programėlės žurnalas"
     }
   }
 }

@@ -1539,7 +1539,9 @@
         "notice_one": "1 plugin er lavet til en ældre version af Termix og forbliver deaktiveret, indtil det opdateres: {{names}}.",
         "notice_other": "{{count}} plugins er lavet til en ældre version af Termix og forbliver deaktiveret, indtil de opdateres: {{names}}.",
         "why": "De er lavet til plugin API 1, som kørte inde i serveren. Termix kører nu hvert plugin i sin egen proces, så hvert plugin skal have en version lavet til plugin API 2. Opdater officielle plugins her, og bed forfatteren af et community-plugin om en ny version.",
-        "guide": "Sådan migrerer plugins til API 2"
+        "guide": "Sådan migrerer plugins til API 2",
+        "update_one": "Opdater det nu",
+        "update_other": "Opdater alle {{count}} nu"
       },
       "provenance": {
         "verified": "Byggeproces verificeret",
@@ -1893,7 +1895,8 @@
       "console": "Browserkonsol",
       "network": "Netværk",
       "page": "Browser og vindue",
-      "dom": "Sideopbygning"
+      "dom": "Sideopbygning",
+      "desktop": "Skrivebordsapp"
     },
     "partHints": {
       "server": "Version, database, SSL og hvilke indstillinger der er sat",
@@ -1906,7 +1909,8 @@
       "console": "Seneste konsollinjer fra siden og plugins",
       "network": "Seneste anmodninger og deres status",
       "page": "Browser, skærmstørrelse og lagernøglenavne",
-      "dom": "Sidenes opbygning uden tekst"
+      "dom": "Sidenes opbygning uden tekst",
+      "desktop": "Opdateringsstatus og appens egen log"
     }
   }
 }
