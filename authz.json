@@ -151,6 +151,12 @@
     "GET /health": {
       "access": "public"
     },
+    "GET /health/live": {
+      "access": "public"
+    },
+    "GET /health/ready": {
+      "access": "public"
+    },
     "GET /host-sidebar/preferences": {
       "access": "user"
     },
