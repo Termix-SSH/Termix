@@ -16,6 +16,7 @@
 
 - Search boxes and other forms in plugin pages did nothing when you pressed Enter or the submit button
 - Desktop app linked to a server: the setup screen could flash open and closed over and over after an update
+- Operations Center could not run other plugins' actions or fill pickers from them. A plugin page may now run the actions its plugin is allowed to run (operations:invoke and its invokes list), right after you click, as you
 
 ## 26.11.3
 

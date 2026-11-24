@@ -312,6 +312,18 @@ function hasCapability(pluginId: string, capability: string): boolean {
   return (summaryOf(pluginId)?.capabilities ?? []).includes(capability);
 }
 
+/** Other plugins' actions a plugin's backend may run, from its manifest. */
+function invokableBy(pluginId: string): string[] {
+  if (!hasCapability(pluginId, "operations:invoke")) return [];
+  const contributes = summaryOf(pluginId)?.contributes as {
+    operations?: { invokes?: unknown };
+  } | null;
+  const list = contributes?.operations?.invokes;
+  return Array.isArray(list)
+    ? list.filter((entry): entry is string => typeof entry === "string")
+    : [];
+}
+
 const DOWNLOAD_AFTER_USE_MS = 120_000;
 const MAX_TOASTS_PER_MINUTE = 20;
 const toastTimes = new Map<string, number[]>();
@@ -346,7 +358,12 @@ async function coreRequest(connection: FrameConnection, request: unknown) {
     body?: unknown;
   };
   const method = String(input.method ?? "GET").toUpperCase();
-  const asked = checkCoreRequest(pluginId, method, String(input.path ?? ""));
+  const asked = checkCoreRequest(
+    pluginId,
+    method,
+    String(input.path ?? ""),
+    invokableBy(pluginId),
+  );
   // Some writes only follow a click or key in the frame.
   const check: typeof asked =
     asked.ok && asked.userAction && !recentlyUsed(connection)
