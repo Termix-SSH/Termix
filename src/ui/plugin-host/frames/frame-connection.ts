@@ -346,7 +346,13 @@ async function coreRequest(connection: FrameConnection, request: unknown) {
     body?: unknown;
   };
   const method = String(input.method ?? "GET").toUpperCase();
-  const asked = checkCoreRequest(pluginId, method, String(input.path ?? ""));
+  const capabilities = summaryOf(pluginId)?.capabilities ?? [];
+  const asked = checkCoreRequest(
+    pluginId,
+    method,
+    String(input.path ?? ""),
+    capabilities,
+  );
   // Some writes only follow a click or key in the frame.
   const check: typeof asked =
     asked.ok && asked.userAction && !recentlyUsed(connection)

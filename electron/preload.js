@@ -6,6 +6,12 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "save-desktop-settings",
 ]);
 
+const ALLOWED_LISTENER_CHANNELS = new Set([
+  "deep-link",
+  "title-bar-visible-changed",
+  "desktop-update-state",
+]);
+
 function invokeAllowed(channel, ...args) {
   if (!ALLOWED_INVOKE_CHANNELS.has(channel)) {
     return Promise.reject(new Error(`IPC channel is not allowed: ${channel}`));
@@ -74,7 +80,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
         },
       },
 
-  removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
+  removeAllListeners: (channel) => {
+    if (!ALLOWED_LISTENER_CHANNELS.has(channel)) {
+      throw new Error(`IPC listener channel is not allowed: ${channel}`);
+    }
+    ipcRenderer.removeAllListeners(channel);
+  },
   isElectron: true,
   isDev: process.env.NODE_ENV === "development",
 

@@ -174,6 +174,16 @@ class PermissionManager {
   }
 
   async hasPermission(userId: string, permission: string): Promise<boolean> {
+    try {
+      const user = await createCurrentUserRepository().findById(userId);
+      if (user?.disabledAt) {
+        this.invalidateUserPermissionCache(userId);
+        return false;
+      }
+    } catch {
+      // Fall through to cached/DB permission lookup when user lookup fails in unit tests.
+    }
+
     const userPermissions = await this.getUserPermissions(userId);
 
     if (userPermissions.includes("*")) {
@@ -370,7 +380,7 @@ class PermissionManager {
     try {
       // The flag is the one source of truth; the admin role follows it.
       const user = await createCurrentUserRepository().findById(userId);
-      return !!user?.isAdmin && !user.disabledAt;
+      return isActiveAdmin(user);
     } catch (error) {
       databaseLogger.error("Failed to check admin status", error, {
         operation: "is_admin",
@@ -487,6 +497,13 @@ class PermissionManager {
       next();
     };
   }
+}
+
+export function isActiveAdmin(
+  user:
+    { isAdmin?: boolean | null; disabledAt?: string | null } | null | undefined,
+): boolean {
+  return !!user?.isAdmin && !user.disabledAt;
 }
 
 export { PermissionManager, SHARE_PERMISSION_LEVELS };

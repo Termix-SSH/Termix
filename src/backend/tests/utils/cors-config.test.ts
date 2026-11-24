@@ -85,6 +85,17 @@ describe("isCorsOriginAllowed", () => {
     process.env.CORS_ALLOWED_ORIGINS = "https://portal.example";
     const req = request({ host: "termix.example" });
     expect(isCorsOriginAllowed(req, "https://attacker.example")).toBe(false);
+    expect(isCorsOriginAllowed(req, "file://")).toBe(false);
+  });
+
+  it("refuses credentials for file:// unless explicitly allowlisted", () => {
+    const req = request({ host: "termix.example" });
+    expect(isCorsCredentialedOrigin(req, "file://")).toBe(false);
+    expect(isCorsCredentialedOrigin(req, "app://termix")).toBe(true);
+
+    process.env.CORS_ALLOWED_ORIGINS = "file://";
+    expect(isCorsOriginAllowed(req, "file://")).toBe(true);
+    expect(isCorsCredentialedOrigin(req, "file://")).toBe(true);
   });
 
   describe("embedded desktop backend", () => {

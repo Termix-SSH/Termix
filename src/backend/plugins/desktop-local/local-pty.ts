@@ -8,6 +8,35 @@ import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
 import type { PluginLocalPty } from "@termix-ssh/plugin-sdk/backend";
+import { CORE_ONLY_ENV } from "../sandbox/launcher/policy.js";
+
+const CORE_ONLY_ENV_UPPER = new Set(
+  [...CORE_ONLY_ENV].map((name) => name.toUpperCase()),
+);
+
+const SECRET_ENV_PATTERN =
+  /^(JWT_SECRET|DATABASE_KEY|ENCRYPTION_KEY|INTERNAL_AUTH_TOKEN|OIDC_SYSTEM_SECRET|WEBAUTHN_SYSTEM_SECRET|DB_FILE_KEY)(?:_PREVIOUS)?(?:_FILE)?$/i;
+
+/**
+ * Strips backend secrets and internal database/launcher variables before
+ * passing the environment to a local interactive shell.
+ */
+export function sanitizeChildEnv(
+  env: NodeJS.ProcessEnv = process.env,
+): Record<string, string> {
+  const clean: Record<string, string> = {};
+  for (const [key, value] of Object.entries(env)) {
+    if (value === undefined) continue;
+    if (
+      CORE_ONLY_ENV_UPPER.has(key.toUpperCase()) ||
+      SECRET_ENV_PATTERN.test(key)
+    ) {
+      continue;
+    }
+    clean[key] = value;
+  }
+  return clean;
+}
 
 export function resolveLocalShell(
   platform: NodeJS.Platform,
@@ -115,7 +144,11 @@ export function spawnLocalPty(options?: {
       cols,
       rows,
       cwd: os.homedir(),
-      env: { ...process.env, TERM: "xterm-256color", COLORTERM: "truecolor" },
+      env: {
+        ...sanitizeChildEnv(process.env),
+        TERM: "xterm-256color",
+        COLORTERM: "truecolor",
+      },
     });
 
   let child: ReturnType<NodePty["spawn"]>;

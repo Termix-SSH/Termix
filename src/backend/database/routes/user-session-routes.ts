@@ -6,6 +6,7 @@ import {
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
 import { AuthManager } from "../../utils/auth-manager.js";
+import { isActiveAdmin } from "../../utils/permission-manager.js";
 import { authLogger } from "../../utils/logger.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import {
@@ -56,7 +57,7 @@ export function registerUserSessionRoutes(
       const userId = authReq.userId;
       try {
         const userRecord = await createCurrentUserRepository().findById(userId);
-        if (!userRecord?.isAdmin) {
+        if (!isActiveAdmin(userRecord)) {
           return res.status(403).json({ error: "Admin access required" });
         }
         const sessions = await createCurrentSessionRepository().revokeAll(

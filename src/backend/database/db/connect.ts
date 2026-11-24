@@ -1,12 +1,15 @@
 import type { DatabaseDialect } from "./dialect.js";
 import { guardMysqlPool, guardPgPool } from "./nan-params.js";
 import type { PortableDatabase } from "../repositories/database-context.js";
+import { databaseLogger } from "../../utils/logger.js";
 
 export const DATABASE_URL_ENV = "DATABASE_URL";
 export const DATABASE_POOL_MAX_ENV = "DATABASE_POOL_MAX";
 export const DATABASE_SSL_ENV = "DATABASE_SSL";
 
 const DEFAULT_POOL_MAX = 10;
+export const DEFAULT_CONNECTION_TIMEOUT_MS = 10_000;
+export const DEFAULT_IDLE_TIMEOUT_MS = 30_000;
 
 /**
  * Pool size. Both drivers default to 10; this exists so an install that runs
@@ -117,8 +120,19 @@ export async function connectRemoteDatabase(
     const pg = await import("pg");
     const Pool = pg.default?.Pool ?? pg.Pool;
     const pool = guardPgPool(
-      new Pool({ connectionString: url, max, ...(ssl ? { ssl } : {}) }),
+      new Pool({
+        connectionString: url,
+        max,
+        connectionTimeoutMillis: DEFAULT_CONNECTION_TIMEOUT_MS,
+        idleTimeoutMillis: DEFAULT_IDLE_TIMEOUT_MS,
+        ...(ssl ? { ssl } : {}),
+      }),
     );
+    pool.on("error", (error: Error) => {
+      databaseLogger.error("Unexpected idle PostgreSQL client error", error, {
+        operation: "pg_pool_error",
+      });
+    });
     return drizzle({ client: pool }) as unknown as PortableDatabase;
   }
 
@@ -131,6 +145,7 @@ export async function connectRemoteDatabase(
     createPool({
       uri: url,
       connectionLimit: max,
+      connectTimeout: DEFAULT_CONNECTION_TIMEOUT_MS,
       ...(ssl ? { ssl } : {}),
     }),
   );

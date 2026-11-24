@@ -101,12 +101,27 @@ describe("IPC argument checks", () => {
     "",
     "a b",
     "x".repeat(129),
+    "arbitraryKey",
+    "jwt",
   ])("refuses setting key %j", (key) => {
+    expect(() => IPC_ARGS["get-setting"](key)).toThrow();
     expect(() => IPC_ARGS["set-setting"](key, 1)).toThrow();
   });
 
+  it.each([
+    "rightClickCopyPaste",
+    "copyOnSelect",
+    "fileManager.externalEditorPath",
+    "theme",
+  ])("allows whitelisted setting key %j", (key) => {
+    expect(IPC_ARGS["get-setting"](key)).toEqual([key]);
+    expect(IPC_ARGS["set-setting"](key, "dark")).toEqual([key, "dark"]);
+  });
+
   it("refuses a huge setting value", () => {
-    expect(() => IPC_ARGS["set-setting"]("k", "x".repeat(70 * 1024))).toThrow();
+    expect(() =>
+      IPC_ARGS["set-setting"]("theme", "x".repeat(70 * 1024)),
+    ).toThrow();
   });
 
   it("keeps only known dialog fields", () => {
@@ -229,5 +244,12 @@ describe("main.cjs", () => {
     expect(main).toMatch(
       /for \(const name of \["will-navigate", "will-redirect"\]\)/,
     );
+  });
+
+  it("restricts preload removeAllListeners to whitelisted event channels", () => {
+    const preload = fs.readFileSync("electron/preload.js", "utf8");
+    expect(preload).toContain("ALLOWED_LISTENER_CHANNELS");
+    expect(preload).toMatch(/removeAllListeners:\s*\(channel\)\s*=>\s*\{/);
+    expect(preload).toContain("!ALLOWED_LISTENER_CHANNELS.has(channel)");
   });
 });

@@ -15,6 +15,7 @@ interface Rule {
   methods: Method[];
   path: (pluginId: string) => RegExp;
   userAction: boolean;
+  requiredCapabilities: string[];
 }
 
 const esc = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -25,19 +26,33 @@ export interface CoreRuleEntry {
   why?: string;
   /** Only right after the user clicked or typed in the frame. */
   userAction?: boolean;
+  /** Capability (or any one of the listed capabilities) required to use this rule. */
+  requiredCapability?: string | string[];
 }
 
 /** The shared list, also read by the mobile app. */
 export const CORE_RULES: CoreRuleEntry[] = RULE_FILE.rules;
 
+function normalizeCapabilities(required?: string | string[]): string[] {
+  if (!required) return [];
+  return Array.isArray(required) ? required : [required];
+}
+
 const RULES: Rule[] = CORE_RULES.map((entry) => ({
   methods: entry.methods as Method[],
   path: (id) => new RegExp(entry.path.split("{id}").join(esc(id))),
   userAction: entry.userAction === true,
+  requiredCapabilities: normalizeCapabilities(entry.requiredCapability),
 }));
 
 export type PolicyResult =
-  | { ok: true; path: string; query: string; userAction: boolean }
+  | {
+      ok: true;
+      path: string;
+      query: string;
+      userAction: boolean;
+      requiredCapabilities: string[];
+    }
   | { ok: false; reason: string };
 
 /** Checks a core request a frame asked for. `target` is path plus query. */
@@ -45,6 +60,7 @@ export function checkCoreRequest(
   pluginId: string,
   method: string,
   target: string,
+  capabilities?: readonly string[],
 ): PolicyResult {
   if (typeof target !== "string" || !target.startsWith("/")) {
     return { ok: false, reason: "not a server path" };
@@ -62,14 +78,36 @@ export function checkCoreRequest(
   const matches = RULES.filter(
     (rule) => rule.methods.includes(verb) && rule.path(pluginId).test(path),
   );
-  return matches.length > 0
-    ? {
-        ok: true,
-        path,
-        query,
-        userAction: matches.every((rule) => rule.userAction),
-      }
-    : { ok: false, reason: `${verb} ${path}` };
+  if (matches.length === 0) {
+    return { ok: false, reason: `${verb} ${path}` };
+  }
+  const permitted =
+    capabilities === undefined
+      ? matches
+      : matches.filter(
+          (rule) =>
+            rule.requiredCapabilities.length === 0 ||
+            rule.requiredCapabilities.some((cap) => capabilities.includes(cap)),
+        );
+  if (permitted.length === 0) {
+    const required = [
+      ...new Set(matches.flatMap((rule) => rule.requiredCapabilities)),
+    ];
+    return {
+      ok: false,
+      reason: `${verb} ${path} requires capability ${required.join(" | ")}`,
+    };
+  }
+  const requiredCapabilities = [
+    ...new Set(permitted.flatMap((rule) => rule.requiredCapabilities)),
+  ];
+  return {
+    ok: true,
+    path,
+    query,
+    userAction: permitted.every((rule) => rule.userAction),
+    requiredCapabilities,
+  };
 }
 
 /** Headers a frame may not set: the shell owns the login and the proxy. */

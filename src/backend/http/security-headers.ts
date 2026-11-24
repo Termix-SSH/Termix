@@ -131,7 +131,7 @@ export const API_CSP = "default-src 'none'; frame-ancestors 'none'";
  * result) sets its own policy, which replaces this one.
  */
 export const PLUGIN_CSP =
-  "object-src 'none'; base-uri 'none'; frame-ancestors 'self'";
+  "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'";
 
 const PLUGIN_PREFIXES = ["/plugin-api/", "/plugin-assets/", "/plugin-ws/"];
 

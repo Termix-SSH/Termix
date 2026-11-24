@@ -18,23 +18,27 @@
     {
       "methods": ["GET", "HEAD"],
       "path": "^/users/(sessions|api-keys/mine)$",
+      "requiredCapability": ["users:read", "auth:policy", "auth:provide"],
       "why": "Your own sessions and keys. Revoking other people's stays out."
     },
     {
       "methods": ["DELETE"],
       "path": "^/users/api-keys/mine/[\\w-]+$",
       "userAction": true,
+      "requiredCapability": ["users:write", "auth:policy", "auth:provide"],
       "why": "Revoking keys only right after the user clicked in the frame"
     },
     {
       "methods": ["POST"],
       "path": "^/users/api-keys/mine/revoke-all$",
       "userAction": true,
+      "requiredCapability": ["users:write", "auth:policy", "auth:provide"],
       "why": "Revoking keys only right after the user clicked in the frame"
     },
     {
       "methods": ["GET", "HEAD"],
-      "path": "^/users/admin-holds(/settings)?$"
+      "path": "^/users/admin-holds(/settings)?$",
+      "requiredCapability": ["users:read", "auth:policy", "auth:provide"]
     },
     {
       "methods": ["GET", "HEAD"],
@@ -64,19 +68,27 @@
     },
     {
       "methods": ["GET", "HEAD"],
-      "path": "^/host/db/host(/\\d+)?$"
+      "path": "^/host/db/host(/\\d+)?$",
+      "requiredCapability": "hosts:read"
     },
     {
       "methods": ["GET", "HEAD"],
-      "path": "^/host/(folders|policy)$"
+      "path": "^/host/(folders|policy)$",
+      "requiredCapability": "hosts:read"
     },
     {
       "methods": ["GET", "HEAD"],
-      "path": "^/host/status(/\\d+|/settings)?$"
+      "path": "^/host/status(/\\d+|/settings)?$",
+      "requiredCapability": "hosts:read"
     },
     {
       "methods": ["GET", "HEAD"],
-      "path": "^/credentials$"
+      "path": "^/credentials$",
+      "requiredCapability": [
+        "credentials:read",
+        "credentials:use",
+        "credentials:write"
+      ]
     },
     {
       "methods": ["GET", "HEAD"],

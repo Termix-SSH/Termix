@@ -93,6 +93,53 @@ describe("checkCoreRequest", () => {
       ).ok,
     ).toBe(true);
   });
+
+  it("enforces requiredCapability when capabilities are provided", () => {
+    // Public / low-privilege core routes work even with no capabilities.
+    expect(checkCoreRequest("plain", "GET", "/users/me", []).ok).toBe(true);
+    expect(checkCoreRequest("plain", "GET", "/health", []).ok).toBe(true);
+
+    // Sensitive core routes are refused without the required capability.
+    for (const [method, path] of [
+      ["GET", "/host/db/host"],
+      ["GET", "/host/db/host/4"],
+      ["GET", "/host/folders"],
+      ["GET", "/host/status"],
+      ["GET", "/credentials"],
+      ["GET", "/users/sessions"],
+      ["GET", "/users/api-keys/mine"],
+      ["DELETE", "/users/api-keys/mine/abc_1"],
+      ["POST", "/users/api-keys/mine/revoke-all"],
+      ["GET", "/users/admin-holds"],
+    ]) {
+      const denied = checkCoreRequest("plain", method, path, []);
+      expect(denied.ok, `${method} ${path} without cap`).toBe(false);
+    }
+
+    // Granting the matching capability unlocks only those routes.
+    expect(
+      checkCoreRequest("docker", "GET", "/host/db/host", ["hosts:read"]).ok,
+    ).toBe(true);
+    expect(
+      checkCoreRequest("docker", "GET", "/credentials", ["hosts:read"]).ok,
+    ).toBe(false);
+    expect(
+      checkCoreRequest("vault", "GET", "/credentials", ["credentials:use"]).ok,
+    ).toBe(true);
+    expect(
+      checkCoreRequest("sec", "GET", "/users/sessions", ["users:read"]).ok,
+    ).toBe(true);
+    expect(
+      checkCoreRequest("sec", "POST", "/users/api-keys/mine/revoke-all", [
+        "users:read",
+      ]).ok,
+    ).toBe(false);
+    expect(
+      checkCoreRequest("sec", "POST", "/users/api-keys/mine/revoke-all", [
+        "auth:policy",
+      ]).ok,
+    ).toBe(true);
+  });
 });
 
 describe("frameHeaders", () => {

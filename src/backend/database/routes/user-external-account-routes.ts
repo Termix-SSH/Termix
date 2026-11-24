@@ -1,6 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
 import { AuthManager } from "../../utils/auth-manager.js";
+import { isActiveAdmin } from "../../utils/permission-manager.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { authLogger } from "../../utils/logger.js";
 import {
@@ -101,7 +102,7 @@ export function registerUserExternalAccountRoutes(
       const userRepository = createCurrentUserRepository();
       const identities = createCurrentUserAuthRepository();
       const adminUser = await userRepository.findById(adminUserId);
-      if (!adminUser?.isAdmin) {
+      if (!isActiveAdmin(adminUser)) {
         return res.status(403).json({ error: "Admin access required" });
       }
 
@@ -229,7 +230,7 @@ export function registerUserExternalAccountRoutes(
     try {
       const userRepository = createCurrentUserRepository();
       const adminUser = await userRepository.findById(adminUserId);
-      if (!adminUser?.isAdmin) {
+      if (!isActiveAdmin(adminUser)) {
         authLogger.warn("Non-admin attempted to remove an external sign-in", {
           operation: "unlink_external_unauthorized",
           adminUserId,
