@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import i18n from "i18next";
 import { getBasePath } from "@/lib/base-path";
 import { isElectron, localBackendPort } from "@/lib/electron";
-import { clearTermixSessionStorage } from "@/shell/TabContext";
+import { clearTermixSessionStorage } from "@/lib/session-storage";
 import type { SSHHost } from "@/types/index";
 
 // ============================================================================

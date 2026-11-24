@@ -16,7 +16,11 @@ import {
   migrateLegacySharedHostAuthOverrides,
 } from "../../utils/shared-host-auth-override-migration.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
-import { saveSnapshot, writeFileAtomic } from "./snapshot-save.js";
+import { saveSnapshot } from "./snapshot-save.js";
+import {
+  terminateSnapshotWorker,
+  writeSnapshotInWorker,
+} from "./snapshot-worker.js";
 import { migrateAuditRetention } from "../../utils/audit-retention-migration.js";
 import { createPerformanceIndexes } from "./performance-indexes.js";
 import {
@@ -1989,12 +1993,21 @@ async function saveMemoryDatabaseToFile(): Promise<void> {
         fs.mkdirSync(dataDir, { recursive: true });
       }
       if (enableFileEncryption) {
-        await DatabaseFileEncryption.encryptDatabaseFromBuffer(
+        const key = await SystemCrypto.getInstance().getDatabaseKey();
+        await writeSnapshotInWorker({
+          targetPath: encryptedDbPath,
           buffer,
-          encryptedDbPath,
-        );
+          encrypted: true,
+          key,
+          reserialize: () => database.serialize(),
+        });
       } else {
-        await writeFileAtomic(dbPath, buffer);
+        await writeSnapshotInWorker({
+          targetPath: dbPath,
+          buffer,
+          encrypted: false,
+          reserialize: () => database.serialize(),
+        });
       }
     },
   });
@@ -2233,6 +2246,8 @@ export { initializeDatabase };
  * while plugins were still stopping.
  */
 export function closeDatabase(): void {
+  void terminateSnapshotWorker();
+
   try {
     if (sqlite) {
       sqlite.close();

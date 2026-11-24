@@ -69,7 +69,7 @@ describe("SSHConnectionPool", () => {
   });
 
   it("does not resurrect a connection removed while another connects", async () => {
-    const pool = new SSHConnectionPool();
+    const pool = new SSHConnectionPool({ maxChannelsPerConnection: 1 });
     const first = deferredClient();
     const second = deferredClient();
     first.resolve(first.client);
@@ -110,5 +110,138 @@ describe("SSHConnectionPool", () => {
     await expect(
       pool.getConnection("host", () => deferredClient().promise),
     ).rejects.toThrow("SSH connection pool destroyed");
+  });
+
+  it("multiplexes channels up to maxChannelsPerConnection before opening another connection", async () => {
+    const pool = new SSHConnectionPool({
+      maxConnectionsPerHost: 2,
+      maxChannelsPerConnection: 3,
+    });
+    const clients = Array.from({ length: 2 }, deferredClient);
+    let idx = 0;
+    const factory = vi.fn(() => {
+      const next = clients[idx++];
+      next.resolve(next.client);
+      return next.promise;
+    });
+
+    const first = await pool.getConnection("mux-host", factory);
+    const second = await pool.getConnection("mux-host", factory);
+    const third = await pool.getConnection("mux-host", factory);
+    expect(first).toBe(clients[0].client);
+    expect(second).toBe(clients[0].client);
+    expect(third).toBe(clients[0].client);
+    expect(factory).toHaveBeenCalledTimes(1);
+
+    // 4th active channel exceeds maxChannelsPerConnection=3 -> opens 2nd connection
+    const fourth = await pool.getConnection("mux-host", factory);
+    expect(fourth).toBe(clients[1].client);
+    expect(factory).toHaveBeenCalledTimes(2);
+
+    // 5th prefers the least loaded healthy connection (clients[1]: 1 < clients[0]: 3)
+    const fifth = await pool.getConnection("mux-host", factory);
+    expect(fifth).toBe(clients[1].client);
+    expect(factory).toHaveBeenCalledTimes(2);
+
+    pool.destroy();
+  });
+
+  it("queues when all connections reach maxChannelsPerConnection and wakes waiters on release", async () => {
+    const pool = new SSHConnectionPool({
+      maxConnectionsPerHost: 1,
+      maxChannelsPerConnection: 2,
+    });
+    const only = deferredClient();
+    only.resolve(only.client);
+    const factory = vi.fn(() => only.promise);
+
+    const c1 = await pool.getConnection("full-host", factory);
+    const c2 = await pool.getConnection("full-host", factory);
+    expect(c1).toBe(only.client);
+    expect(c2).toBe(only.client);
+
+    // Full (1 connection * 2 channels) -> waiter queues
+    let resolvedThird = false;
+    const pendingThird = pool
+      .getConnection("full-host", factory)
+      .then((client) => {
+        resolvedThird = true;
+        return client;
+      });
+    await Promise.resolve();
+    expect(resolvedThird).toBe(false);
+    expect(factory).toHaveBeenCalledTimes(1);
+
+    // Releasing one channel (2 -> 1) immediately wakes the queued waiter
+    pool.releaseConnection("full-host", c1);
+    await expect(pendingThird).resolves.toBe(only.client);
+    expect(factory).toHaveBeenCalledTimes(1);
+
+    pool.destroy();
+  });
+
+  it("evicts unhealthy connections and opens a fresh one instead of reusing them", async () => {
+    const pool = new SSHConnectionPool({
+      maxConnectionsPerHost: 2,
+      maxChannelsPerConnection: 4,
+    });
+    const stale = deferredClient();
+    const fresh = deferredClient();
+    stale.resolve(stale.client);
+    fresh.resolve(fresh.client);
+    const factory = vi
+      .fn()
+      .mockImplementationOnce(() => stale.promise)
+      .mockImplementationOnce(() => fresh.promise);
+
+    const c1 = await pool.getConnection("health-host", factory);
+    expect(c1).toBe(stale.client);
+
+    // Mark underlying socket unhealthy
+    (
+      stale.client as unknown as {
+        _sock: { destroyed: boolean; writable: boolean };
+      }
+    )._sock.writable = false;
+
+    const c2 = await pool.getConnection("health-host", factory);
+    expect(c2).toBe(fresh.client);
+    expect(stale.client.end).toHaveBeenCalledOnce();
+    expect(factory).toHaveBeenCalledTimes(2);
+
+    pool.destroy();
+  });
+
+  it("only expires idle connections once activeChannels reaches zero", async () => {
+    vi.useFakeTimers();
+    try {
+      const pool = new SSHConnectionPool({
+        maxConnectionsPerHost: 1,
+        maxChannelsPerConnection: 4,
+        idleMaxAgeMs: 1_000,
+        cleanupIntervalMs: 500,
+      });
+      const first = deferredClient();
+      first.resolve(first.client);
+      const factory = vi.fn(() => first.promise);
+
+      const a = await pool.getConnection("idle-host", factory);
+      const b = await pool.getConnection("idle-host", factory);
+      expect(a).toBe(b);
+
+      // Release only one channel -> still active, must not be evicted
+      pool.releaseConnection("idle-host", a);
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(first.client.end).not.toHaveBeenCalled();
+
+      // Release last channel -> starts idle age timer and gets evicted after TTL
+      pool.releaseConnection("idle-host", b);
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(first.client.end).toHaveBeenCalledOnce();
+
+      pool.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

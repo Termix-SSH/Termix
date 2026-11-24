@@ -25,7 +25,7 @@ import {
 } from "../store.js";
 import { allocateSeq, getRecord, putRecord, recordKey } from "../records.js";
 import { orderSelfReferences, unheldFields } from "../wire.js";
-import { markChanged, notifyListeners, reconcileUser } from "./feed.js";
+import { markUserChanged, notifyListeners, reconcileUser } from "./feed.js";
 
 export interface PushOp {
   entityType: string;
@@ -305,10 +305,10 @@ export async function applyPush(
   // Refresh the snapshot so the next pull serves what was just written.
   await reconcileUser(userId, { force: true });
   // The reconcile finds nothing new, since the push wrote the records itself,
-  // so tell this user's other clients, and other users who may share a row.
+  // so tell this user's other clients and mark only this user's feed dirty.
   if ([...results.values()].some((result) => result.status === "ok")) {
     notifyListeners(userId);
-    markChanged();
+    markUserChanged(userId);
   }
   return ops.map((op) => {
     const key = recordKey(op.entityType, op.syncId);

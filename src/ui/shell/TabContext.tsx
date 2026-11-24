@@ -12,6 +12,7 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 import type { TabContextTab, TerminalRefHandle } from "@/types/index";
+import { clearTermixSessionStorage } from "@/lib/session-storage";
 
 export type Tab = TabContextTab;
 
@@ -70,10 +71,7 @@ interface TabProviderProps {
   children: ReactNode;
 }
 
-export function clearTermixSessionStorage() {
-  localStorage.removeItem("termix_tabs");
-  localStorage.removeItem("termix_currentTab");
-}
+export { clearTermixSessionStorage };
 
 export function TabProvider({ children }: TabProviderProps) {
   const { t } = useTranslation();
