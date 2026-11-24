@@ -299,6 +299,93 @@ describe("sandbox rpc", () => {
       process.off("uncaughtException", onUncaught);
     }
   });
+
+  it("releases one-way streams on both sides when the reader finishes or cleanly destroys", async () => {
+    const { host, child } = pair();
+    host.handle("oneway", () => {
+      const port = host.openStream();
+      port.write(Buffer.from("hello"));
+      port.end();
+      return port;
+    });
+
+    // Case 1: reader consumes to end and finishes its writable half.
+    const r1 = (await child.call("oneway")) as StreamPort;
+    const chunks: Buffer[] = [];
+    r1.on("data", (c: Buffer) => chunks.push(c));
+    await new Promise<void>((resolve) => r1.on("end", resolve));
+    r1.end();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(Buffer.concat(chunks).toString()).toBe("hello");
+    expect(host.streamCount).toBe(0);
+    expect(child.streamCount).toBe(0);
+
+    // Case 2: reader cleanly destroys without error (like dispatchHttp on res close).
+    const r2 = (await child.call("oneway")) as StreamPort;
+    r2.resume();
+    await new Promise<void>((resolve) => r2.on("end", resolve));
+    r2.destroy();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(host.streamCount).toBe(0);
+    expect(child.streamCount).toBe(0);
+  });
+
+  it("drops late frames for already-closed streams instead of reopening zombie ports", async () => {
+    const { host, child } = pair();
+    let hostPort!: StreamPort;
+    host.handle("open", () => {
+      hostPort = host.openStream();
+      return hostPort;
+    });
+    const remote = (await child.call("open")) as StreamPort;
+    const sid = hostPort.sid;
+    hostPort.end();
+    remote.destroy();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(host.streamCount).toBe(0);
+    expect(child.streamCount).toBe(0);
+
+    // Simulate late credit / end / data frames arriving after close on both sides.
+    (host as unknown as { onMessage: (m: Wire) => void }).onMessage({
+      t: "s",
+      s: sid,
+      op: "c",
+      d: 1024,
+    });
+    (host as unknown as { onMessage: (m: Wire) => void }).onMessage({
+      t: "s",
+      s: sid,
+      op: "x",
+    });
+    (child as unknown as { onMessage: (m: Wire) => void }).onMessage({
+      t: "s",
+      s: sid,
+      op: "c",
+      d: 1024,
+    });
+    (child as unknown as { onMessage: (m: Wire) => void }).onMessage({
+      t: "s",
+      s: sid,
+      op: "d",
+      d: Buffer.from("late"),
+    });
+    expect(host.streamCount).toBe(0);
+    expect(child.streamCount).toBe(0);
+  });
+
+  it("clears retained functions and streams on close", async () => {
+    const { host, child } = pair();
+    host.handle("keep", () => ({
+      fn: () => "ok",
+      stream: host.openStream(),
+    }));
+    await child.call("keep");
+    expect(host.functionCount).toBeGreaterThan(0);
+    expect(host.streamCount).toBeGreaterThan(0);
+    host.close("stopped");
+    expect(host.functionCount).toBe(0);
+    expect(host.streamCount).toBe(0);
+  });
 });
 
 describe("process transport", () => {

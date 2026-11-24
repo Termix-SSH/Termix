@@ -145,10 +145,15 @@ function hybrid(promise: Promise<unknown>, path: string): AnyFn {
   promise.catch((error) => {
     console.error(`ctx.${path} failed: ${(error as Error).message}`);
   });
-  const fn = ((...args: unknown[]) =>
-    promise.then((value) =>
+  const fn = ((...args: unknown[]) => {
+    const out = promise.then((value) =>
       typeof value === "function" ? (value as AnyFn)(...args) : undefined,
-    )) as AnyFn & { then: unknown; catch: unknown; finally: unknown };
+    );
+    out.catch((error) => {
+      console.error(`ctx.${path} dispose failed: ${(error as Error).message}`);
+    });
+    return out;
+  }) as AnyFn & { then: unknown; catch: unknown; finally: unknown };
   fn.then = promise.then.bind(promise);
   fn.catch = promise.catch.bind(promise);
   fn.finally = promise.finally.bind(promise);
@@ -348,9 +353,12 @@ function buildCtx(): Record<string, unknown> {
       exited.catch(() => {});
       return {
         pid: handle.pid,
-        onStdout: (listener: AnyFn) => void handle.onStdout(listener),
-        onStderr: (listener: AnyFn) => void handle.onStderr(listener),
-        kill: (signal?: string) => void handle.kill(signal),
+        onStdout: (listener: AnyFn) =>
+          void Promise.resolve(handle.onStdout(listener)).catch(() => {}),
+        onStderr: (listener: AnyFn) =>
+          void Promise.resolve(handle.onStderr(listener)).catch(() => {}),
+        kill: (signal?: string) =>
+          void Promise.resolve(handle.kill(signal)).catch(() => {}),
         exited,
       };
     });
@@ -446,7 +454,7 @@ function buildCtx(): Record<string, unknown> {
         client: sshClient(result.client.$ssh),
         jumpClient: null,
         host: result.host,
-        dispose: () => void result.dispose(),
+        dispose: () => void Promise.resolve(result.dispose()).catch(() => {}),
       };
     });
   }
@@ -629,7 +637,7 @@ function buildCtx(): Record<string, unknown> {
           client: sshClient(result.client.$ssh),
           jumpClient: null,
           host: result.host,
-          dispose: () => void result.dispose(),
+          dispose: () => void Promise.resolve(result.dispose()).catch(() => {}),
         };
       },
     );
@@ -642,6 +650,9 @@ function buildCtx(): Record<string, unknown> {
       const result = (await endpoint.call("desktop.local.fs.openRead", [
         filePath,
       ])) as { stream: StreamPort; size: number };
+      result.stream.on("end", () => {
+        if (!result.stream.writableEnded) result.stream.end();
+      });
       return { stream: portStream(result.stream), size: result.size };
     });
   }
@@ -930,6 +941,12 @@ async function localPluginFetch(
     headers: Record<string, string>;
     body: StreamPort | null;
   };
+  if (r.body) {
+    const body = r.body;
+    body.on("end", () => {
+      if (!body.writableEnded) body.end();
+    });
+  }
   const stream = r.body ? portStream(r.body) : null;
   signal?.addEventListener("abort", () => stream?.destroy(), { once: true });
   return {
@@ -979,8 +996,9 @@ async function localPty(options?: unknown) {
         port.write({ d: data, b: false });
       }
     },
-    resize: (cols: number, rows: number) => void result.resize(cols, rows),
-    kill: () => void result.kill(),
+    resize: (cols: number, rows: number) =>
+      void Promise.resolve(result.resize(cols, rows)).catch(() => {}),
+    kill: () => void Promise.resolve(result.kill()).catch(() => {}),
     onData: (handler: (data: string) => void) => {
       dataHandlers.add(handler);
       return () => void dataHandlers.delete(handler);
@@ -1662,6 +1680,18 @@ function sshChannel(value: {
     // The remote side is done; finish our half so close fires.
     if (!out.writableEnded) out.end();
   });
+  err.on("remote-end", () => {
+    if (!err.writableEnded) err.end();
+  });
+  out.on("close", () => {
+    if (
+      !err.destroyed &&
+      err.listenerCount("data") === 0 &&
+      err.listenerCount("readable") === 0
+    ) {
+      err.destroy();
+    }
+  });
   // ssh2 passes the exit code to close listeners.
   const emit = out.emit.bind(out);
   out.emit = ((event: string | symbol, ...args: unknown[]) =>
@@ -1712,7 +1742,13 @@ function sftpProxy(id: string) {
       .then((value) => {
         const port = value as StreamPort;
         port.pipe(out);
+        port.on("end", () => {
+          if (!port.writableEnded) port.end();
+        });
         port.on("error", (error) => out.destroy(error));
+        out.on("close", () => {
+          if (!port.destroyed) port.destroy();
+        });
       })
       .catch((error) => out.destroy(error));
     return out;
