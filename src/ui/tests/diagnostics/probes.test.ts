@@ -38,7 +38,7 @@ vi.mock("@/plugin-host/plugin-store", () => ({
   }),
 }));
 
-const { runProbes } = await import("@/diagnostics/probes");
+const { frameAncestorsOf, runProbes } = await import("@/diagnostics/probes");
 
 const realFetch = globalThis.fetch;
 afterEach(() => {
@@ -95,5 +95,17 @@ describe("runProbes", () => {
       status: null,
       error: "Failed to fetch",
     });
+  });
+});
+
+describe("frameAncestorsOf", () => {
+  it("reads the pages a frame's policy lets embed it", () => {
+    expect(
+      frameAncestorsOf(
+        "default-src 'none'; frame-ancestors http://termix.lan app://termix; object-src 'none'",
+      ),
+    ).toEqual(["http://termix.lan", "app://termix"]);
+    expect(frameAncestorsOf("default-src 'none'")).toBeUndefined();
+    expect(frameAncestorsOf(null)).toBeUndefined();
   });
 });

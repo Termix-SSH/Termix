@@ -219,6 +219,7 @@ export function buildReport(
     probes: data.probes,
     capture: data.capture,
     frontends: data.frontends,
+    pageOrigin: window.location.origin,
   });
 
   const head: string[] = [

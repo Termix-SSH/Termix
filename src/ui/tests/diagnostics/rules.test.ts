@@ -97,6 +97,46 @@ describe("findProblems", () => {
     expect(text).toContain("browser extension");
   });
 
+  it("names a proxy that changes the host when frames' policy has the wrong port", () => {
+    const frame = probe({
+      name: "ai frame page",
+      cookies: false,
+      expect: "html",
+      contentType: "text/html",
+      frameAncestors: ["http://termix.lan", "app://termix"],
+    });
+    const findings = findProblems({
+      probes: [frame],
+      pageOrigin: "http://termix.lan:8089",
+    });
+    expect(findings).toContainEqual({
+      level: "problem",
+      text: expect.stringContaining("different port than this page has"),
+    });
+    expect(findings.map((f) => f.text).join()).not.toContain("termix.lan");
+
+    expect(
+      findProblems({
+        probes: [frame],
+        pageOrigin: "https://termix.lan",
+      })[0]?.text,
+    ).toContain("different protocol");
+  });
+
+  it("finds nothing wrong when the policy names this page", () => {
+    const frame = probe({
+      expect: "html",
+      frameAncestors: ["https://termix.lan:8443", "app://termix"],
+    });
+    for (const pageOrigin of ["https://termix.lan:8443", "app://termix"]) {
+      expect(
+        findProblems({ probes: [frame], pageOrigin }).some((f) =>
+          f.text.startsWith("Plugin frames are blocked"),
+        ),
+      ).toBe(false);
+    }
+  });
+
   it("says when nothing was found", () => {
     expect(findProblems({})).toEqual([
       { level: "info", text: "No problems found by the automatic checks." },

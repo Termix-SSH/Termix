@@ -23,10 +23,21 @@ export interface ProbeResult {
   ms: number;
   /** HTML came back where JSON or a script was expected. */
   gotHtml: boolean;
+  /** For a frame page: the pages its policy lets embed it (frame-ancestors). */
+  frameAncestors?: string[];
   error?: string;
 }
 
 const TIMEOUT_MS = 8000;
+
+/** The sources of a policy's frame-ancestors, or undefined without one. */
+export function frameAncestorsOf(csp: string | null): string[] | undefined {
+  const directive = csp
+    ?.split(";")
+    .map((part) => part.trim().split(/\s+/))
+    .find(([name]) => name?.toLowerCase() === "frame-ancestors");
+  return directive?.slice(1);
+}
 const MAX_PLUGIN_PROBES = 60;
 
 async function probe(
@@ -65,6 +76,13 @@ async function probe(
       via: response.headers.get("via"),
       ms: Math.round(performance.now() - started),
       gotHtml,
+      ...(expect === "html"
+        ? {
+            frameAncestors: frameAncestorsOf(
+              response.headers.get("content-security-policy"),
+            ),
+          }
+        : {}),
     };
   } catch (error) {
     return {
