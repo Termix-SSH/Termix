@@ -71,12 +71,16 @@ export async function createJumpHostChain(
   }
 
   let currentClient: SSHClient | null = null;
+  let proxySocket: import("net").Socket | null = null;
   const clients: SSHClient[] = [];
   let closed = false;
   const closeChain = () => {
     if (closed) return;
     closed = true;
     for (const client of clients) client.end();
+    if (proxySocket && !proxySocket.destroyed) {
+      proxySocket.destroy();
+    }
   };
 
   try {
@@ -107,7 +111,6 @@ export async function createJumpHostChain(
     }
 
     const firstHopSocks5Config = getJumpHostSocks5Config(jumpHostConfigs[0]);
-    let proxySocket: import("net").Socket | null = null;
     if (firstHopSocks5Config?.useSocks5) {
       const firstHop = jumpHostConfigs[0]!;
       proxySocket = await createSocks5Connection(
@@ -125,33 +128,66 @@ export async function createJumpHostChain(
       clients.push(jumpClient);
       jumpClient.once("close", closeChain);
 
+      const readyTimeoutMs = 60000;
+
+      // Each hop goes through the same pipeline as the target, so hops get
+      // every auth type, not just password, key and agent.
+      const built = await buildConnectConfig(
+        jumpHostConfig as unknown as SshConnectHost,
+        {
+          userId,
+          purpose: "jump-host",
+          profile: "jump",
+          client: jumpClient,
+          interactive: !!prompt,
+          hostKeySocket: prompt?.hostKeySocket ?? null,
+        },
+      );
+      if (closed) {
+        closeChain();
+        throw new JumpHostChainError("Jump host chain closed", i, totalHops);
+      }
+      if (built.outcome.status !== "ready") {
+        closeChain();
+        throw new JumpHostChainError(
+          `Jump host ${i + 1}/${totalHops}: ${built.outcome.message}`,
+          i,
+          totalHops,
+        );
+      }
+      const connectConfig = built.config;
+      connectConfig.readyTimeout = readyTimeoutMs;
+
       let lastError: Error | null = null;
 
-      // eslint-disable-next-line no-async-promise-executor
-      const connected = await new Promise<boolean>(async (resolve) => {
-        const readyTimeoutMs = 60000;
+      const connected = await new Promise<boolean>((resolve) => {
+        let settled = false;
+        const finish = (ok: boolean) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          resolve(ok);
+        };
+
         const timeout = setTimeout(() => {
           lastError = new Error(
             `Timed out waiting for jump host ${i + 1}/${totalHops} to authenticate`,
           );
-          resolve(false);
+          finish(false);
           // ssh2 has no explicit cancel; ending the client stops it from
           // firing "ready"/"error" after we've already resolved.
           jumpClient.end();
         }, readyTimeoutMs + 5000);
 
         jumpClient.once("close", () => {
-          clearTimeout(timeout);
-          lastError = new Error("Jump host connection closed");
-          resolve(false);
+          if (!lastError) lastError = new Error("Jump host connection closed");
+          finish(false);
         });
         jumpClient.on("ready", () => {
-          clearTimeout(timeout);
-          resolve(true);
+          finish(true);
         });
 
         jumpClient.on("error", (err) => {
-          clearTimeout(timeout);
           lastError = err;
           fileLogger.error(
             `Jump host ${i + 1}/${totalHops} connection failed`,
@@ -171,37 +207,8 @@ export async function createJumpHostChain(
               usedProxySocket: i === 0 && !!proxySocket,
             },
           );
-          resolve(false);
+          finish(false);
         });
-
-        // Each hop goes through the same pipeline as the target, so hops get
-        // every auth type, not just password, key and agent.
-        const built = await buildConnectConfig(
-          jumpHostConfig as unknown as SshConnectHost,
-          {
-            userId,
-            purpose: "jump-host",
-            profile: "jump",
-            client: jumpClient,
-            interactive: !!prompt,
-            hostKeySocket: prompt?.hostKeySocket ?? null,
-          },
-        );
-        if (closed) {
-          clearTimeout(timeout);
-          resolve(false);
-          return;
-        }
-        if (built.outcome.status !== "ready") {
-          clearTimeout(timeout);
-          lastError = new Error(
-            `Jump host ${i + 1}/${totalHops}: ${built.outcome.message}`,
-          );
-          resolve(false);
-          return;
-        }
-        const connectConfig = built.config;
-        connectConfig.readyTimeout = readyTimeoutMs;
 
         jumpClient.on(
           "keyboard-interactive",
@@ -229,6 +236,15 @@ export async function createJumpHostChain(
               ),
         );
 
+        const startConnect = () => {
+          try {
+            jumpClient.connect(connectConfig);
+          } catch (err) {
+            lastError = err instanceof Error ? err : new Error(String(err));
+            finish(false);
+          }
+        };
+
         if (currentClient) {
           currentClient.forwardOut(
             "127.0.0.1",
@@ -236,21 +252,24 @@ export async function createJumpHostChain(
             jumpHostConfig.ip,
             jumpHostConfig.port || 22,
             (err, stream) => {
+              if (settled || closed) {
+                stream?.destroy();
+                return;
+              }
               if (err) {
-                clearTimeout(timeout);
                 lastError = err;
-                resolve(false);
+                finish(false);
                 return;
               }
               connectConfig.sock = stream;
-              jumpClient.connect(connectConfig);
+              startConnect();
             },
           );
         } else if (proxySocket) {
           connectConfig.sock = proxySocket;
-          jumpClient.connect(connectConfig);
+          startConnect();
         } else {
-          jumpClient.connect(connectConfig);
+          startConnect();
         }
       });
 

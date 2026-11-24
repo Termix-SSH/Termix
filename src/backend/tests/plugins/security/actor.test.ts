@@ -25,9 +25,11 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   }),
   createCurrentPluginPermissionGrantRepository: () => ({
     listByPlugin: async () =>
-      ["hosts:read", "ssh:connect", "credentials:use"].map((capability) => ({
-        capability,
-      })),
+      ["hosts:read", "ssh:connect", "credentials:use", "users:impersonate"].map(
+        (capability) => ({
+          capability,
+        }),
+      ),
   }),
   createCurrentHostResolutionRepository: () => ({
     findHostOwnerId: async () => "owner",

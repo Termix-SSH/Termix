@@ -7,6 +7,7 @@ import type { ChangelogRelease } from "@termix-ssh/plugin-sdk/changelog";
 import {
   groupChanges,
   mergeReleaseNotes,
+  safeExternalUrl,
   youtubeEmbedUrl,
   type PluginEntry,
   type ReleaseRow,
@@ -114,16 +115,20 @@ function Release({
           {t("plugins.manager.noReleaseNotes")}
         </span>
       )}
-      {row.releaseNotesUrl && (
-        <a
-          href={row.releaseNotesUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="w-fit text-[11px] text-muted-foreground hover:text-accent-brand"
-        >
-          {t("plugins.manager.viewRelease")}
-        </a>
-      )}
+      {(() => {
+        const releaseNotesHref = safeExternalUrl(row.releaseNotesUrl);
+        if (!releaseNotesHref) return null;
+        return (
+          <a
+            href={releaseNotesHref}
+            target="_blank"
+            rel="noreferrer"
+            className="w-fit text-[11px] text-muted-foreground hover:text-accent-brand"
+          >
+            {t("plugins.manager.viewRelease")}
+          </a>
+        );
+      })()}
     </div>
   );
 }

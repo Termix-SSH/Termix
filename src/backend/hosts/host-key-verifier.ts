@@ -22,6 +22,9 @@ interface HostKeyVerificationData {
 
 interface VerificationResponse {
   action: "accept" | "reject";
+  ip?: string;
+  port?: number;
+  fingerprint?: string;
 }
 
 export interface HostVerifierOptions {
@@ -65,20 +68,28 @@ export class SSHHostKeyVerifier {
    * the key exchange critical path fast, avoiding LoginGraceTime expiry on
    * the remote server (especially important for jump-host tunneled connections).
    */
-  static async preloadHostData(hostId: number | null): Promise<{
-    hostKeyFingerprint: string | null;
-    hostKeyType: string | null;
-    hostKeyAlgorithm: string | null;
-    hostKeyChangedCount: number | null;
-    name: string | null;
-  } | null> {
+  static async preloadHostData(hostId: number | null): Promise<
+    | {
+        hostKeyFingerprint: string | null;
+        hostKeyType: string | null;
+        hostKeyAlgorithm: string | null;
+        hostKeyChangedCount: number | null;
+        name: string | null;
+      }
+    | null
+    | undefined
+  > {
     if (!hostId) return null;
     try {
       return await createCurrentHostResolutionRepository().findHostKeyVerificationData(
         hostId,
       );
-    } catch {
-      return null;
+    } catch (error) {
+      sshLogger.error("Failed to preload host key verification data", error, {
+        operation: "host_key_preload_error",
+        hostId,
+      });
+      return undefined;
     }
   }
 
@@ -476,14 +487,40 @@ export class SSHHostKeyVerifier {
     algorithm: string,
   ): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
-      const timeout = setTimeout(() => {
+      if (typeof ws.readyState === "number" && ws.readyState !== ws.OPEN) {
+        resolve(false);
+        return;
+      }
+
+      let settled = false;
+      const finish = (accepted: boolean) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
         ws.removeListener("message", messageHandler);
+        ws.removeListener("close", closeHandler);
+        resolve(accepted);
+      };
+
+      const closeHandler = () => {
+        sshLogger.warn(
+          "WebSocket closed during host key verification (new key)",
+          {
+            operation: "host_key_ws_closed",
+            ip,
+            port,
+          },
+        );
+        finish(false);
+      };
+
+      const timeout = setTimeout(() => {
         sshLogger.warn("Host key verification timeout (new key)", {
           operation: "host_key_timeout",
           ip,
           port,
         });
-        resolve(false);
+        finish(false);
       }, 60000);
 
       const messageHandler = (data: Buffer) => {
@@ -491,11 +528,17 @@ export class SSHHostKeyVerifier {
           const message = JSON.parse(data.toString());
 
           if (message.type === "host_key_verification_response") {
-            clearTimeout(timeout);
-            ws.removeListener("message", messageHandler);
-
-            const response = message.data as VerificationResponse;
-            resolve(response.action === "accept");
+            const response = message.data as VerificationResponse | undefined;
+            if (!response) return;
+            if (
+              (response.fingerprint !== undefined &&
+                response.fingerprint !== fingerprint) ||
+              (response.ip !== undefined && response.ip !== ip) ||
+              (response.port !== undefined && response.port !== port)
+            ) {
+              return;
+            }
+            finish(response.action === "accept");
           }
         } catch (error) {
           sshLogger.error(
@@ -506,6 +549,7 @@ export class SSHHostKeyVerifier {
       };
 
       ws.on("message", messageHandler);
+      ws.once("close", closeHandler);
 
       const verificationData: HostKeyVerificationData = {
         scenario: "new",
@@ -517,12 +561,21 @@ export class SSHHostKeyVerifier {
         algorithm,
       };
 
-      ws.send(
-        JSON.stringify({
-          type: "host_key_verification_required",
-          data: verificationData,
-        }),
-      );
+      try {
+        ws.send(
+          JSON.stringify({
+            type: "host_key_verification_required",
+            data: verificationData,
+          }),
+        );
+      } catch (error) {
+        sshLogger.error("Failed to send host key verification prompt", error, {
+          operation: "host_key_prompt_send_failed",
+          ip,
+          port,
+        });
+        finish(false);
+      }
     });
   }
 
@@ -538,14 +591,40 @@ export class SSHHostKeyVerifier {
     algorithm: string,
   ): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
-      const timeout = setTimeout(() => {
+      if (typeof ws.readyState === "number" && ws.readyState !== ws.OPEN) {
+        resolve(false);
+        return;
+      }
+
+      let settled = false;
+      const finish = (accepted: boolean) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
         ws.removeListener("message", messageHandler);
+        ws.removeListener("close", closeHandler);
+        resolve(accepted);
+      };
+
+      const closeHandler = () => {
+        sshLogger.warn(
+          "WebSocket closed during host key verification (changed key)",
+          {
+            operation: "host_key_ws_closed",
+            ip,
+            port,
+          },
+        );
+        finish(false);
+      };
+
+      const timeout = setTimeout(() => {
         sshLogger.error("Host key verification timeout (changed key)", {
           operation: "host_key_timeout",
           ip,
           port,
         });
-        resolve(false);
+        finish(false);
       }, 120000);
 
       const messageHandler = (data: Buffer) => {
@@ -553,11 +632,17 @@ export class SSHHostKeyVerifier {
           const message = JSON.parse(data.toString());
 
           if (message.type === "host_key_verification_response") {
-            clearTimeout(timeout);
-            ws.removeListener("message", messageHandler);
-
-            const response = message.data as VerificationResponse;
-            resolve(response.action === "accept");
+            const response = message.data as VerificationResponse | undefined;
+            if (!response) return;
+            if (
+              (response.fingerprint !== undefined &&
+                response.fingerprint !== fingerprint) ||
+              (response.ip !== undefined && response.ip !== ip) ||
+              (response.port !== undefined && response.port !== port)
+            ) {
+              return;
+            }
+            finish(response.action === "accept");
           }
         } catch (error) {
           sshLogger.error(
@@ -568,6 +653,7 @@ export class SSHHostKeyVerifier {
       };
 
       ws.on("message", messageHandler);
+      ws.once("close", closeHandler);
 
       const verificationData: HostKeyVerificationData = {
         scenario: "changed",
@@ -581,12 +667,21 @@ export class SSHHostKeyVerifier {
         algorithm,
       };
 
-      ws.send(
-        JSON.stringify({
-          type: "host_key_changed",
-          data: verificationData,
-        }),
-      );
+      try {
+        ws.send(
+          JSON.stringify({
+            type: "host_key_changed",
+            data: verificationData,
+          }),
+        );
+      } catch (error) {
+        sshLogger.error("Failed to send host key changed prompt", error, {
+          operation: "host_key_prompt_send_failed",
+          ip,
+          port,
+        });
+        finish(false);
+      }
     });
   }
 

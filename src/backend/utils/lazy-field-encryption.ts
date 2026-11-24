@@ -8,6 +8,7 @@ export class LazyFieldEncryption {
     key_password: "keyPassword",
     sudo_password: "sudoPassword",
     socks5_password: "socks5Password",
+    socks5_proxy_chain: "socks5ProxyChain",
     private_key: "privateKey",
     public_key: "publicKey",
     password_hash: "passwordHash",
@@ -17,6 +18,7 @@ export class LazyFieldEncryption {
     keyPassword: "key_password",
     sudoPassword: "sudo_password",
     socks5Password: "socks5_password",
+    socks5ProxyChain: "socks5_proxy_chain",
     privateKey: "private_key",
     publicKey: "public_key",
     passwordHash: "password_hash",
@@ -86,6 +88,7 @@ export class LazyFieldEncryption {
           "keyPassword",
           "sudoPassword",
           "socks5Password",
+          "socks5ProxyChain",
           "privateKey",
           "publicKey",
         ];
@@ -232,6 +235,7 @@ export class LazyFieldEncryption {
     publicKey: "public_key",
     sudoPassword: "sudo_password",
     socks5Password: "socks5_password",
+    socks5ProxyChain: "socks5_proxy_chain",
   };
 
   static getSensitiveFieldsForTable(tableName: string): string[] {
@@ -242,6 +246,7 @@ export class LazyFieldEncryption {
         "keyPassword",
         "sudoPassword",
         "socks5Password",
+        "socks5ProxyChain",
       ],
       ssh_credentials: [
         "password",

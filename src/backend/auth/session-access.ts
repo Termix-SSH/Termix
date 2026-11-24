@@ -3,8 +3,31 @@
  * upgrade both ask here, so a socket follows the same rules as a request.
  */
 
+import path from "node:path";
 import { listSecondFactors } from "./registry.js";
 import { SECOND_FACTOR_SETUP } from "./policy.js";
+
+/**
+ * Normalizes a request path before matching allowlists/blocklists so case,
+ * percent-encoding, redundant slashes or dot segments cannot bypass checks.
+ */
+export function normalizeAuthPath(rawPath: string): string {
+  const withoutQuery = rawPath.split("?")[0].split("#")[0];
+  let decoded = withoutQuery;
+  try {
+    decoded = decodeURIComponent(withoutQuery);
+  } catch {
+    // Keep raw path when percent-encoding is malformed.
+  }
+  const normalized = path.posix
+    .normalize(decoded.replace(/\\/g, "/"))
+    .replace(/\/+/g, "/");
+  const withoutTrailing =
+    normalized.length > 1 && normalized.endsWith("/")
+      ? normalized.slice(0, -1)
+      : normalized;
+  return withoutTrailing.toLowerCase();
+}
 
 const PLUGIN_ROUTE_PATH = /^\/plugin-(?:api|ws)\/([a-z][a-z0-9-]*)(\/|$)/;
 
@@ -42,26 +65,28 @@ function isSecondFactorPlugin(path: string): boolean {
 }
 
 /** Whether a session a plugin minted may call this path. */
-export function allowsPluginSession(path: string): boolean {
-  if (PLUGIN_SESSION_BLOCKLIST.some((pattern) => pattern.test(path))) {
+export function allowsPluginSession(rawPath: string): boolean {
+  const normalized = normalizeAuthPath(rawPath);
+  if (PLUGIN_SESSION_BLOCKLIST.some((pattern) => pattern.test(normalized))) {
     return false;
   }
-  return !isSecondFactorPlugin(path);
+  return !isSecondFactorPlugin(normalized);
 }
 
 /**
  * Whether a session restricted to second factor setup may call this path. A
  * socket upgrade has no method of its own and counts as a read.
  */
-export function allowsSetupSession(path: string, method = "GET"): boolean {
-  if (SETUP_SESSION_ALLOWLIST.some((pattern) => pattern.test(path))) {
+export function allowsSetupSession(rawPath: string, method = "GET"): boolean {
+  const normalized = normalizeAuthPath(rawPath);
+  if (SETUP_SESSION_ALLOWLIST.some((pattern) => pattern.test(normalized))) {
     return true;
   }
   const read = method === "GET" || method === "HEAD";
-  if (read && SETUP_SESSION_READS.some((pattern) => pattern.test(path))) {
+  if (read && SETUP_SESSION_READS.some((pattern) => pattern.test(normalized))) {
     return true;
   }
-  return isSecondFactorPlugin(path);
+  return isSecondFactorPlugin(normalized);
 }
 
 export interface SessionAccessInput {

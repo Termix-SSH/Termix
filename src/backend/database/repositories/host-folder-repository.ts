@@ -1,4 +1,4 @@
-import { and, eq, like, or, sql } from "drizzle-orm";
+import { and, eq, or, sql, type SQL } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { hosts, sshCredentials, sshFolders } from "../db/schema.js";
@@ -9,6 +9,15 @@ import {
   insertReturning,
   updateReturning,
 } from "./returning.js";
+
+function escapeLikePrefix(prefix: string): string {
+  return prefix.replace(/[!%_]/g, "!$&");
+}
+
+function matchFolderTree(col: SQLiteColumn, folderName: string): SQL {
+  const childPattern = `${escapeLikePrefix(`${folderName} / `)}%`;
+  return or(eq(col, folderName), sql`${col} LIKE ${childPattern} ESCAPE '!'`)!;
+}
 
 export type HostFolderRecord = typeof sshFolders.$inferSelect;
 export type HostFolderHostRecord = typeof hosts.$inferSelect;
@@ -35,7 +44,7 @@ export class HostFolderRepository {
     const textType = this.context.dialect === "mysql" ? "char" : "text";
     const oldPrefix = `${oldName} / `;
     const newPrefix = `${newName} / `;
-    const childLike = `${oldPrefix}%`;
+    const substrOffset = Array.from(oldPrefix).length + 1;
     // CONCAT, not `||`: MySQL reads `||` as logical OR unless the server runs
     // with PIPES_AS_CONCAT, so the child paths would have been rewritten to 0.
     // No error, just wrong folder names. CONCAT and SUBSTR mean the same thing
@@ -47,35 +56,89 @@ export class HostFolderRepository {
     // caller supplied, so it goes through a bound placeholder in a plain
     // concatenation instead of sql.raw.
     const renameExpr = (col: SQLiteColumn) =>
-      sql`CASE WHEN ${col} = ${oldName} THEN ${newName} ELSE CONCAT(CAST(${newPrefix} AS ${sql.raw(textType)}), SUBSTR(${col}, ${sql.raw(String(oldPrefix.length + 1))})) END`;
-    const folderMatch = (col: SQLiteColumn) =>
-      or(eq(col, oldName), like(col, childLike));
+      sql`CASE WHEN ${col} = ${oldName} THEN ${newName} ELSE CONCAT(CAST(${newPrefix} AS ${sql.raw(textType)}), SUBSTR(${col}, ${sql.raw(String(substrOffset))})) END`;
 
-    const updatedHosts = await this.context.drizzle
-      .update(hosts)
-      .set({ folder: renameExpr(hosts.folder), updatedAt: now })
-      .where(and(eq(hosts.userId, userId), folderMatch(hosts.folder)));
+    let result: RenameFolderResult;
+    if (this.context.dialect === "sqlite") {
+      result = this.context.drizzle.transaction((tx) => {
+        const updatedHosts = tx
+          .update(hosts)
+          .set({ folder: renameExpr(hosts.folder), updatedAt: now })
+          .where(
+            and(
+              eq(hosts.userId, userId),
+              matchFolderTree(hosts.folder, oldName),
+            ),
+          )
+          .run();
 
-    const updatedCredentials = await this.context.drizzle
-      .update(sshCredentials)
-      .set({ folder: renameExpr(sshCredentials.folder), updatedAt: now })
-      .where(
-        and(
-          eq(sshCredentials.userId, userId),
-          folderMatch(sshCredentials.folder),
-        ),
-      );
+        const updatedCredentials = tx
+          .update(sshCredentials)
+          .set({ folder: renameExpr(sshCredentials.folder), updatedAt: now })
+          .where(
+            and(
+              eq(sshCredentials.userId, userId),
+              matchFolderTree(sshCredentials.folder, oldName),
+            ),
+          )
+          .run();
 
-    await this.context.drizzle
-      .update(sshFolders)
-      .set({ name: renameExpr(sshFolders.name), updatedAt: now })
-      .where(and(eq(sshFolders.userId, userId), folderMatch(sshFolders.name)));
+        tx.update(sshFolders)
+          .set({ name: renameExpr(sshFolders.name), updatedAt: now })
+          .where(
+            and(
+              eq(sshFolders.userId, userId),
+              matchFolderTree(sshFolders.name, oldName),
+            ),
+          )
+          .run();
+
+        return {
+          updatedHosts: rowsAffected(updatedHosts),
+          updatedCredentials: rowsAffected(updatedCredentials),
+        };
+      });
+    } else {
+      result = await this.context.drizzle.transaction(async (tx) => {
+        const updatedHosts = await tx
+          .update(hosts)
+          .set({ folder: renameExpr(hosts.folder), updatedAt: now })
+          .where(
+            and(
+              eq(hosts.userId, userId),
+              matchFolderTree(hosts.folder, oldName),
+            ),
+          );
+
+        const updatedCredentials = await tx
+          .update(sshCredentials)
+          .set({ folder: renameExpr(sshCredentials.folder), updatedAt: now })
+          .where(
+            and(
+              eq(sshCredentials.userId, userId),
+              matchFolderTree(sshCredentials.folder, oldName),
+            ),
+          );
+
+        await tx
+          .update(sshFolders)
+          .set({ name: renameExpr(sshFolders.name), updatedAt: now })
+          .where(
+            and(
+              eq(sshFolders.userId, userId),
+              matchFolderTree(sshFolders.name, oldName),
+            ),
+          );
+
+        return {
+          updatedHosts: rowsAffected(updatedHosts),
+          updatedCredentials: rowsAffected(updatedCredentials),
+        };
+      });
+    }
 
     await this.afterWrite();
-    return {
-      updatedHosts: rowsAffected(updatedHosts),
-      updatedCredentials: rowsAffected(updatedCredentials),
-    };
+    return result;
   }
 
   async listFolders(userId: string): Promise<HostFolderRecord[]> {
@@ -94,16 +157,50 @@ export class HostFolderRepository {
     folderName: string,
     localOnly: boolean,
   ): Promise<void> {
-    const inFolder = (col: SQLiteColumn) =>
-      or(eq(col, folderName), like(col, `${folderName} / %`));
-    await this.context.drizzle
-      .update(sshFolders)
-      .set({ localOnly })
-      .where(and(eq(sshFolders.userId, userId), inFolder(sshFolders.name)));
-    await this.context.drizzle
-      .update(hosts)
-      .set({ localOnly, updatedAt: new Date().toISOString() })
-      .where(and(eq(hosts.userId, userId), inFolder(hosts.folder)));
+    const now = new Date().toISOString();
+    if (this.context.dialect === "sqlite") {
+      this.context.drizzle.transaction((tx) => {
+        tx.update(sshFolders)
+          .set({ localOnly })
+          .where(
+            and(
+              eq(sshFolders.userId, userId),
+              matchFolderTree(sshFolders.name, folderName),
+            ),
+          )
+          .run();
+        tx.update(hosts)
+          .set({ localOnly, updatedAt: now })
+          .where(
+            and(
+              eq(hosts.userId, userId),
+              matchFolderTree(hosts.folder, folderName),
+            ),
+          )
+          .run();
+      });
+    } else {
+      await this.context.drizzle.transaction(async (tx) => {
+        await tx
+          .update(sshFolders)
+          .set({ localOnly })
+          .where(
+            and(
+              eq(sshFolders.userId, userId),
+              matchFolderTree(sshFolders.name, folderName),
+            ),
+          );
+        await tx
+          .update(hosts)
+          .set({ localOnly, updatedAt: now })
+          .where(
+            and(
+              eq(hosts.userId, userId),
+              matchFolderTree(hosts.folder, folderName),
+            ),
+          );
+      });
+    }
     await this.afterWrite();
   }
 
@@ -227,13 +324,15 @@ export class HostFolderRepository {
     userId: string,
     folderName: string,
   ): Promise<HostFolderHostRecord[]> {
-    const folderMatch = (col: SQLiteColumn) =>
-      or(eq(col, folderName), like(col, `${folderName} / %`));
-
     return this.context.drizzle
       .select()
       .from(hosts)
-      .where(and(eq(hosts.userId, userId), folderMatch(hosts.folder)));
+      .where(
+        and(
+          eq(hosts.userId, userId),
+          matchFolderTree(hosts.folder, folderName),
+        ),
+      );
   }
 
   /** Drops the folder rows (and subfolders) only when no host is left in them. */
@@ -249,11 +348,8 @@ export class HostFolderRepository {
       sshFolders,
       and(
         eq(sshFolders.userId, userId),
-        or(
-          eq(sshFolders.name, folderName),
-          like(sshFolders.name, `${folderName} / %`),
-        ),
-      ),
+        matchFolderTree(sshFolders.name, folderName),
+      )!,
     );
     await this.afterWrite();
     return true;
@@ -263,21 +359,66 @@ export class HostFolderRepository {
     userId: string,
     folderName: string,
   ): Promise<{ hostSyncIds: string[]; folderSyncIds: string[] }> {
-    const folderMatch = (col: SQLiteColumn) =>
-      or(eq(col, folderName), like(col, `${folderName} / %`));
-
-    const hostsToDelete = await this.listHostsInFolder(userId, folderName);
-    if (hostsToDelete.length > 0) {
-      await this.context.drizzle
-        .delete(hosts)
-        .where(and(eq(hosts.userId, userId), folderMatch(hosts.folder)));
-    }
-
-    const deletedFolders = await deleteReturning(
-      this.context,
-      sshFolders,
-      and(eq(sshFolders.userId, userId), folderMatch(sshFolders.name)),
+    const hostWhere = and(
+      eq(hosts.userId, userId),
+      matchFolderTree(hosts.folder, folderName),
     );
+    const folderWhere = and(
+      eq(sshFolders.userId, userId),
+      matchFolderTree(sshFolders.name, folderName),
+    );
+
+    let hostsToDelete: Array<{ syncId: string | null }>;
+    let deletedFolders: Array<{ syncId: string | null }>;
+
+    if (this.context.dialect === "sqlite") {
+      ({ hostsToDelete, deletedFolders } = this.context.drizzle.transaction(
+        (tx) => {
+          const matchedHosts = tx
+            .select({ syncId: hosts.syncId })
+            .from(hosts)
+            .where(hostWhere)
+            .all();
+          if (matchedHosts.length > 0) {
+            tx.delete(hosts).where(hostWhere).run();
+          }
+          const matchedFolders = tx
+            .select({ syncId: sshFolders.syncId })
+            .from(sshFolders)
+            .where(folderWhere)
+            .all();
+          if (matchedFolders.length > 0) {
+            tx.delete(sshFolders).where(folderWhere).run();
+          }
+          return {
+            hostsToDelete: matchedHosts,
+            deletedFolders: matchedFolders,
+          };
+        },
+      ));
+    } else {
+      ({ hostsToDelete, deletedFolders } =
+        await this.context.drizzle.transaction(async (tx) => {
+          const matchedHosts = await tx
+            .select({ syncId: hosts.syncId })
+            .from(hosts)
+            .where(hostWhere);
+          if (matchedHosts.length > 0) {
+            await tx.delete(hosts).where(hostWhere);
+          }
+          const matchedFolders = await tx
+            .select({ syncId: sshFolders.syncId })
+            .from(sshFolders)
+            .where(folderWhere);
+          if (matchedFolders.length > 0) {
+            await tx.delete(sshFolders).where(folderWhere);
+          }
+          return {
+            hostsToDelete: matchedHosts,
+            deletedFolders: matchedFolders,
+          };
+        }));
+    }
 
     await this.afterWrite();
 

@@ -109,6 +109,31 @@ describe("the migration checker", () => {
       "SELECT query_to_xml('DELETE FROM users', true, true, '')",
     ],
     ["setval on a core sequence", "SELECT setval('users_id_seq', 1)"],
+    [
+      "a double-quoted refused function",
+      "SELECT \"pg_read_file\"('/etc/passwd')",
+    ],
+    ["a backtick-quoted refused function", "SELECT `load_file`('/etc/passwd')"],
+    [
+      "a double-quoted setval on a core sequence",
+      "SELECT \"setval\"('users_id_seq', 1)",
+    ],
+    [
+      "a refused function inside INSERT",
+      "INSERT INTO p_foo_a (x) VALUES (pg_read_file('/etc/passwd'))",
+    ],
+    [
+      "a refused function inside UPDATE",
+      "UPDATE p_foo_a SET x = set_config('x', 'y', false)",
+    ],
+    [
+      "a refused function inside DELETE",
+      "DELETE FROM p_foo_a WHERE pg_read_file('/etc/passwd') IS NOT NULL",
+    ],
+    [
+      "setval on a core sequence inside INSERT",
+      "INSERT INTO p_foo_a (x) VALUES (setval('users_id_seq', 1))",
+    ],
   ])("refuses %s", (_label, sql) => {
     expect(findUnownedTableWrites("foo", sql)).not.toEqual([]);
   });

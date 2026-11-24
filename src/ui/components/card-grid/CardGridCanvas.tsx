@@ -355,28 +355,46 @@ export function CardGridCanvas({
     [slots, columns, commitSlots],
   );
 
+  const resizeCleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      resizeCleanupRef.current?.();
+    };
+  }, []);
+
   const handleResizeStart = useCallback(
     (id: string, e: ReactMouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      resizeCleanupRef.current?.();
       const startY = e.clientY;
       // Heights are stored in Normal-size pixels, whatever the interface size.
       const scale = remScale();
       const startH =
         (tileRefs.current.get(id)?.getBoundingClientRect().height ??
           120 * scale) / scale;
+      let active = true;
       const onMove = (ev: globalThis.MouseEvent) => {
         onChange(
           setHeight(slots, id, startH + (ev.clientY - startY) / scale),
           columns,
         );
       };
-      const onUp = () => {
+      const cleanup = () => {
+        if (!active) return;
+        active = false;
         window.removeEventListener("mousemove", onMove);
-        window.removeEventListener("mouseup", onUp);
+        window.removeEventListener("mouseup", cleanup);
+        window.removeEventListener("blur", cleanup);
+        if (resizeCleanupRef.current === cleanup) {
+          resizeCleanupRef.current = null;
+        }
       };
+      resizeCleanupRef.current = cleanup;
       window.addEventListener("mousemove", onMove);
-      window.addEventListener("mouseup", onUp);
+      window.addEventListener("mouseup", cleanup);
+      window.addEventListener("blur", cleanup);
     },
     [slots, columns, onChange],
   );

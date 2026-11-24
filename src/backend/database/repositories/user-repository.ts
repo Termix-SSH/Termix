@@ -240,7 +240,7 @@ export class UserRepository {
          transaction callback, so this cannot use the shared helpers. */
       return this.context.drizzle.transaction((tx) => {
         const isFirstUser =
-          tx.select({ id: users.id }).from(users).all().length === 0;
+          tx.select({ id: users.id }).from(users).limit(1).all().length === 0;
         const rows = tx
           .insert(users)
           .values(build(isFirstUser))
@@ -252,24 +252,49 @@ export class UserRepository {
     }
 
     return this.context.drizzle.transaction(async (tx) => {
-      const existing = await tx.select({ id: users.id }).from(users);
-      const isFirstUser = existing.length === 0;
-      const values = build(isFirstUser);
+      const exec = (
+        tx as unknown as {
+          execute?: (query: ReturnType<typeof sql>) => Promise<unknown>;
+        }
+      ).execute;
 
-      if (supportsReturning(this.context.dialect)) {
-        // eslint-disable-next-line no-restricted-syntax -- guarded by the check on this line
-        const rows = await tx.insert(users).values(values).returning();
-        return { user: rows[0], isFirstUser };
+      let mysqlLockAcquired = false;
+      if (typeof exec === "function") {
+        if (this.context.dialect === "postgres") {
+          // Serialize first-user detection across concurrent transactions on Postgres.
+          await exec.call(tx, sql`SELECT pg_advisory_xact_lock(1952805485, 1)`);
+        } else if (this.context.dialect === "mysql") {
+          await exec.call(tx, sql`SELECT GET_LOCK('termix_first_user', 10)`);
+          mysqlLockAcquired = true;
+        }
       }
 
-      // users is keyed by a text id the caller supplies, so there is something
-      // to read back by even without RETURNING.
-      await tx.insert(users).values(values);
-      const [user] = await tx
-        .select()
-        .from(users)
-        .where(eq(users.id, values.id));
-      return { user, isFirstUser };
+      try {
+        const existing = await tx.select({ id: users.id }).from(users).limit(1);
+        const isFirstUser = existing.length === 0;
+        const values = build(isFirstUser);
+
+        if (supportsReturning(this.context.dialect)) {
+          // eslint-disable-next-line no-restricted-syntax -- guarded by the check on this line
+          const rows = await tx.insert(users).values(values).returning();
+          return { user: rows[0], isFirstUser };
+        }
+
+        // users is keyed by a text id the caller supplies, so there is something
+        // to read back by even without RETURNING.
+        await tx.insert(users).values(values);
+        const [user] = await tx
+          .select()
+          .from(users)
+          .where(eq(users.id, values.id));
+        return { user, isFirstUser };
+      } finally {
+        if (mysqlLockAcquired && typeof exec === "function") {
+          await exec
+            .call(tx, sql`SELECT RELEASE_LOCK('termix_first_user')`)
+            .catch(() => undefined);
+        }
+      }
     });
   }
 

@@ -60,6 +60,7 @@ export function normalizeBasePath(value: unknown): string {
 
   basePath = basePath.split("?")[0].split("#")[0].trim();
   if (!basePath || basePath === "/") return "";
+  if (basePath.startsWith("//") || basePath.includes("\\")) return "";
   if (!basePath.startsWith("/")) basePath = `/${basePath}`;
   // A loop, since /\/+$/ takes quadratic time on a long header
   let end = basePath.length;

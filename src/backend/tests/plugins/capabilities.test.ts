@@ -155,7 +155,7 @@ describe("capability gate", () => {
 
 describe("ctx.asUser", () => {
   it("makes the named user the actor and audits the switch", async () => {
-    grants.set("sample-plugin", ["kv:own"]);
+    grants.set("sample-plugin", ["kv:own", "users:impersonate"]);
     const ctx = context(["kv:own", "users:impersonate"]);
 
     let seen: string | undefined;
@@ -176,6 +176,7 @@ describe("ctx.asUser", () => {
   });
 
   it("restores the previous actor afterwards", async () => {
+    grants.set("sample-plugin", ["users:impersonate"]);
     const ctx = context(["users:impersonate"]);
 
     await runAsActor("outer-user", "request", async () => {
@@ -195,6 +196,7 @@ describe("ctx.asUser", () => {
   });
 
   it("refuses to act as a turned off account", async () => {
+    grants.set("sample-plugin", ["users:impersonate"]);
     const ctx = context(["users:impersonate"]);
     disabledUsers.add("gone-user");
     try {
@@ -208,6 +210,14 @@ describe("ctx.asUser", () => {
 
   it("refuses without users:impersonate", async () => {
     const ctx = context(["kv:own"]);
+
+    await expect(ctx.asUser("user-7", async () => {})).rejects.toThrow(
+      /users:impersonate/,
+    );
+  });
+
+  it("refuses when users:impersonate is declared but not granted", async () => {
+    const ctx = context(["users:impersonate"]);
 
     await expect(ctx.asUser("user-7", async () => {})).rejects.toThrow(
       /users:impersonate/,

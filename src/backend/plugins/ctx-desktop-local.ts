@@ -76,7 +76,23 @@ export function createPluginDesktopLocal(deps: Deps): PluginDesktopLocal {
         !subPath.startsWith("/") ||
         subPath.startsWith("//") ||
         subPath.includes("\\") ||
+        subPath.includes("#") ||
         /(^|\/)\.\.?(\/|\?|$)/.test(subPath)
+      ) {
+        throw new Error("Invalid plugin route path");
+      }
+      let decodedPath: string;
+      try {
+        decodedPath = decodeURIComponent(subPath.split("?")[0]);
+      } catch {
+        throw new Error("Invalid plugin route path");
+      }
+      if (
+        !decodedPath.startsWith("/") ||
+        decodedPath.startsWith("//") ||
+        decodedPath.includes("\\") ||
+        decodedPath.includes("#") ||
+        /(^|\/)\.\.?(\/|$)/.test(decodedPath)
       ) {
         throw new Error("Invalid plugin route path");
       }

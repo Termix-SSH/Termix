@@ -191,17 +191,33 @@ describe("ssh relay", () => {
     });
 
     it("closes the host connection when the client already left", async () => {
-      const hostClosed = new Promise<void>((resolve) =>
-        echo.once("connection", (host: net.Socket) =>
-          host.once("close", () => resolve()),
-        ),
+      const end = vi.fn();
+      const channel = new PassThrough();
+      let opened = false;
+      echo.once("connection", () => {
+        opened = true;
+      });
+      mocks.openSshTransport.mockImplementationOnce(
+        async (_host: unknown, config: { sock?: unknown }) => {
+          await new Promise<void>((resolve) => {
+            const prev = release;
+            release = () => {
+              prev();
+              resolve();
+            };
+          });
+          config.sock = channel;
+          return { jumpClient: { end }, via: "jump" };
+        },
       );
       const { socket, closed } = await open("?hostId=5");
       socket.send("SSH-2.0-test\r\n");
       socket.close();
       await closed;
       release();
-      await hostClosed;
+      await vi.waitFor(() => expect(end).toHaveBeenCalled());
+      expect(channel.destroyed).toBe(true);
+      expect(opened).toBe(false);
     });
 
     it("survives a broken frame from the client", async () => {

@@ -36,7 +36,9 @@ function patchUnixTerminalHelperRewrite(file = unixTerminalPath) {
   }
   const known = knownHelperRewrites.find((rewrite) => source.includes(rewrite));
   if (!known) {
-    return false;
+    const msg = `[patch-node-pty] Target helper path rewrite not found and not already patched in ${file}`;
+    console.error(msg);
+    throw new Error(msg);
   }
 
   fs.writeFileSync(

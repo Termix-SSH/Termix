@@ -13,17 +13,19 @@ const entryPath = path.join(betterSqlite3Dir, "src", "better_sqlite3.cpp");
 
 function patchFile(filePath, replacements) {
   if (!fs.existsSync(filePath)) {
-    return false;
+    return { changed: false, unmatched: [] };
   }
 
   let source = fs.readFileSync(filePath, "utf8");
   let changed = false;
+  const unmatched = [];
 
-  for (const { original, patched } of replacements) {
+  for (const { label, original, patched } of replacements) {
     if (source.includes(patched)) {
       continue;
     }
     if (!source.includes(original)) {
+      unmatched.push(`${path.basename(filePath)} (${label})`);
       continue;
     }
     source = source.replace(original, patched);
@@ -34,7 +36,7 @@ function patchFile(filePath, replacements) {
     fs.writeFileSync(filePath, source);
   }
 
-  return changed;
+  return { changed, unmatched };
 }
 
 if (!fs.existsSync(betterSqlite3Dir)) {
@@ -42,13 +44,26 @@ if (!fs.existsSync(betterSqlite3Dir)) {
   process.exit(0);
 }
 
-const macrosPatched = patchFile(macrosPath, [
+// better-sqlite3 >= 13 uses Node-API (<napi.h>) instead of direct V8 C++ APIs,
+// so the V8 External/SetNativeDataProperty compatibility patches do not apply.
+if (
+  fs.existsSync(entryPath) &&
+  fs.readFileSync(entryPath, "utf8").includes("#include <napi.h>")
+) {
+  console.log(
+    "[patch-better-sqlite3] N-API build detected, V8 compatibility patches not needed",
+  );
+  process.exit(0);
+}
+
+const macrosResult = patchFile(macrosPath, [
   {
+    label: "v8::External macros",
     original: `#define OnlyContext isolate->GetCurrentContext()
 #define OnlyAddon static_cast<Addon*>(info.Data().As<v8::External>()->Value())
 #define UseIsolate v8::Isolate* isolate = OnlyIsolate`,
     patched: `#define OnlyContext isolate->GetCurrentContext()
-#if defined(V8_MAJOR_VERSION) && V8_MAJOR_VERSION >= 14
+#if defined(V8_MAJOR_VERSION) && V8_MAJOR_VERSION >= 15
 #define BETTER_SQLITE3_EXTERNAL_POINTER_TAG static_cast<v8::ExternalPointerTypeTag>(0)
 #define EXTERNAL_VALUE(external) ((external)->Value(BETTER_SQLITE3_EXTERNAL_POINTER_TAG))
 #define EXTERNAL_NEW(isolate, value) v8::External::New((isolate), (value), BETTER_SQLITE3_EXTERNAL_POINTER_TAG)
@@ -61,8 +76,9 @@ const macrosPatched = patchFile(macrosPath, [
   },
 ]);
 
-const helpersPatched = patchFile(helpersPath, [
+const helpersResult = patchFile(helpersPath, [
   {
+    label: "SetNativeDataProperty",
     original: `\trecv->InstanceTemplate()->SetNativeDataProperty(
 \t\tInternalizedFromLatin1(isolate, name),
 \t\tfunc,
@@ -78,8 +94,9 @@ const helpersPatched = patchFile(helpersPath, [
   },
 ]);
 
-const entryPatched = patchFile(entryPath, [
+const entryResult = patchFile(entryPath, [
   {
+    label: "MSVC __builtin_frame_address",
     original: `#include <sqlite3.h>
 #include <node.h>`,
     patched: `#include <sqlite3.h>
@@ -90,17 +107,28 @@ const entryPatched = patchFile(entryPath, [
 #include <node.h>`,
   },
   {
+    label: "v8::External::New",
     original: `\tv8::Local<v8::External> data = v8::External::New(isolate, addon);`,
     patched: `\tv8::Local<v8::External> data = EXTERNAL_NEW(isolate, addon);`,
   },
 ]);
 
-if (macrosPatched || helpersPatched || entryPatched) {
+const unmatched = [
+  ...macrosResult.unmatched,
+  ...helpersResult.unmatched,
+  ...entryResult.unmatched,
+];
+if (unmatched.length > 0) {
+  console.error(
+    `[patch-better-sqlite3] Target code not found and not already patched: ${unmatched.join(", ")}`,
+  );
+  process.exit(1);
+}
+
+if (macrosResult.changed || helpersResult.changed || entryResult.changed) {
   console.log(
     "[patch-better-sqlite3] Applied compatibility patches for newer Electron/V8",
   );
 } else {
-  console.log(
-    "[patch-better-sqlite3] Already patched or target code not found",
-  );
+  console.log("[patch-better-sqlite3] Already patched");
 }

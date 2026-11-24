@@ -96,6 +96,7 @@ async function guardedDownload(
     if (response.status < 300 || response.status >= 400 || !location) {
       return response;
     }
+    await response.body?.cancel().catch(() => {});
     current = new URL(location, current);
     if (current.protocol !== "https:") {
       throw new Error("Binary downloads must stay on https");
@@ -216,9 +217,35 @@ export function createPluginProcess(deps: Deps): PluginProcess {
       headers: { "User-Agent": "Termix" },
     });
     if (!response.ok || !response.body) {
+      await response.body?.cancel().catch(() => {});
       throw new Error(`Download failed with HTTP ${response.status}`);
     }
-    const data = Buffer.from(await response.arrayBuffer());
+    const declaredLength = Number(response.headers.get("content-length"));
+    if (
+      Number.isFinite(declaredLength) &&
+      declaredLength > MAX_PREBUILT_BYTES
+    ) {
+      await response.body.cancel().catch(() => {});
+      throw new Error(
+        `Binary download for ${spec.name} exceeds ${MAX_PREBUILT_BYTES} bytes`,
+      );
+    }
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_PREBUILT_BYTES) {
+        await reader.cancel().catch(() => {});
+        throw new Error(
+          `Binary download for ${spec.name} exceeds ${MAX_PREBUILT_BYTES} bytes`,
+        );
+      }
+      chunks.push(value);
+    }
+    const data = Buffer.concat(chunks, total);
     const actual = createHash("sha256").update(data).digest("hex");
     if (actual !== spec.sha256.toLowerCase()) {
       throw new Error(
@@ -235,7 +262,11 @@ export function createPluginProcess(deps: Deps): PluginProcess {
       "process_ensure_binary",
       `${spec.name} ${spec.version}`,
       async () => {
-        if (!SAFE_NAME.test(spec.name)) {
+        if (
+          !SAFE_NAME.test(spec.name) ||
+          spec.name === "." ||
+          spec.name === ".."
+        ) {
           throw new Error(`Invalid binary name "${spec.name}"`);
         }
         const expected = spec.sha256.toLowerCase();
@@ -250,7 +281,11 @@ export function createPluginProcess(deps: Deps): PluginProcess {
 
         const dir = binDir();
         await fs.mkdir(dir, { recursive: true });
-        const target = path.join(dir, spec.name);
+        const resolvedDir = path.resolve(dir);
+        const target = path.resolve(resolvedDir, spec.name);
+        if (path.dirname(target) !== resolvedDir) {
+          throw new Error(`Invalid binary name "${spec.name}"`);
+        }
         if ((await sha256Of(target)) === expected) return target;
 
         await download(spec, target);

@@ -313,6 +313,29 @@ const SENSITIVE_FIELDS = [
   "socks5Password",
 ];
 
+function stripProxyChainPasswords(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((node) => {
+      if (node && typeof node === "object" && !Array.isArray(node)) {
+        const { password: _pw, ...rest } = node as Record<string, unknown>;
+        return rest;
+      }
+      return node;
+    });
+  }
+  if (typeof value === "string" && value) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return JSON.stringify(stripProxyChainPasswords(parsed));
+      }
+    } catch {
+      return value;
+    }
+  }
+  return value;
+}
+
 export function stripSensitiveFields(
   host: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -323,6 +346,9 @@ export function stripSensitiveFields(
   result.hasSudoPassword = !!host.sudoPassword;
   for (const field of SENSITIVE_FIELDS) {
     delete result[field];
+  }
+  if (result.socks5ProxyChain !== undefined) {
+    result.socks5ProxyChain = stripProxyChainPasswords(result.socks5ProxyChain);
   }
   if (
     result.terminalConfig &&

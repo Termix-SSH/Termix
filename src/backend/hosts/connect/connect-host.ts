@@ -247,7 +247,16 @@ export async function connectHost(
     });
 
     client.on("keyboard-interactive", keyboardInteractive);
-    client.connect(config);
+    try {
+      client.connect(config);
+    } catch (error) {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timeout);
+        jumpClient?.end();
+        reject(error);
+      }
+    }
   });
 
   return { client, jumpClient, host, config, dispose };
@@ -257,11 +266,29 @@ export async function connectHost(
 export function getConnectionPoolKey(
   prefix: string,
   host: SshConnectHost,
+  actingUserId?: string,
 ): string {
+  const userId = actingUserId ?? host.userId;
   const socks5Key = host.useSocks5
     ? `:socks5:${host.socks5Host}:${host.socks5Port}`
     : "";
-  return `${prefix}:${host.userId}:${host.ip}:${host.port}:${host.username}${socks5Key}`;
+  const chainKey =
+    Array.isArray(host.socks5ProxyChain) && host.socks5ProxyChain.length > 0
+      ? `:chain:${host.socks5ProxyChain
+          .map(
+            (node) =>
+              `${node.type ?? "socks5"}@${node.host}:${node.port}:${node.username ?? ""}`,
+          )
+          .join(",")}`
+      : "";
+  const jumpKey =
+    Array.isArray(host.jumpHosts) && host.jumpHosts.length > 0
+      ? `:jump:${host.jumpHosts.map((hop) => hop.hostId).join(",")}`
+      : "";
+  const authKey =
+    host.authType !== "password" ? `:auth:${host.authType || "none"}` : "";
+  const credKey = host.credentialId ? `:cred:${host.credentialId}` : "";
+  return `${prefix}:${userId}:${host.ip}:${host.port}:${host.username}${socks5Key}${chainKey}${jumpKey}${authKey}${credKey}`;
 }
 
 /**

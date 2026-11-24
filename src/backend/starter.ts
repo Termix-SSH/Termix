@@ -60,7 +60,7 @@ const gracefulShutdown = createShutdown(
           }
         }
         const { closeDatabase } = await import("./database/db/index.js");
-        closeDatabase();
+        await closeDatabase();
       },
     },
   ],

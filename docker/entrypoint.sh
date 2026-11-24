@@ -48,9 +48,30 @@ RUNTIME_SSL_DOMAIN=${SSL_DOMAIN-}
 
 if [ -f "$DATA_DIR/.env" ]; then
     echo "Loading persisted SSL settings from $DATA_DIR/.env"
-    set -a
-    . "$DATA_DIR/.env"
-    set +a
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="${line%$(printf '\r')}"
+        case "$line" in
+            ''|'#'*) continue ;;
+        esac
+        case "$line" in
+            export\ *) line="${line#export }" ;;
+        esac
+        case "$line" in
+            *=*)
+                key="${line%%=*}"
+                val="${line#*=}"
+                key=$(printf '%s' "$key" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+                case "$key" in
+                    ''|[0-9]*|*[!A-Za-z0-9_]*) continue ;;
+                esac
+                case "$val" in
+                    \"*\") val="${val#\"}"; val="${val%\"}" ;;
+                    \'*\') val="${val#\'}"; val="${val%\'}" ;;
+                esac
+                export "$key=$val"
+                ;;
+        esac
+    done < "$DATA_DIR/.env"
 fi
 
 [ "$RUNTIME_ENABLE_SSL_SET" = "x" ] && ENABLE_SSL=$RUNTIME_ENABLE_SSL
@@ -130,24 +151,26 @@ fi
 
 if [ "$ENABLE_SSL" = "true" ]; then
     echo "Checking SSL certificate configuration..."
-    mkdir -p /app/data/ssl
-    chmod 755 /app/data/ssl 2>/dev/null || true
+    SSL_CERT_DIR=$(dirname "$SSL_CERT_PATH")
+    SSL_KEY_DIR=$(dirname "$SSL_KEY_PATH")
+    mkdir -p "$SSL_CERT_DIR" "$SSL_KEY_DIR"
+    chmod 755 "$SSL_CERT_DIR" "$SSL_KEY_DIR" 2>/dev/null || true
 
     DOMAIN=${SSL_DOMAIN:-localhost}
     
-    if [ -f "/app/data/ssl/termix.crt" ] && [ -f "/app/data/ssl/termix.key" ]; then
+    if [ -f "$SSL_CERT_PATH" ] && [ -f "$SSL_KEY_PATH" ]; then
         echo "SSL certificates found, checking validity..."
         
-        if openssl x509 -in /app/data/ssl/termix.crt -checkend 2592000 -noout >/dev/null 2>&1; then
+        if openssl x509 -in "$SSL_CERT_PATH" -checkend 2592000 -noout >/dev/null 2>&1; then
             echo "SSL certificates are valid and will be reused for domain: $DOMAIN"
         else
-            SUBJECT=$(openssl x509 -in /app/data/ssl/termix.crt -noout -subject 2>/dev/null | sed 's/^subject=//')
-            ISSUER=$(openssl x509 -in /app/data/ssl/termix.crt -noout -issuer 2>/dev/null | sed 's/^issuer=//')
+            SUBJECT=$(openssl x509 -in "$SSL_CERT_PATH" -noout -subject 2>/dev/null | sed 's/^subject=//')
+            ISSUER=$(openssl x509 -in "$SSL_CERT_PATH" -noout -issuer 2>/dev/null | sed 's/^issuer=//')
             # Only replace our own self-signed certificate. A CA-issued one is
             # kept until it expires, even when nothing renews it.
             if [ -n "$SUBJECT" ] && [ "$SUBJECT" = "$ISSUER" ]; then
                 echo "Self-signed SSL certificate is expired or expiring soon, regenerating..."
-                rm -f /app/data/ssl/termix.crt /app/data/ssl/termix.key
+                rm -f "$SSL_CERT_PATH" "$SSL_KEY_PATH"
             else
                 echo "WARNING: SSL certificate expires within 30 days and was not issued by Termix. Renew it."
             fi
@@ -156,10 +179,11 @@ if [ "$ENABLE_SSL" = "true" ]; then
         echo "SSL certificates not found, will generate new ones..."
     fi
     
-    if [ ! -f "/app/data/ssl/termix.crt" ] || [ ! -f "/app/data/ssl/termix.key" ]; then
+    if [ ! -f "$SSL_CERT_PATH" ] || [ ! -f "$SSL_KEY_PATH" ]; then
         echo "Generating SSL certificates for domain: $DOMAIN"
+        SSL_OPENSSL_CONF="$SSL_CERT_DIR/openssl.conf"
 
-        cat > /app/data/ssl/openssl.conf << EOF
+        cat > "$SSL_OPENSSL_CONF" << EOF
 [req]
 default_bits = 2048
 prompt = no
@@ -189,14 +213,14 @@ IP.2 = ::1
 IP.3 = 0.0.0.0
 EOF
 
-        openssl genrsa -out /app/data/ssl/termix.key 2048
+        openssl genrsa -out "$SSL_KEY_PATH" 2048
 
-        openssl req -new -x509 -key /app/data/ssl/termix.key -out /app/data/ssl/termix.crt -days 365 -config /app/data/ssl/openssl.conf -extensions v3_req
+        openssl req -new -x509 -key "$SSL_KEY_PATH" -out "$SSL_CERT_PATH" -days 365 -config "$SSL_OPENSSL_CONF" -extensions v3_req
 
-        chmod 600 /app/data/ssl/termix.key
-        chmod 644 /app/data/ssl/termix.crt
+        chmod 600 "$SSL_KEY_PATH"
+        chmod 644 "$SSL_CERT_PATH"
 
-        rm -f /app/data/ssl/openssl.conf
+        rm -f "$SSL_OPENSSL_CONF"
         
         echo "SSL certificates generated successfully for domain: $DOMAIN"
     fi

@@ -32,7 +32,6 @@ import {
   SECOND_FACTOR_SETUP,
   evaluateAuthPolicy,
   hasAuthPolicies,
-  rememberDeviceAllowed,
 } from "./policy.js";
 import {
   getLoginMethod,
@@ -493,7 +492,7 @@ export function sendLoginError(res: Response, error: unknown): Response {
 export interface PendingLoginLookup {
   userId: string;
   token: string;
-  pending: PendingLogin | null;
+  pending: PendingLogin;
 }
 
 /** Checks a pending token from the body or the redirect cookie. */
@@ -507,14 +506,18 @@ export async function readPendingLogin(
   const decoded = await AuthManager.getInstance().verifyJWTToken(token);
   if (!decoded || !decoded.pendingTOTP) return null;
   prunePending();
-  if (usedPending.has(pendingKey(token))) return null;
-  const pending = pendingLogins.get(pendingKey(token)) ?? null;
+  const key = pendingKey(token);
+  if (usedPending.has(key)) return null;
+  const pending = pendingLogins.get(key);
+  if (!pending || pending.userId !== decoded.userId) return null;
   return { userId: decoded.userId, token, pending };
 }
 
-function consumePendingLogin(token: string): void {
-  pendingLogins.delete(pendingKey(token));
-  usedPending.set(pendingKey(token), Date.now());
+function consumePendingLogin(token: string): boolean {
+  const key = pendingKey(token);
+  const existed = pendingLogins.delete(key);
+  usedPending.set(key, Date.now());
+  return existed;
 }
 
 /**
@@ -601,17 +604,18 @@ export async function verifySecondFactorAndRespond(
       remainingAttempts: loginRateLimiter.getRemainingTOTPAttempts(user.id),
     });
   }
+  if (!consumePendingLogin(lookup.token)) {
+    return res.status(401).json({ error: "Invalid temporary token" });
+  }
   loginRateLimiter.resetTOTPAttempts(user.id);
 
-  // A pending entry lost to a restart falls back to the current policy.
-  const allowRemember = lookup.pending
-    ? lookup.pending.allowRememberDevice !== false
-    : await rememberDeviceAllowed();
+  const pending = lookup.pending;
+  const allowRemember = pending.allowRememberDevice !== false;
   const rememberMe =
     allowRemember &&
     (typeof req.body?.rememberMe === "boolean"
       ? req.body.rememberMe
-      : (lookup.pending?.rememberMe ?? false));
+      : pending.rememberMe);
 
   let trustToken: string | null = null;
   if (rememberMe) {
@@ -640,20 +644,18 @@ export async function verifySecondFactorAndRespond(
     });
   }
 
-  const pending = lookup.pending;
   const session = await issueSession(req, user, {
-    methodId: pending?.methodId ?? "password",
+    methodId: pending.methodId,
     rememberMe,
-    externalSession: pending?.externalSession ?? null,
-    maxAgeSeconds: pending?.maxSessionSeconds ?? null,
-    idleTimeoutSeconds: pending?.idleTimeoutSeconds ?? null,
+    externalSession: pending.externalSession ?? null,
+    maxAgeSeconds: pending.maxSessionSeconds ?? null,
+    idleTimeoutSeconds: pending.idleTimeoutSeconds ?? null,
   });
 
   if (trustToken && isNativeAppRequest(req)) {
     session.body.trustToken = trustToken;
   }
 
-  consumePendingLogin(lookup.token);
   clearAuthCookie(
     req,
     res,

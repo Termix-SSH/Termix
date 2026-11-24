@@ -17,10 +17,11 @@ COPY packages/plugin-sdk/package.json ./packages/plugin-sdk/package.json
 COPY .npmrc ./
 COPY vendor ./vendor
 
-COPY scripts/patch-ssh2-agent.cjs ./scripts/
+COPY scripts/patch-ssh2-agent.cjs scripts/patch-ssh2-sk.cjs ./scripts/
 
 RUN npm ci --ignore-scripts && \
     node scripts/patch-ssh2-agent.cjs && \
+    node scripts/patch-ssh2-sk.cjs && \
     npm cache clean --force
 
 # Stage 2: Build frontend
@@ -32,7 +33,7 @@ COPY . .
 RUN find public/fonts -name "*.ttf" ! -name "*Regular.ttf" ! -name "*Bold.ttf" ! -name "*Italic.ttf" -delete
 
 RUN npm cache clean --force && \
-    TERMIX_RUNTIME_BASE_PATH=true NODE_OPTIONS="--max-old-space-size=3072" npm run build
+    TERMIX_RUNTIME_BASE_PATH=true NODE_OPTIONS="--max-old-space-size=3072" sh -c 'npm run build:sdk && npx vite build && npm run build:frame && node scripts/stamp-sw-build-info.cjs'
 
 # Stage 3: Build backend
 FROM deps AS backend-builder
@@ -95,17 +96,17 @@ COPY packages/plugin-sdk/package.json ./packages/plugin-sdk/package.json
 COPY .npmrc ./
 COPY vendor ./vendor
 
-COPY scripts/patch-ssh2-agent.cjs ./scripts/
+COPY scripts/patch-ssh2-agent.cjs scripts/patch-ssh2-sk.cjs ./scripts/
 
 # ssh2's native crypto crashes Node 24 and later when a cipher is freed, so ssh2 uses
 # OpenSSL instead (chacha20-poly1305 is then left out).
 RUN npm ci --omit=dev --ignore-scripts && \
     node scripts/patch-ssh2-agent.cjs && \
+    node scripts/patch-ssh2-sk.cjs && \
     rm -rf node_modules/better-sqlite3/prebuilds && \
     npm run build-release --prefix node_modules/better-sqlite3 && \
     test -f node_modules/better-sqlite3/build/Release/better_sqlite3.node && \
     rm -rf node_modules/better-sqlite3/build/Release/obj.target node_modules/better-sqlite3/build/Release/.deps && \
-    npm rebuild bcryptjs && \
     rm -rf node_modules/ssh2/lib/protocol/crypto/build && \
     npm cache clean --force
 
@@ -180,7 +181,7 @@ EXPOSE ${PORT}
 
 # Node is already in the image, so no curl or wget is needed.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD ["node", "-e", "fetch('http://127.0.0.1:30001/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+    CMD ["node", "-e", "const http=require('http'),https=require('https');const ssl=process.env.ENABLE_SSL==='true';const port=ssl?(process.env.SSL_PORT||8443):(process.env.PORT||8080);const check=(mod,opts)=>new Promise((ok,no)=>mod.get(opts,r=>{r.resume();r.statusCode>=200&&r.statusCode<400?ok():no(new Error(r.statusCode));}).on('error',no));Promise.all([check(http,{host:'127.0.0.1',port:30001,path:'/health'}),check(ssl?https:http,{host:'127.0.0.1',port,path:'/health',rejectUnauthorized:false})]).then(()=>process.exit(0),()=>process.exit(1))"]
 
 COPY docker/entrypoint.sh /entrypoint.sh
 COPY docker/termix-recover.sh /usr/local/bin/termix-recover

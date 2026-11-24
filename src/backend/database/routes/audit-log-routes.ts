@@ -60,11 +60,12 @@ export function registerAuditLogRoutes(
         return res.status(403).json({ error: "Not authorized" });
       }
 
-      const page = Math.max(1, parseInt(String(req.query.page || "1"), 10));
-      const limit = Math.min(
-        200,
-        Math.max(1, parseInt(String(req.query.limit || "50"), 10)),
-      );
+      const parsedPage = parseInt(String(req.query.page || "1"), 10);
+      const page = Number.isFinite(parsedPage) ? Math.max(1, parsedPage) : 1;
+      const parsedLimit = parseInt(String(req.query.limit || "50"), 10);
+      const limit = Number.isFinite(parsedLimit)
+        ? Math.min(200, Math.max(1, parsedLimit))
+        : 50;
       const offset = (page - 1) * limit;
 
       const { userId, action, resourceType, success, startDate, endDate } =
