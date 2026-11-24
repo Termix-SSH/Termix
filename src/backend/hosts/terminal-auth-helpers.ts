@@ -33,7 +33,19 @@ export async function resolveAgentSocket(
   sshOptions: HostSshOptions | null | undefined,
 ): Promise<{ socketPath: string } | { error: string }> {
   const explicit = sshOptions?.agentSocketPath?.trim();
-  const resolved = explicit || process.env.SSH_AUTH_SOCK;
+  const envSocket = process.env.SSH_AUTH_SOCK?.trim();
+
+  if (
+    explicit &&
+    process.env.ELECTRON_EMBEDDED !== "true" &&
+    explicit !== envSocket
+  ) {
+    return {
+      error: "Custom SSH agent socket paths are only allowed in desktop mode.",
+    };
+  }
+
+  const resolved = explicit || envSocket;
 
   if (!resolved) {
     return {

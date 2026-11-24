@@ -14,7 +14,13 @@ export async function writeFileAtomic(
 ): Promise<void> {
   const tmp = `${target}.tmp-${process.pid}`;
   try {
-    await fs.promises.writeFile(tmp, data);
+    const handle = await fs.promises.open(tmp, "w");
+    try {
+      await handle.writeFile(data);
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
     await fs.promises.rename(tmp, target);
   } catch (error) {
     await fs.promises.rm(tmp, { force: true }).catch(() => {});

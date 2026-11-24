@@ -77,4 +77,47 @@ describe("GHSA-vx6q-m29r-w78v snapshot save errors", () => {
     expect(fs.readFileSync(target, "utf8")).toBe("old contents");
     expect(fs.readdirSync(dir)).toEqual(["db.sqlite"]);
   });
+
+  it("fsyncs the temporary file before renaming it into place", async () => {
+    const target = path.join(dir, "db.sqlite");
+    const order: string[] = [];
+    const realOpen = fs.promises.open.bind(fs.promises);
+    const realRename = fs.promises.rename.bind(fs.promises);
+
+    vi.spyOn(fs.promises, "open").mockImplementationOnce(async (...args) => {
+      const handle = await realOpen(...args);
+      const realSync = handle.sync.bind(handle);
+      vi.spyOn(handle, "sync").mockImplementation(async () => {
+        order.push("sync");
+        return realSync();
+      });
+      return handle;
+    });
+    vi.spyOn(fs.promises, "rename").mockImplementationOnce(async (...args) => {
+      order.push("rename");
+      return realRename(...args);
+    });
+
+    await writeFileAtomic(target, Buffer.from("synced"));
+    expect(order).toEqual(["sync", "rename"]);
+    expect(fs.readFileSync(target, "utf8")).toBe("synced");
+  });
+
+  it("cleans up the temp file and preserves the old file when fsync fails", async () => {
+    const target = path.join(dir, "db.sqlite");
+    fs.writeFileSync(target, "old contents");
+    const realOpen = fs.promises.open.bind(fs.promises);
+
+    vi.spyOn(fs.promises, "open").mockImplementationOnce(async (...args) => {
+      const handle = await realOpen(...args);
+      vi.spyOn(handle, "sync").mockRejectedValueOnce(new Error("fsync failed"));
+      return handle;
+    });
+
+    await expect(
+      writeFileAtomic(target, Buffer.from("new contents")),
+    ).rejects.toThrow("fsync failed");
+    expect(fs.readFileSync(target, "utf8")).toBe("old contents");
+    expect(fs.readdirSync(dir)).toEqual(["db.sqlite"]);
+  });
 });

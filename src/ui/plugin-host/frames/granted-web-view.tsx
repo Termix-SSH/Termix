@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { authApi } from "@/main-axios";
 import { embeddedViewApi, overlayOpen } from "../NativeView";
+import { embeddedViewCoordinator } from "../embedded-view-coordinator";
 
 export interface WebPlace {
   rect: { x: number; y: number; width: number; height: number };
@@ -74,6 +75,7 @@ export function GrantedWebView({
   hiddenRef.current = !!hidden;
   const placementRef = useRef(placement);
   placementRef.current = placement;
+  const sync = useRef<() => void>(() => {});
 
   useEffect(() => {
     if (mode !== "native") return;
@@ -85,10 +87,8 @@ export function GrantedWebView({
     let opened = false;
     let lastBounds = "";
     let lastVisible: boolean | null = null;
-    let frame = 0;
 
     const update = () => {
-      frame = 0;
       const place = placementRef.current?.() ?? measure(element);
       const bounds = {
         x: Math.round(place.rect.x),
@@ -125,35 +125,25 @@ export function GrantedWebView({
         void api.setVisible(id, visible);
       }
     };
-    const schedule = () => {
-      if (!frame) frame = requestAnimationFrame(update);
-    };
 
-    const resize = new ResizeObserver(schedule);
-    resize.observe(element);
-    const mutations = new MutationObserver(schedule);
-    mutations.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["class", "style", "hidden", "data-state"],
+    const handle = embeddedViewCoordinator.register({
+      element,
+      update,
+      watchContainer: placementRef.current ? element.parentElement : null,
     });
-    window.addEventListener("resize", schedule);
-    window.addEventListener("scroll", schedule, true);
-    const timer = window.setInterval(schedule, 250);
-    schedule();
+    sync.current = handle.schedule;
 
     return () => {
       alive = false;
-      resize.disconnect();
-      mutations.disconnect();
-      window.removeEventListener("resize", schedule);
-      window.removeEventListener("scroll", schedule, true);
-      window.clearInterval(timer);
-      if (frame) cancelAnimationFrame(frame);
+      sync.current = () => {};
+      handle.dispose();
       void api.close(id);
     };
   }, [mode, grant, pluginId]);
+
+  useEffect(() => {
+    sync.current();
+  }, [hidden]);
 
   useEffect(() => {
     if (mode !== "iframe") return;

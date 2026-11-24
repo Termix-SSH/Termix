@@ -122,4 +122,35 @@ describe("useTitleBarOverlayColors", () => {
     render(<OverlayColors />);
     expect(api.setTitleBarOverlay).not.toHaveBeenCalled();
   });
+
+  it("reads --sidebar directly without inserting probe elements into document.body", async () => {
+    const { api } = installBridge();
+    const appendSpy = vi.spyOn(document.body, "appendChild");
+    document.documentElement.style.setProperty("--sidebar", "#1e1e2e");
+    document.body.style.color = "rgb(205, 214, 244)";
+
+    render(<OverlayColors />);
+    expect(api.setTitleBarOverlay).toHaveBeenCalledWith({
+      color: "#1e1e2e",
+      symbolColor: "#cdd6f4",
+    });
+
+    api.setTitleBarOverlay.mockClear();
+    document.documentElement.style.setProperty("--sidebar", "#abc");
+    await waitFor(() =>
+      expect(api.setTitleBarOverlay).toHaveBeenCalledWith({
+        color: "#aabbcc",
+        symbolColor: "#cdd6f4",
+      }),
+    );
+
+    // Only React's own container is ever appended; TitleBar overlay sync must not probe body.
+    const probeCalls = appendSpy.mock.calls.filter(
+      ([node]) =>
+        node instanceof HTMLElement &&
+        node.style.backgroundColor === "var(--sidebar)",
+    );
+    expect(probeCalls).toHaveLength(0);
+    appendSpy.mockRestore();
+  });
 });

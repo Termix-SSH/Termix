@@ -267,7 +267,46 @@ app.use(syncChangeWatcher);
  *                   type: string
  *                   example: ok
  */
+let serverDraining = false;
+
 app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
+});
+
+/**
+ * @openapi
+ * /health/live:
+ *   get:
+ *     summary: Liveness probe
+ *     description: Returns 200 while the backend process is alive.
+ *     tags:
+ *       - General
+ *     responses:
+ *       200:
+ *         description: Process is alive.
+ */
+app.get("/health/live", (_req, res) => {
+  res.json({ status: "ok" });
+});
+
+/**
+ * @openapi
+ * /health/ready:
+ *   get:
+ *     summary: Readiness probe
+ *     description: Returns 200 when accepting traffic and 503 while shutting down.
+ *     tags:
+ *       - General
+ *     responses:
+ *       200:
+ *         description: Server is ready to accept requests.
+ *       503:
+ *         description: Server is draining for shutdown.
+ */
+app.get("/health/ready", (_req, res) => {
+  if (serverDraining) {
+    return res.status(503).json({ status: "draining" });
+  }
   res.json({ status: "ok" });
 });
 
@@ -1945,11 +1984,14 @@ if (sslConfig.enabled) {
   });
 }
 
+let activeHttpsServer: https.Server | null = null;
+
 // Built through the TLS service so a new certificate can be swapped in, or
 // HTTPS started, without a restart.
 void configureDirectHttps((options) => {
   const port = getTlsConfig().port;
   const httpsServer = https.createServer(options, app);
+  activeHttpsServer = httpsServer;
 
   attachPluginWebSockets(httpsServer);
 
@@ -1978,6 +2020,41 @@ void configureDirectHttps((options) => {
   });
   return httpsServer;
 });
+
+function closeServerWithTimeout(
+  server: http.Server | https.Server | null,
+  timeoutMs: number,
+): Promise<void> {
+  if (!server || !server.listening) return Promise.resolve();
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(() => {
+      server.closeAllConnections?.();
+      done();
+    }, timeoutMs);
+    timer.unref?.();
+    server.close(() => done());
+    server.closeIdleConnections?.();
+  });
+}
+
+/**
+ * Marks the server as draining for readiness probes and stops accepting new
+ * HTTP/HTTPS connections while giving in-flight requests a bounded window.
+ */
+export async function drainHttpServer(timeoutMs = 1000): Promise<void> {
+  serverDraining = true;
+  await Promise.all([
+    closeServerWithTimeout(httpServer, timeoutMs),
+    closeServerWithTimeout(activeHttpsServer, timeoutMs),
+  ]);
+}
 
 /**
  * Status check columns from an export row. Exports from before 2.9.0 only

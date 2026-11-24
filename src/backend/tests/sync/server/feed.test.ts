@@ -55,6 +55,8 @@ const {
   addListener,
   notifyListeners,
   markChanged,
+  resetFeed,
+  MAX_SNAPSHOT_USERS,
 } = await import("../../../sync/server/feed.js");
 
 function loaded(rows: Array<[string, string]>, failed: string[] = []) {
@@ -146,6 +148,31 @@ describe("reconcileUser", () => {
     markChanged();
     const third = await reconcileUser("u2");
     expect(third.changed).toBe(true);
+  });
+
+  it("evicts the least recently used snapshot once the cache reaches MAX_SNAPSHOT_USERS", async () => {
+    resetFeed();
+    state.rows.set("host", loaded([["a", "h1"]]));
+
+    // Populate MAX_SNAPSHOT_USERS entries: user-0 .. user-(N-1).
+    const firstUserWire = (await reconcileUser("user-0")).wire;
+    const secondUserWire = (await reconcileUser("user-1")).wire;
+    for (let i = 2; i < MAX_SNAPSHOT_USERS; i++) {
+      await reconcileUser(`user-${i}`);
+    }
+
+    // Touch user-0 so it becomes most recently used; user-1 is now oldest.
+    const refreshed = await reconcileUser("user-0");
+    expect(refreshed.wire).toBe(firstUserWire);
+
+    // Adding one more user evicts user-1, not user-0.
+    await reconcileUser("user-overflow");
+
+    const stillCached = await reconcileUser("user-0");
+    expect(stillCached.wire).toBe(firstUserWire);
+
+    const evicted = await reconcileUser("user-1");
+    expect(evicted.wire).not.toBe(secondUserWire);
   });
 });
 

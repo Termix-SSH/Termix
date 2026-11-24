@@ -267,7 +267,6 @@ export async function getUserSecondFactors(
     return response.data?.factors ?? [];
   } catch (error) {
     handleApiError(error, "list second factors");
-    return [];
   }
 }
 

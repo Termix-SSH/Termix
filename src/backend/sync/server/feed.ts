@@ -41,7 +41,18 @@ interface Snapshot {
 
 const snapshots = new Map<string, Snapshot>();
 const SNAPSHOT_TTL_MS = 60_000;
+export const MAX_SNAPSHOT_USERS = 500;
 let generation = 0;
+
+function setSnapshot(userId: string, snapshot: Snapshot): void {
+  if (snapshots.has(userId)) {
+    snapshots.delete(userId);
+  } else if (snapshots.size >= MAX_SNAPSHOT_USERS) {
+    const oldestKey = snapshots.keys().next().value;
+    if (oldestKey !== undefined) snapshots.delete(oldestKey);
+  }
+  snapshots.set(userId, snapshot);
+}
 
 export interface ReconcileResult {
   changed: boolean;
@@ -65,6 +76,8 @@ export async function reconcileUser(
     snapshot.generation === generation &&
     Date.now() - snapshot.at < SNAPSHOT_TTL_MS
   ) {
+    snapshots.delete(userId);
+    snapshots.set(userId, snapshot);
     return { changed: false, wire: snapshot.wire };
   }
 
@@ -121,7 +134,7 @@ export async function reconcileUser(
     }
   }
 
-  snapshots.set(userId, { at: Date.now(), generation: startedAt, wire });
+  setSnapshot(userId, { at: Date.now(), generation: startedAt, wire });
   if (changed) notifyListeners(userId);
   return { changed, wire };
 }

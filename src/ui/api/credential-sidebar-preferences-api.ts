@@ -13,7 +13,6 @@ export async function getCredentialSidebarPreferences(): Promise<CredentialSideb
     return sanitizeCredentialSidebarPreferences(response.data?.preferences);
   } catch (error) {
     handleApiError(error, "fetch credential sidebar preferences");
-    throw error;
   }
 }
 
@@ -24,6 +23,5 @@ export async function saveCredentialSidebarPreferences(
     await authApi.put("/credential-sidebar/preferences", preferences);
   } catch (error) {
     handleApiError(error, "save credential sidebar preferences");
-    throw error;
   }
 }

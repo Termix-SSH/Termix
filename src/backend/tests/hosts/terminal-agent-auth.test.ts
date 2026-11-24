@@ -15,11 +15,13 @@ import {
 
 describe("resolveAgentSocket", () => {
   const originalEnv = process.env.SSH_AUTH_SOCK;
+  const originalEmbedded = process.env.ELECTRON_EMBEDDED;
   const originalPlatform = process.platform;
 
   beforeEach(() => {
     mockAccess.mockReset();
     delete process.env.SSH_AUTH_SOCK;
+    delete process.env.ELECTRON_EMBEDDED;
   });
 
   afterEach(() => {
@@ -28,11 +30,17 @@ describe("resolveAgentSocket", () => {
     } else {
       delete process.env.SSH_AUTH_SOCK;
     }
+    if (originalEmbedded !== undefined) {
+      process.env.ELECTRON_EMBEDDED = originalEmbedded;
+    } else {
+      delete process.env.ELECTRON_EMBEDDED;
+    }
     Object.defineProperty(process, "platform", { value: originalPlatform });
   });
 
-  it("uses explicit socket path from terminalConfig over SSH_AUTH_SOCK", async () => {
+  it("uses explicit socket path from terminalConfig over SSH_AUTH_SOCK in desktop mode", async () => {
     Object.defineProperty(process, "platform", { value: "linux" });
+    process.env.ELECTRON_EMBEDDED = "true";
     process.env.SSH_AUTH_SOCK = "/tmp/ssh-env/agent.123";
     mockAccess.mockResolvedValue(undefined);
 
@@ -46,6 +54,48 @@ describe("resolveAgentSocket", () => {
     expect(mockAccess).toHaveBeenCalledWith(
       "/run/user/1000/gnupg/S.gpg-agent.ssh",
     );
+  });
+
+  it("rejects custom agentSocketPath outside desktop mode when different from SSH_AUTH_SOCK", async () => {
+    Object.defineProperty(process, "platform", { value: "linux" });
+    process.env.SSH_AUTH_SOCK = "/tmp/ssh-env/agent.123";
+    mockAccess.mockResolvedValue(undefined);
+
+    const result = await resolveAgentSocket({
+      agentSocketPath: "/var/run/docker.sock",
+    });
+
+    expect(result).toEqual({
+      error: "Custom SSH agent socket paths are only allowed in desktop mode.",
+    });
+    expect(mockAccess).not.toHaveBeenCalled();
+  });
+
+  it("rejects custom agentSocketPath outside desktop mode when SSH_AUTH_SOCK is unset", async () => {
+    Object.defineProperty(process, "platform", { value: "linux" });
+    mockAccess.mockResolvedValue(undefined);
+
+    const result = await resolveAgentSocket({
+      agentSocketPath: "/run/user/1000/gnupg/S.gpg-agent.ssh",
+    });
+
+    expect(result).toEqual({
+      error: "Custom SSH agent socket paths are only allowed in desktop mode.",
+    });
+    expect(mockAccess).not.toHaveBeenCalled();
+  });
+
+  it("allows explicit agentSocketPath outside desktop mode when matching SSH_AUTH_SOCK", async () => {
+    Object.defineProperty(process, "platform", { value: "linux" });
+    process.env.SSH_AUTH_SOCK = "/tmp/ssh-env/agent.123";
+    mockAccess.mockResolvedValue(undefined);
+
+    const result = await resolveAgentSocket({
+      agentSocketPath: "/tmp/ssh-env/agent.123",
+    });
+
+    expect(result).toEqual({ socketPath: "/tmp/ssh-env/agent.123" });
+    expect(mockAccess).toHaveBeenCalledWith("/tmp/ssh-env/agent.123");
   });
 
   it("falls back to SSH_AUTH_SOCK when no explicit path is provided", async () => {

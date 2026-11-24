@@ -13,7 +13,6 @@ export async function getHostSidebarPreferences(): Promise<HostSidebarPreference
     return sanitizeHostSidebarPreferences(response.data?.preferences);
   } catch (error) {
     handleApiError(error, "fetch host sidebar preferences");
-    throw error;
   }
 }
 
@@ -24,6 +23,5 @@ export async function saveHostSidebarPreferences(
     await authApi.put("/host-sidebar/preferences", preferences);
   } catch (error) {
     handleApiError(error, "save host sidebar preferences");
-    throw error;
   }
 }

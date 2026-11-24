@@ -296,16 +296,16 @@ export async function applyPush(
           hash: written.hash,
           deleted: false,
         });
+        wire.set(recordKey(op.entityType, op.syncId), written.wire);
       }
     } catch {
       // The first write stands.
     }
   }
 
-  // Refresh the snapshot so the next pull serves what was just written.
-  await reconcileUser(userId, { force: true });
-  // The reconcile finds nothing new, since the push wrote the records itself,
-  // so tell this user's other clients, and other users who may share a row.
+  // `wire` was updated in place for every applied op and `markChanged()` bumps
+  // the feed generation when anything succeeded, so a second full reconcile
+  // pass here would be redundant.
   if ([...results.values()].some((result) => result.status === "ok")) {
     notifyListeners(userId);
     markChanged();

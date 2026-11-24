@@ -254,8 +254,7 @@ describe("will-quit waits for the backend", () => {
     const app = Object.assign(new EventEmitter(), { quit: vi.fn() });
     const context = vm.createContext({
       app,
-      tempFiles: new Map(),
-      cleanupManagedTempFile: vi.fn(),
+      tempFileManager: { cleanupAll: vi.fn() },
       backendProcess: { pid: 1 },
       backendStopping: null,
       stopBackendServer: vi.fn(stop),

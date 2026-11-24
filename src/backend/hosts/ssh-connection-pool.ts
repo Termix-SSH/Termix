@@ -48,7 +48,7 @@ export class SSHConnectionPool {
     this.generations.set(key, (this.generations.get(key) || 0) + 1);
   }
 
-  private isConnectionHealthy(client: Client): boolean {
+  isConnectionHealthy(client: Client): boolean {
     try {
       const sock = (
         client as unknown as {
@@ -79,8 +79,27 @@ export class SSHConnectionPool {
       // expected
     }
     const filtered = connections.filter((c) => c !== target);
-    this.connections.set(key, filtered);
+    if (filtered.length === 0) {
+      this.connections.delete(key);
+    } else {
+      this.connections.set(key, filtered);
+    }
     return filtered;
+  }
+
+  private takeHealthyIdleConnection(key: string): PooledConnection | null {
+    let connections = this.connections.get(key) || [];
+    while (true) {
+      const available = connections.find((conn) => !conn.inUse);
+      if (!available) return null;
+      if (!this.isConnectionHealthy(available.client)) {
+        connections = this.removeUnhealthy(key, connections, available);
+        continue;
+      }
+      available.inUse = true;
+      available.lastUsed = Date.now();
+      return available;
+    }
   }
 
   private async createPooledClient(
@@ -165,34 +184,30 @@ export class SSHConnectionPool {
     const queue = this.waiters.get(key);
     if (!queue || queue.length === 0) return;
 
-    let connections = this.connections.get(key) || [];
-    const available = connections.find((conn) => !conn.inUse);
-
-    if (available) {
-      if (!this.isConnectionHealthy(available.client)) {
-        connections = this.removeUnhealthy(key, connections, available);
-        // Fall through, may create or wait again.
-      } else {
+    while (queue.length > 0) {
+      const available = this.takeHealthyIdleConnection(key);
+      if (available) {
         const waiter = queue.shift()!;
         if (queue.length === 0) this.waiters.delete(key);
         else this.waiters.set(key, queue);
         clearTimeout(waiter.timer);
-        available.inUse = true;
-        available.lastUsed = Date.now();
         waiter.resolve(available.client);
-        return;
+        continue;
       }
-    }
 
-    if (this.hasCapacity(key, connections)) {
-      const waiter = queue.shift()!;
-      if (queue.length === 0) this.waiters.delete(key);
-      else this.waiters.set(key, queue);
-      clearTimeout(waiter.timer);
-      this.createPooledClient(key, waiter.factory)
-        .then(waiter.resolve)
-        .catch(waiter.reject);
-      return;
+      const connections = this.connections.get(key) || [];
+      if (this.hasCapacity(key, connections)) {
+        const waiter = queue.shift()!;
+        if (queue.length === 0) this.waiters.delete(key);
+        else this.waiters.set(key, queue);
+        clearTimeout(waiter.timer);
+        this.createPooledClient(key, waiter.factory)
+          .then(waiter.resolve)
+          .catch(waiter.reject);
+        continue;
+      }
+
+      break;
     }
   }
 
@@ -213,19 +228,13 @@ export class SSHConnectionPool {
     if (this.destroyed) {
       throw new Error("SSH connection pool destroyed");
     }
-    let connections = this.connections.get(key) || [];
 
-    const available = connections.find((conn) => !conn.inUse);
+    const available = this.takeHealthyIdleConnection(key);
     if (available) {
-      if (!this.isConnectionHealthy(available.client)) {
-        connections = this.removeUnhealthy(key, connections, available);
-      } else {
-        available.inUse = true;
-        available.lastUsed = Date.now();
-        return available.client;
-      }
+      return available.client;
     }
 
+    const connections = this.connections.get(key) || [];
     if (this.hasCapacity(key, connections)) {
       return this.createPooledClient(key, factory);
     }
@@ -237,10 +246,32 @@ export class SSHConnectionPool {
     const connections = this.connections.get(key) || [];
     const pooled = connections.find((conn) => conn.client === client);
     if (pooled) {
+      if (!this.isConnectionHealthy(client)) {
+        this.discardConnection(key, client);
+        return;
+      }
       pooled.inUse = false;
       pooled.lastUsed = Date.now();
       this.wakeWaiter(key);
     }
+  }
+
+  discardConnection(key: string, client: Client): void {
+    const connections = this.connections.get(key);
+    if (connections) {
+      const filtered = connections.filter((c) => c.client !== client);
+      if (filtered.length === 0) {
+        this.connections.delete(key);
+      } else {
+        this.connections.set(key, filtered);
+      }
+    }
+    try {
+      client.end();
+    } catch {
+      // expected
+    }
+    this.wakeWaiter(key);
   }
 
   private removeConnection(key: string, client: Client): void {
@@ -334,15 +365,75 @@ export class SSHConnectionPool {
 
 export const connectionPool = new SSHConnectionPool();
 
+const TRANSPORT_ERROR_CODES = new Set([
+  "ECONNRESET",
+  "ECONNREFUSED",
+  "ECONNABORTED",
+  "EPIPE",
+  "ETIMEDOUT",
+  "EHOSTUNREACH",
+  "ENETUNREACH",
+  "ENOTCONN",
+  "ERR_SOCKET_CLOSED",
+  "EAI_AGAIN",
+]);
+
+const TRANSPORT_ERROR_LEVELS = new Set([
+  "client-socket",
+  "client-timeout",
+  "client-ssh",
+  "protocol",
+]);
+
+const TRANSPORT_ERROR_MESSAGE_RE =
+  /\b(timed?\s*out|timeout|econnreset|epipe|econnrefused|etimedout|socket\s+(closed|ended|hang\s+up)|connection\s+(closed|lost|reset|ended|timed?\s*out|terminated)|not\s+connected|channel\s+open\s+failure|keepalive\s+timeout)\b/i;
+
+function isTransportError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const err = error as {
+    code?: unknown;
+    level?: unknown;
+    name?: unknown;
+    message?: unknown;
+  };
+  if (typeof err.code === "string" && TRANSPORT_ERROR_CODES.has(err.code)) {
+    return true;
+  }
+  if (typeof err.level === "string" && TRANSPORT_ERROR_LEVELS.has(err.level)) {
+    return true;
+  }
+  if (err.name === "TimeoutError" || err.name === "AbortError") {
+    return true;
+  }
+  if (
+    typeof err.message === "string" &&
+    TRANSPORT_ERROR_MESSAGE_RE.test(err.message)
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export async function withConnection<T>(
   key: string,
   factory: () => Promise<Client>,
   fn: (client: Client) => Promise<T>,
+  pool: SSHConnectionPool = connectionPool,
 ): Promise<T> {
-  const client = await connectionPool.getConnection(key, factory);
+  const client = await pool.getConnection(key, factory);
+  let shouldDiscard = false;
   try {
     return await fn(client);
+  } catch (error) {
+    if (!pool.isConnectionHealthy(client) || isTransportError(error)) {
+      shouldDiscard = true;
+    }
+    throw error;
   } finally {
-    connectionPool.releaseConnection(key, client);
+    if (shouldDiscard || !pool.isConnectionHealthy(client)) {
+      pool.discardConnection(key, client);
+    } else {
+      pool.releaseConnection(key, client);
+    }
   }
 }
