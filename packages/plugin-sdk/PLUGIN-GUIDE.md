@@ -927,6 +927,7 @@ before, with the same look and theme.
   and activity. Saved passwords are not available to a frame.
 - `invokeAction` runs your own actions and the ids in your manifest `uses`. Opening links, downloads,
   the clipboard, toasts and confirms go through the shell. `localStorage` works and is kept per plugin.
+  `navigator.clipboard` has `writeText`, `readText` and `read`; `read` returns only pictures and plain text.
 - Every frame runs activate with its own copy of your module state, so a view can't read what another
   view keeps in a module variable. To reach the background frame, give it an action registered with
   `registerAction(id, handler, { private: true })` and call it from the view: functions in the arguments

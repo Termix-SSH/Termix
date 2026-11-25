@@ -238,7 +238,46 @@ describe("frame connection", () => {
       ok: false,
     });
     expect(await call("clipboard.read")).toMatchObject({ ok: false });
+    expect(await call("clipboard.readItems")).toMatchObject({ ok: false });
     expect(await call("noSuchThing")).toMatchObject({ ok: false });
+  });
+});
+
+describe("clipboard items", () => {
+  const png = new Blob(["png"], { type: "image/png" });
+  const text = new Blob(["hello"], { type: "text/plain" });
+  const getType = vi.fn(async (type: string) =>
+    type === "image/png" ? png : type === "text/plain" ? text : new Blob(),
+  );
+  const read = vi.fn(async () => [
+    { types: ["text/html", "image/png", "text/plain"], getType },
+    { types: ["text/html"], getType },
+  ]);
+
+  beforeEach(() => {
+    getType.mockClear();
+    read.mockClear();
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      get: () => ({ read }),
+    });
+  });
+
+  afterEach(() => {
+    delete (navigator as unknown as Record<string, unknown>).clipboard;
+  });
+
+  it("hands over pictures and plain text right after a click, never HTML", async () => {
+    connectFrame(iframe, "docker", "view", "tab:docker", {});
+    send({ ch: FRAME_CHANNEL, t: "hello", role: "view", key: "tab:docker" });
+    expect(await call("clipboard.readItems")).toMatchObject({ ok: false });
+    expect(read).not.toHaveBeenCalled();
+
+    send({ ch: FRAME_CHANNEL, t: "event", name: "pointer", data: null });
+    const reply = await call("clipboard.readItems");
+    expect(reply).toMatchObject({ ok: true });
+    expect(reply.value).toEqual([{ "image/png": png, "text/plain": text }]);
+    expect(getType).not.toHaveBeenCalledWith("text/html");
   });
 });
 
@@ -397,6 +436,7 @@ describe("step up", () => {
       send({ ch: FRAME_CHANNEL, t: "event", name: "pointer", data: null });
       expect(await call("stepUp")).toMatchObject({ ok: false });
       expect(await call("clipboard.read")).toMatchObject({ ok: false });
+      expect(await call("clipboard.readItems")).toMatchObject({ ok: false });
       expect(stepUp.requestStepUp).not.toHaveBeenCalled();
     } finally {
       delete (navigator as unknown as Record<string, unknown>).userActivation;

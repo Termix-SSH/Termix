@@ -16,6 +16,7 @@
 
 - Search boxes and other forms in plugin pages did nothing when you pressed Enter or the submit button
 - Desktop app linked to a server: the setup screen could flash open and closed over and over after an update
+- Paste image in the terminal's Image menu did nothing. Plugin pages can read pictures from the clipboard again, right after a click, like text
 
 ## 26.11.3
 

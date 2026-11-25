@@ -141,6 +141,9 @@ export const FRAME = {
   "shell.open-url": refused("open a window through the shell with no click"),
   "shell.download": refused("start a download with no click"),
   "shell.clipboard-read": refused("read the clipboard with no click"),
+  "shell.clipboard-read-items": refused(
+    "read pictures on the clipboard with no click",
+  ),
   "shell.clipboard-write": refused("write the clipboard with no click"),
   "shell.step-up": refused("ask for a step up with no click"),
   "shell.diagnostics-open": refused("open the diagnostics page with no click"),

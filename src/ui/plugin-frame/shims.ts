@@ -12,6 +12,8 @@ export interface ShimTarget {
   download: (blob: Blob, name: string) => void;
   writeClipboard: (text: string) => Promise<void>;
   readClipboard: () => Promise<string>;
+  /** Each clipboard item as a map from type to Blob. */
+  readClipboardItems: () => Promise<unknown[]>;
 }
 
 let target: ShimTarget | null = null;
@@ -74,6 +76,30 @@ function define(object: object, name: string, value: unknown) {
   } catch {
     // Not redefinable here; the original stays.
   }
+}
+
+/**
+ * A ClipboardItem from the shell's copy, or a stand-in where the frame has
+ * none.
+ */
+function clipboardItem(value: unknown): ClipboardItem | null {
+  if (!value || typeof value !== "object") return null;
+  const data = Object.fromEntries(
+    Object.entries(value).filter(([, blob]) => blob instanceof Blob),
+  ) as Record<string, Blob>;
+  const types = Object.keys(data);
+  if (types.length === 0) return null;
+  if (typeof ClipboardItem === "function") return new ClipboardItem(data);
+  return {
+    types,
+    presentationStyle: "unspecified",
+    getType: async (type: string) => {
+      if (!Object.hasOwn(data, type)) {
+        throw new DOMException(`No ${type} on the clipboard`, "NotFoundError");
+      }
+      return data[type];
+    },
+  } as ClipboardItem;
 }
 
 function isHttpUrl(url: string): boolean {
@@ -144,6 +170,19 @@ export function installShims(): void {
     readText: () =>
       new Promise<string>((resolve, reject) =>
         withTarget((t) => t.readClipboard().then(resolve, reject)),
+      ),
+    // Pictures and plain text, read by the shell right after a click here.
+    read: () =>
+      new Promise<ClipboardItem[]>((resolve, reject) =>
+        withTarget((t) =>
+          t.readClipboardItems().then((items) => {
+            resolve(
+              items
+                .map(clipboardItem)
+                .filter((item): item is ClipboardItem => item !== null),
+            );
+          }, reject),
+        ),
       ),
   };
   try {
