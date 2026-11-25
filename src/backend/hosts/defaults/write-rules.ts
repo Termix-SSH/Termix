@@ -9,6 +9,10 @@
  * - A create without one (import, quick connect, enroll) inherits every key
  *   whose value matches what resolves, or that it left out.
  *
+ * An SSH host whose stored columns hold two ports (a host from before 2.3,
+ * an import) dials `port`. Its write keeps that port as its own, so a default
+ * can never replace it, and stores it in both columns.
+ *
  * Plugin namespaces are not in the host body. They keep their state here and
  * are classified or rewritten by the materialize pass that follows the write.
  */
@@ -21,7 +25,11 @@ import {
   type DefaultOverrides,
 } from "../../../types/host-defaults.js";
 import { coreCatalogEntries } from "./catalog.js";
-import { readCoreDefault, writeCoreDefault } from "./core-columns.js";
+import {
+  hasSshPortMismatch,
+  readCoreDefault,
+  writeCoreDefault,
+} from "./core-columns.js";
 import { loadDefaultsIndex, levelsForHost } from "./levels.js";
 import { loadPlacement, resolveForHost } from "./materialize.js";
 import { effectiveFolderPath, isOwnValue } from "./resolve.js";
@@ -65,6 +73,43 @@ function leftOut(body: Record<string, unknown>, key: string): boolean {
 }
 
 /**
+ * Gives an SSH write one port in both columns. `port` is the one dialed, so it
+ * wins; a `sshPort` alone (a plugin) moves it, unless it only echoes the stale
+ * value of a stored mismatch.
+ */
+function alignSshPorts(
+  columns: Record<string, unknown>,
+  stored?: HostRow | null,
+): void {
+  const before = (stored ?? {}) as Record<string, unknown>;
+  const type = columns.connectionType ?? before.connectionType ?? "ssh";
+  if (type !== "ssh") return;
+  const given = (value: unknown) => value !== undefined && value !== null;
+  const mismatched = !!stored && hasSshPortMismatch(before);
+
+  if (given(columns.port)) {
+    columns.sshPort = columns.port;
+    return;
+  }
+  if (given(columns.sshPort)) {
+    const echo =
+      mismatched && Number(columns.sshPort) === Number(before.sshPort);
+    if (!echo) {
+      columns.port = columns.sshPort;
+      return;
+    }
+  }
+  if (stored && (before.connectionType ?? "ssh") !== "ssh") {
+    if (given(before.sshPort)) {
+      columns.port = before.sshPort;
+      columns.sshPort = before.sshPort;
+    }
+    return;
+  }
+  if (mismatched) columns.sshPort = before.port;
+}
+
+/**
  * Fills inherited core keys into `columns` and returns the host's overrides.
  * The caller stores them as `defaultOverrides`.
  */
@@ -94,6 +139,12 @@ export async function applyHostDefaultsToWrite(
   );
 
   const storedColumns = (stored ?? {}) as Record<string, unknown>;
+  // Read before the columns are aligned, which hides the mismatch.
+  const keepSshPort =
+    !!stored &&
+    hasSshPortMismatch(storedColumns) &&
+    (columns.connectionType ?? storedColumns.connectionType ?? "ssh") === "ssh";
+  alignSshPorts(columns, stored);
   // A partial write (a plugin's ctx.hosts.update) leaves the rest as stored.
   const incoming = (key: string) =>
     readCoreDefault(key, { ...storedColumns, ...columns });
@@ -108,7 +159,9 @@ export async function applyHostDefaultsToWrite(
       if (own) overridden.push(info.key);
       continue;
     }
-    if (sent?.[CORE_NAMESPACE]) {
+    if (info.key === "sshPort" && keepSshPort) {
+      own = true;
+    } else if (sent?.[CORE_NAMESPACE]) {
       own = sent[CORE_NAMESPACE].includes(info.key);
     } else if (stored && before?.[CORE_NAMESPACE]) {
       own =

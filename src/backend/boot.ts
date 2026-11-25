@@ -80,6 +80,11 @@ export async function runCoreBootMigrations(): Promise<void> {
     await import("./upgrade/audit-noise-cleanup.js");
   await runAuditNoiseCleanup();
 
+  // Before plugins start and before the host defaults pass reads the ports.
+  const { runSshPortRepairMigration } =
+    await import("./upgrade/ssh-port-repair-migration.js");
+  await runSshPortRepairMigration();
+
   // After a key rotation: move everything to the new keys.
   const { runKeyRotation } = await import("./utils/key-rotation.js");
   try {

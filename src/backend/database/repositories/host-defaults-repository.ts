@@ -1,4 +1,13 @@
-import { and, eq, inArray, type SQL } from "drizzle-orm";
+import {
+  and,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  ne,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 import { hostDefaults, hosts, sshFolders } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
@@ -6,6 +15,16 @@ import type { HostDefaultsLevel } from "../../../types/host-defaults.js";
 
 export type HostDefaultsRecord = typeof hostDefaults.$inferSelect;
 export type HostRow = typeof hosts.$inferSelect;
+export type SshPortRow = Pick<
+  HostRow,
+  | "id"
+  | "port"
+  | "sshPort"
+  | "defaultOverrides"
+  | "connectionType"
+  | "enableSsh"
+  | "sharedSource"
+>;
 
 export interface HostDefaultsScope {
   level: HostDefaultsLevel;
@@ -328,6 +347,69 @@ export class HostDefaultsRepository {
       }
     }
     await this.onWrite?.();
+  }
+
+  /**
+   * SSH hosts whose two port columns disagree, with what the boot repair
+   * decides on. A desktop's copies of shared hosts are left out.
+   */
+  async listSshPortMismatches(): Promise<SshPortRow[]> {
+    return this.context.drizzle
+      .select({
+        id: hosts.id,
+        port: hosts.port,
+        sshPort: hosts.sshPort,
+        defaultOverrides: hosts.defaultOverrides,
+        connectionType: hosts.connectionType,
+        enableSsh: hosts.enableSsh,
+        sharedSource: hosts.sharedSource,
+      })
+      .from(hosts)
+      .where(
+        and(
+          eq(hosts.connectionType, "ssh"),
+          isNotNull(hosts.sshPort),
+          ne(hosts.sshPort, hosts.port),
+          isNull(hosts.sharedSource),
+        ),
+      );
+  }
+
+  /**
+   * Writes a patch, with a new `updatedAt`, only while the row still holds
+   * what `row` read. Returns whether it was written.
+   */
+  async updateSshPortRow(
+    row: SshPortRow,
+    values: Partial<HostRow>,
+  ): Promise<boolean> {
+    const same = <T>(column: Parameters<typeof eq>[0], value: T | null) =>
+      value === null ? isNull(column) : eq(column, value);
+    // MySQL's usual collation ignores case, so 'SSH' would match 'ssh'.
+    const sameText = (
+      column: Parameters<typeof eq>[0],
+      value: string | null,
+    ) =>
+      value !== null && this.context.dialect === "mysql"
+        ? sql`CAST(${column} AS BINARY) = CAST(${value} AS BINARY)`
+        : same(column, value);
+    const result = await this.context.drizzle
+      .update(hosts)
+      .set({ ...values, updatedAt: new Date().toISOString() })
+      .where(
+        and(
+          eq(hosts.id, row.id),
+          eq(hosts.port, row.port),
+          same(hosts.sshPort, row.sshPort),
+          sameText(hosts.defaultOverrides, row.defaultOverrides),
+          sameText(hosts.connectionType, row.connectionType),
+          eq(hosts.enableSsh, row.enableSsh),
+          sameText(hosts.sharedSource, row.sharedSource),
+        ),
+      );
+    const written = rowsAffected(result) > 0;
+    if (written) await this.onWrite?.();
+    return written;
   }
 
   /** Rows that name a folder, credential or host a user no longer has. */
