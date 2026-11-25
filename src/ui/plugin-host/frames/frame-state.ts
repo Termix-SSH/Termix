@@ -5,6 +5,7 @@
  */
 
 import type { FrameState } from "@/plugin-frame/protocol";
+import { isElectron } from "@/lib/electron";
 import { toPluginHostRecord } from "../bridge";
 import { dataRowsFor } from "./data-rows";
 
@@ -99,6 +100,8 @@ export function frameStateFor(pluginId: string): FrameState {
   const { shellHosts, ...rest } = shared;
   return {
     ...rest,
+    // Plugins can activate before the shell resolves the linked server URL.
+    desktop: { ...rest.desktop, available: isElectron() },
     hosts: hostsFor(pluginId, shellHosts),
     dataRows: dataRowsFor(pluginId),
   };

@@ -28,6 +28,7 @@ import { decode } from "@/plugin-frame/wire";
 import { decodeHostIconValue } from "./host-icons";
 import { answerAsked, answerDone } from "./answer-pending";
 import { getUserInfo } from "@/main-axios";
+import { isElectron } from "@/lib/electron";
 import { loadMyPermissions } from "@/hooks/use-permissions";
 import { createPluginApp, type PluginAppHandle } from "../app";
 import {
@@ -593,7 +594,10 @@ export async function startFramedPlugin(
   summary: PluginSummary,
 ): Promise<FramedPlugin> {
   const pluginId = summary.id;
-  const version = summary.assetVersion ?? "";
+  const assetVersion = summary.assetVersion ?? "";
+  // Refresh desktop registrations recorded before the first handshake
+  // reliably reported Electron availability.
+  const version = isElectron() ? `desktop-v2:${assetVersion}` : assetVersion;
   const handle = createPluginApp(
     pluginId,
     manifestFor(summary),

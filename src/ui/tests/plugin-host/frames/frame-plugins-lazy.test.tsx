@@ -34,6 +34,7 @@ import { resetFrameConnections } from "@/plugin-host/frames/frame-connection";
 import {
   readCachedPlugin,
   resetRegistrationCache,
+  writeCachedPlugin,
 } from "@/plugin-host/frames/registration-cache";
 import { acquireFramedPlugin } from "@/plugin-host/frames/frame-demand";
 import { getFrameValue } from "@/plugin-host/frames/frame-values";
@@ -156,6 +157,7 @@ afterEach(() => {
   resetFrameConnections();
   document.getElementById("termix-plugin-frames")?.remove();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 /** First run: starts the frame, answers when, and leaves a cache entry. */
@@ -171,6 +173,26 @@ async function firstRun(calls: string[] = [], live: string[] = []) {
 }
 
 describe("lazy background frames", () => {
+  it("starts a desktop frame instead of replaying pre-fix registrations", async () => {
+    vi.stubGlobal("electronAPI", { isElectron: true });
+    writeCachedPlugin(await userKey(), summary.id, {
+      version: "v1",
+      live: [],
+      registrations: [],
+      answers: {},
+      values: {},
+    });
+
+    const started = startFramedPlugin(summary);
+    await bootFrame({});
+    const plugin = await started;
+    try {
+      expect(getPanel("gizmo")?.pluginId).toBe("gizmo");
+    } finally {
+      plugin.dispose();
+    }
+  });
+
   it("caches what the frame registered, its answers and values", async () => {
     await firstRun();
     // Another user's key finds nothing.
