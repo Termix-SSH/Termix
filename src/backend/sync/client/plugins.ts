@@ -65,11 +65,14 @@ async function isEnabledLocally(pluginId: string): Promise<boolean> {
 }
 
 /**
- * Signed by a key this desktop trusts on its own. A key the server sent
- * would let the server's admin sign anything, so it does not count.
+ * Signed through a root this app ships, or by a key this desktop trusts on
+ * its own. A key the server sent would let the server's admin sign anything,
+ * so it does not count.
  */
 function vouchedHere(local: LoadedPlugin): boolean {
-  return !!local.signedBy && isLocallyTrustedPluginKey(local.signedBy);
+  if (!local.signedBy) return false;
+  // The loader only sets signedRoot after checking the chain itself.
+  return !!local.signedRoot || isLocallyTrustedPluginKey(local.signedBy);
 }
 
 const PLUGIN_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;

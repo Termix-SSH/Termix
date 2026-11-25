@@ -1,7 +1,20 @@
+import crypto from "crypto";
 import fs from "fs";
 import os from "os";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  setTrustRootsForTests,
+  verifyAnyTrusted,
+} from "../../../plugins/trust.js";
+import type { ChainTier } from "../../../plugins/trust-chain.js";
+import {
+  envelopeFor,
+  makeCert,
+  makeOnlineKey,
+  makeRoot,
+  rootsFor,
+} from "../../fixtures/trust-chain.js";
 
 const state = vi.hoisted(() => ({
   dir: "",
@@ -112,7 +125,29 @@ beforeEach(() => {
   });
 });
 
+/** The trust fields the loader records for a file this tier's chain signed. */
+function chainSigned(tier: ChainTier) {
+  const root = makeRoot();
+  const online = makeOnlineKey();
+  setTrustRootsForTests(
+    tier === "official" ? rootsFor([root]) : rootsFor([], [root]),
+  );
+  const file = Buffer.from("plugin");
+  const result = verifyAnyTrusted(
+    file,
+    crypto.createHash("sha256").update(file).digest("hex"),
+    JSON.stringify(envelopeFor(file, online, makeCert(root, online, { tier }))),
+  );
+  if (result.ok === false) throw new Error(result.reason);
+  return {
+    signedBy: result.keyId,
+    signedTier: result.tier,
+    signedRoot: result.rootId,
+  };
+}
+
 afterEach(() => {
+  setTrustRootsForTests(null);
   fs.rmSync(state.dir, { recursive: true, force: true });
 });
 
@@ -340,6 +375,89 @@ describe("mirrorPlugins", () => {
       },
     );
   });
+
+  describe.each<ChainTier>(["official", "community"])(
+    "a user plugin the %s chain signed",
+    (tier) => {
+      function installed(version: string, serverEnabled = true) {
+        const plugin = {
+          id: "extra",
+          source: "user",
+          state: "loaded",
+          ...chainSigned(tier),
+          manifest: { id: "extra", version, capabilities: ["net"] },
+        };
+        state.loaded.set("extra", plugin);
+        vi.mocked(remoteJson).mockResolvedValue({
+          plugins: [
+            {
+              id: "extra",
+              name: "Extra",
+              version: "2.0.0",
+              source: "user",
+              artifact: true,
+              enabled: serverEnabled,
+              active: serverEnabled,
+              desktop: "mirror",
+              syncEntities: [],
+              granted: ["net", "undeclared"],
+            },
+          ],
+        });
+        return plugin;
+      }
+
+      it("stays on through an update", async () => {
+        const plugin = installed("1.0.0");
+        state.enabled.add("extra");
+        state.fetch.mockResolvedValue({
+          ok: true,
+          arrayBuffer: async () => new ArrayBuffer(4),
+          headers: new Headers(),
+        });
+        state.install.mockImplementation(async () => {
+          const updated = {
+            ...plugin,
+            manifest: { ...plugin.manifest, version: "2.0.0" },
+          };
+          state.loaded.set("extra", updated);
+          return updated;
+        });
+        const { setPluginEnabled } = await import("../../../plugins/index.js");
+        vi.mocked(setPluginEnabled).mockClear();
+
+        await mirrorPlugins({} as never);
+
+        expect(state.install).toHaveBeenCalledOnce();
+        expect(setPluginEnabled).not.toHaveBeenCalledWith("extra", false);
+        expect(state.enabled.has("extra")).toBe(true);
+        expect(sendCoreAlert).not.toHaveBeenCalled();
+      });
+
+      it("is turned back on with only the grants it declares", async () => {
+        installed("2.0.0");
+
+        await mirrorPlugins({} as never);
+
+        expect(state.enabled.has("extra")).toBe(true);
+        expect(state.grants).toEqual(["net"]);
+      });
+
+      it("follows the server when it is switched off there", async () => {
+        installed("2.0.0", false);
+        state.enabled.add("extra");
+
+        await mirrorPlugins({} as never);
+
+        expect(state.enabled.has("extra")).toBe(false);
+      });
+
+      it("is the server's to switch", () => {
+        installed("2.0.0");
+        expect(isServerManaged("extra")).toBe(true);
+      });
+    },
+  );
 });
 
 it("server bundled label must not enable a synced-only user plugin", async () => {
