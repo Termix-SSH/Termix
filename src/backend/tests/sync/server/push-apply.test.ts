@@ -23,7 +23,7 @@ const state = vi.hoisted(() => ({
   failWrite: new Set<string>(),
   missOnce: new Set<string>(),
   notified: 0,
-  changed: 0,
+  changedUsers: [] as string[],
 }));
 
 vi.mock("../../../utils/permission-manager.js", () => ({
@@ -78,8 +78,8 @@ vi.mock("../../../sync/server/feed.js", () => ({
   notifyListeners: () => {
     state.notified++;
   },
-  markChanged: () => {
-    state.changed++;
+  markUserChanged: (userId: string) => {
+    state.changedUsers.push(userId);
   },
 }));
 
@@ -110,7 +110,7 @@ beforeEach(() => {
   state.failWrite = new Set();
   state.missOnce = new Set();
   state.notified = 0;
-  state.changed = 0;
+  state.changedUsers = [];
   resetSyncRegistry();
   registerEntity("core", {
     type: "hosts",
@@ -150,7 +150,7 @@ describe("applyPush", () => {
       hash: "h-a",
     });
     expect(state.notified).toBe(1);
-    expect(state.changed).toBe(1);
+    expect(state.changedUsers).toEqual(["u1"]);
   });
 
   it("hands back the server's row on a stale revision", async () => {

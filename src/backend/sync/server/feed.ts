@@ -35,13 +35,21 @@ export async function withUserLock<T>(
 
 interface Snapshot {
   at: number;
-  generation: number;
+  globalGeneration: number;
+  userGeneration: number;
   wire: Map<string, SyncRow>;
 }
 
 const snapshots = new Map<string, Snapshot>();
+const userGenerations = new Map<string, number>();
+const dirtyUsers = new Set<string>();
 const SNAPSHOT_TTL_MS = 60_000;
-let generation = 0;
+let globalGeneration = 0;
+let globalDirty = false;
+
+function userGenerationOf(userId: string): number {
+  return userGenerations.get(userId) ?? 0;
+}
 
 export interface ReconcileResult {
   changed: boolean;
@@ -59,17 +67,20 @@ export async function reconcileUser(
   options: { force?: boolean } = {},
 ): Promise<ReconcileResult> {
   const snapshot = snapshots.get(userId);
+  const currentUserGen = userGenerationOf(userId);
   if (
     !options.force &&
     snapshot &&
-    snapshot.generation === generation &&
+    snapshot.globalGeneration === globalGeneration &&
+    snapshot.userGeneration === currentUserGen &&
     Date.now() - snapshot.at < SNAPSHOT_TTL_MS
   ) {
     return { changed: false, wire: snapshot.wire };
   }
 
   registerCoreSyncEntities();
-  const startedAt = generation;
+  const startedGlobalGen = globalGeneration;
+  const startedUserGen = currentUserGen;
   const records = await listRecords(userId);
   const resolvers = createResolvers(userId);
   const wire = new Map<string, SyncRow>();
@@ -121,7 +132,12 @@ export async function reconcileUser(
     }
   }
 
-  snapshots.set(userId, { at: Date.now(), generation: startedAt, wire });
+  snapshots.set(userId, {
+    at: Date.now(),
+    globalGeneration: startedGlobalGen,
+    userGeneration: startedUserGen,
+    wire,
+  });
   if (changed) notifyListeners(userId);
   return { changed, wire };
 }
@@ -131,13 +147,7 @@ let debounce: NodeJS.Timeout | null = null;
 let heartbeat: NodeJS.Timeout | null = null;
 let sweep: NodeJS.Timeout | null = null;
 
-/**
- * Something was written. Desktops listening for changes get their
- * account reconciled shortly after, since a write by one user (an owner
- * editing a shared host) can change what another one sees.
- */
-export function markChanged(): void {
-  generation++;
+function scheduleReconcile(): void {
   if (listeners.size === 0) return;
   if (debounce) clearTimeout(debounce);
   debounce = setTimeout(() => {
@@ -147,8 +157,39 @@ export function markChanged(): void {
   debounce.unref?.();
 }
 
-async function reconcileListeners(): Promise<void> {
-  for (const userId of [...listeners.keys()]) {
+/**
+ * Something was written that may affect multiple users (e.g. host sharing,
+ * RBAC/admin changes, or a write without a user context). Reconciles all
+ * online listeners shortly after.
+ */
+export function markChanged(): void {
+  globalGeneration++;
+  if (listeners.size === 0) return;
+  globalDirty = true;
+  dirtyUsers.clear();
+  scheduleReconcile();
+}
+
+/**
+ * Something was written for a single user. Advances only that user's
+ * generation and schedules reconciliation only for that user if online.
+ */
+export function markUserChanged(userId: string): void {
+  userGenerations.set(userId, userGenerationOf(userId) + 1);
+  if (!listeners.has(userId)) return;
+  if (!globalDirty) dirtyUsers.add(userId);
+  scheduleReconcile();
+}
+
+async function reconcileListeners(forceAll = false): Promise<void> {
+  const reconcileAll = forceAll || globalDirty;
+  const targets = reconcileAll
+    ? [...listeners.keys()]
+    : [...dirtyUsers].filter((userId) => listeners.has(userId));
+  globalDirty = false;
+  dirtyUsers.clear();
+
+  for (const userId of targets) {
     try {
       await withUserLock(userId, () => reconcileUser(userId));
     } catch (error) {
@@ -195,8 +236,8 @@ function ensureTimers(): void {
   if (!sweep) {
     // Background jobs write without a request; this catches them.
     sweep = setInterval(() => {
-      generation++;
-      void reconcileListeners();
+      globalGeneration++;
+      void reconcileListeners(true);
     }, 60_000);
     sweep.unref?.();
   }
@@ -205,9 +246,12 @@ function ensureTimers(): void {
 /** Test seam. */
 export function resetFeed(): void {
   snapshots.clear();
+  userGenerations.clear();
+  dirtyUsers.clear();
   listeners.clear();
   locks.clear();
-  generation = 0;
+  globalGeneration = 0;
+  globalDirty = false;
   for (const timer of [debounce, heartbeat, sweep]) {
     if (timer) clearTimeout(timer);
   }

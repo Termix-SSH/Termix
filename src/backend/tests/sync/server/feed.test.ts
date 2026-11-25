@@ -3,7 +3,7 @@
  * that are gone get a tombstone, and an entity that fails to load is never
  * read as every row deleted.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type Rec = {
   entityType: string;
@@ -18,6 +18,7 @@ const state = vi.hoisted(() => ({
   rows: new Map<string, unknown>(),
   records: new Map<string, unknown>(),
   puts: [] as Array<[string, string, Record<string, unknown>]>,
+  reconciledUsers: [] as string[],
   seq: 0,
 }));
 
@@ -29,7 +30,8 @@ vi.mock("../../../sync/entities.js", () => ({
 }));
 vi.mock("../../../sync/store.js", () => ({
   createResolvers: () => ({}),
-  loadWireRows: async (entity: { type: string }) => {
+  loadWireRows: async (entity: { type: string }, userId: string) => {
+    state.reconciledUsers.push(userId);
     const value = state.rows.get(entity.type);
     if (value instanceof Error) throw value;
     return value;
@@ -55,6 +57,8 @@ const {
   addListener,
   notifyListeners,
   markChanged,
+  markUserChanged,
+  resetFeed,
 } = await import("../../../sync/server/feed.js");
 
 function loaded(rows: Array<[string, string]>, failed: string[] = []) {
@@ -77,11 +81,18 @@ function record(
 }
 
 beforeEach(() => {
+  resetFeed();
   state.entities = [{ type: "host" }];
   state.rows = new Map();
   state.records = new Map();
   state.puts = [];
+  state.reconciledUsers = [];
   markChanged();
+});
+
+afterEach(() => {
+  resetFeed();
+  vi.useRealTimers();
 });
 
 describe("reconcileUser", () => {
@@ -181,5 +192,76 @@ describe("listeners", () => {
     remove();
     notifyListeners("u3");
     expect(writes).toEqual(["event: change\ndata: {}\n\n"]);
+  });
+
+  it("reconciles only the dirty user on markUserChanged and leaves other online users untouched", async () => {
+    vi.useFakeTimers();
+    state.rows.set("host", loaded([["a", "h1"]]));
+    const resA = { write: () => {} } as never;
+    const resB = { write: () => {} } as never;
+    addListener("user-a", resA);
+    addListener("user-b", resB);
+
+    // Prime both users' snapshots.
+    await reconcileUser("user-a");
+    await reconcileUser("user-b");
+    state.reconciledUsers = [];
+
+    // Marking user-a dirty should only reconcile user-a after debounce.
+    markUserChanged("user-a");
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(state.reconciledUsers).toEqual(["user-a"]);
+
+    // user-b's snapshot must remain valid without reloading rows.
+    state.reconciledUsers = [];
+    await reconcileUser("user-b");
+    expect(state.reconciledUsers).toEqual([]);
+  });
+
+  it("reconciles all online listeners on global markChanged", async () => {
+    vi.useFakeTimers();
+    state.rows.set("host", loaded([["a", "h1"]]));
+    addListener("user-a", { write: () => {} } as never);
+    addListener("user-b", { write: () => {} } as never);
+
+    await reconcileUser("user-a");
+    await reconcileUser("user-b");
+    state.reconciledUsers = [];
+
+    markChanged();
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(state.reconciledUsers).toEqual(["user-a", "user-b"]);
+  });
+
+  it("advances an offline user's generation without scheduling background work", async () => {
+    vi.useFakeTimers();
+    state.rows.set("host", loaded([["a", "h1"]]));
+    addListener("online-user", { write: () => {} } as never);
+
+    await reconcileUser("offline-user");
+    await reconcileUser("online-user");
+    state.reconciledUsers = [];
+
+    markUserChanged("offline-user");
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(state.reconciledUsers).toEqual([]);
+
+    // Next explicit reconcile for offline-user must not reuse the stale snapshot.
+    await reconcileUser("offline-user");
+    expect(state.reconciledUsers).toEqual(["offline-user"]);
+  });
+
+  it("keeps the 60s fallback sweep reconciling all online listeners", async () => {
+    vi.useFakeTimers();
+    state.rows.set("host", loaded([["a", "h1"]]));
+    addListener("user-a", { write: () => {} } as never);
+    addListener("user-b", { write: () => {} } as never);
+
+    await reconcileUser("user-a");
+    await reconcileUser("user-b");
+    state.reconciledUsers = [];
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(state.reconciledUsers).toEqual(["user-a", "user-b"]);
   });
 });

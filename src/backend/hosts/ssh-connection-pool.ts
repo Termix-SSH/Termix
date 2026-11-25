@@ -4,6 +4,7 @@ import { sshLogger } from "../utils/logger.js";
 interface PooledConnection {
   client: Client;
   lastUsed: number;
+  activeChannels: number;
   inUse: boolean;
   hostKey: string;
 }
@@ -15,7 +16,16 @@ interface ConnectionWaiter {
   timer: NodeJS.Timeout;
 }
 
+export interface SSHConnectionPoolOptions {
+  maxConnectionsPerHost?: number;
+  maxChannelsPerConnection?: number;
+  maxWaitMs?: number;
+  idleMaxAgeMs?: number;
+  cleanupIntervalMs?: number;
+}
+
 const DEFAULT_MAX_CONNECTIONS_PER_HOST = 3;
+const DEFAULT_MAX_CHANNELS_PER_CONNECTION = 8;
 const DEFAULT_MAX_WAIT_MS = 30_000;
 const IDLE_MAX_AGE_MS = 10 * 60 * 1000;
 const CLEANUP_INTERVAL_MS = 2 * 60 * 1000;
@@ -26,14 +36,30 @@ export class SSHConnectionPool {
   private pendingConnections = new Map<string, number>();
   private generations = new Map<string, number>();
   private destroyed = false;
-  private maxConnectionsPerHost = DEFAULT_MAX_CONNECTIONS_PER_HOST;
-  private maxWaitMs = DEFAULT_MAX_WAIT_MS;
+  private maxConnectionsPerHost: number;
+  private maxChannelsPerConnection: number;
+  private maxWaitMs: number;
+  private idleMaxAgeMs: number;
   private cleanupInterval: NodeJS.Timeout;
 
-  constructor() {
+  constructor(options: SSHConnectionPoolOptions = {}) {
+    this.maxConnectionsPerHost = Math.max(
+      1,
+      options.maxConnectionsPerHost ?? DEFAULT_MAX_CONNECTIONS_PER_HOST,
+    );
+    this.maxChannelsPerConnection = Math.max(
+      1,
+      options.maxChannelsPerConnection ?? DEFAULT_MAX_CHANNELS_PER_CONNECTION,
+    );
+    this.maxWaitMs = Math.max(1, options.maxWaitMs ?? DEFAULT_MAX_WAIT_MS);
+    this.idleMaxAgeMs = Math.max(0, options.idleMaxAgeMs ?? IDLE_MAX_AGE_MS);
+    const cleanupIntervalMs = Math.max(
+      1,
+      options.cleanupIntervalMs ?? CLEANUP_INTERVAL_MS,
+    );
     this.cleanupInterval = setInterval(() => {
       this.cleanup();
-    }, CLEANUP_INTERVAL_MS);
+    }, cleanupIntervalMs);
     this.cleanupInterval.unref();
   }
 
@@ -64,23 +90,51 @@ export class SSHConnectionPool {
     }
   }
 
-  private removeUnhealthy(
-    key: string,
-    connections: PooledConnection[],
-    target: PooledConnection,
-  ): PooledConnection[] {
-    sshLogger.warn("Removing unhealthy connection from pool", {
-      operation: "pool_remove_dead",
-      hostKey: key,
-    });
-    try {
-      target.client.end();
-    } catch {
-      // expected
+  private pickAvailableConnection(key: string): {
+    connection: PooledConnection | null;
+    connections: PooledConnection[];
+  } {
+    const current = this.connections.get(key);
+    if (!current || current.length === 0) {
+      return { connection: null, connections: [] };
     }
-    const filtered = connections.filter((c) => c !== target);
-    this.connections.set(key, filtered);
-    return filtered;
+
+    const healthy: PooledConnection[] = [];
+    let best: PooledConnection | null = null;
+    let removedAny = false;
+
+    for (const conn of current) {
+      if (!this.isConnectionHealthy(conn.client)) {
+        removedAny = true;
+        sshLogger.warn("Removing unhealthy connection from pool", {
+          operation: "pool_remove_dead",
+          hostKey: key,
+        });
+        try {
+          conn.client.end();
+        } catch {
+          // expected
+        }
+        continue;
+      }
+      healthy.push(conn);
+      if (
+        conn.activeChannels < this.maxChannelsPerConnection &&
+        (!best || conn.activeChannels < best.activeChannels)
+      ) {
+        best = conn;
+      }
+    }
+
+    if (removedAny) {
+      if (healthy.length === 0) {
+        this.connections.delete(key);
+      } else {
+        this.connections.set(key, healthy);
+      }
+    }
+
+    return { connection: best, connections: healthy };
   }
 
   private async createPooledClient(
@@ -105,6 +159,7 @@ export class SSHConnectionPool {
       const pooled: PooledConnection = {
         client,
         lastUsed: Date.now(),
+        activeChannels: 1,
         inUse: true,
         hostKey: key,
       };
@@ -160,38 +215,36 @@ export class SSHConnectionPool {
     });
   }
 
-  /** Hand a free connection (or new slot) to the next waiter, if any. */
+  /** Hand free channel slots (or new connection slots) to queued waiters. */
   private wakeWaiter(key: string): void {
-    const queue = this.waiters.get(key);
-    if (!queue || queue.length === 0) return;
+    while (true) {
+      const queue = this.waiters.get(key);
+      if (!queue || queue.length === 0) return;
 
-    let connections = this.connections.get(key) || [];
-    const available = connections.find((conn) => !conn.inUse);
-
-    if (available) {
-      if (!this.isConnectionHealthy(available.client)) {
-        connections = this.removeUnhealthy(key, connections, available);
-        // Fall through, may create or wait again.
-      } else {
+      const { connection, connections } = this.pickAvailableConnection(key);
+      if (connection) {
         const waiter = queue.shift()!;
         if (queue.length === 0) this.waiters.delete(key);
         else this.waiters.set(key, queue);
         clearTimeout(waiter.timer);
-        available.inUse = true;
-        available.lastUsed = Date.now();
-        waiter.resolve(available.client);
-        return;
+        connection.activeChannels += 1;
+        connection.inUse = true;
+        connection.lastUsed = Date.now();
+        waiter.resolve(connection.client);
+        continue;
       }
-    }
 
-    if (this.hasCapacity(key, connections)) {
-      const waiter = queue.shift()!;
-      if (queue.length === 0) this.waiters.delete(key);
-      else this.waiters.set(key, queue);
-      clearTimeout(waiter.timer);
-      this.createPooledClient(key, waiter.factory)
-        .then(waiter.resolve)
-        .catch(waiter.reject);
+      if (this.hasCapacity(key, connections)) {
+        const waiter = queue.shift()!;
+        if (queue.length === 0) this.waiters.delete(key);
+        else this.waiters.set(key, queue);
+        clearTimeout(waiter.timer);
+        this.createPooledClient(key, waiter.factory)
+          .then(waiter.resolve)
+          .catch(waiter.reject);
+        continue;
+      }
+
       return;
     }
   }
@@ -213,17 +266,13 @@ export class SSHConnectionPool {
     if (this.destroyed) {
       throw new Error("SSH connection pool destroyed");
     }
-    let connections = this.connections.get(key) || [];
 
-    const available = connections.find((conn) => !conn.inUse);
-    if (available) {
-      if (!this.isConnectionHealthy(available.client)) {
-        connections = this.removeUnhealthy(key, connections, available);
-      } else {
-        available.inUse = true;
-        available.lastUsed = Date.now();
-        return available.client;
-      }
+    const { connection, connections } = this.pickAvailableConnection(key);
+    if (connection) {
+      connection.activeChannels += 1;
+      connection.inUse = true;
+      connection.lastUsed = Date.now();
+      return connection.client;
     }
 
     if (this.hasCapacity(key, connections)) {
@@ -234,13 +283,19 @@ export class SSHConnectionPool {
   }
 
   releaseConnection(key: string, client: Client): void {
-    const connections = this.connections.get(key) || [];
+    const connections = this.connections.get(key);
+    if (!connections) return;
     const pooled = connections.find((conn) => conn.client === client);
-    if (pooled) {
+    if (!pooled) return;
+
+    if (pooled.activeChannels > 0) {
+      pooled.activeChannels -= 1;
+    }
+    if (pooled.activeChannels === 0) {
       pooled.inUse = false;
       pooled.lastUsed = Date.now();
-      this.wakeWaiter(key);
     }
+    this.wakeWaiter(key);
   }
 
   private removeConnection(key: string, client: Client): void {
@@ -275,7 +330,10 @@ export class SSHConnectionPool {
 
     for (const [hostKey, connections] of this.connections.entries()) {
       const activeConnections = connections.filter((conn) => {
-        if (!conn.inUse && now - conn.lastUsed > IDLE_MAX_AGE_MS) {
+        if (
+          conn.activeChannels === 0 &&
+          now - conn.lastUsed > this.idleMaxAgeMs
+        ) {
           try {
             conn.client.end();
           } catch {

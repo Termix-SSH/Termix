@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.node.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "noFallthroughCasesInSwitch": true,
+    "allowUnusedLabels": false,
+    "allowUnreachableCode": false
+  },
+  "include": [
+    "src/backend/utils/error-message.ts",
+    "src/backend/utils/request-origin.ts",
+    "src/backend/utils/username.ts",
+    "src/ui/lib/session-storage.ts"
+  ],
+  "exclude": ["src/**/*.test.ts"]
+}
