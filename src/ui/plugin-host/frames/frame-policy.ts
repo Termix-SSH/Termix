@@ -7,6 +7,7 @@
  * The list lives in frame-core-rules.json, which the mobile app copies.
  */
 
+import { invokeAllowed } from "@termix-ssh/plugin-sdk/operations";
 import RULE_FILE from "./frame-core-rules.json";
 
 type Method = "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -40,11 +41,19 @@ export type PolicyResult =
   | { ok: true; path: string; query: string; userAction: boolean }
   | { ok: false; reason: string };
 
-/** Checks a core request a frame asked for. `target` is path plus query. */
+const RUN = /^\/operations\/([a-z0-9-]+\.[a-z0-9.-]+)\/run$/;
+
+/**
+ * Checks a core request a frame asked for. `target` is path plus query.
+ * `invokable` is what the plugin's backend may run of other plugins' actions
+ * (operations:invoke and its invokes list); its frame may run those too, as
+ * the person who just clicked, like the actions view in the shell.
+ */
 export function checkCoreRequest(
   pluginId: string,
   method: string,
   target: string,
+  invokable: readonly string[] = [],
 ): PolicyResult {
   if (typeof target !== "string" || !target.startsWith("/")) {
     return { ok: false, reason: "not a server path" };
@@ -62,13 +71,17 @@ export function checkCoreRequest(
   const matches = RULES.filter(
     (rule) => rule.methods.includes(verb) && rule.path(pluginId).test(path),
   );
-  return matches.length > 0
-    ? {
-        ok: true,
-        path,
-        query,
-        userAction: matches.every((rule) => rule.userAction),
-      }
+  if (matches.length > 0) {
+    return {
+      ok: true,
+      path,
+      query,
+      userAction: matches.every((rule) => rule.userAction),
+    };
+  }
+  const run = verb === "POST" ? RUN.exec(path) : null;
+  return run && invokeAllowed(invokable, run[1])
+    ? { ok: true, path, query, userAction: true }
     : { ok: false, reason: `${verb} ${path}` };
 }
 

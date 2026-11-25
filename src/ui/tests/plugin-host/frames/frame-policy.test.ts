@@ -95,6 +95,41 @@ describe("checkCoreRequest", () => {
   });
 });
 
+describe("checkCoreRequest for a plugin that invokes others' actions", () => {
+  it("runs what its invokes list names, only after a click (Operations-Center#11)", () => {
+    const run = (path: string, invokable: string[]) =>
+      checkCoreRequest("operations-center", "POST", path, invokable);
+
+    expect(run("/operations/tunnels.close/run", ["*"])).toMatchObject({
+      ok: true,
+      userAction: true,
+    });
+    expect(run("/operations/docker.restart/run", ["docker.*"]).ok).toBe(true);
+    expect(run("/operations/coolify.deploy/run", ["docker.*"]).ok).toBe(false);
+    expect(run("/operations/tunnels.close/run", []).ok).toBe(false);
+    expect(
+      checkCoreRequest("operations-center", "GET", "/operations/x.y/run", ["*"])
+        .ok,
+    ).toBe(false);
+    for (const path of [
+      "/operations/runs/abc/cancel",
+      "/operations/approvals/abc",
+      "/operations/x.y/run/extra",
+      "/operations/%2e%2e/run",
+    ]) {
+      expect(run(path, ["*"]).ok, path).toBe(false);
+    }
+  });
+
+  it("keeps the plugin's own runs free of the click check", () => {
+    expect(
+      checkCoreRequest("docker", "POST", "/operations/docker.restart/run", [
+        "*",
+      ]),
+    ).toMatchObject({ ok: true, userAction: false });
+  });
+});
+
 describe("frameHeaders", () => {
   it("reads waiting approvals but never decides one", () => {
     expect(checkCoreRequest("ops", "GET", "/operations/approvals").ok).toBe(
