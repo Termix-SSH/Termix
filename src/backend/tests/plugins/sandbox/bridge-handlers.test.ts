@@ -21,9 +21,12 @@ vi.mock("../../../plugins/sandbox/db-exec.js", () => ({
 }));
 
 import { EventEmitter } from "events";
+import { PassThrough } from "node:stream";
 import { runAsActor } from "../../../plugins/actor.js";
 import {
   PluginBridge,
+  SOCKET_TOKEN_MS,
+  SOCKET_TOUCH_INTERVAL_MS,
   sandboxLog,
   socketControl,
 } from "../../../plugins/sandbox/bridge.js";
@@ -142,11 +145,13 @@ function harness() {
       ),
     },
   };
+  const touches: string[] = [];
   const bridge = new PluginBridge(transport, {
     manifest: { id: pluginId, capabilities: [], sandbox: {} } as never,
     ctx: ctx as never,
     tokens,
     dialect: "sqlite",
+    touch: (reason) => touches.push(reason),
   });
   let id = 0;
   const send = async (
@@ -174,7 +179,20 @@ function harness() {
   };
   const token = (userId = "alice") =>
     tokens.mint({ pluginId, userId, kind: "request" });
-  return { bridge, send, token, ctx, routes, sshClient, service, logs };
+  return {
+    bridge,
+    send,
+    token,
+    tokens,
+    touches,
+    replies,
+    deliver: (m: Wire) => toHost.forEach((h) => h(m)),
+    ctx,
+    routes,
+    sshClient,
+    service,
+    logs,
+  };
 }
 
 beforeEach(() => {
@@ -250,6 +268,208 @@ describe("sockets", () => {
       expect.any(Function),
       {},
     );
+  });
+
+  it("tracks open client sockets across ws.route and ws.upgrade and resets on close", async () => {
+    const h = harness();
+    await h.send("ws.route", ["/live", {}]);
+    await h.send("ws.upgrade", ["/raw", {}]);
+    const onWs = h.ctx.ws.route.mock.calls[0][1] as (
+      c: unknown,
+    ) => Promise<void>;
+    const onUpgrade = h.ctx.ws.upgrade.mock.calls[0][1] as (
+      req: unknown,
+      sock: unknown,
+      head: Buffer,
+      userId: string,
+    ) => void;
+
+    const makeWs = () =>
+      Object.assign(new EventEmitter(), {
+        OPEN: 1,
+        readyState: 1,
+        bufferedAmount: 0,
+        send: vi.fn(),
+        ping: vi.fn(),
+        pause: vi.fn(),
+        resume: vi.fn(),
+        close: vi.fn(),
+      });
+
+    expect(h.bridge.openClientSocketCount()).toBe(0);
+
+    const ws = makeWs();
+    const wsPromise = onWs({
+      userId: "alice",
+      socket: ws,
+      request: { url: "/live", headers: {} },
+      clientIp: "127.0.0.1",
+      requestOrigin: "http://localhost",
+    });
+    await Promise.resolve();
+    const wsCall = h.replies.find(
+      (r) => r.t === "call" && r.m === "ws.open",
+    ) as Wire & { id: number };
+    h.deliver({ t: "ok", id: wsCall.id, v: true });
+    await wsPromise;
+    expect(h.bridge.openClientSocketCount()).toBe(1);
+
+    const raw = new PassThrough();
+    onUpgrade(
+      { method: "GET", url: "/raw", headers: {}, httpVersion: "1.1" },
+      raw,
+      Buffer.alloc(0),
+      "alice",
+    );
+    const upgradeCall = h.replies.find(
+      (r) => r.t === "call" && r.m === "ws.upgrade",
+    ) as Wire & { id: number };
+    h.deliver({ t: "ok", id: upgradeCall.id, v: true });
+    expect(h.bridge.openClientSocketCount()).toBe(2);
+
+    ws.emit("close", 1000, Buffer.from("bye"));
+    ws.emit("close", 1000, Buffer.from("bye"));
+    expect(h.bridge.openClientSocketCount()).toBe(1);
+
+    const rawClosed = new Promise<void>((r) => raw.once("close", r));
+    raw.destroy();
+    await rawClosed;
+    expect(h.bridge.openClientSocketCount()).toBe(0);
+
+    const raw2 = new PassThrough();
+    onUpgrade(
+      { method: "GET", url: "/raw", headers: {}, httpVersion: "1.1" },
+      raw2,
+      Buffer.alloc(0),
+      "alice",
+    );
+    expect(h.bridge.openClientSocketCount()).toBe(1);
+    h.bridge.close("stopped");
+    expect(h.bridge.openClientSocketCount()).toBe(0);
+    const raw2Closed = new Promise<void>((r) => raw2.once("close", r));
+    raw2.destroy();
+    await raw2Closed;
+    expect(h.bridge.openClientSocketCount()).toBe(0);
+  });
+
+  it("refreshes socket tokens and activity on bidirectional traffic with throttling", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-11-25T00:00:00Z"));
+      const h = harness();
+      await h.send("ws.route", ["/live", {}]);
+      await h.send("ws.upgrade", ["/raw", {}]);
+      const onWs = h.ctx.ws.route.mock.calls[0][1] as (
+        c: unknown,
+      ) => Promise<void>;
+      const onUpgrade = h.ctx.ws.upgrade.mock.calls[0][1] as (
+        req: unknown,
+        sock: unknown,
+        head: Buffer,
+        userId: string,
+      ) => void;
+
+      const touchSpy = vi.spyOn(h.tokens, "touch");
+
+      // 1. WebSocket: message, pong, and server-to-client port data refresh token.
+      const ws = Object.assign(new EventEmitter(), {
+        OPEN: 1,
+        readyState: 1,
+        bufferedAmount: 0,
+        send: vi.fn(),
+        ping: vi.fn(),
+        pause: vi.fn(),
+        resume: vi.fn(),
+        close: vi.fn(),
+      });
+      const wsPromise = onWs({
+        userId: "alice",
+        socket: ws,
+        request: { url: "/live", headers: {} },
+        clientIp: "127.0.0.1",
+        requestOrigin: "http://localhost",
+      });
+      await Promise.resolve();
+      const wsCall = h.replies.find(
+        (r) => r.t === "call" && r.m === "ws.open",
+      ) as Wire & { id: number; k: string; a: unknown[] };
+      const wsToken = wsCall.k;
+      const wsSid = (wsCall.a[2] as { $s: string }).$s;
+      h.deliver({ t: "ok", id: wsCall.id, v: true });
+      await wsPromise;
+      h.touches.length = 0;
+
+      ws.emit("message", Buffer.from("hi"), false);
+      ws.emit("message", Buffer.from("hi2"), false);
+      expect(touchSpy).toHaveBeenCalledTimes(1);
+      expect(touchSpy).toHaveBeenLastCalledWith(wsToken, SOCKET_TOKEN_MS);
+      expect(h.touches).toEqual(["socket"]);
+
+      // Throttled within SOCKET_TOUCH_INTERVAL_MS, refreshes after interval.
+      vi.advanceTimersByTime(SOCKET_TOUCH_INTERVAL_MS - 1);
+      ws.emit("pong");
+      expect(touchSpy).toHaveBeenCalledTimes(1);
+
+      vi.advanceTimersByTime(1);
+      ws.emit("pong");
+      expect(touchSpy).toHaveBeenCalledTimes(2);
+
+      // Server-to-client data refreshes token past initial SOCKET_TOKEN_MS.
+      vi.advanceTimersByTime(SOCKET_TOKEN_MS / 2);
+      h.deliver({
+        t: "s",
+        s: wsSid,
+        op: "d",
+        d: { d: "frame-1", b: false },
+      });
+      await new Promise<void>((r) => process.nextTick(r));
+      expect(touchSpy).toHaveBeenCalledTimes(3);
+      vi.advanceTimersByTime(SOCKET_TOKEN_MS / 2 + 60_000);
+      expect(h.tokens.resolve(wsToken, "docker")).not.toBeNull();
+      ws.emit("close", 1000, Buffer.alloc(0));
+      expect(h.tokens.resolve(wsToken, "docker")).toBeNull();
+
+      // 2. Raw upgrade: client data and server display frames both refresh token.
+      touchSpy.mockClear();
+      h.touches.length = 0;
+      const raw = new PassThrough();
+      onUpgrade(
+        { method: "GET", url: "/raw", headers: {}, httpVersion: "1.1" },
+        raw,
+        Buffer.alloc(0),
+        "alice",
+      );
+      const upCall = h.replies.find(
+        (r) => r.t === "call" && r.m === "ws.upgrade",
+      ) as Wire & { id: number; k: string; a: unknown[] };
+      const upToken = upCall.k;
+      const upSid = (upCall.a[2] as { $s: string }).$s;
+      h.deliver({ t: "ok", id: upCall.id, v: true });
+
+      raw.write(Buffer.from("input-1"));
+      raw.write(Buffer.from("input-2"));
+      expect(touchSpy).toHaveBeenCalledTimes(1);
+      expect(touchSpy).toHaveBeenLastCalledWith(upToken, SOCKET_TOKEN_MS);
+      expect(h.touches).toEqual(["socket"]);
+
+      // Advance 45 min, receive server display frame only -> token renewed.
+      vi.advanceTimersByTime(45 * 60_000);
+      h.deliver({ t: "s", s: upSid, op: "d", d: Buffer.from("display-frame") });
+      await new Promise<void>((r) => process.nextTick(r));
+      expect(touchSpy).toHaveBeenCalledTimes(2);
+      expect(h.touches).toEqual(["socket", "socket"]);
+
+      // Advance another 45 min (total 90 min > SOCKET_TOKEN_MS): token still valid!
+      vi.advanceTimersByTime(45 * 60_000);
+      expect(h.tokens.resolve(upToken, "docker")).not.toBeNull();
+
+      const rawClosed = new Promise<void>((r) => raw.once("close", r));
+      raw.destroy();
+      await rawClosed;
+      expect(h.tokens.resolve(upToken, "docker")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

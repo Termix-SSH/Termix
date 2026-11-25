@@ -6,6 +6,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { PassThrough } from "node:stream";
 import {
   afterAll,
   beforeAll,
@@ -628,6 +629,96 @@ export async function deactivate() {
     expect(supervisor.status()[0].state).toBe("ready");
     await until(() => reports.includes("done"));
     await until(() => supervisor.status()[0].state === "stopped");
+    await supervisor.shutdown();
+  }, 30_000);
+
+  it("keeps a plugin up while a raw-upgrade socket is open even after its socket token expires, and stops after it closes", async () => {
+    let upgradeHandler:
+      | ((
+          req: unknown,
+          socket: PassThrough,
+          head: Buffer,
+          userId: string,
+        ) => void)
+      | null = null;
+    const supervisor = new SandboxSupervisor(
+      config({ idleMs: 250, healthTimeoutMs: 5_000 }),
+    );
+    await supervisor.register(
+      spec(
+        "display",
+        plugin(
+          "display",
+          `export function activate(ctx) {
+            ctx.ws.upgrade("/display", (_req, socket) => {
+              socket.resume();
+            });
+          }`,
+        ),
+        {
+          ctx: {
+            ws: {
+              route: () => {},
+              upgrade: (
+                _path: string,
+                handler: NonNullable<typeof upgradeHandler>,
+              ) => {
+                upgradeHandler = handler;
+              },
+            },
+          },
+        },
+      ),
+    );
+    expect(await supervisor.wake("display")).toBe(true);
+    await until(() => upgradeHandler !== null);
+
+    const clientSocket = new PassThrough();
+    upgradeHandler!(
+      { method: "GET", url: "/display", headers: {}, httpVersion: "1.1" },
+      clientSocket,
+      Buffer.alloc(0),
+      "alice",
+    );
+
+    // Wait past idleMs: open raw-upgrade socket keeps the plugin busy.
+    await new Promise((r) => setTimeout(r, 400));
+    await until(
+      () =>
+        supervisor.status()[0].state === "ready" &&
+        supervisor.status()[0].busy === "client sockets",
+      2_000,
+    );
+
+    // Simulate > SOCKET_TOKEN_MS elapsed with no traffic (socket token expired/swept).
+    const proc = (
+      supervisor as unknown as {
+        processes: Map<
+          string,
+          {
+            tokens: {
+              revokePlugin: (id: string) => void;
+              countFor: (id: string, kind: string) => number;
+            };
+          }
+        >;
+      }
+    ).processes.get("display")!;
+    proc.tokens.revokePlugin("display");
+    expect(proc.tokens.countFor("display", "socket")).toBe(0);
+
+    // Still busy across multiple idle health checks while the socket stays open.
+    await new Promise((r) => setTimeout(r, 400));
+    await until(
+      () =>
+        supervisor.status()[0].state === "ready" &&
+        supervisor.status()[0].busy === "client sockets",
+      2_000,
+    );
+
+    // Closing the raw-upgrade socket lets the plugin stop when idle.
+    clientSocket.destroy();
+    await until(() => supervisor.status()[0].state === "stopped", 5_000);
     await supervisor.shutdown();
   }, 30_000);
 

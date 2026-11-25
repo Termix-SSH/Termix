@@ -38,6 +38,7 @@ const DEFAULTS = {
   macTrayIcon: "monochrome",
   closeToTray: true,
   trayNoticeShown: false,
+  disableHardwareAcceleration: false,
 };
 
 // The settings the app's page may change. The rest are set by the main

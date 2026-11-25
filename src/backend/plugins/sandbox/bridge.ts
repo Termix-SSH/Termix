@@ -66,7 +66,9 @@ import { agentRelay } from "./agent-relay.js";
 export const REQUEST_TOKEN_GRACE_MS = 30_000;
 /** Shortest gap between pings a plugin may ask of the browser. */
 const PING_GAP_MS = 1_000;
-const SOCKET_TOKEN_MS = 60 * 60 * 1000;
+export const SOCKET_TOKEN_MS = 60 * 60 * 1000;
+/** Minimum interval between activity/token refreshes on busy sockets. */
+export const SOCKET_TOUCH_INTERVAL_MS = 30_000;
 /** How long a prepared config's host key check stays usable. */
 const PREPARED_MS = 15 * 60 * 1000;
 /** A remote forward connection the plugin does not answer is rejected. */
@@ -361,6 +363,8 @@ export class PluginBridge {
   private readonly wsHandlers = new Set<string>();
   /** Open plugin sockets by their stream id, for ssh.prepare's host key prompt. */
   private readonly sockets = new Map<string, import("ws").WebSocket>();
+  /** Open client WebSocket and raw-upgrade sockets held by this bridge. */
+  private clientSockets = 0;
   /** Streams core opened for the plugin, closed with its process. */
   private readonly openStreams = new Map<string, Duplex>();
   private readonly unjoins = new Map<string, () => void>();
@@ -447,6 +451,11 @@ export class PluginBridge {
     };
   }
 
+  /** Number of open client WebSocket and raw-upgrade sockets. */
+  openClientSocketCount(): number {
+    return this.clientSockets;
+  }
+
   close(reason: string): void {
     this.closed = true;
     this.endpoint.close(reason);
@@ -460,6 +469,7 @@ export class PluginBridge {
     for (const stream of this.openStreams.values()) stream.destroy();
     this.openStreams.clear();
     this.sockets.clear();
+    this.clientSockets = 0;
   }
 
   /** A stream core holds for the plugin, closed when the plugin says so. */
@@ -1761,6 +1771,18 @@ export class PluginBridge {
     }
   }
 
+  /** Refreshes a socket's token and activity at most once per interval. */
+  private socketToucher(token: string): () => void {
+    let lastTouch = -Infinity;
+    return () => {
+      const now = Date.now();
+      if (now - lastTouch < SOCKET_TOUCH_INTERVAL_MS) return;
+      lastTouch = now;
+      this.tokens.touch(token, SOCKET_TOKEN_MS);
+      this.touch("socket");
+    };
+  }
+
   private async openSocket(
     path: string,
     connection: WsConnection,
@@ -1775,22 +1797,35 @@ export class PluginBridge {
     });
     const ws = connection.socket;
     const port = this.endpoint.openStream();
+    const touchSocket = this.socketToucher(token);
     this.sockets.set(port.sid, ws);
+    this.clientSockets++;
+    let socketClosed = false;
+    const releaseSocket = () => {
+      if (socketClosed) return;
+      socketClosed = true;
+      this.clientSockets = Math.max(0, this.clientSockets - 1);
+      this.sockets.delete(port.sid);
+      this.tokens.revoke(token);
+    };
     ws.on("message", (data: Buffer, isBinary: boolean) => {
-      this.tokens.touch(token, SOCKET_TOKEN_MS);
-      this.touch("socket");
+      touchSocket();
       if (!port.write({ d: isBinary ? data : data.toString(), b: isBinary })) {
         ws.pause();
         port.once("drain", () => ws.resume());
       }
     });
     const control = { lastPing: 0 };
-    ws.on("pong", () => port.write({ c: "pong" }));
+    ws.on("pong", () => {
+      touchSocket();
+      port.write({ c: "pong" });
+    });
     port.on(
       "data",
       (chunk: { d: Uint8Array | string; b: boolean; c?: unknown }) => {
         if (ws.readyState !== ws.OPEN) return;
         if (socketControl(chunk, ws, control)) return;
+        touchSocket();
         ws.send(chunk.d, { binary: chunk.b });
         if (ws.bufferedAmount > 1024 * 1024) {
           port.pause();
@@ -1818,10 +1853,9 @@ export class PluginBridge {
       if (ws.readyState === ws.OPEN) ws.close(1011);
     });
     ws.on("close", (code: number, reason: Buffer) => {
-      this.sockets.delete(port.sid);
+      releaseSocket();
       port.endMeta = { code, reason: reason.toString() };
       port.end();
-      this.tokens.revoke(token);
     });
     ws.on("error", () => port.destroy());
     let unlocked = true;
@@ -1830,20 +1864,26 @@ export class PluginBridge {
     } catch {
       unlocked = true;
     }
-    await this.endpoint.callWithToken(token, "ws.open", [
-      path,
-      {
-        userId: connection.userId ?? "",
-        clientIp: connection.clientIp,
-        requestOrigin: connection.requestOrigin,
-        request: {
-          url: connection.request?.url,
-          headers: safeHeaders(connection.request?.headers ?? {}),
+    try {
+      await this.endpoint.callWithToken(token, "ws.open", [
+        path,
+        {
+          userId: connection.userId ?? "",
+          clientIp: connection.clientIp,
+          requestOrigin: connection.requestOrigin,
+          request: {
+            url: connection.request?.url,
+            headers: safeHeaders(connection.request?.headers ?? {}),
+          },
+          unlocked,
         },
-        unlocked,
-      },
-      port,
-    ]);
+        port,
+      ]);
+    } catch (error) {
+      releaseSocket();
+      if (ws.readyState === ws.OPEN) ws.close(1011);
+      throw error;
+    }
   }
 
   private async openRawUpgrade(
@@ -1862,8 +1902,18 @@ export class PluginBridge {
       ttlMs: SOCKET_TOKEN_MS,
     });
     const port = this.endpoint.openStream();
-    pump(socket as unknown as NodeReadable, port);
+    const touchSocket = this.socketToucher(token);
+    this.clientSockets++;
+    let socketClosed = false;
+    const releaseSocket = () => {
+      if (socketClosed) return;
+      socketClosed = true;
+      this.clientSockets = Math.max(0, this.clientSockets - 1);
+      this.tokens.revoke(token);
+    };
+    pump(socket as unknown as NodeReadable, port, touchSocket);
     port.on("data", (chunk: Uint8Array) => {
+      touchSocket();
       if (!socket.write(chunk)) {
         port.pause();
         socket.once("drain", () => port.resume());
@@ -1874,7 +1924,7 @@ export class PluginBridge {
     socket.on("end", () => port.end());
     socket.on("close", () => {
       port.destroy();
-      this.tokens.revoke(token);
+      releaseSocket();
     });
     socket.on("error", () => port.destroy());
     try {
@@ -1891,6 +1941,7 @@ export class PluginBridge {
         userId ?? "",
       ]);
     } catch {
+      releaseSocket();
       socket.destroy();
     }
   }
@@ -2298,8 +2349,13 @@ interface NodeChannel {
 }
 
 /** Moves a readable into a port and pauses it when the other side has no credit. */
-function pump(source: NodeReadable, port: StreamPort): void {
+function pump(
+  source: NodeReadable,
+  port: StreamPort,
+  onData?: () => void,
+): void {
   source.on("data", (chunk: Buffer) => {
+    onData?.();
     if (!port.write(chunk)) {
       source.pause();
       port.once("drain", () => source.resume());

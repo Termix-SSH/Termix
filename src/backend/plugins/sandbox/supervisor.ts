@@ -619,7 +619,12 @@ class PluginProcess {
       return `used ${Math.round(since / 1000)}s ago (${this.lastUse})`;
     }
     if (this.bridge && this.bridge.endpoint.pendingCount > 0) return "calls";
-    if (this.tokens.countFor(this.id, "socket") > 0) return "client sockets";
+    if (
+      (this.bridge && this.bridge.openClientSocketCount() > 0) ||
+      this.tokens.countFor(this.id, "socket") > 0
+    ) {
+      return "client sockets";
+    }
     // Its own sockets and listeners, a one-off job still waiting, or a call
     // from core still running.
     if (this.openSockets > 0) return "own sockets";
