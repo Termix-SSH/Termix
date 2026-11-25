@@ -24,6 +24,13 @@ Host myserver
     });
   });
 
+  it("parses a double-quoted HostName", () => {
+    const config = 'Host web\n    HostName "example.org"\n';
+    expect(parseSSHConfig(config)).toEqual([
+      { name: "web", hostname: "example.org" },
+    ]);
+  });
+
   it("parses multiple Host blocks", () => {
     const config = `
 Host web

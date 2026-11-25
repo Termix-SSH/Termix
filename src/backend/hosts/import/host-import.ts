@@ -128,7 +128,7 @@ export function parseSSHConfig(content: string): SSHConfigHost[] {
 
     switch (key) {
       case "hostname":
-        current.hostname = value;
+        current.hostname = value.replace(/^"([^"]*)"$/, "$1");
         break;
       case "user":
         current.user = value;
