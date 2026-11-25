@@ -21,9 +21,11 @@ vi.mock("../../../plugins/sandbox/db-exec.js", () => ({
 }));
 
 import { EventEmitter } from "events";
-import { runAsActor } from "../../../plugins/actor.js";
+import { PassThrough } from "node:stream";
+import { getActor, runAsActor } from "../../../plugins/actor.js";
 import {
   PluginBridge,
+  REQUEST_TOKEN_GRACE_MS,
   sandboxLog,
   socketControl,
 } from "../../../plugins/sandbox/bridge.js";
@@ -33,9 +35,11 @@ import { SandboxTokenStore } from "../../../plugins/sandbox/tokens.js";
 type AnyFn = (...args: unknown[]) => unknown;
 type Reply = Wire & { v?: unknown; e?: { code?: string; message: string } };
 
-function harness() {
+function harness(options: { now?: () => number } = {}) {
   const pluginId = "docker";
-  const tokens = new SandboxTokenStore();
+  const tokens = new SandboxTokenStore(
+    options.now ? { now: options.now } : undefined,
+  );
   const toHost: Array<(m: Wire) => void> = [];
   const replies: Wire[] = [];
   const transport: Transport = {
@@ -79,6 +83,7 @@ function harness() {
   const logs: string[] = [];
   const ctx = {
     pluginId,
+    whoami: () => getActor() ?? null,
     http: { router: vi.fn(() => router) },
     ws: { route: vi.fn(), upgrade: vi.fn() },
     rbac: {
@@ -174,7 +179,18 @@ function harness() {
   };
   const token = (userId = "alice") =>
     tokens.mint({ pluginId, userId, kind: "request" });
-  return { bridge, send, token, ctx, routes, sshClient, service, logs };
+  return {
+    bridge,
+    tokens,
+    replies,
+    send,
+    token,
+    ctx,
+    routes,
+    sshClient,
+    service,
+    logs,
+  };
 }
 
 beforeEach(() => {
@@ -250,6 +266,107 @@ describe("sockets", () => {
       expect.any(Function),
       {},
     );
+  });
+
+  it("keeps a socket actor token alive through the close grace window and refreshes on pong", async () => {
+    let now = 1_000_000;
+    const h = harness({ now: () => now });
+    await h.send("ws.route", ["/term", {}]);
+    const onConnect = h.ctx.ws.route.mock.calls[0][1] as (
+      conn: unknown,
+    ) => Promise<void>;
+    const ws = Object.assign(new EventEmitter(), {
+      OPEN: 1,
+      readyState: 1,
+      bufferedAmount: 0,
+      send: vi.fn(),
+      close: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+      ping: vi.fn(),
+    });
+    void onConnect({
+      userId: "alice",
+      socket: ws,
+      request: { url: "/plugin-ws/docker/term", headers: {} },
+      clientIp: "127.0.0.1",
+      requestOrigin: "http://localhost",
+    }).catch(() => {});
+    await new Promise((r) => setTimeout(r, 10));
+    const openCall = h.replies.find(
+      (m) => m.t === "call" && m.m === "ws.open",
+    ) as (Wire & { k?: string }) | undefined;
+    const socketToken = openCall?.k;
+    expect(socketToken).toBeTruthy();
+
+    // Heartbeat pong refreshes the 1h socket TTL so idle terminals do not lose their actor.
+    now += 50 * 60 * 1000;
+    ws.emit("pong");
+    now += 20 * 60 * 1000;
+    expect(await h.send("ctx.whoami", [], socketToken)).toMatchObject({
+      t: "ok",
+      v: "alice",
+    });
+
+    // Closing the socket leaves the token valid for the grace window so cleanup calls succeed.
+    ws.emit("close", 1000, Buffer.from("bye"));
+    expect(await h.send("ctx.whoami", [], socketToken)).toMatchObject({
+      t: "ok",
+      v: "alice",
+    });
+
+    // Once the grace window passes, the token is rejected.
+    now += REQUEST_TOKEN_GRACE_MS + 1;
+    expect(await h.send("ctx.whoami", [], socketToken)).toMatchObject({
+      t: "err",
+      e: { code: "SANDBOX_TOKEN" },
+    });
+  });
+
+  it("refreshes a raw upgrade token on data and keeps it through the close grace window", async () => {
+    let now = 2_000_000;
+    const h = harness({ now: () => now });
+    await h.send("ws.upgrade", ["/raw", {}]);
+    const onUpgrade = h.ctx.ws.upgrade.mock.calls[0][1] as (
+      req: unknown,
+      sock: PassThrough,
+      head: Buffer,
+      userId: string,
+    ) => void;
+    const sock = new PassThrough();
+    onUpgrade(
+      { method: "GET", url: "/raw", headers: {}, httpVersion: "1.1" },
+      sock,
+      Buffer.alloc(0),
+      "bob",
+    );
+    await new Promise((r) => setTimeout(r, 10));
+    const upgradeCall = h.replies.find(
+      (m) => m.t === "call" && m.m === "ws.upgrade",
+    ) as (Wire & { k?: string }) | undefined;
+    const upgradeToken = upgradeCall?.k;
+    expect(upgradeToken).toBeTruthy();
+
+    now += 50 * 60 * 1000;
+    sock.write(Buffer.from("hi"));
+    now += 20 * 60 * 1000;
+    expect(await h.send("ctx.whoami", [], upgradeToken)).toMatchObject({
+      t: "ok",
+      v: "bob",
+    });
+
+    sock.destroy();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(await h.send("ctx.whoami", [], upgradeToken)).toMatchObject({
+      t: "ok",
+      v: "bob",
+    });
+
+    now += REQUEST_TOKEN_GRACE_MS + 1;
+    expect(await h.send("ctx.whoami", [], upgradeToken)).toMatchObject({
+      t: "err",
+      e: { code: "SANDBOX_TOKEN" },
+    });
   });
 });
 

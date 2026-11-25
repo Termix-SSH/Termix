@@ -18,6 +18,7 @@ export function streamRequestBody(
   bodyPort.on("end", () => {
     req.complete = true;
     req.push(null);
+    if (!bodyPort.destroyed) bodyPort.destroy();
   });
   bodyPort.on("error", (error) => req.destroy(error));
 }

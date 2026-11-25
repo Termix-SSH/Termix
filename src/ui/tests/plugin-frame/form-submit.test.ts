@@ -101,4 +101,41 @@ describe("form submit shim", () => {
     vi.runAllTimers();
     expect(submits).toHaveLength(0);
   });
+
+  it("submits a password form on click and Enter when native submit is blocked", () => {
+    const form = mount(
+      `<form>
+        <input id="passphrase" name="passphrase" type="password" value="s3cr3t" />
+        <button type="button">Toggle</button>
+        <button type="button">Cancel</button>
+        <button type="submit">Connect</button>
+      </form>`,
+    );
+    // Simulate a sandboxed frame without allow-forms: clicking submit never
+    // triggers a native submit event from the browser.
+    const submitBtn = form.querySelector<HTMLButtonElement>(
+      'button[type="submit"]',
+    )!;
+    vi.spyOn(submitBtn, "click").mockImplementation(() => {
+      submitBtn.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }),
+      );
+    });
+
+    submitBtn.click();
+    vi.runAllTimers();
+    expect(submits).toHaveLength(1);
+    expect(
+      (
+        (submits[0].target as HTMLFormElement).elements.namedItem(
+          "passphrase",
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("s3cr3t");
+
+    enter(form.querySelector("#passphrase")!);
+    vi.runAllTimers();
+    expect(submits).toHaveLength(2);
+    expect((submits[1] as SubmitEvent).submitter).toBe(submitBtn);
+  });
 });

@@ -319,6 +319,25 @@ describe("buildConnectConfig per auth type", () => {
     expect(refused.outcome).toMatchObject({ code: "missing-secret" });
   });
 
+  it("keeps a supplied passphrase when expanding an encrypted key credential", async () => {
+    mocks.findUsableCredential.mockResolvedValueOnce({
+      username: "root",
+      privateKey: encryptedKey,
+      keyPassword: null,
+    });
+    const built = await build(
+      host({
+        authType: "credential",
+        password: null,
+        credentialId: 7,
+        keyPassword: "secret",
+      }),
+    );
+    expect(built.outcome.status).toBe("ready");
+    expect(Buffer.isBuffer(built.config.privateKey)).toBe(true);
+    expect(built.config.passphrase).toBe("secret");
+  });
+
   it("agent hands the config to the agent helper", async () => {
     const { config, outcome } = await build(
       host({

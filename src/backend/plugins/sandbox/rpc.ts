@@ -192,6 +192,7 @@ export class StreamPort extends Duplex {
   _final(callback: (error?: Error | null) => void): void {
     this.sendFrame({ t: "s", s: this.sid, op: "x", d: this.endMeta });
     callback();
+    this.maybeClose();
   }
 
   _read(): void {
@@ -210,8 +211,32 @@ export class StreamPort extends Duplex {
         op: "e",
         d: { message: error.message },
       });
+    } else if (!this.writableEnded) {
+      this.sendFrame({ t: "s", s: this.sid, op: "x", d: this.endMeta });
     }
     callback(error);
+  }
+
+  /**
+   * When both halves have ended and nobody is reading the readable side,
+   * Node's Duplex autoDestroy never fires "close" on its own. Destroy on a
+   * microtask so synchronous remote-end/data listeners still run first.
+   */
+  private maybeClose(): void {
+    if (!this.remoteEnded || !this.writableEnded || this.destroyed) return;
+    queueMicrotask(() => {
+      if (
+        !this.destroyed &&
+        this.remoteEnded &&
+        this.writableFinished &&
+        this.readableLength === 0 &&
+        !this.readableFlowing &&
+        this.listenerCount("data") === 0 &&
+        this.listenerCount("readable") === 0
+      ) {
+        this.destroy();
+      }
+    });
   }
 
   /** Called by the endpoint for frames from the other side. */
@@ -240,6 +265,7 @@ export class StreamPort extends Duplex {
       this.remoteEnded = true;
       this.emit("remote-end", data);
       this.push(null);
+      this.maybeClose();
       return;
     }
     this.destroy(new Error((data as WireError)?.message ?? "stream failed"));
@@ -278,9 +304,16 @@ export class Endpoint {
   >();
   private readonly fnIds = new WeakMap<object, string>();
   private readonly streams = new Map<string, StreamPort>();
+  /** Recently closed remote stream ids, so late frames don't reopen them. */
+  private readonly closedRemoteStreams = new Set<string>();
   private readonly released =
     typeof FinalizationRegistry === "function"
-      ? new FinalizationRegistry<string>((f) => this.post({ t: "rel", f }))
+      ? new FinalizationRegistry<string>((f) => {
+          if (this.remoteFns.get(f)?.deref() === undefined) {
+            this.remoteFns.delete(f);
+          }
+          this.post({ t: "rel", f });
+        })
       : null;
   private closed = false;
 
@@ -366,6 +399,10 @@ export class Endpoint {
       port.destroy(new Error(reason));
     }
     this.streams.clear();
+    this.closedRemoteStreams.clear();
+    this.localFns.clear();
+    this.remoteFns.clear();
+    this.handlers.clear();
   }
 
   get pendingCount(): number {
@@ -376,6 +413,19 @@ export class Endpoint {
     return this.localFns.size;
   }
 
+  get streamCount(): number {
+    return this.streams.size;
+  }
+
+  private rememberClosedRemote(sid: string): void {
+    if (sid.startsWith(this.options.side)) return;
+    this.closedRemoteStreams.add(sid);
+    if (this.closedRemoteStreams.size > 4096) {
+      const oldest = this.closedRemoteStreams.values().next().value;
+      if (oldest !== undefined) this.closedRemoteStreams.delete(oldest);
+    }
+  }
+
   private port(sid: string): StreamPort {
     let port = this.streams.get(sid);
     if (!port) {
@@ -383,7 +433,12 @@ export class Endpoint {
       // A stream the other side fails must never take this process down.
       port.on("error", () => {});
       this.streams.set(sid, port);
-      const drop = () => this.streams.delete(sid);
+      const drop = () => {
+        if (this.streams.get(sid) === port) {
+          this.streams.delete(sid);
+          this.rememberClosedRemote(sid);
+        }
+      };
       port.on("close", drop);
     }
     return port;
@@ -628,9 +683,18 @@ export class Endpoint {
         if (!["d", "e", "x", "c"].includes(message.op)) {
           throw new Error("bad stream op");
         }
-        // A failure for a stream already gone (its own echo) is dropped,
-        // or it would open a new port only to fail it.
-        if (message.op === "e" && !this.streams.has(message.s)) return;
+        // Late frames for a stream that already closed (ours or theirs) are
+        // dropped instead of reopening a zombie port nobody will ever close.
+        if (!this.streams.has(message.s)) {
+          if (
+            message.op === "e" ||
+            message.op === "c" ||
+            message.s.startsWith(this.options.side) ||
+            this.closedRemoteStreams.has(message.s)
+          ) {
+            return;
+          }
+        }
         this.port(message.s).receive(message.op, message.d);
         return;
       case "call":

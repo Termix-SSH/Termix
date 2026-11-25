@@ -205,7 +205,7 @@ async function expandCredential(
     username: host.username || credential.username || host.username,
     password: credential.password ?? undefined,
     key: credential.privateKey ?? credential.key ?? undefined,
-    keyPassword: credential.keyPassword ?? undefined,
+    keyPassword: host.keyPassword || credential.keyPassword || undefined,
     keyType: credential.keyType ?? undefined,
   } as SshConnectHost;
 }

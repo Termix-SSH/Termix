@@ -452,6 +452,13 @@ export class PluginBridge {
     this.endpoint.close(reason);
     this.tokens.revokePlugin(this.pluginId);
     this.refs.clear();
+    this.serviceRefs.clear();
+    this.provided.clear();
+    this.tcpWatched.clear();
+    this.liveRequests.clear();
+    this.tablesByName.clear();
+    this.lockProvider = null;
+    this.router = null;
     for (const pending of this.pendingTcp.values()) {
       clearTimeout(pending.timer);
       pending.reject();
@@ -459,6 +466,7 @@ export class PluginBridge {
     this.pendingTcp.clear();
     for (const stream of this.openStreams.values()) stream.destroy();
     this.openStreams.clear();
+    this.unjoins.clear();
     this.sockets.clear();
   }
 
@@ -1168,13 +1176,22 @@ export class PluginBridge {
             sink.once("drain", () => input.resume());
           }
         });
-        input.on("end", () => sink.end());
+        input.on("end", () => {
+          sink.end();
+          if (!input.writableEnded) input.end();
+        });
         input.on("error", (error: Error) => {
           sink.destroy?.(error);
           reject(error);
         });
-        sink.on("close", () => resolve(true));
-        sink.on("error", (error: Error) => reject(error));
+        sink.on("close", () => {
+          if (!input.destroyed) input.destroy();
+          resolve(true);
+        });
+        sink.on("error", (error: Error) => {
+          if (!input.destroyed) input.destroy(error);
+          reject(error);
+        });
       });
     });
     endpoint.handle("sftp.end", ([id]) => {
@@ -1591,13 +1608,22 @@ export class PluginBridge {
               sink.once("drain", () => input.resume());
             }
           });
-          input.on("end", () => sink.end());
+          input.on("end", () => {
+            sink.end();
+            if (!input.writableEnded) input.end();
+          });
           input.on("error", (error: Error) => {
             sink.destroy?.(error);
             reject(error);
           });
-          sink.on("finish", () => resolve());
-          sink.on("error", (error: Error) => reject(error));
+          sink.on("finish", () => {
+            if (!input.destroyed) input.destroy();
+            resolve();
+          });
+          sink.on("error", (error: Error) => {
+            if (!input.destroyed) input.destroy(error);
+            reject(error);
+          });
         });
         written.catch(() => {});
         return {
@@ -1785,7 +1811,10 @@ export class PluginBridge {
       }
     });
     const control = { lastPing: 0 };
-    ws.on("pong", () => port.write({ c: "pong" }));
+    ws.on("pong", () => {
+      this.tokens.touch(token, SOCKET_TOKEN_MS);
+      port.write({ c: "pong" });
+    });
     port.on(
       "data",
       (chunk: { d: Uint8Array | string; b: boolean; c?: unknown }) => {
@@ -1821,7 +1850,9 @@ export class PluginBridge {
       this.sockets.delete(port.sid);
       port.endMeta = { code, reason: reason.toString() };
       port.end();
-      this.tokens.revoke(token);
+      // Keep the actor briefly so the plugin's close handler and in-flight
+      // SSH cleanup (trackSession, dispose, audit) finish under this token.
+      this.releaseLater(token);
     });
     ws.on("error", () => port.destroy());
     let unlocked = true;
@@ -1862,6 +1893,7 @@ export class PluginBridge {
       ttlMs: SOCKET_TOKEN_MS,
     });
     const port = this.endpoint.openStream();
+    socket.on("data", () => this.tokens.touch(token, SOCKET_TOKEN_MS));
     pump(socket as unknown as NodeReadable, port);
     port.on("data", (chunk: Uint8Array) => {
       if (!socket.write(chunk)) {
@@ -1874,7 +1906,7 @@ export class PluginBridge {
     socket.on("end", () => port.end());
     socket.on("close", () => {
       port.destroy();
-      this.tokens.revoke(token);
+      this.releaseLater(token);
     });
     socket.on("error", () => port.destroy());
     try {
@@ -1920,6 +1952,7 @@ export class PluginBridge {
   private watchClient(id: string, client: unknown): void {
     const emitter = client as { once?: (e: string, fn: AnyFn) => void };
     emitter.once?.("close", () => {
+      this.tcpWatched.delete(id);
       if (!this.refs.has(id)) return;
       this.refs.delete(id);
       if (!this.closed) this.endpoint.notify("ssh.closed", [id]);
@@ -2070,6 +2103,7 @@ export class PluginBridge {
         if (!res.writableEnded) res.end();
       } else next(error);
     } finally {
+      if (bodyPort && !bodyPort.destroyed) bodyPort.destroy();
       this.liveRequests.delete(token);
       this.releaseLater(token);
     }

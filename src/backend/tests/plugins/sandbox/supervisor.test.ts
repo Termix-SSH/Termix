@@ -1055,6 +1055,39 @@ describe("methods that hand back a function", () => {
     expect(result).toBe("function");
     expect(calls).toEqual(["open 4", "close 4"]);
   }, 30_000);
+
+  it("does not emit an unhandled rejection when a synchronous disposer fails", async () => {
+    let done = false;
+    const body = `
+      export async function activate(ctx) {
+        const stop = ctx.hosts.trackSession(4);
+        stop();
+        await new Promise((r) => setTimeout(r, 50));
+        await ctx.report("ok");
+      }`;
+    const supervisor = new SandboxSupervisor(config());
+    await supervisor.register(
+      spec("tracker-err", plugin("tracker-err", body), {
+        sandbox: { alwaysOn: true },
+        report: () => {
+          done = true;
+        },
+        ctx: {
+          hosts: {
+            trackSession: () => () => {
+              throw new Error("This plugin call has no valid actor");
+            },
+          },
+        },
+      }),
+    );
+    await until(() => done);
+    await supervisor.shutdown();
+    const unhandled = logged.filter((entry) =>
+      entry.text.includes("Unhandled rejection"),
+    );
+    expect(unhandled).toEqual([]);
+  }, 30_000);
 });
 
 describe("asUser in a plugin process", () => {

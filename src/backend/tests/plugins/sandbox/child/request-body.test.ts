@@ -46,6 +46,7 @@ describe("streamRequestBody", () => {
     const uploaded = (req as unknown as { file: Express.Multer.File }).file;
     expect(uploaded.buffer.equals(file)).toBe(true);
     expect(req.complete).toBe(true);
+    expect(bodyPort.destroyed).toBe(true);
   });
 
   it("fails the request when the body stream fails", async () => {
