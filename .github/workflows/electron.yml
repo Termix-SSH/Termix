@@ -104,6 +104,9 @@ on:
 
 permissions: {}
 
+env:
+  TERMIX_DESKTOP_BUILD: "true"
+
 jobs:
   build-windows:
     runs-on: blacksmith-4vcpu-windows-2025

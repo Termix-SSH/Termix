@@ -32,6 +32,21 @@ describe("termixPluginHost meta CSP", () => {
     expect(tags[1].attrs.type).toBe("importmap");
   });
 
+  it("adds no policy to a build that gives no metaCsp, like the server image", () => {
+    const plugin = termixPluginHost({
+      repoRoot: process.cwd(),
+      sdkUiEntry: "ui.ts",
+      sdkFrontendEntry: "frontend.ts",
+    }) as unknown as {
+      config: (c: unknown, env: { command: string }) => void;
+      transformIndexHtml: { handler: () => Tag[] };
+    };
+    plugin.config({}, { command: "build" });
+    const tags = plugin.transformIndexHtml.handler();
+    expect(tags.some((tag) => tag.tag === "meta")).toBe(false);
+    expect(tags[0].attrs.type).toBe("importmap");
+  });
+
   it("adds no policy to the dev server, which needs inline scripts", () => {
     expect(tagsFor("serve").some((tag) => tag.tag === "meta")).toBe(false);
   });

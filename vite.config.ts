@@ -140,7 +140,13 @@ export default defineConfig({
       repoRoot: __dirname,
       sdkFrontendEntry,
       sdkUiEntry,
-      metaCsp: desktopMetaCsp,
+      // Only the desktop build, loaded without a server, carries the policy as
+      // a meta tag. Server builds get it from the response header, and a second
+      // copy in the page breaks behind proxies that rewrite the CSP.
+      metaCsp:
+        process.env.TERMIX_DESKTOP_BUILD === "true"
+          ? desktopMetaCsp
+          : undefined,
     }),
   ],
   define: {
